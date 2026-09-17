@@ -1,0 +1,66 @@
+{
+  "name": "@powerhousedao/pieces-framework",
+  "version": "6.2.3-dev.10",
+  "description": "Powerhouse's published copy of the Activepieces piece framework, widened with the reactor context.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/pieces-framework"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "UPSTREAM.md"
+  ],
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./common": {
+      "source": "./src/common.ts",
+      "types": "./dist/common.d.ts",
+      "import": "./dist/common.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "eslint",
+    "test": "vitest --run",
+    "build": "tsdown",
+    "sync-upstream": "tsx scripts/sync-upstream.mts"
+  },
+  "upstream": {
+    "repository": "https://github.com/activepieces/activepieces",
+    "tag": "0.91.0",
+    "commit": "da4410d1bf6212054e55805a98d566ff1b9310b2",
+    "packages": {
+      "@activepieces/pieces-framework": "0.39.0",
+      "@activepieces/pieces-common": "0.14.0",
+      "@activepieces/core-piece-types": "0.11.1",
+      "@activepieces/core-utils": "0.6.2"
+    }
+  },
+  "dependencies": {
+    "form-data": "4.0.6",
+    "nanoid": "3.3.17",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "deepmerge-ts": "7.1.0",
+    "ipaddr.js": "2.3.0",
+    "ts-morph": "catalog:",
+    "tsdown": "catalog:",
+    "tsx": "catalog:",
+    "vitest": "catalog:"
+  }
+}

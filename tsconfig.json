@@ -22,6 +22,9 @@
       "path": "packages/builder-tools"
     },
     {
+      "path": "packages/pieces-framework"
+    },
+    {
       "path": "packages/reactor-hypercore"
     },
     {
