@@ -1,13 +1,12 @@
 import type { Command } from "commander";
 import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
 import type { WorkflowStreamEvent } from "@mastra/core/workflows";
 import {
   MODEL_IDS,
   VALIDATED_CLI_VERSION,
   type ClaudeDriver,
 } from "../lib/claude-driver.js";
-import { ClaudeCli, parseCliVersion } from "../lib/claude.js";
+import { parseCliVersion } from "../lib/claude.js";
 import { selectTasks, type Task } from "../lib/catalog.js";
 import {
   catalogOf,
@@ -15,16 +14,14 @@ import {
   setHarnessContext,
   type HarnessContext,
 } from "../lib/context.js";
-import { FakeClaude } from "../lib/fake-claude.js";
+import { createDrivers, recordFiles } from "../lib/drivers.js";
 import {
-  HARNESS_ROOT,
   MONOREPO_ROOT,
   newRunId,
   recipesRoot,
   runLayout,
   RUNS_ROOT,
   STATE_DIR,
-  type RunLayout,
 } from "../lib/paths.js";
 import {
   Arm,
@@ -34,18 +31,8 @@ import {
   SandboxMode,
   AuthMode,
 } from "../lib/schemas.js";
-import { Semaphore } from "../lib/semaphore.js";
 import { createMastra } from "../mastra/create.js";
 import type { HarnessRunInput } from "../workflows/harness-run.js";
-
-const BUILDER_FIXTURE = path.join(
-  HARNESS_ROOT,
-  "test/fixtures/fake-claude/ok.jsonl",
-);
-const JUDGE_FIXTURE = path.join(
-  HARNESS_ROOT,
-  "test/fixtures/workflow/judge-empty.json",
-);
 
 interface RunOptions {
   tasks?: string;
@@ -88,42 +75,6 @@ function csv(value: string | undefined): string[] {
     .split(",")
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
-}
-
-/** Dry runs use fixture-backed fakes; real runs share one CLI and one bound. */
-function drivers(
-  args: RunArgs,
-  allowCliDrift: boolean,
-): { driver: ClaudeDriver; judgeDriver: ClaudeDriver; semaphore: Semaphore } {
-  const semaphore = new Semaphore(args.concurrency);
-  if (args.dryRun) {
-    return {
-      driver: new FakeClaude({ transcriptFixture: BUILDER_FIXTURE }),
-      judgeDriver: new FakeClaude({
-        transcriptFixture: BUILDER_FIXTURE,
-        structuredOutput: JSON.parse(readFileSync(JUDGE_FIXTURE, "utf8")),
-      }),
-      semaphore,
-    };
-  }
-  // The CLI's own semaphore never contends: callClaude already holds a slot.
-  const cli = new ClaudeCli({
-    semaphore: new Semaphore(args.concurrency),
-    allowVersionDrift: allowCliDrift,
-  });
-  return { driver: cli, judgeDriver: cli, semaphore };
-}
-
-/** A dry run's fake findings stay inside its run directory, never in the committed records. */
-function recordFiles(
-  layout: RunLayout,
-  dryRun: boolean,
-): Pick<HarnessContext, "findingsFile" | "runsFile"> {
-  if (!dryRun) return {};
-  return {
-    findingsFile: path.join(layout.root, "FINDINGS.jsonl"),
-    runsFile: path.join(layout.root, "RUNS.jsonl"),
-  };
 }
 
 async function checkCliVersion(
@@ -239,7 +190,7 @@ async function runCommand(opts: RunOptions): Promise<never> {
     throw new Error(`run ${runId} exists; use resume ${runId}`);
   }
 
-  const { driver, judgeDriver, semaphore } = drivers(
+  const { driver, judgeDriver, semaphore } = createDrivers(
     args,
     opts.allowCliDrift === true,
   );
@@ -291,7 +242,7 @@ async function resumeCommand(
   const record = RunRecord.parse(
     JSON.parse(readFileSync(layout.runJson, "utf8")),
   );
-  const { driver, judgeDriver, semaphore } = drivers(
+  const { driver, judgeDriver, semaphore } = createDrivers(
     record.args,
     opts.allowCliDrift === true,
   );

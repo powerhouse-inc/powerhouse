@@ -80,7 +80,21 @@ Because `runs/` sits inside the monorepo, the sandbox denies the monorepo's
 sibling directories along the path to it rather than the root, so the builder
 can read its own workspace but nothing else in the checkout.
 
-`pnpm studio` opens Mastra Studio on the default state DB to browse past runs.
+## Mastra Studio
+
+`pnpm studio` starts Mastra Studio at http://localhost:4111 on the default
+state DB. Workflows > harnessRun shows the step graph, and Runs lists every
+run the CLI has made with per-step status, input and output (`inspect` prints
+the same from the terminal).
+
+A run can also be started from Studio's form. The input mirrors the CLI:
+`runId`, `tasks`, `arms`, `n`, `docsSha` (`HEAD` works), `pin`, and `args`
+(`concurrency`, `dryRun`, `sandbox`, `auth`, models, `skipVerify`,
+`keepWorkspaces`). With no CLI to register drivers, the steps build a default
+context from `args`, so `args.dryRun: true` runs offline on fixtures and
+`false` spends real money exactly like `doc-harness run`. The `studio` script
+pins `DOC_HARNESS_ROOT` because Studio serves a bundle from `.mastra/` and the
+harness resolves its paths from its own location.
 
 ## Catalog
 

@@ -5,3 +5,4 @@ state/
 *.db-wal
 *.db-shm
 .tsbuild/
+.mastra/

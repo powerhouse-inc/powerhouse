@@ -7,11 +7,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Arm } from "./schemas.js";
 
-/** tools/doc-harness */
-export const HARNESS_ROOT = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../..",
-);
+/** tools/doc-harness. DOC_HARNESS_ROOT pins it when running from a bundle (Studio). */
+export const HARNESS_ROOT =
+  process.env.DOC_HARNESS_ROOT ??
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
 /** The monorepo checkout this harness lives in. */
 export const MONOREPO_ROOT = path.resolve(HARNESS_ROOT, "../..");

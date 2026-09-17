@@ -16,6 +16,8 @@ import {
 } from "./catalog.js";
 import type { ClaudeDriver } from "./claude-driver.js";
 import { CATALOG_FILE } from "./paths.js";
+import { defaultHarnessContext } from "./drivers.js";
+import type { RunArgs } from "./schemas.js";
 import type { Semaphore } from "./semaphore.js";
 
 export interface HarnessContext {
@@ -49,12 +51,23 @@ export function setHarnessContext(runId: string, ctx: HarnessContext): void {
   contexts.set(runId, ctx);
 }
 
-export function getHarnessContext(runId: string): HarnessContext {
+/**
+ * The CLI registers a context before starting a run. A run started elsewhere
+ * (Mastra Studio) has none, so with the workflow's RunArgs in hand the steps
+ * build the default one and register it for the rest of the run.
+ */
+export function getHarnessContext(
+  runId: string,
+  args?: RunArgs,
+): HarnessContext {
   const ctx = contexts.get(runId);
-  if (!ctx) {
+  if (ctx) return ctx;
+  if (!args) {
     throw new Error(`no harness context registered for run ${runId}`);
   }
-  return ctx;
+  const built = defaultHarnessContext(runId, args);
+  contexts.set(runId, built);
+  return built;
 }
 
 export function clearHarnessContext(runId: string): void {

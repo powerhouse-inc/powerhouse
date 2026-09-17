@@ -51,7 +51,7 @@ const snapshotDocsStep = createStep({
   retries: 0,
   execute: async (params) => {
     const { inputData } = params;
-    const ctx = getHarnessContext(inputData.runId);
+    const ctx = getHarnessContext(inputData.runId, inputData.args);
     const run = runLayout(inputData.runId, ctx.runsRoot);
 
     // run.json without an INDEX.md means the snapshot did not finish: redo it.
@@ -112,7 +112,7 @@ const expandMatrix = createStep({
   execute: (params) => {
     const { inputData } = params;
     const init = params.getInitData<HarnessRunInput>();
-    const ctx = getHarnessContext(init.runId);
+    const ctx = getHarnessContext(init.runId, init.args);
     const attempts: TaskRunInput[] = [];
     for (const task of selectTasks(catalogOf(ctx), init.tasks)) {
       for (const arm of init.arms) {
@@ -144,7 +144,7 @@ const summarize = createStep({
   execute: (params) => {
     const { inputData } = params;
     const init = params.getInitData<HarnessRunInput>();
-    const ctx = getHarnessContext(init.runId);
+    const ctx = getHarnessContext(init.runId, init.args);
     const run = runLayout(init.runId, ctx.runsRoot);
 
     const record = readJson(run.runJson, RunRecord);

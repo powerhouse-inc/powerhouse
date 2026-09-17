@@ -10,7 +10,7 @@
     "test": "vitest run",
     "tsc": "tsc",
     "lint": "eslint",
-    "studio": "mastra dev --dir src/mastra"
+    "studio": "DOC_HARNESS_ROOT=$PWD mastra dev --dir src/mastra"
   },
   "dependencies": {
     "@mastra/core": "catalog:",

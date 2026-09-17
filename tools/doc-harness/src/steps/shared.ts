@@ -34,7 +34,7 @@ export interface AttemptScope {
 }
 
 export function attemptScope(input: TaskRunInput): AttemptScope {
-  const ctx = getHarnessContext(input.runId);
+  const ctx = getHarnessContext(input.runId, input.args);
   const run = runLayout(input.runId, ctx.runsRoot);
   return {
     input,
