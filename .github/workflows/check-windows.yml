@@ -19,7 +19,9 @@ on:
   push:
     branches: ["main", "release/**"]
   pull_request:
-    branches: ["main", "release/**"]
+    # ci/** lets a change to these workflows be exercised by a pull request
+    # stacked on its branch before it reaches main.
+    branches: ["main", "release/**", "ci/**"]
     types: [opened, reopened, synchronize]
 
 permissions:
@@ -34,6 +36,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      # Defender scans every one of the ~100k files pnpm links and the build
+      # writes; a narrow exclusion, not -DisableRealtimeMonitoring.
+      - name: Exclude the workspace from Defender real-time scanning
+        shell: pwsh
+        run: |
+          try {
+            Add-MpPreference -ExclusionPath "$env:GITHUB_WORKSPACE", "$env:LOCALAPPDATA\pnpm" -ErrorAction Stop
+            Write-Host "Defender exclusions added."
+          } catch {
+            Write-Host "::warning::Could not add Defender exclusions: $_"
+          }
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4

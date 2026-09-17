@@ -9,7 +9,9 @@ on:
   push:
     branches: ["main", "release/**"]
   pull_request:
-    branches: ["main", "release/**"]
+    # ci/** lets a change to these workflows be exercised by a pull request
+    # stacked on its branch before it reaches main.
+    branches: ["main", "release/**", "ci/**"]
     types: [opened, reopened, synchronize]
 
 permissions:
@@ -80,30 +82,46 @@ jobs:
         if: ${{ steps.diff.outputs.files == '' }}
         run: echo "No changed files; skipping linting."
 
-      # reactor-browser runs half its suite in a real chromium (vitest browser
-      # mode), so test:ci needs a browser present. Run from the package that
-      # owns the playwright devDependency: the root has no such bin to exec.
-      - name: Install playwright chromium
+      # Prints the packages the diff can reach, so a reader of the log can see
+      # why a suite ran or did not.
+      - name: Decide test scope
+        id: scope
         if: ${{ steps.diff.outputs.files != '' }}
+        uses: ./.github/actions/test-scope
+        with:
+          files: ${{ steps.diff.outputs.files }}
+
+      # reactor-browser runs half its suite in a real chromium (vitest browser
+      # mode), so it needs a browser present. Run from the package that owns
+      # the playwright devDependency: the root has no such bin to exec.
+      - name: Install playwright chromium
+        if: ${{ steps.scope.outputs.mode == 'full' || contains(steps.scope.outputs.filters, '@powerhousedao/reactor-browser') }}
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./packages/reactor-browser
 
       # The engine's piece suites fetch Activepieces bundles from npm. Keyed on
       # the suites themselves: a run that changes none of them reuses the bundles.
       - name: Cache Activepieces bundles
+        if: ${{ steps.scope.outputs.mode == 'full' || contains(steps.scope.outputs.filters, '@powerhousedao/reactor-workflow') }}
         uses: actions/cache@v4
         with:
           path: packages/reactor-workflow/node_modules/.cache/ap-bundles
           key: ap-bundles-${{ hashFiles('packages/reactor-workflow/test/pieces/**/*.test.ts', 'packages/reactor-workflow/src/reactor/trigger-supervisor.test.ts') }}
           restore-keys: ap-bundles-
 
-      - name: Run tests
-        if: ${{ steps.diff.outputs.files != '' }}
-        run: pnpm test:ci -- --silent passed-only related ${{ steps.diff.outputs.files }}
+      - name: Run tests (full suite)
+        if: ${{ steps.scope.outputs.mode == 'full' }}
+        run: pnpm test:ci
 
-      - name: Skip test (no changed files)
-        if: ${{ steps.diff.outputs.files == '' }}
-        run: echo "No changed files; skipping tests."
+      # Same command test:ci runs, narrowed to the packages the diff can reach.
+      # CI=true is already in the job env, so cross-env is not needed here.
+      - name: Run tests (packages affected by the diff)
+        if: ${{ steps.scope.outputs.mode == 'affected' }}
+        run: pnpm ${{ steps.scope.outputs.filters }} --no-bail run test
+
+      - name: Skip tests (nothing the suites can see changed)
+        if: ${{ steps.diff.outputs.files == '' || steps.scope.outputs.mode == 'none' }}
+        run: echo "No changed file belongs to a package test:ci runs; skipping tests."
 
       - name: Run circular imports check
         run: pnpm check-circular-imports
