@@ -58,10 +58,14 @@ const MAX_EXTRACTED_BYTES = 64 * 1024 * 1024;
 const MAX_COMPRESSED_BYTES = 64 * 1024 * 1024;
 
 // Minimal ustar extraction: regular files only, "package/" root stripped.
-async function extractTarball(tgz: Buffer, dest: string): Promise<void> {
+async function extractTarball(
+  tgz: Buffer,
+  dest: string,
+  maxExtractedBytes = MAX_EXTRACTED_BYTES,
+): Promise<void> {
   // Async gunzip: the sync one blocks the reactor's event loop for every
   // request, not just this one, and inflation is unbounded without maxOutputLength.
-  const tar = await gunzip(tgz, { maxOutputLength: MAX_EXTRACTED_BYTES }).catch(
+  const tar = await gunzip(tgz, { maxOutputLength: maxExtractedBytes }).catch(
     (error: unknown) => {
       throw new Error(`Failed to decompress piece bundle: ${String(error)}`);
     },
@@ -95,6 +99,10 @@ export interface FetchPieceBundleOptions {
   version: string;
   cacheDir: string;
   timeoutMs?: number;
+  /** Compressed transfer cap in bytes; defaults to 64 MB. */
+  maxCompressedBytes?: number;
+  /** Decompressed size cap in bytes; defaults to 64 MB. */
+  maxExtractedBytes?: number;
 }
 
 export interface FetchedBundle {
@@ -112,11 +120,12 @@ export interface FetchedBundle {
 async function readBoundedBody(
   response: Response,
   url: string,
+  maxCompressedBytes = MAX_COMPRESSED_BYTES,
 ): Promise<Buffer> {
   const declared = response.headers.get("content-length");
-  if (declared && Number(declared) > MAX_COMPRESSED_BYTES) {
+  if (declared && Number(declared) > maxCompressedBytes) {
     throw new Error(
-      `${url} exceeds the ${MAX_COMPRESSED_BYTES}-byte compressed size cap (Content-Length: ${declared})`,
+      `${url} exceeds the ${maxCompressedBytes}-byte compressed size cap (Content-Length: ${declared})`,
     );
   }
   if (!response.body) return Buffer.from(await response.arrayBuffer());
@@ -127,10 +136,10 @@ async function readBoundedBody(
     const { done, value } = await reader.read();
     if (done) break;
     total += value.byteLength;
-    if (total > MAX_COMPRESSED_BYTES) {
+    if (total > maxCompressedBytes) {
       await reader.cancel();
       throw new Error(
-        `${url} exceeds the ${MAX_COMPRESSED_BYTES}-byte compressed size cap`,
+        `${url} exceeds the ${maxCompressedBytes}-byte compressed size cap`,
       );
     }
     chunks.push(value);
@@ -142,6 +151,7 @@ async function downloadTarball(
   name: string,
   version: string,
   timeoutMs: number,
+  maxCompressedBytes = MAX_COMPRESSED_BYTES,
 ): Promise<{ tgz: Buffer; source: "cdn" | "npm" }> {
   const sources: { source: "cdn" | "npm"; url: string }[] = [
     { source: "cdn", url: cdnTarballUrl(name, version) },
@@ -157,7 +167,10 @@ async function downloadTarball(
         lastError = new Error(`${url} responded ${response.status}`);
         continue;
       }
-      return { tgz: await readBoundedBody(response, url), source };
+      return {
+        tgz: await readBoundedBody(response, url, maxCompressedBytes),
+        source,
+      };
     } catch (error) {
       lastError = error;
     }
@@ -185,10 +198,15 @@ export async function fetchPieceBundle(
     };
   }
 
-  const { tgz, source } = await downloadTarball(name, version, timeoutMs);
+  const { tgz, source } = await downloadTarball(
+    name,
+    version,
+    timeoutMs,
+    options.maxCompressedBytes,
+  );
   const staging = `${dir}.tmp-${process.pid}`;
   await rm(staging, { recursive: true, force: true });
-  await extractTarball(tgz, staging);
+  await extractTarball(tgz, staging, options.maxExtractedBytes);
   await rm(dir, { recursive: true, force: true });
   try {
     await rename(staging, dir);
@@ -230,7 +248,12 @@ export async function installPieceBundle(
     };
   }
 
-  const { tgz, source } = await downloadTarball(name, version, timeoutMs);
+  const { tgz, source } = await downloadTarball(
+    name,
+    version,
+    timeoutMs,
+    options.maxCompressedBytes,
+  );
   await rm(workspace, { recursive: true, force: true });
   await mkdir(workspace, { recursive: true });
   await writeFile(path.join(workspace, "bundle.tgz"), tgz);
