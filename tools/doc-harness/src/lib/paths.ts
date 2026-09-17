@@ -18,12 +18,20 @@ export const MONOREPO_ROOT = path.resolve(HARNESS_ROOT, "../..");
 /** apps/academy/docs/academy, relative to the monorepo root (used with git archive). */
 export const DOCS_REL = "apps/academy/docs/academy";
 
-/** The public recipes checkout; sibling of the monorepo unless overridden. */
+/**
+ * The public recipes checkout. Sibling of the monorepo, or of the worktrees
+ * directory when the monorepo is itself a worktree; DOC_HARNESS_RECIPES_DIR
+ * overrides both.
+ */
 export function recipesRoot(): string {
-  return (
-    process.env.DOC_HARNESS_RECIPES_DIR ??
-    path.resolve(MONOREPO_ROOT, "../recipes")
-  );
+  if (process.env.DOC_HARNESS_RECIPES_DIR) {
+    return process.env.DOC_HARNESS_RECIPES_DIR;
+  }
+  const candidates = [
+    path.resolve(MONOREPO_ROOT, "../recipes"),
+    path.resolve(MONOREPO_ROOT, "../../recipes"),
+  ];
+  return candidates.find((c) => existsSync(c)) ?? candidates[0];
 }
 
 export const CATALOG_FILE = path.join(HARNESS_ROOT, "catalog/tasks.json");
