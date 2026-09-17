@@ -59,4 +59,16 @@ describe("booting the API with workflows", () => {
       api.graphqlManager.getSubgraphByName("workflow-runtime"),
     ).toBeUndefined();
   });
+
+  // What a host composing the runtime itself needs back from the boot: the
+  // service its access checks ask, and the database its store lives in.
+  it("hands the host the authorization service and the relational db", async () => {
+    const api = await boot(false);
+
+    expect(api.authorizationService).toBeDefined();
+    expect(typeof api.authorizationService.isSupremeAdmin).toBe("function");
+    expect(typeof api.authorizationService.canRead).toBe("function");
+    expect(api.relationalDb).toBeDefined();
+    expect(typeof api.relationalDb.createNamespace).toBe("function");
+  });
 });

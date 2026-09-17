@@ -793,12 +793,18 @@ importers:
       '@powerhousedao/reactor-group':
         specifier: workspace:*
         version: link:../../packages/reactor-group
+      '@powerhousedao/reactor-workflow':
+        specifier: workspace:*
+        version: link:../../packages/reactor-workflow
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@powerhousedao/vetra':
         specifier: workspace:*
         version: link:../../packages/vetra
+      '@powerhousedao/workflow':
+        specifier: workspace:*
+        version: link:../../packages/workflow
       '@pyroscope/nodejs':
         specifier: ^0.4.5
         version: 0.4.10(express@4.22.1)(fastify@5.8.5)

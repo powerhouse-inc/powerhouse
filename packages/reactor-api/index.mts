@@ -1,6 +1,11 @@
 export * from "./src/graphql/index.js";
+export * from "./src/graphql/errors.js";
 export * from "./src/http/index.js";
 export * from "./src/graphql/types.js";
+// The workflow runtime's GraphQL face. Composed by the host (Switchboard) and
+// bound to the runtime instance it owns; the module names the engine in types
+// only, so importing it pulls no engine into a host with workflows off.
+export { createWorkflowRuntimeSubgraph } from "./src/graphql/workflow/subgraph.js";
 export {
   AuthorizationPolicy,
   AuthorizedDocumentHandle,

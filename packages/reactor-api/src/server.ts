@@ -1316,6 +1316,11 @@ async function _setupAPI(
     attachmentReferenceIndex,
     attachmentAccess,
     authService,
+    // Handed back rather than kept private: a component the host composes
+    // after boot (the workflow runtime) authorizes with this service and
+    // stores in this database.
+    authorizationService,
+    relationalDb,
     dispose,
   };
 }
