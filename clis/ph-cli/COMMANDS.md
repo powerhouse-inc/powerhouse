@@ -544,6 +544,10 @@ Override connect.drives.allowAddDrive (top-level add-drive toggle).<br><br>
 Override connect.packages.externalEnabled.<br><br>
 **usage:** `--external-packages <value>`<br>
 
+#### Workflows <br>
+Override connect.app.workflowsEnabled (load the @powerhousedao/workflow package: workflow + connection documents, their editors and Workflow Studio).<br><br>
+**usage:** `--workflows <value>`<br>
+
 #### Remote Drives Enabled <br>
 Override connect.drives.sections.remote.enabled (the unified cloud+public section).<br><br>
 **usage:** `--remote-drives-enabled <value>`<br>
