@@ -253,3 +253,5 @@ export async function setCacheCurrent(
     // best effort — the notice logic tolerates a missing cache
   }
 }
+
+// Probe: a one-line change in a leaf package, to watch the scoped test selection.
