@@ -64,7 +64,9 @@ export const workflowStepsOperations: WorkflowStepsOperations = {
       step.idempotencyKeyExpression =
         action.input.idempotencyKeyExpression || null;
     }
-    if (action.input.position) step.position = action.input.position;
+    if (action.input.position !== undefined) {
+      step.position = action.input.position ?? null;
+    }
     state.version += 1;
   },
   removeStepOperation(state, action) {

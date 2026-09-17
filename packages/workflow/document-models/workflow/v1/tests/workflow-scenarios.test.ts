@@ -153,6 +153,22 @@ describe("workflow scenarios", () => {
     expect(state.version).toBe(7);
   });
 
+  it("clearing the trigger prunes its outgoing edges", () => {
+    let document = buildGraph();
+    expect(document.state.global.edges.map((edge) => edge.id)).toEqual([
+      "edge-entry",
+      "edge-a-b",
+    ]);
+
+    document = reducer(document, clearTrigger({}));
+
+    const state = document.state.global;
+    expect(state.trigger).toBeNull();
+    // edge-entry ran from the trigger and is now orphaned; edge-a-b (A->B)
+    // does not touch the trigger and survives.
+    expect(state.edges.map((edge) => edge.id)).toEqual(["edge-a-b"]);
+  });
+
   it("rejects clearing an unset trigger and keeps state unchanged", () => {
     const document = utils.createDocument();
     const updated = reducer(document, clearTrigger({}));
@@ -236,6 +252,23 @@ describe("workflow scenarios", () => {
     expect(document.operations.global[7].error).toBeUndefined();
   });
 
+  it("distinguishes an explicit null position from an omitted one", () => {
+    let document = buildGraph();
+    document = reducer(
+      document,
+      updateStep({ id: STEP_A, position: { x: 1, y: 2 } }),
+    );
+    expect(document.state.global.steps[0].position).toEqual({ x: 1, y: 2 });
+
+    // Omitted: leave the stored position unchanged.
+    document = reducer(document, updateStep({ id: STEP_A, name: "Fetch v2" }));
+    expect(document.state.global.steps[0].position).toEqual({ x: 1, y: 2 });
+
+    // Explicit null: clear it.
+    document = reducer(document, updateStep({ id: STEP_A, position: null }));
+    expect(document.state.global.steps[0].position).toBeNull();
+  });
+
   it("rejects updates to missing steps and conflicting keys", () => {
     let document = buildGraph();
     document = reducer(document, updateStep({ id: "step-x", name: "Nope" }));
@@ -301,6 +334,28 @@ describe("workflow scenarios", () => {
     expect(document.state.global.edges).toHaveLength(2);
   });
 
+  it("rejects an edge that would close a cycle", () => {
+    let document = buildGraph();
+    // buildGraph already wires trigger->A->B; B->A would close the loop.
+    document = reducer(
+      document,
+      addEdge({ id: "edge-b-a", from: STEP_B, to: STEP_A, port: "next" }),
+    );
+    expect(document.operations.global[5].error).toBe(
+      "Edge would create a cycle in the workflow graph",
+    );
+    expect(document.state.global.edges).toHaveLength(2);
+
+    // A self-loop is a trivial cycle too.
+    document = reducer(
+      document,
+      addEdge({ id: "edge-a-a", from: STEP_A, to: STEP_A, port: "next" }),
+    );
+    expect(document.operations.global[6].error).toBe(
+      "Edge would create a cycle in the workflow graph",
+    );
+  });
+
   it("removes edges and rejects unknown edge ids", () => {
     let document = buildGraph();
     document = reducer(document, removeEdge({ id: "edge-a-b" }));
@@ -354,6 +409,46 @@ describe("workflow scenarios", () => {
 
     document = reducer(document, removeVariable({ id: "var-1" }));
     expect(document.operations.global[5].error).toBe("Variable not found");
+  });
+
+  it("clears a variable description via null or empty string, but not by omitting it", () => {
+    let document = utils.createDocument();
+    document = reducer(
+      document,
+      setVariable({
+        id: "var-1",
+        key: "region",
+        value: "eu-west-1",
+        description: "Deployment region",
+      }),
+    );
+
+    // Omitted: leaves the stored description alone.
+    document = reducer(
+      document,
+      setVariable({ id: "var-2", key: "region", value: "us-east-1" }),
+    );
+    expect(document.state.global.variables[0].description).toBe(
+      "Deployment region",
+    );
+
+    // Explicit null: clears it.
+    document = reducer(
+      document,
+      setVariable({ id: "var-3", key: "region", description: null }),
+    );
+    expect(document.state.global.variables[0].description).toBeNull();
+
+    document = reducer(
+      document,
+      setVariable({ id: "var-4", key: "region", description: "Restored" }),
+    );
+    // Explicit "": also clears it.
+    document = reducer(
+      document,
+      setVariable({ id: "var-5", key: "region", description: "" }),
+    );
+    expect(document.state.global.variables[0].description).toBeNull();
   });
 
   it("updates policy fields individually and together", () => {

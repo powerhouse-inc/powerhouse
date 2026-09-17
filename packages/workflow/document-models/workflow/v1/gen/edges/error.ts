@@ -2,6 +2,7 @@ export type ErrorCode =
   | "DuplicateEdgeIdError"
   | "EdgeSourceNotFoundError"
   | "EdgeTargetNotFoundError"
+  | "EdgeCycleError"
   | "EdgeNotFoundError";
 
 export interface ReducerError {
@@ -29,6 +30,13 @@ export class EdgeTargetNotFoundError extends Error implements ReducerError {
   }
 }
 
+export class EdgeCycleError extends Error implements ReducerError {
+  errorCode = "EdgeCycleError" as ErrorCode;
+  constructor(message = "EdgeCycleError") {
+    super(message);
+  }
+}
+
 export class EdgeNotFoundError extends Error implements ReducerError {
   errorCode = "EdgeNotFoundError" as ErrorCode;
   constructor(message = "EdgeNotFoundError") {
@@ -41,6 +49,7 @@ export const errors = {
     DuplicateEdgeIdError,
     EdgeSourceNotFoundError,
     EdgeTargetNotFoundError,
+    EdgeCycleError,
   },
 
   RemoveEdge: { EdgeNotFoundError },

@@ -230,7 +230,7 @@ export const documentModel: DocumentModelGlobalState = {
               template:
                 "Adds an edge. The source may be a step or the trigger; the target must be a step.",
               reducer:
-                'if (state.edges.some((edge) => edge.id === action.input.id)) {\n    throw new DuplicateEdgeIdError("An edge with this id already exists");\n}\nconst fromExists =\n    state.steps.some((step) => step.id === action.input.from) ||\n    state.trigger?.id === action.input.from;\nif (!fromExists) {\n    throw new EdgeSourceNotFoundError("Edge source step or trigger not found");\n}\nif (!state.steps.some((step) => step.id === action.input.to)) {\n    throw new EdgeTargetNotFoundError("Edge target step not found");\n}\nstate.edges.push({\n    id: action.input.id,\n    from: action.input.from,\n    to: action.input.to,\n    port: action.input.port,\n    condition: action.input.condition || null,\n});\nstate.version += 1;',
+                'if (state.edges.some((edge) => edge.id === action.input.id)) {\n    throw new DuplicateEdgeIdError("An edge with this id already exists");\n}\nconst fromExists =\n    state.steps.some((step) => step.id === action.input.from) ||\n    state.trigger?.id === action.input.from;\nif (!fromExists) {\n    throw new EdgeSourceNotFoundError("Edge source step or trigger not found");\n}\nif (!state.steps.some((step) => step.id === action.input.to)) {\n    throw new EdgeTargetNotFoundError("Edge target step not found");\n}\nif (wouldCycle(state.edges, action.input.from, action.input.to)) {\n    throw new EdgeCycleError("Edge would create a cycle in the workflow graph");\n}\nstate.edges.push({\n    id: action.input.id,\n    from: action.input.from,\n    to: action.input.to,\n    port: action.input.port,\n    condition: action.input.condition || null,\n});\nstate.version += 1;',
               errors: [
                 {
                   id: "aa22b9b5-bbd7-4d80-b6b6-573c5f761ed7",
@@ -252,6 +252,14 @@ export const documentModel: DocumentModelGlobalState = {
                   name: "EdgeTargetNotFoundError",
                   code: "EDGE_TARGET_NOT_FOUND",
                   description: "The edge target references no existing step.",
+                  template: "",
+                },
+                {
+                  id: "6e4a5f2b-3c7d-4e19-9a2b-8d0c1f5e7a6b",
+                  name: "EdgeCycleError",
+                  code: "EDGE_CYCLE",
+                  description:
+                    "The edge would create a cycle in the workflow graph.",
                   template: "",
                 },
               ],

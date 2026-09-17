@@ -16,7 +16,9 @@ export const workflowTriggerOperations: WorkflowTriggerOperations = {
     if (!state.trigger) {
       throw new TriggerNotSetError("Workflow has no trigger to clear");
     }
+    const triggerId = state.trigger.id;
     state.trigger = null;
+    state.edges = state.edges.filter((edge) => edge.from !== triggerId);
     state.version += 1;
   },
 };

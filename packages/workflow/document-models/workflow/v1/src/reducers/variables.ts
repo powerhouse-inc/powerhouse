@@ -8,8 +8,10 @@ export const workflowVariablesOperations: WorkflowVariablesOperations = {
     );
     if (existing) {
       existing.value = action.input.value ?? null;
-      if (action.input.description)
-        existing.description = action.input.description;
+      // Undefined leaves it unchanged; an explicit null or "" clears it.
+      if (action.input.description !== undefined) {
+        existing.description = action.input.description || null;
+      }
     } else {
       state.variables.push({
         id: action.input.id,

@@ -82,6 +82,69 @@ describe("connection scenarios", () => {
     expect(document.state.global.authType).toBe("OAUTH2");
   });
 
+  it("clears the old connector's config, secrets and health on rebind", () => {
+    let document = utils.createDocument();
+    document = reducer(
+      document,
+      setConnector({ connectorId: "a#x", authType: "SECRET_TEXT" }),
+    );
+    document = reducer(document, setConfig({ config: { host: "a.example" } }));
+    document = reducer(
+      document,
+      setSecretRef({ id: "sr-1", name: "token", ref: "vault://a" }),
+    );
+    document = reducer(
+      document,
+      setAccountLabel({ accountLabel: "a@example.com" }),
+    );
+    document = reducer(
+      document,
+      recordCheckResult({
+        status: "OK",
+        checkedAt: "2026-09-01T12:00:00.000Z",
+      }),
+    );
+
+    document = reducer(
+      document,
+      setConnector({ connectorId: "b#y", authType: "OAUTH2" }),
+    );
+
+    const state = document.state.global;
+    expect(state.connectorId).toBe("b#y");
+    expect(state.status).toBe("UNCONFIGURED");
+    expect(state.config).toEqual({});
+    expect(state.secretRefs).toEqual([]);
+    expect(state.accountLabel).toBeNull();
+    expect(state.lastCheckedAt).toBeNull();
+    expect(state.lastError).toBeNull();
+  });
+
+  it("leaves config and secrets untouched when the connector is unchanged", () => {
+    let document = utils.createDocument();
+    document = reducer(
+      document,
+      setConnector({ connectorId: "a#x", authType: "SECRET_TEXT" }),
+    );
+    document = reducer(document, setConfig({ config: { host: "a.example" } }));
+    document = reducer(
+      document,
+      setSecretRef({ id: "sr-1", name: "token", ref: "vault://a" }),
+    );
+
+    // Same connectorId, e.g. a form re-submitting the same picker choice.
+    document = reducer(
+      document,
+      setConnector({ connectorId: "a#x", authType: "SECRET_TEXT" }),
+    );
+
+    const state = document.state.global;
+    expect(state.config).toEqual({ host: "a.example" });
+    expect(state.secretRefs).toEqual([
+      { id: "sr-1", name: "token", ref: "vault://a" },
+    ]);
+  });
+
   it("upserts secret refs by name and removes them by id", () => {
     let document = utils.createDocument();
     document = reducer(
