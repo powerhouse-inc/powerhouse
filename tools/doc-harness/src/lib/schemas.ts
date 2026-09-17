@@ -50,6 +50,7 @@ export type ResultRecord = z.infer<typeof ResultRecord>;
 export const ClaudeFailureReason = z.enum([
   "no-result-record",
   "api-error",
+  "budget-exhausted",
   "wall-clock",
   "nonzero-exit",
   "spawn-error",
