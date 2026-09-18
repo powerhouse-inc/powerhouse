@@ -702,4 +702,82 @@ describe("holding outbox entries the caller may not read", () => {
 
     expect(result.deadLetters.map((d) => d.documentId)).toEqual(["doc-served"]);
   });
+
+  /** Serving an entry no refusal ever saw is how a withheld run reaches a peer
+   * the policy denies it to, since the mailboxes fill while those checks await. */
+  describe("entries that arrive after the caller's checks", () => {
+    it("are not served, and keep their counters", () => {
+      const examined = makeSyncOp("job-examined", "doc-examined", [1]);
+      const arrived = makeSyncOp("job-arrived", "doc-arrived", [2]);
+      const syncManager = makeSyncManager([examined, arrived]);
+
+      const result = pollSyncEnvelopes(
+        syncManager,
+        { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+        new Set(),
+        new Set(),
+        new Set(["job-examined"]),
+      );
+
+      expect(ordinalsOf(result)).toEqual([1]);
+      expect(arrived.deliveredCount).toBe(0);
+      expect(arrived.emittedCount).toBe(0);
+      expect(result.hasMore).toBe(false);
+    });
+
+    it("are served whole by the next poll, which examined them", () => {
+      const arrived = makeSyncOp("job-arrived", "doc-arrived", [1, 2]);
+      const syncManager = makeSyncManager([arrived]);
+
+      pollSyncEnvelopes(
+        syncManager,
+        { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+        new Set(),
+        new Set(),
+        new Set<string>(),
+      );
+      const after = pollSyncEnvelopes(
+        syncManager,
+        { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+        new Set(),
+        new Set(),
+        new Set(["job-arrived"]),
+      );
+
+      expect(ordinalsOf(after)).toEqual([1, 2]);
+    });
+
+    it("include dead letters, which are reported no earlier", () => {
+      const arrived = makeSyncOp("dl-arrived", "doc-arrived", [1]);
+      const syncManager = makeSyncManager([]);
+      const remote = (
+        syncManager as unknown as { getById: (id: string) => FakeRemote }
+      ).getById(CHANNEL_ID);
+      remote.channel.deadLetter.items.push(arrived);
+
+      const result = pollSyncEnvelopes(
+        syncManager,
+        { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+        new Set(),
+        new Set(),
+        new Set<string>(),
+      );
+
+      expect(result.deadLetters).toEqual([]);
+    });
+
+    it("do not arise for a caller that refuses nothing and examines nothing", () => {
+      const first = makeSyncOp("job-1", "doc-1", [1]);
+      const second = makeSyncOp("job-2", "doc-2", [2]);
+      const syncManager = makeSyncManager([first, second]);
+
+      const ungated = pollSyncEnvelopes(syncManager, {
+        channelId: CHANNEL_ID,
+        outboxAck: 0,
+        outboxLatest: 0,
+      });
+
+      expect(ordinalsOf(ungated)).toEqual([1, 2]);
+    });
+  });
 });

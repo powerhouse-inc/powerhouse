@@ -1454,6 +1454,9 @@ export function pollSyncEnvelopes(
   },
   forbiddenIds: ReadonlySet<string> = new Set(),
   heldOpIds: ReadonlySet<string> = new Set(),
+  // The entries the caller's two refusals were evaluated against. An entry that
+  // arrived since is withheld, so no poll serves what it has not examined.
+  examinedIds?: ReadonlySet<string>,
 ): {
   envelopes: any[];
   ackOrdinal: number;
@@ -1482,13 +1485,20 @@ export function pollSyncEnvelopes(
   // channel still has a holder.
   remote.channel.notePoll();
 
+  // Withheld the way a held entry is, and for the same reason: the mailboxes
+  // fill while the caller's checks await, and an unchecked entry is a leak.
+  const unexamined = (syncOp: SyncOperation): boolean =>
+    examinedIds !== undefined && !examinedIds.has(syncOp.id);
+
   // Dead-letter items can originate from failed inbox jobs whose documentId is
   // outside this channel's collection, so they are filtered by the caller's read
   // access independently of the outbox (see the poll resolver in subgraph.ts).
   const deadLetters = remote.channel.deadLetter.items
     .filter(
       (syncOp) =>
-        !forbiddenIds.has(syncOp.documentId) && !heldOpIds.has(syncOp.id),
+        !forbiddenIds.has(syncOp.documentId) &&
+        !heldOpIds.has(syncOp.id) &&
+        !unexamined(syncOp),
     )
     .map((syncOp) => ({
       documentId: syncOp.documentId,
@@ -1580,7 +1590,7 @@ export function pollSyncEnvelopes(
     // entry was delivered and may be evicted. A hold sets no hasMore either --
     // there is no later page that would serve it, so claiming one would spin the
     // puller.
-    if (heldOpIds.has(syncOp.id)) continue;
+    if (heldOpIds.has(syncOp.id) || unexamined(syncOp)) continue;
 
     // Advance the per-syncOp delivery cursor past leading ops the client has
     // both received (outboxLatest) and we have previously emitted
