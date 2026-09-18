@@ -33,7 +33,7 @@ import {
 import type { Project } from "ts-morph";
 import { buildTsMorphProject, fixGenerateMockImports } from "utils";
 import { writePackage } from "write-package";
-import { detectFeatures } from "./features.js";
+import { detectFeatures, type Feature } from "./features.js";
 import { generateAll } from "./generate.js";
 import { sortByKey } from "./utils.js";
 
@@ -131,24 +131,25 @@ function preserveProtected(
   return result;
 }
 
-export async function migrate(version: string, projectDir = process.cwd()) {
-  const fullyQualifiedVersion =
-    await getFullyQualifiedWorkspacePackageVersion(version);
-
-  const packageJson = await readPackage({
-    cwd: projectDir,
-    normalize: false,
-  });
-  const exports = packageJsonExports;
-  const scripts = merge(packageJson.scripts, packageScripts);
-  const workspacePackageNames = filter(
-    map(WORKSPACE_PACKAGES, prop("manifest", "name")),
-    isTruthy,
-  );
-
-  const features = detectFeatures(projectDir);
+// The peer and dev sets migrate rewrites, as a pure function of what it read.
+// Split out so the rewrite can be checked without a registry or an install.
+export function resolveManagedDependencies(input: {
+  packageJson: PackageJson;
+  features: readonly Feature[];
+  fullyQualifiedVersion: string;
+  workspacePackageNames: readonly string[];
+}) {
+  const {
+    packageJson,
+    features,
+    fullyQualifiedVersion,
+    workspacePackageNames,
+  } = input;
   const featurePeerVersioned = features.flatMap(
     (f) => FEATURE_DEPENDENCIES[f].peerVersioned as readonly string[],
+  );
+  const featureDevVersioned = features.flatMap(
+    (f) => FEATURE_DEPENDENCIES[f].devVersioned as readonly string[],
   );
   const featurePeerExternal = features.reduce<
     Record<string, { peer: string; dev: string }>
@@ -163,9 +164,12 @@ export async function migrate(version: string, projectDir = process.cwd()) {
     ...keys(PEER_EXTERNAL_DEPENDENCIES),
     ...keys(featurePeerExternal),
   ];
+  // featureDevVersioned lands here and so also in managedDevNames, which the
+  // peer pipe omits — a dev-only feature dep is stripped from peers by that.
   const managedDevVersioned = [
     ...VERSIONED_DEV_DEPENDENCIES,
     ...managedPeerVersioned,
+    ...featureDevVersioned,
   ];
   const managedDevNames = [
     ...managedDevVersioned,
@@ -232,6 +236,31 @@ export async function migrate(version: string, projectDir = process.cwd()) {
     ),
     sortByKey,
   );
+
+  return { peerDependencies, devDependencies };
+}
+
+export async function migrate(version: string, projectDir = process.cwd()) {
+  const fullyQualifiedVersion =
+    await getFullyQualifiedWorkspacePackageVersion(version);
+
+  const packageJson = await readPackage({
+    cwd: projectDir,
+    normalize: false,
+  });
+  const exports = packageJsonExports;
+  const scripts = merge(packageJson.scripts, packageScripts);
+  const workspacePackageNames = filter(
+    map(WORKSPACE_PACKAGES, prop("manifest", "name")),
+    isTruthy,
+  );
+
+  const { peerDependencies, devDependencies } = resolveManagedDependencies({
+    packageJson,
+    features: detectFeatures(projectDir),
+    fullyQualifiedVersion,
+    workspacePackageNames,
+  });
 
   console.log("Updating package.json...");
   const updatedPackageJson: PackageJson = {

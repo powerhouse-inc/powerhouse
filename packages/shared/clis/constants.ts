@@ -94,6 +94,7 @@ export const ANALYTICS_ENGINE_CORE_PACKAGE =
   "@powerhousedao/analytics-engine-core";
 export const GRAPHQL_PACKAGE = "graphql";
 export const GRAPHQL_TAG_PACKAGE = "graphql-tag";
+export const PIECES_FRAMEWORK_PACKAGE = "@powerhousedao/pieces-framework";
 
 // External peerDependencies of every generated project.
 // `peer` is the consumer-facing range; `dev` is the exact build-tested pin.
@@ -109,15 +110,28 @@ export const PEER_EXTERNAL_DEPENDENCIES = {
   zod: { peer: "^4", dev: "4.3.6" },
 } as const satisfies Record<string, PeerSpec>;
 
-// Per-feature deps added dynamically by codegen when required.
+// Per-feature deps added dynamically by codegen when required. `devVersioned`
+// is for a workspace package the build inlines, which no consumer provides.
 export const FEATURE_DEPENDENCIES = {
   analyticsProcessor: {
     peerVersioned: [ANALYTICS_ENGINE_CORE_PACKAGE],
     peerExternal: {},
+    devVersioned: [],
+  },
+  // Each piece is bundled whole (build-pieces.mts), framework included, so the
+  // framework is only ever needed to compile the piece's own source.
+  piece: {
+    peerVersioned: [],
+    peerExternal: {},
+    devVersioned: [PIECES_FRAMEWORK_PACKAGE],
   },
 } as const satisfies Record<
   string,
-  { peerVersioned: readonly string[]; peerExternal: Record<string, PeerSpec> }
+  {
+    peerVersioned: readonly string[];
+    peerExternal: Record<string, PeerSpec>;
+    devVersioned: readonly string[];
+  }
 >;
 
 export const VERSIONED_DEPENDENCIES = [
