@@ -69,6 +69,25 @@ export type DocumentModelModuleFileMakerArgs = DocumentModelFileMakerArgs & {
   module: ModuleSpecification;
 };
 
+export type PieceAuthKind = "none" | "secret" | "custom";
+
+export type PieceTriggerStrategy = "polling" | "webhook";
+
+// The name bundle every piece template takes, computed once by the file
+// builder so no two templates spell the same piece differently.
+export type PieceNames = {
+  /** Directory under pieces/, e.g. "acme-crm". */
+  kebabCaseName: string;
+  /** The exported const, e.g. "acmeCrm". */
+  camelCaseName: string;
+  /** Type and class prefix, e.g. "AcmeCrm". */
+  pascalCaseName: string;
+  /** SCREAMING_SNAKE, e.g. "ACME_CRM". */
+  constantCaseName: string;
+  /** Human name, e.g. "Acme Crm". */
+  displayName: string;
+};
+
 export type CommandEntry = {
   name: string;
   command: {

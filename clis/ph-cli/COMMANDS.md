@@ -9,6 +9,9 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [App](#app)
 - [Processor](#processor)
 - [Subgraph](#subgraph)
+- [Piece](#piece)
+- [Piece Action](#piece-action)
+- [Piece Trigger](#piece-trigger)
 - [Migration File](#migration-file)
 - [Vetra](#vetra)
 - [Build](#build)
@@ -220,6 +223,114 @@ Re-generate all existing subgraphs in the current project<br><br>
 Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/<br><br>
 **usage:** `--extract, -x`<br>
 
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Piece
+Generate a piece: a connector whose actions and triggers a workflow can call
+### arguments
+#### Name <br>
+The name of the piece to generate. Its directory is the kebab-case of this.<br><br>
+**usage:** `[name]`<br>
+
+
+### options
+#### Name <br>
+The name of the piece to generate<br><br>
+**usage:** `--name, -n <str>`<br>
+
+#### Id <br>
+The piece id a workflow block type names, e.g. @acme/piece-crm. Defaults to one derived from the package name.<br><br>
+**usage:** `--id <str>`<br>
+
+#### Piece Version <br>
+The version the pieces list declares. Defaults to the package version when the piece is named after the package, else 1.0.0.<br><br>
+**usage:** `--piece-version <str>`<br>
+
+#### Auth <br>
+The kind of connection the piece asks for<br><br>
+**usage:** `--auth <value>`<br>
+**default**: `custom`
+#### Description <br>
+One line describing what the piece connects to<br><br>
+**usage:** `--description <str>`<br>
+
+#### Dir <br>
+Name of the directory of an existing piece to re-register<br><br>
+**usage:** `--dir <dir>`<br>
+
+
+### flags
+#### All <br>
+Re-register every piece in pieces/: refresh the pieces list and the manifest, and prune what is gone<br><br>
+**usage:** `--all, -a`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Piece Action
+Generate an action inside an existing piece
+### arguments
+#### Name <br>
+The name of the action, e.g. get-record<br><br>
+**usage:** `[name]`<br>
+
+
+### options
+#### Name <br>
+The name of the action to generate<br><br>
+**usage:** `--name, -n <str>`<br>
+
+#### Piece <br>
+The piece directory under pieces/ to add the action to. Optional when the project ships exactly one piece.<br><br>
+**usage:** `--piece, -p <str>`<br>
+
+
+### flags
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Piece Trigger
+Generate a trigger inside an existing piece
+### arguments
+#### Name <br>
+The name of the trigger, e.g. new-record<br><br>
+**usage:** `[name]`<br>
+
+
+### options
+#### Name <br>
+The name of the trigger to generate<br><br>
+**usage:** `--name, -n <str>`<br>
+
+#### Piece <br>
+The piece directory under pieces/ to add the trigger to. Optional when the project ships exactly one piece.<br><br>
+**usage:** `--piece, -p <str>`<br>
+
+#### Strategy <br>
+How the trigger fires: polled on a schedule, or delivered to a webhook<br><br>
+**usage:** `--strategy <value>`<br>
+**default**: `polling`
+
+### flags
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>

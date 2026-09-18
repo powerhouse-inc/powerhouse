@@ -72,6 +72,7 @@ export * from "./document-model/tests/module.test.js";
 export * from "./document-model/upgrades/upgrade-manifest.js";
 export * from "./document-model/upgrades/upgrade-transition.js";
 export * from "./document-model/utils.js";
+export * from "./pieces/index.js";
 export * from "./processors/analytics/factory.js";
 export * from "./processors/analytics/index.js";
 export * from "./processors/analytics/processor.js";
