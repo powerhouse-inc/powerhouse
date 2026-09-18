@@ -4,12 +4,21 @@ import {
   buildNodeBuildConfig,
   findBundledSharedDeps,
 } from "@powerhousedao/shared/build-config";
+import type { BuiltPiece } from "@powerhousedao/shared/build-pieces";
+import {
+  assertPiecesOutDir,
+  buildPieces,
+  expandEntryGlobs,
+  pieceListPath,
+  planPieces,
+  syncDistManifest,
+} from "@powerhousedao/shared/build-pieces";
 import {
   findSharedImports,
   EXTERNALIZABLE_SHARED_SPECIFIERS,
 } from "@powerhousedao/shared/connect";
 import { execSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { detect, resolveCommand } from "package-manager-detector";
 import { readPackage } from "read-pkg";
@@ -52,10 +61,19 @@ export async function assertManifestNameMatchesPackage(projectPath: string) {
 
 export async function runBuild(args: BuildArgs) {
   const { outDir } = args;
+  const projectRoot = process.cwd();
 
   // Fail fast if the manifest name and package.json name have drifted apart.
-  await assertManifestNameMatchesPackage(process.cwd());
+  await assertManifestNameMatchesPackage(projectRoot);
 
+  const target = {
+    projectRoot,
+    outDir,
+    pieces: planPieces(projectRoot, outDir),
+  };
+  // Before any bundler runs: an out-dir a host will never read from is worth
+  // nothing built, and the failure names what the contract is.
+  assertPiecesOutDir(target);
   const sharedDeps = !args.noSharedDeps;
 
   await tsdownBuild({
@@ -66,7 +84,7 @@ export async function runBuild(args: BuildArgs) {
   // Advisory: a shared dep the source imports but the output no longer
   // references as a bare import was inlined despite the external set.
   if (sharedDeps) {
-    const imported = findSharedImportsInSources(process.cwd(), browserEntry);
+    const imported = findSharedImportsInSources(projectRoot, browserEntry);
     const bundled = findBundledSharedDeps(
       imported,
       readDistBrowserFiles(join(outDir, "browser")),
@@ -82,6 +100,23 @@ export async function runBuild(args: BuildArgs) {
     ...buildNodeBuildConfig({ sharedDeps }),
     outDir: join(outDir, "node"),
   });
+
+  // After the node build: it cleans <outDir>/node, where the pieces land. The
+  // built list is the gate, so a `bundle:` entry is validated with no piece dir.
+  let built: BuiltPiece[] = [];
+  if (existsSync(pieceListPath(target))) {
+    const pkg = await readPackage({ cwd: projectRoot });
+    built = await buildPieces(
+      target,
+      {
+        name: pkg.name,
+        version: pkg.version,
+        license: typeof pkg.license === "string" ? pkg.license : undefined,
+      },
+      { bundle: tsdownBuild },
+    );
+  }
+  syncDistManifest(target, built);
 
   const detectResult = await detect();
   const agent = detectResult?.agent ?? "npm";
@@ -122,44 +157,6 @@ export async function runBuild(args: BuildArgs) {
   execSync(
     `${executeLocalCommand.command} ${executeLocalCommand.args.join(" ")}`,
   );
-}
-
-function statSafe(p: string) {
-  try {
-    return statSync(p);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Expand entry globs (single-`*` segments only — the shape `browserEntry`
- * uses) against files on disk, resolving against `root`.
- */
-function expandEntryGlobs(root: string, globs: string[]): string[] {
-  const files = new Set<string>();
-  for (const pattern of globs) {
-    const segments = pattern.split("/").filter(Boolean);
-    let dirs = [root];
-    for (const seg of segments) {
-      const next: string[] = [];
-      for (const d of dirs) {
-        if (!statSafe(d)?.isDirectory()) continue;
-        if (seg === "*") {
-          for (const e of readdirSync(d, { withFileTypes: true })) {
-            next.push(join(d, e.name));
-          }
-        } else {
-          next.push(join(d, seg));
-        }
-      }
-      dirs = next;
-    }
-    for (const f of dirs) {
-      if (statSafe(f)?.isFile()) files.add(f);
-    }
-  }
-  return [...files];
 }
 
 /**

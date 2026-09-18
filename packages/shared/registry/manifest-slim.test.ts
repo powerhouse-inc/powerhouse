@@ -33,6 +33,31 @@ describe("slimManifest", () => {
     expect(slimManifest(manifest)).toEqual(manifest);
   });
 
+  // `ph build` fills these in from the built piece; a listing needs them to
+  // offer a piece nobody has installed yet, so they survive the slimming.
+  it("keeps what ph build wrote on a piece entry and drops the rest", () => {
+    const built = {
+      id: "@powerhousedao/piece-paperless-ngx",
+      name: "Paperless-ngx",
+      version: "0.1.0",
+      description: "Upload, search and tag documents.",
+      bundle: "dist/node/pieces/paperless-ngx",
+      descriptor: "dist/node/pieces/paperless-ngx/descriptor.json",
+    };
+    const manifest = {
+      name: "@x/pkg",
+      pieces: [
+        { ...built, logoUrl: "data:image/svg+xml,...", actions: { a: {} } },
+        { id: "@x/other", name: "Other", version: 3 },
+      ],
+    } as unknown as Manifest;
+
+    expect(slimManifest(manifest)).toEqual({
+      name: "@x/pkg",
+      pieces: [built, { id: "@x/other", name: "Other" }],
+    });
+  });
+
   it("strips unknown junk fields (the 8MB agent-manifest case)", () => {
     const junk = {
       name: "ph-apeiron-cli",

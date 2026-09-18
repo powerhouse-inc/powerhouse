@@ -11,8 +11,10 @@ import {
   buildBrowserBuildConfig,
   browserEntry,
   buildNodeBuildConfig,
+  buildPieceBuildConfig,
   findBundledSharedDeps,
   nodeBuildConfig,
+  PIECE_ENTRY_GLOB,
 } from "./build-config.mts";
 
 function sharedMatchers(cfg: InlineConfig): RegExp[] {
@@ -131,6 +133,8 @@ describe("buildNodeBuildConfig", () => {
     // ./pieces is node-only and must stay in the node entry set.
     expect(cfg.entry).toContain("pieces/index.ts");
     expect(cfg.entry).not.toContain("reactor/index.ts");
+    // Each piece is its own build, so the list is the only piece entry here.
+    expect(cfg.entry).not.toContain(PIECE_ENTRY_GLOB);
     const neverBundle = cfg.deps!.neverBundle as (string | RegExp)[];
     expect(neverBundle).toContain("@powerhousedao/reactor-api");
     expect(neverBundle).toContain("react");
@@ -204,5 +208,31 @@ describe("findBundledSharedDeps", () => {
     expect(
       findBundledSharedDeps([], [{ path: "index.js", content: "export {};" }]),
     ).toEqual([]);
+  });
+});
+
+describe("buildPieceBuildConfig", () => {
+  const cfg = buildPieceBuildConfig({
+    entry: "pieces/invoices/index.ts",
+    outDir: "dist/node/pieces/invoices",
+  });
+
+  it("builds one piece into its own directory as a single module", () => {
+    expect(cfg.entry).toEqual({ index: "pieces/invoices/index.ts" });
+    expect(cfg.outDir).toBe("dist/node/pieces/invoices");
+    expect(cfg.platform).toBe("node");
+    expect(cfg.outputOptions).toEqual({ codeSplitting: false });
+  });
+
+  // A piece runs in a forked worker with no node_modules, so the shared set,
+  // the framework and React alike are inlined: nothing is left to the host.
+  it("externalizes nothing, and says so without tsdown's bundling hint", () => {
+    expect(cfg.deps!.alwaysBundle).toEqual(["**"]);
+    expect(cfg.deps!.neverBundle).toEqual([]);
+    expect(cfg.deps!.onlyAllowBundle).toBe(false);
+  });
+
+  it("does not emit declarations itself (tsc does)", () => {
+    expect(cfg.dts).toBe(false);
   });
 });

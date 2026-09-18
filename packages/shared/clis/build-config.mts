@@ -20,8 +20,14 @@ const entry = [
 ];
 
 // ./pieces is node-only for the same reason ./reactor is browser-only: a piece
-// is loaded and run by a host process, never by the browser.
-const nodeEntry = [...entry, "pieces/index.ts", "pieces/*/index.ts"];
+// is loaded and run by a host process, never by the browser. Only the list of
+// pieces builds here; each piece is its own build (buildPieceBuildConfig), so
+// two pieces never share a chunk and each ships as one self-contained module.
+const nodeEntry = [...entry, "pieces/index.ts"];
+
+// Where a package's pieces live, one directory per piece, as the node entry
+// glob spells it; `ph build` expands it against the project to find them.
+export const PIECE_ENTRY_GLOB = "pieces/*/index.ts";
 
 // ./reactor is browser-only: the SharedWorker needs it, the node build does not.
 export const browserEntry = [...entry, "reactor/index.ts"];
@@ -199,3 +205,40 @@ export function buildNodeBuildConfig(
 
 // Kept for existing callers: the default (shared deps externalized).
 export const nodeBuildConfig: InlineConfig = buildNodeBuildConfig();
+
+export type PieceBuildConfigOptions = {
+  /** The piece's source entry, relative to the project: `pieces/<dir>/index.ts`. */
+  entry: string;
+  /** Where the piece lands: `<outDir>/node/pieces/<dir>`. */
+  outDir: string;
+};
+
+/**
+ * One piece, bundled whole. A piece runs in a forked worker with no
+ * node_modules beside it, so nothing the piece imports can be left to the
+ * host: the framework, its dependencies and the shared set that every other
+ * module kind externalizes are all inlined here, and only node built-ins stay
+ * external. Code splitting is off for the same reason, so a dynamic import is
+ * inlined too and the piece directory holds exactly one module.
+ */
+export function buildPieceBuildConfig(
+  options: PieceBuildConfigOptions,
+): InlineConfig {
+  return {
+    entry: { index: options.entry },
+    outDir: options.outDir,
+    platform: "node",
+    deps: {
+      alwaysBundle,
+      neverBundle: [],
+      // Inlining dependencies is the point here, so tsdown's hint about it
+      // would only be noise on every piece.
+      onlyAllowBundle: false,
+    },
+    outputOptions: { codeSplitting: false },
+    config,
+    clean,
+    dts,
+    sourcemap,
+  };
+}

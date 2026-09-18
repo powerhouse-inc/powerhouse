@@ -114,6 +114,10 @@
     "./build-config": {
       "source": "./clis/build-config.mts",
       "import": "./dist/clis/build-config.mjs"
+    },
+    "./build-pieces": {
+      "source": "./clis/build-pieces.mts",
+      "import": "./dist/clis/build-pieces.mjs"
     }
   },
   "dependencies": {

@@ -244,6 +244,7 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Subgraph](#subgraph)
 - [Migration File](#migration-file)
 - [Vetra](#vetra)
+- [Build](#build)
 - [Connect](#connect)
 - [Connect Studio](#connect-studio)
 - [Connect Build](#connect-build)
@@ -531,6 +532,35 @@ it never replaces the Vetra drive.
 **Https** - Use https - Usage: `--https`
 
 **Dev** - enable development mode to load local packages - Usage: `--dev`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Build
+
+Build a Powerhouse package for publishing: a browser bundle and a node bundle of its
+document models, editors, subgraphs and processors, type declarations, and its stylesheet.
+
+Pieces under pieces/ are built too, each into its own self-contained module under
+dist/node/pieces/&lt;name&gt;, with a descriptor.json and package.json written beside it and
+the piece listed in dist/powerhouse.manifest.json. A package that ships only pieces is an
+ordinary package: it carries the same boilerplate, and every step above runs for it too.
+
+
+
+### Options
+**Out Dir** - Where to output the bundled code - Usage: `--out-dir <str>`
+
+**Default:** `dist`
+
+
+
+
+### Flags
+**No Shared Deps** - Bundle the shared dependency set instead of externalizing it (default: externalize) - Usage: `--no-shared-deps`
+
+**Default:** `false`
+**Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
 
