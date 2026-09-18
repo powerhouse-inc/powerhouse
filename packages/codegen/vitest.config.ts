@@ -13,6 +13,7 @@ export default defineConfig({
     // predate this config and have never been wired into the workspace runner;
     // folding them in is a separate effort from this change.
     include: [
+      "src/codegen/features.test.ts",
       "src/file-builders/boilerplate/package.json.test.ts",
       "src/file-builders/boilerplate/project-ports.test.ts",
     ],

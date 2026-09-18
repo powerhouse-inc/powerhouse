@@ -28,12 +28,27 @@ function hasAnalyticsProcessor(processorsDir: string): boolean {
   return false;
 }
 
+// The rule planPieces applies, so detection and the build agree: a piece is a
+// pieces/<name>/index.ts, and a bare pieces/index.ts beside none is not one.
+function hasPiece(piecesDir: string): boolean {
+  for (const entry of readdirSync(piecesDir)) {
+    const index = join(piecesDir, entry, "index.ts");
+    if (statSync(index, { throwIfNoEntry: false })?.isFile()) return true;
+  }
+  return false;
+}
+
 export function detectFeatures(projectDir: string): Feature[] {
   const features: Feature[] = [];
   const processorsDir = join(projectDir, "processors");
   const processorsStat = statSync(processorsDir, { throwIfNoEntry: false });
   if (processorsStat?.isDirectory() && hasAnalyticsProcessor(processorsDir)) {
     features.push("analyticsProcessor");
+  }
+  const piecesDir = join(projectDir, "pieces");
+  const piecesStat = statSync(piecesDir, { throwIfNoEntry: false });
+  if (piecesStat?.isDirectory() && hasPiece(piecesDir)) {
+    features.push("piece");
   }
   return features;
 }
@@ -91,13 +106,25 @@ export async function syncFeatureDependencies(
         devDependencies[pkg] = versionSpec.dev;
       }
     }
+    // Dev-only, so nothing is written to peerDependencies: a feature that
+    // inlines its package must not ask a consumer to supply it.
+    for (const pkg of spec.devVersioned) {
+      if (devDependencies[pkg] === undefined) {
+        devDependencies[pkg] = pinVersion;
+        added.push(pkg);
+      }
+    }
   }
 
   if (added.length === 0) return;
 
+  // Spread, not a fixed key: a dev-only feature adds no peers, and an empty
+  // peerDependencies block in a project that had none says nothing.
   const updated = {
     ...packageJson,
-    peerDependencies: sortByKey(peerDependencies),
+    ...(Object.keys(peerDependencies).length > 0
+      ? { peerDependencies: sortByKey(peerDependencies) }
+      : {}),
     devDependencies: sortByKey(devDependencies),
   } as PackageJson;
   await writePackage(projectDir, updated);
