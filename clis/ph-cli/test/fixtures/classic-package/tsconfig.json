@@ -10,11 +10,6 @@
     "skipLibCheck": true,
     "types": []
   },
-  "include": [
-    "index.ts",
-    "pieces/**/*",
-    "document-models/**/*",
-    "editors/**/*"
-  ],
+  "include": ["index.ts", "document-models/**/*", "editors/**/*"],
   "exclude": ["dist"]
 }

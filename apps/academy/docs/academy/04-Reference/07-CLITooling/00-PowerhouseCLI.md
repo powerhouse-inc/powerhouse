@@ -543,8 +543,8 @@ document models, editors, subgraphs and processors, type declarations, and its s
 
 Pieces under pieces/ are built too, each into its own self-contained module under
 dist/node/pieces/&lt;name&gt;, with a descriptor.json and package.json written beside it and
-the piece listed in dist/powerhouse.manifest.json. A package that ships only pieces builds
-the same way: with no browser modules and no style.css, those steps are skipped, not failed.
+the piece listed in dist/powerhouse.manifest.json. A package that ships only pieces is an
+ordinary package: it carries the same boilerplate, and every step above runs for it too.
 
 
 

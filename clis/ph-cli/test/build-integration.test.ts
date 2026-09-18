@@ -1,11 +1,29 @@
-// `runBuild` end to end on the fixtures under test/fixtures: a piece-only
-// package and a mixed one, built in place the way `ph build` builds a project.
+// `runBuild` end to end on the fixtures under test/fixtures, built in place
+// the way `ph build` builds a project, every step running for every one.
 
-import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { isBuiltin } from "node:module";
 import { join } from "node:path";
 import type { Manifest } from "@powerhousedao/shared/document-model";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { runBuild } from "../src/services/build.js";
 import type { BuildArgs } from "../src/types.js";
 
@@ -44,6 +62,28 @@ function clean(fixture: string) {
 }
 
 let warnings: string[];
+
+// The fixtures are plain directories with no node_modules, so the build's last
+// step finds no `tailwindcss` binary to run.
+
+// Standing one on PATH keeps the run whole and still proves what ph-cli owns
+// here: that the step is invoked with the right input and output paths.
+let stubDir: string;
+
+beforeAll(() => {
+  stubDir = mkdtempSync(join(tmpdir(), "ph-tailwind-stub-"));
+  const stub = join(stubDir, "tailwindcss");
+  writeFileSync(
+    stub,
+    `#!/bin/sh\nout=""\nwhile [ $# -gt 0 ]; do\n  case "$1" in -o) out="$2"; shift 2;; *) shift;; esac\ndone\n[ -n "$out" ] && mkdir -p "$(dirname "$out")" && printf '/* stub */\\n' > "$out"\nexit 0\n`,
+  );
+  chmodSync(stub, 0o755);
+  process.env.PATH = `${stubDir}:${process.env.PATH ?? ""}`;
+});
+
+afterAll(() => {
+  rmSync(stubDir, { recursive: true, force: true });
+});
 
 beforeEach(() => {
   warnings = [];
@@ -185,13 +225,19 @@ describe("runBuild on a piece-only package", () => {
     expect(manifest.documentModels).toEqual([]);
     expect(readFileSync(sourceManifest).equals(manifestBefore)).toBe(true);
 
-    // No browser output for a piece-only package; types still emitted.
-    expect(existsSync(join(dist, "browser"))).toBe(false);
+    // The boilerplate steps run here like anywhere else: a browser bundle,
+    // a stylesheet at the path the step names, and the types.
+    expect(existsSync(join(dist, "browser", "index.js"))).toBe(true);
+    expect(
+      existsSync(join(dist, "browser", "document-models", "index.js")),
+    ).toBe(true);
+    // The stylesheet lands where the step was told to write it. What Tailwind
+    // itself emits is Tailwind's business, and the fixture stands in for it.
+    expect(existsSync(join(dist, "style.css"))).toBe(true);
     expect(existsSync(join(dist, "types", "index.d.ts"))).toBe(true);
     expect(
       existsSync(join(dist, "types", "pieces", "hello", "index.d.ts")),
     ).toBe(true);
-    expect(existsSync(join(dist, "style.css"))).toBe(false);
 
     // The two things worth a warning, and nothing else.
     expect(warnings).toEqual([
@@ -222,7 +268,9 @@ describe("runBuild on a mixed package", () => {
     expect(
       existsSync(join(dist, "types", "document-models", "index.d.ts")),
     ).toBe(true);
-    expect(existsSync(join(dist, "style.css"))).toBe(false);
+    // The stylesheet lands where the step was told to write it. What Tailwind
+    // itself emits is Tailwind's business, and the fixture stands in for it.
+    expect(existsSync(join(dist, "style.css"))).toBe(true);
 
     const pieceDir = join(dist, "node", "pieces", "wave");
     expect(readdirSync(pieceDir).sort()).toEqual([
@@ -254,8 +302,46 @@ describe("runBuild on a mixed package", () => {
   }, 120_000);
 });
 
-// Nothing under pieces/<dir>, so the plan finds no piece to bundle; the built
-// list is still there, and what it declares is still the build's to check.
+// The common case, and the one this work must leave alone: no pieces/ at all,
+// so nothing the piece pass does may show up in the output or the manifest.
+describe("runBuild on a package with no pieces", () => {
+  const fixture = join(fixtures, "classic-package");
+  const dist = join(fixture, "dist");
+  const sourceManifest = join(fixture, "powerhouse.manifest.json");
+
+  it("builds browser, node, types and the stylesheet, and copies the manifest", async () => {
+    clean(fixture);
+    process.chdir(fixture);
+
+    await runBuild(args);
+
+    expect(existsSync(join(dist, "browser", "index.js"))).toBe(true);
+    expect(
+      existsSync(join(dist, "browser", "document-models", "index.js")),
+    ).toBe(true);
+    expect(existsSync(join(dist, "browser", "editors", "index.js"))).toBe(true);
+    expect(existsSync(join(dist, "node", "index.mjs"))).toBe(true);
+    expect(existsSync(join(dist, "types", "index.d.ts"))).toBe(true);
+    // The stylesheet lands where the step was told to write it. What Tailwind
+    // itself emits is Tailwind's business, and the fixture stands in for it.
+    expect(existsSync(join(dist, "style.css"))).toBe(true);
+
+    // No piece directory, and the manifest copy is the source byte for byte.
+    expect(existsSync(join(dist, "node", "pieces"))).toBe(false);
+    expect(
+      readFileSync(join(dist, "powerhouse.manifest.json")).equals(
+        readFileSync(sourceManifest),
+      ),
+    ).toBe(true);
+    expect(
+      readJson<Manifest>(join(dist, "powerhouse.manifest.json")),
+    ).not.toHaveProperty("pieces");
+    expect(warnings).toEqual([]);
+  }, 120_000);
+});
+
+// Nothing under pieces/<dir>, so nothing is bundled; the built list is still
+// there, and what it declares is still the build's to check.
 describe("runBuild on a package that only lists a piece", () => {
   const fixture = join(fixtures, "listed-only-package");
 

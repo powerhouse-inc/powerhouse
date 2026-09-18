@@ -113,11 +113,13 @@ import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
    each piece's version, description, `bundle` and `descriptor` paths, so a
    registry can offer the piece before anyone installs the package.
 
-   A package that ships only pieces builds the same way: with no browser
-   modules and no `style.css`, the browser build and the stylesheet are
-   skipped rather than failed. The host that runs pieces on a reactor (the
-   workflow runtime) reads the `pieces` list, imports each `entry` and serves
-   `ctx.reactor`.
+   A package that ships only pieces is still an ordinary reactor package: it
+   carries the same boilerplate as any other, including a root `index.ts`,
+   `document-models/index.ts`, `editors/index.ts` and `style.css`, even when
+   those are empty. `ph build` runs every step for it unchanged, so there is
+   no piece-only mode to know about. The host that runs pieces on a reactor
+   (the workflow runtime) reads the `pieces` list, imports each `entry` and
+   serves `ctx.reactor`.
 
    Bundling with esbuild to ESM instead of `ph build`? `form-data`, which
    `./common` uses, is CommonJS, so pass

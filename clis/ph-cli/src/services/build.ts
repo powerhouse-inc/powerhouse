@@ -10,6 +10,7 @@ import {
   buildPieces,
   expandEntryGlobs,
   pieceListPath,
+  planPieces,
   syncDistManifest,
 } from "@powerhousedao/shared/build-pieces";
 import {
@@ -23,8 +24,6 @@ import { detect, resolveCommand } from "package-manager-detector";
 import { readPackage } from "read-pkg";
 import { build as tsdownBuild } from "tsdown";
 import type { BuildArgs } from "../types.js";
-import type { StepPlan } from "./build-plan.js";
-import { planBuild } from "./build-plan.js";
 
 /**
  * A Powerhouse package's `powerhouse.manifest.json` "name" must match its
@@ -60,13 +59,6 @@ export async function assertManifestNameMatchesPackage(projectPath: string) {
   }
 }
 
-// A step the plan left out is announced, so a piece-only package's build log
-// says why it has no browser output; skipping never fails the build.
-function announceSkip(label: string, step: StepPlan): boolean {
-  if (!step.run) console.log(`▷ ${label} skipped: ${step.reason}`);
-  return step.run;
-}
-
 export async function runBuild(args: BuildArgs) {
   const { outDir } = args;
   const projectRoot = process.cwd();
@@ -74,44 +66,43 @@ export async function runBuild(args: BuildArgs) {
   // Fail fast if the manifest name and package.json name have drifted apart.
   await assertManifestNameMatchesPackage(projectRoot);
 
-  const plan = planBuild(projectRoot, outDir);
+  const target = {
+    projectRoot,
+    outDir,
+    pieces: planPieces(projectRoot, outDir),
+  };
   // Before any bundler runs: an out-dir a host will never read from is worth
   // nothing built, and the failure names what the contract is.
-  assertPiecesOutDir(plan);
+  assertPiecesOutDir(target);
   const sharedDeps = !args.noSharedDeps;
 
-  if (announceSkip("browser build", plan.browser)) {
-    await tsdownBuild({
-      ...buildBrowserBuildConfig({ sharedDeps }),
-      outDir: join(outDir, "browser"),
-    });
+  await tsdownBuild({
+    ...buildBrowserBuildConfig({ sharedDeps }),
+    outDir: join(outDir, "browser"),
+  });
 
-    // Advisory: a shared dep the source imports but the output no longer
-    // references as a bare import was inlined despite the external set.
-    if (sharedDeps) {
-      const imported = findSharedImportsInSources(projectRoot, browserEntry);
-      const bundled = findBundledSharedDeps(
-        imported,
-        readDistBrowserFiles(join(outDir, "browser")),
+  // Advisory: a shared dep the source imports but the output no longer
+  // references as a bare import was inlined despite the external set.
+  if (sharedDeps) {
+    const imported = findSharedImportsInSources(projectRoot, browserEntry);
+    const bundled = findBundledSharedDeps(
+      imported,
+      readDistBrowserFiles(join(outDir, "browser")),
+    );
+    if (bundled.length > 0) {
+      console.warn(
+        `⚠ shared deps bundled instead of externalized: ${bundled.join(", ")} — check your neverBundle config`,
       );
-      if (bundled.length > 0) {
-        console.warn(
-          `⚠ shared deps bundled instead of externalized: ${bundled.join(", ")} — check your neverBundle config`,
-        );
-      }
     }
   }
 
-  if (announceSkip("node build", plan.node)) {
-    await tsdownBuild({
-      ...buildNodeBuildConfig({ sharedDeps }),
-      outDir: join(outDir, "node"),
-    });
-  }
+  await tsdownBuild({
+    ...buildNodeBuildConfig({ sharedDeps }),
+    outDir: join(outDir, "node"),
+  });
 
   // After the node build: it cleans <outDir>/node, where the pieces land. The
   // built list is the gate, so a `bundle:` entry is validated with no piece dir.
-  const target = { projectRoot, outDir, pieces: plan.pieces };
   let built: BuiltPiece[] = [];
   if (existsSync(pieceListPath(target))) {
     const pkg = await readPackage({ cwd: projectRoot });
@@ -149,8 +140,6 @@ export async function runBuild(args: BuildArgs) {
       "✘ tsc reported errors above; declarations were still written. Fix the errors to keep types accurate.",
     );
   }
-
-  if (!announceSkip("stylesheet", plan.stylesheet)) return;
 
   const executeLocalCommand = resolveCommand(agent, "execute-local", [
     "tailwindcss",
