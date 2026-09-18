@@ -388,14 +388,25 @@ describe("serving sync through the document's policy", () => {
     );
   }
 
+  /** Nothing when the replica does not hold the drive yet, which is a replica
+   * still waiting on its first run rather than a failure to compare. */
+  async function heldDrive(
+    reactor: IReactor,
+    driveId: string,
+  ): Promise<DocumentDriveDocument | undefined> {
+    try {
+      return await reactor.get<DocumentDriveDocument>(driveId, {
+        branch: "main",
+      });
+    } catch {
+      return undefined;
+    }
+  }
+
   async function converged(fx: Fixture, driveId: string): Promise<boolean> {
-    const origin = await fx.origin.reactor.get<DocumentDriveDocument>(driveId, {
-      branch: "main",
-    });
-    const peer = await fx.peer.module.reactor.get<DocumentDriveDocument>(
-      driveId,
-      { branch: "main" },
-    );
+    const origin = await heldDrive(fx.origin.reactor, driveId);
+    const peer = await heldDrive(fx.peer.module.reactor, driveId);
+    if (!origin || !peer) return false;
     return (
       peer.header.revision.global === origin.header.revision.global &&
       JSON.stringify(peer.state.global) === JSON.stringify(origin.state.global)
@@ -412,13 +423,9 @@ describe("serving sync through the document's policy", () => {
     driveId: string,
     scope: "global" | "local",
   ): Promise<boolean> {
-    const origin = await fx.origin.reactor.get<DocumentDriveDocument>(driveId, {
-      branch: "main",
-    });
-    const peer = await fx.peer.module.reactor.get<DocumentDriveDocument>(
-      driveId,
-      { branch: "main" },
-    );
+    const origin = await heldDrive(fx.origin.reactor, driveId);
+    const peer = await heldDrive(fx.peer.module.reactor, driveId);
+    if (!origin || !peer) return false;
     return (
       peer.header.revision[scope] === origin.header.revision[scope] &&
       JSON.stringify(peer.state[scope]) === JSON.stringify(origin.state[scope])

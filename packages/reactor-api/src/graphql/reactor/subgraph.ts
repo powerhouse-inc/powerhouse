@@ -526,6 +526,14 @@ export class ReactorSubgraph extends BaseSubgraph {
           // rightful owner out for good. touchChannel orders these the same way.
           await this.#bindOrRefuseChannel(args.channelId, ctx);
 
+          // One snapshot decides both refusals below and what may be served: the
+          // mailboxes keep filling while those checks await.
+          const outboxItems = [...remote.channel.outbox.items];
+          const deadLetterItems = [...remote.channel.deadLetter.items];
+          const examinedIds = new Set(
+            [...outboxItems, ...deadLetterItems].map((syncOp) => syncOp.id),
+          );
+
           // Tier 2/3: drop operations and dead letters for documents the caller
           // cannot read individually.
           const forbiddenIds = new Set<string>();
@@ -540,7 +548,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             );
             if (driveWorldReadable) {
               await this.#collectForbiddenDocuments(
-                remote.channel.outbox.items,
+                outboxItems,
                 forbiddenIds,
                 ctx,
               );
@@ -548,7 +556,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             // Dead letters can carry documents outside this collection (failed
             // inbox jobs) that the drive gate does not cover, so always filter.
             await this.#collectForbiddenDocuments(
-              remote.channel.deadLetter.items,
+              deadLetterItems,
               forbiddenIds,
               ctx,
             );
@@ -562,10 +570,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           // widens later serves them whole on the next poll.
           const heldOpIds = this.syncServingGate
             ? await resolvers.collectHeldSyncOperations(
-                [
-                  ...remote.channel.outbox.items,
-                  ...remote.channel.deadLetter.items,
-                ],
+                [...outboxItems, ...deadLetterItems],
                 this.syncServingGate,
                 this.viewSubject(ctx),
               )
@@ -577,6 +582,7 @@ export class ReactorSubgraph extends BaseSubgraph {
               args,
               forbiddenIds,
               heldOpIds,
+              examinedIds,
             );
           return {
             envelopes,

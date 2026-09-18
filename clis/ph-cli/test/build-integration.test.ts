@@ -12,7 +12,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { isBuiltin } from "node:module";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import type { Manifest } from "@powerhousedao/shared/document-model";
 import {
   afterAll,
@@ -70,15 +70,29 @@ let warnings: string[];
 // here: that the step is invoked with the right input and output paths.
 let stubDir: string;
 
+// The stub's own logic, in node, so one implementation serves both shims.
+const STUB_SCRIPT = `
+const { mkdirSync, writeFileSync } = require("node:fs");
+const { dirname } = require("node:path");
+const argv = process.argv.slice(2);
+const out = argv[argv.indexOf("-o") + 1];
+if (argv.includes("-o") && out) {
+  mkdirSync(dirname(out), { recursive: true });
+  writeFileSync(out, "/* stub */\\n");
+}
+`;
+
 beforeAll(() => {
   stubDir = mkdtempSync(join(tmpdir(), "ph-tailwind-stub-"));
-  const stub = join(stubDir, "tailwindcss");
-  writeFileSync(
-    stub,
-    `#!/bin/sh\nout=""\nwhile [ $# -gt 0 ]; do\n  case "$1" in -o) out="$2"; shift 2;; *) shift;; esac\ndone\n[ -n "$out" ] && mkdir -p "$(dirname "$out")" && printf '/* stub */\\n' > "$out"\nexit 0\n`,
-  );
-  chmodSync(stub, 0o755);
-  process.env.PATH = `${stubDir}:${process.env.PATH ?? ""}`;
+  const script = join(stubDir, "tailwindcss.cjs");
+  writeFileSync(script, STUB_SCRIPT);
+  // Two shims because the package manager resolves a bare command through
+  // PATHEXT on Windows and through the executable bit everywhere else.
+  const shim = join(stubDir, "tailwindcss");
+  writeFileSync(shim, `#!/bin/sh\nexec node "${script}" "$@"\n`);
+  chmodSync(shim, 0o755);
+  writeFileSync(join(stubDir, "tailwindcss.cmd"), `@node "${script}" %*\n`);
+  process.env.PATH = `${stubDir}${delimiter}${process.env.PATH ?? ""}`;
 });
 
 afterAll(() => {
