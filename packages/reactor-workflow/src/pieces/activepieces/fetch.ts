@@ -1,4 +1,3 @@
-import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -100,11 +99,6 @@ export interface FetchPieceBundleOptions {
 export interface FetchedBundle {
   dir: string;
   source: "cdn" | "npm" | "cache";
-  // Declared runtime deps. Non-empty means the bundle is NOT self-contained:
-  // import() will fail without a package-manager install (their engine bun-installs the tgz).
-  dependencies: Record<string, string>;
-  // True when the bundle was installed with its dependencies (see installPieceBundle).
-  installed: boolean;
 }
 
 // Bounds the transfer before gunzip: rejects an over-limit Content-Length up
@@ -168,7 +162,7 @@ async function downloadTarball(
 }
 
 // Downloads and extracts a published piece bundle, returning the directory to
-// hand to loadPieceFromDir(). Cached extractions are reused as-is.
+// hand to loadPieceFromDir(). A cached extraction is reused, and re-checked.
 export async function fetchPieceBundle(
   options: FetchPieceBundleOptions,
 ): Promise<FetchedBundle> {
@@ -177,12 +171,8 @@ export async function fetchPieceBundle(
   const dir = path.join(cacheDir, `${name.replace("/", "-")}-${version}`);
   assertWithinCacheDir(dir, cacheDir);
   if (existsSync(path.join(dir, "package.json"))) {
-    return {
-      dir,
-      source: "cache",
-      dependencies: await readDependencies(dir),
-      installed: false,
-    };
+    await assertSelfContained(dir, name, version);
+    return { dir, source: "cache" };
   }
 
   const { tgz, source } = await downloadTarball(name, version, timeoutMs);
@@ -197,117 +187,66 @@ export async function fetchPieceBundle(
     await rm(staging, { recursive: true, force: true });
     if (!existsSync(path.join(dir, "package.json"))) throw error;
   }
-  return {
-    dir,
-    source,
-    dependencies: await readDependencies(dir),
-    installed: false,
-  };
+  // Checked here rather than before the rename so a bundle an older build
+  // already extracted is refused on its cache hit too, not only a fresh one.
+  await assertSelfContained(dir, name, version);
+  return { dir, source };
 }
 
-// Installs a bundle plus its declared deps into an isolated workspace, the way
-// their piece-installer does (tgz as a file: dependency), then a package-manager install.
-export async function installPieceBundle(
-  options: FetchPieceBundleOptions,
-): Promise<FetchedBundle> {
-  const { name, version, cacheDir, timeoutMs = 120_000 } = options;
-  assertValidPackageCoordinate(name, version);
-  const workspace = path.join(
-    cacheDir,
-    `${name.replace("/", "-")}-${version}.install`,
-  );
-  assertWithinCacheDir(workspace, cacheDir);
-  const dir = path.join(workspace, "node_modules", name);
-  if (
-    existsSync(path.join(workspace, "ready")) &&
-    existsSync(path.join(dir, "package.json"))
-  ) {
-    return {
-      dir,
-      source: "cache",
-      dependencies: await readDependencies(dir),
-      installed: true,
-    };
-  }
-
-  const { tgz, source } = await downloadTarball(name, version, timeoutMs);
-  await rm(workspace, { recursive: true, force: true });
-  await mkdir(workspace, { recursive: true });
-  await writeFile(path.join(workspace, "bundle.tgz"), tgz);
-  await writeFile(
-    path.join(workspace, "package.json"),
-    JSON.stringify({
-      name: "piece-workspace",
-      version: "1.0.0",
-      private: true,
-      dependencies: { [name]: "file:./bundle.tgz" },
-    }),
-  );
-  // --ignore-scripts: never run lifecycle scripts from piece manifests.
-  await runNpmInstall(workspace, timeoutMs);
-  await writeFile(path.join(workspace, "ready"), "true");
-  return {
-    dir,
-    source,
-    dependencies: await readDependencies(dir),
-    installed: true,
-  };
-}
-
-// Concurrent callers for the same bundle share one download+extract (or
-// install) rather than racing each other through it.
+// Concurrent callers for the same bundle share one download+extract rather
+// than racing each other through it.
 const inFlight = new Map<string, Promise<FetchedBundle>>();
 
-// Fetches a bundle; when it declares dependencies (not self-contained),
-// installs it instead so import() can resolve them.
+// The way in: a bundle arrives extracted, cached and checked, and callers that
+// ask for the same one at the same time wait on a single fetch.
 export async function ensurePieceBundle(
   options: FetchPieceBundleOptions,
 ): Promise<FetchedBundle> {
   const key = `${options.cacheDir}\u0000${options.name}@${options.version}`;
   const pending = inFlight.get(key);
   if (pending) return pending;
-  const started = resolveBundle(options).finally(() => inFlight.delete(key));
+  // Dropped once settled, refusals included, so a later caller re-checks the
+  // bundle rather than inheriting this call's answer forever.
+  const started = fetchPieceBundle(options).finally(() => inFlight.delete(key));
   inFlight.set(key, started);
   return started;
 }
 
-async function resolveBundle(
-  options: FetchPieceBundleOptions,
-): Promise<FetchedBundle> {
-  const fetched = await fetchPieceBundle(options);
-  if (Object.keys(fetched.dependencies).length === 0) {
-    return fetched;
-  }
-  return installPieceBundle(options);
-}
+// The Activepieces release that began inlining a piece's dependencies into its
+// bundle. They still publish pieces to npm, which is why npm stays a source.
+const AP_SELF_CONTAINED_SINCE = "0.86.0";
 
-async function runNpmInstall(cwd: string, timeoutMs: number): Promise<void> {
-  // Windows installs npm as npm.cmd, which only a shell can spawn.
-  const windows = process.platform === "win32";
-  await new Promise<void>((resolve, reject) => {
-    execFile(
-      windows ? "npm.cmd" : "npm",
-      [
-        "install",
-        "--ignore-scripts",
-        "--no-audit",
-        "--no-fund",
-        "--loglevel=error",
-      ],
-      { cwd, timeout: timeoutMs, shell: windows },
-      (error, _stdout, stderr) => {
-        if (error) {
-          reject(
-            new Error(
-              `npm install failed in ${cwd}: ${stderr || error.message}`,
-            ),
-          );
-        } else {
-          resolve();
-        }
-      },
-    );
-  });
+// Enough to recognise what the bundle wants without turning the refusal into
+// a wall of text.
+const MAX_LISTED_DEPENDENCIES = 5;
+
+// A bundle has to carry its own code: the worker imports it straight out of the
+// cache directory, where there is no node_modules and nothing to install one.
+async function assertSelfContained(
+  dir: string,
+  name: string,
+  version: string,
+): Promise<void> {
+  const dependencies = await readDependencies(dir);
+  const declared = Object.keys(dependencies);
+  if (declared.length === 0) return;
+  const listed = declared
+    .slice(0, MAX_LISTED_DEPENDENCIES)
+    .map((dep) => `${dep}@${dependencies[dep]}`);
+  const rest = declared.length - listed.length;
+  const count =
+    declared.length === 1 ? "a dependency" : `${declared.length} dependencies`;
+  // Only an Activepieces piece gets their release number: a bundle from
+  // anywhere else would be sent chasing a version that means nothing to it.
+  const since = name.startsWith("@activepieces/")
+    ? ` Activepieces bundles have been self-contained since ${AP_SELF_CONTAINED_SINCE}.`
+    : "";
+  throw new Error(
+    `Piece bundle ${name}@${version} is not self-contained: it declares ${count} ` +
+      `(${listed.join(", ")}${rest > 0 ? `, and ${rest} more` : ""}). ` +
+      `The reactor no longer installs a bundle's dependencies. Pin ${name} at or above ` +
+      `its first self-contained release.${since}`,
+  );
 }
 
 async function readDependencies(dir: string): Promise<Record<string, string>> {

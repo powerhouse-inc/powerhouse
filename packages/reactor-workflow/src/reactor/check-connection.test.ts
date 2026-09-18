@@ -236,8 +236,6 @@ describe("WorkflowRuntimeService.checkConnection", () => {
         return Promise.resolve({
           dir,
           source: "cache",
-          dependencies: {},
-          installed: false,
         });
       },
     );

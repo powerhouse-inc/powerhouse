@@ -14,8 +14,6 @@ vi.mock("../pieces/index.js", async (importOriginal) => {
       Promise.resolve({
         dir: "/nonexistent",
         source: "cache",
-        dependencies: {},
-        installed: false,
       }),
     ),
   };
