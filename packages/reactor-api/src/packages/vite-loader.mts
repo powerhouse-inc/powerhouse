@@ -13,9 +13,16 @@ import { readPackage } from "read-pkg";
 import type { Logger, PluginOption, ViteDevServer } from "vite";
 import { createLogger, createServer } from "vite";
 import { isSubgraphClass } from "../graphql/utils.js";
+import {
+  BUILT_PIECE_LIST,
+  PIECES_SUBPATH,
+  pieceListLocation,
+  piecesFromListModule,
+} from "./pieces.js";
 import type {
   ISubscribablePackageLoader,
   ISubscriptionOptions,
+  PackagePieceEntry,
 } from "./types.js";
 import { debounce, extractUpgradeManifests, isSubpath } from "./util.js";
 
@@ -71,6 +78,33 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
 
   private getProcessorsPath(identifier: string): string {
     return path.posix.join(identifier, "./processors");
+  }
+
+  private getPiecesPath(identifier: string): string {
+    return path.posix.join(identifier, `./${PIECES_SUBPATH}`);
+  }
+
+  // The dev server aliases the local project by its own package name, so a
+  // package that is this project is rooted at the source tree vite serves.
+  private aliasedRoot(identifier: string): string | undefined {
+    const alias = this.vite.config.resolve.alias;
+    const entries = Array.isArray(alias) ? alias : [];
+    const hit = entries.find((entry) => entry.find === identifier);
+    return typeof hit?.replacement === "string" ? hit.replacement : undefined;
+  }
+
+  // What a declared piece path is relative to. Not the module vite loaded: a
+  // list read from source still points at the built output beside it.
+  private pieceRoot(identifier: string): string | undefined {
+    if (!path.isAbsolute(identifier)) {
+      const aliased = this.aliasedRoot(identifier);
+      if (aliased) return aliased;
+    }
+    try {
+      return pieceListLocation(identifier).root;
+    } catch {
+      return undefined;
+    }
   }
 
   public loadDocumentModels(identifier: string, immediate = false) {
@@ -210,6 +244,37 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     return null;
   }
 
+  // The list only, never a piece: in dev it is usually the TypeScript source,
+  // and what it names is still the built bundle a worker will load.
+  async loadPieces(identifier: string): Promise<PackagePieceEntry[]> {
+    const root = this.pieceRoot(identifier);
+    if (root === undefined) {
+      this.logger.debug(`  ➜  No package root found for: ${identifier}`);
+      return [];
+    }
+
+    const fullPath = this.getPiecesPath(identifier);
+    this.logger.verbose("Loading pieces from", fullPath);
+
+    let module: unknown;
+    try {
+      module = await this.vite.ssrLoadModule(fullPath);
+    } catch (e) {
+      this.logger.debug(`  ➜  No pieces found for: ${identifier}`, e);
+      return [];
+    }
+
+    const pieces = piecesFromListModule(module, {
+      root,
+      identifier,
+      logger: this.logger,
+    });
+    this.logger.debug(
+      `  ➜  Loaded ${pieces.length} Pieces from: ${identifier}`,
+    );
+    return pieces;
+  }
+
   onDocumentModelsChange(
     identifier: string,
     handler: (documentModels: DocumentModelModule[]) => void,
@@ -278,6 +343,35 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     // "change" alone misses files that are created or deleted: a removed
     // processors/ entry would never report an empty result, and the
     // package's registered processor factories would leak.
+    this.vite.watcher.on("change", listener);
+    this.vite.watcher.on("add", listener);
+    this.vite.watcher.on("unlink", listener);
+
+    return () => {
+      this.vite.watcher.off("change", listener);
+      this.vite.watcher.off("add", listener);
+      this.vite.watcher.off("unlink", listener);
+    };
+  }
+
+  onPiecesChange(
+    identifier: string,
+    handler: (pieces: PackagePieceEntry[]) => void,
+    options?: ISubscriptionOptions,
+  ): () => void {
+    // Both the source list and the build output: the list says which pieces a
+    // package ships, and only the build decides whether one is there to run.
+    const watched = [this.getPiecesPath(identifier)];
+    const root = this.pieceRoot(identifier);
+    if (root !== undefined) {
+      watched.push(path.dirname(path.resolve(root, BUILT_PIECE_LIST)));
+    }
+    const listener = async (changedPath: string) => {
+      if (!watched.some((dir) => isSubpath(dir, changedPath))) return;
+      handler(await this.loadPieces(identifier));
+    };
+    // "change" alone misses files that are created or deleted, and a piece
+    // appearing for the first time is exactly the build this watches for.
     this.vite.watcher.on("change", listener);
     this.vite.watcher.on("add", listener);
     this.vite.watcher.on("unlink", listener);

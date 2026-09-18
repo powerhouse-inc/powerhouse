@@ -550,9 +550,6 @@ export class WorkflowRuntimeService {
     workflowId: string,
     state: WorkflowState,
   ): Promise<void> {
-    // An unversioned block type is pinned by what this reactor installed, so
-    // the registry answers before any of it is parsed.
-    await packagePieces.ready();
     const trigger = state.status === "ENABLED" ? state.trigger : undefined;
     if (trigger?.blockType === WEBHOOK_BLOCK) {
       await this.registerWebhook(workflowId, trigger.config);
@@ -1712,7 +1709,6 @@ export class WorkflowRuntimeService {
   private async pieceVersion(packageName: string): Promise<string> {
     // A package piece is pinned by what this reactor installed, and no
     // published listing has anything to say about it.
-    await packagePieces.ready();
     const local = packagePieces.lookup(packageName);
     if (local) return local.version;
     try {
@@ -1753,7 +1749,6 @@ export class WorkflowRuntimeService {
   private async localPieces(): Promise<
     { piece: LocalPiece; descriptor: PieceDescriptor }[]
   > {
-    await packagePieces.ready();
     const described = await Promise.all(
       packagePieces.entries().map(async (piece) => {
         try {
@@ -1776,7 +1771,6 @@ export class WorkflowRuntimeService {
   private async localPiece(
     packageName: string,
   ): Promise<{ piece: LocalPiece; descriptor: PieceDescriptor } | undefined> {
-    await packagePieces.ready();
     const piece = packagePieces.lookup(packageName);
     if (!piece) return undefined;
     return {
@@ -1852,7 +1846,6 @@ export class WorkflowRuntimeService {
   // Design-time: the action/trigger descriptor (props, auth) driving the
   // editor form; triggers come back under a "trigger" key.
   async blockDescriptor(blockType: string): Promise<unknown> {
-    await packagePieces.ready();
     const parsed = parseBlockType(blockType, packagePieces.versions());
     if (!parsed) return null;
     const descriptor = await this.pieceDescriptor(
@@ -1952,7 +1945,6 @@ export class WorkflowRuntimeService {
     connectionId?: string,
     ctx?: WorkflowCaller,
   ): Promise<unknown> {
-    await packagePieces.ready();
     const parsed = parseBlockType(blockType, packagePieces.versions());
     if (!parsed) {
       throw new Error(`Not a piece block type: "${blockType}"`);
@@ -2008,7 +2000,6 @@ export class WorkflowRuntimeService {
     blockType: string,
     config?: unknown,
   ): Promise<OutputTree> {
-    await packagePieces.ready();
     const record = (config ?? {}) as Record<string, unknown>;
     switch (blockType) {
       case "core#manual":
@@ -2145,7 +2136,6 @@ export class WorkflowRuntimeService {
     if (trigger.connectionId) {
       await this.assertCanReadDocument(trigger.connectionId, ctx);
     }
-    await packagePieces.ready();
     const binding = this.pieceBinding(workflowId, trigger);
     if (!binding) {
       throw new Error(`"${trigger.blockType}" is not a piece trigger`);

@@ -7,11 +7,12 @@ import {
   type PieceResolver,
   type ReactorPort,
 } from "../src/pieces/index.js";
-import type { BlockExecution } from "../src/pieces/index.js";
+import type { BlockExecution, LocalPiece } from "../src/pieces/index.js";
+import type { PackagePiece } from "../src/pieces/index.js";
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { dirname, isAbsolute, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PieceRegistry } from "../src/reactor/piece-registry.js";
 
@@ -35,6 +36,25 @@ function builtPieceRoot(): string | undefined {
     : undefined;
 }
 const workflowRoot = builtPieceRoot();
+
+// What the host's package manager reports: the package's own list, with every
+// declared entry resolved against the package root.
+async function builtPieces(root: string | undefined): Promise<LocalPiece[]> {
+  if (!root) return [];
+  const listPath = join(root, "dist", "node", "pieces", "index.mjs");
+  const list = (await import(pathToFileURL(listPath).href)) as {
+    pieces: PackagePiece[];
+  };
+  return list.pieces.map((piece) => {
+    const where = piece.entry ?? piece.bundle ?? "";
+    const path = isAbsolute(where) ? where : join(root, where);
+    return {
+      name: piece.name,
+      version: piece.version,
+      ...(piece.entry ? { entryPath: path } : { bundleDir: path }),
+    };
+  });
+}
 
 // Every call the piece made, and what the port answered with.
 function stubPort(): ReactorPort & { calls: string[] } {
@@ -114,7 +134,7 @@ let port: ReturnType<typeof stubPort>;
 describe.skipIf(!workflowRoot)("the reactor piece", () => {
   beforeAll(async () => {
     registry = new PieceRegistry();
-    await registry.load(workflowRoot);
+    registry.setPieces(await builtPieces(workflowRoot));
     resolver = localFirstResolver(registry.lookup, {
       resolve: () =>
         Promise.reject(new Error("nothing is fetched in this test")),

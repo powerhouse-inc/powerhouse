@@ -71,9 +71,12 @@ export interface SwitchboardHandle {
 export function startSwitchboard(options: {
   dir: string;
   port: number;
+  /** A switchboard installed elsewhere, run against `dir`; defaults to the
+   * one `dir` installed itself. */
+  bin?: string;
 }): SwitchboardHandle {
   const { dir, port } = options;
-  const bin = path.join(dir, "node_modules/.bin/switchboard");
+  const bin = options.bin ?? path.join(dir, "node_modules/.bin/switchboard");
   if (!fs.existsSync(bin)) {
     throw new Error(`switchboard binary not found at ${bin}`);
   }

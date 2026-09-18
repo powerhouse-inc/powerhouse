@@ -202,12 +202,9 @@ export function fetchingResolver(cacheDir: string): PieceResolver {
 
 export function pieceResolver(): PieceResolver {
   return (resolver ??= localFirstResolver(
-    // Loads the registry on the first ask, so nothing has to have loaded it
-    // before a step, an editor query or a trigger enable reaches here.
-    async (name) => {
-      await packagePieces.ready();
-      return packagePieces.lookup(name);
-    },
+    // Asked per call rather than captured: the host refills the registry as
+    // packages change, and a step must see what it holds now.
+    (name) => packagePieces.lookup(name),
     fetchingResolver(BUNDLE_CACHE_DIR),
   ));
 }
@@ -249,12 +246,8 @@ export function createBlockExecutor(
       worker: currentPieceWorker,
       resolver: pieceResolver(),
       // A package piece's block type carries no version; this is where the
-      // installed one comes from, and it loads the registry if a step is the
-      // first thing to ask.
-      packages: async () => {
-        await packagePieces.ready();
-        return packagePieces.versions();
-      },
+      // installed one comes from.
+      packages: () => Promise.resolve(packagePieces.versions()),
       // Served only to a piece this reactor's packages ship; the executor
       // withholds it from everything the resolver fetched.
       reactor: new SubgraphReactorPort(host),

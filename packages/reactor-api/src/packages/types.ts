@@ -8,6 +8,26 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 
+// One entry of a reactor package's pieces list, declared here rather than
+// imported so reactor-api needs no dependency on a package meant for pieces.
+export interface PackagePiece {
+  name: string;
+  version: string;
+  /** Built output, relative to the package root: a directory in npm shape. */
+  bundle?: string;
+  /** Built output, relative to the package root: a single module file. */
+  entry?: string;
+}
+
+// A declared piece found on disk. The path is absolute because what consumes
+// it is a worker that knows nothing of the package the piece came from.
+export interface PackagePieceEntry {
+  name: string;
+  version: string;
+  entryPath?: string;
+  bundleDir?: string;
+}
+
 export interface IPackageLoader {
   name: string;
   loadDocumentModels(
@@ -29,6 +49,11 @@ export interface IPackageLoader {
     identifier: string,
     immediate?: boolean,
   ): Promise<ProcessorFactoryBuilder | null>;
+  /** The pieces a package ships, each located absolutely on this disk. */
+  loadPieces(
+    identifier: string,
+    immediate?: boolean,
+  ): Promise<PackagePieceEntry[]>;
 }
 
 export interface ISubscriptionOptions {
@@ -49,6 +74,11 @@ export interface ISubscribablePackageLoader extends IPackageLoader {
   onProcessorsChange?(
     identifier: string,
     handler: (processors: ProcessorFactoryBuilder | null) => void,
+    options?: ISubscriptionOptions,
+  ): () => void;
+  onPiecesChange?(
+    identifier: string,
+    handler: (pieces: PackagePieceEntry[]) => void,
     options?: ISubscriptionOptions,
   ): () => void;
 }
@@ -86,4 +116,14 @@ export type PackageManagerResult = {
   upgradeManifests: UpgradeManifest<readonly number[]>[];
   subgraphs: Map<string, SubgraphClass[]>;
   processors: Map<string, ProcessorFactoryBuilder[]>;
+  pieces: Map<string, PackagePieceEntry[]>;
 };
+
+// What a host binds its piece holder to: what is loaded now, and every change
+// after. Declared as an interface so nothing outside has to name the manager.
+export interface IPackagePieceSource {
+  getPieces(): Map<string, PackagePieceEntry[]>;
+  onPiecesChange(
+    handler: (pieces: Map<string, PackagePieceEntry[]>) => void,
+  ): void;
+}
