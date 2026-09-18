@@ -164,22 +164,12 @@ export function createJsonReplacer() {
   };
 }
 
-// Runs in a child node process: loading a piece runs piece-authored top-level
-// code, and the runtime describes pieces in a worker for the same reason.
+// The half of the child script that needs nothing from the job: a test
+// evaluates this text on its own, so neither copy can drift from the other.
 
-// A string so it works from `src` under bun or tsx as well as from `dist`; its
-// replacer and duck typing mirror createJsonReplacer and the runtime's loader.
-export const DESCRIBE_SCRIPT = `
-import { existsSync, readFileSync } from "node:fs";
-import { isAbsolute, join } from "node:path";
-import { pathToFileURL } from "node:url";
-
-// A piece's own logging goes to stderr so stdout stays one JSON document.
-for (const level of ["log", "info", "debug"]) {
-  console[level] = (...args) => console.error(...args);
-}
-
-const job = JSON.parse(readFileSync(process.argv[1], "utf8"));
+// `constructor?.name`: a module may export an Object.create(null), and the
+// real piece is usually beside it in the same module.
+export const DESCRIBE_HELPERS = `
 const isRecord = (value) => typeof value === "object" && value !== null;
 
 function findPiece(mod) {
@@ -189,7 +179,7 @@ function findPiece(mod) {
     mod.default,
   ];
   for (const candidate of candidates) {
-    if (isRecord(candidate) && candidate.constructor.name === "Piece") {
+    if (isRecord(candidate) && candidate.constructor?.name === "Piece") {
       return candidate;
     }
   }
@@ -207,7 +197,7 @@ function findPiece(mod) {
   return undefined;
 }
 
-function describe(piece) {
+function describePiece(piece) {
   if (typeof piece.metadata === "function") return piece.metadata();
   const call = (value) => (typeof value === "function" ? value.call(piece) : value);
   return {
@@ -237,6 +227,26 @@ function createJsonReplacer() {
     return value;
   };
 }
+`;
+
+// Runs in a child node process: loading a piece runs piece-authored top-level
+// code, and the runtime describes pieces in a worker for the same reason.
+
+// A string so it works from `src` under bun or tsx as well as from `dist`. It
+// answers through a file, leaving both its streams to the piece.
+export const DESCRIBE_SCRIPT = `
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
+import { pathToFileURL } from "node:url";
+
+const job = JSON.parse(readFileSync(process.argv[2], "utf8"));
+${DESCRIBE_HELPERS}
+// Says why the child gave up in the one place the parent always reads, so a
+// failure reports the cause and never the text of this script.
+function fail(message) {
+  writeFileSync(job.outFile, JSON.stringify({ fatal: message }));
+  process.exit(1);
+}
 
 // The module to load for a list entry; a bundle names its own main.
 function entryFile(piece) {
@@ -250,11 +260,15 @@ function entryFile(piece) {
   return join(path, typeof pkg.main === "string" ? pkg.main : "index.mjs");
 }
 
-const listModule = await import(pathToFileURL(job.listPath).href);
+let listModule;
+try {
+  listModule = await import(pathToFileURL(job.listPath).href);
+} catch (error) {
+  fail(job.listPath + " threw on import: " + (error instanceof Error ? error.message : String(error)));
+}
 const list = listModule.pieces ?? listModule.default;
 if (!Array.isArray(list)) {
-  console.error(job.listPath + ' exports no "pieces" array');
-  process.exit(1);
+  fail(job.listPath + ' exports no "pieces" array');
 }
 
 const out = { list, pieces: [], errors: [] };
@@ -270,7 +284,7 @@ for (const piece of list) {
         "no Piece export found in " + file + "; exports: " + Object.keys(mod).join(", "),
       );
     }
-    const metadata = JSON.parse(JSON.stringify(describe(found), createJsonReplacer()));
+    const metadata = JSON.parse(JSON.stringify(describePiece(found), createJsonReplacer()));
     out.pieces.push({ name: piece.name, version: piece.version, metadata });
   } catch (error) {
     out.errors.push({
@@ -279,36 +293,57 @@ for (const piece of list) {
     });
   }
 }
-process.stdout.write(JSON.stringify(out, createJsonReplacer()));
+writeFileSync(job.outFile, JSON.stringify(out, createJsonReplacer()));
 `;
+
+// What the child said went wrong, if it got that far, and otherwise how it
+// died: an exit status, never the whole script an `Error.message` carries.
+function childFailure(error: unknown, outFile: string): string {
+  try {
+    const answer = JSON.parse(readFileSync(outFile, "utf8")) as {
+      fatal?: unknown;
+    };
+    if (typeof answer.fatal === "string") return answer.fatal;
+  } catch {
+    // no answer on disk: fall through to the exit status
+  }
+  const { status, signal } = error as {
+    status?: number | null;
+    signal?: string | null;
+  };
+  if (signal) return `the describe child was killed by ${signal}`;
+  return `the describe child exited with code ${status ?? "unknown"}`;
+}
 
 // Load the built list and every piece it names in a child process and return
 // what they say about themselves. Throws when the list itself cannot be read.
+
+// Both of the child's streams are the parent's, so a piece that prints at
+// import time is heard rather than mixed into the answer.
 export function describePieces(
   projectRoot: string,
   listPath: string,
 ): DescribeResult {
   const dir = mkdtempSync(join(tmpdir(), "ph-build-pieces-"));
+  const rel = toPosix(relative(projectRoot, listPath));
   try {
     const jobFile = join(dir, "job.json");
-    writeFileSync(jobFile, JSON.stringify({ projectRoot, listPath }));
-    const stdout = execFileSync(
-      process.execPath,
-      ["--input-type=module", "-e", DESCRIBE_SCRIPT, "--", jobFile],
-      {
-        encoding: "utf8",
-        maxBuffer: 64 * 1024 * 1024,
+    const scriptFile = join(dir, "describe.mjs");
+    const outFile = join(dir, "describe.json");
+    writeFileSync(scriptFile, DESCRIBE_SCRIPT);
+    writeFileSync(jobFile, JSON.stringify({ projectRoot, listPath, outFile }));
+    try {
+      execFileSync(process.execPath, [scriptFile, jobFile], {
         timeout: 60_000,
-        stdio: ["ignore", "pipe", "inherit"],
-      },
-    );
-    return JSON.parse(stdout) as DescribeResult;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `pieces: could not load ${toPosix(relative(projectRoot, listPath))}: ${message}`,
-      { cause: error },
-    );
+        stdio: "inherit",
+      });
+    } catch (error) {
+      throw new Error(
+        `pieces: could not load ${rel}: ${childFailure(error, outFile)}`,
+        { cause: error },
+      );
+    }
+    return JSON.parse(readFileSync(outFile, "utf8")) as DescribeResult;
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -347,18 +382,46 @@ export function resolvePieceLocation(
     );
   }
   const dir = form === "entry" ? dirname(path) : path;
-  if (form === "entry") {
-    const piecesRoot = resolve(projectRoot, outDir, "node", "pieces");
-    const inside = relative(piecesRoot, dir);
-    if (inside === "" || inside.startsWith("..") || isAbsolute(inside)) {
-      const expected = toPosix(join(outDir, "node", "pieces"));
-      throw new Error(
-        `pieces: "${piece.name}" declares ${declared}, which is outside ${expected}/; ` +
-          `a piece is built to ${expected}/<dir>/index.mjs and its entry must point there`,
-      );
-    }
+  // Both forms, not just `entry`: a descriptor.json is written into this
+  // directory, and outside outDir that lands in tracked source.
+  const piecesRoot = resolve(projectRoot, outDir, "node", "pieces");
+  const inside = relative(piecesRoot, dir);
+  if (inside === "" || inside.startsWith("..") || isAbsolute(inside)) {
+    const expected = toPosix(join(outDir, "node", "pieces"));
+    throw new Error(
+      `pieces: "${piece.name}" declares ${declared}, which is outside ${expected}/; ` +
+        `a piece is built to ${expected}/<dir>/index.mjs and its entry must point there`,
+    );
   }
   return form === "entry" ? { dir, entryFile: path, form } : { dir, form };
+}
+
+// Where the node build leaves the list of pieces a package ships. Its presence
+// on disk, not a pieces/<dir> in the source, is what says a package has them.
+export function pieceListPath(target: {
+  projectRoot: string;
+  outDir: string;
+}): string {
+  return resolve(
+    target.projectRoot,
+    target.outDir,
+    "node",
+    "pieces",
+    "index.mjs",
+  );
+}
+
+// `dist` is not a default here but a contract: a host reads a piece from
+// dist/node/pieces/<name>, and a list entry names that path literally.
+export function assertPiecesOutDir(target: {
+  outDir: string;
+  pieces: PiecePlan[];
+}): void {
+  if (target.pieces.length === 0 || target.outDir === "dist") return;
+  throw new Error(
+    `pieces: --out-dir ${target.outDir} cannot hold pieces; a piece is loaded from ` +
+      `dist/node/pieces/<name> by the host, so a package that ships pieces builds to dist`,
+  );
 }
 
 // A piece named after its package must carry the package's version: once
@@ -454,19 +517,22 @@ export async function buildPieces(
   options: PieceBuildOptions,
 ): Promise<BuiltPiece[]> {
   const { projectRoot, outDir } = target;
+  assertPiecesOutDir(target);
+  // resolve, not join: an absolute --out-dir is what the browser and node
+  // steps hand tsdown, and joining it onto the project root mangles it.
   for (const piece of target.pieces) {
     console.log(`\n▶ Building piece ${piece.dir}...`);
     await options.bundle(
       buildPieceBuildConfig({
-        entry: join(projectRoot, piece.entry),
-        outDir: join(projectRoot, piece.outDir),
+        entry: resolve(projectRoot, piece.entry),
+        outDir: resolve(projectRoot, piece.outDir),
       }),
     );
   }
 
   // The list is the source of truth for names and versions; a package that
   // built pieces without a list has nothing a host could read.
-  const listPath = join(projectRoot, outDir, "node", "pieces", "index.mjs");
+  const listPath = pieceListPath(target);
   if (!existsSync(listPath)) {
     throw new Error(
       `pieces: ${toPosix(relative(projectRoot, listPath))} was not built; ` +
@@ -564,15 +630,18 @@ export function syncDistManifest(
   const { projectRoot, outDir } = target;
   const source = join(projectRoot, "powerhouse.manifest.json");
   const copy = join(projectRoot, outDir, "powerhouse.manifest.json");
+  // The built list, not the source plan: a package whose pieces are all
+  // `bundle:` entries has no pieces/<dir> and still ships pieces.
+  const shipsPieces = existsSync(pieceListPath(target));
   if (!existsSync(source)) {
-    if (target.pieces.length > 0) {
+    if (shipsPieces) {
       console.warn("⚠ no powerhouse.manifest.json; pieces will not be listed");
     }
     return undefined;
   }
   mkdirSync(dirname(copy), { recursive: true });
   copyFileSync(source, copy);
-  if (target.pieces.length === 0) return copy;
+  if (!shipsPieces) return copy;
 
   const manifest = JSON.parse(readFileSync(copy, "utf8")) as Manifest;
   const enriched = enrichManifestPieces(manifest, built);

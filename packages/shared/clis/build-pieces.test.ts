@@ -4,13 +4,18 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { runInNewContext } from "node:vm";
 import type { Manifest } from "../document-model/types.js";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   assertPieceVersion,
+  assertPiecesOutDir,
   createJsonReplacer,
+  DESCRIBE_HELPERS,
+  describePieces,
   enrichManifestPieces,
   pieceDescriptor,
+  pieceListPath,
   piecePackageJson,
   resolvePieceLocation,
   type BuiltPiece,
@@ -20,11 +25,15 @@ import {
 const created: string[] = [];
 
 function makeProject(files: string[]): string {
+  return writeProject(Object.fromEntries(files.map((f) => [f, "{}\n"])));
+}
+
+function writeProject(files: Record<string, string>): string {
   const dir = mkdtempSync(join(tmpdir(), "ph-build-pieces-"));
   created.push(dir);
-  for (const file of files) {
+  for (const [file, content] of Object.entries(files)) {
     mkdirSync(dirname(join(dir, file)), { recursive: true });
-    writeFileSync(join(dir, file), "{}\n");
+    writeFileSync(join(dir, file), content);
   }
   return dir;
 }
@@ -39,59 +48,129 @@ afterEach(() => {
 const stringify = (value: unknown) =>
   JSON.parse(JSON.stringify(value, createJsonReplacer())) as unknown;
 
-describe("createJsonReplacer", () => {
-  it("drops functions and undefined", () => {
-    expect(
-      stringify({
-        keep: 1,
-        run: () => "hi",
-        options: () => Promise.resolve([]),
-        missing: undefined,
-        nested: { resolve() {}, value: "x" },
-      }),
-    ).toEqual({ keep: 1, nested: { value: "x" } });
-  });
+// The child's own copies, evaluated out of the very text the child runs, so a
+// change to one copy and not the other fails here rather than in a build.
+const childCopy = runInNewContext(
+  `${DESCRIBE_HELPERS}\n({ findPiece, createJsonReplacer })`,
+) as {
+  findPiece: (mod: Record<string, unknown>) => unknown;
+  createJsonReplacer: () => (key: string, value: unknown) => unknown;
+};
 
-  it("turns a bigint into a string", () => {
-    expect(stringify({ big: 10n ** 20n })).toEqual({
-      big: "100000000000000000000",
-    });
-  });
+const stringifyInChild = (value: unknown) =>
+  JSON.parse(JSON.stringify(value, childCopy.createJsonReplacer())) as unknown;
 
-  it("omits an object already on the current path", () => {
-    const schema: Record<string, unknown> = { kind: "object" };
-    schema.self = schema;
-    schema.child = { parent: schema, name: "child" };
-    expect(stringify({ schema })).toEqual({
-      schema: { kind: "object", child: { name: "child" } },
-    });
-  });
+function cyclicSchema() {
+  const schema: Record<string, unknown> = { kind: "object" };
+  schema.self = schema;
+  schema.child = { parent: schema, name: "child" };
+  return { schema };
+}
 
-  it("keeps the same object appearing twice on different paths", () => {
-    const shared = { type: "SHORT_TEXT" };
-    expect(stringify({ a: shared, b: shared })).toEqual({
-      a: { type: "SHORT_TEXT" },
-      b: { type: "SHORT_TEXT" },
-    });
-  });
-
-  it("keeps arrays, and the primitives inside them", () => {
-    expect(stringify({ authors: ["a", "b"], tags: [1, true, null] })).toEqual({
-      authors: ["a", "b"],
-      tags: [1, true, null],
-    });
-  });
-
-  it("makes a class instance a plain object", () => {
-    class Default {
-      value = 42;
-      compute() {
-        return this.value;
-      }
+function classInstance() {
+  class Default {
+    value = 42;
+    compute() {
+      return this.value;
     }
-    expect(stringify({ defaultValue: new Default() })).toEqual({
-      defaultValue: { value: 42 },
-    });
+  }
+  return { defaultValue: new Default() };
+}
+
+// One table, run against both copies of the replacer below.
+const replacerCases: { name: string; value: () => unknown; json: unknown }[] = [
+  {
+    name: "drops functions and undefined",
+    value: () => ({
+      keep: 1,
+      run: () => "hi",
+      options: () => Promise.resolve([]),
+      missing: undefined,
+      nested: { resolve() {}, value: "x" },
+    }),
+    json: { keep: 1, nested: { value: "x" } },
+  },
+  {
+    name: "turns a bigint into a string",
+    value: () => ({ big: 10n ** 20n }),
+    json: { big: "100000000000000000000" },
+  },
+  {
+    name: "omits an object already on the current path",
+    value: cyclicSchema,
+    json: { schema: { kind: "object", child: { name: "child" } } },
+  },
+  {
+    name: "keeps the same object appearing twice on different paths",
+    value: () => {
+      const shared = { type: "SHORT_TEXT" };
+      return { a: shared, b: shared };
+    },
+    json: { a: { type: "SHORT_TEXT" }, b: { type: "SHORT_TEXT" } },
+  },
+  {
+    name: "keeps arrays, and the primitives inside them",
+    value: () => ({ authors: ["a", "b"], tags: [1, true, null] }),
+    json: { authors: ["a", "b"], tags: [1, true, null] },
+  },
+  {
+    name: "makes a class instance a plain object",
+    value: classInstance,
+    json: { defaultValue: { value: 42 } },
+  },
+];
+
+describe("createJsonReplacer", () => {
+  for (const c of replacerCases) {
+    it(c.name, () => expect(stringify(c.value())).toEqual(c.json));
+  }
+});
+
+describe("createJsonReplacer, the copy inside DESCRIBE_SCRIPT", () => {
+  for (const c of replacerCases) {
+    it(c.name, () => expect(stringifyInChild(c.value())).toEqual(c.json));
+  }
+});
+
+// The duck typing the child uses to pick the piece out of a loaded module;
+// its other copy is the runtime's own loader, which these cases mirror.
+describe("findPiece, the copy inside DESCRIBE_SCRIPT", () => {
+  class Piece {
+    displayName = "By constructor";
+  }
+
+  it("prefers an export whose constructor is named Piece", () => {
+    const byConstructor = new Piece();
+    const structural = { displayName: "Structural", actions: {} };
+    expect(childCopy.findPiece({ structural, byConstructor })).toBe(
+      byConstructor,
+    );
+  });
+
+  it("falls back to the structural shape", () => {
+    const mod = { hello: { displayName: "Hello", actions: () => ({}) } };
+    expect(childCopy.findPiece(mod)).toBe(mod.hello);
+  });
+
+  it("accepts a getAction method in place of actions", () => {
+    const mod = { hello: { displayName: "Hello", getAction: () => undefined } };
+    expect(childCopy.findPiece(mod)).toBe(mod.hello);
+  });
+
+  it("looks inside a default export object", () => {
+    const hello = { displayName: "Hello", actions: {} };
+    expect(childCopy.findPiece({ default: { hello } })).toBe(hello);
+  });
+
+  it("steps over a null-prototype export and finds the real piece", () => {
+    const hello = { displayName: "Hello", actions: {} };
+    expect(childCopy.findPiece({ weird: Object.create(null), hello })).toBe(
+      hello,
+    );
+  });
+
+  it("returns undefined when nothing looks like a piece", () => {
+    expect(childCopy.findPiece({ version: "1.0.0" })).toBeUndefined();
   });
 });
 
@@ -255,16 +334,33 @@ describe("resolvePieceLocation", () => {
   });
 
   it("resolves a bundle by its package.json", () => {
-    const root = makeProject(["vendor/hello/package.json"]);
+    const root = makeProject(["dist/node/pieces/hello/package.json"]);
     const location = resolvePieceLocation(
-      { name: "@acme/piece-hello", version: "1.0.0", bundle: "vendor/hello" },
+      {
+        name: "@acme/piece-hello",
+        version: "1.0.0",
+        bundle: "dist/node/pieces/hello",
+      },
       root,
       "dist",
     );
     expect(location).toEqual({
-      dir: join(root, "vendor", "hello"),
+      dir: join(root, "dist", "node", "pieces", "hello"),
       form: "bundle",
     });
+  });
+
+  // A descriptor.json is written into whatever this resolves to, so a bundle
+  // outside outDir would put a generated file in tracked source.
+  it("throws when a bundle lies outside <outDir>/node/pieces", () => {
+    const root = makeProject(["vendor/hello/package.json"]);
+    expect(() =>
+      resolvePieceLocation(
+        { name: "@acme/piece-hello", version: "1.0.0", bundle: "vendor/hello" },
+        root,
+        "dist",
+      ),
+    ).toThrow(/declares vendor\/hello, which is outside dist\/node\/pieces\//);
   });
 
   it("throws, naming the path, when the entry is missing", () => {
@@ -336,6 +432,94 @@ describe("resolvePieceLocation", () => {
         "dist",
       ),
     ).toThrow(/declares neither an entry nor a bundle/);
+  });
+});
+
+describe("assertPiecesOutDir", () => {
+  const pieces = [
+    { dir: "hello", entry: "pieces/hello/index.ts", outDir: "x" },
+  ];
+
+  it("refuses an out-dir a host would never read a piece from", () => {
+    expect(() => assertPiecesOutDir({ outDir: "build", pieces })).toThrow(
+      /a package that ships pieces builds to dist/,
+    );
+  });
+
+  it("passes for dist, and for any out-dir when there are no pieces", () => {
+    expect(() => assertPiecesOutDir({ outDir: "dist", pieces })).not.toThrow();
+    expect(() =>
+      assertPiecesOutDir({ outDir: "build", pieces: [] }),
+    ).not.toThrow();
+  });
+});
+
+// The real child, run against a built list on disk: the copies of the replacer
+// and the duck typing inside DESCRIBE_SCRIPT are what answer here.
+describe("describePieces", () => {
+  const list =
+    'export const pieces = [{ name: "@acme/piece-hello", version: "1.0.0", ' +
+    'entry: "dist/node/pieces/hello/index.mjs" }];\n';
+
+  const listIn = (root: string) =>
+    pieceListPath({ projectRoot: root, outDir: "dist" });
+
+  it("describes a piece that prints at import time, beside a null prototype", () => {
+    const root = writeProject({
+      "dist/node/pieces/index.mjs": list,
+      "dist/node/pieces/hello/index.mjs":
+        'process.stdout.write("[fixture] a piece prints at import time\\n");\n' +
+        "export const weird = Object.create(null);\n" +
+        'export const hello = { displayName: "Hello", description: "Says hello.",\n' +
+        '  actions: () => ({ say: { displayName: "Say", run: () => "hi" } }),\n' +
+        "  triggers: () => ({}) };\n",
+    });
+
+    const result = describePieces(root, listIn(root));
+
+    expect(result.errors).toEqual([]);
+    expect(result.pieces).toEqual([
+      {
+        name: "@acme/piece-hello",
+        version: "1.0.0",
+        metadata: {
+          displayName: "Hello",
+          description: "Says hello.",
+          actions: { say: { displayName: "Say" } },
+          triggers: {},
+        },
+      },
+    ]);
+  });
+
+  it("names the list, and not the script, when it exports no array", () => {
+    const root = writeProject({
+      "dist/node/pieces/index.mjs": "export const pieces = 42;\n",
+    });
+
+    let message = "";
+    try {
+      describePieces(root, listIn(root));
+    } catch (error) {
+      message = (error as Error).message;
+    }
+
+    expect(message).toMatch(
+      /could not load dist\/node\/pieces\/index\.mjs: .*exports no "pieces" array/,
+    );
+    expect(message).not.toContain("createJsonReplacer");
+    expect(message.split("\n")).toHaveLength(1);
+  });
+
+  it("reports a piece that throws on import, naming the piece", () => {
+    const root = writeProject({
+      "dist/node/pieces/index.mjs": list,
+      "dist/node/pieces/hello/index.mjs": 'throw new Error("boom");\n',
+    });
+
+    expect(describePieces(root, listIn(root)).errors).toEqual([
+      { name: "@acme/piece-hello", message: "boom" },
+    ]);
   });
 });
 

@@ -6,8 +6,10 @@ import {
 } from "@powerhousedao/shared/build-config";
 import type { BuiltPiece } from "@powerhousedao/shared/build-pieces";
 import {
+  assertPiecesOutDir,
   buildPieces,
   expandEntryGlobs,
+  pieceListPath,
   syncDistManifest,
 } from "@powerhousedao/shared/build-pieces";
 import {
@@ -73,6 +75,9 @@ export async function runBuild(args: BuildArgs) {
   await assertManifestNameMatchesPackage(projectRoot);
 
   const plan = planBuild(projectRoot, outDir);
+  // Before any bundler runs: an out-dir a host will never read from is worth
+  // nothing built, and the failure names what the contract is.
+  assertPiecesOutDir(plan);
   const sharedDeps = !args.noSharedDeps;
 
   if (announceSkip("browser build", plan.browser)) {
@@ -104,10 +109,11 @@ export async function runBuild(args: BuildArgs) {
     });
   }
 
-  // After the node build: it cleans <outDir>/node, where the pieces land.
+  // After the node build: it cleans <outDir>/node, where the pieces land. The
+  // built list is the gate, so a `bundle:` entry is validated with no piece dir.
   const target = { projectRoot, outDir, pieces: plan.pieces };
   let built: BuiltPiece[] = [];
-  if (plan.pieces.length > 0) {
+  if (existsSync(pieceListPath(target))) {
     const pkg = await readPackage({ cwd: projectRoot });
     built = await buildPieces(
       target,

@@ -70,6 +70,15 @@ describe("runBuild on a piece-only package", () => {
 
     await runBuild(args);
 
+    // The empty bareImports below only bites because a piece really imports a
+    // package the node build externalizes; zod is in the shared external set.
+    expect(
+      readFileSync(
+        join(fixture, "pieces", "hello", "lib", "greeting.ts"),
+        "utf8",
+      ),
+    ).toContain('from "zod"');
+
     // The list, and one directory per listed piece, each holding one module.
     expect(existsSync(join(dist, "node", "pieces", "index.mjs"))).toBe(true);
     for (const dir of ["hello", "goodbye"]) {
@@ -242,5 +251,20 @@ describe("runBuild on a mixed package", () => {
       },
     ]);
     expect(warnings).toEqual([]);
+  }, 120_000);
+});
+
+// Nothing under pieces/<dir>, so the plan finds no piece to bundle; the built
+// list is still there, and what it declares is still the build's to check.
+describe("runBuild on a package that only lists a piece", () => {
+  const fixture = join(fixtures, "listed-only-package");
+
+  it("fails, naming the piece the list declares and nothing built", async () => {
+    clean(fixture);
+    process.chdir(fixture);
+
+    await expect(runBuild(args)).rejects.toThrow(
+      'pieces: "@fixture/piece-gone" declares dist/node/pieces/gone/index.mjs, which is missing',
+    );
   }, 120_000);
 });

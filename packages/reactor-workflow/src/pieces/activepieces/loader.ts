@@ -65,7 +65,9 @@ function findPiece(
     mod.default,
   ];
   for (const candidate of candidates) {
-    if (isRecord(candidate) && candidate.constructor.name === "Piece") {
+    // `constructor?.name`: a bundle may export an Object.create(null), and the
+    // real piece is usually beside it in the same module.
+    if (isRecord(candidate) && candidate.constructor?.name === "Piece") {
       return {
         piece: candidate as unknown as ApPiece,
         check: "constructor-name",

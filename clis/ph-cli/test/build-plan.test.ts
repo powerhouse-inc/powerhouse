@@ -4,6 +4,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { assertPiecesOutDir } from "@powerhousedao/shared/build-pieces";
 import { afterEach, describe, expect, it } from "vitest";
 import { planBuild } from "../src/services/build-plan.js";
 
@@ -114,12 +115,24 @@ describe("planBuild", () => {
     expect(plan.pieces).toEqual([]);
   });
 
-  it("honours a custom outDir for the piece output", () => {
+  // The plan still follows --out-dir, but a host reads a piece from
+  // dist/node/pieces/<name>, so a package shipping pieces may not use one.
+  it("records a custom outDir the piece build then refuses", () => {
     const root = makeProject(pieceFiles);
     const plan = planBuild(root, "build");
 
     expect(plan.pieces[0].outDir).toBe(
       join("build", "node", "pieces", "goodbye"),
     );
+    expect(() => assertPiecesOutDir(plan)).toThrow(
+      /a package that ships pieces builds to dist/,
+    );
+  });
+
+  it("leaves a custom outDir alone for a package with no pieces", () => {
+    const plan = planBuild(makeProject(classicFiles), "build");
+
+    expect(plan.pieces).toEqual([]);
+    expect(() => assertPiecesOutDir(plan)).not.toThrow();
   });
 });
