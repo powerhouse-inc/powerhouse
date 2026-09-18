@@ -20,6 +20,16 @@ import {
   scanPackages,
   toPackageListItem,
 } from "./packages.js";
+import {
+  findPiece,
+  findPieceByTarball,
+  invalidatePieceIndex,
+  pieceCatalog,
+  pieceDetail,
+  pieceIndex,
+  pieceNamesInTarball,
+  pieceTarball,
+} from "./pieces.js";
 import type { RegistryConfig } from "./types.js";
 import { createWarmer } from "./warmup.js";
 
@@ -55,6 +65,13 @@ const MIME_TYPES: Record<string, string> = {
 function getContentType(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
   return MIME_TYPES[ext] ?? "application/octet-stream";
+}
+
+// Where a client reached us, for the absolute URLs the piece endpoints hand
+// out. `trust proxy` is off here, so the forwarded scheme is read directly.
+function originOf(req: Request): string {
+  const forwarded = req.get("x-forwarded-proto")?.split(",")[0].trim();
+  return `${forwarded || req.protocol}://${req.get("host") ?? ""}`;
 }
 
 // Publisher identity from verdaccio's remote_user (the renown middleware sets
@@ -297,6 +314,63 @@ export function createPowerhouseRouter(
     res.json((await withOwners([pkg]))[0]);
   });
 
+  // The piece catalog, in the shape cloud.activepieces.com's list endpoint
+  // returns, so the engine consumes both through one code path.
+  router.get("/pieces", (req: Request, res: Response) => {
+    void warm();
+    res.json(
+      pieceCatalog(config.cdnCachePath, {
+        storagePath: config.storagePath,
+        suggestions: req.query.suggestionType === "ACTION_AND_TRIGGER",
+      }),
+    );
+  });
+
+  // Wildcard, not `:name`: a scoped piece name carries a slash.
+  router.get("/pieces/*", (req: Request, res: Response) => {
+    void warm();
+    const name = (req.params as Record<string, string>)[0];
+    const entry = findPiece(config.cdnCachePath, name, config.storagePath);
+    const detail = entry ? pieceDetail(entry, originOf(req)) : null;
+    if (!detail) {
+      res.status(404).json({ error: `Piece not found: ${name}` });
+      return;
+    }
+    res.json(detail);
+  });
+
+  // The piece directory as an npm-shaped tarball, the one thing a reactor's
+  // piece worker downloads. Named as cdn.activepieces.com names its own.
+  router.get("/-/pieces/bundled/*", async (req: Request, res: Response) => {
+    void warm();
+    const filename = (req.params as Record<string, string>)[0];
+    const entry = findPieceByTarball(
+      config.cdnCachePath,
+      filename,
+      config.storagePath,
+    );
+    const file = entry ? await pieceTarball(entry) : null;
+    if (!entry || !file) {
+      res.status(404).json({ error: `Piece bundle not found: ${filename}` });
+      return;
+    }
+    // A piece bundle is immutable per (name, version), like the npm tarball it
+    // was cut from, so it can be cached for as long as a client likes.
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    const etag = `"${entry.packageName}-${filename}"`;
+    res.setHeader("ETag", etag);
+    if (etagMatches(req.headers["if-none-match"], etag)) {
+      res.status(304).end();
+      return;
+    }
+    res.setHeader("Content-Type", "application/gzip");
+    try {
+      await pipeline(fs.createReadStream(file), res);
+    } catch {
+      res.destroy();
+    }
+  });
+
   // CDN file serving
   router.get("/-/cdn/*", async (req: Request, res: Response) => {
     const fullPath = (req.params as Record<string, string>)[0];
@@ -461,6 +535,7 @@ export function createUnpublishHook(
         cdn
           .reconcileWithRegistry(rewrite.packageName)
           .then((removed) => {
+            if (removed.length > 0) invalidatePieceIndex();
             for (const version of removed) {
               notifications.notifyUnpublish({
                 packageName: rewrite.packageName,
@@ -511,6 +586,7 @@ export function createUnpublishHook(
           } else {
             cdn.invalidate(parsed.packageName);
           }
+          invalidatePieceIndex();
           notifications.notifyUnpublish({
             packageName: parsed.packageName,
             version: parsed.version,
@@ -539,15 +615,14 @@ export function createPublishHook(
     config.cdnCachePath,
   );
 
-  return (req: Request, res: Response, next: NextFunction) => {
-    // Only intercept PUT requests to npm publish endpoints.
-    // Skip PUTs to `/<pkg>/-rev/<rev>` — those are npm's manifest-rewrite
-    // step during single-version unpublish, not a new publish.
-    if (req.method !== "PUT" || req.path.includes("/-rev/")) {
-      next();
-      return;
-    }
+  // Publish bodies are read here, ahead of verdaccio: body-parser marks the
+  // request parsed, so verdaccio reuses this one instead of a spent stream.
+  const parseBody = express.json({
+    strict: false,
+    limit: config.maxBodySize ?? "300mb",
+  });
 
+  const attachExtraction = (req: Request, res: Response) => {
     const originalEnd = res.end.bind(res);
     res.end = function (
       this: Response,
@@ -583,6 +658,9 @@ export function createPublishHook(
       cdn
         .extractTarball(packageName, version)
         .then(() => {
+          // The new version's pieces only exist once it is extracted, so the
+          // index is dropped here rather than when the publish was accepted.
+          invalidatePieceIndex();
           notifications.notifyPublish({ packageName, version, publishedBy });
         })
         .catch((err) => {
@@ -594,7 +672,79 @@ export function createPublishHook(
 
       return originalEnd(chunk, encoding as BufferEncoding, cb);
     };
-
-    next();
   };
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    // Only npm publish endpoints: a PUT to `/<pkg>/-rev/<rev>` is the
+    // manifest rewrite of a single-version unpublish, not a new publish.
+    if (req.method !== "PUT" || req.path.includes("/-rev/")) {
+      next();
+      return;
+    }
+    const urlPath = req.path.replace(/^\//, "");
+    if (!urlPath || urlPath.startsWith("-")) {
+      attachExtraction(req, res);
+      next();
+      return;
+    }
+
+    parseBody(req, res, (parseError?: unknown) => {
+      // A body verdaccio will reject anyway: let it own the error message.
+      if (parseError) {
+        next();
+        return;
+      }
+      void pieceClaimConflict(config, decodeURIComponent(urlPath), req.body)
+        .then((conflict) => {
+          if (conflict) {
+            res.status(409).json({ error: conflict });
+            return;
+          }
+          attachExtraction(req, res);
+          next();
+        })
+        .catch((err) => {
+          console.error("[registry] piece collision check failed:", err);
+          attachExtraction(req, res);
+          next();
+        });
+    });
+  };
+}
+
+// The tarball a publish payload carries, if it carries one: npm sends a single
+// `_attachments` entry holding the base64 of the version being published.
+function publishedTarball(body: unknown): Buffer | null {
+  if (body === null || typeof body !== "object") return null;
+  const attachments = (body as { _attachments?: Record<string, unknown> })
+    ._attachments;
+  if (!attachments || typeof attachments !== "object") return null;
+  for (const [name, attachment] of Object.entries(attachments)) {
+    if (!name.endsWith(".tgz")) continue;
+    const data = (attachment as { data?: unknown }).data;
+    if (typeof data === "string") return Buffer.from(data, "base64");
+  }
+  return null;
+}
+
+// A piece name is one package's for good: two packages claiming it would make
+// a block type ambiguous, and a reactor would download whichever won a scan.
+async function pieceClaimConflict(
+  config: RegistryConfig,
+  packageName: string,
+  body: unknown,
+): Promise<string | null> {
+  // Nothing to collide with, so a registry that serves no pieces never pays
+  // for decompressing a publish to find out.
+  const index = pieceIndex(config.cdnCachePath, config.storagePath);
+  if (index.size === 0) return null;
+  const tarball = publishedTarball(body);
+  if (!tarball) return null;
+  for (const name of await pieceNamesInTarball(tarball)) {
+    const owner = index.get(name);
+    if (owner && owner.packageName !== packageName) {
+      return `Piece "${name}" is already published by ${owner.packageName}; ${packageName} cannot claim it.`;
+    }
+  }
+  return null;
 }
