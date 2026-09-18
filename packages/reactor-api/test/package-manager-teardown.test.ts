@@ -6,7 +6,10 @@ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 import { PackageManager } from "../src/packages/package-manager.js";
-import type { ISubscribablePackageLoader } from "../src/packages/types.js";
+import type {
+  ISubscribablePackageLoader,
+  PackagePieceEntry,
+} from "../src/packages/types.js";
 
 function makeSubgraphClass(name: string): SubgraphClass {
   return class extends BaseSubgraph {
@@ -57,6 +60,9 @@ function makeFakeLoader() {
     },
     loadProcessors(pkg: string): Promise<ProcessorFactoryBuilder | null> {
       return Promise.resolve(processors.get(pkg) ?? null);
+    },
+    loadPieces(): Promise<PackagePieceEntry[]> {
+      return Promise.resolve([]);
     },
     onDocumentModelsChange(pkg, handler) {
       return subscribe("documentModels", pkg, handler);

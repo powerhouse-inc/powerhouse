@@ -18,6 +18,8 @@ import {
   type CanonicalDocumentId,
   type Context,
   type IAuthorizationService,
+  type IPackagePieceSource,
+  type PackagePieceEntry,
   type SubgraphClass,
 } from "@powerhousedao/reactor-api";
 import {
@@ -127,6 +129,9 @@ export interface ComposeWorkflowRuntimeDeps {
   attachmentReferenceProjection?: AttachmentReferenceProjectionCapability;
   webhooks?: IWebhookScope;
   authorizationService: IAuthorizationService;
+  /** Where the pieces installed packages ship come from; absent leaves the
+   * runtime with none and only published bundles resolvable. */
+  pieces?: IPackagePieceSource;
   logger: ILogger;
   /** Overridden by the tests; production always loads the real engine. */
   load?: () => Promise<WorkflowEngineModule>;
@@ -274,6 +279,21 @@ async function registerWorkflowTriggersReadModel(
   return { status: "available" };
 }
 
+// The runtime holds pieces; reactor-api is what resolves them. Rebound on
+// every change, so a package rebuilt while this runs needs no restart.
+export function bindPackagePieces(
+  registry: { setPieces(pieces: readonly PackagePieceEntry[]): void },
+  source: IPackagePieceSource,
+): void {
+  const apply = (byPackage: Map<string, PackagePieceEntry[]>) => {
+    registry.setPieces([...byPackage.values()].flat());
+  };
+  // The initial load already happened inside startAPI, so what it reported is
+  // read here rather than waited for.
+  apply(source.getPieces());
+  source.onPiecesChange(apply);
+}
+
 // Builds the runtime, registers its intake, and returns its GraphQL face plus
 // the lifecycle the host drives. The engine loads lazily: off means unloaded.
 export async function composeWorkflowRuntime(
@@ -290,6 +310,10 @@ export async function composeWorkflowRuntime(
       { cause: error },
     );
   }
+
+  // Before the runtime exists: a restored trigger asks for a piece as soon as
+  // the supervisor starts, and the catalog is served from the same holder.
+  if (deps.pieces) bindPackagePieces(engine.packagePieces, deps.pieces);
 
   const runtime = engine.createWorkflowRuntime({
     relationalDb: deps.relationalDb,

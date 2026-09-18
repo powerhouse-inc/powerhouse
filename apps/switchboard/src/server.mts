@@ -922,6 +922,9 @@ async function initServer(
       // under it, not under the reactor's.
       webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
       authorizationService: api.authorizationService,
+      // The manager that already loads this reactor's packages: the project it
+      // runs in is one of them, so its own pieces arrive with the rest.
+      pieces: api.packageManager,
       logger: logger.child(["workflow-runtime"]),
     });
 

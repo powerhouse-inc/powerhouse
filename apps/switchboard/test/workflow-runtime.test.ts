@@ -10,7 +10,12 @@ import {
   type IReadModelCoordinator,
   type ReadModelRegistrationStage,
 } from "@powerhousedao/reactor";
-import { BaseSubgraph, type GraphQLManager } from "@powerhousedao/reactor-api";
+import {
+  BaseSubgraph,
+  type GraphQLManager,
+  type PackagePieceEntry,
+} from "@powerhousedao/reactor-api";
+import { PieceRegistry } from "@powerhousedao/reactor-workflow";
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { Kysely } from "kysely";
@@ -20,6 +25,7 @@ import { initFeatureFlags } from "../src/feature-flags.js";
 import { startSwitchboard } from "../src/server.mjs";
 import {
   PH_WORKFLOWS_ENABLED,
+  bindPackagePieces,
   composeWorkflowRuntime,
   loadWorkflowDocumentModels,
   resolveWorkflowsEnabled,
@@ -409,4 +415,60 @@ describe("booting Switchboard with workflows on", () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   }, 60_000);
+});
+
+describe("bindPackagePieces", () => {
+  // The manager's shape, no more of it than the binding uses.
+  function stubSource(initial: Map<string, PackagePieceEntry[]>) {
+    const handlers: ((pieces: Map<string, PackagePieceEntry[]>) => void)[] = [];
+    return {
+      getPieces: () => initial,
+      onPiecesChange(
+        handler: (pieces: Map<string, PackagePieceEntry[]>) => void,
+      ) {
+        handlers.push(handler);
+      },
+      emit(pieces: Map<string, PackagePieceEntry[]>) {
+        for (const handler of handlers) handler(pieces);
+      },
+    };
+  }
+
+  const entry = (name: string, version: string): PackagePieceEntry => ({
+    name,
+    version,
+    bundleDir: `/pkg/dist/node/pieces/${name}`,
+  });
+
+  it("fills the registry from what the manager already loaded", () => {
+    const registry = new PieceRegistry();
+    const source = stubSource(
+      new Map([
+        ["@acme/pack", [entry("@acme/piece-a", "1.0.0")]],
+        ["/srv/project", [entry("@acme/piece-b", "2.0.0")]],
+      ]),
+    );
+
+    bindPackagePieces(registry, source);
+
+    expect(registry.versions()).toEqual({
+      "@acme/piece-a": "1.0.0",
+      "@acme/piece-b": "2.0.0",
+    });
+  });
+
+  it("refills on every change, so a rebuilt package needs no restart", () => {
+    const registry = new PieceRegistry();
+    const source = stubSource(new Map());
+
+    bindPackagePieces(registry, source);
+    expect(registry.entries()).toEqual([]);
+
+    source.emit(new Map([["/srv/project", [entry("@acme/piece-b", "2.0.0")]]]));
+    expect(registry.versions()).toEqual({ "@acme/piece-b": "2.0.0" });
+
+    // And a package that stops shipping one loses it.
+    source.emit(new Map());
+    expect(registry.entries()).toEqual([]);
+  });
 });

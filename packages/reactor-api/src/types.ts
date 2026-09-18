@@ -22,6 +22,9 @@ import type { AuthService } from "./services/auth.service.js";
 export type {
   IPackageLoader,
   IPackageLoaderOptions,
+  IPackagePieceSource,
+  PackagePiece,
+  PackagePieceEntry,
 } from "./packages/types.js";
 
 /**

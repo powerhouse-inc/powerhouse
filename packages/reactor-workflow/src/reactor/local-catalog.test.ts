@@ -81,14 +81,10 @@ describe("a package piece in the catalog", () => {
       JSON.stringify({ name: PIECE, version: "2.0.0", main: "index.js" }),
     );
     await writeFile(join(bundle, "index.js"), SOURCE);
-    await writeFile(
-      join(root, "dist", "node", "pieces", "index.mjs"),
-      `export const pieces = ${JSON.stringify([
-        { name: PIECE, version: "2.0.0", bundle: "dist/node/pieces/fixture" },
-      ])};\n`,
-    );
-    packagePieces.reset();
-    await packagePieces.load(root);
+    // Filled as the host fills it: already located, absolute on this disk.
+    packagePieces.setPieces([
+      { name: PIECE, version: "2.0.0", bundleDir: bundle },
+    ]);
   });
 
   afterAll(async () => {
