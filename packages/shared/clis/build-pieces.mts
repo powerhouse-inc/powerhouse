@@ -629,7 +629,8 @@ export function syncDistManifest(
 ): string | undefined {
   const { projectRoot, outDir } = target;
   const source = join(projectRoot, "powerhouse.manifest.json");
-  const copy = join(projectRoot, outDir, "powerhouse.manifest.json");
+  // resolve, not join: an absolute --out-dir is a location, not a suffix.
+  const copy = resolve(projectRoot, outDir, "powerhouse.manifest.json");
   // The built list, not the source plan: a package whose pieces are all
   // `bundle:` entries has no pieces/<dir> and still ships pieces.
   const shipsPieces = existsSync(pieceListPath(target));
