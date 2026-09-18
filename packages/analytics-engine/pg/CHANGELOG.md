@@ -1,3 +1,7 @@
+## 6.2.3-dev.13 (2026-09-18)
+
+This was a version bump only for @powerhousedao/analytics-engine-pg to align it with other projects, there were no code changes.
+
 ## 6.2.3-dev.12 (2026-09-17)
 
 ### 🚀 Features
