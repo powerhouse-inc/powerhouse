@@ -1,0 +1,3 @@
+.registry-storage/
+.registry-cdn-cache/
+.tsbuild/
