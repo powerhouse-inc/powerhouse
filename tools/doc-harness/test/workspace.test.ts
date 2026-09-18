@@ -20,10 +20,17 @@ import {
   installedVersion,
   installWorkspace,
   pinsDocumentModels,
+  pinsVitestConfig,
+  refreshGradingConfig,
   scaffoldWorkspace,
   workspacePackageJson,
   workspaceTsconfig,
 } from "../src/lib/workspace.js";
+
+const MODEL_TEST_GLOBS = [
+  "document-models/**/tests/**",
+  "document-models/**/*.test.ts",
+];
 
 const PIN = "6.2.2-dev.62";
 
@@ -113,6 +120,20 @@ describe("scaffoldWorkspace", () => {
       exclude: ["node_modules", "dist", "reference", "__verify__"],
     });
 
+    const vitestConfig = readFileSync(
+      path.join(dir, "vitest.config.ts"),
+      "utf8",
+    );
+    for (const glob of [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/reference/**",
+      "**/__verify__/**",
+      ...MODEL_TEST_GLOBS.map((g) => `**/${g}`),
+    ]) {
+      expect(vitestConfig).toContain(`"${glob}",`);
+    }
+
     const yaml = readFileSync(path.join(dir, "pnpm-workspace.yaml"), "utf8");
     expect(yaml).toContain("allowBuilds:\n  '@apollo/protobufjs': true\n");
     expect(yaml).toContain("  esbuild: true\n");
@@ -146,6 +167,7 @@ describe("scaffoldWorkspace", () => {
     const cfg = workspaceTsconfig(withModels) as {
       compilerOptions: Record<string, unknown>;
       include: string[];
+      exclude: string[];
     };
     expect(cfg.compilerOptions.baseUrl).toBeUndefined();
     expect(cfg.compilerOptions.paths).toEqual({
@@ -153,6 +175,14 @@ describe("scaffoldWorkspace", () => {
       "document-models/*": ["./document-models/*/index.ts"],
     });
     expect(cfg.include).toEqual(["**/*.ts"]);
+    // The pinned codegen tests are not graded.
+    expect(cfg.exclude).toEqual([
+      "node_modules",
+      "dist",
+      "reference",
+      "__verify__",
+      ...MODEL_TEST_GLOBS,
+    ]);
   });
 
   it("lets versions override the devDependency ranges", () => {
@@ -164,6 +194,64 @@ describe("scaffoldWorkspace", () => {
     }) as { devDependencies: Record<string, string> };
     expect(pkg.devDependencies.vitest).toBe("^5.0.0");
     expect(pkg.devDependencies.typescript).toBe("^5.9.3");
+  });
+});
+
+describe("refreshGradingConfig", () => {
+  const stale = JSON.stringify({
+    compilerOptions: { strict: true },
+    include: ["**/*.ts"],
+    exclude: ["node_modules", "dist", "reference", "__verify__"],
+  });
+
+  it("replaces an old tsconfig and the default vitest config", () => {
+    const t = task({
+      pinnedInputs: [{ from: "document-models", to: "document-models" }],
+    });
+    const ws = path.join(tmp, "ws");
+    mkdirSync(ws, { recursive: true });
+    writeFileSync(path.join(ws, "tsconfig.json"), stale);
+    writeFileSync(path.join(ws, "vitest.config.ts"), "// old default\n");
+
+    expect(refreshGradingConfig(t, ws)).toEqual([
+      "tsconfig.json",
+      "vitest.config.ts",
+    ]);
+    expect(
+      JSON.parse(readFileSync(path.join(ws, "tsconfig.json"), "utf8")),
+    ).toEqual(workspaceTsconfig(t));
+    const vitestConfig = readFileSync(
+      path.join(ws, "vitest.config.ts"),
+      "utf8",
+    );
+    expect(vitestConfig).toContain("tsconfigPaths: true");
+    for (const glob of MODEL_TEST_GLOBS) {
+      expect(vitestConfig).toContain(`"**/${glob}",`);
+    }
+  });
+
+  it("leaves a pinned vitest.config.ts alone", () => {
+    const t = task({
+      acceptance: {
+        kind: "vitest",
+        files: [{ from: "vitest.config.ts", to: "vitest.config.ts" }],
+        vitestConfig: true,
+      },
+    });
+    expect(pinsVitestConfig(t)).toBe(true);
+    expect(pinsVitestConfig(task())).toBe(false);
+    const ws = path.join(tmp, "ws");
+    mkdirSync(ws, { recursive: true });
+    writeFileSync(path.join(ws, "tsconfig.json"), stale);
+    writeFileSync(path.join(ws, "vitest.config.ts"), "// pinned\n");
+
+    expect(refreshGradingConfig(t, ws)).toEqual(["tsconfig.json"]);
+    expect(readFileSync(path.join(ws, "vitest.config.ts"), "utf8")).toBe(
+      "// pinned\n",
+    );
+    expect(
+      JSON.parse(readFileSync(path.join(ws, "tsconfig.json"), "utf8")),
+    ).toEqual(workspaceTsconfig(t));
   });
 });
 

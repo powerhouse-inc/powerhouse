@@ -1,17 +1,27 @@
 /** Hidden tests against the builder's workspace: tsc, then vitest as JSON. */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { z } from "zod";
 import type { Task } from "./catalog.js";
 import type { AttemptLayout } from "./paths.js";
 import { run, type RunOptions, type RunResult } from "./process.js";
 import type { TestsResult } from "./schemas.js";
-import { copyAcceptanceFiles } from "./workspace.js";
+import {
+  ACCEPTANCE_VITEST_EXCLUDES,
+  copyAcceptanceFiles,
+  installWorkspace,
+  refreshGradingConfig,
+  type InstallOptions,
+  type InstallResult,
+} from "./workspace.js";
 
 export type Runner = (
   cmd: string,
   args: string[],
   options: RunOptions,
 ) => Promise<RunResult>;
+
+export type Installer = (o: InstallOptions) => Promise<InstallResult>;
 
 /** The subset of vitest's JSON reporter output the harness reads. */
 export const VitestJsonSummary = z.object({
@@ -54,6 +64,8 @@ export interface AcceptanceOptions {
   /** Copies the files but runs nothing; counts stay 0 and tscOk null. */
   dryRun?: boolean;
   runner?: Runner;
+  /** Reinstalls a workspace record.ts already stripped; without it, tsc fails. */
+  reinstall?: { cacheDir: string; timeoutMs: number; installer?: Installer };
 }
 
 const MIN_VITEST_MS = 30_000;
@@ -91,6 +103,23 @@ export async function runAcceptance(
   });
   if (kind === "none" || o.dryRun === true) return done();
 
+  refreshGradingConfig(o.task, cwd);
+  if (o.reinstall && !existsSync(path.join(cwd, "node_modules"))) {
+    const installer = o.reinstall.installer ?? installWorkspace;
+    const install = await installer({
+      dir: cwd,
+      task: o.task,
+      cacheDir: o.reinstall.cacheDir,
+      logPath: o.layout.reinstallLogPath,
+      timeoutMs: o.reinstall.timeoutMs,
+    });
+    if (!install.ok) {
+      throw new Error(
+        `acceptance: reinstall of ${cwd} failed; see ${o.layout.reinstallLogPath}`,
+      );
+    }
+  }
+
   const tsc = await runner("pnpm", ["exec", "tsc", "--noEmit"], {
     cwd,
     timeoutMs: o.timeoutMs,
@@ -114,11 +143,8 @@ export async function runAcceptance(
       "run",
       "--reporter=json",
       `--outputFile=${o.layout.vitestJsonPath}`,
-      // Pinned recipe configs lack these; never grade the reference copy or probes.
-      "--exclude",
-      "**/reference/**",
-      "--exclude",
-      "**/__verify__/**",
+      // Pinned recipe configs lack these.
+      ...ACCEPTANCE_VITEST_EXCLUDES.flatMap((g) => ["--exclude", g]),
     ],
     {
       cwd,

@@ -81,6 +81,15 @@ reopened so the summary re-appends it. A judge or verifier redo keeps the build
 and its grading. A reason may be scoped to one step (`judge:budget-exhausted`);
 `record:budget-exhausted` only re-records matching attempts (attempt.json and
 their findings lines) so a new status taxonomy applies without redoing work.
+`acceptance:tsc` (tests.json has `tscOk: false`), `acceptance:vitest`
+(`vitestOk: false` or suite errors) and `acceptance:any` (every graded
+attempt) re-grade without re-judging: `tests.json`, `vitest.json`, `tsc.log`,
+`vitest.log` and `attempt.json` move aside, the findings lines leave, and
+`judge.json` and `verify.json` stay. The acceptance step rewrites the
+workspace's `tsconfig.json` (and `vitest.config.ts` unless the task pins one)
+from the current scaffold before grading, and reinstalls `node_modules` from
+the run's cached lockfile (`.install-cache/<taskId>/pnpm-lock.yaml`, about a
+second offline) when a recorded attempt has already had it removed.
 
 `--throttle-at <ratio>` (default `0.9`, `0` disables) holds new `claude`
 processes while the account's five-hour rate-limit window is at or above the

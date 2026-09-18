@@ -42,6 +42,21 @@ const RELEASE_AGE_YAML = `minimumReleaseAgeExclude:
   - "document-model"
 `;
 
+const DOCUMENT_MODELS_DIR = "document-models";
+
+/** Pinned codegen tests: not the builder's work, and not typecheckable here. */
+const PINNED_MODEL_TEST_GLOBS = [
+  `${DOCUMENT_MODELS_DIR}/**/tests/**`,
+  `${DOCUMENT_MODELS_DIR}/**/*.test.ts`,
+];
+
+/** Never graded: the reference copy, verifier probes, pinned model tests. */
+export const ACCEPTANCE_VITEST_EXCLUDES: readonly string[] = [
+  "**/reference/**",
+  "**/__verify__/**",
+  ...PINNED_MODEL_TEST_GLOBS.map((g) => `**/${g}`),
+];
+
 const DEFAULT_VITEST_CONFIG = `import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -52,14 +67,14 @@ export default defineConfig({
     exclude: [
       "**/node_modules/**",
       "**/dist/**",
-      "**/reference/**",
-      "**/__verify__/**",
+${ACCEPTANCE_VITEST_EXCLUDES.map((g) => `      "${g}",`).join("\n")}
     ],
   },
 });
 `;
 
-const DOCUMENT_MODELS_DIR = "document-models";
+const TSCONFIG_FILE = "tsconfig.json";
+const VITEST_CONFIG_FILE = "vitest.config.ts";
 
 function sortedRecord(entries: Record<string, string>): Record<string, string> {
   return Object.fromEntries(
@@ -126,8 +141,18 @@ export function workspaceTsconfig(task: Task): object {
     // Recipes are flat or src/-rooted; include everything and exclude the usual.
     include: ["**/*.ts"],
     // reference/ is arm B's read-only copy; __verify__/ holds verifier probes.
-    exclude: ["node_modules", "dist", "reference", "__verify__"],
+    exclude: [
+      "node_modules",
+      "dist",
+      "reference",
+      "__verify__",
+      ...(withModels ? PINNED_MODEL_TEST_GLOBS : []),
+    ],
   };
+}
+
+function tsconfigText(task: Task): string {
+  return `${JSON.stringify(workspaceTsconfig(task), null, 2)}\n`;
 }
 
 /** Returns the files written, relative to dir. */
@@ -136,16 +161,41 @@ export function scaffoldWorkspace(o: ScaffoldOptions): string[] {
   const files: Record<string, string> = {
     "package.json": `${JSON.stringify(workspacePackageJson(o), null, 2)}\n`,
     "pnpm-workspace.yaml": `${ALLOW_BUILDS_YAML}\n${RELEASE_AGE_YAML}`,
-    "tsconfig.json": `${JSON.stringify(workspaceTsconfig(o.task), null, 2)}\n`,
+    [TSCONFIG_FILE]: tsconfigText(o.task),
     ".gitignore": "node_modules\ndist\n",
     // Always present: without it vitest walks up and finds doc-harness's own
     // config, whose include matches nothing in the workspace.
-    "vitest.config.ts": DEFAULT_VITEST_CONFIG,
+    [VITEST_CONFIG_FILE]: DEFAULT_VITEST_CONFIG,
   };
   for (const [name, content] of Object.entries(files)) {
     writeFileSync(path.join(o.dir, name), content);
   }
   return Object.keys(files);
+}
+
+export function pinsVitestConfig(
+  task: Pick<Task, "pinnedInputs" | "acceptance">,
+): boolean {
+  return [...task.pinnedInputs, ...task.acceptance.files].some(
+    (c) => c.to === VITEST_CONFIG_FILE,
+  );
+}
+
+/** prepare.json is cached, so an old workspace would keep stale excludes. */
+export function refreshGradingConfig(
+  task: Task,
+  workspaceDir: string,
+): string[] {
+  writeFileSync(path.join(workspaceDir, TSCONFIG_FILE), tsconfigText(task));
+  const written = [TSCONFIG_FILE];
+  if (!pinsVitestConfig(task)) {
+    writeFileSync(
+      path.join(workspaceDir, VITEST_CONFIG_FILE),
+      DEFAULT_VITEST_CONFIG,
+    );
+    written.push(VITEST_CONFIG_FILE);
+  }
+  return written;
 }
 
 /* -------------------------------------------------------------- copies */

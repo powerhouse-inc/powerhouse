@@ -13,11 +13,23 @@ import {
   parseVitestJson,
   runAcceptance,
   vitestLogPath,
+  type Installer,
   type Runner,
 } from "../src/lib/acceptance.js";
 import type { Task } from "../src/lib/catalog.js";
 import { runLayout } from "../src/lib/paths.js";
 import type { RunResult } from "../src/lib/process.js";
+import {
+  workspaceTsconfig,
+  type InstallOptions,
+} from "../src/lib/workspace.js";
+
+const EXCLUDES = [
+  "**/reference/**",
+  "**/__verify__/**",
+  "**/document-models/**/tests/**",
+  "**/document-models/**/*.test.ts",
+];
 
 let tmp: string;
 beforeEach(() => {
@@ -92,6 +104,25 @@ function fakeRunner(o: {
     });
   };
   return { runner, calls };
+}
+
+/** Records calls; `ok: false` fails the install. */
+function fakeInstaller(ok = true): {
+  installer: Installer;
+  calls: InstallOptions[];
+} {
+  const calls: InstallOptions[] = [];
+  const installer: Installer = (o) => {
+    calls.push(o);
+    if (ok) mkdirSync(path.join(o.dir, "node_modules"), { recursive: true });
+    return Promise.resolve({
+      ok,
+      ms: 1,
+      installedVersion: ok ? "1.0.0" : null,
+      fromCache: ok,
+    });
+  };
+  return { installer, calls };
 }
 
 describe("parseVitestJson", () => {
@@ -201,6 +232,10 @@ describe("runAcceptance", () => {
     });
     expect(calls.map((c) => c.args[1])).toEqual(["tsc", "vitest"]);
     expect(calls[1].args).toContain(`--outputFile=${layout.vitestJsonPath}`);
+    // Pinned recipe configs lack these excludes; the flags carry them.
+    expect(calls[1].args.slice(-2 * EXCLUDES.length)).toEqual(
+      EXCLUDES.flatMap((g) => ["--exclude", g]),
+    );
     expect(result).toMatchObject({
       kind: "vitest",
       tscOk: true,
@@ -231,5 +266,148 @@ describe("runAcceptance", () => {
       timedOut: true,
       vitestJsonPath: null,
     });
+  });
+});
+
+describe("runAcceptance on a recorded workspace", () => {
+  const stale = JSON.stringify({
+    compilerOptions: { strict: true },
+    include: ["**/*.ts"],
+    exclude: ["node_modules"],
+  });
+
+  it("reinstalls a missing node_modules from the run's cache, then grades", async () => {
+    const { pinnedRoot, layout } = setup();
+    const { runner, calls } = fakeRunner({});
+    const { installer, calls: installs } = fakeInstaller();
+    const t = task("tsc-only");
+    const result = await runAcceptance({
+      task: t,
+      layout,
+      timeoutMs: 1000,
+      pinnedRoot,
+      runner,
+      reinstall: { cacheDir: path.join(tmp, "cache"), timeoutMs: 5, installer },
+    });
+    expect(installs).toEqual([
+      {
+        dir: layout.workspaceDir,
+        task: t,
+        cacheDir: path.join(tmp, "cache"),
+        logPath: layout.reinstallLogPath,
+        timeoutMs: 5,
+      },
+    ]);
+    expect(calls.map((c) => c.args[1])).toEqual(["tsc"]);
+    expect(result.tscOk).toBe(true);
+  });
+
+  it("skips the reinstall when node_modules is present", async () => {
+    const { pinnedRoot, layout } = setup();
+    mkdirSync(path.join(layout.workspaceDir, "node_modules"));
+    const { runner } = fakeRunner({});
+    const { installer, calls: installs } = fakeInstaller();
+    await runAcceptance({
+      task: task("tsc-only"),
+      layout,
+      timeoutMs: 1000,
+      pinnedRoot,
+      runner,
+      reinstall: { cacheDir: path.join(tmp, "cache"), timeoutMs: 5, installer },
+    });
+    expect(installs).toEqual([]);
+  });
+
+  it("fails clearly when the reinstall fails, before running anything", async () => {
+    const { pinnedRoot, layout } = setup();
+    const { runner, calls } = fakeRunner({});
+    const { installer } = fakeInstaller(false);
+    await expect(
+      runAcceptance({
+        task: task("tsc-only"),
+        layout,
+        timeoutMs: 1000,
+        pinnedRoot,
+        runner,
+        reinstall: {
+          cacheDir: path.join(tmp, "cache"),
+          timeoutMs: 5,
+          installer,
+        },
+      }),
+    ).rejects.toThrow(/reinstall of .* failed; see .*reinstall\.log/);
+    expect(calls).toEqual([]);
+  });
+
+  it("refreshes tsconfig.json and the default vitest.config.ts before grading", async () => {
+    const { pinnedRoot, layout } = setup();
+    const t = task("vitest");
+    writeFileSync(path.join(layout.workspaceDir, "tsconfig.json"), stale);
+    writeFileSync(
+      path.join(layout.workspaceDir, "vitest.config.ts"),
+      "// old default\n",
+    );
+    const { runner } = fakeRunner({});
+    const { installer } = fakeInstaller();
+    await runAcceptance({
+      task: t,
+      layout,
+      timeoutMs: 1000,
+      pinnedRoot,
+      runner,
+      reinstall: { cacheDir: path.join(tmp, "cache"), timeoutMs: 5, installer },
+    });
+    expect(
+      JSON.parse(
+        readFileSync(path.join(layout.workspaceDir, "tsconfig.json"), "utf8"),
+      ),
+    ).toEqual(workspaceTsconfig(t));
+    expect(
+      readFileSync(path.join(layout.workspaceDir, "vitest.config.ts"), "utf8"),
+    ).toContain("**/document-models/**/tests/**");
+  });
+
+  it("keeps a pinned vitest.config.ts", async () => {
+    const { pinnedRoot, layout } = setup();
+    const t = task("vitest");
+    t.acceptance.files.push({
+      from: "vitest.config.ts",
+      to: "vitest.config.ts",
+    });
+    writeFileSync(
+      path.join(pinnedRoot, "alpha", "vitest.config.ts"),
+      "// pinned\n",
+    );
+    const { runner } = fakeRunner({});
+    await runAcceptance({
+      task: t,
+      layout,
+      timeoutMs: 1000,
+      pinnedRoot,
+      runner,
+    });
+    expect(
+      readFileSync(path.join(layout.workspaceDir, "vitest.config.ts"), "utf8"),
+    ).toBe("// pinned\n");
+  });
+
+  it("dry run neither reinstalls nor rewrites the config", async () => {
+    const { pinnedRoot, layout } = setup();
+    writeFileSync(path.join(layout.workspaceDir, "tsconfig.json"), stale);
+    const { runner } = fakeRunner({});
+    const { installer, calls: installs } = fakeInstaller();
+    await runAcceptance({
+      task: task("vitest"),
+      layout,
+      timeoutMs: 1000,
+      pinnedRoot,
+      dryRun: true,
+      runner,
+      reinstall: { cacheDir: path.join(tmp, "cache"), timeoutMs: 5, installer },
+    });
+    expect(installs).toEqual([]);
+    expect(
+      readFileSync(path.join(layout.workspaceDir, "tsconfig.json"), "utf8"),
+    ).toBe(stale);
   });
 });

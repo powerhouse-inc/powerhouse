@@ -67,6 +67,22 @@ function stepJson(failureReason: string | null): string {
   });
 }
 
+/** tests.json as the acceptance step writes it; only the graded fields matter. */
+function testsJson(o: {
+  tscOk?: boolean | null;
+  vitestOk?: boolean | null;
+  suiteErrors?: number;
+  skipped?: boolean;
+}): string {
+  return JSON.stringify({
+    kind: "vitest",
+    tscOk: o.tscOk ?? true,
+    vitestOk: o.vitestOk ?? true,
+    suiteErrors: o.suiteErrors ?? 0,
+    skipped: o.skipped ?? false,
+  });
+}
+
 /** Every file the pipeline writes for a finished attempt. */
 function fullAttempt(
   layout: AttemptLayout,
@@ -74,6 +90,7 @@ function fullAttempt(
     build?: string | null;
     judge?: string | null;
     verify?: string | null;
+    tests?: string;
   },
 ): void {
   write(layout.prepareJson, "{}");
@@ -84,8 +101,9 @@ function fullAttempt(
   write(layout.transcriptPath, '{"type":"system","subtype":"init"}\n');
   write(layout.sessionJsonlPath, "");
   write(layout.stderrPath, "");
-  write(layout.testsJson, "{}");
+  write(layout.testsJson, o.tests ?? testsJson({}));
   write(layout.vitestJsonPath, "{}");
+  write(path.join(layout.dir, "vitest.log"), "");
   write(layout.tscOutputPath, "");
   write(layout.metricsJson, "{}");
   write(layout.compactMd, "# t");
@@ -115,18 +133,28 @@ beforeEach(() => {
   write(path.join(run.docsDir, "INDEX.md"), "# docs");
   mkdirSync(run.installCacheDir, { recursive: true });
 
-  fullAttempt(run.attempt("custom-read-model", "A", 1), {});
+  fullAttempt(run.attempt("custom-read-model", "A", 1), {
+    tests: testsJson({ tscOk: false }),
+  });
   fullAttempt(run.attempt("custom-read-model", "A", 2), {
     judge: "rate-limited",
+    tests: testsJson({ vitestOk: false }),
   });
   fullAttempt(run.attempt("custom-read-model", "B", 1), {
     verify: "wall-clock",
+    tests: testsJson({ suiteErrors: 1 }),
   });
   fullAttempt(run.attempt("batch-progress", "A", 1), {
     build: "budget-exhausted",
   });
-  fullAttempt(run.attempt("batch-progress", "A", 2), { build: "wall-clock" });
-  fullAttempt(run.attempt("batch-progress", "B", 1), { build: "rate-limited" });
+  fullAttempt(run.attempt("batch-progress", "A", 2), {
+    build: "wall-clock",
+    tests: testsJson({ tscOk: null, vitestOk: null, skipped: true }),
+  });
+  fullAttempt(run.attempt("batch-progress", "B", 1), {
+    build: "rate-limited",
+    tests: testsJson({ tscOk: null, vitestOk: null, skipped: true }),
+  });
 });
 afterEach(() => {
   rmSync(tmp, { recursive: true, force: true });
@@ -187,6 +215,52 @@ describe("redoStepFor", () => {
     expect(
       redoStepFor(run.attempt("ghost", "A", 9), parseRedoReasons("wall-clock")),
     ).toBeNull();
+    expect(
+      redoStepFor(
+        run.attempt("ghost", "A", 9),
+        parseRedoReasons("acceptance:any"),
+      ),
+    ).toBeNull();
+  });
+
+  it("acceptance: reads the grade in tests.json", () => {
+    const a1 = run.attempt("custom-read-model", "A", 1);
+    const a2 = run.attempt("custom-read-model", "A", 2);
+    const b1 = run.attempt("custom-read-model", "B", 1);
+    expect(redoStepFor(a1, parseRedoReasons("acceptance:tsc"))).toEqual({
+      step: "acceptance",
+      reason: "tsc",
+    });
+    expect(redoStepFor(a1, parseRedoReasons("acceptance:vitest"))).toBeNull();
+    expect(redoStepFor(a2, parseRedoReasons("acceptance:vitest"))).toEqual({
+      step: "acceptance",
+      reason: "vitest",
+    });
+    expect(redoStepFor(b1, parseRedoReasons("acceptance:vitest"))).toEqual({
+      step: "acceptance",
+      reason: "vitest",
+    });
+    expect(redoStepFor(b1, parseRedoReasons("acceptance:tsc"))).toBeNull();
+    expect(redoStepFor(a1, parseRedoReasons("acceptance:any"))).toEqual({
+      step: "acceptance",
+      reason: "any",
+    });
+    // A failed step wins; a skipped grade has nothing to redo, so record: applies.
+    expect(
+      redoStepFor(a2, parseRedoReasons("rate-limited,acceptance:vitest")),
+    ).toEqual({ step: "judge", reason: "rate-limited" });
+    expect(
+      redoStepFor(
+        run.attempt("batch-progress", "A", 2),
+        parseRedoReasons("acceptance:any"),
+      ),
+    ).toBeNull();
+    expect(
+      redoStepFor(
+        run.attempt("batch-progress", "A", 1),
+        parseRedoReasons("acceptance:tsc,record:budget-exhausted"),
+      ),
+    ).toEqual({ step: "record", reason: "budget-exhausted" });
   });
 });
 
@@ -194,6 +268,21 @@ describe("filesToReset", () => {
   it("record only touches attempt.json", () => {
     const layout = run.attempt("t", "A", 1);
     expect(filesToReset(layout, "record")).toEqual([layout.attemptJson]);
+  });
+
+  it("acceptance takes the grade and attempt.json, not the judge", () => {
+    const layout = run.attempt("t", "A", 1);
+    expect(filesToReset(layout, "acceptance")).toEqual([
+      layout.testsJson,
+      layout.vitestJsonPath,
+      path.join(layout.dir, "vitest.log"),
+      layout.tscOutputPath,
+      layout.reinstallLogPath,
+      layout.attemptJson,
+    ]);
+    expect(filesToReset(layout, "build")).toEqual(
+      expect.arrayContaining(filesToReset(layout, "acceptance")),
+    );
   });
 
   it("is nested: verify within judge within build", () => {
@@ -334,6 +423,59 @@ describe("redoFailedAttempts", () => {
     expect(result.runLineRemoved).toBe(true);
   });
 
+  it("acceptance: re-grades and re-records without re-judging", () => {
+    const result = redoFailedAttempts(run, {
+      reasons: parseRedoReasons("acceptance:tsc"),
+      findingsFile,
+      runsFile,
+    });
+    expect(
+      result.reset.map(
+        (r) => `${r.taskId}/${r.arm}/${r.n}:${r.step}:${r.reason}`,
+      ),
+    ).toEqual(["custom-read-model/A/1:acceptance:tsc"]);
+    const a1 = run.attempt("custom-read-model", "A", 1);
+    expect(result.reset[0].moved).toEqual([
+      "tests.json",
+      "vitest.json",
+      "vitest.log",
+      "tsc.log",
+      "attempt.json",
+    ]);
+    for (const f of [
+      a1.testsJson,
+      a1.vitestJsonPath,
+      a1.tscOutputPath,
+      a1.attemptJson,
+    ]) {
+      expect(existsSync(f)).toBe(false);
+    }
+    for (const f of [
+      a1.prepareJson,
+      a1.buildJson,
+      a1.transcriptPath,
+      a1.metricsJson,
+      a1.compactMd,
+      a1.dtsDir,
+      a1.judgeJson,
+      a1.verifyJson,
+      path.join(a1.workspaceDir, "src/index.ts"),
+      path.join(a1.workspaceDir, "node_modules/x/package.json"),
+    ]) {
+      expect(existsSync(f)).toBe(true);
+    }
+    expect(existsSync(path.join(a1.dir, "previous/1/tests.json"))).toBe(true);
+
+    expect(result.reset[0].findingsRemoved).toBe(1);
+    const after = readEntries(findingsFile, FindingRecord).entries;
+    expect(after.map((f) => `${f.runId} ${f.taskId}/${f.arm}/${f.n}`)).toEqual([
+      `${RUN_ID} custom-read-model/A/2`,
+      `${RUN_ID} custom-read-model/A/2`,
+      "other-run batch-progress/A/1",
+    ]);
+    expect(result.runLineRemoved).toBe(true);
+  });
+
   it("is a no-op when nothing matches, leaving the records alone", () => {
     const result = redoFailedAttempts(run, {
       reasons: parseRedoReasons("spawn-error"),
@@ -409,5 +551,18 @@ describe("parseRedoReasons", () => {
     ]);
     expect(() => parseRedoReasons("nope")).toThrow();
     expect(() => parseRedoReasons("extract:wall-clock")).toThrow();
+  });
+
+  it("scopes tsc, vitest and any to the acceptance step only", () => {
+    expect(parseRedoReasons("acceptance:tsc,acceptance:vitest")).toEqual([
+      { step: "acceptance", reason: "tsc" },
+      { step: "acceptance", reason: "vitest" },
+    ]);
+    expect(parseRedoReasons("acceptance:any")).toEqual([
+      { step: "acceptance", reason: "any" },
+    ]);
+    expect(() => parseRedoReasons("tsc")).toThrow();
+    expect(() => parseRedoReasons("judge:tsc")).toThrow();
+    expect(() => parseRedoReasons("acceptance:wall-clock")).toThrow();
   });
 });

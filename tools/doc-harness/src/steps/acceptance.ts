@@ -21,6 +21,9 @@ import {
   writeJson,
 } from "./shared.js";
 
+/** Same budget as prepare; the cached lockfile makes the usual case ~1 s. */
+const REINSTALL_TIMEOUT_MS = 900_000;
+
 /** tests.json: TestsResult plus whether the step ran at all. */
 export const TestsJson = TestsResult.extend({ skipped: z.boolean() });
 export type TestsJson = z.infer<typeof TestsJson>;
@@ -47,7 +50,7 @@ export const acceptance = createStep({
   retries: 0,
   execute: async (params) => {
     const { inputData } = params;
-    const { input, ctx, task, layout } = attemptScope(
+    const { input, ctx, task, run, layout } = attemptScope(
       params.getInitData<TaskRunInput>(),
     );
     const cached = readCached(layout.testsJson, TestsJson);
@@ -76,6 +79,10 @@ export const acceptance = createStep({
         timeoutMs: task.timeouts.acceptanceMs,
         pinnedRoot: ctx.pinnedRoot,
         dryRun: ctx.dryRun,
+        reinstall: {
+          cacheDir: run.installCacheDir,
+          timeoutMs: REINSTALL_TIMEOUT_MS,
+        },
       });
       const dts = collectDts(layout.workspaceDir, task.packages, layout.dtsDir);
       ctx.log(

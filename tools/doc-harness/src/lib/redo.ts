@@ -31,17 +31,24 @@ function readCached<T>(file: string, schema: ZodType<T>): T | null {
   return schema.parse(JSON.parse(readFileSync(file, "utf8")));
 }
 
-export type RedoStep = "build" | "judge" | "verify" | "record";
+export type RedoStep = "build" | "acceptance" | "judge" | "verify" | "record";
+
+/** `tsc`: tscOk false; `vitest`: vitestOk false or suite errors; `any`: graded. */
+export const AcceptanceRedoReason = z.enum(["tsc", "vitest", "any"]);
+export type AcceptanceRedoReason = z.infer<typeof AcceptanceRedoReason>;
+
+export type RedoReason = FailureReason | AcceptanceRedoReason;
 
 /**
  * `wall-clock` matches that failure in any step; `judge:wall-clock` only in
  * the judge; `record:budget-exhausted` re-records (attempt.json and the
  * findings lines only) attempts whose build failed that way, so the new
- * status taxonomy applies without redoing any work.
+ * status taxonomy applies without redoing any work. `acceptance:<reason>`
+ * re-grades and re-records without re-judging.
  */
 export interface RedoRule {
   step: RedoStep | null;
-  reason: FailureReason;
+  reason: RedoReason;
 }
 
 export const DEFAULT_REDO_REASONS: readonly RedoRule[] = [
@@ -54,7 +61,7 @@ export interface RedoEntry {
   arm: Arm;
   n: number;
   step: RedoStep;
-  reason: FailureReason;
+  reason: RedoReason;
   /** Where the stale files went. */
   previousDir: string;
   moved: string[];
@@ -89,14 +96,48 @@ function failureOf(file: string): FailureReason | null {
   return parsed.failureReason ?? parsed.claude?.failureReason ?? null;
 }
 
+/** Only what the acceptance rules read; skipped grades have nothing to redo. */
+const TestsGrade = z
+  .object({
+    tscOk: z.boolean().nullable().optional(),
+    vitestOk: z.boolean().nullable().optional(),
+    suiteErrors: z.number().optional(),
+    skipped: z.boolean().optional(),
+  })
+  .loose();
+
+function acceptanceRedoReason(
+  file: string,
+  rules: readonly RedoRule[],
+): AcceptanceRedoReason | null {
+  const wanted = rules.flatMap((r) =>
+    r.step === "acceptance" ? [r.reason as AcceptanceRedoReason] : [],
+  );
+  if (wanted.length === 0) return null;
+  let grade: z.infer<typeof TestsGrade> | null;
+  try {
+    grade = readCached(file, TestsGrade);
+  } catch {
+    return null;
+  }
+  if (grade === null || grade.skipped === true) return null;
+  const hits: Record<AcceptanceRedoReason, boolean> = {
+    tsc: grade.tscOk === false,
+    vitest: grade.vitestOk === false || (grade.suiteErrors ?? 0) > 0,
+    any: true,
+  };
+  return wanted.find((r) => hits[r]) ?? null;
+}
+
 /**
  * The step to redo for one attempt, or null when no rule matches a failure.
- * A step redo wins over a `record:` match, since it re-records anyway.
+ * A step redo wins over an `acceptance:` match, which wins over a `record:`
+ * match, since each re-records anyway.
  */
 export function redoStepFor(
   layout: AttemptLayout,
   rules: readonly RedoRule[],
-): { step: RedoStep; reason: FailureReason } | null {
+): { step: RedoStep; reason: RedoReason } | null {
   const checks: [RedoStep, string][] = [
     ["build", layout.buildJson],
     ["judge", layout.judgeJson],
@@ -115,6 +156,8 @@ export function redoStepFor(
       return f;
     }
   }
+  const graded = acceptanceRedoReason(layout.testsJson, rules);
+  if (graded !== null) return { step: "acceptance", reason: graded };
   for (const f of failures) {
     if (rules.some((r) => r.reason === f.reason && r.step === "record")) {
       return { step: "record", reason: f.reason };
@@ -126,6 +169,15 @@ export function redoStepFor(
 /** Files each step owns, plus everything downstream of it. */
 export function filesToReset(layout: AttemptLayout, step: RedoStep): string[] {
   if (step === "record") return [layout.attemptJson];
+  // The judge already read tests.json, but its findings are doc findings: kept.
+  const grading = [
+    layout.testsJson,
+    layout.vitestJsonPath,
+    path.join(layout.dir, "vitest.log"),
+    layout.tscOutputPath,
+    layout.reinstallLogPath,
+  ];
+  if (step === "acceptance") return [...grading, layout.attemptJson];
   const verify = [
     layout.verifyJson,
     layout.verifyTranscriptPath,
@@ -145,10 +197,7 @@ export function filesToReset(layout: AttemptLayout, step: RedoStep): string[] {
     layout.transcriptPath,
     layout.sessionJsonlPath,
     layout.stderrPath,
-    layout.testsJson,
-    layout.vitestJsonPath,
-    path.join(layout.dir, "vitest.log"),
-    layout.tscOutputPath,
+    ...grading,
     layout.metricsJson,
     layout.compactMd,
     layout.dtsDir,
@@ -292,9 +341,15 @@ export function removeRunLine(file: string, runId: string): boolean {
   return true;
 }
 
-const RedoStepName = z.enum(["build", "judge", "verify", "record"]);
+const RedoStepName = z.enum([
+  "build",
+  "acceptance",
+  "judge",
+  "verify",
+  "record",
+]);
 
-/** `wall-clock,judge:budget-exhausted,record:budget-exhausted`. */
+/** `wall-clock,judge:budget-exhausted,record:budget-exhausted,acceptance:tsc`. */
 export function parseRedoReasons(value: string | true | undefined): RedoRule[] {
   if (value === undefined || value === true) return [...DEFAULT_REDO_REASONS];
   return value
@@ -305,10 +360,11 @@ export function parseRedoReasons(value: string | true | undefined): RedoRule[] {
       const colon = s.indexOf(":");
       if (colon === -1)
         return { step: null, reason: ClaudeFailureReason.parse(s) };
-      return {
-        step: RedoStepName.parse(s.slice(0, colon)),
-        reason: ClaudeFailureReason.parse(s.slice(colon + 1)),
-      };
+      const step = RedoStepName.parse(s.slice(0, colon));
+      const reason = s.slice(colon + 1);
+      return step === "acceptance"
+        ? { step, reason: AcceptanceRedoReason.parse(reason) }
+        : { step, reason: ClaudeFailureReason.parse(reason) };
     });
 }
 

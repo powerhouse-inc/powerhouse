@@ -73,6 +73,8 @@ export interface AttemptLayout {
   sessionJsonlPath: string;
   stderrPath: string;
   installLogPath: string;
+  /** The acceptance step's reinstall after record.ts removed node_modules. */
+  reinstallLogPath: string;
   prepareJson: string;
   buildJson: string;
   testsJson: string;
@@ -133,6 +135,7 @@ export function runLayout(
         sessionJsonlPath: path.join(dir, "session.jsonl"),
         stderrPath: path.join(dir, "build.stderr.log"),
         installLogPath: path.join(dir, "install.log"),
+        reinstallLogPath: path.join(dir, "reinstall.log"),
         prepareJson: path.join(dir, "prepare.json"),
         buildJson: path.join(dir, "build.json"),
         testsJson: path.join(dir, "tests.json"),

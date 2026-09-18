@@ -380,7 +380,7 @@ export function register(program: Command): void {
     )
     .option(
       "--redo-failed [reasons]",
-      "reset attempts whose build, judge or verifier failed for these reasons (default rate-limited,wall-clock; prefix with build:, judge:, verify: to scope, or record: to only re-record) and redo them",
+      "reset attempts whose build, judge or verifier failed for these reasons (default rate-limited,wall-clock; prefix with build:, judge:, verify: to scope, record: to only re-record, or acceptance:tsc|vitest|any to re-grade) and redo them",
     )
     .option(
       "--throttle-at <ratio>",
