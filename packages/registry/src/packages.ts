@@ -183,86 +183,107 @@ function getDocumentTypesFromManifest(manifest: Manifest | undefined | null) {
   return documentTypes;
 }
 
-export function scanPackages(
+/** One cdn-cache package directory, as the scan below found it. */
+export interface ScannedPackage {
+  /** Directory under the cdn cache: `name` or `@scope/name`. */
+  dirName: string;
+  /** Absolute directory the manifest was read from (the version dir, if any). */
+  manifestDir: string;
+  manifest: Manifest | null;
+  name: string;
+  version?: string;
+  distTags?: Record<string, string>;
+  versions?: string[];
+  locallyPublished: boolean | undefined;
+}
+
+function readPackageDir(
+  cdnCachePath: string,
+  dirName: string,
+  storagePath: string | undefined,
+): ScannedPackage {
+  const pkgDir = path.join(cdnCachePath, dirName);
+  const versionDir = getLatestVersionDir(pkgDir);
+  const manifestDir = versionDir ?? pkgDir;
+  const manifest = readManifest(manifestDir);
+  // `||` (not `??`): slimManifest normalizes a missing manifest name to
+  // "" — fall back to the directory name in that case too.
+  const name = manifest?.name || dirName;
+  const { distTags, versions, locallyPublished } = readPackageMetadata(
+    storagePath,
+    name,
+  );
+  return {
+    dirName,
+    manifestDir,
+    manifest,
+    name,
+    version: readPackageJsonVersion(manifestDir),
+    distTags,
+    versions,
+    locallyPublished,
+  };
+}
+
+// One walk of the cdn cache, yielding every package directory with its
+// manifest: the package list and the piece index are both built from it.
+export function* scanPackageDirs(
   cdnCachePath: string,
   storagePath?: string,
-): PackageInfo[] {
+): Generator<ScannedPackage> {
   const absDir = path.resolve(cdnCachePath);
-  const packages: PackageInfo[] = [];
-
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(absDir, { withFileTypes: true });
   } catch {
-    return packages;
+    return;
   }
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
 
-    if (entry.name.startsWith("@")) {
-      const scopeDir = path.join(absDir, entry.name);
-      let scopedEntries: fs.Dirent[];
-      try {
-        scopedEntries = fs.readdirSync(scopeDir, { withFileTypes: true });
-      } catch (error) {
-        console.log(error);
-        continue;
-      }
-      for (const scopedEntry of scopedEntries) {
-        if (!scopedEntry.isDirectory()) continue;
-        const dirName = `${entry.name}/${scopedEntry.name}`;
-        const pkgDir = path.join(scopeDir, scopedEntry.name);
-        const versionDir = getLatestVersionDir(pkgDir);
-        const manifestDir = versionDir ?? pkgDir;
-        const manifest = readManifest(manifestDir);
-        // `||` (not `??`): slimManifest normalizes a missing manifest name to
-        // "" — fall back to the directory name in that case too.
-        const name = manifest?.name || dirName;
-        const { distTags, versions, locallyPublished } = readPackageMetadata(
-          storagePath,
-          name,
-        );
-        // Drop npm-uplink passthroughs from the default listing. Only
-        // skip when we can affirmatively tell the package is a proxy
-        // (no `_attachments` in filesystem-backed storage). When the flag
-        // is `undefined` (no storagePath, or non-filesystem backend where
-        // we can't read verdaccio's metadata) we include the entry — the
-        // alternative would be filtering everything to `[]` on S3 deploys.
-        if (locallyPublished === false) continue;
-        packages.push({
-          name,
-          path: `/-/cdn/${dirName}`,
-          manifest,
-          documentTypes: getDocumentTypesFromManifest(manifest),
-          version: readPackageJsonVersion(manifestDir),
-          distTags,
-          versions,
-        });
-      }
-    } else {
-      const pkgDir = path.join(absDir, entry.name);
-      const versionDir = getLatestVersionDir(pkgDir);
-      const manifestDir = versionDir ?? pkgDir;
-      const manifest = readManifest(manifestDir);
-      const name = manifest?.name || entry.name;
-      const { distTags, versions, locallyPublished } = readPackageMetadata(
+    if (!entry.name.startsWith("@")) {
+      yield readPackageDir(absDir, entry.name, storagePath);
+      continue;
+    }
+    const scopeDir = path.join(absDir, entry.name);
+    let scopedEntries: fs.Dirent[];
+    try {
+      scopedEntries = fs.readdirSync(scopeDir, { withFileTypes: true });
+    } catch (error) {
+      console.log(error);
+      continue;
+    }
+    for (const scopedEntry of scopedEntries) {
+      if (!scopedEntry.isDirectory()) continue;
+      yield readPackageDir(
+        absDir,
+        `${entry.name}/${scopedEntry.name}`,
         storagePath,
-        name,
       );
-      if (locallyPublished === false) continue;
-      packages.push({
-        name,
-        path: `/-/cdn/${entry.name}`,
-        manifest,
-        documentTypes: getDocumentTypesFromManifest(manifest),
-        version: readPackageJsonVersion(manifestDir),
-        distTags,
-        versions,
-      });
     }
   }
+}
 
+export function scanPackages(
+  cdnCachePath: string,
+  storagePath?: string,
+): PackageInfo[] {
+  const packages: PackageInfo[] = [];
+  for (const pkg of scanPackageDirs(cdnCachePath, storagePath)) {
+    // Drop npm-uplink passthroughs, but only when storage metadata says so:
+    // `undefined` (S3, no storagePath) would otherwise empty the listing.
+    if (pkg.locallyPublished === false) continue;
+    packages.push({
+      name: pkg.name,
+      path: `/-/cdn/${pkg.dirName}`,
+      manifest: pkg.manifest,
+      documentTypes: getDocumentTypesFromManifest(pkg.manifest),
+      version: pkg.version,
+      distTags: pkg.distTags,
+      versions: pkg.versions,
+    });
+  }
   return packages;
 }
 
