@@ -1,7 +1,7 @@
 // Bundle fetching runs in the reactor process, so extraction must not block the
 // event loop or inflate without a bound, and concurrent callers for the same
 // bundle must not duplicate the work.
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
@@ -33,6 +33,14 @@ function tarball(files: Record<string, string>): Buffer {
 }
 
 const manifest = JSON.stringify({ name: "fixture", version: "1.0.0" });
+
+// What a pre-0.86 Activepieces bundle looks like: code that cannot run until
+// someone installs what it names.
+const dependentManifest = JSON.stringify({
+  name: "fixture",
+  version: "1.0.0",
+  dependencies: { "@zip.js/zip.js": "2.8.15" },
+});
 
 describe("ensurePieceBundle hardening", () => {
   let cacheDir: string;
@@ -67,9 +75,125 @@ describe("ensurePieceBundle hardening", () => {
       version: "1.0.0",
       cacheDir,
     });
-    expect(bundle.dependencies).toEqual({});
-    expect(bundle.installed).toBe(false);
     expect(bundle.dir).toContain("@scope-fixture-1.0.0");
+  });
+
+  it("accepts a manifest that names no dependencies at all", async () => {
+    serve(tarball({ "package.json": manifest }));
+    const bundle = await ensurePieceBundle({
+      name: "@scope/fixture",
+      version: "1.0.0",
+      cacheDir,
+    });
+    expect(bundle.source).toBe("cdn");
+  });
+
+  it("accepts a manifest whose dependencies are empty", async () => {
+    serve(
+      tarball({
+        "package.json": JSON.stringify({
+          name: "fixture",
+          version: "1.0.0",
+          dependencies: {},
+        }),
+      }),
+    );
+    const bundle = await ensurePieceBundle({
+      name: "@scope/fixture",
+      version: "1.0.0",
+      cacheDir,
+    });
+    expect(bundle.source).toBe("cdn");
+  });
+
+  it("refuses a bundle that declares dependencies, and says what to pin", async () => {
+    serve(tarball({ "package.json": dependentManifest }));
+    await expect(
+      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
+    ).rejects.toThrow(
+      /@scope\/fixture@1\.0\.0 is not self-contained: it declares a dependency \(@zip\.js\/zip\.js@2\.8\.15\)\..*Pin @scope\/fixture at or above its first self-contained release/,
+    );
+  });
+
+  // The release number is theirs; a piece from a Powerhouse registry would be
+  // sent chasing a version that means nothing to it.
+  it("names the Activepieces release only for an Activepieces piece", async () => {
+    serve(tarball({ "package.json": dependentManifest }));
+    await expect(
+      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
+    ).rejects.toThrow(/^(?!.*Activepieces bundles)/s);
+
+    serve(tarball({ "package.json": dependentManifest }));
+    await expect(
+      ensurePieceBundle({
+        name: "@activepieces/piece-fixture",
+        version: "1.0.0",
+        cacheDir,
+      }),
+    ).rejects.toThrow(
+      /Activepieces bundles have been self-contained since 0\.86\.0\./,
+    );
+  });
+
+  it("caps the dependency list a refusal spells out", async () => {
+    serve(
+      tarball({
+        "package.json": JSON.stringify({
+          name: "fixture",
+          version: "1.0.0",
+          dependencies: Object.fromEntries(
+            Array.from({ length: 7 }, (_, index) => [`dep-${index}`, "1.0.0"]),
+          ),
+        }),
+      }),
+    );
+    await expect(
+      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
+    ).rejects.toThrow(
+      /it declares 7 dependencies \(dep-0@1\.0\.0, .*dep-4@1\.0\.0, and 2 more\)/,
+    );
+  });
+
+  it("refuses a bundle already extracted into the cache directory", async () => {
+    // A self-contained tarball is on offer; the cache hit must answer first.
+    serve(tarball({ "package.json": manifest }));
+    const dir = path.join(cacheDir, "@scope-fixture-1.0.0");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "package.json"), dependentManifest);
+    await expect(
+      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
+    ).rejects.toThrow(/is not self-contained/);
+    expect(calls).toBe(0);
+  });
+
+  it("refuses the same bundle again rather than trusting the extraction", async () => {
+    serve(tarball({ "package.json": dependentManifest }));
+    await expect(
+      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
+    ).rejects.toThrow(/is not self-contained/);
+    await expect(
+      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
+    ).rejects.toThrow(/is not self-contained/);
+    expect(calls).toBe(1);
+  });
+
+  it("holds no refusal against the next fetch of the same bundle", async () => {
+    serve(tarball({ "package.json": dependentManifest }));
+    await expect(
+      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
+    ).rejects.toThrow(/is not self-contained/);
+    // Whoever republished it self-contained deserves an answer from the network.
+    await rm(path.join(cacheDir, "@scope-fixture-1.0.0"), {
+      recursive: true,
+      force: true,
+    });
+    serve(tarball({ "package.json": manifest }));
+    const bundle = await ensurePieceBundle({
+      name: "@scope/fixture",
+      version: "1.0.0",
+      cacheDir,
+    });
+    expect(bundle.source).toBe("cdn");
   });
 
   it("shares one download between concurrent callers", async () => {
