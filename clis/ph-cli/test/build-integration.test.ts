@@ -3,16 +3,21 @@
 
 import {
   chmodSync,
+  cpSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { isBuiltin } from "node:module";
 import { delimiter, join } from "node:path";
+import { generatePiece } from "@powerhousedao/codegen";
+import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import type { Manifest } from "@powerhousedao/shared/document-model";
 import {
   afterAll,
@@ -380,4 +385,121 @@ describe("runBuild on a package that only lists a piece", () => {
       'pieces: "@fixture/piece-gone" declares dist/node/pieces/gone/index.mjs, which is missing',
     );
   }, 120_000);
+});
+
+// `ph generate piece` and `ph build`, joined: the templates have to survive
+// the piece bundler and the type checker, not just read well.
+describe("runBuild on a generated piece", () => {
+  const generated = join(fixtures, "generated-piece-package");
+  const dist = join(generated, "dist");
+  const framework = join(
+    import.meta.dirname,
+    "..",
+    "..",
+    "..",
+    "packages",
+    "pieces-framework",
+  );
+
+  beforeAll(async () => {
+    if (!existsSync(join(framework, "dist"))) {
+      throw new Error(
+        "Build @powerhousedao/pieces-framework first: a generated piece bundles it.",
+      );
+    }
+    rmSync(generated, { recursive: true, force: true });
+    // A package that ships a document model, like the one a piece is usually
+    // added to; its pieces are the generator's to write.
+    cpSync(join(fixtures, "mixed-package"), generated, { recursive: true });
+    rmSync(join(generated, "pieces"), { recursive: true, force: true });
+    clean(generated);
+    // The framework resolves from the project the way pnpm would link it.
+    mkdirSync(join(generated, "node_modules", "@powerhousedao"), {
+      recursive: true,
+    });
+    symlinkSync(
+      framework,
+      join(generated, "node_modules", "@powerhousedao", "pieces-framework"),
+      "dir",
+    );
+
+    const project = buildTsMorphProject(generated);
+    await generatePiece(
+      { pieceName: "acme-crm", description: "Connect to Acme CRM." },
+      project,
+    );
+    await project.save();
+    process.chdir(originalCwd);
+  }, 120_000);
+
+  afterAll(() => {
+    rmSync(generated, { recursive: true, force: true });
+  });
+
+  it("bundles it self-contained, describes it and lists it in the dist manifest", async () => {
+    process.chdir(generated);
+
+    await runBuild(args);
+
+    const pieceDir = join(dist, "node", "pieces", "acme-crm");
+    expect(readdirSync(pieceDir).sort()).toEqual([
+      "descriptor.json",
+      "index.mjs",
+      "index.mjs.map",
+      "package.json",
+    ]);
+    // The framework and everything under it was inlined, as a piece running in
+    // a worker with no node_modules beside it needs.
+    expect(
+      bareImports(readFileSync(join(pieceDir, "index.mjs"), "utf8")),
+    ).toEqual([]);
+
+    type Descriptor = {
+      name: string;
+      version: string;
+      displayName: string;
+      description: string;
+      actions: Record<string, { displayName: string }>;
+      triggers: Record<string, { displayName: string }>;
+    };
+    const descriptor = readJson<Descriptor>(join(pieceDir, "descriptor.json"));
+    expect(descriptor.name).toBe("@fixture/piece-acme-crm");
+    expect(descriptor.version).toBe("1.0.0");
+    expect(descriptor.displayName).toBe("Acme Crm");
+    expect(Object.keys(descriptor.actions)).toEqual(["get-record"]);
+    expect(Object.keys(descriptor.triggers)).toEqual(["new-record"]);
+
+    expect(
+      readJson<Record<string, unknown>>(join(pieceDir, "package.json")),
+    ).toEqual({
+      name: "@fixture/piece-acme-crm",
+      version: "1.0.0",
+      description: "Connect to Acme CRM.",
+      type: "module",
+      main: "index.mjs",
+      license: "MIT",
+      dependencies: {},
+    });
+
+    // The source manifest carries the id and the display name codegen wrote;
+    // the rest of this entry is what the build learned by loading the piece.
+    const manifest = readJson<Manifest>(join(dist, "powerhouse.manifest.json"));
+    expect(manifest.pieces).toEqual([
+      {
+        id: "@fixture/piece-acme-crm",
+        name: "Acme Crm",
+        version: "1.0.0",
+        description: "Connect to Acme CRM.",
+        bundle: "dist/node/pieces/acme-crm",
+        descriptor: "dist/node/pieces/acme-crm/descriptor.json",
+      },
+    ]);
+
+    // No warning means tsc had nothing to say about the generated sources,
+    // and every listed piece was built.
+    expect(warnings).toEqual([]);
+    expect(
+      existsSync(join(dist, "types", "pieces", "acme-crm", "index.d.ts")),
+    ).toBe(true);
+  }, 180_000);
 });

@@ -9,6 +9,7 @@ export * from "./document-model/utils.js";
 export * from "./editor-common.js";
 export * from "./index-files.js";
 export * from "./manifest.js";
+export * from "./pieces.js";
 export * from "./processors/processor.js";
 export * from "./project-index.js";
 export * from "./subgraphs.js";

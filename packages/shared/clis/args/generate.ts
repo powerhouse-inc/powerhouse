@@ -116,6 +116,48 @@ export const generateArgs = {
     long: "subgraph",
     description: "Subgraph name.",
   }),
+  pieceName: option({
+    type: optional(string),
+    long: "piece",
+    description: "Piece name.",
+  }),
+  pieceId: option({
+    type: optional(string),
+    long: "piece-id",
+    description:
+      "Piece id a workflow block type names, e.g. @acme/piece-crm. Defaults to one derived from the package name.",
+  }),
+  pieceVersion: option({
+    type: optional(string),
+    long: "piece-version",
+    description:
+      "Version the pieces list declares for the generated piece. Defaults to the package version when the piece is named after the package.",
+  }),
+  pieceAuth: option({
+    type: oneOf(["none", "secret", "custom"] as const),
+    long: "piece-auth",
+    description:
+      "The kind of connection the generated piece asks for. Default is custom.",
+    defaultValue: () => "custom" as const,
+    defaultValueIsSerializable: true,
+  }),
+  pieceActionName: option({
+    type: optional(string),
+    long: "piece-action",
+    description: "Name of an action to generate inside a piece.",
+  }),
+  pieceTriggerName: option({
+    type: optional(string),
+    long: "piece-trigger",
+    description: "Name of a trigger to generate inside a piece.",
+  }),
+  pieceTriggerStrategy: option({
+    type: oneOf(["polling", "webhook"] as const),
+    long: "piece-trigger-strategy",
+    description: "How a generated trigger fires. Default is polling.",
+    defaultValue: () => "polling" as const,
+    defaultValueIsSerializable: true,
+  }),
   importScriptName: option({
     type: optional(string),
     long: "import-script",

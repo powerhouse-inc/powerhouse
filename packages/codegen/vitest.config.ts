@@ -14,6 +14,8 @@ export default defineConfig({
     // folding them in is a separate effort from this change.
     include: [
       "src/codegen/features.test.ts",
+      "src/file-builders/pieces.test.ts",
+      "src/name-builders/derive-piece-id.test.ts",
       "src/file-builders/boilerplate/package.json.test.ts",
       "src/file-builders/boilerplate/project-ports.test.ts",
     ],
