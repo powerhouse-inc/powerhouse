@@ -1,0 +1,19 @@
+{
+  "name": "test-workflow-piece-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "test": "tsx scripts/run.ts"
+  },
+  "devDependencies": {
+    "@powerhousedao/e2e-utils": "workspace:*",
+    "@powerhousedao/ph-cli": "workspace:*",
+    "@powerhousedao/registry": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "@types/node": "catalog:",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3"
+  }
+}
