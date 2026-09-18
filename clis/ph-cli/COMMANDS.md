@@ -11,6 +11,7 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Subgraph](#subgraph)
 - [Migration File](#migration-file)
 - [Vetra](#vetra)
+- [Build](#build)
 - [Connect](#connect)
 - [Connect Studio](#connect-studio)
 - [Connect Build](#connect-build)
@@ -396,6 +397,35 @@ Use https<br><br>
 #### Dev <br>
 enable development mode to load local packages<br><br>
 **usage:** `--dev`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Build
+
+Build a Powerhouse package for publishing: a browser bundle and a node bundle of its
+document models, editors, subgraphs and processors, type declarations, and its stylesheet.
+
+Pieces under pieces/ are built too, each into its own self-contained module under
+dist/node/pieces/<name>, with a descriptor.json and package.json written beside it and
+the piece listed in dist/powerhouse.manifest.json. A package that ships only pieces builds
+the same way: with no browser modules and no style.css, those steps are skipped, not failed.
+### options
+#### Out Dir <br>
+Where to output the bundled code<br><br>
+**usage:** `--out-dir <str>`<br>
+**default**: `dist`
+
+### flags
+#### No Shared Deps <br>
+Bundle the shared dependency set instead of externalizing it (default: externalize)<br><br>
+**usage:** `--no-shared-deps`<br>
+**default**: `false`
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
 
 #### Help <br>
 show help<br><br>

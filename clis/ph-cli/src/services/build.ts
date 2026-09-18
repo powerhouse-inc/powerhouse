@@ -4,17 +4,25 @@ import {
   buildNodeBuildConfig,
   findBundledSharedDeps,
 } from "@powerhousedao/shared/build-config";
+import type { BuiltPiece } from "@powerhousedao/shared/build-pieces";
+import {
+  buildPieces,
+  expandEntryGlobs,
+  syncDistManifest,
+} from "@powerhousedao/shared/build-pieces";
 import {
   findSharedImports,
   EXTERNALIZABLE_SHARED_SPECIFIERS,
 } from "@powerhousedao/shared/connect";
 import { execSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { detect, resolveCommand } from "package-manager-detector";
 import { readPackage } from "read-pkg";
 import { build as tsdownBuild } from "tsdown";
 import type { BuildArgs } from "../types.js";
+import type { StepPlan } from "./build-plan.js";
+import { planBuild } from "./build-plan.js";
 
 /**
  * A Powerhouse package's `powerhouse.manifest.json` "name" must match its
@@ -50,38 +58,68 @@ export async function assertManifestNameMatchesPackage(projectPath: string) {
   }
 }
 
+// A step the plan left out is announced, so a piece-only package's build log
+// says why it has no browser output; skipping never fails the build.
+function announceSkip(label: string, step: StepPlan): boolean {
+  if (!step.run) console.log(`▷ ${label} skipped: ${step.reason}`);
+  return step.run;
+}
+
 export async function runBuild(args: BuildArgs) {
   const { outDir } = args;
+  const projectRoot = process.cwd();
 
   // Fail fast if the manifest name and package.json name have drifted apart.
-  await assertManifestNameMatchesPackage(process.cwd());
+  await assertManifestNameMatchesPackage(projectRoot);
 
+  const plan = planBuild(projectRoot, outDir);
   const sharedDeps = !args.noSharedDeps;
 
-  await tsdownBuild({
-    ...buildBrowserBuildConfig({ sharedDeps }),
-    outDir: join(outDir, "browser"),
-  });
+  if (announceSkip("browser build", plan.browser)) {
+    await tsdownBuild({
+      ...buildBrowserBuildConfig({ sharedDeps }),
+      outDir: join(outDir, "browser"),
+    });
 
-  // Advisory: a shared dep the source imports but the output no longer
-  // references as a bare import was inlined despite the external set.
-  if (sharedDeps) {
-    const imported = findSharedImportsInSources(process.cwd(), browserEntry);
-    const bundled = findBundledSharedDeps(
-      imported,
-      readDistBrowserFiles(join(outDir, "browser")),
-    );
-    if (bundled.length > 0) {
-      console.warn(
-        `⚠ shared deps bundled instead of externalized: ${bundled.join(", ")} — check your neverBundle config`,
+    // Advisory: a shared dep the source imports but the output no longer
+    // references as a bare import was inlined despite the external set.
+    if (sharedDeps) {
+      const imported = findSharedImportsInSources(projectRoot, browserEntry);
+      const bundled = findBundledSharedDeps(
+        imported,
+        readDistBrowserFiles(join(outDir, "browser")),
       );
+      if (bundled.length > 0) {
+        console.warn(
+          `⚠ shared deps bundled instead of externalized: ${bundled.join(", ")} — check your neverBundle config`,
+        );
+      }
     }
   }
 
-  await tsdownBuild({
-    ...buildNodeBuildConfig({ sharedDeps }),
-    outDir: join(outDir, "node"),
-  });
+  if (announceSkip("node build", plan.node)) {
+    await tsdownBuild({
+      ...buildNodeBuildConfig({ sharedDeps }),
+      outDir: join(outDir, "node"),
+    });
+  }
+
+  // After the node build: it cleans <outDir>/node, where the pieces land.
+  const target = { projectRoot, outDir, pieces: plan.pieces };
+  let built: BuiltPiece[] = [];
+  if (plan.pieces.length > 0) {
+    const pkg = await readPackage({ cwd: projectRoot });
+    built = await buildPieces(
+      target,
+      {
+        name: pkg.name,
+        version: pkg.version,
+        license: typeof pkg.license === "string" ? pkg.license : undefined,
+      },
+      { bundle: tsdownBuild },
+    );
+  }
+  syncDistManifest(target, built);
 
   const detectResult = await detect();
   const agent = detectResult?.agent ?? "npm";
@@ -106,6 +144,8 @@ export async function runBuild(args: BuildArgs) {
     );
   }
 
+  if (!announceSkip("stylesheet", plan.stylesheet)) return;
+
   const executeLocalCommand = resolveCommand(agent, "execute-local", [
     "tailwindcss",
     "-i",
@@ -122,44 +162,6 @@ export async function runBuild(args: BuildArgs) {
   execSync(
     `${executeLocalCommand.command} ${executeLocalCommand.args.join(" ")}`,
   );
-}
-
-function statSafe(p: string) {
-  try {
-    return statSync(p);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Expand entry globs (single-`*` segments only — the shape `browserEntry`
- * uses) against files on disk, resolving against `root`.
- */
-function expandEntryGlobs(root: string, globs: string[]): string[] {
-  const files = new Set<string>();
-  for (const pattern of globs) {
-    const segments = pattern.split("/").filter(Boolean);
-    let dirs = [root];
-    for (const seg of segments) {
-      const next: string[] = [];
-      for (const d of dirs) {
-        if (!statSafe(d)?.isDirectory()) continue;
-        if (seg === "*") {
-          for (const e of readdirSync(d, { withFileTypes: true })) {
-            next.push(join(d, e.name));
-          }
-        } else {
-          next.push(join(d, seg));
-        }
-      }
-      dirs = next;
-    }
-    for (const f of dirs) {
-      if (statSafe(f)?.isFile()) files.add(f);
-    }
-  }
-  return [...files];
 }
 
 /**

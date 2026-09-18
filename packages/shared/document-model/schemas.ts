@@ -766,6 +766,22 @@ export const PowerhouseModulesSchema = z
   .array(PowerhouseModuleSchema)
   .optional();
 
+// A piece the package ships, listed like any other module: `id` is the piece
+// name a block type refers to, `name` its display name. The rest is what
+// `ph build` learns by loading the built piece once, and it writes it only to
+// the manifest copy under dist, so a source manifest never has to carry it.
+export const PieceModuleSchema = PowerhouseModuleSchema.extend({
+  version: z.string().optional(),
+  description: z.string().optional(),
+  // Both relative to the package root: the piece directory in npm-bundle shape
+  // (package.json + entry, so a registry can serve it on its own), and the
+  // metadata written beside it.
+  bundle: z.string().optional(),
+  descriptor: z.string().optional(),
+});
+
+export const PieceModulesSchema = z.array(PieceModuleSchema).optional();
+
 export const PublisherSchema = z.object({
   name: z.string().optional(),
   url: z.string().optional(),
@@ -919,7 +935,7 @@ export const ManifestSchema = z.object({
   // Connector pieces the package ships, built under pieces/ and loaded by a
   // host that runs them. Optional like every other module list, so a package
   // that ships none says nothing.
-  pieces: PowerhouseModulesSchema,
+  pieces: PieceModulesSchema,
   config: z.array(ConfigEntrySchema).optional(),
   pwa: PwaConfigSchema.optional(),
 });

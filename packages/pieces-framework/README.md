@@ -100,10 +100,24 @@ import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
    `entry` is the built module, relative to the package root: `ph build`
    emits `pieces/<name>/index.ts` to `dist/node/pieces/<name>/index.mjs`.
 
-4. **Build.** `ph build` inlines the framework into each piece bundle under
-   `dist/node/pieces`, so a host loads a self-contained module. The host that
-   runs pieces on a reactor (the workflow runtime, arriving separately) reads
-   the `pieces` list, imports each `entry` and serves `ctx.reactor`.
+4. **Build.** `ph build` bundles each `pieces/<name>/index.ts` on its own
+   into `dist/node/pieces/<name>/index.mjs`, with everything but node
+   built-ins inlined — the framework, its dependencies and the shared set that
+   document models and subgraphs leave to the host — because a host runs a
+   piece in a forked worker with no `node_modules` beside it. It then loads
+   each built piece once, in a child process, and writes two files next to it:
+   `descriptor.json`, the piece's own `metadata()` in the Activepieces
+   `PieceMetadata` shape (display name, logo, auth, every action and trigger
+   with its properties), and a `package.json` that makes the directory a
+   complete bundle. The `pieces` list in `dist/powerhouse.manifest.json` gets
+   each piece's version, description, `bundle` and `descriptor` paths, so a
+   registry can offer the piece before anyone installs the package.
+
+   A package that ships only pieces builds the same way: with no browser
+   modules and no `style.css`, the browser build and the stylesheet are
+   skipped rather than failed. The host that runs pieces on a reactor (the
+   workflow runtime) reads the `pieces` list, imports each `entry` and serves
+   `ctx.reactor`.
 
    Bundling with esbuild to ESM instead of `ph build`? `form-data`, which
    `./common` uses, is CommonJS, so pass

@@ -1,5 +1,6 @@
 import { writeCliDocsMarkdownFile } from "@powerhousedao/codegen/file-builders";
 import { accessToken } from "../src/commands/access-token.js";
+import { build as buildCmd } from "../src/commands/build.js";
 import { build, connect, preview, studio } from "../src/commands/connect.js";
 import { generateAllCmd } from "../src/commands/generate-all.js";
 import { generateAppCmd } from "../src/commands/generate-app.js";
@@ -29,6 +30,7 @@ const commands = [
   { name: "subgraph", command: generateSubgraphCmd },
   { name: "migration-file", command: generateMigrationFileCmd },
   { name: "vetra", command: vetra },
+  { name: "build", command: buildCmd },
   { name: "connect", command: connect },
   { name: "connect studio", command: studio },
   { name: "connect build", command: build },

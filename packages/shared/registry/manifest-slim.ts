@@ -1,7 +1,7 @@
 // Browser-safe (no node imports): Connect's package-manager hook deep-imports
 // this module, so it must not pull in the node:fs helpers that live behind
 // the registry barrel.
-import type { Manifest } from "types";
+import type { Manifest, PieceModule } from "types";
 
 type ModuleLike = { id?: unknown; name?: unknown; documentTypes?: unknown };
 
@@ -11,8 +11,12 @@ const MODULE_KEYS = [
   "editors",
   "processors",
   "subgraphs",
-  "pieces",
 ] as const;
+
+// What `ph build` adds to a piece entry, kept because a listing is how a piece
+// is found before anyone installs its package. The logo and the property
+// schemas live in the descriptor the entry points at, not here.
+const PIECE_KEYS = ["version", "description", "bundle", "descriptor"] as const;
 
 function slimModules(
   modules: unknown,
@@ -71,5 +75,24 @@ export function slimManifest(
     const slimmed = slimModules(raw[key]);
     if (slimmed) out[key] = slimmed;
   }
+  const pieces = slimPieces(raw.pieces);
+  if (pieces) out.pieces = pieces;
   return out;
+}
+
+function slimPieces(modules: unknown): PieceModule[] | undefined {
+  const slimmed = slimModules(modules);
+  if (!slimmed || !Array.isArray(modules)) return slimmed;
+  const entries = modules.filter(
+    (entry): entry is Record<string, unknown> =>
+      entry !== null && typeof entry === "object",
+  );
+  return slimmed.map((module, index) => {
+    const piece: PieceModule = { ...module };
+    for (const key of PIECE_KEYS) {
+      const value = entries[index]?.[key];
+      if (typeof value === "string") piece[key] = value;
+    }
+    return piece;
+  });
 }
