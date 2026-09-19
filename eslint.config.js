@@ -21,6 +21,8 @@ const normalIgnoredFiles = [
   "**/storybook-static/",
   "**/.vite/",
   "**/.nx/",
+  // Mastra Studio's build output (multi-MB bundles; doc-harness's `pnpm studio`).
+  "**/.mastra/",
   "**/build/",
   "**/.docusaurus/",
   "**/.ph/",
