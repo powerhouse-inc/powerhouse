@@ -348,6 +348,36 @@ export async function installWorkspace(
   };
 }
 
+export type Installer = (o: InstallOptions) => Promise<InstallResult>;
+
+export interface ReinstallOptions extends Omit<InstallOptions, "dir"> {
+  workspaceDir: string;
+  installer?: Installer;
+}
+
+/**
+ * record.ts strips node_modules once an attempt is recorded; a later re-grade
+ * or verifier redo needs it back. Installs from the run's cached lockfile,
+ * a no-op when present; throws when the install fails. Returns whether it ran.
+ */
+export async function reinstallIfMissing(
+  o: ReinstallOptions,
+): Promise<boolean> {
+  if (existsSync(path.join(o.workspaceDir, "node_modules"))) return false;
+  const installer = o.installer ?? installWorkspace;
+  const result = await installer({
+    dir: o.workspaceDir,
+    task: o.task,
+    cacheDir: o.cacheDir,
+    logPath: o.logPath,
+    timeoutMs: o.timeoutMs,
+  });
+  if (!result.ok) {
+    throw new Error(`reinstall of ${o.workspaceDir} failed; see ${o.logPath}`);
+  }
+  return true;
+}
+
 /** Version of @powerhousedao/reactor, else the first listed package present. */
 export function installedVersion(
   workspaceDir: string,

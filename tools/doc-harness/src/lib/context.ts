@@ -20,6 +20,7 @@ import { defaultHarnessContext } from "./drivers.js";
 import type { RunArgs } from "./schemas.js";
 import type { Semaphore } from "./semaphore.js";
 import type { UtilizationThrottle } from "./throttle.js";
+import type { Installer } from "./workspace.js";
 
 export interface HarnessContext {
   /** Builder. */
@@ -41,6 +42,8 @@ export interface HarnessContext {
   promptsRoot?: string;
   /** No install, no tsc, no vitest; drivers are expected to be fakes. */
   dryRun: boolean;
+  /** Overrides installWorkspace for installs and reinstalls; tests inject a fake. */
+  installer?: Installer;
   /** Bounds concurrent claude processes across the whole run. */
   semaphore: Semaphore;
   /** Holds new claude processes while the rate-limit window is nearly spent. */

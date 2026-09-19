@@ -15,11 +15,13 @@ import {
   VerifyStepResult,
   type VerifyResult,
 } from "../lib/schemas.js";
-import { dtsHasSymbol } from "../lib/workspace.js";
+import { dtsHasSymbol, reinstallIfMissing } from "../lib/workspace.js";
+import { REINSTALL_TIMEOUT_MS } from "./acceptance.js";
 import { fileSize } from "./judge.js";
 import {
   attemptLabel,
   attemptScope,
+  type AttemptScope,
   type TaskRunInput,
   callClaude,
   readCached,
@@ -87,105 +89,120 @@ export function mergeVerifyResults(
   return [...byIndex.values()].sort((a, b) => a.index - b.index);
 }
 
+/** The step body, callable without Mastra. */
+export async function verifyAttempt(
+  scope: AttemptScope,
+  inputData: JudgeOutputSummary,
+): Promise<VerifyOutputSummary> {
+  const { input, ctx, task, run, layout } = scope;
+  const cached = readCached(layout.verifyJson, VerifyStepResult);
+  if (cached) return summarize(cached, layout.verifyJson);
+
+  if (input.args.skipVerify || inputData.skipped || inputData.kept === 0) {
+    return { verifyPath: layout.verifyJson, ...SKIPPED };
+  }
+
+  const judged = readJson(layout.judgeJson, JudgeStepResult);
+  const docs = buildDocsSymbolIndex(input.docsDir);
+  const prechecked: VerifyResult[] = [];
+  const pending: IndexedFinding[] = [];
+  judged.kept.forEach((finding, index) => {
+    const settled = precheckVerify(
+      finding,
+      {
+        dtsHasSymbol: (s) => dtsHasSymbol(layout.dtsDir, s),
+        docHasSymbol: (s) => docs.hasSymbol(s),
+      },
+      index,
+    );
+    if (settled) prechecked.push(settled);
+    else pending.push({ index, finding });
+  });
+
+  let claude: VerifyStepResult["claude"] = null;
+  let model: VerifyResult[] | null = null;
+  const budgetUsd = verifyBudgetUsd(task.budgets.verifyUsd, judged.kept.length);
+  const wallClockMs = scaledWallClockMs(
+    VERIFIER_WALL_CLOCK_MS,
+    fileSize(layout.compactMd),
+  );
+  if (pending.length > 0) {
+    // The verifier compiles probes in the workspace; record.ts may have stripped it.
+    if (!ctx.dryRun) {
+      await reinstallIfMissing({
+        workspaceDir: layout.workspaceDir,
+        task,
+        cacheDir: run.installCacheDir,
+        logPath: layout.reinstallLogPath,
+        timeoutMs: REINSTALL_TIMEOUT_MS,
+        installer: ctx.installer,
+      });
+    }
+    const prompts = buildVerifierPrompt(
+      {
+        taskId: input.taskId,
+        arm: input.arm,
+        pin: input.pin,
+        workspaceDir: layout.workspaceDir,
+        docsDir: input.docsDir,
+        compactPath: layout.compactMd,
+        findings: pending,
+      },
+      ctx.promptsRoot,
+    );
+    const systemPromptFile = path.join(layout.dir, "verifier.system.md");
+    writeText(systemPromptFile, prompts.system);
+    claude = await callClaude(ctx, ctx.judgeDriver, {
+      cwd: layout.workspaceDir,
+      prompt: prompts.task,
+      systemPromptFile,
+      model: input.args.judgeModel,
+      settingsFile: layout.verifierSettingsFile,
+      // The attempt dir holds the compact transcript the prompt points at.
+      addDirs: [input.docsDir, layout.dir],
+      tools: VERIFIER_TOOLS,
+      permissionMode: "dontAsk",
+      maxTurns: VERIFIER_MAX_TURNS,
+      maxBudgetUsd: budgetUsd,
+      wallClockMs,
+      jsonSchemaFile: verifierSchemaFile(ctx.promptsRoot),
+      sessionId: randomUUID(),
+      authMode: input.args.auth,
+      transcriptPath: layout.verifyTranscriptPath,
+      stderrPath: layout.verifyStderrPath,
+    });
+    const parsed = claude.ok
+      ? VerifyOutput.safeParse(claude.structuredOutput)
+      : null;
+    model = parsed?.success === true ? parsed.data.results : null;
+  }
+
+  const result: VerifyStepResult = {
+    claude,
+    budgetUsd,
+    wallClockMs,
+    results: mergeVerifyResults(
+      prechecked,
+      pending.map((p) => p.index),
+      model,
+    ),
+  };
+  writeJson(layout.verifyJson, result);
+  const summary = summarize(result, layout.verifyJson);
+  ctx.log(
+    `${attemptLabel(input)} verify ${summary.verified}V/${summary.refuted}R/${summary.unverified}U prechecked=${prechecked.length} cost=$${summary.costUsd.toFixed(2)} budget=$${budgetUsd.toFixed(2)}`,
+  );
+  return summary;
+}
+
 export const verify = createStep({
   id: "verify",
   inputSchema: JudgeOutputSummary,
   outputSchema: VerifyOutputSummary,
   retries: 0,
-  execute: async (params) => {
-    const { inputData } = params;
-    const { input, ctx, task, layout } = attemptScope(
-      params.getInitData<TaskRunInput>(),
-    );
-    const cached = readCached(layout.verifyJson, VerifyStepResult);
-    if (cached) return summarize(cached, layout.verifyJson);
-
-    if (input.args.skipVerify || inputData.skipped || inputData.kept === 0) {
-      return { verifyPath: layout.verifyJson, ...SKIPPED };
-    }
-
-    const judged = readJson(layout.judgeJson, JudgeStepResult);
-    const docs = buildDocsSymbolIndex(input.docsDir);
-    const prechecked: VerifyResult[] = [];
-    const pending: IndexedFinding[] = [];
-    judged.kept.forEach((finding, index) => {
-      const settled = precheckVerify(
-        finding,
-        {
-          dtsHasSymbol: (s) => dtsHasSymbol(layout.dtsDir, s),
-          docHasSymbol: (s) => docs.hasSymbol(s),
-        },
-        index,
-      );
-      if (settled) prechecked.push(settled);
-      else pending.push({ index, finding });
-    });
-
-    let claude: VerifyStepResult["claude"] = null;
-    let model: VerifyResult[] | null = null;
-    const budgetUsd = verifyBudgetUsd(
-      task.budgets.verifyUsd,
-      judged.kept.length,
-    );
-    const wallClockMs = scaledWallClockMs(
-      VERIFIER_WALL_CLOCK_MS,
-      fileSize(layout.compactMd),
-    );
-    if (pending.length > 0) {
-      const prompts = buildVerifierPrompt(
-        {
-          taskId: input.taskId,
-          arm: input.arm,
-          pin: input.pin,
-          workspaceDir: layout.workspaceDir,
-          docsDir: input.docsDir,
-          compactPath: layout.compactMd,
-          findings: pending,
-        },
-        ctx.promptsRoot,
-      );
-      const systemPromptFile = path.join(layout.dir, "verifier.system.md");
-      writeText(systemPromptFile, prompts.system);
-      claude = await callClaude(ctx, ctx.judgeDriver, {
-        cwd: layout.workspaceDir,
-        prompt: prompts.task,
-        systemPromptFile,
-        model: input.args.judgeModel,
-        settingsFile: layout.verifierSettingsFile,
-        // The attempt dir holds the compact transcript the prompt points at.
-        addDirs: [input.docsDir, layout.dir],
-        tools: VERIFIER_TOOLS,
-        permissionMode: "dontAsk",
-        maxTurns: VERIFIER_MAX_TURNS,
-        maxBudgetUsd: budgetUsd,
-        wallClockMs,
-        jsonSchemaFile: verifierSchemaFile(ctx.promptsRoot),
-        sessionId: randomUUID(),
-        authMode: input.args.auth,
-        transcriptPath: layout.verifyTranscriptPath,
-        stderrPath: layout.verifyStderrPath,
-      });
-      const parsed = claude.ok
-        ? VerifyOutput.safeParse(claude.structuredOutput)
-        : null;
-      model = parsed?.success === true ? parsed.data.results : null;
-    }
-
-    const result: VerifyStepResult = {
-      claude,
-      budgetUsd,
-      wallClockMs,
-      results: mergeVerifyResults(
-        prechecked,
-        pending.map((p) => p.index),
-        model,
-      ),
-    };
-    writeJson(layout.verifyJson, result);
-    const summary = summarize(result, layout.verifyJson);
-    ctx.log(
-      `${attemptLabel(input)} verify ${summary.verified}V/${summary.refuted}R/${summary.unverified}U prechecked=${prechecked.length} cost=$${summary.costUsd.toFixed(2)} budget=$${budgetUsd.toFixed(2)}`,
-    );
-    return summary;
-  },
+  execute: (params) =>
+    verifyAttempt(
+      attemptScope(params.getInitData<TaskRunInput>()),
+      params.inputData,
+    ),
 });

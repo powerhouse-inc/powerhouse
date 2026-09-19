@@ -22,7 +22,7 @@ import {
 } from "./shared.js";
 
 /** Same budget as prepare; the cached lockfile makes the usual case ~1 s. */
-const REINSTALL_TIMEOUT_MS = 900_000;
+export const REINSTALL_TIMEOUT_MS = 900_000;
 
 /** tests.json: TestsResult plus whether the step ran at all. */
 export const TestsJson = TestsResult.extend({ skipped: z.boolean() });
@@ -82,6 +82,7 @@ export const acceptance = createStep({
         reinstall: {
           cacheDir: run.installCacheDir,
           timeoutMs: REINSTALL_TIMEOUT_MS,
+          installer: ctx.installer,
         },
       });
       const dts = collectDts(layout.workspaceDir, task.packages, layout.dtsDir);

@@ -99,7 +99,7 @@ export const prepareWorkspace = createStep({
         fromCache: false,
       };
     } else {
-      install = await installWorkspace({
+      install = await (ctx.installer ?? installWorkspace)({
         dir: layout.workspaceDir,
         task,
         cacheDir: run.installCacheDir,

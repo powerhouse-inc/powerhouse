@@ -22,9 +22,12 @@ import {
   pinsDocumentModels,
   pinsVitestConfig,
   refreshGradingConfig,
+  reinstallIfMissing,
   scaffoldWorkspace,
   workspacePackageJson,
   workspaceTsconfig,
+  type InstallOptions,
+  type Installer,
 } from "../src/lib/workspace.js";
 
 const MODEL_TEST_GLOBS = [
@@ -390,6 +393,66 @@ describe("collectDts", () => {
     expect(
       installedVersion(path.join(tmp, "none"), ["document-model"]),
     ).toBeNull();
+  });
+});
+
+describe("reinstallIfMissing", () => {
+  function fakeInstaller(ok = true) {
+    const calls: InstallOptions[] = [];
+    const installer: Installer = (o) => {
+      calls.push(o);
+      if (ok) mkdirSync(path.join(o.dir, "node_modules"), { recursive: true });
+      return Promise.resolve({
+        ok,
+        ms: 1,
+        installedVersion: ok ? PIN : null,
+        fromCache: ok,
+      });
+    };
+    return { installer, calls };
+  }
+
+  it("installs from the cache when node_modules is gone, once", async () => {
+    const ws = path.join(tmp, "ws");
+    mkdirSync(ws);
+    const { installer, calls } = fakeInstaller();
+    const t = task();
+    const o = {
+      workspaceDir: ws,
+      task: t,
+      cacheDir: path.join(tmp, "cache"),
+      logPath: path.join(tmp, "reinstall.log"),
+      timeoutMs: 5,
+      installer,
+    };
+    expect(await reinstallIfMissing(o)).toBe(true);
+    expect(calls).toEqual([
+      {
+        dir: ws,
+        task: t,
+        cacheDir: path.join(tmp, "cache"),
+        logPath: path.join(tmp, "reinstall.log"),
+        timeoutMs: 5,
+      },
+    ]);
+    expect(await reinstallIfMissing(o)).toBe(false);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("names the log when the install fails", async () => {
+    const ws = path.join(tmp, "ws");
+    mkdirSync(ws);
+    const { installer } = fakeInstaller(false);
+    await expect(
+      reinstallIfMissing({
+        workspaceDir: ws,
+        task: task(),
+        cacheDir: path.join(tmp, "cache"),
+        logPath: path.join(tmp, "reinstall.log"),
+        timeoutMs: 5,
+        installer,
+      }),
+    ).rejects.toThrow(/reinstall of .*ws failed; see .*reinstall\.log/);
   });
 });
 
