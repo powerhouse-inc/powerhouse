@@ -125,14 +125,14 @@ import type { IReactorClient } from "@powerhousedao/reactor-browser";
 | `getDocumentModelModules(namespace?, paging?)`                                 | List registered document model modules            |
 | `getDocumentModelModule(documentType)`                                         | Get a specific document model module              |
 
-The optional `ViewFilter` lets you target a specific branch, set of scopes, or revision, and name the subject a client read is gated for:
+The optional `ViewFilter` lets you target a specific branch, set of scopes, or revision. On the client it also names the subject the read is gated for:
 
 ```typescript
 type ViewFilter = {
   branch?: string;
   scopes?: string[];
   revision?: number;
-  subject?: AuthSubject; // client read gate only; IReactor ignores it
+  subject?: AuthSubject; // client read gate only, ignored by IReactor
 };
 ```
 

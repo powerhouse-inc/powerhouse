@@ -38,9 +38,9 @@ type ViewFilter = {
 | `branch`   | The branch to read from (e.g. `"main"`)         |
 | `scopes`   | Scopes to include (e.g. `["global"]`)           |
 | `revision` | Read the document at a specific revision number |
-| `subject`  | Who the [read gate](/academy/Reference/Reactor/Authorization) decides for; defaults to the client's signer. Set it per request when one client serves many principals. `IReactor` ignores it |
+| `subject`  | Who the [read gate](/academy/Reference/Reactor/Authorization) decides for. Defaults to the client's signer. Set it per request when one client serves many principals. `IReactor` ignores it |
 
-`AuthSubject` is `{ address?: string; key?: string }` from `document-model`: the verified signer address, and the signer's `did:key`. Both are optional; an empty subject reads as anonymous.
+`AuthSubject` is `{ address?: string; key?: string }` from `document-model`. `address` is the verified signer address and `key` is the signer's `did:key`. Both are optional. An empty subject reads as anonymous.
 
 ### `SearchFilter`
 

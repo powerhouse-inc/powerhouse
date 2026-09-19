@@ -142,7 +142,7 @@ export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
 
 `version` is optional. The source marks it "should be made required"; module versioning is not finalized, and the registry defaults a missing `version` to `1` everywhere.
 
-Codegen emits every field. If you write a module by hand, `reducer` comes from `createReducer(stateReducer)` in `document-model`, which wraps a `StateReducer<TState>` (`(state: Draft<TState>, action, dispatch?) => TState | undefined`) in the base document reducer so `SET_NAME`, `UNDO`, `REDO` and `PRUNE` keep working. `utils` is the `DocumentModelUtils` object a generated `gen/utils.ts` assembles from `baseCreateDocument`, `baseLoadFromInput` and `baseSaveToFileHandle`; copy that file's shape rather than typing it from memory.
+Codegen emits every field. If you write a module by hand, build `reducer` with `createReducer(stateReducer)` from `document-model`. `createReducer` wraps a `StateReducer<TState>` (`(state: Draft<TState>, action, dispatch?) => TState | undefined`) in the base document reducer, so `SET_NAME`, `UNDO`, `REDO` and `PRUNE` keep working. `utils` is the `DocumentModelUtils` object that a generated `gen/utils.ts` assembles from `baseCreateDocument`, `baseLoadFromInput` and `baseSaveToFileHandle`. Copy that file's shape rather than typing it from memory.
 
 ## Version upgrades
 
@@ -302,7 +302,7 @@ registry.getUpgradeReducer("test/todo", 1, 3);
 
 ### Applying an upgrade without the registry
 
-The registry methods need a built reactor. `document-model` exports the same mechanics as plain functions over a manifest, which is what a script or test that upgrades a document in-process needs. `UPGRADE_DOCUMENT` is a `document`-scope action with no generated creator; `@powerhousedao/reactor` exports `upgradeDocumentAction` for it, or build it with `createAction` as below.
+The registry methods need a built reactor. A script or test that upgrades a document in-process can use the same mechanics as plain functions over a manifest, exported from `document-model`. `UPGRADE_DOCUMENT` is a `document`-scope action with no generated creator. `@powerhousedao/reactor` exports `upgradeDocumentAction` for it, or build the action with `createAction` as below.
 
 ```typescript
 import {
@@ -315,7 +315,7 @@ import {
 const fromVersion = document.state.document.version;
 const toVersion = todoUpgradeManifest.latestVersion;
 
-// The ordered transitions; throws if the manifest is missing a step
+// The ordered transitions. Throws if the manifest is missing a step
 const path = computeUpgradeTransitions(todoUpgradeManifest, fromVersion, toVersion);
 
 const action = createAction<UpgradeDocumentAction>(
@@ -335,9 +335,9 @@ const action = createAction<UpgradeDocumentAction>(
 const upgraded = applyUpgradeDocumentAction(document, action, path);
 ```
 
-`applyUpgradeDocumentAction` returns the upgraded document and stamps `state.document.version`; it appends nothing to the operation log. The reactor records the upgrade as one `UPGRADE_DOCUMENT` operation in the `document` scope. To mirror that, build the operation with `operationFromAction(action, index, skip, context)`, where `index` is the next index in `operations.document`, `skip` is `0`, and `context` is an `OperationContext` (`{ documentId, documentType, scope: "document", branch, ordinal }`).
+`applyUpgradeDocumentAction` returns the upgraded document and stamps `state.document.version`. It appends nothing to the operation log. The reactor records the upgrade as one `UPGRADE_DOCUMENT` operation in the `document` scope. To mirror the reactor, build the operation with `operationFromAction(action, index, skip, context)`. `index` is the next index in `operations.document`, `skip` is `0`, and `context` is an `OperationContext` (`{ documentId, documentType, scope: "document", branch, ordinal }`).
 
-Replay never re-runs an upgrade. `replayDocument(initialState, operations, reducer, header, dispatch?, skipHeaderOperations?, options?)` rebuilds a document from its stored `initialState` and operations through the reducer you pass. When replaying a log recorded under an older version through the current reducer, pass `{ checkHashes: false }` in `options`: the per-operation hashes were computed over the old state shape, so only the final hash of each scope is checked.
+Replay never re-runs an upgrade. `replayDocument(initialState, operations, reducer, header, dispatch?, skipHeaderOperations?, options?)` rebuilds a document from its stored `initialState` and operations through the reducer you pass. When replaying a log recorded under an older version through the current reducer, pass `{ checkHashes: false }` in `options`. The per-operation hashes were computed over the old state shape, so only the final hash of each scope is checked.
 
 ## Errors
 

@@ -174,7 +174,7 @@ const client = await new ReactorClientBuilder()
   .build();
 ```
 
-If no signer is provided, the client falls back to an internal `PassthroughSigner` that returns empty signatures, so actions are submitted unsigned: an auth policy sees an anonymous subject and no `{ address }` grant matches. The class is not exported from `@powerhousedao/reactor`; to sign, pass your own `ISigner`.
+If no signer is provided, the client falls back to an internal `PassthroughSigner` that returns empty signatures, so actions are submitted unsigned. An auth policy then sees an anonymous subject, and no `{ address }` grant matches. The class is not exported from `@powerhousedao/reactor`. To sign, pass your own `ISigner`.
 
 ### ISigner implementations
 
