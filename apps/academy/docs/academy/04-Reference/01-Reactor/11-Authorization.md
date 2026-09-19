@@ -53,6 +53,30 @@ Four actions write the `auth` scope:
 
 `UNDO`, `REDO` and `PRUNE` are refused on the `auth` scope.
 
+The creators are exported from `document-model` (and `@powerhousedao/shared/document-model`) alongside `Grant`:
+
+| Creator                 | Input                                                         |
+| ----------------------- | ------------------------------------------------------------- |
+| `initializeAuth(input)` | `{ version: number; grants: Grant[] }`; `version` is the policy language version, currently `1` |
+| `setGrant(input)`       | `{ grant: Grant }`                                            |
+| `removeGrant(input)`    | `{ id: string }`                                              |
+| `moveGrant(input)`      | `{ id: string; index: number }`; the target index, clamped to the list |
+
+```typescript
+import { initializeAuth, setGrant, type Grant } from "document-model";
+
+const admin: Grant = {
+  id: "admin",
+  description: "The owner administers the policy",
+  effect: "allow",
+  principal: { address: ownerAddress },
+  capability: { can: "execute", scope: "auth" },
+};
+
+await client.execute(documentId, "main", [initializeAuth({ version: 1, grants: [admin] })]);
+await client.execute(documentId, "main", [setGrant({ grant: readers })]);
+```
+
 ### Grants
 
 ```typescript
@@ -74,7 +98,7 @@ type Grant = {
 
 `scope` accepts `"*"` for every scope. Omitting `operation` covers every action in the scope.
 
-A `{ group }` principal names a roster document (`powerhouse/reactor-group`) and resolves live, so hiring and offboarding are single membership operations on the roster rather than edits to every policy that trusts it. A `where` clause reads `subject.*`, `doc.<scope>.*` and `action.input.*`, which is how a grant can depend on the values of the operation it gates.
+A `{ group }` principal names a roster document (`powerhouse/reactor-group`) and resolves live, so hiring and offboarding are single membership operations on the roster rather than edits to every policy that trusts it. The roster model ships in `@powerhousedao/reactor-group`: register its `documentModels` with `withDocumentModelSources`; the `ReactorGroupV1` module is exported from `@powerhousedao/reactor-group/document-models` and `reactorGroupDocumentType` from `@powerhousedao/reactor-group/document-models/reactor-group`. A `where` clause reads `subject.*`, `doc.<scope>.*` and `action.input.*`, which is how a grant can depend on the values of the operation it gates.
 
 ### How a decision is made
 
