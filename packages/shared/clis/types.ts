@@ -79,6 +79,12 @@ export type PHConnectApp = {
   // Builder mode: Connect loads the vetra package and exposes DocumentModel +
   // vetra spec types as creatable docs. Forced on by `ph vetra`/studio.
   studioMode?: boolean;
+  // Powerhouse workflows in Connect: the tab loads the workflow package
+  // (workflow + connection document models, their editors and Workflow
+  // Studio) and the reactor worker registers its models. Connect's half of
+  // the switchboard's `workflows.enabled` / PH_WORKFLOWS_ENABLED. Off by
+  // default, and independent of studioMode in both directions.
+  workflowsEnabled?: boolean;
 };
 
 export type PHConnectAi = {

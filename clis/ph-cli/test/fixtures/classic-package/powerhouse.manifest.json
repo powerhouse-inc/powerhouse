@@ -1,0 +1,14 @@
+{
+  "name": "@fixture/classic-package",
+  "description": "A package with the full boilerplate and no pieces.",
+  "category": "Fixtures",
+  "documentModels": [
+    {
+      "id": "fixture/widget",
+      "name": "Widget"
+    }
+  ],
+  "editors": [],
+  "processors": [],
+  "subgraphs": []
+}

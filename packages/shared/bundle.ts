@@ -63,6 +63,7 @@ await build({
     "clis/command-names.ts",
     "clis/services/telemetry.ts",
     "clis/build-config.mts",
+    "clis/build-pieces.mts",
   ],
   outDir: "dist/clis",
   platform: "node",

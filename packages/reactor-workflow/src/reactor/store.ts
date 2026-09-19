@@ -96,6 +96,16 @@ const logger = childLogger(["workflow", "runtime", "store"]);
 export const ORPHANED_RUN_ERROR =
   "Reactor stopped before the run finished; steps completed before then were journaled";
 
+// A run that was matched and journaled but never started. Recorded as FAILED
+// so it is both visible and rerunnable: rerun() replays the trigger payload
+// with no completed steps, which is exactly the run that never happened.
+export const ABANDONED_PENDING_RUN_ERROR =
+  "Reactor stopped before the matched trigger started its run; rerun it to fire the workflow with the same payload";
+
+// A matched fire, durable before the operation batch that matched it returns.
+// Nothing executes it yet: fire() adopts the row and turns it RUNNING.
+export const PENDING_RUN_STATUS = "PENDING";
+
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -524,6 +534,12 @@ function jsonOrNull(value: unknown): string | null {
   }
 }
 
+export interface EnqueueRunOptions {
+  workflowId: string;
+  triggerKind: string;
+  triggerPayload?: unknown;
+}
+
 export interface StartRunOptions {
   workflowId: string;
   workflowName: string;
@@ -553,6 +569,7 @@ export class WorkflowRunStore {
     const unmigrated = await up(db);
     const store = new WorkflowRunStore(db, unmigrated);
     await store.recoverOrphanedRuns();
+    await store.recoverAbandonedRuns();
     return store;
   }
 
@@ -595,6 +612,78 @@ export class WorkflowRunStore {
       );
     }
     return recovered;
+  }
+
+  // A PENDING run left by a stopped process: it was matched and journaled but
+  // nothing ever started it. Recovery for RUNNING runs cannot reach it — that
+  // sweep must not touch a row a live enqueue is about to adopt — so it gets
+  // its own pass, run once when the journal opens.
+  async recoverAbandonedRuns(): Promise<number> {
+    let query = this.db
+      .updateTable("run")
+      .set({
+        status: "FAILED",
+        error: ABANDONED_PENDING_RUN_ERROR,
+        ended_at: new Date().toISOString(),
+      })
+      .where("status", "=", PENDING_RUN_STATUS);
+    if (this.runsInFlight.size > 0) {
+      query = query.where("id", "not in", [...this.runsInFlight]);
+    }
+    const result = await query.executeTakeFirst();
+    const recovered = Number(result.numUpdatedRows);
+    if (recovered > 0) {
+      logger.warn(
+        `Recovered ${recovered} workflow run(s) journaled by a stopped reactor but never started; they are now FAILED and rerunnable`,
+      );
+    }
+    return recovered;
+  }
+
+  // The durable record of a matched trigger, written before the operation
+  // batch that matched it is acknowledged. The workflow's name and version are
+  // only known once fire() reads the document, so beginRun fills them in.
+  async enqueueRun(options: EnqueueRunOptions): Promise<string> {
+    const id = randomUUID();
+    await this.db
+      .insertInto("run")
+      .values({
+        id,
+        workflow_id: options.workflowId,
+        workflow_name: "",
+        workflow_version: 0,
+        trigger_kind: options.triggerKind,
+        trigger_payload: jsonOrNull(redact(options.triggerPayload)),
+        status: PENDING_RUN_STATUS,
+        error: null,
+        started_at: new Date().toISOString(),
+        ended_at: null,
+        rerun_of: null,
+      })
+      .execute();
+    // In flight from here: the row is this process's to finish, and no sweep
+    // of either kind may close it out underneath the run about to start.
+    this.runsInFlight.add(id);
+    return id;
+  }
+
+  // Adopts an enqueued row: the run starts now, with the definition fire() read.
+  async beginRun(
+    runId: string,
+    details: { workflowName: string; workflowVersion: number },
+  ): Promise<void> {
+    this.runsInFlight.add(runId);
+    await this.db
+      .updateTable("run")
+      .set({
+        status: "RUNNING",
+        workflow_name: details.workflowName,
+        workflow_version: details.workflowVersion,
+        // The wait between enqueue and start is queueing, not run time.
+        started_at: new Date().toISOString(),
+      })
+      .where("id", "=", runId)
+      .execute();
   }
 
   async startRun(options: StartRunOptions): Promise<string> {

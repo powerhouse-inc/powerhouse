@@ -1,5 +1,6 @@
 import {
   buildPHGlobalConfig,
+  connectConfig,
   phGlobalConfig,
 } from "@powerhousedao/connect/config";
 import { toast } from "@powerhousedao/connect/services";
@@ -269,6 +270,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     localPackage,
     runtimeConfig.localPackage?.version,
     phGlobalConfig.studioMode,
+    connectConfig.workflowsEnabled,
   );
   // Register provider:"local" packages the vite plugin bundled in. The virtual
   // module only exists under phBundledPackagesPlugin (ph-cli), so a resolution
@@ -394,6 +396,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       packageSpecs,
       sharedImports,
       studioMode: phGlobalConfig.studioMode,
+      workflowsEnabled: connectConfig.workflowsEnabled,
       renownChainId,
       featureFlags: reactorFeatureFlags,
       documentModelModules,

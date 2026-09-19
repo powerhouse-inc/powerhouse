@@ -21,6 +21,7 @@ import type {
   IPackageManagerOptions,
   ISubscribablePackageLoader,
   PackageManagerResult,
+  PackagePieceEntry,
 } from "./types.js";
 import { debounce } from "./util.js";
 
@@ -36,10 +37,35 @@ import { debounce } from "./util.js";
  * either bare (`'pkg'`) or as a subpath (`'pkg/subgraphs'`), since loaders
  * import sub-entries like `${pkg}/subgraphs` / `${pkg}/document-models`.
  */
-export function isExpectedLoaderMiss(error: unknown, pkg: string): boolean {
+// `subPath` is the sub-entry that was asked for. With it, two more answers
+// read as misses: an `exports` map that omits it, and a 404 for it.
+export function isExpectedLoaderMiss(
+  error: unknown,
+  pkg: string,
+  subPath?: string,
+): boolean {
   if (!(error instanceof Error)) return false;
   const code = (error as NodeJS.ErrnoException).code;
   if (code === "ERR_UNSUPPORTED_DIR_IMPORT") return true; // empty subgraphs/ etc.
+  // An `exports` map without this subpath is the package saying it ships none
+  // — the same answer as a missing directory, in a package that declares one.
+  if (
+    code === "ERR_PACKAGE_PATH_NOT_EXPORTED" &&
+    subPath !== undefined &&
+    error.message.includes(`'./${subPath}'`)
+  ) {
+    return true;
+  }
+  // Nothing published at that subpath; any other status is a registry fault,
+  // and a 404 naming anything else is a broken bundle, not a miss.
+  if (
+    subPath !== undefined &&
+    new RegExp(`^Failed to fetch \\S*/${subPath}/index\\.mjs: 404$`).test(
+      error.message,
+    )
+  ) {
+    return true;
+  }
   // HttpPackageLoader rejects local paths and invalid npm names before any fetch
   if (error.message.startsWith("Invalid package name:")) return true;
   if (code === "ERR_MODULE_NOT_FOUND") {
@@ -90,8 +116,6 @@ export function getUniqueUpgradeManifests(
   return Array.from(uniqueManifests.values());
 }
 
-const WORKFLOW_PACKAGE = "@powerhousedao/workflow";
-
 export class PackageManager implements IPackageManager {
   private readonly logger = childLogger(["reactor-api", "package-manager"]);
   private loaders: ISubscribablePackageLoader[];
@@ -103,12 +127,14 @@ export class PackageManager implements IPackageManager {
   >();
   private subgraphsMap = new Map<string, SubgraphClass[]>();
   private processorMap = new Map<string, Processor>();
+  private piecesMap = new Map<string, PackagePieceEntry[]>();
   private configWatcher: StatWatcher | undefined;
   private debouncedUpdateCallbacks = new Map<string, () => void>();
   private eventEmitter = new EventEmitter<{
     documentModelsChange: [Record<string, DocumentModelModule[]>];
     subgraphsChange: [Map<string, SubgraphClass[]>];
     processorsChange: [Map<string, Processor>];
+    piecesChange: [Map<string, PackagePieceEntry[]>];
   }>();
 
   constructor(
@@ -136,11 +162,13 @@ export class PackageManager implements IPackageManager {
     const upgradeManifestsMap = await this.loadUpgradeManifests(packages);
     const subgraphsMap = await this.loadSubgraphs(packages);
     const processorsMap = await this.loadProcessors(packages);
+    const piecesMap = await this.loadPieces(packages);
 
     this.upgradeManifestsMap = upgradeManifestsMap;
     this.updatePackagesMap(documentModelsMap);
     this.updateSubgraphsMap(subgraphsMap);
     this.updateProcessorsMap(processorsMap);
+    this.updatePiecesMap(piecesMap);
 
     try {
       this.subscribePackages(packages);
@@ -155,6 +183,7 @@ export class PackageManager implements IPackageManager {
       upgradeManifests: this.getUniqueUpgradeManifests(),
       subgraphs: subgraphsMap,
       processors: processorsMap,
+      pieces: piecesMap,
     };
   }
 
@@ -183,13 +212,6 @@ export class PackageManager implements IPackageManager {
     documentModelModuleMap.set("reactor-group", [
       ReactorGroupV1 as unknown as DocumentModelModule,
     ]);
-
-    if (this.options.workflows) {
-      documentModelModuleMap.set(
-        WORKFLOW_PACKAGE,
-        await this.loadWorkflowDocumentModels(),
-      );
-    }
 
     for (const pkg of packages) {
       const allDocumentModels: DocumentModelModule[] = [];
@@ -229,38 +251,6 @@ export class PackageManager implements IPackageManager {
     }
 
     return documentModelModuleMap;
-  }
-
-  // The workflow package is loaded by specifier rather than through a package
-  // loader: it is a declared dependency, so a failure here is a misconfigured
-  // reactor and not a package that happens to be absent.
-  private async loadWorkflowDocumentModels(): Promise<DocumentModelModule[]> {
-    const load =
-      this.options.workflowDocumentModels ??
-      (() =>
-        import("@powerhousedao/workflow/document-models") as Promise<
-          Record<string, unknown>
-        >);
-    try {
-      const modules = Object.values(await load()).filter(
-        (module): module is DocumentModelModule =>
-          typeof module === "object" &&
-          module !== null &&
-          "documentModel" in module &&
-          "reducer" in module,
-      );
-      this.logger.info(
-        "Loaded @count workflow document models from @pkg",
-        modules.length,
-        WORKFLOW_PACKAGE,
-      );
-      return modules;
-    } catch (error) {
-      throw new Error(
-        `workflows are enabled but ${WORKFLOW_PACKAGE} could not be loaded`,
-        { cause: error },
-      );
-    }
   }
 
   /** Upgrade manifests currently loaded across all packages, one per type. */
@@ -378,20 +368,67 @@ export class PackageManager implements IPackageManager {
     return processorsMap;
   }
 
+  // Paths, not modules: a piece is code the host must not import, and what a
+  // worker needs from here is where on disk the package put it.
+  private async loadPieces(
+    packages: string[],
+  ): Promise<Map<string, PackagePieceEntry[]>> {
+    this.logger.debug(`Loading pieces from packages: ${packages.join(", ")}`);
+
+    const piecesMap = new Map<string, PackagePieceEntry[]>();
+
+    for (const pkg of packages) {
+      const allPieces: PackagePieceEntry[] = [];
+      const failures: { loader: string; error: unknown }[] = [];
+      let succeeded = false;
+
+      for (const loader of this.loaders) {
+        try {
+          allPieces.push(...(await loader.loadPieces(pkg)));
+          succeeded = true;
+          break;
+        } catch (error) {
+          failures.push({ loader: loader.name, error });
+          this.logger.debug(
+            `[${loader.name}] Failed to load pieces from package ${pkg}`,
+            error,
+          );
+        }
+      }
+
+      this.maybeWarnAllLoadersFailed("pieces", pkg, succeeded, failures);
+
+      if (allPieces.length > 0) {
+        this.logger.info(
+          "Loaded @count piece(s) from package @pkg: @pieces",
+          allPieces.length,
+          pkg,
+          allPieces.map((piece) => piece.name).join(", "),
+        );
+      }
+      piecesMap.set(pkg, allPieces);
+    }
+
+    return piecesMap;
+  }
+
   private maybeWarnAllLoadersFailed(
-    kind: "document models" | "subgraphs" | "processors",
+    kind: "document models" | "subgraphs" | "processors" | "pieces",
     pkg: string,
     succeeded: boolean,
     failures: { loader: string; error: unknown }[],
   ): void {
     if (succeeded || failures.length === 0) return;
+    // The package subpath every loader asked for, which is what tells a
+    // package that ships none of this kind from one whose bundle is broken.
+    const subPath = kind === "document models" ? "document-models" : kind;
     // Each loader's "this package isn't mine" failure is expected fallthrough,
     // not a real error. Only surface a warning when at least one loader hit
     // something unexpected (e.g. a bundle evaluation error or registry 5xx),
     // and show only those non-expected failures — expected misses would just
     // mislead the reader about which loader actually broke.
     const realFailures = failures.filter(
-      ({ error }) => !isExpectedLoaderMiss(error, pkg),
+      ({ error }) => !isExpectedLoaderMiss(error, pkg, subPath),
     );
     if (realFailures.length === 0) return;
 
@@ -462,6 +499,21 @@ export class PackageManager implements IPackageManager {
     this.updateProcessorsMap(processorsMap);
   }
 
+  private async updatePiecesForPackage(pkg: string): Promise<void> {
+    this.logger.debug(`Updating pieces for package: ${pkg}`);
+    const pieces = await this.loadPieces([pkg]);
+    const piecesMap = new Map(this.piecesMap);
+    const pkgPieces = pieces.get(pkg) ?? [];
+    if (pkgPieces.length === 0) {
+      // An empty result means the package no longer contributes pieces: drop
+      // the key so the change event signals removal, as its siblings do.
+      piecesMap.delete(pkg);
+    } else {
+      piecesMap.set(pkg, pkgPieces);
+    }
+    this.updatePiecesMap(piecesMap);
+  }
+
   /** Debounced per key so repeated subscribePackages calls reuse one timer. */
   private getDebouncedUpdateCallback(
     key: string,
@@ -493,6 +545,9 @@ export class PackageManager implements IPackageManager {
         `${pkg}:processors`,
         () => this.updateProcessorsForPackage(pkg),
       );
+      const onPieces = this.getDebouncedUpdateCallback(`${pkg}:pieces`, () =>
+        this.updatePiecesForPackage(pkg),
+      );
 
       for (const loader of this.loaders) {
         if (loader.onDocumentModelsChange) {
@@ -503,6 +558,9 @@ export class PackageManager implements IPackageManager {
         }
         if (loader.onProcessorsChange) {
           unsubs.push(loader.onProcessorsChange(pkg, onProcessors));
+        }
+        if (loader.onPiecesChange) {
+          unsubs.push(loader.onPiecesChange(pkg, onPieces));
         }
       }
     }
@@ -585,6 +643,24 @@ export class PackageManager implements IPackageManager {
     this.eventEmitter.emit("processorsChange", processorsMap);
   }
 
+  private updatePiecesMap(piecesMap: Map<string, PackagePieceEntry[]>) {
+    const oldPackages = Array.from(this.piecesMap.keys());
+    const newPackages = Array.from(piecesMap.keys());
+    oldPackages
+      .filter((pkg) => !newPackages.includes(pkg))
+      .forEach((pkg) => {
+        this.logger.info("Removed pieces from: @pkg", pkg);
+      });
+
+    this.piecesMap = piecesMap;
+    this.eventEmitter.emit("piecesChange", piecesMap);
+  }
+
+  /** The pieces every loaded package ships, keyed by the package. */
+  getPieces(): Map<string, PackagePieceEntry[]> {
+    return new Map(this.piecesMap);
+  }
+
   /**
    * Remove `pkg` from all package maps and emit the change events, tearing
    * down everything the package registered (subgraphs, processors, document
@@ -604,10 +680,12 @@ export class PackageManager implements IPackageManager {
     this.upgradeManifestsMap = dropKey(this.upgradeManifestsMap);
     this.subgraphsMap = dropKey(this.subgraphsMap);
     this.processorMap = dropKey(this.processorMap);
+    this.piecesMap = dropKey(this.piecesMap);
 
     this.updatePackagesMap(this.docModelsMap);
     this.updateSubgraphsMap(this.subgraphsMap);
     this.updateProcessorsMap(this.processorMap);
+    this.updatePiecesMap(this.piecesMap);
   }
 
   onDocumentModelsChange(
@@ -626,5 +704,11 @@ export class PackageManager implements IPackageManager {
     handler: (processors: Map<string, Processor>) => void,
   ): void {
     this.eventEmitter.on("processorsChange", handler);
+  }
+
+  onPiecesChange(
+    handler: (pieces: Map<string, PackagePieceEntry[]>) => void,
+  ): void {
+    this.eventEmitter.on("piecesChange", handler);
   }
 }

@@ -57,6 +57,11 @@ const normalIgnoredFiles = [
   "test/package-e2e/.registry-storage/",
   "test/package-e2e/.registry-cdn-cache/",
   "test/package-e2e/fixtures/",
+  // test/workflow-piece-e2e runtime artifacts, and the piece it adds to the
+  // generated project (its framework is installed there, not in the workspace).
+  "test/workflow-piece-e2e/.registry-storage/",
+  "test/workflow-piece-e2e/.registry-cdn-cache/",
+  "test/workflow-piece-e2e/fixture-piece/",
   // doc-harness: recipe files pinned verbatim into builder workspaces, and the
   // per-run workspaces themselves; neither is harness source.
   "tools/doc-harness/catalog/pinned/",

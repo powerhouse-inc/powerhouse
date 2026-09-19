@@ -6,6 +6,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { childLogger } from "document-model";
 import type { IPackageLoader, ProcessorFactoryBuilder } from "../types.js";
+import type { PackagePieceEntry } from "./types.js";
 import { extractUpgradeManifests } from "./util.js";
 
 export interface HttpPackageLoaderOptions {
@@ -59,6 +60,9 @@ export class HttpPackageLoader implements IPackageLoader {
   private readonly logger = childLogger(["reactor-api", "http-loader"]);
 
   readonly name = "HttpPackageLoader";
+
+  /** Said once: the reason is the loader's, not any one package's. */
+  private reportedNoPieces = false;
 
   readonly documentModelLoader: HttpDocumentModelLoader;
 
@@ -183,6 +187,20 @@ export class HttpPackageLoader implements IPackageLoader {
 
     this.logger.verbose(`No processor factory found in ${packageName}`);
     return null;
+  }
+
+  // A piece reaches a worker as a path on this disk, and a CDN bundle has
+  // none; downloading one to get a path is issue #3052, step 4.
+  loadPieces(packageSpec: string): Promise<PackagePieceEntry[]> {
+    if (!this.reportedNoPieces) {
+      this.reportedNoPieces = true;
+      this.logger.info(
+        "Pieces are not served over HTTP, so @pkg and every other package " +
+          "loaded from the registry contributes none",
+        packageSpec,
+      );
+    }
+    return Promise.resolve([]);
   }
 
   /**

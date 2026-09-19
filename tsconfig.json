@@ -67,6 +67,9 @@
       "path": "test/vetra-e2e"
     },
     {
+      "path": "test/workflow-piece-e2e"
+    },
+    {
       "path": "scripts/dark-mode"
     },
     {

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "6.2.3-dev.11",
+  "version": "6.2.3-dev.13",
   "description": "GraphQL API layer for the Powerhouse reactor Ã¢â‚¬â€ auto-generated subgraphs per document model plus the core reactor subgraph for drive and document management.",
   "type": "module",
   "repository": {
@@ -83,9 +83,7 @@
     "@powerhousedao/reactor-drive": "workspace:*",
     "@powerhousedao/reactor-group": "workspace:*",
     "@powerhousedao/reactor-mcp": "workspace:*",
-    "@powerhousedao/reactor-workflow": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
-    "@powerhousedao/workflow": "workspace:*",
     "@renown/sdk": "workspace:*",
     "body-parser": "^1.20.3",
     "change-case": "catalog:",

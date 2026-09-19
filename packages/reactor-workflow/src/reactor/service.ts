@@ -1,5 +1,5 @@
 // The workflow runtime: one instance per host, serving the GraphQL subgraph
-// (config + manual fire) and the document-event processor alike.
+// (config + manual fire) and the workflow-triggers read model alike.
 import type {
   IWebhookEndpoints,
   IWebhookScope,
@@ -206,6 +206,18 @@ const DOCUMENT_SCOPE = "document";
 // The relationship type the reactor uses for containment: a drive (or any
 // parent document) -> child document edge.
 const CHILD_RELATIONSHIP = "child";
+
+// What identifies an operation to both dedupe lines below. The ordinal is the
+// reactor's own sequence; a batch without one falls back to the document's.
+function operationKey(op: OperationWithContext): string {
+  return op.context.ordinal > 0
+    ? `o:${op.context.ordinal}`
+    : `${op.context.documentId}:${op.context.scope}:${op.context.branch}:${op.operation.index}`;
+}
+
+// A day, because the redelivery this guards is a restart replaying from a
+// cursor that trailed the runs it had already journaled.
+const OPERATION_DEDUPE_TTL_MS = 24 * 60 * 60_000;
 
 function stringField(
   record: Record<string, unknown>,
@@ -538,9 +550,6 @@ export class WorkflowRuntimeService {
     workflowId: string,
     state: WorkflowState,
   ): Promise<void> {
-    // An unversioned block type is pinned by what this reactor installed, so
-    // the registry answers before any of it is parsed.
-    await packagePieces.ready();
     const trigger = state.status === "ENABLED" ? state.trigger : undefined;
     if (trigger?.blockType === WEBHOOK_BLOCK) {
       await this.registerWebhook(workflowId, trigger.config);
@@ -732,11 +741,7 @@ export class WorkflowRuntimeService {
   private readonly seenOps = new Set<string>();
   private readonly seenOpsQueue: string[] = [];
 
-  private alreadySeen(op: OperationWithContext): boolean {
-    const key =
-      op.context.ordinal > 0
-        ? `o:${op.context.ordinal}`
-        : `${op.context.documentId}:${op.context.scope}:${op.context.branch}:${op.operation.index}`;
+  private alreadySeen(key: string): boolean {
     if (this.seenOps.has(key)) return true;
     this.seenOps.add(key);
     this.seenOpsQueue.push(key);
@@ -747,18 +752,21 @@ export class WorkflowRuntimeService {
     return false;
   }
 
-  // Called by the document-event processor. Registry updates are awaited;
-  // fires are not, so runs never block operation ingestion.
+  // Called by the workflow-triggers read model. Registry updates and the
+  // journal write for every matched fire are awaited; execution is not, so
+  // runs never block operation ingestion.
   async onOperations(operations: OperationWithContext[]): Promise<void> {
     const hints = collectLifecycleParentHints(operations);
     for (const { operation, context } of operations) {
-      if (context.scope === DOCUMENT_SCOPE) {
-        if (this.alreadySeen({ operation, context })) continue;
-        await this.matchDocumentLifecycle(operation, context, hints);
+      if (context.scope !== DOCUMENT_SCOPE && context.scope !== "global") {
         continue;
       }
-      if (context.scope !== "global") continue;
-      if (this.alreadySeen({ operation, context })) continue;
+      const opKey = operationKey({ operation, context });
+      if (this.alreadySeen(opKey)) continue;
+      if (context.scope === DOCUMENT_SCOPE) {
+        await this.matchDocumentLifecycle(operation, context, hints, opKey);
+        continue;
+      }
       // A workflow edit updates the registry, then falls through: workflow docs are
       // also a document-event source, so a workflow can watch its own type.
       if (context.documentType === "powerhouse/workflow") {
@@ -791,10 +799,11 @@ export class WorkflowRuntimeService {
             timestampUtcMs: operation.timestampUtcMs,
           },
         };
-        this.fireFromTrigger(
+        await this.enqueueFire(
           registration.workflowId,
           payload,
           registration.kind,
+          opKey,
         );
       }
       if (context.documentType === DRIVE_DOCUMENT_TYPE) {
@@ -803,17 +812,68 @@ export class WorkflowRuntimeService {
           operation.action.type,
           operation.action.input,
           { index: operation.index, timestampUtcMs: operation.timestampUtcMs },
+          opKey,
         );
       }
     }
+  }
+
+  // Journals the fire, then lets it run on its own. Awaiting only the write is
+  // the whole point: once this resolves the run is durable, so the read model's
+  // cursor may pass the operation that matched it, but nothing here waits on a
+  // piece. A journal that cannot take the row still fires, best-effort.
+  private async enqueueFire(
+    workflowId: string,
+    payload: unknown,
+    kind: string,
+    opKey: string,
+  ): Promise<void> {
+    const store = await this.store();
+    if (!store) {
+      this.fireFromTrigger(workflowId, payload, kind);
+      return;
+    }
+    // The durable half of the dedupe: a crash can leave the cursor behind the
+    // run it already wrote, so the replay delivers this operation a second time.
+    const claimed = await store.claimDedupe(
+      workflowId,
+      `op:${opKey}`,
+      OPERATION_DEDUPE_TTL_MS,
+      new Date().toISOString(),
+    );
+    if (!claimed) return;
+    let runId: string;
+    try {
+      runId = await store.enqueueRun({
+        workflowId,
+        triggerKind: kind,
+        triggerPayload: payload,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Could not journal the ${kind} fire for workflow ${workflowId}; running it without a durable record`,
+        error,
+      );
+      this.fireFromTrigger(workflowId, payload, kind);
+      return;
+    }
+    this.fireFromTrigger(workflowId, payload, kind, runId);
   }
 
   private fireFromTrigger(
     workflowId: string,
     payload: unknown,
     kind: string,
+    enqueuedRunId?: string,
   ): void {
-    this.fire(workflowId, payload, kind).then(
+    this.fire(
+      workflowId,
+      payload,
+      kind,
+      undefined,
+      undefined,
+      enqueuedRunId,
+    ).then(
       (run) => {
         this.logger.info(`${kind} fired workflow ${workflowId}: ${run.status}`);
       },
@@ -866,7 +926,7 @@ export class WorkflowRuntimeService {
     return targets;
   }
 
-  private fireLifecycle(
+  private async fireLifecycle(
     kind: TriggerKind,
     payload: {
       documentId: string;
@@ -876,7 +936,8 @@ export class WorkflowRuntimeService {
       parentId: string | null;
       operation: { index: number; timestampUtcMs: string };
     },
-  ): void {
+    opKey: string,
+  ): Promise<void> {
     let matched = false;
     for (const target of this.lifecycleTargets(kind)) {
       if (
@@ -889,7 +950,7 @@ export class WorkflowRuntimeService {
         continue;
       }
       matched = true;
-      this.fireFromTrigger(target.workflowId, payload, kind);
+      await this.enqueueFire(target.workflowId, payload, kind, opKey);
     }
     if (matched) this.recordLifecycleFired(kind, payload.documentId);
   }
@@ -921,6 +982,7 @@ export class WorkflowRuntimeService {
     operation: OperationWithContext["operation"],
     context: OperationWithContext["context"],
     hints: Map<string, LifecycleParentHint>,
+    opKey: string,
   ): Promise<void> {
     const kind = lifecycleKindForDocumentAction(operation.action.type);
     if (!kind) return;
@@ -936,22 +998,26 @@ export class WorkflowRuntimeService {
     const driveId =
       hint?.driveId ?? (await this.driveIdFromParent(hint?.parentCandidate));
     const created = kind === "document-created";
-    this.fireLifecycle(kind, {
-      documentId,
-      // CREATE_DOCUMENT names the model it creates; the stored context type
-      // answers for a deletion, where the document can no longer be read.
-      documentType:
-        (created ? stringField(input, "model") : undefined) ??
-        (context.documentType || null),
-      // Only a creation carries a name; a deleted document's name is gone.
-      name: stringField(input, "name") ?? null,
-      driveId: driveId ?? null,
-      parentId: hint?.parentId ?? null,
-      operation: {
-        index: operation.index,
-        timestampUtcMs: operation.timestampUtcMs,
+    await this.fireLifecycle(
+      kind,
+      {
+        documentId,
+        // CREATE_DOCUMENT names the model it creates; the stored context type
+        // answers for a deletion, where the document can no longer be read.
+        documentType:
+          (created ? stringField(input, "model") : undefined) ??
+          (context.documentType || null),
+        // Only a creation carries a name; a deleted document's name is gone.
+        name: stringField(input, "name") ?? null,
+        driveId: driveId ?? null,
+        parentId: hint?.parentId ?? null,
+        operation: {
+          index: operation.index,
+          timestampUtcMs: operation.timestampUtcMs,
+        },
       },
-    });
+      opKey,
+    );
   }
 
   // The drive's fallback view: ADD_FILE always accompanies a CREATE_DOCUMENT, so it fires only
@@ -961,6 +1027,7 @@ export class WorkflowRuntimeService {
     actionType: string,
     input: unknown,
     operation: { index: number; timestampUtcMs: string },
+    opKey: string,
   ): Promise<void> {
     const kind = lifecycleKindForDriveAction(actionType);
     if (!kind) return;
@@ -984,14 +1051,18 @@ export class WorkflowRuntimeService {
       }
     }
 
-    this.fireLifecycle(kind, {
-      documentId,
-      documentType: documentType ?? null,
-      name,
-      driveId,
-      parentId: stringField(record, "parentFolder") ?? null,
-      operation,
-    });
+    await this.fireLifecycle(
+      kind,
+      {
+        documentId,
+        documentType: documentType ?? null,
+        name,
+        driveId,
+        parentId: stringField(record, "parentFolder") ?? null,
+        operation,
+      },
+      opKey,
+    );
   }
 
   private triggerSupervisor?: TriggerSupervisor;
@@ -1638,7 +1709,6 @@ export class WorkflowRuntimeService {
   private async pieceVersion(packageName: string): Promise<string> {
     // A package piece is pinned by what this reactor installed, and no
     // published listing has anything to say about it.
-    await packagePieces.ready();
     const local = packagePieces.lookup(packageName);
     if (local) return local.version;
     try {
@@ -1679,7 +1749,6 @@ export class WorkflowRuntimeService {
   private async localPieces(): Promise<
     { piece: LocalPiece; descriptor: PieceDescriptor }[]
   > {
-    await packagePieces.ready();
     const described = await Promise.all(
       packagePieces.entries().map(async (piece) => {
         try {
@@ -1702,7 +1771,6 @@ export class WorkflowRuntimeService {
   private async localPiece(
     packageName: string,
   ): Promise<{ piece: LocalPiece; descriptor: PieceDescriptor } | undefined> {
-    await packagePieces.ready();
     const piece = packagePieces.lookup(packageName);
     if (!piece) return undefined;
     return {
@@ -1778,7 +1846,6 @@ export class WorkflowRuntimeService {
   // Design-time: the action/trigger descriptor (props, auth) driving the
   // editor form; triggers come back under a "trigger" key.
   async blockDescriptor(blockType: string): Promise<unknown> {
-    await packagePieces.ready();
     const parsed = parseBlockType(blockType, packagePieces.versions());
     if (!parsed) return null;
     const descriptor = await this.pieceDescriptor(
@@ -1878,7 +1945,6 @@ export class WorkflowRuntimeService {
     connectionId?: string,
     ctx?: WorkflowCaller,
   ): Promise<unknown> {
-    await packagePieces.ready();
     const parsed = parseBlockType(blockType, packagePieces.versions());
     if (!parsed) {
       throw new Error(`Not a piece block type: "${blockType}"`);
@@ -1934,7 +2000,6 @@ export class WorkflowRuntimeService {
     blockType: string,
     config?: unknown,
   ): Promise<OutputTree> {
-    await packagePieces.ready();
     const record = (config ?? {}) as Record<string, unknown>;
     switch (blockType) {
       case "core#manual":
@@ -2071,7 +2136,6 @@ export class WorkflowRuntimeService {
     if (trigger.connectionId) {
       await this.assertCanReadDocument(trigger.connectionId, ctx);
     }
-    await packagePieces.ready();
     const binding = this.pieceBinding(workflowId, trigger);
     if (!binding) {
       throw new Error(`"${trigger.blockType}" is not a piece trigger`);
@@ -2099,28 +2163,48 @@ export class WorkflowRuntimeService {
       rerunOf: string;
     },
     ctx?: WorkflowCaller,
+    // A run this workflow's trigger already journaled as PENDING. Adopted
+    // rather than created, so the row a matched operation left behind is the
+    // row the run finishes in.
+    enqueuedRunId?: string,
   ): Promise<PersistedRunResult> {
-    // "manual" is the only kind a caller can ask for; every other one is
-    // system-initiated and already authorized by whatever armed the trigger.
-    if (triggerKind === "manual") {
-      await this.assertCanReadDocument(workflowId, ctx);
+    const store = await this.store();
+    let state: WorkflowState;
+    let definition: ReturnType<typeof toWorkflowDefinition>;
+    try {
+      // "manual" is the only kind a caller can ask for; every other one is
+      // system-initiated and already authorized by whatever armed the trigger.
+      if (triggerKind === "manual") {
+        await this.assertCanReadDocument(workflowId, ctx);
+      }
+      const document =
+        await this.host.reactorClient.get<WorkflowDocument>(workflowId);
+      if (document.header.documentType !== "powerhouse/workflow") {
+        throw new Error(
+          `Document "${workflowId}" is not a powerhouse/workflow`,
+        );
+      }
+      state = document.state.global;
+      if (state.status !== "ENABLED") {
+        throw new Error(
+          `Workflow is ${state.status}; only ENABLED workflows can fire`,
+        );
+      }
+      definition = toWorkflowDefinition(state);
+    } catch (error) {
+      // An adopted row is already durable: closing it out here is what keeps
+      // a refused fire from leaving a PENDING run nothing will ever start.
+      if (enqueuedRunId) {
+        await store?.failRun(
+          enqueuedRunId,
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+      throw error;
     }
-    const document =
-      await this.host.reactorClient.get<WorkflowDocument>(workflowId);
-    if (document.header.documentType !== "powerhouse/workflow") {
-      throw new Error(`Document "${workflowId}" is not a powerhouse/workflow`);
-    }
-    const state = document.state.global;
-    if (state.status !== "ENABLED") {
-      throw new Error(
-        `Workflow is ${state.status}; only ENABLED workflows can fire`,
-      );
-    }
-    const definition = toWorkflowDefinition(state);
     // Bound once, to the connections this definition names: an edit landing
     // mid-run cannot widen what the run may resolve.
     const connections = declaredConnectionIds(definition);
-    const store = await this.store();
     // Without a journal there is nowhere durable to keep ctx.store, so the
     // executor falls back to the worker's heap.
     this.executor ??= createBlockExecutor(
@@ -2130,15 +2214,23 @@ export class WorkflowRuntimeService {
       store ? createPieceStorePort(store, currentWorkflowId) : undefined,
     );
 
-    const runId =
-      (await store?.startRun({
-        workflowId,
+    let runId: string | null = enqueuedRunId ?? null;
+    if (enqueuedRunId) {
+      await store?.beginRun(enqueuedRunId, {
         workflowName: state.name,
         workflowVersion: state.version,
-        triggerKind,
-        triggerPayload,
-        rerunOf: resume?.rerunOf,
-      })) ?? null;
+      });
+    } else {
+      runId =
+        (await store?.startRun({
+          workflowId,
+          workflowName: state.name,
+          workflowVersion: state.version,
+          triggerKind,
+          triggerPayload,
+          rerunOf: resume?.rerunOf,
+        })) ?? null;
+    }
     let journalFailed = false;
     // Recorded whether or not the write lands: it is what lets finishRun put a
     // lost row back where the step ran.

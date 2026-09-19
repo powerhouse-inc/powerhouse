@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/shared",
-  "version": "6.2.3-dev.11",
+  "version": "6.2.3-dev.13",
   "type": "module",
   "sideEffects": false,
   "publishConfig": {
@@ -114,6 +114,10 @@
     "./build-config": {
       "source": "./clis/build-config.mts",
       "import": "./dist/clis/build-config.mjs"
+    },
+    "./build-pieces": {
+      "source": "./clis/build-pieces.mts",
+      "import": "./dist/clis/build-pieces.mjs"
     }
   },
   "dependencies": {

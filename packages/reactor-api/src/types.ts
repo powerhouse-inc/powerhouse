@@ -17,10 +17,14 @@ import type { HttpRouteService, IHttpScope } from "./http/index.js";
 import type { IHttpAdapter } from "./graphql/gateway/types.js";
 import type { IPackageManager } from "./packages/types.js";
 import type { IAttachmentAccessService } from "./services/attachment-access.service.js";
+import type { IAuthorizationService } from "./services/authorization.service.js";
 import type { AuthService } from "./services/auth.service.js";
 export type {
   IPackageLoader,
   IPackageLoaderOptions,
+  IPackagePieceSource,
+  PackagePiece,
+  PackagePieceEntry,
 } from "./packages/types.js";
 
 /**
@@ -54,6 +58,12 @@ export type API = {
   /** Document-authorized attachment read decisions; see AttachmentAccessService. */
   attachmentAccess: IAttachmentAccessService;
   authService: AuthService | undefined;
+  /** The service the subgraphs decide with, for a component the host composes
+   * after boot: it must authorize with this one, not one of its own. */
+  authorizationService: IAuthorizationService;
+  /** The read-model relational store, for the same host-composed component:
+   * its tables belong in this database and nothing else hands one over. */
+  relationalDb: IRelationalDb;
   /**
    * Releases resources owned by the API: shuts down the GraphQL gateway,
    * closes WebSocket and HTTP servers, destroys knex pools, and closes any

@@ -6,8 +6,6 @@ export {
 } from "./reactor/attachment-port.js";
 export { WORKFLOW_PACKAGE_NAME } from "./reactor/package-name.js";
 export { PieceRegistry, packagePieces } from "./reactor/piece-registry.js";
-export { createDocumentEventProcessorFactory } from "./reactor/processors/document-event-trigger/factory.js";
-export { DocumentEventTrigger } from "./reactor/processors/document-event-trigger/processor.js";
 export type {
   WorkflowCaller,
   WorkflowRuntimeHostDeps,
@@ -19,6 +17,11 @@ export {
   type ConnectionSummary,
   type PersistedRunResult,
 } from "./reactor/service.js";
+export {
+  WorkflowTriggersReadModel,
+  WORKFLOW_TRIGGERS_READ_MODEL,
+  WORKFLOW_TRIGGERS_READ_MODEL_STAGE,
+} from "./reactor/workflow-triggers-read-model.js";
 export type {
   PieceStoreRow,
   RunRow,

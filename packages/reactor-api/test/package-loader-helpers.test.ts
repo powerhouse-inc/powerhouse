@@ -118,6 +118,47 @@ describe("isExpectedLoaderMiss", () => {
     expect(isExpectedLoaderMiss(err, pkg)).toBe(true);
   });
 
+  it("treats a subpath an `exports` map omits as expected", () => {
+    // A package that ships no document models says so by not exporting the
+    // subpath; the loader asking for it is not a failure to load anything.
+    const err = new Error(
+      `Package subpath './document-models' is not defined by "exports" in /x/${pkg}/package.json imported from /y/loader.mjs`,
+    ) as NodeJS.ErrnoException;
+    err.code = "ERR_PACKAGE_PATH_NOT_EXPORTED";
+    expect(isExpectedLoaderMiss(err, pkg, "document-models")).toBe(true);
+    // A different subpath in the same shape is a real resolution failure.
+    expect(isExpectedLoaderMiss(err, pkg, "subgraphs")).toBe(false);
+  });
+
+  it("treats a package that exports no ./pieces as expected", () => {
+    // Nearly every package ships none, and each would otherwise log a loader
+    // failure the moment pieces became a fourth kind.
+    const err = new Error(
+      `Package subpath './pieces' is not defined by "exports" in /x/${pkg}/package.json imported from /y/loader.mjs`,
+    ) as NodeJS.ErrnoException;
+    err.code = "ERR_PACKAGE_PATH_NOT_EXPORTED";
+    expect(isExpectedLoaderMiss(err, pkg, "pieces")).toBe(true);
+  });
+
+  it("treats a 404 for the asked-for subpath as expected, and 500 as real", () => {
+    const missing = new Error(
+      "Failed to fetch http://localhost:8080/-/cdn/pkg/node/processors/index.mjs: 404",
+    );
+    expect(isExpectedLoaderMiss(missing, pkg, "processors")).toBe(true);
+
+    const broken = new Error(
+      "Failed to fetch http://localhost:8080/-/cdn/pkg/node/processors/index.mjs: 503",
+    );
+    expect(isExpectedLoaderMiss(broken, pkg, "processors")).toBe(false);
+  });
+
+  it("does NOT treat a 404 for something else the bundle imports as expected", () => {
+    const err = new Error(
+      "Failed to fetch http://localhost:8080/-/cdn/other/node/document-models/index.mjs: 404",
+    );
+    expect(isExpectedLoaderMiss(err, pkg, "processors")).toBe(false);
+  });
+
   it("treats HttpPackageLoader's 'Invalid package name:' as expected", () => {
     const err = new Error("Invalid package name: /Users/foo/test-hub");
     expect(isExpectedLoaderMiss(err, pkg)).toBe(true);

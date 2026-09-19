@@ -40,16 +40,10 @@
       "path": "../reactor-mcp"
     },
     {
-      "path": "../reactor-workflow"
-    },
-    {
       "path": "../renown"
     },
     {
       "path": "../shared"
-    },
-    {
-      "path": "../workflow"
     }
   ]
 }

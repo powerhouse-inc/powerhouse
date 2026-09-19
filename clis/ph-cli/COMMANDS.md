@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.3-dev.11)<br>
+# Powerhouse CLI Commands (6.2.3-dev.13)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -11,6 +11,7 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Subgraph](#subgraph)
 - [Migration File](#migration-file)
 - [Vetra](#vetra)
+- [Build](#build)
 - [Connect](#connect)
 - [Connect Studio](#connect-studio)
 - [Connect Build](#connect-build)
@@ -402,6 +403,35 @@ show help<br><br>
 **usage:** `--help, -h`<br>
 
 
+## Build
+
+Build a Powerhouse package for publishing: a browser bundle and a node bundle of its
+document models, editors, subgraphs and processors, type declarations, and its stylesheet.
+
+Pieces under pieces/ are built too, each into its own self-contained module under
+dist/node/pieces/<name>, with a descriptor.json and package.json written beside it and
+the piece listed in dist/powerhouse.manifest.json. A package that ships only pieces is an
+ordinary package: it carries the same boilerplate, and every step above runs for it too.
+### options
+#### Out Dir <br>
+Where to output the bundled code<br><br>
+**usage:** `--out-dir <str>`<br>
+**default**: `dist`
+
+### flags
+#### No Shared Deps <br>
+Bundle the shared dependency set instead of externalizing it (default: externalize)<br><br>
+**usage:** `--no-shared-deps`<br>
+**default**: `false`
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
 ## Connect
 Powerhouse Connect commands. Use with `studio`, `build`, `preview`, or `config`. Defaults to `studio` if not specified.
 ## Connect Studio
@@ -543,6 +573,10 @@ Override connect.drives.allowAddDrive (top-level add-drive toggle).<br><br>
 #### External Packages <br>
 Override connect.packages.externalEnabled.<br><br>
 **usage:** `--external-packages <value>`<br>
+
+#### Workflows <br>
+Override connect.app.workflowsEnabled (load the @powerhousedao/workflow package: workflow + connection documents, their editors and Workflow Studio).<br><br>
+**usage:** `--workflows <value>`<br>
 
 #### Remote Drives Enabled <br>
 Override connect.drives.sections.remote.enabled (the unified cloud+public section).<br><br>

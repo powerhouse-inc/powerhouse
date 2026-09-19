@@ -68,6 +68,9 @@
     },
     {
       "path": "../../packages/vetra"
+    },
+    {
+      "path": "../../packages/workflow"
     }
   ]
 }

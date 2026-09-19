@@ -10,6 +10,7 @@ import type {
   ConfigEntrySchema,
   ConfigEntryTypeSchema,
   ManifestSchema,
+  PieceModuleSchema,
   PowerhouseModuleSchema,
   PublisherSchema,
 } from "./schemas.js";
@@ -1749,6 +1750,7 @@ export type ConfigEntryType = z.infer<typeof ConfigEntryTypeSchema>;
 export type ConfigEntry = z.infer<typeof ConfigEntrySchema>;
 
 export type PowerhouseModule = z.infer<typeof PowerhouseModuleSchema>;
+export type PieceModule = z.infer<typeof PieceModuleSchema>;
 export type Publisher = z.infer<typeof PublisherSchema>;
 
 export type Manifest = z.infer<typeof ManifestSchema>;

@@ -15,12 +15,12 @@ describe("normalizeKey", () => {
   });
 });
 
-describe("buildConnectFlagPatch — 19 field flags", () => {
+describe("buildConnectFlagPatch — 20 field flags", () => {
   it("returns an empty patch when no flag is set", () => {
     expect(buildConnectFlagPatch({})).toEqual({});
   });
 
-  // The 15 strict-optional flags from connectRuntimeOverrideArgs.
+  // The 16 strict-optional flags from connectRuntimeOverrideArgs.
 
   it("renownUrl → renown.url", () => {
     expect(buildConnectFlagPatch({ renownUrl: "https://x" })).toEqual({
@@ -49,6 +49,15 @@ describe("buildConnectFlagPatch — 19 field flags", () => {
   it("externalPackages → packages.externalEnabled", () => {
     expect(buildConnectFlagPatch({ externalPackages: false })).toEqual({
       packages: { externalEnabled: false },
+    });
+  });
+
+  it("workflows → app.workflowsEnabled", () => {
+    expect(buildConnectFlagPatch({ workflows: true })).toEqual({
+      app: { workflowsEnabled: true },
+    });
+    expect(buildConnectFlagPatch({ workflows: false })).toEqual({
+      app: { workflowsEnabled: false },
     });
   });
 

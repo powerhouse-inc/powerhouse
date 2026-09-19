@@ -31,6 +31,10 @@ import {
 } from "@powerhousedao/shared/processors";
 import * as commonDocumentModels from "@powerhousedao/powerhouse-vetra-packages/document-models";
 import {
+  loadFlaggedDocumentModels,
+  toDocumentModelModules,
+} from "./reactor-worker-models.js";
+import {
   BrowserKeyStorage,
   createSignatureVerifier,
   RenownCryptoBuilder,
@@ -63,28 +67,10 @@ console.info("[reactor.worker] module evaluating");
 const RENOWN_APP_NAME = "connect";
 
 // Common models the tab bundles as a local package; not CDN-loadable, so the
-// worker imports them directly. Vetra is builder-only and lazy-loaded below.
-function toDocumentModelModules(candidates: unknown[]): DocumentModelModule[] {
-  return candidates.filter(
-    (m): m is DocumentModelModule =>
-      typeof m === "object" &&
-      m !== null &&
-      "documentModel" in m &&
-      "reducer" in m,
-  );
-}
-
+// worker imports them directly. Vetra and workflow are flag-gated chunks.
 const commonBundledModels = toDocumentModelModules(
   Object.values(commonDocumentModels),
 );
-
-// Not CDN-loadable, so it can't ride the packageSpecs path; lazy-import the
-// bundled chunk only in studio mode.
-async function loadVetraDocumentModels(): Promise<DocumentModelModule[]> {
-  const vetraDocumentModels =
-    await import("@powerhousedao/vetra/document-models");
-  return toDocumentModelModules(Object.values(vetraDocumentModels));
-}
 
 type WorkerConstruct = {
   namespace: string;
@@ -96,6 +82,8 @@ type WorkerConstruct = {
   // maps don't apply here).
   sharedImports?: Record<string, string>;
   studioMode?: boolean;
+  // Loads the workflow package's document models. Independent of studioMode.
+  workflowsEnabled?: boolean;
   // The worker has no runtime config, so the chain its bearer tokens are scoped
   // to is passed in; leaving it unset would sign for a chain nobody issues on.
   renownChainId?: number;
@@ -312,12 +300,13 @@ const host = new ReactorHost({
           ) as Promise<Record<string, unknown>>,
       });
       const loaded = await loader.loadPackages(construct.packageSpecs);
-      const vetraModels = construct.studioMode
-        ? await loadVetraDocumentModels()
-        : [];
+      const flaggedModels = await loadFlaggedDocumentModels({
+        studioMode: construct.studioMode,
+        workflowsEnabled: construct.workflowsEnabled,
+      });
       const models = baseDocumentModels.concat(
         commonBundledModels,
-        vetraModels,
+        flaggedModels,
         loaded,
       );
       phase = "opening pglite stores";
