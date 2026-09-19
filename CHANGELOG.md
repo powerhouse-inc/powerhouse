@@ -1,3 +1,37 @@
+## 6.2.3-dev.14 (2026-09-19)
+
+### 🚀 Features
+
+- **codegen:** a project that ships a piece gets the framework it compiles against ([5ababb70d](https://github.com/powerhouse-inc/powerhouse/commit/5ababb70d))
+- **doc-harness:** workspace wiring and core schemas for the docs-validation harness ([5c591ac69](https://github.com/powerhouse-inc/powerhouse/commit/5c591ac69))
+- **doc-harness:** findings store, records CLI, and observed claude -p result fields ([281dc17f0](https://github.com/powerhouse-inc/powerhouse/commit/281dc17f0))
+- **doc-harness:** pilot task catalog with pinned recipe inputs ([74bc26129](https://github.com/powerhouse-inc/powerhouse/commit/74bc26129))
+- **doc-harness:** builder, judge and verifier prompts, judge post-checks, and the run report ([78b31bd78](https://github.com/powerhouse-inc/powerhouse/commit/78b31bd78))
+- **doc-harness:** claude -p driver, fake driver, and semaphore ([a42704836](https://github.com/powerhouse-inc/powerhouse/commit/a42704836))
+- **doc-harness:** docs snapshot, builder sandbox settings, and workspace scaffolding ([22669d2c7](https://github.com/powerhouse-inc/powerhouse/commit/22669d2c7))
+- **doc-harness:** deterministic transcript extractor and judge-facing compaction ([f21998aef](https://github.com/powerhouse-inc/powerhouse/commit/f21998aef))
+- **doc-harness:** workflows, steps, and the run/resume/inspect commands ([0e116d226](https://github.com/powerhouse-inc/powerhouse/commit/0e116d226))
+- **doc-harness:** runs started from mastra studio build their own context ([27b185553](https://github.com/powerhouse-inc/powerhouse/commit/27b185553))
+- **doc-harness:** serve rendered reports and transcripts from mastra studio ([fd64a4661](https://github.com/powerhouse-inc/powerhouse/commit/fd64a4661))
+- **doc-harness:** report mid-run from attempt.json, and count truncated passes ([0edfafe20](https://github.com/powerhouse-inc/powerhouse/commit/0edfafe20))
+- **doc-harness:** documentation-validation harness for the reactor docs ([#3059](https://github.com/powerhouse-inc/powerhouse/pull/3059))
+- **ph-cli:** build pieces on ph build ([3913b0796](https://github.com/powerhouse-inc/powerhouse/commit/3913b0796))
+
+### 🩹 Fixes
+
+- **doc-harness:** grade only the builder's code, and record the first pilot ([05da958a9](https://github.com/powerhouse-inc/powerhouse/commit/05da958a9))
+- **doc-harness:** track the report test fixtures and find recipes from a worktree ([13452b461](https://github.com/powerhouse-inc/powerhouse/commit/13452b461))
+- **doc-harness:** classify rate-limit stalls, grade truncated builds, and re-drive failures ([8aeed229b](https://github.com/powerhouse-inc/powerhouse/commit/8aeed229b))
+- **doc-harness:** stop grading pinned codegen tests, and re-grade attempts in place ([dfcfed917](https://github.com/powerhouse-inc/powerhouse/commit/dfcfed917))
+- **doc-harness:** apply every matching redo rule to an attempt, not the first ([dbb6daea5](https://github.com/powerhouse-inc/powerhouse/commit/dbb6daea5))
+- **doc-harness:** reinstall a stripped workspace before the verifier runs in it ([6fe5b8cb5](https://github.com/powerhouse-inc/powerhouse/commit/6fe5b8cb5))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+
 ## 6.2.3-dev.13 (2026-09-18)
 
 This was a version bump only, there were no code changes.
