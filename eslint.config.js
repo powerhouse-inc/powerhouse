@@ -21,6 +21,8 @@ const normalIgnoredFiles = [
   "**/storybook-static/",
   "**/.vite/",
   "**/.nx/",
+  // Mastra Studio's build output (multi-MB bundles; doc-harness's `pnpm studio`).
+  "**/.mastra/",
   "**/build/",
   "**/.docusaurus/",
   "**/.ph/",
@@ -60,6 +62,10 @@ const normalIgnoredFiles = [
   "test/workflow-piece-e2e/.registry-storage/",
   "test/workflow-piece-e2e/.registry-cdn-cache/",
   "test/workflow-piece-e2e/fixture-piece/",
+  // doc-harness: recipe files pinned verbatim into builder workspaces, and the
+  // per-run workspaces themselves; neither is harness source.
+  "tools/doc-harness/catalog/pinned/",
+  "tools/doc-harness/runs/",
   // Vendored scratch folder (sql-wasm typings + multi-MB SQL dumps); not
   // maintained source, so don't lint it.
   "packages/analytics-engine/browser/backup/",

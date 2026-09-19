@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-19T00:28:53.889Z
+> Generated: 2026-09-19T02:47:59.322Z
 > Total Documents: 113
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -2354,7 +2354,7 @@ export const setCursor = (input: SetCursorInput) =>
   );
 ```
 
-For your model's own operations you never call `createAction` directly: use the generated creator (`setCursor(...)`) from `document-models/<your-model>/gen/creators.ts`. The exception is the built-in `document`-scope actions (`CREATE_DOCUMENT`, `UPGRADE_DOCUMENT`, `DELETE_DOCUMENT`), which have no generated creator. `@powerhousedao/reactor` exports `createDocumentAction`, `upgradeDocumentAction` and `deleteDocumentAction` for them, and outside a reactor you call `createAction` yourself with `"document"` as the fifth argument.
+For your model's own operations, never call `createAction` directly. Use the generated creator (`setCursor(...)`) from `document-models/<your-model>/gen/creators.ts`. The built-in `document`-scope actions (`CREATE_DOCUMENT`, `UPGRADE_DOCUMENT`, `DELETE_DOCUMENT`) have no generated creator. `@powerhousedao/reactor` exports `createDocumentAction`, `upgradeDocumentAction` and `deleteDocumentAction` for them. Outside a reactor, call `createAction` yourself with `"document"` as the fifth argument.
 
 <Quiz
   question="You're writing a collaborative markdown editor. Which of these actions should live in the local scope?"
@@ -2753,14 +2753,14 @@ The `IReactorClient` is the primary interface for interacting with a reactor pro
 | `getDocumentModelModules(namespace?, paging?)`                                 | List registered document model modules            |
 | `getDocumentModelModule(documentType)`                                         | Get a specific document model module              |
 
-The optional `ViewFilter` lets you target a specific branch, set of scopes, or revision, and name the subject a client read is gated for:
+The optional `ViewFilter` lets you target a specific branch, set of scopes, or revision. On the client it also names the subject the read is gated for:
 
 ```typescript
 type ViewFilter = {
   branch?: string;
   scopes?: string[];
   revision?: number;
-  subject?: AuthSubject; // client read gate only; IReactor ignores it
+  subject?: AuthSubject; // client read gate only, ignored by IReactor
 };
 ```
 
@@ -2954,9 +2954,9 @@ type ViewFilter = {
 | `branch`   | The branch to read from (e.g. `"main"`)         |
 | `scopes`   | Scopes to include (e.g. `["global"]`)           |
 | `revision` | Read the document at a specific revision number |
-| `subject`  | Who the [read gate](/academy/Reference/Reactor/Authorization) decides for; defaults to the client's signer. Set it per request when one client serves many principals. `IReactor` ignores it |
+| `subject`  | Who the [read gate](/academy/Reference/Reactor/Authorization) decides for. Defaults to the client's signer. Set it per request when one client serves many principals. `IReactor` ignores it |
 
-`AuthSubject` is `{ address?: string; key?: string }` from `document-model`: the verified signer address, and the signer's `did:key`. Both are optional; an empty subject reads as anonymous.
+`AuthSubject` is `{ address?: string; key?: string }` from `document-model`. `address` is the verified signer address and `key` is the signer's `did:key`. Both are optional. An empty subject reads as anonymous.
 
 ### `SearchFilter`
 
@@ -4132,7 +4132,7 @@ Workers open their own Postgres pools: the executor pool takes its connection in
 
 ### Built-in document models
 
-A reactor only knows the document types it was given, and nothing is registered for you. Two built-in modules ship with the platform: without `driveDocumentModelModule` the reactor cannot create a drive, and without `documentModelDocumentModelModule` it cannot store document-model definitions.
+A reactor only knows the document types it was given. Nothing is registered by default. Two built-in modules ship with the platform. Without `driveDocumentModelModule` the reactor cannot create a drive. Without `documentModelDocumentModelModule` the reactor cannot store document-model definitions.
 
 ```typescript
 
@@ -4208,7 +4208,7 @@ const job = await reactor.removeRelationship(parentId, childId1, "child");
 
 #### Building the document for `create`
 
-`create` takes a fully formed `PHDocument`. Build it with the model's creator, which sets the header, type and initial state; the reactor turns it into a `CREATE_DOCUMENT` plus an `UPGRADE_DOCUMENT` action in one `document`-scope job. The built-in models export their creators directly, and a codegen'd module exposes the same function as `utils.createDocument`.
+`create` takes a fully formed `PHDocument`. Build the document with the model's creator, which sets the header, type and initial state. The reactor turns the document into a `CREATE_DOCUMENT` and an `UPGRADE_DOCUMENT` action in one `document`-scope job. The built-in models export their creators directly. A codegen'd module exposes the same function as `utils.createDocument`.
 
 ```typescript
 
@@ -4237,7 +4237,7 @@ The returned value is a submission receipt rather than a result: every `JobInfo`
 
 There is no idempotency key on a job plan, so re-submitting a batch after a partial failure re-applies the entries that already succeeded. Any compensation is the caller's to write.
 
-A job plan carries raw `Action` objects, so a batch that creates a document uses action creators rather than `reactor.create`. `@powerhousedao/reactor` exports `createDocumentAction`, `upgradeDocumentAction` and `deleteDocumentAction` for the `document`-scope lifecycle actions; a model's own actions come from its creators (here `addFile` from the drive model).
+A job plan carries raw `Action` objects, so a batch that creates a document uses action creators rather than `reactor.create`. `@powerhousedao/reactor` exports `createDocumentAction`, `upgradeDocumentAction` and `deleteDocumentAction` for the `document`-scope lifecycle actions. A model's own actions come from its creators, here `addFile` from the drive model.
 
 ```typescript
 
@@ -4291,7 +4291,7 @@ const result = await reactor.executeBatch({
 // result.jobs["create-drive"] and result.jobs["add-document"] are JobInfo objects
 ```
 
-A job's `scope` must equal the scope of every action it carries. `executeBatch` checks this on submission and throws `Job '<key>' declares scope '<scope>' but action has scope '<actionScope>'`. `CREATE_DOCUMENT`, `UPGRADE_DOCUMENT` and `DELETE_DOCUMENT` are `document`-scope actions, so creating a document and writing its `global` state are two jobs, as above.
+A job's `scope` must equal the scope of every action it carries. `executeBatch` checks the scopes on submission and throws `Job '<key>' declares scope '<scope>' but action has scope '<actionScope>'`. `CREATE_DOCUMENT`, `UPGRADE_DOCUMENT` and `DELETE_DOCUMENT` are `document`-scope actions, so creating a document and writing its `global` state are two jobs, as above.
 
 `loadBatch` is the load-side counterpart. It submits batches of pre-existing operations (e.g. from sync) with the same dependency ordering. A `LoadJobPlan` uses `operations` instead of `actions`, and adds `externalDeps: string[]` — pre-resolved job UUIDs from prior batches that are appended to the queue hint without plan-key resolution.
 
@@ -4344,12 +4344,12 @@ const awaiter = new JobAwaiter(eventBus, (jobId, signal) =>
 );
 
 const job = await reactor.create(document);
-const info = await awaiter.waitForJob(job.id); // READ_READY or FAILED; check info.status
+const info = await awaiter.waitForJob(job.id); // READ_READY or FAILED, so check info.status
 
 awaiter.shutdown(); // rejects anything still pending
 ```
 
-`waitForJob` resolves with the terminal `JobInfo`, for `FAILED` as well as `READ_READY`, and it reads the current status first, so a job that finished before you called it resolves immediately. Resolving means the job reached a terminal status, not that every other `JOB_READ_READY` subscriber has run: subscribers run sequentially in registration order, and the awaiter registers its own when it is constructed. If your continuation depends on your own subscriber's work, resolve a promise from inside that subscriber and await it too.
+`waitForJob` resolves with the terminal `JobInfo`, for `FAILED` as well as `READ_READY`. It reads the current status first, so a job that finished before the call resolves immediately. Resolving means the job reached a terminal status. It does not mean every other `JOB_READ_READY` subscriber has run: subscribers run sequentially in registration order, and the awaiter registers its own subscriber when it is constructed. If your continuation depends on your own subscriber's work, resolve a promise from inside that subscriber and await that promise too.
 
 ## Consistency tokens
 
@@ -4457,7 +4457,7 @@ module.eventBus.subscribe(
 Besides `ReactorEventTypes`, `SyncEventTypes`, and `QueueEventTypes`, the executor managers emit `JobExecutorEventTypes` (`JOB_STARTED: 20000`, `JOB_COMPLETED: 20001`, `JOB_FAILED: 20002`, `EXECUTOR_STARTED: 20003`, `EXECUTOR_STOPPED: 20004`).
 
 **WARNING:**
-Two distinct job-failed payloads exist. The reactor-level `ReactorEventTypes.JOB_FAILED` (10005) is exported as `ReactorJobFailedEvent` and carries `jobId` and `error: Error`; the executor-level `JobExecutorEventTypes.JOB_FAILED` (20002) is exported as `JobFailedEvent` and carries `job` and `error: string`. Check which enum you subscribed to before reading `error`.
+Two distinct job-failed payloads exist. The reactor-level `ReactorEventTypes.JOB_FAILED` (10005) is exported as `ReactorJobFailedEvent` and carries `jobId` and `error: Error`. The executor-level `JobExecutorEventTypes.JOB_FAILED` (20002) is exported as `JobFailedEvent` and carries `job` and `error: string`. Check which enum you subscribed to before reading `error`.
 
 
 See [Reactor event system](/academy/Reference/Reactor/WorkingWithTheReactor#reactor-event-system) for the full list of event types.
@@ -4510,7 +4510,7 @@ Read models registered via `withReadModel()` run in the pre-ready phase — they
 
 A common use case for the low-level API is writing integration tests that need full control over the reactor lifecycle:
 
-`ReactorClientBuilder.buildModule()` returns an `InProcessReactorClientModule`: the `client`, direct references to `reactor`, `eventBus`, `documentIndexer`, `documentView`, `signer`, `subscriptionManager` and `jobAwaiter`, and `reactorModule`, the same `InProcessReactorModule` you get from `ReactorBuilder.buildModule()`. `reactorModule` is typed `InProcessReactorModule | undefined` because the `withReactor` path has none, so narrow it before use. Hand it a `ReactorBuilder` via `withReactorBuilder` and it builds the reactor for you:
+`ReactorClientBuilder.buildModule()` returns an `InProcessReactorClientModule`. It holds the `client`, direct references to `reactor`, `eventBus`, `documentIndexer`, `documentView`, `signer`, `subscriptionManager` and `jobAwaiter`, and the `reactorModule`. `reactorModule` is the same `InProcessReactorModule` you get from `ReactorBuilder.buildModule()`, typed `InProcessReactorModule | undefined` because the `withReactor` path has none. Narrow it before use. Hand the builder a `ReactorBuilder` via `withReactorBuilder` and it builds the reactor for you:
 
 ```typescript
 
@@ -4563,7 +4563,7 @@ const client = await new ReactorClientBuilder()
   .build();
 ```
 
-This path is handed no feature flags and no registry, so it cannot derive a read gate from the reactor (see below).
+The `withReactor` path receives no feature flags and no registry, so the client cannot derive a read gate from the reactor (see below).
 
 ### ReactorClientBuilder methods
 
@@ -4582,7 +4582,7 @@ This path is handed no feature flags and no registry, so it cannot derive a read
 
 You must call exactly one of `withReactorBuilder` or `withReactor` before `build()`/`buildModule()`, or the build throws.
 
-The two wiring paths do not gate reads the same way. A client built with `withReactorBuilder` derives its read gate from that reactor's feature flags and model registry, so `{ group }` principals resolve once `authGroups` is on. A client built with `withReactor(...)` evaluates the policy alone: a `{ group }` grant never matches and a reader who holds a scope only through a roster silently loses it. To run several per-identity clients over one already-built reactor, pass each the same gate through `withReadGate`; `ModelReadGate`, `BareReadGate` and `readDecisionModel` are exported from `@powerhousedao/reactor`. See [Authorization](/academy/Reference/Reactor/Authorization).
+The two wiring paths do not gate reads the same way. A client built with `withReactorBuilder` derives its read gate from that reactor's feature flags and model registry, so `{ group }` principals resolve once `authGroups` is on. A client built with `withReactor(...)` evaluates the policy alone. A `{ group }` grant never matches, and a reader who holds a scope only through a roster loses that scope without an error. To run several per-identity clients over one already-built reactor, pass each the same gate through `withReadGate`. `ModelReadGate`, `BareReadGate` and `readDecisionModel` are exported from `@powerhousedao/reactor`. See [Authorization](/academy/Reference/Reactor/Authorization).
 
 ---
 
@@ -5042,7 +5042,7 @@ await reactorModule?.processorManager.registerFactory(id, factory);
 
 A `ProcessorFactory` is called once per drive. It receives the drive header and returns the processors for that drive:
 
-A drive is a prerequisite, not only a scoping unit. The manager calls the factories when it sees a `CREATE_DOCUMENT` operation whose document type is a drive container (`powerhouse/document-drive` or `powerhouse/reactor-drive` by default; see `withDriveContainerTypes`). Until a drive exists, a registered factory is never invoked and no operations are routed, even for plain documents that match a filter. In a standalone reactor, create a drive before you expect `onOperations` to fire.
+A drive must exist before any processor runs. The manager calls the factories when it sees a `CREATE_DOCUMENT` operation whose document type is a drive container (`powerhouse/document-drive` or `powerhouse/reactor-drive` by default, see `withDriveContainerTypes`). Until a drive exists, a registered factory is never invoked and no operations are routed, even for plain documents that match a filter. In a standalone reactor, create a drive before you expect `onOperations` to fire.
 
 ```typescript
 
@@ -5184,7 +5184,7 @@ interface IProcessorHostModuleBase {
 - **`analyticsStore`** — the analytics store for time-series rollups.
 - **`relationalDb`** — an `IRelationalDb` (a Kysely instance plus `createNamespace` / `queryNamespace`) for relational indexing. See [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling).
 - **`processorApp`** — `"connect" | "switchboard"`. How a processor learns which app hosts it. Read this rather than the factory's `processorApp?` argument.
-- **`dispatch`** — writes back to the reactor via `dispatch.execute(docId, branch, actions, signal?, meta?)`, returning `{ id, status }`. In Connect this is wired to the reactor client's async execute. Do not `await client.execute()` from inside `onOperations`: it resolves only at `READ_READY`, which the current batch cannot reach while your callback is still running. Use `dispatch` and handle the result in a later `onOperations` call (see [Processor best practices](/academy/Build/WorkWithData/ProcessorBestPractices)).
+- **`dispatch`** — writes back to the reactor via `dispatch.execute(docId, branch, actions, signal?, meta?)`, returning `{ id, status }`. In Connect this is wired to the reactor client's async execute. Do not `await client.execute()` from inside `onOperations`. The promise resolves only at `READ_READY`, which the current batch cannot reach while your callback is still running. Use `dispatch` and handle the result in a later `onOperations` call (see [Processor best practices](/academy/Build/WorkWithData/ProcessorBestPractices)).
 - **`getReadModel(name)`** — looks up a registered read model by its `name`. Reactor-registered names are typed: `getReadModel("document-view")` returns `IDocumentView` and `"document-indexer"` returns `IDocumentIndexer`; other names take an explicit type argument. Connect's implementation throws `Read model "<name>" not found` when there is no match.
 - **`config?`** — optional `Map<string, unknown>` of host config.
 - **`client`** — the `IReactorClient` for reading documents and drives. See [IReactorClient](/academy/Reference/Reactor/ReactorClient).
@@ -5377,7 +5377,7 @@ export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
 
 `version` is optional. The source marks it "should be made required"; module versioning is not finalized, and the registry defaults a missing `version` to `1` everywhere.
 
-Codegen emits every field. If you write a module by hand, `reducer` comes from `createReducer(stateReducer)` in `document-model`, which wraps a `StateReducer<TState>` (`(state: Draft<TState>, action, dispatch?) => TState | undefined`) in the base document reducer so `SET_NAME`, `UNDO`, `REDO` and `PRUNE` keep working. `utils` is the `DocumentModelUtils` object a generated `gen/utils.ts` assembles from `baseCreateDocument`, `baseLoadFromInput` and `baseSaveToFileHandle`; copy that file's shape rather than typing it from memory.
+Codegen emits every field. If you write a module by hand, build `reducer` with `createReducer(stateReducer)` from `document-model`. `createReducer` wraps a `StateReducer<TState>` (`(state: Draft<TState>, action, dispatch?) => TState | undefined`) in the base document reducer, so `SET_NAME`, `UNDO`, `REDO` and `PRUNE` keep working. `utils` is the `DocumentModelUtils` object that a generated `gen/utils.ts` assembles from `baseCreateDocument`, `baseLoadFromInput` and `baseSaveToFileHandle`. Copy that file's shape rather than typing it from memory.
 
 ## Version upgrades
 
@@ -5535,7 +5535,7 @@ registry.getUpgradeReducer("test/todo", 1, 3);
 
 ### Applying an upgrade without the registry
 
-The registry methods need a built reactor. `document-model` exports the same mechanics as plain functions over a manifest, which is what a script or test that upgrades a document in-process needs. `UPGRADE_DOCUMENT` is a `document`-scope action with no generated creator; `@powerhousedao/reactor` exports `upgradeDocumentAction` for it, or build it with `createAction` as below.
+The registry methods need a built reactor. A script or test that upgrades a document in-process can use the same mechanics as plain functions over a manifest, exported from `document-model`. `UPGRADE_DOCUMENT` is a `document`-scope action with no generated creator. `@powerhousedao/reactor` exports `upgradeDocumentAction` for it, or build the action with `createAction` as below.
 
 ```typescript
 
@@ -5548,7 +5548,7 @@ The registry methods need a built reactor. `document-model` exports the same mec
 const fromVersion = document.state.document.version;
 const toVersion = todoUpgradeManifest.latestVersion;
 
-// The ordered transitions; throws if the manifest is missing a step
+// The ordered transitions. Throws if the manifest is missing a step
 const path = computeUpgradeTransitions(todoUpgradeManifest, fromVersion, toVersion);
 
 const action = createAction<UpgradeDocumentAction>(
@@ -5568,9 +5568,9 @@ const action = createAction<UpgradeDocumentAction>(
 const upgraded = applyUpgradeDocumentAction(document, action, path);
 ```
 
-`applyUpgradeDocumentAction` returns the upgraded document and stamps `state.document.version`; it appends nothing to the operation log. The reactor records the upgrade as one `UPGRADE_DOCUMENT` operation in the `document` scope. To mirror that, build the operation with `operationFromAction(action, index, skip, context)`, where `index` is the next index in `operations.document`, `skip` is `0`, and `context` is an `OperationContext` (`{ documentId, documentType, scope: "document", branch, ordinal }`).
+`applyUpgradeDocumentAction` returns the upgraded document and stamps `state.document.version`. It appends nothing to the operation log. The reactor records the upgrade as one `UPGRADE_DOCUMENT` operation in the `document` scope. To mirror the reactor, build the operation with `operationFromAction(action, index, skip, context)`. `index` is the next index in `operations.document`, `skip` is `0`, and `context` is an `OperationContext` (`{ documentId, documentType, scope: "document", branch, ordinal }`).
 
-Replay never re-runs an upgrade. `replayDocument(initialState, operations, reducer, header, dispatch?, skipHeaderOperations?, options?)` rebuilds a document from its stored `initialState` and operations through the reducer you pass. When replaying a log recorded under an older version through the current reducer, pass `{ checkHashes: false }` in `options`: the per-operation hashes were computed over the old state shape, so only the final hash of each scope is checked.
+Replay never re-runs an upgrade. `replayDocument(initialState, operations, reducer, header, dispatch?, skipHeaderOperations?, options?)` rebuilds a document from its stored `initialState` and operations through the reducer you pass. When replaying a log recorded under an older version through the current reducer, pass `{ checkHashes: false }` in `options`. The per-operation hashes were computed over the old state shape, so only the final hash of each scope is checked.
 
 ## Errors
 
@@ -6703,7 +6703,7 @@ Treating the Reactor as an automation engine: one operation triggers work on oth
 Creates a dependency-ordered set of documents in a single `IReactor.executeBatch` call and tracks each job's lifecycle live via the EventBus.
 
 - One `executeBatch` submits a graph of jobs; each job's `dependsOn` (referencing other jobs by key) lets the Reactor resolve ordering and parallelism across both document and drive scopes.
-- Subscribe to `JOB_PENDING` / `JOB_RUNNING` / `JOB_WRITE_READY` / `JOB_READ_READY` / `JOB_FAILED` on the EventBus before calling `executeBatch`: jobs with no dependencies start running while the call is still in flight. Job ids are only known once `result.jobs[key].id` comes back, so buffer events by `jobId` and map them to keys after the call returns.
+- Subscribe to `JOB_PENDING` / `JOB_RUNNING` / `JOB_WRITE_READY` / `JOB_READ_READY` / `JOB_FAILED` on the EventBus before calling `executeBatch`. Jobs with no dependencies start running while the call is still in flight. Job ids are only known once `result.jobs[key].id` comes back, so buffer events by `jobId` and map them to keys after the call returns.
 - `JobAwaiter` (`new JobAwaiter(eventBus, (jobId, signal) => reactor.getJobStatus(jobId, signal))`) reads the current status before it waits, so `waitForJob(jobId)` resolves even when the job finished during `executeBatch`.
 
 **Source** · [`src/create-project.ts`](https://github.com/powerhouse-inc/recipes/blob/main/batch-progress/src/create-project.ts) · [`src/index.ts`](https://github.com/powerhouse-inc/recipes/blob/main/batch-progress/src/index.ts)
@@ -6938,10 +6938,10 @@ The creators are exported from `document-model` (and `@powerhousedao/shared/docu
 
 | Creator                 | Input                                                         |
 | ----------------------- | ------------------------------------------------------------- |
-| `initializeAuth(input)` | `{ version: number; grants: Grant[] }`; `version` is the policy language version, currently `1` |
+| `initializeAuth(input)` | `{ version: number; grants: Grant[] }`. `version` is the policy language version, currently `1` |
 | `setGrant(input)`       | `{ grant: Grant }`                                            |
 | `removeGrant(input)`    | `{ id: string }`                                              |
-| `moveGrant(input)`      | `{ id: string; index: number }`; the target index, clamped to the list |
+| `moveGrant(input)`      | `{ id: string; index: number }`. `index` is clamped to the list |
 
 ```typescript
 
@@ -6979,7 +6979,7 @@ type Grant = {
 
 `scope` accepts `"*"` for every scope. Omitting `operation` covers every action in the scope.
 
-A `{ group }` principal names a roster document (`powerhouse/reactor-group`) and resolves live, so hiring and offboarding are single membership operations on the roster rather than edits to every policy that trusts it. The roster model ships in `@powerhousedao/reactor-group`: register its `documentModels` with `withDocumentModelSources`; the `ReactorGroupV1` module is exported from `@powerhousedao/reactor-group/document-models` and `reactorGroupDocumentType` from `@powerhousedao/reactor-group/document-models/reactor-group`. A `where` clause reads `subject.*`, `doc.<scope>.*` and `action.input.*`, which is how a grant can depend on the values of the operation it gates.
+A `{ group }` principal names a roster document (`powerhouse/reactor-group`) and resolves live, so hiring and offboarding are single membership operations on the roster rather than edits to every policy that trusts it. The roster model ships in `@powerhousedao/reactor-group`. Register its `documentModels` with `withDocumentModelSources`. The `ReactorGroupV1` module is exported from `@powerhousedao/reactor-group/document-models`, and `reactorGroupDocumentType` from `@powerhousedao/reactor-group/document-models/reactor-group`. A `where` clause reads `subject.*`, `doc.<scope>.*` and `action.input.*`, which is how a grant can depend on the values of the operation it gates.
 
 ### How a decision is made
 
@@ -26028,7 +26028,7 @@ const client = await new ReactorClientBuilder()
   .build();
 ```
 
-If no signer is provided, the client falls back to an internal `PassthroughSigner` that returns empty signatures, so actions are submitted unsigned: an auth policy sees an anonymous subject and no `{ address }` grant matches. The class is not exported from `@powerhousedao/reactor`; to sign, pass your own `ISigner`.
+If no signer is provided, the client falls back to an internal `PassthroughSigner` that returns empty signatures, so actions are submitted unsigned. An auth policy then sees an anonymous subject, and no `{ address }` grant matches. The class is not exported from `@powerhousedao/reactor`. To sign, pass your own `ISigner`.
 
 ### ISigner implementations
 
@@ -28495,7 +28495,7 @@ The processor has several key methods:
 
 Processors receive a flat list of `OperationWithContext[]` items. Each item carries both the operation and its context:
 
-- **`context`**: `documentId`, `documentType`, `scope`, `branch`, `ordinal` (global ordering), and `resultingState` (a JSON string of `{ header, ...state }`: the document header plus each scope's state at the top level, so `JSON.parse(context.resultingState).global` is the global state after the operation)
+- **`context`**: `documentId`, `documentType`, `scope`, `branch`, `ordinal` (global ordering), and `resultingState`, a JSON string of `{ header, ...state }`. The header and each scope's state sit at the top level, so `JSON.parse(context.resultingState).global` is the global state after the operation
 - **`operation`**: `action` (with `type` and `input`), `index`, `timestampUtcMs`, `hash`
 
 ```ts

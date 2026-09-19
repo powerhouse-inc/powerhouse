@@ -1,0 +1,49 @@
+{
+  "type": "object",
+  "properties": {
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "VERIFIED",
+              "REFUTED",
+              "UNVERIFIED"
+            ]
+          },
+          "prediction": {
+            "type": "string"
+          },
+          "observation": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "byPrecheck": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "index",
+          "status",
+          "prediction",
+          "observation",
+          "note"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "results"
+  ],
+  "additionalProperties": false
+}
