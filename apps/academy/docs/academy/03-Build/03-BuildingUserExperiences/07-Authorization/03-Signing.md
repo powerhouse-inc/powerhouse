@@ -155,8 +155,8 @@ const signAction = async (action, signer, signal?) => {
 Use `ReactorClientBuilder.withSigner()` to configure signing. It accepts either a bare `ISigner` or a `SignerConfig` that includes an optional verifier:
 
 ```typescript
-import { ReactorClientBuilder } from "reactor";
-import { createSignatureVerifier, RenownCryptoSigner } from "renown";
+import { ReactorClientBuilder } from "@powerhousedao/reactor";
+import { createSignatureVerifier, RenownCryptoSigner } from "@renown/sdk";
 
 // Option 1: Signing only (no server-side verification)
 const client = await new ReactorClientBuilder()
@@ -174,14 +174,14 @@ const client = await new ReactorClientBuilder()
   .build();
 ```
 
-If no signer is provided, the client defaults to `PassthroughSigner` -- a no-op implementation that returns empty signatures, effectively disabling signing.
+If no signer is provided, the client falls back to an internal `PassthroughSigner` that returns empty signatures, so actions are submitted unsigned: an auth policy sees an anonymous subject and no `{ address }` grant matches. The class is not exported from `@powerhousedao/reactor`; to sign, pass your own `ISigner`.
 
 ### ISigner implementations
 
-| Implementation       | Package   | Purpose                                                     |
-| -------------------- | --------- | ----------------------------------------------------------- |
-| `PassthroughSigner`  | `reactor` | No-op signer, used when signing is disabled                 |
-| `RenownCryptoSigner` | `renown`  | Production signer using ECDSA P-256 with `did:key` identity |
+| Implementation       | Package                                     | Purpose                                                     |
+| -------------------- | ------------------------------------------- | ----------------------------------------------------------- |
+| `PassthroughSigner`  | `@powerhousedao/reactor` (internal, not exported) | No-op signer, used when signing is disabled            |
+| `RenownCryptoSigner` | `@renown/sdk`                               | Production signer using ECDSA P-256 with `did:key` identity |
 
 `RenownCryptoSigner` is the standard production implementation. It derives signing keys from the Renown identity system and identifies signers using DID URIs (`did:key:z...`).
 
