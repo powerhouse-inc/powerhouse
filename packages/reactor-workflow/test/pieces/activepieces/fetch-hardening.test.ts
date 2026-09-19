@@ -235,14 +235,20 @@ describe("ensurePieceBundle hardening", () => {
     expect(calls).toBe(2);
   });
 
+  // Inflating to the 64 MB cap costs ~200ms on linux and macOS but 25-30s on
+  // the Windows runner, which the package-wide 30s timeout cannot absorb.
   it("rejects a tarball that inflates past the cap", async () => {
     // 96 MB of zeros compresses to a few hundred KB; the cap is 64 MB.
     const bomb = gzipSync(Buffer.alloc(96 * 1024 * 1024));
     serve(bomb);
     await expect(
-      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
+      ensurePieceBundle({
+        name: "@scope/fixture",
+        version: "1.0.0",
+        cacheDir,
+      }),
     ).rejects.toThrow(/Failed to decompress piece bundle/);
-  });
+  }, 120_000);
 
   it("surfaces a fetch failure with the bundle coordinates", async () => {
     globalThis.fetch = (() =>
