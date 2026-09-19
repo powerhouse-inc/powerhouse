@@ -22,7 +22,8 @@ import {
   listAttemptDirs,
   parseRedoReasons,
   redoFailedAttempts,
-  redoStepFor,
+  redoHitsFor,
+  summarizeRedo,
 } from "../src/lib/redo.js";
 import { FindingRecord, RunRecord } from "../src/lib/schemas.js";
 
@@ -155,6 +156,11 @@ beforeEach(() => {
     build: "rate-limited",
     tests: testsJson({ tscOk: null, vitestOk: null, skipped: true }),
   });
+  // A failed judge and a stale grade at once.
+  fullAttempt(run.attempt("scoped-reads", "A", 1), {
+    judge: "budget-exhausted",
+    tests: testsJson({ tscOk: false }),
+  });
 });
 afterEach(() => {
   rmSync(tmp, { recursive: true, force: true });
@@ -171,108 +177,129 @@ describe("listAttemptDirs", () => {
       "custom-read-model/A/1",
       "custom-read-model/A/2",
       "custom-read-model/B/1",
+      "scoped-reads/A/1",
     ]);
     expect(listAttemptDirs(runLayout("nope", tmp))).toEqual([]);
   });
 });
 
-describe("redoStepFor", () => {
-  it("picks the earliest step whose failure is listed", () => {
+describe("redoHitsFor", () => {
+  it("lists every step whose failure is listed", () => {
     const reasons = parseRedoReasons("rate-limited,wall-clock");
     expect(
-      redoStepFor(run.attempt("custom-read-model", "A", 1), reasons),
-    ).toBeNull();
+      redoHitsFor(run.attempt("custom-read-model", "A", 1), reasons),
+    ).toEqual([]);
     expect(
-      redoStepFor(run.attempt("custom-read-model", "A", 2), reasons),
-    ).toEqual({
-      step: "judge",
-      reason: "rate-limited",
-    });
+      redoHitsFor(run.attempt("custom-read-model", "A", 2), reasons),
+    ).toEqual([{ step: "judge", reason: "rate-limited" }]);
     expect(
-      redoStepFor(run.attempt("custom-read-model", "B", 1), reasons),
-    ).toEqual({
-      step: "verify",
-      reason: "wall-clock",
-    });
+      redoHitsFor(run.attempt("custom-read-model", "B", 1), reasons),
+    ).toEqual([{ step: "verify", reason: "wall-clock" }]);
+    expect(redoHitsFor(run.attempt("batch-progress", "A", 1), reasons)).toEqual(
+      [],
+    );
     expect(
-      redoStepFor(run.attempt("batch-progress", "A", 1), reasons),
-    ).toBeNull();
-    expect(
-      redoStepFor(
+      redoHitsFor(
         run.attempt("batch-progress", "A", 1),
         parseRedoReasons("budget-exhausted"),
       ),
-    ).toEqual({ step: "build", reason: "budget-exhausted" });
-    expect(redoStepFor(run.attempt("batch-progress", "B", 1), reasons)).toEqual(
-      {
-        step: "build",
-        reason: "rate-limited",
-      },
+    ).toEqual([{ step: "build", reason: "budget-exhausted" }]);
+    expect(redoHitsFor(run.attempt("batch-progress", "B", 1), reasons)).toEqual(
+      [{ step: "build", reason: "rate-limited" }],
     );
   });
 
   it("tolerates a missing attempt directory", () => {
     expect(
-      redoStepFor(run.attempt("ghost", "A", 9), parseRedoReasons("wall-clock")),
-    ).toBeNull();
+      redoHitsFor(run.attempt("ghost", "A", 9), parseRedoReasons("wall-clock")),
+    ).toEqual([]);
     expect(
-      redoStepFor(
+      redoHitsFor(
         run.attempt("ghost", "A", 9),
         parseRedoReasons("acceptance:any"),
       ),
-    ).toBeNull();
+    ).toEqual([]);
   });
 
   it("acceptance: reads the grade in tests.json", () => {
     const a1 = run.attempt("custom-read-model", "A", 1);
     const a2 = run.attempt("custom-read-model", "A", 2);
     const b1 = run.attempt("custom-read-model", "B", 1);
-    expect(redoStepFor(a1, parseRedoReasons("acceptance:tsc"))).toEqual({
-      step: "acceptance",
-      reason: "tsc",
-    });
-    expect(redoStepFor(a1, parseRedoReasons("acceptance:vitest"))).toBeNull();
-    expect(redoStepFor(a2, parseRedoReasons("acceptance:vitest"))).toEqual({
-      step: "acceptance",
-      reason: "vitest",
-    });
-    expect(redoStepFor(b1, parseRedoReasons("acceptance:vitest"))).toEqual({
-      step: "acceptance",
-      reason: "vitest",
-    });
-    expect(redoStepFor(b1, parseRedoReasons("acceptance:tsc"))).toBeNull();
-    expect(redoStepFor(a1, parseRedoReasons("acceptance:any"))).toEqual({
-      step: "acceptance",
-      reason: "any",
-    });
-    // A failed step wins; a skipped grade has nothing to redo, so record: applies.
+    expect(redoHitsFor(a1, parseRedoReasons("acceptance:tsc"))).toEqual([
+      { step: "acceptance", reason: "tsc" },
+    ]);
+    expect(redoHitsFor(a1, parseRedoReasons("acceptance:vitest"))).toEqual([]);
+    expect(redoHitsFor(a2, parseRedoReasons("acceptance:vitest"))).toEqual([
+      { step: "acceptance", reason: "vitest" },
+    ]);
+    expect(redoHitsFor(b1, parseRedoReasons("acceptance:vitest"))).toEqual([
+      { step: "acceptance", reason: "vitest" },
+    ]);
+    expect(redoHitsFor(b1, parseRedoReasons("acceptance:tsc"))).toEqual([]);
+    expect(redoHitsFor(a1, parseRedoReasons("acceptance:any"))).toEqual([
+      { step: "acceptance", reason: "any" },
+    ]);
+    // A skipped grade has nothing to redo, so only record: applies.
     expect(
-      redoStepFor(a2, parseRedoReasons("rate-limited,acceptance:vitest")),
-    ).toEqual({ step: "judge", reason: "rate-limited" });
-    expect(
-      redoStepFor(
+      redoHitsFor(
         run.attempt("batch-progress", "A", 2),
         parseRedoReasons("acceptance:any"),
       ),
-    ).toBeNull();
+    ).toEqual([]);
     expect(
-      redoStepFor(
+      redoHitsFor(
         run.attempt("batch-progress", "A", 1),
         parseRedoReasons("acceptance:tsc,record:budget-exhausted"),
       ),
-    ).toEqual({ step: "record", reason: "budget-exhausted" });
+    ).toEqual([{ step: "record", reason: "budget-exhausted" }]);
+  });
+
+  it("applies every matching rule, upstream step first", () => {
+    const a2 = run.attempt("custom-read-model", "A", 2);
+    expect(
+      redoHitsFor(a2, parseRedoReasons("acceptance:vitest,rate-limited")),
+    ).toEqual([
+      { step: "judge", reason: "rate-limited" },
+      { step: "acceptance", reason: "vitest" },
+    ]);
+    const sr = run.attempt("scoped-reads", "A", 1);
+    expect(
+      redoHitsFor(
+        sr,
+        parseRedoReasons("judge:budget-exhausted,acceptance:tsc"),
+      ),
+    ).toEqual([
+      { step: "judge", reason: "budget-exhausted" },
+      { step: "acceptance", reason: "tsc" },
+    ]);
+    expect(
+      redoHitsFor(sr, parseRedoReasons("acceptance:tsc,acceptance:any")),
+    ).toEqual([
+      { step: "acceptance", reason: "tsc" },
+      { step: "acceptance", reason: "any" },
+    ]);
+    expect(
+      redoHitsFor(
+        sr,
+        parseRedoReasons("budget-exhausted,record:budget-exhausted"),
+      ),
+    ).toEqual([
+      { step: "judge", reason: "budget-exhausted" },
+      { step: "record", reason: "budget-exhausted" },
+    ]);
   });
 });
 
 describe("filesToReset", () => {
   it("record only touches attempt.json", () => {
     const layout = run.attempt("t", "A", 1);
-    expect(filesToReset(layout, "record")).toEqual([layout.attemptJson]);
+    expect(filesToReset(layout, ["record"])).toEqual([layout.attemptJson]);
+    expect(filesToReset(layout, [])).toEqual([]);
   });
 
   it("acceptance takes the grade and attempt.json, not the judge", () => {
     const layout = run.attempt("t", "A", 1);
-    expect(filesToReset(layout, "acceptance")).toEqual([
+    expect(filesToReset(layout, ["acceptance"])).toEqual([
       layout.testsJson,
       layout.vitestJsonPath,
       path.join(layout.dir, "vitest.log"),
@@ -280,16 +307,16 @@ describe("filesToReset", () => {
       layout.reinstallLogPath,
       layout.attemptJson,
     ]);
-    expect(filesToReset(layout, "build")).toEqual(
-      expect.arrayContaining(filesToReset(layout, "acceptance")),
+    expect(filesToReset(layout, ["build"])).toEqual(
+      expect.arrayContaining(filesToReset(layout, ["acceptance"])),
     );
   });
 
   it("is nested: verify within judge within build", () => {
     const layout = run.attempt("t", "A", 1);
-    const verify = filesToReset(layout, "verify");
-    const judge = filesToReset(layout, "judge");
-    const build = filesToReset(layout, "build");
+    const verify = filesToReset(layout, ["verify"]);
+    const judge = filesToReset(layout, ["judge"]);
+    const build = filesToReset(layout, ["build"]);
     expect(verify).toContain(layout.attemptJson);
     expect(verify).not.toContain(layout.judgeJson);
     expect(judge).toEqual(expect.arrayContaining(verify));
@@ -308,6 +335,21 @@ describe("filesToReset", () => {
       ]),
     );
   });
+
+  it("unions several steps without repeating a file, upstream first", () => {
+    const layout = run.attempt("t", "A", 1);
+    const both = filesToReset(layout, ["acceptance", "judge"]);
+    expect(both).toEqual([
+      ...filesToReset(layout, ["judge"]),
+      ...filesToReset(layout, ["acceptance"]).filter(
+        (f) => f !== layout.attemptJson,
+      ),
+    ]);
+    expect(new Set(both).size).toBe(both.length);
+    expect(filesToReset(layout, ["record", "build", "verify"])).toEqual(
+      filesToReset(layout, ["build"]),
+    );
+  });
 });
 
 describe("redoFailedAttempts", () => {
@@ -315,7 +357,8 @@ describe("redoFailedAttempts", () => {
     const result = redoFailedAttempts(run, { findingsFile, runsFile });
     expect(
       result.reset.map(
-        (r) => `${r.taskId}/${r.arm}/${r.n}:${r.step}:${r.reason}`,
+        (r) =>
+          `${r.taskId}/${r.arm}/${r.n}:${r.hits.map((h) => `${h.step}:${h.reason}`).join("+")}`,
       ),
     ).toEqual([
       "batch-progress/A/2:build:wall-clock",
@@ -412,8 +455,11 @@ describe("redoFailedAttempts", () => {
       runsFile,
     });
     expect(
-      result.reset.map((r) => `${r.taskId}/${r.arm}/${r.n}:${r.step}`),
-    ).toEqual(["batch-progress/A/1:record"]);
+      result.reset.map(
+        (r) =>
+          `${r.taskId}/${r.arm}/${r.n}:${r.hits.map((h) => h.step).join("+")}`,
+      ),
+    ).toEqual(["batch-progress/A/1:record", "scoped-reads/A/1:record"]);
     const bp1 = run.attempt("batch-progress", "A", 1);
     expect(existsSync(bp1.attemptJson)).toBe(false);
     expect(existsSync(bp1.buildJson)).toBe(true);
@@ -431,9 +477,13 @@ describe("redoFailedAttempts", () => {
     });
     expect(
       result.reset.map(
-        (r) => `${r.taskId}/${r.arm}/${r.n}:${r.step}:${r.reason}`,
+        (r) =>
+          `${r.taskId}/${r.arm}/${r.n}:${r.hits.map((h) => `${h.step}:${h.reason}`).join("+")}`,
       ),
-    ).toEqual(["custom-read-model/A/1:acceptance:tsc"]);
+    ).toEqual([
+      "custom-read-model/A/1:acceptance:tsc",
+      "scoped-reads/A/1:acceptance:tsc",
+    ]);
     const a1 = run.attempt("custom-read-model", "A", 1);
     expect(result.reset[0].moved).toEqual([
       "tests.json",
@@ -474,6 +524,60 @@ describe("redoFailedAttempts", () => {
       "other-run batch-progress/A/1",
     ]);
     expect(result.runLineRemoved).toBe(true);
+  });
+
+  it("redoes the judge and the grade of one attempt in a single pass", () => {
+    const result = redoFailedAttempts(run, {
+      reasons: parseRedoReasons("judge:budget-exhausted,acceptance:tsc"),
+      findingsFile,
+      runsFile,
+    });
+    const sr = run.attempt("scoped-reads", "A", 1);
+    const entry = result.reset.find((r) => r.taskId === "scoped-reads");
+    expect(entry?.hits).toEqual([
+      { step: "judge", reason: "budget-exhausted" },
+      { step: "acceptance", reason: "tsc" },
+    ]);
+    expect(entry?.moved).toEqual([
+      "judge.json",
+      "judge.stream.jsonl",
+      "judge.stderr.log",
+      "verify.json",
+      "verify.stream.jsonl",
+      "attempt.json",
+      "tests.json",
+      "vitest.json",
+      "vitest.log",
+      "tsc.log",
+    ]);
+    for (const f of [
+      sr.judgeJson,
+      sr.verifyJson,
+      sr.testsJson,
+      sr.attemptJson,
+    ]) {
+      expect(existsSync(f)).toBe(false);
+    }
+    for (const f of [sr.buildJson, sr.compactMd, sr.metricsJson, sr.dtsDir]) {
+      expect(existsSync(f)).toBe(true);
+    }
+    expect(existsSync(path.join(sr.dir, "previous/1/judge.json"))).toBe(true);
+    expect(existsSync(path.join(sr.dir, "previous/1/tests.json"))).toBe(true);
+    // custom-read-model A#1 only matched acceptance:tsc.
+    expect(result.reset.map((r) => `${r.taskId}/${r.arm}/${r.n}`)).toEqual([
+      "custom-read-model/A/1",
+      "scoped-reads/A/1",
+    ]);
+    const line = describeRedo(result).find((l) =>
+      l.startsWith("redo scoped-reads A#1"),
+    );
+    expect(line).toMatch(
+      /^redo scoped-reads A#1: judge budget-exhausted, acceptance tsc; moved 10 file\(s\) to /,
+    );
+    expect(summarizeRedo(result)).toBe(
+      "2 redone (acceptance tsc 2, judge budget-exhausted 1)",
+    );
+    expect(summarizeRedo({ reset: [], runLineRemoved: false })).toBeNull();
   });
 
   it("is a no-op when nothing matches, leaving the records alone", () => {

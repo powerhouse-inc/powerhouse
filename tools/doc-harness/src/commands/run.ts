@@ -20,6 +20,8 @@ import {
   describeRedo,
   parseRedoReasons,
   redoFailedAttempts,
+  summarizeRedo,
+  type RedoResult,
 } from "../lib/redo.js";
 import { UtilizationThrottle } from "../lib/throttle.js";
 import {
@@ -151,6 +153,8 @@ async function drive(o: {
   input: HarnessRunInput;
   ctx: HarnessContext;
   stateDir: string;
+  /** What `--redo-failed` reset before this drive, for the summary line. */
+  redo?: RedoResult;
 }): Promise<number> {
   setHarnessContext(o.input.runId, o.ctx);
   const mastra = createMastra(o.stateDir);
@@ -170,8 +174,9 @@ async function drive(o: {
       return 1;
     }
     const s = result.result;
+    const redone = o.redo ? summarizeRedo(o.redo) : null;
     o.ctx.log(
-      `run ${o.input.runId}: ${s.attempts} attempts, ${s.complete} complete (${s.truncated} truncated), ${s.failed} failed, ${s.rateLimited} rate-limited, ${s.contaminated} contaminated, ${s.findingsAppended} findings appended`,
+      `run ${o.input.runId}: ${s.attempts} attempts, ${s.complete} complete (${s.truncated} truncated), ${s.failed} failed, ${s.rateLimited} rate-limited, ${s.contaminated} contaminated, ${s.findingsAppended} findings appended${redone === null ? "" : `, ${redone}`}`,
     );
     if (s.rateLimited > 0) {
       o.ctx.log(
@@ -276,14 +281,15 @@ async function resumeCommand(
     record.args.throttleAt = ratio(opts.throttleAt, "throttle-at");
   }
   const files = recordFiles(layout, record.args.dryRun);
+  let redo: RedoResult | undefined;
   if (opts.redoFailed !== undefined) {
-    const result = redoFailedAttempts(layout, {
+    redo = redoFailedAttempts(layout, {
       reasons: parseRedoReasons(opts.redoFailed),
       findingsFile: files.findingsFile ?? FINDINGS_FILE,
       runsFile: files.runsFile ?? RUNS_FILE,
     });
-    for (const line of describeRedo(result)) log(line);
-    if (result.reset.length > 0) {
+    for (const line of describeRedo(redo)) log(line);
+    if (redo.reset.length > 0) {
       record = RunRecord.parse(
         JSON.parse(readFileSync(layout.runJson, "utf8")),
       );
@@ -327,6 +333,7 @@ async function resumeCommand(
       log,
     },
     stateDir: opts.stateDir,
+    redo,
   });
   process.exit(code);
 }

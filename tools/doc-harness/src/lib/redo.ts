@@ -1,7 +1,7 @@
 /**
  * `resume --redo-failed`: put attempts that failed for infrastructure reasons
- * back to the step that failed, so the idempotent workflow redoes them. Nothing
- * is deleted: the step's outputs and everything downstream move to
+ * back to every step that failed, so the idempotent workflow redoes them.
+ * Nothing is deleted: each step's outputs and everything downstream move to
  * `<attempt>/previous/<n>/`, and the attempt's lines leave FINDINGS.jsonl and
  * the run's line leaves RUNS.jsonl so the summary re-appends them.
  */
@@ -44,7 +44,8 @@ export type RedoReason = FailureReason | AcceptanceRedoReason;
  * the judge; `record:budget-exhausted` re-records (attempt.json and the
  * findings lines only) attempts whose build failed that way, so the new
  * status taxonomy applies without redoing any work. `acceptance:<reason>`
- * re-grades and re-records without re-judging.
+ * re-grades and re-records without re-judging. Every matching rule applies
+ * to an attempt, not just the first.
  */
 export interface RedoRule {
   step: RedoStep | null;
@@ -60,8 +61,8 @@ export interface RedoEntry {
   taskId: string;
   arm: Arm;
   n: number;
-  step: RedoStep;
-  reason: RedoReason;
+  /** Every rule that matched, upstream step first. */
+  hits: RedoHit[];
   /** Where the stale files went. */
   previousDir: string;
   moved: string[];
@@ -106,38 +107,63 @@ const TestsGrade = z
   })
   .loose();
 
-function acceptanceRedoReason(
+/** Every listed acceptance reason the grade in tests.json matches, in rule order. */
+function acceptanceRedoReasons(
   file: string,
   rules: readonly RedoRule[],
-): AcceptanceRedoReason | null {
+): AcceptanceRedoReason[] {
   const wanted = rules.flatMap((r) =>
     r.step === "acceptance" ? [r.reason as AcceptanceRedoReason] : [],
   );
-  if (wanted.length === 0) return null;
+  if (wanted.length === 0) return [];
   let grade: z.infer<typeof TestsGrade> | null;
   try {
     grade = readCached(file, TestsGrade);
   } catch {
-    return null;
+    return [];
   }
-  if (grade === null || grade.skipped === true) return null;
+  if (grade === null || grade.skipped === true) return [];
   const hits: Record<AcceptanceRedoReason, boolean> = {
     tsc: grade.tscOk === false,
     vitest: grade.vitestOk === false || (grade.suiteErrors ?? 0) > 0,
     any: true,
   };
-  return wanted.find((r) => hits[r]) ?? null;
+  return [...new Set(wanted.filter((r) => hits[r]))];
+}
+
+export interface RedoHit {
+  step: RedoStep;
+  reason: RedoReason;
+}
+
+/** Upstream first: a build redo implies everything below it. */
+const STEP_ORDER: readonly RedoStep[] = [
+  "build",
+  "judge",
+  "verify",
+  "acceptance",
+  "record",
+];
+
+function byStep(a: { step: RedoStep }, b: { step: RedoStep }): number {
+  return STEP_ORDER.indexOf(a.step) - STEP_ORDER.indexOf(b.step);
+}
+
+function sortSteps(steps: Iterable<RedoStep>): RedoStep[] {
+  return [...new Set(steps)].sort(
+    (a, b) => STEP_ORDER.indexOf(a) - STEP_ORDER.indexOf(b),
+  );
 }
 
 /**
- * The step to redo for one attempt, or null when no rule matches a failure.
- * A step redo wins over an `acceptance:` match, which wins over a `record:`
- * match, since each re-records anyway.
+ * Every rule that matches one attempt, upstream step first; empty when none
+ * does. All of them apply: an attempt whose judge failed and whose grade is
+ * stale gets both redone, so one pass leaves nothing behind.
  */
-export function redoStepFor(
+export function redoHitsFor(
   layout: AttemptLayout,
   rules: readonly RedoRule[],
-): { step: RedoStep; reason: RedoReason } | null {
+): RedoHit[] {
   const checks: [RedoStep, string][] = [
     ["build", layout.buildJson],
     ["judge", layout.judgeJson],
@@ -147,27 +173,34 @@ export function redoStepFor(
     const reason = failureOf(file);
     return reason === null ? [] : [{ step, reason }];
   });
+  const hits: RedoHit[] = [];
   for (const f of failures) {
     if (
       rules.some(
         (r) => r.reason === f.reason && (r.step === null || r.step === f.step),
       )
     ) {
-      return f;
+      hits.push(f);
     }
   }
-  const graded = acceptanceRedoReason(layout.testsJson, rules);
-  if (graded !== null) return { step: "acceptance", reason: graded };
+  for (const reason of acceptanceRedoReasons(layout.testsJson, rules)) {
+    hits.push({ step: "acceptance", reason });
+  }
   for (const f of failures) {
     if (rules.some((r) => r.reason === f.reason && r.step === "record")) {
-      return { step: "record", reason: f.reason };
+      hits.push({ step: "record", reason: f.reason });
     }
   }
-  return null;
+  return hits.sort(byStep);
 }
 
-/** Files each step owns, plus everything downstream of it. */
-export function filesToReset(layout: AttemptLayout, step: RedoStep): string[] {
+/** The distinct steps of the hits, upstream first. */
+export function redoSteps(hits: readonly RedoHit[]): RedoStep[] {
+  return sortSteps(hits.map((h) => h.step));
+}
+
+/** Files one step owns, plus everything downstream of it. */
+function filesOfStep(layout: AttemptLayout, step: RedoStep): string[] {
   if (step === "record") return [layout.attemptJson];
   // The judge already read tests.json, but its findings are doc findings: kept.
   const grading = [
@@ -210,6 +243,20 @@ export function filesToReset(layout: AttemptLayout, step: RedoStep): string[] {
   return step === "build" ? build : step === "judge" ? judge : verify;
 }
 
+/** The union of each step's files and downstream, upstream step first. */
+export function filesToReset(
+  layout: AttemptLayout,
+  steps: readonly RedoStep[],
+): string[] {
+  const files: string[] = [];
+  for (const step of sortSteps(steps)) {
+    for (const file of filesOfStep(layout, step)) {
+      if (!files.includes(file)) files.push(file);
+    }
+  }
+  return files;
+}
+
 function nextPreviousDir(attemptDir: string): string {
   const root = path.join(attemptDir, "previous");
   let n = 1;
@@ -220,11 +267,11 @@ function nextPreviousDir(attemptDir: string): string {
 /** Moves the files aside; returns the names moved. */
 export function moveAside(
   layout: AttemptLayout,
-  step: RedoStep,
+  steps: readonly RedoStep[],
 ): { previousDir: string; moved: string[] } {
   const previousDir = nextPreviousDir(layout.dir);
   const moved: string[] = [];
-  for (const file of filesToReset(layout, step)) {
+  for (const file of filesToReset(layout, steps)) {
     if (!existsSync(file)) continue;
     if (file === layout.workspaceDir) {
       rmSync(path.join(file, "node_modules"), { recursive: true, force: true });
@@ -278,11 +325,11 @@ export function redoFailedAttempts(
   const reset: RedoEntry[] = [];
   for (const id of listAttemptDirs(run)) {
     const layout = run.attempt(id.taskId, id.arm, id.n);
-    const hit = redoStepFor(layout, reasons);
-    if (hit === null) continue;
-    const { previousDir, moved } = moveAside(layout, hit.step);
+    const hits = redoHitsFor(layout, reasons);
+    if (hits.length === 0) continue;
+    const { previousDir, moved } = moveAside(layout, redoSteps(hits));
     const findingsRemoved = removeFindings(opts.findingsFile, run.runId, id);
-    reset.push({ ...id, ...hit, previousDir, moved, findingsRemoved });
+    reset.push({ ...id, hits, previousDir, moved, findingsRemoved });
   }
   if (reset.length === 0) return { reset, runLineRemoved: false };
 
@@ -368,13 +415,31 @@ export function parseRedoReasons(value: string | true | undefined): RedoRule[] {
     });
 }
 
+function describeHits(hits: readonly RedoHit[]): string {
+  return hits.map((h) => `${h.step} ${h.reason}`).join(", ");
+}
+
 export function describeRedo(result: RedoResult): string[] {
   const lines = result.reset.map(
     (r) =>
-      `redo ${r.taskId} ${r.arm}#${r.n}: ${r.step} ${r.reason}; moved ${r.moved.length} file(s) to ${r.previousDir}${r.findingsRemoved > 0 ? `; removed ${r.findingsRemoved} finding(s)` : ""}`,
+      `redo ${r.taskId} ${r.arm}#${r.n}: ${describeHits(r.hits)}; moved ${r.moved.length} file(s) to ${r.previousDir}${r.findingsRemoved > 0 ? `; removed ${r.findingsRemoved} finding(s)` : ""}`,
   );
   if (result.reset.length === 0) lines.push("redo: nothing to reset");
   else if (result.runLineRemoved)
     lines.push("redo: removed the run's RUNS.jsonl line");
   return lines;
+}
+
+/** `4 redone (judge rate-limited 2, acceptance tsc 3)`; null when nothing was. */
+export function summarizeRedo(result: RedoResult): string | null {
+  if (result.reset.length === 0) return null;
+  const counts = new Map<string, number>();
+  for (const r of result.reset) {
+    for (const h of r.hits) {
+      const key = `${h.step} ${h.reason}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+  const rules = [...counts.entries()].map(([k, n]) => `${k} ${n}`).join(", ");
+  return `${result.reset.length} redone (${rules})`;
 }
