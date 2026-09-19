@@ -105,8 +105,8 @@ Treating the Reactor as an automation engine: one operation triggers work on oth
 Creates a dependency-ordered set of documents in a single `IReactor.executeBatch` call and tracks each job's lifecycle live via the EventBus.
 
 - One `executeBatch` submits a graph of jobs; each job's `dependsOn` (referencing other jobs by key) lets the Reactor resolve ordering and parallelism across both document and drive scopes.
-- Subscribe to `JOB_PENDING` / `JOB_RUNNING` / `JOB_WRITE_READY` / `JOB_READ_READY` / `JOB_FAILED` on the EventBus, mapping `result.jobs[key].id` back to each job for a live progress view.
-- `JobAwaiter` reconciles events that arrived after `executeBatch` returned, so awaiting a terminal status is race-free.
+- Subscribe to `JOB_PENDING` / `JOB_RUNNING` / `JOB_WRITE_READY` / `JOB_READ_READY` / `JOB_FAILED` on the EventBus before calling `executeBatch`. Jobs with no dependencies start running while the call is still in flight. Job ids are only known once `result.jobs[key].id` comes back, so buffer events by `jobId` and map them to keys after the call returns.
+- `JobAwaiter` (`new JobAwaiter(eventBus, (jobId, signal) => reactor.getJobStatus(jobId, signal))`) reads the current status before it waits, so `waitForJob(jobId)` resolves even when the job finished during `executeBatch`.
 
 **Source** · [`src/create-project.ts`](https://github.com/powerhouse-inc/recipes/blob/main/batch-progress/src/create-project.ts) · [`src/index.ts`](https://github.com/powerhouse-inc/recipes/blob/main/batch-progress/src/index.ts)
 **Concepts** · `IReactor.executeBatch` · `dependsOn` · `IEventBus.subscribe` · `JobAwaiter.waitForJob` — see [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage), [Error Handling](/academy/Reference/Reactor/ErrorHandling)

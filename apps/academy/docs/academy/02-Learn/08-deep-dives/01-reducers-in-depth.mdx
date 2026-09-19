@@ -42,7 +42,7 @@ export const setCursor = (input: SetCursorInput) =>
   );
 ```
 
-You never call `createAction` directly — use the generated creator (`setCursor(...)`) from `document-models/<your-model>/gen/creators.ts`.
+For your model's own operations, never call `createAction` directly. Use the generated creator (`setCursor(...)`) from `document-models/<your-model>/gen/creators.ts`. The built-in `document`-scope actions (`CREATE_DOCUMENT`, `UPGRADE_DOCUMENT`, `DELETE_DOCUMENT`) have no generated creator. `@powerhousedao/reactor` exports `createDocumentAction`, `upgradeDocumentAction` and `deleteDocumentAction` for them. Outside a reactor, call `createAction` yourself with `"document"` as the fifth argument.
 
 <Quiz
   question="You're writing a collaborative markdown editor. Which of these actions should live in the local scope?"
