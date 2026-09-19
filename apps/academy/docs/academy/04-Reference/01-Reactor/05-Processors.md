@@ -46,6 +46,8 @@ await reactorModule?.processorManager.registerFactory(id, factory);
 
 A `ProcessorFactory` is called once per drive. It receives the drive header and returns the processors for that drive:
 
+A drive is a prerequisite, not only a scoping unit. The manager calls the factories when it sees a `CREATE_DOCUMENT` operation whose document type is a drive container (`powerhouse/document-drive` or `powerhouse/reactor-drive` by default; see `withDriveContainerTypes`). Until a drive exists, a registered factory is never invoked and no operations are routed, even for plain documents that match a filter. In a standalone reactor, create a drive before you expect `onOperations` to fire.
+
 ```typescript
 import type { PHDocumentHeader } from "document-model";
 
@@ -187,7 +189,7 @@ interface IProcessorHostModuleBase {
 - **`analyticsStore`** — the analytics store for time-series rollups.
 - **`relationalDb`** — an `IRelationalDb` (a Kysely instance plus `createNamespace` / `queryNamespace`) for relational indexing. See [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling).
 - **`processorApp`** — `"connect" | "switchboard"`. How a processor learns which app hosts it. Read this rather than the factory's `processorApp?` argument.
-- **`dispatch`** — writes back to the reactor via `dispatch.execute(docId, branch, actions, signal?, meta?)`, returning `{ id, status }`. In Connect this is wired to the reactor client's async execute.
+- **`dispatch`** — writes back to the reactor via `dispatch.execute(docId, branch, actions, signal?, meta?)`, returning `{ id, status }`. In Connect this is wired to the reactor client's async execute. Do not `await client.execute()` from inside `onOperations`: it resolves only at `READ_READY`, which the current batch cannot reach while your callback is still running. Use `dispatch` and handle the result in a later `onOperations` call (see [Processor best practices](/academy/Build/WorkWithData/ProcessorBestPractices)).
 - **`getReadModel(name)`** — looks up a registered read model by its `name`. Reactor-registered names are typed: `getReadModel("document-view")` returns `IDocumentView` and `"document-indexer"` returns `IDocumentIndexer`; other names take an explicit type argument. Connect's implementation throws `Read model "<name>" not found` when there is no match.
 - **`config?`** — optional `Map<string, unknown>` of host config.
 - **`client`** — the `IReactorClient` for reading documents and drives. See [IReactorClient](/academy/Reference/Reactor/ReactorClient).

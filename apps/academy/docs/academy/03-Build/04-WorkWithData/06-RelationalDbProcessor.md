@@ -197,7 +197,7 @@ The processor has several key methods:
 
 Processors receive a flat list of `OperationWithContext[]` items. Each item carries both the operation and its context:
 
-- **`context`**: `documentId`, `documentType`, `scope`, `branch`, `ordinal` (global ordering), and `resultingState` (JSON string of the document state after the operation)
+- **`context`**: `documentId`, `documentType`, `scope`, `branch`, `ordinal` (global ordering), and `resultingState` (a JSON string of `{ header, ...state }`: the document header plus each scope's state at the top level, so `JSON.parse(context.resultingState).global` is the global state after the operation)
 - **`operation`**: `action` (with `type` and `input`), `index`, `timestampUtcMs`, `hash`
 
 ```ts
