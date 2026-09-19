@@ -1,0 +1,227 @@
+{
+  "pin": "6.2.2-dev.62",
+  "tasks": [
+    {
+      "id": "custom-read-model",
+      "title": "In-memory read model counting operations per document type",
+      "recipeDir": "custom-read-model",
+      "brief": null,
+      "difficulty": "S",
+      "taskPrompt": "Build an in-memory read model that keeps a running count of operations per document type, and register it with a reactor so the counts are already current at the moment the reactor announces that a job's results are readable.\n\nContract:\n- `src/document-count-read-model.ts` exports class `DocumentCountReadModel`, an object the reactor accepts as a read model: it exposes a `name` and an `indexOperations(operations)` method that takes the reactor's operation-with-context records and returns a promise. Each call increments a counter keyed by the operation's document type (found on the record's context) and accumulates across calls; an empty array is a no-op. `getCount(documentType)` returns the count for one type, or 0 for a type never seen. `getCounts()` returns a `ReadonlyMap<string, number>` of every type seen so far. `clear()` resets all counters.\n- `src/index.ts` is a runnable demo (`tsx src/index.ts`): build an in-process reactor with the built-in document-model and drive document models, register the read model through the reactor builder, subscribe to the event the reactor emits when a job's results become readable, create one drive document, and print the counts from inside that event handler to show they are already up to date. Then unsubscribe, shut the reactor down and exit 0.\n\nThe project must typecheck with `tsc --noEmit`.",
+      "contract": [
+        {
+          "file": "src/document-count-read-model.ts",
+          "exports": ["DocumentCountReadModel"]
+        },
+        { "file": "src/index.ts", "exports": [] }
+      ],
+      "pinnedInputs": [],
+      "acceptance": {
+        "kind": "vitest",
+        "files": [
+          {
+            "from": "src/document-count-read-model.test.ts",
+            "to": "src/document-count-read-model.test.ts"
+          }
+        ],
+        "vitestConfig": false
+      },
+      "docSections": ["reference-reactor", "build-work-with-data", "lookup"],
+      "packages": [
+        "@powerhousedao/reactor",
+        "@powerhousedao/shared",
+        "document-model"
+      ],
+      "extraDeps": {},
+      "arms": ["A", "B"],
+      "timeouts": { "buildMs": 1500000, "acceptanceMs": 300000 },
+      "budgets": { "buildUsd": 3, "maxTurns": 80, "judgeUsd": 2, "verifyUsd": 2 }
+    },
+    {
+      "id": "full-text-search",
+      "title": "Processor maintaining a PostgreSQL full-text search index",
+      "recipeDir": "full-text-search",
+      "brief": null,
+      "difficulty": "M",
+      "taskPrompt": "Build a reactor processor that maintains a PostgreSQL full-text search index over document state, using Kysely for SQL, plus a query helper that returns ranked matches. Tests run against an in-process PGlite database through `kysely-pglite`, so nothing may require an external server. All files live at the project root (no `src/`).\n\nContract:\n- `schema.ts` exports the Kysely database type `SearchDB` with one table `search_index` whose row type `SearchIndex` has columns `document_id` (primary key), `document_type`, `title`, `content` and `updated_at`. The table also has a `tsv` tsvector column that is not part of the typed row.\n- `migrations.ts` exports `up(db)` and `down(db)`. `up` creates `search_index` (idempotent) and a GIN index on `tsv`; `down` drops the index and then the table (both idempotent).\n- `processor.ts` exports class `SearchProcessor`, constructed with a `Kysely<SearchDB>` instance and usable as a reactor processor. `onOperations(operations)` receives operation-with-context records: keep only the last operation per document in the batch; skip records whose context carries no `resultingState`; parse `resultingState` (a JSON string) and use its `header.name` as the title (empty string when absent); flatten the whole state into searchable text and upsert one row per document with `tsv = to_tsvector('english', content)`, so a later operation on the same document replaces its row. A record whose action type is `DELETE_DOCUMENT` deletes the row of the deleted document (id from the action input's `documentId`, falling back to the context's document id). An empty batch changes nothing. `onDisconnect()` resolves without error.\n- `query.ts` exports `createSearchQuery(db)` returning an object with `search(term, limit = 20)` that resolves to `SearchResult[]` (`document_id`, `document_type`, `title`, `rank`), matching with `plainto_tsquery('english', term)` and ordered by `ts_rank` descending. Export the `SearchResult` type too.\n- `utils.ts` exports `flattenToSearchableText(value)`: recursively collects every non-empty string in a JSON value (nested objects and arrays) into one space-separated string, ignoring null, numbers and booleans; an empty object gives \"\".\n- `index.ts` re-exports all of the above. `demo.ts` (runnable with `tsx`) builds an in-process reactor, registers the processor with the reactor's processor manager for the main branch, creates a few named documents and prints search results.\n\nThe project must typecheck with `tsc --noEmit`.",
+      "contract": [
+        { "file": "schema.ts", "exports": ["SearchDB", "SearchIndex"] },
+        { "file": "migrations.ts", "exports": ["up", "down"] },
+        { "file": "processor.ts", "exports": ["SearchProcessor"] },
+        { "file": "query.ts", "exports": ["createSearchQuery", "SearchResult"] },
+        { "file": "utils.ts", "exports": ["flattenToSearchableText"] }
+      ],
+      "pinnedInputs": [],
+      "acceptance": {
+        "kind": "vitest",
+        "files": [{ "from": "processor.test.ts", "to": "processor.test.ts" }],
+        "vitestConfig": false
+      },
+      "docSections": [
+        "reference-reactor",
+        "build-work-with-data",
+        "reference-processors",
+        "lookup"
+      ],
+      "packages": [
+        "@powerhousedao/reactor",
+        "@powerhousedao/shared",
+        "document-model"
+      ],
+      "extraDeps": {
+        "@electric-sql/pglite": "^0.4.0",
+        "kysely": "^0.28.17",
+        "kysely-pglite": "^0.6.1"
+      },
+      "arms": ["A", "B"],
+      "timeouts": { "buildMs": 1800000, "acceptanceMs": 300000 },
+      "budgets": { "buildUsd": 4, "maxTurns": 100, "judgeUsd": 2, "verifyUsd": 2 }
+    },
+    {
+      "id": "batch-progress",
+      "title": "Dependency-ordered batch creation with per-job progress from job events",
+      "recipeDir": "batch-progress",
+      "brief": null,
+      "difficulty": "S",
+      "taskPrompt": "Build a runnable demo, `src/index.ts` (run with `tsx src/index.ts`), that creates several documents in one reactor call with dependency ordering and reports per-job progress from the reactor's job events.\n\nBehaviour:\n- Build an in-process reactor with the built-in document-model and drive document models. Create a drive document first and wait for its job to finish.\n- Submit one batch containing four jobs keyed `budget`, `scope`, `project` and `drive`. The first three each create a new document of a built-in document type with a freshly generated id. `budget` and `scope` have no dependencies, `project` depends on both, and `drive` depends on `project` and adds the three new documents as files of the drive created earlier. The reactor must derive the execution order from the declared dependencies; do not sequence the calls yourself.\n- Subscribe to every job lifecycle event the reactor emits (pending, running, write ready, read ready, failed) and print one status line per transition, labelled by job key (map the job ids in the batch result back to their keys).\n- Wait for every job in the batch to reach a terminal state, then print a summary with the number of completed and failed jobs and the ids of the four documents. Unsubscribe, shut the reactor down and exit 0 (non-zero if any job failed).\n- Use only the installed packages; plain console output is enough.\n\nThe program must typecheck with `tsc --noEmit`.",
+      "contract": [{ "file": "src/index.ts", "exports": [] }],
+      "pinnedInputs": [],
+      "acceptance": { "kind": "tsc-only", "files": [], "vitestConfig": false },
+      "docSections": ["reference-reactor", "lookup"],
+      "packages": [
+        "@powerhousedao/reactor",
+        "@powerhousedao/shared",
+        "document-model"
+      ],
+      "extraDeps": {},
+      "arms": ["A", "B"],
+      "timeouts": { "buildMs": 1500000, "acceptanceMs": 300000 },
+      "budgets": { "buildUsd": 3, "maxTurns": 80, "judgeUsd": 2, "verifyUsd": 2 }
+    },
+    {
+      "id": "scoped-reads",
+      "title": "Per-scope read filtering by the auth policy, on the reactor client",
+      "recipeDir": "scoped-reads",
+      "brief": null,
+      "difficulty": "L",
+      "taskPrompt": "An expense-report document model is provided under `document-models/expense-report/` (import it as `document-models/expense-report/v1`; a `powerhouse.config.json` and manifest are provided too). Its `global` scope holds submitted expenses (operation `submitExpense`) and its `local` scope holds confidential review notes (operation `addReviewNote`). Write `src/demo.ts`, a runnable narrated demo (`tsx src/demo.ts`), showing that the same authorization policy that refuses a write also decides which state scopes a read returns, per scope and per identity, and that this filtering happens in the reactor client rather than in the reactor.\n\nBehaviour to demonstrate:\n- Build an in-process reactor together with a reactor client whose signer is Alice, registering the expense-report model, the group (roster) document model and the built-in document-model model, with the executor feature flags for document decisions, auth enforcement and auth groups turned on.\n- Create a group document as a reviewers roster, initialize its auth policy so that only Alice may execute anything on it, and add Bob as a member. Create an expense report and initialize its auth policy with these grants: Alice may execute on the `auth` scope; Alice may execute only the `SUBMIT_EXPENSE` operation on `global`; Carol may read `global`; the roster group may read `global`; the roster group may execute on `local`. Then, as Alice, submit an expense and, as Bob, add a review note. Attach the acting identity to each action the way a signing client would.\n- Show that reading the report directly from the reactor returns all four scopes (`auth`, `document`, `global`, `local`) while reading through the client on behalf of Mallory (an identity with no grants) returns only `auth` and `document`. A withheld scope must be absent from `state`, not present and empty.\n- Show the per-identity views: Alice sees `auth`, `document`, `global` (an execute grant confers read even though she holds no read grant and her operation list is restricted); Bob sees all four; Carol sees `auth`, `document`, `global` and is refused when she submits an expense; Mallory sees `auth` and `document`.\n- Show that the document a client write returns is gated as the client's own identity (Alice's view).\n- Show that removing Bob from the roster withdraws his `global` and `local` view and that re-adding him restores it, with no change to the report's `auth` revision.\n- Show that the roster document itself is readable by Carol (part of the report's audience) but not by Mallory.\n- Wait for each job to reach a terminal status before the next step; refusals surface as failed jobs. Exit 0 at the end.\n\nThe project must typecheck with `tsc --noEmit`.",
+      "contract": [{ "file": "src/demo.ts", "exports": [] }],
+      "pinnedInputs": [
+        { "from": "document-models", "to": "document-models" },
+        { "from": "powerhouse.config.json", "to": "powerhouse.config.json" },
+        { "from": "powerhouse.manifest.json", "to": "powerhouse.manifest.json" }
+      ],
+      "acceptance": {
+        "kind": "vitest",
+        "files": [
+          {
+            "from": "tests/scoped-reads.test.ts",
+            "to": "tests/scoped-reads.test.ts"
+          },
+          { "from": "vitest.config.ts", "to": "vitest.config.ts" }
+        ],
+        "vitestConfig": true
+      },
+      "docSections": ["reference-reactor", "build-user-experiences", "lookup"],
+      "packages": [
+        "@powerhousedao/reactor",
+        "@powerhousedao/reactor-browser",
+        "@powerhousedao/reactor-group",
+        "@powerhousedao/shared",
+        "document-model"
+      ],
+      "extraDeps": { "zod": "^4.3.6" },
+      "arms": ["A", "B"],
+      "timeouts": { "buildMs": 2400000, "acceptanceMs": 300000 },
+      "budgets": { "buildUsd": 6, "maxTurns": 140, "judgeUsd": 2, "verifyUsd": 2 }
+    },
+    {
+      "id": "document-versioning",
+      "title": "Applying an upgrade manifest and replaying a cross-version history",
+      "recipeDir": "document-versioning",
+      "brief": null,
+      "difficulty": "M",
+      "taskPrompt": "A todo document model is provided under `document-models/todo/` with two schema versions and an upgrade manifest (import `document-models/todo/v1`, `document-models/todo/v2` and `document-models/todo/upgrades`). v1 items are `{ id, title, checked }`; v2 items are `{ id, title, status: TODO | IN_PROGRESS | DONE, priority }`; `todoUpgradeManifest` carries the v1 to v2 transition. Implement, in-process and without a reactor, the two mechanics a reactor performs when a document is upgraded and when it is loaded.\n\nContract:\n- `src/upgrade.ts` exports `computeUpgradePath(manifest, fromVersion)`: the ordered list of upgrade transitions from `fromVersion` up to the manifest's latest version, one per hop through `supportedVersions` in ascending order, empty when already latest. It throws an error whose message contains `not in supportedVersions` when `fromVersion` is not a supported version, and one whose message contains `no upgrade transition to v<N>` when the hop to version N has no entry in `upgrades` (keys are `v<N>`).\n- `src/upgrade.ts` also exports `upgradeDocument(document, manifest)`: returns the very same object when `state.document.version` already equals the latest version; otherwise applies each transition's `upgradeReducer` in order, passing an `UPGRADE_DOCUMENT` action (input `{ model, fromVersion, toVersion, documentId }`, scope `document`), stamps the latest version on both `state.document.version` and `initialState.document.version`, and appends one `UPGRADE_DOCUMENT` operation to `operations.document` at the next index. It never mutates its input.\n- `src/replay.ts` exports `replay(document, reducer)`: rebuilds a document the way a load does. Start from the stored `initialState`, replay only the domain scopes' operations (skip the `document` and `auth` scopes) through the given reducer, keep the original header, skip per-operation hash checks (a cross-version log cannot pass them) but keep the final per-scope hash verification, so a document whose `initialState` was never migrated fails with an error whose message contains `Hash mismatch`.\n- `src/demo.ts` (runnable with `tsx`) creates a v1 document with an item seeded into its initial state, applies v1 operations, upgrades it, applies v2 operations, replays the history and prints whether the replay converges with the live state.\n\nThe project must typecheck with `tsc --noEmit`.",
+      "contract": [
+        {
+          "file": "src/upgrade.ts",
+          "exports": ["computeUpgradePath", "upgradeDocument"]
+        },
+        { "file": "src/replay.ts", "exports": ["replay"] },
+        { "file": "src/demo.ts", "exports": [] }
+      ],
+      "pinnedInputs": [
+        { "from": "document-models", "to": "document-models" },
+        { "from": "powerhouse.config.json", "to": "powerhouse.config.json" },
+        { "from": "powerhouse.manifest.json", "to": "powerhouse.manifest.json" }
+      ],
+      "acceptance": {
+        "kind": "vitest",
+        "files": [
+          { "from": "tests/v1-reducer.test.ts", "to": "tests/v1-reducer.test.ts" },
+          { "from": "tests/v2-reducer.test.ts", "to": "tests/v2-reducer.test.ts" },
+          { "from": "tests/versioning.test.ts", "to": "tests/versioning.test.ts" },
+          { "from": "vitest.config.ts", "to": "vitest.config.ts" }
+        ],
+        "vitestConfig": true
+      },
+      "docSections": [
+        "build-document-model-creation",
+        "reference-reactor",
+        "reference-document-models",
+        "lookup"
+      ],
+      "packages": ["@powerhousedao/reactor-browser", "document-model"],
+      "extraDeps": { "zod": "^4.3.6" },
+      "arms": ["A", "B"],
+      "timeouts": { "buildMs": 1800000, "acceptanceMs": 300000 },
+      "budgets": { "buildUsd": 4, "maxTurns": 100, "judgeUsd": 2, "verifyUsd": 2 }
+    },
+    {
+      "id": "async-job-controller",
+      "title": "Processor as a job worker: serialised side effect, retry, status write-back",
+      "recipeDir": null,
+      "brief": "briefs/06-async-job-controller.md",
+      "difficulty": "M",
+      "taskPrompt": "Build a controller that treats a document as a job ticket: when a deployment document's status becomes APPROVED, a worker performs an external side effect once per approval, serialised with other jobs, retrying on failure, and then writes the outcome back into the same document as a status transition.\n\nContract:\n- `src/mutex.ts` exports class `Mutex` with `run<T>(fn: () => Promise<T>): Promise<T>`: callers execute one at a time in call order; the returned promise settles with `fn`'s result; a rejecting `fn` releases the lock so later callers still run.\n- `src/controller.ts` exports the type `DeploymentStatus` = `\"DRAFT\" | \"APPROVED\" | \"RUNNING\" | \"SUCCEEDED\" | \"FAILED\"`; the function `shouldStart(status)`, true only for `APPROVED` (the convergence rule: the controller reacts to current state, not to operation deltas, so its own write-backs leave it idle); and `runWithRetry(effect, { maxAttempts, timeoutMs })`, which calls `effect()` up to `maxAttempts` times until one call resolves, treats a call that has not settled within `timeoutMs` as a failed attempt, and resolves (never rejects) to `{ ok: true, result, attempts }` with the resolved string, or `{ ok: false, reason, attempts }` where `reason` includes the last error's message. Export that result type as `JobOutcome`.\n- A deployment document model under `document-models/deployment/` with state `{ name, spec, status, result }` and operations `approve`, `markRunning`, `markSucceeded(result)` and `markFailed(reason)`. Generate it from a specification with the installed Powerhouse CLI or write the module by hand; import it by relative path.\n- `src/processor.ts`: a reactor processor that, for each batch of operations, reads each affected document's current status, and when `shouldStart` holds dispatches `markRunning` back into that document through a reactor client, runs the side effect under the mutex with `runWithRetry`, then dispatches `markSucceeded` or `markFailed`. The write-back re-triggers the processor, which must then do nothing. Use the document's own branch, never a hard-coded one. The side effect must be deterministic and dependency-free (for example writing a file under a temporary directory).\n- `src/demo.ts` (runnable with `tsx`): approve three documents concurrently, script one side effect to fail once and then succeed, and print the serialised execution order and each document's final status and operation history.\n\nThe project must typecheck with `tsc --noEmit`.",
+      "contract": [
+        { "file": "src/mutex.ts", "exports": ["Mutex"] },
+        {
+          "file": "src/controller.ts",
+          "exports": [
+            "DeploymentStatus",
+            "JobOutcome",
+            "shouldStart",
+            "runWithRetry"
+          ]
+        },
+        { "file": "src/processor.ts", "exports": [] },
+        { "file": "src/demo.ts", "exports": [] }
+      ],
+      "pinnedInputs": [],
+      "acceptance": {
+        "kind": "vitest",
+        "files": [
+          { "from": "tests/controller.test.ts", "to": "tests/controller.test.ts" }
+        ],
+        "vitestConfig": false
+      },
+      "docSections": [
+        "reference-reactor",
+        "build-work-with-data",
+        "reference-processors",
+        "build-document-model-creation"
+      ],
+      "packages": [
+        "@powerhousedao/reactor",
+        "@powerhousedao/shared",
+        "@powerhousedao/ph-cli",
+        "document-model"
+      ],
+      "extraDeps": {},
+      "arms": ["A"],
+      "timeouts": { "buildMs": 1800000, "acceptanceMs": 300000 },
+      "budgets": { "buildUsd": 4, "maxTurns": 100, "judgeUsd": 2, "verifyUsd": 2 }
+    }
+  ]
+}

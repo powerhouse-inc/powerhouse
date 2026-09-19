@@ -1,0 +1,9 @@
+# Anchored: test/fixtures/**/runs must stay tracked.
+/runs/
+/state/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.tsbuild/
+.mastra/

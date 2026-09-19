@@ -1,0 +1,61 @@
+{
+  "runId": "2026-09-17T10-00-00Z",
+  "startedAt": "2026-09-17T10:00:00Z",
+  "finishedAt": "2026-09-17T11:30:00Z",
+  "cliVersion": "2.1.258",
+  "docsSha": "abc1234def5678",
+  "docsHash": "0123456789ab",
+  "docsFileCount": 306,
+  "pin": "6.2.2-dev.62",
+  "catalogHash": "cafebabe0000",
+  "args": {
+    "tasks": ["custom-read-model", "batch-progress"],
+    "arms": ["A", "B"],
+    "n": 2,
+    "concurrency": 2,
+    "dryRun": false,
+    "sandbox": "dontAsk",
+    "auth": "oauth-isolated",
+    "skipVerify": false,
+    "keepWorkspaces": false,
+    "builderModel": "claude-sonnet-4-5",
+    "judgeModel": "claude-opus-4-1"
+  },
+  "attempts": [
+    {
+      "taskId": "custom-read-model", "arm": "A", "n": 1, "status": "complete",
+      "buildOk": true, "buildFailureReason": null, "tscOk": true,
+      "acceptanceOk": true, "testsPassed": 3, "testsTotal": 3, "turns": 24, "costUsd": 1.25, "durationMs": 300000,
+      "escapes": {"dts-read": 0, "outside-root-read": 0, "network-bash": 0, "denied-path-bash": 0, "dep-change": 0}, "docPagesRead": 4, "contaminated": false,
+      "findingsKept": 1, "findingsVerified": 0, "findingsRefuted": 0
+    },
+    {
+      "taskId": "custom-read-model", "arm": "A", "n": 2, "status": "complete",
+      "buildOk": true, "buildFailureReason": null, "tscOk": true,
+      "acceptanceOk": false, "testsPassed": 1, "testsTotal": 3, "turns": 40, "costUsd": 2.5, "durationMs": 600000,
+      "escapes": {"dts-read": 2, "outside-root-read": 0, "network-bash": 0, "denied-path-bash": 0, "dep-change": 0}, "docPagesRead": 2, "contaminated": false,
+      "findingsKept": 2, "findingsVerified": 1, "findingsRefuted": 0
+    },
+    {
+      "taskId": "custom-read-model", "arm": "B", "n": 1, "status": "complete",
+      "buildOk": true, "buildFailureReason": null, "tscOk": true,
+      "acceptanceOk": true, "testsPassed": 3, "testsTotal": 3, "turns": 18, "costUsd": 1.0, "durationMs": 250000,
+      "escapes": {"dts-read": 0, "outside-root-read": 0, "network-bash": 0, "denied-path-bash": 0, "dep-change": 0}, "docPagesRead": 3, "contaminated": false,
+      "findingsKept": 0, "findingsVerified": 0, "findingsRefuted": 0
+    },
+    {
+      "taskId": "batch-progress", "arm": "A", "n": 1, "status": "contaminated",
+      "buildOk": true, "buildFailureReason": null, "tscOk": true,
+      "acceptanceOk": null, "testsPassed": 0, "testsTotal": 0, "turns": 12, "costUsd": 0.4, "durationMs": 100000,
+      "escapes": {"dts-read": 5, "outside-root-read": 0, "network-bash": 0, "denied-path-bash": 1, "dep-change": 0}, "docPagesRead": 1, "contaminated": true,
+      "findingsKept": 0, "findingsVerified": 0, "findingsRefuted": 0
+    },
+    {
+      "taskId": "batch-progress", "arm": "A", "n": 2, "status": "build-fail",
+      "buildOk": false, "buildFailureReason": "wall-clock", "tscOk": null,
+      "acceptanceOk": null, "testsPassed": 0, "testsTotal": 0, "turns": null, "costUsd": 3.1, "durationMs": 1500000,
+      "escapes": {"dts-read": 1, "outside-root-read": 0, "network-bash": 0, "denied-path-bash": 0, "dep-change": 0}, "docPagesRead": 2, "contaminated": false,
+      "findingsKept": 0, "findingsVerified": 0, "findingsRefuted": 0
+    }
+  ]
+}

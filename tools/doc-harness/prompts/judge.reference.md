@@ -1,0 +1,1 @@
+- `{{referenceDir}}`: the reference implementation the builder was allowed to read (arm B). Use it to see what a working solution needs from the API, but findings are still about the docs, not the reference.

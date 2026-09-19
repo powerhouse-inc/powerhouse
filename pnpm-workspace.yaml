@@ -7,12 +7,16 @@ packages:
   - "packages/reactor/bench/host"
   - "test/*"
   - "scripts/*"
+  - "tools/*"
   - "!releases"
 
 minimumReleaseAge: 10080
 # Exact-pinned dep; the cooldown adds nothing once resolution is manual.
 minimumReleaseAgeExclude:
   - "@apollo/subgraph"
+  # Exact-pinned in the catalog; Mastra ships several minors a week.
+  - "@mastra/*"
+  - "mastra"
 dedupePeerDependents: false
 
 # pnpm 12 dropped built-in @jsr scope resolution.
@@ -20,6 +24,10 @@ registries:
   "@jsr": https://npm.jsr.io
 
 catalog:
+  "@mastra/core": 1.67.0
+  "@mastra/libsql": 1.23.0
+  "mastra": 1.30.0
+  "marked": 18.0.12
   "ai": 7.0.83
   "@ai-sdk/openai-compatible": 3.0.37
   "@aws-sdk/client-s3": 3.1087.0

@@ -1,0 +1,26 @@
+{
+  "format": "stream-json",
+  "cliVersion": "2.1.258",
+  "model": "claude-sonnet-4-5",
+  "turns": 40,
+  "assistantMessages": 40,
+  "tokens": { "input": 3000, "output": 5000, "cacheCreation": 300, "cacheRead": 9000 },
+  "costUsd": 2.5,
+  "durationMs": 600000,
+  "toolHistogram": { "Read": 14, "Write": 5, "Bash": 9 },
+  "docPagesRead": [
+    { "rel": "INDEX.md", "firstTurn": 1, "via": "Read" },
+    { "rel": "04-Reference/01-Reactor/read-models.md", "firstTurn": 3, "via": "Read" }
+  ],
+  "escapes": [
+    { "kind": "dts-read", "turn": 15, "detail": "node_modules/@powerhousedao/reactor/dist/index.d.ts" },
+    { "kind": "dts-read", "turn": 22, "detail": "node_modules/@powerhousedao/reactor/dist/read-model.d.ts" }
+  ],
+  "bashCommands": [],
+  "errorToolResults": 2,
+  "retryLoops": [{ "cmd": "pnpm tsc", "count": 3 }],
+  "symbols": [],
+  "finalText": "## Documentation gaps\n- how withReadModel takes its argument",
+  "docGapsStated": "- how withReadModel takes its argument",
+  "contaminated": false
+}
