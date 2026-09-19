@@ -12,7 +12,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { isBuiltin } from "node:module";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import type { Manifest } from "@powerhousedao/shared/document-model";
 import {
   afterAll,
@@ -68,17 +68,44 @@ let warnings: string[];
 
 // Standing one on PATH keeps the run whole and still proves what ph-cli owns
 // here: that the step is invoked with the right input and output paths.
+//
+// The stub's work lives in a .mjs file that both entry points hand to node:
+// a lone `#!/bin/sh` script is unreachable on Windows, which resolves a bare
+// `tailwindcss` only through PATHEXT (.cmd among them, no extension never).
 let stubDir: string;
 
 beforeAll(() => {
   stubDir = mkdtempSync(join(tmpdir(), "ph-tailwind-stub-"));
-  const stub = join(stubDir, "tailwindcss");
+
   writeFileSync(
-    stub,
-    `#!/bin/sh\nout=""\nwhile [ $# -gt 0 ]; do\n  case "$1" in -o) out="$2"; shift 2;; *) shift;; esac\ndone\n[ -n "$out" ] && mkdir -p "$(dirname "$out")" && printf '/* stub */\\n' > "$out"\nexit 0\n`,
+    join(stubDir, "tailwindcss.mjs"),
+    [
+      'import { mkdirSync, writeFileSync } from "node:fs";',
+      'import { dirname } from "node:path";',
+      "const argv = process.argv.slice(2);",
+      'const out = argv[argv.indexOf("-o") + 1];',
+      'if (argv.includes("-o") && out) {',
+      "  mkdirSync(dirname(out), { recursive: true });",
+      '  writeFileSync(out, "/* stub */\\n");',
+      "}",
+      "",
+    ].join("\n"),
   );
-  chmodSync(stub, 0o755);
-  process.env.PATH = `${stubDir}:${process.env.PATH ?? ""}`;
+
+  const posix = join(stubDir, "tailwindcss");
+  writeFileSync(
+    posix,
+    `#!/bin/sh\nexec node "$(dirname "$0")/tailwindcss.mjs" "$@"\n`,
+  );
+  chmodSync(posix, 0o755);
+
+  // PATHEXT makes this the one Windows actually runs; harmless elsewhere.
+  writeFileSync(
+    join(stubDir, "tailwindcss.cmd"),
+    '@echo off\r\nnode "%~dp0tailwindcss.mjs" %*\r\n',
+  );
+
+  process.env.PATH = `${stubDir}${delimiter}${process.env.PATH ?? ""}`;
 });
 
 afterAll(() => {
