@@ -1,6 +1,6 @@
 // The dev loader's half of the piece contract: it reads the TypeScript list a
 // project has not built yet, and reloads when the build output changes.
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -38,7 +38,9 @@ async function writeBuiltPiece(dir: string): Promise<void> {
 
 describe("VitePackageLoader.loadPieces", () => {
   beforeAll(async () => {
-    root = await mkdtemp(join(tmpdir(), "vite-loader-pieces-"));
+    // realpath: on Windows tmpdir() is an 8.3 short path, and watching one
+    // aborts the process from libuv's uv__relative_path assertion.
+    root = await realpath(await mkdtemp(join(tmpdir(), "vite-loader-pieces-")));
     await writeFile(
       join(root, "package.json"),
       JSON.stringify({ name: PACKAGE, version: "1.0.0", type: "module" }),
