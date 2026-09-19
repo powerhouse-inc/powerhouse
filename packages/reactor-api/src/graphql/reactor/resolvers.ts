@@ -1454,6 +1454,7 @@ export function pollSyncEnvelopes(
   },
   forbiddenIds: ReadonlySet<string> = new Set(),
   heldOpIds: ReadonlySet<string> = new Set(),
+  gatedOpIds?: ReadonlySet<string>,
 ): {
   envelopes: any[];
   ackOrdinal: number;
@@ -1468,6 +1469,15 @@ export function pollSyncEnvelopes(
   }>;
   hasMore: boolean;
 } {
+  // The gate ran against a snapshot taken before its first await, so an entry
+  // the outbox gained while it was deciding carries no verdict. Serving one
+  // would hand over a scope nobody authorized, so an entry the gate never saw
+  // is held exactly like one it refused -- withheld, not consumed, which leaves
+  // it in the outbox for the next poll to evaluate properly.
+  const isHeld = (syncOp: SyncOperation): boolean =>
+    heldOpIds.has(syncOp.id) ||
+    (gatedOpIds !== undefined && !gatedOpIds.has(syncOp.id));
+
   let remote;
   try {
     remote = syncManager.getById(args.channelId);
@@ -1486,10 +1496,7 @@ export function pollSyncEnvelopes(
   // outside this channel's collection, so they are filtered by the caller's read
   // access independently of the outbox (see the poll resolver in subgraph.ts).
   const deadLetters = remote.channel.deadLetter.items
-    .filter(
-      (syncOp) =>
-        !forbiddenIds.has(syncOp.documentId) && !heldOpIds.has(syncOp.id),
-    )
+    .filter((syncOp) => !forbiddenIds.has(syncOp.documentId) && !isHeld(syncOp))
     .map((syncOp) => ({
       documentId: syncOp.documentId,
       error: syncOp.error?.message ?? "Unknown error",
@@ -1580,7 +1587,7 @@ export function pollSyncEnvelopes(
     // entry was delivered and may be evicted. A hold sets no hasMore either --
     // there is no later page that would serve it, so claiming one would spin the
     // puller.
-    if (heldOpIds.has(syncOp.id)) continue;
+    if (isHeld(syncOp)) continue;
 
     // Advance the per-syncOp delivery cursor past leading ops the client has
     // both received (outboxLatest) and we have previously emitted

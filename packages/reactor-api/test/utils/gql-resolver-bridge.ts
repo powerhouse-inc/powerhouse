@@ -116,10 +116,17 @@ export function createResolverBridge(
       // resolver's own channel lookup, whose "Channel not found" is what a
       // puller recovering from a deleted channel branches on.
       let held = new Set<string>();
+      let gatedIds: Set<string> | undefined;
       if (target.servingGate) {
         const remote = syncManager.getById(variables.channelId);
+        // Snapshot once: the gate awaits, and the outbox can grow while it does.
+        const gated = [
+          ...remote.channel.outbox.items,
+          ...remote.channel.deadLetter.items,
+        ];
+        gatedIds = new Set(gated.map((syncOp) => syncOp.id));
         held = await collectHeldSyncOperations(
-          [...remote.channel.outbox.items, ...remote.channel.deadLetter.items],
+          gated,
           target.servingGate,
           target.subject ?? {},
           undefined,
@@ -131,6 +138,7 @@ export function createResolverBridge(
         variables,
         new Set<string>(),
         held,
+        gatedIds,
       );
 
       if (logEnabled && result.envelopes.length > 0) {

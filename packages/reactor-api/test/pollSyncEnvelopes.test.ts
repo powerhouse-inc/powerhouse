@@ -703,3 +703,78 @@ describe("holding outbox entries the caller may not read", () => {
     expect(result.deadLetters.map((d) => d.documentId)).toEqual(["doc-served"]);
   });
 });
+
+/**
+ * The gate decides against a snapshot of the outbox and its verdict arrives one
+ * or more awaits later, by which time the outbox may hold entries it never saw.
+ * Those carry no verdict, so serving them would hand over a scope nobody
+ * authorized -- the regression behind an intermittent leak of a withheld
+ * `global` scope in the serving-policy suite.
+ */
+describe("entries the gate never evaluated", () => {
+  it("withholds an outbox entry that arrived after the gate's snapshot", () => {
+    const gated = makeSyncOp("job-gated", "doc-gated", [1, 2]);
+    const ungated = makeSyncOp("job-late", "doc-late", [3, 4]);
+    const syncManager = makeSyncManager([gated, ungated]);
+
+    const result = pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+      new Set(),
+      new Set(),
+      new Set(["job-gated"]),
+    );
+
+    expect(result.envelopes.map((e) => e.key)).toEqual(["job-gated"]);
+  });
+
+  it("leaves the late entry's counters untouched, so a later poll serves it", () => {
+    const ungated = makeSyncOp("job-late", "doc-late", [1, 2]);
+    const syncManager = makeSyncManager([ungated]);
+
+    pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+      new Set(),
+      new Set(),
+      new Set<string>(),
+    );
+
+    expect(ungated.deliveredCount).toBe(0);
+    expect(ungated.emittedCount).toBe(0);
+  });
+
+  it("withholds a dead letter that arrived after the gate's snapshot", () => {
+    const syncManager = makeSyncManager([]);
+    const gatedLetter = makeSyncOp("dl-gated", "doc-gated", [1]);
+    const lateLetter = makeSyncOp("dl-late", "doc-late", [2]);
+    const remote = (
+      syncManager as unknown as { getById: (id: string) => FakeRemote }
+    ).getById(CHANNEL_ID);
+    remote.channel.deadLetter.items.push(gatedLetter, lateLetter);
+
+    const result = pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+      new Set(),
+      new Set(),
+      new Set(["dl-gated"]),
+    );
+
+    expect(result.deadLetters.map((d) => d.documentId)).toEqual(["doc-gated"]);
+  });
+
+  it("serves everything when no gate ran, so an open host is unaffected", () => {
+    const a = makeSyncOp("job-a", "doc-a", [1]);
+    const b = makeSyncOp("job-b", "doc-b", [2]);
+    const syncManager = makeSyncManager([a, b]);
+
+    const result = pollSyncEnvelopes(syncManager, {
+      channelId: CHANNEL_ID,
+      outboxAck: 0,
+      outboxLatest: 0,
+    });
+
+    expect(result.envelopes.map((e) => e.key)).toEqual(["job-a", "job-b"]);
+  });
+});

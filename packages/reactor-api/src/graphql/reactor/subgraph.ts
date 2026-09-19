@@ -560,16 +560,24 @@ export class ReactorSubgraph extends BaseSubgraph {
           // the policy alone would open whatever the host's tables still
           // protect. Held entries are withheld, not consumed, so a grant that
           // widens later serves them whole on the next poll.
-          const heldOpIds = this.syncServingGate
-            ? await resolvers.collectHeldSyncOperations(
-                [
-                  ...remote.channel.outbox.items,
-                  ...remote.channel.deadLetter.items,
-                ],
-                this.syncServingGate,
-                this.viewSubject(ctx),
-              )
-            : new Set<string>();
+          // One snapshot feeds both the gate and the poll. Re-reading the
+          // outbox after the gate's awaits would let an entry queued in the
+          // meantime through with no verdict attached to it.
+          const gate = this.syncServingGate;
+          const gated = gate
+            ? [
+                ...remote.channel.outbox.items,
+                ...remote.channel.deadLetter.items,
+              ]
+            : undefined;
+          const heldOpIds =
+            gate && gated
+              ? await resolvers.collectHeldSyncOperations(
+                  gated,
+                  gate,
+                  this.viewSubject(ctx),
+                )
+              : new Set<string>();
 
           const { envelopes, ackOrdinal, deadLetters, hasMore } =
             resolvers.pollSyncEnvelopes(
@@ -577,6 +585,7 @@ export class ReactorSubgraph extends BaseSubgraph {
               args,
               forbiddenIds,
               heldOpIds,
+              gated && new Set(gated.map((syncOp) => syncOp.id)),
             );
           return {
             envelopes,
