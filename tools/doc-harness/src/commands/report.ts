@@ -1,14 +1,17 @@
 import type { Command } from "commander";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { loadCatalog, type Task } from "../lib/catalog.js";
+import { loadCatalog } from "../lib/catalog.js";
 import { readEntries } from "../lib/findings.js";
 import { FINDINGS_FILE, RUNS_ROOT, runLayout } from "../lib/paths.js";
 import {
   loadAttemptMetrics,
   loadPhLoraMapping,
+  matrixSize,
   renderReport,
+  withAttemptsOnDisk,
   type PhLoraMapping,
+  type ReportTask,
 } from "../lib/report.js";
 import { FindingRecord, RunRecord } from "../lib/schemas.js";
 
@@ -18,7 +21,7 @@ export interface ReportInput {
   findingsFile?: string;
   out?: string;
   /** Overrides; the command loads the catalog and mapping, tolerating failure. */
-  tasks?: Pick<Task, "id" | "docSections">[];
+  tasks?: readonly ReportTask[];
   mapping?: PhLoraMapping;
 }
 
@@ -30,13 +33,14 @@ function tryLoad<T>(load: () => T): T | undefined {
   }
 }
 
-/** Writes REPORT.md and returns its path. */
+/** Writes REPORT.md and returns its path. Mid-run, reads the attempt.json files run.json lacks. */
 export function writeReport(input: ReportInput): string {
   const layout = runLayout(input.runId, input.runsRoot ?? RUNS_ROOT);
   if (!existsSync(layout.runJson)) {
     throw new Error(`run ${input.runId} not found at ${layout.runJson}`);
   }
   const run = RunRecord.parse(JSON.parse(readFileSync(layout.runJson, "utf8")));
+  run.attempts = withAttemptsOnDisk(layout, run.attempts);
 
   const { entries, problems } = readEntries(
     input.findingsFile ?? FINDINGS_FILE,
@@ -53,6 +57,7 @@ export function writeReport(input: ReportInput): string {
     tasks,
     mapping,
     metrics: (summary) => loadAttemptMetrics(layout, summary),
+    expectedAttempts: matrixSize(run.args, tasks),
   });
 
   const target = input.out ?? layout.reportMd;

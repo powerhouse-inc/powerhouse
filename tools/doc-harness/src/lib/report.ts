@@ -9,15 +9,21 @@ import { formatTokens } from "./attempt-status.js";
 import type { Task } from "./catalog.js";
 import { summarizeFindings } from "./findings.js";
 import { MONOREPO_ROOT, type RunLayout } from "./paths.js";
+import { listAttemptDirs } from "./redo.js";
 import {
   Arm,
+  AttemptSummary,
   EscapeKind,
   Metrics,
-  type AttemptSummary,
   type FindingRecord,
+  type RunArgs,
   type RunRecord,
   type VerifyStatus,
 } from "./schemas.js";
+
+/** What the report needs of a catalog task; arms only for the matrix size. */
+export type ReportTask = Pick<Task, "id" | "docSections"> &
+  Partial<Pick<Task, "arms">>;
 
 /* --------------------------------------------------------- ph-lora map */
 
@@ -70,14 +76,61 @@ export function loadAttemptMetrics(
   }
 }
 
+/* ------------------------------------------------------ attempts on disk */
+
+/**
+ * run.json lists attempts only once `summarize` ran; mid-run, each recorded
+ * attempt has an attempt.json of its own. Recorded entries win over disk.
+ */
+export function withAttemptsOnDisk(
+  layout: RunLayout,
+  recorded: readonly AttemptSummary[],
+): AttemptSummary[] {
+  const known = new Set(recorded.map((a) => `${a.taskId}/${a.arm}/${a.n}`));
+  const found: AttemptSummary[] = [];
+  for (const id of listAttemptDirs(layout)) {
+    if (known.has(`${id.taskId}/${id.arm}/${id.n}`)) continue;
+    const file = layout.attempt(id.taskId, id.arm, id.n).attemptJson;
+    if (!existsSync(file)) continue;
+    try {
+      found.push(AttemptSummary.parse(JSON.parse(readFileSync(file, "utf8"))));
+    } catch {
+      // A half-written or pre-schema attempt.json: the summary will redo it.
+    }
+  }
+  return [...recorded, ...found];
+}
+
+/**
+ * Attempts the run's args call for; null when `tasks` is empty (every catalog
+ * task) and no catalog is at hand to expand it.
+ */
+export function matrixSize(
+  args: Pick<RunArgs, "tasks" | "arms" | "n">,
+  tasks?: readonly ReportTask[],
+): number | null {
+  const ids = args.tasks.length > 0 ? args.tasks : tasks?.map((t) => t.id);
+  if (ids === undefined) return null;
+  const byId = new Map((tasks ?? []).map((t) => [t.id, t] as const));
+  return ids.reduce((sum, id) => {
+    const arms = byId.get(id)?.arms;
+    const count = arms
+      ? args.arms.filter((a) => arms.includes(a)).length
+      : args.arms.length;
+    return sum + count * args.n;
+  }, 0);
+}
+
 /* ------------------------------------------------------------- helpers */
 
 export interface ReportOptions {
   mapping?: PhLoraMapping;
   /** Catalog tasks, for docSections; tasks not listed get no coverage rows. */
-  tasks?: Pick<Task, "id" | "docSections">[];
+  tasks?: readonly ReportTask[];
   /** Per-attempt metrics; defaults to none (coverage then reports unknown). */
   metrics?: (summary: AttemptSummary) => Metrics | null;
+  /** Size of the run's matrix; the header says "partial" when attempts fall short. */
+  expectedAttempts?: number | null;
 }
 
 /** Truncated builds count: the workspace was graded like any other. */
@@ -136,6 +189,16 @@ function pct(num: number, den: number): string {
     : `${Math.round((num / den) * 100)}% (${num}/${den})`;
 }
 
+/** `67% (12/18, 7 truncated)`: how many of the passes were truncated builds. */
+function passCell(cell: AttemptSummary[]): string {
+  const passes = cell.filter(passed);
+  const truncated = passes.filter((a) => a.truncated).length;
+  const base = pct(passes.length, cell.length);
+  return truncated === 0
+    ? base
+    : base.replace(/\)$/, `, ${truncated} truncated)`);
+}
+
 function money(usd: number): string {
   return `$${usd.toFixed(2)}`;
 }
@@ -190,9 +253,21 @@ export function renderReport(
     run.attempts.some((a) => a.arm === arm),
   );
   const taskIds = [...new Set(run.attempts.map((a) => a.taskId))].sort();
+  // A finished run's list is complete; the matrix only bounds an open one.
+  const expected = opts.expectedAttempts ?? null;
+  const partial =
+    run.finishedAt === null &&
+    expected !== null &&
+    expected > run.attempts.length;
   const out: string[] = [];
 
   out.push(`# doc-harness report: ${run.runId}`, "");
+  if (partial) {
+    out.push(
+      `**partial: ${run.attempts.length} of ${expected} attempts** recorded so far; the rest are still running or were reset.`,
+      "",
+    );
+  }
   out.push(
     `- docsSha: \`${run.docsSha}\` (${run.docsFileCount} files, hash \`${run.docsHash}\`)`,
     `- pin: \`${run.pin}\``,
@@ -200,7 +275,7 @@ export function renderReport(
     `- catalogHash: \`${run.catalogHash}\``,
     `- started: ${run.startedAt}; finished: ${run.finishedAt ?? "(unfinished)"}`,
     `- args: tasks ${run.args.tasks.join(",") || "(all)"}; arms ${run.args.arms.join(",")}; n ${run.args.n}; concurrency ${run.args.concurrency}; sandbox ${run.args.sandbox}; auth ${run.args.auth}; builder ${run.args.builderModel}; judge ${run.args.judgeModel}${run.args.dryRun ? "; dry run" : ""}${run.args.skipVerify ? "; verify skipped" : ""}`,
-    `- attempts: ${run.attempts.length} (${contaminated} contaminated, ${rateLimited} rate-limited; both excluded from rates); ${truncated} truncated (graded after the build hit its budget)`,
+    `- attempts: ${run.attempts.length}${partial ? ` of ${expected} (partial)` : ""} (${contaminated} contaminated, ${rateLimited} rate-limited; both excluded from rates); ${truncated} truncated (graded after the build hit its budget)`,
     `- unmetered (killed) attempts: ${killed} (cost unknown; tokens shown instead)`,
     "",
   );
@@ -262,7 +337,7 @@ export function renderReport(
         const dts = escapeTotals(cell)["dts-read"];
         return [
           arm,
-          pct(cell.filter(passed).length, cell.length),
+          passCell(cell),
           String(dts),
           cell.length === 0 ? "-" : (dts / cell.length).toFixed(2),
         ];
@@ -279,14 +354,14 @@ export function renderReport(
           const cell = clean.filter(
             (a) => a.taskId === taskId && a.arm === arm,
           );
-          return pct(cell.filter(passed).length, cell.length);
+          return passCell(cell);
         }),
       ]),
     ),
     "",
   );
   out.push(
-    "`dts-read` counts builder reads of `node_modules/**/*.d.ts`: each is a question the docs did not answer.",
+    "`dts-read` counts builder reads of `node_modules/**/*.d.ts`: each is a question the docs did not answer. A pass rate's `truncated` count says how many of its passes were builds that hit their budget.",
     "",
   );
 

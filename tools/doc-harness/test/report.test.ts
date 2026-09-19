@@ -1,4 +1,12 @@
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -7,8 +15,10 @@ import { runLayout } from "../src/lib/paths.js";
 import {
   loadAttemptMetrics,
   loadPhLoraMapping,
+  matrixSize,
   renderReport,
   sectionRel,
+  withAttemptsOnDisk,
   type PhLoraMapping,
 } from "../src/lib/report.js";
 import { AttemptSummary, RunRecord } from "../src/lib/schemas.js";
@@ -110,6 +120,8 @@ describe("writeReport", () => {
 
   it("renders the header", () => {
     expect(report).toContain(`# doc-harness report: ${RUN_ID}`);
+    // Finished: 5 attempts against a 2x2x2 matrix is not partial.
+    expect(report).not.toContain("partial");
     expect(report).toContain("docsSha: `abc1234def5678`");
     expect(report).toContain("pin: `6.2.2-dev.62`");
     expect(report).toContain("cliVersion: `2.1.258`");
@@ -239,9 +251,15 @@ describe("renderReport with rate-limited and truncated attempts", () => {
       "attempts: 7 (1 contaminated, 1 rate-limited; both excluded from rates); 1 truncated",
     );
     expect(md).toContain("unmetered (killed) attempts: 2");
-    // B: the truncated build passed its tests; the rate-limited one is not counted.
-    expect(md).toContain("| B | 100% (2/2) | 0 | 0.00 |");
+    // B: the truncated build passed its tests and is counted, marked; the rate-limited one is not counted.
+    expect(md).toContain("| B | 100% (2/2, 1 truncated) | 0 | 0.00 |");
+    expect(md).toContain(
+      "| custom-read-model | 50% (1/2) | 100% (2/2, 1 truncated) |",
+    );
     expect(md).toContain("| batch-progress | 0% (0/1) | n/a |");
+    expect(md).toContain(
+      "how many of its passes were builds that hit their budget",
+    );
     expect(md).toContain("excluded from the rates below");
   });
 
@@ -277,5 +295,113 @@ describe("renderReport without metrics or catalog", () => {
     expect(md).toContain(
       "| custom-read-model | reference-reactor | `04-Reference/01-Reactor` | unknown |",
     );
+  });
+});
+
+describe("report mid-run", () => {
+  const fixture = RunRecord.parse(
+    JSON.parse(
+      readFileSync(path.join(FIXTURES, "runs", RUN_ID, "run.json"), "utf8"),
+    ),
+  );
+
+  function openRun(dir: string, attempts: AttemptSummary[]) {
+    const layout = runLayout(RUN_ID, dir);
+    mkdirSync(layout.root, { recursive: true });
+    writeFileSync(
+      layout.runJson,
+      JSON.stringify({ ...fixture, finishedAt: null, attempts: [] }),
+    );
+    for (const a of attempts) {
+      const file = layout.attempt(a.taskId, a.arm, a.n).attemptJson;
+      mkdirSync(path.dirname(file), { recursive: true });
+      writeFileSync(file, JSON.stringify(a));
+    }
+    // A running attempt has no attempt.json yet; docs/ is not a task.
+    mkdirSync(layout.attempt("batch-progress", "B", 1).workspaceDir, {
+      recursive: true,
+    });
+    mkdirSync(layout.docsDir, { recursive: true });
+    return layout;
+  }
+
+  it("withAttemptsOnDisk fills in what run.json lacks, recorded first", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "doc-harness-midrun-"));
+    try {
+      const layout = openRun(dir, fixture.attempts.slice(0, 3));
+      const broken = layout.attempt("custom-read-model", "B", 2).attemptJson;
+      mkdirSync(path.dirname(broken), { recursive: true });
+      writeFileSync(broken, "{ not json");
+      const ids = (list: AttemptSummary[]) =>
+        list.map((a) => `${a.taskId}/${a.arm}/${a.n}`);
+      expect(ids(withAttemptsOnDisk(layout, []))).toEqual([
+        "custom-read-model/A/1",
+        "custom-read-model/A/2",
+        "custom-read-model/B/1",
+      ]);
+      const recorded = {
+        ...fixture.attempts[1],
+        status: "build-fail" as const,
+      };
+      const merged = withAttemptsOnDisk(layout, [recorded]);
+      expect(ids(merged)).toEqual([
+        "custom-read-model/A/2",
+        "custom-read-model/A/1",
+        "custom-read-model/B/1",
+      ]);
+      expect(merged[0].status).toBe("build-fail");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("matrixSize expands the args, honouring each task's arms", () => {
+    const args = { tasks: ["a", "b"], arms: ["A", "B"] as const, n: 3 };
+    expect(matrixSize({ ...args, arms: [...args.arms] })).toBe(12);
+    expect(
+      matrixSize({ ...args, arms: [...args.arms] }, [
+        { id: "a", docSections: [], arms: ["A"] },
+        { id: "b", docSections: [] },
+      ]),
+    ).toBe(9);
+    expect(matrixSize({ tasks: [], arms: ["A"], n: 2 })).toBeNull();
+    expect(
+      matrixSize({ tasks: [], arms: ["A"], n: 2 }, [
+        { id: "a", docSections: [], arms: ["A", "B"] },
+        { id: "b", docSections: [], arms: ["B"] },
+      ]),
+    ).toBe(2);
+  });
+
+  it("writeReport reports the attempts on disk and says how partial it is", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "doc-harness-midrun-"));
+    try {
+      const layout = openRun(dir, fixture.attempts.slice(0, 3));
+      const md = readFileSync(
+        writeReport({
+          runId: RUN_ID,
+          runsRoot: dir,
+          findingsFile: path.join(FIXTURES, "FINDINGS.jsonl"),
+          tasks,
+          mapping,
+        }),
+        "utf8",
+      );
+      expect(md).toContain("**partial: 3 of 8 attempts**");
+      expect(md).toContain("- attempts: 3 of 8 (partial) (0 contaminated");
+      expect(md).toContain("finished: (unfinished)");
+      expect(md).toContain(
+        "| custom-read-model | A | 2 | 2/2 | 0 | 4/6 | 32.0 | $3.75 | 2 ok | dts-read: 2 | 0 | 0 |",
+      );
+      expect(md).toContain("| custom-read-model | B | 1 |");
+      expect(md).not.toContain("| batch-progress |");
+      // run.json itself is left for summarize to fill in.
+      expect(
+        RunRecord.parse(JSON.parse(readFileSync(layout.runJson, "utf8")))
+          .attempts,
+      ).toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

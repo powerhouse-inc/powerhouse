@@ -85,11 +85,22 @@ their findings lines) so a new status taxonomy applies without redoing work.
 (`vitestOk: false` or suite errors) and `acceptance:any` (every graded
 attempt) re-grade without re-judging: `tests.json`, `vitest.json`, `tsc.log`,
 `vitest.log` and `attempt.json` move aside, the findings lines leave, and
-`judge.json` and `verify.json` stay. The acceptance step rewrites the
-workspace's `tsconfig.json` (and `vitest.config.ts` unless the task pins one)
-from the current scaffold before grading, and reinstalls `node_modules` from
-the run's cached lockfile (`.install-cache/<taskId>/pnpm-lock.yaml`, about a
-second offline) when a recorded attempt has already had it removed.
+`judge.json` and `verify.json` stay. Every rule that matches an attempt
+applies to it: an attempt with a failed judge and a stale grade has both
+redone in one pass, the files moved aside being the union of each step's, and
+the `redo …` line names every rule. The final `run …:` line counts what was
+redone by rule. The acceptance step rewrites the workspace's `tsconfig.json`
+(and `vitest.config.ts` unless the task pins one) from the current scaffold
+before grading. The acceptance step and the verifier (which compiles probes in
+the workspace) reinstall `node_modules` from the run's cached lockfile
+(`.install-cache/<taskId>/pnpm-lock.yaml`, about a second offline) when a
+recorded attempt has already had it removed.
+
+`report <runId>` works mid-run: attempts that `run.json` does not list yet are
+read from their `attempt.json`, and while the run is open the header says
+`partial: N of M attempts` when the matrix in `run.json.args` is larger. Pass
+rates note how many of their passes were truncated builds
+(`67% (12/18, 7 truncated)`).
 
 `--throttle-at <ratio>` (default `0.9`, `0` disables) holds new `claude`
 processes while the account's five-hour rate-limit window is at or above the
