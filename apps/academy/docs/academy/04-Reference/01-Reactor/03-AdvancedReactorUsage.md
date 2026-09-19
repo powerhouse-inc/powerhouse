@@ -60,7 +60,7 @@ const reactor = await new ReactorBuilder()
 | `withDocumentModelSources(sources)` | Register document-model sources: live modules, importable `{ filePath }` files, or importable `{ packageName }` packages |
 | `withUpgradeManifests(manifests)` | Register [upgrade manifests](/academy/Reference/Reactor/DocumentModelRegistry) for document model versioning |
 | `withLogger(logger)`              | Set the logger (defaults to `ConsoleLogger`)                             |
-| `withExecutorConfig(config)`      | Configure `maxConcurrency` and `jobTimeoutMs`                            |
+| `withExecutorConfig(config)`      | Configure `maxConcurrency`, `jobTimeoutMs`, and the reactor `featureFlags` (see [Authorization](/academy/Reference/Reactor/Authorization)) |
 | `withWriteCacheConfig(config)`    | Configure `maxDocuments` and `ringBufferSize` for the write cache        |
 | `withMigrationStrategy(strategy)` | Set to `"auto"` to run database migrations on build                      |
 | `withKysely(kysely)`              | Provide a custom Kysely database instance (defaults to in-memory PGlite) |
@@ -85,6 +85,24 @@ const reactor = await new ReactorBuilder()
 | `withProjectionWorkerFactory(factory)` | Inject a custom projection worker factory                           |
 
 Workers open their own Postgres pools: the executor pool takes its connection info in `withWorkerPool({ db })`, and `withProjectionShards` takes its own `db` (falling back to the executor pool's when both are configured). See [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling) for worker pools and projection shards, and [Synchronization and remote drives](/academy/Reference/Reactor/Synchronization) for sync.
+
+### Built-in document models
+
+A reactor only knows the document types it was given, and nothing is registered for you. Two built-in modules ship with the platform: without `driveDocumentModelModule` the reactor cannot create a drive, and without `documentModelDocumentModelModule` it cannot store document-model definitions.
+
+```typescript
+import { ReactorBuilder } from "@powerhousedao/reactor";
+import { documentModelDocumentModelModule } from "document-model";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+
+const reactor = await new ReactorBuilder()
+  .withDocumentModelSources([
+    documentModelDocumentModelModule, // powerhouse/document-model
+    driveDocumentModelModule, // powerhouse/document-drive
+    todoListModule,
+  ])
+  .build();
+```
 
 ## IReactor API
 
@@ -146,6 +164,26 @@ const job = await reactor.removeRelationship(parentId, childId1, "child");
 
 `create`, `deleteDocument`, `execute`, `load`, `executeBatch`, and `loadBatch` accept an optional trailing `meta?: Record<string, unknown>` that is merged into the job's `JobMeta`. Use it for tracing or correlation.
 
+#### Building the document for `create`
+
+`create` takes a fully formed `PHDocument`. Build it with the model's creator, which sets the header, type and initial state; the reactor turns it into a `CREATE_DOCUMENT` plus an `UPGRADE_DOCUMENT` action in one `document`-scope job. The built-in models export their creators directly, and a codegen'd module exposes the same function as `utils.createDocument`.
+
+```typescript
+import { documentModelCreateDocument } from "document-model";
+import { driveCreateDocument } from "@powerhousedao/shared/document-drive";
+
+const drive = driveCreateDocument();
+const driveJob = await reactor.create(drive, signer);
+
+const modelDefinition = documentModelCreateDocument();
+const modelJob = await reactor.create(modelDefinition, signer);
+
+const todoList = todoListModule.utils.createDocument();
+const todoJob = await reactor.create(todoList, signer);
+```
+
+Each creator takes an optional initial state and falls back to the model's defaults.
+
 ### Batch operations
 
 `executeBatch` lets you submit multiple mutation jobs with dependency ordering. Jobs are executed in the order dictated by their `dependsOn` keys.
@@ -158,15 +196,42 @@ The returned value is a submission receipt rather than a result: every `JobInfo`
 
 There is no idempotency key on a job plan, so re-submitting a batch after a partial failure re-applies the entries that already succeeded. Any compensation is the caller's to write.
 
+A job plan carries raw `Action` objects, so a batch that creates a document uses action creators rather than `reactor.create`. `@powerhousedao/reactor` exports `createDocumentAction`, `upgradeDocumentAction` and `deleteDocumentAction` for the `document`-scope lifecycle actions; a model's own actions come from its creators (here `addFile` from the drive model).
+
 ```typescript
+import {
+  createDocumentAction,
+  upgradeDocumentAction,
+} from "@powerhousedao/reactor";
+import {
+  addFile,
+  driveDocumentType,
+} from "@powerhousedao/shared/document-drive";
+import { generateId } from "document-model";
+
+const driveId = generateId();
+const fileId = generateId();
+
 const result = await reactor.executeBatch({
   jobs: [
     {
       key: "create-drive",
       documentId: driveId,
-      scope: "global",
+      scope: "document",
       branch: "main",
-      actions: [createDriveAction],
+      actions: [
+        createDocumentAction({
+          documentId: driveId,
+          model: driveDocumentType,
+          version: 0,
+        }),
+        upgradeDocumentAction({
+          documentId: driveId,
+          model: driveDocumentType,
+          fromVersion: 0,
+          toVersion: 1,
+        }),
+      ],
       dependsOn: [],
     },
     {
@@ -174,7 +239,9 @@ const result = await reactor.executeBatch({
       documentId: driveId,
       scope: "global",
       branch: "main",
-      actions: [addFileAction],
+      actions: [
+        addFile({ id: fileId, name: "Budget", documentType: "powerhouse/budget" }),
+      ],
       dependsOn: ["create-drive"], // Waits for drive creation
     },
   ],
@@ -182,6 +249,8 @@ const result = await reactor.executeBatch({
 
 // result.jobs["create-drive"] and result.jobs["add-document"] are JobInfo objects
 ```
+
+A job's `scope` must equal the scope of every action it carries. `executeBatch` checks this on submission and throws `Job '<key>' declares scope '<scope>' but action has scope '<actionScope>'`. `CREATE_DOCUMENT`, `UPGRADE_DOCUMENT` and `DELETE_DOCUMENT` are `document`-scope actions, so creating a document and writing its `global` state are two jobs, as above.
 
 `loadBatch` is the load-side counterpart. It submits batches of pre-existing operations (e.g. from sync) with the same dependency ordering. A `LoadJobPlan` uses `operations` instead of `actions`, and adds `externalDeps: string[]` — pre-resolved job UUIDs from prior batches that are appended to the queue hint without plan-key resolution.
 
@@ -217,6 +286,29 @@ await shutdown.completed; // Resolves when all in-flight jobs finish
 ```
 
 `kill()` returns a `ShutdownStatus` synchronously (it is not a Promise): `{ get isShutdown(): boolean; completed: Promise<void> }`. `isShutdown` flips to `true` immediately; `await shutdown.completed` to block until in-flight jobs drain. Do not `await reactor.kill()`.
+
+### Awaiting a job with `JobAwaiter`
+
+`IReactorClient` waits for jobs with a `JobAwaiter`. On the `IReactor` path you construct one yourself over the module's event bus instead of polling `getJobStatus`:
+
+```typescript
+import { JobAwaiter, ReactorBuilder } from "@powerhousedao/reactor";
+
+const { reactor, eventBus } = await new ReactorBuilder()
+  .withDocumentModelSources([todoListModule])
+  .buildModule();
+
+const awaiter = new JobAwaiter(eventBus, (jobId, signal) =>
+  reactor.getJobStatus(jobId, signal),
+);
+
+const job = await reactor.create(document);
+const info = await awaiter.waitForJob(job.id); // READ_READY or FAILED; check info.status
+
+awaiter.shutdown(); // rejects anything still pending
+```
+
+`waitForJob` resolves with the terminal `JobInfo`, for `FAILED` as well as `READ_READY`, and it reads the current status first, so a job that finished before you called it resolves immediately. Resolving means the job reached a terminal status, not that every other `JOB_READ_READY` subscriber has run: subscribers run sequentially in registration order, and the awaiter registers its own when it is constructed. If your continuation depends on your own subscriber's work, resolve a promise from inside that subscriber and await it too.
 
 ## Consistency tokens
 
@@ -294,27 +386,37 @@ The base `ReactorModule` interface has only three fields (`documentModelRegistry
 The `IEventBus` lets you listen to internal reactor events. Subscribers are called sequentially in registration order.
 
 ```typescript
-import { ReactorEventTypes, SyncEventTypes } from "@powerhousedao/reactor";
+import {
+  ReactorEventTypes,
+  SyncEventTypes,
+  type JobReadReadyEvent,
+  type SyncFailedEvent,
+} from "@powerhousedao/reactor";
 
 // Listen for all completed jobs
 const unsubscribe = module.eventBus.subscribe(
   ReactorEventTypes.JOB_READ_READY,
-  (type, event) => {
+  (type, event: JobReadReadyEvent) => {
     console.log("Job completed:", event.jobId);
     console.log("Operations:", event.operations.length);
   },
 );
 
 // Listen for sync failures
-module.eventBus.subscribe(SyncEventTypes.SYNC_FAILED, (type, event) => {
-  console.error("Sync failed for job:", event.jobId, event.errors);
-});
+module.eventBus.subscribe(
+  SyncEventTypes.SYNC_FAILED,
+  (type, event: SyncFailedEvent) => {
+    console.error("Sync failed for job:", event.jobId, event.errors);
+  },
+);
 ```
+
+`subscribe<K>(type: number, subscriber: (type: number, event: K) => void | Promise<void>)` cannot infer the payload from the event id, so annotate the callback's `event` parameter (or pass `K` explicitly). Left unannotated, `event` is `unknown` and the handler does not compile. The payload types are exported from `@powerhousedao/reactor`.
 
 Besides `ReactorEventTypes`, `SyncEventTypes`, and `QueueEventTypes`, the executor managers emit `JobExecutorEventTypes` (`JOB_STARTED: 20000`, `JOB_COMPLETED: 20001`, `JOB_FAILED: 20002`, `EXECUTOR_STARTED: 20003`, `EXECUTOR_STOPPED: 20004`).
 
 :::warning
-Two distinct `JobFailedEvent` shapes exist. The reactor-level `ReactorEventTypes.JOB_FAILED` (10005) carries `error: Error`; the executor-level `JobExecutorEventTypes.JOB_FAILED` (20002) carries `error: string`. Check which enum you subscribed to before reading `error`.
+Two distinct job-failed payloads exist. The reactor-level `ReactorEventTypes.JOB_FAILED` (10005) is exported as `ReactorJobFailedEvent` and carries `jobId` and `error: Error`; the executor-level `JobExecutorEventTypes.JOB_FAILED` (20002) is exported as `JobFailedEvent` and carries `job` and `error: string`. Check which enum you subscribed to before reading `error`.
 :::
 
 See [Reactor event system](/academy/Reference/Reactor/WorkingWithTheReactor#reactor-event-system) for the full list of event types.
@@ -342,7 +444,7 @@ Writing directly to the operation store bypasses the job queue, reducers, and re
 A read model receives operations after each job's write phase completes and builds a derived view of the data.
 
 ```typescript
-import type { IReadModel } from "@powerhousedao/reactor";
+import type { IReadModel, OperationWithContext } from "@powerhousedao/reactor";
 
 class MyCustomReadModel implements IReadModel {
   // `name` identifies the read model for lookup via getReadModel
@@ -367,7 +469,7 @@ Read models registered via `withReadModel()` run in the pre-ready phase — they
 
 A common use case for the low-level API is writing integration tests that need full control over the reactor lifecycle:
 
-`ReactorClientBuilder.buildModule()` returns both the `client` and the `reactorModule` (the same `InProcessReactorModule` you get from `ReactorBuilder.buildModule()`). Hand it a `ReactorBuilder` via `withReactorBuilder` and it builds the reactor for you:
+`ReactorClientBuilder.buildModule()` returns an `InProcessReactorClientModule`: the `client`, direct references to `reactor`, `eventBus`, `documentIndexer`, `documentView`, `signer`, `subscriptionManager` and `jobAwaiter`, and `reactorModule`, the same `InProcessReactorModule` you get from `ReactorBuilder.buildModule()`. `reactorModule` is typed `InProcessReactorModule | undefined` because the `withReactor` path has none, so narrow it before use. Hand it a `ReactorBuilder` via `withReactorBuilder` and it builds the reactor for you:
 
 ```typescript
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
@@ -382,6 +484,9 @@ async function createTestReactor() {
   const { client, reactorModule } = await new ReactorClientBuilder()
     .withReactorBuilder(builder)
     .buildModule();
+  if (!reactorModule) {
+    throw new Error("withReactorBuilder always yields a reactorModule");
+  }
 
   return { client, reactorModule };
 }
@@ -418,6 +523,8 @@ const client = await new ReactorClientBuilder()
   .build();
 ```
 
+This path is handed no feature flags and no registry, so it cannot derive a read gate from the reactor (see below).
+
 ### ReactorClientBuilder methods
 
 | Method                              | Description                                                          |
@@ -429,7 +536,10 @@ const client = await new ReactorClientBuilder()
 | `withSubscriptionManager(manager)`  | Provide a custom subscription manager                                |
 | `withJobAwaiter(awaiter)`           | Provide a custom job awaiter                                         |
 | `withDocumentModelLoader(loader)`   | Set a custom document model loader (forwarded to the reactor builder) |
+| `withReadGate(gate)`                | Override how reads are gated with an `IReadGate` (see below)         |
 | `build()`                           | Build and return the `IReactorClient`                                |
 | `buildModule()`                     | Build and return the client plus its reactor module internals        |
 
 You must call exactly one of `withReactorBuilder` or `withReactor` before `build()`/`buildModule()`, or the build throws.
+
+The two wiring paths do not gate reads the same way. A client built with `withReactorBuilder` derives its read gate from that reactor's feature flags and model registry, so `{ group }` principals resolve once `authGroups` is on. A client built with `withReactor(...)` evaluates the policy alone: a `{ group }` grant never matches and a reader who holds a scope only through a roster silently loses it. To run several per-identity clients over one already-built reactor, pass each the same gate through `withReadGate`; `ModelReadGate`, `BareReadGate` and `readDecisionModel` are exported from `@powerhousedao/reactor`. See [Authorization](/academy/Reference/Reactor/Authorization).
