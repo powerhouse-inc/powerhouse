@@ -134,6 +134,41 @@ describe("journaled step records", () => {
     expect(result.error).toContain("[redacted:bearer]");
   });
 
+  it("hands the error branch the redacted message, not the raw one", async () => {
+    const executor = new CredentialedExecutor(
+      new Map([["piece#note", {}]]),
+      new Map([
+        [
+          "piece#fail",
+          new Error(
+            "GET https://api.example.com/v1?api_key=abcd1234efgh failed",
+          ),
+        ],
+      ]),
+    );
+    const result = await runWorkflow({
+      definition: definition(
+        [
+          { id: "s1", key: "fetch", blockType: "piece#fail", config: {} },
+          {
+            id: "s2",
+            key: "record",
+            blockType: "piece#note",
+            config: { reason: "{{steps.fetch.error}}" },
+          },
+        ],
+        [{ id: "e1", from: "s1", to: "s2", port: "error" }] as never,
+      ),
+      executor,
+    });
+
+    const recorded = result.steps[1].input as { reason: string };
+    expect(recorded.reason).toBe(
+      "GET https://api.example.com/v1?api_key=[redacted:api_key] failed",
+    );
+    expect(recorded.reason).not.toContain("abcd1234efgh");
+  });
+
   it("leaves an ordinary failure readable", async () => {
     const executor = new CredentialedExecutor(
       new Map(),

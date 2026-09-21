@@ -3,7 +3,10 @@
 
 export interface ExpressionScope {
   trigger?: unknown;
-  steps: Record<string, { output: unknown }>;
+  // A step contributes `output` when it succeeded and `error` when it did not.
+  // The failed entry is what an error-port branch reads: without it a branch
+  // can route on a failure but cannot say what the failure was.
+  steps: Record<string, { output?: unknown; error?: string }>;
   variables: Record<string, unknown>;
 }
 
