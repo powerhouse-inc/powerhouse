@@ -32,8 +32,10 @@ function toOutput(json: TestsJson, testsPath: string): AcceptanceOutput {
   return {
     kind: json.kind,
     tscOk: json.tscOk,
+    tscError: json.tscError,
     vitestOk: json.vitestOk,
     suiteErrors: json.suiteErrors,
+    suiteFailures: json.suiteFailures,
     passed: json.passed,
     failed: json.failed,
     total: json.total,
@@ -62,14 +64,17 @@ export const acceptance = createStep({
         kind: task.acceptance.kind,
         tscOk: null,
         tscOutputPath: null,
+        tscError: null,
         vitestOk: null,
         suiteErrors: 0,
+        suiteFailures: [],
         passed: 0,
         failed: 0,
         total: 0,
         timedOut: false,
         durationMs: 0,
         vitestJsonPath: null,
+        vitestLogPath: null,
         skipped: true,
       };
     } else {

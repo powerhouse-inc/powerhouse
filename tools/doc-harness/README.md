@@ -62,6 +62,14 @@ state/harness.db              Mastra snapshots (gitignored)
 Every step is idempotent on its output file, so `resume <runId>` re-drives the
 workflow and skips finished work.
 
+`vitest.log` holds the command, vitest's stdout and stderr, and how it exited:
+the run is graded with the JSON reporter *and* the default one, because the
+JSON reporter reports a suite that failed in a hook as a count and nothing
+else — `passed: 10, total: 10, suiteErrors: 2` with an empty message. The
+failed suites and their errors land in `tests.json` as `suiteFailures`, the
+first `error TS…` line as `tscError`, and one line of either becomes the
+attempt's `gradeNote`, which the report prints under `## Grading failures`.
+
 ## Commands
 
 | command | purpose |

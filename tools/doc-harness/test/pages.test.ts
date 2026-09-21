@@ -186,9 +186,11 @@ describe("listRuns and the index", () => {
     writeFileSync(layout.compactMd, "# t\n");
     writeFileSync(layout.metricsJson, "{}");
     writeFileSync(path.join(layout.dir, "session.jsonl"), "");
+    writeFileSync(path.join(layout.dir, "vitest.log"), "FAIL a.test.ts\n");
     expect(listAttemptFiles(layout)).toEqual([
       "transcript.compact.md",
       "metrics.json",
+      "vitest.log",
     ]);
     expect(
       listAttemptFiles(runLayout("x", runsRoot).attempt("t", "A", 1)),

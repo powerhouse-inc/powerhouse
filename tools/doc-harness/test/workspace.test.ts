@@ -49,6 +49,7 @@ function task(overrides: Partial<Task> = {}): Task {
       {
         file: "src/document-count-read-model.ts",
         exports: ["DocumentCountReadModel"],
+        signatures: {},
       },
     ],
     pinnedInputs: [],

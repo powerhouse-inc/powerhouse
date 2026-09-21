@@ -215,6 +215,11 @@ function table(header: string[], rows: string[][]): string {
   );
 }
 
+/** Markdown cells hold no raw pipe or newline. */
+function cellText(text: string): string {
+  return text.replace(/\|/g, "\\|").replace(/\s*\n\s*/g, " ");
+}
+
 function escapeTotals(attempts: AttemptSummary[]): Record<string, number> {
   const totals: Record<string, number> = {};
   for (const kind of EscapeKind.options) totals[kind] = 0;
@@ -327,6 +332,31 @@ export function renderReport(
     "`truncated` builds hit their budget and were graded anyway; `rate-limited` builds were killed while the CLI retried the API and are excluded from the rates below (redo them with `resume --redo-failed`).",
     "",
   );
+
+  out.push("## Grading failures", "");
+  // A pre-gradeNote attempt.json only knows that the grade failed.
+  const graded = run.attempts.filter(
+    (a) => a.gradeNote !== null || a.acceptanceOk === false,
+  );
+  if (graded.length === 0) {
+    out.push("Every graded attempt compiled and every suite ran.", "");
+  } else {
+    out.push(
+      table(
+        ["task", "arm", "n", "tests", "why"],
+        graded.map((a) => [
+          a.taskId,
+          a.arm,
+          String(a.n),
+          `${a.testsPassed}/${a.testsTotal}`,
+          cellText(a.gradeNote ?? "(not recorded; see tsc.log and vitest.log)"),
+        ]),
+      ),
+      "",
+      "A suite that fails in a hook passes every test it contains, so `tests` can read full marks next to a failure. The whole reason is in the attempt's `tsc.log` or `vitest.log`.",
+      "",
+    );
+  }
 
   out.push("## Pass rate", "");
   out.push(

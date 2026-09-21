@@ -10,7 +10,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  firstTscError,
+  parseVitestFailures,
   parseVitestJson,
+  parseVitestJsonFailures,
   runAcceptance,
   vitestLogPath,
   type Installer,
@@ -18,6 +21,7 @@ import {
 } from "../src/lib/acceptance.js";
 import type { Task } from "../src/lib/catalog.js";
 import { runLayout } from "../src/lib/paths.js";
+import { gradeNote } from "../src/steps/record.js";
 import type { RunResult } from "../src/lib/process.js";
 import {
   workspaceTsconfig,
@@ -84,6 +88,7 @@ type Call = { cmd: string; args: string[]; cwd: string };
 function fakeRunner(o: {
   tsc?: RunResult["status"];
   vitest?: RunResult["status"];
+  vitestOutput?: string;
   onVitest?: (outputFile: string) => void;
 }): { runner: Runner; calls: Call[] } {
   const calls: Call[] = [];
@@ -100,7 +105,7 @@ function fakeRunner(o: {
       code: status === "pass" ? 0 : status === "fail" ? 1 : null,
       signal: null,
       durationMs: 5,
-      output: `${isVitest ? "vitest" : "tsc"} output\n`,
+      output: isVitest ? (o.vitestOutput ?? "vitest output\n") : "tsc output\n",
     });
   };
   return { runner, calls };
@@ -245,7 +250,13 @@ describe("runAcceptance", () => {
       timedOut: false,
       vitestJsonPath: layout.vitestJsonPath,
     });
-    expect(readFileSync(vitestLogPath(layout), "utf8")).toBe("vitest output\n");
+    const log = readFileSync(vitestLogPath(layout), "utf8");
+    expect(log).toContain("$ pnpm exec vitest run");
+    expect(log).toContain("vitest output");
+    expect(log).toContain("[fail code=1");
+    expect(result.vitestLogPath).toBe(vitestLogPath(layout));
+    // The default reporter is what writes a failure reason to stdout at all.
+    expect(calls[1].args).toContain("--reporter=default");
   });
 
   it("a killed vitest with no JSON reads as 0/0/0 and timedOut", async () => {
@@ -409,5 +420,214 @@ describe("runAcceptance on a recorded workspace", () => {
     expect(
       readFileSync(path.join(layout.workspaceDir, "tsconfig.json"), "utf8"),
     ).toBe(stale);
+  });
+});
+
+/** Verbatim from vitest 4's default reporter on a suite whose afterAll threw. */
+const HOOK_FAILURE_LOG = `
+ RUN  v4.1.11 /w
+
+ ❯ processor.test.ts (10 tests) 3ms
+     ✓ passes 0 1ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  processor.test.ts > SearchProcessor
+Error: syntax error at or near "ON"
+ ❯ processor.test.ts:4:32
+
+ Test Files  1 failed (1)
+      Tests  10 passed (10)
+
+JSON report written to /w/vitest.json
+`;
+
+describe("parseVitestFailures", () => {
+  it("names the failed suite and the error the JSON report drops", () => {
+    expect(parseVitestFailures(HOOK_FAILURE_LOG)).toEqual([
+      {
+        name: "processor.test.ts > SearchProcessor",
+        message: 'Error: syntax error at or near "ON"',
+      },
+    ]);
+  });
+
+  it("keeps a FAIL whose error line it cannot find, and dedupes", () => {
+    const log =
+      " FAIL  a.test.ts\n\n\n\n\n\n FAIL  a.test.ts\n FAIL  b.test.ts\n";
+    expect(parseVitestFailures(log)).toEqual([
+      { name: "a.test.ts", message: "" },
+      { name: "b.test.ts", message: "" },
+    ]);
+  });
+
+  it("finds nothing in a passing run", () => {
+    expect(parseVitestFailures(" Test Files  1 passed (1)\n")).toEqual([]);
+  });
+
+  it("reads through a coloured log", () => {
+    const esc = String.fromCharCode(27);
+    const log = `${esc}[41m FAIL ${esc}[49m a.test.ts > S\n${esc}[31mTypeError: nope${esc}[39m\n`;
+    expect(parseVitestFailures(log)).toEqual([
+      { name: "a.test.ts > S", message: "TypeError: nope" },
+    ]);
+  });
+});
+
+describe("parseVitestJsonFailures", () => {
+  it("takes the message vitest does carry, by file", () => {
+    const text = JSON.stringify({
+      testResults: [
+        {
+          name: "/w/a.test.ts",
+          status: "failed",
+          message: "AssertionError: x",
+        },
+        { name: "/w/b.test.ts", status: "failed", message: "" },
+        { name: "/w/c.test.ts", status: "passed", message: "" },
+      ],
+    });
+    expect(parseVitestJsonFailures(text)).toEqual([
+      { name: "a.test.ts", message: "AssertionError: x" },
+    ]);
+  });
+
+  it("survives a report that is not the shape it expects", () => {
+    expect(parseVitestJsonFailures("{")).toEqual([]);
+    expect(parseVitestJsonFailures("{}")).toEqual([]);
+  });
+});
+
+describe("firstTscError", () => {
+  it("returns the first diagnostic line, or null", () => {
+    const log =
+      "some noise\nsrc/a.ts(3,1): error TS2558: Expected 0 type arguments, but got 1.\nsrc/b.ts(9,2): error TS2345: no\n";
+    expect(firstTscError(log)).toBe(
+      "src/a.ts(3,1): error TS2558: Expected 0 type arguments, but got 1.",
+    );
+    expect(firstTscError("all good\n")).toBeNull();
+  });
+});
+
+describe("runAcceptance suite failures", () => {
+  it("records why a suite failed when every test in it passed", async () => {
+    const { pinnedRoot, layout } = setup();
+    const { runner } = fakeRunner({
+      vitest: "fail",
+      vitestOutput: HOOK_FAILURE_LOG,
+      onVitest: (file) =>
+        writeFileSync(
+          file,
+          JSON.stringify({
+            numTotalTests: 10,
+            numPassedTests: 10,
+            numFailedTests: 0,
+            numFailedTestSuites: 2,
+            testResults: [
+              { name: "/w/processor.test.ts", status: "failed", message: "" },
+            ],
+          }),
+        ),
+    });
+    const result = await runAcceptance({
+      task: task("vitest"),
+      layout,
+      timeoutMs: 1000,
+      pinnedRoot,
+      runner,
+    });
+    expect(result).toMatchObject({
+      passed: 10,
+      failed: 0,
+      total: 10,
+      suiteErrors: 2,
+    });
+    expect(result.suiteFailures).toEqual([
+      {
+        name: "processor.test.ts > SearchProcessor",
+        message: 'Error: syntax error at or near "ON"',
+      },
+    ]);
+    expect(readFileSync(vitestLogPath(layout), "utf8")).toContain(
+      'Error: syntax error at or near "ON"',
+    );
+  });
+
+  it("records the first tsc error when tsc fails", async () => {
+    const { pinnedRoot, layout } = setup();
+    const runner: Runner = (cmd, args) =>
+      Promise.resolve({
+        status: "fail",
+        code: 1,
+        signal: null,
+        durationMs: 1,
+        output:
+          args[1] === "tsc"
+            ? "tests/v.test.ts(27,35): error TS2558: Expected 0 type arguments, but got 1.\n"
+            : "",
+      });
+    const result = await runAcceptance({
+      task: task("tsc-only"),
+      layout,
+      timeoutMs: 1000,
+      pinnedRoot,
+      runner,
+    });
+    expect(result.tscOk).toBe(false);
+    expect(result.tscError).toBe(
+      "tests/v.test.ts(27,35): error TS2558: Expected 0 type arguments, but got 1.",
+    );
+  });
+});
+
+describe("gradeNote", () => {
+  const base = {
+    kind: "vitest" as const,
+    tscOk: true,
+    tscError: null,
+    vitestOk: true,
+    suiteErrors: 0,
+    suiteFailures: [],
+    passed: 3,
+    failed: 0,
+    total: 3,
+    timedOut: false,
+    testsPath: "/t/tests.json",
+    skipped: false,
+  };
+
+  it("is null for a clean grade and for a skipped one", () => {
+    expect(gradeNote(base)).toBeNull();
+    expect(gradeNote({ ...base, skipped: true, tscOk: false })).toBeNull();
+  });
+
+  it("prefers the tsc error, then the suite, then the counts", () => {
+    expect(
+      gradeNote({ ...base, tscOk: false, tscError: "a.ts(1,1): error TS1" }),
+    ).toBe("tsc: a.ts(1,1): error TS1");
+    expect(gradeNote({ ...base, tscOk: false })).toBe(
+      "tsc: failed; see tsc.log",
+    );
+    expect(
+      gradeNote({
+        ...base,
+        suiteErrors: 2,
+        passed: 10,
+        total: 10,
+        suiteFailures: [{ name: "p.test.ts > S", message: "Error: bad SQL" }],
+      }),
+    ).toBe("suite failed: p.test.ts > S: Error: bad SQL");
+    expect(gradeNote({ ...base, suiteErrors: 2 })).toBe(
+      "2 suites failed; see vitest.log",
+    );
+    expect(gradeNote({ ...base, failed: 1, passed: 2 })).toBe(
+      "1 of 3 tests failed",
+    );
+    expect(gradeNote({ ...base, vitestOk: false })).toBe(
+      "vitest wrote no report; see vitest.log",
+    );
+    expect(gradeNote({ ...base, passed: 0, total: 0 })).toBe(
+      "vitest ran no tests",
+    );
   });
 });

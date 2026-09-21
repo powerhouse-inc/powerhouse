@@ -66,6 +66,7 @@ function attempt(overrides: Partial<AttemptSummary> = {}): AttemptSummary {
     tscOk: true,
     testsPassed: 3,
     acceptanceOk: true,
+    gradeNote: null,
     testsTotal: 3,
     turns: 20,
     costUsd: 1.5,

@@ -283,6 +283,50 @@ describe("renderReport with rate-limited and truncated attempts", () => {
   });
 });
 
+describe("renderReport grading failures", () => {
+  const run = RunRecord.parse(
+    JSON.parse(
+      readFileSync(path.join(FIXTURES, "runs", RUN_ID, "run.json"), "utf8"),
+    ),
+  );
+
+  it("says so when every graded attempt compiled and ran", () => {
+    const attempts = run.attempts.filter((a) => a.acceptanceOk !== false);
+    expect(
+      renderReport({ ...run, attempts }, [], { mapping, tasks }),
+    ).toContain("Every graded attempt compiled and every suite ran.");
+  });
+
+  it("still lists an attempt recorded before gradeNote existed", () => {
+    const md = renderReport(run, [], { mapping, tasks });
+    expect(md).toContain(
+      "| custom-read-model | A | 2 | 1/3 | (not recorded; see tsc.log and vitest.log) |",
+    );
+  });
+
+  it("names the suite and the error behind a full-marks failure", () => {
+    const base = run.attempts[0];
+    const failed = {
+      ...base,
+      n: 9,
+      acceptanceOk: false,
+      testsPassed: 10,
+      testsTotal: 10,
+      gradeNote:
+        'suite failed: processor.test.ts > SearchProcessor: Error: syntax error at | near "ON"',
+    };
+    const md = renderReport(
+      { ...run, attempts: [...run.attempts, failed] },
+      [],
+      { mapping, tasks },
+    );
+    expect(md).toContain("## Grading failures");
+    expect(md).toContain(
+      '| custom-read-model | A | 9 | 10/10 | suite failed: processor.test.ts > SearchProcessor: Error: syntax error at \\| near "ON" |',
+    );
+  });
+});
+
 describe("renderReport without metrics or catalog", () => {
   it("reports coverage as unknown and no findings", () => {
     const run = RunRecord.parse(
