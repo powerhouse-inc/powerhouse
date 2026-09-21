@@ -1,3 +1,13 @@
+## 6.2.3-dev.19 (2026-09-21)
+
+### 🩹 Fixes
+
+- **workflow:** let a step carry an attachment ref it is not allowed to open ([a700e098a](https://github.com/powerhouse-inc/powerhouse/commit/a700e098a))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.18 (2026-09-21)
 
 ### 🚀 Features
