@@ -315,6 +315,55 @@ describe("runWorkflow", () => {
     expect(run.steps[0].error).toBe("boom");
   });
 
+  it("hands the error branch the reason the step failed", async () => {
+    const executor = new FakeExecutor();
+    const definition: WorkflowDefinition = {
+      trigger: TRIGGER,
+      steps: [
+        { id: "a", key: "risky", blockType: "fake#fail", config: {} },
+        {
+          id: "c",
+          key: "recover",
+          blockType: "fake#ok",
+          // What a document-dispatch on the failure branch would write.
+          config: { note: "could not reach it: {{steps.risky.error}}" },
+        },
+      ],
+      edges: [edge("e1", "t", "a"), edge("e2", "a", "c", "error")],
+    };
+
+    const run = await runWorkflow({ definition, executor });
+
+    expect(run.status).toBe("SUCCEEDED");
+    expect(run.steps[1].output).toEqual({
+      note: "could not reach it: boom",
+    });
+  });
+
+  it("leaves a succeeding step's scope entry free of an error", async () => {
+    const executor = new FakeExecutor();
+    const definition: WorkflowDefinition = {
+      trigger: TRIGGER,
+      steps: [
+        { id: "a", key: "fine", blockType: "fake#ok", config: { v: 1 } },
+        {
+          id: "b",
+          key: "after",
+          blockType: "fake#ok",
+          config: {
+            was: "{{steps.fine.error}}",
+            got: "{{steps.fine.output.v}}",
+          },
+        },
+      ],
+      edges: [edge("e1", "t", "a"), edge("e2", "a", "b")],
+    };
+
+    const run = await runWorkflow({ definition, executor });
+
+    expect(run.steps[1].output).toEqual({ was: undefined, got: 1 });
+  });
+
   it("runs every successor on a port, not just the first", async () => {
     const executor = new FakeExecutor();
     const definition: WorkflowDefinition = {
