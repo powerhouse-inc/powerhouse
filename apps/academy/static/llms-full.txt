@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-19T02:47:59.322Z
+> Generated: 2026-09-21T09:43:34.015Z
 > Total Documents: 113
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -13934,6 +13934,9 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [App](#app)
 - [Processor](#processor)
 - [Subgraph](#subgraph)
+- [Piece](#piece)
+- [Piece Action](#piece-action)
+- [Piece Trigger](#piece-trigger)
 - [Migration File](#migration-file)
 - [Vetra](#vetra)
 - [Build](#build)
@@ -14083,6 +14086,93 @@ Generate a subgraph
 
 **Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
 
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Piece
+Generate a piece: a connector whose actions and triggers a workflow can call
+
+
+---
+
+## Parameters
+
+### Arguments
+**Name** - The name of the piece to generate. Its directory is the kebab-case of this. - Usage: `[name]`
+
+
+### Options
+**Name** - The name of the piece to generate - Usage: `--name, -n <str>`
+
+**Id** - The piece id a workflow block type names, e.g. @acme/piece-crm. Defaults to one derived from the package name. - Usage: `--id <str>`
+
+**Piece Version** - The version the pieces list declares. Defaults to the package version when the piece is named after the package, else 1.0.0. - Usage: `--piece-version <str>`
+
+**Auth** - The kind of connection the piece asks for - Usage: `--auth <value>`
+
+**Default:** `custom`
+**Description** - One line describing what the piece connects to - Usage: `--description <str>`
+
+**Dir** - Name of the directory of an existing piece to re-register - Usage: `--dir <dir>`
+
+
+### Flags
+**All** - Re-register every piece in pieces/: refresh the pieces list and the manifest, and prune what is gone - Usage: `--all, -a`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Piece Action
+Generate an action inside an existing piece
+
+
+---
+
+## Parameters
+
+### Arguments
+**Name** - The name of the action, e.g. get-record - Usage: `[name]`
+
+
+### Options
+**Name** - The name of the action to generate - Usage: `--name, -n <str>`
+
+**Piece** - The piece directory under pieces/ to add the action to. Optional when the project ships exactly one piece. - Usage: `--piece, -p <str>`
+
+
+### Flags
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Piece Trigger
+Generate a trigger inside an existing piece
+
+
+---
+
+## Parameters
+
+### Arguments
+**Name** - The name of the trigger, e.g. new-record - Usage: `[name]`
+
+
+### Options
+**Name** - The name of the trigger to generate - Usage: `--name, -n <str>`
+
+**Piece** - The piece directory under pieces/ to add the trigger to. Optional when the project ships exactly one piece. - Usage: `--piece, -p <str>`
+
+**Strategy** - How the trigger fires: polled on a schedule, or delivered to a webhook - Usage: `--strategy <value>`
+
+**Default:** `polling`
+
+
+### Flags
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`

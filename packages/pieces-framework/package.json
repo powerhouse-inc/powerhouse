@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/pieces-framework",
-  "version": "6.2.3-dev.16",
+  "version": "6.2.3-dev.17",
   "description": "Powerhouse's published copy of the Activepieces piece framework, widened with the reactor context.",
   "license": "MIT",
   "type": "module",

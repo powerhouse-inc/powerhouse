@@ -1,3 +1,14 @@
+## 6.2.3-dev.17 (2026-09-21)
+
+### 🚀 Features
+
+- **codegen:** generate a piece, and add actions and triggers to it ([#3052](https://github.com/powerhouse-inc/powerhouse/issues/3052))
+- **registry:** index pieces and serve one on its own ([#3052](https://github.com/powerhouse-inc/powerhouse/issues/3052))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.16 (2026-09-21)
 
 ### 🩹 Fixes
