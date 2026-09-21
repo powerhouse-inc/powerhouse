@@ -1,3 +1,4 @@
+import { childLogger } from "document-model";
 import { randomUUID } from "node:crypto";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
@@ -381,6 +382,8 @@ export function storeHandlers(port: PieceStorePort): HostCallHandlers {
   };
 }
 
+const logger = childLogger(["workflow", "piece-staging"]);
+
 export interface ActivepiecesBlockExecutorOptions {
   cacheDir: string;
   // Piece package name -> pinned version; the connector registry for this run.
@@ -649,8 +652,20 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     let index = 0;
     for (const ref of refs) {
       const destPath = path.join(stagingDir, `in-${index++}`);
-      const meta = await port.read(ref, destPath);
-      staged.push({ ref, path: destPath, ...meta });
+      try {
+        const meta = await port.read(ref, destPath);
+        staged.push({ ref, path: destPath, ...meta });
+      } catch (error) {
+        // Staging is opportunistic: refs are collected from the whole config
+        // without knowing which props are FILE, because the prop schema lives
+        // in the worker. So a ref this step was never going to open must not
+        // fail it -- a dispatch carrying one as data is the ordinary case. A
+        // FILE prop that did need it still fails, in the worker, naming the
+        // reference it could not resolve.
+        logger.debug(
+          `Left ${ref} unstaged: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
     }
     return staged;
   }

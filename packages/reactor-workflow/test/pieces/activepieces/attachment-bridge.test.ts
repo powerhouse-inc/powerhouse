@@ -80,6 +80,25 @@ const app = {
 module.exports = { app };
 `;
 
+// The dispatch case: a reference travels through a text prop as data, and the
+// action never opens it.
+const CARRIER_FIXTURE = `
+const app = {
+  displayName: "Carrier Fixture",
+  actions: {
+    carry: {
+      name: "carry",
+      displayName: "Carry",
+      props: {
+        sourceDocument: { type: "SHORT_TEXT", required: true, displayName: "Ref" },
+      },
+      run: async (ctx) => ({ sourceDocument: ctx.propsValue.sourceDocument }),
+    },
+  },
+};
+module.exports = { app };
+`;
+
 const NO_STORE_FIXTURE = WRITER_FIXTURE;
 
 let cacheDir = "";
@@ -211,6 +230,52 @@ describe("AttachmentBridge", () => {
       text: "scanned-bytes",
       isBuffer: true,
     });
+    expect(await readdir(stagingRoot)).toEqual([]);
+  });
+
+  it("carries a reference it cannot stage through to the piece as data", async () => {
+    await writeFixture("@test/carrier", CARRIER_FIXTURE);
+    // Nothing seeded, so every read is refused the way the reactor refuses a
+    // ref the workflow document does not itself reference.
+    const port = attachmentPort();
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      stagingRoot,
+      attachments: port,
+    });
+
+    const result = await executor.execute(
+      execution("@test/carrier@1.0.0#carry", {
+        sourceDocument: "attachment://v1:unreadable",
+      }),
+    );
+
+    expect(result.output).toEqual({
+      sourceDocument: "attachment://v1:unreadable",
+    });
+    expect(await readdir(stagingRoot)).toEqual([]);
+  });
+
+  it("still fails the step when a FILE prop needed the reference", async () => {
+    await writeFixture("@test/reader", READER_FIXTURE);
+    const port = attachmentPort();
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      stagingRoot,
+      attachments: port,
+    });
+
+    await expect(
+      executor.execute(
+        execution("@test/reader@1.0.0#consume", {
+          attachment: "attachment://v1:missing",
+        }),
+      ),
+    ).rejects.toThrow(
+      /No staged file for reference "attachment:\/\/v1:missing"/,
+    );
     expect(await readdir(stagingRoot)).toEqual([]);
   });
 
