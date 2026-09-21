@@ -3019,7 +3019,13 @@ correctly.
   migration body is the one piece you hand-write.
 - The upgrade-application logic that `@powerhousedao/reactor` runs in production
   (`computeUpgradePath` + apply + version stamp), distilled into
-  [`src/upgrade.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/src/upgrade.ts) — `document-model` only defines the manifest types.
+  [`src/upgrade.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/src/upgrade.ts). `document-model` supplies both halves — the
+  manifest types and the primitives the recipe composes: `computeUpgradeTransitions`,
+  `applyUpgradeDocumentAction`, `operationFromAction` and `replayDocument`. The recipe
+  spells the sequence out by hand so the mechanics stay visible; see
+  [Applying an upgrade without the registry](/academy/Reference/Reactor/DocumentModelRegistry#applying-an-upgrade-without-the-registry).
+  `document-model/dist/index.d.ts` is a thin `export *` over
+  `@powerhousedao/shared/document-model`, so the declarations are not in that file.
 - Replaying an operation log recorded under v1 into a v2 state shape
   ([`src/replay.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/src/replay.ts)).
 
@@ -3561,7 +3567,7 @@ pnpm start   # narrated single-reactor walkthrough
 ```
 
 The demo attaches unsigned signer context (`action.context.signer`) directly;
-a production client populates and signs it via `ReactorClient.withSigner()`.
+a production client populates and signs it via `ReactorClientBuilder.withSigner()`.
 Signature verification is a separate, composable concern — see
 [`signed-operations-verifier`](https://github.com/powerhouse-inc/recipes/blob/main/signed-operations-verifier).
 
@@ -4402,16 +4408,9 @@ pnpm --filter @powerhousedao/example-scoped-reads start
 
 #### Version requirement
 
-The read path ships in the monorepo's stage-7 work, which is newer than the
-version this repo's catalog pins. Until a dev release carrying it is published
-and the catalog is bumped, `build`, `test` and `start` pass only against a
-local checkout of the monorepo:
-
-```sh
-cd ../powerhouse
-pnpm build
-pnpm test:e2e:recipes --filter scoped-reads --verbose
-```
+The read path ships in `6.2.2-dev.62` and later, so the recipe builds, tests and
+runs against the published packages. Earlier versions have no gate on the client
+and serve every scope to every caller.
 
 #### Files
 

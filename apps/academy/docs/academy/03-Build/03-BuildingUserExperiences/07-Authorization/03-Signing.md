@@ -60,7 +60,7 @@ The `ISigner` interface is the core abstraction for all signing operations:
 
 ```typescript
 interface ISigner {
-  user?: UserActionSigner; // { address, networkId, chainId }
+  user?: UserActionSigner; // { address: string; networkId: string; chainId: number }
   app?: AppActionSigner; // { name, key }
   publicKey: CryptoKey;
 
@@ -99,11 +99,13 @@ Each signed action carries an `ActionSigner` context that identifies both the us
 
 ```typescript
 type ActionSigner = {
-  user: UserActionSigner; // { address, networkId (CAIP-2), chainId (CAIP-10) }
+  user: UserActionSigner; // { address: string; networkId: string; chainId: number }
   app: AppActionSigner; // { name, key (DID) }
   signatures: Signature[];
 };
 ```
+
+`networkId` is the CAIP-2 namespace (`"eip155"`), and `chainId` is the numeric chain id (`1`) — not a string.
 
 This context is attached to the action's `context.signer` field and flows through the entire system -- from the client, through the reactor, into storage, and out through the GQL API.
 
