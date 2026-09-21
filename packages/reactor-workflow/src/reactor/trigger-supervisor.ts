@@ -93,6 +93,8 @@ export interface TriggerSupervisorOptions {
 }
 
 const MIN_INTERVAL_MS = MIN_SCHEDULE_INTERVAL_MS;
+// What a trigger polls at when neither the workflow nor the piece says.
+export const DEFAULT_POLL_INTERVAL_MS = 60_000;
 const MAX_BACKOFF_MS = 30 * 60_000;
 const DEDUPE_TTL_MS = 30_000;
 const DEFAULT_RECONCILE_INTERVAL_MS = 15 * 60_000;
@@ -210,7 +212,8 @@ export class TriggerSupervisor {
   constructor(private readonly options: TriggerSupervisorOptions) {
     this.worker = options.worker ?? new PieceWorker();
     this.tickMs = options.tickMs ?? 15_000;
-    this.defaultIntervalMs = options.defaultIntervalMs ?? 300_000;
+    this.defaultIntervalMs =
+      options.defaultIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
     this.hookTimeoutMs = options.hookTimeoutMs ?? 60_000;
     this.now = options.now ?? (() => new Date());
     this.egress =

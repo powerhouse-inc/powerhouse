@@ -72,10 +72,13 @@ describe("parseScheduleConfig", () => {
     ).toThrow(/unknown timezone "Mars\/Olympus"/);
   });
 
-  it("enforces the one-minute floor and positive intervals", () => {
+  it("enforces the one-second floor and positive intervals", () => {
     expect(() =>
-      parseScheduleConfig({ mode: "interval", everyMs: 30_000 }),
-    ).toThrow(/at least 60s/);
+      parseScheduleConfig({ mode: "interval", everyMs: 250 }),
+    ).toThrow(/at least 1s/);
+    expect(
+      parseScheduleConfig({ mode: "interval", everyMs: 1_000 }),
+    ).toMatchObject({ mode: "interval", everyMs: 1_000 });
     expect(() => parseScheduleConfig({ mode: "interval", every: 0 })).toThrow(
       /positive/,
     );
@@ -222,7 +225,7 @@ describe("cronIntervalMs", () => {
     const from = at("2026-09-04T10:02:00Z");
     expect(cronIntervalMs("*/2 * * * *", from)).toBe(120_000);
     expect(cronIntervalMs("0 3 * * 1", from)).toBe(7 * 86_400_000);
-    expect(cronIntervalMs("* * * * * *", from)).toBe(60_000);
+    expect(cronIntervalMs("* * * * * *", from)).toBe(1_000);
     expect(cronIntervalMs("nope", from)).toBeUndefined();
   });
 });
