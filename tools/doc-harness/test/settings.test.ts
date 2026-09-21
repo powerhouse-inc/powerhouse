@@ -6,6 +6,7 @@ import {
   builderSettings,
   judgeSettings,
   pathRule,
+  tsxSocketDirs,
   verifierSettings,
   writeSettings,
 } from "../src/lib/settings.js";
@@ -73,10 +74,11 @@ describe("builderSettings", () => {
       sandbox: {
         enabled: true,
         autoAllowBashIfSandboxed: false,
+        allowUnsandboxedCommands: false,
         filesystem: {
           denyRead: [MONO, RECIPES, path.join(homedir(), ".claude")],
         },
-        network: { allowedDomains: [] },
+        network: { allowedDomains: [], allowUnixSockets: tsxSocketDirs() },
       },
     });
   });
@@ -96,6 +98,36 @@ describe("builderSettings", () => {
     }
     for (const p of s.sandbox.filesystem.denyRead) {
       expect(path.isAbsolute(p)).toBe(true);
+    }
+  });
+
+  it("lets tsx bind its loader socket without letting bash out of the sandbox", () => {
+    const s = builderSettings({ ...base, arm: "A", sandbox: "dontAsk" });
+    const uid = process.getuid?.();
+    if (uid !== undefined) {
+      expect(s.sandbox.network.allowUnixSockets).toContain(
+        `/tmp/claude-${uid}/tsx-${uid}`,
+      );
+    }
+    expect(s.sandbox.network.allowedDomains).toEqual([]);
+    expect(s.sandbox.allowUnsandboxedCommands).toBe(false);
+    expect(s.sandbox.enabled).toBe(true);
+  });
+});
+
+describe("tsxSocketDirs", () => {
+  it("names only tsx's own IPC directory, absolutely and without duplicates", () => {
+    const dirs = tsxSocketDirs();
+    const uid = process.getuid?.();
+    if (uid === undefined) {
+      expect(dirs).toEqual([]);
+      return;
+    }
+    expect(dirs.length).toBeGreaterThan(0);
+    expect(new Set(dirs).size).toBe(dirs.length);
+    for (const dir of dirs) {
+      expect(path.isAbsolute(dir)).toBe(true);
+      expect(path.basename(dir)).toBe(`tsx-${uid}`);
     }
   });
 });

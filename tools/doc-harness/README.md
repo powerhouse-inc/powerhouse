@@ -29,10 +29,17 @@ contamination (reads outside the docs and workspace, network use).
 The builder runs under `--permission-mode dontAsk` with deny rules for the
 monorepo, the recipes checkout and `~/.claude`, plus the Claude Code sandbox
 block that closes the Bash interpreter hole (a plain deny rule stops `cat` but
-not `python3 -c "open(...)"`). The user's plugins, hooks, MCP servers and
-CLAUDE.md are excluded with `--setting-sources ""`, `--strict-mcp-config` and an
-empty MCP config. `--bare` is not used because it requires an API key and the
-harness runs on the claude.ai login.
+not `python3 -c "open(...)"`). `allowUnsandboxedCommands: false` keeps that
+closed: without it a builder that hits a sandbox denial simply reruns the
+command with `dangerouslyDisableSandbox`, which `dontAsk` grants. The one hole
+punched in the sandbox is `network.allowUnixSockets`, listing the directory
+`tsx` binds its ESM-loader IPC socket in (`<tmp>/tsx-<uid>/<pid>.pipe`, and the
+sandbox's tmp is `/tmp/claude-<uid>`): without it every `tsx script.ts` dies
+with `listen EPERM` and the builder writes code it can never run. The user's
+plugins, hooks, MCP servers and CLAUDE.md are excluded with
+`--setting-sources ""`, `--strict-mcp-config` and an empty MCP config. `--bare`
+is not used because it requires an API key and the harness runs on the
+claude.ai login.
 
 Reads of `node_modules/**/*.d.ts` are allowed and counted as `dts-read`
 escapes: the headline metric for "the docs did not answer the question".
