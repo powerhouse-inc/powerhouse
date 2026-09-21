@@ -37,7 +37,9 @@ function scaffoldProject(
   fs.writeFileSync(
     path.join(dir, "powerhouse.config.json"),
     JSON.stringify(
-      packageRegistryUrl ? { packages: [], packageRegistryUrl } : { packages: [] },
+      packageRegistryUrl
+        ? { packages: [], packageRegistryUrl }
+        : { packages: [] },
       null,
       2,
     ) + "\n",
