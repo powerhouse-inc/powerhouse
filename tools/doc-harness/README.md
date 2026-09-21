@@ -195,7 +195,13 @@ inside `runs/` and escape any HTML the report contains.
 `catalog/tasks.json` describes each task: a behaviour-level prompt, the
 contract (files and exports the hidden tests import), pinned inputs copied into
 the workspace (document-model specs and generated code), the acceptance tests,
-the packages to install at the pin, and budgets. `scripts/import-pinned.ts`
+the packages to install at the pin, and budgets. A contract entry may also pin
+`signatures` (export name -> declaration), which the builder prompt renders
+under the file: the hidden tests are typechecked against the builder's code, so
+a shape they rely on and the prompt never states would grade arm A on a secret.
+`catalog validate` and `test/catalog.test.ts` hold the line: a test that calls a
+contract export with explicit type arguments must have that export's signature
+pinned, and a pinned signature must be the one the reference recipe declares. `scripts/import-pinned.ts`
 regenerates `catalog/pinned/` from the recipes checkout when the pin bumps.
 
 ## Verified against

@@ -5,7 +5,6 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import type { Task } from "./catalog.js";
 import { PROMPTS_ROOT } from "./paths.js";
 import type { Arm, Finding } from "./schemas.js";
 
@@ -51,7 +50,18 @@ export function renderPrompt(
 
 /* ------------------------------------------------------------- builder */
 
-export type TaskPromptInput = Pick<Task, "title" | "taskPrompt" | "contract">;
+export type TaskPromptInput = {
+  title: string;
+  taskPrompt: string;
+  contract: readonly ContractEntry[];
+};
+
+/** A catalog contract entry; `signatures` is optional for callers. */
+export type ContractEntry = {
+  file: string;
+  exports: readonly string[];
+  signatures?: Record<string, string>;
+};
 
 export interface BuilderPromptVars {
   docsDir: string;
@@ -62,14 +72,21 @@ export interface BuilderPromptVars {
   referenceDir?: string;
 }
 
-export function renderContract(contract: Task["contract"]): string {
+export function renderContract(contract: readonly ContractEntry[]): string {
   if (contract.length === 0) return "- (no files are imported by tests)";
   return contract
-    .map((entry) => {
+    .flatMap((entry) => {
       const names = entry.exports.map((name) => `\`${name}\``).join(", ");
-      return entry.exports.length === 0
-        ? `- \`${entry.file}\``
-        : `- \`${entry.file}\` exports ${names}`;
+      const head =
+        entry.exports.length === 0
+          ? `- \`${entry.file}\``
+          : `- \`${entry.file}\` exports ${names}`;
+      // Hidden tests typecheck against these files: shape is contract.
+      const signatures = Object.entries(entry.signatures ?? {}).map(
+        ([name, signature]) =>
+          `  - \`${name}\` must be declared \`${signature}\``,
+      );
+      return [head, ...signatures];
     })
     .join("\n");
 }

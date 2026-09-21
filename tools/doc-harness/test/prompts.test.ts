@@ -168,6 +168,44 @@ describe("buildBuilderPrompts", () => {
   it("renders an empty contract as a note", () => {
     expect(renderContract([])).toMatch(/no files/);
   });
+
+  it("puts a pinned declaration under the export it belongs to", () => {
+    const rendered = renderContract([
+      {
+        file: "src/upgrade.ts",
+        exports: ["computeUpgradePath", "upgradeDocument"],
+        signatures: {
+          upgradeDocument: "upgradeDocument<TTo extends PHBaseState>(d, m)",
+        },
+      },
+      { file: "src/demo.ts", exports: [] },
+    ]);
+    expect(rendered).toBe(
+      [
+        "- `src/upgrade.ts` exports `computeUpgradePath`, `upgradeDocument`",
+        "  - `upgradeDocument` must be declared `upgradeDocument<TTo extends PHBaseState>(d, m)`",
+        "- `src/demo.ts`",
+      ].join("\n"),
+    );
+  });
+
+  it("carries the declaration into the builder task prompt", () => {
+    const { task: rendered } = buildBuilderPrompts(
+      {
+        ...task,
+        contract: [
+          {
+            file: "src/upgrade.ts",
+            exports: ["upgradeDocument"],
+            signatures: { upgradeDocument: "upgradeDocument<TTo>(d, m)" },
+          },
+        ],
+      },
+      { docsDir: "/d", pin: "p", workspaceDir: "/w", arm: "A" },
+    );
+    expect(rendered).toContain("typechecked");
+    expect(rendered).toContain("must be declared `upgradeDocument<TTo>(d, m)`");
+  });
 });
 
 describe("buildJudgePrompt", () => {

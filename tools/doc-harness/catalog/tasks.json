@@ -145,9 +145,19 @@
       "contract": [
         {
           "file": "src/upgrade.ts",
-          "exports": ["computeUpgradePath", "upgradeDocument"]
+          "exports": ["computeUpgradePath", "upgradeDocument"],
+          "signatures": {
+            "computeUpgradePath": "computeUpgradePath(manifest: UpgradeManifest<readonly number[]>, fromVersion: number): UpgradeTransition[]",
+            "upgradeDocument": "upgradeDocument<TTo extends PHBaseState = PHBaseState>(document: PHDocument<PHBaseState>, manifest: UpgradeManifest<readonly number[]>): PHDocument<TTo>"
+          }
         },
-        { "file": "src/replay.ts", "exports": ["replay"] },
+        {
+          "file": "src/replay.ts",
+          "exports": ["replay"],
+          "signatures": {
+            "replay": "replay<TState extends PHBaseState>(document: PHDocument<TState>, reducer: Reducer<TState>): PHDocument<TState>"
+          }
+        },
         { "file": "src/demo.ts", "exports": [] }
       ],
       "pinnedInputs": [
