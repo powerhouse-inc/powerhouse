@@ -1,8 +1,5 @@
 import { afterEach, expect, it } from "vitest";
-import {
-  pieceRegistrySource,
-  setPieceRegistryUrl,
-} from "./registry-source.js";
+import { pieceRegistrySource, setPieceRegistryUrl } from "./registry-source.js";
 
 afterEach(() => {
   setPieceRegistryUrl(undefined);
