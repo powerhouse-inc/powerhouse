@@ -2,7 +2,7 @@
 // per-workflow policy and a verified delivery. The rest is reactor-api's.
 import type { WebhookRequest } from "@powerhousedao/shared/processors";
 import type { OperationWithContext } from "document-model";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkflowRuntimeService } from "./service.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 
@@ -108,6 +108,13 @@ describe("WorkflowRuntimeService webhooks", () => {
   beforeEach(() => {
     fired = [];
     service = makeService();
+  });
+
+  // A runtime left running keeps its supervisor's timer and its logger alive
+  // past the test, and vitest tears the worker's rpc down underneath it:
+  // "Closing rpc while onUserConsoleLog was pending".
+  afterEach(() => {
+    service.shutdown();
   });
 
   // ── registration ─────────────────────────────────────────────────────────
