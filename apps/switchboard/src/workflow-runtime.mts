@@ -92,22 +92,15 @@ export async function resolveWorkflowsEnabled({
   return featureFlags.getBooleanValue(PH_WORKFLOWS_ENABLED, configEnabled);
 }
 
-// The workflow package's models, loaded by specifier the way vetra's are. A
-// declared dependency that will not load is a misconfigured switchboard.
-export async function loadWorkflowDocumentModels(
-  load: () => Promise<Record<string, unknown>> = () =>
-    import("@powerhousedao/workflow/document-models") as Promise<
-      Record<string, unknown>
-    >,
-): Promise<DocumentModelModule[]> {
+// The package manager reports an unresolvable package and continues; for one
+// the host added itself that is a misconfigured switchboard, not a degraded
+// one. The manager imports this subpath moments later, so the cache absorbs it.
+export async function assertWorkflowPackageLoadable(
+  load: () => Promise<unknown> = () =>
+    import("@powerhousedao/workflow/document-models"),
+): Promise<void> {
   try {
-    return Object.values(await load()).filter(
-      (module): module is DocumentModelModule =>
-        typeof module === "object" &&
-        module !== null &&
-        "documentModel" in module &&
-        "reducer" in module,
-    );
+    await load();
   } catch (error) {
     throw new Error(
       `Workflows are enabled but ${WORKFLOW_PACKAGE_NAME} could not be loaded`,

@@ -254,6 +254,13 @@ async function main(): Promise<void> {
 
     console.log("\nthe catalog");
     const catalog = await pieceCatalog(client);
+    // The workflow package's own piece: the host adds that package when
+    // workflows are enabled, so this project never names it.
+    checks.ok(
+      "the reactor piece is registered without the project naming its package",
+      catalog.some((piece) => piece.name === "@powerhousedao/piece-reactor"),
+      () => `catalog held ${JSON.stringify(catalog.map((p) => p.name))}`,
+    );
     const entry = catalog.find((piece) => piece.name === FIXTURE_PACKAGE);
     checks.ok(
       "pieceCatalog carries the piece the installed package ships",
