@@ -148,16 +148,25 @@ describe("normalizePropsValue", () => {
     });
   });
 
-  // A value the coercion cannot read does not reach the piece as its raw text:
-  // JSON and DATE_TIME drop it, NUMBER yields NaN, OBJECT parses any JSON.
-  it("refuses values the coercion cannot read", async () => {
+  // DATE_TIME drops what it cannot read and NUMBER yields NaN, because a piece
+  // reading those is promised a shape. JSON is different: what is routed into
+  // one is usually a model's answer, and a model wraps its object in prose, so
+  // the text reaches the piece to parse rather than vanishing. Until
+  // eba99e3a5b this was how every type behaved; that commit took the upstream
+  // processors without their validators, and a failed coercion started
+  // deleting the value instead of being reported.
+  it("hands a JSON value it cannot parse to the piece, and refuses the rest", async () => {
     const result = await normalizePropsValue(props, {
       count: "twelve",
       payload: "{not json",
       headers: "[1,2]",
       when: "later",
     });
-    expect(result).toEqual({ count: NaN, headers: [1, 2] });
+    expect(result).toEqual({
+      count: NaN,
+      payload: "{not json",
+      headers: [1, 2],
+    });
   });
 
   it("drops keys that normalise to undefined and skips absent props", async () => {
