@@ -11,7 +11,6 @@ import type {
 } from "@powerhousedao/pieces-framework";
 import { childLogger } from "document-model";
 import { pieceRegistrySource } from "../pieces/activepieces/registry-source.js";
-import { PAPERLESS_LOGO } from "./first-party-logos.js";
 import { SERVER_ONLY_PIECES } from "./unsupported-pieces.js";
 
 const CATALOG_URL = "https://cloud.activepieces.com/api/v1/pieces";
@@ -198,78 +197,6 @@ export async function fetchCatalogWithSuggestions(): Promise<
 
 let catalogCache: Cached<PieceSummary[]> | undefined;
 
-// First-party pieces not (yet) listed by the cloud catalog. After upstream
-// publication the cloud entry wins (short-name dedupe below), so remove the
-// entry from here at that point.
-const FIRST_PARTY_PIECES: PieceSummary[] = [
-  {
-    name: "@powerhousedao/piece-paperless-ngx",
-    displayName: "Paperless-ngx",
-    description:
-      "Manage documents in a self-hosted paperless-ngx archive: upload, search, tag, and react to new documents.",
-    // Data URI, since a first-party piece has no logo on their CDN.
-    logoUrl: PAPERLESS_LOGO,
-    version: "0.1.0",
-    actionCount: 9,
-    triggerCount: 2,
-    categories: ["CONTENT_AND_FILES"],
-    auth: {
-      type: "CUSTOM_AUTH",
-      displayName: "paperless-ngx",
-      required: true,
-      props: {
-        base_url: {
-          type: "SHORT_TEXT",
-          displayName: "Base URL",
-          required: true,
-          description:
-            "e.g. https://paperless.example.com — no trailing slash, no /api suffix",
-        },
-        token: {
-          type: "SECRET_TEXT",
-          displayName: "API Token",
-          required: true,
-          description: "paperless web UI -> My Profile -> API Token",
-        },
-      },
-    },
-  },
-  {
-    name: "@powerhousedao/piece-docling",
-    displayName: "Docling",
-    description:
-      "Convert documents (PDF, DOCX, PPTX, images, HTML, …) to Markdown, docling-document JSON, HTML, DocTags and plain text via a docling-serve v1 API (self-hosted or Docling for IBM watsonx).",
-    logoUrl:
-      "data:image/svg+xml," +
-      encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#1e3a8a"/><path d="M14 10h14l8 8v20a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V12a2 2 0 0 1 2-2z" fill="#fff"/><path d="M28 10v8h8" fill="none" stroke="#1e3a8a" stroke-width="2"/><path d="M18 24h12M18 29h12M18 34h8" stroke="#1e3a8a" stroke-width="2"/></svg>',
-      ),
-    version: "1.0.0",
-    actionCount: 6,
-    triggerCount: 0,
-    categories: ["CONTENT_AND_FILES"],
-    // Mirrors the piece's PieceAuth descriptor (the shape the connection
-    // editor's planFromAuth consumes).
-    auth: {
-      type: "CUSTOM_AUTH",
-      displayName: "Docling Serve",
-      required: true,
-      props: {
-        base_url: {
-          type: "SHORT_TEXT",
-          displayName: "Service URL",
-          required: true,
-        },
-        api_key: {
-          type: "SECRET_TEXT",
-          displayName: "API Key",
-          required: false,
-        },
-      },
-    },
-  },
-];
-
 // Test-only: the module caches the catalog for CACHE_TTL_MS.
 export function __resetCatalogCacheForTests(): void {
   catalogCache = undefined;
@@ -309,14 +236,9 @@ export async function fetchPieceCatalog(): Promise<PieceSummary[]> {
     toSummaries(lists.registry as CatalogEntry[]),
     toSummaries(lists.cloud as CatalogEntry[]),
   );
-  // First-party pieces no listing carries yet; a listing wins on short-name
-  // collisions (once the same piece is published somewhere).
-  const shortName = (n: string) => n.slice(n.lastIndexOf("/") + 1);
-  const shorts = new Set(published.map((e) => shortName(e.name)));
-  const value = [
-    ...published,
-    ...FIRST_PARTY_PIECES.filter((p) => !shorts.has(shortName(p.name))),
-  ].sort((a, b) => a.displayName.localeCompare(b.displayName));
+  const value = [...published].sort((a, b) =>
+    a.displayName.localeCompare(b.displayName),
+  );
   catalogCache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
   return value;
 }
