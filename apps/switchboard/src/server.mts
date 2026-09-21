@@ -79,7 +79,7 @@ import { initFeatureFlags } from "./feature-flags.js";
 import {
   WORKFLOW_PACKAGE_NAME,
   composeWorkflowRuntime,
-  loadWorkflowDocumentModels,
+  assertWorkflowPackageLoadable,
   resolveWorkflowsEnabled,
   type ComposedWorkflowRuntime,
 } from "./workflow-runtime.mjs";
@@ -487,6 +487,15 @@ async function initServer(
   // only reads the answer.
   const workflowsEnabled = options.workflows?.enabled === true;
 
+  // Through the package manager like any other, so one route carries the
+  // models, the subgraphs and the piece.
+  if (workflowsEnabled) {
+    await assertWorkflowPackageLoadable();
+    if (!packages.includes(WORKFLOW_PACKAGE_NAME)) {
+      packages.push(WORKFLOW_PACKAGE_NAME);
+    }
+  }
+
   // Set only when we build the reactor ourselves; a caller-provided one keeps
   // its own lifecycle and must not be torn down here.
   let ownedReactorModule: InProcessReactorClientModule | undefined;
@@ -585,18 +594,8 @@ async function initServer(
         )
       : [];
 
-    // The workflow package is composed by this host now, so its models come
-    // in here rather than through reactor-api's package manager.
-    const workflowDocumentModels: DocumentModelModule[] = workflowsEnabled
-      ? await loadWorkflowDocumentModels()
-      : [];
-
     applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
-      documentModels: [
-        ...documentModels,
-        ...vetraDocumentModels,
-        ...workflowDocumentModels,
-      ],
+      documentModels: [...documentModels, ...vetraDocumentModels],
       upgradeManifests,
       executorConfig:
         hasSkipThreshold || enabledFeatureFlags.length > 0
