@@ -9,6 +9,9 @@ export const FIXTURE_PACKAGE = "test-workflow-piece-package";
 export const FIXTURE_VERSION = "1.0.0";
 export const FIXTURE_PIECE_DIR = "greeter";
 export const FIXTURE_BLOCK_TYPE = `${FIXTURE_PACKAGE}#greet`;
+// What a published listing offers: a piece nobody installed is pinned by the
+// version the block type names, the way an Activepieces block is.
+export const FIXTURE_PUBLISHED_BLOCK_TYPE = `${FIXTURE_PACKAGE}@${FIXTURE_VERSION}#greet`;
 
 export interface BuildFixtureOptions {
   /** The checked-in piece source, laid out as it sits in a package. */
@@ -115,4 +118,38 @@ export function buildAndPublishFixture(
     descriptor,
     manifestPieces: manifest.pieces ?? [],
   };
+}
+
+/** One entry of the registry's piece catalog, in the cloud's list shape. */
+export interface RegistryPieceEntry {
+  name: string;
+  version: string;
+  package: string;
+  actions: number;
+  triggers: number;
+}
+
+// The registry indexes a package's pieces when it extracts the published
+// tarball, so its piece endpoints answer a moment after `ph publish` returns.
+export async function waitForRegistryPiece(
+  name: string,
+  timeoutMs = 60_000,
+): Promise<RegistryPieceEntry> {
+  const deadline = Date.now() + timeoutMs;
+  let last = "nothing yet";
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`${REGISTRY_URL}/pieces`);
+      const entries = (await res.json()) as RegistryPieceEntry[];
+      const hit = entries.find((entry) => entry.name === name);
+      if (hit) return hit;
+      last = JSON.stringify(entries.map((entry) => entry.name));
+    } catch (error) {
+      last = String(error);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error(
+    `${REGISTRY_URL}/pieces never listed ${name} within ${timeoutMs}ms (last: ${last})`,
+  );
 }
