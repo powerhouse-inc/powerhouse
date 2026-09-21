@@ -76,21 +76,11 @@ interface FetchModule {
 let catalogModule: CatalogModule;
 let searchModule: SearchModule;
 let fetchModule: FetchModule;
+let resetRegistrySource: (() => void) | undefined;
 
-const CLOUD_LIST = "https://cloud.activepieces.com/api/v1/pieces";
-const CLOUD_CDN = "https://cdn.activepieces.com/pieces/bundled/";
-
-// The engine addresses Activepieces by constant, so pointing it at this
-// registry means rewriting those two bases and nothing else.
-function routeToRegistry(url: string): string | null {
-  if (url.startsWith(CLOUD_LIST)) {
-    return `${REGISTRY_URL}/pieces${url.slice(CLOUD_LIST.length)}`;
-  }
-  if (url.startsWith(CLOUD_CDN)) {
-    return `${REGISTRY_URL}/-/pieces/bundled/${url.slice(CLOUD_CDN.length)}`;
-  }
-  return null;
-}
+// Activepieces itself is not reachable from a unit test, and a deployment
+// pointed at a registry must not need it to be.
+const CLOUD_HOSTS = ["cloud.activepieces.com", "cdn.activepieces.com"];
 
 const descriptor = {
   name: PIECE_NAME,
@@ -317,6 +307,14 @@ describe("registry pieces", () => {
     fetchModule = (await import(
       `${WORKFLOW_SRC}/pieces/activepieces/fetch.ts`
     )) as FetchModule;
+    const registrySource = (await import(
+      `${WORKFLOW_SRC}/pieces/activepieces/registry-source.ts`
+    )) as { setPieceRegistryUrl: (url: string | undefined) => void };
+
+    // The engine reaches this registry because its host pointed it here, not
+    // because the test rewrote its URLs.
+    registrySource.setPieceRegistryUrl(REGISTRY_URL);
+    resetRegistrySource = () => registrySource.setPieceRegistryUrl(undefined);
 
     vi.stubGlobal("fetch", (input: unknown, init?: RequestInit) => {
       const url =
@@ -325,13 +323,16 @@ describe("registry pieces", () => {
           : input instanceof URL
             ? input.href
             : (input as Request).url;
-      const mapped = routeToRegistry(url);
-      return realFetch(mapped ?? (input as string), init);
+      if (CLOUD_HOSTS.some((host) => url.includes(host))) {
+        return Promise.resolve(new Response("unreachable", { status: 503 }));
+      }
+      return realFetch(input as string, init);
     });
   }, 60000);
 
   afterAll(() => {
     vi.unstubAllGlobals();
+    resetRegistrySource?.();
     server.close();
   });
 
@@ -443,7 +444,7 @@ describe("registry pieces", () => {
         version: VERSION,
         cacheDir: bundleCache,
       });
-      expect(bundle.source).toBe("cdn");
+      expect(bundle.source).toBe("registry");
 
       const pkg = JSON.parse(
         readFileSync(path.join(bundle.dir, "package.json"), "utf8"),
