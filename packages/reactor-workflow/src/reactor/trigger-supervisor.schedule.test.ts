@@ -193,11 +193,11 @@ describe("TriggerSupervisor core#schedule", () => {
     expect(row?.last_error).toMatch(/unknown timezone/);
 
     await supervisor.upsert(
-      scheduleBinding("wf-too-fast", { mode: "interval", everyMs: 5_000 }),
+      scheduleBinding("wf-too-fast", { mode: "interval", everyMs: 250 }),
     );
     row = await store.getTriggerState("wf-too-fast");
     expect(row?.status).toBe("ERROR");
-    expect(row?.last_error).toMatch(/at least 60s/);
+    expect(row?.last_error).toMatch(/at least 1s/);
 
     setClock("2026-09-05T00:00:00.000Z");
     await supervisor.tick();

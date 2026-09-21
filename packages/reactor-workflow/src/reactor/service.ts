@@ -1090,7 +1090,7 @@ export class WorkflowRuntimeService {
       resolver: pieceResolver(),
       // Trigger hooks reach the same services steps do.
       egress: configuredEgress(),
-      // Dev override; the 60s floor still applies.
+      // Overrides the 60s default; the 1s floor still applies.
       defaultIntervalMs:
         Number(process.env.WORKFLOW_POLL_INTERVAL_MS) || undefined,
       reconcileIntervalMs:

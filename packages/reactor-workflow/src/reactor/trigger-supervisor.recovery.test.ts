@@ -312,9 +312,9 @@ describe("TriggerSupervisor robustness", () => {
     expect(calls.map((call) => call.hook)).toEqual(["onDisable", "onEnable"]);
   });
 
-  it("holds the interval floor when the retry itself throws", async () => {
+  it("backs off from the configured interval when the retry itself throws", async () => {
     const wf = "wf-retry-floor";
-    supervisor = newSupervisor({ defaultIntervalMs: 10_000 });
+    supervisor = newSupervisor({ defaultIntervalMs: 60_000 });
     stub.enable = () => {
       throw new Error("the provider is down");
     };
@@ -326,7 +326,7 @@ describe("TriggerSupervisor robustness", () => {
 
     dbBroken = false;
     stub.enable = () => result();
-    // Four floored minutes out, not four times the sub-floor default.
+    // Four minutes out: the backoff is measured from the interval itself.
     setClock("2026-09-04T09:02:40.000Z");
     await supervisor.tick();
     expect((await store.getTriggerState(wf))?.status).toBe("ERROR");
