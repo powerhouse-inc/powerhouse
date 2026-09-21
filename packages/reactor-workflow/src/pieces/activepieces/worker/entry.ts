@@ -175,7 +175,10 @@ async function handleResolveOptions(
 function stagedInputResolver(
   inputs: StagedInput[] | undefined,
 ): NormalizeOptions["resolveRef"] {
-  if (!inputs || inputs.length === 0) return undefined;
+  // An empty list is not the same as no list: it means the host has a store
+  // and tried, so a FILE prop that still comes up short is told which
+  // reference failed rather than that the context has no resolver.
+  if (!inputs) return undefined;
   const byRef = new Map(inputs.map((input) => [input.ref, input]));
   return async (ref: string) => {
     const staged = byRef.get(ref);
