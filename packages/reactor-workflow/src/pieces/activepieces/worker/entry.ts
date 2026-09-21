@@ -214,6 +214,9 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   const reactor = request.reactorAccess
     ? new RemoteReactorService()
     : undefined;
+  // Before the props are normalised, not after: a processor that cannot coerce
+  // says so on console.error, and the worker's stdio goes nowhere.
+  const restoreConsole = request.captureLogs ? captureConsole() : undefined;
   const { context, touched } = buildActionContext({
     propsValue: await normalizePropsValue(action.props, request.propsValue, {
       resolveRef: stagedInputResolver(request.stagedInputs),
@@ -231,7 +234,6 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
     executionType: request.executionType,
     identity: request.identity,
   });
-  const restoreConsole = request.captureLogs ? captureConsole() : undefined;
   let output: unknown;
   try {
     output = await action.run(context);
