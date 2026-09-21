@@ -924,6 +924,7 @@ async function initServer(
       // The manager that already loads this reactor's packages: the project it
       // runs in is one of them, so its own pieces arrive with the rest.
       pieces: api.packageManager,
+      pieceRegistryUrl: registryUrl,
       logger: logger.child(["workflow-runtime"]),
     });
 

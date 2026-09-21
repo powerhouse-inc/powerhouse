@@ -102,6 +102,7 @@ function fakeEngine() {
       WORKFLOW_TRIGGERS_READ_MODEL_STAGE:
         "post_ready" as ReadModelRegistrationStage,
       WorkflowTriggersReadModel: FakeWorkflowTriggersReadModel,
+      setPieceRegistryUrl: vi.fn((_url: string | undefined) => undefined),
       createWorkflowRuntime: vi.fn((_deps: Record<string, unknown>) => runtime),
     },
   };

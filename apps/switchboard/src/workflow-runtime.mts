@@ -111,6 +111,9 @@ export async function assertWorkflowPackageLoadable(
 
 export interface ComposeWorkflowRuntimeDeps {
   reactorClient: IReactorClient;
+  /** The registry this host installs packages from; pieces come from it too.
+   * Absent on a host that installs from none, and only the cloud is read. */
+  pieceRegistryUrl?: string;
   /** Where the trigger read model registers; absent leaves the intake
    * unavailable rather than quietly dropping every document trigger. */
   clientModule?: InProcessReactorClientModule;
@@ -303,6 +306,10 @@ export async function composeWorkflowRuntime(
       { cause: error },
     );
   }
+
+  // The same registry the host installs packages from, so a piece it indexes
+  // is reachable without a second setting to keep in step.
+  engine.setPieceRegistryUrl(deps.pieceRegistryUrl);
 
   // Before the runtime exists: a restored trigger asks for a piece as soon as
   // the supervisor starts, and the catalog is served from the same holder.

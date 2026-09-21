@@ -5,6 +5,7 @@ export {
   type AttachmentClientLike,
 } from "./reactor/attachment-port.js";
 export { WORKFLOW_PACKAGE_NAME } from "./reactor/package-name.js";
+export { setPieceRegistryUrl } from "./pieces/activepieces/registry-source.js";
 export { PieceRegistry, packagePieces } from "./reactor/piece-registry.js";
 export type {
   WorkflowCaller,
