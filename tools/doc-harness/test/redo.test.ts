@@ -19,8 +19,11 @@ import {
 import {
   describeRedo,
   filesToReset,
+  formatRedoRules,
   listAttemptDirs,
   parseRedoReasons,
+  pendingInstallFailures,
+  pendingRedoRules,
   redoFailedAttempts,
   redoHitsFor,
   summarizeRedo,
@@ -180,6 +183,45 @@ describe("listAttemptDirs", () => {
       "scoped-reads/A/1",
     ]);
     expect(listAttemptDirs(runLayout("nope", tmp))).toEqual([]);
+  });
+});
+
+describe("pendingRedoRules", () => {
+  it("scopes every still-failed step and skips a truncated build", () => {
+    expect(formatRedoRules(pendingRedoRules(run))).toBe(
+      "build:rate-limited,build:wall-clock,judge:budget-exhausted,judge:rate-limited,verify:wall-clock",
+    );
+  });
+
+  it("names rules that redo exactly the failed attempts", () => {
+    const result = redoFailedAttempts(run, {
+      reasons: parseRedoReasons(formatRedoRules(pendingRedoRules(run))),
+      findingsFile,
+      runsFile,
+    });
+    expect(result.reset.map((r) => `${r.taskId}/${r.arm}/${r.n}`)).toEqual([
+      "batch-progress/A/2",
+      "batch-progress/B/1",
+      "custom-read-model/A/2",
+      "custom-read-model/B/1",
+      "scoped-reads/A/1",
+    ]);
+    // batch-progress/A/1, the truncated build, is graded and judged: not a failure.
+    expect(pendingRedoRules(run)).toEqual([]);
+  });
+
+  it("is empty when nothing failed", () => {
+    expect(pendingRedoRules(runLayout("nope", tmp))).toEqual([]);
+    expect(formatRedoRules([])).toBe("");
+  });
+});
+
+describe("pendingInstallFailures", () => {
+  it("names the prepare.json of an attempt whose install failed", () => {
+    expect(pendingInstallFailures(run)).toEqual([]);
+    const layout = run.attempt("custom-read-model", "A", 1);
+    write(layout.prepareJson, JSON.stringify({ installOk: false }));
+    expect(pendingInstallFailures(run)).toEqual([layout.prepareJson]);
   });
 });
 

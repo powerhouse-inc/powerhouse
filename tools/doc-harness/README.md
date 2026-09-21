@@ -136,6 +136,13 @@ Rate-limited and contaminated attempts are excluded from pass rates.
 | `complete` | the builder finished and the workspace was graded | yes | yes | yes | no |
 | `complete` + `truncated: true` | the builder hit `--max-budget-usd` (`budget-exhausted`) but the workspace was graded and the transcript judged anyway; the report marks it and counts a passing one as a pass | yes | yes | yes | no |
 
+`run` and `resume` end by printing the exact recovery commands, to be pasted
+from `tools/doc-harness`: one `pnpm cli resume <runId> --redo-failed <rules>`
+naming every step still failed, scoped to the step it failed in
+(`build:rate-limited,judge:budget-exhausted`) so a build that only ran out of
+budget is left alone, and, for an install failure, the `rm` of each
+`prepare.json` that has to go before a plain `resume` retries it.
+
 A judge or verifier that fails does not change the attempt's status: the
 failure reason lands in `judgeFailed` and the report's `judge` column, and
 `resume --redo-failed` redoes that step alone. Killed builders report no cost;

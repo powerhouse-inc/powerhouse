@@ -16,6 +16,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { z, type ZodType } from "zod";
+import { isTruncation } from "./attempt-status.js";
 import { readEntries, writeEntries } from "./findings.js";
 import type { AttemptLayout, RunLayout } from "./paths.js";
 import {
@@ -442,4 +443,60 @@ export function summarizeRedo(result: RedoResult): string | null {
   }
   const rules = [...counts.entries()].map(([k, n]) => `${k} ${n}`).join(", ");
   return `${result.reset.length} redone (${rules})`;
+}
+
+/** Only what the install check reads; the rest of the file may predate it. */
+const PrepareResult = z.object({ installOk: z.boolean().optional() }).loose();
+
+/**
+ * The scoped rules that would redo every step of a run that is still failed,
+ * read from the same step files `redoHitsFor` matches. Scoped because a bare
+ * reason matches any step: `budget-exhausted` in a judge is a failure, but in
+ * a build it is a truncation that was graded and judged anyway.
+ */
+export function pendingRedoRules(run: RunLayout): RedoRule[] {
+  const rules = new Map<string, RedoHit>();
+  for (const id of listAttemptDirs(run)) {
+    const layout = run.attempt(id.taskId, id.arm, id.n);
+    const steps: [RedoStep, string][] = [
+      ["build", layout.buildJson],
+      ["judge", layout.judgeJson],
+      ["verify", layout.verifyJson],
+    ];
+    for (const [step, file] of steps) {
+      const reason = failureOf(file);
+      if (reason === null) continue;
+      if (step === "build" && isTruncation(reason)) continue;
+      rules.set(`${step}:${reason}`, { step, reason });
+    }
+  }
+  return [...rules.values()].sort(
+    (a, b) => byStep(a, b) || a.reason.localeCompare(b.reason),
+  );
+}
+
+/** `build:rate-limited,judge:wall-clock`, as `--redo-failed` takes them. */
+export function formatRedoRules(rules: readonly RedoRule[]): string {
+  return rules
+    .map((r) => (r.step === null ? r.reason : `${r.step}:${r.reason}`))
+    .join(",");
+}
+
+/**
+ * The prepare.json of every attempt whose install failed. `--redo-failed` has
+ * no rule for these: the file has to go before a resume retries the install.
+ */
+export function pendingInstallFailures(run: RunLayout): string[] {
+  const out: string[] = [];
+  for (const id of listAttemptDirs(run)) {
+    const layout = run.attempt(id.taskId, id.arm, id.n);
+    let prepared: z.infer<typeof PrepareResult> | null;
+    try {
+      prepared = readCached(layout.prepareJson, PrepareResult);
+    } catch {
+      continue;
+    }
+    if (prepared?.installOk === false) out.push(layout.prepareJson);
+  }
+  return out;
 }
