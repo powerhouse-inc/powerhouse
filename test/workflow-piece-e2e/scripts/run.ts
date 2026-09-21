@@ -1,5 +1,7 @@
-// Proves two chains through one fixture package built by `ph build`: its piece
-// installed into a consumer project, and served by a reactor pointed at it.
+// Proves three chains through one fixture package built by `ph build`: its
+// piece installed into a consumer project, served by a reactor pointed at the
+// package itself, and downloaded from the registry by a reactor with nothing
+// installed at all.
 import type { ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -18,10 +20,13 @@ import {
   FIXTURE_BLOCK_TYPE,
   FIXTURE_PACKAGE,
   FIXTURE_PIECE_DIR,
+  FIXTURE_PUBLISHED_BLOCK_TYPE,
   FIXTURE_VERSION,
+  waitForRegistryPiece,
 } from "./lib/fixture.js";
 import {
   createConsumerProject,
+  createEmptyProject,
   startSwitchboard,
   stopSwitchboard,
   waitForSwitchboard,
@@ -48,9 +53,14 @@ const WORK_DIR =
   process.env.PH_WORKFLOW_E2E_WORKDIR ?? "/tmp/ph-workflow-piece-e2e";
 const FIXTURE_DIR = path.join(WORK_DIR, "fixture");
 const PROJECT_DIR = path.join(WORK_DIR, "project");
+// A sibling of the project above, so nothing of the install reaches it by
+// walking up the tree.
+const REGISTRY_PROJECT_DIR = path.join(WORK_DIR, "registry-project");
 const PORT = Number(process.env.PH_WORKFLOW_E2E_PORT ?? 4021);
 // The second reactor, run against the fixture package itself.
 const FIXTURE_PORT = PORT + 1;
+// The third, which holds nothing and fetches the piece from the registry.
+const REGISTRY_PORT = PORT + 2;
 const TAG = process.env.PH_TAG ?? "dev";
 // For re-runs against a registry that is already up and already seeded.
 const REUSE_REGISTRY = process.env.PH_WORKFLOW_E2E_REUSE_REGISTRY === "1";
@@ -72,6 +82,7 @@ async function runTheGreeter(
   client: SwitchboardClient,
   checks: Checks,
   label: string,
+  blockType: string = FIXTURE_BLOCK_TYPE,
 ): Promise<string> {
   const workflowId = await createWorkflow(client, {
     name: `Greeter e2e (${label})`,
@@ -81,7 +92,7 @@ async function runTheGreeter(
         id: "step-1",
         key: "greet",
         name: "Greet",
-        blockType: FIXTURE_BLOCK_TYPE,
+        blockType,
         config: { who: WHO },
       },
     ],
@@ -106,7 +117,7 @@ async function runTheGreeter(
   checks.equal(
     `${label}: the step names the piece's block and succeeded`,
     stepRun && [stepRun.stepKey, stepRun.blockType, stepRun.status],
-    ["greet", FIXTURE_BLOCK_TYPE, "SUCCEEDED"],
+    ["greet", blockType, "SUCCEEDED"],
   );
   const output = isRecord(stepRun?.output) ? stepRun.output : {};
   checks.equal(
@@ -125,6 +136,7 @@ async function main(): Promise<void> {
   let registry: ChildProcess | undefined;
   let switchboard: SwitchboardHandle | undefined;
   let fixtureReactor: SwitchboardHandle | undefined;
+  let registryReactor: SwitchboardHandle | undefined;
 
   let shuttingDown = false;
   const shutdown = (signal: NodeJS.Signals) => {
@@ -133,6 +145,7 @@ async function main(): Promise<void> {
     console.log(`\n[cleanup] received ${signal}; tearing down`);
     stopSwitchboard(switchboard);
     stopSwitchboard(fixtureReactor);
+    stopSwitchboard(registryReactor);
     if (registry) stopRegistry(registry);
     process.exit(130);
   };
@@ -140,7 +153,7 @@ async function main(): Promise<void> {
   process.on("SIGTERM", shutdown);
 
   try {
-    step("1/7 Start the local registry");
+    step("1/8 Start the local registry");
     if (REUSE_REGISTRY) {
       console.log(`reusing the registry already serving ${REGISTRY_URL}`);
     } else {
@@ -156,14 +169,14 @@ async function main(): Promise<void> {
     }
     const token = await createTestUser();
 
-    step("2/7 Publish the workspace packages");
+    step("2/8 Publish the workspace packages");
     if (REUSE_REGISTRY) {
       console.log("skipped (PH_WORKFLOW_E2E_REUSE_REGISTRY=1)");
     } else {
       await publishWorkspacePackages({ workspaceRoot: WORKSPACE_ROOT });
     }
 
-    step("3/7 Generate, build and publish the fixture reactor package");
+    step("3/8 Generate, build and publish the fixture reactor package");
     const fixture = buildAndPublishFixture({
       source: path.join(ROOT, "fixture-piece"),
       parent: FIXTURE_DIR,
@@ -172,7 +185,7 @@ async function main(): Promise<void> {
       tag: TAG,
     });
 
-    step("4/7 Install switchboard and the fixture into a consumer project");
+    step("4/8 Install switchboard and the fixture into a consumer project");
     createConsumerProject({
       dir: PROJECT_DIR,
       phCli: PH_CLI,
@@ -180,8 +193,11 @@ async function main(): Promise<void> {
       fixtureSpec: `${FIXTURE_PACKAGE}@${FIXTURE_VERSION}`,
       tag: TAG,
     });
+    // And a project that installs nothing, for the reactor that has to fetch
+    // the piece from the registry to run it.
+    createEmptyProject(REGISTRY_PROJECT_DIR, REGISTRY_URL);
 
-    step("5/7 Start switchboard with workflows enabled");
+    step("5/8 Start switchboard with workflows enabled");
     switchboard = startSwitchboard({ dir: PROJECT_DIR, port: PORT });
     // The same binary, run against the package that ships the piece rather
     // than a project that installed it. Started now so the boots overlap.
@@ -190,11 +206,18 @@ async function main(): Promise<void> {
       port: FIXTURE_PORT,
       bin: path.join(PROJECT_DIR, "node_modules/.bin/switchboard"),
     });
+    // And the same binary again, in the empty project, which names the local
+    // registry in its config and installs nothing from it.
+    registryReactor = startSwitchboard({
+      dir: REGISTRY_PROJECT_DIR,
+      port: REGISTRY_PORT,
+      bin: path.join(PROJECT_DIR, "node_modules/.bin/switchboard"),
+    });
     await waitForSwitchboard(switchboard, 180_000);
     const client = new SwitchboardClient(switchboard.url);
     console.log(`workflow runtime health: ${await runtimeHealth(client)}`);
 
-    step("6/7 Check the chain through the consumer project");
+    step("6/8 Check the chain through the consumer project");
     const checks = new Checks();
 
     console.log("\nthe build");
@@ -312,7 +335,7 @@ async function main(): Promise<void> {
       () => `ran from ${ranFrom}`,
     );
 
-    step("7/7 Check the same package served as the project itself");
+    step("7/8 Check the same package served as the project itself");
     await waitForSwitchboard(fixtureReactor, 180_000);
     const ownClient = new SwitchboardClient(fixtureReactor.url);
     console.log(
@@ -355,9 +378,121 @@ async function main(): Promise<void> {
         `ran from ${ownRanFrom || "(no moduleUrl in the output)"}, expected a path under ${fs.realpathSync(fixture.dir)}`,
     );
 
+    step("8/8 Check the same piece served by the registry, nothing installed");
+    await waitForSwitchboard(registryReactor, 180_000);
+    const registryClient = new SwitchboardClient(registryReactor.url);
+    console.log(
+      `workflow runtime health: ${await runtimeHealth(registryClient)} (registry source)`,
+    );
+
+    console.log("\nnothing installed");
+    const emptyModules = path.join(REGISTRY_PROJECT_DIR, "node_modules");
+    checks.ok(
+      "the project this reactor serves installed nothing at all",
+      !fs.existsSync(emptyModules),
+      () => `${emptyModules} exists, so the run would not prove the download`,
+    );
+    checks.ok(
+      "and the fixture package is nowhere in the workspace either",
+      !fs.existsSync(inWorkspace),
+      () => `${inWorkspace} exists, so the run would not prove the download`,
+    );
+    const emptyConfig = JSON.parse(
+      fs.readFileSync(
+        path.join(REGISTRY_PROJECT_DIR, "powerhouse.config.json"),
+        "utf8",
+      ),
+    ) as { packages?: unknown[] };
+    checks.equal(
+      "its powerhouse.config.json names no packages",
+      emptyConfig.packages ?? [],
+      [],
+    );
+
+    console.log("\nthe registry");
+    const served = await waitForRegistryPiece(FIXTURE_PACKAGE);
+    checks.equal(
+      "the registry serves the piece on its own, out of the package that ships it",
+      [served.name, served.version, served.package, served.actions],
+      [FIXTURE_PACKAGE, FIXTURE_VERSION, FIXTURE_PACKAGE, 1],
+    );
+
+    console.log("\nthe catalog");
+    const fetchedCatalog = await pieceCatalog(registryClient);
+    const fetchedEntry = fetchedCatalog.find(
+      (piece) => piece.name === FIXTURE_PACKAGE,
+    );
+    checks.ok(
+      "pieceCatalog carries a piece this reactor never installed",
+      fetchedEntry !== undefined,
+      () =>
+        `catalog held ${JSON.stringify(fetchedCatalog.map((p) => p.name).slice(0, 10))}`,
+    );
+    checks.equal(
+      "described from the registry's listing",
+      fetchedEntry && [
+        fetchedEntry.displayName,
+        fetchedEntry.version,
+        fetchedEntry.actionCount,
+        fetchedEntry.triggerCount,
+      ],
+      ["E2E Greeter", FIXTURE_VERSION, 1, 0],
+    );
+
+    const fetchedSearch = await searchBlocksWhenReady(registryClient, "greet");
+    const fetchedHit = fetchedSearch.hits.find(
+      (h) => h.pieceName === FIXTURE_PACKAGE,
+    );
+    checks.ok(
+      "searchBlocks finds the piece's action",
+      fetchedHit !== undefined,
+      () =>
+        `status=${fetchedSearch.status}, hits=${JSON.stringify(fetchedSearch.hits.map((h) => h.blockType))}`,
+    );
+    // A piece nobody installed is pinned by the version the block type names,
+    // the way every published piece is.
+    checks.equal(
+      "and offers it at the published version",
+      fetchedHit && [
+        fetchedHit.kind,
+        fetchedHit.blockType,
+        fetchedHit.displayName,
+      ],
+      ["action", FIXTURE_PUBLISHED_BLOCK_TYPE, "Greet"],
+    );
+
+    console.log("\nthe run");
+    const fetchedRanFrom = await runTheGreeter(
+      registryClient,
+      checks,
+      "registry",
+      FIXTURE_PUBLISHED_BLOCK_TYPE,
+    );
+    const cachedBundle = path.join(
+      fs.realpathSync(REGISTRY_PROJECT_DIR),
+      ".ph",
+      "ap-bundles",
+      `${FIXTURE_PACKAGE}-${FIXTURE_VERSION}`,
+    );
+    checks.ok(
+      "the piece ran from the bundle the engine downloaded and cached",
+      fetchedRanFrom.startsWith(cachedBundle + path.sep),
+      () =>
+        `ran from ${fetchedRanFrom || "(no moduleUrl in the output)"}, expected a path under ${cachedBundle}`,
+    );
+    checks.ok(
+      "not from a copy installed anywhere",
+      !fetchedRanFrom.includes(`${path.sep}node_modules${path.sep}`),
+      () => `ran from ${fetchedRanFrom}`,
+    );
+
     checks.report();
     console.log("\n✅ test-workflow-piece-e2e: all green\n");
   } finally {
+    if (registryReactor) {
+      console.log("\n[cleanup] stop the registry-sourced switchboard");
+      stopSwitchboard(registryReactor);
+    }
     if (fixtureReactor) {
       console.log("\n[cleanup] stop the fixture-package switchboard");
       stopSwitchboard(fixtureReactor);
