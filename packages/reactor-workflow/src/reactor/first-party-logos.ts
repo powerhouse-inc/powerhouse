@@ -1,5 +1,0 @@
-// Logos for pieces we publish ourselves, inlined the way the editor shim
-// already inlines the core piece: a first-party piece has no entry on the
-// Activepieces logo CDN, and the catalog is served to the browser.
-export const PAPERLESS_LOGO =
-  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iIzE3NTQxZiIvPjxwYXRoIGQ9Ik0xNCAxMGgxM2w3IDd2MjFhMiAyIDAgMCAxLTIgMkgxNmEyIDIgMCAwIDEtMi0yVjEyYTIgMiAwIDAgMSAyLTJ6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTI3IDEwbDcgN2gtN3oiIGZpbGw9IiM5ZmQzYTYiLz48ZyBmaWxsPSIjMTc1NDFmIj48cmVjdCB4PSIxOCIgeT0iMjIiIHdpZHRoPSIxNiIgaGVpZ2h0PSIyIiByeD0iMSIvPjxyZWN0IHg9IjE4IiB5PSIyNyIgd2lkdGg9IjE2IiBoZWlnaHQ9IjIiIHJ4PSIxIi8+PHJlY3QgeD0iMTgiIHk9IjMyIiB3aWR0aD0iMTAiIGhlaWdodD0iMiIgcng9IjEiLz48L2c+PC9zdmc+";

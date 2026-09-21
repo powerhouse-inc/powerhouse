@@ -7,8 +7,7 @@ import {
   __resetCatalogCacheForTests,
 } from "./piece-catalog.js";
 
-// The catalog fetcher uses global fetch; stub it per test. The first-party
-// merge must not depend on the cloud at all when the cloud is empty.
+// The catalog fetcher uses global fetch; stub it per test.
 function stubCatalog(entries: unknown[]) {
   vi.stubGlobal("fetch", ((input: unknown) => {
     expect(String(input)).toContain("cloud.activepieces.com/api/v1/pieces");
@@ -27,32 +26,9 @@ afterEach(() => {
   setPieceRegistryUrl(undefined);
 });
 
-it("lists the first-party docling piece when the cloud catalog lacks it", async () => {
+it("is empty when no source lists anything", async () => {
   stubCatalog([]);
-  const catalog = await fetchPieceCatalog();
-  const docling = catalog.find(
-    (p) => p.name === "@powerhousedao/piece-docling",
-  );
-  expect(docling?.displayName).toBe("Docling");
-  expect(docling?.actionCount).toBe(6);
-  expect(docling?.triggerCount).toBe(0);
-  expect(docling?.auth).toMatchObject({ type: "CUSTOM_AUTH" });
-});
-
-it("prefers the cloud entry when the same short name exists upstream", async () => {
-  stubCatalog([
-    {
-      name: "@activepieces/piece-docling",
-      version: "0.1.0",
-      actions: 6,
-      triggers: 0,
-      auth: { type: "CUSTOM_AUTH" },
-    },
-  ]);
-  const catalog = await fetchPieceCatalog();
-  const matches = catalog.filter((p) => p.name.includes("piece-docling"));
-  expect(matches).toHaveLength(1);
-  expect(matches[0]?.name).toBe("@activepieces/piece-docling");
+  expect(await fetchPieceCatalog()).toEqual([]);
 });
 
 it("keeps server-only pieces filtered", async () => {
