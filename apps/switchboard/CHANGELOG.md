@@ -1,3 +1,17 @@
+## 6.2.3-dev.18 (2026-09-21)
+
+### 🚀 Features
+
+- **workflow:** read pieces from a Powerhouse registry ([f1467e0b0](https://github.com/powerhouse-inc/powerhouse/commit/f1467e0b0))
+
+### 🩹 Fixes
+
+- **switchboard:** load the workflow package like any other package ([7629bf71f](https://github.com/powerhouse-inc/powerhouse/commit/7629bf71f))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.17 (2026-09-21)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.

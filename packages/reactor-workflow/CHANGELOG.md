@@ -1,3 +1,18 @@
+## 6.2.3-dev.18 (2026-09-21)
+
+### 🚀 Features
+
+- **workflow:** drop the hand-written first-party catalog entries ([86d0f244b](https://github.com/powerhouse-inc/powerhouse/commit/86d0f244b))
+- **workflow:** read pieces from a Powerhouse registry ([f1467e0b0](https://github.com/powerhouse-inc/powerhouse/commit/f1467e0b0))
+
+### 🩹 Fixes
+
+- **workflow:** hand a piece the JSON it cannot parse, instead of nothing ([4aa10a946](https://github.com/powerhouse-inc/powerhouse/commit/4aa10a946))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.17 (2026-09-21)
 
 This was a version bump only for @powerhousedao/reactor-workflow to align it with other projects, there were no code changes.

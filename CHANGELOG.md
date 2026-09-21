@@ -1,3 +1,19 @@
+## 6.2.3-dev.18 (2026-09-21)
+
+### 🚀 Features
+
+- **workflow:** read pieces from a Powerhouse registry ([f1467e0b0](https://github.com/powerhouse-inc/powerhouse/commit/f1467e0b0))
+- **workflow:** drop the hand-written first-party catalog entries ([86d0f244b](https://github.com/powerhouse-inc/powerhouse/commit/86d0f244b))
+
+### 🩹 Fixes
+
+- **switchboard:** load the workflow package like any other package ([7629bf71f](https://github.com/powerhouse-inc/powerhouse/commit/7629bf71f))
+- **workflow:** hand a piece the JSON it cannot parse, instead of nothing ([4aa10a946](https://github.com/powerhouse-inc/powerhouse/commit/4aa10a946))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.17 (2026-09-21)
 
 ### 🚀 Features
