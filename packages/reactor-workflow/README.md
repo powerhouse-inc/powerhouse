@@ -122,6 +122,15 @@ Environment:
 - `WORKFLOW_EGRESS_ALLOW_ADDRESSES` — comma-separated CIDRs a piece may reach.
   The default policy refuses private and loopback addresses; a suite that talks
   to a local mock service widens it.
+Pieces are also read from the registry the host installs packages from —
+`packageRegistryUrl` in `powerhouse.config.json`, or `PH_REGISTRY_URL`. It
+serves the same list, detail and bundle endpoints cloud.activepieces.com and
+its CDN do, and is read ahead of both: its listing merges into the catalog and
+into block search, and its tarball is the first download source tried. A host
+that installs packages from no registry reads the Activepieces CDN and npm
+only. There is no second setting: a package installed from that registry
+already ships pieces that run in the worker, so a bundle fetched from it is no
+more trusted than one that arrived inside a package.
 
 ## Design documents
 

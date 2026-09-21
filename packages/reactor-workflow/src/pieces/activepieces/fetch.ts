@@ -3,6 +3,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { gunzip as gunzipCb } from "node:zlib";
+import { pieceRegistrySource } from "./registry-source.js";
 
 const gunzip = promisify(gunzipCb);
 
@@ -96,9 +97,12 @@ export interface FetchPieceBundleOptions {
   timeoutMs?: number;
 }
 
+/** Where a bundle came from, "cache" being a copy one of the others left. */
+export type BundleSource = "registry" | "cdn" | "npm";
+
 export interface FetchedBundle {
   dir: string;
-  source: "cdn" | "npm" | "cache";
+  source: BundleSource | "cache";
 }
 
 // Bounds the transfer before gunzip: rejects an over-limit Content-Length up
@@ -132,15 +136,33 @@ async function readBoundedBody(
   return Buffer.concat(chunks);
 }
 
+// A Powerhouse registry this deployment allowed comes first, so a piece it
+// serves is not shadowed by an Activepieces piece of the same name.
+function tarballSources(
+  name: string,
+  version: string,
+): { source: BundleSource; url: string }[] {
+  const registry = pieceRegistrySource();
+  return [
+    ...(registry
+      ? [
+          {
+            source: "registry" as const,
+            url: registry.tarballUrl(name, version),
+          },
+        ]
+      : []),
+    { source: "cdn" as const, url: cdnTarballUrl(name, version) },
+    { source: "npm" as const, url: npmTarballUrl(name, version) },
+  ];
+}
+
 async function downloadTarball(
   name: string,
   version: string,
   timeoutMs: number,
-): Promise<{ tgz: Buffer; source: "cdn" | "npm" }> {
-  const sources: { source: "cdn" | "npm"; url: string }[] = [
-    { source: "cdn", url: cdnTarballUrl(name, version) },
-    { source: "npm", url: npmTarballUrl(name, version) },
-  ];
+): Promise<{ tgz: Buffer; source: BundleSource }> {
+  const sources = tarballSources(name, version);
   let lastError: unknown;
   for (const { source, url } of sources) {
     try {
