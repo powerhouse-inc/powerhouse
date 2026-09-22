@@ -201,7 +201,7 @@ These six core fields are `IProcessorHostModuleBase` in `@powerhousedao/shared`.
 
 ## Catch-up and ordering
 
-Each processor has a **cursor** that records the highest operation `ordinal` it has handled. The manager tracks this per processor as `TrackedProcessor`:
+Each processor has a **cursor**, `lastOrdinal`: the highest operation `ordinal` it has taken, pulled back below any batch it failed to take. The manager tracks this per processor as `TrackedProcessor`:
 
 ```typescript
 type TrackedProcessor = {
@@ -218,20 +218,20 @@ type TrackedProcessor = {
 };
 ```
 
-**Ordering.** Operations arrive sorted by global ordinal. On each batch the manager filters to operations with `ordinal > lastOrdinal`, applies the filter, and calls `onOperations` on the matches. On success it advances `lastOrdinal` to the maximum ordinal in the batch (including unmatched operations), so the cursor moves forward even when nothing matched.
+**Ordering.** Batches reach the manager one document at a time, and different documents are projected in parallel, so a processor is not called in global ordinal order: a call may carry an ordinal lower than one an earlier call carried, and calls for different documents may overlap. Within one document's scope and branch, operations arrive in order. On each batch the manager applies the filter and calls `onOperations` on the matches a backfill has not already delivered. On success it raises `lastOrdinal` to the batch's maximum ordinal (including unmatched operations) when that is higher; a later batch never lowers it. Delivery is at-least-once for operations the manager has indexed: after a restart a processor may see an operation again. A crash between two concurrently projected documents, after the higher ordinal's cursor was persisted, can leave the lower ordinals unreplayed.
 
 **`startFrom`.** When a processor is first created and no cursor row exists yet:
 
 - `"beginning"` (the default) starts the cursor at ordinal 0, so the processor backfills the drive's full history.
-- `"current"` starts the cursor at the manager's current ordinal, so the processor sees only operations from now on.
+- `"current"` starts the cursor just below the drive's creation when the processor is created from the drive's creation batch, and at the manager's current ordinal when a late `registerFactory` creates it, so the processor sees only its drive's history or only what comes next.
 
 `startFrom` applies **only on first creation**. Once a cursor row exists, it is ignored — the persisted cursor wins. Restarting the reactor never re-runs `startFrom`.
 
-**Backfill and replay.** When a processor's `lastOrdinal` is behind the manager, the manager pages through history with `operationIndex.getSinceOrdinal(lastOrdinal)`, filters each page, calls `onOperations`, advances the cursor to the page's max ordinal, persists it, and follows the continuation until exhausted. This runs when a factory registers against a drive that already has history, and after a restart to replay anything missed while the reactor was down.
+**Backfill and replay.** When a processor's `lastOrdinal` is behind the manager, the manager pages through history with `operationIndex.getSinceOrdinal(lastOrdinal)`, filters each page, calls `onOperations`, advances the cursor to the page's max ordinal, persists it, and follows the continuation until exhausted. This runs when a factory registers against a drive that already has history, and after a restart to replay anything missed while the reactor was down. Backfill runs outside the manager's lock, so other documents keep indexing; live batches for a processor that is backfilling are held and routed once it finishes, against what the backfill delivered, so none is lost or repeated.
 
 **Persistence.** Cursors are stored in the `ProcessorCursor` table, keyed by `processorId`, and survive restarts. On startup the manager rehydrates every cursor, then catch-up replays the gap.
 
-**Failure isolation.** Processors run in parallel, each in its own try/catch. If `onOperations` throws, that processor goes to `status: "errored"`, its `lastError` and `lastErrorTimestamp` are recorded, and its cursor stops advancing. Other processors are unaffected. There is no automatic retry: an errored processor stays errored and is skipped on later batches until you call `tracked.retry()` (which re-activates it and re-runs backfill) or re-register its factory. See [Error handling](/academy/Reference/Reactor/ErrorHandling).
+**Failure isolation.** Processors run in parallel, each in its own try/catch. If `onOperations` throws, that processor goes to `status: "errored"`, its `lastError` and `lastErrorTimestamp` are recorded, and its cursor is set below the lowest ordinal of the batch that failed. Other processors are unaffected. There is no automatic retry: an errored processor stays errored, and later batches that match it are skipped and pull its cursor below them likewise, until you call `tracked.retry()` (which re-activates it and replays from the cursor) or re-register its factory. See [Error handling](/academy/Reference/Reactor/ErrorHandling).
 
 To inspect state, use the manager: `get(processorId)` for one processor or `getAll()` for every tracked processor across all drives.
 

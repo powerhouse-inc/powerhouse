@@ -65,10 +65,12 @@ export interface IProcessor {
    * Processes a list of operations with context.
    * Called when operations match this processor's filter.
    *
-   * Delivery is at-least-once and is not ordered by ordinal across documents:
-   * a call may carry an ordinal lower than one an earlier call carried, and an
-   * operation may be delivered again after a restart. Ordinals within one
-   * document's scope and branch arrive in order.
+   * Delivery is at-least-once for operations the manager has indexed: after
+   * a restart a processor may see an operation again. Calls are not ordered
+   * by ordinal across documents and may overlap across documents; within one
+   * document's scope and branch, operations arrive in order. A crash between
+   * two concurrently projected documents, after the higher ordinal's cursor
+   * was persisted, can leave the lower ordinals unreplayed.
    */
   onOperations(operations: OperationWithContext[]): Promise<void>;
 
