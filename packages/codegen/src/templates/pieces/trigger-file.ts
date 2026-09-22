@@ -24,8 +24,10 @@ const fetchRecords = (v: PieceTriggerTemplateArgs) =>
     path: "records",
     query: { ordering: "-created" },
   });`
-    : `  const documents = await reactorOf(context).find({ limit: 50 });
-  const records = documents.map((document) => ({ id: document.documentId }));`;
+    : `  // What this trigger watches, reached without credentials. Replace the
+  // call; what the cursor below needs is a stable id on each record.
+  const response = await fetch("https://example.com/records");
+  const records = (await response.json()) as { id: string }[];`;
 
 const pollingBody = (v: PieceTriggerTemplateArgs) => `
 // One cursor per workflow: the host serves ctx.store at FLOW scope, so two
@@ -125,11 +127,7 @@ ${webhookRegistration(v)}
 
 export const pieceTriggerFileTemplate = (v: PieceTriggerTemplateArgs) => {
   const polling = v.strategy === "polling";
-  const framework = [
-    "createTrigger",
-    "TriggerStrategy",
-    polling && !v.withAuth ? "reactorOf" : undefined,
-  ].filter((name) => name !== undefined);
+  const framework = ["createTrigger", "TriggerStrategy"];
   const imports = [
     `import { ${framework.join(", ")} } from "${PIECES_FRAMEWORK_PACKAGE}";`,
     v.withAuth
