@@ -34,6 +34,8 @@
 - [01-sync-and-collaborate](https://academy.vetra.io/academy/Learn/sync/sync-and-collaborate): So far your Todo document lives in a single Reactor in a single tab. This lesson makes it collaborative: open it in two browsers, take one offline, an
 - [01-reducers-in-depth](https://academy.vetra.io/academy/Learn/deep-dives/reducers-in-depth): Reducers are the one part of a <Term>Powerhouse</Term> app that _must_ be pure. Everything downstream — sync, replay, undo, audit — assumes that runni
 - [02-identity-and-signing](https://academy.vetra.io/academy/Learn/deep-dives/identity-and-signing): You've seen that a document _is_ its operation log, and that the log is what syncs between peers. That raises a question every collaborative system ha
+- [01-what-are-workflows](https://academy.vetra.io/academy/Learn/workflows/what-are-workflows): You've seen two ways to make a Powerhouse system react to something. An editor reacts to a person. A processor reacts to the operation log — but it's 
+- [02-pieces-and-connections](https://academy.vetra.io/academy/Learn/workflows/pieces-and-connections): A workflow step doesn't contain code. It names a block type — one action, belonging to one piece — and carries the configuration that action needs.
 
 ## Reference
 
@@ -121,6 +123,8 @@
 - [Relational database processor](https://academy.vetra.io/academy/Build/WorkWithData/RelationalDbProcessor): In this chapter you'll implement a Todo-List relational database processor. This processor receives operations from the reactor and can use resultingS
 - [Hosting HTTP routes](https://academy.vetra.io/academy/Build/WorkWithData/HostingHttpRoutes): A package can serve HTTP endpoints of its own on the reactor, alongside the GraphQL API. You register routes in code against a http scope the host han
 - [Receiving webhooks](https://academy.vetra.io/academy/Build/WorkWithData/ReceivingWebhooks): A webhook endpoint is how a third-party provider (GitHub, Stripe, Slack, a payment gateway) delivers an event into your package. You register one endp
+- [Building a piece](https://academy.vetra.io/academy/Build/WorkWithData/BuildingAPiece): A piece is a connector a workflow can call: a named bundle of actions (things a step does) and triggers (things that start a run). If you haven't met 
+- [Authoring workflows outside Connect](https://academy.vetra.io/academy/Build/WorkWithData/AuthoringWorkflows): Workflow Studio is how a person builds a workflow. This page is how a program does it — a seed script that sets an environment up, an integration test
 - [Publish your package](https://academy.vetra.io/academy/Build/Launch/PublishYourProject): This guide assumes familiarity with building document models in Vetra Studio. Please start with the Manual Todo tutorial or the Document Model Creatio
 - [Setup your environment](https://academy.vetra.io/academy/Build/Launch/SetupEnvironment): This guide sets up the Powerhouse CLI and configures a server machine to run Powerhouse services, for both development and production deployment.
 - [Configure your environment](https://academy.vetra.io/academy/Build/Launch/ConfigureEnvironment): After successfully setting up your server and installing the Powerhouse services using the ph service setup command as described in the Setup Environm

@@ -226,6 +226,63 @@ DOCUMENT_PERMISSIONS_ENABLED=true
 
 For a complete understanding of how authorization (authentication, admin access, and document protection) works, please refer to the full [Authorization guide](/academy/Build/BuildingUserExperiences/Authorization/Authorization).
 
+## Configuring workflows
+
+Workflows have two halves, switched on independently, and both live in the same
+`powerhouse.config.json`:
+
+```json
+{
+  "workflows": { "enabled": true },
+  "connect": { "app": { "workflowsEnabled": true } }
+}
+```
+
+`workflows.enabled` starts the workflow runtime inside **Switchboard** — trigger
+watching, runs, step execution. `connect.app.workflowsEnabled` makes **Connect**
+load Workflow Studio and the workflow and connection editors. A headless reactor
+needs only the first; a Connect that browses workflows running elsewhere needs
+only the second. Both default to off.
+
+Or via env vars:
+
+```bash
+PH_WORKFLOWS_ENABLED=true
+```
+
+Connect's half has no env var — set it in the config, or pass
+`ph connect build --workflows true`.
+
+Beyond the switch, the runtime reads a handful of `PH_WORKFLOWS_*` variables for
+things an operator tunes: run concurrency, poll and webhook intervals, the
+file-size ceiling, and the two below. Each is declared with its type, default and
+purpose in the `config` block of the `@powerhousedao/workflow` package manifest,
+which is the list to read rather than a copy of it here.
+
+Two are worth naming, because leaving them out fails in ways that are hard to
+diagnose:
+
+```bash
+# 32 bytes of hex encrypting stored connection secrets. Unset, the runtime
+# generates a key next to its working directory — so a host that does not keep
+# that directory comes back unable to read the secrets it stored.
+PH_WORKFLOWS_SECRETS_MASTER_KEY=<64 hex chars>
+
+# Addresses a piece may reach, widening a policy that refuses private and
+# loopback space by default. Without it a step pointed at a service on your own
+# machine or network fails to connect.
+PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES=127.0.0.1/32,::1/128
+```
+
+:::note Variable names changed
+These names carry the `PH_WORKFLOWS_` prefix as of the release that introduced
+it. Earlier releases read them unprefixed — `PH_SECRETS_MASTER_KEY`,
+`WORKFLOW_EGRESS_ALLOW_ADDRESSES`, `WORKFLOW_RUN_CONCURRENCY` and so on — with
+no fallback, so check which your installed version expects if a setting appears
+to be ignored. The `config` block of the installed package's manifest is
+authoritative for the version you actually have.
+:::
+
 ## Applying your changes
 
 Regardless of which method you use to update your configuration, the changes will not be applied until the service that consumes them restarts (or, in the case of the running SPA, the page is refreshed and re-fetches `/powerhouse.config.json`).

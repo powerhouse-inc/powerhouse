@@ -27,6 +27,14 @@ export const glossary: Record<string, string> = {
     "A modular GraphQL schema unit in Switchboard that exposes a slice of document data, composed with others into the full API.",
   vetra:
     "A Powerhouse platform for hosting remote drives, enabling collaborative development and document synchronization across a team.",
+  workflow:
+    "Automation assembled from blocks rather than written in code: a trigger and a graph of steps, stored as a Powerhouse document and run by the reactor.",
+  piece:
+    "A connector a workflow calls — a named bundle of actions and triggers, each declaring the properties it takes and the shape of what it returns.",
+  block:
+    "One action or trigger belonging to a piece, named by a workflow step as '<piece>#<action>' — plus a version for a piece that came from a registry.",
+  connection:
+    "A document holding one credential a workflow step authenticates with, referenced by id so the secret never travels in the workflow itself.",
 };
 
 /** Looks up a definition by canonical name, case-insensitively. */
