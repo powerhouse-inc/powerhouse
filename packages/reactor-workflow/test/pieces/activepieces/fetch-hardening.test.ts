@@ -34,8 +34,8 @@ function tarball(files: Record<string, string>): Buffer {
 
 const manifest = JSON.stringify({ name: "fixture", version: "1.0.0" });
 
-// What a pre-0.86 Activepieces bundle looks like: code that cannot run until
-// someone installs what it names.
+// A bundle that names code it does not carry. Age is incidental: their bundler
+// still externalises what esbuild cannot trace, at any version.
 const dependentManifest = JSON.stringify({
   name: "fixture",
   version: "1.0.0",
@@ -106,22 +106,31 @@ describe("ensurePieceBundle hardening", () => {
     expect(bundle.source).toBe("cdn");
   });
 
-  it("refuses a bundle that declares dependencies, and says what to pin", async () => {
+  it("refuses a bundle that declares dependencies, and says why", async () => {
     serve(tarball({ "package.json": dependentManifest }));
     await expect(
       ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
     ).rejects.toThrow(
-      /@scope\/fixture@1\.0\.0 is not self-contained: it declares a dependency \(@zip\.js\/zip\.js@2\.8\.15\)\..*Pin @scope\/fixture at or above its first self-contained release/,
+      /@scope\/fixture@1\.0\.0 is not self-contained: it declares a dependency \(@zip\.js\/zip\.js@2\.8\.15\)\..*declares no dependencies at all/s,
     );
   });
 
-  // The release number is theirs; a piece from a Powerhouse registry would be
-  // sent chasing a version that means nothing to it.
-  it("names the Activepieces release only for an Activepieces piece", async () => {
+  it("asks for no pin, because the check compares no versions", async () => {
+    serve(tarball({ "package.json": dependentManifest }));
+    // The gate is zero declared dependencies or nothing, and a piece whose
+    // bundler externalised one declares it at every release it has.
+    await expect(
+      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
+    ).rejects.toThrow(/^(?!.*\bpin\b)(?=.*cannot run here at any version)/is);
+  });
+
+  // The number is their platform's, and has to read that way: piece semver
+  // runs far behind it, and text-helper's newest release is 0.6.6.
+  it("names the Activepieces release as their platform's, and only to them", async () => {
     serve(tarball({ "package.json": dependentManifest }));
     await expect(
       ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
-    ).rejects.toThrow(/^(?!.*Activepieces bundles)/s);
+    ).rejects.toThrow(/^(?!.*0\.86\.0)/s);
 
     serve(tarball({ "package.json": dependentManifest }));
     await expect(
@@ -131,7 +140,7 @@ describe("ensurePieceBundle hardening", () => {
         cacheDir,
       }),
     ).rejects.toThrow(
-      /Activepieces bundles have been self-contained since 0\.86\.0\./,
+      /their platform 0\.86\.0 or later.*not this package's own version/s,
     );
   });
 

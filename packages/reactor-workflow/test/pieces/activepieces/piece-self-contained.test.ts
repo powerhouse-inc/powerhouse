@@ -31,8 +31,8 @@ describe.skipIf(!online)("ensurePieceBundle", () => {
     );
   });
 
-  // Published before Activepieces inlined dependencies, so its code cannot
-  // run without the install this engine no longer performs.
+  // This one predates their inlining, but age is not what the check reads: a
+  // dependency their bundler externalises is declared at every version there is.
   it("refuses a published bundle that still declares dependencies", async () => {
     await expect(
       ensurePieceBundle({
