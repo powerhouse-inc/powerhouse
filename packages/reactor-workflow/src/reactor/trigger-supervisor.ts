@@ -302,12 +302,13 @@ export class TriggerSupervisor {
     blockType: string,
     config: unknown,
     message: string,
+    retryAt?: Date,
   ): Promise<void> {
     this.bindings.delete(workflowId);
     this.enabledOk.delete(workflowId);
     this.enableRetries.delete(workflowId);
     return this.enqueue(() =>
-      this.recordRejection(workflowId, blockType, config, message),
+      this.recordRejection(workflowId, blockType, config, message, retryAt),
     );
   }
 
@@ -316,21 +317,37 @@ export class TriggerSupervisor {
     blockType: string,
     config: unknown,
     message: string,
+    retryAt?: Date,
   ): Promise<void> {
     const store = await this.options.store();
     if (!store) return;
+    const hash = configHash(blockType, config);
     const existing = await store.getTriggerState(workflowId);
+    // An ENABLED row for this very config is a registration a previous process
+    // made and this one cannot see: the binding it would take to call
+    // onDisable is the thing that could not be resolved.
+
+    // Turning it ERROR would strand it. enable() reads a non-ENABLED row as
+    // "not a republish", wipes the piece store with it -- the _webhook_id
+    // included -- and the next onEnable subscribes a second time at the
+    // provider while the first goes on delivering to nobody.
+    if (existing?.status === "ENABLED" && existing.config_hash === hash) {
+      logger.warn(
+        `Workflow ${workflowId} could not be resolved, and its trigger row is left as it stands: a registration from before this reactor started is presumed live, and releasing it needs the binding that would not resolve. ${message}`,
+      );
+      return;
+    }
     await store.upsertTriggerState({
       workflow_id: workflowId,
       block_type: blockType,
-      config_hash: configHash(blockType, config),
+      config_hash: hash,
       status: "ERROR",
       store_state: VESTIGIAL_STORE_STATE,
       // What it would poll at, once it resolves to something that can.
       interval_ms: this.defaultIntervalMs,
-      // No retry time: nothing here changes on its own, and installing the
-      // package or editing the workflow re-registers rather than waiting.
-      next_poll_at: null,
+      // Set only when somebody is coming back for it: an absent piece changes
+      // nothing on its own, and installing it re-registers rather than waiting.
+      next_poll_at: retryAt?.toISOString() ?? null,
       last_poll_at: existing?.last_poll_at ?? null,
       last_error: message,
       consecutive_failures: (existing?.consecutive_failures ?? 0) + 1,

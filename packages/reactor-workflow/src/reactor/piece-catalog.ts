@@ -120,10 +120,23 @@ interface Cached<T> {
   expiresAt: number;
 }
 
+// Carries the status, so a caller can tell "this source has no such piece"
+// from "this source did not answer". A transport failure throws something
+// else, which is the same distinction from the other side.
+export class CatalogStatusError extends Error {
+  constructor(
+    url: string,
+    readonly status: number,
+  ) {
+    super(`${url} responded ${status}`);
+    this.name = "CatalogStatusError";
+  }
+}
+
 async function fetchJson(url: string, timeoutMs = 30_000): Promise<unknown> {
   const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
   if (!response.ok) {
-    throw new Error(`${url} responded ${response.status}`);
+    throw new CatalogStatusError(url, response.status);
   }
   return response.json();
 }
@@ -245,12 +258,22 @@ export async function fetchPieceCatalog(): Promise<PieceSummary[]> {
 
 // One piece's detail: the configured registry answers for its own pieces, and
 // anything it does not have comes from the cloud.
+// Only a 404 is the configured registry saying it does not serve that name.
+
+// Anything else -- a 500, a timeout, a refused connection -- is the registry
+// failing to answer, and falling through on that would quietly hand a name the
+// deployment reserved for its own registry to the public cloud instead.
+function registrySilentOn(error: unknown): boolean {
+  return error instanceof CatalogStatusError && error.status === 404;
+}
+
 async function fetchPieceJson(packageName: string): Promise<unknown> {
   const source = pieceRegistrySource();
   if (source) {
     try {
       return await fetchJson(source.pieceUrl(packageName));
     } catch (error) {
+      if (!registrySilentOn(error)) throw error;
       logger.debug(
         `${source.baseUrl} does not serve "${packageName}": ${String(error)}`,
       );

@@ -74,11 +74,22 @@ const seedDescriptor = (version: string) =>
     service as unknown as { descriptors: Map<string, PieceDescriptor> }
   ).descriptors.set(`${PIECE}@${version}`, descriptor);
 
+// A source answered and has no such piece. Distinct from an unreachable
+// catalog, which is not an answer and is never remembered as one.
+const absent = () => {
+  vi.mocked(fetchPieceCatalog).mockResolvedValue([]);
+  vi.mocked(fetchPieceDetail).mockResolvedValue({});
+};
+
+const unreachable = () => {
+  vi.mocked(fetchPieceCatalog).mockRejectedValue(new Error("offline"));
+  vi.mocked(fetchPieceDetail).mockRejectedValue(new Error("offline"));
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   bundleRequests.length = 0;
-  vi.mocked(fetchPieceCatalog).mockRejectedValue(new Error("offline"));
-  vi.mocked(fetchPieceDetail).mockRejectedValue(new Error("offline"));
+  absent();
   packagePieces.reset();
   service = testRuntime();
 });
@@ -184,6 +195,20 @@ describe("what the shared resolution refuses to pay for", () => {
     expect(vi.mocked(fetchPieceCatalog).mock.calls).toHaveLength(1);
   });
 
+  it("does not remember a catalog that never answered", async () => {
+    unreachable();
+
+    // Three reads, and every one of them asks again: an outage is not an
+    // answer, and caching it would hold the name unresolvable after it ends.
+    await service.blockDescriptor(ACTION);
+    await service.blockDescriptor(ACTION);
+    await service.blockDescriptor(ACTION);
+
+    expect(
+      vi.mocked(fetchPieceDetail).mock.calls.length,
+    ).toBeGreaterThanOrEqual(3);
+  });
+
   it("shares one lookup between callers that race for it", async () => {
     const answers = await Promise.all([
       service.blockDescriptor(ACTION),
@@ -193,6 +218,25 @@ describe("what the shared resolution refuses to pay for", () => {
 
     expect(answers[0]).toBeNull();
     expect(vi.mocked(fetchPieceDetail).mock.calls).toHaveLength(1);
+  });
+
+  it("gives up on a catalog that never answers, rather than hanging", async () => {
+    vi.useFakeTimers();
+    try {
+      // Neither source ever settles: the editor call must still return, and
+      // the timeout has to read as an outage, not as a piece that is absent.
+      vi.mocked(fetchPieceCatalog).mockReturnValue(
+        new Promise(() => undefined),
+      );
+      vi.mocked(fetchPieceDetail).mockReturnValue(new Promise(() => undefined));
+
+      const pending = service.blockDescriptor(ACTION);
+      await vi.advanceTimersByTimeAsync(2_000);
+
+      expect(await pending).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("prefers the installed piece and asks nothing of the catalog", async () => {

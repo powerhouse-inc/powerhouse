@@ -81,6 +81,7 @@ import {
   fetchPieceCatalog,
   fetchPieceDetail,
   fetchPieceTriggers,
+  CatalogStatusError,
   type PieceActionsResult,
   type PieceSummary,
   type PieceTriggersResult,
@@ -153,6 +154,28 @@ import {
 } from "./trigger-filters.js";
 
 export type PersistedRunResult = WorkflowRunResult & { runId: string | null };
+
+// "absent" is a source answering that it has no such piece; "unreachable" is
+// no source answering at all. Collapsing the two is what turned a network
+// blip into a permanent ERROR row telling an operator to install something.
+type VersionLookup =
+  | { kind: "found"; version: string }
+  | { kind: "absent" }
+  | { kind: "unreachable"; detail: string };
+
+type BlockResolution =
+  | { kind: "resolved"; block: ParsedBlockType }
+  | { kind: "absent" }
+  | { kind: "unreachable"; detail: string };
+
+interface VersionLookupOptions {
+  // Give up waiting after this long. The lookup itself runs on and fills the
+  // catalog's cache, so whatever asks next is answered from it.
+  timeoutMs?: number;
+  // Ask again even for a name remembered as absent. For a person who pressed
+  // a button: they may well have pressed it because they fixed something.
+  fresh?: boolean;
+}
 
 export interface ConnectionSummary {
   id: string;
@@ -341,11 +364,29 @@ const SUPERVISED_KINDS = new Set(["piece", "schedule", PIECE_WEBHOOK_KIND]);
 // reaches the resolution below every time a workflow is saved.
 const CORE_PACKAGE = "core";
 
-// How long a package name the catalog had no version for stays unresolved.
+// A source that answered and has no such piece, as opposed to one that could
+// not be asked. Only the first is something to tell an operator to act on.
+function isAbsentFromCatalog(error: unknown): boolean {
+  return error instanceof CatalogStatusError && error.status === 404;
+}
 
-// Only misses are remembered: a hit is already cached by the catalog itself,
-// while a miss is cached nowhere, and the editor asks per request.
+// How long a name the catalog answered for, and said it has nothing of, stays
+// unresolved. Only a definitive absence is remembered: a hit is already cached
+// by the catalog itself, and an unreachable catalog is not an answer at all.
 const PIECE_VERSION_MISS_TTL_MS = 5 * 60_000;
+
+// What a caller on an awaited path waits for a lookup before giving up on it.
+
+// Registration is awaited by the operation ingest and by seeding, which loops
+// workflows one at a time, and the design-time reads are somebody typing. The
+// fetch runs on regardless, so the retry behind it answers from the cache.
+const PIECE_VERSION_LOOKUP_TIMEOUT_MS = 2_000;
+
+// How long before a trigger left unresolved by an unreachable catalog is tried
+// again, doubling to the cap. A reactor that booted during a brief outage has
+// to arm itself once it is over, not wait to be restarted.
+const UNREACHABLE_RETRY_MS = 30_000;
+const UNREACHABLE_RETRY_CAP_MS = 15 * 60_000;
 
 // Shared so no refusal path can accidentally answer with a distinguishing body.
 const UNAUTHORIZED: WebhookReply = { status: 401 };
@@ -565,6 +606,9 @@ export class WorkflowRuntimeService {
     // The ERROR row an unresolvable trigger leaves outlives the trigger, so a
     // workflow registering anything now drops it first, ahead of what follows.
     if (this.unarmed.delete(workflowId)) this.dropSupervised(workflowId);
+    // Whatever this registration decides supersedes the pending retry, which
+    // re-arms itself below if the catalog is still away.
+    this.cancelResolutionRetry(workflowId);
     const trigger = state.status === "ENABLED" ? state.trigger : undefined;
     if (trigger?.blockType === WEBHOOK_BLOCK) {
       await this.registerWebhook(workflowId, trigger.config);
@@ -573,10 +617,10 @@ export class WorkflowRuntimeService {
     const kind: TriggerKind | undefined = trigger
       ? TRIGGER_KIND_BY_BLOCK[trigger.blockType]
       : undefined;
-    const supervised =
+    const { binding: supervised, resolution } =
       trigger && !kind
         ? await this.supervisedBinding(workflowId, trigger)
-        : undefined;
+        : { binding: undefined, resolution: undefined };
 
     if (!kind && !supervised) {
       const had = this.registry.get(workflowId);
@@ -584,7 +628,7 @@ export class WorkflowRuntimeService {
       if (had && SUPERVISED_KINDS.has(had.kind))
         this.dropSupervised(workflowId);
       // After the drop above, so the row this leaves is the last one written.
-      if (trigger) this.reportUnarmedTrigger(workflowId, trigger);
+      if (trigger) this.reportUnarmedTrigger(workflowId, trigger, resolution);
       return;
     }
     if (supervised) {
@@ -693,16 +737,22 @@ export class WorkflowRuntimeService {
   }
 
   // Triggers the supervisor drives on its tick: piece polls and schedules.
+
+  // The resolution travels with the binding: whether a trigger failed because
+  // no piece answers or because nothing could be asked decides what the caller
+  // is told, and only the resolution knows which it was.
   private async supervisedBinding(
     workflowId: string,
     trigger: NonNullable<WorkflowState["trigger"]>,
-  ): Promise<TriggerBinding | undefined> {
+  ): Promise<{ binding?: TriggerBinding; resolution?: BlockResolution }> {
     if (trigger.blockType === SCHEDULE_BLOCK) {
       return {
-        kind: "schedule",
-        workflowId,
-        blockType: SCHEDULE_BLOCK,
-        config: configRecord(trigger.config),
+        binding: {
+          kind: "schedule",
+          workflowId,
+          blockType: SCHEDULE_BLOCK,
+          config: configRecord(trigger.config),
+        },
       };
     }
     return this.pieceBinding(workflowId, trigger);
@@ -711,25 +761,33 @@ export class WorkflowRuntimeService {
   private async pieceBinding(
     workflowId: string,
     trigger: NonNullable<WorkflowState["trigger"]>,
-  ): Promise<PieceTriggerBinding | undefined> {
-    const parsed = await this.resolveBlockType(
+  ): Promise<{ binding?: PieceTriggerBinding; resolution: BlockResolution }> {
+    const resolution = await this.resolveBlockType(
       trigger.blockType,
       `workflow ${workflowId}`,
+      // Bounded: seeding walks workflows one at a time and ingest awaits this,
+      // and while neither has finished every webhook delivery is refused.
+      { timeoutMs: PIECE_VERSION_LOOKUP_TIMEOUT_MS },
     );
+    const parsed =
+      resolution.kind === "resolved" ? resolution.block : undefined;
     // An action block type is no more a trigger than an unresolved one is.
-    if (parsed?.kind !== "trigger") return undefined;
+    if (parsed?.kind !== "trigger") return { resolution };
     const { config, pollIntervalMs } = splitPollInterval(
       configRecord(trigger.config),
     );
     return {
-      workflowId,
-      blockType: trigger.blockType,
-      packageName: parsed.packageName,
-      version: parsed.version,
-      triggerName: parsed.name,
-      config,
-      connectionId: trigger.connectionId,
-      pollIntervalMs,
+      resolution,
+      binding: {
+        workflowId,
+        blockType: trigger.blockType,
+        packageName: parsed.packageName,
+        version: parsed.version,
+        triggerName: parsed.name,
+        config,
+        connectionId: trigger.connectionId,
+        pollIntervalMs,
+      },
     };
   }
 
@@ -745,29 +803,46 @@ export class WorkflowRuntimeService {
   private async resolveBlockType(
     blockType: string,
     caller = "a design-time request",
-  ): Promise<ParsedBlockType | undefined> {
+    options: VersionLookupOptions = {},
+  ): Promise<BlockResolution> {
     const parsed = parseBlockType(blockType, packagePieces.versions());
-    if (parsed) return parsed;
+    if (parsed) return { kind: "resolved", block: parsed };
     // Nothing but an unversioned block type reaches here: a pinned one parses
     // on its own, whether or not anything can serve what it pins.
     const parts = blockTypeParts(blockType);
-    if (!parts) return undefined;
-    const version = await this.pieceVersion(parts.packageName);
-    if (!version) return undefined;
+    if (!parts) return { kind: "absent" };
+    const found = await this.pieceVersion(parts.packageName, options);
+    if (found.kind !== "found") return found;
     // Block types carry a scoped package name, so they travel as logger values:
     // inline, the logger reads the scope as a token and prints null/pack.
     this.logger.info(
       "Resolving @block for @caller: it pins no version and this reactor holds no package piece of that name, so it reads as version @version, the one the piece catalog serves today. Pin a version in the block type to hold it still across upgrades.",
       blockType,
       caller,
-      version,
+      found.version,
     );
     return {
-      packageName: parts.packageName,
-      version,
-      kind: parts.kind,
-      name: parts.name,
+      kind: "resolved",
+      block: {
+        packageName: parts.packageName,
+        version: found.version,
+        kind: parts.kind,
+        name: parts.name,
+      },
     };
+  }
+
+  // For the callers that only need the piece: a block type nobody serves and
+  // one nobody could be asked about both come back as nothing to work with.
+  private async resolvedBlock(
+    blockType: string,
+  ): Promise<ParsedBlockType | undefined> {
+    // Bounded: these are interactive, and an editor that hangs for a minute
+    // before drawing an empty form is worse than one that draws it at once.
+    const resolution = await this.resolveBlockType(blockType, undefined, {
+      timeoutMs: PIECE_VERSION_LOOKUP_TIMEOUT_MS,
+    });
+    return resolution.kind === "resolved" ? resolution.block : undefined;
   }
 
   // Workflows whose trigger resolved to nothing. Remembered only so the row
@@ -779,17 +854,28 @@ export class WorkflowRuntimeService {
 
   // Both halves of the report matter: the log for whoever is watching the
   // reactor come up, the row for whoever asks later why a workflow is quiet.
+
+  // What it says depends on which failure it was. "No piece answers" is a
+  // fact only when something answered; when the catalog could not be reached
+  // it is a guess, and one that sends an operator to install what they have.
   private reportUnarmedTrigger(
     workflowId: string,
     trigger: NonNullable<WorkflowState["trigger"]>,
+    resolution: BlockResolution | undefined,
   ): void {
     const parts = blockTypeParts(trigger.blockType);
     // Only a piece trigger is a failure here: core#manual and the document
     // triggers reach this path in the ordinary course of things.
     if (parts?.kind !== "trigger") return;
-    const reason =
-      `No piece answers for the trigger block type "${trigger.blockType}", so this workflow will not arm: it pins no version, this reactor holds no package piece of that name, and the piece catalog has none either. ` +
-      "Pin a version in the block type, or install the package that ships the piece.";
+    const unreachable = resolution?.kind === "unreachable";
+    const retryAt = unreachable
+      ? new Date(Date.now() + this.scheduleResolutionRetry(workflowId))
+      : undefined;
+    const reason = unreachable
+      ? `The piece behind the trigger block type "${trigger.blockType}" could not be resolved, so this workflow is not armed: it pins no version, this reactor holds no package piece of that name, and the piece catalog could not be reached (${resolution.detail}). ` +
+        `Retrying at ${retryAt?.toISOString() ?? "the next registration"}; this is a connectivity failure, not a missing piece.`
+      : `No piece answers for the trigger block type "${trigger.blockType}", so this workflow will not arm: it pins no version, this reactor holds no package piece of that name, and the piece catalog has none either. ` +
+        "Pin a version in the block type, or install the package that ships the piece.";
     this.logger.warn("Workflow @workflow: @reason", workflowId, reason);
     this.unarmed.add(workflowId);
     this.supervisor()
@@ -798,6 +884,7 @@ export class WorkflowRuntimeService {
         trigger.blockType,
         configRecord(trigger.config),
         reason,
+        retryAt,
       )
       .catch((error: unknown) => {
         this.logger.error(
@@ -805,6 +892,47 @@ export class WorkflowRuntimeService {
           error,
         );
       });
+  }
+
+  // Re-registration attempts for triggers left unresolved by an unreachable
+  // catalog, and how long the next one waits.
+  private readonly resolutionRetries = new Map<
+    string,
+    { timer: NodeJS.Timeout; delayMs: number }
+  >();
+
+  // Nothing else would ever come back to these: an ERROR row is not due for a
+  // poll and carries no binding to retry, so without this a reactor that
+  // booted during an outage stays unarmed until someone restarts or edits it.
+  private scheduleResolutionRetry(workflowId: string): number {
+    const previous = this.resolutionRetries.get(workflowId);
+    if (previous) clearTimeout(previous.timer);
+    const delayMs = Math.min(
+      previous ? previous.delayMs * 2 : UNREACHABLE_RETRY_MS,
+      UNREACHABLE_RETRY_CAP_MS,
+    );
+    const timer = setTimeout(() => {
+      this.resolutionRetries.delete(workflowId);
+      // Re-read rather than replay: the workflow may have been edited or
+      // disabled while the catalog was away, and that answer wins.
+      this.refreshRegistration(workflowId).catch((error: unknown) => {
+        this.logger.warn(
+          `Could not retry the unresolved trigger for workflow ${workflowId}`,
+          error,
+        );
+      });
+    }, delayMs);
+    // Never a reason to hold the process open.
+    timer.unref();
+    this.resolutionRetries.set(workflowId, { timer, delayMs });
+    return delayMs;
+  }
+
+  private cancelResolutionRetry(workflowId: string): void {
+    const pending = this.resolutionRetries.get(workflowId);
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    this.resolutionRetries.delete(workflowId);
   }
 
   private dropSupervised(workflowId: string): void {
@@ -1206,6 +1334,9 @@ export class WorkflowRuntimeService {
   // outlive the reactor otherwise — they are forked, not
   // spawned by it — and a run holding one is over the moment we stop.
   shutdown(): void {
+    for (const { timer } of this.resolutionRetries.values())
+      clearTimeout(timer);
+    this.resolutionRetries.clear();
     this.stopTriggerSupervisor();
     // Left in place, disposed: clearing it here would let a run that is still
     // between awaits build a replacement and fork into it after teardown.
@@ -1722,14 +1853,18 @@ export class WorkflowRuntimeService {
     const packageName = packageFromConnectorId(state.connectorId);
     let moduleRef: PieceModuleRef;
     try {
-      const version = await this.pieceVersion(packageName);
-      if (!version) {
+      // A person pressed "check", quite possibly because they just fixed the
+      // connectivity that made the last answer a miss: ask again rather than
+      // serve them a remembered one, and wait for the real answer.
+      const found = await this.pieceVersion(packageName, { fresh: true });
+      if (found.kind !== "found") {
         throw new Error(
-          `Could not resolve a version for piece "${packageName}"`,
+          `Could not resolve a version for piece "${packageName}"` +
+            (found.kind === "unreachable" ? `: ${found.detail}` : ""),
         );
       }
       moduleRef = pieceModuleRef(
-        await pieceResolver().resolve(packageName, version),
+        await pieceResolver().resolve(packageName, found.version),
       );
     } catch (error) {
       return this.recordCheckResult(document, {
@@ -1805,76 +1940,127 @@ export class WorkflowRuntimeService {
     });
   }
 
-  // A name the catalog had nothing for, and when it said so. Nothing downstream
-  // caches a miss, and these paths are asked per editor request: an offline
-  // reactor would otherwise pay both fetch timeouts again on every one.
+  // Names a source answered for and had nothing of, and when it said so. An
+  // unreachable catalog is never recorded here: it is not an answer, and
+  // remembering it would hold a name unresolvable after connectivity is back.
   private readonly versionMisses = new Map<string, number>();
 
   // Lookups still in the air, so a burst of requests for one name costs one.
-  private readonly versionLookups = new Map<
-    string,
-    Promise<string | undefined>
-  >();
+  private readonly versionLookups = new Map<string, Promise<VersionLookup>>();
 
   // The version to run a piece at, by the one rule every caller uses: what
   // this reactor installed, else what the catalog serves for the name.
-
-  // Undefined is "no version anywhere"; a caller that must have one says so
-  // itself, because what a missing piece means differs by caller.
-  private pieceVersion(packageName: string): Promise<string | undefined> {
+  private pieceVersion(
+    packageName: string,
+    options: VersionLookupOptions = {},
+  ): Promise<VersionLookup> {
     // A package piece is pinned by what this reactor installed, and no
     // published listing has anything to say about it.
     const local = packagePieces.lookup(packageName);
-    if (local) return Promise.resolve(local.version);
-    if (packageName === CORE_PACKAGE) return Promise.resolve(undefined);
+    if (local)
+      return Promise.resolve({ kind: "found", version: local.version });
+    if (packageName === CORE_PACKAGE)
+      return Promise.resolve({ kind: "absent" });
     const missedAt = this.versionMisses.get(packageName);
     if (
+      !options.fresh &&
       missedAt !== undefined &&
       Date.now() - missedAt < PIECE_VERSION_MISS_TTL_MS
     ) {
-      return Promise.resolve(undefined);
+      return Promise.resolve({ kind: "absent" });
     }
-    const inFlight = this.versionLookups.get(packageName);
-    if (inFlight) return inFlight;
-    const lookup = this.lookUpPieceVersion(packageName).then((version) => {
-      if (version === undefined)
+    if (options.fresh) this.versionMisses.delete(packageName);
+    const lookup =
+      this.versionLookups.get(packageName) ??
+      this.startVersionLookup(packageName);
+    return options.timeoutMs === undefined
+      ? lookup
+      : this.boundedLookup(packageName, lookup, options.timeoutMs);
+  }
+
+  private startVersionLookup(packageName: string): Promise<VersionLookup> {
+    const lookup = this.lookUpPieceVersion(packageName).then((found) => {
+      if (found.kind === "absent")
         this.versionMisses.set(packageName, Date.now());
-      else this.versionMisses.delete(packageName);
+      else if (found.kind === "found") this.versionMisses.delete(packageName);
       this.versionLookups.delete(packageName);
-      return version;
+      return found;
     });
     this.versionLookups.set(packageName, lookup);
     return lookup;
   }
 
+  // A caller that cannot wait treats the deadline as the catalog not having
+  // answered, which is what it is. The lookup is left running: it fills the
+  // catalog's own cache, so the retry behind this is answered from memory.
+  private boundedLookup(
+    packageName: string,
+    lookup: Promise<VersionLookup>,
+    timeoutMs: number,
+  ): Promise<VersionLookup> {
+    return new Promise<VersionLookup>((resolve) => {
+      const timer = setTimeout(() => {
+        this.logger.debug(
+          "Gave the piece catalog @ms ms for @package and went on without it",
+          timeoutMs,
+          packageName,
+        );
+        resolve({
+          kind: "unreachable",
+          detail: `the piece catalog did not answer within ${timeoutMs}ms`,
+        });
+      }, timeoutMs);
+      timer.unref();
+      lookup.then(
+        (found) => {
+          clearTimeout(timer);
+          resolve(found);
+        },
+        () => {
+          clearTimeout(timer);
+          resolve({ kind: "unreachable", detail: "the piece catalog failed" });
+        },
+      );
+    });
+  }
+
   // Catalog first, piece detail as fallback; the cache keeps this cheap.
+
+  // A source that answered and did not list the piece is an absence; both
+  // failing is an outage, and the two must not read the same to a caller.
   private async lookUpPieceVersion(
     packageName: string,
-  ): Promise<string | undefined> {
+  ): Promise<VersionLookup> {
     try {
       const catalog = await fetchPieceCatalog();
       const version = catalog.find(
         (entry) => entry.name === packageName,
       )?.version;
-      if (version) return version;
+      if (version) return { kind: "found", version };
     } catch {
-      // Catalog unreachable; fall through to the piece detail.
+      // Unreachable listing; the piece's own detail may still answer.
     }
     try {
       const detail = (await fetchPieceDetail(packageName)) as {
         version?: unknown;
       };
       if (typeof detail.version === "string" && detail.version !== "") {
-        return detail.version;
+        return { kind: "found", version: detail.version };
       }
+      return { kind: "absent" };
     } catch (error) {
+      // A 404 is the catalog answering that it has no such piece. Anything
+      // else left the question open, and the listing above is filtered, so
+      // missing from it is no answer either.
+      if (isAbsentFromCatalog(error)) return { kind: "absent" };
+      const detail = error instanceof Error ? error.message : String(error);
       this.logger.debug(
-        "The piece catalog has nothing for @package: @error",
+        "The piece catalog could not be reached for @package: @error",
         packageName,
         error,
       );
+      return { kind: "unreachable", detail };
     }
-    return undefined;
   }
 
   private async recordCheckResult(
@@ -1994,7 +2180,7 @@ export class WorkflowRuntimeService {
   // Design-time: the action/trigger descriptor (props, auth) driving the
   // editor form; triggers come back under a "trigger" key.
   async blockDescriptor(blockType: string): Promise<unknown> {
-    const parsed = await this.resolveBlockType(blockType);
+    const parsed = await this.resolvedBlock(blockType);
     if (!parsed) return null;
     const descriptor = await this.pieceDescriptor(
       parsed.packageName,
@@ -2093,7 +2279,7 @@ export class WorkflowRuntimeService {
     connectionId?: string,
     ctx?: WorkflowCaller,
   ): Promise<unknown> {
-    const parsed = await this.resolveBlockType(blockType);
+    const parsed = await this.resolvedBlock(blockType);
     if (!parsed) {
       throw new Error(`Not a piece block type: "${blockType}"`);
     }
@@ -2203,7 +2389,7 @@ export class WorkflowRuntimeService {
         };
       }
       default: {
-        const parsed = await this.resolveBlockType(blockType);
+        const parsed = await this.resolvedBlock(blockType);
         if (!parsed) return { source: "none", nodes: [] };
         // Through the service, not the published catalog: a package piece is
         // often unpublished, and its detail comes from its own descriptor.
@@ -2284,7 +2470,7 @@ export class WorkflowRuntimeService {
     if (trigger.connectionId) {
       await this.assertCanReadDocument(trigger.connectionId, ctx);
     }
-    const binding = await this.pieceBinding(workflowId, trigger);
+    const { binding } = await this.pieceBinding(workflowId, trigger);
     if (!binding) {
       throw new Error(`"${trigger.blockType}" is not a piece trigger`);
     }
@@ -2363,11 +2549,13 @@ export class WorkflowRuntimeService {
       store ? createPieceStorePort(store, currentWorkflowId) : undefined,
       // A step resolves its block type the way every other caller does, so a
       // trigger that arms cannot be followed by a step that cannot start.
-      (stepBlockType) =>
-        this.resolveBlockType(
+      async (stepBlockType) => {
+        const resolution = await this.resolveBlockType(
           stepBlockType,
           `a step of workflow ${currentWorkflowId() ?? "?"}`,
-        ),
+        );
+        return resolution.kind === "resolved" ? resolution.block : undefined;
+      },
     );
 
     let runId: string | null = enqueuedRunId ?? null;
