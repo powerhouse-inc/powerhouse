@@ -8,18 +8,22 @@ description: >
 inputs:
   key-prefix:
     description: Cache key prefix. Bump to invalidate every entry at once.
-    default: nx-v1
+    default: nx-v2
 
 runs:
   using: composite
   steps:
-    # The exact key never hits on restore (the sha is unique per commit); it is
-    # what this run writes. restore-keys is what actually serves the hit, and
-    # falls back to the newest cache on this branch, then on the base branch.
+    # Both paths are required. .nx/cache holds the task outputs; the db under
+    # workspace-data holds the hash index that points at them, and restoring
+    # the artifacts without it rebuilds everything. The daemon's scratch dir is
+    # excluded: it is per-machine state nx recreates, never cache content.
     - name: Restore Nx cache
       uses: actions/cache@v4
       with:
-        path: .nx/cache
+        path: |
+          .nx/cache
+          .nx/workspace-data
+          !.nx/workspace-data/d
         key: ${{ inputs.key-prefix }}-${{ runner.os }}-${{ github.sha }}
         restore-keys: |
           ${{ inputs.key-prefix }}-${{ runner.os }}-
