@@ -155,10 +155,13 @@ export interface CheckConnectionMessage {
 
 // `output` of a check-connection result.
 export interface CheckConnectionOutcome {
-  // False when the piece declares no app.checkConnection.
+  // False when the piece declares neither app.checkConnection nor auth.validate.
   declared: boolean;
   // Its return value: void | boolean | { name | username | email | sub }.
   result?: unknown;
+  // Why the check failed, when the hook said so. auth.validate carries a
+  // message; app.checkConnection only ever returns false.
+  detail?: string;
 }
 
 // Design-time descriptor of a piece: its actions, triggers and auth shape.

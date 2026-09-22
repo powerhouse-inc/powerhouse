@@ -64,6 +64,8 @@ const PIECES = {
   pass: { name: "@activepieces/piece-pass", version: "1.0.0" },
   fail: { name: "@activepieces/piece-fail", version: "1.0.0" },
   nocheck: { name: "@activepieces/piece-nocheck", version: "1.0.0" },
+  validates: { name: "@activepieces/piece-validates", version: "1.0.0" },
+  refuses: { name: "@activepieces/piece-refuses", version: "1.0.0" },
   denied: { name: "@activepieces/piece-denied", version: "1.0.0" },
   env: { name: "@activepieces/piece-env", version: "1.0.0" },
 } as const;
@@ -102,6 +104,30 @@ module.exports = { app };
 const app = {
   displayName: "NoCheck Fixture",
   actions: {},
+};
+module.exports = { app };
+`,
+  validates: `
+const app = {
+  displayName: "Validates Fixture",
+  actions: {},
+  auth: {
+    type: "CUSTOM_AUTH",
+    // Upstream hands validate the property values, so a piece written against
+    // the Activepieces docs reads them flat.
+    validate: async ({ auth }) => ({ valid: auth.host === "imap.example.com" }),
+  },
+};
+module.exports = { app };
+`,
+  refuses: `
+const app = {
+  displayName: "Refuses Fixture",
+  actions: {},
+  auth: {
+    type: "CUSTOM_AUTH",
+    validate: async () => ({ valid: false, error: "that host refused the login" }),
+  },
 };
 module.exports = { app };
 `,
@@ -441,6 +467,40 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     const input = lastRecordInput();
     expect(input.status).toBe("OK");
     expect(input.error).toBeUndefined();
+  });
+
+  // No Activepieces piece declares checkConnection — validate is what their
+  // docs teach — so without this fallback the whole catalogue goes unchecked.
+  it("falls back to the framework's own auth.validate", async () => {
+    const document = makeDocument({
+      connectorId: `${PIECES.validates.name}#validates`,
+    });
+    get.mockResolvedValueOnce(document);
+    execute.mockClear();
+
+    const result = await service.checkConnection(document.header.id, TEST_CTX);
+
+    expect(result.ok).toBe(true);
+    // Not the "declares no connection check" answer: a check really ran, and
+    // it read the property values, which only the unwrapped form carries.
+    expect(result.detail).toBeNull();
+    expect(lastRecordInput().status).toBe("OK");
+  });
+
+  it("reports the reason validate gave for refusing", async () => {
+    const document = makeDocument({
+      connectorId: `${PIECES.refuses.name}#refuses`,
+    });
+    get.mockResolvedValueOnce(document);
+    execute.mockClear();
+
+    const result = await service.checkConnection(document.header.id, TEST_CTX);
+
+    expect(result).toMatchObject({
+      ok: false,
+      detail: "that host refused the login",
+    });
+    expect(lastRecordInput().status).toBe("ERROR");
   });
 
   it("surfaces a missing secret by naming its ref", async () => {
