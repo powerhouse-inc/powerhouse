@@ -1,12 +1,12 @@
 # @powerhousedao/pieces-framework
 
 Powerhouse's published copy of the [Activepieces](https://www.activepieces.com)
-piece framework, plus the one thing a piece running on a Powerhouse reactor
-gets that no other host serves: `ctx.reactor`.
+piece framework, so a piece can be authored outside their monorepo.
 
-`ctx.reactor` is served to `@powerhousedao/piece-reactor` alone — the piece
-whose actions are that surface. Every other piece finds the member throwing,
-however it was loaded and whoever shipped it.
+It also carries `ctx.reactor`, which is internal: it is served to
+`@powerhousedao/piece-reactor` alone — the piece whose actions are that surface
+— and every other piece finds the member throwing, however it was loaded and
+whoever shipped it. Nothing you write should reach for it.
 
 ## Why this package exists
 
@@ -31,8 +31,8 @@ Powerhouse types on top. The authoring API is upstream's, unchanged.
 import {
   createAction,
   createPiece,
+  PieceAuth,
   Property,
-  reactorOf,
 } from "@powerhousedao/pieces-framework";
 import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
 ```
@@ -50,8 +50,7 @@ import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
 
 2. **Write the piece** in `pieces/<name>/index.ts` with `createPiece`,
    `createAction`, `createTrigger` and `Property`, exactly as an Activepieces
-   piece. The reactor the piece runs inside is on every context; read it with
-   `reactorOf(ctx)`:
+   piece:
 
    ```ts
    import {
@@ -59,21 +58,18 @@ import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
      createPiece,
      PieceAuth,
      Property,
-     reactorOf,
    } from "@powerhousedao/pieces-framework";
 
    const listInvoices = createAction({
+     auth: invoicesAuth,
      name: "list_invoices",
      displayName: "List invoices",
-     description: "Invoices on this reactor",
+     description: "Invoices in the billing system",
      props: {
-       parentId: Property.ShortText({ displayName: "Drive", required: false }),
+       since: Property.ShortText({ displayName: "Since", required: false }),
      },
      async run(ctx) {
-       return reactorOf(ctx).find({
-         documentType: "powerhouse/invoice",
-         parentId: ctx.propsValue.parentId,
-       });
+       return clientFor(ctx.auth).listInvoices(ctx.propsValue.since);
      },
    });
 
@@ -81,16 +77,15 @@ import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
      displayName: "Invoices",
      logoUrl: "https://example.com/invoices.png",
      authors: ["acme"],
-     auth: PieceAuth.None(),
+     auth: invoicesAuth,
      actions: [listInvoices],
      triggers: [],
    });
    ```
 
-   `ReactorService` offers `models()`, `model(type)`, `get`, `find`, `create`
-   and `execute`. The typed contexts are exported too:
-   `PowerhouseActionContext`, `PowerhousePropertyContext`,
-   `PowerhouseTriggerHookContext` and the generic `WithReactor<C>`.
+   A piece connects a reactor to something outside it. Reading and writing
+   Powerhouse documents is the reactor piece's job, and a workflow composes the
+   two as separate steps.
 
 3. **Register it.** List the piece in `pieces/index.ts` as a `PackagePiece`
    and in the package manifest under `"pieces"`:
@@ -128,16 +123,12 @@ import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
    `document-models/index.ts`, `editors/index.ts` and `style.css`, even when
    those are empty. `ph build` runs every step for it unchanged, so there is
    no piece-only mode to know about. The host that runs pieces on a reactor
-   (the workflow runtime) reads the `pieces` list, imports each `entry` and
-   serves `ctx.reactor`.
+   (the workflow runtime) reads the `pieces` list and imports each `entry`.
 
    Bundling with esbuild to ESM instead of `ph build`? `form-data`, which
    `./common` uses, is CommonJS, so pass
    `--banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);"`
    or the bundle throws `Dynamic require of "util" is not supported` on import.
-
-Outside a Powerhouse reactor, `reactorOf(ctx)` throws an error that names
-`ctx.reactor`, so a piece that ends up on another host fails legibly.
 
 ## `./host`, for the host and not for piece authors
 
@@ -198,7 +189,7 @@ vendors only the prop-coercion files, for the reasons in
 
 ## Publishing the same piece to Activepieces
 
-A piece that does not use `ctx.reactor` is a plain Activepieces piece. To
+A piece written against this package is a plain Activepieces piece. To
 contribute it upstream, scaffold one in the Activepieces monorepo with
 `npm run cli pieces create`, copy your `src/` over its own, rewrite the import
 specifiers (`@powerhousedao/pieces-framework` to

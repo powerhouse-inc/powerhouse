@@ -78,11 +78,11 @@ export default crm;
 `document-model`, `editor`, `processor`, `subgraph`, `migration-file` — and
 three of them are the piece family:
 
-| Command | What it does |
-| --- | --- |
-| `ph generate piece <name>` | A new piece: directory, auth, logo, one example action and one example trigger, plus both registrations |
-| `ph generate piece-action <name>` | An action inside an existing piece, imported into its `index.ts` for you |
-| `ph generate piece-trigger <name>` | A trigger, `--strategy polling` (default) or `--strategy webhook` |
+| Command                            | What it does                                                                                            |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `ph generate piece <name>`         | A new piece: directory, auth, logo, one example action and one example trigger, plus both registrations |
+| `ph generate piece-action <name>`  | An action inside an existing piece, imported into its `index.ts` for you                                |
+| `ph generate piece-trigger <name>` | A trigger, `--strategy polling` (default) or `--strategy webhook`                                       |
 
 ```bash
 ph generate piece-action list-records
@@ -138,7 +138,7 @@ Three of those deserve attention, because they're what makes a step usable by so
 
 - **`name`** is the half after `#` in the block type. This step is `@acme/piece-crm#get-record`. Note there's no version in it: a piece your package ships is named unversioned, because the copy the reactor installed is the copy that runs. Renaming the action, though, breaks every workflow that referred to it.
 - **`props`** is the form Workflow Studio renders for the step. A property a user may reasonably leave empty must be `required: false`, or the step can't be saved half-built while someone is still assembling the workflow.
-- **`outputSchema`** is what a *later* step can pick fields from. Without it, whoever builds the workflow has to run your action once and read the raw output to discover what it returns. It costs a few lines and saves every author that round trip.
+- **`outputSchema`** is what a _later_ step can pick fields from. Without it, whoever builds the workflow has to run your action once and read the raw output to discover what it returns. It costs a few lines and saves every author that round trip.
 
 ## Writing a trigger
 
@@ -187,19 +187,15 @@ Declaring a **connection check** is optional and worth doing: it's what makes Co
 
 ## Reading and writing documents
 
-A piece running on a Powerhouse reactor can reach that reactor directly — this is the one thing the framework adds on top of the Activepieces API:
+Your piece doesn't need to. Reading and writing Powerhouse documents is what the
+reactor's own piece is for — `#document-find`, `#document-get`,
+`#document-create` and `#document-dispatch` are steps a workflow author drops in
+beside yours, with no code from you at all.
 
-```typescript
-import { reactorOf } from "@powerhousedao/pieces-framework";
-
-async run(context) {
-  return reactorOf(context).find({ documentType: "powerhouse/invoice" });
-}
-```
-
-`reactorOf(context)` offers `models()`, `model(type)`, `get`, `find`, `create` and `execute`. Outside a Powerhouse reactor it throws an error naming what's missing, so a piece that ends up on another host fails legibly rather than mysteriously.
-
-You often won't need this: the reactor's own piece already ships find, get, create and dispatch actions, so a workflow can read and write documents without you writing anything. Reach for `reactorOf` when your action needs to combine a document read with something else in a single step.
+So a workflow that pulls a record from your service and records it on a document
+is two steps: your action, then `@powerhousedao/piece-reactor#document-create`
+reading the first step's output through an expression. Your piece stays a
+connector to your service, which is the thing only you can write.
 
 ## Registering it
 
@@ -308,4 +304,4 @@ For the rest, `@powerhousedao/reactor-workflow/testing` runs a piece the way a r
 
 ## Publishing
 
-A package shipping a piece publishes like any other reactor package — see [Publish your project](/academy/Build/Launch/PublishYourProject). Once it's on a registry, other reactors get the piece by adding your package to their `packages` list. A package that ships *only* pieces is still an ordinary reactor package, with the same boilerplate; there's no piece-only mode to learn.
+A package shipping a piece publishes like any other reactor package — see [Publish your project](/academy/Build/Launch/PublishYourProject). Once it's on a registry, other reactors get the piece by adding your package to their `packages` list. A package that ships _only_ pieces is still an ordinary reactor package, with the same boilerplate; there's no piece-only mode to learn.

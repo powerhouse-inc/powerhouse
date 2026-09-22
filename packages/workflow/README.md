@@ -24,7 +24,7 @@ reactor piece that lets a workflow read and write documents.
 
 | Package                                                  | What it is                                                                                                     |
 | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| [`@powerhousedao/pieces-framework`](../pieces-framework) | The piece authoring API (Activepieces', vendored) plus `ctx.reactor`.                                          |
+| [`@powerhousedao/pieces-framework`](../pieces-framework) | The piece authoring API (Activepieces', vendored).                                                             |
 | `@powerhousedao/workflow` (this one)                     | Models, editors, assistant tools and the reactor piece. Loaded by Connect; its models are loaded by a reactor. |
 | `@powerhousedao/reactor-workflow`                        | The engine that runs a workflow: scheduler, executor, piece host, and the GraphQL surface. Arrives next.       |
 
