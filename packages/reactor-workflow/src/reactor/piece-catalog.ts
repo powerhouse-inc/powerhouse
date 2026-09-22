@@ -271,6 +271,20 @@ export async function fetchPieceDetail(packageName: string): Promise<unknown> {
   return value;
 }
 
+// The version whichever source answers for a piece is serving right now: the
+// only one that exists for a piece this reactor does not hold.
+
+// It moves when the registry publishes, so a caller resolving an unpinned
+// block type against it owes whoever reads the log the version it landed on.
+export async function fetchPieceVersion(
+  packageName: string,
+): Promise<string | undefined> {
+  const detail = (await fetchPieceDetail(packageName)) as CatalogEntry;
+  return typeof detail.version === "string" && detail.version
+    ? detail.version
+    : undefined;
+}
+
 const triggersCache = new Map<string, Cached<PieceTriggersResult>>();
 
 export async function fetchPieceTriggers(

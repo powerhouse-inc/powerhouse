@@ -25,6 +25,7 @@ import {
   runWorkflow,
   type BlockExecutor,
   type LocalPiece,
+  type ParsedBlockType,
   type PieceModuleRef,
   type CheckConnectionOutcome,
   type PieceDescriptor,
@@ -80,6 +81,7 @@ import {
   fetchPieceCatalog,
   fetchPieceDetail,
   fetchPieceTriggers,
+  fetchPieceVersion,
   type PieceActionsResult,
   type PieceSummary,
   type PieceTriggersResult,
@@ -564,7 +566,7 @@ export class WorkflowRuntimeService {
       : undefined;
     const supervised =
       trigger && !kind
-        ? this.supervisedBinding(workflowId, trigger)
+        ? await this.supervisedBinding(workflowId, trigger)
         : undefined;
 
     if (!kind && !supervised) {
@@ -682,10 +684,10 @@ export class WorkflowRuntimeService {
   }
 
   // Triggers the supervisor drives on its tick: piece polls and schedules.
-  private supervisedBinding(
+  private async supervisedBinding(
     workflowId: string,
     trigger: NonNullable<WorkflowState["trigger"]>,
-  ): TriggerBinding | undefined {
+  ): Promise<TriggerBinding | undefined> {
     if (trigger.blockType === SCHEDULE_BLOCK) {
       return {
         kind: "schedule",
@@ -697,12 +699,12 @@ export class WorkflowRuntimeService {
     return this.pieceBinding(workflowId, trigger);
   }
 
-  private pieceBinding(
+  private async pieceBinding(
     workflowId: string,
     trigger: NonNullable<WorkflowState["trigger"]>,
-  ): PieceTriggerBinding | undefined {
-    const parsed = parseBlockType(trigger.blockType, packagePieces.versions());
-    if (!parsed || parsed.kind !== "trigger") return undefined;
+  ): Promise<PieceTriggerBinding | undefined> {
+    const parsed = await this.triggerPiece(workflowId, trigger.blockType);
+    if (!parsed) return undefined;
     const { config, pollIntervalMs } = splitPollInterval(
       configRecord(trigger.config),
     );
@@ -716,6 +718,57 @@ export class WorkflowRuntimeService {
       connectionId: trigger.connectionId,
       pollIntervalMs,
     };
+  }
+
+  // The piece a trigger's block type names. A pinned version, or a piece this
+  // reactor holds, resolves without leaving the process.
+
+  // Anything else is a name only the catalog has heard of, and resolving it
+  // there is the difference between a workflow that arms and one that does not.
+
+  // What it resolves to is whatever the registry serves today, so the version
+  // is logged: the same block type can mean a different piece after an upgrade.
+  private async triggerPiece(
+    workflowId: string,
+    blockType: string,
+  ): Promise<ParsedBlockType | undefined> {
+    const parsed = parseBlockType(blockType, packagePieces.versions());
+    if (parsed) return parsed.kind === "trigger" ? parsed : undefined;
+    // Nothing but an unversioned block type reaches here: a pinned one parses
+    // on its own, whether or not anything can serve what it pins.
+    const parts = blockTypeParts(blockType);
+    if (parts?.kind !== "trigger") return undefined;
+    const version = await this.catalogVersion(parts.packageName);
+    if (!version) return undefined;
+    // Block types carry a scoped package name, so they travel as logger values:
+    // inline, the logger reads the scope as a token and prints null/pack.
+    this.logger.info(
+      "Workflow @workflow pins no version for its trigger block @block, and this reactor holds no package piece of that name; running version @version, the one the piece catalog serves today. Pin a version in the block type to hold it still across upgrades.",
+      workflowId,
+      blockType,
+      version,
+    );
+    return {
+      packageName: parts.packageName,
+      version,
+      kind: "trigger",
+      name: parts.name,
+    };
+  }
+
+  private async catalogVersion(
+    packageName: string,
+  ): Promise<string | undefined> {
+    try {
+      return await fetchPieceVersion(packageName);
+    } catch (error) {
+      this.logger.debug(
+        "The piece catalog has nothing for @package: @error",
+        packageName,
+        error,
+      );
+      return undefined;
+    }
   }
 
   // Workflows whose trigger resolved to nothing. Remembered only so the row
@@ -736,7 +789,7 @@ export class WorkflowRuntimeService {
     // triggers reach this path in the ordinary course of things.
     if (parts?.kind !== "trigger") return;
     const reason =
-      `No piece answers for the trigger block type "${trigger.blockType}", so this workflow will not arm: it pins no version, and this reactor holds no package piece of that name. ` +
+      `No piece answers for the trigger block type "${trigger.blockType}", so this workflow will not arm: it pins no version, this reactor holds no package piece of that name, and the piece catalog has none either. ` +
       "Pin a version in the block type, or install the package that ships the piece.";
     this.logger.warn("Workflow @workflow: @reason", workflowId, reason);
     this.unarmed.add(workflowId);
@@ -2179,7 +2232,7 @@ export class WorkflowRuntimeService {
     if (trigger.connectionId) {
       await this.assertCanReadDocument(trigger.connectionId, ctx);
     }
-    const binding = this.pieceBinding(workflowId, trigger);
+    const binding = await this.pieceBinding(workflowId, trigger);
     if (!binding) {
       throw new Error(`"${trigger.blockType}" is not a piece trigger`);
     }
