@@ -104,7 +104,7 @@ function main(): void {
       environment: readMachineEnvironment(target.storage),
       recordedAt: new Date().toISOString(),
       derived: readings.derived,
-      conclusions: options.conclusions,
+      conclusions: [...readings.conclusions, ...options.conclusions],
       caveats: [...readings.caveats, ...options.caveats],
       title: options.title,
       question: options.question,

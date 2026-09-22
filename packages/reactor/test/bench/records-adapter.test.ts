@@ -432,32 +432,81 @@ function reading(label: string, overrides: Record<string, unknown> = {}) {
   };
 }
 
-function stampedSuites(labels: string[]): MicroSuite[] {
-  return labels.map((label) => ({
-    fullName: `bench/write-cache.bench.ts > Decomposition (${label})`,
-    cases: [
-      {
-        name: `${label}: instrumented cold-miss replay`,
-        rank: 1,
-        hz: 10,
-        meanMs: 100,
-        medianMs: 100,
-        minMs: 90,
-        maxMs: 110,
-        rmePct: 1,
-        sampleCount: 20,
-        totalTimeMs: 2000,
-      },
-    ],
-  }));
+/** One leg's split, in the shape write-cache.bench.ts files it. */
+function split(leg: string, overrides: Record<string, unknown> = {}) {
+  return {
+    leg,
+    counts: [100, 1000],
+    fullUsPerNode: 0.04,
+    collisionScanUsPerNode: 0.01,
+    sortUsPerNode: 0.028,
+    touchUsPerNode: 0.001,
+    floorUsPerNode: 0.001,
+    wrapperUsPerNode: 0.0002,
+    stampedBodyUsPerNode: 0.038,
+    realBodyUsPerNode: 0.04,
+    collisionScanSharePct: 25,
+    sortSharePct: 70,
+    touchSharePct: 2.5,
+    floorSharePct: 2.5,
+    scanPlusSortSharePct: 95,
+    mirrorOverRealSlope: 0.95,
+    ...overrides,
+  };
+}
+
+/** One split leg's cases, which the sidecar's split has to pair with. */
+function splitSuite(leg: string, sampleCount: number): MicroSuite {
+  return {
+    fullName: "bench/write-cache.bench.ts > Read/Write Split",
+    cases: [100, 1000].map((count, index) => ({
+      name: `${leg} leg ${String(count)} ops: mirrored body: reads + push + sort`,
+      rank: index + 1,
+      hz: 10,
+      meanMs: 100,
+      medianMs: 100,
+      minMs: 90,
+      maxMs: 110,
+      rmePct: 1,
+      sampleCount,
+      totalTimeMs: 2000,
+    })),
+  };
+}
+
+function stampedSuites(
+  labels: string[],
+  legs: string[] = ["plain"],
+  sampleCount = 400,
+): MicroSuite[] {
+  return [
+    ...labels.map((label) => ({
+      fullName: `bench/write-cache.bench.ts > Decomposition (${label})`,
+      cases: [
+        {
+          name: `${label}: instrumented cold-miss replay`,
+          rank: 1,
+          hz: 10,
+          meanMs: 100,
+          medianMs: 100,
+          minMs: 90,
+          maxMs: 110,
+          rmePct: 1,
+          sampleCount: 20,
+          totalTimeMs: 2000,
+        },
+      ],
+    })),
+    ...legs.map((leg) => splitSuite(leg, sampleCount)),
+  ];
 }
 
 /** Writes a sidecar into a throwaway results directory and returns its path. */
-function withSidecar(stamps: unknown[]): string {
+function withSidecar(stamps: unknown[], splits: unknown[] = [split("plain")]) {
   const directory = mkdtempSync(join(tmpdir(), "bench-stamps-"));
   writeFileSync(
     join(directory, "write-cache-stamps.json"),
-    JSON.stringify({ version: 1, stamps }),
+    JSON.stringify({ version: 2, stamps, splits }),
   );
   return directory;
 }
@@ -474,7 +523,9 @@ describe("stampReadings", () => {
       stampedSuites(["cold miss 100 ops"]),
     );
 
-    expect(derived).toEqual([
+    expect(
+      derived.filter((item) => item.name.startsWith("cold miss 100 ops")),
+    ).toEqual([
       {
         name: "cold miss 100 ops: module.reducer wall",
         value: 80,
@@ -505,6 +556,7 @@ describe("stampReadings", () => {
   it("reads nothing for a benchmark whose case means say it all", () => {
     expect(stampReadings(findTarget("auth"), "nowhere", [])).toEqual({
       derived: [],
+      conclusions: [],
       caveats: [],
     });
   });
@@ -562,6 +614,79 @@ describe("stampReadings", () => {
 
     expect(caveats).toEqual([
       "cold miss 100 ops: 100 module.reducer calls drove 400 state-reducer calls, so the body figure per module.reducer call aggregates more than one invocation and the two per-call means are not comparable",
+    ]);
+  });
+
+  it("carries the plain leg's scan-and-sort split into the entry", () => {
+    // T-025: the subtraction was in the case means and in stdout, and nowhere
+    // a reader of the record could find it.
+    const directory = withSidecar([reading("cold miss 100 ops")]);
+
+    const { derived, conclusions } = stampReadings(
+      findTarget("cache"),
+      directory,
+      stampedSuites(["cold miss 100 ops"]),
+    );
+
+    expect(
+      derived
+        .filter((item) => item.name.startsWith("plain leg: "))
+        .map((item) => [item.name, item.value, item.unit]),
+    ).toEqual([
+      ["plain leg: collision scans per node", 0.01, "us"],
+      ["plain leg: sorted-insert comparator per node", 0.028, "us"],
+      ["plain leg: scan + sort share of the mirrored body", 95, "pct"],
+      ["plain leg: residue the buckets leave per node", 0.001, "us"],
+      ["plain leg: copy, freeze and assignment floor per node", 0.001, "us"],
+      ["plain leg: create() and base reducer per node", 0.0002, "us"],
+      ["plain leg: mirrored body per node", 0.04, "us"],
+      ["plain leg: mirror over real body slope", 0.95, "x"],
+    ]);
+    expect(conclusions).toEqual([
+      "In the plain leg, the add-node reducer body costs 0.04us per node, of which the two collision scans are 0.01us (25%) and the sorted-insert comparator 0.028us (70%), together 95% of it; the copy, freeze and assignment floor is 0.001us (2.5%) and the residue the two buckets leave 0.001us (2.5%)",
+    ]);
+  });
+
+  it("refuses a run whose split leg filed no split", () => {
+    const directory = withSidecar([reading("cold miss 100 ops")]);
+
+    expect(() =>
+      stampReadings(
+        findTarget("cache"),
+        directory,
+        stampedSuites(["cold miss 100 ops"], ["plain", "draft"]),
+      ),
+    ).toThrow("Legs that filed no split: draft");
+  });
+
+  it("refuses a split for a leg the report never ran", () => {
+    const directory = withSidecar(
+      [reading("cold miss 100 ops")],
+      [split("plain"), split("draft")],
+    );
+
+    expect(() =>
+      stampReadings(
+        findTarget("cache"),
+        directory,
+        stampedSuites(["cold miss 100 ops"]),
+      ),
+    ).toThrow("Splits with no leg in the report: draft");
+  });
+
+  it("earns a caveat when the slope rests on a thin case", () => {
+    // The 2000-op arms run ten iterations by construction, so the far end of
+    // the subtraction is the one a reader should distrust first.
+    const directory = withSidecar([reading("cold miss 100 ops")]);
+
+    const { caveats } = stampReadings(
+      findTarget("cache"),
+      directory,
+      stampedSuites(["cold miss 100 ops"], ["plain"], 19),
+    );
+
+    expect(caveats).toEqual([
+      "plain leg: the split is a slope through 100/1000 ops and the thinnest case behind it carries 19 samples, so the large-count end of the subtraction is the one to distrust",
     ]);
   });
 

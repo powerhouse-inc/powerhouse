@@ -899,6 +899,29 @@ type ReplayStampReading = {
 /** Every reading this process has taken, by label. */
 const replayReadings = new Map<string, ReplayStampReading>();
 
+/** One leg's split, as per-node slopes over the four op counts. */
+type MirrorSplitReading = {
+  leg: MirrorLeg;
+  counts: number[];
+  fullUsPerNode: number;
+  collisionScanUsPerNode: number;
+  sortUsPerNode: number;
+  touchUsPerNode: number;
+  floorUsPerNode: number;
+  wrapperUsPerNode: number;
+  stampedBodyUsPerNode: number;
+  realBodyUsPerNode: number;
+  collisionScanSharePct: number;
+  sortSharePct: number;
+  touchSharePct: number;
+  floorSharePct: number;
+  scanPlusSortSharePct: number;
+  mirrorOverRealSlope: number;
+};
+
+/** Every split this process has taken, by leg. */
+const mirrorSplitReadings = new Map<MirrorLeg, MirrorSplitReading>();
+
 /**
  * Where the recorder reads the decomposition from. `--outputJson` carries case
  * means and nothing else, so a figure that only ever reached stdout is absent
@@ -964,8 +987,9 @@ function recordReplayStamps(label: string): void {
  */
 function writeReplayStamps(): void {
   const payload = {
-    version: 1,
+    version: 2,
     stamps: [...replayReadings.values()],
+    splits: [...mirrorSplitReadings.values()],
   };
 
   try {
@@ -1668,6 +1692,26 @@ function reportMirrorLeg(leg: MirrorLeg): void {
   const realBody = perNodeSlope(real, (sample) =>
     usPerCall(sample, sample.stamps.bodyNs),
   );
+
+  mirrorSplitReadings.set(leg, {
+    leg,
+    counts: full.map((sample) => sample.count),
+    fullUsPerNode: fullSlope,
+    collisionScanUsPerNode: readScan,
+    sortUsPerNode: sortCompare,
+    touchUsPerNode: touch,
+    floorUsPerNode: pushOnlySlope,
+    wrapperUsPerNode: noBodySlope,
+    stampedBodyUsPerNode: stampedBody,
+    realBodyUsPerNode: realBody,
+    collisionScanSharePct: readShare * 100,
+    sortSharePct: (sortCompare / fullSlope) * 100,
+    touchSharePct: (touch / fullSlope) * 100,
+    floorSharePct: (pushOnlySlope / fullSlope) * 100,
+    scanPlusSortSharePct: ((readScan + sortCompare) / fullSlope) * 100,
+    mirrorOverRealSlope: stampedBody / realBody,
+  });
+  writeReplayStamps();
 
   console.log(
     [

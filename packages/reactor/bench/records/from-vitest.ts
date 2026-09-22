@@ -177,15 +177,38 @@ const ReplayStampReading = z.strictObject({
   bodySharePct: z.number(),
 });
 
+/** One leg's per-node split, as the benchmark subtracted it. */
+const MirrorSplitReading = z.strictObject({
+  leg: z.string().min(1),
+  counts: z.array(z.number().positive()).min(2),
+  fullUsPerNode: z.number(),
+  collisionScanUsPerNode: z.number(),
+  sortUsPerNode: z.number(),
+  touchUsPerNode: z.number(),
+  floorUsPerNode: z.number(),
+  wrapperUsPerNode: z.number(),
+  stampedBodyUsPerNode: z.number(),
+  realBodyUsPerNode: z.number(),
+  collisionScanSharePct: z.number(),
+  sortSharePct: z.number(),
+  touchSharePct: z.number(),
+  floorSharePct: z.number(),
+  scanPlusSortSharePct: z.number(),
+  mirrorOverRealSlope: z.number(),
+});
+type MirrorSplitReading = z.infer<typeof MirrorSplitReading>;
+
 export const ReplayStampsFile = z.strictObject({
-  version: z.literal(1),
+  version: z.literal(2),
   stamps: z.array(ReplayStampReading).min(1),
+  splits: z.array(MirrorSplitReading).min(1),
 });
 export type ReplayStampsFile = z.infer<typeof ReplayStampsFile>;
 
-/** What a sidecar contributes to the entry: readings, and their limits. */
+/** What a sidecar contributes: readings, what they say, and their limits. */
 export type StampReadings = {
   derived: DerivedRatio[];
+  conclusions: string[];
   caveats: string[];
 };
 
@@ -195,6 +218,90 @@ function stampedCaseNames(target: BenchTarget, suites: MicroSuite[]): string[] {
   return suites
     .flatMap((suite) => suite.cases.map((entry) => entry.name))
     .filter((name) => name.endsWith(suffix));
+}
+
+const SPLIT_CASE = /^(.+?) leg \d+ ops: /;
+
+/** Cases of one split leg, which name the leg and the size they ran. */
+function splitLegCases(leg: string, suites: MicroSuite[]): MicroCase[] {
+  return suites
+    .flatMap((suite) => suite.cases)
+    .filter((entry) => SPLIT_CASE.exec(entry.name)?.[1] === leg);
+}
+
+/** Legs the report varied, whether or not the sidecar split any of them. */
+function splitLegsInReport(suites: MicroSuite[]): string[] {
+  const legs = new Set<string>();
+  for (const suite of suites) {
+    for (const entry of suite.cases) {
+      const match = SPLIT_CASE.exec(entry.name);
+      if (match !== null) {
+        legs.add(match[1]);
+      }
+    }
+  }
+  return [...legs];
+}
+
+/** The buckets a leg's slope splits into, and the ratio bounding them. */
+function splitDerived(split: MirrorSplitReading): DerivedRatio[] {
+  const over = `over ${split.counts.map(String).join("/")} ops, per node on the list`;
+
+  return [
+    {
+      name: `${split.leg} leg: collision scans per node`,
+      value: round4(split.collisionScanUsPerNode),
+      unit: "us",
+      note: `The existence find and handleTargetNameCollisions, as the full mirrored body minus the no-reads variant, ${over}`,
+    },
+    {
+      name: `${split.leg} leg: sorted-insert comparator per node`,
+      value: round4(split.sortUsPerNode),
+      unit: "us",
+      note: `The localeCompare pass in insertNodeSorted, as the full mirrored body minus the no-sort variant, ${over}`,
+    },
+    {
+      name: `${split.leg} leg: scan + sort share of the mirrored body`,
+      value: round(split.scanPlusSortSharePct),
+      unit: "pct",
+      note: `Both buckets over the full mirrored body slope of ${round4(split.fullUsPerNode)}us per node`,
+    },
+    {
+      name: `${split.leg} leg: residue the buckets leave per node`,
+      value: round4(split.touchUsPerNode),
+      unit: "us",
+      note: `What full-minus-no-reads and full-minus-no-sort leave between the push-only floor and the full mirrored body; on the draft leg that is child drafts and finalize, and the plain leg has no draft for it to be, ${over}`,
+    },
+    {
+      name: `${split.leg} leg: copy, freeze and assignment floor per node`,
+      value: round4(split.floorUsPerNode),
+      unit: "us",
+      note: `The push-only variant, which still reads the list, copies it twice, freezes it and assigns it once, ${over}`,
+    },
+    {
+      name: `${split.leg} leg: create() and base reducer per node`,
+      value: round4(split.wrapperUsPerNode),
+      unit: "us",
+      note: `The no-body baseline, which is the wrapper the reducer body does not induce, ${over}`,
+    },
+    {
+      name: `${split.leg} leg: mirrored body per node`,
+      value: round4(split.fullUsPerNode),
+      unit: "us",
+      note: `The full mirrored body slope the buckets sum to, ${over}`,
+    },
+    {
+      name: `${split.leg} leg: mirror over real body slope`,
+      value: round4(split.mirrorOverRealSlope),
+      unit: "x",
+      note: `The mirror's stamped read+write slope of ${round4(split.stampedBodyUsPerNode)}us per node over the real reducer body's ${round4(split.realBodyUsPerNode)}us; the mirror represents the body only as far as this reads 1x`,
+    },
+  ];
+}
+
+/** The split in a sentence, which is the reading a later reader will quote. */
+function splitConclusion(split: MirrorSplitReading): string {
+  return `In the ${split.leg} leg, the add-node reducer body costs ${round4(split.fullUsPerNode)}us per node, of which the two collision scans are ${round4(split.collisionScanUsPerNode)}us (${round(split.collisionScanSharePct)}%) and the sorted-insert comparator ${round4(split.sortUsPerNode)}us (${round(split.sortSharePct)}%), together ${round(split.scanPlusSortSharePct)}% of it; the copy, freeze and assignment floor is ${round4(split.floorUsPerNode)}us (${round(split.floorSharePct)}%) and the residue the two buckets leave ${round4(split.touchUsPerNode)}us (${round(split.touchSharePct)}%)`;
 }
 
 /**
@@ -218,7 +325,7 @@ export function stampReadings(
   const cases = stampedCaseNames(target, suites);
 
   if (target.stampsFile === "") {
-    return { derived: [], caveats: [] };
+    return { derived: [], conclusions: [], caveats: [] };
   }
 
   const path = join(resultsDirectory, target.stampsFile);
@@ -260,7 +367,28 @@ export function stampReadings(
     );
   }
 
+  const legs = splitLegsInReport(suites);
+  const split = parsed.data.splits.map((entry) => entry.leg);
+  const unsplit = legs.filter((leg) => !split.includes(leg));
+  const staleSplits = split.filter((leg) => !legs.includes(leg));
+
+  if (unsplit.length > 0 || staleSplits.length > 0) {
+    throw new Error(
+      [
+        `${path} does not split the legs the run in ${target.resultsFile} varied.`,
+        ...(unsplit.length > 0
+          ? [`Legs that filed no split: ${unsplit.join(", ")}`]
+          : []),
+        ...(staleSplits.length > 0
+          ? [`Splits with no leg in the report: ${staleSplits.join(", ")}`]
+          : []),
+        `Re-run ${target.recordScript} so both come from one run.`,
+      ].join("\n"),
+    );
+  }
+
   const derived: DerivedRatio[] = [];
+  const conclusions: string[] = [];
   const caveats: string[] = [];
 
   for (const stamp of parsed.data.stamps) {
@@ -300,7 +428,23 @@ export function stampReadings(
     }
   }
 
-  return { derived, caveats };
+  for (const entry of parsed.data.splits) {
+    derived.push(...splitDerived(entry));
+    conclusions.push(splitConclusion(entry));
+
+    const thinnest = splitLegCases(entry.leg, suites).reduce(
+      (fewest, item) => Math.min(fewest, item.sampleCount),
+      Number.POSITIVE_INFINITY,
+    );
+
+    if (thinnest < 100) {
+      caveats.push(
+        `${entry.leg} leg: the split is a slope through ${entry.counts.map(String).join("/")} ops and the thinnest case behind it carries ${String(thinnest)} samples, so the large-count end of the subtraction is the one to distrust`,
+      );
+    }
+  }
+
+  return { derived, conclusions, caveats };
 }
 
 /**
