@@ -439,7 +439,7 @@ export class ProcessorManager
           }
         }
 
-        tracked.lastOrdinal = maxOrdinal;
+        tracked.lastOrdinal = Math.max(tracked.lastOrdinal, maxOrdinal);
         await this.safeSaveProcessorCursor(tracked);
       }),
     );

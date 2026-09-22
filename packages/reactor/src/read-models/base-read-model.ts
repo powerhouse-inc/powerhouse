@@ -247,12 +247,13 @@ export class BaseReadModel implements IReadModel {
     for (const item of items) {
       maxOrdinal = Math.max(maxOrdinal, item.context.ordinal);
     }
-    this.lastOrdinal = maxOrdinal;
+    const next = Math.max(this.lastOrdinal, maxOrdinal);
+    this.lastOrdinal = next;
 
     await trx
       .updateTable("ViewState")
       .set({
-        lastOrdinal: maxOrdinal,
+        lastOrdinal: next,
         lastOperationTimestamp: new Date(),
       })
       .where("readModelId", "=", this.config.readModelId)
