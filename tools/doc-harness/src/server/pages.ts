@@ -249,6 +249,8 @@ export const ATTEMPT_FILES = [
   "attempt.json",
   "build.json",
   "tests.json",
+  "tsc.log",
+  "vitest.log",
 ] as const;
 
 /** The linkable files present in an attempt directory. */

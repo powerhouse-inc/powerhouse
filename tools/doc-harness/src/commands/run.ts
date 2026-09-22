@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import type { WorkflowStreamEvent } from "@mastra/core/workflows";
 import {
   MODEL_IDS,
@@ -18,13 +19,17 @@ import { createDrivers, recordFiles } from "../lib/drivers.js";
 import { FINDINGS_FILE, RUNS_FILE } from "../lib/paths.js";
 import {
   describeRedo,
+  formatRedoRules,
   parseRedoReasons,
+  pendingInstallFailures,
+  pendingRedoRules,
   redoFailedAttempts,
   summarizeRedo,
   type RedoResult,
 } from "../lib/redo.js";
 import { UtilizationThrottle } from "../lib/throttle.js";
 import {
+  HARNESS_ROOT,
   MONOREPO_ROOT,
   newRunId,
   recipesRoot,
@@ -32,6 +37,7 @@ import {
   runLayout,
   RUNS_ROOT,
   STATE_DIR,
+  type RunLayout,
 } from "../lib/paths.js";
 import {
   Arm,
@@ -148,6 +154,38 @@ function describeChunk(chunk: WorkflowStreamEvent): string | null {
   }
 }
 
+/** Paths are printed relative to the package, where the commands are run. */
+function fromHarnessRoot(file: string): string {
+  const rel = path.relative(HARNESS_ROOT, file);
+  return rel.startsWith("..") ? file : rel;
+}
+
+/**
+ * What is left to run after a drive, as commands to paste from
+ * `tools/doc-harness`: one `resume --redo-failed` naming every step that is
+ * still failed, and the prepare.json of each attempt whose install failed,
+ * which no redo rule covers.
+ */
+function recoveryLines(runId: string, layout: RunLayout): string[] {
+  const lines: string[] = [];
+  const rules = pendingRedoRules(layout);
+  if (rules.length > 0) {
+    lines.push(
+      "redo the failed steps from tools/doc-harness:",
+      `  pnpm cli resume ${runId} --redo-failed ${formatRedoRules(rules)}`,
+    );
+  }
+  const installs = pendingInstallFailures(layout);
+  if (installs.length > 0) {
+    lines.push(
+      `${installs.length} attempt(s) failed to install; retry them from tools/doc-harness:`,
+      `  rm ${installs.map(fromHarnessRoot).join(" ")}`,
+      `  pnpm cli resume ${runId}`,
+    );
+  }
+  return lines;
+}
+
 /** Drives harnessRun to completion and returns the process exit code. */
 async function drive(o: {
   input: HarnessRunInput;
@@ -174,15 +212,12 @@ async function drive(o: {
       return 1;
     }
     const s = result.result;
+    const layout = runLayout(o.input.runId, o.ctx.runsRoot);
     const redone = o.redo ? summarizeRedo(o.redo) : null;
     o.ctx.log(
       `run ${o.input.runId}: ${s.attempts} attempts, ${s.complete} complete (${s.truncated} truncated), ${s.failed} failed, ${s.rateLimited} rate-limited, ${s.contaminated} contaminated, ${s.findingsAppended} findings appended${redone === null ? "" : `, ${redone}`}`,
     );
-    if (s.rateLimited > 0) {
-      o.ctx.log(
-        `${s.rateLimited} attempt(s) were rate-limited: redo them with doc-harness resume ${o.input.runId} --redo-failed`,
-      );
-    }
+    for (const line of recoveryLines(o.input.runId, layout)) o.ctx.log(line);
     o.ctx.log(`report ${s.reportPath}`);
     o.ctx.log(`open ${reportUrl(o.input.runId)} (with pnpm studio running)`);
     return s.failed > 0 || s.rateLimited > 0 ? 1 : 0;

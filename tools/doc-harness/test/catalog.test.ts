@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import {
   loadCatalog,
   pinnedPath,
+  Task,
   validateCatalogFiles,
-  type Task,
 } from "../src/lib/catalog.js";
 import { MONOREPO_ROOT, recipesRoot } from "../src/lib/paths.js";
 
@@ -20,6 +20,28 @@ function exportPattern(name: string): RegExp {
   const declared = `export\\s+(?:declare\\s+)?(?:abstract\\s+)?(?:async\\s+)?(?:class|function\\*?|const|let|var|type|interface|enum)\\s+${name}\\b`;
   const listed = `export\\s*(?:type\\s*)?\\{[^}]*\\b${name}\\b[^}]*\\}`;
   return new RegExp(`${declared}|${listed}`);
+}
+
+/** The `<…>` an export declares, not one that appears in a parameter type. */
+function typeParameters(name: string, signature: string): string | null {
+  if (!signature.startsWith(`${name}<`)) return null;
+  let depth = 0;
+  for (let i = name.length; i < signature.length; i += 1) {
+    if (signature[i] === "<") depth += 1;
+    if (signature[i] !== ">") continue;
+    depth -= 1;
+    if (depth === 0) return signature.slice(name.length, i + 1);
+  }
+  return null;
+}
+
+function testFiles(task: Task): { to: string; source: string }[] {
+  return task.acceptance.files
+    .filter((f) => /\.test\.[cm]?ts$/.test(f.to))
+    .map((f) => ({
+      to: f.to,
+      source: readFileSync(pinnedPath(task.id, f.from), "utf8"),
+    }));
 }
 
 function importSpecifiers(source: string): string[] {
@@ -139,5 +161,60 @@ describe("catalog", () => {
         }
       }
     }
+  });
+
+  // The acceptance tests are typechecked against the builder's files, so a
+  // shape they need and the contract does not name is a hidden requirement.
+  it("pins a signature wherever a hidden test names type arguments", () => {
+    for (const task of catalog.tasks) {
+      for (const entry of task.contract) {
+        for (const name of entry.exports) {
+          const called = new RegExp(`\\b${name}\\s*<[^<>]*>\\s*\\(`);
+          for (const file of testFiles(task)) {
+            if (!called.test(file.source)) continue;
+            const label = `${task.id}: ${file.to} calls ${name}<…>()`;
+            const signature = entry.signatures[name];
+            expect(signature, `${label} with no pinned signature`).toBeTypeOf(
+              "string",
+            );
+            expect(
+              typeParameters(name, signature),
+              `${label}, not generically`,
+            ).not.toBeNull();
+          }
+        }
+      }
+    }
+  });
+
+  it("pins signatures the recipe actually declares", (ctx) => {
+    if (!recipesPresent) {
+      ctx.skip(`recipes checkout absent at ${recipes}`);
+    }
+    for (const task of catalog.tasks) {
+      if (task.recipeDir === null) continue;
+      for (const entry of task.contract) {
+        for (const [name, signature] of Object.entries(entry.signatures)) {
+          const params = typeParameters(name, signature);
+          if (params === null) continue;
+          const source = readFileSync(
+            path.join(recipes, task.recipeDir, entry.file),
+            "utf8",
+          );
+          expect(
+            source.includes(`${name}${params}`),
+            `${task.id}: ${entry.file} does not declare ${name}${params}`,
+          ).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("rejects a signature for a name that is not an export", () => {
+    const task = structuredClone(catalog.tasks[0]) as unknown as {
+      contract: { file: string; exports: string[]; signatures: unknown }[];
+    };
+    task.contract[0].signatures = { nope: "nope(): void" };
+    expect(() => Task.parse(task)).toThrow(/not an export/);
   });
 });

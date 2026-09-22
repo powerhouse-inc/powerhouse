@@ -87,6 +87,7 @@ export const record = createStep({
       buildFailureReason: built.failureReason,
       tscOk: tests.tscOk,
       acceptanceOk: acceptanceVerdict(tests),
+      gradeNote: gradeNote(tests),
       testsPassed: tests.passed,
       testsTotal: tests.total,
       turns: built.turns,
@@ -152,6 +153,29 @@ export const record = createStep({
     });
   },
 });
+
+/** What a reader needs to see without opening tsc.log or vitest.log. */
+export function gradeNote(tests: AcceptanceOutput): string | null {
+  if (tests.skipped) return null;
+  if (tests.tscOk === false) {
+    return `tsc: ${tests.tscError ?? "failed; see tsc.log"}`;
+  }
+  const suite = tests.suiteFailures.at(0);
+  if (suite !== undefined) {
+    const why = suite.message.length > 0 ? `: ${suite.message}` : "";
+    return `suite failed: ${suite.name}${why}`;
+  }
+  if (tests.suiteErrors > 0) {
+    return `${tests.suiteErrors} suites failed; see vitest.log`;
+  }
+  if (tests.failed > 0) {
+    return `${tests.failed} of ${tests.total} tests failed`;
+  }
+  if (tests.vitestOk === false) return "vitest wrote no report; see vitest.log";
+  if (tests.kind === "vitest" && tests.total === 0)
+    return "vitest ran no tests";
+  return null;
+}
 
 /** tsc-only grades on tsc; vitest needs a report with tests and no failures. */
 function acceptanceVerdict(tests: AcceptanceOutput): boolean | null {

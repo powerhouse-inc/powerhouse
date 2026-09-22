@@ -19,7 +19,7 @@ This page covers the low-level `IReactor` interface and the internal components 
 | Aspect                  | `IReactor`                                                 | `IReactorClient`                                                                                        |
 | ----------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | **Write return values** | Returns `JobInfo` immediately (fire-and-forget)            | Waits for job completion, returns the final document                                                    |
-| **Signing**             | Caller passes an `ISigner` explicitly                      | Client manages signing internally                                                                       |
+| **Signing**             | `create`, `deleteDocument`, `addRelationship` and `removeRelationship` take an optional `signer`; `execute` and `load` take none — identity rides on each action's `context.signer` | Client manages signing internally                                                                       |
 | **Document lookup**     | Separate `get()`, `getBySlug()`, `getByIdOrSlug()` methods | Single `get(identifier)` that accepts either                                                            |
 | **Children/parents**    | Returns `string[]` (document IDs only)                     | Returns `PagedResults<PHDocument>` (full documents)                                                     |
 | **Convenience methods** | Basic CRUD                                                 | Plus: `createEmpty()`, `rename()`, `moveRelationship()`, `deleteDocuments()`, and `client.drives.addFile()` |
@@ -192,11 +192,13 @@ What it guarantees is ordering, and only ordering. A batch is not atomic and not
 
 In particular, a `dependsOn` edge waits for the job before it to *finish*, not to *succeed*. A job that fails leaves the queue exactly as a successful one does, so its dependents still run — against whatever state the failure left behind. Jobs that committed stay committed.
 
-The returned value is a submission receipt rather than a result: every `JobInfo` comes back `PENDING`, with a placeholder consistency token. To find out what actually happened, poll `getJobStatus` for each job id, or subscribe to `JOB_FAILED` and correlate through `job.meta.batchId` and `job.meta.batchJobIds`.
+The returned value is a submission receipt rather than a result: every `JobInfo` comes back `PENDING`, with a placeholder consistency token. To find out what actually happened, poll `getJobStatus` for each job id, or subscribe to the job lifecycle events and correlate through `event.jobMeta.batchId` and `event.jobMeta.batchJobIds`. `ReactorJobFailedEvent` carries no `jobMeta`, and its `job` is optional (`job?: Job`), so guard it before reading `event.job.meta` — or read `JobInfo.meta` from `getJobStatus` instead.
 
 There is no idempotency key on a job plan, so re-submitting a batch after a partial failure re-applies the entries that already succeeded. Any compensation is the caller's to write.
 
 A job plan carries raw `Action` objects, so a batch that creates a document uses action creators rather than `reactor.create`. `@powerhousedao/reactor` exports `createDocumentAction`, `upgradeDocumentAction` and `deleteDocumentAction` for the `document`-scope lifecycle actions. A model's own actions come from its creators, here `addFile` from the drive model.
+
+The `model` field takes a document type string. Each built-in model exports its own as a constant rather than requiring the literal: `driveDocumentType` (`"powerhouse/document-drive"`) from `@powerhousedao/shared/document-drive`, and `documentModelDocumentType` (`"powerhouse/document-model"`) from `@powerhousedao/shared/document-model`. A codegen'd module exports its own the same way, as `<name>DocumentType`.
 
 ```typescript
 import {
@@ -411,12 +413,24 @@ module.eventBus.subscribe(
 );
 ```
 
-`subscribe<K>(type: number, subscriber: (type: number, event: K) => void | Promise<void>)` cannot infer the payload from the event id, so annotate the callback's `event` parameter (or pass `K` explicitly). Left unannotated, `event` is `unknown` and the handler does not compile. The payload types are exported from `@powerhousedao/reactor`.
+`subscribe<K>(type: number, subscriber: (type: number, event: K) => void | Promise<void>)` cannot infer the payload from the event id, so annotate the callback's `event` parameter (or pass `K` explicitly). Left unannotated, `event` is `unknown` and the handler does not compile.
+
+Each job lifecycle event has its own payload type, all exported from `@powerhousedao/reactor`:
+
+| Event                              | Payload type            | Fields                                                     |
+| ---------------------------------- | ----------------------- | ---------------------------------------------------------- |
+| `JOB_PENDING` (10001)              | `JobPendingEvent`       | `jobId`, `jobMeta`                                          |
+| `JOB_RUNNING` (10002)              | `JobRunningEvent`       | `jobId`, `jobMeta`                                          |
+| `JOB_WRITE_READY` (10003)          | `JobWriteReadyEvent`    | `jobId`, `operations`, `jobMeta`, `collectionMemberships?`  |
+| `JOB_READ_READY` (10004)           | `JobReadReadyEvent`     | `jobId`, `operations`                                       |
+| `JOB_FAILED` (10005)               | `ReactorJobFailedEvent` | `jobId`, `error: Error`, `job?`                             |
+
+Every payload carries `jobId`, so a subscriber can correlate back to the ids returned in `BatchExecutionResult.jobs`. Where `jobMeta` is present it carries `batchId` and `batchJobIds` plus any `meta` passed at submission; `JobReadReadyEvent` and `ReactorJobFailedEvent` do not carry it.
 
 Besides `ReactorEventTypes`, `SyncEventTypes`, and `QueueEventTypes`, the executor managers emit `JobExecutorEventTypes` (`JOB_STARTED: 20000`, `JOB_COMPLETED: 20001`, `JOB_FAILED: 20002`, `EXECUTOR_STARTED: 20003`, `EXECUTOR_STOPPED: 20004`).
 
 :::warning
-Two distinct job-failed payloads exist. The reactor-level `ReactorEventTypes.JOB_FAILED` (10005) is exported as `ReactorJobFailedEvent` and carries `jobId` and `error: Error`. The executor-level `JobExecutorEventTypes.JOB_FAILED` (20002) is exported as `JobFailedEvent` and carries `job` and `error: string`. Check which enum you subscribed to before reading `error`.
+Two distinct job-failed payloads exist. The reactor-level `ReactorEventTypes.JOB_FAILED` (10005) is exported as `ReactorJobFailedEvent` and carries `jobId`, `error: Error` and an optional `job`. The executor-level `JobExecutorEventTypes.JOB_FAILED` (20002) is exported as `JobFailedEvent` and carries `job` and `error: string`. Check which enum you subscribed to before reading `error`.
 :::
 
 See [Reactor event system](/academy/Reference/Reactor/WorkingWithTheReactor#reactor-event-system) for the full list of event types.

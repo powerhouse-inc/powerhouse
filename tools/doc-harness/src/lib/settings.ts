@@ -1,6 +1,6 @@
 /** Per-invocation `--settings` JSON for the builder, judge and verifier. */
 import { mkdirSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import type { Arm, SandboxMode } from "./schemas.js";
 
@@ -13,8 +13,10 @@ export interface PermissionSettings {
   sandbox: {
     enabled: true;
     autoAllowBashIfSandboxed: false;
+    /** The sandbox is the boundary, not a suggestion: no per-command opt-out. */
+    allowUnsandboxedCommands: false;
     filesystem: { denyRead: string[] };
-    network: { allowedDomains: [] };
+    network: { allowedDomains: []; allowUnixSockets: string[] };
   };
 }
 
@@ -36,12 +38,22 @@ function claudeDir(): string {
   return path.join(homedir(), ".claude");
 }
 
+/** tsx's IPC socket dir; sandboxed TMPDIR is `/tmp/claude-<uid>`, not ours. */
+export function tsxSocketDirs(): string[] {
+  const uid = process.getuid?.();
+  if (uid === undefined) return [];
+  const roots = [tmpdir(), `/tmp/claude-${uid}`, `/private/tmp/claude-${uid}`];
+  const dirs = roots.map((root) => path.join(root, `tsx-${uid}`));
+  return [...new Set(dirs)];
+}
+
 function sandboxBlock(denyRead: string[]): PermissionSettings["sandbox"] {
   return {
     enabled: true,
     autoAllowBashIfSandboxed: false,
+    allowUnsandboxedCommands: false,
     filesystem: { denyRead: denyRead.map((p) => path.resolve(p)) },
-    network: { allowedDomains: [] },
+    network: { allowedDomains: [], allowUnixSockets: tsxSocketDirs() },
   };
 }
 

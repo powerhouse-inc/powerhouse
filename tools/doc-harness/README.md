@@ -29,10 +29,17 @@ contamination (reads outside the docs and workspace, network use).
 The builder runs under `--permission-mode dontAsk` with deny rules for the
 monorepo, the recipes checkout and `~/.claude`, plus the Claude Code sandbox
 block that closes the Bash interpreter hole (a plain deny rule stops `cat` but
-not `python3 -c "open(...)"`). The user's plugins, hooks, MCP servers and
-CLAUDE.md are excluded with `--setting-sources ""`, `--strict-mcp-config` and an
-empty MCP config. `--bare` is not used because it requires an API key and the
-harness runs on the claude.ai login.
+not `python3 -c "open(...)"`). `allowUnsandboxedCommands: false` keeps that
+closed: without it a builder that hits a sandbox denial simply reruns the
+command with `dangerouslyDisableSandbox`, which `dontAsk` grants. The one hole
+punched in the sandbox is `network.allowUnixSockets`, listing the directory
+`tsx` binds its ESM-loader IPC socket in (`<tmp>/tsx-<uid>/<pid>.pipe`, and the
+sandbox's tmp is `/tmp/claude-<uid>`): without it every `tsx script.ts` dies
+with `listen EPERM` and the builder writes code it can never run. The user's
+plugins, hooks, MCP servers and CLAUDE.md are excluded with
+`--setting-sources ""`, `--strict-mcp-config` and an empty MCP config. `--bare`
+is not used because it requires an API key and the harness runs on the
+claude.ai login.
 
 Reads of `node_modules/**/*.d.ts` are allowed and counted as `dts-read`
 escapes: the headline metric for "the docs did not answer the question".
@@ -54,6 +61,14 @@ state/harness.db              Mastra snapshots (gitignored)
 
 Every step is idempotent on its output file, so `resume <runId>` re-drives the
 workflow and skips finished work.
+
+`vitest.log` holds the command, vitest's stdout and stderr, and how it exited:
+the run is graded with the JSON reporter *and* the default one, because the
+JSON reporter reports a suite that failed in a hook as a count and nothing
+else — `passed: 10, total: 10, suiteErrors: 2` with an empty message. The
+failed suites and their errors land in `tests.json` as `suiteFailures`, the
+first `error TS…` line as `tscError`, and one line of either becomes the
+attempt's `gradeNote`, which the report prints under `## Grading failures`.
 
 ## Commands
 
@@ -136,6 +151,13 @@ Rate-limited and contaminated attempts are excluded from pass rates.
 | `complete` | the builder finished and the workspace was graded | yes | yes | yes | no |
 | `complete` + `truncated: true` | the builder hit `--max-budget-usd` (`budget-exhausted`) but the workspace was graded and the transcript judged anyway; the report marks it and counts a passing one as a pass | yes | yes | yes | no |
 
+`run` and `resume` end by printing the exact recovery commands, to be pasted
+from `tools/doc-harness`: one `pnpm cli resume <runId> --redo-failed <rules>`
+naming every step still failed, scoped to the step it failed in
+(`build:rate-limited,judge:budget-exhausted`) so a build that only ran out of
+budget is left alone, and, for an install failure, the `rm` of each
+`prepare.json` that has to go before a plain `resume` retries it.
+
 A judge or verifier that fails does not change the attempt's status: the
 failure reason lands in `judgeFailed` and the report's `judge` column, and
 `resume --redo-failed` redoes that step alone. Killed builders report no cost;
@@ -173,7 +195,13 @@ inside `runs/` and escape any HTML the report contains.
 `catalog/tasks.json` describes each task: a behaviour-level prompt, the
 contract (files and exports the hidden tests import), pinned inputs copied into
 the workspace (document-model specs and generated code), the acceptance tests,
-the packages to install at the pin, and budgets. `scripts/import-pinned.ts`
+the packages to install at the pin, and budgets. A contract entry may also pin
+`signatures` (export name -> declaration), which the builder prompt renders
+under the file: the hidden tests are typechecked against the builder's code, so
+a shape they rely on and the prompt never states would grade arm A on a secret.
+`catalog validate` and `test/catalog.test.ts` hold the line: a test that calls a
+contract export with explicit type arguments must have that export's signature
+pinned, and a pinned signature must be the one the reference recipe declares. `scripts/import-pinned.ts`
 regenerates `catalog/pinned/` from the recipes checkout when the pin bumps.
 
 ## Verified against

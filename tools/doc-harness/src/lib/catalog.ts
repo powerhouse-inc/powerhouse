@@ -43,7 +43,22 @@ export const Task = z.object({
   taskPrompt: z.string().min(200),
   /** Files and exports the hidden acceptance tests import. */
   contract: z.array(
-    z.object({ file: z.string(), exports: z.array(z.string()) }),
+    z
+      .object({
+        file: z.string(),
+        exports: z.array(z.string()),
+        /** Export -> declaration, where the tests typecheck against a shape. */
+        signatures: z.record(z.string(), z.string()).default({}),
+      })
+      .superRefine((entry, ctx) => {
+        for (const name of Object.keys(entry.signatures)) {
+          if (entry.exports.includes(name)) continue;
+          ctx.addIssue({
+            code: "custom",
+            message: `${entry.file}: signature for ${name}, which is not an export`,
+          });
+        }
+      }),
   ),
   /** Copied into the workspace before the builder starts. */
   pinnedInputs: z.array(FileCopy),

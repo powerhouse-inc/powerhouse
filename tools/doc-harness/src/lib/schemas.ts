@@ -198,21 +198,33 @@ export type Metrics = z.infer<typeof Metrics>;
 export const AcceptanceKind = z.enum(["vitest", "tsc-only", "none"]);
 export type AcceptanceKind = z.infer<typeof AcceptanceKind>;
 
+/** One `FAIL` block: a test file, or a suite that failed in a hook. */
+export const SuiteFailure = z.object({
+  name: z.string(),
+  message: z.string(),
+});
+export type SuiteFailure = z.infer<typeof SuiteFailure>;
+
 /** Written to tests.json. */
 export const TestsResult = z.object({
   kind: AcceptanceKind,
   tscOk: z.boolean().nullable(),
   tscOutputPath: z.string().nullable(),
+  /** The first `error TS…` line, when tsc failed. */
+  tscError: z.string().nullable().default(null),
   /** True when vitest ran and wrote its JSON report; null when it did not run. */
   vitestOk: z.boolean().nullable(),
-  /** Test files that failed to collect; their tests never counted. */
+  /** Suites vitest failed; a hook failure counts here and in no test count. */
   suiteErrors: z.number().default(0),
+  /** Which ones, and why: the counts alone never say. */
+  suiteFailures: z.array(SuiteFailure).default([]),
   passed: z.number(),
   failed: z.number(),
   total: z.number(),
   timedOut: z.boolean(),
   durationMs: z.number(),
   vitestJsonPath: z.string().nullable(),
+  vitestLogPath: z.string().nullable().default(null),
 });
 export type TestsResult = z.infer<typeof TestsResult>;
 
@@ -336,6 +348,8 @@ export const AttemptSummary = z.object({
   tscOk: z.boolean().nullable(),
   /** The acceptance verdict for the task kind; null when nothing was graded. */
   acceptanceOk: z.boolean().nullable(),
+  /** Why it failed: the first tsc error or failed suite, with its message. */
+  gradeNote: z.string().nullable().default(null),
   testsPassed: z.number(),
   testsTotal: z.number(),
   turns: z.number().nullable(),
@@ -420,8 +434,10 @@ export type BuildOutput = z.infer<typeof BuildOutput>;
 export const AcceptanceOutput = TestsResult.pick({
   kind: true,
   tscOk: true,
+  tscError: true,
   vitestOk: true,
   suiteErrors: true,
+  suiteFailures: true,
   passed: true,
   failed: true,
   total: true,
