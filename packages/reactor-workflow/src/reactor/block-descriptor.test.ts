@@ -69,7 +69,7 @@ module.exports = { app };
   // bundle was loaded in this process.
   env: `
 const app = {
-  displayName: process.env.PH_SECRETS_MASTER_KEY ? "leaked" : "isolated",
+  displayName: process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY ? "leaked" : "isolated",
   actions: {
     probe: {
       name: "probe",
@@ -112,7 +112,7 @@ async function writeFixtureBundle(
 
 describe("WorkflowRuntimeService.blockDescriptor", () => {
   beforeAll(async () => {
-    process.env.PH_SECRETS_MASTER_KEY =
+    process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY =
       "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
     cacheDir = await mkdtemp(join(tmpdir(), "ap-block-descriptor-"));
     for (const key of Object.keys(PIECES) as Array<keyof typeof PIECES>) {
@@ -139,7 +139,7 @@ describe("WorkflowRuntimeService.blockDescriptor", () => {
   });
 
   afterAll(async () => {
-    delete process.env.PH_SECRETS_MASTER_KEY;
+    delete process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY;
     await rm(cacheDir, { recursive: true, force: true });
   });
 

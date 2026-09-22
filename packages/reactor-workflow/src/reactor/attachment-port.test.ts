@@ -26,7 +26,7 @@ async function destPath(): Promise<string> {
 }
 
 afterEach(async () => {
-  delete process.env.PH_PIECE_MAX_FILE_BYTES;
+  delete process.env.PH_WORKFLOWS_PIECE_MAX_FILE_BYTES;
   if (dir) await rm(dir, { recursive: true, force: true });
   dir = undefined;
 });
@@ -76,7 +76,7 @@ describe("the attachment port's read", () => {
   });
 
   it("refuses a declared size over the limit without reading the body", async () => {
-    process.env.PH_PIECE_MAX_FILE_BYTES = "8";
+    process.env.PH_WORKFLOWS_PIECE_MAX_FILE_BYTES = "8";
     const cancel = vi.fn(() => Promise.resolve());
     const body = streamOf([new Uint8Array(4)]);
     body.cancel = cancel as never;
@@ -96,7 +96,7 @@ describe("the attachment port's read", () => {
   });
 
   it("stops a body that outgrows the limit and leaves no partial file", async () => {
-    process.env.PH_PIECE_MAX_FILE_BYTES = "8";
+    process.env.PH_WORKFLOWS_PIECE_MAX_FILE_BYTES = "8";
     // A body with no end to it: the header understates it, so only counting
     // what arrives stops this, and only streaming stops it in time.
     let pulls = 0;

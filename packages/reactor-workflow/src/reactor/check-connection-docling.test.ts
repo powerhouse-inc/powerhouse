@@ -169,7 +169,7 @@ describe.skipIf(!existsSync(PIECE_PKG))(
   () => {
     beforeAll(async () => {
       // Keep the key in-process so the encrypted store never writes a key file.
-      process.env.PH_SECRETS_MASTER_KEY =
+      process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY =
         "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
       cacheDir = await mkdtemp(join(tmpdir(), "ap-check-docling-"));
       seedBuiltBundle(cacheDir);

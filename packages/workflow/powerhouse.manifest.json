@@ -43,5 +43,52 @@
   ],
   "processors": [],
   "subgraphs": [],
-  "config": []
+  "config": [
+    {
+      "name": "PH_WORKFLOWS_SECRETS_MASTER_KEY",
+      "type": "secret",
+      "description": "64 hex chars (32 bytes) encrypting connection secrets at rest. Unset, a key is generated at ./.ph/secrets.key and reused; a host whose working directory does not survive a restart must set this or every stored secret becomes undecryptable."
+    },
+    {
+      "name": "PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES",
+      "type": "var",
+      "description": "Comma-separated addresses or CIDRs a piece may reach, widening the default policy that refuses private and loopback space. A bare address is taken as one host. Applies to steps and to design-time piece code alike."
+    },
+    {
+      "name": "PH_WORKFLOWS_RUN_CONCURRENCY",
+      "type": "var",
+      "description": "How many runs execute at once. Each slot is a forked node process, so this is the reactor's real connector concurrency.",
+      "default": "4"
+    },
+    {
+      "name": "PH_WORKFLOWS_RUN_QUEUE_DEPTH",
+      "type": "var",
+      "description": "How many runs may wait for a slot before new ones are refused. 0 waits without limit, turning saturation into latency rather than failures.",
+      "default": "0"
+    },
+    {
+      "name": "PH_WORKFLOWS_POLL_INTERVAL_MS",
+      "type": "var",
+      "description": "Cadence for a polling trigger that names none of its own. An author's override and a piece's requested schedule both win over it; a 1000ms floor applies to all three.",
+      "default": "60000"
+    },
+    {
+      "name": "PH_WORKFLOWS_WEBHOOK_RECONCILE_MS",
+      "type": "var",
+      "description": "How often a webhook trigger re-registers with its provider, so a registration the provider dropped comes back.",
+      "default": "900000"
+    },
+    {
+      "name": "PH_WORKFLOWS_WEBHOOK_TIMEOUT_MS",
+      "type": "var",
+      "description": "How long a sync-mode delivery holds the provider's socket. Past it the run continues and the provider is told so, lest a wedged step tie up connections.",
+      "default": "30000"
+    },
+    {
+      "name": "PH_WORKFLOWS_PIECE_MAX_FILE_BYTES",
+      "type": "var",
+      "description": "File-size ceiling for both directions: a FILE property hydrated from a URL, data URI or attachment ref, and ctx.files.write.",
+      "default": "8388608"
+    }
+  ]
 }

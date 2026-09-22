@@ -56,7 +56,7 @@ const app = {
   displayName: "Env Fixture",
   actions: {},
   checkConnection: async () => ({
-    name: process.env.PH_SECRETS_MASTER_KEY ? "leaked" : "isolated",
+    name: process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY ? "leaked" : "isolated",
   }),
 };
 module.exports = { app };
@@ -95,7 +95,7 @@ function bundleDir(name: FixtureName): string {
 
 describe("PieceWorker.checkConnection", () => {
   beforeAll(async () => {
-    process.env.PH_SECRETS_MASTER_KEY = "host-only-master-key";
+    process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY = "host-only-master-key";
     cacheDir = await mkdtemp(join(tmpdir(), "ap-worker-check-"));
     for (const name of Object.keys(FIXTURES) as FixtureName[]) {
       const dir = bundleDir(name);
@@ -111,7 +111,7 @@ describe("PieceWorker.checkConnection", () => {
 
   afterAll(async () => {
     worker.dispose();
-    delete process.env.PH_SECRETS_MASTER_KEY;
+    delete process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY;
     await rm(cacheDir, { recursive: true, force: true });
   });
 
