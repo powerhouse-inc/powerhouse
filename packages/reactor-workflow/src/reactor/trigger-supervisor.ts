@@ -292,6 +292,54 @@ export class TriggerSupervisor {
     return this.enqueue(() => this.disable(workflowId, binding));
   }
 
+  // A trigger the runtime could not turn into a binding at all: an unknown
+  // block type, a piece nothing can resolve.
+
+  // It never reaches enable(), so this is the only thing that writes a row for
+  // it, and without one the workflow reads as absent rather than as broken.
+  reject(
+    workflowId: string,
+    blockType: string,
+    config: unknown,
+    message: string,
+  ): Promise<void> {
+    this.bindings.delete(workflowId);
+    this.enabledOk.delete(workflowId);
+    this.enableRetries.delete(workflowId);
+    return this.enqueue(() =>
+      this.recordRejection(workflowId, blockType, config, message),
+    );
+  }
+
+  private async recordRejection(
+    workflowId: string,
+    blockType: string,
+    config: unknown,
+    message: string,
+  ): Promise<void> {
+    const store = await this.options.store();
+    if (!store) return;
+    const existing = await store.getTriggerState(workflowId);
+    await store.upsertTriggerState({
+      workflow_id: workflowId,
+      block_type: blockType,
+      config_hash: configHash(blockType, config),
+      status: "ERROR",
+      store_state: VESTIGIAL_STORE_STATE,
+      // What it would poll at, once it resolves to something that can.
+      interval_ms: this.defaultIntervalMs,
+      // No retry time: nothing here changes on its own, and installing the
+      // package or editing the workflow re-registers rather than waiting.
+      next_poll_at: null,
+      last_poll_at: existing?.last_poll_at ?? null,
+      last_error: message,
+      consecutive_failures: (existing?.consecutive_failures ?? 0) + 1,
+      lease_owner: null,
+      lease_expires_at: null,
+      updated_at: this.now().toISOString(),
+    });
+  }
+
   // Design-time sample, run against its own partitions so no key it writes can
   // alias a live one, and dropped afterwards so none of it outlives the sample.
   test(binding: PieceTriggerBinding): Promise<unknown> {

@@ -483,6 +483,33 @@ describe("parseBlockType", () => {
     ).toBeUndefined();
   });
 
+  it("keeps the halves of a block type no version resolves", async () => {
+    const { blockTypeParts } =
+      await import("../../../src/pieces/engine/blocks.js");
+    // What a caller with another source of versions needs: which piece, which
+    // block, and the fact that the block type itself named no version.
+    expect(blockTypeParts("@activepieces/piece-rss#trigger:new_item")).toEqual({
+      packageName: "@activepieces/piece-rss",
+      kind: "trigger",
+      name: "new_item",
+    });
+    expect(
+      blockTypeParts("@activepieces/piece-rss@0.5.0#trigger:new_item"),
+    ).toEqual({
+      packageName: "@activepieces/piece-rss",
+      version: "0.5.0",
+      kind: "trigger",
+      name: "new_item",
+    });
+    expect(blockTypeParts("core#manual")).toEqual({
+      packageName: "core",
+      kind: "action",
+      name: "manual",
+    });
+    expect(blockTypeParts("no-action")).toBeUndefined();
+    expect(blockTypeParts("@acme/piece-x#trigger:")).toBeUndefined();
+  });
+
   it("refuses to execute a trigger block type as a step", async () => {
     const { ActivepiecesBlockExecutor, TriggerBlockAsStepError } =
       await import("../../../src/pieces/engine/blocks.js");

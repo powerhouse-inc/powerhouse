@@ -10,6 +10,7 @@ import type {
 import type { WorkflowCaller, WorkflowRuntimeHostDeps } from "./host.js";
 
 import {
+  blockTypeParts,
   containsRedactedMarker,
   declaredConnectionIds,
   DEFAULT_EGRESS_POLICY,
@@ -550,6 +551,9 @@ export class WorkflowRuntimeService {
     workflowId: string,
     state: WorkflowState,
   ): Promise<void> {
+    // The ERROR row an unresolvable trigger leaves outlives the trigger, so a
+    // workflow registering anything now drops it first, ahead of what follows.
+    if (this.unarmed.delete(workflowId)) this.dropSupervised(workflowId);
     const trigger = state.status === "ENABLED" ? state.trigger : undefined;
     if (trigger?.blockType === WEBHOOK_BLOCK) {
       await this.registerWebhook(workflowId, trigger.config);
@@ -568,6 +572,8 @@ export class WorkflowRuntimeService {
       this.registry.delete(workflowId);
       if (had && SUPERVISED_KINDS.has(had.kind))
         this.dropSupervised(workflowId);
+      // After the drop above, so the row this leaves is the last one written.
+      if (trigger) this.reportUnarmedTrigger(workflowId, trigger);
       return;
     }
     if (supervised) {
@@ -710,6 +716,43 @@ export class WorkflowRuntimeService {
       connectionId: trigger.connectionId,
       pollIntervalMs,
     };
+  }
+
+  // Workflows whose trigger resolved to nothing. Remembered only so the row
+  // below can be cleared once the workflow registers something again.
+  private readonly unarmed = new Set<string>();
+
+  // A trigger naming a piece nothing can resolve registers nothing, and used
+  // to say nothing either: no entry, no trigger state, no log.
+
+  // Both halves of the report matter: the log for whoever is watching the
+  // reactor come up, the row for whoever asks later why a workflow is quiet.
+  private reportUnarmedTrigger(
+    workflowId: string,
+    trigger: NonNullable<WorkflowState["trigger"]>,
+  ): void {
+    const parts = blockTypeParts(trigger.blockType);
+    // Only a piece trigger is a failure here: core#manual and the document
+    // triggers reach this path in the ordinary course of things.
+    if (parts?.kind !== "trigger") return;
+    const reason =
+      `No piece answers for the trigger block type "${trigger.blockType}", so this workflow will not arm: it pins no version, and this reactor holds no package piece of that name. ` +
+      "Pin a version in the block type, or install the package that ships the piece.";
+    this.logger.warn("Workflow @workflow: @reason", workflowId, reason);
+    this.unarmed.add(workflowId);
+    this.supervisor()
+      .reject(
+        workflowId,
+        trigger.blockType,
+        configRecord(trigger.config),
+        reason,
+      )
+      .catch((error: unknown) => {
+        this.logger.error(
+          `Could not record the unresolved trigger for workflow ${workflowId}`,
+          error,
+        );
+      });
   }
 
   private dropSupervised(workflowId: string): void {
