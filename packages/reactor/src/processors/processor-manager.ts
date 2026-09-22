@@ -126,6 +126,55 @@ export class ProcessorManager
     await this.discoverExistingDrives();
   }
 
+  override async indexOperations(items: OperationWithContext[]): Promise<void> {
+    if (items.length === 0) return;
+
+    const key = keyOf(items);
+    const section = () => super.indexOperations(items);
+    try {
+      await (key === MIXED_KEY
+        ? this.exclusive("indexOperations", section)
+        : this.keyed(key, "indexOperations", section));
+    } finally {
+      await this.awaitSpawned(key);
+    }
+  }
+
+  protected override async commitOperations(
+    items: OperationWithContext[],
+  ): Promise<void> {
+    await this.detectAndRegisterNewDrives(items);
+    await this.detectAndCleanupDeletedDrives(items);
+    await this.routeOperationsToProcessors(items);
+  }
+
+  async registerFactory(
+    identifier: string,
+    factory: ProcessorFactory,
+  ): Promise<void> {
+    const backfills = await this.exclusive("registerFactory", () =>
+      this.registerFactoryUnlocked(identifier, factory),
+    );
+    await Promise.all(backfills);
+  }
+
+  unregisterFactory(identifier: string): Promise<void> {
+    return this.exclusive("unregisterFactory", () =>
+      this.unregisterFactoryUnlocked(identifier),
+    );
+  }
+
+  get(processorId: string): TrackedProcessor | undefined {
+    for (const tracked of this.allTrackedProcessors()) {
+      if (tracked.processorId === processorId) return tracked;
+    }
+    return undefined;
+  }
+
+  getAll(): TrackedProcessor[] {
+    return Array.from(this.allTrackedProcessors());
+  }
+
   // The lock keeps a document's batches one at a time and in arrival order,
   // and keeps the processor tables still while a pass reads them: a drive's
   // processors are created before or after a pass over its own operations,
@@ -178,44 +227,6 @@ export class ProcessorManager
     } finally {
       this.inCallback = false;
     }
-  }
-
-  override async indexOperations(items: OperationWithContext[]): Promise<void> {
-    if (items.length === 0) return;
-
-    const key = keyOf(items);
-    const section = () => super.indexOperations(items);
-    try {
-      await (key === MIXED_KEY
-        ? this.exclusive("indexOperations", section)
-        : this.keyed(key, "indexOperations", section));
-    } finally {
-      await this.awaitSpawned(key);
-    }
-  }
-
-  protected override async commitOperations(
-    items: OperationWithContext[],
-  ): Promise<void> {
-    await this.detectAndRegisterNewDrives(items);
-    await this.detectAndCleanupDeletedDrives(items);
-    await this.routeOperationsToProcessors(items);
-  }
-
-  async registerFactory(
-    identifier: string,
-    factory: ProcessorFactory,
-  ): Promise<void> {
-    const backfills = await this.exclusive("registerFactory", () =>
-      this.registerFactoryUnlocked(identifier, factory),
-    );
-    await Promise.all(backfills);
-  }
-
-  unregisterFactory(identifier: string): Promise<void> {
-    return this.exclusive("unregisterFactory", () =>
-      this.unregisterFactoryUnlocked(identifier),
-    );
   }
 
   private async registerFactoryUnlocked(
@@ -272,17 +283,6 @@ export class ProcessorManager
     await this.deleteProcessorCursors({ factoryId: identifier });
     this.factoryToProcessors.delete(identifier);
     this.factoryRegistry.delete(identifier);
-  }
-
-  get(processorId: string): TrackedProcessor | undefined {
-    for (const tracked of this.allTrackedProcessors()) {
-      if (tracked.processorId === processorId) return tracked;
-    }
-    return undefined;
-  }
-
-  getAll(): TrackedProcessor[] {
-    return Array.from(this.allTrackedProcessors());
   }
 
   private *allTrackedProcessors(): Iterable<TrackedProcessor> {
