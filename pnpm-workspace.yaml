@@ -10,6 +10,20 @@ packages:
   - "tools/*"
   - "!releases"
 
+# Read by `pnpm pipeline` only; a recursive `pnpm run` never restores a cached
+# task. outputs is what makes a task cacheable at all.
+tasks:
+  build:
+    dependsOn:
+      - ^build
+    outputs:
+      - dist/**
+      - .tsbuild/**
+
+pipelines:
+  build:
+    - build
+
 minimumReleaseAge: 10080
 # Exact-pinned dep; the cooldown adds nothing once resolution is manual.
 minimumReleaseAgeExclude:
