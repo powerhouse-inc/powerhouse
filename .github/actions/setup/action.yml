@@ -22,6 +22,9 @@ runs:
       shell: bash
       run: pnpm install-ci
 
+    - name: Restore Nx build cache
+      uses: ./.github/actions/nx-cache
+
     - name: Build
       shell: bash
       run: pnpm build

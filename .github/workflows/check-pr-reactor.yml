@@ -24,6 +24,10 @@ on:
       - ".github/workflows/check-pr-reactor.yml"
     types: [opened, synchronize]
 
+concurrency:
+  group: check-pr-reactor-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   NX_ISOLATE_PLUGINS: false
 

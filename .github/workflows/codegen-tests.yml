@@ -8,9 +8,21 @@ on:
   workflow_dispatch:
   push:
     branches: ["main"]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "apps/academy/**"
+      - ".claude/**"
+      - "LICENSE"
   pull_request:
     branches: ["main"]
     types: [opened, reopened, synchronize]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "apps/academy/**"
+      - ".claude/**"
+      - "LICENSE"
 
 permissions:
   contents: read
@@ -45,6 +57,9 @@ jobs:
 
       - name: Install deps (frozen lockfile)
         run: pnpm install-ci
+
+      - name: Restore Nx build cache
+        uses: ./.github/actions/nx-cache
 
       - name: Build
         run: pnpm build

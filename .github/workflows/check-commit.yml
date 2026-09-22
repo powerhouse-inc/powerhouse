@@ -57,6 +57,9 @@ jobs:
       - name: Check tsconfig references
         run: pnpm check-ts-references
 
+      - name: Restore Nx build cache
+        uses: ./.github/actions/nx-cache
+
       - name: Build
         run: pnpm build
 
@@ -80,11 +83,32 @@ jobs:
         if: ${{ steps.diff.outputs.files == '' }}
         run: echo "No changed files; skipping linting."
 
+      - name: Run circular imports check
+        run: pnpm check-circular-imports
+
+  # The whole suite, split three ways. Three is the useful maximum: switchboard
+  # alone is 44s of the 137s total, so a fourth shard would sit idle.
+  test:
+    name: Test (shard ${{ matrix.shard }}/3)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: true
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: General setup
+        uses: ./.github/actions/setup
+
       # reactor-browser runs half its suite in a real chromium (vitest browser
-      # mode), so test:ci needs a browser present. Run from the package that
-      # owns the playwright devDependency: the root has no such bin to exec.
+      # mode). Installed in every shard so the split can be rebalanced freely.
       - name: Install playwright chromium
-        if: ${{ steps.diff.outputs.files != '' }}
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./packages/reactor-browser
 
@@ -97,20 +121,12 @@ jobs:
           key: ap-bundles-${{ hashFiles('packages/reactor-workflow/test/pieces/**/*.test.ts', 'packages/reactor-workflow/src/reactor/trigger-supervisor.test.ts') }}
           restore-keys: ap-bundles-
 
-      - name: Run tests
-        if: ${{ steps.diff.outputs.files != '' }}
-        run: pnpm test:ci -- --silent passed-only related ${{ steps.diff.outputs.files }}
-
-      - name: Skip test (no changed files)
-        if: ${{ steps.diff.outputs.files == '' }}
-        run: echo "No changed files; skipping tests."
-
-      - name: Run circular imports check
-        run: pnpm check-circular-imports
+      - name: Run shard
+        run: pnpm exec tsx scripts/test-shard.ts ${{ matrix.shard }} 3
 
   notify-discord:
     if: failure() && github.event_name != 'pull_request'
-    needs: [check]
+    needs: [check, test]
     runs-on: ubuntu-latest
     steps:
       - name: Send Discord notification
