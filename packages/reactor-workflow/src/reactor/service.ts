@@ -1969,7 +1969,8 @@ export class WorkflowRuntimeService {
     if (outcome.result === false) {
       return this.recordCheckResult(document, {
         ok: false,
-        detail: "Connection check failed",
+        // auth.validate says why; app.checkConnection only ever says no.
+        detail: outcome.detail ?? "Connection check failed",
         accountLabel,
       });
     }

@@ -307,6 +307,42 @@ async function handleTriggerHook(
   };
 }
 
+// What auth.validate is handed upstream: the property values themselves, not
+// the connection envelope an action receives.
+function authForValidate(auth: unknown): unknown {
+  if (auth === null || typeof auth !== "object") return auth;
+  const value = auth as Record<string, unknown>;
+  switch (value.type) {
+    case "CUSTOM_AUTH":
+      return value.props;
+    case "SECRET_TEXT":
+      return value.secret_text;
+    case "BASIC_AUTH":
+      return { username: value.username, password: value.password };
+    default:
+      return auth;
+  }
+}
+
+// `{ valid: true }` or `{ valid: false, error }`, mapped onto the convention
+// app.checkConnection uses so the host reads one shape.
+function fromValidateResult(result: unknown): CheckConnectionOutcome {
+  if (result === null || typeof result !== "object") {
+    return { declared: true, result: jsonSafe(result) };
+  }
+  const value = result as { valid?: unknown; error?: unknown };
+  if (value.valid === false) {
+    return {
+      declared: true,
+      result: false,
+      ...(typeof value.error === "string" && value.error
+        ? { detail: value.error }
+        : {}),
+    };
+  }
+  return { declared: true, result: jsonSafe(result) };
+}
+
 async function handleCheckConnection(
   message: CheckConnectionMessage,
 ): Promise<WorkerResponse> {
@@ -314,8 +350,15 @@ async function handleCheckConnection(
   const { piece } = await loadCached(request);
   const app = piece as {
     checkConnection?: (context: unknown) => unknown;
+    auth?: { validate?: (context: unknown) => unknown };
   };
-  if (typeof app.checkConnection !== "function") {
+  const validate = app.auth?.validate;
+  // Powerhouse's own hook first: it can name the account, which validate's
+  // boolean cannot. Falling back to validate is what gives every Activepieces
+  // piece a check, since none of them declares checkConnection.
+  const declared =
+    typeof app.checkConnection === "function" || typeof validate === "function";
+  if (!declared) {
     const outcome: CheckConnectionOutcome = { declared: false };
     return {
       id: message.id,
@@ -325,14 +368,16 @@ async function handleCheckConnection(
       tlsPoisoned: consumeTlsFlag(),
     };
   }
+  const usingCheck = typeof app.checkConnection === "function";
   const { context, touched } = buildCheckConnectionContext({
-    auth: request.auth,
+    auth: usingCheck ? request.auth : authForValidate(request.auth),
   });
-  const result = await app.checkConnection(context);
-  const outcome: CheckConnectionOutcome = {
-    declared: true,
-    result: jsonSafe(result),
-  };
+  const outcome: CheckConnectionOutcome = usingCheck
+    ? {
+        declared: true,
+        result: jsonSafe(await app.checkConnection!(context)),
+      }
+    : fromValidateResult(await validate!(context));
   return {
     id: message.id,
     type: "result",
