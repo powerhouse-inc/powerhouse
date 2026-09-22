@@ -71,9 +71,6 @@ jobs:
         with:
           bun-version: 1.3.8
 
-      - name: Restore Nx build cache
-        uses: ./.github/actions/nx-cache
-
       - name: Build
         run: pnpm build
 
@@ -144,9 +141,6 @@ jobs:
         with:
           bun-version: 1.3.8
 
-      - name: Restore Nx build cache
-        uses: ./.github/actions/nx-cache
-
       - name: Build
         run: pnpm build
 
@@ -214,9 +208,6 @@ jobs:
 
       # The suite publishes the workspace to a local registry and installs
       # switchboard from it, so the tarballs have to carry dist output.
-      - name: Restore Nx build cache
-        uses: ./.github/actions/nx-cache
-
       - name: Build
         run: pnpm build
 
@@ -252,9 +243,6 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.8
-
-      - name: Restore Nx build cache
-        uses: ./.github/actions/nx-cache
 
       - name: Build
         run: pnpm build
@@ -340,9 +328,6 @@ jobs:
       # The recipes resolve the Powerhouse packages through `link:` paths into
       # this checkout, and every package's exports point at dist/, so a full
       # build has to land before the suite runs.
-      - name: Restore Nx build cache
-        uses: ./.github/actions/nx-cache
-
       - name: Build
         run: pnpm build
 
