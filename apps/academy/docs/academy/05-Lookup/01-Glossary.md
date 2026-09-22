@@ -25,6 +25,12 @@
 - **Powerhouse Academy** – A training platform for onboarding and upskilling SNO contributors.
 - **Connect** – The contributor's public or private workspace, serving as the entry point for individual contributors to install apps and packages for specific business solutions.
 - **Powergrid** – A decentralized network of reactors that sync with each other.
+- **Workflow** – Automation assembled from blocks rather than written in code: one trigger and a graph of steps, stored as a `powerhouse/workflow` document so it syncs, versions and replays like any other. Run by the workflow runtime inside Switchboard and authored in Connect's Workflow Studio.
+- **Workflow Studio** – The Connect drive app for authoring workflows: the canvas, plus the list of workflows, connections and runs.
+- **Piece** – A connector a workflow calls: a named bundle of actions (what a step does) and triggers (what starts a run), each declaring the properties it takes and the shape of what it returns. Pieces come from the reactor's own built-in piece, from a reactor package that ships one, or from a registry.
+- **Block Type** – What a workflow step names: `<piece>#<action>`, or `<piece>#trigger:<name>` for a trigger. A piece from a registry carries its version too (`<piece>@<version>#<action>`); one shipped by a reactor package does not, so that upgrading the package cannot orphan the workflows naming its blocks.
+- **Connection** – A `powerhouse/connection` document holding one credential a workflow step authenticates with. Steps refer to it by id, so the secret is never written into the workflow document itself.
+- **Run** – One execution of a workflow, started by its trigger. A run records the workflow version it executed, so an old run stays readable against the definition it actually used.
 - **Preview Drive** – A local drive created in `--watch` mode during `ph vetra` development, used for testing local document models and editors without affecting the main synced drive.
 - **Remote Drive** – A Powerhouse drive hosted on a remote server (e.g., Vetra) that syncs across team members, enabling collaborative development on shared documents and document models.
 - **Powerhouse CLI (ph)** – The command-line tool for Powerhouse project initialization, code generation, package management, and running local development environments (Connect Studio). It also manages services, ensuring the terminology aligns with the updated setup guide.

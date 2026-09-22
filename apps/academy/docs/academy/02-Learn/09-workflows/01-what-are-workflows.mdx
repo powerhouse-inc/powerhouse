@@ -1,0 +1,107 @@
+---
+title: What are workflows?
+description: A workflow is automation you assemble in the browser instead of writing, reviewing and deploying — and it is itself a Powerhouse document, so it syncs, versions and replays like everything else.
+---
+
+You've seen two ways to make a Powerhouse system react to something. An editor reacts to a person. A processor reacts to the operation log — but it's code you write, review, build and deploy, and changing it means another release.
+
+A **workflow** is the third way. Something happens, and a chain of steps runs. The difference is that you assemble it from blocks in Connect rather than writing it, so the person who understands the process can change it without waiting on a deploy.
+
+## A workflow is a document
+
+This is the part worth getting straight first, because everything else follows from it.
+
+A workflow is not a config file or a row in the runtime's database. It's a Powerhouse document of type `powerhouse/workflow`, living in a drive alongside your other documents. So it inherits what every document gets: an operation log of every edit, sync across <Term>Reactor</Term>s, history you can replay, and the same permissions model.
+
+Editing a workflow in Connect dispatches operations. Two people can edit one. You can see who changed a step and when.
+
+## The parts
+
+```
+trigger ──▶ step ──▶ branch ──true──▶ step ──▶ step
+                        └───false──▶ step
+```
+
+**The trigger** is the one thing that starts a run. A workflow has exactly one — a new row appearing in an external service, a webhook delivery, a schedule, or a document event on the reactor itself. A workflow with no trigger is a draft that can't do anything yet.
+
+**Steps** are the work. Each names a *block type* — one action belonging to one piece, which you'll meet in the [next lesson](./02-pieces-and-connections.mdx) — plus the configuration that action needs. A step's config can refer to the trigger payload and to earlier steps' output, which is how data moves down the chain.
+
+**Edges** connect steps, and each leaves its source through a named **port**. A plain step has a `next` port; a branch has `true` and `false`; any step also has an `error` port, so you can route a failure somewhere useful instead of just failing the run.
+
+Decisions are made by a branch step rather than by clever expressions on the edges: the expression language is deliberately a lookup, not a small programming language, so `{{steps.check.output.severity}}` resolves a value but `{{a == b}}` does not compare anything. The [authoring reference](/academy/Build/WorkWithData/AuthoringWorkflows) has the syntax and the branch block.
+
+**Variables** are named values a workflow carries, with defaults the trigger payload can overwrite.
+
+**A policy** governs the whole workflow: whether firings run concurrently, queue up or drop while one is already running; how long a run may take; the default retry rule; and what happens to a run whose steps have all failed terminally.
+
+## What a run is
+
+When a trigger fires, the runtime starts a **run** and walks the graph. Each run records the workflow version it executed, so a run you inspect next month tells you what the workflow looked like *then*, not now.
+
+Runs end in one of a handful of states — succeeded, failed, cancelled — and two that are worth knowing about:
+
+- **Waiting** — the run is suspended at a step that's expecting something, and will pick up where it left off.
+- **Parked** — every step failed terminally and the policy said park rather than notify or ignore. A parked run is a run someone needs to look at; it holds everything it knew so you can see how far it got.
+
+Steps retry according to the policy before they fail terminally. A step can also declare an idempotency key, so a delivery that arrives twice produces one effect rather than two.
+
+## Workflow or processor?
+
+Both react to things happening, and there's real overlap. The useful split:
+
+| | Reach for a **processor** | Reach for a **workflow** |
+| --- | --- | --- |
+| Changing it means | a code change and a deploy | editing a document in Connect |
+| Good at | folding many operations into a read model, computed views, anything needing a real function | calling services, moving data between them, decisions a reader can follow |
+| Who owns it | a developer | whoever owns the process |
+
+A workflow can't call a function you wrote — if a step needs a calculation, that calculation has to live somewhere a workflow can reach: in a reducer, behind a mutation, or inside an action of a piece your package ships. That last option is the subject of the [Building a piece](/academy/Build/WorkWithData/BuildingAPiece) tutorial, and it's what makes workflows extensible rather than limited to what ships in the box.
+
+## Where the parts run
+
+Two halves, and they're switched on separately:
+
+- **The runtime** lives in the reactor (Switchboard). It watches triggers, starts runs and executes steps. Turn it on with `workflows.enabled` in `powerhouse.config.json`.
+- **Workflow Studio** lives in Connect — the canvas you author on, plus the list of workflows, connections and runs. Turn it on with `connect.app.workflowsEnabled`.
+
+```json
+{
+  "workflows": { "enabled": true },
+  "connect": { "app": { "workflowsEnabled": true } }
+}
+```
+
+Both default to off. They're independent: a headless reactor can run workflows with no Connect at all, and an operator can enable the environment variable counterparts instead — see [Configure environment](/academy/Build/Launch/ConfigureEnvironment).
+
+<Quiz
+  question="A workflow has been running in production for a month. Someone edits one of its steps. What happens to the runs that already finished?"
+  choices={[
+    {
+      label:
+        "They are re-executed against the new version, because the workflow document changed.",
+      explanation:
+        "Nothing re-runs on an edit. A run executes once; editing the workflow affects future firings only.",
+    },
+    {
+      label:
+        "They still report the version they executed, so what you inspect is the workflow as it was then.",
+      correct: true,
+      explanation:
+        "Exactly. Each run records the workflow version it ran, and the version is bumped on every structural edit — so an old run stays readable against the definition it actually used.",
+    },
+    {
+      label:
+        "They are deleted, since the definition they referred to no longer exists.",
+      explanation:
+        "The workflow is a document with a full operation log — editing it adds history rather than replacing it, and past runs are retained according to the workflow's policy.",
+    },
+    {
+      label:
+        "Nothing is recorded either way; runs only exist while they are executing.",
+      explanation:
+        "Runs are retained (for as long as the policy's retention says) and are visible in Workflow Studio, which is how you debug one that failed.",
+    },
+  ]}
+/>
+
+Next: where the blocks in those steps actually come from.

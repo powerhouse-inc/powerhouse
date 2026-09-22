@@ -1,7 +1,7 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-21T09:43:34.015Z
-> Total Documents: 113
+> Generated: 2026-09-22T11:36:45.560Z
+> Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
 
@@ -2549,6 +2549,224 @@ make the whole history **tamper-evident**: change any past operation and every
 signature and hash after it stops verifying. The same structure that gives you
 deterministic replay and conflict-free sync gives you a trustworthy audit trail
 for free.
+
+---
+
+
+## 01-what-are-workflows
+
+> Source: https://academy.vetra.io/academy/Learn/workflows/what-are-workflows
+
+You've seen two ways to make a Powerhouse system react to something. An editor reacts to a person. A processor reacts to the operation log — but it's code you write, review, build and deploy, and changing it means another release.
+
+A **workflow** is the third way. Something happens, and a chain of steps runs. The difference is that you assemble it from blocks in Connect rather than writing it, so the person who understands the process can change it without waiting on a deploy.
+
+## A workflow is a document
+
+This is the part worth getting straight first, because everything else follows from it.
+
+A workflow is not a config file or a row in the runtime's database. It's a Powerhouse document of type `powerhouse/workflow`, living in a drive alongside your other documents. So it inherits what every document gets: an operation log of every edit, sync across <Term>Reactor</Term>s, history you can replay, and the same permissions model.
+
+Editing a workflow in Connect dispatches operations. Two people can edit one. You can see who changed a step and when.
+
+## The parts
+
+```
+trigger ──▶ step ──▶ branch ──true──▶ step ──▶ step
+                        └───false──▶ step
+```
+
+**The trigger** is the one thing that starts a run. A workflow has exactly one — a new row appearing in an external service, a webhook delivery, a schedule, or a document event on the reactor itself. A workflow with no trigger is a draft that can't do anything yet.
+
+**Steps** are the work. Each names a *block type* — one action belonging to one piece, which you'll meet in the [next lesson](../docs/docs/02-pieces-and-connections.mdx) — plus the configuration that action needs. A step's config can refer to the trigger payload and to earlier steps' output, which is how data moves down the chain.
+
+**Edges** connect steps, and each leaves its source through a named **port**. A plain step has a `next` port; a branch has `true` and `false`; any step also has an `error` port, so you can route a failure somewhere useful instead of just failing the run.
+
+Decisions are made by a branch step rather than by clever expressions on the edges: the expression language is deliberately a lookup, not a small programming language, so `{{steps.check.output.severity}}` resolves a value but `{{a == b}}` does not compare anything. The [authoring reference](/academy/Build/WorkWithData/AuthoringWorkflows) has the syntax and the branch block.
+
+**Variables** are named values a workflow carries, with defaults the trigger payload can overwrite.
+
+**A policy** governs the whole workflow: whether firings run concurrently, queue up or drop while one is already running; how long a run may take; the default retry rule; and what happens to a run whose steps have all failed terminally.
+
+## What a run is
+
+When a trigger fires, the runtime starts a **run** and walks the graph. Each run records the workflow version it executed, so a run you inspect next month tells you what the workflow looked like *then*, not now.
+
+Runs end in one of a handful of states — succeeded, failed, cancelled — and two that are worth knowing about:
+
+- **Waiting** — the run is suspended at a step that's expecting something, and will pick up where it left off.
+- **Parked** — every step failed terminally and the policy said park rather than notify or ignore. A parked run is a run someone needs to look at; it holds everything it knew so you can see how far it got.
+
+Steps retry according to the policy before they fail terminally. A step can also declare an idempotency key, so a delivery that arrives twice produces one effect rather than two.
+
+## Workflow or processor?
+
+Both react to things happening, and there's real overlap. The useful split:
+
+| | Reach for a **processor** | Reach for a **workflow** |
+| --- | --- | --- |
+| Changing it means | a code change and a deploy | editing a document in Connect |
+| Good at | folding many operations into a read model, computed views, anything needing a real function | calling services, moving data between them, decisions a reader can follow |
+| Who owns it | a developer | whoever owns the process |
+
+A workflow can't call a function you wrote — if a step needs a calculation, that calculation has to live somewhere a workflow can reach: in a reducer, behind a mutation, or inside an action of a piece your package ships. That last option is the subject of the [Building a piece](/academy/Build/WorkWithData/BuildingAPiece) tutorial, and it's what makes workflows extensible rather than limited to what ships in the box.
+
+## Where the parts run
+
+Two halves, and they're switched on separately:
+
+- **The runtime** lives in the reactor (Switchboard). It watches triggers, starts runs and executes steps. Turn it on with `workflows.enabled` in `powerhouse.config.json`.
+- **Workflow Studio** lives in Connect — the canvas you author on, plus the list of workflows, connections and runs. Turn it on with `connect.app.workflowsEnabled`.
+
+```json
+{
+  "workflows": { "enabled": true },
+  "connect": { "app": { "workflowsEnabled": true } }
+}
+```
+
+Both default to off. They're independent: a headless reactor can run workflows with no Connect at all, and an operator can enable the environment variable counterparts instead — see [Configure environment](/academy/Build/Launch/ConfigureEnvironment).
+
+<Quiz
+  question="A workflow has been running in production for a month. Someone edits one of its steps. What happens to the runs that already finished?"
+  choices={[
+    {
+      label:
+        "They are re-executed against the new version, because the workflow document changed.",
+      explanation:
+        "Nothing re-runs on an edit. A run executes once; editing the workflow affects future firings only.",
+    },
+    {
+      label:
+        "They still report the version they executed, so what you inspect is the workflow as it was then.",
+      correct: true,
+      explanation:
+        "Exactly. Each run records the workflow version it ran, and the version is bumped on every structural edit — so an old run stays readable against the definition it actually used.",
+    },
+    {
+      label:
+        "They are deleted, since the definition they referred to no longer exists.",
+      explanation:
+        "The workflow is a document with a full operation log — editing it adds history rather than replacing it, and past runs are retained according to the workflow's policy.",
+    },
+    {
+      label:
+        "Nothing is recorded either way; runs only exist while they are executing.",
+      explanation:
+        "Runs are retained (for as long as the policy's retention says) and are visible in Workflow Studio, which is how you debug one that failed.",
+    },
+  ]}
+/>
+
+Next: where the blocks in those steps actually come from.
+
+---
+
+
+## 02-pieces-and-connections
+
+> Source: https://academy.vetra.io/academy/Learn/workflows/pieces-and-connections
+
+A workflow step doesn't contain code. It names a **block type** — one action, belonging to one **piece** — and carries the configuration that action needs.
+
+```
+@acme/piece-crm#get-record
+└──────┬──────┘ └────┬───┘
+    piece id       action
+```
+
+Triggers are named the same way, with a `trigger:` marker so a block type is unambiguous about which half of the piece it refers to:
+
+```
+@acme/piece-crm#trigger:new-record
+```
+
+A piece that arrives from a **registry** carries its version as well, because a
+reactor can hold more than one copy of it:
+
+```
+@activepieces/piece-github@0.9.0#create_branch
+```
+
+A piece your own **package** ships doesn't, and deliberately: the copy the
+reactor installed is the copy that runs, so upgrading the package must not
+orphan every workflow that named its blocks. Don't assemble these strings by
+hand either way — ask the reactor for them, which the
+[workflow authoring reference](/academy/Build/WorkWithData/AuthoringWorkflows)
+shows how to do.
+
+A piece is a connector: a named bundle of actions (things a step can do) and triggers (things that can start a run), each declaring the properties it takes and the shape of what it returns. Those declarations are what let Workflow Studio draw a form for a step and offer a later step the fields an earlier one produced — before anything has run.
+
+## Where pieces come from
+
+Three sources, and a reactor reads all three the same way.
+
+**The reactor's own piece**, `@powerhousedao/piece-reactor`, ships with workflows and needs no installing. It's how a workflow reads and writes Powerhouse documents:
+
+- `#document-find`, `#document-get`, `#document-create`, `#document-dispatch`
+- `#document-schema` and `#document-types`, which report a model's shape at run time
+- `#trigger:document-event`, `#trigger:document-created`, `#trigger:document-deleted`
+
+A workflow that only moves data around inside Powerhouse needs nothing else. It's also the piece to copy conventions from: unversioned block types, kebab-case names.
+
+**Pieces your own package ships.** A reactor package already carries document models, editors and processors; it can carry pieces the same way. This is the route for anything specific to your domain — your internal API, your calculation, your service. It's the subject of the [Building a piece](/academy/Build/WorkWithData/BuildingAPiece) tutorial.
+
+**Pieces from a registry.** A reactor reads pieces from the registry it installs packages from, and falls back to the public [Activepieces](https://www.activepieces.com) catalogue for the long tail of common SaaS connectors. Powerhouse pieces use the Activepieces authoring API, so that whole ecosystem is available without a translation layer.
+
+However a piece arrives, a step naming one of its actions looks identical. The difference is only in where the block came from.
+
+## Connections
+
+Most pieces talk to something outside the reactor, and that something usually wants credentials. Those don't go in the workflow.
+
+A **connection** is its own document, of type `powerhouse/connection`: one credential, configured once, referenced by every step that needs it. A workflow step points at a connection by id rather than carrying an API key in its config.
+
+This matters for a reason that goes beyond tidiness. A workflow document syncs, has a full operation log, and is readable by anyone who can read the drive. A credential written into a step's config would inherit all of that. Keeping it in a connection means the secret itself is held by the runtime and only ever referred to by reference — what the documents carry is a pointer, not the key.
+
+A piece can also declare a **connection check**, which is what lets Connect show a connection as working or broken, with the account it's actually authenticated as, instead of leaving you to find out when a run fails at 3am.
+
+## What a piece is allowed to do
+
+Two limits are worth knowing about as an author, because they shape what your steps can do.
+
+**Reaching private addresses.** Piece code runs under an outbound address policy that refuses private and loopback space by default. A piece configuration is a place a user types a URL, which makes it a route into whatever your reactor can reach on its own network — so the default is to refuse. A deployment that genuinely needs a step to reach a service on its own network widens the policy by naming those addresses; it doesn't switch the guard off.
+
+This is the one that surprises people running a demo on their laptop: a piece pointed at `http://localhost:9000` will not connect until the deployment says that address is allowed.
+
+**Writing to documents.** The reactor piece's dispatch action takes an allow-list of action types. A step that dispatches can be pinned to exactly the operations it's meant to perform, so a workflow cannot do anything else to a document even if someone edits its step list — which matters when the thing composing the actions is a language model rather than a person.
+
+<Quiz
+  question="You're building a workflow that reads a record from your company's internal API and records it on a Powerhouse document. What do you need?"
+  choices={[
+    {
+      label:
+        "A piece shipped by your reactor package for the internal API, the reactor's own piece for the document write, and a connection holding the API credential.",
+      correct: true,
+      explanation:
+        "Right on all three. Your domain-specific integration is a piece your package ships, writing documents is what the reactor's own piece is for, and the credential belongs in a connection document rather than in the step's config.",
+    },
+    {
+      label:
+        "A processor — a workflow cannot write to Powerhouse documents.",
+      explanation:
+        "It can. The reactor's own piece ships with workflows precisely so a step can find, get, create and dispatch against documents on the reactor it is running in.",
+    },
+    {
+      label:
+        "One piece for the internal API, with the API key configured on the step that uses it.",
+      explanation:
+        "A credential in a step's config would be carried in the workflow document, which syncs and keeps a full operation log. Credentials belong in a connection document, which a step refers to by id.",
+    },
+    {
+      label:
+        "Nothing to build — every integration comes from the public Activepieces catalogue.",
+      explanation:
+        "The catalogue covers common SaaS connectors well, but an internal API is exactly the case it cannot cover. That is what shipping a piece from your own package is for.",
+    },
+  ]}
+/>
+
+Ready to build one? [Building a piece](/academy/Build/WorkWithData/BuildingAPiece) takes you from `ph generate piece` to a block a workflow can call.
 
 ---
 
@@ -29668,6 +29886,577 @@ Endpoints are not revoked on teardown. `revoke(key)` is the only thing that reti
 ---
 
 
+## Building a piece
+
+> Source: https://academy.vetra.io/academy/Build/WorkWithData/BuildingAPiece
+
+A piece is a connector a workflow can call: a named bundle of **actions** (things a step does) and **triggers** (things that start a run). If you haven't met workflows yet, read [What are workflows?](/academy/Learn/workflows/what-are-workflows) first — this tutorial assumes you know what a step and a block type are.
+
+Your reactor package already ships document models, editors and processors. It can ship pieces the same way, and that's the route for anything the public connector catalogue can't cover: your internal API, your domain calculation, your service.
+
+In this tutorial you'll build a piece for a fictional CRM — an action that reads a record, a trigger that fires when a new one appears — and wire it up so a workflow on your reactor can use it.
+
+## Before you start
+
+You need an existing reactor package (`ph init` gives you one) and the piece authoring framework:
+
+```bash
+pnpm add -D @powerhousedao/pieces-framework
+```
+
+A dev dependency, not a runtime one: the build inlines the framework into your
+piece rather than resolving it when the piece runs. More on why below.
+
+The API is [Activepieces](https://www.activepieces.com)' authoring API, unchanged, plus one addition: the reactor the piece is running inside. A piece written for Powerhouse is a valid Activepieces piece, and vice versa.
+
+## Generate the piece
+
+```bash
+ph generate piece crm --id @acme/piece-crm --auth custom
+```
+
+- **`crm`** names the directory, `pieces/crm/`.
+- **`--id`** is what a block type names. Defaults to something derived from your package name; pick it deliberately, because changing it later breaks every workflow already referring to it.
+- **`--auth`** is the kind of connection the piece asks for: `custom` (a form you define), `secret` (a single token), or `none`.
+
+You get a working piece with one example action and one example trigger:
+
+```
+pieces/
+├── index.ts                    # the list of pieces this package ships
+└── crm/
+    ├── index.ts                # createPiece — the piece definition
+    └── lib/
+        ├── auth.ts             # what a connection to this service holds
+        ├── logo.ts
+        ├── actions/get-record.ts
+        ├── triggers/new-record.ts
+        └── common/             # client, context, errors, auth value
+```
+
+The generator also registers the piece in `pieces/index.ts` and adds it to `powerhouse.manifest.json` — you don't have to do either by hand.
+
+## The piece definition
+
+`pieces/crm/index.ts` is the whole piece: what it's called, what it authenticates with, and everything it offers.
+
+```typescript
+
+
+export const crm = createPiece({
+  displayName: "Acme CRM",
+  description: "Read and watch records in the Acme CRM",
+  logoUrl: CRM_LOGO,
+  authors: ["acme"],
+  categories: [PieceCategory.PRODUCTIVITY],
+  minimumSupportedRelease: "0.30.0",
+  auth: crmAuth,
+  actions: [crmGetRecordAction],
+  triggers: [crmNewRecordTrigger],
+});
+
+export default crm;
+```
+
+### The generator commands
+
+`ph generate` scaffolds every kind of module a reactor package can hold —
+`document-model`, `editor`, `processor`, `subgraph`, `migration-file` — and
+three of them are the piece family:
+
+| Command | What it does |
+| --- | --- |
+| `ph generate piece <name>` | A new piece: directory, auth, logo, one example action and one example trigger, plus both registrations |
+| `ph generate piece-action <name>` | An action inside an existing piece, imported into its `index.ts` for you |
+| `ph generate piece-trigger <name>` | A trigger, `--strategy polling` (default) or `--strategy webhook` |
+
+```bash
+ph generate piece-action list-records
+ph generate piece-trigger record-updated --strategy webhook
+```
+
+Both take `--piece <dir>` to say which piece to add to, which you can omit when
+the package ships exactly one.
+
+Two flags on `ph generate piece` are for maintenance rather than creation:
+`--dir <dir>` re-registers an existing piece, and `--all` refreshes the
+`pieces/index.ts` list and the manifest for every piece under `pieces/`,
+pruning entries whose directory is gone. Reach for those if you rename a piece
+directory by hand, or after a merge leaves the two registrations disagreeing.
+
+## Writing an action
+
+An action declares the properties it takes, the shape of what it returns, and a `run` function.
+
+```typescript
+
+
+export const crmGetRecordAction = createAction({
+  auth: crmAuth,
+  name: "get-record",
+  displayName: "Get record",
+  description: "Reads one record by id",
+  props: {
+    recordId: Property.ShortText({
+      displayName: "Record id",
+      description: "The id of the record to read",
+      required: true,
+    }),
+  },
+  outputSchema: {
+    fields: [
+      { key: "id", label: "Id" },
+      { key: "name", label: "Name" },
+    ],
+  },
+  async run(context) {
+    const { recordId } = context.propsValue;
+    return await clientForContext(context).request({
+      path: `records/${encodeURIComponent(String(recordId))}`,
+    });
+  },
+});
+```
+
+Three of those deserve attention, because they're what makes a step usable by someone who didn't write the piece:
+
+- **`name`** is the half after `#` in the block type. This step is `@acme/piece-crm#get-record`. Note there's no version in it: a piece your package ships is named unversioned, because the copy the reactor installed is the copy that runs. Renaming the action, though, breaks every workflow that referred to it.
+- **`props`** is the form Workflow Studio renders for the step. A property a user may reasonably leave empty must be `required: false`, or the step can't be saved half-built while someone is still assembling the workflow.
+- **`outputSchema`** is what a *later* step can pick fields from. Without it, whoever builds the workflow has to run your action once and read the raw output to discover what it returns. It costs a few lines and saves every author that round trip.
+
+## Writing a trigger
+
+A trigger starts a run. It comes in two strategies, and the generator scaffolds either.
+
+**Polling** asks the service what's new on a schedule. It keeps a cursor so it reports each thing once:
+
+```typescript
+async run(context) {
+  const records = await clientFor(context.auth).request<{ id: string }[]>({
+    path: "records",
+    query: { ordering: "-created" },
+  });
+  const seen = new Set(parseCursor(await context.store.get(CURSOR_KEY)).seen);
+  const fresh = records.filter((record) => !seen.has(record.id));
+  await context.store.put(CURSOR_KEY, { seen: records.map((r) => r.id) });
+  return fresh;
+}
+```
+
+`context.store` is served by the host, scoped per workflow — two workflows watching the same service keep their own reading of it. Seed the cursor in `onEnable` so switching a workflow on doesn't replay the service's entire history as a flood of runs.
+
+**Webhook** has the service call you instead. The trigger registers a subscription in `onEnable` and removes it in `onDisable`, so enabling a workflow sets the integration up and disabling it tears the integration down — no manual step in someone's admin console to remember.
+
+Both declare `sampleData`, which is what Studio shows as the trigger's payload before it has ever fired. It's what lets someone build the rest of the workflow against real-looking fields on a Monday morning rather than waiting for the trigger to fire.
+
+## Authenticating
+
+`lib/auth.ts` defines what a connection to your service holds — the form a user fills in once, in a connection document, that every step using this piece then refers to.
+
+```typescript
+export const crmAuth = PieceAuth.CustomAuth({
+  displayName: "Acme CRM",
+  description: "An API token from Settings → Developer in the Acme CRM.",
+  required: true,
+  props: {
+    baseUrl: Property.ShortText({ displayName: "Base URL", required: true }),
+    apiKey: PieceAuth.SecretText({ displayName: "API key", required: true }),
+  },
+});
+```
+
+Write the `description` for the person who has to fill this in — where the token comes from, what the URL should look like, what permissions it needs. It's the only documentation they'll see at the moment they need it.
+
+Declaring a **connection check** is optional and worth doing: it's what makes Connect show a connection as healthy or broken, labelled with the account it's actually authenticated as, instead of leaving a misconfiguration to surface as a failed run later.
+
+## Reading and writing documents
+
+A piece running on a Powerhouse reactor can reach that reactor directly — this is the one thing the framework adds on top of the Activepieces API:
+
+```typescript
+
+
+async run(context) {
+  return reactorOf(context).find({ documentType: "powerhouse/invoice" });
+}
+```
+
+`reactorOf(context)` offers `models()`, `model(type)`, `get`, `find`, `create` and `execute`. Outside a Powerhouse reactor it throws an error naming what's missing, so a piece that ends up on another host fails legibly rather than mysteriously.
+
+You often won't need this: the reactor's own piece already ships find, get, create and dispatch actions, so a workflow can read and write documents without you writing anything. Reach for `reactorOf` when your action needs to combine a document read with something else in a single step.
+
+## Registering it
+
+Two declarations, both of which the generator already made.
+
+`pieces/index.ts` lists what your package ships, pointing at the **built** module:
+
+```typescript
+
+
+export const pieces: PackagePiece[] = [
+  {
+    name: "@acme/piece-crm",
+    version: "1.0.0",
+    entry: "dist/node/pieces/crm/index.mjs",
+  },
+];
+```
+
+And `powerhouse.manifest.json` names it again, so a host can see what the package offers without executing any of its code:
+
+```json
+"pieces": [{ "id": "@acme/piece-crm", "name": "Acme CRM" }]
+```
+
+## Build it
+
+```bash
+ph build
+```
+
+This bundles each `pieces/<name>/index.ts` into `dist/node/pieces/<name>/index.mjs` with its dependencies inlined, because a host runs piece code in an isolated worker process with no `node_modules` beside it. That's also why the framework belongs in `devDependencies`: it ends up inside the bundle rather than being resolved at run time.
+
+The build then loads each piece once and writes a descriptor next to it — the display name, logo, auth and every action and trigger with its properties. That descriptor is how Workflow Studio can draw your step's form before anyone has installed anything.
+
+**A piece has to be built, not merely present.** A declared piece with no build output is the most common way to end up with a workflow whose block type resolves to nothing.
+
+## Run it locally
+
+Three things have to be true before a workflow can name your block, and missing
+any one of them fails quietly in its own way.
+
+**1. Workflows are on, and the workflow package is installed.** The flag starts
+the runtime; it does not by itself give the reactor the workflow and connection
+document models. Those come from `@powerhousedao/workflow`, which has to be
+installed and listed like any other package — a reactor with the flag on but the
+package missing logs `Workflow runtime started` and then refuses to create a
+workflow with "Document model module not found".
+
+```bash
+pnpm add @powerhousedao/workflow
+```
+
+**2. Your own package is in the `packages` list**, which is how the reactor
+finds both its document models and its pieces. There is no separate piece
+install.
+
+```json
+{
+  "workflows": { "enabled": true },
+  "packages": ["@powerhousedao/workflow", "@acme/my-package"]
+}
+```
+
+**3. The piece is built.** `ph build` after every edit — see above.
+
+Then start the reactor. `ph vetra` runs Switchboard and Connect together and is
+the quickest way to see your piece in Workflow Studio; `ph switchboard` runs the
+server alone, which is what you want if you're driving it from a script or an
+agent. Either way the boot log tells you whether it worked:
+
+```
+Loaded document models from package @powerhousedao/workflow: [...]
+[workflow][piece-registry] Loaded 1 package piece(s): @acme/piece-crm
+Workflow runtime started
+```
+
+An empty piece list with no error almost always means the piece is declared but
+not built.
+
+**If your piece talks to something on localhost** — a stub service, a database,
+anything on your own machine — it will not connect until the deployment widens
+the outbound address policy, which refuses private and loopback space by
+default. That's the guard described in
+[Pieces and connections](/academy/Learn/workflows/pieces-and-connections); the
+setting that widens it is in
+[Configure environment](/academy/Build/Launch/ConfigureEnvironment#configuring-workflows).
+
+## Use it
+
+With the reactor running, your actions and triggers are in the block catalogue
+alongside the reactor's own piece and anything from the registry. Create a
+connection for the CRM, then build a workflow whose trigger is
+`@acme/piece-crm#trigger:new-record`.
+
+Authoring that workflow in Connect is Workflow Studio's job. To do it from a
+script or an agent instead — which is also how you'd seed an environment or test
+an integration end to end — see
+[Authoring workflows outside Connect](/academy/Build/WorkWithData/AuthoringWorkflows).
+
+## Testing
+
+A piece is ordinary TypeScript, and an action's `run` is an ordinary async function — most of what you'll want to assert needs no workflow at all. Test the client and the transformations directly, the way you'd test any other module in the package.
+
+For the rest, `@powerhousedao/reactor-workflow/testing` runs a piece the way a reactor will, without standing up a reactor to do it.
+
+## Publishing
+
+A package shipping a piece publishes like any other reactor package — see [Publish your project](/academy/Build/Launch/PublishYourProject). Once it's on a registry, other reactors get the piece by adding your package to their `packages` list. A package that ships *only* pieces is still an ordinary reactor package, with the same boilerplate; there's no piece-only mode to learn.
+
+---
+
+
+## Authoring workflows outside Connect
+
+> Source: https://academy.vetra.io/academy/Build/WorkWithData/AuthoringWorkflows
+
+Workflow Studio is how a person builds a workflow. This page is how a *program*
+does it — a seed script that sets an environment up, an integration test that
+drives a workflow end to end, or an agent building one on your behalf.
+
+Everything here is the reactor's own GraphQL API. The workflow runtime adds a
+subgraph under the reactor's main endpoint (`/graphql` by default) with two
+roots, `workflowRuntime` on `Query` and on `Mutation`. It's introspectable, so
+the fastest way to see the current surface is to point a GraphQL client at it;
+the fields below are the ones you'll reach for.
+
+## 1. Find out what blocks exist
+
+Never assemble a block type by hand. Ask the reactor, and use the strings it
+gives back — that way you get the right form whether the piece came from your
+package or from a registry.
+
+```graphql
+query {
+  workflowRuntime {
+    # Every piece this reactor can offer
+    pieceCatalog
+    # One piece's actions and triggers, each with a ready-to-use blockType
+    pieceActions(packageName: "@acme/piece-crm")
+    pieceTriggers(packageName: "@acme/piece-crm")
+  }
+}
+```
+
+`pieceActions` and `pieceTriggers` are the two you want when you already know
+the piece. Each entry carries the exact `blockType` string to put in a step.
+
+To search across everything instead:
+
+```graphql
+query {
+  workflowRuntime {
+    searchBlocks(query: "invoice", limit: 20) {
+      # hits carry blockType, pieceName and the action's display name
+      ...
+    }
+  }
+}
+```
+
+The search index builds lazily, so the first call may report a status of
+`indexing` — poll until it settles.
+
+Two more worth knowing:
+
+- **`blockDescriptor(blockType:)`** — an action's props and auth requirements,
+  so you know what config to write. Returns null for core blocks.
+- **`blockOutputTree(blockType:, config:)`** — the shape a block's output will
+  have, which is how Studio offers later steps their fields before anything has
+  run. Useful for checking an expression path is real before you commit it.
+
+## 2. The expression language
+
+Step config refers to the trigger and to earlier steps with `{{ }}`. The scope
+has three roots:
+
+| Path | What it reads |
+| --- | --- |
+| `{{trigger.payload.<field>}}` | the trigger's payload — note `payload`, it isn't `{{trigger.<field>}}` |
+| `{{steps.<stepKey>.output.<field>}}` | an earlier step's output, by its `key` |
+| `{{steps.<stepKey>.error}}` | why an earlier step failed — what an error branch reads |
+| `{{variables.<key>}}` | a workflow variable |
+
+A whole-string expression yields the raw value, so `{{steps.a.output.count}}`
+passes a number. An expression embedded in text interpolates into a string.
+
+`||` gives a fallback chain, and string literals are allowed in it:
+
+```
+{{steps.lookup.output.name || trigger.payload.name || 'unknown'}}
+```
+
+The first term that isn't undefined, null or empty wins.
+
+**That is the whole language.** It is path lookup, not a small programming
+language, and this is the single most common thing to get wrong:
+
+```
+{{a.b == 'x'}}          ✗  comparisons do not evaluate
+{{ a.b ? x : y }}       ✗  no ternaries
+{{ eq(a, b) }}          ✗  no function calls
+{{ a['b'] }}            ✗  no bracket access — use a.b
+```
+
+**An expression that resolves to nothing drops the property silently.** No
+warning, no failed run — the step simply runs without that input, and you find
+out from the result. When a step behaves as if you passed nothing, read the run
+journal's recorded `input` for that step (below) and check the path.
+
+## 3. Core blocks
+
+Some blocks belong to no piece — they're the engine's own. They're listed like
+any other piece, under the name `core`:
+
+```graphql
+query {
+  workflowRuntime {
+    pieceActions(packageName: "core")
+    pieceTriggers(packageName: "core")
+  }
+}
+```
+
+`blockDescriptor("core#branch")` describes their config the same way it
+describes a piece action's props. What they are:
+
+| Block type | What it is |
+| --- | --- |
+| `core#branch` | a decision — the `true`/`false` ports |
+| `core#assert` | fails the step when a value is blank or rejected |
+| `core#schedule` | a trigger firing on a cron or interval |
+| `core#webhook` | a trigger fired by an HTTP delivery |
+| `core#manual` | a trigger fired on demand, by the `fire` mutation |
+
+**`core#branch` does not evaluate an expression.** It compares two resolved
+values. Give it a `condition` and an `equals`, and it takes the `true` port when
+they match, trimmed and case-insensitively:
+
+```json
+{
+  "blockType": "core#branch",
+  "config": {
+    "condition": "{{trigger.payload.severity}}",
+    "equals": "critical"
+  }
+}
+```
+
+With `equals` omitted it falls back to truthiness — anything non-empty is true,
+except the strings `"false"` and `"0"`. This is the trap: a config of
+`{"condition": "{{a}} == 'critical'"}` is a *non-empty string*, so it takes the
+true port every time, whatever `a` is. If a branch always goes one way, this is
+why.
+
+`core#assert` takes `value` plus any of `rejectValues`, `allowValues`,
+`allowEmpty` and a custom `message`. It's the guard for a value you don't
+control — a model's output, a third party's field — placed before the step that
+would act on it.
+
+## 4. Build the workflow document
+
+A workflow is a `powerhouse/workflow` document, so you create and edit it the
+way you would any other document — through the reactor's document API or its MCP
+endpoint, covered in [Using the API](/academy/Build/WorkWithData/UsingTheAPI).
+What's specific to workflows is which operations to dispatch, in this order:
+
+1. **`SET_WORKFLOW_NAME`** / `SET_WORKFLOW_DESCRIPTION`.
+2. **`SET_TRIGGER`** — `blockType`, `config`, and `connectionId` when the
+   trigger's piece needs credentials. One per workflow; `CLEAR_TRIGGER` removes it.
+3. **`ADD_STEP`** — `id`, `key`, `name`, `blockType`, `config`, optionally
+   `connectionId`, `retry`, `timeoutSeconds`, `idempotencyKeyExpression` and a
+   `position` for the canvas. The `key` is what expressions refer to, so choose
+   it deliberately. `UPDATE_STEP`, `SET_STEP_CONFIG` and `REMOVE_STEP` follow.
+4. **`ADD_EDGE`** — `from` (a step id, or the trigger's id for the entry edge),
+   `to`, and `port`: `next`, `true`, `false`, `error`, or a case label.
+5. **`SET_VARIABLE`** and **`SET_POLICY`** as needed.
+6. **`SET_WORKFLOW_STATUS`** to `ENABLED`. Nothing fires until you do — only an
+   enabled workflow gets trigger instances. This is also what runs a piece
+   trigger's `onEnable`, which is when a webhook trigger registers itself with
+   its provider.
+
+## 5. Connections and secrets
+
+A step that authenticates points at a `powerhouse/connection` document. Mint the
+secret through the runtime rather than writing it into the document:
+
+```graphql
+mutation {
+  workflowRuntime {
+    createSecret(value: "sk-...", label: "CRM production") {
+      ref
+    }
+  }
+}
+```
+
+You get back a `ref`. That ref is what goes in the connection document; the
+value is stored encrypted and cannot be read back over any API. `rotateSecret`
+replaces the value behind a ref without touching any document that refers to it,
+and `deleteSecret` makes it unrecoverable.
+
+Then verify it, which also records the outcome on the connection document so
+Connect can show it:
+
+```graphql
+mutation {
+  workflowRuntime {
+    checkConnection(connectionId: "...") { ok accountLabel detail }
+  }
+}
+```
+
+## 6. Webhook workflows
+
+A webhook trigger needs a URL to hand its provider. Ask for it — don't construct
+it:
+
+```graphql
+query {
+  workflowRuntime {
+    webhookEndpoint(workflowId: "...") { url absoluteUrl armed }
+  }
+}
+```
+
+The endpoint is minted on first ask, whether or not the workflow is enabled,
+because an author needs the URL before switching it on. `armed` carries that
+difference: a URL that exists but isn't accepting yet. `absoluteUrl: false`
+means the reactor doesn't know its own public origin and has handed you a bare
+path — fix that with `PUBLIC_URL`, per
+[Configure environment](/academy/Build/Launch/ConfigureEnvironment), before
+giving the URL to anything outside your machine.
+
+## 7. Fire it, and see what happened
+
+```graphql
+mutation { workflowRuntime { fire(workflowId: "...", payload: {...}) { runId status } } }
+mutation { workflowRuntime { testTrigger(workflowId: "...") } }
+mutation { workflowRuntime { rerun(runId: "...") { runId status } } }
+```
+
+`fire` runs a `core#manual` workflow to completion and hands back the result —
+the quickest way to exercise a graph without waiting on a poll. `testTrigger`
+runs a piece trigger's test hook, returning sample items without moving its
+cursor. `rerun` resumes a failed run: succeeded steps replay from the journal
+and execution restarts at the failure.
+
+The run journal is the debugging surface, and it is a good one:
+
+```graphql
+query {
+  workflowRuntime {
+    runs(workflowId: "...", limit: 10) {
+      id status error startedAt endedAt workflowVersion
+      steps { stepKey blockType status port input output error }
+    }
+  }
+}
+```
+
+Per step: the config **as resolved** (`input`), what came back (`output`), and
+which port it left by. That resolved input is how you catch an expression that
+silently resolved to nothing — the commonest cause of a workflow that runs green
+and does nothing.
+
+`triggerStates` reports the health of every registered trigger, including poll
+schedules and the last error, which is where a trigger that isn't firing
+explains itself.
+
+---
+
+
 ## Publish your package
 
 > Source: https://academy.vetra.io/academy/Build/Launch/PublishYourProject
@@ -30772,6 +31561,63 @@ DOCUMENT_PERMISSIONS_ENABLED=true
 ```
 
 For a complete understanding of how authorization (authentication, admin access, and document protection) works, please refer to the full [Authorization guide](/academy/Build/BuildingUserExperiences/Authorization/Authorization).
+
+## Configuring workflows
+
+Workflows have two halves, switched on independently, and both live in the same
+`powerhouse.config.json`:
+
+```json
+{
+  "workflows": { "enabled": true },
+  "connect": { "app": { "workflowsEnabled": true } }
+}
+```
+
+`workflows.enabled` starts the workflow runtime inside **Switchboard** — trigger
+watching, runs, step execution. `connect.app.workflowsEnabled` makes **Connect**
+load Workflow Studio and the workflow and connection editors. A headless reactor
+needs only the first; a Connect that browses workflows running elsewhere needs
+only the second. Both default to off.
+
+Or via env vars:
+
+```bash
+PH_WORKFLOWS_ENABLED=true
+```
+
+Connect's half has no env var — set it in the config, or pass
+`ph connect build --workflows true`.
+
+Beyond the switch, the runtime reads a handful of `PH_WORKFLOWS_*` variables for
+things an operator tunes: run concurrency, poll and webhook intervals, the
+file-size ceiling, and the two below. Each is declared with its type, default and
+purpose in the `config` block of the `@powerhousedao/workflow` package manifest,
+which is the list to read rather than a copy of it here.
+
+Two are worth naming, because leaving them out fails in ways that are hard to
+diagnose:
+
+```bash
+# 32 bytes of hex encrypting stored connection secrets. Unset, the runtime
+# generates a key next to its working directory — so a host that does not keep
+# that directory comes back unable to read the secrets it stored.
+PH_WORKFLOWS_SECRETS_MASTER_KEY=<64 hex chars>
+
+# Addresses a piece may reach, widening a policy that refuses private and
+# loopback space by default. Without it a step pointed at a service on your own
+# machine or network fails to connect.
+PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES=127.0.0.1/32,::1/128
+```
+
+**NOTE:**
+These names carry the `PH_WORKFLOWS_` prefix as of the release that introduced
+it. Earlier releases read them unprefixed — `PH_SECRETS_MASTER_KEY`,
+`WORKFLOW_EGRESS_ALLOW_ADDRESSES`, `WORKFLOW_RUN_CONCURRENCY` and so on — with
+no fallback, so check which your installed version expects if a setting appears
+to be ignored. The `config` block of the installed package's manifest is
+authoritative for the version you actually have.
+
 
 ## Applying your changes
 
@@ -38176,6 +39022,12 @@ yarn cache clean --force
 - **Powerhouse Academy** – A training platform for onboarding and upskilling SNO contributors.
 - **Connect** – The contributor's public or private workspace, serving as the entry point for individual contributors to install apps and packages for specific business solutions.
 - **Powergrid** – A decentralized network of reactors that sync with each other.
+- **Workflow** – Automation assembled from blocks rather than written in code: one trigger and a graph of steps, stored as a `powerhouse/workflow` document so it syncs, versions and replays like any other. Run by the workflow runtime inside Switchboard and authored in Connect's Workflow Studio.
+- **Workflow Studio** – The Connect drive app for authoring workflows: the canvas, plus the list of workflows, connections and runs.
+- **Piece** – A connector a workflow calls: a named bundle of actions (what a step does) and triggers (what starts a run), each declaring the properties it takes and the shape of what it returns. Pieces come from the reactor's own built-in piece, from a reactor package that ships one, or from a registry.
+- **Block Type** – What a workflow step names: `<piece>#<action>`, or `<piece>#trigger:<name>` for a trigger. A piece from a registry carries its version too (`<piece>@<version>#<action>`); one shipped by a reactor package does not, so that upgrading the package cannot orphan the workflows naming its blocks.
+- **Connection** – A `powerhouse/connection` document holding one credential a workflow step authenticates with. Steps refer to it by id, so the secret is never written into the workflow document itself.
+- **Run** – One execution of a workflow, started by its trigger. A run records the workflow version it executed, so an old run stays readable against the definition it actually used.
 - **Preview Drive** – A local drive created in `--watch` mode during `ph vetra` development, used for testing local document models and editors without affecting the main synced drive.
 - **Remote Drive** – A Powerhouse drive hosted on a remote server (e.g., Vetra) that syncs across team members, enabling collaborative development on shared documents and document models.
 - **Powerhouse CLI (ph)** – The command-line tool for Powerhouse project initialization, code generation, package management, and running local development environments (Connect Studio). It also manages services, ensuring the terminology aligns with the updated setup guide.
