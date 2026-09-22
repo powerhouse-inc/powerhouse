@@ -46,6 +46,9 @@ export type ApAction = Partial<
   Pick<ActionBase, "name" | "displayName" | "description" | "requireAuth">
 > & {
   props?: Record<string, ApProperty>;
+  // Authored shape of run()'s return, for the expression picker. Plain data,
+  // and never validated against — a piece may return whatever it likes.
+  outputSchema?: unknown;
   run: (ctx: unknown) => Promise<unknown>;
 };
 
@@ -69,6 +72,7 @@ export type ApTrigger = Partial<
   // Widened from TriggerTestStrategy: SIMULATION | TEST_FUNCTION.
   testStrategy?: string;
   props?: Record<string, ApProperty>;
+  outputSchema?: unknown;
   handshakeConfiguration?: ApHandshakeConfiguration;
   onEnable?: (ctx: unknown) => Promise<void>;
   onDisable?: (ctx: unknown) => Promise<void>;

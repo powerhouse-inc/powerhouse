@@ -53,6 +53,20 @@ const app = {
       props: { title: { displayName: "Title", type: "SHORT_TEXT", required: true } },
       run: async () => undefined,
     },
+    summarise: {
+      name: "summarise",
+      displayName: "Summarise",
+      description: "Declares what it returns",
+      requireAuth: false,
+      props: {},
+      outputSchema: {
+        fields: [
+          { key: "total", label: "Total" },
+          { key: "items", label: "Items", listItems: [{ key: "id", label: "Id" }] },
+        ],
+      },
+      run: async () => undefined,
+    },
   },
   triggers: {
     thing_happened: {
@@ -62,6 +76,7 @@ const app = {
       type: "POLLING",
       requireAuth: true,
       props: {},
+      sampleData: { id: "evt-1", at: "2026-01-01T00:00:00Z" },
       run: async () => [],
     },
   },
@@ -105,7 +120,7 @@ describe("a package piece in the catalog", () => {
         description: "A piece a package ships",
         logoUrl: "https://example.com/fixture.png",
         version: "2.0.0",
-        actionCount: 1,
+        actionCount: 2,
         triggerCount: 1,
         categories: ["CONTENT_AND_FILES"],
       }),
@@ -135,6 +150,10 @@ describe("a package piece in the catalog", () => {
         name: "do_thing",
         displayName: "Do Thing",
         blockType: `${PIECE}#do_thing`,
+      }),
+      expect.objectContaining({
+        name: "summarise",
+        blockType: `${PIECE}#summarise`,
       }),
     ]);
     expect(triggers.triggers).toEqual([
@@ -183,6 +202,27 @@ describe("a package piece in the catalog", () => {
     expect(tree).toEqual({ source: "none", nodes: [] });
   });
 
+  // A package piece has no published listing to read the shape back from, so
+  // what its author declared has to survive the descriptor or it is lost.
+  it("builds the tree an action's outputSchema declares", async () => {
+    const tree = (await runtime.blockOutputTree(`${PIECE}#summarise`)) as {
+      source: string;
+      nodes: { name: string }[];
+    };
+
+    expect(tree.source).toBe("schema");
+    expect(tree.nodes.map((node) => node.name)).toEqual(["total", "items"]);
+  });
+
+  it("falls back to a trigger's sampleData for its shape", async () => {
+    const tree = (await runtime.blockOutputTree(
+      `${PIECE}#trigger:thing_happened`,
+    )) as { source: string; nodes: { name: string }[] };
+
+    expect(tree.source).toBe("sample");
+    expect(tree.nodes.map((node) => node.name)).toEqual(["id", "at"]);
+  });
+
   it("serves detail the published listing has nothing to say about", async () => {
     const detail = (await runtime.pieceDetail(PIECE)) as {
       version: string;
@@ -190,6 +230,6 @@ describe("a package piece in the catalog", () => {
     };
 
     expect(detail.version).toBe("2.0.0");
-    expect(Object.keys(detail.actions)).toEqual(["do_thing"]);
+    expect(Object.keys(detail.actions)).toEqual(["do_thing", "summarise"]);
   });
 });

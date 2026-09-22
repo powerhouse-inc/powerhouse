@@ -181,6 +181,9 @@ describe("PieceWorker.describePiece", () => {
           requireAuth: true,
           props: [],
           hasSampleData: true,
+          // Carried, not just flagged: the expression picker reads it for the
+          // trigger's shape when no outputSchema is declared.
+          sampleData: { id: 1 },
         },
       ],
     });
