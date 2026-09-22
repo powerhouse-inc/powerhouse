@@ -172,6 +172,8 @@ function makeDocument(
     secretRef?: string;
     // A real document only leaves UNCONFIGURED through a recorded check.
     configured?: boolean;
+    // Nothing to authenticate with: no config values and no secret handles.
+    empty?: boolean;
   } = {},
 ): ConnectionDocument {
   const {
@@ -179,14 +181,17 @@ function makeDocument(
     authType = "CUSTOM_AUTH",
     secretRef = passwordRef,
     configured = true,
+    empty = false,
   } = options;
   let document = utils.createDocument();
   document = reducer(document, actions.setConnector({ connectorId, authType }));
-  document = reducer(
-    document,
-    actions.setConfig({ config: { host: "imap.example.com" } }),
-  );
-  if (secretRef) {
+  if (!empty) {
+    document = reducer(
+      document,
+      actions.setConfig({ config: { host: "imap.example.com" } }),
+    );
+  }
+  if (secretRef && !empty) {
     document = reducer(
       document,
       actions.setSecretRef({ id: "sr-1", name: "password", ref: secretRef }),
@@ -472,8 +477,8 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     });
   });
 
-  it("refuses an unconfigured connection without fetching a bundle", async () => {
-    const document = makeDocument({ configured: false });
+  it("refuses a connection with nothing to authenticate with, without fetching a bundle", async () => {
+    const document = makeDocument({ configured: false, empty: true });
     get.mockResolvedValueOnce(document);
     vi.mocked(ensurePieceBundle).mockClear();
     execute.mockClear();
@@ -490,6 +495,20 @@ describe("WorkflowRuntimeService.checkConnection", () => {
       status: "ERROR",
       error: "Connection is not configured",
     });
+  });
+
+  // SET_CONNECTOR leaves UNCONFIGURED behind and only a recorded check clears
+  // it, so a status-based guard refused the very first check of every
+  // connection — the one an author runs after filling the form in.
+  it("checks a configured connection that has never been checked", async () => {
+    const document = makeDocument({ configured: false });
+    get.mockResolvedValueOnce(document);
+    execute.mockClear();
+
+    const result = await service.checkConnection(document.header.id, TEST_CTX);
+
+    expect(result.ok).toBe(true);
+    expect(lastRecordInput()).toMatchObject({ status: "OK" });
   });
 
   it("refuses a revoked connection instead of resolving its secrets", async () => {
