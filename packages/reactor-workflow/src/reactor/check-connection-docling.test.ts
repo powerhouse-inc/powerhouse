@@ -187,7 +187,9 @@ describe.skipIf(!existsSync(PIECE_PKG))(
           }
           return Promise.resolve({
             dir,
-            source: "cache",
+            source: "cache" as const,
+            dependencies: {},
+            installed: false,
           });
         },
       );
