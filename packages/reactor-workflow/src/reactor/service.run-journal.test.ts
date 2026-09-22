@@ -32,6 +32,19 @@ function workflowDocument() {
   };
 }
 
+// A workflow whose own state.name was never set. createDocument(name:) names the
+// DOCUMENT; state.name is a separate field that starts empty, so this is what a
+// workflow created through the API without setting it actually looks like.
+function unnamedWorkflowDocument() {
+  const document = workflowDocument() as {
+    header: { documentType: string; name?: string };
+    state: { global: { name: string } };
+  };
+  document.header.name = "Named on the document";
+  document.state.global.name = "";
+  return document;
+}
+
 interface FinishCall {
   result: WorkflowRunResult;
   executionOrder?: ReadonlyMap<string, number>;
@@ -40,6 +53,16 @@ interface FinishCall {
 function serviceWithStore(store: unknown): WorkflowRuntimeService {
   const service = testRuntime({
     reactorClient: { get: () => Promise.resolve(workflowDocument()) },
+  } as never);
+  const internals = service as unknown as Record<string, unknown>;
+  internals.executor = { execute: () => Promise.resolve({ output: {} }) };
+  internals.storePromise = Promise.resolve(store);
+  return service;
+}
+
+function serviceWithUnnamedWorkflow(store: unknown): WorkflowRuntimeService {
+  const service = testRuntime({
+    reactorClient: { get: () => Promise.resolve(unnamedWorkflowDocument()) },
   } as never);
   const internals = service as unknown as Record<string, unknown>;
   internals.executor = { execute: () => Promise.resolve({ output: {} }) };
@@ -69,6 +92,36 @@ function recordingStore(finishRun: (call: FinishCall) => Promise<void>) {
 const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
 
 describe("fire() and the run journal", () => {
+  it("stamps a run with the workflow's own name", async () => {
+    let recorded: string | undefined;
+    const store = {
+      ...recordingStore(() => Promise.resolve()),
+      startRun: (options: { workflowName: string }) => {
+        recorded = options.workflowName;
+        return Promise.resolve("run-1");
+      },
+    };
+    await serviceWithStore(store).fire(WORKFLOW_ID, {}, CTX);
+    expect(recorded).toBe("Journalled");
+  });
+
+  // Without this the column is blank in every run table, while the drive lists
+  // the name perfectly well — which reads as a display fault rather than a
+  // value that was never recorded. Still a snapshot: the name is resolved when
+  // the run starts, not looked up when a row is shown.
+  it("falls back to the document's name when the workflow has none", async () => {
+    let recorded: string | undefined;
+    const store = {
+      ...recordingStore(() => Promise.resolve()),
+      startRun: (options: { workflowName: string }) => {
+        recorded = options.workflowName;
+        return Promise.resolve("run-1");
+      },
+    };
+    await serviceWithUnnamedWorkflow(store).fire(WORKFLOW_ID, {}, CTX);
+    expect(recorded).toBe("Named on the document");
+  });
+
   it("keeps a finished run's outcome when finishRun throws", async () => {
     const store = recordingStore(() =>
       Promise.reject(new Error("journal is gone")),
