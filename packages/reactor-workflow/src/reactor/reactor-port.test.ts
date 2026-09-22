@@ -331,3 +331,104 @@ describe("ScopedDesignTimeReactorPort", () => {
     ).rejects.toThrow("not available");
   });
 });
+
+// A rejected action is not a rejected call: the operation is still recorded,
+// with the reason on operation.error, and the state is left as it was.
+
+// An operation's index counts within its own scope, so the freshly appended
+// ones can only be found per scope.
+const TYPE_ERROR =
+  '[{"expected":"number","code":"invalid_type","path":["latePenaltyPerHour"],"message":"Invalid input"}]';
+
+const op = (index: number, type: string, error?: string) => ({
+  index,
+  action: { type },
+  ...(error === undefined ? {} : { error }),
+});
+
+function reactorAnswering(operations: Record<string, unknown[]>) {
+  const client = {
+    execute: () =>
+      Promise.resolve({
+        header: {
+          id: "d1",
+          documentType: "acme/commitment",
+          name: "Commitment",
+          slug: "d1",
+        },
+        state: { global: { name: "Commitment" } },
+        operations,
+      }),
+  };
+  return new SubgraphReactorPort({
+    reactorClient: client,
+  } as unknown as WorkflowRuntimeHostDeps);
+}
+
+const dispatch = (
+  port: SubgraphReactorPort,
+  actions: { type: string; scope?: string }[],
+) => port.execute({ documentId: "d1", actions });
+
+describe("SubgraphReactorPort.execute", () => {
+  it("fails a dispatch whose reducer rejected the input", async () => {
+    // The shape a fresh document takes: CREATE_DOCUMENT is index 0 of its own
+    // scope, and so is the first action dispatched against the global one.
+    const port = reactorAnswering({
+      global: [op(0, "SET_COMMITMENT", TYPE_ERROR)],
+      local: [],
+      document: [op(0, "CREATE_DOCUMENT")],
+    });
+
+    await expect(dispatch(port, [{ type: "SET_COMMITMENT" }])).rejects.toThrow(
+      /SET_COMMITMENT failed.*latePenaltyPerHour/s,
+    );
+  });
+
+  it("names every action the reducer rejected, not just the first", async () => {
+    const port = reactorAnswering({
+      global: [op(0, "SET_COMMITMENT", TYPE_ERROR), op(1, "SET_TERMS", "nope")],
+    });
+
+    await expect(
+      dispatch(port, [{ type: "SET_COMMITMENT" }, { type: "SET_TERMS" }]),
+    ).rejects.toThrow(/SET_COMMITMENT failed.*SET_TERMS failed: nope/s);
+  });
+
+  it("looks at the scope the action was dispatched to", async () => {
+    const port = reactorAnswering({
+      global: [op(0, "SET_NAME")],
+      local: [op(0, "SET_LOCAL", "local reducer said no")],
+    });
+
+    await expect(
+      dispatch(port, [{ type: "SET_LOCAL", scope: "local" }]),
+    ).rejects.toThrow(/local reducer said no/);
+  });
+
+  it("passes a dispatch the reducers took", async () => {
+    const port = reactorAnswering({
+      global: [op(0, "SET_COMMITMENT")],
+      document: [op(0, "CREATE_DOCUMENT")],
+    });
+
+    expect(await dispatch(port, [{ type: "SET_COMMITMENT" }])).toEqual(
+      expect.objectContaining({
+        documentId: "d1",
+        documentType: "acme/commitment",
+      }),
+    );
+  });
+
+  it("does not answer for an error this dispatch did not cause", async () => {
+    // The failure is already in the document's history; a later dispatch that
+    // worked is not the place to report it.
+    const port = reactorAnswering({
+      global: [op(0, "SET_COMMITMENT", TYPE_ERROR), op(1, "SET_TERMS")],
+    });
+
+    expect(await dispatch(port, [{ type: "SET_TERMS" }])).toEqual(
+      expect.objectContaining({ documentId: "d1" }),
+    );
+  });
+});
