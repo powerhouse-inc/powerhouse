@@ -103,6 +103,68 @@ in-memory secret and connection resolvers. It is what a piece author's own
 package uses to run its piece the way this reactor will, without standing up a
 reactor to do it.
 
+## Configuration
+
+Everything the engine itself reads from the environment is prefixed
+`PH_WORKFLOWS_`, and every one of these is declared under `config` in
+[`packages/workflow/powerhouse.manifest.json`](../workflow/powerhouse.manifest.json)
+— that manifest is the published surface a host reads, this table is the
+explanation behind it.
+
+| Variable                              | Default            | What it sets                                                                              |
+| ------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------- |
+| `PH_WORKFLOWS_SECRETS_MASTER_KEY`     | generated key file | 64 hex chars (32 bytes) encrypting connection secrets at rest (`reactor/secret-store.ts`) |
+| `PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES` | unset              | Addresses or CIDRs a piece may reach, widening the default policy (`reactor/lib.ts`)      |
+| `PH_WORKFLOWS_RUN_CONCURRENCY`        | `4`                | Runs executing at once; one forked node child each (`worker/pool.ts`)                     |
+| `PH_WORKFLOWS_RUN_QUEUE_DEPTH`        | `0`                | Runs that may wait for a slot before new ones are refused; `0` waits without limit        |
+| `PH_WORKFLOWS_POLL_INTERVAL_MS`       | `60000`            | Cadence for a polling trigger that names none of its own                                  |
+| `PH_WORKFLOWS_WEBHOOK_RECONCILE_MS`   | `900000`           | How often a webhook trigger re-registers with its provider                                |
+| `PH_WORKFLOWS_WEBHOOK_TIMEOUT_MS`     | `30000`            | How long a sync-mode delivery holds the provider's socket                                 |
+| `PH_WORKFLOWS_PIECE_MAX_FILE_BYTES`   | `8388608`          | File-size ceiling for FILE-property hydration and `ctx.files.write`                       |
+
+Each numeric one parses as `Number(raw) || default`: a value that is not a
+positive number falls back silently rather than failing at boot.
+
+Two of them carry a caveat worth knowing before a deployment depends on them:
+
+- **The secrets key is not optional in production.** Unset, `loadKey` generates
+  `./.ph/secrets.key` — relative to the working directory, like the bundle cache
+  and the attachment staging dir. A host whose working directory does not
+  survive a restart comes back with a new key, and every stored connection
+  secret is undecryptable.
+- **The file ceiling only moves the host-side check.** The worker child is
+  forked with an empty environment (`worker/transport.ts`), so the piece-side
+  readers of the limit — `context/files.ts` and `context/normalize.ts`, loaded
+  inside that child — always see the 8 MiB default. Raising it today affects
+  only `reactor/attachment-port.ts`. The egress policy avoids this by being read
+  on the host and shipped over the worker protocol; the limit needs the same.
+
+### From the host
+
+Workflows are turned on by switchboard, not here: `PH_WORKFLOWS_ENABLED`
+(`"1"`/`"0"`/`"true"`/`"false"`), which loses to the host's own `workflows`
+option and wins over `workflows.enabled` in `powerhouse.config.json`. Two more
+switchboard-side settings shape what the runtime can do, and keep their own
+names because they are not workflow settings:
+
+- `PH_REGISTRY_URL` — or `packageRegistryUrl` in `powerhouse.config.json`. See
+  the paragraph below.
+- `PUBLIC_URL` (then `RENDER_EXTERNAL_URL`, then
+  `HEROKU_APP_DEFAULT_DOMAIN_NAME`) — the origin a minted webhook URL carries.
+  Unset, endpoints are advertised as `http://localhost:<port>`, which is not
+  something a provider can call. This is **not** `PH_SWITCHBOARD_PUBLIC_URL`,
+  which sets the attachment service base URL instead.
+
+Pieces are also read from the registry the host installs packages from —
+`packageRegistryUrl` in `powerhouse.config.json`, or `PH_REGISTRY_URL`. It
+serves the same list, detail and bundle endpoints cloud.activepieces.com and
+its CDN do, and is read ahead of both: its listing merges into the catalog and
+into block search, and its tarball is the first download source tried. A host
+that installs packages from no registry reads the Activepieces CDN and npm
+only. There is no second setting: a package installed from that registry
+already ships pieces that run in the worker, so a bundle fetched from it is no
+more trusted than one that arrived inside a package.
+
 ## Running the tests
 
 ```sh
@@ -115,22 +177,12 @@ suites that need one skip when it cannot be fetched, so the offline run is
 smaller but green. Two suites need the docling piece's own package checked out
 beside this repo, and skip otherwise.
 
-Environment:
-
-- `PH_SECRETS_MASTER_KEY` — 32 bytes of hex for the managed secret store. Unset,
-  it generates and reuses a key file.
-- `WORKFLOW_EGRESS_ALLOW_ADDRESSES` — comma-separated CIDRs a piece may reach.
-  The default policy refuses private and loopback addresses; a suite that talks
-  to a local mock service widens it.
-Pieces are also read from the registry the host installs packages from —
-`packageRegistryUrl` in `powerhouse.config.json`, or `PH_REGISTRY_URL`. It
-serves the same list, detail and bundle endpoints cloud.activepieces.com and
-its CDN do, and is read ahead of both: its listing merges into the catalog and
-into block search, and its tarball is the first download source tried. A host
-that installs packages from no registry reads the Activepieces CDN and npm
-only. There is no second setting: a package installed from that registry
-already ships pieces that run in the worker, so a bundle fetched from it is no
-more trusted than one that arrived inside a package.
+The suites set the variables above themselves where they need to — a mock
+service on loopback is reached by widening
+`PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES`, and the secret-store suites set a master
+key so no run picks up a developer's key file. The two live piece suites read
+`DOCLING_E2E_URL` / `DOCLING_E2E_API_KEY` and `PAPERLESS_E2E_URL` /
+`PAPERLESS_E2E_USER` / `PAPERLESS_E2E_PASSWORD`, and skip when unset.
 
 ## Design documents
 

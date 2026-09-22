@@ -336,7 +336,7 @@ describe("StagedFilesService", () => {
   });
 
   it("refuses an oversized file before writing it", async () => {
-    process.env.PH_PIECE_MAX_FILE_BYTES = "4";
+    process.env.PH_WORKFLOWS_PIECE_MAX_FILE_BYTES = "4";
     try {
       const service = new StagedFilesService(join(dir, "run-2"));
       await expect(
@@ -345,18 +345,18 @@ describe("StagedFilesService", () => {
       expect(service.staged()).toEqual([]);
       await expect(readdir(join(dir, "run-2"))).rejects.toThrow();
     } finally {
-      delete process.env.PH_PIECE_MAX_FILE_BYTES;
+      delete process.env.PH_WORKFLOWS_PIECE_MAX_FILE_BYTES;
     }
   });
 
   it("applies the same cap to the inline fallback", async () => {
-    process.env.PH_PIECE_MAX_FILE_BYTES = "4";
+    process.env.PH_WORKFLOWS_PIECE_MAX_FILE_BYTES = "4";
     try {
       await expect(
         new DataUriFilesService().write({ data: Buffer.alloc(5) }),
       ).rejects.toBeInstanceOf(FileTooLargeError);
     } finally {
-      delete process.env.PH_PIECE_MAX_FILE_BYTES;
+      delete process.env.PH_WORKFLOWS_PIECE_MAX_FILE_BYTES;
     }
   });
 });

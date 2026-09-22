@@ -22,11 +22,11 @@ reactor piece that lets a workflow read and write documents.
 
 ## The three packages
 
-| Package | What it is |
-| --- | --- |
-| [`@powerhousedao/pieces-framework`](../pieces-framework) | The piece authoring API (Activepieces', vendored) plus `ctx.reactor`. |
-| `@powerhousedao/workflow` (this one) | Models, editors, assistant tools and the reactor piece. Loaded by Connect; its models are loaded by a reactor. |
-| `@powerhousedao/reactor-workflow` | The engine that runs a workflow: scheduler, executor, piece host, and the GraphQL surface. Arrives next. |
+| Package                                                  | What it is                                                                                                     |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| [`@powerhousedao/pieces-framework`](../pieces-framework) | The piece authoring API (Activepieces', vendored) plus `ctx.reactor`.                                          |
+| `@powerhousedao/workflow` (this one)                     | Models, editors, assistant tools and the reactor piece. Loaded by Connect; its models are loaded by a reactor. |
+| `@powerhousedao/reactor-workflow`                        | The engine that runs a workflow: scheduler, executor, piece host, and the GraphQL surface. Arrives next.       |
 
 This package deliberately depends on neither the engine nor
 `@powerhousedao/reactor-api`, so Connect can load it without pulling a server
@@ -44,6 +44,12 @@ or with `PH_WORKFLOWS_ENABLED=true`, which wins over the config file. With the
 flag on, the reactor registers this package's two document models, so
 workflows and connections can be created and synced. Running them is the
 engine's job and follows in `@powerhousedao/reactor-workflow`.
+
+What that engine reads from the environment is declared under `config` in
+[`powerhouse.manifest.json`](./powerhouse.manifest.json) — every entry prefixed
+`PH_WORKFLOWS_`, each with its type, default and what it sets. The table in
+[`@powerhousedao/reactor-workflow`'s README](../reactor-workflow/README.md#configuration)
+explains them, including which ones a deployment should not leave unset.
 
 ## Developing
 

@@ -355,7 +355,7 @@ const JSON_CONTENT_TYPE = "application/json; charset=utf-8";
 // How long a sync-mode delivery holds the provider's socket; beyond this the run
 // keeps going and the provider is told so, lest a wedged step tie up connections.
 const DELIVERY_TIMEOUT_MS =
-  Number(process.env.WORKFLOW_WEBHOOK_TIMEOUT_MS) || 30_000;
+  Number(process.env.PH_WORKFLOWS_WEBHOOK_TIMEOUT_MS) || 30_000;
 
 const TIMED_OUT = Symbol("webhook delivery timed out");
 
@@ -1187,9 +1187,9 @@ export class WorkflowRuntimeService {
       egress: configuredEgress(),
       // Overrides the 60s default; the 1s floor still applies.
       defaultIntervalMs:
-        Number(process.env.WORKFLOW_POLL_INTERVAL_MS) || undefined,
+        Number(process.env.PH_WORKFLOWS_POLL_INTERVAL_MS) || undefined,
       reconcileIntervalMs:
-        Number(process.env.WORKFLOW_WEBHOOK_RECONCILE_MS) || undefined,
+        Number(process.env.PH_WORKFLOWS_WEBHOOK_RECONCILE_MS) || undefined,
     });
     return this.triggerSupervisor;
   }
@@ -2297,8 +2297,9 @@ export class WorkflowRuntimeService {
     // A queue depth of 0 waits without limit, which is what one shared worker
     // did — a cap turns a saturated pool into failures instead of latency.
     return (this.pieceWorkers ??= new PieceWorkerPool({
-      size: Number(process.env.WORKFLOW_RUN_CONCURRENCY) || undefined,
-      maxQueueDepth: Number(process.env.WORKFLOW_RUN_QUEUE_DEPTH) || undefined,
+      size: Number(process.env.PH_WORKFLOWS_RUN_CONCURRENCY) || undefined,
+      maxQueueDepth:
+        Number(process.env.PH_WORKFLOWS_RUN_QUEUE_DEPTH) || undefined,
     }));
   }
 

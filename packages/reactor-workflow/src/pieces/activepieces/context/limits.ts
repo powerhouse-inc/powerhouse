@@ -7,7 +7,7 @@ export const DEFAULT_MAX_FILE_BYTES = 8 * 1024 * 1024;
 // Read per call rather than at import: a host may set the override after this
 // module is loaded, and tests need to move it.
 export function maxFileBytes(): number {
-  const raw = process.env.PH_PIECE_MAX_FILE_BYTES;
+  const raw = process.env.PH_WORKFLOWS_PIECE_MAX_FILE_BYTES;
   if (raw === undefined) return DEFAULT_MAX_FILE_BYTES;
   const parsed = Number(raw);
   return Number.isFinite(parsed) && parsed > 0
@@ -22,7 +22,7 @@ export class FileTooLargeError extends Error {
   constructor(size: number, limit: number = maxFileBytes()) {
     super(
       `File of ${size} bytes exceeds the ${limit} byte limit ` +
-        `(raise PH_PIECE_MAX_FILE_BYTES to allow more)`,
+        `(raise PH_WORKFLOWS_PIECE_MAX_FILE_BYTES to allow more)`,
     );
     this.name = "FileTooLargeError";
     this.size = size;

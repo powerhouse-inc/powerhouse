@@ -146,10 +146,10 @@ export async function resolveConnectionWithSecrets(
 // guard off, so allowing a demo's loopback services leaves the rest of private
 // space — and the metadata endpoint — denied.
 //
-//   WORKFLOW_EGRESS_ALLOW_ADDRESSES=127.0.0.1/32,::1/128
+//   PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES=127.0.0.1/32,::1/128
 //
 // Unset, the default policy applies and nothing private is reachable.
-const EGRESS_ALLOW_ENV = "WORKFLOW_EGRESS_ALLOW_ADDRESSES";
+const EGRESS_ALLOW_ENV = "PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES";
 
 // A bare address is one host, not a guess at the network around it.
 function asCidr(entry: string): string {

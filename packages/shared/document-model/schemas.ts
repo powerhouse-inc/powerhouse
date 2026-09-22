@@ -797,7 +797,9 @@ export const ConfigEntrySchema = z.object({
   type: ConfigEntryTypeSchema,
   description: z.string().optional(),
   required: z.boolean().optional(),
-  default: z.boolean().optional(),
+  // The value the host falls back to, spelled as the env var would be. Only
+  // meaningful for `var`; a `secret` has no default worth publishing.
+  default: z.string().optional(),
 });
 
 // PWA / service-worker overrides a package contributes to a Connect build.

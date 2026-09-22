@@ -1,5 +1,5 @@
 // Managed secrets in the relational "secrets" namespace, AES-256-GCM at rest;
-// master key from PH_SECRETS_MASTER_KEY or a generated key file.
+// master key from PH_WORKFLOWS_SECRETS_MASTER_KEY or a generated key file.
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import {
   parseSecretRef,
@@ -47,14 +47,15 @@ async function up(db: IRelationalDb<SecretsDB>): Promise<void> {
 }
 
 export interface LocalSecretStoreOptions {
-  // 64 hex chars (32 bytes); defaults to PH_SECRETS_MASTER_KEY.
+  // 64 hex chars (32 bytes); defaults to PH_WORKFLOWS_SECRETS_MASTER_KEY.
   masterKeyHex?: string;
   // Dev fallback when no master key is set; generated on first use.
   keyFile?: string;
 }
 
 function loadKey(options: LocalSecretStoreOptions): Buffer {
-  const hex = options.masterKeyHex ?? process.env.PH_SECRETS_MASTER_KEY;
+  const hex =
+    options.masterKeyHex ?? process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY;
   if (hex !== undefined) {
     if (!/^[0-9a-f]{64}$/i.test(hex)) {
       throw new Error("Secrets master key must be 64 hex chars (32 bytes)");

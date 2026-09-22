@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { configuredEgress } from "./lib.js";
 
-const ENV = "WORKFLOW_EGRESS_ALLOW_ADDRESSES";
+const ENV = "PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES";
 
 afterEach(() => {
   delete process.env[ENV];

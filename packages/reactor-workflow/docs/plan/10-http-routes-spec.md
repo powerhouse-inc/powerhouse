@@ -638,7 +638,7 @@ lines to 198, and the port removed 2,690 lines net.
 Two things the port had to keep that read as transport but are not:
 
 * **The sync-mode delivery timeout.** Sync mode holds the provider's socket, so
-  the wait is bounded at 30s (`WORKFLOW_WEBHOOK_TIMEOUT_MS`) and answers 504
+  the wait is bounded at 30s (`PH_WORKFLOWS_WEBHOOK_TIMEOUT_MS`) and answers 504
   while letting the run continue — cancelling would lose work the provider has
   already been told about, and the retry that follows is what the dedupe field
   absorbs. This is a workflow decision because only workflows have runs that
