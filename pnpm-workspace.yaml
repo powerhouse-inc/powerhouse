@@ -16,9 +16,10 @@ tasks:
   build:
     dependsOn:
       - ^build
+    # dist only. A declared output that does not exist fails the cache store,
+    # and .tsbuild comes from the root `tsc --build`, not from a build script.
     outputs:
       - dist/**
-      - .tsbuild/**
 
 pipelines:
   build:
