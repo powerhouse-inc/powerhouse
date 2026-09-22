@@ -1,47 +1,57 @@
-import { setModelName } from "@powerhousedao/shared/document-model";
-import type {
-  DocumentModelModule,
-  OperationWithContext,
+import { PGlite } from "@electric-sql/pglite";
+import {
+  generateId,
+  type OperationWithContext,
 } from "@powerhousedao/shared/document-model";
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   IProcessor,
   ProcessorFactory,
 } from "@powerhousedao/shared/processors";
-import { documentModelDocumentModelModule } from "document-model";
+import { ConsoleLogger } from "document-model";
+import { Kysely } from "kysely";
+import { PGliteDialect } from "kysely-pglite-dialect";
 import { describe } from "vitest";
 import { bench } from "./loud-bench.js";
-import { ReactorBuilder } from "../src/core/reactor-builder.js";
-import type { InProcessReactorModule } from "../src/core/types.js";
-import type { ReadModelIndexedEvent } from "../src/events/types.js";
-import { ReactorEventTypes } from "../src/events/types.js";
+import { KyselyOperationIndex } from "../src/cache/kysely-operation-index.js";
+import type { IOperationIndex } from "../src/cache/operation-index-types.js";
+import type { IWriteCache } from "../src/cache/write/interfaces.js";
+import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../src/core/drive-container-types.js";
+import type { Database } from "../src/core/types.js";
+import { ProcessorManager } from "../src/processors/processor-manager.js";
+import type { DocumentViewDatabase } from "../src/read-models/types.js";
+import { ConsistencyTracker } from "../src/shared/consistency-tracker.js";
+import type { Database as StorageDatabase } from "../src/storage/kysely/types.js";
+import {
+  REACTOR_SCHEMA,
+  runMigrations,
+} from "../src/storage/migrations/migrator.js";
 
 /**
- * Prices processor delivery when many documents' batches reach the processor
- * manager at once. Each document projects on its own coordinator key, so its
- * creation and its edit are separate post-ready passes; with N documents in
- * flight the manager sees up to 2N passes competing for one processor whose
- * onOperations does real work.
+ * Prices the processor manager's post-ready pass when many documents' batches
+ * reach it at once, driving indexOperations directly over pre-built batches.
+ * The processor waits on a timer rather than spinning, so passes that the
+ * manager lets overlap actually do.
  */
 
-const DOCS_PER_ITERATION = 16;
-/** Roughly what a small relational-db processor spends per operation. */
-const WORK_PER_OPERATION_MS = 0.2;
+const DRIVE_TYPE = "powerhouse/document-drive";
+const CHILD_TYPE = "powerhouse/document-model";
+const DOCS_PER_ROUND = 32;
+const OPS_PER_DOC = 4;
+/** Warmup plus iterations, with headroom; a round is never replayed because
+ * a manager that filtered on the cursor would then deliver nothing. */
+const ROUNDS = 14;
+const PROCESSOR_DELAY_MS = 2;
+const RELOAD_DELAY_MS = 20;
 
-function spin(ms: number): void {
-  const end = performance.now() + ms;
-  while (performance.now() < end) {
-    // busy
-  }
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-class BusyProcessor implements IProcessor {
-  delivered = 0;
+class TimedProcessor implements IProcessor {
+  constructor(private readonly delayMs: number) {}
 
-  onOperations(operations: OperationWithContext[]): Promise<void> {
-    for (let i = 0; i < operations.length; i++) spin(WORK_PER_OPERATION_MS);
-    this.delivered += operations.length;
-    return Promise.resolve();
+  async onOperations(): Promise<void> {
+    if (this.delayMs > 0) await sleep(this.delayMs);
   }
 
   onDisconnect(): Promise<void> {
@@ -49,83 +59,170 @@ class BusyProcessor implements IProcessor {
   }
 }
 
-type Fixture = {
-  module: InProcessReactorModule;
-  processor: BusyProcessor;
-  /** Resolves once the processor manager has indexed the job. */
-  managerIndexed: (jobId: string) => Promise<void>;
-  readReady: (jobId: string) => Promise<void>;
-  destroy: () => Promise<void>;
-};
-
-function awaiter(): {
-  wait: (jobId: string) => Promise<void>;
-  arrive: (jobId: string) => void;
-} {
-  const seen = new Set<string>();
-  const waiting = new Map<string, () => void>();
+function makeOp(
+  documentId: string,
+  documentType: string,
+  ordinal: number,
+  index: number,
+  type: string,
+  scope: string,
+): OperationWithContext {
   return {
-    wait: (jobId) =>
-      seen.has(jobId)
-        ? Promise.resolve()
-        : new Promise((resolve) => waiting.set(jobId, resolve)),
-    arrive: (jobId) => {
-      seen.add(jobId);
-      waiting.get(jobId)?.();
-      waiting.delete(jobId);
+    operation: {
+      id: generateId(),
+      index,
+      skip: 0,
+      hash: `hash-${ordinal}`,
+      timestampUtcMs: new Date().toISOString(),
+      action: {
+        id: generateId(),
+        type,
+        scope,
+        timestampUtcMs: new Date().toISOString(),
+        input: {},
+      },
+    },
+    context: {
+      documentId,
+      documentType,
+      scope,
+      branch: "main",
+      ordinal,
+      resultingState: JSON.stringify({
+        header: {
+          id: documentId,
+          documentType,
+          revision: {},
+          createdAtUtcIso: new Date().toISOString(),
+          lastModifiedAtUtcIso: new Date().toISOString(),
+        },
+      }),
     },
   };
 }
 
-async function createFixture(): Promise<Fixture> {
-  const module = await new ReactorBuilder()
-    .withDocumentModelSources([
-      documentModelDocumentModelModule as unknown as DocumentModelModule,
-      driveDocumentModelModule as unknown as DocumentModelModule,
-    ])
-    .buildModule();
-
-  const indexed = awaiter();
-  module.eventBus.subscribe<ReadModelIndexedEvent>(
-    ReactorEventTypes.READMODEL_INDEXED,
-    (_type, event) => {
-      if (event.readModelName === "processor-manager")
-        indexed.arrive(event.jobId);
-    },
+async function writeToIndex(
+  index: IOperationIndex,
+  ops: OperationWithContext[],
+): Promise<void> {
+  const txn = index.start();
+  txn.write(
+    ops.map((op) => ({
+      id: op.operation.id,
+      index: op.operation.index,
+      skip: op.operation.skip,
+      hash: op.operation.hash,
+      timestampUtcMs: op.operation.timestampUtcMs,
+      action: op.operation.action,
+      documentId: op.context.documentId,
+      documentType: op.context.documentType,
+      scope: op.context.scope,
+      branch: op.context.branch,
+      sourceRemote: "",
+    })),
   );
-  const ready = awaiter();
-  module.eventBus.subscribe<{ jobId: string }>(
-    ReactorEventTypes.JOB_READ_READY,
-    (_type, event) => ready.arrive(event.jobId),
-  );
+  await index.commit(txn);
+}
 
-  const processor = new BusyProcessor();
+type Fixture = {
+  manager: ProcessorManager;
+  /** One batch per document; each round has fresh ordinals. */
+  rounds: OperationWithContext[][][];
+  nextRound: number;
+  destroy: () => Promise<void>;
+};
+
+async function createFixture(delayMs: number): Promise<Fixture> {
+  const pglite = new PGlite();
+  const baseDb = new Kysely<Database>({ dialect: new PGliteDialect(pglite) });
+  const migrated = await runMigrations(baseDb, REACTOR_SCHEMA);
+  if (!migrated.success) {
+    throw migrated.error ?? new Error("migrations failed");
+  }
+  const db = baseDb.withSchema(REACTOR_SCHEMA);
+  const operationIndex = new KyselyOperationIndex(
+    db as unknown as Kysely<StorageDatabase>,
+  );
+  const writeCache: IWriteCache = {
+    getState: () => Promise.resolve({} as never),
+    putState: () => undefined,
+    putRun: () => undefined,
+    invalidate: () => 0,
+    clear: () => undefined,
+    startup: () => Promise.resolve(),
+    shutdown: () => Promise.resolve(),
+  };
+  const manager = new ProcessorManager(
+    db as unknown as Kysely<DocumentViewDatabase>,
+    operationIndex,
+    writeCache,
+    new ConsistencyTracker(),
+    new ConsoleLogger(["bench"]),
+    DEFAULT_DRIVE_CONTAINER_TYPES,
+  );
+  await manager.init();
+
+  const processor = new TimedProcessor(delayMs);
   const factory: ProcessorFactory = () => [
-    {
-      processor,
-      filter: {
-        documentType: ["powerhouse/document-model"],
-        documentId: ["*"],
-      },
-    },
+    { processor, filter: { documentId: ["*"] } },
   ];
-  await module.processorManager.registerFactory("busy", factory);
+  await manager.registerFactory("main", factory);
 
-  // One drive so the factory produces exactly one processor.
-  const drive = driveDocumentModelModule.utils.createDocument();
-  const driveJob = await module.reactor.create(drive);
-  await indexed.wait(driveJob.id);
+  // Ordinals follow the index's serial, so every op is written in the order
+  // it is numbered.
+  let ordinal = 1;
+  const driveId = generateId();
+  const create = makeOp(
+    driveId,
+    DRIVE_TYPE,
+    ordinal++,
+    0,
+    "CREATE_DOCUMENT",
+    "document",
+  );
+  await writeToIndex(operationIndex, [create]);
+  await manager.indexOperations([create]);
+
+  const rounds: OperationWithContext[][][] = [];
+  const all: OperationWithContext[] = [];
+  for (let r = 0; r < ROUNDS; r++) {
+    const round: OperationWithContext[][] = [];
+    for (let d = 0; d < DOCS_PER_ROUND; d++) {
+      const docId = `doc-${r}-${d}`;
+      const batch: OperationWithContext[] = [];
+      for (let i = 0; i < OPS_PER_DOC; i++) {
+        batch.push(
+          makeOp(docId, CHILD_TYPE, ordinal++, i, "SET_MODEL_NAME", "global"),
+        );
+      }
+      round.push(batch);
+      all.push(...batch);
+    }
+    rounds.push(round);
+  }
+  await writeToIndex(operationIndex, all);
 
   return {
-    module,
-    processor,
-    managerIndexed: indexed.wait,
-    readReady: ready.wait,
+    manager,
+    rounds,
+    nextRound: 0,
     destroy: async () => {
-      module.reactor.kill();
-      await module.database.destroy();
+      await baseDb.destroy();
     },
   };
+}
+
+function takeRound(fixture: Fixture): OperationWithContext[][] {
+  const round = fixture.rounds[fixture.nextRound++];
+  if (!round) throw new Error("bench exhausted its pre-built rounds");
+  return round;
+}
+
+/** Every document's batch at once, as the coordinator hands them over. */
+function indexRound(fixture: Fixture): Promise<void[]> {
+  return Promise.all(
+    takeRound(fixture).map((batch) => fixture.manager.indexOperations(batch)),
+  );
 }
 
 /**
@@ -134,54 +231,65 @@ async function createFixture(): Promise<Fixture> {
  */
 let pendingTeardown: Promise<void> = Promise.resolve();
 
-/** Creates N documents at once, then edits each one; returns when the manager has indexed every job. */
-async function deliverRound(fixture: Fixture): Promise<void> {
-  const { module, managerIndexed, readReady } = fixture;
+function options(delayMs: number, holder: { fixture: Fixture | undefined }) {
+  return {
+    iterations: 10,
+    warmupIterations: 1,
+    time: 0,
+    warmupTime: 0,
+    async setup() {
+      await pendingTeardown;
+      holder.fixture = await createFixture(delayMs);
+    },
+    teardown() {
+      const fixture = holder.fixture;
+      if (fixture) pendingTeardown = fixture.destroy();
+    },
+  };
+}
 
-  const creates = await Promise.all(
-    Array.from({ length: DOCS_PER_ITERATION }, () =>
-      module.reactor.create(
-        documentModelDocumentModelModule.utils.createDocument(),
-      ),
-    ),
-  );
-  // An edit needs its document committed; the manager passes still overlap
-  // across documents.
-  await Promise.all(creates.map((job) => readReady(job.id)));
-
-  const edits = await Promise.all(
-    creates.map((job, i) =>
-      module.reactor.execute(job.documentId, "main", [
-        setModelName({ name: `doc-${i}` }),
-      ]),
-    ),
-  );
-
-  await Promise.all(
-    [...creates, ...edits].map((job) => managerIndexed(job.id)),
-  );
+function current(holder: { fixture: Fixture | undefined }): Fixture {
+  if (!holder.fixture) throw new Error("fixture not set up");
+  return holder.fixture;
 }
 
 describe("processor delivery under concurrent batches", () => {
-  let fixture: Fixture;
-
+  const noop = { fixture: undefined as Fixture | undefined };
   bench(
-    `${DOCS_PER_ITERATION} documents created and edited, one busy processor`,
+    `${DOCS_PER_ROUND} documents, no-op processor`,
     async () => {
-      await deliverRound(fixture);
+      await indexRound(current(noop));
     },
+    options(0, noop),
+  );
+
+  const timed = { fixture: undefined as Fixture | undefined };
+  bench(
+    `${DOCS_PER_ROUND} documents, ${PROCESSOR_DELAY_MS}ms processor`,
+    async () => {
+      await indexRound(current(timed));
+    },
+    options(PROCESSOR_DELAY_MS, timed),
+  );
+
+  // A hot reload re-registers a factory while documents keep arriving; its
+  // backfill of every known drive runs alongside the round.
+  const reload = { fixture: undefined as Fixture | undefined };
+  const reloadFactory: ProcessorFactory = () => [
     {
-      iterations: 10,
-      warmupIterations: 1,
-      time: 0,
-      warmupTime: 0,
-      async setup() {
-        await pendingTeardown;
-        fixture = await createFixture();
-      },
-      teardown() {
-        pendingTeardown = fixture.destroy();
-      },
+      processor: new TimedProcessor(RELOAD_DELAY_MS),
+      filter: { documentId: ["*"] },
     },
+  ];
+  bench(
+    `${DOCS_PER_ROUND} documents, ${PROCESSOR_DELAY_MS}ms processor, factory re-registered concurrently`,
+    async () => {
+      const fixture = current(reload);
+      await Promise.all([
+        indexRound(fixture),
+        fixture.manager.registerFactory("reload", reloadFactory),
+      ]);
+    },
+    options(PROCESSOR_DELAY_MS, reload),
   );
 });
