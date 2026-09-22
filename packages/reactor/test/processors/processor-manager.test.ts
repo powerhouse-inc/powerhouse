@@ -27,6 +27,8 @@ import type { IWriteCache } from "../../src/cache/write/interfaces.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../src/core/drive-container-types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { Database, InProcessReactorModule } from "../../src/core/types.js";
+import type { ReadModelIndexedEvent } from "../../src/events/types.js";
+import { ReactorEventTypes } from "../../src/events/types.js";
 import { ProcessorManager } from "../../src/processors/processor-manager.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
@@ -625,6 +627,82 @@ describe("ProcessorManager Integration Tests", () => {
         },
         { timeout: 5000 },
       );
+    });
+  });
+
+  describe("Concurrent read-model batches", () => {
+    // Guards the fix; the standalone tests below demonstrate the defects. A
+    // drive's creation (scope document) and its first edit (scope global)
+    // project on different coordinator keys, so the manager indexes them as
+    // two batches in either order.
+    it("should deliver a drive's first edit once and leave both cursors at the highest ordinal", async () => {
+      const indexed: ReadModelIndexedEvent[] = [];
+      reactorModule.eventBus.subscribe<ReadModelIndexedEvent>(
+        ReactorEventTypes.READMODEL_INDEXED,
+        (_type, event) => {
+          indexed.push(event);
+        },
+      );
+      const managerIndexed = (jobId: string) =>
+        indexed.some(
+          (e) =>
+            e.jobId === jobId &&
+            e.readModelName === "processor-manager" &&
+            e.success,
+        );
+
+      const { factory, processor } = createMockProcessorFactory({
+        documentType: [DRIVE_DOCUMENT_TYPE],
+      });
+      await reactorModule.processorManager.registerFactory(
+        "test-factory",
+        factory,
+      );
+
+      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveId = driveDoc.header.id;
+      const createJob = await reactorModule.reactor.create(driveDoc);
+      // The queue does not hold a global-scope job behind the same document's
+      // pending creation; the manager race is downstream of READ_READY anyway.
+      await vi.waitFor(async () => {
+        const status = await reactorModule.reactor.getJobStatus(createJob.id);
+        expect(status.status).toBe(JobStatus.READ_READY);
+      });
+
+      const editJob = await reactorModule.reactor.execute(driveId, "main", [
+        setDriveName({ name: "renamed" }),
+      ]);
+
+      await vi.waitFor(() => {
+        expect(managerIndexed(createJob.id)).toBe(true);
+        expect(managerIndexed(editJob.id)).toBe(true);
+      });
+
+      const renames = processor.receivedOperations.filter(
+        (op) => op.operation.action.type === "SET_DRIVE_NAME",
+      );
+      expect(renames).toHaveLength(1);
+
+      const all = await reactorModule.operationIndex.getSinceOrdinal(0);
+      const maxOrdinal = Math.max(
+        ...all.results.map((op) => op.context.ordinal),
+      );
+      expect(maxOrdinal).toBeGreaterThan(0);
+
+      const db = reactorModule.database as unknown as Kysely<CombinedDatabase>;
+      const cursor = await db
+        .selectFrom("ProcessorCursor")
+        .select("lastOrdinal")
+        .where("processorId", "=", `test-factory:${driveId}:0`)
+        .executeTakeFirst();
+      expect(cursor?.lastOrdinal).toBe(maxOrdinal);
+
+      const viewState = await db
+        .selectFrom("ViewState")
+        .select("lastOrdinal")
+        .where("readModelId", "=", "processor-manager")
+        .executeTakeFirst();
+      expect(viewState?.lastOrdinal).toBe(maxOrdinal);
     });
   });
 });
