@@ -37,13 +37,15 @@ const clientBody = () => `
   },
 `;
 
-const reactorBody = () => `
+// Nothing to authenticate with, and nothing reached: the action works on what
+// the step hands it. A piece that stays portable runs wherever it is loaded.
+const transformBody = () => `
   // What the editor renders as a step's inputs. A prop a user may leave empty
   // must be \`required: false\`, or the step cannot be saved half-built.
   props: {
-    documentId: Property.ShortText({
-      displayName: "Document id",
-      description: "The id of the document to read",
+    value: Property.LongText({
+      displayName: "Value",
+      description: "The text this action works on",
       required: true,
     }),
   },
@@ -51,20 +53,19 @@ const reactorBody = () => `
   // without running this one first.
   outputSchema: {
     fields: [
-      { key: "documentId", label: "Document id" },
-      { key: "name", label: "Name" },
+      { key: "value", label: "Value" },
+      { key: "length", label: "Length" },
     ],
   },
   async run(context) {
-    const { documentId } = context.propsValue;
-    return await reactorOf(context).get({ documentId: String(documentId) });
+    const { value } = context.propsValue;
+    const text = String(value ?? "");
+    return await Promise.resolve({ value: text.trim(), length: text.length });
   },
 `;
 
 export const pieceActionFileTemplate = (v: PieceActionTemplateArgs) => {
-  const framework = v.withAuth
-    ? "createAction, Property"
-    : "createAction, Property, reactorOf";
+  const framework = "createAction, Property";
   const imports = [
     `import { ${framework} } from "${PIECES_FRAMEWORK_PACKAGE}";`,
     v.withAuth
@@ -79,7 +80,7 @@ export const pieceActionFileTemplate = (v: PieceActionTemplateArgs) => {
 
   const description = v.withAuth
     ? "Reads one record. Replace the path and the props with the call you need."
-    : "Reads one document. Replace the props and the call with the one you need.";
+    : "Tidies a value. Replace the props and the body with the work you need.";
 
   return ts`
 ${imports}
@@ -92,6 +93,6 @@ ${v.withAuth ? `  auth: ${v.camelCaseName}Auth,` : "  requireAuth: false,"}
   // "both" offers the action to a person building a workflow and to an agent.
   audience: "both",
   aiMetadata: { idempotent: true },
-${v.withAuth ? clientBody() : reactorBody()}});
+${v.withAuth ? clientBody() : transformBody()}});
 `.raw;
 };

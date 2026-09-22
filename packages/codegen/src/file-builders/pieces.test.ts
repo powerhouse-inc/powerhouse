@@ -181,6 +181,31 @@ describe("generatePiece", () => {
   });
 });
 
+// A piece is authored against a framework Activepieces pieces share, so what
+// the scaffold reaches for decides whether it runs anywhere but here.
+describe("a scaffolded piece without auth", () => {
+  it("reaches for nothing only a Powerhouse reactor serves", async () => {
+    const dir = makeProject();
+    const project = buildTsMorphProject(dir);
+    await generatePiece({ pieceName: "acme-crm", auth: "none" }, project);
+    await project.save();
+
+    const sources = [
+      "lib/actions/get-record.ts",
+      "lib/triggers/new-record.ts",
+    ].map((file) =>
+      readFileSync(join(dir, "pieces", "acme-crm", file), "utf8"),
+    );
+
+    // ctx.reactor is served to the reactor piece alone, so a scaffold calling
+    // it produced a piece that threw here and could not run there at all.
+    for (const source of sources) {
+      expect(source).not.toContain("reactorOf");
+      expect(source).not.toContain("ctx.reactor");
+    }
+  });
+});
+
 describe("generatePieceAction", () => {
   it("writes the action and adds it to the piece that has to name it", async () => {
     const dir = makeProject();
