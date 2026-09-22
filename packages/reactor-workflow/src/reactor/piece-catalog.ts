@@ -22,7 +22,7 @@ const logger = childLogger(["workflow", "piece-catalog"]);
 // audience: "ai" -- atomics added for agents that would clutter their flow
 // builder (activepieces/activepieces#13960). We want the whole surface, the
 // way their own non-builder callers ask for it.
-function aiLast(audience: string | null): number {
+export function aiLast(audience: string | null): number {
   return audience === "ai" ? 1 : 0;
 }
 

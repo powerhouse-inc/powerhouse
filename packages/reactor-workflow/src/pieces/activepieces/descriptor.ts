@@ -42,6 +42,9 @@ export interface PieceActionDescriptor {
   // Carried verbatim: it is what the expression picker builds a later step's
   // field list from, and a package piece has no published listing to read.
   outputSchema?: unknown;
+  // Orders the action picker, so a package piece that declares it must be
+  // ordered by it too rather than counting as unset.
+  audience?: string;
 }
 
 export interface PieceTriggerDescriptor {
@@ -192,6 +195,7 @@ export function buildDescriptor(
       ...(action.outputSchema !== undefined
         ? { outputSchema: action.outputSchema }
         : {}),
+      ...(action.audience !== undefined ? { audience: action.audience } : {}),
     }),
   );
 
