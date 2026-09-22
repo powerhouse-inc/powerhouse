@@ -270,19 +270,7 @@ export function groupMembers(count: number, includeWriter: boolean): string[] {
   return members;
 }
 
-/**
- * A grant stack whose administration check costs its worst legal price.
- *
- * `administrationReachable` stops at the first candidate grant that still
- * resolves to allow, so a policy whose administration sits at the top settles
- * in one scan. This orders it the other way: every earlier candidate is
- * shadowed by a blanket deny and resolves to deny, so the search runs the full
- * stack and each step scans the stack again.
- *
- * The result is still installable, which is the point. Administration stays
- * reachable through the final address-scoped grant, so this is a policy a
- * deployment can actually hold rather than a shape the validator would refuse.
- */
+/** Installable; the administrator is last, so the reverse pass returns at once. */
 export function adversarialAdminGrants(grantCount: number): Grant[] {
   const shadowed = Math.max(0, grantCount - 2);
   const grants: Grant[] = [];
@@ -312,6 +300,32 @@ export function adversarialAdminGrants(grantCount: number): Grant[] {
     principal: { address: BENCH_ADMIN_ADDRESS },
     capability: { can: "execute", scope: "auth" },
   });
+
+  return grants;
+}
+
+/** Installable; one anyone allow at index 0 behind N distinct address denies. */
+export function shadowWalkAdminGrants(grantCount: number): Grant[] {
+  const grants: Grant[] = [
+    {
+      id: "bench-anyone-admin",
+      description: "the only grant that decides, and the last one reached",
+      effect: "allow",
+      principal: { anyone: true },
+      capability: { can: "execute", scope: "auth" },
+    },
+  ];
+
+  const denied = Math.max(0, grantCount - 1);
+  for (let index = 0; index < denied; index++) {
+    grants.push({
+      id: `bench-denied-admin-${index}`,
+      description: "a distinct address the pass must shadow before moving on",
+      effect: "deny",
+      principal: { address: `0xdenied${index.toString().padStart(33, "0")}` },
+      capability: { can: "execute", scope: "auth" },
+    });
+  }
 
   return grants;
 }
