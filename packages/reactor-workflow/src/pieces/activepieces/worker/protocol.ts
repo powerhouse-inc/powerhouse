@@ -31,10 +31,14 @@ export interface EgressPolicy {
   allowPorts?: number[];
 }
 
-// The child is forked with an empty env, so policy can only arrive on the wire:
-// every request carries the one in force for the work it asks for.
-export interface EgressScopedRequest {
+// The child is forked with an empty env, so what the host's environment decides
+// can only arrive on the wire: every request carries what is in force for the
+// work it asks for.
+export interface HostScopedRequest {
   egress?: EgressPolicy;
+  // Ceiling for FILE-prop hydration and ctx.files.write, from the host's
+  // PH_WORKFLOWS_PIECE_MAX_FILE_BYTES. Absent leaves the built-in default.
+  maxFileBytes?: number;
 }
 
 // Where the worker finds the piece module: a bundle directory in npm shape, as
@@ -46,7 +50,7 @@ export interface PieceModuleRef {
   entryPath?: string;
 }
 
-export interface RunActionRequest extends EgressScopedRequest, PieceModuleRef {
+export interface RunActionRequest extends HostScopedRequest, PieceModuleRef {
   actionName: string;
   propsValue: Record<string, unknown>;
   auth?: unknown;
@@ -86,7 +90,7 @@ export interface RunMessage {
 
 // Design-time resolution of a DROPDOWN options() / DYNAMIC props() resolver.
 export interface ResolveOptionsRequest
-  extends EgressScopedRequest, PieceModuleRef {
+  extends HostScopedRequest, PieceModuleRef {
   // Action or trigger name, per kind (default "action").
   actionName: string;
   kind?: "action" | "trigger";
@@ -110,8 +114,7 @@ export interface ResolveOptionsMessage {
 
 // Without one it runs statelessly: `storeState` seeds an in-memory store and
 // the whole snapshot comes back in the response for the caller to persist.
-export interface TriggerHookRequest
-  extends EgressScopedRequest, PieceModuleRef {
+export interface TriggerHookRequest extends HostScopedRequest, PieceModuleRef {
   triggerName: string;
   hook: "onEnable" | "onDisable" | "run" | "test" | "onHandshake";
   propsValue: Record<string, unknown>;
@@ -140,7 +143,7 @@ export interface TriggerHookMessage {
 // A connection credential check. Auth crosses into the worker and stays
 // there: the piece code that reads it never runs in the host process.
 export interface CheckConnectionRequest
-  extends EgressScopedRequest, PieceModuleRef {
+  extends HostScopedRequest, PieceModuleRef {
   auth?: unknown;
 }
 
@@ -162,7 +165,7 @@ export interface CheckConnectionOutcome {
 // Building one requires the piece module, whose top-level code runs on load,
 // so it is built in the worker and only the plain descriptor crosses back.
 export interface DescribePieceRequest
-  extends EgressScopedRequest, PieceModuleRef {
+  extends HostScopedRequest, PieceModuleRef {
   // Carried through into the descriptor's `source` and its resolver ids.
   packageName: string;
   version: string;

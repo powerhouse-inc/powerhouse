@@ -1,3 +1,4 @@
+import { configuredMaxFileBytes } from "../context/limits.js";
 import type { StagedFile } from "../context/files.js";
 import type { RecordedListener, RecordedSchedule } from "../context/trigger.js";
 import { jsonSafe } from "./json-safe.js";
@@ -309,7 +310,15 @@ export class PieceWorker implements IPieceWorker {
       worker.on("exit", onExit);
       // Flattened here rather than per caller: config, auth and connection
       // values are piece-authored, and the contract is JSON-shaped both ways.
-      worker.send(jsonSafe({ id, type, request }));
+      // The file ceiling is stamped on the same way the egress policy is passed
+      // in: the child reads no environment of its own.
+      worker.send(
+        jsonSafe({
+          id,
+          type,
+          request: { maxFileBytes: configuredMaxFileBytes(), ...request },
+        }),
+      );
     });
   }
 
