@@ -1,3 +1,13 @@
+## 6.2.3-dev.21 (2026-09-22)
+
+### 🚀 Features
+
+- **reactor-api:** keep a package's pieces when it comes from a registry ([06c2bc6df](https://github.com/powerhouse-inc/powerhouse/commit/06c2bc6df))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.20 (2026-09-22)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
