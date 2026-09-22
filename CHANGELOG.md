@@ -1,3 +1,17 @@
+## 6.2.3-dev.20 (2026-09-22)
+
+### 🚀 Features
+
+- **workflow:** let an error branch read why the step failed ([99242e124](https://github.com/powerhouse-inc/powerhouse/commit/99242e124))
+
+### 🩹 Fixes
+
+- **workflow:** floor a poll cadence at a second, and default it to a minute ([5049146a6](https://github.com/powerhouse-inc/powerhouse/commit/5049146a6))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.19 (2026-09-21)
 
 ### 🩹 Fixes
