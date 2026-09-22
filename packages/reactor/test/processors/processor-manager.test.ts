@@ -1672,6 +1672,9 @@ describe("ProcessorManager Standalone Tests", () => {
       const edit = pm.indexOperations([ops[2]!]);
       await editRouted.promise;
       const creation = pm.indexOperations([ops[0]!, ops[1]!]);
+      // A round trip on the idle connection: time enough for the creation
+      // pass to reach its factory if nothing held it back.
+      await db.selectFrom("ViewState").select("lastOrdinal").execute();
       try {
         expect(mock.factoryCallCount).toBe(0);
       } finally {
