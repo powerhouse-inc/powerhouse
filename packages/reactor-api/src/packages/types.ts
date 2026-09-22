@@ -19,13 +19,17 @@ export interface PackagePiece {
   entry?: string;
 }
 
-// A declared piece found on disk. The path is absolute because what consumes
-// it is a worker that knows nothing of the package the piece came from.
+// A declared piece, located. Absolute either way, because what consumes it is
+// a worker that knows nothing of the package the piece came from.
+
+// A path when the package is on this disk; a URL when it was loaded from a
+// registry, which serves the built module but nothing to point a path at.
 export interface PackagePieceEntry {
   name: string;
   version: string;
   entryPath?: string;
   bundleDir?: string;
+  entryUrl?: string;
 }
 
 export interface IPackageLoader {
