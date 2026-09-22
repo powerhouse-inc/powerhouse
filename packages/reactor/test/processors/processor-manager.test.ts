@@ -1631,6 +1631,27 @@ describe("ProcessorManager Standalone Tests", () => {
       expect(tracked).toBeDefined();
       expect(tracked!.lastOrdinal).toBe(3);
     });
+
+    it("should start a 'current' processor at its drive's creation when the edit arrived first", async () => {
+      const driveId = generateId();
+      const processor = createMockProcessor();
+      const factory: ProcessorFactory = () => [
+        {
+          processor,
+          filter: { documentType: [DRIVE_DOCUMENT_TYPE] },
+          startFrom: "current",
+        },
+      ];
+      await processorManager.registerFactory("current-factory", factory);
+
+      const ops = driveCreationOps(driveId);
+      await writeToOperationIndex(operationIndex, ops);
+
+      await processorManager.indexOperations([ops[2]!]);
+      await processorManager.indexOperations([ops[0]!, ops[1]!]);
+
+      expect(ordinalsOf(processor)).toEqual([1, 2, 3]);
+    });
   });
 });
 

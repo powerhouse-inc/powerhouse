@@ -61,6 +61,7 @@ export class ProcessorManager
   private logger: ILogger;
   private driveContainerTypes: ReadonlySet<string>;
   private legacyProcessorIds: boolean;
+  private tail: Promise<void> = Promise.resolve();
 
   constructor(
     db: Kysely<DocumentViewDatabase>,
@@ -81,10 +82,27 @@ export class ProcessorManager
     this.legacyProcessorIds = options.legacyProcessorIds ?? true;
   }
 
+  // Not serialized: it indexes through indexOperations, which is.
   override async init(): Promise<void> {
     await super.init();
     await this.loadAllCursors();
     await this.discoverExistingDrives();
+  }
+
+  // Passes and registry mutations share the processor tables and the
+  // cursors, so they run one at a time. A serialized method must never call
+  // another serialized method: the inner one would wait on the outer forever.
+  private serialized<T>(work: () => Promise<T>): Promise<T> {
+    const run = this.tail.then(work);
+    this.tail = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
+  }
+
+  override indexOperations(items: OperationWithContext[]): Promise<void> {
+    return this.serialized(() => super.indexOperations(items));
   }
 
   protected override async commitOperations(
@@ -95,12 +113,25 @@ export class ProcessorManager
     await this.routeOperationsToProcessors(items);
   }
 
-  async registerFactory(
+  registerFactory(
+    identifier: string,
+    factory: ProcessorFactory,
+  ): Promise<void> {
+    return this.serialized(() =>
+      this.registerFactoryUnlocked(identifier, factory),
+    );
+  }
+
+  unregisterFactory(identifier: string): Promise<void> {
+    return this.serialized(() => this.unregisterFactoryUnlocked(identifier));
+  }
+
+  private async registerFactoryUnlocked(
     identifier: string,
     factory: ProcessorFactory,
   ): Promise<void> {
     if (this.factoryRegistry.has(identifier)) {
-      await this.unregisterFactory(identifier);
+      await this.unregisterFactoryUnlocked(identifier);
     }
 
     this.factoryRegistry.set(identifier, factory);
@@ -117,7 +148,7 @@ export class ProcessorManager
     }
   }
 
-  async unregisterFactory(identifier: string): Promise<void> {
+  private async unregisterFactoryUnlocked(identifier: string): Promise<void> {
     const factoryProcessors = this.factoryToProcessors.get(identifier);
     if (!factoryProcessors) return;
 
@@ -179,6 +210,7 @@ export class ProcessorManager
           identifier,
           factory,
           driveHeader,
+          op.context.ordinal,
         );
       }
     }
@@ -229,6 +261,7 @@ export class ProcessorManager
     identifier: string,
     factory: ProcessorFactory,
     driveHeader: PHDocumentHeader,
+    creationOrdinal?: number,
   ): Promise<void> {
     let records: ProcessorRecord[];
 
@@ -266,7 +299,8 @@ export class ProcessorManager
         lastErrorTimestamp = cached.lastErrorTimestamp ?? undefined;
       } else {
         const startFrom = record.startFrom ?? "beginning";
-        lastOrdinal = startFrom === "current" ? this.lastOrdinal : 0;
+        lastOrdinal =
+          startFrom === "current" ? this.currentStart(creationOrdinal) : 0;
         status = "active";
         lastError = undefined;
         lastErrorTimestamp = undefined;
@@ -282,7 +316,7 @@ export class ProcessorManager
         status,
         lastError,
         lastErrorTimestamp,
-        retry: () => this.retryProcessor(tracked),
+        retry: () => this.serialized(() => this.retryProcessor(tracked)),
       };
 
       trackedList.push(tracked);
@@ -328,6 +362,13 @@ export class ProcessorManager
         await this.backfillProcessor(tracked);
       }
     }
+  }
+
+  // "current" means from the drive's creation onward. Another document's
+  // batch may already have moved the shared cursor past that creation.
+  private currentStart(creationOrdinal: number | undefined): number {
+    if (creationOrdinal === undefined) return this.lastOrdinal;
+    return Math.min(this.lastOrdinal, creationOrdinal - 1);
   }
 
   private async backfillProcessor(tracked: TrackedProcessor): Promise<void> {
