@@ -707,7 +707,9 @@ async function measureManualRebuild(
       if (document === undefined) {
         document = state.module.utils.createDocument();
       }
-      document = state.module.reducer(document, storedOp.action);
+      document = state.module.reducer(document, storedOp.action, undefined, {
+        replayOptions: { operation: storedOp },
+      });
     }
 
     if (result.nextCursor) {
