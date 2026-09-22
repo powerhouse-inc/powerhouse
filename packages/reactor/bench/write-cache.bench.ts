@@ -7,9 +7,11 @@ import {
   driveDocumentModelModule,
   handleTargetNameCollisions,
   insertNodeSorted,
+  isFileNode,
   isValidName,
   nodeReducer,
   readNodes,
+  sortNodesById,
   type AddFileAction,
   type AddFolderAction,
   type DocumentDriveGlobalState,
@@ -1840,3 +1842,163 @@ describe("Write Cache Cold Miss Replay Read/Write Split", () => {
     }
   }
 });
+
+/** A node list at one size in both shapes a reader can hold it: the array sortNodesById froze (packages/shared/document-drive/src/utils.ts:147-158), and a plain copy of the same elements in the same order. */
+type NodeListPair = {
+  count: number;
+  frozen: readonly DriveNode[];
+  plain: DriveNode[];
+  /** Last in id order, and the folder holding it, so every scan visits all `count` elements. */
+  target: FileNode;
+  targetParentFolder: string;
+};
+
+type NodeListLeg = "frozen" | "plain";
+
+/** One scan the client read path runs, against whichever leg a case holds. */
+type NodeScan = {
+  suite: string;
+  label: string;
+  /** Something read off the result, so no case can be optimised away unrun. */
+  run: (nodes: readonly DriveNode[], pair: NodeListPair) => number;
+};
+
+const NODE_LIST_SIZES: number[] = [100, 1000, 5000];
+const NODE_SCAN_TIME_MS = 500;
+const NODES_PER_FOLDER = 50;
+
+let nodeScanSink = 0;
+let nodeScanCasesRun = 0;
+
+function folderIdFor(index: number): string {
+  const folder = Math.floor(index / NODES_PER_FOLDER) * NODES_PER_FOLDER;
+  return `node-${String(folder).padStart(6, "0")}`;
+}
+
+function buildNodeListPair(count: number): NodeListPair {
+  const built: DriveNode[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const id = `node-${String(index).padStart(6, "0")}`;
+
+    if (index % NODES_PER_FOLDER === 0) {
+      built.push({
+        id,
+        name: `folder ${String(index)}`,
+        kind: "folder",
+        parentFolder: null,
+      });
+      continue;
+    }
+
+    built.push({
+      id,
+      name: `document ${String(index)}`,
+      kind: "file",
+      parentFolder: folderIdFor(index),
+      documentType: DOCUMENT_TYPE,
+    });
+  }
+
+  const frozen = sortNodesById(built);
+  const last = frozen[frozen.length - 1];
+
+  if (!isFileNode(last)) {
+    throw new Error("the last node in id order has to be a file node");
+  }
+
+  return {
+    count,
+    frozen,
+    plain: [...frozen],
+    target: last,
+    targetParentFolder: folderIdFor(count - 1),
+  };
+}
+
+/** The scans as their call sites write them: drive-client.ts:235, :365, :396, :449 find by id and :473-477 copies or filters the list; reactor-browser actions/document.ts:74, :873, :912, :966, :1001, :1165, :1180 find by id and :87 finds by name, type and parent folder. The copy is the control -- it reads every element and calls no predicate, which is the shape T-023 measured the freeze leaving alone. */
+const NODE_SCANS: NodeScan[] = [
+  {
+    suite: "Client Node Lookup: find by id",
+    label: "find by id",
+    run: (nodes, pair) => {
+      const node = nodes.find((n) => n.id === pair.target.id);
+      return node === undefined ? 0 : node.name.length;
+    },
+  },
+  {
+    suite: "Client Node Lookup: find by name, type and parent folder",
+    label: "find by name, type and parent folder",
+    run: (nodes, pair) => {
+      const node = nodes.find(
+        (n) =>
+          isFileNode(n) &&
+          n.name === pair.target.name &&
+          n.documentType === pair.target.documentType &&
+          n.parentFolder === pair.target.parentFolder,
+      );
+      return node === undefined ? 0 : node.name.length;
+    },
+  },
+  {
+    suite: "Client Node Lookup: filter by parent folder",
+    label: "filter by parent folder",
+    run: (nodes, pair) =>
+      nodes.filter((n) => (n.parentFolder ?? null) === pair.targetParentFolder)
+        .length,
+  },
+  {
+    suite: "Client Node Lookup: copy the whole list",
+    label: "copy the whole list",
+    run: (nodes) => [...nodes].length,
+  },
+];
+
+const NODE_SCAN_CASES = NODE_SCANS.length * NODE_LIST_SIZES.length * 2;
+
+/** One line saying the scans found what they looked for, so a case that found nothing cannot pass for a fast one. */
+function reportNodeScans(): void {
+  console.log(
+    [
+      "client node lookup",
+      `${String(nodeScanCasesRun)} cases ran`,
+      `scan results summed to ${String(nodeScanSink)}`,
+    ].join(" | "),
+  );
+}
+
+/** What a client node lookup costs now that the list is frozen: the write path reads it through readNodes, which copies it first (utils.ts:132), and the read path scans it in place. A case is one call over one of two lists differing in nothing but Object.freeze, so its mean is the per-lookup wall time and a pair is the multiple the freeze costs; both legs visit every element and the name counts those visits, so the recorder's spread at a size is the freeze and never a difference in list length. The shared sub-microsecond harness floor is a larger share of the 100-node scans than of the 5000-node ones, which makes the smallest size the conservative end. */
+for (const scan of NODE_SCANS) {
+  describe(scan.suite, () => {
+    for (const count of NODE_LIST_SIZES) {
+      const pair = buildNodeListPair(count);
+
+      for (const leg of ["frozen", "plain"] satisfies NodeListLeg[]) {
+        const nodes: readonly DriveNode[] =
+          leg === "frozen" ? pair.frozen : pair.plain;
+
+        bench(
+          `${scan.label}, ${leg} list (${String(count)} node ops)`,
+          () => {
+            nodeScanSink += scan.run(nodes, pair);
+          },
+          {
+            time: NODE_SCAN_TIME_MS,
+            throws: true,
+            teardown: (_task, mode) => {
+              if (mode !== "run") {
+                return;
+              }
+
+              nodeScanCasesRun += 1;
+
+              if (nodeScanCasesRun === NODE_SCAN_CASES) {
+                reportNodeScans();
+              }
+            },
+          },
+        );
+      }
+    }
+  });
+}
