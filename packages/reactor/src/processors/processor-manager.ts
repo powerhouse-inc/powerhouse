@@ -459,15 +459,17 @@ export class ProcessorManager
 
     await Promise.all(
       allTracked.map(async (tracked) => {
-        if (tracked.status !== "active") return;
-
         const backfilled = this.backfilledThrough.get(tracked) ?? 0;
-        const unseen = operations.filter(
-          (op) => op.context.ordinal > backfilled,
+        const matching = operations.filter(
+          (op) =>
+            op.context.ordinal > backfilled &&
+            matchesFilter(op, tracked.record.filter),
         );
-        const matching = unseen.filter((op) =>
-          matchesFilter(op, tracked.record.filter),
-        );
+
+        if (tracked.status !== "active") {
+          if (matching.length > 0) await this.parkBelow(tracked, matching);
+          return;
+        }
 
         if (matching.length > 0) {
           try {
@@ -477,7 +479,7 @@ export class ProcessorManager
             tracked.lastError =
               error instanceof Error ? error.message : String(error);
             tracked.lastErrorTimestamp = new Date();
-            await this.safeSaveProcessorCursor(tracked);
+            await this.parkBelow(tracked, matching);
             this.logger.error(
               "Processor '@ProcessorId' failed at ordinal @Ordinal: @Error",
               tracked.processorId,
@@ -492,6 +494,21 @@ export class ProcessorManager
         await this.safeSaveProcessorCursor(tracked);
       }),
     );
+  }
+
+  // A batch the processor did not take must stay ahead of both cursors, or
+  // retry and restart would resume past it.
+  private async parkBelow(
+    tracked: TrackedProcessor,
+    missed: OperationWithContext[],
+  ): Promise<void> {
+    let lowest = missed[0]!.context.ordinal;
+    for (const op of missed) lowest = Math.min(lowest, op.context.ordinal);
+
+    tracked.lastOrdinal = Math.min(tracked.lastOrdinal, lowest - 1);
+    const backfilled = this.backfilledThrough.get(tracked) ?? 0;
+    this.backfilledThrough.set(tracked, Math.min(backfilled, lowest - 1));
+    await this.safeSaveProcessorCursor(tracked);
   }
 
   private async loadAllCursors(): Promise<void> {

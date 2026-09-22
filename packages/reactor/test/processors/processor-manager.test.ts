@@ -1731,6 +1731,107 @@ describe("ProcessorManager Standalone Tests", () => {
       expect(ordinalsOf(processor)).toEqual([1, 2, 3]);
     });
   });
+
+  describe("Failed and skipped live batches", () => {
+    // lastOrdinal is a cross-document high-water mark, so a lower ordinal
+    // that fails or is skipped must pull the cursor back below itself or
+    // retry and restart both resume past it.
+    const CHILD = "powerhouse/document-model";
+
+    function failingOn(ordinal: number) {
+      const processor = createMockProcessor();
+      processor.onOperations = vi
+        .fn()
+        .mockImplementation((ops: OperationWithContext[]) => {
+          if (ops.some((op) => op.context.ordinal === ordinal)) {
+            return Promise.reject(new Error(`fails on ${ordinal}`));
+          }
+          processor.receivedOperations.push(...ops);
+          return Promise.resolve();
+        });
+      return processor;
+    }
+
+    it("should retry a batch that failed below the cursor", async () => {
+      const driveId = generateId();
+      const processor = failingOn(2);
+      const factory: ProcessorFactory = () => [
+        { processor, filter: { documentId: ["*"] } },
+      ];
+      await processorManager.registerFactory("f", factory);
+
+      const ops = [
+        makeDriveCreateOp(driveId, 1),
+        makeOp(generateId(), 2, { documentType: CHILD }),
+        makeOp(generateId(), 3, { documentType: CHILD }),
+      ];
+      await writeToOperationIndex(operationIndex, ops);
+
+      await processorManager.indexOperations([ops[0]!]);
+      await processorManager.indexOperations([ops[2]!]);
+      await processorManager.indexOperations([ops[1]!]);
+
+      const tracked = processorManager.get(`f:${driveId}:0`);
+      expect(tracked).toBeDefined();
+      expect(tracked!.status).toBe("errored");
+      expect(tracked!.lastOrdinal).toBe(1);
+
+      const row = await db
+        .selectFrom("ProcessorCursor")
+        .select("lastOrdinal")
+        .where("processorId", "=", `f:${driveId}:0`)
+        .executeTakeFirst();
+      expect(row?.lastOrdinal).toBe(1);
+
+      processor.onOperations = vi
+        .fn()
+        .mockImplementation((batch: OperationWithContext[]) => {
+          processor.receivedOperations.push(...batch);
+          return Promise.resolve();
+        });
+      await tracked!.retry();
+
+      expect(ordinalsOf(processor)).toContain(2);
+    });
+
+    it("should retry a batch skipped while the processor was errored", async () => {
+      const driveId = generateId();
+      const processor = failingOn(3);
+      const factory: ProcessorFactory = () => [
+        { processor, filter: { documentId: ["*"] } },
+      ];
+      await processorManager.registerFactory("f", factory);
+
+      const ops = [
+        makeDriveCreateOp(driveId, 1),
+        makeOp(generateId(), 2, { documentType: CHILD }),
+        makeOp(generateId(), 3, { documentType: CHILD }),
+        makeOp(generateId(), 4, { documentType: CHILD }),
+      ];
+      await writeToOperationIndex(operationIndex, ops);
+
+      await processorManager.indexOperations([ops[0]!]);
+      await processorManager.indexOperations([ops[3]!]);
+      await processorManager.indexOperations([ops[2]!]);
+      await processorManager.indexOperations([ops[1]!]);
+
+      const tracked = processorManager.get(`f:${driveId}:0`);
+      expect(tracked).toBeDefined();
+      expect(tracked!.status).toBe("errored");
+      expect(tracked!.lastOrdinal).toBe(1);
+
+      processor.onOperations = vi
+        .fn()
+        .mockImplementation((batch: OperationWithContext[]) => {
+          processor.receivedOperations.push(...batch);
+          return Promise.resolve();
+        });
+      await tracked!.retry();
+
+      expect(ordinalsOf(processor)).toContain(2);
+      expect(ordinalsOf(processor)).toContain(3);
+    });
+  });
 });
 
 describe("ProcessorManager Backfill Paging Regression", () => {
