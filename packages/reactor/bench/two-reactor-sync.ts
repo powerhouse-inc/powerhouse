@@ -967,6 +967,50 @@ const scenarios: Scenario[] = [
       return writes;
     },
   },
+  {
+    name: "Document Count: 50 documents, 10 operations each (writes to convergence)",
+    continues: "",
+    ids: Array.from({ length: 50 }, (_, i) => deterministicId("doc", i + 500)),
+    creatorFor: alternating,
+    write: (setup, ids) => {
+      const writes: Promise<void>[] = [];
+      for (const [i, docId] of ids.entries()) {
+        const reactor = alternating(setup, i);
+        for (let j = 0; j < 10; j++) {
+          writes.push(
+            submitWrite(setup, reactor, docId, [
+              driveDocumentModelModule.actions.setDriveName({
+                name: `Wide ${i} Update ${j}`,
+              }),
+            ]),
+          );
+        }
+      }
+      return writes;
+    },
+  },
+  {
+    name: "History Depth: 10 documents, 100 operations each (writes to convergence)",
+    continues: "",
+    ids: Array.from({ length: 10 }, (_, i) => deterministicId("doc", i + 600)),
+    creatorFor: alternating,
+    write: (setup, ids) => {
+      const writes: Promise<void>[] = [];
+      for (const [i, docId] of ids.entries()) {
+        const reactor = alternating(setup, i);
+        for (let j = 0; j < 100; j++) {
+          writes.push(
+            submitWrite(setup, reactor, docId, [
+              driveDocumentModelModule.actions.setDriveName({
+                name: `Deep ${i} Update ${j}`,
+              }),
+            ]),
+          );
+        }
+      }
+      return writes;
+    },
+  },
 ];
 
 /**
