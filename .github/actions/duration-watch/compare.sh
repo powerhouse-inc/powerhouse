@@ -45,9 +45,16 @@ if [ ! -s "$current_file" ]; then
   exit 0
 fi
 
+# The API's branch= filter does not return the most recent runs -- it served a
+# set reaching back five months, so baselines silently mixed in runs from when
+# the suites were half their current size. Page wide and filter client-side.
 baseline_ids=$(gh api \
-  "repos/$REPO/actions/workflows/$WORKFLOW_FILE/runs?branch=$BASELINE_BRANCH&status=success&per_page=$SAMPLES" \
-  --jq ".workflow_runs[] | select(.id != $RUN_ID) | .id")
+  "repos/$REPO/actions/workflows/$WORKFLOW_FILE/runs?per_page=100" \
+  --jq ".workflow_runs[]
+        | select(.head_branch == \"$BASELINE_BRANCH\")
+        | select(.conclusion == \"success\")
+        | select(.id != $RUN_ID)
+        | .id" | head -n "$SAMPLES")
 
 baseline_file=$(mktemp)
 for id in $baseline_ids; do

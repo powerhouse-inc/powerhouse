@@ -2,7 +2,6 @@
   "name": "root",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.27.1",
   "scripts": {
     "tsc": "tsc --build",
     "test": "pnpm test:ci",
