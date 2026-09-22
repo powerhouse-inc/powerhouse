@@ -22,6 +22,7 @@ import {
   createFakeProjectionTransports,
   type FakeProjectionTransport,
 } from "./fake-projection-transport.js";
+import { deferred, type Deferred } from "../factories.js";
 
 const DB: DbConfig = {
   host: "localhost",
@@ -101,16 +102,6 @@ function operation(
       ...overrides,
     },
   };
-}
-
-type Deferred = { promise: Promise<void>; resolve: () => void };
-
-function deferred(): Deferred {
-  let resolve: () => void = () => {};
-  const promise = new Promise<void>((r) => {
-    resolve = r;
-  });
-  return { promise, resolve };
 }
 
 type RecordingReadModelOptions = {

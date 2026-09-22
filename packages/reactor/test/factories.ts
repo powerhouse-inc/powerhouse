@@ -70,6 +70,17 @@ import { TestChannel } from "./sync/channels/test-channel.js";
 /**
  * Creates a mock logger for testing that no-ops all log methods.
  */
+export type Deferred<T = void> = {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+};
+
+export function deferred<T = void>(): Deferred<T> {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((r) => (resolve = r));
+  return { promise, resolve };
+}
+
 export function createMockLogger(): ILogger {
   const logger: ILogger = {
     level: "error",

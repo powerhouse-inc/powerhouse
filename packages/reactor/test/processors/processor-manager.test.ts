@@ -39,6 +39,7 @@ import {
   REACTOR_SCHEMA,
   runMigrations,
 } from "../../src/storage/migrations/migrator.js";
+import { deferred } from "../factories.js";
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 
@@ -175,12 +176,6 @@ function makeOp(
   };
 }
 
-function deferred<T = void>() {
-  let resolve!: (v: T) => void;
-  const promise = new Promise<T>((r) => (resolve = r));
-  return { promise, resolve };
-}
-
 class HookedProcessorManager extends ProcessorManager {
   afterCommit: (items: OperationWithContext[]) => Promise<void> = () =>
     Promise.resolve();
@@ -198,7 +193,9 @@ class HookedProcessorManager extends ProcessorManager {
 function ordinalsOf(processor: {
   receivedOperations: OperationWithContext[];
 }): number[] {
-  return processor.receivedOperations.map((op) => op.context.ordinal);
+  return processor.receivedOperations
+    .map((op) => op.context.ordinal)
+    .sort((a, b) => a - b);
 }
 
 // What `reactor.create` plus a first edit commits: creation in scope
@@ -798,23 +795,7 @@ describe("ProcessorManager Standalone Tests", () => {
     it("should discover existing drives from DocumentSnapshot on restart", async () => {
       const driveId = generateId();
 
-      await db
-        .insertInto("DocumentSnapshot")
-        .values({
-          id: generateId(),
-          documentId: driveId,
-          slug: "test-drive",
-          name: "Test Drive",
-          scope: "global",
-          branch: "main",
-          content: JSON.stringify({}),
-          documentType: DRIVE_DOCUMENT_TYPE,
-          lastOperationIndex: 0,
-          lastOperationHash: "hash-0",
-          identifiers: JSON.stringify({}),
-          metadata: JSON.stringify({}),
-        })
-        .execute();
+      await insertDriveSnapshot(db, driveId);
 
       await db
         .updateTable("ViewState")
@@ -1179,23 +1160,7 @@ describe("ProcessorManager Standalone Tests", () => {
       const driveId = generateId();
 
       // Insert a drive snapshot so the PM knows the drive exists
-      await db
-        .insertInto("DocumentSnapshot")
-        .values({
-          id: generateId(),
-          documentId: driveId,
-          slug: "test-drive",
-          name: "Test Drive",
-          scope: "global",
-          branch: "main",
-          content: JSON.stringify({}),
-          documentType: DRIVE_DOCUMENT_TYPE,
-          lastOperationIndex: 0,
-          lastOperationHash: "hash-0",
-          identifiers: JSON.stringify({}),
-          metadata: JSON.stringify({}),
-        })
-        .execute();
+      await insertDriveSnapshot(db, driveId);
 
       // Write operations to the operation index so backfill can find them
       const ops = [
@@ -1257,23 +1222,7 @@ describe("ProcessorManager Standalone Tests", () => {
       const driveId = generateId();
 
       // Insert drive snapshot
-      await db
-        .insertInto("DocumentSnapshot")
-        .values({
-          id: generateId(),
-          documentId: driveId,
-          slug: "test-drive",
-          name: "Test Drive",
-          scope: "global",
-          branch: "main",
-          content: JSON.stringify({}),
-          documentType: DRIVE_DOCUMENT_TYPE,
-          lastOperationIndex: 0,
-          lastOperationHash: "hash-0",
-          identifiers: JSON.stringify({}),
-          metadata: JSON.stringify({}),
-        })
-        .execute();
+      await insertDriveSnapshot(db, driveId);
 
       const { factory } = createMockProcessorFactory();
       await processorManager.registerFactory("test-factory", factory);
@@ -1320,23 +1269,7 @@ describe("ProcessorManager Standalone Tests", () => {
       const driveId = generateId();
 
       // Insert drive snapshot
-      await db
-        .insertInto("DocumentSnapshot")
-        .values({
-          id: generateId(),
-          documentId: driveId,
-          slug: "test-drive",
-          name: "Test Drive",
-          scope: "global",
-          branch: "main",
-          content: JSON.stringify({}),
-          documentType: DRIVE_DOCUMENT_TYPE,
-          lastOperationIndex: 0,
-          lastOperationHash: "hash-0",
-          identifiers: JSON.stringify({}),
-          metadata: JSON.stringify({}),
-        })
-        .execute();
+      await insertDriveSnapshot(db, driveId);
 
       // Index ops to advance PM cursor
       await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
@@ -1495,23 +1428,7 @@ describe("ProcessorManager Standalone Tests", () => {
       const driveId = generateId();
 
       // Insert drive snapshot
-      await db
-        .insertInto("DocumentSnapshot")
-        .values({
-          id: generateId(),
-          documentId: driveId,
-          slug: "test-drive",
-          name: "Test Drive",
-          scope: "global",
-          branch: "main",
-          content: JSON.stringify({}),
-          documentType: DRIVE_DOCUMENT_TYPE,
-          lastOperationIndex: 0,
-          lastOperationHash: "hash-0",
-          identifiers: JSON.stringify({}),
-          metadata: JSON.stringify({}),
-        })
-        .execute();
+      await insertDriveSnapshot(db, driveId);
 
       // Register a factory that returns 3 processors
       const processors = [
@@ -2134,12 +2051,6 @@ describe("ProcessorManager Cursor Identity Across Restarts", () => {
     ]);
     await waitForJob(module, renamed.id);
     return driveDoc.header.id;
-  }
-
-  function ordinalsOf(processor: ReturnType<typeof createMockProcessor>) {
-    return processor.receivedOperations
-      .map((op) => op.context.ordinal)
-      .sort((a, b) => a - b);
   }
 
   // Ids are what is under test, so processors are located by identity instead.
