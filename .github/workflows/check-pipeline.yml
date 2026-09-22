@@ -43,10 +43,13 @@ jobs:
         with:
           version: 12.5.1
 
+      # Exact patch, not `24`. The pipeline task key embeds the output of
+      # `node --version`, and `24` resolved to 24.20.0 then 24.21.0 in runs
+      # eight minutes apart, changing all 47 keys at once for a total miss.
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: 24.21.0
           cache: "pnpm"
 
       - name: Setup bun global install
