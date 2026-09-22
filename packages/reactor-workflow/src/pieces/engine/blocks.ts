@@ -475,14 +475,20 @@ export interface ParsedBlockType {
   name: string;
 }
 
+// Everything a block type says about itself, the version excepted: it is
+// absent when the block type pins none, and a caller resolves it from there.
+export interface BlockTypeParts {
+  packageName: string;
+  version?: string;
+  kind: BlockKind;
+  name: string;
+}
+
 const TRIGGER_FRAGMENT = "trigger:";
 
-// "<pkg>[@<version>]#<action>" or "<pkg>[@<version>]#trigger:<trigger>" —
-// the version after the scope-less "@" wins over the registry.
-export function parseBlockType(
-  blockType: string,
-  packages: Record<string, string> = {},
-): ParsedBlockType | undefined {
+// The block type's own halves, before any registry is consulted: a caller with
+// another source of versions still learns which piece an unresolved one names.
+export function blockTypeParts(blockType: string): BlockTypeParts | undefined {
   const separator = blockType.lastIndexOf("#");
   if (separator <= 0) return undefined;
   const packageSpec = blockType.slice(0, separator);
@@ -500,9 +506,27 @@ export function parseBlockType(
       name,
     };
   }
-  const version = packages[packageSpec] as string | undefined;
+  return { packageName: packageSpec, kind, name };
+}
+
+// "<pkg>[@<version>]#<action>" or "<pkg>[@<version>]#trigger:<trigger>" —
+// the version after the scope-less "@" wins over the registry.
+
+// Undefined means "no version anywhere", not "not a block type": treating the
+// two alike is how an unversioned name the reactor holds nothing for vanishes.
+export function parseBlockType(
+  blockType: string,
+  packages: Record<string, string> = {},
+): ParsedBlockType | undefined {
+  const parts = blockTypeParts(blockType);
+  if (!parts) return undefined;
+  const { packageName, kind, name } = parts;
+  if (parts.version !== undefined) {
+    return { packageName, version: parts.version, kind, name };
+  }
+  const version = packages[packageName] as string | undefined;
   if (!version) return undefined;
-  return { packageName: packageSpec, version, kind, name };
+  return { packageName, version, kind, name };
 }
 
 // Executes "<packageName>#<actionName>" block types through the piece worker.

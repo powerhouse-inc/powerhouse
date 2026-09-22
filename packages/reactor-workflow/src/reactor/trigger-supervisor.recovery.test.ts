@@ -335,4 +335,34 @@ describe("TriggerSupervisor robustness", () => {
     await supervisor.tick();
     expect((await store.getTriggerState(wf))?.status).toBe("ENABLED");
   });
+
+  it("records a trigger it was never handed a binding for", async () => {
+    const wf = "wf-unresolvable";
+    const blockType = "@powerhousedao/piece-paperless-ngx#trigger:new_document";
+
+    await supervisor.reject(wf, blockType, {}, "no piece answers for it");
+
+    const row = await store.getTriggerState(wf);
+    expect(row?.status).toBe("ERROR");
+    expect(row?.block_type).toBe(blockType);
+    expect(row?.last_error).toBe("no piece answers for it");
+    // Nothing to retry: only an install or an edit can change the answer, and
+    // both come back through upsert rather than the tick.
+    expect(row?.next_poll_at).toBeNull();
+
+    await supervisor.tick();
+    expect(calls).toEqual([]);
+  });
+
+  it("gives up the row it recorded once the trigger resolves", async () => {
+    const wf = "wf-unresolvable-fixed";
+    await supervisor.reject(wf, "@acme/piece-x#trigger:new_thing", {}, "gone");
+
+    await supervisor.upsert(binding(wf));
+
+    const row = await store.getTriggerState(wf);
+    expect(row?.status).toBe("ENABLED");
+    expect(row?.last_error).toBeNull();
+    expect(row?.consecutive_failures).toBe(0);
+  });
 });
