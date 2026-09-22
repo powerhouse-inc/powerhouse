@@ -108,19 +108,45 @@ export function documentSummary(
   };
 }
 
-// Reducer failures don't reject execute(); they land on the operations. Fail
-// the call when any of the freshly appended operations carries an error.
-function assertOperationsApplied(document: PHDocument, count: number): void {
-  const operations = Object.values(document.operations).flat();
-  const recent = operations
-    .sort((a, b) => a.index - b.index)
-    .slice(-Math.max(count, 1));
-  const failed = recent.find((operation) => operation.error !== undefined);
-  if (failed) {
-    throw new Error(
-      `Action ${failed.action.type} failed: ${failed.error ?? "unknown error"}`,
-    );
+// Reducer failures don't reject execute(): the operation is still recorded,
+// with the reason on operation.error and the state left exactly as it was.
+
+// So a dispatch that wrote nothing at all comes back looking like any other,
+// and the only thing standing between that and a step reporting success is
+// this. It fails the call instead, which is what the block needs: its payload
+// may be model output, and a silent no-op is the worst way to learn that.
+
+// Per scope, because an operation's index counts within its own scope. A tail
+// taken across all of them sorts one scope's indexes against another's, and a
+// document-scope CREATE_DOCUMENT at index 0 displaces the failed global
+// operation at index 0 that a fresh document's first dispatch leaves.
+function assertOperationsApplied(
+  document: PHDocument,
+  dispatched: readonly { scope?: string }[],
+): void {
+  const perScope = new Map<string, number>();
+  for (const action of dispatched) {
+    const scope = action.scope ?? "global";
+    perScope.set(scope, (perScope.get(scope) ?? 0) + 1);
   }
+  const failed = [...perScope].flatMap(([scope, count]) =>
+    [...(document.operations[scope] ?? [])]
+      .sort((a, b) => a.index - b.index)
+      .slice(-count)
+      .filter((operation) => operation.error !== undefined),
+  );
+  if (failed.length === 0) return;
+  // All of them: a payload a model wrote tends to fail a field at a time, and
+  // naming only the first sends the author back for another run to find the
+  // next. The reducer's own message carries the field and what it wanted.
+  throw new Error(
+    failed
+      .map(
+        (operation) =>
+          `Action ${operation.action.type} failed: ${operation.error ?? "unknown error"}`,
+      )
+      .join("; "),
+  );
 }
 
 export class SubgraphReactorPort implements ReactorPort {
@@ -234,12 +260,13 @@ export class SubgraphReactorPort implements ReactorPort {
       // createEmpty takes no name, so naming it is a first operation. The
       // drive path below sets the header instead, before the file lands.
       if (!input.name) return documentSummary(created, true);
+      const naming = createAction("SET_NAME", { name: input.name });
       const named = await this.client.execute<PHDocument>(
         created.header.id,
         "main",
-        [createAction("SET_NAME", { name: input.name })],
+        [naming],
       );
-      assertOperationsApplied(named, 1);
+      assertOperationsApplied(named, [naming]);
       return documentSummary(named, true);
     }
     // createEmpty only records the parent relationship; a drive also needs an
@@ -271,7 +298,9 @@ export class SubgraphReactorPort implements ReactorPort {
       input.branch ?? "main",
       actions,
     );
-    assertOperationsApplied(document, actions.length);
+    // The inputs rather than the built actions: they carry the scope each one
+    // was asked for, which is the scope its operation was appended to.
+    assertOperationsApplied(document, input.actions);
     return documentSummary(document, true);
   }
 
