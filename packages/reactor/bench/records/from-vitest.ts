@@ -492,9 +492,9 @@ export function buildMicroEntry(
     );
   }
 
-  const derived = [...input.suites.map(suiteSpread), ...input.derived];
+  const derived = [...input.suites.flatMap(suiteSpreads), ...input.derived];
   const conclusions = [
-    ...input.suites.map(suiteConclusion),
+    ...input.suites.flatMap(suiteConclusions),
     ...input.conclusions,
   ];
   const caveats = [
@@ -539,30 +539,142 @@ export function suiteLabel(fullName: string): string {
   return parts.length > 1 ? parts.slice(1).join(" > ") : fullName;
 }
 
-function suiteSpread(suite: MicroSuite): DerivedRatio {
-  const fastest = extreme(suite, (a, b) => a.hz > b.hz);
-  const slowest = extreme(suite, (a, b) => a.hz < b.hz);
-  return {
-    name: `${suiteLabel(suite.fullName)}: spread`,
-    value: round(fastest.hz / slowest.hz),
-    unit: "x",
-    note: `${fastest.name} over ${slowest.name}`,
-  };
+/** Cases of one suite that ran the same stated operation count. */
+type WorkloadGroup = {
+  /** 0 when the cases state no count of their own. */
+  operations: number;
+  cases: MicroCase[];
+};
+
+/**
+ * The operation count a case name states, or 0 when it states none. A case
+ * name is the only place the harness says how much work the case did, so it is
+ * the only thing a spread can hold fixed.
+ */
+function statedOperationCount(name: string): number {
+  const match = /(\d+)\s+(?:[a-z]+\s+)?(?:operations?|ops)\b/i.exec(name);
+  return match === null ? 0 : Number(match[1]);
+}
+
+/**
+ * Splits a suite into the sets whose cases are comparable to each other. A
+ * suite where no case states a count is one set, because holding the workload
+ * fixed is then the suite's own construction. Once any case states one, a case
+ * that states none is comparable to nothing and stands alone.
+ */
+function workloadGroups(suite: MicroSuite): WorkloadGroup[] {
+  const tagged = suite.cases.map((entry) => ({
+    entry,
+    operations: statedOperationCount(entry.name),
+  }));
+  if (tagged.every((item) => item.operations === 0)) {
+    return [{ operations: 0, cases: suite.cases }];
+  }
+
+  const groups: WorkloadGroup[] = [];
+  const byCount = new Map<number, WorkloadGroup>();
+  for (const item of tagged) {
+    const existing = byCount.get(item.operations);
+    if (item.operations !== 0 && existing !== undefined) {
+      existing.cases.push(item.entry);
+      continue;
+    }
+    const group: WorkloadGroup = {
+      operations: item.operations,
+      cases: [item.entry],
+    };
+    if (item.operations !== 0) {
+      byCount.set(item.operations, group);
+    }
+    groups.push(group);
+  }
+  return groups;
+}
+
+/** What each case states about its own workload, for a note that has to say why. */
+function statedCounts(suite: MicroSuite): string {
+  return suite.cases
+    .map((entry) => {
+      const operations = statedOperationCount(entry.name);
+      return operations === 0
+        ? `${entry.name}: no stated count`
+        : `${entry.name}: ${String(operations)}`;
+    })
+    .join("; ");
+}
+
+/**
+ * One spread per set of cases that ran the same stated operation count, rather
+ * than one fastest-over-slowest for the suite. A pair that differs in workload
+ * size prices the size as much as the mechanism, and the ratio reads as though
+ * it priced the mechanism alone. A suite that holds one size throughout keeps
+ * the single `<label>: spread` it has always filed.
+ */
+function suiteSpreads(suite: MicroSuite): DerivedRatio[] {
+  const label = suiteLabel(suite.fullName);
+  const groups = workloadGroups(suite);
+  const comparable = groups.filter((group) => group.cases.length > 1);
+
+  if (comparable.length === 0) {
+    return [
+      {
+        name: `${label}: comparable pairs`,
+        value: 0,
+        unit: "count",
+        note: `No two cases ran the same stated operation count (${statedCounts(suite)}), so a fastest-over-slowest ratio here would price the operation count rather than the mechanism`,
+      },
+    ];
+  }
+
+  return comparable.map((group) => {
+    const fastest = extreme(group.cases, (a, b) => a.hz > b.hz);
+    const slowest = extreme(group.cases, (a, b) => a.hz < b.hz);
+    const at = `${String(group.operations)} operations`;
+    return {
+      name:
+        groups.length === 1 ? `${label}: spread` : `${label}: spread at ${at}`,
+      value: round(fastest.hz / slowest.hz),
+      unit: "x",
+      note:
+        groups.length === 1
+          ? `${fastest.name} over ${slowest.name}`
+          : `${fastest.name} over ${slowest.name}, both at ${at}`,
+    };
+  });
 }
 
 /**
  * Restates a measured ratio rather than claiming anything about why. Something
  * has to fill `conclusions`, which is min(1), and model prose must not be what
- * fills it.
+ * fills it. A suite with no two cases at one size gets a sentence that says so:
+ * the alternative is a headline that reads as a mechanism and is an op count.
  */
-function suiteConclusion(suite: MicroSuite): string {
+function suiteConclusions(suite: MicroSuite): string[] {
   const label = suiteLabel(suite.fullName);
-  if (suite.cases.length === 1) {
-    return `In ${label}, ${suite.cases[0].name} ran at ${round(suite.cases[0].hz)} ops/sec`;
+  const groups = workloadGroups(suite);
+  const comparable = groups.filter((group) => group.cases.length > 1);
+
+  if (comparable.length === 0) {
+    if (suite.cases.length === 1) {
+      return [
+        `In ${label}, ${suite.cases[0].name} ran at ${round(suite.cases[0].hz)} ops/sec`,
+      ];
+    }
+    const rates = suite.cases
+      .map((entry) => `${entry.name} at ${round(entry.hz)} ops/sec`)
+      .join(", ");
+    return [
+      `In ${label}, no two cases ran the same stated operation count, so the suite has no spread that isolates the mechanism: ${rates}`,
+    ];
   }
-  const fastest = extreme(suite, (a, b) => a.hz > b.hz);
-  const slowest = extreme(suite, (a, b) => a.hz < b.hz);
-  return `In ${label}, ${slowest.name} is ${round(fastest.hz / slowest.hz)}x slower than ${fastest.name}`;
+
+  return comparable.map((group) => {
+    const fastest = extreme(group.cases, (a, b) => a.hz > b.hz);
+    const slowest = extreme(group.cases, (a, b) => a.hz < b.hz);
+    const at =
+      groups.length === 1 ? "" : ` at ${String(group.operations)} operations`;
+    return `In ${label}${at}, ${slowest.name} is ${round(fastest.hz / slowest.hz)}x slower than ${fastest.name}`;
+  });
 }
 
 /** What the numbers themselves say about how far to trust them. */
@@ -587,12 +699,10 @@ function earnedCaveats(suites: MicroSuite[]): string[] {
 }
 
 function extreme(
-  suite: MicroSuite,
+  cases: MicroCase[],
   better: (a: MicroCase, b: MicroCase) => boolean,
 ): MicroCase {
-  return suite.cases.reduce((best, entry) =>
-    better(entry, best) ? entry : best,
-  );
+  return cases.reduce((best, entry) => (better(entry, best) ? entry : best));
 }
 
 function median(samples: number[]): number {

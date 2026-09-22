@@ -205,6 +205,29 @@ describe("suitesFromTinybench", () => {
   });
 });
 
+/**
+ * A suite whose case names state their own operation counts, which is what the
+ * recorder groups on before it takes a fastest and a slowest.
+ */
+function sizedSuite(fullName: string, rates: [string, number][]): MicroSuite {
+  const ranked = [...rates].sort((a, b) => b[1] - a[1]);
+  return {
+    fullName,
+    cases: ranked.map(([name, hz], index) => ({
+      name,
+      rank: index + 1,
+      hz,
+      meanMs: 1000 / hz,
+      medianMs: 1000 / hz,
+      minMs: 1000 / hz,
+      maxMs: 1000 / hz,
+      rmePct: 1,
+      sampleCount: 200,
+      totalTimeMs: 1000,
+    })),
+  };
+}
+
 describe("buildMicroEntry", () => {
   it("produces an entry the store accepts once an id is allocated", () => {
     const entry = entryFor(findTarget("auth"));
@@ -305,6 +328,86 @@ describe("buildMicroEntry", () => {
     const entry = entryFor(findTarget("auth"), { suites });
 
     expect((entry.conclusions as string[])[0]).toContain("ran at");
+  });
+
+  it("gives a suite one spread per operation count its case names state", () => {
+    const suites = [
+      sizedSuite("bench/write-cache.bench.ts > vs No-Cache", [
+        ["No-cache baseline: manual rebuild (100 operations)", 100],
+        ["With cache: rebuild (100 operations)", 150],
+        ["No-cache baseline: manual rebuild (1000 operations)", 2],
+        ["With cache: rebuild (1000 operations)", 13],
+      ]),
+    ];
+
+    const entry = entryFor(findTarget("auth"), { suites });
+    const results = entry.results as {
+      derived: { name: string; value: number; unit: string; note: string }[];
+    };
+
+    expect(results.derived).toEqual([
+      {
+        name: "vs No-Cache: spread at 100 operations",
+        value: 1.5,
+        unit: "x",
+        note: "With cache: rebuild (100 operations) over No-cache baseline: manual rebuild (100 operations), both at 100 operations",
+      },
+      {
+        name: "vs No-Cache: spread at 1000 operations",
+        value: 6.5,
+        unit: "x",
+        note: "With cache: rebuild (1000 operations) over No-cache baseline: manual rebuild (1000 operations), both at 1000 operations",
+      },
+    ]);
+    expect(entry.conclusions).toEqual([
+      "In vs No-Cache at 100 operations, No-cache baseline: manual rebuild (100 operations) is 1.5x slower than With cache: rebuild (100 operations)",
+      "In vs No-Cache at 1000 operations, No-cache baseline: manual rebuild (1000 operations) is 6.5x slower than With cache: rebuild (1000 operations)",
+    ]);
+  });
+
+  it("says so rather than ranking cases that ran different amounts of work", () => {
+    const suites = [
+      sizedSuite("bench/write-cache.bench.ts > Warm Miss", [
+        ["Warm miss rebuild (10 incremental operations)", 600],
+        ["Warm miss rebuild (50 incremental operations)", 200],
+        ["Warm miss with nearby cached revision", 900],
+      ]),
+    ];
+
+    const entry = entryFor(findTarget("auth"), { suites });
+    const results = entry.results as {
+      derived: { name: string; value: number; unit: string }[];
+    };
+
+    expect(results.derived).toHaveLength(1);
+    expect(results.derived[0]).toMatchObject({
+      name: "Warm Miss: comparable pairs",
+      value: 0,
+      unit: "count",
+    });
+    expect((entry.conclusions as string[])[0]).toContain(
+      "no two cases ran the same stated operation count",
+    );
+    expect((entry.conclusions as string[])[0]).not.toContain("x slower");
+  });
+
+  it("keeps the one spread a suite that holds its workload fixed has filed", () => {
+    const suites = [
+      sizedSuite("bench/write-cache.bench.ts > Decomposition (100 ops)", [
+        ["cold miss 100 ops: instrumented cold-miss replay", 150],
+        ["cold miss 100 ops: input validation only", 285],
+      ]),
+    ];
+
+    const results = entryFor(findTarget("auth"), { suites }).results as {
+      derived: { name: string; note: string }[];
+    };
+
+    expect(results.derived).toHaveLength(1);
+    expect(results.derived[0].name).toBe("Decomposition (100 ops): spread");
+    expect(results.derived[0].note).toBe(
+      "cold miss 100 ops: input validation only over cold miss 100 ops: instrumented cold-miss replay",
+    );
   });
 });
 
