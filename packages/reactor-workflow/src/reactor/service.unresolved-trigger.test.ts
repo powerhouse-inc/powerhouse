@@ -13,12 +13,13 @@ vi.mock("./piece-catalog.js", async (importOriginal) => {
   const actual = await importOriginal<typeof PieceCatalog>();
   return {
     ...actual,
-    fetchPieceVersion: vi.fn(() => Promise.reject(new Error("offline"))),
+    fetchPieceCatalog: vi.fn(() => Promise.reject(new Error("offline"))),
+    fetchPieceDetail: vi.fn(() => Promise.reject(new Error("offline"))),
   };
 });
 
 import { testRuntime } from "../../test/helpers/runtime.js";
-import { fetchPieceVersion } from "./piece-catalog.js";
+import { fetchPieceCatalog, fetchPieceDetail } from "./piece-catalog.js";
 import { packagePieces } from "./piece-registry.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import type { PieceTriggerBinding } from "./trigger-supervisor.js";
@@ -92,7 +93,8 @@ const logCall = (calls: unknown[][], token: string) =>
 beforeEach(() => {
   vi.clearAllMocks();
   // Offline again: clearing a mock keeps whatever the last test taught it.
-  vi.mocked(fetchPieceVersion).mockRejectedValue(new Error("offline"));
+  vi.mocked(fetchPieceCatalog).mockRejectedValue(new Error("offline"));
+  vi.mocked(fetchPieceDetail).mockRejectedValue(new Error("offline"));
   packagePieces.reset();
   service = testRuntime({ logger } as never);
   (service as unknown as { triggerSupervisor: unknown }).triggerSupervisor = {
@@ -137,22 +139,26 @@ describe("a trigger block type with no version", () => {
     expect(armed().triggerName).toBe("new_document");
     // Nothing is asked of the catalog, so an installed piece cannot be pulled
     // out from under a workflow by somebody else's publish.
-    expect(fetchPieceVersion).not.toHaveBeenCalled();
+    expect(fetchPieceDetail).not.toHaveBeenCalled();
     expect(reject).not.toHaveBeenCalled();
   });
 
   it("falls back to the version the piece catalog serves, and names it", async () => {
-    vi.mocked(fetchPieceVersion).mockResolvedValue("0.1.0");
+    vi.mocked(fetchPieceDetail).mockResolvedValue({ version: "0.1.0" });
 
     await service.onOperations([workflowOp(UNVERSIONED)]);
 
-    expect(fetchPieceVersion).toHaveBeenCalledWith(PIECE);
+    expect(fetchPieceDetail).toHaveBeenCalledWith(PIECE);
     expect(armed().version).toBe("0.1.0");
     expect(reject).not.toHaveBeenCalled();
     // The version is logged because it is the one part of this binding the
     // workflow does not pin: the next publish moves it.
     const logged = logCall(logger.info.mock.calls, "@version");
-    expect(logged?.slice(1)).toEqual([WORKFLOW, UNVERSIONED, "0.1.0"]);
+    expect(logged?.slice(1)).toEqual([
+      UNVERSIONED,
+      `workflow ${WORKFLOW}`,
+      "0.1.0",
+    ]);
     // Scoped names travel as logger values; inline they print as null/pack.
     expect(String(logged?.[0])).not.toContain(PIECE);
   });
@@ -195,7 +201,7 @@ describe("the block types this path must leave alone", () => {
     await service.onOperations([workflowOp(PINNED)]);
 
     expect(armed().version).toBe("0.1.0");
-    expect(fetchPieceVersion).not.toHaveBeenCalled();
+    expect(fetchPieceDetail).not.toHaveBeenCalled();
     expect(reject).not.toHaveBeenCalled();
   });
 
@@ -205,5 +211,7 @@ describe("the block types this path must leave alone", () => {
     expect(upsert).not.toHaveBeenCalled();
     expect(reject).not.toHaveBeenCalled();
     expect(logger.warn).not.toHaveBeenCalled();
+    // core is the engine's own namespace; no catalog has heard of it.
+    expect(fetchPieceDetail).not.toHaveBeenCalled();
   });
 });
