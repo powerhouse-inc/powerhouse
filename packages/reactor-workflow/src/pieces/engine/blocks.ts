@@ -395,6 +395,14 @@ export interface ActivepiecesBlockExecutorOptions {
   packages?:
     | Record<string, string>
     | (() => Record<string, string> | Promise<Record<string, string>>);
+  // Asked only for a block type the registry above could not resolve, so a
+  // host that can still find the piece some other way answers for it here.
+
+  // A map cannot: resolving an unpinned name means looking that one name up,
+  // which the registry, being what this host installed, has nothing to say to.
+  resolveBlockType?: (
+    blockType: string,
+  ) => Promise<ParsedBlockType | undefined>;
   connections?: EngineConnectionResolver;
   // The worker piece steps go to. A function is asked once per step, so a
   // host handing each run its own child answers with that run's.
@@ -561,7 +569,9 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
   }
 
   async execute(execution: BlockExecution): Promise<BlockResult> {
-    const parsed = parseBlockType(execution.blockType, await this.packages());
+    const parsed =
+      parseBlockType(execution.blockType, await this.packages()) ??
+      (await this.options.resolveBlockType?.(execution.blockType));
     if (!parsed) {
       throw new UnknownBlockTypeError(execution.blockType);
     }

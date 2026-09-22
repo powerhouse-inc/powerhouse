@@ -81,7 +81,6 @@ import {
   fetchPieceCatalog,
   fetchPieceDetail,
   fetchPieceTriggers,
-  fetchPieceVersion,
   type PieceActionsResult,
   type PieceSummary,
   type PieceTriggersResult,
@@ -337,6 +336,16 @@ export const PIECE_WEBHOOK_KIND = "piece-webhook";
 // Kinds whose enable/disable lifecycle the supervisor owns, so leaving one
 // has to release its registration.
 const SUPERVISED_KINDS = new Set(["piece", "schedule", PIECE_WEBHOOK_KIND]);
+
+// The engine's own namespace. No catalog has ever heard of it, and core#manual
+// reaches the resolution below every time a workflow is saved.
+const CORE_PACKAGE = "core";
+
+// How long a package name the catalog had no version for stays unresolved.
+
+// Only misses are remembered: a hit is already cached by the catalog itself,
+// while a miss is cached nowhere, and the editor asks per request.
+const PIECE_VERSION_MISS_TTL_MS = 5 * 60_000;
 
 // Shared so no refusal path can accidentally answer with a distinguishing body.
 const UNAUTHORIZED: WebhookReply = { status: 401 };
@@ -703,8 +712,12 @@ export class WorkflowRuntimeService {
     workflowId: string,
     trigger: NonNullable<WorkflowState["trigger"]>,
   ): Promise<PieceTriggerBinding | undefined> {
-    const parsed = await this.triggerPiece(workflowId, trigger.blockType);
-    if (!parsed) return undefined;
+    const parsed = await this.resolveBlockType(
+      trigger.blockType,
+      `workflow ${workflowId}`,
+    );
+    // An action block type is no more a trigger than an unresolved one is.
+    if (parsed?.kind !== "trigger") return undefined;
     const { config, pollIntervalMs } = splitPollInterval(
       configRecord(trigger.config),
     );
@@ -720,55 +733,41 @@ export class WorkflowRuntimeService {
     };
   }
 
-  // The piece a trigger's block type names. A pinned version, or a piece this
-  // reactor holds, resolves without leaving the process.
+  // One rule for turning a block type into the piece behind it, for every
+  // caller: design-time reads, a run's steps, and a trigger's binding alike.
 
-  // Anything else is a name only the catalog has heard of, and resolving it
-  // there is the difference between a workflow that arms and one that does not.
+  // A pinned version or an installed piece resolves in-process; only a name
+  // neither answers for is looked up, and a piece that resolves for one caller
+  // has to resolve for all of them.
 
-  // What it resolves to is whatever the registry serves today, so the version
-  // is logged: the same block type can mean a different piece after an upgrade.
-  private async triggerPiece(
-    workflowId: string,
+  // What the catalog serves moves when the registry publishes, so the version
+  // this lands on is logged rather than quietly adopted.
+  private async resolveBlockType(
     blockType: string,
+    caller = "a design-time request",
   ): Promise<ParsedBlockType | undefined> {
     const parsed = parseBlockType(blockType, packagePieces.versions());
-    if (parsed) return parsed.kind === "trigger" ? parsed : undefined;
+    if (parsed) return parsed;
     // Nothing but an unversioned block type reaches here: a pinned one parses
     // on its own, whether or not anything can serve what it pins.
     const parts = blockTypeParts(blockType);
-    if (parts?.kind !== "trigger") return undefined;
-    const version = await this.catalogVersion(parts.packageName);
+    if (!parts) return undefined;
+    const version = await this.pieceVersion(parts.packageName);
     if (!version) return undefined;
     // Block types carry a scoped package name, so they travel as logger values:
     // inline, the logger reads the scope as a token and prints null/pack.
     this.logger.info(
-      "Workflow @workflow pins no version for its trigger block @block, and this reactor holds no package piece of that name; running version @version, the one the piece catalog serves today. Pin a version in the block type to hold it still across upgrades.",
-      workflowId,
+      "Resolving @block for @caller: it pins no version and this reactor holds no package piece of that name, so it reads as version @version, the one the piece catalog serves today. Pin a version in the block type to hold it still across upgrades.",
       blockType,
+      caller,
       version,
     );
     return {
       packageName: parts.packageName,
       version,
-      kind: "trigger",
+      kind: parts.kind,
       name: parts.name,
     };
-  }
-
-  private async catalogVersion(
-    packageName: string,
-  ): Promise<string | undefined> {
-    try {
-      return await fetchPieceVersion(packageName);
-    } catch (error) {
-      this.logger.debug(
-        "The piece catalog has nothing for @package: @error",
-        packageName,
-        error,
-      );
-      return undefined;
-    }
   }
 
   // Workflows whose trigger resolved to nothing. Remembered only so the row
@@ -1724,6 +1723,11 @@ export class WorkflowRuntimeService {
     let moduleRef: PieceModuleRef;
     try {
       const version = await this.pieceVersion(packageName);
+      if (!version) {
+        throw new Error(
+          `Could not resolve a version for piece "${packageName}"`,
+        );
+      }
       moduleRef = pieceModuleRef(
         await pieceResolver().resolve(packageName, version),
       );
@@ -1801,12 +1805,52 @@ export class WorkflowRuntimeService {
     });
   }
 
-  // Catalog first, piece detail as fallback; the cache keeps this cheap.
-  private async pieceVersion(packageName: string): Promise<string> {
+  // A name the catalog had nothing for, and when it said so. Nothing downstream
+  // caches a miss, and these paths are asked per editor request: an offline
+  // reactor would otherwise pay both fetch timeouts again on every one.
+  private readonly versionMisses = new Map<string, number>();
+
+  // Lookups still in the air, so a burst of requests for one name costs one.
+  private readonly versionLookups = new Map<
+    string,
+    Promise<string | undefined>
+  >();
+
+  // The version to run a piece at, by the one rule every caller uses: what
+  // this reactor installed, else what the catalog serves for the name.
+
+  // Undefined is "no version anywhere"; a caller that must have one says so
+  // itself, because what a missing piece means differs by caller.
+  private pieceVersion(packageName: string): Promise<string | undefined> {
     // A package piece is pinned by what this reactor installed, and no
     // published listing has anything to say about it.
     const local = packagePieces.lookup(packageName);
-    if (local) return local.version;
+    if (local) return Promise.resolve(local.version);
+    if (packageName === CORE_PACKAGE) return Promise.resolve(undefined);
+    const missedAt = this.versionMisses.get(packageName);
+    if (
+      missedAt !== undefined &&
+      Date.now() - missedAt < PIECE_VERSION_MISS_TTL_MS
+    ) {
+      return Promise.resolve(undefined);
+    }
+    const inFlight = this.versionLookups.get(packageName);
+    if (inFlight) return inFlight;
+    const lookup = this.lookUpPieceVersion(packageName).then((version) => {
+      if (version === undefined)
+        this.versionMisses.set(packageName, Date.now());
+      else this.versionMisses.delete(packageName);
+      this.versionLookups.delete(packageName);
+      return version;
+    });
+    this.versionLookups.set(packageName, lookup);
+    return lookup;
+  }
+
+  // Catalog first, piece detail as fallback; the cache keeps this cheap.
+  private async lookUpPieceVersion(
+    packageName: string,
+  ): Promise<string | undefined> {
     try {
       const catalog = await fetchPieceCatalog();
       const version = catalog.find(
@@ -1816,13 +1860,21 @@ export class WorkflowRuntimeService {
     } catch {
       // Catalog unreachable; fall through to the piece detail.
     }
-    const detail = (await fetchPieceDetail(packageName)) as {
-      version?: unknown;
-    };
-    if (typeof detail.version === "string" && detail.version !== "") {
-      return detail.version;
+    try {
+      const detail = (await fetchPieceDetail(packageName)) as {
+        version?: unknown;
+      };
+      if (typeof detail.version === "string" && detail.version !== "") {
+        return detail.version;
+      }
+    } catch (error) {
+      this.logger.debug(
+        "The piece catalog has nothing for @package: @error",
+        packageName,
+        error,
+      );
     }
-    throw new Error(`Could not resolve a version for piece "${packageName}"`);
+    return undefined;
   }
 
   private async recordCheckResult(
@@ -1942,7 +1994,7 @@ export class WorkflowRuntimeService {
   // Design-time: the action/trigger descriptor (props, auth) driving the
   // editor form; triggers come back under a "trigger" key.
   async blockDescriptor(blockType: string): Promise<unknown> {
-    const parsed = parseBlockType(blockType, packagePieces.versions());
+    const parsed = await this.resolveBlockType(blockType);
     if (!parsed) return null;
     const descriptor = await this.pieceDescriptor(
       parsed.packageName,
@@ -2041,7 +2093,7 @@ export class WorkflowRuntimeService {
     connectionId?: string,
     ctx?: WorkflowCaller,
   ): Promise<unknown> {
-    const parsed = parseBlockType(blockType, packagePieces.versions());
+    const parsed = await this.resolveBlockType(blockType);
     if (!parsed) {
       throw new Error(`Not a piece block type: "${blockType}"`);
     }
@@ -2151,7 +2203,7 @@ export class WorkflowRuntimeService {
         };
       }
       default: {
-        const parsed = parseBlockType(blockType, packagePieces.versions());
+        const parsed = await this.resolveBlockType(blockType);
         if (!parsed) return { source: "none", nodes: [] };
         // Through the service, not the published catalog: a package piece is
         // often unpublished, and its detail comes from its own descriptor.
@@ -2308,6 +2360,13 @@ export class WorkflowRuntimeService {
       this.secretProvider(),
       this.attachments,
       store ? createPieceStorePort(store, currentWorkflowId) : undefined,
+      // A step resolves its block type the way every other caller does, so a
+      // trigger that arms cannot be followed by a step that cannot start.
+      (stepBlockType) =>
+        this.resolveBlockType(
+          stepBlockType,
+          `a step of workflow ${currentWorkflowId() ?? "?"}`,
+        ),
     );
 
     let runId: string | null = enqueuedRunId ?? null;

@@ -12,6 +12,7 @@ import {
   type ConnectionRequest,
   type EngineConnectionResolver,
   type AttachmentPort,
+  type ParsedBlockType,
   type PieceResolver,
   type PieceStorePort,
   type ResolvedConnection,
@@ -232,6 +233,12 @@ export function createBlockExecutor(
   secrets: SecretProvider,
   attachments?: AttachmentPort,
   pieceStore?: PieceStorePort,
+  // The host's own resolution, for a block type the registry below does not
+  // carry. Without one a step is left with the registry alone, which is how a
+  // workflow could arm on a piece none of its steps could then run.
+  resolveBlockType?: (
+    blockType: string,
+  ) => Promise<ParsedBlockType | undefined>,
 ): BlockExecutor {
   // No handler map: the document blocks are a piece now, and they reach the
   // reactor through the port below like any other package piece would.
@@ -248,6 +255,7 @@ export function createBlockExecutor(
       // A package piece's block type carries no version; this is where the
       // installed one comes from.
       packages: () => Promise.resolve(packagePieces.versions()),
+      ...(resolveBlockType ? { resolveBlockType } : {}),
       // Served only to a piece this reactor's packages ship; the executor
       // withholds it from everything the resolver fetched.
       reactor: new SubgraphReactorPort(host),

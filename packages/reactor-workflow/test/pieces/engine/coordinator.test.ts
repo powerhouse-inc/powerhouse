@@ -510,6 +510,74 @@ describe("parseBlockType", () => {
     expect(blockTypeParts("@acme/piece-x#trigger:")).toBeUndefined();
   });
 
+  it("asks the host for a block type its registry cannot resolve", async () => {
+    const { ActivepiecesBlockExecutor } =
+      await import("../../../src/pieces/engine/blocks.js");
+    const asked: string[] = [];
+    const resolved: { name: string; version: string }[] = [];
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir: "/tmp/na",
+      // What this host installed: nothing by this name.
+      packages: {},
+      resolveBlockType: (blockType) => {
+        asked.push(blockType);
+        return Promise.resolve({
+          packageName: "@acme/piece-x",
+          version: "1.2.3",
+          kind: "action" as const,
+          name: "do_thing",
+        });
+      },
+      resolver: {
+        resolve: (name: string, version: string) => {
+          resolved.push({ name, version });
+          return Promise.resolve({
+            name,
+            version,
+            bundleDir: "/bundle",
+            local: false,
+          });
+        },
+      },
+      worker: {
+        runAction: () => Promise.resolve({ output: { ok: true } }),
+      } as never,
+    });
+    const blockType = "@acme/piece-x#do_thing";
+
+    const result = await executor.execute({
+      blockType,
+      config: {},
+      step: { id: "s1", key: "s1", blockType, config: {} },
+    });
+
+    expect(result.output).toEqual({ ok: true });
+    expect(asked).toEqual([blockType]);
+    // The host's version is the one the bundle is fetched at.
+    expect(resolved).toEqual([{ name: "@acme/piece-x", version: "1.2.3" }]);
+    executor.dispose();
+  });
+
+  it("still refuses a block type the host cannot resolve either", async () => {
+    const { ActivepiecesBlockExecutor, UnknownBlockTypeError } =
+      await import("../../../src/pieces/engine/blocks.js");
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir: "/tmp/na",
+      packages: {},
+      resolveBlockType: () => Promise.resolve(undefined),
+    });
+    const blockType = "@acme/piece-x#do_thing";
+
+    await expect(
+      executor.execute({
+        blockType,
+        config: {},
+        step: { id: "s1", key: "s1", blockType, config: {} },
+      }),
+    ).rejects.toBeInstanceOf(UnknownBlockTypeError);
+    executor.dispose();
+  });
+
   it("refuses to execute a trigger block type as a step", async () => {
     const { ActivepiecesBlockExecutor, TriggerBlockAsStepError } =
       await import("../../../src/pieces/engine/blocks.js");
