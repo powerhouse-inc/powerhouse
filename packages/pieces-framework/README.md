@@ -11,10 +11,16 @@ however it was loaded and whoever shipped it.
 ## Why this package exists
 
 Activepieces pieces are written against `@activepieces/pieces-framework` and
-`@activepieces/pieces-common`. Since Activepieces v0.86.0 pieces ship as
+`@activepieces/pieces-common`. Since Activepieces v0.86.0 most pieces ship as
 self-contained bundles with the framework inlined, and upstream stopped
 publishing those two packages to npm. Anyone authoring a piece outside the
 Activepieces monorepo has nothing to install.
+
+"Most", not all: their bundler externalises what esbuild cannot trace, so a
+piece can still declare a dependency — 21 of the 760 published ones do. A
+reactor installs those before loading the piece, with lifecycle scripts
+disabled, which is why one needing a postinstall or a native build will not
+run there whatever version is pinned.
 
 This package vendors the framework, `pieces-common` and the two core packages
 they depend on from a pinned upstream tag (see [UPSTREAM.md](./UPSTREAM.md)),

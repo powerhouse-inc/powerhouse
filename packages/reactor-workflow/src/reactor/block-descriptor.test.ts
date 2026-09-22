@@ -132,7 +132,11 @@ describe("WorkflowRuntimeService.blockDescriptor", () => {
         }
         return Promise.resolve({
           dir,
-          source: "cache",
+          source: "cache" as const,
+          // A fixture bundle carries its own code, which is the path 739 of
+          // the 760 published pieces take and the one that installs nothing.
+          dependencies: {},
+          installed: false,
         });
       },
     );
