@@ -14,6 +14,14 @@ export {
   loadPackage,
   scanPackages,
 } from "./packages.js";
+export {
+  findPiece,
+  invalidatePieceIndex,
+  pieceCatalog,
+  pieceIndex,
+  pieceTarballName,
+} from "./pieces.js";
+export type { PieceCatalogEntry, PieceIndexEntry } from "./pieces.js";
 export type {
   NotifyConfig,
   PackageInfo,

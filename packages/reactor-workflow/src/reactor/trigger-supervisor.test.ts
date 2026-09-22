@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { WorkflowRunStore } from "./store.js";
 import {
+  DEFAULT_POLL_INTERVAL_MS,
   TriggerSupervisor,
   configHash,
   intervalFromSchedules,
@@ -119,7 +120,7 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
     await supervisor.upsert(binding());
     const row = await store.getTriggerState(WF);
     expect(row?.status).toBe("ENABLED");
-    expect(row?.interval_ms).toBe(300_000);
+    expect(row?.interval_ms).toBe(DEFAULT_POLL_INTERVAL_MS);
     expect(await store.getPieceStoreValue("FLOW", WF, CURSOR_KEY)).toBe("g1");
     expect(Date.parse(row!.next_poll_at!)).toBeGreaterThan(Date.now());
   }, 60_000);
@@ -420,7 +421,7 @@ describe("interval parsing", () => {
     expect(
       intervalFromSchedules([{ cronExpression: "not a cron" }], 300_000),
     ).toBe(300_000);
-    expect(intervalFromSchedules(undefined, 10_000)).toBe(60_000);
+    expect(intervalFromSchedules(undefined, 10_000)).toBe(10_000);
   });
 
   it("hashes blockType and config together", () => {

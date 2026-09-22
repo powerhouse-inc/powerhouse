@@ -92,22 +92,15 @@ export async function resolveWorkflowsEnabled({
   return featureFlags.getBooleanValue(PH_WORKFLOWS_ENABLED, configEnabled);
 }
 
-// The workflow package's models, loaded by specifier the way vetra's are. A
-// declared dependency that will not load is a misconfigured switchboard.
-export async function loadWorkflowDocumentModels(
-  load: () => Promise<Record<string, unknown>> = () =>
-    import("@powerhousedao/workflow/document-models") as Promise<
-      Record<string, unknown>
-    >,
-): Promise<DocumentModelModule[]> {
+// The package manager reports an unresolvable package and continues; for one
+// the host added itself that is a misconfigured switchboard, not a degraded
+// one. The manager imports this subpath moments later, so the cache absorbs it.
+export async function assertWorkflowPackageLoadable(
+  load: () => Promise<unknown> = () =>
+    import("@powerhousedao/workflow/document-models"),
+): Promise<void> {
   try {
-    return Object.values(await load()).filter(
-      (module): module is DocumentModelModule =>
-        typeof module === "object" &&
-        module !== null &&
-        "documentModel" in module &&
-        "reducer" in module,
-    );
+    await load();
   } catch (error) {
     throw new Error(
       `Workflows are enabled but ${WORKFLOW_PACKAGE_NAME} could not be loaded`,
@@ -118,6 +111,9 @@ export async function loadWorkflowDocumentModels(
 
 export interface ComposeWorkflowRuntimeDeps {
   reactorClient: IReactorClient;
+  /** The registry this host installs packages from; pieces come from it too.
+   * Absent on a host that installs from none, and only the cloud is read. */
+  pieceRegistryUrl?: string;
   /** Where the trigger read model registers; absent leaves the intake
    * unavailable rather than quietly dropping every document trigger. */
   clientModule?: InProcessReactorClientModule;
@@ -310,6 +306,10 @@ export async function composeWorkflowRuntime(
       { cause: error },
     );
   }
+
+  // The same registry the host installs packages from, so a piece it indexes
+  // is reachable without a second setting to keep in step.
+  engine.setPieceRegistryUrl(deps.pieceRegistryUrl);
 
   // Before the runtime exists: a restored trigger asks for a piece as soon as
   // the supervisor starts, and the catalog is served from the same holder.

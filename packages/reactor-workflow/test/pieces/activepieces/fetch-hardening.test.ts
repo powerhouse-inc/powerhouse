@@ -1,6 +1,7 @@
 // Bundle fetching runs in the reactor process, so extraction must not block the
 // event loop or inflate without a bound, and concurrent callers for the same
 // bundle must not duplicate the work.
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -34,12 +35,37 @@ function tarball(files: Record<string, string>): Buffer {
 
 const manifest = JSON.stringify({ name: "fixture", version: "1.0.0" });
 
-// What a pre-0.86 Activepieces bundle looks like: code that cannot run until
-// someone installs what it names.
+// A bundle that names code it does not carry, which 21 of the 760 published
+// pieces do: their bundler externalises what esbuild cannot trace.
+
+// The dependency resolves from inside the bundle, so the install runs for
+// real here without a registry, and no egress still tests it.
 const dependentManifest = JSON.stringify({
   name: "fixture",
   version: "1.0.0",
-  dependencies: { "@zip.js/zip.js": "2.8.15" },
+  dependencies: { "fixture-dep": "file:./dep" },
+});
+
+// Its postinstall writes a file, so a test can prove it never ran.
+const dependentBundle = {
+  "package.json": dependentManifest,
+  "dep/package.json": JSON.stringify({
+    name: "fixture-dep",
+    version: "1.0.0",
+    main: "index.js",
+    scripts: {
+      postinstall: "node -e \"require('fs').writeFileSync('ran','1')\"",
+    },
+  }),
+  "dep/index.js": "module.exports = { ok: true };",
+};
+
+// npm refuses this spec before it reaches a network, so the failure path
+// tests the same offline as on. It stands in for an unreachable registry.
+const uninstallableManifest = JSON.stringify({
+  name: "fixture",
+  version: "1.0.0",
+  dependencies: { "fixture-dep": "not-a-valid-spec-@@@" },
 });
 
 describe("ensurePieceBundle hardening", () => {
@@ -106,34 +132,83 @@ describe("ensurePieceBundle hardening", () => {
     expect(bundle.source).toBe("cdn");
   });
 
-  it("refuses a bundle that declares dependencies, and says what to pin", async () => {
-    serve(tarball({ "package.json": dependentManifest }));
+  it("installs what a bundle declares, and answers from the install", async () => {
+    serve(tarball(dependentBundle));
+
+    const bundle = await ensurePieceBundle({
+      name: "@scope/fixture",
+      version: "1.0.0",
+      cacheDir,
+    });
+
+    // The piece is loaded out of the workspace, beside a resolved dependency,
+    // rather than out of the extraction where nothing resolves.
+    expect(bundle.installed).toBe(true);
+    expect(bundle.dependencies).toEqual({ "fixture-dep": "file:./dep" });
+    expect(bundle.dir).toContain(`@scope-fixture-1.0.0.install`);
+    expect(
+      existsSync(
+        path.join(bundle.dir, "..", "..", "fixture-dep", "package.json"),
+      ),
+    ).toBe(true);
+  }, 120_000);
+
+  it("never runs a lifecycle script from a piece it installs", async () => {
+    serve(tarball(dependentBundle));
+
+    const bundle = await ensurePieceBundle({
+      name: "@scope/fixture",
+      version: "1.0.0",
+      cacheDir,
+    });
+
+    // --ignore-scripts is what makes installing a third party's package at
+    // runtime defensible, so it is asserted rather than assumed.
+    const modules = path.join(bundle.dir, "..", "..");
+    expect(existsSync(path.join(modules, "fixture-dep", "ran"))).toBe(false);
+    expect(existsSync(path.join(modules, "..", "ran"))).toBe(false);
+  }, 120_000);
+
+  it("reuses a finished install rather than repeating it", async () => {
+    serve(tarball(dependentBundle));
+    await ensurePieceBundle({
+      name: "@scope/fixture",
+      version: "1.0.0",
+      cacheDir,
+    });
+    const afterFirst = calls;
+
+    const again = await ensurePieceBundle({
+      name: "@scope/fixture",
+      version: "1.0.0",
+      cacheDir,
+    });
+
+    expect(again.source).toBe("cache");
+    expect(again.installed).toBe(true);
+    // Nothing fetched and nothing installed: the marker answered for both.
+    expect(calls).toBe(afterFirst);
+  }, 120_000);
+
+  it("refuses with what it tried when the install cannot be done", async () => {
+    serve(tarball({ "package.json": uninstallableManifest }));
+
     await expect(
       ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
     ).rejects.toThrow(
-      /@scope\/fixture@1\.0\.0 is not self-contained: it declares a dependency \(@zip\.js\/zip\.js@2\.8\.15\)\..*Pin @scope\/fixture at or above its first self-contained release/,
+      /carries a dependency it does not bundle \(fixture-dep@not-a-valid-spec-@@@\), and installing them here failed:/s,
     );
-  });
+  }, 120_000);
 
-  // The release number is theirs; a piece from a Powerhouse registry would be
-  // sent chasing a version that means nothing to it.
-  it("names the Activepieces release only for an Activepieces piece", async () => {
-    serve(tarball({ "package.json": dependentManifest }));
+  it("says a script-dependent install cannot be prepared this way", async () => {
+    serve(tarball({ "package.json": uninstallableManifest }));
+
+    // The one thing an operator cannot work out from the failure alone: a
+    // dependency that builds or downloads on install will never work here.
     await expect(
       ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
-    ).rejects.toThrow(/^(?!.*Activepieces bundles)/s);
-
-    serve(tarball({ "package.json": dependentManifest }));
-    await expect(
-      ensurePieceBundle({
-        name: "@activepieces/piece-fixture",
-        version: "1.0.0",
-        cacheDir,
-      }),
-    ).rejects.toThrow(
-      /Activepieces bundles have been self-contained since 0\.86\.0\./,
-    );
-  });
+    ).rejects.toThrow(/lifecycle scripts disabled/);
+  }, 120_000);
 
   it("caps the dependency list a refusal spells out", async () => {
     serve(
@@ -142,7 +217,10 @@ describe("ensurePieceBundle hardening", () => {
           name: "fixture",
           version: "1.0.0",
           dependencies: Object.fromEntries(
-            Array.from({ length: 7 }, (_, index) => [`dep-${index}`, "1.0.0"]),
+            Array.from({ length: 7 }, (_, index) => [
+              `dep-${index}`,
+              "not-a-valid-spec-@@@",
+            ]),
           ),
         }),
       }),
@@ -150,38 +228,50 @@ describe("ensurePieceBundle hardening", () => {
     await expect(
       ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
     ).rejects.toThrow(
-      /it declares 7 dependencies \(dep-0@1\.0\.0, .*dep-4@1\.0\.0, and 2 more\)/,
+      /carries 7 dependencies it does not bundle \(dep-0@not-a-valid-spec-@@@, .*dep-4@not-a-valid-spec-@@@, and 2 more\)/s,
     );
-  });
+  }, 120_000);
 
-  it("refuses a bundle already extracted into the cache directory", async () => {
-    // A self-contained tarball is on offer; the cache hit must answer first.
-    serve(tarball({ "package.json": manifest }));
+  it("installs for a bundle an older build left extracted", async () => {
+    // Extracted by a build that loaded it as-is; it declares a dependency, so
+    // this one installs rather than handing the worker an unresolvable module.
+    serve(tarball(dependentBundle));
     const dir = path.join(cacheDir, "@scope-fixture-1.0.0");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "package.json"), dependentManifest);
-    await expect(
-      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
-    ).rejects.toThrow(/is not self-contained/);
-    expect(calls).toBe(0);
-  });
 
-  it("refuses the same bundle again rather than trusting the extraction", async () => {
-    serve(tarball({ "package.json": dependentManifest }));
-    await expect(
-      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
-    ).rejects.toThrow(/is not self-contained/);
-    await expect(
-      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
-    ).rejects.toThrow(/is not self-contained/);
+    const bundle = await ensurePieceBundle({
+      name: "@scope/fixture",
+      version: "1.0.0",
+      cacheDir,
+    });
+
+    expect(bundle.installed).toBe(true);
+    // One fetch, and it is the install's: the extraction came from the cache,
+    // and only the tarball can be handed to a package manager.
     expect(calls).toBe(1);
-  });
+  }, 120_000);
+
+  it("tries the install again rather than trusting a failed one", async () => {
+    serve(tarball({ "package.json": uninstallableManifest }));
+    await expect(
+      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
+    ).rejects.toThrow(/installing them here failed/);
+    // A torn workspace is swept, so the second attempt redoes it from scratch
+    // rather than loading half a node_modules.
+    await expect(
+      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
+    ).rejects.toThrow(/installing them here failed/);
+    // The extraction is cached after the first; each install fetches the
+    // tarball, which is the only form a package manager takes.
+    expect(calls).toBe(3);
+  }, 120_000);
 
   it("holds no refusal against the next fetch of the same bundle", async () => {
-    serve(tarball({ "package.json": dependentManifest }));
+    serve(tarball({ "package.json": uninstallableManifest }));
     await expect(
       ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
-    ).rejects.toThrow(/is not self-contained/);
+    ).rejects.toThrow(/installing them here failed/);
     // Whoever republished it self-contained deserves an answer from the network.
     await rm(path.join(cacheDir, "@scope-fixture-1.0.0"), {
       recursive: true,
@@ -194,7 +284,8 @@ describe("ensurePieceBundle hardening", () => {
       cacheDir,
     });
     expect(bundle.source).toBe("cdn");
-  });
+    expect(bundle.installed).toBe(false);
+  }, 120_000);
 
   it("shares one download between concurrent callers", async () => {
     serve(tarball({ "package.json": manifest }), 20);

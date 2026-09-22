@@ -6,6 +6,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { childLogger } from "document-model";
 import type { IPackageLoader, ProcessorFactoryBuilder } from "../types.js";
+import { piecesFromCdnList } from "./pieces.js";
 import type { PackagePieceEntry } from "./types.js";
 import { extractUpgradeManifests } from "./util.js";
 
@@ -60,9 +61,6 @@ export class HttpPackageLoader implements IPackageLoader {
   private readonly logger = childLogger(["reactor-api", "http-loader"]);
 
   readonly name = "HttpPackageLoader";
-
-  /** Said once: the reason is the loader's, not any one package's. */
-  private reportedNoPieces = false;
 
   readonly documentModelLoader: HttpDocumentModelLoader;
 
@@ -189,18 +187,30 @@ export class HttpPackageLoader implements IPackageLoader {
     return null;
   }
 
-  // A piece reaches a worker as a path on this disk, and a CDN bundle has
-  // none; downloading one to get a path is issue #3052, step 4.
-  loadPieces(packageSpec: string): Promise<PackagePieceEntry[]> {
-    if (!this.reportedNoPieces) {
-      this.reportedNoPieces = true;
-      this.logger.info(
-        "Pieces are not served over HTTP, so @pkg and every other package " +
-          "loaded from the registry contributes none",
-        packageSpec,
-      );
+  // The same list module every other loader reads, on the CDN path its three
+  // siblings already come from. Metadata only: no piece code is fetched here.
+
+  // The declared entry is relative to the package root while the CDN serves
+  // beneath `dist/`, so this is the only place that can make it absolute.
+  async loadPieces(packageSpec: string): Promise<PackagePieceEntry[]> {
+    const { name: packageName } = this.parsePackageSpec(packageSpec);
+    if (!this.isValidPackageName(packageName)) {
+      throw new Error(`Invalid package name: ${packageName}`);
     }
-    return Promise.resolve([]);
+    const base = `${this.registryUrl}-/cdn/${packageSpec}/node/pieces/`;
+    this.logger.verbose(`Importing pieces from: ${base}index.mjs`);
+    let module: unknown;
+    try {
+      module = await import(`${base}index.mjs`);
+    } catch (error) {
+      // A package shipping none has no list to serve, which is the common
+      // case rather than a fault.
+      this.logger.verbose(`No pieces found for: ${packageName}`, error);
+      return [];
+    }
+    const pieces = piecesFromCdnList(module, base, packageName, this.logger);
+    this.logger.verbose(`Loaded ${pieces.length} pieces from ${packageName}`);
+    return pieces;
   }
 
   /**

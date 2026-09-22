@@ -16,6 +16,7 @@ import { redactError, redactMessage } from "./redact.js";
 import { readFile } from "node:fs/promises";
 import { buildCheckConnectionContext } from "../context/check.js";
 import { DataUriFilesService, StagedFilesService } from "../context/files.js";
+import { setMaxFileBytes } from "../context/limits.js";
 import {
   normalizePropsValue,
   type NormalizeOptions,
@@ -175,7 +176,10 @@ async function handleResolveOptions(
 function stagedInputResolver(
   inputs: StagedInput[] | undefined,
 ): NormalizeOptions["resolveRef"] {
-  if (!inputs || inputs.length === 0) return undefined;
+  // An empty list is not the same as no list: it means the host has a store
+  // and tried, so a FILE prop that still comes up short is told which
+  // reference failed rather than that the context has no resolver.
+  if (!inputs) return undefined;
   const byRef = new Map(inputs.map((input) => [input.ref, input]));
   return async (ref: string) => {
     const staged = byRef.get(ref);
@@ -214,6 +218,9 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   const reactor = request.reactorAccess
     ? new RemoteReactorService()
     : undefined;
+  // Before the props are normalised, not after: a processor that cannot coerce
+  // says so on console.error, and the worker's stdio goes nowhere.
+  const restoreConsole = request.captureLogs ? captureConsole() : undefined;
   const { context, touched } = buildActionContext({
     propsValue: await normalizePropsValue(action.props, request.propsValue, {
       resolveRef: stagedInputResolver(request.stagedInputs),
@@ -231,7 +238,6 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
     executionType: request.executionType,
     identity: request.identity,
   });
-  const restoreConsole = request.captureLogs ? captureConsole() : undefined;
   let output: unknown;
   try {
     output = await action.run(context);
@@ -387,9 +393,10 @@ process.on("message", (message: unknown) => {
   if (!isWorkerMessage(message)) return;
   // Deferred so a synchronous throw — a malformed egress policy — becomes a
   // rejection the handler below reports, instead of killing the child.
-  const handler = Promise.resolve().then(() =>
-    runWithEgressPolicy(message.request.egress, () => dispatch(message)),
-  );
+  const handler = Promise.resolve().then(() => {
+    setMaxFileBytes(message.request.maxFileBytes);
+    return runWithEgressPolicy(message.request.egress, () => dispatch(message));
+  });
   handler
     .catch(
       (error: unknown): WorkerResponse => ({

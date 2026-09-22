@@ -184,6 +184,10 @@ export async function runWorkflow(
       };
       records.set(step.id, record);
       await journal(record);
+      // The same redacted text the journal took: an error-port branch writing
+      // the reason somewhere a person will read must not widen what a failure
+      // discloses.
+      scope.steps[step.key] = { error: detail };
       decideOutgoing(step.id, "error");
       const errorHandled = definition.edges.some(
         (edge) => edge.from === step.id && edgeDecisions.get(edge.id),

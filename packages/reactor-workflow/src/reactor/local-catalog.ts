@@ -5,10 +5,11 @@
 // the worker from the piece module — is the listing.
 import type { PieceDescriptor } from "../pieces/index.js";
 import type { BlockSearchHit } from "./block-search.js";
-import type {
-  PieceActionsResult,
-  PieceSummary,
-  PieceTriggersResult,
+import {
+  aiLast,
+  type PieceActionsResult,
+  type PieceSummary,
+  type PieceTriggersResult,
 } from "./piece-catalog.js";
 
 // Block types of a package piece carry no version. The copy this reactor
@@ -51,15 +52,17 @@ export function actionsResult(
     name: pieceName,
     displayName: descriptor.displayName || pieceName,
     version,
-    actions: descriptor.actions.map((action) => ({
-      name: action.name,
-      displayName: action.displayName,
-      description: action.description ?? "",
-      blockType: localBlockType(pieceName, action.name, "action"),
-      // The cloud's discovery filter; a package piece declares no audience,
-      // and an absent one already counts as human-visible everywhere.
-      audience: null,
-    })),
+    actions: descriptor.actions
+      .map((action) => ({
+        name: action.name,
+        displayName: action.displayName,
+        description: action.description ?? "",
+        blockType: localBlockType(pieceName, action.name, "action"),
+        // The cloud's discovery filter. Absent counts as human-visible.
+        audience: action.audience ?? null,
+      }))
+      // Agent-targeted atomics last, as the published listing sorts them.
+      .sort((a, b) => aiLast(a.audience) - aiLast(b.audience)),
     auth: descriptor.auth ?? null,
   };
 }
@@ -141,6 +144,10 @@ export function detailResult(
           description: action.description ?? "",
           props: action.props,
           requireAuth: action.requireAuth,
+          // What blockOutputTree reads. A published piece's listing carries
+          // it; a package piece has only this.
+          outputSchema: action.outputSchema,
+          audience: action.audience,
         },
       ]),
     ),
@@ -154,6 +161,12 @@ export function detailResult(
           type: trigger.strategy,
           props: trigger.props,
           requireAuth: trigger.requireAuth,
+          outputSchema: trigger.outputSchema,
+          sampleData: trigger.sampleData,
+          testStrategy: trigger.testStrategy,
+          // Under the name the published listing uses; the descriptor
+          // shortens it.
+          handshakeConfiguration: trigger.handshake,
         },
       ]),
     ),

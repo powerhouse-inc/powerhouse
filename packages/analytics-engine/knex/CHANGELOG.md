@@ -1,3 +1,31 @@
+## 6.2.3-dev.21 (2026-09-22)
+
+This was a version bump only for @powerhousedao/analytics-engine-knex to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.20 (2026-09-22)
+
+This was a version bump only for @powerhousedao/analytics-engine-knex to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.19 (2026-09-21)
+
+This was a version bump only for @powerhousedao/analytics-engine-knex to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.18 (2026-09-21)
+
+This was a version bump only for @powerhousedao/analytics-engine-knex to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.17 (2026-09-21)
+
+This was a version bump only for @powerhousedao/analytics-engine-knex to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.16 (2026-09-21)
+
+This was a version bump only for @powerhousedao/analytics-engine-knex to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.15 (2026-09-20)
+
+This was a version bump only for @powerhousedao/analytics-engine-knex to align it with other projects, there were no code changes.
+
 ## 6.2.3-dev.14 (2026-09-19)
 
 ### 🚀 Features

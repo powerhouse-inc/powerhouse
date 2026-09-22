@@ -33,9 +33,15 @@ describe("setSchedule", () => {
     expect(handle.schedules).toEqual([{ intervalMs: 300_000 }]);
   });
 
-  it("refuses an interval below the one-minute floor or not a whole number", () => {
+  it("accepts the one-second floor exactly", () => {
     const handle = buildTriggerContext({ propsValue: {} });
-    for (const intervalMs of [59_999, 60_000.5, 0, -60_000]) {
+    handle.context.setSchedule({ intervalMs: 1_000 });
+    expect(handle.schedules).toEqual([{ intervalMs: 1_000 }]);
+  });
+
+  it("refuses an interval below the floor or not a whole number", () => {
+    const handle = buildTriggerContext({ propsValue: {} });
+    for (const intervalMs of [999, 1_000.5, 0, -1_000]) {
       expect(() => handle.context.setSchedule({ intervalMs })).toThrowError(
         InvalidScheduleIntervalError,
       );

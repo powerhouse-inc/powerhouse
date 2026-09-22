@@ -254,6 +254,9 @@ function plainFile(value: unknown): unknown {
 
 const table = processors as Record<string, ProcessorFn | undefined>;
 
+// The types whose processor failing means "not JSON", not "not usable".
+const JSON_LIKE = new Set(["JSON", "OBJECT"]);
+
 export async function normalizeValue(
   prop: ApProperty,
   value: unknown,
@@ -268,9 +271,21 @@ export async function normalizeValue(
     if (typeof hydrated !== "string") return hydrated;
     return plainFile(await table.FILE?.(prop as PieceProperty, hydrated));
   }
-  const processor = prop.type ? table[prop.type] : undefined;
+  const type = prop.type;
+  const processor = type ? table[type] : undefined;
   if (!processor) return value;
-  return plainFile(await processor(prop as PieceProperty, value));
+  const processed = plainFile(await processor(prop as PieceProperty, value));
+  // Every other type keeps its promise to the piece: a DATE_TIME prop is an
+  // ISO string or nothing, a NUMBER is a number or NaN. JSON is the exception,
+  // because the thing most often routed into one is a model's answer, and a
+  // model wraps its object in prose. jsonProcessor answers undefined for that,
+  // which would drop the value entirely — so hand back what the author wrote
+  // and let the piece parse it. The pieces that take model output this way
+  // carry their own tolerant parsing for exactly this case.
+  if (processed === undefined && type && JSON_LIKE.has(type) && value !== "") {
+    return value;
+  }
+  return processed;
 }
 
 // Normalises every configured value with a matching prop schema; keys

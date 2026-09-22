@@ -2,7 +2,7 @@
 // fire it matched has to be a row by then. These cover the row, its adoption
 // by the run that follows, and what closes it out when that run never starts.
 import type { OperationWithContext } from "document-model";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DOCUMENT_EVENT_BLOCK } from "./reactor-piece.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
@@ -96,6 +96,13 @@ describe("onOperations journals a matched fire before it returns", () => {
     await service.onOperations([
       op(WATCHER, WORKFLOW_TYPE, "SET_WORKFLOW_NAME", {}, watcherState),
     ]);
+  });
+
+  // A runtime left running keeps its supervisor's timer and its logger alive
+  // past the test, and vitest tears the worker's rpc down underneath it:
+  // "Closing rpc while onUserConsoleLog was pending".
+  afterEach(() => {
+    service.shutdown();
   });
 
   it("leaves a PENDING run carrying the trigger payload", async () => {

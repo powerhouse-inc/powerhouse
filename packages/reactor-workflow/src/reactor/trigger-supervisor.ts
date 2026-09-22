@@ -93,6 +93,8 @@ export interface TriggerSupervisorOptions {
 }
 
 const MIN_INTERVAL_MS = MIN_SCHEDULE_INTERVAL_MS;
+// What a trigger polls at when neither the workflow nor the piece says.
+export const DEFAULT_POLL_INTERVAL_MS = 60_000;
 const MAX_BACKOFF_MS = 30 * 60_000;
 const DEDUPE_TTL_MS = 30_000;
 const DEFAULT_RECONCILE_INTERVAL_MS = 15 * 60_000;
@@ -210,7 +212,8 @@ export class TriggerSupervisor {
   constructor(private readonly options: TriggerSupervisorOptions) {
     this.worker = options.worker ?? new PieceWorker();
     this.tickMs = options.tickMs ?? 15_000;
-    this.defaultIntervalMs = options.defaultIntervalMs ?? 300_000;
+    this.defaultIntervalMs =
+      options.defaultIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
     this.hookTimeoutMs = options.hookTimeoutMs ?? 60_000;
     this.now = options.now ?? (() => new Date());
     this.egress =
@@ -287,6 +290,71 @@ export class TriggerSupervisor {
     this.enabledOk.delete(workflowId);
     this.enableRetries.delete(workflowId);
     return this.enqueue(() => this.disable(workflowId, binding));
+  }
+
+  // A trigger the runtime could not turn into a binding at all: an unknown
+  // block type, a piece nothing can resolve.
+
+  // It never reaches enable(), so this is the only thing that writes a row for
+  // it, and without one the workflow reads as absent rather than as broken.
+  reject(
+    workflowId: string,
+    blockType: string,
+    config: unknown,
+    message: string,
+    retryAt?: Date,
+  ): Promise<void> {
+    this.bindings.delete(workflowId);
+    this.enabledOk.delete(workflowId);
+    this.enableRetries.delete(workflowId);
+    return this.enqueue(() =>
+      this.recordRejection(workflowId, blockType, config, message, retryAt),
+    );
+  }
+
+  private async recordRejection(
+    workflowId: string,
+    blockType: string,
+    config: unknown,
+    message: string,
+    retryAt?: Date,
+  ): Promise<void> {
+    const store = await this.options.store();
+    if (!store) return;
+    const hash = configHash(blockType, config);
+    const existing = await store.getTriggerState(workflowId);
+    // An ENABLED row for this very config is a registration a previous process
+    // made and this one cannot see: the binding it would take to call
+    // onDisable is the thing that could not be resolved.
+
+    // Turning it ERROR would strand it. enable() reads a non-ENABLED row as
+    // "not a republish", wipes the piece store with it -- the _webhook_id
+    // included -- and the next onEnable subscribes a second time at the
+    // provider while the first goes on delivering to nobody.
+    if (existing?.status === "ENABLED" && existing.config_hash === hash) {
+      logger.warn(
+        `Workflow ${workflowId} could not be resolved, and its trigger row is left as it stands: a registration from before this reactor started is presumed live, and releasing it needs the binding that would not resolve. ${message}`,
+      );
+      return;
+    }
+    await store.upsertTriggerState({
+      workflow_id: workflowId,
+      block_type: blockType,
+      config_hash: hash,
+      status: "ERROR",
+      store_state: VESTIGIAL_STORE_STATE,
+      // What it would poll at, once it resolves to something that can.
+      interval_ms: this.defaultIntervalMs,
+      // Set only when somebody is coming back for it: an absent piece changes
+      // nothing on its own, and installing it re-registers rather than waiting.
+      next_poll_at: retryAt?.toISOString() ?? null,
+      last_poll_at: existing?.last_poll_at ?? null,
+      last_error: message,
+      consecutive_failures: (existing?.consecutive_failures ?? 0) + 1,
+      lease_owner: null,
+      lease_expires_at: null,
+      updated_at: this.now().toISOString(),
+    });
   }
 
   // Design-time sample, run against its own partitions so no key it writes can

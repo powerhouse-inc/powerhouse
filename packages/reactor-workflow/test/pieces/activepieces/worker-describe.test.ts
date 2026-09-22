@@ -62,7 +62,7 @@ module.exports = { app };
   // loaded in the reactor process.
   env: `
 const app = {
-  displayName: process.env.PH_SECRETS_MASTER_KEY ? "leaked" : "isolated",
+  displayName: process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY ? "leaked" : "isolated",
   actions: {},
   triggers: {},
 };
@@ -99,7 +99,7 @@ function describeFixture(name: FixtureName): Promise<PieceDescriptor> {
 
 describe("PieceWorker.describePiece", () => {
   beforeAll(async () => {
-    process.env.PH_SECRETS_MASTER_KEY = "host-only-master-key";
+    process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY = "host-only-master-key";
     cacheDir = await mkdtemp(join(tmpdir(), "ap-worker-describe-"));
     for (const name of Object.keys(FIXTURES) as FixtureName[]) {
       const dir = bundleDir(name);
@@ -121,7 +121,7 @@ describe("PieceWorker.describePiece", () => {
 
   afterAll(async () => {
     worker.dispose();
-    delete process.env.PH_SECRETS_MASTER_KEY;
+    delete process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY;
     await rm(cacheDir, { recursive: true, force: true });
   });
 
@@ -181,6 +181,9 @@ describe("PieceWorker.describePiece", () => {
           requireAuth: true,
           props: [],
           hasSampleData: true,
+          // Carried, not just flagged: the expression picker reads it for the
+          // trigger's shape when no outputSchema is declared.
+          sampleData: { id: 1 },
         },
       ],
     });

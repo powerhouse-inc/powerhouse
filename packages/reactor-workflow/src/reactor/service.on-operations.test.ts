@@ -1,7 +1,7 @@
 // A workflow document is both a registry source and a document-event source,
 // so a workflow can watch powerhouse/workflow itself (e.g. status changes).
 import type { OperationWithContext } from "document-model";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DOCUMENT_EVENT_BLOCK } from "./reactor-piece.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
@@ -87,6 +87,13 @@ describe("WorkflowRuntimeService.onOperations", () => {
       op(WATCHER, WORKFLOW_TYPE, "SET_WORKFLOW_NAME", {}, watcherState),
     ]);
     expect(fired).toHaveLength(0);
+  });
+
+  // A runtime left running keeps its supervisor's timer and its logger alive
+  // past the test, and vitest tears the worker's rpc down underneath it:
+  // "Closing rpc while onUserConsoleLog was pending".
+  afterEach(() => {
+    service.shutdown();
   });
 
   it("fires on another workflow document's matching operation", async () => {

@@ -1,3 +1,53 @@
+## 6.2.3-dev.21 (2026-09-22)
+
+### 🚀 Features
+
+- **reactor-api:** keep a package's pieces when it comes from a registry ([06c2bc6df](https://github.com/powerhouse-inc/powerhouse/commit/06c2bc6df))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.20 (2026-09-22)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.19 (2026-09-21)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.18 (2026-09-21)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.17 (2026-09-21)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.16 (2026-09-21)
+
+### 🩹 Fixes
+
+- **reactor-api:** withhold sync entries the serving gate never evaluated ([8f76e3e12](https://github.com/powerhouse-inc/powerhouse/commit/8f76e3e12))
+- **reactor-api:** realpath the temp root the vite loader test watches ([814c83372](https://github.com/powerhouse-inc/powerhouse/commit/814c83372))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.3-dev.15 (2026-09-20)
+
+### 🩹 Fixes
+
+- **reactor-api:** withhold sync entries the serving gate never evaluated ([8f76e3e12](https://github.com/powerhouse-inc/powerhouse/commit/8f76e3e12))
+- **reactor-api:** realpath the temp root the vite loader test watches ([814c83372](https://github.com/powerhouse-inc/powerhouse/commit/814c83372))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.3-dev.14 (2026-09-19)
 
 ### 🚀 Features

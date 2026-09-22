@@ -315,6 +315,55 @@ describe("runWorkflow", () => {
     expect(run.steps[0].error).toBe("boom");
   });
 
+  it("hands the error branch the reason the step failed", async () => {
+    const executor = new FakeExecutor();
+    const definition: WorkflowDefinition = {
+      trigger: TRIGGER,
+      steps: [
+        { id: "a", key: "risky", blockType: "fake#fail", config: {} },
+        {
+          id: "c",
+          key: "recover",
+          blockType: "fake#ok",
+          // What a document-dispatch on the failure branch would write.
+          config: { note: "could not reach it: {{steps.risky.error}}" },
+        },
+      ],
+      edges: [edge("e1", "t", "a"), edge("e2", "a", "c", "error")],
+    };
+
+    const run = await runWorkflow({ definition, executor });
+
+    expect(run.status).toBe("SUCCEEDED");
+    expect(run.steps[1].output).toEqual({
+      note: "could not reach it: boom",
+    });
+  });
+
+  it("leaves a succeeding step's scope entry free of an error", async () => {
+    const executor = new FakeExecutor();
+    const definition: WorkflowDefinition = {
+      trigger: TRIGGER,
+      steps: [
+        { id: "a", key: "fine", blockType: "fake#ok", config: { v: 1 } },
+        {
+          id: "b",
+          key: "after",
+          blockType: "fake#ok",
+          config: {
+            was: "{{steps.fine.error}}",
+            got: "{{steps.fine.output.v}}",
+          },
+        },
+      ],
+      edges: [edge("e1", "t", "a"), edge("e2", "a", "b")],
+    };
+
+    const run = await runWorkflow({ definition, executor });
+
+    expect(run.steps[1].output).toEqual({ was: undefined, got: 1 });
+  });
+
   it("runs every successor on a port, not just the first", async () => {
     const executor = new FakeExecutor();
     const definition: WorkflowDefinition = {
@@ -432,6 +481,101 @@ describe("parseBlockType", () => {
     expect(
       parseBlockType("@activepieces/piece-rss@0.5.0#trigger:"),
     ).toBeUndefined();
+  });
+
+  it("keeps the halves of a block type no version resolves", async () => {
+    const { blockTypeParts } =
+      await import("../../../src/pieces/engine/blocks.js");
+    // What a caller with another source of versions needs: which piece, which
+    // block, and the fact that the block type itself named no version.
+    expect(blockTypeParts("@activepieces/piece-rss#trigger:new_item")).toEqual({
+      packageName: "@activepieces/piece-rss",
+      kind: "trigger",
+      name: "new_item",
+    });
+    expect(
+      blockTypeParts("@activepieces/piece-rss@0.5.0#trigger:new_item"),
+    ).toEqual({
+      packageName: "@activepieces/piece-rss",
+      version: "0.5.0",
+      kind: "trigger",
+      name: "new_item",
+    });
+    expect(blockTypeParts("core#manual")).toEqual({
+      packageName: "core",
+      kind: "action",
+      name: "manual",
+    });
+    expect(blockTypeParts("no-action")).toBeUndefined();
+    expect(blockTypeParts("@acme/piece-x#trigger:")).toBeUndefined();
+  });
+
+  it("asks the host for a block type its registry cannot resolve", async () => {
+    const { ActivepiecesBlockExecutor } =
+      await import("../../../src/pieces/engine/blocks.js");
+    const asked: string[] = [];
+    const resolved: { name: string; version: string }[] = [];
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir: "/tmp/na",
+      // What this host installed: nothing by this name.
+      packages: {},
+      resolveBlockType: (blockType) => {
+        asked.push(blockType);
+        return Promise.resolve({
+          packageName: "@acme/piece-x",
+          version: "1.2.3",
+          kind: "action" as const,
+          name: "do_thing",
+        });
+      },
+      resolver: {
+        resolve: (name: string, version: string) => {
+          resolved.push({ name, version });
+          return Promise.resolve({
+            name,
+            version,
+            bundleDir: "/bundle",
+            local: false,
+          });
+        },
+      },
+      worker: {
+        runAction: () => Promise.resolve({ output: { ok: true } }),
+      } as never,
+    });
+    const blockType = "@acme/piece-x#do_thing";
+
+    const result = await executor.execute({
+      blockType,
+      config: {},
+      step: { id: "s1", key: "s1", blockType, config: {} },
+    });
+
+    expect(result.output).toEqual({ ok: true });
+    expect(asked).toEqual([blockType]);
+    // The host's version is the one the bundle is fetched at.
+    expect(resolved).toEqual([{ name: "@acme/piece-x", version: "1.2.3" }]);
+    executor.dispose();
+  });
+
+  it("still refuses a block type the host cannot resolve either", async () => {
+    const { ActivepiecesBlockExecutor, UnknownBlockTypeError } =
+      await import("../../../src/pieces/engine/blocks.js");
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir: "/tmp/na",
+      packages: {},
+      resolveBlockType: () => Promise.resolve(undefined),
+    });
+    const blockType = "@acme/piece-x#do_thing";
+
+    await expect(
+      executor.execute({
+        blockType,
+        config: {},
+        step: { id: "s1", key: "s1", blockType, config: {} },
+      }),
+    ).rejects.toBeInstanceOf(UnknownBlockTypeError);
+    executor.dispose();
   });
 
   it("refuses to execute a trigger block type as a step", async () => {

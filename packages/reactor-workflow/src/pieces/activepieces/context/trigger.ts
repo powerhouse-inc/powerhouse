@@ -32,9 +32,13 @@ export type RecordedListener = Parameters<
   HookContextFor<TriggerStrategy.APP_WEBHOOK>["app"]["createListeners"]
 >[0];
 
-// Upstream's floor for an interval schedule; a cron is validated the way its
-// engine does, by handing the expression to a parser.
-export const MIN_SCHEDULE_INTERVAL_MS = 60_000;
+// The floor for an interval schedule; a cron is validated the way upstream's
+// engine does, by handing the expression to a parser. Upstream sets this at a
+// minute, a fair default for a hosted multi-tenant scheduler and too coarse
+// here, where a polling trigger is the reactor's own loop against a service it
+// owns. See MIN_SCHEDULE_INTERVAL_MS in reactor/schedule.ts, the floor the
+// supervisor actually clamps to.
+export const MIN_SCHEDULE_INTERVAL_MS = 1_000;
 
 export class InvalidCronExpressionError extends Error {
   constructor(cronExpression: string) {

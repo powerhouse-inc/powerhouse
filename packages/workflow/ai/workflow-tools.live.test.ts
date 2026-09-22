@@ -1,10 +1,10 @@
 // Opt-in integration check against a running workflow runtime:
-//   WORKFLOW_RUNTIME_URL=http://localhost:4002/graphql/workflow-runtime pnpm vitest run ai/workflow-tools.live.test.ts
+//   PH_WORKFLOWS_RUNTIME_URL=http://localhost:4002/graphql/workflow-runtime pnpm vitest run ai/workflow-tools.live.test.ts
 import { beforeAll, describe, expect, it } from "vitest";
 import { setRuntimeUrl } from "../editors/workflow-editor/runtime-api.js";
 import { workflowTools } from "./workflow-tools.js";
 
-const url = process.env.WORKFLOW_RUNTIME_URL;
+const url = process.env.PH_WORKFLOWS_RUNTIME_URL;
 
 describe.skipIf(!url)("workflow tools against a live runtime", () => {
   const tool = (name: string) => workflowTools.find((t) => t.name === name)!;

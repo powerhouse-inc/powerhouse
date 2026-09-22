@@ -312,9 +312,9 @@ describe("TriggerSupervisor robustness", () => {
     expect(calls.map((call) => call.hook)).toEqual(["onDisable", "onEnable"]);
   });
 
-  it("holds the interval floor when the retry itself throws", async () => {
+  it("backs off from the configured interval when the retry itself throws", async () => {
     const wf = "wf-retry-floor";
-    supervisor = newSupervisor({ defaultIntervalMs: 10_000 });
+    supervisor = newSupervisor({ defaultIntervalMs: 60_000 });
     stub.enable = () => {
       throw new Error("the provider is down");
     };
@@ -326,7 +326,7 @@ describe("TriggerSupervisor robustness", () => {
 
     dbBroken = false;
     stub.enable = () => result();
-    // Four floored minutes out, not four times the sub-floor default.
+    // Four minutes out: the backoff is measured from the interval itself.
     setClock("2026-09-04T09:02:40.000Z");
     await supervisor.tick();
     expect((await store.getTriggerState(wf))?.status).toBe("ERROR");
@@ -334,5 +334,83 @@ describe("TriggerSupervisor robustness", () => {
     setClock("2026-09-04T09:06:00.000Z");
     await supervisor.tick();
     expect((await store.getTriggerState(wf))?.status).toBe("ENABLED");
+  });
+
+  it("records a trigger it was never handed a binding for", async () => {
+    const wf = "wf-unresolvable";
+    const blockType = "@powerhousedao/piece-paperless-ngx#trigger:new_document";
+
+    await supervisor.reject(wf, blockType, {}, "no piece answers for it");
+
+    const row = await store.getTriggerState(wf);
+    expect(row?.status).toBe("ERROR");
+    expect(row?.block_type).toBe(blockType);
+    expect(row?.last_error).toBe("no piece answers for it");
+    // Nothing to retry: only an install or an edit can change the answer, and
+    // both come back through upsert rather than the tick.
+    expect(row?.next_poll_at).toBeNull();
+
+    await supervisor.tick();
+    expect(calls).toEqual([]);
+  });
+
+  it("leaves a live row alone rather than stranding its registration", async () => {
+    const wf = "wf-unresolvable-live";
+    // Armed by an earlier process; this one cannot resolve the piece, so it
+    // has no binding to release the provider-side registration with.
+    await supervisor.upsert(binding(wf));
+    const armed = await store.getTriggerState(wf);
+    expect(armed?.status).toBe("ENABLED");
+
+    await supervisor.reject(
+      wf,
+      binding(wf).blockType,
+      binding(wf).config,
+      "catalog unreachable",
+    );
+
+    // Turned ERROR, the next enable would count as a fresh registration, wipe
+    // the piece store with the _webhook_id in it, and subscribe a second time.
+    const row = await store.getTriggerState(wf);
+    expect(row?.status).toBe("ENABLED");
+    expect(row?.config_hash).toBe(armed?.config_hash);
+  });
+
+  it("records a rejection over a row whose config has since changed", async () => {
+    const wf = "wf-unresolvable-changed";
+    await supervisor.upsert(binding(wf));
+
+    await supervisor.reject(wf, "@acme/piece-x#trigger:other", {}, "gone");
+
+    expect((await store.getTriggerState(wf))?.status).toBe("ERROR");
+  });
+
+  it("carries a retry time when one is coming back for it", async () => {
+    const wf = "wf-unresolvable-retry";
+    const retryAt = new Date("2026-09-04T09:30:00.000Z");
+
+    await supervisor.reject(
+      wf,
+      "@acme/piece-x#trigger:new_thing",
+      {},
+      "down",
+      retryAt,
+    );
+
+    const row = await store.getTriggerState(wf);
+    expect(row?.status).toBe("ERROR");
+    expect(row?.next_poll_at).toBe(retryAt.toISOString());
+  });
+
+  it("gives up the row it recorded once the trigger resolves", async () => {
+    const wf = "wf-unresolvable-fixed";
+    await supervisor.reject(wf, "@acme/piece-x#trigger:new_thing", {}, "gone");
+
+    await supervisor.upsert(binding(wf));
+
+    const row = await store.getTriggerState(wf);
+    expect(row?.status).toBe("ENABLED");
+    expect(row?.last_error).toBeNull();
+    expect(row?.consecutive_failures).toBe(0);
   });
 });

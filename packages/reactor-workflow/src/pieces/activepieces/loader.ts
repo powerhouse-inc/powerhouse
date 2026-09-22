@@ -88,6 +88,22 @@ function findPiece(
   return undefined;
 }
 
+// A module the piece names and node cannot find. Dependencies are installed
+// with scripts disabled, so a native or downloaded one looks like this.
+function missingModule(entryPath: string, error: unknown): Error | undefined {
+  const code = (error as { code?: unknown } | null)?.code;
+  if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND") {
+    return undefined;
+  }
+  const detail = error instanceof Error ? error.message : String(error);
+  return new Error(
+    `Piece at ${entryPath} could not be loaded: it imports a module that is ` +
+      `not there. Its dependencies are installed with lifecycle scripts ` +
+      `disabled, so one that compiles or downloads on install -- a native ` +
+      `addon, a browser download -- cannot be prepared here. ${detail}`,
+  );
+}
+
 // ESM-first `import()` — Node's CJS interop handles the typical CJS bundle —
 // with a `require` fallback.
 export async function loadPiece(entryPath: string): Promise<LoadedPiece> {
@@ -96,9 +112,19 @@ export async function loadPiece(entryPath: string): Promise<LoadedPiece> {
     mod = (await import(
       /* @vite-ignore */ pathToFileURL(entryPath).href
     )) as Record<string, unknown>;
-  } catch {
-    const require = createRequire(import.meta.url);
-    mod = require(entryPath) as Record<string, unknown>;
+  } catch (imported) {
+    try {
+      const require = createRequire(import.meta.url);
+      mod = require(entryPath) as Record<string, unknown>;
+    } catch (required) {
+      // The import's error names the missing module; require's often names
+      // only the entry it was handed.
+      throw (
+        missingModule(entryPath, imported) ??
+        missingModule(entryPath, required) ??
+        required
+      );
+    }
   }
   const found = findPiece(mod);
   if (!found) {

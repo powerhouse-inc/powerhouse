@@ -2,7 +2,7 @@
 // own CREATE_DOCUMENT / DELETE_DOCUMENT operations, with the drive's ADD_FILE /
 // DELETE_NODE kept as a fallback.
 import type { OperationWithContext } from "document-model";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DOCUMENT_CREATED_BLOCK,
   DOCUMENT_DELETED_BLOCK,
@@ -170,6 +170,13 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
   beforeEach(() => {
     fired = [];
     useReactor({ [DRIVE]: DRIVE_TYPE });
+  });
+
+  // A runtime left running keeps its supervisor's timer and its logger alive
+  // past the test, and vitest tears the worker's rpc down underneath it:
+  // "Closing rpc while onUserConsoleLog was pending".
+  afterEach(() => {
+    service.shutdown();
   });
 
   it("fires for a document created outside every drive", async () => {

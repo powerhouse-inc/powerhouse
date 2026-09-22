@@ -1,5 +1,5 @@
-// The reactor that consumes the fixture: a project outside the workspace whose
-// switchboard and fixture package both come from the local registry.
+// The projects the reactors run in, both outside the workspace: one that
+// installs switchboard and the fixture from the local registry, one empty.
 import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -17,31 +17,47 @@ export interface CreateProjectOptions {
   tag: string;
 }
 
-export function createConsumerProject(options: CreateProjectOptions): void {
-  const { dir, phCli, token, fixtureSpec, tag } = options;
-
+// package.json + powerhouse.config.json are what makes a directory a
+// Powerhouse project; `ph install` writes what it installs into the config.
+function scaffoldProject(
+  dir: string,
+  name: string,
+  packageRegistryUrl?: string,
+): void {
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
-
-  // package.json + powerhouse.config.json are what makes this a Powerhouse
-  // project to `ph install`, which writes the package into the config below.
   fs.writeFileSync(
     path.join(dir, "package.json"),
     JSON.stringify(
-      {
-        name: "test-workflow-piece-project",
-        version: "1.0.0",
-        private: true,
-        type: "module",
-      },
+      { name, version: "1.0.0", private: true, type: "module" },
       null,
       2,
     ) + "\n",
   );
   fs.writeFileSync(
     path.join(dir, "powerhouse.config.json"),
-    JSON.stringify({ packages: [] }, null, 2) + "\n",
+    JSON.stringify(
+      packageRegistryUrl
+        ? { packages: [], packageRegistryUrl }
+        : { packages: [] },
+      null,
+      2,
+    ) + "\n",
   );
+}
+
+// A project with nothing in it: no node_modules, no packages in its config,
+// so a reactor pointed at it can only get a piece over the wire. It names the
+// registry the way any project does — the one it would install packages from.
+export function createEmptyProject(dir: string, registryUrl: string): void {
+  scaffoldProject(dir, "test-workflow-piece-registry-project", registryUrl);
+}
+
+export function createConsumerProject(options: CreateProjectOptions): void {
+  const { dir, phCli, token, fixtureSpec, tag } = options;
+
+  scaffoldProject(dir, "test-workflow-piece-project");
+
   // pnpm 11 fails an install that silently skips a build script, and reads the
   // allow-list from here only; the same two settings `ph init --pnpm` writes.
   fs.writeFileSync(
@@ -74,6 +90,8 @@ export function startSwitchboard(options: {
   /** A switchboard installed elsewhere, run against `dir`; defaults to the
    * one `dir` installed itself. */
   bin?: string;
+  /** Extra environment for this reactor, e.g. where it may fetch pieces. */
+  env?: Record<string, string>;
 }): SwitchboardHandle {
   const { dir, port } = options;
   const bin = options.bin ?? path.join(dir, "node_modules/.bin/switchboard");
@@ -95,6 +113,7 @@ export function startSwitchboard(options: {
       ...process.env,
       PH_SWITCHBOARD_PORT: String(port),
       PH_WORKFLOWS_ENABLED: "1",
+      ...options.env,
     },
   });
   child.stdout?.on("data", keep);

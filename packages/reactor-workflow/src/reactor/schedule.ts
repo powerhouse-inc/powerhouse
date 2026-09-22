@@ -1,10 +1,15 @@
 // Pure config parsing and next-fire math for the core#schedule trigger: a
-// 5-field cron in an IANA timezone, or a fixed interval (min one minute).
+// 5-field cron in an IANA timezone, or a fixed interval (min one second).
 import { Cron } from "croner";
 
 export const SCHEDULE_BLOCK = "core#schedule";
 
-export const MIN_SCHEDULE_INTERVAL_MS = 60_000;
+// The floor the supervisor clamps every poll cadence to, however a workflow
+// asked for it. A second, not a minute: a polling trigger here watches
+// something the reactor owns, and the cost of a poll is a request the operator
+// is already paying for. The cadence a workflow should actually run at is the
+// author's call, expressed in its own config; this only refuses nonsense.
+export const MIN_SCHEDULE_INTERVAL_MS = 1_000;
 export const DEFAULT_TIMEZONE = "UTC";
 
 export const INTERVAL_UNIT_MS = {

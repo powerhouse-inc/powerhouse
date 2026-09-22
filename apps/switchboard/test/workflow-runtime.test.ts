@@ -27,7 +27,7 @@ import {
   PH_WORKFLOWS_ENABLED,
   bindPackagePieces,
   composeWorkflowRuntime,
-  loadWorkflowDocumentModels,
+  assertWorkflowPackageLoadable,
   resolveWorkflowsEnabled,
   type BooleanFlagSource,
 } from "../src/workflow-runtime.mjs";
@@ -102,6 +102,7 @@ function fakeEngine() {
       WORKFLOW_TRIGGERS_READ_MODEL_STAGE:
         "post_ready" as ReadModelRegistrationStage,
       WorkflowTriggersReadModel: FakeWorkflowTriggersReadModel,
+      setPieceRegistryUrl: vi.fn((_url: string | undefined) => undefined),
       createWorkflowRuntime: vi.fn((_deps: Record<string, unknown>) => runtime),
     },
   };
@@ -192,20 +193,17 @@ describe("resolveWorkflowsEnabled", () => {
   });
 });
 
-describe("loadWorkflowDocumentModels", () => {
-  it("keeps only the document model modules the export names", async () => {
-    const module = { documentModel: {}, reducer: () => undefined };
-    const models = await loadWorkflowDocumentModels(() =>
-      Promise.resolve({ module, notAModel: { documentModel: {} }, nope: 3 }),
-    );
-
-    expect(models).toEqual([module]);
+describe("assertWorkflowPackageLoadable", () => {
+  it("passes when the package resolves", async () => {
+    await expect(
+      assertWorkflowPackageLoadable(() => Promise.resolve({})),
+    ).resolves.toBeUndefined();
   });
 
   it("names the package a host would have to install when the load fails", async () => {
     const cause = new Error("Cannot find module");
     await expect(
-      loadWorkflowDocumentModels(() => Promise.reject(cause)),
+      assertWorkflowPackageLoadable(() => Promise.reject(cause)),
     ).rejects.toMatchObject({ cause });
   });
 });

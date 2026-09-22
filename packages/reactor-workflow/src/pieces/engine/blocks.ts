@@ -1,3 +1,4 @@
+import { childLogger } from "document-model";
 import { randomUUID } from "node:crypto";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
@@ -381,6 +382,8 @@ export function storeHandlers(port: PieceStorePort): HostCallHandlers {
   };
 }
 
+const logger = childLogger(["workflow", "piece-staging"]);
+
 export interface ActivepiecesBlockExecutorOptions {
   cacheDir: string;
   // Piece package name -> pinned version; the connector registry for this run.
@@ -392,6 +395,14 @@ export interface ActivepiecesBlockExecutorOptions {
   packages?:
     | Record<string, string>
     | (() => Record<string, string> | Promise<Record<string, string>>);
+  // Asked only for a block type the registry above could not resolve, so a
+  // host that can still find the piece some other way answers for it here.
+
+  // A map cannot: resolving an unpinned name means looking that one name up,
+  // which the registry, being what this host installed, has nothing to say to.
+  resolveBlockType?: (
+    blockType: string,
+  ) => Promise<ParsedBlockType | undefined>;
   connections?: EngineConnectionResolver;
   // The worker piece steps go to. A function is asked once per step, so a
   // host handing each run its own child answers with that run's.
@@ -462,6 +473,17 @@ function redactThrown(error: unknown, values: string[]): unknown {
   return rememberSecrets(redactError(error, { values }), values);
 }
 
+// The one piece served `ctx.reactor`. Its actions are the reactor surface --
+// find, get, create, dispatch, schemas -- so the port is what it is for.
+
+// Identity, not provenance: a piece is not handed the reactor for having been
+// installed locally, shipped first-party, or registered in the host's registry.
+export const REACTOR_PORT_PIECE = "@powerhousedao/piece-reactor";
+
+export function servesReactorPort(packageName: string): boolean {
+  return packageName === REACTOR_PORT_PIECE;
+}
+
 export type BlockKind = "action" | "trigger";
 
 export interface ParsedBlockType {
@@ -472,14 +494,20 @@ export interface ParsedBlockType {
   name: string;
 }
 
+// Everything a block type says about itself, the version excepted: it is
+// absent when the block type pins none, and a caller resolves it from there.
+export interface BlockTypeParts {
+  packageName: string;
+  version?: string;
+  kind: BlockKind;
+  name: string;
+}
+
 const TRIGGER_FRAGMENT = "trigger:";
 
-// "<pkg>[@<version>]#<action>" or "<pkg>[@<version>]#trigger:<trigger>" —
-// the version after the scope-less "@" wins over the registry.
-export function parseBlockType(
-  blockType: string,
-  packages: Record<string, string> = {},
-): ParsedBlockType | undefined {
+// The block type's own halves, before any registry is consulted: a caller with
+// another source of versions still learns which piece an unresolved one names.
+export function blockTypeParts(blockType: string): BlockTypeParts | undefined {
   const separator = blockType.lastIndexOf("#");
   if (separator <= 0) return undefined;
   const packageSpec = blockType.slice(0, separator);
@@ -497,9 +525,27 @@ export function parseBlockType(
       name,
     };
   }
-  const version = packages[packageSpec] as string | undefined;
+  return { packageName: packageSpec, kind, name };
+}
+
+// "<pkg>[@<version>]#<action>" or "<pkg>[@<version>]#trigger:<trigger>" —
+// the version after the scope-less "@" wins over the registry.
+
+// Undefined means "no version anywhere", not "not a block type": treating the
+// two alike is how an unversioned name the reactor holds nothing for vanishes.
+export function parseBlockType(
+  blockType: string,
+  packages: Record<string, string> = {},
+): ParsedBlockType | undefined {
+  const parts = blockTypeParts(blockType);
+  if (!parts) return undefined;
+  const { packageName, kind, name } = parts;
+  if (parts.version !== undefined) {
+    return { packageName, version: parts.version, kind, name };
+  }
+  const version = packages[packageName] as string | undefined;
   if (!version) return undefined;
-  return { packageName: packageSpec, version, kind, name };
+  return { packageName, version, kind, name };
 }
 
 // Executes "<packageName>#<actionName>" block types through the piece worker.
@@ -534,7 +580,9 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
   }
 
   async execute(execution: BlockExecution): Promise<BlockResult> {
-    const parsed = parseBlockType(execution.blockType, await this.packages());
+    const parsed =
+      parseBlockType(execution.blockType, await this.packages()) ??
+      (await this.options.resolveBlockType?.(execution.blockType));
     if (!parsed) {
       throw new UnknownBlockTypeError(execution.blockType);
     }
@@ -576,9 +624,11 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
         this.options.egress === undefined
           ? DEFAULT_EGRESS_POLICY
           : this.options.egress;
-      // A fetched bundle never reaches the reactor: the handlers below are the
-      // only way in, and they are registered for a local piece alone.
-      const reactor = piece.local ? this.options.reactor : undefined;
+      // One piece reaches the reactor: the one whose whole job is reaching it.
+      // Not a question of where the bundle came from -- see REACTOR_PORT_PIECE.
+      const reactor = servesReactorPort(parsed.packageName)
+        ? this.options.reactor
+        : undefined;
       const result = await this.worker().runAction(
         {
           ...pieceModuleRef(piece),
@@ -649,8 +699,20 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     let index = 0;
     for (const ref of refs) {
       const destPath = path.join(stagingDir, `in-${index++}`);
-      const meta = await port.read(ref, destPath);
-      staged.push({ ref, path: destPath, ...meta });
+      try {
+        const meta = await port.read(ref, destPath);
+        staged.push({ ref, path: destPath, ...meta });
+      } catch (error) {
+        // Staging is opportunistic: refs are collected from the whole config
+        // without knowing which props are FILE, because the prop schema lives
+        // in the worker. So a ref this step was never going to open must not
+        // fail it -- a dispatch carrying one as data is the ordinary case. A
+        // FILE prop that did need it still fails, in the worker, naming the
+        // reference it could not resolve.
+        logger.debug(
+          `Left ${ref} unstaged: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
     }
     return staged;
   }

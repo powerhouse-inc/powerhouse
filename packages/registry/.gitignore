@@ -1,4 +1,4 @@
 storage/
 cdn-cache/
 packages/
-.test-output/
+.test-output*/

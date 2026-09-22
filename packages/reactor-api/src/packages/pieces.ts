@@ -97,6 +97,57 @@ export function locatePieces(
   return located;
 }
 
+// A package's `pieces` array, however the list module was obtained.
+function declaredPieces(
+  module: unknown,
+  identifier: string,
+  logger: ILogger,
+): PackagePiece[] | undefined {
+  const namespace = (module ?? {}) as { pieces?: unknown; default?: unknown };
+  const declared = namespace.pieces ?? namespace.default;
+  if (!Array.isArray(declared)) {
+    logger.warn(
+      'The pieces list of @pkg exports no "pieces" array; it contributes none',
+      identifier,
+    );
+    return undefined;
+  }
+  return declared as PackagePiece[];
+}
+
+// The same list, served by a registry rather than read off a disk. Nothing is
+// checked for existence here: the CDN is asked when the piece is run.
+
+// `entry` is relative to the package root while the CDN serves beneath
+// `dist/`, so that prefix comes off before the base is applied.
+export function piecesFromCdnList(
+  module: unknown,
+  baseUrl: string,
+  identifier: string,
+  logger: ILogger,
+): PackagePieceEntry[] {
+  const declared = declaredPieces(module, identifier, logger);
+  if (!declared) return [];
+  const located: PackagePieceEntry[] = [];
+  for (const piece of declared) {
+    const where = piece.entry ?? piece.bundle;
+    if (typeof where !== "string" || where === "") {
+      logger.warn(
+        "Piece @piece of @pkg declares neither a bundle nor an entry",
+        piece.name,
+        identifier,
+      );
+      continue;
+    }
+    located.push({
+      name: piece.name,
+      version: piece.version,
+      entryUrl: `${baseUrl}${where.replace(/^dist\/node\/pieces\//, "")}`,
+    });
+  }
+  return located;
+}
+
 // What a loaded list module contributes. A module without a `pieces` array is
 // not a list, and saying so beats reporting the package as shipping none.
 export function piecesFromListModule(

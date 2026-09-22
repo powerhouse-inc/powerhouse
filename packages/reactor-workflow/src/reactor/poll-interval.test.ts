@@ -63,8 +63,13 @@ describe("pollIntervalFor", () => {
     expect(pollIntervalFor(binding(), undefined, 300_000)).toBe(300_000);
   });
 
-  it("holds the 60s floor against a smaller override", () => {
-    expect(pollIntervalFor(binding(5_000), undefined, 300_000)).toBe(60_000);
+  it("holds the 1s floor against a smaller override", () => {
+    expect(pollIntervalFor(binding(250), undefined, 300_000)).toBe(1_000);
+  });
+
+  it("lets a workflow ask for a cadence a hosted scheduler would refuse", () => {
+    expect(pollIntervalFor(binding(5_000), undefined, 300_000)).toBe(5_000);
+    expect(pollIntervalFor(binding(1_000), undefined, 300_000)).toBe(1_000);
   });
 
   it("arms the interval branch of setSchedule as the cadence itself", () => {

@@ -1,8 +1,10 @@
+import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { gunzip as gunzipCb } from "node:zlib";
+import { pieceRegistrySource } from "./registry-source.js";
 
 const gunzip = promisify(gunzipCb);
 
@@ -94,11 +96,26 @@ export interface FetchPieceBundleOptions {
   version: string;
   cacheDir: string;
   timeoutMs?: number;
+  // Where a piece an installed reactor package ships is served, when the
+  // package itself came from a registry rather than this disk.
+  entryUrl?: string;
+  // How long the install of a bundle's declared dependencies may run, for the
+  // few that declare any. Bounds a hung registry rather than budgeting work.
+  installTimeoutMs?: number;
 }
+
+/** Where a bundle came from, "cache" being a copy one of the others left. */
+export type BundleSource = "package" | "registry" | "cdn" | "npm";
 
 export interface FetchedBundle {
   dir: string;
-  source: "cdn" | "npm" | "cache";
+  source: BundleSource | "cache";
+  // What the bundle's own manifest declares. Empty for 739 of the 760
+  // published pieces, which is the path that costs nothing.
+  dependencies: Record<string, string>;
+  // Whether those declarations were installed beside it, rather than the
+  // bundle being loaded straight out of its extraction.
+  installed: boolean;
 }
 
 // Bounds the transfer before gunzip: rejects an over-limit Content-Length up
@@ -132,15 +149,33 @@ async function readBoundedBody(
   return Buffer.concat(chunks);
 }
 
+// A Powerhouse registry this deployment allowed comes first, so a piece it
+// serves is not shadowed by an Activepieces piece of the same name.
+function tarballSources(
+  name: string,
+  version: string,
+): { source: BundleSource; url: string }[] {
+  const registry = pieceRegistrySource();
+  return [
+    ...(registry
+      ? [
+          {
+            source: "registry" as const,
+            url: registry.tarballUrl(name, version),
+          },
+        ]
+      : []),
+    { source: "cdn" as const, url: cdnTarballUrl(name, version) },
+    { source: "npm" as const, url: npmTarballUrl(name, version) },
+  ];
+}
+
 async function downloadTarball(
   name: string,
   version: string,
   timeoutMs: number,
-): Promise<{ tgz: Buffer; source: "cdn" | "npm" }> {
-  const sources: { source: "cdn" | "npm"; url: string }[] = [
-    { source: "cdn", url: cdnTarballUrl(name, version) },
-    { source: "npm", url: npmTarballUrl(name, version) },
-  ];
+): Promise<{ tgz: Buffer; source: BundleSource }> {
+  const sources = tarballSources(name, version);
   let lastError: unknown;
   for (const { source, url } of sources) {
     try {
@@ -161,6 +196,58 @@ async function downloadTarball(
   );
 }
 
+async function extractDownloadedTarball(
+  name: string,
+  version: string,
+  timeoutMs: number,
+  staging: string,
+): Promise<BundleSource> {
+  const { tgz, source } = await downloadTarball(name, version, timeoutMs);
+  await extractTarball(tgz, staging);
+  return source;
+}
+
+// A piece from an installed reactor package, served by the registry that
+// package came from: its manifest, then the one file the manifest names.
+
+// `ph build` leaves each piece a self-contained module with a package.json
+// beside it, so those two files are the whole bundle.
+async function downloadPackagePiece(
+  entryUrl: string,
+  staging: string,
+  timeoutMs: number,
+): Promise<BundleSource> {
+  const base = entryUrl.slice(0, entryUrl.lastIndexOf("/") + 1);
+  const fetchInto = async (url: string, name: string): Promise<Buffer> => {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!response.ok) {
+      throw new Error(`${url} responded ${response.status}`);
+    }
+    const body = await readBoundedBody(response, url);
+    await writeFile(path.join(staging, name), body);
+    return body;
+  };
+  await mkdir(staging, { recursive: true });
+  const manifest = await fetchInto(`${base}package.json`, "package.json");
+  const main = (JSON.parse(manifest.toString("utf8")) as { main?: unknown })
+    .main;
+  const entry =
+    typeof main === "string" && main !== ""
+      ? main
+      : entryUrl.slice(base.length);
+  // One segment: the manifest of a built piece names a file beside itself, and
+  // a path that climbs out of the staging directory is not that.
+  if (entry.includes("/") || entry.includes("\\") || entry.startsWith(".")) {
+    throw new Error(
+      `Piece manifest at ${base} names an unusable main: ${entry}`,
+    );
+  }
+  await fetchInto(`${base}${entry}`, entry);
+  return "package";
+}
+
 // Downloads and extracts a published piece bundle, returning the directory to
 // hand to loadPieceFromDir(). A cached extraction is reused, and re-checked.
 export async function fetchPieceBundle(
@@ -171,14 +258,21 @@ export async function fetchPieceBundle(
   const dir = path.join(cacheDir, `${name.replace("/", "-")}-${version}`);
   assertWithinCacheDir(dir, cacheDir);
   if (existsSync(path.join(dir, "package.json"))) {
-    await assertSelfContained(dir, name, version);
-    return { dir, source: "cache" };
+    return {
+      dir,
+      source: "cache",
+      dependencies: await readDependencies(dir),
+      installed: false,
+    };
   }
 
-  const { tgz, source } = await downloadTarball(name, version, timeoutMs);
   const staging = `${dir}.tmp-${process.pid}`;
   await rm(staging, { recursive: true, force: true });
-  await extractTarball(tgz, staging);
+  // A piece a package ships is served as its built module, not as a tarball,
+  // so it is fetched file by file rather than extracted.
+  const source = options.entryUrl
+    ? await downloadPackagePiece(options.entryUrl, staging, timeoutMs)
+    : await extractDownloadedTarball(name, version, timeoutMs, staging);
   await rm(dir, { recursive: true, force: true });
   try {
     await rename(staging, dir);
@@ -187,18 +281,20 @@ export async function fetchPieceBundle(
     await rm(staging, { recursive: true, force: true });
     if (!existsSync(path.join(dir, "package.json"))) throw error;
   }
-  // Checked here rather than before the rename so a bundle an older build
-  // already extracted is refused on its cache hit too, not only a fresh one.
-  await assertSelfContained(dir, name, version);
-  return { dir, source };
+  return {
+    dir,
+    source,
+    dependencies: await readDependencies(dir),
+    installed: false,
+  };
 }
 
 // Concurrent callers for the same bundle share one download+extract rather
 // than racing each other through it.
 const inFlight = new Map<string, Promise<FetchedBundle>>();
 
-// The way in: a bundle arrives extracted, cached and checked, and callers that
-// ask for the same one at the same time wait on a single fetch.
+// The way in: a bundle arrives extracted, cached and loadable, and callers
+// that ask for the same one at the same time wait on a single fetch.
 export async function ensurePieceBundle(
   options: FetchPieceBundleOptions,
 ): Promise<FetchedBundle> {
@@ -207,46 +303,208 @@ export async function ensurePieceBundle(
   if (pending) return pending;
   // Dropped once settled, refusals included, so a later caller re-checks the
   // bundle rather than inheriting this call's answer forever.
-  const started = fetchPieceBundle(options).finally(() => inFlight.delete(key));
+  const started = resolveBundle(options).finally(() => inFlight.delete(key));
   inFlight.set(key, started);
   return started;
 }
 
-// The Activepieces release that began inlining a piece's dependencies into its
-// bundle. They still publish pieces to npm, which is why npm stays a source.
-const AP_SELF_CONTAINED_SINCE = "0.86.0";
+// 739 of the 760 published pieces declare nothing, and they take the path they
+// always took: extract, load, no package manager anywhere near it.
+
+// The rest have their declarations installed beside them, once per name and
+// version, and the refusal is what is left when that cannot be done.
+async function resolveBundle(
+  options: FetchPieceBundleOptions,
+): Promise<FetchedBundle> {
+  const fetched = await fetchPieceBundle(options);
+  if (Object.keys(fetched.dependencies).length === 0) return fetched;
+  return installPieceBundle(options, fetched);
+}
+
+// Installs a bundle plus its declared deps into an isolated workspace, the way
+// their piece-installer does: the bundle as a file: dependency, then install.
+async function installPieceBundle(
+  options: FetchPieceBundleOptions,
+  fetched: FetchedBundle,
+): Promise<FetchedBundle> {
+  const { name, version, cacheDir } = options;
+  const timeoutMs = options.installTimeoutMs ?? INSTALL_TIMEOUT_MS;
+  const workspace = path.join(
+    cacheDir,
+    `${name.replace("/", "-")}-${version}.install`,
+  );
+  assertWithinCacheDir(workspace, cacheDir);
+  const dir = path.join(workspace, "node_modules", name);
+  // Written last, so a torn install is never mistaken for a finished one.
+  if (
+    existsSync(path.join(workspace, INSTALL_READY_MARKER)) &&
+    existsSync(path.join(dir, "package.json"))
+  ) {
+    return {
+      dir,
+      source: "cache",
+      dependencies: fetched.dependencies,
+      installed: true,
+    };
+  }
+  try {
+    await stageInstallWorkspace(workspace, options);
+    await runInstall(workspace, timeoutMs);
+    await writeFile(path.join(workspace, INSTALL_READY_MARKER), "true");
+  } catch (error) {
+    // Swept, so the next attempt starts clean: a half-written node_modules
+    // loads worse than none at all, and more confusingly.
+    await rm(workspace, { recursive: true, force: true }).catch(
+      () => undefined,
+    );
+    throw notInstallable(name, version, fetched.dependencies, error);
+  }
+  return {
+    dir,
+    source: fetched.source,
+    dependencies: fetched.dependencies,
+    installed: true,
+  };
+}
+
+// The tarball, not the directory already extracted: npm symlinks a directory
+// dependency, and node resolves a symlinked module from its realpath.
+
+// That realpath is back in the cache, where the installed deps are not, so
+// the tgz is what makes npm unpack a real directory under node_modules.
+async function stageInstallWorkspace(
+  workspace: string,
+  options: FetchPieceBundleOptions,
+): Promise<void> {
+  const { tgz } = await downloadTarball(
+    options.name,
+    options.version,
+    options.timeoutMs ?? 30_000,
+  );
+  await rm(workspace, { recursive: true, force: true });
+  await mkdir(workspace, { recursive: true });
+  await writeFile(path.join(workspace, "bundle.tgz"), tgz);
+  await writeFile(
+    path.join(workspace, "package.json"),
+    JSON.stringify({
+      name: "piece-workspace",
+      version: "1.0.0",
+      private: true,
+      dependencies: { [options.name]: "file:./bundle.tgz" },
+    }),
+  );
+}
 
 // Enough to recognise what the bundle wants without turning the refusal into
 // a wall of text.
 const MAX_LISTED_DEPENDENCIES = 5;
 
-// A bundle has to carry its own code: the worker imports it straight out of the
-// cache directory, where there is no node_modules and nothing to install one.
-async function assertSelfContained(
-  dir: string,
+// Written into the workspace once the install has finished, so a cache hit is
+// a finished install and never a torn one.
+const INSTALL_READY_MARKER = "ready";
+
+// A published piece pulls a handful of packages at most; this is a bound on a
+// hung registry, not a budget. Configurable for a slow or distant mirror.
+const INSTALL_TIMEOUT_MS =
+  Number(process.env.PH_WORKFLOWS_PIECE_INSTALL_TIMEOUT_MS) || 120_000;
+
+// npm, and only npm. It is on every image that can run this reactor, which bun
+// is not, and one package manager is one thing to keep --ignore-scripts true of.
+
+// Activepieces use bun and it is much faster, but the install is cached per
+// name and version and off every hot path, so what it would buy is one-off.
+function installCommand(): { file: string; args: string[]; shell: boolean } {
+  // Windows installs npm as npm.cmd, which only a shell can spawn.
+  const windows = process.platform === "win32";
+  return {
+    file: windows ? "npm.cmd" : "npm",
+    // --ignore-scripts is not optional and has no switch to turn it off: it is
+    // what makes installing a third party's package at runtime defensible.
+    args: [
+      "install",
+      "--ignore-scripts",
+      "--no-audit",
+      "--no-fund",
+      "--omit=dev",
+      "--loglevel=error",
+    ],
+    shell: windows,
+  };
+}
+
+async function runInstall(cwd: string, timeoutMs: number): Promise<void> {
+  const { file, args, shell } = installCommand();
+  await new Promise<void>((resolve, reject) => {
+    execFile(
+      file,
+      args,
+      // No network of its own to configure and no bunfig to inherit: npm reads
+      // the ambient registry config, which is the host's to set.
+      { cwd, timeout: timeoutMs, shell, windowsHide: true },
+      (error, _stdout, stderr) => {
+        if (!error) return resolve();
+        const killed = (error as { killed?: boolean }).killed === true;
+        // npm's "a complete log of this run" line points at a file nobody
+        // reading a reactor log can open; the cause above it is the message.
+        const reported = stderr
+          .split("\n")
+          .filter((line) => !line.includes("A complete log of this run"))
+          .join("\n")
+          .trim();
+        reject(
+          new Error(
+            killed
+              ? `timed out after ${timeoutMs}ms`
+              : reported || error.message,
+          ),
+        );
+      },
+    );
+  });
+}
+
+// What is left when a bundle names code it does not carry and that code could
+// not be fetched: the piece is unloadable, and this says what was tried.
+export class PieceNotInstallableError extends Error {
+  constructor(
+    readonly packageName: string,
+    readonly version: string,
+    readonly dependencies: Record<string, string>,
+    readonly cause: unknown,
+  ) {
+    const declared = Object.keys(dependencies);
+    const listed = declared
+      .slice(0, MAX_LISTED_DEPENDENCIES)
+      .map((dep) => `${dep}@${dependencies[dep]}`);
+    const rest = declared.length - listed.length;
+    const count =
+      declared.length === 1
+        ? "a dependency"
+        : `${declared.length} dependencies`;
+    super(
+      `Piece bundle ${packageName}@${version} carries ${count} it does not ` +
+        `bundle (${listed.join(", ")}${rest > 0 ? `, and ${rest} more` : ""}), ` +
+        `and installing them here failed: ${reasonOf(cause)}. ` +
+        `The install runs once per version, with lifecycle scripts disabled, so ` +
+        `a dependency that builds or downloads on install cannot be prepared ` +
+        `this way. Check that this reactor can reach an npm registry, or run a ` +
+        `piece whose bundle inlines what it needs.`,
+    );
+    this.name = "PieceNotInstallableError";
+  }
+}
+
+function reasonOf(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
+}
+
+function notInstallable(
   name: string,
   version: string,
-): Promise<void> {
-  const dependencies = await readDependencies(dir);
-  const declared = Object.keys(dependencies);
-  if (declared.length === 0) return;
-  const listed = declared
-    .slice(0, MAX_LISTED_DEPENDENCIES)
-    .map((dep) => `${dep}@${dependencies[dep]}`);
-  const rest = declared.length - listed.length;
-  const count =
-    declared.length === 1 ? "a dependency" : `${declared.length} dependencies`;
-  // Only an Activepieces piece gets their release number: a bundle from
-  // anywhere else would be sent chasing a version that means nothing to it.
-  const since = name.startsWith("@activepieces/")
-    ? ` Activepieces bundles have been self-contained since ${AP_SELF_CONTAINED_SINCE}.`
-    : "";
-  throw new Error(
-    `Piece bundle ${name}@${version} is not self-contained: it declares ${count} ` +
-      `(${listed.join(", ")}${rest > 0 ? `, and ${rest} more` : ""}). ` +
-      `The reactor no longer installs a bundle's dependencies. Pin ${name} at or above ` +
-      `its first self-contained release.${since}`,
-  );
+  dependencies: Record<string, string>,
+  cause: unknown,
+): PieceNotInstallableError {
+  return new PieceNotInstallableError(name, version, dependencies, cause);
 }
 
 async function readDependencies(dir: string): Promise<Record<string, string>> {

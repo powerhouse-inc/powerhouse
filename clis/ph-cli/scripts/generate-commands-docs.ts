@@ -7,6 +7,9 @@ import { generateAppCmd } from "../src/commands/generate-app.js";
 import { generateDocumentModelCmd } from "../src/commands/generate-document-model.js";
 import { generateEditorCmd } from "../src/commands/generate-editor.js";
 import { generateMigrationFileCmd } from "../src/commands/generate-migration-file.js";
+import { generatePieceActionCmd } from "../src/commands/generate-piece-action.js";
+import { generatePieceTriggerCmd } from "../src/commands/generate-piece-trigger.js";
+import { generatePieceCmd } from "../src/commands/generate-piece.js";
 import { generateProcessorCmd } from "../src/commands/generate-processor.js";
 import { generateSubgraphCmd } from "../src/commands/generate-subgraph.js";
 import { generate } from "../src/commands/generate.js";
@@ -28,6 +31,9 @@ const commands = [
   { name: "app", command: generateAppCmd },
   { name: "processor", command: generateProcessorCmd },
   { name: "subgraph", command: generateSubgraphCmd },
+  { name: "piece", command: generatePieceCmd },
+  { name: "piece-action", command: generatePieceActionCmd },
+  { name: "piece-trigger", command: generatePieceTriggerCmd },
   { name: "migration-file", command: generateMigrationFileCmd },
   { name: "vetra", command: vetra },
   { name: "build", command: buildCmd },

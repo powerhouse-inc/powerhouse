@@ -93,7 +93,7 @@ One interface, selected per secret at creation (default from `PH_SECRETS_BACKEND
 | Backend | Read | Write/rotate | Storage | Notes |
 |---|---|---|---|---|
 | `env` | ✓ | ✗ | process env | Legacy bare refs only; never minted as `secret://` |
-| `local` | ✓ | ✓ | encrypted at rest in the reactor DB | AES-256-GCM, master key from `PH_SECRETS_MASTER_KEY` (or a generated key file next to the DB for dev). The zero-infra default, like attachments' filesystem backend |
+| `local` | ✓ | ✓ | encrypted at rest in the reactor DB | AES-256-GCM, master key from `PH_WORKFLOWS_SECRETS_MASTER_KEY` (or a generated key file next to the DB for dev). The zero-infra default, like attachments' filesystem backend |
 | `openbao` | ✓ | ✓ | OpenBao / Vault KV v2 | `BAO_ADDR` + `BAO_TOKEN` or AppRole. `backend_path` = `<mount>/<path>`; service reads `data.data.value`. Vault-API compatible ⇒ works against HashiCorp Vault too |
 
 Backend interface (server-side only):

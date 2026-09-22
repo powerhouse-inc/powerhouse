@@ -4,15 +4,25 @@
 // cannot ingest is worse than a piece that refuses both.
 export const DEFAULT_MAX_FILE_BYTES = 8 * 1024 * 1024;
 
-// Read per call rather than at import: a host may set the override after this
-// module is loaded, and tests need to move it.
-export function maxFileBytes(): number {
-  const raw = process.env.PH_PIECE_MAX_FILE_BYTES;
-  if (raw === undefined) return DEFAULT_MAX_FILE_BYTES;
+// What the environment asks for, or undefined when it asks for nothing usable.
+// Read per call: a host may set it after this module is loaded.
+export function configuredMaxFileBytes(): number | undefined {
+  const raw = process.env.PH_WORKFLOWS_PIECE_MAX_FILE_BYTES;
+  if (raw === undefined) return undefined;
   const parsed = Number(raw);
-  return Number.isFinite(parsed) && parsed > 0
-    ? Math.floor(parsed)
-    : DEFAULT_MAX_FILE_BYTES;
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : undefined;
+}
+
+// The worker child is forked without an environment, so its limit arrives on
+// the wire instead. Requests are serialized per worker: one value at a time.
+let fromWire: number | undefined;
+
+export function setMaxFileBytes(limit: number | undefined): void {
+  fromWire = limit;
+}
+
+export function maxFileBytes(): number {
+  return fromWire ?? configuredMaxFileBytes() ?? DEFAULT_MAX_FILE_BYTES;
 }
 
 export class FileTooLargeError extends Error {
@@ -22,7 +32,7 @@ export class FileTooLargeError extends Error {
   constructor(size: number, limit: number = maxFileBytes()) {
     super(
       `File of ${size} bytes exceeds the ${limit} byte limit ` +
-        `(raise PH_PIECE_MAX_FILE_BYTES to allow more)`,
+        `(raise PH_WORKFLOWS_PIECE_MAX_FILE_BYTES to allow more)`,
     );
     this.name = "FileTooLargeError";
     this.size = size;

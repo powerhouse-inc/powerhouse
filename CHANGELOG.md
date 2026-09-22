@@ -1,3 +1,109 @@
+## 6.2.3-dev.21 (2026-09-22)
+
+### 🚀 Features
+
+- **reactor-api:** keep a package's pieces when it comes from a registry ([06c2bc6df](https://github.com/powerhouse-inc/powerhouse/commit/06c2bc6df))
+- **workflow:** resolve an unpinned trigger piece against the catalog ([82bfa4dbe](https://github.com/powerhouse-inc/powerhouse/commit/82bfa4dbe))
+- **workflow:** resolve an unpinned block type the same way everywhere ([d0e6aa8cb](https://github.com/powerhouse-inc/powerhouse/commit/d0e6aa8cb))
+- **workflow:** install what a piece bundle declares, when it declares any ([5262361ad](https://github.com/powerhouse-inc/powerhouse/commit/5262361ad))
+
+### 🩹 Fixes
+
+- **codegen:** scaffold a piece that can run somewhere other than here ([07d899b0f](https://github.com/powerhouse-inc/powerhouse/commit/07d899b0f))
+- **workflow:** say so when a trigger names a piece nothing can resolve ([3f673ba86](https://github.com/powerhouse-inc/powerhouse/commit/3f673ba86))
+- **workflow:** fail a dispatch whose reducer rejected the action ([992976e99](https://github.com/powerhouse-inc/powerhouse/commit/992976e99))
+- **workflow:** stop telling people to pin a version that does not exist ([6466b6329](https://github.com/powerhouse-inc/powerhouse/commit/6466b6329))
+- **workflow:** carry the piece file limit to the worker child ([b3b82617a](https://github.com/powerhouse-inc/powerhouse/commit/b3b82617a))
+- **workflow:** tell an unreachable catalog apart from a piece that is gone ([8492afaad](https://github.com/powerhouse-inc/powerhouse/commit/8492afaad))
+- ⚠️  **workflow:** serve ctx.reactor to the reactor piece alone ([eb06f5af6](https://github.com/powerhouse-inc/powerhouse/commit/eb06f5af6))
+- **workflow:** list the engine's own blocks, and check a fresh connection ([4513eef24](https://github.com/powerhouse-inc/powerhouse/commit/4513eef24))
+- **workflow:** keep a package piece's authored output shape ([625b0b88e](https://github.com/powerhouse-inc/powerhouse/commit/625b0b88e))
+- **workflow:** keep a package piece's audience, testStrategy and handshake ([c577fdb77](https://github.com/powerhouse-inc/powerhouse/commit/c577fdb77))
+- **workflow:** stamp a run with a name even when the workflow has none ([ae4d9b1ad](https://github.com/powerhouse-inc/powerhouse/commit/ae4d9b1ad))
+
+### ⚠️  Breaking Changes
+
+- **workflow:** serve ctx.reactor to the reactor piece alone  ([eb06f5af6](https://github.com/powerhouse-inc/powerhouse/commit/eb06f5af6))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.20 (2026-09-22)
+
+### 🚀 Features
+
+- **workflow:** let an error branch read why the step failed ([99242e124](https://github.com/powerhouse-inc/powerhouse/commit/99242e124))
+
+### 🩹 Fixes
+
+- **workflow:** floor a poll cadence at a second, and default it to a minute ([5049146a6](https://github.com/powerhouse-inc/powerhouse/commit/5049146a6))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.19 (2026-09-21)
+
+### 🩹 Fixes
+
+- **workflow:** let a step carry an attachment ref it is not allowed to open ([a700e098a](https://github.com/powerhouse-inc/powerhouse/commit/a700e098a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.18 (2026-09-21)
+
+### 🚀 Features
+
+- **workflow:** read pieces from a Powerhouse registry ([f1467e0b0](https://github.com/powerhouse-inc/powerhouse/commit/f1467e0b0))
+- **workflow:** drop the hand-written first-party catalog entries ([86d0f244b](https://github.com/powerhouse-inc/powerhouse/commit/86d0f244b))
+
+### 🩹 Fixes
+
+- **switchboard:** load the workflow package like any other package ([7629bf71f](https://github.com/powerhouse-inc/powerhouse/commit/7629bf71f))
+- **workflow:** hand a piece the JSON it cannot parse, instead of nothing ([4aa10a946](https://github.com/powerhouse-inc/powerhouse/commit/4aa10a946))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.17 (2026-09-21)
+
+### 🚀 Features
+
+- **codegen:** generate a piece, and add actions and triggers to it ([#3052](https://github.com/powerhouse-inc/powerhouse/issues/3052))
+- **registry:** index pieces and serve one on its own ([#3052](https://github.com/powerhouse-inc/powerhouse/issues/3052))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.16 (2026-09-21)
+
+### 🩹 Fixes
+
+- **reactor-api:** realpath the temp root the vite loader test watches ([814c83372](https://github.com/powerhouse-inc/powerhouse/commit/814c83372))
+- **reactor-api:** withhold sync entries the serving gate never evaluated ([8f76e3e12](https://github.com/powerhouse-inc/powerhouse/commit/8f76e3e12))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.3-dev.15 (2026-09-20)
+
+### 🩹 Fixes
+
+- **reactor-api:** realpath the temp root the vite loader test watches ([814c83372](https://github.com/powerhouse-inc/powerhouse/commit/814c83372))
+- **reactor-api:** withhold sync entries the serving gate never evaluated ([8f76e3e12](https://github.com/powerhouse-inc/powerhouse/commit/8f76e3e12))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.3-dev.14 (2026-09-19)
 
 ### 🚀 Features
