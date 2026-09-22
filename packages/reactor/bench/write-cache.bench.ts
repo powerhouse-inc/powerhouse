@@ -982,14 +982,32 @@ function writeReplayStamps(): void {
  * leg calls this same function, so the two legs cannot drift apart on the path
  * they share.
  */
+const benchSchemaMemo = new Map<() => unknown, unknown>();
+
+/**
+ * The generated reducer builds each input schema once and reuses it, so the
+ * mirror has to do the same or it prices a construction production no longer
+ * pays.
+ */
+function memoizedSchema<T>(makeSchema: () => T): T {
+  let schema = benchSchemaMemo.get(makeSchema) as T | undefined;
+  if (schema === undefined) {
+    schema = makeSchema();
+    benchSchemaMemo.set(makeSchema, schema);
+  }
+  return schema;
+}
+
 function validateDriveInput(action: Action): void {
   if (action.type === "ADD_FILE") {
-    AddFileInputSchema().parse((action as AddFileAction).input);
+    memoizedSchema(AddFileInputSchema).parse((action as AddFileAction).input);
     return;
   }
 
   if (action.type === "ADD_FOLDER") {
-    AddFolderInputSchema().parse((action as AddFolderAction).input);
+    memoizedSchema(AddFolderInputSchema).parse(
+      (action as AddFolderAction).input,
+    );
   }
 }
 
