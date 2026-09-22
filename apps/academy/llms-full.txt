@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-22T11:36:45.560Z
+> Generated: 2026-09-22T12:05:14.274Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -30251,7 +30251,7 @@ The search index builds lazily, so the first call may report a status of
 Two more worth knowing:
 
 - **`blockDescriptor(blockType:)`** — an action's props and auth requirements,
-  so you know what config to write. Returns null for core blocks.
+  so you know what config to write. Works for core blocks too.
 - **`blockOutputTree(blockType:, config:)`** — the shape a block's output will
   have, which is how Studio offers later steps their fields before anything has
   run. Useful for checking an expression path is real before you commit it.
@@ -30349,6 +30349,9 @@ would act on it.
 A workflow is a `powerhouse/workflow` document, so you create and edit it the
 way you would any other document — through the reactor's document API or its MCP
 endpoint, covered in [Using the API](/academy/Build/WorkWithData/UsingTheAPI).
+Every operation below is dispatched in the `global` scope; a dispatch that omits
+the scope is rejected.
+
 What's specific to workflows is which operations to dispatch, in this order:
 
 1. **`SET_WORKFLOW_NAME`** / `SET_WORKFLOW_DESCRIPTION`.
@@ -30368,8 +30371,53 @@ What's specific to workflows is which operations to dispatch, in this order:
 
 ## 5. Connections and secrets
 
-A step that authenticates points at a `powerhouse/connection` document. Mint the
-secret through the runtime rather than writing it into the document:
+A step that authenticates points at a `powerhouse/connection` document, so you
+build one of those the same way — with operations, in order.
+
+### What a connection holds
+
+| Field | What goes in it |
+| --- | --- |
+| `connectorId` | The piece id, e.g. `@acme/piece-crm`. Not a block type: no action, no `#` fragment. |
+| `authType` | Which `PieceAuth` kind the piece declares: `CUSTOM_AUTH`, `SECRET_TEXT`, `BASIC_AUTH`, `OAUTH2`, `OIDC` or `NONE`. |
+| `config` | The **non-secret** auth properties, keyed by property name. |
+| `secretRefs` | One entry per secret property: `{ id, name, ref }`. |
+
+**The rule that catches everyone: `secretRefs[].name` must equal the auth
+property's name in the piece.** That's how a resolved credential is reassembled
+before it reaches your piece — `config` and `secretRefs` are merged by property
+name into the single `auth` object your `run` receives. A `name` that matches
+nothing in the piece's auth is silently absent at run time, which surfaces as an
+authentication failure rather than a configuration error.
+
+So a piece declaring this:
+
+```typescript
+export const crmAuth = PieceAuth.CustomAuth({
+  props: {
+    baseUrl: Property.ShortText({ displayName: "Base URL", required: true }),
+    apiKey: PieceAuth.SecretText({ displayName: "API key", required: true }),
+  },
+});
+```
+
+wants a connection built like this — `baseUrl` in `config` because it is not a
+secret, `apiKey` as a secret ref carrying that exact name:
+
+1. **`SET_CONNECTION_NAME`** — `{ name: "CRM production" }`.
+2. **`SET_CONNECTOR`** — `{ connectorId: "@acme/piece-crm", authType: "CUSTOM_AUTH" }`.
+   This resets the status, so send it before the rest.
+3. **`SET_CONFIG`** — `{ config: { baseUrl: "https://crm.example.com" } }`.
+4. **`SET_SECRET_REF`** — `{ id: "<oid>", name: "apiKey", ref: "<the ref>" }`, once
+   per secret property. `REMOVE_SECRET_REF` takes the `id` you chose here.
+
+A `SECRET_TEXT` piece has one secret property and usually no config at all; a
+`NONE` piece needs neither, and its connection is just a name and a connector.
+
+### Minting the secret
+
+Get the `ref` from the runtime rather than writing a credential into the
+document:
 
 ```graphql
 mutation {
@@ -30381,10 +30429,17 @@ mutation {
 }
 ```
 
-You get back a `ref`. That ref is what goes in the connection document; the
-value is stored encrypted and cannot be read back over any API. `rotateSecret`
+You get back a `ref` — that is what step 4 above puts in `secretRefs`. The value
+is stored encrypted and cannot be read back over any API. `rotateSecret`
 replaces the value behind a ref without touching any document that refers to it,
 and `deleteSecret` makes it unrecoverable.
+
+Secrets are encrypted with the runtime's master key, so changing that key — or
+losing it, and letting the runtime generate a new one — makes every existing ref
+undecryptable. That surfaces as a check failing with a message about
+unsupported state or authentication data, which reads like a broken credential
+rather than a configuration problem. Mint the secrets again and `SET_SECRET_REF`
+the new refs.
 
 Then verify it, which also records the outcome on the connection document so
 Connect can show it:
