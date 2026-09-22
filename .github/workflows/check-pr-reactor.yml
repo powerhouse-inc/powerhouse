@@ -70,9 +70,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install-ci
 
-      - name: Restore Nx build cache
-        uses: ./.github/actions/nx-cache
-
       - name: Build
         run: pnpm build
 
@@ -173,9 +170,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install-ci
-
-      - name: Restore Nx build cache
-        uses: ./.github/actions/nx-cache
 
       - name: Build
         run: pnpm build

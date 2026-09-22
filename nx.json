@@ -16,37 +16,10 @@
       "!{projectRoot}/coverage/**/*",
       "!{projectRoot}/test/**/*"
     ],
-    "sharedGlobals": [
-      "{workspaceRoot}/pnpm-lock.yaml",
-      "{workspaceRoot}/pnpm-workspace.yaml",
-      "{workspaceRoot}/tsconfig.json"
-    ],
-    "default": [
-      "{projectRoot}/**/*",
-      "!{projectRoot}/dist/**/*",
-      "!{projectRoot}/.tsbuild/**/*",
-      "sharedGlobals"
-    ],
-    "production": [
-      "default",
-      "noMarkdown",
-      "noStories",
-      "noLicenses",
-      "noTests"
-    ]
+    "sharedGlobals": ["{workspaceRoot}/.github/workflows/check-commit-nx.yml"],
+    "default": ["sharedGlobals"]
   },
-  "targetDefaults": {
-    "build": {
-      "dependsOn": ["^build"],
-      "cache": true,
-      "inputs": ["production", "^production", { "env": "PH_PACKAGES" }],
-      "outputs": [
-        "{projectRoot}/dist",
-        "{projectRoot}/.tsbuild",
-        "{projectRoot}/COMMANDS.md"
-      ]
-    }
-  },
+  "targetDefaults": {},
   "release": {
     "projects": [
       "packages/*",

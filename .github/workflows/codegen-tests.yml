@@ -56,9 +56,6 @@ jobs:
       - name: Install deps (frozen lockfile)
         run: pnpm install-ci
 
-      - name: Restore Nx build cache
-        uses: ./.github/actions/nx-cache
-
       - name: Build
         run: pnpm build
 
