@@ -494,6 +494,19 @@ function configRecord(config: unknown): Record<string, unknown> {
   return {};
 }
 
+// The name a run is stamped with. A run record is a journal: it snapshots the
+// name alongside the version so a workflow that is later renamed or deleted
+// still reads correctly in its own history. That is why this resolves at run
+// time rather than being looked up when a row is displayed \u2014 and why the
+// document's name is a fallback for an unset state.name, not a replacement for
+// it.
+function runJournalName(
+  stateName: string | undefined,
+  documentName: string | undefined,
+): string {
+  return stateName?.trim() ? stateName : (documentName ?? "");
+}
+
 export class WorkflowRuntimeService {
   private readonly host: WorkflowRuntimeHostDeps;
   private readonly logger: ILogger;
@@ -2555,6 +2568,13 @@ export class WorkflowRuntimeService {
   ): Promise<PersistedRunResult> {
     const store = await this.store();
     let state: WorkflowState;
+    // Carried out of the try so the run journal can fall back to it: a
+    // workflow's state.name is a separate field from the document's name and
+    // starts empty, so a workflow created without setting it stamps "" on every
+    // run it ever makes. The drive still lists it correctly, which is what makes
+    // the blank column in a run table look like a UI fault rather than a
+    // missing value.
+    let documentName: string | undefined;
     let definition: ReturnType<typeof toWorkflowDefinition>;
     try {
       // "manual" is the only kind a caller can ask for; every other one is
@@ -2570,6 +2590,7 @@ export class WorkflowRuntimeService {
         );
       }
       state = document.state.global;
+      documentName = document.header.name;
       if (state.status !== "ENABLED") {
         throw new Error(
           `Workflow is ${state.status}; only ENABLED workflows can fire`,
@@ -2611,14 +2632,14 @@ export class WorkflowRuntimeService {
     let runId: string | null = enqueuedRunId ?? null;
     if (enqueuedRunId) {
       await store?.beginRun(enqueuedRunId, {
-        workflowName: state.name,
+        workflowName: runJournalName(state.name, documentName),
         workflowVersion: state.version,
       });
     } else {
       runId =
         (await store?.startRun({
           workflowId,
-          workflowName: state.name,
+          workflowName: runJournalName(state.name, documentName),
           workflowVersion: state.version,
           triggerKind,
           triggerPayload,
