@@ -1757,6 +1757,89 @@ describe("ProcessorManager Standalone Tests", () => {
     });
   });
 
+  describe("Backfill outside the lock", () => {
+    const CHILD = "powerhouse/document-model";
+
+    // A processor that holds its first call until the test releases it.
+    function holdingProcessor() {
+      const held = deferred();
+      const release = deferred();
+      let calls = 0;
+      const processor = createMockProcessor();
+      processor.onOperations = vi
+        .fn()
+        .mockImplementation(async (ops: OperationWithContext[]) => {
+          calls++;
+          if (calls === 1) {
+            held.resolve();
+            await release.promise;
+          }
+          processor.receivedOperations.push(...ops);
+        });
+      return { processor, held, release };
+    }
+
+    it("should index other documents while a registration backfill is running", async () => {
+      const driveId = generateId();
+      await insertDriveSnapshot(db, driveId);
+      const ops = [
+        makeDriveCreateOp(driveId, 1),
+        makeOp(generateId(), 2, { documentType: CHILD }),
+        makeOp(generateId(), 3, { documentType: CHILD }),
+      ];
+      await writeToOperationIndex(operationIndex, ops);
+      for (const op of ops) await processorManager.indexOperations([op]);
+
+      const { processor, held, release } = holdingProcessor();
+      const factory: ProcessorFactory = () => [
+        { processor, filter: { documentId: ["*"] } },
+      ];
+      const registration = processorManager.registerFactory("late", factory);
+      await held.promise;
+
+      // Written after the backfill's page was read, so only live routing
+      // can carry it.
+      const live = makeOp(generateId(), 4, { documentType: CHILD });
+      await writeToOperationIndex(operationIndex, [live]);
+      await processorManager.indexOperations([live]);
+
+      release.resolve();
+      await registration;
+
+      expect(ordinalsOf(processor)).toEqual([1, 2, 3, 4]);
+    });
+
+    it("should neither lose nor repeat a live batch that arrives mid-backfill", async () => {
+      const driveId = generateId();
+      await insertDriveSnapshot(db, driveId);
+      const ops = [
+        makeDriveCreateOp(driveId, 1),
+        makeOp(generateId(), 2, { documentType: CHILD }),
+        makeOp(generateId(), 3, { documentType: CHILD }),
+      ];
+      await writeToOperationIndex(operationIndex, ops);
+      for (const op of ops.slice(0, 2)) {
+        await processorManager.indexOperations([op]);
+      }
+
+      const { processor, held, release } = holdingProcessor();
+      const factory: ProcessorFactory = () => [
+        { processor, filter: { documentId: ["*"] } },
+      ];
+      const registration = processorManager.registerFactory("late", factory);
+      await held.promise;
+
+      // Op 3 is in the index, so the backfill page already holds it; the
+      // live batch for it lands while the backfill is still delivering.
+      await processorManager.indexOperations([ops[2]!]);
+
+      release.resolve();
+      await registration;
+
+      expect(ordinalsOf(processor)).toEqual([1, 2, 3]);
+    });
+  });
+
   describe("Failed and skipped live batches", () => {
     // lastOrdinal is a cross-document high-water mark, so a lower ordinal
     // that fails or is skipped must pull the cursor back below itself or

@@ -31,6 +31,30 @@ import {
   resolveProcessorSlots,
 } from "./utils.js";
 
+// Live-versus-backfill bookkeeping for one processor.
+type DeliveryState = {
+  // Ordinal through which a backfill has delivered. Live routing dedupes
+  // against this, not against lastOrdinal: batches reach the manager out of
+  // ordinal order across documents, and lastOrdinal is the high-water mark a
+  // restart replays from.
+  backfilledThrough: number;
+  // Live batches held while a backfill runs; undefined when none is running.
+  pending: OperationWithContext[] | undefined;
+  backfill: Promise<void> | undefined;
+  retired: boolean;
+};
+
+// Batches from init span documents; they take every key.
+const MIXED_KEY = "*";
+
+function keyOf(items: OperationWithContext[]): string {
+  const first = items[0]!.context.documentId;
+  for (const item of items) {
+    if (item.context.documentId !== first) return MIXED_KEY;
+  }
+  return first;
+}
+
 export type ProcessorManagerOptions = {
   // Key cursors by array position (default). Off derives stable keys from
   // record id, namespace or class name, so reordering factories is safe.
@@ -58,15 +82,15 @@ export class ProcessorManager
     new Map();
   private knownDrives: Map<string, string> = new Map();
   private cursorCache: Map<string, ProcessorCursorRow> = new Map();
-  // Ordinal through which a backfill has already delivered, per processor.
-  // Live routing dedupes against this, not against lastOrdinal: batches reach
-  // the manager out of ordinal order across documents, and lastOrdinal is the
-  // high-water mark a restart replays from.
-  private backfilledThrough = new WeakMap<TrackedProcessor, number>();
+  private delivery = new WeakMap<TrackedProcessor, DeliveryState>();
   private logger: ILogger;
   private driveContainerTypes: ReadonlySet<string>;
   private legacyProcessorIds: boolean;
-  private tail: Promise<void> = Promise.resolve();
+  // One pass at a time per document; registry mutations take every key.
+  private tails = new Map<string, Promise<void>>();
+  private registry: Promise<void> = Promise.resolve();
+  // Backfills a pass started, awaited by that pass once its key is released.
+  private spawned = new Map<string, Promise<void>[]>();
 
   constructor(
     db: Kysely<DocumentViewDatabase>,
@@ -87,27 +111,58 @@ export class ProcessorManager
     this.legacyProcessorIds = options.legacyProcessorIds ?? true;
   }
 
-  // Not serialized: it indexes through indexOperations, which is.
+  // Takes no key: it indexes through indexOperations, which does.
   override async init(): Promise<void> {
     await super.init();
     await this.loadAllCursors();
     await this.discoverExistingDrives();
   }
 
-  // Passes and registry mutations share the processor tables and the
-  // cursors, so they run one at a time. A serialized method must never call
-  // another serialized method: the inner one would wait on the outer forever.
-  private serialized<T>(work: () => Promise<T>): Promise<T> {
-    const run = this.tail.then(work);
-    this.tail = run.then(
+  // The lock keeps a document's batches one at a time and in arrival order,
+  // and keeps the processor tables still while a pass reads them: a drive's
+  // processors are created before or after a pass over its own operations,
+  // never during one. Delivery to a processor that is backfilling, and the
+  // backfill itself, run outside it. A method holding a key must never wait
+  // on another keyed or exclusive call: it would wait on itself.
+  private keyed<T>(key: string, work: () => Promise<T>): Promise<T> {
+    const previous = Promise.all([
+      this.tails.get(key) ?? Promise.resolve(),
+      this.registry,
+    ]);
+    const run = previous.then(work);
+    const settled = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.tails.set(key, settled);
+    void settled.then(() => {
+      if (this.tails.get(key) === settled) this.tails.delete(key);
+    });
+    return run;
+  }
+
+  private exclusive<T>(work: () => Promise<T>): Promise<T> {
+    const previous = Promise.all([...this.tails.values(), this.registry]);
+    const run = previous.then(work);
+    this.registry = run.then(
       () => undefined,
       () => undefined,
     );
     return run;
   }
 
-  override indexOperations(items: OperationWithContext[]): Promise<void> {
-    return this.serialized(() => super.indexOperations(items));
+  override async indexOperations(items: OperationWithContext[]): Promise<void> {
+    if (items.length === 0) return;
+
+    const key = keyOf(items);
+    const section = () => super.indexOperations(items);
+    try {
+      await (key === MIXED_KEY
+        ? this.exclusive(section)
+        : this.keyed(key, section));
+    } finally {
+      await this.awaitSpawned(key);
+    }
   }
 
   protected override async commitOperations(
@@ -118,23 +173,24 @@ export class ProcessorManager
     await this.routeOperationsToProcessors(items);
   }
 
-  registerFactory(
+  async registerFactory(
     identifier: string,
     factory: ProcessorFactory,
   ): Promise<void> {
-    return this.serialized(() =>
+    const backfills = await this.exclusive(() =>
       this.registerFactoryUnlocked(identifier, factory),
     );
+    await Promise.all(backfills);
   }
 
   unregisterFactory(identifier: string): Promise<void> {
-    return this.serialized(() => this.unregisterFactoryUnlocked(identifier));
+    return this.exclusive(() => this.unregisterFactoryUnlocked(identifier));
   }
 
   private async registerFactoryUnlocked(
     identifier: string,
     factory: ProcessorFactory,
-  ): Promise<void> {
+  ): Promise<Promise<void>[]> {
     if (this.factoryRegistry.has(identifier)) {
       await this.unregisterFactoryUnlocked(identifier);
     }
@@ -145,16 +201,20 @@ export class ProcessorManager
     // A late registration has no creation batch to anchor to: "current"
     // means from here on.
     const creationOrdinal = this.lastOrdinal + 1;
+    const backfills: Promise<void>[] = [];
     for (const [driveId, documentType] of this.knownDrives) {
       const driveHeader = createMinimalDriveHeader(driveId, documentType);
-      await this.createProcessorsForDrive(
-        driveId,
-        identifier,
-        factory,
-        driveHeader,
-        creationOrdinal,
+      backfills.push(
+        ...(await this.createProcessorsForDrive(
+          driveId,
+          identifier,
+          factory,
+          driveHeader,
+          creationOrdinal,
+        )),
       );
     }
+    return backfills;
   }
 
   private async unregisterFactoryUnlocked(identifier: string): Promise<void> {
@@ -163,6 +223,7 @@ export class ProcessorManager
 
     for (const [driveId, tracked] of factoryProcessors) {
       for (const t of tracked) {
+        await this.retire(t);
         await this.safeDisconnect(t.record.processor);
       }
 
@@ -213,16 +274,28 @@ export class ProcessorManager
       const driveHeader = extractDriveHeader(op);
       if (!driveHeader) continue;
 
+      const key = keyOf(operations);
+      const backfills = this.spawned.get(key) ?? [];
+      this.spawned.set(key, backfills);
       for (const [identifier, factory] of this.factoryRegistry) {
-        await this.createProcessorsForDrive(
-          driveId,
-          identifier,
-          factory,
-          driveHeader,
-          op.context.ordinal,
+        backfills.push(
+          ...(await this.createProcessorsForDrive(
+            driveId,
+            identifier,
+            factory,
+            driveHeader,
+            op.context.ordinal,
+          )),
         );
       }
     }
+  }
+
+  private async awaitSpawned(key: string): Promise<void> {
+    const backfills = this.spawned.get(key);
+    if (!backfills) return;
+    this.spawned.delete(key);
+    await Promise.all(backfills);
   }
 
   private isDriveCreation(op: OperationWithContext): boolean {
@@ -271,7 +344,7 @@ export class ProcessorManager
     factory: ProcessorFactory,
     driveHeader: PHDocumentHeader,
     creationOrdinal: number,
-  ): Promise<void> {
+  ): Promise<Promise<void>[]> {
     let records: ProcessorRecord[];
 
     try {
@@ -283,10 +356,10 @@ export class ProcessorManager
         driveId,
         error,
       );
-      return;
+      return [];
     }
 
-    if (records.length === 0) return;
+    if (records.length === 0) return [];
 
     const trackedList: TrackedProcessor[] = [];
     const slots = resolveProcessorSlots(records, this.legacyProcessorIds);
@@ -324,11 +397,11 @@ export class ProcessorManager
         status,
         lastError,
         lastErrorTimestamp,
-        retry: () => this.serialized(() => this.retryProcessor(tracked)),
+        retry: () => this.retryProcessor(tracked),
       };
 
       trackedList.push(tracked);
-      this.backfilledThrough.set(tracked, lastOrdinal);
+      this.stateOf(tracked).backfilledThrough = lastOrdinal;
 
       await this.saveProcessorCursor(tracked);
     }
@@ -363,20 +436,83 @@ export class ProcessorManager
       ...trackedList,
     ]);
 
+    const backfills: Promise<void>[] = [];
     for (const tracked of trackedList) {
       if (
         tracked.status === "active" &&
         tracked.lastOrdinal < this.lastOrdinal
       ) {
-        await this.backfillProcessor(tracked);
+        backfills.push(this.runBackfill(tracked));
       }
+    }
+    return backfills;
+  }
+
+  private stateOf(tracked: TrackedProcessor): DeliveryState {
+    let state = this.delivery.get(tracked);
+    if (!state) {
+      state = {
+        backfilledThrough: 0,
+        pending: undefined,
+        backfill: undefined,
+        retired: false,
+      };
+      this.delivery.set(tracked, state);
+    }
+    return state;
+  }
+
+  // Holds live batches from this synchronous point until the backfill and
+  // the held batches have both been delivered.
+  private runBackfill(tracked: TrackedProcessor): Promise<void> {
+    const state = this.stateOf(tracked);
+    if (state.backfill) return state.backfill;
+
+    state.pending = [];
+    state.backfill = this.backfillThenDrain(tracked, state).finally(() => {
+      state.pending = undefined;
+      state.backfill = undefined;
+    });
+    return state.backfill;
+  }
+
+  private async backfillThenDrain(
+    tracked: TrackedProcessor,
+    state: DeliveryState,
+  ): Promise<void> {
+    await this.backfillProcessor(tracked, state);
+
+    while (state.pending !== undefined && state.pending.length > 0) {
+      const held = state.pending;
+      state.pending = [];
+      await this.route(tracked, held, true);
     }
   }
 
-  private async backfillProcessor(tracked: TrackedProcessor): Promise<void> {
+  // Read through a call: the flag flips while a delivery is awaited.
+  private isRetired(tracked: TrackedProcessor): boolean {
+    return this.stateOf(tracked).retired;
+  }
+
+  private async retire(tracked: TrackedProcessor): Promise<void> {
+    const state = this.stateOf(tracked);
+    state.retired = true;
+    try {
+      await state.backfill;
+    } catch {
+      // Reported to whoever started the backfill.
+    }
+  }
+
+  private async backfillProcessor(
+    tracked: TrackedProcessor,
+    state: DeliveryState,
+  ): Promise<void> {
     let page = await this.operationIndex.getSinceOrdinal(tracked.lastOrdinal);
 
     while (page.results.length > 0) {
+      if (this.isRetired(tracked)) return;
+
       const matching = page.results.filter((op) =>
         matchesFilter(op, tracked.record.filter),
       );
@@ -400,9 +536,10 @@ export class ProcessorManager
         }
       }
 
+      if (this.isRetired(tracked)) return;
       const lastResult = page.results[page.results.length - 1]!;
       tracked.lastOrdinal = lastResult.context.ordinal;
-      this.backfilledThrough.set(tracked, tracked.lastOrdinal);
+      state.backfilledThrough = tracked.lastOrdinal;
       await this.safeSaveProcessorCursor(tracked);
 
       if (!page.next) break;
@@ -415,8 +552,9 @@ export class ProcessorManager
     tracked.status = "active";
     tracked.lastError = undefined;
     tracked.lastErrorTimestamp = undefined;
+    const backfill = this.runBackfill(tracked);
     await this.saveProcessorCursor(tracked);
-    await this.backfillProcessor(tracked);
+    await backfill;
   }
 
   private async cleanupDriveProcessors(driveId: string): Promise<void> {
@@ -424,6 +562,7 @@ export class ProcessorManager
     if (!processors) return;
 
     for (const tracked of processors) {
+      await this.retire(tracked);
       await this.safeDisconnect(tracked.record.processor);
     }
 
@@ -447,49 +586,61 @@ export class ProcessorManager
   private async routeOperationsToProcessors(
     operations: OperationWithContext[],
   ): Promise<void> {
+    const allTracked = Array.from(this.allTrackedProcessors());
+    await Promise.all(
+      allTracked.map((tracked) => this.route(tracked, operations, false)),
+    );
+  }
+
+  private async route(
+    tracked: TrackedProcessor,
+    operations: OperationWithContext[],
+    fromHold: boolean,
+  ): Promise<void> {
+    const state = this.stateOf(tracked);
+    if (state.retired) return;
+
+    if (!fromHold && state.pending !== undefined) {
+      state.pending.push(...operations);
+      return;
+    }
+
+    const matching = operations.filter(
+      (op) =>
+        op.context.ordinal > state.backfilledThrough &&
+        matchesFilter(op, tracked.record.filter),
+    );
+
+    if (tracked.status !== "active") {
+      if (matching.length > 0) await this.parkBelow(tracked, matching);
+      return;
+    }
+
+    if (matching.length > 0) {
+      try {
+        await tracked.record.processor.onOperations(matching);
+      } catch (error) {
+        tracked.status = "errored";
+        tracked.lastError =
+          error instanceof Error ? error.message : String(error);
+        tracked.lastErrorTimestamp = new Date();
+        await this.parkBelow(tracked, matching);
+        this.logger.error(
+          "Processor '@ProcessorId' failed at ordinal @Ordinal: @Error",
+          tracked.processorId,
+          tracked.lastOrdinal,
+          error,
+        );
+        return;
+      }
+    }
+
     let maxOrdinal = 0;
     for (const op of operations) {
       maxOrdinal = Math.max(maxOrdinal, op.context.ordinal);
     }
-    const allTracked = Array.from(this.allTrackedProcessors());
-
-    await Promise.all(
-      allTracked.map(async (tracked) => {
-        const backfilled = this.backfilledThrough.get(tracked) ?? 0;
-        const matching = operations.filter(
-          (op) =>
-            op.context.ordinal > backfilled &&
-            matchesFilter(op, tracked.record.filter),
-        );
-
-        if (tracked.status !== "active") {
-          if (matching.length > 0) await this.parkBelow(tracked, matching);
-          return;
-        }
-
-        if (matching.length > 0) {
-          try {
-            await tracked.record.processor.onOperations(matching);
-          } catch (error) {
-            tracked.status = "errored";
-            tracked.lastError =
-              error instanceof Error ? error.message : String(error);
-            tracked.lastErrorTimestamp = new Date();
-            await this.parkBelow(tracked, matching);
-            this.logger.error(
-              "Processor '@ProcessorId' failed at ordinal @Ordinal: @Error",
-              tracked.processorId,
-              tracked.lastOrdinal,
-              error,
-            );
-            return;
-          }
-        }
-
-        tracked.lastOrdinal = Math.max(tracked.lastOrdinal, maxOrdinal);
-        await this.safeSaveProcessorCursor(tracked);
-      }),
-    );
+    tracked.lastOrdinal = Math.max(tracked.lastOrdinal, maxOrdinal);
+    await this.safeSaveProcessorCursor(tracked);
   }
 
   // A batch the processor did not take must stay ahead of both cursors, or
@@ -502,8 +653,8 @@ export class ProcessorManager
     for (const op of missed) lowest = Math.min(lowest, op.context.ordinal);
 
     tracked.lastOrdinal = Math.min(tracked.lastOrdinal, lowest - 1);
-    const backfilled = this.backfilledThrough.get(tracked) ?? 0;
-    this.backfilledThrough.set(tracked, Math.min(backfilled, lowest - 1));
+    const state = this.stateOf(tracked);
+    state.backfilledThrough = Math.min(state.backfilledThrough, lowest - 1);
     await this.safeSaveProcessorCursor(tracked);
   }
 
