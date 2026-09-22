@@ -32,6 +32,16 @@ const WORKFLOW = "wf-paperless";
 // Unique per operation: the service dedupes on the ordinal.
 let ordinal = 0;
 
+const enabledState = (blockType: string) => ({
+  name: "Paperless",
+  status: "ENABLED",
+  version: 1,
+  trigger: { id: "t1", blockType, config: {} },
+  steps: [],
+  edges: [],
+  variables: [],
+});
+
 function workflowOp(blockType: string): OperationWithContext {
   ordinal += 1;
   return {
@@ -39,15 +49,7 @@ function workflowOp(blockType: string): OperationWithContext {
       index: ordinal,
       timestampUtcMs: `${ordinal}`,
       action: { type: "SET_TRIGGER", input: {} },
-      resultingState: JSON.stringify({
-        name: "Paperless",
-        status: "ENABLED",
-        version: 1,
-        trigger: { id: "t1", blockType, config: {} },
-        steps: [],
-        edges: [],
-        variables: [],
-      }),
+      resultingState: JSON.stringify(enabledState(blockType)),
     },
     context: {
       documentId: WORKFLOW,
@@ -77,6 +79,7 @@ const reject = vi.fn(
     _blockType: string,
     _config: unknown,
     _message: string,
+    _retryAt?: Date,
   ) => Promise.resolve(),
 );
 const remove = vi.fn((_workflowId: string) => Promise.resolve());
@@ -92,9 +95,10 @@ const logCall = (calls: unknown[][], token: string) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Offline again: clearing a mock keeps whatever the last test taught it.
-  vi.mocked(fetchPieceCatalog).mockRejectedValue(new Error("offline"));
-  vi.mocked(fetchPieceDetail).mockRejectedValue(new Error("offline"));
+  // A source answering, with no such piece: clearing a mock keeps whatever the
+  // last test taught it. An unreachable catalog is its own case, below.
+  vi.mocked(fetchPieceCatalog).mockResolvedValue([]);
+  vi.mocked(fetchPieceDetail).mockResolvedValue({});
   packagePieces.reset();
   service = testRuntime({ logger } as never);
   (service as unknown as { triggerSupervisor: unknown }).triggerSupervisor = {
@@ -150,6 +154,7 @@ describe("a trigger block type with no version", () => {
 
     expect(fetchPieceDetail).toHaveBeenCalledWith(PIECE);
     expect(armed().version).toBe("0.1.0");
+    expect(logger.warn).not.toHaveBeenCalled();
     expect(reject).not.toHaveBeenCalled();
     // The version is logged because it is the one part of this binding the
     // workflow does not pin: the next publish moves it.
@@ -172,13 +177,62 @@ describe("a trigger block type with no version", () => {
     expect(String(warned?.[2])).toContain(UNVERSIONED);
     expect(String(warned?.[2])).toMatch(/pin a version/i);
     expect(String(warned?.[0])).not.toContain(PIECE);
-    // And where every other trigger failure is read from.
+    // And where every other trigger failure is read from. No retry time: an
+    // absent piece changes nothing on its own.
     expect(reject).toHaveBeenCalledWith(
       WORKFLOW,
       UNVERSIONED,
       {},
       expect.stringContaining(UNVERSIONED),
+      undefined,
     );
+  });
+
+  it("says the catalog was unreachable rather than that the piece is gone", async () => {
+    vi.mocked(fetchPieceCatalog).mockRejectedValue(new Error("offline"));
+    vi.mocked(fetchPieceDetail).mockRejectedValue(new Error("ECONNREFUSED"));
+
+    await service.onOperations([workflowOp(UNVERSIONED)]);
+
+    const warned = logCall(logger.warn.mock.calls, "@reason");
+    const reason = String(warned?.[2]);
+    // The old message asserted the catalog has no such piece and told the
+    // operator to install one. Neither is known here, and neither is the fix.
+    expect(reason).toContain("could not be reached");
+    expect(reason).toContain("connectivity failure, not a missing piece");
+    expect(reason).not.toMatch(/has none either/);
+    // Recorded with a time it will be tried again, not parked forever.
+    const [, , , , retryAt] = reject.mock.calls[0]!;
+    expect(retryAt).toBeInstanceOf(Date);
+  });
+
+  it("comes back for a trigger the catalog could not answer for", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(fetchPieceCatalog).mockRejectedValue(new Error("offline"));
+      vi.mocked(fetchPieceDetail).mockRejectedValue(new Error("offline"));
+      const get = vi.fn(() =>
+        Promise.resolve({
+          header: { id: WORKFLOW, documentType: "powerhouse/workflow" },
+          state: { global: enabledState(UNVERSIONED) },
+        }),
+      );
+      (
+        service as unknown as { host: { reactorClient: { get: unknown } } }
+      ).host.reactorClient.get = get;
+
+      await service.onOperations([workflowOp(UNVERSIONED)]);
+      expect(upsert).not.toHaveBeenCalled();
+
+      // The outage ends, and nothing else would ever come back to this row.
+      vi.mocked(fetchPieceDetail).mockResolvedValue({ version: "0.1.0" });
+      await vi.advanceTimersByTimeAsync(30_000);
+      await vi.waitFor(() => expect(upsert).toHaveBeenCalled());
+
+      expect(armed().version).toBe("0.1.0");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("drops the error it recorded once the workflow registers again", async () => {

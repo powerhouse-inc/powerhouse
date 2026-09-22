@@ -4,6 +4,7 @@ import { buildSearchIndex } from "./block-search.js";
 import {
   fetchCatalogWithSuggestions,
   fetchPieceCatalog,
+  fetchPieceDetail,
   __resetCatalogCacheForTests,
 } from "./piece-catalog.js";
 
@@ -132,4 +133,46 @@ it("indexes the registry's blocks for block search", async () => {
   expect(index.entries.map((e) => e.hit.blockType)).toEqual([
     "@acme/piece-invoices@1.0.0#send",
   ]);
+});
+
+// A registry the deployment configured is the source for the names it serves.
+// Falling through to the public cloud because it answered 503 hands one of
+// those names to whoever registered it there instead.
+function stubPieceDetail(registryStatus: number) {
+  const seen: string[] = [];
+  vi.stubGlobal("fetch", ((input: unknown) => {
+    const url = String(input);
+    seen.push(url);
+    if (url.startsWith(REGISTRY)) {
+      return Promise.resolve(new Response("no", { status: registryStatus }));
+    }
+    return Promise.resolve(
+      new Response(JSON.stringify({ name: "p", version: "9.9.9" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+  }) as never);
+  return seen;
+}
+
+it("asks the cloud only when the registry says it has no such piece", async () => {
+  setPieceRegistryUrl(REGISTRY);
+  const seen = stubPieceDetail(404);
+
+  expect(await fetchPieceDetail("@acme/piece-x")).toEqual({
+    name: "p",
+    version: "9.9.9",
+  });
+  expect(seen.some((url) => url.includes("cloud.activepieces.com"))).toBe(true);
+});
+
+it("does not hand a name to the cloud because the registry was down", async () => {
+  setPieceRegistryUrl(REGISTRY);
+  const seen = stubPieceDetail(503);
+
+  await expect(fetchPieceDetail("@acme/piece-y")).rejects.toThrow(/503/);
+  expect(seen.some((url) => url.includes("cloud.activepieces.com"))).toBe(
+    false,
+  );
 });
