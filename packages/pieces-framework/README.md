@@ -4,6 +4,10 @@ Powerhouse's published copy of the [Activepieces](https://www.activepieces.com)
 piece framework, plus the one thing a piece running on a Powerhouse reactor
 gets that no other host serves: `ctx.reactor`.
 
+`ctx.reactor` is served to `@powerhousedao/piece-reactor` alone — the piece
+whose actions are that surface. Every other piece finds the member throwing,
+however it was loaded and whoever shipped it.
+
 ## Why this package exists
 
 Activepieces pieces are written against `@activepieces/pieces-framework` and

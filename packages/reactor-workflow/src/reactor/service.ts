@@ -12,6 +12,7 @@ import type { WorkflowCaller, WorkflowRuntimeHostDeps } from "./host.js";
 import {
   blockTypeParts,
   containsRedactedMarker,
+  servesReactorPort,
   declaredConnectionIds,
   DEFAULT_EGRESS_POLICY,
   parseBlockType,
@@ -2309,16 +2310,19 @@ export class WorkflowRuntimeService {
         propName,
         refresherValues: (input ?? {}) as Record<string, unknown>,
         auth,
-        // A package piece's options() reads the reactor it offers choices
-        // from, over the same port a step of it would use — offered only when
-        // there is a host to answer, or the member would fail as a missing
-        // handler rather than as the unsupported member it is.
-        ...(piece.local ? { reactorAccess: true } : {}),
+        // The reactor piece's options() reads the reactor it offers choices
+        // from, over the same port a step of it would use.
+
+        // The same identity rule the run path applies: design time is not a
+        // way round it, and a piece offered the member would have none.
+        ...(servesReactorPort(parsed.packageName)
+          ? { reactorAccess: true }
+          : {}),
         // Options come from the same service the step will call: the editor
         // must not offer a choice a run cannot reach.
         ...(this.designEgress ? { egress: this.designEgress } : {}),
       },
-      piece.local
+      servesReactorPort(parsed.packageName)
         ? {
             hostCalls: reactorHandlers(
               new ScopedDesignTimeReactorPort(this.host, ctx),

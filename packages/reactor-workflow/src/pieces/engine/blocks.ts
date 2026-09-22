@@ -473,6 +473,17 @@ function redactThrown(error: unknown, values: string[]): unknown {
   return rememberSecrets(redactError(error, { values }), values);
 }
 
+// The one piece served `ctx.reactor`. Its actions are the reactor surface --
+// find, get, create, dispatch, schemas -- so the port is what it is for.
+
+// Identity, not provenance: a piece is not handed the reactor for having been
+// installed locally, shipped first-party, or registered in the host's registry.
+export const REACTOR_PORT_PIECE = "@powerhousedao/piece-reactor";
+
+export function servesReactorPort(packageName: string): boolean {
+  return packageName === REACTOR_PORT_PIECE;
+}
+
 export type BlockKind = "action" | "trigger";
 
 export interface ParsedBlockType {
@@ -613,9 +624,11 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
         this.options.egress === undefined
           ? DEFAULT_EGRESS_POLICY
           : this.options.egress;
-      // A fetched bundle never reaches the reactor: the handlers below are the
-      // only way in, and they are registered for a local piece alone.
-      const reactor = piece.local ? this.options.reactor : undefined;
+      // One piece reaches the reactor: the one whose whole job is reaching it.
+      // Not a question of where the bundle came from -- see REACTOR_PORT_PIECE.
+      const reactor = servesReactorPort(parsed.packageName)
+        ? this.options.reactor
+        : undefined;
       const result = await this.worker().runAction(
         {
           ...pieceModuleRef(piece),

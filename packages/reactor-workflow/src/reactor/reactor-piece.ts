@@ -4,7 +4,12 @@
 // are fired by the host rather than polled, and the output shape of a document
 // block depends on the model an author picked, which static piece metadata
 // cannot express. Everything else about them comes from the piece.
-export const REACTOR_PIECE = "@powerhousedao/piece-reactor";
+
+// Named where it is enforced: this is the one piece served ctx.reactor, and
+// the block types below are the surface that port exists for.
+import { REACTOR_PORT_PIECE } from "../pieces/index.js";
+
+export const REACTOR_PIECE = REACTOR_PORT_PIECE;
 
 function action(name: string): string {
   return `${REACTOR_PIECE}#${name}`;
