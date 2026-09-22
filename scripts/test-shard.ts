@@ -1,7 +1,7 @@
 // Split the `test:ci` package list into balanced shards and run one.
 // Usage: tsx scripts/test-shard.ts <shard> <total> | --print <total>
 
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -71,8 +71,12 @@ if (!Number.isInteger(index) || index < 1 || index > total) {
 const mine = shards[index - 1];
 console.log(`shard ${index}/${total}: ${mine.names.join(" ")}`);
 
-execFileSync(
+// spawnSync, not execFileSync: a failing suite should surface vitest's own
+// output and exit code, not a Node stack trace from this script.
+const result = spawnSync(
   "pnpm",
   [...mine.names.map((n) => `--filter=${n}`), "--no-bail", "run", "test"],
   { cwd: root, stdio: "inherit", env: { ...process.env, CI: "true" } },
 );
+if (result.error) throw result.error;
+process.exit(result.status ?? 1);
