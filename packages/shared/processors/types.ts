@@ -121,16 +121,27 @@ export type TrackedProcessor = {
   status: ProcessorStatus;
   lastError: string | undefined;
   lastErrorTimestamp: Date | undefined;
+  /**
+   * Clears the error and replays from the cursor. Runs outside the manager's
+   * lock, so it may be called from anywhere, a processor callback included.
+   */
   retry: () => Promise<void>;
 };
 
 /**
  * Manages processor creation and destruction based on drive operations.
+ *
+ * The manager holds a lock while it runs a factory, a live `onOperations`
+ * call, or `onDisconnect`. `registerFactory` and `unregisterFactory` take
+ * that lock, so neither may be called from inside one of those callbacks
+ * before it returns: a call made synchronously there is rejected, one made
+ * after an `await` waits on the callback that is waiting on it.
  */
 export interface IProcessorManager {
   /**
    * Registers a processor factory.
-   * Immediately creates processors for all existing drives.
+   * Immediately creates processors for all existing drives and resolves once
+   * their backfills have run.
    */
   registerFactory(identifier: string, factory: ProcessorFactory): Promise<void>;
 

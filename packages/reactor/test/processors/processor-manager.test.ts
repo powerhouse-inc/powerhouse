@@ -1843,6 +1843,38 @@ describe("ProcessorManager Standalone Tests", () => {
     });
   });
 
+  describe("Reentrant calls", () => {
+    it("should reject a registration made from inside a delivery and keep working", async () => {
+      const driveId = generateId();
+      const reentrant = createMockProcessor();
+      const nested = createMockProcessorFactory({ documentId: ["*"] });
+      reentrant.onOperations = vi
+        .fn()
+        .mockImplementation(() =>
+          processorManager.registerFactory("nested", nested.factory),
+        );
+      const factory: ProcessorFactory = () => [
+        { processor: reentrant, filter: { documentId: ["*"] } },
+      ];
+      await processorManager.registerFactory("outer", factory);
+
+      const ops = [makeDriveCreateOp(driveId, 1), makeOp(driveId, 2)];
+      await writeToOperationIndex(operationIndex, ops);
+      await processorManager.indexOperations([ops[0]!]);
+
+      const tracked = processorManager.get(`outer:${driveId}:0`);
+      expect(tracked).toBeDefined();
+      expect(tracked!.status).toBe("errored");
+      expect(tracked!.lastError).toMatch(/callback/);
+      expect(processorManager.get(`nested:${driveId}:0`)).toBeUndefined();
+
+      const later = createMockProcessorFactory({ documentId: ["*"] });
+      await processorManager.registerFactory("later", later.factory);
+      await processorManager.indexOperations([ops[1]!]);
+      expect(ordinalsOf(later.processor)).toEqual([1, 2]);
+    });
+  });
+
   describe("Failed and skipped live batches", () => {
     // lastOrdinal is a cross-document high-water mark, so a lower ordinal
     // that fails or is skipped must pull the cursor back below itself or

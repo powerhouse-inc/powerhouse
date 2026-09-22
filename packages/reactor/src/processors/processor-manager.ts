@@ -47,6 +47,12 @@ type DeliveryState = {
 // Batches from init span documents; they take every key.
 const MIXED_KEY = "*";
 
+function reentrantCall(method: string): Error {
+  return new Error(
+    `ProcessorManager.${method} was called from inside a processor or factory callback while the manager held its lock for that callback; the call would wait on itself. Make it after the callback returns.`,
+  );
+}
+
 function keyOf(items: OperationWithContext[]): string {
   const first = items[0]!.context.documentId;
   for (const item of items) {
@@ -91,6 +97,8 @@ export class ProcessorManager
   private registry: Promise<void> = Promise.resolve();
   // Backfills a pass started, awaited by that pass once its key is released.
   private spawned = new Map<string, Promise<void>[]>();
+  // True only for the synchronous part of a callback made under a key.
+  private inCallback = false;
 
   constructor(
     db: Kysely<DocumentViewDatabase>,
@@ -124,7 +132,13 @@ export class ProcessorManager
   // never during one. Delivery to a processor that is backfilling, and the
   // backfill itself, run outside it. A method holding a key must never wait
   // on another keyed or exclusive call: it would wait on itself.
-  private keyed<T>(key: string, work: () => Promise<T>): Promise<T> {
+  private keyed<T>(
+    key: string,
+    method: string,
+    work: () => Promise<T>,
+  ): Promise<T> {
+    if (this.inCallback) return Promise.reject(reentrantCall(method));
+
     const previous = Promise.all([
       this.tails.get(key) ?? Promise.resolve(),
       this.registry,
@@ -141,7 +155,9 @@ export class ProcessorManager
     return run;
   }
 
-  private exclusive<T>(work: () => Promise<T>): Promise<T> {
+  private exclusive<T>(method: string, work: () => Promise<T>): Promise<T> {
+    if (this.inCallback) return Promise.reject(reentrantCall(method));
+
     const previous = Promise.all([...this.tails.values(), this.registry]);
     const run = previous.then(work);
     this.registry = run.then(
@@ -151,6 +167,19 @@ export class ProcessorManager
     return run;
   }
 
+  // A call into the manager from the synchronous part of a callback would
+  // wait on the key the callback holds; it is rejected instead. One made
+  // after the callback's first await looks like any concurrent caller and is
+  // not detected: see the precondition on IProcessorManager.
+  private callback<T>(fn: () => Promise<T> | T): Promise<T> {
+    this.inCallback = true;
+    try {
+      return Promise.resolve(fn());
+    } finally {
+      this.inCallback = false;
+    }
+  }
+
   override async indexOperations(items: OperationWithContext[]): Promise<void> {
     if (items.length === 0) return;
 
@@ -158,8 +187,8 @@ export class ProcessorManager
     const section = () => super.indexOperations(items);
     try {
       await (key === MIXED_KEY
-        ? this.exclusive(section)
-        : this.keyed(key, section));
+        ? this.exclusive("indexOperations", section)
+        : this.keyed(key, "indexOperations", section));
     } finally {
       await this.awaitSpawned(key);
     }
@@ -177,14 +206,16 @@ export class ProcessorManager
     identifier: string,
     factory: ProcessorFactory,
   ): Promise<void> {
-    const backfills = await this.exclusive(() =>
+    const backfills = await this.exclusive("registerFactory", () =>
       this.registerFactoryUnlocked(identifier, factory),
     );
     await Promise.all(backfills);
   }
 
   unregisterFactory(identifier: string): Promise<void> {
-    return this.exclusive(() => this.unregisterFactoryUnlocked(identifier));
+    return this.exclusive("unregisterFactory", () =>
+      this.unregisterFactoryUnlocked(identifier),
+    );
   }
 
   private async registerFactoryUnlocked(
@@ -348,7 +379,7 @@ export class ProcessorManager
     let records: ProcessorRecord[];
 
     try {
-      records = await factory(driveHeader);
+      records = await this.callback(() => factory(driveHeader));
     } catch (error) {
       this.logger.error(
         "Factory '@FactoryId' failed for drive '@DriveId': @Error",
@@ -577,7 +608,7 @@ export class ProcessorManager
 
   private async safeDisconnect(processor: IProcessor): Promise<void> {
     try {
-      await processor.onDisconnect();
+      await this.callback(() => processor.onDisconnect());
     } catch (error) {
       this.logger.error("Error disconnecting processor: @Error", error);
     }
@@ -617,8 +648,9 @@ export class ProcessorManager
     }
 
     if (matching.length > 0) {
+      const deliver = () => tracked.record.processor.onOperations(matching);
       try {
-        await tracked.record.processor.onOperations(matching);
+        await (fromHold ? deliver() : this.callback(deliver));
       } catch (error) {
         tracked.status = "errored";
         tracked.lastError =
