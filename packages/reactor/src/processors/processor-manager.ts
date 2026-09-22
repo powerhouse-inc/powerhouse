@@ -58,6 +58,11 @@ export class ProcessorManager
     new Map();
   private knownDrives: Map<string, string> = new Map();
   private cursorCache: Map<string, ProcessorCursorRow> = new Map();
+  // Ordinal through which a backfill has already delivered, per processor.
+  // Live routing dedupes against this, not against lastOrdinal: batches reach
+  // the manager out of ordinal order across documents, and lastOrdinal is the
+  // high-water mark a restart replays from.
+  private backfilledThrough = new WeakMap<TrackedProcessor, number>();
   private logger: ILogger;
   private driveContainerTypes: ReadonlySet<string>;
   private legacyProcessorIds: boolean;
@@ -320,6 +325,7 @@ export class ProcessorManager
       };
 
       trackedList.push(tracked);
+      this.backfilledThrough.set(tracked, lastOrdinal);
 
       await this.saveProcessorCursor(tracked);
     }
@@ -400,6 +406,7 @@ export class ProcessorManager
 
       const lastResult = page.results[page.results.length - 1]!;
       tracked.lastOrdinal = lastResult.context.ordinal;
+      this.backfilledThrough.set(tracked, tracked.lastOrdinal);
       await this.safeSaveProcessorCursor(tracked);
 
       if (!page.next) break;
@@ -454,8 +461,9 @@ export class ProcessorManager
       allTracked.map(async (tracked) => {
         if (tracked.status !== "active") return;
 
+        const backfilled = this.backfilledThrough.get(tracked) ?? 0;
         const unseen = operations.filter(
-          (op) => op.context.ordinal > tracked.lastOrdinal,
+          (op) => op.context.ordinal > backfilled,
         );
         const matching = unseen.filter((op) =>
           matchesFilter(op, tracked.record.filter),

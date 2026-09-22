@@ -64,6 +64,11 @@ export interface IProcessor {
   /**
    * Processes a list of operations with context.
    * Called when operations match this processor's filter.
+   *
+   * Delivery is at-least-once and is not ordered by ordinal across documents:
+   * a call may carry an ordinal lower than one an earlier call carried, and an
+   * operation may be delivered again after a restart. Ordinals within one
+   * document's scope and branch arrive in order.
    */
   onOperations(operations: OperationWithContext[]): Promise<void>;
 
