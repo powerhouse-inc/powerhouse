@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { z } from "zod";
 import type {
+  BenchmarkTier,
   DerivedRatio,
   MachineEnvironment,
   MicroCase,
@@ -24,6 +25,8 @@ export type BenchTarget = {
   sourceFiles: string[];
   command: string;
   storage: StorageEngine;
+  /** Which tier its cases sit in: a stubbed call site is not a stored one. */
+  tier: BenchmarkTier;
   title: string;
   question: string;
   /**
@@ -59,9 +62,30 @@ export const BENCH_TARGETS: BenchTarget[] = [
     sourceFiles: ["bench/auth-scope.bench.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:auth:record",
     storage: "stubbed",
+    tier: "micro",
     title: "auth-scope microbenchmarks",
     question: "auth evaluation cost per step, isolated from storage",
     caveats: [],
+    renames: {},
+    stampsFile: "",
+    stampedCase: "",
+  },
+  {
+    name: "auth-storage",
+    recordScript: "bench:auth-storage:record",
+    resultsFile: "auth-gate-storage.json",
+    sourceFiles: ["bench/auth-gate-storage.bench.ts"],
+    command: "pnpm --filter @powerhousedao/reactor bench:auth-storage:record",
+    storage: "pglite",
+    tier: "meso",
+    title: "auth-gate cost against real storage",
+    question:
+      "what the admission gate and the read gate cost against a real store, and how the group-roster walk scales with referencer count",
+    caveats: [
+      "The referencer walk probes at REFERENCER_PROBE_CONCURRENCY, but PGlite serializes every query, so these numbers price the walk without the concurrency a Postgres pool would give it",
+      "The admission-gate cases vary the write cache between warm and cold at one grant count; the group fan-out axis is absent, because rebuilding a group stream needs a group document model this package does not register",
+      "The pure-CPU anchor case is copied from the micro suite unchanged and touches no storage: it is there to compare machines between the two records, not to measure this one",
+    ],
     renames: {},
     stampsFile: "",
     stampedCase: "",
@@ -73,6 +97,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     sourceFiles: ["bench/event-bus.bench.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:events:record",
     storage: "stubbed",
+    tier: "micro",
     title: "event-bus microbenchmarks",
     question: "emit cost by subscriber count, filter shape, and payload size",
     caveats: [],
@@ -87,6 +112,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     sourceFiles: ["bench/queue-perf.bench.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:queue:record",
     storage: "stubbed",
+    tier: "micro",
     title: "queue throughput microbenchmarks",
     question: "queue cost per job at realistic batch sizes",
     caveats: [
@@ -103,6 +129,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     sourceFiles: ["bench/queue-only.bench.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:queue-only:record",
     storage: "stubbed",
+    tier: "micro",
     title: "queue microbenchmarks without an executor",
     question: "enqueue and dequeue cost with nothing draining",
     caveats: [
@@ -119,6 +146,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     sourceFiles: ["bench/write-cache.bench.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:cache:record",
     storage: "pglite",
+    tier: "micro",
     title: "write-cache microbenchmarks",
     question: "write-cache hit and miss cost against PGlite",
     caveats: [
@@ -136,6 +164,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     sourceFiles: ["bench/two-reactor-sync.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:sync:record",
     storage: "pglite",
+    tier: "micro",
     title: "two-reactor sync workloads",
     question: "convergence time between two reactors",
     caveats: [
@@ -649,7 +678,7 @@ export function buildMicroEntry(
 
   return {
     kind: "micro",
-    tier: "micro",
+    tier: input.target.tier,
     title: input.title === "" ? input.target.title : input.title,
     question: input.question === "" ? input.target.question : input.question,
     command: input.target.command,

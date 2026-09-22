@@ -29,6 +29,7 @@
     "bench:auth": "vitest bench --run bench/auth-scope",
     "bench:auth:record": "vitest bench --run bench/auth-scope --outputJson bench/results/auth-scope.json",
     "bench:auth:compare": "vitest bench --run bench/auth-scope --compare bench/results/auth-scope.json",
+    "bench:auth-storage:record": "vitest bench --run bench/auth-gate-storage --outputJson bench/results/auth-gate-storage.json",
     "bench:events:record": "vitest bench --run bench/event-bus --outputJson bench/results/event-bus.json",
     "bench:queue:record": "vitest bench --run bench/queue-perf --outputJson bench/results/queue-perf.json",
     "bench:queue-only:record": "vitest bench --run bench/queue-only --outputJson bench/results/queue-only.json",

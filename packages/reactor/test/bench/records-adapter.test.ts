@@ -238,6 +238,10 @@ describe("buildMicroEntry", () => {
     expect(parsed.tier).toBe("micro");
   });
 
+  it("takes the tier from the target, so a stored call site is not filed as micro", () => {
+    expect(entryFor(findTarget("auth-storage")).tier).toBe("meso");
+  });
+
   it("never offers an id, which add-benchmark rejects", () => {
     expect(entryFor(findTarget("auth"))).not.toHaveProperty("id");
   });
@@ -699,6 +703,7 @@ describe("BENCH_TARGETS", () => {
   it("names every benchmark that exists", () => {
     expect(BENCH_TARGETS.map((target) => target.name)).toEqual([
       "auth",
+      "auth-storage",
       "events",
       "queue",
       "queue-only",
