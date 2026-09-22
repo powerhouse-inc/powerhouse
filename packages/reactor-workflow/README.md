@@ -125,19 +125,18 @@ explanation behind it.
 Each numeric one parses as `Number(raw) || default`: a value that is not a
 positive number falls back silently rather than failing at boot.
 
-Two of them carry a caveat worth knowing before a deployment depends on them:
+One of them carries a caveat worth knowing before a deployment depends on it.
+**The secrets key is not optional in production.** Unset, `loadKey` generates
+`./.ph/secrets.key` — relative to the working directory, like the bundle cache
+and the attachment staging dir. A host whose working directory does not survive
+a restart comes back with a new key, and every stored connection secret is
+undecryptable.
 
-- **The secrets key is not optional in production.** Unset, `loadKey` generates
-  `./.ph/secrets.key` — relative to the working directory, like the bundle cache
-  and the attachment staging dir. A host whose working directory does not
-  survive a restart comes back with a new key, and every stored connection
-  secret is undecryptable.
-- **The file ceiling only moves the host-side check.** The worker child is
-  forked with an empty environment (`worker/transport.ts`), so the piece-side
-  readers of the limit — `context/files.ts` and `context/normalize.ts`, loaded
-  inside that child — always see the 8 MiB default. Raising it today affects
-  only `reactor/attachment-port.ts`. The egress policy avoids this by being read
-  on the host and shipped over the worker protocol; the limit needs the same.
+Only the host process reads any of these. The worker child is forked with an
+empty environment, so the two settings it enforces travel on the wire instead:
+the egress policy is compiled per request in the child, and the file ceiling is
+stamped onto every request in `PieceWorker.execute` and installed by the child
+before it dispatches.
 
 ### From the host
 

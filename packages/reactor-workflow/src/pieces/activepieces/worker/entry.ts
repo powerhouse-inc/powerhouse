@@ -16,6 +16,7 @@ import { redactError, redactMessage } from "./redact.js";
 import { readFile } from "node:fs/promises";
 import { buildCheckConnectionContext } from "../context/check.js";
 import { DataUriFilesService, StagedFilesService } from "../context/files.js";
+import { setMaxFileBytes } from "../context/limits.js";
 import {
   normalizePropsValue,
   type NormalizeOptions,
@@ -392,9 +393,10 @@ process.on("message", (message: unknown) => {
   if (!isWorkerMessage(message)) return;
   // Deferred so a synchronous throw — a malformed egress policy — becomes a
   // rejection the handler below reports, instead of killing the child.
-  const handler = Promise.resolve().then(() =>
-    runWithEgressPolicy(message.request.egress, () => dispatch(message)),
-  );
+  const handler = Promise.resolve().then(() => {
+    setMaxFileBytes(message.request.maxFileBytes);
+    return runWithEgressPolicy(message.request.egress, () => dispatch(message));
+  });
   handler
     .catch(
       (error: unknown): WorkerResponse => ({
