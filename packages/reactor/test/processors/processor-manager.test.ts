@@ -1730,6 +1730,31 @@ describe("ProcessorManager Standalone Tests", () => {
 
       expect(ordinalsOf(processor)).toEqual([1, 2, 3]);
     });
+
+    it("should not give a 'current' processor operations that predate its drive", async () => {
+      const processor = createMockProcessor();
+      const factory: ProcessorFactory = () => [
+        { processor, filter: { documentId: ["*"] }, startFrom: "current" },
+      ];
+      await processorManager.registerFactory("current-factory", factory);
+
+      const childId = generateId();
+      const driveId = generateId();
+      const ops = [
+        makeOp(childId, 1, { documentType: "powerhouse/document-model" }),
+        makeOp(childId, 2, { documentType: "powerhouse/document-model" }),
+        makeOp(childId, 3, { documentType: "powerhouse/document-model" }),
+        makeDriveCreateOp(driveId, 4),
+      ];
+      await writeToOperationIndex(operationIndex, ops);
+
+      await processorManager.indexOperations([ops[0]!]);
+      // The drive's creation reaches the manager before the child's 2 and 3.
+      await processorManager.indexOperations([ops[3]!]);
+      await processorManager.indexOperations([ops[1]!, ops[2]!]);
+
+      expect(ordinalsOf(processor)).toEqual([4]);
+    });
   });
 
   describe("Failed and skipped live batches", () => {

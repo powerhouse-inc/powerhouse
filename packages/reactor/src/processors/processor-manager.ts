@@ -142,6 +142,9 @@ export class ProcessorManager
     this.factoryRegistry.set(identifier, factory);
     this.factoryToProcessors.set(identifier, new Map());
 
+    // A late registration has no creation batch to anchor to: "current"
+    // means from here on.
+    const creationOrdinal = this.lastOrdinal + 1;
     for (const [driveId, documentType] of this.knownDrives) {
       const driveHeader = createMinimalDriveHeader(driveId, documentType);
       await this.createProcessorsForDrive(
@@ -149,6 +152,7 @@ export class ProcessorManager
         identifier,
         factory,
         driveHeader,
+        creationOrdinal,
       );
     }
   }
@@ -266,7 +270,7 @@ export class ProcessorManager
     identifier: string,
     factory: ProcessorFactory,
     driveHeader: PHDocumentHeader,
-    creationOrdinal?: number,
+    creationOrdinal: number,
   ): Promise<void> {
     let records: ProcessorRecord[];
 
@@ -304,8 +308,7 @@ export class ProcessorManager
         lastErrorTimestamp = cached.lastErrorTimestamp ?? undefined;
       } else {
         const startFrom = record.startFrom ?? "beginning";
-        lastOrdinal =
-          startFrom === "current" ? this.currentStart(creationOrdinal) : 0;
+        lastOrdinal = startFrom === "current" ? creationOrdinal - 1 : 0;
         status = "active";
         lastError = undefined;
         lastErrorTimestamp = undefined;
@@ -368,13 +371,6 @@ export class ProcessorManager
         await this.backfillProcessor(tracked);
       }
     }
-  }
-
-  // "current" means from the drive's creation onward. Another document's
-  // batch may already have moved the shared cursor past that creation.
-  private currentStart(creationOrdinal: number | undefined): number {
-    if (creationOrdinal === undefined) return this.lastOrdinal;
-    return Math.min(this.lastOrdinal, creationOrdinal - 1);
   }
 
   private async backfillProcessor(tracked: TrackedProcessor): Promise<void> {
