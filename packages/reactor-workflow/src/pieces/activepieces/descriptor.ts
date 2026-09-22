@@ -39,6 +39,9 @@ export interface PieceActionDescriptor {
   // UI metadata only — not a credential contract (spike finding).
   requireAuth: boolean;
   props: PiecePropDescriptor[];
+  // Carried verbatim: it is what the expression picker builds a later step's
+  // field list from, and a package piece has no published listing to read.
+  outputSchema?: unknown;
 }
 
 export interface PieceTriggerDescriptor {
@@ -49,7 +52,11 @@ export interface PieceTriggerDescriptor {
   testStrategy?: string;
   requireAuth: boolean;
   props: PiecePropDescriptor[];
+  outputSchema?: unknown;
   hasSampleData: boolean;
+  // The sample itself, not just whether there is one: a trigger that declares
+  // no outputSchema is read for its shape instead.
+  sampleData?: unknown;
   // How the sender proves the endpoint exists before it will register it.
   // Absent when the trigger declares no handshake, or declares NONE.
   handshake?: { strategy: string; paramName?: string };
@@ -182,6 +189,9 @@ export function buildDescriptor(
         (propName) =>
           `activepieces:${source.packageName}#${actionName}.${propName}`,
       ),
+      ...(action.outputSchema !== undefined
+        ? { outputSchema: action.outputSchema }
+        : {}),
     }),
   );
 
@@ -198,8 +208,14 @@ export function buildDescriptor(
         (propName) =>
           `activepieces:${source.packageName}#${triggerName}.${propName}`,
       ),
+      ...(trigger.outputSchema !== undefined
+        ? { outputSchema: trigger.outputSchema }
+        : {}),
       hasSampleData:
         trigger.sampleData !== undefined && trigger.sampleData !== null,
+      ...(trigger.sampleData !== undefined && trigger.sampleData !== null
+        ? { sampleData: trigger.sampleData }
+        : {}),
       handshake: describeHandshake(trigger),
     }),
   );
