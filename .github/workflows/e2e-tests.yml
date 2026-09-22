@@ -1,10 +1,25 @@
 name: E2E Tests
 
+# paths-ignore, not an allowlist: these suites exercise nearly the whole stack
+# (ph CLI, codegen, connect, reactor), so enumerating what affects them would
+# silently skip real regressions. Only prose and the docs site are excluded.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "apps/academy/**"
+      - ".claude/**"
+      - "LICENSE"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "apps/academy/**"
+      - ".claude/**"
+      - "LICENSE"
   # Allow manual triggering for testing
   workflow_dispatch:
 
@@ -57,6 +72,9 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.8
+
+      - name: Restore Nx build cache
+        uses: ./.github/actions/nx-cache
 
       - name: Build
         run: pnpm build
@@ -130,6 +148,9 @@ jobs:
         with:
           bun-version: 1.3.8
 
+      - name: Restore Nx build cache
+        uses: ./.github/actions/nx-cache
+
       - name: Build
         run: pnpm build
 
@@ -199,6 +220,9 @@ jobs:
 
       # The suite publishes the workspace to a local registry and installs
       # switchboard from it, so the tarballs have to carry dist output.
+      - name: Restore Nx build cache
+        uses: ./.github/actions/nx-cache
+
       - name: Build
         run: pnpm build
 
@@ -236,6 +260,9 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.8
+
+      - name: Restore Nx build cache
+        uses: ./.github/actions/nx-cache
 
       - name: Build
         run: pnpm build
@@ -323,6 +350,9 @@ jobs:
       # The recipes resolve the Powerhouse packages through `link:` paths into
       # this checkout, and every package's exports point at dist/, so a full
       # build has to land before the suite runs.
+      - name: Restore Nx build cache
+        uses: ./.github/actions/nx-cache
+
       - name: Build
         run: pnpm build
 

@@ -7,6 +7,9 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   test: {
+    // No vi.mock and no global assignment in this suite, so test files can
+    // share a module registry instead of re-instantiating it per file.
+    isolate: false,
     globals: true,
     environment: "node",
     // Scoped include. The two suites under src/templates/document-model/tests
