@@ -234,9 +234,10 @@ export async function ensurePieceBundle(
   return started;
 }
 
-// The Activepieces release that began inlining a piece's dependencies into its
-// bundle. They still publish pieces to npm, which is why npm stays a source.
-const AP_SELF_CONTAINED_SINCE = "0.86.0";
+// The Activepieces PLATFORM release that began inlining a piece's dependencies
+// into its bundle. Their release line, never a piece's own version: piece
+// semver runs far behind it, and text-helper's newest is 0.6.6.
+const AP_PLATFORM_INLINING_SINCE = "0.86.0";
 
 // Enough to recognise what the bundle wants without turning the refusal into
 // a wall of text.
@@ -258,16 +259,21 @@ async function assertSelfContained(
   const rest = declared.length - listed.length;
   const count =
     declared.length === 1 ? "a dependency" : `${declared.length} dependencies`;
-  // Only an Activepieces piece gets their release number: a bundle from
-  // anywhere else would be sent chasing a version that means nothing to it.
+  // Only an Activepieces piece gets their number, and only ever labelled as
+  // their platform's: a piece at 0.6.6 has no 0.86.0 to be pinned to.
   const since = name.startsWith("@activepieces/")
-    ? ` Activepieces bundles have been self-contained since ${AP_SELF_CONTAINED_SINCE}.`
+    ? ` Activepieces inline them in bundles built with their platform ` +
+      `${AP_PLATFORM_INLINING_SINCE} or later -- that is their platform's ` +
+      `release line, not this package's own version.`
     : "";
+  // No advice to pin: the check compares no versions, and a dependency the
+  // upstream bundler externalised is declared by every release there is.
   throw new Error(
     `Piece bundle ${name}@${version} is not self-contained: it declares ${count} ` +
       `(${listed.join(", ")}${rest > 0 ? `, and ${rest} more` : ""}). ` +
-      `The reactor no longer installs a bundle's dependencies. Pin ${name} at or above ` +
-      `its first self-contained release.${since}`,
+      `This reactor imports a bundle straight from its cache directory and installs ` +
+      `nothing, so it can only run one that declares no dependencies at all; a piece ` +
+      `whose bundler leaves one external cannot run here at any version.${since}`,
   );
 }
 
