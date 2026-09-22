@@ -15,7 +15,13 @@ export interface ResolvedPiece extends PieceModuleRef {
 }
 
 export interface PieceResolver {
-  resolve(name: string, version: string): Promise<ResolvedPiece>;
+  // entryUrl: where a package-provided piece is served, for a package this
+  // host loaded from a registry and so has no copy of on disk.
+  resolve(
+    name: string,
+    version: string,
+    entryUrl?: string,
+  ): Promise<ResolvedPiece>;
 }
 
 // A piece found in an installed reactor package: a module file, or a directory
@@ -25,6 +31,9 @@ export interface LocalPiece {
   version: string;
   entryPath?: string;
   bundleDir?: string;
+  // Set instead of the two above when the package was loaded from a registry:
+  // the piece is declared and served, but nothing of it is on this disk yet.
+  entryUrl?: string;
 }
 
 // May answer asynchronously: a host whose registry loads on first use waits
@@ -43,11 +52,16 @@ export function bundleResolver(options: {
   timeoutMs?: number;
 }): PieceResolver {
   return {
-    async resolve(name: string, version: string): Promise<ResolvedPiece> {
+    async resolve(
+      name: string,
+      version: string,
+      entryUrl?: string,
+    ): Promise<ResolvedPiece> {
       const bundle = await ensurePieceBundle({
         name,
         version,
         cacheDir: options.cacheDir,
+        ...(entryUrl ? { entryUrl } : {}),
         ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
       });
       return { name, version, bundleDir: bundle.dir, local: false };
@@ -66,6 +80,11 @@ export function localFirstResolver(
     async resolve(name: string, version: string): Promise<ResolvedPiece> {
       const local = await lookup(name);
       if (!local) return fallback.resolve(name, version);
+      // Declared but not on this disk: the package came from a registry, so
+      // the piece is fetched from where that registry serves it.
+      if (!local.entryPath && !local.bundleDir && local.entryUrl) {
+        return fallback.resolve(name, local.version, local.entryUrl);
+      }
       return {
         name,
         version: local.version,

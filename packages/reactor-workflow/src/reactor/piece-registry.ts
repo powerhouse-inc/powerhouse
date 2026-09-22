@@ -21,10 +21,22 @@ export class PieceRegistry {
     }
     this.byName = found;
     const names = [...found.keys()].join(", ");
+    // "Holding" meant one thing when every piece was code on this disk. A
+    // package loaded from a registry contributes the declaration, not the code.
+    const held = [...found.values()].filter(
+      (piece) => piece.entryPath ?? piece.bundleDir,
+    ).length;
+    const served = found.size - held;
     // Names go through the logger's values: it substitutes `@`-prefixed
     // tokens, and a scoped package name printed inline comes out as null/pack.
     if (found.size > 0) {
-      logger.info(`Holding ${found.size} package piece(s): @names`, names);
+      const what =
+        served === 0
+          ? `${held} package piece(s) on disk`
+          : held === 0
+            ? `${served} package piece(s), fetched when first run`
+            : `${held} on disk and ${served} fetched when first run`;
+      logger.info(`Holding ${what}: @names`, names);
     } else {
       logger.debug("Holding no package pieces");
     }

@@ -96,13 +96,16 @@ export interface FetchPieceBundleOptions {
   version: string;
   cacheDir: string;
   timeoutMs?: number;
+  // Where a piece an installed reactor package ships is served, when the
+  // package itself came from a registry rather than this disk.
+  entryUrl?: string;
   // How long the install of a bundle's declared dependencies may run, for the
   // few that declare any. Bounds a hung registry rather than budgeting work.
   installTimeoutMs?: number;
 }
 
 /** Where a bundle came from, "cache" being a copy one of the others left. */
-export type BundleSource = "registry" | "cdn" | "npm";
+export type BundleSource = "package" | "registry" | "cdn" | "npm";
 
 export interface FetchedBundle {
   dir: string;
@@ -193,6 +196,58 @@ async function downloadTarball(
   );
 }
 
+async function extractDownloadedTarball(
+  name: string,
+  version: string,
+  timeoutMs: number,
+  staging: string,
+): Promise<BundleSource> {
+  const { tgz, source } = await downloadTarball(name, version, timeoutMs);
+  await extractTarball(tgz, staging);
+  return source;
+}
+
+// A piece from an installed reactor package, served by the registry that
+// package came from: its manifest, then the one file the manifest names.
+
+// `ph build` leaves each piece a self-contained module with a package.json
+// beside it, so those two files are the whole bundle.
+async function downloadPackagePiece(
+  entryUrl: string,
+  staging: string,
+  timeoutMs: number,
+): Promise<BundleSource> {
+  const base = entryUrl.slice(0, entryUrl.lastIndexOf("/") + 1);
+  const fetchInto = async (url: string, name: string): Promise<Buffer> => {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!response.ok) {
+      throw new Error(`${url} responded ${response.status}`);
+    }
+    const body = await readBoundedBody(response, url);
+    await writeFile(path.join(staging, name), body);
+    return body;
+  };
+  await mkdir(staging, { recursive: true });
+  const manifest = await fetchInto(`${base}package.json`, "package.json");
+  const main = (JSON.parse(manifest.toString("utf8")) as { main?: unknown })
+    .main;
+  const entry =
+    typeof main === "string" && main !== ""
+      ? main
+      : entryUrl.slice(base.length);
+  // One segment: the manifest of a built piece names a file beside itself, and
+  // a path that climbs out of the staging directory is not that.
+  if (entry.includes("/") || entry.includes("\\") || entry.startsWith(".")) {
+    throw new Error(
+      `Piece manifest at ${base} names an unusable main: ${entry}`,
+    );
+  }
+  await fetchInto(`${base}${entry}`, entry);
+  return "package";
+}
+
 // Downloads and extracts a published piece bundle, returning the directory to
 // hand to loadPieceFromDir(). A cached extraction is reused, and re-checked.
 export async function fetchPieceBundle(
@@ -211,10 +266,13 @@ export async function fetchPieceBundle(
     };
   }
 
-  const { tgz, source } = await downloadTarball(name, version, timeoutMs);
   const staging = `${dir}.tmp-${process.pid}`;
   await rm(staging, { recursive: true, force: true });
-  await extractTarball(tgz, staging);
+  // A piece a package ships is served as its built module, not as a tarball,
+  // so it is fetched file by file rather than extracted.
+  const source = options.entryUrl
+    ? await downloadPackagePiece(options.entryUrl, staging, timeoutMs)
+    : await extractDownloadedTarball(name, version, timeoutMs, staging);
   await rm(dir, { recursive: true, force: true });
   try {
     await rename(staging, dir);
