@@ -96,7 +96,9 @@ describe("a package piece in the catalog", () => {
   it("lists the piece with counts read from the piece itself", async () => {
     const catalog = await runtime.pieceCatalog();
 
-    expect(catalog).toEqual([
+    // The engine's own blocks are listed too, and always.
+    expect(catalog.map((entry) => entry.name)).toContain("core");
+    expect(catalog.filter((entry) => entry.name === PIECE)).toEqual([
       expect.objectContaining({
         name: PIECE,
         displayName: "Fixture",
@@ -111,9 +113,10 @@ describe("a package piece in the catalog", () => {
   });
 
   it("carries the auth fields a connection form needs", async () => {
-    const [entry] = await runtime.pieceCatalog();
+    const catalog = await runtime.pieceCatalog();
+    const entry = catalog.find((item) => item.name === PIECE);
 
-    expect(entry.auth).toEqual(
+    expect(entry?.auth).toEqual(
       expect.objectContaining({
         type: "CUSTOM_AUTH",
         displayName: "Fixture Auth",
@@ -160,10 +163,11 @@ describe("a package piece in the catalog", () => {
     const result = await runtime.searchBlocks("thing");
 
     // Ranked as any hit is: a name the query prefixes comes first.
-    expect(result.hits.map((hit) => hit.blockType)).toEqual([
-      `${PIECE}#trigger:thing_happened`,
-      `${PIECE}#do_thing`,
-    ]);
+    expect(
+      result.hits
+        .map((hit) => hit.blockType)
+        .filter((blockType) => blockType.startsWith(PIECE)),
+    ).toEqual([`${PIECE}#trigger:thing_happened`, `${PIECE}#do_thing`]);
   });
 
   it("builds an output tree without asking the published catalog", async () => {

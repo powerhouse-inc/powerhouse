@@ -117,6 +117,13 @@ import type { AttachmentPort } from "../pieces/index.js";
 import { createAttachmentPort } from "./attachment-port.js";
 import { createPieceStorePort } from "./piece-store-port.js";
 import { currentWorkflowId, withRunScope } from "./run-scope.js";
+import {
+  CORE_DESCRIPTOR,
+  CORE_PIECE_NAME,
+  CORE_PIECE_VERSION,
+  coreBlockDescriptor,
+  isCoreBlock,
+} from "./core-catalog.js";
 import { LocalEncryptedSecretStore } from "./secret-store.js";
 import {
   WorkflowRunStore,
@@ -364,6 +371,21 @@ const SUPERVISED_KINDS = new Set(["piece", "schedule", PIECE_WEBHOOK_KIND]);
 // The engine's own namespace. No catalog has ever heard of it, and core#manual
 // reaches the resolution below every time a workflow is saved.
 const CORE_PACKAGE = "core";
+
+// Whether there is anything to authenticate with: a secret handle, or a
+// non-secret config value such as a base URL.
+function hasCredentials(state: {
+  config?: unknown;
+  secretRefs?: { ref: string }[];
+}): boolean {
+  if ((state.secretRefs ?? []).length > 0) return true;
+  const config = state.config;
+  return (
+    typeof config === "object" &&
+    config !== null &&
+    Object.keys(config as Record<string, unknown>).length > 0
+  );
+}
 
 // A source that answered and has no such piece, as opposed to one that could
 // not be asked. Only the first is something to tell an operator to act on.
@@ -1835,7 +1857,11 @@ export class WorkflowRuntimeService {
     if (state.status === "REVOKED") {
       return { ok: false, detail: "Connection is revoked", accountLabel };
     }
-    if (state.status === "UNCONFIGURED") {
+    // Judged on what the connection holds, not on `status`: SET_CONNECTOR
+    // leaves UNCONFIGURED behind and only a recorded check clears it, so
+    // trusting the flag here refuses the first check of every connection —
+    // the one an author runs the moment they finish filling it in.
+    if (state.authType !== "NONE" && !hasCredentials(state)) {
       return this.recordCheckResult(document, {
         ok: false,
         detail: "Connection is not configured",
@@ -2132,12 +2158,22 @@ export class WorkflowRuntimeService {
       published = [];
     }
     return [
+      // The engine's blocks belong to no package; without this they are
+      // absent from every listing an author browses.
+      catalogEntry(CORE_DESCRIPTOR, CORE_PIECE_NAME, CORE_PIECE_VERSION),
       ...entries,
       ...published.filter((entry) => !names.has(entry.name)),
     ].sort((a, b) => a.displayName.localeCompare(b.displayName));
   }
 
   async pieceActions(packageName: string): Promise<PieceActionsResult> {
+    if (packageName === CORE_PIECE_NAME) {
+      return actionsResult(
+        CORE_DESCRIPTOR,
+        CORE_PIECE_NAME,
+        CORE_PIECE_VERSION,
+      );
+    }
     const local = await this.localPiece(packageName);
     return local
       ? actionsResult(local.descriptor, local.piece.name, local.piece.version)
@@ -2145,6 +2181,13 @@ export class WorkflowRuntimeService {
   }
 
   async pieceTriggers(packageName: string): Promise<PieceTriggersResult> {
+    if (packageName === CORE_PIECE_NAME) {
+      return triggersResult(
+        CORE_DESCRIPTOR,
+        CORE_PIECE_NAME,
+        CORE_PIECE_VERSION,
+      );
+    }
     const local = await this.localPiece(packageName);
     return local
       ? triggersResult(local.descriptor, local.piece.name, local.piece.version)
@@ -2157,13 +2200,15 @@ export class WorkflowRuntimeService {
     query: string,
     limit?: number,
   ): Promise<BlockSearchResult> {
-    let local: BlockSearchIndex | undefined;
+    const core = localSearchHits(CORE_DESCRIPTOR, CORE_PIECE_NAME);
+    let local: BlockSearchIndex | undefined = indexFromHits(core);
     try {
-      local = indexFromHits(
-        (await this.localPieces()).flatMap(({ piece, descriptor }) =>
+      local = indexFromHits([
+        ...core,
+        ...(await this.localPieces()).flatMap(({ piece, descriptor }) =>
           localSearchHits(descriptor, piece.name),
         ),
-      );
+      ]);
     } catch (error) {
       // The published half is still worth serving without them.
       this.logger.warn(`Could not index the package pieces: ${String(error)}`);
@@ -2181,6 +2226,7 @@ export class WorkflowRuntimeService {
   // Design-time: the action/trigger descriptor (props, auth) driving the
   // editor form; triggers come back under a "trigger" key.
   async blockDescriptor(blockType: string): Promise<unknown> {
+    if (isCoreBlock(blockType)) return coreBlockDescriptor(blockType);
     const parsed = await this.resolvedBlock(blockType);
     if (!parsed) return null;
     const descriptor = await this.pieceDescriptor(
