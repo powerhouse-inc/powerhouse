@@ -49,6 +49,8 @@ export type ApAction = Partial<
   // Authored shape of run()'s return, for the expression picker. Plain data,
   // and never validated against — a piece may return whatever it likes.
   outputSchema?: unknown;
+  // "human" | "ai" | "both"; absent counts as human-visible.
+  audience?: string;
   run: (ctx: unknown) => Promise<unknown>;
 };
 
