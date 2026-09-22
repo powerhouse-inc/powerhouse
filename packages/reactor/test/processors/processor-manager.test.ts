@@ -173,6 +173,69 @@ function makeOp(
   };
 }
 
+function deferred<T = void>() {
+  let resolve!: (v: T) => void;
+  const promise = new Promise<T>((r) => (resolve = r));
+  return { promise, resolve };
+}
+
+class HookedProcessorManager extends ProcessorManager {
+  afterCommit: (items: OperationWithContext[]) => Promise<void> = () =>
+    Promise.resolve();
+
+  protected override async commitOperations(
+    items: OperationWithContext[],
+  ): Promise<void> {
+    await super.commitOperations(items);
+    // Outside any transaction: PGlite is single-connection, so a hold inside
+    // one would deadlock the other pass.
+    await this.afterCommit(items);
+  }
+}
+
+function ordinalsOf(processor: {
+  receivedOperations: OperationWithContext[];
+}): number[] {
+  return processor.receivedOperations.map((op) => op.context.ordinal);
+}
+
+// What `reactor.create` plus a first edit commits: creation in scope
+// `document`, the edit in scope `global`.
+function driveCreationOps(driveId: string): OperationWithContext[] {
+  return [
+    makeDriveCreateOp(driveId, 1),
+    makeOp(driveId, 2, {
+      actionType: "UPGRADE_DOCUMENT",
+      scope: "document",
+      index: 1,
+    }),
+    makeOp(driveId, 3, { index: 0 }),
+  ];
+}
+
+async function insertDriveSnapshot(
+  db: Kysely<CombinedDatabase>,
+  driveId: string,
+): Promise<void> {
+  await db
+    .insertInto("DocumentSnapshot")
+    .values({
+      id: generateId(),
+      documentId: driveId,
+      slug: "test-drive",
+      name: "Test Drive",
+      scope: "global",
+      branch: "main",
+      content: JSON.stringify({}),
+      documentType: DRIVE_DOCUMENT_TYPE,
+      lastOperationIndex: 0,
+      lastOperationHash: "hash-0",
+      identifiers: JSON.stringify({}),
+      metadata: JSON.stringify({}),
+    })
+    .execute();
+}
+
 describe("ProcessorManager Integration Tests", () => {
   let reactorModule: InProcessReactorModule;
 
@@ -1437,6 +1500,136 @@ describe("ProcessorManager Standalone Tests", () => {
 
       // onOperations should only have been called once (the failing first call)
       expect(processor.onOperations).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("Concurrent read-model batches", () => {
+    // The coordinator chains projection per documentId:scope:branch, so a
+    // drive's creation (scope document) and its first edit (scope global)
+    // reach the manager as separate batches in either order.
+    async function readCursors(processorId: string) {
+      const cursor = await db
+        .selectFrom("ProcessorCursor")
+        .select("lastOrdinal")
+        .where("processorId", "=", processorId)
+        .executeTakeFirst();
+      const viewState = await db
+        .selectFrom("ViewState")
+        .select("lastOrdinal")
+        .where("readModelId", "=", "processor-manager")
+        .executeTakeFirst();
+      return { cursor, viewState };
+    }
+
+    it("should keep cursors at the highest ordinal when the edit arrives before the creation", async () => {
+      const driveId = generateId();
+      await insertDriveSnapshot(db, driveId);
+      const { factory, processor } = createMockProcessorFactory({
+        documentType: [DRIVE_DOCUMENT_TYPE],
+      });
+      await processorManager.registerFactory("f", factory);
+
+      const ops = driveCreationOps(driveId);
+      await writeToOperationIndex(operationIndex, ops);
+
+      await processorManager.indexOperations([ops[2]!]);
+      await processorManager.indexOperations([ops[0]!, ops[1]!]);
+
+      expect(ordinalsOf(processor)).toEqual([1, 2, 3]);
+
+      const tracked = processorManager.get(`f:${driveId}:0`);
+      expect(tracked).toBeDefined();
+      expect(tracked!.lastOrdinal).toBe(3);
+
+      const { cursor, viewState } = await readCursors(`f:${driveId}:0`);
+      expect(cursor?.lastOrdinal).toBe(3);
+      expect(viewState?.lastOrdinal).toBe(3);
+
+      // A restart backfills from the persisted cursors: op 3 must not repeat.
+      const restarted = new ProcessorManager(
+        db as unknown as Kysely<DocumentViewDatabase>,
+        operationIndex,
+        mockWriteCache,
+        new ConsistencyTracker(),
+        new ConsoleLogger(["test"]),
+        DEFAULT_DRIVE_CONTAINER_TYPES,
+      );
+      await restarted.init();
+      const { factory: factory2, processor: processor2 } =
+        createMockProcessorFactory({ documentType: [DRIVE_DOCUMENT_TYPE] });
+      await restarted.registerFactory("f", factory2);
+
+      expect(ordinalsOf(processor2)).toEqual([]);
+    });
+
+    it("should not create processors while another pass is mid-flight", async () => {
+      const pm = new HookedProcessorManager(
+        db as unknown as Kysely<DocumentViewDatabase>,
+        operationIndex,
+        mockWriteCache,
+        new ConsistencyTracker(),
+        new ConsoleLogger(["test"]),
+        DEFAULT_DRIVE_CONTAINER_TYPES,
+      );
+      await pm.init();
+
+      const driveId = generateId();
+      const mock = createMockProcessorFactory({
+        documentType: [DRIVE_DOCUMENT_TYPE],
+      });
+      await pm.registerFactory("f", mock.factory);
+
+      const ops = driveCreationOps(driveId);
+      await writeToOperationIndex(operationIndex, ops);
+
+      const editRouted = deferred();
+      const release = deferred();
+      pm.afterCommit = async (items) => {
+        if (items[0]!.context.ordinal === 3) {
+          editRouted.resolve();
+          await release.promise;
+        }
+      };
+
+      const edit = pm.indexOperations([ops[2]!]);
+      await editRouted.promise;
+      const creation = pm.indexOperations([ops[0]!, ops[1]!]);
+      try {
+        expect(mock.factoryCallCount).toBe(0);
+      } finally {
+        release.resolve();
+      }
+      await Promise.all([edit, creation]);
+
+      expect(ordinalsOf(mock.processor)).toEqual([1, 2, 3]);
+
+      const { cursor, viewState } = await readCursors(`f:${driveId}:0`);
+      expect(cursor?.lastOrdinal).toBe(3);
+      expect(viewState?.lastOrdinal).toBe(3);
+    });
+
+    it("should deliver an earlier ordinal that arrives after a later one", async () => {
+      const driveId = generateId();
+      const { factory, processor } = createMockProcessorFactory({
+        documentId: ["*"],
+      });
+      await processorManager.registerFactory("f", factory);
+
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      // Child documents project on their own coordinator keys.
+      await processorManager.indexOperations([
+        makeOp(generateId(), 3, { documentType: "powerhouse/document-model" }),
+      ]);
+      await processorManager.indexOperations([
+        makeOp(generateId(), 2, { documentType: "powerhouse/document-model" }),
+      ]);
+
+      expect(ordinalsOf(processor)).toContain(2);
+
+      const tracked = processorManager.get(`f:${driveId}:0`);
+      expect(tracked).toBeDefined();
+      expect(tracked!.lastOrdinal).toBe(3);
     });
   });
 });
