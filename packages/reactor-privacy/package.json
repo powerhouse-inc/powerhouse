@@ -1,0 +1,54 @@
+{
+  "name": "@powerhousedao/reactor-privacy",
+  "version": "6.2.3-dev.22",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/reactor-privacy"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "source": "./index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "eslint",
+    "build": "tsdown",
+    "test": "vitest --run"
+  },
+  "dependencies": {
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "graphql": "catalog:",
+    "graphql-tag": "catalog:",
+    "kysely": "catalog:"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "catalog:",
+    "document-model": "workspace:*",
+    "kysely-pglite-dialect": "catalog:",
+    "tsdown": "catalog:",
+    "vitest": "catalog:"
+  },
+  "description": "Subject disclosure and whole-document erasure for the Powerhouse reactor: a documents-by-subject index, access and erasure requests, and their audit log.",
+  "keywords": [
+    "powerhouse",
+    "reactor",
+    "privacy",
+    "gdpr",
+    "erasure"
+  ]
+}

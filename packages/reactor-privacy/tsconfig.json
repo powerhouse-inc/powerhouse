@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./.tsbuild"
+  },
+  "include": ["**/*"],
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../reactor"
+    },
+    {
+      "path": "../reactor-api"
+    },
+    {
+      "path": "../shared"
+    }
+  ]
+}
