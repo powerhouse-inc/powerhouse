@@ -1,6 +1,6 @@
 # Plan: Action signature integrity (#2894)
 
-Date: 2026-09-23
+Date: 2026-09-23 (revised the same day after a code review of the first draft)
 Replaces: #2970, #2974, #2975 (closed)
 
 ## Problem
@@ -11,132 +11,170 @@ action, so any valid tuple verifies on any action in any document. In
 addition:
 
 - Two hash schemes disagree: renown `hashAction` (`signer.ts:116`) covers
-  `scope+type+input`; shared `buildOperationSignatureParams`
+  `scope+type+input` with SHA-256 over insertion-order `JSON.stringify`;
+  shared `buildOperationSignatureParams`
   (`packages/shared/document-model/crypto.ts:66`) covers
-  `documentId+scope+type+input` with SHA-1 and a non-injective `join("")`.
-  Neither covers id, nonce, timestamp or branch.
-- Tuple element [3] (previous state) is signed but never checked.
-- `SignatureVerifier.verifyOperations`
-  (`packages/reactor/src/executor/signature-verifier.ts:65`) has no caller, so
-  load and sync operations are never verified.
-- Whether signatures are required is a host flag, not a document property.
+  `documentId+scope+type+input` with SHA-1. Both use a non-injective
+  `join("")`. Neither covers id, timestamp, branch or `signer.user`.
+- `signer.user` is not signed at all, so any relay can relabel who an
+  operation is attributed to. The auth scope reads `signer.user.address` as
+  the subject.
+- `requireSignatures` is inert. `SignatureVerifier.verifyActions`
+  (`packages/reactor/src/executor/signature-verifier.ts:21`) skips unsigned
+  actions before the handler runs, so the flag never rejects anything. It is
+  also switchboard-only, and switchboard's worker pool
+  (`apps/switchboard/src/server.mts:632`) passes no verifier at all.
+- Tuple element [3] (previous state) is signed but never checked, and every
+  ReactorClient-signed action carries `""` there.
+- The same action id can be written twice on the local write path. Load
+  dedups by action id; mutation does not.
+
+What already works and the first draft got wrong: load and sync **are**
+verified. Every load job runs `processActions`
+(`simple-job-executor.ts:2098`), which calls `verifyActions` (`:537`) before
+any reducer. Reevaluation (`:1700`) and mutation (`:420`) go through the same
+call. Only `verifyOperations` (`signature-verifier.ts:65`) is dead.
 
 ## Decisions
 
-1. **The reactor checks integrity, not identity.** The reactor proves that a
-   signature covers the action and that the key in the tuple made it. Whether
-   that key belongs to `signer.user` is the host's job (switchboard, Connect),
-   supplied through a hook. Hosts that want Renown credential binding
-   implement it there.
-2. **Signature policy is document state.** The document scope declares the
-   scheme and whether signatures are required. The reactor enforces what the
-   document declares at each operation's position. No host flag decides it.
-3. **The branch is in the preimage.** A signature doesn't transfer between
-   branches.
-4. **Reshuffles are countersigned.** A reactor that moves an operation appends
-   its own signature over the new position and keeps the author's signature.
-   Receivers decide which reshufflers they trust through a host hook.
-5. **Load and sync verify under the same rules as local writes.**
-6. **Mixed-version safety comes from opt-in.** A document stays on legacy
-   until an action moves it to v2, and that happens only after verifiers
-   support v2.
+1. **The reactor checks integrity, the host checks identity.** The reactor
+   proves the signature covers this action in this document and that the key
+   in the tuple made it. Whether that key may sign as `signer.user` is the
+   host's job through a hook. The hook defaults to deny once
+   `authEnforcement` is on and to accept otherwise, because the auth scope
+   trusts `user.address` and must not do so against an unbound key.
+2. **Signature policy is set at genesis and never changes.** The document's
+   header carries it in `protocolVersions.signature`, written by
+   `CREATE_DOCUMENT` and copied verbatim by every reactor, old or new. There
+   is no policy action, no positional lookup and no transition. A policy
+   resolved at a timestamp position can be bypassed by backdating, because
+   positions are caller-supplied timestamps; a policy with no transition has
+   no window to backdate into.
+3. **Order is bound by the preimage, not by countersignatures.** v2 signs
+   documentId, branch, scope, type, action id and timestamp. The reshuffle
+   order is timestamp, then action id, then operation id
+   (`packages/reactor/src/utils/reshuffle.ts:60`), so once those are signed
+   a reshuffler has nothing left to choose. Index and skip are replica-local
+   (`packages/shared/document-model/operations.ts:276`), so a signature over
+   them would pin nothing another replica could check. Countersignatures,
+   the previous-state check, `trustReshuffler` and a reactor signing key are
+   all dropped. Tuple [3] stays informational.
+4. **The scheme is self-identifying and the message format does not change.**
+   A v2 tuple carries `v2:` in front of the hash in element [2]. The signed
+   message keeps today's `\x19Signed Operation:\n` layout. An old verifier
+   only checks ECDSA over the tuple's own params, so a v2 tuple still passes
+   it. Signers can therefore switch to v2 as soon as they are released, with
+   no policy read before signing and no coordination with peers. A 6th tuple
+   element is not an option: `deserializeSignature`
+   (`packages/shared/document-model/signatures.ts:72`) truncates to five.
+5. **Off admission, a failure is a stored denial.** Local admission rejects
+   the job so the client sees the error. Load, reshuffle and reevaluation
+   record a `deniedReason` and the job succeeds, matching the auth scope's
+   rule. Verification of stored operations is a pure function of the log:
+   the identity hook runs only when a reactor first stores an operation,
+   never on re-verification.
+6. **Legacy stays weak and is retired by opt-in.** Stored actions are jsonb
+   and Postgres reorders their keys, so the renown legacy hash cannot be
+   recomputed after a store round trip. Legacy tuples are recomputed at
+   local admission only and get today's ECDSA-only check everywhere else.
+   Documents created at level 2 refuse legacy outright.
 
 ## Design
 
-### Document signature policy
+### Policy
 
 ```ts
-// PHDocumentState gains:
-type SignaturePolicy = {
-  scheme: "legacy" | "v2";
-  required: boolean;
-};
-// absent => { scheme: "legacy", required: false }, which is today's behaviour
+// PHDocumentHeader.protocolVersions, set by CREATE_DOCUMENT input
+{ "base-reducer": 2, "signature": 2 }
 
-// new document-scope action, handled in document-action-handler.ts
-type SetSignaturePolicyAction = {
-  type: "SET_SIGNATURE_POLICY";
-  scope: "document";
-  input: SignaturePolicy;
-};
+// level (absent or 1) = legacy: any tuple or none, today's behaviour
+// level 2            = every operation carries a v2 tuple
 ```
 
-- The action is verified under the policy in effect before it. The new
-  policy applies from the next operation.
-- The auth scope grants control who can set it.
-- The verifier resolves the policy in effect at each operation's position,
-  the same way the auth scope resolves grants at a position. Reshuffle and
-  reevaluation re-verify stored operations under the policy they were written
-  under, so old legacy operations keep passing after a document moves to v2.
+- `createDocumentFromAction` (`packages/reactor/src/executor/util.ts:137`)
+  already copies the map. The three create paths (`core/reactor.ts:511`,
+  `client/reactor-client.ts:993`, `client/drive-client.ts:114`) and
+  `createDocument` (`packages/shared/document-model/documents.ts:254`) add
+  the key.
+- The verifier reads the target document's header. For `CREATE_DOCUMENT`
+  itself it reads the action's own input.
+- A document-scope action that writes to another document
+  (`ADD_RELATIONSHIP` writes to `input.sourceId`) is verified under that
+  document's policy. Use the same `targetDocumentId` the write path uses
+  (`executor/util.ts:71`), as #2974 did.
+- Existing documents stay at level 1. A document moves to level 2 only by
+  being re-created.
 
-### v2 preimage
+### v2 tuple
 
 ```ts
-hash = sha256(canonicalJson([
-  "v2", documentId, branch, scope, type, id, nonce, timestampUtcMs, input,
-]))
-message = lengthPrefixed([signedAtTimestamp, appKey, hash, prevStateHash])
+preimage = canonicalJson([
+  "v2", documentId, branch, scope, type, id, timestampUtcMs, input,
+  signer.user.address, signer.user.networkId, signer.user.chainId,
+  signer.app.key,
+])
+tuple = [
+  signedAtUnixSeconds,
+  signer.app.key,                       // must equal tuple[1] and the ECDSA key
+  "v2:" + base64url(sha256(preimage)),
+  prevStateHash,                        // informational, may be ""
+  "0x" + hex(ecdsaP256(message)),
+]
+message = "\x19Signed Operation:\n" + len + tuple[0..3].join("")   // unchanged
 ```
 
-- `canonicalJson`: sorted keys, BigInt encoded as a string, and unicode
-  normalized the way the reducer's `stringifyJson` does it.
-- An empty `documentId` or `branch` is rejected at sign time and verify time.
-- `documentId` is the canonical id of the document the action writes to, not
-  the job's document and not a slug. Port #2974's target-document resolution
-  (drive `ADD_RELATIONSHIP`, slug → id).
-- The tuple stays five elements. The scheme comes from the document's policy
-  at that position, not from a tag in the tuple, so a signature can't be
-  relabelled to a weaker scheme and the GraphQL wire format doesn't change.
+- `canonicalJson` is `safe-stable-stringify` with sorted keys, the same
+  function the state hash uses. Sign time rejects BigInt, NaN, Infinity and
+  sparse arrays; undefined properties are omitted as `JSON.stringify` omits
+  them. It is computed from parsed values, so it survives the jsonb round
+  trip.
+- `documentId` is the id of the log the operation is stored in. Slugs are
+  resolved at the client boundary before signing, never in the verifier.
+  `branch` comes from the same place the job gets it.
+- No nonce. `id` is in the preimage and the executor rejects a second write
+  of a live action id, so a v2 signature is single-use without one.
+- Empty `documentId` or `branch` is rejected at sign time and verify time.
+
+```ts
+// ISigner gains the coordinates it signs
+signAction(action: Action, target: { documentId: string; branch: string },
+           signal?: AbortSignal): Promise<Action>
+```
 
 ### Verification
 
 ```ts
-// reactor-owned: integrity only
-verify(op, policy): IntegrityResult
-  // 1. unsigned: reject if policy.required, else accept
-  // 2. recompute hash under policy.scheme from op.action; must equal tuple[2]
-  // 3. ECDSA over the message with tuple[1] (the key)
-  // 4. previous state (v2 only), see below
+// reactor-owned, always on, no host wiring
+verify(action, target, policy): "ok" | SignatureRefusal
+  // 1. tuple[1] must equal signer.app.key
+  // 2. no signer:      level 2 → UNSIGNED_REQUIRED, else ok
+  // 3. tuple[2] "v2:"  → recompute v2 preimage, must match; ECDSA
+  // 4. otherwise legacy:
+  //      level 2       → SCHEME_BELOW_POLICY
+  //      at admission  → recompute by length (44 = renown SHA-256,
+  //                      28 = shared SHA-1), must match; ECDSA
+  //      elsewhere     → ECDSA only (today's check)
 
-// host-provided
+// host-provided, admission only
 type SignatureTrustPolicy = {
-  // is this key allowed to sign as signer.user? default: accept
-  authorizeSigner(signer: ActionSigner, key: string, documentId: string): Promise<boolean>;
-  // may this key reorder operations in this document? default: own key only
-  trustReshuffler(key: string, documentId: string): Promise<boolean>;
+  authorizeSigner(signer: ActionSigner, key: string,
+                  documentId: string): Promise<boolean>;
 };
 ```
 
-`SignerConfig` (`packages/reactor/src/signer/types.ts`) takes the trust policy
-next to the verifier. Errors name the action's target document.
-
-### Previous state and countersignatures
-
-- The author's tuple[3] declares the scope state hash the author signed
-  against.
-- On apply, the reactor compares it with the actual pre-apply state hash.
-- If they match, the operation passes.
-- If they don't, the operation needs a countersignature from a trusted
-  reshuffler whose declared previous state matches.
-- Resulting hashes are checked after apply against what the reducer produced.
-  They are never trusted as declared.
-
-```ts
-// appended to signer.signatures by a reactor that reshuffles
-countersignature = [
-  signedAtTimestamp, reshufflerKey,
-  sha256(canonicalJson(["v2-reshuffle", operationId, index, skip,
-                        sha256(authorSignature)])),
-  prevStateHash + ":" + resultingStateHash,
-  signatureHex,
-]
-```
-
-- Every reactor that reshuffles, locally or on load, countersigns with its own
-  host-provided signer and trusts its own key.
-- A chain of reshuffles appends one countersignature per move. The latest
-  countersignature has to match the actual position.
-- Under legacy policy the previous-state check is skipped.
+- Admission is the first time this reactor stores the operation: a mutation
+  job, or a load job carrying operations from a remote. Reshuffle and
+  reevaluation re-verify stored operations but never call the hook.
+- The hook's answer may not depend on when it is asked. Revocation goes
+  through auth-scope grants, not the hook, or replicas diverge.
+- Refusals: `MALFORMED_TUPLE`, `KEY_MISMATCH`, `HASH_MISMATCH`,
+  `BAD_SIGNATURE`, `UNSIGNED_REQUIRED`, `SCHEME_BELOW_POLICY`,
+  `SIGNER_UNAUTHORIZED`. A refusal names the target document. At admission
+  it is the job error. Elsewhere it is the operation's `deniedReason`, with
+  no feature flag in the way.
+- `SignerConfig` (`packages/reactor/src/signer/types.ts`) loses `verifier`
+  and gains the trust policy. Worker pools load it through a `FactorySpec`
+  like the verifier does today (`executor/worker/protocol.ts:111`).
 
 ## Phases
 
@@ -144,62 +182,67 @@ Each phase merges green to main on its own.
 
 | Phase | Change | Behaviour change |
 |---|---|---|
-| P1 Recompute legacy hash | The verifier recomputes the legacy hash from the action and compares it with tuple[2]. Add a log-only mode and a dry-run script over stored operations. Errors name the target document. | Rejects tampered input. Run the dry-run first; stored operations signed through the shared SHA-1 path or carrying BigInt input could fail re-verification during reshuffle. |
-| P2 Document policy | `SignaturePolicy` in `PHDocumentState`, `SET_SIGNATURE_POLICY`, position-aware lookup, `required` enforced from policy. Remove the host `requireSignature` flag once the policy covers it. | None until a document sets a policy. |
-| P3 v2 verify | `hashActionV2` and the length-prefixed message (port from #2974). The verifier handles v2 where the policy says so. Signers read the target document's policy and sign v2 when it is set. | Only documents that opted in. |
-| P4 Trust hook and countersignatures | `SignatureTrustPolicy`; previous-state check under v2; reshuffle paths (`simple-job-executor.ts:1426`, `:1941`) countersign; the reactor needs its own signer. | v2 documents: an uncountersigned moved operation is rejected. |
-| P5 Load and sync | Call `verifyOperations` in load jobs with the same rules. Remove the dead path in `packages/shared/document-model/actions.ts` `verifyOperationSignature`. | Tampered remote operations are rejected. |
-| P6 Signers and defaults | ReactorClient `execute`/`executeAsync`/`executeBatch`, the drive client, reactor-browser `signing.ts` (align its `prevOpHash` with the pre-apply hash), the switchboard test helper. New documents are created with v2 policy by default. | New documents start on v2. |
+| P1 Reactor-owned verifier | Move integrity checking into the executor, always on, replacing the host-wired `SignatureVerificationHandler`. Recompute legacy at admission by hash length; ECDSA-only elsewhere. Reject a second write of a live action id. Log-only mode with a `signature_integrity_mismatch_total{scheme,path,reason}` metric, and a `preflight:signatures` sweep over a Postgres-backed store modelled on `preflight:auth`. Delete `verifyOperations` and shared `verifyOperationSignature`; update the academy pages that recommend it. | Tampered legacy input is rejected at admission once log-only is lifted. Worker pools verify. |
+| P2 v2 scheme and signers | `hashActionV2`, `canonicalJson`, the `v2:` prefix, the `ISigner` change. Port #2974's target-document resolution. Every signer emits v2: `ReactorClient` `execute`/`executeAsync`/`executeBatch`, the reactor's create/delete/relationship paths, the drive client, reactor-browser `signing.ts` and `remote-controller.ts`, `actions/sign.ts` (retire the SHA-1 path), the Connect worker, the switchboard e2e helper. | New writes carry v2 tuples that verify everywhere, including on old peers. Tampered v2 operations are rejected on every path. |
+| P3 Genesis policy and stored denials | `protocolVersions.signature`, level-2 enforcement, stored `deniedReason` off admission, job error at admission. Remove `REQUIRE_SIGNATURES` / `identity.requireSignatures`. | None until a document is created at level 2. |
+| P4 Identity hook | `SignatureTrustPolicy.authorizeSigner`, admission-only, default by `authEnforcement`, `FactorySpec` for workers. Switchboard implements it with Renown credentials. | Under `authEnforcement`, a key that cannot sign as its claimed address is refused. |
+| P5 Level 2 by default | New documents are created at level 2. | New documents refuse unsigned and legacy operations. |
 
 ## Mixed-version rollout
 
-- P1 to P5 change verifiers only. Signers keep emitting legacy until the
-  target document's policy says v2.
-- A document moves to v2 only by a `SET_SIGNATURE_POLICY` action. Once it
-  has, a reactor from before P2 can't process it.
-- The document is the gate: nobody should set v2 on a document until every
-  peer that syncs it is on P3 or later.
-- Sync capability: remotes advertise the schemes they support in the
-  handshake. A reactor doesn't push a v2 document to a remote that doesn't
-  advertise v2, and logs that it didn't.
-- Before P2 ships, check what an unupgraded reactor does with an unknown
-  document-scope action (it dead-letters, or it throws in the reducer). The
-  result decides whether the capability check is required or advisory.
-- P6's "new documents default to v2" lands only after P3 and P4 are released
-  and deployed on the switchboards that sync those documents.
+- P1 and P2 are safe to deploy in any order across a fleet. A v2 tuple
+  passes an old verifier because the message format is unchanged, and a
+  legacy tuple from an old signer passes a new verifier at level 1.
+- P3 changes nothing for level-1 documents. A pre-P3 reactor that receives a
+  level-2 document copies the header and admits whatever it would have
+  admitted before, then forwards it; upgraded peers store those operations
+  as denied. So no document is created at level 2 until every peer that
+  syncs it is on P3. P5 flips the default only after that.
+- An old reactor treats an unknown action type as a no-op and forwards it,
+  so no capability handshake is needed and none is added.
+- Legacy operations already stored are grandfathered on ECDSA alone. The
+  P1 dry-run reports how many would fail a recompute; the answer changes
+  the log-only period, not the design.
 
 ## Tests
 
-- **Preimage:** canonical JSON key order, BigInt, unicode; changing any
-  preimage field changes the hash; v2 relabelled as legacy under a v2 policy
-  is rejected.
-- **Replay:** the same tuple onto another document, branch or scope, mutated
-  input, and resubmission under a fresh action id are all rejected by the
-  executor, not only at the hash level.
-- **Policy:** the policy in effect at a position; legacy operations before a
-  switch re-verify during reshuffle and reevaluation; `required` rejects
-  unsigned actions.
-- **Countersignatures:** concurrent writers reshuffled by a trusted reactor
-  pass; a countersignature from an untrusted reactor is rejected; a forged
-  resulting hash is rejected after apply.
-- **Sync:** a tampered operation over load is rejected; a two-node test with
-  one pre-P3 peer respects the capability gate.
+- **Preimage:** sorted keys, BigInt rejected, no unicode normalization;
+  changing any preimage field including `signer.user` changes the hash; a
+  multi-key input still verifies after a Postgres jsonb round trip.
+- **Replay:** the same tuple onto another document, branch or scope, with
+  mutated input, relabelled `signer.user`, or resubmitted under the same or
+  a fresh action id, is rejected by the executor.
+- **Policy:** level 2 refuses unsigned and legacy tuples; level 1 accepts
+  both; `CREATE_DOCUMENT` is verified under its own input's policy;
+  `ADD_RELATIONSHIP` under the target document's.
+- **Paths:** a mutation refusal fails the job; a load, reshuffle or
+  reevaluation refusal stores a denial and the job succeeds; one poisoned
+  operation in a load batch does not stall the document; a stale-head
+  append and a two-action batch pass under v2.
+- **Legacy:** renown and shared tuples both recompute at admission; a
+  stored legacy operation with reordered keys passes off admission.
+- **Wire:** a `v2:` tuple survives `serializeSignature` and an old
+  `deserializeSignature`; an old `createSignatureVerifier` accepts it.
+- **Hook:** the default denies under `authEnforcement` and accepts
+  otherwise; the hook is not called on reshuffle or reevaluation.
 - Run through the real `pnpm test` per package, not isolated `vitest run`.
+
+## Not in this plan
+
+- The load path reuses the remote's declared operation hash and keeps stale
+  hashes on moved operations (`packages/shared/document-model/reducer.ts:639`).
+  Document-scope operations store `hash: ""`. Recomputing state hashes is a
+  convergence concern and gets its own issue.
+- Withholding operations cannot be detected per operation.
 
 ## Open questions
 
-1. **Downgrading policy.** Can a document go from v2 back to legacy, or from
-   required to optional? Governed by the auth scope either way, but a one-way
-   scheme is simpler to reason about.
-2. **P1 dry-run result.** If stored operations fail the legacy recompute,
-   decide whether to accept them as grandfathered or treat them as corrupt.
-3. **Position semantics across scopes.** The policy lives in the document
-   scope and applies to operations in other scopes. Reuse the auth scope's
-   cross-scope positioning.
-4. **The reactor's own signing key.** Countersigning needs every reshuffling
-   reactor to hold a key. Decide how hosts provision one: switchboard config,
-   and Connect's worker-side renown key.
-5. **GDPR redaction.** `input` is in the v2 hash, so redacting it voids the
-   signature. The subject-redaction plan already requires voiding and logging
-   such signatures; make sure the verifier treats a voided signature as
-   intentionally removed and not as tampering.
+1. **Migrating existing documents.** Re-creation is the only path to level 2.
+   Decide whether a duplication tool is wanted, and for which documents.
+2. **GDPR redaction.** `input` and `signer.user.address` are both in the v2
+   preimage, so Tier 1 redaction voids a v2 signature where it did not void
+   a legacy one. Re-verification would then deny the operation. The
+   redaction path must write a per-operation void marker that verification
+   honours, and only that path may write it.
+3. **Switchboard's `authorizeSigner`.** Which Renown credential proves a key
+   may sign as an address, and how it is cached so the answer is stable.
