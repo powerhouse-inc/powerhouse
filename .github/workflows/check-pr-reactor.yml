@@ -32,16 +32,16 @@ env:
   NX_ISOLATE_PLUGINS: false
 
 jobs:
-  # Two shards, not three: a third saves ~1m but adds a job that can queue
-  # behind the runner cap. Lint and the reactor packages ride the lighter shard.
+  # Lint and the reactor packages ride shard 3, the lightest, instead of a job
+  # of their own that can queue behind the runner cap.
   test-reactor:
-    name: Test Reactor (shard ${{ matrix.shard }}/2)
+    name: Test Reactor (shard ${{ matrix.shard }}/3)
     runs-on: ubuntu-24.04
     container: node:24
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
 
     services:
       postgres:
@@ -85,13 +85,13 @@ jobs:
         run: >-
           pnpm test:reactor
           --coverage.enabled=false
-          --shard=${{ matrix.shard }}/2
+          --shard=${{ matrix.shard }}/3
           --reporter=default
           --reporter=json
           --outputFile.json=vitest-timings.json
 
       - name: Lint
-        if: matrix.shard == 2
+        if: matrix.shard == 3
         run: pnpm lint
         working-directory: packages/reactor
 
@@ -101,7 +101,7 @@ jobs:
       # changes. Running them here, where the trigger already fires on
       # packages/reactor/**, is what covers that direction.
       - name: Run reactor package tests
-        if: matrix.shard == 2
+        if: matrix.shard == 3
         run: pnpm test:reactor-packages
 
       # This step's duration swings by ~50% run to run on identical code, while
