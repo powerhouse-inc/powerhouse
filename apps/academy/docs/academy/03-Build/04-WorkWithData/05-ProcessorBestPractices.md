@@ -19,6 +19,10 @@ The key principle: **never block on a reactor operation from inside a processor*
 
 This design keeps processors predictable, avoids circular dependencies, and prevents scenarios where a processor waits on work that depends on that same processor finishing.
 
+## Ordering across documents
+
+Operations for one document's scope and branch arrive in ordinal order, but operations for different documents do not: document B's creation can reach your processor after document A's operation that refers to B. If you need operations in ordinal order within one call, sort the batch by `context.ordinal` at the top of `onOperations`. No ordering is available across calls. If a processor must resolve a reference to another document, look it up in the read model or relational store it already writes to, and handle the case where it is not there yet, rather than relying on the order of arrival.
+
 ## Dispatching actions with `dispatch`
 
 The `dispatch` API lets a processor mutate documents by executing actions. It is available on the `IProcessorHostModule` object passed to your factory.

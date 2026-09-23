@@ -65,12 +65,13 @@ export interface IProcessor {
    * Processes a list of operations with context.
    * Called when operations match this processor's filter.
    *
-   * Delivery is at-least-once for operations the manager has indexed: after
-   * a restart a processor may see an operation again. Calls are not ordered
-   * by ordinal across documents and may overlap across documents; within one
-   * document's scope and branch, operations arrive in order. A crash between
-   * two concurrently projected documents, after the higher ordinal's cursor
-   * was persisted, can leave the lower ordinals unreplayed.
+   * Delivery is at-least-once: a processor may see an operation again after
+   * a restart or a retry. Within one document's scope and branch, operations
+   * arrive in ordinal order. Across documents there is no ordering guarantee.
+   * A processor receives one `onOperations` call at a time; the next call
+   * begins after the previous resolves. A crash between two concurrently
+   * projected documents, after the higher ordinal's cursor was persisted, can
+   * leave the lower ordinals unreplayed.
    */
   onOperations(operations: OperationWithContext[]): Promise<void>;
 
@@ -124,31 +125,31 @@ export type TrackedProcessor = {
   lastError: string | undefined;
   lastErrorTimestamp: Date | undefined;
   /**
-   * Clears the error and replays from the cursor. Runs outside the manager's
-   * lock, so it may be called from anywhere, a processor callback included.
+   * Clears the error and resolves once the replay from the cursor completes.
+   * Safe from anywhere, but awaiting it from this processor's own
+   * `onOperations` waits on itself: the replay runs after that call returns.
+   * A no-op once the processor has been removed.
    */
   retry: () => Promise<void>;
 };
 
 /**
  * Manages processor creation and destruction based on drive operations.
- *
- * The manager holds a lock while it runs a factory, a live `onOperations`
- * call, or `onDisconnect`. `registerFactory` and `unregisterFactory` take
- * that lock, so neither may be called from inside one of those callbacks
- * before it returns: a call made synchronously there is rejected, one made
- * after an `await` waits on the callback that is waiting on it.
  */
 export interface IProcessorManager {
   /**
    * Registers a processor factory.
    * Immediately creates processors for all existing drives and resolves once
-   * their backfills have run.
+   * every factory run has completed and its processors are bound. Their
+   * backfills run afterwards, on each processor's own queue.
    */
   registerFactory(identifier: string, factory: ProcessorFactory): Promise<void>;
 
   /**
-   * Unregisters a processor factory and disconnects all processors it created.
+   * Unregisters a processor factory. Resolves once its processors receive no
+   * new deliveries and their cursors are deleted; each one's in-flight
+   * delivery finishes first, then `onDisconnect` runs. Safe to call from
+   * inside a processor's own `onOperations`.
    */
   unregisterFactory(identifier: string): Promise<void>;
 

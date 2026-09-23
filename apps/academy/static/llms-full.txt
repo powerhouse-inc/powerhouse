@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-22T19:07:18.210Z
+> Generated: 2026-09-23T16:37:27.410Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -5445,7 +5445,7 @@ type TrackedProcessor = {
 };
 ```
 
-**Ordering.** Batches reach the manager one document at a time, and different documents are projected in parallel, so a processor is not called in global ordinal order: a call may carry an ordinal lower than one an earlier call carried, and calls for different documents may overlap. Within one document's scope and branch, operations arrive in order. On each batch the manager applies the filter and calls `onOperations` on the matches a backfill has not already delivered. On success it raises `lastOrdinal` to the batch's maximum ordinal (including unmatched operations) when that is higher; a later batch never lowers it. Delivery is at-least-once for operations the manager has indexed: after a restart a processor may see an operation again. A crash between two concurrently projected documents, after the higher ordinal's cursor was persisted, can leave the lower ordinals unreplayed.
+**Ordering.** Batches reach the manager one document at a time, and different documents are projected in parallel, so a processor is not called in global ordinal order: a call may carry an ordinal lower than one an earlier call carried. Within one document's scope and branch, operations arrive in ordinal order; across documents there is no ordering guarantee. A processor receives one `onOperations` call at a time: each processor has its own delivery queue, and the next call begins after the previous one resolves. A slow processor delays only its own queue. On each batch the manager applies the filter and queues the matches, minus any a backfill has already delivered. On success it raises `lastOrdinal` to the batch's maximum ordinal (including unmatched operations) when that is higher. Delivery is at-least-once: a processor may see an operation again after a restart or a retry. A crash between two concurrently projected documents, after the higher ordinal's cursor was persisted, can leave the lower ordinals unreplayed.
 
 **`startFrom`.** When a processor is first created and no cursor row exists yet:
 
@@ -5454,11 +5454,11 @@ type TrackedProcessor = {
 
 `startFrom` applies **only on first creation**. Once a cursor row exists, it is ignored — the persisted cursor wins. Restarting the reactor never re-runs `startFrom`.
 
-**Backfill and replay.** When a processor's `lastOrdinal` is behind the manager, the manager pages through history with `operationIndex.getSinceOrdinal(lastOrdinal)`, filters each page, calls `onOperations`, advances the cursor to the page's max ordinal, persists it, and follows the continuation until exhausted. This runs when a factory registers against a drive that already has history, and after a restart to replay anything missed while the reactor was down. Backfill runs outside the manager's lock, so other documents keep indexing; live batches for a processor that is backfilling are held and routed once it finishes, against what the backfill delivered, so none is lost or repeated.
+**Backfill and replay.** When a processor's `lastOrdinal` is behind the manager, the manager pages through history with `operationIndex.getSinceOrdinal(lastOrdinal)`, filters each page, calls `onOperations`, advances the cursor to the page's max ordinal, persists it, and follows the continuation until exhausted. This runs when a factory registers against a drive that already has history, and after a restart to replay anything missed while the reactor was down. Backfill runs on the processor's queue, so other documents keep indexing and other processors keep receiving; live batches for a processor that is backfilling wait behind it and skip whatever the backfill already delivered. `registerFactory` resolves once the factory has run and its processors are bound, before their backfills finish; to wait for a backfill, watch the processor's `lastOrdinal` through `get()` or `getAll()`.
 
 **Persistence.** Cursors are stored in the `ProcessorCursor` table, keyed by `processorId`, and survive restarts. On startup the manager rehydrates every cursor, then catch-up replays the gap.
 
-**Failure isolation.** Processors run in parallel, each in its own try/catch. If `onOperations` throws, that processor goes to `status: "errored"`, its `lastError` and `lastErrorTimestamp` are recorded, and its cursor is set below the lowest ordinal of the batch that failed. Other processors are unaffected. There is no automatic retry: an errored processor stays errored, and later batches that match it are skipped and pull its cursor below them likewise, until you call `tracked.retry()` (which re-activates it and replays from the cursor) or re-register its factory. See [Error handling](/academy/Reference/Reactor/ErrorHandling).
+**Failure isolation.** Processors run in parallel, each on its own queue. If `onOperations` throws, or a backfill page cannot be read, that processor goes to `status: "errored"`, its `lastError` and `lastErrorTimestamp` are recorded, and its cursor is set below the lowest ordinal of the batch that failed. Other processors are unaffected. There is no automatic retry: an errored processor stays errored, and later batches that match it are skipped and pull its cursor below them likewise, until you call `tracked.retry()` (which re-activates it and replays from the cursor) or re-register its factory. See [Error handling](/academy/Reference/Reactor/ErrorHandling).
 
 To inspect state, use the manager: `get(processorId)` for one processor or `getAll()` for every tracked processor across all drives.
 
@@ -28334,6 +28334,10 @@ Processors should follow a one-way data flow: operations flow **in** via `onOper
 The key principle: **never block on a reactor operation from inside a processor**. When a processor dispatches actions, the job is submitted asynchronously — the processor does not wait for it to complete. If the processor needs to react to the result, it will receive the resulting operations in a future `onOperations` call.
 
 This design keeps processors predictable, avoids circular dependencies, and prevents scenarios where a processor waits on work that depends on that same processor finishing.
+
+## Ordering across documents
+
+Operations for one document's scope and branch arrive in ordinal order, but operations for different documents do not: document B's creation can reach your processor after document A's operation that refers to B. If you need operations in ordinal order within one call, sort the batch by `context.ordinal` at the top of `onOperations`. No ordering is available across calls. If a processor must resolve a reference to another document, look it up in the read model or relational store it already writes to, and handle the case where it is not there yet, rather than relying on the order of arrival.
 
 ## Dispatching actions with `dispatch`
 
