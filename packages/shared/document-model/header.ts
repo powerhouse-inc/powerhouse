@@ -2,6 +2,11 @@ import type { ActionSigningTarget } from "./action-signature.js";
 import type { Action } from "./actions.js";
 import type { PHDocumentHeader } from "./documents.js";
 import type { Signature } from "./signatures.js";
+import {
+  deriveDocumentId,
+  signaturePolicyOf,
+  type ProtocolVersions,
+} from "./signature-policy.js";
 import type { ISigner, SigningParameters } from "./types.js";
 import { generateId } from "./utils.js";
 
@@ -159,29 +164,56 @@ export const validateHeader = async (
  * Creates a header that has yet to be signed. This header is not valid, but
  * can be input into {@link createSignedHeader} to create a signed header.
  *
+ * With `protocolVersions` requiring v2 signatures the header takes a random
+ * nonce and the id {@link deriveDocumentId} gives, so `id` must be omitted.
+ *
  * @returns An unsigned header for a document.
  */
 export const createPresignedHeader = (
-  id: string = generateId(),
+  id?: string,
   documentType = "",
+  protocolVersions?: ProtocolVersions,
 ): PHDocumentHeader => {
-  return {
-    id,
+  const createdAtUtcIso = new Date().toISOString();
+  const header: PHDocumentHeader = {
+    id: id ?? generateId(),
     sig: {
       publicKey: {},
       nonce: "",
     },
     documentType,
-    createdAtUtcIso: new Date().toISOString(),
+    createdAtUtcIso,
     slug: "",
     name: "",
     branch: "main",
     revision: {
       document: 0,
     },
-    lastModifiedAtUtcIso: new Date().toISOString(),
+    lastModifiedAtUtcIso: createdAtUtcIso,
     meta: {},
   };
+  if (protocolVersions === undefined) {
+    return header;
+  }
+
+  header.protocolVersions = { ...protocolVersions };
+  if (signaturePolicyOf(header) === "legacy") {
+    return header;
+  }
+
+  if (id !== undefined) {
+    throw new Error(
+      `A v2-required document's id is derived from its header; cannot use ${id}`,
+    );
+  }
+  header.sig.nonce = generateId();
+  header.id = deriveDocumentId({
+    documentType,
+    createdAtUtcIso,
+    nonce: header.sig.nonce,
+    protocolVersions: header.protocolVersions,
+  });
+  return header;
 };
 
 /**

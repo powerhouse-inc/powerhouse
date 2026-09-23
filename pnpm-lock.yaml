@@ -2761,6 +2761,9 @@ importers:
 
   packages/shared:
     dependencies:
+      '@noble/hashes':
+        specifier: ^1.8.0
+        version: 1.8.0
       '@sindresorhus/fnv1a':
         specifier: 'catalog:'
         version: 3.1.0

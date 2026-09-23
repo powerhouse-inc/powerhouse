@@ -5,6 +5,7 @@ import { isDenied } from "./denied.js";
 import { HashMismatchError } from "./errors.js";
 import { createPresignedHeader } from "./header.js";
 import type { DocumentOperations, Operation } from "./operations.js";
+import type { ProtocolVersions } from "./signature-policy.js";
 import type { PHDocumentSignatureInfo } from "./signatures.js";
 import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";
@@ -237,21 +238,25 @@ function createDocumentScopeOperations<TState extends PHBaseState>(
 
 /**
  * Creates a new document. When `documentType` is given the header is stamped
- * with it and the document-scope operations are seeded.
+ * with it and the document-scope operations are seeded. `protocolVersions` is
+ * merged over the base-reducer default; see {@link createPresignedHeader}.
  */
 export function baseCreateDocument<TState extends PHBaseState = PHBaseState>(
   createState: CreateState<TState>,
   initialState?: Partial<TState>,
   documentType = "",
+  protocolVersions?: ProtocolVersions,
 ): PHDocument<TState> {
   const state = createState(initialState);
-  const header = createPresignedHeader(generateId(), documentType);
 
-  // The document's own CREATE_DOCUMENT operation records this, so the header
-  // has to agree with it. Left off the header factory itself, because that is
-  // also how a rebuild starts and a rebuild must take the version from the
+  // The document's own CREATE_DOCUMENT operation records these, so the header
+  // has to agree with it. Left off the header factory's default, because that
+  // is also how a rebuild starts and a rebuild must take the version from the
   // stored operation rather than assume one.
-  header.protocolVersions = { "base-reducer": 2 };
+  const header = createPresignedHeader(undefined, documentType, {
+    "base-reducer": 2,
+    ...protocolVersions,
+  });
 
   const phDocument: PHDocument<TState> = {
     header,
