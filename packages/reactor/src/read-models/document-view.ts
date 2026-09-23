@@ -9,6 +9,7 @@ import {
   isDenied,
 } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
+import { sql } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
@@ -26,16 +27,14 @@ import {
   type IOperationStore,
   type ViewFilter,
 } from "../storage/interfaces.js";
+import { notPurged } from "../storage/kysely/document-purge-gate.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import {
   BaseReadModel,
   defaultReadModelIndexingConfig,
   type ReadModelIndexingConfig,
 } from "./base-read-model.js";
-import type {
-  DocumentViewDatabase,
-  InsertableDocumentSnapshot,
-} from "./types.js";
+import type { DocumentViewDatabase } from "./types.js";
 
 type Database = StorageDatabase & DocumentViewDatabase;
 
@@ -302,12 +301,17 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             if (slug && slug !== documentId && !existingSnapshot?.isDeleted) {
               await trx
                 .insertInto("SlugMapping")
-                .values({
-                  slug,
-                  documentId,
-                  scope: scopeName,
-                  branch,
-                })
+                .columns(["slug", "documentId", "scope", "branch"])
+                .expression(
+                  trx
+                    .selectNoFrom([
+                      sql<string>`${slug}::text`.as("slug"),
+                      sql<string>`${documentId}::text`.as("documentId"),
+                      sql<string>`${scopeName}::text`.as("scope"),
+                      sql<string>`${branch}::text`.as("branch"),
+                    ])
+                    .where((eb) => notPurged(eb, documentId)),
+                )
                 .onConflict((oc) =>
                   oc.column("slug").doUpdateSet({
                     documentId,
@@ -341,24 +345,41 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               )
               .execute();
           } else {
-            const snapshot: InsertableDocumentSnapshot = {
-              id: uuidv4(),
-              documentId,
-              slug,
-              name,
-              scope: scopeName,
-              branch,
-              content: newState,
-              documentType,
-              lastOperationIndex: index,
-              lastOperationHash: hash,
-              lastOperationOrdinal: ordinal,
-              identifiers: null,
-              metadata: null,
-              deletedAt: null,
-            };
-
-            await trx.insertInto("DocumentSnapshot").values(snapshot).execute();
+            await trx
+              .insertInto("DocumentSnapshot")
+              .columns([
+                "id",
+                "documentId",
+                "slug",
+                "name",
+                "scope",
+                "branch",
+                "content",
+                "documentType",
+                "lastOperationIndex",
+                "lastOperationHash",
+                "lastOperationOrdinal",
+              ])
+              .expression(
+                trx
+                  .selectNoFrom([
+                    sql<string>`${uuidv4()}::text`.as("id"),
+                    sql<string>`${documentId}::text`.as("documentId"),
+                    sql<string | null>`${slug}::text`.as("slug"),
+                    sql<string | null>`${name}::text`.as("name"),
+                    sql<string>`${scopeName}::text`.as("scope"),
+                    sql<string>`${branch}::text`.as("branch"),
+                    sql<unknown>`${JSON.stringify(newState)}::jsonb`.as(
+                      "content",
+                    ),
+                    sql<string>`${documentType}::text`.as("documentType"),
+                    sql<number>`${index}::integer`.as("lastOperationIndex"),
+                    sql<string>`${hash}::text`.as("lastOperationHash"),
+                    sql<number>`${ordinal}::integer`.as("lastOperationOrdinal"),
+                  ])
+                  .where((eb) => notPurged(eb, documentId)),
+              )
+              .execute();
           }
         }
       }

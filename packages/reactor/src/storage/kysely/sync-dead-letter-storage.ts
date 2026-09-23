@@ -1,5 +1,6 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
+import { sql } from "kysely";
 import type { PagingOptions, PagedResults } from "../../shared/types.js";
 import type {
   ChannelErrorSource,
@@ -8,6 +9,7 @@ import type {
 import { quarantinesDocument } from "../../sync/utils.js";
 import type { DeadLetterRecord } from "../interfaces.js";
 import type { ISyncDeadLetterStorage } from "../interfaces.js";
+import { notPurged } from "./document-purge-gate.js";
 import type {
   Database,
   InsertableSyncDeadLetter,
@@ -107,7 +109,40 @@ export class KyselySyncDeadLetterStorage implements ISyncDeadLetterStorage {
 
       await trx
         .insertInto("sync_dead_letters")
-        .values(insertable)
+        .columns([
+          "id",
+          "job_id",
+          "job_dependencies",
+          "remote_name",
+          "document_id",
+          "scopes",
+          "branch",
+          "operations",
+          "error_source",
+          "error_message",
+          "error_type",
+        ])
+        .expression(
+          trx
+            .selectNoFrom([
+              sql<string>`${insertable.id}::text`.as("id"),
+              sql<string>`${insertable.job_id}::text`.as("job_id"),
+              sql<unknown>`${insertable.job_dependencies}::jsonb`.as(
+                "job_dependencies",
+              ),
+              sql<string>`${insertable.remote_name}::text`.as("remote_name"),
+              sql<string>`${insertable.document_id}::text`.as("document_id"),
+              sql<unknown>`${insertable.scopes}::jsonb`.as("scopes"),
+              sql<string>`${insertable.branch}::text`.as("branch"),
+              sql<unknown>`${insertable.operations}::jsonb`.as("operations"),
+              sql<string>`${insertable.error_source}::text`.as("error_source"),
+              sql<string>`${insertable.error_message}::text`.as(
+                "error_message",
+              ),
+              sql<string>`${insertable.error_type}::text`.as("error_type"),
+            ])
+            .where((eb) => notPurged(eb, insertable.document_id)),
+        )
         .onConflict((oc) => oc.column("id").doNothing())
         .execute();
     });

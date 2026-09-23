@@ -1,4 +1,10 @@
-import type { Generated, Insertable, Selectable, Updateable } from "kysely";
+import type {
+  ColumnType,
+  Generated,
+  Insertable,
+  Selectable,
+  Updateable,
+} from "kysely";
 
 export interface OperationTable {
   id: Generated<number>;
@@ -113,6 +119,22 @@ export interface GroupReferenceTable {
   groupId: string;
 }
 
+/** A bigint column: pg reads it back as a string, PGlite as a number or bigint. */
+export type Int8Column = ColumnType<
+  string | number | bigint,
+  string | number | undefined,
+  string | number
+>;
+
+export interface DocumentPurgeTable {
+  ordinal: Int8Column;
+  documentId: string;
+  directiveId: string;
+  purgedOrdinals: unknown;
+  purgedAtUtc: Date;
+  purgedBy: string | null;
+}
+
 export interface Database {
   Operation: OperationTable;
   Keyframe: KeyframeTable;
@@ -122,6 +144,7 @@ export interface Database {
   sync_remotes: SyncRemoteTable;
   sync_cursors: SyncCursorTable;
   sync_dead_letters: SyncDeadLetterTable;
+  document_purges: DocumentPurgeTable;
 }
 
 export type OperationRow = Selectable<OperationTable>;

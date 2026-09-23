@@ -3,6 +3,7 @@ import type {
   OperationWithContext,
 } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
+import { sql } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../../cache/operation-index-types.js";
 import type { IWriteCache } from "../../cache/write/interfaces.js";
@@ -26,9 +27,9 @@ import type {
   IDocumentGraph,
   IDocumentIndexer,
 } from "../interfaces.js";
+import { notPurged } from "./document-purge-gate.js";
 import type {
   DocumentIndexerDatabase,
-  InsertableDocumentRelationship,
   Database as StorageDatabase,
 } from "./types.js";
 
@@ -588,9 +589,12 @@ export class KyselyDocumentIndexer
     if (!existingDoc) {
       await trx
         .insertInto("Document")
-        .values({
-          id: input.sourceId,
-        })
+        .columns(["id"])
+        .expression(
+          trx
+            .selectNoFrom(sql<string>`${input.sourceId}::text`.as("id"))
+            .where((eb) => notPurged(eb, input.sourceId)),
+        )
         .execute();
     }
 
@@ -603,9 +607,12 @@ export class KyselyDocumentIndexer
     if (!existingTargetDoc) {
       await trx
         .insertInto("Document")
-        .values({
-          id: input.targetId,
-        })
+        .columns(["id"])
+        .expression(
+          trx
+            .selectNoFrom(sql<string>`${input.targetId}::text`.as("id"))
+            .where((eb) => notPurged(eb, input.targetId)),
+        )
         .execute();
     }
 
@@ -618,17 +625,29 @@ export class KyselyDocumentIndexer
       .executeTakeFirst();
 
     if (!existingRel) {
-      const relationship: InsertableDocumentRelationship = {
-        id: uuidv4(),
-        sourceId: input.sourceId,
-        targetId: input.targetId,
-        relationshipType: input.relationshipType,
-        metadata: input.metadata || null,
-      };
-
       await trx
         .insertInto("DocumentRelationship")
-        .values(relationship)
+        .columns(["id", "sourceId", "targetId", "relationshipType", "metadata"])
+        .expression(
+          trx
+            .selectNoFrom([
+              sql<string>`${uuidv4()}::text`.as("id"),
+              sql<string>`${input.sourceId}::text`.as("sourceId"),
+              sql<string>`${input.targetId}::text`.as("targetId"),
+              sql<string>`${input.relationshipType}::text`.as(
+                "relationshipType",
+              ),
+              sql<unknown>`${input.metadata ? JSON.stringify(input.metadata) : null}::jsonb`.as(
+                "metadata",
+              ),
+            ])
+            .where((eb) =>
+              eb.and([
+                notPurged(eb, input.sourceId),
+                notPurged(eb, input.targetId),
+              ]),
+            ),
+        )
         .execute();
     }
   }

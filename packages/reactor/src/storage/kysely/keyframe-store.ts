@@ -1,6 +1,8 @@
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type { Kysely, Transaction } from "kysely";
+import { sql } from "kysely";
 import type { IKeyframeStore } from "../interfaces.js";
+import { notPurged } from "./document-purge-gate.js";
 import type { Database } from "./types.js";
 
 export class KyselyKeyframeStore implements IKeyframeStore {
@@ -30,16 +32,31 @@ export class KyselyKeyframeStore implements IKeyframeStore {
       throw new Error("Operation aborted");
     }
 
-    await this.queryExecutor
+    const executor = this.queryExecutor;
+    await executor
       .insertInto("Keyframe")
-      .values({
-        documentId,
-        documentType: document.header.documentType,
-        scope,
-        branch,
-        revision,
-        document,
-      })
+      .columns([
+        "documentId",
+        "documentType",
+        "scope",
+        "branch",
+        "revision",
+        "document",
+      ])
+      .expression(
+        executor
+          .selectNoFrom([
+            sql<string>`${documentId}::text`.as("documentId"),
+            sql<string>`${document.header.documentType}::text`.as(
+              "documentType",
+            ),
+            sql<string>`${scope}::text`.as("scope"),
+            sql<string>`${branch}::text`.as("branch"),
+            sql<number>`${revision}::integer`.as("revision"),
+            sql<unknown>`${JSON.stringify(document)}::jsonb`.as("document"),
+          ])
+          .where((eb) => notPurged(eb, documentId)),
+      )
       .onConflict((oc) =>
         oc
           .columns(["documentId", "scope", "branch", "revision"])

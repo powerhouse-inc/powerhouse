@@ -1,9 +1,11 @@
 import type { Generated, Insertable, Selectable, Updateable } from "kysely";
+import type { Int8Column } from "../storage/kysely/types.js";
 
 export interface ViewStateTable {
   readModelId: string;
   lastOrdinal: number;
   lastOperationTimestamp: Generated<Date>;
+  lastPurgeOrdinal: Int8Column;
 }
 
 export interface DocumentSnapshotTable {

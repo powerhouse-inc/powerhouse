@@ -87,6 +87,7 @@ export {
 } from "./src/shared/drive-url.js";
 export {
   AuthEnforcementDisabledError,
+  DocumentPurgedError,
   RelationshipNotFoundError,
 } from "./src/shared/errors.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
@@ -336,6 +337,7 @@ export {
 export type {
   DocumentViewDatabase,
   InsertableDocumentSnapshot,
+  ViewStateTable,
 } from "./src/read-models/types.js";
 export {
   DOCUMENT_INDEXER_READ_MODEL,

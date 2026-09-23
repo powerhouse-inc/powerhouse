@@ -3,6 +3,7 @@ import type { Kysely, Transaction } from "kysely";
 import { sql } from "kysely";
 import type { PagedResults, PagingOptions } from "../shared/types.js";
 import type { ViewFilter } from "../storage/interfaces.js";
+import { notPurged } from "../storage/kysely/document-purge-gate.js";
 import type { Database } from "../storage/kysely/types.js";
 import type {
   InsertableDocumentCollection,
@@ -35,6 +36,23 @@ function chunkRows<TRow extends object>(rows: TRow[]): TRow[][] {
     chunks.push(rows.slice(i, i + perChunk));
   }
   return chunks;
+}
+
+/** A membership row, unless the member carries a tombstone. */
+function membershipUnlessPurged(
+  trx: Transaction<Database>,
+  documentId: string,
+  collectionId: string,
+  joinedOrdinal: bigint,
+) {
+  return trx
+    .selectNoFrom([
+      sql<string>`${documentId}::text`.as("documentId"),
+      sql<string>`${collectionId}::text`.as("collectionId"),
+      sql<bigint>`${joinedOrdinal.toString()}::bigint`.as("joinedOrdinal"),
+      sql<bigint | null>`null::bigint`.as("leftOrdinal"),
+    ])
+    .where((eb) => notPurged(eb, documentId));
 }
 
 type CollectionMembershipRecord = {
@@ -200,12 +218,10 @@ export class KyselyOperationIndex implements IOperationIndex {
     kyselyTxn.recordMembershipInvalidation(documentId);
     await trx
       .insertInto("document_collections")
-      .values({
-        documentId,
-        collectionId,
-        joinedOrdinal: ordinal,
-        leftOrdinal: null,
-      })
+      .columns(["documentId", "collectionId", "joinedOrdinal", "leftOrdinal"])
+      .expression(
+        membershipUnlessPurged(trx, documentId, collectionId, ordinal),
+      )
       .onConflict((oc) =>
         oc.columns(["documentId", "collectionId"]).doUpdateSet({
           joinedOrdinal: sql`LEAST("document_collections"."joinedOrdinal", EXCLUDED."joinedOrdinal")`,
@@ -288,12 +304,20 @@ export class KyselyOperationIndex implements IOperationIndex {
 
         await trx
           .insertInto("document_collections")
-          .values({
-            documentId: m.documentId,
-            collectionId: m.collectionId,
-            joinedOrdinal: BigInt(ordinal),
-            leftOrdinal: null,
-          })
+          .columns([
+            "documentId",
+            "collectionId",
+            "joinedOrdinal",
+            "leftOrdinal",
+          ])
+          .expression(
+            membershipUnlessPurged(
+              trx,
+              m.documentId,
+              m.collectionId,
+              BigInt(ordinal),
+            ),
+          )
           .onConflict((oc) =>
             oc.columns(["documentId", "collectionId"]).doUpdateSet({
               joinedOrdinal: BigInt(ordinal),

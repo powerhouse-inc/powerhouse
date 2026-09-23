@@ -70,8 +70,14 @@ function createMockKysely() {
   mockReturning.mockReturnValue({ execute: mockExecute });
   mockDoUpdateSet.mockReturnValue({ execute: mockExecute });
 
+  const mockExpression = vi.fn(() => ({
+    onConflict: mockOnConflict,
+    execute: mockExecute,
+  }));
+
   const mockInsertInto = vi.fn(() => ({
     values: mockValues,
+    columns: vi.fn(() => ({ expression: mockExpression })),
     execute: mockExecute,
   }));
 
@@ -366,6 +372,7 @@ describe("KyselyOperationIndex.commit()", () => {
       const mockTrx = {
         insertInto: mocks.insertInto,
         selectFrom: mocks.selectFrom,
+        selectNoFrom: mocks.selectFrom,
       };
       mocks.execute.mockResolvedValue([]);
       mocks.execute.mockResolvedValueOnce([{ ordinal: 1 }]);

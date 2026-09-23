@@ -273,6 +273,23 @@ export class DocumentNotFoundError extends Error {
   }
 }
 
+/** The document was purged; its id is refused for good. */
+export class DocumentPurgedError extends Error {
+  public readonly documentId: string;
+
+  constructor(documentId: string) {
+    super(`Document ${documentId} was purged`);
+    this.name = "DocumentPurgedError";
+    this.documentId = documentId;
+
+    Error.captureStackTrace(this, DocumentPurgedError);
+  }
+
+  static isError(error: unknown): error is DocumentPurgedError {
+    return Error.isError(error) && error.name === "DocumentPurgedError";
+  }
+}
+
 /**
  * An authorization preflight was asked for while the reactor's decision model
  * is off, so there is no model to answer from.
