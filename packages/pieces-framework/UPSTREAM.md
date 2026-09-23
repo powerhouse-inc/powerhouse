@@ -149,6 +149,11 @@ Current patches:
   `Property.MarkDown` always writes one and the exported type declares it,
   but the schema had no such key, so zod silently stripped
   `WARNING`/`TIP`/`BORDERLESS` variants on parse.
+- `upstream/framework/lib/trigger/trigger.ts`: give `createTrigger`'s switch a
+  `default` that throws, naming the trigger and its `type`. The switch had none,
+  so a missing or misspelt strategy returned `undefined`, and the piece failed
+  later wherever that trigger was first read. TypeScript already rejects it;
+  this covers code that bypasses the types.
 - `upstream/framework/index.ts` and `upstream/framework/lib/property/index.ts`:
   re-export `SeekPage`, `McpAuthConfig` and `InputProperty` as values instead
   of `export type`. Each is a zod schema merged with a type; rolldown-plugin-dts

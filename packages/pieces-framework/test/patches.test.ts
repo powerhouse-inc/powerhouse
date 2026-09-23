@@ -11,10 +11,12 @@ import {
 } from "../src/common.js";
 import {
   ArrayProperty,
+  createTrigger,
   CustomAuthProperty,
   InputProperty,
   Property,
   PropertyType,
+  TriggerStrategy,
 } from "../src/index.js";
 
 afterEach(() => {
@@ -205,5 +207,44 @@ describe("createCustomApiCallAction authLocation", () => {
     expect(calledUrl).toContain("api_key=secret-token");
     const headerKeys = Object.keys(init.headers as Record<string, string>);
     expect(headerKeys.map((k) => k.toLowerCase())).not.toContain("api_key");
+  });
+});
+
+describe("createTrigger with an unknown type", () => {
+  const params = {
+    name: "new_record",
+    displayName: "New record",
+    description: "",
+    props: {},
+    sampleData: {},
+    onEnable: () => Promise.resolve(),
+    onDisable: () => Promise.resolve(),
+    run: () => Promise.resolve([]),
+  };
+
+  it("throws, naming the trigger and the field, instead of returning undefined", () => {
+    expect(() =>
+      createTrigger({ ...params, type: "POLL" as TriggerStrategy.POLLING }),
+    ).toThrow('trigger "new_record" has `type` "POLL"');
+    expect(() =>
+      createTrigger({ ...params } as unknown as Parameters<
+        typeof createTrigger
+      >[0]),
+    ).toThrow("has `type` undefined; set type: TriggerStrategy.POLLING");
+  });
+
+  it("says the field is type when a trigger sets strategy instead", () => {
+    expect(() =>
+      createTrigger({
+        ...params,
+        strategy: TriggerStrategy.WEBHOOK,
+      } as unknown as Parameters<typeof createTrigger>[0]),
+    ).toThrow('trigger "new_record" sets `strategy`; the field is `type`');
+  });
+
+  it("still builds a trigger for every strategy", () => {
+    for (const type of Object.values(TriggerStrategy)) {
+      expect(createTrigger({ ...params, type }).type).toBe(type);
+    }
   });
 });

@@ -349,6 +349,24 @@ const PATCHES: Patch[] = [
       "        auth: undefined,\n",
   },
   {
+    file: "upstream/framework/lib/trigger/trigger.ts",
+    why: "createTrigger's switch has no default, so an unknown type returned undefined and the piece failed far from the cause; name the field, and the common `strategy` slip",
+    find: "        params.propertyGroups,\n      );\n  }\n};\n",
+    replace:
+      "        params.propertyGroups,\n" +
+      "      );\n" +
+      "    default: {\n" +
+      "      const { name, type, strategy } = params as Record<string, unknown>;\n" +
+      "      throw new Error(\n" +
+      "        type === undefined && strategy !== undefined\n" +
+      "          ? `createTrigger: trigger ${JSON.stringify(name)} sets \\`strategy\\`; the field is \\`type\\`, e.g. type: TriggerStrategy.POLLING`\n" +
+      "          : `createTrigger: trigger ${JSON.stringify(name)} has \\`type\\` ${JSON.stringify(type)}; set type: TriggerStrategy.POLLING or TriggerStrategy.WEBHOOK`,\n" +
+      "      );\n" +
+      "    }\n" +
+      "  }\n" +
+      "};\n",
+  },
+  {
     file: "test/upstream/framework/test/connection-identifier-flag.test.ts",
     why: "upstream never typechecks this test; createPiece requires authors",
     find: '    logoUrl: "https://example.com/logo.png",\n    auth,\n',
