@@ -8,6 +8,8 @@ import type {
 import type { Kysely } from "kysely";
 
 import type { IProcessorManager } from "@powerhousedao/shared/processors";
+import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
+import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { ReactorClient } from "../client/reactor-client.js";
@@ -567,6 +569,9 @@ export interface InProcessReactorModule extends ReactorModule {
   keyframeStore: IKeyframeStore;
   writeCache: IWriteCache;
   operationIndex: IOperationIndex;
+  /** Host-side only; executor workers hold their own copies. */
+  documentMetaCache: IDocumentMetaCache;
+  collectionMembershipCache: ICollectionMembershipCache;
   documentView: IDocumentView;
   documentViewConsistencyTracker: IConsistencyTracker;
   documentIndexer: IDocumentIndexer;

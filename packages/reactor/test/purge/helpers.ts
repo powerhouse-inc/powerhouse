@@ -7,9 +7,14 @@ import { documentModelDocumentModelModule } from "document-model";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
 import { vi } from "vitest";
-import { ReactorBuilder } from "../../src/core/reactor-builder.js";
+import {
+  ReactorBuilder,
+  type ReadModelFactory,
+} from "../../src/core/reactor-builder.js";
+import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type {
   Database,
+  InProcessReactorClientModule,
   InProcessReactorModule,
   IReactor,
 } from "../../src/core/types.js";
@@ -28,11 +33,10 @@ export type BuildOptions = {
   kysely?: Kysely<Database>;
   sync?: SyncBuilder;
   featureFlags?: Partial<ReactorFeatureFlags>;
+  readModelFactories?: ReadModelFactory[];
 };
 
-export async function buildReactor(
-  options: BuildOptions = {},
-): Promise<InProcessReactorModule> {
+function reactorBuilder(options: BuildOptions): ReactorBuilder {
   const builder = new ReactorBuilder()
     .withDocumentModelSources([
       driveDocumentModelModule as never,
@@ -41,7 +45,25 @@ export async function buildReactor(
     .withExecutorConfig({ featureFlags: options.featureFlags ?? {} });
   if (options.kysely) builder.withKysely(options.kysely);
   if (options.sync) builder.withSync(options.sync);
-  return builder.buildModule();
+  for (const factory of options.readModelFactories ?? []) {
+    builder.withReadModelFactory(factory);
+  }
+  return builder;
+}
+
+export async function buildReactor(
+  options: BuildOptions = {},
+): Promise<InProcessReactorModule> {
+  return reactorBuilder(options).buildModule();
+}
+
+/** A reactor with its client, for the client-level cascade. */
+export async function buildClient(
+  options: BuildOptions = {},
+): Promise<InProcessReactorClientModule> {
+  return new ReactorClientBuilder()
+    .withReactorBuilder(reactorBuilder(options))
+    .buildModule();
 }
 
 /** Resolves with the job once it is READ_READY or FAILED. */

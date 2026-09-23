@@ -20,6 +20,7 @@ export type PurgeJournalEntry = {
   ordinal: number;
   documentId: string;
   directiveId: string;
+  purgedBy: string | null;
   purgedOrdinals: OrdinalRange[];
 };
 
@@ -37,6 +38,7 @@ export async function readPurgeJournal<DB>(
       "ordinal",
       "documentId",
       "directiveId",
+      "purgedBy",
       sql<
         Array<[number | string, number | string]>
       >`(select coalesce(json_agg(json_build_array(lower(r), upper(r) - 1) order by lower(r)), '[]'::json) from unnest("purgedOrdinals") as r)`.as(
@@ -52,6 +54,7 @@ export async function readPurgeJournal<DB>(
     ordinal: Number(row.ordinal),
     documentId: row.documentId,
     directiveId: row.directiveId,
+    purgedBy: row.purgedBy,
     purgedOrdinals: row.ranges.map(([from, to]) => ({
       from: Number(from),
       to: Number(to),

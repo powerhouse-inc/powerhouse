@@ -354,3 +354,71 @@ export class RelationshipNotFoundError extends Error {
     return Error.isError(error) && error.name === "RelationshipNotFoundError";
   }
 }
+
+/** A purge was asked for a document not deleted on every branch. */
+export class DocumentNotDeletedError extends Error {
+  public readonly documentIds: string[];
+
+  constructor(documentIds: string[]) {
+    super(`Not deleted on every branch: ${documentIds.join(", ")}`);
+    this.name = "DocumentNotDeletedError";
+    this.documentIds = documentIds;
+
+    Error.captureStackTrace(this, DocumentNotDeletedError);
+  }
+
+  static isError(error: unknown): error is DocumentNotDeletedError {
+    return Error.isError(error) && error.name === "DocumentNotDeletedError";
+  }
+}
+
+/** A remote has not received every operation of a document about to be purged. */
+export class DocumentNotFlushedError extends Error {
+  public readonly owed: Array<{
+    documentId: string;
+    remoteName: string;
+    connectionState: string;
+    lastSuccessUtcMs: number;
+    reasons: string[];
+  }>;
+
+  constructor(owed: DocumentNotFlushedError["owed"]) {
+    super(
+      `Remotes still owed operations: ${owed
+        .map(
+          (entry) =>
+            `${entry.remoteName} (${entry.connectionState}) for ${entry.documentId}: ${entry.reasons.join("; ")}`,
+        )
+        .join(", ")}`,
+    );
+    this.name = "DocumentNotFlushedError";
+    this.owed = owed;
+
+    Error.captureStackTrace(this, DocumentNotFlushedError);
+  }
+
+  static isError(error: unknown): error is DocumentNotFlushedError {
+    return Error.isError(error) && error.name === "DocumentNotFlushedError";
+  }
+}
+
+/** A group about to be purged is still referenced by a surviving document. */
+export class GroupInUseError extends Error {
+  public readonly users: Record<string, string[]>;
+
+  constructor(users: Record<string, string[]>) {
+    super(
+      `Groups referenced by surviving documents: ${Object.entries(users)
+        .map(([group, documents]) => `${group} (${documents.join(", ")})`)
+        .join(", ")}`,
+    );
+    this.name = "GroupInUseError";
+    this.users = users;
+
+    Error.captureStackTrace(this, GroupInUseError);
+  }
+
+  static isError(error: unknown): error is GroupInUseError {
+    return Error.isError(error) && error.name === "GroupInUseError";
+  }
+}

@@ -287,4 +287,37 @@ describe("a load racing a purge (Postgres)", () => {
     expect(writeReady.slice(1)).toEqual([]);
     expect(await rowsAbout(db, "raced")).toEqual(emptyRows());
   });
+
+  it("serializes concurrent purges so journal ordinals commit in order", async () => {
+    // Held first, so every purge below queues on the purge lock together.
+    lockClient = await pool.connect();
+    await lockClient.query("BEGIN");
+    await lockClient.query(`select pg_advisory_xact_lock(hashtext('purge'))`);
+
+    const ids = ["p-1", "p-2", "p-3", "p-4", "p-5"];
+    const committed: string[] = [];
+    const purges = ids.map((id) =>
+      new KyselyDocumentPurger(db)
+        .purge([id], { directiveId: id })
+        .then((rows) => {
+          committed.push(rows.purged[0]!);
+        }),
+    );
+    await vi.waitUntil(
+      async () => (await waitingAdvisoryLocks()) >= ids.length,
+      { timeout: 5_000 },
+    );
+
+    await lockClient.query("COMMIT");
+    lockClient.release();
+    lockClient = undefined;
+    await Promise.all(purges);
+
+    const journal = await db
+      .selectFrom("document_purges")
+      .select(["documentId", "ordinal"])
+      .orderBy("ordinal")
+      .execute();
+    expect(journal.map((row) => row.documentId)).toEqual(committed);
+  });
 });

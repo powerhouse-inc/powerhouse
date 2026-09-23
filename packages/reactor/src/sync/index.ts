@@ -2,10 +2,12 @@ export type {
   ConnectionStateChangeCallback,
   IChannel,
   IChannelFactory,
+  IDocumentPurgeSyncManager,
   ISyncManager,
   Remote,
   RemoteMeta,
 } from "./interfaces.js";
+export { supportsDocumentPurgeQuarantine } from "./interfaces.js";
 
 export type { ShutdownStatus } from "../shared/types.js";
 

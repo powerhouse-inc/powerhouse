@@ -136,3 +136,17 @@ export interface IJobExecutorManager {
    */
   getStatus(): ExecutorManagerStatus;
 }
+
+/** Optional capability: evicts documents from every executor's own caches. */
+export interface ICacheInvalidatingExecutorManager extends IJobExecutorManager {
+  invalidateDocuments(documentIds: string[]): Promise<void>;
+}
+
+export function supportsCacheInvalidation(
+  manager: IJobExecutorManager,
+): manager is ICacheInvalidatingExecutorManager {
+  return (
+    "invalidateDocuments" in manager &&
+    typeof manager.invalidateDocuments === "function"
+  );
+}

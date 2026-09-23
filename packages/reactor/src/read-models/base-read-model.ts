@@ -3,12 +3,18 @@ import type { Kysely, Transaction } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
+import type { PurgeDirective, PurgeOutcome } from "../shared/purge-types.js";
+import { findPurgedIds } from "../storage/kysely/document-purge-gate.js";
+import {
+  readPurgeJournal,
+  type PurgeJournalEntry,
+} from "../storage/kysely/document-purger.js";
 import type {
   ConsistencyCoordinate,
   ConsistencyToken,
 } from "../shared/types.js";
 import { yieldToMain } from "../shared/utils.js";
-import type { IReadModel } from "./interfaces.js";
+import type { IPurgeJournalReadModel } from "./interfaces.js";
 import type { DocumentViewDatabase } from "./types.js";
 
 /** Bounds on an indexing pass: one transaction, and the stall between yields. */
@@ -68,7 +74,7 @@ export type BaseReadModelConfig = {
  * Handles initialization, state tracking via ViewState table, and consistency tracking.
  * Subclasses override commitOperations() with their specific domain logic.
  */
-export class BaseReadModel implements IReadModel {
+export class BaseReadModel implements IPurgeJournalReadModel {
   protected lastOrdinal: number = 0;
 
   readonly name: string;
@@ -81,6 +87,8 @@ export class BaseReadModel implements IReadModel {
    * the cursor still reaches every operation the failed pass left out.
    */
   private uncommittedOrdinal: number = 0;
+
+  private purgeChain: Promise<unknown> = Promise.resolve();
 
   constructor(
     protected db: Kysely<DocumentViewDatabase>,
@@ -117,6 +125,93 @@ export class BaseReadModel implements IReadModel {
       if (!page.next) break;
       page = await page.next();
     }
+
+    await this.reconcilePurges();
+  }
+
+  /** Removes this model's rows for the ids; the default reports uncovered. */
+  purgeDocuments(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    ids: string[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    directive: PurgeDirective,
+  ): Promise<PurgeOutcome> {
+    return Promise.resolve({
+      readModelId: this.name,
+      rowsAffected: 0,
+      covered: false,
+    });
+  }
+
+  /** Applies journal rows above lastPurgeOrdinal in order, advancing it. */
+  reconcilePurges(): Promise<PurgeOutcome[]> {
+    const run = this.purgeChain.then(() => this.applyPurgeJournal());
+    this.purgeChain = run.catch(() => undefined);
+    return run;
+  }
+
+  /** An uncovered or failed hook stops here, leaving the cursor for a retry. */
+  private async applyPurgeJournal(): Promise<PurgeOutcome[]> {
+    const outcomes: PurgeOutcome[] = [];
+    const failed = (error: unknown): PurgeOutcome[] => {
+      outcomes.push({
+        readModelId: this.name,
+        rowsAffected: 0,
+        covered: true,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return outcomes;
+    };
+
+    let cursor: number | undefined;
+    try {
+      cursor = await this.loadPurgeCursor();
+    } catch (error) {
+      return failed(error);
+    }
+    // No ViewState row yet: init() reconciles once it writes one.
+    if (cursor === undefined) return outcomes;
+
+    for (;;) {
+      let entries: PurgeJournalEntry[];
+      try {
+        entries = await readPurgeJournal(this.db, cursor);
+      } catch (error) {
+        return failed(error);
+      }
+      if (entries.length === 0) return outcomes;
+
+      for (const group of groupByDirective(entries)) {
+        let outcome: PurgeOutcome;
+        try {
+          outcome = await this.purgeDocuments(group.ids, group.directive);
+        } catch (error) {
+          return failed(error);
+        }
+        outcomes.push(outcome);
+        if (!outcome.covered || outcome.error !== undefined) return outcomes;
+
+        try {
+          await this.db
+            .updateTable("ViewState")
+            .set({ lastPurgeOrdinal: group.lastOrdinal })
+            .where("readModelId", "=", this.config.readModelId)
+            .execute();
+        } catch (error) {
+          return failed(error);
+        }
+        cursor = group.lastOrdinal;
+      }
+    }
+  }
+
+  private async loadPurgeCursor(): Promise<number | undefined> {
+    const row = await this.db
+      .selectFrom("ViewState")
+      .select("lastPurgeOrdinal")
+      .where("readModelId", "=", this.config.readModelId)
+      .executeTakeFirst();
+    return row === undefined ? undefined : Number(row.lastPurgeOrdinal);
   }
 
   /**
@@ -184,8 +279,17 @@ export class BaseReadModel implements IReadModel {
   ): Promise<OperationWithContext[]> {
     const result: OperationWithContext[] = [];
 
+    // A page read just before a purge can name documents the cache cannot build.
+    const purged = new Set(
+      await findPurgedIds(
+        this.db,
+        operations.map((op) => op.context.documentId),
+      ),
+    );
+
     for (const op of operations) {
       const { documentId, scope, branch } = op.context;
+      if (purged.has(documentId)) continue;
       const targetRevision = op.operation.index;
 
       const document = await this.writeCache.getState(
@@ -354,4 +458,34 @@ export class BaseReadModel implements IReadModel {
       }
     }
   }
+}
+
+/** Consecutive journal rows of one directive, applied as one hook call. */
+function groupByDirective(entries: PurgeJournalEntry[]): Array<{
+  ids: string[];
+  directive: PurgeDirective;
+  lastOrdinal: number;
+}> {
+  const groups: Array<{
+    ids: string[];
+    directive: PurgeDirective;
+    lastOrdinal: number;
+  }> = [];
+  for (const entry of entries) {
+    const last = groups.at(-1);
+    if (last?.directive.directiveId === entry.directiveId) {
+      last.ids.push(entry.documentId);
+      last.lastOrdinal = entry.ordinal;
+      continue;
+    }
+    groups.push({
+      ids: [entry.documentId],
+      directive: {
+        directiveId: entry.directiveId,
+        ...(entry.purgedBy !== null ? { purgedBy: entry.purgedBy } : {}),
+      },
+      lastOrdinal: entry.ordinal,
+    });
+  }
+  return groups;
 }

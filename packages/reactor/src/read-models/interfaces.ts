@@ -1,4 +1,9 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import type {
+  PurgeDirective,
+  PurgeFanOutOutcome,
+  PurgeOutcome,
+} from "../shared/purge-types.js";
 
 /**
  * Generic interface for any read model that can index operations.
@@ -69,5 +74,46 @@ export function supportsLiveReadModelRegistration(
   return (
     "addReadModel" in coordinator &&
     typeof coordinator.addReadModel === "function"
+  );
+}
+
+/** Optional capability: removes a model's own rows for purged documents. */
+export interface IDocumentPurgingReadModel extends IReadModel {
+  purgeDocuments(
+    ids: string[],
+    directive: PurgeDirective,
+  ): Promise<PurgeOutcome>;
+}
+
+/** A purging model that applies the purge journal against its own cursor. */
+export interface IPurgeJournalReadModel extends IDocumentPurgingReadModel {
+  /** Applies journal rows above the model's purge cursor; never throws. */
+  reconcilePurges(): Promise<PurgeOutcome[]>;
+}
+
+/** Optional capability: fans a purge out to every model it coordinates. */
+export interface IDocumentPurgingCoordinator extends IReadModelCoordinator {
+  purgeDocuments(
+    ids: string[],
+    directive: PurgeDirective,
+  ): Promise<PurgeFanOutOutcome>;
+}
+
+export function supportsDocumentPurge(
+  x: unknown,
+): x is IDocumentPurgingReadModel | IDocumentPurgingCoordinator {
+  return (
+    typeof x === "object" &&
+    x !== null &&
+    "purgeDocuments" in x &&
+    typeof x.purgeDocuments === "function"
+  );
+}
+
+export function supportsPurgeJournal(x: unknown): x is IPurgeJournalReadModel {
+  return (
+    supportsDocumentPurge(x) &&
+    "reconcilePurges" in x &&
+    typeof x.reconcilePurges === "function"
   );
 }

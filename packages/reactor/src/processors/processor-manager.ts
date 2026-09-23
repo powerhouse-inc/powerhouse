@@ -20,7 +20,9 @@ import type {
   DocumentViewDatabase,
   ProcessorCursorRow,
 } from "../read-models/types.js";
+import { supportsDocumentPurge } from "../read-models/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
+import type { PurgeDirective, PurgeOutcome } from "../shared/purge-types.js";
 import {
   ProcessorQueue,
   type ProcessorCursorState,
@@ -146,6 +148,56 @@ export class ProcessorManager
 
   async unregisterFactory(identifier: string): Promise<void> {
     await Promise.all(this.removeFactory(identifier));
+  }
+
+  /** Closes a purged drive's processors, as DELETE_DOCUMENT does, then forwards. */
+  override async purgeDocuments(
+    ids: string[],
+    directive: PurgeDirective,
+  ): Promise<PurgeOutcome> {
+    const notes: string[] = [];
+    let rowsAffected = 0;
+    let error: string | undefined;
+
+    // Forwarded first, while a purged drive's processors are still bound.
+    for (const { tracked } of this.allBound()) {
+      const processor: unknown = tracked.record.processor;
+      if (!supportsDocumentPurge(processor)) {
+        notes.push(`processor ${tracked.processorId} has no purge hook`);
+        continue;
+      }
+      try {
+        const outcome = await processor.purgeDocuments(ids, directive);
+        if ("rowsAffected" in outcome) rowsAffected += outcome.rowsAffected;
+        if ("error" in outcome && outcome.error !== undefined) {
+          error ??= `${tracked.processorId}: ${outcome.error}`;
+        }
+      } catch (caught) {
+        error ??= `${tracked.processorId}: ${caught instanceof Error ? caught.message : String(caught)}`;
+      }
+    }
+
+    const closing: Promise<void>[] = [];
+    for (const driveId of ids) {
+      this.knownDrives.delete(driveId);
+      for (const slot of this.pendingSlots) {
+        if (slot.driveId === driveId) this.pendingSlots.delete(slot);
+      }
+      for (const { queue } of this.processorsByDrive.get(driveId) ?? []) {
+        closing.push(queue.close());
+      }
+      this.processorsByDrive.delete(driveId);
+      closing.push(...this.deleteCursors((row) => row.driveId === driveId));
+    }
+    await Promise.all(closing);
+
+    return {
+      readModelId: this.name,
+      rowsAffected,
+      covered: true,
+      ...(error !== undefined ? { error } : {}),
+      ...(notes.length > 0 ? { notes } : {}),
+    };
   }
 
   get(processorId: string): TrackedProcessor | undefined {

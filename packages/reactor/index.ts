@@ -87,9 +87,19 @@ export {
 } from "./src/shared/drive-url.js";
 export {
   AuthEnforcementDisabledError,
+  DocumentNotDeletedError,
+  DocumentNotFlushedError,
   DocumentPurgedError,
+  GroupInUseError,
   RelationshipNotFoundError,
 } from "./src/shared/errors.js";
+export type {
+  OrdinalRange,
+  PurgeDirective,
+  PurgeFanOutOutcome,
+  PurgeOutcome,
+  PurgeRows,
+} from "./src/shared/purge-types.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
 export { parsePagingOptions, type ParsedPaging } from "./src/shared/utils.js";
 export {
@@ -157,6 +167,8 @@ export { type IJobTracker } from "./src/job-tracker/interfaces.js";
 
 // Job Executor
 export {
+  supportsCacheInvalidation,
+  type ICacheInvalidatingExecutorManager,
   type IJobExecutor,
   type IJobExecutorManager,
 } from "./src/executor/interfaces.js";
@@ -328,8 +340,13 @@ export {
   KyselyDocumentView,
 } from "./src/read-models/document-view.js";
 export {
+  supportsDocumentPurge,
   supportsLiveReadModelRegistration,
+  supportsPurgeJournal,
+  type IDocumentPurgingCoordinator,
+  type IDocumentPurgingReadModel,
   type ILiveReadModelCoordinator,
+  type IPurgeJournalReadModel,
   type IReadModel,
   type IReadModelCoordinator,
   type ReadModelRegistrationStage,
@@ -415,6 +432,8 @@ export {
   type IChannelFactory,
   type IMailbox,
   type IPollTimer,
+  supportsDocumentPurgeQuarantine,
+  type IDocumentPurgeSyncManager,
   type ISyncManager,
   type ISyncStatusTracker,
   type JwtHandler,
@@ -462,6 +481,28 @@ export {
   type ReactorHostModuleBaseOptions,
 } from "./src/processors/host-module.js";
 export { DocumentIntegrityService } from "./src/admin/document-integrity-service.js";
+export {
+  DocumentPurgeService,
+  type DocumentPurgeServiceModule,
+  type DocumentPurgeServiceOptions,
+} from "./src/admin/document-purge-service.js";
+export type {
+  DocumentPurgeResult,
+  OwedRemote,
+  PurgeBlocker,
+  PurgeCandidate,
+  PurgePlan,
+} from "./src/admin/document-purge-types.js";
+export {
+  KyselyDocumentPurger,
+  listPurgedDocumentIds,
+  readPurgeJournal,
+  type PurgeJournalEntry,
+} from "./src/storage/kysely/document-purger.js";
+export {
+  findPurgedIds,
+  notPurged,
+} from "./src/storage/kysely/document-purge-gate.js";
 export type {
   IDocumentIntegrityService,
   KeyframeValidationIssue,

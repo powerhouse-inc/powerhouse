@@ -1659,7 +1659,7 @@ export class ReactorClient implements IReactorClient {
       identifier,
       propagate,
     );
-    const jobs: JobInfo[] = [];
+    const targets: string[] = [];
 
     if (propagate === PropagationMode.Cascade) {
       const toDelete = new Set([identifier]);
@@ -1683,38 +1683,34 @@ export class ReactorClient implements IReactorClient {
         }
       }
 
-      for (const descendantId of toDelete) {
-        if (descendantId === identifier) {
-          continue;
+      // Discovered after their parents, so reversed they come leaves first.
+      for (const descendantId of [...toDelete].reverse()) {
+        if (descendantId !== identifier) {
+          targets.push(descendantId);
         }
-        const removalJobs = await this.removeAllIncomingRelationships(
-          descendantId,
-          signal,
-        );
-        jobs.push(...removalJobs);
-
-        const jobInfo = await this.reactor.deleteDocument(
-          descendantId,
-          this.signer,
-          signal,
-        );
-        jobs.push(jobInfo);
       }
     }
+    targets.push(identifier);
 
-    const removalJobs = await this.removeAllIncomingRelationships(
-      identifier,
-      signal,
-    );
-    jobs.push(...removalJobs);
+    // Deleted before unlinked: a removal closes the membership the outbox
+    // serves a child through, and a DELETE after it would reach no remote.
+    // Leaves first, so each parent is still live when its edge is removed.
+    for (const id of targets) {
+      await this.waitForAll(
+        [await this.reactor.deleteDocument(id, this.signer, signal)],
+        signal,
+      );
+      await this.waitForAll(
+        await this.removeAllIncomingRelationships(id, signal),
+        signal,
+      );
+    }
+  }
 
-    const jobInfo = await this.reactor.deleteDocument(
-      identifier,
-      this.signer,
-      signal,
-    );
-    jobs.push(jobInfo);
-
+  private async waitForAll(
+    jobs: JobInfo[],
+    signal?: AbortSignal,
+  ): Promise<void> {
     const completedJobs = await Promise.all(
       jobs.map((job) => this.waitForJob(job, signal)),
     );

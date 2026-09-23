@@ -10,10 +10,16 @@ import {
   type Unsubscribe,
 } from "../events/types.js";
 import type {
+  PurgeDirective,
+  PurgeFanOutOutcome,
+} from "../shared/purge-types.js";
+import type {
+  IDocumentPurgingCoordinator,
   ILiveReadModelCoordinator,
   IReadModel,
   ReadModelRegistrationStage,
 } from "./interfaces.js";
+import { purgeReadModels } from "./purge-fan-out.js";
 
 /**
  * Coordinates read model synchronization by listening to operation write events
@@ -22,7 +28,9 @@ import type {
  * serialized so the executor can return to dispatch without holding ordering
  * implicitly.
  */
-export class ReadModelCoordinator implements ILiveReadModelCoordinator {
+export class ReadModelCoordinator
+  implements ILiveReadModelCoordinator, IDocumentPurgingCoordinator
+{
   private unsubscribe?: Unsubscribe;
   private isRunning = false;
   private readonly chains = new Map<string, Promise<void>>();
@@ -81,6 +89,16 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
 
   getChainDepth(): number {
     return this.chains.size;
+  }
+
+  async purgeDocuments(
+    ids: string[],
+    directive: PurgeDirective,
+  ): Promise<PurgeFanOutOutcome> {
+    return {
+      outcomes: await purgeReadModels(this.readModels, ids, directive),
+      unacknowledgedShards: [],
+    };
   }
 
   addReadModel(readModel: IReadModel, stage: ReadModelRegistrationStage): void {

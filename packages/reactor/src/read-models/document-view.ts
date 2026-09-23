@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
+import type { PurgeOutcome } from "../shared/purge-types.js";
 import { DOCUMENT_VIEW_READ_MODEL } from "./names.js";
 import type {
   ConsistencyToken,
@@ -80,6 +81,15 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       },
     );
     this._db = db;
+  }
+
+  /** Its rows live in the reactor schema, which the purger already cleared. */
+  override purgeDocuments(): Promise<PurgeOutcome> {
+    return Promise.resolve({
+      readModelId: this.name,
+      rowsAffected: 0,
+      covered: true,
+    });
   }
 
   /**

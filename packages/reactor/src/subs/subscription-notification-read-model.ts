@@ -1,5 +1,6 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
-import type { IReadModel } from "../read-models/interfaces.js";
+import type { IDocumentPurgingReadModel } from "../read-models/interfaces.js";
+import type { PurgeOutcome } from "../shared/purge-types.js";
 import { RelationshipChangeType } from "../shared/types.js";
 import type { IDocumentView } from "../storage/interfaces.js";
 import type { ReactorSubscriptionManager } from "./react-subscription-manager.js";
@@ -11,8 +12,17 @@ import type { ReactorSubscriptionManager } from "./react-subscription-manager.js
  * Must be processed AFTER other read models have completed and AFTER READ_READY
  * is emitted, so that reactor.get() returns fresh data when callbacks fire.
  */
-export class SubscriptionNotificationReadModel implements IReadModel {
+export class SubscriptionNotificationReadModel implements IDocumentPurgingReadModel {
   readonly name = "subscription-notification";
+
+  /** Owns no rows: covered, with nothing to remove. */
+  purgeDocuments(): Promise<PurgeOutcome> {
+    return Promise.resolve({
+      readModelId: this.name,
+      rowsAffected: 0,
+      covered: true,
+    });
+  }
 
   constructor(
     private subscriptionManager: ReactorSubscriptionManager,

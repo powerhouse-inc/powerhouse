@@ -905,6 +905,14 @@ export class SyncManager implements IDocumentPurgeSyncManager {
       return;
     }
 
+    // A purged id is never wanted again, so its arrivals are dropped outright.
+    const purged = syncOps.filter((op) =>
+      this.purgedInboundIds.has(op.documentId),
+    );
+    if (purged.length > 0) {
+      remote.channel.inbox.remove(...purged);
+    }
+
     const eligible = syncOps.filter(
       (op) => !this.isInboundQuarantined(op.documentId),
     );

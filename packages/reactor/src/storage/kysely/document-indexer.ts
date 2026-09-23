@@ -16,6 +16,7 @@ import { DOCUMENT_INDEXER_READ_MODEL } from "../../read-models/names.js";
 import type { DocumentViewDatabase } from "../../read-models/types.js";
 import { collectAllPages } from "../../shared/collect-all-pages.js";
 import type { IConsistencyTracker } from "../../shared/consistency-tracker.js";
+import type { PurgeOutcome } from "../../shared/purge-types.js";
 import type {
   ConsistencyToken,
   PagedResults,
@@ -70,6 +71,15 @@ export class KyselyDocumentIndexer
       },
     );
     this._db = db;
+  }
+
+  /** Its rows live in the reactor schema, which the purger already cleared. */
+  override purgeDocuments(): Promise<PurgeOutcome> {
+    return Promise.resolve({
+      readModelId: this.name,
+      rowsAffected: 0,
+      covered: true,
+    });
   }
 
   /** Opens no transaction for a batch carrying no relationship operation. */

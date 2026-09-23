@@ -1005,6 +1005,8 @@ export class ReactorBuilder {
       keyframeStore,
       writeCache,
       operationIndex,
+      documentMetaCache,
+      collectionMembershipCache,
       documentView,
       documentViewConsistencyTracker,
       documentIndexer,
