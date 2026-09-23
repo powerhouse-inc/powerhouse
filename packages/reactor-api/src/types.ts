@@ -19,6 +19,7 @@ import type { IPackageManager } from "./packages/types.js";
 import type { IAttachmentAccessService } from "./services/attachment-access.service.js";
 import type { IAuthorizationService } from "./services/authorization.service.js";
 import type { AuthService } from "./services/auth.service.js";
+import type { DocumentPermissionService } from "./services/document-permission.service.js";
 export type {
   IPackageLoader,
   IPackageLoaderOptions,
@@ -64,6 +65,8 @@ export type API = {
   /** The read-model relational store, for the same host-composed component:
    * its tables belong in this database and nothing else hands one over. */
   relationalDb: IRelationalDb;
+  /** Present when document permissions are enabled; a purge clears its rows. */
+  documentPermissionService: DocumentPermissionService | undefined;
   /**
    * Releases resources owned by the API: shuts down the GraphQL gateway,
    * closes WebSocket and HTTP servers, destroys knex pools, and closes any

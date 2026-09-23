@@ -664,4 +664,48 @@ describe("DocumentPermissionService", () => {
       expect(opUserPerms).toHaveLength(0);
     });
   });
+
+  describe("erasure", () => {
+    const subject = "0xSubject";
+
+    beforeEach(async () => {
+      await service.grantPermission("purged", subject, "WRITE", "0xAdmin");
+      await service.grantPermission("kept", subject, "READ", "0xAdmin");
+      await service.grantOperationPermission(
+        "purged",
+        "SET_NAME",
+        subject,
+        "0xAdmin",
+      );
+      await service.setDocumentOwner("purged", subject);
+    });
+
+    it("removes every row a purged document holds, and only those", async () => {
+      const removed = await service.eraseDocument("purged");
+
+      expect(removed).toEqual({
+        permissions: 1,
+        operationPermissions: 1,
+        protection: 1,
+      });
+      expect(await service.getDocumentPermissions("purged")).toEqual([]);
+      expect(await service.getDocumentOwner("purged")).toBeNull();
+      expect(await service.getDocumentPermissions("kept")).toHaveLength(1);
+    });
+
+    it("lists what names a subject, case-insensitively", async () => {
+      const listed = await service.listForSubject(subject.toUpperCase());
+
+      expect(
+        listed.permissions.map((entry) => entry.documentId).sort(),
+      ).toEqual(["kept", "purged"]);
+      expect(listed.operationPermissions).toEqual([
+        expect.objectContaining({
+          documentId: "purged",
+          operationType: "SET_NAME",
+        }),
+      ]);
+      expect(listed.ownedDocuments).toEqual(["purged"]);
+    });
+  });
 });

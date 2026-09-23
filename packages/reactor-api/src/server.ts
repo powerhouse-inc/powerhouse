@@ -1272,6 +1272,7 @@ async function _setupAPI(
     // stores in this database.
     authorizationService,
     relationalDb,
+    documentPermissionService,
     dispose,
   };
 }

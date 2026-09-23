@@ -199,6 +199,68 @@ export class DocumentPermissionService {
       .execute();
   }
 
+  /** Removes every permission and protection row for a purged document, at once. */
+  async eraseDocument(documentId: string): Promise<{
+    permissions: number;
+    operationPermissions: number;
+    protection: number;
+  }> {
+    // Counted from returned rows: not every dialect reports deleted rows.
+    return this.db.transaction().execute(async (trx) => {
+      const permissions = await trx
+        .deleteFrom("DocumentPermission")
+        .where("documentId", "=", documentId)
+        .returning("documentId")
+        .execute();
+      const operationPermissions = await trx
+        .deleteFrom("OperationUserPermission")
+        .where("documentId", "=", documentId)
+        .returning("documentId")
+        .execute();
+      const protection = await trx
+        .deleteFrom("DocumentProtection")
+        .where("documentId", "=", documentId)
+        .returning("documentId")
+        .execute();
+      return {
+        permissions: permissions.length,
+        operationPermissions: operationPermissions.length,
+        protection: protection.length,
+      };
+    });
+  }
+
+  /** Every permission row that names the address, for an access request. */
+  async listForSubject(address: string): Promise<{
+    permissions: DocumentPermissionEntry[];
+    operationPermissions: OperationUserPermissionEntry[];
+    ownedDocuments: string[];
+  }> {
+    const normalized = address.toLowerCase();
+    const permissions = await this.getUserDocuments(normalized);
+    const operationPermissions = await this.db
+      .selectFrom("OperationUserPermission")
+      .select([
+        "documentId",
+        "operationType",
+        "userAddress",
+        "grantedBy",
+        "createdAt",
+      ])
+      .where("userAddress", "=", normalized)
+      .execute();
+    const owned = await this.db
+      .selectFrom("DocumentProtection")
+      .select("documentId")
+      .where(sql`lower("ownerAddress")`, "=", normalized)
+      .execute();
+    return {
+      permissions,
+      operationPermissions,
+      ownedDocuments: owned.map((row) => row.documentId),
+    };
+  }
+
   // ============================================
   // Operation Permissions
   // ============================================
