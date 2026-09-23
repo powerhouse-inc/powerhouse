@@ -166,7 +166,9 @@ type SignatureTrustPolicy = {
   job, or a load job carrying operations from a remote. Reshuffle and
   reevaluation re-verify stored operations but never call the hook.
 - The hook's answer may not depend on when it is asked. Revocation goes
-  through auth-scope grants, not the hook, or replicas diverge.
+  through auth-scope grants, not the hook, or replicas diverge. Switchboard's
+  implementation checks the Renown credential binding the app DID to the
+  address and caches per (address, key) with no expiry-based revocation.
 - Refusals: `MALFORMED_TUPLE`, `KEY_MISMATCH`, `HASH_MISMATCH`,
   `BAD_SIGNATURE`, `UNSIGNED_REQUIRED`, `SCHEME_BELOW_POLICY`,
   `SIGNER_UNAUTHORIZED`. A refusal names the target document. At admission
@@ -185,7 +187,7 @@ Each phase merges green to main on its own.
 | P1 Reactor-owned verifier | Move integrity checking into the executor, always on, replacing the host-wired `SignatureVerificationHandler`. Recompute legacy at admission by hash length; ECDSA-only elsewhere. Reject a second write of a live action id. Log-only mode with a `signature_integrity_mismatch_total{scheme,path,reason}` metric, and a `preflight:signatures` sweep over a Postgres-backed store modelled on `preflight:auth`. Delete `verifyOperations` and shared `verifyOperationSignature`; update the academy pages that recommend it. | Tampered legacy input is rejected at admission once log-only is lifted. Worker pools verify. |
 | P2 v2 scheme and signers | `hashActionV2`, `canonicalJson`, the `v2:` prefix, the `ISigner` change. Port #2974's target-document resolution. Every signer emits v2: `ReactorClient` `execute`/`executeAsync`/`executeBatch`, the reactor's create/delete/relationship paths, the drive client, reactor-browser `signing.ts` and `remote-controller.ts`, `actions/sign.ts` (retire the SHA-1 path), the Connect worker, the switchboard e2e helper. | New writes carry v2 tuples that verify everywhere, including on old peers. Tampered v2 operations are rejected on every path. |
 | P3 Genesis policy and stored denials | `protocolVersions.signature`, level-2 enforcement, stored `deniedReason` off admission, job error at admission. Remove `REQUIRE_SIGNATURES` / `identity.requireSignatures`. | None until a document is created at level 2. |
-| P4 Identity hook | `SignatureTrustPolicy.authorizeSigner`, admission-only, default by `authEnforcement`, `FactorySpec` for workers. Switchboard implements it with Renown credentials. | Under `authEnforcement`, a key that cannot sign as its claimed address is refused. |
+| P4 Identity hook | `SignatureTrustPolicy.authorizeSigner`, admission-only, default by `authEnforcement`, `FactorySpec` for workers. Switchboard verifies the Renown credential that binds the app DID to the wallet address against Renown's issuer key, and caches the answer per (address, key). | Under `authEnforcement`, a key that cannot sign as its claimed address is refused. |
 | P5 Level 2 by default | New documents are created at level 2. | New documents refuse unsigned and legacy operations. |
 
 ## Mixed-version rollout
@@ -234,15 +236,6 @@ Each phase merges green to main on its own.
   Document-scope operations store `hash: ""`. Recomputing state hashes is a
   convergence concern and gets its own issue.
 - Withholding operations cannot be detected per operation.
-
-## Open questions
-
-1. **Migrating existing documents.** Re-creation is the only path to level 2.
-   Decide whether a duplication tool is wanted, and for which documents.
-2. **GDPR redaction.** `input` and `signer.user.address` are both in the v2
-   preimage, so Tier 1 redaction voids a v2 signature where it did not void
-   a legacy one. Re-verification would then deny the operation. The
-   redaction path must write a per-operation void marker that verification
-   honours, and only that path may write it.
-3. **Switchboard's `authorizeSigner`.** Which Renown credential proves a key
-   may sign as an address, and how it is cached so the answer is stable.
+- GDPR erasure deletes whole documents. There is no operation-level
+  redaction, so no signature void marker is needed.
+- No migration tool for existing documents. They stay at level 1.
