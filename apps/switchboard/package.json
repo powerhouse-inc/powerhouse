@@ -76,6 +76,7 @@
     "@powerhousedao/reactor-attachments": "workspace:*",
     "@powerhousedao/reactor-drive": "workspace:*",
     "@powerhousedao/reactor-group": "workspace:*",
+    "@powerhousedao/reactor-privacy": "workspace:*",
     "@powerhousedao/reactor-workflow": "workspace:*",
     "@powerhousedao/workflow": "workspace:*",
     "@powerhousedao/pglite-fs": "workspace:*",

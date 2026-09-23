@@ -93,6 +93,11 @@ import {
   readPgVersionFile,
   type SupportedPgMajor,
 } from "./pglite-version.js";
+import {
+  composePrivacySubgraph,
+  registerSubjectDocumentsReadModel,
+  resolvePrivacyConfig,
+} from "./privacy.mjs";
 import { resolveReactorFeatureFlags } from "./reactor-feature-flags.mjs";
 import { getRenownSignerConfig, initRenown } from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
@@ -487,6 +492,7 @@ async function initServer(
   // Resolved in startSwitchboard, which owns the flag mechanism; initServer
   // only reads the answer.
   const workflowsEnabled = options.workflows?.enabled === true;
+  const privacy = resolvePrivacyConfig();
 
   // Through the package manager like any other, so one route carries the
   // models, the subgraphs and the piece.
@@ -663,6 +669,14 @@ async function initServer(
       baseKysely: baseKysely as unknown as Kysely<unknown>,
       attachmentReferenceWriter,
     });
+
+    if (privacy.enabled) {
+      registerSubjectDocumentsReadModel(
+        reactorBuilder,
+        baseKysely as unknown as Kysely<unknown>,
+        privacy.secret,
+      );
+    }
 
     if (projectionWorker) {
       if (!reactorDbUrl) {
@@ -957,6 +971,36 @@ async function initServer(
 
     await workflows.start();
     logger.info("Workflow runtime started");
+  }
+
+  if (privacy.enabled) {
+    // Only a reactor built here carries the subject index the requests read.
+    const privacySubgraph = ownedReactorModule
+      ? composePrivacySubgraph({
+          clientModule: ownedReactorModule,
+          secret: privacy.secret,
+          documentPermissionService: api.documentPermissionService,
+          reactorClient: client,
+          graphqlManager,
+          relationalDb: api.relationalDb,
+          syncManager: api.syncManager,
+          authorizationService: graphqlManager.getAuthorizationService(),
+        })
+      : undefined;
+    if (privacySubgraph) {
+      lateSubgraphs.push(
+        graphqlManager
+          .registerSubgraphInstance(privacySubgraph, "graphql", false)
+          .catch((error: unknown) => {
+            logger.error("Failed to register privacy subgraph: @error", error);
+          }),
+      );
+      logger.info("Privacy requests enabled");
+    } else {
+      logger.warn(
+        "Privacy requests need the reactor switchboard builds itself; not enabled",
+      );
+    }
   }
 
   // Ahead of the api: the runtime's store lives in the read-model database
