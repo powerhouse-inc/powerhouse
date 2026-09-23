@@ -360,9 +360,10 @@ export class DocumentActionHandler {
       branch: job.branch,
     });
 
+    // Header last: a state key named "header" must not replace it.
     const resultingStateObj: Record<string, unknown> = {
-      header: document.header,
       ...document.state,
+      header: document.header,
     };
     const resultingState = JSON.stringify(resultingStateObj);
 
@@ -790,9 +791,10 @@ export class DocumentActionHandler {
       branch: job.branch,
     });
 
+    // Header last: a state key named "header" must not replace it.
     const resultingStateObj: Record<string, unknown> = {
-      header: document.header,
       ...document.state,
+      header: document.header,
     };
     // Vouches that every scope echoed here was fetched fresh before the
     // migration ran. Upgrade operations persisted by executors that never

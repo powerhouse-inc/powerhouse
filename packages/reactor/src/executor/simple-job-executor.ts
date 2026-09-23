@@ -15,6 +15,7 @@ import {
   mentionedGroupIds,
   normalizeDocumentModelVersion,
   sortOperations,
+  withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
@@ -906,11 +907,14 @@ export class SimpleJobExecutor implements IJobExecutor {
               protocolVersion,
             }
           : { skip, branch: job.branch, protocolVersion };
-        updatedDocument = module.reducer(
-          document as PHDocument,
-          action,
-          undefined,
-          reducerOptions,
+        updatedDocument = withProtocolVersions(
+          module.reducer(
+            document as PHDocument,
+            action,
+            undefined,
+            reducerOptions,
+          ),
+          document.header.protocolVersions,
         );
       } catch (error) {
         const contextMessage = `Failed to apply action to document:\n  Action type: ${action.type}\n  Document ID: ${job.documentId}\n  Document type: ${document.header.documentType}\n  Scope: ${job.scope}\n  Original error: ${error instanceof Error ? error.message : String(error)}`;

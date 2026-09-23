@@ -13,6 +13,7 @@ import {
   baseReducerVersion,
   isDenied,
   normalizeDocumentModelVersion,
+  withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import { createDocumentFromAction } from "../executor/util.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
@@ -834,10 +835,13 @@ export class KyselyWriteCache implements IWriteCache {
           }
         } else {
           const protocolVersion = baseReducerVersion(document.header);
-          document = docModule.reducer(document, operation.action, undefined, {
-            skip: operation.skip,
-            protocolVersion,
-          });
+          document = withProtocolVersions(
+            docModule.reducer(document, operation.action, undefined, {
+              skip: operation.skip,
+              protocolVersion,
+            }),
+            document.header.protocolVersions,
+          );
         }
       }
     }
@@ -963,16 +967,19 @@ export class KyselyWriteCache implements IWriteCache {
           } else {
             // Fail-fast: if reducer throws, error propagates immediately without caching partial state
             const protocolVersion = baseReducerVersion(document.header);
-            document = getModuleCached(moduleVersion).reducer(
-              document,
-              operation.action,
-              undefined,
-              {
-                skip: operation.skip,
-                protocolVersion,
-                replayOptions: { operation },
-                skipIndexValidation: true,
-              },
+            document = withProtocolVersions(
+              getModuleCached(moduleVersion).reducer(
+                document,
+                operation.action,
+                undefined,
+                {
+                  skip: operation.skip,
+                  protocolVersion,
+                  replayOptions: { operation },
+                  skipIndexValidation: true,
+                },
+              ),
+              document.header.protocolVersions,
             );
           }
         }
@@ -1276,12 +1283,15 @@ export class KyselyWriteCache implements IWriteCache {
         } else {
           // Fail-fast: if reducer throws, error propagates immediately without caching partial state
           const protocolVersion = baseReducerVersion(document.header);
-          document = module.reducer(document, operation.action, undefined, {
-            skip: operation.skip,
-            protocolVersion,
-            replayOptions: { operation },
-            skipIndexValidation: true,
-          });
+          document = withProtocolVersions(
+            module.reducer(document, operation.action, undefined, {
+              skip: operation.skip,
+              protocolVersion,
+              replayOptions: { operation },
+              skipIndexValidation: true,
+            }),
+            document.header.protocolVersions,
+          );
         }
 
         if (
