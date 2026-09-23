@@ -17,15 +17,20 @@ import {
   type DocumentDriveGlobalState,
   type DocumentDrivePHState,
   type FileNode,
+  type Listener,
   type Node as DriveNode,
 } from "@powerhousedao/shared/document-drive";
 import {
+  baseCreateDocument,
   createReducer,
+  defaultPHState as defaultDocumentModelPHState,
   deriveOperationId,
   generateId,
   isDocumentAction,
   type Action,
   type DocumentModelModule,
+  type DocumentModelPHState,
+  type ModuleSpecification,
   type Operation,
   type PHDocument,
   type Reducer,
@@ -2034,6 +2039,476 @@ for (const scan of NODE_SCANS) {
               if (nodeScanCasesRun === NODE_SCAN_CASES) {
                 reportNodeScans();
               }
+            },
+          },
+        );
+      }
+    }
+  });
+}
+
+/** The packages/shared assigns outside node.ts that have T-023's shape. */
+const SURVEY_SITES: string[] = [
+  "document-drive/src/reducers/drive.ts:51 state.listeners = state.listeners.filter",
+  "document-drive/src/reducers/drive.ts:69 state.triggers = state.triggers.filter",
+  "document-model/reducers.ts:194 latestSpec.modules = latestSpec.modules.filter",
+  "document-model/reducers.ts:386 mod.operations = mod.operations.filter",
+  "document-model/reducers.ts:397 mod.operations = mod.operations.filter",
+  "document-model/reducers.ts:472 scopeState.examples = scopeState.examples.filter",
+];
+
+type SurveyAssignLeg =
+  | "filter the draft, assign unfrozen"
+  | "read base, filter, assign unfrozen"
+  | "read base, filter, assign frozen";
+
+const SURVEY_ASSIGN_LEGS: SurveyAssignLeg[] = [
+  "filter the draft, assign unfrozen",
+  "read base, filter, assign unfrozen",
+  "read base, filter, assign frozen",
+];
+
+type SurveyReadLeg = "frozen" | "plain";
+
+const SURVEY_READ_LEGS: SurveyReadLeg[] = ["frozen", "plain"];
+
+/** 5 is a drive's production listener count; 1000 shows per-element growth. */
+const SURVEY_SIZES: number[] = [5, 50, 500, 1000];
+const SURVEY_TIME_MS = 500;
+
+let surveySink = 0;
+let surveyCasesRun = 0;
+
+/** The assigned list, built the way the leg names; base is the untouched list. */
+function surveyFilteredList<TItem>(
+  draftList: TItem[],
+  baseList: readonly TItem[],
+  keep: (item: TItem) => boolean,
+  leg: SurveyAssignLeg,
+): TItem[] {
+  if (leg === "filter the draft, assign unfrozen") {
+    return draftList.filter(keep);
+  }
+
+  const filtered = baseList.filter(keep);
+
+  if (leg === "read base, filter, assign frozen") {
+    return Object.freeze(filtered) as TItem[];
+  }
+
+  return filtered;
+}
+
+function surveyListenerId(index: number): string {
+  return `listener-${String(index).padStart(6, "0")}`;
+}
+
+function surveyModuleId(index: number): string {
+  return `module-${String(index).padStart(6, "0")}`;
+}
+
+/** Listeners shaped as addListenerOperation stores them. */
+function buildSurveyListeners(count: number): Listener[] {
+  const listeners: Listener[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    listeners.push({
+      listenerId: surveyListenerId(index),
+      label: `listener ${String(index)}`,
+      block: false,
+      system: false,
+      filter: {
+        branch: [BRANCH],
+        documentId: [DOCUMENT_ID],
+        documentType: [DOCUMENT_TYPE],
+        scope: [SCOPE],
+      },
+      callInfo: {
+        transmitterType: "Internal",
+        name: `transmitter-${String(index)}`,
+        data: "",
+      },
+    });
+  }
+
+  return listeners;
+}
+
+/** Modules carry one operation each, so the finalize walk recurses a level. */
+function buildSurveyModules(count: number): ModuleSpecification[] {
+  const modules: ModuleSpecification[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    modules.push({
+      id: surveyModuleId(index),
+      name: `module ${String(index)}`,
+      description: `module ${String(index)} description`,
+      operations: [
+        {
+          id: `operation-${String(index).padStart(6, "0")}`,
+          name: `OPERATION_${String(index)}`,
+          description: null,
+          errors: [],
+          examples: [],
+          reducer: null,
+          schema: null,
+          template: null,
+          scope: SCOPE,
+        },
+      ],
+    });
+  }
+
+  return modules;
+}
+
+/** A replayed operation, whose hash keeps the reducer from rehashing a scope. */
+function surveyOperation(scope: string, type: string, input: object): Operation {
+  const action: Action = {
+    id: `survey-${type}`,
+    type,
+    scope,
+    timestampUtcMs: Date.now().toString(),
+    input,
+  };
+
+  return {
+    id: deriveOperationId(DOCUMENT_ID, scope, BRANCH, action.id),
+    index: 0,
+    skip: 0,
+    hash: `survey-hash-${type}`,
+    timestampUtcMs: new Date().toISOString(),
+    action,
+  };
+}
+
+/** A drive document holding the listeners on its local scope, unfrozen. */
+function surveyDriveDocument(
+  listeners: Listener[],
+): PHDocument<DocumentDrivePHState> {
+  const document = driveDocumentModelModule.utils.createDocument();
+  document.state.local.listeners = listeners;
+  return document;
+}
+
+/** A document model whose latest specification holds the modules, unfrozen. */
+function surveyDocumentModelDocument(
+  modules: ModuleSpecification[],
+): PHDocument<DocumentModelPHState> {
+  const document = baseCreateDocument<DocumentModelPHState>(
+    (state) => ({ ...defaultDocumentModelPHState(), ...state }),
+    undefined,
+    "powerhouse/document-model",
+  );
+
+  document.state.global.specifications = [
+    {
+      changeLog: [],
+      modules,
+      state: {
+        global: { examples: [], initialValue: "", schema: "" },
+        local: { examples: [], initialValue: "", schema: "" },
+      },
+      version: 1,
+    },
+  ];
+
+  return document;
+}
+
+/** removeListenerOperation with its one statement under the leg. */
+function surveyListenerReducer(
+  leg: SurveyAssignLeg,
+  base: readonly Listener[],
+  removedId: string,
+): Reducer<DocumentDrivePHState> {
+  const stateReducer: StateReducer<DocumentDrivePHState> = (state, action) => {
+    const local = (state as unknown as DocumentDrivePHState).local;
+    local.listeners = surveyFilteredList(
+      local.listeners,
+      base,
+      (listener) => listener.listenerId !== removedId,
+      leg,
+    );
+    return undefined;
+  };
+
+  return createReducer<DocumentDrivePHState>(stateReducer);
+}
+
+/** deleteModuleOperation with its one statement under the leg. */
+function surveyModuleReducer(
+  leg: SurveyAssignLeg,
+  base: readonly ModuleSpecification[],
+  removedId: string,
+): Reducer<DocumentModelPHState> {
+  const stateReducer: StateReducer<DocumentModelPHState> = (state, action) => {
+    const global = (state as unknown as DocumentModelPHState).global;
+    const latestSpec = global.specifications[global.specifications.length - 1];
+    latestSpec.modules = surveyFilteredList(
+      latestSpec.modules,
+      base,
+      (specModule) => specModule.id !== removedId,
+      leg,
+    );
+    return undefined;
+  };
+
+  return createReducer<DocumentModelPHState>(stateReducer);
+}
+
+/** The sites surveyed and one line saying the cases did the claimed work. */
+function reportSurvey(): void {
+  console.log(
+    [
+      "reducer draft array survey",
+      `${String(surveyCasesRun)} cases ran`,
+      `results summed to ${String(surveySink)}`,
+      `sites surveyed: ${SURVEY_SITES.join(" ; ")}`,
+    ].join(" | "),
+  );
+}
+
+const SURVEY_ASSIGN_CASES = SURVEY_SIZES.length * SURVEY_ASSIGN_LEGS.length * 2;
+const SURVEY_READ_CASES = SURVEY_SIZES.length * SURVEY_READ_LEGS.length * 4;
+const SURVEY_CASES = SURVEY_ASSIGN_CASES + SURVEY_READ_CASES;
+
+function countSurveyCase(): void {
+  surveyCasesRun += 1;
+
+  if (surveyCasesRun === SURVEY_CASES) {
+    reportSurvey();
+  }
+}
+
+/** One dispatched REMOVE_LISTENER, whose predicate visits every listener. */
+describe("Reducer Draft Assign Survey: drive listeners", () => {
+  for (const count of SURVEY_SIZES) {
+    const base = buildSurveyListeners(count);
+    const removedId = surveyListenerId(count - 1);
+    const document = surveyDriveDocument(base);
+    const operation = surveyOperation("local", "REMOVE_LISTENER", {
+      listenerId: removedId,
+    });
+
+    for (const leg of SURVEY_ASSIGN_LEGS) {
+      const reducer = surveyListenerReducer(leg, base, removedId);
+
+      bench(
+        `drive listeners, ${leg} (${String(count)} listener ops)`,
+        () => {
+          const next = reducer(document, operation.action, undefined, {
+            skip: operation.skip,
+            replayOptions: { operation },
+            skipIndexValidation: true,
+          });
+          surveySink += next.state.local.listeners.length;
+        },
+        {
+          time: SURVEY_TIME_MS,
+          throws: true,
+          teardown: (_task, mode) => {
+            if (mode !== "run") {
+              return;
+            }
+
+            const next = reducer(document, operation.action, undefined, {
+              skip: operation.skip,
+              replayOptions: { operation },
+              skipIndexValidation: true,
+            });
+
+            if (next.state.local.listeners.length !== count - 1) {
+              throw new Error(
+                `drive listener survey at ${String(count)} kept ${String(next.state.local.listeners.length)} of ${String(count)}`,
+              );
+            }
+
+            countSurveyCase();
+          },
+        },
+      );
+    }
+  }
+});
+
+/** The same statement on a nested draft: the spec is reached through it. */
+describe("Reducer Draft Assign Survey: document-model spec modules", () => {
+  for (const count of SURVEY_SIZES) {
+    const base = buildSurveyModules(count);
+    const removedId = surveyModuleId(count - 1);
+    const document = surveyDocumentModelDocument(base);
+    const operation = surveyOperation(SCOPE, "DELETE_MODULE", {
+      id: removedId,
+    });
+
+    for (const leg of SURVEY_ASSIGN_LEGS) {
+      const reducer = surveyModuleReducer(leg, base, removedId);
+
+      bench(
+        `document-model spec modules, ${leg} (${String(count)} module ops)`,
+        () => {
+          const next = reducer(document, operation.action, undefined, {
+            skip: operation.skip,
+            replayOptions: { operation },
+            skipIndexValidation: true,
+          });
+          surveySink += next.state.global.specifications[0].modules.length;
+        },
+        {
+          time: SURVEY_TIME_MS,
+          throws: true,
+          teardown: (_task, mode) => {
+            if (mode !== "run") {
+              return;
+            }
+
+            const next = reducer(document, operation.action, undefined, {
+              skip: operation.skip,
+              replayOptions: { operation },
+              skipIndexValidation: true,
+            });
+            const remaining = next.state.global.specifications[0].modules;
+
+            if (remaining.length !== count - 1) {
+              throw new Error(
+                `module survey at ${String(count)} kept ${String(remaining.length)} of ${String(count)}`,
+              );
+            }
+
+            countSurveyCase();
+          },
+        },
+      );
+    }
+  }
+});
+
+/** One scan a reducer runs, against whichever shape of the list a case holds. */
+type SurveyScan = {
+  suite: string;
+  label: string;
+  unit: string;
+  frozen: (count: number) => readonly unknown[];
+  plain: (count: number) => unknown[];
+  run: (list: readonly unknown[], targetId: string) => number;
+  targetId: (count: number) => string;
+};
+
+const surveyListenerLists = new Map<number, Listener[]>();
+const surveyModuleLists = new Map<number, ModuleSpecification[]>();
+
+function surveyListenerList(count: number): Listener[] {
+  const cached = surveyListenerLists.get(count);
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const built = buildSurveyListeners(count);
+  surveyListenerLists.set(count, built);
+  return built;
+}
+
+function surveyModuleList(count: number): ModuleSpecification[] {
+  const cached = surveyModuleLists.get(count);
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const built = buildSurveyModules(count);
+  surveyModuleLists.set(count, built);
+  return built;
+}
+
+/** The predicates those reducers read their lists back with, both shapes. */
+const SURVEY_SCANS: SurveyScan[] = [
+  {
+    suite: "Reducer List Read Survey: drive listeners, find by id",
+    label: "drive listeners find by id",
+    unit: "listener ops",
+    frozen: (count) => Object.freeze([...surveyListenerList(count)]),
+    plain: (count) => [...surveyListenerList(count)],
+    run: (list, targetId) => {
+      const found = (list as readonly Listener[]).find(
+        (listener) => listener.listenerId === targetId,
+      );
+      return found === undefined ? 0 : 1;
+    },
+    targetId: (count) => surveyListenerId(count - 1),
+  },
+  {
+    suite: "Reducer List Read Survey: drive listeners, filter by id",
+    label: "drive listeners filter by id",
+    unit: "listener ops",
+    frozen: (count) => Object.freeze([...surveyListenerList(count)]),
+    plain: (count) => [...surveyListenerList(count)],
+    run: (list, targetId) =>
+      (list as readonly Listener[]).filter(
+        (listener) => listener.listenerId !== targetId,
+      ).length,
+    targetId: (count) => surveyListenerId(count - 1),
+  },
+  {
+    suite: "Reducer List Read Survey: document-model spec modules, find by id",
+    label: "document-model spec modules find by id",
+    unit: "module ops",
+    frozen: (count) => Object.freeze([...surveyModuleList(count)]),
+    plain: (count) => [...surveyModuleList(count)],
+    run: (list, targetId) => {
+      const found = (list as readonly ModuleSpecification[]).find(
+        (specModule) => specModule.id === targetId,
+      );
+      return found === undefined ? 0 : found.name.length;
+    },
+    targetId: (count) => surveyModuleId(count - 1),
+  },
+  {
+    suite:
+      "Reducer List Read Survey: document-model spec modules, filter by id",
+    label: "document-model spec modules filter by id",
+    unit: "module ops",
+    frozen: (count) => Object.freeze([...surveyModuleList(count)]),
+    plain: (count) => [...surveyModuleList(count)],
+    run: (list, targetId) =>
+      (list as readonly ModuleSpecification[]).filter(
+        (specModule) => specModule.id !== targetId,
+      ).length,
+    targetId: (count) => surveyModuleId(count - 1),
+  },
+];
+
+for (const scan of SURVEY_SCANS) {
+  describe(scan.suite, () => {
+    for (const count of SURVEY_SIZES) {
+      const targetId = scan.targetId(count);
+      const frozen = scan.frozen(count);
+      const plain = scan.plain(count);
+
+      for (const leg of SURVEY_READ_LEGS) {
+        const list: readonly unknown[] = leg === "frozen" ? frozen : plain;
+
+        bench(
+          `${scan.label}, ${leg} list (${String(count)} ${scan.unit})`,
+          () => {
+            surveySink += scan.run(list, targetId);
+          },
+          {
+            time: SURVEY_TIME_MS,
+            throws: true,
+            teardown: (_task, mode) => {
+              if (mode !== "run") {
+                return;
+              }
+
+              if (Object.isFrozen(list) !== (leg === "frozen")) {
+                throw new Error(
+                  `${scan.label} at ${String(count)} ran its ${leg} leg over the wrong shape`,
+                );
+              }
+
+              countSurveyCase();
             },
           },
         );
