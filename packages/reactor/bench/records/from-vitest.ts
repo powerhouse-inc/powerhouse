@@ -52,7 +52,45 @@ export type BenchTarget = {
    * sidecar into an error rather than a quietly incomplete record.
    */
   stampedCase: string;
+  /**
+   * The units this target's case names state their workload size in. A spread
+   * pairs only cases that state the same count in every one of them.
+   */
+  sizeUnits: SizeUnit[];
 };
+
+/** A unit a case name can state its workload size in, as `<n> [adjective] <word>`. */
+export type SizeUnit = {
+  /** Every spelling a case name uses, matched whole and case-insensitively. */
+  words: string[];
+  /** What a spread says it held fixed: `at 100 <label>`. */
+  label: string;
+  /** What a suite with no pair says it could not hold fixed. */
+  noun: string;
+};
+
+const OPERATION_COUNT: SizeUnit = {
+  words: ["operations", "operation", "ops"],
+  label: "operations",
+  noun: "operation count",
+};
+
+/** How auth-scope.bench.ts names the size of each case. */
+const AUTH_SIZE_UNITS: SizeUnit[] = [
+  { words: ["grants", "grant"], label: "grants", noun: "grant count" },
+  { words: ["members", "member"], label: "members", noun: "member count" },
+  { words: ["nodes", "node"], label: "nodes", noun: "node count" },
+  {
+    words: ["referencer(s)", "referencers", "referencer"],
+    label: "referencer(s)",
+    noun: "referencer count",
+  },
+  {
+    words: ["group(s)", "groups"],
+    label: "group(s)",
+    noun: "group count",
+  },
+];
 
 /** Marks a case as a reference cost rather than a point on the sweep. */
 export const REFERENCE_CASE_MARKER = "[reference]";
@@ -105,6 +143,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     renames: {},
     stampsFile: "",
     stampedCase: "",
+    sizeUnits: AUTH_SIZE_UNITS,
   },
   {
     name: "auth-storage",
@@ -125,6 +164,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     renames: {},
     stampsFile: "",
     stampedCase: "",
+    sizeUnits: [OPERATION_COUNT],
   },
   {
     name: "events",
@@ -143,6 +183,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     },
     stampsFile: "",
     stampedCase: "",
+    sizeUnits: [OPERATION_COUNT],
   },
   {
     name: "queue",
@@ -160,6 +201,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     renames: {},
     stampsFile: "",
     stampedCase: "",
+    sizeUnits: [OPERATION_COUNT],
   },
   {
     name: "queue-only",
@@ -177,6 +219,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     renames: {},
     stampsFile: "",
     stampedCase: "",
+    sizeUnits: [OPERATION_COUNT],
   },
   {
     name: "cache",
@@ -195,6 +238,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     renames: cacheRenames(),
     stampsFile: "write-cache-stamps.json",
     stampedCase: "instrumented cold-miss replay",
+    sizeUnits: [OPERATION_COUNT],
   },
   {
     name: "sync",
@@ -212,6 +256,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     renames: {},
     stampsFile: "",
     stampedCase: "",
+    sizeUnits: [OPERATION_COUNT],
   },
 ];
 
@@ -704,9 +749,13 @@ export function buildMicroEntry(
     );
   }
 
-  const derived = [...input.suites.flatMap(suiteSpreads), ...input.derived];
+  const units = input.target.sizeUnits;
+  const derived = [
+    ...input.suites.flatMap((suite) => suiteSpreads(suite, units)),
+    ...input.derived,
+  ];
   const conclusions = [
-    ...input.suites.flatMap(suiteConclusions),
+    ...input.suites.flatMap((suite) => suiteConclusions(suite, units)),
     ...input.conclusions,
   ];
   const caveats = [
@@ -751,10 +800,10 @@ export function suiteLabel(fullName: string): string {
   return parts.length > 1 ? parts.slice(1).join(" > ") : fullName;
 }
 
-/** Cases of one suite that ran the same stated operation count on one leg. */
+/** Cases of one suite that ran the same stated size on one leg. */
 type WorkloadGroup = {
-  /** 0 when the cases state no count of their own. */
-  operations: number;
+  /** Empty when the cases state no size of their own. */
+  size: string;
   /** Empty when the cases name no leg of their own. */
   leg: string;
   cases: MicroCase[];
@@ -766,14 +815,42 @@ type SuiteSplit = {
   references: MicroCase[];
 };
 
-/**
- * The operation count a case name states, or 0 when it states none. A case
- * name is the only place the harness says how much work the case did, so it is
- * the only thing a spread can hold fixed.
- */
-function statedOperationCount(name: string): number {
-  const match = /(\d+)\s+(?:[a-z]+\s+)?(?:operations?|ops)\b/i.exec(name);
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** One unit's count as a case name states it, or 0 when it states none. */
+function statedCount(name: string, unit: SizeUnit): number {
+  const words = [...unit.words]
+    .sort((a, b) => b.length - a.length)
+    .map(escapeRegExp)
+    .join("|");
+  const match = new RegExp(
+    `(\\d+)\\s+(?:[a-z]+\\s+)?(?:${words})(?!\\w)`,
+    "i",
+  ).exec(name);
   return match === null ? 0 : Number(match[1]);
+}
+
+/**
+ * The size a case name states in the target's units, or empty when it states
+ * none. A case name is the only place the harness says how much work the case
+ * did, so it is the only thing a spread can hold fixed.
+ */
+function statedSize(name: string, units: SizeUnit[]): string {
+  return units
+    .map((unit) => ({ unit, count: statedCount(name, unit) }))
+    .filter((stated) => stated.count !== 0)
+    .map((stated) => `${String(stated.count)} ${stated.unit.label}`)
+    .join(", ");
+}
+
+/** What a suite with no pair could not hold fixed, in the target's own words. */
+function sizeNoun(units: SizeUnit[]): string {
+  const nouns = units.map((unit) => unit.noun);
+  return nouns.length < 2
+    ? nouns.join("")
+    : `${nouns.slice(0, -1).join(", ")} or ${nouns[nouns.length - 1]}`;
 }
 
 function isReferenceCase(name: string): boolean {
@@ -798,31 +875,34 @@ function statedLeg(name: string): string {
 }
 
 /** Cases stating no count at all are one set, the suite's own construction; once any case states one, a case stating none is comparable to nothing. */
-function workloadGroups(cases: MicroCase[]): WorkloadGroup[] {
+function workloadGroups(
+  cases: MicroCase[],
+  units: SizeUnit[],
+): WorkloadGroup[] {
   const tagged = cases.map((entry) => ({
     entry,
-    operations: statedOperationCount(entry.name),
+    size: statedSize(entry.name, units),
     leg: statedLeg(entry.name),
   }));
-  if (tagged.every((item) => item.operations === 0)) {
-    return [{ operations: 0, leg: "", cases }];
+  if (tagged.every((item) => item.size === "")) {
+    return [{ size: "", leg: "", cases }];
   }
 
   const groups: WorkloadGroup[] = [];
   const byWorkload = new Map<string, WorkloadGroup>();
   for (const item of tagged) {
-    const workload = `${String(item.operations)} ${item.leg}`;
+    const workload = `${item.size} ${item.leg}`;
     const existing = byWorkload.get(workload);
-    if (item.operations !== 0 && existing !== undefined) {
+    if (item.size !== "" && existing !== undefined) {
       existing.cases.push(item.entry);
       continue;
     }
     const group: WorkloadGroup = {
-      operations: item.operations,
+      size: item.size,
       leg: item.leg,
       cases: [item.entry],
     };
-    if (item.operations !== 0) {
+    if (item.size !== "") {
       byWorkload.set(workload, group);
     }
     groups.push(group);
@@ -832,34 +912,35 @@ function workloadGroups(cases: MicroCase[]): WorkloadGroup[] {
 
 /** What a group held fixed, which its spread has to say it held fixed. */
 function heldFixed(group: WorkloadGroup): string {
-  const at = `${String(group.operations)} operations`;
-  return group.leg === "" ? at : `${at} on the ${group.leg} leg`;
+  return group.leg === ""
+    ? group.size
+    : `${group.size} on the ${group.leg} leg`;
 }
 
 /** What each case states about its own workload, for a note that has to say why. */
-function statedCounts(cases: MicroCase[]): string {
+function statedCounts(cases: MicroCase[], units: SizeUnit[]): string {
   return cases
     .map((entry) => {
-      const operations = statedOperationCount(entry.name);
-      return operations === 0
+      const size = statedSize(entry.name, units);
+      return size === ""
         ? `${entry.name}: no stated count`
-        : `${entry.name}: ${String(operations)}`;
+        : `${entry.name}: ${size}`;
     })
     .join("; ");
 }
 
 /**
- * One spread per set of sweep cases that ran the same stated operation count, rather
+ * One spread per set of sweep cases that ran the same stated size, rather
  * than one fastest-over-slowest for the suite. A pair that differs in workload
  * size prices the size as much as the mechanism, and a pair that crosses into a
  * reference case prices that mechanism; either ratio reads as though it priced
  * the sweep alone. A suite that holds one size throughout keeps the single
  * `<label>: spread` it has always filed.
  */
-function suiteSpreads(suite: MicroSuite): DerivedRatio[] {
+function suiteSpreads(suite: MicroSuite, units: SizeUnit[]): DerivedRatio[] {
   const label = suiteLabel(suite.fullName);
   const { sweep } = splitReferences(suite);
-  const groups = workloadGroups(sweep);
+  const groups = workloadGroups(sweep, units);
   const comparable = groups.filter((group) => group.cases.length > 1);
 
   if (comparable.length === 0) {
@@ -868,7 +949,7 @@ function suiteSpreads(suite: MicroSuite): DerivedRatio[] {
         name: `${label}: comparable pairs`,
         value: 0,
         unit: "count",
-        note: `No two cases ran the same stated operation count (${statedCounts(sweep)}), so a fastest-over-slowest ratio here would price the operation count rather than the mechanism`,
+        note: `No two cases ran the same stated ${sizeNoun(units)} (${statedCounts(sweep, units)}), so a fastest-over-slowest ratio here would price the size rather than the mechanism`,
       },
     ];
   }
@@ -896,10 +977,10 @@ function suiteSpreads(suite: MicroSuite): DerivedRatio[] {
  * fills it. A suite with no two cases at one size gets a sentence that says so:
  * the alternative is a headline that reads as a mechanism and is an op count.
  */
-function suiteConclusions(suite: MicroSuite): string[] {
+function suiteConclusions(suite: MicroSuite, units: SizeUnit[]): string[] {
   const label = suiteLabel(suite.fullName);
   const { sweep, references } = splitReferences(suite);
-  const groups = workloadGroups(sweep);
+  const groups = workloadGroups(sweep, units);
   const comparable = groups.filter((group) => group.cases.length > 1);
   const held = references.map(
     (entry) =>
@@ -917,7 +998,7 @@ function suiteConclusions(suite: MicroSuite): string[] {
       .map((entry) => `${entry.name} at ${round(entry.hz)} ops/sec`)
       .join(", ");
     return [
-      `In ${label}, no two cases ran the same stated operation count, so the suite has no spread that isolates the mechanism: ${rates}`,
+      `In ${label}, no two cases ran the same stated ${sizeNoun(units)}, so the suite has no spread that isolates the mechanism: ${rates}`,
       ...held,
     ];
   }

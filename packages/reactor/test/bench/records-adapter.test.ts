@@ -246,18 +246,67 @@ describe("buildMicroEntry", () => {
     expect(entryFor(findTarget("auth"))).not.toHaveProperty("id");
   });
 
-  it("derives one conclusion and one spread per suite from the numbers", () => {
+  it("derives one conclusion and one reading per suite from the numbers", () => {
     const entry = entryFor(findTarget("auth"));
     const results = entry.results as { derived: { name: string }[] };
 
-    expect(entry.conclusions).toEqual([
-      "In auth policy evaluation (pure CPU), evaluateGrantStack: 10 grants is 4.57x slower than evaluateGrantStack: 2 grants",
-      "In auth policy evaluation (pure CPU) > group principals, 10 grants, group of 1000 members is 55.53x slower than 10 grants, group absent from the map",
+    expect(entry.conclusions).toHaveLength(2);
+    expect(results.derived.map((reading) => reading.name)).toEqual([
+      "auth policy evaluation (pure CPU): comparable pairs",
+      "auth policy evaluation (pure CPU) > group principals: comparable pairs",
     ]);
-    expect(results.derived).toHaveLength(2);
-    expect(results.derived[0].name).toBe(
-      "auth policy evaluation (pure CPU): spread",
-    );
+  });
+
+  it("holds the grant count an auth case names fixed", () => {
+    const suites = [
+      sizedSuite("bench/auth-scope.bench.ts > auth scope write validation", [
+        ["retention: 10 grants, administered from the top", 17000000],
+        ["retention: 100 grants, administered from the top", 3800000],
+        ["retention: 10 grants, shadow walk before an anyone allow", 680000],
+        ["retention: 100 grants, shadow walk before an anyone allow", 55000],
+      ]),
+    ];
+
+    const results = entryFor(findTarget("auth"), { suites }).results as {
+      derived: { name: string; value: number; note: string }[];
+    };
+
+    expect(
+      results.derived.map((reading) => [reading.name, reading.value]),
+    ).toEqual([
+      ["auth scope write validation: spread at 10 grants", 25],
+      ["auth scope write validation: spread at 100 grants", 69.09],
+    ]);
+  });
+
+  it("pairs no auth cases that differ in any stated size", () => {
+    const suites = [
+      sizedSuite("bench/auth-scope.bench.ts > conditions", [
+        ["evaluateGrantStack: 100 grants x 100 condition nodes", 4700],
+        ["evaluateGrantStack: 100 conditional grants, no context", 6400000],
+        ["1 referencer(s), reader outside the audience", 270000],
+        ["5 distinct group(s)", 200000],
+      ]),
+    ];
+
+    const entry = entryFor(findTarget("auth"), { suites });
+    const results = entry.results as {
+      derived: { name: string; value: number; note: string }[];
+    };
+
+    expect(results.derived).toHaveLength(1);
+    expect(results.derived[0]).toMatchObject({
+      name: "conditions: comparable pairs",
+      value: 0,
+    });
+    for (const stated of [
+      "evaluateGrantStack: 100 grants x 100 condition nodes: 100 grants, 100 nodes",
+      "evaluateGrantStack: 100 conditional grants, no context: 100 grants",
+      "1 referencer(s), reader outside the audience: 1 referencer(s)",
+      "5 distinct group(s): 5 group(s)",
+    ]) {
+      expect(results.derived[0].note).toContain(stated);
+    }
   });
 
   it("appends the caller's claims rather than replacing what was measured", () => {
@@ -344,7 +393,7 @@ describe("buildMicroEntry", () => {
       ]),
     ];
 
-    const entry = entryFor(findTarget("auth"), { suites });
+    const entry = entryFor(findTarget("queue"), { suites });
     const results = entry.results as {
       derived: { name: string; value: number; unit: string; note: string }[];
     };
@@ -378,7 +427,7 @@ describe("buildMicroEntry", () => {
       ]),
     ];
 
-    const entry = entryFor(findTarget("auth"), { suites });
+    const entry = entryFor(findTarget("queue"), { suites });
     const results = entry.results as {
       derived: { name: string; value: number; unit: string }[];
     };
@@ -403,7 +452,7 @@ describe("buildMicroEntry", () => {
       ]),
     ];
 
-    const results = entryFor(findTarget("auth"), { suites }).results as {
+    const results = entryFor(findTarget("queue"), { suites }).results as {
       derived: { name: string; note: string }[];
     };
 
@@ -427,7 +476,7 @@ describe("buildMicroEntry", () => {
       ]),
     ];
 
-    const entry = entryFor(findTarget("auth"), { suites });
+    const entry = entryFor(findTarget("queue"), { suites });
     const results = entry.results as {
       derived: { name: string; value: number; unit: string; note: string }[];
     };
@@ -454,7 +503,7 @@ describe("buildMicroEntry", () => {
       ]),
     ];
 
-    const results = entryFor(findTarget("auth"), { suites }).results as {
+    const results = entryFor(findTarget("queue"), { suites }).results as {
       derived: { name: string; value: number }[];
     };
 
@@ -473,7 +522,7 @@ describe("buildMicroEntry", () => {
       ]),
     ];
 
-    const entry = entryFor(findTarget("auth"), { suites });
+    const entry = entryFor(findTarget("queue"), { suites });
     const results = entry.results as {
       derived: { name: string; value: number; note: string }[];
     };

@@ -21,8 +21,8 @@ Usage:
   --allow-dirty        record against a working tree with uncommitted changes
 
 The conclusions and caveats an entry starts with are derived from the numbers:
-one spread per set of cases in a suite that state the same operation count, or
-a note that the suite has no such pair, plus a caveat for every case whose
+one spread per set of cases in a suite that state the same size, in the units
+the target's sizeUnits declare, or a note that the suite has no such pair, plus a caveat for every case whose
 relative margin of error exceeds 5% or whose sample count is under 100. Your
 own text is appended to those, never in place of them.
 
