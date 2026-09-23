@@ -1,5 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
 import {
+  AttachmentAlreadyExists,
   AttachmentBuilder,
   S3AttachmentBackend,
   type AttachmentBuildResult,
@@ -100,6 +101,45 @@ describe("attachment routes through the real Express middleware stack", () => {
       off += c.byteLength;
     }
     expect(new TextDecoder().decode(merged)).toBe(payload);
+  });
+
+  it("HEAD and GET /attachments/:hash serve a file name above U+00FF", async () => {
+    const fileName = "opłata – 報告 📎.pdf";
+    const service = createRemoteAttachmentService({ remoteUrl: baseUrl });
+    const upload = await service.reserve({
+      mimeType: "application/pdf",
+      fileName,
+    });
+    const bytes = new TextEncoder().encode("%PDF-unicode-name");
+    const { hash } = await upload.send(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(bytes);
+          controller.close();
+        },
+      }),
+    );
+
+    for (const method of ["HEAD", "GET"]) {
+      const res = await fetch(`${baseUrl}/attachments/${hash}`, { method });
+      expect(res.status).toBe(200);
+      const meta = JSON.parse(res.headers.get("attachment-metadata")!) as {
+        fileName: string;
+      };
+      expect(meta.fileName).toBe(fileName);
+      await res.arrayBuffer();
+    }
+
+    // A hash-first reserve of the same bytes is what the client sends on the
+    // next upload; it stats the hash first.
+    await expect(
+      service.reserve({
+        mimeType: "application/pdf",
+        fileName,
+        clientHash: hash,
+        sizeBytes: bytes.byteLength,
+      }),
+    ).rejects.toBeInstanceOf(AttachmentAlreadyExists);
   });
 });
 
