@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-23T16:39:16.255Z
+> Generated: 2026-09-23T17:50:15.813Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -5445,7 +5445,7 @@ type TrackedProcessor = {
 };
 ```
 
-**Ordering.** Batches reach the manager one document at a time, and different documents are projected in parallel, so a processor is not called in global ordinal order: a call may carry an ordinal lower than one an earlier call carried. Within one document's scope and branch, operations arrive in ordinal order; across documents there is no ordering guarantee. A processor receives one `onOperations` call at a time: each processor has its own delivery queue, and the next call begins after the previous one resolves. Batches that queue up behind a call are delivered together in the next one, in the order they arrived. A slow processor delays only its own queue. On each batch the manager applies the filter and queues the matches, minus any a backfill has already delivered. On success it raises `lastOrdinal` to the batch's maximum ordinal (including unmatched operations) when that is higher. Delivery is at-least-once: a processor may see an operation again after a restart or a retry. A crash between two concurrently projected documents, after the higher ordinal's cursor was persisted, can leave the lower ordinals unreplayed.
+**Ordering.** Batches reach the manager one document at a time, and different documents are projected in parallel, so a processor is not called in global ordinal order: a call may carry an ordinal lower than one an earlier call carried. Within one document's scope and branch, operations arrive in ordinal order; across documents there is no ordering guarantee. A processor receives one `onOperations` call at a time: each processor has its own delivery queue, and the next call begins after the previous one resolves. Batches that queue up behind a call are delivered together in the next one, in the order they arrived. A slow processor delays only its own queue. On each batch the manager applies the filter and queues the matches, minus any a backfill has already delivered. On success it raises `lastOrdinal` to the batch's maximum ordinal (including unmatched operations) when that is higher. Delivery is at-least-once: a processor may see an operation again after a restart or a retry, or when a backfill reads an operation whose live batch is still on its way to the manager. A crash between two concurrently projected documents, after the higher ordinal's cursor was persisted, can leave the lower ordinals unreplayed.
 
 **`startFrom`.** When a processor is first created and no cursor row exists yet:
 

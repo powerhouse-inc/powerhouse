@@ -66,12 +66,13 @@ export interface IProcessor {
    * Called when operations match this processor's filter.
    *
    * Delivery is at-least-once: a processor may see an operation again after
-   * a restart or a retry. Within one document's scope and branch, operations
-   * arrive in ordinal order. Across documents there is no ordering guarantee.
-   * A processor receives one `onOperations` call at a time; the next call
-   * begins after the previous resolves. A crash between two concurrently
-   * projected documents, after the higher ordinal's cursor was persisted, can
-   * leave the lower ordinals unreplayed.
+   * a restart or a retry, or when a backfill reads an operation whose live
+   * batch has not reached the manager yet. Within one document's scope and
+   * branch, operations arrive in ordinal order. Across documents there is no
+   * ordering guarantee. A processor receives one `onOperations` call at a
+   * time; the next call begins after the previous resolves. A crash between
+   * two concurrently projected documents, after the higher ordinal's cursor
+   * was persisted, can leave the lower ordinals unreplayed.
    */
   onOperations(operations: OperationWithContext[]): Promise<void>;
 
@@ -143,9 +144,10 @@ export interface IProcessorManager {
    * every factory run has completed and its processors are bound. Their
    * backfills run afterwards, on each processor's own queue. If processors
    * from an earlier registration under the same identifier are still
-   * draining, the factory runs after they have disconnected, so awaiting a
-   * re-registration of a processor's own factory from its `onOperations`
-   * waits on itself.
+   * draining, or a call of the previous factory is still in flight, the
+   * factory runs after they have settled, so awaiting a re-registration of
+   * a factory from inside that factory or one of its processors'
+   * `onOperations` waits on itself.
    */
   registerFactory(identifier: string, factory: ProcessorFactory): Promise<void>;
 
