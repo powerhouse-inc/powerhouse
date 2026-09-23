@@ -141,18 +141,27 @@ jobs:
       - name: Run reactor package tests
         run: pnpm test:reactor-packages
 
+  # One job per case: each hub-spoke case is spoke catch-up bound and runs 1-3.5m
+  # on its own. Not gated on test-reactor, which it shares no artifact with.
   integration-test:
-    name: Sync Integration Tests
-    # Deliberately not gated on test-reactor: this job shares no artifact with
-    # it (own checkout, install and build), so the dependency only served to
-    # fail fast. Running both at once takes the workflow from the sum of the
-    # two to the longer of them.
+    name: Sync Integration (${{ matrix.name }})
     runs-on: ubuntu-24.04
     container: node:24
-    # The last green main run took 14m22s against the previous 15m budget:
-    # two ~6m hub-spoke legs plus the load test left no headroom, and runner
-    # variance tipped it into cancellation mid-leg.
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: load test
+            run: pnpm --filter=@powerhousedao/load-test-connect run test:integration
+          - name: document-drive, 1 spoke
+            run: pnpm --filter=@powerhousedao/reactor-api run test:integration -t "document-drive.*converges 1 spoke"
+          - name: document-drive, 3 spokes
+            run: pnpm --filter=@powerhousedao/reactor-api run test:integration -t "document-drive.*converges 3 spoke"
+          - name: reactor-drive, 1 spoke
+            run: pnpm --filter=@powerhousedao/reactor-api run test:integration -t "reactor-drive.*converges 1 spoke"
+          - name: reactor-drive, 3 spokes
+            run: pnpm --filter=@powerhousedao/reactor-api run test:integration -t "reactor-drive.*converges 3 spoke"
 
     services:
       postgres:
@@ -210,7 +219,7 @@ jobs:
         run: pnpm build
 
       - name: Run integration tests
-        run: pnpm test:integration
+        run: ${{ matrix.run }}
 
   duration-watch:
     name: CI duration watch
