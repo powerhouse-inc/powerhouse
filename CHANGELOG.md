@@ -1,3 +1,30 @@
+## 6.2.3-dev.22 (2026-09-23)
+
+### 🚀 Features
+
+- **doc-harness:** end a drive with the exact command that redoes what failed ([9e08583ae](https://github.com/powerhouse-inc/powerhouse/commit/9e08583ae))
+- **workflow:** check a connection with the piece's own auth.validate ([2ce28e650](https://github.com/powerhouse-inc/powerhouse/commit/2ce28e650))
+
+### 🩹 Fixes
+
+- **ci:** slice the duration-watch baseline in jq, not through head ([73db497e0](https://github.com/powerhouse-inc/powerhouse/commit/73db497e0))
+- **doc-harness:** let the builder run tsx, and stop it opting out of the sandbox ([4fa0c9e1f](https://github.com/powerhouse-inc/powerhouse/commit/4fa0c9e1f))
+- **doc-harness:** say why a graded attempt failed ([025110781](https://github.com/powerhouse-inc/powerhouse/commit/025110781))
+- **doc-harness:** pin the export shapes the hidden tests rely on ([46cec15a3](https://github.com/powerhouse-inc/powerhouse/commit/46cec15a3))
+- **reactor:** write-cache spreads compare only cases at the same operation count ([610fc6ea6](https://github.com/powerhouse-inc/powerhouse/commit/610fc6ea6))
+- **reactor:** write-cache spreads compare only cases at the same operation count ([#3075](https://github.com/powerhouse-inc/powerhouse/pull/3075))
+
+### 🔥 Performance
+
+- **codegen:** generated reducers build each input schema once ([79a95f435](https://github.com/powerhouse-inc/powerhouse/commit/79a95f435))
+- **shared:** build drive reducer input schemas once instead of per action ([791311ada](https://github.com/powerhouse-inc/powerhouse/commit/791311ada))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.3-dev.21 (2026-09-22)
 
 ### 🚀 Features

@@ -1,3 +1,17 @@
+## 6.2.3-dev.22 (2026-09-23)
+
+### 🚀 Features
+
+- **workflow:** check a connection with the piece's own auth.validate ([2ce28e650](https://github.com/powerhouse-inc/powerhouse/commit/2ce28e650))
+
+### 🩹 Fixes
+
+- **ci:** slice the duration-watch baseline in jq, not through head ([73db497e0](https://github.com/powerhouse-inc/powerhouse/commit/73db497e0))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.21 (2026-09-22)
 
 ### 🚀 Features

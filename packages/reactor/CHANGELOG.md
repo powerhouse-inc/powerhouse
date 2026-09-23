@@ -1,3 +1,20 @@
+## 6.2.3-dev.22 (2026-09-23)
+
+### 🩹 Fixes
+
+- **reactor:** write-cache spreads compare only cases at the same operation count ([610fc6ea6](https://github.com/powerhouse-inc/powerhouse/commit/610fc6ea6))
+- **ci:** slice the duration-watch baseline in jq, not through head ([73db497e0](https://github.com/powerhouse-inc/powerhouse/commit/73db497e0))
+
+### 🔥 Performance
+
+- **shared:** build drive reducer input schemas once instead of per action ([791311ada](https://github.com/powerhouse-inc/powerhouse/commit/791311ada))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.3-dev.21 (2026-09-22)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

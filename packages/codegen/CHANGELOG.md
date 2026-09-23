@@ -1,3 +1,19 @@
+## 6.2.3-dev.22 (2026-09-23)
+
+### 🩹 Fixes
+
+- **ci:** slice the duration-watch baseline in jq, not through head ([73db497e0](https://github.com/powerhouse-inc/powerhouse/commit/73db497e0))
+
+### 🔥 Performance
+
+- **codegen:** generated reducers build each input schema once ([79a95f435](https://github.com/powerhouse-inc/powerhouse/commit/79a95f435))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.3-dev.21 (2026-09-22)
 
 ### 🩹 Fixes
