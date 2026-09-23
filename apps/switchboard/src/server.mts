@@ -613,7 +613,11 @@ async function initServer(
           : undefined,
       logger: reactorLogger,
       signer: renown
-        ? getRenownSignerConfig(renown, options.identity?.requireSignatures)
+        ? getRenownSignerConfig(
+            renown,
+            options.identity?.requireSignatures,
+            options.identity?.keypairPath,
+          )
         : undefined,
     });
 

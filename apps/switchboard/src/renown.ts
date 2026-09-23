@@ -1,6 +1,7 @@
-import type { SignerConfig } from "@powerhousedao/reactor";
+import type { FactorySpec, SignerConfig } from "@powerhousedao/reactor";
 import {
   createSignatureVerifier,
+  DEFAULT_KEYPAIR_PATH,
   DEFAULT_RENOWN_URL,
   NodeKeyStorage,
   RenownBuilder,
@@ -8,6 +9,8 @@ import {
   type IRenown,
 } from "@renown/sdk/node";
 import { childLogger } from "document-model";
+import { createRequire } from "node:module";
+import { resolve } from "node:path";
 
 const logger = childLogger(["switchboard", "renown"]);
 
@@ -71,13 +74,48 @@ export async function initRenown(
  *
  * @param renown - The renown instance
  * @param requireSignature - If true, unsigned actions are rejected
+ * @param keypairPath - Where `initRenown` loaded the key from
  */
 export function getRenownSignerConfig(
   renown: IRenown,
   requireSignature?: boolean,
+  keypairPath?: string,
 ): SignerConfig {
   return {
     signer: renown.signer,
+    workerSigner: getRenownWorkerSignerSpec(renown, keypairPath),
     verifier: createSignatureVerifier(requireSignature),
+  };
+}
+
+/**
+ * What a pooled executor worker imports to sign as this switchboard: it
+ * reloads the key `initRenown` stored, and takes the user known at boot.
+ */
+export function getRenownWorkerSignerSpec(
+  renown: IRenown,
+  keypairPath?: string,
+): FactorySpec {
+  const { signer } = renown;
+  const user = signer.user;
+  return {
+    module: {
+      filePath: createRequire(import.meta.url).resolve("@renown/sdk/node"),
+      exportName: "createNodeRenownSigner",
+    },
+    initArgs: {
+      appName: signer.app?.name ?? "switchboard",
+      keypairPath: resolve(keypairPath ?? DEFAULT_KEYPAIR_PATH),
+      ...(signer.app?.key ? { did: signer.app.key } : {}),
+      ...(user
+        ? {
+            user: {
+              address: user.address,
+              networkId: user.networkId,
+              chainId: user.chainId,
+            },
+          }
+        : {}),
+    },
   };
 }

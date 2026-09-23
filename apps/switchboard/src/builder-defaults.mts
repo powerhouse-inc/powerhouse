@@ -44,8 +44,9 @@ export type SwitchboardReactorDefaultsOptions = {
   documentModelLoader?: IDocumentModelLoader;
   logger?: ILogger;
   /**
-   * Identity signer (typically from `getRenownSignerConfig`). Applied to the
-   * `ReactorClientBuilder`; omit for unsigned operation.
+   * Identity signer (typically from `getRenownSignerConfig`). Signs client
+   * writes and the operations the executor synthesizes, in pooled workers
+   * through `workerSigner`; omit for unsigned operation.
    */
   signer?: SignerConfig;
 };
@@ -123,5 +124,9 @@ export function applySwitchboardReactorDefaults(
 
   if (options.signer) {
     clientBuilder.withSigner(options.signer);
+    reactorBuilder.withSigner(
+      options.signer.signer,
+      options.signer.workerSigner,
+    );
   }
 }
