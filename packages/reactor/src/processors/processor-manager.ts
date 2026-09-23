@@ -41,6 +41,8 @@ type PendingSlot = {
   // Highest ordinal routed before the slot existed.
   reservedAt: number;
   lowestRoutedOrdinal: number | undefined;
+  // Resolves once the factory call is bound or its records discarded.
+  settled: Promise<void> | undefined;
 };
 
 type Bound = { tracked: TrackedProcessor; queue: ProcessorQueue };
@@ -337,11 +339,13 @@ export class ProcessorManager
   protected removeFactory(identifier: string): Promise<void>[] {
     if (!this.factoryRegistry.delete(identifier)) return [];
 
+    const closing: Promise<void>[] = [];
     for (const slot of this.pendingSlots) {
-      if (slot.factoryId === identifier) this.pendingSlots.delete(slot);
+      if (slot.factoryId !== identifier) continue;
+      this.pendingSlots.delete(slot);
+      if (slot.settled) closing.push(slot.settled);
     }
 
-    const closing: Promise<void>[] = [];
     for (const [driveId, drive] of this.processorsByDrive) {
       const remaining: Bound[] = [];
       for (const b of drive) {
@@ -389,19 +393,19 @@ export class ProcessorManager
       driveId,
       reservedAt: this.highWater(),
       lowestRoutedOrdinal: undefined,
+      settled: undefined,
     };
     this.pendingSlots.add(slot);
 
     const run = async () => {
-      // A re-registered factory starts once its previous instance is gone.
-      await previous;
-      const records = await this.runFactory(slot, factory, driveHeader);
-      const { persisted, delivered } = this.bind(
-        slot,
-        records,
-        creationOrdinal,
-        creationItems,
-      );
+      const bound = (async () => {
+        // A re-registered factory starts once its previous instance is gone.
+        await previous;
+        const records = await this.runFactory(slot, factory, driveHeader);
+        return this.bind(slot, records, creationOrdinal, creationItems);
+      })();
+      slot.settled = bound.then(({ persisted }) => persisted);
+      const { persisted, delivered } = await bound;
       await (awaitDelivery ? Promise.all([persisted, delivered]) : persisted);
     };
 

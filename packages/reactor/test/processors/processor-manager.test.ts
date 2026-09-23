@@ -2431,6 +2431,44 @@ describe("ProcessorManager Standalone Tests", () => {
       expect(events).toEqual(["old ops", "old disconnect", "new factory"]);
     });
 
+    it("should start a re-registered factory only after the previous factory call has settled", async () => {
+      const driveId = generateId();
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      const events: string[] = [];
+      const entered = deferred();
+      const release = deferred();
+      const old = createMockProcessor();
+      old.onDisconnect = vi.fn().mockImplementation(() => {
+        events.push("old disconnect");
+        return Promise.resolve();
+      });
+
+      const first = processorManager.registerFactory("pkg", async () => {
+        entered.resolve();
+        await release.promise;
+        events.push("old factory returned");
+        return [{ processor: old, filter: {} }];
+      });
+      await entered.promise;
+
+      await processorManager.unregisterFactory("pkg");
+      const second = processorManager.registerFactory("pkg", () => {
+        events.push("new factory");
+        return [{ processor: createMockProcessor(), filter: {} }];
+      });
+      // A round trip on the idle connection: time for the new factory to run
+      // if nothing held it back.
+      await db.selectFrom("ViewState").select("lastOrdinal").execute();
+      release.resolve();
+      await Promise.all([first, second]);
+
+      expect(events).toEqual([
+        "old factory returned",
+        "old disconnect",
+        "new factory",
+      ]);
+    });
+
     it("should not hold a drive deletion behind its processors' deliveries", async () => {
       const driveId = generateId();
       const held = deferred();
