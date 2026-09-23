@@ -164,4 +164,17 @@ describe("WorkflowTriggersReadModel", () => {
     expect(ordinals(batches)).toEqual([[14], [15, 16]]);
     expect(await cursor()).toBe(16);
   });
+
+  // Its tables hold no document-id column yet, so it must never read as purged.
+  it("reports a purge as uncovered", async () => {
+    const { model } = readModel();
+
+    await expect(
+      model.purgeDocuments(["doc-1"], { directiveId: "erasure" }),
+    ).resolves.toEqual({
+      readModelId: WORKFLOW_TRIGGERS_READ_MODEL,
+      rowsAffected: 0,
+      covered: false,
+    });
+  });
 });
