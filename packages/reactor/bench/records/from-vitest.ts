@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { z } from "zod";
 import type {
+  BenchmarkTier,
   DerivedRatio,
   MachineEnvironment,
   MicroCase,
@@ -24,6 +25,8 @@ export type BenchTarget = {
   sourceFiles: string[];
   command: string;
   storage: StorageEngine;
+  /** Which tier its cases sit in: a stubbed call site is not a stored one. */
+  tier: BenchmarkTier;
   title: string;
   question: string;
   /**
@@ -51,6 +54,42 @@ export type BenchTarget = {
   stampedCase: string;
 };
 
+/** Marks a case as a reference cost rather than a point on the sweep. */
+export const REFERENCE_CASE_MARKER = "[reference]";
+
+const SPLIT_LEGS = ["draft", "plain"];
+const SPLIT_COUNTS = [100, 500, 1000, 2000];
+const SPLIT_BASELINES = [
+  "real body (fidelity reference)",
+  "no body: create() + base reducer only",
+];
+
+/** The split baselines the suite now marks; renaming keeps their series joined. */
+function splitBaselineRenames(): Record<string, string> {
+  const renames: Record<string, string> = {};
+  for (const leg of SPLIT_LEGS) {
+    for (const count of SPLIT_COUNTS) {
+      for (const baseline of SPLIT_BASELINES) {
+        const former = `${leg} leg ${String(count)} ops: ${baseline}`;
+        renames[former] = `${former} ${REFERENCE_CASE_MARKER}`;
+      }
+    }
+  }
+  return renames;
+}
+
+/** The LRU legs now name the count they hold fixed, so their series is joined. */
+const LRU_RENAMES: Record<string, string> = {
+  "LRU eviction (filling cache to capacity)":
+    "LRU eviction (filling cache to capacity) over 12 documents, capacity 6",
+  "LRU access pattern (updating access order)":
+    "LRU access pattern (updating access order) over 12 documents, capacity 12",
+};
+
+function cacheRenames(): Record<string, string> {
+  return { ...splitBaselineRenames(), ...LRU_RENAMES };
+}
+
 export const BENCH_TARGETS: BenchTarget[] = [
   {
     name: "auth",
@@ -59,9 +98,30 @@ export const BENCH_TARGETS: BenchTarget[] = [
     sourceFiles: ["bench/auth-scope.bench.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:auth:record",
     storage: "stubbed",
+    tier: "micro",
     title: "auth-scope microbenchmarks",
     question: "auth evaluation cost per step, isolated from storage",
     caveats: [],
+    renames: {},
+    stampsFile: "",
+    stampedCase: "",
+  },
+  {
+    name: "auth-storage",
+    recordScript: "bench:auth-storage:record",
+    resultsFile: "auth-gate-storage.json",
+    sourceFiles: ["bench/auth-gate-storage.bench.ts"],
+    command: "pnpm --filter @powerhousedao/reactor bench:auth-storage:record",
+    storage: "pglite",
+    tier: "meso",
+    title: "auth-gate cost against real storage",
+    question:
+      "what the admission gate and the read gate cost against a real store, and how the group-roster walk scales with referencer count",
+    caveats: [
+      "The referencer walk probes at REFERENCER_PROBE_CONCURRENCY, but PGlite serializes every query, so these numbers price the walk without the concurrency a Postgres pool would give it",
+      "The admission-gate cases vary the write cache between warm and cold at one grant count; the group fan-out axis is absent, because rebuilding a group stream needs a group document model this package does not register",
+      "The pure-CPU anchor case is copied from the micro suite unchanged and touches no storage: it is there to compare machines between the two records, not to measure this one",
+    ],
     renames: {},
     stampsFile: "",
     stampedCase: "",
@@ -73,10 +133,14 @@ export const BENCH_TARGETS: BenchTarget[] = [
     sourceFiles: ["bench/event-bus.bench.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:events:record",
     storage: "stubbed",
+    tier: "micro",
     title: "event-bus microbenchmarks",
     question: "emit cost by subscriber count, filter shape, and payload size",
     caveats: [],
-    renames: {},
+    renames: {
+      "50 subscribers (50% sync, 50% yield to macrotask via setImmediate)":
+        "50 subscribers (50% sync, 50% yield to macrotask via setImmediate) [reference]",
+    },
     stampsFile: "",
     stampedCase: "",
   },
@@ -87,6 +151,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     sourceFiles: ["bench/queue-perf.bench.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:queue:record",
     storage: "stubbed",
+    tier: "micro",
     title: "queue throughput microbenchmarks",
     question: "queue cost per job at realistic batch sizes",
     caveats: [
@@ -103,6 +168,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     sourceFiles: ["bench/queue-only.bench.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:queue-only:record",
     storage: "stubbed",
+    tier: "micro",
     title: "queue microbenchmarks without an executor",
     question: "enqueue and dequeue cost with nothing draining",
     caveats: [
@@ -119,13 +185,14 @@ export const BENCH_TARGETS: BenchTarget[] = [
     sourceFiles: ["bench/write-cache.bench.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:cache:record",
     storage: "pglite",
+    tier: "micro",
     title: "write-cache microbenchmarks",
     question: "write-cache hit and miss cost against PGlite",
     caveats: [
       "The no-cache baseline compares a cold rebuild against a manual replay — both are a replay, so that pair reads about 1x by construction rather than what the cache is worth",
       "The two keyframe cases are floored by a 100ms drain sleep for fire-and-forget keyframe writes to land, so their difference isn't persistence overhead",
     ],
-    renames: {},
+    renames: cacheRenames(),
     stampsFile: "write-cache-stamps.json",
     stampedCase: "instrumented cold-miss replay",
   },
@@ -136,6 +203,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     sourceFiles: ["bench/two-reactor-sync.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:sync:record",
     storage: "pglite",
+    tier: "micro",
     title: "two-reactor sync workloads",
     question: "convergence time between two reactors",
     caveats: [
@@ -177,15 +245,38 @@ const ReplayStampReading = z.strictObject({
   bodySharePct: z.number(),
 });
 
+/** One leg's per-node split, as the benchmark subtracted it. */
+const MirrorSplitReading = z.strictObject({
+  leg: z.string().min(1),
+  counts: z.array(z.number().positive()).min(2),
+  fullUsPerNode: z.number(),
+  collisionScanUsPerNode: z.number(),
+  sortUsPerNode: z.number(),
+  touchUsPerNode: z.number(),
+  floorUsPerNode: z.number(),
+  wrapperUsPerNode: z.number(),
+  stampedBodyUsPerNode: z.number(),
+  realBodyUsPerNode: z.number(),
+  collisionScanSharePct: z.number(),
+  sortSharePct: z.number(),
+  touchSharePct: z.number(),
+  floorSharePct: z.number(),
+  scanPlusSortSharePct: z.number(),
+  mirrorOverRealSlope: z.number(),
+});
+type MirrorSplitReading = z.infer<typeof MirrorSplitReading>;
+
 export const ReplayStampsFile = z.strictObject({
-  version: z.literal(1),
+  version: z.literal(2),
   stamps: z.array(ReplayStampReading).min(1),
+  splits: z.array(MirrorSplitReading).min(1),
 });
 export type ReplayStampsFile = z.infer<typeof ReplayStampsFile>;
 
-/** What a sidecar contributes to the entry: readings, and their limits. */
+/** What a sidecar contributes: readings, what they say, and their limits. */
 export type StampReadings = {
   derived: DerivedRatio[];
+  conclusions: string[];
   caveats: string[];
 };
 
@@ -195,6 +286,90 @@ function stampedCaseNames(target: BenchTarget, suites: MicroSuite[]): string[] {
   return suites
     .flatMap((suite) => suite.cases.map((entry) => entry.name))
     .filter((name) => name.endsWith(suffix));
+}
+
+const SPLIT_CASE = /^(.+?) leg \d+ ops: /;
+
+/** Cases of one split leg, which name the leg and the size they ran. */
+function splitLegCases(leg: string, suites: MicroSuite[]): MicroCase[] {
+  return suites
+    .flatMap((suite) => suite.cases)
+    .filter((entry) => SPLIT_CASE.exec(entry.name)?.[1] === leg);
+}
+
+/** Legs the report varied, whether or not the sidecar split any of them. */
+function splitLegsInReport(suites: MicroSuite[]): string[] {
+  const legs = new Set<string>();
+  for (const suite of suites) {
+    for (const entry of suite.cases) {
+      const match = SPLIT_CASE.exec(entry.name);
+      if (match !== null) {
+        legs.add(match[1]);
+      }
+    }
+  }
+  return [...legs];
+}
+
+/** The buckets a leg's slope splits into, and the ratio bounding them. */
+function splitDerived(split: MirrorSplitReading): DerivedRatio[] {
+  const over = `over ${split.counts.map(String).join("/")} ops, per node on the list`;
+
+  return [
+    {
+      name: `${split.leg} leg: collision scans per node`,
+      value: round4(split.collisionScanUsPerNode),
+      unit: "us",
+      note: `The existence find and handleTargetNameCollisions, as the full mirrored body minus the no-reads variant, ${over}`,
+    },
+    {
+      name: `${split.leg} leg: sorted-insert comparator per node`,
+      value: round4(split.sortUsPerNode),
+      unit: "us",
+      note: `The localeCompare pass in insertNodeSorted, as the full mirrored body minus the no-sort variant, ${over}`,
+    },
+    {
+      name: `${split.leg} leg: scan + sort share of the mirrored body`,
+      value: round(split.scanPlusSortSharePct),
+      unit: "pct",
+      note: `Both buckets over the full mirrored body slope of ${round4(split.fullUsPerNode)}us per node`,
+    },
+    {
+      name: `${split.leg} leg: residue the buckets leave per node`,
+      value: round4(split.touchUsPerNode),
+      unit: "us",
+      note: `What full-minus-no-reads and full-minus-no-sort leave between the push-only floor and the full mirrored body; on the draft leg that is child drafts and finalize, and the plain leg has no draft for it to be, ${over}`,
+    },
+    {
+      name: `${split.leg} leg: copy, freeze and assignment floor per node`,
+      value: round4(split.floorUsPerNode),
+      unit: "us",
+      note: `The push-only variant, which still reads the list, copies it twice, freezes it and assigns it once, ${over}`,
+    },
+    {
+      name: `${split.leg} leg: create() and base reducer per node`,
+      value: round4(split.wrapperUsPerNode),
+      unit: "us",
+      note: `The no-body baseline, which is the wrapper the reducer body does not induce, ${over}`,
+    },
+    {
+      name: `${split.leg} leg: mirrored body per node`,
+      value: round4(split.fullUsPerNode),
+      unit: "us",
+      note: `The full mirrored body slope the buckets sum to, ${over}`,
+    },
+    {
+      name: `${split.leg} leg: mirror over real body slope`,
+      value: round4(split.mirrorOverRealSlope),
+      unit: "x",
+      note: `The mirror's stamped read+write slope of ${round4(split.stampedBodyUsPerNode)}us per node over the real reducer body's ${round4(split.realBodyUsPerNode)}us; the mirror represents the body only as far as this reads 1x`,
+    },
+  ];
+}
+
+/** The split in a sentence, which is the reading a later reader will quote. */
+function splitConclusion(split: MirrorSplitReading): string {
+  return `In the ${split.leg} leg, the add-node reducer body costs ${round4(split.fullUsPerNode)}us per node, of which the two collision scans are ${round4(split.collisionScanUsPerNode)}us (${round(split.collisionScanSharePct)}%) and the sorted-insert comparator ${round4(split.sortUsPerNode)}us (${round(split.sortSharePct)}%), together ${round(split.scanPlusSortSharePct)}% of it; the copy, freeze and assignment floor is ${round4(split.floorUsPerNode)}us (${round(split.floorSharePct)}%) and the residue the two buckets leave ${round4(split.touchUsPerNode)}us (${round(split.touchSharePct)}%)`;
 }
 
 /**
@@ -218,7 +393,7 @@ export function stampReadings(
   const cases = stampedCaseNames(target, suites);
 
   if (target.stampsFile === "") {
-    return { derived: [], caveats: [] };
+    return { derived: [], conclusions: [], caveats: [] };
   }
 
   const path = join(resultsDirectory, target.stampsFile);
@@ -260,7 +435,28 @@ export function stampReadings(
     );
   }
 
+  const legs = splitLegsInReport(suites);
+  const split = parsed.data.splits.map((entry) => entry.leg);
+  const unsplit = legs.filter((leg) => !split.includes(leg));
+  const staleSplits = split.filter((leg) => !legs.includes(leg));
+
+  if (unsplit.length > 0 || staleSplits.length > 0) {
+    throw new Error(
+      [
+        `${path} does not split the legs the run in ${target.resultsFile} varied.`,
+        ...(unsplit.length > 0
+          ? [`Legs that filed no split: ${unsplit.join(", ")}`]
+          : []),
+        ...(staleSplits.length > 0
+          ? [`Splits with no leg in the report: ${staleSplits.join(", ")}`]
+          : []),
+        `Re-run ${target.recordScript} so both come from one run.`,
+      ].join("\n"),
+    );
+  }
+
   const derived: DerivedRatio[] = [];
+  const conclusions: string[] = [];
   const caveats: string[] = [];
 
   for (const stamp of parsed.data.stamps) {
@@ -300,7 +496,23 @@ export function stampReadings(
     }
   }
 
-  return { derived, caveats };
+  for (const entry of parsed.data.splits) {
+    derived.push(...splitDerived(entry));
+    conclusions.push(splitConclusion(entry));
+
+    const thinnest = splitLegCases(entry.leg, suites).reduce(
+      (fewest, item) => Math.min(fewest, item.sampleCount),
+      Number.POSITIVE_INFINITY,
+    );
+
+    if (thinnest < 100) {
+      caveats.push(
+        `${entry.leg} leg: the split is a slope through ${entry.counts.map(String).join("/")} ops and the thinnest case behind it carries ${String(thinnest)} samples, so the large-count end of the subtraction is the one to distrust`,
+      );
+    }
+  }
+
+  return { derived, conclusions, caveats };
 }
 
 /**
@@ -505,7 +717,7 @@ export function buildMicroEntry(
 
   return {
     kind: "micro",
-    tier: "micro",
+    tier: input.target.tier,
     title: input.title === "" ? input.target.title : input.title,
     question: input.question === "" ? input.target.question : input.question,
     command: input.target.command,
@@ -539,11 +751,19 @@ export function suiteLabel(fullName: string): string {
   return parts.length > 1 ? parts.slice(1).join(" > ") : fullName;
 }
 
-/** Cases of one suite that ran the same stated operation count. */
+/** Cases of one suite that ran the same stated operation count on one leg. */
 type WorkloadGroup = {
   /** 0 when the cases state no count of their own. */
   operations: number;
+  /** Empty when the cases name no leg of their own. */
+  leg: string;
   cases: MicroCase[];
+};
+
+/** The cases a suite's spread may pair, and the reference costs it may not. */
+type SuiteSplit = {
+  sweep: MicroCase[];
+  references: MicroCase[];
 };
 
 /**
@@ -556,44 +776,69 @@ function statedOperationCount(name: string): number {
   return match === null ? 0 : Number(match[1]);
 }
 
-/**
- * Splits a suite into the sets whose cases are comparable to each other. A
- * suite where no case states a count is one set, because holding the workload
- * fixed is then the suite's own construction. Once any case states one, a case
- * that states none is comparable to nothing and stands alone.
- */
-function workloadGroups(suite: MicroSuite): WorkloadGroup[] {
-  const tagged = suite.cases.map((entry) => ({
+function isReferenceCase(name: string): boolean {
+  return name.trimEnd().endsWith(REFERENCE_CASE_MARKER);
+}
+
+/** A pair against a case on another mechanism prices that mechanism and reads as the sweep's range; a suite of nothing but markers separates nothing, so it is its own sweep. */
+function splitReferences(suite: MicroSuite): SuiteSplit {
+  const sweep = suite.cases.filter((entry) => !isReferenceCase(entry.name));
+  if (sweep.length === 0) {
+    return { sweep: suite.cases, references: [] };
+  }
+  return {
+    sweep,
+    references: suite.cases.filter((entry) => isReferenceCase(entry.name)),
+  };
+}
+
+/** A pair across two legs prices the leg as much as what the sweep varies. */
+function statedLeg(name: string): string {
+  return SPLIT_CASE.exec(name)?.[1] ?? "";
+}
+
+/** Cases stating no count at all are one set, the suite's own construction; once any case states one, a case stating none is comparable to nothing. */
+function workloadGroups(cases: MicroCase[]): WorkloadGroup[] {
+  const tagged = cases.map((entry) => ({
     entry,
     operations: statedOperationCount(entry.name),
+    leg: statedLeg(entry.name),
   }));
   if (tagged.every((item) => item.operations === 0)) {
-    return [{ operations: 0, cases: suite.cases }];
+    return [{ operations: 0, leg: "", cases }];
   }
 
   const groups: WorkloadGroup[] = [];
-  const byCount = new Map<number, WorkloadGroup>();
+  const byWorkload = new Map<string, WorkloadGroup>();
   for (const item of tagged) {
-    const existing = byCount.get(item.operations);
+    const workload = `${String(item.operations)} ${item.leg}`;
+    const existing = byWorkload.get(workload);
     if (item.operations !== 0 && existing !== undefined) {
       existing.cases.push(item.entry);
       continue;
     }
     const group: WorkloadGroup = {
       operations: item.operations,
+      leg: item.leg,
       cases: [item.entry],
     };
     if (item.operations !== 0) {
-      byCount.set(item.operations, group);
+      byWorkload.set(workload, group);
     }
     groups.push(group);
   }
   return groups;
 }
 
+/** What a group held fixed, which its spread has to say it held fixed. */
+function heldFixed(group: WorkloadGroup): string {
+  const at = `${String(group.operations)} operations`;
+  return group.leg === "" ? at : `${at} on the ${group.leg} leg`;
+}
+
 /** What each case states about its own workload, for a note that has to say why. */
-function statedCounts(suite: MicroSuite): string {
-  return suite.cases
+function statedCounts(cases: MicroCase[]): string {
+  return cases
     .map((entry) => {
       const operations = statedOperationCount(entry.name);
       return operations === 0
@@ -604,15 +849,17 @@ function statedCounts(suite: MicroSuite): string {
 }
 
 /**
- * One spread per set of cases that ran the same stated operation count, rather
+ * One spread per set of sweep cases that ran the same stated operation count, rather
  * than one fastest-over-slowest for the suite. A pair that differs in workload
- * size prices the size as much as the mechanism, and the ratio reads as though
- * it priced the mechanism alone. A suite that holds one size throughout keeps
- * the single `<label>: spread` it has always filed.
+ * size prices the size as much as the mechanism, and a pair that crosses into a
+ * reference case prices that mechanism; either ratio reads as though it priced
+ * the sweep alone. A suite that holds one size throughout keeps the single
+ * `<label>: spread` it has always filed.
  */
 function suiteSpreads(suite: MicroSuite): DerivedRatio[] {
   const label = suiteLabel(suite.fullName);
-  const groups = workloadGroups(suite);
+  const { sweep } = splitReferences(suite);
+  const groups = workloadGroups(sweep);
   const comparable = groups.filter((group) => group.cases.length > 1);
 
   if (comparable.length === 0) {
@@ -621,7 +868,7 @@ function suiteSpreads(suite: MicroSuite): DerivedRatio[] {
         name: `${label}: comparable pairs`,
         value: 0,
         unit: "count",
-        note: `No two cases ran the same stated operation count (${statedCounts(suite)}), so a fastest-over-slowest ratio here would price the operation count rather than the mechanism`,
+        note: `No two cases ran the same stated operation count (${statedCounts(sweep)}), so a fastest-over-slowest ratio here would price the operation count rather than the mechanism`,
       },
     ];
   }
@@ -629,7 +876,7 @@ function suiteSpreads(suite: MicroSuite): DerivedRatio[] {
   return comparable.map((group) => {
     const fastest = extreme(group.cases, (a, b) => a.hz > b.hz);
     const slowest = extreme(group.cases, (a, b) => a.hz < b.hz);
-    const at = `${String(group.operations)} operations`;
+    const at = heldFixed(group);
     return {
       name:
         groups.length === 1 ? `${label}: spread` : `${label}: spread at ${at}`,
@@ -651,30 +898,37 @@ function suiteSpreads(suite: MicroSuite): DerivedRatio[] {
  */
 function suiteConclusions(suite: MicroSuite): string[] {
   const label = suiteLabel(suite.fullName);
-  const groups = workloadGroups(suite);
+  const { sweep, references } = splitReferences(suite);
+  const groups = workloadGroups(sweep);
   const comparable = groups.filter((group) => group.cases.length > 1);
+  const held = references.map(
+    (entry) =>
+      `In ${label}, ${entry.name} ran at ${round(entry.hz)} ops/sec, held out of the spread as a reference cost on another mechanism`,
+  );
 
   if (comparable.length === 0) {
-    if (suite.cases.length === 1) {
+    if (sweep.length === 1) {
       return [
-        `In ${label}, ${suite.cases[0].name} ran at ${round(suite.cases[0].hz)} ops/sec`,
+        `In ${label}, ${sweep[0].name} ran at ${round(sweep[0].hz)} ops/sec`,
+        ...held,
       ];
     }
-    const rates = suite.cases
+    const rates = sweep
       .map((entry) => `${entry.name} at ${round(entry.hz)} ops/sec`)
       .join(", ");
     return [
       `In ${label}, no two cases ran the same stated operation count, so the suite has no spread that isolates the mechanism: ${rates}`,
+      ...held,
     ];
   }
 
-  return comparable.map((group) => {
+  const spreads = comparable.map((group) => {
     const fastest = extreme(group.cases, (a, b) => a.hz > b.hz);
     const slowest = extreme(group.cases, (a, b) => a.hz < b.hz);
-    const at =
-      groups.length === 1 ? "" : ` at ${String(group.operations)} operations`;
+    const at = groups.length === 1 ? "" : ` at ${heldFixed(group)}`;
     return `In ${label}${at}, ${slowest.name} is ${round(fastest.hz / slowest.hz)}x slower than ${fastest.name}`;
   });
+  return [...spreads, ...held];
 }
 
 /** What the numbers themselves say about how far to trust them. */

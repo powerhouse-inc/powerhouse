@@ -7,23 +7,30 @@ import {
   driveDocumentModelModule,
   handleTargetNameCollisions,
   insertNodeSorted,
+  isFileNode,
   isValidName,
   nodeReducer,
   readNodes,
+  sortNodesById,
   type AddFileAction,
   type AddFolderAction,
   type DocumentDriveGlobalState,
   type DocumentDrivePHState,
   type FileNode,
+  type Listener,
   type Node as DriveNode,
 } from "@powerhousedao/shared/document-drive";
 import {
+  baseCreateDocument,
   createReducer,
+  defaultPHState as defaultDocumentModelPHState,
   deriveOperationId,
   generateId,
   isDocumentAction,
   type Action,
   type DocumentModelModule,
+  type DocumentModelPHState,
+  type ModuleSpecification,
   type Operation,
   type PHDocument,
   type Reducer,
@@ -593,83 +600,76 @@ describe("Write Cache Warm Miss Performance", () => {
   );
 });
 
+type LruSnapshot = {
+  documentId: string;
+  document: PHDocument;
+};
+
 type LruState = {
   fixture: Fixture;
-  documentIds: string[];
+  snapshots: LruSnapshot[];
   config: WriteCacheConfig;
 };
 
+/** Both legs put this many documents, so only the capacity below them varies. */
+const LRU_DOCUMENT_COUNT = 12;
+
+/** Half the documents, so putting all twelve evicts six of them. */
+const LRU_EVICTING_CAPACITY = 6;
+
+/** Snapshots are rebuilt here so no PGlite read sits in the timed loop. */
+async function prepareLru(
+  fixture: Fixture,
+  maxDocuments: number,
+): Promise<LruState> {
+  const documentIds = await populateManyDocuments(fixture, LRU_DOCUMENT_COUNT);
+  const snapshots: LruSnapshot[] = [];
+
+  for (const documentId of documentIds) {
+    const document = await documentAtRevision(fixture, documentId, 0);
+    snapshots.push({ documentId, document: assertLastIndex(document, 0) });
+  }
+
+  return {
+    fixture,
+    snapshots,
+    config: {
+      maxDocuments,
+      ringBufferSize: 5,
+      keyframeInterval: 1_000_000,
+    },
+  } satisfies LruState;
+}
+
+/** One putState pass; only a cache at capacity evicts before it touches. */
+async function measureLruPuts(state: LruState): Promise<void> {
+  const cache = await freshCache(state.fixture, state.config);
+
+  for (const snapshot of state.snapshots) {
+    cache.putState(
+      snapshot.documentId,
+      SCOPE,
+      BRANCH,
+      0,
+      snapshot.document,
+      SnapshotPosition.Head,
+    );
+  }
+}
+
 describe("Write Cache LRU Eviction Performance", () => {
   benchCase(
-    "LRU eviction (filling cache to capacity)",
+    "LRU eviction (filling cache to capacity) over 12 documents, capacity 6",
     2000,
-    async (fixture) => {
-      const documentIds = await populateManyDocuments(fixture, 15);
-      assertLastIndex(await documentAtRevision(fixture, documentIds[0], 0), 0);
-
-      return {
-        fixture,
-        documentIds,
-        config: {
-          maxDocuments: 10,
-          ringBufferSize: 5,
-          keyframeInterval: 1_000_000,
-        },
-      } satisfies LruState;
-    },
-    async (state) => {
-      const cache = await freshCache(state.fixture, state.config);
-
-      for (const documentId of state.documentIds) {
-        const document = await cache.getState(documentId, SCOPE, BRANCH, 0);
-        cache.putState(
-          documentId,
-          SCOPE,
-          BRANCH,
-          0,
-          document,
-          SnapshotPosition.Head,
-        );
-      }
-    },
+    (fixture) => prepareLru(fixture, LRU_EVICTING_CAPACITY),
+    measureLruPuts,
   );
 
   benchCase(
-    "LRU access pattern (updating access order)",
+    "LRU access pattern (updating access order) over 12 documents, capacity 12",
     2000,
-    async (fixture) => {
-      const documentIds = await populateManyDocuments(fixture, 5);
-      assertLastIndex(await documentAtRevision(fixture, documentIds[0], 0), 0);
-
-      return {
-        fixture,
-        documentIds,
-        config: {
-          maxDocuments: 5,
-          ringBufferSize: 5,
-          keyframeInterval: 1_000_000,
-        },
-      } satisfies LruState;
-    },
-    async (state) => {
-      const cache = await freshCache(state.fixture, state.config);
-
-      for (const documentId of state.documentIds) {
-        const document = await cache.getState(documentId, SCOPE, BRANCH, 0);
-        cache.putState(
-          documentId,
-          SCOPE,
-          BRANCH,
-          0,
-          document,
-          SnapshotPosition.Head,
-        );
-      }
-
-      for (const documentId of state.documentIds) {
-        await cache.getState(documentId, SCOPE, BRANCH, 0);
-      }
-    },
+    (fixture) => prepareLru(fixture, LRU_DOCUMENT_COUNT),
+    measureLruPuts,
   );
 });
 
@@ -707,7 +707,9 @@ async function measureManualRebuild(
       if (document === undefined) {
         document = state.module.utils.createDocument();
       }
-      document = state.module.reducer(document, storedOp.action);
+      document = state.module.reducer(document, storedOp.action, undefined, {
+        replayOptions: { operation: storedOp },
+      });
     }
 
     if (result.nextCursor) {
@@ -895,6 +897,29 @@ type ReplayStampReading = {
 /** Every reading this process has taken, by label. */
 const replayReadings = new Map<string, ReplayStampReading>();
 
+/** One leg's split, as per-node slopes over the four op counts. */
+type MirrorSplitReading = {
+  leg: MirrorLeg;
+  counts: number[];
+  fullUsPerNode: number;
+  collisionScanUsPerNode: number;
+  sortUsPerNode: number;
+  touchUsPerNode: number;
+  floorUsPerNode: number;
+  wrapperUsPerNode: number;
+  stampedBodyUsPerNode: number;
+  realBodyUsPerNode: number;
+  collisionScanSharePct: number;
+  sortSharePct: number;
+  touchSharePct: number;
+  floorSharePct: number;
+  scanPlusSortSharePct: number;
+  mirrorOverRealSlope: number;
+};
+
+/** Every split this process has taken, by leg. */
+const mirrorSplitReadings = new Map<MirrorLeg, MirrorSplitReading>();
+
 /**
  * Where the recorder reads the decomposition from. `--outputJson` carries case
  * means and nothing else, so a figure that only ever reached stdout is absent
@@ -960,8 +985,9 @@ function recordReplayStamps(label: string): void {
  */
 function writeReplayStamps(): void {
   const payload = {
-    version: 1,
+    version: 2,
     stamps: [...replayReadings.values()],
+    splits: [...mirrorSplitReadings.values()],
   };
 
   try {
@@ -1537,8 +1563,10 @@ const MIRROR_FULL_LABEL = MIRROR_VARIANTS[0].label;
 const MIRROR_NO_READS_LABEL = MIRROR_VARIANTS[1].label;
 const MIRROR_NO_SORT_LABEL = MIRROR_VARIANTS[2].label;
 const MIRROR_PUSH_ONLY_LABEL = MIRROR_VARIANTS[3].label;
-const MIRROR_REAL_LABEL = "real body (fidelity reference)";
-const MIRROR_NO_BODY_LABEL = "no body: create() + base reducer only";
+/** Marked: these price what the sweep holds fixed, so no spread pairs them. */
+const MIRROR_REAL_LABEL = "real body (fidelity reference) [reference]";
+const MIRROR_NO_BODY_LABEL =
+  "no body: create() + base reducer only [reference]";
 
 /** Registration order, which the report reads the samples back in. */
 const MIRROR_LABELS: string[] = [
@@ -1664,6 +1692,26 @@ function reportMirrorLeg(leg: MirrorLeg): void {
   const realBody = perNodeSlope(real, (sample) =>
     usPerCall(sample, sample.stamps.bodyNs),
   );
+
+  mirrorSplitReadings.set(leg, {
+    leg,
+    counts: full.map((sample) => sample.count),
+    fullUsPerNode: fullSlope,
+    collisionScanUsPerNode: readScan,
+    sortUsPerNode: sortCompare,
+    touchUsPerNode: touch,
+    floorUsPerNode: pushOnlySlope,
+    wrapperUsPerNode: noBodySlope,
+    stampedBodyUsPerNode: stampedBody,
+    realBodyUsPerNode: realBody,
+    collisionScanSharePct: readShare * 100,
+    sortSharePct: (sortCompare / fullSlope) * 100,
+    touchSharePct: (touch / fullSlope) * 100,
+    floorSharePct: (pushOnlySlope / fullSlope) * 100,
+    scanPlusSortSharePct: ((readScan + sortCompare) / fullSlope) * 100,
+    mirrorOverRealSlope: stampedBody / realBody,
+  });
+  writeReplayStamps();
 
   console.log(
     [
@@ -1838,3 +1886,633 @@ describe("Write Cache Cold Miss Replay Read/Write Split", () => {
     }
   }
 });
+
+/** A node list at one size in both shapes a reader can hold it: the array sortNodesById froze (packages/shared/document-drive/src/utils.ts:147-158), and a plain copy of the same elements in the same order. */
+type NodeListPair = {
+  count: number;
+  frozen: readonly DriveNode[];
+  plain: DriveNode[];
+  /** Last in id order, and the folder holding it, so every scan visits all `count` elements. */
+  target: FileNode;
+  targetParentFolder: string;
+};
+
+type NodeListLeg = "frozen" | "plain";
+
+/** One scan the client read path runs, against whichever leg a case holds. */
+type NodeScan = {
+  suite: string;
+  label: string;
+  /** Something read off the result, so no case can be optimised away unrun. */
+  run: (nodes: readonly DriveNode[], pair: NodeListPair) => number;
+};
+
+const NODE_LIST_SIZES: number[] = [100, 1000, 5000];
+const NODE_SCAN_TIME_MS = 500;
+const NODES_PER_FOLDER = 50;
+
+let nodeScanSink = 0;
+let nodeScanCasesRun = 0;
+
+function folderIdFor(index: number): string {
+  const folder = Math.floor(index / NODES_PER_FOLDER) * NODES_PER_FOLDER;
+  return `node-${String(folder).padStart(6, "0")}`;
+}
+
+function buildNodeListPair(count: number): NodeListPair {
+  const built: DriveNode[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const id = `node-${String(index).padStart(6, "0")}`;
+
+    if (index % NODES_PER_FOLDER === 0) {
+      built.push({
+        id,
+        name: `folder ${String(index)}`,
+        kind: "folder",
+        parentFolder: null,
+      });
+      continue;
+    }
+
+    built.push({
+      id,
+      name: `document ${String(index)}`,
+      kind: "file",
+      parentFolder: folderIdFor(index),
+      documentType: DOCUMENT_TYPE,
+    });
+  }
+
+  const frozen = sortNodesById(built);
+  const last = frozen[frozen.length - 1];
+
+  if (!isFileNode(last)) {
+    throw new Error("the last node in id order has to be a file node");
+  }
+
+  return {
+    count,
+    frozen,
+    plain: [...frozen],
+    target: last,
+    targetParentFolder: folderIdFor(count - 1),
+  };
+}
+
+/** The scans as their call sites write them: drive-client.ts:235, :365, :396, :449 find by id and :473-477 copies or filters the list; reactor-browser actions/document.ts:74, :873, :912, :966, :1001, :1165, :1180 find by id and :87 finds by name, type and parent folder. The copy is the control -- it reads every element and calls no predicate, which is the shape T-023 measured the freeze leaving alone. */
+const NODE_SCANS: NodeScan[] = [
+  {
+    suite: "Client Node Lookup: find by id",
+    label: "find by id",
+    run: (nodes, pair) => {
+      const node = nodes.find((n) => n.id === pair.target.id);
+      return node === undefined ? 0 : node.name.length;
+    },
+  },
+  {
+    suite: "Client Node Lookup: find by name, type and parent folder",
+    label: "find by name, type and parent folder",
+    run: (nodes, pair) => {
+      const node = nodes.find(
+        (n) =>
+          isFileNode(n) &&
+          n.name === pair.target.name &&
+          n.documentType === pair.target.documentType &&
+          n.parentFolder === pair.target.parentFolder,
+      );
+      return node === undefined ? 0 : node.name.length;
+    },
+  },
+  {
+    suite: "Client Node Lookup: filter by parent folder",
+    label: "filter by parent folder",
+    run: (nodes, pair) =>
+      nodes.filter((n) => (n.parentFolder ?? null) === pair.targetParentFolder)
+        .length,
+  },
+  {
+    suite: "Client Node Lookup: copy the whole list",
+    label: "copy the whole list",
+    run: (nodes) => [...nodes].length,
+  },
+];
+
+const NODE_SCAN_CASES = NODE_SCANS.length * NODE_LIST_SIZES.length * 2;
+
+/** One line saying the scans found what they looked for, so a case that found nothing cannot pass for a fast one. */
+function reportNodeScans(): void {
+  console.log(
+    [
+      "client node lookup",
+      `${String(nodeScanCasesRun)} cases ran`,
+      `scan results summed to ${String(nodeScanSink)}`,
+    ].join(" | "),
+  );
+}
+
+/** What a client node lookup costs now that the list is frozen: the write path reads it through readNodes, which copies it first (utils.ts:132), and the read path scans it in place. A case is one call over one of two lists differing in nothing but Object.freeze, so its mean is the per-lookup wall time and a pair is the multiple the freeze costs; both legs visit every element and the name counts those visits, so the recorder's spread at a size is the freeze and never a difference in list length. The shared sub-microsecond harness floor is a larger share of the 100-node scans than of the 5000-node ones, which makes the smallest size the conservative end. */
+for (const scan of NODE_SCANS) {
+  describe(scan.suite, () => {
+    for (const count of NODE_LIST_SIZES) {
+      const pair = buildNodeListPair(count);
+
+      for (const leg of ["frozen", "plain"] satisfies NodeListLeg[]) {
+        const nodes: readonly DriveNode[] =
+          leg === "frozen" ? pair.frozen : pair.plain;
+
+        bench(
+          `${scan.label}, ${leg} list (${String(count)} node ops)`,
+          () => {
+            nodeScanSink += scan.run(nodes, pair);
+          },
+          {
+            time: NODE_SCAN_TIME_MS,
+            throws: true,
+            teardown: (_task, mode) => {
+              if (mode !== "run") {
+                return;
+              }
+
+              nodeScanCasesRun += 1;
+
+              if (nodeScanCasesRun === NODE_SCAN_CASES) {
+                reportNodeScans();
+              }
+            },
+          },
+        );
+      }
+    }
+  });
+}
+
+/** The packages/shared assigns outside node.ts that have T-023's shape. */
+const SURVEY_SITES: string[] = [
+  "document-drive/src/reducers/drive.ts:51 state.listeners = state.listeners.filter",
+  "document-drive/src/reducers/drive.ts:69 state.triggers = state.triggers.filter",
+  "document-model/reducers.ts:194 latestSpec.modules = latestSpec.modules.filter",
+  "document-model/reducers.ts:386 mod.operations = mod.operations.filter",
+  "document-model/reducers.ts:397 mod.operations = mod.operations.filter",
+  "document-model/reducers.ts:472 scopeState.examples = scopeState.examples.filter",
+];
+
+type SurveyAssignLeg =
+  | "filter the draft, assign unfrozen"
+  | "read base, filter, assign unfrozen"
+  | "read base, filter, assign frozen";
+
+const SURVEY_ASSIGN_LEGS: SurveyAssignLeg[] = [
+  "filter the draft, assign unfrozen",
+  "read base, filter, assign unfrozen",
+  "read base, filter, assign frozen",
+];
+
+type SurveyReadLeg = "frozen" | "plain";
+
+const SURVEY_READ_LEGS: SurveyReadLeg[] = ["frozen", "plain"];
+
+/** 5 is a drive's production listener count; 1000 shows per-element growth. */
+const SURVEY_SIZES: number[] = [5, 50, 500, 1000];
+const SURVEY_TIME_MS = 500;
+
+let surveySink = 0;
+let surveyCasesRun = 0;
+
+/** The assigned list, built the way the leg names; base is the untouched list. */
+function surveyFilteredList<TItem>(
+  draftList: TItem[],
+  baseList: readonly TItem[],
+  keep: (item: TItem) => boolean,
+  leg: SurveyAssignLeg,
+): TItem[] {
+  if (leg === "filter the draft, assign unfrozen") {
+    return draftList.filter(keep);
+  }
+
+  const filtered = baseList.filter(keep);
+
+  if (leg === "read base, filter, assign frozen") {
+    return Object.freeze(filtered) as TItem[];
+  }
+
+  return filtered;
+}
+
+function surveyListenerId(index: number): string {
+  return `listener-${String(index).padStart(6, "0")}`;
+}
+
+function surveyModuleId(index: number): string {
+  return `module-${String(index).padStart(6, "0")}`;
+}
+
+/** Listeners shaped as addListenerOperation stores them. */
+function buildSurveyListeners(count: number): Listener[] {
+  const listeners: Listener[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    listeners.push({
+      listenerId: surveyListenerId(index),
+      label: `listener ${String(index)}`,
+      block: false,
+      system: false,
+      filter: {
+        branch: [BRANCH],
+        documentId: [DOCUMENT_ID],
+        documentType: [DOCUMENT_TYPE],
+        scope: [SCOPE],
+      },
+      callInfo: {
+        transmitterType: "Internal",
+        name: `transmitter-${String(index)}`,
+        data: "",
+      },
+    });
+  }
+
+  return listeners;
+}
+
+/** Modules carry one operation each, so the finalize walk recurses a level. */
+function buildSurveyModules(count: number): ModuleSpecification[] {
+  const modules: ModuleSpecification[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    modules.push({
+      id: surveyModuleId(index),
+      name: `module ${String(index)}`,
+      description: `module ${String(index)} description`,
+      operations: [
+        {
+          id: `operation-${String(index).padStart(6, "0")}`,
+          name: `OPERATION_${String(index)}`,
+          description: null,
+          errors: [],
+          examples: [],
+          reducer: null,
+          schema: null,
+          template: null,
+          scope: SCOPE,
+        },
+      ],
+    });
+  }
+
+  return modules;
+}
+
+/** A replayed operation, whose hash keeps the reducer from rehashing a scope. */
+function surveyOperation(scope: string, type: string, input: object): Operation {
+  const action: Action = {
+    id: `survey-${type}`,
+    type,
+    scope,
+    timestampUtcMs: Date.now().toString(),
+    input,
+  };
+
+  return {
+    id: deriveOperationId(DOCUMENT_ID, scope, BRANCH, action.id),
+    index: 0,
+    skip: 0,
+    hash: `survey-hash-${type}`,
+    timestampUtcMs: new Date().toISOString(),
+    action,
+  };
+}
+
+/** A drive document holding the listeners on its local scope, unfrozen. */
+function surveyDriveDocument(
+  listeners: Listener[],
+): PHDocument<DocumentDrivePHState> {
+  const document = driveDocumentModelModule.utils.createDocument();
+  document.state.local.listeners = listeners;
+  return document;
+}
+
+/** A document model whose latest specification holds the modules, unfrozen. */
+function surveyDocumentModelDocument(
+  modules: ModuleSpecification[],
+): PHDocument<DocumentModelPHState> {
+  const document = baseCreateDocument<DocumentModelPHState>(
+    (state) => ({ ...defaultDocumentModelPHState(), ...state }),
+    undefined,
+    "powerhouse/document-model",
+  );
+
+  document.state.global.specifications = [
+    {
+      changeLog: [],
+      modules,
+      state: {
+        global: { examples: [], initialValue: "", schema: "" },
+        local: { examples: [], initialValue: "", schema: "" },
+      },
+      version: 1,
+    },
+  ];
+
+  return document;
+}
+
+/** removeListenerOperation with its one statement under the leg. */
+function surveyListenerReducer(
+  leg: SurveyAssignLeg,
+  base: readonly Listener[],
+  removedId: string,
+): Reducer<DocumentDrivePHState> {
+  const stateReducer: StateReducer<DocumentDrivePHState> = (state, action) => {
+    const local = (state as unknown as DocumentDrivePHState).local;
+    local.listeners = surveyFilteredList(
+      local.listeners,
+      base,
+      (listener) => listener.listenerId !== removedId,
+      leg,
+    );
+    return undefined;
+  };
+
+  return createReducer<DocumentDrivePHState>(stateReducer);
+}
+
+/** deleteModuleOperation with its one statement under the leg. */
+function surveyModuleReducer(
+  leg: SurveyAssignLeg,
+  base: readonly ModuleSpecification[],
+  removedId: string,
+): Reducer<DocumentModelPHState> {
+  const stateReducer: StateReducer<DocumentModelPHState> = (state, action) => {
+    const global = (state as unknown as DocumentModelPHState).global;
+    const latestSpec = global.specifications[global.specifications.length - 1];
+    latestSpec.modules = surveyFilteredList(
+      latestSpec.modules,
+      base,
+      (specModule) => specModule.id !== removedId,
+      leg,
+    );
+    return undefined;
+  };
+
+  return createReducer<DocumentModelPHState>(stateReducer);
+}
+
+/** The sites surveyed and one line saying the cases did the claimed work. */
+function reportSurvey(): void {
+  console.log(
+    [
+      "reducer draft array survey",
+      `${String(surveyCasesRun)} cases ran`,
+      `results summed to ${String(surveySink)}`,
+      `sites surveyed: ${SURVEY_SITES.join(" ; ")}`,
+    ].join(" | "),
+  );
+}
+
+const SURVEY_ASSIGN_CASES = SURVEY_SIZES.length * SURVEY_ASSIGN_LEGS.length * 2;
+const SURVEY_READ_CASES = SURVEY_SIZES.length * SURVEY_READ_LEGS.length * 4;
+const SURVEY_CASES = SURVEY_ASSIGN_CASES + SURVEY_READ_CASES;
+
+function countSurveyCase(): void {
+  surveyCasesRun += 1;
+
+  if (surveyCasesRun === SURVEY_CASES) {
+    reportSurvey();
+  }
+}
+
+/** One dispatched REMOVE_LISTENER, whose predicate visits every listener. */
+describe("Reducer Draft Assign Survey: drive listeners", () => {
+  for (const count of SURVEY_SIZES) {
+    const base = buildSurveyListeners(count);
+    const removedId = surveyListenerId(count - 1);
+    const document = surveyDriveDocument(base);
+    const operation = surveyOperation("local", "REMOVE_LISTENER", {
+      listenerId: removedId,
+    });
+
+    for (const leg of SURVEY_ASSIGN_LEGS) {
+      const reducer = surveyListenerReducer(leg, base, removedId);
+
+      bench(
+        `drive listeners, ${leg} (${String(count)} listener ops)`,
+        () => {
+          const next = reducer(document, operation.action, undefined, {
+            skip: operation.skip,
+            replayOptions: { operation },
+            skipIndexValidation: true,
+          });
+          surveySink += next.state.local.listeners.length;
+        },
+        {
+          time: SURVEY_TIME_MS,
+          throws: true,
+          teardown: (_task, mode) => {
+            if (mode !== "run") {
+              return;
+            }
+
+            const next = reducer(document, operation.action, undefined, {
+              skip: operation.skip,
+              replayOptions: { operation },
+              skipIndexValidation: true,
+            });
+
+            if (next.state.local.listeners.length !== count - 1) {
+              throw new Error(
+                `drive listener survey at ${String(count)} kept ${String(next.state.local.listeners.length)} of ${String(count)}`,
+              );
+            }
+
+            countSurveyCase();
+          },
+        },
+      );
+    }
+  }
+});
+
+/** The same statement on a nested draft: the spec is reached through it. */
+describe("Reducer Draft Assign Survey: document-model spec modules", () => {
+  for (const count of SURVEY_SIZES) {
+    const base = buildSurveyModules(count);
+    const removedId = surveyModuleId(count - 1);
+    const document = surveyDocumentModelDocument(base);
+    const operation = surveyOperation(SCOPE, "DELETE_MODULE", {
+      id: removedId,
+    });
+
+    for (const leg of SURVEY_ASSIGN_LEGS) {
+      const reducer = surveyModuleReducer(leg, base, removedId);
+
+      bench(
+        `document-model spec modules, ${leg} (${String(count)} module ops)`,
+        () => {
+          const next = reducer(document, operation.action, undefined, {
+            skip: operation.skip,
+            replayOptions: { operation },
+            skipIndexValidation: true,
+          });
+          surveySink += next.state.global.specifications[0].modules.length;
+        },
+        {
+          time: SURVEY_TIME_MS,
+          throws: true,
+          teardown: (_task, mode) => {
+            if (mode !== "run") {
+              return;
+            }
+
+            const next = reducer(document, operation.action, undefined, {
+              skip: operation.skip,
+              replayOptions: { operation },
+              skipIndexValidation: true,
+            });
+            const remaining = next.state.global.specifications[0].modules;
+
+            if (remaining.length !== count - 1) {
+              throw new Error(
+                `module survey at ${String(count)} kept ${String(remaining.length)} of ${String(count)}`,
+              );
+            }
+
+            countSurveyCase();
+          },
+        },
+      );
+    }
+  }
+});
+
+/** One scan a reducer runs, against whichever shape of the list a case holds. */
+type SurveyScan = {
+  suite: string;
+  label: string;
+  unit: string;
+  frozen: (count: number) => readonly unknown[];
+  plain: (count: number) => unknown[];
+  run: (list: readonly unknown[], targetId: string) => number;
+  targetId: (count: number) => string;
+};
+
+const surveyListenerLists = new Map<number, Listener[]>();
+const surveyModuleLists = new Map<number, ModuleSpecification[]>();
+
+function surveyListenerList(count: number): Listener[] {
+  const cached = surveyListenerLists.get(count);
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const built = buildSurveyListeners(count);
+  surveyListenerLists.set(count, built);
+  return built;
+}
+
+function surveyModuleList(count: number): ModuleSpecification[] {
+  const cached = surveyModuleLists.get(count);
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const built = buildSurveyModules(count);
+  surveyModuleLists.set(count, built);
+  return built;
+}
+
+/** The predicates those reducers read their lists back with, both shapes. */
+const SURVEY_SCANS: SurveyScan[] = [
+  {
+    suite: "Reducer List Read Survey: drive listeners, find by id",
+    label: "drive listeners find by id",
+    unit: "listener ops",
+    frozen: (count) => Object.freeze([...surveyListenerList(count)]),
+    plain: (count) => [...surveyListenerList(count)],
+    run: (list, targetId) => {
+      const found = (list as readonly Listener[]).find(
+        (listener) => listener.listenerId === targetId,
+      );
+      return found === undefined ? 0 : 1;
+    },
+    targetId: (count) => surveyListenerId(count - 1),
+  },
+  {
+    suite: "Reducer List Read Survey: drive listeners, filter by id",
+    label: "drive listeners filter by id",
+    unit: "listener ops",
+    frozen: (count) => Object.freeze([...surveyListenerList(count)]),
+    plain: (count) => [...surveyListenerList(count)],
+    run: (list, targetId) =>
+      (list as readonly Listener[]).filter(
+        (listener) => listener.listenerId !== targetId,
+      ).length,
+    targetId: (count) => surveyListenerId(count - 1),
+  },
+  {
+    suite: "Reducer List Read Survey: document-model spec modules, find by id",
+    label: "document-model spec modules find by id",
+    unit: "module ops",
+    frozen: (count) => Object.freeze([...surveyModuleList(count)]),
+    plain: (count) => [...surveyModuleList(count)],
+    run: (list, targetId) => {
+      const found = (list as readonly ModuleSpecification[]).find(
+        (specModule) => specModule.id === targetId,
+      );
+      return found === undefined ? 0 : found.name.length;
+    },
+    targetId: (count) => surveyModuleId(count - 1),
+  },
+  {
+    suite:
+      "Reducer List Read Survey: document-model spec modules, filter by id",
+    label: "document-model spec modules filter by id",
+    unit: "module ops",
+    frozen: (count) => Object.freeze([...surveyModuleList(count)]),
+    plain: (count) => [...surveyModuleList(count)],
+    run: (list, targetId) =>
+      (list as readonly ModuleSpecification[]).filter(
+        (specModule) => specModule.id !== targetId,
+      ).length,
+    targetId: (count) => surveyModuleId(count - 1),
+  },
+];
+
+for (const scan of SURVEY_SCANS) {
+  describe(scan.suite, () => {
+    for (const count of SURVEY_SIZES) {
+      const targetId = scan.targetId(count);
+      const frozen = scan.frozen(count);
+      const plain = scan.plain(count);
+
+      for (const leg of SURVEY_READ_LEGS) {
+        const list: readonly unknown[] = leg === "frozen" ? frozen : plain;
+
+        bench(
+          `${scan.label}, ${leg} list (${String(count)} ${scan.unit})`,
+          () => {
+            surveySink += scan.run(list, targetId);
+          },
+          {
+            time: SURVEY_TIME_MS,
+            throws: true,
+            teardown: (_task, mode) => {
+              if (mode !== "run") {
+                return;
+              }
+
+              if (Object.isFrozen(list) !== (leg === "frozen")) {
+                throw new Error(
+                  `${scan.label} at ${String(count)} ran its ${leg} leg over the wrong shape`,
+                );
+              }
+
+              countSurveyCase();
+            },
+          },
+        );
+      }
+    }
+  });
+}

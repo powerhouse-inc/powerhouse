@@ -270,7 +270,10 @@ describe("Queue Only Operations", () => {
       }
     },
   );
+});
 
+/** Own suite: one spread per suite, and this case mutates no queue. */
+describe("Queue Size Query", () => {
   benchCase(
     "queue total size (500 jobs across 10 sub-queues)",
     1000,

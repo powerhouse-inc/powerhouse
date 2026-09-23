@@ -41,6 +41,7 @@ import {
   groupMembers,
   MINIMAL_SHAPE,
   policiedAt,
+  shadowWalkAdminGrants,
   type AuthLevel,
   type PolicyShape,
 } from "./fixtures/auth-policies.js";
@@ -179,17 +180,14 @@ describe("auth policy evaluation (pure CPU)", () => {
     });
   });
 
-  // Retention fires on every write to the auth scope. Its cost turns entirely
-  // on where administration sits: the search stops at the first candidate grant
-  // that still resolves to allow, so a policy administered from the top settles
-  // in one scan and one administered from the bottom scans the stack per grant.
-  // Both stacks below are installable, so the spread between them is a real
-  // range a deployment can land in rather than a synthetic worst case.
+  // All three stacks below are installable policies, not synthetic shapes.
   describe("auth scope write validation", () => {
     const tenTop = buildGrants(shape({ grantCount: 10 }));
     const hundredTop = buildGrants(shape({ grantCount: MAX_AUTH_GRANTS }));
     const tenBottom = adversarialAdminGrants(10);
     const hundredBottom = adversarialAdminGrants(MAX_AUTH_GRANTS);
+    const tenShadowWalk = shadowWalkAdminGrants(10);
+    const hundredShadowWalk = shadowWalkAdminGrants(MAX_AUTH_GRANTS);
 
     bench("retention: 10 grants, administered from the top", () => {
       assertAuthAdministrationRetained(
@@ -224,6 +222,24 @@ describe("auth policy evaluation (pure CPU)", () => {
         hundredBottom,
         hundredBottom,
         "bench-sole-admin",
+      );
+    });
+
+    bench("retention: 10 grants, shadow walk before an anyone allow", () => {
+      assertAuthAdministrationRetained(
+        undefined,
+        tenShadowWalk,
+        tenShadowWalk,
+        "bench-anyone-admin",
+      );
+    });
+
+    bench("retention: 100 grants, shadow walk before an anyone allow", () => {
+      assertAuthAdministrationRetained(
+        undefined,
+        hundredShadowWalk,
+        hundredShadowWalk,
+        "bench-anyone-admin",
       );
     });
   });

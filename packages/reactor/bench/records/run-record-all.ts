@@ -106,7 +106,7 @@ function convertVitestReport(target: BenchTarget): Record<string, unknown> {
     environment: readMachineEnvironment(target.storage),
     recordedAt: new Date().toISOString(),
     derived: readings.derived,
-    conclusions: [],
+    conclusions: readings.conclusions,
     caveats: readings.caveats,
     title: "",
     question: "",
