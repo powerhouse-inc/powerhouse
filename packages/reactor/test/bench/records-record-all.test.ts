@@ -30,6 +30,7 @@ describe("parseRecordAllOptions", () => {
       "queue",
       "queue-only",
       "cache",
+      "processors",
       "sync",
     ]);
   });

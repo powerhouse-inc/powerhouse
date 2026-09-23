@@ -64,6 +64,15 @@ export interface IProcessor {
   /**
    * Processes a list of operations with context.
    * Called when operations match this processor's filter.
+   *
+   * Delivery is at-least-once: a processor may see an operation again after
+   * a restart or a retry, or when a backfill reads an operation whose live
+   * batch has not reached the manager yet. Within one document's scope and
+   * branch, operations arrive in ordinal order. Across documents there is no
+   * ordering guarantee. A processor receives one `onOperations` call at a
+   * time; the next call begins after the previous resolves. A crash between
+   * two concurrently projected documents, after the higher ordinal's cursor
+   * was persisted, can leave the lower ordinals unreplayed.
    */
   onOperations(operations: OperationWithContext[]): Promise<void>;
 
@@ -116,6 +125,12 @@ export type TrackedProcessor = {
   status: ProcessorStatus;
   lastError: string | undefined;
   lastErrorTimestamp: Date | undefined;
+  /**
+   * Clears the error and resolves once the replay from the cursor completes.
+   * Safe from anywhere, but awaiting it from this processor's own
+   * `onOperations` waits on itself: the replay runs after that call returns.
+   * A no-op once the processor has been removed.
+   */
   retry: () => Promise<void>;
 };
 
@@ -125,12 +140,22 @@ export type TrackedProcessor = {
 export interface IProcessorManager {
   /**
    * Registers a processor factory.
-   * Immediately creates processors for all existing drives.
+   * Immediately creates processors for all existing drives and resolves once
+   * every factory run has completed and its processors are bound. Their
+   * backfills run afterwards, on each processor's own queue. If processors
+   * from an earlier registration under the same identifier are still
+   * draining, or a call of the previous factory is still in flight, the
+   * factory runs after they have settled, so awaiting a re-registration of
+   * a factory from inside that factory or one of its processors'
+   * `onOperations` waits on itself.
    */
   registerFactory(identifier: string, factory: ProcessorFactory): Promise<void>;
 
   /**
-   * Unregisters a processor factory and disconnects all processors it created.
+   * Unregisters a processor factory. Resolves once its processors receive no
+   * new deliveries and their cursors are deleted; each one's in-flight
+   * delivery finishes first, then `onDisconnect` runs. Safe to call from
+   * inside a processor's own `onOperations`.
    */
   unregisterFactory(identifier: string): Promise<void>;
 
