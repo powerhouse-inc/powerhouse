@@ -2186,12 +2186,15 @@ describe("ProcessorManager Standalone Tests", () => {
       let inFlight = 0;
       let maxInFlight = 0;
       const processor = createMockProcessor();
-      processor.onOperations = vi.fn().mockImplementation(async () => {
-        inFlight++;
-        maxInFlight = Math.max(maxInFlight, inFlight);
-        await new Promise((r) => setTimeout(r, 5));
-        inFlight--;
-      });
+      processor.onOperations = vi
+        .fn()
+        .mockImplementation(async (ops: OperationWithContext[]) => {
+          inFlight++;
+          maxInFlight = Math.max(maxInFlight, inFlight);
+          await new Promise((r) => setTimeout(r, 5));
+          processor.receivedOperations.push(...ops);
+          inFlight--;
+        });
       const factory: ProcessorFactory = () => [
         { processor, filter: { documentId: ["*"] } },
       ];
@@ -2207,7 +2210,7 @@ describe("ProcessorManager Standalone Tests", () => {
         ]),
       ]);
 
-      expect(processor.onOperations).toHaveBeenCalledTimes(3);
+      expect(ordinalsOf(processor)).toEqual([1, 2, 3]);
       expect(maxInFlight).toBe(1);
     });
 

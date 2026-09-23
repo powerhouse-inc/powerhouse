@@ -28,11 +28,21 @@ export type ProcessorQueueOptions = {
   logger: ILogger;
 };
 
-type Task = {
-  kind: "live" | "advance" | "backfill" | "retry" | "disconnect";
-  run: () => Promise<void>;
-  done: () => void;
-};
+type Delivery =
+  | { kind: "live"; ops: OperationWithContext[]; done: () => void }
+  | { kind: "advance"; through: number; done: () => void };
+
+type Task =
+  | Delivery
+  | {
+      kind: "backfill" | "retry" | "disconnect";
+      run: () => Promise<void>;
+      done: () => void;
+    };
+
+function isDelivery(task: Task | undefined): task is Delivery {
+  return task?.kind === "live" || task?.kind === "advance";
+}
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -55,7 +65,6 @@ export class ProcessorQueue {
   private readonly tasks: Task[] = [];
   private running = false;
   private closed = false;
-  private pendingAdvance: { through: number } | undefined;
   private replaysAhead = 0;
   // Ordinals a backfill delivered, open until the queue drains.
   private overlap: Set<number> | undefined;
@@ -70,27 +79,18 @@ export class ProcessorQueue {
 
   /** Resolves at once behind a replay, so a pass never waits out a backfill. */
   live(ops: OperationWithContext[]): Promise<void> {
-    const delivered = this.enqueue("live", () => this.deliverLive(ops));
+    const delivered = this.push((done) => ({ kind: "live", ops, done }));
     return this.replaysAhead > 0 ? Promise.resolve() : delivered;
   }
 
   /** Raises the cursor past a batch with nothing for this processor. */
   advance(through: number): Promise<void> {
     const last = this.tasks.at(-1);
-    if (last?.kind === "advance" && this.pendingAdvance) {
-      this.pendingAdvance.through = Math.max(
-        this.pendingAdvance.through,
-        through,
-      );
+    if (last?.kind === "advance") {
+      last.through = Math.max(last.through, through);
       return Promise.resolve();
     }
-
-    const pending = { through };
-    this.pendingAdvance = pending;
-    return this.enqueue("advance", async () => {
-      if (this.pendingAdvance === pending) this.pendingAdvance = undefined;
-      await this.raiseCursor(pending.through);
-    });
+    return this.push((done) => ({ kind: "advance", through, done }));
   }
 
   /** Replays from the cursor as it stands when the task runs. */
@@ -144,11 +144,18 @@ export class ProcessorQueue {
     });
   }
 
-  private enqueue(kind: Task["kind"], run: () => Promise<void>): Promise<void> {
+  private enqueue(
+    kind: "backfill" | "retry" | "disconnect",
+    run: () => Promise<void>,
+  ): Promise<void> {
+    return this.push((done) => ({ kind, run, done }));
+  }
+
+  private push(task: (done: () => void) => Task): Promise<void> {
     if (this.closed) return Promise.resolve();
 
     return new Promise<void>((resolve) => {
-      this.tasks.push({ kind, run, done: resolve });
+      this.tasks.push(task(resolve));
       if (this.running) return;
       this.running = true;
       // Never start user code on the caller's stack.
@@ -159,8 +166,19 @@ export class ProcessorQueue {
   private async drain(): Promise<void> {
     while (this.tasks.length > 0) {
       const task = this.tasks.shift()!;
+      // Consecutive deliveries go to the processor as one call.
+      const batch: Delivery[] = [];
+      if (isDelivery(task)) {
+        batch.push(task);
+        let next = this.tasks[0];
+        while (isDelivery(next)) {
+          batch.push(next);
+          this.tasks.shift();
+          next = this.tasks[0];
+        }
+      }
       try {
-        await task.run();
+        await (isDelivery(task) ? this.deliverLive(batch) : task.run());
       } catch (error) {
         this.options.logger.error(
           "Processor '@ProcessorId' task '@Kind' failed: @Error",
@@ -170,21 +188,31 @@ export class ProcessorQueue {
         );
       } finally {
         task.done();
+        for (const merged of batch.slice(1)) merged.done();
       }
     }
     this.overlap = undefined;
     this.running = false;
   }
 
-  private async deliverLive(ops: OperationWithContext[]): Promise<void> {
+  private async deliverLive(batch: Delivery[]): Promise<void> {
     const { cursor, floor } = this.options;
     const overlap = this.overlap;
+    const ops: OperationWithContext[] = [];
+    let through = 0;
+    for (const task of batch) {
+      if (task.kind === "live") ops.push(...task.ops);
+      else through = Math.max(through, task.through);
+    }
     const fresh = ops.filter((op) => {
       const ordinal = op.context.ordinal;
       if (ordinal <= floor || overlap?.has(ordinal)) return false;
       return !this.unrouted.delete(ordinal);
     });
-    if (fresh.length === 0) return;
+    if (fresh.length === 0) {
+      await this.raiseCursor(through);
+      return;
+    }
 
     if (cursor.status !== "active") {
       await this.parkBelow(fresh);
@@ -196,7 +224,7 @@ export class ProcessorQueue {
       return;
     }
 
-    await this.raiseCursor(highestOf(fresh));
+    await this.raiseCursor(Math.max(highestOf(fresh), through));
   }
 
   private async runBackfill(): Promise<void> {

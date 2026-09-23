@@ -119,15 +119,35 @@ function harness(
 describe("ProcessorQueue", () => {
   describe("ordering", () => {
     it("should deliver tasks in the order they were enqueued", async () => {
-      const { queue, delivered } = harness();
+      const gate = deferred();
+      let calls = 0;
+      const { queue, delivered } = harness({
+        onOperations: async () => {
+          if (calls++ === 0) await gate.promise;
+        },
+      });
+
+      const first = queue.live([op(4)]);
+      await Promise.resolve();
+      const rest = [queue.live([op(3)]), queue.live([op(1)])];
+      gate.resolve();
+      await Promise.all([first, ...rest]);
+
+      expect(delivered).toEqual([[4], [3, 1]]);
+    });
+
+    it("should merge queued live batches into one call, in order", async () => {
+      const { queue, delivered, processor } = harness();
 
       await Promise.all([
         queue.live([op(3)]),
-        queue.live([op(1)]),
-        queue.live([op(2)]),
+        queue.live([op(1), op(2)]),
+        queue.advance(9),
+        queue.live([op(5)]),
       ]);
 
-      expect(delivered).toEqual([[3], [1], [2]]);
+      expect(processor.onOperations).toHaveBeenCalledTimes(1);
+      expect(delivered).toEqual([[3, 1, 2, 5]]);
     });
 
     it("should run one onOperations call at a time", async () => {
@@ -177,7 +197,7 @@ describe("ProcessorQueue", () => {
       await Promise.all([busy, ...advances]);
 
       expect(cursor.lastOrdinal).toBe(9);
-      expect(persisted.map((p) => p.lastOrdinal)).toEqual([1, 9]);
+      expect(persisted.map((p) => p.lastOrdinal)).toEqual([9]);
     });
   });
 
@@ -519,7 +539,7 @@ describe("ProcessorQueue", () => {
       gate.resolve();
       await Promise.all([first, second, closed, late]);
 
-      expect(events).toEqual(["ops:1", "ops:2", "disconnect"]);
+      expect(events).toEqual(["ops:1,2", "disconnect"]);
       expect(processor.onDisconnect).toHaveBeenCalledTimes(1);
       expect(queue.isClosed).toBe(true);
     });
