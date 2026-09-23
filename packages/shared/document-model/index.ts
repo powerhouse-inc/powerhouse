@@ -1,3 +1,4 @@
+export * from "./action-signature.js";
 export * from "./action-transport.js";
 export * from "./actions.js";
 export * from "./auth.js";
