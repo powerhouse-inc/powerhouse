@@ -60,14 +60,15 @@ function highestOf(ops: OperationWithContext[]): number {
   return highest;
 }
 
+/** Largest merged live call, matching the operation index's page size. */
+export const MAX_MERGED_OPERATIONS = 500;
+
 // One task at a time per processor; task promises never reject.
 export class ProcessorQueue {
   private readonly tasks: Task[] = [];
   private running = false;
   private closed = false;
   private replaysAhead = 0;
-  // Ordinals a backfill delivered, open until the queue drains.
-  private overlap: Set<number> | undefined;
   // Delivered by backfill before routing reached them; dropped once, live.
   private readonly unrouted = new Set<number>();
 
@@ -170,8 +171,10 @@ export class ProcessorQueue {
       const batch: Delivery[] = [];
       if (isDelivery(task)) {
         batch.push(task);
+        let size = task.kind === "live" ? task.ops.length : 0;
         let next = this.tasks[0];
-        while (isDelivery(next)) {
+        while (isDelivery(next) && size < MAX_MERGED_OPERATIONS) {
+          if (next.kind === "live") size += next.ops.length;
           batch.push(next);
           this.tasks.shift();
           next = this.tasks[0];
@@ -191,13 +194,11 @@ export class ProcessorQueue {
         for (const merged of batch.slice(1)) merged.done();
       }
     }
-    this.overlap = undefined;
     this.running = false;
   }
 
   private async deliverLive(batch: Delivery[]): Promise<void> {
     const { cursor, floor } = this.options;
-    const overlap = this.overlap;
     const ops: OperationWithContext[] = [];
     let through = 0;
     for (const task of batch) {
@@ -206,7 +207,7 @@ export class ProcessorQueue {
     }
     const fresh = ops.filter((op) => {
       const ordinal = op.context.ordinal;
-      if (ordinal <= floor || overlap?.has(ordinal)) return false;
+      if (ordinal <= floor) return false;
       return !this.unrouted.delete(ordinal);
     });
     if (fresh.length === 0) {
@@ -231,7 +232,6 @@ export class ProcessorQueue {
     const { cursor, filter, floor } = this.options;
     if (cursor.status !== "active") return;
 
-    const overlap = (this.overlap ??= new Set());
     let page: PagedResults<OperationWithContext>;
     try {
       page = await this.options.readSince(cursor.lastOrdinal);
@@ -251,11 +251,7 @@ export class ProcessorQueue {
           await this.persist();
           return;
         }
-        const routed = this.options.routedThrough();
-        for (const op of matching) {
-          const ordinal = op.context.ordinal;
-          (ordinal > routed ? this.unrouted : overlap).add(ordinal);
-        }
+        this.dedupeQueued(matching);
       }
 
       await this.raiseCursor(highestOf(page.results));
@@ -267,6 +263,22 @@ export class ProcessorQueue {
         await this.fail(error, "reading backfill");
         return;
       }
+    }
+  }
+
+  // Routing is synchronous: a routed ordinal is queued now, an unrouted one comes later.
+  private dedupeQueued(delivered: OperationWithContext[]): void {
+    const routed = this.options.routedThrough();
+    const queued = new Set<number>();
+    for (const op of delivered) {
+      const ordinal = op.context.ordinal;
+      if (ordinal > routed) this.unrouted.add(ordinal);
+      else queued.add(ordinal);
+    }
+    if (queued.size === 0) return;
+    for (const task of this.tasks) {
+      if (task.kind !== "live") continue;
+      task.ops = task.ops.filter((op) => !queued.has(op.context.ordinal));
     }
   }
 

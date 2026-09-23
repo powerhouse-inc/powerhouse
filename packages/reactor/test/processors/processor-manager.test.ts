@@ -2181,16 +2181,121 @@ describe("ProcessorManager Standalone Tests", () => {
       expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined();
     });
 
+    it("should keep a factory's cursors when its run fails", async () => {
+      const driveId = generateId();
+      await insertDriveSnapshot(db, driveId);
+      const { factory } = createMockProcessorFactory();
+      await processorManager.registerFactory("f", factory);
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      await processorManager.indexOperations([makeOp(driveId, 7)]);
+      expect((await cursorRow(`f:${driveId}:0`))?.lastOrdinal).toBe(7);
+
+      for (const factory of [
+        () => {
+          throw new Error("transient");
+        },
+        () => [],
+      ]) {
+        const restarted = new ProcessorManager(
+          db as unknown as Kysely<DocumentViewDatabase>,
+          operationIndex,
+          mockWriteCache,
+          new ConsistencyTracker(),
+          new ConsoleLogger(["test"]),
+          DEFAULT_DRIVE_CONTAINER_TYPES,
+        );
+        await restarted.init();
+        await restarted.registerFactory("f", factory);
+        expect((await cursorRow(`f:${driveId}:0`))?.lastOrdinal).toBe(7);
+      }
+    });
+
+    it("should start a re-registered factory only after its previous processors disconnect", async () => {
+      const driveId = generateId();
+      const events: string[] = [];
+      const held = deferred();
+      const release = deferred();
+      const old = createMockProcessor();
+      old.onOperations = vi
+        .fn()
+        .mockImplementation(async (ops: OperationWithContext[]) => {
+          if (ops.some((op) => op.context.ordinal === 2)) {
+            held.resolve();
+            await release.promise;
+            events.push("old ops");
+          }
+        });
+      old.onDisconnect = vi.fn().mockImplementation(() => {
+        events.push("old disconnect");
+        return Promise.resolve();
+      });
+      await processorManager.registerFactory("pkg", () => [
+        { processor: old, filter: { documentId: ["*"] } },
+      ]);
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      const live = processorManager.indexOperations([
+        makeOp(generateId(), 2, { documentType: CHILD }),
+      ]);
+      await held.promise;
+
+      await processorManager.unregisterFactory("pkg");
+      const replacement = createMockProcessor();
+      const registered = processorManager.registerFactory("pkg", () => {
+        events.push("new factory");
+        return [{ processor: replacement, filter: { documentId: ["*"] } }];
+      });
+      release.resolve();
+      await Promise.all([live, registered]);
+
+      expect(events).toEqual(["old ops", "old disconnect", "new factory"]);
+    });
+
+    it("should not hold a drive deletion behind its processors' deliveries", async () => {
+      const driveId = generateId();
+      const held = deferred();
+      const release = deferred();
+      const processor = createMockProcessor();
+      processor.onOperations = vi
+        .fn()
+        .mockImplementation(async (ops: OperationWithContext[]) => {
+          if (ops.some((op) => op.context.ordinal === 2)) {
+            held.resolve();
+            await release.promise;
+          }
+        });
+      await processorManager.registerFactory("f", () => [
+        { processor, filter: { documentId: ["*"] } },
+      ]);
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      const child = processorManager.indexOperations([
+        makeOp(generateId(), 2, { documentType: CHILD }),
+      ]);
+      await held.promise;
+      try {
+        await processorManager.indexOperations([makeDriveDeleteOp(driveId, 3)]);
+        expect(processor.onDisconnect).not.toHaveBeenCalled();
+        expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined();
+      } finally {
+        release.resolve();
+      }
+      await child;
+      await vi.waitFor(() => expect(processor.onDisconnect).toHaveBeenCalled());
+    });
+
     it("should never overlap two onOperations calls on one processor", async () => {
       const driveId = generateId();
       let inFlight = 0;
       let maxInFlight = 0;
+      const entered = deferred();
       const processor = createMockProcessor();
       processor.onOperations = vi
         .fn()
         .mockImplementation(async (ops: OperationWithContext[]) => {
           inFlight++;
           maxInFlight = Math.max(maxInFlight, inFlight);
+          if (ops.some((op) => op.context.ordinal === 2)) entered.resolve();
           await new Promise((r) => setTimeout(r, 5));
           processor.receivedOperations.push(...ops);
           inFlight--;
@@ -2201,14 +2306,17 @@ describe("ProcessorManager Standalone Tests", () => {
       await processorManager.registerFactory("f", factory);
       await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
 
-      await Promise.all([
-        processorManager.indexOperations([
-          makeOp(generateId(), 2, { documentType: CHILD }),
-        ]),
-        processorManager.indexOperations([
-          makeOp(generateId(), 3, { documentType: CHILD }),
-        ]),
+      // The second document's batch arrives while the first is in flight.
+      const first = processorManager.indexOperations([
+        makeOp(generateId(), 2, { documentType: CHILD }),
       ]);
+      await entered.promise;
+      const second = processorManager.indexOperations([
+        makeOp(generateId(), 3, { documentType: CHILD }),
+      ]);
+      await Promise.all([first, second]);
+
+      expect(processor.onOperations).toHaveBeenCalledTimes(3);
 
       expect(ordinalsOf(processor)).toEqual([1, 2, 3]);
       expect(maxInFlight).toBe(1);
@@ -2216,15 +2324,15 @@ describe("ProcessorManager Standalone Tests", () => {
 
     it("should keep a park when a sibling document's delivery succeeds after it", async () => {
       const driveId = generateId();
+      const entered = deferred();
       const processor = createMockProcessor();
       processor.onOperations = vi
         .fn()
         .mockImplementation(async (ops: OperationWithContext[]) => {
           if (ops.some((op) => op.context.ordinal === 2)) {
-            throw new Error("fails on 2");
-          }
-          if (ops.some((op) => op.context.ordinal === 3)) {
+            entered.resolve();
             await new Promise((r) => setTimeout(r, 5));
+            throw new Error("fails on 2");
           }
         });
       const factory: ProcessorFactory = () => [
@@ -2233,14 +2341,15 @@ describe("ProcessorManager Standalone Tests", () => {
       await processorManager.registerFactory("f", factory);
       await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
 
-      await Promise.all([
-        processorManager.indexOperations([
-          makeOp(generateId(), 3, { documentType: CHILD }),
-        ]),
-        processorManager.indexOperations([
-          makeOp(generateId(), 2, { documentType: CHILD }),
-        ]),
+      // Document B's batch lands while A's is failing.
+      const failing = processorManager.indexOperations([
+        makeOp(generateId(), 2, { documentType: CHILD }),
       ]);
+      await entered.promise;
+      const sibling = processorManager.indexOperations([
+        makeOp(generateId(), 3, { documentType: CHILD }),
+      ]);
+      await Promise.all([failing, sibling]);
 
       const tracked = processorManager.get(`f:${driveId}:0`);
       expect(tracked!.status).toBe("errored");

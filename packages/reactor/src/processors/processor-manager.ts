@@ -67,6 +67,8 @@ export class ProcessorManager
   private cursorCache: Map<string, ProcessorCursorRow> = new Map();
   // Serializes every cursor row write per processor id.
   private cursorWrites: Map<string, Promise<void>> = new Map();
+  // Removed processors per factory id, until each has disconnected.
+  private draining: Map<string, Promise<void>> = new Map();
   private logger: ILogger;
   private driveContainerTypes: ReadonlySet<string>;
   private legacyProcessorIds: boolean;
@@ -91,8 +93,8 @@ export class ProcessorManager
   }
 
   override async init(): Promise<void> {
-    await super.init();
     await this.loadAllCursors();
+    await super.init();
     await this.discoverExistingDrives();
   }
 
@@ -116,6 +118,7 @@ export class ProcessorManager
   ): Promise<void> {
     const removals = this.removeFactory(identifier);
     this.factoryRegistry.set(identifier, factory);
+    const previous = this.draining.get(identifier);
 
     // A late registration has no creation batch to anchor to: "current"
     // means from here on.
@@ -131,6 +134,7 @@ export class ProcessorManager
           creationOrdinal,
           undefined,
           false,
+          previous,
         ).run,
       );
     }
@@ -207,7 +211,8 @@ export class ProcessorManager
       }
 
       for (const { queue } of this.processorsByDrive.get(driveId) ?? []) {
-        pending.push(queue.close());
+        // Not awaited: the pass must not wait out the drive's queues.
+        void queue.close();
       }
       this.processorsByDrive.delete(driveId);
       pending.push(...this.deleteCursors((row) => row.driveId === driveId));
@@ -257,11 +262,17 @@ export class ProcessorManager
   /** Synchronous: binds records, or discards them if the slot was cancelled. */
   protected bind(
     slot: PendingSlot,
-    records: ProcessorRecord[],
+    records: ProcessorRecord[] | undefined,
     creationOrdinal: number,
     creationItems: OperationWithContext[] | undefined,
   ): { persisted: Promise<void>; delivered: Promise<void> } {
-    if (!this.pendingSlots.delete(slot)) {
+    const released = this.pendingSlots.delete(slot);
+    // A failed or empty run leaves the factory's cursors for the drive alone.
+    if (!records || records.length === 0) {
+      const settled = Promise.resolve();
+      return { persisted: settled, delivered: settled };
+    }
+    if (!released) {
       const discarded = records.map((record) =>
         this.discard(
           slot,
@@ -330,12 +341,12 @@ export class ProcessorManager
       if (slot.factoryId === identifier) this.pendingSlots.delete(slot);
     }
 
+    const closing: Promise<void>[] = [];
     for (const [driveId, drive] of this.processorsByDrive) {
       const remaining: Bound[] = [];
       for (const b of drive) {
         if (b.tracked.factoryId === identifier) {
-          // Not awaited: in-flight deliveries finish, then onDisconnect runs.
-          void b.queue.close();
+          closing.push(b.queue.close());
         } else {
           remaining.push(b);
         }
@@ -345,6 +356,19 @@ export class ProcessorManager
       } else {
         this.processorsByDrive.delete(driveId);
       }
+    }
+
+    if (closing.length > 0) {
+      const drained = Promise.all([
+        this.draining.get(identifier),
+        ...closing,
+      ]).then(() => undefined);
+      this.draining.set(identifier, drained);
+      void drained.then(() => {
+        if (this.draining.get(identifier) === drained) {
+          this.draining.delete(identifier);
+        }
+      });
     }
 
     return this.deleteCursors((row) => row.factoryId === identifier);
@@ -358,6 +382,7 @@ export class ProcessorManager
     creationOrdinal: number,
     creationItems: OperationWithContext[] | undefined,
     awaitDelivery: boolean,
+    previous?: Promise<void>,
   ): { slot: PendingSlot; run: FactoryRun } {
     const slot: PendingSlot = {
       factoryId,
@@ -368,6 +393,8 @@ export class ProcessorManager
     this.pendingSlots.add(slot);
 
     const run = async () => {
+      // A re-registered factory starts once its previous instance is gone.
+      await previous;
       const records = await this.runFactory(slot, factory, driveHeader);
       const { persisted, delivered } = this.bind(
         slot,
@@ -385,7 +412,7 @@ export class ProcessorManager
     slot: PendingSlot,
     factory: ProcessorFactory,
     driveHeader: PHDocumentHeader,
-  ): Promise<ProcessorRecord[]> {
+  ): Promise<ProcessorRecord[] | undefined> {
     try {
       return await factory(driveHeader);
     } catch (error) {
@@ -395,7 +422,7 @@ export class ProcessorManager
         slot.driveId,
         error,
       );
-      return [];
+      return undefined;
     }
   }
 

@@ -5,6 +5,7 @@ import type {
 } from "@powerhousedao/shared/processors";
 import { describe, expect, it, vi } from "vitest";
 import {
+  MAX_MERGED_OPERATIONS,
   ProcessorQueue,
   type ProcessorCursorState,
 } from "../../src/processors/processor-queue.js";
@@ -136,6 +137,20 @@ describe("ProcessorQueue", () => {
       expect(delivered).toEqual([[4], [3, 1]]);
     });
 
+    it("should cap a merged call at the page size", async () => {
+      const { queue, delivered } = harness();
+
+      const ops = Array.from({ length: MAX_MERGED_OPERATIONS + 1 }, (_, i) =>
+        op(i + 1),
+      );
+      await Promise.all(ops.map((o) => queue.live([o])));
+
+      expect(delivered.map((call) => call.length)).toEqual([
+        MAX_MERGED_OPERATIONS,
+        1,
+      ]);
+    });
+
     it("should merge queued live batches into one call, in order", async () => {
       const { queue, delivered, processor } = harness();
 
@@ -153,17 +168,27 @@ describe("ProcessorQueue", () => {
     it("should run one onOperations call at a time", async () => {
       let inFlight = 0;
       let maxInFlight = 0;
-      const { queue } = harness({
+      let entered = deferred();
+      const { queue, processor } = harness({
         onOperations: async () => {
           inFlight++;
           maxInFlight = Math.max(maxInFlight, inFlight);
+          entered.resolve();
           await new Promise((r) => setTimeout(r, 1));
           inFlight--;
         },
       });
 
-      await Promise.all([1, 2, 3, 4].map((n) => queue.live([op(n)])));
+      // Each batch is enqueued while the previous call is in flight.
+      const lives: Promise<void>[] = [];
+      for (const n of [1, 2, 3]) {
+        entered = deferred();
+        lives.push(queue.live([op(n)]));
+        await entered.promise;
+      }
+      await Promise.all(lives);
 
+      expect(processor.onOperations).toHaveBeenCalledTimes(3);
       expect(maxInFlight).toBe(1);
     });
 
@@ -507,7 +532,7 @@ describe("ProcessorQueue", () => {
       expect(delivered).toEqual([[1, 2], [2]]);
     });
 
-    it("should close the window once the queue drains", async () => {
+    it("should deliver again a routed op that queues after the backfill", async () => {
       const { queue, delivered } = harness({ index: [op(1)] });
 
       await queue.backfill();
