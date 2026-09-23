@@ -1265,15 +1265,21 @@ export class ReactorClient implements IReactorClient {
       branch,
       actions.length,
     );
+    const documentId = await this.resolveWriteTarget(
+      documentIdentifier,
+      branch,
+      actions,
+      signal,
+    );
     const signedActions = await signActions(
       actions,
       this.signer,
-      { documentId: documentIdentifier, branch },
+      { documentId, branch },
       signal,
     );
 
     const jobInfo = await this.reactor.execute(
-      documentIdentifier,
+      documentId,
       branch,
       signedActions,
       signal,
@@ -1310,17 +1316,51 @@ export class ReactorClient implements IReactorClient {
       branch,
       actions.length,
     );
+    const documentId = await this.resolveWriteTarget(
+      documentIdentifier,
+      branch,
+      actions,
+      signal,
+    );
     const signedActions = await signActions(
       actions,
       this.signer,
-      { documentId: documentIdentifier, branch },
+      { documentId, branch },
       signal,
     );
 
-    return this.reactor.execute(
-      documentIdentifier,
-      branch,
-      signedActions,
+    return this.reactor.execute(documentId, branch, signedActions, signal);
+  }
+
+  /**
+   * The id a write on `identifier` is stored under, which its signatures bind.
+   * A create names its own id, and an id no slug maps to is taken as given, so
+   * a document still in flight resolves to itself.
+   */
+  private async resolveWriteTarget(
+    identifier: string,
+    branch: string,
+    actions: readonly Action[],
+    signal?: AbortSignal,
+  ): Promise<string> {
+    if (actions.some((action) => action.type === "CREATE_DOCUMENT")) {
+      return identifier;
+    }
+
+    const view = { branch };
+    const bySlug = await this.documentView.resolveSlug(
+      identifier,
+      view,
+      undefined,
+      signal,
+    );
+    if (bySlug === undefined || bySlug === identifier) {
+      return identifier;
+    }
+    return this.documentView.resolveIdOrSlug(
+      identifier,
+      view,
+      undefined,
       signal,
     );
   }
@@ -1332,10 +1372,24 @@ export class ReactorClient implements IReactorClient {
     this.logger.verbose("executeBatch(@count jobs)", request.jobs.length);
 
     const signedJobs: ExecutionJobPlan[] = await Promise.all(
-      request.jobs.map(async (job) => ({
-        ...job,
-        actions: await signActions(job.actions, this.signer, job, signal),
-      })),
+      request.jobs.map(async (job) => {
+        const documentId = await this.resolveWriteTarget(
+          job.documentId,
+          job.branch,
+          job.actions,
+          signal,
+        );
+        return {
+          ...job,
+          documentId,
+          actions: await signActions(
+            job.actions,
+            this.signer,
+            { documentId, branch: job.branch },
+            signal,
+          ),
+        };
+      }),
     );
 
     const batchResult = await this.reactor.executeBatch(

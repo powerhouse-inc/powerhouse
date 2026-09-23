@@ -1,6 +1,7 @@
 import type {
   Action,
   ActionSigner,
+  ISigner,
   Signature,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -102,6 +103,21 @@ export class TestP256Signer {
     ];
     const signature = await this.sign(buildOperationSignatureMessage(params));
     return [...params, `0x${bytesToHex(signature)}`];
+  }
+
+  /** An ISigner over this key, recording every target it signs for. */
+  asISigner(targets: ActionSigningTarget[] = []): ISigner {
+    return {
+      user: this.user,
+      app: { name: "test", key: this.did },
+      publicKey: this.keyPair.publicKey,
+      sign: (data) => this.sign(data),
+      verify: () => Promise.resolve(),
+      signAction: (action, target) => {
+        targets.push(target);
+        return this.v2Tuple(action, target);
+      },
+    };
   }
 
   actionSigner(signatures: Signature[]): ActionSigner {
