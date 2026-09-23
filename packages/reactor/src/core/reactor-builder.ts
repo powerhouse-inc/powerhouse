@@ -187,11 +187,7 @@ export type {
 type WorkerPoolBase = {
   /** Number of worker threads to spawn; also the sticky-routing modulus. */
   numWorkers: number;
-  /**
-   * Factory spec the default transport's workers import to instantiate
-   * their signature verifier. Omitted = no executor-side verification,
-   * parity with the in-process executor's default.
-   */
+  /** @deprecated Ignored: workers verify signature integrity themselves. */
   verifier?: SignatureVerifierSpec;
 };
 
@@ -297,7 +293,6 @@ export class ReactorBuilder {
   private eventBus?: IEventBus;
   private readModelCoordinator?: IReadModelCoordinator;
   private readModelCoordinatorFactory?: ReadModelCoordinatorFactory;
-  private signatureVerifier?: SignatureVerificationHandler;
   private kyselyInstance?: Kysely<Database>;
   private signalHandlersEnabled = false;
   private queueInstance?: IQueue;
@@ -408,8 +403,8 @@ export class ReactorBuilder {
     return this;
   }
 
-  withSignatureVerifier(verifier: SignatureVerificationHandler): this {
-    this.signatureVerifier = verifier;
+  /** @deprecated No-op: the executor verifies signature integrity itself. */
+  withSignatureVerifier(_verifier: SignatureVerificationHandler): this {
     return this;
   }
 
@@ -474,8 +469,7 @@ export class ReactorBuilder {
    * this enables the pool — there is no `enabled` flag. Provide `db`
    * (each worker opens its own Postgres pool; the parent database is built
    * from it too unless {@link withKysely} is set) or a custom `factory`
-   * transport. `verifier` is imported by the default transport's workers;
-   * omitted = no executor-side signature verification.
+   * transport.
    */
   withWorkerPool(options: WorkerPoolOptions): this {
     this.workerPool = options;
@@ -729,7 +723,6 @@ export class ReactorBuilder {
           factory = await this.createDefaultWorkerFactory(
             pool.numWorkers,
             pool.db,
-            pool.verifier,
           );
         }
         const poolManager = new WorkerPoolJobExecutorManager(
@@ -762,7 +755,6 @@ export class ReactorBuilder {
               collectionMembershipCache,
               this.driveContainerTypes,
               this.executorConfig,
-              this.signatureVerifier,
               executionScope,
             ),
           eventBus,
@@ -1209,7 +1201,6 @@ export class ReactorBuilder {
   private async createDefaultWorkerFactory(
     numWorkers: number,
     db: DbConfig,
-    signatureVerifier: SignatureVerifierSpec | undefined,
   ): Promise<WorkerFactory> {
     const [{ WorkerHandle }, { createThreadTransport }, { workerEntryPath }] =
       await Promise.all([
@@ -1236,7 +1227,6 @@ export class ReactorBuilder {
         initPayload: {
           poolConfig,
           db,
-          signatureVerifier,
           models,
           executorConfig: this.executorConfig,
         },

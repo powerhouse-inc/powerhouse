@@ -1,3 +1,4 @@
+import type { SignatureRefusedEvent } from "../events/types.js";
 import type { Job } from "../queue/types.js";
 import type { ExecutorManagerStatus, JobResult } from "./types.js";
 import type {
@@ -24,6 +25,7 @@ export type WorkerInFlightSnapshot = {
 export type WorkerExecutionOutcome = {
   result: JobResult;
   writeReady?: JobWriteReadyPayload;
+  signatureRefusals?: SignatureRefusedEvent[];
 };
 
 /**

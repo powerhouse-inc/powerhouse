@@ -87,6 +87,7 @@ export {
 } from "./src/shared/drive-url.js";
 export {
   AuthEnforcementDisabledError,
+  InvalidSignatureError,
   RelationshipNotFoundError,
 } from "./src/shared/errors.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
@@ -108,7 +109,12 @@ export {
   type ViewFilter,
 } from "./src/shared/types.js";
 export {
+  SIGNATURE_REFUSAL_CODES,
+  type AdmissionPath,
+  type SignatureRefusalCode,
+  type SignatureScheme,
   type SignatureVerificationHandler,
+  type SignatureVerificationMode,
   type SignerConfig,
 } from "./src/signer/types.js";
 
@@ -137,6 +143,7 @@ export {
   type ReadModelIndexedEvent,
   type ReadModelStage,
   type ReadModelIndexingStage,
+  type SignatureRefusedEvent,
   type Unsubscribe,
 } from "./src/events/types.js";
 

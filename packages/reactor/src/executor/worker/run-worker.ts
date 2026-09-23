@@ -240,11 +240,19 @@ export function runWorker(
     try {
       const result = await executorStack.executor.executeJob(job);
       const writeReady = executorStack.takeLastWriteReady();
+      const signatureRefusals = executorStack.takeSignatureRefusals();
       post({
         type: "result",
         correlationId,
         result,
         writeReady: writeReady ?? undefined,
+        signatureRefusals:
+          signatureRefusals.length > 0 ? signatureRefusals : undefined,
+        // Structured clone drops a custom error name; the ErrorInfo keeps it.
+        error:
+          !result.success && result.error
+            ? errorToInfo(result.error)
+            : undefined,
       });
     } catch (error) {
       post({

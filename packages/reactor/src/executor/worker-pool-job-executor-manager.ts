@@ -315,6 +315,12 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
       return;
     }
 
+    for (const refusal of outcome.signatureRefusals ?? []) {
+      this.eventBus
+        .emit(ReactorEventTypes.SIGNATURE_REFUSED, refusal)
+        .catch(() => {});
+    }
+
     if (outcome.result.success) {
       this.totalJobsProcessed++;
       const completedEvent: JobCompletedEvent = {

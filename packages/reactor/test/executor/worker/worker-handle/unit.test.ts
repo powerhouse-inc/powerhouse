@@ -68,9 +68,6 @@ function makeInitPayload(): WorkerInitPayload {
       user: "test",
       password: "test",
     },
-    signatureVerifier: {
-      module: { packageName: "test-verifier", exportName: "factory" },
-    },
     models: [],
     executorConfig: {
       maxSkipThreshold: 42,

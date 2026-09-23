@@ -36,7 +36,6 @@ import {
   InvalidOperationTimestampError,
 } from "../shared/errors.js";
 import { yieldToMain } from "../shared/utils.js";
-import type { SignatureVerificationHandler } from "../signer/types.js";
 import {
   AppendConditionFailedError,
   type AppendCondition,
@@ -55,7 +54,7 @@ import { DocumentActionHandler } from "./document-action-handler.js";
 import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
 import { DefaultExecutionScope } from "./execution-scope.js";
 import type { IJobExecutor } from "./interfaces.js";
-import { SignatureVerifier } from "./signature-verifier.js";
+import { SignatureAdmission } from "./signature-admission.js";
 import { DEFAULT_DEFERRED_JOB_TTL_MS } from "./types.js";
 import type {
   ExecutingJob,
@@ -152,7 +151,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private config: Required<JobExecutorConfig>;
   private featureFlags: ReactorFeatureFlags;
   private decisionModel: RegisteredDecisionModel;
-  private signatureVerifierModule: SignatureVerifier;
+  private signatureAdmission: SignatureAdmission;
   private documentActionHandler: DocumentActionHandler;
   private executionScope: IExecutionScope;
 
@@ -167,7 +166,6 @@ export class SimpleJobExecutor implements IJobExecutor {
     private collectionMembershipCache: ICollectionMembershipCache,
     private driveContainerTypes: ReadonlySet<string>,
     config: JobExecutorConfig,
-    signatureVerifier?: SignatureVerificationHandler,
     executionScope?: IExecutionScope,
   ) {
     this.config = {
@@ -182,6 +180,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       retryMaxDelayMs: config.retryMaxDelayMs ?? 5000,
       yieldDeadlineMs: config.yieldDeadlineMs ?? 50,
       batchApplies: config.batchApplies ?? true,
+      signatureVerification: config.signatureVerification ?? "log",
     };
 
     // Resolved separately so reads are plain booleans; the config keeps what
@@ -190,7 +189,11 @@ export class SimpleJobExecutor implements IJobExecutor {
     // the flags that crossed the boundary.
     this.featureFlags = resolveFeatureFlags(config.featureFlags);
     this.decisionModel = selectDecisionModel(this.featureFlags, registry);
-    this.signatureVerifierModule = new SignatureVerifier(signatureVerifier);
+    this.signatureAdmission = new SignatureAdmission(
+      this.config.signatureVerification,
+      logger,
+      eventBus,
+    );
     this.documentActionHandler = new DocumentActionHandler(
       registry,
       logger,
@@ -399,6 +402,26 @@ export class SimpleJobExecutor implements IJobExecutor {
       return { result: reevalResult, pendingEvent };
     }
 
+    let refusal: Error | undefined;
+    try {
+      refusal = await this.signatureAdmission.admitMutation(
+        job,
+        stores.operationStore,
+        signal,
+      );
+    } catch (error) {
+      return {
+        result: buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        ),
+      };
+    }
+    if (refusal) {
+      return { result: buildErrorResult(job, refusal, startTime) };
+    }
+
     const positioned = await this.positionByTimestamp(job, stores, signal);
     if (positioned.error) {
       return { result: buildErrorResult(job, positioned.error, startTime) };
@@ -532,21 +555,6 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const generatedOperations: Operation[] = [];
     const operationsWithContext: OperationWithContext[] = [];
-
-    try {
-      await this.signatureVerifierModule.verifyActions(
-        job.documentId,
-        job.branch,
-        actions,
-      );
-    } catch (error) {
-      return {
-        success: false,
-        generatedOperations,
-        operationsWithContext,
-        error: error instanceof Error ? error : new Error(String(error)),
-      };
-    }
 
     for (const action of actions) {
       if (
@@ -1864,76 +1872,70 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
 
-    let minIncomingIndex = Number.POSITIVE_INFINITY;
-    let minIncomingTimestamp = job.operations[0]?.timestampUtcMs || "";
-    for (const operation of job.operations) {
-      minIncomingIndex = Math.min(minIncomingIndex, operation.index);
-      const ts = operation.timestampUtcMs || "";
-      if (Date.parse(ts) < Date.parse(minIncomingTimestamp)) {
-        minIncomingTimestamp = ts;
+    // Reselected after a drop, so a refused operation cannot widen the window.
+    const dropped = new Set<Operation>();
+    const admitted = new Set<Operation>();
+    let selection = await this.selectLoadWrites(
+      job,
+      job.operations,
+      stores,
+      signal,
+    );
+    for (;;) {
+      const unadmitted = selection.incomingOpsToApply.filter(
+        (operation) => !admitted.has(operation),
+      );
+      if (unadmitted.length === 0) {
+        break;
       }
-    }
 
-    let conflictingOps: Operation[];
-    try {
-      const conflictingResult = await stores.operationStore.getConflicting(
-        job.documentId,
-        scope,
-        job.branch,
-        minIncomingTimestamp,
-        undefined,
-        signal,
-      );
-
-      conflictingOps = conflictingResult.results;
-    } catch {
-      conflictingOps = [];
-    }
-
-    let allOpsFromMinConflictingIndex: Operation[] = conflictingOps;
-    if (conflictingOps.length > 0) {
-      const minConflictingIndex = Math.min(
-        ...conflictingOps.map((op) => op.index),
-      );
+      let refused: Set<Operation>;
       try {
-        const allOpsResult = await stores.operationStore.getSince(
-          job.documentId,
-          scope,
-          job.branch,
-          minConflictingIndex - 1,
-          undefined,
-          undefined,
+        refused = await this.signatureAdmission.admitLoad(
+          job,
+          unadmitted,
+          stores.operationStore,
           signal,
         );
-        allOpsFromMinConflictingIndex = allOpsResult.results;
-      } catch {
-        allOpsFromMinConflictingIndex = conflictingOps;
+      } catch (error) {
+        return buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        );
       }
-    }
 
-    const incomingActionIds = new Set(job.operations.map((op) => op.action.id));
-
-    const nonSupersededOps = conflictingOps.filter((op) => {
-      // A local op at an index below the incoming batch's lowest index with no
-      // overlapping action.id is a predecessor of the incoming ops, not a
-      // concurrent conflict. Including it would force a reshuffle that
-      // re-inserts identical history at new indices, which cascades when many
-      // ops share timestamps (bulk imports). Local ops whose action.id matches
-      // an incoming op are kept so dedup + reshuffle can remap them correctly
-      // (e.g. cross-reactor reshuffle rebroadcast).
-      if (op.index < minIncomingIndex && !incomingActionIds.has(op.action.id)) {
-        return false;
-      }
-      for (const laterOp of allOpsFromMinConflictingIndex) {
-        if (laterOp.index > op.index && laterOp.skip > 0) {
-          const logicalIndex = laterOp.index - laterOp.skip;
-          if (logicalIndex <= op.index) {
-            return false;
-          }
+      for (const operation of unadmitted) {
+        if (refused.has(operation)) {
+          dropped.add(operation);
+        } else {
+          admitted.add(operation);
         }
       }
-      return true;
-    });
+      if (refused.size === 0) {
+        break;
+      }
+
+      const remaining = job.operations.filter(
+        (operation) => !dropped.has(operation),
+      );
+      if (remaining.length === 0) {
+        return {
+          job,
+          success: true,
+          operations: [],
+          operationsWithContext: [],
+          duration: Date.now() - startTime,
+        };
+      }
+      selection = await this.selectLoadWrites(job, remaining, stores, signal);
+    }
+
+    const {
+      nonSupersededOps,
+      allOpsFromMinConflictingIndex,
+      incomingOpsToApply,
+    } = selection;
 
     // Creation holds the first two indexes for the life of the document, so it
     // never moves however far back the conflicting range reaches. The auth stream
@@ -1980,17 +1982,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       const logicalSkip = latestRevision - minLogicalIndex;
       if (logicalSkip > skipCount) skipCount = logicalSkip;
     }
-
-    const existingActionIds = new Set(
-      nonSupersededOps.map((op) => op.action.id),
-    );
-    const seenIncomingActionIds = new Set<string>();
-    const incomingOpsToApply = job.operations.filter((op) => {
-      if (existingActionIds.has(op.action.id)) return false;
-      if (seenIncomingActionIds.has(op.action.id)) return false;
-      seenIncomingActionIds.add(op.action.id);
-      return true;
-    });
 
     if (incomingOpsToApply.length === 0) {
       return {
@@ -2140,6 +2131,108 @@ export class SimpleJobExecutor implements IJobExecutor {
       operations: result.generatedOperations,
       operationsWithContext: result.operationsWithContext,
       duration: Date.now() - startTime,
+    };
+  }
+
+  /** The conflicting window a load opens, and which of its operations are new. */
+  private async selectLoadWrites(
+    job: Job,
+    operations: Operation[],
+    stores: ExecutionStores,
+    signal?: AbortSignal,
+  ): Promise<{
+    nonSupersededOps: Operation[];
+    allOpsFromMinConflictingIndex: Operation[];
+    incomingOpsToApply: Operation[];
+  }> {
+    const scope = job.scope;
+
+    let minIncomingIndex = Number.POSITIVE_INFINITY;
+    let minIncomingTimestamp = operations[0]?.timestampUtcMs || "";
+    for (const operation of operations) {
+      minIncomingIndex = Math.min(minIncomingIndex, operation.index);
+      const ts = operation.timestampUtcMs || "";
+      if (Date.parse(ts) < Date.parse(minIncomingTimestamp)) {
+        minIncomingTimestamp = ts;
+      }
+    }
+
+    let conflictingOps: Operation[];
+    try {
+      const conflictingResult = await stores.operationStore.getConflicting(
+        job.documentId,
+        scope,
+        job.branch,
+        minIncomingTimestamp,
+        undefined,
+        signal,
+      );
+
+      conflictingOps = conflictingResult.results;
+    } catch {
+      conflictingOps = [];
+    }
+
+    let allOpsFromMinConflictingIndex: Operation[] = conflictingOps;
+    if (conflictingOps.length > 0) {
+      const minConflictingIndex = Math.min(
+        ...conflictingOps.map((op) => op.index),
+      );
+      try {
+        const allOpsResult = await stores.operationStore.getSince(
+          job.documentId,
+          scope,
+          job.branch,
+          minConflictingIndex - 1,
+          undefined,
+          undefined,
+          signal,
+        );
+        allOpsFromMinConflictingIndex = allOpsResult.results;
+      } catch {
+        allOpsFromMinConflictingIndex = conflictingOps;
+      }
+    }
+
+    const incomingActionIds = new Set(operations.map((op) => op.action.id));
+
+    const nonSupersededOps = conflictingOps.filter((op) => {
+      // A local op at an index below the incoming batch's lowest index with no
+      // overlapping action.id is a predecessor of the incoming ops, not a
+      // concurrent conflict. Including it would force a reshuffle that
+      // re-inserts identical history at new indices, which cascades when many
+      // ops share timestamps (bulk imports). Local ops whose action.id matches
+      // an incoming op are kept so dedup + reshuffle can remap them correctly
+      // (e.g. cross-reactor reshuffle rebroadcast).
+      if (op.index < minIncomingIndex && !incomingActionIds.has(op.action.id)) {
+        return false;
+      }
+      for (const laterOp of allOpsFromMinConflictingIndex) {
+        if (laterOp.index > op.index && laterOp.skip > 0) {
+          const logicalIndex = laterOp.index - laterOp.skip;
+          if (logicalIndex <= op.index) {
+            return false;
+          }
+        }
+      }
+      return true;
+    });
+
+    const existingActionIds = new Set(
+      nonSupersededOps.map((op) => op.action.id),
+    );
+    const seenIncomingActionIds = new Set<string>();
+    const incomingOpsToApply = operations.filter((op) => {
+      if (existingActionIds.has(op.action.id)) return false;
+      if (seenIncomingActionIds.has(op.action.id)) return false;
+      seenIncomingActionIds.add(op.action.id);
+      return true;
+    });
+
+    return {
+      nonSupersededOps,
+      allOpsFromMinConflictingIndex,
+      incomingOpsToApply,
     };
   }
 

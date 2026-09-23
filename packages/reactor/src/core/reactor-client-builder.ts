@@ -14,10 +14,7 @@ import type { IEventBus } from "../events/interfaces.js";
 import type { IDocumentModelLoader } from "../registry/interfaces.js";
 import { JobAwaiter, type IJobAwaiter } from "../shared/awaiter.js";
 import { PassthroughSigner } from "../signer/passthrough-signer.js";
-import type {
-  SignatureVerificationHandler,
-  SignerConfig,
-} from "../signer/types.js";
+import type { SignerConfig } from "../signer/types.js";
 import type { IDocumentIndexer, IDocumentView } from "../storage/interfaces.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
@@ -40,7 +37,6 @@ export class ReactorClientBuilder {
   private documentIndexer?: IDocumentIndexer;
   private documentView?: IDocumentView;
   private signer?: ISigner;
-  private signatureVerifier?: SignatureVerificationHandler;
   private subscriptionManager?: IReactorSubscriptionManager;
   private jobAwaiter?: IJobAwaiter;
   private documentModelLoader?: IDocumentModelLoader;
@@ -88,15 +84,10 @@ export class ReactorClientBuilder {
     return this;
   }
 
-  /**
-   * Sets the signer configuration for signing and verifying actions.
-   *
-   * @param config - Either an ISigner for signing only, or a SignerConfig for both signing and verification
-   */
+  /** Signs submitted actions; verification needs no wiring. */
   public withSigner(config: ISigner | SignerConfig): this {
     if ("signer" in config) {
       this.signer = config.signer;
-      this.signatureVerifier = config.verifier;
     } else {
       this.signer = config;
     }
@@ -196,9 +187,6 @@ export class ReactorClientBuilder {
     let reactorModule: InProcessReactorModule | undefined;
 
     if (this.reactorBuilder) {
-      if (this.signatureVerifier) {
-        this.reactorBuilder.withSignatureVerifier(this.signatureVerifier);
-      }
       if (this.documentModelLoader) {
         this.reactorBuilder.withDocumentModelLoader(this.documentModelLoader);
       }

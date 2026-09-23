@@ -14,9 +14,43 @@ export type SignerConfig = {
    */
   signer: ISigner;
 
-  /**
-   * Optional handler for verifying signatures on incoming operations.
-   * If not provided, signature verification will be skipped.
-   */
+  /** @deprecated Ignored: the executor verifies signature integrity itself. */
   verifier?: SignatureVerificationHandler;
 };
+
+/** `log` counts refusals and admits anyway; `enforce` refuses. */
+export type SignatureVerificationMode = "log" | "enforce";
+
+export const SIGNATURE_REFUSAL_CODES = [
+  "UNSIGNED_REQUIRED",
+  "KEY_MISMATCH",
+  "MALFORMED_TUPLE",
+  "TIMESTAMP_MISMATCH",
+  "HASH_MISMATCH",
+  "BAD_SIGNATURE",
+  "SCHEME_BELOW_POLICY",
+  "DUPLICATE_ACTION",
+  "SIGNER_UNAUTHORIZED",
+] as const;
+
+export type SignatureRefusalCode = (typeof SIGNATURE_REFUSAL_CODES)[number];
+
+/** Read from the prefix or length of tuple[2]. */
+export type SignatureScheme =
+  | "unsigned"
+  | "v2"
+  | "legacy-renown"
+  | "legacy-shared"
+  | "legacy-unknown";
+
+/** Where this reactor first stores the write. */
+export type AdmissionPath = "mutation" | "load";
+
+export type SignatureVerdict =
+  | { ok: true; scheme: SignatureScheme }
+  | {
+      ok: false;
+      scheme: SignatureScheme;
+      code: SignatureRefusalCode;
+      reason: string;
+    };

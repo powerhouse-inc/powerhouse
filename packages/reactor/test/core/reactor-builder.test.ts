@@ -292,7 +292,7 @@ describe("ReactorBuilder", () => {
       expect(builder.getResolvedModelManifest()).toBeUndefined();
     });
 
-    it("builds without a signature-verifier spec (verification is optional)", async () => {
+    it("builds a worker pool with no verifier spec", async () => {
       const builder = new ReactorBuilder()
         .withDocumentModelSources(FIXTURE_SOURCES)
         .withWorkerPool({

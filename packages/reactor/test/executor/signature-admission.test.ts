@@ -1,0 +1,415 @@
+import type { Action, Operation } from "@powerhousedao/shared/document-model";
+import {
+  addModule,
+  deriveOperationId,
+} from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { deleteDocumentAction } from "../../src/actions/index.js";
+import { ReactorBuilder } from "../../src/core/reactor-builder.js";
+import type { InProcessReactorModule } from "../../src/core/types.js";
+import {
+  ReactorEventTypes,
+  type SignatureRefusedEvent,
+} from "../../src/events/types.js";
+import type { ReactorFeatureFlags } from "../../src/executor/types.js";
+import { JobStatus, type JobInfo } from "../../src/shared/types.js";
+import type { SignatureVerificationMode } from "../../src/signer/types.js";
+import { createDocModelDocument } from "../factories.js";
+import { TestP256Signer } from "../utils/p256-signer.js";
+
+const DOC_TYPE = "powerhouse/document-model";
+
+describe("signature admission", () => {
+  let module: InProcessReactorModule | undefined;
+  let refusals: SignatureRefusedEvent[];
+  let signer: TestP256Signer;
+  let docId: string;
+  let base: number;
+
+  beforeAll(async () => {
+    signer = await TestP256Signer.create();
+  });
+
+  afterEach(() => {
+    module?.reactor.kill();
+    module = undefined;
+  });
+
+  async function build(
+    signatureVerification?: SignatureVerificationMode,
+    featureFlags: Partial<ReactorFeatureFlags> = {},
+  ): Promise<InProcessReactorModule> {
+    module = await new ReactorBuilder()
+      .withDocumentModelSources([documentModelDocumentModelModule as never])
+      .withExecutorConfig({ signatureVerification, featureFlags })
+      .buildModule();
+    refusals = [];
+    module.eventBus.subscribe(
+      ReactorEventTypes.SIGNATURE_REFUSED,
+      (_type: number, event: SignatureRefusedEvent) => {
+        refusals.push(event);
+      },
+    );
+
+    const document = createDocModelDocument();
+    docId = document.header.id;
+    expect((await settle(await module.reactor.create(document))).status).toBe(
+      JobStatus.READ_READY,
+    );
+    base = Date.now() + 60_000;
+    return module;
+  }
+
+  async function settle(job: JobInfo): Promise<JobInfo> {
+    const reactor = module!.reactor;
+    let status = await reactor.getJobStatus(job.id);
+    while (
+      status.status !== JobStatus.READ_READY &&
+      status.status !== JobStatus.FAILED
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      status = await reactor.getJobStatus(job.id);
+    }
+    return status;
+  }
+
+  function at(offsetMs: number): string {
+    return new Date(base + offsetMs).toISOString();
+  }
+
+  function moduleAction(id: string, offsetMs = 0): Action {
+    return {
+      ...addModule({ id, name: id }),
+      timestampUtcMs: at(offsetMs),
+    };
+  }
+
+  async function renownSigned(action: Action): Promise<Action> {
+    return signer.signed(action, await signer.renownTuple(action));
+  }
+
+  async function tampered(action: Action): Promise<Action> {
+    const signed = await renownSigned(action);
+    return { ...signed, input: { id: "tampered", name: "tampered" } };
+  }
+
+  async function badSignature(action: Action): Promise<Action> {
+    const other = await TestP256Signer.create();
+    const tuple = await other.renownTuple(action);
+    return signer.signed(action, [
+      tuple[0],
+      signer.did,
+      tuple[2],
+      tuple[3],
+      tuple[4],
+    ]);
+  }
+
+  function asOperation(action: Action, index: number): Operation {
+    return {
+      id: deriveOperationId(docId, action.scope, "main", action.id),
+      index,
+      skip: 0,
+      hash: "",
+      timestampUtcMs: action.timestampUtcMs,
+      action,
+    };
+  }
+
+  async function execute(actions: Action[]): Promise<JobInfo> {
+    return settle(await module!.reactor.execute(docId, "main", actions));
+  }
+
+  async function load(operations: Operation[]): Promise<JobInfo> {
+    return settle(await module!.reactor.load(docId, "main", operations));
+  }
+
+  async function stored(scope = "global"): Promise<Operation[]> {
+    const result = await module!.reactor.getOperations(docId, {
+      branch: "main",
+      scopes: [scope],
+    });
+    const byScope = result as Record<
+      string,
+      { results: Operation[] } | undefined
+    >;
+    return byScope[scope]?.results ?? [];
+  }
+
+  async function storedActionIds(): Promise<string[]> {
+    return (await stored()).map((operation) => operation.action.id);
+  }
+
+  /** Writes past admission, as a store holding it from before this reactor. */
+  async function storeDirectly(action: Action): Promise<void> {
+    const store = module!.operationStore;
+    const revisions = await store.getRevisions(docId, "main");
+    const index =
+      (revisions.revision as Record<string, number | undefined>).global ?? 0;
+    await store.apply(docId, DOC_TYPE, "global", "main", index, (txn) => {
+      txn.addOperations(asOperation(action, index));
+    });
+    module!.writeCache.invalidate(docId, "global", "main");
+  }
+
+  describe("at mutation admission", () => {
+    it("accepts renown and shared legacy tuples", async () => {
+      await build("enforce");
+      const renown = await renownSigned(moduleAction("renown"));
+      const shared = moduleAction("shared");
+      const sharedSigned = signer.signed(
+        shared,
+        await signer.sharedTuple(shared, docId),
+      );
+
+      expect((await execute([renown, sharedSigned])).status).toBe(
+        JobStatus.READ_READY,
+      );
+      expect(refusals).toEqual([]);
+    });
+
+    it.each(["renown", "shared"] as const)(
+      "refuses a %s tuple over tampered input, with the code in JobInfo.error",
+      async (scheme) => {
+        await build("enforce");
+        const action = moduleAction("m");
+        const tuple =
+          scheme === "renown"
+            ? await signer.renownTuple(action)
+            : await signer.sharedTuple(action, docId);
+        const forged = signer.signed(
+          { ...action, input: { id: "x", name: "x" } },
+          tuple,
+        );
+
+        const job = await execute([forged]);
+
+        expect(job.status).toBe(JobStatus.FAILED);
+        expect(job.error?.name).toBe("InvalidSignatureError");
+        expect(job.error?.message).toContain("[HASH_MISMATCH]");
+        expect(await stored()).toEqual([]);
+        expect(refusals).toMatchObject([
+          { code: "HASH_MISMATCH", path: "mutation", enforced: true },
+        ]);
+      },
+    );
+
+    it("refuses a legacy tuple whose hash has another length", async () => {
+      await build("enforce");
+      const action = moduleAction("m");
+      const job = await execute([
+        signer.signed(action, await signer.tupleOver("h".repeat(30))),
+      ]);
+
+      expect(job.status).toBe(JobStatus.FAILED);
+      expect(job.error?.message).toContain("[MALFORMED_TUPLE]");
+    });
+
+    it("accepts a v2 tuple on ECDSA alone", async () => {
+      await build("enforce");
+      const action = moduleAction("m");
+      const job = await execute([
+        signer.signed(action, await signer.tupleOver(`v2:${"A".repeat(43)}`)),
+      ]);
+
+      expect(job.status).toBe(JobStatus.READ_READY);
+    });
+
+    it("treats a PassthroughSigner tuple as unsigned", async () => {
+      await build("enforce");
+      const action: Action = {
+        ...moduleAction("m"),
+        context: {
+          signer: {
+            user: { address: "", networkId: "", chainId: 0 },
+            app: { name: "", key: "" },
+            signatures: [["", "", "", "", ""]],
+          },
+        },
+      };
+
+      expect((await execute([action])).status).toBe(JobStatus.READ_READY);
+      expect(refusals).toEqual([]);
+    });
+
+    it("fails on the first refusal and stores nothing", async () => {
+      await build("enforce");
+      const job = await execute([
+        await renownSigned(moduleAction("a", 0)),
+        await tampered(moduleAction("b", 1)),
+        await renownSigned(moduleAction("c", 2)),
+      ]);
+
+      expect(job.status).toBe(JobStatus.FAILED);
+      expect(job.error?.name).toBe("InvalidSignatureError");
+      expect(await stored()).toEqual([]);
+    });
+
+    it("refuses an action id already in the stream", async () => {
+      await build("enforce");
+      const action = await renownSigned(moduleAction("m"));
+      expect((await execute([action])).status).toBe(JobStatus.READ_READY);
+
+      const again = await execute([action]);
+
+      expect(again.status).toBe(JobStatus.FAILED);
+      expect(again.error?.message).toContain("[DUPLICATE_ACTION]");
+      expect(await storedActionIds()).toEqual([action.id]);
+    });
+
+    it("logs and counts, but admits, when not enforcing", async () => {
+      await build();
+      const action = await tampered(moduleAction("m"));
+
+      expect((await execute([action])).status).toBe(JobStatus.READ_READY);
+      expect(await storedActionIds()).toEqual([action.id]);
+      expect(refusals).toMatchObject([
+        {
+          code: "HASH_MISMATCH",
+          scheme: "legacy-renown",
+          path: "mutation",
+          enforced: false,
+          documentId: docId,
+          actionId: action.id,
+        },
+      ]);
+    });
+  });
+
+  describe("at load admission", () => {
+    it("drops only the refused operation and succeeds with the rest", async () => {
+      await build("enforce");
+      const good1 = await renownSigned(moduleAction("a", 0));
+      const bad = await badSignature(moduleAction("b", 1));
+      const good2 = await renownSigned(moduleAction("c", 2));
+
+      const job = await load([
+        asOperation(good1, 0),
+        asOperation(bad, 1),
+        asOperation(good2, 2),
+      ]);
+
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(await storedActionIds()).toEqual([good1.id, good2.id]);
+      expect(refusals).toMatchObject([
+        { actionId: bad.id, code: "BAD_SIGNATURE", path: "load" },
+      ]);
+    });
+
+    it("succeeds with nothing stored when every operation is refused", async () => {
+      await build("enforce");
+      const bad = await badSignature(moduleAction("b"));
+
+      const job = await load([asOperation(bad, 0)]);
+
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(await stored()).toEqual([]);
+    });
+
+    it("keeps a dropped operation's timestamp out of the reshuffle", async () => {
+      await build("enforce");
+      const local = await renownSigned(moduleAction("local", 10));
+      expect((await execute([local])).status).toBe(JobStatus.READ_READY);
+
+      const early = await badSignature(moduleAction("early", 0));
+      const late = await renownSigned(moduleAction("late", 20));
+      const job = await load([asOperation(early, 0), asOperation(late, 1)]);
+
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(
+        (await stored()).map((operation) => [
+          operation.action.id,
+          operation.index,
+        ]),
+      ).toEqual([
+        [local.id, 0],
+        [late.id, 1],
+      ]);
+    });
+
+    it("accepts a legacy operation whose input keys a store reordered", async () => {
+      await build("enforce");
+      const action: Action = {
+        ...moduleAction("m"),
+        input: { id: "m", name: "m" },
+      };
+      const signed = await renownSigned(action);
+      const reordered = { ...signed, input: { name: "m", id: "m" } };
+
+      const job = await load([asOperation(reordered, 0)]);
+
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(await storedActionIds()).toEqual([action.id]);
+    });
+
+    it("dedups a re-delivery silently and refuses a replay stamped later", async () => {
+      await build("enforce");
+      const action = await renownSigned(moduleAction("m", 0));
+      expect((await load([asOperation(action, 0)])).status).toBe(
+        JobStatus.READ_READY,
+      );
+
+      expect((await load([asOperation(action, 0)])).status).toBe(
+        JobStatus.READ_READY,
+      );
+      expect(refusals).toEqual([]);
+
+      const replay = { ...asOperation(action, 1), timestampUtcMs: at(5_000) };
+      expect((await load([replay])).status).toBe(JobStatus.READ_READY);
+
+      expect(await storedActionIds()).toEqual([action.id]);
+      expect(refusals).toMatchObject([
+        { actionId: action.id, code: "DUPLICATE_ACTION", path: "load" },
+      ]);
+    });
+  });
+
+  describe("re-appends are not admission", () => {
+    it("does not re-verify what a backdated mutation moves", async () => {
+      await build("enforce", { documentDecisions: true });
+      const unverifiable = await badSignature(moduleAction("stored", 10));
+      await storeDirectly(unverifiable);
+
+      const job = await execute([await renownSigned(moduleAction("early", 0))]);
+
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(refusals).toEqual([]);
+      expect((await storedActionIds()).at(-1)).toBe(unverifiable.id);
+    });
+
+    it("does not re-verify what a load reshuffles", async () => {
+      await build("enforce");
+      const unverifiable = await badSignature(moduleAction("stored", 10));
+      await storeDirectly(unverifiable);
+
+      const early = await renownSigned(moduleAction("early", 0));
+      const job = await load([asOperation(early, 0)]);
+
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(refusals).toEqual([]);
+      expect((await storedActionIds()).slice(-2)).toEqual([
+        early.id,
+        unverifiable.id,
+      ]);
+    });
+
+    it("does not re-verify what a re-evaluation re-appends", async () => {
+      await build("enforce", { documentDecisions: true });
+      const unverifiable = await badSignature(moduleAction("stored", 10));
+      await storeDirectly(unverifiable);
+
+      const deletion = {
+        ...deleteDocumentAction(docId),
+        timestampUtcMs: at(0),
+      };
+      const job = await execute([deletion]);
+
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(refusals).toEqual([]);
+      const reappended = (await stored()).at(-1);
+      expect(reappended?.action.id).toBe(unverifiable.id);
+      expect(reappended?.deniedReason).toBeDefined();
+    });
+  });
+});

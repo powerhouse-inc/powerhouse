@@ -8,6 +8,7 @@ import { PGliteDialect } from "kysely-pglite-dialect";
 import { PGlite } from "@electric-sql/pglite";
 import { MessageChannel, type MessagePort } from "node:worker_threads";
 import { afterEach, describe, expect, it } from "vitest";
+import { TestP256Signer } from "../../../utils/p256-signer.js";
 import type { Database } from "../../../../src/core/types.js";
 import {
   runWorker,
@@ -123,6 +124,7 @@ function makeInit(
       },
     },
   ],
+  executorConfig?: InitMessage["executorConfig"],
 ): InitMessage {
   return {
     type: "init",
@@ -136,10 +138,8 @@ function makeInit(
       user: "ignored",
       password: "ignored",
     },
-    signatureVerifier: {
-      module: { packageName: "ignored", exportName: "factory" },
-    },
     models,
+    executorConfig,
   };
 }
 
@@ -307,6 +307,77 @@ describe("runWorker in-process execution", () => {
       "ADD_FOLDER",
     );
     expect(result.writeReady!.jobMeta).toEqual(job.meta);
+  });
+
+  it("verifies admission inside the worker and keeps the refusal's name", async () => {
+    const h = await startInProcessWorker();
+    const ready = waitForMessage(
+      h.port1,
+      (m): m is ReadyMessage => m.type === "ready",
+    );
+    h.port1.postMessage(
+      makeInit(undefined, { signatureVerification: "enforce" }),
+    );
+    await ready;
+
+    const document = driveDocumentModelModule.utils.createDocument();
+    await preCreateDriveDocument(
+      h.database,
+      document.header.id,
+      document.state,
+    );
+
+    const signer = await TestP256Signer.create();
+    const action = {
+      id: "action-signed-1",
+      type: "ADD_FOLDER",
+      scope: "global",
+      timestampUtcMs: new Date().toISOString(),
+      input: { id: "folder-1", name: "Inbox", parentFolder: null },
+    };
+    const forged = signer.signed(
+      { ...action, input: { ...action.input, name: "Forged" } },
+      await signer.renownTuple(action),
+    );
+
+    const job: Job = {
+      id: "job-signed-1",
+      kind: "mutation",
+      documentId: document.header.id,
+      scope: "global",
+      branch: "main",
+      actions: [forged],
+      operations: [],
+      createdAt: new Date().toISOString(),
+      queueHint: [],
+      retryCount: 0,
+      maxRetries: 0,
+      errorHistory: [],
+      meta: { batchId: "batch-signed-1", batchJobIds: ["job-signed-1"] },
+    };
+
+    const resultPromise = waitForMessage(
+      h.port1,
+      (m): m is ResultMessage => m.type === "result",
+    );
+    h.port1.postMessage({
+      type: "execute",
+      correlationId: "corr-signed-1",
+      job,
+    });
+
+    const result = await resultPromise;
+    expect(result.result.success).toBe(false);
+    expect(result.error?.name).toBe("InvalidSignatureError");
+    expect(result.error?.message).toContain("[HASH_MISMATCH]");
+    expect(result.signatureRefusals).toMatchObject([
+      {
+        actionId: "action-signed-1",
+        code: "HASH_MISMATCH",
+        path: "mutation",
+        enforced: true,
+      },
+    ]);
   });
 
   it("returns an error result when the document does not exist", async () => {

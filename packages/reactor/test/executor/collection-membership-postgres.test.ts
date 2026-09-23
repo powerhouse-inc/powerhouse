@@ -187,7 +187,6 @@ describe("collection membership cache coherence [Postgres]", () => {
       collectionMembershipCache,
       DEFAULT_DRIVE_CONTAINER_TYPES,
       {},
-      undefined,
       executionScope,
     );
   });

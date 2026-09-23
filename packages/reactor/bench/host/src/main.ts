@@ -31,8 +31,6 @@ import {
 } from "@powerhousedao/shared/document-drive";
 import { Kysely, PostgresDialect } from "kysely";
 import http from "node:http";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import pg from "pg";
 import { makeBenchSigner } from "./keypair.js";
 
@@ -64,8 +62,6 @@ const N_PROJECTION_SHARDS = parseInt(
   10,
 );
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 type State = {
   module: InProcessReactorModule;
   instrumentation: ReactorInstrumentation;
@@ -73,9 +69,7 @@ type State = {
 };
 
 async function buildReactor(signer: ISigner): Promise<State> {
-  const builder = new ReactorBuilder().withSignatureVerifier(() =>
-    Promise.resolve(true),
-  );
+  const builder = new ReactorBuilder();
 
   const hostPool = new pg.Pool({
     host: DB_HOST,
@@ -107,7 +101,6 @@ async function buildReactor(signer: ISigner): Promise<State> {
   ]);
 
   if (REACTOR_WORKERS > 0) {
-    const verifierFile = path.resolve(__dirname, "./signature-verifier.mjs");
     builder.withWorkerPool({
       numWorkers: REACTOR_WORKERS,
       db: {
@@ -119,12 +112,6 @@ async function buildReactor(signer: ISigner): Promise<State> {
         applicationName: "reactor-bench-worker",
         poolSize: DB_POOL_SIZE_WORKER,
         connectionTimeoutMillis: DB_ACQUIRE_TIMEOUT_MS,
-      },
-      verifier: {
-        module: {
-          filePath: verifierFile,
-          exportName: "createVerifier",
-        },
       },
     });
     if (N_PROJECTION_SHARDS > 0) {
