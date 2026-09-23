@@ -822,6 +822,72 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
     });
   });
 
+  describe("findOperationIds", () => {
+    const documentType = "powerhouse/document-drive";
+
+    async function writeWithId(
+      documentId: string,
+      scope: string,
+      index: number,
+      opId: string,
+      skip = 0,
+    ): Promise<void> {
+      await store.apply(
+        documentId,
+        documentType,
+        scope,
+        "main",
+        index,
+        (txn) => {
+          txn.addOperations({
+            index,
+            timestampUtcMs: "2026-01-01T00:00:01.000Z",
+            hash: `hash-${index}`,
+            skip,
+            id: opId,
+            action: addFolder({
+              id: generateId(),
+              name: `f-${index}`,
+              parentFolder: null,
+            }),
+          });
+        },
+      );
+    }
+
+    it("returns the ids the stream holds, retracted rows included", async () => {
+      const documentId = generateId();
+      await writeWithId(documentId, "global", 0, "op-a");
+      await writeWithId(documentId, "global", 1, "op-b", 1);
+
+      await expect(
+        store.findOperationIds(documentId, "global", "main", [
+          "op-a",
+          "op-b",
+          "op-missing",
+        ]),
+      ).resolves.toEqual(new Set(["op-a", "op-b"]));
+    });
+
+    it("looks only in the named stream", async () => {
+      const documentId = generateId();
+      await writeWithId(documentId, "local", 0, "op-local");
+
+      await expect(
+        store.findOperationIds(documentId, "global", "main", ["op-local"]),
+      ).resolves.toEqual(new Set());
+      await expect(
+        store.findOperationIds(documentId, "local", "other", ["op-local"]),
+      ).resolves.toEqual(new Set());
+    });
+
+    it("answers an empty query without reading", async () => {
+      await expect(
+        store.findOperationIds(generateId(), "global", "main", []),
+      ).resolves.toEqual(new Set());
+    });
+  });
+
   describe("getRevisions", () => {
     const documentType = "powerhouse/document-drive";
 

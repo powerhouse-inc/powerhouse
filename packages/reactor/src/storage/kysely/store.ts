@@ -698,6 +698,32 @@ export class KyselyOperationStore implements IOperationStore {
       : undefined;
   }
 
+  async findOperationIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Set<string>> {
+    throwIfAborted(signal);
+
+    if (opIds.length === 0) {
+      return new Set();
+    }
+
+    const rows = await this.queryExecutor
+      .selectFrom("Operation")
+      .select("opId")
+      .distinct()
+      .where("opId", "in", opIds)
+      .where("documentId", "=", documentId)
+      .where("scope", "=", scope)
+      .where("branch", "=", branch)
+      .execute();
+
+    return new Set(rows.map((row) => row.opId));
+  }
+
   private rowToOperation(row: OperationRow): Operation {
     return {
       index: row.index,
