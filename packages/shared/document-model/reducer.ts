@@ -2,7 +2,6 @@ import { castDraft, create, unsafe } from "mutative";
 import type { Action } from "./actions.js";
 import {
   actionFromAction,
-  loadState,
   operationFromAction,
   operationFromOperation,
 } from "./actions.js";
@@ -26,7 +25,6 @@ import {
   type PHDocumentHeader,
 } from "./documents.js";
 import {
-  loadStateOperation,
   redoOperation,
   setNameOperation,
   setPreferredEditorOperation,
@@ -39,7 +37,6 @@ import {
 import { DocumentActionSchema } from "./schemas.js";
 import type { PHBaseState } from "./state.js";
 import type {
-  PruneActionInput,
   Reducer,
   ReducerOptions,
   ReplayDocumentOptions,
@@ -92,9 +89,9 @@ function updateOperationsForAction<TDocument extends PHDocument>(
   skip: number,
   context: OperationContext,
 ): TDocument {
-  // UNDO, REDO and PRUNE are meta operations
+  // UNDO and REDO are meta operations
   // that alter the operations history themselves
-  if (["UNDO", "REDO", "PRUNE"].includes(action.type)) {
+  if (["UNDO", "REDO"].includes(action.type)) {
     return document;
   }
 
@@ -205,17 +202,15 @@ export function updateDocument<TDocument extends PHDocument>(
 }
 
 /**
- * The base document reducer function that wraps a custom reducer function.
+ * The base document reducer function.
  *
  * @param state The current state of the document.
  * @param action The action being applied to the document.
- * @param wrappedReducer The custom reducer function being wrapped by the base reducer.
  * @returns The updated document state.
  */
 function _baseReducer<TState extends PHBaseState = PHBaseState>(
   document: PHDocument<TState>,
   action: Action,
-  wrappedReducer: StateReducer<TState>,
 ): PHDocument<TState> {
   // throws if action is not valid base action
   const parsedAction = DocumentActionSchema().parse(action);
@@ -226,10 +221,6 @@ function _baseReducer<TState extends PHBaseState = PHBaseState>(
       return setNameOperation(document, parsedAction.input);
     case "SET_PREFERRED_EDITOR":
       return setPreferredEditorOperation(document, parsedAction.input);
-    case "PRUNE":
-      return pruneOperation(document, parsedAction.input, wrappedReducer);
-    case "LOAD_STATE":
-      return loadStateOperation(document, parsedAction.input);
     default:
       return document;
   }
@@ -384,7 +375,7 @@ function processUndoOperation<TState extends PHBaseState = PHBaseState>(
 
 /**
  * Base document reducer that wraps a custom document reducer and handles
- * document-level actions such as undo, redo, prune, and set name.
+ * document-level actions such as undo, redo, and set name.
  *
  * @template TGlobalState - The type of the state of the custom reducer.
  * @template TAction - The type of the actions of the custom reducer.
@@ -412,8 +403,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
 
   let _action: Action = actionFromAction(action);
 
-  // UNDO/REDO/PRUNE are rejected on the auth scope (PRUNE is hardcoded to the
-  // global scope, so an auth PRUNE would otherwise corrupt global history).
+  // UNDO/REDO are rejected on the auth scope.
   assertAuthScopeActionAllowed(_action);
 
   let skipValue = skip ?? options.replayOptions?.operation.skip ?? 0;
@@ -448,10 +438,10 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
     };
   }
 
-  // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
+  // if the action is one the base document actions (SET_NAME, UNDO, REDO)
   // then runs the base reducer first
   if (isDocumentAction(_action)) {
-    newDocument = _baseReducer(newDocument, _action, customReducer);
+    newDocument = _baseReducer(newDocument, _action);
   }
 
   // updates the document revision number, last modified date
@@ -629,7 +619,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
   });
   // updates the document history
   // meta operations are not added to the operations history
-  if (["UNDO", "REDO", "PRUNE"].includes(_action.type)) {
+  if (["UNDO", "REDO"].includes(_action.type)) {
     return newDocument;
   }
 
@@ -666,7 +656,6 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
  *   - `SET_NAME`
  *   - `UNDO`
  *   - `REDO`
- *   - `PRUNE`
  *
  * It also updates the document-related attributes on every operation.
  *
@@ -688,78 +677,4 @@ export function createReducer<TState extends PHBaseState = PHBaseState>(
     return documentReducer(document, action, stateReducer, dispatch, options);
   };
   return reducer;
-}
-
-export function pruneOperation<TState extends PHBaseState = PHBaseState>(
-  document: PHDocument<TState>,
-  input: PruneActionInput,
-  wrappedReducer: StateReducer<TState>,
-): PHDocument<TState> {
-  const operations = document.operations.global;
-  if (!operations) {
-    throw new Error("No global operations found");
-  }
-
-  let { start, end } = input;
-  start = start || 0;
-  end = end || operations.length;
-
-  const actionsToPrune = operations.slice(start, end);
-  const actionsToKeepStart = operations.slice(0, start);
-  const actionsToKeepEnd = operations.slice(end);
-
-  // runs all operations from the initial state to
-  // the end of prune to get name and data
-  const newDocument = replayOperations(
-    document.initialState,
-    {
-      ...document.operations,
-      global: actionsToKeepStart.concat(actionsToPrune),
-    },
-    wrappedReducer,
-    document.header,
-  );
-
-  const newState = newDocument.state;
-  const name = newDocument.header.name;
-
-  // the new operation has the index of the first pruned operation
-  const loadStateIndex = actionsToKeepStart.length;
-
-  // if and operation is pruned then reuses the timestamp of the last operation
-  // if not then assigns the timestamp of the following unpruned operation
-  const loadStateTimestamp = actionsToKeepStart.length
-    ? actionsToKeepStart[actionsToKeepStart.length - 1].timestampUtcMs
-    : actionsToKeepEnd.length
-      ? actionsToKeepEnd[0].timestampUtcMs
-      : new Date().toISOString();
-
-  const action = loadState({ name, ...newState }, actionsToPrune.length);
-
-  // replaces pruned operations with LOAD_STATE
-  return replayOperations(
-    document.initialState,
-    {
-      ...document.operations,
-      global: [
-        ...actionsToKeepStart,
-        {
-          skip: 0,
-          ...action,
-          action,
-          timestampUtcMs: loadStateTimestamp,
-          index: loadStateIndex,
-          hash: hashDocumentStateForScope({ state: newState }, "global"),
-        },
-        ...actionsToKeepEnd
-          // updates the index for all the following operations
-          .map((action, index) => ({
-            ...action,
-            index: loadStateIndex + index + 1,
-          })),
-      ],
-    },
-    wrappedReducer,
-    document.header,
-  );
 }
