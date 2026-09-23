@@ -6,6 +6,8 @@ import type {
 import {
   buildOperationSignature,
   buildOperationSignatureMessage,
+  signActionV2,
+  type ActionSigningTarget,
 } from "@powerhousedao/shared/document-model";
 
 const BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -47,7 +49,23 @@ export class TestP256Signer {
     return new Uint8Array(signature);
   }
 
-  /** Mirrors RenownCryptoSigner.signAction. */
+  /** The v2 tuple every current signer emits. */
+  async v2Tuple(
+    action: Action,
+    target: ActionSigningTarget,
+    user: ActionSigner["user"] = this.user,
+    previousStateHash = "",
+  ): Promise<Signature> {
+    return signActionV2({
+      action,
+      target,
+      signer: { user, app: { name: "test", key: this.did } },
+      sign: (message) => this.sign(message),
+      previousStateHash,
+    });
+  }
+
+  /** Mirrors the legacy RenownCryptoSigner hash. */
   async renownTuple(action: Action, prevStateHash = ""): Promise<Signature> {
     const payload = [
       action.scope,

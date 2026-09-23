@@ -6,7 +6,7 @@ import { createTestAction } from "../factories.js";
 import { TestP256Signer } from "../utils/p256-signer.js";
 
 const DOC = "doc-1";
-const target = { documentId: DOC };
+const target = { documentId: DOC, branch: "main" };
 
 // Produced by RenownCryptoSigner.signAction, to pin the format to renown.
 const RENOWN_VECTOR = {
@@ -159,38 +159,6 @@ describe("verifyActionSignature", () => {
     ).toMatchObject({ ok: false, code: "HASH_MISMATCH" });
   });
 
-  it("accepts a v2 tuple on ECDSA alone", async () => {
-    const a = action();
-    const signed = signer.signed(
-      a,
-      await signer.tupleOver(`v2:${"A".repeat(43)}`),
-    );
-    for (const path of ["mutation", "load"] as const) {
-      expect(await verifyActionSignature(signed, target, path)).toEqual({
-        ok: true,
-        scheme: "v2",
-      });
-    }
-  });
-
-  it("refuses a v2 tuple whose signature does not verify", async () => {
-    const a = action();
-    const tuple = await other.tupleOver(`v2:${"A".repeat(43)}`);
-    const forged: Signature = [
-      tuple[0],
-      signer.did,
-      tuple[2],
-      tuple[3],
-      tuple[4],
-    ];
-    const verdict = await verifyActionSignature(
-      signer.signed(a, forged),
-      target,
-      "load",
-    );
-    expect(verdict).toMatchObject({ ok: false, code: "BAD_SIGNATURE" });
-  });
-
   it("refuses a tuple whose key differs from signer.app.key", async () => {
     const a = action();
     const signed = signer.signed(a, await other.renownTuple(a));
@@ -235,5 +203,142 @@ describe("verifyActionSignature", () => {
     const count = cachedDidKeyCount();
     expect(await importDidKey(signer.did)).toBe(first);
     expect(cachedDidKeyCount()).toBe(count);
+  });
+
+  describe("v2", () => {
+    async function v2Signed(a: Action = action()): Promise<Action> {
+      return signer.signed(a, await signer.v2Tuple(a, target));
+    }
+
+    it("accepts a v2 tuple at mutation and load admission", async () => {
+      const signed = await v2Signed();
+      for (const path of ["mutation", "load"] as const) {
+        expect(await verifyActionSignature(signed, target, path)).toEqual({
+          ok: true,
+          scheme: "v2",
+        });
+      }
+    });
+
+    it("accepts reordered input keys, as a jsonb round trip leaves them", async () => {
+      const signed = await v2Signed(action({ a: 1, b: { d: 1, c: 2 } }));
+      const reordered = { ...signed, input: { b: { c: 2, d: 1 }, a: 1 } };
+      expect(await verifyActionSignature(reordered, target, "load")).toEqual({
+        ok: true,
+        scheme: "v2",
+      });
+    });
+
+    it.each([
+      ["another document", { documentId: "doc-2", branch: "main" }],
+      ["another branch", { documentId: DOC, branch: "draft" }],
+    ])("refuses the tuple replayed onto %s", async (_label, elsewhere) => {
+      const signed = await v2Signed();
+      for (const path of ["mutation", "load"] as const) {
+        expect(
+          await verifyActionSignature(signed, elsewhere, path),
+        ).toMatchObject({ ok: false, code: "HASH_MISMATCH" });
+      }
+    });
+
+    it.each([
+      ["another scope", (a: Action) => ({ ...a, scope: "local" })],
+      ["mutated input", (a: Action) => ({ ...a, input: { a: 1, b: 3 } })],
+      ["a fresh action id", (a: Action) => ({ ...a, id: "other-id" })],
+      [
+        "a later timestamp",
+        (a: Action) => ({ ...a, timestampUtcMs: "2099-01-01T00:00:00.000Z" }),
+      ],
+      [
+        "a relabelled signer.user",
+        (a: Action) => ({
+          ...a,
+          context: {
+            signer: {
+              ...a.context!.signer!,
+              user: { address: "0xevil", networkId: "eip155", chainId: 1 },
+            },
+          },
+        }),
+      ],
+    ])("refuses the tuple on %s", async (_label, change) => {
+      const replayed = change(await v2Signed());
+      for (const path of ["mutation", "load"] as const) {
+        expect(
+          await verifyActionSignature(replayed, target, path),
+        ).toMatchObject({ ok: false, scheme: "v2", code: "HASH_MISMATCH" });
+      }
+    });
+
+    it("refuses an operation stamped at another instant than its action", async () => {
+      const signed = await v2Signed();
+      const verdict = await verifyActionSignature(signed, target, "load", {
+        timestampUtcMs: "2099-01-01T00:00:00.000Z",
+      });
+      expect(verdict).toMatchObject({ ok: false, code: "TIMESTAMP_MISMATCH" });
+    });
+
+    it("accepts an operation timestamp a store reformatted", async () => {
+      const a = action();
+      const signed = await v2Signed({
+        ...a,
+        timestampUtcMs: "2026-01-01T00:00:00Z",
+      });
+      const verdict = await verifyActionSignature(signed, target, "load", {
+        timestampUtcMs: "2026-01-01T00:00:00.000Z",
+      });
+      expect(verdict).toEqual({ ok: true, scheme: "v2" });
+    });
+
+    it("refuses a v2 tuple whose ECDSA another key made", async () => {
+      const a = action();
+      const tuple = await other.v2Tuple(a, target, signer.user);
+      const forged = signer.signed(a, [
+        tuple[0],
+        signer.did,
+        tuple[2],
+        tuple[3],
+        tuple[4],
+      ]);
+      const verdict = await verifyActionSignature(forged, target, "load");
+      expect(verdict).toMatchObject({ ok: false, code: "HASH_MISMATCH" });
+
+      const sameIdentity = signer.signed(a, [
+        tuple[0],
+        signer.did,
+        await signer.v2Tuple(a, target).then((t) => t[2]),
+        tuple[3],
+        tuple[4],
+      ]);
+      expect(
+        await verifyActionSignature(sameIdentity, target, "load"),
+      ).toMatchObject({ ok: false, code: "BAD_SIGNATURE" });
+    });
+
+    it.each([
+      ["42 characters", `v2:${"A".repeat(42)}`],
+      ["44 characters", `v2:${"A".repeat(44)}`],
+      ["padding", `v2:${"A".repeat(42)}=`],
+      ["the standard alphabet", `v2:${"A".repeat(41)}/A`],
+      ["no body", "v2:"],
+    ])("refuses a v2 hash with %s", async (_label, hash) => {
+      const a = action();
+      const signed = signer.signed(a, await signer.tupleOver(hash));
+      for (const path of ["mutation", "load"] as const) {
+        expect(await verifyActionSignature(signed, target, path)).toMatchObject(
+          { ok: false, scheme: "v2", code: "MALFORMED_TUPLE" },
+        );
+      }
+    });
+
+    it("refuses a v2 tuple against an empty branch", async () => {
+      const signed = await v2Signed();
+      const verdict = await verifyActionSignature(
+        signed,
+        { documentId: DOC, branch: "" },
+        "mutation",
+      );
+      expect(verdict).toMatchObject({ ok: false, code: "HASH_MISMATCH" });
+    });
   });
 });

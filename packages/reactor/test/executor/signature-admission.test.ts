@@ -5,7 +5,10 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import { deleteDocumentAction } from "../../src/actions/index.js";
+import {
+  addRelationshipAction,
+  deleteDocumentAction,
+} from "../../src/actions/index.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule } from "../../src/core/types.js";
 import {
@@ -15,6 +18,7 @@ import {
 import type { ReactorFeatureFlags } from "../../src/executor/types.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import type { SignatureVerificationMode } from "../../src/signer/types.js";
+import { verifyActionSignature } from "../../src/signer/verify-action-signature.js";
 import { createDocModelDocument } from "../factories.js";
 import { TestP256Signer } from "../utils/p256-signer.js";
 
@@ -87,6 +91,13 @@ describe("signature admission", () => {
 
   async function renownSigned(action: Action): Promise<Action> {
     return signer.signed(action, await signer.renownTuple(action));
+  }
+
+  async function v2Signed(action: Action, documentId = docId): Promise<Action> {
+    return signer.signed(
+      action,
+      await signer.v2Tuple(action, { documentId, branch: "main" }),
+    );
   }
 
   async function tampered(action: Action): Promise<Action> {
@@ -206,14 +217,95 @@ describe("signature admission", () => {
       expect(job.error?.message).toContain("[MALFORMED_TUPLE]");
     });
 
-    it("accepts a v2 tuple on ECDSA alone", async () => {
+    it("accepts a v2 tuple, and a two-action v2 batch", async () => {
       await build("enforce");
-      const action = moduleAction("m");
       const job = await execute([
-        signer.signed(action, await signer.tupleOver(`v2:${"A".repeat(43)}`)),
+        await v2Signed(moduleAction("a", 0)),
+        await v2Signed(moduleAction("b", 1)),
       ]);
 
       expect(job.status).toBe(JobStatus.READ_READY);
+      expect(refusals).toEqual([]);
+    });
+
+    it("accepts a v2 tuple appended to a head the signer never saw", async () => {
+      await build("enforce");
+      const first = await v2Signed(moduleAction("first", 0));
+      expect((await execute([first])).status).toBe(JobStatus.READ_READY);
+
+      const stale = moduleAction("stale", 1);
+      const tuple = await signer.v2Tuple(
+        stale,
+        { documentId: docId, branch: "main" },
+        signer.user,
+        "state-before-first",
+      );
+      const job = await execute([signer.signed(stale, tuple)]);
+
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(await storedActionIds()).toEqual([first.id, stale.id]);
+    });
+
+    it("refuses a v2 tuple signed for another document", async () => {
+      await build("enforce");
+      const job = await execute([
+        await v2Signed(moduleAction("m"), "doc-elsewhere"),
+      ]);
+
+      expect(job.status).toBe(JobStatus.FAILED);
+      expect(job.error?.name).toBe("InvalidSignatureError");
+      expect(job.error?.message).toContain("[HASH_MISMATCH]");
+      expect(await stored()).toEqual([]);
+    });
+
+    it("verifies ADD_RELATIONSHIP against the document it is written to", async () => {
+      await build("enforce");
+      const other = createDocModelDocument();
+      expect((await settle(await module!.reactor.create(other))).status).toBe(
+        JobStatus.READ_READY,
+      );
+      const relationship = {
+        ...addRelationshipAction(other.header.id, docId, "child"),
+        timestampUtcMs: at(0),
+      };
+
+      const signedForJob = await v2Signed(relationship, docId);
+      const refused = await settle(
+        await module!.reactor.execute(docId, "main", [signedForJob]),
+      );
+      expect(refused.status).toBe(JobStatus.FAILED);
+      expect(refused.error?.message).toContain("[HASH_MISMATCH]");
+
+      const signedForSource = await v2Signed(relationship, other.header.id);
+      const accepted = await settle(
+        await module!.reactor.execute(docId, "main", [signedForSource]),
+      );
+      expect(accepted.status).toBe(JobStatus.READ_READY);
+      expect(refusals).toMatchObject([
+        { documentId: other.header.id, code: "HASH_MISMATCH" },
+      ]);
+    });
+
+    it("stores a multi-key input that still verifies once read back", async () => {
+      await build("enforce");
+      const action: Action = {
+        ...moduleAction("m"),
+        input: { name: "m", id: "m", z: { y: [1, { b: 2, a: 1 }], x: null } },
+      };
+      expect((await execute([await v2Signed(action)])).status).toBe(
+        JobStatus.READ_READY,
+      );
+
+      const [operation] = await stored();
+      expect(operation.action.id).toBe(action.id);
+      expect(
+        await verifyActionSignature(
+          operation.action,
+          { documentId: docId, branch: "main" },
+          "load",
+          operation,
+        ),
+      ).toEqual({ ok: true, scheme: "v2" });
     });
 
     it("treats a PassthroughSigner tuple as unsigned", async () => {
@@ -326,6 +418,31 @@ describe("signature admission", () => {
         [local.id, 0],
         [late.id, 1],
       ]);
+    });
+
+    it("refuses a v2 operation stamped later than its action", async () => {
+      await build("enforce");
+      const action = await v2Signed(moduleAction("m", 0));
+      const job = await load([
+        { ...asOperation(action, 0), timestampUtcMs: at(5_000) },
+      ]);
+
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(await stored()).toEqual([]);
+      expect(refusals).toMatchObject([
+        { actionId: action.id, code: "TIMESTAMP_MISMATCH", path: "load" },
+      ]);
+    });
+
+    it("refuses a v2 operation replayed onto another document", async () => {
+      await build("enforce");
+      const action = await v2Signed(moduleAction("m", 0), "doc-elsewhere");
+
+      expect((await load([asOperation(action, 0)])).status).toBe(
+        JobStatus.READ_READY,
+      );
+      expect(await stored()).toEqual([]);
+      expect(refusals).toMatchObject([{ code: "HASH_MISMATCH", path: "load" }]);
     });
 
     it("accepts a legacy operation whose input keys a store reordered", async () => {

@@ -2,6 +2,9 @@ import type { Action, Signature } from "@powerhousedao/shared/document-model";
 import {
   buildOperationSignatureMessage,
   buildOperationSignatureParams,
+  hashActionV2,
+  isV2ActionHash,
+  v2TupleProblem,
 } from "@powerhousedao/shared/document-model";
 import { importDidKey } from "./did-key.js";
 import type {
@@ -10,21 +13,25 @@ import type {
   SignatureVerdict,
 } from "./types.js";
 
-const V2_PREFIX = "v2:";
 const RENOWN_HASH_LENGTH = 44;
 const SHARED_HASH_LENGTH = 28;
 const HEX_SIGNATURE = /^(0x)?([0-9a-fA-F]{2})+$/;
 
 export type VerificationTarget = {
-  /** The document whose stream the operation is stored in. */
+  /** The stream the operation is stored in. */
   documentId: string;
+  branch: string;
 };
 
-/** Integrity only: identity binding and the live-id check sit with the caller. */
+/**
+ * Integrity only: identity binding and the live-id check sit with the caller.
+ * `operation` is the incoming operation at load admission.
+ */
 export async function verifyActionSignature(
   action: Action,
   target: VerificationTarget,
   path: AdmissionPath,
+  operation?: { timestampUtcMs: string },
 ): Promise<SignatureVerdict> {
   const signer = action.context?.signer;
   if (!signer || !signer.app.key) {
@@ -60,8 +67,12 @@ export async function verifyActionSignature(
     );
   }
 
-  // v2 is checked on ECDSA alone until the preimage recompute lands.
-  if (path === "mutation" && scheme !== "v2") {
+  if (scheme === "v2") {
+    const refusal = await checkV2(action, tuple, target, operation);
+    if (refusal) {
+      return refusal;
+    }
+  } else if (path === "mutation") {
     const expected = await legacyHash(scheme, action, target);
     if (expected !== tuple[2]) {
       return refuse(
@@ -75,8 +86,56 @@ export async function verifyActionSignature(
   return verifyEcdsa(tuple, scheme, action.id);
 }
 
+async function checkV2(
+  action: Action,
+  tuple: Signature,
+  target: VerificationTarget,
+  operation: { timestampUtcMs: string } | undefined,
+): Promise<SignatureVerdict | undefined> {
+  const problem = v2TupleProblem(tuple);
+  if (problem) {
+    return refuse("v2", "MALFORMED_TUPLE", `action ${action.id}: ${problem}`);
+  }
+
+  if (
+    operation &&
+    !sameInstant(operation.timestampUtcMs, action.timestampUtcMs)
+  ) {
+    return refuse(
+      "v2",
+      "TIMESTAMP_MISMATCH",
+      `action ${action.id} is stamped ${action.timestampUtcMs} but its operation ${operation.timestampUtcMs}`,
+    );
+  }
+
+  let expected: string;
+  try {
+    expected = await hashActionV2(action, target, action.context!.signer!);
+  } catch (error) {
+    return refuse(
+      "v2",
+      "HASH_MISMATCH",
+      `action ${action.id} has no v2 hash: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  if (expected !== tuple[2]) {
+    return refuse(
+      "v2",
+      "HASH_MISMATCH",
+      `action ${action.id} does not match the hash its signature covers`,
+    );
+  }
+  return undefined;
+}
+
+// Stores normalize the operation timestamp's text, so compare instants.
+function sameInstant(a: string, b: string): boolean {
+  const left = Date.parse(a);
+  return !Number.isNaN(left) && left === Date.parse(b);
+}
+
 function schemeOf(hash: string): SignatureScheme {
-  if (hash.startsWith(V2_PREFIX)) {
+  if (isV2ActionHash(hash)) {
     return "v2";
   }
   if (hash.length === RENOWN_HASH_LENGTH) {

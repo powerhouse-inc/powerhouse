@@ -1,5 +1,8 @@
 import type { Action, Operation } from "@powerhousedao/shared/document-model";
-import { deriveOperationId } from "@powerhousedao/shared/document-model";
+import {
+  actionSigningTarget,
+  deriveOperationId,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { IEventBus } from "../events/interfaces.js";
 import {
@@ -15,11 +18,15 @@ import type {
 } from "../signer/types.js";
 import { verifyActionSignature } from "../signer/verify-action-signature.js";
 import type { IOperationStore } from "../storage/interfaces.js";
-import { DOCUMENT_SCOPE_ACTIONS, targetDocumentId } from "./util.js";
 
 type Stream = { documentId: string; scope: string; branch: string };
 
-type Candidate = { action: Action; stream: Stream; opId: string };
+type Candidate = {
+  action: Action;
+  stream: Stream;
+  opId: string;
+  operation?: Operation;
+};
 
 type Refusal = Extract<SignatureVerdict, { ok: false }>;
 
@@ -73,9 +80,10 @@ export class SignatureAdmission {
       scope: job.scope,
       branch: job.branch,
     };
-    const candidates = operations.map((operation) =>
-      candidate(operation.action, stream),
-    );
+    const candidates = operations.map((operation) => ({
+      ...candidate(operation.action, stream),
+      operation,
+    }));
     const live = await this.liveOperationIds(
       candidates,
       operationStore,
@@ -108,8 +116,9 @@ export class SignatureAdmission {
   ): Promise<SignatureVerdict> {
     const verdict = await verifyActionSignature(
       entry.action,
-      { documentId: entry.stream.documentId },
+      { documentId: entry.stream.documentId, branch: entry.stream.branch },
       path,
+      entry.operation,
     );
     if (!verdict.ok) {
       return verdict;
@@ -212,10 +221,7 @@ function candidate(action: Action, stream: Stream): Candidate {
 
 function mutationStream(action: Action, job: Job): Stream {
   return {
-    documentId: DOCUMENT_SCOPE_ACTIONS.has(action.type)
-      ? targetDocumentId(action, job.documentId)
-      : job.documentId,
+    ...actionSigningTarget(action, job.documentId, job.branch),
     scope: job.scope,
-    branch: job.branch,
   };
 }
