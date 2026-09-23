@@ -2,7 +2,10 @@ import type { ILogger } from "document-model";
 
 const FORCED_EXIT_MS = 15_000;
 
-type FatalProcess = Pick<NodeJS.Process, "on" | "kill" | "exit" | "pid"> & {
+type FatalProcess = Pick<
+  NodeJS.Process,
+  "on" | "kill" | "exit" | "pid" | "listenerCount"
+> & {
   exitCode?: NodeJS.Process["exitCode"];
 };
 
@@ -14,6 +17,10 @@ const installed = new WeakSet<FatalProcess>();
  * PGlite stores write their snapshots before the process exits with code 1.
  * Node's default is to exit at once, which drops every write AtomicNodeFs has
  * not flushed yet. A shutdown that hangs is cut off after FORCED_EXIT_MS.
+ *
+ * A rejection is fatal only when this is its sole listener: Node exits on an
+ * unhandled rejection only when nothing listens for it, and Sentry's
+ * listener deliberately keeps the process running.
  */
 export function installFatalErrorShutdown(
   logger: ILogger,
@@ -40,7 +47,8 @@ export function installFatalErrorShutdown(
   };
 
   proc.on("uncaughtException", (err) => onFatal("Uncaught exception", err));
-  proc.on("unhandledRejection", (reason) =>
-    onFatal("Unhandled rejection", reason),
-  );
+  proc.on("unhandledRejection", (reason) => {
+    if (proc.listenerCount("unhandledRejection") > 1) return;
+    onFatal("Unhandled rejection", reason);
+  });
 }

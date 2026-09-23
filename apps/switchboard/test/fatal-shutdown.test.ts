@@ -42,6 +42,30 @@ describe("installFatalErrorShutdown", () => {
     },
   );
 
+  it("leaves an unhandled rejection to another listener, such as Sentry's", () => {
+    const proc = makeProc();
+    const other = vi.fn();
+    proc.on("unhandledRejection", other);
+    installFatalErrorShutdown(logger, proc as never);
+
+    proc.emit("unhandledRejection", new Error("boom"));
+
+    expect(other).toHaveBeenCalledOnce();
+    expect(proc.kill).not.toHaveBeenCalled();
+    expect(proc.exitCode).toBeUndefined();
+  });
+
+  it("still shuts down on an uncaught exception when another listener exists", () => {
+    const proc = makeProc();
+    proc.on("uncaughtException", vi.fn());
+    installFatalErrorShutdown(logger, proc as never);
+
+    proc.emit("uncaughtException", new Error("boom"));
+
+    expect(proc.kill).toHaveBeenCalledWith(1234, "SIGTERM");
+    expect(proc.exitCode).toBe(1);
+  });
+
   it("signals once when a second fatal error arrives during shutdown", () => {
     const proc = makeProc();
     installFatalErrorShutdown(logger, proc as never);
