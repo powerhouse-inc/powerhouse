@@ -117,12 +117,37 @@ export const memoryFsBackend: TestFsBackend = () =>
     cleanup: () => Promise.resolve(),
   });
 
-/**
- * AtomicNodeFs against a fresh tempdir per test. The tempdir is removed in
- * `cleanup` after the PGLite instance has been closed.
- */
+let migratedAtomicSnapshot: Promise<Buffer> | undefined;
+
+/** Snapshot of a data dir migrated to REACTOR_SCHEMA over AtomicNodeFs, built once per worker. */
+function getMigratedAtomicSnapshot(): Promise<Buffer> {
+  migratedAtomicSnapshot ??= (async () => {
+    const dir = await fsp.mkdtemp(
+      path.join(os.tmpdir(), "reactor-atomic-template-"),
+    );
+    try {
+      const pg = new PGlite({ fs: new AtomicNodeFs(dir) });
+      const db = new Kysely<DatabaseSchema>({
+        dialect: new PGliteDialect(pg),
+      });
+      const result = await runMigrations(db, REACTOR_SCHEMA);
+      if (!result.success && result.error) {
+        throw new Error(`Template migration failed: ${result.error.message}`);
+      }
+      await pg.close();
+      return await fsp.readFile(path.join(dir, "snapshot.bin"));
+    } finally {
+      await fsp.rm(dir, { recursive: true, force: true });
+    }
+  })();
+  return migratedAtomicSnapshot;
+}
+
+/** AtomicNodeFs in a fresh tempdir per test, restored from the migrated snapshot. */
 export const atomicNodeFsBackend: TestFsBackend = async () => {
+  const snapshot = await getMigratedAtomicSnapshot();
   const dir = await fsp.mkdtemp(path.join(os.tmpdir(), "reactor-atomic-"));
+  await fsp.writeFile(path.join(dir, "snapshot.bin"), snapshot);
   return {
     fs: new AtomicNodeFs(dir),
     cleanup: async () => {

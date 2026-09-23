@@ -32,10 +32,16 @@ env:
   NX_ISOLATE_PLUGINS: false
 
 jobs:
+  # Lint and the reactor packages ride shard 3, the lightest, instead of a job
+  # of their own that can queue behind the runner cap.
   test-reactor:
-    name: Test Reactor
+    name: Test Reactor (shard ${{ matrix.shard }}/3)
     runs-on: ubuntu-24.04
     container: node:24
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
 
     services:
       postgres:
@@ -74,24 +80,28 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Lint
-        run: pnpm lint
-        working-directory: packages/reactor
-
+      # Coverage is off: nothing in CI reads the report.
       - name: Run tests
         run: >-
           pnpm test:reactor
+          --coverage.enabled=false
+          --shard=${{ matrix.shard }}/3
           --reporter=default
           --reporter=json
           --outputFile.json=vitest-timings.json
+
+      - name: Lint
+        if: matrix.shard == 3
+        run: pnpm lint
+        working-directory: packages/reactor
 
       # reactor-drive and reactor-attachments consume @powerhousedao/reactor
       # through its built dist, so `test:ci -- related <changed files>` in
       # check-commit.yml never selects their suites when only packages/reactor
       # changes. Running them here, where the trigger already fires on
-      # packages/reactor/**, is what covers that direction. Reuses this job's
-      # install and build rather than paying for them again in a second job.
+      # packages/reactor/**, is what covers that direction.
       - name: Run reactor package tests
+        if: matrix.shard == 3
         run: pnpm test:reactor-packages
 
       # This step's duration swings by ~50% run to run on identical code, while
@@ -103,23 +113,32 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: reactor-test-timings-${{ github.run_id }}-${{ github.run_attempt }}
+          name: reactor-test-timings-${{ github.run_id }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}
           path: packages/reactor/vitest-timings.json
           if-no-files-found: warn
           retention-days: 90
 
+  # One job per hub-spoke case, with the two short ones sharing a job to keep
+  # the job count under the runner cap. Shares no artifact with test-reactor.
   integration-test:
-    name: Sync Integration Tests
-    # Deliberately not gated on test-reactor: this job shares no artifact with
-    # it (own checkout, install and build), so the dependency only served to
-    # fail fast. Running both at once takes the workflow from the sum of the
-    # two to the longer of them.
+    name: Sync Integration (${{ matrix.name }})
     runs-on: ubuntu-24.04
     container: node:24
-    # The last green main run took 14m22s against the previous 15m budget:
-    # two ~6m hub-spoke legs plus the load test left no headroom, and runner
-    # variance tipped it into cancellation mid-leg.
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: load test, reactor-drive 1 spoke
+            run: >-
+              pnpm --filter=@powerhousedao/load-test-connect run test:integration &&
+              pnpm --filter=@powerhousedao/reactor-api run test:integration -t "reactor-drive.*converges 1 spoke"
+          - name: document-drive, 1 spoke
+            run: pnpm --filter=@powerhousedao/reactor-api run test:integration -t "document-drive.*converges 1 spoke"
+          - name: document-drive, 3 spokes
+            run: pnpm --filter=@powerhousedao/reactor-api run test:integration -t "document-drive.*converges 3 spoke"
+          - name: reactor-drive, 3 spokes
+            run: pnpm --filter=@powerhousedao/reactor-api run test:integration -t "reactor-drive.*converges 3 spoke"
 
     services:
       postgres:
@@ -177,7 +196,7 @@ jobs:
         run: pnpm build
 
       - name: Run integration tests
-        run: pnpm test:integration
+        run: ${{ matrix.run }}
 
   duration-watch:
     name: CI duration watch
