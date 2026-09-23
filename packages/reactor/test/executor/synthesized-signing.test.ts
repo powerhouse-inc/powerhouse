@@ -287,6 +287,25 @@ describe("synthesized operations", () => {
       reactor.kill();
     }
   });
+
+  it("hands a ReactorBuilder the worker signer spec from a SignerConfig", async () => {
+    const reactorBuilder = new ReactorBuilder().withDocumentModelSources([
+      documentModelDocumentModelModule as never,
+    ]);
+    const withSigner = vi.spyOn(reactorBuilder, "withSigner");
+    const signer = reactorKey.asISigner();
+    const workerSigner = {
+      module: { filePath: "/signer.js", exportName: "createSigner" },
+    };
+
+    const clientModule = await new ReactorClientBuilder()
+      .withReactorBuilder(reactorBuilder)
+      .withSigner({ signer, workerSigner })
+      .buildModule();
+    clientModule.reactor.kill();
+
+    expect(withSigner).toHaveBeenCalledWith(signer, workerSigner);
+  });
 });
 
 describe("synthesized REDO", () => {

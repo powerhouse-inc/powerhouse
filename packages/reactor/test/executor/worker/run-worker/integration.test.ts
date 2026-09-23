@@ -23,6 +23,7 @@ import type {
   WorkerMessage,
 } from "../../../../src/executor/worker/protocol.js";
 import type { Job } from "../../../../src/queue/types.js";
+import { verifyActionSignature } from "../../../../src/signer/verify-action-signature.js";
 import {
   REACTOR_SCHEMA,
   runMigrations,
@@ -378,6 +379,95 @@ describe("runWorker in-process execution", () => {
         enforced: true,
       },
     ]);
+  });
+
+  it("builds its signer from the init's spec and signs the NOOP an UNDO becomes", async () => {
+    const reactorKey = await TestP256Signer.create();
+    const specs: string[] = [];
+    const h = await startInProcessWorker((spec) => {
+      specs.push(spec.module.exportName);
+      if (spec.module.exportName === "createSigner") {
+        expect(spec.initArgs).toEqual({ appName: "test" });
+        return Promise.resolve(reactorKey.asISigner());
+      }
+      return Promise.resolve(driveDocumentModelModule);
+    });
+    const ready = waitForMessage(
+      h.port1,
+      (m): m is ReadyMessage => m.type === "ready",
+    );
+    h.port1.postMessage({
+      ...makeInit(undefined, { signatureVerification: "enforce" }),
+      signer: {
+        module: { filePath: "/signer.js", exportName: "createSigner" },
+        initArgs: { appName: "test" },
+      },
+    } satisfies InitMessage);
+    await ready;
+    expect(specs).toContain("createSigner");
+
+    const document = driveDocumentModelModule.utils.createDocument();
+    const documentId = document.header.id;
+    await preCreateDriveDocument(h.database, documentId, document.state);
+
+    async function execute(
+      id: string,
+      action: Job["actions"][number],
+    ): Promise<ResultMessage> {
+      const job: Job = {
+        id,
+        kind: "mutation",
+        documentId,
+        scope: "global",
+        branch: "main",
+        actions: [action],
+        operations: [],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        retryCount: 0,
+        maxRetries: 0,
+        errorHistory: [],
+        meta: { batchId: id, batchJobIds: [id] },
+      };
+      const result = waitForMessage(
+        h.port1,
+        (m): m is ResultMessage =>
+          m.type === "result" && m.correlationId === id,
+      );
+      h.port1.postMessage({ type: "execute", correlationId: id, job });
+      return result;
+    }
+
+    const added = await execute("job-add", {
+      id: "action-add-folder",
+      type: "ADD_FOLDER",
+      scope: "global",
+      timestampUtcMs: new Date().toISOString(),
+      input: { id: "folder-1", name: "Inbox", parentFolder: null },
+    });
+    expect(added.result.success).toBe(true);
+
+    const undone = await execute("job-undo", {
+      id: "action-undo",
+      type: "UNDO",
+      scope: "global",
+      timestampUtcMs: new Date().toISOString(),
+      input: { count: 1 },
+    });
+    expect(undone.error).toBeUndefined();
+    expect(undone.result.success).toBe(true);
+
+    const [written] = undone.writeReady!.operations;
+    const noop = written.operation;
+    expect(noop.action.type).toBe("NOOP");
+    expect(noop.action.context?.signer?.app.key).toBe(reactorKey.did);
+    const verdict = await verifyActionSignature(
+      noop.action,
+      { documentId, branch: "main" },
+      "load",
+      noop,
+    );
+    expect(verdict).toEqual({ ok: true, scheme: "v2" });
   });
 
   it("returns an error result when the document does not exist", async () => {

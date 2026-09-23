@@ -32,6 +32,7 @@ import {
 import type { ForwardingPoolInstrumentation } from "../../storage/pool-instrumentation.js";
 import type {
   DbConfig,
+  FactorySpec,
   HeartbeatMessage,
   LogMessage,
   MetricsMessage,
@@ -58,6 +59,8 @@ export type WorkerInitPayload = {
   models: ModelManifestEntry[];
   /** Omitted = the worker builds its executor with the built-in defaults. */
   executorConfig?: JobExecutorConfig;
+  /** Builds the worker's signer for synthesized operations. */
+  signer?: FactorySpec;
 };
 
 export type WorkerHandleOptions = {
@@ -178,6 +181,7 @@ export class WorkerHandle implements IExecutorWorker {
       db: this.initPayload.db,
       models: this.initPayload.models,
       executorConfig: this.initPayload.executorConfig,
+      signer: this.initPayload.signer,
     });
     await ready;
     this.phase = "ready";

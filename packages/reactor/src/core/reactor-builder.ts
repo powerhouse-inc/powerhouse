@@ -7,6 +7,7 @@ import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
 import type {
   DbConfig,
+  FactorySpec,
   ModelManifestEntry,
   SignatureVerifierSpec,
   WorkerPoolConfig,
@@ -298,6 +299,7 @@ export class ReactorBuilder {
   private readModelCoordinatorFactory?: ReadModelCoordinatorFactory;
   private kyselyInstance?: Kysely<Database>;
   private signer?: ISigner;
+  private workerSigner?: FactorySpec;
   private signalHandlersEnabled = false;
   private queueInstance?: IQueue;
   private channelScheme?: ChannelScheme;
@@ -414,10 +416,12 @@ export class ReactorBuilder {
 
   /**
    * Signs the operations the executor synthesizes: the NOOP an UNDO becomes and
-   * the action a REDO rebuilds. Without one they are stored unsigned.
+   * the action a REDO rebuilds. Without one they are stored unsigned. Pooled
+   * workers import `workerSigner` to build the same signer.
    */
-  withSigner(signer: ISigner): this {
+  withSigner(signer: ISigner, workerSigner?: FactorySpec): this {
     this.signer = signer;
+    this.workerSigner = workerSigner;
     return this;
   }
 
@@ -736,6 +740,11 @@ export class ReactorBuilder {
           if (pool.db === undefined) {
             throw new Error(
               "unreachable: worker pool configured without db or factory",
+            );
+          }
+          if (this.signer && !this.workerSigner) {
+            this.logger!.warn(
+              "Worker pool has no signer spec; pooled workers store synthesized operations unsigned",
             );
           }
           factory = await this.createDefaultWorkerFactory(
@@ -1248,6 +1257,7 @@ export class ReactorBuilder {
           db,
           models,
           executorConfig: this.executorConfig,
+          signer: this.workerSigner,
         },
         logger,
         poolInstrumentation,

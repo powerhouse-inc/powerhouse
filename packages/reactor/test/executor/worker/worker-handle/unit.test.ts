@@ -72,6 +72,10 @@ function makeInitPayload(): WorkerInitPayload {
     executorConfig: {
       maxSkipThreshold: 42,
     },
+    signer: {
+      module: { filePath: "/signer.js", exportName: "createSigner" },
+      initArgs: { appName: "test" },
+    },
   };
 }
 
@@ -114,6 +118,17 @@ describe("WorkerHandle", () => {
       await handle.start();
       const init = transport.getSentMessages()[0] as InitMessage;
       expect(init.executorConfig).toEqual({ maxSkipThreshold: 42 });
+    });
+
+    it("forwards the signer spec so pooled workers sign synthesized operations", async () => {
+      const transport = new FakeWorkerTransport({ autoReady: true });
+      const handle = makeHandle(transport);
+      await handle.start();
+      const init = transport.getSentMessages()[0] as InitMessage;
+      expect(init.signer).toEqual({
+        module: { filePath: "/signer.js", exportName: "createSigner" },
+        initArgs: { appName: "test" },
+      });
     });
 
     it("rejects with WorkerInitFailedError if exit arrives before ready", async () => {

@@ -37,6 +37,7 @@ export class ReactorClientBuilder {
   private documentIndexer?: IDocumentIndexer;
   private documentView?: IDocumentView;
   private signer?: ISigner;
+  private workerSigner?: SignerConfig["workerSigner"];
   private subscriptionManager?: IReactorSubscriptionManager;
   private jobAwaiter?: IJobAwaiter;
   private documentModelLoader?: IDocumentModelLoader;
@@ -91,6 +92,7 @@ export class ReactorClientBuilder {
   public withSigner(config: ISigner | SignerConfig): this {
     if ("signer" in config) {
       this.signer = config.signer;
+      this.workerSigner = config.workerSigner;
     } else {
       this.signer = config;
     }
@@ -194,7 +196,7 @@ export class ReactorClientBuilder {
         this.reactorBuilder.withDocumentModelLoader(this.documentModelLoader);
       }
       if (this.signer && !this.reactorBuilder.hasSigner()) {
-        this.reactorBuilder.withSigner(this.signer);
+        this.reactorBuilder.withSigner(this.signer, this.workerSigner);
       }
       reactorModule = await this.reactorBuilder.buildModule();
       reactor = reactorModule.reactor;

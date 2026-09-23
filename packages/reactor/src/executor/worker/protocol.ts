@@ -86,8 +86,8 @@ export type ModuleRef =
     };
 
 /**
- * Factory specification shared by the signature verifier and document
- * model spec channels. The worker imports `module.exportName` and invokes
+ * Factory specification shared by the signer and document model spec
+ * channels. The worker imports `module.exportName` and invokes
  * it with `initArgs` to obtain the actual instance.
  *
  * `initArgs` must be JSON-clonable.
@@ -224,6 +224,8 @@ export type InitMessage = {
   models: ModelManifestEntry[];
   /** Omitted = the worker builds its executor with the built-in defaults. */
   executorConfig?: JobExecutorConfig;
+  /** Builds the `ISigner` for synthesized operations; omitted = unsigned. */
+  signer?: FactorySpec;
 };
 
 /**

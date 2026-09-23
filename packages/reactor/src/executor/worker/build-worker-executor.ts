@@ -1,5 +1,6 @@
 import type {
   DocumentModelModule,
+  ISigner,
   OperationWithContext,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -133,6 +134,20 @@ export async function buildWorkerExecutor(
   const registry = new DocumentModelRegistry();
   await loadModelManifest(init.models, loadFactory, registry, logger);
 
+  let signer: ISigner | undefined;
+  if (init.signer) {
+    try {
+      signer = (await loadFactory(init.signer)) as ISigner;
+    } catch (error) {
+      logger.error(
+        "worker failed to load signer: @spec @error",
+        init.signer.module,
+        error,
+      );
+      throw error;
+    }
+  }
+
   const database = baseDatabase.withSchema(REACTOR_SCHEMA);
   const operationStore = new KyselyOperationStore(
     database as unknown as Kysely<StorageDatabase>,
@@ -210,6 +225,7 @@ export async function buildWorkerExecutor(
     driveContainerTypes,
     executorConfig,
     executionScope,
+    signer,
   );
 
   return {

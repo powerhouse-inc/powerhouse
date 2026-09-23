@@ -2,6 +2,7 @@ import type {
   ISigner,
   SignatureVerificationHandler,
 } from "@powerhousedao/shared/document-model";
+import type { FactorySpec } from "../executor/worker/protocol.js";
 
 export type { SignatureVerificationHandler };
 
@@ -13,6 +14,13 @@ export type SignerConfig = {
    * The signer used to sign actions before submission.
    */
   signer: ISigner;
+
+  /**
+   * What a pooled executor worker imports to build the same signer, which
+   * cannot cross the thread boundary itself. Omitted = pooled workers store
+   * synthesized operations unsigned.
+   */
+  workerSigner?: FactorySpec;
 
   /** @deprecated Ignored: the executor verifies signature integrity itself. */
   verifier?: SignatureVerificationHandler;
