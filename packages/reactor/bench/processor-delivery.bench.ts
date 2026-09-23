@@ -129,6 +129,8 @@ type Fixture = {
   /** One batch per document; each round has fresh ordinals. */
   rounds: OperationWithContext[][][];
   nextRound: number;
+  /** Highest ordinal in the index. */
+  lastOrdinal: number;
   destroy: () => Promise<void>;
 };
 
@@ -206,6 +208,7 @@ async function createFixture(delayMs: number): Promise<Fixture> {
     manager,
     rounds,
     nextRound: 0,
+    lastOrdinal: ordinal - 1,
     destroy: async () => {
       await baseDb.destroy();
     },
@@ -246,6 +249,19 @@ function options(delayMs: number, holder: { fixture: Fixture | undefined }) {
       if (fixture) pendingTeardown = fixture.destroy();
     },
   };
+}
+
+async function settled(fixture: Fixture, factoryId: string): Promise<void> {
+  const pending = () =>
+    fixture.manager
+      .getAll()
+      .some(
+        (t) =>
+          t.factoryId === factoryId &&
+          t.status === "active" &&
+          t.lastOrdinal < fixture.lastOrdinal,
+      );
+  while (pending()) await sleep(1);
 }
 
 function current(holder: { fixture: Fixture | undefined }): Fixture {
@@ -289,6 +305,8 @@ describe("processor delivery under concurrent batches", () => {
         indexRound(fixture),
         fixture.manager.registerFactory("reload", reloadFactory),
       ]);
+      // registerFactory need not wait for the backfill; time it either way.
+      await settled(fixture, "reload");
     },
     options(PROCESSOR_DELAY_MS, reload),
   );
