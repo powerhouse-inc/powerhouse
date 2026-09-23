@@ -141,8 +141,8 @@ jobs:
       - name: Run reactor package tests
         run: pnpm test:reactor-packages
 
-  # One job per case: each hub-spoke case is spoke catch-up bound and runs 1-3.5m
-  # on its own. Not gated on test-reactor, which it shares no artifact with.
+  # One job per hub-spoke case, with the two short ones sharing a job to keep
+  # the job count under the runner cap. Shares no artifact with test-reactor.
   integration-test:
     name: Sync Integration (${{ matrix.name }})
     runs-on: ubuntu-24.04
@@ -152,14 +152,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: load test
-            run: pnpm --filter=@powerhousedao/load-test-connect run test:integration
+          - name: load test, reactor-drive 1 spoke
+            run: >-
+              pnpm --filter=@powerhousedao/load-test-connect run test:integration &&
+              pnpm --filter=@powerhousedao/reactor-api run test:integration -t "reactor-drive.*converges 1 spoke"
           - name: document-drive, 1 spoke
             run: pnpm --filter=@powerhousedao/reactor-api run test:integration -t "document-drive.*converges 1 spoke"
           - name: document-drive, 3 spokes
             run: pnpm --filter=@powerhousedao/reactor-api run test:integration -t "document-drive.*converges 3 spoke"
-          - name: reactor-drive, 1 spoke
-            run: pnpm --filter=@powerhousedao/reactor-api run test:integration -t "reactor-drive.*converges 1 spoke"
           - name: reactor-drive, 3 spokes
             run: pnpm --filter=@powerhousedao/reactor-api run test:integration -t "reactor-drive.*converges 3 spoke"
 
