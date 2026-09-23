@@ -724,6 +724,36 @@ export class KyselyOperationStore implements IOperationStore {
     return new Set(rows.map((row) => row.opId));
   }
 
+  async getOperationsByIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Operation[]> {
+    throwIfAborted(signal);
+
+    if (opIds.length === 0) {
+      return [];
+    }
+
+    const rows = await this.queryExecutor
+      .selectFrom("Operation")
+      .selectAll()
+      .where("opId", "in", opIds)
+      .where("documentId", "=", documentId)
+      .where("scope", "=", scope)
+      .where("branch", "=", branch)
+      .orderBy("index", "asc")
+      .execute();
+
+    const latest = new Map<string, Operation>();
+    for (const row of rows) {
+      latest.set(row.opId, this.rowToOperation(row));
+    }
+    return [...latest.values()];
+  }
+
   private rowToOperation(row: OperationRow): Operation {
     return {
       index: row.index,

@@ -301,6 +301,15 @@ export interface IOperationStore {
     opIds: string[],
     signal?: AbortSignal,
   ): Promise<Set<string>>;
+
+  /** The latest row of each of `opIds` stored in one stream. */
+  getOperationsByIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Operation[]>;
 }
 
 /**

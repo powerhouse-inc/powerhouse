@@ -31,6 +31,7 @@ describe("KyselyDocumentView Unit Tests", () => {
       getRevisions: vi.fn(),
       getStreamLatestTimestamp: vi.fn().mockResolvedValue(undefined),
       findOperationIds: vi.fn().mockResolvedValue(new Set()),
+      getOperationsByIds: vi.fn().mockResolvedValue([]),
     };
 
     mockOperationIndex = {

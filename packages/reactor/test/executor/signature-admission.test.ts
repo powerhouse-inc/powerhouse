@@ -16,6 +16,7 @@ import {
   type SignatureRefusedEvent,
 } from "../../src/events/types.js";
 import type { ReactorFeatureFlags } from "../../src/executor/types.js";
+import type { Job } from "../../src/queue/types.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import type { SignatureVerificationMode } from "../../src/signer/types.js";
 import { verifyActionSignature } from "../../src/signer/verify-action-signature.js";
@@ -487,6 +488,84 @@ describe("signature admission", () => {
       expect(refusals).toMatchObject([
         { actionId: action.id, code: "DUPLICATE_ACTION", path: "load" },
       ]);
+    });
+  });
+
+  describe("a retried mutation", () => {
+    /** Re-runs a job as the queue does after losing its first attempt. */
+    async function retried(actions: Action[]): Promise<JobInfo> {
+      const createdAtUtcIso = new Date().toISOString();
+      const job: Job = {
+        id: `retry-${actions[0].id}`,
+        kind: "mutation",
+        documentId: docId,
+        scope: "global",
+        branch: "main",
+        actions,
+        operations: [],
+        createdAt: createdAtUtcIso,
+        queueHint: [],
+        maxRetries: 3,
+        retryCount: 1,
+        errorHistory: [
+          { name: "WorkerExitedError", message: "worker exited", stack: "" },
+        ],
+        meta: { batchId: "retry", batchJobIds: [`retry-${actions[0].id}`] },
+      };
+      const info: JobInfo = {
+        id: job.id,
+        documentId: docId,
+        status: JobStatus.PENDING,
+        createdAtUtcIso,
+        consistencyToken: { version: 1, createdAtUtcIso, coordinates: [] },
+        meta: job.meta,
+      };
+      module!.jobTracker.registerJob(info);
+      await module!.queue.enqueue(job);
+      return settle(info);
+    }
+
+    it("succeeds without a second write when the first attempt committed", async () => {
+      await build("enforce");
+      const first = await v2Signed(moduleAction("a", 0));
+      const second = await v2Signed(moduleAction("b", 1));
+      expect((await execute([first, second])).status).toBe(
+        JobStatus.READ_READY,
+      );
+
+      const job = await retried([first, second]);
+
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(await storedActionIds()).toEqual([first.id, second.id]);
+      expect(refusals).toEqual([]);
+    });
+
+    it("refuses a retry whose action id holds other content", async () => {
+      await build("enforce");
+      const stored = await v2Signed(moduleAction("a", 0));
+      expect((await execute([stored])).status).toBe(JobStatus.READ_READY);
+
+      const changed = await v2Signed({
+        ...moduleAction("a", 0),
+        id: stored.id,
+        input: { id: "a", name: "changed" },
+      });
+      const job = await retried([changed]);
+
+      expect(job.status).toBe(JobStatus.FAILED);
+      expect(job.error?.message).toContain("[DUPLICATE_ACTION]");
+      expect(await storedActionIds()).toEqual([stored.id]);
+    });
+
+    it("refuses a retry of which only part is stored", async () => {
+      await build("enforce");
+      const stored = await v2Signed(moduleAction("a", 0));
+      expect((await execute([stored])).status).toBe(JobStatus.READ_READY);
+
+      const job = await retried([stored, await v2Signed(moduleAction("b", 1))]);
+
+      expect(job.status).toBe(JobStatus.FAILED);
+      expect(job.error?.message).toContain("[DUPLICATE_ACTION]");
     });
   });
 

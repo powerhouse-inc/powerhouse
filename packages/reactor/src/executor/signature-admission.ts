@@ -1,6 +1,7 @@
 import type { Action, Operation } from "@powerhousedao/shared/document-model";
 import {
   actionSigningTarget,
+  canonicalJson,
   deriveOperationId,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -30,6 +31,15 @@ type Candidate = {
 
 type Refusal = Extract<SignatureVerdict, { ok: false }>;
 
+/**
+ * `committed`: the job is a retry whose every write is already stored exactly
+ * as submitted, so its first attempt committed and nothing is written again.
+ */
+export type MutationAdmission =
+  | { kind: "admitted" }
+  | { kind: "refused"; error: InvalidSignatureError }
+  | { kind: "committed" };
+
 /** Runs once per write, when this reactor first stores it; never on re-appends. */
 export class SignatureAdmission {
   constructor(
@@ -43,7 +53,7 @@ export class SignatureAdmission {
     job: Job,
     operationStore: IOperationStore,
     signal?: AbortSignal,
-  ): Promise<InvalidSignatureError | undefined> {
+  ): Promise<MutationAdmission> {
     const candidates = job.actions.map((action) =>
       candidate(action, mutationStream(action, job)),
     );
@@ -52,6 +62,19 @@ export class SignatureAdmission {
       operationStore,
       signal,
     );
+
+    // A job the queue retried may have committed before its first attempt was
+    // lost (a worker exiting, an abort timing out). Its writes then sit in the
+    // stream unchanged, and refusing them as duplicates would fail a write that
+    // landed.
+    if (
+      isRetry(job) &&
+      candidates.length > 0 &&
+      candidates.every((entry) => live.has(entry.opId)) &&
+      (await this.storedAsSubmitted(candidates, operationStore, signal))
+    ) {
+      return { kind: "committed" };
+    }
 
     const submitted = new Set<string>();
     for (const entry of candidates) {
@@ -62,10 +85,10 @@ export class SignatureAdmission {
       }
       const refusal = this.record(job, entry, verdict, "mutation");
       if (refusal) {
-        return refusal;
+        return { kind: "refused", error: refusal };
       }
     }
-    return undefined;
+    return { kind: "admitted" };
   }
 
   /** The incoming operations a load drops, empty unless enforcing. */
@@ -134,26 +157,44 @@ export class SignatureAdmission {
     return verdict;
   }
 
+  private async storedAsSubmitted(
+    candidates: Candidate[],
+    operationStore: IOperationStore,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    for (const [stream, entries] of byStream(candidates)) {
+      const stored = await operationStore.getOperationsByIds(
+        stream.documentId,
+        stream.scope,
+        stream.branch,
+        entries.map((entry) => entry.opId),
+        signal,
+      );
+      const byId = new Map(
+        stored.map((operation) => [operation.id, operation]),
+      );
+      for (const entry of entries) {
+        const operation = byId.get(entry.opId);
+        if (!operation || !sameContent(operation.action, entry.action)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   private async liveOperationIds(
     candidates: Candidate[],
     operationStore: IOperationStore,
     signal?: AbortSignal,
   ): Promise<Set<string>> {
-    const byStream = new Map<string, { stream: Stream; opIds: string[] }>();
-    for (const entry of candidates) {
-      const key = `${entry.stream.documentId}\u0000${entry.stream.scope}\u0000${entry.stream.branch}`;
-      const group = byStream.get(key) ?? { stream: entry.stream, opIds: [] };
-      group.opIds.push(entry.opId);
-      byStream.set(key, group);
-    }
-
     const live = new Set<string>();
-    for (const { stream, opIds } of byStream.values()) {
+    for (const [stream, entries] of byStream(candidates)) {
       const found = await operationStore.findOperationIds(
         stream.documentId,
         stream.scope,
         stream.branch,
-        opIds,
+        entries.map((entry) => entry.opId),
         signal,
       );
       for (const opId of found) {
@@ -224,4 +265,27 @@ function mutationStream(action: Action, job: Job): Stream {
     ...actionSigningTarget(action, job.documentId, job.branch),
     scope: job.scope,
   };
+}
+
+function byStream(candidates: Candidate[]): [Stream, Candidate[]][] {
+  const groups = new Map<string, [Stream, Candidate[]]>();
+  for (const entry of candidates) {
+    const key = `${entry.stream.documentId}\u0000${entry.stream.scope}\u0000${entry.stream.branch}`;
+    const group = groups.get(key) ?? [entry.stream, []];
+    group[1].push(entry);
+    groups.set(key, group);
+  }
+  return [...groups.values()];
+}
+
+function isRetry(job: Job): boolean {
+  return job.errorHistory.length > 0 || (job.retryCount ?? 0) > 0;
+}
+
+function sameContent(stored: Action, submitted: Action): boolean {
+  try {
+    return canonicalJson(stored) === canonicalJson(submitted);
+  } catch {
+    return false;
+  }
 }

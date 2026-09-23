@@ -886,6 +886,27 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
         store.findOperationIds(generateId(), "global", "main", []),
       ).resolves.toEqual(new Set());
     });
+
+    it("reads back the latest row of each id in the stream", async () => {
+      const documentId = generateId();
+      await writeWithId(documentId, "global", 0, "op-a");
+      await writeWithId(documentId, "global", 1, "op-b");
+      await writeWithId(documentId, "global", 2, "op-a", 2);
+
+      const found = await store.getOperationsByIds(
+        documentId,
+        "global",
+        "main",
+        ["op-a", "op-missing"],
+      );
+
+      expect(found.map((operation) => [operation.id, operation.index])).toEqual(
+        [["op-a", 2]],
+      );
+      await expect(
+        store.getOperationsByIds(documentId, "local", "main", ["op-a"]),
+      ).resolves.toEqual([]);
+    });
   });
 
   describe("getRevisions", () => {

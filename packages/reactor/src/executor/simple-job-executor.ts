@@ -54,7 +54,10 @@ import { DocumentActionHandler } from "./document-action-handler.js";
 import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
 import { DefaultExecutionScope } from "./execution-scope.js";
 import type { IJobExecutor } from "./interfaces.js";
-import { SignatureAdmission } from "./signature-admission.js";
+import {
+  SignatureAdmission,
+  type MutationAdmission,
+} from "./signature-admission.js";
 import { DEFAULT_DEFERRED_JOB_TTL_MS } from "./types.js";
 import type {
   ExecutingJob,
@@ -402,9 +405,9 @@ export class SimpleJobExecutor implements IJobExecutor {
       return { result: reevalResult, pendingEvent };
     }
 
-    let refusal: Error | undefined;
+    let admission: MutationAdmission;
     try {
-      refusal = await this.signatureAdmission.admitMutation(
+      admission = await this.signatureAdmission.admitMutation(
         job,
         stores.operationStore,
         signal,
@@ -418,8 +421,25 @@ export class SimpleJobExecutor implements IJobExecutor {
         ),
       };
     }
-    if (refusal) {
-      return { result: buildErrorResult(job, refusal, startTime) };
+    if (admission.kind === "refused") {
+      return { result: buildErrorResult(job, admission.error, startTime) };
+    }
+    if (admission.kind === "committed") {
+      return {
+        result: {
+          job,
+          success: true as const,
+          operations: [],
+          operationsWithContext: [],
+          duration: Date.now() - startTime,
+        },
+        pendingEvent: {
+          jobId: job.id,
+          operations: [],
+          jobMeta: job.meta,
+          collectionMemberships: {},
+        },
+      };
     }
 
     const positioned = await this.positionByTimestamp(job, stores, signal);

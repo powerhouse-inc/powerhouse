@@ -44,6 +44,7 @@ function createMockOperationStore(): IOperationStore {
     }),
     getStreamLatestTimestamp: vi.fn().mockResolvedValue(undefined),
     findOperationIds: vi.fn().mockResolvedValue(new Set()),
+    getOperationsByIds: vi.fn().mockResolvedValue([]),
   };
 }
 
