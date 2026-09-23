@@ -931,12 +931,13 @@ const scenarios: Scenario[] = [
     },
   },
   {
-    name: "Deep Hierarchy: 10 documents with nested structures (writes to convergence)",
-    continues: "Deep Hierarchy: 10 documents with nested structures",
+    name: "Deep Hierarchy: 10 documents with nested structures (writes to convergence), single writer per document",
+    continues:
+      "Deep Hierarchy: 10 documents with nested structures (writes to convergence)",
     ids: Array.from({ length: 10 }, (_, i) => deterministicId("doc", i + 300)),
     creatorFor: sideA,
     write: (setup, ids) => {
-      const { reactorA, reactorB } = setup;
+      const { reactorA } = setup;
       const writes: Promise<void>[] = [];
       for (const [i, docId] of ids.entries()) {
         let parentFolder: string | null = null;
@@ -952,7 +953,7 @@ const scenarios: Scenario[] = [
             ]),
           );
           writes.push(
-            submitWrite(setup, reactorB, docId, [
+            submitWrite(setup, reactorA, docId, [
               driveDocumentModelModule.actions.addFile({
                 id: deterministicId("file", i * 100 + level),
                 name: `File at Level ${level}`,
