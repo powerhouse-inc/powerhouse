@@ -19,6 +19,7 @@ import type { Job } from "../queue/types.js";
 import {
   AuthorizationDeniedError,
   DocumentDeletedError,
+  DocumentPurgedError,
 } from "../shared/errors.js";
 import type {
   ConsistencyCoordinate,
@@ -26,6 +27,7 @@ import type {
   JobResultSummary,
   SubmittedActionResult,
 } from "../shared/types.js";
+import type { ExecutionStores } from "./execution-scope.js";
 import type { JobResult, TouchedStream } from "./types.js";
 
 export { applyDeleteDocumentAction, applyUpgradeDocumentAction };
@@ -296,6 +298,31 @@ export function buildErrorResult(
     error: error,
     duration: Date.now() - startTime,
   };
+}
+
+/** Refuses a write to a purged id; the shared lock it takes lasts to commit. */
+export async function refuseIfPurged(
+  stores: ExecutionStores,
+  job: Job,
+  startTime: number,
+  documentIds: string[],
+): Promise<JobResult | undefined> {
+  if (!stores.purgeGate) return undefined;
+
+  let purged: string[];
+  try {
+    purged = await stores.purgeGate.admit(documentIds);
+  } catch (error) {
+    return buildErrorResult(
+      job,
+      error instanceof Error ? error : new Error(String(error)),
+      startTime,
+    );
+  }
+
+  return purged.length > 0
+    ? buildErrorResult(job, new DocumentPurgedError(purged[0]), startTime)
+    : undefined;
 }
 
 /**

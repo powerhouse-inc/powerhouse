@@ -53,6 +53,7 @@ import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   DocumentDeletedError,
   DocumentNotFoundError,
+  DocumentPurgedError,
   UpgradePreconditionFailedError,
 } from "../shared/errors.js";
 import { AppendConditionFailedError } from "../storage/interfaces.js";
@@ -75,6 +76,7 @@ import {
   GATED_DOCUMENT_ACTIONS,
   getNextIndexForScope,
   refusalError,
+  refuseIfPurged,
   targetDocumentId,
   updateDocumentRevision,
 } from "./util.js";
@@ -352,6 +354,13 @@ export class DocumentActionHandler {
     }
 
     const document = createDocumentFromAction(action as CreateDocumentAction);
+
+    const purged = await refuseIfPurged(stores, job, startTime, [
+      document.header.id,
+    ]);
+    if (purged) {
+      return purged;
+    }
 
     let operation = createOperation(action, 0, skip, {
       documentId: document.header.id,
@@ -871,10 +880,35 @@ export class DocumentActionHandler {
     );
   }
 
-  private executeAddRelationship(
+  private async executeAddRelationship(
     write: PendingWrite,
     executing: ExecutingJob,
   ): Promise<RelationshipJobResult> {
+    const { targetId } = write.action.input as RelationshipActionShape;
+
+    let targetPurged = false;
+    if (targetId && executing.stores.purgeGate) {
+      try {
+        const purged = await executing.stores.purgeGate.findPurged([targetId]);
+        targetPurged = purged.length > 0;
+      } catch (error) {
+        return buildErrorResult(
+          executing.job,
+          error instanceof Error ? error : new Error(String(error)),
+          executing.startTime,
+        );
+      }
+    }
+
+    // Accepted history keeps its operation; only the membership is withheld.
+    if (targetPurged && !executing.replayingAcceptedHistory) {
+      return buildErrorResult(
+        executing.job,
+        new DocumentPurgedError(targetId),
+        executing.startTime,
+      );
+    }
+
     return this.withRelationshipAction(
       "ADD_RELATIONSHIP",
       write,
@@ -886,7 +920,10 @@ export class DocumentActionHandler {
             )
           : null,
       ({ indexTxn: txn, stores: s, sourceDoc, input, job: j }) => {
-        if (this.driveContainerTypes.has(sourceDoc.header.documentType)) {
+        if (
+          !targetPurged &&
+          this.driveContainerTypes.has(sourceDoc.header.documentType)
+        ) {
           const collectionId = DriveCollectionId.forDrive(
             input.sourceId,
             j.branch,

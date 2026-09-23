@@ -264,6 +264,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     await this.resultHandler.handleResult(handle, result, {
       deferJob: (documentId, job) => this.deferredJobs.add(documentId, job),
       flushDeferredFor: (documentId) => this.deferredJobs.flush(documentId),
+      dropDeferredFor: (documentId) => this.deferredJobs.drop(documentId),
     });
 
     this.activeJobs--;

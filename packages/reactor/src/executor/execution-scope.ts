@@ -10,6 +10,10 @@ import type { ICollectionMembershipCache } from "../cache/collection-membership-
 import type { IOperationStore } from "../storage/interfaces.js";
 import type { KyselyOperationStore } from "../storage/kysely/store.js";
 import type { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
+import {
+  KyselyDocumentPurgeGate,
+  type IDocumentPurgeGate,
+} from "../storage/kysely/document-purge-gate.js";
 import type { Database } from "../storage/kysely/types.js";
 
 export interface ExecutionStores {
@@ -18,6 +22,8 @@ export interface ExecutionStores {
   writeCache: IWriteCache;
   documentMetaCache: IDocumentMetaCache;
   collectionMembershipCache: ICollectionMembershipCache;
+  /** Absent without a database, where nothing can have been purged. */
+  purgeGate?: IDocumentPurgeGate;
 }
 
 export interface IExecutionScope {
@@ -82,6 +88,7 @@ export class KyselyExecutionScope implements IExecutionScope {
           this.documentMetaCache.withScopedStore(scopedOperationStore),
         collectionMembershipCache:
           this.collectionMembershipCache.withScopedIndex(scopedOperationIndex),
+        purgeGate: new KyselyDocumentPurgeGate(trx),
       });
     });
   }

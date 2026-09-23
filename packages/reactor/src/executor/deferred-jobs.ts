@@ -4,7 +4,10 @@ import { ReactorEventTypes } from "../events/types.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { Job } from "../queue/types.js";
-import { DocumentNotFoundError } from "../shared/errors.js";
+import {
+  DocumentNotFoundError,
+  DocumentPurgedError,
+} from "../shared/errors.js";
 import { toErrorInfo } from "./job-result-handler.js";
 import { DEFAULT_DEFERRED_JOB_TTL_MS } from "./types.js";
 
@@ -105,6 +108,20 @@ export class DeferredJobs {
     this.#byDocumentId.clear();
   }
 
+  /** Fails every job waiting on a purged document, which will never arrive. */
+  async drop(documentId: string): Promise<void> {
+    const jobs = this.#byDocumentId.get(documentId);
+    if (!jobs || jobs.length === 0) {
+      return;
+    }
+    this.#byDocumentId.delete(documentId);
+
+    for (const job of jobs) {
+      this.#clearTimer(job.id);
+      await this.#release(job, new DocumentPurgedError(documentId));
+    }
+  }
+
   /** The jobs still waiting on a document. Exposed for assertions. */
   waitingOn(documentId: string): readonly Job[] {
     return this.#byDocumentId.get(documentId) ?? [];
@@ -130,7 +147,11 @@ export class DeferredJobs {
       this.ttlMs,
     );
 
-    const errorInfo = this.#markFailed(job);
+    await this.#release(job, new DocumentNotFoundError(job.documentId));
+  }
+
+  async #release(job: Job, error: Error): Promise<void> {
+    const errorInfo = this.#markFailed(job, error);
 
     try {
       // Resolves the job in the queue, which is what releases its dependents.
@@ -156,8 +177,10 @@ export class DeferredJobs {
     }
   }
 
-  #markFailed(job: Job) {
-    const error = new DocumentNotFoundError(job.documentId);
+  #markFailed(
+    job: Job,
+    error: Error = new DocumentNotFoundError(job.documentId),
+  ) {
     const errorInfo = toErrorInfo(error);
     this.jobTracker.markFailed(job.id, errorInfo, job);
     this.eventBus

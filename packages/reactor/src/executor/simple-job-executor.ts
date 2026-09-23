@@ -73,6 +73,7 @@ import {
   getNextIndexForScope,
   isGenesisOperation,
   refusalError,
+  refuseIfPurged,
   submittedActionIds,
   TouchedStreams,
 } from "./util.js";
@@ -1738,6 +1739,13 @@ export class SimpleJobExecutor implements IJobExecutor {
   ): Promise<JobResult> {
     const { job, startTime, stores, signal } = executing;
 
+    const purged = await refuseIfPurged(stores, job, startTime, [
+      job.documentId,
+    ]);
+    if (purged) {
+      return purged;
+    }
+
     if (!this.featureFlags.documentDecisions) {
       return {
         job,
@@ -1803,6 +1811,14 @@ export class SimpleJobExecutor implements IJobExecutor {
         new Error("Load job must include at least one operation"),
         startTime,
       );
+    }
+
+    // Before the meta read: a cached meta can predate the purge.
+    const purged = await refuseIfPurged(stores, job, startTime, [
+      job.documentId,
+    ]);
+    if (purged) {
+      return purged;
     }
 
     let docMeta;

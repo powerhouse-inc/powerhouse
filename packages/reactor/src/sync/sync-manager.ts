@@ -33,7 +33,11 @@ import {
   GraphQLRequestError,
   isDriveAuthError,
 } from "./errors.js";
-import type { IChannelFactory, ISyncManager, Remote } from "./interfaces.js";
+import type {
+  IChannelFactory,
+  IDocumentPurgeSyncManager,
+  Remote,
+} from "./interfaces.js";
 import { SyncAwaiter } from "./sync-awaiter.js";
 import { SyncOperation } from "./sync-operation.js";
 import {
@@ -129,7 +133,7 @@ function firstOrdinalOf(syncOp: SyncOperation): number {
     : 0;
 }
 
-export class SyncManager implements ISyncManager {
+export class SyncManager implements IDocumentPurgeSyncManager {
   private readonly logger: ILogger;
   private readonly remoteStorage: ISyncRemoteStorage;
   private readonly cursorStorage: ISyncCursorStorage;
@@ -151,6 +155,10 @@ export class SyncManager implements ISyncManager {
   private readonly connectionStateUnsubscribes: Map<string, () => void> =
     new Map();
   private readonly quarantinedDocumentIds = new Set<string>();
+  // Purged or being purged: never loaded and never dead-lettered.
+  private readonly purgedInboundIds = new Set<string>();
+  private readonly purgedOutboundIds = new Set<string>();
+  private readonly listPurgedIds?: () => Promise<string[]>;
   private readonly backfillAbortControllers = new Map<
     string,
     AbortController
@@ -176,7 +184,9 @@ export class SyncManager implements ISyncManager {
     eventBus: IEventBus,
     driveContainerTypes: ReadonlySet<string>,
     config: Partial<SyncManagerConfig> = {},
+    listPurgedIds?: () => Promise<string[]>,
   ) {
+    this.listPurgedIds = listPurgedIds;
     this.logger = logger;
     this.remoteStorage = remoteStorage;
     this.cursorStorage = cursorStorage;
@@ -216,6 +226,19 @@ export class SyncManager implements ISyncManager {
         "Failed to load quarantined document IDs (@error)",
         error instanceof Error ? error.message : String(error),
       );
+    }
+
+    if (this.listPurgedIds) {
+      try {
+        const purged = await this.listPurgedIds();
+        this.quarantineInbound(purged);
+        this.quarantineOutbound(purged);
+      } catch (error) {
+        this.logger.error(
+          "Failed to load purged document IDs (@error)",
+          error instanceof Error ? error.message : String(error),
+        );
+      }
     }
 
     const remoteRecords = await this.remoteStorage.list();
@@ -600,6 +623,47 @@ export class SyncManager implements ISyncManager {
     return Array.from(this.remotes.values());
   }
 
+  quarantineInbound(documentIds: string[]): void {
+    for (const id of documentIds) {
+      this.purgedInboundIds.add(id);
+    }
+  }
+
+  releaseInbound(documentIds: string[]): void {
+    for (const id of documentIds) {
+      if (this.purgedOutboundIds.has(id)) continue;
+      this.purgedInboundIds.delete(id);
+    }
+  }
+
+  quarantineOutbound(documentIds: string[]): void {
+    for (const id of documentIds) {
+      this.purgedOutboundIds.add(id);
+    }
+  }
+
+  isInboundQuarantined(documentId: string): boolean {
+    return (
+      this.quarantinedDocumentIds.has(documentId) ||
+      this.purgedInboundIds.has(documentId)
+    );
+  }
+
+  private isOutboundExcluded(documentId: string): boolean {
+    return (
+      this.quarantinedDocumentIds.has(documentId) ||
+      this.purgedOutboundIds.has(documentId)
+    );
+  }
+
+  getEvictedOutboxFloor(remoteName: string): number | undefined {
+    return this.evictedOutboxFloors.get(remoteName);
+  }
+
+  isRemoving(remoteName: string): boolean {
+    return this.removing.has(remoteName);
+  }
+
   waitForSync(jobId: string, signal?: AbortSignal): Promise<SyncResult> {
     return this.syncAwaiter.waitForSync(jobId, signal);
   }
@@ -646,7 +710,18 @@ export class SyncManager implements ISyncManager {
     this.connectionStateUnsubscribes.set(remote.meta.name, unsubscribe);
 
     remote.channel.deadLetter.onAdded((syncOps) => {
+      const refused = syncOps.filter((syncOp) =>
+        this.purgedInboundIds.has(syncOp.documentId),
+      );
+      if (refused.length > 0) {
+        remote.channel.deadLetter.remove(...refused);
+      }
+
       for (const syncOp of syncOps) {
+        if (this.purgedInboundIds.has(syncOp.documentId)) {
+          continue;
+        }
+
         this.logger.error(
           "Dead letter (@remote, @documentId, @jobId, @error, @dependencies)",
           remote.meta.name,
@@ -831,7 +906,7 @@ export class SyncManager implements ISyncManager {
     }
 
     const eligible = syncOps.filter(
-      (op) => !this.quarantinedDocumentIds.has(op.documentId),
+      (op) => !this.isInboundQuarantined(op.documentId),
     );
     if (eligible.length === 0) return;
 
@@ -943,6 +1018,7 @@ export class SyncManager implements ISyncManager {
         completedJobInfo.id,
         errorMessage,
       );
+      this.notePurgeRefusal(syncOp.documentId, completedJobInfo.error);
       syncOp.failed(this.inboxFailure(completedJobInfo.error));
       remote.channel.deadLetter.add(syncOp);
     } else {
@@ -1053,6 +1129,7 @@ export class SyncManager implements ISyncManager {
       if (this.isShutdown) return;
 
       if (completedJobInfo.status === JobStatus.FAILED) {
+        this.notePurgeRefusal(syncOp.documentId, completedJobInfo.error);
         syncOp.failed(this.inboxFailure(completedJobInfo.error));
         remote.channel.deadLetter.add(syncOp);
       } else {
@@ -1060,6 +1137,17 @@ export class SyncManager implements ISyncManager {
       }
 
       remote.channel.inbox.remove(syncOp);
+    }
+  }
+
+  /** A reactor sharing the database purged it; refuse it here too. */
+  private notePurgeRefusal(
+    documentId: string,
+    error: ErrorInfo | undefined,
+  ): void {
+    if (error?.name === "DocumentPurgedError") {
+      this.quarantineInbound([documentId]);
+      this.quarantineOutbound([documentId]);
     }
   }
 
@@ -1380,7 +1468,7 @@ export class SyncManager implements ISyncManager {
       }
       operations = filterOperations(operations, remote.meta.filter);
       operations = operations.filter(
-        (op) => !this.quarantinedDocumentIds.has(op.context.documentId),
+        (op) => !this.isOutboundExcluded(op.context.documentId),
       );
 
       hasMore = !!page.next;

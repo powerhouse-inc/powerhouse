@@ -11,6 +11,7 @@ import type {
 import { KyselySyncCursorStorage } from "../storage/kysely/sync-cursor-storage.js";
 import { KyselySyncDeadLetterStorage } from "../storage/kysely/sync-dead-letter-storage.js";
 import { KyselySyncRemoteStorage } from "../storage/kysely/sync-remote-storage.js";
+import { listPurgedDocumentIds } from "../storage/kysely/document-purger.js";
 import type { Database } from "../storage/kysely/types.js";
 import type { IChannelFactory, ISyncManager } from "./interfaces.js";
 import { SyncManager, type SyncManagerConfig } from "./sync-manager.js";
@@ -109,6 +110,7 @@ export class SyncBuilder {
       eventBus,
       driveContainerTypes,
       this.config,
+      () => listPurgedDocumentIds(db),
     );
 
     return {

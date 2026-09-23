@@ -12,6 +12,7 @@ import {
   AuthTimestampNotMonotonicError,
   DocumentDeletedError,
   DocumentNotFoundError,
+  DocumentPurgedError,
   ExcessiveReshuffleError,
   InvalidOperationTimestampError,
   UpgradePreconditionFailedError,
@@ -29,6 +30,8 @@ const MAX_EXEMPT_CONFLICT_RETRIES = 20;
 export type JobResultCallbacks = {
   deferJob(documentId: string, job: Job): void;
   flushDeferredFor(documentId: string): Promise<void>;
+  /** Fails what waits on a purged document now rather than at its TTL. */
+  dropDeferredFor?(documentId: string): Promise<void>;
 };
 
 export interface IJobResultHandler {
@@ -141,7 +144,19 @@ export class JobResultHandler implements IJobResultHandler {
 
     if (
       result.error &&
+      DocumentPurgedError.isError(result.error) &&
+      callbacks.dropDeferredFor
+    ) {
+      // A worker's error crosses as name and message only.
+      const { documentId } = result.error as { documentId?: string };
+      await callbacks.dropDeferredFor(documentId ?? handle.job.documentId);
+    }
+
+    if (
+      result.error &&
       (DocumentDeletedError.isError(result.error) ||
+        // A purged id is refused for good.
+        DocumentPurgedError.isError(result.error) ||
         // The id is taken. A retry re-writes against the same stream and loses
         // the same way; only a new id resolves it.
         DocumentAlreadyExistsError.isError(result.error) ||

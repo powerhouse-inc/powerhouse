@@ -290,3 +290,32 @@ export interface ISyncManager {
    */
   onSyncStatusChange(callback: SyncStatusChangeCallback): () => void;
 }
+
+/** Optional capability: the refusal sets a document purge drives. */
+export interface IDocumentPurgeSyncManager extends ISyncManager {
+  /** Refuses inbound operations for the ids and never dead-letters them. */
+  quarantineInbound(documentIds: string[]): void;
+
+  /** Lifts an inbound quarantine taken for a purge that was then refused. */
+  releaseInbound(documentIds: string[]): void;
+
+  /** Stops serving the ids to any remote. */
+  quarantineOutbound(documentIds: string[]): void;
+
+  isInboundQuarantined(documentId: string): boolean;
+
+  /** Lowest ordinal evicted from the remote's outbox and not yet refilled. */
+  getEvictedOutboxFloor(remoteName: string): number | undefined;
+
+  /** True while `remove` is tearing the remote down. */
+  isRemoving(remoteName: string): boolean;
+}
+
+export function supportsDocumentPurgeQuarantine(
+  syncManager: ISyncManager,
+): syncManager is IDocumentPurgeSyncManager {
+  return (
+    "quarantineInbound" in syncManager &&
+    typeof syncManager.quarantineInbound === "function"
+  );
+}
