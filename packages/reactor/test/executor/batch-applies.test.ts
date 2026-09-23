@@ -15,7 +15,7 @@ import { createDocModelDocument } from "../factories.js";
 const WRITER = {
   signer: {
     user: { address: BENCH_WRITER_ADDRESS, networkId: "1", chainId: 1 },
-    app: { name: "batch-test", key: "batch-test" },
+    app: { name: "batch-test", key: "" },
     signatures: [] as never[],
   },
 };

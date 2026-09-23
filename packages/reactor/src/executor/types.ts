@@ -210,7 +210,7 @@ export type JobExecutorConfig = {
    */
   batchApplies?: boolean;
 
-  /** Defaults to `log`: refusals are logged and counted, and the write admitted. */
+  /** Defaults to `enforce`; `log` counts refusals and admits the write. */
   signatureVerification?: SignatureVerificationMode;
 };
 

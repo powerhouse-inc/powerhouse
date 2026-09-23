@@ -350,8 +350,16 @@ describe("signature admission", () => {
       expect(await storedActionIds()).toEqual([action.id]);
     });
 
-    it("logs and counts, but admits, when not enforcing", async () => {
+    it("enforces by default", async () => {
       await build();
+      const job = await execute([await tampered(moduleAction("m"))]);
+
+      expect(job.status).toBe(JobStatus.FAILED);
+      expect(job.error?.message).toContain("[HASH_MISMATCH]");
+    });
+
+    it("logs and counts, but admits, in log mode", async () => {
+      await build("log");
       const action = await tampered(moduleAction("m"));
 
       expect((await execute([action])).status).toBe(JobStatus.READ_READY);

@@ -21,6 +21,11 @@ import {
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import {
+  MemoryKeyStorage,
+  RenownCryptoBuilder,
+  RenownCryptoSigner,
+} from "@renown/sdk/node";
 import { ConsoleLogger } from "document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
@@ -902,11 +907,23 @@ describe("Connect-Switchboard Sync", () => {
     const signedAction = driveDocumentModelModule.actions.setDriveName({
       name: "Signed Drive",
     });
+    const renownCrypto = await new RenownCryptoBuilder()
+      .withKeyPairStorage(new MemoryKeyStorage())
+      .build();
+    const signer = new RenownCryptoSigner(renownCrypto, "test-app", {
+      address: "0xabc",
+      networkId: "eip155",
+      chainId: 1,
+    });
+    const tuple = await signer.signAction(signedAction, {
+      documentId,
+      branch: "main",
+    });
     signedAction.context = {
       signer: {
         user: { address: "0xabc", networkId: "eip155", chainId: 1 },
-        app: { name: "test-app", key: "app-key-1" },
-        signatures: [["algo", "0xabc", "pubkey123", "sig456", "hash789"]],
+        app: signer.app,
+        signatures: [tuple],
       },
     };
 
@@ -932,12 +949,6 @@ describe("Connect-Switchboard Sync", () => {
     const signatures = signedOp!.action.context?.signer?.signatures;
     expect(signatures).toHaveLength(1);
     expect(Array.isArray(signatures![0])).toBe(true);
-    expect(signatures![0]).toEqual([
-      "algo",
-      "0xabc",
-      "pubkey123",
-      "sig456",
-      "hash789",
-    ]);
+    expect(signatures![0]).toEqual(tuple);
   }, 30000);
 });

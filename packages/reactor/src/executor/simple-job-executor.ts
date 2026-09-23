@@ -180,7 +180,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       retryMaxDelayMs: config.retryMaxDelayMs ?? 5000,
       yieldDeadlineMs: config.yieldDeadlineMs ?? 50,
       batchApplies: config.batchApplies ?? true,
-      signatureVerification: config.signatureVerification ?? "log",
+      signatureVerification: config.signatureVerification ?? "enforce",
     };
 
     // Resolved separately so reads are plain booleans; the config keeps what
