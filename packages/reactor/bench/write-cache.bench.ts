@@ -1565,8 +1565,10 @@ const MIRROR_FULL_LABEL = MIRROR_VARIANTS[0].label;
 const MIRROR_NO_READS_LABEL = MIRROR_VARIANTS[1].label;
 const MIRROR_NO_SORT_LABEL = MIRROR_VARIANTS[2].label;
 const MIRROR_PUSH_ONLY_LABEL = MIRROR_VARIANTS[3].label;
-const MIRROR_REAL_LABEL = "real body (fidelity reference)";
-const MIRROR_NO_BODY_LABEL = "no body: create() + base reducer only";
+/** Marked: these price what the sweep holds fixed, so no spread pairs them. */
+const MIRROR_REAL_LABEL = "real body (fidelity reference) [reference]";
+const MIRROR_NO_BODY_LABEL =
+  "no body: create() + base reducer only [reference]";
 
 /** Registration order, which the report reads the samples back in. */
 const MIRROR_LABELS: string[] = [

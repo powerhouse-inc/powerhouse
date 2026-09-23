@@ -54,6 +54,30 @@ export type BenchTarget = {
   stampedCase: string;
 };
 
+/** Marks a case as a reference cost rather than a point on the sweep. */
+export const REFERENCE_CASE_MARKER = "[reference]";
+
+const SPLIT_LEGS = ["draft", "plain"];
+const SPLIT_COUNTS = [100, 500, 1000, 2000];
+const SPLIT_BASELINES = [
+  "real body (fidelity reference)",
+  "no body: create() + base reducer only",
+];
+
+/** The split baselines the suite now marks; renaming keeps their series joined. */
+function splitBaselineRenames(): Record<string, string> {
+  const renames: Record<string, string> = {};
+  for (const leg of SPLIT_LEGS) {
+    for (const count of SPLIT_COUNTS) {
+      for (const baseline of SPLIT_BASELINES) {
+        const former = `${leg} leg ${String(count)} ops: ${baseline}`;
+        renames[former] = `${former} ${REFERENCE_CASE_MARKER}`;
+      }
+    }
+  }
+  return renames;
+}
+
 export const BENCH_TARGETS: BenchTarget[] = [
   {
     name: "auth",
@@ -156,7 +180,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
       "The no-cache baseline compares a cold rebuild against a manual replay — both are a replay, so that pair reads about 1x by construction rather than what the cache is worth",
       "The two keyframe cases are floored by a 100ms drain sleep for fire-and-forget keyframe writes to land, so their difference isn't persistence overhead",
     ],
-    renames: {},
+    renames: splitBaselineRenames(),
     stampsFile: "write-cache-stamps.json",
     stampedCase: "instrumented cold-miss replay",
   },
@@ -715,10 +739,12 @@ export function suiteLabel(fullName: string): string {
   return parts.length > 1 ? parts.slice(1).join(" > ") : fullName;
 }
 
-/** Cases of one suite that ran the same stated operation count. */
+/** Cases of one suite that ran the same stated operation count on one leg. */
 type WorkloadGroup = {
   /** 0 when the cases state no count of their own. */
   operations: number;
+  /** Empty when the cases name no leg of their own. */
+  leg: string;
   cases: MicroCase[];
 };
 
@@ -727,9 +753,6 @@ type SuiteSplit = {
   sweep: MicroCase[];
   references: MicroCase[];
 };
-
-/** The name suffix that marks a case as a reference cost, not a point on the sweep. */
-export const REFERENCE_CASE_MARKER = "[reference]";
 
 /**
  * The operation count a case name states, or 0 when it states none. A case
@@ -757,34 +780,48 @@ function splitReferences(suite: MicroSuite): SuiteSplit {
   };
 }
 
+/** A pair across two legs prices the leg as much as what the sweep varies. */
+function statedLeg(name: string): string {
+  return SPLIT_CASE.exec(name)?.[1] ?? "";
+}
+
 /** Cases stating no count at all are one set, the suite's own construction; once any case states one, a case stating none is comparable to nothing. */
 function workloadGroups(cases: MicroCase[]): WorkloadGroup[] {
   const tagged = cases.map((entry) => ({
     entry,
     operations: statedOperationCount(entry.name),
+    leg: statedLeg(entry.name),
   }));
   if (tagged.every((item) => item.operations === 0)) {
-    return [{ operations: 0, cases }];
+    return [{ operations: 0, leg: "", cases }];
   }
 
   const groups: WorkloadGroup[] = [];
-  const byCount = new Map<number, WorkloadGroup>();
+  const byWorkload = new Map<string, WorkloadGroup>();
   for (const item of tagged) {
-    const existing = byCount.get(item.operations);
+    const workload = `${String(item.operations)} ${item.leg}`;
+    const existing = byWorkload.get(workload);
     if (item.operations !== 0 && existing !== undefined) {
       existing.cases.push(item.entry);
       continue;
     }
     const group: WorkloadGroup = {
       operations: item.operations,
+      leg: item.leg,
       cases: [item.entry],
     };
     if (item.operations !== 0) {
-      byCount.set(item.operations, group);
+      byWorkload.set(workload, group);
     }
     groups.push(group);
   }
   return groups;
+}
+
+/** What a group held fixed, which its spread has to say it held fixed. */
+function heldFixed(group: WorkloadGroup): string {
+  const at = `${String(group.operations)} operations`;
+  return group.leg === "" ? at : `${at} on the ${group.leg} leg`;
 }
 
 /** What each case states about its own workload, for a note that has to say why. */
@@ -827,7 +864,7 @@ function suiteSpreads(suite: MicroSuite): DerivedRatio[] {
   return comparable.map((group) => {
     const fastest = extreme(group.cases, (a, b) => a.hz > b.hz);
     const slowest = extreme(group.cases, (a, b) => a.hz < b.hz);
-    const at = `${String(group.operations)} operations`;
+    const at = heldFixed(group);
     return {
       name:
         groups.length === 1 ? `${label}: spread` : `${label}: spread at ${at}`,
@@ -876,8 +913,7 @@ function suiteConclusions(suite: MicroSuite): string[] {
   const spreads = comparable.map((group) => {
     const fastest = extreme(group.cases, (a, b) => a.hz > b.hz);
     const slowest = extreme(group.cases, (a, b) => a.hz < b.hz);
-    const at =
-      groups.length === 1 ? "" : ` at ${String(group.operations)} operations`;
+    const at = groups.length === 1 ? "" : ` at ${heldFixed(group)}`;
     return `In ${label}${at}, ${slowest.name} is ${round(fastest.hz / slowest.hz)}x slower than ${fastest.name}`;
   });
   return [...spreads, ...held];

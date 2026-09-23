@@ -463,6 +463,48 @@ describe("buildMicroEntry", () => {
     ]);
   });
 
+  it("holds the leg a case names fixed, as well as the operation count", () => {
+    const suites = [
+      sizedSuite("bench/write-cache.bench.ts > Read/Write Split", [
+        ["draft leg 100 ops: mirrored body: reads + push + sort", 1900],
+        ["draft leg 100 ops: mirrored body: push only", 3200],
+        ["plain leg 100 ops: mirrored body: reads + push + sort", 5100],
+        ["plain leg 100 ops: mirrored body: push only", 89000],
+      ]),
+    ];
+
+    const entry = entryFor(findTarget("auth"), { suites });
+    const results = entry.results as {
+      derived: { name: string; value: number; note: string }[];
+    };
+
+    expect(
+      results.derived.map((reading) => [reading.name, reading.value]),
+    ).toEqual([
+      ["Read/Write Split: spread at 100 operations on the plain leg", 17.45],
+      ["Read/Write Split: spread at 100 operations on the draft leg", 1.68],
+    ]);
+    expect(results.derived[0].note).toBe(
+      "plain leg 100 ops: mirrored body: push only over plain leg 100 ops: mirrored body: reads + push + sort, both at 100 operations on the plain leg",
+    );
+    expect((entry.conclusions as string[])[1]).toBe(
+      "In Read/Write Split at 100 operations on the draft leg, draft leg 100 ops: mirrored body: reads + push + sort is 1.68x slower than draft leg 100 ops: mirrored body: push only",
+    );
+  });
+
+  it("stamps the split baselines with the names they continue", () => {
+    const renamed = findTarget("cache").renames;
+
+    expect(
+      renamed["draft leg 100 ops: no body: create() + base reducer only"],
+    ).toBe(
+      "draft leg 100 ops: no body: create() + base reducer only [reference]",
+    );
+    expect(renamed["plain leg 2000 ops: real body (fidelity reference)"]).toBe(
+      "plain leg 2000 ops: real body (fidelity reference) [reference]",
+    );
+  });
+
   it("stamps the macrotask reference case with the name it continues", () => {
     const renamed = findTarget("events").renames;
 
