@@ -117,6 +117,10 @@ export {
   type SignatureVerificationMode,
   type SignerConfig,
 } from "./src/signer/types.js";
+export {
+  verifyActionSignature,
+  type VerificationTarget,
+} from "./src/signer/verify-action-signature.js";
 
 // Subscription Manager
 export { DefaultSubscriptionErrorHandler } from "./src/subs/default-error-handler.js";

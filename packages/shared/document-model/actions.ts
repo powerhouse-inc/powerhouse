@@ -441,6 +441,7 @@ export async function buildSignedAction<
   return operationWithContext(operation, actionContext);
 }
 
+/** @deprecated Use `verifyActionSignature` from `@powerhousedao/reactor`. */
 export async function verifyOperationSignature(
   signature: Signature,
   signer: Omit<ActionSigner, "signatures">,
