@@ -26,6 +26,11 @@ a note that the suite has no such pair, plus a caveat for every case whose
 relative margin of error exceeds 5% or whose sample count is under 100. Your
 own text is appended to those, never in place of them.
 
+A case whose name ends in [reference] is a reference cost rather than a point on
+its suite's sweep: no spread pairs it, and it gets a conclusion of its own that
+states its rate. Mark the case in the bench file and add the rename to the
+target's \`renames\`, so the record says which case it continues.
+
 A dirty tree is refused. The entry is stamped with the current commit, and on
 a dirty tree that sha describes code that did not run.`;
 

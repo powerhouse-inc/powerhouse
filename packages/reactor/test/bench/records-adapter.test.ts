@@ -413,6 +413,67 @@ describe("buildMicroEntry", () => {
       "cold miss 100 ops: input validation only over cold miss 100 ops: instrumented cold-miss replay",
     );
   });
+
+  it("holds a reference case out of the spread it would otherwise headline", () => {
+    const suites = [
+      sizedSuite("bench/event-bus.bench.ts > Mixed", [
+        ["10 subscribers (90% sync, 10% async)", 1600000],
+        ["25 subscribers (50% sync, 50% async)", 590000],
+        ["50 subscribers (50% sync, 50% async)", 320000],
+        [
+          "50 subscribers (50% sync, 50% yield via setImmediate) [reference]",
+          2900,
+        ],
+      ]),
+    ];
+
+    const entry = entryFor(findTarget("auth"), { suites });
+    const results = entry.results as {
+      derived: { name: string; value: number; unit: string; note: string }[];
+    };
+
+    expect(results.derived).toEqual([
+      {
+        name: "Mixed: spread",
+        value: 5,
+        unit: "x",
+        note: "10 subscribers (90% sync, 10% async) over 50 subscribers (50% sync, 50% async)",
+      },
+    ]);
+    expect(entry.conclusions).toEqual([
+      "In Mixed, 50 subscribers (50% sync, 50% async) is 5x slower than 10 subscribers (90% sync, 10% async)",
+      "In Mixed, 50 subscribers (50% sync, 50% yield via setImmediate) [reference] ran at 2900 ops/sec, held out of the spread as a reference cost on another mechanism",
+    ]);
+  });
+
+  it("treats a suite of nothing but reference cases as its own sweep", () => {
+    const suites = [
+      sizedSuite("bench/event-bus.bench.ts > All Reference", [
+        ["fast [reference]", 400],
+        ["slow [reference]", 100],
+      ]),
+    ];
+
+    const results = entryFor(findTarget("auth"), { suites }).results as {
+      derived: { name: string; value: number }[];
+    };
+
+    expect(results.derived).toEqual([
+      expect.objectContaining({ name: "All Reference: spread", value: 4 }),
+    ]);
+  });
+
+  it("stamps the macrotask reference case with the name it continues", () => {
+    const renamed = findTarget("events").renames;
+
+    expect(
+      renamed[
+        "50 subscribers (50% sync, 50% yield to macrotask via setImmediate)"
+      ],
+    ).toBe(
+      "50 subscribers (50% sync, 50% yield to macrotask via setImmediate) [reference]",
+    );
+  });
 });
 
 /**
