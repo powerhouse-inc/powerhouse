@@ -81,6 +81,7 @@ function harness(
     ) => Promise<PagedResults<OperationWithContext>>;
     onOperations?: (ops: OperationWithContext[]) => Promise<void>;
     onDisconnect?: () => Promise<void>;
+    routedThrough?: () => number;
   } = {},
 ): Harness {
   const delivered: number[][] = [];
@@ -105,6 +106,7 @@ function harness(
     cursor,
     floor: options.floor ?? 0,
     readSince: options.readSince ?? pagedIndex(options.index ?? []),
+    routedThrough: options.routedThrough ?? (() => Number.MAX_SAFE_INTEGER),
     persist: (state) => {
       persisted.push({ ...state });
       return Promise.resolve();
@@ -249,6 +251,7 @@ describe("ProcessorQueue", () => {
         cursor,
         floor: 0,
         readSince: pagedIndex([]),
+        routedThrough: () => Number.MAX_SAFE_INTEGER,
         persist: () => Promise.reject(new Error("db down")),
         logger: createMockLogger(),
       });
@@ -409,7 +412,7 @@ describe("ProcessorQueue", () => {
       const backfill = queue.backfill();
       const live = queue.live([op(3), op(4)]);
       gate.resolve();
-      await Promise.all([backfill, live]);
+      await Promise.all([backfill, live, queue.advance(0)]);
 
       expect(delivered).toEqual([[1, 2, 3], [4]]);
     });
@@ -427,7 +430,7 @@ describe("ProcessorQueue", () => {
       const backfill = queue.backfill();
       const lives = [queue.live([op(3)]), queue.live([op(2)])];
       gate.resolve();
-      await Promise.all([backfill, ...lives]);
+      await Promise.all([backfill, ...lives, queue.advance(0)]);
 
       expect(delivered).toEqual([[1, 3], [2]]);
     });
@@ -446,10 +449,42 @@ describe("ProcessorQueue", () => {
       const backfill = queue.backfill();
       const live = queue.live([op(150)]);
       gate.resolve();
-      await Promise.all([backfill, live]);
+      await Promise.all([backfill, live, queue.advance(0)]);
 
       expect(delivered).toEqual([[100, 200], [150]]);
       expect(cursor.lastOrdinal).toBe(200);
+    });
+
+    it("should not hold a live caller behind a backfill", async () => {
+      const gate = deferred();
+      let calls = 0;
+      const { queue, delivered } = harness({
+        index: [op(1)],
+        onOperations: async () => {
+          if (calls++ === 0) await gate.promise;
+        },
+      });
+
+      const backfill = queue.backfill();
+      await queue.live([op(2)]);
+      expect(delivered).toEqual([]);
+
+      gate.resolve();
+      await Promise.all([backfill, queue.advance(0)]);
+      expect(delivered).toEqual([[1], [2]]);
+    });
+
+    it("should drop a live op the backfill delivered before routing reached it", async () => {
+      const { queue, delivered } = harness({
+        index: [op(1), op(2)],
+        routedThrough: () => 1,
+      });
+
+      await queue.backfill();
+      await queue.live([op(2)]);
+      await queue.live([op(2)]);
+
+      expect(delivered).toEqual([[1, 2], [2]]);
     });
 
     it("should close the window once the queue drains", async () => {

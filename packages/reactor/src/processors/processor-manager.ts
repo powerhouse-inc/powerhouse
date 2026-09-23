@@ -3,7 +3,6 @@ import type {
   PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
 import type {
-  IProcessor,
   IProcessorManager,
   ProcessorFactory,
   ProcessorRecord,
@@ -23,6 +22,10 @@ import type {
 } from "../read-models/types.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import {
+  ProcessorQueue,
+  type ProcessorCursorState,
+} from "./processor-queue.js";
+import {
   createMinimalDriveHeader,
   extractDeletedDocumentId,
   extractDriveHeader,
@@ -31,35 +34,18 @@ import {
   resolveProcessorSlots,
 } from "./utils.js";
 
-// Live-versus-backfill bookkeeping for one processor.
-type DeliveryState = {
-  // Ordinal through which a backfill has delivered. Live routing dedupes
-  // against this, not against lastOrdinal: batches reach the manager out of
-  // ordinal order across documents, and lastOrdinal is the high-water mark a
-  // restart replays from.
-  backfilledThrough: number;
-  // Live batches held while a backfill runs; undefined when none is running.
-  pending: OperationWithContext[] | undefined;
-  backfill: Promise<void> | undefined;
-  retired: boolean;
+// A factory run in progress; batches routed meanwhile are left to backfill.
+type PendingSlot = {
+  factoryId: string;
+  driveId: string;
+  // Highest ordinal routed before the slot existed.
+  reservedAt: number;
+  lowestRoutedOrdinal: number | undefined;
 };
 
-// Batches from init span documents; they take every key.
-const MIXED_KEY = "*";
+type Bound = { tracked: TrackedProcessor; queue: ProcessorQueue };
 
-function reentrantCall(method: string): Error {
-  return new Error(
-    `ProcessorManager.${method} was called from inside a processor or factory callback while the manager held its lock for that callback; the call would wait on itself. Make it after the callback returns.`,
-  );
-}
-
-function keyOf(items: OperationWithContext[]): string {
-  const first = items[0]!.context.documentId;
-  for (const item of items) {
-    if (item.context.documentId !== first) return MIXED_KEY;
-  }
-  return first;
-}
+type FactoryRun = () => Promise<void>;
 
 export type ProcessorManagerOptions = {
   // Key cursors by array position (default). Off derives stable keys from
@@ -67,38 +53,23 @@ export type ProcessorManagerOptions = {
   legacyProcessorIds?: boolean;
 };
 
-/**
- * Manages processor lifecycle based on operations.
- * Extends BaseReadModel to receive operations from ReadModelCoordinator.
- *
- * Responsibilities:
- * 1. Detect drive creation from CREATE_DOCUMENT operations
- * 2. Create processors for each drive using registered factories
- * 3. Route operations to matching processors based on filters
- * 4. Clean up processors when drives are deleted or factories are unregistered
- * 5. Track per-processor cursors for failure recovery and backfill
- */
+// Routing tables are only read or written synchronously; everything that
+// touches a processor runs on that processor's queue.
 export class ProcessorManager
   extends BaseReadModel
   implements IProcessorManager
 {
   private factoryRegistry: Map<string, ProcessorFactory> = new Map();
-  private processorsByDrive: Map<string, TrackedProcessor[]> = new Map();
-  private factoryToProcessors: Map<string, Map<string, TrackedProcessor[]>> =
-    new Map();
+  private processorsByDrive: Map<string, Bound[]> = new Map();
+  private pendingSlots: Set<PendingSlot> = new Set();
   private knownDrives: Map<string, string> = new Map();
+  private highestRoutedOrdinal = 0;
   private cursorCache: Map<string, ProcessorCursorRow> = new Map();
-  private delivery = new WeakMap<TrackedProcessor, DeliveryState>();
+  // Serializes every cursor row write per processor id.
+  private cursorWrites: Map<string, Promise<void>> = new Map();
   private logger: ILogger;
   private driveContainerTypes: ReadonlySet<string>;
   private legacyProcessorIds: boolean;
-  // One pass at a time per document; registry mutations take every key.
-  private tails = new Map<string, Promise<void>>();
-  private registry: Promise<void> = Promise.resolve();
-  // Backfills a pass started, awaited by that pass once its key is released.
-  private spawned = new Map<string, Promise<void>[]>();
-  // True only for the synchronous part of a callback made under a key.
-  private inCallback = false;
 
   constructor(
     db: Kysely<DocumentViewDatabase>,
@@ -119,49 +90,56 @@ export class ProcessorManager
     this.legacyProcessorIds = options.legacyProcessorIds ?? true;
   }
 
-  // Takes no key: it indexes through indexOperations, which does.
   override async init(): Promise<void> {
     await super.init();
     await this.loadAllCursors();
     await this.discoverExistingDrives();
   }
 
-  override async indexOperations(items: OperationWithContext[]): Promise<void> {
-    if (items.length === 0) return;
-
-    const key = keyOf(items);
-    const section = () => super.indexOperations(items);
-    try {
-      await (key === MIXED_KEY
-        ? this.exclusive("indexOperations", section)
-        : this.keyed(key, "indexOperations", section));
-    } finally {
-      await this.awaitSpawned(key);
-    }
-  }
-
   protected override async commitOperations(
     items: OperationWithContext[],
   ): Promise<void> {
-    await this.detectAndRegisterNewDrives(items);
-    await this.detectAndCleanupDeletedDrives(items);
-    await this.routeOperationsToProcessors(items);
+    const { runs, reserved } = this.detectNewDrives(items);
+    const disconnects = this.detectDeletedDrives(items);
+    const deliveries = this.enqueueRouted(items, reserved);
+
+    await Promise.all([
+      ...runs.map((run) => run()),
+      ...disconnects,
+      ...deliveries,
+    ]);
   }
 
   async registerFactory(
     identifier: string,
     factory: ProcessorFactory,
   ): Promise<void> {
-    const backfills = await this.exclusive("registerFactory", () =>
-      this.registerFactoryUnlocked(identifier, factory),
-    );
-    await Promise.all(backfills);
+    const removals = this.removeFactory(identifier);
+    this.factoryRegistry.set(identifier, factory);
+
+    // A late registration has no creation batch to anchor to: "current"
+    // means from here on.
+    const creationOrdinal = this.highWater() + 1;
+    const runs: FactoryRun[] = [];
+    for (const [driveId, documentType] of this.knownDrives) {
+      runs.push(
+        this.reserveSlot(
+          identifier,
+          factory,
+          driveId,
+          createMinimalDriveHeader(driveId, documentType),
+          creationOrdinal,
+          undefined,
+          false,
+        ).run,
+      );
+    }
+
+    await Promise.all([...removals, ...runs.map((run) => run())]);
   }
 
-  unregisterFactory(identifier: string): Promise<void> {
-    return this.exclusive("unregisterFactory", () =>
-      this.unregisterFactoryUnlocked(identifier),
-    );
+  async unregisterFactory(identifier: string): Promise<void> {
+    await Promise.all(this.removeFactory(identifier));
   }
 
   get(processorId: string): TrackedProcessor | undefined {
@@ -175,158 +153,339 @@ export class ProcessorManager
     return Array.from(this.allTrackedProcessors());
   }
 
-  // The lock keeps a document's batches one at a time and in arrival order,
-  // and keeps the processor tables still while a pass reads them: a drive's
-  // processors are created before or after a pass over its own operations,
-  // never during one. Delivery to a processor that is backfilling, and the
-  // backfill itself, run outside it. A method holding a key must never wait
-  // on another keyed or exclusive call: it would wait on itself.
-  private keyed<T>(
-    key: string,
-    method: string,
-    work: () => Promise<T>,
-  ): Promise<T> {
-    if (this.inCallback) return Promise.reject(reentrantCall(method));
+  /** Synchronous: reserves a slot per registered factory for each new drive. */
+  protected detectNewDrives(items: OperationWithContext[]): {
+    runs: FactoryRun[];
+    reserved: Set<PendingSlot>;
+  } {
+    const runs: FactoryRun[] = [];
+    const reserved = new Set<PendingSlot>();
 
-    const previous = Promise.all([
-      this.tails.get(key) ?? Promise.resolve(),
-      this.registry,
-    ]);
-    const run = previous.then(work);
-    const settled = run.then(
-      () => undefined,
-      () => undefined,
-    );
-    this.tails.set(key, settled);
-    void settled.then(() => {
-      if (this.tails.get(key) === settled) this.tails.delete(key);
-    });
-    return run;
-  }
-
-  private exclusive<T>(method: string, work: () => Promise<T>): Promise<T> {
-    if (this.inCallback) return Promise.reject(reentrantCall(method));
-
-    const previous = Promise.all([...this.tails.values(), this.registry]);
-    const run = previous.then(work);
-    this.registry = run.then(
-      () => undefined,
-      () => undefined,
-    );
-    return run;
-  }
-
-  // A call into the manager from the synchronous part of a callback would
-  // wait on the key the callback holds; it is rejected instead. One made
-  // after the callback's first await looks like any concurrent caller and is
-  // not detected: see the precondition on IProcessorManager.
-  private callback<T>(fn: () => Promise<T> | T): Promise<T> {
-    this.inCallback = true;
-    try {
-      return Promise.resolve(fn());
-    } finally {
-      this.inCallback = false;
-    }
-  }
-
-  private async registerFactoryUnlocked(
-    identifier: string,
-    factory: ProcessorFactory,
-  ): Promise<Promise<void>[]> {
-    if (this.factoryRegistry.has(identifier)) {
-      await this.unregisterFactoryUnlocked(identifier);
-    }
-
-    this.factoryRegistry.set(identifier, factory);
-    this.factoryToProcessors.set(identifier, new Map());
-
-    // A late registration has no creation batch to anchor to: "current"
-    // means from here on.
-    const creationOrdinal = this.lastOrdinal + 1;
-    const backfills: Promise<void>[] = [];
-    for (const [driveId, documentType] of this.knownDrives) {
-      const driveHeader = createMinimalDriveHeader(driveId, documentType);
-      backfills.push(
-        ...(await this.createProcessorsForDrive(
-          driveId,
-          identifier,
-          factory,
-          driveHeader,
-          creationOrdinal,
-        )),
-      );
-    }
-    return backfills;
-  }
-
-  private async unregisterFactoryUnlocked(identifier: string): Promise<void> {
-    const factoryProcessors = this.factoryToProcessors.get(identifier);
-    if (!factoryProcessors) return;
-
-    for (const [driveId, tracked] of factoryProcessors) {
-      for (const t of tracked) {
-        await this.retire(t);
-        await this.safeDisconnect(t.record.processor);
-      }
-
-      const driveProcessors = this.processorsByDrive.get(driveId);
-      if (driveProcessors) {
-        const remaining = driveProcessors.filter((p) => !tracked.includes(p));
-        if (remaining.length > 0) {
-          this.processorsByDrive.set(driveId, remaining);
-        } else {
-          this.processorsByDrive.delete(driveId);
-        }
-      }
-    }
-
-    await this.deleteProcessorCursors({ factoryId: identifier });
-    this.factoryToProcessors.delete(identifier);
-    this.factoryRegistry.delete(identifier);
-  }
-
-  private *allTrackedProcessors(): Iterable<TrackedProcessor> {
-    for (const tracked of this.processorsByDrive.values()) {
-      yield* tracked;
-    }
-  }
-
-  private async detectAndRegisterNewDrives(
-    operations: OperationWithContext[],
-  ): Promise<void> {
-    for (const op of operations) {
+    for (const op of items) {
       if (!this.isDriveCreation(op)) continue;
 
       const driveId = op.context.documentId;
       if (this.knownDrives.has(driveId)) continue;
-
       this.knownDrives.set(driveId, op.context.documentType);
 
       const driveHeader = extractDriveHeader(op);
       if (!driveHeader) continue;
 
-      const key = keyOf(operations);
-      const backfills = this.spawned.get(key) ?? [];
-      this.spawned.set(key, backfills);
       for (const [identifier, factory] of this.factoryRegistry) {
-        backfills.push(
-          ...(await this.createProcessorsForDrive(
-            driveId,
-            identifier,
-            factory,
-            driveHeader,
-            op.context.ordinal,
-          )),
+        const { slot, run } = this.reserveSlot(
+          identifier,
+          factory,
+          driveId,
+          driveHeader,
+          op.context.ordinal,
+          items,
+          true,
         );
+        reserved.add(slot);
+        runs.push(run);
       }
+    }
+
+    return { runs, reserved };
+  }
+
+  /** Synchronous: drops a deleted drive's processors from the tables. */
+  protected detectDeletedDrives(
+    items: OperationWithContext[],
+  ): Promise<void>[] {
+    const pending: Promise<void>[] = [];
+
+    for (const op of items) {
+      if (!isDriveDeletion(op)) continue;
+
+      const driveId = extractDeletedDocumentId(op);
+      if (!driveId || !this.knownDrives.has(driveId)) continue;
+      this.knownDrives.delete(driveId);
+
+      for (const slot of this.pendingSlots) {
+        if (slot.driveId === driveId) this.pendingSlots.delete(slot);
+      }
+
+      for (const { queue } of this.processorsByDrive.get(driveId) ?? []) {
+        pending.push(queue.close());
+      }
+      this.processorsByDrive.delete(driveId);
+      pending.push(...this.deleteCursors((row) => row.driveId === driveId));
+    }
+
+    return pending;
+  }
+
+  /** Synchronous: puts each processor's share of the batch on its queue. */
+  protected enqueueRouted(
+    items: OperationWithContext[],
+    reserved: ReadonlySet<PendingSlot>,
+  ): Promise<void>[] {
+    if (items.length === 0) return [];
+
+    let lowest = items[0]!.context.ordinal;
+    let highest = 0;
+    for (const item of items) {
+      lowest = Math.min(lowest, item.context.ordinal);
+      highest = Math.max(highest, item.context.ordinal);
+    }
+    this.highestRoutedOrdinal = Math.max(this.highestRoutedOrdinal, highest);
+
+    for (const slot of this.pendingSlots) {
+      if (reserved.has(slot)) continue;
+      slot.lowestRoutedOrdinal = Math.min(
+        slot.lowestRoutedOrdinal ?? lowest,
+        lowest,
+      );
+    }
+
+    const deliveries: Promise<void>[] = [];
+    for (const { tracked, queue } of this.allBound()) {
+      const matching = items.filter((op) =>
+        matchesFilter(op, tracked.record.filter),
+      );
+      if (matching.length > 0) {
+        deliveries.push(queue.live(matching));
+      } else {
+        // Not awaited: the pass waits only on processors it delivers to.
+        void queue.advance(highest);
+      }
+    }
+    return deliveries;
+  }
+
+  /** Synchronous: binds records, or discards them if the slot was cancelled. */
+  protected bind(
+    slot: PendingSlot,
+    records: ProcessorRecord[],
+    creationOrdinal: number,
+    creationItems: OperationWithContext[] | undefined,
+  ): { persisted: Promise<void>; delivered: Promise<void> } {
+    if (!this.pendingSlots.delete(slot)) {
+      const discarded = records.map((record) =>
+        this.discard(
+          slot,
+          record.processor.onDisconnect.bind(record.processor),
+        ),
+      );
+      const settled = Promise.all(discarded).then(() => undefined);
+      return { persisted: settled, delivered: settled };
+    }
+
+    const { factoryId, driveId, lowestRoutedOrdinal } = slot;
+    const ids = resolveProcessorSlots(records, this.legacyProcessorIds);
+    const bound: Bound[] = records.map((record, i) =>
+      this.track(
+        slot,
+        record,
+        i,
+        `${factoryId}:${driveId}:${ids[i]}`,
+        creationOrdinal,
+        lowestRoutedOrdinal,
+      ),
+    );
+
+    const drive = this.processorsByDrive.get(driveId) ?? [];
+    this.processorsByDrive.set(driveId, [...drive, ...bound]);
+
+    // Cursors this factory no longer produces for the drive are orphans.
+    const liveIds = new Set(bound.map((b) => b.tracked.processorId));
+    const writes = this.deleteCursors(
+      (row) =>
+        row.factoryId === factoryId &&
+        row.driveId === driveId &&
+        !liveIds.has(row.processorId),
+    );
+    for (const { tracked } of bound) {
+      writes.push(this.writeCursor(tracked, tracked));
+    }
+
+    const deliveries: Promise<void>[] = [];
+    for (const { tracked, queue } of bound) {
+      const missed =
+        tracked.lastOrdinal < slot.reservedAt ||
+        lowestRoutedOrdinal !== undefined;
+      if (tracked.status === "active" && missed) {
+        deliveries.push(queue.backfill());
+      }
+      const matching = creationItems?.filter((op) =>
+        matchesFilter(op, tracked.record.filter),
+      );
+      if (matching && matching.length > 0) {
+        deliveries.push(queue.live(matching));
+      }
+    }
+
+    return {
+      persisted: Promise.all(writes).then(() => undefined),
+      delivered: Promise.all(deliveries).then(() => undefined),
+    };
+  }
+
+  /** Synchronous: removes a factory's slots, processors and cursor rows. */
+  protected removeFactory(identifier: string): Promise<void>[] {
+    if (!this.factoryRegistry.delete(identifier)) return [];
+
+    for (const slot of this.pendingSlots) {
+      if (slot.factoryId === identifier) this.pendingSlots.delete(slot);
+    }
+
+    for (const [driveId, drive] of this.processorsByDrive) {
+      const remaining: Bound[] = [];
+      for (const b of drive) {
+        if (b.tracked.factoryId === identifier) {
+          // Not awaited: in-flight deliveries finish, then onDisconnect runs.
+          void b.queue.close();
+        } else {
+          remaining.push(b);
+        }
+      }
+      if (remaining.length > 0) {
+        this.processorsByDrive.set(driveId, remaining);
+      } else {
+        this.processorsByDrive.delete(driveId);
+      }
+    }
+
+    return this.deleteCursors((row) => row.factoryId === identifier);
+  }
+
+  private reserveSlot(
+    factoryId: string,
+    factory: ProcessorFactory,
+    driveId: string,
+    driveHeader: PHDocumentHeader,
+    creationOrdinal: number,
+    creationItems: OperationWithContext[] | undefined,
+    awaitDelivery: boolean,
+  ): { slot: PendingSlot; run: FactoryRun } {
+    const slot: PendingSlot = {
+      factoryId,
+      driveId,
+      reservedAt: this.highWater(),
+      lowestRoutedOrdinal: undefined,
+    };
+    this.pendingSlots.add(slot);
+
+    const run = async () => {
+      const records = await this.runFactory(slot, factory, driveHeader);
+      const { persisted, delivered } = this.bind(
+        slot,
+        records,
+        creationOrdinal,
+        creationItems,
+      );
+      await (awaitDelivery ? Promise.all([persisted, delivered]) : persisted);
+    };
+
+    return { slot, run };
+  }
+
+  private async runFactory(
+    slot: PendingSlot,
+    factory: ProcessorFactory,
+    driveHeader: PHDocumentHeader,
+  ): Promise<ProcessorRecord[]> {
+    try {
+      return await factory(driveHeader);
+    } catch (error) {
+      this.logger.error(
+        "Factory '@FactoryId' failed for drive '@DriveId': @Error",
+        slot.factoryId,
+        slot.driveId,
+        error,
+      );
+      return [];
     }
   }
 
-  private async awaitSpawned(key: string): Promise<void> {
-    const backfills = this.spawned.get(key);
-    if (!backfills) return;
-    this.spawned.delete(key);
-    await Promise.all(backfills);
+  private track(
+    slot: PendingSlot,
+    record: ProcessorRecord,
+    processorIndex: number,
+    processorId: string,
+    creationOrdinal: number,
+    lowestRoutedOrdinal: number | undefined,
+  ): Bound {
+    const cached = this.cursorCache.get(processorId);
+    let floor = 0;
+    let cursor: ProcessorCursorState;
+    if (cached) {
+      cursor = {
+        lastOrdinal: cached.lastOrdinal,
+        status: cached.status as ProcessorCursorState["status"],
+        lastError: cached.lastError ?? undefined,
+        lastErrorTimestamp: cached.lastErrorTimestamp ?? undefined,
+      };
+    } else {
+      if (record.startFrom === "current") floor = creationOrdinal - 1;
+      cursor = {
+        lastOrdinal: floor,
+        status: "active",
+        lastError: undefined,
+        lastErrorTimestamp: undefined,
+      };
+    }
+    if (lowestRoutedOrdinal !== undefined) {
+      cursor.lastOrdinal = Math.max(
+        floor,
+        Math.min(cursor.lastOrdinal, lowestRoutedOrdinal - 1),
+      );
+    }
+
+    const tracked: TrackedProcessor = {
+      processorId,
+      factoryId: slot.factoryId,
+      driveId: slot.driveId,
+      processorIndex,
+      record,
+      ...cursor,
+      retry: () => queue.retry(),
+    };
+    const queue = new ProcessorQueue({
+      processorId,
+      processor: record.processor,
+      filter: record.filter,
+      cursor: tracked,
+      floor,
+      readSince: (ordinal) => this.operationIndex.getSinceOrdinal(ordinal),
+      routedThrough: () => this.highWater(),
+      persist: (state) => this.writeCursor(tracked, state),
+      logger: this.logger,
+    });
+    return { tracked, queue };
+  }
+
+  private async discard(
+    slot: PendingSlot,
+    disconnect: () => Promise<void>,
+  ): Promise<void> {
+    try {
+      await disconnect();
+    } catch (error) {
+      this.logger.error(
+        "Error disconnecting discarded processor for '@FactoryId' on '@DriveId': @Error",
+        slot.factoryId,
+        slot.driveId,
+        error,
+      );
+    }
+  }
+
+  private highWater(): number {
+    return Math.max(this.lastOrdinal, this.highestRoutedOrdinal);
+  }
+
+  private *allBound(): Iterable<Bound> {
+    for (const drive of this.processorsByDrive.values()) {
+      yield* drive;
+    }
+  }
+
+  private *allTrackedProcessors(): Iterable<TrackedProcessor> {
+    for (const { tracked } of this.allBound()) {
+      yield tracked;
+    }
   }
 
   private isDriveCreation(op: OperationWithContext): boolean {
@@ -334,22 +493,6 @@ export class ProcessorManager
       op.operation.action.type === "CREATE_DOCUMENT" &&
       this.driveContainerTypes.has(op.context.documentType)
     );
-  }
-
-  private async detectAndCleanupDeletedDrives(
-    operations: OperationWithContext[],
-  ): Promise<void> {
-    for (const op of operations) {
-      if (!isDriveDeletion(op)) continue;
-
-      const driveId = extractDeletedDocumentId(op);
-      if (!driveId || !this.knownDrives.has(driveId)) continue;
-
-      if (!this.isDeletedDocumentADrive(driveId)) continue;
-
-      await this.cleanupDriveProcessors(driveId);
-      this.knownDrives.delete(driveId);
-    }
   }
 
   private async discoverExistingDrives(): Promise<void> {
@@ -365,331 +508,6 @@ export class ProcessorManager
     }
   }
 
-  private isDeletedDocumentADrive(documentId: string): boolean {
-    return this.knownDrives.has(documentId);
-  }
-
-  private async createProcessorsForDrive(
-    driveId: string,
-    identifier: string,
-    factory: ProcessorFactory,
-    driveHeader: PHDocumentHeader,
-    creationOrdinal: number,
-  ): Promise<Promise<void>[]> {
-    let records: ProcessorRecord[];
-
-    try {
-      records = await this.callback(() => factory(driveHeader));
-    } catch (error) {
-      this.logger.error(
-        "Factory '@FactoryId' failed for drive '@DriveId': @Error",
-        identifier,
-        driveId,
-        error,
-      );
-      return [];
-    }
-
-    if (records.length === 0) return [];
-
-    const trackedList: TrackedProcessor[] = [];
-    const slots = resolveProcessorSlots(records, this.legacyProcessorIds);
-
-    for (let i = 0; i < records.length; i++) {
-      const record = records[i]!;
-      const processorId = `${identifier}:${driveId}:${slots[i]}`;
-
-      const cached = this.cursorCache.get(processorId);
-      let lastOrdinal: number;
-      let status: "active" | "errored";
-      let lastError: string | undefined;
-      let lastErrorTimestamp: Date | undefined;
-
-      if (cached) {
-        lastOrdinal = cached.lastOrdinal;
-        status = cached.status as "active" | "errored";
-        lastError = cached.lastError ?? undefined;
-        lastErrorTimestamp = cached.lastErrorTimestamp ?? undefined;
-      } else {
-        const startFrom = record.startFrom ?? "beginning";
-        lastOrdinal = startFrom === "current" ? creationOrdinal - 1 : 0;
-        status = "active";
-        lastError = undefined;
-        lastErrorTimestamp = undefined;
-      }
-
-      const tracked: TrackedProcessor = {
-        processorId,
-        factoryId: identifier,
-        driveId,
-        processorIndex: i,
-        record,
-        lastOrdinal,
-        status,
-        lastError,
-        lastErrorTimestamp,
-        retry: () => this.retryProcessor(tracked),
-      };
-
-      trackedList.push(tracked);
-      this.stateOf(tracked).backfilledThrough = lastOrdinal;
-
-      await this.saveProcessorCursor(tracked);
-    }
-
-    // Cursors this factory no longer produces for the drive are orphans.
-    const liveIds = new Set(trackedList.map((t) => t.processorId));
-    await this.db
-      .deleteFrom("ProcessorCursor")
-      .where("factoryId", "=", identifier)
-      .where("driveId", "=", driveId)
-      .where("processorId", "not in", [...liveIds])
-      .execute();
-
-    for (const [id, row] of this.cursorCache) {
-      if (
-        row.factoryId === identifier &&
-        row.driveId === driveId &&
-        !liveIds.has(id)
-      ) {
-        this.cursorCache.delete(id);
-      }
-    }
-
-    const factoryProcessors = this.factoryToProcessors.get(identifier);
-    if (factoryProcessors) {
-      factoryProcessors.set(driveId, trackedList);
-    }
-
-    const existingDriveProcessors = this.processorsByDrive.get(driveId) ?? [];
-    this.processorsByDrive.set(driveId, [
-      ...existingDriveProcessors,
-      ...trackedList,
-    ]);
-
-    const backfills: Promise<void>[] = [];
-    for (const tracked of trackedList) {
-      if (
-        tracked.status === "active" &&
-        tracked.lastOrdinal < this.lastOrdinal
-      ) {
-        backfills.push(this.runBackfill(tracked));
-      }
-    }
-    return backfills;
-  }
-
-  private stateOf(tracked: TrackedProcessor): DeliveryState {
-    let state = this.delivery.get(tracked);
-    if (!state) {
-      state = {
-        backfilledThrough: 0,
-        pending: undefined,
-        backfill: undefined,
-        retired: false,
-      };
-      this.delivery.set(tracked, state);
-    }
-    return state;
-  }
-
-  // Holds live batches from this synchronous point until the backfill and
-  // the held batches have both been delivered.
-  private runBackfill(tracked: TrackedProcessor): Promise<void> {
-    const state = this.stateOf(tracked);
-    if (state.backfill) return state.backfill;
-
-    state.pending = [];
-    state.backfill = this.backfillThenDrain(tracked, state).finally(() => {
-      state.pending = undefined;
-      state.backfill = undefined;
-    });
-    return state.backfill;
-  }
-
-  private async backfillThenDrain(
-    tracked: TrackedProcessor,
-    state: DeliveryState,
-  ): Promise<void> {
-    await this.backfillProcessor(tracked, state);
-
-    while (state.pending !== undefined && state.pending.length > 0) {
-      const held = state.pending;
-      state.pending = [];
-      await this.route(tracked, held, true);
-    }
-  }
-
-  // Read through a call: the flag flips while a delivery is awaited.
-  private isRetired(tracked: TrackedProcessor): boolean {
-    return this.stateOf(tracked).retired;
-  }
-
-  private async retire(tracked: TrackedProcessor): Promise<void> {
-    const state = this.stateOf(tracked);
-    state.retired = true;
-    try {
-      await state.backfill;
-    } catch {
-      // Reported to whoever started the backfill.
-    }
-  }
-
-  private async backfillProcessor(
-    tracked: TrackedProcessor,
-    state: DeliveryState,
-  ): Promise<void> {
-    let page = await this.operationIndex.getSinceOrdinal(tracked.lastOrdinal);
-
-    while (page.results.length > 0) {
-      if (this.isRetired(tracked)) return;
-
-      const matching = page.results.filter((op) =>
-        matchesFilter(op, tracked.record.filter),
-      );
-
-      if (matching.length > 0) {
-        try {
-          await tracked.record.processor.onOperations(matching);
-        } catch (error) {
-          tracked.status = "errored";
-          tracked.lastError =
-            error instanceof Error ? error.message : String(error);
-          tracked.lastErrorTimestamp = new Date();
-          await this.safeSaveProcessorCursor(tracked);
-          this.logger.error(
-            "Processor '@ProcessorId' failed during backfill at ordinal @Ordinal: @Error",
-            tracked.processorId,
-            tracked.lastOrdinal,
-            error,
-          );
-          return;
-        }
-      }
-
-      if (this.isRetired(tracked)) return;
-      const lastResult = page.results[page.results.length - 1]!;
-      tracked.lastOrdinal = lastResult.context.ordinal;
-      state.backfilledThrough = tracked.lastOrdinal;
-      await this.safeSaveProcessorCursor(tracked);
-
-      if (!page.next) break;
-      page = await page.next();
-    }
-  }
-
-  private async retryProcessor(tracked: TrackedProcessor): Promise<void> {
-    if (tracked.status !== "errored") return;
-    tracked.status = "active";
-    tracked.lastError = undefined;
-    tracked.lastErrorTimestamp = undefined;
-    const backfill = this.runBackfill(tracked);
-    await this.saveProcessorCursor(tracked);
-    await backfill;
-  }
-
-  private async cleanupDriveProcessors(driveId: string): Promise<void> {
-    const processors = this.processorsByDrive.get(driveId);
-    if (!processors) return;
-
-    for (const tracked of processors) {
-      await this.retire(tracked);
-      await this.safeDisconnect(tracked.record.processor);
-    }
-
-    this.processorsByDrive.delete(driveId);
-
-    for (const factoryProcessors of this.factoryToProcessors.values()) {
-      factoryProcessors.delete(driveId);
-    }
-
-    await this.deleteProcessorCursors({ driveId });
-  }
-
-  private async safeDisconnect(processor: IProcessor): Promise<void> {
-    try {
-      await this.callback(() => processor.onDisconnect());
-    } catch (error) {
-      this.logger.error("Error disconnecting processor: @Error", error);
-    }
-  }
-
-  private async routeOperationsToProcessors(
-    operations: OperationWithContext[],
-  ): Promise<void> {
-    const allTracked = Array.from(this.allTrackedProcessors());
-    await Promise.all(
-      allTracked.map((tracked) => this.route(tracked, operations, false)),
-    );
-  }
-
-  private async route(
-    tracked: TrackedProcessor,
-    operations: OperationWithContext[],
-    fromHold: boolean,
-  ): Promise<void> {
-    const state = this.stateOf(tracked);
-    if (state.retired) return;
-
-    if (!fromHold && state.pending !== undefined) {
-      state.pending.push(...operations);
-      return;
-    }
-
-    const matching = operations.filter(
-      (op) =>
-        op.context.ordinal > state.backfilledThrough &&
-        matchesFilter(op, tracked.record.filter),
-    );
-
-    if (tracked.status !== "active") {
-      if (matching.length > 0) await this.parkBelow(tracked, matching);
-      return;
-    }
-
-    if (matching.length > 0) {
-      const deliver = () => tracked.record.processor.onOperations(matching);
-      try {
-        await (fromHold ? deliver() : this.callback(deliver));
-      } catch (error) {
-        tracked.status = "errored";
-        tracked.lastError =
-          error instanceof Error ? error.message : String(error);
-        tracked.lastErrorTimestamp = new Date();
-        await this.parkBelow(tracked, matching);
-        this.logger.error(
-          "Processor '@ProcessorId' failed at ordinal @Ordinal: @Error",
-          tracked.processorId,
-          tracked.lastOrdinal,
-          error,
-        );
-        return;
-      }
-    }
-
-    let maxOrdinal = 0;
-    for (const op of operations) {
-      maxOrdinal = Math.max(maxOrdinal, op.context.ordinal);
-    }
-    tracked.lastOrdinal = Math.max(tracked.lastOrdinal, maxOrdinal);
-    await this.safeSaveProcessorCursor(tracked);
-  }
-
-  // A batch the processor did not take must stay ahead of both cursors, or
-  // retry and restart would resume past it.
-  private async parkBelow(
-    tracked: TrackedProcessor,
-    missed: OperationWithContext[],
-  ): Promise<void> {
-    let lowest = missed[0]!.context.ordinal;
-    for (const op of missed) lowest = Math.min(lowest, op.context.ordinal);
-
-    tracked.lastOrdinal = Math.min(tracked.lastOrdinal, lowest - 1);
-    const state = this.stateOf(tracked);
-    state.backfilledThrough = Math.min(state.backfilledThrough, lowest - 1);
-    await this.safeSaveProcessorCursor(tracked);
-  }
-
   private async loadAllCursors(): Promise<void> {
     const rows = await this.db
       .selectFrom("ProcessorCursor")
@@ -701,78 +519,92 @@ export class ProcessorManager
     }
   }
 
-  private async safeSaveProcessorCursor(
-    tracked: TrackedProcessor,
+  private lane(
+    processorId: string,
+    write: () => Promise<unknown>,
   ): Promise<void> {
-    try {
-      await this.saveProcessorCursor(tracked);
-    } catch (error) {
-      this.logger.error(
-        "Failed to persist cursor for '@ProcessorId': @Error",
-        tracked.processorId,
-        error,
-      );
-    }
+    const previous = this.cursorWrites.get(processorId) ?? Promise.resolve();
+    const next = previous.then(write).then(
+      () => undefined,
+      (error: unknown) => {
+        this.logger.error(
+          "Failed to write cursor for '@ProcessorId': @Error",
+          processorId,
+          error,
+        );
+      },
+    );
+    this.cursorWrites.set(processorId, next);
+    void next.then(() => {
+      if (this.cursorWrites.get(processorId) === next) {
+        this.cursorWrites.delete(processorId);
+      }
+    });
+    return next;
   }
 
-  private async saveProcessorCursor(tracked: TrackedProcessor): Promise<void> {
-    await this.db
-      .insertInto("ProcessorCursor")
-      .values({
-        processorId: tracked.processorId,
-        factoryId: tracked.factoryId,
-        driveId: tracked.driveId,
-        processorIndex: tracked.processorIndex,
-        lastOrdinal: tracked.lastOrdinal,
-        status: tracked.status,
-        lastError: tracked.lastError ?? null,
-        lastErrorTimestamp: tracked.lastErrorTimestamp ?? null,
-        updatedAt: new Date(),
-      })
-      .onConflict((oc) =>
-        oc.column("processorId").doUpdateSet({
-          lastOrdinal: tracked.lastOrdinal,
-          status: tracked.status,
-          lastError: tracked.lastError ?? null,
-          lastErrorTimestamp: tracked.lastErrorTimestamp ?? null,
-          updatedAt: new Date(),
-        }),
-      )
-      .execute();
-
-    this.cursorCache.set(tracked.processorId, {
+  private writeCursor(
+    tracked: TrackedProcessor,
+    state: ProcessorCursorState,
+  ): Promise<void> {
+    const now = new Date();
+    const row: ProcessorCursorRow = {
       processorId: tracked.processorId,
       factoryId: tracked.factoryId,
       driveId: tracked.driveId,
       processorIndex: tracked.processorIndex,
-      lastOrdinal: tracked.lastOrdinal,
-      status: tracked.status,
-      lastError: tracked.lastError ?? null,
-      lastErrorTimestamp: tracked.lastErrorTimestamp ?? null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+      lastOrdinal: state.lastOrdinal,
+      status: state.status,
+      lastError: state.lastError ?? null,
+      lastErrorTimestamp: state.lastErrorTimestamp ?? null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.cursorCache.set(row.processorId, row);
+
+    return this.lane(row.processorId, () =>
+      this.db
+        .insertInto("ProcessorCursor")
+        .values({
+          processorId: row.processorId,
+          factoryId: row.factoryId,
+          driveId: row.driveId,
+          processorIndex: row.processorIndex,
+          lastOrdinal: row.lastOrdinal,
+          status: row.status,
+          lastError: row.lastError,
+          lastErrorTimestamp: row.lastErrorTimestamp,
+          updatedAt: now,
+        })
+        .onConflict((oc) =>
+          oc.column("processorId").doUpdateSet({
+            lastOrdinal: row.lastOrdinal,
+            status: row.status,
+            lastError: row.lastError,
+            lastErrorTimestamp: row.lastErrorTimestamp,
+            updatedAt: now,
+          }),
+        )
+        .execute(),
+    );
   }
 
-  private async deleteProcessorCursors(
-    filter: { factoryId: string } | { driveId: string },
-  ): Promise<void> {
-    if ("factoryId" in filter) {
-      await this.db
-        .deleteFrom("ProcessorCursor")
-        .where("factoryId", "=", filter.factoryId)
-        .execute();
-      for (const [id, row] of this.cursorCache) {
-        if (row.factoryId === filter.factoryId) this.cursorCache.delete(id);
-      }
-    } else {
-      await this.db
-        .deleteFrom("ProcessorCursor")
-        .where("driveId", "=", filter.driveId)
-        .execute();
-      for (const [id, row] of this.cursorCache) {
-        if (row.driveId === filter.driveId) this.cursorCache.delete(id);
-      }
+  private deleteCursors(
+    matches: (row: ProcessorCursorRow) => boolean,
+  ): Promise<void>[] {
+    const deletes: Promise<void>[] = [];
+    for (const [processorId, row] of this.cursorCache) {
+      if (!matches(row)) continue;
+      this.cursorCache.delete(processorId);
+      deletes.push(
+        this.lane(processorId, () =>
+          this.db
+            .deleteFrom("ProcessorCursor")
+            .where("processorId", "=", processorId)
+            .execute(),
+        ),
+      );
     }
+    return deletes;
   }
 }

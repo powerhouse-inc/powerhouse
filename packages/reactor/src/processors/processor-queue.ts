@@ -22,6 +22,8 @@ export type ProcessorQueueOptions = {
   /** Ordinals at or below this are never delivered. */
   floor: number;
   readSince: (ordinal: number) => Promise<PagedResults<OperationWithContext>>;
+  /** Highest ordinal routed so far; anything above it has yet to arrive live. */
+  routedThrough: () => number;
   persist: (cursor: ProcessorCursorState) => Promise<void>;
   logger: ILogger;
 };
@@ -54,8 +56,11 @@ export class ProcessorQueue {
   private running = false;
   private closed = false;
   private pendingAdvance: { through: number } | undefined;
+  private replaysAhead = 0;
   // Ordinals a backfill delivered, open until the queue drains.
   private overlap: Set<number> | undefined;
+  // Delivered by backfill before routing reached them; dropped once, live.
+  private readonly unrouted = new Set<number>();
 
   constructor(private readonly options: ProcessorQueueOptions) {}
 
@@ -63,9 +68,10 @@ export class ProcessorQueue {
     return this.closed;
   }
 
-  /** Delivers operations that already match the filter. */
+  /** Resolves at once behind a replay, so a pass never waits out a backfill. */
   live(ops: OperationWithContext[]): Promise<void> {
-    return this.enqueue("live", () => this.deliverLive(ops));
+    const delivered = this.enqueue("live", () => this.deliverLive(ops));
+    return this.replaysAhead > 0 ? Promise.resolve() : delivered;
   }
 
   /** Raises the cursor past a batch with nothing for this processor. */
@@ -89,12 +95,12 @@ export class ProcessorQueue {
 
   /** Replays from the cursor as it stands when the task runs. */
   backfill(): Promise<void> {
-    return this.enqueue("backfill", () => this.runBackfill());
+    return this.replay("backfill", () => this.runBackfill());
   }
 
   /** Clears an error and replays from the cursor. No-op when active. */
   retry(): Promise<void> {
-    return this.enqueue("retry", async () => {
+    return this.replay("retry", async () => {
       const { cursor } = this.options;
       if (cursor.status !== "errored") return;
       cursor.status = "active";
@@ -121,6 +127,21 @@ export class ProcessorQueue {
     });
     this.closed = true;
     return disconnect;
+  }
+
+  private replay(
+    kind: "backfill" | "retry",
+    run: () => Promise<void>,
+  ): Promise<void> {
+    if (this.closed) return Promise.resolve();
+    this.replaysAhead++;
+    return this.enqueue(kind, async () => {
+      try {
+        await run();
+      } finally {
+        this.replaysAhead--;
+      }
+    });
   }
 
   private enqueue(kind: Task["kind"], run: () => Promise<void>): Promise<void> {
@@ -158,9 +179,11 @@ export class ProcessorQueue {
   private async deliverLive(ops: OperationWithContext[]): Promise<void> {
     const { cursor, floor } = this.options;
     const overlap = this.overlap;
-    const fresh = ops.filter(
-      (op) => op.context.ordinal > floor && !overlap?.has(op.context.ordinal),
-    );
+    const fresh = ops.filter((op) => {
+      const ordinal = op.context.ordinal;
+      if (ordinal <= floor || overlap?.has(ordinal)) return false;
+      return !this.unrouted.delete(ordinal);
+    });
     if (fresh.length === 0) return;
 
     if (cursor.status !== "active") {
@@ -200,7 +223,11 @@ export class ProcessorQueue {
           await this.persist();
           return;
         }
-        for (const op of matching) overlap.add(op.context.ordinal);
+        const routed = this.options.routedThrough();
+        for (const op of matching) {
+          const ordinal = op.context.ordinal;
+          (ordinal > routed ? this.unrouted : overlap).add(ordinal);
+        }
       }
 
       await this.raiseCursor(highestOf(page.results));

@@ -176,6 +176,85 @@ function makeOp(
   };
 }
 
+// Flags a routing section entered while another is on the stack, or one that
+// hands back a promise instead of finishing synchronously.
+class GuardedProcessorManager extends ProcessorManager {
+  violations: string[] = [];
+  private depth = 0;
+
+  private guard<T>(name: string, section: () => T): T {
+    if (this.depth > 0) this.violations.push(`${name} nested`);
+    this.depth++;
+    try {
+      const result = section();
+      if (result instanceof Promise) this.violations.push(`${name} async`);
+      return result;
+    } finally {
+      this.depth--;
+    }
+  }
+
+  protected override detectNewDrives(
+    ...args: Parameters<ProcessorManager["detectNewDrives"]>
+  ) {
+    return this.guard("detectNewDrives", () => super.detectNewDrives(...args));
+  }
+
+  protected override detectDeletedDrives(
+    ...args: Parameters<ProcessorManager["detectDeletedDrives"]>
+  ) {
+    return this.guard("detectDeletedDrives", () =>
+      super.detectDeletedDrives(...args),
+    );
+  }
+
+  protected override enqueueRouted(
+    ...args: Parameters<ProcessorManager["enqueueRouted"]>
+  ) {
+    return this.guard("enqueueRouted", () => super.enqueueRouted(...args));
+  }
+
+  protected override bind(...args: Parameters<ProcessorManager["bind"]>) {
+    return this.guard("bind", () => super.bind(...args));
+  }
+
+  protected override removeFactory(
+    ...args: Parameters<ProcessorManager["removeFactory"]>
+  ) {
+    return this.guard("removeFactory", () => super.removeFactory(...args));
+  }
+}
+
+function makeDriveDeleteOp(
+  driveId: string,
+  ordinal: number,
+): OperationWithContext {
+  return {
+    operation: {
+      id: generateId(),
+      index: 1,
+      skip: 0,
+      hash: `hash-${ordinal}`,
+      timestampUtcMs: new Date().toISOString(),
+      action: {
+        id: generateId(),
+        type: "DELETE_DOCUMENT",
+        scope: "document",
+        timestampUtcMs: new Date().toISOString(),
+        input: { documentId: driveId },
+      },
+    },
+    context: {
+      documentId: driveId,
+      documentType: DRIVE_DOCUMENT_TYPE,
+      scope: "document",
+      branch: "main",
+      ordinal,
+      resultingState: JSON.stringify({}),
+    },
+  };
+}
+
 class HookedProcessorManager extends ProcessorManager {
   afterCommit: (items: OperationWithContext[]) => Promise<void> = () =>
     Promise.resolve();
@@ -1179,12 +1258,11 @@ describe("ProcessorManager Standalone Tests", () => {
       const { factory, processor } = createMockProcessorFactory();
       await processorManager.registerFactory("late-factory", factory);
 
-      // The processor should have received backfill ops
-      expect(processor.receivedOperations.length).toBeGreaterThan(0);
-
+      // Registration resolves once bound; the backfill runs on its queue.
       const tracked = processorManager.get(`late-factory:${driveId}:0`);
       expect(tracked).toBeDefined();
-      expect(tracked!.lastOrdinal).toBe(3);
+      await vi.waitFor(() => expect(tracked!.lastOrdinal).toBe(3));
+      expect(ordinalsOf(processor)).toEqual([1, 2, 3]);
     });
 
     it("should retry after error", async () => {
@@ -1557,7 +1635,7 @@ describe("ProcessorManager Standalone Tests", () => {
       expect(ordinalsOf(processor2)).toEqual([]);
     });
 
-    it("should not create processors while another pass is mid-flight", async () => {
+    it("should deliver a drive's operations once when its edit's pass is mid-flight during creation", async () => {
       const pm = new HookedProcessorManager(
         db as unknown as Kysely<DocumentViewDatabase>,
         operationIndex,
@@ -1589,15 +1667,9 @@ describe("ProcessorManager Standalone Tests", () => {
       const edit = pm.indexOperations([ops[2]!]);
       await editRouted.promise;
       const creation = pm.indexOperations([ops[0]!, ops[1]!]);
-      // A round trip on the idle connection: time enough for the creation
-      // pass to reach its factory if nothing held it back.
-      await db.selectFrom("ViewState").select("lastOrdinal").execute();
-      try {
-        expect(mock.factoryCallCount).toBe(0);
-      } finally {
-        release.resolve();
-      }
-      await Promise.all([edit, creation]);
+      await creation;
+      release.resolve();
+      await edit;
 
       expect(ordinalsOf(mock.processor)).toEqual([1, 2, 3]);
 
@@ -1726,7 +1798,9 @@ describe("ProcessorManager Standalone Tests", () => {
       release.resolve();
       await registration;
 
-      expect(ordinalsOf(processor)).toEqual([1, 2, 3, 4]);
+      await vi.waitFor(() =>
+        expect(ordinalsOf(processor)).toEqual([1, 2, 3, 4]),
+      );
     });
 
     it("should neither lose nor repeat a live batch that arrives mid-backfill", async () => {
@@ -1756,19 +1830,27 @@ describe("ProcessorManager Standalone Tests", () => {
       release.resolve();
       await registration;
 
+      const tracked = processorManager.get(`late:${driveId}:0`);
+      await vi.waitFor(() => expect(tracked!.lastOrdinal).toBe(3));
+      await db.selectFrom("ViewState").select("lastOrdinal").execute();
       expect(ordinalsOf(processor)).toEqual([1, 2, 3]);
     });
   });
 
   describe("Reentrant calls", () => {
-    it("should reject a registration made from inside a delivery and keep working", async () => {
+    it("should accept a registration made from inside a delivery", async () => {
       const driveId = generateId();
       const reentrant = createMockProcessor();
       const nested = createMockProcessorFactory({ documentId: ["*"] });
+      let registered: Promise<void> | undefined;
       reentrant.onOperations = vi
         .fn()
-        .mockImplementation(() =>
-          processorManager.registerFactory("nested", nested.factory),
+        .mockImplementation(
+          () =>
+            (registered ??= processorManager.registerFactory(
+              "nested",
+              nested.factory,
+            )),
         );
       const factory: ProcessorFactory = () => [
         { processor: reentrant, filter: { documentId: ["*"] } },
@@ -1780,15 +1862,18 @@ describe("ProcessorManager Standalone Tests", () => {
       await processorManager.indexOperations([ops[0]!]);
 
       const tracked = processorManager.get(`outer:${driveId}:0`);
-      expect(tracked).toBeDefined();
-      expect(tracked!.status).toBe("errored");
-      expect(tracked!.lastError).toMatch(/callback/);
-      expect(processorManager.get(`nested:${driveId}:0`)).toBeUndefined();
+      expect(tracked!.status).toBe("active");
+      const inner = processorManager.get(`nested:${driveId}:0`);
+      expect(inner).toBeDefined();
 
       const later = createMockProcessorFactory({ documentId: ["*"] });
       await processorManager.registerFactory("later", later.factory);
       await processorManager.indexOperations([ops[1]!]);
+      await vi.waitFor(() =>
+        expect(processorManager.get(`later:${driveId}:0`)!.lastOrdinal).toBe(2),
+      );
       expect(ordinalsOf(later.processor)).toEqual([1, 2]);
+      expect(ordinalsOf(nested.processor)).toEqual([1, 2]);
     });
   });
 
@@ -1890,6 +1975,274 @@ describe("ProcessorManager Standalone Tests", () => {
 
       expect(ordinalsOf(processor)).toContain(2);
       expect(ordinalsOf(processor)).toContain(3);
+    });
+  });
+
+  describe("Delivery queues", () => {
+    const CHILD = "powerhouse/document-model";
+
+    function hookedManager(): HookedProcessorManager {
+      return new HookedProcessorManager(
+        db as unknown as Kysely<DocumentViewDatabase>,
+        operationIndex,
+        mockWriteCache,
+        new ConsistencyTracker(),
+        new ConsoleLogger(["test"]),
+        DEFAULT_DRIVE_CONTAINER_TYPES,
+      );
+    }
+
+    async function cursorRow(processorId: string) {
+      return db
+        .selectFrom("ProcessorCursor")
+        .selectAll()
+        .where("processorId", "=", processorId)
+        .executeTakeFirst();
+    }
+
+    it("should keep every routing section synchronous and unnested", async () => {
+      const pm = new GuardedProcessorManager(
+        db as unknown as Kysely<DocumentViewDatabase>,
+        operationIndex,
+        mockWriteCache,
+        new ConsistencyTracker(),
+        new ConsoleLogger(["test"]),
+        DEFAULT_DRIVE_CONTAINER_TYPES,
+      );
+      await pm.init();
+
+      // Callbacks that call straight back into the manager, synchronously.
+      const nested = createMockProcessorFactory({ documentId: ["*"] });
+      const processor = createMockProcessor();
+      processor.onOperations = vi.fn().mockImplementation(() => {
+        void pm.registerFactory("nested", nested.factory);
+        void pm.unregisterFactory("nested");
+        return Promise.resolve();
+      });
+      const factory: ProcessorFactory = () => {
+        void pm.unregisterFactory("absent");
+        return [{ processor, filter: { documentId: ["*"] } }];
+      };
+      await pm.registerFactory("f", factory);
+
+      const driveId = generateId();
+      const ops = [
+        makeDriveCreateOp(driveId, 1),
+        makeOp(generateId(), 2, { documentType: CHILD }),
+        makeOp(generateId(), 3, { documentType: CHILD }),
+      ];
+      await writeToOperationIndex(operationIndex, ops);
+
+      await pm.indexOperations([ops[0]!]);
+      await Promise.all(ops.slice(1).map((op) => pm.indexOperations([op])));
+      await pm.registerFactory("f", factory);
+      await pm.indexOperations([
+        makeOp(generateId(), 5, { documentType: CHILD }),
+      ]);
+      await pm.indexOperations([makeDriveDeleteOp(driveId, 6)]);
+
+      expect(pm.violations).toEqual([]);
+      expect(processor.onOperations).toHaveBeenCalled();
+    });
+
+    it("should deliver a child created while its drive's factory runs exactly once", async () => {
+      const pm = hookedManager();
+      await pm.init();
+
+      const driveId = generateId();
+      const ops = [
+        makeDriveCreateOp(driveId, 1),
+        makeOp(generateId(), 2, {
+          actionType: "CREATE_DOCUMENT",
+          documentType: CHILD,
+          scope: "document",
+          index: 0,
+        }),
+      ];
+      await writeToOperationIndex(operationIndex, ops);
+
+      const processor = createMockProcessor();
+      const factoryEntered = deferred();
+      const releaseFactory = deferred();
+      const factory: ProcessorFactory = async () => {
+        factoryEntered.resolve();
+        await releaseFactory.promise;
+        return [{ processor, filter: { documentId: ["*"] } }];
+      };
+      await pm.registerFactory("f", factory);
+
+      // The child's pass routes, then stalls before it saves its cursor.
+      const childRouted = deferred();
+      const releaseChild = deferred();
+      pm.afterCommit = async (items) => {
+        if (items[0]!.context.ordinal === 2) {
+          childRouted.resolve();
+          await releaseChild.promise;
+        }
+      };
+
+      const creation = pm.indexOperations([ops[0]!]);
+      await factoryEntered.promise;
+      const child = pm.indexOperations([ops[1]!]);
+      await childRouted.promise;
+      releaseFactory.resolve();
+      await creation;
+      releaseChild.resolve();
+      await child;
+
+      expect(ordinalsOf(processor)).toEqual([1, 2]);
+    });
+
+    it("should let a processor unregister its own factory from inside onOperations", async () => {
+      const driveId = generateId();
+      const events: string[] = [];
+      const processor = createMockProcessor();
+      processor.onOperations = vi.fn().mockImplementation(async () => {
+        events.push("ops");
+        await processorManager.unregisterFactory("self");
+        events.push("unregistered");
+      });
+      processor.onDisconnect = vi.fn().mockImplementation(() => {
+        events.push("disconnect");
+        return Promise.resolve();
+      });
+      const factory: ProcessorFactory = () => [
+        { processor, filter: { documentId: ["*"] } },
+      ];
+      await processorManager.registerFactory("self", factory);
+
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      await vi.waitFor(() =>
+        expect(events).toEqual(["ops", "unregistered", "disconnect"]),
+      );
+      expect(processorManager.get(`self:${driveId}:0`)).toBeUndefined();
+      expect(await cursorRow(`self:${driveId}:0`)).toBeUndefined();
+    });
+
+    it("should not resurrect a deleted drive's cursor from a delivery in flight", async () => {
+      const driveId = generateId();
+      const held = deferred();
+      const release = deferred();
+      const processor = createMockProcessor();
+      processor.onOperations = vi
+        .fn()
+        .mockImplementation(async (ops: OperationWithContext[]) => {
+          if (ops.some((op) => op.context.ordinal === 2)) {
+            held.resolve();
+            await release.promise;
+          }
+        });
+      const factory: ProcessorFactory = () => [
+        { processor, filter: { documentId: ["*"] } },
+      ];
+      await processorManager.registerFactory("f", factory);
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      const child = processorManager.indexOperations([
+        makeOp(generateId(), 2, { documentType: CHILD }),
+      ]);
+      await held.promise;
+      const deletion = processorManager.indexOperations([
+        makeDriveDeleteOp(driveId, 3),
+      ]);
+      // A round trip on the idle connection: time enough for the deletion
+      // to reach the database.
+      await db.selectFrom("ViewState").select("lastOrdinal").execute();
+      release.resolve();
+      await Promise.all([child, deletion]);
+      await vi.waitFor(() => expect(processor.onDisconnect).toHaveBeenCalled());
+
+      expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined();
+    });
+
+    it("should not replay or persist when retrying a retired processor", async () => {
+      const driveId = generateId();
+      const processor = createMockProcessor();
+      processor.onOperations = vi
+        .fn()
+        .mockRejectedValue(new Error("always fails"));
+      const factory: ProcessorFactory = () => [
+        { processor, filter: { documentId: ["*"] } },
+      ];
+      await processorManager.registerFactory("f", factory);
+
+      const op = makeDriveCreateOp(driveId, 1);
+      await writeToOperationIndex(operationIndex, [op]);
+      await processorManager.indexOperations([op]);
+
+      const tracked = processorManager.get(`f:${driveId}:0`);
+      expect(tracked!.status).toBe("errored");
+      await processorManager.unregisterFactory("f");
+
+      await tracked!.retry();
+
+      expect(processor.onOperations).toHaveBeenCalledTimes(1);
+      expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined();
+    });
+
+    it("should never overlap two onOperations calls on one processor", async () => {
+      const driveId = generateId();
+      let inFlight = 0;
+      let maxInFlight = 0;
+      const processor = createMockProcessor();
+      processor.onOperations = vi.fn().mockImplementation(async () => {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((r) => setTimeout(r, 5));
+        inFlight--;
+      });
+      const factory: ProcessorFactory = () => [
+        { processor, filter: { documentId: ["*"] } },
+      ];
+      await processorManager.registerFactory("f", factory);
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      await Promise.all([
+        processorManager.indexOperations([
+          makeOp(generateId(), 2, { documentType: CHILD }),
+        ]),
+        processorManager.indexOperations([
+          makeOp(generateId(), 3, { documentType: CHILD }),
+        ]),
+      ]);
+
+      expect(processor.onOperations).toHaveBeenCalledTimes(3);
+      expect(maxInFlight).toBe(1);
+    });
+
+    it("should keep a park when a sibling document's delivery succeeds after it", async () => {
+      const driveId = generateId();
+      const processor = createMockProcessor();
+      processor.onOperations = vi
+        .fn()
+        .mockImplementation(async (ops: OperationWithContext[]) => {
+          if (ops.some((op) => op.context.ordinal === 2)) {
+            throw new Error("fails on 2");
+          }
+          if (ops.some((op) => op.context.ordinal === 3)) {
+            await new Promise((r) => setTimeout(r, 5));
+          }
+        });
+      const factory: ProcessorFactory = () => [
+        { processor, filter: { documentId: ["*"] } },
+      ];
+      await processorManager.registerFactory("f", factory);
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      await Promise.all([
+        processorManager.indexOperations([
+          makeOp(generateId(), 3, { documentType: CHILD }),
+        ]),
+        processorManager.indexOperations([
+          makeOp(generateId(), 2, { documentType: CHILD }),
+        ]),
+      ]);
+
+      const tracked = processorManager.get(`f:${driveId}:0`);
+      expect(tracked!.status).toBe("errored");
+      expect(tracked!.lastOrdinal).toBe(1);
+      expect((await cursorRow(`f:${driveId}:0`))?.lastOrdinal).toBe(1);
     });
   });
 });
@@ -2094,6 +2447,7 @@ describe("ProcessorManager Cursor Identity Across Restarts", () => {
     ]);
 
     // Never seen anything: full history expected.
+    await waitForCursor(second, added, seen[seen.length - 1]!);
     expect(ordinalsOf(added)).toEqual(seen);
     // Already caught up: nothing expected.
     expect(existing2.receivedOperations).toHaveLength(0);
