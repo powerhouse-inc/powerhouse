@@ -398,6 +398,7 @@ export async function buildOperationSignature(
   return [...params, `0x${ab2hex(signature)}`];
 }
 
+/** @deprecated Emits a legacy SHA-1 tuple; sign through `ISigner.signAction`. */
 export async function buildSignedAction<
   TState extends PHBaseState = PHBaseState,
 >(
