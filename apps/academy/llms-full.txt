@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-24T09:54:58.557Z
+> Generated: 2026-09-24T09:55:40.710Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -29934,7 +29934,7 @@ pnpm add -D @powerhousedao/pieces-framework
 A dev dependency, not a runtime one: the build inlines the framework into your
 piece rather than resolving it when the piece runs. More on why below.
 
-The API is [Activepieces](https://www.activepieces.com)' authoring API, unchanged, plus one addition: the reactor the piece is running inside. A piece written for Powerhouse is a valid Activepieces piece, and vice versa.
+The API is [Activepieces](https://www.activepieces.com)' authoring API, unchanged: a piece written for Powerhouse is a valid Activepieces piece, and vice versa. This tutorial covers what you need to ship one in a reactor package. For the full property catalogue, persistent storage, files and piece versioning, use their [piece reference](https://www.activepieces.com/docs/build-pieces/piece-reference/authentication). The framework tracks Activepieces `0.91.0`, so their current docs can get ahead of what you have installed.
 
 ## Generate the piece
 
@@ -30053,28 +30053,80 @@ Three of those deserve attention, because they're what makes a step usable by so
 
 ## Writing a trigger
 
-A trigger starts a run. It comes in two strategies, and the generator scaffolds either.
+A trigger starts a run. Its `run` hook returns an array, and **each item starts one workflow run** with that item as the trigger's output. Returning an empty array means nothing happened.
 
-**Polling** asks the service what's new on a schedule. It keeps a cursor so it reports each thing once:
+Every trigger declares a strategy with `type`, which decides how the reactor calls it. The reactor runs two of the four Activepieces strategies for a piece's triggers:
+
+| `type`                        | The reactor calls `run`                                                                             | Use it when                                          |
+| ----------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `TriggerStrategy.POLLING`     | On an interval: every minute by default, never more often than once a second                        | The service has no webhooks, or you can't reach them |
+| `TriggerStrategy.WEBHOOK`     | For each delivery to the workflow's endpoint, and on a slow reconciliation sweep (every 15 minutes) | The service can call a URL when something changes    |
+| `TriggerStrategy.APP_WEBHOOK` | Not supported: the reactor never reads the listeners it registers                                   | —                                                    |
+| `TriggerStrategy.MANUAL`      | Not supported for piece triggers                                                                    | Use `core#manual` instead                            |
+
+`type` is required and must be the enum member, not a string. The generator writes it for you (`--strategy polling` or `--strategy webhook`).
+
+Every trigger has the same hooks:
+
+- **`onEnable`** runs when a workflow using the trigger is switched on or republished, and **`onDisable`** when it's switched off or deleted.
+- **`run`** reports what's new.
+- **`test`** is optional. Studio calls it to fetch a real sample while someone is building the workflow. It gets a scratch `context.store` that's thrown away afterwards, so it can't move a live cursor.
+- **`sampleData`** is what Studio shows as the trigger's payload before it has ever fired. It lets someone build the rest of the workflow against real-looking fields rather than waiting for the trigger to fire.
+
+### Polling
+
+A polling trigger asks the service what's new and remembers what it has already reported:
 
 ```typescript
-async run(context) {
-  const records = await clientFor(context.auth).request<{ id: string }[]>({
-    path: "records",
-    query: { ordering: "-created" },
-  });
-  const seen = new Set(parseCursor(await context.store.get(CURSOR_KEY)).seen);
-  const fresh = records.filter((record) => !seen.has(record.id));
-  await context.store.put(CURSOR_KEY, { seen: records.map((r) => r.id) });
-  return fresh;
-}
+
+  createTrigger,
+  TriggerStrategy,
+} from "@powerhousedao/pieces-framework";
+
+export const crmNewRecordTrigger = createTrigger({
+  auth: crmAuth,
+  name: "new-record",
+  displayName: "New record",
+  description: "Fires once for each record created in the CRM",
+  type: TriggerStrategy.POLLING,
+  props: {},
+  sampleData: { id: "rec_1", name: "Example record" },
+  async onEnable(context) {
+    // Seed the cursor, so enabling doesn't replay the service's history.
+    const records = await listRecords(context.auth);
+    await context.store.put(CURSOR_KEY, { seen: records.map((r) => r.id) });
+  },
+  async onDisable(context) {
+    await context.store.delete(CURSOR_KEY);
+  },
+  async run(context) {
+    const records = await listRecords(context.auth);
+    const cursor = await context.store.get<{ seen: string[] }>(CURSOR_KEY);
+    const seen = new Set(cursor?.seen ?? []);
+    await context.store.put(CURSOR_KEY, { seen: records.map((r) => r.id) });
+    return records.filter((record) => !seen.has(record.id));
+  },
+});
 ```
 
-`context.store` is served by the host, scoped per workflow — two workflows watching the same service keep their own reading of it. Seed the cursor in `onEnable` so switching a workflow on doesn't replay the service's entire history as a flood of runs.
+`context.store` is served by the host, scoped per workflow, so two workflows watching the same service keep their own cursors. The cursor's shape is yours to choose: a set of ids, a timestamp, the service's own page token. It's the only thing that stops a trigger reporting the same item twice.
 
-**Webhook** has the service call you instead. The trigger registers a subscription in `onEnable` and removes it in `onDisable`, so enabling a workflow sets the integration up and disabling it tears the integration down — no manual step in someone's admin console to remember.
+A polling trigger can set its own cadence in `onEnable` with `context.setSchedule({ intervalMs })`. A `cronExpression` also works, but the reactor turns it into a fixed interval rather than firing at wall-clock times. A workflow author can override both with `pollEverySeconds` in the trigger's config, which the reactor reads itself and never passes to the piece.
 
-Both declare `sampleData`, which is what Studio shows as the trigger's payload before it has ever fired. It's what lets someone build the rest of the workflow against real-looking fields on a Monday morning rather than waiting for the trigger to fire.
+### Webhook
+
+A webhook trigger has the service call the reactor. In `onEnable`, `context.webhookUrl` is the address the reactor minted for this workflow: register it with the service there, and remove the registration in `onDisable`. That way, enabling a workflow sets the integration up and disabling it tears it down, with nothing to remember in someone's admin console.
+
+`run` is then called in two ways, and has to handle both:
+
+- **For a delivery**, `context.payload` holds the request. Turn its body into items.
+- **For the reconciliation sweep**, there's no payload. Ask the service for what changed since your cursor, as a polling trigger would. That's how the trigger recovers deliveries the service dropped.
+
+A reactor with no public webhook endpoint refuses to enable a webhook trigger, with "This trigger delivers by webhook, but no public webhook endpoint is configured for the reactor". If the service verifies an endpoint before it will deliver to it, declare `handshakeConfiguration` and answer the probe in `onHandshake`, as Activepieces documents.
+
+### Duplicate items
+
+An item carrying a `_dedupe_key` string doesn't start a second run if another item with the same key arrived in the last 30 seconds. That covers a delivery and the sweep reporting the same change moments apart. It doesn't replace the cursor, which is what keeps an item from coming back on the next poll.
 
 ## Authenticating
 
@@ -30094,7 +30146,52 @@ export const crmAuth = PieceAuth.CustomAuth({
 
 Write the `description` for the person who has to fill this in — where the token comes from, what the URL should look like, what permissions it needs. It's the only documentation they'll see at the moment they need it.
 
-Declaring a **connection check** is optional and worth doing: it's what makes Connect show a connection as healthy or broken, labelled with the account it's actually authenticated as, instead of leaving a misconfiguration to surface as a failed run later.
+Auth properties come from `PieceAuth`, action inputs from `Property`. A secret field is `PieceAuth.SecretText`; there is no `Property.SecretText`.
+
+### What your code receives
+
+The auth value arrives in two shapes, depending on where your code runs. This is Activepieces behaviour, and any Activepieces host does the same:
+
+| Where                                   | `auth` for `CustomAuth`                               | `auth` for `SecretText`                       |
+| --------------------------------------- | ----------------------------------------------------- | --------------------------------------------- |
+| An action's or trigger's `context.auth` | `{ type: "CUSTOM_AUTH", props: { baseUrl, apiKey } }` | `{ type: "SECRET_TEXT", secret_text: "..." }` |
+| `validate({ auth })`                    | `{ baseUrl, apiKey }`                                 | the token string                              |
+| `getConnectionIdentifier({ auth })`     | `{ baseUrl, apiKey }`                                 | the token string                              |
+
+The framework's types say which shape you have: `context.auth` is typed as the envelope in an action or trigger, and as the flat props in `validate` and `getConnectionIdentifier`, so reading the wrong one is a compile error. The generated `lib/common/auth-value.ts` also reads the auth through one helper that accepts both shapes, which lets a client take either:
+
+```typescript
+export function readAuth(auth: unknown): { baseUrl: string; apiKey: string } {
+  const source = isRecord(auth) && isRecord(auth.props) ? auth.props : auth;
+  // ...check source.baseUrl and source.apiKey, then return them
+}
+```
+
+### Checking a connection
+
+A connection check is what makes Connect show a connection as healthy or broken, instead of leaving a misconfiguration to surface as a failed run later, and which account it's authenticated as. Both come from two optional hooks on the auth, as Activepieces documents them:
+
+```typescript
+export const crmAuth = PieceAuth.CustomAuth({
+  // ...displayName, description, props as above
+  validate: async ({ auth }) => {
+    try {
+      await clientFor(auth).ping();
+      return { valid: true };
+    } catch (error) {
+      return { valid: false, error: String(error) };
+    }
+  },
+  getConnectionIdentifier: async ({ auth }) => {
+    const me = await clientFor(auth).request<{ email: string }>({ path: "me" });
+    return me.email;
+  },
+});
+```
+
+**`validate`** decides whether the connection works. It returns `{ valid: true }` or `{ valid: false, error }`, and the error is what the user sees on the connection. Throwing fails the check too, with the error's message. A piece whose auth has no `validate` passes the check once its credentials resolve.
+
+**`getConnectionIdentifier`** names the account. The reactor calls it only after the check passes, and stores the string it returns as the connection's account label. It's best-effort: returning `undefined` or throwing keeps the label the connection already had, and the check still passes.
 
 ## Reading and writing documents
 
@@ -30210,6 +30307,12 @@ an integration end to end — see
 ## Testing
 
 A piece is ordinary TypeScript, and an action's `run` is an ordinary async function — most of what you'll want to assert needs no workflow at all. Test the client and the transformations directly, the way you'd test any other module in the package.
+
+Typecheck it too. Vitest strips types without checking them, and the framework's types catch the mistakes that are easiest to make: a trigger with no `type`, `validate` returning the wrong shape, reading `context.auth` as flat props, a `Property.*` call that doesn't exist. `ph build` runs `tsc` before it bundles anything, and when `tsc` reports errors it asks whether to build anyway. Without a terminal to ask in, as in CI, it stops instead. `--ignore-type-errors` builds without asking, but it's unsafe: a piece with type errors can load and still fail at runtime, so fix the errors before you publish or deploy.
+
+The auth's hooks are plain functions as well. Call `crmAuth.validate` and `crmAuth.getConnectionIdentifier` with the flat value, `{ auth: { baseUrl, apiKey }, server }`, to test the check and the label against a stub of your service.
+
+Add one test that loads the piece definition itself and asserts its full list of action and trigger names. Tests that call actions one by one never import `index.ts`, so they stay green when an action is left out of it, or when the file doesn't load at all.
 
 For the rest, `@powerhousedao/reactor-workflow/testing` runs a piece the way a reactor will, without standing up a reactor to do it.
 
