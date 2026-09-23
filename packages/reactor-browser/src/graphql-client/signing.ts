@@ -74,8 +74,8 @@ export async function signStampedAction(
 /**
  * Actions a snapshot batch cannot predict the next state for.
  *
- * `UNDO`, `REDO` and `PRUNE` rewrite history the light read path never fetched
- * (and the reducer appends no operation for them); `NOOP` is only ever produced
+ * `UNDO` and `REDO` rewrite history the light read path never fetched (and
+ * the reducer appends no operation for them); `NOOP` is only ever produced
  * by an undo chain; the document-scope actions run through the reactor's
  * document-action handler rather than a document-model reducer
  * (`DOCUMENT_SCOPE_ACTIONS` in packages/reactor/src/executor/util.ts) and
@@ -84,7 +84,6 @@ export async function signStampedAction(
 const unsupportedBatchActions: ReadonlySet<string> = new Set([
   "UNDO",
   "REDO",
-  "PRUNE",
   "NOOP",
   "CREATE_DOCUMENT",
   "DELETE_DOCUMENT",
