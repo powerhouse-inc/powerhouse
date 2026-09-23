@@ -51,7 +51,7 @@ Four actions write the `auth` scope:
 | `REMOVE_GRANT`     | Removes a grant by `id`                           |
 | `MOVE_GRANT`       | Reorders a grant, which can change the outcome    |
 
-`UNDO`, `REDO` and `PRUNE` are refused on the `auth` scope.
+`UNDO` and `REDO` are refused on the `auth` scope.
 
 The creators are exported from `document-model` (and `@powerhousedao/shared/document-model`) alongside `Grant`:
 

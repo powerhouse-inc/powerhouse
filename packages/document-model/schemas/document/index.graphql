@@ -110,53 +110,15 @@ input RedoAction {
   input: RedoActionInput!
 }
 
-enum PRUNE {
-  PRUNE
-}
-
-input PruneActionInput {
-  start: Int
-  end: Int
-}
-
-input PruneAction {
-  type: PRUNE!
-  input: PruneActionInput!
-}
-
-enum LOAD_STATE {
-  LOAD_STATE
-}
-
-input LoadStateActionStateInput {
-  name: String!
-  data: Unknown
-  # How to define data?
-}
-
-input LoadStateActionInput {
-  state: LoadStateActionStateInput!
-  operations: Int!
-}
-
-input LoadStateAction {
-  type: LOAD_STATE!
-  input: LoadStateActionInput!
-}
-
 union DocumentAction =
   | SetNameAction
   | SetPreferredEditorAction
   | UndoAction
   | RedoAction
-  | PruneAction
-  | LoadStateAction
 
 type Mutation {
   setName(input: SetNameAction!): IDocument
   setPreferredEditor(input: SetPreferredEditorAction!): IDocument
   undo(input: UndoAction!): IDocument
   redo(input: RedoAction!): IDocument
-  prune(input: PruneAction!): IDocument
-  loadState(input: LoadStateAction!): IDocument
 }
