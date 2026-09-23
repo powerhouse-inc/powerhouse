@@ -1,6 +1,7 @@
 import type {
   Action,
   DocumentModelModule,
+  ISigner,
   Operation,
   OperationWithContext,
   PHDocument,
@@ -58,6 +59,8 @@ import {
   SignatureAdmission,
   type MutationAdmission,
 } from "./signature-admission.js";
+import { isSynthesized, signSynthesized } from "./synthesized-signing.js";
+import { PassthroughSigner } from "../signer/passthrough-signer.js";
 import { DEFAULT_DEFERRED_JOB_TTL_MS } from "./types.js";
 import type {
   ExecutingJob,
@@ -157,7 +160,9 @@ export class SimpleJobExecutor implements IJobExecutor {
   private signatureAdmission: SignatureAdmission;
   private documentActionHandler: DocumentActionHandler;
   private executionScope: IExecutionScope;
+  private signer: ISigner;
 
+  /** `signer` signs the operations the reducer synthesizes; unsigned if omitted. */
   constructor(
     private logger: ILogger,
     private registry: IDocumentModelRegistry,
@@ -170,7 +175,9 @@ export class SimpleJobExecutor implements IJobExecutor {
     private driveContainerTypes: ReadonlySet<string>,
     config: JobExecutorConfig,
     executionScope?: IExecutionScope,
+    signer?: ISigner,
   ) {
+    this.signer = signer ?? new PassthroughSigner();
     this.config = {
       featureFlags: config.featureFlags ?? {},
       maxSkipThreshold: config.maxSkipThreshold ?? MAX_SKIP_THRESHOLD,
@@ -930,6 +937,30 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     if (!isUndoRedo(action)) {
       newOperation.skip = skip;
+    }
+
+    // A peer's synthesized operation arrives signed and is admitted as is.
+    if (
+      deniedReason === undefined &&
+      sourceOperation === undefined &&
+      !executing.replayingAcceptedHistory &&
+      isSynthesized(action, newOperation, document.operations[scope] ?? [])
+    ) {
+      try {
+        await signSynthesized(
+          newOperation,
+          action,
+          { documentId: job.documentId, scope, branch: job.branch },
+          this.signer,
+          signal,
+        );
+      } catch (error) {
+        return buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        );
+      }
     }
 
     const resultingState = JSON.stringify({

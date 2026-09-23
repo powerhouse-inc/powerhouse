@@ -84,7 +84,10 @@ export class ReactorClientBuilder {
     return this;
   }
 
-  /** Signs submitted actions; verification needs no wiring. */
+  /**
+   * Signs submitted actions, and the operations a reactor built from
+   * `withReactorBuilder` synthesizes unless that builder has its own signer.
+   */
   public withSigner(config: ISigner | SignerConfig): this {
     if ("signer" in config) {
       this.signer = config.signer;
@@ -189,6 +192,9 @@ export class ReactorClientBuilder {
     if (this.reactorBuilder) {
       if (this.documentModelLoader) {
         this.reactorBuilder.withDocumentModelLoader(this.documentModelLoader);
+      }
+      if (this.signer && !this.reactorBuilder.hasSigner()) {
+        this.reactorBuilder.withSigner(this.signer);
       }
       reactorModule = await this.reactorBuilder.buildModule();
       reactor = reactorModule.reactor;

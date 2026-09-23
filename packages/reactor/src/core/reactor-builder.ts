@@ -1,4 +1,7 @@
-import type { UpgradeManifest } from "@powerhousedao/shared/document-model";
+import type {
+  ISigner,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
@@ -294,6 +297,7 @@ export class ReactorBuilder {
   private readModelCoordinator?: IReadModelCoordinator;
   private readModelCoordinatorFactory?: ReadModelCoordinatorFactory;
   private kyselyInstance?: Kysely<Database>;
+  private signer?: ISigner;
   private signalHandlersEnabled = false;
   private queueInstance?: IQueue;
   private channelScheme?: ChannelScheme;
@@ -406,6 +410,20 @@ export class ReactorBuilder {
   /** @deprecated No-op: the executor verifies signature integrity itself. */
   withSignatureVerifier(_verifier: SignatureVerificationHandler): this {
     return this;
+  }
+
+  /**
+   * Signs the operations the executor synthesizes: the NOOP an UNDO becomes and
+   * the action a REDO rebuilds. Without one they are stored unsigned.
+   */
+  withSigner(signer: ISigner): this {
+    this.signer = signer;
+    return this;
+  }
+
+  /** Whether {@link withSigner} was called. */
+  hasSigner(): boolean {
+    return this.signer !== undefined;
   }
 
   withKysely(kysely: Kysely<Database>): this {
@@ -756,6 +774,7 @@ export class ReactorBuilder {
               this.driveContainerTypes,
               this.executorConfig,
               executionScope,
+              this.signer,
             ),
           eventBus,
           queue,

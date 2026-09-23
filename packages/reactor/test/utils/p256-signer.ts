@@ -106,16 +106,19 @@ export class TestP256Signer {
   }
 
   /** An ISigner over this key, recording every target it signs for. */
-  asISigner(targets: ActionSigningTarget[] = []): ISigner {
+  asISigner(
+    targets: ActionSigningTarget[] = [],
+    user: ActionSigner["user"] = this.user,
+  ): ISigner {
     return {
-      user: this.user,
+      user,
       app: { name: "test", key: this.did },
       publicKey: this.keyPair.publicKey,
       sign: (data) => this.sign(data),
       verify: () => Promise.resolve(),
       signAction: (action, target) => {
         targets.push(target);
-        return this.v2Tuple(action, target);
+        return this.v2Tuple(action, target, user);
       },
     };
   }
