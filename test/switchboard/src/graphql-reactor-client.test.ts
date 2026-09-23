@@ -6,6 +6,7 @@ import type {
   Signature,
 } from "@powerhousedao/shared/document-model";
 import {
+  hashActionV2,
   setModelDescription,
   setModelName,
   setName,
@@ -62,25 +63,6 @@ async function countMutations<T>(
   } finally {
     globalThis.fetch = originalFetch;
   }
-}
-
-/**
- * The action hash a signature commits to, as `RenownCryptoSigner.hashAction`
- * computes it. Recomputed here from the operation the SERVER stored, so the
- * assertion below proves the signature covers that exact action rather than
- * whatever the client happened to hold.
- */
-async function hashAction(action: Action): Promise<string> {
-  const payload = [
-    action.scope,
-    action.type,
-    JSON.stringify(action.input),
-  ].join("");
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(payload),
-  );
-  return Buffer.from(digest).toString("base64");
 }
 
 describe("GraphQLReactorClient signed batches e2e", () => {
@@ -184,9 +166,9 @@ describe("GraphQLReactorClient signed batches e2e", () => {
     expect(pushed[1].context?.prevOpHash).toBe(storedBatch[0].hash);
     expect(pushed[2].context?.prevOpHash).toBe(storedBatch[1].hash);
 
-    // The executor verifies at admission, but only logs by default, so the
-    // real Renown verifier over what came back proves the batch is signed
-    // correctly and not merely signed.
+    // The server's executor refused anything that did not verify; the old
+    // Renown verifier over what came back proves a v2 tuple still passes a
+    // peer that has not upgraded.
     const verify = createSignatureVerifier(true);
     for (const operation of storedBatch) {
       const signer = operation.action.context?.signer;
@@ -228,7 +210,15 @@ describe("GraphQLReactorClient signed batches e2e", () => {
     for (const [offset, operation] of storedBatch.entries()) {
       const [, , signedActionHash, signedPrevOpHash] =
         operation.action.context!.signer!.signatures[0];
-      expect(signedActionHash).toBe(await hashAction(operation.action));
+      // Recomputed from the operation the SERVER stored, so this proves the
+      // signature covers that exact action in this document.
+      expect(signedActionHash).toBe(
+        await hashActionV2(
+          operation.action,
+          { documentId, branch: "main" },
+          operation.action.context!.signer!,
+        ),
+      );
       expect(signedPrevOpHash).toBe(
         offset === 0
           ? (pushed[0].context?.prevOpHash as string)
