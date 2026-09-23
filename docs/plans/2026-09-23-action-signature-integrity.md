@@ -58,10 +58,10 @@ mutation (`:420`) go through the same call. Connect wires a verifier too
    caller-supplied timestamps; a policy with no transition has no window to
    backdate into. Existing documents are legacy and stay legacy.
 3. **The requirement is bound to the document id.** The id of a v2-required
-   document is the creator's header signature, and `protocolVersions` joins
-   the signed header params. A competing CREATE with a different requirement
-   cannot produce the same id. This makes header signing live: a presigned
-   header with a random id cannot be v2-required.
+   document is a hash of its header params including `protocolVersions`. A
+   competing CREATE with a different requirement cannot produce the same id.
+   No key is involved, so presigned headers keep working; who created the
+   document is proven by the CREATE action's v2 tuple, not by the id.
 4. **Order is bound by the preimage, not by countersignatures.** v2 signs
    documentId, branch, scope, type, action id and timestamp, and the verifier
    requires the operation timestamp to equal the action timestamp. The
@@ -114,22 +114,30 @@ mutation (`:420`) go through the same call. Connect wires a verifier too
 
 // absent      = legacy document: any tuple or none, today's behaviour
 // signature 2 = v2-required: every operation carries a v2 tuple,
-//               the header is signed, PRUNE is refused
+//               the id is content-addressed, PRUNE is refused
 ```
 
 - `createDocumentFromAction` (`packages/reactor/src/executor/util.ts:137`)
-  already copies the map. Every create path adds the key and builds a signed
-  header: `core/reactor.ts:511`, `client/reactor-client.ts:993`,
+  already copies the map. Every create path adds the key and derives the id:
+  `core/reactor.ts:511`, `client/reactor-client.ts:993`,
   `client/drive-client.ts:114`, `reactor-drive-client.ts` (create, `addFile`,
   duplicate), `documents.ts:200` and `:254`, reactor-browser
   `actions/document.ts:566` and `:1117`.
-- The signed header payload becomes
-  `documentType:createdAtUtcIso:nonce:canonicalJson(protocolVersions)`
-  (`packages/shared/document-model/header.ts:10`). The id is that signature.
+
+```ts
+// id of a v2-required document
+id = base64url(sha256(canonicalJson({
+  documentType, createdAtUtcIso, nonce: header.sig.nonce, protocolVersions,
+})))
+```
+
+- `createPresignedHeader` (`packages/shared/document-model/header.ts:158`)
+  derives the id this way when `protocolVersions.signature` is set, and
+  takes a random id otherwise as today.
 - The verifier reads the target document's header from the write cache or
   document meta. For `CREATE_DOCUMENT`, and for later actions in the same
-  batch, it reads the CREATE input. A v2-required CREATE must carry a valid
-  header signature and a v2 tuple, or the job fails.
+  batch, it reads the CREATE input. A v2-required CREATE must carry an id
+  that recomputes from its input and a v2 tuple, or the job fails.
 - A document-scope action that writes to another document
   (`ADD_RELATIONSHIP` writes to `input.sourceId`) is verified under that
   document's header. Use the same `targetDocumentId` the write path uses
@@ -238,9 +246,9 @@ Each phase merges green to main on its own.
 | P1 Reactor-owned verifier | Integrity checking moves into the executor, always on, replacing the host-wired `SignatureVerificationHandler`. Recognises `v2:` (ECDSA only until P2). Recomputes legacy at mutation admission by hash length. Live-id check. Per-write admission. Load drops refused operations. Empty-key tuples are unsigned. Key cache. Log-only mode, default `log`. Delete `verifyOperations`; deprecate shared `verifyOperationSignature` and update the academy pages that recommend it and `createSignatureVerifier`. | Tampered legacy input is refused at mutation admission once `enforce` is set. Worker pools verify. |
 | P2 v2 scheme and signers | `hashActionV2`, `canonicalJson`, strict tuple parsing, timestamp equality, the `ISigner` change. Port #2974's target-document resolution and slug resolution before signing. Every signer emits v2: `ReactorClient` `execute`/`executeAsync`/`executeBatch`, the reactor's create/delete/relationship paths, the drive client, `reactor-drive-client.ts`, `migrate-legacy-state.ts`, reactor-browser `signing.ts` and `remote-controller.ts`, `actions/sign.ts` (retire the SHA-1 path), the Connect worker, the switchboard e2e helper, the bench host. Default flips to `enforce`. | New writes carry v2 tuples that verify everywhere, including on old peers. Tampered v2 operations are refused on every path. |
 | P3 Reactor signer | `SignerConfig.signer` reaches the executor and workers. NOOP from UNDO and the rebuilt REDO action are signed before the write. PRUNE refused on v2-required documents. | Synthesized operations carry the reactor's signature. |
-| P4 v2-required documents | `protocolVersions.signature`, signed headers with `protocolVersions` in the payload, header verification on CREATE, `SCHEME_BELOW_POLICY` and `UNSIGNED_REQUIRED`, header restored after upgrade reducers. Remove `REQUIRE_SIGNATURES` / `identity.requireSignatures`. | None until a document is created v2-required. |
+| P4 v2-required documents | `protocolVersions.signature`, content-addressed ids, id recompute on CREATE, `SCHEME_BELOW_POLICY` and `UNSIGNED_REQUIRED`, header restored after upgrade reducers. Remove `REQUIRE_SIGNATURES` / `identity.requireSignatures`. | None until a document is created v2-required. |
 | P5 Identity hook | `SignatureTrustPolicy.authorizeSigner`, admission-only, default by `authEnforcement`, `FactorySpec` for workers. Switchboard's Renown credential check. | Under `authEnforcement`, a key that cannot sign as its claimed address is refused. |
-| P6 v2-required by default | Every create path builds a signed header and sets `signature: 2`. | New documents refuse unsigned, legacy and PRUNE operations. |
+| P6 v2-required by default | Every create path sets `signature: 2` and derives the id. | New documents refuse unsigned, legacy and PRUNE operations. |
 
 ## Mixed-version rollout
 
@@ -276,9 +284,8 @@ Each phase merges green to main on its own.
 - **Policy:** v2-required refuses unsigned, empty-key, legacy and PRUNE;
   legacy documents accept all of them; CREATE is verified under its own
   input; later actions in the create batch too; `ADD_RELATIONSHIP` under the
-  target document's header; a CREATE with a header signature that does not
-  cover its `protocolVersions` is refused; an upgrade reducer cannot change
-  `protocolVersions`.
+  target document's header; a CREATE whose id does not recompute from its
+  input is refused; an upgrade reducer cannot change `protocolVersions`.
 - **Synthesized:** UNDO and REDO on a v2-required document produce signed
   operations that a peer accepts.
 - **Legacy:** renown and shared tuples both recompute at mutation admission;
