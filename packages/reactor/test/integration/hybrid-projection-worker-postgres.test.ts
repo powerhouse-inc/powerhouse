@@ -8,6 +8,7 @@ import { Kysely, PostgresDialect } from "kysely";
 import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { DocumentPurgeService } from "../../src/admin/document-purge-service.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { Database, InProcessReactorModule } from "../../src/core/types.js";
 import {
@@ -17,13 +18,17 @@ import {
 import { createHybridProjectionCoordinatorFactory } from "../../src/projection/create-hybrid-projection-coordinator.js";
 import { HybridProjectionCoordinator } from "../../src/projection/hybrid-projection-coordinator.js";
 import type { DbConfig } from "../../src/projection/protocol.js";
-import { createProjectionThreadTransport } from "../../src/projection/transport.js";
+import {
+  createProjectionThreadTransport,
+  type IProjectionTransport,
+} from "../../src/projection/transport.js";
 import type { IReadModel } from "../../src/read-models/interfaces.js";
 import {
   JobStatus,
   type JobInfo,
   type PagedResults,
 } from "../../src/shared/types.js";
+import { readPurgeJournal } from "../../src/storage/kysely/document-purger.js";
 import { createDocModelDocument } from "../factories.js";
 
 const PG_TEST_URL =
@@ -297,4 +302,162 @@ describe("hybrid projection worker over Postgres", () => {
     }
     expect([...counts.keys()].sort()).toEqual([...relayed].sort());
   });
+});
+
+describe("hybrid projection worker purge over Postgres", () => {
+  const PURGE_DATABASE = "reactor_hybrid_purge_test";
+  let adminPool: Pool | undefined;
+  const kyselys: Array<Kysely<Database>> = [];
+  const modules: InProcessReactorModule[] = [];
+  const transports: IProjectionTransport[] = [];
+
+  async function build(): Promise<InProcessReactorModule> {
+    const db = dbConfigFor(PG_TEST_URL, PURGE_DATABASE);
+    const kysely = new Kysely<Database>({
+      dialect: new PostgresDialect({
+        pool: new Pool({ ...db, max: 4, application_name: "purge-test-host" }),
+      }),
+    });
+    kyselys.push(kysely);
+    const built = await new ReactorBuilder()
+      .withKysely(kysely)
+      .withDocumentModelSources([
+        {
+          packageName: "document-model",
+          exportName: "documentModelDocumentModelModule",
+        },
+      ])
+      .withProjectionWorkerFactory(() => {
+        const transport = createProjectionThreadTransport(BOOTSTRAP_PATH);
+        transports.push(transport);
+        return transport;
+      })
+      .withReadModelCoordinatorFactory(
+        createHybridProjectionCoordinatorFactory({
+          db,
+          poolSize: 4,
+          initTimeoutMs: 60_000,
+          shutdownGraceMs: 500,
+        }),
+      )
+      .buildModule();
+    modules.push(built);
+    return built;
+  }
+
+  async function shutdown(module: InProcessReactorModule): Promise<void> {
+    await module.reactor.kill().completed;
+    await within(
+      (module.readModelCoordinator as HybridProjectionCoordinator).shutdown(),
+      "hybrid coordinator shutdown",
+      10_000,
+    );
+    modules.splice(modules.indexOf(module), 1);
+  }
+
+  async function deleted(module: InProcessReactorModule, id: string) {
+    const settle = async (job: JobInfo) =>
+      vi.waitUntil(
+        async () => {
+          const status = await module.reactor.getJobStatus(job.id);
+          if (status.status === JobStatus.FAILED) {
+            throw new Error(status.error?.message ?? "job failed");
+          }
+          return status.status === JobStatus.READ_READY;
+        },
+        { timeout: WITHIN_MS },
+      );
+    await settle(await module.reactor.create(createDocModelDocument({ id })));
+    await settle(await module.reactor.deleteDocument(id));
+    await module.readModelCoordinator.drain();
+  }
+
+  async function purgeCursors(
+    module: InProcessReactorModule,
+  ): Promise<Record<string, number>> {
+    const rows = await module.database
+      .selectFrom("ViewState")
+      .select(["readModelId", "lastPurgeOrdinal"])
+      .where("readModelId", "in", ["document-view", "document-indexer"])
+      .execute();
+    return Object.fromEntries(
+      rows.map((row) => [row.readModelId, Number(row.lastPurgeOrdinal)]),
+    );
+  }
+
+  beforeAll(async () => {
+    adminPool = new Pool({ connectionString: PG_TEST_URL });
+    await adminPool.query(
+      `SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+       WHERE datname = $1 AND pid <> pg_backend_pid()`,
+      [PURGE_DATABASE],
+    );
+    await adminPool.query(`DROP DATABASE IF EXISTS "${PURGE_DATABASE}"`);
+    await adminPool.query(`CREATE DATABASE "${PURGE_DATABASE}"`);
+  });
+
+  afterAll(async () => {
+    for (const module of [...modules]) await shutdown(module);
+    for (const kysely of kyselys) await kysely.destroy();
+    if (adminPool) {
+      await adminPool.query(
+        `SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+         WHERE datname = $1 AND pid <> pg_backend_pid()`,
+        [PURGE_DATABASE],
+      );
+      await adminPool.query(`DROP DATABASE IF EXISTS "${PURGE_DATABASE}"`);
+      await adminPool.end();
+    }
+  });
+
+  it("reaches the shard, reports a stopped one, and converges on restart", async () => {
+    const first = await build();
+    await deleted(first, "purge-a");
+    await deleted(first, "purge-b");
+    const service = new DocumentPurgeService(first);
+
+    const reached = await service.purgeDocuments(["purge-a"], {
+      directiveId: "shard-up",
+    });
+    expect(reached.unacknowledgedShards).toEqual([]);
+    const shardOutcomes = reached.readModels.filter((outcome) =>
+      outcome.readModelId.includes("/"),
+    );
+    expect(
+      shardOutcomes.map(({ readModelId, covered }) => ({
+        model: readModelId.split("/")[1],
+        covered,
+      })),
+    ).toEqual(
+      expect.arrayContaining([
+        { model: "document-view", covered: true },
+        { model: "document-indexer", covered: true },
+      ]),
+    );
+    const [firstEntry] = await readPurgeJournal(first.database, 0);
+    expect(await purgeCursors(first)).toEqual({
+      "document-view": firstEntry!.ordinal,
+      "document-indexer": firstEntry!.ordinal,
+    });
+
+    await transports[0]!.terminate();
+    const missed = await service.purgeDocuments(["purge-b"], {
+      directiveId: "shard-down",
+    });
+    expect(missed.purged).toEqual(["purge-b"]);
+    expect(missed.unacknowledgedShards).toEqual([0]);
+    expect(await purgeCursors(first)).toEqual({
+      "document-view": firstEntry!.ordinal,
+      "document-indexer": firstEntry!.ordinal,
+    });
+
+    // A new host and shard read the journal on init and catch up.
+    await shutdown(first);
+    const restarted = await build();
+    const journal = await readPurgeJournal(restarted.database, 0);
+    expect(await purgeCursors(restarted)).toEqual({
+      "document-view": journal.at(-1)!.ordinal,
+      "document-indexer": journal.at(-1)!.ordinal,
+    });
+  }, 120_000);
 });

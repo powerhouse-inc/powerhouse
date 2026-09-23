@@ -12,10 +12,15 @@ import {
   type Unsubscribe,
 } from "../events/types.js";
 import type {
+  IDocumentPurgingCoordinator,
   IReadModel,
-  IReadModelCoordinator,
 } from "../read-models/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
+import type {
+  PurgeDirective,
+  PurgeFanOutOutcome,
+  PurgeOutcome,
+} from "../shared/purge-types.js";
 import type { ConsistencyCoordinate } from "../shared/types.js";
 import type { ForwardingPoolInstrumentation } from "../storage/pool-instrumentation.js";
 import type {
@@ -23,6 +28,7 @@ import type {
   ChainDepthReport,
   DbConfig,
   ModelManifestEntry,
+  ProjectionDocumentsPurgedMessage,
   ProjectionDrainedMessage,
   ProjectionInitMessage,
   ProjectionParentMessage,
@@ -172,6 +178,14 @@ type ShardState = {
   onExit: (code: number) => void;
 };
 
+type PendingPurge = {
+  resolve: (fanOut: PurgeFanOutOutcome) => void;
+  remaining: Set<string>;
+  outcomes: PurgeOutcome[];
+  unacknowledged: number[];
+  timer: NodeJS.Timeout;
+};
+
 type PendingDrain = {
   resolve: () => void;
   reject: (err: Error) => void;
@@ -194,7 +208,7 @@ type PendingDrain = {
  * @see Sharded projection workers sub-feature brief
  *   (Powerhouse board wiki id: eb26f01f-8f68-4918-a6f6-ac7a4679b533)
  */
-export class ProjectionShardManager implements IReadModelCoordinator {
+export class ProjectionShardManager implements IDocumentPurgingCoordinator {
   readonly readModels: IReadModel[] = [];
 
   private readonly config: ProjectionShardManagerConfig;
@@ -206,6 +220,7 @@ export class ProjectionShardManager implements IReadModelCoordinator {
     { resolve: () => void; reject: (err: Error) => void; timer: NodeJS.Timeout }
   >();
   private readonly pendingDrains = new Map<string, PendingDrain>();
+  private readonly pendingPurges = new Map<string, PendingPurge>();
   private readonly trackersByReadModelName = new Map<
     string,
     IConsistencyTracker
@@ -359,6 +374,85 @@ export class ProjectionShardManager implements IReadModelCoordinator {
       shard.transport.postMessage({ type: "drain", correlationId });
     }
     await promise;
+  }
+
+  /**
+   * Broadcast to every ready shard, since a directive can span buckets. A shard
+   * that is down or does not answer is reported and converges on its restart.
+   */
+  purgeDocuments(
+    ids: string[],
+    directive: PurgeDirective,
+  ): Promise<PurgeFanOutOutcome> {
+    const unacknowledged = this.shards
+      .filter((s) => !s.ready)
+      .map((s) => s.shardIndex);
+    const readyShards = this.shards.filter((s) => s.ready);
+    if (readyShards.length === 0) {
+      return Promise.resolve({
+        outcomes: [],
+        unacknowledgedShards: unacknowledged,
+      });
+    }
+
+    const correlationId = randomUUID();
+    const drainTimeoutMs =
+      this.config.drainTimeoutMs ?? DEFAULT_DRAIN_TIMEOUT_MS;
+    const promise = new Promise<PurgeFanOutOutcome>((resolve) => {
+      const pending: PendingPurge = {
+        resolve,
+        remaining: new Set(readyShards.map((s) => s.shardId)),
+        outcomes: [],
+        unacknowledged,
+        timer: setTimeout(() => {
+          for (const shard of this.shards) {
+            if (pending.remaining.has(shard.shardId)) {
+              pending.unacknowledged.push(shard.shardIndex);
+            }
+          }
+          pending.remaining.clear();
+          this.settlePurge(correlationId, pending);
+        }, drainTimeoutMs),
+      };
+      this.pendingPurges.set(correlationId, pending);
+    });
+    for (const shard of readyShards) {
+      shard.transport.postMessage({
+        type: "purge-documents",
+        correlationId,
+        documentIds: ids,
+        directive,
+      });
+    }
+    return promise;
+  }
+
+  private handleDocumentsPurged(msg: ProjectionDocumentsPurgedMessage): void {
+    const pending = this.pendingPurges.get(msg.correlationId);
+    if (!pending) {
+      return;
+    }
+    pending.outcomes.push(
+      ...msg.outcomes.map((outcome) => ({
+        ...outcome,
+        readModelId: `${msg.shardId}/${outcome.readModelId}`,
+      })),
+    );
+    pending.remaining.delete(msg.shardId);
+    if (pending.remaining.size === 0) {
+      this.settlePurge(msg.correlationId, pending);
+    }
+  }
+
+  private settlePurge(correlationId: string, pending: PendingPurge): void {
+    this.pendingPurges.delete(correlationId);
+    clearTimeout(pending.timer);
+    pending.resolve({
+      outcomes: pending.outcomes,
+      unacknowledgedShards: [...new Set(pending.unacknowledged)].sort(
+        (a, b) => a - b,
+      ),
+    });
   }
 
   /** Emits JOB_READ_READY on the host bus; an `onReadReady` hook awaits this. */
@@ -565,6 +659,9 @@ export class ProjectionShardManager implements IReadModelCoordinator {
       case "drained":
         this.handleDrained(msg);
         return;
+      case "documents-purged":
+        this.handleDocumentsPurged(msg);
+        return;
       case "log":
         this.handleLog(shard, msg);
         return;
@@ -728,6 +825,13 @@ export class ProjectionShardManager implements IReadModelCoordinator {
     shard.pendingCoordinates.clear();
     for (const [correlationId, pending] of this.pendingDrains) {
       this.releaseDrain(correlationId, pending, shard.shardId);
+    }
+    for (const [correlationId, pending] of this.pendingPurges) {
+      if (!pending.remaining.delete(shard.shardId)) continue;
+      pending.unacknowledged.push(shard.shardIndex);
+      if (pending.remaining.size === 0) {
+        this.settlePurge(correlationId, pending);
+      }
     }
     if (
       this.failPendingInit(

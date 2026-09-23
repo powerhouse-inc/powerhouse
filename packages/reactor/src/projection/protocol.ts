@@ -22,6 +22,7 @@ import type {
   ReadModelStage,
 } from "../events/types.js";
 import type { ReadModelIndexingConfig } from "../read-models/base-read-model.js";
+import type { PurgeDirective, PurgeOutcome } from "../shared/purge-types.js";
 import type { JobMeta } from "../shared/types.js";
 
 export type { DbConfig, ModelManifestEntry, ReadModelIndexingConfig };
@@ -104,11 +105,20 @@ export type ProjectionShutdownMessage = {
   graceMs?: number;
 };
 
+/** Asks the worker to reconcile its read models against the purge journal. */
+export type ProjectionPurgeDocumentsMessage = {
+  type: "purge-documents";
+  correlationId: string;
+  documentIds: string[];
+  directive: PurgeDirective;
+};
+
 export type ProjectionParentMessage =
   | ProjectionInitMessage
   | ProjectionWriteReadyMessage
   | ProjectionDrainMessage
-  | ProjectionShutdownMessage;
+  | ProjectionShutdownMessage
+  | ProjectionPurgeDocumentsMessage;
 
 /**
  * Announces that the worker has finished `init` and is ready to accept
@@ -231,7 +241,16 @@ export type ProjectionLogMessage = {
   timestamp: number;
 };
 
+/** The worker's per-model outcomes for a `purge-documents` request. */
+export type ProjectionDocumentsPurgedMessage = {
+  type: "documents-purged";
+  correlationId: string;
+  shardId: string;
+  outcomes: PurgeOutcome[];
+};
+
 export type ProjectionWorkerMessage =
+  | ProjectionDocumentsPurgedMessage
   | ProjectionReadyMessage
   | ProjectionInitFailedMessage
   | ProjectionReadReadyMessage

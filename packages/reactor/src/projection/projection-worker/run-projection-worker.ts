@@ -18,6 +18,7 @@ import {
 import type {
   ProjectionInitMessage,
   ProjectionParentMessage,
+  ProjectionPurgeDocumentsMessage,
   ProjectionWorkerMessage,
 } from "../protocol.js";
 import {
@@ -296,6 +297,20 @@ export function runProjectionWorker(
     post({ type: "drained", correlationId, shardId });
   }
 
+  async function handlePurge(
+    msg: ProjectionPurgeDocumentsMessage,
+  ): Promise<void> {
+    const fanOut = stack
+      ? await stack.coordinator.purgeDocuments(msg.documentIds, msg.directive)
+      : { outcomes: [] };
+    post({
+      type: "documents-purged",
+      correlationId: msg.correlationId,
+      shardId,
+      outcomes: fanOut.outcomes,
+    });
+  }
+
   async function shutdownStack(): Promise<void> {
     stopDepthReporter();
     stopPoolReporter();
@@ -366,6 +381,24 @@ export function runProjectionWorker(
             message: "projection worker drain failed",
             args: [errorToInfo(err)],
             timestamp: Date.now(),
+          });
+        });
+        break;
+      }
+      case "purge-documents": {
+        handlePurge(msg).catch((err: unknown) => {
+          post({
+            type: "documents-purged",
+            correlationId: msg.correlationId,
+            shardId,
+            outcomes: [
+              {
+                readModelId: `projection-shard-${shardId}`,
+                rowsAffected: 0,
+                covered: true,
+                error: errorToInfo(err).message,
+              },
+            ],
           });
         });
         break;

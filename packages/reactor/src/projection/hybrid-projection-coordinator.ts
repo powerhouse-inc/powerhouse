@@ -8,10 +8,16 @@ import {
   type ReadModelIndexingStage,
 } from "../events/types.js";
 import type {
+  IDocumentPurgingCoordinator,
   ILiveReadModelCoordinator,
   IReadModel,
   ReadModelRegistrationStage,
 } from "../read-models/interfaces.js";
+import { purgeReadModels } from "../read-models/purge-fan-out.js";
+import type {
+  PurgeDirective,
+  PurgeFanOutOutcome,
+} from "../shared/purge-types.js";
 import type { ProjectionShardManager } from "./projection-shard-manager.js";
 
 export type HybridProjectionCoordinatorOptions = {
@@ -27,7 +33,9 @@ export type HybridProjectionCoordinatorOptions = {
 };
 
 /** Host-side stages on a per-queueKey chain driven by the worker's read-ready. */
-export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
+export class HybridProjectionCoordinator
+  implements ILiveReadModelCoordinator, IDocumentPurgingCoordinator
+{
   /** One array, mutated in place: reactor-api captures it by reference once. */
   readonly readModels: IReadModel[];
 
@@ -98,6 +106,23 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
       this.postReady.push(readModel);
     }
     this.readModels.push(readModel);
+  }
+
+  /** Host models here, then every shard; lookup-only models are the shards'. */
+  async purgeDocuments(
+    ids: string[],
+    directive: PurgeDirective,
+  ): Promise<PurgeFanOutOutcome> {
+    const host = await purgeReadModels(
+      [...this.preReady, ...this.postReady],
+      ids,
+      directive,
+    );
+    const shards = await this.manager.purgeDocuments(ids, directive);
+    return {
+      outcomes: [...host, ...shards.outcomes],
+      unacknowledgedShards: shards.unacknowledgedShards,
+    };
   }
 
   getChainDepth(): number {
