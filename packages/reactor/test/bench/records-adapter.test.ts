@@ -239,7 +239,9 @@ describe("buildMicroEntry", () => {
   });
 
   it("takes the tier from the target, so a stored call site is not filed as micro", () => {
-    expect(entryFor(findTarget("auth-storage")).tier).toBe("meso");
+    expect(entryFor(findTarget("auth-storage"), { suites: [] }).tier).toBe(
+      "meso",
+    );
   });
 
   it("never offers an id, which add-benchmark rejects", () => {
@@ -375,6 +377,7 @@ describe("buildMicroEntry", () => {
     // went on asserting the old text.
     const target = findTarget("cache");
     const caveats = entryFor(target, {
+      suites: [],
       derived: [{ name: "a harness reading", value: 1, unit: "us" }],
     }).caveats as string[];
 
@@ -495,7 +498,6 @@ describe("buildMicroEntry", () => {
     const suites = [
       sizedSuite("bench/event-bus.bench.ts > Mixed", [
         ["10 subscribers (90% sync, 10% async)", 1600000],
-        ["25 subscribers (50% sync, 50% async)", 590000],
         ["50 subscribers (50% sync, 50% async)", 320000],
         [
           "50 subscribers (50% sync, 50% yield via setImmediate) [reference]",
@@ -567,6 +569,141 @@ describe("buildMicroEntry", () => {
     expect((entry.conclusions as string[])[1]).toBe(
       "In Read/Write Split at 100 operations on the draft leg, draft leg 100 ops: mirrored body: reads + push + sort is 1.68x slower than draft leg 100 ops: mirrored body: push only",
     );
+  });
+
+  it("splits a nested decomposition into one spread per adjacent leg", () => {
+    const suites = [
+      sizedSuite("bench/write-cache.bench.ts > Decomposition (100 ops)", [
+        ["cold miss 100 ops: instrumented cold-miss replay", 390],
+        ["cold miss 100 ops: reducer body on plain state", 4550],
+        ["cold miss 100 ops: input validation only", 114000],
+      ]),
+    ];
+
+    const entry = entryFor(findTarget("cache"), {
+      suites,
+      derived: [{ name: "a harness reading", value: 1, unit: "us" }],
+    });
+    const results = entry.results as {
+      derived: { name: string; value: number; note: string }[];
+    };
+
+    expect(
+      results.derived
+        .filter((reading) => reading.name.startsWith("Decomposition"))
+        .map((reading) => [reading.name, reading.value, reading.note]),
+    ).toEqual([
+      [
+        "Decomposition (100 ops): input validation only vs reducer body on plain state",
+        25.05,
+        "cold miss 100 ops: input validation only over cold miss 100 ops: reducer body on plain state",
+      ],
+      [
+        "Decomposition (100 ops): reducer body on plain state vs instrumented cold-miss replay",
+        11.67,
+        "cold miss 100 ops: reducer body on plain state over cold miss 100 ops: instrumented cold-miss replay",
+      ],
+    ]);
+    expect((entry.conclusions as string[])[0]).toBe(
+      "In Decomposition (100 ops), cold miss 100 ops: input validation only runs at 25.05x the rate of cold miss 100 ops: reducer body on plain state",
+    );
+  });
+
+  it("refuses to reduce three undeclared cases at one size to their extremes", () => {
+    const suites = [
+      sizedSuite("bench/queue-perf.bench.ts > Three Legs", [
+        ["leg a at 100 ops", 900],
+        ["leg b at 100 ops", 300],
+        ["leg c at 100 ops", 100],
+      ]),
+    ];
+
+    expect(() => entryFor(findTarget("queue"), { suites })).toThrow(
+      /Three Legs at 100 operations has 3 comparable cases.*leg b at 100 ops/,
+    );
+  });
+
+  it("pairs the extremes once the extras are marked as references", () => {
+    const suites = [
+      sizedSuite("bench/queue-perf.bench.ts > Three Legs", [
+        ["leg a at 100 ops", 900],
+        ["leg b at 100 ops [reference]", 300],
+        ["leg c at 100 ops", 100],
+      ]),
+    ];
+
+    const results = entryFor(findTarget("queue"), { suites }).results as {
+      derived: { name: string; value: number }[];
+    };
+
+    expect(
+      results.derived.map((reading) => [reading.name, reading.value]),
+    ).toEqual([["Three Legs: spread", 9]]);
+  });
+
+  it("files no ratio between workloads declared as standing alone", () => {
+    const suites = [
+      sizedSuite("bench/queue-perf.bench.ts > InMemoryQueue hot-path", [
+        ["bulk enqueue throughput", 780],
+        ["dequeueNext fairness under contention", 530],
+        ["dependency scan with long chains", 560],
+        ["retry loop churn", 570],
+      ]),
+    ];
+
+    const entry = entryFor(findTarget("queue"), { suites });
+    const results = entry.results as {
+      derived: { name: string; value: number; unit: string }[];
+    };
+
+    expect(results.derived).toEqual([
+      expect.objectContaining({
+        name: "InMemoryQueue hot-path: comparable pairs",
+        value: 0,
+        unit: "count",
+      }),
+    ]);
+    expect((entry.conclusions as string[])[0]).toContain(
+      "every case is declared a workload of its own",
+    );
+  });
+
+  it("refuses a chain fragment that names more than one case in a group", () => {
+    const target: BenchTarget = {
+      ...findTarget("queue"),
+      spreadChains: [["leg", "leg c"]],
+    };
+    const suites = [
+      sizedSuite("bench/queue-perf.bench.ts > Three Legs", [
+        ["leg a at 100 ops", 900],
+        ["leg b at 100 ops", 300],
+        ["leg c at 100 ops", 100],
+      ]),
+    ];
+
+    expect(() => entryFor(target, { suites })).toThrow(
+      /fragment "leg" names 3 cases/,
+    );
+  });
+
+  it("does not take a sync case's document count for its operation count", () => {
+    const suites = [
+      sizedSuite("two-reactor sync", [
+        ["Baseline: 10 documents, 10 operations each", 1.6],
+        ["Contention: 10 documents, 10 operations each, alternating", 1.2],
+        ["Document Count: 50 documents, 10 operations each", 0.36],
+      ]),
+    ];
+
+    const results = entryFor(findTarget("sync"), { suites }).results as {
+      derived: { name: string; value: number }[];
+    };
+
+    expect(
+      results.derived.map((reading) => [reading.name, reading.value]),
+    ).toEqual([
+      ["two-reactor sync: spread at 10 operations, 10 documents", 1.33],
+    ]);
   });
 
   it("stamps the split baselines with the names they continue", () => {

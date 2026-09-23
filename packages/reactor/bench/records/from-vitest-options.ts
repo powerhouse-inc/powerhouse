@@ -31,6 +31,11 @@ its suite's sweep: no spread pairs it, and it gets a conclusion of its own that
 states its rate. Mark the case in the bench file and add the rename to the
 target's \`renames\`, so the record says which case it continues.
 
+A set of three or more such cases gets no fastest-over-slowest spread, which
+would drop every case between the two ends. It pairs only the adjacent steps
+the target's \`spreadChains\` declare, and the conversion fails when a case in
+it sits on no declared step and is not marked [reference].
+
 A dirty tree is refused. The entry is stamped with the current commit, and on
 a dirty tree that sha describes code that did not run.`;
 
