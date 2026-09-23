@@ -239,6 +239,40 @@ describe("RenownCryptoSigner", () => {
   });
 });
 
+describe("createSignatureVerifier and v2 tuples", () => {
+  it("accepts a v2-prefixed hash on ECDSA alone, so old peers admit v2 writes", async () => {
+    const renownCrypto = await new RenownCryptoBuilder()
+      .withKeyPairStorage(new MemoryKeyStorage())
+      .build();
+    const params: [string, string, string, string] = [
+      "1790000000",
+      renownCrypto.did,
+      `v2:${"A".repeat(43)}`,
+      "",
+    ];
+    const message = params.join("");
+    const bytes = await renownCrypto.sign(
+      new TextEncoder().encode(
+        "\x19Signed Operation:\n" + message.length.toString() + message,
+      ),
+    );
+    const hex = Array.from(bytes)
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+    const signature: Signature = [...params, `0x${hex}`];
+
+    const operation = createOperationWithSignature(
+      createTestAction(),
+      signature,
+      renownCrypto.did,
+    );
+
+    await expect(
+      createSignatureVerifier(true)(operation, renownCrypto.did),
+    ).resolves.toBe(true);
+  });
+});
+
 describe("parseSignatureHashField", () => {
   it("should parse old format (no resulting hash)", () => {
     const result = parseSignatureHashField("prev-hash-abc");
