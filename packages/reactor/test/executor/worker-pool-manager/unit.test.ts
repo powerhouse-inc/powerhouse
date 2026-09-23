@@ -98,6 +98,12 @@ class FakeWorker implements IExecutorWorker {
 
   loadModelCalls: ModelManifestEntry[] = [];
   loadModelImpl?: (entry: ModelManifestEntry) => Promise<void>;
+  invalidateCalls: string[][] = [];
+
+  invalidateDocuments(documentIds: string[]): Promise<void> {
+    this.invalidateCalls.push(documentIds);
+    return Promise.resolve();
+  }
 
   async loadModel(entry: ModelManifestEntry): Promise<void> {
     this.loadModelCalls.push(entry);
@@ -885,6 +891,18 @@ describe("WorkerPoolJobExecutorManager", () => {
         await manager.stop(true);
       },
     );
+  });
+
+  describe("invalidateDocuments", () => {
+    it("evicts the ids from every worker", async () => {
+      const manager = buildManager((i) => new FakeWorker({ index: i }));
+      await manager.start(3);
+      await manager.invalidateDocuments(["purged-1", "purged-2"]);
+      for (const w of createdWorkers) {
+        expect(w.invalidateCalls).toEqual([["purged-1", "purged-2"]]);
+      }
+      await manager.stop(true);
+    });
   });
 
   describe("loadModel broadcast", () => {

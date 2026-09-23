@@ -15,6 +15,7 @@ import {
 } from "../../../../src/executor/worker/run-worker.js";
 import type {
   InitMessage,
+  InvalidatedMessage,
   ModelLoadFailedMessage,
   ModelLoadedMessage,
   ReadyMessage,
@@ -29,6 +30,7 @@ import {
 import { KyselyOperationStore } from "../../../../src/storage/kysely/store.js";
 import { KyselyOperationIndex } from "../../../../src/cache/kysely-operation-index.js";
 import { DriveCollectionId } from "../../../../src/cache/operation-index-types.js";
+import { KyselyDocumentPurger } from "../../../../src/storage/kysely/document-purger.js";
 import type { Database as StorageDatabase } from "../../../../src/storage/kysely/types.js";
 
 type Harness = {
@@ -307,6 +309,89 @@ describe("runWorker in-process execution", () => {
       "ADD_FOLDER",
     );
     expect(result.writeReady!.jobMeta).toEqual(job.meta);
+  });
+
+  async function purgedAfterWarmCache() {
+    const h = await startInProcessWorker();
+    const ready = waitForMessage(
+      h.port1,
+      (m): m is ReadyMessage => m.type === "ready",
+    );
+    h.port1.postMessage(makeInit());
+    await ready;
+
+    const document = driveDocumentModelModule.utils.createDocument();
+    const documentId = document.header.id;
+    await preCreateDriveDocument(h.database, documentId, document.state);
+
+    const addFolder = (n: number): Job => ({
+      id: `job-folder-${n}`,
+      kind: "mutation",
+      documentId,
+      scope: "global",
+      branch: "main",
+      actions: [
+        {
+          id: `action-folder-${n}`,
+          type: "ADD_FOLDER",
+          scope: "global",
+          timestampUtcMs: new Date().toISOString(),
+          input: { id: `folder-${n}`, name: `F${n}`, parentFolder: null },
+        },
+      ],
+      operations: [],
+      createdAt: new Date().toISOString(),
+      queueHint: [],
+      retryCount: 0,
+      maxRetries: 0,
+      errorHistory: [],
+      meta: { batchId: `b-${n}`, batchJobIds: [`job-folder-${n}`] },
+    });
+    const execute = async (job: Job) => {
+      const result = waitForMessage(
+        h.port1,
+        (m): m is ResultMessage =>
+          m.type === "result" && m.correlationId === job.id,
+      );
+      h.port1.postMessage({ type: "execute", correlationId: job.id, job });
+      return (await result).result;
+    };
+
+    // Warms the worker's write cache with the drive's state.
+    expect((await execute(addFolder(1))).success).toBe(true);
+    await new KyselyDocumentPurger(
+      h.database.withSchema(REACTOR_SCHEMA) as unknown as Kysely<Database>,
+    ).purge([documentId], { directiveId: "worker" });
+
+    return { h, documentId, next: () => execute(addFolder(2)) };
+  }
+
+  it("serves a purged document from a stale cache without invalidate", async () => {
+    const { next } = await purgedAfterWarmCache();
+
+    const stale = await next();
+    expect(stale.success).toBe(false);
+    expect(stale.error?.message).toMatch(/Revision mismatch/);
+  });
+
+  it("evicts a document from its caches on invalidate", async () => {
+    const { h, documentId, next } = await purgedAfterWarmCache();
+
+    const invalidated = waitForMessage(
+      h.port1,
+      (m): m is InvalidatedMessage => m.type === "invalidated",
+    );
+    h.port1.postMessage({
+      type: "invalidate",
+      correlationId: "corr-invalidate",
+      documentIds: [documentId],
+    });
+    expect((await invalidated).correlationId).toBe("corr-invalidate");
+
+    // Read from the store now, which no longer has the document.
+    const after = await next();
+    expect(after.success).toBe(false);
+    expect(after.error?.message).toMatch(/not found/);
   });
 
   it("returns an error result when the document does not exist", async () => {

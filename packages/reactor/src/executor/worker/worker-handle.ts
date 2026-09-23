@@ -105,6 +105,11 @@ type PendingEntry =
       version: string;
       resolve: () => void;
       reject: (err: Error) => void;
+    }
+  | {
+      kind: "invalidate";
+      resolve: () => void;
+      reject: (err: Error) => void;
     };
 
 type Phase = "fresh" | "starting" | "ready" | "shutting-down" | "terminated";
@@ -414,6 +419,23 @@ export class WorkerHandle implements IExecutorWorker {
     return promise;
   }
 
+  public invalidateDocuments(documentIds: string[]): Promise<void> {
+    if (this.phase !== "ready") {
+      // A worker not serving jobs holds nothing another job could read.
+      return Promise.resolve();
+    }
+    const correlationId = this.nextCorrelationId();
+    const promise = new Promise<void>((resolve, reject) => {
+      this.pending.set(correlationId, { kind: "invalidate", resolve, reject });
+    });
+    this.transport.postMessage({
+      type: "invalidate",
+      correlationId,
+      documentIds,
+    });
+    return promise;
+  }
+
   public isIdle(): boolean {
     return this.inFlight === null && this.phase === "ready";
   }
@@ -443,6 +465,14 @@ export class WorkerHandle implements IExecutorWorker {
       case "model-loaded":
         this.handleModelLoaded(msg);
         return;
+      case "invalidated": {
+        const entry = this.pending.get(msg.correlationId);
+        if (entry?.kind === "invalidate") {
+          this.pending.delete(msg.correlationId);
+          entry.resolve();
+        }
+        return;
+      }
       case "model-load-failed":
         this.handleModelLoadFailed(msg);
         return;
@@ -624,6 +654,10 @@ export class WorkerHandle implements IExecutorWorker {
         entry.resolve();
       } else if (entry.kind === "init") {
         entry.reject(new WorkerInitFailedError(this.workerId, "worker exited"));
+      } else if (entry.kind === "invalidate") {
+        entry.reject(
+          new Error(`worker ${this.workerId} exited before invalidating`),
+        );
       } else if (entry.kind === "load-model") {
         entry.reject(
           new WorkerLoadModelFailedError(

@@ -292,12 +292,20 @@ export type LoadModelMessage = {
  * @see Wire Protocol Reference wiki page
  *   (Powerhouse board wiki id: 64c03e51-1aa4-4fa9-93d8-daa45642484d)
  */
+/** Evicts documents from the worker's own caches, as after a purge. */
+export type InvalidateMessage = {
+  type: "invalidate";
+  correlationId: string;
+  documentIds: string[];
+};
+
 export type ParentMessage =
   | InitMessage
   | ExecuteMessage
   | AbortMessage
   | ShutdownMessage
-  | LoadModelMessage;
+  | LoadModelMessage
+  | InvalidateMessage;
 
 // ---------------------------------------------------------------------------
 // Worker -> parent messages
@@ -444,7 +452,14 @@ export type PoolAcquireSamplesMessage = {
  * @see Wire Protocol Reference wiki page
  *   (Powerhouse board wiki id: 64c03e51-1aa4-4fa9-93d8-daa45642484d)
  */
+/** Acknowledges an `invalidate` once the worker's caches no longer hold the ids. */
+export type InvalidatedMessage = {
+  type: "invalidated";
+  correlationId: string;
+};
+
 export type WorkerMessage =
+  | InvalidatedMessage
   | ReadyMessage
   | ResultMessage
   | ModelLoadedMessage

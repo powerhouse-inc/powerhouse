@@ -16,9 +16,9 @@ import type {
 import { QueueEventTypes } from "../queue/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
 import type {
+  ICacheInvalidatingExecutorManager,
   IExecutorWorker,
   IJobExecutor,
-  IJobExecutorManager,
   WorkerExecutionOutcome,
 } from "./interfaces.js";
 import { DeferredJobs } from "./deferred-jobs.js";
@@ -81,7 +81,7 @@ export type WorkerFactory = (index: number) => IExecutorWorker;
  * @see Executor Worker Pool Design wiki page
  *   (Powerhouse board wiki id: d400d711-f07e-4389-a226-4e9fdd4fa8ba)
  */
-export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
+export class WorkerPoolJobExecutorManager implements ICacheInvalidatingExecutorManager {
   private workers: IExecutorWorker[] = [];
   private isRunning = false;
   private activeJobs = 0;
@@ -182,6 +182,29 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
    */
   getExecutors(): IJobExecutor[] {
     return [];
+  }
+
+  /** Drops deferred jobs for the ids and evicts them from every worker. */
+  async invalidateDocuments(documentIds: string[]): Promise<void> {
+    for (const id of documentIds) {
+      await this.deferredJobs.drop(id);
+    }
+    const results = await Promise.allSettled(
+      this.workers.map((w) =>
+        w.invalidateDocuments
+          ? w.invalidateDocuments(documentIds)
+          : Promise.resolve(),
+      ),
+    );
+    const failures = results.filter(
+      (r): r is PromiseRejectedResult => r.status === "rejected",
+    );
+    if (failures.length > 0) {
+      throw new AggregateError(
+        failures.map((f) => f.reason as unknown),
+        `${failures.length} worker(s) failed to invalidate`,
+      );
+    }
   }
 
   /**

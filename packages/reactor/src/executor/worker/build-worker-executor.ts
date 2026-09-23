@@ -51,6 +51,8 @@ export type WorkerExecutorStack = {
    * did not produce one for this job.
    */
   takeLastWriteReady(): WorkerWriteReadyCapture | null;
+  /** Evicts the documents from this worker's write, meta and membership caches. */
+  invalidateDocuments(documentIds: string[]): void;
 };
 
 export type BuildWorkerExecutorOptions = {
@@ -222,6 +224,13 @@ export async function buildWorkerExecutor(
   return {
     executor,
     registry,
+    invalidateDocuments(documentIds: string[]): void {
+      for (const id of documentIds) {
+        writeCache.invalidate(id);
+        documentMetaCache.invalidate(id);
+        collectionMembershipCache.invalidate(id);
+      }
+    },
     takeLastWriteReady(): WorkerWriteReadyCapture | null {
       const captured = lastWriteReady;
       lastWriteReady = null;

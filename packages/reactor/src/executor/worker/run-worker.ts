@@ -367,6 +367,13 @@ export function runWorker(
         break;
       }
 
+      case "invalidate": {
+        // Before init there is no cache to hold anything.
+        executorStack?.invalidateDocuments(msg.documentIds);
+        post({ type: "invalidated", correlationId: msg.correlationId });
+        break;
+      }
+
       case "load-model": {
         handleLoadModel(msg).catch((err: unknown) => {
           post({

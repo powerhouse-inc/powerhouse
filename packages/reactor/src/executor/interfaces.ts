@@ -79,6 +79,9 @@ export interface IExecutorWorker {
    */
   loadModel(entry: ModelManifestEntry, signal?: AbortSignal): Promise<void>;
 
+  /** Evicts documents from the worker's caches; optional for test fakes. */
+  invalidateDocuments?(documentIds: string[]): Promise<void>;
+
   /** True when no job is currently in flight. */
   isIdle(): boolean;
 

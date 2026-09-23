@@ -6,7 +6,10 @@ import type { IQueue } from "../queue/interfaces.js";
 import type { IJobExecutionHandle } from "../queue/types.js";
 import { QueueEventTypes } from "../queue/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
-import type { IJobExecutor, IJobExecutorManager } from "./interfaces.js";
+import type {
+  ICacheInvalidatingExecutorManager,
+  IJobExecutor,
+} from "./interfaces.js";
 import { DeferredJobs } from "./deferred-jobs.js";
 import {
   JobResultHandler,
@@ -29,7 +32,7 @@ export type JobExecutorFactory = () => IJobExecutor;
  * Manages multiple job executors and coordinates job distribution.
  * Listens for job available events and dispatches jobs to executors.
  */
-export class SimpleJobExecutorManager implements IJobExecutorManager {
+export class SimpleJobExecutorManager implements ICacheInvalidatingExecutorManager {
   private executors: IJobExecutor[] = [];
   private isRunning = false;
   private activeJobs = 0;
@@ -123,6 +126,13 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
 
     this.executors = [];
     this.isRunning = false;
+  }
+
+  /** The executors share the host's caches, so only deferred jobs remain. */
+  async invalidateDocuments(documentIds: string[]): Promise<void> {
+    for (const id of documentIds) {
+      await this.deferredJobs.drop(id);
+    }
   }
 
   getExecutors(): IJobExecutor[] {

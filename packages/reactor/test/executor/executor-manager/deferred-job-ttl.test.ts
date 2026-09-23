@@ -268,4 +268,25 @@ describe("a deferred job that its document never arrives for", () => {
       JobStatus.FAILED,
     );
   });
+
+  it("fails a deferred job at once when its document is purged", async () => {
+    await startManager(missingDocumentExecutor(), 60_000);
+    const job = createTestJob({
+      id: "purged-wait",
+      kind: "load",
+      documentId: "missing-doc",
+      scope: "global",
+    });
+    await queue.enqueue(job);
+    await settled(50);
+    expect(jobTracker.getJobStatus("purged-wait")?.status).not.toBe(
+      JobStatus.FAILED,
+    );
+
+    await manager.invalidateDocuments(["missing-doc"]);
+
+    const status = jobTracker.getJobStatus("purged-wait");
+    expect(status?.status).toBe(JobStatus.FAILED);
+    expect(status?.error?.name).toBe("DocumentPurgedError");
+  });
 });
