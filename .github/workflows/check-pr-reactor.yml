@@ -32,9 +32,7 @@ env:
   NX_ISOLATE_PLUGINS: false
 
 jobs:
-  # The suite split three ways. Shards are by file, and
-  # test/storage/operation/unit.test.ts alone takes ~11m, so more shards
-  # would not shorten the slowest one.
+  # Shards split by file, so the slowest file is the floor for any shard count.
   test-reactor:
     name: Test Reactor (shard ${{ matrix.shard }}/3)
     runs-on: ubuntu-24.04
