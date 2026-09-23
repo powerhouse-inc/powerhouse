@@ -26,7 +26,15 @@ export type HybridProjectionCoordinatorOptions = {
   lookupOnly: IReadModel[];
 };
 
-/** Host-side stages on a per-queueKey chain driven by the worker's read-ready. */
+type HostPreReadyStages = Pick<
+  ReadModelBatchCompletedEvent,
+  "chainWaitDurationMs" | "preReadyDurationMs" | "emitDurationMs"
+>;
+
+/**
+ * Host-side stages on per-queueKey chains driven by the worker's read-ready.
+ * Post-ready has its own chain so it never delays the next read-ready.
+ */
 export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
   /** One array, mutated in place: reactor-api captures it by reference once. */
   readonly readModels: IReadModel[];
@@ -37,6 +45,7 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
   private readonly preReady: IReadModel[];
   private readonly postReady: IReadModel[];
   private readonly chains = new Map<string, Promise<void>>();
+  private readonly postReadyChains = new Map<string, Promise<void>>();
 
   constructor(options: HybridProjectionCoordinatorOptions) {
     this.eventBus = options.eventBus;
@@ -77,14 +86,10 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
     const enqueuedAt = performance.now();
     const key = this.queueKeyFor(event);
     const previous = this.chains.get(key) ?? Promise.resolve();
-    const current = previous.then(() => this.runHostChain(event, enqueuedAt));
-
-    this.chains.set(key, current);
-    void current.finally(() => {
-      if (this.chains.get(key) === current) {
-        this.chains.delete(key);
-      }
-    });
+    const current = previous.then(() =>
+      this.runHostChain(event, key, enqueuedAt),
+    );
+    this.track(this.chains, key, current);
   }
 
   addReadModel(readModel: IReadModel, stage: ReadModelRegistrationStage): void {
@@ -101,14 +106,21 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
   }
 
   getChainDepth(): number {
-    return this.manager.getChainDepth() + this.chains.size;
+    return (
+      this.manager.getChainDepth() +
+      this.chains.size +
+      this.postReadyChains.size
+    );
   }
 
   /** Worker chains flush first, so every relayed read-ready is in `chains`. */
   async drain(): Promise<void> {
     await this.manager.drain();
-    while (this.chains.size > 0) {
-      const pending = Array.from(this.chains.values());
+    while (this.chains.size > 0 || this.postReadyChains.size > 0) {
+      const pending = [
+        ...this.chains.values(),
+        ...this.postReadyChains.values(),
+      ];
       await Promise.allSettled(pending);
     }
   }
@@ -126,8 +138,22 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
     await this.manager.shutdown();
   }
 
+  private track(
+    chains: Map<string, Promise<void>>,
+    key: string,
+    current: Promise<void>,
+  ): void {
+    chains.set(key, current);
+    void current.finally(() => {
+      if (chains.get(key) === current) {
+        chains.delete(key);
+      }
+    });
+  }
+
   private async runHostChain(
     event: JobReadReadyEvent,
+    key: string,
     enqueuedAt: number,
   ): Promise<void> {
     const chainWaitDurationMs = performance.now() - enqueuedAt;
@@ -162,6 +188,20 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
     }
     const emitDurationMs = performance.now() - emitStart;
 
+    const stages: HostPreReadyStages = {
+      chainWaitDurationMs,
+      preReadyDurationMs,
+      emitDurationMs,
+    };
+    const previous = this.postReadyChains.get(key) ?? Promise.resolve();
+    const current = previous.then(() => this.runHostPostReady(event, stages));
+    this.track(this.postReadyChains, key, current);
+  }
+
+  private async runHostPostReady(
+    event: JobReadReadyEvent,
+    stages: HostPreReadyStages,
+  ): Promise<void> {
     const postReadyStart = performance.now();
     try {
       await Promise.all(
@@ -185,9 +225,7 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
     this.emitBatchCompleted({
       jobId: event.jobId,
       batchSize: event.operations.length,
-      chainWaitDurationMs,
-      preReadyDurationMs,
-      emitDurationMs,
+      ...stages,
       postReadyDurationMs,
     });
   }

@@ -15,17 +15,24 @@ import type {
   ReadModelRegistrationStage,
 } from "./interfaces.js";
 
+type PreReadyStages = Pick<
+  ReadModelBatchCompletedEvent,
+  "chainWaitDurationMs" | "preReadyDurationMs" | "emitDurationMs"
+>;
+
 /**
  * Coordinates read model synchronization by listening to operation write events
  * and updating all registered read models on per-`documentId:scope:branch`
  * serial chains. Cross-key projection runs in parallel; same-key projection is
  * serialized so the executor can return to dispatch without holding ordering
- * implicitly.
+ * implicitly. Post-ready runs on a second per-key chain, so the next batch's
+ * pre-ready and JOB_READ_READY never wait on an earlier batch's post-ready.
  */
 export class ReadModelCoordinator implements ILiveReadModelCoordinator {
   private unsubscribe?: Unsubscribe;
   private isRunning = false;
   private readonly chains = new Map<string, Promise<void>>();
+  private readonly postReadyChains = new Map<string, Promise<void>>();
   private readonly logger: ILogger;
 
   readonly readModels: IReadModel[];
@@ -73,14 +80,17 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
    * consistency tokens instead.
    */
   async drain(): Promise<void> {
-    while (this.chains.size > 0) {
-      const pending = Array.from(this.chains.values());
+    while (this.chains.size > 0 || this.postReadyChains.size > 0) {
+      const pending = [
+        ...this.chains.values(),
+        ...this.postReadyChains.values(),
+      ];
       await Promise.allSettled(pending);
     }
   }
 
   getChainDepth(): number {
-    return this.chains.size;
+    return this.chains.size + this.postReadyChains.size;
   }
 
   addReadModel(readModel: IReadModel, stage: ReadModelRegistrationStage): void {
@@ -105,12 +115,19 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
     const enqueuedAt = performance.now();
     const key = this.queueKeyFor(event);
     const previous = this.chains.get(key) ?? Promise.resolve();
-    const current = previous.then(() => this.runChain(event, enqueuedAt));
+    const current = previous.then(() => this.runChain(event, key, enqueuedAt));
+    this.track(this.chains, key, current);
+  }
 
-    this.chains.set(key, current);
+  private track(
+    chains: Map<string, Promise<void>>,
+    key: string,
+    current: Promise<void>,
+  ): void {
+    chains.set(key, current);
     void current.finally(() => {
-      if (this.chains.get(key) === current) {
-        this.chains.delete(key);
+      if (chains.get(key) === current) {
+        chains.delete(key);
       }
     });
   }
@@ -141,6 +158,7 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
 
   private async runChain(
     event: JobWriteReadyEvent,
+    key: string,
     enqueuedAt: number,
   ): Promise<void> {
     const chainStartedAt = performance.now();
@@ -178,6 +196,20 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
     }
     const emitDurationMs = performance.now() - emitStart;
 
+    const stages: PreReadyStages = {
+      chainWaitDurationMs,
+      preReadyDurationMs,
+      emitDurationMs,
+    };
+    const previous = this.postReadyChains.get(key) ?? Promise.resolve();
+    const current = previous.then(() => this.runPostReady(event, stages));
+    this.track(this.postReadyChains, key, current);
+  }
+
+  private async runPostReady(
+    event: JobWriteReadyEvent,
+    stages: PreReadyStages,
+  ): Promise<void> {
     const postReadyStart = performance.now();
     try {
       await Promise.all(
@@ -197,9 +229,7 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
     this.emitBatchCompleted({
       jobId: event.jobId,
       batchSize: event.operations.length,
-      chainWaitDurationMs,
-      preReadyDurationMs,
-      emitDurationMs,
+      ...stages,
       postReadyDurationMs,
     });
   }
