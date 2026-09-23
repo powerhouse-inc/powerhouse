@@ -422,6 +422,17 @@ const MirrorSplitReading = z.strictObject({
 });
 type MirrorSplitReading = z.infer<typeof MirrorSplitReading>;
 
+/** The split's per-node slopes, by the name each is recorded under. */
+const SPLIT_SLOPE_NAMES = {
+  collisionScanUsPerNode: "collision scans per node",
+  sortUsPerNode: "sorted-insert comparator per node",
+  touchUsPerNode: "residue the buckets leave per node",
+  floorUsPerNode: "copy, freeze and assignment floor per node",
+  wrapperUsPerNode: "create() and base reducer per node",
+  fullUsPerNode: "mirrored body per node",
+} as const;
+type SplitSlopeKey = keyof typeof SPLIT_SLOPE_NAMES;
+
 export const ReplayStampsFile = z.strictObject({
   version: z.literal(2),
   stamps: z.array(ReplayStampReading).min(1),
@@ -473,13 +484,13 @@ function splitDerived(split: MirrorSplitReading): DerivedRatio[] {
 
   return [
     {
-      name: `${split.leg} leg: collision scans per node`,
+      name: `${split.leg} leg: ${SPLIT_SLOPE_NAMES.collisionScanUsPerNode}`,
       value: round4(split.collisionScanUsPerNode),
       unit: "us",
       note: `The existence find and handleTargetNameCollisions, as the full mirrored body minus the no-reads variant, ${over}`,
     },
     {
-      name: `${split.leg} leg: sorted-insert comparator per node`,
+      name: `${split.leg} leg: ${SPLIT_SLOPE_NAMES.sortUsPerNode}`,
       value: round4(split.sortUsPerNode),
       unit: "us",
       note: `The localeCompare pass in insertNodeSorted, as the full mirrored body minus the no-sort variant, ${over}`,
@@ -491,25 +502,25 @@ function splitDerived(split: MirrorSplitReading): DerivedRatio[] {
       note: `Both buckets over the full mirrored body slope of ${round4(split.fullUsPerNode)}us per node`,
     },
     {
-      name: `${split.leg} leg: residue the buckets leave per node`,
+      name: `${split.leg} leg: ${SPLIT_SLOPE_NAMES.touchUsPerNode}`,
       value: round4(split.touchUsPerNode),
       unit: "us",
       note: `What full-minus-no-reads and full-minus-no-sort leave between the push-only floor and the full mirrored body; on the draft leg that is child drafts and finalize, and the plain leg has no draft for it to be, ${over}`,
     },
     {
-      name: `${split.leg} leg: copy, freeze and assignment floor per node`,
+      name: `${split.leg} leg: ${SPLIT_SLOPE_NAMES.floorUsPerNode}`,
       value: round4(split.floorUsPerNode),
       unit: "us",
       note: `The push-only variant, which still reads the list, copies it twice, freezes it and assigns it once, ${over}`,
     },
     {
-      name: `${split.leg} leg: create() and base reducer per node`,
+      name: `${split.leg} leg: ${SPLIT_SLOPE_NAMES.wrapperUsPerNode}`,
       value: round4(split.wrapperUsPerNode),
       unit: "us",
       note: `The no-body baseline, which is the wrapper the reducer body does not induce, ${over}`,
     },
     {
-      name: `${split.leg} leg: mirrored body per node`,
+      name: `${split.leg} leg: ${SPLIT_SLOPE_NAMES.fullUsPerNode}`,
       value: round4(split.fullUsPerNode),
       unit: "us",
       note: `The full mirrored body slope the buckets sum to, ${over}`,
@@ -521,6 +532,20 @@ function splitDerived(split: MirrorSplitReading): DerivedRatio[] {
       note: `The mirror's stamped read+write slope of ${round4(split.stampedBodyUsPerNode)}us per node over the real reducer body's ${round4(split.realBodyUsPerNode)}us; the mirror represents the body only as far as this reads 1x`,
     },
   ];
+}
+
+/**
+ * A slope that rounds to zero at four decimals is below what the four-point
+ * regression resolves, and a JSON zero cannot say so: -0 prints as 0.
+ */
+function unresolvedSlopeCaveats(split: MirrorSplitReading): string[] {
+  const keys = Object.keys(SPLIT_SLOPE_NAMES) as SplitSlopeKey[];
+  return keys
+    .filter((key) => split[key] !== 0 && round4(split[key]) === 0)
+    .map(
+      (key) =>
+        `${split.leg} leg: ${SPLIT_SLOPE_NAMES[key]} reads 0 but its slope through ${split.counts.map(String).join("/")} ops was ${split[key].toExponential(2)}us${split[key] < 0 ? ", a negative per-node cost" : ""}; that is below the 0.0001us this reading resolves, so it says the cost is too small to measure here, not that it was measured at zero`,
+    );
 }
 
 /** The split in a sentence, which is the reading a later reader will quote. */
@@ -655,6 +680,7 @@ export function stampReadings(
   for (const entry of parsed.data.splits) {
     derived.push(...splitDerived(entry));
     conclusions.push(splitConclusion(entry));
+    caveats.push(...unresolvedSlopeCaveats(entry));
 
     const thinnest = splitLegCases(entry.leg, suites).reduce(
       (fewest, item) => Math.min(fewest, item.sampleCount),
@@ -1298,5 +1324,6 @@ function round(value: number): number {
 
 /** Per-call figures live in microseconds, where two decimals lose the signal. */
 function round4(value: number): number {
-  return Number(value.toFixed(4));
+  const rounded = Number(value.toFixed(4));
+  return Object.is(rounded, -0) ? 0 : rounded;
 }

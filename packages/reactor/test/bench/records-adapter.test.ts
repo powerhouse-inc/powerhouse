@@ -1011,6 +1011,28 @@ describe("stampReadings", () => {
     ]);
   });
 
+  it("says so when a slope is below what four decimals resolve", () => {
+    // T-042: -0 serialises as 0, the same bytes a measured zero writes.
+    const directory = withSidecar(
+      [reading("cold miss 100 ops")],
+      [split("plain", { wrapperUsPerNode: -4.2471e-7 })],
+    );
+
+    const { derived, caveats } = stampReadings(
+      findTarget("cache"),
+      directory,
+      stampedSuites(["cold miss 100 ops"]),
+    );
+
+    const wrapper = derived.find(
+      (item) => item.name === "plain leg: create() and base reducer per node",
+    );
+    expect(Object.is(wrapper?.value, 0)).toBe(true);
+    expect(caveats).toEqual([
+      "plain leg: create() and base reducer per node reads 0 but its slope through 100/1000 ops was -4.25e-7us, a negative per-node cost; that is below the 0.0001us this reading resolves, so it says the cost is too small to measure here, not that it was measured at zero",
+    ]);
+  });
+
   it("keeps a stamped target from being recorded without its readings", () => {
     expect(() => entryFor(findTarget("cache"))).toThrow("would drop it");
   });
