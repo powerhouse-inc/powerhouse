@@ -141,7 +141,11 @@ export interface IProcessorManager {
    * Registers a processor factory.
    * Immediately creates processors for all existing drives and resolves once
    * every factory run has completed and its processors are bound. Their
-   * backfills run afterwards, on each processor's own queue.
+   * backfills run afterwards, on each processor's own queue. If processors
+   * from an earlier registration under the same identifier are still
+   * draining, the factory runs after they have disconnected, so awaiting a
+   * re-registration of a processor's own factory from its `onOperations`
+   * waits on itself.
    */
   registerFactory(identifier: string, factory: ProcessorFactory): Promise<void>;
 

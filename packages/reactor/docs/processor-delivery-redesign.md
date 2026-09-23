@@ -1,6 +1,6 @@
 # Processor delivery redesign
 
-Status: proposed. Branch `fix/processor-concurrent-delivery` holds two rounds of patches to `ProcessorManager`; two adversarial reviews found that each round's locking mechanism created the surface for the next round's defects. This plan replaces the concurrency model rather than patching it a third time.
+Status: implemented, with the changes in §9. Branch `fix/processor-concurrent-delivery` holds two rounds of patches to `ProcessorManager`; two adversarial reviews found that each round's locking mechanism created the surface for the next round's defects. This plan replaces the concurrency model rather than patching it a third time.
 
 The `IProcessor` interface does not change. No processor in the monorepo or in any published package needs to be rewritten. See "Migration" for what does change and for whom.
 
@@ -200,3 +200,18 @@ Two findings survive any in-memory design and are out of scope here; recorded so
 - **Moving the mutex into `BaseReadModel` or the coordinator.** The redesign needs no mutex, so there is nothing to hoist. The other read models with cross-pass state (attachments) keep their own approach until Phase 3 looks at the base class.
 - **Changing the coordinator's key to `documentId:branch` or a global post-ready chain.** Same-document-only, or serializes every post-ready read model for one that no longer needs it.
 - **A feature flag for the new manager.** Two managers cannot share cursor semantics safely, and the flag would double the test matrix for a component whose whole point is the invariant.
+
+## 9. As implemented
+
+Where the implementation departs from §2–§5, and why.
+
+- **A pass does not wait out a backfill.** A `live` task enqueued while a `backfill` or `retry` is ahead of it on the same queue resolves its pass at once. Awaiting it would make every batch matching a hot-reloading processor wait for that processor's full replay, which is round 1's stall. The processor's own cursor stays below the batch until it is delivered, so nothing is lost; the cost is that the manager's `ViewState` and consistency tracker can report a batch before a backfilling processor has seen it. The drive-creation pass still awaits the backfills it starts (Rule 3).
+- **Dedupe without a window.** There is no overlap set. After each backfill page is delivered, the queue strips those ordinals from the `live` tasks queued behind it: routing is synchronous, so any delivered ordinal the manager has already routed to this processor is in the queue at that point. Ordinals above the routing high-water (`max(lastOrdinal, highest routed)`) have not been routed at all; they go into a small `unrouted` set and are dropped once when their live batch arrives. What remains is the §7 case: a live op below the high-water that reaches the manager after the backfill read it (Postgres visibility) is delivered twice, which at-least-once allows.
+- **Cursor rows go through a per-processor-id write lane in the manager**, not through the disconnect task. A re-registered factory produces the same processor ids; deleting the row from the old queue's disconnect would delete the new processor's row. A closed queue stops persisting immediately and the manager enqueues the row delete on the lane, so no late upsert can land after it.
+- **Re-registration waits for the previous instance.** `unregisterFactory` still resolves without waiting for disconnects, but a later `registerFactory` under the same identifier runs its factory only after the previous processors' queues have drained and `onDisconnect` has run, so two instances never share a namespace. Batches routed meanwhile are covered by the new processors' backfill through the pending slot.
+- **Drive deletion does not await disconnects**; it awaits only the cursor deletes.
+- **Non-matching batches** enqueue an un-awaited `advance` task that raises the cursor, as the pre-branch code did, so a narrow filter does not rescan history on restart.
+- **Consecutive `live` and `advance` tasks are merged into one `onOperations` call**, capped at 500 operations. With one call at a time per processor, 32 documents' batches for a `["*"]` processor would otherwise cost 32 sequential calls.
+- **A failed or empty factory run leaves the factory's cursor rows alone**, as the pre-branch code did; only a run that returns processors sweeps orphans.
+- **`startFrom: "current"` has a floor**: ordinals at or below the creation cursor are never delivered live, so a child batch that predates the drive and arrives after it is not delivered.
+- **Cursors load before the base-class replay**, so drive deletions replayed on `init()` delete their rows.
