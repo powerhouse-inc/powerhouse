@@ -79,7 +79,7 @@ async function createLocalReactor(
 
   const module = await new ReactorClientBuilder()
     .withReactorBuilder(reactorBuilder)
-    // .withSigner({ signer: renown.signer, verifier: createSignatureVerifier() })
+    // .withSigner(renown.signer)
     .buildModule();
 
   const sync = module.reactorModule?.syncModule?.syncManager;

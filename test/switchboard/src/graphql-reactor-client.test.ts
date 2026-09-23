@@ -184,11 +184,9 @@ describe("GraphQLReactorClient signed batches e2e", () => {
     expect(pushed[1].context?.prevOpHash).toBe(storedBatch[0].hash);
     expect(pushed[2].context?.prevOpHash).toBe(storedBatch[1].hash);
 
-    // And the signatures the server stored hold up cryptographically. The
-    // Switchboard does not verify them itself - nothing in the monorepo wires
-    // `withSignatureVerifier` - so this runs the real Renown verifier over what
-    // came back, which is what proves the batch is signed CORRECTLY and not
-    // merely signed.
+    // The executor verifies at admission, but only logs by default, so the
+    // real Renown verifier over what came back proves the batch is signed
+    // correctly and not merely signed.
     const verify = createSignatureVerifier(true);
     for (const operation of storedBatch) {
       const signer = operation.action.context?.signer;
