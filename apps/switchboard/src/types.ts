@@ -70,6 +70,14 @@ export type StartServerOptions = {
    */
   reactor?: InProcessReactorClientModule;
   /**
+   * Route uncaught exceptions, and unhandled rejections nothing else listens
+   * for, through the reactor's SIGTERM shutdown, so PGlite stores are flushed
+   * before the process exits with code 1. Installed once the switchboard's own reactor is built;
+   * ignored when `reactor` is passed. For process entry points only, since
+   * it adds process-wide listeners.
+   */
+  fatalErrorShutdown?: boolean;
+  /**
    * Registry URL for the HttpPackageLoader. Enables `PackagesSubgraph`
    * (install/uninstall mutations) plus dynamic package resolution.
    * Falls back to PH_REGISTRY_URL env, then `packageRegistryUrl` in the

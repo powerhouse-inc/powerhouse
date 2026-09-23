@@ -37,9 +37,11 @@ export interface AtomicNodeFsOptions {
    * non-transactional query (including each BEGIN/INSERT/COMMIT emitted by
    * Kysely), so a synchronous full-tree snapshot per call caps write
    * throughput at one query per snapshot duration. Deferred mode trades
-   * worst-case crash loss of up to `flushIntervalMs` of writes for sustained
-   * throughput. `closeFs` always drains pending writes durably before
-   * returning.
+   * crash durability for sustained throughput: a crash loses every write
+   * since the last completed snapshot, which is up to `flushIntervalMs` plus
+   * the duration of the snapshot in flight (a full-tree write, so it grows
+   * with the database). `closeFs` always drains pending writes durably before
+   * returning; a process that exits without calling it gets no final flush.
    *
    * Default `0` preserves the original per-call synchronous behavior.
    */

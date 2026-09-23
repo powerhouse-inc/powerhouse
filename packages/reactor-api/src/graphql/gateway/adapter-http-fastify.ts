@@ -21,6 +21,7 @@ import type {
   TlsOptions,
 } from "./types.js";
 import { normalizePath } from "./path-normalize.js";
+import { runNodeHandler, type NodeHandler } from "./run-node-handler.js";
 
 /** Parses body-limit strings like "50mb" to bytes. */
 function parseBodyLimit(limit: string): number {
@@ -48,12 +49,6 @@ type GetEntry = {
   handler: (r: Request) => Response | Promise<Response>;
   matcher: MatchFunction<ParamData>;
 };
-
-type NodeHandler = (
-  req: http.IncomingMessage,
-  res: http.ServerResponse,
-  body?: unknown,
-) => void;
 
 type NodeEntry = {
   path: string;
@@ -254,7 +249,7 @@ export class FastifyHttpAdapter implements IHttpAdapter {
       (req.raw as http.IncomingMessage & { params?: ParamData }).params =
         claimed.params;
       reply.hijack();
-      claimed.route.handler(req.raw, reply.raw, undefined);
+      runNodeHandler(claimed.route.handler, req.raw, reply.raw, undefined);
     });
 
     // Single catch-all route — all dispatching is done via the Maps above so
@@ -320,7 +315,7 @@ export class FastifyHttpAdapter implements IHttpAdapter {
       (req.raw as http.IncomingMessage & { params?: ParamData }).params =
         node.params;
       reply.hijack();
-      node.route.handler(req.raw, reply.raw, req.body);
+      runNodeHandler(node.route.handler, req.raw, reply.raw, req.body);
       return;
     }
 
