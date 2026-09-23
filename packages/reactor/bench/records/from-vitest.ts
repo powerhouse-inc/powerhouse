@@ -78,6 +78,18 @@ function splitBaselineRenames(): Record<string, string> {
   return renames;
 }
 
+/** The LRU legs now name the count they hold fixed, so their series is joined. */
+const LRU_RENAMES: Record<string, string> = {
+  "LRU eviction (filling cache to capacity)":
+    "LRU eviction (filling cache to capacity) over 12 documents, capacity 6",
+  "LRU access pattern (updating access order)":
+    "LRU access pattern (updating access order) over 12 documents, capacity 12",
+};
+
+function cacheRenames(): Record<string, string> {
+  return { ...splitBaselineRenames(), ...LRU_RENAMES };
+}
+
 export const BENCH_TARGETS: BenchTarget[] = [
   {
     name: "auth",
@@ -180,7 +192,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
       "The no-cache baseline compares a cold rebuild against a manual replay — both are a replay, so that pair reads about 1x by construction rather than what the cache is worth",
       "The two keyframe cases are floored by a 100ms drain sleep for fire-and-forget keyframe writes to land, so their difference isn't persistence overhead",
     ],
-    renames: splitBaselineRenames(),
+    renames: cacheRenames(),
     stampsFile: "write-cache-stamps.json",
     stampedCase: "instrumented cold-miss replay",
   },

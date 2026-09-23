@@ -595,83 +595,76 @@ describe("Write Cache Warm Miss Performance", () => {
   );
 });
 
+type LruSnapshot = {
+  documentId: string;
+  document: PHDocument;
+};
+
 type LruState = {
   fixture: Fixture;
-  documentIds: string[];
+  snapshots: LruSnapshot[];
   config: WriteCacheConfig;
 };
 
+/** Both legs put this many documents, so only the capacity below them varies. */
+const LRU_DOCUMENT_COUNT = 12;
+
+/** Half the documents, so putting all twelve evicts six of them. */
+const LRU_EVICTING_CAPACITY = 6;
+
+/** Snapshots are rebuilt here so no PGlite read sits in the timed loop. */
+async function prepareLru(
+  fixture: Fixture,
+  maxDocuments: number,
+): Promise<LruState> {
+  const documentIds = await populateManyDocuments(fixture, LRU_DOCUMENT_COUNT);
+  const snapshots: LruSnapshot[] = [];
+
+  for (const documentId of documentIds) {
+    const document = await documentAtRevision(fixture, documentId, 0);
+    snapshots.push({ documentId, document: assertLastIndex(document, 0) });
+  }
+
+  return {
+    fixture,
+    snapshots,
+    config: {
+      maxDocuments,
+      ringBufferSize: 5,
+      keyframeInterval: 1_000_000,
+    },
+  } satisfies LruState;
+}
+
+/** One putState pass; only a cache at capacity evicts before it touches. */
+async function measureLruPuts(state: LruState): Promise<void> {
+  const cache = await freshCache(state.fixture, state.config);
+
+  for (const snapshot of state.snapshots) {
+    cache.putState(
+      snapshot.documentId,
+      SCOPE,
+      BRANCH,
+      0,
+      snapshot.document,
+      SnapshotPosition.Head,
+    );
+  }
+}
+
 describe("Write Cache LRU Eviction Performance", () => {
   benchCase(
-    "LRU eviction (filling cache to capacity)",
+    "LRU eviction (filling cache to capacity) over 12 documents, capacity 6",
     2000,
-    async (fixture) => {
-      const documentIds = await populateManyDocuments(fixture, 15);
-      assertLastIndex(await documentAtRevision(fixture, documentIds[0], 0), 0);
-
-      return {
-        fixture,
-        documentIds,
-        config: {
-          maxDocuments: 10,
-          ringBufferSize: 5,
-          keyframeInterval: 1_000_000,
-        },
-      } satisfies LruState;
-    },
-    async (state) => {
-      const cache = await freshCache(state.fixture, state.config);
-
-      for (const documentId of state.documentIds) {
-        const document = await cache.getState(documentId, SCOPE, BRANCH, 0);
-        cache.putState(
-          documentId,
-          SCOPE,
-          BRANCH,
-          0,
-          document,
-          SnapshotPosition.Head,
-        );
-      }
-    },
+    (fixture) => prepareLru(fixture, LRU_EVICTING_CAPACITY),
+    measureLruPuts,
   );
 
   benchCase(
-    "LRU access pattern (updating access order)",
+    "LRU access pattern (updating access order) over 12 documents, capacity 12",
     2000,
-    async (fixture) => {
-      const documentIds = await populateManyDocuments(fixture, 5);
-      assertLastIndex(await documentAtRevision(fixture, documentIds[0], 0), 0);
-
-      return {
-        fixture,
-        documentIds,
-        config: {
-          maxDocuments: 5,
-          ringBufferSize: 5,
-          keyframeInterval: 1_000_000,
-        },
-      } satisfies LruState;
-    },
-    async (state) => {
-      const cache = await freshCache(state.fixture, state.config);
-
-      for (const documentId of state.documentIds) {
-        const document = await cache.getState(documentId, SCOPE, BRANCH, 0);
-        cache.putState(
-          documentId,
-          SCOPE,
-          BRANCH,
-          0,
-          document,
-          SnapshotPosition.Head,
-        );
-      }
-
-      for (const documentId of state.documentIds) {
-        await cache.getState(documentId, SCOPE, BRANCH, 0);
-      }
-    },
+    (fixture) => prepareLru(fixture, LRU_DOCUMENT_COUNT),
+    measureLruPuts,
   );
 });
 
