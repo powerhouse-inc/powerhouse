@@ -4,6 +4,7 @@ import {
   unchunkedReadModelIndexingConfig,
   type DocumentViewDatabase,
   type IConsistencyTracker,
+  type PurgeOutcome,
 } from "@powerhousedao/reactor";
 import type {
   AddRelationshipActionInput,
@@ -92,6 +93,27 @@ export class NodeProcessor extends BaseReadModel {
       );
     }
     await super.init();
+  }
+
+  /** By id and by drive: DELETE_DOCUMENT matches id only, missing folder rows. */
+  override async purgeDocuments(ids: string[]): Promise<PurgeOutcome> {
+    if (ids.length === 0) {
+      return { readModelId: this.name, rowsAffected: 0, covered: true };
+    }
+    const rowsAffected = await this.driveDb
+      .transaction()
+      .execute(async (trx) => {
+        const nodes = await trx
+          .deleteFrom("DriveNode")
+          .where((eb) => eb.or([eb("id", "in", ids), eb("driveId", "in", ids)]))
+          .executeTakeFirst();
+        const names = await trx
+          .deleteFrom("DocumentName")
+          .where("docId", "in", ids)
+          .executeTakeFirst();
+        return Number(nodes.numDeletedRows) + Number(names.numDeletedRows);
+      });
+    return { readModelId: this.name, rowsAffected, covered: true };
   }
 
   protected override async commitOperations(
