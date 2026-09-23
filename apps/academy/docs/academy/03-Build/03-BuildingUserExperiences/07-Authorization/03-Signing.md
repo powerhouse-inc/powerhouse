@@ -115,7 +115,6 @@ This context is attached to the action's `context.signer` field and flows throug
 | ---------------------------------- | ------------------------------------ | ------------------------------------------------------------ |
 | `buildOperationSignature()`        | `document-model/src/core/actions.ts` | Creates a Signature tuple from an action context             |
 | `buildSignedAction()`              | `document-model/src/core/actions.ts` | Reduces an action, signs it, and attaches the signer context |
-| `verifyOperationSignature()`       | `document-model/src/core/actions.ts` | Verifies a Signature tuple against its signer                |
 | `buildOperationSignatureParams()`  | `document-model/src/core/crypto.ts`  | Builds the 4-element params from action context              |
 | `buildOperationSignatureMessage()` | `document-model/src/core/crypto.ts`  | Constructs the prefixed message for signing                  |
 
@@ -154,27 +153,18 @@ const signAction = async (action, signer, signal?) => {
 
 ### Wiring a signer
 
-Use `ReactorClientBuilder.withSigner()` to configure signing. It accepts either a bare `ISigner` or a `SignerConfig` that includes an optional verifier:
+Use `ReactorClientBuilder.withSigner()` to configure signing. It accepts an `ISigner`, or a `SignerConfig` carrying one:
 
 ```typescript
 import { ReactorClientBuilder } from "@powerhousedao/reactor";
-import { createSignatureVerifier, RenownCryptoSigner } from "@renown/sdk";
 
-// Option 1: Signing only (no server-side verification)
 const client = await new ReactorClientBuilder()
   .withReactorBuilder(reactorBuilder)
   .withSigner(mySigner)
   .build();
-
-// Option 2: Signing + verification
-const client = await new ReactorClientBuilder()
-  .withReactorBuilder(reactorBuilder)
-  .withSigner({
-    signer: mySigner,
-    verifier: createSignatureVerifier(),
-  })
-  .build();
 ```
+
+Verification needs no wiring. The reactor checks every write it stores; see [Signature Verification](#signature-verification).
 
 If no signer is provided, the client falls back to an internal `PassthroughSigner` that returns empty signatures, so actions are submitted unsigned. An auth policy then sees an anonymous subject, and no `{ address }` grant matches. The class is not exported from `@powerhousedao/reactor`. To sign, pass your own `ISigner`.
 
@@ -189,38 +179,45 @@ If no signer is provided, the client falls back to an internal `PassthroughSigne
 
 ## Signature Verification
 
-Signature verification is optional and runs in the reactor's executor before actions are processed.
+The reactor's executor verifies signatures itself. There is nothing to configure on the client or the reactor builder.
 
-### How it works
+### When a write is verified
 
-The `SignatureVerifier` class sits in the executor pipeline. When a `SignatureVerificationHandler` is configured, it:
+A write is verified once, when this reactor first stores it:
 
-1. Inspects each incoming action for a `context.signer`.
-2. If a signer is present but has no signatures, the action is rejected.
-3. Calls the handler to verify the signature against the signer's public key.
-4. Throws `InvalidSignatureError` if verification fails.
+- an action submitted to a mutation job (`execute`, `create`, and the other client mutations), or
+- an incoming operation in a load job (operations arriving from sync or `reactor.load`).
 
-This applies to both action jobs (new mutations) and load jobs (operations arriving from sync).
+Operations the reactor only moves are not verified again. That covers stored operations a backdated write or a load reshuffles into a new position, and operations a re-evaluation re-appends.
 
-### Configuration
+### What is checked
 
-Verification is enabled by passing a `verifier` in the `SignerConfig`:
+The last tuple in `context.signer.signatures` is checked:
+
+1. An action with no `context.signer`, or with an empty `signer.app.key` (what `PassthroughSigner` produces), is unsigned. Steps 2 to 4 do not apply to it.
+2. Element [1] of the tuple must equal `signer.app.key`.
+3. On a mutation, the hash in element [2] is recomputed from the action and must match. The scheme is read from the hash length: 44 characters is the Renown signer's SHA-256 hash, 28 is the `buildOperationSignature` SHA-1 hash. Any other length is refused. On a load, the hash is not recomputed, because stored input can come back with its keys reordered.
+4. The ECDSA P-256 signature over elements [0] to [3] must verify under the `did:key` in element [1].
+5. The action id must not already be stored in the document's stream for that scope and branch.
+
+A mutation job fails on the first refusal, and nothing it carried is stored. A load job drops the refused operations, stores the rest, and succeeds.
+
+### Log mode and enforcement
+
+Verification runs in one of two modes, set through the executor config:
 
 ```typescript
-import { createSignatureVerifier } from "renown";
-
-const client = await new ReactorClientBuilder()
-  .withReactorBuilder(reactorBuilder)
-  .withSigner({
-    signer: mySigner,
-    verifier: createSignatureVerifier(),
-  })
-  .build();
+const reactorBuilder = new ReactorBuilder().withExecutorConfig({
+  signatureVerification: "enforce", // default: "log"
+});
 ```
 
-The `createSignatureVerifier()` function from the `renown` package returns a handler that uses the Web Crypto API to verify ECDSA P-256 signatures. It extracts the public key from the signer's DID and verifies the signature against the reconstructed message.
+- `log` (the default) records every refusal and stores the write anyway.
+- `enforce` refuses the write.
 
-If no verifier is provided, all actions are accepted regardless of their signature status.
+Each refusal emits a `SIGNATURE_REFUSED` event on the reactor event bus, with the refusal `code`, the signature `scheme`, the admission `path` (`mutation` or `load`), and whether it was `enforced`. `@powerhousedao/opentelemetry-instrumentation-reactor` counts these as `reactor.signature.refusals`.
+
+A refused mutation fails with an `InvalidSignatureError`. Its message carries the code in brackets, for example `[HASH_MISMATCH]`, and the code is also on the error's `code` field. The codes are `KEY_MISMATCH`, `MALFORMED_TUPLE`, `HASH_MISMATCH`, `BAD_SIGNATURE`, and `DUPLICATE_ACTION`.
 
 ## Signing at the GQL / Switchboard Level
 

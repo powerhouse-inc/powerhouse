@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-23T17:50:15.813Z
+> Generated: 2026-09-23T21:59:27.996Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -4322,7 +4322,7 @@ const reactor = await new ReactorBuilder()
 | `withDocumentModelSources(sources)` | Register document-model sources: live modules, importable `{ filePath }` files, or importable `{ packageName }` packages |
 | `withUpgradeManifests(manifests)` | Register [upgrade manifests](/academy/Reference/Reactor/DocumentModelRegistry) for document model versioning |
 | `withLogger(logger)`              | Set the logger (defaults to `ConsoleLogger`)                             |
-| `withExecutorConfig(config)`      | Configure `maxConcurrency`, `jobTimeoutMs`, and the reactor `featureFlags` (see [Authorization](/academy/Reference/Reactor/Authorization)) |
+| `withExecutorConfig(config)`      | Configure `maxConcurrency`, `jobTimeoutMs`, `signatureVerification` (see [Signing](/academy/Build/BuildingUserExperiences/Authorization/Signing#signature-verification)), and the reactor `featureFlags` (see [Authorization](/academy/Reference/Reactor/Authorization)) |
 | `withWriteCacheConfig(config)`    | Configure `maxDocuments` and `ringBufferSize` for the write cache        |
 | `withMigrationStrategy(strategy)` | Set to `"auto"` to run database migrations on build                      |
 | `withKysely(kysely)`              | Provide a custom Kysely database instance (defaults to in-memory PGlite) |
@@ -4335,14 +4335,13 @@ const reactor = await new ReactorBuilder()
 | `withSync(syncBuilder)`           | Enable [synchronization with remote reactors](/academy/Reference/Reactor/Synchronization) |
 | `withChannelScheme(scheme)`       | Set the sync channel scheme                                              |
 | `withFeatures(features)`          | Set feature flags                                                        |
-| `withSignatureVerifier(verifier)` | Set a signature verification handler                                     |
 | `withJwtHandler(handler)`         | Set a JWT handler for authentication                                     |
 | `withDocumentModelLoader(loader)` | Set a lazy document-model loader: `load(documentType)` returns a `DocumentModelSource`; importable sources are broadcast to executor workers, live modules stay host-only |
 | `withDriveContainerTypes(types)`  | Set the document types treated as drive containers                       |
 | `withInstrumentedPool(instrumentation)` | Register an externally-built `pg.Pool` so its metrics surface through `pools` |
 | `withShutdownHook(hook)`          | Register an async cleanup hook to run during graceful shutdown           |
 | `withSignalHandlers()`            | Register OS signal handlers for graceful shutdown                        |
-| `withWorkerPool(options)`         | Run jobs in N worker threads instead of in-process — calling it enables the pool; `{ numWorkers, db, verifier? }` or `{ numWorkers, factory }` (see [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling)) |
+| `withWorkerPool(options)`         | Run jobs in N worker threads instead of in-process — calling it enables the pool; `{ numWorkers, db }` or `{ numWorkers, factory }` (see [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling)) |
 | `withProjectionShards(config)`    | Run N sharded projection workers (see [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling)) |
 | `withProjectionWorkerFactory(factory)` | Inject a custom projection worker factory                           |
 
@@ -5968,8 +5967,8 @@ const reactor = await new ReactorBuilder()
 
 ```typescript
 type WorkerPoolOptions =
-  | { numWorkers: number; db: DbConfig; verifier?: SignatureVerifierSpec; factory?: WorkerFactory }
-  | { numWorkers: number; factory: WorkerFactory; db?: DbConfig; verifier?: SignatureVerifierSpec };
+  | { numWorkers: number; db: DbConfig; factory?: WorkerFactory }
+  | { numWorkers: number; factory: WorkerFactory; db?: DbConfig };
 ```
 
 `numWorkers` is the number of workers the manager spawns at `start()` and the modulus used for sticky routing. Either `db` (the default thread transport; each worker opens its own Postgres pool) or a custom `factory` is required **by construction** — an enabled pool without connection info is unrepresentable rather than a runtime error.
@@ -5993,7 +5992,7 @@ type DbConfig = {
 
 `DbConfig` is sent across worker IPC, so it must be JSON-clonable. `ssl: true` maps to `{ rejectUnauthorized: false }`; `poolSize` maps to pg's `max`; `applicationName` maps to `application_name`.
 
-The `verifier` field is optional: when omitted, workers perform no executor-side signature verification (parity with the in-process executor's default). To opt in, pass a `FactorySpec`: a `ModuleRef` (one of `{ packageName, exportName }` or `{ filePath, exportName }`) plus optional JSON-clonable `initArgs`. The worker imports the named export and invokes it to construct its signature verifier.
+Workers verify signatures the same way the in-process executor does, with the same `signatureVerification` mode from `withExecutorConfig`. A refusal inside a worker is re-emitted on the host event bus. See [Signature Verification](/academy/Build/BuildingUserExperiences/Authorization/Signing#signature-verification).
 
 ### How sources resolve
 
@@ -6018,7 +6017,7 @@ Passing `factory` in the pool options injects a custom `WorkerFactory`, skipping
 type WorkerFactory = (index: number) => IExecutorWorker;
 ```
 
-Use this for tests or an alternative transport (e.g. a child-process adapter); `db` and `verifier` are then optional, since the builder is not constructing the default transport.
+Use this for tests or an alternative transport (e.g. a child-process adapter); `db` is then optional, since the builder is not constructing the default transport.
 
 ## Projection shards
 
@@ -7030,11 +7029,11 @@ A read-only processor that counts operations per signer address over a sliding w
 A standalone script that builds cryptographically signed operations with an `ISigner` and verifies each one per-signature, detecting tampered and unsigned operations.
 
 - Builds a self-contained ECDSA P-256 `ISigner` with `RenownCryptoBuilder` plus in-memory key storage — no filesystem or network.
-- `buildSignedAction` advances the document through the reducer between actions, so each signature captures the correct previous-state hash; `verifyOperationSignature` checks each signature tuple.
+- `buildSignedAction` advances the document through the reducer between actions, so each signature captures the correct previous-state hash. A reactor checks these tuples itself when it stores a write; see [Signature Verification](/academy/Build/BuildingUserExperiences/Authorization/Signing#signature-verification).
 - Tamper and unsigned detection: corrupting a signature element or removing `action.context` flips verification to invalid / unsigned respectively.
 
 **Source** · [`src/verify-operations.ts`](https://github.com/powerhouse-inc/recipes/blob/main/signed-operations-verifier/src/verify-operations.ts) · [`src/verify-operations.test.ts`](https://github.com/powerhouse-inc/recipes/blob/main/signed-operations-verifier/src/verify-operations.test.ts)
-**Concepts** · `ISigner` · `RenownCryptoSigner` · `buildSignedAction` · `verifyOperationSignature` — see [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage)
+**Concepts** · `ISigner` · `RenownCryptoSigner` · `buildSignedAction` · signature tuples — see [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage)
 
 ## Document-model patterns
 
@@ -26292,7 +26291,6 @@ This context is attached to the action's `context.signer` field and flows throug
 | ---------------------------------- | ------------------------------------ | ------------------------------------------------------------ |
 | `buildOperationSignature()`        | `document-model/src/core/actions.ts` | Creates a Signature tuple from an action context             |
 | `buildSignedAction()`              | `document-model/src/core/actions.ts` | Reduces an action, signs it, and attaches the signer context |
-| `verifyOperationSignature()`       | `document-model/src/core/actions.ts` | Verifies a Signature tuple against its signer                |
 | `buildOperationSignatureParams()`  | `document-model/src/core/crypto.ts`  | Builds the 4-element params from action context              |
 | `buildOperationSignatureMessage()` | `document-model/src/core/crypto.ts`  | Constructs the prefixed message for signing                  |
 
@@ -26331,26 +26329,18 @@ const signAction = async (action, signer, signal?) => {
 
 ### Wiring a signer
 
-Use `ReactorClientBuilder.withSigner()` to configure signing. It accepts either a bare `ISigner` or a `SignerConfig` that includes an optional verifier:
+Use `ReactorClientBuilder.withSigner()` to configure signing. It accepts an `ISigner`, or a `SignerConfig` carrying one:
 
 ```typescript
 
 
-// Option 1: Signing only (no server-side verification)
 const client = await new ReactorClientBuilder()
   .withReactorBuilder(reactorBuilder)
   .withSigner(mySigner)
   .build();
-
-// Option 2: Signing + verification
-const client = await new ReactorClientBuilder()
-  .withReactorBuilder(reactorBuilder)
-  .withSigner({
-    signer: mySigner,
-    verifier: createSignatureVerifier(),
-  })
-  .build();
 ```
+
+Verification needs no wiring. The reactor checks every write it stores; see [Signature Verification](#signature-verification).
 
 If no signer is provided, the client falls back to an internal `PassthroughSigner` that returns empty signatures, so actions are submitted unsigned. An auth policy then sees an anonymous subject, and no `{ address }` grant matches. The class is not exported from `@powerhousedao/reactor`. To sign, pass your own `ISigner`.
 
@@ -26365,38 +26355,45 @@ If no signer is provided, the client falls back to an internal `PassthroughSigne
 
 ## Signature Verification
 
-Signature verification is optional and runs in the reactor's executor before actions are processed.
+The reactor's executor verifies signatures itself. There is nothing to configure on the client or the reactor builder.
 
-### How it works
+### When a write is verified
 
-The `SignatureVerifier` class sits in the executor pipeline. When a `SignatureVerificationHandler` is configured, it:
+A write is verified once, when this reactor first stores it:
 
-1. Inspects each incoming action for a `context.signer`.
-2. If a signer is present but has no signatures, the action is rejected.
-3. Calls the handler to verify the signature against the signer's public key.
-4. Throws `InvalidSignatureError` if verification fails.
+- an action submitted to a mutation job (`execute`, `create`, and the other client mutations), or
+- an incoming operation in a load job (operations arriving from sync or `reactor.load`).
 
-This applies to both action jobs (new mutations) and load jobs (operations arriving from sync).
+Operations the reactor only moves are not verified again. That covers stored operations a backdated write or a load reshuffles into a new position, and operations a re-evaluation re-appends.
 
-### Configuration
+### What is checked
 
-Verification is enabled by passing a `verifier` in the `SignerConfig`:
+The last tuple in `context.signer.signatures` is checked:
+
+1. An action with no `context.signer`, or with an empty `signer.app.key` (what `PassthroughSigner` produces), is unsigned. Steps 2 to 4 do not apply to it.
+2. Element [1] of the tuple must equal `signer.app.key`.
+3. On a mutation, the hash in element [2] is recomputed from the action and must match. The scheme is read from the hash length: 44 characters is the Renown signer's SHA-256 hash, 28 is the `buildOperationSignature` SHA-1 hash. Any other length is refused. On a load, the hash is not recomputed, because stored input can come back with its keys reordered.
+4. The ECDSA P-256 signature over elements [0] to [3] must verify under the `did:key` in element [1].
+5. The action id must not already be stored in the document's stream for that scope and branch.
+
+A mutation job fails on the first refusal, and nothing it carried is stored. A load job drops the refused operations, stores the rest, and succeeds.
+
+### Log mode and enforcement
+
+Verification runs in one of two modes, set through the executor config:
 
 ```typescript
-
-
-const client = await new ReactorClientBuilder()
-  .withReactorBuilder(reactorBuilder)
-  .withSigner({
-    signer: mySigner,
-    verifier: createSignatureVerifier(),
-  })
-  .build();
+const reactorBuilder = new ReactorBuilder().withExecutorConfig({
+  signatureVerification: "enforce", // default: "log"
+});
 ```
 
-The `createSignatureVerifier()` function from the `renown` package returns a handler that uses the Web Crypto API to verify ECDSA P-256 signatures. It extracts the public key from the signer's DID and verifies the signature against the reconstructed message.
+- `log` (the default) records every refusal and stores the write anyway.
+- `enforce` refuses the write.
 
-If no verifier is provided, all actions are accepted regardless of their signature status.
+Each refusal emits a `SIGNATURE_REFUSED` event on the reactor event bus, with the refusal `code`, the signature `scheme`, the admission `path` (`mutation` or `load`), and whether it was `enforced`. `@powerhousedao/opentelemetry-instrumentation-reactor` counts these as `reactor.signature.refusals`.
+
+A refused mutation fails with an `InvalidSignatureError`. Its message carries the code in brackets, for example `[HASH_MISMATCH]`, and the code is also on the error's `code` field. The codes are `KEY_MISMATCH`, `MALFORMED_TUPLE`, `HASH_MISMATCH`, `BAD_SIGNATURE`, and `DUPLICATE_ACTION`.
 
 ## Signing at the GQL / Switchboard Level
 
