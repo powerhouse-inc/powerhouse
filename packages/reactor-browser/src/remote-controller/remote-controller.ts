@@ -6,7 +6,11 @@ import type {
   PHDocument,
   PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
-import { toTransportAction } from "@powerhousedao/shared/document-model";
+import {
+  actionSignerIdentity,
+  actionSigningTarget,
+  toTransportAction,
+} from "@powerhousedao/shared/document-model";
 import type { PHDocumentController } from "document-model";
 import { ActionTracker } from "./action-tracker.js";
 import { RemoteClient } from "./remote-client.js";
@@ -64,6 +68,8 @@ export class RemoteDocumentController<
   private readonly tracker = new ActionTracker();
   private readonly options: RemoteControllerOptions;
   private documentId: string;
+  /** The remote's id for the document; `documentId` may be a slug. */
+  private canonicalDocumentId?: string;
   private remoteRevision: Record<string, number> = {};
   private hasPulled = false;
   private pushScheduled = false;
@@ -206,6 +212,7 @@ export class RemoteDocumentController<
     }
 
     const { remoteDoc, operations } = await this.fetchDocumentAndOperations();
+    this.canonicalDocumentId = remoteDoc.id;
 
     // Get module from inner controller
     const initialDoc = this.inner.module.utils.createDocument();
@@ -281,6 +288,7 @@ export class RemoteDocumentController<
       this.options.parentIdentifier,
     );
     this.documentId = remoteDoc.id;
+    this.canonicalDocumentId = remoteDoc.id;
   }
 
   /** Set up interceptors for all action methods on the inner controller. */
@@ -491,15 +499,19 @@ export class RemoteDocumentController<
   /** Sign an action using the configured signer, preserving existing signatures. */
   private async signAction(action: Action): Promise<Action> {
     const signer = this.options.signer!;
-    const signature = await signer.signAction(action);
+    const target = actionSigningTarget(
+      action,
+      this.canonicalDocumentId ?? this.documentId,
+      this.options.branch ?? "main",
+    );
+    const signature = await signer.signAction(action, target);
     const existingSignatures = action.context?.signer?.signatures ?? [];
     return {
       ...action,
       context: {
         ...action.context,
         signer: {
-          user: signer.user!,
-          app: signer.app!,
+          ...actionSignerIdentity(signer),
           signatures: [...existingSignatures, signature],
         },
       },

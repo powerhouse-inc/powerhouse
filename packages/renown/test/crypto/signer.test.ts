@@ -1,6 +1,7 @@
 import type { Action, Signature } from "@powerhousedao/shared/document-model";
 import {
   deriveOperationId,
+  hashActionV2,
   type Operation,
 } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -18,6 +19,7 @@ import {
 const TEST_DOC_ID = "test-doc-id";
 const TEST_BRANCH = "main";
 const TEST_SCOPE = "global";
+const TARGET = { documentId: TEST_DOC_ID, branch: TEST_BRANCH };
 
 function createTestAction(options?: { prevOpHash?: string }): Action {
   return {
@@ -86,6 +88,7 @@ describe("RenownCryptoSigner", () => {
 
       const signature = await signer.signActionWithResultingState(
         action,
+        TARGET,
         resultingHash,
       );
 
@@ -100,6 +103,7 @@ describe("RenownCryptoSigner", () => {
 
       const signature = await signer.signActionWithResultingState(
         action,
+        TARGET,
         resultingHash,
       );
 
@@ -112,6 +116,7 @@ describe("RenownCryptoSigner", () => {
 
       const signature = await signer.signActionWithResultingState(
         action,
+        TARGET,
         resultingHash,
       );
 
@@ -124,6 +129,7 @@ describe("RenownCryptoSigner", () => {
 
       const signature = await signer.signActionWithResultingState(
         action,
+        TARGET,
         resultingHash,
       );
 
@@ -145,7 +151,12 @@ describe("RenownCryptoSigner", () => {
       controller.abort();
 
       await expect(
-        signer.signActionWithResultingState(action, "hash", controller.signal),
+        signer.signActionWithResultingState(
+          action,
+          TARGET,
+          "hash",
+          controller.signal,
+        ),
       ).rejects.toThrow("Signing aborted");
     });
 
@@ -153,9 +164,10 @@ describe("RenownCryptoSigner", () => {
       const action = createTestAction({ prevOpHash: "prev-hash" });
       const resultingHash = "resulting-hash";
 
-      const sig1 = await signer.signAction(action);
+      const sig1 = await signer.signAction(action, TARGET);
       const sig2 = await signer.signActionWithResultingState(
         action,
+        TARGET,
         resultingHash,
       );
 
@@ -170,7 +182,11 @@ describe("RenownCryptoSigner", () => {
     it("should handle empty resultingStateHash", async () => {
       const action = createTestAction({ prevOpHash: "prev-hash" });
 
-      const signature = await signer.signActionWithResultingState(action, "");
+      const signature = await signer.signActionWithResultingState(
+        action,
+        TARGET,
+        "",
+      );
 
       expect(signature[3]).toBe("prev-hash:");
     });
@@ -178,7 +194,11 @@ describe("RenownCryptoSigner", () => {
     it("should handle both empty hashes", async () => {
       const action = createTestAction(); // no prevOpHash
 
-      const signature = await signer.signActionWithResultingState(action, "");
+      const signature = await signer.signActionWithResultingState(
+        action,
+        TARGET,
+        "",
+      );
 
       expect(signature[3]).toBe(":");
     });
@@ -189,6 +209,7 @@ describe("RenownCryptoSigner", () => {
 
       const signature = await signer.signActionWithResultingState(
         action,
+        TARGET,
         "hash",
       );
 
@@ -205,6 +226,7 @@ describe("RenownCryptoSigner", () => {
 
       const signature = await signer.signActionWithResultingState(
         action,
+        TARGET,
         "hash",
       );
 
@@ -217,12 +239,16 @@ describe("RenownCryptoSigner", () => {
 
       const signature = await signer.signActionWithResultingState(
         action,
+        TARGET,
         "hash",
       );
 
-      // Hash should be a non-empty base64 string
-      expect(signature[2]).toBeDefined();
-      expect(signature[2].length).toBeGreaterThan(0);
+      expect(signature[2]).toBe(
+        await hashActionV2(action, TARGET, {
+          user: { address: "", networkId: "", chainId: 0 },
+          app: signer.app,
+        }),
+      );
     });
 
     it("should include hex signature in element [4]", async () => {
@@ -230,6 +256,7 @@ describe("RenownCryptoSigner", () => {
 
       const signature = await signer.signActionWithResultingState(
         action,
+        TARGET,
         "hash",
       );
 
@@ -239,7 +266,61 @@ describe("RenownCryptoSigner", () => {
   });
 });
 
+describe("RenownCryptoSigner.signAction", () => {
+  const user = { address: "0xabc", networkId: "eip155", chainId: 1 };
+
+  async function userSigner(): Promise<RenownCryptoSigner> {
+    const renownCrypto = await new RenownCryptoBuilder()
+      .withKeyPairStorage(new MemoryKeyStorage())
+      .build();
+    return new RenownCryptoSigner(renownCrypto, "test-app", user);
+  }
+
+  it("emits a v2 tuple over the target and the signer's identity", async () => {
+    const signer = await userSigner();
+    const action = createTestAction();
+
+    const signature = await signer.signAction(action, TARGET);
+
+    expect(signature[1]).toBe(signer.app.key);
+    expect(signature[2]).toBe(
+      await hashActionV2(action, TARGET, { user, app: signer.app }),
+    );
+    expect(signature[4]).toMatch(/^0x[0-9a-f]{128}$/);
+  });
+
+  it("refuses to sign for an empty document id", async () => {
+    const signer = await userSigner();
+    await expect(
+      signer.signAction(createTestAction(), { documentId: "", branch: "main" }),
+    ).rejects.toThrow(/documentId/);
+  });
+
+  it("still emits the legacy tuple on request", async () => {
+    const signer = await userSigner();
+    const signature = await signer.signActionLegacy(createTestAction());
+    expect(signature[2]).toHaveLength(44);
+  });
+});
+
 describe("createSignatureVerifier and v2 tuples", () => {
+  it("accepts a tuple signAction produced", async () => {
+    const renownCrypto = await new RenownCryptoBuilder()
+      .withKeyPairStorage(new MemoryKeyStorage())
+      .build();
+    const signer = new RenownCryptoSigner(renownCrypto, "test-app");
+    const action = createTestAction();
+    const operation = createOperationWithSignature(
+      action,
+      await signer.signAction(action, TARGET),
+      renownCrypto.did,
+    );
+
+    await expect(
+      createSignatureVerifier(true)(operation, renownCrypto.did),
+    ).resolves.toBe(true);
+  });
+
   it("accepts a v2-prefixed hash on ECDSA alone, so old peers admit v2 writes", async () => {
     const renownCrypto = await new RenownCryptoBuilder()
       .withKeyPairStorage(new MemoryKeyStorage())

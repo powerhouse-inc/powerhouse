@@ -1,3 +1,4 @@
+import type { ActionSigningTarget } from "./action-signature.js";
 import type { Action } from "./actions.js";
 import type { PHDocumentHeader } from "./documents.js";
 import type { Signature } from "./signatures.js";
@@ -30,15 +31,20 @@ export async function createVerificationSigner(
   return {
     publicKey: cryptoKey,
 
-    async sign(_data: Uint8Array): Promise<Uint8Array> {
-      throw new Error("verification-only signer cannot sign data");
+    sign(_data: Uint8Array): Promise<Uint8Array> {
+      return Promise.reject(
+        new Error("verification-only signer cannot sign data"),
+      );
     },
 
-    async signAction(
+    signAction(
       _action: Action,
+      _target: ActionSigningTarget,
       _abortSignal?: AbortSignal,
     ): Promise<Signature> {
-      throw new Error("verification-only signer cannot sign actions");
+      return Promise.reject(
+        new Error("verification-only signer cannot sign actions"),
+      );
     },
 
     async verify(data: Uint8Array, signature: Uint8Array): Promise<void> {

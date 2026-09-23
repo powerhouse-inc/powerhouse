@@ -22,9 +22,11 @@ import {
 } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import type {
   Action,
+  ActionSigningTarget,
   ISigner,
   Signature,
 } from "@powerhousedao/shared/document-model";
+import { actionSignerIdentity } from "@powerhousedao/shared/document-model";
 import {
   driveDocumentModelModule,
   setDriveName,
@@ -133,24 +135,14 @@ async function buildReactor(signer: ISigner): Promise<State> {
 async function signAction<A extends Action>(
   signer: ISigner,
   action: A,
+  target: ActionSigningTarget,
 ): Promise<A> {
-  const signature: Signature = await signer.signAction(action);
+  const signature: Signature = await signer.signAction(action, target);
   return {
     ...action,
     context: {
       ...(action.context ?? {}),
-      signer: {
-        user: {
-          address: signer.user?.address ?? "",
-          networkId: signer.user?.networkId ?? "",
-          chainId: signer.user?.chainId ?? 0,
-        },
-        app: {
-          name: signer.app?.name ?? "reactor-bench",
-          key: signer.app?.key ?? "",
-        },
-        signatures: [signature],
-      },
+      signer: { ...actionSignerIdentity(signer), signatures: [signature] },
     },
   } as A;
 }
@@ -231,7 +223,10 @@ async function handle(
       return;
     }
     const action = setDriveName({ name: body.name ?? `lt-${Date.now()}` });
-    const signed = await signAction(state.signer, action);
+    const signed = await signAction(state.signer, action, {
+      documentId: body.driveId,
+      branch: "main",
+    });
     const info = await state.module.reactor.execute(body.driveId, "main", [
       signed,
     ]);

@@ -974,6 +974,7 @@ export class ReactorClient implements IReactorClient {
     );
 
     const documentId = document.header.id;
+    const branch = document.header.branch || "main";
 
     const createInput: CreateDocumentActionInput = {
       model: document.header.documentType,
@@ -1010,6 +1011,7 @@ export class ReactorClient implements IReactorClient {
         }),
       ],
       this.signer,
+      { documentId, branch },
       signal,
     );
 
@@ -1018,7 +1020,7 @@ export class ReactorClient implements IReactorClient {
         key: "create",
         documentId,
         scope: getSharedActionScope(createActions),
-        branch: "main",
+        branch,
         actions: createActions,
         dependsOn: [],
       },
@@ -1028,6 +1030,7 @@ export class ReactorClient implements IReactorClient {
       const parentActions: Action[] = await signActions(
         [addRelationshipAction(parentIdentifier, documentId, "child")],
         this.signer,
+        { documentId: parentIdentifier, branch: "main" },
         signal,
       );
 
@@ -1187,7 +1190,12 @@ export class ReactorClient implements IReactorClient {
         revision: { ...document.header.revision },
       });
 
-      const signedActions = await signActions([action], this.signer, signal);
+      const signedActions = await signActions(
+        [action],
+        this.signer,
+        { documentId, branch },
+        signal,
+      );
       const jobInfo = await this.reactor.execute(
         documentId,
         branch,
@@ -1257,7 +1265,12 @@ export class ReactorClient implements IReactorClient {
       branch,
       actions.length,
     );
-    const signedActions = await signActions(actions, this.signer, signal);
+    const signedActions = await signActions(
+      actions,
+      this.signer,
+      { documentId: documentIdentifier, branch },
+      signal,
+    );
 
     const jobInfo = await this.reactor.execute(
       documentIdentifier,
@@ -1297,7 +1310,12 @@ export class ReactorClient implements IReactorClient {
       branch,
       actions.length,
     );
-    const signedActions = await signActions(actions, this.signer, signal);
+    const signedActions = await signActions(
+      actions,
+      this.signer,
+      { documentId: documentIdentifier, branch },
+      signal,
+    );
 
     return this.reactor.execute(
       documentIdentifier,
@@ -1316,7 +1334,7 @@ export class ReactorClient implements IReactorClient {
     const signedJobs: ExecutionJobPlan[] = await Promise.all(
       request.jobs.map(async (job) => ({
         ...job,
-        actions: await signActions(job.actions, this.signer, signal),
+        actions: await signActions(job.actions, this.signer, job, signal),
       })),
     );
 

@@ -368,6 +368,10 @@ describe("GraphQLReactorClient.execute", () => {
     expect(signedArgument.context?.prevOpHash).toBe(
       hashDocumentStateForScope({ state }, "global"),
     );
+    expect(signAction.mock.calls[0][1]).toEqual({
+      documentId: "doc-1",
+      branch: "main",
+    });
   });
 
   it("pushes a multi-action batch unsigned when there is no signer", async () => {
@@ -489,7 +493,7 @@ describe("GraphQLReactorClient.execute", () => {
     }).execute("doc-1", "main", batch, controller.signal);
 
     for (const call of signAction.mock.calls) {
-      expect(call[1]).toBe(controller.signal);
+      expect(call[2]).toBe(controller.signal);
     }
   });
 

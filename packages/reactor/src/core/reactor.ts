@@ -525,9 +525,15 @@ export class Reactor implements IReactor {
       initialState: document.state,
     });
 
+    const branch = document.header.branch || "main";
     let actions: Action[] = [createAction, upgradeAction];
     if (signer) {
-      actions = await signActions(actions, signer, signal);
+      actions = await signActions(
+        actions,
+        signer,
+        { documentId: document.header.id, branch },
+        signal,
+      );
     }
 
     const jobId = uuidv4();
@@ -538,7 +544,7 @@ export class Reactor implements IReactor {
       kind: "mutation",
       documentId: document.header.id,
       scope: "document",
-      branch: "main",
+      branch,
       actions,
       operations: [],
       createdAt: new Date().toISOString(),
@@ -582,7 +588,12 @@ export class Reactor implements IReactor {
     let action = deleteDocumentAction(id);
 
     if (signer) {
-      action = await signAction(action, signer, signal);
+      action = await signAction(
+        action,
+        signer,
+        { documentId: id, branch: "main" },
+        signal,
+      );
     }
 
     const jobId = uuidv4();
@@ -956,7 +967,12 @@ export class Reactor implements IReactor {
     ];
 
     if (signer) {
-      actions = await signActions(actions, signer, signal);
+      actions = await signActions(
+        actions,
+        signer,
+        { documentId: sourceId, branch },
+        signal,
+      );
     }
 
     return await this.execute(sourceId, branch, actions, signal);
@@ -987,7 +1003,12 @@ export class Reactor implements IReactor {
     ];
 
     if (signer) {
-      actions = await signActions(actions, signer, signal);
+      actions = await signActions(
+        actions,
+        signer,
+        { documentId: sourceId, branch },
+        signal,
+      );
     }
 
     return await this.execute(sourceId, branch, actions, signal);
@@ -1016,7 +1037,12 @@ export class Reactor implements IReactor {
     ];
 
     if (signer) {
-      actions = await signActions(actions, signer, signal);
+      actions = await signActions(
+        actions,
+        signer,
+        { documentId: sourceId, branch },
+        signal,
+      );
     }
 
     return await this.execute(sourceId, branch, actions, signal);

@@ -133,6 +133,7 @@ export class DriveClient implements IDriveClient {
         addRelationshipAction(driveIdentifier, documentId, "child"),
       ],
       this.signer,
+      { documentId, branch: "main" },
       signal,
     );
 
@@ -146,6 +147,7 @@ export class DriveClient implements IDriveClient {
         }),
       ],
       this.signer,
+      { documentId: driveIdentifier, branch: "main" },
       signal,
     );
 
@@ -547,11 +549,13 @@ export class DriveClient implements IDriveClient {
     const relationshipActions: Action[] = await signActions(
       [removeRelationshipAction(driveId, fileId, "child")],
       this.signer,
+      { documentId: driveId, branch: "main" },
       signal,
     );
     const driveActions: Action[] = await signActions(
       [deleteNodeAction({ id: fileId })],
       this.signer,
+      { documentId: driveId, branch: "main" },
       signal,
     );
 

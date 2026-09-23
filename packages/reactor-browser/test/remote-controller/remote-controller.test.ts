@@ -440,6 +440,36 @@ describe("RemoteDocumentController", () => {
       expect(actions[0].context!.signer!.app!.name).toBe("test-app");
       expect(actions[0].context!.signer!.signatures).toHaveLength(1);
     });
+
+    it("signs for the remote's document id and the configured branch", async () => {
+      const mockSigner = {
+        user: { address: "0x123", networkId: "eip155:1", chainId: 1 },
+        app: { name: "test-app", key: "key-123" },
+        publicKey: {} as CryptoKey,
+        sign: vi.fn(),
+        verify: vi.fn(),
+        signAction: vi.fn().mockResolvedValue(["", "", "", "", "sig-123"]),
+      };
+
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        {
+          client: createMockClient(),
+          documentId: "my-slug",
+          branch: "draft",
+          mode: "batch",
+          signer: mockSigner,
+        },
+      );
+
+      controller.setName({ name: "Signed" });
+      await controller.push();
+
+      expect(mockSigner.signAction.mock.calls[0][1]).toEqual({
+        documentId: "doc-1",
+        branch: "draft",
+      });
+    });
   });
 
   describe("streaming mode", () => {
