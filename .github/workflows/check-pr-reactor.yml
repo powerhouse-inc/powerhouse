@@ -32,15 +32,16 @@ env:
   NX_ISOLATE_PLUGINS: false
 
 jobs:
-  # Shards split by file, so the slowest file is the floor for any shard count.
+  # Two shards, not three: a third saves ~1m but adds a job that can queue
+  # behind the runner cap. Lint and the reactor packages ride the lighter shard.
   test-reactor:
-    name: Test Reactor (shard ${{ matrix.shard }}/3)
+    name: Test Reactor (shard ${{ matrix.shard }}/2)
     runs-on: ubuntu-24.04
     container: node:24
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2]
 
     services:
       postgres:
@@ -84,10 +85,24 @@ jobs:
         run: >-
           pnpm test:reactor
           --coverage.enabled=false
-          --shard=${{ matrix.shard }}/3
+          --shard=${{ matrix.shard }}/2
           --reporter=default
           --reporter=json
           --outputFile.json=vitest-timings.json
+
+      - name: Lint
+        if: matrix.shard == 2
+        run: pnpm lint
+        working-directory: packages/reactor
+
+      # reactor-drive and reactor-attachments consume @powerhousedao/reactor
+      # through its built dist, so `test:ci -- related <changed files>` in
+      # check-commit.yml never selects their suites when only packages/reactor
+      # changes. Running them here, where the trigger already fires on
+      # packages/reactor/**, is what covers that direction.
+      - name: Run reactor package tests
+        if: matrix.shard == 2
+        run: pnpm test:reactor-packages
 
       # This step's duration swings by ~50% run to run on identical code, while
       # install, build and lint stay flat — so it is the suite, not the runner.
@@ -102,44 +117,6 @@ jobs:
           path: packages/reactor/vitest-timings.json
           if-no-files-found: warn
           retention-days: 90
-
-  reactor-lint-and-packages:
-    name: Lint Reactor and test reactor packages
-    runs-on: ubuntu-24.04
-    container: node:24
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Install PNPM
-        uses: pnpm/action-setup@v4
-        with:
-          version: 12.5.1
-          run_install: false
-
-      - name: Setup bun global install
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.8
-
-      - name: Install dependencies
-        run: pnpm install-ci
-
-      - name: Build
-        run: pnpm build
-
-      - name: Lint
-        run: pnpm lint
-        working-directory: packages/reactor
-
-      # reactor-drive and reactor-attachments consume @powerhousedao/reactor
-      # through its built dist, so `test:ci -- related <changed files>` in
-      # check-commit.yml never selects their suites when only packages/reactor
-      # changes. Running them here, where the trigger already fires on
-      # packages/reactor/**, is what covers that direction.
-      - name: Run reactor package tests
-        run: pnpm test:reactor-packages
 
   # One job per hub-spoke case, with the two short ones sharing a job to keep
   # the job count under the runner cap. Shares no artifact with test-reactor.
@@ -226,7 +203,7 @@ jobs:
     # Warn-only trend guard: compares each job's duration against the median
     # of recent green main runs, so a slow creep is flagged the week it
     # starts instead of the day it walks into a timeout.
-    needs: [test-reactor, reactor-lint-and-packages, integration-test]
+    needs: [test-reactor, integration-test]
     if: always()
     runs-on: ubuntu-latest
     permissions:
