@@ -309,6 +309,34 @@ describe("buildMicroEntry", () => {
     }
   });
 
+  it("holds the subscriber delay an events case names fixed, 0ms included", () => {
+    const suites = [
+      sizedSuite(
+        "bench/event-bus.bench.ts > EventBus Async Emission Throughput",
+        [
+          ["1 async subscriber (0ms delay)", 6000000],
+          ["10 async subscribers (0ms delay)", 1600000],
+          ["1 async subscriber (1ms delay)", 800],
+          ["10 async subscribers (1ms delay)", 80],
+          ["1 async subscriber (5ms delay)", 160],
+          ["5 async subscribers (5ms delay)", 32],
+        ],
+      ),
+    ];
+
+    const results = entryFor(findTarget("events"), { suites }).results as {
+      derived: { name: string; value: number }[];
+    };
+
+    expect(
+      results.derived.map((reading) => [reading.name, reading.value]),
+    ).toEqual([
+      ["EventBus Async Emission Throughput: spread at 0 ms delay", 3.75],
+      ["EventBus Async Emission Throughput: spread at 1 ms delay", 10],
+      ["EventBus Async Emission Throughput: spread at 5 ms delay", 5],
+    ]);
+  });
+
   it("appends the caller's claims rather than replacing what was measured", () => {
     const entry = entryFor(findTarget("auth"), {
       conclusions: ["group lookup dominates once the roster passes 1000"],

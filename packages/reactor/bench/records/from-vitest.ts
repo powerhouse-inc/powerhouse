@@ -59,7 +59,7 @@ export type BenchTarget = {
   sizeUnits: SizeUnit[];
 };
 
-/** A unit a case name can state its workload size in, as `<n> [adjective] <word>`. */
+/** A unit a case name can state its workload size in, as `<n>[ ][adjective ]<word>`. */
 export type SizeUnit = {
   /** Every spelling a case name uses, matched whole and case-insensitively. */
   words: string[];
@@ -73,6 +73,13 @@ const OPERATION_COUNT: SizeUnit = {
   words: ["operations", "operation", "ops"],
   label: "operations",
   noun: "operation count",
+};
+
+/** An injected subscriber wait, which prices the timer rather than emit's dispatch. */
+const DELAY_MS: SizeUnit = {
+  words: ["ms delay"],
+  label: "ms delay",
+  noun: "delay",
 };
 
 /** How auth-scope.bench.ts names the size of each case. */
@@ -183,7 +190,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     },
     stampsFile: "",
     stampedCase: "",
-    sizeUnits: [OPERATION_COUNT],
+    sizeUnits: [OPERATION_COUNT, DELAY_MS],
   },
   {
     name: "queue",
@@ -819,17 +826,17 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** One unit's count as a case name states it, or 0 when it states none. */
-function statedCount(name: string, unit: SizeUnit): number {
+/** One unit's count as a case name states it, or undefined when it states none. */
+function statedCount(name: string, unit: SizeUnit): number | undefined {
   const words = [...unit.words]
     .sort((a, b) => b.length - a.length)
     .map(escapeRegExp)
     .join("|");
   const match = new RegExp(
-    `(\\d+)\\s+(?:[a-z]+\\s+)?(?:${words})(?!\\w)`,
+    `(\\d+)\\s*(?:[a-z]+\\s+)?(?:${words})(?!\\w)`,
     "i",
   ).exec(name);
-  return match === null ? 0 : Number(match[1]);
+  return match === null ? undefined : Number(match[1]);
 }
 
 /**
@@ -840,7 +847,7 @@ function statedCount(name: string, unit: SizeUnit): number {
 function statedSize(name: string, units: SizeUnit[]): string {
   return units
     .map((unit) => ({ unit, count: statedCount(name, unit) }))
-    .filter((stated) => stated.count !== 0)
+    .filter((stated) => stated.count !== undefined)
     .map((stated) => `${String(stated.count)} ${stated.unit.label}`)
     .join(", ");
 }
