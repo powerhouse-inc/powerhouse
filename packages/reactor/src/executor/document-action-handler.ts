@@ -305,6 +305,7 @@ export class DocumentActionHandler {
     stores.documentMetaCache.putDocumentMeta(job.documentId, job.branch, {
       state: standing.state.document,
       documentType: standing.header.documentType,
+      protocolVersions: standing.header.protocolVersions,
       documentScopeRevision: operation.index + 1,
     });
 
@@ -421,6 +422,7 @@ export class DocumentActionHandler {
     stores.documentMetaCache.putDocumentMeta(document.header.id, job.branch, {
       state: document.state.document,
       documentType: document.header.documentType,
+      protocolVersions: document.header.protocolVersions,
       documentScopeRevision: 1,
     });
 
@@ -558,6 +560,7 @@ export class DocumentActionHandler {
     stores.documentMetaCache.putDocumentMeta(documentId, job.branch, {
       state: document.state.document,
       documentType: document.header.documentType,
+      protocolVersions: document.header.protocolVersions,
       documentScopeRevision: operation.index + 1,
     });
 
@@ -858,6 +861,7 @@ export class DocumentActionHandler {
     stores.documentMetaCache.putDocumentMeta(documentId, job.branch, {
       state: document.state.document,
       documentType: document.header.documentType,
+      protocolVersions: document.header.protocolVersions,
       documentScopeRevision: operation.index + 1,
     });
 
@@ -1079,6 +1083,7 @@ export class DocumentActionHandler {
     stores.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
       state: sourceDoc.state.document,
       documentType: sourceDoc.header.documentType,
+      protocolVersions: sourceDoc.header.protocolVersions,
       documentScopeRevision: operation.index + 1,
     });
 

@@ -683,6 +683,7 @@ export function createMockDocumentMetaCache(
       hash: { algorithm: "sha256", encoding: "base64" },
     },
     documentType: "powerhouse/document-model",
+    protocolVersions: undefined,
     documentScopeRevision: 1,
   };
 

@@ -1,4 +1,14 @@
-import type { Action, Signature } from "@powerhousedao/shared/document-model";
+import type {
+  Action,
+  CreateDocumentActionInput,
+  Signature,
+} from "@powerhousedao/shared/document-model";
+import {
+  createPresignedHeader,
+  prune,
+  v2RequiredProtocolVersions,
+} from "@powerhousedao/shared/document-model";
+import { createDocumentAction } from "../../src/actions/index.js";
 import { beforeAll, describe, expect, it } from "vitest";
 import { cachedDidKeyCount, importDidKey } from "../../src/signer/did-key.js";
 import { verifyActionSignature } from "../../src/signer/verify-action-signature.js";
@@ -339,6 +349,146 @@ describe("verifyActionSignature", () => {
         "mutation",
       );
       expect(verdict).toMatchObject({ ok: false, code: "HASH_MISMATCH" });
+    });
+  });
+  describe("policy", () => {
+    const v2Target = { ...target, policy: "v2-required" as const };
+
+    function createFor(
+      header: ReturnType<typeof createPresignedHeader>,
+      documentId = header.id,
+    ): Action {
+      const input: CreateDocumentActionInput = {
+        model: header.documentType,
+        version: 0,
+        documentId,
+        signing: {
+          signature: documentId,
+          publicKey: header.sig.publicKey,
+          nonce: header.sig.nonce,
+          createdAtUtcIso: header.createdAtUtcIso,
+          documentType: header.documentType,
+        },
+        protocolVersions: header.protocolVersions,
+      };
+      return createDocumentAction(input);
+    }
+
+    it("refuses unsigned and empty-key actions on a v2-required document", async () => {
+      const passthrough: Action = {
+        ...action(),
+        context: {
+          signer: {
+            user: { address: "", networkId: "", chainId: 0 },
+            app: { name: "", key: "" },
+            signatures: [["", "", "", "", ""]],
+          },
+        },
+      };
+      for (const unsigned of [action(), passthrough]) {
+        for (const path of ["mutation", "load"] as const) {
+          expect(
+            await verifyActionSignature(unsigned, v2Target, path),
+          ).toMatchObject({
+            ok: false,
+            scheme: "unsigned",
+            code: "UNSIGNED_REQUIRED",
+          });
+        }
+      }
+    });
+
+    it("refuses legacy tuples on a v2-required document, at load too", async () => {
+      const base = action();
+      const renown = signer.signed(base, await signer.renownTuple(base));
+      const shared = signer.signed(base, await signer.sharedTuple(base, DOC));
+      for (const signed of [renown, shared]) {
+        for (const path of ["mutation", "load"] as const) {
+          expect(
+            await verifyActionSignature(signed, v2Target, path),
+          ).toMatchObject({ ok: false, code: "SCHEME_BELOW_POLICY" });
+        }
+        expect(
+          await verifyActionSignature(signed, target, "mutation"),
+        ).toMatchObject({ ok: true });
+      }
+    });
+
+    it("refuses PRUNE on a v2-required document only", async () => {
+      const pruning = prune();
+      const signed = signer.signed(
+        pruning,
+        await signer.v2Tuple(pruning, target),
+      );
+      expect(
+        await verifyActionSignature(signed, v2Target, "mutation"),
+      ).toMatchObject({ ok: false, code: "ACTION_NOT_ALLOWED" });
+      expect(await verifyActionSignature(signed, target, "mutation")).toEqual({
+        ok: true,
+        scheme: "v2",
+      });
+    });
+
+    it("accepts a v2-required CREATE whose id recomputes from its input", async () => {
+      const header = createPresignedHeader(
+        undefined,
+        "powerhouse/test",
+        v2RequiredProtocolVersions(),
+      );
+      const create = createFor(header);
+      const signed = signer.signed(
+        create,
+        await signer.v2Tuple(create, { documentId: header.id, branch: "main" }),
+      );
+      expect(
+        await verifyActionSignature(
+          signed,
+          { documentId: header.id, branch: "main", policy: "v2-required" },
+          "mutation",
+        ),
+      ).toEqual({ ok: true, scheme: "v2" });
+    });
+
+    it("refuses a v2-required CREATE whose id does not recompute", async () => {
+      const header = createPresignedHeader(
+        undefined,
+        "powerhouse/test",
+        v2RequiredProtocolVersions(),
+      );
+      const forged = createFor(header, "doc-forged");
+      const signed = signer.signed(
+        forged,
+        await signer.v2Tuple(forged, {
+          documentId: "doc-forged",
+          branch: "main",
+        }),
+      );
+      expect(
+        await verifyActionSignature(
+          signed,
+          { documentId: "doc-forged", branch: "main", policy: "v2-required" },
+          "load",
+        ),
+      ).toMatchObject({ ok: false, code: "ID_MISMATCH" });
+    });
+
+    it("refuses a legacy CREATE that takes a content-addressed id", async () => {
+      const derived = createPresignedHeader(
+        undefined,
+        "powerhouse/test",
+        v2RequiredProtocolVersions(),
+      ).id;
+      const legacy = createFor(
+        createPresignedHeader(undefined, "powerhouse/test"),
+        derived,
+      );
+      expect(
+        await verifyActionSignature(
+          legacy,
+          { documentId: derived, branch: "main" },
+          "load",
+        ),
+      ).toMatchObject({ ok: false, code: "ID_MISMATCH" });
     });
   });
 });

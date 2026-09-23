@@ -136,6 +136,7 @@ describe("DocumentMetaCache", () => {
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
+        protocolVersions: undefined,
         documentScopeRevision: 1,
       });
 
@@ -313,6 +314,7 @@ describe("DocumentMetaCache", () => {
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
+        protocolVersions: undefined,
         documentScopeRevision: 5,
       });
 
@@ -331,6 +333,7 @@ describe("DocumentMetaCache", () => {
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
+        protocolVersions: undefined,
         documentScopeRevision: 1,
       };
 
@@ -350,6 +353,7 @@ describe("DocumentMetaCache", () => {
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
+        protocolVersions: undefined,
         documentScopeRevision: 1,
       };
 
@@ -373,6 +377,7 @@ describe("DocumentMetaCache", () => {
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
+        protocolVersions: undefined,
         documentScopeRevision: 1,
       };
 
@@ -400,6 +405,7 @@ describe("DocumentMetaCache", () => {
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
+        protocolVersions: undefined,
         documentScopeRevision: 1,
       };
 
@@ -424,6 +430,7 @@ describe("DocumentMetaCache", () => {
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
+        protocolVersions: undefined,
         documentScopeRevision: 1,
       };
 
@@ -459,6 +466,7 @@ describe("DocumentMetaCache", () => {
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: docType,
+        protocolVersions: undefined,
         documentScopeRevision: 1,
       });
 

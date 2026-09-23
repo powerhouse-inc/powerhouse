@@ -416,7 +416,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     try {
       admission = await this.signatureAdmission.admitMutation(
         job,
-        stores.operationStore,
+        stores,
         signal,
       );
     } catch (error) {
@@ -1945,7 +1945,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         refused = await this.signatureAdmission.admitLoad(
           job,
           unadmitted,
-          stores.operationStore,
+          stores,
           signal,
         );
       } catch (error) {

@@ -1,8 +1,15 @@
-import type { Action, Signature } from "@powerhousedao/shared/document-model";
+import type {
+  Action,
+  CreateDocumentActionInput,
+  Signature,
+  SignaturePolicy,
+} from "@powerhousedao/shared/document-model";
 import {
   buildOperationSignatureMessage,
   buildOperationSignatureParams,
+  deriveDocumentId,
   hashActionV2,
+  isDerivedDocumentId,
   isV2ActionHash,
   v2TupleProblem,
 } from "@powerhousedao/shared/document-model";
@@ -21,6 +28,8 @@ export type VerificationTarget = {
   /** The stream the operation is stored in. */
   documentId: string;
   branch: string;
+  /** Of the document `documentId` names; legacy when omitted. */
+  policy?: SignaturePolicy;
 };
 
 /**
@@ -33,9 +42,21 @@ export async function verifyActionSignature(
   path: AdmissionPath,
   operation?: { timestampUtcMs: string },
 ): Promise<SignatureVerdict> {
+  const policy = target.policy ?? "legacy";
+  const refusal = policyRefusal(action, policy);
+  if (refusal) {
+    return refusal;
+  }
+
   const signer = action.context?.signer;
   if (!signer || !signer.app.key) {
-    return { ok: true, scheme: "unsigned" };
+    return policy === "v2-required"
+      ? refuse(
+          "unsigned",
+          "UNSIGNED_REQUIRED",
+          `action ${action.id} is unsigned but ${target.documentId} requires v2 signatures`,
+        )
+      : { ok: true, scheme: "unsigned" };
   }
 
   const tuple = signer.signatures.at(-1);
@@ -56,6 +77,14 @@ export async function verifyActionSignature(
       scheme,
       "KEY_MISMATCH",
       `action ${action.id} tuple key does not match signer.app.key`,
+    );
+  }
+
+  if (scheme !== "v2" && policy === "v2-required") {
+    return refuse(
+      scheme,
+      "SCHEME_BELOW_POLICY",
+      `action ${action.id} carries a legacy tuple but ${target.documentId} requires v2 signatures`,
     );
   }
 
@@ -84,6 +113,78 @@ export async function verifyActionSignature(
   }
 
   return verifyEcdsa(tuple, scheme, action.id);
+}
+
+/** Refusals a document's policy makes before any tuple is read. */
+function policyRefusal(
+  action: Action,
+  policy: SignaturePolicy,
+): SignatureVerdict | undefined {
+  const scheme = schemeOfAction(action);
+
+  if (action.type === "PRUNE" && policy === "v2-required") {
+    return refuse(
+      scheme,
+      "ACTION_NOT_ALLOWED",
+      `action ${action.id}: PRUNE is refused on a v2-required document`,
+    );
+  }
+
+  if (action.type !== "CREATE_DOCUMENT") {
+    return undefined;
+  }
+
+  const input = action.input as CreateDocumentActionInput | undefined;
+  const documentId = input?.documentId ?? "";
+  if (policy === "legacy") {
+    // Otherwise a legacy CREATE could claim the id a v2-required one derives.
+    return isDerivedDocumentId(documentId)
+      ? refuse(
+          scheme,
+          "ID_MISMATCH",
+          `action ${action.id}: a legacy document cannot take the content-addressed id ${documentId}`,
+        )
+      : undefined;
+  }
+
+  const expected = derivedCreateId(input);
+  if (expected === documentId) {
+    return undefined;
+  }
+  return refuse(
+    scheme,
+    "ID_MISMATCH",
+    expected === undefined
+      ? `action ${action.id} creates v2-required ${documentId} without the header params its id is derived from`
+      : `action ${action.id} creates v2-required ${documentId}, but its header params derive ${expected}`,
+  );
+}
+
+function derivedCreateId(
+  input: CreateDocumentActionInput | undefined,
+): string | undefined {
+  if (!input?.signing || !input.protocolVersions) {
+    return undefined;
+  }
+  try {
+    return deriveDocumentId({
+      documentType: input.model,
+      createdAtUtcIso: input.signing.createdAtUtcIso,
+      nonce: input.signing.nonce,
+      protocolVersions: input.protocolVersions,
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+function schemeOfAction(action: Action): SignatureScheme {
+  const signer = action.context?.signer;
+  if (!signer || !signer.app.key) {
+    return "unsigned";
+  }
+  const tuple = signer.signatures.at(-1);
+  return isTuple(tuple) ? schemeOf(tuple[2]) : "legacy-unknown";
 }
 
 async function checkV2(

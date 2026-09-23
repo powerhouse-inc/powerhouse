@@ -1,8 +1,14 @@
-import type { Action, Operation } from "@powerhousedao/shared/document-model";
+import type {
+  Action,
+  CreateDocumentActionInput,
+  Operation,
+  SignaturePolicy,
+} from "@powerhousedao/shared/document-model";
 import {
   actionSigningTarget,
   canonicalJson,
   deriveOperationId,
+  signaturePolicyOf,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { IEventBus } from "../events/interfaces.js";
@@ -10,8 +16,12 @@ import {
   ReactorEventTypes,
   type SignatureRefusedEvent,
 } from "../events/types.js";
+import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type { Job } from "../queue/types.js";
-import { InvalidSignatureError } from "../shared/errors.js";
+import {
+  DocumentNotFoundError,
+  InvalidSignatureError,
+} from "../shared/errors.js";
 import type {
   AdmissionPath,
   SignatureVerdict,
@@ -27,6 +37,13 @@ type Candidate = {
   stream: Stream;
   opId: string;
   operation?: Operation;
+  policy?: SignaturePolicy;
+};
+
+/** What admission reads: the stream for live ids, the meta for the policy. */
+export type AdmissionStores = {
+  operationStore: IOperationStore;
+  documentMetaCache: IDocumentMetaCache;
 };
 
 type Refusal = Extract<SignatureVerdict, { ok: false }>;
@@ -51,9 +68,10 @@ export class SignatureAdmission {
   /** The first refusal of a mutation's submitted actions, when enforcing. */
   async admitMutation(
     job: Job,
-    operationStore: IOperationStore,
+    stores: AdmissionStores,
     signal?: AbortSignal,
   ): Promise<MutationAdmission> {
+    const { operationStore } = stores;
     const candidates = job.actions.map((action) =>
       candidate(action, mutationStream(action, job)),
     );
@@ -76,6 +94,12 @@ export class SignatureAdmission {
       return { kind: "committed" };
     }
 
+    await resolvePolicies(
+      candidates,
+      job.actions,
+      stores.documentMetaCache,
+      signal,
+    );
     const submitted = new Set<string>();
     for (const entry of candidates) {
       const verdict = await this.verdict(entry, live, submitted, "mutation");
@@ -95,9 +119,10 @@ export class SignatureAdmission {
   async admitLoad(
     job: Job,
     operations: Operation[],
-    operationStore: IOperationStore,
+    stores: AdmissionStores,
     signal?: AbortSignal,
   ): Promise<Set<Operation>> {
+    const { operationStore } = stores;
     const stream = {
       documentId: job.documentId,
       scope: job.scope,
@@ -113,6 +138,12 @@ export class SignatureAdmission {
       signal,
     );
 
+    await resolvePolicies(
+      candidates,
+      job.operations.map((operation) => operation.action),
+      stores.documentMetaCache,
+      signal,
+    );
     const dropped = new Set<Operation>();
     for (let i = 0; i < candidates.length; i++) {
       const verdict = await this.verdict(
@@ -139,7 +170,11 @@ export class SignatureAdmission {
   ): Promise<SignatureVerdict> {
     const verdict = await verifyActionSignature(
       entry.action,
-      { documentId: entry.stream.documentId, branch: entry.stream.branch },
+      {
+        documentId: entry.stream.documentId,
+        branch: entry.stream.branch,
+        policy: entry.policy,
+      },
       path,
       entry.operation,
     );
@@ -245,6 +280,75 @@ export class SignatureAdmission {
         )
       : undefined;
   }
+}
+
+/**
+ * A CREATE_DOCUMENT is verified under its own input. Anything else takes the
+ * stored document's policy, or, for a document this job creates, that CREATE's.
+ */
+async function resolvePolicies(
+  candidates: Candidate[],
+  jobActions: Action[],
+  documentMetaCache: IDocumentMetaCache,
+  signal?: AbortSignal,
+): Promise<void> {
+  const resolved = new Map<string, SignaturePolicy>();
+  for (const entry of candidates) {
+    if (entry.action.type === "CREATE_DOCUMENT") {
+      entry.policy = createPolicy(entry.action);
+      continue;
+    }
+
+    const { documentId, branch } = entry.stream;
+    const key = `${documentId}\u0000${branch}`;
+    let policy = resolved.get(key);
+    if (policy === undefined) {
+      policy =
+        (await storedPolicy(documentMetaCache, documentId, branch, signal)) ??
+        createdPolicy(jobActions, documentId) ??
+        "legacy";
+      resolved.set(key, policy);
+    }
+    entry.policy = policy;
+  }
+}
+
+async function storedPolicy(
+  documentMetaCache: IDocumentMetaCache,
+  documentId: string,
+  branch: string,
+  signal?: AbortSignal,
+): Promise<SignaturePolicy | undefined> {
+  try {
+    const meta = await documentMetaCache.getDocumentMeta(
+      documentId,
+      branch,
+      signal,
+    );
+    return signaturePolicyOf(meta.protocolVersions);
+  } catch (error) {
+    if (DocumentNotFoundError.isError(error)) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+function createdPolicy(
+  actions: Action[],
+  documentId: string,
+): SignaturePolicy | undefined {
+  const create = actions.find(
+    (action) =>
+      action.type === "CREATE_DOCUMENT" &&
+      (action.input as CreateDocumentActionInput | undefined)?.documentId ===
+        documentId,
+  );
+  return create ? createPolicy(create) : undefined;
+}
+
+function createPolicy(action: Action): SignaturePolicy {
+  return signaturePolicyOf(action.input as CreateDocumentActionInput);
 }
 
 function candidate(action: Action, stream: Stream): Candidate {
