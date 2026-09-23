@@ -1047,6 +1047,7 @@ describe("BENCH_TARGETS", () => {
       "queue",
       "queue-only",
       "cache",
+      "processors",
       "sync",
     ]);
   });

@@ -282,7 +282,7 @@ export function makeDownloadHandler(attachments: AttachmentBuildResult) {
         res.setHeader("Retry-After", String(RETRY_AFTER_SECONDS));
         res.setHeader(
           "Attachment-Pending",
-          JSON.stringify({
+          buildPendingHeader({
             expiresAtUtc: err.expiresAtUtc,
             ...(err.metadata ?? {}),
           }),
@@ -310,7 +310,25 @@ export function makeDownloadHandler(attachments: AttachmentBuildResult) {
   };
 }
 
-function buildMetadataHeader(header: {
+// Node rejects header values above U+00FF. Escaping everything outside
+// printable ASCII keeps the header valid; JSON.parse restores the original.
+function toAsciiJson(value: unknown): string {
+  return JSON.stringify(value).replace(
+    /[\u007f-\uffff]/g,
+    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
+}
+
+export function buildPendingHeader(pending: {
+  expiresAtUtc: string | null;
+  mimeType?: string;
+  fileName?: string;
+  sizeBytes?: number;
+}): string {
+  return toAsciiJson(pending);
+}
+
+export function buildMetadataHeader(header: {
   mimeType: string;
   fileName: string;
   sizeBytes: number;
@@ -318,7 +336,7 @@ function buildMetadataHeader(header: {
   createdAtUtc: string;
   lastAccessedAtUtc: string;
 }): string {
-  return JSON.stringify({
+  return toAsciiJson({
     mimeType: header.mimeType,
     fileName: header.fileName,
     sizeBytes: header.sizeBytes,
@@ -350,7 +368,7 @@ export function makeStatHandler(attachments: AttachmentBuildResult) {
       res.setHeader("Retry-After", String(RETRY_AFTER_SECONDS));
       res.setHeader(
         "Attachment-Pending",
-        JSON.stringify({
+        buildPendingHeader({
           expiresAtUtc: header.expiresAtUtc,
           mimeType: header.mimeType,
           fileName: header.fileName,

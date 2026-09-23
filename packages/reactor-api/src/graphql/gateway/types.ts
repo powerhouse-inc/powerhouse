@@ -234,8 +234,8 @@ export interface IHttpAdapter {
   mountNodeRoute(
     method: HttpMethod,
     path: string,
-    // Node route handlers may be synchronous or async; the adapter
-    // fire-and-forgets the returned promise.
+    // Node route handlers may be synchronous or async; the adapter does not
+    // await them, and answers a throw or rejection with a 500.
     handler: (
       req: http.IncomingMessage,
       res: http.ServerResponse,

@@ -552,6 +552,83 @@ export function runHttpAdapterContractTests(
     });
   });
 
+  // ── mountNodeRoute() failures ──────────────────────────────────────────────
+
+  describe(`IHttpAdapter contract (${adapterName}) – mountNodeRoute() failures`, () => {
+    let h: HttpAdapterHarness;
+
+    beforeEach(async () => {
+      h = await createHarness();
+      h.adapter.mountNodeRoute("GET", "/alive", (_req, res) => {
+        res.writeHead(200).end("ok");
+      });
+    });
+    afterEach(async () => {
+      await h.close();
+    });
+
+    async function expectStillServing(): Promise<void> {
+      const res = await fetch(`${h.url}/alive`);
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe("ok");
+    }
+
+    it("answers 500 when a node handler throws synchronously", async () => {
+      h.adapter.mountNodeRoute("GET", "/throws", () => {
+        throw new Error("boom");
+      });
+
+      const res = await fetch(`${h.url}/throws`);
+      expect(res.status).toBe(500);
+      await expectStillServing();
+    });
+
+    it("answers 500 when a node handler rejects", async () => {
+      h.adapter.mountNodeRoute("GET", "/rejects", async () => {
+        await Promise.resolve();
+        throw new Error("boom");
+      });
+
+      const res = await fetch(`${h.url}/rejects`);
+      expect(res.status).toBe(500);
+      await expectStillServing();
+    });
+
+    it("answers 500 when a raw-body node handler rejects", async () => {
+      h.adapter.mountNodeRoute(
+        "PUT",
+        "/rejects-raw",
+        async () => {
+          await Promise.resolve();
+          throw new Error("boom");
+        },
+        { rawBody: true },
+      );
+
+      const res = await fetch(`${h.url}/rejects-raw`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/octet-stream" },
+        body: new Uint8Array([1, 2, 3]),
+      });
+      expect(res.status).toBe(500);
+      await expectStillServing();
+    });
+
+    it("closes the response when a node handler rejects after sending headers", async () => {
+      h.adapter.mountNodeRoute("GET", "/rejects-late", async (_req, res) => {
+        res.writeHead(200, { "Content-Type": "text/plain" });
+        res.write("partial");
+        await Promise.resolve();
+        throw new Error("boom");
+      });
+
+      const res = await fetch(`${h.url}/rejects-late`);
+      expect(res.status).toBe(200);
+      await expect(res.text()).rejects.toThrow();
+      await expectStillServing();
+    });
+  });
+
   // ── streaming ─────────────────────────────────────────────────────────────
 
   describe(`IHttpAdapter contract (${adapterName}) – streaming`, () => {

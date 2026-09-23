@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { LONG_VISIBLE_TIMEOUT } from "./timeouts.js";
 import { waitForAppReady } from "./wait.js";
@@ -127,6 +127,18 @@ export async function navigateBackToDrive(page: Page): Promise<void> {
   await expect(driveHeading).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
 }
 
+async function fillAndCommit(
+  page: Page,
+  field: Locator,
+  value: string,
+): Promise<void> {
+  await expect(async () => {
+    await field.fill(value);
+    await page.getByText("Global State Schema").first().click();
+    await expect(field).toHaveValue(value, { timeout: 1000 });
+  }).toPass({ timeout: 30_000 });
+}
+
 /**
  * Helper function to create a document and fill its basic data (Vetra-specific).
  * @param page - Playwright Page object
@@ -141,21 +153,22 @@ export async function createDocumentAndFillBasicData(
   // Create the document (powerhouse/document-model in Vetra)
   await createDocument(page, "powerhouse/document-model", documentName);
 
-  // Fill in the basic data
-  await page.getByPlaceholder("Document Type").fill(data.documentType);
-  await page.getByText("Global State Schema").first().click();
-
-  await page.locator('textarea[name="authorName"]').fill(data.authorName);
-  await page.getByText("Global State Schema").first().click();
-
-  await page.locator('textarea[name="description"]').fill(data.description);
-  await page.getByText("Global State Schema").first().click();
-
-  await page.locator('textarea[name="authorWebsite"]').fill(data.authorWebsite);
-  await page.getByText("Global State Schema").first().click();
-
-  await page.locator('textarea[name="extension"]').fill(data.extension);
-  await page.getByText("Global State Schema").first().click();
+  const fields: [Locator, string][] = [
+    [page.getByPlaceholder("Document Type"), data.documentType],
+    [page.locator('textarea[name="authorName"]'), data.authorName],
+    [page.locator('textarea[name="description"]'), data.description],
+    [page.locator('textarea[name="authorWebsite"]'), data.authorWebsite],
+    [page.locator('textarea[name="extension"]'), data.extension],
+  ];
+  for (const [field, value] of fields) {
+    await fillAndCommit(page, field, value);
+  }
+  // An edit made while the new editor is still loading can be reset.
+  for (const [field, value] of fields) {
+    if ((await field.inputValue()) !== value) {
+      await fillAndCommit(page, field, value);
+    }
+  }
 
   if (data.global) {
     // Focus the first CodeMirror editor (global state schema)

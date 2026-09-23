@@ -106,7 +106,10 @@ export async function startSwitchboard(
           logger,
         };
 
-  const reactor = await startSwitchboardServer(finalOptions);
+  const reactor = await startSwitchboardServer({
+    ...finalOptions,
+    fatalErrorShutdown: true,
+  });
 
   return reactor;
 }

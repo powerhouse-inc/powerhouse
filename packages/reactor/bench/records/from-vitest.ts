@@ -351,6 +351,25 @@ export const BENCH_TARGETS: BenchTarget[] = [
     spreadChains: CACHE_SPREAD_CHAINS,
   },
   {
+    name: "processors",
+    recordScript: "bench:processors:record",
+    resultsFile: "processor-delivery.json",
+    sourceFiles: ["bench/processor-delivery.bench.ts"],
+    command: "pnpm --filter @powerhousedao/reactor bench:processors:record",
+    storage: "pglite",
+    tier: "meso",
+    title: "processor delivery under concurrent batches",
+    question:
+      "cost of the processor manager's post-ready pass when many documents' batches arrive at once",
+    caveats: [
+      "Drives ProcessorManager.indexOperations directly over pre-built batches, so the executor and coordinator are not on the path",
+      "The processor waits on a 2ms timer per call, so the figure is dominated by how many calls the manager lets overlap, not by processor work",
+    ],
+    renames: {},
+    stampsFile: "",
+    stampedCase: "",
+  },
+  {
     name: "sync",
     recordScript: "bench:sync:record",
     resultsFile: "",

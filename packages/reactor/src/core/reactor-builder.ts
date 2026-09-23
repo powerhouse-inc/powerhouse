@@ -1347,7 +1347,9 @@ export class ReactorBuilder {
 
       this.logger!.info("Shutdown complete");
       nodeProcess.exit = realExit;
-      realExit(pendingExitCode ?? 0);
+      // A failure code set before the signal (a fatal-error handler) wins
+      // over a peer handler's exit(0).
+      realExit(pendingExitCode || Number(nodeProcess.exitCode ?? 0));
     };
 
     nodeProcess.prependListener("SIGINT", () => void handler("SIGINT"));

@@ -64,6 +64,7 @@ import {
   registerAttachmentReferenceReadModel,
   registerAttachmentReferenceReadModelOnModule,
 } from "./attachment-reference-read-model.mjs";
+import { installFatalErrorShutdown } from "./fatal-shutdown.mjs";
 import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
 import {
   assertProjectionWorkerSupported,
@@ -719,6 +720,9 @@ async function initServer(
     });
 
     ownedReactorModule = module;
+    if (options.fatalErrorShutdown) {
+      installFatalErrorShutdown(logger);
+    }
 
     return {
       module,
@@ -1234,5 +1238,5 @@ export {
 export * from "./types.js";
 
 if (import.meta.main) {
-  await startSwitchboard();
+  await startSwitchboard({ fatalErrorShutdown: true });
 }

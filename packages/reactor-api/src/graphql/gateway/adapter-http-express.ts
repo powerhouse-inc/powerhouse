@@ -23,14 +23,9 @@ import type {
   TlsOptions,
 } from "./types.js";
 import { normalizePath } from "./path-normalize.js";
+import { runNodeHandler, type NodeHandler } from "./run-node-handler.js";
 
 type GetHandler = (r: Request) => Response | Promise<Response>;
-
-type NodeHandler = (
-  req: http.IncomingMessage,
-  res: http.ServerResponse,
-  body?: unknown,
-) => void | Promise<void>;
 
 type RouteEntry =
   | {
@@ -190,9 +185,12 @@ export class ExpressHttpAdapter implements IHttpAdapter {
       const matched = entry.matcher(pathname);
       if (!matched) continue;
       req.params = matched.params as Record<string, string>;
-      // Fire-and-forget, as before: the node handler manages its own response
-      // and the adapter does not await its promise.
-      void entry.handler(req, res, entry.rawBody ? undefined : req.body);
+      runNodeHandler(
+        entry.handler,
+        req,
+        res,
+        entry.rawBody ? undefined : req.body,
+      );
       return true;
     }
     next();
