@@ -1,6 +1,10 @@
 import { join } from "node:path";
 import { z } from "zod";
-import { BenchmarkEntry } from "./benchmark-schema.js";
+import {
+  BenchmarkEntry,
+  BenchmarkTier,
+  StorageEngine,
+} from "./benchmark-schema.js";
 import type { BenchmarkEntry as Benchmark } from "./benchmark-schema.js";
 import {
   nextId,
@@ -187,11 +191,27 @@ function requireMeasuredFix(
   // A sha match alone only proves that something was measured at the fix. The
   // run has to be the same benchmark the finding rests on, or a task about the
   // queue could close on a fresh auth record that never touched it.
-  const beforeCommands = new Set(
-    benchmarks
-      .filter((entry) => priorEvidence(task).includes(entry.id))
-      .map((entry) => entry.command),
+  const before = benchmarks.filter((entry) =>
+    priorEvidence(task).includes(entry.id),
   );
+
+  const called = calledForRun(task, before);
+  if (called !== undefined) {
+    if (measured.some((entry) => answersCall(entry, called))) {
+      return;
+    }
+    throw new RecordsError(
+      [
+        `${options.taskId} cannot be FIXED at ${options.commit}: its experiment calls for ${describeCall(called)}, which none of its prior evidence ran, and no record measured at that commit ran it either.`,
+        `Measured there: ${measured.map(describeRun).join(", ")}`,
+        `The finding rests on: ${before.map(describeRun).join(", ")}`,
+        "Record the benchmark the experiment asked for on the clean tree and cite the record it writes.",
+      ].join("\n"),
+      RECORDS_EXIT.unmeasuredFix,
+    );
+  }
+
+  const beforeCommands = new Set(before.map((entry) => entry.command));
   if (beforeCommands.size === 0) {
     return;
   }
@@ -208,6 +228,80 @@ function requireMeasuredFix(
     ].join("\n"),
     RECORDS_EXIT.unmeasuredFix,
   );
+}
+
+/** A run a GAP's experiment names that its prior evidence never was. */
+type CalledForRun = {
+  tiers: BenchmarkTier[];
+  storages: StorageEngine[];
+  realStorage: boolean;
+};
+
+const REAL_STORAGE = /\breal\b[\w\s/-]*?\b(?:store|storage|database)\b/i;
+
+/**
+ * A GAP asks for a measurement that does not exist yet, so a rerun of the
+ * benchmark it was filed against cannot answer it when its experiment names a
+ * tier or storage engine that benchmark never ran on. Only names absent from
+ * the prior evidence count: an experiment that says "compare against the
+ * micro numbers" is not asking for another micro run.
+ */
+function calledForRun(
+  task: Task,
+  before: Benchmark[],
+): CalledForRun | undefined {
+  if (task.kind !== "GAP" || before.length === 0) {
+    return undefined;
+  }
+
+  const experiment = task.details.experiment;
+  const names = (word: string): boolean =>
+    new RegExp(`\\b${word}\\b`, "i").test(experiment);
+
+  const tiers = BenchmarkTier.options.filter(
+    (tier) => names(tier) && !before.some((entry) => entry.tier === tier),
+  );
+  const storages = StorageEngine.options.filter(
+    (storage) =>
+      storage !== "mixed" &&
+      names(storage) &&
+      !before.some((entry) => entry.environment.storage === storage),
+  );
+  const realStorage =
+    REAL_STORAGE.test(experiment) &&
+    before.every((entry) => entry.environment.storage === "stubbed");
+
+  if (tiers.length === 0 && storages.length === 0 && !realStorage) {
+    return undefined;
+  }
+  return { tiers, storages, realStorage };
+}
+
+function answersCall(entry: Benchmark, called: CalledForRun): boolean {
+  return (
+    (called.tiers.length === 0 || called.tiers.includes(entry.tier)) &&
+    (called.storages.length === 0 ||
+      called.storages.includes(entry.environment.storage)) &&
+    (!called.realStorage || entry.environment.storage !== "stubbed")
+  );
+}
+
+function describeCall(called: CalledForRun): string {
+  const parts: string[] = [];
+  if (called.tiers.length > 0) {
+    parts.push(`a ${called.tiers.join(" or ")} tier`);
+  }
+  if (called.storages.length > 0) {
+    parts.push(`${called.storages.join(" or ")} storage`);
+  }
+  if (called.realStorage) {
+    parts.push("real, not stubbed, storage");
+  }
+  return parts.join(" on ");
+}
+
+function describeRun(entry: Benchmark): string {
+  return `${entry.id} (${entry.tier} tier, ${entry.environment.storage} storage, ${entry.command})`;
 }
 
 /** Everything the task cited before this event, envelope and history alike. */
