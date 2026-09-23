@@ -382,6 +382,186 @@ describe("ProcessorManager Integration Tests", () => {
     });
   });
 
+  // The call patterns of the hosts: Connect's boot, reactor-api's package
+  // reload, and the openpanel teardown guard.
+  describe("registerFactory as hosts call it", () => {
+    async function waitForJob(jobId: string): Promise<void> {
+      await vi.waitFor(
+        async () => {
+          const status = await reactorModule.reactor.getJobStatus(jobId);
+          if (status.status === JobStatus.FAILED) {
+            throw new Error(`Job failed: ${status.error?.message}`);
+          }
+          expect(status.status).toBe(JobStatus.READ_READY);
+        },
+        { timeout: 5000 },
+      );
+    }
+
+    async function rename(driveId: string, name: string): Promise<void> {
+      const job = await reactorModule.reactor.execute(driveId, "main", [
+        setDriveName({ name }),
+      ]);
+      await waitForJob(job.id);
+    }
+
+    async function driveWithHistory(renames: number): Promise<string> {
+      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const created = await reactorModule.reactor.create(driveDoc);
+      await waitForJob(created.id);
+      for (let i = 0; i < renames; i++) {
+        await rename(driveDoc.header.id, `name-${i}`);
+      }
+      return driveDoc.header.id;
+    }
+
+    async function allOrdinals(): Promise<number[]> {
+      const ordinals: number[] = [];
+      let page = await reactorModule.operationIndex.getSinceOrdinal(0);
+      for (;;) {
+        ordinals.push(...page.results.map((op) => op.context.ordinal));
+        if (!page.next) break;
+        page = await page.next();
+      }
+      return ordinals.sort((a, b) => a - b);
+    }
+
+    function trackedFor(processor: IProcessor) {
+      return reactorModule.processorManager
+        .getAll()
+        .find((t) => t.record.processor === processor);
+    }
+
+    it("should bind every package registered concurrently and backfill each once", async () => {
+      const driveId = await driveWithHistory(3);
+      const expected = await allOrdinals();
+
+      const packages = ["pkg-a", "pkg-b", "pkg-c"].map((id) => ({
+        id,
+        ...createMockProcessorFactory(),
+      }));
+      await Promise.all(
+        packages.map(({ id, factory }) =>
+          reactorModule.processorManager.registerFactory(id, factory),
+        ),
+      );
+
+      // Bound on resolve; the backfill is not part of the promise.
+      for (const { id, processor } of packages) {
+        const tracked = reactorModule.processorManager.get(
+          `${id}:${driveId}:0`,
+        );
+        expect(tracked?.record.processor).toBe(processor);
+      }
+      for (const { processor } of packages) {
+        await vi.waitFor(() =>
+          expect(trackedFor(processor)?.lastOrdinal).toBe(expected.at(-1)),
+        );
+        expect(ordinalsOf(processor)).toEqual(expected);
+      }
+    });
+
+    it("should hand a reloaded package over without overlap while writes continue", async () => {
+      const driveId = await driveWithHistory(2);
+      const events: string[] = [];
+      const held = deferred();
+      const release = deferred();
+
+      // The old instance is mid-delivery when the reload starts.
+      const before = createMockProcessor();
+      before.onOperations = vi
+        .fn()
+        .mockImplementation(async (ops: OperationWithContext[]) => {
+          const renamed = ops.some(
+            (op) =>
+              (op.operation.action.input as { name?: string }).name === "held",
+          );
+          if (renamed) {
+            held.resolve();
+            await release.promise;
+            events.push("old delivery done");
+          }
+        });
+      before.onDisconnect = vi.fn().mockImplementation(() => {
+        events.push("old disconnect");
+        return Promise.resolve();
+      });
+      await reactorModule.processorManager.registerFactory("pkg", () => [
+        { processor: before, filter: {} },
+      ]);
+      await vi.waitFor(() =>
+        expect(trackedFor(before)?.lastOrdinal).toBeGreaterThan(0),
+      );
+
+      const heldWrite = rename(driveId, "held");
+      await held.promise;
+
+      const after = createMockProcessor();
+      await reactorModule.processorManager.unregisterFactory("pkg");
+      const reload = reactorModule.processorManager.registerFactory(
+        "pkg",
+        () => {
+          events.push("new factory");
+          return [{ processor: after, filter: {} }];
+        },
+      );
+      const writes = (async () => {
+        for (let i = 0; i < 2; i++) await rename(driveId, `during-${i}`);
+      })();
+      // A round trip on the idle connection: time for the new factory to run
+      // if nothing held it back.
+      await reactorModule.operationIndex.getSinceOrdinal(0);
+      release.resolve();
+      await Promise.all([heldWrite, reload, writes]);
+      await rename(driveId, "after");
+
+      const expected = await allOrdinals();
+      await vi.waitFor(() =>
+        expect(trackedFor(after)?.lastOrdinal).toBe(expected.at(-1)),
+      );
+
+      expect(events).toEqual([
+        "old delivery done",
+        "old disconnect",
+        "new factory",
+      ]);
+      expect(trackedFor(before)).toBeUndefined();
+      // The cursor went with the old registration: one full replay.
+      expect(ordinalsOf(after)).toEqual(expected);
+    });
+
+    it("should leave nothing behind when unregistered while registration is in flight", async () => {
+      const driveId = await driveWithHistory(1);
+      const processor = createMockProcessor();
+      const factoryEntered = deferred();
+      const releaseFactory = deferred();
+
+      const registration = reactorModule.processorManager.registerFactory(
+        "openpanel",
+        async () => {
+          factoryEntered.resolve();
+          await releaseFactory.promise;
+          return [{ processor, filter: {} }];
+        },
+      );
+      await factoryEntered.promise;
+      const teardown =
+        reactorModule.processorManager.unregisterFactory("openpanel");
+      releaseFactory.resolve();
+      await Promise.all([registration, teardown]);
+
+      await rename(driveId, "after teardown");
+
+      expect(
+        reactorModule.processorManager
+          .getAll()
+          .filter((t) => t.factoryId === "openpanel"),
+      ).toEqual([]);
+      expect(processor.onDisconnect).toHaveBeenCalledTimes(1);
+      expect(processor.receivedOperations).toEqual([]);
+    });
+  });
+
   describe("Operation Routing", () => {
     it("should route operations to processor with matching filter", async () => {
       const filter: ProcessorFilter = {
