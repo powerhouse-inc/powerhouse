@@ -24,6 +24,18 @@ export class KyselyAttachmentReferenceStore
     return row !== undefined;
   }
 
+  async removeDocuments(documentIds: readonly string[]): Promise<number> {
+    if (documentIds.length === 0) {
+      return 0;
+    }
+
+    const result = await this.db
+      .deleteFrom("attachment_reference")
+      .where("document_id", "in", [...documentIds])
+      .executeTakeFirst();
+    return Number(result.numDeletedRows);
+  }
+
   async addReferences(
     references: readonly AttachmentReferenceInput[],
   ): Promise<void> {

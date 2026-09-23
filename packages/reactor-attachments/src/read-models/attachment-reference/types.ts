@@ -15,4 +15,7 @@ export interface IAttachmentReferenceReader {
 
 export interface IAttachmentReferenceWriter {
   addReferences(references: readonly AttachmentReferenceInput[]): Promise<void>;
+
+  /** Deletes every reference the documents hold; returns the rows removed. */
+  removeDocuments?(documentIds: readonly string[]): Promise<number>;
 }

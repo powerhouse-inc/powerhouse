@@ -1,12 +1,16 @@
 import {
   BaseReadModel,
   defaultReadModelIndexingConfig,
+  findPurgedIds,
+  readPurgeJournal,
   type DocumentViewDatabase,
   type IConsistencyTracker,
   type IDocumentModelRegistry,
   type IOperationIndex,
   type IWriteCache,
+  type OrdinalRange,
   type PagedResults,
+  type PurgeOutcome,
 } from "@powerhousedao/reactor";
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Kysely, Transaction } from "kysely";
@@ -41,6 +45,8 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
    */
   private replayedThrough: number | undefined;
   private warnedCheckpoint: number | undefined;
+  /** Ordinals a purge removed: gaps that will never fill. */
+  private purgedRanges: OrdinalRange[] = [];
 
   constructor(
     db: Kysely<DocumentViewDatabase>,
@@ -72,13 +78,61 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
         await this.initializeState();
       }
 
+      await this.refreshPurgedRanges();
+
       let page = await this.operationIndex.getSinceOrdinal(this.lastOrdinal);
       while (page.results.length > 0) {
         await this.indexOperationsInOrdinalOrder(page.results);
         if (!page.next) break;
         page = await page.next();
       }
+
+      // The base init() is bypassed, so its journal pass is run here.
+      await this.reconcilePurges();
     });
+  }
+
+  override async purgeDocuments(ids: string[]): Promise<PurgeOutcome> {
+    await this.refreshPurgedRanges();
+    if (!this.referenceWriter.removeDocuments) {
+      return { readModelId: this.name, rowsAffected: 0, covered: false };
+    }
+    const rowsAffected = await this.referenceWriter.removeDocuments(ids);
+    return {
+      readModelId: this.name,
+      rowsAffected,
+      covered: true,
+      notes: ["rows and cursor are written separately, not in one transaction"],
+    };
+  }
+
+  /** Best effort: a failed read keeps the ranges already known. */
+  private async refreshPurgedRanges(): Promise<void> {
+    const ranges: OrdinalRange[] = [];
+    let after = 0;
+    try {
+      for (;;) {
+        const entries = await readPurgeJournal(this.db, after);
+        if (entries.length === 0) break;
+        for (const entry of entries) ranges.push(...entry.purgedOrdinals);
+        after = entries[entries.length - 1]!.ordinal;
+      }
+    } catch {
+      return;
+    }
+    this.purgedRanges = ranges;
+  }
+
+  /** The first ordinal at or above `ordinal` that a purge did not remove. */
+  private skipPurged(ordinal: number): number {
+    let next = ordinal;
+    for (;;) {
+      const range = this.purgedRanges.find(
+        ({ from, to }) => next >= from && next <= to,
+      );
+      if (!range) return next;
+      next = range.to + 1;
+    }
   }
 
   private enqueue(work: () => Promise<void>): Promise<void> {
@@ -114,8 +168,20 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
       }
     }
 
-    if (references.length > 0) {
-      await this.referenceWriter.addReferences(references);
+    if (references.length === 0) return;
+
+    // A payload that committed before a purge can still arrive after it.
+    const purged = new Set(
+      await findPurgedIds(
+        this.db,
+        references.map((reference) => reference.documentId),
+      ),
+    );
+    const kept = references.filter(
+      (reference) => !purged.has(reference.documentId),
+    );
+    if (kept.length > 0) {
+      await this.referenceWriter.addReferences(kept);
     }
   }
 
@@ -126,6 +192,10 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
     if (candidates.length === 0) return;
 
     const incomingMax = candidates[candidates.length - 1]!.context.ordinal;
+
+    if (this.contiguousEnd(candidates) < incomingMax) {
+      await this.refreshPurgedRanges();
+    }
 
     if (this.contiguousEnd(candidates) < incomingMax) {
       const replayed = await this.loadThroughOrdinal(incomingMax);
@@ -200,12 +270,12 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
 
   /** Last ordinal of the contiguous run starting at lastOrdinal + 1. */
   private contiguousEnd(items: OperationWithContext[]): number {
-    let expectedOrdinal = this.lastOrdinal + 1;
+    let expectedOrdinal = this.skipPurged(this.lastOrdinal + 1);
     for (const item of items) {
       const ordinal = item.context.ordinal;
       if (ordinal < expectedOrdinal) continue;
       if (ordinal > expectedOrdinal) break;
-      expectedOrdinal++;
+      expectedOrdinal = this.skipPurged(expectedOrdinal + 1);
     }
     return expectedOrdinal - 1;
   }

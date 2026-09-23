@@ -143,6 +143,8 @@ function cursorDb(cursor?: number): FakeCursorDb {
                 ? undefined
                 : { lastOrdinal: state.cursor },
             ),
+          // The tombstone lookup: nothing here is ever purged.
+          execute: () => Promise.resolve([]),
         }),
       }),
     }),
@@ -384,7 +386,8 @@ describe("AttachmentReferenceReadModel", () => {
     const { model } = dependencies({ writer });
     const first = model.indexOperations([op(1, undefined, undefined, "alpha")]);
     const second = model.indexOperations([op(2, undefined, undefined, "beta")]);
-    await Promise.resolve();
+    await vi.waitFor(() => expect(committed).toEqual([1]));
+    await new Promise((resolve) => setTimeout(resolve, 10));
     expect(committed).toEqual([1]);
     releaseFirst();
     await Promise.all([first, second]);
