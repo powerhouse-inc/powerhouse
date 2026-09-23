@@ -339,6 +339,35 @@ describe("buildMicroEntry", () => {
     ]);
   });
 
+  it("holds the processor delay a processors case names fixed", () => {
+    const suites = [
+      sizedSuite(
+        "bench/processor-delivery.bench.ts > processor delivery under concurrent batches",
+        [
+          ["32 documents, no-op processor", 80],
+          ["32 documents, 2ms processor", 72],
+          [
+            "32 documents, 2ms processor, factory re-registered concurrently",
+            9,
+          ],
+        ],
+      ),
+    ];
+
+    const results = entryFor(findTarget("processors"), { suites }).results as {
+      derived: { name: string; value: number }[];
+    };
+
+    expect(
+      results.derived.map((reading) => [reading.name, reading.value]),
+    ).toEqual([
+      [
+        "processor delivery under concurrent batches: spread at 32 documents, 2 ms processor",
+        8,
+      ],
+    ]);
+  });
+
   it("appends the caller's claims rather than replacing what was measured", () => {
     const entry = entryFor(findTarget("auth"), {
       conclusions: ["group lookup dominates once the roster passes 1000"],

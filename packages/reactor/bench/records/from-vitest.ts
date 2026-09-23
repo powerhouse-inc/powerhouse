@@ -144,6 +144,13 @@ const DOCUMENT_COUNT: SizeUnit = {
   noun: "document count",
 };
 
+/** The processor's per-call wait, which sets how much a delivery pass can overlap. */
+const PROCESSOR_DELAY_MS: SizeUnit = {
+  words: ["ms processor"],
+  label: "ms processor",
+  noun: "processor delay",
+};
+
 const AUTH_SPREAD_CHAINS: string[][] = [
   ["(cap), match first", "(cap), match last", "(cap), denied"],
   ["administered from the top", "administered from the bottom"],
@@ -368,6 +375,8 @@ export const BENCH_TARGETS: BenchTarget[] = [
     renames: {},
     stampsFile: "",
     stampedCase: "",
+    sizeUnits: [DOCUMENT_COUNT, PROCESSOR_DELAY_MS],
+    spreadChains: [],
   },
   {
     name: "sync",
