@@ -51,6 +51,7 @@ try {
     ...config,
     migratePglite: cliMigratePglite || config.migratePglite,
     forcePgVersion: config.forcePgVersion ?? undefined,
+    fatalErrorShutdown: true,
   });
 } catch (e) {
   Sentry.captureException(e);
