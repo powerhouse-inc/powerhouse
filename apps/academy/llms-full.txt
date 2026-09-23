@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-23T21:59:27.996Z
+> Generated: 2026-09-23T23:11:11.728Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -26242,14 +26242,18 @@ interface ISigner {
 
   sign(data: Uint8Array): Promise<Uint8Array>;
   verify(data: Uint8Array, signature: Uint8Array): Promise<void>;
-  signAction(action: Action, abortSignal?: AbortSignal): Promise<Signature>;
+  signAction(
+    action: Action,
+    target: { documentId: string; branch: string },
+    abortSignal?: AbortSignal,
+  ): Promise<Signature>;
 }
 ```
 
 It serves two purposes:
 
 - `sign()` / `verify()` handle raw data signing, used for **header signing**.
-- `signAction()` produces a structured `Signature` tuple, used for **action signing**.
+- `signAction()` produces a structured `Signature` tuple, used for **action signing**. `target` names the document and branch whose log stores the action; the signature is bound to it.
 
 ### The Signature tuple
 
@@ -26263,11 +26267,34 @@ A signed action produces a 5-element `Signature` tuple:
 | ----- | -------------- | ----------------------------------------------------------------------------------- |
 | 0     | `timestamp`    | Unix timestamp (seconds) when the action was signed                                 |
 | 1     | `signerKey`    | The signer's public key identifier (typically a `did:key` URI)                      |
-| 2     | `actionHash`   | SHA-1 hash of `documentId + scope + actionType + JSON(input)`                       |
+| 2     | `actionHash`   | `v2:` followed by the unpadded base64url SHA-256 of the preimage below (43 chars)   |
 | 3     | `hashField`    | Previous state hash, or `prevStateHash:resultingStateHash` for offline verification |
 | 4     | `signatureHex` | The ECDSA signature bytes as a `0x`-prefixed hex string                             |
 
 The signed message uses the prefix `\x19Signed Operation:\n{length}` followed by the concatenation of elements 0-3, matching the pattern used by Ethereum-style message signing.
+
+The preimage is the sorted-key JSON (`canonicalJson`) of:
+
+```typescript
+[
+  "v2",
+  documentId,
+  branch,
+  scope,
+  type,
+  id,
+  timestampUtcMs,
+  input,
+  signer.user.address,
+  signer.user.networkId,
+  signer.user.chainId,
+  signer.app.key,
+];
+```
+
+So a tuple is valid for one action, in one document and branch, attributed to one user and key. Signing refuses an empty `documentId` or `branch`, an action with no `input`, and input values JSON storage would not return unchanged: `BigInt`, `NaN`, `Infinity`, sparse arrays and lone surrogates. Object properties holding `undefined` are omitted, as JSON omits them.
+
+A document-scope action is signed for the document it writes to: `ADD_RELATIONSHIP`, `UPDATE_RELATIONSHIP` and `REMOVE_RELATIONSHIP` for `input.sourceId`, the others for `input.documentId`.
 
 ### ActionSigner context
 
@@ -26287,12 +26314,12 @@ This context is attached to the action's `context.signer` field and flows throug
 
 ### Key functions
 
-| Function                           | Location                             | Purpose                                                      |
-| ---------------------------------- | ------------------------------------ | ------------------------------------------------------------ |
-| `buildOperationSignature()`        | `document-model/src/core/actions.ts` | Creates a Signature tuple from an action context             |
-| `buildSignedAction()`              | `document-model/src/core/actions.ts` | Reduces an action, signs it, and attaches the signer context |
-| `buildOperationSignatureParams()`  | `document-model/src/core/crypto.ts`  | Builds the 4-element params from action context              |
-| `buildOperationSignatureMessage()` | `document-model/src/core/crypto.ts`  | Constructs the prefixed message for signing                  |
+| Function                | Location                               | Purpose                                                         |
+| ----------------------- | -------------------------------------- | --------------------------------------------------------------- |
+| `signActionV2()`        | `@powerhousedao/shared/document-model` | Builds a v2 `Signature` tuple from an action, target and signer |
+| `hashActionV2()`        | `@powerhousedao/shared/document-model` | Computes element [2] for an action, target and signer           |
+| `canonicalJson()`       | `@powerhousedao/shared/document-model` | The sorted-key JSON the preimage is encoded with                |
+| `actionSigningTarget()` | `@powerhousedao/shared/document-model` | The document and branch an action submitted to a job lands in   |
 
 ## ReactorClient Auto-Signing
 
@@ -26302,26 +26329,24 @@ The `ReactorClient` automatically signs all actions before submitting them to th
 
 `ReactorClient` holds an `ISigner` instance. Every mutation method -- `execute()`, `create()`, `createChild()`, `add()`, `remove()`, `move()` -- calls `signActions()` internally before submitting to the reactor. If an action already has valid signatures, it is passed through unchanged.
 
+`execute()`, `executeAsync()` and `executeBatch()` resolve a slug to the document id before signing, because the signature is bound to the id the write is stored under.
+
 ```typescript
 // From reactor/src/core/utils.ts
-const signAction = async (action, signer, signal?) => {
+const signAction = async (action, signer, target, signal?) => {
   // Skip if already signed
   const existingSignatures = action.context?.signer?.signatures;
   if (existingSignatures && existingSignatures.length > 0) {
     return action;
   }
 
-  const signature = await signer.signAction(action, signal);
+  const signature = await signer.signAction(action, target, signal);
 
   return {
     ...action,
     context: {
       ...action.context,
-      signer: {
-        user: { address: signer.user?.address || "", ... },
-        app: { name: signer.app?.name || "", key: signer.app?.key || "" },
-        signatures: [signature],
-      },
+      signer: { ...actionSignerIdentity(signer), signatures: [signature] },
     },
   };
 };
@@ -26346,10 +26371,10 @@ If no signer is provided, the client falls back to an internal `PassthroughSigne
 
 ### ISigner implementations
 
-| Implementation       | Package                                     | Purpose                                                     |
-| -------------------- | ------------------------------------------- | ----------------------------------------------------------- |
-| `PassthroughSigner`  | `@powerhousedao/reactor` (internal, not exported) | No-op signer, used when signing is disabled            |
-| `RenownCryptoSigner` | `@renown/sdk`                               | Production signer using ECDSA P-256 with `did:key` identity |
+| Implementation       | Package                                           | Purpose                                                     |
+| -------------------- | ------------------------------------------------- | ----------------------------------------------------------- |
+| `PassthroughSigner`  | `@powerhousedao/reactor` (internal, not exported) | No-op signer, used when signing is disabled                 |
+| `RenownCryptoSigner` | `@renown/sdk`                                     | Production signer using ECDSA P-256 with `did:key` identity |
 
 `RenownCryptoSigner` is the standard production implementation. It derives signing keys from the Renown identity system and identifies signers using DID URIs (`did:key:z...`).
 
@@ -26370,11 +26395,12 @@ Operations the reactor only moves are not verified again. That covers stored ope
 
 The last tuple in `context.signer.signatures` is checked:
 
-1. An action with no `context.signer`, or with an empty `signer.app.key` (what `PassthroughSigner` produces), is unsigned. Steps 2 to 4 do not apply to it.
+1. An action with no `context.signer`, or with an empty `signer.app.key` (what `PassthroughSigner` produces), is unsigned. Steps 2 to 5 do not apply to it.
 2. Element [1] of the tuple must equal `signer.app.key`.
-3. On a mutation, the hash in element [2] is recomputed from the action and must match. The scheme is read from the hash length: 44 characters is the Renown signer's SHA-256 hash, 28 is the `buildOperationSignature` SHA-1 hash. Any other length is refused. On a load, the hash is not recomputed, because stored input can come back with its keys reordered.
-4. The ECDSA P-256 signature over elements [0] to [3] must verify under the `did:key` in element [1].
-5. The action id must not already be stored in the document's stream for that scope and branch.
+3. A `v2:` hash must be `v2:` and 43 base64url characters, element [0] decimal seconds, and element [4] `0x` and 128 lowercase hex digits. The preimage is recomputed for the document and branch the write is stored in and must match, on mutations and loads alike. On a load, the incoming operation's timestamp must be the action's timestamp.
+4. A hash without the prefix is a legacy tuple. On a mutation it is recomputed by length: 44 characters is the legacy Renown SHA-256 hash, 28 is the `buildOperationSignature` SHA-1 hash, and any other length is refused. On a load it is not recomputed, because stored input can come back with its keys reordered.
+5. The ECDSA P-256 signature over elements [0] to [3] must verify under the `did:key` in element [1].
+6. The action id must not already be stored in the document's stream for that scope and branch. A job the queue retries after its first attempt committed is the exception: when every write it carries is stored with the same content, it succeeds without writing again.
 
 A mutation job fails on the first refusal, and nothing it carried is stored. A load job drops the refused operations, stores the rest, and succeeds.
 
@@ -26384,16 +26410,16 @@ Verification runs in one of two modes, set through the executor config:
 
 ```typescript
 const reactorBuilder = new ReactorBuilder().withExecutorConfig({
-  signatureVerification: "enforce", // default: "log"
+  signatureVerification: "log", // default: "enforce"
 });
 ```
 
-- `log` (the default) records every refusal and stores the write anyway.
-- `enforce` refuses the write.
+- `enforce` (the default) refuses the write.
+- `log` records every refusal and stores the write anyway.
 
 Each refusal emits a `SIGNATURE_REFUSED` event on the reactor event bus, with the refusal `code`, the signature `scheme`, the admission `path` (`mutation` or `load`), and whether it was `enforced`. `@powerhousedao/opentelemetry-instrumentation-reactor` counts these as `reactor.signature.refusals`.
 
-A refused mutation fails with an `InvalidSignatureError`. Its message carries the code in brackets, for example `[HASH_MISMATCH]`, and the code is also on the error's `code` field. The codes are `KEY_MISMATCH`, `MALFORMED_TUPLE`, `HASH_MISMATCH`, `BAD_SIGNATURE`, and `DUPLICATE_ACTION`.
+A refused mutation fails with an `InvalidSignatureError`. Its message carries the code in brackets, for example `[HASH_MISMATCH]`, and the code is also on the error's `code` field. The codes are `KEY_MISMATCH`, `MALFORMED_TUPLE`, `TIMESTAMP_MISMATCH`, `HASH_MISMATCH`, `BAD_SIGNATURE`, and `DUPLICATE_ACTION`.
 
 ## Signing at the GQL / Switchboard Level
 
