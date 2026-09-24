@@ -2455,6 +2455,24 @@ export class SimpleJobExecutor implements IJobExecutor {
       return liveOps.has(op);
     });
 
+    // The skip rewinds from here, so each live row from here goes back.
+    let rewoundFrom = Number.POSITIVE_INFINITY;
+    for (const op of nonSupersededOps) {
+      if (!isGenesisOperation(op)) {
+        rewoundFrom = Math.min(rewoundFrom, op.index - op.skip);
+      }
+    }
+    const reappended = new Set(nonSupersededOps.map((op) => op.index));
+    for (const op of allOpsFromMinConflictingIndex) {
+      if (
+        op.index >= rewoundFrom &&
+        !reappended.has(op.index) &&
+        supersededBy(op) === undefined
+      ) {
+        nonSupersededOps.push(op);
+      }
+    }
+
     const existingActionIds = new Set(
       nonSupersededOps.map((op) => op.action.id),
     );

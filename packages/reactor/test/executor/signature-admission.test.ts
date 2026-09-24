@@ -197,6 +197,14 @@ describe("signature admission", () => {
     module!.writeCache.invalidate(docId, "global", "main");
   }
 
+  async function storeRows(operations: Operation[]): Promise<void> {
+    const store = module!.operationStore;
+    await store.apply(docId, DOC_TYPE, "global", "main", 0, (txn) => {
+      txn.addOperations(...operations);
+    });
+    module!.writeCache.invalidate(docId, "global", "main");
+  }
+
   describe("at mutation admission", () => {
     it("accepts renown and shared legacy tuples", async () => {
       await build("enforce");
@@ -543,19 +551,19 @@ describe("signature admission", () => {
       );
     }
 
-    /** b and c sit below the peer's index for a: rewound, never re-appended. */
+    /** A stream an earlier load left rewinding b and c without re-appending them. */
     async function rewound(): Promise<Record<"a" | "b" | "c" | "d", Action>> {
       const a = await renownSigned(moduleAction("a", 0));
       const b = await renownSigned(moduleAction("b", 10));
       const c = await renownSigned(moduleAction("c", 20));
       const d = await renownSigned(moduleAction("d", 15));
-      expect(
-        (await load([asOperation(a, 0), asOperation(b, 1), asOperation(c, 2)]))
-          .status,
-      ).toBe(JobStatus.READ_READY);
-      expect(
-        (await load([asOperation(a, 10), asOperation(d, 11)])).status,
-      ).toBe(JobStatus.READ_READY);
+      await storeRows([
+        asOperation(a, 0),
+        asOperation(b, 1),
+        asOperation(c, 2),
+        { ...asOperation(a, 3), skip: 3 },
+        asOperation(d, 4),
+      ]);
       expect(await liveActionIds()).toEqual([a.id, d.id]);
       return { a, b, c, d };
     }
