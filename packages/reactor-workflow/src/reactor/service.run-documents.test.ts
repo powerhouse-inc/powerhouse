@@ -2,7 +2,7 @@
 // trigger names or its steps were handed, and connections are read as the caller.
 import type { WorkflowRuntimeHostDeps } from "./host.js";
 import { SubgraphReactorPort } from "./reactor-port.js";
-import { withRunScope } from "./run-scope.js";
+import { currentDocumentRecorder, withRunScope } from "./run-scope.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import { describe, expect, it, vi } from "vitest";
 import { testRuntime } from "../../test/helpers/runtime.js";
@@ -219,5 +219,69 @@ describe("the reactor port", () => {
         () => port.get({ documentId: SECRET }),
       ),
     ).rejects.toThrow("journal down");
+  });
+});
+
+describe("a fired run's result", () => {
+  const workflow = {
+    header: { id: WORKFLOW, documentType: "powerhouse/workflow" },
+    state: {
+      global: {
+        name: "Fired",
+        status: "ENABLED",
+        version: 1,
+        trigger: { id: "t1", blockType: "core#manual", config: {} },
+        steps: [{ id: "s", key: "read", blockType: "fake#ok", config: {} }],
+        edges: [{ id: "e1", from: "t1", to: "s", port: "next" }],
+        variables: [],
+      },
+    },
+  };
+
+  // A step that reads one document through the reactor port.
+  function firing(read: string) {
+    const service = testRuntime({
+      reactorClient: {
+        get: (id: string) =>
+          Promise.resolve(id === WORKFLOW ? workflow : { header: { id } }),
+      },
+      assertCanRead,
+    } as never);
+    const internals = service as unknown as Record<string, unknown>;
+    internals.storePromise = Promise.resolve(undefined);
+    internals.executor = {
+      execute: async () => {
+        await currentDocumentRecorder()?.([read]);
+        return { output: { content: read } };
+      },
+    };
+    return service;
+  }
+
+  it("is handed back without its steps when a step read what the caller may not", async () => {
+    const result = await firing(SECRET).fire(
+      WORKFLOW,
+      undefined,
+      "manual",
+      undefined,
+      CTX,
+    );
+
+    expect(result.status).toBe("SUCCEEDED");
+    expect(result.steps).toEqual([]);
+  });
+
+  it("is handed back whole when the caller may read what its steps read", async () => {
+    const result = await firing(OPEN).fire(
+      WORKFLOW,
+      undefined,
+      "manual",
+      undefined,
+      CTX,
+    );
+
+    expect(result.steps.map((step) => step.output)).toEqual([
+      { content: OPEN },
+    ]);
   });
 });

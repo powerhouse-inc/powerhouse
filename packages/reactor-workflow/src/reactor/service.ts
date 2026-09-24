@@ -264,15 +264,17 @@ function stringField(
 
 // The documents a run's trigger names: the one whose operation fired it, and
 // the drive it sits in.
-function triggerDocumentIds(payload: string | null): string[] {
+function journaledTriggerDocumentIds(payload: string | null): string[] {
   if (payload === null) return [];
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(payload);
+    return triggerDocumentIds(JSON.parse(payload));
   } catch {
     return [];
   }
-  const record = inputRecord(parsed);
+}
+
+function triggerDocumentIds(payload: unknown): string[] {
+  const record = inputRecord(payload);
   return [
     ...new Set(
       [
@@ -2380,28 +2382,41 @@ export class WorkflowRuntimeService {
   ): Promise<RunRow[]> {
     if (!ctx) return [];
     const decisions = new Map<string, Promise<boolean>>();
-    const serves = (documentId: string) => {
-      let decision = decisions.get(documentId);
-      if (!decision) {
-        decision = this.servesTriggerDocument(documentId, ctx);
-        decisions.set(documentId, decision);
-      }
-      return decision;
-    };
     const store = await this.store();
     const served = await Promise.all(
-      rows.map(async (row) => {
-        const ids = new Set([
-          ...triggerDocumentIds(row.trigger_payload),
-          ...((await store?.getRunDocuments(row.id)) ?? []),
-        ]);
-        return (await Promise.all([...ids].map(serves))).every(Boolean);
-      }),
+      rows.map(async (row) =>
+        this.servesDocuments(
+          [
+            ...journaledTriggerDocumentIds(row.trigger_payload),
+            ...((await store?.getRunDocuments(row.id)) ?? []),
+          ],
+          ctx,
+          decisions,
+        ),
+      ),
     );
     return rows.filter((_, index) => served[index]);
   }
 
-  private async servesTriggerDocument(
+  private async servesDocuments(
+    documentIds: string[],
+    ctx: WorkflowCaller,
+    decisions = new Map<string, Promise<boolean>>(),
+  ): Promise<boolean> {
+    const served = await Promise.all(
+      [...new Set(documentIds)].map((documentId) => {
+        let decision = decisions.get(documentId);
+        if (!decision) {
+          decision = this.servesRunDocument(documentId, ctx);
+          decisions.set(documentId, decision);
+        }
+        return decision;
+      }),
+    );
+    return served.every(Boolean);
+  }
+
+  private async servesRunDocument(
     documentId: string,
     ctx: WorkflowCaller,
   ): Promise<boolean> {
@@ -2764,18 +2779,19 @@ export class WorkflowRuntimeService {
       session = this.workers().session();
       const journal = store;
       const journaledRunId = runId;
+      const handed = new Set<string>();
       const result = await withRunScope(
         {
           workflowId,
           runId,
           connections,
           pieceWorker: session,
-          ...(journal && journaledRunId
-            ? {
-                recordDocuments: (documentIds: string[]) =>
-                  journal.recordRunDocuments(journaledRunId, documentIds),
-              }
-            : {}),
+          recordDocuments: async (documentIds: string[]) => {
+            for (const documentId of documentIds) handed.add(documentId);
+            if (journal && journaledRunId) {
+              await journal.recordRunDocuments(journaledRunId, documentIds);
+            }
+          },
         },
         () =>
           runWorkflow({
@@ -2817,7 +2833,14 @@ export class WorkflowRuntimeService {
           );
         }
       }
-      return { ...result, runId };
+      const finished = { ...result, runId };
+      if (!ctx) return finished;
+      // Handed back only as `run` would serve it, so a step's output never
+      // reaches a caller the journal would withhold it from.
+      const ids = [...triggerDocumentIds(triggerPayload), ...handed];
+      return (await this.servesDocuments(ids, ctx))
+        ? finished
+        : { status: finished.status, steps: [], runId };
     } catch (error) {
       if (store && runId) {
         await store.failRun(
@@ -2892,10 +2915,13 @@ export class WorkflowRuntimeService {
         port: row.port,
       });
     }
-    return this.fire(run.workflow_id, triggerPayload, "rerun", {
-      completedSteps,
-      rerunOf: runId,
-    });
+    return this.fire(
+      run.workflow_id,
+      triggerPayload,
+      "rerun",
+      { completedSteps, rerunOf: runId },
+      ctx,
+    );
   }
 }
 
