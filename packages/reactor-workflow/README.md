@@ -51,6 +51,13 @@ rather than restated here.
   `apfile://` refs, the size ceiling and a host-injected fetcher have no
   upstream equivalent. An `ApFile` a processor builds is flattened to a plain
   object at that boundary: a class instance does not survive the worker IPC.
+- **Prop validation**, from the same place. Before an action's `run()` or any
+  trigger hook but `onDisable`, a prop left unset takes its `defaultValue` and
+  the coerced values go through the engine's `validateProperty`. A failure is
+  a `PropsValidationError` naming each field, as in
+  `Title (title): Expected string, received: undefined`; the step fails and
+  piece code never runs. The one departure: a JSON prop whose text does not
+  parse reaches the piece as that text, as coercion already hands it on.
 - **The SSRF table**, likewise from `./host`. `worker/egress.ts` classifies an
   address with `ssrfIpClassifier.isBlockedIp`; the connect-time socket and DNS
   hooks, the per-request policy and the allow-lists are ours. The one range the
@@ -196,7 +203,6 @@ This is what a piece can declare or call that this engine does not run. It is tr
 - `refreshOnSearch`: a dropdown's `searchValue` is never sent.
 - Dynamic resolvers nested in ARRAY items or DYNAMIC output can't be called.
 - CUSTOM props carry only their type.
-- A `required` prop is not validated before `run()`.
 
 **Actions**
 

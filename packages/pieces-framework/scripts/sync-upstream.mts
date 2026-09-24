@@ -316,6 +316,12 @@ const PATCHES: Patch[] = [
     replace: 'export { InputProperty } from "./input/index.js";\n',
   },
   {
+    file: "upstream/engine/lib/variables/props-processor.ts",
+    why: "export the validator half, for a host that runs its own processors first",
+    find: "const validateProperty = (\n",
+    replace: "export const validateProperty = (\n",
+  },
+  {
     file: "test/upstream/engine/test/variables/file-processor.test.ts",
     why: "upstream never typechecks this test; propsProcessor returns unknown values",
     find: "    const file: ApStreamingFile = processedInput.file;\n",

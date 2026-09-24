@@ -156,6 +156,10 @@ Current patches:
   type-only re-export let `import { SeekPage }` typecheck and then fail at link
   time. The runtime gains three exports upstream's lacks; `test/dist.test.ts`
   holds the d.ts to the runtime.
+- `upstream/engine/lib/variables/props-processor.ts`: export
+  `validateProperty`, the validator half of `applyProcessorsAndValidators`.
+  A host that coerces values with its own processors first (reactor-workflow
+  hydrates FILE props itself) validates the result with it.
 - `test/upstream/framework/test/connection-identifier-flag.test.ts`: pass
   `authors: []` to `createPiece` (upstream does not typecheck its tests).
 - `test/upstream/core-utils/test/ai-provider-health.test.ts`: make the outcome

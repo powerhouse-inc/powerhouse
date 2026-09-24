@@ -172,7 +172,7 @@ function destroyOpenStreams(value: unknown): void {
   }
 }
 
-const validateProperty = (
+export const validateProperty = (
   property: PieceProperty,
   value: unknown,
   originalValue: unknown,

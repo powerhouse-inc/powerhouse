@@ -176,7 +176,8 @@ function isPermanentFailure(error: unknown): boolean {
   if (error instanceof TriggerConfigError) return true;
   return (
     error instanceof PieceWorkerError &&
-    error.serialized.unsupportedMember !== undefined
+    (error.serialized.unsupportedMember !== undefined ||
+      error.serialized.invalidProps !== undefined)
   );
 }
 
