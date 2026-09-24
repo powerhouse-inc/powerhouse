@@ -3451,6 +3451,9 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@renown/sdk':
+        specifier: workspace:*
+        version: link:../../packages/renown
       colorette:
         specifier: 'catalog:'
         version: 2.0.20
