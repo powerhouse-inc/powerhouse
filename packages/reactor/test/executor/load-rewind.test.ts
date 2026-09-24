@@ -8,6 +8,7 @@ import {
   deriveOperationId,
   garbageCollect,
   sortOperations,
+  undo,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, describe, expect, it } from "vitest";
@@ -146,5 +147,37 @@ describe("a load reshuffle", () => {
 
     expect(await live()).toEqual(["r", "s", "q", "p"]);
     expect(await modules()).toEqual(["r", "s", "q", "p"]);
+  });
+
+  // The executor stamps the NOOP an UNDO becomes with its own clock.
+  it("keeps an undo the reshuffle moves on the operation it undid", async () => {
+    await build();
+    await execute([moduleAction("x", -120_000)]);
+    await execute([undo()]);
+    expect(await modules()).toEqual([]);
+
+    await load([asOperation(moduleAction("z", -90_000), 0)]);
+
+    expect(await modules()).toEqual(["z"]);
+    expect(await live()).toContain("z");
+  });
+
+  // A NOOP records no target: a reshuffle moving a peer's undo away from the
+  // operation it undid leaves the skip on whatever sorts before it.
+  it.fails("keeps a peer's undo on the operation it undid", async () => {
+    await build();
+    await load([asOperation(moduleAction("x", 0), 0)]);
+    await execute([moduleAction("w", 20)]);
+    const noop: Action = {
+      id: "peer-undo",
+      type: "NOOP",
+      scope: "global",
+      input: {},
+      timestampUtcMs: new Date(base + 10).toISOString(),
+    };
+
+    await load([asOperation(noop, 1, 1)]);
+
+    expect(await modules()).toEqual(["w"]);
   });
 });

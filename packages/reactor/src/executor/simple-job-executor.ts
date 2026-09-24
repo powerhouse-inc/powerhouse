@@ -2250,8 +2250,16 @@ export class SimpleJobExecutor implements IJobExecutor {
     // into the next reshuffle and drives the cost toward the excessive-
     // reshuffle limit. Peers get the shortened skip too, and compute a
     // different superseded set than the reactor that sent it.
+    const incomingIds = new Set(
+      incomingOpsToApply.map((operation) => operation.action.id),
+    );
     for (const operation of reshuffledOperations) {
-      if (operation.action.type === "NOOP" && operation.skip === 0) {
+      // A local NOOP's target stays behind; a skip would undo another operation.
+      if (
+        operation.action.type === "NOOP" &&
+        operation.skip === 0 &&
+        incomingIds.has(operation.action.id)
+      ) {
         operation.skip = 1;
       }
     }
