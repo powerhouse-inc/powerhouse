@@ -84,6 +84,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@powerhousedao/powerhouse-vetra-packages": "workspace:*",
     "@tailwindcss/cli": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
