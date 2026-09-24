@@ -132,8 +132,15 @@ id = base64url(sha256(canonicalJson({
 ```
 
 - `createPresignedHeader` (`packages/shared/document-model/header.ts:158`)
-  derives the id this way when `protocolVersions.signature` is set, and
-  takes a random id otherwise as today.
+  derives the id this way when `protocolVersions.signature` is set, from a
+  fresh random nonce, and takes a random id otherwise as today.
+- A legacy CREATE whose id has the derived shape (43 base64url characters)
+  is refused as `ID_MISMATCH`; otherwise a legacy CREATE could claim the id a
+  v2-required one derives and downgrade it on peers that see it first.
+- `PRUNE` on a v2-required document is refused as `ACTION_NOT_ALLOWED`.
+- A reactor with no signer stores synthesized operations with an empty tuple,
+  which every peer refuses on a v2-required document, so a host that writes
+  to such documents must configure a signer.
 - The verifier reads the target document's header from the write cache or
   document meta. For `CREATE_DOCUMENT`, and for later actions in the same
   batch, it reads the CREATE input. A v2-required CREATE must carry an id
@@ -215,7 +222,9 @@ type SignatureTrustPolicy = {
   `positionByTimestamp` merges into a mutation job (`:1426`) and existing
   operations a load job reshuffles (`:2040`) are not re-verified.
 - The live-id check uses the derived operation id, which the store already
-  indexes. It covers the whole stream, not the conflicting window.
+  indexes. It covers the whole stream, not the conflicting window. The action
+  the executor synthesizes from an UNDO or REDO takes an id derived from the
+  submitted one, so the submitted id is live once that operation is stored.
 - Refusals are carried by `InvalidSignatureError` with a `code` from the set
   above and the target document id. The error name must reach
   `JobInfo.error`. A mutation job fails on the first refusal. A load job

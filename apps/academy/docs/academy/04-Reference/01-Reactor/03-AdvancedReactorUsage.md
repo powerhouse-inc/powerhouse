@@ -545,7 +545,7 @@ The `withReactor` path receives no feature flags and no registry, so the client 
 | `withLogger(logger)`                | Set the logger (defaults to `ConsoleLogger`)                         |
 | `withReactorBuilder(builder)`       | Build the reactor from a `ReactorBuilder` (mutually exclusive with `withReactor`) |
 | `withReactor(reactor, eventBus, documentIndexer, documentView)` | Wire an already-built reactor and its internals        |
-| `withSigner(config)`                | Set an `ISigner` or `SignerConfig` for signing/verification          |
+| `withSigner(config)`                | Set an `ISigner` or `SignerConfig` for signing                       |
 | `withSubscriptionManager(manager)`  | Provide a custom subscription manager                                |
 | `withJobAwaiter(awaiter)`           | Provide a custom job awaiter                                         |
 | `withDocumentModelLoader(loader)`   | Set a custom document model loader (forwarded to the reactor builder) |

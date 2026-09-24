@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-23T23:11:11.728Z
+> Generated: 2026-09-24T00:12:55.617Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -4803,7 +4803,7 @@ The `withReactor` path receives no feature flags and no registry, so the client 
 | `withLogger(logger)`                | Set the logger (defaults to `ConsoleLogger`)                         |
 | `withReactorBuilder(builder)`       | Build the reactor from a `ReactorBuilder` (mutually exclusive with `withReactor`) |
 | `withReactor(reactor, eventBus, documentIndexer, documentView)` | Wire an already-built reactor and its internals        |
-| `withSigner(config)`                | Set an `ISigner` or `SignerConfig` for signing/verification          |
+| `withSigner(config)`                | Set an `ISigner` or `SignerConfig` for signing                       |
 | `withSubscriptionManager(manager)`  | Provide a custom subscription manager                                |
 | `withJobAwaiter(awaiter)`           | Provide a custom job awaiter                                         |
 | `withDocumentModelLoader(loader)`   | Set a custom document model loader (forwarded to the reactor builder) |
@@ -26404,6 +26404,44 @@ The last tuple in `context.signer.signatures` is checked:
 
 A mutation job fails on the first refusal, and nothing it carried is stored. A load job drops the refused operations, stores the rest, and succeeds.
 
+### v2-required documents
+
+A document is legacy or v2-required, fixed when it is created. `protocolVersions.signature: 2` in the header makes it v2-required; without the key it is legacy, and the checks above are all it gets. On a v2-required document:
+
+- an unsigned action, or one with an empty `signer.app.key`, is refused as `UNSIGNED_REQUIRED`,
+- a legacy tuple is refused as `SCHEME_BELOW_POLICY`,
+- `PRUNE` is refused as `ACTION_NOT_ALLOWED`.
+
+The id of a v2-required document is `base64url(sha256(canonicalJson({ documentType, createdAtUtcIso, nonce, protocolVersions })))`, so its requirement cannot be changed without changing its id. `createPresignedHeader` derives it when `protocolVersions` asks for v2, and takes no id then:
+
+```typescript
+
+  createPresignedHeader,
+  v2RequiredProtocolVersions,
+} from "@powerhousedao/shared/document-model";
+
+const header = createPresignedHeader(
+  undefined,
+  "powerhouse/document-model",
+  v2RequiredProtocolVersions(),
+);
+
+// or through the client
+await client.createEmpty("powerhouse/document-model", {
+  protocolVersions: v2RequiredProtocolVersions(),
+});
+await client.drives.create({
+  global: { name: "Drive" },
+  protocolVersions: v2RequiredProtocolVersions(),
+});
+```
+
+A `CREATE_DOCUMENT` whose id does not recompute from its own input is refused as `ID_MISMATCH`, and so is a legacy `CREATE_DOCUMENT` that takes an id of that shape. A copy of a v2-required document is v2-required, under a new derived id.
+
+The NOOP an `UNDO` becomes and the action a `REDO` rebuilds are signed by the reactor's own signer. A reactor with no signer stores them unsigned, and every peer refuses them on a v2-required document, so a host that writes to v2-required documents must be given a signer.
+
+Documents are created legacy unless asked otherwise. Create a document v2-required only once every reactor that syncs it verifies v2 policy; an older reactor stores whatever it would have stored before, and forwards it.
+
 ### Log mode and enforcement
 
 Verification runs in one of two modes, set through the executor config:
@@ -26419,7 +26457,7 @@ const reactorBuilder = new ReactorBuilder().withExecutorConfig({
 
 Each refusal emits a `SIGNATURE_REFUSED` event on the reactor event bus, with the refusal `code`, the signature `scheme`, the admission `path` (`mutation` or `load`), and whether it was `enforced`. `@powerhousedao/opentelemetry-instrumentation-reactor` counts these as `reactor.signature.refusals`.
 
-A refused mutation fails with an `InvalidSignatureError`. Its message carries the code in brackets, for example `[HASH_MISMATCH]`, and the code is also on the error's `code` field. The codes are `KEY_MISMATCH`, `MALFORMED_TUPLE`, `TIMESTAMP_MISMATCH`, `HASH_MISMATCH`, `BAD_SIGNATURE`, and `DUPLICATE_ACTION`.
+A refused mutation fails with an `InvalidSignatureError`. Its message carries the code in brackets, for example `[HASH_MISMATCH]`, and the code is also on the error's `code` field. The codes are `UNSIGNED_REQUIRED`, `KEY_MISMATCH`, `MALFORMED_TUPLE`, `TIMESTAMP_MISMATCH`, `HASH_MISMATCH`, `BAD_SIGNATURE`, `SCHEME_BELOW_POLICY`, `ID_MISMATCH`, `ACTION_NOT_ALLOWED`, and `DUPLICATE_ACTION`.
 
 ## Signing at the GQL / Switchboard Level
 
