@@ -98,16 +98,7 @@ async function servedPage(
   ctx: ReactorDriveResolverContext,
   page: PagedResults<ReactorDriveNode>,
 ): Promise<PagedResults<ReactorDriveNode>> {
-  const results = await servedNodes(ctx, page.results);
-  const withheld = page.results.length - results.length;
-  return {
-    ...page,
-    results,
-    totalCount:
-      page.totalCount === undefined
-        ? undefined
-        : Math.max(0, page.totalCount - withheld),
-  };
+  return { ...page, results: await servedNodes(ctx, page.results) };
 }
 
 /**

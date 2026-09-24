@@ -183,14 +183,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         items.push(item);
       }
     }
-    return {
-      ...page,
-      items,
-      totalCount: Math.max(
-        0,
-        page.totalCount - (page.items.length - items.length),
-      ),
-    };
+    return { ...page, items, totalCount: items.length };
   }
 
   /**
