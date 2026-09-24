@@ -204,6 +204,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       this.config.signatureVerification,
       logger,
       eventBus,
+      this.featureFlags.documentDecisions ? "write-cache" : "meta",
     );
     this.documentActionHandler = new DocumentActionHandler(
       registry,

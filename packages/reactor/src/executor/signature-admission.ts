@@ -17,6 +17,7 @@ import {
   type SignatureRefusedEvent,
 } from "../events/types.js";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
+import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { Job } from "../queue/types.js";
 import {
   DocumentNotFoundError,
@@ -46,11 +47,18 @@ type Candidate = {
   policy?: SignaturePolicy;
 };
 
-/** What admission reads: the stream for live ids, the meta for the policy. */
+/** What admission reads: the stream for live ids, a cache for the policy. */
 export type AdmissionStores = {
   operationStore: IOperationStore;
   documentMetaCache: IDocumentMetaCache;
+  writeCache: IWriteCache;
 };
+
+/**
+ * Where a stored document's policy is read: the write cache when the decision
+ * model reads the document scope from there anyway, else the meta cache.
+ */
+export type PolicySource = "meta" | "write-cache";
 
 type Refusal = Extract<SignatureVerdict, { ok: false }>;
 
@@ -69,6 +77,7 @@ export class SignatureAdmission {
     private readonly mode: SignatureVerificationMode,
     private readonly logger: ILogger,
     private readonly eventBus: IEventBus,
+    private readonly policySource: PolicySource = "meta",
   ) {}
 
   /** The first refusal of a mutation's submitted actions, when enforcing. */
@@ -100,11 +109,8 @@ export class SignatureAdmission {
       return { kind: "committed" };
     }
 
-    await resolvePolicies(
-      candidates,
-      job.actions,
-      stores.documentMetaCache,
-      signal,
+    await resolvePolicies(candidates, job.actions, (documentId, branch) =>
+      storedPolicy(stores, this.policySource, documentId, branch, signal),
     );
     const submitted = new Set<string>();
     for (const entry of candidates) {
@@ -147,8 +153,8 @@ export class SignatureAdmission {
     await resolvePolicies(
       candidates,
       job.operations.map((operation) => operation.action),
-      stores.documentMetaCache,
-      signal,
+      (documentId, branch) =>
+        storedPolicy(stores, this.policySource, documentId, branch, signal),
     );
     const dropped = new Set<Operation>();
     for (let i = 0; i < candidates.length; i++) {
@@ -304,8 +310,10 @@ export class SignatureAdmission {
 async function resolvePolicies(
   candidates: Candidate[],
   jobActions: Action[],
-  documentMetaCache: IDocumentMetaCache,
-  signal?: AbortSignal,
+  stored: (
+    documentId: string,
+    branch: string,
+  ) => Promise<SignaturePolicy | undefined>,
 ): Promise<void> {
   const resolved = new Map<string, SignaturePolicy>();
   for (const entry of candidates) {
@@ -319,7 +327,7 @@ async function resolvePolicies(
     let policy = resolved.get(key);
     if (policy === undefined) {
       policy =
-        (await storedPolicy(documentMetaCache, documentId, branch, signal)) ??
+        (await stored(documentId, branch)) ??
         createdPolicy(jobActions, documentId) ??
         "legacy";
       resolved.set(key, policy);
@@ -329,13 +337,24 @@ async function resolvePolicies(
 }
 
 async function storedPolicy(
-  documentMetaCache: IDocumentMetaCache,
+  stores: AdmissionStores,
+  source: PolicySource,
   documentId: string,
   branch: string,
   signal?: AbortSignal,
 ): Promise<SignaturePolicy | undefined> {
   try {
-    const meta = await documentMetaCache.getDocumentMeta(
+    if (source === "write-cache") {
+      const document = await stores.writeCache.getState(
+        documentId,
+        "document",
+        branch,
+        undefined,
+        signal,
+      );
+      return signaturePolicyOf(document.header);
+    }
+    const meta = await stores.documentMetaCache.getDocumentMeta(
       documentId,
       branch,
       signal,

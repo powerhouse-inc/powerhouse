@@ -78,7 +78,10 @@ function v2Document(): PHDocument {
   };
 }
 
-describe("signature policy", () => {
+describe.each([
+  ["meta cache", {}],
+  ["write cache, under documentDecisions", { documentDecisions: true }],
+] as const)("signature policy read from the %s", (_, featureFlags) => {
   let client: TestP256Signer;
   let clientSigner: ISigner;
   const modules: InProcessReactorModule[] = [];
@@ -102,7 +105,7 @@ describe("signature policy", () => {
   }> {
     const module = await new ReactorBuilder()
       .withDocumentModelSources([documentModelDocumentModelModule as never])
-      .withExecutorConfig({ signatureVerification: "enforce" })
+      .withExecutorConfig({ signatureVerification: "enforce", featureFlags })
       .buildModule();
     modules.push(module);
     const refusals: SignatureRefusedEvent[] = [];
