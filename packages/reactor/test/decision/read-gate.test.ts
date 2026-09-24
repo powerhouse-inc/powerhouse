@@ -511,6 +511,31 @@ describe("serving a policy-named group to the policy's audience", () => {
     expect(readable("global")).toBe(false);
   });
 
+  // Unlike a listing, which serves such a document: here there is no allow.
+  it("does not serve it through a referencer holding no domain scope", async () => {
+    const stateless = referencer(
+      policy([
+        {
+          id: "g-read-all",
+          description: "reads every scope",
+          effect: "allow",
+          principal: { address: MEMBER },
+          capability: { can: "read" },
+        },
+      ]),
+    );
+    const state = stateless.state as Record<string, unknown>;
+    delete state.global;
+    delete state.local;
+
+    const readable = await groupGate(
+      mockView({ [REFERENCER]: stateless }),
+      mockIndex({ [GROUP]: [REFERENCER] }),
+    ).scopePredicate(groupDoc(), { address: MEMBER }, "main");
+
+    expect(readable("global")).toBe(false);
+  });
+
   it("serves it when any one of several referencers serves the subject", async () => {
     const view = mockView({
       "stmt-a": referencer(policy([]), "stmt-a"),

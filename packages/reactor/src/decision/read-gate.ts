@@ -34,6 +34,30 @@ export const ALWAYS_READABLE_SCOPES: ReadonlySet<string> = new Set([
   "document",
 ]);
 
+/** The scopes a document holds that grants gate. */
+export function domainScopesOf(document: PHDocument): string[] {
+  return Object.keys((document.state ?? {}) as Record<string, unknown>).filter(
+    (scope) => !ALWAYS_READABLE_SCOPES.has(scope),
+  );
+}
+
+/** False for a document holding no domain scope: there is no allow to rest on. */
+export function allowsSomeDomainScope(
+  document: PHDocument,
+  readable: (scope: string) => boolean,
+): boolean {
+  return domainScopesOf(document).some(readable);
+}
+
+/** False for a document holding no domain scope: there is nothing to protect. */
+export function refusesEveryDomainScope(
+  document: PHDocument,
+  readable: (scope: string) => boolean,
+): boolean {
+  const scopes = domainScopesOf(document);
+  return scopes.length > 0 && !scopes.some(readable);
+}
+
 /**
  * How a gate treats a document nobody has written a policy onto.
  *
@@ -425,9 +449,7 @@ export class ModelReadGate implements IReadGate {
       signal,
     );
 
-    return Object.keys((referencer.state ?? {}) as Record<string, unknown>)
-      .filter((scope) => !ALWAYS_READABLE_SCOPES.has(scope))
-      .some((scope) => readable(scope));
+    return allowsSomeDomainScope(referencer, readable);
   }
 
   private servesGroup(document: PHDocument): boolean {

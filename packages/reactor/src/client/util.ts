@@ -3,7 +3,6 @@ import type {
   ISigner,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { ALWAYS_READABLE_SCOPES } from "../decision/read-gate.js";
 import type { ViewFilter } from "../shared/types.js";
 
 export function authSubjectFromSigner(signer: ISigner): AuthSubject {
@@ -33,25 +32,6 @@ export function narrowedScopes(view?: ViewFilter): Set<string> | undefined {
     return undefined;
   }
   return new Set(["document", "auth", ...view.scopes]);
-}
-
-/**
- * Whether the subject may read any domain scope of the document. A listing or
- * a feed withholds one that serves none: its header and always-readable scopes
- * still name it and carry its policy.
- */
-export function servesDomainScope(
-  document: PHDocument,
-  readable: (scope: string) => boolean,
-): boolean {
-  const state = document.state as Record<string, unknown> | undefined;
-  if (!state) {
-    return true;
-  }
-  const domainScopes = Object.keys(state).filter(
-    (scope) => !ALWAYS_READABLE_SCOPES.has(scope),
-  );
-  return domainScopes.length === 0 || domainScopes.some(readable);
 }
 
 /**

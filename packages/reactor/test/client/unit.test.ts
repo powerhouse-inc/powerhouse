@@ -1507,6 +1507,19 @@ describe("ReactorClient Unit Tests", () => {
         "readable-parent",
       ]);
     });
+
+    it("lists a document holding no domain scope to withhold", async () => {
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: [documentWithScopes("meta-only", ["auth", "document"])],
+        options: { cursor: "0", limit: 10 },
+      });
+
+      const listed = await clientRefusing("meta-only").find({
+        ids: ["meta-only"],
+      });
+
+      expect(listed.results.map((d) => d.header.id)).toEqual(["meta-only"]);
+    });
   });
 
   describe("deleteDocument", () => {

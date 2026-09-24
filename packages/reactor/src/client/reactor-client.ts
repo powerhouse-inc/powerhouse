@@ -70,7 +70,11 @@ import {
 } from "./types.js";
 import { buildDecisionModel } from "../decision/build-decision-model.js";
 import type { IReadGate } from "../decision/read-gate.js";
-import { BareReadGate, SeededStateReader } from "../decision/read-gate.js";
+import {
+  BareReadGate,
+  refusesEveryDomainScope,
+  SeededStateReader,
+} from "../decision/read-gate.js";
 import type { DocumentDecisionModel } from "../decision/document-decision-model.js";
 import type { RegisteredDecisionModel } from "../decision/registered-model.js";
 import type { DecisionModel, Evaluation } from "../decision/types.js";
@@ -80,7 +84,6 @@ import {
   authSubjectFromSigner,
   filterReadableScopes,
   narrowedScopes,
-  servesDomainScope,
   withAllScopes,
   withAuthScope,
 } from "./util.js";
@@ -252,7 +255,7 @@ export class ReactorClient implements IReactorClient {
     signal?: AbortSignal,
   ): Promise<TDocument | undefined> {
     const readable = await this.readableScopes(document, view, signal);
-    if (!servesDomainScope(document, readable)) {
+    if (refusesEveryDomainScope(document, readable)) {
       return undefined;
     }
     const narrowed = narrowedScopes(view);
@@ -324,7 +327,10 @@ export class ReactorClient implements IReactorClient {
         continue;
       }
       if (
-        !servesDomainScope(document, await this.readableScopes(document, view))
+        refusesEveryDomainScope(
+          document,
+          await this.readableScopes(document, view),
+        )
       ) {
         return false;
       }
@@ -816,7 +822,10 @@ export class ReactorClient implements IReactorClient {
       await Promise.all(
         documents.results.map(async (doc) => {
           const allows = await this.readableScopes(doc, view, signal);
-          return [doc.header.id, servesDomainScope(doc, allows)] as const;
+          return [
+            doc.header.id,
+            !refusesEveryDomainScope(doc, allows),
+          ] as const;
         }),
       ),
     );
