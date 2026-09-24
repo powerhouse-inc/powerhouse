@@ -186,6 +186,38 @@ export class BareReadGate implements IReadGate {
 }
 
 /**
+ * Rethrows a failed read unless the document is confirmed not live. The read
+ * side reports absence as a plain Error, so absence is checked rather than
+ * inferred from the message, and a failed check surfaces the read's own error.
+ */
+export async function assertAbsent(
+  documentView: IDocumentView,
+  documentId: string,
+  error: unknown,
+  signal?: AbortSignal,
+): Promise<void> {
+  if (DocumentNotFoundError.isError(error)) {
+    return;
+  }
+
+  let exists: boolean[];
+  try {
+    exists = await documentView.exists(
+      [documentId],
+      DocumentExistence.LiveOnly,
+      undefined,
+      signal,
+    );
+  } catch {
+    throw error;
+  }
+
+  if (exists[0]) {
+    throw error;
+  }
+}
+
+/**
  * Answers a stream read from the document already fetched, and anything else
  * through the read side.
  *
@@ -233,34 +265,8 @@ export class SeededStateReader implements IStreamStateReader {
         signal,
       );
     } catch (error) {
-      await this.assertAbsent(documentId, error, signal);
+      await assertAbsent(this.documentView, documentId, error, signal);
       throw new DocumentNotFoundError(documentId);
-    }
-  }
-
-  private async assertAbsent(
-    documentId: string,
-    error: unknown,
-    signal?: AbortSignal,
-  ): Promise<void> {
-    if (DocumentNotFoundError.isError(error)) {
-      return;
-    }
-
-    let exists: boolean[];
-    try {
-      exists = await this.documentView.exists(
-        [documentId],
-        DocumentExistence.LiveOnly,
-        undefined,
-        signal,
-      );
-    } catch {
-      throw error;
-    }
-
-    if (exists[0]) {
-      throw error;
     }
   }
 }

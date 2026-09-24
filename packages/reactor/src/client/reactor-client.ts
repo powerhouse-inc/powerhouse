@@ -71,6 +71,7 @@ import {
 import { buildDecisionModel } from "../decision/build-decision-model.js";
 import type { IReadGate } from "../decision/read-gate.js";
 import {
+  assertAbsent,
   BareReadGate,
   refusesEveryDomainScope,
   SeededStateReader,
@@ -312,30 +313,25 @@ export class ReactorClient implements IReactorClient {
     ids: string[],
     view: ViewFilter | undefined,
   ): Promise<boolean> {
-    for (const id of ids) {
-      let document: PHDocument;
-      try {
-        document = await this.reactor.get(id, withAllScopes(view));
-      } catch (error) {
-        const [live] = await this.documentView.exists(
-          [id],
-          DocumentExistence.LiveOnly,
-        );
-        if (live) {
-          throw error;
-        }
-        continue;
-      }
-      if (
-        refusesEveryDomainScope(
-          document,
-          await this.readableScopes(document, view),
-        )
-      ) {
-        return false;
-      }
+    const served = await Promise.all(ids.map((id) => this.servesId(id, view)));
+    return served.every(Boolean);
+  }
+
+  private async servesId(
+    id: string,
+    view: ViewFilter | undefined,
+  ): Promise<boolean> {
+    let document: PHDocument;
+    try {
+      document = await this.reactor.get(id, withAllScopes(view));
+    } catch (error) {
+      await assertAbsent(this.documentView, id, error);
+      return true;
     }
-    return true;
+    return !refusesEveryDomainScope(
+      document,
+      await this.readableScopes(document, view),
+    );
   }
 
   /**

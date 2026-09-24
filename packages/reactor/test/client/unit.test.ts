@@ -23,10 +23,14 @@ import type { IReactorClient } from "../../src/client/types.js";
 import { DocumentChangeType } from "../../src/client/types.js";
 import type { BatchExecutionResult, IReactor } from "../../src/core/types.js";
 import type { IJobAwaiter } from "../../src/shared/awaiter.js";
-import { RelationshipNotFoundError } from "../../src/shared/errors.js";
+import {
+  DocumentNotFoundError,
+  RelationshipNotFoundError,
+} from "../../src/shared/errors.js";
 import {
   JobStatus,
   PropagationMode,
+  RelationshipChangeType,
   type JobInfo,
   type PagedResults,
 } from "../../src/shared/types.js";
@@ -2868,6 +2872,81 @@ describe("ReactorClient Unit Tests", () => {
 
           await vi.waitFor(() => expect(callback).toHaveBeenCalledTimes(1));
           expect(deliveredXs(callback)).toEqual([2]);
+        });
+      });
+
+      describe("gating a relationship event", () => {
+        function subscribeToRelationships(logger = createMockLogger()) {
+          const callback = vi.fn();
+          let fire:
+            | ((parentId: string, childId: string, type: string) => void)
+            | undefined;
+          const manager = createMockSubscriptionManager({
+            onRelationshipChanged: vi.fn((cb: typeof fire) => {
+              fire = cb;
+              return () => {};
+            }) as never,
+          });
+          const client = new ReactorClient(
+            logger,
+            mockReactor,
+            createMockSigner(),
+            manager,
+            mockJobAwaiter,
+            mockDocumentIndexer,
+            mockDocumentView,
+            new BareReadGate(),
+          );
+          client.subscribe({}, callback, { subject: { address: "0xreader" } });
+          return {
+            callback,
+            added: () =>
+              fire?.("parent", "child", RelationshipChangeType.Added),
+          };
+        }
+
+        it("reads parent and child concurrently", async () => {
+          const pending: string[] = [];
+          vi.mocked(mockReactor.get).mockImplementation((id: string) => {
+            pending.push(id);
+            return new Promise(() => {});
+          });
+          const { added } = subscribeToRelationships();
+
+          added();
+
+          await vi.waitFor(() =>
+            expect(pending.sort()).toEqual(["child", "parent"]),
+          );
+        });
+
+        it("surfaces the read's own error when the absence check fails too", async () => {
+          const logger = createMockLogger();
+          const failed = vi.spyOn(logger, "error");
+          const readFailure = new Error("read side unavailable");
+          vi.mocked(mockReactor.get).mockRejectedValue(readFailure);
+          vi.mocked(mockDocumentView.exists).mockRejectedValue(
+            new Error("existence check unavailable"),
+          );
+          const { callback, added } = subscribeToRelationships(logger);
+
+          added();
+
+          await vi.waitFor(() => expect(failed).toHaveBeenCalled());
+          expect(failed.mock.calls[0][2]).toBe(readFailure);
+          expect(callback).not.toHaveBeenCalled();
+        });
+
+        it("delivers without an absence check for a document not found", async () => {
+          vi.mocked(mockReactor.get).mockRejectedValue(
+            new DocumentNotFoundError("child"),
+          );
+          const { callback, added } = subscribeToRelationships();
+
+          added();
+
+          await vi.waitFor(() => expect(callback).toHaveBeenCalled());
+          expect(mockDocumentView.exists).not.toHaveBeenCalled();
         });
       });
     });
