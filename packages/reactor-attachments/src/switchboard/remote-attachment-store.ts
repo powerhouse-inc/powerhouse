@@ -205,8 +205,10 @@ export class RemoteAttachmentStore implements IAttachmentReader {
     hash: AttachmentHash,
     documentId?: string,
   ): Promise<AttachmentHeader> {
+    // The server answers a hash-only HEAD 404; hash-first reserve relies on
+    // that to leave the dedup decision to the server's 409.
     if (documentId === undefined) {
-      throw new Error(MISSING_DOCUMENT_ID);
+      throw new AttachmentNotFound(hash);
     }
     const url = `${this.remoteUrl}/attachments/${hash}?documentId=${encodeURIComponent(documentId)}`;
     const authHeaders = await buildAuthHeaders(url, this.jwtHandler);

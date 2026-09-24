@@ -683,9 +683,11 @@ describe("RemoteAttachmentStore", () => {
     });
   }
 
-  it("get and stat refuse to read without a documentId", async () => {
+  it("get and stat make no request without a documentId", async () => {
     await expect(store.get("hash-1")).rejects.toThrow(/documentId/);
-    await expect(store.stat("hash-1")).rejects.toThrow(/documentId/);
+    await expect(store.stat("hash-1")).rejects.toBeInstanceOf(
+      AttachmentNotFound,
+    );
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
@@ -1151,5 +1153,34 @@ describe("createRemoteAttachmentService", () => {
     });
     expect(upload.reservationId).toBe("r-100");
     expect(upload).toBeInstanceOf(RemoteAttachmentUpload);
+  });
+
+  it("leaves hash-first dedup to the server's 409 without a hash-only HEAD", async () => {
+    const hash = "d".repeat(64) as AttachmentHash;
+    const mockFetch = vi.fn() as unknown as typeof fetch &
+      ReturnType<typeof vi.fn>;
+    mockFetch.mockResolvedValueOnce(
+      mockResponse(409, {
+        json: { error: "already_exists", ref: `attachment://v1:${hash}` },
+      }),
+    );
+
+    const service = createRemoteAttachmentService({
+      remoteUrl: REMOTE_URL,
+      fetchFn: mockFetch,
+    });
+    await expect(
+      service.reserve({
+        mimeType: "text/plain",
+        fileName: "x.txt",
+        clientHash: hash,
+        sizeBytes: 3,
+      }),
+    ).rejects.toBeInstanceOf(AttachmentAlreadyExists);
+    expect(mockFetch).toHaveBeenCalledOnce();
+    expect(mockFetch).toHaveBeenCalledWith(
+      `${REMOTE_URL}/attachments/reservations`,
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 });
