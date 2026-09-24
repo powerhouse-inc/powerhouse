@@ -113,7 +113,7 @@ async function main() {
       throw new Error(`Unknown scene "${name}" (see --list)`);
   }
 
-  buildCss();
+  await buildCss();
   const started = await ensureServers();
   const browser = await chromium.launch();
   try {

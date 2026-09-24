@@ -2,7 +2,7 @@
 // (workflows on, in-memory) plus Connect's Vite dev server, seeded per drive.
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 import { spawn, type ChildProcess, execSync } from "node:child_process";
-import { appendFileSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type * as ConnectionModel from "../document-models/connection/v1/index.js";
@@ -109,21 +109,27 @@ export async function ensureServers(): Promise<ChildProcess[]> {
   return started;
 }
 
-/** Connect imports the package's dist stylesheet; regenerate it from source. */
-export function buildCss() {
-  execSync("pnpm exec tailwindcss -i ./style.css -o ./dist/style.css", {
+// Connect imports the package's dist stylesheet; regenerate it from source.
+// Written only when it changed: every write makes Vite reload open pages.
+export async function buildCss(): Promise<void> {
+  const target = join(PKG, "dist/style.css");
+  const scratch = join(PKG, ".ui-shots/style.css");
+  mkdirSync(dirname(scratch), { recursive: true });
+  execSync(`pnpm exec tailwindcss -i ./style.css -o ${scratch}`, {
     cwd: PKG,
     stdio: "ignore",
   });
-  const canvasCss = join(PKG, "dist/browser/style.css");
+  let css = readFileSync(scratch, "utf8");
   try {
-    appendFileSync(
-      join(PKG, "dist/style.css"),
-      "\n" + readFileSync(canvasCss, "utf8"),
-    );
+    css += "\n" + readFileSync(join(PKG, "dist/browser/style.css"), "utf8");
   } catch {
     // No browser build yet; Connect dev loads the canvas CSS from source.
   }
+  const current = existsSync(target) ? readFileSync(target, "utf8") : "";
+  if (css === current) return;
+  writeFileSync(target, css);
+  // Let Vite pick up the change before any page loads.
+  await new Promise((r) => setTimeout(r, 2000));
 }
 
 // ─── seeding ────────────────────────────────────────────────────────────────
