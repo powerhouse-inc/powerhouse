@@ -114,6 +114,7 @@ export {
   type SignatureRefusalCode,
   type SignatureScheme,
   type SignatureVerificationHandler,
+  type SignatureTrustPolicy,
   type SignatureVerificationMode,
   type SignerConfig,
 } from "./src/signer/types.js";

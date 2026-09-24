@@ -32,6 +32,7 @@ import type { IJobExecutorManager } from "../executor/interfaces.js";
 import { SimpleJobExecutorManager } from "../executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../executor/simple-job-executor.js";
 import type { JobExecutorConfig } from "../executor/types.js";
+import type { SignatureTrustPolicy } from "../signer/types.js";
 import { InMemoryJobTracker } from "../job-tracker/in-memory-job-tracker.js";
 import { ProcessorManager } from "../processors/processor-manager.js";
 import type { IQueue } from "../queue/interfaces.js";
@@ -296,6 +297,8 @@ export class ReactorBuilder {
   private kyselyInstance?: Kysely<Database>;
   private signer?: ISigner;
   private workerSigner?: FactorySpec;
+  private trustPolicy?: SignatureTrustPolicy;
+  private workerTrustPolicy?: FactorySpec;
   private signalHandlersEnabled = false;
   private queueInstance?: IQueue;
   private channelScheme?: ChannelScheme;
@@ -419,6 +422,25 @@ export class ReactorBuilder {
   /** Whether {@link withSigner} was called. */
   hasSigner(): boolean {
     return this.signer !== undefined;
+  }
+
+  /**
+   * Decides at admission whether a key may sign as the user it claims; see
+   * {@link SignatureTrustPolicy} for the contract and the default. Pooled
+   * workers import `workerTrustPolicy` to build the same policy.
+   */
+  withTrustPolicy(
+    trustPolicy: SignatureTrustPolicy,
+    workerTrustPolicy?: FactorySpec,
+  ): this {
+    this.trustPolicy = trustPolicy;
+    this.workerTrustPolicy = workerTrustPolicy;
+    return this;
+  }
+
+  /** Whether {@link withTrustPolicy} was called. */
+  hasTrustPolicy(): boolean {
+    return this.trustPolicy !== undefined;
   }
 
   withKysely(kysely: Kysely<Database>): this {
@@ -738,6 +760,11 @@ export class ReactorBuilder {
               "Worker pool has no signer spec; pooled workers store synthesized operations unsigned",
             );
           }
+          if (this.trustPolicy && !this.workerTrustPolicy) {
+            this.logger!.warn(
+              "Worker pool has no trust policy spec; pooled workers apply the default trust policy",
+            );
+          }
           factory = await this.createDefaultWorkerFactory(
             pool.numWorkers,
             pool.db,
@@ -775,6 +802,7 @@ export class ReactorBuilder {
               this.executorConfig,
               executionScope,
               this.signer,
+              this.trustPolicy,
             ),
           eventBus,
           queue,
@@ -1249,6 +1277,7 @@ export class ReactorBuilder {
           models,
           executorConfig: this.executorConfig,
           signer: this.workerSigner,
+          trustPolicy: this.workerTrustPolicy,
         },
         logger,
         poolInstrumentation,

@@ -57,11 +57,13 @@ import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
 import { DefaultExecutionScope } from "./execution-scope.js";
 import type { IJobExecutor } from "./interfaces.js";
 import {
+  DEFAULT_TRUST_TIMEOUT_MS,
   SignatureAdmission,
   type MutationAdmission,
 } from "./signature-admission.js";
 import { isSynthesized, signSynthesized } from "./synthesized-signing.js";
 import { PassthroughSigner } from "../signer/passthrough-signer.js";
+import type { SignatureTrustPolicy } from "../signer/types.js";
 import { DEFAULT_DEFERRED_JOB_TTL_MS } from "./types.js";
 import type {
   ExecutingJob,
@@ -163,7 +165,10 @@ export class SimpleJobExecutor implements IJobExecutor {
   private executionScope: IExecutionScope;
   private signer: ISigner;
 
-  /** `signer` signs the operations the reducer synthesizes; unsigned if omitted. */
+  /**
+   * `signer` signs the operations the reducer synthesizes; unsigned if omitted.
+   * `trustPolicy` decides which keys may sign as which users at admission.
+   */
   constructor(
     private logger: ILogger,
     private registry: IDocumentModelRegistry,
@@ -177,6 +182,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     config: JobExecutorConfig,
     executionScope?: IExecutionScope,
     signer?: ISigner,
+    trustPolicy?: SignatureTrustPolicy,
   ) {
     this.signer = signer ?? new PassthroughSigner();
     this.config = {
@@ -205,6 +211,15 @@ export class SimpleJobExecutor implements IJobExecutor {
       logger,
       eventBus,
       this.featureFlags.documentDecisions ? "write-cache" : "meta",
+      {
+        signer: this.signer,
+        authEnforcement: this.featureFlags.authEnforcement,
+        policy: trustPolicy,
+        timeoutMs: Math.min(
+          DEFAULT_TRUST_TIMEOUT_MS,
+          this.config.jobTimeoutMs / 2,
+        ),
+      },
     );
     this.documentActionHandler = new DocumentActionHandler(
       registry,

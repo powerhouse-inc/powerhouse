@@ -470,6 +470,82 @@ describe("runWorker in-process execution", () => {
     expect(verdict).toEqual({ ok: true, scheme: "v2" });
   });
 
+  it("builds its trust policy from the init's spec and refuses what it refuses", async () => {
+    const asked: { key: string; documentId: string }[] = [];
+    const h = await startInProcessWorker((spec) => {
+      if (spec.module.exportName === "createTrustPolicy") {
+        expect(spec.initArgs).toEqual({ renownUrl: "https://renown.test" });
+        return Promise.resolve({
+          authorizeSigner(_signer: unknown, key: string, documentId: string) {
+            asked.push({ key, documentId });
+            return Promise.resolve(false);
+          },
+        });
+      }
+      return Promise.resolve(driveDocumentModelModule);
+    });
+    const ready = waitForMessage(
+      h.port1,
+      (m): m is ReadyMessage => m.type === "ready",
+    );
+    h.port1.postMessage({
+      ...makeInit(undefined, { signatureVerification: "enforce" }),
+      trustPolicy: {
+        module: { filePath: "/trust.js", exportName: "createTrustPolicy" },
+        initArgs: { renownUrl: "https://renown.test" },
+      },
+    } satisfies InitMessage);
+    await ready;
+
+    const document = driveDocumentModelModule.utils.createDocument();
+    const documentId = document.header.id;
+    await preCreateDriveDocument(h.database, documentId, document.state);
+
+    const signer = await TestP256Signer.create();
+    const action = {
+      id: "action-trust-1",
+      type: "ADD_FOLDER",
+      scope: "global",
+      timestampUtcMs: new Date().toISOString(),
+      input: { id: "folder-1", name: "Inbox", parentFolder: null },
+    };
+    const signed = signer.signed(
+      action,
+      await signer.v2Tuple(action, { documentId, branch: "main" }),
+    );
+    const job: Job = {
+      id: "job-trust-1",
+      kind: "mutation",
+      documentId,
+      scope: "global",
+      branch: "main",
+      actions: [signed],
+      operations: [],
+      createdAt: new Date().toISOString(),
+      queueHint: [],
+      retryCount: 0,
+      maxRetries: 0,
+      errorHistory: [],
+      meta: { batchId: "batch-trust-1", batchJobIds: ["job-trust-1"] },
+    };
+
+    const resultPromise = waitForMessage(
+      h.port1,
+      (m): m is ResultMessage => m.type === "result",
+    );
+    h.port1.postMessage({
+      type: "execute",
+      correlationId: "corr-trust-1",
+      job,
+    });
+
+    const result = await resultPromise;
+    expect(result.result.success).toBe(false);
+    expect(result.error?.name).toBe("InvalidSignatureError");
+    expect(result.error?.message).toContain("[SIGNER_UNAUTHORIZED]");
+    expect(asked).toEqual([{ key: signer.did, documentId }]);
+  });
+
   it("returns an error result when the document does not exist", async () => {
     const h = await startInProcessWorker();
     const init = makeInit();

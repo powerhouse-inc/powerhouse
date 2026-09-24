@@ -61,6 +61,8 @@ export type WorkerInitPayload = {
   executorConfig?: JobExecutorConfig;
   /** Builds the worker's signer for synthesized operations. */
   signer?: FactorySpec;
+  /** Builds the worker's signature trust policy. */
+  trustPolicy?: FactorySpec;
 };
 
 export type WorkerHandleOptions = {
@@ -182,6 +184,7 @@ export class WorkerHandle implements IExecutorWorker {
       models: this.initPayload.models,
       executorConfig: this.initPayload.executorConfig,
       signer: this.initPayload.signer,
+      trustPolicy: this.initPayload.trustPolicy,
     });
     await ready;
     this.phase = "ready";

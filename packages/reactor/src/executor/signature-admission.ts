@@ -1,6 +1,8 @@
 import type {
   Action,
+  ActionSigner,
   CreateDocumentActionInput,
+  ISigner,
   Operation,
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
@@ -23,8 +25,11 @@ import {
   DocumentNotFoundError,
   InvalidSignatureError,
 } from "../shared/errors.js";
+import { PassthroughSigner } from "../signer/passthrough-signer.js";
+import { admissionTrustPolicy } from "../signer/trust-policy.js";
 import type {
   AdmissionPath,
+  SignatureTrustPolicy,
   SignatureVerdict,
   SignatureVerificationMode,
 } from "../signer/types.js";
@@ -62,6 +67,19 @@ export type PolicySource = "meta" | "write-cache";
 
 type Refusal = Extract<SignatureVerdict, { ok: false }>;
 
+/** Who may sign as whom: see {@link SignatureTrustPolicy}. */
+export type AdmissionTrust = {
+  /** The reactor's own signer, whose key is accepted for its own user. */
+  signer?: ISigner;
+  /** Selects the default when there is no `policy`. */
+  authEnforcement: boolean;
+  policy?: SignatureTrustPolicy;
+  /** A policy slower than this fails the job, to be retried. */
+  timeoutMs: number;
+};
+
+export const DEFAULT_TRUST_TIMEOUT_MS = 10_000;
+
 /**
  * `committed`: the job is a retry whose every write is already stored exactly
  * as submitted, so its first attempt committed and nothing is written again.
@@ -73,12 +91,26 @@ export type MutationAdmission =
 
 /** Runs once per write, when this reactor first stores it; never on re-appends. */
 export class SignatureAdmission {
+  private readonly trustPolicy: SignatureTrustPolicy;
+  private readonly trustTimeoutMs: number;
+
   constructor(
     private readonly mode: SignatureVerificationMode,
     private readonly logger: ILogger,
     private readonly eventBus: IEventBus,
     private readonly policySource: PolicySource = "meta",
-  ) {}
+    trust: AdmissionTrust = {
+      authEnforcement: false,
+      timeoutMs: DEFAULT_TRUST_TIMEOUT_MS,
+    },
+  ) {
+    this.trustPolicy = admissionTrustPolicy(
+      trust.signer ?? new PassthroughSigner(),
+      trust.authEnforcement,
+      trust.policy,
+    );
+    this.trustTimeoutMs = trust.timeoutMs;
+  }
 
   /** The first refusal of a mutation's submitted actions, when enforcing. */
   async admitMutation(
@@ -114,7 +146,13 @@ export class SignatureAdmission {
     );
     const submitted = new Set<string>();
     for (const entry of candidates) {
-      const verdict = await this.verdict(entry, live, submitted, "mutation");
+      const verdict = await this.verdict(
+        entry,
+        live,
+        submitted,
+        "mutation",
+        signal,
+      );
       submitted.add(entry.opId);
       if (verdict.ok) {
         continue;
@@ -163,6 +201,7 @@ export class SignatureAdmission {
         live,
         undefined,
         "load",
+        signal,
       );
       if (verdict.ok) {
         continue;
@@ -179,6 +218,7 @@ export class SignatureAdmission {
     live: Set<string>,
     submitted: Set<string> | undefined,
     path: AdmissionPath,
+    signal?: AbortSignal,
   ): Promise<SignatureVerdict> {
     const verdict = await verifyActionSignature(
       entry.action,
@@ -201,7 +241,65 @@ export class SignatureAdmission {
         reason: `action ${entry.action.id} is already in the stream`,
       };
     }
+    if (verdict.scheme === "unsigned") {
+      return verdict;
+    }
+
+    const signer = entry.action.context!.signer!;
+    const authorized = await this.authorize(
+      signer,
+      entry.stream.documentId,
+      signal,
+    );
+    if (!authorized) {
+      return {
+        ok: false,
+        scheme: verdict.scheme,
+        code: "SIGNER_UNAUTHORIZED",
+        reason: `action ${entry.action.id}: key ${signer.app.key} may not sign as ${signer.user.address}`,
+      };
+    }
     return verdict;
+  }
+
+  /** Throws when the policy does, times out or the job is aborted. */
+  private async authorize(
+    signer: ActionSigner,
+    documentId: string,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    signal?.throwIfAborted();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let onAbort: (() => void) | undefined;
+    const stop = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        reject(
+          new Error(
+            `signature trust policy did not answer for ${signer.app.key} within ${this.trustTimeoutMs}ms`,
+          ),
+        );
+      }, this.trustTimeoutMs);
+      if (signal) {
+        onAbort = () =>
+          reject(
+            signal.reason instanceof Error
+              ? signal.reason
+              : new Error(String(signal.reason)),
+          );
+        signal.addEventListener("abort", onAbort, { once: true });
+      }
+    });
+    try {
+      return await Promise.race([
+        this.trustPolicy.authorizeSigner(signer, signer.app.key, documentId),
+        stop,
+      ]);
+    } finally {
+      clearTimeout(timer);
+      if (onAbort) {
+        signal?.removeEventListener("abort", onAbort);
+      }
+    }
   }
 
   private async storedAsSubmitted(

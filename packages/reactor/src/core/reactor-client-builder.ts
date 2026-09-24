@@ -38,6 +38,8 @@ export class ReactorClientBuilder {
   private documentView?: IDocumentView;
   private signer?: ISigner;
   private workerSigner?: SignerConfig["workerSigner"];
+  private trustPolicy?: SignerConfig["trustPolicy"];
+  private workerTrustPolicy?: SignerConfig["workerTrustPolicy"];
   private subscriptionManager?: IReactorSubscriptionManager;
   private jobAwaiter?: IJobAwaiter;
   private documentModelLoader?: IDocumentModelLoader;
@@ -88,11 +90,14 @@ export class ReactorClientBuilder {
   /**
    * Signs submitted actions, and the operations a reactor built from
    * `withReactorBuilder` synthesizes unless that builder has its own signer.
+   * A `trustPolicy` reaches that builder unless it has its own.
    */
   public withSigner(config: ISigner | SignerConfig): this {
     if ("signer" in config) {
       this.signer = config.signer;
       this.workerSigner = config.workerSigner;
+      this.trustPolicy = config.trustPolicy;
+      this.workerTrustPolicy = config.workerTrustPolicy;
     } else {
       this.signer = config;
     }
@@ -197,6 +202,12 @@ export class ReactorClientBuilder {
       }
       if (this.signer && !this.reactorBuilder.hasSigner()) {
         this.reactorBuilder.withSigner(this.signer, this.workerSigner);
+      }
+      if (this.trustPolicy && !this.reactorBuilder.hasTrustPolicy()) {
+        this.reactorBuilder.withTrustPolicy(
+          this.trustPolicy,
+          this.workerTrustPolicy,
+        );
       }
       reactorModule = await this.reactorBuilder.buildModule();
       reactor = reactorModule.reactor;

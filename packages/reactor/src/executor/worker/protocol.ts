@@ -86,8 +86,8 @@ export type ModuleRef =
     };
 
 /**
- * Factory specification shared by the signer and document model spec
- * channels. The worker imports `module.exportName` and invokes
+ * Factory specification shared by the signer, trust policy and document
+ * model spec channels. The worker imports `module.exportName` and invokes
  * it with `initArgs` to obtain the actual instance.
  *
  * `initArgs` must be JSON-clonable.
@@ -223,6 +223,8 @@ export type InitMessage = {
   executorConfig?: JobExecutorConfig;
   /** Builds the `ISigner` for synthesized operations; omitted = unsigned. */
   signer?: FactorySpec;
+  /** Builds the `SignatureTrustPolicy`; omitted = the default. */
+  trustPolicy?: FactorySpec;
 };
 
 /**

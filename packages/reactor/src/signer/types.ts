@@ -1,4 +1,5 @@
 import type {
+  ActionSigner,
   ISigner,
   SignatureVerificationHandler,
 } from "@powerhousedao/shared/document-model";
@@ -19,6 +20,41 @@ export type SignerConfig = {
    * synthesized operations unsigned.
    */
   workerSigner?: FactorySpec;
+
+  /** Decides which keys may sign as which users; see {@link SignatureTrustPolicy}. */
+  trustPolicy?: SignatureTrustPolicy;
+
+  /**
+   * What a pooled executor worker imports to build the same trust policy.
+   * Omitted = pooled workers apply the default.
+   */
+  workerTrustPolicy?: FactorySpec;
+};
+
+/**
+ * The host's answer to whether `key` may sign as `signer.user`. The reactor has
+ * already proven that `key` made the signature over this action in this
+ * document.
+ *
+ * Asked once per signed write at admission, never on a re-append, and never for
+ * an unsigned action. `false` refuses the write as `SIGNER_UNAUTHORIZED`. A
+ * throw is a job error: the job is retried and nothing is dropped, so a
+ * transient failure must throw rather than answer `false`.
+ *
+ * The answer may not depend on when it is asked: replicas admit the same write
+ * at different times and must reach the same verdict. Cache an acceptance and
+ * never expire it.
+ *
+ * The reactor's own key signing as its own user is accepted before the policy
+ * is asked. Without a policy, a signed write is refused under `authEnforcement`
+ * and accepted otherwise.
+ */
+export type SignatureTrustPolicy = {
+  authorizeSigner(
+    signer: ActionSigner,
+    key: string,
+    documentId: string,
+  ): Promise<boolean>;
 };
 
 /** `log` counts refusals and admits anyway; `enforce` refuses. */

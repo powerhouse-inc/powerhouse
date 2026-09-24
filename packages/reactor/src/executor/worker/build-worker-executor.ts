@@ -26,6 +26,7 @@ import type { Database as StorageDatabase } from "../../storage/kysely/types.js"
 import { REACTOR_SCHEMA } from "../../storage/migrations/migrator.js";
 import { KyselyExecutionScope } from "../execution-scope.js";
 import { SimpleJobExecutor } from "../simple-job-executor.js";
+import type { SignatureTrustPolicy } from "../../signer/types.js";
 import type { JobExecutorConfig } from "../types.js";
 import type {
   FactorySpec,
@@ -148,6 +149,22 @@ export async function buildWorkerExecutor(
     }
   }
 
+  let trustPolicy: SignatureTrustPolicy | undefined;
+  if (init.trustPolicy) {
+    try {
+      trustPolicy = (await loadFactory(
+        init.trustPolicy,
+      )) as SignatureTrustPolicy;
+    } catch (error) {
+      logger.error(
+        "worker failed to load trust policy: @spec @error",
+        init.trustPolicy.module,
+        error,
+      );
+      throw error;
+    }
+  }
+
   const database = baseDatabase.withSchema(REACTOR_SCHEMA);
   const operationStore = new KyselyOperationStore(
     database as unknown as Kysely<StorageDatabase>,
@@ -226,6 +243,7 @@ export async function buildWorkerExecutor(
     executorConfig,
     executionScope,
     signer,
+    trustPolicy,
   );
 
   return {

@@ -1,15 +1,21 @@
-import type { Action, Operation } from "@powerhousedao/shared/document-model";
+import type {
+  Action,
+  ActionSigner,
+  ISigner,
+  Operation,
+} from "@powerhousedao/shared/document-model";
 import {
   addModule,
   deriveOperationId,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   addRelationshipAction,
   deleteDocumentAction,
 } from "../../src/actions/index.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
+import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { InProcessReactorModule } from "../../src/core/types.js";
 import {
   ReactorEventTypes,
@@ -18,7 +24,10 @@ import {
 import type { ReactorFeatureFlags } from "../../src/executor/types.js";
 import type { Job } from "../../src/queue/types.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
-import type { SignatureVerificationMode } from "../../src/signer/types.js";
+import type {
+  SignatureTrustPolicy,
+  SignatureVerificationMode,
+} from "../../src/signer/types.js";
 import { verifyActionSignature } from "../../src/signer/verify-action-signature.js";
 import { createDocModelDocument } from "../factories.js";
 import { TestP256Signer } from "../utils/p256-signer.js";
@@ -44,11 +53,26 @@ describe("signature admission", () => {
   async function build(
     signatureVerification?: SignatureVerificationMode,
     featureFlags: Partial<ReactorFeatureFlags> = {},
+    options: {
+      trustPolicy?: SignatureTrustPolicy;
+      signer?: ISigner;
+      jobTimeoutMs?: number;
+    } = {},
   ): Promise<InProcessReactorModule> {
-    module = await new ReactorBuilder()
+    const builder = new ReactorBuilder()
       .withDocumentModelSources([documentModelDocumentModelModule as never])
-      .withExecutorConfig({ signatureVerification, featureFlags })
-      .buildModule();
+      .withExecutorConfig({
+        signatureVerification,
+        featureFlags,
+        ...(options.jobTimeoutMs ? { jobTimeoutMs: options.jobTimeoutMs } : {}),
+      });
+    if (options.trustPolicy) {
+      builder.withTrustPolicy(options.trustPolicy);
+    }
+    if (options.signer) {
+      builder.withSigner(options.signer);
+    }
+    module = await builder.buildModule();
     refusals = [];
     module.eventBus.subscribe(
       ReactorEventTypes.SIGNATURE_REFUSED,
@@ -614,6 +638,300 @@ describe("signature admission", () => {
       const reappended = (await stored()).at(-1);
       expect(reappended?.action.id).toBe(unverifiable.id);
       expect(reappended?.deniedReason).toBeDefined();
+    });
+  });
+
+  describe("the trust policy", () => {
+    const AUTH_ENFORCEMENT = { documentDecisions: true, authEnforcement: true };
+
+    type Call = { key: string; address: string; documentId: string };
+
+    /** Records every question; `answer` decides, or throws. */
+    function policy(
+      answer: (signer: ActionSigner, key: string) => Promise<boolean>,
+    ): SignatureTrustPolicy & { calls: Call[] } {
+      const calls: Call[] = [];
+      return {
+        calls,
+        authorizeSigner(actionSigner, key, documentId) {
+          calls.push({ key, address: actionSigner.user.address, documentId });
+          return answer(actionSigner, key);
+        },
+      };
+    }
+
+    function unsigned(action: Action): Action {
+      return {
+        ...action,
+        context: {
+          signer: {
+            user: { address: "0xabc", networkId: "eip155", chainId: 1 },
+            app: { name: "", key: "" },
+            signatures: [],
+          },
+        },
+      };
+    }
+
+    it("by default refuses a signed write under authEnforcement", async () => {
+      await build("enforce", AUTH_ENFORCEMENT);
+      const job = await execute([await v2Signed(moduleAction("m"))]);
+
+      expect(job.status).toBe(JobStatus.FAILED);
+      expect(job.error?.name).toBe("InvalidSignatureError");
+      expect(job.error?.message).toContain("[SIGNER_UNAUTHORIZED]");
+      expect(await stored()).toEqual([]);
+      expect(refusals).toMatchObject([
+        { code: "SIGNER_UNAUTHORIZED", path: "mutation", scheme: "v2" },
+      ]);
+    });
+
+    it("by default accepts a signed write without authEnforcement", async () => {
+      await build("enforce", { documentDecisions: true });
+      const action = await v2Signed(moduleAction("m"));
+
+      expect((await execute([action])).status).toBe(JobStatus.READ_READY);
+      expect(await storedActionIds()).toEqual([action.id]);
+    });
+
+    it("never asks about an unsigned write", async () => {
+      const trust = policy(() => Promise.resolve(false));
+      await build("enforce", AUTH_ENFORCEMENT, { trustPolicy: trust });
+      const action = unsigned(moduleAction("m"));
+
+      expect((await execute([action])).status).toBe(JobStatus.READ_READY);
+      expect(trust.calls).toEqual([]);
+    });
+
+    it("accepts the reactor's own key for its own user under authEnforcement", async () => {
+      const trust = policy(() => Promise.resolve(false));
+      await build("enforce", AUTH_ENFORCEMENT, {
+        trustPolicy: trust,
+        signer: signer.asISigner(),
+      });
+      const own = await v2Signed(moduleAction("own", 0));
+
+      expect((await execute([own])).status).toBe(JobStatus.READ_READY);
+      expect(trust.calls).toEqual([]);
+
+      const elsewhere = moduleAction("elsewhere", 1);
+      const relabelled = signer.signed(
+        elsewhere,
+        await signer.v2Tuple(
+          elsewhere,
+          { documentId: docId, branch: "main" },
+          { address: "0xdef", networkId: "eip155", chainId: 1 },
+        ),
+      );
+      relabelled.context!.signer!.user = {
+        address: "0xdef",
+        networkId: "eip155",
+        chainId: 1,
+      };
+      const job = await execute([relabelled]);
+
+      expect(job.status).toBe(JobStatus.FAILED);
+      expect(job.error?.message).toContain("[SIGNER_UNAUTHORIZED]");
+      expect(trust.calls).toEqual([
+        { key: signer.did, address: "0xdef", documentId: docId },
+      ]);
+    });
+
+    it("fails a mutation it refuses, with the code in JobInfo.error", async () => {
+      const trust = policy(() => Promise.resolve(false));
+      await build("enforce", {}, { trustPolicy: trust });
+      const job = await execute([await v2Signed(moduleAction("m"))]);
+
+      expect(job.status).toBe(JobStatus.FAILED);
+      expect(job.error?.name).toBe("InvalidSignatureError");
+      expect(job.error?.message).toContain("[SIGNER_UNAUTHORIZED]");
+      expect(await stored()).toEqual([]);
+      expect(trust.calls).toEqual([
+        { key: signer.did, address: signer.user.address, documentId: docId },
+      ]);
+    });
+
+    it("asks only after the integrity checks pass", async () => {
+      const trust = policy(() => Promise.resolve(true));
+      await build("enforce", {}, { trustPolicy: trust });
+      const job = await execute([await tampered(moduleAction("m"))]);
+
+      expect(job.error?.message).toContain("[HASH_MISMATCH]");
+      expect(trust.calls).toEqual([]);
+    });
+
+    it("drops only the refused operation at load", async () => {
+      const stranger = await TestP256Signer.create();
+      const trust = policy((_signer, key) =>
+        Promise.resolve(key !== stranger.did),
+      );
+      await build("enforce", {}, { trustPolicy: trust });
+      const good = await v2Signed(moduleAction("a", 0));
+      const strangeAction = moduleAction("b", 1);
+      const strange = stranger.signed(
+        strangeAction,
+        await stranger.v2Tuple(strangeAction, {
+          documentId: docId,
+          branch: "main",
+        }),
+      );
+
+      const job = await load([asOperation(good, 0), asOperation(strange, 1)]);
+
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(await storedActionIds()).toEqual([good.id]);
+      expect(refusals).toMatchObject([
+        { actionId: strange.id, code: "SIGNER_UNAUTHORIZED", path: "load" },
+      ]);
+    });
+
+    it("fails a load it throws on, storing nothing", async () => {
+      const trust = policy(() => Promise.reject(new Error("renown is down")));
+      await build("enforce", {}, { trustPolicy: trust });
+      const action = await v2Signed(moduleAction("m"));
+
+      const job = await load([asOperation(action, 0)]);
+
+      expect(job.status).toBe(JobStatus.FAILED);
+      expect(job.error?.name).not.toBe("InvalidSignatureError");
+      expect(job.error?.message).toContain("renown is down");
+      expect(trust.calls.length).toBeGreaterThan(1);
+      expect(await stored()).toEqual([]);
+      expect(refusals).toEqual([]);
+    });
+
+    it("retries a load it threw on once, then admits it", async () => {
+      let failures = 1;
+      const trust = policy(() =>
+        failures-- > 0
+          ? Promise.reject(new Error("renown is down"))
+          : Promise.resolve(true),
+      );
+      await build("enforce", {}, { trustPolicy: trust });
+      const action = await v2Signed(moduleAction("m"));
+
+      const job = await load([asOperation(action, 0)]);
+
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(await storedActionIds()).toEqual([action.id]);
+      expect(trust.calls).toHaveLength(2);
+    });
+
+    it("retries a mutation it did not answer in time", async () => {
+      let hangs = 1;
+      const trust = policy(() =>
+        hangs-- > 0 ? new Promise<boolean>(() => {}) : Promise.resolve(true),
+      );
+      await build("enforce", {}, { trustPolicy: trust, jobTimeoutMs: 400 });
+      const action = await v2Signed(moduleAction("m"));
+
+      const job = await execute([action]);
+
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(await storedActionIds()).toEqual([action.id]);
+      expect(trust.calls).toHaveLength(2);
+    });
+
+    it("reaches a ReactorBuilder from a SignerConfig unless it has its own", async () => {
+      const trustPolicy = policy(() => Promise.resolve(true));
+      const workerTrustPolicy = {
+        module: { filePath: "/trust.js", exportName: "createTrustPolicy" },
+      };
+      const config = {
+        signer: signer.asISigner(),
+        trustPolicy,
+        workerTrustPolicy,
+      };
+
+      const plain = new ReactorBuilder().withDocumentModelSources([
+        documentModelDocumentModelModule as never,
+      ]);
+      const forwarded = vi.spyOn(plain, "withTrustPolicy");
+      const first = await new ReactorClientBuilder()
+        .withReactorBuilder(plain)
+        .withSigner(config)
+        .buildModule();
+      first.reactor.kill();
+      expect(forwarded).toHaveBeenCalledWith(trustPolicy, workerTrustPolicy);
+
+      const own = new ReactorBuilder()
+        .withDocumentModelSources([documentModelDocumentModelModule as never])
+        .withTrustPolicy(policy(() => Promise.resolve(false)));
+      const kept = vi.spyOn(own, "withTrustPolicy");
+      const second = await new ReactorClientBuilder()
+        .withReactorBuilder(own)
+        .withSigner(config)
+        .buildModule();
+      second.reactor.kill();
+      expect(kept).not.toHaveBeenCalled();
+    });
+
+    describe("is not asked on a re-append", () => {
+      let stranger: TestP256Signer;
+      let trust: ReturnType<typeof policy>;
+
+      beforeAll(async () => {
+        stranger = await TestP256Signer.create();
+      });
+
+      async function storeStranger(offsetMs: number): Promise<Action> {
+        const action = moduleAction("stranger", offsetMs);
+        const signed = stranger.signed(
+          action,
+          await stranger.v2Tuple(action, { documentId: docId, branch: "main" }),
+        );
+        await storeDirectly(signed);
+        return signed;
+      }
+
+      async function buildRefusingStranger(
+        featureFlags: Partial<ReactorFeatureFlags>,
+      ): Promise<void> {
+        trust = policy((_signer, key) => Promise.resolve(key !== stranger.did));
+        await build("enforce", featureFlags, { trustPolicy: trust });
+      }
+
+      it("by a backdated mutation", async () => {
+        await buildRefusingStranger({ documentDecisions: true });
+        const moved = await storeStranger(10);
+
+        const job = await execute([await v2Signed(moduleAction("early", 0))]);
+
+        expect(job.status).toBe(JobStatus.READ_READY);
+        expect(trust.calls.map((call) => call.key)).toEqual([signer.did]);
+        expect((await storedActionIds()).at(-1)).toBe(moved.id);
+      });
+
+      it("by a load reshuffle", async () => {
+        await buildRefusingStranger({});
+        const moved = await storeStranger(10);
+
+        const early = await v2Signed(moduleAction("early", 0));
+        const job = await load([asOperation(early, 0)]);
+
+        expect(job.status).toBe(JobStatus.READ_READY);
+        expect(trust.calls.map((call) => call.key)).toEqual([signer.did]);
+        expect((await storedActionIds()).slice(-2)).toEqual([
+          early.id,
+          moved.id,
+        ]);
+      });
+
+      it("by a re-evaluation", async () => {
+        await buildRefusingStranger({ documentDecisions: true });
+        const moved = await storeStranger(10);
+
+        const deletion = {
+          ...deleteDocumentAction(docId),
+          timestampUtcMs: at(0),
+        };
+        const job = await execute([deletion]);
+
+        expect(job.status).toBe(JobStatus.READ_READY);
+        expect(trust.calls).toEqual([]);
+        const reappended = (await stored()).at(-1);
+        expect(reappended?.action.id).toBe(moved.id);
+      });
     });
   });
 });
