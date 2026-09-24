@@ -612,6 +612,18 @@ describe("signature admission", () => {
         expect(await liveActionIds()).not.toContain(action.id);
         expect(await moduleIds()).toEqual([]);
       });
+
+      it("does not redo it when resubmitted", async () => {
+        await build("enforce");
+        const action = await undone();
+
+        const job = await execute([action]);
+
+        expect(job.status).toBe(JobStatus.FAILED);
+        expect(job.error?.message).toContain("[DUPLICATE_ACTION]");
+        expect(await liveActionIds()).not.toContain(action.id);
+        expect(await moduleIds()).toEqual([]);
+      });
     });
   });
 

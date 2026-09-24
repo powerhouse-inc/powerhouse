@@ -325,7 +325,9 @@ export class SignatureAdmission {
   }
 
   /**
-   * The live candidates stored exactly as submitted. A synthesized operation
+   * The live candidates stored exactly as submitted and still standing: one
+   * an undo or a reshuffle has since superseded is refused, not re-emitted with
+   * the state it once produced. A synthesized operation
    * holds another action, so it cannot be compared; only a retry, whose first
    * attempt this job was, takes it as committed.
    */
@@ -358,9 +360,24 @@ export class SignatureAdmission {
       const byId = new Map(
         stored.map((operation) => [operation.id, operation]),
       );
-      for (const entry of entries) {
+      const matching = entries.filter((entry) => {
         const operation = byId.get(entry.opId);
-        if (operation && sameContent(operation.action, entry.action)) {
+        return operation && sameContent(operation.action, entry.action);
+      });
+      if (matching.length === 0) {
+        continue;
+      }
+      const later = await operationStore.getSince(
+        stream.documentId,
+        stream.scope,
+        stream.branch,
+        Math.min(...matching.map((entry) => byId.get(entry.opId)!.index)),
+        undefined,
+        undefined,
+        signal,
+      );
+      for (const entry of matching) {
+        if (!isSuperseded(byId.get(entry.opId)!, later.results)) {
           committed.set(entry, committedWrite(entry, entry.opId));
         }
       }
@@ -603,6 +620,15 @@ function isRetry(job: Job): boolean {
 
 function committedWrite(entry: Candidate, opId: string): CommittedWrite {
   return { ...entry.stream, actionId: entry.action.id, opId };
+}
+
+function isSuperseded(operation: Operation, later: Operation[]): boolean {
+  return later.some(
+    (next) =>
+      next.index > operation.index &&
+      next.skip > 0 &&
+      next.index - next.skip <= operation.index,
+  );
 }
 
 function sameContent(stored: Action, submitted: Action): boolean {
