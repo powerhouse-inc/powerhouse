@@ -16,6 +16,12 @@ import type {
   DocumentModelModule,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import {
+  createPresignedHeader,
+  hasDerivedDocumentId,
+  signaturePolicyOf,
+  v2RequiredProtocolVersions,
+} from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -29,6 +35,7 @@ import {
 import { DriveNodeView } from "../src/read-model/drive-node-view.js";
 import type { ReactorDriveDatabase } from "../src/schema/tables.js";
 import { reactorDriveDocumentModelModule } from "../src/module.js";
+import { createP256Signer } from "./utils/p256-signer.js";
 
 describe("ReactorDriveClient Integration", () => {
   let pg: PGlite;
@@ -82,8 +89,10 @@ describe("ReactorDriveClient Integration", () => {
       .withKysely(baseDb as never)
       .withMigrationStrategy("manual");
 
+    // A real signer, so v2-required documents can be created at all.
     const built = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
+      .withSigner(await createP256Signer())
       .buildModule();
     reactorClient = built.client;
     reactorModule = built.reactorModule!;
@@ -377,6 +386,57 @@ describe("ReactorDriveClient Integration", () => {
       expect(srcDoc.header.protocolVersions).toEqual({ "base-reducer": 2 });
       expect(copyDoc.header.protocolVersions).toEqual(
         srcDoc.header.protocolVersions,
+      );
+    });
+  });
+
+  describe("v2-required documents", () => {
+    function v2Child(name: string): PHDocument {
+      const doc = makeChildDocument(name);
+      return {
+        ...doc,
+        header: {
+          ...createPresignedHeader(
+            undefined,
+            doc.header.documentType,
+            v2RequiredProtocolVersions(),
+          ),
+          name,
+        },
+      };
+    }
+
+    function expectV2Required(header: PHDocument["header"]): void {
+      expect(signaturePolicyOf(header)).toBe("v2-required");
+      expect(hasDerivedDocumentId(header)).toBe(true);
+    }
+
+    it("creates a v2-required drive", async () => {
+      const drive = await driveClient.create({
+        global: { name: "V2 Drive" },
+        protocolVersions: v2RequiredProtocolVersions(),
+      });
+      expectV2Required(drive.header);
+    });
+
+    it("adds and copies a v2-required file, the copy under a derived id", async () => {
+      const source = await driveClient.addFolder(driveId, "V2 Source");
+      const file = v2Child("V2 File");
+      const added = await driveClient.addFile(driveId, file, source.id);
+      expectV2Required(added.header);
+      const target = await driveClient.addFolder(driveId, "V2 Target");
+
+      await driveClient.copyNode(driveId, source.id, target.id);
+
+      const copiedFolder = (await driveClient.listNodes(driveId, target.id))
+        .results[0];
+      const copiedFile = (await driveClient.listNodes(driveId, copiedFolder.id))
+        .results[0];
+      expect(copiedFile.id).not.toBe(file.header.id);
+      const copy = await reactorClient.get(copiedFile.id);
+      expectV2Required(copy.header);
+      expect(copy.header.protocolVersions).toEqual(
+        v2RequiredProtocolVersions(),
       );
     });
   });

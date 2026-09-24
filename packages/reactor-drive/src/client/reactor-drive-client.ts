@@ -20,6 +20,7 @@ import type {
 } from "@powerhousedao/shared/document-drive";
 import {
   assertAuthPreservedOnDuplicate,
+  createCopyHeader,
   createPresignedHeader,
   generateId,
   replayDocumentVersioned,
@@ -90,6 +91,13 @@ export class ReactorDriveClient implements IDriveClient {
       if (typeof input.local.availableOffline === "boolean") {
         driveDoc.state.local.availableOffline = input.local.availableOffline;
       }
+    }
+    if (input.protocolVersions) {
+      driveDoc.header = createPresignedHeader(
+        undefined,
+        driveDoc.header.documentType,
+        { ...driveDoc.header.protocolVersions, ...input.protocolVersions },
+      );
     }
     if (input.preferredEditor) {
       driveDoc.header.meta = {
@@ -419,7 +427,7 @@ export class ReactorDriveClient implements IDriveClient {
     const fileCreateKeys: string[] = [];
 
     for (const node of subtree) {
-      const newId = idMap.get(node.id)!;
+      let newId = idMap.get(node.id)!;
       let newParent: string | null;
       if (node.id === srcNodeId) {
         newParent = targetParentFolderId ?? null;
@@ -470,8 +478,10 @@ export class ReactorDriveClient implements IDriveClient {
         reducers[m.version ?? 1] = m.reducer as Reducer<PHBaseState>;
       }
       const config: VersionedReplayConfig = { reducers };
-      const replayHeader = createPresignedHeader(newId, documentType);
+      const replayHeader = createCopyHeader(srcDoc.header, newId);
       replayHeader.protocolVersions = srcDoc.header.protocolVersions;
+      // A v2-required copy takes a derived id; files head no subtree.
+      newId = replayHeader.id;
       const duplicated: PHDocument = replayDocumentVersioned(
         srcDoc.initialState,
         srcDoc.operations,
