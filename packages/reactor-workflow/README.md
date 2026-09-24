@@ -213,8 +213,9 @@ This is what a piece can declare or call that this engine does not run. It is tr
 - `run.stop`, `run.respond`, `run.pause`, waitpoints and `generateResumeUrl`
   throw.
 - `connections.get`, `tags`, `server`, `agent` and `flows.list` throw.
-- `run.id`, `flows.current.id`, `project.id` and `step.name` are constants,
-  the same for every run.
+- `flows.current.version.id` is a constant. `project.id` is `reactor` on
+  every reactor: the reactor is the project, as it is for `ctx.store`'s
+  PROJECT scope.
 
 **Piece**
 

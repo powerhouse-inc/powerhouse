@@ -99,6 +99,8 @@ export interface ResolveOptionsRequest
   refresherValues?: Record<string, unknown>;
   auth?: unknown;
   searchValue?: string;
+  // ctx.project.id, the same one a run of the piece is handed.
+  projectId?: string;
   // As on a run: an options() resolver of a package piece may read the reactor
   // it is offering choices from.
   reactorAccess?: boolean;

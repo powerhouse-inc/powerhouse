@@ -139,6 +139,7 @@ async function handleResolveOptions(
   const { piece } = await loadCached(request);
   const { context, touched } = buildPropertyContext({
     searchValue: request.searchValue,
+    projectId: request.projectId,
     // Design-time default: an empty flows listing instead of a throwing stub.
     flows: { list: () => Promise.resolve({ data: [] }) },
     ...(request.reactorAccess ? { reactor: new RemoteReactorService() } : {}),
