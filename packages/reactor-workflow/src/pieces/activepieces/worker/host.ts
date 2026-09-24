@@ -184,8 +184,8 @@ export class PieceWorker implements IPieceWorker {
     return this.enqueue("resolve-options", request, options.timeoutMs, options);
   }
 
-  // A piece's app.checkConnection over resolved credentials; the output is a
-  // CheckConnectionOutcome.
+  // The piece's auth.validate and auth.getConnectionIdentifier over resolved
+  // credentials; the output is a CheckConnectionOutcome.
   checkConnection(
     request: CheckConnectionRequest,
     options: { timeoutMs?: number } = {},
