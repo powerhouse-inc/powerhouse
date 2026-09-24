@@ -119,7 +119,6 @@ query {
       documentType
       state
     }
-    totalCount
     hasNextPage
   }
 }
@@ -148,7 +147,8 @@ query {
           }
         }
       }
-      totalCount
+      hasNextPage
+      cursor
     }
   }
 }
@@ -169,7 +169,8 @@ query {
       name
       state
     }
-    totalCount
+    hasNextPage
+    cursor
   }
 }
 ```
@@ -194,7 +195,8 @@ query {
           }
         }
       }
-      totalCount
+      hasNextPage
+      cursor
     }
   }
 }
