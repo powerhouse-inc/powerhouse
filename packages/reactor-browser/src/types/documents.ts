@@ -35,10 +35,18 @@ export type PromiseState<T> =
   | { status: "fulfilled"; value: T }
   | { status: "rejected"; reason: unknown };
 
+/** A refetch of an already-loaded document. `error` is the last failure that kept the loaded document. */
+export type DocumentRefetchState = {
+  isRefetching: boolean;
+  error: unknown;
+};
+
 export interface IDocumentCache {
   get(id: string, refetch?: boolean): Promise<PHDocument>;
   getBatch(ids: string[], refetch?: boolean): Promise<PHDocument[]>;
   subscribe(id: string | string[], callback: () => void): () => void;
+  /** Stable snapshot of the refetch of `id`. Optional: not every cache refetches in the background. */
+  getRefetchState?(id: string): DocumentRefetchState;
 }
 
 /** Snapshot of one document scope's operations as the cache knows them. */

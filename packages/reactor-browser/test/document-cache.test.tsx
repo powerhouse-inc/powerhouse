@@ -808,14 +808,18 @@ describe("DocumentCache class", () => {
         documents: [updatedDoc],
       });
 
-      // After event, cache.get("test") returns the new pending refetch promise
-      const refetchPromise = cache.get("test");
-      expect(refetchPromise).not.toBe(initialPromise);
+      // While the refetch is in flight, readers keep the loaded promise.
+      expect(cache.get("test")).toBe(initialPromise);
+      expect(cache.getRefetchState("test").isRefetching).toBe(true);
 
-      // Resolve the deferred with the updated document
       deferred.resolve(updatedDoc);
-      const resolvedDoc = await refetchPromise;
-      expect(resolvedDoc.header.name).toBe("Updated Name");
+      await vi.waitFor(() => {
+        expect(cache.get("test")).not.toBe(initialPromise);
+      });
+      const refreshed = cache.get("test") as PromiseWithState<PHDocument>;
+      expect(refreshed.status).toBe("fulfilled");
+      expect((await refreshed).header.name).toBe("Updated Name");
+      expect(cache.getRefetchState("test").isRefetching).toBe(false);
     });
 
     it("should return stale batch data while refetch is in progress", async () => {

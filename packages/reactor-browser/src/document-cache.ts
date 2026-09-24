@@ -1,10 +1,12 @@
 import type { DocumentChangeEvent, PagedResults } from "@powerhousedao/reactor";
+import { DocumentRefetcher } from "./document-refetcher.js";
 import { DOCUMENT_CHANGE_TYPE } from "./reactor-interop.js";
 import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import type {
+  DocumentRefetchState,
   FulfilledPromise,
   IDocumentCache,
   IOperationCache,
@@ -135,6 +137,17 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
   >();
   private listeners = new Map<string, (() => void)[]>();
 
+  private refetcher = new DocumentRefetcher({
+    documents: this.documents,
+    fetch: (id) => this.client.get(id),
+    notify: (id) => this.notifyListeners(id),
+    onFetched: (id, document) => {
+      if (document.header.id !== id) {
+        this.recordAlias(document.header.id, id);
+      }
+    },
+  });
+
   /**
    * Cache keys that fetched a document under a name other than its id --
    * slugs, which `client.get` resolves. Change events dispatch by `header.id`,
@@ -188,6 +201,7 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
     for (const key of this.cacheKeysFor(documentId)) {
       const listeners = this.listeners.get(key);
       this.documents.delete(key);
+      this.refetcher.forget(key);
       this.invalidateBatchesContaining(key);
       if (listeners) {
         listeners.forEach((listener) => listener());
@@ -197,16 +211,17 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
     this.aliasKeys.delete(documentId);
   }
 
+  // The refetch notifies listeners itself once it settles.
   private async handleDocumentUpdated(documentId: string): Promise<void> {
-    for (const key of this.cacheKeysFor(documentId)) {
-      if (!this.documents.has(key)) {
-        continue;
-      }
-      await this.get(key, true);
-      const listeners = this.listeners.get(key);
-      if (listeners) {
-        listeners.forEach((listener) => listener());
-      }
+    const refetches = this.cacheKeysFor(documentId)
+      .filter((key) => this.documents.has(key))
+      .map((key) => this.get(key, true));
+    await Promise.all(refetches);
+  }
+
+  private notifyListeners(key: string): void {
+    for (const listener of this.listeners.get(key) ?? []) {
+      listener();
     }
   }
 
@@ -232,15 +247,16 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
 
   get(id: string, refetch?: boolean): Promise<PHDocument> {
     const currentData = this.documents.get(id);
-    if (currentData) {
-      if (currentData.status === "pending") {
-        return currentData;
-      }
-      if (!refetch) {
-        return currentData;
-      }
+    if (currentData && !refetch) {
+      return currentData;
+    }
+    // A loaded document stays served while it refetches; a pending first load
+    // may predate the change, so it gets a refetch queued behind it.
+    if (currentData && currentData.status !== "rejected") {
+      return this.refetcher.refetch(id);
     }
 
+    this.refetcher.forget(id);
     const documentPromise = this.client.get(id);
     documentPromise.then(
       (doc) => {
@@ -253,6 +269,10 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
     );
     this.documents.set(id, addPromiseState(documentPromise));
     return documentPromise;
+  }
+
+  getRefetchState(id: string): DocumentRefetchState {
+    return this.refetcher.getState(id);
   }
 
   getBatch(ids: string[]): Promise<PHDocument[]> {
@@ -597,6 +617,9 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
     }
     this.operationRequests.clear();
     this.operationEntries.clear();
+    this.refetcher.clear();
     this.operationListeners.clear();
   }
 }
+
+export { IDLE_REFETCH_STATE } from "./document-refetcher.js";
