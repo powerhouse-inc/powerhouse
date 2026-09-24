@@ -92,7 +92,7 @@ describe("documentChanges read cost per distinct subject", () => {
     const all: Record<keyof Counts, MockInstance> = {
       viewGet: vi.spyOn(m.documentView, "get"),
       viewExists: vi.spyOn(m.documentView, "exists"),
-      gate: vi.spyOn(gate, "scopePredicate"),
+      gate: vi.spyOn(gate as Required<IReadGate>, "prepare"),
     };
     return {
       reset: () => Object.values(all).forEach((spy) => spy.mockClear()),
@@ -197,27 +197,19 @@ describe("documentChanges read cost per distinct subject", () => {
   }
 
   /**
-   * Every distinct subject holds its own reactor subscription, so each event is
-   * fetched and gated once per subject. A document fetch is three uncached
-   * queries; a gate on a policed document builds its decision model.
+   * Each distinct subject holds its own reactor subscription, but an event's
+   * document fetches and gate resolutions are shared by all of them; only the
+   * per-subject decision repeats. A fetch is three uncached queries.
    */
   it.each([1, 10, 100])(
-    "repeats every event's reads once per distinct subject (N=%i)",
+    "reads each event once however many subjects subscribe (N=%i)",
     async (n) => {
       const cost = await costPerEvent(n);
 
-      expect(cost.created).toEqual({
-        viewGet: n + 1,
-        viewExists: 0,
-        gate: n + 1,
-      });
-      expect(cost.updated).toEqual({ viewGet: 2, viewExists: 0, gate: n + 1 });
-      expect(cost.childAdded).toEqual({
-        viewGet: 2 * n + 1,
-        viewExists: 0,
-        gate: 2 * n + 1,
-      });
-      expect(cost.deleted).toEqual({ viewGet: n, viewExists: 0, gate: n });
+      expect(cost.created).toEqual({ viewGet: 2, viewExists: 0, gate: 2 });
+      expect(cost.updated).toEqual({ viewGet: 2, viewExists: 0, gate: 2 });
+      expect(cost.childAdded).toEqual({ viewGet: 3, viewExists: 0, gate: 3 });
+      expect(cost.deleted).toEqual({ viewGet: 1, viewExists: 0, gate: 1 });
     },
   );
 });

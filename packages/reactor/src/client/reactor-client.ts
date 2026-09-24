@@ -81,6 +81,7 @@ import type { DocumentDecisionModel } from "../decision/document-decision-model.
 import type { RegisteredDecisionModel } from "../decision/registered-model.js";
 import type { DecisionModel, Evaluation } from "../decision/types.js";
 import { GATED_DOCUMENT_ACTIONS, targetDocumentId } from "../executor/util.js";
+import { type EventReads, EventReadsSource } from "./event-reads.js";
 import type { ReactorFeatureFlags } from "../executor/types.js";
 import {
   authSubjectFromSigner,
@@ -179,6 +180,7 @@ export class ReactorClient implements IReactorClient {
   private documentIndexer: IDocumentIndexer;
   private documentView: IDocumentView;
   private readGate: IReadGate;
+  private eventReads: EventReadsSource;
   private actionEvaluation: ActionEvaluationConfig | undefined;
 
   readonly drives: IDriveClient;
@@ -202,6 +204,7 @@ export class ReactorClient implements IReactorClient {
     this.documentIndexer = documentIndexer;
     this.documentView = documentView;
     this.readGate = readGate;
+    this.eventReads = new EventReadsSource(reactor, documentView, readGate);
     this.actionEvaluation = actionEvaluation;
     this.drives = new DriveClient(this, logger, reactor, signer);
     this.logger.verbose("ReactorClient initialized");
@@ -220,13 +223,13 @@ export class ReactorClient implements IReactorClient {
     document: PHDocument,
     view?: ViewFilter,
     signal?: AbortSignal,
+    reads?: EventReads,
   ): Promise<(scope: string) => boolean> {
-    return this.readGate.scopePredicate(
-      document,
-      this.readSubject(view?.subject),
-      view?.branch ?? "main",
-      signal,
-    );
+    const subject = this.readSubject(view?.subject);
+    const branch = view?.branch ?? "main";
+    return reads
+      ? reads.scopePredicate(document, subject, branch)
+      : this.readGate.scopePredicate(document, subject, branch, signal);
   }
 
   /**
@@ -255,8 +258,9 @@ export class ReactorClient implements IReactorClient {
     document: TDocument,
     view: ViewFilter | undefined,
     signal?: AbortSignal,
+    reads?: EventReads,
   ): Promise<TDocument | undefined> {
-    const readable = await this.readableScopes(document, view, signal);
+    const readable = await this.readableScopes(document, view, signal, reads);
     if (refusesEveryDomainScope(document, readable)) {
       return undefined;
     }
@@ -271,9 +275,12 @@ export class ReactorClient implements IReactorClient {
     documents: PHDocument[],
     view: ViewFilter | undefined,
     signal?: AbortSignal,
+    reads?: EventReads,
   ): Promise<PHDocument[]> {
     const served = await Promise.all(
-      documents.map((document) => this.gateServed(document, view, signal)),
+      documents.map((document) =>
+        this.gateServed(document, view, signal, reads),
+      ),
     );
     return served.filter((document) => document !== undefined);
   }
@@ -367,25 +374,29 @@ export class ReactorClient implements IReactorClient {
   private async servesEvery(
     ids: string[],
     view: ViewFilter | undefined,
+    reads: EventReads,
   ): Promise<boolean> {
-    const served = await Promise.all(ids.map((id) => this.servesId(id, view)));
+    const served = await Promise.all(
+      ids.map((id) => this.servesId(id, view, reads)),
+    );
     return served.every(Boolean);
   }
 
   private async servesId(
     id: string,
     view: ViewFilter | undefined,
+    reads: EventReads,
   ): Promise<boolean> {
     let document: PHDocument;
     try {
-      document = await this.reactor.get(id, withAllScopes(view));
+      document = await reads.get(id, withAllScopes(view));
     } catch (error) {
       await assertAbsent(this.documentView, id, error);
       return true;
     }
     return !refusesEveryDomainScope(
       document,
-      await this.readableScopes(document, view),
+      await this.readableScopes(document, view, undefined, reads),
     );
   }
 
@@ -1916,8 +1927,14 @@ export class ReactorClient implements IReactorClient {
     const served = async (
       type: DocumentChangeType,
       documents: PHDocument[],
+      reads: EventReads,
     ): Promise<DocumentChangeEvent | undefined> => {
-      const documentsServed = await this.gateServedAll(documents, view);
+      const documentsServed = await this.gateServedAll(
+        documents,
+        view,
+        undefined,
+        reads,
+      );
       return documentsServed.length > 0
         ? { type, documents: documentsServed }
         : undefined;
@@ -1963,16 +1980,15 @@ export class ReactorClient implements IReactorClient {
 
     const unsubscribeCreated = this.subscriptionManager.onDocumentCreated(
       (result) => {
+        const reads = this.eventReads.forEvent();
         deliver(
           (async () => {
             // Unnarrowed: a narrowed fetch could omit the policy, which the
             // gate reads as uninitialized, or every domain scope.
             const documents = await Promise.all(
-              result.results.map((id) =>
-                this.reactor.get(id, withAllScopes(view), undefined, undefined),
-              ),
+              result.results.map((id) => reads.get(id, withAllScopes(view))),
             );
-            return served(DocumentChangeType.Created, documents);
+            return served(DocumentChangeType.Created, documents, reads);
           })(),
         );
       },
@@ -1982,9 +1998,10 @@ export class ReactorClient implements IReactorClient {
     const unsubscribeDeleted = this.subscriptionManager.onDocumentDeleted(
       (documentIds) => {
         const childId = documentIds[0];
+        const reads = this.eventReads.forEvent();
         deliver(
           (async () =>
-            (await this.servesEvery([childId], view))
+            (await this.servesEvery([childId], view, reads))
               ? {
                   type: DocumentChangeType.Deleted,
                   documents: [],
@@ -1998,7 +2015,13 @@ export class ReactorClient implements IReactorClient {
 
     const unsubscribeUpdated = this.subscriptionManager.onDocumentStateUpdated(
       (result) => {
-        deliver(served(DocumentChangeType.Updated, result.results));
+        deliver(
+          served(
+            DocumentChangeType.Updated,
+            result.results,
+            this.eventReads.forEvent(),
+          ),
+        );
       },
       search,
       view,
@@ -2007,9 +2030,10 @@ export class ReactorClient implements IReactorClient {
     const unsubscribeRelationship =
       this.subscriptionManager.onRelationshipChanged(
         (parentId, childId, changeType) => {
+          const reads = this.eventReads.forEvent();
           deliver(
             (async () =>
-              (await this.servesEvery([parentId, childId], view))
+              (await this.servesEvery([parentId, childId], view, reads))
                 ? {
                     type:
                       changeType === RelationshipChangeType.Added
