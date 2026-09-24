@@ -79,6 +79,7 @@ const reactor = await new ReactorBuilder()
 | `withInstrumentedPool(instrumentation)` | Register an externally-built `pg.Pool` so its metrics surface through `pools` |
 | `withShutdownHook(hook)`          | Register an async cleanup hook to run during graceful shutdown           |
 | `withSignalHandlers()`            | Register OS signal handlers for graceful shutdown                        |
+| `withTrustPolicy(policy, workerSpec?)` | Decide which keys may sign as which users (see [Trust policy](/academy/Build/BuildingUserExperiences/Authorization/Signing#trust-policy)) |
 | `withWorkerPool(options)`         | Run jobs in N worker threads instead of in-process — calling it enables the pool; `{ numWorkers, db }` or `{ numWorkers, factory }` (see [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling)) |
 | `withProjectionShards(config)`    | Run N sharded projection workers (see [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling)) |
 | `withProjectionWorkerFactory(factory)` | Inject a custom projection worker factory                           |
