@@ -25,6 +25,7 @@ export default defineConfig({
     include: ["src/**/*.test.ts", "test/**/*.test.ts"],
     // Upstream's suites rely on the globals.
     globals: true,
+    setupFiles: ["test/setup.ts"],
     // PGlite's cold boot and a forked piece worker both outrun the default 5s.
     testTimeout: 30_000,
     hookTimeout: 30_000,
