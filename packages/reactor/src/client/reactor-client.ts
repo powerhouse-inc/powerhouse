@@ -70,11 +70,7 @@ import {
 } from "./types.js";
 import { buildDecisionModel } from "../decision/build-decision-model.js";
 import type { IReadGate } from "../decision/read-gate.js";
-import {
-  ALWAYS_READABLE_SCOPES,
-  BareReadGate,
-  SeededStateReader,
-} from "../decision/read-gate.js";
+import { BareReadGate, SeededStateReader } from "../decision/read-gate.js";
 import type { DocumentDecisionModel } from "../decision/document-decision-model.js";
 import type { RegisteredDecisionModel } from "../decision/registered-model.js";
 import type { DecisionModel, Evaluation } from "../decision/types.js";
@@ -83,6 +79,9 @@ import type { ReactorFeatureFlags } from "../executor/types.js";
 import {
   authSubjectFromSigner,
   filterReadableScopes,
+  narrowedScopes,
+  servesDomainScope,
+  withAllScopes,
   withAuthScope,
 } from "./util.js";
 
@@ -240,6 +239,97 @@ export class ReactorClient implements IReactorClient {
   ): Promise<TDocument> {
     const readable = await this.readableScopes(document, view, signal);
     return filterReadableScopes(document, readable);
+  }
+
+  /**
+   * One document as a listing or a feed serves it, or undefined when withheld.
+   * The document must hold every scope, or withholding is decided on a subset;
+   * a narrowing view is applied here instead.
+   */
+  private async gateServed<TDocument extends PHDocument>(
+    document: TDocument,
+    view: ViewFilter | undefined,
+    signal?: AbortSignal,
+  ): Promise<TDocument | undefined> {
+    const readable = await this.readableScopes(document, view, signal);
+    if (!servesDomainScope(document, readable)) {
+      return undefined;
+    }
+    const narrowed = narrowedScopes(view);
+    return filterReadableScopes(
+      document,
+      narrowed ? (scope) => readable(scope) && narrowed.has(scope) : readable,
+    );
+  }
+
+  private async gateServedAll(
+    documents: PHDocument[],
+    view: ViewFilter | undefined,
+    signal?: AbortSignal,
+  ): Promise<PHDocument[]> {
+    const served = await Promise.all(
+      documents.map((document) => this.gateServed(document, view, signal)),
+    );
+    return served.filter((document) => document !== undefined);
+  }
+
+  /**
+   * Gates a page and every page after it. `totalCount` is restated over what
+   * was withheld so the difference is not a count of refused documents;
+   * `nextCursor` is left as the stream reported it.
+   */
+  private async gateListing(
+    page: PagedResults<PHDocument>,
+    view: ViewFilter | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<PagedResults<PHDocument>> {
+    const results = await this.gateServedAll(page.results, view, signal);
+    const withheld = page.results.length - results.length;
+    const next = page.next;
+    return {
+      ...page,
+      results,
+      totalCount:
+        page.totalCount === undefined
+          ? undefined
+          : Math.max(0, page.totalCount - withheld),
+      next: next
+        ? async () => this.gateListing(await next(), view, signal)
+        : undefined,
+    };
+  }
+
+  /**
+   * Whether an event naming only these ids may reach the subject. An id with no
+   * live document behind it has no content left to protect, so it does not
+   * withhold; a deleted document is read at its deletion boundary when
+   * deletion is positional, and gated like any other.
+   */
+  private async servesEvery(
+    ids: string[],
+    view: ViewFilter | undefined,
+  ): Promise<boolean> {
+    for (const id of ids) {
+      let document: PHDocument;
+      try {
+        document = await this.reactor.get(id, withAllScopes(view));
+      } catch (error) {
+        const [live] = await this.documentView.exists(
+          [id],
+          DocumentExistence.LiveOnly,
+        );
+        if (live) {
+          throw error;
+        }
+        continue;
+      }
+      if (
+        !servesDomainScope(document, await this.readableScopes(document, view))
+      ) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -726,13 +816,7 @@ export class ReactorClient implements IReactorClient {
       await Promise.all(
         documents.results.map(async (doc) => {
           const allows = await this.readableScopes(doc, view, signal);
-          const domainScopes = Object.keys(doc.state).filter(
-            (scope) => !ALWAYS_READABLE_SCOPES.has(scope),
-          );
-          return [
-            doc.header.id,
-            domainScopes.length === 0 || domainScopes.some(allows),
-          ] as const;
+          return [doc.header.id, servesDomainScope(doc, allows)] as const;
         }),
       ),
     );
@@ -808,22 +892,12 @@ export class ReactorClient implements IReactorClient {
     this.logger.verbose("find(@search, @view, @paging)", search, view, paging);
     const results = await this.reactor.find(
       search,
-      withAuthScope(view),
+      withAllScopes(view),
       paging,
       undefined,
       signal,
     );
-    return {
-      ...results,
-      results: await Promise.all(
-        results.results.map(async (doc) =>
-          filterReadableScopes(
-            doc,
-            await this.readableScopes(doc, view, signal),
-          ),
-        ),
-      ),
-    };
+    return this.gateListing(results, view, signal);
   }
 
   /**
@@ -1776,12 +1850,18 @@ export class ReactorClient implements IReactorClient {
   ): () => void {
     this.logger.verbose("subscribe(@search, @view)", search, view);
 
-    // A subscription is a read. The filter lives here because the subscription
-    // manager is a read model, which sees everything.
-    const readable = async <TDocument extends PHDocument>(
-      document: TDocument,
-    ): Promise<TDocument> =>
-      filterReadableScopes(document, await this.readableScopes(document, view));
+    // A subscription is a read, gated here because the subscription manager is
+    // a read model, which sees everything. It is gated as a listing is: an
+    // event for a document the subject can read no domain scope of is withheld.
+    const served = async (
+      type: DocumentChangeType,
+      documents: PHDocument[],
+    ): Promise<DocumentChangeEvent | undefined> => {
+      const documentsServed = await this.gateServedAll(documents, view);
+      return documentsServed.length > 0
+        ? { type, documents: documentsServed }
+        : undefined;
+    };
 
     let disposed = false;
     let delivering: Promise<void> = Promise.resolve();
@@ -1797,11 +1877,9 @@ export class ReactorClient implements IReactorClient {
      * gated is withheld, because serving it unfiltered would leak the scopes
      * the gate did not clear -- but it is logged rather than swallowed, since
      * the gate rethrows a transient failure precisely so it is not read as a
-     * denial.
+     * denial. An event that resolves to undefined was withheld.
      */
-    const deliver = (
-      event: DocumentChangeEvent | Promise<DocumentChangeEvent>,
-    ): void => {
+    const deliver = (event: Promise<DocumentChangeEvent | undefined>): void => {
       // Attached now, or a rejection while the chain is parked on real I/O
       // waits a full turn with no handler, which Node reports as unhandled.
       void Promise.resolve(event).catch(() => undefined);
@@ -1809,7 +1887,7 @@ export class ReactorClient implements IReactorClient {
       delivering = delivering
         .then(async () => {
           const built = await event;
-          if (disposed) {
+          if (disposed || !built) {
             return;
           }
           callback(built);
@@ -1827,19 +1905,14 @@ export class ReactorClient implements IReactorClient {
       (result) => {
         deliver(
           (async () => {
-            // withAuthScope, or a view that narrows scopes would leave the
-            // policy out of the fetch and the gate would read an absent one as
-            // uninitialized, which allows everything.
+            // Unnarrowed: a narrowed fetch could omit the policy, which the
+            // gate reads as uninitialized, or every domain scope.
             const documents = await Promise.all(
               result.results.map((id) =>
-                this.reactor.get(id, withAuthScope(view), undefined, undefined),
+                this.reactor.get(id, withAllScopes(view), undefined, undefined),
               ),
             );
-
-            return {
-              type: DocumentChangeType.Created,
-              documents: await Promise.all(documents.map(readable)),
-            };
+            return served(DocumentChangeType.Created, documents);
           })(),
         );
       },
@@ -1848,23 +1921,24 @@ export class ReactorClient implements IReactorClient {
 
     const unsubscribeDeleted = this.subscriptionManager.onDocumentDeleted(
       (documentIds) => {
-        deliver({
-          type: DocumentChangeType.Deleted,
-          documents: [],
-          context: { childId: documentIds[0] },
-        });
+        const childId = documentIds[0];
+        deliver(
+          (async () =>
+            (await this.servesEvery([childId], view))
+              ? {
+                  type: DocumentChangeType.Deleted,
+                  documents: [],
+                  context: { childId },
+                }
+              : undefined)(),
+        );
       },
       search,
     );
 
     const unsubscribeUpdated = this.subscriptionManager.onDocumentStateUpdated(
       (result) => {
-        deliver(
-          (async () => ({
-            type: DocumentChangeType.Updated,
-            documents: await Promise.all(result.results.map(readable)),
-          }))(),
-        );
+        deliver(served(DocumentChangeType.Updated, result.results));
       },
       search,
       view,
@@ -1873,17 +1947,19 @@ export class ReactorClient implements IReactorClient {
     const unsubscribeRelationship =
       this.subscriptionManager.onRelationshipChanged(
         (parentId, childId, changeType) => {
-          deliver({
-            type:
-              changeType === RelationshipChangeType.Added
-                ? DocumentChangeType.ChildAdded
-                : DocumentChangeType.ChildRemoved,
-            documents: [],
-            context: {
-              parentId,
-              childId,
-            },
-          });
+          deliver(
+            (async () =>
+              (await this.servesEvery([parentId, childId], view))
+                ? {
+                    type:
+                      changeType === RelationshipChangeType.Added
+                        ? DocumentChangeType.ChildAdded
+                        : DocumentChangeType.ChildRemoved,
+                    documents: [],
+                    context: { parentId, childId },
+                  }
+                : undefined)(),
+          );
         },
         search,
       );

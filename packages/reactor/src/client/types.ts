@@ -403,7 +403,9 @@ export interface IReactorClient {
   ): Promise<PagedResults<DocumentRelationship>>;
 
   /**
-   * Filters documents by criteria and returns a list of them
+   * Filters documents by criteria and returns a list of them. A document the
+   * view's subject may read no domain scope of is withheld, not served as its
+   * header and always-readable scopes.
    *
    * @param search - Search filter options (type, parentId, identifiers)
    * @param view - Optional filter containing branch and scopes information
@@ -786,7 +788,9 @@ export interface IReactorClient {
   waitForJob(jobId: string | JobInfo, signal?: AbortSignal): Promise<JobInfo>;
 
   /**
-   * Subscribes to changes for documents matching specified filters
+   * Subscribes to changes for documents matching specified filters, gated as
+   * `find` is: an event naming a document the view's subject may read no domain
+   * scope of is withheld.
    *
    * @param search - Search filter options (type, parentId, identifiers)
    * @param callback - Function called when documents change with the change event details

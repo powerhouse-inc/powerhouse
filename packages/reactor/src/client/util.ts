@@ -3,6 +3,7 @@ import type {
   ISigner,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { ALWAYS_READABLE_SCOPES } from "../decision/read-gate.js";
 import type { ViewFilter } from "../shared/types.js";
 
 export function authSubjectFromSigner(signer: ISigner): AuthSubject {
@@ -15,6 +16,38 @@ export function withAuthScope(view?: ViewFilter): ViewFilter | undefined {
     return { ...view, scopes: [...new Set([...view.scopes, "auth"])] };
   }
   return view;
+}
+
+// Unnarrowed, so withholding is decided on every scope the document holds.
+export function withAllScopes(view?: ViewFilter): ViewFilter | undefined {
+  if (!view?.scopes) {
+    return view;
+  }
+  const { scopes: _narrowed, ...whole } = view;
+  return whole;
+}
+
+// The scopes a narrowed fetch returns, or undefined when the view does not narrow.
+export function narrowedScopes(view?: ViewFilter): Set<string> | undefined {
+  if (!view?.scopes || view.scopes.length === 0) {
+    return undefined;
+  }
+  return new Set(["document", "auth", ...view.scopes]);
+}
+
+/**
+ * Whether the subject may read any domain scope of the document. A listing or
+ * a feed withholds one that serves none: its header and always-readable scopes
+ * still name it and carry its policy.
+ */
+export function servesDomainScope(
+  document: PHDocument,
+  readable: (scope: string) => boolean,
+): boolean {
+  const domainScopes = Object.keys(document.state).filter(
+    (scope) => !ALWAYS_READABLE_SCOPES.has(scope),
+  );
+  return domainScopes.length === 0 || domainScopes.some(readable);
 }
 
 /**

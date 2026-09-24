@@ -2208,9 +2208,9 @@ describe("ReactorClient Unit Tests", () => {
       expect((filtered.initialState as any).local).toBeUndefined();
     });
 
-    it("keeps the auth scope in a scope-narrowed subscription fetch", async () => {
-      // Without it the fetch omits the policy, decide() reads an absent policy
-      // as uninitialized, and the gate allows everything.
+    it("fetches a scope-narrowed subscription whole, then narrows", async () => {
+      // A narrowed fetch could omit the policy or every domain scope, and
+      // withholding would be decided on neither.
       let onCreated: ((result: { results: string[] }) => void) | undefined;
       vi.mocked(mockSubscriptionManager.onDocumentCreated).mockImplementation(
         (handler: any) => {
@@ -2222,19 +2222,24 @@ describe("ReactorClient Unit Tests", () => {
         docWithScopes("d1", readGlobalPolicy, { global: { x: 1 } }),
       );
 
-      client.subscribe({} as any, () => {}, {
+      const callback = vi.fn();
+      client.subscribe({} as any, callback, {
         scopes: ["global"],
         subject: { address: "0xreader" },
       });
 
       onCreated?.({ results: ["d1"] });
 
-      await vi.waitFor(() => {
-        expect(mockReactor.get).toHaveBeenCalled();
-      });
+      await vi.waitFor(() => expect(callback).toHaveBeenCalled());
       const viewArg = vi.mocked(mockReactor.get).mock.calls[0][1];
-      expect(viewArg?.scopes).toContain("auth");
-      expect(viewArg?.scopes).toContain("global");
+      expect(viewArg?.scopes).toBeUndefined();
+      expect(viewArg?.subject).toEqual({ address: "0xreader" });
+      const event = callback.mock.calls[0][0] as { documents: PHDocument[] };
+      expect(Object.keys(event.documents[0].state).sort()).toEqual([
+        "auth",
+        "document",
+        "global",
+      ]);
     });
 
     it("falls back to the client's own signer when no subject is given", async () => {
@@ -2694,6 +2699,11 @@ describe("ReactorClient Unit Tests", () => {
             mockDocumentIndexer,
             mockDocumentView,
             gate,
+          );
+
+          // The delete is gated on the document read at its deletion boundary.
+          vi.mocked(mockReactor.get).mockResolvedValue(
+            docWithScopes("d1", readGlobalPolicy, { global: { x: 0 } }),
           );
 
           const unsubscribe = client.subscribe({}, callback, {
