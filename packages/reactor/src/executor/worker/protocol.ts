@@ -56,6 +56,8 @@ export type ErrorInfo = {
   message: string;
   stack?: string;
   cause?: ErrorInfo;
+  /** A deferrable error's requested delay; see `DeferredAdmissionError`. */
+  retryAfterMs?: number;
 };
 
 // ---------------------------------------------------------------------------

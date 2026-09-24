@@ -22,6 +22,7 @@ import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { Job } from "../queue/types.js";
 import {
+  DeferredAdmissionError,
   DocumentNotFoundError,
   InvalidSignatureError,
 } from "../shared/errors.js";
@@ -272,7 +273,10 @@ export class SignatureAdmission {
     return verdict;
   }
 
-  /** Throws when the policy does, times out or the job is aborted. */
+  /**
+   * Throws when the policy does, times out or the job is aborted; a policy
+   * error with `retryAfterMs` becomes a {@link DeferredAdmissionError}.
+   */
   private async authorize(
     signer: ActionSigner,
     documentId: string,
@@ -300,15 +304,37 @@ export class SignatureAdmission {
       }
     });
     try {
-      return await Promise.race([
-        this.trustPolicy.authorizeSigner(signer, signer.app.key, documentId),
-        stop,
-      ]);
+      return await Promise.race([this.ask(signer, documentId), stop]);
     } finally {
       clearTimeout(timer);
       if (onAbort) {
         signal?.removeEventListener("abort", onAbort);
       }
+    }
+  }
+
+  /** A policy error carrying `retryAfterMs` defers the job instead. */
+  private async ask(
+    signer: ActionSigner,
+    documentId: string,
+  ): Promise<boolean> {
+    try {
+      return await this.trustPolicy.authorizeSigner(
+        signer,
+        signer.app.key,
+        documentId,
+      );
+    } catch (error) {
+      const retryAfterMs = DeferredAdmissionError.retryAfterOf(error);
+      if (retryAfterMs === undefined) {
+        throw error;
+      }
+      throw new DeferredAdmissionError(
+        documentId,
+        retryAfterMs,
+        error instanceof Error ? error.message : String(error),
+        error,
+      );
     }
   }
 

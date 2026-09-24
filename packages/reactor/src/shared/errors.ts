@@ -209,6 +209,47 @@ export class InvalidSignatureError extends Error {
   }
 }
 
+/**
+ * Admission cannot decide yet: the trust policy threw an error carrying
+ * `retryAfterMs`, such as a signer's credential that has not propagated. The
+ * job is retried after that delay without charging its retry limit.
+ */
+export class DeferredAdmissionError extends Error {
+  public readonly documentId: string;
+  public readonly retryAfterMs: number;
+
+  constructor(
+    documentId: string,
+    retryAfterMs: number,
+    message: string,
+    cause?: unknown,
+  ) {
+    super(`Admission deferred in document ${documentId}: ${message}`, {
+      cause,
+    });
+    this.name = "DeferredAdmissionError";
+    this.documentId = documentId;
+    this.retryAfterMs = retryAfterMs;
+
+    Error.captureStackTrace(this, DeferredAdmissionError);
+  }
+
+  static isError(error: unknown): error is DeferredAdmissionError {
+    return Error.isError(error) && error.name === "DeferredAdmissionError";
+  }
+
+  /** The delay a thrown error asks for: a positive finite `retryAfterMs`. */
+  static retryAfterOf(error: unknown): number | undefined {
+    if (typeof error !== "object" || error === null) {
+      return undefined;
+    }
+    const value = (error as { retryAfterMs?: unknown }).retryAfterMs;
+    return typeof value === "number" && Number.isFinite(value) && value > 0
+      ? value
+      : undefined;
+  }
+}
+
 export { DowngradeNotSupportedError } from "@powerhousedao/shared/document-model";
 
 /**

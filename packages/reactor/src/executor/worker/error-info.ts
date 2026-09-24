@@ -29,6 +29,10 @@ export function toErrorInfo(err: unknown, depth = 0): ErrorInfo {
     if (err.cause !== undefined) {
       info.cause = toErrorInfo(err.cause, depth + 1);
     }
+    const retryAfterMs = (err as { retryAfterMs?: unknown }).retryAfterMs;
+    if (typeof retryAfterMs === "number") {
+      info.retryAfterMs = retryAfterMs;
+    }
     return info;
   }
   if (typeof err === "string") {
@@ -79,6 +83,14 @@ export function fromErrorInfo(info: ErrorInfo): Error {
       value: fromErrorInfo(info.cause),
       configurable: true,
       writable: true,
+    });
+  }
+  if (info.retryAfterMs !== undefined) {
+    Object.defineProperty(err, "retryAfterMs", {
+      value: info.retryAfterMs,
+      configurable: true,
+      writable: true,
+      enumerable: true,
     });
   }
   return err;

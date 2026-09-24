@@ -87,6 +87,7 @@ export {
 } from "./src/shared/drive-url.js";
 export {
   AuthEnforcementDisabledError,
+  DeferredAdmissionError,
   InvalidSignatureError,
   RelationshipNotFoundError,
 } from "./src/shared/errors.js";

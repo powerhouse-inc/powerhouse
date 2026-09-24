@@ -16,6 +16,7 @@ import {
   type WorkerInitPayload,
 } from "../../../../src/executor/worker/worker-handle.js";
 import type { Job } from "../../../../src/queue/types.js";
+import { DeferredAdmissionError } from "../../../../src/shared/errors.js";
 import { FakeWorkerTransport } from "../fake-worker.js";
 
 function createMockLogger(): ILogger {
@@ -221,6 +222,34 @@ describe("WorkerHandle", () => {
       expect(outcome.result.error?.name).toBe("BoomError");
       expect(outcome.result.error?.message).toBe("boom");
       expect(outcome.result.error?.stack).toContain("BoomError: boom");
+    });
+
+    it("keeps a deferrable error's retryAfterMs", async () => {
+      const transport = new FakeWorkerTransport({ autoReady: true });
+      const handle = makeHandle(transport);
+      await handle.start();
+
+      const job = createTestJob({ id: "job-deferred" });
+      const pending = handle.execute(job);
+      await flush();
+      const exec = transport
+        .getSentMessages()
+        .find((m): m is ExecuteMessage => m.type === "execute");
+      transport.emitToParent({
+        type: "result",
+        correlationId: exec!.correlationId,
+        result: { job, success: false },
+        error: {
+          name: "DeferredAdmissionError",
+          message: "no credential yet",
+          retryAfterMs: 1000,
+        },
+      });
+      const outcome = await pending;
+      expect(DeferredAdmissionError.isError(outcome.result.error)).toBe(true);
+      expect(DeferredAdmissionError.retryAfterOf(outcome.result.error)).toBe(
+        1000,
+      );
     });
 
     it("rejects after the worker exits abnormally", async () => {
