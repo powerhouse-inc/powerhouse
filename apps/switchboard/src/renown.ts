@@ -176,6 +176,32 @@ export async function getRenownTrustPolicyConfig(
   };
 }
 
+/**
+ * Fails the boot when pooled workers would refuse every signed write the
+ * in-process executor accepts: a `self` Renown source gives workers no trust
+ * policy spec, so under authEnforcement they apply the default.
+ */
+export function assertWorkerTrustPolicy(config: {
+  workers: number;
+  authEnforcement: boolean;
+  renownSource: "self" | "remote";
+}): void {
+  if (
+    config.workers > 0 &&
+    config.authEnforcement &&
+    config.renownSource === "self"
+  ) {
+    throw new Error(
+      "The executor worker pool (REACTOR_WORKERS) cannot verify signers when " +
+        "REACTOR_AUTH_ENFORCEMENT is on and Renown credentials are read from " +
+        'this switchboard ("self" via auth.renown.source or RENOWN_SOURCE): ' +
+        "pooled workers have no trust policy and would refuse every signed " +
+        "write. Set RENOWN_SOURCE=remote, or disable the worker pool " +
+        "(REACTOR_WORKERS=0).",
+    );
+  }
+}
+
 function ownIdentity(
   renown: IRenown | null,
 ): RenownTrustPolicyOptions["self"] | undefined {

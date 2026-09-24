@@ -12,7 +12,10 @@ import { existsSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { applySwitchboardReactorDefaults } from "../src/builder-defaults.mjs";
-import { getRenownTrustPolicyConfig } from "../src/renown.js";
+import {
+  assertWorkerTrustPolicy,
+  getRenownTrustPolicyConfig,
+} from "../src/renown.js";
 
 const WALLET = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
 const CONNECT_KEY = "did:key:zDnaeConnectKey";
@@ -232,6 +235,28 @@ describe("getRenownTrustPolicyConfig", () => {
       ),
     ).resolves.toBe(true);
     expect(request).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("assertWorkerTrustPolicy", () => {
+  it("fails with workers, authEnforcement and a self source", () => {
+    expect(() =>
+      assertWorkerTrustPolicy({
+        workers: 2,
+        authEnforcement: true,
+        renownSource: "self",
+      }),
+    ).toThrow(
+      /REACTOR_WORKERS[\s\S]*REACTOR_AUTH_ENFORCEMENT[\s\S]*RENOWN_SOURCE/,
+    );
+  });
+
+  it.each([
+    { workers: 0, authEnforcement: true, renownSource: "self" as const },
+    { workers: 2, authEnforcement: false, renownSource: "self" as const },
+    { workers: 2, authEnforcement: true, renownSource: "remote" as const },
+  ])("passes %o", (config) => {
+    expect(() => assertWorkerTrustPolicy(config)).not.toThrow();
   });
 });
 
