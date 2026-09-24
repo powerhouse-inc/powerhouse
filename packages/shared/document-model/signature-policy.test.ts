@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { canonicalJson } from "./action-signature.js";
 import type { PHDocument } from "./documents.js";
-import { baseCreateDocument } from "./documents.js";
+import { baseCreateDocument, withSignaturePolicy } from "./documents.js";
 import { createZip, documentModelLoadFromInput } from "./files.js";
 import {
   createCopyHeader,
@@ -12,6 +12,8 @@ import { loadStateOperation } from "./operations.js";
 import {
   deriveDocumentId,
   isDerivedDocumentId,
+  protocolVersionsFor,
+  requestedSignaturePolicy,
   signaturePolicyOf,
   v2RequiredProtocolVersions,
   type DocumentIdParams,
@@ -141,13 +143,35 @@ describe("createPresignedHeader", () => {
 });
 
 describe("createCopyHeader", () => {
-  it("keeps the given id for a copy of a legacy document", () => {
+  it("keeps the given id for a legacy copy of a legacy document", () => {
     const copy = createCopyHeader(
       createPresignedHeader("doc-1", "test/doc"),
       "copy-1",
+      "legacy",
     );
     expect(copy.id).toBe("copy-1");
     expect(signaturePolicyOf(copy)).toBe("legacy");
+  });
+
+  it("makes a copy of a legacy document v2-required by default", () => {
+    const source = createPresignedHeader("doc-1", "test/doc", {
+      "base-reducer": 3,
+    });
+    const copy = createCopyHeader(source, "copy-1");
+    expect(signaturePolicyOf(copy)).toBe("v2-required");
+    expect(copy.protocolVersions).toEqual({ "base-reducer": 3, signature: 2 });
+    expect(hasDerivedDocumentId(copy)).toBe(true);
+  });
+
+  it("never copies a v2-required document as legacy", () => {
+    const source = createPresignedHeader(
+      undefined,
+      "test/doc",
+      v2RequiredProtocolVersions(),
+    );
+    const copy = createCopyHeader(source, "copy-1", "legacy");
+    expect(signaturePolicyOf(copy)).toBe("v2-required");
+    expect(hasDerivedDocumentId(copy)).toBe(true);
   });
 
   it("derives a fresh id for a copy of a v2-required document", () => {
@@ -166,13 +190,30 @@ describe("createCopyHeader", () => {
 });
 
 describe("baseCreateDocument", () => {
-  it("seeds a legacy document by default", () => {
+  it("seeds a v2-required document by default", () => {
     const document = baseCreateDocument(
       () => createBaseState(),
       undefined,
       "test/doc",
     );
+    expect(document.header.protocolVersions).toEqual(
+      v2RequiredProtocolVersions(),
+    );
+    expect(hasDerivedDocumentId(document.header)).toBe(true);
+    expect(createInputOf(document).protocolVersions).toEqual(
+      v2RequiredProtocolVersions(),
+    );
+  });
+
+  it("seeds a legacy document when asked", () => {
+    const document = baseCreateDocument(
+      () => createBaseState(),
+      undefined,
+      "test/doc",
+      protocolVersionsFor("legacy"),
+    );
     expect(document.header.protocolVersions).toEqual({ "base-reducer": 2 });
+    expect(isDerivedDocumentId(document.header.id)).toBe(false);
     expect(createInputOf(document).protocolVersions).toEqual({
       "base-reducer": 2,
     });
@@ -297,6 +338,7 @@ describe("protocolVersions are fixed at creation", () => {
       () => createBaseState(undefined, { version: 1 }),
       undefined,
       "test/doc",
+      protocolVersionsFor("legacy"),
     );
     const claimsV2 = await createZip({
       ...legacy,
@@ -308,5 +350,96 @@ describe("protocolVersions are fixed at creation", () => {
     const loaded = await documentModelLoadFromInput(claimsV2);
     expect(signaturePolicyOf(loaded.header)).toBe("legacy");
     expect(loaded.header.protocolVersions).toEqual({ "base-reducer": 2 });
+  });
+});
+
+describe("protocolVersionsFor", () => {
+  it("adds or drops the signature key over the base", () => {
+    expect(protocolVersionsFor("v2-required", { "base-reducer": 3 })).toEqual({
+      "base-reducer": 3,
+      signature: 2,
+    });
+    expect(
+      protocolVersionsFor("legacy", { "base-reducer": 3, signature: 2 }),
+    ).toEqual({ "base-reducer": 3 });
+    expect(protocolVersionsFor("legacy")).toEqual({ "base-reducer": 2 });
+  });
+});
+
+describe("requestedSignaturePolicy", () => {
+  it("takes the explicit policy, then the signature key, then the host's", () => {
+    expect(requestedSignaturePolicy(undefined, "legacy")).toBe("legacy");
+    expect(requestedSignaturePolicy({}, "v2-required")).toBe("v2-required");
+    expect(
+      requestedSignaturePolicy(
+        { protocolVersions: { signature: 2 } },
+        "legacy",
+      ),
+    ).toBe("v2-required");
+    expect(
+      requestedSignaturePolicy(
+        { protocolVersions: { "base-reducer": 3 } },
+        "legacy",
+      ),
+    ).toBe("legacy");
+    expect(
+      requestedSignaturePolicy(
+        { signaturePolicy: "legacy", protocolVersions: { signature: 2 } },
+        "v2-required",
+      ),
+    ).toBe("legacy");
+  });
+});
+
+describe("withSignaturePolicy", () => {
+  const create = () =>
+    baseCreateDocument(() => createBaseState(), undefined, "test/doc");
+
+  it("returns a document already under the policy unchanged", () => {
+    const document = create();
+    expect(withSignaturePolicy(document, "v2-required")).toBe(document);
+  });
+
+  it("re-heads a new document as legacy under a random or given id", () => {
+    const document = create();
+    document.header.name = "named";
+    document.header.slug = "slugged";
+
+    const legacy = withSignaturePolicy(document, "legacy");
+    expect(signaturePolicyOf(legacy.header)).toBe("legacy");
+    expect(isDerivedDocumentId(legacy.header.id)).toBe(false);
+    expect(legacy.header.name).toBe("named");
+    expect(legacy.header.slug).toBe("slugged");
+    expect(createInputOf(legacy).documentId).toBe(legacy.header.id);
+    expect(createInputOf(legacy).protocolVersions).toEqual({
+      "base-reducer": 2,
+    });
+
+    expect(
+      withSignaturePolicy(document, "legacy", { id: "fixed" }).header.id,
+    ).toBe("fixed");
+  });
+
+  it("re-heads a legacy document as v2-required under a derived id", () => {
+    const legacy = withSignaturePolicy(create(), "legacy");
+    const v2 = withSignaturePolicy(legacy, "v2-required");
+    expect(hasDerivedDocumentId(v2.header)).toBe(true);
+    expect(createInputOf(v2).documentId).toBe(v2.header.id);
+    expect(() =>
+      withSignaturePolicy(legacy, "v2-required", { id: "fixed" }),
+    ).toThrow();
+  });
+
+  it("merges protocolVersions into a fresh header", () => {
+    const document = create();
+    const merged = withSignaturePolicy(document, "v2-required", {
+      protocolVersions: { "base-reducer": 3 },
+    });
+    expect(merged.header.id).not.toBe(document.header.id);
+    expect(merged.header.protocolVersions).toEqual({
+      "base-reducer": 3,
+      signature: 2,
+    });
+    expect(hasDerivedDocumentId(merged.header)).toBe(true);
   });
 });

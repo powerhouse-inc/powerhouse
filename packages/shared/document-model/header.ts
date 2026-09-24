@@ -3,9 +3,12 @@ import type { Action } from "./actions.js";
 import type { PHDocumentHeader } from "./documents.js";
 import type { Signature } from "./signatures.js";
 import {
+  DEFAULT_SIGNATURE_POLICY,
   deriveDocumentId,
+  protocolVersionsFor,
   signaturePolicyOf,
   type ProtocolVersions,
+  type SignaturePolicy,
 } from "./signature-policy.js";
 import type { ISigner, SigningParameters } from "./types.js";
 import { generateId } from "./utils.js";
@@ -217,20 +220,28 @@ export const createPresignedHeader = (
 };
 
 /**
- * A header for a copy of a document headed `source`. A copy keeps a v2
- * requirement and so takes a derived id; otherwise it takes `id`.
+ * A header for a copy of a document headed `source`. A copy is v2-required
+ * when its source is or when `policy` asks for it, and then takes a derived id;
+ * otherwise it takes `id`. It keeps the source's other protocol versions.
  */
 export function createCopyHeader(
   source: Pick<PHDocumentHeader, "documentType" | "protocolVersions">,
   id?: string,
+  policy: SignaturePolicy = DEFAULT_SIGNATURE_POLICY,
 ): PHDocumentHeader {
-  return signaturePolicyOf(source) === "v2-required"
-    ? createPresignedHeader(
-        undefined,
-        source.documentType,
-        source.protocolVersions,
-      )
-    : createPresignedHeader(id, source.documentType);
+  const base = source.protocolVersions ?? {};
+  if (signaturePolicyOf(source) === "v2-required" || policy === "v2-required") {
+    return createPresignedHeader(
+      undefined,
+      source.documentType,
+      protocolVersionsFor("v2-required", base),
+    );
+  }
+  const header = createPresignedHeader(id, source.documentType);
+  if (source.protocolVersions) {
+    header.protocolVersions = { ...source.protocolVersions };
+  }
+  return header;
 }
 
 /** Whether a v2-required `header` carries the id its params derive. */

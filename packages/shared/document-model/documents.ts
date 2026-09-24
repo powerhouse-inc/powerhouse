@@ -5,7 +5,12 @@ import { isDenied } from "./denied.js";
 import { HashMismatchError } from "./errors.js";
 import { createPresignedHeader } from "./header.js";
 import type { DocumentOperations, Operation } from "./operations.js";
-import type { ProtocolVersions } from "./signature-policy.js";
+import {
+  protocolVersionsFor,
+  signaturePolicyOf,
+  type ProtocolVersions,
+  type SignaturePolicy,
+} from "./signature-policy.js";
 import type { PHDocumentSignatureInfo } from "./signatures.js";
 import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";
@@ -238,8 +243,9 @@ function createDocumentScopeOperations<TState extends PHBaseState>(
 
 /**
  * Creates a new document. When `documentType` is given the header is stamped
- * with it and the document-scope operations are seeded. `protocolVersions` is
- * merged over the base-reducer default; see {@link createPresignedHeader}.
+ * with it and the document-scope operations are seeded. Without
+ * `protocolVersions` the document is v2-required and takes a derived id; with
+ * them it is v2-required only if they say so (see {@link protocolVersionsFor}).
  */
 export function baseCreateDocument<TState extends PHBaseState = PHBaseState>(
   createState: CreateState<TState>,
@@ -253,10 +259,13 @@ export function baseCreateDocument<TState extends PHBaseState = PHBaseState>(
   // has to agree with it. Left off the header factory's default, because that
   // is also how a rebuild starts and a rebuild must take the version from the
   // stored operation rather than assume one.
-  const header = createPresignedHeader(undefined, documentType, {
-    "base-reducer": 2,
-    ...protocolVersions,
-  });
+  const header = createPresignedHeader(
+    undefined,
+    documentType,
+    protocolVersions === undefined
+      ? protocolVersionsFor("v2-required")
+      : { "base-reducer": 2, ...protocolVersions },
+  );
 
   const phDocument: PHDocument<TState> = {
     header,
@@ -273,6 +282,47 @@ export function baseCreateDocument<TState extends PHBaseState = PHBaseState>(
   };
 
   return phDocument;
+}
+
+/**
+ * `document`, not yet created, under a fresh header for `policy`. A legacy
+ * header takes `id` when given; a v2-required one derives its own.
+ * `protocolVersions` are merged over the document's. Name, slug, branch and
+ * meta carry over. A document already under `policy` is returned as is unless
+ * `id` or `protocolVersions` are given.
+ */
+export function withSignaturePolicy<TDocument extends PHDocument>(
+  document: TDocument,
+  policy: SignaturePolicy,
+  options: { id?: string; protocolVersions?: ProtocolVersions } = {},
+): TDocument {
+  if (
+    options.id === undefined &&
+    options.protocolVersions === undefined &&
+    signaturePolicyOf(document.header) === policy
+  ) {
+    return document;
+  }
+  const source = document.header;
+  const header = createPresignedHeader(
+    options.id,
+    source.documentType,
+    protocolVersionsFor(policy, {
+      ...source.protocolVersions,
+      ...options.protocolVersions,
+    }),
+  );
+  header.name = source.name;
+  header.slug = source.slug;
+  header.branch = source.branch;
+  header.meta = source.meta;
+  const operations = document.operations.document
+    ? {
+        ...document.operations,
+        document: createDocumentScopeOperations(header, document.state),
+      }
+    : document.operations;
+  return { ...document, header, operations };
 }
 
 export function hashDocumentStateForScope(
