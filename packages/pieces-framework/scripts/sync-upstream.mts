@@ -13,6 +13,7 @@ import {
   type OptionalKind,
   type SourceFile,
 } from "ts-morph";
+import { fixTypeOnlyAndFormat } from "./sync-upstream-type-only.mts";
 
 interface UpstreamPackage {
   dir: string;
@@ -868,11 +869,6 @@ const TEST_OUT = path.join(PKG_ROOT, "test", "upstream");
 const LICENSE_FILE = path.join(PKG_ROOT, "LICENSE");
 const CONFORMANCE_ROOT = path.resolve(PKG_ROOT, "..", "reactor-workflow");
 const CONFORMANCE_OUT = path.join(CONFORMANCE_ROOT, "test", "upstream");
-const ESLINT_CONFIG = path.join(
-  PKG_ROOT,
-  "scripts",
-  "sync-upstream.eslint.config.mjs",
-);
 
 function parseArgs(argv: string[]): { tag: string; from?: string } {
   let tag: string | undefined;
@@ -1167,25 +1163,6 @@ function applyPatches(patches: Patch[] = PATCHES, root = PKG_ROOT): void {
   }
 }
 
-function runEslintFix(
-  cwd = PKG_ROOT,
-  targets: string[] = ["upstream", "test/upstream"],
-): void {
-  execFileSync(
-    "pnpm",
-    [
-      "exec",
-      "eslint",
-      "--no-config-lookup",
-      "--config",
-      path.relative(cwd, ESLINT_CONFIG),
-      "--fix",
-      ...targets,
-    ],
-    { cwd, stdio: "inherit" },
-  );
-}
-
 function checkLicense(tree: Tree): { upstream: string; sha256: string } {
   const upstreamText = fs.readFileSync(path.join(tree.root, "LICENSE"), "utf8");
   const ours = fs.existsSync(LICENSE_FILE)
@@ -1340,7 +1317,10 @@ interface ConformanceManifest {
 
 // Generates reactor-workflow's test/upstream/ from CONFORMANCE, under the same
 // header, codemod, formatting and patch contract as the vendored tree.
-function syncConformance(tree: Tree, tag: string): ConformanceManifest {
+async function syncConformance(
+  tree: Tree,
+  tag: string,
+): Promise<ConformanceManifest> {
   fs.rmSync(CONFORMANCE_OUT, { recursive: true, force: true });
   const generator = "packages/pieces-framework/scripts/sync-upstream.mts";
   const project = new Project({
@@ -1384,7 +1364,9 @@ function syncConformance(tree: Tree, tag: string): ConformanceManifest {
     });
   }
   files.sort((a, b) => a.path.localeCompare(b.path));
-  runEslintFix(CONFORMANCE_ROOT, ["test/upstream"]);
+  await fixTypeOnlyAndFormat(path.join(CONFORMANCE_ROOT, "tsconfig.json"), [
+    CONFORMANCE_OUT,
+  ]);
   applyPatches(CONFORMANCE_PATCHES, CONFORMANCE_ROOT);
   markTests(CONFORMANCE_SKIPS, "skip", (m) => `Not applicable here: ${m.why}`);
   markTests(KNOWN_DIVERGENCES, "fails", (m) => {
@@ -1413,7 +1395,7 @@ function syncConformance(tree: Tree, tag: string): ConformanceManifest {
   return manifest;
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const { tag, from } = parseArgs(process.argv.slice(2));
   const tree = obtainTree(tag, from);
   try {
@@ -1457,10 +1439,13 @@ function main(): void {
       path.join(UPSTREAM_OUT, "MANIFEST.json"),
       `${JSON.stringify(manifest, null, 2)}\n`,
     );
-    runEslintFix();
+    await fixTypeOnlyAndFormat(path.join(PKG_ROOT, "tsconfig.json"), [
+      UPSTREAM_OUT,
+      TEST_OUT,
+    ]);
     applyPatches();
     writePackageJsonUpstream(manifest);
-    const conformance = syncConformance(tree, tag);
+    const conformance = await syncConformance(tree, tag);
 
     const sources = manifest.files.filter((f) =>
       f.path.startsWith("upstream/"),
@@ -1484,4 +1469,4 @@ function main(): void {
   }
 }
 
-main();
+await main();
