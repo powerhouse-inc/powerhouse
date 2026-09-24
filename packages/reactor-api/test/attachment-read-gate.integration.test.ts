@@ -11,6 +11,7 @@ import {
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
   initializeAuth,
+  withSignaturePolicy,
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
@@ -84,8 +85,11 @@ describe("attachment reads under OPEN with auth-scope policies", () => {
     client: InProcessReactorClientModule["client"],
     id: string,
   ) {
-    const document = documentModelDocumentModelModule.utils.createDocument();
-    document.header.id = id;
+    const document = withSignaturePolicy(
+      documentModelDocumentModelModule.utils.createDocument(),
+      "legacy",
+      { id },
+    );
     await client.create(document);
     return id;
   }
