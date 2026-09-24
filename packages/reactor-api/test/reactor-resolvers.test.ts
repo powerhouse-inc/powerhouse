@@ -5,12 +5,15 @@ import {
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
+  isDerivedDocumentId,
+  signaturePolicyOf,
   type DocumentModelModule,
   type PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import * as resolvers from "../src/graphql/reactor/resolvers.js";
+import { createTestSigner } from "./utils/test-signer.js";
 
 const createTestDocument = (): PHDocument => {
   return documentModelDocumentModelModule.utils.createDocument();
@@ -25,6 +28,7 @@ describe("ReactorSubgraph Query Resolvers", () => {
       documentModelDocumentModelModule as unknown as DocumentModelModule,
     ]);
     module = await new ReactorClientBuilder()
+      .withSigner(await createTestSigner())
       .withReactorBuilder(reactorBuilder)
       .buildModule();
   });
@@ -246,6 +250,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       documentModelDocumentModelModule as unknown as DocumentModelModule,
     ]);
     module = await new ReactorClientBuilder()
+      .withSigner(await createTestSigner())
       .withReactorBuilder(reactorBuilder)
       .buildModule();
   });
@@ -548,4 +553,53 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       ).rejects.toThrow();
     });
   });
+});
+
+describe("create mutations under the client's creation default", () => {
+  const reactors: InProcessReactorClientModule[] = [];
+
+  afterEach(() => {
+    for (const built of reactors.splice(0)) {
+      built.reactor.kill();
+    }
+  });
+
+  async function clientCreating(
+    policy: "legacy" | "v2-required",
+  ): Promise<InProcessReactorClientModule> {
+    const built = await new ReactorClientBuilder()
+      .withSigner(await createTestSigner())
+      .withReactorBuilder(
+        new ReactorBuilder().withDocumentModelSources([
+          driveDocumentModelModule as unknown as DocumentModelModule,
+          documentModelDocumentModelModule as unknown as DocumentModelModule,
+        ]),
+      )
+      .withCreateSignaturePolicy(policy)
+      .buildModule();
+    reactors.push(built);
+    return built;
+  }
+
+  it.each(["legacy", "v2-required"] as const)(
+    "creates %s documents in a drive and with initial state",
+    async (policy) => {
+      const { client } = await clientCreating(policy);
+      const drive = await client.drives.create({ global: { name: "Drive" } });
+
+      const inDrive = await resolvers.createEmptyDocument(client, {
+        documentType: "powerhouse/document-model",
+        parentIdentifier: drive.header.id,
+      });
+      const withState = await resolvers.createDocumentWithInitialState(client, {
+        documentType: "powerhouse/document-model",
+        initialState: {},
+      });
+
+      for (const id of [drive.header.id, inDrive.id, withState.id]) {
+        expect(signaturePolicyOf((await client.get(id)).header)).toBe(policy);
+        expect(isDerivedDocumentId(id)).toBe(policy === "v2-required");
+      }
+    },
+  );
 });

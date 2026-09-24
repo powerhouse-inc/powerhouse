@@ -20,7 +20,10 @@ import {
   type InProcessReactorModule,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  ISigner,
+} from "@powerhousedao/shared/document-model";
 import {
   MemoryKeyStorage,
   RenownCryptoBuilder,
@@ -29,6 +32,7 @@ import {
 import { ConsoleLogger } from "document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
+import { createTestSigner, signFor } from "./utils/test-signer.js";
 
 type ConnectSwitchboardSetup = {
   connectReactor: IReactor;
@@ -40,6 +44,7 @@ type ConnectSwitchboardSetup = {
   connectSyncManager: ISyncManager;
   switchboardSyncManager: ISyncManager;
   resolverBridge: typeof fetch;
+  signer: ISigner;
 };
 
 async function setupConnectSwitchboard(): Promise<ConnectSwitchboardSetup> {
@@ -117,6 +122,7 @@ async function setupConnectSwitchboard(): Promise<ConnectSwitchboardSetup> {
     connectSyncManager,
     switchboardSyncManager,
     resolverBridge,
+    signer: await createTestSigner(),
   };
 }
 
@@ -270,6 +276,7 @@ describe("Connect-Switchboard Sync", () => {
   let connectSyncManager: ISyncManager;
   let switchboardSyncManager: ISyncManager;
   let resolverBridge: typeof fetch;
+  let signer: ISigner;
 
   afterEach(() => {
     connectReactor.kill();
@@ -287,6 +294,7 @@ describe("Connect-Switchboard Sync", () => {
     connectSyncManager = setup.connectSyncManager;
     switchboardSyncManager = setup.switchboardSyncManager;
     resolverBridge = setup.resolverBridge;
+    signer = setup.signer;
 
     const document = driveDocumentModelModule.utils.createDocument({
       global: {
@@ -304,7 +312,7 @@ describe("Connect-Switchboard Sync", () => {
       documentId,
     );
 
-    const jobInfo = await connectReactor.create(document);
+    const jobInfo = await connectReactor.create(document, signer);
     await waitForJobCompletion(connectReactor, jobInfo.id);
 
     await readyOnSwitchboard;
@@ -351,6 +359,7 @@ describe("Connect-Switchboard Sync", () => {
     connectSyncManager = setup.connectSyncManager;
     switchboardSyncManager = setup.switchboardSyncManager;
     resolverBridge = setup.resolverBridge;
+    signer = setup.signer;
 
     const document = driveDocumentModelModule.utils.createDocument({
       global: {
@@ -367,7 +376,7 @@ describe("Connect-Switchboard Sync", () => {
     // Create document on Switchboard
     const readyOnConnect = waitForOperationsReady(connectEventBus, documentId);
 
-    const jobInfo = await switchboardReactor.create(document);
+    const jobInfo = await switchboardReactor.create(document, signer);
     await waitForJobCompletion(switchboardReactor, jobInfo.id);
 
     // Connect polls Switchboard's outbox
@@ -415,6 +424,7 @@ describe("Connect-Switchboard Sync", () => {
     connectSyncManager = setup.connectSyncManager;
     switchboardSyncManager = setup.switchboardSyncManager;
     resolverBridge = setup.resolverBridge;
+    signer = setup.signer;
 
     const document = driveDocumentModelModule.utils.createDocument();
     const documentId = document.header.id;
@@ -423,7 +433,7 @@ describe("Connect-Switchboard Sync", () => {
 
     // Step 1: Create document on Connect, sync to Switchboard
     const createReady = waitForOperationsReady(switchboardEventBus, documentId);
-    const createJob = await connectReactor.create(document);
+    const createJob = await connectReactor.create(document, signer);
     await waitForJobCompletion(connectReactor, createJob.id);
     await createReady;
 
@@ -433,7 +443,11 @@ describe("Connect-Switchboard Sync", () => {
       documentId,
     );
     const mutateJob = await connectReactor.execute(documentId, "main", [
-      driveDocumentModelModule.actions.setDriveName({ name: "Synced Drive" }),
+      await signFor(
+        signer,
+        driveDocumentModelModule.actions.setDriveName({ name: "Synced Drive" }),
+        documentId,
+      ),
     ]);
     await waitForJobCompletion(connectReactor, mutateJob.id);
     await mutationReady;
@@ -466,19 +480,24 @@ describe("Connect-Switchboard Sync", () => {
       connectSyncManager = setup.connectSyncManager;
       switchboardSyncManager = setup.switchboardSyncManager;
       resolverBridge = setup.resolverBridge;
+      signer = setup.signer;
 
       const document = driveDocumentModelModule.utils.createDocument({
         global: { name: "Local Test", icon: null, nodes: [] },
       });
       const documentId = document.header.id;
 
-      const createJob = await connectReactor.create(document);
+      const createJob = await connectReactor.create(document, signer);
       await waitForJobCompletion(connectReactor, createJob.id);
 
       const mutateJob = await connectReactor.execute(documentId, "main", [
-        driveDocumentModelModule.actions.setDriveName({
-          name: "Local Mutation",
-        }),
+        await signFor(
+          signer,
+          driveDocumentModelModule.actions.setDriveName({
+            name: "Local Mutation",
+          }),
+          documentId,
+        ),
       ]);
       await waitForJobCompletion(connectReactor, mutateJob.id);
 
@@ -502,6 +521,7 @@ describe("Connect-Switchboard Sync", () => {
       connectSyncManager = setup.connectSyncManager;
       switchboardSyncManager = setup.switchboardSyncManager;
       resolverBridge = setup.resolverBridge;
+      signer = setup.signer;
 
       const document = driveDocumentModelModule.utils.createDocument({
         global: { name: "Echo Test", icon: null, nodes: [] },
@@ -519,7 +539,7 @@ describe("Connect-Switchboard Sync", () => {
         switchboardEventBus,
         documentId,
       );
-      const createJob = await connectReactor.create(document);
+      const createJob = await connectReactor.create(document, signer);
       await waitForJobCompletion(connectReactor, createJob.id);
       await createOnSwitchboard;
 
@@ -528,7 +548,11 @@ describe("Connect-Switchboard Sync", () => {
         documentId,
       );
       const mutateJob = await connectReactor.execute(documentId, "main", [
-        driveDocumentModelModule.actions.setDriveName({ name: "No Echo" }),
+        await signFor(
+          signer,
+          driveDocumentModelModule.actions.setDriveName({ name: "No Echo" }),
+          documentId,
+        ),
       ]);
       await waitForJobCompletion(connectReactor, mutateJob.id);
       await mutationOnSwitchboard;
@@ -611,6 +635,7 @@ describe("Connect-Switchboard Sync", () => {
       connectSyncManager = setup.connectSyncManager;
       switchboardSyncManager = setup.switchboardSyncManager;
       resolverBridge = setup.resolverBridge;
+      signer = setup.signer;
 
       const document = driveDocumentModelModule.utils.createDocument({
         global: { name: "Wedge Test", icon: null, nodes: [] },
@@ -624,7 +649,7 @@ describe("Connect-Switchboard Sync", () => {
         switchboardEventBus,
         documentId,
       );
-      const createJob = await connectReactor.create(document);
+      const createJob = await connectReactor.create(document, signer);
       await waitForJobCompletion(connectReactor, createJob.id);
       await createOnSwitchboard;
 
@@ -634,9 +659,13 @@ describe("Connect-Switchboard Sync", () => {
         documentId,
       );
       const mutateJob = await connectReactor.execute(documentId, "main", [
-        driveDocumentModelModule.actions.setDriveName({
-          name: "Wedge Mutated",
-        }),
+        await signFor(
+          signer,
+          driveDocumentModelModule.actions.setDriveName({
+            name: "Wedge Mutated",
+          }),
+          documentId,
+        ),
       ]);
       await waitForJobCompletion(connectReactor, mutateJob.id);
       await mutationOnSwitchboard;
@@ -686,6 +715,7 @@ describe("Connect-Switchboard Sync", () => {
       connectSyncManager = setup.connectSyncManager;
       switchboardSyncManager = setup.switchboardSyncManager;
       resolverBridge = setup.resolverBridge;
+      signer = setup.signer;
 
       const document = driveDocumentModelModule.utils.createDocument({
         global: { name: "Dedup Test", icon: null, nodes: [] },
@@ -699,7 +729,7 @@ describe("Connect-Switchboard Sync", () => {
         switchboardEventBus,
         documentId,
       );
-      const createJob = await connectReactor.create(document);
+      const createJob = await connectReactor.create(document, signer);
       await waitForJobCompletion(connectReactor, createJob.id);
       await createOnSwitchboard;
 
@@ -709,7 +739,11 @@ describe("Connect-Switchboard Sync", () => {
         documentId,
       );
       const mutateJob = await connectReactor.execute(documentId, "main", [
-        driveDocumentModelModule.actions.setDriveName({ name: "Dedup" }),
+        await signFor(
+          signer,
+          driveDocumentModelModule.actions.setDriveName({ name: "Dedup" }),
+          documentId,
+        ),
       ]);
       await waitForJobCompletion(connectReactor, mutateJob.id);
       await mutationOnSwitchboard;
@@ -758,6 +792,7 @@ describe("Connect-Switchboard Sync", () => {
       connectSyncManager = setup.connectSyncManager;
       switchboardSyncManager = setup.switchboardSyncManager;
       resolverBridge = setup.resolverBridge;
+      signer = setup.signer;
 
       const document = driveDocumentModelModule.utils.createDocument();
       const documentId = document.header.id;
@@ -770,7 +805,7 @@ describe("Connect-Switchboard Sync", () => {
         switchboardEventBus,
         documentId,
       );
-      const createJob = await connectReactor.create(document);
+      const createJob = await connectReactor.create(document, signer);
       await waitForJobCompletion(connectReactor, createJob.id);
       await createOnSwitchboard;
 
@@ -783,9 +818,13 @@ describe("Connect-Switchboard Sync", () => {
         documentId,
         "main",
         [
-          driveDocumentModelModule.actions.setDriveName({
-            name: "Switchboard Mutation",
-          }),
+          await signFor(
+            signer,
+            driveDocumentModelModule.actions.setDriveName({
+              name: "Switchboard Mutation",
+            }),
+            documentId,
+          ),
         ],
       );
       await waitForJobCompletion(switchboardReactor, switchboardMutateJob.id);
@@ -798,9 +837,13 @@ describe("Connect-Switchboard Sync", () => {
         documentId,
         "main",
         [
-          driveDocumentModelModule.actions.setDriveName({
-            name: "Connect Mutation",
-          }),
+          await signFor(
+            signer,
+            driveDocumentModelModule.actions.setDriveName({
+              name: "Connect Mutation",
+            }),
+            documentId,
+          ),
         ],
       );
       await waitForJobCompletion(connectReactor, connectMutateJob.id);
@@ -893,6 +936,7 @@ describe("Connect-Switchboard Sync", () => {
     connectSyncManager = setup.connectSyncManager;
     switchboardSyncManager = setup.switchboardSyncManager;
     resolverBridge = setup.resolverBridge;
+    signer = setup.signer;
 
     const document = driveDocumentModelModule.utils.createDocument();
     const documentId = document.header.id;
@@ -900,7 +944,7 @@ describe("Connect-Switchboard Sync", () => {
     await setupSyncForDrive(connectSyncManager, documentId, resolverBridge);
 
     const createReady = waitForOperationsReady(switchboardEventBus, documentId);
-    const createJob = await connectReactor.create(document);
+    const createJob = await connectReactor.create(document, signer);
     await waitForJobCompletion(connectReactor, createJob.id);
     await createReady;
 
@@ -910,19 +954,19 @@ describe("Connect-Switchboard Sync", () => {
     const renownCrypto = await new RenownCryptoBuilder()
       .withKeyPairStorage(new MemoryKeyStorage())
       .build();
-    const signer = new RenownCryptoSigner(renownCrypto, "test-app", {
+    const tupleSigner = new RenownCryptoSigner(renownCrypto, "test-app", {
       address: "0xabc",
       networkId: "eip155",
       chainId: 1,
     });
-    const tuple = await signer.signAction(signedAction, {
+    const tuple = await tupleSigner.signAction(signedAction, {
       documentId,
       branch: "main",
     });
     signedAction.context = {
       signer: {
         user: { address: "0xabc", networkId: "eip155", chainId: 1 },
-        app: signer.app,
+        app: tupleSigner.app,
         signatures: [tuple],
       },
     };
