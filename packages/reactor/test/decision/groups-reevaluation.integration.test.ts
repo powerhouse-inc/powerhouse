@@ -24,6 +24,7 @@ import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor } from "../../src/core/types.js";
 import { JobStatus } from "../../src/shared/types.js";
 import { createDocModelDocument } from "../factories.js";
+import { signedAs, TRUST_ANY_SIGNER } from "../utils/signed-as.js";
 
 type GroupPHState = PHBaseState & {
   global: { members: string[] };
@@ -85,19 +86,6 @@ function action(type: string, scope: string, input: unknown): Action {
   } as Action;
 }
 
-function signedBy<T extends Action>(anAction: T, address: string): T {
-  return {
-    ...anAction,
-    context: {
-      signer: {
-        user: { address, networkId: "", chainId: 0 },
-        app: { name: "test", key: "" },
-        signatures: [],
-      },
-    },
-  };
-}
-
 const MEMBER = "0xMember";
 const ADMIN = "0xAdmin";
 
@@ -121,6 +109,7 @@ describe("group membership re-evaluation across documents", () => {
           authGroups: true,
         },
       })
+      .withTrustPolicy(TRUST_ANY_SIGNER)
       .build();
   });
 
@@ -215,7 +204,7 @@ describe("group membership re-evaluation across documents", () => {
     await settle(
       (
         await reactor.execute(targetId, "main", [
-          signedBy(addModule({ id: "m1", name: "m1" }), MEMBER),
+          await signedAs(addModule({ id: "m1", name: "m1" }), MEMBER, targetId),
         ])
       ).id,
     );
@@ -300,7 +289,7 @@ describe("group membership re-evaluation across documents", () => {
     await settle(
       (
         await reactor.execute(targetId, "main", [
-          signedBy(addModule({ id: "m1", name: "m1" }), MEMBER),
+          await signedAs(addModule({ id: "m1", name: "m1" }), MEMBER, targetId),
         ])
       ).id,
     );

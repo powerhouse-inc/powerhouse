@@ -7,6 +7,7 @@ import type {
 import {
   addModule,
   deriveOperationId,
+  initializeAuth,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -661,12 +662,12 @@ describe("signature admission", () => {
       };
     }
 
-    function unsigned(action: Action): Action {
+    function unsigned(action: Action, address = ""): Action {
       return {
         ...action,
         context: {
           signer: {
-            user: { address: "0xabc", networkId: "eip155", chainId: 1 },
+            user: { address, networkId: address ? "eip155" : "", chainId: 1 },
             app: { name: "", key: "" },
             signatures: [],
           },
@@ -701,6 +702,18 @@ describe("signature admission", () => {
       const action = unsigned(moduleAction("m"));
 
       expect((await execute([action])).status).toBe(JobStatus.READ_READY);
+      expect(trust.calls).toEqual([]);
+    });
+
+    it("refuses an unsigned write that claims an address, without asking", async () => {
+      const trust = policy(() => Promise.resolve(true));
+      await build("enforce", AUTH_ENFORCEMENT, { trustPolicy: trust });
+      const job = await execute([unsigned(moduleAction("m"), "0xabc")]);
+
+      expect(job.status).toBe(JobStatus.FAILED);
+      expect(job.error?.name).toBe("InvalidSignatureError");
+      expect(job.error?.message).toContain("[UNSIGNED_IDENTITY]");
+      expect(await stored()).toEqual([]);
       expect(trust.calls).toEqual([]);
     });
 
@@ -933,6 +946,131 @@ describe("signature admission", () => {
         const reappended = (await stored()).at(-1);
         expect(reappended?.action.id).toBe(moved.id);
       });
+    });
+  });
+
+  describe("an unsigned action claiming an identity", () => {
+    const VICTIM = "0xvictim";
+    const USER = { address: VICTIM, networkId: "eip155", chainId: 1 };
+    const EMPTY_TUPLE: [string, string, string, string, string] = [
+      "",
+      "",
+      "",
+      "",
+      "",
+    ];
+
+    function claiming(
+      action: Action,
+      user: ActionSigner["user"],
+      signatures: ActionSigner["signatures"] = [],
+    ): Action {
+      return {
+        ...action,
+        context: { signer: { user, app: { name: "", key: "" }, signatures } },
+      };
+    }
+
+    const FLAG_SETS: [string, Partial<ReactorFeatureFlags>][] = [
+      ["without authEnforcement", {}],
+      [
+        "under authEnforcement",
+        { documentDecisions: true, authEnforcement: true },
+      ],
+    ];
+
+    for (const [label, flags] of FLAG_SETS) {
+      it(`is refused at mutation ${label}`, async () => {
+        await build("enforce", flags);
+        for (const [id, signatures] of [
+          ["none", []],
+          ["empty", [EMPTY_TUPLE]],
+        ] as const) {
+          const job = await execute([
+            claiming(moduleAction(id), USER, [...signatures]),
+          ]);
+          expect(job.status).toBe(JobStatus.FAILED);
+          expect(job.error?.name).toBe("InvalidSignatureError");
+          expect(job.error?.message).toContain("[UNSIGNED_IDENTITY]");
+        }
+        expect(await stored()).toEqual([]);
+        expect(refusals).toMatchObject([
+          { code: "UNSIGNED_IDENTITY", path: "mutation", scheme: "unsigned" },
+          { code: "UNSIGNED_IDENTITY", path: "mutation", scheme: "unsigned" },
+        ]);
+      });
+
+      it(`is dropped at load ${label}, storing nothing`, async () => {
+        await build("enforce", flags);
+        const claim = claiming(moduleAction("claim"), USER);
+
+        const job = await load([asOperation(claim, 0)]);
+
+        expect(job.status).toBe(JobStatus.READ_READY);
+        expect(await stored()).toEqual([]);
+        expect(refusals).toMatchObject([
+          { actionId: claim.id, code: "UNSIGNED_IDENTITY", path: "load" },
+        ]);
+      });
+    }
+
+    it("is admitted on a legacy document when it claims no one", async () => {
+      await build("enforce", {
+        documentDecisions: true,
+        authEnforcement: true,
+      });
+      const passthrough = claiming(
+        moduleAction("passthrough"),
+        { address: "", networkId: "", chainId: 0 },
+        [EMPTY_TUPLE],
+      );
+
+      const job = await execute([passthrough]);
+
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(await storedActionIds()).toEqual([passthrough.id]);
+      expect(refusals).toEqual([]);
+    });
+
+    it("is never decided as the address it claims", async () => {
+      await build("enforce", {
+        documentDecisions: true,
+        authEnforcement: true,
+      });
+      const grant = {
+        id: "victim",
+        description: "only the victim writes",
+        effect: "allow" as const,
+        principal: { address: VICTIM },
+        capability: { can: "execute" as const, scope: "global" },
+      };
+      const admin = {
+        id: "admin",
+        description: "administers the policy",
+        effect: "allow" as const,
+        principal: { address: "0xadmin" },
+        capability: { can: "execute" as const, scope: "auth" },
+      };
+      const init = await execute([
+        initializeAuth({ version: 1, grants: [admin, grant] }),
+      ]);
+      expect(init.error).toBeUndefined();
+      expect(init.status).toBe(JobStatus.READ_READY);
+
+      const anonymous = await execute([
+        claiming(moduleAction("anonymous", 0), {
+          address: "",
+          networkId: "",
+          chainId: 0,
+        }),
+      ]);
+      expect(anonymous.error?.message).toMatch(/Authorization denied/i);
+
+      const claim = await execute([claiming(moduleAction("claim", 1), USER)]);
+      expect(claim.status).toBe(JobStatus.FAILED);
+      expect(claim.error?.name).toBe("InvalidSignatureError");
+      expect(claim.error?.message).toContain("[UNSIGNED_IDENTITY]");
+      expect(await stored()).toEqual([]);
     });
   });
 });

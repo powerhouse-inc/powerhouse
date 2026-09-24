@@ -11,17 +11,10 @@ import {
   MINIMAL_SHAPE,
 } from "../../bench/fixtures/auth-policies.js";
 import { createDocModelDocument } from "../factories.js";
+import { signedAs, TRUST_ANY_SIGNER } from "../utils/signed-as.js";
 
-const WRITER = {
-  signer: {
-    user: { address: BENCH_WRITER_ADDRESS, networkId: "1", chainId: 1 },
-    app: { name: "batch-test", key: "" },
-    signatures: [] as never[],
-  },
-};
-
-function signed<A extends Action>(action: A): A {
-  return { ...action, context: WRITER } as A;
+function signed<A extends Action>(action: A, documentId: string): Promise<A> {
+  return signedAs(action, BENCH_WRITER_ADDRESS, documentId);
 }
 
 /**
@@ -51,6 +44,7 @@ describe("batched applies", () => {
         batchApplies,
         featureFlags: { documentDecisions: true, authEnforcement: true },
       })
+      .withTrustPolicy(TRUST_ANY_SIGNER)
       .build();
     reactors.push(reactor);
     return reactor;
@@ -92,15 +86,16 @@ describe("batched applies", () => {
       }));
   }
 
-  function actions(count: number): Action[] {
+  async function actions(count: number, documentId: string): Promise<Action[]> {
     const creators = documentModelDocumentModelModule.actions;
     const out: Action[] = [];
     for (let i = 0; i < count; i++) {
       out.push(
-        signed(
+        await signed(
           i % 2 === 0
             ? creators.setModelName({ name: `name-${i}` })
             : creators.setModelDescription({ description: `desc-${i}` }),
+          documentId,
         ),
       );
     }
@@ -127,11 +122,12 @@ describe("batched applies", () => {
         reactor,
         (
           await reactor.execute(document.header.id, "main", [
-            signed(
+            await signed(
               initializeAuth({
                 version: 1,
                 grants: buildGrants({ ...MINIMAL_SHAPE, grantCount: 10 }),
               }),
+              document.header.id,
             ),
           ])
         ).id,
@@ -140,7 +136,13 @@ describe("batched applies", () => {
 
     await settle(
       reactor,
-      (await reactor.execute(document.header.id, "main", actions(count))).id,
+      (
+        await reactor.execute(
+          document.header.id,
+          "main",
+          await actions(count, document.header.id),
+        )
+      ).id,
     );
 
     const stream = await streamOf(reactor, document.header.id);

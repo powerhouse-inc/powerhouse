@@ -23,7 +23,7 @@ signAction(action: Action, target: { documentId: string; branch: string }, signa
 
 #### ✅ Executor-owned verification, enforcing by default
 
-The reactor verifies every write once, at admission: actions submitted to a mutation job and incoming operations in a load job, in-process and in pooled workers. A refused mutation fails with `InvalidSignatureError` (the code is in the message and on `code`); a load drops the refused operations and stores the rest. `signatureVerification: "log"` on the executor config records refusals without refusing. Each refusal emits `SIGNATURE_REFUSED`, counted as `reactor_signature_refusals_total{scheme,path,code}`.
+The reactor verifies every write once, at admission: actions submitted to a mutation job and incoming operations in a load job, in-process and in pooled workers. A refused mutation fails with `InvalidSignatureError` (the code is in the message and on `code`); a load drops the refused operations and stores the rest. An unsigned action that names a `signer.user.address` is refused as `UNSIGNED_IDENTITY` on every document, so a write without a key cannot be decided as someone else. `signatureVerification: "log"` on the executor config records refusals without refusing. Each refusal emits `SIGNATURE_REFUSED`, counted as `reactor_signature_refusals_total{scheme,path,code}`.
 
 #### 📄 v2-required documents, by default
 

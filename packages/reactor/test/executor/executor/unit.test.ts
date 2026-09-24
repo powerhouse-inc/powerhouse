@@ -2526,14 +2526,30 @@ describe("SimpleJobExecutor", () => {
       other = await TestP256Signer.create();
     });
 
-    async function signedJob(job: Job, signer: TestP256Signer): Promise<Job> {
+    async function signedJob(
+      job: Job,
+      signer: TestP256Signer,
+      address?: string,
+    ): Promise<Job> {
       const target = { documentId: job.documentId, branch: job.branch };
+      const user =
+        address === undefined
+          ? signer.user
+          : { address, networkId: "", chainId: 0 };
       return {
         ...job,
         actions: await Promise.all(
-          job.actions.map(async (action) =>
-            signer.signed(action, await signer.v2Tuple(action, target)),
-          ),
+          job.actions.map(async (action) => ({
+            ...action,
+            context: {
+              ...action.context,
+              signer: {
+                user,
+                app: { name: "test", key: signer.did },
+                signatures: [await signer.v2Tuple(action, target, user)],
+              },
+            },
+          })),
         ),
       };
     }
@@ -2638,7 +2654,9 @@ describe("SimpleJobExecutor", () => {
         .fn()
         .mockResolvedValue(authDoc({ version: 1, grants: [adminGrant] }));
 
-      const result = await executor.executeJob(authJob("0xstranger"));
+      const result = await executor.executeJob(
+        await signedJob(authJob(), other, "0xstranger"),
+      );
 
       expect(result.success).toBe(false);
       expect(result.error?.message).toContain("Authorization denied");
@@ -2649,9 +2667,12 @@ describe("SimpleJobExecutor", () => {
         .fn()
         .mockResolvedValue(authDoc({ version: 1, grants: [adminGrant] }));
 
-      const result = await executor.executeJob(authJob("0xADMIN"));
+      const result = await executor.executeJob(
+        await signedJob(authJob(), other, "0xADMIN"),
+      );
 
       // The gate admits the matching signer; any later failure is not an auth denial.
+      expect(result.error?.name).not.toBe("InvalidSignatureError");
       expect(result.error?.message ?? "").not.toContain("Authorization denied");
     });
 
@@ -2660,8 +2681,11 @@ describe("SimpleJobExecutor", () => {
         .fn()
         .mockResolvedValue(authDoc({ version: 0, grants: [] }));
 
-      const result = await executor.executeJob(authJob("0xstranger"));
+      const result = await executor.executeJob(
+        await signedJob(authJob(), other, "0xstranger"),
+      );
 
+      expect(result.error?.name).not.toBe("InvalidSignatureError");
       expect(result.error?.message ?? "").not.toContain("Authorization denied");
     });
 
@@ -2670,8 +2694,11 @@ describe("SimpleJobExecutor", () => {
       // (e.g. UPGRADE_DOCUMENT initialState snapshots rebuilt by the write cache)
       mockWriteCache.getState = vi.fn().mockResolvedValue(authDoc({}));
 
-      const result = await executor.executeJob(authJob("0xstranger"));
+      const result = await executor.executeJob(
+        await signedJob(authJob(), other, "0xstranger"),
+      );
 
+      expect(result.error?.name).not.toBe("InvalidSignatureError");
       expect(result.error?.message ?? "").not.toContain("Authorization denied");
       expect(result.error?.message ?? "").not.toContain("iterable");
     });

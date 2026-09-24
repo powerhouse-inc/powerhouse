@@ -242,7 +242,15 @@ export class SignatureAdmission {
       };
     }
     if (verdict.scheme === "unsigned") {
-      return verdict;
+      const address = entry.action.context?.signer?.user?.address;
+      return address
+        ? {
+            ok: false,
+            scheme: "unsigned",
+            code: "UNSIGNED_IDENTITY",
+            reason: `action ${entry.action.id} is unsigned but claims to act as ${address}`,
+          }
+        : verdict;
     }
 
     const signer = entry.action.context!.signer!;

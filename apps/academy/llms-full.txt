@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-24T14:33:14.498Z
+> Generated: 2026-09-24T14:49:11.228Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -26403,7 +26403,7 @@ Operations the reactor only moves are not verified again. That covers stored ope
 
 The last tuple in `context.signer.signatures` is checked:
 
-1. An action with no `context.signer`, or with an empty `signer.app.key` (what `PassthroughSigner` produces), is unsigned. Steps 2 to 5 do not apply to it.
+1. An action with no `context.signer`, or with an empty `signer.app.key` (what `PassthroughSigner` produces), is unsigned. Steps 2 to 5 do not apply to it. An unsigned action with a non-empty `signer.user.address` is refused as `UNSIGNED_IDENTITY` on every document, because the auth scope would decide it as that address.
 2. Element [1] of the tuple must equal `signer.app.key`.
 3. A `v2:` hash must be `v2:` and 43 base64url characters, element [0] decimal seconds, and element [4] `0x` and 128 lowercase hex digits. The preimage is recomputed for the document and branch the write is stored in and must match, on mutations and loads alike. On a load, the incoming operation's timestamp must be the action's timestamp.
 4. A hash without the prefix is a legacy tuple. On a mutation it is recomputed by length: 44 characters is the legacy Renown SHA-256 hash, 28 is the `buildOperationSignature` SHA-1 hash, and any other length is refused. On a load it is not recomputed, because stored input can come back with its keys reordered.
@@ -26524,7 +26524,7 @@ const reactorBuilder = new ReactorBuilder().withExecutorConfig({
 
 Each refusal emits a `SIGNATURE_REFUSED` event on the reactor event bus, with the refusal `code`, the signature `scheme`, the admission `path` (`mutation` or `load`), and whether it was `enforced`. `@powerhousedao/opentelemetry-instrumentation-reactor` counts these as `reactor.signature.refusals`.
 
-A refused mutation fails with an `InvalidSignatureError`. Its message carries the code in brackets, for example `[HASH_MISMATCH]`, and the code is also on the error's `code` field. The codes are `UNSIGNED_REQUIRED`, `KEY_MISMATCH`, `MALFORMED_TUPLE`, `TIMESTAMP_MISMATCH`, `HASH_MISMATCH`, `BAD_SIGNATURE`, `SCHEME_BELOW_POLICY`, `ID_MISMATCH`, `DUPLICATE_ACTION`, and `SIGNER_UNAUTHORIZED`.
+A refused mutation fails with an `InvalidSignatureError`. Its message carries the code in brackets, for example `[HASH_MISMATCH]`, and the code is also on the error's `code` field. The codes are `UNSIGNED_REQUIRED`, `UNSIGNED_IDENTITY`, `KEY_MISMATCH`, `MALFORMED_TUPLE`, `TIMESTAMP_MISMATCH`, `HASH_MISMATCH`, `BAD_SIGNATURE`, `SCHEME_BELOW_POLICY`, `ID_MISMATCH`, `DUPLICATE_ACTION`, and `SIGNER_UNAUTHORIZED`.
 
 ## Signing at the GQL / Switchboard Level
 

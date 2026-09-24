@@ -62,6 +62,7 @@ export type SignatureVerificationMode = "log" | "enforce";
 
 export const SIGNATURE_REFUSAL_CODES = [
   "UNSIGNED_REQUIRED",
+  "UNSIGNED_IDENTITY",
   "KEY_MISMATCH",
   "MALFORMED_TUPLE",
   "TIMESTAMP_MISMATCH",

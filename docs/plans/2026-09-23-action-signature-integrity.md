@@ -207,7 +207,8 @@ verify(action, op, target, header): "ok" | Refusal
   //                           28 = shared SHA-1, else MALFORMED_TUPLE); ECDSA
   //      load admission     → ECDSA only
   // 4. action id already live in (documentId, scope, branch) → DUPLICATE_ACTION
-  // 5. host hook: authorizeSigner(...) false → SIGNER_UNAUTHORIZED
+  // 5. unsigned with signer.user.address !== "" → UNSIGNED_IDENTITY, any policy
+  // 6. host hook: authorizeSigner(...) false → SIGNER_UNAUTHORIZED
 
 // host-provided, admission only
 type SignatureTrustPolicy = {
