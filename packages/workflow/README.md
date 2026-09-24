@@ -91,6 +91,18 @@ Tailwind classes show up too. The switchboard runs from `apps/switchboard/dist`,
 so a change to the runtime side needs a rebuild of that package first. Scenes
 live in `SCENES` in `scripts/ui-shots.ts`.
 
+### UI tests
+
+`test:ui` runs the Playwright specs in `test/ui/` against the same stack, one
+fresh seeded drive per test:
+
+```sh
+pnpm --filter @powerhousedao/workflow test:ui
+```
+
+Both commands share `scripts/ui-stack.ts`, which starts the servers and seeds
+the documents.
+
 ## Shipping a piece from a package
 
 This package is the worked example an external reactor package copies. A piece
