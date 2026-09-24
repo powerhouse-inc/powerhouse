@@ -157,6 +157,10 @@ export class RemoteDocumentController<
       if (this.options.onConflict && tracked.length > 0) {
         tracked = await this.handleConflicts(tracked, this.options.onConflict);
       }
+
+      if (this.options.signer && tracked.length > 0) {
+        await this.resolveCanonicalDocumentId();
+      }
     } catch (error) {
       // Pre-push failure: restore actions so they can be retried
       this.tracker.restore(tracked);
@@ -398,6 +402,7 @@ export class RemoteDocumentController<
     if (!remoteResult) {
       throw new Error(`Document "${this.documentId}" not found on remote`);
     }
+    this.canonicalDocumentId ??= remoteResult.document.id;
 
     const currentRevision = extractRevisionMap(
       remoteResult.document.revisionsList,
@@ -496,12 +501,39 @@ export class RemoteDocumentController<
     return actions;
   }
 
+  /**
+   * The remote's id for `documentId`, which may be a slug. A signature binds
+   * the id the remote verifies against, so a slug is never signed.
+   */
+  private async resolveCanonicalDocumentId(): Promise<string> {
+    if (this.canonicalDocumentId) return this.canonicalDocumentId;
+    let result: Awaited<ReturnType<IRemoteClient["getDocument"]>>;
+    try {
+      result = await this.remoteClient.getDocument(
+        this.documentId,
+        this.options.branch,
+      );
+    } catch (error) {
+      throw new Error(
+        `Cannot sign for "${this.documentId}": its document id could not be resolved on the remote`,
+        { cause: error },
+      );
+    }
+    if (!result) {
+      throw new Error(
+        `Cannot sign for "${this.documentId}": no document with that identifier on the remote`,
+      );
+    }
+    this.canonicalDocumentId = result.document.id;
+    return result.document.id;
+  }
+
   /** Sign an action using the configured signer, preserving existing signatures. */
   private async signAction(action: Action): Promise<Action> {
     const signer = this.options.signer!;
     const target = actionSigningTarget(
       action,
-      this.canonicalDocumentId ?? this.documentId,
+      await this.resolveCanonicalDocumentId(),
       this.options.branch ?? "main",
     );
     const signature = await signer.signAction(action, target);
