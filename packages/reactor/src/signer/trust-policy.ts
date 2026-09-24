@@ -7,16 +7,17 @@ import type { SignatureTrustPolicy } from "./types.js";
 
 /**
  * The policy admission asks: the reactor's own key signing as its own user is
- * accepted, then the host's policy decides, else the default does.
+ * accepted, then the host's policy decides, else the default does. `own` is
+ * read on every ask, since its user changes on login.
  */
 export function admissionTrustPolicy(
   own: ISigner,
   authEnforcement: boolean,
   policy?: SignatureTrustPolicy,
 ): SignatureTrustPolicy {
-  const identity = actionSignerIdentity(own);
   return {
     authorizeSigner(signer, key, documentId) {
+      const identity = actionSignerIdentity(own);
       if (identity.app.key !== "" && key === identity.app.key) {
         if (sameUser(actionSignerIdentity(signer).user, identity.user)) {
           return Promise.resolve(true);

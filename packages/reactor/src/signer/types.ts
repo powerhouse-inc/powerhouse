@@ -45,9 +45,11 @@ export type SignerConfig = {
  * at different times and must reach the same verdict. Cache an acceptance and
  * never expire it.
  *
- * The reactor's own key signing as its own user is accepted before the policy
- * is asked. Without a policy, a signed write is refused under `authEnforcement`
- * and accepted otherwise.
+ * Key a cache on (`signer.user`, `key`) only. The reactor's own key signing as
+ * its current user is accepted before the policy is asked, read live on every
+ * ask, and never cached. Invalidate nothing when the local identity changes:
+ * other users' verdicts do not depend on it. Without a policy, a signed write
+ * is refused under `authEnforcement` and accepted otherwise.
  */
 export type SignatureTrustPolicy = {
   authorizeSigner(
