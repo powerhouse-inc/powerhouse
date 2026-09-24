@@ -215,7 +215,7 @@ export function Sidebar(props: {
     <aside className="w-60 shrink-0 overflow-y-auto border-r border-solid border-border bg-muted/50 py-3">
       <Row active={props.allRunsActive} onClick={props.onShowAllRuns}>
         <Icon name="list" className="text-muted-foreground" />
-        <span>All runs</span>
+        <span>Overview</span>
       </Row>
       <Section
         title="Workflows"

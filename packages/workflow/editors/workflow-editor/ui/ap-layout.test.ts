@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ADD_BUTTON_SIZE,
   attachableSteps,
+  flowOrder,
   layoutWorkflow,
   STEP_HEIGHT,
   STEP_WIDTH,
@@ -162,5 +163,22 @@ describe("layoutWorkflow branch placeholders", () => {
     expect(button.position.y).toBeLessThan(
       step.position.y + STEP_HEIGHT + VSPACE,
     );
+  });
+});
+
+describe("flowOrder", () => {
+  it("follows the run from the trigger, whatever the authored order", () => {
+    expect(
+      flowOrder(
+        model([
+          ["t", "c"],
+          ["c", "a"],
+        ]),
+      ),
+    ).toEqual(["c", "a", "b"]);
+  });
+
+  it("lists steps the trigger can't reach last", () => {
+    expect(flowOrder(model([["t", "b"]]))).toEqual(["b", "a", "c"]);
   });
 });

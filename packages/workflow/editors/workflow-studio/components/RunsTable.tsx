@@ -22,6 +22,8 @@ import {
   statusLabel,
   toneOf,
 } from "./run-format.js";
+import { useWorkflowDocumentsInSelectedDrive } from "document-models/workflow";
+import { MiniChain, runLinks } from "./chain.js";
 import { Button, Icon, StatusText } from "./ui.js";
 
 type StatusFilter = "ALL" | (typeof RUN_STATUSES)[number];
@@ -269,6 +271,14 @@ export function RunsTable(props: {
   const [sort, setSort] = useState<SortKey>("startedAt");
   const [descending, setDescending] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
+  // Each run's chain starts at its workflow's trigger block.
+  const documents = useWorkflowDocumentsInSelectedDrive() ?? [];
+  const triggerBlock = new Map(
+    documents.map((document) => [
+      document.header.id,
+      document.state.global.trigger?.blockType,
+    ]),
+  );
   // Piece logos and names arrive with the catalog.
   usePieceLogos();
 
@@ -500,8 +510,13 @@ export function RunsTable(props: {
                       <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-muted-foreground">
                         {formatDuration(run.startedAt, run.endedAt)}
                       </td>
-                      <td className="px-3 py-2.5 tabular-nums text-muted-foreground">
-                        {run.steps.length}
+                      <td className="px-3 py-2">
+                        <MiniChain
+                          links={runLinks(
+                            run,
+                            triggerBlock.get(run.workflowId),
+                          )}
+                        />
                       </td>
                       <td className="px-3 py-2.5">
                         <button

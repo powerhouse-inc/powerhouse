@@ -91,7 +91,7 @@ function TrackStop(props: {
             : stop.title
         }
         aria-label={`${stop.title}: ${stop.status ? stop.status.toLowerCase() : "not run"}`}
-        className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-card ring-2 transition-shadow hover:ring-4 focus-visible:outline-none focus-visible:ring-4 ${RING[tone]}`}
+        className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-card ring-2 transition-shadow dark:bg-white hover:ring-4 focus-visible:outline-none focus-visible:ring-4 ${RING[tone]}`}
         onClick={props.onClick}
       >
         <StopLogo logoUrl={stop.logoUrl} glyph={stop.glyph} />

@@ -8,6 +8,7 @@ import {
 } from "../workflow-editor/runtime-api.js";
 import { packageFromConnectorId } from "./piece-auth.js";
 import { Button } from "../shared/controls.js";
+import { Icon } from "../shared/icons.js";
 import { CONNECTION_STATUS_LABEL, CONNECTION_STATUS_STYLES } from "./status.js";
 
 export function ConnectionToolbar(props: {
@@ -40,63 +41,63 @@ export function ConnectionToolbar(props: {
   const revoked = state.status === "REVOKED";
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-solid border-foreground/10 px-4 py-2">
-      <input
-        key={state.name}
-        className="min-w-0 max-w-72 rounded-md border border-solid border-transparent bg-transparent px-1.5 py-1 text-[15px] font-semibold text-foreground hover:border-foreground/15 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/25"
-        defaultValue={state.name}
-        placeholder="Untitled connection"
-        spellCheck={false}
-        aria-label="Connection name"
-        onKeyDown={(event) => {
-          if (event.key === "Enter") event.currentTarget.blur();
-        }}
-        onBlur={(event) => {
-          const name = event.target.value.trim();
-          if (name && name !== state.name) props.onRename(name);
-        }}
-      />
-      {piece ? (
-        <span className="flex min-w-0 items-center gap-1.5">
-          <img
-            src={piece.logoUrl}
-            alt=""
-            className="h-4 w-4 shrink-0 object-contain"
-          />
-          <span className="truncate text-xs text-muted-foreground">
-            {piece.displayName}
-          </span>
-        </span>
-      ) : packageName ? (
-        <span className="truncate text-xs text-muted-foreground/80">
-          {packageName}
-        </span>
-      ) : (
-        <span className="text-xs text-muted-foreground/80">
-          No connector picked
-        </span>
-      )}
-      <span
-        className={`rounded-full px-2 py-0.5 text-xs font-medium ${CONNECTION_STATUS_STYLES[state.status]}`}
-      >
-        {CONNECTION_STATUS_LABEL[state.status]}
-      </span>
-      {state.accountLabel ? (
-        <span className="truncate text-xs text-muted-foreground">
-          {state.accountLabel}
-        </span>
-      ) : null}
-      <span className="ml-auto flex items-center gap-3">
-        {state.lastCheckedAt ? (
-          <span
-            className="text-xs text-muted-foreground"
-            title={new Date(state.lastCheckedAt).toLocaleString()}
-          >
-            Checked {new Date(state.lastCheckedAt).toLocaleDateString()}
-          </span>
+    <header className="mb-8 flex flex-wrap items-start gap-4">
+      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-solid border-foreground/10 bg-white">
+        {piece?.logoUrl ? (
+          <img src={piece.logoUrl} alt="" className="h-8 w-8 object-contain" />
         ) : (
-          <span className="text-xs text-muted-foreground">Never checked</span>
+          <Icon name="link" className="h-6 w-6 text-neutral-500" />
         )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <input
+          key={state.name}
+          className="-mx-1.5 w-full max-w-md rounded-md border border-solid border-transparent bg-transparent px-1.5 text-xl font-semibold tracking-tight text-foreground hover:border-foreground/15 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/25"
+          defaultValue={state.name}
+          placeholder="Untitled connection"
+          spellCheck={false}
+          aria-label="Connection name"
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.currentTarget.blur();
+          }}
+          onBlur={(event) => {
+            const name = event.target.value.trim();
+            if (name && name !== state.name) props.onRename(name);
+          }}
+        />
+        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted-foreground">
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs font-medium ${CONNECTION_STATUS_STYLES[state.status]}`}
+          >
+            {CONNECTION_STATUS_LABEL[state.status]}
+          </span>
+          <span>
+            {piece?.displayName ?? (packageName || "No service picked")}
+            {state.accountLabel ? (
+              <>
+                {" "}
+                as{" "}
+                <span className="font-medium text-foreground">
+                  {state.accountLabel}
+                </span>
+              </>
+            ) : null}
+          </span>
+        </p>
+        <p
+          className="mt-1 text-xs text-muted-foreground"
+          title={
+            state.lastCheckedAt
+              ? new Date(state.lastCheckedAt).toLocaleString()
+              : undefined
+          }
+        >
+          {state.lastCheckedAt
+            ? `Last checked ${new Date(state.lastCheckedAt).toLocaleDateString()}`
+            : "Never checked"}
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
         <Button size="sm" variant="danger" onClick={props.onDelete}>
           Delete
         </Button>
@@ -106,7 +107,7 @@ export function ConnectionToolbar(props: {
         >
           {revoked ? "Reactivate" : "Revoke"}
         </Button>
-      </span>
-    </div>
+      </div>
+    </header>
   );
 }

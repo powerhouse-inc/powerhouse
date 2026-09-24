@@ -90,6 +90,21 @@ export interface DesignTimeService {
   listConnections?: () => Promise<ConnectionSummary[]>;
   // Drops the cached listing after the picker creates a connection.
   refreshConnections?: () => void;
+  // The current workflow's most recent run, for a step's "Last run" preview.
+  latestRun?: () => Promise<LatestRun | null>;
+}
+
+export interface LatestRun {
+  status: string;
+  startedAt: string;
+  triggerPayload: unknown;
+  steps: {
+    stepKey: string;
+    status: string;
+    input: unknown;
+    output: unknown;
+    error: string | null;
+  }[];
 }
 
 // Ours, not the piece's: the reactor's poll cadence for a piece trigger.

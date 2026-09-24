@@ -41,6 +41,8 @@ function WorkflowEditor() {
       webhookEndpoint: () => fetchWebhookEndpoint(workflowId),
       listConnections: fetchConnections,
       refreshConnections: invalidateConnections,
+      latestRun: () =>
+        fetchRuns({ workflowId, limit: 1 }).then((runs) => runs.at(0) ?? null),
       secrets: {
         save: ({ ref, value, label }) =>
           ref ? rotateSecret(ref, value) : createSecret(value, label),
