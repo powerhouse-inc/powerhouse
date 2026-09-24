@@ -388,14 +388,33 @@ describe("serving sync through the document's policy", () => {
     );
   }
 
+  /** The peer's copy, or undefined until the first sync delivers it. */
+  async function peerDrive(
+    fx: Fixture,
+    driveId: string,
+  ): Promise<DocumentDriveDocument | undefined> {
+    try {
+      return await fx.peer.module.reactor.get<DocumentDriveDocument>(driveId, {
+        branch: "main",
+      });
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.name === "DocumentNotFoundError" ||
+          error.message.startsWith("Document not found"))
+      ) {
+        return undefined;
+      }
+      throw error;
+    }
+  }
+
   async function converged(fx: Fixture, driveId: string): Promise<boolean> {
     const origin = await fx.origin.reactor.get<DocumentDriveDocument>(driveId, {
       branch: "main",
     });
-    const peer = await fx.peer.module.reactor.get<DocumentDriveDocument>(
-      driveId,
-      { branch: "main" },
-    );
+    const peer = await peerDrive(fx, driveId);
+    if (!peer) return false;
     return (
       peer.header.revision.global === origin.header.revision.global &&
       JSON.stringify(peer.state.global) === JSON.stringify(origin.state.global)
@@ -415,10 +434,8 @@ describe("serving sync through the document's policy", () => {
     const origin = await fx.origin.reactor.get<DocumentDriveDocument>(driveId, {
       branch: "main",
     });
-    const peer = await fx.peer.module.reactor.get<DocumentDriveDocument>(
-      driveId,
-      { branch: "main" },
-    );
+    const peer = await peerDrive(fx, driveId);
+    if (!peer) return false;
     return (
       peer.header.revision[scope] === origin.header.revision[scope] &&
       JSON.stringify(peer.state[scope]) === JSON.stringify(origin.state[scope])
