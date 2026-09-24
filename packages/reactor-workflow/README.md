@@ -164,6 +164,60 @@ only. There is no second setting: a package installed from that registry
 already ships pieces that run in the worker, so a bundle fetched from it is no
 more trusted than one that arrived inside a package.
 
+## Known missing features
+
+This is what a piece can declare or call that this engine does not run. It is tracked in
+[#3081](https://github.com/powerhouse-inc/powerhouse/issues/3081),
+[#3090](https://github.com/powerhouse-inc/powerhouse/issues/3090) and
+[#3091](https://github.com/powerhouse-inc/powerhouse/issues/3091).
+
+**Triggers**
+
+- `TriggerStrategy.APP_WEBHOOK` and `context.app.createListeners`: the
+  listeners are never read, so deliveries are refused (#3081).
+- `renewConfiguration` / `onRenew`: never scheduled, so subscriptions that
+  expire stop delivering (#3090).
+- Every `WEBHOOK` trigger's `run()` is called every 15 minutes without a
+  `payload`, as a reconciliation sweep. A `run` that only maps the delivery
+  either fails or fires a spurious run (#3090).
+- `setSchedule({ cronExpression })` is run as a fixed interval; wall-clock
+  time and timezone are lost.
+- `onStart` is never called. The trigger context's `server` is a throwing stub.
+
+**Auth**
+
+- CustomAuth `refresh`: no `access_token` is minted.
+- A piece whose `auth` is an array describes as `UNKNOWN`.
+- OAuth2 and OIDC connections are refused at check and run.
+- `server` in `validate` and `getConnectionIdentifier` is a throwing stub.
+
+**Props**
+
+- `refreshOnSearch`: a dropdown's `searchValue` is never sent.
+- Dynamic resolvers nested in ARRAY items or DYNAMIC output can't be called.
+- CUSTOM props carry only their type.
+- A `required` prop is not validated before `run()`.
+
+**Actions**
+
+- `errorHandlingOptions` (retry, continue on failure) is ignored.
+- `test` is never called.
+- `requireAuth` defaults to `false` in the descriptor; upstream defaults to
+  `true`.
+- `run.stop`, `run.respond`, `run.pause`, waitpoints and `generateResumeUrl`
+  throw.
+- `connections.get`, `tags`, `server`, `agent` and `flows.list` throw.
+- `run.id`, `flows.current.id`, `project.id` and `step.name` are constants,
+  the same for every run.
+
+**Piece**
+
+- `deprecated` is not in the descriptor.
+- Every piece gets the current context shape, whatever its `getContextInfo`
+  says.
+- Reads of context members outside the documented surface are tracked but not
+  reported.
+
 ## Running the tests
 
 ```sh
