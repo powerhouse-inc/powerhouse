@@ -99,7 +99,10 @@ function TrackStop(props: {
       <span className="mt-2 max-w-full truncate px-2 text-[13px] font-medium text-foreground">
         {stop.title}
       </span>
-      <span className="max-w-full truncate px-2 text-xs text-muted-foreground">
+      <span
+        className="max-w-full truncate px-2 text-xs text-muted-foreground"
+        title={stop.subtitle}
+      >
         {stop.subtitle}
       </span>
     </li>

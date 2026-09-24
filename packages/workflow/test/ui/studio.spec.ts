@@ -30,6 +30,7 @@ test.describe("Workflow Studio", () => {
     await expect(steps.nth(1)).toContainText("Succeeded");
     await expect(steps.nth(2)).toContainText("Failed");
     await expect(steps.nth(3)).toContainText("Skipped");
+    await expect(steps.nth(2)).toContainText("Send HTTP request");
 
     // The trigger row opens onto the payload the run started with.
     await steps.nth(0).getByRole("button").click();
@@ -59,6 +60,9 @@ test.describe("Workflow Studio", () => {
     await expect(
       app.getByRole("button", { name: "Summarise: not run" }),
     ).toBeVisible();
+    // Actions read by the piece's own names, not their ids.
+    await expect(app.getByText("Ask ChatGPT")).toBeVisible();
+    await expect(app.getByText("Send Message To A Channel")).toBeVisible();
   });
 
   test("a connection names its service and the workflows using it", async ({
