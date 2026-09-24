@@ -356,11 +356,12 @@ jobs:
           path: recipes-checkout/semantic-search/.model-cache
           key: hf-model-Xenova-all-MiniLM-L6-v2-q8
 
-      # drive-override's demo creates 10,000 documents and takes ~112s locally;
-      # every other recipe is under 7s. 600s leaves headroom on a slow runner
-      # without masking a genuine hang.
+      # drive-override's demo creates 10,000 documents, ~290s of the ~550s suite
+      # on CI, so it runs on main and manual runs only. 600s covers it there.
       - name: Run recipe suite against this checkout
-        run: pnpm test:e2e:recipes --timeout 600
+        run: >-
+          pnpm test:e2e:recipes --timeout 600
+          ${{ github.event_name == 'pull_request' && '--skip drive-override' || '' }}
         env:
           RECIPES_DIR: ${{ github.workspace }}/recipes-checkout
 
