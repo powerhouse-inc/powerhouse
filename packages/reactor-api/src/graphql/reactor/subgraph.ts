@@ -202,9 +202,9 @@ export class ReactorSubgraph extends BaseSubgraph {
    * reports the liveness that keeps it from being reclaimed -- but they never
    * adopt, since the push path has no drive check to clear the claimant.
    *
-   * Nothing is enforced or adopted without a serving gate. Below
-   * `authEnforcement` there is no policy being enforced for the channel to
-   * belong to, and refusing a poll there would break sync for no gain.
+   * Nothing is enforced or adopted without a serving gate: with no gate the
+   * channel serves every subject alike, so there is no subject for it to
+   * belong to.
    */
   async #bindOrRefuseChannel(
     channelId: string,
