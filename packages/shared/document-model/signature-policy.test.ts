@@ -406,9 +406,26 @@ describe("withSignaturePolicy", () => {
     const v2 = withSignaturePolicy(legacy, "v2-required");
     expect(hasDerivedDocumentId(v2.header)).toBe(true);
     expect(createInputOf(v2).documentId).toBe(v2.header.id);
-    expect(() =>
-      withSignaturePolicy(legacy, "v2-required", { id: "fixed" }),
-    ).toThrow();
+  });
+
+  it("ignores a given id under v2-required and derives one", () => {
+    const legacy = withSignaturePolicy(create(), "legacy");
+    const v2 = withSignaturePolicy(legacy, "v2-required", { id: "fixed" });
+    expect(v2.header.id).not.toBe("fixed");
+    expect(hasDerivedDocumentId(v2.header)).toBe(true);
+    expect(createInputOf(v2).documentId).toBe(v2.header.id);
+
+    const already = create();
+    expect(withSignaturePolicy(already, "v2-required", { id: "fixed" })).toBe(
+      already,
+    );
+  });
+
+  it("uses a given id under legacy, even for a legacy document", () => {
+    const legacy = withSignaturePolicy(create(), "legacy");
+    const fixed = withSignaturePolicy(legacy, "legacy", { id: "fixed" });
+    expect(fixed.header.id).toBe("fixed");
+    expect(createInputOf(fixed).documentId).toBe("fixed");
   });
 
   it("merges protocolVersions into a fresh header", () => {

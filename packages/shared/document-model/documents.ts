@@ -281,18 +281,20 @@ export function baseCreateDocument<TState extends PHBaseState = PHBaseState>(
 
 /**
  * `document`, not yet created, under a fresh header for `policy`. A legacy
- * header takes `id` when given; a v2-required one derives its own.
+ * header takes `id` when given; a v2-required one ignores `id` and derives its
+ * own, so a caller that needs a fixed id must ask for legacy.
  * `protocolVersions` are merged over the document's. Name, slug, branch and
  * meta carry over. A document already under `policy` is returned as is unless
- * `id` or `protocolVersions` are given.
+ * a legacy `id` or `protocolVersions` are given.
  */
 export function withSignaturePolicy<TDocument extends PHDocument>(
   document: TDocument,
   policy: SignaturePolicy,
   options: { id?: string; protocolVersions?: ProtocolVersions } = {},
 ): TDocument {
+  const id = policy === "legacy" ? options.id : undefined;
   if (
-    options.id === undefined &&
+    id === undefined &&
     options.protocolVersions === undefined &&
     signaturePolicyOf(document.header) === policy
   ) {
@@ -300,7 +302,7 @@ export function withSignaturePolicy<TDocument extends PHDocument>(
   }
   const source = document.header;
   const header = createPresignedHeader(
-    options.id,
+    id,
     source.documentType,
     protocolVersionsFor(policy, {
       ...source.protocolVersions,
