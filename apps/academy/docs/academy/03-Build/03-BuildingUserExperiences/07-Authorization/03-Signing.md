@@ -263,9 +263,7 @@ With no policy, a signed write is refused while the `authEnforcement` feature fl
 
 Under `authEnforcement`, the switchboard uses `createRenownTrustPolicy` from `@renown/sdk`. It accepts a key when a Renown credential issued by `did:pkh:<networkId>:<chainId>:<address>` delegates to that `did:key`, and the credential's EIP-712 proof recovers to the address. The credential is read from the Renown instance the switchboard authenticates against (`RENOWN_SOURCE`, `RENOWN_URL`, `SWITCHBOARD_URL`), and a failed read fails the job for a retry. Its expiry and revocation are ignored; revoke a user's access through auth-scope grants.
 
-A credential can reach a replica after the user's first writes do. While no credential is found, the lookup throws `MissingCredentialError` and the job is deferred. This lasts for 5 minutes after the first miss for that address and key (`missingCredentialWindowMs` on `createRenownTrustPolicy`). After that the write is refused, and the refusal is remembered for 60 seconds.
-
-A policy error with a numeric `retryAfterMs`, as `MissingCredentialError` has, defers the job instead of failing it: the job returns to `PENDING` with `JobInfo.deferral` set and runs again after that delay, doubling per attempt up to 60 seconds, without using its retries. Later jobs for the same document, scope and branch wait behind it. After `maxAdmissionDeferralMs` on the executor config (default 6 minutes) the error counts as an ordinary failure.
+A credential can reach a replica after the user's first writes do. While no credential is found, the lookup fails the job for a retry. This lasts for 5 minutes after the first miss for that address and key (`missingCredentialWindowMs` on `createRenownTrustPolicy`). After that the write is refused, and the refusal is remembered for 60 seconds.
 
 With `RENOWN_SOURCE=self`, pooled executor workers get no trust policy. A switchboard with `REACTOR_WORKERS` above 0 and `REACTOR_AUTH_ENFORCEMENT` on therefore refuses to boot. Use a remote Renown source, or set `REACTOR_WORKERS=0`.
 

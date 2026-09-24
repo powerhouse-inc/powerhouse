@@ -265,11 +265,6 @@ type SignatureTrustPolicy = {
 - A mutation write already stored byte-identical is committed: it is not
   written again, the rest of its job is, and the job's result and
   `JOB_WRITE_READY` re-emit the stored operations with their indexed ordinals.
-- A hook error with a positive `retryAfterMs` (`MissingCredentialError`)
-  becomes `DeferredAdmissionError`: the job returns to the head of its stream,
-  PENDING with `JobInfo.deferral`, and reruns after the delay, doubling to at
-  most 60s, uncounted against `maxRetries`, until `maxAdmissionDeferralMs`
-  (6 min) after the first deferral; later jobs on the stream wait behind it.
 
 ## Phases
 
