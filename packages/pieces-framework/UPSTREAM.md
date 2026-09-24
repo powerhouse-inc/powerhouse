@@ -43,16 +43,20 @@ Left out: `mime-db-min.cjs` (upstream's bundler alias that keeps `mime-db`,
 pulled in through `form-data`, out of piece bundles; aliasing is the piece
 build's job, so `ph build` may adopt it later) and upstream's unused `ai` and
 `semver` dependencies.
-Of the engine's own tests only `test/variables/props-validator.test.ts` and
-`test/variables/file-processor.test.ts` come along: the rest need
-`@activepieces/shared`, `props-resolver` or `FlowExecutorContext`.
+Of the engine's own tests only those that exercise vendored code come along:
+`test/variables/{props-validator,file-processor,dynamic-prop-keys}.test.ts`,
+`test/helper/polling-helper.test.ts` and
+`test/http/formdata-multipart-claim-verify.test.ts` (which guards the patched
+`fetch-http-client.ts`). The rest need `@activepieces/shared`,
+`props-resolver` or `FlowExecutorContext`.
 
 `@activepieces/shared` (8k lines of platform entities) is not vendored. The four
 piece packages never import it; the engine files do, so the codemod re-homes
 each symbol they use — `AUTHENTICATION_PROPERTY_NAME` and `AppConnectionValue`
 to `upstream/core-piece-types/`, which really defines them, and `PropertySettings`
-to `src/host/shared-shim.ts`, a Powerhouse-owned declaration of the minimal
-shape `props-processor.ts` reads. An unmapped symbol fails the sync.
+and `PropertyExecutionType` to `src/host/shared-shim.ts`, a Powerhouse-owned
+declaration of the minimal shapes `props-processor.ts` and its tests read. An
+unmapped symbol fails the sync.
 
 `deepmerge-ts` is a devDependency only: `core-utils` imports it in
 `deepMergeAndCast`, which the framework barrel never re-exports, so the source
@@ -167,6 +171,8 @@ Current patches:
   hydrates FILE props itself) validates the result with it.
 - `test/upstream/framework/test/connection-identifier-flag.test.ts`: pass
   `authors: []` to `createPiece` (upstream does not typecheck its tests).
+- `test/upstream/engine/test/variables/dynamic-prop-keys.test.ts`: pass
+  `auth: undefined` to `Property.DynamicProperties`, which requires it.
 - `test/upstream/core-utils/test/ai-provider-health.test.ts`: make the outcome
   reporter return `void` instead of `Array.prototype.push`'s number (three
   sites).
@@ -179,3 +185,35 @@ Current patches:
 
 The vendored trees are excluded from the root ESLint run: their lint stance is
 upstream's, and the codemod already applies this repo's formatting.
+
+## Conformance suite for reactor-workflow
+
+The same sync also generates
+[`../reactor-workflow/test/upstream/`](../reactor-workflow/test/upstream):
+Activepieces engine tests that run against our engine instead of vendored code.
+It lives in this script rather than a second one so that one run, from one
+checkout, regenerates both trees under one codemod and one patch contract.
+
+`CONFORMANCE` in `scripts/sync-upstream.mts` lists each upstream test and its
+target, optionally cut down to literal `excerpt` segments. For each file the
+sync:
+
+1. Rewrites `@activepieces/pieces-framework` and `@activepieces/pieces-common`
+   to our published `@powerhousedao/pieces-framework` entries.
+2. Rewrites every other upstream import through `IMPORT_REDIRECTS` to an adapter
+   in `../reactor-workflow/test/upstream-adapters/`, which exposes the upstream
+   API (`createContextStore`, `createConnectionResolver`, `ssrfGuard`,
+   `propsProcessor`, the `@activepieces/shared` symbols) over our code. An
+   import with no redirect fails the sync.
+3. Adds the header, formats, and applies `CONFORMANCE_PATCHES`, which carry the
+   same `count` and `why` as `PATCHES`.
+4. Marks each `CONFORMANCE_SKIPS` case `it.skip` and each `KNOWN_DIVERGENCES`
+   case `it.fails`, with a comment giving the reason and, for a divergence, the
+   issue or README item that fixes it; a deliberate divergence names none. A
+   name that no longer matches upstream fails the sync. When a fix lands, its
+   `it.fails` starts failing: drop the entry and re-sync.
+5. Writes `test/upstream/MANIFEST.json` there, with the upstream path and
+   SHA-256 of each original and the lists of divergences and skips.
+
+Nothing is taken from `packages/ee/` or `packages/server/api/src/app/ee`, which
+are not MIT.
