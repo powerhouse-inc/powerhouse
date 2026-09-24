@@ -1,4 +1,5 @@
 import { defineConfig } from "tsdown";
+import { dtsExportList } from "../../tsdown.dts.mjs";
 
 const version =
   process.env.WORKSPACE_VERSION ?? process.env.npm_package_version ?? "unknown";
@@ -13,11 +14,12 @@ export default defineConfig({
   platform: "node",
   outDir: "dist",
   clean: true,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
   loader: { ".graphql": "text" },
   deps: {
-    onlyAllowBundle: [],
+    onlyBundle: [],
   },
   define: {
     REACTOR_API_VERSION: JSON.stringify(version),

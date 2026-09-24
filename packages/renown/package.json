@@ -106,6 +106,7 @@
     "@types/react": "catalog:",
     "react": ">=19",
     "tsdown": "catalog:",
+    "typescript": "catalog:",
     "vitest": "catalog:",
     "wagmi": "^2.19.5"
   },
