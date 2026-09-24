@@ -116,7 +116,7 @@ import { packageFromConnectorId } from "./connector-id.js";
 import { SCHEDULE_BLOCK } from "./schedule.js";
 import type { AttachmentPort } from "../pieces/index.js";
 import { createAttachmentPort } from "./attachment-port.js";
-import { createPieceStorePort } from "./piece-store-port.js";
+import { createPieceStorePort, PROJECT_SCOPE_KEY } from "./piece-store-port.js";
 import { currentWorkflowId, withRunScope } from "./run-scope.js";
 import {
   CORE_DESCRIPTOR,
@@ -2374,6 +2374,7 @@ export class WorkflowRuntimeService {
         propName,
         refresherValues: (input ?? {}) as Record<string, unknown>,
         auth,
+        projectId: PROJECT_SCOPE_KEY,
         // The reactor piece's options() reads the reactor it offers choices
         // from, over the same port a step of it would use.
 

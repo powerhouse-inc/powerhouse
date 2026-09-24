@@ -30,8 +30,10 @@ import { join } from "node:path";
 import {
   currentBoundConnections,
   currentPieceWorker,
+  currentRunId,
   currentWorkflowId,
 } from "./run-scope.js";
+import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";
 import { packagePieces } from "./piece-registry.js";
 import { SubgraphReactorPort } from "./reactor-port.js";
 import { packageFromConnectorId } from "./connector-id.js";
@@ -251,6 +253,13 @@ export function createBlockExecutor(
       // Asked per step, for the same reason the binding is: one executor,
       // many runs, and each run has a child of its own.
       worker: currentPieceWorker,
+      // A workflow is a flow; the reactor is the project, as it is for
+      // ctx.store's PROJECT scope.
+      identity: () => ({
+        runId: currentRunId(),
+        flowId: currentWorkflowId(),
+        projectId: PROJECT_SCOPE_KEY,
+      }),
       resolver: pieceResolver(),
       // A package piece's block type carries no version; this is where the
       // installed one comes from.

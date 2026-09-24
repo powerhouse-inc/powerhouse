@@ -31,7 +31,11 @@ import {
   schedulePayload,
   SCHEDULE_BLOCK,
 } from "./schedule.js";
-import { createPieceStorePort, testPartitionKey } from "./piece-store-port.js";
+import {
+  createPieceStorePort,
+  PROJECT_SCOPE_KEY,
+  testPartitionKey,
+} from "./piece-store-port.js";
 import type { TriggerStateRow, WorkflowRunStore } from "./store.js";
 
 const logger = childLogger(["workflow", "trigger-supervisor"]);
@@ -523,7 +527,7 @@ export class TriggerSupervisor {
         auth,
         ...(redactValues.length > 0 ? { redactValues } : {}),
         ...(pieceStore ? { durableStore: true } : {}),
-        identity: { flowId: binding.workflowId },
+        identity: { flowId: binding.workflowId, projectId: PROJECT_SCOPE_KEY },
         isRepublish: options.isRepublish,
         payload: options.payload,
         // A poll binding gets an unroutable URL on purpose: a live one would
