@@ -1466,7 +1466,7 @@ describe("ReactorClient Unit Tests", () => {
       );
     });
 
-    it("keeps an outgoing edge whose far end holds no domain scope to withhold", async () => {
+    it("withholds an outgoing edge whose far end holds no domain scope yet", async () => {
       vi.mocked(mockReactor.getOutgoingRelationshipEdges).mockResolvedValue({
         results: [edgeBetween("p", "meta-only")],
         options: { cursor: "0", limit: 100 },
@@ -1476,11 +1476,15 @@ describe("ReactorClient Unit Tests", () => {
         options: { cursor: "0", limit: 1 },
       });
 
-      const result = await clientRefusing(
+      const refused = await clientRefusing(
         "meta-only",
       ).getOutgoingRelationshipEdges("p", "child");
+      const allowed = await clientRefusing(
+        "other",
+      ).getOutgoingRelationshipEdges("p", "child");
 
-      expect(result.results).toHaveLength(1);
+      expect(refused.results).toHaveLength(0);
+      expect(allowed.results).toHaveLength(1);
     });
 
     it("withholds an incoming edge whose far end refuses every domain scope", async () => {
@@ -1508,17 +1512,39 @@ describe("ReactorClient Unit Tests", () => {
       ]);
     });
 
-    it("lists a document holding no domain scope to withhold", async () => {
+    // Its model declares domain scopes the read model has not indexed yet.
+    it("judges a listed document holding no domain scope yet on the declared ones", async () => {
       vi.mocked(mockReactor.find).mockResolvedValue({
         results: [documentWithScopes("meta-only", ["auth", "document"])],
         options: { cursor: "0", limit: 10 },
       });
 
-      const listed = await clientRefusing("meta-only").find({
+      const refused = await clientRefusing("meta-only").find({
+        ids: ["meta-only"],
+      });
+      const allowed = await clientRefusing("other").find({
         ids: ["meta-only"],
       });
 
-      expect(listed.results.map((d) => d.header.id)).toEqual(["meta-only"]);
+      expect(refused.results).toHaveLength(0);
+      expect(allowed.results.map((d) => d.header.id)).toEqual(["meta-only"]);
+    });
+
+    it("lists a document handed over with no state at all", async () => {
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: [
+          {
+            header: { id: "stateless", documentType: "test", branch: "main" },
+          } as unknown as PHDocument,
+        ],
+        options: { cursor: "0", limit: 10 },
+      });
+
+      const listed = await clientRefusing("stateless").find({
+        ids: ["stateless"],
+      });
+
+      expect(listed.results.map((d) => d.header.id)).toEqual(["stateless"]);
     });
   });
 

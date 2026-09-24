@@ -511,29 +511,28 @@ describe("serving a policy-named group to the policy's audience", () => {
     expect(readable("global")).toBe(false);
   });
 
-  // Unlike a listing, which serves such a document: here there is no allow.
-  it("does not serve it through a referencer holding no domain scope", async () => {
-    const stateless = referencer(
-      policy([
-        {
-          id: "g-read-all",
-          description: "reads every scope",
-          effect: "allow",
-          principal: { address: MEMBER },
-          capability: { can: "read" },
-        },
-      ]),
-    );
+  // Its model declares domain scopes the read model has not indexed yet.
+  it("judges a referencer holding no domain scope yet on the declared ones", async () => {
+    const stateless = referencer(policy([readGlobal({ address: MEMBER })]));
     const state = stateless.state as Record<string, unknown>;
     delete state.global;
     delete state.local;
 
-    const readable = await groupGate(
-      mockView({ [REFERENCER]: stateless }),
-      mockIndex({ [GROUP]: [REFERENCER] }),
-    ).scopePredicate(groupDoc(), { address: MEMBER }, "main");
+    const view = mockView({ [REFERENCER]: stateless });
+    const index = mockIndex({ [GROUP]: [REFERENCER] });
+    const member = await groupGate(view, index).scopePredicate(
+      groupDoc(),
+      { address: MEMBER },
+      "main",
+    );
+    const other = await groupGate(view, index).scopePredicate(
+      groupDoc(),
+      { address: OTHER },
+      "main",
+    );
 
-    expect(readable("global")).toBe(false);
+    expect(member("global")).toBe(true);
+    expect(other("global")).toBe(false);
   });
 
   it("serves it when any one of several referencers serves the subject", async () => {

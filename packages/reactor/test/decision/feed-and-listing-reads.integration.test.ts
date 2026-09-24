@@ -1,8 +1,16 @@
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
-import { initializeAuth, setGrant } from "@powerhousedao/shared/document-model";
+import {
+  initializeAuth,
+  normalizeDocumentModelVersion,
+  setGrant,
+} from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule, setModelName } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  createDocumentAction,
+  upgradeDocumentAction,
+} from "../../src/actions/index.js";
 import type { ReactorClient } from "../../src/client/reactor-client.js";
 import type { DocumentChangeEvent } from "../../src/client/types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
@@ -79,6 +87,66 @@ describe("feed and listing reads", () => {
   async function createOpen(client: ReactorClient, id: string) {
     await client.create(createDocModelDocument({ id }));
     return id;
+  }
+
+  // Upgraded with no initialState, so the read model indexes no domain scope.
+  async function createUnindexed(
+    client: ReactorClient,
+    id: string,
+  ): Promise<string> {
+    const { header, state } = createDocModelDocument({ id });
+    await client.execute(id, "main", [
+      createDocumentAction({
+        model: header.documentType,
+        version: 0,
+        documentId: id,
+        signing: {
+          signature: id,
+          publicKey: header.sig.publicKey,
+          nonce: header.sig.nonce,
+          createdAtUtcIso: header.createdAtUtcIso,
+          documentType: header.documentType,
+        },
+        slug: header.slug,
+        name: header.name,
+        branch: header.branch,
+        meta: header.meta,
+        protocolVersions: header.protocolVersions ?? { "base-reducer": 2 },
+      }),
+      upgradeDocumentAction({
+        documentId: id,
+        model: header.documentType,
+        fromVersion: 0,
+        toVersion: normalizeDocumentModelVersion(
+          (state as Partial<typeof state>).document?.version,
+        ),
+      }),
+    ]);
+    return id;
+  }
+
+  function policeUnindexed(client: ReactorClient, id: string) {
+    return client.execute(id, "main", [
+      initializeAuth({
+        version: 1,
+        grants: [
+          {
+            id: "g-read",
+            description: "the reader reads the domain",
+            effect: "allow",
+            principal: { address: READER },
+            capability: { can: "read", scope: "global" },
+          },
+          {
+            id: "g-admin",
+            description: "only the admin administers",
+            effect: "allow",
+            principal: { address: "0xAdmin" },
+            capability: { can: "execute", scope: "auth" },
+          },
+        ],
+      }),
+    ]);
   }
 
   function touchPoliced(client: ReactorClient, id: string) {
@@ -178,6 +246,18 @@ describe("feed and listing reads", () => {
       expect(Object.keys(served!.state)).not.toContain("local");
     });
 
+    it("withholds an update to a policed document holding no domain scope yet", async () => {
+      const client = await build();
+      const policed = await createUnindexed(client, "feed-unindexed");
+      const sentinel = await createOpen(client, "feed-unindexed-sentinel");
+
+      const events = await feedAs(client, OUTSIDER, sentinel, () =>
+        policeUnindexed(client, policed),
+      );
+
+      expect(events.flatMap(idsOf)).not.toContain(policed);
+    });
+
     it("withholds a relationship event naming an unreadable document", async () => {
       const client = await build();
       const policed = await createPoliced(client, "feed-rel-policed");
@@ -223,6 +303,28 @@ describe("feed and listing reads", () => {
       expect(asReader.results.map((d) => d.header.id).sort()).toEqual(
         [open, policed].sort(),
       );
+    });
+
+    it("withhold a policed document holding no domain scope yet", async () => {
+      const client = await build();
+      const policed = await createUnindexed(client, "list-unindexed");
+      await policeUnindexed(client, policed);
+
+      const asOutsider = await client.find(
+        { ids: [policed] },
+        { subject: { address: OUTSIDER } },
+      );
+      const asReader = await client.find(
+        { ids: [policed] },
+        { subject: { address: READER } },
+      );
+
+      expect(Object.keys((await reactor!.get(policed)).state).sort()).toEqual([
+        "auth",
+        "document",
+      ]);
+      expect(asOutsider.results).toEqual([]);
+      expect(asReader.results.map((d) => d.header.id)).toEqual([policed]);
     });
 
     it("gate every page, not only the first", async () => {

@@ -34,28 +34,32 @@ export const ALWAYS_READABLE_SCOPES: ReadonlySet<string> = new Set([
   "document",
 ]);
 
+// Every model declares these; the read model holds a scope only once written.
+const DECLARED_DOMAIN_SCOPES: readonly string[] = ["global", "local"];
+
 /** The scopes a document holds that grants gate. */
 export function domainScopesOf(document: PHDocument): string[] {
-  return Object.keys((document.state ?? {}) as Record<string, unknown>).filter(
+  const state = document.state as Record<string, unknown> | undefined;
+  return Object.keys(state ?? {}).filter(
     (scope) => !ALWAYS_READABLE_SCOPES.has(scope),
   );
 }
 
-/** False for a document holding no domain scope: there is no allow to rest on. */
 export function allowsSomeDomainScope(
   document: PHDocument,
   readable: (scope: string) => boolean,
 ): boolean {
-  return domainScopesOf(document).some(readable);
+  const held = domainScopesOf(document);
+  return (held.length > 0 ? held : DECLARED_DOMAIN_SCOPES).some(readable);
 }
 
-/** False for a document holding no domain scope: there is nothing to protect. */
+/** A document with no state at all is not policied, so nothing withholds it. */
 export function refusesEveryDomainScope(
   document: PHDocument,
   readable: (scope: string) => boolean,
 ): boolean {
-  const scopes = domainScopesOf(document);
-  return scopes.length > 0 && !scopes.some(readable);
+  const state = document.state as PHDocument["state"] | undefined;
+  return state !== undefined && !allowsSomeDomainScope(document, readable);
 }
 
 /**
