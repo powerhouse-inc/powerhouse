@@ -375,6 +375,94 @@ describe("Subscription SSE Integration", () => {
     });
   });
 
+  describe("Per-subscriber reads", () => {
+    type Feed = {
+      view: { subject?: { address?: string } } | undefined;
+      callback: (event: unknown) => void;
+    };
+
+    function recordingClient(feeds: Feed[]): IReactorClient {
+      return {
+        subscribe: vi.fn(
+          (
+            _search: unknown,
+            callback: Feed["callback"],
+            view: Feed["view"],
+          ) => {
+            feeds.push({ view, callback });
+            return vi.fn();
+          },
+        ),
+        getJobStatus: vi.fn(),
+      } as unknown as IReactorClient;
+    }
+
+    async function subscribeAs(
+      schema: ReturnType<typeof buildSchema>,
+      address: string,
+    ) {
+      const result = await subscribe({
+        schema,
+        contextValue: {
+          user: { address },
+          headers: {},
+          db: null,
+        } as unknown as Context,
+        document: parse(`
+          subscription {
+            documentChanges(search: {}) { type documents { id } }
+          }
+        `),
+      });
+      return firstEvent(result);
+    }
+
+    it("reads the reactor feed as each subscriber, not as the host", async () => {
+      const feeds: Feed[] = [];
+      const subgraph = new ReactorSubgraph({
+        reactorClient: recordingClient(feeds),
+        syncManager: {} as ISyncManager,
+        // OPEN: the legacy layer admits everyone, so only the view can gate.
+        authorizationService: makeAuthorizationService({
+          isSupremeAdmin: () => true,
+        }),
+      } as SubgraphArgs);
+      const schema = buildSubscriptionSchema(subgraph);
+
+      const alice = await subscribeAs(schema, "0xalice");
+      const bob = await subscribeAs(schema, "0xbob");
+      await delay(10);
+
+      const feedOf = (address: string) =>
+        feeds.find((feed) => feed.view?.subject?.address === address);
+      expect(feedOf("0xalice")).toBeDefined();
+      expect(feedOf("0xbob")).toBeDefined();
+
+      feedOf("0xalice")!.callback({
+        type: DocumentChangeType.Created,
+        documents: [documentWithId("alice-doc")],
+      });
+
+      const delivered = await alice.next;
+      expect(delivered.value).toEqual({
+        data: {
+          documentChanges: {
+            type: "CREATED",
+            documents: [expect.objectContaining({ id: "alice-doc" })],
+          },
+        },
+      });
+      const bobGot = await Promise.race([
+        bob.next.then(() => "event"),
+        delay(50).then(() => "nothing"),
+      ]);
+      expect(bobGot).toBe("nothing");
+
+      await alice.iterator.return?.();
+      await bob.iterator.return?.();
+    });
+  });
+
   describe("Subscription Authorization (S-H2)", () => {
     it("drops documentChanges events for documents the subscriber cannot read", async () => {
       const subgraph = makeReactorSubgraph(
