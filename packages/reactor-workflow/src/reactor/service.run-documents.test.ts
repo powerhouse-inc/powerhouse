@@ -1,6 +1,8 @@
 // A run is served only to a caller who is served every live document its
-// trigger names, and connections are read as the caller.
+// trigger names or its steps were handed, and connections are read as the caller.
 import type { WorkflowRuntimeHostDeps } from "./host.js";
+import { SubgraphReactorPort } from "./reactor-port.js";
+import { withRunScope } from "./run-scope.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import { describe, expect, it, vi } from "vitest";
 import { testRuntime } from "../../test/helpers/runtime.js";
@@ -54,10 +56,15 @@ const rows = [
   runRow("run-secret", { documentId: SECRET }),
   runRow("run-secret-drive", { documentId: OPEN, driveId: SECRET }),
   runRow("run-gone", { documentId: GONE }),
+  runRow("run-read-secret", { documentId: OPEN }),
 ];
+
+// What the reactor port handed each run's steps.
+const handed: Record<string, string[]> = { "run-read-secret": [SECRET] };
 
 const store = {
   listRuns: () => Promise.resolve(rows),
+  getRunDocuments: (runId: string) => Promise.resolve(handed[runId] ?? []),
   getRun: (id: string) => Promise.resolve(rows.find((row) => row.id === id)),
   getSteps: () => Promise.resolve([]),
 };
@@ -93,6 +100,7 @@ describe("runs are served with the documents their trigger names", () => {
 
     expect(await service.run("run-secret", CTX)).toBeNull();
     expect(await service.run("run-secret-drive", CTX)).toBeNull();
+    expect(await service.run("run-read-secret", CTX)).toBeNull();
     expect((await service.run("run-open", CTX))?.row.id).toBe("run-open");
   });
 
@@ -149,5 +157,67 @@ describe("connections", () => {
       { subject },
     );
     expect(listed.map((c) => c.id)).toEqual([OPEN]);
+  });
+});
+
+describe("the reactor port", () => {
+  it("journals a document against the run before handing it to a step", async () => {
+    const order: string[] = [];
+    const port = new SubgraphReactorPort({
+      reactorClient: {
+        get: (id: string) => {
+          order.push(`read ${id}`);
+          return Promise.resolve({
+            header: { id, documentType: "t", name: "", slug: "" },
+            state: {},
+          });
+        },
+      },
+    } as never);
+
+    const summary = await withRunScope(
+      {
+        workflowId: WORKFLOW,
+        runId: "run-1",
+        recordDocuments: (ids) => {
+          order.push(`journal ${ids.join(",")}`);
+          return Promise.resolve();
+        },
+      },
+      async () => {
+        const got = await port.get({ documentId: SECRET });
+        order.push("handed over");
+        return got;
+      },
+    );
+
+    expect(summary.documentId).toBe(SECRET);
+    expect(order).toEqual([
+      `read ${SECRET}`,
+      `journal ${SECRET}`,
+      "handed over",
+    ]);
+  });
+
+  it("fails the step when the journal cannot take the document", async () => {
+    const port = new SubgraphReactorPort({
+      reactorClient: {
+        get: (id: string) =>
+          Promise.resolve({
+            header: { id, documentType: "t", name: "", slug: "" },
+            state: {},
+          }),
+      },
+    } as never);
+
+    await expect(
+      withRunScope(
+        {
+          workflowId: WORKFLOW,
+          recordDocuments: () => Promise.reject(new Error("journal down")),
+        },
+        () => port.get({ documentId: SECRET }),
+      ),
+    ).rejects.toThrow("journal down");
   });
 });

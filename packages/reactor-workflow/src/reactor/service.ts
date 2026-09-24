@@ -2369,10 +2369,11 @@ export class WorkflowRuntimeService {
       .catch(() => false);
   }
 
-  // A run carries its trigger payload and every step's input and output, all
-  // drawn from the documents its trigger names, so it is served only to a
-  // caller who is served each of them. One no longer live has no content left
-  // to protect, or a deletion's runs would be served to nobody.
+  // A run carries its trigger payload and every step's input and output, drawn
+  // from the documents its trigger names and those the reactor port handed its
+  // steps, so it is served only to a caller who is served each of them. One no
+  // longer live has no content left to protect, or a deletion's runs would be
+  // served to nobody.
   private async servedRuns(
     rows: RunRow[],
     ctx: WorkflowCaller | undefined,
@@ -2387,10 +2388,14 @@ export class WorkflowRuntimeService {
       }
       return decision;
     };
+    const store = await this.store();
     const served = await Promise.all(
       rows.map(async (row) => {
-        const ids = triggerDocumentIds(row.trigger_payload);
-        return (await Promise.all(ids.map(serves))).every(Boolean);
+        const ids = new Set([
+          ...triggerDocumentIds(row.trigger_payload),
+          ...((await store?.getRunDocuments(row.id)) ?? []),
+        ]);
+        return (await Promise.all([...ids].map(serves))).every(Boolean);
       }),
     );
     return rows.filter((_, index) => served[index]);
@@ -2757,8 +2762,21 @@ export class WorkflowRuntimeService {
       // here, and the journal records the run as failed rather than leaving it
       // to be swept up as an orphan.
       session = this.workers().session();
+      const journal = store;
+      const journaledRunId = runId;
       const result = await withRunScope(
-        { workflowId, runId, connections, pieceWorker: session },
+        {
+          workflowId,
+          runId,
+          connections,
+          pieceWorker: session,
+          ...(journal && journaledRunId
+            ? {
+                recordDocuments: (documentIds: string[]) =>
+                  journal.recordRunDocuments(journaledRunId, documentIds),
+              }
+            : {}),
+        },
         () =>
           runWorkflow({
             definition,

@@ -42,6 +42,12 @@ export interface StepExecutionRow {
   error: string | null;
 }
 
+// A document a run's steps were handed through the reactor port.
+export interface RunDocumentRow {
+  run_id: string;
+  document_id: string;
+}
+
 export interface TriggerStateRow {
   workflow_id: string;
   block_type: string;
@@ -84,6 +90,7 @@ export interface PieceStoreRow {
 export interface WorkflowRuntimeDB {
   run: RunRow;
   step_execution: StepExecutionRow;
+  run_document: RunDocumentRow;
   trigger_state: TriggerStateRow;
   trigger_dedupe: TriggerDedupeRow;
   piece_store: PieceStoreRow;
@@ -204,6 +211,14 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
       );
     }
   }
+
+  await db.schema
+    .createTable("run_document")
+    .addColumn("run_id", "text", (col) => col.notNull())
+    .addColumn("document_id", "text", (col) => col.notNull())
+    .addPrimaryKeyConstraint("run_document_pk", ["run_id", "document_id"])
+    .ifNotExists()
+    .execute();
 
   await db.schema
     .createTable("piece_store")
@@ -865,6 +880,32 @@ export class WorkflowRunStore {
       .where("run_id", "=", runId)
       .orderBy("ordinal", "asc")
       .execute();
+  }
+
+  async recordRunDocuments(
+    runId: string,
+    documentIds: string[],
+  ): Promise<void> {
+    if (documentIds.length === 0) return;
+    await this.db
+      .insertInto("run_document")
+      .values(
+        [...new Set(documentIds)].map((documentId) => ({
+          run_id: runId,
+          document_id: documentId,
+        })),
+      )
+      .onConflict((oc) => oc.columns(["run_id", "document_id"]).doNothing())
+      .execute();
+  }
+
+  async getRunDocuments(runId: string): Promise<string[]> {
+    const rows = await this.db
+      .selectFrom("run_document")
+      .select("document_id")
+      .where("run_id", "=", runId)
+      .execute();
+    return rows.map((row) => row.document_id);
   }
 
   async getTriggerState(
