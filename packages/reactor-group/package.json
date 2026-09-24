@@ -44,7 +44,7 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/reactor-group",
     "build": "tsdown",
     "test": "vitest --run",
     "generate": "ph-cli generate"

@@ -23,7 +23,7 @@
   ],
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint clis/ph-cmd",
     "generate-docs": "bun run scripts/generate-commands-docs.ts",
     "build": "tsdown",
     "postbuild": "bun generate-docs",

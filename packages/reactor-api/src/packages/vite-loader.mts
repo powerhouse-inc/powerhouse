@@ -158,7 +158,10 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     // try both without requiring a regeneration.
     const candidatePaths = [
       this.getDocumentModelsPath(identifier),
-      path.posix.join(this.getDocumentModelsPath(identifier), "upgrade-manifests"),
+      path.posix.join(
+        this.getDocumentModelsPath(identifier),
+        "upgrade-manifests",
+      ),
     ];
     for (const fullPath of candidatePaths) {
       try {

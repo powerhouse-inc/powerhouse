@@ -24,7 +24,7 @@
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/pglite-fs",
     "build": "tsdown",
     "test": "vitest --run"
   },

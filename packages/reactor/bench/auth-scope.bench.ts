@@ -163,13 +163,7 @@ describe("auth policy evaluation (pure CPU)", () => {
     );
 
     bench("evaluateGrantStack: 100 grants x 100 condition nodes", () => {
-      evaluateGrantStack(
-        worstCase,
-        WRITER,
-        EXECUTE_GLOBAL,
-        undefined,
-        context,
-      );
+      evaluateGrantStack(worstCase, WRITER, EXECUTE_GLOBAL, undefined, context);
     });
 
     // Below authConditions the same policy skips every conditional grant

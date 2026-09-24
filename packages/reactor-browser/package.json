@@ -64,11 +64,11 @@
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/reactor-browser",
     "build": "tsdown",
     "test": "vitest --run",
     "install:playwright": "playwright install",
-    "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/gen/*.ts && eslint --fix src/graphql/gen/*.ts --no-warn-ignored"
+    "codegen": "graphql-codegen --config codegen.ts && oxlint --fix src/graphql/gen/*.ts && oxfmt src/graphql/gen/*.ts"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "catalog:",

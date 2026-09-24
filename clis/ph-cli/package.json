@@ -22,7 +22,7 @@
   ],
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint clis/ph-cli",
     "test": "vitest --run",
     "generate-docs": "bun run scripts/generate-commands-docs.ts",
     "build": "tsdown",

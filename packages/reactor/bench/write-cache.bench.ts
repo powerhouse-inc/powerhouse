@@ -2163,7 +2163,11 @@ function buildSurveyModules(count: number): ModuleSpecification[] {
 }
 
 /** A replayed operation, whose hash keeps the reducer from rehashing a scope. */
-function surveyOperation(scope: string, type: string, input: object): Operation {
+function surveyOperation(
+  scope: string,
+  type: string,
+  input: object,
+): Operation {
   const action: Action = {
     id: `survey-${type}`,
     type,

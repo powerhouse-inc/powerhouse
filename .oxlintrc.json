@@ -1,0 +1,791 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "typescript", "react"],
+  "categories": {
+    "correctness": "off",
+    "suspicious": "off",
+    "pedantic": "off",
+    "perf": "off",
+    "style": "off",
+    "restriction": "off",
+    "nursery": "off"
+  },
+  "options": {
+    "typeAware": true
+  },
+  "env": {
+    "builtin": true,
+    "es2026": true,
+    "browser": true,
+    "node": true
+  },
+  "settings": {
+    "better-tailwindcss": {
+      "attributes": [
+        "class",
+        "className",
+        [
+          "^.*ClassName$",
+          [
+            {
+              "match": "strings"
+            }
+          ]
+        ]
+      ]
+    }
+  },
+  "rules": {
+    "for-direction": "error",
+    "no-async-promise-executor": "error",
+    "no-case-declarations": "error",
+    "no-compare-neg-zero": "error",
+    "no-cond-assign": "error",
+    "no-constant-binary-expression": "error",
+    "no-control-regex": "error",
+    "no-debugger": "error",
+    "no-delete-var": "error",
+    "no-dupe-else-if": "error",
+    "no-duplicate-case": "error",
+    "no-empty": "error",
+    "no-empty-character-class": "error",
+    "no-empty-pattern": "error",
+    "no-empty-static-block": "error",
+    "no-ex-assign": "error",
+    "no-extra-boolean-cast": "error",
+    "no-fallthrough": "error",
+    "no-global-assign": "error",
+    "no-invalid-regexp": "error",
+    "no-irregular-whitespace": "error",
+    "no-loss-of-precision": "error",
+    "no-misleading-character-class": "error",
+    "no-nonoctal-decimal-escape": "error",
+    "no-prototype-builtins": "error",
+    "no-regex-spaces": "error",
+    "no-self-assign": [
+      "error",
+      {
+        "props": true
+      }
+    ],
+    "no-shadow-restricted-names": [
+      "error",
+      {
+        "reportGlobalThis": true
+      }
+    ],
+    "no-sparse-arrays": "error",
+    "no-unassigned-vars": "error",
+    "no-unsafe-finally": "error",
+    "no-unsafe-optional-chaining": "error",
+    "no-unused-labels": "error",
+    "no-unused-private-class-members": "error",
+    "no-useless-backreference": "error",
+    "no-useless-catch": "error",
+    "no-useless-escape": "error",
+    "require-yield": "error",
+    "use-isnan": "error",
+    "valid-typeof": "error",
+    "typescript/ban-ts-comment": "error",
+    "no-array-constructor": "error",
+    "typescript/no-duplicate-enum-values": "error",
+    "typescript/no-empty-object-type": [
+      "warn",
+      {
+        "allowInterfaces": "with-single-extends"
+      }
+    ],
+    "typescript/no-explicit-any": "off",
+    "typescript/no-extra-non-null-assertion": "error",
+    "typescript/no-misused-new": "error",
+    "typescript/no-namespace": "error",
+    "typescript/no-non-null-asserted-optional-chain": "error",
+    "typescript/no-require-imports": "error",
+    "typescript/no-this-alias": "error",
+    "typescript/no-unnecessary-type-constraint": "error",
+    "typescript/no-unsafe-declaration-merging": "error",
+    "typescript/no-unsafe-function-type": "error",
+    "no-unused-expressions": "error",
+    "no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_",
+        "destructuredArrayIgnorePattern": "^_"
+      }
+    ],
+    "typescript/no-wrapper-object-types": "error",
+    "typescript/prefer-as-const": "error",
+    "typescript/prefer-namespace-keyword": "error",
+    "typescript/triple-slash-reference": "error",
+    "typescript/await-thenable": "error",
+    "typescript/no-array-delete": "error",
+    "typescript/no-base-to-string": "warn",
+    "typescript/no-duplicate-type-constituents": "warn",
+    "typescript/no-floating-promises": "warn",
+    "typescript/no-for-in-array": "error",
+    "typescript/no-implied-eval": "error",
+    "typescript/no-misused-promises": "warn",
+    "typescript/no-redundant-type-constituents": "error",
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-enum-comparison": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-return": "error",
+    "typescript/no-unsafe-unary-minus": "error",
+    "typescript/only-throw-error": "error",
+    "typescript/prefer-promise-reject-errors": "error",
+    "typescript/require-await": "error",
+    "typescript/restrict-plus-operands": "error",
+    "typescript/restrict-template-expressions": [
+      "warn",
+      {
+        "allowNumber": true
+      }
+    ],
+    "typescript/unbound-method": "error",
+    "typescript/no-unnecessary-condition": "warn",
+    "no-var": "error",
+    "prefer-const": "error",
+    "prefer-rest-params": "error",
+    "prefer-spread": "error",
+    "no-useless-assignment": "warn",
+    "preserve-caught-error": "warn",
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "prefer": "type-imports",
+        "disallowTypeAnnotations": true,
+        "fixStyle": "separate-type-imports"
+      }
+    ],
+    "no-constant-condition": "off",
+    "typescript/no-unnecessary-type-assertion": "off",
+    "typescript/no-unnecessary-type-parameters": "off"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.js", "**/*.cjs", "**/*.mjs"],
+      "rules": {
+        "constructor-super": "error",
+        "getter-return": "error",
+        "no-class-assign": "error",
+        "no-const-assign": "error",
+        "no-constant-condition": [
+          "error",
+          {
+            "checkLoops": "allExceptWhileTrue"
+          }
+        ],
+        "no-dupe-class-members": "error",
+        "no-dupe-keys": "error",
+        "no-func-assign": "error",
+        "no-import-assign": "error",
+        "no-new-native-nonconstructor": "error",
+        "no-obj-calls": "error",
+        "no-redeclare": [
+          "error",
+          {
+            "builtinGlobals": true
+          }
+        ],
+        "no-setter-return": "error",
+        "no-this-before-super": "error",
+        "no-undef": "error",
+        "no-unreachable": "error",
+        "no-unsafe-negation": "error",
+        "no-with": "error",
+        "typescript/await-thenable": "off",
+        "typescript/no-array-delete": "off",
+        "typescript/no-base-to-string": "off",
+        "typescript/no-duplicate-type-constituents": "off",
+        "typescript/no-floating-promises": "off",
+        "typescript/no-for-in-array": "off",
+        "typescript/no-implied-eval": "off",
+        "typescript/no-misused-promises": "off",
+        "typescript/no-redundant-type-constituents": "off",
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-enum-comparison": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-return": "off",
+        "typescript/no-unsafe-unary-minus": "off",
+        "typescript/only-throw-error": "off",
+        "typescript/prefer-promise-reject-errors": "off",
+        "typescript/require-await": "off",
+        "typescript/restrict-plus-operands": "off",
+        "typescript/restrict-template-expressions": "off",
+        "typescript/unbound-method": "off",
+        "typescript/no-unnecessary-condition": "off",
+        "no-var": "off",
+        "prefer-const": "off",
+        "prefer-rest-params": "off",
+        "prefer-spread": "off",
+        "typescript/consistent-type-imports": "off",
+        "no-unused-vars": "error",
+        "typescript/no-explicit-any": "error",
+        "typescript/no-empty-object-type": "error",
+        "no-useless-assignment": "error",
+        "preserve-caught-error": "error"
+      }
+    },
+    {
+      "files": ["**/*.tsx"],
+      "jsPlugins": [
+        {
+          "name": "react-hooks-extra",
+          "specifier": "eslint-plugin-react-hooks"
+        }
+      ],
+      "rules": {
+        "react-hooks/rules-of-hooks": "error",
+        "react-hooks/exhaustive-deps": "warn",
+        "react-hooks-extra/config": "error",
+        "react-hooks-extra/error-boundaries": "error",
+        "react-hooks-extra/gating": "error",
+        "react-hooks-extra/globals": "error",
+        "react-hooks-extra/immutability": "error",
+        "react-hooks-extra/incompatible-library": "warn",
+        "react-hooks-extra/preserve-manual-memoization": "error",
+        "react-hooks-extra/purity": "error",
+        "react-hooks-extra/refs": "error",
+        "react-hooks-extra/set-state-in-effect": "error",
+        "react-hooks-extra/set-state-in-render": "error",
+        "react-hooks-extra/static-components": "error",
+        "react-hooks-extra/unsupported-syntax": "warn",
+        "react-hooks-extra/use-memo": "error"
+      }
+    },
+    {
+      "files": ["packages/reactor/bench/ui/**/*.{js,mjs}"],
+      "env": {
+        "browser": true,
+        "node": true
+      }
+    },
+    {
+      "files": ["tools/stale-bot/**/*.mjs"],
+      "env": {
+        "node": true
+      },
+      "rules": {
+        "preserve-caught-error": "off",
+        "no-unused-vars": "off"
+      }
+    },
+    {
+      "files": [
+        "apps/academy/**/*",
+        "packages/reactor/test/**/*",
+        "packages/reactor/**/*.test.ts",
+        "packages/codegen/src/codegen/__tests__/data/**/*",
+        "packages/document-drive/src/drive-document-model/src/tests/**/*",
+        "packages/reactor-api/test/**/*",
+        "packages/document-drive/test/**/*",
+        "packages/reactor-mcp/test/**/*",
+        "packages/vetra/editors/**/*.test.tsx",
+        "packages/codegen/src/ts-morph-generator/__tests__/**/*",
+        "apps/connect/cypress/e2e/**/*",
+        "packages/document-drive/src/utils/logger.ts",
+        "**/gen/*.ts",
+        "apps/connect/vite.config.ts",
+        "packages/codegen/src/codegen/.hygen/templates/**/*",
+        "packages/document-model/src/document/utils/file.ts",
+        "apps/connect/scripts/render-skeleton.ts",
+        "apps/connect/src/components/modal/modals/DebugSettingsModal.tsx",
+        "apps/connect/src/context/read-mode.tsx",
+        "packages/builder-tools/connect-studio/server.ts",
+        "packages/codegen/src/codegen/hygen.ts",
+        "packages/design-system/src/connect/components/toast/toast.stories.tsx",
+        "clis/ph-cli/src/services/dev.ts",
+        "packages/design-system/src/powerhouse/utils/fixedForwardRef.ts",
+        "packages/design-system/src/ui/components/value-transformer/value-transformer.tsx",
+        "packages/document-drive/src/processors/relational.ts",
+        "packages/document-drive/src/server/transmitter/internal.ts",
+        "packages/document-drive/src/utils/run-asap.ts",
+        "packages/document-model/src/document/utils/document-helpers.ts",
+        "packages/document-drive/src/utils/graphql.ts",
+        "packages/reactor/src/events/types.ts",
+        "packages/reactor-api/src/packages/util.ts",
+        "packages/reactor-browser/src/context/read-mode.tsx",
+        "packages/document-model/src/document/object.ts",
+        "packages/switchboard-gui/src/components/header/header.tsx",
+        "packages/reactor-mcp/src/server.ts",
+        "packages/reactor-api/src/server.ts",
+        "packages/reactor-api/src/graphql/index.ts",
+        "packages/document-model/src/document/reducer.ts",
+        "packages/document-drive/src/read-mode/server.ts",
+        "packages/document-drive/src/queue/event.ts",
+        "packages/document-model/src/document-model/custom/reducers/operation-error.ts",
+        "packages/document-model/src/document-model/custom/reducers/operation-example.ts",
+        "packages/analytics-engine/**/*"
+      ],
+      "rules": {
+        "no-useless-assignment": "warn",
+        "preserve-caught-error": "warn",
+        "typescript/consistent-type-imports": [
+          "error",
+          {
+            "prefer": "type-imports",
+            "disallowTypeAnnotations": true,
+            "fixStyle": "separate-type-imports"
+          }
+        ],
+        "typescript/no-explicit-any": "off",
+        "no-unused-vars": [
+          "warn",
+          {
+            "argsIgnorePattern": "^_",
+            "varsIgnorePattern": "^_",
+            "caughtErrorsIgnorePattern": "^_",
+            "destructuredArrayIgnorePattern": "^_"
+          }
+        ],
+        "typescript/no-empty-object-type": [
+          "warn",
+          {
+            "allowInterfaces": "with-single-extends"
+          }
+        ],
+        "no-constant-condition": "off",
+        "typescript/no-unnecessary-type-assertion": "off",
+        "typescript/no-unnecessary-type-parameters": "off",
+        "typescript/no-unsafe-declaration-merging": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-return": "off",
+        "typescript/no-unsafe-argument": "off",
+        "typescript/await-thenable": "off",
+        "typescript/no-require-imports": "off",
+        "typescript/no-base-to-string": "off",
+        "typescript/unbound-method": "off",
+        "typescript/no-namespace": "off",
+        "prefer-const": "off",
+        "no-unsafe-optional-chaining": "warn"
+      }
+    },
+    {
+      "files": ["**/gen/**/*.{ts,tsx}"],
+      "rules": {
+        "typescript/no-empty-object-type": "off"
+      }
+    },
+    {
+      "files": [
+        "clis/ph-cli/src/cli.ts",
+        "clis/ph-cmd/src/cli.ts",
+        "clis/ph-cli/src/commands/*.ts",
+        "clis/ph-cmd/src/commands/*.ts"
+      ],
+      "jsPlugins": ["./lint-plugins/cli-cold-path.js"],
+      "rules": {
+        "cli-cold-path/allowed-static-imports": [
+          "error",
+          {
+            "allow": [
+              "cmd-ts",
+              "@powerhousedao/shared/clis/args",
+              "@powerhousedao/shared/clis/constants",
+              "@powerhousedao/shared/clis/utils",
+              "@powerhousedao/shared/clis/telemetry",
+              "@powerhousedao/shared/clis/command-names",
+              "@powerhousedao/shared/constants",
+              "@powerhousedao/shared/processors"
+            ],
+            "message": "Do not import modules statically on the CLI commands."
+          }
+        ]
+      }
+    },
+    {
+      "files": ["**/*.ts", "**/*.mts", "**/*.cts"],
+      "jsPlugins": ["./lint-plugins/logger.js"],
+      "rules": {
+        "logger/missing-token-args": "error",
+        "logger/extra-args-without-token": "warn"
+      }
+    },
+    {
+      "files": ["packages/reactor-workflow/src/pieces/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@powerhousedao/*",
+                  "!@powerhousedao/pieces-framework",
+                  "!@powerhousedao/pieces-framework/**",
+                  "../reactor/*",
+                  "**/reactor/**"
+                ],
+                "message": "The pieces layer runs a piece; it must not reach for the reactor above it, nor for any Powerhouse package other than the piece framework it runs pieces against."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["packages/workflow/{editors,ai,document-models}/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@powerhousedao/reactor-workflow",
+                  "@powerhousedao/reactor-api"
+                ],
+                "message": "This half of the workflow package ships to the browser; the engine and the API run on the reactor."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/design-system/**/*.{js,jsx,cjs,mjs,ts,tsx,mts,cts}",
+        "packages/powerhouse-vetra-packages/**/*.{js,jsx,cjs,mjs,ts,tsx,mts,cts}",
+        "packages/vetra/**/*.{js,jsx,cjs,mjs,ts,tsx,mts,cts}"
+      ],
+      "excludeFiles": [
+        "packages/design-system/src/powerhouse/components/legacy/**"
+      ],
+      "jsPlugins": [
+        {
+          "name": "better-tailwindcss",
+          "specifier": "eslint-plugin-better-tailwindcss"
+        }
+      ],
+      "rules": {
+        "better-tailwindcss/enforce-canonical-classes": [
+          "error",
+          {
+            "cwd": "packages/design-system",
+            "entryPoint": "storybook.css"
+          }
+        ],
+        "better-tailwindcss/enforce-consistent-class-order": [
+          "error",
+          {
+            "cwd": "packages/design-system",
+            "entryPoint": "storybook.css"
+          }
+        ],
+        "better-tailwindcss/no-conflicting-classes": [
+          "error",
+          {
+            "cwd": "packages/design-system",
+            "entryPoint": "storybook.css"
+          }
+        ],
+        "better-tailwindcss/no-deprecated-classes": [
+          "error",
+          {
+            "cwd": "packages/design-system",
+            "entryPoint": "storybook.css"
+          }
+        ],
+        "better-tailwindcss/no-duplicate-classes": [
+          "error",
+          {
+            "cwd": "packages/design-system",
+            "entryPoint": "storybook.css"
+          }
+        ],
+        "better-tailwindcss/no-unnecessary-whitespace": [
+          "error",
+          {
+            "cwd": "packages/design-system",
+            "entryPoint": "storybook.css"
+          }
+        ],
+        "better-tailwindcss/no-unknown-classes": [
+          "error",
+          {
+            "cwd": "packages/design-system",
+            "entryPoint": "storybook.css",
+            "ignore": [
+              "custom-class",
+              "hover-bg-transparent",
+              "skeleton-loader",
+              "home-screen"
+            ]
+          }
+        ],
+        "better-tailwindcss/no-restricted-classes": [
+          "error",
+          {
+            "cwd": "packages/design-system",
+            "entryPoint": "storybook.css",
+            "restrict": [
+              {
+                "pattern": "-(gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|charcoal)-(50|100|200|300|400|500|600|700|800|900|950)(/[0-9]+)?!?$",
+                "message": "Don't use raw palette colors. Use a semantic theme token instead (e.g. bg-background, text-foreground, bg-secondary, text-muted-foreground, border-border, bg-warning) — see packages/design-system/theme.css."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["apps/connect/**/*.{js,jsx,cjs,mjs,ts,tsx,mts,cts}"],
+      "jsPlugins": [
+        {
+          "name": "better-tailwindcss",
+          "specifier": "eslint-plugin-better-tailwindcss"
+        }
+      ],
+      "rules": {
+        "better-tailwindcss/enforce-canonical-classes": [
+          "error",
+          {
+            "cwd": "apps/connect",
+            "entryPoint": "style.css"
+          }
+        ],
+        "better-tailwindcss/enforce-consistent-class-order": [
+          "error",
+          {
+            "cwd": "apps/connect",
+            "entryPoint": "style.css"
+          }
+        ],
+        "better-tailwindcss/no-conflicting-classes": [
+          "error",
+          {
+            "cwd": "apps/connect",
+            "entryPoint": "style.css"
+          }
+        ],
+        "better-tailwindcss/no-deprecated-classes": [
+          "error",
+          {
+            "cwd": "apps/connect",
+            "entryPoint": "style.css"
+          }
+        ],
+        "better-tailwindcss/no-duplicate-classes": [
+          "error",
+          {
+            "cwd": "apps/connect",
+            "entryPoint": "style.css"
+          }
+        ],
+        "better-tailwindcss/no-unnecessary-whitespace": [
+          "error",
+          {
+            "cwd": "apps/connect",
+            "entryPoint": "style.css"
+          }
+        ],
+        "better-tailwindcss/no-unknown-classes": [
+          "error",
+          {
+            "cwd": "apps/connect",
+            "entryPoint": "style.css",
+            "ignore": [
+              "custom-class",
+              "hover-bg-transparent",
+              "skeleton-loader",
+              "home-screen"
+            ]
+          }
+        ],
+        "better-tailwindcss/no-restricted-classes": [
+          "error",
+          {
+            "cwd": "apps/connect",
+            "entryPoint": "style.css",
+            "restrict": [
+              {
+                "pattern": "-(gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|charcoal)-(50|100|200|300|400|500|600|700|800|900|950)(/[0-9]+)?!?$",
+                "message": "Don't use raw palette colors. Use a semantic theme token instead (e.g. bg-background, text-foreground, bg-secondary, text-muted-foreground, border-border, bg-warning) — see packages/design-system/theme.css."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/switchboard-gui/**/*.{js,jsx,cjs,mjs,ts,tsx,mts,cts}"
+      ],
+      "jsPlugins": [
+        {
+          "name": "better-tailwindcss",
+          "specifier": "eslint-plugin-better-tailwindcss"
+        }
+      ],
+      "rules": {
+        "better-tailwindcss/enforce-canonical-classes": [
+          "error",
+          {
+            "cwd": "packages/switchboard-gui",
+            "entryPoint": "src/index.css"
+          }
+        ],
+        "better-tailwindcss/enforce-consistent-class-order": [
+          "error",
+          {
+            "cwd": "packages/switchboard-gui",
+            "entryPoint": "src/index.css"
+          }
+        ],
+        "better-tailwindcss/no-conflicting-classes": [
+          "error",
+          {
+            "cwd": "packages/switchboard-gui",
+            "entryPoint": "src/index.css"
+          }
+        ],
+        "better-tailwindcss/no-deprecated-classes": [
+          "error",
+          {
+            "cwd": "packages/switchboard-gui",
+            "entryPoint": "src/index.css"
+          }
+        ],
+        "better-tailwindcss/no-duplicate-classes": [
+          "error",
+          {
+            "cwd": "packages/switchboard-gui",
+            "entryPoint": "src/index.css"
+          }
+        ],
+        "better-tailwindcss/no-unnecessary-whitespace": [
+          "error",
+          {
+            "cwd": "packages/switchboard-gui",
+            "entryPoint": "src/index.css"
+          }
+        ],
+        "better-tailwindcss/no-unknown-classes": [
+          "error",
+          {
+            "cwd": "packages/switchboard-gui",
+            "entryPoint": "src/index.css",
+            "ignore": [
+              "custom-class",
+              "hover-bg-transparent",
+              "skeleton-loader",
+              "home-screen"
+            ]
+          }
+        ],
+        "better-tailwindcss/no-restricted-classes": [
+          "error",
+          {
+            "cwd": "packages/switchboard-gui",
+            "entryPoint": "src/index.css",
+            "restrict": [
+              {
+                "pattern": "-(gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|charcoal)-(50|100|200|300|400|500|600|700|800|900|950)(/[0-9]+)?!?$",
+                "message": "Don't use raw palette colors. Use a semantic theme token instead (e.g. bg-background, text-foreground, bg-secondary, text-muted-foreground, border-border, bg-warning) — see packages/design-system/theme.css."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "vitest.config.ts",
+        "test/scripts/analyze-ops.ts",
+        "test/versioned-documents/vitest.config.ts",
+        "test/ph-lora/scripts/check-pr-drift.ts",
+        "test/ph-lora/scripts/validate-mapping.ts"
+      ],
+      "rules": {
+        "typescript/await-thenable": "off",
+        "typescript/no-array-delete": "off",
+        "typescript/no-base-to-string": "off",
+        "typescript/no-duplicate-type-constituents": "off",
+        "typescript/no-floating-promises": "off",
+        "typescript/no-for-in-array": "off",
+        "typescript/no-implied-eval": "off",
+        "typescript/no-misused-promises": "off",
+        "typescript/no-redundant-type-constituents": "off",
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-enum-comparison": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-return": "off",
+        "typescript/no-unsafe-unary-minus": "off",
+        "typescript/only-throw-error": "off",
+        "typescript/prefer-promise-reject-errors": "off",
+        "typescript/require-await": "off",
+        "typescript/restrict-plus-operands": "off",
+        "typescript/restrict-template-expressions": "off",
+        "typescript/unbound-method": "off",
+        "typescript/no-unnecessary-condition": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "**/node_modules/",
+    "**/coverage/",
+    "**/dist/",
+    "**/.tsbuild/",
+    "**/ts-build/",
+    "**/storybook-static/",
+    "**/.vite/",
+    "**/.nx/",
+    "**/.mastra/",
+    "**/build/",
+    "**/.docusaurus/",
+    "**/.ph/",
+    "**/.hotseat/",
+    "**/prisma/",
+    "**/babel.config.js",
+    "commitlint.config.cjs",
+    "**/.out/",
+    "**/test-output/",
+    "**/.test-output/",
+    "**/test-projects/",
+    "**/flaky/",
+    "apps/connect/lib/",
+    "apps/switchboard-lb/test/integration/*.js",
+    "packages/reactor/bench/test/integration/*.js",
+    "clis/ph-cli/src/commands/migrations/templates",
+    "clis/ph-cmd/legacy/**",
+    "packages/builder-tools/connect-utils/service-worker/**",
+    "**/playwright-report/",
+    "test/package-e2e/.registry-storage/",
+    "test/package-e2e/.registry-cdn-cache/",
+    "test/package-e2e/fixtures/",
+    "test/workflow-piece-e2e/.registry-storage/",
+    "test/workflow-piece-e2e/.registry-cdn-cache/",
+    "test/workflow-piece-e2e/fixture-piece/",
+    "tools/doc-harness/catalog/pinned/",
+    "tools/doc-harness/runs/",
+    "packages/analytics-engine/browser/backup/",
+    "packages/pieces-framework/upstream/",
+    "packages/pieces-framework/test/upstream/",
+    "packages/reactor-workflow/test/upstream/",
+    "**/.storybook/",
+    "**/*.bench.ts",
+    "packages/codegen/src/codegen/.hygen/",
+    "apps/connect/src/vite-env.d.ts",
+    "packages/switchboard-gui/src/hooks/useAuth.ts",
+    "packages/document-drive/src/storage/ipfs.ts",
+    "packages/document-drive/src/utils/migrations.ts",
+    "tools/scripts/release.ts",
+    "releases/*.ts",
+    "**/external-packages.js",
+    "packages/reactor/test/atlas/**/*",
+    "packages/reactor-api/src/packages/vite-loader.mts",
+    "packages/reactor/test/executor/worker/entry/worker-bootstrap.mjs",
+    "packages/reactor/test/integration/projection-worker-bootstrap.mjs",
+    "packages/reactor/test/core/fixtures/model-barrel.mjs"
+  ]
+}
