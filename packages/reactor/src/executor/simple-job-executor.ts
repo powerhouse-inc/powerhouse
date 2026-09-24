@@ -65,10 +65,7 @@ import {
 import { isSynthesized, signSynthesized } from "./synthesized-signing.js";
 import { PassthroughSigner } from "../signer/passthrough-signer.js";
 import type { SignatureTrustPolicy } from "../signer/types.js";
-import {
-  DEFAULT_DEFERRED_JOB_TTL_MS,
-  DEFAULT_MAX_ADMISSION_DEFERRAL_MS,
-} from "./types.js";
+import { DEFAULT_DEFERRED_JOB_TTL_MS } from "./types.js";
 import type {
   ExecutingJob,
   JobExecutorConfig,
@@ -197,8 +194,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       // Held by the executor manager, not the executor; carried so a pooled
       // worker's config round-trips unchanged.
       deferredJobTtlMs: config.deferredJobTtlMs ?? DEFAULT_DEFERRED_JOB_TTL_MS,
-      maxAdmissionDeferralMs:
-        config.maxAdmissionDeferralMs ?? DEFAULT_MAX_ADMISSION_DEFERRAL_MS,
       retryBaseDelayMs: config.retryBaseDelayMs ?? 100,
       retryMaxDelayMs: config.retryMaxDelayMs ?? 5000,
       yieldDeadlineMs: config.yieldDeadlineMs ?? 50,

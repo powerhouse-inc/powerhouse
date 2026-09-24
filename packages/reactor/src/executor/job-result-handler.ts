@@ -10,7 +10,6 @@ import { ModuleNotFoundError } from "../registry/errors.js";
 import {
   AuthorizationDeniedError,
   AuthTimestampNotMonotonicError,
-  DeferredAdmissionError,
   DocumentDeletedError,
   DocumentNotFoundError,
   ExcessiveReshuffleError,
@@ -23,13 +22,10 @@ import {
   DocumentAlreadyExistsError,
 } from "../storage/interfaces.js";
 import type { ErrorInfo } from "../shared/types.js";
-import { DEFAULT_MAX_ADMISSION_DEFERRAL_MS, type JobResult } from "./types.js";
+import type { JobResult } from "./types.js";
 
 /** Conflict retries a job may take without charging its retry limit. */
 const MAX_EXEMPT_CONFLICT_RETRIES = 20;
-
-/** The longest single wait between deferred attempts. */
-const MAX_DEFERRAL_DELAY_MS = 60_000;
 
 export type JobResultCallbacks = {
   deferJob(documentId: string, job: Job): void;
@@ -66,7 +62,6 @@ export class JobResultHandler implements IJobResultHandler {
     private eventBus: IEventBus,
     private resolver: IDocumentModelResolver,
     private logger: ILogger,
-    private maxDeferralMs: number = DEFAULT_MAX_ADMISSION_DEFERRAL_MS,
   ) {}
 
   async handleResult(
@@ -80,10 +75,6 @@ export class JobResultHandler implements IJobResultHandler {
       if (this.hasCreateDocumentAction(handle.job)) {
         await callbacks.flushDeferredFor(handle.job.documentId);
       }
-      return;
-    }
-
-    if (result.error && (await this.deferRetry(handle.job, result.error))) {
       return;
     }
 
@@ -230,60 +221,6 @@ export class JobResultHandler implements IJobResultHandler {
 
       handle.fail(fullErrorInfo);
     }
-  }
-
-  /**
-   * Holds a job admission could not decide yet at the head of its stream and
-   * retries it later, uncharged, until the deferral cap; past it the error
-   * takes the normal retry path.
-   */
-  private async deferRetry(job: Job, error: Error): Promise<boolean> {
-    const delayMs = this.deferralDelay(job, error);
-    if (delayMs === undefined) {
-      return false;
-    }
-    const errorInfo = toErrorInfo(error);
-    try {
-      await this.queue.retryJobAfter(job.id, delayMs, errorInfo);
-    } catch (retryError) {
-      this.logger.error(
-        "Error deferring job @jobId: @Error",
-        job.id,
-        retryError,
-      );
-      return false;
-    }
-    this.jobTracker.markDeferred(
-      job.id,
-      errorInfo,
-      new Date(Date.now() + delayMs).toISOString(),
-    );
-    this.logger.warn(
-      "Job @jobId deferred @delayMs ms (deferral @count): @reason",
-      job.id,
-      delayMs,
-      (job.deferral?.count ?? 0) + 1,
-      error.message,
-    );
-    return true;
-  }
-
-  /** Doubles from the error's delay per deferral, within the cap. */
-  private deferralDelay(job: Job, error: Error): number | undefined {
-    if (!DeferredAdmissionError.isError(error)) {
-      return undefined;
-    }
-    const retryAfterMs = DeferredAdmissionError.retryAfterOf(error);
-    if (retryAfterMs === undefined) {
-      return undefined;
-    }
-    const elapsed = job.deferral ? Date.now() - job.deferral.firstAtMs : 0;
-    const remaining = this.maxDeferralMs - elapsed;
-    if (remaining <= 0) {
-      return undefined;
-    }
-    const backoff = retryAfterMs * 2 ** (job.deferral?.count ?? 0);
-    return Math.min(backoff, MAX_DEFERRAL_DELAY_MS, remaining);
   }
 
   /** How many times this job has already lost an append-condition race. */

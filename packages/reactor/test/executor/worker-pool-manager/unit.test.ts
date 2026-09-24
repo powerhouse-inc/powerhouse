@@ -21,7 +21,6 @@ import type {
 } from "../../../src/executor/interfaces.js";
 import { bucketFor } from "../../../src/executor/worker-pool-router.js";
 import { WorkerPoolJobExecutorManager } from "../../../src/executor/worker-pool-job-executor-manager.js";
-import { fromErrorInfo } from "../../../src/executor/worker/error-info.js";
 import { WorkerExitedError } from "../../../src/executor/worker/errors.js";
 import type {
   JobWriteReadyPayload,
@@ -32,7 +31,6 @@ import { InMemoryQueue } from "../../../src/queue/queue.js";
 import type { Job } from "../../../src/queue/types.js";
 import { NullDocumentModelResolver } from "../../../src/registry/document-model-resolver.js";
 import { DocumentNotFoundError } from "../../../src/shared/errors.js";
-import { JobStatus } from "../../../src/shared/types.js";
 import { createMockLogger, createTestJob } from "../../factories.js";
 
 type FakeWorkerOptions = {
@@ -767,84 +765,6 @@ describe("WorkerPoolJobExecutorManager", () => {
       const evt = await failedPromise;
       expect(evt.jobId).toBe("deferred-job");
       expect(DocumentNotFoundError.isError(evt.error)).toBe(true);
-    });
-  });
-
-  describe("deferred admission", () => {
-    it("retries a deferred job uncounted, holding its stream behind it", async () => {
-      let misses = 5;
-      const executed: { id: string; retryCount?: number }[] = [];
-      const manager = buildManager(
-        (i) =>
-          new FakeWorker({
-            index: i,
-            outcome: (job) => {
-              executed.push({ id: job.id, retryCount: job.retryCount });
-              if (job.id === "held" && misses-- > 0) {
-                return {
-                  result: {
-                    job,
-                    success: false,
-                    // As a worker's ErrorInfo arrives on the parent.
-                    error: fromErrorInfo({
-                      name: "DeferredAdmissionError",
-                      message: "no credential yet",
-                      retryAfterMs: 10,
-                    }),
-                  },
-                };
-              }
-              return { result: { job, success: true, duration: 1 } };
-            },
-          }),
-      );
-      await manager.start(1);
-      const failed: JobFailedEvent[] = [];
-      eventBus.subscribe(
-        ReactorEventTypes.JOB_FAILED,
-        (_t: number, data: JobFailedEvent) => {
-          failed.push(data);
-        },
-      );
-
-      for (const id of ["held", "behind"]) {
-        jobTracker.registerJob({
-          id,
-          documentId: "doc-held",
-          status: JobStatus.PENDING,
-          createdAtUtcIso: new Date().toISOString(),
-          consistencyToken: {
-            version: 1,
-            createdAtUtcIso: "",
-            coordinates: [],
-          },
-          meta: { batchId: id, batchJobIds: [id] },
-        });
-      }
-      await queue.enqueue(
-        createTestJob({ id: "held", documentId: "doc-held", maxRetries: 3 }),
-      );
-      await queue.enqueue(
-        createTestJob({ id: "behind", documentId: "doc-held", maxRetries: 3 }),
-      );
-      await flush(20);
-      expect(jobTracker.getJobStatus("held")?.deferral?.reason.name).toBe(
-        "DeferredAdmissionError",
-      );
-      await flush(800);
-
-      expect(failed).toEqual([]);
-      expect(executed.map((entry) => entry.id)).toEqual([
-        "held",
-        "held",
-        "held",
-        "held",
-        "held",
-        "held",
-        "behind",
-      ]);
-      expect(executed.every((entry) => entry.retryCount === 0)).toBe(true);
-      await manager.stop(true);
     });
   });
 

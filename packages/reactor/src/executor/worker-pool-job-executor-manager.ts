@@ -29,7 +29,6 @@ import {
 } from "./job-result-handler.js";
 import {
   DEFAULT_DEFERRED_JOB_TTL_MS,
-  DEFAULT_MAX_ADMISSION_DEFERRAL_MS,
   JobExecutorEventTypes,
   type ExecutorManagerStatus,
   type JobCompletedEvent,
@@ -102,7 +101,6 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
     private operationIndex: IOperationIndex,
     jobTimeoutMs: number = 30_000,
     deferredJobTtlMs: number = DEFAULT_DEFERRED_JOB_TTL_MS,
-    maxAdmissionDeferralMs: number = DEFAULT_MAX_ADMISSION_DEFERRAL_MS,
   ) {
     this.jobTimeoutMs = jobTimeoutMs;
     this.deferredJobs = new DeferredJobs(
@@ -119,7 +117,6 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
       eventBus,
       resolver,
       logger,
-      maxAdmissionDeferralMs,
     );
   }
 

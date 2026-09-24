@@ -21,15 +21,6 @@ export interface IJobTracker {
   markRunning(jobId: string): void;
 
   /**
-   * Return a job to PENDING until its deferred retry runs.
-   *
-   * @param jobId - The job ID to mark as deferred
-   * @param reason - The error that deferred it
-   * @param retryAtUtcIso - When it may run again
-   */
-  markDeferred(jobId: string, reason: ErrorInfo, retryAtUtcIso: string): void;
-
-  /**
    * Mark a job as failed.
    *
    * @param jobId - The job ID to mark as failed

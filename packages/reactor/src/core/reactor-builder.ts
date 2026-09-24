@@ -780,7 +780,6 @@ export class ReactorBuilder {
           operationIndex,
           this.executorConfig.jobTimeoutMs,
           this.executorConfig.deferredJobTtlMs,
-          this.executorConfig.maxAdmissionDeferralMs,
         );
         executorManager = poolManager;
         executorStartCount = pool.numWorkers;
@@ -812,7 +811,6 @@ export class ReactorBuilder {
           resolver,
           this.executorConfig.jobTimeoutMs,
           this.executorConfig.deferredJobTtlMs,
-          this.executorConfig.maxAdmissionDeferralMs,
         );
       }
     }

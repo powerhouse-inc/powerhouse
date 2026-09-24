@@ -29,8 +29,6 @@ export class InMemoryQueue implements IQueue {
   private isBlocked = false;
   private onDrainedCallback?: () => void;
   private isPausedFlag = false;
-  /** Jobs held at the head of their stream until the timer releases them. */
-  private heldJobs = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor(
     private eventBus: IEventBus,
@@ -134,9 +132,6 @@ export class InMemoryQueue implements IQueue {
       return null;
     }
     const head = queue[0];
-    if (this.heldJobs.has(head.id)) {
-      return null;
-    }
     return this.areDependenciesMet(head) ? head : null;
   }
 
@@ -390,7 +385,6 @@ export class InMemoryQueue implements IQueue {
   }
 
   remove(jobId: string): Promise<boolean> {
-    this.release(jobId);
     const queueKey = this.jobIdToQueueKey.get(jobId);
     if (!queueKey) {
       return Promise.resolve(false);
@@ -434,7 +428,6 @@ export class InMemoryQueue implements IQueue {
     if (queue) {
       // Remove all jobs from the job index
       for (const job of queue) {
-        this.release(job.id);
         this.jobIdToQueueKey.delete(job.id);
         this.jobIndex.delete(job.id);
       }
@@ -447,9 +440,6 @@ export class InMemoryQueue implements IQueue {
   }
 
   clearAll(): Promise<void> {
-    for (const jobId of [...this.heldJobs.keys()]) {
-      this.release(jobId);
-    }
     // Clear all job indices
     this.jobIdToQueueKey.clear();
     this.jobIndex.clear();
@@ -585,76 +575,6 @@ export class InMemoryQueue implements IQueue {
 
     // Re-enqueue with updated retry count
     await this.enqueue(updatedJob);
-  }
-
-  retryJobAfter(
-    jobId: string,
-    delayMs: number,
-    error?: ErrorInfo,
-  ): Promise<void> {
-    if (this.isBlocked) {
-      return Promise.reject(new Error("Queue is blocked"));
-    }
-    const job = this.jobIndex.get(jobId);
-    if (!job) {
-      return Promise.resolve();
-    }
-
-    const documentId = this.jobIdToDocId.get(jobId);
-    if (documentId) {
-      this.markJobComplete(jobId, documentId);
-    }
-    if (error) {
-      job.errorHistory.push(error);
-    }
-
-    const now = Date.now();
-    const held: Job = {
-      ...job,
-      lastError: error,
-      deferral: {
-        firstAtMs: job.deferral?.firstAtMs ?? now,
-        count: (job.deferral?.count ?? 0) + 1,
-      },
-    };
-
-    // At the head, not the tail: it was the head when it ran, and the jobs
-    // behind it keep their place.
-    const queueKey = this.createQueueKey(
-      held.documentId,
-      held.scope,
-      held.branch,
-    );
-    this.getQueue(queueKey).unshift(held);
-    this.jobIdToQueueKey.set(jobId, queueKey);
-    this.jobIndex.set(jobId, held);
-
-    this.release(jobId);
-    const timer = setTimeout(() => {
-      this.heldJobs.delete(jobId);
-      this.eventBus
-        .emit(QueueEventTypes.JOB_AVAILABLE, {
-          documentId: held.documentId,
-          scope: held.scope,
-          branch: held.branch,
-          jobId,
-        } satisfies JobAvailableEvent)
-        .catch(() => {});
-    }, delayMs);
-    // Browsers hand back a number, which has nothing to unref.
-    if (typeof timer === "object" && "unref" in timer) {
-      timer.unref();
-    }
-    this.heldJobs.set(jobId, timer);
-    return Promise.resolve();
-  }
-
-  private release(jobId: string): void {
-    const timer = this.heldJobs.get(jobId);
-    if (timer !== undefined) {
-      clearTimeout(timer);
-      this.heldJobs.delete(jobId);
-    }
   }
 
   /**

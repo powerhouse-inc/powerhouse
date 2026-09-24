@@ -132,20 +132,6 @@ export interface IQueue {
   ): Promise<void>;
 
   /**
-   * Returns a job to the head of its stream, to run once `delayMs` elapses.
-   * The stream's later jobs wait behind it; the retry count is unchanged and
-   * `Job.deferral` counts the attempt instead.
-   * @param jobId - The ID of the job to hold
-   * @param delayMs - How long before the job may run again
-   * @param error - Optional error information from the attempt
-   */
-  retryJobAfter(
-    jobId: string,
-    delayMs: number,
-    error?: ErrorInfo,
-  ): Promise<void>;
-
-  /**
    * Returns true if and only if all jobs have been resolved.
    */
   get isDrained(): boolean;
