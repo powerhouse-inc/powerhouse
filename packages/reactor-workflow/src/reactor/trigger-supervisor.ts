@@ -181,6 +181,7 @@ function isPermanentFailure(error: unknown): boolean {
   return (
     error instanceof PieceWorkerError &&
     (error.serialized.unsupportedMember !== undefined ||
+      error.serialized.unsupportedFeature !== undefined ||
       error.serialized.invalidProps !== undefined)
   );
 }
@@ -544,8 +545,8 @@ export class TriggerSupervisor {
     );
   }
 
-  // A trigger's strategy lives in the piece descriptor, so it takes loading
-  // the bundle. Enables are rare and the descriptor is cached per version.
+  // A trigger's strategy, and whether the engine can run it, live in the piece
+  // descriptor. Enables are rare and the descriptor is cached per version.
   private async strategyFor(binding: PieceTriggerBinding): Promise<string> {
     const key = `${binding.packageName}@${binding.version}`;
     let descriptor = this.descriptors.get(key);
@@ -569,6 +570,13 @@ export class TriggerSupervisor {
     const trigger = descriptor.triggers.find(
       (candidate) => candidate.name === binding.triggerName,
     );
+    // Parked, not retried: no attempt can make the feature run.
+    const unsupported = descriptor.unsupported ?? trigger?.unsupported;
+    if (unsupported) {
+      throw new TriggerConfigError(
+        `Trigger "${binding.triggerName}" of "${binding.packageName}": ${unsupported.reason}`,
+      );
+    }
     return trigger?.strategy ?? "POLLING";
   }
 

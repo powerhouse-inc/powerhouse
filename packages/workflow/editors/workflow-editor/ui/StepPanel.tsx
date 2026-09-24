@@ -88,13 +88,15 @@ function RawConfigEditor(props: {
 }
 
 // Loads the block's form descriptor; null means "no form, fall back to JSON".
+// A refusal keeps its message, so a block that cannot run says why.
 function useBlockForm(
   blockType: string,
   designTime?: DesignTimeService,
-): BlockForm | null | "loading" {
+): { form: BlockForm | null | "loading"; error?: string } {
   const [state, setState] = useState<{
     blockType: string;
     form: BlockForm | null | "loading";
+    error?: string;
   }>({ blockType, form: designTime ? "loading" : null });
   if (state.blockType !== blockType) {
     setState({ blockType, form: designTime ? "loading" : null });
@@ -106,20 +108,26 @@ function useBlockForm(
       (result) => {
         if (alive) setState({ blockType, form: result });
       },
-      () => {
-        if (alive) setState({ blockType, form: null });
+      (error: unknown) => {
+        if (!alive) return;
+        setState({
+          blockType,
+          form: null,
+          error: error instanceof Error ? error.message : String(error),
+        });
       },
     );
     return () => {
       alive = false;
     };
   }, [blockType, designTime]);
-  return state.form;
+  return { form: state.form, error: state.error };
 }
 
 function ConfigSection(props: {
   blockType: string;
   form: BlockForm | null | "loading";
+  formError?: string;
   config: unknown;
   onChange: (config: unknown) => void;
   designTime?: DesignTimeService;
@@ -136,6 +144,9 @@ function ConfigSection(props: {
     <div className="flex flex-col gap-3">
       {form === "loading" ? (
         <p className="text-xs text-slate-400">Loading block properties…</p>
+      ) : null}
+      {props.formError ? (
+        <p className="text-xs text-red-500">{props.formError}</p>
       ) : null}
       {form && form !== "loading" && form.props.length > 0 ? (
         <PropertyForm
@@ -620,7 +631,10 @@ export function StepPanel(props: {
   designTime?: DesignTimeService;
 }) {
   const { step, callbacks } = props;
-  const form = useBlockForm(step.blockType, props.designTime);
+  const { form, error: formError } = useBlockForm(
+    step.blockType,
+    props.designTime,
+  );
   const missing = missingForBlock(form, step.config, step.connectionId);
   return (
     <div className="flex flex-col gap-3 p-4">
@@ -662,6 +676,7 @@ export function StepPanel(props: {
         key={`${step.id}-config`}
         blockType={step.blockType}
         form={form}
+        formError={formError}
         config={step.config}
         onChange={(config) => callbacks.updateStep({ id: step.id, config })}
         designTime={props.designTime}
@@ -840,7 +855,10 @@ export function TriggerPanel(props: {
 }) {
   const { trigger, callbacks } = props;
   const isPieceTrigger = trigger.blockType.includes("#trigger:");
-  const form = useBlockForm(trigger.blockType, props.designTime);
+  const { form, error: formError } = useBlockForm(
+    trigger.blockType,
+    props.designTime,
+  );
   // core#webhook, and any piece trigger the provider pushes to: both are
   // reached through this workflow's endpoint URL.
   const isWebhookTrigger =
@@ -883,6 +901,7 @@ export function TriggerPanel(props: {
         key={trigger.id}
         blockType={trigger.blockType}
         form={form}
+        formError={formError}
         config={trigger.config}
         onChange={(config) => setTrigger({ config })}
         designTime={props.designTime}

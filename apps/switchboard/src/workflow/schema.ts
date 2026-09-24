@@ -84,8 +84,10 @@ export const schema: DocumentNode = gql`
     description: String!
     "action | trigger"
     kind: String!
-    "Triggers only: POLLING | WEBHOOK | APP_WEBHOOK"
+    "Triggers only: POLLING | WEBHOOK | APP_WEBHOOK | MANUAL"
     strategy: String
+    "Why this block cannot run on this reactor; null when it can."
+    unsupported: String
   }
 
   type BlockSearchResult {

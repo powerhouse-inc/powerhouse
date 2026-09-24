@@ -66,6 +66,50 @@ const raw: CatalogSuggestionEntry[] = [
   { name: "@activepieces/piece-broken", suggestedActions: [{ name: "x" }] },
 ];
 
+describe("buildSearchIndex over blocks this engine cannot run", () => {
+  const ISSUES = "https://github.com/powerhouse-inc/powerhouse/issues";
+  // Fields as the cloud listing serves them (0.91.0), trimmed.
+  const index = buildSearchIndex([
+    {
+      name: "@activepieces/piece-google-sheets",
+      displayName: "Google Sheets",
+      version: "0.17.0",
+      auth: { type: "SECRET_TEXT" },
+      suggestedActions: [{ name: "insert_row", displayName: "Insert Row" }],
+      suggestedTriggers: [
+        {
+          name: "googlesheets_new_row_added",
+          displayName: "New Row Added",
+          type: "WEBHOOK",
+          renewConfiguration: {
+            strategy: "CRON",
+            cronExpression: "0 */12 * * *",
+          },
+        },
+      ],
+    },
+    {
+      name: "@activepieces/piece-gmail",
+      displayName: "Gmail",
+      version: "0.16.0",
+      auth: [{ type: "OAUTH2" }, { type: "CUSTOM_AUTH" }],
+      suggestedActions: [{ name: "send_email", displayName: "Send Email" }],
+    },
+  ]);
+
+  it("carries the reason on each hit that cannot run", () => {
+    expect(
+      Object.fromEntries(
+        index.entries.map(({ hit }) => [hit.blockType, hit.unsupported]),
+      ),
+    ).toEqual({
+      "@activepieces/piece-google-sheets@0.17.0#insert_row": undefined,
+      "@activepieces/piece-google-sheets@0.17.0#trigger:googlesheets_new_row_added": `renewConfiguration is not supported yet (${ISSUES}/3090)`,
+      "@activepieces/piece-gmail@0.16.0#send_email": `Multi-auth (auth as an array) is not supported yet (${ISSUES}/3091)`,
+    });
+  });
+});
+
 describe("buildSearchIndex", () => {
   const index = buildSearchIndex(raw);
 
