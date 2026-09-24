@@ -9,6 +9,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   actions,
+  createPresignedHeader,
   DowngradeNotSupportedError,
   normalizeDocumentModelVersion,
   UnsupportedDocumentModelVersionError,
@@ -1119,6 +1120,13 @@ export class ReactorClient implements IReactorClient {
     document.state.document.version = normalizeDocumentModelVersion(
       module.version,
     );
+    if (options?.protocolVersions) {
+      document.header = createPresignedHeader(
+        undefined,
+        document.header.documentType,
+        { ...document.header.protocolVersions, ...options.protocolVersions },
+      );
+    }
 
     return this.create<TDocument>(document, options?.parentIdentifier, signal);
   }

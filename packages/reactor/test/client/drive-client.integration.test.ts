@@ -4,6 +4,12 @@ import {
   isFolderNode,
   type DocumentDriveDocument,
 } from "@powerhousedao/shared/document-drive";
+import {
+  createPresignedHeader,
+  hasDerivedDocumentId,
+  signaturePolicyOf,
+  v2RequiredProtocolVersions,
+} from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -20,6 +26,7 @@ import {
   createTestDocumentIndexer,
   createTestOperationStore,
 } from "../factories.js";
+import { TestP256Signer } from "../utils/p256-signer.js";
 
 describe("DriveClient Integration Tests", () => {
   let client: IReactorClient;
@@ -284,6 +291,103 @@ describe("DriveClient Integration Tests", () => {
       const fileNodes = reloaded.state.global.nodes.filter(isFileNode);
       expect(folderNodes.length).toBe(2);
       expect(fileNodes.length).toBe(2);
+    });
+  });
+
+  describe("v2-required documents", () => {
+    let signed: IReactorClient;
+    let signedReactor: IReactor;
+
+    beforeEach(async () => {
+      const setup = await createTestOperationStore();
+      const signedDb = setup.db as unknown as Kysely<Database>;
+      const indexer = createTestDocumentIndexer(
+        signedDb,
+        new ConsistencyTracker(),
+      );
+      await indexer.init();
+      const key = await TestP256Signer.create();
+      signed = await new ReactorClientBuilder()
+        .withReactorBuilder(
+          new ReactorBuilder()
+            .withDocumentModelSources([
+              driveDocumentModelModule as any,
+              documentModelDocumentModelModule,
+            ])
+            .withReadModel(indexer)
+            .withEventBus(new EventBus())
+            .withExecutorConfig({ signatureVerification: "enforce" }),
+        )
+        .withSigner(key.asISigner())
+        .build();
+      signedReactor = (signed as any).reactor;
+    });
+
+    afterEach(() => {
+      signedReactor.kill();
+    });
+
+    function expectV2Required(header: {
+      id: string;
+      protocolVersions?: Record<string, number>;
+    }) {
+      expect(signaturePolicyOf(header)).toBe("v2-required");
+      expect(hasDerivedDocumentId(header as never)).toBe(true);
+    }
+
+    it("creates a drive, adds a file and copies it, all v2-required", async () => {
+      const drive = await signed.drives.create({
+        global: { name: "V2 Drive" },
+        protocolVersions: v2RequiredProtocolVersions(),
+      });
+      expectV2Required(drive.header);
+
+      const base = documentModelDocumentModelModule.utils.createDocument();
+      const document = {
+        ...base,
+        header: {
+          ...createPresignedHeader(
+            undefined,
+            base.header.documentType,
+            v2RequiredProtocolVersions(),
+          ),
+          name: "Original",
+        },
+      };
+      const original = await signed.drives.addFile(drive.header.id, document);
+      expectV2Required(original.header);
+
+      await signed.drives.copyNode(
+        drive.header.id,
+        original.header.id,
+        undefined,
+      );
+
+      const reloaded = await signed.get<DocumentDriveDocument>(drive.header.id);
+      const copiedNode = reloaded.state.global.nodes
+        .filter(isFileNode)
+        .find((node) => node.id !== original.header.id);
+      expect(copiedNode).toBeDefined();
+      const copied = await signed.get(copiedNode!.id);
+      expectV2Required(copied.header);
+      expect(copied.header.id).not.toBe(original.header.id);
+    });
+
+    it("creates an empty v2-required document", async () => {
+      const document = await signed.createEmpty(
+        documentModelDocumentModelModule.documentModel.global.id,
+        { protocolVersions: v2RequiredProtocolVersions() },
+      );
+      expectV2Required(document.header);
+    });
+
+    it("keeps creating legacy documents by default", async () => {
+      const drive = await signed.drives.create({ global: { name: "Legacy" } });
+      expect(signaturePolicyOf(drive.header)).toBe("legacy");
+      const document = await signed.createEmpty(
+        documentModelDocumentModelModule.documentModel.global.id,
+      );
+      expect(signaturePolicyOf(document.header)).toBe("legacy");
     });
   });
 

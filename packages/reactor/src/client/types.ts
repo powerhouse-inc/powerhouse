@@ -65,6 +65,8 @@ export type CreateDocumentOptions = {
   parentIdentifier?: string;
   /** Optional version of the document model to use (defaults to latest) */
   documentModelVersion?: number;
+  /** Merged over the model's defaults; `signature: 2` makes it v2-required. */
+  protocolVersions?: { [protocol: string]: number };
 };
 
 /** Retries taken when an upgrade conflicts with concurrent edits. */

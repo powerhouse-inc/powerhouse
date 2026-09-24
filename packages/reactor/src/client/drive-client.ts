@@ -18,6 +18,7 @@ import {
 import { addFile as addFileAction } from "@powerhousedao/shared/document-drive";
 import {
   actions,
+  createCopyHeader,
   createPresignedHeader,
   generateId,
   normalizeDocumentModelVersion,
@@ -68,6 +69,13 @@ export class DriveClient implements IDriveClient {
         nodes: [],
       },
     });
+    if (input.protocolVersions) {
+      driveDoc.header = createPresignedHeader(
+        undefined,
+        driveDoc.header.documentType,
+        { ...driveDoc.header.protocolVersions, ...input.protocolVersions },
+      );
+    }
     if (input.preferredEditor) {
       driveDoc.header.meta = {
         ...driveDoc.header.meta,
@@ -405,10 +413,7 @@ export class DriveClient implements IDriveClient {
       // already current.
       const duplicated: PHDocument = {
         ...srcDoc,
-        header: createPresignedHeader(
-          entry.targetId,
-          srcDoc.header.documentType,
-        ),
+        header: createCopyHeader(srcDoc.header, entry.targetId),
         initialState: srcDoc.state,
         operations: {},
       };
@@ -417,6 +422,8 @@ export class DriveClient implements IDriveClient {
       if (resolvedName) {
         duplicated.header.name = resolvedName;
       }
+      // A v2-required copy takes a derived id, which the drive's node must name.
+      entry.targetId = duplicated.header.id;
       await this.addFile(
         driveIdentifier,
         duplicated,

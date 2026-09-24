@@ -3,7 +3,11 @@ import { canonicalJson } from "./action-signature.js";
 import type { PHDocument } from "./documents.js";
 import { baseCreateDocument } from "./documents.js";
 import { createZip, documentModelLoadFromInput } from "./files.js";
-import { createPresignedHeader } from "./header.js";
+import {
+  createCopyHeader,
+  createPresignedHeader,
+  hasDerivedDocumentId,
+} from "./header.js";
 import { loadStateOperation } from "./operations.js";
 import {
   deriveDocumentId,
@@ -133,6 +137,31 @@ describe("createPresignedHeader", () => {
     expect(() =>
       createPresignedHeader("doc-1", "test/doc", v2RequiredProtocolVersions()),
     ).toThrow(/derived/);
+  });
+});
+
+describe("createCopyHeader", () => {
+  it("keeps the given id for a copy of a legacy document", () => {
+    const copy = createCopyHeader(
+      createPresignedHeader("doc-1", "test/doc"),
+      "copy-1",
+    );
+    expect(copy.id).toBe("copy-1");
+    expect(signaturePolicyOf(copy)).toBe("legacy");
+  });
+
+  it("derives a fresh id for a copy of a v2-required document", () => {
+    const source = createPresignedHeader(
+      undefined,
+      "test/doc",
+      v2RequiredProtocolVersions(),
+    );
+    const copy = createCopyHeader(source, "copy-1");
+    expect(copy.id).not.toBe("copy-1");
+    expect(copy.id).not.toBe(source.id);
+    expect(hasDerivedDocumentId(copy)).toBe(true);
+    expect(hasDerivedDocumentId(source)).toBe(true);
+    expect(hasDerivedDocumentId({ ...source, id: "copy-1" })).toBe(false);
   });
 });
 

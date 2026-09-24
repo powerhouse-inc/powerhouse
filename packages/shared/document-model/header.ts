@@ -217,6 +217,42 @@ export const createPresignedHeader = (
 };
 
 /**
+ * A header for a copy of a document headed `source`. A copy keeps a v2
+ * requirement and so takes a derived id; otherwise it takes `id`.
+ */
+export function createCopyHeader(
+  source: Pick<PHDocumentHeader, "documentType" | "protocolVersions">,
+  id?: string,
+): PHDocumentHeader {
+  return signaturePolicyOf(source) === "v2-required"
+    ? createPresignedHeader(
+        undefined,
+        source.documentType,
+        source.protocolVersions,
+      )
+    : createPresignedHeader(id, source.documentType);
+}
+
+/** Whether a v2-required `header` carries the id its params derive. */
+export function hasDerivedDocumentId(header: PHDocumentHeader): boolean {
+  if (signaturePolicyOf(header) === "legacy" || !header.protocolVersions) {
+    return false;
+  }
+  try {
+    return (
+      deriveDocumentId({
+        documentType: header.documentType,
+        createdAtUtcIso: header.createdAtUtcIso,
+        nonce: header.sig.nonce,
+        protocolVersions: header.protocolVersions,
+      }) === header.id
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Creates a new, signed header for a document. This will replace the id of the
  * document.
  *

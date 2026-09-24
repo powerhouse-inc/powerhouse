@@ -20,6 +20,8 @@ export type DriveInput = {
   slug?: string;
   preferredEditor?: string;
   local?: Partial<DocumentDriveLocalState>;
+  /** Merged over the drive's defaults; `signature: 2` makes it v2-required. */
+  protocolVersions?: { [protocol: string]: number };
 };
 
 export type SharingType = "LOCAL" | "CLOUD" | "PUBLIC";
