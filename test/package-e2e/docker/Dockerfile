@@ -36,6 +36,9 @@ RUN apk add --no-cache python3 make g++ git curl \
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME/bin:$PATH"
+# The store and dlx cache live in BuildKit cache mounts, not the image: a
+# smaller layer to export, and the later `ph install` stages reuse the store.
+ENV NPM_CONFIG_STORE_DIR=/pnpm-store
 # Pin to skip corepack's `latest` lookup against the registry; ~10s faster
 # than `corepack prepare pnpm@latest --activate`.
 RUN corepack enable && corepack prepare pnpm@11.0.8 --activate
@@ -56,10 +59,14 @@ RUN echo "workspace_cachebust=${WORKSPACE_CACHEBUST}" > /dev/null
 
 # Install ph-cmd globally. Use --no-frozen-lockfile semantics by relying on
 # pnpm's default; this is a throwaway image so we don't pin a lockfile.
-RUN pnpm add -g ph-cmd@${TAG}
+RUN --mount=type=cache,id=pkg-e2e-pnpm-store,target=/pnpm-store \
+    --mount=type=cache,id=pkg-e2e-pnpm-cache,target=/root/.cache/pnpm \
+    pnpm add -g ph-cmd@${TAG}
 
 # Scaffold a fresh consumer project.
-RUN case "$TAG" in \
+RUN --mount=type=cache,id=pkg-e2e-pnpm-store,target=/pnpm-store \
+    --mount=type=cache,id=pkg-e2e-pnpm-cache,target=/root/.cache/pnpm \
+    case "$TAG" in \
         *dev*) ph init project --dev --pnpm ;; \
         *staging*) ph init project --staging --pnpm ;; \
         *) ph init project --pnpm ;; \
@@ -89,7 +96,9 @@ RUN echo "cachebust=${CACHEBUST}" > /dev/null
 #   - packageRegistryUrl: ${REGISTRY_URL}  (reached as host.docker.internal
 #     from inside this container at runtime)
 #   - packages[].provider = "registry"
-RUN ph install "${PACKAGE_NAME}" --registry "${REGISTRY_URL}"
+RUN --mount=type=cache,id=pkg-e2e-pnpm-store,target=/pnpm-store \
+    --mount=type=cache,id=pkg-e2e-pnpm-cache,target=/root/.cache/pnpm \
+    ph install "${PACKAGE_NAME}" --registry "${REGISTRY_URL}"
 
 # -----------------------------------------------------------------------------
 # Connect: build static assets and serve via nginx
