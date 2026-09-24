@@ -10,6 +10,7 @@
   "devDependencies": {
     "@powerhousedao/e2e-utils": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
+    "@powerhousedao/pieces-framework": "workspace:*",
     "@powerhousedao/registry": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@types/node": "catalog:",

@@ -3847,6 +3847,9 @@ importers:
       '@powerhousedao/ph-cli':
         specifier: workspace:*
         version: link:../../clis/ph-cli
+      '@powerhousedao/pieces-framework':
+        specifier: workspace:*
+        version: link:../../packages/pieces-framework
       '@powerhousedao/registry':
         specifier: workspace:*
         version: link:../../packages/registry
