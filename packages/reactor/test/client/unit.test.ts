@@ -2639,6 +2639,69 @@ describe("ReactorClient Unit Tests", () => {
         ]);
       });
 
+      it("delivers every readable id of a multi-document delete, gating each", async () => {
+        const deleted = vi.fn();
+        let fire: ((ids: string[]) => void) | undefined;
+        const manager = createMockSubscriptionManager({
+          onDocumentDeleted: vi.fn((cb: (ids: string[]) => void) => {
+            fire = cb;
+            return () => {};
+          }) as never,
+        });
+
+        const subscribing = new ReactorClient(
+          createMockLogger(),
+          mockReactor,
+          createMockSigner(),
+          manager,
+          mockJobAwaiter,
+          mockDocumentIndexer,
+          mockDocumentView,
+        );
+
+        const otherReaderPolicy = {
+          version: 1,
+          grants: [
+            {
+              id: "g-other",
+              description: "someone else reads global",
+              effect: "allow",
+              principal: { address: "0xother" },
+              capability: { can: "read", scope: "global" },
+            },
+          ],
+        };
+        vi.mocked(mockReactor.get).mockImplementation((id) =>
+          Promise.resolve(
+            docWithScopes(
+              id,
+              id === "d1" ? otherReaderPolicy : readGlobalPolicy,
+              { global: { x: 1 } },
+            ),
+          ),
+        );
+
+        subscribing.subscribe({}, deleted, {
+          subject: { address: "0xreader" },
+        });
+
+        fire?.(["d1", "d2", "d3"]);
+        await vi.waitFor(() => expect(deleted).toHaveBeenCalledTimes(2));
+
+        expect(deleted.mock.calls.map((call) => call[0])).toEqual([
+          {
+            type: DocumentChangeType.Deleted,
+            documents: [],
+            context: { childId: "d2" },
+          },
+          {
+            type: DocumentChangeType.Deleted,
+            documents: [],
+            context: { childId: "d3" },
+          },
+        ]);
+      });
+
       /**
        * Gating is asynchronous, so an event needing a slow group fetch can be
        * overtaken by the event behind it unless delivery is ordered.
