@@ -11,7 +11,6 @@ function createMockClient(
     GetDocumentOperations: vi.fn().mockResolvedValue({
       documentOperations: {
         items: [],
-        totalCount: 0,
         hasNextPage: false,
         hasPreviousPage: false,
         cursor: null,
@@ -120,7 +119,6 @@ describe("RemoteClient", () => {
               makeRemoteOp(1, "global"),
               makeRemoteOp(2, "local"),
             ],
-            totalCount: 3,
             hasNextPage: false,
             hasPreviousPage: false,
             cursor: null,
@@ -145,7 +143,6 @@ describe("RemoteClient", () => {
         .mockResolvedValueOnce({
           documentOperations: {
             items: [makeRemoteOp(0)],
-            totalCount: 2,
             hasNextPage: true,
             hasPreviousPage: false,
             cursor: "cursor-1",
@@ -154,7 +151,6 @@ describe("RemoteClient", () => {
         .mockResolvedValueOnce({
           documentOperations: {
             items: [makeRemoteOp(1)],
-            totalCount: 2,
             hasNextPage: false,
             hasPreviousPage: true,
             cursor: null,
