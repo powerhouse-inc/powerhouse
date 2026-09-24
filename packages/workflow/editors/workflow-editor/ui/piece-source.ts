@@ -10,6 +10,8 @@ export interface PieceSummaryUi {
   triggerCount: number;
   // Activepieces category ids; empty for uncategorised pieces.
   categories: string[];
+  // Why none of the piece's blocks can run on this reactor.
+  unsupported?: string | null;
 }
 
 export interface BlockSearchHitUi {
@@ -21,6 +23,7 @@ export interface BlockSearchHitUi {
   description: string;
   kind: "action" | "trigger";
   strategy: string | null;
+  unsupported?: string | null;
 }
 
 export interface BlockSearchResultUi {
@@ -34,6 +37,7 @@ export interface PieceActionUi {
   displayName: string;
   description: string;
   blockType: string;
+  unsupported?: string | null;
 }
 
 export interface PieceTriggerUi {
@@ -43,12 +47,28 @@ export interface PieceTriggerUi {
   // POLLING | WEBHOOK | APP_WEBHOOK.
   strategy: string;
   blockType: string;
+  unsupported?: string | null;
 }
 
 // APP_WEBHOOK is the one the runtime cannot serve: it maps to polling, and an
 // app-webhook trigger's run hook needs a request, so a poll calls it blind.
 export function triggerStrategyRuns(strategy: string | null | undefined) {
   return (strategy ?? "POLLING") !== "APP_WEBHOOK";
+}
+
+// Why a listed block cannot be picked, or undefined when it can: the
+// runtime's own reason first, then a trigger strategy it cannot serve.
+export function blockUnavailable(entry: {
+  unsupported?: string | null;
+  kind?: "action" | "trigger";
+  strategy?: string | null;
+}): string | undefined {
+  if (entry.unsupported) return entry.unsupported;
+  if (entry.kind !== "trigger") return undefined;
+  const strategy = entry.strategy ?? "POLLING";
+  return triggerStrategyRuns(strategy)
+    ? undefined
+    : `${strategy.toLowerCase()} — not supported yet`;
 }
 
 export interface PieceCatalogSource {

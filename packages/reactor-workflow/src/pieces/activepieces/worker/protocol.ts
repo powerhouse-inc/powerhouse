@@ -202,6 +202,8 @@ export interface SerializedPieceError {
   properties: Record<string, unknown>;
   // Set when the piece hit an unimplemented context member.
   unsupportedMember?: string;
+  // Set when the piece or trigger uses a feature this engine does not run.
+  unsupportedFeature?: string;
   // Set when the props failed validation, before piece code ran.
   invalidProps?: PropsValidationErrors;
 }

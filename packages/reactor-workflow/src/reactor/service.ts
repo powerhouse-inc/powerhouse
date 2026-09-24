@@ -24,6 +24,7 @@ import {
   PieceWorkerTimeoutError,
   rememberSecrets,
   runWorkflow,
+  UnsupportedPieceFeatureError,
   type BlockExecutor,
   type LocalPiece,
   type ParsedBlockType,
@@ -2251,6 +2252,13 @@ export class WorkflowRuntimeService {
       parsed.packageName,
       parsed.version,
     );
+    // Refused here so no form is ever drawn for a block that cannot run.
+    if (descriptor.unsupported) {
+      throw new UnsupportedPieceFeatureError(
+        `Piece "${parsed.packageName}"`,
+        descriptor.unsupported,
+      );
+    }
     const common = {
       displayName: descriptor.displayName,
       logoUrl: descriptor.logoUrl,
@@ -2260,6 +2268,12 @@ export class WorkflowRuntimeService {
       const trigger = descriptor.triggers.find(
         (entry) => entry.name === parsed.name,
       );
+      if (trigger?.unsupported) {
+        throw new UnsupportedPieceFeatureError(
+          `Trigger "${parsed.name}" of "${parsed.packageName}"`,
+          trigger.unsupported,
+        );
+      }
       return trigger ? { ...common, trigger } : null;
     }
     const action = descriptor.actions.find(

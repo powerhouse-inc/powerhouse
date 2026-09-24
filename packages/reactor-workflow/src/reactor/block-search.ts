@@ -2,8 +2,13 @@
 // lazily from one list request (suggestionType=ACTION_AND_TRIGGER) and cached.
 import {
   fetchCatalogWithSuggestions,
+  reasonOf,
   type CatalogSuggestionEntry,
 } from "./piece-catalog.js";
+import {
+  unsupportedAuth,
+  unsupportedTrigger,
+} from "../pieces/activepieces/unsupported.js";
 import { SERVER_ONLY_PIECES } from "./unsupported-pieces.js";
 
 export type BlockSearchKind = "action" | "trigger";
@@ -16,8 +21,10 @@ export interface BlockSearchHit {
   displayName: string;
   description: string;
   kind: BlockSearchKind;
-  // Triggers only: POLLING | WEBHOOK | APP_WEBHOOK.
+  // Triggers only: POLLING | WEBHOOK | APP_WEBHOOK | MANUAL.
   strategy: string | null;
+  // Why the block cannot run here.
+  unsupported?: string;
 }
 
 export type BlockSearchStatus = "ready" | "indexing" | "error";
@@ -63,6 +70,7 @@ export function buildSearchIndex(
     const pieceName = entry.name;
     const pieceDisplayName = entry.displayName ?? pieceName;
     const logoUrl = entry.logoUrl ?? "";
+    const pieceUnsupported = unsupportedAuth(entry.auth);
     const push = (
       kind: BlockSearchKind,
       item: {
@@ -70,6 +78,7 @@ export function buildSearchIndex(
         displayName?: string;
         description?: string;
         type?: string;
+        renewConfiguration?: unknown;
       },
     ) => {
       if (typeof item.name !== "string" || item.name === "") return;
@@ -88,6 +97,10 @@ export function buildSearchIndex(
           description,
           kind,
           strategy: kind === "trigger" ? (item.type ?? null) : null,
+          ...reasonOf(
+            pieceUnsupported ??
+              (kind === "trigger" ? unsupportedTrigger(item) : undefined),
+          ),
         },
         name: `${displayName} ${item.name}`.toLowerCase(),
         description: description.toLowerCase(),

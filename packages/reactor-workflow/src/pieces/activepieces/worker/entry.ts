@@ -32,7 +32,18 @@ import {
 import { buildTriggerContext, runTriggerHook } from "../context/trigger.js";
 import { buildDescriptor, describeProperties } from "../descriptor.js";
 import { loadPiece, loadPieceFromDir, type LoadedPiece } from "../loader.js";
-import { getActions, getTriggers, type ApProperty } from "../types.js";
+import {
+  getActions,
+  getTriggers,
+  type ApPiece,
+  type ApProperty,
+  type ApTrigger,
+} from "../types.js";
+import {
+  unsupportedAuth,
+  unsupportedTrigger,
+  UnsupportedPieceFeatureError,
+} from "../unsupported.js";
 import { installEgressGuard, runWithEgressPolicy } from "./egress.js";
 import type {
   StagedInput,
@@ -119,6 +130,9 @@ function serializeError(
     ) as Record<string, unknown>,
     unsupportedMember:
       error instanceof UnsupportedContextMemberError ? error.member : undefined,
+    ...(error instanceof UnsupportedPieceFeatureError
+      ? { unsupportedFeature: error.feature }
+      : {}),
     ...(error instanceof PropsValidationError
       ? { invalidProps: jsonSafe(error.errors) as PropsValidationErrors }
       : {}),
@@ -201,6 +215,29 @@ function stagedInputResolver(
   };
 }
 
+// The same refusal describe records, for a step or hook that reaches the
+// worker anyway: a workflow saved before the check, or built over the API.
+function assertRunnable(
+  piece: ApPiece,
+  pieceName: string,
+  trigger?: { name: string; trigger: ApTrigger },
+): void {
+  const pieceFeature = unsupportedAuth(piece.auth);
+  if (pieceFeature) {
+    throw new UnsupportedPieceFeatureError(
+      `Piece "${pieceName}"`,
+      pieceFeature,
+    );
+  }
+  const triggerFeature = trigger && unsupportedTrigger(trigger.trigger);
+  if (triggerFeature) {
+    throw new UnsupportedPieceFeatureError(
+      `Trigger "${trigger.name}" of "${pieceName}"`,
+      triggerFeature,
+    );
+  }
+}
+
 async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   const { request } = message;
   const { piece } = await loadCached(request);
@@ -212,6 +249,7 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
       `No action "${request.actionName}" in ${pieceRefKey(request)}`,
     );
   }
+  assertRunnable(piece, piece.displayName);
   const files = request.stagingDir
     ? new StagedFilesService(request.stagingDir)
     : new DataUriFilesService();
@@ -279,6 +317,13 @@ async function handleTriggerHook(
     throw new Error(
       `No trigger "${request.triggerName}" in bundle ${request.bundleDir}`,
     );
+  }
+  // Teardown still runs, so a registration made before the check is released.
+  if (request.hook !== "onDisable") {
+    assertRunnable(piece, piece.displayName, {
+      name: request.triggerName,
+      trigger,
+    });
   }
   // The durable store answers every get/put over the call channel, so a long
   // onEnable checkpoints: registration ids survive a crash mid-hook.

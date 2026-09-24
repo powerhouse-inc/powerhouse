@@ -76,6 +76,8 @@ export type ApTrigger = Partial<
   props?: Record<string, ApProperty>;
   outputSchema?: unknown;
   handshakeConfiguration?: ApHandshakeConfiguration;
+  // Widened from WebhookRenewConfiguration: CRON | NONE.
+  renewConfiguration?: { strategy?: string; cronExpression?: string };
   onEnable?: (ctx: unknown) => Promise<void>;
   onDisable?: (ctx: unknown) => Promise<void>;
   onStart?: (ctx: unknown) => Promise<unknown>;
@@ -99,7 +101,8 @@ export type ApPiece = Pick<PieceBase, "displayName"> &
     >
   > & {
     categories?: string[];
-    auth?: ApProperty;
+    // An array when the piece offers several auth methods.
+    auth?: ApProperty | ApProperty[];
     // A bundle exposes these as the built record or as a zero-arg method; the
     // framework's own Piece class only ever has the method.
     actions?: Record<string, ApAction> | (() => Record<string, ApAction>);

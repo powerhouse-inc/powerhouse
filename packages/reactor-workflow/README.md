@@ -179,12 +179,25 @@ This is what a piece can declare or call that this engine does not run. It is tr
 [#3091](https://github.com/powerhouse-inc/powerhouse/issues/3091) and
 [#3095](https://github.com/powerhouse-inc/powerhouse/issues/3095).
 
+Some are **rejected** rather than run wrongly. A rejected feature is refused
+wherever a user meets it: the catalog, `pieceActions`, `pieceTriggers` and
+block search carry the reason as `unsupported`, and the editor lists the
+block disabled; `blockDescriptor` throws `Piece "<name>": <reason>` (or
+`Trigger "<name>" of "<piece>": <reason>`); enabling a trigger parks it in
+`ERROR` with that message and no retry; a step or hook that reaches the
+worker anyway fails before piece code runs, except `onDisable`, which still
+releases what an earlier enable registered. The reason reads
+`<feature> is not supported yet (<issue URL>)`.
+
 **Triggers**
 
 - `TriggerStrategy.APP_WEBHOOK` and `context.app.createListeners`: the
   listeners are never read, so deliveries are refused (#3081).
-- `renewConfiguration` / `onRenew`: never scheduled, so subscriptions that
-  expire stop delivering (#3090).
+- `renewConfiguration` / `onRenew`: rejected when the strategy is not
+  `NONE`, as `renewConfiguration` (#3090).
+- `TriggerStrategy.MANUAL` on a piece trigger: rejected, as
+  `TriggerStrategy.MANUAL` (#3091). The engine's own `core#manual` is not a
+  piece trigger and is unaffected.
 - Every `WEBHOOK` trigger's `run()` is called every 15 minutes without a
   `payload`, as a reconciliation sweep. A `run` that only maps the delivery
   either fails or fires a spurious run (#3090).
@@ -199,9 +212,10 @@ This is what a piece can declare or call that this engine does not run. It is tr
 
 **Auth**
 
-- CustomAuth `refresh`: no `access_token` is minted.
-- A piece whose `auth` is an array describes as `UNKNOWN`.
-- OAuth2 and OIDC connections are refused at check and run.
+- CustomAuth `refresh`: rejected, as `CustomAuth refresh` (#3091).
+- `auth` as an array: rejected, as `Multi-auth (auth as an array)` (#3091).
+- OAuth2 and OIDC: rejected, as `OAuth2 auth` and `OIDC auth` (#3091). Their
+  connections are refused at check and run too.
 - `server` in `validate` and `getConnectionIdentifier` is a throwing stub.
 
 **Props**
