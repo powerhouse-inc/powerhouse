@@ -291,6 +291,7 @@ export {
   SeededStateReader,
   type IReadGate,
   type ReadGateOptions,
+  type SubjectScopePredicate,
 } from "./src/decision/read-gate.js";
 export { SyncScopeGate } from "./src/decision/sync-scope-gate.js";
 export {
