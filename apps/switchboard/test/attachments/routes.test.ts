@@ -386,7 +386,9 @@ describe("attachment routes", () => {
       };
       void statHandler(req, res);
     });
-    await new Promise<void>((resolve) => server.listen(0, resolve));
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
     const port = (server.address() as { port: number }).port;
 
     try {

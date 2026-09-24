@@ -112,7 +112,7 @@ describe("attachment service built from deriveAttachmentServiceConfig round-trip
       authService: undefined,
     } as unknown as API);
 
-    server = await adapter.listen(0);
+    server = await adapter.listen(0, undefined, "127.0.0.1");
     const addr = server.address();
     if (!addr || typeof addr === "string") throw new Error("no addr");
     port = addr.port;

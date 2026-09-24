@@ -97,7 +97,7 @@ export async function startWebhookHost(
   // constructing it would test a path no consumer can take.
   const { adapter } = await createHttpAdapter("express");
   adapter.setupMiddleware({});
-  const server = await adapter.listen(0);
+  const server = await adapter.listen(0, undefined, "127.0.0.1");
   const { port } = server.address() as { port: number };
   const url = `http://127.0.0.1:${port}`;
 

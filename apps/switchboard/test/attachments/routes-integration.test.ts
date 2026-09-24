@@ -46,7 +46,7 @@ describe("attachment routes through the real Express middleware stack", () => {
       authService: undefined,
     } as unknown as API);
 
-    server = await adapter.listen(0);
+    server = await adapter.listen(0, undefined, "127.0.0.1");
     const addr = server.address();
     if (!addr || typeof addr === "string") throw new Error("no addr");
     baseUrl = `http://127.0.0.1:${addr.port}`;
@@ -180,7 +180,7 @@ describe("authenticated S3 reservation production path", () => {
       attachments,
       authService: { verifyBearer },
     } as unknown as API);
-    const server = await adapter.listen(0);
+    const server = await adapter.listen(0, undefined, "127.0.0.1");
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("no addr");
     const baseUrl = `http://127.0.0.1:${address.port}`;
