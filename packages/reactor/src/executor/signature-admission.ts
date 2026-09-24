@@ -28,6 +28,10 @@ import type {
   SignatureVerificationMode,
 } from "../signer/types.js";
 import { verifyActionSignature } from "../signer/verify-action-signature.js";
+import {
+  SYNTHESIZING_TYPES,
+  synthesizedActionId,
+} from "./synthesized-signing.js";
 import type { IOperationStore } from "../storage/interfaces.js";
 
 type Stream = { documentId: string; scope: string; branch: string };
@@ -36,6 +40,8 @@ type Candidate = {
   action: Action;
   stream: Stream;
   opId: string;
+  /** The operation the reducer stores in place of a submitted UNDO or REDO. */
+  synthesizedOpId?: string;
   operation?: Operation;
   policy?: SignaturePolicy;
 };
@@ -88,8 +94,8 @@ export class SignatureAdmission {
     if (
       isRetry(job) &&
       candidates.length > 0 &&
-      candidates.every((entry) => live.has(entry.opId)) &&
-      (await this.storedAsSubmitted(candidates, operationStore, signal))
+      candidates.every((entry) => isLive(entry, live)) &&
+      (await this.storedAsSubmitted(candidates, live, operationStore, signal))
     ) {
       return { kind: "committed" };
     }
@@ -181,7 +187,7 @@ export class SignatureAdmission {
     if (!verdict.ok) {
       return verdict;
     }
-    if (live.has(entry.opId) || submitted?.has(entry.opId)) {
+    if (isLive(entry, live) || submitted?.has(entry.opId)) {
       return {
         ok: false,
         scheme: verdict.scheme,
@@ -194,10 +200,15 @@ export class SignatureAdmission {
 
   private async storedAsSubmitted(
     candidates: Candidate[],
+    live: Set<string>,
     operationStore: IOperationStore,
     signal?: AbortSignal,
   ): Promise<boolean> {
-    for (const [stream, entries] of byStream(candidates)) {
+    // A synthesized operation holds another action; that it is stored is enough.
+    const asSubmitted = candidates.filter(
+      (entry) => !entry.synthesizedOpId || !live.has(entry.synthesizedOpId),
+    );
+    for (const [stream, entries] of byStream(asSubmitted)) {
       const stored = await operationStore.getOperationsByIds(
         stream.documentId,
         stream.scope,
@@ -229,7 +240,11 @@ export class SignatureAdmission {
         stream.documentId,
         stream.scope,
         stream.branch,
-        entries.map((entry) => entry.opId),
+        entries.flatMap((entry) =>
+          entry.synthesizedOpId
+            ? [entry.opId, entry.synthesizedOpId]
+            : [entry.opId],
+        ),
         signal,
       );
       for (const opId of found) {
@@ -352,16 +367,23 @@ function createPolicy(action: Action): SignaturePolicy {
 }
 
 function candidate(action: Action, stream: Stream): Candidate {
+  const opId = (actionId: string) =>
+    deriveOperationId(stream.documentId, stream.scope, stream.branch, actionId);
   return {
     action,
     stream,
-    opId: deriveOperationId(
-      stream.documentId,
-      stream.scope,
-      stream.branch,
-      action.id,
-    ),
+    opId: opId(action.id),
+    synthesizedOpId: SYNTHESIZING_TYPES.has(action.type)
+      ? opId(synthesizedActionId(action.id))
+      : undefined,
   };
+}
+
+function isLive(entry: Candidate, live: Set<string>): boolean {
+  return (
+    live.has(entry.opId) ||
+    (entry.synthesizedOpId !== undefined && live.has(entry.synthesizedOpId))
+  );
 }
 
 function mutationStream(action: Action, job: Job): Stream {

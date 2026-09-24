@@ -7,15 +7,23 @@ import type {
 import {
   actionSignerIdentity,
   deriveOperationId,
-  generateId,
+  hashBrowser,
 } from "@powerhousedao/shared/document-model";
 
 /** Submitted types whose stored action the reducer writes in their place. */
-const SYNTHESIZING_TYPES: ReadonlySet<string> = new Set([
+export const SYNTHESIZING_TYPES: ReadonlySet<string> = new Set([
   "UNDO",
   "REDO",
   "PRUNE",
 ]);
+
+/**
+ * The id of the action synthesized from `submittedId`. Derived, so the stored
+ * operation answers for the submitted id at the live-id check.
+ */
+export function synthesizedActionId(submittedId: string): string {
+  return hashBrowser(`synthesized:${submittedId}`, "sha1", "hex").slice(0, 32);
+}
 
 /**
  * Whether `operation` stores an action the reducer made from `submitted`
@@ -40,10 +48,11 @@ export function isSynthesized(
 }
 
 /**
- * Signs the synthesized action of `operation` in place as `signer`. A REDO's
- * rebuilt action has no id or timestamp, so it takes a fresh id and the
- * submitted timestamp; the operation timestamp is set to the action's, which
- * a peer requires of a v2 tuple.
+ * Signs the synthesized action of `operation` in place as `signer`, under the
+ * id {@link synthesizedActionId} derives from the submitted one. A REDO's
+ * rebuilt action has no timestamp, so it takes the submitted one; the
+ * operation timestamp is set to the action's, which a peer requires of a v2
+ * tuple.
  */
 export async function signSynthesized(
   operation: Operation,
@@ -53,7 +62,7 @@ export async function signSynthesized(
   signal?: AbortSignal,
 ): Promise<void> {
   const synthesized = operation.action;
-  const id = (synthesized.id as string | undefined) || generateId();
+  const id = synthesizedActionId(submitted.id);
   const timestampUtcMs =
     (operation.timestampUtcMs as string | undefined) ||
     (synthesized.timestampUtcMs as string | undefined) ||
