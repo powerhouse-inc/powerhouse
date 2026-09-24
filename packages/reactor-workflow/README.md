@@ -175,8 +175,9 @@ more trusted than one that arrived inside a package.
 
 This is what a piece can declare or call that this engine does not run. It is tracked in
 [#3081](https://github.com/powerhouse-inc/powerhouse/issues/3081),
-[#3090](https://github.com/powerhouse-inc/powerhouse/issues/3090) and
-[#3091](https://github.com/powerhouse-inc/powerhouse/issues/3091).
+[#3090](https://github.com/powerhouse-inc/powerhouse/issues/3090),
+[#3091](https://github.com/powerhouse-inc/powerhouse/issues/3091) and
+[#3095](https://github.com/powerhouse-inc/powerhouse/issues/3095).
 
 **Triggers**
 
@@ -190,6 +191,11 @@ This is what a piece can declare or call that this engine does not run. It is tr
 - `setSchedule({ cronExpression })` is run as a fixed interval; wall-clock
   time and timezone are lost.
 - `onStart` is never called. The trigger context's `server` is a throwing stub.
+- Outside a delivery a hook's `payload` is `undefined`; upstream passes `{}`
+  (#3090).
+- A webhook payload carries no raw body, and its signature headers
+  (`x-signature`, `x-hub-signature-256`, `stripe-signature`, `authorization`)
+  arrive redacted, so `run()` cannot verify the sender's signature (#3090).
 
 **Auth**
 
@@ -203,6 +209,8 @@ This is what a piece can declare or call that this engine does not run. It is tr
 - `refreshOnSearch`: a dropdown's `searchValue` is never sent.
 - Dynamic resolvers nested in ARRAY items or DYNAMIC output can't be called.
 - CUSTOM props carry only their type.
+- DYNAMIC prop keys are not escaped, and an `options()` that throws gets no
+  disabled-dropdown fallback (#3091).
 
 **Actions**
 
@@ -224,6 +232,8 @@ This is what a piece can declare or call that this engine does not run. It is tr
   says.
 - Reads of context members outside the documented surface are tracked but not
   reported.
+- A piece's setup markdown can describe Activepieces features this engine
+  does not serve, such as the webhook URL's `/sync` and `/test` forms (#3095).
 
 ## Running the tests
 
