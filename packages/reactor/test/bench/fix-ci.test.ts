@@ -85,7 +85,8 @@ describe("planCi", () => {
       "typecheck",
       "rebuild",
       "versioned-documents",
-      "eslint",
+      "oxlint",
+      "oxfmt",
       "test-ci",
       "circular",
     ]);
@@ -150,7 +151,7 @@ describe("planCi", () => {
       changed: ["packages/shared/a.ts", "packages/shared/README.md"],
     });
     expect(
-      plan.find((step) => step.id === "eslint")?.command.slice(-1),
+      plan.find((step) => step.id === "oxlint")?.command.slice(-1),
     ).toEqual(["packages/shared/a.ts"]);
     expect(
       plan.find((step) => step.id === "test-ci")?.command.slice(-2),

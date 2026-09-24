@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard-gui",
   "private": true,
-  "version": "6.2.3-dev.22",
+  "version": "6.2.3-dev.23",
   "type": "module",
   "repository": {
     "type": "git",
@@ -11,7 +11,7 @@
   "types": "./dist/src/index.d.ts",
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/switchboard-gui",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"

@@ -10,7 +10,11 @@ document models, editors, subgraphs and processors, type declarations, and its s
 Pieces under pieces/ are built too, each into its own self-contained module under
 dist/node/pieces/<name>, with a descriptor.json and package.json written beside it and
 the piece listed in dist/powerhouse.manifest.json. A package that ships only pieces is an
-ordinary package: it carries the same boilerplate, and every step above runs for it too.`,
+ordinary package: it carries the same boilerplate, and every step above runs for it too.
+
+tsc runs first. If it reports type errors the build asks whether to go ahead, and stops
+where it can't ask. --ignore-type-errors builds without asking; a package built that way
+can load and still fail at runtime, so don't publish it.`,
   args: buildArgs,
   handler: async (args) => {
     if (args.debug) {

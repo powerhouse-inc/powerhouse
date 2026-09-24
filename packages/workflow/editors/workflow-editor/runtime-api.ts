@@ -127,6 +127,8 @@ export interface PieceSummary {
   categories: string[];
   // PieceAuth descriptor, verbatim from the piece; null when authless.
   auth?: unknown;
+  // Why none of the piece's blocks can run on this reactor.
+  unsupported?: string | null;
 }
 
 export interface PieceActionEntry {
@@ -134,6 +136,7 @@ export interface PieceActionEntry {
   displayName: string;
   description: string;
   blockType: string;
+  unsupported?: string | null;
 }
 
 let catalogCache: Promise<PieceSummary[]> | undefined;
@@ -167,6 +170,7 @@ export interface PieceTriggerEntry {
   description: string;
   strategy: string;
   blockType: string;
+  unsupported?: string | null;
 }
 
 export async function fetchPieceTriggers(
@@ -192,6 +196,7 @@ export interface BlockSearchHit {
   description: string;
   kind: "action" | "trigger";
   strategy: string | null;
+  unsupported: string | null;
 }
 
 export interface BlockSearchResult {
@@ -212,7 +217,7 @@ export async function searchBlocks(
     `query SearchBlocks($query: String!, $limit: Int) {
       workflowRuntime { searchBlocks(query: $query, limit: $limit) {
         status indexedPieces error
-        hits { blockType pieceName pieceDisplayName logoUrl displayName description kind strategy }
+        hits { blockType pieceName pieceDisplayName logoUrl displayName description kind strategy unsupported }
       } }
     }`,
     { query, limit },

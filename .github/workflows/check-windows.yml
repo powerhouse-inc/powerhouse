@@ -8,7 +8,7 @@ name: Check Windows
 #
 # Deliberately narrower than Check Commit: install, build, and the test suites of
 # the packages that actually touch the filesystem, spawn processes or build
-# module specifiers (`test:ci:platform`). Storybook, eslint, the e2e suites and
+# module specifiers (`test:ci:platform`). Storybook, lint, the e2e suites and
 # every platform-agnostic suite stay on ubuntu -- this is about platform
 # portability, not duplicating the whole matrix. reactor-browser and
 # design-system in particular are the two largest suites and contain no

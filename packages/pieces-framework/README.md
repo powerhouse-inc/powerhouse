@@ -87,6 +87,39 @@ import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
    Powerhouse documents is the reactor piece's job, and a workflow composes the
    two as separate steps.
 
+   To give a connection a status and an account label in Connect, declare
+   `validate` and `getConnectionIdentifier` on the auth. Both are handed the
+   flat auth value (here the props themselves, not `{ type, props }`):
+
+   ```ts
+   const invoicesAuth = PieceAuth.CustomAuth({
+     displayName: "Invoices",
+     required: true,
+     props: {
+       base_url: Property.ShortText({
+         displayName: "Base URL",
+         required: true,
+       }),
+       token: PieceAuth.SecretText({ displayName: "Token", required: true }),
+     },
+     validate: async ({ auth }) => {
+       try {
+         await clientFor(auth).ping();
+         return { valid: true };
+       } catch (error) {
+         return { valid: false, error: String(error) };
+       }
+     },
+     getConnectionIdentifier: async ({ auth }) =>
+       (await clientFor(auth).me()).email,
+   });
+   ```
+
+   A reactor runs `validate` for the check's result and, when it passes,
+   `getConnectionIdentifier` for the account label. The label is best-effort:
+   returning `undefined` or throwing keeps the previous label and still passes
+   the check.
+
 3. **Register it.** List the piece in `pieces/index.ts` as a `PackagePiece`
    and in the package manifest under `"pieces"`:
 

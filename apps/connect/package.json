@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/connect",
   "productName": "Powerhouse-Connect",
-  "version": "6.2.3-dev.22",
+  "version": "6.2.3-dev.23",
   "description": "Powerhouse Connect",
   "main": "dist/index.html",
   "type": "module",
@@ -51,7 +51,7 @@
   "homepage": "https://github.com/powerhouse-inc/powerhouse#readme",
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint apps/connect",
     "test": "vitest --run",
     "dev": "vite dev",
     "build": "pnpm run build:bundle && pnpm run build:css",

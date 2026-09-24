@@ -29,6 +29,10 @@ export function currentWorkflowId(): string | undefined {
   return storage.getStore()?.workflowId;
 }
 
+export function currentRunId(): string | undefined {
+  return storage.getStore()?.runId ?? undefined;
+}
+
 // Undefined outside a run, which the block executor treats as "resolve
 // nothing": only a run establishes a binding.
 export function currentBoundConnections(): ReadonlySet<string> | undefined {

@@ -616,6 +616,32 @@ describe("WebhookService", () => {
     expect(headers["x-safe"]).toBe("kept");
   });
 
+  // #3090: REDACTED_HEADERS strips signature headers the reactor did not verify.
+  it.fails("leaves a signature header the handler verifies itself", async () => {
+    let headers: Record<string, string> = {};
+    const endpoints = await scope().webhooks.register({
+      name: "trigger",
+      onRequest: (request) => {
+        headers = request.headers;
+        return { status: 202 };
+      },
+    });
+    const { token } = await endpoints.endpointFor("doc-1");
+
+    await fetch(`${url}/webhooks/${token}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-hub-signature-256": "sha256=abc",
+        "stripe-signature": "t=1,v1=abc",
+      },
+      body: "{}",
+    });
+
+    expect(headers["x-hub-signature-256"]).toBe("sha256=abc");
+    expect(headers["stripe-signature"]).toBe("t=1,v1=abc");
+  });
+
   it("refuses a payload past the configured cap", async () => {
     const endpoints = await scope().webhooks.register({
       name: "trigger",

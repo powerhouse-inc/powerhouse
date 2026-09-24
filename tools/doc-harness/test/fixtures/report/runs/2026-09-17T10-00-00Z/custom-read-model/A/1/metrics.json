@@ -4,24 +4,54 @@
   "model": "claude-sonnet-4-5",
   "turns": 24,
   "assistantMessages": 24,
-  "tokens": { "input": 1000, "output": 2000, "cacheCreation": 300, "cacheRead": 4000 },
+  "tokens": {
+    "input": 1000,
+    "output": 2000,
+    "cacheCreation": 300,
+    "cacheRead": 4000
+  },
   "costUsd": 1.25,
   "durationMs": 300000,
   "toolHistogram": { "Read": 8, "Write": 3, "Bash": 4 },
   "docPagesRead": [
     { "rel": "INDEX.md", "firstTurn": 1, "via": "Read" },
-    { "rel": "04-Reference/01-Reactor/read-models.md", "firstTurn": 3, "via": "Read" },
-    { "rel": "04-Reference/01-Reactor/builder.md", "firstTurn": 4, "via": "Read" },
-    { "rel": "03-Build/04-WorkWithData/processors.md", "firstTurn": 6, "via": "Grep" }
+    {
+      "rel": "04-Reference/01-Reactor/read-models.md",
+      "firstTurn": 3,
+      "via": "Read"
+    },
+    {
+      "rel": "04-Reference/01-Reactor/builder.md",
+      "firstTurn": 4,
+      "via": "Read"
+    },
+    {
+      "rel": "03-Build/04-WorkWithData/processors.md",
+      "firstTurn": 6,
+      "via": "Grep"
+    }
   ],
   "escapes": [],
   "bashCommands": [
-    { "turn": 20, "cmd": "pnpm tsc", "isError": false, "exitCodeInferred": 0, "stderrHead": "" }
+    {
+      "turn": 20,
+      "cmd": "pnpm tsc",
+      "isError": false,
+      "exitCodeInferred": 0,
+      "stderrHead": ""
+    }
   ],
   "errorToolResults": 0,
   "retryLoops": [],
   "symbols": [
-    { "pkg": "@powerhousedao/reactor", "name": "ReactorBuilder", "firstUseTurn": 10, "firstDocReadTurn": 4, "docPage": "04-Reference/01-Reactor/builder.md", "documentedAnywhere": true }
+    {
+      "pkg": "@powerhousedao/reactor",
+      "name": "ReactorBuilder",
+      "firstUseTurn": 10,
+      "firstDocReadTurn": 4,
+      "docPage": "04-Reference/01-Reactor/builder.md",
+      "documentedAnywhere": true
+    }
   ],
   "finalText": "Done.\n\n## Documentation gaps\nnone",
   "docGapsStated": "none",

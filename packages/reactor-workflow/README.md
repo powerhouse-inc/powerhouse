@@ -51,6 +51,15 @@ rather than restated here.
   `apfile://` refs, the size ceiling and a host-injected fetcher have no
   upstream equivalent. An `ApFile` a processor builds is flattened to a plain
   object at that boundary: a class instance does not survive the worker IPC.
+- **Prop validation**, from the same place. Before an action's `run()` or any
+  trigger hook but `onDisable`, a prop left unset takes its `defaultValue` and
+  the coerced values go through the engine's `validateProperty`. A failure is
+  a `PropsValidationError` naming each field, as in
+  `Title (title): Expected string, received: undefined`; the step fails and
+  piece code never runs. Two departures: a JSON or OBJECT prop whose text does
+  not parse reaches the piece as that text, as coercion already hands it on;
+  and every declared prop is checked, so a required one absent from the input
+  fails, where upstream's processor checks only the keys it was given.
 - **The SSRF table**, likewise from `./host`. `worker/egress.ts` classifies an
   address with `ssrfIpClassifier.isBlockedIp`; the connect-time socket and DNS
   hooks, the per-request policy and the allow-lists are ours. The one range the
@@ -164,6 +173,92 @@ only. There is no second setting: a package installed from that registry
 already ships pieces that run in the worker, so a bundle fetched from it is no
 more trusted than one that arrived inside a package.
 
+## Known missing features
+
+This is what a piece can declare or call that this engine does not run. It is tracked in
+[#3081](https://github.com/powerhouse-inc/powerhouse/issues/3081),
+[#3090](https://github.com/powerhouse-inc/powerhouse/issues/3090),
+[#3091](https://github.com/powerhouse-inc/powerhouse/issues/3091) and
+[#3095](https://github.com/powerhouse-inc/powerhouse/issues/3095).
+
+Some are **rejected** rather than run wrongly. A rejected feature is refused
+wherever a user meets it: the catalog, `pieceActions`, `pieceTriggers` and
+block search carry the reason as `unsupported`, and the editor lists the
+block disabled; `blockDescriptor` throws `Piece "<name>": <reason>` (or
+`Trigger "<name>" of "<piece>": <reason>`); enabling a trigger parks it in
+`ERROR` with that message and no retry; a step or hook that reaches the
+worker anyway fails before piece code runs, except `onDisable`, which still
+releases what an earlier enable registered. The reason reads
+`<feature> is not supported yet (<issue URL>)`.
+
+**Triggers**
+
+- `TriggerStrategy.APP_WEBHOOK` and `context.app.createListeners`: the
+  listeners are never read, so deliveries are refused (#3081).
+- `renewConfiguration` / `onRenew`: rejected when the strategy is not
+  `NONE`, as `renewConfiguration` (#3090).
+- `TriggerStrategy.MANUAL` on a piece trigger: rejected, as
+  `TriggerStrategy.MANUAL` (#3091). The engine's own `core#manual` is not a
+  piece trigger and is unaffected.
+- Every `WEBHOOK` trigger's `run()` is called every 15 minutes without a
+  `payload`, as a reconciliation sweep. A `run` that only maps the delivery
+  either fails or fires a spurious run (#3090).
+- `setSchedule({ cronExpression })` is run as a fixed interval; wall-clock
+  time and timezone are lost.
+- `onStart` is never called. The trigger context's `server` is a throwing stub.
+- Outside a delivery a hook's `payload` is `undefined`; upstream passes `{}`
+  (#3090).
+- A webhook payload carries no raw body, and its signature headers
+  (`x-signature`, `x-hub-signature-256`, `stripe-signature`, `authorization`)
+  arrive redacted, so `run()` cannot verify the sender's signature (#3090).
+
+**Auth**
+
+- CustomAuth `refresh`: rejected, as `CustomAuth refresh` (#3091).
+- `auth` as an array: rejected, as `Multi-auth (auth as an array)` (#3091).
+- OAuth2 and OIDC: rejected, as `OAuth2 auth` and `OIDC auth` (#3091). Their
+  connections are refused at check and run too.
+- `server` in `validate` and `getConnectionIdentifier` is a throwing stub.
+- A CUSTOM_AUTH value's props reach the piece as stored, not coerced: a
+  `Property.Number` prop arrives as the string it was entered as.
+
+**Props**
+
+- `refreshOnSearch`: a dropdown's `searchValue` is never sent.
+- An optional prop set to `null` reaches `run()` as `null`; upstream passes
+  `undefined`.
+- A DYNAMIC prop's value is not coerced against the props it resolved to, so
+  an ARRAY inside it arrives as parallel arrays rather than rows.
+- Dynamic resolvers nested in ARRAY items or DYNAMIC output can't be called.
+- CUSTOM props carry only their type.
+- DYNAMIC prop keys are not escaped, and an `options()` that throws gets no
+  disabled-dropdown fallback (#3091).
+
+**Actions**
+
+- `errorHandlingOptions` (retry, continue on failure) is ignored.
+- `test` is never called.
+- `requireAuth` defaults to `false` in the descriptor; upstream defaults to
+  `true`.
+- `run.stop`, `run.respond`, `run.pause`, waitpoints and `generateResumeUrl`
+  throw.
+- `connections.get`, `tags`, `server`, `agent` and `flows.list` throw.
+- `ctx.store` checks the key length on `put` only; `get` and `delete` of an
+  over-long key answer as if it were absent.
+- `flows.current.version.id` is a constant. `project.id` is `reactor` on
+  every reactor: the reactor is the project, as it is for `ctx.store`'s
+  PROJECT scope.
+
+**Piece**
+
+- `deprecated` is not in the descriptor.
+- Every piece gets the current context shape, whatever its `getContextInfo`
+  says.
+- Reads of context members outside the documented surface are tracked but not
+  reported.
+- A piece's setup markdown can describe Activepieces features this engine
+  does not serve, such as the webhook URL's `/sync` and `/test` forms (#3095).
+
 ## Running the tests
 
 ```sh
@@ -182,6 +277,17 @@ service on loopback is reached by widening
 key so no run picks up a developer's key file. The two live piece suites read
 `DOCLING_E2E_URL` / `DOCLING_E2E_API_KEY` and `PAPERLESS_E2E_URL` /
 `PAPERLESS_E2E_USER` / `PAPERLESS_E2E_PASSWORD`, and skip when unset.
+
+`test/upstream/` holds Activepieces' own engine tests, generated by
+`pieces-framework`'s sync (see its
+[`UPSTREAM.md`](../pieces-framework/UPSTREAM.md#conformance-suite-for-reactor-workflow))
+and run against this engine through the adapters in `test/upstream-adapters/`.
+A case this engine is known to fail runs as `it.fails` and names the issue that
+fixes it; never edit those files by hand. To regenerate them:
+
+```sh
+pnpm --filter @powerhousedao/pieces-framework sync-upstream -- --tag 0.91.0 --from <activepieces checkout>
+```
 
 ## Design documents
 

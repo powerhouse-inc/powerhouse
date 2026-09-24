@@ -47,6 +47,14 @@ export const buildArgs = {
     defaultValue: () => false as const,
     defaultValueIsSerializable: true,
   }),
+  ignoreTypeErrors: flag({
+    type: boolean,
+    long: "ignore-type-errors",
+    description:
+      "Unsafe: build even when tsc reports type errors, without asking. The package can load and still fail at runtime",
+    defaultValue: () => false as const,
+    defaultValueIsSerializable: true,
+  }),
   ...debugArgs,
 };
 

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/pieces-framework",
-  "version": "6.2.3-dev.22",
+  "version": "6.2.3-dev.23",
   "description": "Powerhouse's published copy of the Activepieces piece framework, widened with the reactor context.",
   "license": "MIT",
   "type": "module",
@@ -38,7 +38,7 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/pieces-framework",
     "test": "vitest --run",
     "build": "tsdown",
     "sync-upstream": "tsx scripts/sync-upstream.mts"
@@ -65,9 +65,14 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "deepmerge-ts": "7.1.0",
+    "eslint": "^10.3.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "prettier": "catalog:",
     "ts-morph": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:",
+    "typescript-eslint": "^8.59.3",
     "vitest": "catalog:"
   }
 }

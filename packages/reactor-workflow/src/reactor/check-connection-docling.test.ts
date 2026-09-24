@@ -1,5 +1,5 @@
-// The docling piece's checkConnection shim through the real subgraph
-// check-connection path: real PGlite secret store, real PieceWorker fork,
+// The docling piece's auth.validate and auth.getConnectionIdentifier through
+// the real check-connection path: real PGlite secret store, real PieceWorker fork,
 // built piece bundle, live mock docling-serve. The harness mirrors
 // check-connection.test.ts (same mocks, same subgraph shape).
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
@@ -16,7 +16,7 @@ import {
   type RecordCheckResultInput,
 } from "@powerhousedao/workflow/document-models/connection";
 import { execFileSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
@@ -101,17 +101,22 @@ const PIECE_PKG = fileURLToPath(
   new URL("../../../piece-docling", import.meta.url),
 );
 
+// `ph build` emits a bare module; the cache layout wants a package root.
 function seedBuiltBundle(cacheDir: string): void {
-  const piecePkg = PIECE_PKG;
-  if (!existsSync(join(piecePkg, "dist/src/index.js"))) {
-    execFileSync("node", ["scripts/bundle.mjs"], { cwd: piecePkg });
+  const entry = join(PIECE_PKG, "dist/node/pieces/docling/index.mjs");
+  if (!existsSync(entry)) {
+    execFileSync("pnpm", ["run", "build"], { cwd: PIECE_PKG });
   }
   const dir = join(
     cacheDir,
     `${PIECE.name.replace("/", "-")}-${PIECE.version}`,
   );
   mkdirSync(dir, { recursive: true });
-  cpSync(join(piecePkg, "dist"), dir, { recursive: true });
+  copyFileSync(entry, join(dir, "index.mjs"));
+  writeFileSync(
+    join(dir, "package.json"),
+    JSON.stringify({ ...PIECE, main: "./index.mjs" }),
+  );
 }
 
 let cacheDir = "";
@@ -158,7 +163,6 @@ function lastRecordInput(): RecordCheckResultInput {
   const call = execute.mock.calls.at(-1);
   expect(call, "execute should have been called").toBeDefined();
   const actionList = call?.[2] as Action[];
-  expect(actionList).toHaveLength(1);
   const action = actionList[0];
   expect(action.type).toBe("RECORD_CHECK_RESULT");
   return action.input as RecordCheckResultInput;

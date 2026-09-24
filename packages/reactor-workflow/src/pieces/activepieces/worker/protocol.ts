@@ -1,5 +1,6 @@
 import type { ActionContextIdentity } from "../context/action.js";
 import type { StagedFile } from "../context/files.js";
+import type { PropsValidationErrors } from "../context/normalize.js";
 import type {
   ExecutionType,
   ServerContext,
@@ -98,6 +99,8 @@ export interface ResolveOptionsRequest
   refresherValues?: Record<string, unknown>;
   auth?: unknown;
   searchValue?: string;
+  // ctx.project.id, the same one a run of the piece is handed.
+  projectId?: string;
   // As on a run: an options() resolver of a package piece may read the reactor
   // it is offering choices from.
   reactorAccess?: boolean;
@@ -155,13 +158,16 @@ export interface CheckConnectionMessage {
 
 // `output` of a check-connection result.
 export interface CheckConnectionOutcome {
-  // False when the piece declares neither app.checkConnection nor auth.validate.
+  // False when the piece's auth declares no validate.
   declared: boolean;
-  // Its return value: void | boolean | { name | username | email | sub }.
-  result?: unknown;
-  // Why the check failed, when the hook said so. auth.validate carries a
-  // message; app.checkConnection only ever returns false.
+  // validate's verdict; true when none is declared.
+  valid: boolean;
+  // Why validate failed, when it said so.
   detail?: string;
+  // getConnectionIdentifier's label; it runs only once the check passes.
+  accountLabel?: string;
+  // Why getConnectionIdentifier threw. The check still passes.
+  identifierError?: string;
 }
 
 // Design-time descriptor of a piece: its actions, triggers and auth shape.
@@ -196,6 +202,10 @@ export interface SerializedPieceError {
   properties: Record<string, unknown>;
   // Set when the piece hit an unimplemented context member.
   unsupportedMember?: string;
+  // Set when the piece or trigger uses a feature this engine does not run.
+  unsupportedFeature?: string;
+  // Set when the props failed validation, before piece code ran.
+  invalidProps?: PropsValidationErrors;
 }
 
 export interface ResultResponse {

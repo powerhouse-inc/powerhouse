@@ -31,7 +31,11 @@ import {
   schedulePayload,
   SCHEDULE_BLOCK,
 } from "./schedule.js";
-import { createPieceStorePort, testPartitionKey } from "./piece-store-port.js";
+import {
+  createPieceStorePort,
+  PROJECT_SCOPE_KEY,
+  testPartitionKey,
+} from "./piece-store-port.js";
 import type { TriggerStateRow, WorkflowRunStore } from "./store.js";
 
 const logger = childLogger(["workflow", "trigger-supervisor"]);
@@ -176,7 +180,9 @@ function isPermanentFailure(error: unknown): boolean {
   if (error instanceof TriggerConfigError) return true;
   return (
     error instanceof PieceWorkerError &&
-    error.serialized.unsupportedMember !== undefined
+    (error.serialized.unsupportedMember !== undefined ||
+      error.serialized.unsupportedFeature !== undefined ||
+      error.serialized.invalidProps !== undefined)
   );
 }
 
@@ -522,7 +528,7 @@ export class TriggerSupervisor {
         auth,
         ...(redactValues.length > 0 ? { redactValues } : {}),
         ...(pieceStore ? { durableStore: true } : {}),
-        identity: { flowId: binding.workflowId },
+        identity: { flowId: binding.workflowId, projectId: PROJECT_SCOPE_KEY },
         isRepublish: options.isRepublish,
         payload: options.payload,
         // A poll binding gets an unroutable URL on purpose: a live one would
@@ -539,8 +545,8 @@ export class TriggerSupervisor {
     );
   }
 
-  // A trigger's strategy lives in the piece descriptor, so it takes loading
-  // the bundle. Enables are rare and the descriptor is cached per version.
+  // A trigger's strategy, and whether the engine can run it, live in the piece
+  // descriptor. Enables are rare and the descriptor is cached per version.
   private async strategyFor(binding: PieceTriggerBinding): Promise<string> {
     const key = `${binding.packageName}@${binding.version}`;
     let descriptor = this.descriptors.get(key);
@@ -564,6 +570,13 @@ export class TriggerSupervisor {
     const trigger = descriptor.triggers.find(
       (candidate) => candidate.name === binding.triggerName,
     );
+    // Parked, not retried: no attempt can make the feature run.
+    const unsupported = descriptor.unsupported ?? trigger?.unsupported;
+    if (unsupported) {
+      throw new TriggerConfigError(
+        `Trigger "${binding.triggerName}" of "${binding.packageName}": ${unsupported.reason}`,
+      );
+    }
     return trigger?.strategy ?? "POLLING";
   }
 

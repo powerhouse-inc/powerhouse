@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-attachments",
-  "version": "6.2.3-dev.22",
+  "version": "6.2.3-dev.23",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -29,7 +29,7 @@
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/reactor-attachments",
     "build": "tsdown",
     "test": "vitest --run",
     "verify:s3-compatibility": "tsx scripts/verify-s3-compatibility.ts"

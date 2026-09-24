@@ -20,8 +20,8 @@ export const ${v.camelCaseName}Auth = PieceAuth.CustomAuth({
       description: "Where the token is minted in the service's UI",
     }),
   },
-  // Activepieces hands \`validate\` the flat property value; the reactor calls
-  // the piece's checkConnection instead, so this is Activepieces semantics.
+  // The connection check. \`auth\` here is the flat property value, not the
+  // envelope an action's ctx.auth carries.
   validate: async ({ auth }) => {
     try {
       await clientFor(auth).ping();
@@ -29,6 +29,13 @@ export const ${v.camelCaseName}Auth = PieceAuth.CustomAuth({
     } catch (error) {
       return { valid: false as const, error: describeAuthFailure(error) };
     }
+  },
+  // Labels the connection once it validates; best-effort. Return the account
+  // name if the API has a "who am I" call.
+  getConnectionIdentifier: async ({ auth }) => {
+    const client = clientFor(auth);
+    await client.ping();
+    return new URL(client.credentials.baseUrl).host;
   },
 });
 `;
@@ -38,8 +45,8 @@ export const ${v.camelCaseName}Auth = PieceAuth.SecretText({
   displayName: "${v.displayName} API Token",
   description: AUTH_DESCRIPTION,
   required: true,
-  // Activepieces hands \`validate\` the token itself; the reactor calls the
-  // piece's checkConnection instead, so this is Activepieces semantics.
+  // The connection check. \`auth\` here is the token itself, not the
+  // envelope an action's ctx.auth carries.
   validate: async ({ auth }) => {
     try {
       await clientFor(auth).ping();
@@ -47,6 +54,13 @@ export const ${v.camelCaseName}Auth = PieceAuth.SecretText({
     } catch (error) {
       return { valid: false as const, error: describeAuthFailure(error) };
     }
+  },
+  // Labels the connection once it validates; best-effort. Return the account
+  // name if the API has a "who am I" call.
+  getConnectionIdentifier: async ({ auth }) => {
+    const client = clientFor(auth);
+    await client.ping();
+    return new URL(client.credentials.baseUrl).host;
   },
 });
 `;
@@ -79,19 +93,5 @@ function describeAuthFailure(error: unknown): string {
     }
   }
   return error instanceof Error ? error.message : String(error);
-}
-
-export interface ConnectionIdentity {
-  name: string;
-}
-
-// The reactor's checkConnection mutation calls this and labels the connection
-// with the first string \`name\`/\`username\`/\`email\`/\`sub\` field it finds.
-export async function check${v.pascalCaseName}Connection(context: {
-  auth?: unknown;
-}): Promise<ConnectionIdentity> {
-  const client = clientFor(context.auth);
-  await client.ping();
-  return { name: new URL(client.credentials.baseUrl).host };
 }
 `.raw;

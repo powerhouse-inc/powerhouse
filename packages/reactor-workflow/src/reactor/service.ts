@@ -24,6 +24,7 @@ import {
   PieceWorkerTimeoutError,
   rememberSecrets,
   runWorkflow,
+  UnsupportedPieceFeatureError,
   type BlockExecutor,
   type LocalPiece,
   type ParsedBlockType,
@@ -38,6 +39,7 @@ import {
 } from "../pieces/index.js";
 import {
   childLogger,
+  type Action,
   type ILogger,
   type OperationWithContext,
 } from "document-model";
@@ -115,7 +117,7 @@ import { packageFromConnectorId } from "./connector-id.js";
 import { SCHEDULE_BLOCK } from "./schedule.js";
 import type { AttachmentPort } from "../pieces/index.js";
 import { createAttachmentPort } from "./attachment-port.js";
-import { createPieceStorePort } from "./piece-store-port.js";
+import { createPieceStorePort, PROJECT_SCOPE_KEY } from "./piece-store-port.js";
 import { currentWorkflowId, withRunScope } from "./run-scope.js";
 import {
   CORE_DESCRIPTOR,
@@ -319,18 +321,6 @@ export function collectLifecycleParentHints(
     });
   }
   return hints;
-}
-
-// A piece's checkConnection returns void | boolean |
-// { name | username | email | sub }; anything string-valued labels the account.
-function accountLabelFromCheckResult(result: unknown): string | undefined {
-  if (!result || typeof result !== "object") return undefined;
-  const record = result as Record<string, unknown>;
-  for (const key of ["name", "username", "email", "sub"]) {
-    const value = record[key];
-    if (typeof value === "string" && value !== "") return value;
-  }
-  return undefined;
 }
 
 // User-visible detail of a failed worker request; a piece error contributes only
@@ -1845,8 +1835,8 @@ export class WorkflowRuntimeService {
     });
   }
 
-  // Runs the piece's app.checkConnection (when declared) against the
-  // connection's credentials and records the outcome on the document.
+  // Runs the piece's auth.validate, then auth.getConnectionIdentifier for the
+  // account label, against the connection's credentials; records the outcome.
   async checkConnection(
     connectionId: string,
     ctx?: WorkflowCaller,
@@ -1935,7 +1925,7 @@ export class WorkflowRuntimeService {
       });
     }
 
-    // Plaintext auth crosses only into the piece worker: checkConnection is
+    // Plaintext auth crosses only into the piece worker: the auth's hooks are
     // untrusted piece code and must not run in the reactor process.
     let outcome: CheckConnectionOutcome;
     try {
@@ -1959,25 +1949,27 @@ export class WorkflowRuntimeService {
       });
     }
 
-    if (!outcome.declared) {
-      return this.recordCheckResult(document, {
-        ok: true,
-        detail: "piece declares no connection check; credentials resolved",
-        accountLabel,
-      });
-    }
-    if (outcome.result === false) {
+    if (!outcome.valid) {
       return this.recordCheckResult(document, {
         ok: false,
-        // auth.validate says why; app.checkConnection only ever says no.
         detail: outcome.detail ?? "Connection check failed",
         accountLabel,
       });
     }
+    // The label is best-effort: a failure keeps the previous one.
+    if (outcome.identifierError) {
+      this.logger.warn(
+        "Connection @id kept its label: getConnectionIdentifier failed: @detail",
+        connectionId,
+        outcome.identifierError,
+      );
+    }
     return this.recordCheckResult(document, {
       ok: true,
-      detail: null,
-      accountLabel: accountLabelFromCheckResult(outcome.result) ?? accountLabel,
+      detail: outcome.declared
+        ? null
+        : "piece declares no auth.validate; credentials resolved",
+      accountLabel: outcome.accountLabel ?? accountLabel,
     });
   }
 
@@ -2108,12 +2100,25 @@ export class WorkflowRuntimeService {
     document: ConnectionDocument,
     result: ConnectionCheckResult,
   ): Promise<ConnectionCheckResult> {
-    const action = connectionActions.recordCheckResult({
-      status: result.ok ? "OK" : "ERROR",
-      checkedAt: new Date().toISOString(),
-      error: result.ok ? undefined : (result.detail ?? undefined),
-    });
-    await this.host.reactorClient.execute(document.header.id, "main", [action]);
+    const actionList: Action[] = [
+      connectionActions.recordCheckResult({
+        status: result.ok ? "OK" : "ERROR",
+        checkedAt: new Date().toISOString(),
+        error: result.ok ? undefined : (result.detail ?? undefined),
+      }),
+    ];
+    // Stored so the connections query and the editors show it.
+    const label = result.accountLabel;
+    if (label && label !== (document.state.global.accountLabel ?? null)) {
+      actionList.push(
+        connectionActions.setAccountLabel({ accountLabel: label }),
+      );
+    }
+    await this.host.reactorClient.execute(
+      document.header.id,
+      "main",
+      actionList,
+    );
     return result;
   }
 
@@ -2247,6 +2252,13 @@ export class WorkflowRuntimeService {
       parsed.packageName,
       parsed.version,
     );
+    // Refused here so no form is ever drawn for a block that cannot run.
+    if (descriptor.unsupported) {
+      throw new UnsupportedPieceFeatureError(
+        `Piece "${parsed.packageName}"`,
+        descriptor.unsupported,
+      );
+    }
     const common = {
       displayName: descriptor.displayName,
       logoUrl: descriptor.logoUrl,
@@ -2256,6 +2268,12 @@ export class WorkflowRuntimeService {
       const trigger = descriptor.triggers.find(
         (entry) => entry.name === parsed.name,
       );
+      if (trigger?.unsupported) {
+        throw new UnsupportedPieceFeatureError(
+          `Trigger "${parsed.name}" of "${parsed.packageName}"`,
+          trigger.unsupported,
+        );
+      }
       return trigger ? { ...common, trigger } : null;
     }
     const action = descriptor.actions.find(
@@ -2370,6 +2388,7 @@ export class WorkflowRuntimeService {
         propName,
         refresherValues: (input ?? {}) as Record<string, unknown>,
         auth,
+        projectId: PROJECT_SCOPE_KEY,
         // The reactor piece's options() reads the reactor it offers choices
         // from, over the same port a step of it would use.
 

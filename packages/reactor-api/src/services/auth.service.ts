@@ -2,7 +2,7 @@ import type { RouteUser } from "@powerhousedao/shared/processors";
 import { verifyAuthBearerToken } from "@renown/sdk";
 
 type VerifiedCredential =
-  Awaited<ReturnType<typeof verifyAuthBearerToken>> extends false | infer T
+  Awaited<ReturnType<typeof verifyAuthBearerToken>> extends false | (infer T)
     ? T
     : never;
 

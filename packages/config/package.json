@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/config",
-  "version": "6.2.3-dev.22",
+  "version": "6.2.3-dev.23",
   "description": "",
   "license": "AGPL-3.0-only",
   "private": false,
@@ -32,7 +32,7 @@
   "scripts": {
     "build": "tsdown",
     "tsc": "tsc",
-    "lint": "eslint"
+    "lint": "cd ../.. && oxlint packages/config"
   },
   "dependencies": {
     "@powerhousedao/shared": "workspace:*"

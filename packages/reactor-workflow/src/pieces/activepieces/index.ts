@@ -3,6 +3,7 @@ export * from "./fetch.js";
 export * from "./loader.js";
 export { throwingStub } from "./context/stubs.js";
 export * from "./descriptor.js";
+export * from "./unsupported.js";
 export * from "./resolver.js";
 export * from "./context/reactor.js";
 export * from "./context/action.js";

@@ -198,6 +198,21 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
     broken = false;
   }, 60_000);
 
+  it("parks an enable whose props fail validation, naming the field", async () => {
+    await supervisor.upsert({
+      ...binding(),
+      workflowId: "wf-sup-invalid",
+      config: {},
+    });
+    const row = await store.getTriggerState("wf-sup-invalid");
+    expect(row?.status).toBe("ERROR");
+    expect(row?.last_error).toContain(
+      'Invalid input for trigger "new-item": RSS Feed URL (rss_feed_url)',
+    );
+    // Retrying cannot fix a config, so nothing is scheduled.
+    expect(row?.next_poll_at).toBeNull();
+  }, 60_000);
+
   it("disables on remove and keeps the cursor for a later republish", async () => {
     await supervisor.remove(WF);
     const row = await store.getTriggerState(WF);

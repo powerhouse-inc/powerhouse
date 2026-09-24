@@ -134,7 +134,7 @@ function SecretField(props: {
   const [manualRef, setManualRef] = useState(false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- clears the stale stat before the ref's own fetch
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect -- clears the stale stat before the ref's own fetch
     setStat(null);
     if (!isManagedRef(refValue)) return;
     let cancelled = false;
