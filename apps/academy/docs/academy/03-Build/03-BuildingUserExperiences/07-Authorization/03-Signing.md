@@ -265,8 +265,7 @@ Under `authEnforcement`, the switchboard uses `createRenownTrustPolicy` from `@r
 A document is legacy or v2-required, fixed when it is created. `protocolVersions.signature: 2` in the header makes it v2-required; without the key it is legacy, and the checks above are all it gets. New documents are v2-required unless the caller or host asks otherwise. Existing documents keep the policy they were created with. On a v2-required document:
 
 - an unsigned action, or one with an empty `signer.app.key`, is refused as `UNSIGNED_REQUIRED`,
-- a legacy tuple is refused as `SCHEME_BELOW_POLICY`,
-- `PRUNE` is refused as `ACTION_NOT_ALLOWED`.
+- a legacy tuple is refused as `SCHEME_BELOW_POLICY`.
 
 The id of a v2-required document is `base64url(sha256(canonicalJson({ documentType, createdAtUtcIso, nonce, protocolVersions })))`: 43 base64url characters, not a UUID. Its requirement cannot be changed without changing its id, and it cannot take an id you choose. A model's `utils.createDocument()` derives the id when it builds the header, so `document.header.id` is final before the document is created:
 
@@ -341,7 +340,7 @@ const reactorBuilder = new ReactorBuilder().withExecutorConfig({
 
 Each refusal emits a `SIGNATURE_REFUSED` event on the reactor event bus, with the refusal `code`, the signature `scheme`, the admission `path` (`mutation` or `load`), and whether it was `enforced`. `@powerhousedao/opentelemetry-instrumentation-reactor` counts these as `reactor.signature.refusals`.
 
-A refused mutation fails with an `InvalidSignatureError`. Its message carries the code in brackets, for example `[HASH_MISMATCH]`, and the code is also on the error's `code` field. The codes are `UNSIGNED_REQUIRED`, `KEY_MISMATCH`, `MALFORMED_TUPLE`, `TIMESTAMP_MISMATCH`, `HASH_MISMATCH`, `BAD_SIGNATURE`, `SCHEME_BELOW_POLICY`, `ID_MISMATCH`, `ACTION_NOT_ALLOWED`, `DUPLICATE_ACTION`, and `SIGNER_UNAUTHORIZED`.
+A refused mutation fails with an `InvalidSignatureError`. Its message carries the code in brackets, for example `[HASH_MISMATCH]`, and the code is also on the error's `code` field. The codes are `UNSIGNED_REQUIRED`, `KEY_MISMATCH`, `MALFORMED_TUPLE`, `TIMESTAMP_MISMATCH`, `HASH_MISMATCH`, `BAD_SIGNATURE`, `SCHEME_BELOW_POLICY`, `ID_MISMATCH`, `DUPLICATE_ACTION`, and `SIGNER_UNAUTHORIZED`.
 
 ## Signing at the GQL / Switchboard Level
 

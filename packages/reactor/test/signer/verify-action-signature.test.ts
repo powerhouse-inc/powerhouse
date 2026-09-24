@@ -5,7 +5,6 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   createPresignedHeader,
-  prune,
   v2RequiredProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import { createDocumentAction } from "../../src/actions/index.js";
@@ -412,21 +411,6 @@ describe("verifyActionSignature", () => {
           await verifyActionSignature(signed, target, "mutation"),
         ).toMatchObject({ ok: true });
       }
-    });
-
-    it("refuses PRUNE on a v2-required document only", async () => {
-      const pruning = prune();
-      const signed = signer.signed(
-        pruning,
-        await signer.v2Tuple(pruning, target),
-      );
-      expect(
-        await verifyActionSignature(signed, v2Target, "mutation"),
-      ).toMatchObject({ ok: false, code: "ACTION_NOT_ALLOWED" });
-      expect(await verifyActionSignature(signed, target, "mutation")).toEqual({
-        ok: true,
-        scheme: "v2",
-      });
     });
 
     it("accepts a v2-required CREATE whose id recomputes from its input", async () => {

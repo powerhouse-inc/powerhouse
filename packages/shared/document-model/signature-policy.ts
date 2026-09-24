@@ -7,7 +7,7 @@ export const SIGNATURE_PROTOCOL = "signature";
 /** `protocolVersions.signature` of a document that requires v2 tuples. */
 export const SIGNATURE_PROTOCOL_V2 = 2;
 
-/** `v2-required`: v2 tuples only, a content-addressed id, no PRUNE. */
+/** `v2-required`: v2 tuples only and a content-addressed id. */
 export type SignaturePolicy = "legacy" | "v2-required";
 
 /** What a new document is created as unless the caller or host says otherwise. */

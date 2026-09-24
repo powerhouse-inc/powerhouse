@@ -27,7 +27,7 @@ The reactor verifies every write once, at admission: actions submitted to a muta
 
 #### 📄 v2-required documents, by default
 
-`protocolVersions.signature: 2` makes a document v2-required. It refuses unsigned actions (`UNSIGNED_REQUIRED`), legacy tuples (`SCHEME_BELOW_POLICY`) and `PRUNE` (`ACTION_NOT_ALLOWED`). Its id is `base64url(sha256(canonicalJson({ documentType, createdAtUtcIso, nonce, protocolVersions })))`, 43 characters, so a document's requirement cannot change without changing its id and a v2-required document cannot take an id you choose. Every model's `utils.createDocument()`, `createEmpty()`, `drives.create()`, copies of legacy documents, and the documents Connect and switchboard create are now v2-required. Existing documents stay legacy.
+`protocolVersions.signature: 2` makes a document v2-required. It refuses unsigned actions (`UNSIGNED_REQUIRED`) and legacy tuples (`SCHEME_BELOW_POLICY`). Its id is `base64url(sha256(canonicalJson({ documentType, createdAtUtcIso, nonce, protocolVersions })))`, 43 characters, so a document's requirement cannot change without changing its id and a v2-required document cannot take an id you choose. Every model's `utils.createDocument()`, `createEmpty()`, `drives.create()`, copies of legacy documents, and the documents Connect and switchboard create are now v2-required. Existing documents stay legacy.
 
 ```typescript
 import { withSignaturePolicy } from "@powerhousedao/shared/document-model";

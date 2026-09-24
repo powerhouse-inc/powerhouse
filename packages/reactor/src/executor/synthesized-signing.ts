@@ -14,7 +14,6 @@ import {
 export const SYNTHESIZING_TYPES: ReadonlySet<string> = new Set([
   "UNDO",
   "REDO",
-  "PRUNE",
 ]);
 
 /**

@@ -94,8 +94,7 @@ mutation (`:420`) go through the same call. Connect wires a verifier too
 8. **The reactor signs what it synthesizes.** The executor holds a
    host-provided signer and signs the NOOP it derives from UNDO and the
    action it rebuilds from REDO, after the reducer returns and before the
-   write. PRUNE is being retired separately and is refused on v2-required
-   documents until it is gone.
+   write.
 9. **Legacy stays weak.** Stored actions are jsonb and Postgres reorders
    their keys, so the renown legacy hash cannot be recomputed after a store
    round trip. Legacy tuples are recomputed at mutation admission only and
@@ -114,7 +113,7 @@ mutation (`:420`) go through the same call. Connect wires a verifier too
 
 // absent      = legacy document: any tuple or none, today's behaviour
 // signature 2 = v2-required: every operation carries a v2 tuple,
-//               the id is content-addressed, PRUNE is refused
+//               the id is content-addressed
 ```
 
 - `createDocumentFromAction` (`packages/reactor/src/executor/util.ts:137`)
@@ -137,7 +136,6 @@ id = base64url(sha256(canonicalJson({
 - A legacy CREATE whose id has the derived shape (43 base64url characters)
   is refused as `ID_MISMATCH`; otherwise a legacy CREATE could claim the id a
   v2-required one derives and downgrade it on peers that see it first.
-- `PRUNE` on a v2-required document is refused as `ACTION_NOT_ALLOWED`.
 - A reactor with no signer stores synthesized operations with an empty tuple,
   which every peer refuses on a v2-required document, so a host that writes
   to such documents must configure a signer.
@@ -271,10 +269,10 @@ Each phase merges green to main on its own.
 |---|---|---|
 | P1 Reactor-owned verifier | Integrity checking moves into the executor, always on, replacing the host-wired `SignatureVerificationHandler`. Recognises `v2:` (ECDSA only until P2). Recomputes legacy at mutation admission by hash length. Live-id check. Per-write admission. Load drops refused operations. Empty-key tuples are unsigned. Key cache. Log-only mode, default `log`. Delete `verifyOperations`; deprecate shared `verifyOperationSignature` and update the academy pages that recommend it and `createSignatureVerifier`. | Tampered legacy input is refused at mutation admission once `enforce` is set. Worker pools verify. |
 | P2 v2 scheme and signers | `hashActionV2`, `canonicalJson`, strict tuple parsing, timestamp equality, the `ISigner` change. Port #2974's target-document resolution and slug resolution before signing. Every signer emits v2: `ReactorClient` `execute`/`executeAsync`/`executeBatch`, the reactor's create/delete/relationship paths, the drive client, `reactor-drive-client.ts`, `migrate-legacy-state.ts`, reactor-browser `signing.ts` and `remote-controller.ts`, `actions/sign.ts` (retire the SHA-1 path), the Connect worker, the switchboard e2e helper, the bench host. Default flips to `enforce`. | New writes carry v2 tuples that verify everywhere, including on old peers. Tampered v2 operations are refused on every path. |
-| P3 Reactor signer | `SignerConfig.signer` reaches the executor and workers. NOOP from UNDO and the rebuilt REDO action are signed before the write. PRUNE refused on v2-required documents. | Synthesized operations carry the reactor's signature. |
+| P3 Reactor signer | `SignerConfig.signer` reaches the executor and workers. NOOP from UNDO and the rebuilt REDO action are signed before the write. | Synthesized operations carry the reactor's signature. |
 | P4 v2-required documents | `protocolVersions.signature`, content-addressed ids, id recompute on CREATE, `SCHEME_BELOW_POLICY` and `UNSIGNED_REQUIRED`, header restored after upgrade reducers. Remove `REQUIRE_SIGNATURES` / `identity.requireSignatures`. | None until a document is created v2-required. |
 | P5 Identity hook | `SignatureTrustPolicy.authorizeSigner`, admission-only, default by `authEnforcement`, `FactorySpec` for workers. Switchboard's Renown credential check. | Under `authEnforcement`, a key that cannot sign as its claimed address is refused. |
-| P6 v2-required by default | `baseCreateDocument`, and so every model's `createDocument`, sets `signature: 2` and derives the id; `createEmpty`, `drives.create`, copies of legacy documents and the host create paths follow a creation default, `v2-required` unless overridden. `create` and `addFile` keep the header they are handed. | New documents refuse unsigned, legacy and PRUNE operations. |
+| P6 v2-required by default | `baseCreateDocument`, and so every model's `createDocument`, sets `signature: 2` and derives the id; `createEmpty`, `drives.create`, copies of legacy documents and the host create paths follow a creation default, `v2-required` unless overridden. `create` and `addFile` keep the header they are handed. | New documents refuse unsigned and legacy operations. |
 
 ## Mixed-version rollout
 
@@ -322,7 +320,7 @@ Each phase merges green to main on its own.
   `JobInfo.error`; a load refusal drops only that operation and the job
   succeeds; nothing is stored or forwarded for it; a hook error fails the
   load job instead.
-- **Policy:** v2-required refuses unsigned, empty-key, legacy and PRUNE;
+- **Policy:** v2-required refuses unsigned, empty-key and legacy;
   legacy documents accept all of them; CREATE is verified under its own
   input; later actions in the create batch too; `ADD_RELATIONSHIP` under the
   target document's header; a CREATE whose id does not recompute from its

@@ -120,20 +120,10 @@ function policyRefusal(
   action: Action,
   policy: SignaturePolicy,
 ): SignatureVerdict | undefined {
-  const scheme = schemeOfAction(action);
-
-  if (action.type === "PRUNE" && policy === "v2-required") {
-    return refuse(
-      scheme,
-      "ACTION_NOT_ALLOWED",
-      `action ${action.id}: PRUNE is refused on a v2-required document`,
-    );
-  }
-
   if (action.type !== "CREATE_DOCUMENT") {
     return undefined;
   }
-
+  const scheme = schemeOfAction(action);
   const input = action.input as CreateDocumentActionInput | undefined;
   const documentId = input?.documentId ?? "";
   if (policy === "legacy") {

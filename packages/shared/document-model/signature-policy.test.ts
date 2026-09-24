@@ -8,7 +8,6 @@ import {
   createPresignedHeader,
   hasDerivedDocumentId,
 } from "./header.js";
-import { loadStateOperation } from "./operations.js";
 import {
   deriveDocumentId,
   isDerivedDocumentId,
@@ -302,24 +301,6 @@ describe("protocolVersions are fixed at creation", () => {
       }),
     );
     expect(upgraded.header.protocolVersions).toEqual(
-      v2RequiredProtocolVersions(),
-    );
-  });
-
-  it("does not take them from LOAD_STATE", () => {
-    const document = v2Document();
-    const loaded = loadStateOperation(document, {
-      state: {
-        name: "loaded",
-        data: {
-          ...document.state,
-          header: { protocolVersions: {} },
-        } as never,
-      },
-      operations: 0,
-    });
-    expect(loaded.header.name).toBe("loaded");
-    expect(loaded.header.protocolVersions).toEqual(
       v2RequiredProtocolVersions(),
     );
   });

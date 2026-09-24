@@ -9,7 +9,6 @@ import {
   addModule,
   createPresignedHeader,
   deriveOperationId,
-  prune,
   v2RequiredProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
@@ -257,15 +256,6 @@ describe.each([
       ]);
     });
 
-    it("refuses PRUNE, even signed v2, as ACTION_NOT_ALLOWED", async () => {
-      const { reactor, documentId } = await v2Created();
-      const job = await execute(reactor, documentId, [
-        await v2Signed(prune(), documentId),
-      ]);
-      expect(job.status).toBe(JobStatus.FAILED);
-      expect(job.error?.message).toContain("[ACTION_NOT_ALLOWED]");
-    });
-
     it("verifies ADD_RELATIONSHIP under the header of the document it writes to", async () => {
       const { module, refusals } = await build();
       const { reactor } = module;
@@ -392,7 +382,7 @@ describe.each([
   });
 
   describe("on a legacy document", () => {
-    it("accepts unsigned, empty-key, legacy tuples and PRUNE", async () => {
+    it("accepts unsigned, empty-key and legacy tuples", async () => {
       const { module, refusals } = await build();
       const { reactor } = module;
       const document = createDocModelDocument({ signaturePolicy: "legacy" });
@@ -413,10 +403,6 @@ describe.each([
         expect(job.error).toBeUndefined();
         expect(job.status).toBe(JobStatus.READ_READY);
       }
-
-      // Admitted; the reducer's own PRUNE failure is not a refusal.
-      const pruned = await execute(reactor, documentId, [prune()]);
-      expect(pruned.error?.message).not.toContain("Invalid signature");
       expect(refusals).toEqual([]);
     });
   });
