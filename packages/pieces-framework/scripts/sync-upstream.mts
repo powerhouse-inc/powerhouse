@@ -92,6 +92,9 @@ const PACKAGES: UpstreamPackage[] = [
       "src/lib/variables/processors/text.ts",
       "src/lib/variables/processors/types.ts",
       "src/lib/variables/props-processor.ts",
+      "test/helper/polling-helper.test.ts",
+      "test/http/formdata-multipart-claim-verify.test.ts",
+      "test/variables/dynamic-prop-keys.test.ts",
       "test/variables/file-processor.test.ts",
       "test/variables/props-validator.test.ts",
     ],
@@ -105,6 +108,7 @@ const SHARED_SHIM = "src/host/shared-shim.ts";
 const SHARED_SYMBOL_HOMES: Record<string, string | undefined> = {
   AUTHENTICATION_PROPERTY_NAME: "core-piece-types",
   AppConnectionValue: "core-piece-types",
+  PropertyExecutionType: SHARED_SHIM,
   PropertySettings: SHARED_SHIM,
 };
 
@@ -371,6 +375,19 @@ const PATCHES: Patch[] = [
       "    }\n" +
       "  }\n" +
       "};\n",
+  },
+  {
+    file: "test/upstream/engine/test/variables/dynamic-prop-keys.test.ts",
+    why: "upstream never typechecks this test; Property.DynamicProperties requires auth",
+    find:
+      "    fields: Property.DynamicProperties({\n" +
+      '      displayName: "Fields",\n' +
+      "      required: true,\n",
+    replace:
+      "    fields: Property.DynamicProperties({\n" +
+      '      displayName: "Fields",\n' +
+      "      required: true,\n" +
+      "      auth: undefined,\n",
   },
   {
     file: "test/upstream/framework/test/connection-identifier-flag.test.ts",

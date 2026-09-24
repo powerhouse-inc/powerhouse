@@ -43,16 +43,20 @@ Left out: `mime-db-min.cjs` (upstream's bundler alias that keeps `mime-db`,
 pulled in through `form-data`, out of piece bundles; aliasing is the piece
 build's job, so `ph build` may adopt it later) and upstream's unused `ai` and
 `semver` dependencies.
-Of the engine's own tests only `test/variables/props-validator.test.ts` and
-`test/variables/file-processor.test.ts` come along: the rest need
-`@activepieces/shared`, `props-resolver` or `FlowExecutorContext`.
+Of the engine's own tests only those that exercise vendored code come along:
+`test/variables/{props-validator,file-processor,dynamic-prop-keys}.test.ts`,
+`test/helper/polling-helper.test.ts` and
+`test/http/formdata-multipart-claim-verify.test.ts` (which guards the patched
+`fetch-http-client.ts`). The rest need `@activepieces/shared`,
+`props-resolver` or `FlowExecutorContext`.
 
 `@activepieces/shared` (8k lines of platform entities) is not vendored. The four
 piece packages never import it; the engine files do, so the codemod re-homes
 each symbol they use — `AUTHENTICATION_PROPERTY_NAME` and `AppConnectionValue`
 to `upstream/core-piece-types/`, which really defines them, and `PropertySettings`
-to `src/host/shared-shim.ts`, a Powerhouse-owned declaration of the minimal
-shape `props-processor.ts` reads. An unmapped symbol fails the sync.
+and `PropertyExecutionType` to `src/host/shared-shim.ts`, a Powerhouse-owned
+declaration of the minimal shapes `props-processor.ts` and its tests read. An
+unmapped symbol fails the sync.
 
 `deepmerge-ts` is a devDependency only: `core-utils` imports it in
 `deepMergeAndCast`, which the framework barrel never re-exports, so the source
@@ -167,6 +171,8 @@ Current patches:
   hydrates FILE props itself) validates the result with it.
 - `test/upstream/framework/test/connection-identifier-flag.test.ts`: pass
   `authors: []` to `createPiece` (upstream does not typecheck its tests).
+- `test/upstream/engine/test/variables/dynamic-prop-keys.test.ts`: pass
+  `auth: undefined` to `Property.DynamicProperties`, which requires it.
 - `test/upstream/core-utils/test/ai-provider-health.test.ts`: make the outcome
   reporter return `void` instead of `Array.prototype.push`'s number (three
   sites).
