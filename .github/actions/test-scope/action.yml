@@ -1,0 +1,28 @@
+name: Test scope
+description: Which of the test:ci packages a diff can affect. Outputs a mode (full, affected or none) and, for affected, the pnpm filters to run.
+
+inputs:
+  files:
+    description: Space-separated changed files, repo-relative
+    required: true
+
+outputs:
+  mode:
+    description: full, affected, or none
+    value: ${{ steps.select.outputs.mode }}
+  filters:
+    description: pnpm --filter arguments, set only when mode is affected
+    value: ${{ steps.select.outputs.filters }}
+
+runs:
+  using: composite
+  steps:
+    - id: select
+      shell: bash
+      env:
+        CHANGED_FILES: ${{ inputs.files }}
+      # Unquoted on purpose: the file list is one space-separated string and
+      # select.mjs takes one file per argument.
+      run: |
+        set -euo pipefail
+        node "$GITHUB_ACTION_PATH/select.mjs" $CHANGED_FILES >> "$GITHUB_OUTPUT"

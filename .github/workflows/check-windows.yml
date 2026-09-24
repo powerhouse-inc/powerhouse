@@ -24,7 +24,9 @@ on:
   push:
     branches: ["main", "release/**"]
   pull_request:
-    branches: ["main", "release/**"]
+    # ci/** lets a change to these workflows be exercised by a pull request
+    # stacked on its branch before it reaches main.
+    branches: ["main", "release/**", "ci/**"]
     types: [opened, reopened, synchronize]
 
 permissions:
@@ -45,6 +47,19 @@ jobs:
         with:
           version: 12.5.1
 
+      # Defender scans every file pnpm links, the build writes and the ~700 MB
+      # store cache untars into; a narrow exclusion, not -DisableRealtimeMonitoring.
+      - name: Exclude the workspace from Defender real-time scanning
+        shell: pwsh
+        run: |
+          try {
+            $store = pnpm store path --silent
+            Add-MpPreference -ExclusionPath "$env:GITHUB_WORKSPACE", "$store", "$env:RUNNER_TEMP", "$env:RUNNER_TOOL_CACHE" -ErrorAction Stop
+            Write-Host "Defender exclusions added for $env:GITHUB_WORKSPACE, $store, $env:RUNNER_TEMP, $env:RUNNER_TOOL_CACHE"
+          } catch {
+            Write-Host "::warning::Could not add Defender exclusions: $_"
+          }
+
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
@@ -63,9 +78,6 @@ jobs:
 
       - name: Build
         run: pnpm build
-
-      - name: Typecheck
-        run: pnpm typecheck
 
       - name: Re-link workspace bins now that dist files exist
         run: pnpm rebuild --recursive

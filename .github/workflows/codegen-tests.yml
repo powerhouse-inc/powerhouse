@@ -14,8 +14,12 @@ on:
       - "apps/academy/**"
       - ".claude/**"
       - "LICENSE"
+  # Also skips workspace packages outside test/codegen's dependency closure
+  # (`pnpm list --filter "test-codegen..."`); main stays docs-only as the backstop.
   pull_request:
-    branches: ["main"]
+    # ci/** lets a change to this workflow be exercised by a pull request
+    # stacked on its branch before it reaches main.
+    branches: ["main", "ci/**"]
     types: [opened, reopened, synchronize]
     paths-ignore:
       - "**/*.md"
@@ -23,6 +27,30 @@ on:
       - "apps/academy/**"
       - ".claude/**"
       - "LICENSE"
+      - "clis/ph-cmd/**"
+      - "packages/analytics-engine/benchmarks/**"
+      - "packages/analytics-engine/compat/**"
+      - "packages/reactor-hypercore/**"
+      - "packages/reactor/bench/**"
+      - "packages/registry/**"
+      - "packages/switchboard-gui/**"
+      - "scripts/dark-mode/**"
+      - "scripts/profiling/**"
+      - "scripts/release/**"
+      - "test/e2e-utils/**"
+      - "test/lb-loadtest/**"
+      - "test/package-e2e/**"
+      - "test/recipes-e2e/**"
+      - "test/switchboard/**"
+      - "test/test-client/**"
+      - "test/test-connect/**"
+      - "test/test-consumer-project/**"
+      - "test/test-fusion/**"
+      - "test/test-sync-queue/**"
+      - "test/versioned-documents/**"
+      - "test/vetra-e2e/**"
+      - "test/workflow-piece-e2e/**"
+      - "tools/**"
 
 permissions:
   contents: read
