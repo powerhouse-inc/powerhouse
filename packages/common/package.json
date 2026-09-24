@@ -33,7 +33,7 @@
   "scripts": {
     "build": "tsdown",
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/common",
     "dev": "ph-cli dev --config-file ./powerhouse.config.json"
   },
   "peerDependencies": {

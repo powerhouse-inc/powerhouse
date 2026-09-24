@@ -9,7 +9,7 @@
     "cli": "tsx src/cli.ts",
     "test": "vitest run",
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint tools/doc-harness",
     "studio": "DOC_HARNESS_ROOT=$PWD mastra dev --dir src/mastra"
   },
   "dependencies": {

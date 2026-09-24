@@ -67,7 +67,7 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/powerhouse-vetra-packages",
     "test": "vitest --run",
     "build": "tsx ./build",
     "test:watch": "vitest",

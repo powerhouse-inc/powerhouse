@@ -757,7 +757,7 @@ function useWebhookEndpoint(
   useEffect(() => {
     if (!load) return;
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- marks the load that starts on this very line
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect -- marks the load that starts on this very line
     setState({ kind: "loading" });
     load().then(
       (endpoint) => {

@@ -60,7 +60,7 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/design-system",
     "create-icon-components": "tsx scripts/create-icon-components.ts",
     "build": "tsdown && pnpm run build:css",
     "build:css": "pnpm exec tailwindcss -i style.css -o dist/style.css",

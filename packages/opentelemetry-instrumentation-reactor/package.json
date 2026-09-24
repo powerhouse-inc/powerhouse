@@ -22,7 +22,7 @@
   "scripts": {
     "tsc": "tsc",
     "build": "tsdown",
-    "lint": "eslint"
+    "lint": "cd ../.. && oxlint packages/opentelemetry-instrumentation-reactor"
   },
   "publishConfig": {
     "access": "public"

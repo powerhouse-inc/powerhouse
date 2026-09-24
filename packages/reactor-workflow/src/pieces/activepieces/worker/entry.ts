@@ -514,14 +514,12 @@ process.on("message", (message: unknown) => {
     return runWithEgressPolicy(message.request.egress, () => dispatch(message));
   });
   handler
-    .catch(
-      (error: unknown): WorkerResponse => ({
-        id: message.id,
-        type: "error",
-        error: serializeError(error, redactValuesOf(message)),
-        tlsPoisoned: consumeTlsFlag(),
-      }),
-    )
+    .catch((error: unknown): WorkerResponse => ({
+      id: message.id,
+      type: "error",
+      error: serializeError(error, redactValuesOf(message)),
+      tlsPoisoned: consumeTlsFlag(),
+    }))
     .then((response) => process.send?.(response))
     .catch(() => process.exit(1));
 });

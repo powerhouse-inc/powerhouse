@@ -7,7 +7,7 @@
   "private": true,
   "scripts": {
     "build": "tsdown",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint test/switchboard",
     "test": "vitest --run"
   },
   "devDependencies": {

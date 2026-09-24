@@ -31,7 +31,7 @@
   "scripts": {
     "build": "tsdown",
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/reactor-mcp",
     "test": "vitest --run",
     "test:run": "vitest --run",
     "test:watch": "vitest",

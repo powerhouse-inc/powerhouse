@@ -91,7 +91,7 @@
     "build": "tsdown",
     "test": "vitest --run",
     "tsc": "tsc",
-    "lint": "eslint"
+    "lint": "cd ../.. && oxlint packages/renown"
   },
   "devDependencies": {
     "@privy-io/react-auth": "3.35.0",

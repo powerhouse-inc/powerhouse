@@ -24,7 +24,7 @@
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/builder-tools",
     "build": "tsdown",
     "test": "vitest --run"
   },

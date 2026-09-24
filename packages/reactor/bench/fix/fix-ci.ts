@@ -188,18 +188,31 @@ export function planCi(input: PlanInput): CiStep[] {
   const lintable = input.changed.filter((path) => LINTABLE.test(path));
   if (lintable.length > 0) {
     steps.push({
-      id: "eslint",
+      id: "oxlint",
       label: "Lint (changed files)",
       command: [
         "pnpm",
-        "eslint",
-        "--config",
-        "eslint.config.js",
+        "exec",
+        "oxlint",
         "--quiet",
         "--no-error-on-unmatched-pattern",
         ...lintable,
       ],
-      env: { NODE_OPTIONS: "--max-old-space-size=8192" },
+      env: {},
+      blocking: false,
+    });
+    steps.push({
+      id: "oxfmt",
+      label: "Formatting (changed files)",
+      command: [
+        "pnpm",
+        "exec",
+        "oxfmt",
+        "--check",
+        "--no-error-on-unmatched-pattern",
+        ...lintable,
+      ],
+      env: {},
       blocking: false,
     });
   }

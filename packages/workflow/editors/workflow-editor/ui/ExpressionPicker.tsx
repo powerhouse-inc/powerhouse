@@ -104,7 +104,7 @@ export function useExpressionField(options: {
   const id = useId();
   const context = useExpressionTarget();
   const insertRef = useRef(options.insert);
-  // eslint-disable-next-line react-hooks/refs -- latest-value ref, only read from the focus callback
+  // eslint-disable-next-line react-hooks-extra/refs -- latest-value ref, only read from the focus callback
   insertRef.current = options.insert;
   const { stepId, label } = options;
   return {
@@ -324,7 +324,7 @@ export function ExpressionPickerPopup() {
   useEffect(() => {
     if (!hasTarget || !scopeSource) return;
     let alive = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- marks the load that starts on this very line
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect -- marks the load that starts on this very line
     setState({ kind: "loading" });
     scopeSource.load({ stepId }).then(
       (scope) => {
@@ -346,7 +346,7 @@ export function ExpressionPickerPopup() {
 
   // A fresh field starts from an unfiltered tree.
   const targetId = target?.id;
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- a fresh field starts from an unfiltered tree
+  // eslint-disable-next-line react-hooks-extra/set-state-in-effect -- a fresh field starts from an unfiltered tree
   useEffect(() => setQuery(""), [targetId]);
 
   const close = context?.setTarget;

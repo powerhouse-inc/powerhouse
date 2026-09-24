@@ -88,7 +88,7 @@ Precedent for the message, by kind:
 - GAP: `feat(reactor): the sync bench isolates cross-reactor contention`
 
 The subject says what the code now does, not which task it closes. lint-staged
-runs `eslint --fix` on the staged files; if it rewrites them, the commit still
+runs `oxlint --fix` and `oxfmt` on the staged files; if it rewrites them, the commit still
 lands with the rewritten content.
 
 ```bash

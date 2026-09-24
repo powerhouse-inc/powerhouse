@@ -64,7 +64,7 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/workflow",
     "test": "vitest --run",
     "test:watch": "vitest",
     "build": "tsx ./build.ts"

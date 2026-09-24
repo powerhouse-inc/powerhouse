@@ -4,3 +4,6 @@
 # these generator-written files must not be formatted by Prettier.
 apps/academy/docs/academy/05-Lookup/00-Cookbook.md
 apps/academy/docs/academy/04-Reference/07-CLITooling/00-PowerhouseCLI.md
+
+# Recipe files pinned verbatim into doc-harness builder workspaces.
+tools/doc-harness/catalog/pinned/

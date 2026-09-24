@@ -55,6 +55,6 @@ runs:
 
         # printf, not echo: echo would append a newline that tr turns into a
         # trailing space, so an empty diff (a delete-only commit) would emit
-        # files=" " -- non-empty to the workflow's `!= ''` guards, and eslint
-        # with no file patterns lints the whole monorepo and OOMs.
+        # files=" " -- non-empty to the workflow's `!= ''` guards, and oxlint
+        # with no file patterns lints the whole monorepo.
         echo "files=$(printf '%s' "$FILES" | tr '\n' ' ')" >> "$GITHUB_OUTPUT"

@@ -29,7 +29,7 @@ export const HDivider = (props: HDividerProps) => {
   useEffect(() => {
     // Force close and re-open if already open to refresh content
     if (open) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks-extra/set-state-in-effect
       setOpen(false);
       setTimeout(() => hasContent && setOpen(true), 50);
     }

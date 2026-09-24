@@ -22,7 +22,7 @@
     "build": "tsdown",
     "test": "vitest run --silent=false",
     "test:watch": "vitest",
-    "lint": "eslint"
+    "lint": "cd ../.. && oxlint packages/reactor-hypercore"
   },
   "publishConfig": {
     "access": "public"

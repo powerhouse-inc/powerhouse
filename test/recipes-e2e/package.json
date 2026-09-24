@@ -7,7 +7,7 @@
   "scripts": {
     "recipes": "tsx scripts/run.ts",
     "tsc": "tsc",
-    "lint": "eslint"
+    "lint": "cd ../.. && oxlint test/recipes-e2e"
   },
   "devDependencies": {
     "@types/node": "catalog:",

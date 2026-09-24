@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "trailingComma": "all",
+  "printWidth": 80,
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    "apps/academy/docs/academy/05-Lookup/00-Cookbook.md",
+    "apps/academy/docs/academy/04-Reference/07-CLITooling/00-PowerhouseCLI.md",
+    "**/*.md",
+    "**/*.mdx",
+    ".github/ISSUE_TEMPLATE/base_template.yml",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "**/document-models/*/*.json",
+    "**/document-models/*/v*/schema.graphql",
+    "test/codegen/data/",
+    "**/powerhouse.config.json",
+    "**/powerhouse.manifest.json",
+    "tools/doc-harness/catalog/",
+    "packages/reactor-workflow/test/upstream/",
+    "tools/doc-harness/prompts/schemas/"
+  ]
+}

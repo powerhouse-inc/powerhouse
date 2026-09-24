@@ -80,7 +80,7 @@ export const PackageManagerListItem = (props: {
   useEffect(() => {
     if (!preferredTag) return;
     if (registryPackage.distTags && preferredTag in registryPackage.distTags) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks-extra/set-state-in-effect
       setSelected({ kind: "tag", value: preferredTag });
     } else if (registryPackage.versions?.includes(preferredTag)) {
       setSelected({ kind: "version", value: preferredTag });
@@ -93,7 +93,7 @@ export const PackageManagerListItem = (props: {
   // selection is never clobbered.
   useEffect(() => {
     if (!isInstalled || !hasVersionMetadata) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect
     setSelected(
       resolveInstalledVersionSelection({
         spec: registryPackage.spec,
