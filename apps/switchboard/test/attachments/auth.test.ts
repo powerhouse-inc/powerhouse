@@ -342,6 +342,91 @@ describe("requireAuth", () => {
     });
   });
 
+  /**
+   * The deployment-wide floor. These routes never pass the GraphQL fetch chain,
+   * so `REQUIRE_AUTHENTICATED_CALLER` reaches them through this option instead
+   * — including on the routes that opt into `allowAnonymous`, which says the
+   * handler can decide without identity, not that the server will serve callers
+   * it cannot name.
+   */
+  describe("requireAuthenticatedCaller", () => {
+    const anonymousUnderOpenPolicy = () =>
+      makeAuthService(() =>
+        Promise.resolve({ user: undefined, admins: [], auth_enabled: false }),
+      );
+
+    it("refuses a missing bearer even with auth disabled, where today it passes", async () => {
+      const { service } = anonymousUnderOpenPolicy();
+      const handler = vi.fn<NodeHandler>();
+      const wrapped = requireAuth(service, handler, {
+        requireAuthenticatedCaller: true,
+      });
+
+      const res = makeRes();
+      await wrapped(makeReq({ headers: {} }), res);
+
+      expect(res.statusCode).toBe(401);
+      expect(JSON.parse(res._body)).toEqual({
+        error: "Authentication required",
+      });
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("overrides allowAnonymous", async () => {
+      const { service } = anonymousUnderOpenPolicy();
+      const handler = vi.fn<NodeHandler>();
+      const wrapped = requireAuth(service, handler, {
+        allowAnonymous: true,
+        requireAuthenticatedCaller: true,
+      });
+
+      const res = makeRes();
+      await wrapped(makeReq({ headers: {} }), res);
+
+      expect(res.statusCode).toBe(401);
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("still serves a verified caller", async () => {
+      const { service } = makeAuthService(() =>
+        Promise.resolve({
+          user: { address: "0x123", chainId: 1, networkId: "mainnet" },
+          admins: [],
+          auth_enabled: false,
+        }),
+      );
+      const handler = vi.fn<NodeHandler>();
+      const wrapped = requireAuth(service, handler, {
+        allowAnonymous: true,
+        requireAuthenticatedCaller: true,
+      });
+
+      const req = makeReq({ headers: { authorization: "Bearer good-token" } });
+      const res = makeRes();
+      await wrapped(req, res);
+
+      expect(res.statusCode).toBe(200);
+      expect(handler).toHaveBeenCalledWith(req, res, undefined, {
+        user: { address: "0x123", chainId: 1, networkId: "mainnet" },
+        authEnabled: false,
+      });
+    });
+
+    it("leaves every route as it was when the deployment has not set it", async () => {
+      const { service } = anonymousUnderOpenPolicy();
+      const handler = vi.fn<NodeHandler>();
+      const wrapped = requireAuth(service, handler, {
+        requireAuthenticatedCaller: false,
+      });
+
+      const res = makeRes();
+      await wrapped(makeReq({ headers: {} }), res);
+
+      expect(res.statusCode).toBe(200);
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("calls verifyBearer with undefined when no authorization header is present", async () => {
     const { service, spy } = makeAuthService(() =>
       Promise.resolve({
