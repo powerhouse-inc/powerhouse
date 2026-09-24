@@ -27,6 +27,7 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { withSignaturePolicy } from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 
 import { AuthEvaluationUnsupportedError } from "../errors.js";
@@ -752,7 +753,10 @@ export async function createEmptyDocument(
         const module = await reactorClient.getDocumentModelModule(
           args.documentType,
         );
-        const document = module.utils.createDocument();
+        const document = withSignaturePolicy(
+          module.utils.createDocument(),
+          await reactorClient.getCreateSignaturePolicy(),
+        );
         if (name) {
           document.header.name = name;
         }
@@ -811,7 +815,10 @@ export async function createDocumentWithInitialState(
     );
   }
 
-  const document = module.utils.createDocument();
+  const document = withSignaturePolicy(
+    module.utils.createDocument(),
+    await reactorClient.getCreateSignaturePolicy(),
+  );
 
   // Only merge specification-defined scopes (e.g., global, local).
   // Protected scopes like "auth" and "document" are excluded.

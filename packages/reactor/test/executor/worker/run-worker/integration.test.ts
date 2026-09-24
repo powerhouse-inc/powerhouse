@@ -8,6 +8,7 @@ import { PGliteDialect } from "kysely-pglite-dialect";
 import { PGlite } from "@electric-sql/pglite";
 import { MessageChannel, type MessagePort } from "node:worker_threads";
 import { afterEach, describe, expect, it } from "vitest";
+import { TestP256Signer } from "../../../utils/p256-signer.js";
 import type { Database } from "../../../../src/core/types.js";
 import {
   runWorker,
@@ -22,6 +23,7 @@ import type {
   WorkerMessage,
 } from "../../../../src/executor/worker/protocol.js";
 import type { Job } from "../../../../src/queue/types.js";
+import { verifyActionSignature } from "../../../../src/signer/verify-action-signature.js";
 import {
   REACTOR_SCHEMA,
   runMigrations,
@@ -123,6 +125,7 @@ function makeInit(
       },
     },
   ],
+  executorConfig?: InitMessage["executorConfig"],
 ): InitMessage {
   return {
     type: "init",
@@ -136,10 +139,8 @@ function makeInit(
       user: "ignored",
       password: "ignored",
     },
-    signatureVerifier: {
-      module: { packageName: "ignored", exportName: "factory" },
-    },
     models,
+    executorConfig,
   };
 }
 
@@ -307,6 +308,242 @@ describe("runWorker in-process execution", () => {
       "ADD_FOLDER",
     );
     expect(result.writeReady!.jobMeta).toEqual(job.meta);
+  });
+
+  it("verifies admission inside the worker and keeps the refusal's name", async () => {
+    const h = await startInProcessWorker();
+    const ready = waitForMessage(
+      h.port1,
+      (m): m is ReadyMessage => m.type === "ready",
+    );
+    h.port1.postMessage(
+      makeInit(undefined, { signatureVerification: "enforce" }),
+    );
+    await ready;
+
+    const document = driveDocumentModelModule.utils.createDocument();
+    await preCreateDriveDocument(
+      h.database,
+      document.header.id,
+      document.state,
+    );
+
+    const signer = await TestP256Signer.create();
+    const action = {
+      id: "action-signed-1",
+      type: "ADD_FOLDER",
+      scope: "global",
+      timestampUtcMs: new Date().toISOString(),
+      input: { id: "folder-1", name: "Inbox", parentFolder: null },
+    };
+    const forged = signer.signed(
+      { ...action, input: { ...action.input, name: "Forged" } },
+      await signer.renownTuple(action),
+    );
+
+    const job: Job = {
+      id: "job-signed-1",
+      kind: "mutation",
+      documentId: document.header.id,
+      scope: "global",
+      branch: "main",
+      actions: [forged],
+      operations: [],
+      createdAt: new Date().toISOString(),
+      queueHint: [],
+      retryCount: 0,
+      maxRetries: 0,
+      errorHistory: [],
+      meta: { batchId: "batch-signed-1", batchJobIds: ["job-signed-1"] },
+    };
+
+    const resultPromise = waitForMessage(
+      h.port1,
+      (m): m is ResultMessage => m.type === "result",
+    );
+    h.port1.postMessage({
+      type: "execute",
+      correlationId: "corr-signed-1",
+      job,
+    });
+
+    const result = await resultPromise;
+    expect(result.result.success).toBe(false);
+    expect(result.error?.name).toBe("InvalidSignatureError");
+    expect(result.error?.message).toContain("[HASH_MISMATCH]");
+    expect(result.signatureRefusals).toMatchObject([
+      {
+        actionId: "action-signed-1",
+        code: "HASH_MISMATCH",
+        path: "mutation",
+        enforced: true,
+      },
+    ]);
+  });
+
+  it("builds its signer from the init's spec and signs the NOOP an UNDO becomes", async () => {
+    const reactorKey = await TestP256Signer.create();
+    const specs: string[] = [];
+    const h = await startInProcessWorker((spec) => {
+      specs.push(spec.module.exportName);
+      if (spec.module.exportName === "createSigner") {
+        expect(spec.initArgs).toEqual({ appName: "test" });
+        return Promise.resolve(reactorKey.asISigner());
+      }
+      return Promise.resolve(driveDocumentModelModule);
+    });
+    const ready = waitForMessage(
+      h.port1,
+      (m): m is ReadyMessage => m.type === "ready",
+    );
+    h.port1.postMessage({
+      ...makeInit(undefined, { signatureVerification: "enforce" }),
+      signer: {
+        module: { filePath: "/signer.js", exportName: "createSigner" },
+        initArgs: { appName: "test" },
+      },
+    } satisfies InitMessage);
+    await ready;
+    expect(specs).toContain("createSigner");
+
+    const document = driveDocumentModelModule.utils.createDocument();
+    const documentId = document.header.id;
+    await preCreateDriveDocument(h.database, documentId, document.state);
+
+    async function execute(
+      id: string,
+      action: Job["actions"][number],
+    ): Promise<ResultMessage> {
+      const job: Job = {
+        id,
+        kind: "mutation",
+        documentId,
+        scope: "global",
+        branch: "main",
+        actions: [action],
+        operations: [],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        retryCount: 0,
+        maxRetries: 0,
+        errorHistory: [],
+        meta: { batchId: id, batchJobIds: [id] },
+      };
+      const result = waitForMessage(
+        h.port1,
+        (m): m is ResultMessage =>
+          m.type === "result" && m.correlationId === id,
+      );
+      h.port1.postMessage({ type: "execute", correlationId: id, job });
+      return result;
+    }
+
+    const added = await execute("job-add", {
+      id: "action-add-folder",
+      type: "ADD_FOLDER",
+      scope: "global",
+      timestampUtcMs: new Date().toISOString(),
+      input: { id: "folder-1", name: "Inbox", parentFolder: null },
+    });
+    expect(added.result.success).toBe(true);
+
+    const undone = await execute("job-undo", {
+      id: "action-undo",
+      type: "UNDO",
+      scope: "global",
+      timestampUtcMs: new Date().toISOString(),
+      input: { count: 1 },
+    });
+    expect(undone.error).toBeUndefined();
+    expect(undone.result.success).toBe(true);
+
+    const [written] = undone.writeReady!.operations;
+    const noop = written.operation;
+    expect(noop.action.type).toBe("NOOP");
+    expect(noop.action.context?.signer?.app.key).toBe(reactorKey.did);
+    const verdict = await verifyActionSignature(
+      noop.action,
+      { documentId, branch: "main" },
+      "load",
+      noop,
+    );
+    expect(verdict).toEqual({ ok: true, scheme: "v2" });
+  });
+
+  it("builds its trust policy from the init's spec and refuses what it refuses", async () => {
+    const asked: { key: string; documentId: string }[] = [];
+    const h = await startInProcessWorker((spec) => {
+      if (spec.module.exportName === "createTrustPolicy") {
+        expect(spec.initArgs).toEqual({ renownUrl: "https://renown.test" });
+        return Promise.resolve({
+          authorizeSigner(_signer: unknown, key: string, documentId: string) {
+            asked.push({ key, documentId });
+            return Promise.resolve(false);
+          },
+        });
+      }
+      return Promise.resolve(driveDocumentModelModule);
+    });
+    const ready = waitForMessage(
+      h.port1,
+      (m): m is ReadyMessage => m.type === "ready",
+    );
+    h.port1.postMessage({
+      ...makeInit(undefined, { signatureVerification: "enforce" }),
+      trustPolicy: {
+        module: { filePath: "/trust.js", exportName: "createTrustPolicy" },
+        initArgs: { renownUrl: "https://renown.test" },
+      },
+    } satisfies InitMessage);
+    await ready;
+
+    const document = driveDocumentModelModule.utils.createDocument();
+    const documentId = document.header.id;
+    await preCreateDriveDocument(h.database, documentId, document.state);
+
+    const signer = await TestP256Signer.create();
+    const action = {
+      id: "action-trust-1",
+      type: "ADD_FOLDER",
+      scope: "global",
+      timestampUtcMs: new Date().toISOString(),
+      input: { id: "folder-1", name: "Inbox", parentFolder: null },
+    };
+    const signed = signer.signed(
+      action,
+      await signer.v2Tuple(action, { documentId, branch: "main" }),
+    );
+    const job: Job = {
+      id: "job-trust-1",
+      kind: "mutation",
+      documentId,
+      scope: "global",
+      branch: "main",
+      actions: [signed],
+      operations: [],
+      createdAt: new Date().toISOString(),
+      queueHint: [],
+      retryCount: 0,
+      maxRetries: 0,
+      errorHistory: [],
+      meta: { batchId: "batch-trust-1", batchJobIds: ["job-trust-1"] },
+    };
+
+    const resultPromise = waitForMessage(
+      h.port1,
+      (m): m is ResultMessage => m.type === "result",
+    );
+    h.port1.postMessage({
+      type: "execute",
+      correlationId: "corr-trust-1",
+      job,
+    });
+
+    const result = await resultPromise;
+    expect(result.result.success).toBe(false);
+    expect(result.error?.name).toBe("InvalidSignatureError");
+    expect(result.error?.message).toContain("[SIGNER_UNAUTHORIZED]");
+    expect(asked).toEqual([{ key: signer.did, documentId }]);
   });
 
   it("returns an error result when the document does not exist", async () => {

@@ -6,12 +6,16 @@ import type {
   ISigner,
   Operation,
   PHDocument,
+  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
   actions,
+  DEFAULT_SIGNATURE_POLICY,
   DowngradeNotSupportedError,
   normalizeDocumentModelVersion,
+  requestedSignaturePolicy,
   UnsupportedDocumentModelVersionError,
+  withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import {
@@ -182,6 +186,7 @@ export class ReactorClient implements IReactorClient {
   private readGate: IReadGate;
   private eventReads: EventReadsSource;
   private actionEvaluation: ActionEvaluationConfig | undefined;
+  private readonly createSignaturePolicy: SignaturePolicy;
 
   readonly drives: IDriveClient;
 
@@ -195,6 +200,7 @@ export class ReactorClient implements IReactorClient {
     documentView: IDocumentView,
     readGate: IReadGate = new BareReadGate(),
     actionEvaluation?: ActionEvaluationConfig,
+    createSignaturePolicy: SignaturePolicy = DEFAULT_SIGNATURE_POLICY,
   ) {
     this.logger = logger;
     this.reactor = reactor;
@@ -206,6 +212,7 @@ export class ReactorClient implements IReactorClient {
     this.readGate = readGate;
     this.eventReads = new EventReadsSource(reactor, documentView, readGate);
     this.actionEvaluation = actionEvaluation;
+    this.createSignaturePolicy = createSignaturePolicy;
     this.drives = new DriveClient(this, logger, reactor, signer);
     this.logger.verbose("ReactorClient initialized");
   }
@@ -730,6 +737,10 @@ export class ReactorClient implements IReactorClient {
     };
   }
 
+  getCreateSignaturePolicy(): Promise<SignaturePolicy> {
+    return Promise.resolve(this.createSignaturePolicy);
+  }
+
   /**
    * Creates a document and waits for completion
    */
@@ -745,6 +756,7 @@ export class ReactorClient implements IReactorClient {
     );
 
     const documentId = document.header.id;
+    const branch = document.header.branch || "main";
 
     const createInput: CreateDocumentActionInput = {
       model: document.header.documentType,
@@ -781,6 +793,7 @@ export class ReactorClient implements IReactorClient {
         }),
       ],
       this.signer,
+      { documentId, branch },
       signal,
     );
 
@@ -789,7 +802,7 @@ export class ReactorClient implements IReactorClient {
         key: "create",
         documentId,
         scope: getSharedActionScope(createActions),
-        branch: "main",
+        branch,
         actions: createActions,
         dependsOn: [],
       },
@@ -799,6 +812,7 @@ export class ReactorClient implements IReactorClient {
       const parentActions: Action[] = await signActions(
         [addRelationshipAction(parentIdentifier, documentId, "child")],
         this.signer,
+        { documentId: parentIdentifier, branch: "main" },
         signal,
       );
 
@@ -883,7 +897,11 @@ export class ReactorClient implements IReactorClient {
       }
     }
 
-    const document = module.utils.createDocument();
+    const document = withSignaturePolicy(
+      module.utils.createDocument(),
+      requestedSignaturePolicy(options, this.createSignaturePolicy),
+      { protocolVersions: options?.protocolVersions },
+    );
     document.state.document.version = normalizeDocumentModelVersion(
       module.version,
     );
@@ -958,7 +976,12 @@ export class ReactorClient implements IReactorClient {
         revision: { ...document.header.revision },
       });
 
-      const signedActions = await signActions([action], this.signer, signal);
+      const signedActions = await signActions(
+        [action],
+        this.signer,
+        { documentId, branch },
+        signal,
+      );
       const jobInfo = await this.reactor.execute(
         documentId,
         branch,
@@ -1028,10 +1051,21 @@ export class ReactorClient implements IReactorClient {
       branch,
       actions.length,
     );
-    const signedActions = await signActions(actions, this.signer, signal);
+    const documentId = await this.resolveWriteTarget(
+      documentIdentifier,
+      branch,
+      actions,
+      signal,
+    );
+    const signedActions = await signActions(
+      actions,
+      this.signer,
+      { documentId, branch },
+      signal,
+    );
 
     const jobInfo = await this.reactor.execute(
-      documentIdentifier,
+      documentId,
       branch,
       signedActions,
       signal,
@@ -1068,14 +1102,20 @@ export class ReactorClient implements IReactorClient {
       branch,
       actions.length,
     );
-    const signedActions = await signActions(actions, this.signer, signal);
-
-    return this.reactor.execute(
+    const documentId = await this.resolveWriteTarget(
       documentIdentifier,
       branch,
-      signedActions,
+      actions,
       signal,
     );
+    const signedActions = await signActions(
+      actions,
+      this.signer,
+      { documentId, branch },
+      signal,
+    );
+
+    return this.reactor.execute(documentId, branch, signedActions, signal);
   }
 
   async executeBatch(
@@ -1085,10 +1125,24 @@ export class ReactorClient implements IReactorClient {
     this.logger.verbose("executeBatch(@count jobs)", request.jobs.length);
 
     const signedJobs: ExecutionJobPlan[] = await Promise.all(
-      request.jobs.map(async (job) => ({
-        ...job,
-        actions: await signActions(job.actions, this.signer, signal),
-      })),
+      request.jobs.map(async (job) => {
+        const documentId = await this.resolveWriteTarget(
+          job.documentId,
+          job.branch,
+          job.actions,
+          signal,
+        );
+        return {
+          ...job,
+          documentId,
+          actions: await signActions(
+            job.actions,
+            this.signer,
+            { documentId, branch: job.branch },
+            signal,
+          ),
+        };
+      }),
     );
 
     const batchResult = await this.reactor.executeBatch(
@@ -2029,6 +2083,39 @@ export class ReactorClient implements IReactorClient {
     );
 
     return edges.results[0];
+  }
+
+  /**
+   * The id a write on `identifier` is stored under, which its signatures bind.
+   * A create names its own id, and an id no slug maps to is taken as given, so
+   * a document still in flight resolves to itself.
+   */
+  private async resolveWriteTarget(
+    identifier: string,
+    branch: string,
+    actions: readonly Action[],
+    signal?: AbortSignal,
+  ): Promise<string> {
+    if (actions.some((action) => action.type === "CREATE_DOCUMENT")) {
+      return identifier;
+    }
+
+    const view = { branch };
+    const bySlug = await this.documentView.resolveSlug(
+      identifier,
+      view,
+      undefined,
+      signal,
+    );
+    if (bySlug === undefined || bySlug === identifier) {
+      return identifier;
+    }
+    return this.documentView.resolveIdOrSlug(
+      identifier,
+      view,
+      undefined,
+      signal,
+    );
   }
 
   /**

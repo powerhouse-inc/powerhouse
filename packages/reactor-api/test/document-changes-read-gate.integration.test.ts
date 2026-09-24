@@ -11,6 +11,7 @@ import {
   initializeAuth,
   normalizeDocumentModelVersion,
   setGrant,
+  withSignaturePolicy,
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule, setModelName } from "document-model";
@@ -112,8 +113,12 @@ describe("documentChanges and findDocuments under OPEN with auth-scope policies"
     id: string,
     name: string,
   ) {
-    const document = documentModelDocumentModelModule.utils.createDocument();
-    document.header.id = id;
+    // A fixed id cannot be content-addressed, so the document is legacy.
+    const document = withSignaturePolicy(
+      documentModelDocumentModelModule.utils.createDocument(),
+      "legacy",
+      { id },
+    );
     document.header.name = name;
     await client.create(document);
     return id;
@@ -273,8 +278,11 @@ describe("documentChanges and findDocuments under OPEN with auth-scope policies"
     async function unindexedJob() {
       const { client, subgraph } = await build();
       const id = "job-unindexed";
-      const { header, state } =
-        documentModelDocumentModelModule.utils.createDocument();
+      const { header, state } = withSignaturePolicy(
+        documentModelDocumentModelModule.utils.createDocument(),
+        "legacy",
+        { id },
+      );
       await client.execute(id, "main", [
         createDocumentAction({
           model: header.documentType,

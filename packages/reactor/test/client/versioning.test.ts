@@ -23,6 +23,7 @@ import type {
   IReactor,
   InProcessReactorClientModule,
 } from "../../src/core/types.js";
+import { TestP256Signer } from "../utils/p256-signer.js";
 
 const VERSIONED_DOC_TYPE = "test/versioned-items";
 
@@ -277,6 +278,7 @@ describe("ReactorClient Versioning Integration Tests", () => {
       ]);
     module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
+      .withSigner((await TestP256Signer.create()).asISigner())
       .buildModule();
 
     client = module.client;
@@ -857,6 +859,7 @@ describe("ReactorClient createEmpty with an unversioned module", () => {
     ]);
     module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
+      .withSigner((await TestP256Signer.create()).asISigner())
       .buildModule();
     client = module.client;
   });

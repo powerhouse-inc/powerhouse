@@ -15,6 +15,7 @@ function createMockOperationIndex(): IOperationIndex {
     getLatestTimestampForCollection: vi.fn(),
     getCollectionsForDocuments: vi.fn(),
     getGroupReferencers: vi.fn().mockResolvedValue([]),
+    getOrdinalsByOpIds: vi.fn().mockResolvedValue(new Map()),
   };
 }
 

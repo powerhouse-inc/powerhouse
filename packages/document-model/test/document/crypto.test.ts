@@ -1,6 +1,7 @@
 import type {
   Action,
   ActionSigner,
+  ActionSigningTarget,
   ISigner,
   PHDocument,
   Reducer,
@@ -68,6 +69,7 @@ async function createTestSigner(): Promise<ISigner> {
 
     async signAction(
       _action: Action,
+      _target: ActionSigningTarget,
       _abortSignal?: AbortSignal,
     ): Promise<Signature> {
       await Promise.resolve();

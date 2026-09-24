@@ -9,6 +9,7 @@ export * from "./login.node.js";
 export * from "./profile.js";
 export * from "./renown-builder.js";
 export * from "./session.js";
+export * from "./signer-trust.js";
 export * from "./switchboard.js";
 export * from "./storage/storage.node.js";
 export * from "./types.js";

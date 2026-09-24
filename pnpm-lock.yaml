@@ -2764,6 +2764,9 @@ importers:
 
   packages/shared:
     dependencies:
+      '@noble/hashes':
+        specifier: ^1.8.0
+        version: 1.8.0
       '@sindresorhus/fnv1a':
         specifier: 'catalog:'
         version: 3.1.0
@@ -3214,6 +3217,9 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@renown/sdk':
+        specifier: workspace:*
+        version: link:../../packages/renown
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1

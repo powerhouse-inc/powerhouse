@@ -133,8 +133,8 @@ const reactor = await new ReactorBuilder()
 
 ```typescript
 type WorkerPoolOptions =
-  | { numWorkers: number; db: DbConfig; verifier?: SignatureVerifierSpec; factory?: WorkerFactory }
-  | { numWorkers: number; factory: WorkerFactory; db?: DbConfig; verifier?: SignatureVerifierSpec };
+  | { numWorkers: number; db: DbConfig; factory?: WorkerFactory }
+  | { numWorkers: number; factory: WorkerFactory; db?: DbConfig };
 ```
 
 `numWorkers` is the number of workers the manager spawns at `start()` and the modulus used for sticky routing. Either `db` (the default thread transport; each worker opens its own Postgres pool) or a custom `factory` is required **by construction** — an enabled pool without connection info is unrepresentable rather than a runtime error.
@@ -158,7 +158,7 @@ type DbConfig = {
 
 `DbConfig` is sent across worker IPC, so it must be JSON-clonable. `ssl: true` maps to `{ rejectUnauthorized: false }`; `poolSize` maps to pg's `max`; `applicationName` maps to `application_name`.
 
-The `verifier` field is optional: when omitted, workers perform no executor-side signature verification (parity with the in-process executor's default). To opt in, pass a `FactorySpec`: a `ModuleRef` (one of `{ packageName, exportName }` or `{ filePath, exportName }`) plus optional JSON-clonable `initArgs`. The worker imports the named export and invokes it to construct its signature verifier.
+Workers verify signatures the same way the in-process executor does, with the same `signatureVerification` mode from `withExecutorConfig`. A refusal inside a worker is re-emitted on the host event bus. See [Signature Verification](/academy/Build/BuildingUserExperiences/Authorization/Signing#signature-verification).
 
 ### How sources resolve
 
@@ -183,7 +183,7 @@ Passing `factory` in the pool options injects a custom `WorkerFactory`, skipping
 type WorkerFactory = (index: number) => IExecutorWorker;
 ```
 
-Use this for tests or an alternative transport (e.g. a child-process adapter); `db` and `verifier` are then optional, since the builder is not constructing the default transport.
+Use this for tests or an alternative transport (e.g. a child-process adapter); `db` is then optional, since the builder is not constructing the default transport.
 
 ## Projection shards
 

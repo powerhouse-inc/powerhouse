@@ -1,11 +1,12 @@
 import { documentModelDocumentModelModule } from "document-model";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
 import { SimpleJobExecutor } from "../../../src/executor/simple-job-executor.js";
 import type { Job } from "../../../src/queue/types.js";
 import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js";
 import { DocumentNotFoundError } from "../../../src/shared/errors.js";
+import { TestP256Signer } from "../../utils/p256-signer.js";
 import {
   AppendConditionFailedError,
   DocumentAlreadyExistsError,
@@ -2517,11 +2518,41 @@ describe("SimpleJobExecutor", () => {
       capability: { can: "execute" as const, scope: "global" },
     };
 
-    // did:key app keys, as ActionSigner.app.key / PHAuthState.creator take them.
-    const CREATOR_DID =
-      "did:key:zDnaexNjCKnPLh5Vhn1KqjmrLDFtXddrtTTE9gJmdWRSCG3wt";
-    const OTHER_DID =
-      "did:key:zDnaefv2pj8YQM2T6E3pnrJoGnDGbXsrvJiXhqHzh7d5RzncU";
+    // Real keys: an app key on a write has to carry a signature that verifies.
+    let creator: TestP256Signer;
+    let other: TestP256Signer;
+    beforeAll(async () => {
+      creator = await TestP256Signer.create();
+      other = await TestP256Signer.create();
+    });
+
+    async function signedJob(
+      job: Job,
+      signer: TestP256Signer,
+      address?: string,
+    ): Promise<Job> {
+      const target = { documentId: job.documentId, branch: job.branch };
+      const user =
+        address === undefined
+          ? signer.user
+          : { address, networkId: "", chainId: 0 };
+      return {
+        ...job,
+        actions: await Promise.all(
+          job.actions.map(async (action) => ({
+            ...action,
+            context: {
+              ...action.context,
+              signer: {
+                user,
+                app: { name: "test", key: signer.did },
+                signatures: [await signer.v2Tuple(action, target, user)],
+              },
+            },
+          })),
+        ),
+      };
+    }
     const denyAllGrant = {
       id: "lockdown",
       description: "deny everything",
@@ -2623,7 +2654,9 @@ describe("SimpleJobExecutor", () => {
         .fn()
         .mockResolvedValue(authDoc({ version: 1, grants: [adminGrant] }));
 
-      const result = await executor.executeJob(authJob("0xstranger"));
+      const result = await executor.executeJob(
+        await signedJob(authJob(), other, "0xstranger"),
+      );
 
       expect(result.success).toBe(false);
       expect(result.error?.message).toContain("Authorization denied");
@@ -2634,9 +2667,12 @@ describe("SimpleJobExecutor", () => {
         .fn()
         .mockResolvedValue(authDoc({ version: 1, grants: [adminGrant] }));
 
-      const result = await executor.executeJob(authJob("0xADMIN"));
+      const result = await executor.executeJob(
+        await signedJob(authJob(), other, "0xADMIN"),
+      );
 
       // The gate admits the matching signer; any later failure is not an auth denial.
+      expect(result.error?.name).not.toBe("InvalidSignatureError");
       expect(result.error?.message ?? "").not.toContain("Authorization denied");
     });
 
@@ -2645,8 +2681,11 @@ describe("SimpleJobExecutor", () => {
         .fn()
         .mockResolvedValue(authDoc({ version: 0, grants: [] }));
 
-      const result = await executor.executeJob(authJob("0xstranger"));
+      const result = await executor.executeJob(
+        await signedJob(authJob(), other, "0xstranger"),
+      );
 
+      expect(result.error?.name).not.toBe("InvalidSignatureError");
       expect(result.error?.message ?? "").not.toContain("Authorization denied");
     });
 
@@ -2655,8 +2694,11 @@ describe("SimpleJobExecutor", () => {
       // (e.g. UPGRADE_DOCUMENT initialState snapshots rebuilt by the write cache)
       mockWriteCache.getState = vi.fn().mockResolvedValue(authDoc({}));
 
-      const result = await executor.executeJob(authJob("0xstranger"));
+      const result = await executor.executeJob(
+        await signedJob(authJob(), other, "0xstranger"),
+      );
 
+      expect(result.error?.name).not.toBe("InvalidSignatureError");
       expect(result.error?.message ?? "").not.toContain("Authorization denied");
       expect(result.error?.message ?? "").not.toContain("iterable");
     });
@@ -2666,19 +2708,23 @@ describe("SimpleJobExecutor", () => {
         authDoc({
           version: 1,
           grants: [denyAllGrant],
-          creator: CREATOR_DID,
+          creator: creator.did,
         }),
       );
 
       const result = await executor.executeJob(
-        authJob(undefined, {
-          scope: "auth",
-          type: "SET_GRANT",
-          appKey: CREATOR_DID,
-          input: { grant: adminGrant },
-        }),
+        await signedJob(
+          authJob(undefined, {
+            scope: "auth",
+            type: "SET_GRANT",
+            appKey: creator.did,
+            input: { grant: adminGrant },
+          }),
+          creator,
+        ),
       );
 
+      expect(result.error?.name).not.toBe("InvalidSignatureError");
       expect(result.error?.message ?? "").not.toContain("Authorization denied");
     });
 
@@ -2687,17 +2733,20 @@ describe("SimpleJobExecutor", () => {
         authDoc({
           version: 1,
           grants: [denyAllGrant],
-          creator: CREATOR_DID,
+          creator: creator.did,
         }),
       );
 
       const result = await executor.executeJob(
-        authJob(undefined, {
-          scope: "auth",
-          type: "SET_GRANT",
-          appKey: OTHER_DID,
-          input: { grant: adminGrant },
-        }),
+        await signedJob(
+          authJob(undefined, {
+            scope: "auth",
+            type: "SET_GRANT",
+            appKey: other.did,
+            input: { grant: adminGrant },
+          }),
+          other,
+        ),
       );
 
       expect(result.success).toBe(false);

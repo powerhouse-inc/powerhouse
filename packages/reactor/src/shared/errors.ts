@@ -1,3 +1,5 @@
+import type { SignatureRefusalCode } from "../signer/types.js";
+
 /**
  * Error thrown when attempting to access a deleted document.
  */
@@ -186,20 +188,24 @@ export class CreateDocumentRequiredError extends Error {
   }
 }
 
-/**
- * Error thrown when an operation has an invalid signature.
- */
+/** The message carries the code: only name and message cross the queue. */
 export class InvalidSignatureError extends Error {
   public readonly documentId: string;
+  public readonly code: SignatureRefusalCode;
   public readonly reason: string;
 
-  constructor(documentId: string, reason: string) {
-    super(`Invalid signature in document ${documentId}: ${reason}`);
+  constructor(documentId: string, code: SignatureRefusalCode, reason: string) {
+    super(`Invalid signature in document ${documentId} [${code}]: ${reason}`);
     this.name = "InvalidSignatureError";
     this.documentId = documentId;
+    this.code = code;
     this.reason = reason;
 
     Error.captureStackTrace(this, InvalidSignatureError);
+  }
+
+  static isError(error: unknown): error is InvalidSignatureError {
+    return Error.isError(error) && error.name === "InvalidSignatureError";
   }
 }
 

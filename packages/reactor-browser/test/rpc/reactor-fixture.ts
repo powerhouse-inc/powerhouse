@@ -4,6 +4,7 @@ import {
   type IReactorClient,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import { createP256Signer } from "../utils/p256-signer.js";
 
 export type InMemoryReactor = {
   client: IReactorClient;
@@ -15,6 +16,7 @@ export async function createInMemoryReactorClient(): Promise<InMemoryReactor> {
     .withReactorBuilder(
       new ReactorBuilder().withDocumentModelSources([driveDocumentModelModule]),
     )
+    .withSigner(await createP256Signer())
     .buildModule();
   return {
     client: module.client,
