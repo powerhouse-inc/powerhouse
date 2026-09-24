@@ -133,6 +133,41 @@ interface AuthConfig {
 - **Document Owners**: implicit ADMIN on documents they create
 - **Per-Document Grants**: READ / WRITE / ADMIN granted to users or groups, inherited from protected ancestors
 
+#### Attachments
+
+An attachment is readable by whoever may read the document that references it.
+`GET /attachments/:hash/download-target` decides that twice over: the caller
+must be able to read the document's `global` scope, and the reference index
+must confirm that the document really does reference this hash. A denial is a
+single generic `404` either way, so it never tells the caller which of the two
+failed.
+
+Which model answers the first half depends on the composition. With auth
+enforcement on, the document's **own policy** decides, evaluated for the
+caller's subject — their address *and* the `did:key` of the app instance whose
+token authenticated them, because a grant can name either and a document's
+creator is recorded by key. Without it, there is no policy model to evaluate
+and the permission tables above decide alone.
+
+That distinction matters more than it looks. A deployment whose documents carry
+policies keeps no rows in the permission tables, so asking those tables about
+such a document returns whatever the host-wide policy says — under `OPEN`,
+`true`, for every caller including an anonymous one. Handing out bytes on that
+answer gives the file to anyone who learns its hash, which the document's own
+state may well have told them before their access was taken away.
+
+The presigned URL a target carries is short-lived by design: the authorization
+behind it is decided once, when it is issued, and the URL keeps working until it
+expires however the policy changes in between. The default ceiling is **300
+seconds**, and it applies whether or not the caller asked for a lifetime —
+otherwise omitting `expiresIn` would be a way to opt out of it.
+
+```bash
+# Raise it if a deployment genuinely needs longer; still bounded by the
+# 7-day maximum a SigV4 signature can carry.
+export ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS=1800
+```
+
 ### 6. **Session Management**
 
 Advanced session handling with multiple active sessions:
