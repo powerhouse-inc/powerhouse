@@ -1,4 +1,5 @@
 import { defineConfig } from "tsdown";
+import { dtsExportList } from "../../tsdown.dts.mjs";
 export default defineConfig({
   entry: [
     "index.ts",
@@ -10,7 +11,6 @@ export default defineConfig({
     "processors/*/index.ts",
     "codegen/index.ts",
     "codegen/spec.ts",
-    "powerhouse.manifest.json",
   ],
   platform: "neutral",
   outDir: "dist",
@@ -22,7 +22,10 @@ export default defineConfig({
     // downstream code that mixes vetra/codegen helpers with raw ts-morph.
     neverBundle: [/^node:/, "ts-morph"],
   },
+  // tsgo emits no dts for JSON entries; ship the manifest as-is for `./manifest`.
+  copy: [{ from: "powerhouse.manifest.json", to: "dist" }],
   clean: true,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
 });

@@ -32,7 +32,7 @@ catalog:
   "@ai-sdk/openai-compatible": 3.0.37
   "@aws-sdk/client-s3": 3.1087.0
   "@aws-sdk/s3-request-presigner": 3.1087.0
-  "typescript": 6.0.3
+  "typescript": 7.0.2
   "execa": 9.6.1
   "dotenv": 16.4.7
   # Windows: scripts cannot use the POSIX `VAR=value cmd` prefix (cmd.exe has no
@@ -144,9 +144,9 @@ catalog:
   "@vitest/browser-playwright": 4.1.1
   "@vitest/coverage-v8": 4.1.1
   "@preact/preset-vite": 2.10.5
-  "tsdown": 0.21.1
-  "@tsdown/css": 0.21.1
-  "rolldown": 1.0.0-rc.8
+  "tsdown": 0.23.0
+  "@tsdown/css": 0.23.0
+  "rolldown": 1.2.9
   "remeda": 2.33.7
   "type-fest": 5.6.0
 

@@ -123,6 +123,7 @@
     "thememirror": "^2.0.1",
     "tsdown": "catalog:",
     "tsx": "catalog:",
+    "typescript": "catalog:",
     "zod": "catalog:"
   }
 }

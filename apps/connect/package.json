@@ -37,6 +37,7 @@
     "./dist/main.js",
     "./dist/start-connect.js",
     "./dist/i18n-*.js",
+    "./src/i18n/index.ts",
     "./dist/style.css"
   ],
   "license": "AGPL-3.0-only",
@@ -119,6 +120,7 @@
     "react-dom": "catalog:",
     "tailwindcss": "catalog:",
     "tsdown": "catalog:",
+    "typescript": "catalog:",
     "vite": "catalog:",
     "vite-bundle-analyzer": "^1.3.6",
     "vite-tsconfig-paths": "catalog:"

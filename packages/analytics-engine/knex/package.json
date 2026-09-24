@@ -37,5 +37,13 @@
     "vitest": "catalog:",
     "@types/luxon": "catalog:",
     "tsdown": "catalog:"
+  },
+  "peerDependencies": {
+    "knex": "^3.1.0"
+  },
+  "peerDependenciesMeta": {
+    "knex": {
+      "optional": true
+    }
   }
 }

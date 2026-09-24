@@ -1,6 +1,7 @@
 import { findWorkspaceDir } from "@pnpm/find-workspace-dir";
 import { findWorkspacePackages } from "@pnpm/find-workspace-packages";
 import { defineConfig } from "tsdown";
+import { dtsExportList } from "../../tsdown.dts.mjs";
 
 const workspaceDir = await findWorkspaceDir(process.cwd());
 const workspacePackages = await findWorkspacePackages(workspaceDir!);
@@ -18,7 +19,8 @@ export default defineConfig({
   ],
   outDir: "dist",
   platform: "node",
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   clean: true,
   sourcemap: true,
   define: {
