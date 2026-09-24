@@ -7,85 +7,122 @@ import {
   blockMeta,
   usePieceLogos,
 } from "../../workflow-editor/ui/block-meta.js";
-import { RUN_DOT } from "./run-format.js";
+import { STEP_TONE, toneOf, type Tone } from "./run-format.js";
 import { stepOutline, type OutlineStep } from "./step-outline.js";
 
-const STEP_DOT: Record<string, string> = {
-  ...RUN_DOT,
-  SKIPPED: "bg-slate-300",
-  REPLAYED: "bg-sky-400",
+const RAIL: Record<Tone, string> = {
+  ok: "bg-wf-ok",
+  fail: "bg-wf-fail",
+  warn: "bg-wf-warn",
+  run: "bg-wf-run",
+  idle: "bg-border",
+};
+
+const RING: Record<Tone, string> = {
+  ok: "ring-wf-ok",
+  fail: "ring-wf-fail",
+  warn: "ring-wf-warn",
+  run: "ring-wf-run",
+  idle: "ring-border",
 };
 
 // The piece logo, degrading to the block glyph when absent or unloadable.
-function ChipLogo(props: { logoUrl?: string; glyph?: string }) {
+function StopLogo(props: { logoUrl?: string; glyph?: string }) {
   const [broken, setBroken] = useState(false);
   if (props.logoUrl && !broken) {
     return (
       <img
         src={props.logoUrl}
         alt=""
-        className="h-4 w-4 shrink-0"
+        className="h-5 w-5"
         onError={() => setBroken(true)}
       />
     );
   }
   return (
-    <span className="w-4 shrink-0 text-center text-xs text-slate-400">
-      {props.glyph ?? "▪"}
-    </span>
+    <span className="text-sm text-muted-foreground">{props.glyph ?? "▪"}</span>
   );
 }
 
-function Chip(props: {
+interface Stop {
+  id: string;
   title: string;
   subtitle: string;
   glyph?: string;
   logoUrl?: string;
+  // How the latest run fared here; undefined when it never reached this stop.
   status?: string;
-  muted?: boolean;
+  // The port the run takes to arrive here, shown on the rail.
+  port?: string | null;
+}
+
+// One stop on the rail. The rail segment into a stop is coloured by whether
+// the latest run reached it, so the track shows how far a run got.
+function TrackStop(props: {
+  stop: Stop;
+  first: boolean;
+  last: boolean;
+  inbound: Tone;
+  outbound: Tone;
   onClick: () => void;
 }) {
+  const { stop } = props;
+  const tone = stop.status ? toneOf(STEP_TONE, stop.status) : "idle";
   return (
-    <button
-      type="button"
-      title={
-        props.status ? `${props.subtitle} · ${props.status}` : props.subtitle
-      }
-      className={`flex max-w-56 items-center gap-2 rounded border border-solid px-2 py-1 text-left hover:border-slate-400 ${
-        props.muted
-          ? "border-dashed border-slate-300 bg-slate-50"
-          : "border-slate-200 bg-white"
-      }`}
-      onClick={props.onClick}
-    >
-      <ChipLogo logoUrl={props.logoUrl} glyph={props.glyph} />
-      <span className="min-w-0">
-        <span className="block truncate text-xs font-medium text-slate-700">
-          {props.title}
+    <li className="relative flex w-40 shrink-0 flex-col items-center">
+      <span
+        aria-hidden
+        className={`absolute left-0 top-[19px] h-0.5 w-1/2 ${props.first ? "invisible" : RAIL[props.inbound]}`}
+      />
+      <span
+        aria-hidden
+        className={`absolute right-0 top-[19px] h-0.5 w-1/2 ${props.last ? "invisible" : RAIL[props.outbound]}`}
+      />
+      {stop.port ? (
+        <span className="absolute -left-4 top-0 rounded bg-background px-1 text-[11px] text-muted-foreground">
+          {stop.port}
         </span>
-        <span className="block truncate text-[11px] text-slate-400">
-          {props.subtitle}
-        </span>
-      </span>
-      {props.status ? (
-        <span
-          className={`ml-1 h-2 w-2 shrink-0 rounded-full ${STEP_DOT[props.status] ?? "bg-slate-300"}`}
-        />
       ) : null}
-    </button>
+      <button
+        type="button"
+        title={
+          stop.status
+            ? `${stop.title}: ${stop.status.toLowerCase()}`
+            : stop.title
+        }
+        className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-card ring-2 transition-shadow hover:ring-4 focus-visible:outline-none focus-visible:ring-4 ${RING[tone]}`}
+        onClick={props.onClick}
+      >
+        <StopLogo logoUrl={stop.logoUrl} glyph={stop.glyph} />
+      </button>
+      <span className="mt-2 max-w-full truncate px-2 text-[13px] font-medium text-foreground">
+        {stop.title}
+      </span>
+      <span className="max-w-full truncate px-2 text-xs text-muted-foreground">
+        {stop.subtitle}
+      </span>
+    </li>
   );
 }
 
-function Arrow(props: { port: string | null }) {
+function Track(props: { stops: Stop[]; onOpenEditor: () => void }) {
+  const tones = props.stops.map((stop) =>
+    stop.status ? toneOf(STEP_TONE, stop.status) : "idle",
+  );
   return (
-    <span className="flex shrink-0 items-center gap-1 text-slate-300">
-      <span aria-hidden>→</span>
-      {props.port ? (
-        <span className="rounded bg-slate-100 px-1 text-[10px] text-slate-500">
-          {props.port}
-        </span>
-      ) : null}
-    </span>
+    <ol className="-mx-6 flex overflow-x-auto px-6 pb-1">
+      {props.stops.map((stop, index) => (
+        <TrackStop
+          key={stop.id}
+          stop={stop}
+          first={index === 0}
+          last={index === props.stops.length - 1}
+          inbound={tones[index]}
+          outbound={tones[index + 1] ?? "idle"}
+          onClick={props.onOpenEditor}
+        />
+      ))}
+    </ol>
   );
 }
 
@@ -107,30 +144,27 @@ export function WorkflowSteps(props: {
     (props.latestRun?.steps ?? []).map((step) => [step.stepKey, step.status]),
   );
 
-  const chipFor = (step: OutlineStep, muted: boolean) => {
+  const stopFor = (step: OutlineStep, port: string | null): Stop => {
     const meta = blockMeta(step.blockType);
-    return (
-      <Chip
-        key={step.id}
-        title={step.name || step.key}
-        subtitle={meta.displayName}
-        glyph={meta.glyph}
-        logoUrl={meta.logoUrl}
-        status={statusByKey.get(step.key)}
-        muted={muted}
-        onClick={props.onOpenEditor}
-      />
-    );
+    return {
+      id: step.id,
+      title: step.name || step.key,
+      subtitle: meta.displayName,
+      glyph: meta.glyph,
+      logoUrl: meta.logoUrl,
+      status: statusByKey.get(step.key),
+      port,
+    };
   };
 
   if (!state.trigger && state.steps.length === 0) {
     return (
-      <section className="mt-3 rounded-md border border-solid border-slate-200 bg-white px-3 py-4">
-        <p className="text-xs text-slate-500">
+      <section className="mt-8 border-t border-solid border-border pt-6">
+        <p className="text-[13px] text-muted-foreground">
           This workflow has no trigger or steps yet.{" "}
           <button
             type="button"
-            className="underline hover:text-slate-800"
+            className="font-medium text-foreground underline underline-offset-2"
             onClick={props.onOpenEditor}
           >
             Open the editor
@@ -142,45 +176,55 @@ export function WorkflowSteps(props: {
   }
 
   const triggerMeta = state.trigger ? blockMeta(state.trigger.blockType) : null;
+  const stops: Stop[] = [
+    ...(state.trigger && triggerMeta
+      ? [
+          {
+            id: state.trigger.id,
+            title: triggerMeta.displayName,
+            subtitle: "Trigger",
+            glyph: triggerMeta.glyph,
+            logoUrl: triggerMeta.logoUrl,
+            // Any recorded run means the trigger fired.
+            status: props.latestRun ? "SUCCEEDED" : undefined,
+          },
+        ]
+      : []),
+    ...outline.rows.map((row) => stopFor(row.step, row.port)),
+  ];
 
   return (
-    <section className="mt-3 rounded-md border border-solid border-slate-200 bg-white px-3 py-3">
-      <div className="mb-2 flex items-baseline gap-2">
-        <h3 className="text-[11px] text-slate-400">Steps</h3>
-        <span className="text-[11px] tabular-nums text-slate-400">
-          {state.steps.length}
+    <section className="mt-8 border-t border-solid border-border pt-6">
+      <div className="mb-4 flex items-baseline gap-2">
+        <h3 className="text-[13px] font-medium text-foreground">Steps</h3>
+        <span className="text-xs text-muted-foreground">
+          {props.latestRun ? "Coloured by the latest run" : "Not run yet"}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {triggerMeta && state.trigger ? (
-          <Chip
-            title={triggerMeta.displayName}
-            subtitle="Trigger"
-            glyph={triggerMeta.glyph}
-            logoUrl={triggerMeta.logoUrl}
-            muted={false}
-            onClick={props.onOpenEditor}
-          />
-        ) : (
-          <span className="rounded border border-dashed border-slate-300 px-2 py-1 text-[11px] text-slate-400">
-            No trigger
-          </span>
-        )}
-        {outline.rows.map((row) => (
-          <span key={row.step.id} className="flex items-center gap-2">
-            <Arrow port={row.port} />
-            {chipFor(row.step, false)}
-          </span>
-        ))}
-      </div>
+      {!state.trigger ? (
+        <p className="mb-3 text-xs text-wf-warn">
+          No trigger set, so this workflow never starts on its own.
+        </p>
+      ) : null}
+      <Track stops={stops} onOpenEditor={props.onOpenEditor} />
       {outline.orphans.length > 0 ? (
-        <div className="mt-3 border-t border-solid border-slate-100 pt-2">
-          <p className="mb-2 text-[11px] text-slate-400">
+        <div className="mt-5">
+          <p className="mb-3 text-xs text-muted-foreground">
             Not connected to the trigger, so runs never reach these:
           </p>
-          <div className="flex flex-wrap items-center gap-2">
-            {outline.orphans.map((step) => chipFor(step, true))}
-          </div>
+          <ol className="-mx-6 flex overflow-x-auto px-6 opacity-60">
+            {outline.orphans.map((step) => (
+              <TrackStop
+                key={step.id}
+                stop={stopFor(step, null)}
+                first
+                last
+                inbound="idle"
+                outbound="idle"
+                onClick={props.onOpenEditor}
+              />
+            ))}
+          </ol>
         </div>
       ) : null}
     </section>

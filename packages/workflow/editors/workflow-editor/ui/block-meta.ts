@@ -47,17 +47,28 @@ function parsePieceBlockType(blockType: string) {
 // Logos keyed by package name ("@activepieces/piece-date-helper"), as given
 // by the piece catalog. Module-level so every block view shares one lookup.
 const pieceLogos = new Map<string, string>();
+// Catalog display names ("HTTP", "OpenAI"), which the package name can't give.
+const pieceNames = new Map<string, string>();
 const listeners = new Set<() => void>();
 // Bumped on every registration so useSyncExternalStore re-reads.
 let logoRevision = 0;
 
 export function registerPieceLogos(
-  entries: Iterable<{ name: string; logoUrl?: string | null }>,
+  entries: Iterable<{
+    name: string;
+    logoUrl?: string | null;
+    displayName?: string | null;
+  }>,
 ): void {
   let changed = false;
   for (const entry of entries) {
-    if (!entry.name || !entry.logoUrl) continue;
-    if (pieceLogos.get(entry.name) === entry.logoUrl) continue;
+    if (!entry.name) continue;
+    if (entry.displayName && pieceNames.get(entry.name) !== entry.displayName) {
+      pieceNames.set(entry.name, entry.displayName);
+      changed = true;
+    }
+    if (!entry.logoUrl || pieceLogos.get(entry.name) === entry.logoUrl)
+      continue;
     pieceLogos.set(entry.name, entry.logoUrl);
     changed = true;
   }
@@ -70,9 +81,14 @@ export function pieceLogo(packageName: string): string | undefined {
   return pieceLogos.get(packageName);
 }
 
+export function pieceDisplayName(packageName: string): string | undefined {
+  return pieceNames.get(packageName);
+}
+
 // Test seam: drop the cache so a fresh catalog can be registered.
 export function resetPieceLogos(): void {
   pieceLogos.clear();
+  pieceNames.clear();
   catalogLoad = undefined;
   logoRevision += 1;
   for (const listener of listeners) listener();
@@ -109,11 +125,11 @@ export function blockMeta(blockType: string): BlockMeta {
   if (core) return core;
   const piece = parsePieceBlockType(blockType);
   if (piece) {
+    const pieceLabel =
+      pieceNames.get(piece.packageName) ?? titleCase(piece.pieceName);
     return {
       displayName: titleCase(piece.actionName),
-      subtitle: piece.isTrigger
-        ? `${titleCase(piece.pieceName)} · Trigger`
-        : titleCase(piece.pieceName),
+      subtitle: piece.isTrigger ? `${pieceLabel} · Trigger` : pieceLabel,
       logoUrl: pieceLogo(piece.packageName),
       // Shown until the catalog arrives, and whenever the logo fails to load.
       glyph: piece.pieceName.slice(0, 1).toUpperCase() || "?",

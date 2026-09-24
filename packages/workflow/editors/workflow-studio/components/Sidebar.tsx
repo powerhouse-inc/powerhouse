@@ -7,7 +7,8 @@ import {
 import type { FileNode } from "@powerhousedao/shared/document-drive";
 import { useEffect, type ReactNode } from "react";
 import { errorMessage } from "../../shared/DocumentErrorBoundary.js";
-import { CONNECTION_STATUS_DOT, WORKFLOW_STATUS_DOT } from "./run-format.js";
+import { CONNECTION_TONE, toneOf, WORKFLOW_TONE } from "./run-format.js";
+import { Icon, StatusDot } from "./ui.js";
 
 const WORKFLOW_TYPE = "powerhouse/workflow";
 
@@ -34,15 +35,15 @@ function Row(props: {
 }) {
   return (
     <div
-      className={`group mx-2 flex items-center rounded ${
-        props.active ? "bg-white ring-1 ring-slate-200" : "hover:bg-slate-100"
+      className={`group mx-2 flex items-center rounded-md ${
+        props.active ? "bg-accent" : "hover:bg-accent/60"
       }`}
     >
       <button
         type="button"
         aria-current={props.active ? "true" : undefined}
-        className={`flex min-w-0 grow items-center gap-2 px-2 py-1.5 text-left text-sm ${
-          props.active ? "text-slate-900" : "text-slate-600"
+        className={`flex min-w-0 grow items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          props.active ? "font-medium text-foreground" : "text-foreground/80"
         }`}
         onClick={props.onClick}
       >
@@ -54,9 +55,9 @@ function Row(props: {
 }
 
 const ROW_ACTION =
-  "shrink-0 rounded px-1 py-0.5 text-xs text-slate-400 opacity-0 hover:bg-slate-200 hover:text-slate-700 focus-visible:opacity-100 group-hover:opacity-100";
+  "flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-background hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100";
 
-const DELETE_ACTION = `${ROW_ACTION} hover:bg-red-100 hover:text-red-600`;
+const DELETE_ACTION = `${ROW_ACTION} hover:text-wf-fail`;
 
 function DeleteButton(props: { node: FileNode; label: string }) {
   return (
@@ -67,7 +68,7 @@ function DeleteButton(props: { node: FileNode; label: string }) {
       className={DELETE_ACTION}
       onClick={() => showDeleteNodeModal(props.node)}
     >
-      <span aria-hidden>🗑</span>
+      <Icon name="trash" className="h-3.5 w-3.5" />
     </button>
   );
 }
@@ -100,13 +101,13 @@ function NodeRow(props: {
         }
       >
         <span
-          className="shrink-0 text-xs text-red-600"
+          className="shrink-0 text-xs text-wf-fail"
           title={`Could not load ${node.id}: ${errorMessage(error)}`}
           aria-hidden
         >
           ⚠
         </span>
-        <span className="min-w-0 truncate text-red-600">
+        <span className="min-w-0 truncate text-wf-fail">
           {node.name || "(unnamed)"}
         </span>
       </Row>
@@ -114,10 +115,10 @@ function NodeRow(props: {
   }
 
   const status = documentStatus(document);
-  const dots =
-    node.documentType === WORKFLOW_TYPE
-      ? WORKFLOW_STATUS_DOT
-      : CONNECTION_STATUS_DOT;
+  const tone = toneOf(
+    node.documentType === WORKFLOW_TYPE ? WORKFLOW_TONE : CONNECTION_TONE,
+    status,
+  );
   return (
     <Row
       active={props.active}
@@ -132,19 +133,16 @@ function NodeRow(props: {
               className={ROW_ACTION}
               onClick={props.onEdit}
             >
-              <span aria-hidden>✎</span>
+              <Icon name="pencil" className="h-3.5 w-3.5" />
             </button>
           ) : null}
           <DeleteButton node={node} label={documentName(document, node.name)} />
         </span>
       }
     >
-      <span
-        className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-          status ? (dots[status] ?? "bg-slate-300") : "bg-slate-200"
-        }`}
-        title={status}
-      />
+      <span title={status} className="flex">
+        <StatusDot tone={tone} />
+      </span>
       <span className="min-w-0 truncate">
         {documentName(document, node.name)}
       </span>
@@ -164,25 +162,24 @@ function Section(props: {
   creating: boolean;
 }) {
   return (
-    <div className="mt-2">
-      {/* A banded header, so the two groups read as separate lists. */}
-      <div className="mb-1.5 flex items-center justify-between border-y border-solid border-slate-200 bg-slate-100 px-4 py-1.5">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+    <div className="mt-5">
+      <div className="mb-1 flex items-center justify-between pl-4 pr-3">
+        <h3 className="text-xs font-medium text-muted-foreground">
           {props.title}
-        </span>
+        </h3>
         <button
           type="button"
           disabled={props.creating}
-          className="flex h-5 w-5 items-center justify-center rounded border border-solid border-transparent text-sm leading-none text-slate-500 hover:border-slate-300 hover:bg-white hover:text-slate-800 disabled:opacity-50"
+          className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
           title={props.addLabel}
           aria-label={props.addLabel}
           onClick={props.onCreate}
         >
-          <span aria-hidden>+</span>
+          <Icon name="plus" className="h-3.5 w-3.5" />
         </button>
       </div>
       {props.nodes.length === 0 ? (
-        <p className="px-4 py-1 text-xs text-slate-400">{props.empty}</p>
+        <p className="px-4 py-1 text-xs text-muted-foreground">{props.empty}</p>
       ) : (
         <div className="flex flex-col gap-0.5">
           {props.nodes.map((node) => (
@@ -215,17 +212,15 @@ export function Sidebar(props: {
   onCreateConnection: () => void;
 }) {
   return (
-    <aside className="w-60 shrink-0 overflow-y-auto border-r border-solid border-slate-200 bg-slate-50 py-2">
+    <aside className="w-60 shrink-0 overflow-y-auto border-r border-solid border-border bg-muted/50 py-3">
       <Row active={props.allRunsActive} onClick={props.onShowAllRuns}>
-        <span aria-hidden className="shrink-0 text-xs text-slate-400">
-          ☰
-        </span>
-        <span className="font-medium">All runs</span>
+        <Icon name="list" className="text-muted-foreground" />
+        <span>All runs</span>
       </Row>
       <Section
         title="Workflows"
         addLabel="New workflow"
-        empty="No workflows yet. Use + to add one."
+        empty="No workflows yet."
         nodes={props.workflows}
         activeId={props.activeId}
         onOpen={props.onOpenWorkflow}
@@ -236,7 +231,7 @@ export function Sidebar(props: {
       <Section
         title="Connections"
         addLabel="New connection"
-        empty="No connections yet. Use + to add one."
+        empty="No connections yet."
         nodes={props.connections}
         activeId={props.activeId}
         onOpen={props.onOpenConnection}

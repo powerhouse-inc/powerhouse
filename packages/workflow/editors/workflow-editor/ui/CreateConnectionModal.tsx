@@ -63,7 +63,7 @@ export function CreateConnectionModal(props: {
         <div className="flex items-center gap-2">
           <input
             key={state?.name}
-            className="min-w-0 flex-1 rounded border border-transparent px-1 py-0.5 text-sm font-semibold text-slate-800 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
+            className="min-w-0 flex-1 rounded border border-transparent px-1 py-0.5 text-sm font-semibold text-foreground hover:border-foreground/10 focus:border-foreground/15 focus:outline-none"
             defaultValue={state?.name ?? props.draft.name}
             placeholder="Untitled connection"
             spellCheck={false}
@@ -78,7 +78,7 @@ export function CreateConnectionModal(props: {
           />
           <button
             type="button"
-            className="shrink-0 rounded bg-slate-800 px-3 py-1.5 text-xs font-medium text-white"
+            className="shrink-0 rounded bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
             onClick={() => props.onDone(props.connectionId)}
           >
             Use this connection
@@ -87,7 +87,7 @@ export function CreateConnectionModal(props: {
         {state && callbacks ? (
           <ConnectionForm state={state} callbacks={callbacks} />
         ) : (
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted-foreground/80">
             Loading the new connection document…
           </p>
         )}

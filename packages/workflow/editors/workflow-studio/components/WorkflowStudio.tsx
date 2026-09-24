@@ -158,7 +158,7 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
             onOpenWorkflow={(workflowId) => select(workflowId)}
           />
         ) : (
-          <div className="mx-auto w-full max-w-5xl p-6">
+          <div className="mx-auto w-full max-w-5xl px-6 py-8">
             {liveTarget ? (
               <WorkflowHeader
                 key={liveTarget.id}

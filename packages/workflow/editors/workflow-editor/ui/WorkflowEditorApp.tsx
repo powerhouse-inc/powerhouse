@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { Button, Select } from "../../shared/controls.js";
+import { Icon } from "../../shared/icons.js";
 import {
   ExpressionPickerPopup,
   ExpressionTargetProvider,
@@ -14,6 +16,13 @@ import { VariablesEditor } from "./VariablesEditor.js";
 import { WorkflowCanvas } from "./WorkflowCanvas.js";
 
 const VARIABLES_VIEW = "__variables";
+
+const STATUS_HINT: Record<WorkflowStatusValue, string> = {
+  DRAFT: "Saved, never runs",
+  ENABLED: "Runs when its trigger fires",
+  DISABLED: "Paused, keeps its history",
+  ARCHIVED: "Retired",
+};
 
 const STATUSES: WorkflowStatusValue[] = [
   "DRAFT",
@@ -42,10 +51,11 @@ export function WorkflowEditorApp(props: {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-2">
+      <div className="flex items-center gap-3 border-b border-solid border-foreground/10 bg-background px-4 py-2">
         <input
           key={model.name}
-          className="min-w-0 max-w-72 rounded border border-transparent px-1 py-0.5 text-sm font-semibold text-slate-800 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
+          aria-label="Workflow name"
+          className="min-w-0 max-w-72 rounded-md border border-solid border-transparent bg-transparent px-1.5 py-1 text-[15px] font-semibold text-foreground hover:border-foreground/15 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/25"
           defaultValue={model.name}
           placeholder="Untitled workflow"
           spellCheck={false}
@@ -57,37 +67,39 @@ export function WorkflowEditorApp(props: {
             if (name && name !== model.name) callbacks.setName(name);
           }}
         />
-        <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
+        <span className="text-xs tabular-nums text-muted-foreground">
           v{model.version}
         </span>
-        <select
-          className="rounded border border-slate-300 px-2 py-1 text-xs"
-          value={model.status}
-          onChange={(event) =>
-            callbacks.setStatus(event.target.value as WorkflowStatusValue)
-          }
-        >
-          {STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {status}
-            </option>
-          ))}
-        </select>
-        <span className="ml-auto text-[11px] text-slate-400">
-          Use the + buttons on the canvas to add steps
+        <div className="w-36">
+          <Select
+            value={model.status}
+            options={STATUSES.map((status) => ({
+              value: status,
+              label: status.charAt(0) + status.slice(1).toLowerCase(),
+              description: STATUS_HINT[status],
+            }))}
+            onChange={(status) =>
+              callbacks.setStatus(status as WorkflowStatusValue)
+            }
+          />
+        </div>
+        <span className="ml-auto hidden text-xs text-muted-foreground lg:inline">
+          Add steps with the + buttons on the canvas
         </span>
-        <button
-          type="button"
-          className={`rounded border px-2 py-0.5 text-[11px] font-medium ${
-            showVariables
-              ? "border-slate-800 bg-slate-800 text-white"
-              : "border-slate-200 text-slate-500 hover:bg-slate-100"
-          }`}
+        <Button
+          size="sm"
+          variant={showVariables ? "primary" : "secondary"}
+          aria-pressed={showVariables}
           onClick={() => setSelectedId(showVariables ? null : VARIABLES_VIEW)}
         >
+          <Icon name="braces" className="h-3.5 w-3.5" />
           Variables
-          {model.variables.length > 0 ? ` (${model.variables.length})` : ""}
-        </button>
+          {model.variables.length > 0 ? (
+            <span className="tabular-nums opacity-70">
+              {model.variables.length}
+            </span>
+          ) : null}
+        </Button>
       </div>
       <div className="flex min-h-0 flex-1">
         <div className="min-h-[480px] min-w-0 flex-1">
@@ -99,7 +111,7 @@ export function WorkflowEditorApp(props: {
           />
         </div>
         {showVariables ? (
-          <aside className="min-h-0 w-96 overflow-y-auto border-l border-slate-200 bg-slate-50">
+          <aside className="min-h-0 w-[26rem] shrink-0 overflow-y-auto border-l border-solid border-foreground/10 bg-card">
             <VariablesEditor
               variables={model.variables}
               callbacks={callbacks}
@@ -113,7 +125,7 @@ export function WorkflowEditorApp(props: {
             stepBlockTypes={stepBlockTypes}
             triggerBlockType={model.trigger?.blockType}
           >
-            <aside className="flex min-h-0 w-96 flex-col border-l border-slate-200 bg-slate-50">
+            <aside className="flex min-h-0 w-[26rem] shrink-0 flex-col border-l border-solid border-foreground/10 bg-card">
               <div className="min-h-0 flex-1 overflow-y-auto">
                 {selectedStep ? (
                   <StepPanel

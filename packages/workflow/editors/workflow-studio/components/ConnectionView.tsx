@@ -11,30 +11,32 @@ import {
   type ConnectionDocument,
 } from "document-models/connection";
 import { useWorkflowDocumentsInSelectedDrive } from "document-models/workflow";
-import type { ReactNode } from "react";
-import { CONNECTION_STATUS_STYLES } from "../../connection-editor/status.js";
 import { packageFromConnectorId } from "../../connection-editor/piece-auth.js";
+import {
+  AUTH_TYPE_LABEL,
+  CONNECTION_STATUS_LABEL,
+} from "../../connection-editor/status.js";
+import {
+  pieceDisplayName,
+  pieceLogo,
+  usePieceLogos,
+} from "../../workflow-editor/ui/block-meta.js";
 import { DocumentLoadError } from "../../shared/DocumentErrorBoundary.js";
 import {
   connectionUsage,
   enabledDependents,
   type UsageWorkflow,
 } from "./connection-usage.js";
-import { formatAbsolute, WORKFLOW_STATUS_DOT } from "./run-format.js";
+import {
+  CONNECTION_TONE,
+  formatAbsolute,
+  toneOf,
+  TONE_BADGE,
+  WORKFLOW_TONE,
+} from "./run-format.js";
+import { Button, Fact, StatusDot } from "./ui.js";
 
 const CONNECTION_TYPE = "powerhouse/connection";
-
-const ACTION =
-  "rounded border border-solid border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50";
-
-function Stat(props: { label: string; children: ReactNode }) {
-  return (
-    <div className="min-w-0 grow border-l border-solid border-slate-200 px-3 py-2 first:border-l-0 first:pl-0">
-      <div className="text-[11px] text-slate-400">{props.label}</div>
-      <div className="truncate text-xs text-slate-800">{props.children}</div>
-    </div>
-  );
-}
 
 function configEntries(config: unknown): [string, string][] {
   if (!config || typeof config !== "object" || Array.isArray(config)) return [];
@@ -55,6 +57,7 @@ export function ConnectionView(props: {
   const { data: document, error, reload } = useDocumentSafe(connectionId);
   const [, dispatch] = useDispatch(document);
   const workflows = useWorkflowDocumentsInSelectedDrive();
+  usePieceLogos();
 
   if (error !== undefined) {
     return (
@@ -94,99 +97,121 @@ export function ConnectionView(props: {
       }),
     );
 
+  const statusTone = toneOf(CONNECTION_TONE, state.status);
+
   return (
-    <div className="mx-auto w-full max-w-5xl p-6">
-      <header className="mb-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="min-w-0 truncate text-base font-semibold text-slate-800">
-            {state.name || props.node.name || "Untitled connection"}
-          </h2>
-          <span
-            className={`rounded px-2 py-0.5 text-[11px] font-semibold ${CONNECTION_STATUS_STYLES[state.status]}`}
-          >
-            {state.status}
-          </span>
-          <span className="grow" />
-          <button type="button" className={ACTION} onClick={props.onEdit}>
-            Edit connection
-          </button>
-          <button
-            type="button"
-            className={ACTION}
-            onClick={() => setStatus(revoked ? "OK" : "REVOKED")}
-          >
-            {revoked ? "Reactivate" : "Revoke"}
-          </button>
-          <button
-            type="button"
-            className="rounded border border-solid border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 hover:border-red-300 hover:bg-red-50"
-            onClick={() => showDeleteNodeModal(props.node)}
-          >
-            Delete
-          </button>
-        </div>
-        <div className="mt-3 flex flex-wrap items-stretch rounded-md border border-solid border-slate-200 bg-white px-3">
-          <Stat label="Connector">
-            {packageName || <span className="text-slate-400">None picked</span>}
-          </Stat>
-          <Stat label="Auth">{state.authType}</Stat>
-          <Stat label="Account">
-            {state.accountLabel ?? <span className="text-slate-400">—</span>}
-          </Stat>
-          <Stat label="Last checked">
-            {state.lastCheckedAt ? (
-              formatAbsolute(state.lastCheckedAt)
-            ) : (
-              <span className="text-slate-400">Never</span>
-            )}
-          </Stat>
-          <Stat label="Secrets">
-            <span className="tabular-nums">{state.secretRefs.length}</span>
-          </Stat>
-          <Stat label="Used by">
-            <span className="tabular-nums">
-              {usage.length}
-              {atRisk > 0 ? (
-                <span className="text-slate-400"> · {atRisk} enabled</span>
-              ) : null}
+    <div className="mx-auto w-full max-w-5xl px-6 py-8">
+      <header className="mb-8">
+        <div className="flex flex-wrap items-start gap-3">
+          <div className="flex min-w-0 grow items-center gap-2.5">
+            <h2 className="min-w-0 truncate text-xl font-semibold tracking-tight text-foreground">
+              {state.name || props.node.name || "Untitled connection"}
+            </h2>
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${TONE_BADGE[statusTone]}`}
+            >
+              {CONNECTION_STATUS_LABEL[state.status]}
             </span>
-          </Stat>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="danger"
+              onClick={() => showDeleteNodeModal(props.node)}
+            >
+              Delete
+            </Button>
+            <Button onClick={() => setStatus(revoked ? "OK" : "REVOKED")}>
+              {revoked ? "Reactivate" : "Revoke"}
+            </Button>
+            <Button variant="primary" onClick={props.onEdit}>
+              Edit connection
+            </Button>
+          </div>
         </div>
+        <dl className="mt-5 flex flex-wrap gap-x-10 gap-y-3">
+          <Fact label="Connector" title={packageName || undefined}>
+            {packageName ? (
+              <span className="inline-flex items-center gap-1.5">
+                {pieceLogo(packageName) ? (
+                  <img
+                    src={pieceLogo(packageName)}
+                    alt=""
+                    className="h-4 w-4"
+                  />
+                ) : null}
+                {pieceDisplayName(packageName) ?? packageName}
+              </span>
+            ) : (
+              <span className="text-muted-foreground">None picked</span>
+            )}
+          </Fact>
+          <Fact label="Sign-in method">{AUTH_TYPE_LABEL[state.authType]}</Fact>
+          <Fact label="Account">
+            {state.accountLabel ?? (
+              <span className="text-muted-foreground">Unknown</span>
+            )}
+          </Fact>
+          <Fact
+            label="Last checked"
+            title={
+              state.lastCheckedAt
+                ? formatAbsolute(state.lastCheckedAt)
+                : undefined
+            }
+          >
+            {state.lastCheckedAt ? (
+              new Date(state.lastCheckedAt).toLocaleDateString()
+            ) : (
+              <span className="text-muted-foreground">Never</span>
+            )}
+          </Fact>
+          <Fact label="Secrets">{state.secretRefs.length}</Fact>
+          <Fact label="Used by">
+            {usage.length === 1 ? "1 workflow" : `${usage.length} workflows`}
+            {atRisk > 0 ? (
+              <span className="text-muted-foreground"> ({atRisk} enabled)</span>
+            ) : null}
+          </Fact>
+        </dl>
       </header>
 
       {state.lastError ? (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-xs text-red-600">
+        <p className="mb-6 rounded-md bg-wf-fail/10 px-3 py-2 text-[13px] text-wf-fail">
           {state.lastError}
         </p>
       ) : null}
 
-      <section className="mb-4 rounded-md border border-solid border-slate-200 bg-white px-3 py-3">
-        <h3 className="mb-2 text-[11px] text-slate-400">Used by</h3>
+      <section className="border-t border-solid border-border pt-6">
+        <h3 className="mb-3 text-[13px] font-medium text-foreground">
+          Used by
+        </h3>
         {usage.length === 0 ? (
-          <p className="text-xs text-slate-500">
-            No workflow uses this connection yet. Bind it to a step in a
+          <p className="text-[13px] text-muted-foreground">
+            No workflow uses this connection yet. Pick it on a step in a
             workflow's editor.
           </p>
         ) : (
-          <ul className="flex flex-col gap-1">
+          <ul className="-mx-2 flex flex-col">
             {usage.map((entry) => (
               <li key={entry.workflow.id}>
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2 rounded px-1 py-1 text-left hover:bg-slate-50"
+                  className="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left text-[13px] hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={() => props.onOpenWorkflow(entry.workflow.id)}
                 >
-                  <span
-                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${WORKFLOW_STATUS_DOT[entry.workflow.status] ?? "bg-slate-300"}`}
-                    title={entry.workflow.status}
-                  />
-                  <span className="shrink-0 text-xs font-medium text-slate-700">
+                  <span title={entry.workflow.status} className="flex">
+                    <StatusDot
+                      tone={toneOf(WORKFLOW_TONE, entry.workflow.status)}
+                    />
+                  </span>
+                  <span className="shrink-0 font-medium text-foreground">
                     {entry.workflow.name}
                   </span>
-                  <span className="truncate text-[11px] text-slate-400">
-                    {entry.trigger ? "trigger" : null}
-                    {entry.trigger && entry.steps.length > 0 ? " · " : null}
-                    {entry.steps.map((step) => step.key).join(", ")}
+                  <span className="truncate text-xs text-muted-foreground">
+                    {[
+                      ...(entry.trigger ? ["trigger"] : []),
+                      ...entry.steps.map((step) => step.key),
+                    ].join(", ")}
                   </span>
                 </button>
               </li>
@@ -195,14 +220,16 @@ export function ConnectionView(props: {
         )}
       </section>
 
-      <section className="rounded-md border border-solid border-slate-200 bg-white px-3 py-3">
-        <h3 className="mb-2 text-[11px] text-slate-400">Configuration</h3>
+      <section className="mt-8 border-t border-solid border-border pt-6">
+        <h3 className="mb-3 text-[13px] font-medium text-foreground">
+          Configuration
+        </h3>
         {config.length === 0 && state.secretRefs.length === 0 ? (
-          <p className="text-xs text-slate-500">
+          <p className="text-[13px] text-muted-foreground">
             Nothing configured yet.{" "}
             <button
               type="button"
-              className="underline hover:text-slate-800"
+              className="font-medium text-foreground underline underline-offset-2"
               onClick={props.onEdit}
             >
               Open the editor
@@ -210,20 +237,18 @@ export function ConnectionView(props: {
             to fill it in.
           </p>
         ) : (
-          <dl className="flex flex-col gap-1">
+          <dl className="grid grid-cols-[12rem_1fr] gap-x-4 gap-y-2 text-[13px]">
             {config.map(([key, value]) => (
-              <div key={key} className="flex gap-2 text-xs">
-                <dt className="w-40 shrink-0 truncate text-slate-500">{key}</dt>
-                <dd className="min-w-0 truncate text-slate-800">{value}</dd>
+              <div key={key} className="contents">
+                <dt className="truncate text-muted-foreground">{key}</dt>
+                <dd className="min-w-0 truncate text-foreground">{value}</dd>
               </div>
             ))}
             {state.secretRefs.map((ref) => (
-              <div key={ref.id} className="flex gap-2 text-xs">
-                <dt className="w-40 shrink-0 truncate text-slate-500">
-                  {ref.name}
-                </dt>
-                <dd className="text-slate-400">
-                  stored secret · never displayed
+              <div key={ref.id} className="contents">
+                <dt className="truncate text-muted-foreground">{ref.name}</dt>
+                <dd className="text-muted-foreground">
+                  Stored secret, never shown
                 </dd>
               </div>
             ))}

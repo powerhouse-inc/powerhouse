@@ -2,13 +2,27 @@
 @custom-variant dark (&:where(.dark, .dark *));
 @import "tailwindcss";
 
-@theme {
-  /* You can customize the theme by overriding the theme variables here */
-  /* See https://tailwindcss.com/docs/theme#using-a-custom-theme for details */
+/* Run and document status. The design-system hues are too light for small
+   text, so each tone is tuned per theme. */
+:root {
+  --wf-ok: #1a7f45;
+  --wf-fail: #c4312a;
+  --wf-warn: #9a5800;
+  --wf-run: #1d63d6;
+  --wf-edge: #cbd5e1;
+}
 
-  /* If you would prefer to use plain css, add your styles below this @theme tag as you normally would */
+.dark {
+  --wf-ok: #4cc47d;
+  --wf-fail: #f2776e;
+  --wf-warn: #e9a23b;
+  --wf-run: #6aa6ff;
+  --wf-edge: #3a4146;
+}
 
-  /* A sensible CSS reset is applied by default. If you would prefer to use a different reset or none at all, uncomment the following line */
-
-  /* --*: initial; */
+@theme inline {
+  --color-wf-ok: var(--wf-ok);
+  --color-wf-fail: var(--wf-fail);
+  --color-wf-warn: var(--wf-warn);
+  --color-wf-run: var(--wf-run);
 }
