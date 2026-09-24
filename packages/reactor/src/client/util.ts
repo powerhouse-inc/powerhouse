@@ -44,7 +44,11 @@ export function servesDomainScope(
   document: PHDocument,
   readable: (scope: string) => boolean,
 ): boolean {
-  const domainScopes = Object.keys(document.state).filter(
+  const state = document.state as Record<string, unknown> | undefined;
+  if (!state) {
+    return true;
+  }
+  const domainScopes = Object.keys(state).filter(
     (scope) => !ALWAYS_READABLE_SCOPES.has(scope),
   );
   return domainScopes.length === 0 || domainScopes.some(readable);
