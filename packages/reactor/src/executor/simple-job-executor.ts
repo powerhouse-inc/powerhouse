@@ -59,6 +59,7 @@ import type { IJobExecutor } from "./interfaces.js";
 import {
   DEFAULT_TRUST_TIMEOUT_MS,
   SignatureAdmission,
+  type CommittedWrite,
   type MutationAdmission,
 } from "./signature-admission.js";
 import { isSynthesized, signSynthesized } from "./synthesized-signing.js";
@@ -448,31 +449,46 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (admission.kind === "refused") {
       return { result: buildErrorResult(job, admission.error, startTime) };
     }
-    if (admission.kind === "committed") {
+
+    let committed: OperationWithContext[];
+    try {
+      committed = await this.reloadCommitted(
+        admission.committed,
+        stores,
+        signal,
+      );
+    } catch (error) {
       return {
-        result: {
+        result: buildErrorResult(
           job,
-          success: true as const,
-          operations: [],
-          operationsWithContext: [],
-          duration: Date.now() - startTime,
-        },
-        pendingEvent: {
-          jobId: job.id,
-          operations: [],
-          jobMeta: job.meta,
-          collectionMemberships: {},
-        },
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        ),
       };
     }
+    const committedIds = new Set(
+      admission.committed.map((write) => write.actionId),
+    );
+    const fresh: Job =
+      committedIds.size === 0
+        ? job
+        : {
+            ...job,
+            actions: job.actions.filter(
+              (action) => !committedIds.has(action.id),
+            ),
+          };
+    if (fresh.actions.length === 0) {
+      return this.committedOutcome(job, committed, [], [], stores, startTime);
+    }
 
-    const positioned = await this.positionByTimestamp(job, stores, signal);
+    const positioned = await this.positionByTimestamp(fresh, stores, signal);
     if (positioned.error) {
       return { result: buildErrorResult(job, positioned.error, startTime) };
     }
 
     const executing: ExecutingJob = {
-      job,
+      job: fresh,
       startTime,
       indexTxn,
       stores,
@@ -521,18 +537,42 @@ export class SimpleJobExecutor implements IJobExecutor {
       ...indexTxn.getMembershipInvalidations(),
     );
 
-    if (actionResult.operationsWithContext.length > 0) {
-      for (let i = 0; i < actionResult.operationsWithContext.length; i++) {
-        actionResult.operationsWithContext[i].context.ordinal = ordinals[i];
-      }
+    for (let i = 0; i < actionResult.operationsWithContext.length; i++) {
+      actionResult.operationsWithContext[i].context.ordinal = ordinals[i];
+    }
+    return this.committedOutcome(
+      job,
+      committed,
+      actionResult.operationsWithContext,
+      actionResult.generatedOperations,
+      stores,
+      startTime,
+    );
+  }
+
+  /**
+   * A successful mutation's result and the write-ready event it owes, carrying
+   * what earlier attempts committed ahead of what this one wrote.
+   */
+  private async committedOutcome(
+    job: Job,
+    reloaded: OperationWithContext[],
+    written: OperationWithContext[],
+    generated: Operation[],
+    stores: ExecutionStores,
+    startTime: number,
+  ): Promise<ScopeOutcome> {
+    const operationsWithContext = [...reloaded, ...written];
+    let pendingEvent: JobWriteReadyEvent | undefined;
+    if (operationsWithContext.length > 0) {
       const collectionMemberships =
         await this.getCollectionMembershipsForOperations(
-          actionResult.operationsWithContext,
+          operationsWithContext,
           stores,
         );
       pendingEvent = {
         jobId: job.id,
-        operations: actionResult.operationsWithContext,
+        operations: operationsWithContext,
         jobMeta: job.meta,
         submittedActionIds: submittedActionIds(job),
         collectionMemberships,
@@ -543,12 +583,99 @@ export class SimpleJobExecutor implements IJobExecutor {
       result: {
         job,
         success: true as const,
-        operations: actionResult.generatedOperations,
-        operationsWithContext: actionResult.operationsWithContext,
+        operations: [...reloaded.map((entry) => entry.operation), ...generated],
+        operationsWithContext,
         duration: Date.now() - startTime,
       },
       pendingEvent,
     };
+  }
+
+  /**
+   * The stored operations of writes an earlier attempt committed, as a fresh
+   * write would report them. State is rebuilt from the write cache, and left
+   * out when it cannot be.
+   */
+  private async reloadCommitted(
+    writes: CommittedWrite[],
+    stores: ExecutionStores,
+    signal?: AbortSignal,
+  ): Promise<OperationWithContext[]> {
+    const streams = new Map<string, CommittedWrite[]>();
+    for (const write of writes) {
+      const key = `${write.documentId}\u0000${write.scope}\u0000${write.branch}`;
+      streams.set(key, [...(streams.get(key) ?? []), write]);
+    }
+
+    const reloaded: OperationWithContext[] = [];
+    for (const group of streams.values()) {
+      const { documentId, scope, branch } = group[0];
+      const opIds = [...new Set(group.map((write) => write.opId))];
+      const operations = await stores.operationStore.getOperationsByIds(
+        documentId,
+        scope,
+        branch,
+        opIds,
+        signal,
+      );
+      const ordinals = await stores.operationIndex.getOrdinalsByOpIds(
+        documentId,
+        scope,
+        branch,
+        opIds,
+        signal,
+      );
+      const { documentType } = await stores.documentMetaCache.getDocumentMeta(
+        documentId,
+        branch,
+        signal,
+      );
+      for (const operation of operations.sort((a, b) => a.index - b.index)) {
+        reloaded.push({
+          operation,
+          context: {
+            documentId,
+            scope,
+            branch,
+            documentType,
+            resultingState: await this.rebuiltState(
+              stores,
+              { documentId, scope, branch },
+              operation,
+              signal,
+            ),
+            ordinal: ordinals.get(operation.id) ?? 0,
+          },
+        });
+      }
+    }
+    return reloaded;
+  }
+
+  private async rebuiltState(
+    stores: ExecutionStores,
+    stream: TouchedStream,
+    operation: Operation,
+    signal?: AbortSignal,
+  ): Promise<string | undefined> {
+    try {
+      const document = await stores.writeCache.getState(
+        stream.documentId,
+        stream.scope,
+        stream.branch,
+        operation.index,
+        signal,
+      );
+      return JSON.stringify({ ...document.state, header: document.header });
+    } catch (error) {
+      this.logger.warn(
+        "No state for committed operation @OperationId in @Stream: @Error",
+        operation.id,
+        stream,
+        error,
+      );
+      return undefined;
+    }
   }
 
   /**

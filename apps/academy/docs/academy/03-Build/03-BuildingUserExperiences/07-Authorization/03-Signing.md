@@ -226,7 +226,7 @@ The last tuple in `context.signer.signatures` is checked:
 3. A `v2:` hash must be `v2:` and 43 base64url characters, element [0] decimal seconds, and element [4] `0x` and 128 lowercase hex digits. The preimage is recomputed for the document and branch the write is stored in and must match, on mutations and loads alike. On a load, the incoming operation's timestamp must be the action's timestamp.
 4. A hash without the prefix is a legacy tuple. On a mutation it is recomputed by length: 44 characters is the legacy Renown SHA-256 hash, 28 is the `buildOperationSignature` SHA-1 hash, and any other length is refused. On a load it is not recomputed, because stored input can come back with its keys reordered.
 5. The ECDSA P-256 signature over elements [0] to [3] must verify under the `did:key` in element [1].
-6. The action id must not already be stored in the document's stream for that scope and branch. A job the queue retries after its first attempt committed is the exception: when every write it carries is stored with the same content, it succeeds without writing again.
+6. The action id must not already be stored in the document's stream for that scope and branch, unless it is stored with the same content. Such a write, from a retry or a resubmission after a lost response, is not written again: the job writes the rest and succeeds, and reports the stored operation as if it had just written it.
 7. For a signed action, the host's trust policy must accept `signer.app.key` as a signer for `signer.user`. See [Trust policy](#trust-policy).
 
 A mutation job fails on the first refusal, and nothing it carried is stored. A load job drops the refused operations, stores the rest, and succeeds.

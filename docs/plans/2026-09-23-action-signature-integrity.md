@@ -206,7 +206,8 @@ verify(action, op, target, header): "ok" | Refusal
   //      mutation admission → recompute by length (44 = renown SHA-256,
   //                           28 = shared SHA-1, else MALFORMED_TUPLE); ECDSA
   //      load admission     → ECDSA only
-  // 4. action id already live in (documentId, scope, branch) → DUPLICATE_ACTION
+  // 4. action id already live in (documentId, scope, branch) → DUPLICATE_ACTION,
+  //    unless stored byte-identical (canonicalJson): committed, not rewritten
   // 5. unsigned with signer.user.address !== "" → UNSIGNED_IDENTITY, any policy
   // 6. host hook: authorizeSigner(...) false → SIGNER_UNAUTHORIZED
 
@@ -261,6 +262,9 @@ type SignatureTrustPolicy = {
   `modPow` on every call today (`signer.ts:291`).
 - Log-only mode is a reactor config option, `signatureVerification: "log" |
   "enforce"`, with a `signature_refusals_total{scheme,path,code}` metric.
+- A mutation write already stored byte-identical is committed: it is not
+  written again, the rest of its job is, and the job's result and
+  `JOB_WRITE_READY` re-emit the stored operations with their indexed ordinals.
 
 ## Phases
 

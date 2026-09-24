@@ -3,6 +3,7 @@ import type {
   ActionSigner,
   ISigner,
   Operation,
+  OperationWithContext,
 } from "@powerhousedao/shared/document-model";
 import {
   addModule,
@@ -20,6 +21,7 @@ import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { InProcessReactorModule } from "../../src/core/types.js";
 import {
   ReactorEventTypes,
+  type JobWriteReadyEvent,
   type SignatureRefusedEvent,
 } from "../../src/events/types.js";
 import type { ReactorFeatureFlags } from "../../src/executor/types.js";
@@ -365,12 +367,18 @@ describe("signature admission", () => {
       expect(await stored()).toEqual([]);
     });
 
-    it("refuses an action id already in the stream", async () => {
+    it("refuses an action id already in the stream with other content", async () => {
       await build("enforce");
       const action = await renownSigned(moduleAction("m"));
       expect((await execute([action])).status).toBe(JobStatus.READ_READY);
 
-      const again = await execute([action]);
+      const again = await execute([
+        await renownSigned({
+          ...moduleAction("m"),
+          id: action.id,
+          input: { id: "m", name: "changed" },
+        }),
+      ]);
 
       expect(again.status).toBe(JobStatus.FAILED);
       expect(again.error?.message).toContain("[DUPLICATE_ACTION]");
@@ -517,7 +525,39 @@ describe("signature admission", () => {
     });
   });
 
-  describe("a retried mutation", () => {
+  describe("a retried or resubmitted mutation", () => {
+    let writeReady: JobWriteReadyEvent[];
+
+    function track(): void {
+      writeReady = [];
+      module!.eventBus.subscribe(
+        ReactorEventTypes.JOB_WRITE_READY,
+        (_type: number, event: JobWriteReadyEvent) => {
+          writeReady.push(event);
+        },
+      );
+    }
+
+    // Rebuilt state matches but for the header's derived modified time.
+    function scoped({ operation, context }: OperationWithContext) {
+      return {
+        operation,
+        context: {
+          ...context,
+          resultingState: (
+            JSON.parse(context.resultingState!) as { global: unknown }
+          ).global,
+        },
+      };
+    }
+
+    async function emitted(jobId: string): Promise<JobWriteReadyEvent> {
+      await vi.waitFor(() => {
+        expect(writeReady.some((event) => event.jobId === jobId)).toBe(true);
+      });
+      return writeReady.find((event) => event.jobId === jobId)!;
+    }
+
     /** Re-runs a job as the queue does after losing its first attempt. */
     async function retried(actions: Action[]): Promise<JobInfo> {
       const createdAtUtcIso = new Date().toISOString();
@@ -553,17 +593,101 @@ describe("signature admission", () => {
 
     it("succeeds without a second write when the first attempt committed", async () => {
       await build("enforce");
+      track();
       const first = await v2Signed(moduleAction("a", 0));
       const second = await v2Signed(moduleAction("b", 1));
-      expect((await execute([first, second])).status).toBe(
-        JobStatus.READ_READY,
-      );
+      const original = await execute([first, second]);
+      expect(original.status).toBe(JobStatus.READ_READY);
+      const originalEvent = await emitted(original.id);
 
       const job = await retried([first, second]);
 
       expect(job.status).toBe(JobStatus.READ_READY);
       expect(await storedActionIds()).toEqual([first.id, second.id]);
       expect(refusals).toEqual([]);
+
+      const event = await emitted(job.id);
+      const stored = await module!.operationStore.getOperationsByIds(
+        docId,
+        "global",
+        "main",
+        originalEvent.operations.map(({ operation }) => operation.id),
+      );
+      expect(event.operations.map(({ operation }) => operation)).toEqual(
+        stored,
+      );
+      expect(event.operations.map(scoped)).toEqual(
+        originalEvent.operations.map(scoped),
+      );
+      expect(event.submittedActionIds).toEqual([first.id, second.id]);
+      expect(Object.keys(event.collectionMemberships ?? {})).toEqual(
+        Object.keys(originalEvent.collectionMemberships ?? {}),
+      );
+      expect(job.result?.actions.map((action) => action.actionId)).toEqual([
+        first.id,
+        second.id,
+      ]);
+    });
+
+    it("treats a fresh resubmission of a stored signed action as committed", async () => {
+      await build("enforce");
+      track();
+      const action = await v2Signed(moduleAction("a", 0));
+      const original = await execute([action]);
+      expect(original.status).toBe(JobStatus.READ_READY);
+      const originalEvent = await emitted(original.id);
+
+      const again = await execute([action]);
+
+      expect(again.error).toBeUndefined();
+      expect(again.status).toBe(JobStatus.READ_READY);
+      expect(await storedActionIds()).toEqual([action.id]);
+      expect(refusals).toEqual([]);
+      expect((await emitted(again.id)).operations.map(scoped)).toEqual(
+        originalEvent.operations.map(scoped),
+      );
+    });
+
+    it("refuses a fresh resubmission whose action id holds other input", async () => {
+      await build("enforce");
+      const stored = await v2Signed(moduleAction("a", 0));
+      expect((await execute([stored])).status).toBe(JobStatus.READ_READY);
+
+      const job = await execute([
+        await v2Signed({
+          ...moduleAction("a", 0),
+          id: stored.id,
+          input: { id: "a", name: "changed" },
+        }),
+      ]);
+
+      expect(job.status).toBe(JobStatus.FAILED);
+      expect(job.error?.message).toContain("[DUPLICATE_ACTION]");
+      expect(await storedActionIds()).toEqual([stored.id]);
+    });
+
+    it("applies only the new write of a job mixing it with a stored one", async () => {
+      await build("enforce");
+      track();
+      const stored = await v2Signed(moduleAction("a", 0));
+      const original = await execute([stored]);
+      expect(original.status).toBe(JobStatus.READ_READY);
+      const [storedOperation] = (await emitted(original.id)).operations;
+
+      const fresh = await v2Signed(moduleAction("b", 1));
+      const job = await execute([stored, fresh]);
+
+      expect(job.error).toBeUndefined();
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(await storedActionIds()).toEqual([stored.id, fresh.id]);
+      const event = await emitted(job.id);
+      expect(
+        event.operations.map(({ operation }) => operation.action.id),
+      ).toEqual([stored.id, fresh.id]);
+      expect(scoped(event.operations[0])).toEqual(scoped(storedOperation));
+      expect(event.operations[1].context.ordinal).toBeGreaterThan(
+        storedOperation.context.ordinal,
+      );
     });
 
     it("refuses a retry whose action id holds other content", async () => {
@@ -583,15 +707,16 @@ describe("signature admission", () => {
       expect(await storedActionIds()).toEqual([stored.id]);
     });
 
-    it("refuses a retry of which only part is stored", async () => {
+    it("writes the unstored part of a retry of which only part is stored", async () => {
       await build("enforce");
       const stored = await v2Signed(moduleAction("a", 0));
       expect((await execute([stored])).status).toBe(JobStatus.READ_READY);
 
-      const job = await retried([stored, await v2Signed(moduleAction("b", 1))]);
+      const fresh = await v2Signed(moduleAction("b", 1));
+      const job = await retried([stored, fresh]);
 
-      expect(job.status).toBe(JobStatus.FAILED);
-      expect(job.error?.message).toContain("[DUPLICATE_ACTION]");
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(await storedActionIds()).toEqual([stored.id, fresh.id]);
     });
   });
 

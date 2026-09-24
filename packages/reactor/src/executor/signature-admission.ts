@@ -80,14 +80,16 @@ export type AdmissionTrust = {
 
 export const DEFAULT_TRUST_TIMEOUT_MS = 10_000;
 
+/** A submitted write already stored exactly as submitted, under `opId`. */
+export type CommittedWrite = Stream & { actionId: string; opId: string };
+
 /**
- * `committed`: the job is a retry whose every write is already stored exactly
- * as submitted, so its first attempt committed and nothing is written again.
+ * `committed` lists the writes an earlier attempt or submission already
+ * stored; they are not written again and the rest are admitted.
  */
 export type MutationAdmission =
-  | { kind: "admitted" }
-  | { kind: "refused"; error: InvalidSignatureError }
-  | { kind: "committed" };
+  | { kind: "admitted"; committed: CommittedWrite[] }
+  | { kind: "refused"; error: InvalidSignatureError };
 
 /** Runs once per write, when this reactor first stores it; never on re-appends. */
 export class SignatureAdmission {
@@ -128,24 +130,24 @@ export class SignatureAdmission {
       signal,
     );
 
-    // A job the queue retried may have committed before its first attempt was
-    // lost (a worker exiting, an abort timing out). Its writes then sit in the
-    // stream unchanged, and refusing them as duplicates would fail a write that
-    // landed.
-    if (
-      isRetry(job) &&
-      candidates.length > 0 &&
-      candidates.every((entry) => isLive(entry, live)) &&
-      (await this.storedAsSubmitted(candidates, live, operationStore, signal))
-    ) {
-      return { kind: "committed" };
-    }
+    // A retry or a resubmission after a lost response may find its writes
+    // already stored. Refusing them as duplicates would fail writes that landed.
+    const committed = await this.storedAsSubmitted(
+      candidates,
+      live,
+      isRetry(job),
+      operationStore,
+      signal,
+    );
 
     await resolvePolicies(candidates, job.actions, (documentId, branch) =>
       storedPolicy(stores, this.policySource, documentId, branch, signal),
     );
     const submitted = new Set<string>();
     for (const entry of candidates) {
+      if (committed.has(entry)) {
+        continue;
+      }
       const verdict = await this.verdict(
         entry,
         live,
@@ -162,7 +164,7 @@ export class SignatureAdmission {
         return { kind: "refused", error: refusal };
       }
     }
-    return { kind: "admitted" };
+    return { kind: "admitted", committed: [...committed.values()] };
   }
 
   /** The incoming operations a load drops, empty unless enforcing. */
@@ -310,17 +312,30 @@ export class SignatureAdmission {
     }
   }
 
+  /**
+   * The live candidates stored exactly as submitted. A synthesized operation
+   * holds another action, so it cannot be compared; only a retry, whose first
+   * attempt this job was, takes it as committed.
+   */
   private async storedAsSubmitted(
     candidates: Candidate[],
     live: Set<string>,
+    retry: boolean,
     operationStore: IOperationStore,
     signal?: AbortSignal,
-  ): Promise<boolean> {
-    // A synthesized operation holds another action; that it is stored is enough.
-    const asSubmitted = candidates.filter(
-      (entry) => !entry.synthesizedOpId || !live.has(entry.synthesizedOpId),
-    );
-    for (const [stream, entries] of byStream(asSubmitted)) {
+  ): Promise<Map<Candidate, CommittedWrite>> {
+    const committed = new Map<Candidate, CommittedWrite>();
+    const toCompare: Candidate[] = [];
+    for (const entry of candidates) {
+      if (entry.synthesizedOpId && live.has(entry.synthesizedOpId)) {
+        if (retry) {
+          committed.set(entry, committedWrite(entry, entry.synthesizedOpId));
+        }
+      } else if (live.has(entry.opId)) {
+        toCompare.push(entry);
+      }
+    }
+    for (const [stream, entries] of byStream(toCompare)) {
       const stored = await operationStore.getOperationsByIds(
         stream.documentId,
         stream.scope,
@@ -333,12 +348,12 @@ export class SignatureAdmission {
       );
       for (const entry of entries) {
         const operation = byId.get(entry.opId);
-        if (!operation || !sameContent(operation.action, entry.action)) {
-          return false;
+        if (operation && sameContent(operation.action, entry.action)) {
+          committed.set(entry, committedWrite(entry, entry.opId));
         }
       }
     }
-    return true;
+    return committed;
   }
 
   private async liveOperationIds(
@@ -531,6 +546,10 @@ function byStream(candidates: Candidate[]): [Stream, Candidate[]][] {
 
 function isRetry(job: Job): boolean {
   return job.errorHistory.length > 0 || (job.retryCount ?? 0) > 0;
+}
+
+function committedWrite(entry: Candidate, opId: string): CommittedWrite {
+  return { ...entry.stream, actionId: entry.action.id, opId };
 }
 
 function sameContent(stored: Action, submitted: Action): boolean {
