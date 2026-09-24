@@ -16,6 +16,8 @@ import type { DocumentChangeEvent } from "../../src/client/types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { IReactor } from "../../src/core/types.js";
+import type { ReactorFeatureFlags } from "../../src/executor/types.js";
+import type { IDocumentView } from "../../src/storage/interfaces.js";
 import { createDocModelDocument } from "../factories.js";
 
 const READER = "0xReader";
@@ -24,13 +26,18 @@ const OUTSIDER = "0xOutsider";
 // A document serving no readable domain scope is withheld, not header-only.
 describe("feed and listing reads", () => {
   let reactor: IReactor | undefined;
+  let documentView: IDocumentView | undefined;
 
   afterEach(() => {
     reactor?.kill();
     reactor = undefined;
+    documentView = undefined;
+    vi.restoreAllMocks();
   });
 
-  async function build(): Promise<ReactorClient> {
+  async function build(
+    featureFlags: Partial<ReactorFeatureFlags> = {},
+  ): Promise<ReactorClient> {
     const module = await new ReactorClientBuilder()
       .withReactorBuilder(
         new ReactorBuilder()
@@ -39,12 +46,17 @@ describe("feed and listing reads", () => {
             driveDocumentModelModule as never,
           ])
           .withExecutorConfig({
-            featureFlags: { documentDecisions: true, authEnforcement: true },
+            featureFlags: {
+              documentDecisions: true,
+              authEnforcement: true,
+              ...featureFlags,
+            },
           }),
       )
       .buildModule();
 
     reactor = module.reactor;
+    documentView = module.documentView;
     return module.client;
   }
 
@@ -325,6 +337,86 @@ describe("feed and listing reads", () => {
       ]);
       expect(asOutsider.results).toEqual([]);
       expect(asReader.results.map((d) => d.header.id)).toEqual([policed]);
+    });
+
+    it("read only the view's scopes and the policy for a narrowed view", async () => {
+      const client = await build();
+      const policed = await createPoliced(client, "narrow-policed");
+      const open = await createOpen(client, "narrow-open");
+      const getMany = vi.spyOn(documentView!, "getMany");
+      const get = vi.spyOn(documentView!, "get");
+
+      const asOutsider = await client.find(
+        { ids: [policed, open] },
+        { scopes: ["document"], subject: { address: OUTSIDER } },
+      );
+      const asReader = await client.find(
+        { ids: [policed, open] },
+        { scopes: ["document"], subject: { address: READER } },
+      );
+
+      expect(getMany).toHaveBeenCalledTimes(2);
+      for (const call of getMany.mock.calls) {
+        expect(call[1]?.scopes).toEqual(["document", "auth"]);
+      }
+      expect(get).not.toHaveBeenCalled();
+      expect(asOutsider.results.map((d) => d.header.id)).toEqual([open]);
+      expect(asReader.results.map((d) => d.header.id).sort()).toEqual(
+        [open, policed].sort(),
+      );
+      for (const document of asReader.results) {
+        expect(Object.keys(document.state).sort()).toEqual([
+          "auth",
+          "document",
+        ]);
+      }
+    });
+
+    it("read a scope a condition decides on when the view leaves it out", async () => {
+      const client = await build({ authGroups: true, authConditions: true });
+      const id = await createOpen(client, "narrow-conditioned");
+      await client.execute(id, "main", [
+        initializeAuth({
+          version: 1,
+          grants: [
+            {
+              id: "g-write",
+              description: "anyone writes the domain",
+              effect: "allow",
+              principal: { anyone: true },
+              capability: { can: "execute", scope: "global" },
+            },
+            {
+              id: "g-hide",
+              description: "the outsider loses it once it is named secret",
+              effect: "deny",
+              principal: { address: OUTSIDER },
+              capability: { can: "read", scope: "global" },
+              where: { eq: [{ attr: "doc.global.name" }, { lit: "secret" }] },
+            },
+            {
+              id: "g-admin",
+              description: "administration stays reachable",
+              effect: "allow",
+              principal: { anyone: true },
+              capability: { can: "execute", scope: "auth" },
+            },
+          ],
+        }),
+      ]);
+      await client.execute(id, "main", [setModelName({ name: "secret" })]);
+
+      const narrowed = await client.find(
+        { ids: [id] },
+        { scopes: ["document"], subject: { address: OUTSIDER } },
+      );
+      const whole = await client.find(
+        { ids: [id] },
+        { subject: { address: OUTSIDER } },
+      );
+
+      expect(whole.results).toEqual([]);
+      expect(narrowed.results).toEqual([]);
     });
 
     it("gate every page, not only the first", async () => {

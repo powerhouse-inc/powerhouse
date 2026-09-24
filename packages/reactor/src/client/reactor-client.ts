@@ -75,6 +75,7 @@ import {
   BareReadGate,
   refusesEveryDomainScope,
   SeededStateReader,
+  unheldScopesReadOnState,
 } from "../decision/read-gate.js";
 import type { DocumentDecisionModel } from "../decision/document-decision-model.js";
 import type { RegisteredDecisionModel } from "../decision/registered-model.js";
@@ -287,7 +288,10 @@ export class ReactorClient implements IReactorClient {
     view: ViewFilter | undefined,
     signal: AbortSignal | undefined,
   ): Promise<PagedResults<PHDocument>> {
-    const results = await this.gateServedAll(page.results, view, signal);
+    const listed = await Promise.all(
+      page.results.map((document) => this.gateListed(document, view, signal)),
+    );
+    const results = listed.filter((document) => document !== undefined);
     const withheld = page.results.length - results.length;
     const next = page.next;
     return {
@@ -301,6 +305,57 @@ export class ReactorClient implements IReactorClient {
         ? async () => this.gateListing(await next(), view, signal)
         : undefined,
     };
+  }
+
+  /**
+   * One document as a listing serves it, or undefined when withheld. It holds
+   * only the view's scopes; a domain scope it lacks is decided on its name, or
+   * on its state read now when a condition needs that.
+   */
+  private async gateListed(
+    document: PHDocument,
+    view: ViewFilter | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<PHDocument | undefined> {
+    const readable = await this.readableScopes(document, view, signal);
+    const unheld = unheldScopesReadOnState(document);
+    const decided =
+      unheld.length === 0
+        ? readable
+        : (scope: string) => !unheld.includes(scope) && readable(scope);
+    if (
+      refusesEveryDomainScope(document, decided) &&
+      !(await this.servesUnheld(document, unheld, view, signal))
+    ) {
+      return undefined;
+    }
+    return filterReadableScopes(document, readable);
+  }
+
+  private async servesUnheld(
+    document: PHDocument,
+    scopes: string[],
+    view: ViewFilter | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<boolean> {
+    if (scopes.length === 0) {
+      return false;
+    }
+    const id = document.header.id;
+    let held: PHDocument;
+    try {
+      held = await this.reactor.get(
+        id,
+        withAuthScope({ ...view, scopes }),
+        undefined,
+        signal,
+      );
+    } catch (error) {
+      await assertAbsent(this.documentView, id, error, signal);
+      return false;
+    }
+    const readable = await this.readableScopes(held, view, signal);
+    return scopes.some(readable);
   }
 
   /**
@@ -897,7 +952,7 @@ export class ReactorClient implements IReactorClient {
     this.logger.verbose("find(@search, @view, @paging)", search, view, paging);
     const results = await this.reactor.find(
       search,
-      withAllScopes(view),
+      withAuthScope(view),
       paging,
       undefined,
       signal,

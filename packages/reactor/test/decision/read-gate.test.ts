@@ -14,6 +14,7 @@ import {
   BareReadGate,
   ModelReadGate,
   readDecisionModel,
+  unheldScopesReadOnState,
 } from "../../src/decision/read-gate.js";
 import type { ReactorFeatureFlags } from "../../src/executor/types.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
@@ -841,6 +842,34 @@ describe("serving a policy-named group to the policy's audience", () => {
         ),
       ).rejects.toThrow("connection terminated");
     });
+  });
+});
+
+describe("the unheld scopes a read decides on state", () => {
+  function narrowed(auth: PHAuthState): PHDocument {
+    const document = doc({ auth });
+    const state = document.state as Record<string, unknown>;
+    delete state.global;
+    delete state.local;
+    return document;
+  }
+
+  it("names a scope a condition reads that the document does not hold", () => {
+    expect(unheldScopesReadOnState(narrowed(policy([rtoReadsOwn])))).toEqual([
+      "global",
+    ]);
+  });
+
+  it("names nothing once the document holds that scope", () => {
+    expect(
+      unheldScopesReadOnState(doc({ auth: policy([rtoReadsOwn]) })),
+    ).toEqual([]);
+  });
+
+  it("names nothing for a policy without conditions", () => {
+    expect(
+      unheldScopesReadOnState(narrowed(policy([readGlobal({ address: RTO })]))),
+    ).toEqual([]);
   });
 });
 

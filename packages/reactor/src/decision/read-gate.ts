@@ -37,20 +37,23 @@ export const ALWAYS_READABLE_SCOPES: ReadonlySet<string> = new Set([
 // Every model declares these; the read model holds a scope only once written.
 const DECLARED_DOMAIN_SCOPES: readonly string[] = ["global", "local"];
 
-/** The scopes a document holds that grants gate. */
+/**
+ * The scopes grants gate: the declared ones, and any other the document holds.
+ * A document fetched for a narrowed view holds only that view's scopes.
+ */
 export function domainScopesOf(document: PHDocument): string[] {
   const state = document.state as Record<string, unknown> | undefined;
-  return Object.keys(state ?? {}).filter(
+  const held = Object.keys(state ?? {}).filter(
     (scope) => !ALWAYS_READABLE_SCOPES.has(scope),
   );
+  return [...new Set([...DECLARED_DOMAIN_SCOPES, ...held])];
 }
 
 export function allowsSomeDomainScope(
   document: PHDocument,
   readable: (scope: string) => boolean,
 ): boolean {
-  const held = domainScopesOf(document);
-  return (held.length > 0 ? held : DECLARED_DOMAIN_SCOPES).some(readable);
+  return domainScopesOf(document).some(readable);
 }
 
 /** A document with no state at all is not policied, so nothing withholds it. */
@@ -60,6 +63,50 @@ export function refusesEveryDomainScope(
 ): boolean {
   const state = document.state as PHDocument["state"] | undefined;
   return state !== undefined && !allowsSomeDomainScope(document, readable);
+}
+
+/**
+ * The domain scopes the document does not hold whose read decision reads their
+ * own state. A condition's `doc.<scope>` path resolves only for that scope, so
+ * every other scope is decided on its name and the policy alone.
+ */
+export function unheldScopesReadOnState(document: PHDocument): string[] {
+  const grants = authOf(document)?.grants ?? [];
+  const onState = new Set<string>();
+  for (const grant of grants) {
+    collectStateScopes(grant.where, onState);
+    collectStateScopes(grant.principal, onState);
+  }
+  if (onState.size === 0) {
+    return [];
+  }
+  const held = (document.state as Record<string, unknown> | undefined) ?? {};
+  return domainScopesOf(document).filter(
+    (scope) => onState.has(scope) && !(scope in held),
+  );
+}
+
+function collectStateScopes(node: unknown, into: Set<string>): void {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      collectStateScopes(child, into);
+    }
+    return;
+  }
+  if (typeof node !== "object" || node === null) {
+    return;
+  }
+  const { attr } = node as { attr?: unknown };
+  if (typeof attr === "string") {
+    const [root, scope] = attr.split(".");
+    if (root === "doc" && scope) {
+      into.add(scope);
+    }
+    return;
+  }
+  for (const child of Object.values(node)) {
+    collectStateScopes(child, into);
+  }
 }
 
 /**
