@@ -83,6 +83,40 @@ describe("signAction", () => {
     });
   });
 
+  describe("when its signatures carry no key", () => {
+    const EMPTY: Signature = ["", "", "", "", ""];
+
+    it.each([
+      ["an empty app key", "", ["ts", "did", "hash", "prev", "0xsig"]],
+      ["an empty tuple key", "did:key:claimed", EMPTY],
+    ] as const)(
+      "signs as its own signer an action with %s",
+      async (_, appKey, tuple) => {
+        const action: Action = {
+          ...createTestAction({ id: "action-1", type: "TEST_ACTION" }),
+          context: {
+            signer: {
+              user: { address: "0xvictim", networkId: "eip155", chainId: 1 },
+              app: { name: "", key: appKey },
+              signatures: [[...tuple]],
+            },
+          },
+        };
+        const signer = createMockSigner({
+          user: { address: "0xserver", networkId: "eip155", chainId: 1 },
+          app: { name: "server", key: "server-key" },
+        });
+
+        const result = await signAction(action, signer, TARGET);
+
+        expect(signer.signAction).toHaveBeenCalledOnce();
+        expect(result.context?.signer?.user.address).toBe("0xserver");
+        expect(result.context?.signer?.app.key).toBe("server-key");
+        expect(result.context?.signer?.signatures).toHaveLength(1);
+      },
+    );
+  });
+
   describe("when action already has signatures", () => {
     it("should NOT overwrite existing signatures", async () => {
       const existingSignature: Signature = [

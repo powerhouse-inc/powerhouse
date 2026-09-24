@@ -352,8 +352,8 @@ The GQL mutations `mutateDocument` and `mutateDocumentAsync` accept actions as J
 
 This means:
 
-- **If you submit unsigned actions** through the GQL API, the switchboard signs them on your behalf using its configured signer.
-- **If you submit pre-signed actions** (actions that already have a `context.signer` with signatures), the switchboard passes them through unchanged -- it does not re-sign.
+- **If you submit unsigned actions** through the GQL API, the switchboard signs them on your behalf using its configured signer. An action whose `signer.app.key` or last tuple's key is empty is unsigned, whatever it carries in `signatures`, and is signed as the switchboard.
+- **If you submit pre-signed actions** (actions that already have a `context.signer` with a key and signatures), the switchboard passes them through unchanged -- it does not re-sign.
 
 ### When the switchboard signs
 
@@ -371,4 +371,4 @@ The switchboard signs actions during any mutation that flows through the `Reacto
 
 If your client has its own `ISigner` (e.g., a `RenownCryptoSigner` tied to a specific user identity), you should sign actions before submitting them to the GQL API. This ensures the signatures reflect the actual user who performed the action, rather than the switchboard's server-side identity.
 
-Pre-signed actions are detected by checking for existing signatures in `action.context.signer.signatures` -- if any are present, the `ReactorClient` skips signing.
+Pre-signed actions are detected by `action.context.signer`: if `signer.app.key` and the key in its last tuple are both non-empty, the `ReactorClient` skips signing.

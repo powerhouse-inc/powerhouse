@@ -276,8 +276,9 @@ export function getSharedActionScope(actions: Action[]): string {
 }
 
 /**
- * Signs an action for `target`, the log it is written to. An action that
- * already carries signatures is returned unchanged.
+ * Signs an action for `target`, the log it is written to. An action already
+ * signed under a key is returned unchanged; one whose signer or last tuple has
+ * no key is unsigned, and is signed like any other.
  */
 export const signAction = async (
   action: Action,
@@ -285,8 +286,8 @@ export const signAction = async (
   target: ActionSigningTarget,
   signal?: AbortSignal,
 ): Promise<Action> => {
-  const existingSignatures = action.context?.signer?.signatures;
-  if (existingSignatures && existingSignatures.length > 0) {
+  const existing = action.context?.signer;
+  if (existing?.app?.key && existing.signatures.at(-1)?.[1]) {
     return action;
   }
 
