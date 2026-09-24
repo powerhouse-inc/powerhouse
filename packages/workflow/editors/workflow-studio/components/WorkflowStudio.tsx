@@ -21,6 +21,7 @@ import { RunsView } from "./RunsView.js";
 import { Sidebar } from "./Sidebar.js";
 import { useHashSelection } from "./use-hash-selection.js";
 import { useRuns } from "./useRuns.js";
+import { WorkflowBoard } from "./WorkflowBoard.js";
 import { WorkflowHeader } from "./WorkflowHeader.js";
 
 const WORKFLOW_TYPE = "powerhouse/workflow";
@@ -158,7 +159,7 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
             onOpenWorkflow={(workflowId) => select(workflowId)}
           />
         ) : (
-          <div className="mx-auto w-full max-w-5xl px-6 py-8">
+          <div className="mx-auto w-full max-w-6xl px-8 py-10">
             {liveTarget ? (
               <WorkflowHeader
                 key={liveTarget.id}
@@ -166,10 +167,19 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
                 runs={runs}
                 onEdit={() => setSelectedNode(liveTarget.id)}
               />
-            ) : null}
+            ) : (
+              <WorkflowBoard
+                runs={runs}
+                creating={creating}
+                onOpen={(workflowId) => select(workflowId)}
+                onCreate={() =>
+                  create(WORKFLOW_TYPE, "Workflow", workflows.length)
+                }
+              />
+            )}
             <RunsView
               // The header already names the workflow; don't say it twice.
-              title={liveTarget ? "Runs" : "All runs in this drive"}
+              title={liveTarget ? "Runs" : "Recent runs"}
               runs={runs}
               error={runsError}
               reload={reloadRuns}

@@ -19,7 +19,12 @@ export type PieceMode = "actions" | "triggers";
 // Logo size for the picker's rows: presets, pieces, search hits and attach.
 const ROW_LOGO = 24;
 
-export function BlockLogo(props: { blockType: string; size?: number }) {
+export function BlockLogo(props: {
+  blockType: string;
+  size?: number;
+  // Set where the caller already draws a light badge behind the logo.
+  bare?: boolean;
+}) {
   const meta = useBlockMeta(props.blockType);
   return (
     <LogoFrame
@@ -27,6 +32,7 @@ export function BlockLogo(props: { blockType: string; size?: number }) {
       alt={meta.displayName}
       size={props.size ?? 36}
       glyph={meta.glyph}
+      bare={props.bare}
     />
   );
 }
@@ -53,6 +59,7 @@ function LogoFrame(props: {
   alt: string;
   size: number;
   glyph?: string;
+  bare?: boolean;
 }) {
   const [broken, setBroken] = useState(false);
   useEffect(() => {
@@ -69,8 +76,12 @@ function LogoFrame(props: {
   // and no single radius matches every piece, so the frame is left to the
   // glyph badge, which is the only case where we draw the tile ourselves.
   return (
+    // Piece logos are drawn for light backgrounds, so dark mode backs them
+    // with a small white tile rather than losing black artwork to the page.
     <div
-      className="flex shrink-0 items-center justify-center"
+      className={`flex shrink-0 items-center justify-center ${
+        props.bare ? "" : "dark:rounded-[22%] dark:bg-white dark:p-[12%]"
+      }`}
       style={{ width: props.size, height: props.size }}
     >
       <img

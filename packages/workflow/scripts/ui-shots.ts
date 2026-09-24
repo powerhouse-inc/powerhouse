@@ -47,7 +47,7 @@ const SCENES: Record<string, (page: Page) => Promise<void>> = {
     await openDrive(page);
     await selectInSidebar(page, "Uptime ping");
     await page.getByText("Failed", { exact: true }).last().click();
-    await page.getByText("Started by hand").click();
+    await page.getByText("Started by hand", { exact: true }).click();
   },
   "studio-connection": async (page) => {
     await openDrive(page);
@@ -69,6 +69,11 @@ const SCENES: Record<string, (page: Page) => Promise<void>> = {
     await canvasNode(page, "Summarise").click();
     await page.getByRole("combobox").filter({ hasText: "gpt" }).click();
     await page.getByRole("listbox").waitFor();
+  },
+  "workflow-editor-last-run": async (page) => {
+    await openWorkflowEditor(page, "Uptime ping");
+    await canvasNode(page, "Ping host").click();
+    await page.getByRole("tab", { name: /Last run/ }).click();
   },
   "workflow-editor-settings": async (page) => {
     await openWorkflowEditor(page);

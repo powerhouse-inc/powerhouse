@@ -89,6 +89,24 @@ test.describe("Step panel", () => {
     ).toBeVisible();
   });
 
+  test("steps page through in run order", async ({ app }) => {
+    await canvasNode(app, "Fetch metrics").click();
+    await expect(app.getByText("1 of 3")).toBeVisible();
+    await expect(
+      app.getByRole("button", { name: "Previous step" }),
+    ).toBeDisabled();
+    await app.getByRole("button", { name: "Next step" }).click();
+    await expect(app.getByRole("textbox", { name: "Step name" })).toHaveValue(
+      "Summarise",
+    );
+    await expect(app.getByText("2 of 3")).toBeVisible();
+  });
+
+  test("the trigger panel says when the workflow runs", async ({ app }) => {
+    await canvasNode(app, "Schedule").click();
+    await expect(app.getByText("Every day at 08:00 UTC")).toBeVisible();
+  });
+
   test("the schedule trigger shows only the fields for its mode", async ({
     app,
   }) => {
@@ -126,5 +144,26 @@ test.describe("Step panel in dark mode", () => {
     // Light text on the dark surface, so the name stays readable.
     const [r, g, b] = color.match(/\d+/g)!.map(Number);
     expect(r + g + b).toBeGreaterThan(600);
+  });
+});
+
+test.describe("Step panel after a run", () => {
+  test("Last run shows what the step received and why it failed", async ({
+    app,
+  }) => {
+    await openWorkflowEditor(app, "Uptime ping");
+    await canvasNode(app, "Ping host").click();
+    await app.getByRole("tab", { name: /Last run/ }).click();
+    await expect(app.getByText("Failed", { exact: true })).toBeVisible();
+    await expect(app.getByText("TypeError: fetch failed")).toBeVisible();
+    await expect(app.getByText("Received")).toBeVisible();
+    await expect(
+      app.getByText('"url": "http://127.0.0.1:9/health"'),
+    ).toBeVisible();
+
+    // A step the run never reached says so.
+    await app.getByRole("button", { name: "Next step" }).click();
+    await app.getByRole("tab", { name: /Last run/ }).click();
+    await expect(app.getByText("Skipped", { exact: true })).toBeVisible();
   });
 });

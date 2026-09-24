@@ -11,7 +11,6 @@ import {
   type WorkflowDocument,
 } from "document-models/workflow";
 import type { RunRecord } from "../../workflow-editor/runtime-api.js";
-import { blockMeta } from "../../workflow-editor/ui/block-meta.js";
 import { DocumentLoadError } from "../../shared/DocumentErrorBoundary.js";
 import {
   formatAbsolute,
@@ -25,6 +24,8 @@ import {
   WORKFLOW_TONE,
 } from "./run-format.js";
 import { Button, Fact, StatusDot } from "./ui.js";
+import { describeTrigger } from "../../workflow-editor/ui/trigger-text.js";
+import { RunStrip } from "./chain.js";
 import { WorkflowSteps } from "./WorkflowSteps.js";
 
 const WORKFLOW_TYPE = "powerhouse/workflow";
@@ -56,9 +57,6 @@ export function WorkflowHeader(props: {
   const state = workflow.state.global;
   const enabled = state.status === "ENABLED";
   const stats = runStats(props.runs ?? []);
-  const trigger = state.trigger
-    ? blockMeta(state.trigger.blockType).displayName
-    : null;
 
   const lastTone = toneOf(RUN_TONE, stats.lastRun?.status);
   const statusTone = toneOf(WORKFLOW_TONE, state.status);
@@ -107,8 +105,12 @@ export function WorkflowHeader(props: {
         </div>
       </div>
       <dl className="mt-5 flex flex-wrap gap-x-10 gap-y-3">
-        <Fact label="Trigger">
-          {trigger ?? <span className="text-muted-foreground">None set</span>}
+        <Fact label="Starts">
+          {state.trigger ? (
+            describeTrigger(state.trigger)
+          ) : (
+            <span className="text-wf-warn">Never: no trigger</span>
+          )}
         </Fact>
         <Fact
           label="Last run"
@@ -127,11 +129,12 @@ export function WorkflowHeader(props: {
             <span className="text-muted-foreground">Never</span>
           )}
         </Fact>
-        <Fact label="Runs">
-          {stats.total}
-          {stats.failed > 0 ? (
-            <span className="text-wf-fail"> ({stats.failed} failed)</span>
-          ) : null}
+        <Fact label="Recent runs">
+          {stats.total > 0 ? (
+            <RunStrip runs={props.runs ?? []} />
+          ) : (
+            <span className="text-muted-foreground">None yet</span>
+          )}
         </Fact>
         <Fact label="Success rate">
           {stats.successRate === null ? (

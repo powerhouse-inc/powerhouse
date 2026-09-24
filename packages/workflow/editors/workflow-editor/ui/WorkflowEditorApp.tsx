@@ -134,6 +134,7 @@ export function WorkflowEditorApp(props: {
                     model={model}
                     callbacks={callbacks}
                     onClose={() => setSelectedId(null)}
+                    onSelect={setSelectedId}
                     designTime={props.designTime}
                   />
                 ) : null}

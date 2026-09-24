@@ -12,7 +12,7 @@ import {
   textInputClass,
 } from "../../shared/controls.js";
 import { Icon } from "../../shared/icons.js";
-import { acyclicTargets, reachableFrom } from "./ap-layout.js";
+import { acyclicTargets, flowOrder, reachableFrom } from "./ap-layout.js";
 import { useBlockMeta } from "./block-meta.js";
 import { BlockLogo } from "./BlockSelector.js";
 import { ConnectionField } from "./ConnectionField.js";
@@ -21,7 +21,12 @@ import {
   ExpressionTokenLine,
   useExpressionField,
 } from "./ExpressionPicker.js";
-import type { BlockForm, DesignTimeService, WebhookEndpoint } from "./forms.js";
+import type {
+  BlockForm,
+  DesignTimeService,
+  LatestRun,
+  WebhookEndpoint,
+} from "./forms.js";
 import {
   flowPorts,
   type RetryPolicyModel,
@@ -31,6 +36,7 @@ import {
   type WorkflowModel,
 } from "./model.js";
 import { AvailableSoon, PropertyForm } from "./PropertyForm.js";
+import { describeTrigger } from "./trigger-text.js";
 import { missingForBlock } from "./validation.js";
 
 function stringify(value: unknown): string {
@@ -240,6 +246,12 @@ function PanelHeader(props: {
   missing: string[];
   loading: boolean;
   onClose: () => void;
+  position?: {
+    index: number;
+    total: number;
+    onPrevious?: () => void;
+    onNext?: () => void;
+  };
   children?: ReactNode;
 }) {
   return (
@@ -278,6 +290,25 @@ function PanelHeader(props: {
             {props.actionLabel}
           </p>
         </div>
+        {props.position ? (
+          <div className="flex shrink-0 items-center">
+            <IconButton
+              icon="back"
+              label="Previous step"
+              disabled={!props.position.onPrevious}
+              onClick={props.position.onPrevious}
+            />
+            <span className="px-0.5 text-xs tabular-nums text-muted-foreground">
+              {props.position.index + 1} of {props.position.total}
+            </span>
+            <IconButton
+              icon="chevron"
+              label="Next step"
+              disabled={!props.position.onNext}
+              onClick={props.position.onNext}
+            />
+          </div>
+        ) : null}
         <IconButton icon="close" label="Close panel" onClick={props.onClose} />
       </div>
       <div className="mt-3 flex items-center gap-1.5 text-xs">
@@ -782,7 +813,150 @@ function StepSettings(props: {
   );
 }
 
-type StepTab = "setup" | "settings";
+function useLatestRun(designTime?: DesignTimeService) {
+  const [state, setState] = useState<
+    { kind: "loading" } | { kind: "ready"; run: LatestRun | null }
+  >({ kind: "loading" });
+  useEffect(() => {
+    if (!designTime?.latestRun) return;
+    let alive = true;
+    designTime.latestRun().then(
+      (run) => {
+        if (alive) setState({ kind: "ready", run });
+      },
+      () => {
+        if (alive) setState({ kind: "ready", run: null });
+      },
+    );
+    return () => {
+      alive = false;
+    };
+  }, [designTime]);
+  return designTime?.latestRun ? state : null;
+}
+
+function DataBlock(props: { label: string; value: unknown }) {
+  const text =
+    props.value === undefined ? "" : JSON.stringify(props.value, null, 2);
+  const [open, setOpen] = useState(false);
+  if (!text || text === "{}" || text === "null") {
+    return (
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-medium text-foreground">{props.label}</span>
+        <span className="text-muted-foreground">Nothing</span>
+      </div>
+    );
+  }
+  const long = text.split("\n").length > 8;
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-xs">
+        <span className="font-medium text-foreground">{props.label}</span>
+        {long ? (
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={() => setOpen((value) => !value)}
+          >
+            {open ? "Show less" : "Show all"}
+          </button>
+        ) : null}
+      </div>
+      <pre
+        className={`overflow-auto rounded-md bg-muted/70 p-2.5 font-mono text-[11px] leading-relaxed text-foreground ${
+          long && !open ? "max-h-36" : "max-h-96"
+        }`}
+      >
+        {text}
+      </pre>
+    </div>
+  );
+}
+
+const RUN_TEXT: Record<string, string> = {
+  SUCCEEDED: "text-wf-ok",
+  FAILED: "text-wf-fail",
+  SKIPPED: "text-muted-foreground",
+};
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 60_000) return "just now";
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+// What this step (or the trigger) saw in the workflow's most recent run.
+function LastRunSection(props: {
+  designTime?: DesignTimeService;
+  stepKey?: string;
+  latest?: ReturnType<typeof useLatestRun>;
+  bare?: boolean;
+}) {
+  const own = useLatestRun(
+    props.latest === undefined ? props.designTime : undefined,
+  );
+  const latest = props.latest ?? own;
+  if (!latest) return null;
+  const run = latest.kind === "ready" ? latest.run : null;
+  const step = props.stepKey
+    ? run?.steps.find((entry) => entry.stepKey === props.stepKey)
+    : undefined;
+  const status = props.stepKey ? step?.status : run ? "FIRED" : undefined;
+  const body = (
+    <>
+      {latest.kind === "loading" ? (
+        <div className="h-16 animate-pulse rounded-md bg-foreground/5" />
+      ) : !run ? (
+        <p className="text-xs text-muted-foreground">
+          No runs yet. Once the workflow runs, what this{" "}
+          {props.stepKey ? "step receives and produces" : "trigger hands on"}{" "}
+          shows up here.
+        </p>
+      ) : props.stepKey && !step ? (
+        <p className="text-xs text-muted-foreground">
+          The last run, {relativeTime(run.startedAt)}, didn&apos;t reach this
+          step.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <p className="text-xs text-muted-foreground">
+            <span
+              className={`font-medium ${RUN_TEXT[status ?? ""] ?? "text-wf-ok"}`}
+            >
+              {status === "FIRED"
+                ? "Fired"
+                : (status ?? "").charAt(0) +
+                  (status ?? "").slice(1).toLowerCase()}
+            </span>{" "}
+            {relativeTime(run.startedAt)}
+          </p>
+          {step?.error ? (
+            <pre className="overflow-auto whitespace-pre-wrap rounded-md bg-wf-fail/10 p-2.5 text-xs text-wf-fail">
+              {step.error}
+            </pre>
+          ) : null}
+          {step ? (
+            <>
+              <DataBlock label="Received" value={step.input} />
+              <DataBlock label="Produced" value={step.output} />
+            </>
+          ) : (
+            <DataBlock label="Payload" value={run.triggerPayload} />
+          )}
+        </div>
+      )}
+    </>
+  );
+  return props.bare ? (
+    <div className="flex flex-col gap-4">{body}</div>
+  ) : (
+    <Section title="Last run">{body}</Section>
+  );
+}
+
+type StepTab = "setup" | "run" | "settings";
 
 function settingsCustomised(step: StepModel, model: WorkflowModel): number {
   return [
@@ -798,6 +972,7 @@ export function StepPanel(props: {
   model: WorkflowModel;
   callbacks: WorkflowEditorCallbacks;
   onClose: () => void;
+  onSelect?: (id: string) => void;
   designTime?: DesignTimeService;
 }) {
   const { step, callbacks } = props;
@@ -809,6 +984,26 @@ export function StepPanel(props: {
   );
   const missing = missingForBlock(form, step.config, step.connectionId);
   const customised = settingsCustomised(step, props.model);
+  const latest = useLatestRun(props.designTime);
+  const lastStatus =
+    latest?.kind === "ready"
+      ? latest.run?.steps.find((entry) => entry.stepKey === step.key)?.status
+      : undefined;
+  const order = flowOrder(props.model);
+  const index = order.indexOf(step.id);
+  const select = props.onSelect;
+  const position =
+    select && index >= 0
+      ? {
+          index,
+          total: order.length,
+          onPrevious: index > 0 ? () => select(order[index - 1]) : undefined,
+          onNext:
+            index < order.length - 1
+              ? () => select(order[index + 1])
+              : undefined,
+        }
+      : undefined;
   return (
     <div className="flex min-h-full flex-col">
       <PanelHeader
@@ -823,12 +1018,33 @@ export function StepPanel(props: {
         missing={missing}
         loading={form === "loading"}
         onClose={props.onClose}
+        position={position}
       >
         <Tabs
           value={tab}
           onChange={setTab}
           tabs={[
             { value: "setup", label: "Setup" },
+            ...(latest
+              ? [
+                  {
+                    value: "run" as const,
+                    label: "Last run",
+                    badge: lastStatus ? (
+                      <span
+                        aria-label={lastStatus.toLowerCase()}
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          lastStatus === "SUCCEEDED"
+                            ? "bg-wf-ok"
+                            : lastStatus === "FAILED"
+                              ? "bg-wf-fail"
+                              : "bg-foreground/30"
+                        }`}
+                      />
+                    ) : undefined,
+                  },
+                ]
+              : []),
             {
               value: "settings",
               label: "Settings",
@@ -868,6 +1084,13 @@ export function StepPanel(props: {
               scopeStepId={step.id}
             />
           </div>
+        ) : tab === "run" ? (
+          <LastRunSection
+            designTime={props.designTime}
+            stepKey={step.key}
+            latest={latest}
+            bare
+          />
         ) : (
           <StepSettings
             step={step}
@@ -1081,7 +1304,7 @@ export function TriggerPanel(props: {
             ? form.title
             : meta.displayName
         }
-        actionLabel="Starts the workflow"
+        actionLabel={describeTrigger(trigger)}
         missing={missing}
         loading={form === "loading"}
         onClose={props.onClose}
@@ -1112,6 +1335,7 @@ export function TriggerPanel(props: {
             endpoint.kind === "ready" ? endpoint.endpoint.url : undefined
           }
         />
+        <LastRunSection designTime={props.designTime} />
         {isPieceTrigger && props.designTime?.testTrigger ? (
           <Section title="Try it">
             <TestTriggerSection onTest={props.designTime.testTrigger} />

@@ -20,14 +20,16 @@ function ConnectionEditor() {
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       <DocumentToolbar />
-      <ConnectionToolbar
-        state={state}
-        onRename={callbacks.setName}
-        onSetStatus={callbacks.setStatus}
-        onDelete={() => showDeleteNodeModal(document.header.id)}
-      />
-      <div className="mx-auto w-full max-w-2xl p-6">
-        <ConnectionForm state={state} callbacks={callbacks} />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-2xl px-6 py-10">
+          <ConnectionToolbar
+            state={state}
+            onRename={callbacks.setName}
+            onSetStatus={callbacks.setStatus}
+            onDelete={() => showDeleteNodeModal(document.header.id)}
+          />
+          <ConnectionForm state={state} callbacks={callbacks} />
+        </div>
       </div>
     </div>
   );

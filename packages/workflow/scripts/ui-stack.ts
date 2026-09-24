@@ -449,7 +449,7 @@ export async function openSeededPage(
 
 export async function openDrive(page: Page) {
   await page.getByText("Workflows", { exact: true }).first().click();
-  await page.getByText("All runs").first().waitFor();
+  await page.getByRole("heading", { name: "Workflows", level: 2 }).waitFor();
 }
 
 export async function selectInSidebar(page: Page, name: string) {

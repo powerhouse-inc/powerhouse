@@ -2,6 +2,32 @@ import { openDrive, selectInSidebar } from "../../scripts/ui-stack.js";
 import { expect, test } from "./fixtures.js";
 
 test.describe("Workflow Studio", () => {
+  test("the overview shows each workflow's trigger, chain and last run", async ({
+    app,
+  }) => {
+    await openDrive(app);
+    const board = app.getByRole("list", { name: "Workflows" });
+    const digest = board
+      .getByRole("listitem")
+      .filter({ hasText: "Daily digest" });
+    await expect(digest).toContainText("Every day at 08:00 UTC");
+    await expect(digest).toContainText("Not run yet");
+    const ping = board.getByRole("listitem").filter({ hasText: "Uptime ping" });
+    await expect(ping).toContainText("When started by hand");
+    await expect(ping).toContainText("Failed");
+    await expect(ping.getByRole("list").first()).toHaveAccessibleName(
+      /Ping host: failed.*Alert #ops/,
+    );
+    await expect(
+      app.getByText("3 workflows, 3 enabled, 1 failed on the last run"),
+    ).toBeVisible();
+
+    await ping.getByRole("button").click();
+    await expect(
+      app.getByRole("heading", { name: "Uptime ping" }),
+    ).toBeVisible();
+  });
+
   test("lists every run in the drive with its outcome", async ({ app }) => {
     await openDrive(app);
     const rows = app.getByRole("row");
