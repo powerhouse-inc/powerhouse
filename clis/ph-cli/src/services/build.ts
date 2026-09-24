@@ -20,7 +20,7 @@ import {
 import { execSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { detect, resolveCommand } from "package-manager-detector";
+import { detect, resolveCommand, type Agent } from "package-manager-detector";
 import { readPackage } from "read-pkg";
 import { build as tsdownBuild } from "tsdown";
 import type { BuildArgs } from "../types.js";
@@ -76,6 +76,15 @@ export async function runBuild(args: BuildArgs) {
   assertPiecesOutDir(target);
   const sharedDeps = !args.noSharedDeps;
 
+  const detectResult = await detect();
+  const agent = detectResult?.agent ?? "npm";
+
+  // Before any bundler runs, so declining leaves nothing half built.
+  const typesOk = emitTypes(agent, outDir);
+  if (!typesOk && !args.ignoreTypeErrors) {
+    await confirmBuildDespiteTypeErrors();
+  }
+
   await tsdownBuild({
     ...buildBrowserBuildConfig({ sharedDeps }),
     outDir: join(outDir, "browser"),
@@ -118,29 +127,6 @@ export async function runBuild(args: BuildArgs) {
   }
   syncDistManifest(target, built);
 
-  const detectResult = await detect();
-  const agent = detectResult?.agent ?? "npm";
-
-  // Emit types with tsc
-  const tscCommand = resolveCommand(agent, "execute-local", ["tsc", "--build"]);
-  if (tscCommand === null) {
-    console.error(
-      "You need to have typescript installed to use the `build` command.",
-    );
-    process.exit(1);
-  }
-  console.log("\n▶ Emitting types via tsc...");
-  try {
-    execSync(`${tscCommand.command} ${tscCommand.args.join(" ")}`, {
-      stdio: "inherit",
-    });
-    console.log("✔ Types emitted to", join(outDir, "types"));
-  } catch {
-    console.warn(
-      "✘ tsc reported errors above; declarations were still written. Fix the errors to keep types accurate.",
-    );
-  }
-
   const executeLocalCommand = resolveCommand(agent, "execute-local", [
     "tailwindcss",
     "-i",
@@ -157,6 +143,72 @@ export async function runBuild(args: BuildArgs) {
   execSync(
     `${executeLocalCommand.command} ${executeLocalCommand.args.join(" ")}`,
   );
+
+  // Last, so it is the line a finished build leaves on screen.
+  if (!typesOk) console.warn(`\n${UNSAFE_BUILD_WARNING}`);
+}
+
+// Runs tsc, which checks the project and writes its declarations either way.
+// Returns whether it reported no type errors.
+function emitTypes(agent: Agent, outDir: string): boolean {
+  const tscCommand = resolveCommand(agent, "execute-local", ["tsc", "--build"]);
+  if (tscCommand === null) {
+    console.error(
+      "You need to have typescript installed to use the `build` command.",
+    );
+    process.exit(1);
+  }
+  console.log("\n▶ Type-checking and emitting types via tsc...");
+  try {
+    execSync(`${tscCommand.command} ${tscCommand.args.join(" ")}`, {
+      stdio: "inherit",
+    });
+    console.log("✔ Types emitted to", join(outDir, "types"));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isInteractive(): boolean {
+  return Boolean(process.stdin.isTTY) && !process.env.CI;
+}
+
+const TYPE_ERROR_RISK =
+  "A package built with type errors can load and still fail at runtime.";
+
+const UNSAFE_BUILD_WARNING =
+  "⚠ Built despite type errors. " +
+  TYPE_ERROR_RISK +
+  " Fix them before you publish or deploy it.";
+
+async function confirmBuildDespiteTypeErrors(): Promise<void> {
+  const hint =
+    "Fix them and build again. --ignore-type-errors skips this check, at the risk of shipping that failure.";
+  if (!isInteractive()) {
+    console.error(
+      `\n✘ tsc reported the type errors above. ${TYPE_ERROR_RISK}\n${hint}`,
+    );
+    process.exit(1);
+  }
+  const enquirer = await import("enquirer");
+  let confirmed: boolean;
+  try {
+    const answer = await enquirer.default.prompt<{ confirmed: boolean }>({
+      type: "confirm",
+      name: "confirmed",
+      message: `tsc reported the type errors above. ${TYPE_ERROR_RISK} Build anyway?`,
+      initial: false,
+    });
+    confirmed = answer.confirmed;
+  } catch {
+    // Ctrl-C at the prompt is a decline.
+    confirmed = false;
+  }
+  if (!confirmed) {
+    console.error(`Build cancelled. ${hint}`);
+    process.exit(1);
+  }
 }
 
 /**

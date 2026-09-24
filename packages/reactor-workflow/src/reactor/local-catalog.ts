@@ -7,6 +7,7 @@ import type { PieceDescriptor } from "../pieces/index.js";
 import type { BlockSearchHit } from "./block-search.js";
 import {
   aiLast,
+  reasonOf,
   type PieceActionsResult,
   type PieceSummary,
   type PieceTriggersResult,
@@ -40,6 +41,7 @@ export function catalogEntry(
     triggerCount: descriptor.triggers.length,
     categories: descriptor.categories ?? [],
     auth: descriptor.auth ?? null,
+    ...reasonOf(descriptor.unsupported),
   };
 }
 
@@ -60,6 +62,7 @@ export function actionsResult(
         blockType: localBlockType(pieceName, action.name, "action"),
         // The cloud's discovery filter. Absent counts as human-visible.
         audience: action.audience ?? null,
+        ...reasonOf(descriptor.unsupported),
       }))
       // Agent-targeted atomics last, as the published listing sorts them.
       .sort((a, b) => aiLast(a.audience) - aiLast(b.audience)),
@@ -82,6 +85,7 @@ export function triggersResult(
       description: trigger.description ?? "",
       strategy: trigger.strategy,
       blockType: localBlockType(pieceName, trigger.name, "trigger"),
+      ...reasonOf(descriptor.unsupported ?? trigger.unsupported),
     })),
     auth: descriptor.auth ?? null,
   };
@@ -105,6 +109,7 @@ export function localSearchHits(
       description: action.description ?? "",
       kind: "action" as const,
       strategy: null,
+      ...reasonOf(descriptor.unsupported),
     })),
     ...descriptor.triggers.map((trigger) => ({
       blockType: localBlockType(pieceName, trigger.name, "trigger"),
@@ -115,6 +120,7 @@ export function localSearchHits(
       description: trigger.description ?? "",
       kind: "trigger" as const,
       strategy: trigger.strategy,
+      ...reasonOf(descriptor.unsupported ?? trigger.unsupported),
     })),
   ];
 }

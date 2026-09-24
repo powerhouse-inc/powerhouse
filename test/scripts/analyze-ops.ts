@@ -437,8 +437,8 @@ function analyzeTimestampCollisions(
     }
 
     // Show expected tiebreaker resolution
-    const uniqueEntries = [...uniqueOpIds].map(
-      (opId) => entries.find((e) => e.op.opId === opId)!,
+    const uniqueEntries = [...uniqueOpIds].map((opId) =>
+      entries.find((e) => e.op.opId === opId)!,
     );
     const sorted = uniqueEntries.slice().sort((a, b) => {
       const aOp = a.op;

@@ -37,8 +37,8 @@ export function normalizeBaseUrl(raw: unknown): string {
   return trimmed;
 }
 
-// \`ctx.auth\` arrives shaped as { type: "CUSTOM_AUTH", props } from the reactor
-// and flat from Activepieces, which hands \`validate\` the raw value. Take both.
+// \`ctx.auth\` arrives shaped as { type: "CUSTOM_AUTH", props }, while \`validate\`
+// and \`getConnectionIdentifier\` are handed the flat props. Take both.
 export function readAuth(auth: unknown): ${v.pascalCaseName}Credentials {
   const source = isRecord(auth) && isRecord(auth.props) ? auth.props : auth;
   if (!isRecord(source)) {
@@ -62,8 +62,8 @@ const secretAuthValue = (v: PieceNames) => `
 // lives here. Point it at the API this piece calls.
 export const ${v.constantCaseName}_BASE_URL = "https://${v.kebabCaseName}.example.com";
 
-// \`ctx.auth\` arrives shaped as { type: "SECRET_TEXT", secret_text } from the
-// reactor and as the bare string from Activepieces. Take both.
+// \`ctx.auth\` arrives shaped as { type: "SECRET_TEXT", secret_text }, while
+// \`validate\` and \`getConnectionIdentifier\` are handed the bare string. Take both.
 export function readAuth(auth: unknown): ${v.pascalCaseName}Credentials {
   const token =
     typeof auth === "string"

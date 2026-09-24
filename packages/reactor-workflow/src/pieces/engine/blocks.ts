@@ -7,6 +7,7 @@ import {
   pieceModuleRef,
   type PieceResolver,
 } from "../activepieces/resolver.js";
+import type { ActionContextIdentity } from "../activepieces/context/action.js";
 import type { ReactorService } from "../activepieces/context/reactor.js";
 import {
   rewriteFileRefs,
@@ -429,6 +430,9 @@ export interface ActivepiecesBlockExecutorOptions {
   // message per event, and neither is asked for unless someone reads it.
   onPieceLog?: (entry: PieceLogEntry, execution: BlockExecution) => void;
   onPartialOutput?: (output: unknown, execution: BlockExecution) => void;
+  // The run, workflow and project a step belongs to, asked per step: the
+  // executor is shared across runs. The step name is the step's key.
+  identity?: () => Omit<ActionContextIdentity, "stepName"> | undefined;
 }
 
 // The notify handlers served to one step. Unlike a store call, nothing here
@@ -635,6 +639,10 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
           actionName: parsed.name,
           propsValue: execution.config as Record<string, unknown>,
           auth,
+          identity: {
+            ...this.options.identity?.(),
+            stepName: execution.step.key,
+          },
           ...(redactValues.length > 0 ? { redactValues } : {}),
           ...(stagingDir ? { stagingDir } : {}),
           ...(stagedInputs ? { stagedInputs } : {}),

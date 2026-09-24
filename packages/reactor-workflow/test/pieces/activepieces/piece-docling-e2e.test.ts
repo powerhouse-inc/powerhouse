@@ -13,10 +13,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-  PieceWorker,
-  PieceWorkerError,
-} from "../../../src/pieces/activepieces/worker/host.js";
+import { PieceWorker } from "../../../src/pieces/activepieces/worker/host.js";
+import type { CheckConnectionOutcome } from "../../../src/pieces/activepieces/worker/protocol.js";
 import path from "node:path";
 
 const PIECE_PKG = path.resolve("../piece-docling");
@@ -128,31 +126,24 @@ describe.skipIf(!baseUrl)("docling piece through the worker (E2E)", () => {
       bundleDir: BUNDLE,
       auth: auth(),
     });
-    // The shim reports the server version as the connection label; the
-    // worker wraps the piece's return value in { declared, result }.
-    const outcome = output as { declared: boolean; result: { name: string } };
-    expect(outcome.declared).toBe(true);
-    expect(outcome.result.name).toMatch(/^docling-serve \d/);
+    // auth.getConnectionIdentifier labels the connection with the server version.
+    const outcome = output as CheckConnectionOutcome;
+    expect(outcome).toMatchObject({ declared: true, valid: true });
+    expect(outcome.accountLabel).toMatch(/^docling-serve \d/);
   });
 
-  it("classifies a rejected key as an AUTH error across the IPC boundary", async () => {
-    let failure: unknown;
-    try {
-      await worker.checkConnection({
-        bundleDir: BUNDLE,
-        auth: {
-          type: "CUSTOM_AUTH",
-          props: { base_url: baseUrl, api_key: `${apiKey}-wrong` },
-        },
-      });
-    } catch (error) {
-      failure = error;
-    }
-    expect(failure).toBeInstanceOf(PieceWorkerError);
-    const serialized = (failure as PieceWorkerError).serialized;
-    expect(serialized.name).toBe("DoclingError");
-    expect(serialized.properties).toMatchObject({ kind: "AUTH" });
-    expect(String(failure)).toContain("401");
+  it("reports a rejected key as a failed check with the 401", async () => {
+    const { output } = await worker.checkConnection({
+      bundleDir: BUNDLE,
+      auth: {
+        type: "CUSTOM_AUTH",
+        props: { base_url: baseUrl, api_key: `${apiKey}-wrong` },
+      },
+    });
+    const outcome = output as CheckConnectionOutcome;
+    expect(outcome).toMatchObject({ declared: true, valid: false });
+    expect(outcome.detail).toContain("401");
+    expect(outcome.accountLabel).toBeUndefined();
   }, 60_000);
 
   it("converts a real PDF from a Buffer file prop (the ApFile shape)", async () => {

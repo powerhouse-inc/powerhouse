@@ -1,3 +1,16 @@
+## 6.2.3-dev.23 (2026-09-24)
+
+### 🩹 Fixes
+
+- **switchboard:** leave unhandled rejections to Sentry when it listens ([c6a40108e](https://github.com/powerhouse-inc/powerhouse/commit/c6a40108e))
+- **switchboard:** flush PGlite before exiting on an uncaught error ([#3077](https://github.com/powerhouse-inc/powerhouse/issues/3077))
+- **switchboard:** escape non-ASCII file names in attachment metadata headers ([#3077](https://github.com/powerhouse-inc/powerhouse/issues/3077))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.22 (2026-09-23)
 
 ### 🩹 Fixes

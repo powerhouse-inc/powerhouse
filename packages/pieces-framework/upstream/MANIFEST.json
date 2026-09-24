@@ -61,6 +61,21 @@
       "sha256": "d728d15f69123b3f0da875db5d95a231b6285fba7db6e808699ffdf3accb92d6"
     },
     {
+      "path": "test/upstream/engine/test/helper/polling-helper.test.ts",
+      "upstream": "packages/server/engine/test/helper/polling-helper.test.ts",
+      "sha256": "d8c5445416e85ef4defb8495640aedbb1b0f88d084e75a130fc9a0eaae54396e"
+    },
+    {
+      "path": "test/upstream/engine/test/http/formdata-multipart-claim-verify.test.ts",
+      "upstream": "packages/server/engine/test/http/formdata-multipart-claim-verify.test.ts",
+      "sha256": "81f91d68879ea3d2561ddeb0730410df5b5af9a60ab295d9a8418e5298a2d010"
+    },
+    {
+      "path": "test/upstream/engine/test/variables/dynamic-prop-keys.test.ts",
+      "upstream": "packages/server/engine/test/variables/dynamic-prop-keys.test.ts",
+      "sha256": "2cac0613e64acb89940afe001a39054e8815643bb2ff4419527d0652e72eabba"
+    },
+    {
       "path": "test/upstream/engine/test/variables/file-processor.test.ts",
       "upstream": "packages/server/engine/test/variables/file-processor.test.ts",
       "sha256": "d27f1f38f47763d5eac601a1d877f6afbace7778771657001991442cdbf32b2a"

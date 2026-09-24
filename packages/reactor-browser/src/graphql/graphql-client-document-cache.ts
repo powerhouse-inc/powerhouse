@@ -1,12 +1,49 @@
 import type { PHDocument } from "document-model";
+import { ClientError } from "graphql-request";
 import { forEach } from "remeda";
 import { addPromiseState, readPromiseState } from "../document-cache.js";
+import { DocumentRefetcher } from "../document-refetcher.js";
 import type {
+  DocumentRefetchState,
   FulfilledPromise,
   IDocumentCache,
   PromiseWithState,
 } from "../types/documents.js";
+import { phDocumentFromQuery } from "./adapters.js";
 import { DocumentFetcher } from "./document-fetcher.js";
+
+// Unlike `reactorGraphqlFetchDocument`, failures reach the caller, so a
+// refetch can tell a missing document from an outage.
+async function fetchDocumentForRefetch(
+  identifier: string,
+): Promise<PHDocument> {
+  const client = window.ph?.reactorGraphQLClient;
+  if (!client) {
+    throw new Error(
+      "Please call `useInitReactorGraphqlClient` to use its functions",
+    );
+  }
+  const notFound = (cause?: unknown) =>
+    new Error(`Document not found: ${identifier}`, { cause });
+  let result: Awaited<ReturnType<typeof client.GetDocument>>;
+  try {
+    result = await client.GetDocument({ identifier });
+  } catch (error) {
+    const messages =
+      error instanceof ClientError
+        ? (error.response.errors ?? []).map((e) => e.message)
+        : [];
+    if (messages.some((message) => message.includes("Document not found"))) {
+      throw notFound(error);
+    }
+    throw error;
+  }
+  const document = result.document?.document;
+  if (!document) {
+    throw notFound();
+  }
+  return phDocumentFromQuery(document);
+}
 
 export class GraphQLClientDocumentCache implements IDocumentCache {
   private fetcher: DocumentFetcher;
@@ -23,6 +60,12 @@ export class GraphQLClientDocumentCache implements IDocumentCache {
 
   private listeners = new Map<string, (() => void)[]>();
 
+  private refetcher = new DocumentRefetcher({
+    documents: this.documents,
+    fetch: fetchDocumentForRefetch,
+    notify: (id) => this.notify(id),
+  });
+
   constructor() {
     this.fetcher = new DocumentFetcher();
 
@@ -38,16 +81,16 @@ export class GraphQLClientDocumentCache implements IDocumentCache {
   get(id: string, refetch?: boolean): Promise<PHDocument> {
     const current = this.documents.get(id);
 
-    if (current) {
-      if (current.status === "pending") {
-        return current;
-      }
-
-      if (!refetch) {
-        return current;
-      }
+    if (current && !refetch) {
+      return current;
     }
 
+    // A loaded document stays served while it refetches.
+    if (current && current.status !== "rejected") {
+      return this.refetcher.refetch(id);
+    }
+
+    this.refetcher.forget(id);
     const promise = addPromiseState(
       this.fetcher.get(id).then((document) => {
         this.invalidateBatchesContaining(id);
@@ -58,6 +101,10 @@ export class GraphQLClientDocumentCache implements IDocumentCache {
     this.documents.set(id, promise);
 
     return promise;
+  }
+
+  getRefetchState(id: string): DocumentRefetchState {
+    return this.refetcher.getState(id);
   }
 
   getBatch(ids: string[]): Promise<PHDocument[]> {
@@ -165,14 +212,15 @@ export class GraphQLClientDocumentCache implements IDocumentCache {
     }
   }
 
+  // The refetch notifies listeners itself once it settles.
   private async handleDocumentMutated(id: string) {
-    this.invalidateBatchesContaining(id);
-    await this.get(id);
-    this.notify(id);
+    if (!this.documents.has(id)) return;
+    await this.get(id, true);
   }
 
   private handleDocumentDeleted(id: string) {
     this.documents.delete(id);
+    this.refetcher.forget(id);
     this.invalidateBatchesContaining(id);
     this.notify(id);
   }

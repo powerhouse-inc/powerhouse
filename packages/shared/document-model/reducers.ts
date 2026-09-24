@@ -1,3 +1,4 @@
+import { isDraft, original } from "mutative";
 import { isDocumentAction } from "./documents.js";
 import { createReducer } from "./reducer.js";
 import {
@@ -51,6 +52,7 @@ import type {
   AddOperationErrorAction,
   AddOperationExampleAction,
   AddStateExampleAction,
+  CodeExample,
   DeleteChangeLogItemAction,
   DeleteModuleAction,
   DeleteOperationAction,
@@ -65,6 +67,7 @@ import type {
   DocumentModelPHState,
   DocumentModelStateOperations,
   DocumentModelVersioningOperations,
+  ModuleSpecification,
   MoveOperationAction,
   OperationSpecification,
   ReleaseNewVersionAction,
@@ -139,6 +142,16 @@ function orderBy<TItem extends { id: string }>(
     .map(({ item }) => item);
 }
 
+/**
+ * The untouched base of a mutative draft, or the value itself when it is not a
+ * draft. Build replacement lists from it and freeze them before assigning, as
+ * the drive node reducer does, so finalize skips the walk over the assigned
+ * list. Read before writing: the base does not see this action's mutations.
+ */
+function readBase<T extends object>(value: T): T {
+  return isDraft(value) ? original(value) : value;
+}
+
 export const documentModelHeaderReducer: DocumentModelHeaderOperations = {
   setModelNameOperation(state, action) {
     state.name = action.input.name;
@@ -191,9 +204,10 @@ export const documentModelModuleReducer: DocumentModelModuleOperations = {
   deleteModuleOperation(state, action) {
     findModuleOrThrow(state, action.input.id);
     const latestSpec = state.specifications[state.specifications.length - 1];
-    latestSpec.modules = latestSpec.modules.filter(
+    const modules = readBase(latestSpec).modules.filter(
       (m) => m.id != action.input.id,
     );
+    latestSpec.modules = Object.freeze(modules) as ModuleSpecification[];
   },
 
   reorderModulesOperation(state, action) {
@@ -380,23 +394,27 @@ export const documentModelOperationReducer: DocumentModelOperationOperations = {
         `Operation "${action.input.operationId}" is duplicated in the latest specification`,
       );
     }
-    const moved = matches[0];
+    const moved = readBase(matches[0]);
 
     for (const mod of latestSpec.modules) {
-      mod.operations = mod.operations.filter(
+      const operations = readBase(mod).operations.filter(
         (op) => op.id !== action.input.operationId,
       );
+      if (mod === targetModule) {
+        operations.push(moved);
+      }
+      mod.operations = Object.freeze(operations) as OperationSpecification[];
     }
-    targetModule.operations.push(moved);
   },
 
   deleteOperationOperation(state, action) {
     findOperationOrThrow(state, action.input.id);
     const latestSpec = state.specifications[state.specifications.length - 1];
     for (const mod of latestSpec.modules) {
-      mod.operations = mod.operations.filter(
+      const operations = readBase(mod).operations.filter(
         (operation) => operation.id != action.input.id,
       );
+      mod.operations = Object.freeze(operations) as OperationSpecification[];
     }
   },
 
@@ -469,9 +487,10 @@ export const documentModelStateSchemaReducer: DocumentModelStateOperations = {
         `State example "${action.input.id}" not found in scope "${action.input.scope}"`,
       );
     }
-    scopeState.examples = scopeState.examples.filter(
+    const examples = readBase(scopeState).examples.filter(
       (e) => e.id != action.input.id,
     );
+    scopeState.examples = Object.freeze(examples) as CodeExample[];
   },
 
   reorderStateExamplesOperation(state, action) {

@@ -651,6 +651,10 @@ dist/node/pieces/&lt;name&gt;, with a descriptor.json and package.json written b
 the piece listed in dist/powerhouse.manifest.json. A package that ships only pieces is an
 ordinary package: it carries the same boilerplate, and every step above runs for it too.
 
+tsc runs first. If it reports type errors the build asks whether to go ahead, and stops
+where it can't ask. --ignore-type-errors builds without asking; a package built that way
+can load and still fail at runtime, so don't publish it.
+
 
 
 ### Options
@@ -663,6 +667,9 @@ ordinary package: it carries the same boilerplate, and every step above runs for
 
 ### Flags
 **No Shared Deps** - Bundle the shared dependency set instead of externalizing it (default: externalize) - Usage: `--no-shared-deps`
+
+**Default:** `false`
+**Ignore Type Errors** - Unsafe: build even when tsc reports type errors, without asking. The package can load and still fail at runtime - Usage: `--ignore-type-errors`
 
 **Default:** `false`
 **Debug** - Log arguments passed to this command - Usage: `--debug`

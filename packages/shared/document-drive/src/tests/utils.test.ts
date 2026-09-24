@@ -376,6 +376,50 @@ describe("node list helpers", () => {
     expect(Object.isFrozen(own)).toBe(false);
   });
 
+  it("orders ids exactly as localeCompare does", () => {
+    const ids = [
+      "b",
+      "B",
+      "a",
+      "A",
+      "a10",
+      "a2",
+      "a-1",
+      "a_1",
+      "a.1",
+      "1",
+      "10",
+      "2",
+      "Zeta",
+      "zeta",
+      "é",
+      "e",
+      "f",
+      "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+      "3F2504E0-4F89-11D3-9A0C-0305E82C3301",
+      "0a1b2c3d-0000-4000-8000-000000000000",
+      "ffffffff-ffff-4fff-bfff-ffffffffffff",
+      "doc-abc",
+      "doc_abc",
+      "docABC",
+    ];
+    const nodes: Node[] = ids.map((id) => ({
+      id,
+      name: id,
+      parentFolder: null,
+      kind: "folder",
+    }));
+    const expected = [...ids].sort((a, b) => a.localeCompare(b));
+
+    expect(sortNodesById(nodes).map((node) => node.id)).toEqual(expected);
+
+    let inserted: readonly Node[] = [];
+    for (const node of nodes) {
+      inserted = insertNodeSorted(inserted, node);
+    }
+    expect(inserted.map((node) => node.id)).toEqual(expected);
+  });
+
   it("assignNodes installs the list it is handed", () => {
     const state = { nodes: [] as Node[] };
     const sorted = sortNodesById(unsorted);

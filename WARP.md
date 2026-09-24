@@ -173,7 +173,7 @@ Documents sync through **strand updates** containing batched operations:
 - `nx.json` - Nx workspace configuration
 - `package.json` - Root workspace dependencies and scripts
 - `vitest.workspace.ts` - Test configuration
-- `eslint.config.js` - Linting rules
+- `.oxlintrc.json` - Linting rules (oxlint)
 - `tsconfig.json` - TypeScript project references
 
 ### Core Packages

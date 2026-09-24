@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "6.2.3-dev.22",
+  "version": "6.2.3-dev.23",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -42,7 +42,7 @@
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/document-model",
     "test": "vitest --run",
     "test:watch": "vitest watch",
     "build": "tsx ./build.ts"

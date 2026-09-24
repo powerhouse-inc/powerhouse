@@ -1,3 +1,57 @@
+## 6.2.3-dev.23 (2026-09-24)
+
+### 🚀 Features
+
+- **reactor:** the auth bench isolates the reverse pass's deny wall ([6645fda5e](https://github.com/powerhouse-inc/powerhouse/commit/6645fda5e))
+- **reactor:** the sync bench separates document count from history depth ([a80c873c0](https://github.com/powerhouse-inc/powerhouse/commit/a80c873c0))
+- **reactor:** the cache bench measures node lookups over frozen and plain lists ([4482bc45c](https://github.com/powerhouse-inc/powerhouse/commit/4482bc45c))
+- **reactor:** the write-cache read/write split is recorded, not printed ([642ac58d2](https://github.com/powerhouse-inc/powerhouse/commit/642ac58d2))
+- **reactor:** the auth gate walks real storage in a meso-tier bench ([62d35a1cd](https://github.com/powerhouse-inc/powerhouse/commit/62d35a1cd))
+- **reactor:** the sync bench attributes post-ready read-model cost ([36326cf3c](https://github.com/powerhouse-inc/powerhouse/commit/36326cf3c))
+- **reactor:** the write-cache bench prices whole-array draft assignment across the surveyed reducers ([1f2683e52](https://github.com/powerhouse-inc/powerhouse/commit/1f2683e52))
+- **reactor:** a serial delivery queue per processor ([61d74021a](https://github.com/powerhouse-inc/powerhouse/commit/61d74021a))
+- **reactor:** route processors synchronously and deliver through per-processor queues ([a021b7ab9](https://github.com/powerhouse-inc/powerhouse/commit/a021b7ab9))
+
+### 🩹 Fixes
+
+- **reactor:** the dependency-scan bench asserts order once instead of per job ([eb7e809df](https://github.com/powerhouse-inc/powerhouse/commit/eb7e809df))
+- **reactor:** the queue size query is measured in its own suite ([d891f70ac](https://github.com/powerhouse-inc/powerhouse/commit/d891f70ac))
+- **reactor:** the write-cache baseline replays with the stored operation's hash ([d022d8c15](https://github.com/powerhouse-inc/powerhouse/commit/d022d8c15))
+- **reactor:** bench case names ending in [reference] stay out of the suite spread ([fb0975397](https://github.com/powerhouse-inc/powerhouse/commit/fb0975397))
+- **reactor:** the write-cache spread pairs only cases on the same leg and op count ([2daf22233](https://github.com/powerhouse-inc/powerhouse/commit/2daf22233))
+- **reactor:** the LRU bench varies only maxDocuments over equal document counts ([ce65e814b](https://github.com/powerhouse-inc/powerhouse/commit/ce65e814b))
+- **reactor:** the deep-hierarchy sync case measures nesting depth, not contention ([bce418a58](https://github.com/powerhouse-inc/powerhouse/commit/bce418a58))
+- **reactor:** work the verified bench findings one task at a time ([#3076](https://github.com/powerhouse-inc/powerhouse/pull/3076))
+- **reactor:** signal shutdown keeps a failure exit code set before the signal ([8e4bcb76e](https://github.com/powerhouse-inc/powerhouse/commit/8e4bcb76e))
+- **reactor:** never move a read-model cursor backwards ([938c42517](https://github.com/powerhouse-inc/powerhouse/commit/938c42517))
+- **reactor:** run processor-manager passes and registry mutations one at a time ([27521db2e](https://github.com/powerhouse-inc/powerhouse/commit/27521db2e))
+- **reactor:** deliver operations that reach the processor manager out of ordinal order ([b615f33d9](https://github.com/powerhouse-inc/powerhouse/commit/b615f33d9))
+- **reactor:** park a processor's cursor below a live batch it did not take ([090c9770f](https://github.com/powerhouse-inc/powerhouse/commit/090c9770f))
+- **reactor:** start a 'current' processor at its drive's creation, never earlier ([aa6ce24f2](https://github.com/powerhouse-inc/powerhouse/commit/aa6ce24f2))
+- **reactor:** key processor-manager passes per document and backfill outside the lock ([3a347b16b](https://github.com/powerhouse-inc/powerhouse/commit/3a347b16b))
+- **reactor:** reject a manager call made synchronously inside a locked callback ([64666e114](https://github.com/powerhouse-inc/powerhouse/commit/64666e114))
+- **reactor:** address the processor delivery review ([c8eb8275b](https://github.com/powerhouse-inc/powerhouse/commit/c8eb8275b))
+- **reactor:** wait for an in-flight factory call before re-registering its factory ([b8d881b8e](https://github.com/powerhouse-inc/powerhouse/commit/b8d881b8e))
+- **reactor:** processor delivery through synchronous routing and per-processor queues ([#3084](https://github.com/powerhouse-inc/powerhouse/pull/3084))
+- **reactor-api:** a failing node route answers 500 instead of crashing the process ([#3077](https://github.com/powerhouse-inc/powerhouse/issues/3077))
+- **switchboard:** escape non-ASCII file names in attachment metadata headers ([#3077](https://github.com/powerhouse-inc/powerhouse/issues/3077))
+- **switchboard:** flush PGlite before exiting on an uncaught error ([#3077](https://github.com/powerhouse-inc/powerhouse/issues/3077))
+- **switchboard:** leave unhandled rejections to Sentry when it listens ([c6a40108e](https://github.com/powerhouse-inc/powerhouse/commit/c6a40108e))
+- **switchboard:** attachment names above U+00FF no longer crash the server ([#3083](https://github.com/powerhouse-inc/powerhouse/pull/3083))
+
+### 🔥 Performance
+
+- **reactor:** bench processor delivery under concurrent read-model batches ([5637ad6ca](https://github.com/powerhouse-inc/powerhouse/commit/5637ad6ca))
+- **reactor:** bench processor delivery with a timer-based processor, driven directly ([b7f08451b](https://github.com/powerhouse-inc/powerhouse/commit/b7f08451b))
+- **reactor:** deliver queued live batches to a processor in one call ([002dc6821](https://github.com/powerhouse-inc/powerhouse/commit/002dc6821))
+- **reactor:** time the reload processors' backfill in the re-register bench ([da5e19bf8](https://github.com/powerhouse-inc/powerhouse/commit/da5e19bf8))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- Claude Opus 5.5
+
 ## 6.2.3-dev.22 (2026-09-23)
 
 ### 🚀 Features

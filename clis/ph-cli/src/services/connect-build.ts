@@ -52,6 +52,7 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
     // Local packages built for Connect share deps with the app vendor, same
     // as a plain `ph build`.
     noSharedDeps: false,
+    ignoreTypeErrors: false,
   });
 
   // Production shared-dependency vendor: prebuilt into <outDir>/__vendor__

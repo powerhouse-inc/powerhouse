@@ -8,6 +8,11 @@ import {
   type ApTrigger,
   type ApTriggerStrategy,
 } from "./types.js";
+import {
+  unsupportedAuth,
+  unsupportedTrigger,
+  type UnsupportedFeature,
+} from "./unsupported.js";
 
 export interface PiecePropDescriptor {
   name: string;
@@ -63,6 +68,8 @@ export interface PieceTriggerDescriptor {
   // How the sender proves the endpoint exists before it will register it.
   // Absent when the trigger declares no handshake, or declares NONE.
   handshake?: { strategy: string; paramName?: string };
+  // A trigger feature the engine cannot run; the piece's own is on the piece.
+  unsupported?: UnsupportedFeature;
 }
 
 export interface PieceAuthDescriptor {
@@ -105,6 +112,8 @@ export interface PieceDescriptor {
   maximumSupportedRelease?: string;
   actions: PieceActionDescriptor[];
   triggers: PieceTriggerDescriptor[];
+  // Set when no block of the piece can run here, e.g. an OAuth2 piece.
+  unsupported?: UnsupportedFeature;
 }
 
 function hasResolver(prop: ApProperty): boolean {
@@ -175,6 +184,12 @@ function isPropertyObject(value: unknown): value is ApProperty {
   return value !== null && typeof value === "object";
 }
 
+function withUnsupported(feature: UnsupportedFeature | undefined): {
+  unsupported?: UnsupportedFeature;
+} {
+  return feature ? { unsupported: feature } : {};
+}
+
 // Pure translation over a loaded piece; performs no I/O and never executes
 // piece code beyond the actions()/triggers() accessors.
 export function buildDescriptor(
@@ -221,6 +236,7 @@ export function buildDescriptor(
         ? { sampleData: trigger.sampleData }
         : {}),
       handshake: describeHandshake(trigger),
+      ...withUnsupported(unsupportedTrigger(trigger)),
     }),
   );
 
@@ -235,7 +251,9 @@ export function buildDescriptor(
     maximumSupportedRelease: piece.maximumSupportedRelease,
     actions,
     triggers,
+    ...withUnsupported(unsupportedAuth(piece.auth)),
   };
+  if (Array.isArray(piece.auth)) return descriptor;
   if (piece.auth && typeof piece.auth === "object") {
     // CUSTOM_AUTH carries a record here; a DYNAMIC prop would carry a
     // resolver function, which is not an auth shape at all.

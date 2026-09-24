@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "6.2.3-dev.22",
+  "version": "6.2.3-dev.23",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -22,7 +22,7 @@
   ],
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint clis/ph-cli",
     "test": "vitest --run",
     "generate-docs": "bun run scripts/generate-commands-docs.ts",
     "build": "tsdown",

@@ -6,7 +6,7 @@ import type { BlockPreset } from "./blocks.js";
 import type { StepModel } from "./model.js";
 import {
   getPieceSource,
-  triggerStrategyRuns,
+  blockUnavailable,
   type BlockSearchHitUi,
   type BlockSearchResultUi,
   type PieceActionUi,
@@ -56,7 +56,7 @@ function LogoFrame(props: {
 }) {
   const [broken, setBroken] = useState(false);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- a new src gets a fresh chance to load
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect -- a new src gets a fresh chance to load
     setBroken(false);
   }, [props.src]);
   if (!props.src || broken) {
@@ -241,10 +241,11 @@ function PieceEntries(props: {
         <div className="px-3 py-2 text-xs text-slate-400">Loading…</div>
       ) : (
         entries.map((entry) => {
-          // Visible but inert: picking one would arm a trigger that never fires.
-          const strategy = entry.strategy ?? "POLLING";
-          const unsupported =
-            props.mode === "triggers" && !triggerStrategyRuns(strategy);
+          // Visible but inert: picking one would build a step that never runs.
+          const unavailable = blockUnavailable({
+            ...entry,
+            kind: props.mode === "triggers" ? "trigger" : "action",
+          });
           return (
             <Row
               key={entry.name}
@@ -256,12 +257,8 @@ function PieceEntries(props: {
                 />
               }
               label={entry.displayName}
-              description={
-                unsupported
-                  ? `${strategy.toLowerCase()} — not supported yet`
-                  : entry.description
-              }
-              disabled={unsupported}
+              description={unavailable ?? entry.description}
+              disabled={unavailable !== undefined}
               onClick={() =>
                 props.onPick({
                   label: entry.displayName,
@@ -298,7 +295,7 @@ function useBlockSearch(query: string, enabled: boolean): SearchState {
   useEffect(() => {
     const search = getPieceSource()?.searchBlocks;
     if (!active || !search) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- drops a finished search when the query goes inactive
+      // eslint-disable-next-line react-hooks-extra/set-state-in-effect -- drops a finished search when the query goes inactive
       setState({ kind: "idle" });
       return;
     }
@@ -568,9 +565,7 @@ export function BlockSelector(props: {
               ) : (
                 <>
                   {hits.map((hit) => {
-                    const strategy = hit.strategy ?? "POLLING";
-                    const unsupported =
-                      hit.kind === "trigger" && !triggerStrategyRuns(strategy);
+                    const unavailable = blockUnavailable(hit);
                     return (
                       <Row
                         key={hit.blockType}
@@ -583,11 +578,10 @@ export function BlockSelector(props: {
                         }
                         label={`${hit.displayName} · ${hit.pieceDisplayName}`}
                         description={
-                          unsupported
-                            ? `${strategy.toLowerCase()} — not supported yet`
-                            : hit.description || hit.pieceDisplayName
+                          unavailable ??
+                          (hit.description || hit.pieceDisplayName)
                         }
-                        disabled={unsupported}
+                        disabled={unavailable !== undefined}
                         onClick={() =>
                           props.onPick({
                             label: hit.displayName,
@@ -642,9 +636,10 @@ export function BlockSelector(props: {
                     }
                     label={entry.displayName}
                     description={
-                      mode === "triggers"
+                      entry.unsupported ??
+                      (mode === "triggers"
                         ? `${entry.triggerCount} trigger${entry.triggerCount === 1 ? "" : "s"} · ${entry.description}`
-                        : `${entry.actionCount} action${entry.actionCount === 1 ? "" : "s"} · ${entry.description}`
+                        : `${entry.actionCount} action${entry.actionCount === 1 ? "" : "s"} · ${entry.description}`)
                     }
                     onClick={() => setPiece(entry)}
                   />

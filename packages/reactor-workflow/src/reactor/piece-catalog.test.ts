@@ -5,6 +5,7 @@ import {
   fetchCatalogWithSuggestions,
   fetchPieceCatalog,
   fetchPieceDetail,
+  fetchPieceTriggers,
   __resetCatalogCacheForTests,
 } from "./piece-catalog.js";
 
@@ -40,6 +41,77 @@ it("keeps server-only pieces filtered", async () => {
   expect(
     catalog.find((p) => p.name === "@activepieces/piece-ai"),
   ).toBeUndefined();
+});
+
+// Auth and trigger fields as the cloud listing serves them (0.91.0), trimmed.
+const ISSUES = "https://github.com/powerhouse-inc/powerhouse/issues";
+const LISTED_AUTH = {
+  gmail: [
+    { type: "OAUTH2", displayName: "Connection", required: true },
+    { type: "CUSTOM_AUTH", displayName: "Service account", required: true },
+  ],
+  slack: { type: "OAUTH2", displayName: "Connection", required: true },
+  omnihr: { type: "CUSTOM_AUTH", required: true, refresh: {} },
+  notion: { type: "SECRET_TEXT", required: true },
+};
+
+it("flags the listed pieces whose auth this engine cannot run", async () => {
+  stubCatalog(
+    Object.entries(LISTED_AUTH).map(([name, auth]) => ({
+      name: `@activepieces/piece-${name}`,
+      displayName: name,
+      version: "1.0.0",
+      actions: 1,
+      auth,
+    })),
+  );
+  const catalog = await fetchPieceCatalog();
+  expect(
+    Object.fromEntries(catalog.map((p) => [p.displayName, p.unsupported])),
+  ).toEqual({
+    gmail: `Multi-auth (auth as an array) is not supported yet (${ISSUES}/3091)`,
+    slack: `OAuth2 auth is not supported yet (${ISSUES}/3091)`,
+    omnihr: `CustomAuth refresh is not supported yet (${ISSUES}/3091)`,
+    notion: undefined,
+  });
+});
+
+it("flags a listed trigger that renews or is MANUAL", async () => {
+  vi.stubGlobal("fetch", (() =>
+    Promise.resolve(
+      Response.json({
+        name: "@activepieces/piece-google-calendar",
+        version: "0.12.0",
+        auth: { type: "SECRET_TEXT" },
+        triggers: {
+          new_event: {
+            type: "WEBHOOK",
+            renewConfiguration: {
+              strategy: "CRON",
+              cronExpression: "0 */12 * * *",
+            },
+          },
+          manual_trigger: {
+            type: "MANUAL",
+            renewConfiguration: { strategy: "NONE" },
+          },
+          event_ended: {
+            type: "POLLING",
+            renewConfiguration: { strategy: "NONE" },
+          },
+        },
+      }),
+    )) as never);
+  const { triggers } = await fetchPieceTriggers(
+    "@activepieces/piece-google-calendar",
+  );
+  expect(
+    Object.fromEntries(triggers.map((t) => [t.name, t.unsupported])),
+  ).toEqual({
+    new_event: `renewConfiguration is not supported yet (${ISSUES}/3090)`,
+    manual_trigger: `TriggerStrategy.MANUAL is not supported yet (${ISSUES}/3091)`,
+    event_ended: undefined,
+  });
 });
 
 const REGISTRY = "https://registry.example.com";

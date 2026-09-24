@@ -47,8 +47,8 @@
     "./style.css": "./dist/style.css"
   },
   "scripts": {
-    "lint": "eslint . --cache",
-    "lint:fix": "eslint . --fix --cache",
+    "lint": "cd ../.. && oxlint test/vetra-e2e",
+    "lint:fix": "cd ../.. && oxlint test/vetra-e2e --fix",
     "typecheck": "tsc --noEmit",
     "generate": "ph-cli generate",
     "connect": "ph-cli connect",

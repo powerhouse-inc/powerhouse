@@ -303,7 +303,7 @@ export const externalDevDependencies = {
   "@types/react-dom": "^19.2.3",
   "@vitejs/plugin-react": "^6.0.1",
   "@vitest/coverage-v8": "4.1.1",
-  oxfmt: "0.55.0",
+  oxfmt: "0.68.0",
   oxlint: "1.70.0",
   "oxlint-tsgolint": "0.23.0",
   tailwindcss: "^4.1.16",

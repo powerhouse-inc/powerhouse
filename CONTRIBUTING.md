@@ -94,11 +94,14 @@ Notes:
 ## Lint and formatting
 
 ```bash
-pnpm lint   # eslint across all packages
+pnpm lint       # oxlint across all packages, then oxfmt --check
+pnpm lint:fix   # oxlint --fix, then oxfmt
 ```
 
-- `lint-staged` runs `eslint --fix` on staged files during `git commit`.
-- The root Prettier config (`.prettierrc.json`) defines shared formatting.
+- `lint-staged` runs `oxlint --fix` and `oxfmt` on staged files during `git commit`.
+- Lint rules live in `.oxlintrc.json`; custom rules are in `lint-plugins/`.
+- `.oxfmtrc.json` defines formatting for code, JSON, YAML, CSS, GraphQL and HTML;
+  Markdown/MDX stay on Prettier (`.prettierrc.json`), which oxfmt mangles.
 - CI lints the changed files of each PR and fails on errors.
 
 ## Branches and commits
@@ -120,8 +123,8 @@ pnpm lint   # eslint across all packages
    use one of the templates in `.github/ISSUE_TEMPLATE` when filing issues
    (blank issues are disabled).
 2. Wait for the required checks:
-   - **Check Commit** — tsconfig references, build, typecheck, eslint on
-     changed files, the tests related to your changes, circular-import check
+   - **Check Commit** — tsconfig references, build, typecheck, oxlint and
+     oxfmt on changed files, the tests related to your changes, circular-import check
    - **E2E Tests**, **Codegen Tests**, **Check Windows** — depending on what
      you touched (the Windows job catches POSIX-only breakage before users do)
 3. Address review feedback on the same branch.

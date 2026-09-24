@@ -72,9 +72,17 @@ jobs:
       - name: Build packages that depend on generated binaries
         run: pnpm --filter=@powerhousedao/versioned-documents --no-bail run build
 
-      - name: Run eslint
+      - name: Run oxlint
         if: ${{ steps.diff.outputs.files != '' }}
-        run: NODE_OPTIONS=--max-old-space-size=8192 pnpm eslint --config eslint.config.js --quiet --no-error-on-unmatched-pattern ${{ steps.diff.outputs.files }}
+        run: pnpm exec oxlint --quiet --no-error-on-unmatched-pattern ${{ steps.diff.outputs.files }}
+
+      - name: Check formatting
+        if: ${{ steps.diff.outputs.files != '' }}
+        run: |
+          # File types oxfmt formats; .oxfmtrc.json ignorePatterns still apply.
+          files=$(printf '%s\n' ${{ steps.diff.outputs.files }} \
+            | grep -E '\.(js|jsx|mjs|cjs|ts|tsx|mts|cts|json|jsonc|json5|yml|yaml|toml|graphql|gql|html|vue|css|scss|less)$' || true)
+          if [ -n "$files" ]; then pnpm exec oxfmt --check --no-error-on-unmatched-pattern $files; fi
 
       - name: Skip lint (no changed files)
         if: ${{ steps.diff.outputs.files == '' }}

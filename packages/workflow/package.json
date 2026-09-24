@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/workflow",
-  "version": "6.2.3-dev.22",
+  "version": "6.2.3-dev.23",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": [
@@ -64,7 +64,7 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/workflow",
     "test": "vitest --run",
     "test:watch": "vitest",
     "build": "tsx ./build.ts"
@@ -84,6 +84,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@powerhousedao/powerhouse-vetra-packages": "workspace:*",
     "@tailwindcss/cli": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

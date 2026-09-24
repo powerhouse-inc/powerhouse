@@ -16,27 +16,13 @@ export const pieceIndexFileTemplate = (
     `import { createPiece, PieceCategory } from "${PIECES_FRAMEWORK_PACKAGE}";`,
     `import { ${v.actionExportName} } from "./lib/actions/${v.actionFileName}.js";`,
     v.withAuth
-      ? `import { check${v.pascalCaseName}Connection, ${v.camelCaseName}Auth } from "./lib/auth.js";`
+      ? `import { ${v.camelCaseName}Auth } from "./lib/auth.js";`
       : undefined,
     `import { ${v.constantCaseName}_LOGO } from "./lib/logo.js";`,
     `import { ${v.triggerExportName} } from "./lib/triggers/${v.triggerFileName}.js";`,
   ]
     .filter((line) => line !== undefined)
     .join("\n");
-
-  const checkConnection = v.withAuth
-    ? `
-// The reactor's checkConnection mutation calls this if the piece declares one,
-// and records its label on the connection document.
-(
-  ${v.camelCaseName} as unknown as {
-    checkConnection: (context: { auth?: unknown }) => Promise<unknown>;
-  }
-).checkConnection = check${v.pascalCaseName}Connection;
-
-export { ${v.camelCaseName}Auth };
-`
-    : "";
 
   return ts`
 ${imports}
@@ -52,7 +38,7 @@ export const ${v.camelCaseName} = createPiece({
   actions: [${v.actionExportName}],
   triggers: [${v.triggerExportName}],
 });
-${checkConnection}
+${v.withAuth ? `\nexport { ${v.camelCaseName}Auth };\n` : ""}
 export default ${v.camelCaseName};
 `.raw;
 };
