@@ -3,6 +3,7 @@ import type {
   DocumentModelModule,
   PHDocument,
   PHDocumentHeader,
+  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
   createBaseState,
@@ -32,7 +33,10 @@ function sourceDocument(header: PHDocumentHeader): PHDocument {
   } as unknown as PHDocument;
 }
 
-function install(source: PHDocument) {
+function install(
+  source: PHDocument,
+  createPolicy: SignaturePolicy = "v2-required",
+) {
   const added: PHDocumentHeader[] = [];
   const executed: Action[] = [];
   const node = {
@@ -53,6 +57,7 @@ function install(source: PHDocument) {
   } as unknown as DocumentModelModule;
   const client = {
     get: (id: string) => Promise.resolve(id === DRIVE_ID ? drive : source),
+    getCreateSignaturePolicy: () => Promise.resolve(createPolicy),
     getDocumentModelModules: () =>
       Promise.resolve({ results: [module], options: { cursor: "", limit: 1 } }),
     drives: {
@@ -101,18 +106,51 @@ describe("copyNode", () => {
     ]);
   });
 
-  it("keeps a copy of a legacy file legacy", async () => {
-    const source = sourceDocument({
+  function legacySource(): PHDocument {
+    return sourceDocument({
       ...createPresignedHeader("legacy-1", DOCUMENT_TYPE),
       protocolVersions: { "base-reducer": 2 },
     });
-    const { node, added, executed } = install(source);
+  }
+
+  it("copies a legacy file as v2-required by default", async () => {
+    const { node, added, executed } = install(legacySource());
+
+    await copyNode(DRIVE_ID, node as never, undefined);
+
+    expect(added).toHaveLength(1);
+    expect(added[0].protocolVersions).toEqual(v2RequiredProtocolVersions());
+    expect(hasDerivedDocumentId(added[0])).toBe(true);
+    expect(executed.map((action) => action.input)).toMatchObject([
+      { srcId: "legacy-1", targetId: added[0].id },
+    ]);
+  });
+
+  it("keeps a copy of a legacy file legacy under a legacy creation default", async () => {
+    const { node, added, executed } = install(legacySource(), "legacy");
 
     await copyNode(DRIVE_ID, node as never, undefined);
 
     expect(signaturePolicyOf(added[0])).toBe("legacy");
+    expect(added[0].protocolVersions).toEqual({ "base-reducer": 2 });
     expect(executed.map((action) => action.input)).toMatchObject([
       { srcId: "legacy-1", targetId: added[0].id },
     ]);
+  });
+
+  it("never copies a v2-required file as legacy", async () => {
+    const source = sourceDocument(
+      createPresignedHeader(
+        undefined,
+        DOCUMENT_TYPE,
+        v2RequiredProtocolVersions(),
+      ),
+    );
+    const { node, added } = install(source, "legacy");
+
+    await copyNode(DRIVE_ID, node as never, undefined);
+
+    expect(signaturePolicyOf(added[0])).toBe("v2-required");
+    expect(hasDerivedDocumentId(added[0])).toBe(true);
   });
 });

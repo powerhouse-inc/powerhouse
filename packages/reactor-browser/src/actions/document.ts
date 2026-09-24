@@ -46,6 +46,7 @@ import {
   setPreferredEditor,
   signaturePolicyOf,
   UnsupportedDocumentModelVersionError,
+  withSignaturePolicy,
   type UpgradeDocumentActionInput,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
@@ -482,7 +483,12 @@ export async function addDocument(
   }
 
   // create - use passed document's state if available
-  const newDocument = document ?? documentModelModule.utils.createDocument();
+  const newDocument =
+    document ??
+    withSignaturePolicy(
+      documentModelModule.utils.createDocument(),
+      await reactorClient.getCreateSignaturePolicy(),
+    );
   if (!document) {
     newDocument.state.document.version = documentModelModule.version ?? 1;
   }
@@ -1130,8 +1136,11 @@ async function _duplicateDocument(
   }
 
   const config: VersionedReplayConfig = { reducers, upgradeManifest };
-  const header = createCopyHeader(document.header, newId);
-  header.protocolVersions = document.header.protocolVersions;
+  const header = createCopyHeader(
+    document.header,
+    newId,
+    await reactor.getCreateSignaturePolicy(),
+  );
 
   const duplicated = replayDocumentVersioned(
     document.initialState,
