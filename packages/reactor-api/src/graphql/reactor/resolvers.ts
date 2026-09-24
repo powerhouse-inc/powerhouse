@@ -10,6 +10,7 @@ import {
   type IReactorClient,
   type ISyncManager,
   type JobInfo,
+  JobStatus,
   type OperationFilter,
   type PagedResults,
   type PagingOptions,
@@ -490,11 +491,30 @@ export async function findDocuments(
   }
 }
 
+/**
+ * The answer for a job the caller may not see, shaped as the reactor answers
+ * an unknown one so that the two cannot be told apart.
+ */
+function unknownJob(jobId: string): JobInfo {
+  const now = new Date().toISOString();
+  return {
+    id: jobId,
+    documentId: "",
+    status: JobStatus.FAILED,
+    createdAtUtcIso: now,
+    completedAtUtcIso: now,
+    error: { name: "Error", message: "Job not found", stack: "" },
+    consistencyToken: { version: 1, createdAtUtcIso: now, coordinates: [] },
+    meta: { batchId: jobId, batchJobIds: [jobId] },
+  };
+}
+
 export async function jobStatus(
   reactorClient: IReactorClient,
   args: {
     jobId: string;
   },
+  serves: (documentId: string) => Promise<boolean>,
 ): Promise<GqlJobInfo> {
   let result: JobInfo;
   try {
@@ -503,6 +523,9 @@ export async function jobStatus(
     throw new GraphQLError(
       `Failed to fetch job status: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
+  }
+  if (!(await serves(result.documentId))) {
+    result = unknownJob(args.jobId);
   }
 
   try {

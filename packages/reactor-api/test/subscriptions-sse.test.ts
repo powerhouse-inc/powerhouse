@@ -44,6 +44,8 @@ const mockReactorClient = {
     },
   ),
   getJobStatus: vi.fn(),
+  // Every document is unpoliced, so jobs on it are served to anyone.
+  get: vi.fn((id: string) => Promise.resolve(documentWithId(id))),
 } as unknown as IReactorClient;
 
 // Emits as the reactor would on the feed read as `address`.

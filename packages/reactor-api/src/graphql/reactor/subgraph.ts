@@ -443,10 +443,12 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      jobStatus: async (_parent, args) => {
+      jobStatus: async (_parent, args, ctx: Context) => {
         this.logger.debug("jobStatus(@args)", args);
         try {
-          return await resolvers.jobStatus(this.reactorClient, args);
+          return await resolvers.jobStatus(this.reactorClient, args, (id) =>
+            this.servesDocument(id, ctx),
+          );
         } catch (error) {
           this.logger.error("Error in jobStatus: @Error", error);
           throw error;
@@ -1206,6 +1208,14 @@ export class ReactorSubgraph extends BaseSubgraph {
             async (payload, filterArgs, filterCtx) => {
               if (!payload || !filterArgs) return false;
               if (!matchesJobFilter(payload, filterArgs)) return false;
+              if (
+                !(await this.servesDocument(
+                  payload.documentId,
+                  filterCtx as Context,
+                ))
+              ) {
+                return false;
+              }
 
               if (
                 this.authorizationService.isSupremeAdmin(
