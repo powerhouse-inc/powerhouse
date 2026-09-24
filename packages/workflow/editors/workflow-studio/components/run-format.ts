@@ -4,49 +4,72 @@ import type { RunRecord } from "../../workflow-editor/runtime-api.js";
 
 export const RUN_STATUSES = ["RUNNING", "SUCCEEDED", "FAILED"] as const;
 
-// Status is the only place colour carries meaning in this view.
-export const RUN_DOT: Record<string, string> = {
-  SUCCEEDED: "bg-green-500",
-  FAILED: "bg-red-500",
-  RUNNING: "bg-amber-400",
-  PARKED: "bg-slate-400",
-  CANCELLED: "bg-slate-400",
+// Every status maps to one of five tones; colour carries meaning nowhere else.
+export type Tone = "ok" | "fail" | "warn" | "run" | "idle";
+
+export const TONE_TEXT: Record<Tone, string> = {
+  ok: "text-wf-ok",
+  fail: "text-wf-fail",
+  warn: "text-wf-warn",
+  run: "text-wf-run",
+  idle: "text-muted-foreground",
 };
 
-export const RUN_TEXT: Record<string, string> = {
-  SUCCEEDED: "text-green-700",
-  FAILED: "text-red-700",
-  RUNNING: "text-amber-700",
+export const TONE_DOT: Record<Tone, string> = {
+  ok: "bg-wf-ok",
+  fail: "bg-wf-fail",
+  warn: "bg-wf-warn",
+  run: "bg-wf-run",
+  idle: "bg-muted-foreground/40",
 };
 
-export const STEP_TEXT: Record<string, string> = {
-  SUCCEEDED: "text-green-600",
-  FAILED: "text-red-600",
-  SKIPPED: "text-slate-400",
-  REPLAYED: "text-sky-600",
+export const TONE_BADGE: Record<Tone, string> = {
+  ok: "bg-wf-ok/12 text-wf-ok",
+  fail: "bg-wf-fail/12 text-wf-fail",
+  warn: "bg-wf-warn/12 text-wf-warn",
+  run: "bg-wf-run/12 text-wf-run",
+  idle: "bg-muted text-muted-foreground",
 };
 
-// Sidebar dots: the same status vocabulary at glyph size.
-export const WORKFLOW_STATUS_DOT: Record<string, string> = {
-  ENABLED: "bg-green-500",
-  DRAFT: "bg-slate-300",
-  DISABLED: "bg-amber-400",
-  ARCHIVED: "bg-slate-200",
+export const RUN_TONE: Record<string, Tone> = {
+  SUCCEEDED: "ok",
+  FAILED: "fail",
+  RUNNING: "run",
+  WAITING: "run",
+  PENDING: "idle",
+  PARKED: "warn",
+  CANCELLED: "idle",
 };
 
-export const CONNECTION_STATUS_DOT: Record<string, string> = {
-  OK: "bg-green-500",
-  ERROR: "bg-red-500",
-  REVOKED: "bg-red-400",
-  UNCONFIGURED: "bg-slate-300",
+export const STEP_TONE: Record<string, Tone> = {
+  ...RUN_TONE,
+  SKIPPED: "idle",
+  REPLAYED: "run",
 };
 
-export const WORKFLOW_STATUS_STYLES: Record<string, string> = {
-  ENABLED: "bg-green-100 text-green-700",
-  DRAFT: "bg-slate-100 text-slate-500",
-  DISABLED: "bg-amber-100 text-amber-700",
-  ARCHIVED: "bg-slate-200 text-slate-400",
+export const WORKFLOW_TONE: Record<string, Tone> = {
+  ENABLED: "ok",
+  DRAFT: "idle",
+  DISABLED: "warn",
+  ARCHIVED: "idle",
 };
+
+export const CONNECTION_TONE: Record<string, Tone> = {
+  OK: "ok",
+  ERROR: "fail",
+  REVOKED: "fail",
+  UNCONFIGURED: "warn",
+};
+
+export function toneOf(map: Record<string, Tone>, status?: string): Tone {
+  const tone = status ? (map[status] as Tone | undefined) : undefined;
+  return tone ?? "idle";
+}
+
+// FAILED → Failed; stored enums read as words, not tokens.
+export function statusLabel(status: string): string {
+  return status.charAt(0) + status.slice(1).toLowerCase();
+}
 
 export function formatDuration(
   startedAt: string,

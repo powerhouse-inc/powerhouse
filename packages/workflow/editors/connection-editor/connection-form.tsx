@@ -13,7 +13,15 @@ import {
   type PieceSummary,
   type SecretStat,
 } from "../workflow-editor/runtime-api.js";
-import { AutocompleteInput } from "../workflow-editor/ui/Autocomplete.js";
+import {
+  FieldError,
+  FieldLabel as LabelRow,
+  Hint as HintText,
+  IconButton,
+  Select,
+  Switch,
+  textInputClass,
+} from "../shared/controls.js";
 import {
   isAuthComplete,
   packageFromConnectorId,
@@ -31,21 +39,19 @@ export interface ConnectionCallbacks {
   setStatus: (status: ConnectionStatus) => void;
 }
 
-const inputClass =
-  "w-full rounded border border-solid border-slate-300 px-2 py-1.5 text-sm text-slate-800";
+const inputClass = textInputClass;
 
 function FieldLabel(props: { field: AuthField }) {
   return (
-    <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-      {props.field.displayName}
-      {props.field.required ? <span className="text-red-500"> *</span> : null}
-    </span>
+    <LabelRow
+      label={props.field.displayName}
+      optional={!props.field.required}
+    />
   );
 }
 
 function Hint(props: { children?: string }) {
-  if (!props.children) return null;
-  return <p className="mt-0.5 text-[11px] text-slate-400">{props.children}</p>;
+  return <HintText text={props.children ?? ""} />;
 }
 
 function ConfigField(props: {
@@ -56,34 +62,29 @@ function ConfigField(props: {
   const { field, value } = props;
   if (field.inputType === "CHECKBOX") {
     return (
-      <label className="flex items-center gap-2 text-sm text-slate-700">
-        <input
-          type="checkbox"
-          checked={Boolean(value)}
-          onChange={(event) => props.onCommit(event.target.checked)}
-        />
-        {field.displayName}
-      </label>
+      <Switch
+        checked={Boolean(value)}
+        onChange={(checked) => props.onCommit(checked)}
+        label={field.displayName}
+        description={field.description}
+      />
     );
   }
   if (field.inputType === "STATIC_DROPDOWN") {
     return (
-      <label className="block">
+      <div>
         <FieldLabel field={field} />
-        <select
-          className={inputClass}
+        <Select
           value={typeof value === "string" ? value : ""}
-          onChange={(event) => props.onCommit(event.target.value || undefined)}
-        >
-          <option value="">—</option>
-          {(field.options ?? []).map((option) => (
-            <option key={String(option.value)} value={String(option.value)}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          options={(field.options ?? []).map((option) => ({
+            value: String(option.value),
+            label: option.label,
+          }))}
+          clearable={!field.required}
+          onChange={(next) => props.onCommit(next || undefined)}
+        />
         <Hint>{field.description}</Hint>
-      </label>
+      </div>
     );
   }
   return (
@@ -180,29 +181,28 @@ function SecretField(props: {
     <label className="block">
       <FieldLabel field={field} />
       {managed ? (
-        <p className="mb-1 text-[11px] text-slate-500">
-          <span className="font-medium text-slate-600">
+        <p className="mb-1.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">
             {stat?.label ?? refValue}
           </span>
           {stat ? (
             <span>
-              {" "}
-              · v{stat.version} · rotated{" "}
+              version {stat.version}, changed{" "}
               {new Date(stat.updatedAt).toLocaleString()}
             </span>
           ) : null}
           {stat?.status === "DELETED" ? (
-            <span className="font-medium text-red-600"> · deleted</span>
+            <span className="font-medium text-wf-fail">deleted</span>
           ) : null}
         </p>
       ) : null}
       {refValue && !managed ? (
-        <p className="mb-1 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
+        <p className="mb-1.5 rounded-md bg-wf-warn/10 px-3 py-2 text-xs text-wf-warn">
           Legacy ref <span className="font-mono">{refValue}</span> no longer
           resolves. Paste the secret value to replace it with a managed secret.
         </p>
       ) : null}
-      <div className="flex gap-1">
+      <div className="flex items-center gap-1">
         <input
           className={inputClass}
           type="password"
@@ -212,7 +212,7 @@ function SecretField(props: {
             managed
               ? replace
                 ? "Paste a value for the replacement secret"
-                : "•••••••• — paste a new value to rotate"
+                : "Paste a new value to replace it"
               : "Paste the secret value"
           }
           autoComplete="off"
@@ -224,24 +224,19 @@ function SecretField(props: {
           onBlur={commitValue}
         />
         {refValue ? (
-          <button
-            type="button"
-            className="shrink-0 rounded border border-solid border-slate-200 px-2 text-xs text-slate-400 hover:text-red-500"
-            title="Remove secret ref"
+          <IconButton
+            icon="close"
+            label="Remove secret"
             onClick={props.onRemove}
-          >
-            ✕
-          </button>
+          />
         ) : null}
       </div>
-      {error ? (
-        <p className="mt-0.5 text-[11px] font-medium text-red-600">{error}</p>
-      ) : null}
-      <div className="mt-0.5 flex gap-3">
+      <FieldError>{error}</FieldError>
+      <div className="mt-1.5 flex gap-3">
         {managed ? (
           <button
             type="button"
-            className="text-[11px] text-slate-400 underline hover:text-slate-600"
+            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
             onClick={() => setReplace((mode) => !mode)}
           >
             {replace
@@ -251,7 +246,7 @@ function SecretField(props: {
         ) : null}
         <button
           type="button"
-          className="text-[11px] text-slate-400 underline hover:text-slate-600"
+          className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
           onClick={() => setManualRef((mode) => !mode)}
         >
           {manualRef ? "Hide ref" : "Enter a ref manually"}
@@ -259,7 +254,7 @@ function SecretField(props: {
       </div>
       {manualRef ? (
         <input
-          className={`${inputClass} mt-1 font-mono text-xs`}
+          className={`${inputClass} mt-1.5 font-mono text-xs`}
           defaultValue={refValue}
           placeholder="secret://v1:…"
           spellCheck={false}
@@ -344,57 +339,42 @@ export function ConnectionForm(props: {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Connector
-        </span>
-        <AutocompleteInput
+        <LabelRow label="Service" />
+        <Select
           value={packageName}
-          placeholder="Pick a piece, e.g. @activepieces/piece-slack"
-          onCommit={() => undefined}
-          onPick={(option) => {
-            const picked = catalog?.find(
-              (entry) => entry.name === option.value,
-            );
+          loading={catalog === null}
+          placeholder="Choose the service to connect"
+          options={(catalog ?? []).map((entry) => ({
+            value: entry.name,
+            label: entry.displayName,
+            description: entry.description,
+            icon: entry.logoUrl ? (
+              <img
+                src={entry.logoUrl}
+                alt=""
+                loading="lazy"
+                className="h-4 w-4 shrink-0 object-contain"
+              />
+            ) : undefined,
+          }))}
+          onChange={(name) => {
+            const picked = catalog?.find((entry) => entry.name === name);
             if (picked) callbacks.pickPiece(picked);
           }}
-          loadOptions={() =>
-            fetchPieceCatalog().then((pieces) => ({
-              options: pieces.map((entry) => ({
-                label: entry.displayName,
-                value: entry.name,
-              })),
-            }))
-          }
         />
-        {piece ? (
-          <div className="mt-2 flex items-center gap-2 rounded border border-solid border-slate-200 bg-slate-50 p-2">
-            <img
-              src={piece.logoUrl}
-              alt={piece.displayName}
-              className="h-8 w-8 object-contain"
-            />
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-slate-800">
-                {piece.displayName}
-              </div>
-              <div className="truncate text-xs text-slate-400">
-                {plan.displayName ?? plan.authType} · {piece.description}
-              </div>
-            </div>
-          </div>
-        ) : null}
+        {piece ? <HintText text={piece.description} /> : null}
       </div>
 
       {plan.supported ? null : (
-        <p className="rounded bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        <p className="rounded-md bg-wf-warn/10 px-3 py-2 text-xs text-wf-warn">
           {plan.authType} connections are not executable by the workflow runtime
           yet.
         </p>
       )}
 
       {plan.configFields.length > 0 ? (
-        <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-semibold text-slate-700">
+        <div className="flex flex-col gap-5 border-t border-solid border-foreground/10 pt-5">
+          <h3 className="text-[13px] font-semibold text-foreground">
             Configuration
           </h3>
           {plan.configFields.map((field) => (
@@ -415,8 +395,8 @@ export function ConnectionForm(props: {
       ) : null}
 
       {plan.secretFields.length > 0 ? (
-        <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-semibold text-slate-700">Secrets</h3>
+        <div className="flex flex-col gap-5 border-t border-solid border-foreground/10 pt-5">
+          <h3 className="text-[13px] font-semibold text-foreground">Secrets</h3>
           {plan.secretFields.map((field) => (
             <SecretField
               key={field.name}
@@ -441,7 +421,7 @@ export function ConnectionForm(props: {
       ) : null}
 
       {state.lastError ? (
-        <p className="rounded bg-red-50 px-3 py-2 text-xs text-red-600">
+        <p className="rounded-md bg-wf-fail/10 px-3 py-2 text-xs text-wf-fail">
           {state.lastError}
         </p>
       ) : null}

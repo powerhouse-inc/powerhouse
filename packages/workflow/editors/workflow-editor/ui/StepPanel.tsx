@@ -1,5 +1,20 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  Button,
+  FieldError,
+  FieldLabel,
+  Hint,
+  IconButton,
+  Select,
+  Switch,
+  Tabs,
+  textAreaClass,
+  textInputClass,
+} from "../../shared/controls.js";
+import { Icon } from "../../shared/icons.js";
 import { acyclicTargets, reachableFrom } from "./ap-layout.js";
+import { useBlockMeta } from "./block-meta.js";
+import { BlockLogo } from "./BlockSelector.js";
 import { ConnectionField } from "./ConnectionField.js";
 import {
   ExpressionPickerButton,
@@ -26,26 +41,27 @@ function stringify(value: unknown): string {
   }
 }
 
-function Field(props: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
+function Section(props: {
+  title: string;
+  description?: string;
+  children: ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-        {props.label}
-      </span>
+    <section className="flex flex-col gap-4 border-t border-solid border-foreground/10 pt-5 first:border-t-0 first:pt-0">
+      <div>
+        <h4 className="text-[13px] font-semibold text-foreground">
+          {props.title}
+        </h4>
+        {props.description ? (
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {props.description}
+          </p>
+        ) : null}
+      </div>
       {props.children}
-      {props.hint ? (
-        <p className="mt-0.5 text-[11px] text-slate-400">{props.hint}</p>
-      ) : null}
-    </label>
+    </section>
   );
 }
-
-const inputClass =
-  "w-full rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800";
 
 function RawConfigEditor(props: {
   value: unknown;
@@ -58,31 +74,49 @@ function RawConfigEditor(props: {
     setPrevValue(props.value);
     setText(stringify(props.value));
   }
+  const dirty = text !== stringify(props.value);
   return (
     <div>
       <textarea
-        className={`${inputClass} min-h-32 font-mono text-xs`}
+        aria-label="Configuration as JSON"
+        className={`${textAreaClass} min-h-40 font-mono text-xs`}
         value={text}
         onChange={(event) => setText(event.target.value)}
         spellCheck={false}
       />
-      {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
-      <button
-        type="button"
-        className="mt-1 rounded bg-slate-800 px-3 py-1 text-xs font-medium text-white"
-        onClick={() => {
-          try {
-            props.onApply(JSON.parse(text));
-            setError(null);
-          } catch (parseError) {
-            setError(
-              parseError instanceof Error ? parseError.message : "Invalid JSON",
-            );
-          }
-        }}
-      >
-        Apply JSON
-      </button>
+      <FieldError>{error}</FieldError>
+      <div className="mt-2 flex gap-2">
+        <Button
+          size="sm"
+          disabled={!dirty}
+          onClick={() => {
+            try {
+              props.onApply(JSON.parse(text));
+              setError(null);
+            } catch (parseError) {
+              setError(
+                parseError instanceof Error
+                  ? parseError.message
+                  : "Not valid JSON",
+              );
+            }
+          }}
+        >
+          Apply JSON
+        </Button>
+        {dirty ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setText(stringify(props.value));
+              setError(null);
+            }}
+          >
+            Discard
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -124,6 +158,19 @@ function useBlockForm(
   return { form: state.form, error: state.error };
 }
 
+function FormSkeleton() {
+  return (
+    <div className="flex animate-pulse flex-col gap-5" aria-label="Loading">
+      {[0, 1, 2].map((row) => (
+        <div key={row} className="flex flex-col gap-2">
+          <div className="h-3 w-24 rounded bg-foreground/10" />
+          <div className="h-9 rounded-md bg-foreground/5" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ConfigSection(props: {
   blockType: string;
   form: BlockForm | null | "loading";
@@ -140,15 +187,15 @@ function ConfigSection(props: {
   const { form } = props;
   const configRecord = (props.config ?? {}) as Record<string, unknown>;
 
+  if (form === "loading") return <FormSkeleton />;
   return (
-    <div className="flex flex-col gap-3">
-      {form === "loading" ? (
-        <p className="text-xs text-slate-400">Loading block properties…</p>
-      ) : null}
+    <div className="flex flex-col gap-5">
       {props.formError ? (
-        <p className="text-xs text-red-500">{props.formError}</p>
+        <p className="rounded-md bg-wf-fail/10 px-3 py-2 text-xs text-wf-fail">
+          {props.formError}
+        </p>
       ) : null}
-      {form && form !== "loading" && form.props.length > 0 ? (
+      {form && form.props.length > 0 ? (
         <PropertyForm
           props={form.props}
           value={configRecord}
@@ -170,49 +217,93 @@ function ConfigSection(props: {
           }
         />
       ) : null}
-      {form && form !== "loading" && form.props.length === 0 ? (
-        <p className="text-xs text-slate-400">
-          This block has no configuration.
+      {form && form.props.length === 0 ? (
+        <p className="text-[13px] text-muted-foreground">
+          Nothing to set up. This block runs as it is.
         </p>
       ) : null}
-      <details className="mt-1">
-        <summary className="cursor-pointer text-[11px] text-slate-400">
-          Raw JSON
-        </summary>
-        <div className="mt-2">
-          <RawConfigEditor value={props.config} onApply={props.onChange} />
-        </div>
-      </details>
+      {!form && !props.formError ? (
+        <p className="text-[13px] text-muted-foreground">
+          This block has no form. Edit its configuration as JSON under Settings.
+        </p>
+      ) : null}
     </div>
   );
 }
 
+// Name, piece and readiness at the top of the panel; the name edits in place.
 function PanelHeader(props: {
-  title: string;
+  blockType: string;
+  name: string;
+  onRename?: (name: string) => void;
+  actionLabel: string;
   missing: string[];
+  loading: boolean;
   onClose: () => void;
+  children?: ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-        {props.title}
-        {props.missing.length > 0 ? (
+    <header className="border-b border-solid border-foreground/10 px-4 pt-4">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-solid border-foreground/10 bg-card">
+          <BlockLogo blockType={props.blockType} size={24} />
+        </div>
+        <div className="min-w-0 flex-1">
+          {props.onRename ? (
+            <input
+              key={props.name}
+              aria-label="Step name"
+              className="-mx-1 w-full rounded-md border border-solid border-transparent bg-transparent px-1 text-[15px] font-semibold text-foreground hover:border-foreground/15 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/25"
+              defaultValue={props.name}
+              spellCheck={false}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") event.currentTarget.blur();
+                if (event.key === "Escape") {
+                  event.currentTarget.value = props.name;
+                  event.currentTarget.blur();
+                }
+              }}
+              onBlur={(event) => {
+                const name = event.target.value.trim();
+                if (name && name !== props.name) props.onRename!(name);
+                else event.target.value = props.name;
+              }}
+            />
+          ) : (
+            <h3 className="truncate text-[15px] font-semibold text-foreground">
+              {props.name}
+            </h3>
+          )}
+          <p className="truncate text-xs text-muted-foreground">
+            {props.actionLabel}
+          </p>
+        </div>
+        <IconButton icon="close" label="Close panel" onClick={props.onClose} />
+      </div>
+      <div className="mt-3 flex items-center gap-1.5 text-xs">
+        {props.loading ? (
+          <span className="text-muted-foreground">Checking setup…</span>
+        ) : props.missing.length > 0 ? (
           <span
-            className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
+            className="flex min-w-0 items-center gap-1.5 text-wf-warn"
             title={props.missing.join(", ")}
           >
-            {props.missing.length} required
+            <Icon name="alert" className="h-3.5 w-3.5" />
+            <span className="truncate">
+              {props.missing.length === 1
+                ? `${props.missing[0]} needs a value`
+                : `${props.missing.length} fields need a value: ${props.missing.join(", ")}`}
+            </span>
           </span>
-        ) : null}
-      </h3>
-      <button
-        type="button"
-        className="text-xs text-slate-400"
-        onClick={props.onClose}
-      >
-        Close
-      </button>
-    </div>
+        ) : (
+          <span className="flex items-center gap-1.5 text-wf-ok">
+            <Icon name="check" className="h-3.5 w-3.5" />
+            Ready to run
+          </span>
+        )}
+      </div>
+      <div className="mt-3">{props.children}</div>
+    </header>
   );
 }
 
@@ -229,6 +320,46 @@ function intOrUndefined(raw: string): number | undefined {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
+// A number input with its unit drawn inside the field.
+function NumberField(props: {
+  label: string;
+  value: number | null;
+  unit?: string;
+  min?: number;
+  placeholder?: string;
+  hint?: string;
+  onCommit: (value: number | null) => void;
+}) {
+  return (
+    <label className="block">
+      <FieldLabel label={props.label} />
+      <span className="relative block">
+        <input
+          key={`${props.label}-${props.value ?? ""}`}
+          type="number"
+          min={props.min}
+          className={`${textInputClass} ${props.unit ? "pr-16" : ""}`}
+          defaultValue={props.value ?? ""}
+          placeholder={props.placeholder}
+          onBlur={(event) => {
+            const raw = event.target.value.trim();
+            if (raw === "") return props.onCommit(null);
+            const next = intOrUndefined(raw);
+            if (next !== undefined && next >= (props.min ?? 0))
+              props.onCommit(next);
+          }}
+        />
+        {props.unit ? (
+          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">
+            {props.unit}
+          </span>
+        ) : null}
+      </span>
+      {props.hint ? <Hint>{props.hint}</Hint> : null}
+    </label>
+  );
+}
+
 function RetryEditor(props: {
   value: RetryPolicyModel | null;
   onChange: (value: RetryPolicyModel | null) => void;
@@ -237,94 +368,72 @@ function RetryEditor(props: {
   const patch = (partial: Partial<RetryPolicyModel>) =>
     props.onChange({ ...(retry ?? DEFAULT_RETRY), ...partial });
   return (
-    <div className="flex flex-col gap-2">
-      <label className="flex items-center gap-2 text-sm text-slate-700">
-        <input
-          type="checkbox"
-          checked={retry !== null}
-          onChange={(event) =>
-            props.onChange(event.target.checked ? DEFAULT_RETRY : null)
-          }
-        />
-        Override retry policy
-      </label>
+    <div className="flex flex-col gap-4">
+      <Switch
+        checked={retry !== null}
+        onChange={(checked) => props.onChange(checked ? DEFAULT_RETRY : null)}
+        label="Retry when it fails"
+        description="Try the step again before failing the run."
+      />
       {retry ? (
-        <div className="grid grid-cols-2 gap-2 rounded border border-slate-200 p-2">
-          <Field label="Max attempts">
-            <input
-              key={`attempts-${retry.maxAttempts}`}
-              type="number"
-              min={1}
-              className={inputClass}
-              defaultValue={retry.maxAttempts}
-              onBlur={(event) => {
-                const next = intOrUndefined(event.target.value);
-                if (next !== undefined && next >= 1)
-                  patch({ maxAttempts: next });
-              }}
-            />
-          </Field>
-          <Field label="Backoff">
-            <select
-              className={inputClass}
+        <div className="grid grid-cols-2 gap-3">
+          <NumberField
+            label="Attempts"
+            value={retry.maxAttempts}
+            min={1}
+            onCommit={(next) => {
+              if (next !== null) patch({ maxAttempts: next });
+            }}
+          />
+          <label className="block">
+            <FieldLabel label="Backoff" />
+            <Select
               value={retry.backoff}
-              onChange={(event) =>
+              options={[
+                { value: "FIXED", label: "Fixed" },
+                { value: "EXPONENTIAL", label: "Exponential" },
+              ]}
+              onChange={(backoff) =>
+                patch({ backoff: backoff as RetryPolicyModel["backoff"] })
+              }
+            />
+          </label>
+          <NumberField
+            label="First delay"
+            unit="seconds"
+            value={retry.initialDelaySeconds}
+            onCommit={(next) => {
+              if (next !== null) patch({ initialDelaySeconds: next });
+            }}
+          />
+          <NumberField
+            label="Longest delay"
+            unit="seconds"
+            value={retry.maxDelaySeconds}
+            onCommit={(next) => {
+              if (next !== null) patch({ maxDelaySeconds: next });
+            }}
+          />
+          <label className="col-span-2 block">
+            <FieldLabel label="Retry on" optional />
+            <input
+              key={`on-${retry.retryOn.join(",")}`}
+              className={`${textInputClass} font-mono text-xs`}
+              defaultValue={retry.retryOn.join(", ")}
+              placeholder="TRANSIENT, RATE_LIMIT"
+              onBlur={(event) =>
                 patch({
-                  backoff: event.target.value as RetryPolicyModel["backoff"],
+                  retryOn: event.target.value
+                    .split(",")
+                    .map((entry) => entry.trim())
+                    .filter((entry) => entry !== ""),
                 })
               }
-            >
-              <option value="FIXED">Fixed</option>
-              <option value="EXPONENTIAL">Exponential</option>
-            </select>
-          </Field>
-          <Field label="Initial delay (s)">
-            <input
-              key={`initial-${retry.initialDelaySeconds}`}
-              type="number"
-              min={0}
-              className={inputClass}
-              defaultValue={retry.initialDelaySeconds}
-              onBlur={(event) => {
-                const next = intOrUndefined(event.target.value);
-                if (next !== undefined) patch({ initialDelaySeconds: next });
-              }}
             />
-          </Field>
-          <Field label="Max delay (s)">
-            <input
-              key={`max-${retry.maxDelaySeconds}`}
-              type="number"
-              min={0}
-              className={inputClass}
-              defaultValue={retry.maxDelaySeconds}
-              onBlur={(event) => {
-                const next = intOrUndefined(event.target.value);
-                if (next !== undefined) patch({ maxDelaySeconds: next });
-              }}
-            />
-          </Field>
-          <div className="col-span-2">
-            <Field
-              label="Retry on"
-              hint="Comma-separated error classes; empty retries everything"
-            >
-              <input
-                key={`on-${retry.retryOn.join(",")}`}
-                className={`${inputClass} font-mono text-xs`}
-                defaultValue={retry.retryOn.join(", ")}
-                placeholder="TRANSIENT, RATE_LIMIT"
-                onBlur={(event) =>
-                  patch({
-                    retryOn: event.target.value
-                      .split(",")
-                      .map((entry) => entry.trim())
-                      .filter((entry) => entry !== ""),
-                  })
-                }
-              />
-            </Field>
-          </div>
+            <Hint>
+              Error classes, comma-separated. Empty retries every error.
+            </Hint>
+          </label>
         </div>
       ) : null}
     </div>
@@ -332,10 +441,36 @@ function RetryEditor(props: {
 }
 
 const PORT_LABEL: Record<string, string> = {
-  next: "Next step",
+  next: "Then",
   true: "When true",
   false: "When false",
 };
+
+function EdgeRow(props: {
+  target?: StepModel;
+  fallback: string;
+  onRemove: () => void;
+  tone?: "warn";
+}) {
+  return (
+    <div
+      className={`flex min-w-0 items-center gap-2 rounded-md border border-solid px-2 py-1.5 text-[13px] ${
+        props.tone === "warn"
+          ? "border-wf-warn/30 bg-wf-warn/5"
+          : "border-foreground/10 bg-muted/40"
+      }`}
+    >
+      <Icon name="arrowRight" className="h-3.5 w-3.5 text-muted-foreground" />
+      {props.target ? (
+        <BlockLogo blockType={props.target.blockType} size={16} />
+      ) : null}
+      <span className="min-w-0 flex-1 truncate text-foreground">
+        {props.target ? props.target.name || props.target.key : props.fallback}
+      </span>
+      <IconButton icon="close" label="Disconnect" onClick={props.onRemove} />
+    </div>
+  );
+}
 
 // A port may hold several edges: the engine runs every successor on a taken
 // port. acyclicTargets offers any step that is not an ancestor.
@@ -346,82 +481,58 @@ function FlowPortEditor(props: {
 }) {
   const { step, model, callbacks } = props;
   const ports = flowPorts(step.blockType);
-  const stepName = (id: string) => {
-    const target = model.steps.find((entry) => entry.id === id);
-    return target ? target.name || target.key : id;
-  };
   const attached = model.trigger
     ? reachableFrom(model.trigger.id, model.edges)
     : new Set<string>();
   const candidates = acyclicTargets(model, step.id);
   return (
-    <Field
-      label={ports.length > 1 ? "Branches" : "Connects to"}
-      hint="Any step that is not upstream of this one, connected or not"
-    >
-      <div className="flex flex-col gap-2">
-        {ports.map((port) => {
-          const edges = model.edges.filter(
-            (candidate) =>
-              candidate.from === step.id && candidate.port === port,
-          );
-          const targets = candidates.filter(
-            (candidate) => !edges.some((edge) => edge.to === candidate.id),
-          );
-          return (
-            <div key={port} className="flex flex-col gap-1">
-              {ports.length > 1 ? (
-                <span className="text-[11px] font-medium text-slate-500">
-                  {PORT_LABEL[port] ?? port}
-                </span>
-              ) : null}
+    <div className="flex flex-col gap-4">
+      {ports.map((port) => {
+        const edges = model.edges.filter(
+          (candidate) => candidate.from === step.id && candidate.port === port,
+        );
+        const targets = candidates.filter(
+          (candidate) => !edges.some((edge) => edge.to === candidate.id),
+        );
+        return (
+          <div key={port}>
+            <FieldLabel label={PORT_LABEL[port] ?? port} />
+            <div className="flex flex-col gap-1.5">
               {edges.map((edge) => (
-                <div
+                <EdgeRow
                   key={edge.id}
-                  className="flex min-w-0 items-center justify-between rounded border border-solid border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700"
-                >
-                  <span className="truncate">→ {stepName(edge.to)}</span>
-                  <button
-                    type="button"
-                    className="ml-2 shrink-0 text-[11px] text-red-500"
-                    onClick={() => callbacks.removeEdge(edge.id)}
-                  >
-                    Disconnect
-                  </button>
-                </div>
+                  target={model.steps.find((entry) => entry.id === edge.to)}
+                  fallback={edge.to}
+                  onRemove={() => callbacks.removeEdge(edge.id)}
+                />
               ))}
-              <select
-                className={inputClass}
+              <Select
                 value=""
                 disabled={targets.length === 0}
-                onChange={(event) => {
-                  if (event.target.value === "") return;
-                  callbacks.addEdge({
-                    from: step.id,
-                    to: event.target.value,
-                    port,
-                  });
-                }}
-              >
-                <option value="">
-                  {targets.length === 0
+                placeholder={
+                  targets.length === 0
                     ? "No other step to connect to"
                     : edges.length > 0
-                      ? "Also connect to…"
-                      : "Connect to…"}
-                </option>
-                {targets.map((target) => (
-                  <option key={target.id} value={target.id}>
-                    {target.name || target.key}
-                    {attached.has(target.id) ? "" : " · detached"}
-                  </option>
-                ))}
-              </select>
+                      ? "Also run…"
+                      : "Run next…"
+                }
+                options={targets.map((target) => ({
+                  value: target.id,
+                  label: target.name || target.key,
+                  description: attached.has(target.id)
+                    ? undefined
+                    : "Not connected to the trigger yet",
+                  icon: <BlockLogo blockType={target.blockType} size={16} />,
+                }))}
+                onChange={(to) => {
+                  if (to) callbacks.addEdge({ from: step.id, to, port });
+                }}
+              />
             </div>
-          );
-        })}
-      </div>
-    </Field>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -434,62 +545,44 @@ function ErrorPortEditor(props: {
   const errorEdges = model.edges.filter(
     (edge) => edge.from === step.id && edge.port === "error",
   );
-  const stepName = (id: string) => {
-    const target = model.steps.find((entry) => entry.id === id);
-    return target ? target.name || target.key : id;
-  };
   const targets = acyclicTargets(model, step.id).filter(
     (candidate) => !errorEdges.some((edge) => edge.to === candidate.id),
   );
   return (
-    <Field
-      label="On error"
-      hint="Route failures to another step instead of failing the run"
-    >
-      <div className="flex flex-col gap-1">
+    <div>
+      <FieldLabel label="On error, run" optional />
+      <div className="flex flex-col gap-1.5">
         {errorEdges.map((edge) => (
-          <div
+          <EdgeRow
             key={edge.id}
-            className="flex items-center justify-between rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800"
-          >
-            <span>→ {stepName(edge.to)}</span>
-            <button
-              type="button"
-              className="text-[11px] text-red-500"
-              onClick={() => callbacks.removeEdge(edge.id)}
-            >
-              Remove
-            </button>
-          </div>
+            tone="warn"
+            target={model.steps.find((entry) => entry.id === edge.to)}
+            fallback={edge.to}
+            onRemove={() => callbacks.removeEdge(edge.id)}
+          />
         ))}
-        <select
-          className={inputClass}
+        <Select
           value=""
           disabled={targets.length === 0}
-          onChange={(event) => {
-            if (event.target.value === "") return;
-            callbacks.addEdge({
-              from: step.id,
-              to: event.target.value,
-              port: "error",
-            });
-          }}
-        >
-          <option value="">
-            {targets.length === 0
-              ? "No other step to route to"
+          placeholder={
+            targets.length === 0
+              ? "No other step to run"
               : errorEdges.length > 0
-                ? "Add another error target…"
-                : "Route errors to…"}
-          </option>
-          {targets.map((target) => (
-            <option key={target.id} value={target.id}>
-              {target.name || target.key}
-            </option>
-          ))}
-        </select>
+                ? "Also run…"
+                : "Fail the run"
+          }
+          options={targets.map((target) => ({
+            value: target.id,
+            label: target.name || target.key,
+            icon: <BlockLogo blockType={target.blockType} size={16} />,
+          }))}
+          onChange={(to) => {
+            if (to) callbacks.addEdge({ from: step.id, to, port: "error" });
+          }}
+        />
       </div>
-    </Field>
+      <Hint>Route failures to another step instead of failing the run.</Hint>
+    </div>
   );
 }
 
@@ -526,20 +619,22 @@ function IdempotencyField(props: {
     },
   });
   return (
-    <label className="block">
-      <span className="mb-1 flex items-end justify-between gap-1">
-        <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Idempotency key
-        </span>
-        <ExpressionPickerButton
-          active={field.active}
-          onFocusField={field.focus}
-        />
-      </span>
+    <div>
+      <FieldLabel
+        label="Idempotency key"
+        optional
+        action={
+          <ExpressionPickerButton
+            active={field.active}
+            onFocusField={field.focus}
+          />
+        }
+      />
       <input
         ref={ref}
         key={`${step.id}-idem`}
-        className={`${inputClass} font-mono text-xs`}
+        aria-label="Idempotency key"
+        className={`${textInputClass} font-mono text-xs`}
         defaultValue={step.idempotencyKeyExpression ?? ""}
         placeholder="{{trigger.payload.id}}"
         spellCheck={false}
@@ -548,79 +643,151 @@ function IdempotencyField(props: {
         onBlur={(event) => commit(event.target.value)}
       />
       <ExpressionTokenLine value={draft} />
-      <p className="mt-0.5 text-[11px] text-slate-400">
-        Two executions with the same key count as one side effect
-      </p>
+      <Hint>Two runs with the same key count as one side effect.</Hint>
+    </div>
+  );
+}
+
+// Steps are referenced by key in expressions, so it must stay a clean slug.
+function KeyField(props: {
+  step: StepModel;
+  callbacks: WorkflowEditorCallbacks;
+}) {
+  const { step, callbacks } = props;
+  const [copied, setCopied] = useState(false);
+  return (
+    <label className="block">
+      <FieldLabel
+        label="Key"
+        action={
+          <IconButton
+            icon={copied ? "check" : "copy"}
+            label="Copy reference"
+            onClick={(event) => {
+              event.preventDefault();
+              navigator.clipboard.writeText(`{{${step.key}}}`).then(
+                () => setCopied(true),
+                () => undefined,
+              );
+            }}
+          />
+        }
+      />
+      <input
+        key={`${step.id}-key-${step.key}`}
+        className={`${textInputClass} font-mono text-xs`}
+        defaultValue={step.key}
+        spellCheck={false}
+        onBlur={(event) => {
+          const key = event.target.value.trim();
+          if (key && key !== step.key)
+            callbacks.updateStep({ id: step.id, key });
+          else event.target.value = step.key;
+        }}
+      />
+      <Hint>
+        Later steps read this step&apos;s output as{" "}
+        <code className="rounded bg-muted px-1 font-mono text-[11px] text-foreground">
+          {`{{${step.key}.…}}`}
+        </code>
+        . Renaming it doesn&apos;t update expressions that use it.
+      </Hint>
     </label>
   );
 }
 
-function AdvancedSection(props: {
+function StepSettings(props: {
   step: StepModel;
   model: WorkflowModel;
   callbacks: WorkflowEditorCallbacks;
+  onRemoved: () => void;
 }) {
   const { step, callbacks } = props;
-  const customised =
-    step.retry !== null ||
-    step.timeoutSeconds !== null ||
-    step.idempotencyKeyExpression !== null ||
-    props.model.edges.some(
-      (edge) => edge.from === step.id && edge.port === "error",
-    );
   return (
-    <details
-      className="rounded border border-slate-200 bg-white"
-      open={customised}
-    >
-      <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Advanced
-        {customised ? (
-          <span className="ml-2 font-normal normal-case tracking-normal text-slate-400">
-            customised
-          </span>
-        ) : null}
-      </summary>
-      <div className="flex flex-col gap-3 border-t border-slate-100 p-3">
-        <Field label="Timeout (seconds)" hint="Empty uses the runtime default">
-          <input
-            key={`${step.id}-timeout-${step.timeoutSeconds ?? ""}`}
-            type="number"
-            min={1}
-            className={inputClass}
-            defaultValue={step.timeoutSeconds ?? ""}
-            onBlur={(event) => {
-              const raw = event.target.value.trim();
-              const next = raw === "" ? null : intOrUndefined(raw);
-              if (next === undefined || next === 0) return;
-              if (next !== step.timeoutSeconds) {
-                callbacks.updateStep({ id: step.id, timeoutSeconds: next });
-              }
-            }}
-          />
-        </Field>
-        {/* Stored on the step, but the runtime does not enforce them yet. */}
-        <fieldset
-          disabled
-          className="m-0 flex min-w-0 flex-col gap-3 rounded border border-dashed border-amber-200 p-2 opacity-80"
-        >
-          <legend className="px-1">
-            <AvailableSoon>retry policy and idempotency key</AvailableSoon>
-          </legend>
-          <RetryEditor
-            value={step.retry}
-            onChange={(retry) => callbacks.updateStep({ id: step.id, retry })}
-          />
-          <IdempotencyField step={step} callbacks={callbacks} />
-        </fieldset>
+    <div className="flex flex-col gap-6">
+      <Section title="Identity">
+        <KeyField step={step} callbacks={callbacks} />
+      </Section>
+      <Section
+        title="What runs next"
+        description="Any step that isn't upstream of this one."
+      >
+        <FlowPortEditor step={step} model={props.model} callbacks={callbacks} />
+      </Section>
+      <Section title="When it fails">
         <ErrorPortEditor
           step={step}
           model={props.model}
           callbacks={callbacks}
         />
-      </div>
-    </details>
+        <NumberField
+          label="Timeout"
+          unit="seconds"
+          min={1}
+          value={step.timeoutSeconds}
+          placeholder="Runtime default"
+          onCommit={(next) => {
+            if (next === 0) return;
+            if (next !== step.timeoutSeconds)
+              callbacks.updateStep({ id: step.id, timeoutSeconds: next });
+          }}
+        />
+        {/* Stored on the step, but the runtime does not enforce them yet. */}
+        <fieldset
+          disabled
+          className="m-0 flex min-w-0 flex-col gap-4 rounded-lg border border-dashed border-foreground/15 p-3"
+        >
+          <legend className="px-1">
+            <AvailableSoon>retries and idempotency</AvailableSoon>
+          </legend>
+          <div className="flex flex-col gap-4 opacity-70">
+            <RetryEditor
+              value={step.retry}
+              onChange={(retry) => callbacks.updateStep({ id: step.id, retry })}
+            />
+            <IdempotencyField step={step} callbacks={callbacks} />
+          </div>
+        </fieldset>
+      </Section>
+      <Section
+        title="Configuration as JSON"
+        description="Everything the setup form stores, for pasting or bulk edits."
+      >
+        <RawConfigEditor
+          value={step.config}
+          onApply={(config) => callbacks.updateStep({ id: step.id, config })}
+        />
+      </Section>
+      <Section title="Remove">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            Removes the step and its connections.
+          </p>
+          <Button
+            variant="danger"
+            onClick={() => {
+              callbacks.removeStep(step.id);
+              props.onRemoved();
+            }}
+          >
+            <Icon name="trash" className="h-3.5 w-3.5" />
+            Remove step
+          </Button>
+        </div>
+      </Section>
+    </div>
   );
+}
+
+type StepTab = "setup" | "settings";
+
+function settingsCustomised(step: StepModel, model: WorkflowModel): number {
+  return [
+    step.retry !== null,
+    step.timeoutSeconds !== null,
+    step.idempotencyKeyExpression !== null,
+    model.edges.some((edge) => edge.from === step.id && edge.port === "error"),
+  ].filter(Boolean).length;
 }
 
 export function StepPanel(props: {
@@ -631,109 +798,132 @@ export function StepPanel(props: {
   designTime?: DesignTimeService;
 }) {
   const { step, callbacks } = props;
+  const [tab, setTab] = useState<StepTab>("setup");
+  const meta = useBlockMeta(step.blockType);
   const { form, error: formError } = useBlockForm(
     step.blockType,
     props.designTime,
   );
   const missing = missingForBlock(form, step.config, step.connectionId);
+  const customised = settingsCustomised(step, props.model);
   return (
-    <div className="flex flex-col gap-3 p-4">
-      <PanelHeader title="Step" missing={missing} onClose={props.onClose} />
-      <Field label="Name">
-        <input
-          key={`${step.id}-name`}
-          className={inputClass}
-          defaultValue={step.name}
-          onBlur={(event) => {
-            const name = event.target.value.trim();
-            if (name && name !== step.name)
-              callbacks.updateStep({ id: step.id, name });
-          }}
-        />
-      </Field>
-      <Field label="Key (used in expressions)">
-        <input
-          key={`${step.id}-key`}
-          className={inputClass}
-          defaultValue={step.key}
-          onBlur={(event) => {
-            const key = event.target.value.trim();
-            if (key && key !== step.key)
-              callbacks.updateStep({ id: step.id, key });
-          }}
-        />
-      </Field>
-      <ConnectionField
-        key={`${step.id}-conn`}
+    <div className="flex min-h-full flex-col">
+      <PanelHeader
         blockType={step.blockType}
-        value={step.connectionId ?? ""}
-        onChange={(connectionId) =>
-          callbacks.updateStep({ id: step.id, connectionId })
+        name={step.name || step.key}
+        onRename={(name) => callbacks.updateStep({ id: step.id, name })}
+        actionLabel={
+          form && form !== "loading" && form.title
+            ? form.title
+            : [meta.subtitle, meta.displayName].filter(Boolean).join(": ")
         }
-        designTime={props.designTime}
-      />
-      <ConfigSection
-        key={`${step.id}-config`}
-        blockType={step.blockType}
-        form={form}
-        formError={formError}
-        config={step.config}
-        onChange={(config) => callbacks.updateStep({ id: step.id, config })}
-        designTime={props.designTime}
-        connectionId={step.connectionId ?? undefined}
-        scopeStepId={step.id}
-      />
-      <FlowPortEditor
-        key={`${step.id}-flow`}
-        step={step}
-        model={props.model}
-        callbacks={callbacks}
-      />
-      <AdvancedSection step={step} model={props.model} callbacks={callbacks} />
-      <button
-        type="button"
-        className="mt-2 rounded border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600"
-        onClick={() => {
-          callbacks.removeStep(step.id);
-          props.onClose();
-        }}
+        missing={missing}
+        loading={form === "loading"}
+        onClose={props.onClose}
       >
-        Remove step
-      </button>
+        <Tabs
+          value={tab}
+          onChange={setTab}
+          tabs={[
+            { value: "setup", label: "Setup" },
+            {
+              value: "settings",
+              label: "Settings",
+              badge:
+                customised > 0 ? (
+                  <span className="rounded-full bg-muted px-1.5 text-[11px] tabular-nums text-muted-foreground">
+                    {customised}
+                  </span>
+                ) : undefined,
+            },
+          ]}
+        />
+      </PanelHeader>
+      <div className="flex-1 px-4 py-5">
+        {tab === "setup" ? (
+          <div className="flex flex-col gap-5">
+            <ConnectionField
+              key={`${step.id}-conn`}
+              blockType={step.blockType}
+              value={step.connectionId ?? ""}
+              onChange={(connectionId) =>
+                callbacks.updateStep({ id: step.id, connectionId })
+              }
+              designTime={props.designTime}
+            />
+            <ConfigSection
+              key={`${step.id}-config`}
+              blockType={step.blockType}
+              form={form}
+              formError={formError}
+              config={step.config}
+              onChange={(config) =>
+                callbacks.updateStep({ id: step.id, config })
+              }
+              designTime={props.designTime}
+              connectionId={step.connectionId ?? undefined}
+              scopeStepId={step.id}
+            />
+          </div>
+        ) : (
+          <StepSettings
+            step={step}
+            model={props.model}
+            callbacks={callbacks}
+            onRemoved={props.onClose}
+          />
+        )}
+      </div>
     </div>
   );
 }
 
 function TestTriggerSection(props: { onTest: () => Promise<unknown> }) {
   const [state, setState] = useState<
-    { kind: "idle" } | { kind: "loading" } | { kind: "done"; result: string }
+    | { kind: "idle" }
+    | { kind: "loading" }
+    | { kind: "done"; result: string; failed: boolean }
   >({ kind: "idle" });
   return (
     <div>
-      <button
-        type="button"
-        className="rounded bg-slate-800 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
-        disabled={state.kind === "loading"}
-        onClick={() => {
-          setState({ kind: "loading" });
-          props.onTest().then(
-            (result) =>
-              setState({
-                kind: "done",
-                result: JSON.stringify(result, null, 2),
-              }),
-            (error: unknown) =>
-              setState({
-                kind: "done",
-                result: error instanceof Error ? error.message : String(error),
-              }),
-          );
-        }}
-      >
-        {state.kind === "loading" ? "Testing…" : "Test trigger"}
-      </button>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          Fetch sample data to see what this trigger hands the next steps.
+        </p>
+        <Button
+          size="sm"
+          disabled={state.kind === "loading"}
+          onClick={() => {
+            setState({ kind: "loading" });
+            props.onTest().then(
+              (result) =>
+                setState({
+                  kind: "done",
+                  result: JSON.stringify(result, null, 2),
+                  failed: false,
+                }),
+              (error: unknown) =>
+                setState({
+                  kind: "done",
+                  result:
+                    error instanceof Error ? error.message : String(error),
+                  failed: true,
+                }),
+            );
+          }}
+        >
+          <Icon name="play" className="h-3.5 w-3.5" />
+          {state.kind === "loading" ? "Testing…" : "Test trigger"}
+        </Button>
+      </div>
       {state.kind === "done" ? (
-        <pre className="mt-2 max-h-48 overflow-auto rounded border border-slate-200 bg-slate-50 p-2 text-[11px] text-slate-700">
+        <pre
+          className={`mt-3 max-h-56 overflow-auto rounded-md p-2 text-xs ${
+            state.failed
+              ? "bg-wf-fail/10 text-wf-fail"
+              : "bg-muted text-foreground"
+          }`}
+        >
           {state.result}
         </pre>
       ) : null}
@@ -788,32 +978,29 @@ function WebhookUrlSection(props: { state: EndpointState }) {
 
   return (
     <div>
-      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Endpoint URL
-      </span>
+      <FieldLabel label="Endpoint URL" />
       {state.kind === "loading" ? (
-        <p className="text-xs text-slate-400">Loading…</p>
+        <div className="h-9 animate-pulse rounded-md bg-foreground/5" />
       ) : null}
       {state.kind === "empty" ? (
-        <p className="text-[11px] text-slate-400">
-          Enable the workflow to mint its endpoint.
+        <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+          Enable the workflow to create its endpoint.
         </p>
       ) : null}
       {state.kind === "error" ? (
-        <p className="text-[11px] text-red-600">{state.message}</p>
+        <p className="text-xs text-wf-fail">{state.message}</p>
       ) : null}
       {state.kind === "ready" ? (
         <>
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1.5">
             <input
               readOnly
-              className="w-full rounded border border-slate-300 bg-slate-50 px-2 py-1.5 font-mono text-[11px] text-slate-700"
+              aria-label="Endpoint URL"
+              className={`${textInputClass} bg-muted/50 font-mono text-xs`}
               value={state.endpoint.url}
               onFocus={(event) => event.currentTarget.select()}
             />
-            <button
-              type="button"
-              className="shrink-0 rounded border border-slate-300 px-2 text-xs text-slate-600 hover:border-slate-400"
+            <Button
               onClick={() => {
                 navigator.clipboard.writeText(state.endpoint.url).then(
                   () => setCopied(true),
@@ -821,26 +1008,25 @@ function WebhookUrlSection(props: { state: EndpointState }) {
                 );
               }}
             >
+              <Icon name={copied ? "check" : "copy"} className="h-3.5 w-3.5" />
               {copied ? "Copied" : "Copy"}
-            </button>
+            </Button>
           </div>
           {!state.endpoint.armed ? (
-            <p className="mt-1 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
+            <p className="mt-2 rounded-md bg-wf-warn/10 px-3 py-2 text-xs text-wf-warn">
               Not accepting deliveries: the workflow is disabled or its webhook
               config is invalid.
             </p>
           ) : null}
           {!state.endpoint.absoluteUrl ? (
-            <p className="mt-1 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
-              This reactor does not know its own public address, so the path
-              above is missing its origin. Prefix it with the host the provider
-              can reach.
+            <p className="mt-2 rounded-md bg-wf-warn/10 px-3 py-2 text-xs text-wf-warn">
+              This reactor doesn&apos;t know its public address, so the URL is
+              missing its host. Prefix it with the host the provider can reach.
             </p>
           ) : null}
-          <p className="mt-1 text-[11px] text-slate-400">
-            Treat this URL as a secret; anyone holding it can reach the
-            endpoint.
-          </p>
+          <Hint>
+            Treat this URL as a secret: anyone who has it can call the endpoint.
+          </Hint>
         </>
       ) : null}
     </div>
@@ -854,6 +1040,7 @@ export function TriggerPanel(props: {
   designTime?: DesignTimeService;
 }) {
   const { trigger, callbacks } = props;
+  const meta = useBlockMeta(trigger.blockType);
   const isPieceTrigger = trigger.blockType.includes("#trigger:");
   const { form, error: formError } = useBlockForm(
     trigger.blockType,
@@ -883,46 +1070,68 @@ export function TriggerPanel(props: {
           : patch.connectionId,
     });
   return (
-    <div className="flex flex-col gap-3 p-4">
-      <PanelHeader title="Trigger" missing={missing} onClose={props.onClose} />
-      {isWebhookTrigger && props.designTime?.webhookEndpoint ? (
-        <WebhookUrlSection state={endpoint} />
-      ) : null}
-      {isPieceTrigger ? (
-        <ConnectionField
-          key={`${trigger.id}-conn`}
-          blockType={trigger.blockType}
-          value={trigger.connectionId ?? ""}
-          onChange={(connectionId) => setTrigger({ connectionId })}
-          designTime={props.designTime}
-        />
-      ) : null}
-      <ConfigSection
-        key={trigger.id}
+    <div className="flex min-h-full flex-col">
+      <PanelHeader
         blockType={trigger.blockType}
-        form={form}
-        formError={formError}
-        config={trigger.config}
-        onChange={(config) => setTrigger({ config })}
-        designTime={props.designTime}
-        connectionId={trigger.connectionId ?? undefined}
-        webhookUrl={
-          endpoint.kind === "ready" ? endpoint.endpoint.url : undefined
+        name={
+          form && form !== "loading" && form.title
+            ? form.title
+            : meta.displayName
         }
+        actionLabel="Starts the workflow"
+        missing={missing}
+        loading={form === "loading"}
+        onClose={props.onClose}
       />
-      {isPieceTrigger && props.designTime?.testTrigger ? (
-        <TestTriggerSection onTest={props.designTime.testTrigger} />
-      ) : null}
-      <button
-        type="button"
-        className="mt-2 rounded border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600"
-        onClick={() => {
-          callbacks.clearTrigger();
-          props.onClose();
-        }}
-      >
-        Remove trigger
-      </button>
+      <div className="flex flex-1 flex-col gap-6 px-4 py-5">
+        {isWebhookTrigger && props.designTime?.webhookEndpoint ? (
+          <WebhookUrlSection state={endpoint} />
+        ) : null}
+        {isPieceTrigger ? (
+          <ConnectionField
+            key={`${trigger.id}-conn`}
+            blockType={trigger.blockType}
+            value={trigger.connectionId ?? ""}
+            onChange={(connectionId) => setTrigger({ connectionId })}
+            designTime={props.designTime}
+          />
+        ) : null}
+        <ConfigSection
+          key={trigger.id}
+          blockType={trigger.blockType}
+          form={form}
+          formError={formError}
+          config={trigger.config}
+          onChange={(config) => setTrigger({ config })}
+          designTime={props.designTime}
+          connectionId={trigger.connectionId ?? undefined}
+          webhookUrl={
+            endpoint.kind === "ready" ? endpoint.endpoint.url : undefined
+          }
+        />
+        {isPieceTrigger && props.designTime?.testTrigger ? (
+          <Section title="Try it">
+            <TestTriggerSection onTest={props.designTime.testTrigger} />
+          </Section>
+        ) : null}
+        <Section title="Remove">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              Without a trigger the workflow never starts.
+            </p>
+            <Button
+              variant="danger"
+              onClick={() => {
+                callbacks.clearTrigger();
+                props.onClose();
+              }}
+            >
+              <Icon name="trash" className="h-3.5 w-3.5" />
+              Remove trigger
+            </Button>
+          </div>
+        </Section>
+      </div>
     </div>
   );
 }

@@ -7,7 +7,8 @@ import {
   type PieceSummary,
 } from "../workflow-editor/runtime-api.js";
 import { packageFromConnectorId } from "./piece-auth.js";
-import { CONNECTION_STATUS_STYLES } from "./status.js";
+import { Button } from "../shared/controls.js";
+import { CONNECTION_STATUS_LABEL, CONNECTION_STATUS_STYLES } from "./status.js";
 
 export function ConnectionToolbar(props: {
   state: ConnectionState;
@@ -39,10 +40,10 @@ export function ConnectionToolbar(props: {
   const revoked = state.status === "REVOKED";
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-solid border-slate-200 px-4 py-2">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-solid border-foreground/10 px-4 py-2">
       <input
         key={state.name}
-        className="min-w-0 max-w-72 rounded border border-transparent px-1 py-0.5 text-sm font-semibold text-slate-800 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
+        className="min-w-0 max-w-72 rounded-md border border-solid border-transparent bg-transparent px-1.5 py-1 text-[15px] font-semibold text-foreground hover:border-foreground/15 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/25"
         defaultValue={state.name}
         placeholder="Untitled connection"
         spellCheck={false}
@@ -62,50 +63,49 @@ export function ConnectionToolbar(props: {
             alt=""
             className="h-4 w-4 shrink-0 object-contain"
           />
-          <span className="truncate text-xs text-slate-600">
+          <span className="truncate text-xs text-muted-foreground">
             {piece.displayName}
           </span>
         </span>
       ) : packageName ? (
-        <span className="truncate text-xs text-slate-400">{packageName}</span>
+        <span className="truncate text-xs text-muted-foreground/80">
+          {packageName}
+        </span>
       ) : (
-        <span className="text-xs text-slate-400">No connector picked</span>
+        <span className="text-xs text-muted-foreground/80">
+          No connector picked
+        </span>
       )}
       <span
-        className={`rounded px-2 py-0.5 text-[11px] font-semibold ${CONNECTION_STATUS_STYLES[state.status]}`}
+        className={`rounded-full px-2 py-0.5 text-xs font-medium ${CONNECTION_STATUS_STYLES[state.status]}`}
       >
-        {state.status}
+        {CONNECTION_STATUS_LABEL[state.status]}
       </span>
       {state.accountLabel ? (
-        <span className="truncate text-xs text-slate-500">
+        <span className="truncate text-xs text-muted-foreground">
           {state.accountLabel}
         </span>
       ) : null}
       <span className="ml-auto flex items-center gap-3">
         {state.lastCheckedAt ? (
           <span
-            className="text-[11px] text-slate-400"
+            className="text-xs text-muted-foreground"
             title={new Date(state.lastCheckedAt).toLocaleString()}
           >
             Checked {new Date(state.lastCheckedAt).toLocaleDateString()}
           </span>
         ) : (
-          <span className="text-[11px] text-slate-400">Never checked</span>
+          <span className="text-xs text-muted-foreground">Never checked</span>
         )}
-        <button
-          type="button"
-          className="rounded border border-solid border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+        <Button size="sm" variant="danger" onClick={props.onDelete}>
+          Delete
+        </Button>
+        <Button
+          size="sm"
           onClick={() => props.onSetStatus(revoked ? "OK" : "REVOKED")}
         >
           {revoked ? "Reactivate" : "Revoke"}
-        </button>
-        <button
-          type="button"
-          className="rounded border border-solid border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:border-red-300 hover:bg-red-50"
-          onClick={props.onDelete}
-        >
-          Delete
-        </button>
+        </Button>
       </span>
     </div>
   );

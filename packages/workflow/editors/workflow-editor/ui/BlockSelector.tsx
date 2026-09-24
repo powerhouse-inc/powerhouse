@@ -34,7 +34,7 @@ export function BlockLogo(props: { blockType: string; size?: number }) {
 function GlyphBadge(props: { glyph?: string; size: number }) {
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-sm border border-solid border-slate-200 bg-slate-50 text-slate-600"
+      className="flex shrink-0 items-center justify-center rounded-sm border border-solid border-foreground/10 bg-muted/50 text-muted-foreground"
       style={{
         width: props.size,
         height: props.size,
@@ -97,17 +97,17 @@ function Row(props: {
     <button
       type="button"
       className={`flex w-full items-center gap-2 px-3 py-1.5 text-left ${
-        props.disabled ? "cursor-not-allowed opacity-50" : "hover:bg-slate-50"
+        props.disabled ? "cursor-not-allowed opacity-50" : "hover:bg-muted/50"
       }`}
       disabled={props.disabled}
       onClick={props.onClick}
     >
       {props.logo}
       <span className="min-w-0">
-        <span className="block truncate text-xs font-medium text-slate-800">
+        <span className="block truncate text-xs font-medium text-foreground">
           {props.label}
         </span>
-        <span className="block truncate text-[11px] text-slate-400">
+        <span className="block truncate text-[11px] text-muted-foreground/80">
           {props.description}
         </span>
       </span>
@@ -117,7 +117,7 @@ function Row(props: {
 
 function SectionLabel(props: { children: string }) {
   return (
-    <div className="px-3 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+    <div className="px-3 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">
       {props.children}
     </div>
   );
@@ -230,15 +230,17 @@ function PieceEntries(props: {
     <div className="max-h-80 overflow-y-auto py-1">
       <button
         type="button"
-        className="flex w-full items-center gap-1 px-3 py-1 text-[11px] text-slate-400 hover:text-slate-600"
+        className="flex w-full items-center gap-1 px-3 py-1 text-[11px] text-muted-foreground/80 hover:text-muted-foreground"
         onClick={props.onBack}
       >
         ← {props.piece.displayName}
       </button>
       {error ? (
-        <div className="px-3 py-2 text-xs text-red-500">{error}</div>
+        <div className="px-3 py-2 text-xs text-wf-fail">{error}</div>
       ) : entries === null ? (
-        <div className="px-3 py-2 text-xs text-slate-400">Loading…</div>
+        <div className="px-3 py-2 text-xs text-muted-foreground/80">
+          Loading…
+        </div>
       ) : (
         entries.map((entry) => {
           // Visible but inert: picking one would build a step that never runs.
@@ -342,8 +344,8 @@ function Chip(props: { label: string; active: boolean; onClick: () => void }) {
       type="button"
       className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
         props.active
-          ? "border-slate-800 bg-slate-800 text-white"
-          : "border-slate-200 text-slate-500 hover:border-slate-400"
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-foreground/10 text-muted-foreground hover:border-foreground/25"
       }`}
       onClick={props.onClick}
     >
@@ -483,18 +485,18 @@ export function BlockSelector(props: {
   return (
     <div
       ref={containerRef}
-      className="nodrag nopan nowheel w-80 rounded-md border border-solid border-slate-200 bg-white shadow-lg"
+      className="nodrag nopan nowheel w-80 rounded-md border border-solid border-foreground/10 bg-card shadow-lg"
       onClick={(event) => event.stopPropagation()}
     >
-      <div className="border-b border-slate-100 p-2">
-        <div className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+      <div className="border-b border-foreground/10 p-2">
+        <div className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
           {props.title}
         </div>
         {piece ? null : (
           <>
             <input
               autoFocus
-              className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
+              className="w-full rounded border border-foreground/10 px-2 py-1 text-xs"
               placeholder={
                 pieceSource ? "Search pieces, actions, triggers…" : "Search…"
               }
@@ -555,11 +557,11 @@ export function BlockSelector(props: {
                 {mode === "triggers" ? "Triggers" : "Actions & triggers"}
               </SectionLabel>
               {search.kind === "loading" ? (
-                <div className="px-3 py-1 text-xs text-slate-400">
+                <div className="px-3 py-1 text-xs text-muted-foreground/80">
                   Searching…
                 </div>
               ) : search.kind === "error" ? (
-                <div className="px-3 py-1 text-xs text-red-500">
+                <div className="px-3 py-1 text-xs text-wf-fail">
                   {search.message}
                 </div>
               ) : (
@@ -596,15 +598,15 @@ export function BlockSelector(props: {
                   {/* Status describes the published catalog only. Blocks this
                     reactor ships are already listed above it. */}
                   {search.result.status === "indexing" ? (
-                    <div className="px-3 py-1 text-xs text-slate-400">
+                    <div className="px-3 py-1 text-xs text-muted-foreground/80">
                       Indexing the catalog… more results appear shortly.
                     </div>
                   ) : search.result.status === "error" ? (
-                    <div className="px-3 py-1 text-xs text-red-500">
+                    <div className="px-3 py-1 text-xs text-wf-fail">
                       {search.result.error ?? "Search failed"}
                     </div>
                   ) : hits.length === 0 ? (
-                    <div className="px-3 py-1 text-xs text-slate-400">
+                    <div className="px-3 py-1 text-xs text-muted-foreground/80">
                       No matching {wantedKind}s
                     </div>
                   ) : null}
@@ -616,11 +618,11 @@ export function BlockSelector(props: {
             <>
               <SectionLabel>Pieces</SectionLabel>
               {catalog === null ? (
-                <div className="px-3 py-2 text-xs text-slate-400">
+                <div className="px-3 py-2 text-xs text-muted-foreground/80">
                   Loading catalog…
                 </div>
               ) : catalog.error ? (
-                <div className="px-3 py-2 text-xs text-red-500">
+                <div className="px-3 py-2 text-xs text-wf-fail">
                   {catalog.error}
                 </div>
               ) : (
@@ -651,7 +653,9 @@ export function BlockSelector(props: {
           filteredPieces.length === 0 &&
           filteredAttach.length === 0 &&
           !searchActive ? (
-            <div className="px-3 py-2 text-xs text-slate-400">No matches</div>
+            <div className="px-3 py-2 text-xs text-muted-foreground/80">
+              No matches
+            </div>
           ) : null}
         </div>
       )}

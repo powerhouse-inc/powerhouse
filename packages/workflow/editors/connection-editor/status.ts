@@ -1,10 +1,29 @@
 // Shared by the connection toolbar and the form, so a connection's status
 // looks the same wherever it appears.
-import type { ConnectionStatus } from "document-models/connection";
+import type {
+  ConnectionAuthType,
+  ConnectionStatus,
+} from "document-models/connection";
 
 export const CONNECTION_STATUS_STYLES: Record<ConnectionStatus, string> = {
-  OK: "bg-green-100 text-green-700",
-  ERROR: "bg-red-100 text-red-700",
-  REVOKED: "bg-slate-200 text-slate-500",
-  UNCONFIGURED: "bg-amber-100 text-amber-700",
+  OK: "bg-wf-ok/12 text-wf-ok",
+  ERROR: "bg-wf-fail/12 text-wf-fail",
+  REVOKED: "bg-wf-fail/12 text-wf-fail",
+  UNCONFIGURED: "bg-wf-warn/12 text-wf-warn",
+};
+
+export const CONNECTION_STATUS_LABEL: Record<ConnectionStatus, string> = {
+  OK: "Connected",
+  ERROR: "Error",
+  REVOKED: "Revoked",
+  UNCONFIGURED: "Not set up",
+};
+
+export const AUTH_TYPE_LABEL: Record<ConnectionAuthType, string> = {
+  NONE: "None",
+  SECRET_TEXT: "API key",
+  BASIC_AUTH: "Username and password",
+  CUSTOM_AUTH: "Custom",
+  OAUTH2: "OAuth 2",
+  OIDC: "OpenID Connect",
 };

@@ -29,7 +29,7 @@ function stringifyInput(input: unknown): string {
 }
 
 const inputClass =
-  "w-full rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800";
+  "w-full rounded border border-foreground/15 px-2 py-1.5 text-sm text-foreground";
 
 function ActionRowEditor(props: {
   row: ActionRow;
@@ -47,7 +47,7 @@ function ActionRowEditor(props: {
   const [jsonError, setJsonError] = useState<string | null>(null);
 
   return (
-    <div className="rounded border border-slate-200 p-2">
+    <div className="rounded border border-foreground/10 p-2">
       <div className="flex items-start gap-1">
         <div className="grow">
           <AutocompleteInput
@@ -74,7 +74,7 @@ function ActionRowEditor(props: {
         </div>
         <button
           type="button"
-          className="shrink-0 rounded border border-slate-200 px-2 py-1 text-xs text-slate-400 hover:text-red-500"
+          className="shrink-0 rounded border border-foreground/10 px-2 py-1 text-xs text-muted-foreground/80 hover:text-wf-fail"
           onClick={props.onRemove}
           title="Remove action"
         >
@@ -99,7 +99,7 @@ function ActionRowEditor(props: {
         }}
       />
       {jsonError ? (
-        <p className="mt-0.5 text-[11px] text-red-500">{jsonError}</p>
+        <p className="mt-0.5 text-[11px] text-wf-fail">{jsonError}</p>
       ) : null}
     </div>
   );
@@ -129,7 +129,7 @@ export function ActionListEditor(props: {
       ))}
       <button
         type="button"
-        className="self-start rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600"
+        className="self-start rounded border border-foreground/15 px-2 py-1 text-xs font-medium text-muted-foreground"
         onClick={() => commit([...rows, { type: "", input: {} }])}
       >
         + Add action

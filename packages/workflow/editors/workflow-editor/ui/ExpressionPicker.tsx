@@ -1,5 +1,6 @@
 // Expression picker popup: opens beside the focused config field and inserts
 // {{path}} expressions from the run scope (trigger.payload / steps.* / variables.*).
+import { Icon } from "../../shared/icons.js";
 import {
   createContext,
   useContext,
@@ -150,7 +151,7 @@ function entriesOf(value: unknown): [string, unknown][] {
 function Caption(props: { text?: string }) {
   if (!props.text) return null;
   return (
-    <span className="ml-auto shrink-0 pl-2 text-[10px] italic text-slate-400">
+    <span className="ml-auto shrink-0 pl-2 text-[10px] italic text-muted-foreground/80">
       {props.text}
     </span>
   );
@@ -178,13 +179,13 @@ function ValueNode(props: {
   return (
     <div>
       <div
-        className="flex items-center gap-1 rounded px-1 py-0.5 hover:bg-slate-50"
+        className="flex items-center gap-1 rounded px-1 py-0.5 hover:bg-muted/50"
         style={{ paddingLeft: props.depth * 14 + 4 }}
       >
         {expandable ? (
           <button
             type="button"
-            className="w-3 shrink-0 text-[10px] text-slate-400"
+            className="w-3 shrink-0 text-[10px] text-muted-foreground/80"
             onClick={() => setOpen((value) => !value)}
           >
             {open ? "▾" : "▸"}
@@ -201,16 +202,16 @@ function ValueNode(props: {
           {nodeBlockType ? (
             <>
               <BlockLogo blockType={nodeBlockType} size={16} />
-              <span className="shrink-0 text-xs font-medium text-slate-700">
+              <span className="shrink-0 text-xs font-medium text-foreground">
                 {blockMeta(nodeBlockType).displayName}
               </span>
             </>
           ) : (
-            <span className="shrink-0 font-mono text-xs text-slate-700">
+            <span className="shrink-0 font-mono text-xs text-foreground">
               {props.name}
             </span>
           )}
-          <span className="truncate text-[11px] text-slate-400">
+          <span className="truncate text-[11px] text-muted-foreground/80">
             {preview(props.value)}
           </span>
         </button>
@@ -270,7 +271,11 @@ function SearchResults(props: {
       .slice(0, SEARCH_LIMIT);
   }, [props.scope, props.query]);
   if (matches.length === 0) {
-    return <div className="px-2 py-1 text-xs text-slate-400">No matches</div>;
+    return (
+      <div className="px-2 py-1 text-xs text-muted-foreground/80">
+        No matches
+      </div>
+    );
   }
   return (
     <>
@@ -278,14 +283,14 @@ function SearchResults(props: {
         <button
           key={entry.path}
           type="button"
-          className="flex w-full items-baseline gap-2 rounded px-2 py-0.5 text-left hover:bg-slate-50"
+          className="flex w-full items-baseline gap-2 rounded px-2 py-0.5 text-left hover:bg-muted/50"
           title={`{{${entry.path}}}`}
           onClick={() => props.onPick(entry.path)}
         >
-          <span className="min-w-0 truncate font-mono text-[11px] text-slate-700">
+          <span className="min-w-0 truncate font-mono text-[11px] text-foreground">
             {entry.path}
           </span>
-          <span className="truncate text-[10px] text-slate-400">
+          <span className="truncate text-[10px] text-muted-foreground/80">
             {preview(entry.value)}
           </span>
         </button>
@@ -391,7 +396,7 @@ export function ExpressionPickerPopup() {
   return createPortal(
     <div
       ref={containerRef}
-      className="workflow-expression-popup fixed flex flex-col rounded-md border border-solid border-slate-200 bg-white shadow-lg"
+      className="workflow-expression-popup fixed flex flex-col rounded-md border border-solid border-foreground/10 bg-card shadow-lg"
       style={{
         left: position.x,
         top: position.y,
@@ -400,14 +405,16 @@ export function ExpressionPickerPopup() {
       }}
     >
       <div className="flex items-center gap-2 px-3 py-1.5">
-        <span className="font-mono text-[11px] text-slate-500">{"{}"}</span>
-        <span className="min-w-0 truncate text-xs text-slate-500">
+        <span className="font-mono text-[11px] text-muted-foreground">
+          {"{}"}
+        </span>
+        <span className="min-w-0 truncate text-xs text-muted-foreground">
           Insert into{" "}
-          <span className="font-semibold text-slate-700">{target.label}</span>
+          <span className="font-semibold text-foreground">{target.label}</span>
         </span>
         <button
           type="button"
-          className="ml-auto text-[11px] text-slate-400 hover:text-slate-600"
+          className="ml-auto text-[11px] text-muted-foreground/80 hover:text-muted-foreground"
           title="Close"
           onClick={() => context.setTarget(null)}
         >
@@ -416,7 +423,7 @@ export function ExpressionPickerPopup() {
       </div>
       <div className="px-3 pb-1.5">
         <input
-          className="w-full rounded border border-slate-200 px-2 py-1.5 text-sm"
+          className="w-full rounded border border-foreground/10 px-2 py-1.5 text-sm"
           placeholder="Search paths…"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -424,11 +431,13 @@ export function ExpressionPickerPopup() {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-1">
         {state.kind === "error" ? (
-          <div className="px-2 py-1 text-xs text-red-500">{state.message}</div>
+          <div className="px-2 py-1 text-xs text-wf-fail">{state.message}</div>
         ) : state.kind === "loading" ? (
-          <div className="px-2 py-1 text-xs text-slate-400">Loading…</div>
+          <div className="px-2 py-1 text-xs text-muted-foreground/80">
+            Loading…
+          </div>
         ) : empty ? (
-          <div className="px-2 py-1 text-xs text-slate-400">
+          <div className="px-2 py-1 text-xs text-muted-foreground/80">
             No values available for this field yet.
           </div>
         ) : query.trim() ? (
@@ -461,15 +470,16 @@ export function ExpressionPickerButton(props: {
   return (
     <button
       type="button"
-      title="Insert value from trigger or previous steps"
-      className={`shrink-0 rounded border px-1.5 py-1 font-mono text-[11px] ${
+      title="Insert data from the trigger or an earlier step"
+      className={`inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
         props.active
-          ? "border-blue-500 text-blue-600"
-          : "border-slate-300 text-slate-500 hover:border-slate-400"
+          ? "bg-wf-run/10 text-wf-run"
+          : "text-muted-foreground hover:bg-accent hover:text-foreground"
       }`}
       onClick={props.onFocusField}
     >
-      {"{}"}
+      <Icon name="braces" className="h-3.5 w-3.5" />
+      Insert data
     </button>
   );
 }
@@ -490,7 +500,7 @@ function Chip(props: {
           : "";
   return (
     <span
-      className="inline-flex max-w-full items-center gap-1 rounded border border-solid border-blue-200 bg-blue-50 px-1 py-px font-mono text-[10px] text-blue-700"
+      className="inline-flex max-w-full items-center gap-1 rounded border border-solid border-wf-run/20 bg-wf-run/10 px-1 py-px font-mono text-[11px] text-wf-run"
       title={`{{${props.expression}}}`}
     >
       {blockType ? <BlockLogo blockType={blockType} size={12} /> : null}
@@ -498,7 +508,7 @@ function Chip(props: {
       <span className="truncate">
         {ref.root === "other" ? ref.rest : ref.rest || "*"}
       </span>
-      {ref.hasFallback ? <span className="text-blue-400">||…</span> : null}
+      {ref.hasFallback ? <span className="text-wf-run">||…</span> : null}
     </span>
   );
 }
@@ -509,7 +519,7 @@ export function ExpressionTokenLine(props: { value: string }) {
   const tokens = splitExpressionTokens(props.value);
   if (!tokens.some((token) => token.kind === "expression")) return null;
   return (
-    <div className="mt-1 flex flex-wrap items-center gap-1 text-[11px] text-slate-500">
+    <div className="mt-1.5 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
       {tokens.map((token, index) =>
         token.kind === "text" ? (
           <span key={index} className="max-w-40 truncate whitespace-pre">

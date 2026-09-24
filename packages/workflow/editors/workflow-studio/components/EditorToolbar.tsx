@@ -2,25 +2,27 @@
 // the run facts an author wants while editing.
 import { useDocumentSafe } from "@powerhousedao/reactor-browser";
 import type { FileNode } from "@powerhousedao/shared/document-drive";
-import type { WorkflowDocument } from "document-models/workflow";
 import type { RunRecord } from "../../workflow-editor/runtime-api.js";
 import {
   formatAbsolute,
   formatDuration,
   formatWhen,
-  RUN_DOT,
-  RUN_TEXT,
+  RUN_TONE,
   runStats,
-  WORKFLOW_STATUS_STYLES,
+  toneOf,
+  TONE_TEXT,
 } from "./run-format.js";
+import { Button, Icon, StatusDot } from "./ui.js";
 
 const WORKFLOW_TYPE = "powerhouse/workflow";
 
 function Fact(props: { label: string; value: string; title?: string }) {
   return (
     <span className="flex items-baseline gap-1.5" title={props.title}>
-      <span className="text-[11px] text-slate-400">{props.label}</span>
-      <span className="text-xs tabular-nums text-slate-700">{props.value}</span>
+      <span className="text-xs text-muted-foreground">{props.label}</span>
+      <span className="text-[13px] tabular-nums text-foreground">
+        {props.value}
+      </span>
     </span>
   );
 }
@@ -32,54 +34,36 @@ export function EditorToolbar(props: {
 }) {
   const { data: document } = useDocumentSafe(props.node?.id ?? null);
   const isWorkflow = document?.header.documentType === WORKFLOW_TYPE;
-  const state = isWorkflow
-    ? (document as WorkflowDocument).state.global
-    : undefined;
   const stats = runStats(props.runs ?? []);
   const lastRun = isWorkflow ? stats.lastRun : undefined;
+  const lastTone = toneOf(RUN_TONE, lastRun?.status);
 
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-solid border-slate-200 bg-slate-50 px-3 py-2">
-      <button
-        type="button"
-        className="flex items-center gap-1.5 rounded border border-solid border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:border-slate-400 hover:text-slate-900"
-        onClick={props.onBack}
-      >
-        <span aria-hidden>←</span>
-        {isWorkflow ? "Back to runs" : "Back to overview"}
-      </button>
-      <span className="min-w-0 truncate text-sm font-medium text-slate-800">
-        {state?.name || props.node?.name || "Untitled"}
-      </span>
-      {state ? (
-        <span
-          className={`rounded px-2 py-0.5 text-[11px] font-semibold ${WORKFLOW_STATUS_STYLES[state.status] ?? "bg-slate-100 text-slate-500"}`}
-        >
-          {state.status}
-        </span>
-      ) : null}
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-solid border-border bg-background px-3 py-2">
+      <Button variant="ghost" className="-ml-1" onClick={props.onBack}>
+        <Icon name="back" />
+        {isWorkflow ? "Runs" : "Overview"}
+      </Button>
       {isWorkflow ? (
-        <span className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1">
+        <span className="ml-auto flex flex-wrap items-center gap-x-5 gap-y-1">
           {lastRun ? (
             <span
               className="flex items-baseline gap-1.5"
               title={formatAbsolute(lastRun.startedAt)}
             >
-              <span className="text-[11px] text-slate-400">Last run</span>
-              <span className="flex items-center gap-1.5 text-xs">
-                <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${RUN_DOT[lastRun.status] ?? "bg-slate-300"}`}
-                />
-                <span className={RUN_TEXT[lastRun.status] ?? "text-slate-700"}>
-                  {formatWhen(lastRun.startedAt)}
-                </span>
-                <span className="tabular-nums text-slate-400">
+              <span className="text-xs text-muted-foreground">Last run</span>
+              <span
+                className={`flex items-center gap-1.5 text-[13px] ${TONE_TEXT[lastTone]}`}
+              >
+                <StatusDot tone={lastTone} />
+                {formatWhen(lastRun.startedAt)}
+                <span className="tabular-nums text-muted-foreground">
                   {formatDuration(lastRun.startedAt, lastRun.endedAt)}
                 </span>
               </span>
             </span>
           ) : (
-            <Fact label="Last run" value="Never run" />
+            <Fact label="Last run" value="Never" />
           )}
           {stats.successRate !== null ? (
             <Fact
