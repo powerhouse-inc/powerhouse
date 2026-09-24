@@ -412,6 +412,32 @@ describe("the model read gate", () => {
     ).rejects.toThrow("connection terminated");
   });
 
+  it("reads a named group once however many subjects it decides for", async () => {
+    const view = mockView({
+      "grp-1": doc({
+        id: "grp-1",
+        documentType: groupDocumentType,
+        global: { members: [MEMBER] },
+      }),
+    });
+
+    const decide = await gate(allFlags, view).prepare(
+      doc({ auth: policy([readGlobal({ group: "grp-1" })]) }),
+      "main",
+    );
+    const readable = await Promise.all(
+      [MEMBER, OTHER, "0xa", "0xb"].map((address) => decide({ address })),
+    );
+
+    expect(readable.map((scopes) => scopes("global"))).toEqual([
+      true,
+      false,
+      false,
+      false,
+    ]);
+    expect(view.get).toHaveBeenCalledTimes(1);
+  });
+
   it("reads the target's own streams from the document it was handed", async () => {
     const view = mockView();
     await gate(allFlags, view).scopePredicate(
@@ -629,6 +655,28 @@ describe("serving a policy-named group to the policy's audience", () => {
 
     expect(readable("global")).toBe(true);
     expect(index.getGroupReferencers).not.toHaveBeenCalled();
+  });
+
+  it("reads the relation and each referencer once however many subjects it decides for", async () => {
+    const view = mockView({
+      "stmt-a": referencer(policy([]), "stmt-a"),
+      "stmt-b": referencer(policy([readGlobal({ address: MEMBER })]), "stmt-b"),
+    });
+    const index = mockIndex({ [GROUP]: ["stmt-a", "stmt-b"] });
+
+    const decide = await groupGate(view, index).prepare(groupDoc(), "main");
+    const readable = await Promise.all(
+      [MEMBER, OTHER, "0xa", "0xb"].map((address) => decide({ address })),
+    );
+
+    expect(readable.map((scopes) => scopes("global"))).toEqual([
+      true,
+      false,
+      false,
+      false,
+    ]);
+    expect(index.getGroupReferencers).toHaveBeenCalledTimes(1);
+    expect(view.get).toHaveBeenCalledTimes(2);
   });
 
   it("does nothing without an operation index to consult", async () => {

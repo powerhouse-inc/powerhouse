@@ -194,7 +194,25 @@ export interface IReadGate {
     branch: string,
     signal?: AbortSignal,
   ): Promise<(scope: string) => boolean>;
+
+  /** Reads what one document's decision needs once, then decides per subject. */
+  prepare?(
+    document: PHDocument,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<SubjectScopePredicate>;
 }
+
+/** Which scopes of an already-prepared document one subject may read. */
+export type SubjectScopePredicate = (
+  subject: AuthSubject,
+) => Promise<(scope: string) => boolean>;
+
+/** A group's referencer reads, shared by every subject it is decided for. */
+type ReferencerReads = {
+  examined: () => Promise<string[]>;
+  serves: (referencerId: string) => Promise<(subject: AuthSubject) => boolean>;
+};
 
 /**
  * The model reads enforce. Below `authEnforcement` there is no model to
@@ -229,6 +247,10 @@ export class BareReadGate implements IReadGate {
         ALWAYS_READABLE_SCOPES.has(scope) ||
         decide(auth, subject, { verb: "read", scope }) === "allow",
     );
+  }
+
+  prepare(document: PHDocument): Promise<SubjectScopePredicate> {
+    return Promise.resolve((subject) => this.scopePredicate(document, subject));
   }
 }
 
@@ -358,25 +380,34 @@ export class ModelReadGate implements IReadGate {
     branch: string,
     signal?: AbortSignal,
   ): Promise<(scope: string) => boolean> {
-    const own = await this.ownPolicyPredicate(
-      document,
-      subject,
-      branch,
-      signal,
-    );
+    const decide = await this.prepare(document, branch, signal);
+    return decide(subject);
+  }
 
-    if (!this.servesGroup(document) || own(GROUP_MEMBERSHIP_SCOPE)) {
-      return own;
+  async prepare(
+    document: PHDocument,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<SubjectScopePredicate> {
+    const policy = await this.ownPolicy(document, branch, signal);
+
+    if (!this.servesGroup(document)) {
+      return (subject) => Promise.resolve(policy(subject));
     }
 
-    const audience = await this.servesGroupTo(
-      document.header.id,
-      subject,
-      signal,
-    );
+    const referencers = this.referencerReads(document.header.id, signal);
 
-    return (scope: string) =>
-      own(scope) || (audience && scope === GROUP_MEMBERSHIP_SCOPE);
+    return async (subject) => {
+      const own = policy(subject);
+      if (own(GROUP_MEMBERSHIP_SCOPE)) {
+        return own;
+      }
+
+      const audience = await this.servesGroupTo(subject, referencers);
+
+      return (scope: string) =>
+        own(scope) || (audience && scope === GROUP_MEMBERSHIP_SCOPE);
+    };
   }
 
   /**
@@ -412,25 +443,10 @@ export class ModelReadGate implements IReadGate {
    * from.
    */
   private async servesGroupTo(
-    groupId: string,
     subject: AuthSubject,
-    signal?: AbortSignal,
+    referencers: ReferencerReads,
   ): Promise<boolean> {
-    if (!this.operationIndex) {
-      return false;
-    }
-
-    const referencers = await this.operationIndex.getGroupReferencers(
-      groupId,
-      signal,
-    );
-
-    const examined = referencers.slice(0, MAX_EXAMINED_REFERENCERS);
-    if (examined.length < referencers.length) {
-      this.logger?.warn(
-        `Group ${groupId} is referenced by ${referencers.length} documents; only the first ${MAX_EXAMINED_REFERENCERS} decide whether it is served`,
-      );
-    }
+    const examined = await referencers.examined();
 
     const walk: ReferencerWalk = {
       next: 0,
@@ -446,7 +462,7 @@ export class ModelReadGate implements IReadGate {
         // that back after the await could overwrite another probe's answer.
         let serves = false;
         try {
-          serves = await this.servesThrough(referencerId, subject, signal);
+          serves = (await referencers.serves(referencerId))(subject);
         } catch (error) {
           walk.failure ??= Error.isError(error)
             ? error
@@ -473,16 +489,61 @@ export class ModelReadGate implements IReadGate {
     return walk.served;
   }
 
+  /** Each read made once, however many subjects the walk runs for. */
+  private referencerReads(
+    groupId: string,
+    signal?: AbortSignal,
+  ): ReferencerReads {
+    let examined: Promise<string[]> | undefined;
+    const serves = new Map<
+      string,
+      Promise<(subject: AuthSubject) => boolean>
+    >();
+
+    return {
+      examined: () => (examined ??= this.examinedReferencers(groupId, signal)),
+      serves: (referencerId) => {
+        let read = serves.get(referencerId);
+        if (!read) {
+          read = this.servesThrough(referencerId, signal);
+          serves.set(referencerId, read);
+        }
+        return read;
+      },
+    };
+  }
+
+  private async examinedReferencers(
+    groupId: string,
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    if (!this.operationIndex) {
+      return [];
+    }
+
+    const referencers = await this.operationIndex.getGroupReferencers(
+      groupId,
+      signal,
+    );
+
+    const examined = referencers.slice(0, MAX_EXAMINED_REFERENCERS);
+    if (examined.length < referencers.length) {
+      this.logger?.warn(
+        `Group ${groupId} is referenced by ${referencers.length} documents; only the first ${MAX_EXAMINED_REFERENCERS} decide whether it is served`,
+      );
+    }
+    return examined;
+  }
+
   /**
-   * Whether one referencing document serves the subject any domain scope. A
+   * Whether one referencing document serves a subject any domain scope. A
    * referencer this replica does not hold serves nothing, which fails closed
    * the same way a group it does not hold does.
    */
   private async servesThrough(
     referencerId: string,
-    subject: AuthSubject,
     signal?: AbortSignal,
-  ): Promise<boolean> {
+  ): Promise<(subject: AuthSubject) => boolean> {
     let referencer: PHDocument;
     try {
       referencer = await this.documentView.get(
@@ -492,21 +553,16 @@ export class ModelReadGate implements IReadGate {
         signal,
       );
     } catch {
-      return false;
+      return () => false;
     }
 
     if (this.servesGroup(referencer)) {
-      return false;
+      return () => false;
     }
 
-    const readable = await this.ownPolicyPredicate(
-      referencer,
-      subject,
-      GROUP_BRANCH,
-      signal,
-    );
+    const policy = await this.ownPolicy(referencer, GROUP_BRANCH, signal);
 
-    return allowsSomeDomainScope(referencer, readable);
+    return (subject) => allowsSomeDomainScope(referencer, policy(subject));
   }
 
   private servesGroup(document: PHDocument): boolean {
@@ -530,18 +586,18 @@ export class ModelReadGate implements IReadGate {
    * publish an unpoliced group it names: the referencer walk asks this question
    * of the referencing document, whose real policy answers it.
    */
-  private async ownPolicyPredicate(
+  private async ownPolicy(
     document: PHDocument,
-    subject: AuthSubject,
     branch: string,
     signal?: AbortSignal,
-  ): Promise<(scope: string) => boolean> {
+  ): Promise<(subject: AuthSubject) => (scope: string) => boolean> {
     const auth = authOf(document);
 
     if (!auth || !auth.version) {
-      return this.options.withholdUninitialized
+      const readable = this.options.withholdUninitialized
         ? (scope: string) => ALWAYS_READABLE_SCOPES.has(scope)
         : () => true;
+      return () => readable;
     }
 
     const target = { documentId: document.header.id, branch };
@@ -556,7 +612,7 @@ export class ModelReadGate implements IReadGate {
     const definition = this.model(target);
     const scopeStates = (document.state ?? {}) as Record<string, unknown>;
 
-    return (scope: string) =>
+    return (subject) => (scope: string) =>
       ALWAYS_READABLE_SCOPES.has(scope) ||
       definition.decide(
         built.model,
