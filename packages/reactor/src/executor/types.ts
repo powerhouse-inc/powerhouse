@@ -161,6 +161,13 @@ export type ReactorFeatureFlags = {
 export const DEFAULT_DEFERRED_JOB_TTL_MS = 30_000;
 
 /**
+ * How long admission may keep deferring a job before its next deferrable
+ * error counts as a failure: renown's 5-minute missing-credential window plus
+ * a margin.
+ */
+export const DEFAULT_MAX_ADMISSION_DEFERRAL_MS = 6 * 60_000;
+
+/**
  * Configuration options for the job executor
  */
 export type JobExecutorConfig = {
@@ -179,6 +186,13 @@ export type JobExecutorConfig = {
   /** How long a job whose document is missing waits for it before failing.
    *  Unbounded deferral never resolves the caller awaiting the job. */
   deferredJobTtlMs?: number;
+
+  /**
+   * How long after its first deferral a job whose admission is deferred (a
+   * trust policy error with `retryAfterMs`) keeps being retried without
+   * charging its retry limit. Defaults to 6 minutes.
+   */
+  maxAdmissionDeferralMs?: number;
 
   /** Base delay in milliseconds for exponential backoff retries */
   retryBaseDelayMs?: number;

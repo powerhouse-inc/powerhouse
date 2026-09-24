@@ -78,6 +78,37 @@ describe("InMemoryJobTracker", () => {
     });
   });
 
+  describe("markDeferred", () => {
+    it("returns the job to PENDING with the reason until it runs again", () => {
+      tracker.registerJob({
+        id: "job-1",
+        documentId: "test-doc",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
+      });
+      tracker.markRunning("job-1");
+      const reason = {
+        name: "DeferredAdmissionError",
+        message: "no credential",
+        stack: "",
+      };
+
+      tracker.markDeferred("job-1", reason, "2026-01-01T00:00:01.000Z");
+
+      expect(tracker.getJobStatus("job-1")).toMatchObject({
+        status: JobStatus.PENDING,
+        deferral: { reason, retryAtUtcIso: "2026-01-01T00:00:01.000Z" },
+      });
+
+      tracker.markRunning("job-1");
+      const running = tracker.getJobStatus("job-1");
+      expect(running?.status).toBe(JobStatus.RUNNING);
+      expect(running).not.toHaveProperty("deferral");
+    });
+  });
+
   describe("markFailed", () => {
     it("should update job to FAILED status with error", () => {
       const jobInfo: JobInfo = {

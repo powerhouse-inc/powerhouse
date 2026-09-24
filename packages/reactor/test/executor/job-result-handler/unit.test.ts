@@ -12,6 +12,7 @@ import type { IDocumentModelResolver } from "../../../src/registry/document-mode
 import { ModuleNotFoundError } from "../../../src/registry/errors.js";
 import {
   AuthTimestampNotMonotonicError,
+  DeferredAdmissionError,
   DocumentDeletedError,
   DocumentNotFoundError,
   InvalidOperationTimestampError,
@@ -86,11 +87,13 @@ describe("JobResultHandler", () => {
   beforeEach(() => {
     queue = {
       retryJob: vi.fn().mockResolvedValue(undefined),
+      retryJobAfter: vi.fn().mockResolvedValue(undefined),
       enqueue: vi.fn().mockResolvedValue(undefined),
     } as unknown as IQueue;
 
     jobTracker = {
       markFailed: vi.fn(),
+      markDeferred: vi.fn(),
     } as unknown as IJobTracker;
 
     eventBus = {
@@ -709,6 +712,194 @@ describe("JobResultHandler", () => {
 
       expect(jobTracker.markFailed).toHaveBeenCalled();
       expect(handle.fail).toHaveBeenCalled();
+    });
+  });
+
+  describe("DeferredAdmissionError (deferred, uncounted retry)", () => {
+    const CAP_MS = 6 * 60_000;
+
+    function deferred(retryAfterMs = 1000): DeferredAdmissionError {
+      return new DeferredAdmissionError("doc-1", retryAfterMs, "no credential");
+    }
+
+    it("re-queues after retryAfterMs without charging a retry or failing", async () => {
+      const job = createTestJob({ retryCount: 1, maxRetries: 3 });
+      const handle = createTestHandle(job);
+
+      await handler.handleResult(
+        handle,
+        { success: false, job, error: deferred(250) },
+        callbacks(),
+      );
+
+      expect(queue.retryJobAfter).toHaveBeenCalledWith(
+        job.id,
+        250,
+        expect.objectContaining({ name: "DeferredAdmissionError" }),
+      );
+      expect(queue.retryJob).not.toHaveBeenCalled();
+      expect(jobTracker.markFailed).not.toHaveBeenCalled();
+      expect(jobTracker.markDeferred).toHaveBeenCalledWith(
+        job.id,
+        expect.objectContaining({ name: "DeferredAdmissionError" }),
+        expect.any(String),
+      );
+      expect(handle.fail).not.toHaveBeenCalled();
+      expect(eventBus.emit).not.toHaveBeenCalled();
+    });
+
+    it("doubles the delay per deferral, capped at 60s", async () => {
+      const now = Date.now();
+      for (const [count, expected] of [
+        [1, 2000],
+        [3, 8000],
+        [10, 60_000],
+      ] as const) {
+        vi.mocked(queue.retryJobAfter).mockClear();
+        const job = createTestJob({ deferral: { firstAtMs: now, count } });
+        await handler.handleResult(
+          createTestHandle(job),
+          { success: false, job, error: deferred(1000) },
+          callbacks(),
+        );
+        expect(queue.retryJobAfter).toHaveBeenCalledWith(
+          job.id,
+          expected,
+          expect.any(Object),
+        );
+      }
+    });
+
+    it("never waits past the deferral cap", async () => {
+      const job = createTestJob({
+        deferral: { firstAtMs: Date.now() - (CAP_MS - 5000), count: 10 },
+      });
+
+      await handler.handleResult(
+        createTestHandle(job),
+        { success: false, job, error: deferred(1000) },
+        callbacks(),
+      );
+
+      const delay = vi.mocked(queue.retryJobAfter).mock.calls[0][1];
+      expect(delay).toBeGreaterThan(0);
+      expect(delay).toBeLessThanOrEqual(5000);
+    });
+
+    it("takes the normal retry path once the cap has passed", async () => {
+      const job = createTestJob({
+        retryCount: 0,
+        maxRetries: 3,
+        deferral: { firstAtMs: Date.now() - CAP_MS - 1, count: 11 },
+      });
+
+      await handler.handleResult(
+        createTestHandle(job),
+        { success: false, job, error: deferred() },
+        callbacks(),
+      );
+
+      expect(queue.retryJobAfter).not.toHaveBeenCalled();
+      expect(queue.retryJob).toHaveBeenCalledWith(job.id, expect.any(Object));
+    });
+
+    it("fails normally past the cap with no retries left", async () => {
+      const job = createTestJob({
+        retryCount: 3,
+        maxRetries: 3,
+        deferral: { firstAtMs: Date.now() - CAP_MS - 1, count: 11 },
+      });
+      const handle = createTestHandle(job);
+
+      await handler.handleResult(
+        handle,
+        { success: false, job, error: deferred() },
+        callbacks(),
+      );
+
+      expect(queue.retryJobAfter).not.toHaveBeenCalled();
+      expect(jobTracker.markFailed).toHaveBeenCalledWith(
+        job.id,
+        expect.objectContaining({ name: "DeferredAdmissionError" }),
+        job,
+      );
+      expect(handle.fail).toHaveBeenCalled();
+    });
+
+    it("honours a configured cap", async () => {
+      const capped = new JobResultHandler(
+        queue,
+        jobTracker,
+        eventBus,
+        resolver,
+        logger,
+        1000,
+      );
+      const job = createTestJob({
+        maxRetries: 0,
+        deferral: { firstAtMs: Date.now() - 1000, count: 1 },
+      });
+
+      await capped.handleResult(
+        createTestHandle(job),
+        { success: false, job, error: deferred() },
+        callbacks(),
+      );
+
+      expect(queue.retryJobAfter).not.toHaveBeenCalled();
+      expect(jobTracker.markFailed).toHaveBeenCalled();
+    });
+
+    it("keeps today's behaviour for an error without the name", async () => {
+      const error = Object.assign(new Error("renown is down"), {
+        retryAfterMs: 1000,
+      });
+      const job = createTestJob({ retryCount: 0, maxRetries: 3 });
+
+      await handler.handleResult(
+        createTestHandle(job),
+        { success: false, job, error },
+        callbacks(),
+      );
+
+      expect(queue.retryJobAfter).not.toHaveBeenCalled();
+      expect(queue.retryJob).toHaveBeenCalledWith(job.id, expect.any(Object));
+    });
+
+    it("recognises a deferral rebuilt from a worker's ErrorInfo", async () => {
+      const error = Object.assign(new Error("no credential"), {
+        name: "DeferredAdmissionError",
+        retryAfterMs: 500,
+      });
+      const job = createTestJob();
+
+      await handler.handleResult(
+        createTestHandle(job),
+        { success: false, job, error },
+        callbacks(),
+      );
+
+      expect(queue.retryJobAfter).toHaveBeenCalledWith(
+        job.id,
+        500,
+        expect.any(Object),
+      );
+    });
+
+    it("falls back to the normal path when the queue cannot hold the job", async () => {
+      vi.mocked(queue.retryJobAfter).mockRejectedValue(
+        new Error("Queue is blocked"),
+      );
+      const job = createTestJob({ retryCount: 0, maxRetries: 3 });
+
+      await handler.handleResult(
+        createTestHandle(job),
+        { success: false, job, error: deferred() },
+        callbacks(),
+      );
+
+      expect(jobTracker.markDeferred).not.toHaveBeenCalled();
+      expect(queue.retryJob).toHaveBeenCalled();
     });
   });
 });

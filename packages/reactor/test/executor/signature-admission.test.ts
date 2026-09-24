@@ -60,6 +60,7 @@ describe("signature admission", () => {
       trustPolicy?: SignatureTrustPolicy;
       signer?: ISigner;
       jobTimeoutMs?: number;
+      maxAdmissionDeferralMs?: number;
     } = {},
   ): Promise<InProcessReactorModule> {
     const builder = new ReactorBuilder()
@@ -68,6 +69,9 @@ describe("signature admission", () => {
         signatureVerification,
         featureFlags,
         ...(options.jobTimeoutMs ? { jobTimeoutMs: options.jobTimeoutMs } : {}),
+        ...(options.maxAdmissionDeferralMs
+          ? { maxAdmissionDeferralMs: options.maxAdmissionDeferralMs }
+          : {}),
       });
     if (options.trustPolicy) {
       builder.withTrustPolicy(options.trustPolicy);
@@ -969,6 +973,115 @@ describe("signature admission", () => {
       expect(job.status).toBe(JobStatus.READ_READY);
       expect(await storedActionIds()).toEqual([action.id]);
       expect(trust.calls).toHaveLength(2);
+    });
+
+    describe("asking for a later retry", () => {
+      /** Shaped like renown's: named, carrying the delay the reactor waits. */
+      function missingCredential(retryAfterMs: number): Error {
+        return Object.assign(new Error("no credential yet"), {
+          name: "MissingCredentialError",
+          retryAfterMs,
+        });
+      }
+
+      /** Throws for `misses` asks, then accepts. */
+      function propagating(misses: number, retryAfterMs = 20) {
+        return policy(() =>
+          misses-- > 0
+            ? Promise.reject(missingCredential(retryAfterMs))
+            : Promise.resolve(true),
+        );
+      }
+
+      /** Throws until `windowMs` after the first ask, then refuses. */
+      function neverFound(windowMs: number) {
+        let first: number | undefined;
+        return policy(() => {
+          first ??= Date.now();
+          return Date.now() < first + windowMs
+            ? Promise.reject(missingCredential(20))
+            : Promise.resolve(false);
+        });
+      }
+
+      it("admits a load once the credential arrives, past the retry limit", async () => {
+        const trust = propagating(5);
+        await build("enforce", {}, { trustPolicy: trust });
+        const action = await v2Signed(moduleAction("m"));
+
+        const job = await load([asOperation(action, 0)]);
+
+        expect(job.status).toBe(JobStatus.READ_READY);
+        expect(await storedActionIds()).toEqual([action.id]);
+        expect(trust.calls).toHaveLength(6);
+        expect(refusals).toEqual([]);
+      });
+
+      it("admits a mutation once the credential arrives, reporting the wait", async () => {
+        const trust = propagating(4, 50);
+        await build("enforce", {}, { trustPolicy: trust });
+        const action = await v2Signed(moduleAction("m"));
+
+        const submitted = await module!.reactor.execute(docId, "main", [
+          action,
+        ]);
+        let waiting = await module!.reactor.getJobStatus(submitted.id);
+        while (!waiting.deferral) {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          waiting = await module!.reactor.getJobStatus(submitted.id);
+        }
+        expect(waiting.status).toBe(JobStatus.PENDING);
+        expect(waiting.deferral.reason.name).toBe("DeferredAdmissionError");
+        expect(waiting.deferral.reason.message).toContain("no credential yet");
+
+        const job = await settle(submitted);
+        expect(job.status).toBe(JobStatus.READ_READY);
+        expect(job.deferral).toBeUndefined();
+        expect(await storedActionIds()).toEqual([action.id]);
+        expect(trust.calls).toHaveLength(5);
+      });
+
+      it("drops a load's operation once the window passes without one", async () => {
+        const trust = neverFound(300);
+        await build("enforce", {}, { trustPolicy: trust });
+        const action = await v2Signed(moduleAction("m"));
+
+        const job = await load([asOperation(action, 0)]);
+
+        expect(job.status).toBe(JobStatus.READ_READY);
+        expect(await stored()).toEqual([]);
+        expect(refusals).toMatchObject([
+          { code: "SIGNER_UNAUTHORIZED", path: "load" },
+        ]);
+      });
+
+      it("fails a mutation as SIGNER_UNAUTHORIZED once the window passes", async () => {
+        const trust = neverFound(300);
+        await build("enforce", {}, { trustPolicy: trust });
+
+        const job = await execute([await v2Signed(moduleAction("m"))]);
+
+        expect(job.status).toBe(JobStatus.FAILED);
+        expect(job.error?.name).toBe("InvalidSignatureError");
+        expect(job.error?.message).toContain("[SIGNER_UNAUTHORIZED]");
+        expect(await stored()).toEqual([]);
+      });
+
+      it("fails normally once the deferral cap passes", async () => {
+        const trust = neverFound(60_000);
+        await build(
+          "enforce",
+          {},
+          { trustPolicy: trust, maxAdmissionDeferralMs: 200 },
+        );
+
+        const job = await execute([await v2Signed(moduleAction("m"))]);
+
+        expect(job.status).toBe(JobStatus.FAILED);
+        expect(job.error?.name).toBe("DeferredAdmissionError");
+        expect(job.error?.message).toContain("no credential yet");
+        expect(await stored()).toEqual([]);
+      });
     });
 
     it("reaches a ReactorBuilder from a SignerConfig unless it has its own", async () => {

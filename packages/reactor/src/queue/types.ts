@@ -90,6 +90,12 @@ export type Job = {
   /** History of all errors from each attempt (ordered) */
   errorHistory: ErrorInfo[];
 
+  /**
+   * Deferred retries so far, which do not count against `maxRetries`: when
+   * the first was scheduled (epoch ms) and how many there have been.
+   */
+  deferral?: { firstAtMs: number; count: number };
+
   /** Metadata that flows through the job lifecycle */
   meta: JobMeta;
 };

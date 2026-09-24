@@ -128,9 +128,20 @@ export class InMemoryJobTracker implements IJobTracker {
       return;
     }
 
+    const running: JobInfo = { ...job, status: JobStatus.RUNNING };
+    delete running.deferral;
+    this.jobs.set(jobId, running);
+  }
+
+  markDeferred(jobId: string, reason: ErrorInfo, retryAtUtcIso: string): void {
+    const job = this.jobs.get(jobId);
+    if (!job) {
+      return;
+    }
     this.jobs.set(jobId, {
       ...job,
-      status: JobStatus.RUNNING,
+      status: JobStatus.PENDING,
+      deferral: { reason, retryAtUtcIso },
     });
   }
 

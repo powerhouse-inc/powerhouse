@@ -122,6 +122,12 @@ export type JobInfo = {
   errorHistory?: ErrorInfo[];
 
   /**
+   * Set while the job waits, back at PENDING, to be retried after an attempt
+   * admission could not decide yet; cleared when it runs again.
+   */
+  deferral?: { reason: ErrorInfo; retryAtUtcIso: string };
+
+  /**
    * What the job produced for its caller, from the moment its operations are
    * durable. Undefined until then, and on jobs that carry no submitted
    * actions.
