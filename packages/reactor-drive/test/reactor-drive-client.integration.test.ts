@@ -19,8 +19,11 @@ import type {
 import {
   createPresignedHeader,
   hasDerivedDocumentId,
+  isDerivedDocumentId,
   signaturePolicyOf,
   v2RequiredProtocolVersions,
+  withSignaturePolicy,
+  type SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { Kysely } from "kysely";
@@ -114,6 +117,22 @@ describe("ReactorDriveClient Integration", () => {
     await baseDb.destroy();
     await pg.close();
   });
+
+  /** This suite's client, over a reactor client with another creation default. */
+  function clientCreating(policy: SignaturePolicy): ReactorDriveClient {
+    const reactor = new Proxy(reactorClient, {
+      get: (target, prop): unknown =>
+        prop === "getCreateSignaturePolicy"
+          ? () => Promise.resolve(policy)
+          : Reflect.get(target, prop, target),
+    });
+    return new ReactorDriveClient({
+      reactor,
+      readModel: new DriveNodeView(
+        schemaDb as unknown as Kysely<ReactorDriveDatabase>,
+      ),
+    });
+  }
 
   function makeChildDocument(name: string): PHDocument {
     const doc = documentModelDocumentModelModule.utils.createDocument();
@@ -367,26 +386,46 @@ describe("ReactorDriveClient Integration", () => {
       expect(copiedLeaf.parentFolder).toBe(currentParent);
     });
 
-    it("carries the source document's protocol versions onto the copy", async () => {
-      const source = await driveClient.addFolder(driveId, "Protocol Source");
-      const file = makeChildDocument("Protocol File");
-      await driveClient.addFile(driveId, file, source.id);
-      const target = await driveClient.addFolder(driveId, "Protocol Target");
+    async function copyOfLegacyFile(client: ReactorDriveClient) {
+      const source = await client.addFolder(driveId, "Protocol Source");
+      const file = withSignaturePolicy(
+        makeChildDocument("Protocol File"),
+        "legacy",
+      );
+      await client.addFile(driveId, file, source.id);
+      const target = await client.addFolder(driveId, "Protocol Target");
 
-      await driveClient.copyNode(driveId, source.id, target.id);
+      await client.copyNode(driveId, source.id, target.id);
 
-      const copiedFolder = (await driveClient.listNodes(driveId, target.id))
+      const copiedFolder = (await client.listNodes(driveId, target.id))
         .results[0];
-      const copiedFile = (await driveClient.listNodes(driveId, copiedFolder.id))
+      const copiedFile = (await client.listNodes(driveId, copiedFolder.id))
         .results[0];
+      return {
+        srcDoc: await reactorClient.get(file.header.id),
+        copyDoc: await reactorClient.get(copiedFile.id),
+      };
+    }
 
-      const srcDoc = await reactorClient.get(file.header.id);
-      const copyDoc = await reactorClient.get(copiedFile.id);
+    it("copies a legacy document as v2-required, keeping its other protocol versions", async () => {
+      const { srcDoc, copyDoc } = await copyOfLegacyFile(driveClient);
 
       expect(srcDoc.header.protocolVersions).toEqual({ "base-reducer": 2 });
       expect(copyDoc.header.protocolVersions).toEqual(
+        v2RequiredProtocolVersions(srcDoc.header.protocolVersions!),
+      );
+      expect(hasDerivedDocumentId(copyDoc.header)).toBe(true);
+    });
+
+    it("copies a legacy document as legacy under a legacy creation default", async () => {
+      const { srcDoc, copyDoc } = await copyOfLegacyFile(
+        clientCreating("legacy"),
+      );
+
+      expect(copyDoc.header.protocolVersions).toEqual(
         srcDoc.header.protocolVersions,
       );
+      expect(signaturePolicyOf(copyDoc.header)).toBe("legacy");
     });
   });
 
@@ -410,6 +449,36 @@ describe("ReactorDriveClient Integration", () => {
       expect(signaturePolicyOf(header)).toBe("v2-required");
       expect(hasDerivedDocumentId(header)).toBe(true);
     }
+
+    it("creates drives and files v2-required by default", async () => {
+      const drive = await driveClient.create({
+        global: { name: "Default Drive" },
+      });
+      expectV2Required(drive.header);
+
+      const added = await driveClient.addFile(
+        drive.header.id,
+        makeChildDocument("Default File"),
+      );
+      expectV2Required(added.header);
+    });
+
+    it("creates a legacy drive with a random id under a legacy creation default", async () => {
+      const drive = await clientCreating("legacy").create({
+        global: { name: "Legacy Drive" },
+      });
+      expect(signaturePolicyOf(drive.header)).toBe("legacy");
+      expect(isDerivedDocumentId(drive.header.id)).toBe(false);
+    });
+
+    it("creates a legacy drive when the call asks, whatever the default", async () => {
+      const drive = await driveClient.create({
+        global: { name: "Asked Legacy" },
+        signaturePolicy: "legacy",
+      });
+      expect(signaturePolicyOf(drive.header)).toBe("legacy");
+      expect(isDerivedDocumentId(drive.header.id)).toBe(false);
+    });
 
     it("creates a v2-required drive", async () => {
       const drive = await driveClient.create({

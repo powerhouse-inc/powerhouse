@@ -21,9 +21,10 @@ import type {
 import {
   assertAuthPreservedOnDuplicate,
   createCopyHeader,
-  createPresignedHeader,
   generateId,
   replayDocumentVersioned,
+  requestedSignaturePolicy,
+  withSignaturePolicy,
   type Action,
   type CreateDocumentActionInput,
   type PHBaseState,
@@ -78,12 +79,19 @@ export class ReactorDriveClient implements IDriveClient {
     input: DriveInput,
     signal?: AbortSignal,
   ): Promise<DocumentDriveDocument> {
-    const driveDoc = reactorDriveCreateDocument({
-      global: {
-        name: input.global.name,
-        icon: input.global.icon ?? null,
-      },
-    });
+    const driveDoc = withSignaturePolicy(
+      reactorDriveCreateDocument({
+        global: {
+          name: input.global.name,
+          icon: input.global.icon ?? null,
+        },
+      }),
+      requestedSignaturePolicy(
+        input,
+        await this.reactor.getCreateSignaturePolicy(),
+      ),
+      { protocolVersions: input.protocolVersions },
+    );
     if (input.local) {
       if (typeof input.local.sharingType === "string") {
         driveDoc.state.local.sharingType = input.local.sharingType;
@@ -91,13 +99,6 @@ export class ReactorDriveClient implements IDriveClient {
       if (typeof input.local.availableOffline === "boolean") {
         driveDoc.state.local.availableOffline = input.local.availableOffline;
       }
-    }
-    if (input.protocolVersions) {
-      driveDoc.header = createPresignedHeader(
-        undefined,
-        driveDoc.header.documentType,
-        { ...driveDoc.header.protocolVersions, ...input.protocolVersions },
-      );
     }
     if (input.preferredEditor) {
       driveDoc.header.meta = {
@@ -421,6 +422,7 @@ export class ReactorDriveClient implements IDriveClient {
     for (const node of subtree) {
       idMap.set(node.id, generateId());
     }
+    const policy = await this.reactor.getCreateSignaturePolicy();
 
     const jobs: ExecutionJobPlan[] = [];
     const driveActions: Action[] = [];
@@ -478,8 +480,7 @@ export class ReactorDriveClient implements IDriveClient {
         reducers[m.version ?? 1] = m.reducer as Reducer<PHBaseState>;
       }
       const config: VersionedReplayConfig = { reducers };
-      const replayHeader = createCopyHeader(srcDoc.header, newId);
-      replayHeader.protocolVersions = srcDoc.header.protocolVersions;
+      const replayHeader = createCopyHeader(srcDoc.header, newId, policy);
       // A v2-required copy takes a derived id; files head no subtree.
       newId = replayHeader.id;
       const duplicated: PHDocument = replayDocumentVersioned(
