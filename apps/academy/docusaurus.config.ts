@@ -19,6 +19,9 @@ const config: Config = {
       defer: true,
       "data-website-id": "5a9bd03e-f330-4fa1-8087-b0475030f365",
       "data-domains": "academy.vetra.io",
+      "data-do-not-track": "true",
+      "data-exclude-search": "true",
+      "data-performance": "true",
     },
   ],
 
