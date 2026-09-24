@@ -2,7 +2,6 @@ import type { FactorySpec, SignerConfig } from "@powerhousedao/reactor";
 import {
   createRenownTrustPolicy,
   DEFAULT_KEYPAIR_PATH,
-  DEFAULT_MISSING_CREDENTIAL_WINDOW_MS,
   DEFAULT_RENOWN_URL,
   NodeKeyStorage,
   RenownBuilder,
@@ -126,11 +125,6 @@ export type RenownTrustSource =
   | { source: "remote"; renownUrl?: string; switchboardUrl?: string }
   | { source: "self"; request: SwitchboardRequestFn };
 
-export interface RenownTrustPolicyTuning {
-  /** See `RenownTrustPolicyOptions.missingCredentialWindowMs`. */
-  missingCredentialWindowMs?: number;
-}
-
 /**
  * Admits a key as a signer for an address a Renown credential binds it to; a
  * `self` source has no worker spec. In process, the switchboard's own key is
@@ -139,17 +133,13 @@ export interface RenownTrustPolicyTuning {
 export async function getRenownTrustPolicyConfig(
   trustSource: RenownTrustSource,
   renown: IRenown | null,
-  tuning: RenownTrustPolicyTuning = {},
 ): Promise<Pick<SignerConfig, "trustPolicy" | "workerTrustPolicy">> {
-  const missingCredentialWindowMs =
-    tuning.missingCredentialWindowMs ?? DEFAULT_MISSING_CREDENTIAL_WINDOW_MS;
   const ownSigner = renown?.signer;
   if (trustSource.source === "self") {
     return {
       trustPolicy: createRenownTrustPolicy({
         switchboard: trustSource.request,
         ownSigner,
-        missingCredentialWindowMs,
       }),
     };
   }
@@ -161,7 +151,6 @@ export async function getRenownTrustPolicyConfig(
   const options = {
     ...(switchboardUrl ? { switchboard: switchboardUrl } : {}),
     ...(trustSource.renownUrl ? { renownUrl: trustSource.renownUrl } : {}),
-    missingCredentialWindowMs,
   } satisfies RenownTrustPolicyOptions;
   const self = ownIdentity(renown);
   return {

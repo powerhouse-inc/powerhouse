@@ -89,7 +89,6 @@ async function remotePolicy(
   const { trustPolicy } = await getRenownTrustPolicyConfig(
     { source: "remote", switchboardUrl: GRAPHQL },
     renown,
-    { missingCredentialWindowMs: 0 },
   );
   return trustPolicy!;
 }
@@ -125,6 +124,19 @@ describe("getRenownTrustPolicyConfig", () => {
         "doc",
       ),
     ).resolves.toBe(false);
+  });
+
+  it("refuses a key no credential binds yet", async () => {
+    const fetchMock = mockReadModel([]);
+    const policy = await remotePolicy();
+
+    await expect(
+      policy.authorizeSigner(claim(WALLET, CONNECT_KEY), CONNECT_KEY, "doc"),
+    ).resolves.toBe(false);
+    await expect(
+      policy.authorizeSigner(claim(WALLET, CONNECT_KEY), CONNECT_KEY, "doc"),
+    ).resolves.toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("caches an acceptance per (address, key)", async () => {
@@ -193,7 +205,6 @@ describe("getRenownTrustPolicyConfig", () => {
     const { workerTrustPolicy } = await getRenownTrustPolicyConfig(
       { source: "remote", switchboardUrl: GRAPHQL },
       stubRenown(),
-      { missingCredentialWindowMs: 1234 },
     );
 
     const module = workerTrustPolicy!.module;
@@ -202,7 +213,6 @@ describe("getRenownTrustPolicyConfig", () => {
     expect(existsSync(filePath)).toBe(true);
     expect(workerTrustPolicy!.initArgs).toEqual({
       switchboard: GRAPHQL,
-      missingCredentialWindowMs: 1234,
       self: { key: SWITCHBOARD_KEY, user: SWITCHBOARD_USER },
     });
 

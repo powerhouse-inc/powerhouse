@@ -5,10 +5,7 @@ import {
   buildAndSignCredential,
   type SignCredentialTypedData,
 } from "../src/credential.js";
-import {
-  createRenownTrustPolicy,
-  MissingCredentialError,
-} from "../src/signer-trust.js";
+import { createRenownTrustPolicy } from "../src/signer-trust.js";
 import type { SwitchboardRequestFn } from "../src/switchboard.js";
 import type { PowerhouseVerifiableCredential } from "../src/types.js";
 
@@ -116,7 +113,6 @@ describe("createRenownTrustPolicy", () => {
   it("refuses a claimed address the credential was not issued by", async () => {
     const policy = createRenownTrustPolicy({
       switchboard: readModel([row(await credentialFor())]),
-      missingCredentialWindowMs: 0,
     });
 
     await expect(
@@ -127,7 +123,6 @@ describe("createRenownTrustPolicy", () => {
   it("refuses a key the credential does not delegate to", async () => {
     const policy = createRenownTrustPolicy({
       switchboard: readModel([row(await credentialFor())]),
-      missingCredentialWindowMs: 0,
     });
 
     await expect(
@@ -174,10 +169,7 @@ describe("createRenownTrustPolicy", () => {
 
   it("caches an acceptance per (address, key), and never re-asks", async () => {
     const request = readModel([row(await credentialFor())]);
-    const policy = createRenownTrustPolicy({
-      switchboard: request,
-      missingCredentialWindowMs: 0,
-    });
+    const policy = createRenownTrustPolicy({ switchboard: request });
     const signer = signerAs(account.address);
 
     const concurrent = await Promise.all([
@@ -204,7 +196,6 @@ describe("createRenownTrustPolicy", () => {
     const policy = createRenownTrustPolicy({
       switchboard: request,
       refusalTtlMs: 0,
-      missingCredentialWindowMs: 0,
     });
     const signer = signerAs(account.address);
 
@@ -275,11 +266,7 @@ describe("createRenownTrustPolicy", () => {
       key: "did:key:zDnaeSwitchboard",
       user: { address: account.address, networkId: "eip155", chainId: 1 },
     };
-    const policy = createRenownTrustPolicy({
-      switchboard: request,
-      self,
-      missingCredentialWindowMs: 0,
-    });
+    const policy = createRenownTrustPolicy({ switchboard: request, self });
 
     await expect(
       policy.authorizeSigner(
@@ -308,11 +295,7 @@ describe("createRenownTrustPolicy", () => {
       app: { key: "did:key:zDnaeSwitchboard" },
       user: { address: other.address, networkId: "eip155", chainId: 1 },
     };
-    const policy = createRenownTrustPolicy({
-      switchboard: request,
-      ownSigner,
-      missingCredentialWindowMs: 0,
-    });
+    const policy = createRenownTrustPolicy({ switchboard: request, ownSigner });
     const key = ownSigner.app.key;
 
     ownSigner.user = {
@@ -353,117 +336,45 @@ describe("createRenownTrustPolicy", () => {
     expect(request).toHaveBeenCalledTimes(1);
   });
 
-  describe("a missing credential", () => {
-    const WINDOW = 60_000;
+  it("refuses a missing credential at once, and remembers the refusal for 60s", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const request = readModel([]);
+    const policy = createRenownTrustPolicy({ switchboard: request });
+    const signer = signerAs(account.address);
 
-    it("throws within the window", async () => {
-      vi.useFakeTimers({ toFake: ["Date"] });
-      const request = readModel([]);
-      const policy = createRenownTrustPolicy({
-        switchboard: request,
-        missingCredentialWindowMs: WINDOW,
-      });
-      const signer = signerAs(account.address);
+    await expect(
+      policy.authorizeSigner(signer, APP_KEY, DOCUMENT_ID),
+    ).resolves.toBe(false);
+    vi.advanceTimersByTime(59_999);
+    await expect(
+      policy.authorizeSigner(signer, APP_KEY, DOCUMENT_ID),
+    ).resolves.toBe(false);
+    expect(request).toHaveBeenCalledTimes(1);
 
-      await expect(
-        policy.authorizeSigner(signer, APP_KEY, DOCUMENT_ID),
-      ).rejects.toBeInstanceOf(MissingCredentialError);
-      vi.advanceTimersByTime(WINDOW - 1);
-      await expect(
-        policy.authorizeSigner(signer, APP_KEY, DOCUMENT_ID),
-      ).rejects.toBeInstanceOf(MissingCredentialError);
-      expect(request).toHaveBeenCalledTimes(2);
-    });
+    vi.advanceTimersByTime(1);
+    await expect(
+      policy.authorizeSigner(signer, APP_KEY, DOCUMENT_ID),
+    ).resolves.toBe(false);
+    expect(request).toHaveBeenCalledTimes(2);
+  });
 
-    it("refuses after the window, and remembers the refusal", async () => {
-      vi.useFakeTimers({ toFake: ["Date"] });
-      const request = readModel([]);
-      const policy = createRenownTrustPolicy({
-        switchboard: request,
-        missingCredentialWindowMs: WINDOW,
-      });
-      const signer = signerAs(account.address);
-
-      await expect(
-        policy.authorizeSigner(signer, APP_KEY, DOCUMENT_ID),
-      ).rejects.toBeInstanceOf(MissingCredentialError);
-      vi.advanceTimersByTime(WINDOW);
-      await expect(
-        policy.authorizeSigner(signer, APP_KEY, DOCUMENT_ID),
-      ).resolves.toBe(false);
-      await expect(
-        policy.authorizeSigner(signer, APP_KEY, DOCUMENT_ID),
-      ).resolves.toBe(false);
-      expect(request).toHaveBeenCalledTimes(2);
-    });
-
-    it("accepts a credential that appears within the window", async () => {
-      vi.useFakeTimers({ toFake: ["Date"] });
-      const request = readModel([]);
-      const policy = createRenownTrustPolicy({
-        switchboard: request,
-        missingCredentialWindowMs: WINDOW,
-      });
-      const signer = signerAs(account.address);
-
-      await expect(
-        policy.authorizeSigner(signer, APP_KEY, DOCUMENT_ID),
-      ).rejects.toBeInstanceOf(MissingCredentialError);
-      vi.advanceTimersByTime(WINDOW / 2);
-      request.mockResolvedValue({
-        renownCredentials: [row(await credentialFor())],
-      });
-      await expect(
-        policy.authorizeSigner(signer, APP_KEY, DOCUMENT_ID),
-      ).resolves.toBe(true);
-    });
-
-    it("keeps a window per (address, key)", async () => {
-      vi.useFakeTimers({ toFake: ["Date"] });
-      const request = readModel([]);
-      const policy = createRenownTrustPolicy({
-        switchboard: request,
-        missingCredentialWindowMs: WINDOW,
-      });
-
-      await expect(
-        policy.authorizeSigner(signerAs(account.address), APP_KEY, DOCUMENT_ID),
-      ).rejects.toBeInstanceOf(MissingCredentialError);
-      vi.advanceTimersByTime(WINDOW);
-
-      await expect(
-        policy.authorizeSigner(
-          signerAs(account.address, OTHER_KEY),
-          OTHER_KEY,
-          DOCUMENT_ID,
-        ),
-      ).rejects.toBeInstanceOf(MissingCredentialError);
-      await expect(
-        policy.authorizeSigner(signerAs(other.address), APP_KEY, DOCUMENT_ID),
-      ).rejects.toBeInstanceOf(MissingCredentialError);
-      await expect(
-        policy.authorizeSigner(signerAs(account.address), APP_KEY, DOCUMENT_ID),
-      ).resolves.toBe(false);
-    });
-
-    it("counts a REST 404 as missing", async () => {
-      vi.useFakeTimers({ toFake: ["Date"] });
-      vi.spyOn(globalThis, "fetch").mockImplementation(() =>
-        Promise.resolve(new Response("", { status: 404 })),
+  it("refuses a REST 404 or a null credential", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("", { status: 404 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ credential: null }), { status: 200 }),
       );
-      const policy = createRenownTrustPolicy({
-        renownUrl: "http://renown.test",
-        missingCredentialWindowMs: WINDOW,
-      });
-      const signer = signerAs(account.address);
-
-      await expect(
-        policy.authorizeSigner(signer, APP_KEY, DOCUMENT_ID),
-      ).rejects.toBeInstanceOf(MissingCredentialError);
-      vi.advanceTimersByTime(WINDOW);
-      await expect(
-        policy.authorizeSigner(signer, APP_KEY, DOCUMENT_ID),
-      ).resolves.toBe(false);
+    const policy = createRenownTrustPolicy({
+      renownUrl: "http://renown.test",
+      refusalTtlMs: 0,
     });
+    const signer = signerAs(account.address);
+
+    await expect(
+      policy.authorizeSigner(signer, APP_KEY, DOCUMENT_ID),
+    ).resolves.toBe(false);
+    await expect(
+      policy.authorizeSigner(signer, APP_KEY, DOCUMENT_ID),
+    ).resolves.toBe(false);
   });
 });
