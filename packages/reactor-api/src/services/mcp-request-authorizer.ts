@@ -9,7 +9,8 @@ import {
  * Authorization gate for the /mcp endpoint (AUTH_REVIEW S-C1). MCP tools have
  * unrestricted reactor access, so access is limited to supreme admins when
  * auth is enabled. OPEN policy is public; any other policy without an
- * AuthService fails closed.
+ * AuthService fails closed. The tools read as the caller: anonymous under OPEN,
+ * else the admin's address and the app key its token carries.
  */
 export function createMcpRequestAuthorizer(
   authService: AuthService | undefined,
@@ -18,7 +19,7 @@ export function createMcpRequestAuthorizer(
   return async (req) => {
     if (!authService) {
       if (authorizationService.config.policy === AuthorizationPolicy.OPEN) {
-        return { authorized: true };
+        return { authorized: true, subject: {} };
       }
       return {
         authorized: false,
@@ -49,6 +50,9 @@ export function createMcpRequestAuthorizer(
         message: "Forbidden: MCP access requires an administrator",
       };
     }
-    return { authorized: true };
+    return {
+      authorized: true,
+      subject: { address: context.user.address, key: context.user.appKey },
+    };
   };
 }
