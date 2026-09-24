@@ -43,7 +43,6 @@ function shapePage(page: PagedResults<ReactorDriveNode>) {
     results: page.results,
     nextCursor: page.nextCursor,
     hasMore: page.nextCursor !== undefined,
-    totalCount: page.totalCount,
   };
 }
 

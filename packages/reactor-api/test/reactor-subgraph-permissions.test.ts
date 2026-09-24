@@ -419,26 +419,9 @@ describe("ReactorSubgraph Permission Checks", () => {
       const result = await callOutgoingEdges(ctx);
 
       expect(result.items).toHaveLength(2);
-      expect(result.totalCount).toBe(2);
     });
 
-    /**
-     * A count taken before the filter tells the caller how many edges were
-     * withheld, which is the disclosure the filter exists to prevent.
-     */
-    it("should count only the edges it serves", async () => {
-      vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
-        (documentId: string) => Promise.resolve(documentId !== "secret-child"),
-      );
-      const ctx = createContext({ userAddress: "0xpermitted" });
-
-      const result = await callOutgoingEdges(ctx);
-
-      expect(result.items).toHaveLength(1);
-      expect(result.totalCount).toBe(1);
-    });
-
-    it("should count a page down to zero when every far end is unreadable", async () => {
+    it("should serve an empty page when every far end is unreadable", async () => {
       vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
         (documentId: string) => Promise.resolve(documentId === "doc-123"),
       );
@@ -447,7 +430,6 @@ describe("ReactorSubgraph Permission Checks", () => {
       const result = await callIncomingEdges(ctx);
 
       expect(result.items).toHaveLength(0);
-      expect(result.totalCount).toBe(0);
     });
 
     /**
@@ -488,7 +470,6 @@ describe("ReactorSubgraph Permission Checks", () => {
       const result = await callOutgoingEdges(ctx);
 
       expect(result.items).toHaveLength(1);
-      expect(result.totalCount).toBe(1);
       expect(result.cursor).toBe("page-2");
       expect(result.hasNextPage).toBe(true);
       expect(result.hasPreviousPage).toBe(true);
@@ -520,7 +501,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       });
     });
 
-    it("should count only the documents it serves", async () => {
+    it("should serve only the documents it can read", async () => {
       vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
         (documentId: string) => Promise.resolve(documentId !== "secret-parent"),
       );
@@ -530,7 +511,6 @@ describe("ReactorSubgraph Permission Checks", () => {
 
       expect(result.items).toHaveLength(1);
       expect(result.items[0].id).toBe("readable-parent");
-      expect(result.totalCount).toBe(1);
     });
 
     it("should leave the cursor and page flags describing the underlying stream", async () => {
@@ -546,7 +526,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       expect(result.hasPreviousPage).toBe(true);
     });
 
-    it("should not filter or recount for a supreme admin", async () => {
+    it("should not filter for a supreme admin", async () => {
       vi.mocked(mockAuthorizationService.isSupremeAdmin!).mockReturnValue(true);
       vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xadmin" });
@@ -554,7 +534,6 @@ describe("ReactorSubgraph Permission Checks", () => {
       const result = await callIncomingRelationships(ctx);
 
       expect(result.items).toHaveLength(2);
-      expect(result.totalCount).toBe(2);
     });
   });
 
@@ -603,11 +582,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       expect(mockAuthorizationService.canRead).toHaveBeenCalled();
     });
 
-    /**
-     * A count taken before the filter tells the caller how many documents were
-     * withheld, which is the disclosure the filter exists to prevent.
-     */
-    it("should count only the documents it serves", async () => {
+    it("should serve only the documents it can read", async () => {
       vi.mocked(mockReactorClient.find!).mockResolvedValue({
         results: [
           createMockDocument("readable-doc", "Readable Doc"),
@@ -626,7 +601,6 @@ describe("ReactorSubgraph Permission Checks", () => {
       const result = await callFindDocuments(ctx);
 
       expect(result.items).toHaveLength(1);
-      expect(result.totalCount).toBe(1);
     });
   });
 

@@ -867,7 +867,6 @@ function generateNewApiSchema(
     """
     type ${documentName}_DocumentResultPage {
       items: [${documentName}MutationResult!]!
-      totalCount: Int!
       hasNextPage: Boolean!
       hasPreviousPage: Boolean!
       cursor: String

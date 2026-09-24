@@ -36,7 +36,6 @@ export const typeDefs = gql`
     results: [ReactorDriveNode!]!
     nextCursor: String
     hasMore: Boolean!
-    totalCount: Int
   }
 
   type ReactorDrive {

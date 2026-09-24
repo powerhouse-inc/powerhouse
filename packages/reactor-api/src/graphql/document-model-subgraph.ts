@@ -328,11 +328,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
                 filteredItems.push(item);
               }
             }
-            return {
-              ...result,
-              items: filteredItems,
-              totalCount: filteredItems.length,
-            };
+            return { ...result, items: filteredItems };
           }
 
           return result;
@@ -370,11 +366,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
                 filteredItems.push(item);
               }
             }
-            return {
-              ...result,
-              items: filteredItems,
-              totalCount: filteredItems.length,
-            };
+            return { ...result, items: filteredItems };
           }
 
           return result;
@@ -408,11 +400,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             (item: PhDocument) => item.documentType === documentType,
           );
 
-          return {
-            ...result,
-            items: filteredItems,
-            totalCount: filteredItems.length,
-          };
+          return { ...result, items: filteredItems };
         },
 
         documentIncomingRelationships: async (

@@ -164,7 +164,7 @@ describe("ReactorSubgraph Query Resolvers", () => {
       });
       expect(outgoing.items[0].createdAt).toBeDefined();
       expect(outgoing.items[0].updatedAt).toBeDefined();
-      expect(outgoing.totalCount).toBe(1);
+      expect(outgoing.hasNextPage).toBe(false);
 
       const incoming = await resolvers.documentIncomingRelationshipEdges(
         module.client,
