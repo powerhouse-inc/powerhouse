@@ -55,7 +55,7 @@ Schema lives in `packages/builder-tools/connect-utils/runtime-config-schema.ts`.
     "drives":    { "allowAddDrive": true, "defaultDrives": [...], "preserveStrategy": "...", "sections": {...} },
     "packages":  { "externalEnabled": true },
     "sentry":    { "dsn": null, "env": "dev", "tracing": false },
-    "reactor":   { "featureFlags": { "documentDecisions": false, "authEnforcement": false, "authGroups": false, "authConditions": false } },
+    "reactor":   { "featureFlags": { "documentDecisions": false, "authEnforcement": false, "authGroups": false, "authConditions": false }, "createSignaturePolicy": "v2-required" },
     "pwa":       { ... } // build-time only, see below
   }
 }
@@ -125,6 +125,22 @@ worker's is told to reload onto a fresh worker, exactly as it would be after a
 new build — without that, the worker would keep enforcing the flags it booted
 with while the tab believed the new set was live. Other tabs still on the old
 worker reload as they refresh.
+
+### Creation signature policy (`connect.reactor.createSignaturePolicy`)
+
+What the documents and drives Connect creates are born as: `"v2-required"`
+(the default) or `"legacy"`. A v2-required document accepts only v2 action
+signatures and takes a content-addressed id. Set `"legacy"` while any reactor
+Connect syncs with predates v2-required documents; existing documents keep
+their policy either way, and the setting does not change what Connect accepts.
+
+```jsonc
+"reactor": { "createSignaturePolicy": "legacy" }
+```
+
+The main-thread reactor reads it from this file; the SharedWorker gets it in its
+construct message and keeps the value the first tab booted it with. It is not
+part of the worker's version fingerprint.
 
 ## Setting values — the precedence ladder
 
@@ -228,15 +244,15 @@ const loader = new ConfigLoader(
 
 Downstream consumers inside the SPA:
 
-| File                                            | Reads                                                                                                                                   |
-| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/connect/src/connect.config.ts`            | Re-exports the cached config behind getters (`getConnectConfig()`) so the rest of the SPA reads typed accessors instead of dotted paths |
-| `apps/connect/src/hooks/useRegistryPackages.ts` | `getRuntimeConfig().packageRegistryUrl`                                                                                                 |
-| `apps/connect/src/store/reactor.ts`             | Passes `packageRegistryUrl` to `BrowserPackageManager`; reads `connect.reactor.featureFlags` for both reactor hosts                     |
-| Renown auth flow                                | Reads `connect.renown.*`                                                                                                                |
-| Drives sidebar                                  | Reads `connect.drives.*`                                                                                                                |
-| Router                                          | Reads `connect.app.basePath`                                                                                                            |
-| `apps/connect/src/components/app.tsx`           | Reads `connect.app.offline` to register or unregister the service worker                                                                |
+| File                                            | Reads                                                                                                                                           |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/connect/src/connect.config.ts`            | Re-exports the cached config behind getters (`getConnectConfig()`) so the rest of the SPA reads typed accessors instead of dotted paths         |
+| `apps/connect/src/hooks/useRegistryPackages.ts` | `getRuntimeConfig().packageRegistryUrl`                                                                                                         |
+| `apps/connect/src/store/reactor.ts`             | Passes `packageRegistryUrl` to `BrowserPackageManager`; reads `connect.reactor.featureFlags` and `createSignaturePolicy` for both reactor hosts |
+| Renown auth flow                                | Reads `connect.renown.*`                                                                                                                        |
+| Drives sidebar                                  | Reads `connect.drives.*`                                                                                                                        |
+| Router                                          | Reads `connect.app.basePath`                                                                                                                    |
+| `apps/connect/src/components/app.tsx`           | Reads `connect.app.offline` to register or unregister the service worker                                                                        |
 
 A hard refresh in the browser tears down the module graph; the next module evaluation runs `loadRuntimeConfig()` again and the SPA picks up whatever the dist file holds now. This is the path operators use after `ph connect config --renown-url X`: write the new value, refresh the tab.
 

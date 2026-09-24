@@ -274,7 +274,7 @@ Each phase merges green to main on its own.
 | P3 Reactor signer | `SignerConfig.signer` reaches the executor and workers. NOOP from UNDO and the rebuilt REDO action are signed before the write. PRUNE refused on v2-required documents. | Synthesized operations carry the reactor's signature. |
 | P4 v2-required documents | `protocolVersions.signature`, content-addressed ids, id recompute on CREATE, `SCHEME_BELOW_POLICY` and `UNSIGNED_REQUIRED`, header restored after upgrade reducers. Remove `REQUIRE_SIGNATURES` / `identity.requireSignatures`. | None until a document is created v2-required. |
 | P5 Identity hook | `SignatureTrustPolicy.authorizeSigner`, admission-only, default by `authEnforcement`, `FactorySpec` for workers. Switchboard's Renown credential check. | Under `authEnforcement`, a key that cannot sign as its claimed address is refused. |
-| P6 v2-required by default | Every create path sets `signature: 2` and derives the id. | New documents refuse unsigned, legacy and PRUNE operations. |
+| P6 v2-required by default | `baseCreateDocument`, and so every model's `createDocument`, sets `signature: 2` and derives the id; `createEmpty`, `drives.create`, copies of legacy documents and the host create paths follow a creation default, `v2-required` unless overridden. `create` and `addFile` keep the header they are handed. | New documents refuse unsigned, legacy and PRUNE operations. |
 
 ## Mixed-version rollout
 
@@ -289,6 +289,21 @@ Each phase merges green to main on its own.
   syncs it is on P4. P6 flips the default only after that. Browser clients
   update on their own schedule, so the gate is a release note and the
   refusal metric, not a check.
+- The creation default is one host setting, read only when a document is
+  born: `ReactorClientBuilder.withCreateSignaturePolicy`, switchboard's
+  `CREATE_SIGNATURE_POLICY` and Connect's
+  `connect.reactor.createSignaturePolicy`, each `v2-required` unless set to
+  `legacy`. It decides what `createEmpty`, `drives.create`, a copy of a legacy
+  document, and the documents reactor-browser, reactor-api's create
+  mutations and switchboard's default drive make are born as. It never
+  changes an existing document and gates nothing at admission: a reactor
+  creating legacy documents verifies a v2-required one it receives like any
+  other. A fleet sets it to `legacy` until every peer runs P4, and a
+  switchboard with no signer falls back to `legacy` and warns, because it
+  could not sign its own writes to a v2-required document. A document handed
+  to `create` or `addFile` keeps the policy its header carries, since a
+  v2-required id is fixed when the header is made; a `.phd` import keeps the
+  policy it was exported with, because its signed history is bound to it.
 
 ## Tests
 

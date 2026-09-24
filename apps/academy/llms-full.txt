@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-24T00:51:35.335Z
+> Generated: 2026-09-24T01:49:01.648Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -26186,7 +26186,7 @@ Both mechanisms use **ECDSA with the P-256 curve and SHA-256** via the Web Crypt
 
 ## Header Signing (Document Identity)
 
-Every Powerhouse document has a header containing immutable identity fields. The document's `id` field is itself a cryptographic signature, meaning the document's identity is inseparable from its creator.
+Every Powerhouse document has a header containing immutable identity fields. A header signed as below makes the document's `id` a cryptographic signature, so the document's identity is inseparable from its creator. Such an id is not the one a v2-required document derives, so a document with a signed header is created legacy; see [v2-required documents](#v2-required-documents).
 
 ### How it works
 
@@ -26368,7 +26368,7 @@ const client = await new ReactorClientBuilder()
 
 Verification needs no wiring. The reactor checks every write it stores; see [Signature Verification](#signature-verification).
 
-If no signer is provided, the client falls back to an internal `PassthroughSigner` that returns empty signatures, so actions are submitted unsigned. An auth policy then sees an anonymous subject, and no `{ address }` grant matches. The class is not exported from `@powerhousedao/reactor`. To sign, pass your own `ISigner`.
+If no signer is provided, the client falls back to an internal `PassthroughSigner` that returns empty signatures, so actions are submitted unsigned. An auth policy then sees an anonymous subject, and no `{ address }` grant matches. A v2-required document refuses unsigned actions, so such a client can only create and write legacy documents; see [The creation default](#the-creation-default). The class is not exported from `@powerhousedao/reactor`. To sign, pass your own `ISigner`.
 
 ### ISigner implementations
 
@@ -26439,41 +26439,69 @@ Under `authEnforcement`, the switchboard uses `createRenownTrustPolicy` from `@r
 
 ### v2-required documents
 
-A document is legacy or v2-required, fixed when it is created. `protocolVersions.signature: 2` in the header makes it v2-required; without the key it is legacy, and the checks above are all it gets. On a v2-required document:
+A document is legacy or v2-required, fixed when it is created. `protocolVersions.signature: 2` in the header makes it v2-required; without the key it is legacy, and the checks above are all it gets. New documents are v2-required unless the caller or host asks otherwise. Existing documents keep the policy they were created with. On a v2-required document:
 
 - an unsigned action, or one with an empty `signer.app.key`, is refused as `UNSIGNED_REQUIRED`,
 - a legacy tuple is refused as `SCHEME_BELOW_POLICY`,
 - `PRUNE` is refused as `ACTION_NOT_ALLOWED`.
 
-The id of a v2-required document is `base64url(sha256(canonicalJson({ documentType, createdAtUtcIso, nonce, protocolVersions })))`, so its requirement cannot be changed without changing its id. `createPresignedHeader` derives it when `protocolVersions` asks for v2, and takes no id then:
+The id of a v2-required document is `base64url(sha256(canonicalJson({ documentType, createdAtUtcIso, nonce, protocolVersions })))`: 43 base64url characters, not a UUID. Its requirement cannot be changed without changing its id, and it cannot take an id you choose. A model's `utils.createDocument()` derives the id when it builds the header, so `document.header.id` is final before the document is created:
 
 ```typescript
 
-  createPresignedHeader,
-  v2RequiredProtocolVersions,
-} from "@powerhousedao/shared/document-model";
 
-const header = createPresignedHeader(
-  undefined,
-  "powerhouse/document-model",
-  v2RequiredProtocolVersions(),
-);
+// v2-required, under a derived id
+const document = module.utils.createDocument();
+await client.create(document);
+await client.createEmpty("powerhouse/document-model");
+await client.drives.create({ global: { name: "Drive" } });
 
-// or through the client
+// legacy, for one document
 await client.createEmpty("powerhouse/document-model", {
-  protocolVersions: v2RequiredProtocolVersions(),
+  signaturePolicy: "legacy",
 });
 await client.drives.create({
   global: { name: "Drive" },
-  protocolVersions: v2RequiredProtocolVersions(),
+  signaturePolicy: "legacy",
 });
+await client.create(
+  withSignaturePolicy(module.utils.createDocument(), "legacy", {
+    id: "my-document",
+  }),
+);
 ```
 
-A `CREATE_DOCUMENT` whose id does not recompute from its own input is refused as `ID_MISMATCH`, and so is a legacy `CREATE_DOCUMENT` that takes an id of that shape. A copy of a v2-required document is v2-required, under a new derived id.
+`client.create()` and `client.drives.addFile()` create the document under the header it carries. `withSignaturePolicy(document, policy, { id })` gives a document that has not been created a fresh header under `policy`; only a legacy header takes `id`.
 
-The NOOP an `UNDO` becomes and the action a `REDO` rebuilds are signed by the reactor's own signer. A reactor with no signer stores them unsigned, and every peer refuses them on a v2-required document, so a host that writes to v2-required documents must be given a signer.
+A `CREATE_DOCUMENT` whose id does not recompute from its own input is refused as `ID_MISMATCH`, and so is a legacy `CREATE_DOCUMENT` that takes an id of that shape. A copy of a v2-required document is v2-required, under a new derived id. A copy of a legacy document is created under the creation default below. An imported `.phd` keeps the policy it was exported with.
 
-Documents are created legacy unless asked otherwise. Create a document v2-required only once every reactor that syncs it verifies v2 policy; an older reactor stores whatever it would have stored before, and forwards it.
+The NOOP an `UNDO` becomes and the action a `REDO` rebuilds are signed by the reactor's own signer. A reactor with no signer stores them unsigned, and every peer refuses them on a v2-required document, so a host that writes to v2-required documents must be given a signer. A client with no signer cannot create a v2-required document at all: its `CREATE_DOCUMENT` is unsigned.
+
+### The creation default
+
+What a host creates when the caller does not choose is set once per client:
+
+```typescript
+const client = await new ReactorClientBuilder()
+  .withReactorBuilder(reactorBuilder)
+  .withSigner(signer)
+  .withCreateSignaturePolicy("legacy") // default: "v2-required"
+  .build();
+
+await client.getCreateSignaturePolicy(); // "legacy"
+```
+
+It applies to `createEmpty()`, `drives.create()`, copies of legacy documents, the documents reactor-browser's `addDocument` and `addDrive` create, and the documents a switchboard's `createEmptyDocument` and `createDocumentWithInitialState` mutations create. It never changes an existing document, and it does not change what a reactor accepts: a reactor creating legacy documents verifies a v2-required document it receives as strictly as any other.
+
+| Host        | Setting                                                             |
+| ----------- | ------------------------------------------------------------------- |
+| Switchboard | `CREATE_SIGNATURE_POLICY=legacy` or `v2-required` (default)         |
+| Connect     | `connect.reactor.createSignaturePolicy` in `powerhouse.config.json` |
+| Library     | `ReactorClientBuilder.withCreateSignaturePolicy()`                  |
+
+A switchboard with no identity (Renown failed to initialize) has no signer, so it creates legacy documents and logs a warning. A configured default drive with a fixed `id` is created legacy, because a v2-required document cannot take a chosen id.
+
+Create v2-required documents only once every reactor that syncs them runs a release that verifies v2 policy. An older reactor stores whatever it would have stored before on such a document, and forwards it, and upgraded peers drop those operations. Until the whole fleet is upgraded, set the creation default to `legacy`.
 
 ### Log mode and enforcement
 
@@ -29145,12 +29173,12 @@ Result:
 ```json
 {
   "data": {
-    "TodoList_createDocument": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b"
+    "TodoList_createDocument": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI"
   }
 }
 ```
 
-💡 **Key Insight**: The returned UUID (`72b73d31-4874-4b71-8cc3-289ed4cfbe2b`) is crucial - this is the document ID that will appear in our processor's database records, linking operations back to their source document. You will receive a different UUID.
+💡 **Key Insight**: The returned id (`pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI`) is crucial - this is the document ID that will appear in our processor's database records, linking operations back to their source document. New documents take a content-addressed id derived from their header, so you will receive a different one.
 
 ---
 
@@ -29173,7 +29201,7 @@ Variables:
 ```json
 {
   "driveId": "fc29ec1b-9934-410b-8682-4731b810d441",
-  "docId": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b",
+  "docId": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI",
   "input": {
     "text": "complete mutation"
   }
@@ -29195,7 +29223,7 @@ Result:
 1. **Document Model**: Stores the operation and updates document state
 2. **Reactor**: Packages the operation as an `OperationWithContext` (with `documentId`, `documentType`, `scope`, etc.) and routes it to matching processors via `onOperations()`
 3. **Our Processor**: Automatically receives the `OperationWithContext` and creates a database record
-4. **Database**: Now contains: `"72b73d31-4874-4b71-8cc3-289ed4cfbe2b-0: ADD_TODO_ITEM"`
+4. **Database**: Now contains: `"pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI-0: ADD_TODO_ITEM"`
 
 🔄 **Repeat this step 2-3 times** with different todo items to see multiple operations get processed. Each operation will have an incrementing revision number or index
 
@@ -29229,7 +29257,7 @@ Variables:
 ```json
 {
   "driveId": "fc29ec1b-9934-410b-8682-4731b810d441",
-  "docId": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b"
+  "docId": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI"
 }
 ```
 
@@ -29240,15 +29268,15 @@ Response:
   "data": {
     "todos": [
       {
-        "task": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b-0: ADD_TODO_ITEM",
+        "task": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI-0: ADD_TODO_ITEM",
         "status": true
       },
       {
-        "task": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b-1: ADD_TODO_ITEM",
+        "task": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI-1: ADD_TODO_ITEM",
         "status": true
       },
       {
-        "task": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b-2: ADD_TODO_ITEM",
+        "task": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI-2: ADD_TODO_ITEM",
         "status": true
       }
     ],

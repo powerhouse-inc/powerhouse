@@ -1,5 +1,102 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — action signature integrity (#2894)
+
+### ✨ Highlights
+
+1. **v2 action signatures on every write** — a signature is bound to one action in one document and branch, attributed to one user and key, and checked by every reactor that stores it
+2. **Verification is on and enforcing by default** — the executor verifies each write when it first stores it; no host wiring
+3. **New documents are v2-required** — they accept only v2-signed operations and take content-addressed ids instead of random UUIDs
+4. **A trust policy decides which keys may sign as which users** — under `REACTOR_AUTH_ENFORCEMENT`, switchboard checks the Renown credential that binds a key to a wallet
+
+---
+
+### NEW FEATURES
+
+#### 🔏 v2 action signatures
+
+Every signer emits a v2 tuple: element [2] is `v2:` plus the base64url SHA-256 of the canonical JSON of `["v2", documentId, branch, scope, type, id, timestampUtcMs, input, signer.user.address, signer.user.networkId, signer.user.chainId, signer.app.key]`. The signed message layout is unchanged, so an older verifier still accepts a v2 tuple. `ISigner.signAction` takes the document and branch the action is written to, and `ReactorClient` resolves slugs to ids before signing. The executor signs the NOOP an `UNDO` becomes and the action a `REDO` rebuilds with the reactor's own signer.
+
+```typescript
+signAction(action: Action, target: { documentId: string; branch: string }, signal?: AbortSignal): Promise<Signature>;
+```
+
+#### ✅ Executor-owned verification, enforcing by default
+
+The reactor verifies every write once, at admission: actions submitted to a mutation job and incoming operations in a load job, in-process and in pooled workers. A refused mutation fails with `InvalidSignatureError` (the code is in the message and on `code`); a load drops the refused operations and stores the rest. `signatureVerification: "log"` on the executor config records refusals without refusing. Each refusal emits `SIGNATURE_REFUSED`, counted as `reactor_signature_refusals_total{scheme,path,code}`.
+
+#### 📄 v2-required documents, by default
+
+`protocolVersions.signature: 2` makes a document v2-required. It refuses unsigned actions (`UNSIGNED_REQUIRED`), legacy tuples (`SCHEME_BELOW_POLICY`) and `PRUNE` (`ACTION_NOT_ALLOWED`). Its id is `base64url(sha256(canonicalJson({ documentType, createdAtUtcIso, nonce, protocolVersions })))`, 43 characters, so a document's requirement cannot change without changing its id and a v2-required document cannot take an id you choose. Every model's `utils.createDocument()`, `createEmpty()`, `drives.create()`, copies of legacy documents, and the documents Connect and switchboard create are now v2-required. Existing documents stay legacy.
+
+```typescript
+import { withSignaturePolicy } from "@powerhousedao/shared/document-model";
+
+await client.createEmpty("powerhouse/document-model"); // v2-required, derived id
+await client.createEmpty("powerhouse/document-model", {
+  signaturePolicy: "legacy",
+});
+await client.drives.create({
+  global: { name: "Drive" },
+  signaturePolicy: "legacy",
+});
+await client.create(
+  withSignaturePolicy(module.utils.createDocument(), "legacy", { id: "my-id" }),
+);
+```
+
+#### 🎚️ Creation default override
+
+One host-level setting picks what new documents are created as when the caller does not say. It never changes an existing document and does not change what a reactor accepts.
+
+| Host        | Setting                                                                     |
+| ----------- | --------------------------------------------------------------------------- |
+| Library     | `ReactorClientBuilder.withCreateSignaturePolicy("legacy" \| "v2-required")` |
+| Switchboard | `CREATE_SIGNATURE_POLICY=legacy` or `v2-required` (default)                 |
+| Connect     | `connect.reactor.createSignaturePolicy` in `powerhouse.config.json`         |
+
+`IReactorClient.getCreateSignaturePolicy()` reports it.
+
+#### 🪪 Signature trust policy
+
+A `SignatureTrustPolicy` (`ReactorBuilder.withTrustPolicy`, or `SignerConfig.trustPolicy`) is asked once per signed write whether `signer.app.key` may sign as `signer.user`. Without one, a signed write is refused while `REACTOR_AUTH_ENFORCEMENT` is on and accepted otherwise, because the auth scope trusts `signer.user.address`. Under `REACTOR_AUTH_ENFORCEMENT` switchboard installs `createRenownTrustPolicy` from `@renown/sdk`, which accepts a key when a Renown credential issued by the address's `did:pkh` delegates to it. The reactor's own key signing as its own user is always accepted.
+
+### BREAKING CHANGES
+
+#### Signature verification enforces by default
+
+A write whose signature does not verify is refused. Tampered legacy input is refused at mutation admission. Set `signatureVerification: "log"` on the executor config to observe refusals first.
+
+#### `REQUIRE_SIGNATURES` removed
+
+The switchboard `REQUIRE_SIGNATURES` env var and `identity.requireSignatures` no longer exist; nothing reads them. Also removed: `SignerConfig.verifier`, `ReactorBuilder.withSignatureVerifier`, `WorkerPoolOptions.verifier`, `SignatureVerifierSpec` and `getRenownSignerConfig`'s `requireSignature` parameter. A v2-required document carries its own requirement.
+
+#### New documents are v2-required, with content-addressed ids
+
+**Before:** `module.utils.createDocument()` returned a legacy document with a random UUID, and code could overwrite `document.header.id` before creating it.
+
+**After:** the document is v2-required and its id is derived from its header. Setting `document.header.id` on it makes its `CREATE_DOCUMENT` fail with `ID_MISMATCH`, and writing to it unsigned fails with `UNSIGNED_REQUIRED`.
+
+**Migration:** use the id the document carries; for a chosen id, create it legacy with `withSignaturePolicy(document, "legacy", { id })`. Give every client that creates or writes documents a signer (`ReactorClientBuilder.withSigner`), or create legacy documents with `withCreateSignaturePolicy("legacy")`. A switchboard's default drive with a fixed `id` is created legacy.
+
+#### Hosts need a signer to undo and redo on v2-required documents
+
+A reactor with no signer stores the operations it synthesizes from `UNDO` and `REDO` unsigned, and every peer refuses them on a v2-required document. Give the reactor a signer (`ReactorBuilder.withSigner`, which `ReactorClientBuilder.withSigner` passes on) and, for pooled workers, a `workerSigner` spec. A switchboard whose Renown identity fails to initialize has no signer, so it creates legacy documents and logs a warning.
+
+#### `IReactorClient.getCreateSignaturePolicy()`
+
+`IReactorClient` gains `getCreateSignaturePolicy()`. An object implementing the interface by hand must add it.
+
+### MIGRATION GUIDE
+
+1. Upgrade every reactor in the fleet — switchboards and Connect builds — to this release before any of them creates v2-required documents. An older reactor stores whatever it would have stored before on a v2-required document and forwards it, and upgraded peers drop those operations.
+2. During the rollout, set the creation default to legacy: `CREATE_SIGNATURE_POLICY=legacy` on switchboards, `connect.reactor.createSignaturePolicy: "legacy"` in Connect's config. Browser clients update on their own schedule; watch `reactor_signature_refusals_total` for refusals.
+3. Make sure every host that writes documents has a signer: switchboard needs a Renown identity (`ph login`), and a library host needs `withSigner`.
+4. Remove `REQUIRE_SIGNATURES` from deployments.
+5. Once the whole fleet runs this release, drop the legacy override; new documents are then v2-required.
+
+---
+
 ## 🚀 **v6.0.0** — Jan–May 2026
 
 ### ✨ Highlights
