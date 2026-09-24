@@ -40,7 +40,35 @@ export interface AttachmentAccessRequest {
   documentId: string;
   attachmentRef: string;
   userAddress?: string;
+  /**
+   * The `did:key` of the app instance whose token authenticated the caller.
+   * A policy subject is an address AND a key — a grant can name either, and a
+   * document's creator is recorded by key — so a decision made from the address
+   * alone answers a narrower question than the one being asked.
+   */
+  appKey?: string;
 }
+
+/**
+ * Which scopes of a document a subject may read, asked by document id.
+ *
+ * Structural on purpose: the composition that has a policy model to enforce
+ * supplies `SyncScopeGate`, and one that does not supplies nothing at all.
+ */
+export interface IDocumentScopeGate {
+  scopePredicateById(
+    documentId: string,
+    subject: { address?: string; key?: string },
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<(scope: string) => boolean>;
+}
+
+/** The scope an attachment's bytes belong to: the document's own domain state. */
+const ATTACHMENT_SCOPE = "global";
+
+/** The branch an attachment reference is resolved against. */
+const ATTACHMENT_BRANCH = "main";
 
 export interface IAttachmentAccessService {
   canReadAttachment(
@@ -53,9 +81,20 @@ const HASH_PATTERN = /^[a-f0-9]{64}$/;
 /**
  * Composes document authorization with the projected document/ref
  * relationship. Order is fixed: validate ref, resolve the canonical document
- * id, check `canRead`, then check the reference index. A denied document
+ * id, decide the read, then check the reference index. A denied document
  * never reaches the reference reader, and the facade never touches
  * attachment metadata, storage backends, or presigners.
+ *
+ * The read is decided by the document's own policy when this composition has a
+ * model to enforce it with, and by the host's permission tables when it does
+ * not. That is not a preference between two equivalent answers: a host running
+ * document policies keeps no rows in the permission tables, so asking them
+ * about such a document returns whatever the host-wide policy says — under
+ * `OPEN`, `true`, for everyone. Serving bytes on that answer hands the file to
+ * anyone who learns its hash, which the document's own state may well have told
+ * them. Both are kept because they are the two halves of one rule: an
+ * attachment is readable by whoever may read the document that references it,
+ * and each composition can only express that in its own terms.
  */
 export class AttachmentAccessService implements IAttachmentAccessService {
   constructor(
@@ -63,6 +102,11 @@ export class AttachmentAccessService implements IAttachmentAccessService {
     private readonly authorization: IAuthorizationService,
     private readonly references: IAttachmentReferenceReader,
     private readonly projection: AttachmentReferenceProjectionCapability,
+    /**
+     * Absent below auth enforcement, where there is no policy model to
+     * evaluate; the host's permission tables decide alone, exactly as before.
+     */
+    private readonly scopeGate?: IDocumentScopeGate,
   ) {}
 
   async canReadAttachment(
@@ -84,11 +128,7 @@ export class AttachmentAccessService implements IAttachmentAccessService {
       return { kind: "denied" };
     }
 
-    const readable = await this.authorization.canRead(
-      documentId,
-      request.userAddress,
-    );
-    if (!readable) {
+    if (!(await this.canReadDocument(documentId, request))) {
       return { kind: "denied" };
     }
 
@@ -98,6 +138,29 @@ export class AttachmentAccessService implements IAttachmentAccessService {
     }
 
     return { kind: "allowed", documentId, ref };
+  }
+
+  /**
+   * Whether the caller may read the state the reference lives in.
+   *
+   * A failure here is rethrown rather than turned into a denial. A read side
+   * that is down must not read as a policy: a denial nobody can distinguish
+   * from a refusal is one nobody investigates, and the route answers 500 for a
+   * reason.
+   */
+  private async canReadDocument(
+    documentId: CanonicalDocumentId,
+    request: AttachmentAccessRequest,
+  ): Promise<boolean> {
+    if (!this.scopeGate) {
+      return this.authorization.canRead(documentId, request.userAddress);
+    }
+    const readable = await this.scopeGate.scopePredicateById(
+      documentId,
+      { address: request.userAddress, key: request.appKey },
+      ATTACHMENT_BRANCH,
+    );
+    return readable(ATTACHMENT_SCOPE);
   }
 }
 

@@ -1249,15 +1249,21 @@ async function _setupAPI(
     `Authorization service initialized (policy: ${authorizationConfig.policy})`,
   );
 
-  // Attachment reads are authorized by document permission plus the projected
+  // Attachment reads are authorized by the document read plus the projected
   // document/ref relationship; the facade owns that composition so routes
   // never consult the reference store or authorization service directly.
+  //
+  // The gate is the one sync serving already decides with, rather than a second
+  // one built here: two gates over one document model would be two policies
+  // that can disagree, and the question both are asking is the same one — may
+  // this subject read this document's state.
   const attachmentAccess: IAttachmentAccessService =
     new AttachmentAccessService(
       createCanonicalDocumentIdResolver(reactorClient),
       authorizationService,
       attachmentReferenceIndex.store,
       attachmentReferenceProjection,
+      syncServingGate,
     );
 
   // set up subgraph manager
