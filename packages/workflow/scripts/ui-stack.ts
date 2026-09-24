@@ -216,19 +216,17 @@ function seedInBrowser(page: Page, input: SeedInput): Promise<Seeded> {
       `/@fs${root}/packages/workflow/document-models/connection/v1/index.ts`
     )) as typeof ConnectionModel;
 
-    // Readable is not yet writable: the drive's relationships can land a
-    // moment after the document itself syncs, so the first add retries.
-    const addFirst = async () => {
-      for (let attempt = 0; ; attempt++) {
-        try {
-          return await client.drives.addFile(drive, cn.utils.createDocument());
-        } catch (error) {
-          if (attempt >= 30) throw error;
-          await new Promise((r) => setTimeout(r, 500));
-        }
+    // The drive can be readable before it accepts files, so the first add
+    // retries; inline because tsx wraps named functions in a missing __name.
+    let conn: { header: { id: string } } | undefined;
+    for (let attempt = 0; !conn; attempt++) {
+      try {
+        conn = await client.drives.addFile(drive, cn.utils.createDocument());
+      } catch (error) {
+        if (attempt >= 30) throw error;
+        await new Promise((r) => setTimeout(r, 500));
       }
-    };
-    const conn = await addFirst();
+    }
     const connection = conn.header.id;
     await client.execute(connection, "main", [
       cn.setConnectionName({ name: "Ops Slack" }),
