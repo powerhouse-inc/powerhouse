@@ -23,7 +23,10 @@ import {
   type ReactorIdentity,
   type WorkerMigrationState,
 } from "@powerhousedao/reactor-browser/rpc";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  SignaturePolicy,
+} from "@powerhousedao/shared/document-model";
 import {
   createRelationalDb,
   type IProcessorManager,
@@ -89,6 +92,8 @@ type WorkerConstruct = {
   // Same reason: enforcement flags arrive from the tab. Absent means all off,
   // which is what a tab on an older build sends.
   featureFlags?: Partial<ReactorFeatureFlags>;
+  // What new documents are created as; absent means the reactor's default.
+  createSignaturePolicy?: SignaturePolicy;
 };
 
 type ModelRegistry = {
@@ -356,6 +361,9 @@ const host = new ReactorHost({
             ),
         );
       builder.withDocumentModelLoader(loader);
+      if (construct.createSignaturePolicy) {
+        builder.withCreateSignaturePolicy(construct.createSignaturePolicy);
+      }
       const module = await builder.buildModule();
       registry = module.reactorModule?.documentModelRegistry;
       syncManager = module.reactorModule?.syncModule?.syncManager;

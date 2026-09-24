@@ -14,6 +14,7 @@ import { getUniqueDocumentModels } from "@powerhousedao/reactor-api";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelModule,
+  SignaturePolicy,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule, type ILogger } from "document-model";
@@ -54,6 +55,8 @@ export type SwitchboardReactorDefaultsOptions = {
    * `getRenownTrustPolicyConfig`); wins over one carried by `signer`.
    */
   trustPolicy?: Pick<SignerConfig, "trustPolicy" | "workerTrustPolicy">;
+  /** What the client creates new documents as; see `resolveCreateSignaturePolicy`. */
+  createSignaturePolicy?: SignaturePolicy;
 };
 
 /**
@@ -133,6 +136,10 @@ export function applySwitchboardReactorDefaults(
       options.signer.signer,
       options.signer.workerSigner,
     );
+  }
+
+  if (options.createSignaturePolicy) {
+    clientBuilder.withCreateSignaturePolicy(options.createSignaturePolicy);
   }
 
   const trust = options.trustPolicy ?? options.signer;

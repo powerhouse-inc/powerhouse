@@ -186,6 +186,20 @@ exits non-zero instead of waiting out the init timeout.
 
 Programmatically: `startSwitchboard({ projectionWorker: { enabled, dbPoolSize } })`.
 
+### Creation Signature Policy
+
+| Variable                  | Description                                                  | Default       |
+| ------------------------- | ------------------------------------------------------------ | ------------- |
+| `CREATE_SIGNATURE_POLICY` | What new documents are created as: `legacy` or `v2-required` | `v2-required` |
+
+A v2-required document accepts only v2 action signatures and takes a
+content-addressed id. Set `legacy` while any reactor that syncs with this one
+predates v2-required documents. It only decides what new documents are born
+as; existing documents keep their policy, and it does not change what the
+switchboard accepts. Without a Renown identity the switchboard has no signer,
+so it creates legacy documents and logs a warning. A default drive configured
+with a fixed `id` is always created legacy.
+
 ### Reactor Enforcement Flags
 
 | Variable                       | Description                                                        | Default |

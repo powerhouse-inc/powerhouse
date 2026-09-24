@@ -22,6 +22,7 @@ import type {
 import type { RuntimePowerhouseConfig } from "@powerhousedao/shared/connect";
 import type {
   DocumentModelModule,
+  SignaturePolicy,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import type { IRenown } from "@renown/sdk";
@@ -40,6 +41,7 @@ export async function createBrowserReactor(
   renown: IRenown,
   featureFlags: Partial<ReactorFeatureFlags>,
   documentModelLoader?: IDocumentModelLoader,
+  createSignaturePolicy?: SignaturePolicy,
 ): Promise<BrowserReactorClientModule> {
   const signerConfig: SignerConfig = { signer: renown.signer };
 
@@ -73,6 +75,9 @@ export async function createBrowserReactor(
 
   if (documentModelLoader) {
     builder.withDocumentModelLoader(documentModelLoader);
+  }
+  if (createSignaturePolicy) {
+    builder.withCreateSignaturePolicy(createSignaturePolicy);
   }
 
   const module = await builder.buildModule();

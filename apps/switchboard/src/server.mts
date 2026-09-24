@@ -95,6 +95,7 @@ import {
   type SupportedPgMajor,
 } from "./pglite-version.js";
 import { resolveReactorFeatureFlags } from "./reactor-feature-flags.mjs";
+import { resolveCreateSignaturePolicy } from "./create-signature-policy.mjs";
 import {
   getRenownSignerConfig,
   getRenownTrustPolicyConfig,
@@ -620,6 +621,10 @@ async function initServer(
       signer: renown
         ? getRenownSignerConfig(renown, options.identity?.keypairPath)
         : undefined,
+      createSignaturePolicy: resolveCreateSignaturePolicy(process.env, {
+        hasSigner: renown !== null,
+        logger,
+      }),
       trustPolicy: reactorFeatureFlags.authEnforcement
         ? await getRenownTrustPolicyConfig(
             renownConfig.source === "self"
