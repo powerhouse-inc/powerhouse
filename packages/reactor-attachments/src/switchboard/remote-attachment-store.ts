@@ -17,6 +17,9 @@ import type {
 import { buildAuthHeaders } from "./build-auth-headers.js";
 import type { SwitchboardClientConfig } from "./remote-reservation-store.js";
 
+const MISSING_DOCUMENT_ID =
+  "Remote attachment reads require the documentId whose operations reference the attachment";
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -198,8 +201,14 @@ export class RemoteAttachmentStore implements IAttachmentReader {
    * header (degraded wire), throws AttachmentPending instead -- the
    * AttachmentPending throw is the degraded-wire case.
    */
-  async stat(hash: AttachmentHash): Promise<AttachmentHeader> {
-    const url = `${this.remoteUrl}/attachments/${hash}`;
+  async stat(
+    hash: AttachmentHash,
+    documentId?: string,
+  ): Promise<AttachmentHeader> {
+    if (documentId === undefined) {
+      throw new Error(MISSING_DOCUMENT_ID);
+    }
+    const url = `${this.remoteUrl}/attachments/${hash}?documentId=${encodeURIComponent(documentId)}`;
     const authHeaders = await buildAuthHeaders(url, this.jwtHandler);
 
     const response = await this.fetchFn(url, {
@@ -240,15 +249,13 @@ export class RemoteAttachmentStore implements IAttachmentReader {
     documentId?: string,
   ): Promise<AttachmentResponse> {
     if (documentId === undefined) {
-      return this.fetchAttachment(hash, signal);
+      throw new Error(MISSING_DOCUMENT_ID);
     }
     const target = await this.getDownloadTarget(hash, { documentId, signal });
     if (target.kind === "presigned-get") {
       return this.fetchPresigned(hash, target, signal);
     }
-    // Switchboard targets keep the existing authenticated byte semantics;
-    // the target URL points at the same route the legacy path uses.
-    return this.fetchAttachment(hash, signal, target);
+    return this.fetchAttachment(hash, target, signal);
   }
 
   /**
@@ -316,12 +323,12 @@ export class RemoteAttachmentStore implements IAttachmentReader {
 
   private async fetchAttachment(
     hash: AttachmentHash,
+    target: AttachmentDownloadTarget,
     signal?: AbortSignal,
-    target?: AttachmentDownloadTarget,
   ): Promise<AttachmentResponse> {
-    const url = target?.url ?? `${this.remoteUrl}/attachments/${hash}`;
+    const url = target.url;
     const authHeaders = await buildAuthHeaders(url, this.jwtHandler);
-    const headers = { ...target?.headers, ...authHeaders };
+    const headers = { ...target.headers, ...authHeaders };
 
     const response = await this.fetchFn(url, { signal, headers });
 

@@ -9,6 +9,7 @@ import type {
   AttachmentMetadata,
   AttachmentResponse,
   AttachmentSendOptions,
+  AttachmentStatOptions,
   AttachmentTransportConfig,
   AttachmentUploadResult,
   AttachmentUploadTarget,
@@ -49,8 +50,14 @@ export interface IAttachmentService {
    * Returns an AttachmentHeader with status='pending' and expiresAtUtc set if
    * the hash has an active reservation but no committed bytes. Callers must
    * check header.status to distinguish pending from available.
+   *
+   * `documentId` names the document that authorizes the read. Remote readers
+   * require it; local/direct readers ignore it.
    */
-  stat(ref: AttachmentRef): Promise<AttachmentHeader>;
+  stat(
+    ref: AttachmentRef,
+    options?: AttachmentStatOptions,
+  ): Promise<AttachmentHeader>;
 
   /**
    * Retrieve attachment data.
@@ -66,8 +73,7 @@ export interface IAttachmentService {
    *         callers cannot tune it.
    *
    * The options form carries the document id that authorizes a remote
-   * download; local/direct readers ignore it. The bare-signal form remains
-   * supported for source compatibility.
+   * download. Remote readers require it; local/direct readers ignore it.
    */
   get(
     ref: AttachmentRef,
@@ -176,17 +182,20 @@ export interface IAttachmentReader {
    * Returns an AttachmentHeader with status='pending' and expiresAtUtc set if
    * the hash has an active reservation but no committed bytes. Callers must
    * check header.status to distinguish pending from available.
+   *
+   * `documentId` is the authorization anchor: remote readers require it,
+   * local/direct readers ignore it.
    */
-  stat(hash: AttachmentHash): Promise<AttachmentHeader>;
+  stat(hash: AttachmentHash, documentId?: string): Promise<AttachmentHeader>;
 
   /**
    * Retrieve attachment header and data stream by hash.
    * Updates lastAccessedAtUtc on access.
    *
-   * If the data has been evicted, re-fetches it from the transport,
-   * restores it locally via put(), and returns the data. This makes
-   * eviction transparent to callers -- get() always succeeds for
-   * any known, available hash.
+   * If the data has been evicted or was never local, re-fetches it from the
+   * transport on behalf of `documentId`, restores it locally via put(), and
+   * returns the data. Without a `documentId` there is nothing to authorize
+   * the remote fetch, so only locally available bytes are served.
    *
    * @throws AttachmentNotFound if the hash is unknown (no metadata
    *         record exists and no pending reservation).
@@ -194,8 +203,8 @@ export interface IAttachmentReader {
    *         upload; bytes are not yet available. There is no store-level
    *         wait -- polling is the caller's responsibility.
    *
-   * `documentId` is the authorization anchor for remote readers that must
-   * negotiate a download target; local/direct readers ignore it.
+   * `documentId` is the authorization anchor: remote readers require it,
+   * and local stores pass it to the transport when they must re-fetch.
    */
   get(
     hash: AttachmentHash,
@@ -288,10 +297,13 @@ export interface IAttachmentTransport {
    * or to retry indefinitely on a permanently missing hash.
    *
    * @param hash - Content hash of the attachment
+   * @param documentId - Document whose operations reference the attachment;
+   *   the remote authorizes the fetch through it
    * @param signal - Abort signal for cancellation
    */
   fetch(
     hash: AttachmentHash,
+    documentId: string,
     signal?: AbortSignal,
   ): Promise<TransportFetchResult>;
 

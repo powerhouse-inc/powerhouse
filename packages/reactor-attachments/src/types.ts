@@ -142,6 +142,11 @@ export type AttachmentDownloadOptions = {
   signal?: AbortSignal;
 };
 
+/** Options form of IAttachmentService.stat. */
+export type AttachmentStatOptions = {
+  documentId?: string;
+};
+
 /**
  * Options for minting a raw download target without transferring bytes
  * (previews, share links). `documentId` is required: targets are always

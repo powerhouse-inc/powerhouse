@@ -17,13 +17,14 @@ import {
   AttachmentBuilder,
   type AttachmentBuildResult,
 } from "../../src/index.js";
-import { ReservationNotFound } from "../../src/errors.js";
+import { AttachmentNotFound, ReservationNotFound } from "../../src/errors.js";
 import { createRemoteAttachmentService } from "../../src/switchboard/create-remote-attachment-service.js";
 import { RemoteAttachmentStore } from "../../src/switchboard/remote-attachment-store.js";
 import { RemoteReservationStore } from "../../src/switchboard/remote-reservation-store.js";
 import { streamFromString, streamToBytes } from "../factories.js";
 
 const HASH_PATTERN = /^[a-f0-9]{64}$/i;
+const DOC_ID = "doc-1";
 
 type RouteContext = {
   attachments: AttachmentBuildResult;
@@ -112,7 +113,22 @@ async function handle(
     return;
   }
 
-  const getMatch = /^\/attachments\/([^/]+)$/.exec(url);
+  const [pathname, query = ""] = url.split("?");
+  const targetMatch = /^\/attachments\/([^/]+)\/download-target$/.exec(
+    pathname,
+  );
+  if (method === "GET" && targetMatch) {
+    const documentId = new URLSearchParams(query).get("documentId") ?? "";
+    sendJson(res, 200, {
+      kind: "switchboard",
+      method: "GET",
+      url: `http://${req.headers.host}/attachments/${targetMatch[1]}?documentId=${encodeURIComponent(documentId)}`,
+      headers: {},
+    });
+    return;
+  }
+
+  const getMatch = /^\/attachments\/([^/]+)$/.exec(pathname);
   if ((method === "GET" || method === "HEAD") && getMatch) {
     const hash = getMatch[1];
     if (!HASH_PATTERN.test(hash)) {
@@ -213,7 +229,7 @@ describe("remote attachment service end-to-end", () => {
     expect(result.ref).toBe(`attachment://v1:${result.hash}`);
     expect(result.header.sizeBytes).toBe(payload.length);
 
-    const got = await service.get(result.ref);
+    const got = await service.get(result.ref, { documentId: DOC_ID });
     expect(got.header.hash).toBe(result.hash);
     expect(got.header.mimeType).toBe("text/plain");
     expect(got.header.fileName).toBe("hello.txt");
@@ -259,7 +275,7 @@ describe("remote attachment service end-to-end", () => {
     // strictly before this window) rather than being synthesized client-side.
     const beforeStat = new Date();
     await new Promise((resolve) => setTimeout(resolve, 5));
-    const header = await service.stat(result.ref);
+    const header = await service.stat(result.ref, { documentId: DOC_ID });
 
     expect(header.hash).toBe(result.hash);
     expect(header.mimeType).toBe("text/plain");
@@ -289,7 +305,7 @@ describe("remote attachment service end-to-end", () => {
 
     const beforeGet = new Date();
     await new Promise((resolve) => setTimeout(resolve, 5));
-    const got = await service.get(result.ref);
+    const got = await service.get(result.ref, { documentId: DOC_ID });
 
     expect(new Date(got.header.createdAtUtc).toISOString()).toBe(
       got.header.createdAtUtc,
@@ -333,6 +349,8 @@ describe("remote attachment service end-to-end", () => {
   it("RemoteAttachmentStore.stat throws when the hash is unknown", async () => {
     const store = new RemoteAttachmentStore({ remoteUrl: baseUrl });
     const fakeHash = "0".repeat(64);
-    await expect(store.stat(fakeHash)).rejects.toThrow();
+    await expect(store.stat(fakeHash, DOC_ID)).rejects.toThrow(
+      AttachmentNotFound,
+    );
   });
 });

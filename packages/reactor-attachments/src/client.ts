@@ -59,6 +59,7 @@ export type {
   AttachmentMetadata,
   AttachmentResponse,
   AttachmentSendOptions,
+  AttachmentStatOptions,
   AttachmentStatus,
   AttachmentTransportConfig,
   AttachmentUploadResult,
@@ -315,6 +316,26 @@ function isAttachmentAlreadyExists(
   );
 }
 
+// Nothing references the blob yet, so the server header is not readable.
+function dedupedHeader(
+  hash: AttachmentHash,
+  options: HashFirstReserveAttachmentOptions,
+): AttachmentHeader {
+  const now = new Date().toISOString();
+  return {
+    hash,
+    mimeType: options.mimeType,
+    fileName: options.fileName,
+    sizeBytes: options.sizeBytes,
+    extension: options.extension ?? null,
+    status: "available",
+    source: "local",
+    createdAtUtc: now,
+    lastAccessedAtUtc: now,
+    expiresAtUtc: null,
+  };
+}
+
 function streamFromBuffer(buf: Uint8Array): ReadableStream<Uint8Array> {
   return new ReadableStream({
     start(controller) {
@@ -413,10 +434,13 @@ class AttachmentClientImpl implements IAttachmentClient {
       return { kind: "handle", handle: await this.service.reserve(options) };
     } catch (err) {
       if (!isAttachmentAlreadyExists(err)) throw err;
-      const header = await this.service.stat(err.ref);
       return {
         kind: "deduped",
-        result: { hash: err.hash, ref: err.ref, header },
+        result: {
+          hash: err.hash,
+          ref: err.ref,
+          header: dedupedHeader(err.hash, options),
+        },
       };
     }
   }

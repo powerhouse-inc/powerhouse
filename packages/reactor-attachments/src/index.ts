@@ -32,6 +32,7 @@ export type {
   AttachmentMetadata,
   AttachmentResponse,
   AttachmentSendOptions,
+  AttachmentStatOptions,
   AttachmentStatus,
   AttachmentTransportConfig,
   AttachmentUploadResult,

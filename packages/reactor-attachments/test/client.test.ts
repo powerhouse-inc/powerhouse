@@ -176,14 +176,15 @@ describe("createAttachmentClient", () => {
       expect(result).toBe(UPLOAD_RESULT);
     });
 
-    it("returns dedup result WITHOUT calling send when AttachmentAlreadyExists", async () => {
+    it("returns dedup result WITHOUT calling send or stat when AttachmentAlreadyExists", async () => {
+      const stat = vi.fn();
       const service = makeMockService({
         reserve: vi
           .fn()
           .mockRejectedValue(
             new AttachmentAlreadyExists(EXPECTED_HASH, EXPECTED_REF),
           ),
-        stat: vi.fn().mockResolvedValue(MOCK_HEADER),
+        stat,
       });
       const client = createAttachmentClient(service);
       const mockSend = vi.fn();
@@ -191,15 +192,25 @@ describe("createAttachmentClient", () => {
         {
           mimeType: "text/plain",
           fileName: "f.txt",
+          extension: "txt",
           clientHash: EXPECTED_HASH,
           sizeBytes: BYTES.byteLength,
         },
         mockSend,
       );
       expect(mockSend).not.toHaveBeenCalled();
+      expect(stat).not.toHaveBeenCalled();
       expect(result.ref).toBe(EXPECTED_REF);
       expect(result.hash).toBe(EXPECTED_HASH);
-      expect(result.header).toBe(MOCK_HEADER);
+      expect(result.header).toMatchObject({
+        hash: EXPECTED_HASH,
+        mimeType: "text/plain",
+        fileName: "f.txt",
+        extension: "txt",
+        sizeBytes: BYTES.byteLength,
+        status: "available",
+        expiresAtUtc: null,
+      });
     });
 
     it("returned value has .ref as a valid attachment:// string", async () => {
@@ -238,30 +249,6 @@ describe("createAttachmentClient", () => {
           vi.fn(),
         ),
       ).rejects.toBe(boom);
-    });
-
-    it("re-throws stat errors from the dedup path", async () => {
-      const statError = new Error("stat failed");
-      const service = makeMockService({
-        reserve: vi
-          .fn()
-          .mockRejectedValue(
-            new AttachmentAlreadyExists(EXPECTED_HASH, EXPECTED_REF),
-          ),
-        stat: vi.fn().mockRejectedValue(statError),
-      });
-      const client = createAttachmentClient(service);
-      await expect(
-        client.reserve(
-          {
-            mimeType: "text/plain",
-            fileName: "f.txt",
-            clientHash: EXPECTED_HASH,
-            sizeBytes: BYTES.byteLength,
-          },
-          vi.fn(),
-        ),
-      ).rejects.toBe(statError);
     });
   });
 
