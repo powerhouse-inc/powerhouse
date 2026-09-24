@@ -3217,6 +3217,9 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@renown/sdk':
+        specifier: workspace:*
+        version: link:../../packages/renown
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
