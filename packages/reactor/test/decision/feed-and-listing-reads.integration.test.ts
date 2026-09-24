@@ -1,13 +1,23 @@
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
-import { initializeAuth, setGrant } from "@powerhousedao/shared/document-model";
+import {
+  initializeAuth,
+  normalizeDocumentModelVersion,
+  setGrant,
+} from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule, setModelName } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  createDocumentAction,
+  upgradeDocumentAction,
+} from "../../src/actions/index.js";
 import type { ReactorClient } from "../../src/client/reactor-client.js";
 import type { DocumentChangeEvent } from "../../src/client/types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { IReactor } from "../../src/core/types.js";
+import type { ReactorFeatureFlags } from "../../src/executor/types.js";
+import type { IDocumentView } from "../../src/storage/interfaces.js";
 import { createDocModelDocument } from "../factories.js";
 
 const READER = "0xReader";
@@ -16,13 +26,18 @@ const OUTSIDER = "0xOutsider";
 // A document serving no readable domain scope is withheld, not header-only.
 describe("feed and listing reads", () => {
   let reactor: IReactor | undefined;
+  let documentView: IDocumentView | undefined;
 
   afterEach(() => {
     reactor?.kill();
     reactor = undefined;
+    documentView = undefined;
+    vi.restoreAllMocks();
   });
 
-  async function build(): Promise<ReactorClient> {
+  async function build(
+    featureFlags: Partial<ReactorFeatureFlags> = {},
+  ): Promise<ReactorClient> {
     const module = await new ReactorClientBuilder()
       .withReactorBuilder(
         new ReactorBuilder()
@@ -31,12 +46,17 @@ describe("feed and listing reads", () => {
             driveDocumentModelModule as never,
           ])
           .withExecutorConfig({
-            featureFlags: { documentDecisions: true, authEnforcement: true },
+            featureFlags: {
+              documentDecisions: true,
+              authEnforcement: true,
+              ...featureFlags,
+            },
           }),
       )
       .buildModule();
 
     reactor = module.reactor;
+    documentView = module.documentView;
     return module.client;
   }
 
@@ -79,6 +99,66 @@ describe("feed and listing reads", () => {
   async function createOpen(client: ReactorClient, id: string) {
     await client.create(createDocModelDocument({ id }));
     return id;
+  }
+
+  // Upgraded with no initialState, so the read model indexes no domain scope.
+  async function createUnindexed(
+    client: ReactorClient,
+    id: string,
+  ): Promise<string> {
+    const { header, state } = createDocModelDocument({ id });
+    await client.execute(id, "main", [
+      createDocumentAction({
+        model: header.documentType,
+        version: 0,
+        documentId: id,
+        signing: {
+          signature: id,
+          publicKey: header.sig.publicKey,
+          nonce: header.sig.nonce,
+          createdAtUtcIso: header.createdAtUtcIso,
+          documentType: header.documentType,
+        },
+        slug: header.slug,
+        name: header.name,
+        branch: header.branch,
+        meta: header.meta,
+        protocolVersions: header.protocolVersions ?? { "base-reducer": 2 },
+      }),
+      upgradeDocumentAction({
+        documentId: id,
+        model: header.documentType,
+        fromVersion: 0,
+        toVersion: normalizeDocumentModelVersion(
+          (state as Partial<typeof state>).document?.version,
+        ),
+      }),
+    ]);
+    return id;
+  }
+
+  function policeUnindexed(client: ReactorClient, id: string) {
+    return client.execute(id, "main", [
+      initializeAuth({
+        version: 1,
+        grants: [
+          {
+            id: "g-read",
+            description: "the reader reads the domain",
+            effect: "allow",
+            principal: { address: READER },
+            capability: { can: "read", scope: "global" },
+          },
+          {
+            id: "g-admin",
+            description: "only the admin administers",
+            effect: "allow",
+            principal: { address: "0xAdmin" },
+            capability: { can: "execute", scope: "auth" },
+          },
+        ],
+      }),
+    ]);
   }
 
   function touchPoliced(client: ReactorClient, id: string) {
@@ -178,6 +258,18 @@ describe("feed and listing reads", () => {
       expect(Object.keys(served!.state)).not.toContain("local");
     });
 
+    it("withholds an update to a policed document holding no domain scope yet", async () => {
+      const client = await build();
+      const policed = await createUnindexed(client, "feed-unindexed");
+      const sentinel = await createOpen(client, "feed-unindexed-sentinel");
+
+      const events = await feedAs(client, OUTSIDER, sentinel, () =>
+        policeUnindexed(client, policed),
+      );
+
+      expect(events.flatMap(idsOf)).not.toContain(policed);
+    });
+
     it("withholds a relationship event naming an unreadable document", async () => {
       const client = await build();
       const policed = await createPoliced(client, "feed-rel-policed");
@@ -223,6 +315,108 @@ describe("feed and listing reads", () => {
       expect(asReader.results.map((d) => d.header.id).sort()).toEqual(
         [open, policed].sort(),
       );
+    });
+
+    it("withhold a policed document holding no domain scope yet", async () => {
+      const client = await build();
+      const policed = await createUnindexed(client, "list-unindexed");
+      await policeUnindexed(client, policed);
+
+      const asOutsider = await client.find(
+        { ids: [policed] },
+        { subject: { address: OUTSIDER } },
+      );
+      const asReader = await client.find(
+        { ids: [policed] },
+        { subject: { address: READER } },
+      );
+
+      expect(Object.keys((await reactor!.get(policed)).state).sort()).toEqual([
+        "auth",
+        "document",
+      ]);
+      expect(asOutsider.results).toEqual([]);
+      expect(asReader.results.map((d) => d.header.id)).toEqual([policed]);
+    });
+
+    it("read only the view's scopes and the policy for a narrowed view", async () => {
+      const client = await build();
+      const policed = await createPoliced(client, "narrow-policed");
+      const open = await createOpen(client, "narrow-open");
+      const getMany = vi.spyOn(documentView!, "getMany");
+      const get = vi.spyOn(documentView!, "get");
+
+      const asOutsider = await client.find(
+        { ids: [policed, open] },
+        { scopes: ["document"], subject: { address: OUTSIDER } },
+      );
+      const asReader = await client.find(
+        { ids: [policed, open] },
+        { scopes: ["document"], subject: { address: READER } },
+      );
+
+      expect(getMany).toHaveBeenCalledTimes(2);
+      for (const call of getMany.mock.calls) {
+        expect(call[1]?.scopes).toEqual(["document", "auth"]);
+      }
+      expect(get).not.toHaveBeenCalled();
+      expect(asOutsider.results.map((d) => d.header.id)).toEqual([open]);
+      expect(asReader.results.map((d) => d.header.id).sort()).toEqual(
+        [open, policed].sort(),
+      );
+      for (const document of asReader.results) {
+        expect(Object.keys(document.state).sort()).toEqual([
+          "auth",
+          "document",
+        ]);
+      }
+    });
+
+    it("read a scope a condition decides on when the view leaves it out", async () => {
+      const client = await build({ authGroups: true, authConditions: true });
+      const id = await createOpen(client, "narrow-conditioned");
+      await client.execute(id, "main", [
+        initializeAuth({
+          version: 1,
+          grants: [
+            {
+              id: "g-write",
+              description: "anyone writes the domain",
+              effect: "allow",
+              principal: { anyone: true },
+              capability: { can: "execute", scope: "global" },
+            },
+            {
+              id: "g-hide",
+              description: "the outsider loses it once it is named secret",
+              effect: "deny",
+              principal: { address: OUTSIDER },
+              capability: { can: "read", scope: "global" },
+              where: { eq: [{ attr: "doc.global.name" }, { lit: "secret" }] },
+            },
+            {
+              id: "g-admin",
+              description: "administration stays reachable",
+              effect: "allow",
+              principal: { anyone: true },
+              capability: { can: "execute", scope: "auth" },
+            },
+          ],
+        }),
+      ]);
+      await client.execute(id, "main", [setModelName({ name: "secret" })]);
+
+      const narrowed = await client.find(
+        { ids: [id] },
+        { scopes: ["document"], subject: { address: OUTSIDER } },
+      );
+      const whole = await client.find(
+        { ids: [id] },
+        { subject: { address: OUTSIDER } },
+      );
+
+      expect(whole.results).toEqual([]);
+      expect(narrowed.results).toEqual([]);
     });
 
     it("gate every page, not only the first", async () => {
