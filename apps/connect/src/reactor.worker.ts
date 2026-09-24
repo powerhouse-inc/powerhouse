@@ -36,7 +36,6 @@ import {
 } from "./reactor-worker-models.js";
 import {
   BrowserKeyStorage,
-  createSignatureVerifier,
   RenownCryptoBuilder,
   RenownCryptoSigner,
 } from "@renown/sdk/crypto";
@@ -345,7 +344,7 @@ const host = new ReactorHost({
       phase = "building reactor module";
       console.info(`[reactor.worker] boot: ${phase}`);
       const builder = new ReactorClientBuilder()
-        .withSigner({ signer, verifier: createSignatureVerifier() })
+        .withSigner({ signer })
         .withReactorBuilder(
           new ReactorBuilder()
             .withDocumentModelSources(models)

@@ -100,9 +100,6 @@ export type FactorySpec = {
   initArgs?: SanitizedArg;
 };
 
-/** @deprecated Workers no longer load a verifier; nothing reads this spec. */
-export type SignatureVerifierSpec = FactorySpec;
-
 /**
  * Factory spec for a document model module the worker should instantiate.
  *

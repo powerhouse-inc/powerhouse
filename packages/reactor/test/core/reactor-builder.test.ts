@@ -292,7 +292,7 @@ describe("ReactorBuilder", () => {
       expect(builder.getResolvedModelManifest()).toBeUndefined();
     });
 
-    it("builds a worker pool with no verifier spec", async () => {
+    it("builds a worker pool from a thread count and a factory", async () => {
       const builder = new ReactorBuilder()
         .withDocumentModelSources(FIXTURE_SOURCES)
         .withWorkerPool({

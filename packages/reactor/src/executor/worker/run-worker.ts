@@ -52,8 +52,8 @@ export type RunWorkerOverrides = {
     workerId: string,
   ) => Promise<WorkerDatabaseHandle>;
   /**
-   * Overrides the dynamic-import factory loader used for the signature
-   * verifier and document model manifest. Tests usually inject this so
+   * Overrides the dynamic-import factory loader used for the signer and
+   * document model manifest. Tests usually inject this so
    * they don't need real packages.
    */
   loadFactory?: BuildWorkerExecutorOptions["loadFactory"];
@@ -109,7 +109,7 @@ async function defaultCreateDatabase(
 /**
  * Drives the worker's message loop. Owns lifecycle of the database handle
  * and executor stack. The default factories build a real Postgres pool and
- * use dynamic `import()` for model/verifier specs; tests inject overrides
+ * use dynamic `import()` for model/signer specs; tests inject overrides
  * for an in-process PGlite path.
  */
 export function runWorker(

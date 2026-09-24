@@ -24,7 +24,7 @@ import type {
   DocumentModelModule,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
-import { createSignatureVerifier, type IRenown } from "@renown/sdk";
+import type { IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -41,10 +41,7 @@ export async function createBrowserReactor(
   featureFlags: Partial<ReactorFeatureFlags>,
   documentModelLoader?: IDocumentModelLoader,
 ): Promise<BrowserReactorClientModule> {
-  const signerConfig: SignerConfig = {
-    signer: renown.signer,
-    verifier: createSignatureVerifier(),
-  };
+  const signerConfig: SignerConfig = { signer: renown.signer };
 
   const jwtHandler: JwtHandler = async (_url: string) => {
     if (!renown.user) {

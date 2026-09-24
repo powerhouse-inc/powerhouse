@@ -221,7 +221,6 @@ export type {
   ResultMessage,
   SanitizedArg,
   ShutdownMessage,
-  SignatureVerifierSpec,
   WorkerMessage,
   WorkerPoolConfig,
 } from "./src/executor/worker/protocol.js";

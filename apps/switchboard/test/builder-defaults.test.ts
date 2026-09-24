@@ -30,7 +30,7 @@ describe("applySwitchboardReactorDefaults", () => {
     const clientBuilder = new ReactorClientBuilder();
     const reactorWithSigner = vi.spyOn(reactorBuilder, "withSigner");
     const clientWithSigner = vi.spyOn(clientBuilder, "withSigner");
-    const signer = getRenownSignerConfig(stubRenown(), false, ".ph/key.json");
+    const signer = getRenownSignerConfig(stubRenown(), ".ph/key.json");
 
     applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
       includeBaseModels: false,

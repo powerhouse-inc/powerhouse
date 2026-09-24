@@ -6,9 +6,7 @@ import type { FactorySpec } from "../executor/worker/protocol.js";
 
 export type { SignatureVerificationHandler };
 
-/**
- * Configuration for signing and verification.
- */
+/** The signer a client signs with and the executor signs synthesized operations with. */
 export type SignerConfig = {
   /**
    * The signer used to sign actions before submission.
@@ -21,9 +19,6 @@ export type SignerConfig = {
    * synthesized operations unsigned.
    */
   workerSigner?: FactorySpec;
-
-  /** @deprecated Ignored: the executor verifies signature integrity itself. */
-  verifier?: SignatureVerificationHandler;
 };
 
 /** `log` counts refusals and admits anyway; `enforce` refuses. */

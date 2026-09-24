@@ -1,6 +1,5 @@
 import type { FactorySpec, SignerConfig } from "@powerhousedao/reactor";
 import {
-  createSignatureVerifier,
   DEFAULT_KEYPAIR_PATH,
   DEFAULT_RENOWN_URL,
   NodeKeyStorage,
@@ -73,18 +72,15 @@ export async function initRenown(
  * Get the signer config for the given renown instance.
  *
  * @param renown - The renown instance
- * @param requireSignature - If true, unsigned actions are rejected
  * @param keypairPath - Where `initRenown` loaded the key from
  */
 export function getRenownSignerConfig(
   renown: IRenown,
-  requireSignature?: boolean,
   keypairPath?: string,
 ): SignerConfig {
   return {
     signer: renown.signer,
     workerSigner: getRenownWorkerSignerSpec(renown, keypairPath),
-    verifier: createSignatureVerifier(requireSignature),
   };
 }
 

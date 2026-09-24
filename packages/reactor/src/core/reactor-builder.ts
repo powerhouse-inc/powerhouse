@@ -9,7 +9,6 @@ import type {
   DbConfig,
   FactorySpec,
   ModelManifestEntry,
-  SignatureVerifierSpec,
   WorkerPoolConfig,
 } from "../executor/worker/protocol.js";
 import { WorkerPoolJobExecutorManager } from "../executor/worker-pool-job-executor-manager.js";
@@ -76,7 +75,6 @@ import {
   ConsistencyTracker,
   type IConsistencyTracker,
 } from "../shared/consistency-tracker.js";
-import type { SignatureVerificationHandler } from "../signer/types.js";
 import {
   KyselyDocumentIndexer,
   type IndexerDatabase,
@@ -191,8 +189,6 @@ export type {
 type WorkerPoolBase = {
   /** Number of worker threads to spawn; also the sticky-routing modulus. */
   numWorkers: number;
-  /** @deprecated Ignored: workers verify signature integrity themselves. */
-  verifier?: SignatureVerifierSpec;
 };
 
 /**
@@ -406,11 +402,6 @@ export class ReactorBuilder {
 
   withEventBus(eventBus: IEventBus): this {
     this.eventBus = eventBus;
-    return this;
-  }
-
-  /** @deprecated No-op: the executor verifies signature integrity itself. */
-  withSignatureVerifier(_verifier: SignatureVerificationHandler): this {
     return this;
   }
 

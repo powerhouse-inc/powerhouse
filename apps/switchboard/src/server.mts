@@ -112,8 +112,6 @@ dotenv.config();
 // Feature flag constants
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED = "DOCUMENT_MODEL_SUBGRAPHS_ENABLED";
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT = true;
-const REQUIRE_SIGNATURES = "REQUIRE_SIGNATURES";
-const REQUIRE_SIGNATURES_DEFAULT = false;
 
 const DEFAULT_PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
 
@@ -613,11 +611,7 @@ async function initServer(
           : undefined,
       logger: reactorLogger,
       signer: renown
-        ? getRenownSignerConfig(
-            renown,
-            options.identity?.requireSignatures,
-            options.identity?.keypairPath,
-          )
+        ? getRenownSignerConfig(renown, options.identity?.keypairPath)
         : undefined,
     });
 
@@ -1172,13 +1166,6 @@ export const startSwitchboard = async (
 
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
-  const requireSignatures =
-    options.identity?.requireSignatures ??
-    (await featureFlags.getBooleanValue(
-      REQUIRE_SIGNATURES,
-      REQUIRE_SIGNATURES_DEFAULT,
-    ));
-
   const configPathForFlags = resolveConfigPath(options.configFile);
   const workflowsEnabled = await resolveWorkflowsEnabled({
     featureFlags,
@@ -1195,7 +1182,6 @@ export const startSwitchboard = async (
   );
   options.identity = {
     ...options.identity,
-    requireSignatures,
     baseUrl: options.identity?.baseUrl ?? renownConfig.url,
   };
 
@@ -1204,7 +1190,6 @@ export const startSwitchboard = async (
     JSON.stringify(
       {
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
-        REQUIRE_SIGNATURES: requireSignatures,
         PH_WORKFLOWS_ENABLED: workflowsEnabled,
       },
       null,
