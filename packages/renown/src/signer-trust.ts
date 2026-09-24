@@ -6,17 +6,44 @@ import type { PowerhouseVerifiableCredential } from "./types.js";
 
 type SignerUser = ActionSigner["user"];
 
+/** A signer whose `app.key` and `user` are read on every ask. */
+export interface RenownOwnSigner {
+  readonly app?: { readonly key: string };
+  readonly user?: SignerUser;
+}
+
 export interface RenownTrustPolicyOptions {
   /** Serves the renown read model; without it, Renown's REST API is read. */
   switchboard?: SwitchboardSource;
   /** Renown base URL for the REST lookup. Defaults to DEFAULT_RENOWN_URL. */
   renownUrl?: string;
-  /** This node's own key and user, accepted without a lookup. */
+  /** This node's signer, read on every ask; its key signing as its current user is accepted without a lookup. Wins over `self`. */
+  ownSigner?: RenownOwnSigner;
+  /**
+   * A snapshot of this node's key and user, for a pooled worker whose signer
+   * cannot cross the thread boundary. Only matches the worker's own key.
+   */
   self?: { key: string; user: SignerUser };
   /** How many acceptances are remembered. Defaults to 10000. */
   maxAccepted?: number;
   /** How long a refusal is remembered before asking again. Defaults to 60s. */
   refusalTtlMs?: number;
+  /**
+   * How long after the first miss for an (address, key) a missing credential
+   * throws, so the write is retried while the credential propagates, before it
+   * is refused. Defaults to 5 minutes.
+   */
+  missingCredentialWindowMs?: number;
+}
+
+/** No credential binds the key yet; thrown inside the retry window. */
+export class MissingCredentialError extends Error {
+  constructor(address: string, key: string, retryUntil: number) {
+    super(
+      `No Renown credential binds ${key} to ${address} yet; retried until ${new Date(retryUntil).toISOString()}`,
+    );
+    this.name = "MissingCredentialError";
+  }
 }
 
 /** Structurally a reactor `SignatureTrustPolicy`. */
@@ -30,13 +57,20 @@ export interface RenownTrustPolicy {
 
 const DEFAULT_MAX_ACCEPTED = 10_000;
 const DEFAULT_REFUSAL_TTL_MS = 60_000;
+export const DEFAULT_MISSING_CREDENTIAL_WINDOW_MS = 5 * 60_000;
 
-/** Accepts a key the user's EIP-712 Renown credential delegates to, ignoring expiry and revocation. */
+/**
+ * Accepts a key the user's EIP-712 Renown credential delegates to, ignoring
+ * expiry and revocation. Verdicts are cached per (address, key); this node's
+ * own key is checked before the cache and never cached.
+ */
 export function createRenownTrustPolicy(
   options: RenownTrustPolicyOptions = {},
 ): RenownTrustPolicy {
   const maxAccepted = options.maxAccepted ?? DEFAULT_MAX_ACCEPTED;
   const refusalTtlMs = options.refusalTtlMs ?? DEFAULT_REFUSAL_TTL_MS;
+  const missingWindowMs =
+    options.missingCredentialWindowMs ?? DEFAULT_MISSING_CREDENTIAL_WINDOW_MS;
   const client = options.switchboard
     ? new SwitchboardClient(options.switchboard)
     : undefined;
@@ -45,6 +79,7 @@ export function createRenownTrustPolicy(
   const accepted = new Set<string>();
   const refusedUntil = new Map<string, number>();
   const pending = new Map<string, Promise<boolean>>();
+  const firstMissing = new Map<string, number>();
 
   const issued = (
     user: SignerUser,
@@ -58,14 +93,42 @@ export function createRenownTrustPolicy(
         })
       : fetchIssuedCredentialRest(user, key, renownUrl);
 
-  async function lookup(user: SignerUser, key: string): Promise<boolean> {
-    for (const credential of await issued(user, key)) {
+  async function lookup(
+    entry: string,
+    user: SignerUser,
+    key: string,
+  ): Promise<boolean> {
+    const credentials = await issued(user, key);
+    if (credentials.length === 0) {
+      return missing(entry, user, key);
+    }
+    firstMissing.delete(entry);
+    for (const credential of credentials) {
       if (
         bindsTo(credential, user, key) &&
         (await verifyDelegationProof(credential, user.chainId))
       ) {
         return true;
       }
+    }
+    return false;
+  }
+
+  // Throws inside the window so the write is retried; refuses after it.
+  function missing(entry: string, user: SignerUser, key: string): false {
+    const now = Date.now();
+    let first = firstMissing.get(entry);
+    if (first === undefined) {
+      if (firstMissing.size >= maxAccepted) {
+        const oldest = firstMissing.keys().next().value;
+        if (oldest !== undefined) firstMissing.delete(oldest);
+      }
+      first = now;
+      firstMissing.set(entry, first);
+    }
+    const retryUntil = first + missingWindowMs;
+    if (now < retryUntil) {
+      throw new MissingCredentialError(user.address, key, retryUntil);
     }
     return false;
   }
@@ -86,7 +149,8 @@ export function createRenownTrustPolicy(
   return {
     authorizeSigner(signer, key) {
       const user = signer.user as SignerUser | undefined;
-      if (options.self && isSelf(options.self, user, key)) {
+      const self = ownIdentity(options);
+      if (self && isSelf(self, user, key)) {
         return Promise.resolve(true);
       }
       if (!user || !isLookupable(user, key)) {
@@ -106,7 +170,7 @@ export function createRenownTrustPolicy(
         return inFlight;
       }
 
-      const verdict = lookup(user, key).then(
+      const verdict = lookup(entry, user, key).then(
         (result) => {
           pending.delete(entry);
           remember(entry, result);
@@ -119,6 +183,23 @@ export function createRenownTrustPolicy(
       );
       pending.set(entry, verdict);
       return verdict;
+    },
+  };
+}
+
+function ownIdentity(
+  options: RenownTrustPolicyOptions,
+): RenownTrustPolicyOptions["self"] {
+  if (!options.ownSigner) {
+    return options.self;
+  }
+  const { app, user } = options.ownSigner;
+  return {
+    key: app?.key ?? "",
+    user: {
+      address: user?.address ?? "",
+      networkId: user?.networkId ?? "",
+      chainId: user?.chainId ?? 0,
     },
   };
 }

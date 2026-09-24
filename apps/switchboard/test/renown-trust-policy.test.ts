@@ -53,9 +53,9 @@ const CREDENTIAL_ROW = {
   revoked: false,
 };
 
-function stubRenown(): IRenown {
+function stubRenown(user: ActionSigner["user"] = SWITCHBOARD_USER): IRenown {
   const signer = {
-    user: SWITCHBOARD_USER,
+    user,
     app: { name: "switchboard", key: SWITCHBOARD_KEY },
   } as unknown as ISigner;
   return { signer } as unknown as IRenown;
@@ -80,10 +80,13 @@ function mockReadModel(rows: unknown[] = [CREDENTIAL_ROW]) {
   );
 }
 
-async function remotePolicy(): Promise<SignatureTrustPolicy> {
+async function remotePolicy(
+  renown = stubRenown(),
+): Promise<SignatureTrustPolicy> {
   const { trustPolicy } = await getRenownTrustPolicyConfig(
     { source: "remote", switchboardUrl: GRAPHQL },
-    stubRenown(),
+    renown,
+    { missingCredentialWindowMs: 0 },
   );
   return trustPolicy!;
 }
@@ -158,11 +161,36 @@ describe("getRenownTrustPolicyConfig", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("matches the switchboard's own key against its current user", async () => {
+    const fetchMock = mockReadModel([]);
+    const renown = stubRenown();
+    const policy = await remotePolicy(renown);
+
+    renown.signer.user = { address: WALLET, networkId: "eip155", chainId: 1 };
+
+    await expect(
+      policy.authorizeSigner(
+        claim(WALLET, SWITCHBOARD_KEY),
+        SWITCHBOARD_KEY,
+        "doc",
+      ),
+    ).resolves.toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(
+      policy.authorizeSigner(
+        claim(SWITCHBOARD_USER.address, SWITCHBOARD_KEY),
+        SWITCHBOARD_KEY,
+        "doc",
+      ),
+    ).resolves.toBe(false);
+  });
+
   it("gives pooled workers a spec that builds the same policy", async () => {
     const fetchMock = mockReadModel();
     const { workerTrustPolicy } = await getRenownTrustPolicyConfig(
       { source: "remote", switchboardUrl: GRAPHQL },
       stubRenown(),
+      { missingCredentialWindowMs: 1234 },
     );
 
     const module = workerTrustPolicy!.module;
@@ -171,6 +199,7 @@ describe("getRenownTrustPolicyConfig", () => {
     expect(existsSync(filePath)).toBe(true);
     expect(workerTrustPolicy!.initArgs).toEqual({
       switchboard: GRAPHQL,
+      missingCredentialWindowMs: 1234,
       self: { key: SWITCHBOARD_KEY, user: SWITCHBOARD_USER },
     });
 
