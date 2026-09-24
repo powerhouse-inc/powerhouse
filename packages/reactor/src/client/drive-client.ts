@@ -489,7 +489,6 @@ export class DriveClient implements IDriveClient {
       results: slice,
       options: effective,
       ...(hasMore ? { nextCursor: String(endIndex) } : {}),
-      totalCount: filtered.length,
     };
   }
 

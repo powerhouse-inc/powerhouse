@@ -592,7 +592,6 @@ export class ReactorDriveClient implements IDriveClient {
       results: page.results.map((node) => this.toLegacyNode(node)),
       options: page.options,
       ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}),
-      ...(page.totalCount !== undefined ? { totalCount: page.totalCount } : {}),
     };
   }
 

@@ -274,9 +274,8 @@ export class ReactorClient implements IReactorClient {
   }
 
   /**
-   * Gates a page and every page after it. `totalCount` is restated over what
-   * was withheld so the difference is not a count of refused documents;
-   * `nextCursor` is left as the stream reported it.
+   * Gates a page and every page after it. `nextCursor` is left as the stream
+   * reported it.
    */
   private async gateListing(
     page: PagedResults<PHDocument>,
@@ -284,15 +283,10 @@ export class ReactorClient implements IReactorClient {
     signal: AbortSignal | undefined,
   ): Promise<PagedResults<PHDocument>> {
     const results = await this.gateServedAll(page.results, view, signal);
-    const withheld = page.results.length - results.length;
     const next = page.next;
     return {
       ...page,
       results,
-      totalCount:
-        page.totalCount === undefined
-          ? undefined
-          : Math.max(0, page.totalCount - withheld),
       next: next
         ? async () => this.gateListing(await next(), view, signal)
         : undefined,
