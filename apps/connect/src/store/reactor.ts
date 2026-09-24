@@ -347,6 +347,8 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   if (enabledReactorFlags.length > 0) {
     logger.info(`Reactor feature flags: ${enabledReactorFlags.join(", ")}`);
   }
+  const createSignaturePolicy =
+    runtimeConfig.connect?.reactor?.createSignaturePolicy;
 
   // create reactor v2 with all versions and upgrade manifests
   let reactorClientModule:
@@ -399,6 +401,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       workflowsEnabled: connectConfig.workflowsEnabled,
       renownChainId,
       featureFlags: reactorFeatureFlags,
+      createSignaturePolicy,
       documentModelModules,
       upgradeManifests,
       documentModelLoader,
@@ -428,6 +431,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       renown,
       reactorFeatureFlags,
       discoveryService,
+      createSignaturePolicy,
     );
   }
 

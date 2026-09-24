@@ -25,6 +25,7 @@ import {
 } from "@powerhousedao/reactor-browser/rpc";
 import type {
   DocumentModelModule,
+  SignaturePolicy,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import type { IRenown, User } from "@renown/sdk";
@@ -51,6 +52,8 @@ export type WorkerReactorClientArgs = {
   renownChainId?: number;
   /** Enforcement flags for the worker's reactor; it has no runtime config to read them from. */
   featureFlags: Partial<ReactorFeatureFlags>;
+  /** What the worker's client creates new documents as. */
+  createSignaturePolicy?: SignaturePolicy;
   documentModelModules: DocumentModelModule[];
   upgradeManifests: UpgradeManifest<readonly number[]>[];
   documentModelLoader: IDocumentModelLoader;
@@ -140,6 +143,7 @@ export function createWorkerReactorClientModule(
         workflowsEnabled: args.workflowsEnabled,
         renownChainId: args.renownChainId,
         featureFlags: args.featureFlags,
+        createSignaturePolicy: args.createSignaturePolicy,
       },
       packages: args.packageSpecs,
     },

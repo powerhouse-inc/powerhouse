@@ -87,6 +87,7 @@ export {
 } from "./src/shared/drive-url.js";
 export {
   AuthEnforcementDisabledError,
+  InvalidSignatureError,
   RelationshipNotFoundError,
 } from "./src/shared/errors.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
@@ -108,9 +109,19 @@ export {
   type ViewFilter,
 } from "./src/shared/types.js";
 export {
+  SIGNATURE_REFUSAL_CODES,
+  type AdmissionPath,
+  type SignatureRefusalCode,
+  type SignatureScheme,
   type SignatureVerificationHandler,
+  type SignatureTrustPolicy,
+  type SignatureVerificationMode,
   type SignerConfig,
 } from "./src/signer/types.js";
+export {
+  verifyActionSignature,
+  type VerificationTarget,
+} from "./src/signer/verify-action-signature.js";
 
 // Subscription Manager
 export { DefaultSubscriptionErrorHandler } from "./src/subs/default-error-handler.js";
@@ -137,6 +148,7 @@ export {
   type ReadModelIndexedEvent,
   type ReadModelStage,
   type ReadModelIndexingStage,
+  type SignatureRefusedEvent,
   type Unsubscribe,
 } from "./src/events/types.js";
 
@@ -210,7 +222,6 @@ export type {
   ResultMessage,
   SanitizedArg,
   ShutdownMessage,
-  SignatureVerifierSpec,
   WorkerMessage,
   WorkerPoolConfig,
 } from "./src/executor/worker/protocol.js";

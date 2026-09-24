@@ -236,9 +236,17 @@ function bindsTo(
   chainId: number,
   appDid: string,
 ): boolean {
+  return !row.revoked && issuedTo(row, address, chainId, appDid);
+}
+
+function issuedTo(
+  row: ReadRenownCredential,
+  address: string,
+  chainId: number,
+  appDid: string,
+): boolean {
   const expected = address.toLowerCase();
   return (
-    !row.revoked &&
     row.credentialSubjectId === appDid &&
     issuerChainId(row.issuerId) === String(chainId) &&
     issuerDidAddress(row.issuerId)?.toLowerCase() === expected &&
@@ -347,6 +355,37 @@ export class SwitchboardClient {
 
     const mostRecent = candidates.at(0);
     return mostRecent ? reshapeCredential(mostRecent) : undefined;
+  }
+
+  // Every credential (address, chainId) issued to `appDid`, revoked and expired
+  // included: that the address once delegated to the key does not change.
+  async getIssuedCredentials(params: {
+    address: string;
+    chainId: number;
+    appDid: string;
+  }): Promise<PowerhouseVerifiableCredential[]> {
+    const { address, chainId, appDid } = params;
+    const { renownCredentials } = await this.#request<{
+      renownCredentials: ReadRenownCredential[];
+    }>(CREDENTIALS_QUERY, {
+      input: {
+        driveId: userDriveId(address),
+        ethAddress: address.toLowerCase(),
+        did: appDid,
+        includeRevoked: true,
+      },
+    });
+
+    const credentials: PowerhouseVerifiableCredential[] = [];
+    for (const row of renownCredentials) {
+      if (!issuedTo(row, address, chainId, appDid)) continue;
+      try {
+        credentials.push(reshapeCredential(row));
+      } catch {
+        // A row whose proof domain does not parse cannot verify.
+      }
+    }
+    return credentials;
   }
 
   // Look up a Renown profile by ethereum address via the `renownUsers` query.

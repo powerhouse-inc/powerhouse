@@ -29,11 +29,29 @@ export type RequireAuthFetchMiddleware = (
  * context has no caller, and is rejected. The server never composes this
  * middleware without the auth middleware in the chain (see
  * `assertRequireAuthenticatedCallerAllowed` in `server.ts`).
+ *
+ * `exemptPaths` names the mounted paths that stay reachable anonymously — a
+ * deployment whose product has a flow that runs before sign-in, such as
+ * previewing an invitation from its code, needs somewhere to serve it from.
+ * Each entry is a hole in the floor, so the match is deliberately the
+ * narrowest one that works: the request's pathname, compared in full. A
+ * prefix rule would exempt `/graphql/public-admin` along with
+ * `/graphql/public`, and an exempt surface nobody can enumerate by reading
+ * the configuration is not one anybody audits.
  */
-export function createRequireAuthFetchMiddleware(): RequireAuthFetchMiddleware {
+export function createRequireAuthFetchMiddleware(
+  exemptPaths: readonly string[] = [],
+): RequireAuthFetchMiddleware {
+  const exempt = new Set(exemptPaths.map(normalizeExemptPath));
   return (next: FetchHandler): FetchHandler =>
     async (request: globalThis.Request): Promise<globalThis.Response> => {
       if (request.method === "OPTIONS") {
+        return next(request);
+      }
+      if (
+        exempt.size > 0 &&
+        exempt.has(normalizeExemptPath(new URL(request.url).pathname))
+      ) {
         return next(request);
       }
       if (getAuthContext(request)?.user === undefined) {
@@ -44,4 +62,24 @@ export function createRequireAuthFetchMiddleware(): RequireAuthFetchMiddleware {
       }
       return next(request);
     };
+}
+
+/**
+ * The form both sides of the comparison are reduced to: surrounding whitespace
+ * gone, and one trailing slash gone, so `/graphql/public/` and
+ * `/graphql/public` are the same path. A client that appends a slash is not
+ * asking for a different route, and a configuration that carries one is not
+ * asking for a different rule.
+ *
+ * Deliberately NOT normalized: case, percent-encoding, and a missing leading
+ * slash. The first two would let two spellings of one path diverge from how
+ * the router itself matches; the third is a configuration error, and
+ * `assertRequireAuthenticatedCallerAllowed` refuses to boot on it rather than
+ * leaving an exemption that silently never applies.
+ */
+function normalizeExemptPath(path: string): string {
+  const trimmed = path.trim();
+  return trimmed.length > 1 && trimmed.endsWith("/")
+    ? trimmed.slice(0, -1)
+    : trimmed;
 }

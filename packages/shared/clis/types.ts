@@ -160,6 +160,8 @@ export type PHConnectReactorFeatureFlags = {
 
 export type PHConnectReactor = {
   featureFlags?: PHConnectReactorFeatureFlags;
+  /** What new documents are created as; `legacy` while peers predate v2-required documents. */
+  createSignaturePolicy?: "legacy" | "v2-required";
 };
 
 /**

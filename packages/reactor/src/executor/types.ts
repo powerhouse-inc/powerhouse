@@ -6,6 +6,7 @@ import type { Operation } from "@powerhousedao/shared/document-model";
 import type { Job } from "../queue/types.js";
 import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
 import type { ExecutionStores } from "./execution-scope.js";
+import type { SignatureVerificationMode } from "../signer/types.js";
 import type { TouchedStreams } from "./util.js";
 
 /**
@@ -208,6 +209,9 @@ export type JobExecutorConfig = {
    * unit-test harnesses, which therefore see writes survive a failed job.
    */
   batchApplies?: boolean;
+
+  /** Defaults to `enforce`; `log` counts refusals and admits the write. */
+  signatureVerification?: SignatureVerificationMode;
 };
 
 /**

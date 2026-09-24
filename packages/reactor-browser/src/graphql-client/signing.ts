@@ -1,11 +1,16 @@
 import type {
   Action,
+  ActionSigningTarget,
   DocumentModelModule,
   ISigner,
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { hashDocumentStateForScope } from "@powerhousedao/shared/document-model";
+import {
+  actionSignerIdentity,
+  actionSigningTarget,
+  hashDocumentStateForScope,
+} from "@powerhousedao/shared/document-model";
 
 /**
  * Stamps an action with the head of the scope it targets.
@@ -38,37 +43,46 @@ export function stampAction(
 }
 
 /**
- * Signs a stamped action, preserving any signatures it already carries.
- *
- * The signer reads `context.prevOpHash` off the action, so this must run after
- * {@link stampAction}.
+ * Signs a stamped action for `target`, keeping any signatures it already
+ * carries. The signer reads `context.prevOpHash`, so this runs after
+ * {@link stampAction}. A v2 tuple covers the signer's identity, so the context
+ * takes the signer's user and app even when the action named others.
  */
 export async function signStampedAction(
   action: Action,
   signer: ISigner,
+  target: ActionSigningTarget,
   signal?: AbortSignal,
 ): Promise<Action> {
-  const actionSigner = action.context?.signer;
-  const user = actionSigner?.user ?? signer.user;
-  const app = actionSigner?.app ?? signer.app;
-  if (!user || !app) {
+  if (!signer.user || !signer.app) {
     throw new Error(
       "cannot sign an action: the signer has no user or app identity",
     );
   }
 
-  const signature = await signer.signAction(action, signal);
+  const signature = await signer.signAction(action, target, signal);
   return {
     ...action,
     context: {
       ...action.context,
       signer: {
-        user,
-        app,
-        signatures: [...(actionSigner?.signatures ?? []), signature],
+        ...actionSignerIdentity(signer),
+        signatures: [...(action.context?.signer?.signatures ?? []), signature],
       },
     },
   };
+}
+
+/** The log a snapshot's action is written to; the snapshot names the branch read. */
+function snapshotTarget(
+  action: Action,
+  snapshot: PHDocument,
+): ActionSigningTarget {
+  return actionSigningTarget(
+    action,
+    snapshot.header.id,
+    snapshot.header.branch || "main",
+  );
 }
 
 /**
@@ -142,6 +156,7 @@ export async function prepareSignedActions(
       await signStampedAction(
         stampAction(actions[0], snapshot),
         signer,
+        snapshotTarget(actions[0], snapshot),
         signal,
       ),
     ];
@@ -173,7 +188,12 @@ export async function prepareSignedActions(
     throwIfAborted(signal, index);
 
     const stamped = stampAction(action, working, revision);
-    const signedAction = await signStampedAction(stamped, signer, signal);
+    const signedAction = await signStampedAction(
+      stamped,
+      signer,
+      snapshotTarget(stamped, snapshot),
+      signal,
+    );
     signed.push(signedAction);
 
     // The last action's state is never hashed by anything, but reducing it

@@ -289,6 +289,27 @@ export interface IOperationStore {
     branch: string,
     signal?: AbortSignal,
   ): Promise<string | undefined>;
+
+  /**
+   * The subset of `opIds` stored anywhere in one stream, retracted rows
+   * included.
+   */
+  findOperationIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Set<string>>;
+
+  /** The latest row of each of `opIds` stored in one stream. */
+  getOperationsByIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Operation[]>;
 }
 
 /**

@@ -1,5 +1,6 @@
 import type {
   DocumentModelModule,
+  ISigner,
   OperationWithContext,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -15,16 +16,17 @@ import { EventBus } from "../../events/event-bus.js";
 import {
   ReactorEventTypes,
   type JobWriteReadyEvent,
+  type SignatureRefusedEvent,
 } from "../../events/types.js";
 import { DocumentModelRegistry } from "../../registry/implementation.js";
 import type { JobMeta } from "../../shared/types.js";
-import type { SignatureVerificationHandler } from "../../signer/types.js";
 import { KyselyKeyframeStore } from "../../storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../../storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../../storage/kysely/types.js";
 import { REACTOR_SCHEMA } from "../../storage/migrations/migrator.js";
 import { KyselyExecutionScope } from "../execution-scope.js";
 import { SimpleJobExecutor } from "../simple-job-executor.js";
+import type { SignatureTrustPolicy } from "../../signer/types.js";
 import type { JobExecutorConfig } from "../types.js";
 import type {
   FactorySpec,
@@ -51,6 +53,8 @@ export type WorkerExecutorStack = {
    * did not produce one for this job.
    */
   takeLastWriteReady(): WorkerWriteReadyCapture | null;
+  /** Drains the refusals this worker's executor emitted since the last call. */
+  takeSignatureRefusals(): SignatureRefusedEvent[];
 };
 
 export type BuildWorkerExecutorOptions = {
@@ -131,16 +135,30 @@ export async function buildWorkerExecutor(
   const registry = new DocumentModelRegistry();
   await loadModelManifest(init.models, loadFactory, registry, logger);
 
-  let signatureVerifier: SignatureVerificationHandler | undefined;
-  if (init.signatureVerifier) {
+  let signer: ISigner | undefined;
+  if (init.signer) {
     try {
-      signatureVerifier = (await loadFactory(
-        init.signatureVerifier,
-      )) as SignatureVerificationHandler;
+      signer = (await loadFactory(init.signer)) as ISigner;
     } catch (error) {
       logger.error(
-        "worker failed to load signature verifier: @spec @error",
-        init.signatureVerifier,
+        "worker failed to load signer: @spec @error",
+        init.signer.module,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  let trustPolicy: SignatureTrustPolicy | undefined;
+  if (init.trustPolicy) {
+    try {
+      trustPolicy = (await loadFactory(
+        init.trustPolicy,
+      )) as SignatureTrustPolicy;
+    } catch (error) {
+      logger.error(
+        "worker failed to load trust policy: @spec @error",
+        init.trustPolicy.module,
         error,
       );
       throw error;
@@ -203,6 +221,14 @@ export async function buildWorkerExecutor(
     },
   );
 
+  let signatureRefusals: SignatureRefusedEvent[] = [];
+  eventBus.subscribe(
+    ReactorEventTypes.SIGNATURE_REFUSED,
+    (_t: number, event: SignatureRefusedEvent) => {
+      signatureRefusals.push(event);
+    },
+  );
+
   const executorConfig = options.executorConfig ?? {};
   const executor = new SimpleJobExecutor(
     logger,
@@ -215,8 +241,9 @@ export async function buildWorkerExecutor(
     collectionMembershipCache,
     driveContainerTypes,
     executorConfig,
-    signatureVerifier,
     executionScope,
+    signer,
+    trustPolicy,
   );
 
   return {
@@ -225,6 +252,11 @@ export async function buildWorkerExecutor(
     takeLastWriteReady(): WorkerWriteReadyCapture | null {
       const captured = lastWriteReady;
       lastWriteReady = null;
+      return captured;
+    },
+    takeSignatureRefusals(): SignatureRefusedEvent[] {
+      const captured = signatureRefusals;
+      signatureRefusals = [];
       return captured;
     },
   };

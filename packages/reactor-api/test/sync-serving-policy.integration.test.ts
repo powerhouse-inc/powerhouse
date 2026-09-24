@@ -25,12 +25,14 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelModule,
   Grant,
+  ISigner,
 } from "@powerhousedao/shared/document-model";
 import { initializeAuth, setGrant } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import type { BridgeTarget } from "./utils/gql-resolver-bridge.js";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
+import { createTestSigner, signFor, trustOnly } from "./utils/test-signer.js";
 
 const PEER = "0xpeer";
 
@@ -49,8 +51,8 @@ const peerReadsGlobal: Grant = {
 };
 
 /**
- * The fixture writes to the origin anonymously, so a policy that names nobody
- * for execute stops the test's own writes. An `allow` on execute carries the
+ * No grant names the fixture's writer, so a policy that names nobody for
+ * execute stops the test's own writes. An `allow` on execute carries the
  * read with it (executing an operation means reading the scope it applies to),
  * which is also what lets the peer apply the runs it receives.
  */
@@ -102,6 +104,7 @@ const anyoneAdministersAuth: Grant = {
 
 type Fixture = {
   origin: InProcessReactorModule;
+  signer: ISigner;
   peer: PeerSide;
   bridge: typeof fetch;
 };
@@ -145,6 +148,7 @@ async function setup(withholdUninitialized: boolean): Promise<Fixture> {
     },
   });
 
+  const signer = await createTestSigner();
   const models = new DocumentModelRegistry();
   models.registerModules(
     driveDocumentModelModule as unknown as DocumentModelModule,
@@ -156,6 +160,7 @@ async function setup(withholdUninitialized: boolean): Promise<Fixture> {
     new NullDocumentModelResolver(models),
   );
   const origin = await new ReactorBuilder()
+    .withSigner(signer)
     .withEventBus(originBus)
     .withQueue(originQueue)
     .withDocumentModelSources([
@@ -175,6 +180,7 @@ async function setup(withholdUninitialized: boolean): Promise<Fixture> {
     new NullDocumentModelResolver(models),
   );
   const peerModule = await new ReactorBuilder()
+    .withTrustPolicy(trustOnly(signer))
     .withEventBus(peerBus)
     .withQueue(peerQueue)
     .withDocumentModelSources([
@@ -218,7 +224,7 @@ async function setup(withholdUninitialized: boolean): Promise<Fixture> {
   };
   registry.set("peer", peer.syncManager);
 
-  return { origin, peer, bridge };
+  return { origin, signer, peer, bridge };
 }
 
 async function pullFrom(
@@ -337,17 +343,14 @@ describe("serving sync through the document's policy", () => {
     await pullFrom(fx.peer, driveId, fx.bridge);
     await awaitJob(
       fx.origin.reactor,
-      (await fx.origin.reactor.create(drive)).id,
+      (await fx.origin.reactor.create(drive, fx.signer)).id,
     );
-    await awaitJob(
-      fx.origin.reactor,
-      (
-        await fx.origin.reactor.execute(driveId, "main", [
-          driveDocumentModelModule.actions.setDriveName({
-            name: `${name} (named)`,
-          }),
-        ])
-      ).id,
+    await executeOn(
+      fx,
+      driveId,
+      driveDocumentModelModule.actions.setDriveName({
+        name: `${name} (named)`,
+      }),
     );
 
     return driveId;
@@ -357,16 +360,13 @@ describe("serving sync through the document's policy", () => {
     fx: Fixture,
     driveId: string,
   ): Promise<void> {
-    await awaitJob(
-      fx.origin.reactor,
-      (
-        await fx.origin.reactor.execute(driveId, "main", [
-          initializeAuth({
-            version: 1,
-            grants: [peerReadsGlobal, anyoneAdministersAuth],
-          }),
-        ])
-      ).id,
+    await executeOn(
+      fx,
+      driveId,
+      initializeAuth({
+        version: 1,
+        grants: [peerReadsGlobal, anyoneAdministersAuth],
+      }),
     );
   }
 
@@ -451,9 +451,10 @@ describe("serving sync through the document's policy", () => {
     driveId: string,
     action: Parameters<typeof fx.origin.reactor.execute>[2][number],
   ): Promise<void> {
+    const signed = await signFor(fx.signer, action, driveId);
     await awaitJob(
       fx.origin.reactor,
-      (await fx.origin.reactor.execute(driveId, "main", [action])).id,
+      (await fx.origin.reactor.execute(driveId, "main", [signed])).id,
     );
   }
 
@@ -560,7 +561,7 @@ describe("serving sync through the document's policy", () => {
     await pullFrom(fx.peer, driveId, fx.bridge);
     await awaitJob(
       fx.origin.reactor,
-      (await fx.origin.reactor.create(drive)).id,
+      (await fx.origin.reactor.create(drive, fx.signer)).id,
     );
     await waitFor(
       () => holds(fx.peer.module.reactor, driveId, "document"),

@@ -18,9 +18,11 @@ import {
 import { addFile as addFileAction } from "@powerhousedao/shared/document-drive";
 import {
   actions,
-  createPresignedHeader,
+  createCopyHeader,
   generateId,
   normalizeDocumentModelVersion,
+  requestedSignaturePolicy,
+  withSignaturePolicy,
   type Action,
   type CreateDocumentActionInput,
   type ISigner,
@@ -61,13 +63,20 @@ export class DriveClient implements IDriveClient {
     signal?: AbortSignal,
   ): Promise<DocumentDriveDocument> {
     this.logger.verbose("drives.create(@input)", input);
-    const driveDoc = driveCreateDocument({
-      global: {
-        name: input.global.name || "",
-        icon: input.global.icon ?? null,
-        nodes: [],
-      },
-    });
+    const driveDoc = withSignaturePolicy(
+      driveCreateDocument({
+        global: {
+          name: input.global.name || "",
+          icon: input.global.icon ?? null,
+          nodes: [],
+        },
+      }),
+      requestedSignaturePolicy(
+        input,
+        await this.client.getCreateSignaturePolicy(),
+      ),
+      { protocolVersions: input.protocolVersions },
+    );
     if (input.preferredEditor) {
       driveDoc.header.meta = {
         ...driveDoc.header.meta,
@@ -133,6 +142,7 @@ export class DriveClient implements IDriveClient {
         addRelationshipAction(driveIdentifier, documentId, "child"),
       ],
       this.signer,
+      { documentId, branch: "main" },
       signal,
     );
 
@@ -146,6 +156,7 @@ export class DriveClient implements IDriveClient {
         }),
       ],
       this.signer,
+      { documentId: driveIdentifier, branch: "main" },
       signal,
     );
 
@@ -392,6 +403,7 @@ export class DriveClient implements IDriveClient {
       resolvedNamesByTargetId.set(entry.targetId, resolved);
     }
 
+    const policy = await this.client.getCreateSignaturePolicy();
     for (const entry of copyPlan) {
       const node = drive.state.global.nodes.find((n) => n.id === entry.srcId);
       if (!node || !isFileNode(node)) continue;
@@ -403,10 +415,7 @@ export class DriveClient implements IDriveClient {
       // already current.
       const duplicated: PHDocument = {
         ...srcDoc,
-        header: createPresignedHeader(
-          entry.targetId,
-          srcDoc.header.documentType,
-        ),
+        header: createCopyHeader(srcDoc.header, entry.targetId, policy),
         initialState: srcDoc.state,
         operations: {},
       };
@@ -415,6 +424,8 @@ export class DriveClient implements IDriveClient {
       if (resolvedName) {
         duplicated.header.name = resolvedName;
       }
+      // A v2-required copy takes a derived id, which the drive's node must name.
+      entry.targetId = duplicated.header.id;
       await this.addFile(
         driveIdentifier,
         duplicated,
@@ -547,11 +558,13 @@ export class DriveClient implements IDriveClient {
     const relationshipActions: Action[] = await signActions(
       [removeRelationshipAction(driveId, fileId, "child")],
       this.signer,
+      { documentId: driveId, branch: "main" },
       signal,
     );
     const driveActions: Action[] = await signActions(
       [deleteNodeAction({ id: fileId })],
       this.signer,
+      { documentId: driveId, branch: "main" },
       signal,
     );
 
