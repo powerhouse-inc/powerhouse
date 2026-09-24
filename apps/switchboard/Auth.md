@@ -221,6 +221,47 @@ It requires a caller to be resolvable at all, so it refuses to boot without
 resolution off, no bearer is ever read and it would reject every caller,
 including authenticated ones.
 
+It also covers the attachment routes, which are mounted on the HTTP adapter and
+never pass the GraphQL fetch chain. Their own 401 keys on `AUTH_ENABLED`, so
+without this switch a deployment running `OPEN` serves them to anyone; with it,
+every attachment route refuses a caller it cannot name — `download-target`
+included, even though that route decides per document on its own.
+
+##### Serving one path anonymously
+
+Some products have a flow that runs *before* sign-in: previewing an invitation
+from the code in its e-mail, for instance, so the screen can say who the
+invitation is for. That flow has no caller by definition, and the floor above
+would answer it a `401`.
+
+```bash
+export REQUIRE_AUTHENTICATED_CALLER=true
+export REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS=/graphql/public
+```
+
+Comma-separated, so several paths are one variable:
+
+```bash
+export REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS=/graphql/public,/graphql/invites
+```
+
+Each entry is matched against the request's **pathname, in full** — never as a
+prefix, so `/graphql/public` does not also exempt `/graphql/public-admin`. A
+trailing slash on either side is ignored; a leading slash is required, and a
+path without one is refused at boot rather than left as an exemption that
+silently never applies. Configuring exemptions while the floor is off is
+refused too: it would describe a protection the server is not applying.
+
+The exempt paths are named in the boot log, because the one question worth
+asking about this floor is what is still open.
+
+Every entry is a hole in it. Only ever name a path that serves operations which
+are safe without a caller, and prefer a route mounted for exactly that purpose
+over exempting one that also serves something else. Note what this switch does
+**not** reach, in either configuration: routes registered directly on the HTTP
+adapter (`/health`, `/ready`, `/explorer`, `/d/:drive`) and package HTTP routes,
+which declare their own `auth` per route.
+
 #### Configuration File Method
 
 ```json
