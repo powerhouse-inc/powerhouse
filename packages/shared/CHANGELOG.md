@@ -1,3 +1,15 @@
+## 6.2.3-dev.23 (2026-09-24)
+
+### 🩹 Fixes
+
+- **reactor:** reject a manager call made synchronously inside a locked callback ([64666e114](https://github.com/powerhouse-inc/powerhouse/commit/64666e114))
+- **reactor:** deliver operations that reach the processor manager out of ordinal order ([b615f33d9](https://github.com/powerhouse-inc/powerhouse/commit/b615f33d9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.3-dev.22 (2026-09-23)
 
 ### 🩹 Fixes

@@ -1,3 +1,14 @@
+## 6.2.3-dev.23 (2026-09-24)
+
+### 🔥 Performance
+
+- **reactor:** deliver queued live batches to a processor in one call ([002dc6821](https://github.com/powerhouse-inc/powerhouse/commit/002dc6821))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.22 (2026-09-23)
 
 ### 🩹 Fixes
