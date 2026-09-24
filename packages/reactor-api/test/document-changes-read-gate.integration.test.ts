@@ -14,6 +14,11 @@ import { documentModelDocumentModelModule, setModelName } from "document-model";
 import { buildSchema, parse, print, subscribe } from "graphql";
 import { setTimeout as delay } from "node:timers/promises";
 import { afterEach, describe, expect, it } from "vitest";
+import {
+  getPubSub,
+  SUBSCRIPTION_TRIGGERS,
+  type JobChangesPayload,
+} from "../src/graphql/reactor/pubsub.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import {
@@ -238,5 +243,99 @@ describe("documentChanges and findDocuments under OPEN with auth-scope policies"
       "public.pdf",
     ]);
     expect((await names(READER)).sort()).toEqual(["public.pdf", "secret.pdf"]);
+  });
+
+  describe("jobs on a policed document", () => {
+    async function policedJob() {
+      const { client, subgraph } = await build();
+      const policed = await createDocument(client, "job-policed", "secret.pdf");
+      await police(client, policed);
+      // Anyone may execute on auth, so this job succeeds for the test's signer.
+      const job = await client.executeAsync(policed, "main", [
+        setGrant({
+          grant: {
+            id: "g-job",
+            description: "a job on the policed document",
+            effect: "allow",
+            principal: { address: "0xnobody" },
+            capability: { can: "read", scope: "local" },
+          },
+        }),
+      ]);
+      await client.waitForJob(job.id);
+      return { subgraph, policed, jobId: job.id };
+    }
+
+    type JobAnswer = { id: string; status: string; error: string | null };
+
+    it("jobStatus answers an unauthorised caller as for an unknown job", async () => {
+      const { subgraph, jobId } = await policedJob();
+      const jobStatus = (
+        subgraph.resolvers.Query as Record<
+          string,
+          (p: unknown, a: unknown, c: Context) => Promise<JobAnswer>
+        >
+      ).jobStatus;
+
+      const asOutsider = await jobStatus(
+        undefined,
+        { jobId },
+        contextFor(OUTSIDER),
+      );
+      const unknown = await jobStatus(
+        undefined,
+        { jobId: "no-such-job" },
+        contextFor(OUTSIDER),
+      );
+      const asReader = await jobStatus(
+        undefined,
+        { jobId },
+        contextFor(READER),
+      );
+
+      expect(asOutsider.status).toBe(unknown.status);
+      expect(asOutsider.error).toBe(unknown.error);
+      expect(asReader.status).not.toBe(unknown.status);
+      expect(asReader.error).toBeNull();
+    });
+
+    it("jobChanges sends an unauthorised subscriber nothing", async () => {
+      const { subgraph, policed, jobId } = await policedJob();
+      const watch = async (address: string) => {
+        const result = await subscribe({
+          schema: subscriptionSchema(subgraph),
+          contextValue: contextFor(address),
+          document: parse(
+            `subscription { jobChanges(jobId: "${jobId}") { jobId status } }`,
+          ),
+        });
+        const iterator = (result as AsyncIterableIterator<unknown>)[
+          Symbol.asyncIterator
+        ]();
+        const next = iterator.next();
+        await delay(10);
+        void getPubSub().publish(SUBSCRIPTION_TRIGGERS.JOB_CHANGES, {
+          jobChanges: {
+            jobId,
+            status: "READ_READY",
+            createdAt: new Date().toISOString(),
+            completedAt: null,
+            error: null,
+            result: null,
+          },
+          jobId,
+          documentId: policed,
+        } satisfies JobChangesPayload);
+        const got = await Promise.race([
+          next.then(() => "event"),
+          delay(500).then(() => "nothing"),
+        ]);
+        await iterator.return?.();
+        return got;
+      };
+
+      expect(await watch(OUTSIDER)).toBe("nothing");
+      expect(await watch(READER)).toBe("event");
+    });
   });
 });
