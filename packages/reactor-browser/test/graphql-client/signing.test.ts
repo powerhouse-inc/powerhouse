@@ -50,6 +50,7 @@ const action: Action = {
 };
 
 const signature: Signature = ["ts", "did", "hash", "prev", "0xsig"];
+const target = { documentId: "doc-1", branch: "main" };
 
 function createSigner(): ISigner {
   return {
@@ -115,7 +116,7 @@ describe("signStampedAction", () => {
   it("appends the signature under the signer identity", async () => {
     const signer = createSigner();
     const stamped = stampAction(action, createDocument({ global: 7 }));
-    const signed = await signStampedAction(stamped, signer);
+    const signed = await signStampedAction(stamped, signer, target);
 
     expect(signed.context?.signer?.signatures).toEqual([signature]);
     expect(signed.context?.signer?.user).toEqual(signer.user);
@@ -123,7 +124,7 @@ describe("signStampedAction", () => {
     expect(signed.context?.prevOpHash).toBe(stamped.context?.prevOpHash);
   });
 
-  it("preserves signatures the action already carries", async () => {
+  it("keeps prior signatures under the signer's identity, which v2 covers", async () => {
     const existing: Signature = ["ts0", "did0", "hash0", "prev0", "0xold"];
     const stamped: Action = {
       ...stampAction(action, createDocument({ global: 7 })),
@@ -136,26 +137,31 @@ describe("signStampedAction", () => {
       },
     };
 
-    const signed = await signStampedAction(stamped, createSigner());
+    const signed = await signStampedAction(stamped, createSigner(), target);
 
     expect(signed.context?.signer?.signatures).toEqual([existing, signature]);
-    expect(signed.context?.signer?.app.name).toBe("other");
+    expect(signed.context?.signer?.app).toEqual({
+      name: "test-app",
+      key: "app-key",
+    });
+    expect(signed.context?.signer?.user.address).toBe("0x1");
   });
 
   it("signs the stamped action, not a copy without the stamp", async () => {
     const signer = createSigner();
     const stamped = stampAction(action, createDocument({ global: 7 }));
-    await signStampedAction(stamped, signer);
+    await signStampedAction(stamped, signer, target);
 
-    const argument = vi.mocked(signer.signAction).mock.calls[0][0];
+    const [argument, signedFor] = vi.mocked(signer.signAction).mock.calls[0];
     expect(argument.context?.prevOpHash).toBe(stamped.context?.prevOpHash);
+    expect(signedFor).toEqual(target);
   });
 
-  it("rejects when neither the action nor the signer has an identity", async () => {
+  it("rejects when the signer has no identity", async () => {
     const signer = { signAction: vi.fn() } as unknown as ISigner;
     const stamped = stampAction(action, createDocument({ global: 7 }));
 
-    await expect(signStampedAction(stamped, signer)).rejects.toThrow(
+    await expect(signStampedAction(stamped, signer, target)).rejects.toThrow(
       "no user or app identity",
     );
     expect(signer.signAction).not.toHaveBeenCalled();
@@ -226,6 +232,19 @@ describe("prepareSignedActions", () => {
       hashDocumentStateForScope(snapshot, "global"),
     );
     expect(signed.context?.signer?.signatures).toEqual([signature]);
+  });
+
+  it("signs for the snapshot's document and the branch it was read from", async () => {
+    const signer = createSigner();
+    const snapshot = createSnapshot({ global: 7 });
+    snapshot.header.branch = "draft";
+
+    await prepareSignedActions([action], snapshot, signer);
+
+    expect(vi.mocked(signer.signAction).mock.calls[0][1]).toEqual({
+      documentId: snapshot.header.id,
+      branch: "draft",
+    });
   });
 
   it("chains prevOpHash across the batch from a history-free snapshot", async () => {
@@ -337,7 +356,7 @@ describe("prepareSignedActions", () => {
     );
 
     for (const call of vi.mocked(signer.signAction).mock.calls) {
-      expect(call[1]).toBe(controller.signal);
+      expect(call[2]).toBe(controller.signal);
     }
   });
 

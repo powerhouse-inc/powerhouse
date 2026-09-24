@@ -4,11 +4,13 @@ import type {
   DocumentModelModule,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { withSignaturePolicy } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { InProcessReactorClientModule } from "../../src/core/types.js";
+import { TestP256Signer } from "../utils/p256-signer.js";
 
 /**
  * An import that reuses a taken document id must fail without leaving anything
@@ -50,8 +52,13 @@ describe("drives.addFile with a taken document id", () => {
     return reactorModule.database;
   }
 
+  // A reused id is only possible on a legacy document; a v2-required id is
+  // content-addressed.
   function newDocument(): PHDocument {
-    return documentModelDocumentModelModule.utils.createDocument();
+    return withSignaturePolicy(
+      documentModelDocumentModelModule.utils.createDocument(),
+      "legacy",
+    );
   }
 
   beforeEach(async () => {
@@ -61,6 +68,7 @@ describe("drives.addFile with a taken document id", () => {
     ]);
     module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
+      .withSigner((await TestP256Signer.create()).asISigner())
       .buildModule();
 
     const drive = await module.client.drives.create({

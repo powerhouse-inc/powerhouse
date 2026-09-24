@@ -89,6 +89,14 @@ export interface IOperationIndex {
    * reference other groups.
    */
   getGroupReferencers(groupId: string, signal?: AbortSignal): Promise<string[]>;
+  /** The latest ordinal of each of `opIds` indexed in one stream. */
+  getOrdinalsByOpIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Map<string, number>>;
 }
 
 export interface DocumentCollectionTable {

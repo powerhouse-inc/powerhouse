@@ -1,11 +1,14 @@
-import type { UpgradeManifest } from "@powerhousedao/shared/document-model";
+import type {
+  ISigner,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
 import type {
   DbConfig,
+  FactorySpec,
   ModelManifestEntry,
-  SignatureVerifierSpec,
   WorkerPoolConfig,
 } from "../executor/worker/protocol.js";
 import { WorkerPoolJobExecutorManager } from "../executor/worker-pool-job-executor-manager.js";
@@ -29,6 +32,7 @@ import type { IJobExecutorManager } from "../executor/interfaces.js";
 import { SimpleJobExecutorManager } from "../executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../executor/simple-job-executor.js";
 import type { JobExecutorConfig } from "../executor/types.js";
+import type { SignatureTrustPolicy } from "../signer/types.js";
 import { InMemoryJobTracker } from "../job-tracker/in-memory-job-tracker.js";
 import { ProcessorManager } from "../processors/processor-manager.js";
 import type { IQueue } from "../queue/interfaces.js";
@@ -72,7 +76,6 @@ import {
   ConsistencyTracker,
   type IConsistencyTracker,
 } from "../shared/consistency-tracker.js";
-import type { SignatureVerificationHandler } from "../signer/types.js";
 import {
   KyselyDocumentIndexer,
   type IndexerDatabase,
@@ -187,12 +190,6 @@ export type {
 type WorkerPoolBase = {
   /** Number of worker threads to spawn; also the sticky-routing modulus. */
   numWorkers: number;
-  /**
-   * Factory spec the default transport's workers import to instantiate
-   * their signature verifier. Omitted = no executor-side verification,
-   * parity with the in-process executor's default.
-   */
-  verifier?: SignatureVerifierSpec;
 };
 
 /**
@@ -297,8 +294,11 @@ export class ReactorBuilder {
   private eventBus?: IEventBus;
   private readModelCoordinator?: IReadModelCoordinator;
   private readModelCoordinatorFactory?: ReadModelCoordinatorFactory;
-  private signatureVerifier?: SignatureVerificationHandler;
   private kyselyInstance?: Kysely<Database>;
+  private signer?: ISigner;
+  private workerSigner?: FactorySpec;
+  private trustPolicy?: SignatureTrustPolicy;
+  private workerTrustPolicy?: FactorySpec;
   private signalHandlersEnabled = false;
   private queueInstance?: IQueue;
   private channelScheme?: ChannelScheme;
@@ -408,9 +408,39 @@ export class ReactorBuilder {
     return this;
   }
 
-  withSignatureVerifier(verifier: SignatureVerificationHandler): this {
-    this.signatureVerifier = verifier;
+  /**
+   * Signs the operations the executor synthesizes: the NOOP an UNDO becomes and
+   * the action a REDO rebuilds. Without one they are stored unsigned. Pooled
+   * workers import `workerSigner` to build the same signer.
+   */
+  withSigner(signer: ISigner, workerSigner?: FactorySpec): this {
+    this.signer = signer;
+    this.workerSigner = workerSigner;
     return this;
+  }
+
+  /** Whether {@link withSigner} was called. */
+  hasSigner(): boolean {
+    return this.signer !== undefined;
+  }
+
+  /**
+   * Decides at admission whether a key may sign as the user it claims; see
+   * {@link SignatureTrustPolicy} for the contract and the default. Pooled
+   * workers import `workerTrustPolicy` to build the same policy.
+   */
+  withTrustPolicy(
+    trustPolicy: SignatureTrustPolicy,
+    workerTrustPolicy?: FactorySpec,
+  ): this {
+    this.trustPolicy = trustPolicy;
+    this.workerTrustPolicy = workerTrustPolicy;
+    return this;
+  }
+
+  /** Whether {@link withTrustPolicy} was called. */
+  hasTrustPolicy(): boolean {
+    return this.trustPolicy !== undefined;
   }
 
   withKysely(kysely: Kysely<Database>): this {
@@ -474,8 +504,7 @@ export class ReactorBuilder {
    * this enables the pool — there is no `enabled` flag. Provide `db`
    * (each worker opens its own Postgres pool; the parent database is built
    * from it too unless {@link withKysely} is set) or a custom `factory`
-   * transport. `verifier` is imported by the default transport's workers;
-   * omitted = no executor-side signature verification.
+   * transport.
    */
   withWorkerPool(options: WorkerPoolOptions): this {
     this.workerPool = options;
@@ -726,10 +755,19 @@ export class ReactorBuilder {
               "unreachable: worker pool configured without db or factory",
             );
           }
+          if (this.signer && !this.workerSigner) {
+            this.logger!.warn(
+              "Worker pool has no signer spec; pooled workers store synthesized operations unsigned",
+            );
+          }
+          if (this.trustPolicy && !this.workerTrustPolicy) {
+            this.logger!.warn(
+              "Worker pool has no trust policy spec; pooled workers apply the default trust policy",
+            );
+          }
           factory = await this.createDefaultWorkerFactory(
             pool.numWorkers,
             pool.db,
-            pool.verifier,
           );
         }
         const poolManager = new WorkerPoolJobExecutorManager(
@@ -762,8 +800,9 @@ export class ReactorBuilder {
               collectionMembershipCache,
               this.driveContainerTypes,
               this.executorConfig,
-              this.signatureVerifier,
               executionScope,
+              this.signer,
+              this.trustPolicy,
             ),
           eventBus,
           queue,
@@ -1209,7 +1248,6 @@ export class ReactorBuilder {
   private async createDefaultWorkerFactory(
     numWorkers: number,
     db: DbConfig,
-    signatureVerifier: SignatureVerifierSpec | undefined,
   ): Promise<WorkerFactory> {
     const [{ WorkerHandle }, { createThreadTransport }, { workerEntryPath }] =
       await Promise.all([
@@ -1236,9 +1274,10 @@ export class ReactorBuilder {
         initPayload: {
           poolConfig,
           db,
-          signatureVerifier,
           models,
           executorConfig: this.executorConfig,
+          signer: this.workerSigner,
+          trustPolicy: this.workerTrustPolicy,
         },
         logger,
         poolInstrumentation,

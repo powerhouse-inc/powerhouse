@@ -16,6 +16,7 @@ import {
   initializeAuth,
   normalizeDocumentModelVersion,
   setModelName,
+  withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import {
@@ -300,10 +301,10 @@ describe("the authorization preflight end to end", () => {
       client: ReactorClient,
       id: string,
     ): Promise<string> {
-      const group = baseCreateDocument(
-        groupCreateState,
-        undefined,
-        groupDocumentType,
+      // The client signs with the anonymous passthrough.
+      const group = withSignaturePolicy(
+        baseCreateDocument(groupCreateState, undefined, groupDocumentType),
+        "legacy",
       );
       await client.create(group);
       await client.execute(group.header.id, "main", [

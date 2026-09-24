@@ -65,6 +65,7 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
       authGroups: false,
       authConditions: false,
     },
+    createSignaturePolicy: "v2-required",
   },
 };
 

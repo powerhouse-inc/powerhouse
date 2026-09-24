@@ -398,6 +398,32 @@ export class KyselyOperationIndex implements IOperationIndex {
     return rows.map((row) => row.documentId);
   }
 
+  async getOrdinalsByOpIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Map<string, number>> {
+    signal?.throwIfAborted();
+    if (opIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.queryExecutor
+      .selectFrom("operation_index_operations")
+      .select("opId")
+      .select((eb) => eb.fn.max("ordinal").as("ordinal"))
+      .where("documentId", "=", documentId)
+      .where("branch", "=", branch)
+      .where("scope", "=", scope)
+      .where("opId", "in", opIds)
+      .groupBy("opId")
+      .execute();
+
+    return new Map(rows.map((row) => [row.opId, Number(row.ordinal)]));
+  }
+
   async find(
     collectionId: string,
     cursor?: number,

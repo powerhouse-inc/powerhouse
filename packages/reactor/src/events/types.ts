@@ -1,6 +1,11 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Job } from "../queue/types.js";
 import type { JobMeta } from "../shared/types.js";
+import type {
+  AdmissionPath,
+  SignatureRefusalCode,
+  SignatureScheme,
+} from "../signer/types.js";
 
 /**
  * Describes a function to unsubscribe from an event.
@@ -54,6 +59,7 @@ export const ReactorEventTypes = {
   READMODEL_BATCH_COMPLETED: 10006,
   READMODEL_INDEXED: 10007,
   MODEL_LOADED: 10008,
+  SIGNATURE_REFUSED: 10009,
 } as const;
 
 /**
@@ -169,4 +175,18 @@ export type ReadModelIndexedEvent = {
   durationMs: number;
   operationCount: number;
   success: boolean;
+};
+
+/** A write failed admission; `enforced` is false in log mode, which admits it. */
+export type SignatureRefusedEvent = {
+  jobId: string;
+  documentId: string;
+  scope: string;
+  branch: string;
+  actionId: string;
+  code: SignatureRefusalCode;
+  scheme: SignatureScheme;
+  path: AdmissionPath;
+  enforced: boolean;
+  reason: string;
 };

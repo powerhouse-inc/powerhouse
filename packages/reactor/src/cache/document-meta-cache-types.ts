@@ -30,6 +30,9 @@ export type CachedDocumentMeta = {
    */
   documentType: string;
 
+  /** From the CREATE_DOCUMENT input, which fixes them for the document's life. */
+  protocolVersions: { [protocol: string]: number } | undefined;
+
   /**
    * The revision of the document scope when this metadata was captured.
    * Used for cache invalidation and consistency checks.

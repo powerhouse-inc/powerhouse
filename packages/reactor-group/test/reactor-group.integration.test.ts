@@ -19,6 +19,7 @@ import {
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { createP256Signer } from "./utils/p256-signer.js";
 
 describe("ReactorGroup reactor integration", () => {
   let pg: PGlite;
@@ -44,6 +45,7 @@ describe("ReactorGroup reactor integration", () => {
 
     const built = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
+      .withSigner(await createP256Signer())
       .buildModule();
     client = built.client;
     killReactor = () => built.reactor.kill();

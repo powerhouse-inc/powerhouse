@@ -1,7 +1,6 @@
 import { generateProcessor } from "@powerhousedao/codegen";
 import { fileExists } from "@powerhousedao/shared/clis";
 import type { InProcessReactorModule } from "@powerhousedao/reactor";
-import { ReactorBuilder } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 
 import { createAnalyticsStore } from "@powerhousedao/reactor-browser";
@@ -23,6 +22,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "path";
 import { Project } from "ts-morph";
 import { NEW_PROJECT, TEST_OUTPUT } from "../constants.js";
+import { buildSignedReactor } from "../signed-reactor.js";
 import { cpForce, mkdirRecursive, rmForce, runTsc } from "../utils.js";
 
 import { PGlite } from "@electric-sql/pglite";
@@ -690,11 +690,10 @@ describe("processor e2e integration", () => {
     expect(log).toHaveLength(0);
 
     // 4. Build a reactor with the drive document model
-    reactorModule = await new ReactorBuilder()
-      .withDocumentModelSources([
-        driveDocumentModelModule as unknown as DocumentModelModule,
-      ])
-      .buildModule();
+    const signed = await buildSignedReactor([
+      driveDocumentModelModule as unknown as DocumentModelModule,
+    ]);
+    reactorModule = signed.reactorModule;
 
     // 5. Register a factory that uses the generated processor class
     await reactorModule.processorManager.registerFactory(
@@ -707,7 +706,7 @@ describe("processor e2e integration", () => {
 
     // 6. Create a drive document to trigger operations
     const driveDoc = driveDocumentModelModule.utils.createDocument();
-    await reactorModule.reactor.create(driveDoc);
+    await signed.client.create(driveDoc);
 
     // 7. Wait for the processor to receive operations
     await waitFor(() => {
