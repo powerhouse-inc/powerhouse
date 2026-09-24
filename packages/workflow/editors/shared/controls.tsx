@@ -90,9 +90,12 @@ export function FieldLabel(props: {
   needsValue?: boolean;
   action?: ReactNode;
 }) {
+  // A <label> only when pointed at a control; callers that wrap the control
+  // in their own <label> get a span, so labels never nest.
+  const LabelTag = props.htmlFor ? "label" : "span";
   return (
     <div className="mb-1.5 flex min-h-6 items-center justify-between gap-2">
-      <label
+      <LabelTag
         htmlFor={props.htmlFor}
         className="flex min-w-0 items-baseline gap-1.5 text-[13px] font-medium text-foreground"
       >
@@ -107,7 +110,7 @@ export function FieldLabel(props: {
             Needs a value
           </span>
         ) : null}
-      </label>
+      </LabelTag>
       {props.action ? (
         <span className="flex shrink-0 items-center gap-0.5">
           {props.action}
@@ -375,10 +378,15 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
     // Placed once per opening; scroll and resize re-place it below.
   }, [open]);
 
+  // The popover mounts once placed; a long list then takes focus in its search
+  // box, a short one leaves focus on the trigger, which handles the keys.
+  const placed = position !== null;
+  useEffect(() => {
+    if (open && placed && searchable) searchRef.current?.focus();
+  }, [open, placed, searchable]);
+
   useEffect(() => {
     if (!open) return;
-    if (searchable) searchRef.current?.focus();
-    else popoverRef.current?.focus();
     const onPointer = (event: MouseEvent) => {
       const target = event.target as globalThis.Node;
       if (
@@ -430,9 +438,13 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
       event.preventDefault();
       const option = visible[active] as SelectOption | undefined;
       if (option) choose(option);
-    } else if (event.key === "Escape" || event.key === "Tab") {
+    } else if (event.key === "Escape") {
       event.preventDefault();
       close();
+    } else if (event.key === "Tab") {
+      // Let focus move on as usual.
+      setOpen(false);
+      setQuery("");
     }
   };
 
@@ -457,6 +469,9 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
         role="combobox"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
+        aria-activedescendant={
+          open && visible.length > 0 ? `${listId}-${active}` : undefined
+        }
         aria-haspopup="listbox"
         disabled={props.disabled}
         className={`${textInputClass} flex items-center gap-2 text-left ${
@@ -464,11 +479,14 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
         } ${open ? "border-ring ring-2 ring-ring/25" : ""}`}
         onClick={() => (open ? close() : openList())}
         onKeyDown={(event) => {
+          if (open) {
+            onListKey(event);
+            return;
+          }
           if (
-            !open &&
-            (event.key === "ArrowDown" ||
-              event.key === "Enter" ||
-              event.key === " ")
+            event.key === "ArrowDown" ||
+            event.key === "Enter" ||
+            event.key === " "
           ) {
             event.preventDefault();
             openList();
@@ -564,6 +582,7 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
                     return (
                       <div
                         key={option.value}
+                        id={`${listId}-${index}`}
                         role="option"
                         aria-selected={isSelected}
                         aria-disabled={option.disabled || undefined}

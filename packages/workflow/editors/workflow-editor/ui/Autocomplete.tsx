@@ -47,6 +47,7 @@ export function AutocompleteInput(props: {
   placeholder?: string;
   className?: string;
   loadOptions?: () => Promise<unknown>;
+  id?: string;
 }) {
   const listId = useId();
   const [text, setText] = useState(props.value);
@@ -80,6 +81,7 @@ export function AutocompleteInput(props: {
   return (
     <div>
       <input
+        id={props.id}
         className={props.className ?? inputClass}
         value={text}
         list={listId}

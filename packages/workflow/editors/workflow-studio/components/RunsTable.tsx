@@ -44,7 +44,7 @@ function StepRow(props: { step: RunStepRecord }) {
   const meta = blockMeta(step.blockType);
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-t border-solid border-border">
+    <div role="listitem" className="border-t border-solid border-border">
       <button
         type="button"
         aria-expanded={open}
@@ -129,7 +129,7 @@ function TriggerRow(props: { run: RunRecord }) {
   const payload = stringify(run.triggerPayload);
   const hasPayload = payload !== "" && payload !== "null" && payload !== "{}";
   return (
-    <div>
+    <div role="listitem">
       <button
         type="button"
         aria-expanded={hasPayload ? open : undefined}
@@ -215,7 +215,11 @@ function RunDetail(props: { run: RunRecord; onChanged: () => void }) {
         ) : null}
         {rerunError ? <span className="text-wf-fail">{rerunError}</span> : null}
       </div>
-      <div className="overflow-hidden rounded-md border border-solid border-border bg-card">
+      <div
+        role="list"
+        aria-label="Steps of this run"
+        className="overflow-hidden rounded-md border border-solid border-border bg-card"
+      >
         <TriggerRow run={run} />
         {run.steps.map((step) => (
           <StepRow key={step.stepId + step.stepKey} step={step} />

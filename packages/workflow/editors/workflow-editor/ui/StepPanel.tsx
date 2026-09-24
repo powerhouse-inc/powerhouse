@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   Button,
   FieldError,
@@ -655,9 +655,11 @@ function KeyField(props: {
 }) {
   const { step, callbacks } = props;
   const [copied, setCopied] = useState(false);
+  const id = useId();
   return (
-    <label className="block">
+    <div>
       <FieldLabel
+        htmlFor={id}
         label="Key"
         action={
           <IconButton
@@ -674,6 +676,7 @@ function KeyField(props: {
         }
       />
       <input
+        id={id}
         key={`${step.id}-key-${step.key}`}
         className={`${textInputClass} font-mono text-xs`}
         defaultValue={step.key}
@@ -692,7 +695,7 @@ function KeyField(props: {
         </code>
         . Renaming it doesn&apos;t update expressions that use it.
       </Hint>
-    </label>
+    </div>
   );
 }
 
