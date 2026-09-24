@@ -49,7 +49,7 @@ What `ci` does, in order, mirroring `.github/workflows/check-commit.yml`:
 | 3 | Typecheck | `pnpm typecheck` |
 | 3a | Re-link workspace bins | `pnpm rebuild --recursive` |
 | 3b | Generated-binary consumers | `pnpm --filter=@powerhousedao/versioned-documents --no-bail run build` |
-| 4 | Lint | `pnpm eslint --config eslint.config.js --quiet --no-error-on-unmatched-pattern <CHANGED>` |
+| 4 | Lint | `pnpm exec oxlint --quiet --no-error-on-unmatched-pattern <CHANGED>`, then `pnpm exec oxfmt --check --no-error-on-unmatched-pattern <CHANGED JS/TS>` |
 | 5 | Tests | `pnpm test:ci -- --silent passed-only related <CHANGED>` |
 | 6 | Circular imports | `pnpm check-circular-imports` |
 | 7 | reactor paths only | `pnpm --filter=@powerhousedao/reactor run lint`, then `pnpm test:reactor` with `REACTOR_TEST_PG_URL` set when 5433 answers |
@@ -85,10 +85,10 @@ lint and tests entirely in that case.
   whether it is plausibly caused by the diff. Never re-run `ci` hoping for
   green; if you believe the red is environmental, say so and report it as
   unverified.
-- **Pre-commit parity.** `lint-staged` runs `eslint --fix --no-warn-ignored`
+- **Pre-commit parity.** `lint-staged` runs `oxlint --fix` and `oxfmt`
   on staged JS/TS. If the diff would be rewritten, say so: run
-  `pnpm exec eslint --config eslint.config.js <CHANGED>` and report any
-  `prettier/prettier` errors, which are always auto-fixable.
+  `pnpm exec oxfmt --check <CHANGED>` and report any unformatted files,
+  which are always auto-fixable.
 - **Codegen.** If the change touches GraphQL schemas or other codegen inputs,
   run the generator (e.g. `pnpm --filter=@powerhousedao/reactor-api run codegen`)
   and `git diff --stat` the gen dir. Report drift; never hand-edit generated

@@ -18,5 +18,8 @@ export { numberProcessor } from "../upstream/engine/lib/variables/processors/num
 export { objectProcessor } from "../upstream/engine/lib/variables/processors/object.js";
 export { textProcessor } from "../upstream/engine/lib/variables/processors/text.js";
 export type { ProcessorFn } from "../upstream/engine/lib/variables/processors/types.js";
-export { propsProcessor } from "../upstream/engine/lib/variables/props-processor.js";
+export {
+  propsProcessor,
+  validateProperty,
+} from "../upstream/engine/lib/variables/props-processor.js";
 export type { PropertySettings } from "./host/shared-shim.js";

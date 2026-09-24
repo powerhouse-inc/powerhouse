@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "6.2.3-dev.22",
+  "version": "6.2.3-dev.23",
   "main": "dist/index.mjs",
   "exports": {
     ".": {
@@ -33,7 +33,7 @@
   "scripts": {
     "tsc": "tsc",
     "test": "vitest run",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint apps/switchboard",
     "build": "tsdown && pnpm run install-packages",
     "start": "node dist/index.mjs",
     "start:profile": "mkdir -p .prof && node --cpu-prof --cpu-prof-dir=.prof dist/index.mjs",

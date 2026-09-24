@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-workflow",
-  "version": "6.2.3-dev.22",
+  "version": "6.2.3-dev.23",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": false,
@@ -30,7 +30,7 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "cd ../.. && oxlint packages/reactor-workflow",
     "test": "vitest --run",
     "test:watch": "vitest",
     "build": "tsdown"

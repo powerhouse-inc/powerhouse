@@ -1,3 +1,14 @@
+## 6.2.3-dev.23 (2026-09-24)
+
+### 🩹 Fixes
+
+- **switchboard:** flush PGlite before exiting on an uncaught error ([#3077](https://github.com/powerhouse-inc/powerhouse/issues/3077))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.22 (2026-09-23)
 
 ### 🩹 Fixes

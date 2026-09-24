@@ -4,6 +4,7 @@ import {
   formatPieceError,
   processors,
   ssrfIpClassifier,
+  validateProperty,
 } from "../src/host.js";
 import type { PieceProperty } from "../src/index.js";
 import { ApFile, Property, PropertyType } from "../src/index.js";
@@ -84,6 +85,21 @@ describe("processors", () => {
     expect(file.filename).toBe("unknown.txt");
     expect(file.extension).toBe("txt");
     expect(file.data.toString()).toBe("hello");
+  });
+});
+
+describe("validateProperty", () => {
+  it("rejects a required prop with no value, naming the expected type", () => {
+    const property = Property.ShortText({ displayName: "T", required: true });
+    expect(validateProperty(property, undefined, undefined)).toEqual([
+      "Expected string, received: undefined",
+    ]);
+    expect(validateProperty(property, "x", "x")).toEqual([]);
+  });
+
+  it("passes an optional prop with no value", () => {
+    const property = Property.Number({ displayName: "N", required: false });
+    expect(validateProperty(property, undefined, "")).toEqual([]);
   });
 });
 

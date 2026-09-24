@@ -75,15 +75,13 @@ export function ConnectionView(props: {
   const packageName = packageFromConnectorId(state.connectorId);
   const usage = connectionUsage(
     connectionId,
-    (workflows ?? []).map(
-      (workflow): UsageWorkflow => ({
-        id: workflow.header.id,
-        name: workflow.state.global.name || workflow.header.name || "Untitled",
-        status: workflow.state.global.status,
-        trigger: workflow.state.global.trigger,
-        steps: workflow.state.global.steps,
-      }),
-    ),
+    (workflows ?? []).map((workflow): UsageWorkflow => ({
+      id: workflow.header.id,
+      name: workflow.state.global.name || workflow.header.name || "Untitled",
+      status: workflow.state.global.status,
+      trigger: workflow.state.global.trigger,
+      steps: workflow.state.global.steps,
+    })),
   );
   const atRisk = enabledDependents(usage);
   const config = configEntries(state.config);

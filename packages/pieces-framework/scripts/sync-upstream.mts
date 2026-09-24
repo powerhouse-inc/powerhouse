@@ -92,6 +92,9 @@ const PACKAGES: UpstreamPackage[] = [
       "src/lib/variables/processors/text.ts",
       "src/lib/variables/processors/types.ts",
       "src/lib/variables/props-processor.ts",
+      "test/helper/polling-helper.test.ts",
+      "test/http/formdata-multipart-claim-verify.test.ts",
+      "test/variables/dynamic-prop-keys.test.ts",
       "test/variables/file-processor.test.ts",
       "test/variables/props-validator.test.ts",
     ],
@@ -105,6 +108,7 @@ const SHARED_SHIM = "src/host/shared-shim.ts";
 const SHARED_SYMBOL_HOMES: Record<string, string | undefined> = {
   AUTHENTICATION_PROPERTY_NAME: "core-piece-types",
   AppConnectionValue: "core-piece-types",
+  PropertyExecutionType: SHARED_SHIM,
   PropertySettings: SHARED_SHIM,
 };
 
@@ -316,6 +320,12 @@ const PATCHES: Patch[] = [
     replace: 'export { InputProperty } from "./input/index.js";\n',
   },
   {
+    file: "upstream/engine/lib/variables/props-processor.ts",
+    why: "export the validator half, for a host that runs its own processors first",
+    find: "const validateProperty = (\n",
+    replace: "export const validateProperty = (\n",
+  },
+  {
     file: "test/upstream/engine/test/variables/file-processor.test.ts",
     why: "upstream never typechecks this test; propsProcessor returns unknown values",
     find: "    const file: ApStreamingFile = processedInput.file;\n",
@@ -349,6 +359,37 @@ const PATCHES: Patch[] = [
       "        auth: undefined,\n",
   },
   {
+    file: "upstream/framework/lib/trigger/trigger.ts",
+    why: "createTrigger's switch has no default, so an unknown type returned undefined and the piece failed far from the cause; name the field, and the common `strategy` slip",
+    find: "        params.propertyGroups,\n      );\n  }\n};\n",
+    replace:
+      "        params.propertyGroups,\n" +
+      "      );\n" +
+      "    default: {\n" +
+      "      const { name, type, strategy } = params as Record<string, unknown>;\n" +
+      "      throw new Error(\n" +
+      "        type === undefined && strategy !== undefined\n" +
+      "          ? `createTrigger: trigger ${JSON.stringify(name)} sets \\`strategy\\`; the field is \\`type\\`, e.g. type: TriggerStrategy.POLLING`\n" +
+      "          : `createTrigger: trigger ${JSON.stringify(name)} has \\`type\\` ${JSON.stringify(type)}; set type: TriggerStrategy.POLLING or TriggerStrategy.WEBHOOK`,\n" +
+      "      );\n" +
+      "    }\n" +
+      "  }\n" +
+      "};\n",
+  },
+  {
+    file: "test/upstream/engine/test/variables/dynamic-prop-keys.test.ts",
+    why: "upstream never typechecks this test; Property.DynamicProperties requires auth",
+    find:
+      "    fields: Property.DynamicProperties({\n" +
+      '      displayName: "Fields",\n' +
+      "      required: true,\n",
+    replace:
+      "    fields: Property.DynamicProperties({\n" +
+      '      displayName: "Fields",\n' +
+      "      required: true,\n" +
+      "      auth: undefined,\n",
+  },
+  {
     file: "test/upstream/framework/test/connection-identifier-flag.test.ts",
     why: "upstream never typechecks this test; createPiece requires authors",
     find: '    logoUrl: "https://example.com/logo.png",\n    auth,\n',
@@ -362,6 +403,447 @@ const PATCHES: Patch[] = [
     replace:
       "observedProviderFetch((signal) => {\n        signals.push(signal);\n      })",
     count: 3,
+  },
+];
+
+// Upstream engine tests run against @powerhousedao/reactor-workflow's engine
+// instead of vendored code: their imports are redirected to adapters there.
+interface ConformanceTest {
+  upstream: string;
+  // Relative to CONFORMANCE_OUT.
+  target: string;
+  // Segments kept, in order; each anchor must occur exactly once upstream.
+  excerpt?: { from: string; to?: string }[];
+}
+
+// An upstream case our engine is known to fail today, run as `it.fails` so a
+// fix shows up as a failure to promote. `test` is the case's name.
+interface MarkedTest {
+  file: string;
+  test: string;
+  why: string;
+  count?: number;
+}
+
+interface KnownDivergence extends MarkedTest {
+  // The issue (or README item) whose fix turns this case green; none for a
+  // difference that is deliberate.
+  issue?: string;
+}
+
+const CONFORMANCE_REPO_DIR = "packages/server/engine/test";
+
+const CONFORMANCE: ConformanceTest[] = [
+  {
+    upstream: "piece-context/store.test.ts",
+    target: "engine/piece-context/store.test.ts",
+  },
+  // The fetch-retry, 404 and AP_ENFORCE_CONNECTION_PIECE_BINDING cases test
+  // upstream's platform API client, which has no counterpart here.
+  {
+    upstream: "piece-context/connection-resolver.test.ts",
+    target: "engine/piece-context/connection-resolver.test.ts",
+    excerpt: [
+      {
+        from: "import { ContextVersion }",
+        to: "    it('throws ConnectionNotFoundError on 404'",
+      },
+      {
+        from: "    it('throws ConnectionExpiredError when status is ERROR'",
+        to: "    it('retries a transient network failure and resolves'",
+      },
+      { from: "})\n\nasync function drainRetries" },
+    ],
+  },
+  {
+    upstream: "network/ssrf-guard.test.ts",
+    target: "engine/network/ssrf-guard.test.ts",
+  },
+  // Only the processor cases: the rest need the expression resolver and
+  // FlowExecutorContext, which have no counterpart here.
+  {
+    upstream: "variables/props-resolver.test.ts",
+    target: "engine/variables/props-resolver.test.ts",
+    excerpt: [
+      {
+        from: "import { ApFile, LATEST_CONTEXT_VERSION, PieceAuth, Property }",
+        to: "import { FlowExecutorContext }",
+      },
+      {
+        from: "import { propsProcessor }",
+        to: "import { createPropsResolver }",
+      },
+      {
+        from: "describe('Props resolver', () => {",
+        to: "    test('Test resolve inside nested loops'",
+      },
+      { from: "    it('should return base64 from base64 with mime only'" },
+    ],
+  },
+  {
+    upstream: "variables/props-validator.test.ts",
+    target: "engine/variables/props-validator.test.ts",
+  },
+];
+
+// Bare packages the conformance tests reach through our published entries.
+const CONFORMANCE_SPECIFIERS: Record<string, string | undefined> = {
+  "@activepieces/pieces-framework": "@powerhousedao/pieces-framework",
+  "@activepieces/pieces-common": "@powerhousedao/pieces-framework/common",
+};
+
+// Upstream module (bare specifier, or repo path without extension) -> the
+// adapter, relative to CONFORMANCE_ROOT, exposing its API over our engine.
+const ADAPTERS = "test/upstream-adapters";
+const IMPORT_REDIRECTS: Record<string, string | undefined> = {
+  "@activepieces/shared": `${ADAPTERS}/shared.ts`,
+  "packages/server/engine/src/lib/piece-context/store": `${ADAPTERS}/store.ts`,
+  "packages/server/engine/src/lib/piece-context/connection-resolver": `${ADAPTERS}/connection-resolver.ts`,
+  "packages/server/engine/src/lib/network/ssrf-guard": `${ADAPTERS}/ssrf-guard.ts`,
+  "packages/server/engine/src/lib/variables/props-processor": `${ADAPTERS}/props-processor.ts`,
+};
+
+const STORE_TEST = "test/upstream/engine/piece-context/store.test.ts";
+const CONNECTION_TEST =
+  "test/upstream/engine/piece-context/connection-resolver.test.ts";
+const SSRF_TEST = "test/upstream/engine/network/ssrf-guard.test.ts";
+const PROPS_RESOLVER_TEST =
+  "test/upstream/engine/variables/props-resolver.test.ts";
+const PROPS_VALIDATOR_TEST =
+  "test/upstream/engine/variables/props-validator.test.ts";
+
+// The fetch mock through which upstream's server hands a test its fixture.
+const jsonFetchMock = (indent: string, fixture: string): string =>
+  `${indent}vi.spyOn(global, "fetch").mockResolvedValue(\n` +
+  `${indent}  new Response(JSON.stringify(${fixture}), {\n` +
+  `${indent}    status: 200,\n` +
+  `${indent}    headers: { "Content-Type": "application/json" },\n` +
+  `${indent}  }),\n` +
+  `${indent});\n`;
+
+const PARTITION_COMMENT =
+  "      // Ours partitions by (scope, flow) instead of prefixing the key.\n";
+
+const GUARD_FILTERS_COMMENT =
+  "      // Ours drops the private record at connect rather than refusing the name.\n";
+
+// Same contract as PATCHES; `file` is relative to CONFORMANCE_ROOT.
+const CONFORMANCE_PATCHES: Patch[] = [
+  {
+    file: STORE_TEST,
+    why: "the fixture upstream's store API would serve is seeded into our journal instead",
+    find: jsonFetchMock("      ", "storeEntry"),
+    replace: "      await seedStoreEntry(storeEntry, STORE_PARAMS);\n",
+    count: 2,
+  },
+  {
+    file: STORE_TEST,
+    why: "the adapter's seeding and call-recording helpers",
+    find: 'import { createContextStore } from "../../../upstream-adapters/store.js";\n',
+    replace:
+      "import {\n  createContextStore,\n  lastStoreCall,\n  seedStoreEntry,\n" +
+      '} from "../../../upstream-adapters/store.js";\n',
+  },
+  {
+    file: STORE_TEST,
+    why: "assert on rejection, not on upstream's error classes",
+    find:
+      "import {\n  StorageError,\n  StorageInvalidKeyError,\n  StorageLimitError,\n" +
+      "  STORE_KEY_MAX_LENGTH,\n",
+    replace: "import {\n  STORE_KEY_MAX_LENGTH,\n",
+  },
+  {
+    file: STORE_TEST,
+    why: "same",
+    find: ".rejects.toThrow(StorageInvalidKeyError);",
+    replace: ".rejects.toThrow();",
+    count: 3,
+  },
+  {
+    file: STORE_TEST,
+    why: "same",
+    find: ".rejects.toThrow(StorageError);",
+    replace: ".rejects.toThrow();",
+  },
+  {
+    file: STORE_TEST,
+    why: "same",
+    find: ").rejects.toThrow(\n        StorageLimitError,\n      );",
+    replace: ").rejects.toThrow();",
+    count: 2,
+  },
+  {
+    file: STORE_TEST,
+    why: "read the journal row a FLOW call reached, where upstream reads the URL",
+    find:
+      "      const calledUrl = fetchSpy.mock.calls[0][0].toString();\n" +
+      '      expect(calledUrl).toContain("test_flow_flow-123%2FmyKey");\n',
+    replace:
+      PARTITION_COMMENT +
+      "      expect(fetchSpy).not.toHaveBeenCalled();\n" +
+      "      expect(lastStoreCall()).toEqual({\n" +
+      '        scope: "FLOW",\n        scopeKey: "flow-123",\n        key: "myKey",\n' +
+      "      });\n",
+  },
+  {
+    file: STORE_TEST,
+    why: "same for PROJECT, whose partition is the reactor",
+    find:
+      "      const calledUrl = fetchSpy.mock.calls[0][0].toString();\n" +
+      '      expect(calledUrl).toContain("test_myKey");\n' +
+      '      expect(calledUrl).not.toContain("flow_");\n',
+    replace:
+      PARTITION_COMMENT +
+      "      expect(fetchSpy).not.toHaveBeenCalled();\n" +
+      "      expect(lastStoreCall()).toEqual({\n" +
+      '        scope: "PROJECT",\n        scopeKey: "reactor",\n        key: "myKey",\n' +
+      "      });\n",
+  },
+  {
+    file: STORE_TEST,
+    why: "same for the default scope",
+    find:
+      "      const calledUrl = fetchSpy.mock.calls[0][0].toString();\n" +
+      '      expect(calledUrl).toContain("flow_flow-123");\n',
+    replace:
+      PARTITION_COMMENT +
+      "      expect(fetchSpy).not.toHaveBeenCalled();\n" +
+      "      expect(lastStoreCall()).toEqual({\n" +
+      '        scope: "FLOW",\n        scopeKey: "flow-123",\n        key: "myKey",\n' +
+      "      });\n",
+  },
+  {
+    file: CONNECTION_TEST,
+    why: "the connection upstream's platform API would serve is seeded instead",
+    find: jsonFetchMock("    ", "connection"),
+    replace: "    seedConnection(connection);\n",
+    count: 5,
+  },
+  {
+    file: CONNECTION_TEST,
+    why: "the adapter's seeding helper",
+    find: 'import { createConnectionResolver } from "../../../upstream-adapters/connection-resolver.js";\n',
+    replace:
+      "import {\n  createConnectionResolver,\n  seedConnection,\n" +
+      '} from "../../../upstream-adapters/connection-resolver.js";\n',
+  },
+  {
+    file: CONNECTION_TEST,
+    why: "assert on rejection, not on upstream's error classes",
+    find:
+      "  AppConnectionType,\n  ConnectionExpiredError,\n  ConnectionLoadingError,\n" +
+      "  ConnectionNotFoundError,\n  ConnectionPieceMismatchError,\n  FetchError,\n",
+    replace: "  AppConnectionType,\n",
+  },
+  {
+    file: CONNECTION_TEST,
+    why: "same",
+    find: ").rejects.toThrow(\n      ConnectionExpiredError,\n    );",
+    replace: ").rejects.toThrow();",
+  },
+  {
+    file: SSRF_TEST,
+    why: "our guard filters the records a socket may dial; it never refuses the name outright",
+    find:
+      "      await expect(\n" +
+      '        dns.promises.lookup("multi.example.test"),\n' +
+      "      ).rejects.toBeInstanceOf(SSRFBlockedError);\n",
+    replace:
+      GUARD_FILTERS_COMMENT +
+      "      await expect(\n" +
+      '        guardedDns.promises.lookup("multi.example.test"),\n' +
+      '      ).resolves.toEqual({ address: "8.8.8.8", family: 4 });\n',
+  },
+  {
+    file: SSRF_TEST,
+    why: "same, with every record asked for",
+    find:
+      "      await expect(\n" +
+      '        dns.promises.lookup("multi.example.test", { all: true }),\n' +
+      "      ).rejects.toBeInstanceOf(SSRFBlockedError);\n",
+    replace:
+      GUARD_FILTERS_COMMENT +
+      "      await expect(\n" +
+      '        guardedDns.promises.lookup("multi.example.test", { all: true }),\n' +
+      '      ).resolves.toEqual([{ address: "8.8.8.8", family: 4 }]);\n',
+  },
+  {
+    file: SSRF_TEST,
+    why: "same, through the callback api",
+    find:
+      "      const err = await new Promise<unknown>((resolve) => {\n" +
+      '        dns.lookup("multi.example.test", (e) => resolve(e));\n' +
+      "      });\n" +
+      "      expect(err).toBeInstanceOf(SSRFBlockedError);\n",
+    replace:
+      GUARD_FILTERS_COMMENT +
+      "      const answer = await new Promise<unknown[]>((resolve) => {\n" +
+      '        guardedDns.lookup("multi.example.test", (...args) => resolve(args));\n' +
+      "      });\n" +
+      '      expect(answer).toEqual([null, "8.8.8.8", 4]);\n',
+  },
+  {
+    file: SSRF_TEST,
+    why: "ours hooks connect, not dns.lookup: a lookup is asked the way a socket asks it",
+    find: 'dns.promises.lookup("',
+    replace: 'guardedDns.promises.lookup("',
+    count: 5,
+  },
+  {
+    file: SSRF_TEST,
+    why: "same, through the callback api",
+    find: 'dns.lookup("',
+    replace: 'guardedDns.lookup("',
+    count: 3,
+  },
+  {
+    file: SSRF_TEST,
+    why: "the adapter's guarded lookup",
+    find: 'import { ssrfGuard } from "../../../upstream-adapters/ssrf-guard.js";\n',
+    replace:
+      'import { guardedDns, ssrfGuard } from "../../../upstream-adapters/ssrf-guard.js";\n',
+  },
+  {
+    file: PROPS_RESOLVER_TEST,
+    why: "the excerpt keeps only the processor cases, which need none of the flow types",
+    find:
+      "import {\n  FlowActionType,\n  FlowTriggerType,\n  GenericStepOutput,\n" +
+      "  PropertyExecutionType,\n  StepOutputStatus,\n" +
+      '} from "../../../upstream-adapters/shared.js";\n',
+    replace:
+      'import { PropertyExecutionType } from "../../../upstream-adapters/shared.js";\n',
+  },
+  // The typecheck fixes the vendored copy of this test already carries.
+  ...PATCHES.filter(
+    (patch) =>
+      patch.file ===
+      "test/upstream/engine/test/variables/props-validator.test.ts",
+  ).map((patch) => ({ ...patch, file: PROPS_VALIDATOR_TEST })),
+];
+
+// Cases that do not apply to our engine at all; run as `it.skip`.
+const CONFORMANCE_SKIPS: MarkedTest[] = [
+  {
+    file: STORE_TEST,
+    test: "throws StorageError on server 500",
+    why: "a store call is a host call, not HTTP, so there is no status to map",
+  },
+  {
+    file: STORE_TEST,
+    test: "throws StorageLimitError on 413 response",
+    why: "a store call is a host call, not HTTP; the size ceiling is the case above",
+  },
+  {
+    file: CONNECTION_TEST,
+    test: "throws ConnectionExpiredError when status is ERROR",
+    why: "our ERROR status records a failed check; only REVOKED refuses a connection",
+  },
+  {
+    file: SSRF_TEST,
+    test: "allows loopback target on a whitelisted port (engine↔worker RPC)",
+    why: "our worker reaches its host over IPC, so the guard has no loopback-port allow-list",
+  },
+  {
+    file: SSRF_TEST,
+    test: "leaves dns.lookup untouched",
+    why: "our guard is sealed once installed and cannot be uninstalled",
+  },
+  {
+    file: SSRF_TEST,
+    test: "leaves net.Socket.connect untouched",
+    why: "our guard is sealed once installed and cannot be uninstalled",
+  },
+  {
+    file: PROPS_RESOLVER_TEST,
+    test: "should resolve files inside the array properties",
+    why: "fetches cdn.activepieces.com",
+  },
+  {
+    file: PROPS_RESOLVER_TEST,
+    test: "should return images for image url",
+    why: "fetches cdn.activepieces.com",
+  },
+  {
+    file: PROPS_RESOLVER_TEST,
+    test: "should return error for invalid data",
+    why: "fetches google.com",
+  },
+];
+
+// An item of reactor-workflow's README "Known missing features".
+const readme = (item: string): string => `README: ${item}`;
+
+// #3096 validates with upstream's validateProperty, not applyProcessorsAndValidators
+// whole; these reasons are what it does differently on purpose, so they name no issue.
+const TOLERATED_JSON =
+  "unparseable JSON or OBJECT text reaches the piece instead of failing validation";
+const ABSENT_REQUIRED =
+  "a required prop absent from the input fails validation";
+
+const KNOWN_DIVERGENCES: KnownDivergence[] = [
+  {
+    file: STORE_TEST,
+    test: "throws StorageInvalidKeyError when key exceeds max length",
+    issue: readme("ctx.store key length"),
+    why: "only a put checks the key length (assertPieceStoreEntry); get and delete do not",
+  },
+  {
+    file: CONNECTION_TEST,
+    test: "V0 SECRET_TEXT returns connection.value.secret_text",
+    issue: "#3091",
+    why: "every piece gets the current context; getContextInfo is not read",
+  },
+  {
+    file: CONNECTION_TEST,
+    test: "V0 CUSTOM_AUTH returns connection.value.props",
+    issue: "#3091",
+    why: "every piece gets the current context; getContextInfo is not read",
+  },
+  {
+    file: CONNECTION_TEST,
+    test: "V0 other types returns connection.value",
+    issue: "#3091",
+    why: "OAuth2 connections are refused at run",
+  },
+  {
+    file: PROPS_RESOLVER_TEST,
+    test: "should return base64 from base64 with mime only",
+    why: "our FILE handling: a data URI becomes a plain object named file.<ext>, not an ApFile",
+  },
+  {
+    file: PROPS_RESOLVER_TEST,
+    test: "should return casted number for text",
+    issue: readme("CUSTOM_AUTH props are not coerced"),
+    why: "a CUSTOM_AUTH value reaches the piece without its props coerced",
+  },
+  {
+    file: PROPS_RESOLVER_TEST,
+    test: "should flatten arrays inside DYNAMIC properties",
+    issue: readme("DYNAMIC values are not re-processed"),
+    why: "a DYNAMIC value is not re-processed against the schema it resolved to",
+  },
+  ...[
+    "should validate required json property",
+    "should validate optional json property with invalid value",
+    "should validate required object property",
+    "should validate property types",
+  ].map((test) => ({ file: PROPS_VALIDATOR_TEST, test, why: TOLERATED_JSON })),
+  {
+    file: PROPS_VALIDATOR_TEST,
+    test: "should coerce %s",
+    why: ABSENT_REQUIRED,
+  },
+  {
+    file: PROPS_VALIDATOR_TEST,
+    test: "should convert null to undefined for unset optional properties",
+    issue: readme("optional props set to null"),
+    why: "ours passes null through; propsProcessor maps it to undefined",
+  },
+  {
+    file: PROPS_VALIDATOR_TEST,
+    test: "should map nil to undefined on optional props, leaving required-ness to validation",
+    issue: readme("optional props set to null"),
+    why: "ours passes null through; propsProcessor maps it to undefined",
   },
 ];
 
@@ -384,6 +866,8 @@ const PKG_ROOT = path.resolve(
 const UPSTREAM_OUT = path.join(PKG_ROOT, "upstream");
 const TEST_OUT = path.join(PKG_ROOT, "test", "upstream");
 const LICENSE_FILE = path.join(PKG_ROOT, "LICENSE");
+const CONFORMANCE_ROOT = path.resolve(PKG_ROOT, "..", "reactor-workflow");
+const CONFORMANCE_OUT = path.join(CONFORMANCE_ROOT, "test", "upstream");
 const ESLINT_CONFIG = path.join(
   PKG_ROOT,
   "scripts",
@@ -471,7 +955,13 @@ function obtainTree(tag: string, from: string | undefined): Tree {
     ],
     { stdio: "inherit" },
   );
-  git(root, "sparse-checkout", "set", ...PACKAGES.map((p) => p.upstreamDir));
+  git(
+    root,
+    "sparse-checkout",
+    "set",
+    ...PACKAGES.map((p) => p.upstreamDir),
+    CONFORMANCE_REPO_DIR,
+  );
   const commit = git(root, "rev-parse", "HEAD");
   const date = git(root, "log", "-1", "--format=%cI", "HEAD");
   return {
@@ -578,11 +1068,16 @@ function rewriteSpecifier(
   return EXTENSIONLESS_SUBPATHS[spec] ?? spec;
 }
 
-function header(tag: string, upstreamPath: string, destFile: string): string {
+function header(
+  tag: string,
+  upstreamPath: string,
+  destFile: string,
+  generator = "scripts/sync-upstream.mts",
+): string {
   const license = toPosix(path.relative(path.dirname(destFile), LICENSE_FILE));
   return (
     `// Vendored from ${REPO_SLUG}@${tag} ${upstreamPath}. MIT; see ${license}.\n` +
-    `// Generated by scripts/sync-upstream.mts — do not edit by hand.\n`
+    `// Generated by ${generator} — do not edit by hand.\n`
   );
 }
 
@@ -657,9 +1152,9 @@ function codemod(tree: Tree, tag: string, plan: Map<string, string>): void {
   }
 }
 
-function applyPatches(): void {
-  for (const patch of PATCHES) {
-    const file = path.join(PKG_ROOT, patch.file);
+function applyPatches(patches: Patch[] = PATCHES, root = PKG_ROOT): void {
+  for (const patch of patches) {
+    const file = path.join(root, patch.file);
     const text = fs.readFileSync(file, "utf8");
     const expected = patch.count ?? 1;
     const count = text.split(patch.find).length - 1;
@@ -672,7 +1167,10 @@ function applyPatches(): void {
   }
 }
 
-function runEslintFix(): void {
+function runEslintFix(
+  cwd = PKG_ROOT,
+  targets: string[] = ["upstream", "test/upstream"],
+): void {
   execFileSync(
     "pnpm",
     [
@@ -680,12 +1178,11 @@ function runEslintFix(): void {
       "eslint",
       "--no-config-lookup",
       "--config",
-      path.relative(PKG_ROOT, ESLINT_CONFIG),
+      path.relative(cwd, ESLINT_CONFIG),
       "--fix",
-      "upstream",
-      "test/upstream",
+      ...targets,
     ],
-    { cwd: PKG_ROOT, stdio: "inherit" },
+    { cwd, stdio: "inherit" },
   );
 }
 
@@ -719,6 +1216,201 @@ function writePackageJsonUpstream(manifest: Manifest): void {
     packages,
   };
   fs.writeFileSync(file, `${JSON.stringify(pkg, null, 2)}\n`);
+}
+
+// Cuts a file down to the listed segments; an anchor that is missing or
+// ambiguous fails the sync, so upstream reshaping the file cannot go unseen.
+function excerpt(
+  text: string,
+  segments: NonNullable<ConformanceTest["excerpt"]>,
+  file: string,
+): string {
+  const once = (anchor: string): number => {
+    const at = text.indexOf(anchor);
+    if (at === -1 || text.includes(anchor, at + 1)) {
+      throw new Error(
+        `excerpt anchor ${JSON.stringify(anchor)} does not occur exactly once in ${file}; upstream changed, revisit it`,
+      );
+    }
+    return at;
+  };
+  return segments
+    .map(({ from, to }) => {
+      const start = once(from);
+      const end = to === undefined ? text.length : once(to);
+      if (end < start) {
+        throw new Error(
+          `excerpt ${JSON.stringify(from)} ends before it starts`,
+        );
+      }
+      return text.slice(start, end);
+    })
+    .join("");
+}
+
+function redirectTarget(key: string): string | undefined {
+  const target = IMPORT_REDIRECTS[key];
+  return target === undefined ? undefined : path.join(CONFORMANCE_ROOT, target);
+}
+
+function rewriteConformanceSpecifier(
+  spec: string,
+  origFile: string,
+  destFile: string,
+  treeRoot: string,
+): string {
+  const published = CONFORMANCE_SPECIFIERS[spec];
+  if (published) return published;
+  const bare = redirectTarget(spec);
+  if (bare) return relativeSpecifier(destFile, bare);
+  if (spec.startsWith(".")) {
+    const base = path.resolve(path.dirname(origFile), spec);
+    const key = toPosix(path.relative(treeRoot, base)).replace(/\.tsx?$/, "");
+    const target = redirectTarget(key);
+    if (!target) {
+      throw new Error(
+        `no adapter for ${key} (imported by ${origFile}); extend IMPORT_REDIRECTS`,
+      );
+    }
+    return relativeSpecifier(destFile, target);
+  }
+  if (spec.startsWith("@activepieces/")) {
+    throw new Error(`no mapping for ${spec} in ${origFile}`);
+  }
+  if (!spec.startsWith("node:") && builtinModules.includes(spec)) {
+    return `node:${spec}`;
+  }
+  return spec;
+}
+
+// Puts `it.fails` / `it.skip` on each named case, with a comment saying why.
+// The name must match `count` cases, so a renamed upstream case fails the sync.
+function markTests(
+  marks: MarkedTest[],
+  modifier: "fails" | "skip",
+  comment: (mark: MarkedTest) => string,
+): void {
+  for (const mark of marks) {
+    const file = path.join(CONFORMANCE_ROOT, mark.file);
+    const lines = fs.readFileSync(file, "utf8").split("\n");
+    const quoted = JSON.stringify(mark.test);
+    const targets: number[] = [];
+    lines.forEach((line, index) => {
+      const direct = /^\s*(?:it|test)\(/.exec(line);
+      if (direct && line.slice(direct[0].length).startsWith(`${quoted},`)) {
+        targets.push(index);
+        return;
+      }
+      // it.each([...])("name", ...): the modifier goes on the it.each line.
+      if (!line.trimStart().startsWith(`])(${quoted},`)) return;
+      for (let back = index - 1; back >= 0; back--) {
+        if (/^\s*(?:it|test)\.each\(/.test(lines[back])) {
+          targets.push(back);
+          return;
+        }
+      }
+    });
+    const expected = mark.count ?? 1;
+    if (targets.length !== expected) {
+      throw new Error(
+        `"${mark.test}" matched ${targets.length} cases in ${mark.file} (expected ${expected}); upstream changed, revisit it`,
+      );
+    }
+    for (const index of targets.reverse()) {
+      const indent = /^\s*/.exec(lines[index])?.[0] ?? "";
+      lines[index] = lines[index].replace(
+        /^(\s*)(it|test)(\.each)?\(/,
+        `$1$2.${modifier}$3(`,
+      );
+      lines.splice(index, 0, `${indent}// ${comment(mark)}`);
+    }
+    fs.writeFileSync(file, lines.join("\n"));
+  }
+}
+
+interface ConformanceManifest {
+  repository: string;
+  tag: string;
+  commit: string;
+  date: string;
+  files: ManifestFile[];
+  knownDivergences: { file: string; test: string; issue: string }[];
+  skipped: { file: string; test: string }[];
+}
+
+// Generates reactor-workflow's test/upstream/ from CONFORMANCE, under the same
+// header, codemod, formatting and patch contract as the vendored tree.
+function syncConformance(tree: Tree, tag: string): ConformanceManifest {
+  fs.rmSync(CONFORMANCE_OUT, { recursive: true, force: true });
+  const generator = "packages/pieces-framework/scripts/sync-upstream.mts";
+  const project = new Project({
+    skipAddingFilesFromTsConfig: true,
+    skipFileDependencyResolution: true,
+  });
+  const files: ManifestFile[] = [];
+  for (const test of CONFORMANCE) {
+    const upstreamPath = `${CONFORMANCE_REPO_DIR}/${test.upstream}`;
+    const orig = path.join(tree.root, upstreamPath);
+    if (!fs.existsSync(orig)) {
+      throw new Error(`${upstreamPath} no longer exists; revisit CONFORMANCE`);
+    }
+    const bytes = fs.readFileSync(orig);
+    const text = test.excerpt
+      ? excerpt(bytes.toString("utf8"), test.excerpt, upstreamPath)
+      : bytes.toString("utf8");
+    const dest = path.join(CONFORMANCE_OUT, test.target);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    const sourceFile = project.createSourceFile(dest, text, {
+      overwrite: true,
+    });
+    const declarations = [
+      ...sourceFile.getImportDeclarations(),
+      ...sourceFile.getExportDeclarations(),
+    ];
+    for (const decl of declarations) {
+      const spec = decl.getModuleSpecifierValue();
+      if (spec === undefined) continue;
+      const next = rewriteConformanceSpecifier(spec, orig, dest, tree.root);
+      if (next !== spec) decl.setModuleSpecifier(next);
+    }
+    fs.writeFileSync(
+      dest,
+      header(tag, upstreamPath, dest, generator) + sourceFile.getFullText(),
+    );
+    files.push({
+      path: toPosix(path.relative(CONFORMANCE_ROOT, dest)),
+      upstream: upstreamPath,
+      sha256: sha256(bytes),
+    });
+  }
+  files.sort((a, b) => a.path.localeCompare(b.path));
+  runEslintFix(CONFORMANCE_ROOT, ["test/upstream"]);
+  applyPatches(CONFORMANCE_PATCHES, CONFORMANCE_ROOT);
+  markTests(CONFORMANCE_SKIPS, "skip", (m) => `Not applicable here: ${m.why}`);
+  markTests(KNOWN_DIVERGENCES, "fails", (m) => {
+    const { issue } = m as KnownDivergence;
+    return issue
+      ? `Known divergence (${issue}): ${m.why}`
+      : `Deliberate divergence: ${m.why}`;
+  });
+  const manifest: ConformanceManifest = {
+    repository: `https://github.com/${REPO_SLUG}`,
+    tag,
+    commit: tree.commit,
+    date: tree.date,
+    files,
+    knownDivergences: KNOWN_DIVERGENCES.map(({ file, test, issue }) => ({
+      file,
+      test,
+      issue: issue ?? "deliberate",
+    })),
+    skipped: CONFORMANCE_SKIPS.map(({ file, test }) => ({ file, test })),
+  };
+  fs.writeFileSync(
+    path.join(CONFORMANCE_OUT, "MANIFEST.json"),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+  );
+  return manifest;
 }
 
 function main(): void {
@@ -768,6 +1460,7 @@ function main(): void {
     runEslintFix();
     applyPatches();
     writePackageJsonUpstream(manifest);
+    const conformance = syncConformance(tree, tag);
 
     const sources = manifest.files.filter((f) =>
       f.path.startsWith("upstream/"),
@@ -781,6 +1474,11 @@ function main(): void {
       const m = manifest.packages[p.dir];
       console.log(`  ${m.name}@${m.version} <- ${m.upstreamDir}`);
     }
+    console.log(
+      `  reactor-workflow conformance: ${conformance.files.length} test files, ` +
+        `${CONFORMANCE_PATCHES.length} patches, ${conformance.knownDivergences.length} known divergences, ` +
+        `${conformance.skipped.length} skipped`,
+    );
   } finally {
     tree.cleanup();
   }

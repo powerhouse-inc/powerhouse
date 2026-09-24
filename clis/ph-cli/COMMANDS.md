@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.3-dev.22)<br>
+# Powerhouse CLI Commands (6.2.3-dev.23)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -523,6 +523,10 @@ Pieces under pieces/ are built too, each into its own self-contained module unde
 dist/node/pieces/<name>, with a descriptor.json and package.json written beside it and
 the piece listed in dist/powerhouse.manifest.json. A package that ships only pieces is an
 ordinary package: it carries the same boilerplate, and every step above runs for it too.
+
+tsc runs first. If it reports type errors the build asks whether to go ahead, and stops
+where it can't ask. --ignore-type-errors builds without asking; a package built that way
+can load and still fail at runtime, so don't publish it.
 ### options
 #### Out Dir <br>
 Where to output the bundled code<br><br>
@@ -533,6 +537,10 @@ Where to output the bundled code<br><br>
 #### No Shared Deps <br>
 Bundle the shared dependency set instead of externalizing it (default: externalize)<br><br>
 **usage:** `--no-shared-deps`<br>
+**default**: `false`
+#### Ignore Type Errors <br>
+Unsafe: build even when tsc reports type errors, without asking. The package can load and still fail at runtime<br><br>
+**usage:** `--ignore-type-errors`<br>
 **default**: `false`
 #### Debug <br>
 Log arguments passed to this command<br><br>

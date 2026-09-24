@@ -4,6 +4,7 @@ import type { PieceProperty } from "@powerhousedao/pieces-framework";
 import {
   arrayZipperProcessor,
   processors,
+  validateProperty,
   type ProcessorFn,
 } from "@powerhousedao/pieces-framework/host";
 import type { ApProperty } from "../types.js";
@@ -304,4 +305,141 @@ export async function normalizePropsValue(
     else out[name] = normalized;
   }
   return out;
+}
+
+// Upstream's error shape: a field's messages, or an ARRAY's per-row errors.
+export interface PropsValidationErrors {
+  [key: string]: string[] | { properties: PropsValidationErrors[] };
+}
+
+function hasErrors(errors: PropsValidationErrors): boolean {
+  return Object.keys(errors).length > 0;
+}
+
+// normalizeValue hands a JSON prop's unparseable text back on purpose; the
+// validator would call that "not JSON".
+function isToleratedJson(
+  prop: ApProperty,
+  value: unknown,
+  original: unknown,
+): boolean {
+  return (
+    prop.type !== undefined &&
+    JSON_LIKE.has(prop.type) &&
+    typeof value === "string" &&
+    value === original
+  );
+}
+
+// Upstream's validator over values our processors already coerced. Every
+// declared prop is checked, so a required one that is absent fails too.
+export function validatePropsValue(
+  props: Record<string, ApProperty> | undefined,
+  processed: Record<string, unknown>,
+  original: Record<string, unknown>,
+): PropsValidationErrors {
+  const errors: PropsValidationErrors = {};
+  if (!props) return errors;
+  for (const [name, prop] of Object.entries(props)) {
+    if (!isRecord(prop)) continue;
+    const value = processed[name];
+    const raw = original[name];
+    if (prop.type === "ARRAY" && prop.properties && Array.isArray(value)) {
+      const zipped: unknown = arrayZipperProcessor(prop as PieceProperty, raw);
+      const rawRows = Array.isArray(zipped) ? (zipped as unknown[]) : [];
+      const rows = (value as unknown[]).map((row, index) => {
+        const rawRow = rawRows[index];
+        return isRecord(row)
+          ? validatePropsValue(
+              prop.properties,
+              row,
+              isRecord(rawRow) ? rawRow : row,
+            )
+          : {};
+      });
+      if (rows.some(hasErrors)) errors[name] = { properties: rows };
+      continue;
+    }
+    if (isToleratedJson(prop, value, raw)) continue;
+    const messages = validateProperty(prop as PieceProperty, value, raw);
+    if (messages.length > 0) errors[name] = messages;
+  }
+  return errors;
+}
+
+function describeErrors(
+  errors: PropsValidationErrors,
+  props: Record<string, ApProperty> | undefined,
+  path = "",
+): string[] {
+  return Object.entries(errors).flatMap(([name, entry]) => {
+    const label = path
+      ? `${path}.${name}`
+      : `${props?.[name]?.displayName ?? name} (${name})`;
+    if (Array.isArray(entry)) return [`${label}: ${entry.join(", ")}`];
+    const rowProps = props?.[name]?.properties;
+    return entry.properties.flatMap((row, index) =>
+      describeErrors(row, rowProps, `${path ? label : name}[${index}]`),
+    );
+  });
+}
+
+// Thrown before piece code runs; `errors` carries upstream's shape.
+export class PropsValidationError extends Error {
+  constructor(
+    owner: string,
+    readonly errors: PropsValidationErrors,
+    props: Record<string, ApProperty> | undefined,
+  ) {
+    super(
+      `Invalid input for ${owner}: ${describeErrors(errors, props).join("; ")}`,
+    );
+    this.name = "PropsValidationError";
+  }
+}
+
+// What the builder writes into a step upstream: a prop left unset takes its
+// defaultValue, the value the editor shows for it.
+function withDefaults(
+  props: Record<string, ApProperty>,
+  values: Record<string, unknown>,
+): Record<string, unknown> {
+  const out = { ...values };
+  for (const [name, prop] of Object.entries(props)) {
+    if (!isRecord(prop)) continue;
+    if (!(name in out)) {
+      if (prop.defaultValue !== undefined) out[name] = prop.defaultValue;
+      continue;
+    }
+    const fields = prop.properties;
+    if (prop.type !== "ARRAY" || !fields) continue;
+    const rows: unknown = arrayZipperProcessor(
+      prop as PieceProperty,
+      out[name],
+    );
+    if (Array.isArray(rows)) {
+      out[name] = (rows as unknown[]).map((row) =>
+        isRecord(row) ? withDefaults(fields, row) : row,
+      );
+    }
+  }
+  return out;
+}
+
+// Defaults, coercion, then validation: the values run() receives, or a
+// PropsValidationError naming each field that failed.
+export async function preparePropsValue(
+  owner: string,
+  props: Record<string, ApProperty> | undefined,
+  values: Record<string, unknown>,
+  options: NormalizeOptions = {},
+): Promise<Record<string, unknown>> {
+  if (!props || !isRecord(values)) return values;
+  const original = withDefaults(props, values);
+  const processed = await normalizePropsValue(props, original, options);
+  const errors = validatePropsValue(props, processed, original);
+  if (hasErrors(errors)) {
+    throw new PropsValidationError(owner, errors, props);
+  }
+  return processed;
 }

@@ -1,11 +1,13 @@
 // What a processor does when it cannot coerce. The upstream processors answer
-// undefined, and upstream pairs them with validators that turn that into
-// "Expected JSON, received: …". We take the processors alone, so undefined has
-// to mean "leave it to the piece" — or an author's value disappears before the
-// action runs, which is how a model's prose-wrapped answer used to reach
-// document-dispatch as nothing at all.
+// undefined, and upstream's validators turn that into "Expected JSON,
+// received: …". For JSON we hand the text to the piece instead, and skip that
+// validator, or a model's prose-wrapped answer reaches the action as nothing.
 import { expect, it } from "vitest";
-import { normalizePropsValue, normalizeValue } from "./normalize.js";
+import {
+  normalizePropsValue,
+  normalizeValue,
+  preparePropsValue,
+} from "./normalize.js";
 
 const jsonProp = { type: "JSON", displayName: "Actions", required: true };
 
@@ -33,6 +35,27 @@ it("keeps a JSON key whose value it could not parse", async () => {
   // no `actions` prop at all, and refuse an empty list rather than the text.
   expect(Object.keys(out).sort()).toEqual(["actions", "documentId"]);
   expect(out.actions).toBe(MODEL_ANSWER);
+});
+
+it("validates past a JSON value it could not parse", async () => {
+  const out = await preparePropsValue(
+    'action "dispatch"',
+    { actions: jsonProp },
+    { actions: MODEL_ANSWER },
+  );
+  expect(out.actions).toBe(MODEL_ANSWER);
+});
+
+it("refuses an empty required JSON value", async () => {
+  await expect(
+    preparePropsValue(
+      'action "dispatch"',
+      { actions: jsonProp },
+      { actions: "" },
+    ),
+  ).rejects.toThrow(
+    'Invalid input for action "dispatch": Actions (actions): Expected JSON, received: ',
+  );
 });
 
 // Narrow on purpose. Every other type keeps its promise to the piece, and

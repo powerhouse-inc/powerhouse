@@ -19,12 +19,14 @@ import {
   type FileNode,
   type Listener,
   type Node as DriveNode,
+  type Trigger,
 } from "@powerhousedao/shared/document-drive";
 import {
   baseCreateDocument,
   createReducer,
   defaultPHState as defaultDocumentModelPHState,
   deriveOperationId,
+  documentModelReducer,
   generateId,
   isDocumentAction,
   type Action,
@@ -2163,7 +2165,11 @@ function buildSurveyModules(count: number): ModuleSpecification[] {
 }
 
 /** A replayed operation, whose hash keeps the reducer from rehashing a scope. */
-function surveyOperation(scope: string, type: string, input: object): Operation {
+function surveyOperation(
+  scope: string,
+  type: string,
+  input: object,
+): Operation {
   const action: Action = {
     id: `survey-${type}`,
     type,
@@ -2513,6 +2519,212 @@ for (const scan of SURVEY_SCANS) {
           },
         );
       }
+    }
+  });
+}
+
+function surveyOperationId(index: number): string {
+  return `operation-${String(index).padStart(6, "0")}`;
+}
+
+function buildSurveyTriggers(count: number): Trigger[] {
+  const triggers: Trigger[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    triggers.push({
+      id: `trigger-${String(index).padStart(6, "0")}`,
+      type: "PullResponder",
+      data: {
+        interval: "1",
+        listenerId: surveyListenerId(index),
+        url: "http://localhost",
+      },
+    });
+  }
+
+  return triggers;
+}
+
+function buildSurveyExamples(count: number): { id: string; value: string }[] {
+  const examples: { id: string; value: string }[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    examples.push({
+      id: `example-${String(index).padStart(6, "0")}`,
+      value: "{}",
+    });
+  }
+
+  return examples;
+}
+
+type RealReducerCase = {
+  type: string;
+  unit: string;
+  setup: (count: number) => { run: () => number; expected: number };
+};
+
+function replayArgs(operation: Operation) {
+  return {
+    skip: operation.skip,
+    replayOptions: { operation },
+    skipIndexValidation: true,
+  };
+}
+
+function realDriveCase(
+  type: string,
+  unit: string,
+  measure: (state: DocumentDrivePHState) => number,
+  input: (count: number) => object,
+): RealReducerCase {
+  return {
+    type,
+    unit,
+    setup: (count) => {
+      const document = driveDocumentModelModule.utils.createDocument();
+      document.state.local.listeners = buildSurveyListeners(count);
+      document.state.local.triggers = buildSurveyTriggers(count);
+      const operation = surveyOperation("local", type, input(count));
+      return {
+        run: () =>
+          measure(
+            driveDocumentModelModule.reducer(
+              document,
+              operation.action,
+              undefined,
+              replayArgs(operation),
+            ).state,
+          ),
+        expected: count - 1,
+      };
+    },
+  };
+}
+
+function realDocumentModelCase(
+  type: string,
+  unit: string,
+  measure: (state: DocumentModelPHState) => number,
+  input: (count: number) => object,
+  expected: (count: number) => number,
+): RealReducerCase {
+  return {
+    type,
+    unit,
+    setup: (count) => {
+      const document = surveyDocumentModelDocument(buildSurveyModules(count));
+      document.state.global.specifications[0].state.global.examples =
+        buildSurveyExamples(count);
+      const operation = surveyOperation(SCOPE, type, input(count));
+      return {
+        run: () =>
+          measure(
+            documentModelReducer(
+              document,
+              operation.action,
+              undefined,
+              replayArgs(operation),
+            ).state,
+          ),
+        expected: expected(count),
+      };
+    },
+  };
+}
+
+function latestModules(state: DocumentModelPHState): ModuleSpecification[] {
+  const specifications = state.global.specifications;
+  return specifications[specifications.length - 1].modules;
+}
+
+function operationCount(state: DocumentModelPHState): number {
+  return latestModules(state).reduce(
+    (total, specModule) => total + specModule.operations.length,
+    0,
+  );
+}
+
+/** The six T-043 sites, dispatched through the reducers that ship them. */
+const REAL_REDUCER_CASES: RealReducerCase[] = [
+  realDriveCase(
+    "REMOVE_LISTENER",
+    "listener ops",
+    (state) => state.local.listeners.length,
+    (count) => ({ listenerId: surveyListenerId(count - 1) }),
+  ),
+  realDriveCase(
+    "REMOVE_TRIGGER",
+    "trigger ops",
+    (state) => state.local.triggers.length,
+    (count) => ({ triggerId: `trigger-${String(count - 1).padStart(6, "0")}` }),
+  ),
+  realDocumentModelCase(
+    "DELETE_MODULE",
+    "module ops",
+    (state) => latestModules(state).length,
+    (count) => ({ id: surveyModuleId(count - 1) }),
+    (count) => count - 1,
+  ),
+  realDocumentModelCase(
+    "DELETE_OPERATION",
+    "module ops",
+    operationCount,
+    (count) => ({ id: surveyOperationId(count - 1) }),
+    (count) => count - 1,
+  ),
+  realDocumentModelCase(
+    "MOVE_OPERATION",
+    "module ops",
+    (state) => latestModules(state)[0].operations.length,
+    (count) => ({
+      operationId: surveyOperationId(count - 1),
+      newModuleId: surveyModuleId(0),
+    }),
+    () => 2,
+  ),
+  realDocumentModelCase(
+    "DELETE_STATE_EXAMPLE",
+    "example ops",
+    (state) => state.global.specifications[0].state.global.examples.length,
+    (count) => ({
+      scope: SCOPE,
+      id: `example-${String(count - 1).padStart(6, "0")}`,
+    }),
+    (count) => count - 1,
+  ),
+];
+
+let realReducerSink = 0;
+
+for (const realCase of REAL_REDUCER_CASES) {
+  describe(`Real Reducer Draft Assign: ${realCase.type}`, () => {
+    for (const count of SURVEY_SIZES) {
+      const { run, expected } = realCase.setup(count);
+
+      bench(
+        `${realCase.type} (${String(count)} ${realCase.unit})`,
+        () => {
+          realReducerSink += run();
+        },
+        {
+          time: SURVEY_TIME_MS,
+          throws: true,
+          teardown: (_task, mode) => {
+            if (mode !== "run") {
+              return;
+            }
+
+            const result = run();
+
+            if (result !== expected) {
+              throw new Error(
+                `${realCase.type} at ${String(count)} gave ${String(result)}, expected ${String(expected)} (sink ${String(realReducerSink)})`,
+              );
+            }
+          },
+        },
+      );
     }
   });
 }

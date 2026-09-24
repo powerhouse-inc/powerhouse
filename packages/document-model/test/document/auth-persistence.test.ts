@@ -458,46 +458,4 @@ describe("a state snapshot is not a door onto the auth policy", () => {
     expect(upgraded.state.auth.grants.map((g) => g.id)).toEqual(["a"]);
     expect((upgraded.state as CounterState).global.count).toBe(5);
   });
-
-  it("rejects a LOAD_STATE that replaces an initialized policy", () => {
-    const doc = initialized([adminGrant("a")]);
-    const load = {
-      id: "act-load",
-      type: "LOAD_STATE",
-      scope: "global",
-      input: {
-        operations: 0,
-        state: {
-          name: "loaded",
-          data: {
-            ...doc.state,
-            auth: { version: 1, grants: [adminGrant("attacker")] },
-          },
-        },
-      },
-      timestampUtcMs: makeTimestamp(0),
-    } as unknown as Action;
-
-    // Throws rather than recording an error operation, which is how this path
-    // already treats an unusable LOAD_STATE input; the executor turns it into a
-    // failed job and nothing is stored.
-    expect(() => counterReducer(doc, load)).toThrow(/preserve its auth policy/);
-  });
-
-  it("accepts a LOAD_STATE carrying the policy the document already has", () => {
-    const doc = initialized([adminGrant("a")]);
-    const load = {
-      id: "act-load-same",
-      type: "LOAD_STATE",
-      scope: "global",
-      input: {
-        operations: 0,
-        state: { name: "loaded", data: { ...doc.state } },
-      },
-      timestampUtcMs: makeTimestamp(0),
-    } as unknown as Action;
-
-    const next = counterReducer(doc, load);
-    expect(next.state.auth.grants.map((g) => g.id)).toEqual(["a"]);
-  });
 });

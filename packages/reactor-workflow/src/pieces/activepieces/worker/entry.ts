@@ -19,7 +19,10 @@ import { DataUriFilesService, StagedFilesService } from "../context/files.js";
 import { setMaxFileBytes } from "../context/limits.js";
 import {
   normalizePropsValue,
+  preparePropsValue,
+  PropsValidationError,
   type NormalizeOptions,
+  type PropsValidationErrors,
 } from "../context/normalize.js";
 import {
   buildPropertyContext,
@@ -29,7 +32,18 @@ import {
 import { buildTriggerContext, runTriggerHook } from "../context/trigger.js";
 import { buildDescriptor, describeProperties } from "../descriptor.js";
 import { loadPiece, loadPieceFromDir, type LoadedPiece } from "../loader.js";
-import { getActions, getTriggers, type ApProperty } from "../types.js";
+import {
+  getActions,
+  getTriggers,
+  type ApPiece,
+  type ApProperty,
+  type ApTrigger,
+} from "../types.js";
+import {
+  unsupportedAuth,
+  unsupportedTrigger,
+  UnsupportedPieceFeatureError,
+} from "../unsupported.js";
 import { installEgressGuard, runWithEgressPolicy } from "./egress.js";
 import type {
   StagedInput,
@@ -116,6 +130,12 @@ function serializeError(
     ) as Record<string, unknown>,
     unsupportedMember:
       error instanceof UnsupportedContextMemberError ? error.member : undefined,
+    ...(error instanceof UnsupportedPieceFeatureError
+      ? { unsupportedFeature: error.feature }
+      : {}),
+    ...(error instanceof PropsValidationError
+      ? { invalidProps: jsonSafe(error.errors) as PropsValidationErrors }
+      : {}),
   };
 }
 
@@ -133,6 +153,7 @@ async function handleResolveOptions(
   const { piece } = await loadCached(request);
   const { context, touched } = buildPropertyContext({
     searchValue: request.searchValue,
+    projectId: request.projectId,
     // Design-time default: an empty flows listing instead of a throwing stub.
     flows: { list: () => Promise.resolve({ data: [] }) },
     ...(request.reactorAccess ? { reactor: new RemoteReactorService() } : {}),
@@ -194,6 +215,29 @@ function stagedInputResolver(
   };
 }
 
+// The same refusal describe records, for a step or hook that reaches the
+// worker anyway: a workflow saved before the check, or built over the API.
+function assertRunnable(
+  piece: ApPiece,
+  pieceName: string,
+  trigger?: { name: string; trigger: ApTrigger },
+): void {
+  const pieceFeature = unsupportedAuth(piece.auth);
+  if (pieceFeature) {
+    throw new UnsupportedPieceFeatureError(
+      `Piece "${pieceName}"`,
+      pieceFeature,
+    );
+  }
+  const triggerFeature = trigger && unsupportedTrigger(trigger.trigger);
+  if (triggerFeature) {
+    throw new UnsupportedPieceFeatureError(
+      `Trigger "${trigger.name}" of "${pieceName}"`,
+      triggerFeature,
+    );
+  }
+}
+
 async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   const { request } = message;
   const { piece } = await loadCached(request);
@@ -205,6 +249,7 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
       `No action "${request.actionName}" in ${pieceRefKey(request)}`,
     );
   }
+  assertRunnable(piece, piece.displayName);
   const files = request.stagingDir
     ? new StagedFilesService(request.stagingDir)
     : new DataUriFilesService();
@@ -222,9 +267,12 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   // says so on console.error, and the worker's stdio goes nowhere.
   const restoreConsole = request.captureLogs ? captureConsole() : undefined;
   const { context, touched } = buildActionContext({
-    propsValue: await normalizePropsValue(action.props, request.propsValue, {
-      resolveRef: stagedInputResolver(request.stagedInputs),
-    }),
+    propsValue: await preparePropsValue(
+      `action "${request.actionName}"`,
+      action.props,
+      request.propsValue,
+      { resolveRef: stagedInputResolver(request.stagedInputs) },
+    ),
     auth: request.auth,
     store:
       durableStore ??
@@ -270,14 +318,31 @@ async function handleTriggerHook(
       `No trigger "${request.triggerName}" in bundle ${request.bundleDir}`,
     );
   }
+  // Teardown still runs, so a registration made before the check is released.
+  if (request.hook !== "onDisable") {
+    assertRunnable(piece, piece.displayName, {
+      name: request.triggerName,
+      trigger,
+    });
+  }
   // The durable store answers every get/put over the call channel, so a long
   // onEnable checkpoints: registration ids survive a crash mid-hook.
   const snapshot = request.durableStore
     ? undefined
     : new InMemoryKeyValueStore(request.storeState);
   const runsPiece = request.hook === "run" || request.hook === "test";
+  // Teardown is never refused: a config that no longer validates must still
+  // release what onEnable registered.
+  const propsValue =
+    request.hook === "onDisable"
+      ? await normalizePropsValue(trigger.props, request.propsValue)
+      : await preparePropsValue(
+          `trigger "${request.triggerName}"`,
+          trigger.props,
+          request.propsValue,
+        );
   const handle = buildTriggerContext({
-    propsValue: await normalizePropsValue(trigger.props, request.propsValue),
+    propsValue,
     auth: request.auth,
     store: snapshot ?? new RemoteKeyValueStore(),
     hostPartitionedStore: request.durableStore,
@@ -307,8 +372,8 @@ async function handleTriggerHook(
   };
 }
 
-// What auth.validate is handed upstream: the property values themselves, not
-// the connection envelope an action receives.
+// What auth.validate and auth.getConnectionIdentifier are handed upstream: the
+// property values themselves, not the connection envelope an action receives.
 function authForValidate(auth: unknown): unknown {
   if (auth === null || typeof auth !== "object") return auth;
   const value = auth as Record<string, unknown>;
@@ -324,23 +389,37 @@ function authForValidate(auth: unknown): unknown {
   }
 }
 
-// `{ valid: true }` or `{ valid: false, error }`, mapped onto the convention
-// app.checkConnection uses so the host reads one shape.
-function fromValidateResult(result: unknown): CheckConnectionOutcome {
-  if (result === null || typeof result !== "object") {
-    return { declared: true, result: jsonSafe(result) };
-  }
+// `{ valid: false, error }` (or a bare `false`) fails the check.
+function fromValidateResult(
+  result: unknown,
+): Pick<CheckConnectionOutcome, "valid" | "detail"> {
+  if (result === false) return { valid: false };
+  if (result === null || typeof result !== "object") return { valid: true };
   const value = result as { valid?: unknown; error?: unknown };
-  if (value.valid === false) {
+  if (value.valid !== false) return { valid: true };
+  return {
+    valid: false,
+    ...(typeof value.error === "string" && value.error
+      ? { detail: value.error }
+      : {}),
+  };
+}
+
+// Best-effort: a label failure is reported beside a passing check.
+async function connectionIdentifier(
+  getConnectionIdentifier: (context: unknown) => unknown,
+  context: unknown,
+): Promise<Pick<CheckConnectionOutcome, "accountLabel" | "identifierError">> {
+  try {
+    const label = await getConnectionIdentifier(context);
+    return typeof label === "string" && label !== ""
+      ? { accountLabel: label }
+      : {};
+  } catch (error) {
     return {
-      declared: true,
-      result: false,
-      ...(typeof value.error === "string" && value.error
-        ? { detail: value.error }
-        : {}),
+      identifierError: error instanceof Error ? error.message : String(error),
     };
   }
-  return { declared: true, result: jsonSafe(result) };
 }
 
 async function handleCheckConnection(
@@ -348,36 +427,28 @@ async function handleCheckConnection(
 ): Promise<WorkerResponse> {
   const { request } = message;
   const { piece } = await loadCached(request);
-  const app = piece as {
-    checkConnection?: (context: unknown) => unknown;
-    auth?: { validate?: (context: unknown) => unknown };
-  };
-  const validate = app.auth?.validate;
-  // Powerhouse's own hook first: it can name the account, which validate's
-  // boolean cannot. Falling back to validate is what gives every Activepieces
-  // piece a check, since none of them declares checkConnection.
-  const declared =
-    typeof app.checkConnection === "function" || typeof validate === "function";
-  if (!declared) {
-    const outcome: CheckConnectionOutcome = { declared: false };
-    return {
-      id: message.id,
-      type: "result",
-      output: outcome,
-      touched: [],
-      tlsPoisoned: consumeTlsFlag(),
+  // An auth array has no hooks here: a connection records no choice among them.
+  const auth = (piece as { auth?: unknown }).auth as
+    | {
+        validate?: (context: unknown) => unknown;
+        getConnectionIdentifier?: (context: unknown) => unknown;
+      }
+    | undefined;
+  const validate = auth?.validate;
+  const getConnectionIdentifier = auth?.getConnectionIdentifier;
+  const { context, touched } = buildCheckConnectionContext({
+    auth: authForValidate(request.auth),
+  });
+  let outcome: CheckConnectionOutcome =
+    typeof validate === "function"
+      ? { declared: true, ...fromValidateResult(await validate(context)) }
+      : { declared: false, valid: true };
+  if (outcome.valid && typeof getConnectionIdentifier === "function") {
+    outcome = {
+      ...outcome,
+      ...(await connectionIdentifier(getConnectionIdentifier, context)),
     };
   }
-  const usingCheck = typeof app.checkConnection === "function";
-  const { context, touched } = buildCheckConnectionContext({
-    auth: usingCheck ? request.auth : authForValidate(request.auth),
-  });
-  const outcome: CheckConnectionOutcome = usingCheck
-    ? {
-        declared: true,
-        result: jsonSafe(await app.checkConnection!(context)),
-      }
-    : fromValidateResult(await validate!(context));
   return {
     id: message.id,
     type: "result",
@@ -443,14 +514,12 @@ process.on("message", (message: unknown) => {
     return runWithEgressPolicy(message.request.egress, () => dispatch(message));
   });
   handler
-    .catch(
-      (error: unknown): WorkerResponse => ({
-        id: message.id,
-        type: "error",
-        error: serializeError(error, redactValuesOf(message)),
-        tlsPoisoned: consumeTlsFlag(),
-      }),
-    )
+    .catch((error: unknown): WorkerResponse => ({
+      id: message.id,
+      type: "error",
+      error: serializeError(error, redactValuesOf(message)),
+      tlsPoisoned: consumeTlsFlag(),
+    }))
     .then((response) => process.send?.(response))
     .catch(() => process.exit(1));
 });

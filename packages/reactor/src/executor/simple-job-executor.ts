@@ -789,7 +789,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       documentVersion = docMeta.state.version;
     }
 
-    // UNDO, REDO, PRUNE, and any operation carrying a skip need the full
+    // UNDO, REDO, and any operation carrying a skip need the full
     // operation history to replay state correctly: a skip rewinds the stream
     // past the operations it supersedes, so the base state is the one standing
     // before them, not the head. The write cache stores sliced documents (last
@@ -802,7 +802,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     // left the resulting state derived from the superseded lineage, which is
     // what the document view stores and serves; the write cache recovered on
     // its next cold read and the read model never did.
-    if (isUndoRedo(action) || action.type === "PRUNE" || skip > 0) {
+    if (isUndoRedo(action) || skip > 0) {
       stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
     }
 
@@ -1158,7 +1158,7 @@ export class SimpleJobExecutor implements IJobExecutor {
    *   apply and its own reasons for it.
    * - A positional or replayed run carries skips and re-appended operations,
    *   whose indices are not a simple ascending run from the head.
-   * - UNDO, REDO, PRUNE and NOOP-with-skip each invalidate the write cache to
+   * - UNDO, REDO and NOOP-with-skip each invalidate the write cache to
    *   force a full-history rebuild, so they cannot be reduced against state
    *   threaded from the write before them.
    * - The auth scope decides later writes against the policy earlier ones
@@ -1188,7 +1188,6 @@ export class SimpleJobExecutor implements IJobExecutor {
         write.sourceOperation === undefined &&
         !DOCUMENT_SCOPE_ACTIONS.has(type) &&
         !isUndoRedo(write.action) &&
-        type !== "PRUNE" &&
         type !== "NOOP"
       );
     });

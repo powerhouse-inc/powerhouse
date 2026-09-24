@@ -1,6 +1,5 @@
 import {
   baseCreateDocument,
-  prune,
   redo,
   undo,
 } from "@powerhousedao/shared/document-model";
@@ -224,76 +223,6 @@ describe("Local reducer", () => {
           scope: "local",
         },
       ],
-    });
-  });
-
-  it.skip("should prune local operations", () => {
-    const document = baseCreateDocument<CountPHState>(
-      createCountDocumentState,
-      createCountState(),
-    );
-    document.header.protocolVersions = { "base-reducer": 1 };
-    let newDocument = countReducer(document, setLocalName("test"));
-    newDocument = countReducer(newDocument, setLocalName("test 2"));
-    expect(newDocument.header.revision).toStrictEqual({ global: 0, local: 2 });
-    expect(newDocument.state).toStrictEqual({
-      global: { count: 0 },
-      local: { name: "test 2" },
-    });
-    expect(newDocument.operations).toMatchObject({
-      global: [],
-      local: [
-        {
-          type: "SET_LOCAL_NAME",
-          input: { name: "test" },
-          index: 0,
-          skip: 0,
-          scope: "local",
-          timestampUtcMs: new Date().toISOString(),
-          error: undefined,
-        },
-
-        {
-          type: "SET_LOCAL_NAME",
-          input: { name: "test 2" },
-          index: 1,
-          skip: 0,
-          scope: "local",
-          timestampUtcMs: new Date().toISOString(),
-          error: undefined,
-        },
-      ],
-    });
-
-    newDocument = countReducer(newDocument, prune(0, undefined, "local"));
-    expect(newDocument.header.revision).toStrictEqual({ global: 1, local: 0 });
-    expect(newDocument.state).toStrictEqual({
-      global: { count: 0 },
-      local: { name: "test 2" },
-    });
-    expect(newDocument.operations).toStrictEqual({
-      global: [
-        {
-          error: undefined,
-          hash: "ch7MNww9+xUYoTgutbGr6VU0GaU=",
-          type: "LOAD_STATE",
-          input: {
-            operations: 2,
-            state: {
-              name: "",
-              state: {
-                global: { count: 0 },
-                local: { name: "test 2" },
-              },
-            },
-          },
-          index: 0,
-          skip: 0,
-          scope: "global",
-          timestampUtcMs: new Date().toISOString(),
-        },
-      ],
-      local: [],
     });
   });
 });

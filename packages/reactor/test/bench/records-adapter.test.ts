@@ -239,25 +239,133 @@ describe("buildMicroEntry", () => {
   });
 
   it("takes the tier from the target, so a stored call site is not filed as micro", () => {
-    expect(entryFor(findTarget("auth-storage")).tier).toBe("meso");
+    expect(entryFor(findTarget("auth-storage"), { suites: [] }).tier).toBe(
+      "meso",
+    );
   });
 
   it("never offers an id, which add-benchmark rejects", () => {
     expect(entryFor(findTarget("auth"))).not.toHaveProperty("id");
   });
 
-  it("derives one conclusion and one spread per suite from the numbers", () => {
+  it("derives one conclusion and one reading per suite from the numbers", () => {
     const entry = entryFor(findTarget("auth"));
     const results = entry.results as { derived: { name: string }[] };
 
-    expect(entry.conclusions).toEqual([
-      "In auth policy evaluation (pure CPU), evaluateGrantStack: 10 grants is 4.57x slower than evaluateGrantStack: 2 grants",
-      "In auth policy evaluation (pure CPU) > group principals, 10 grants, group of 1000 members is 55.53x slower than 10 grants, group absent from the map",
+    expect(entry.conclusions).toHaveLength(2);
+    expect(results.derived.map((reading) => reading.name)).toEqual([
+      "auth policy evaluation (pure CPU): comparable pairs",
+      "auth policy evaluation (pure CPU) > group principals: comparable pairs",
     ]);
-    expect(results.derived).toHaveLength(2);
-    expect(results.derived[0].name).toBe(
-      "auth policy evaluation (pure CPU): spread",
-    );
+  });
+
+  it("holds the grant count an auth case names fixed", () => {
+    const suites = [
+      sizedSuite("bench/auth-scope.bench.ts > auth scope write validation", [
+        ["retention: 10 grants, administered from the top", 17000000],
+        ["retention: 100 grants, administered from the top", 3800000],
+        ["retention: 10 grants, shadow walk before an anyone allow", 680000],
+        ["retention: 100 grants, shadow walk before an anyone allow", 55000],
+      ]),
+    ];
+
+    const results = entryFor(findTarget("auth"), { suites }).results as {
+      derived: { name: string; value: number; note: string }[];
+    };
+
+    expect(
+      results.derived.map((reading) => [reading.name, reading.value]),
+    ).toEqual([
+      ["auth scope write validation: spread at 10 grants", 25],
+      ["auth scope write validation: spread at 100 grants", 69.09],
+    ]);
+  });
+
+  it("pairs no auth cases that differ in any stated size", () => {
+    const suites = [
+      sizedSuite("bench/auth-scope.bench.ts > conditions", [
+        ["evaluateGrantStack: 100 grants x 100 condition nodes", 4700],
+        ["evaluateGrantStack: 100 conditional grants, no context", 6400000],
+        ["1 referencer(s), reader outside the audience", 270000],
+        ["5 distinct group(s)", 200000],
+      ]),
+    ];
+
+    const entry = entryFor(findTarget("auth"), { suites });
+    const results = entry.results as {
+      derived: { name: string; value: number; note: string }[];
+    };
+
+    expect(results.derived).toHaveLength(1);
+    expect(results.derived[0]).toMatchObject({
+      name: "conditions: comparable pairs",
+      value: 0,
+    });
+    for (const stated of [
+      "evaluateGrantStack: 100 grants x 100 condition nodes: 100 grants, 100 nodes",
+      "evaluateGrantStack: 100 conditional grants, no context: 100 grants",
+      "1 referencer(s), reader outside the audience: 1 referencer(s)",
+      "5 distinct group(s): 5 group(s)",
+    ]) {
+      expect(results.derived[0].note).toContain(stated);
+    }
+  });
+
+  it("holds the subscriber delay an events case names fixed, 0ms included", () => {
+    const suites = [
+      sizedSuite(
+        "bench/event-bus.bench.ts > EventBus Async Emission Throughput",
+        [
+          ["1 async subscriber (0ms delay)", 6000000],
+          ["10 async subscribers (0ms delay)", 1600000],
+          ["1 async subscriber (1ms delay)", 800],
+          ["10 async subscribers (1ms delay)", 80],
+          ["1 async subscriber (5ms delay)", 160],
+          ["5 async subscribers (5ms delay)", 32],
+        ],
+      ),
+    ];
+
+    const results = entryFor(findTarget("events"), { suites }).results as {
+      derived: { name: string; value: number }[];
+    };
+
+    expect(
+      results.derived.map((reading) => [reading.name, reading.value]),
+    ).toEqual([
+      ["EventBus Async Emission Throughput: spread at 0 ms delay", 3.75],
+      ["EventBus Async Emission Throughput: spread at 1 ms delay", 10],
+      ["EventBus Async Emission Throughput: spread at 5 ms delay", 5],
+    ]);
+  });
+
+  it("holds the processor delay a processors case names fixed", () => {
+    const suites = [
+      sizedSuite(
+        "bench/processor-delivery.bench.ts > processor delivery under concurrent batches",
+        [
+          ["32 documents, no-op processor", 80],
+          ["32 documents, 2ms processor", 72],
+          [
+            "32 documents, 2ms processor, factory re-registered concurrently",
+            9,
+          ],
+        ],
+      ),
+    ];
+
+    const results = entryFor(findTarget("processors"), { suites }).results as {
+      derived: { name: string; value: number }[];
+    };
+
+    expect(
+      results.derived.map((reading) => [reading.name, reading.value]),
+    ).toEqual([
+      [
+        "processor delivery under concurrent batches: spread at 32 documents, 2 ms processor",
+        8,
+      ],
+    ]);
   });
 
   it("appends the caller's claims rather than replacing what was measured", () => {
@@ -298,6 +406,7 @@ describe("buildMicroEntry", () => {
     // went on asserting the old text.
     const target = findTarget("cache");
     const caveats = entryFor(target, {
+      suites: [],
       derived: [{ name: "a harness reading", value: 1, unit: "us" }],
     }).caveats as string[];
 
@@ -344,7 +453,7 @@ describe("buildMicroEntry", () => {
       ]),
     ];
 
-    const entry = entryFor(findTarget("auth"), { suites });
+    const entry = entryFor(findTarget("queue"), { suites });
     const results = entry.results as {
       derived: { name: string; value: number; unit: string; note: string }[];
     };
@@ -378,7 +487,7 @@ describe("buildMicroEntry", () => {
       ]),
     ];
 
-    const entry = entryFor(findTarget("auth"), { suites });
+    const entry = entryFor(findTarget("queue"), { suites });
     const results = entry.results as {
       derived: { name: string; value: number; unit: string }[];
     };
@@ -403,7 +512,7 @@ describe("buildMicroEntry", () => {
       ]),
     ];
 
-    const results = entryFor(findTarget("auth"), { suites }).results as {
+    const results = entryFor(findTarget("queue"), { suites }).results as {
       derived: { name: string; note: string }[];
     };
 
@@ -418,7 +527,6 @@ describe("buildMicroEntry", () => {
     const suites = [
       sizedSuite("bench/event-bus.bench.ts > Mixed", [
         ["10 subscribers (90% sync, 10% async)", 1600000],
-        ["25 subscribers (50% sync, 50% async)", 590000],
         ["50 subscribers (50% sync, 50% async)", 320000],
         [
           "50 subscribers (50% sync, 50% yield via setImmediate) [reference]",
@@ -427,7 +535,7 @@ describe("buildMicroEntry", () => {
       ]),
     ];
 
-    const entry = entryFor(findTarget("auth"), { suites });
+    const entry = entryFor(findTarget("queue"), { suites });
     const results = entry.results as {
       derived: { name: string; value: number; unit: string; note: string }[];
     };
@@ -454,7 +562,7 @@ describe("buildMicroEntry", () => {
       ]),
     ];
 
-    const results = entryFor(findTarget("auth"), { suites }).results as {
+    const results = entryFor(findTarget("queue"), { suites }).results as {
       derived: { name: string; value: number }[];
     };
 
@@ -473,7 +581,7 @@ describe("buildMicroEntry", () => {
       ]),
     ];
 
-    const entry = entryFor(findTarget("auth"), { suites });
+    const entry = entryFor(findTarget("queue"), { suites });
     const results = entry.results as {
       derived: { name: string; value: number; note: string }[];
     };
@@ -490,6 +598,141 @@ describe("buildMicroEntry", () => {
     expect((entry.conclusions as string[])[1]).toBe(
       "In Read/Write Split at 100 operations on the draft leg, draft leg 100 ops: mirrored body: reads + push + sort is 1.68x slower than draft leg 100 ops: mirrored body: push only",
     );
+  });
+
+  it("splits a nested decomposition into one spread per adjacent leg", () => {
+    const suites = [
+      sizedSuite("bench/write-cache.bench.ts > Decomposition (100 ops)", [
+        ["cold miss 100 ops: instrumented cold-miss replay", 390],
+        ["cold miss 100 ops: reducer body on plain state", 4550],
+        ["cold miss 100 ops: input validation only", 114000],
+      ]),
+    ];
+
+    const entry = entryFor(findTarget("cache"), {
+      suites,
+      derived: [{ name: "a harness reading", value: 1, unit: "us" }],
+    });
+    const results = entry.results as {
+      derived: { name: string; value: number; note: string }[];
+    };
+
+    expect(
+      results.derived
+        .filter((reading) => reading.name.startsWith("Decomposition"))
+        .map((reading) => [reading.name, reading.value, reading.note]),
+    ).toEqual([
+      [
+        "Decomposition (100 ops): input validation only vs reducer body on plain state",
+        25.05,
+        "cold miss 100 ops: input validation only over cold miss 100 ops: reducer body on plain state",
+      ],
+      [
+        "Decomposition (100 ops): reducer body on plain state vs instrumented cold-miss replay",
+        11.67,
+        "cold miss 100 ops: reducer body on plain state over cold miss 100 ops: instrumented cold-miss replay",
+      ],
+    ]);
+    expect((entry.conclusions as string[])[0]).toBe(
+      "In Decomposition (100 ops), cold miss 100 ops: input validation only runs at 25.05x the rate of cold miss 100 ops: reducer body on plain state",
+    );
+  });
+
+  it("refuses to reduce three undeclared cases at one size to their extremes", () => {
+    const suites = [
+      sizedSuite("bench/queue-perf.bench.ts > Three Legs", [
+        ["leg a at 100 ops", 900],
+        ["leg b at 100 ops", 300],
+        ["leg c at 100 ops", 100],
+      ]),
+    ];
+
+    expect(() => entryFor(findTarget("queue"), { suites })).toThrow(
+      /Three Legs at 100 operations has 3 comparable cases.*leg b at 100 ops/,
+    );
+  });
+
+  it("pairs the extremes once the extras are marked as references", () => {
+    const suites = [
+      sizedSuite("bench/queue-perf.bench.ts > Three Legs", [
+        ["leg a at 100 ops", 900],
+        ["leg b at 100 ops [reference]", 300],
+        ["leg c at 100 ops", 100],
+      ]),
+    ];
+
+    const results = entryFor(findTarget("queue"), { suites }).results as {
+      derived: { name: string; value: number }[];
+    };
+
+    expect(
+      results.derived.map((reading) => [reading.name, reading.value]),
+    ).toEqual([["Three Legs: spread", 9]]);
+  });
+
+  it("files no ratio between workloads declared as standing alone", () => {
+    const suites = [
+      sizedSuite("bench/queue-perf.bench.ts > InMemoryQueue hot-path", [
+        ["bulk enqueue throughput", 780],
+        ["dequeueNext fairness under contention", 530],
+        ["dependency scan with long chains", 560],
+        ["retry loop churn", 570],
+      ]),
+    ];
+
+    const entry = entryFor(findTarget("queue"), { suites });
+    const results = entry.results as {
+      derived: { name: string; value: number; unit: string }[];
+    };
+
+    expect(results.derived).toEqual([
+      expect.objectContaining({
+        name: "InMemoryQueue hot-path: comparable pairs",
+        value: 0,
+        unit: "count",
+      }),
+    ]);
+    expect((entry.conclusions as string[])[0]).toContain(
+      "every case is declared a workload of its own",
+    );
+  });
+
+  it("refuses a chain fragment that names more than one case in a group", () => {
+    const target: BenchTarget = {
+      ...findTarget("queue"),
+      spreadChains: [["leg", "leg c"]],
+    };
+    const suites = [
+      sizedSuite("bench/queue-perf.bench.ts > Three Legs", [
+        ["leg a at 100 ops", 900],
+        ["leg b at 100 ops", 300],
+        ["leg c at 100 ops", 100],
+      ]),
+    ];
+
+    expect(() => entryFor(target, { suites })).toThrow(
+      /fragment "leg" names 3 cases/,
+    );
+  });
+
+  it("does not take a sync case's document count for its operation count", () => {
+    const suites = [
+      sizedSuite("two-reactor sync", [
+        ["Baseline: 10 documents, 10 operations each", 1.6],
+        ["Contention: 10 documents, 10 operations each, alternating", 1.2],
+        ["Document Count: 50 documents, 10 operations each", 0.36],
+      ]),
+    ];
+
+    const results = entryFor(findTarget("sync"), { suites }).results as {
+      derived: { name: string; value: number }[];
+    };
+
+    expect(
+      results.derived.map((reading) => [reading.name, reading.value]),
+    ).toEqual([
+      ["two-reactor sync: spread at 10 operations, 10 documents", 1.33],
+    ]);
   });
 
   it("stamps the split baselines with the names they continue", () => {
@@ -794,6 +1037,28 @@ describe("stampReadings", () => {
 
     expect(caveats).toEqual([
       "plain leg: the split is a slope through 100/1000 ops and the thinnest case behind it carries 19 samples, so the large-count end of the subtraction is the one to distrust",
+    ]);
+  });
+
+  it("says so when a slope is below what four decimals resolve", () => {
+    // T-042: -0 serialises as 0, the same bytes a measured zero writes.
+    const directory = withSidecar(
+      [reading("cold miss 100 ops")],
+      [split("plain", { wrapperUsPerNode: -4.2471e-7 })],
+    );
+
+    const { derived, caveats } = stampReadings(
+      findTarget("cache"),
+      directory,
+      stampedSuites(["cold miss 100 ops"]),
+    );
+
+    const wrapper = derived.find(
+      (item) => item.name === "plain leg: create() and base reducer per node",
+    );
+    expect(Object.is(wrapper?.value, 0)).toBe(true);
+    expect(caveats).toEqual([
+      "plain leg: create() and base reducer per node reads 0 but its slope through 100/1000 ops was -4.25e-7us, a negative per-node cost; that is below the 0.0001us this reading resolves, so it says the cost is too small to measure here, not that it was measured at zero",
     ]);
   });
 

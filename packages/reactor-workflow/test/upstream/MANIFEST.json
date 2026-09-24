@@ -1,0 +1,143 @@
+{
+  "repository": "https://github.com/activepieces/activepieces",
+  "tag": "0.91.0",
+  "commit": "da4410d1bf6212054e55805a98d566ff1b9310b2",
+  "date": "2026-09-14T11:51:38+01:00",
+  "files": [
+    {
+      "path": "test/upstream/engine/network/ssrf-guard.test.ts",
+      "upstream": "packages/server/engine/test/network/ssrf-guard.test.ts",
+      "sha256": "c3c281d386f3fdd41dc0e7570b084c480966d26532dd2c0a342eedd7b19193e8"
+    },
+    {
+      "path": "test/upstream/engine/piece-context/connection-resolver.test.ts",
+      "upstream": "packages/server/engine/test/piece-context/connection-resolver.test.ts",
+      "sha256": "28afc46474f21706b5dd0a3d333c31aef280807815cc02da02282e121a2ae14b"
+    },
+    {
+      "path": "test/upstream/engine/piece-context/store.test.ts",
+      "upstream": "packages/server/engine/test/piece-context/store.test.ts",
+      "sha256": "87d5edb76540bb4e86705e23dc2548467c0ebb7bbdab683ea5d8ef6b0bb41e00"
+    },
+    {
+      "path": "test/upstream/engine/variables/props-resolver.test.ts",
+      "upstream": "packages/server/engine/test/variables/props-resolver.test.ts",
+      "sha256": "4fad746d659772431bc9eafff2216edb974ec1942c3b4c3b430adafe0c900246"
+    },
+    {
+      "path": "test/upstream/engine/variables/props-validator.test.ts",
+      "upstream": "packages/server/engine/test/variables/props-validator.test.ts",
+      "sha256": "794d3ee48e626b883e2002676a48450795f7e07504eda355cd8401b72a7df9ac"
+    }
+  ],
+  "knownDivergences": [
+    {
+      "file": "test/upstream/engine/piece-context/store.test.ts",
+      "test": "throws StorageInvalidKeyError when key exceeds max length",
+      "issue": "README: ctx.store key length"
+    },
+    {
+      "file": "test/upstream/engine/piece-context/connection-resolver.test.ts",
+      "test": "V0 SECRET_TEXT returns connection.value.secret_text",
+      "issue": "#3091"
+    },
+    {
+      "file": "test/upstream/engine/piece-context/connection-resolver.test.ts",
+      "test": "V0 CUSTOM_AUTH returns connection.value.props",
+      "issue": "#3091"
+    },
+    {
+      "file": "test/upstream/engine/piece-context/connection-resolver.test.ts",
+      "test": "V0 other types returns connection.value",
+      "issue": "#3091"
+    },
+    {
+      "file": "test/upstream/engine/variables/props-resolver.test.ts",
+      "test": "should return base64 from base64 with mime only",
+      "issue": "deliberate"
+    },
+    {
+      "file": "test/upstream/engine/variables/props-resolver.test.ts",
+      "test": "should return casted number for text",
+      "issue": "README: CUSTOM_AUTH props are not coerced"
+    },
+    {
+      "file": "test/upstream/engine/variables/props-resolver.test.ts",
+      "test": "should flatten arrays inside DYNAMIC properties",
+      "issue": "README: DYNAMIC values are not re-processed"
+    },
+    {
+      "file": "test/upstream/engine/variables/props-validator.test.ts",
+      "test": "should validate required json property",
+      "issue": "deliberate"
+    },
+    {
+      "file": "test/upstream/engine/variables/props-validator.test.ts",
+      "test": "should validate optional json property with invalid value",
+      "issue": "deliberate"
+    },
+    {
+      "file": "test/upstream/engine/variables/props-validator.test.ts",
+      "test": "should validate required object property",
+      "issue": "deliberate"
+    },
+    {
+      "file": "test/upstream/engine/variables/props-validator.test.ts",
+      "test": "should validate property types",
+      "issue": "deliberate"
+    },
+    {
+      "file": "test/upstream/engine/variables/props-validator.test.ts",
+      "test": "should coerce %s",
+      "issue": "deliberate"
+    },
+    {
+      "file": "test/upstream/engine/variables/props-validator.test.ts",
+      "test": "should convert null to undefined for unset optional properties",
+      "issue": "README: optional props set to null"
+    },
+    {
+      "file": "test/upstream/engine/variables/props-validator.test.ts",
+      "test": "should map nil to undefined on optional props, leaving required-ness to validation",
+      "issue": "README: optional props set to null"
+    }
+  ],
+  "skipped": [
+    {
+      "file": "test/upstream/engine/piece-context/store.test.ts",
+      "test": "throws StorageError on server 500"
+    },
+    {
+      "file": "test/upstream/engine/piece-context/store.test.ts",
+      "test": "throws StorageLimitError on 413 response"
+    },
+    {
+      "file": "test/upstream/engine/piece-context/connection-resolver.test.ts",
+      "test": "throws ConnectionExpiredError when status is ERROR"
+    },
+    {
+      "file": "test/upstream/engine/network/ssrf-guard.test.ts",
+      "test": "allows loopback target on a whitelisted port (engine↔worker RPC)"
+    },
+    {
+      "file": "test/upstream/engine/network/ssrf-guard.test.ts",
+      "test": "leaves dns.lookup untouched"
+    },
+    {
+      "file": "test/upstream/engine/network/ssrf-guard.test.ts",
+      "test": "leaves net.Socket.connect untouched"
+    },
+    {
+      "file": "test/upstream/engine/variables/props-resolver.test.ts",
+      "test": "should resolve files inside the array properties"
+    },
+    {
+      "file": "test/upstream/engine/variables/props-resolver.test.ts",
+      "test": "should return images for image url"
+    },
+    {
+      "file": "test/upstream/engine/variables/props-resolver.test.ts",
+      "test": "should return error for invalid data"
+    }
+  ]
+}

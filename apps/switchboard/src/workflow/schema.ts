@@ -84,8 +84,10 @@ export const schema: DocumentNode = gql`
     description: String!
     "action | trigger"
     kind: String!
-    "Triggers only: POLLING | WEBHOOK | APP_WEBHOOK"
+    "Triggers only: POLLING | WEBHOOK | APP_WEBHOOK | MANUAL"
     strategy: String
+    "Why this block cannot run on this reactor; null when it can."
+    unsupported: String
   }
 
   type BlockSearchResult {
@@ -117,6 +119,10 @@ export const schema: DocumentNode = gql`
   type ConnectionCheckResult {
     ok: Boolean!
     detail: String
+    """
+    From auth.getConnectionIdentifier when the check passes; otherwise the
+    label the connection already holds.
+    """
     accountLabel: String
   }
 
@@ -223,8 +229,9 @@ export const schema: DocumentNode = gql`
     """
     deleteSecret(ref: String!): Boolean!
     """
-    Runs the piece's app.checkConnection against the connection's
-    credentials and records the outcome on the connection document.
+    Runs the piece's auth.validate against the connection's credentials,
+    then auth.getConnectionIdentifier for the account label, and records the
+    outcome on the connection document.
     """
     checkConnection(connectionId: String!): ConnectionCheckResult!
   }

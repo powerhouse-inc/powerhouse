@@ -2222,60 +2222,6 @@ describe("SimpleJobExecutor", () => {
       );
     });
 
-    it("should invalidate cache before loading for PRUNE actions", async () => {
-      const docId = "doc-prune-invalidation";
-      const callOrder: string[] = [];
-      mockWriteCache.invalidate = vi.fn().mockImplementation(() => {
-        callOrder.push("invalidate");
-      });
-      mockWriteCache.getState = vi.fn().mockImplementation(() => {
-        callOrder.push("getState");
-        return Promise.resolve({
-          header: {
-            protocolVersions: { "base-reducer": 2 },
-            id: docId,
-            documentType: "powerhouse/document-model",
-            revision: { document: 1, global: 1 },
-          },
-          operations: { document: [], global: [] },
-          state: { global: {}, local: {}, document: { isDeleted: false } },
-        });
-      });
-
-      const job: Job = {
-        kind: "mutation",
-        id: "prune-job-1",
-        documentId: docId,
-        scope: "global",
-        branch: "main",
-        actions: [
-          {
-            id: "prune-action-1",
-            type: "PRUNE",
-            scope: "global",
-            timestampUtcMs: "2024-01-01T00:00:00.000Z",
-            input: { start: 0, end: 1 },
-          },
-        ],
-        operations: [],
-        createdAt: "123",
-        queueHint: [],
-        errorHistory: [],
-        meta: { batchId: "test", batchJobIds: ["prune-job-1"] },
-      };
-
-      await executor.executeJob(job);
-
-      expect(mockWriteCache.invalidate).toHaveBeenCalledWith(
-        docId,
-        "global",
-        "main",
-      );
-      expect(callOrder.indexOf("invalidate")).toBeLessThan(
-        callOrder.indexOf("getState"),
-      );
-    });
-
     it("should invalidate cache before loading for REDO actions", async () => {
       const docId = "doc-redo-invalidation";
       const callOrder: string[] = [];

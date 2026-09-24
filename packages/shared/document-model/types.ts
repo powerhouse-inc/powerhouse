@@ -1070,34 +1070,6 @@ export type IOperation = {
   type: Scalars["String"]["output"];
 };
 
-export type Load_State = "LOAD_STATE";
-
-export type SchemaLoadStateAction = {
-  id: Scalars["String"]["output"];
-  timestampUtcMs: Scalars["DateTime"]["output"];
-  input: LoadStateActionInput;
-  type: Load_State;
-  scope: string;
-};
-
-export type LoadStateActionInput = {
-  operations: Scalars["Int"]["input"];
-  state: LoadStateActionStateInput;
-};
-
-export type LoadStateActionStateInput = {
-  data?: InputMaybe<Scalars["Unknown"]["input"]>;
-  name: Scalars["String"]["input"];
-};
-
-export type MutationLoadStateArgs = {
-  input: SchemaLoadStateAction;
-};
-
-export type MutationPruneArgs = {
-  input: SchemaPruneAction;
-};
-
 export type MutationRedoArgs = {
   input: SchemaRedoAction;
 };
@@ -1108,21 +1080,6 @@ export type MutationSetNameArgs = {
 
 export type MutationUndoArgs = {
   input: SchemaUndoAction;
-};
-
-export type Prune = "PRUNE";
-
-export type SchemaPruneAction = {
-  id: Scalars["String"]["output"];
-  timestampUtcMs: Scalars["DateTime"]["output"];
-  input: PruneActionInput;
-  type: Prune;
-  scope: string;
-};
-
-export type PruneActionInput = {
-  end?: InputMaybe<Scalars["Int"]["input"]>;
-  start?: InputMaybe<Scalars["Int"]["input"]>;
 };
 
 export type Query = {
@@ -1206,11 +1163,6 @@ export type SchemaNOOPAction = {
   type: "NOOP";
 };
 
-export type LoadStateAction = Action & {
-  type: "LOAD_STATE";
-  input: LoadStateActionInput;
-};
-export type PruneAction = Action & { type: "PRUNE"; input: PruneActionInput };
 export type RedoAction = Action & {
   type: "REDO";
   input: SchemaRedoAction["input"];
@@ -1321,8 +1273,6 @@ export type UpdateRelationshipAction = Action & {
 };
 
 export type DocumentAction =
-  | LoadStateAction
-  | PruneAction
   | RedoAction
   | SetNameAction
   | SetPreferredEditorAction

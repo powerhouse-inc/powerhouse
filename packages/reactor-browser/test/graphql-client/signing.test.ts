@@ -403,7 +403,6 @@ describe("prepareSignedActions", () => {
   it.each([
     "UNDO",
     "REDO",
-    "PRUNE",
     "NOOP",
     "CREATE_DOCUMENT",
     "DELETE_DOCUMENT",

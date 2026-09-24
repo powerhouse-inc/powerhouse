@@ -17,21 +17,16 @@ import type {
   DeleteStateExampleInput,
   DocumentModelGlobalState,
   DocumentSpecification,
-  LoadStateActionInput,
-  LoadStateActionStateInput,
   ModuleSpecification,
   MoveOperationInput,
   OperationErrorSpecification,
   OperationSpecification,
-  PruneActionInput,
   ReorderChangeLogItemsInput,
   ReorderModuleOperationsInput,
   ReorderModulesInput,
   ReorderOperationErrorsInput,
   ReorderOperationExamplesInput,
   ReorderStateExamplesInput,
-  SchemaLoadStateAction,
-  SchemaPruneAction,
   SchemaRedoAction,
   SchemaSetNameAction,
   SchemaSetPreferredEditorAction,
@@ -72,10 +67,6 @@ export const definedNonNullAnySchema = z
   .any()
   .refine((v) => isDefinedNonNullAny(v));
 
-export const Load_StateSchema = z.enum(["LOAD_STATE"]);
-
-export const PruneSchema = z.enum(["PRUNE"]);
-
 export const RedoSchema = z.enum(["REDO"]);
 
 export const Set_NameSchema = z.enum(["SET_NAME"]);
@@ -90,64 +81,11 @@ export function OperationScopeSchema(): z.ZodString {
 
 export function DocumentActionSchema() {
   return z.union([
-    LoadStateActionSchema(),
-    PruneActionSchema(),
     RedoActionSchema(),
     SetNameActionSchema(),
     SetPreferredEditorActionSchema(),
     UndoActionSchema(),
   ]);
-}
-
-export function LoadStateActionSchema(): z.ZodObject<
-  Properties<SchemaLoadStateAction>
-> {
-  return z.object({
-    id: z.string(),
-    timestampUtcMs: z.string(),
-    input: z.lazy(() => LoadStateActionInputSchema()),
-    type: Load_StateSchema,
-    scope: OperationScopeSchema(),
-  });
-}
-
-export function LoadStateActionInputSchema(): z.ZodObject<
-  Properties<LoadStateActionInput>
-> {
-  return z.object({
-    operations: z.number(),
-    state: z.lazy(() => LoadStateActionStateInputSchema()),
-  });
-}
-
-export function LoadStateActionStateInputSchema(): z.ZodObject<
-  Properties<LoadStateActionStateInput>
-> {
-  return z.object({
-    data: z.unknown().nullish(),
-    name: z.string(),
-  });
-}
-
-export function PruneActionSchema(): z.ZodObject<
-  Properties<SchemaPruneAction>
-> {
-  return z.object({
-    id: z.string(),
-    timestampUtcMs: z.string(),
-    input: z.lazy(() => PruneActionInputSchema()),
-    type: PruneSchema,
-    scope: OperationScopeSchema(),
-  });
-}
-
-export function PruneActionInputSchema(): z.ZodObject<
-  Properties<PruneActionInput>
-> {
-  return z.object({
-    end: z.number().nullish(),
-    start: z.number().nullish(),
-  });
 }
 
 export function RedoActionInputSchema() {

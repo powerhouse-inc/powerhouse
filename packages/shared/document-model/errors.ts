@@ -121,7 +121,7 @@ export class GrantNotFoundError extends Error {
 }
 
 /**
- * Thrown when a disallowed action (UNDO, REDO, PRUNE) targets the auth scope.
+ * Thrown when a disallowed action (UNDO, REDO) targets the auth scope.
  */
 export class AuthActionNotAllowedError extends Error {
   public readonly actionType: string;

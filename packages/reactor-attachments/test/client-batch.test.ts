@@ -218,9 +218,8 @@ function makeService(overrides: Partial<IAttachmentService> = {}) {
     } as unknown as IAttachmentUpload;
     return Promise.resolve(handle);
   });
-  const get = vi.fn(
-    (): Promise<AttachmentResponse> =>
-      Promise.resolve({ header: HEADER, body: body() }),
+  const get = vi.fn((): Promise<AttachmentResponse> =>
+    Promise.resolve({ header: HEADER, body: body() }),
   );
   const service = {
     reserve,
@@ -607,14 +606,13 @@ describe("AttachmentClient upload/download batches", () => {
       ref: AttachmentRef;
       header: AttachmentHeader;
     }>();
-    const reserve = vi.fn(
-      (): Promise<IAttachmentUpload> =>
-        Promise.resolve({
-          reservationId: "res",
-          ref: null,
-          expiresAtUtc: "",
-          send: vi.fn(() => sendGate.promise),
-        } as unknown as IAttachmentUpload),
+    const reserve = vi.fn((): Promise<IAttachmentUpload> =>
+      Promise.resolve({
+        reservationId: "res",
+        ref: null,
+        expiresAtUtc: "",
+        send: vi.fn(() => sendGate.promise),
+      } as unknown as IAttachmentUpload),
     );
     const { service } = makeService({ reserve });
     const client = createAttachmentClient(service);

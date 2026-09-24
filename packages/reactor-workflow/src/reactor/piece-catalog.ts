@@ -11,6 +11,11 @@ import type {
 } from "@powerhousedao/pieces-framework";
 import { childLogger } from "document-model";
 import { pieceRegistrySource } from "../pieces/activepieces/registry-source.js";
+import {
+  unsupportedAuth,
+  unsupportedTrigger,
+  type UnsupportedFeature,
+} from "../pieces/activepieces/unsupported.js";
 import { SERVER_ONLY_PIECES } from "./unsupported-pieces.js";
 
 const CATALOG_URL = "https://cloud.activepieces.com/api/v1/pieces";
@@ -30,6 +35,13 @@ function pieceUrl(packageName: string): string {
   return `${CATALOG_URL}/${packageName}?audience=all`;
 }
 
+// A listing field, set only for a block that cannot run here.
+export function reasonOf(feature: UnsupportedFeature | undefined): {
+  unsupported?: string;
+} {
+  return feature ? { unsupported: feature.reason } : {};
+}
+
 export interface PieceSummary {
   name: string;
   displayName: string;
@@ -41,6 +53,9 @@ export interface PieceSummary {
   categories: string[];
   // The piece's PieceAuth descriptor, verbatim; null when authless.
   auth: unknown;
+  // Why no block of the piece can run here. Listed, so a
+  // search explains the piece rather than silently missing it.
+  unsupported?: string;
 }
 
 export interface PieceActionEntry {
@@ -50,6 +65,7 @@ export interface PieceActionEntry {
   blockType: string;
   // "human" | "ai" | "both"; absent on most pieces, which means "both".
   audience: string | null;
+  unsupported?: string;
 }
 
 export interface PieceActionsResult {
@@ -66,6 +82,7 @@ export interface PieceTriggerEntry {
   description: string;
   strategy: string;
   blockType: string;
+  unsupported?: string;
 }
 
 export interface PieceTriggersResult {
@@ -100,14 +117,16 @@ type PieceDetailAction = Partial<
 type PieceDetailTrigger = Partial<
   Pick<TriggerBase, "name" | "displayName" | "description">
 > & {
-  // POLLING | WEBHOOK | APP_WEBHOOK; runtime support varies by strategy.
+  // POLLING | WEBHOOK | APP_WEBHOOK | MANUAL; runtime support varies by strategy.
   type?: string;
+  renewConfiguration?: unknown;
 };
 
 // List entry with suggestionType=ACTION_AND_TRIGGER: the same list endpoint
 // their selector searches, carrying every action/trigger name inline.
 export interface CatalogSuggestionEntry {
   name?: string;
+  auth?: unknown;
   displayName?: string;
   version?: string;
   logoUrl?: string;
@@ -237,6 +256,7 @@ function toSummaries(raw: CatalogEntry[]): PieceSummary[] {
       triggerCount: typeof entry.triggers === "number" ? entry.triggers : 0,
       categories: entry.categories ?? [],
       auth: entry.auth ?? null,
+      ...reasonOf(unsupportedAuth(entry.auth)),
     }));
 }
 
@@ -303,6 +323,7 @@ export async function fetchPieceTriggers(
   if (cached && cached.expiresAt > Date.now()) return cached.value;
   const detail = (await fetchPieceJson(packageName)) as CatalogEntry;
   const version = detail.version ?? "";
+  const pieceUnsupported = unsupportedAuth(detail.auth);
   const triggersRecord =
     detail.triggers && typeof detail.triggers === "object"
       ? detail.triggers
@@ -313,6 +334,7 @@ export async function fetchPieceTriggers(
     description: trigger.description ?? "",
     strategy: trigger.type ?? "",
     blockType: `${packageName}@${version}#trigger:${name}`,
+    ...reasonOf(pieceUnsupported ?? unsupportedTrigger(trigger)),
   }));
   const value: PieceTriggersResult = {
     name: packageName,
@@ -337,6 +359,7 @@ export async function fetchPieceActions(
   if (cached && cached.expiresAt > Date.now()) return cached.value;
   const detail = (await fetchPieceJson(packageName)) as CatalogEntry;
   const version = detail.version ?? "";
+  const unsupported = reasonOf(unsupportedAuth(detail.auth));
   const actionsRecord =
     detail.actions && typeof detail.actions === "object" ? detail.actions : {};
   const actions = Object.entries(actionsRecord)
@@ -346,6 +369,7 @@ export async function fetchPieceActions(
       description: action.description ?? "",
       blockType: `${packageName}@${version}#${name}`,
       audience: action.audience ?? null,
+      ...unsupported,
     }))
     // Agent-targeted atomics last, so the actions a person would pick stay at
     // the top. Same predicate their own human view filters on, and an absent

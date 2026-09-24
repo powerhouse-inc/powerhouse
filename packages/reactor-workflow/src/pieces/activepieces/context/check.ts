@@ -1,12 +1,12 @@
-// Context handed to a piece's connection check. The framework has no
-// checkConnection hook: auth.validate({auth, server}) is the whole contract.
+// Context handed to a piece's auth.validate and auth.getConnectionIdentifier:
+// `{ auth, server }`, with auth as the flat property value.
 import { throwingStub, withTouchTracking } from "./stubs.js";
 import type { AuthValidationServerContext } from "@powerhousedao/pieces-framework";
 
 export interface CheckConnectionContextOptions {
   auth?: unknown;
   // apiUrl / publicUrl when the host serves them; mintOidcToken always throws,
-  // since no reactor mints tokens for a piece's validate().
+  // since no reactor mints tokens for a piece's connection check.
   server?: Omit<AuthValidationServerContext, "mintOidcToken">;
   onTouch?: (member: string) => void;
 }

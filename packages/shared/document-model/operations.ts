@@ -1,12 +1,8 @@
 import type { Draft } from "mutative";
 import { castDraft, create } from "mutative";
 import { noop, type Action } from "./actions.js";
-import { resolveSnapshotAuth } from "./auth.js";
 import type { PHDocument } from "./documents.js";
 import { nextSkipNumber, sortOperations } from "./documents.js";
-import { backfillAuthState } from "./state.js";
-import type { PHBaseState } from "./state.js";
-import type { LoadStateActionInput } from "./types.js";
 
 // updates the name of the document
 export function setNameOperation<TDocument extends PHDocument>(
@@ -213,26 +209,6 @@ export function redoOperation<TDocument extends PHDocument>(
       input: operation.action.input,
     } as Action);
   });
-}
-
-export function loadStateOperation<TState extends PHBaseState>(
-  document: PHDocument<TState>,
-  action: LoadStateActionInput,
-): PHDocument<TState> {
-  const loaded = backfillAuthState(action.state.data as TState);
-  // A loaded snapshot does not get to install or replace a policy; see
-  // resolveSnapshotAuth.
-  loaded.auth = resolveSnapshotAuth(
-    document.header.id,
-    document.header.documentType,
-    backfillAuthState({ ...document.state }).auth,
-    loaded.auth,
-  );
-  return {
-    ...document,
-    header: { ...document.header, name: action.state.name },
-    state: loaded,
-  };
 }
 
 /**
