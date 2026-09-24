@@ -2393,6 +2393,54 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const incomingActionIds = new Set(operations.map((op) => op.action.id));
 
+    // The nearest later operation whose skip reaches `op`, if any.
+    const supersededBy = (op: Operation): Operation | undefined => {
+      let nearest: Operation | undefined;
+      for (const laterOp of allOpsFromMinConflictingIndex) {
+        if (
+          laterOp.index > op.index &&
+          laterOp.skip > 0 &&
+          laterOp.index - laterOp.skip <= op.index &&
+          (nearest === undefined || laterOp.index < nearest.index)
+        ) {
+          nearest = laterOp;
+        }
+      }
+      return nearest;
+    };
+
+    // Held only in superseded rows: undone stays undone, rewound is re-applied.
+    const undoneActionIds = new Set<string>();
+    let predecessorBound = minIncomingIndex;
+    const rowsByActionId = new Map<string, Operation[]>();
+    for (const op of conflictingOps) {
+      if (incomingActionIds.has(op.action.id)) {
+        rowsByActionId.set(op.action.id, [
+          ...(rowsByActionId.get(op.action.id) ?? []),
+          op,
+        ]);
+      }
+    }
+    const liveOps = new Set<Operation>();
+    for (const op of conflictingOps) {
+      if (supersededBy(op) === undefined) {
+        liveOps.add(op);
+      }
+    }
+    for (const [actionId, rows] of rowsByActionId) {
+      if (rows.some((row) => liveOps.has(row))) {
+        continue;
+      }
+      if (rows.some((row) => supersededBy(row)?.action.type === "NOOP")) {
+        undoneActionIds.add(actionId);
+      } else {
+        predecessorBound = Math.min(
+          predecessorBound,
+          Math.max(...rows.map((row) => row.index)),
+        );
+      }
+    }
+
     const nonSupersededOps = conflictingOps.filter((op) => {
       // A local op at an index below the incoming batch's lowest index with no
       // overlapping action.id is a predecessor of the incoming ops, not a
@@ -2401,18 +2449,10 @@ export class SimpleJobExecutor implements IJobExecutor {
       // ops share timestamps (bulk imports). Local ops whose action.id matches
       // an incoming op are kept so dedup + reshuffle can remap them correctly
       // (e.g. cross-reactor reshuffle rebroadcast).
-      if (op.index < minIncomingIndex && !incomingActionIds.has(op.action.id)) {
+      if (op.index < predecessorBound && !incomingActionIds.has(op.action.id)) {
         return false;
       }
-      for (const laterOp of allOpsFromMinConflictingIndex) {
-        if (laterOp.index > op.index && laterOp.skip > 0) {
-          const logicalIndex = laterOp.index - laterOp.skip;
-          if (logicalIndex <= op.index) {
-            return false;
-          }
-        }
-      }
-      return true;
+      return liveOps.has(op);
     });
 
     const existingActionIds = new Set(
@@ -2421,6 +2461,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     const seenIncomingActionIds = new Set<string>();
     const incomingOpsToApply = operations.filter((op) => {
       if (existingActionIds.has(op.action.id)) return false;
+      if (undoneActionIds.has(op.action.id)) return false;
       if (seenIncomingActionIds.has(op.action.id)) return false;
       seenIncomingActionIds.add(op.action.id);
       return true;

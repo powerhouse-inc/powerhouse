@@ -190,6 +190,13 @@ export class SignatureAdmission {
       signal,
     );
 
+    const redelivered = await this.redelivered(
+      candidates,
+      live,
+      operationStore,
+      signal,
+    );
+
     await resolvePolicies(
       candidates,
       job.operations.map((operation) => operation.action),
@@ -204,6 +211,7 @@ export class SignatureAdmission {
         undefined,
         "load",
         signal,
+        redelivered.has(candidates[i]),
       );
       if (verdict.ok) {
         continue;
@@ -221,6 +229,7 @@ export class SignatureAdmission {
     submitted: Set<string> | undefined,
     path: AdmissionPath,
     signal?: AbortSignal,
+    known = false,
   ): Promise<SignatureVerdict> {
     const verdict = await verifyActionSignature(
       entry.action,
@@ -235,7 +244,7 @@ export class SignatureAdmission {
     if (!verdict.ok) {
       return verdict;
     }
-    if (isLive(entry, live) || submitted?.has(entry.opId)) {
+    if (!known && (isLive(entry, live) || submitted?.has(entry.opId))) {
       return {
         ok: false,
         scheme: verdict.scheme,
@@ -253,6 +262,9 @@ export class SignatureAdmission {
             reason: `action ${entry.action.id} is unsigned but claims to act as ${address}`,
           }
         : verdict;
+    }
+    if (known) {
+      return verdict;
     }
 
     const signer = entry.action.context!.signer!;
@@ -354,6 +366,47 @@ export class SignatureAdmission {
       }
     }
     return committed;
+  }
+
+  /**
+   * The load candidates stored exactly as they arrive, timestamp included: a
+   * peer re-sending what this stream holds, not a replay of its action.
+   */
+  private async redelivered(
+    candidates: Candidate[],
+    live: Set<string>,
+    operationStore: IOperationStore,
+    signal?: AbortSignal,
+  ): Promise<Set<Candidate>> {
+    const found = new Set<Candidate>();
+    const toCompare = candidates.filter(
+      (entry) =>
+        live.has(entry.opId) &&
+        !(entry.synthesizedOpId && live.has(entry.synthesizedOpId)),
+    );
+    for (const [stream, entries] of byStream(toCompare)) {
+      const stored = await operationStore.getOperationsByIds(
+        stream.documentId,
+        stream.scope,
+        stream.branch,
+        entries.map((entry) => entry.opId),
+        signal,
+      );
+      for (const entry of entries) {
+        if (
+          stored.some(
+            (operation) =>
+              operation.id === entry.opId &&
+              Date.parse(operation.timestampUtcMs) ===
+                Date.parse(entry.operation?.timestampUtcMs ?? "") &&
+              sameContent(operation.action, entry.action),
+          )
+        ) {
+          found.add(entry);
+        }
+      }
+    }
+    return found;
   }
 
   private async liveOperationIds(
