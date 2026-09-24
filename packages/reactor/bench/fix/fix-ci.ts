@@ -18,8 +18,8 @@ import type { CiOptions } from "./fix-options.js";
 import {
   git,
   nonEmptyLines,
-  POSTGRES_PORT,
-  POSTGRES_URL,
+  postgresTarget,
+  postgresUrl,
   probePort,
   repoRoot,
 } from "./repo.js";
@@ -252,7 +252,7 @@ export function planCi(input: PlanInput): CiStep[] {
         ? "Reactor suite (with PG variants)"
         : "Reactor suite (PG variants NOT run)",
       command: ["pnpm", "test:reactor"],
-      env: input.postgres ? { REACTOR_TEST_PG_URL: POSTGRES_URL } : {},
+      env: input.postgres ? { REACTOR_TEST_PG_URL: postgresUrl() } : {},
       blocking: false,
     });
     if (input.integration) {
@@ -363,8 +363,8 @@ export function formatCiReport(
   lines.push(
     coverage.reactorTouched
       ? coverage.postgres
-        ? `- reactor suite ran with Postgres on ${String(POSTGRES_PORT)}; PG variants executed`
-        : `- reactor suite ran WITHOUT Postgres on ${String(POSTGRES_PORT)}; PG variants not run - PARTIAL`
+        ? `- reactor suite ran with Postgres on ${String(postgresTarget().port)}; PG variants executed`
+        : `- reactor suite ran WITHOUT Postgres on ${String(postgresTarget().port)}; PG variants not run - PARTIAL`
       : "- reactor paths untouched; reactor suite and integration not in scope",
   );
   lines.push(
@@ -431,7 +431,8 @@ export async function runCi(options: CiOptions): Promise<CommandResult> {
     .map(checkPackage)
     .filter((status) => status.verdict === "stale")
     .map((status) => status.name);
-  const postgres = await probePort("localhost", POSTGRES_PORT, 1500);
+  const target = postgresTarget();
+  const postgres = await probePort(target.host, target.port, 1500);
   const reactorTouched = touchesReactor(changed);
 
   const steps = planCi({

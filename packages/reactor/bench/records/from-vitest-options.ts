@@ -21,8 +21,8 @@ Usage:
   --allow-dirty        record against a working tree with uncommitted changes
 
 The conclusions and caveats an entry starts with are derived from the numbers:
-one spread per set of cases in a suite that state the same operation count, or
-a note that the suite has no such pair, plus a caveat for every case whose
+one spread per set of cases in a suite that state the same size, in the units
+the target's sizeUnits declare, or a note that the suite has no such pair, plus a caveat for every case whose
 relative margin of error exceeds 5% or whose sample count is under 100. Your
 own text is appended to those, never in place of them.
 
@@ -30,6 +30,11 @@ A case whose name ends in [reference] is a reference cost rather than a point on
 its suite's sweep: no spread pairs it, and it gets a conclusion of its own that
 states its rate. Mark the case in the bench file and add the rename to the
 target's \`renames\`, so the record says which case it continues.
+
+A set of three or more such cases gets no fastest-over-slowest spread, which
+would drop every case between the two ends. It pairs only the adjacent steps
+the target's \`spreadChains\` declare, and the conversion fails when a case in
+it sits on no declared step and is not marked [reference].
 
 A dirty tree is refused. The entry is stamped with the current commit, and on
 a dirty tree that sha describes code that did not run.`;

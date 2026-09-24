@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   formatCiReport,
   owningPackage,
@@ -6,6 +6,7 @@ import {
   touchesReactor,
 } from "../../bench/fix/fix-ci.js";
 import type { CiStep, Coverage, StepOutcome } from "../../bench/fix/fix-ci.js";
+import { postgresTarget, postgresUrl } from "../../bench/fix/repo.js";
 
 const root = "/repo";
 const packages = [
@@ -13,6 +14,36 @@ const packages = [
   { name: "@powerhousedao/shared", path: "/repo/packages/shared" },
   { name: "@powerhousedao/switchboard", path: "/repo/apps/switchboard" },
 ];
+
+describe("postgresUrl", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("defaults to 5433 when REACTOR_TEST_PG_URL is unset", () => {
+    expect(postgresUrl({})).toBe(
+      "postgres://postgres:postgres@localhost:5433/reactor",
+    );
+    expect(postgresTarget(postgresUrl({}))).toEqual({
+      host: "localhost",
+      port: 5433,
+    });
+  });
+
+  it("honours an exported REACTOR_TEST_PG_URL in the suite step and probe", () => {
+    const url = "postgres://postgres:postgres@db.local:5434/reactor";
+    vi.stubEnv("REACTOR_TEST_PG_URL", url);
+    const suite = planCi({
+      changed: ["packages/reactor/src/x.ts"],
+      owners: ["@powerhousedao/reactor"],
+      stale: [],
+      integration: false,
+      postgres: true,
+    }).find((step) => step.id === "test-reactor");
+    expect(suite?.env.REACTOR_TEST_PG_URL).toBe(url);
+    expect(postgresTarget()).toEqual({ host: "db.local", port: 5434 });
+  });
+});
 
 describe("touchesReactor", () => {
   it("follows check-pr-reactor's path filter", () => {
@@ -87,7 +118,7 @@ describe("planCi", () => {
       "test-reactor",
     ]);
     const suite = reactor.find((step) => step.id === "test-reactor");
-    expect(suite?.env.REACTOR_TEST_PG_URL).toContain("5433");
+    expect(suite?.env.REACTOR_TEST_PG_URL).toBe(postgresUrl());
     expect(suite?.label).toContain("with PG variants");
 
     const noPg = planCi({
