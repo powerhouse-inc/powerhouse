@@ -181,8 +181,9 @@ export function insertNodeSorted(
  * Node[], so the cast below is where that gap is paid rather than spread over
  * the reducer. Consumers must treat drive.state.global.nodes as read-only --
  * mutating it in place (push, sort, splice) throws in strict mode; copy it
- * first, as readNodes does. Note that LOAD_STATE replaces a whole scope and can
- * install a list this function never saw.
+ * first, as readNodes does. Note that UPGRADE_DOCUMENT's initialState and
+ * imported documents replace a whole scope and can install a list this
+ * function never saw.
  */
 export function assignNodes(
   state: { nodes: Node[] },

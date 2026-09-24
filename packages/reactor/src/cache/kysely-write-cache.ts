@@ -424,8 +424,8 @@ export class KyselyWriteCache implements IWriteCache {
 
     // Keep only the last operation per scope in the ring buffer. The reducer
     // only needs at(-1).index to determine the next index, so carrying the
-    // full history causes O(n²) array copies across n operations. UNDO, REDO,
-    // and PRUNE bypass this by forcing a cold-miss rebuild in the job executor.
+    // full history causes O(n²) array copies across n operations. UNDO and REDO
+    // bypass this by forcing a cold-miss rebuild in the job executor.
     // Copied so a caller still holding the document cannot change what we
     // stored.
     const slicedDocument: PHDocument = {

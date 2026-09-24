@@ -142,7 +142,7 @@ export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
 
 `version` is optional. The source marks it "should be made required"; module versioning is not finalized, and the registry defaults a missing `version` to `1` everywhere.
 
-Codegen emits every field. If you write a module by hand, build `reducer` with `createReducer(stateReducer)` from `document-model`. `createReducer` wraps a `StateReducer<TState>` (`(state: Draft<TState>, action, dispatch?) => TState | undefined`) in the base document reducer, so `SET_NAME`, `UNDO`, `REDO` and `PRUNE` keep working. `utils` is the `DocumentModelUtils` object that a generated `gen/utils.ts` assembles from `baseCreateDocument`, `baseLoadFromInput` and `baseSaveToFileHandle`. Copy that file's shape rather than typing it from memory.
+Codegen emits every field. If you write a module by hand, build `reducer` with `createReducer(stateReducer)` from `document-model`. `createReducer` wraps a `StateReducer<TState>` (`(state: Draft<TState>, action, dispatch?) => TState | undefined`) in the base document reducer, so `SET_NAME`, `UNDO` and `REDO` keep working. `utils` is the `DocumentModelUtils` object that a generated `gen/utils.ts` assembles from `baseCreateDocument`, `baseLoadFromInput` and `baseSaveToFileHandle`. Copy that file's shape rather than typing it from memory.
 
 ## Version upgrades
 
