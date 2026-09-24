@@ -58,6 +58,15 @@ export type API = {
   /** Document-authorized attachment read decisions; see AttachmentAccessService. */
   attachmentAccess: IAttachmentAccessService;
   authService: AuthService | undefined;
+  /**
+   * Whether this deployment refuses anonymous callers
+   * (`REQUIRE_AUTHENTICATED_CALLER`). Carried here because routes mounted
+   * straight on the HTTP adapter never pass the GraphQL fetch chain, so its
+   * require-auth middleware cannot reach them: a host-composed route reads the
+   * resolved value from the API rather than the environment, so one variable
+   * cannot end up half applied.
+   */
+  requireAuthenticatedCaller: boolean;
   /** The service the subgraphs decide with, for a component the host composes
    * after boot: it must authorize with this one, not one of its own. */
   authorizationService: IAuthorizationService;

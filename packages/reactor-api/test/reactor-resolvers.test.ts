@@ -5,12 +5,16 @@ import {
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
+  isDerivedDocumentId,
+  signaturePolicyOf,
+  withSignaturePolicy,
   type DocumentModelModule,
   type PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import * as resolvers from "../src/graphql/reactor/resolvers.js";
+import { createTestSigner, signFor } from "./utils/test-signer.js";
 
 const createTestDocument = (): PHDocument => {
   return documentModelDocumentModelModule.utils.createDocument();
@@ -25,6 +29,7 @@ describe("ReactorSubgraph Query Resolvers", () => {
       documentModelDocumentModelModule as unknown as DocumentModelModule,
     ]);
     module = await new ReactorClientBuilder()
+      .withSigner(await createTestSigner())
       .withReactorBuilder(reactorBuilder)
       .buildModule();
   });
@@ -246,6 +251,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       documentModelDocumentModelModule as unknown as DocumentModelModule,
     ]);
     module = await new ReactorClientBuilder()
+      .withSigner(await createTestSigner())
       .withReactorBuilder(reactorBuilder)
       .buildModule();
   });
@@ -548,4 +554,149 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       ).rejects.toThrow();
     });
   });
+});
+
+describe("execute", () => {
+  let module: InProcessReactorClientModule;
+  let server: Awaited<ReturnType<typeof createTestSigner>>;
+
+  beforeEach(async () => {
+    server = await createTestSigner("0xserver");
+    module = await new ReactorClientBuilder()
+      .withSigner(server)
+      .withReactorBuilder(
+        new ReactorBuilder().withDocumentModelSources([
+          documentModelDocumentModelModule as unknown as DocumentModelModule,
+        ]),
+      )
+      .buildModule();
+  });
+
+  afterEach(() => {
+    module.reactor.kill();
+  });
+
+  async function lastSigner(documentId: string) {
+    const operations = await module.reactor.getOperations(documentId, {
+      branch: "main",
+      scopes: ["global"],
+    });
+    return operations.global.results.at(-1)?.action.context?.signer;
+  }
+
+  it.each(["legacy", "v2-required"] as const)(
+    "signs as the server a keyless action that claims an address on a %s document",
+    async (policy) => {
+      const document = withSignaturePolicy(createTestDocument(), policy);
+      await module.client.create(document);
+      const action = documentModelDocumentModelModule.actions.setModelName({
+        name: "claimed",
+      });
+
+      await resolvers.execute(module.client, {
+        documentIdentifier: document.header.id,
+        actions: [
+          {
+            ...action,
+            input: action.input as Record<string, unknown>,
+            context: {
+              signer: {
+                user: { address: "0xvictim", networkId: "eip155", chainId: 1 },
+                app: { name: "", key: "" },
+                signatures: [", , , , "],
+              },
+            },
+          },
+        ],
+      });
+
+      const signer = await lastSigner(document.header.id);
+      expect(signer?.user.address).toBe("0xserver");
+      expect(signer?.app.key).toBe(server.app.key);
+      expect(signer?.signatures).toHaveLength(1);
+    },
+  );
+
+  it("keeps the signature of an action its author signed", async () => {
+    const document = createTestDocument();
+    await module.client.create(document);
+    const author = await createTestSigner("0xauthor");
+    const signed = await signFor(
+      author,
+      documentModelDocumentModelModule.actions.setModelName({ name: "own" }),
+      document.header.id,
+    );
+
+    await resolvers.execute(module.client, {
+      documentIdentifier: document.header.id,
+      actions: [
+        {
+          ...signed,
+          input: signed.input as Record<string, unknown>,
+          context: {
+            signer: {
+              ...signed.context!.signer!,
+              signatures: signed.context!.signer!.signatures.map((tuple) =>
+                tuple.join(", "),
+              ),
+            },
+          },
+        },
+      ],
+    });
+
+    const signer = await lastSigner(document.header.id);
+    expect(signer?.user.address).toBe("0xauthor");
+    expect(signer?.app.key).toBe(author.app.key);
+    expect(signer?.signatures).toEqual(signed.context!.signer!.signatures);
+  });
+});
+
+describe("create mutations under the client's creation default", () => {
+  const reactors: InProcessReactorClientModule[] = [];
+
+  afterEach(() => {
+    for (const built of reactors.splice(0)) {
+      built.reactor.kill();
+    }
+  });
+
+  async function clientCreating(
+    policy: "legacy" | "v2-required",
+  ): Promise<InProcessReactorClientModule> {
+    const built = await new ReactorClientBuilder()
+      .withSigner(await createTestSigner())
+      .withReactorBuilder(
+        new ReactorBuilder().withDocumentModelSources([
+          driveDocumentModelModule as unknown as DocumentModelModule,
+          documentModelDocumentModelModule as unknown as DocumentModelModule,
+        ]),
+      )
+      .withCreateSignaturePolicy(policy)
+      .buildModule();
+    reactors.push(built);
+    return built;
+  }
+
+  it.each(["legacy", "v2-required"] as const)(
+    "creates %s documents in a drive and with initial state",
+    async (policy) => {
+      const { client } = await clientCreating(policy);
+      const drive = await client.drives.create({ global: { name: "Drive" } });
+
+      const inDrive = await resolvers.createEmptyDocument(client, {
+        documentType: "powerhouse/document-model",
+        parentIdentifier: drive.header.id,
+      });
+      const withState = await resolvers.createDocumentWithInitialState(client, {
+        documentType: "powerhouse/document-model",
+        initialState: {},
+      });
+
+      for (const id of [drive.header.id, inDrive.id, withState.id]) {
+        expect(signaturePolicyOf((await client.get(id)).header)).toBe(policy);
+        expect(isDerivedDocumentId(id)).toBe(policy === "v2-required");
+      }
+    },
+  );
 });

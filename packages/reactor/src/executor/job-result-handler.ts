@@ -14,6 +14,7 @@ import {
   DocumentNotFoundError,
   ExcessiveReshuffleError,
   InvalidOperationTimestampError,
+  InvalidSignatureError,
   UpgradePreconditionFailedError,
 } from "../shared/errors.js";
 import {
@@ -152,6 +153,8 @@ export class JobResultHandler implements IJobResultHandler {
         AuthTimestampNotMonotonicError.isError(result.error) ||
         InvalidOperationTimestampError.isError(result.error) ||
         ExcessiveReshuffleError.isError(result.error) ||
+        // A refusal is a function of the write's content.
+        InvalidSignatureError.isError(result.error) ||
         // The action's snapshot stays stale; the client retries with a fresh read.
         UpgradePreconditionFailedError.isError(result.error))
     ) {

@@ -13,6 +13,7 @@
  */
 
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import type { SignatureRefusedEvent } from "../../events/types.js";
 import type { Job } from "../../queue/types.js";
 import type { JobMeta } from "../../shared/types.js";
 import type { JobExecutorConfig, JobResult } from "../types.js";
@@ -85,7 +86,7 @@ export type ModuleRef =
     };
 
 /**
- * Factory specification shared by the signature verifier and document
+ * Factory specification shared by the signer, trust policy and document
  * model spec channels. The worker imports `module.exportName` and invokes
  * it with `initArgs` to obtain the actual instance.
  *
@@ -98,17 +99,6 @@ export type FactorySpec = {
   module: ModuleRef;
   initArgs?: SanitizedArg;
 };
-
-/**
- * Factory spec for the signature verifier the worker should instantiate.
- *
- * Structurally identical to {@link FactorySpec}; the alias exists so call
- * sites read intent-fully.
- *
- * @see Wire Protocol Reference wiki page
- *   (Powerhouse board wiki id: 64c03e51-1aa4-4fa9-93d8-daa45642484d)
- */
-export type SignatureVerifierSpec = FactorySpec;
 
 /**
  * Factory spec for a document model module the worker should instantiate.
@@ -228,11 +218,13 @@ export type InitMessage = {
   workerId: string;
   poolConfig: WorkerPoolConfig;
   db: DbConfig;
-  /** Omitted = the worker performs no executor-side signature verification. */
-  signatureVerifier?: SignatureVerifierSpec;
   models: ModelManifestEntry[];
   /** Omitted = the worker builds its executor with the built-in defaults. */
   executorConfig?: JobExecutorConfig;
+  /** Builds the `ISigner` for synthesized operations; omitted = unsigned. */
+  signer?: FactorySpec;
+  /** Builds the `SignatureTrustPolicy`; omitted = the default. */
+  trustPolicy?: FactorySpec;
 };
 
 /**
@@ -333,6 +325,8 @@ export type ResultMessage = {
   correlationId: string;
   result: JobResult;
   writeReady?: JobWriteReadyPayload;
+  /** Re-emitted on the parent bus, which is where observers subscribe. */
+  signatureRefusals?: SignatureRefusedEvent[];
   error?: ErrorInfo;
 };
 

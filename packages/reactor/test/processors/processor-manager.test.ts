@@ -5,6 +5,7 @@ import {
 } from "@powerhousedao/shared/document-drive";
 import {
   generateId,
+  withSignaturePolicy,
   type DocumentModelModule,
   type OperationWithContext,
   type PHDocumentHeader,
@@ -44,6 +45,14 @@ import { deferred } from "../factories.js";
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 
 type CombinedDatabase = StorageDatabase & DocumentViewDatabase;
+
+// IReactor.execute takes no signer, so its writes go unsigned.
+function createLegacyDrive() {
+  return withSignaturePolicy(
+    driveDocumentModelModule.utils.createDocument(),
+    "legacy",
+  );
+}
 
 function createMockProcessor(namespace?: string): IProcessor & {
   receivedOperations: OperationWithContext[];
@@ -340,7 +349,7 @@ describe("ProcessorManager Integration Tests", () => {
         mockFactory.factory,
       );
 
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
 
       const result = await reactorModule.reactor.create(driveDoc);
       expect(result.status).toBe(JobStatus.PENDING);
@@ -366,7 +375,7 @@ describe("ProcessorManager Integration Tests", () => {
         factory,
       );
 
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
       const driveId = driveDoc.header.id;
 
       await reactorModule.reactor.create(driveDoc);
@@ -406,7 +415,7 @@ describe("ProcessorManager Integration Tests", () => {
     }
 
     async function driveWithHistory(renames: number): Promise<string> {
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
       const created = await reactorModule.reactor.create(driveDoc);
       await waitForJob(created.id);
       for (let i = 0; i < renames; i++) {
@@ -574,7 +583,7 @@ describe("ProcessorManager Integration Tests", () => {
         factory,
       );
 
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
       await reactorModule.reactor.create(driveDoc);
 
       await vi.waitFor(() => {
@@ -598,7 +607,7 @@ describe("ProcessorManager Integration Tests", () => {
         factory,
       );
 
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
       await reactorModule.reactor.create(driveDoc);
 
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -615,7 +624,7 @@ describe("ProcessorManager Integration Tests", () => {
         factory,
       );
 
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
       await reactorModule.reactor.create(driveDoc);
 
       await vi.waitFor(() => {
@@ -637,7 +646,7 @@ describe("ProcessorManager Integration Tests", () => {
         factory,
       );
 
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
       await reactorModule.reactor.create(driveDoc);
 
       await vi.waitFor(
@@ -664,7 +673,7 @@ describe("ProcessorManager Integration Tests", () => {
         factory,
       );
 
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
       await reactorModule.reactor.create(driveDoc);
 
       await vi.waitFor(() => {
@@ -678,7 +687,7 @@ describe("ProcessorManager Integration Tests", () => {
     });
 
     it("should filter by documentId", async () => {
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
       const driveId = driveDoc.header.id;
 
       const filter: ProcessorFilter = {
@@ -715,7 +724,7 @@ describe("ProcessorManager Integration Tests", () => {
         factory,
       );
 
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
       await reactorModule.reactor.create(driveDoc);
 
       await vi.waitFor(
@@ -747,7 +756,7 @@ describe("ProcessorManager Integration Tests", () => {
         factory2,
       );
 
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
       await reactorModule.reactor.create(driveDoc);
 
       await vi.waitFor(() => {
@@ -766,7 +775,7 @@ describe("ProcessorManager Integration Tests", () => {
         factory,
       );
 
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
       await reactorModule.reactor.create(driveDoc);
 
       await vi.waitFor(() => {
@@ -791,7 +800,7 @@ describe("ProcessorManager Integration Tests", () => {
         factory,
       );
 
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
       await reactorModule.reactor.create(driveDoc);
 
       await vi.waitFor(() => {
@@ -808,7 +817,7 @@ describe("ProcessorManager Integration Tests", () => {
     });
 
     it("should create processors for existing drives when factory is registered late", async () => {
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
 
       await reactorModule.reactor.create(driveDoc);
 
@@ -853,7 +862,7 @@ describe("ProcessorManager Integration Tests", () => {
         badFactory,
       );
 
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
       await reactorModule.reactor.create(driveDoc);
 
       await vi.waitFor(() => {
@@ -871,7 +880,7 @@ describe("ProcessorManager Integration Tests", () => {
         errorFactory,
       );
 
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
       const result = await reactorModule.reactor.create(driveDoc);
 
       expect(result.status).toBe(JobStatus.PENDING);
@@ -915,7 +924,7 @@ describe("ProcessorManager Integration Tests", () => {
         factory,
       );
 
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveDoc = createLegacyDrive();
       const driveId = driveDoc.header.id;
       const createJob = await reactorModule.reactor.create(driveDoc);
       // The queue does not hold a global-scope job behind the same document's
@@ -2726,7 +2735,7 @@ describe("ProcessorManager Cursor Identity Across Restarts", () => {
   async function createDriveWithOps(
     module: InProcessReactorModule,
   ): Promise<string> {
-    const driveDoc = driveDocumentModelModule.utils.createDocument();
+    const driveDoc = createLegacyDrive();
     const created = await module.reactor.create(driveDoc);
     await waitForJob(module, created.id);
     const renamed = await module.reactor.execute(driveDoc.header.id, "main", [

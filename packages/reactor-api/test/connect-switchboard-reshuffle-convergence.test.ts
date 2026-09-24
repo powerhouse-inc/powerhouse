@@ -19,6 +19,7 @@ import type {
   DocumentModelModule,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { withSignaturePolicy } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
@@ -262,10 +263,14 @@ describe("Connect-Switchboard reshuffle rebroadcast convergence", () => {
       { documentId: [], scope: [], branch: "main" },
     );
 
-    const document = driveDocumentModelModule.utils.createDocument({
-      global: { name: "Repro", icon: null, nodes: [] },
-    });
-    document.header.id = DOCUMENT_ID;
+    // Fixed ids and unsigned deterministic actions need a legacy document.
+    const document = withSignaturePolicy(
+      driveDocumentModelModule.utils.createDocument({
+        global: { name: "Repro", icon: null, nodes: [] },
+      }),
+      "legacy",
+      { id: DOCUMENT_ID },
+    );
 
     const createJob = await connectA.reactor.create(document);
     await waitForJobCompletion(connectA.reactor, createJob.id);

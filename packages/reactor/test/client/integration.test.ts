@@ -2,7 +2,10 @@ import {
   addFile,
   driveDocumentModelModule,
 } from "@powerhousedao/shared/document-drive";
-import { actions } from "@powerhousedao/shared/document-model";
+import {
+  actions,
+  withSignaturePolicy,
+} from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -25,6 +28,7 @@ import {
   createTestDocumentIndexer,
   createTestOperationStore,
 } from "../factories.js";
+import { TestP256Signer } from "../utils/p256-signer.js";
 
 describe("ReactorClient Integration Tests", () => {
   let client: IReactorClient;
@@ -55,6 +59,7 @@ describe("ReactorClient Integration Tests", () => {
       .withEventBus(eventBus);
     client = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
+      .withSigner((await TestP256Signer.create()).asISigner())
       .build();
 
     reactor = (client as any).reactor;
@@ -1180,11 +1185,7 @@ describe("ReactorClient Integration Tests", () => {
         await client.create(doc);
 
         const jobInfo = await client.executeAsync("job-status-test", "main", [
-          {
-            type: "SET_NAME",
-            input: { name: "Test" },
-            scope: "global",
-          } as any,
+          actions.setName("Test"),
         ]);
 
         const status = await client.getJobStatus(jobInfo.id);
@@ -1198,11 +1199,7 @@ describe("ReactorClient Integration Tests", () => {
         await client.create(doc);
 
         const jobInfo = await client.executeAsync("job-signal-test", "main", [
-          {
-            type: "SET_NAME",
-            input: { name: "Test" },
-            scope: "global",
-          } as any,
+          actions.setName("Test"),
         ]);
 
         const controller = new AbortController();
@@ -1325,8 +1322,15 @@ describe("ReactorClient Integration Tests", () => {
     });
 
     it("should emit JOB_WRITE_READY events with batch metadata that allows detecting batch completion", async () => {
-      const first = documentModelDocumentModelModule.utils.createDocument();
-      const second = documentModelDocumentModelModule.utils.createDocument();
+      // executeBatch takes no signer, so these writes go unsigned.
+      const first = withSignaturePolicy(
+        documentModelDocumentModelModule.utils.createDocument(),
+        "legacy",
+      );
+      const second = withSignaturePolicy(
+        documentModelDocumentModelModule.utils.createDocument(),
+        "legacy",
+      );
       await client.create(first);
       await client.create(second);
 

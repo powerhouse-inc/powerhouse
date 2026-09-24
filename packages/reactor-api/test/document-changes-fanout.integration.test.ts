@@ -10,6 +10,7 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
   initializeAuth,
   setGrant,
+  withSignaturePolicy,
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
@@ -47,8 +48,12 @@ describe("documentChanges read cost per distinct subject", () => {
     client: InProcessReactorClientModule["client"],
     id: string,
   ) {
-    const document = documentModelDocumentModelModule.utils.createDocument();
-    document.header.id = id;
+    // A fixed id cannot be content-addressed, so the document is legacy.
+    const document = withSignaturePolicy(
+      documentModelDocumentModelModule.utils.createDocument(),
+      "legacy",
+      { id },
+    );
     await client.create(document);
     await client.execute(id, "main", [
       initializeAuth({
@@ -150,9 +155,11 @@ describe("documentChanges read cost per distinct subject", () => {
 
     const created = await measure(
       () => {
-        const document =
-          documentModelDocumentModelModule.utils.createDocument();
-        document.header.id = "fanout-created";
+        const document = withSignaturePolicy(
+          documentModelDocumentModelModule.utils.createDocument(),
+          "legacy",
+          { id: "fanout-created" },
+        );
         return client.create(document);
       },
       (e) =>

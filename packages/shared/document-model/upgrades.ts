@@ -106,9 +106,11 @@ export function applyUpgradeDocumentAction(
   }
 
   if (upgradePath) {
+    const protocolVersions = document.header.protocolVersions;
     for (const transition of upgradePath) {
       document = transition.upgradeReducer(document, action);
     }
+    document = withProtocolVersions(document, protocolVersions);
   }
 
   applyInitialState(document, action);
@@ -118,6 +120,20 @@ export function applyUpgradeDocumentAction(
     version: toVersion,
   };
   return document;
+}
+
+/** CREATE_DOCUMENT fixes `protocolVersions`; this puts them back after a reducer. */
+export function withProtocolVersions<TDocument extends PHDocument>(
+  document: TDocument,
+  protocolVersions: PHDocument["header"]["protocolVersions"],
+): TDocument {
+  const header = { ...document.header };
+  if (protocolVersions === undefined) {
+    delete header.protocolVersions;
+  } else {
+    header.protocolVersions = { ...protocolVersions };
+  }
+  return { ...document, header };
 }
 
 /**

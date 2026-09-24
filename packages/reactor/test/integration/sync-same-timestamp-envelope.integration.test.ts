@@ -96,6 +96,22 @@ class SmallPageOperationIndex implements IOperationIndex {
   getGroupReferencers(groupId: string, signal?: AbortSignal) {
     return this.inner.getGroupReferencers(groupId, signal);
   }
+
+  getOrdinalsByOpIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ) {
+    return this.inner.getOrdinalsByOpIds(
+      documentId,
+      scope,
+      branch,
+      opIds,
+      signal,
+    );
+  }
 }
 
 describe("Sync envelope grouping for same-timestamp runs", () => {

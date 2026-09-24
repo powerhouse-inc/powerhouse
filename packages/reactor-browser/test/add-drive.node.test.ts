@@ -1,5 +1,10 @@
 // @vitest-environment happy-dom
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import {
+  hasDerivedDocumentId,
+  isDerivedDocumentId,
+  signaturePolicyOf,
+} from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { addDrive } from "../src/actions/drive.js";
 import type { PHGlobal } from "../src/types/global.js";
@@ -31,6 +36,7 @@ describe("addDrive (issue #2838)", () => {
     expect(create).toHaveBeenCalledTimes(1);
     const doc = create.mock.calls[0]![0] as DocumentDriveDocument;
     expect(doc.header.id).toBe("configured-id");
+    expect(signaturePolicyOf(doc.header)).toBe("legacy");
     expect(doc.header.meta).toEqual({
       preferredEditor: "powerhouse/generic-drive-explorer",
     });
@@ -44,5 +50,28 @@ describe("addDrive (issue #2838)", () => {
     const doc = create.mock.calls[0]![0] as DocumentDriveDocument;
     expect(doc.header.id).toBeTruthy();
     expect(doc.header.id).not.toBe("");
+  });
+
+  it("creates a v2-required drive under a derived id by default", async () => {
+    await addDrive({ global: { name: "Default" } });
+
+    const doc = create.mock.calls[0]![0] as DocumentDriveDocument;
+    expect(signaturePolicyOf(doc.header)).toBe("v2-required");
+    expect(hasDerivedDocumentId(doc.header)).toBe(true);
+  });
+
+  it("creates a legacy drive under the full client's legacy creation default", async () => {
+    window.ph = {
+      reactorClient: { create },
+      reactorClientModule: {
+        client: { getCreateSignaturePolicy: () => Promise.resolve("legacy") },
+      },
+    } as unknown as PHGlobal;
+
+    await addDrive({ global: { name: "Legacy" } });
+
+    const doc = create.mock.calls[0]![0] as DocumentDriveDocument;
+    expect(signaturePolicyOf(doc.header)).toBe("legacy");
+    expect(isDerivedDocumentId(doc.header.id)).toBe(false);
   });
 });

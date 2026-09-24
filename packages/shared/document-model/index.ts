@@ -1,3 +1,4 @@
+export * from "./action-signature.js";
 export * from "./action-transport.js";
 export * from "./actions.js";
 export * from "./auth.js";
@@ -15,6 +16,7 @@ export * from "./operations.js";
 export * from "./reducer.js";
 export * from "./reducers.js";
 export * from "./schemas.js";
+export * from "./signature-policy.js";
 export * from "./signatures.js";
 export * from "./state.js";
 export type * from "./types.js";

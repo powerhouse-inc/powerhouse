@@ -18,6 +18,7 @@ import type {
   ReactorJobFailedEvent,
   ReadModelBatchCompletedEvent,
   ReadModelIndexedEvent,
+  SignatureRefusedEvent,
   IReadModelCoordinator,
   InProcessReactorModule,
   SyncModule,
@@ -53,6 +54,7 @@ export class ReactorInstrumentation {
     this.subscribeExecutorJobCompleted(eventBus);
     this.subscribeExecutorJobFailed(eventBus);
     this.subscribeDeadLetterAdded(eventBus);
+    this.subscribeSignatureRefused(eventBus);
     this.subscribeReadModelBatchCompleted(eventBus);
     this.subscribeReadModelIndexed(eventBus);
     this.registerObservableGauges(
@@ -295,6 +297,25 @@ export class ReactorInstrumentation {
           });
           this.metrics.eventbusEventsEmitted.add(1, {
             "event.type": "DEAD_LETTER_ADDED",
+          });
+        },
+      ),
+    );
+  }
+
+  private subscribeSignatureRefused(eventBus: IEventBus): void {
+    this.unsubscribes.push(
+      eventBus.subscribe<SignatureRefusedEvent>(
+        ReactorEventTypes.SIGNATURE_REFUSED,
+        (_type, event) => {
+          if (!this.metrics) return;
+          this.metrics.signatureRefusals.add(1, {
+            scheme: event.scheme,
+            path: event.path,
+            code: event.code,
+          });
+          this.metrics.eventbusEventsEmitted.add(1, {
+            "event.type": "SIGNATURE_REFUSED",
           });
         },
       ),

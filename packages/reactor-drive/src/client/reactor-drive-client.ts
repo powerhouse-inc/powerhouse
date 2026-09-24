@@ -20,9 +20,11 @@ import type {
 } from "@powerhousedao/shared/document-drive";
 import {
   assertAuthPreservedOnDuplicate,
-  createPresignedHeader,
+  createCopyHeader,
   generateId,
   replayDocumentVersioned,
+  requestedSignaturePolicy,
+  withSignaturePolicy,
   type Action,
   type CreateDocumentActionInput,
   type PHBaseState,
@@ -77,12 +79,19 @@ export class ReactorDriveClient implements IDriveClient {
     input: DriveInput,
     signal?: AbortSignal,
   ): Promise<DocumentDriveDocument> {
-    const driveDoc = reactorDriveCreateDocument({
-      global: {
-        name: input.global.name,
-        icon: input.global.icon ?? null,
-      },
-    });
+    const driveDoc = withSignaturePolicy(
+      reactorDriveCreateDocument({
+        global: {
+          name: input.global.name,
+          icon: input.global.icon ?? null,
+        },
+      }),
+      requestedSignaturePolicy(
+        input,
+        await this.reactor.getCreateSignaturePolicy(),
+      ),
+      { protocolVersions: input.protocolVersions },
+    );
     if (input.local) {
       if (typeof input.local.sharingType === "string") {
         driveDoc.state.local.sharingType = input.local.sharingType;
@@ -413,13 +422,14 @@ export class ReactorDriveClient implements IDriveClient {
     for (const node of subtree) {
       idMap.set(node.id, generateId());
     }
+    const policy = await this.reactor.getCreateSignaturePolicy();
 
     const jobs: ExecutionJobPlan[] = [];
     const driveActions: Action[] = [];
     const fileCreateKeys: string[] = [];
 
     for (const node of subtree) {
-      const newId = idMap.get(node.id)!;
+      let newId = idMap.get(node.id)!;
       let newParent: string | null;
       if (node.id === srcNodeId) {
         newParent = targetParentFolderId ?? null;
@@ -470,8 +480,9 @@ export class ReactorDriveClient implements IDriveClient {
         reducers[m.version ?? 1] = m.reducer as Reducer<PHBaseState>;
       }
       const config: VersionedReplayConfig = { reducers };
-      const replayHeader = createPresignedHeader(newId, documentType);
-      replayHeader.protocolVersions = srcDoc.header.protocolVersions;
+      const replayHeader = createCopyHeader(srcDoc.header, newId, policy);
+      // A v2-required copy takes a derived id; files head no subtree.
+      newId = replayHeader.id;
       const duplicated: PHDocument = replayDocumentVersioned(
         srcDoc.initialState,
         srcDoc.operations,

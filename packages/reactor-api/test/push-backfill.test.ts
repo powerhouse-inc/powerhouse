@@ -19,10 +19,14 @@ import {
   type InProcessReactorModule,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  ISigner,
+} from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
+import { createTestSigner, signFor } from "./utils/test-signer.js";
 
 type BridgeMode = "online" | "offline" | "rejecting";
 
@@ -71,6 +75,7 @@ type PushBackfillSetup = {
   connectSyncManager: ISyncManager;
   switchboardSyncManager: ISyncManager;
   bridge: typeof fetch;
+  signer: ISigner;
   setOffline: (v: boolean) => void;
   setMode: (m: BridgeMode) => void;
 };
@@ -149,6 +154,7 @@ async function setupPushBackfill(): Promise<PushBackfillSetup> {
     connectSyncManager,
     switchboardSyncManager,
     bridge,
+    signer: await createTestSigner(),
     setOffline,
     setMode,
   };
@@ -293,6 +299,7 @@ describe("Push Backfill After Offline Recovery", () => {
       switchboardEventBus,
       connectSyncManager,
       bridge,
+      signer,
       setOffline,
     } = setup;
 
@@ -312,7 +319,7 @@ describe("Push Backfill After Offline Recovery", () => {
       switchboardEventBus,
       documentId,
     );
-    const createJob = await connectReactor.create(document);
+    const createJob = await connectReactor.create(document, signer);
     await waitForJobCompletion(connectReactor, createJob.id);
     await createOnSwitchboard;
 
@@ -330,9 +337,13 @@ describe("Push Backfill After Offline Recovery", () => {
 
     // Step 3: Mutate while offline
     const mutateJob = await connectReactor.execute(documentId, "main", [
-      driveDocumentModelModule.actions.setDriveName({
-        name: "Offline Change",
-      }),
+      await signFor(
+        signer,
+        driveDocumentModelModule.actions.setDriveName({
+          name: "Offline Change",
+        }),
+        documentId,
+      ),
     ]);
     await waitForJobCompletion(connectReactor, mutateJob.id);
 
@@ -397,6 +408,7 @@ describe("Push Backfill After Offline Recovery", () => {
       switchboardEventBus,
       connectSyncManager,
       bridge,
+      signer,
       setMode,
     } = setup;
 
@@ -416,7 +428,7 @@ describe("Push Backfill After Offline Recovery", () => {
       switchboardEventBus,
       documentId,
     );
-    const createJob = await connectReactor.create(document);
+    const createJob = await connectReactor.create(document, signer);
     await waitForJobCompletion(connectReactor, createJob.id);
     await createOnSwitchboard;
 
@@ -441,9 +453,13 @@ describe("Push Backfill After Offline Recovery", () => {
 
     // Step 3: Mutate on Connect
     const mutateJob = await connectReactor.execute(documentId, "main", [
-      driveDocumentModelModule.actions.setDriveName({
-        name: "Rejected Change",
-      }),
+      await signFor(
+        signer,
+        driveDocumentModelModule.actions.setDriveName({
+          name: "Rejected Change",
+        }),
+        documentId,
+      ),
     ]);
     await waitForJobCompletion(connectReactor, mutateJob.id);
 

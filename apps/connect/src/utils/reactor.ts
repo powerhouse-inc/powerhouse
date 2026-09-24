@@ -22,9 +22,10 @@ import type {
 import type { RuntimePowerhouseConfig } from "@powerhousedao/shared/connect";
 import type {
   DocumentModelModule,
+  SignaturePolicy,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
-import { createSignatureVerifier, type IRenown } from "@renown/sdk";
+import type { IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -40,11 +41,9 @@ export async function createBrowserReactor(
   renown: IRenown,
   featureFlags: Partial<ReactorFeatureFlags>,
   documentModelLoader?: IDocumentModelLoader,
+  createSignaturePolicy?: SignaturePolicy,
 ): Promise<BrowserReactorClientModule> {
-  const signerConfig: SignerConfig = {
-    signer: renown.signer,
-    verifier: createSignatureVerifier(),
-  };
+  const signerConfig: SignerConfig = { signer: renown.signer };
 
   const jwtHandler: JwtHandler = async (_url: string) => {
     if (!renown.user) {
@@ -76,6 +75,9 @@ export async function createBrowserReactor(
 
   if (documentModelLoader) {
     builder.withDocumentModelLoader(documentModelLoader);
+  }
+  if (createSignaturePolicy) {
+    builder.withCreateSignaturePolicy(createSignaturePolicy);
   }
 
   const module = await builder.buildModule();

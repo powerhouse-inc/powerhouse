@@ -12,6 +12,7 @@ import {
   documentModelDocumentModelModule,
 } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createP256Signer } from "./utils/p256-signer.js";
 
 function getTextContent(result: CallToolResult, index = 0): string {
   const content = result.content[index];
@@ -60,6 +61,7 @@ async function createReactorClientModule(): Promise<InProcessReactorClientModule
 
   const module = await new ReactorClientBuilder()
     .withReactorBuilder(reactorBuilder)
+    .withSigner(await createP256Signer())
     .buildModule();
 
   return module;

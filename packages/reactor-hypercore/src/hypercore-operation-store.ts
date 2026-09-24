@@ -539,6 +539,74 @@ export class HypercoreOperationStore implements IOperationStore {
     return latest;
   }
 
+  async findOperationIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Set<string>> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const found = new Set<string>();
+    if (opIds.length === 0) {
+      return found;
+    }
+
+    const wanted = new Set(opIds);
+    const stored = await this.getSince(
+      documentId,
+      scope,
+      branch,
+      -1,
+      undefined,
+      undefined,
+      signal,
+    );
+    for (const operation of stored.results) {
+      if (wanted.has(operation.id)) {
+        found.add(operation.id);
+      }
+    }
+
+    return found;
+  }
+
+  async getOperationsByIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Operation[]> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+    if (opIds.length === 0) {
+      return [];
+    }
+
+    const wanted = new Set(opIds);
+    const stored = await this.getSince(
+      documentId,
+      scope,
+      branch,
+      -1,
+      undefined,
+      undefined,
+      signal,
+    );
+    const latest = new Map<string, Operation>();
+    for (const operation of stored.results) {
+      if (wanted.has(operation.id)) {
+        latest.set(operation.id, operation);
+      }
+    }
+    return [...latest.values()];
+  }
+
   private serializeOperation(op: StoredOperation): StoredOperation {
     return {
       id: op.id,

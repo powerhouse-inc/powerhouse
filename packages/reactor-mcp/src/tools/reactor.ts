@@ -11,7 +11,10 @@ import type {
   DocumentModelModule,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { createAction } from "@powerhousedao/shared/document-model";
+import {
+  createAction,
+  withSignaturePolicy,
+} from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
 import { toolWithCallback, validateDocumentModelAction } from "./utils.js";
@@ -375,7 +378,10 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
             `Document model for type '${params.documentType}' not found`,
           );
         }
-        const document = module.utils.createDocument();
+        const document = withSignaturePolicy(
+          module.utils.createDocument(),
+          await client.getCreateSignaturePolicy(),
+        );
         if (params.name) {
           document.header.name = params.name;
         }

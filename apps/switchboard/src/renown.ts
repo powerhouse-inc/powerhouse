@@ -1,13 +1,19 @@
-import type { SignerConfig } from "@powerhousedao/reactor";
+import type { FactorySpec, SignerConfig } from "@powerhousedao/reactor";
 import {
-  createSignatureVerifier,
+  createRenownTrustPolicy,
+  DEFAULT_KEYPAIR_PATH,
   DEFAULT_RENOWN_URL,
   NodeKeyStorage,
   RenownBuilder,
   RenownCryptoBuilder,
+  resolveSwitchboardEndpoint,
   type IRenown,
+  type RenownTrustPolicyOptions,
+  type SwitchboardRequestFn,
 } from "@renown/sdk/node";
 import { childLogger } from "document-model";
+import { createRequire } from "node:module";
+import { resolve } from "node:path";
 
 const logger = childLogger(["switchboard", "renown"]);
 
@@ -70,14 +76,135 @@ export async function initRenown(
  * Get the signer config for the given renown instance.
  *
  * @param renown - The renown instance
- * @param requireSignature - If true, unsigned actions are rejected
+ * @param keypairPath - Where `initRenown` loaded the key from
  */
 export function getRenownSignerConfig(
   renown: IRenown,
-  requireSignature?: boolean,
+  keypairPath?: string,
 ): SignerConfig {
   return {
     signer: renown.signer,
-    verifier: createSignatureVerifier(requireSignature),
+    workerSigner: getRenownWorkerSignerSpec(renown, keypairPath),
+  };
+}
+
+/**
+ * What a pooled executor worker imports to sign as this switchboard: it
+ * reloads the key `initRenown` stored, and takes the user known at boot.
+ */
+export function getRenownWorkerSignerSpec(
+  renown: IRenown,
+  keypairPath?: string,
+): FactorySpec {
+  const { signer } = renown;
+  const user = signer.user;
+  return {
+    module: {
+      filePath: createRequire(import.meta.url).resolve("@renown/sdk/node"),
+      exportName: "createNodeRenownSigner",
+    },
+    initArgs: {
+      appName: signer.app?.name ?? "switchboard",
+      keypairPath: resolve(keypairPath ?? DEFAULT_KEYPAIR_PATH),
+      ...(signer.app?.key ? { did: signer.app.key } : {}),
+      ...(user
+        ? {
+            user: {
+              address: user.address,
+              networkId: user.networkId,
+              chainId: user.chainId,
+            },
+          }
+        : {}),
+    },
+  };
+}
+
+/** Where switchboard reads the credentials binding keys to wallets. */
+export type RenownTrustSource =
+  | { source: "remote"; renownUrl?: string; switchboardUrl?: string }
+  | { source: "self"; request: SwitchboardRequestFn };
+
+/**
+ * Admits a key as a signer for an address a Renown credential binds it to; a
+ * `self` source has no worker spec. In process, the switchboard's own key is
+ * matched against its current user; the worker spec carries the user known now.
+ */
+export async function getRenownTrustPolicyConfig(
+  trustSource: RenownTrustSource,
+  renown: IRenown | null,
+): Promise<Pick<SignerConfig, "trustPolicy" | "workerTrustPolicy">> {
+  const ownSigner = renown?.signer;
+  if (trustSource.source === "self") {
+    return {
+      trustPolicy: createRenownTrustPolicy({
+        switchboard: trustSource.request,
+        ownSigner,
+      }),
+    };
+  }
+
+  const switchboardUrl = await resolveSwitchboardEndpoint({
+    switchboardUrl: trustSource.switchboardUrl,
+    baseUrl: trustSource.renownUrl,
+  });
+  const options = {
+    ...(switchboardUrl ? { switchboard: switchboardUrl } : {}),
+    ...(trustSource.renownUrl ? { renownUrl: trustSource.renownUrl } : {}),
+  } satisfies RenownTrustPolicyOptions;
+  const self = ownIdentity(renown);
+  return {
+    trustPolicy: createRenownTrustPolicy({ ...options, ownSigner }),
+    workerTrustPolicy: {
+      module: {
+        filePath: createRequire(import.meta.url).resolve("@renown/sdk/node"),
+        exportName: "createRenownTrustPolicy",
+      },
+      initArgs: { ...options, ...(self ? { self } : {}) },
+    },
+  };
+}
+
+/**
+ * Fails the boot when pooled workers would refuse every signed write the
+ * in-process executor accepts: a `self` Renown source gives workers no trust
+ * policy spec, so under authEnforcement they apply the default.
+ */
+export function assertWorkerTrustPolicy(config: {
+  workers: number;
+  authEnforcement: boolean;
+  renownSource: "self" | "remote";
+}): void {
+  if (
+    config.workers > 0 &&
+    config.authEnforcement &&
+    config.renownSource === "self"
+  ) {
+    throw new Error(
+      "The executor worker pool (REACTOR_WORKERS) cannot verify signers when " +
+        "REACTOR_AUTH_ENFORCEMENT is on and Renown credentials are read from " +
+        'this switchboard ("self" via auth.renown.source or RENOWN_SOURCE): ' +
+        "pooled workers have no trust policy and would refuse every signed " +
+        "write. Set RENOWN_SOURCE=remote, or disable the worker pool " +
+        "(REACTOR_WORKERS=0).",
+    );
+  }
+}
+
+function ownIdentity(
+  renown: IRenown | null,
+): RenownTrustPolicyOptions["self"] | undefined {
+  const key = renown?.signer.app?.key;
+  if (!key) {
+    return undefined;
+  }
+  const user = renown.signer.user;
+  return {
+    key,
+    user: {
+      address: user?.address ?? "",
+      networkId: user?.networkId ?? "",
+      chainId: user?.chainId ?? 0,
+    },
   };
 }

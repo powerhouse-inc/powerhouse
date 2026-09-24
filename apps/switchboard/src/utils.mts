@@ -8,6 +8,24 @@ import {
   driveCreateState,
 } from "@powerhousedao/shared/document-drive";
 import type { DriveInput } from "@powerhousedao/shared/document-drive";
+import {
+  withSignaturePolicy,
+  type PHDocument,
+} from "@powerhousedao/shared/document-model";
+
+/**
+ * A configured id pins the drive, and only a legacy drive can take a chosen
+ * id; otherwise the client's creation default applies.
+ */
+async function underCreatePolicy<TDocument extends PHDocument>(
+  client: IReactorClient,
+  document: TDocument,
+  id: string | undefined,
+): Promise<TDocument> {
+  return id
+    ? withSignaturePolicy(document, "legacy", { id })
+    : withSignaturePolicy(document, await client.getCreateSignaturePolicy());
+}
 
 export async function addDefaultDrive(
   client: IReactorClient,
@@ -37,7 +55,7 @@ export async function addDefaultDrive(
   }
 
   const { global } = driveCreateState();
-  const document = driveCreateDocument({
+  const created = driveCreateDocument({
     global: {
       ...global,
       name: drive.global.name,
@@ -51,9 +69,7 @@ export async function addDefaultDrive(
     },
   });
 
-  if (drive.id && drive.id.length > 0) {
-    document.header.id = drive.id;
-  }
+  const document = await underCreatePolicy(client, created, drive.id);
   if (drive.slug && drive.slug.length > 0) {
     document.header.slug = drive.slug;
   }
@@ -102,7 +118,7 @@ export async function addDefaultReactorDrive(
   }
 
   const { global, local } = reactorDriveCreateState();
-  const document = reactorDriveCreateDocument({
+  const created = reactorDriveCreateDocument({
     global: {
       ...global,
       name: drive.global.name,
@@ -115,9 +131,7 @@ export async function addDefaultReactorDrive(
     },
   });
 
-  if (drive.id && drive.id.length > 0) {
-    document.header.id = drive.id;
-  }
+  const document = await underCreatePolicy(client, created, drive.id);
   if (drive.slug && drive.slug.length > 0) {
     document.header.slug = drive.slug;
   }

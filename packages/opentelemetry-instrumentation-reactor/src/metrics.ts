@@ -153,6 +153,13 @@ export function createMetrics() {
         unit: "{operation}",
       },
     ),
+
+    // Signature metrics
+    signatureRefusals: meter.createCounter("reactor.signature.refusals", {
+      description:
+        "Writes that failed signature admission, refused or (in log mode) admitted",
+      unit: "{operation}",
+    }),
   };
 }
 

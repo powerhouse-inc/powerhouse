@@ -438,6 +438,121 @@ describe("RemoteDocumentController", () => {
       expect(actions[0].context!.signer!.app!.name).toBe("test-app");
       expect(actions[0].context!.signer!.signatures).toHaveLength(1);
     });
+
+    it("signs for the remote's document id and the configured branch", async () => {
+      const mockSigner = {
+        user: { address: "0x123", networkId: "eip155:1", chainId: 1 },
+        app: { name: "test-app", key: "key-123" },
+        publicKey: {} as CryptoKey,
+        sign: vi.fn(),
+        verify: vi.fn(),
+        signAction: vi.fn().mockResolvedValue(["", "", "", "", "sig-123"]),
+      };
+
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        {
+          client: createMockClient(),
+          documentId: "my-slug",
+          branch: "draft",
+          mode: "batch",
+          signer: mockSigner,
+        },
+      );
+
+      controller.setName({ name: "Signed" });
+      await controller.push();
+
+      expect(mockSigner.signAction.mock.calls[0][1]).toEqual({
+        documentId: "doc-1",
+        branch: "draft",
+      });
+    });
+
+    function slugSigner() {
+      return {
+        user: { address: "0x123", networkId: "eip155:1", chainId: 1 },
+        app: { name: "test-app", key: "key-123" },
+        publicKey: {} as CryptoKey,
+        sign: vi.fn(),
+        verify: vi.fn(),
+        signAction: vi.fn().mockResolvedValue(["", "", "", "", "sig-123"]),
+      };
+    }
+
+    it("resolves a slug to the remote's id before signing, without a pull", async () => {
+      const mockSigner = slugSigner();
+      const client = createMockClient();
+      const controller = RemoteDocumentController.from(
+        new DocumentModelController(),
+        {
+          client,
+          documentId: "my-slug",
+          mode: "batch",
+          signer: mockSigner,
+        },
+      );
+
+      controller.setName({ name: "Signed" });
+      await controller.push();
+
+      expect(client.GetDocument).toHaveBeenCalledWith(
+        expect.objectContaining({ identifier: "my-slug" }),
+      );
+      expect(mockSigner.signAction.mock.calls[0][1]).toEqual({
+        documentId: "doc-1",
+        branch: "main",
+      });
+    });
+
+    it("fails the push without signing when the identifier does not resolve", async () => {
+      const mockSigner = slugSigner();
+      const client = createMockClient({
+        GetDocument: vi.fn().mockResolvedValue({ document: null }),
+      });
+      const controller = RemoteDocumentController.from(
+        new DocumentModelController(),
+        {
+          client,
+          documentId: "missing-slug",
+          mode: "batch",
+          signer: mockSigner,
+        },
+      );
+
+      controller.setName({ name: "Signed" });
+
+      await expect(controller.push()).rejects.toThrow(
+        'Cannot sign for "missing-slug": no document with that identifier on the remote',
+      );
+      expect(mockSigner.signAction).not.toHaveBeenCalled();
+      expect(client.MutateDocument).not.toHaveBeenCalled();
+      expect(controller.status.pendingActionCount).toBe(1);
+    });
+
+    it("fails the push without signing when the lookup throws", async () => {
+      const mockSigner = slugSigner();
+      const client = createMockClient({
+        GetDocument: vi.fn().mockRejectedValue(new Error("offline")),
+      });
+      const controller = RemoteDocumentController.from(
+        new DocumentModelController(),
+        {
+          client,
+          documentId: "my-slug",
+          mode: "batch",
+          signer: mockSigner,
+        },
+      );
+
+      controller.setName({ name: "Signed" });
+
+      await expect(controller.push()).rejects.toThrow(
+        'Cannot sign for "my-slug": its document id could not be resolved on the remote',
+      );
+      expect(mockSigner.signAction).not.toHaveBeenCalled();
+      expect(controller.status.pendingActionCount).toBe(1);
+    });
   });
 
   describe("streaming mode", () => {

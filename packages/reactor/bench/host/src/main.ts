@@ -22,17 +22,17 @@ import {
 } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import type {
   Action,
+  ActionSigningTarget,
   ISigner,
   Signature,
 } from "@powerhousedao/shared/document-model";
+import { actionSignerIdentity } from "@powerhousedao/shared/document-model";
 import {
   driveDocumentModelModule,
   setDriveName,
 } from "@powerhousedao/shared/document-drive";
 import { Kysely, PostgresDialect } from "kysely";
 import http from "node:http";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import pg from "pg";
 import { makeBenchSigner } from "./keypair.js";
 
@@ -64,8 +64,6 @@ const N_PROJECTION_SHARDS = parseInt(
   10,
 );
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 type State = {
   module: InProcessReactorModule;
   instrumentation: ReactorInstrumentation;
@@ -73,9 +71,7 @@ type State = {
 };
 
 async function buildReactor(signer: ISigner): Promise<State> {
-  const builder = new ReactorBuilder().withSignatureVerifier(() =>
-    Promise.resolve(true),
-  );
+  const builder = new ReactorBuilder();
 
   const hostPool = new pg.Pool({
     host: DB_HOST,
@@ -107,7 +103,6 @@ async function buildReactor(signer: ISigner): Promise<State> {
   ]);
 
   if (REACTOR_WORKERS > 0) {
-    const verifierFile = path.resolve(__dirname, "./signature-verifier.mjs");
     builder.withWorkerPool({
       numWorkers: REACTOR_WORKERS,
       db: {
@@ -119,12 +114,6 @@ async function buildReactor(signer: ISigner): Promise<State> {
         applicationName: "reactor-bench-worker",
         poolSize: DB_POOL_SIZE_WORKER,
         connectionTimeoutMillis: DB_ACQUIRE_TIMEOUT_MS,
-      },
-      verifier: {
-        module: {
-          filePath: verifierFile,
-          exportName: "createVerifier",
-        },
       },
     });
     if (N_PROJECTION_SHARDS > 0) {
@@ -146,24 +135,14 @@ async function buildReactor(signer: ISigner): Promise<State> {
 async function signAction<A extends Action>(
   signer: ISigner,
   action: A,
+  target: ActionSigningTarget,
 ): Promise<A> {
-  const signature: Signature = await signer.signAction(action);
+  const signature: Signature = await signer.signAction(action, target);
   return {
     ...action,
     context: {
       ...(action.context ?? {}),
-      signer: {
-        user: {
-          address: signer.user?.address ?? "",
-          networkId: signer.user?.networkId ?? "",
-          chainId: signer.user?.chainId ?? 0,
-        },
-        app: {
-          name: signer.app?.name ?? "reactor-bench",
-          key: signer.app?.key ?? "",
-        },
-        signatures: [signature],
-      },
+      signer: { ...actionSignerIdentity(signer), signatures: [signature] },
     },
   } as A;
 }
@@ -244,7 +223,10 @@ async function handle(
       return;
     }
     const action = setDriveName({ name: body.name ?? `lt-${Date.now()}` });
-    const signed = await signAction(state.signer, action);
+    const signed = await signAction(state.signer, action, {
+      documentId: body.driveId,
+      branch: "main",
+    });
     const info = await state.module.reactor.execute(body.driveId, "main", [
       signed,
     ]);
