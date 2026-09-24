@@ -1905,7 +1905,10 @@ export class SimpleJobExecutor implements IJobExecutor {
       const result = await this.processActions(
         tail.map((operation, i) => ({
           action: operation.action,
-          skip: i === 0 ? retractionSkip(nextIndex, tail[0].index) : 0,
+          skip:
+            i === 0
+              ? retractionSkip(nextIndex, tail[0].index - tail[0].skip)
+              : 0,
           sourceRemote: "",
           deniedReason: reevaluated[firstChange + i],
         })),
