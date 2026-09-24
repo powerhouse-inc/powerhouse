@@ -121,7 +121,7 @@ describe("synthesized operations", () => {
 
   /** Creates a document, renames it, and undoes the rename. */
   async function undoRename(module: InProcessReactorModule): Promise<string> {
-    const document = createDocModelDocument();
+    const document = createDocModelDocument({ signaturePolicy: "legacy" });
     const documentId = document.header.id;
     const { reactor } = module;
     expect((await settle(reactor, await reactor.create(document))).status).toBe(
@@ -244,7 +244,7 @@ describe("synthesized operations", () => {
   it("does not re-sign a NOOP the client submitted signed", async () => {
     const targets: unknown[] = [];
     const module = await build(reactorKey.asISigner(targets as never));
-    const document = createDocModelDocument();
+    const document = createDocModelDocument({ signaturePolicy: "legacy" });
     const documentId = document.header.id;
     const { reactor } = module;
     await settle(reactor, await reactor.create(document));
@@ -266,7 +266,7 @@ describe("synthesized operations", () => {
       documentId: string;
       undone: Action;
     }> {
-      const document = createDocModelDocument();
+      const document = createDocModelDocument({ signaturePolicy: "legacy" });
       const documentId = document.header.id;
       const { reactor } = module;
       await settle(reactor, await reactor.create(document));

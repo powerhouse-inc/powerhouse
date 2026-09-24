@@ -19,9 +19,10 @@ import { addFile as addFileAction } from "@powerhousedao/shared/document-drive";
 import {
   actions,
   createCopyHeader,
-  createPresignedHeader,
   generateId,
   normalizeDocumentModelVersion,
+  requestedSignaturePolicy,
+  withSignaturePolicy,
   type Action,
   type CreateDocumentActionInput,
   type ISigner,
@@ -62,20 +63,20 @@ export class DriveClient implements IDriveClient {
     signal?: AbortSignal,
   ): Promise<DocumentDriveDocument> {
     this.logger.verbose("drives.create(@input)", input);
-    const driveDoc = driveCreateDocument({
-      global: {
-        name: input.global.name || "",
-        icon: input.global.icon ?? null,
-        nodes: [],
-      },
-    });
-    if (input.protocolVersions) {
-      driveDoc.header = createPresignedHeader(
-        undefined,
-        driveDoc.header.documentType,
-        { ...driveDoc.header.protocolVersions, ...input.protocolVersions },
-      );
-    }
+    const driveDoc = withSignaturePolicy(
+      driveCreateDocument({
+        global: {
+          name: input.global.name || "",
+          icon: input.global.icon ?? null,
+          nodes: [],
+        },
+      }),
+      requestedSignaturePolicy(
+        input,
+        await this.client.getCreateSignaturePolicy(),
+      ),
+      { protocolVersions: input.protocolVersions },
+    );
     if (input.preferredEditor) {
       driveDoc.header.meta = {
         ...driveDoc.header.meta,
@@ -402,6 +403,7 @@ export class DriveClient implements IDriveClient {
       resolvedNamesByTargetId.set(entry.targetId, resolved);
     }
 
+    const policy = await this.client.getCreateSignaturePolicy();
     for (const entry of copyPlan) {
       const node = drive.state.global.nodes.find((n) => n.id === entry.srcId);
       if (!node || !isFileNode(node)) continue;
@@ -413,7 +415,7 @@ export class DriveClient implements IDriveClient {
       // already current.
       const duplicated: PHDocument = {
         ...srcDoc,
-        header: createCopyHeader(srcDoc.header, entry.targetId),
+        header: createCopyHeader(srcDoc.header, entry.targetId, policy),
         initialState: srcDoc.state,
         operations: {},
       };

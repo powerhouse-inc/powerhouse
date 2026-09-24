@@ -7,10 +7,12 @@ import type {
   Operation,
   OperationContext,
   PHDocument,
+  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
   deriveOperationId,
   generateId,
+  withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
@@ -519,13 +521,16 @@ export function createDocModelDocument(
     slug?: string;
     documentType?: string;
     state?: any;
+    signaturePolicy?: SignaturePolicy;
   } = {},
 ): PHDocument {
-  const baseDocument = documentModelDocumentModelModule.utils.createDocument();
+  // A fixed id cannot be content-addressed, so it defaults to legacy.
+  const policy = overrides.signaturePolicy ?? (overrides.id ? "legacy" : null);
+  const created = documentModelDocumentModelModule.utils.createDocument();
+  const baseDocument = policy
+    ? withSignaturePolicy(created, policy, { id: overrides.id })
+    : created;
 
-  if (overrides.id) {
-    baseDocument.header.id = overrides.id;
-  }
   if (overrides.slug) {
     baseDocument.header.slug = overrides.slug;
   }

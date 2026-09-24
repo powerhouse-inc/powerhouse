@@ -10,6 +10,7 @@ import type {
   DocumentModelModule,
   Operation,
   PHDocument,
+  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 
 import type {
@@ -67,6 +68,8 @@ export type CreateDocumentOptions = {
   documentModelVersion?: number;
   /** Merged over the model's defaults; `signature: 2` makes it v2-required. */
   protocolVersions?: { [protocol: string]: number };
+  /** Overrides the client's creation default for this document. */
+  signaturePolicy?: SignaturePolicy;
 };
 
 /** Retries taken when an upgrade conflicts with concurrent edits. */
@@ -466,7 +469,14 @@ export interface IReactorClient {
   ): Promise<ActionEvaluations>;
 
   /**
-   * Creates a document and waits for completion
+   * The signature policy this client gives the documents it creates when the
+   * caller does not choose one. It never changes an existing document.
+   */
+  getCreateSignaturePolicy(): Promise<SignaturePolicy>;
+
+  /**
+   * Creates a document and waits for completion. The document keeps the
+   * signature policy and id its header carries.
    *
    * @param document - Document with optional id, slug, parent, model type, and initial state
    * @param parentIdentifier - Optional "id" or "slug" of parent document

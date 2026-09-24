@@ -1,8 +1,10 @@
+import { withSignaturePolicy } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule } from "../../src/core/types.js";
 import { JobStatus } from "../../src/shared/types.js";
+import { TestP256Signer } from "../utils/p256-signer.js";
 
 /**
  * Mechanism harness for the .phd re-import id-collision defect.
@@ -66,9 +68,10 @@ describe("DEFECT: DocumentSnapshot read model diverges from the Operation store"
     const module = await boot();
 
     const document = documentModelDocumentModelModule.utils.createDocument();
+    const signer = (await TestP256Signer.create()).asISigner();
     const created = await waitForTerminal(
       module,
-      (await module.reactor.create(document)).id,
+      (await module.reactor.create(document, signer)).id,
     );
     expect(created.status).toBe(JobStatus.READ_READY);
 
@@ -104,7 +107,11 @@ describe("DEFECT: DocumentSnapshot read model diverges from the Operation store"
   it("DEFECT: rejects a CREATE_DOCUMENT that reuses the id the read model claims is free", async () => {
     const module = await boot();
 
-    const original = documentModelDocumentModelModule.utils.createDocument();
+    // Only a legacy id can be reused; a v2-required id is content-addressed.
+    const original = withSignaturePolicy(
+      documentModelDocumentModelModule.utils.createDocument(),
+      "legacy",
+    );
     const created = await waitForTerminal(
       module,
       (await module.reactor.create(original)).id,
@@ -127,7 +134,10 @@ describe("DEFECT: DocumentSnapshot read model diverges from the Operation store"
     }
     expect(duplicateId).toBe(false);
 
-    const imported = documentModelDocumentModelModule.utils.createDocument();
+    const imported = withSignaturePolicy(
+      documentModelDocumentModelModule.utils.createDocument(),
+      "legacy",
+    );
     imported.header.id = duplicateId ? imported.header.id : documentId;
     imported.header.name = "imported copy";
     expect(imported.header.id).toBe(documentId);

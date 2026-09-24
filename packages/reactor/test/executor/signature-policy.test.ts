@@ -270,7 +270,7 @@ describe.each([
       const { module, refusals } = await build();
       const { reactor } = module;
       const v2 = v2Document();
-      const legacy = createDocModelDocument();
+      const legacy = createDocModelDocument({ signaturePolicy: "legacy" });
       expect((await create(reactor, v2, clientSigner)).status).toBe(
         JobStatus.READ_READY,
       );
@@ -395,7 +395,7 @@ describe.each([
     it("accepts unsigned, empty-key, legacy tuples and PRUNE", async () => {
       const { module, refusals } = await build();
       const { reactor } = module;
-      const document = createDocModelDocument();
+      const document = createDocModelDocument({ signaturePolicy: "legacy" });
       const documentId = document.header.id;
       expect((await create(reactor, document)).status).toBe(
         JobStatus.READ_READY,

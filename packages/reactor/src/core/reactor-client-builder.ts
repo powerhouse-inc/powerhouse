@@ -1,4 +1,8 @@
-import type { ISigner } from "@powerhousedao/shared/document-model";
+import type {
+  ISigner,
+  SignaturePolicy,
+} from "@powerhousedao/shared/document-model";
+import { DEFAULT_SIGNATURE_POLICY } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
 import type { ActionEvaluationConfig } from "../client/reactor-client.js";
@@ -40,6 +44,7 @@ export class ReactorClientBuilder {
   private workerSigner?: SignerConfig["workerSigner"];
   private trustPolicy?: SignerConfig["trustPolicy"];
   private workerTrustPolicy?: SignerConfig["workerTrustPolicy"];
+  private createSignaturePolicy: SignaturePolicy = DEFAULT_SIGNATURE_POLICY;
   private subscriptionManager?: IReactorSubscriptionManager;
   private jobAwaiter?: IJobAwaiter;
   private documentModelLoader?: IDocumentModelLoader;
@@ -101,6 +106,16 @@ export class ReactorClientBuilder {
     } else {
       this.signer = config;
     }
+    return this;
+  }
+
+  /**
+   * What the client creates new documents as when a call does not say:
+   * `v2-required` (the default) or `legacy`, for a fleet with peers that
+   * predate v2-required documents. Existing documents keep their policy.
+   */
+  public withCreateSignaturePolicy(policy: SignaturePolicy): this {
+    this.createSignaturePolicy = policy;
     return this;
   }
 
@@ -262,6 +277,7 @@ export class ReactorClientBuilder {
       this.readGate ??
         this.resolveReadGate(reactorModule, documentView, decisionModel),
       this.resolveActionEvaluation(reactorModule, decisionModel),
+      this.createSignaturePolicy,
     );
 
     return {

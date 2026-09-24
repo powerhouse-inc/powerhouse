@@ -6,13 +6,16 @@ import type {
   ISigner,
   Operation,
   PHDocument,
+  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
   actions,
-  createPresignedHeader,
+  DEFAULT_SIGNATURE_POLICY,
   DowngradeNotSupportedError,
   normalizeDocumentModelVersion,
+  requestedSignaturePolicy,
   UnsupportedDocumentModelVersionError,
+  withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import {
@@ -177,6 +180,7 @@ export class ReactorClient implements IReactorClient {
   private documentView: IDocumentView;
   private readGate: IReadGate;
   private actionEvaluation: ActionEvaluationConfig | undefined;
+  private readonly createSignaturePolicy: SignaturePolicy;
 
   readonly drives: IDriveClient;
 
@@ -190,6 +194,7 @@ export class ReactorClient implements IReactorClient {
     documentView: IDocumentView,
     readGate: IReadGate = new BareReadGate(),
     actionEvaluation?: ActionEvaluationConfig,
+    createSignaturePolicy: SignaturePolicy = DEFAULT_SIGNATURE_POLICY,
   ) {
     this.logger = logger;
     this.reactor = reactor;
@@ -200,6 +205,7 @@ export class ReactorClient implements IReactorClient {
     this.documentView = documentView;
     this.readGate = readGate;
     this.actionEvaluation = actionEvaluation;
+    this.createSignaturePolicy = createSignaturePolicy;
     this.drives = new DriveClient(this, logger, reactor, signer);
     this.logger.verbose("ReactorClient initialized");
   }
@@ -960,6 +966,10 @@ export class ReactorClient implements IReactorClient {
     };
   }
 
+  getCreateSignaturePolicy(): Promise<SignaturePolicy> {
+    return Promise.resolve(this.createSignaturePolicy);
+  }
+
   /**
    * Creates a document and waits for completion
    */
@@ -1116,17 +1126,14 @@ export class ReactorClient implements IReactorClient {
       }
     }
 
-    const document = module.utils.createDocument();
+    const document = withSignaturePolicy(
+      module.utils.createDocument(),
+      requestedSignaturePolicy(options, this.createSignaturePolicy),
+      { protocolVersions: options?.protocolVersions },
+    );
     document.state.document.version = normalizeDocumentModelVersion(
       module.version,
     );
-    if (options?.protocolVersions) {
-      document.header = createPresignedHeader(
-        undefined,
-        document.header.documentType,
-        { ...document.header.protocolVersions, ...options.protocolVersions },
-      );
-    }
 
     return this.create<TDocument>(document, options?.parentIdentifier, signal);
   }

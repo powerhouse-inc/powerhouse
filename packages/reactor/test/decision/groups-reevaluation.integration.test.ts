@@ -15,6 +15,7 @@ import {
   generateId,
   groupDocumentType,
   initializeAuth,
+  protocolVersionsFor,
   sortOperations,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
@@ -163,6 +164,7 @@ describe("group membership re-evaluation across documents", () => {
       groupCreateState,
       undefined,
       groupDocumentType,
+      protocolVersionsFor("legacy"),
     );
     const groupId = groupDoc.header.id;
     await settle((await reactor.create(groupDoc)).id);
@@ -249,6 +251,7 @@ describe("group membership re-evaluation across documents", () => {
       groupCreateState,
       undefined,
       groupDocumentType,
+      protocolVersionsFor("legacy"),
     );
     const groupId = groupDoc.header.id;
     await settle((await reactor.create(groupDoc)).id);

@@ -54,6 +54,7 @@ describe("DriveClient Integration Tests", () => {
       .withEventBus(eventBus);
     client = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
+      .withSigner((await TestP256Signer.create()).asISigner())
       .build();
 
     reactor = (client as any).reactor;
@@ -381,11 +382,24 @@ describe("DriveClient Integration Tests", () => {
       expectV2Required(document.header);
     });
 
-    it("keeps creating legacy documents by default", async () => {
-      const drive = await signed.drives.create({ global: { name: "Legacy" } });
+    it("creates v2-required documents by default", async () => {
+      const drive = await signed.drives.create({ global: { name: "Default" } });
+      expectV2Required(drive.header);
+      const document = await signed.createEmpty(
+        documentModelDocumentModelModule.documentModel.global.id,
+      );
+      expectV2Required(document.header);
+    });
+
+    it("creates legacy documents when asked", async () => {
+      const drive = await signed.drives.create({
+        global: { name: "Legacy" },
+        signaturePolicy: "legacy",
+      });
       expect(signaturePolicyOf(drive.header)).toBe("legacy");
       const document = await signed.createEmpty(
         documentModelDocumentModelModule.documentModel.global.id,
+        { signaturePolicy: "legacy" },
       );
       expect(signaturePolicyOf(document.header)).toBe("legacy");
     });

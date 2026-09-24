@@ -15,6 +15,7 @@ import {
   generateId,
   groupDocumentType,
   initializeAuth,
+  protocolVersionsFor,
   sortOperations,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
@@ -184,6 +185,7 @@ describe("group convergence across replicas", () => {
       groupCreateState,
       undefined,
       groupDocumentType,
+      protocolVersionsFor("legacy"),
     );
     const groupId = groupDoc.header.id;
     await settle(origin, (await origin.create(groupDoc)).id);

@@ -81,7 +81,8 @@ describe("signature admission", () => {
       },
     );
 
-    const document = createDocModelDocument();
+    // Legacy, so every scheme is admissible; signature-policy covers v2-required.
+    const document = createDocModelDocument({ signaturePolicy: "legacy" });
     docId = document.header.id;
     expect((await settle(await module.reactor.create(document))).status).toBe(
       JobStatus.READ_READY,
@@ -285,7 +286,7 @@ describe("signature admission", () => {
 
     it("verifies ADD_RELATIONSHIP against the document it is written to", async () => {
       await build("enforce");
-      const other = createDocModelDocument();
+      const other = createDocModelDocument({ signaturePolicy: "legacy" });
       expect((await settle(await module!.reactor.create(other))).status).toBe(
         JobStatus.READ_READY,
       );
