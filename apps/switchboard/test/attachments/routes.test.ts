@@ -5,7 +5,7 @@ import {
 } from "@powerhousedao/reactor-attachments";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
 import {
   validateHeaderValue,
   type IncomingMessage,
@@ -84,7 +84,16 @@ function makeRes(): CapturedRes {
     getHeader(name: string) {
       return headers[name.toLowerCase()];
     },
+    removeHeader(name: string) {
+      delete headers[name.toLowerCase()];
+    },
     _done: done,
+  });
+  // Like ServerResponse: headers count as sent once the first byte is written.
+  Object.defineProperty(writable, "headersSent", {
+    get(): boolean {
+      return chunks.length > 0;
+    },
   });
   Object.defineProperty(writable, "_body", {
     get(): Buffer {
@@ -672,6 +681,101 @@ describe("attachment routes", () => {
       const bodyText = res._body.toString("utf8");
       expect(JSON.parse(bodyText)).toEqual({ error: "Internal error" });
       expect(bodyText).not.toContain(secret);
+    } finally {
+      attachments.store.get = originalGet;
+    }
+  });
+
+  async function uploadText(payload: string): Promise<string> {
+    const reserveRes = makeRes();
+    await makeReserveHandler(attachments)(
+      makeReq({
+        method: "POST",
+        body: JSON.stringify({ mimeType: "text/plain", fileName: "a.txt" }),
+      }),
+      reserveRes,
+    );
+    await waitFor(reserveRes);
+    const { reservationId } = JSON.parse(reserveRes._body.toString("utf8")) as {
+      reservationId: string;
+    };
+    const uploadRes = makeRes();
+    await makeUploadHandler(attachments)(
+      makeReq({ method: "PUT", params: { reservationId }, body: payload }),
+      uploadRes,
+    );
+    await waitFor(uploadRes);
+    return (JSON.parse(uploadRes._body.toString("utf8")) as { hash: string })
+      .hash;
+  }
+
+  // The blob store is a directory; its metadata lives in the database. When
+  // the directory is lost (a pod-local tmpdir after a restart) the metadata
+  // still says "available". Reading such a blob used to raise an unhandled
+  // stream error that took the whole process down.
+  it("GET download returns 404 when the blob file is missing from disk", async () => {
+    const hash = await uploadText("gone");
+    const files = await readdir(storagePath, {
+      recursive: true,
+      withFileTypes: true,
+    });
+    const blobs = files.filter((f) => f.isFile() && f.name.startsWith(hash));
+    expect(blobs.length).toBeGreaterThan(0);
+    for (const f of blobs) await rm(join(f.parentPath, f.name));
+
+    const res = makeRes();
+    await makeDownloadHandler(attachments)(
+      makeReq({ method: "GET", params: { hash } }),
+      res,
+    );
+    await waitFor(res);
+
+    expect(res.statusCode).toBe(404);
+    expect(JSON.parse(res._body.toString("utf8"))).toEqual({
+      error: "Attachment not found",
+    });
+    // The download headers were set before the read failed; none may leak
+    // onto the JSON error.
+    expect(res.getHeader("content-length")).toBeUndefined();
+    expect(res.getHeader("content-disposition")).toBeUndefined();
+    expect(res.getHeader("attachment-metadata")).toBeUndefined();
+  });
+
+  it("GET download aborts the response when the blob fails mid-stream", async () => {
+    const hash = await uploadText("partial");
+    const originalGet = attachments.store.get.bind(attachments.store);
+    const real = await originalGet(hash as never);
+    let sentFirst = false;
+    attachments.store.get = () =>
+      Promise.resolve({
+        header: real.header,
+        // First chunk flows to the response; the read fails only after it
+        // has been written, the way a disk error partway through a file would.
+        body: new ReadableStream<Uint8Array>({
+          async pull(controller) {
+            if (!sentFirst) {
+              sentFirst = true;
+              controller.enqueue(new TextEncoder().encode("part"));
+              return;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 20));
+            controller.error(new Error("EIO: read failed"));
+          },
+        }) as never,
+      });
+    try {
+      const res = makeRes();
+      const closed = new Promise<void>((resolve) => res.once("close", resolve));
+      await makeDownloadHandler(attachments)(
+        makeReq({ method: "GET", params: { hash } }),
+        res,
+      );
+      await closed;
+      // Bytes were already on the wire: the only honest signal left is to
+      // cut the connection, never to finish it as if it were complete.
+      expect(res._body.toString("utf8")).toBe("part");
+      expect(res.destroyed).toBe(true);
+      expect(res.writableFinished).toBe(false);
     } finally {
       attachments.store.get = originalGet;
     }
