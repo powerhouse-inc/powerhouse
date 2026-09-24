@@ -22,10 +22,8 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-  PieceWorker,
-  PieceWorkerError,
-} from "../../../src/pieces/activepieces/worker/host.js";
+import { PieceWorker } from "../../../src/pieces/activepieces/worker/host.js";
+import type { CheckConnectionOutcome } from "../../../src/pieces/activepieces/worker/protocol.js";
 
 const PIECE_PKG = path.resolve("../piece-paperless-ngx");
 const BUNDLE = path.join(PIECE_PKG, "dist");
@@ -213,44 +211,25 @@ describe.skipIf(!baseUrl)("paperless piece through the worker (E2E)", () => {
       bundleDir: BUNDLE,
       auth: auth(),
     });
-    const outcome = output as {
-      declared: boolean;
-      result?: {
-        name: string;
-        username: string;
-        apiVersion?: number;
-        permissions: string[];
-      };
-    };
-    expect(outcome.declared).toBe(true);
-    expect(outcome.result?.username).toBe(username);
+    const outcome = output as CheckConnectionOutcome;
+    expect(outcome).toMatchObject({ declared: true, valid: true });
     // The live server's ceiling, reached by negotiation rather than pinned.
-    expect([9, 10]).toContain(outcome.result?.apiVersion);
-    expect(outcome.result?.permissions.length).toBeGreaterThan(0);
-    expect(outcome.result?.name).toContain(`${username}@`);
+    expect(outcome.accountLabel).toMatch(
+      new RegExp(`^${username}@.+, API (9|10)\\)$`),
+    );
   });
 
-  it("classifies a bad token as a credential error across the IPC boundary", async () => {
-    let failure: unknown;
-    try {
-      await worker.checkConnection({
-        bundleDir: BUNDLE,
-        auth: {
-          type: "CUSTOM_AUTH",
-          props: { base_url: baseUrl, token: "not-a-real-token" },
-        },
-      });
-    } catch (error) {
-      failure = error;
-    }
-    expect(failure).toBeInstanceOf(PieceWorkerError);
-    // The piece's own error classification crosses the IPC boundary as data.
-    const serialized =
-      failure instanceof PieceWorkerError ? failure.serialized : undefined;
-    expect(serialized?.properties).toMatchObject({
-      category: "credential",
-      status: 401,
+  it("reports a bad token as a failed check with the credential message", async () => {
+    const { output } = await worker.checkConnection({
+      bundleDir: BUNDLE,
+      auth: {
+        type: "CUSTOM_AUTH",
+        props: { base_url: baseUrl, token: "not-a-real-token" },
+      },
     });
+    const outcome = output as CheckConnectionOutcome;
+    expect(outcome).toMatchObject({ declared: true, valid: false });
+    expect(outcome.detail).toMatch(/token was rejected/);
   }, 60_000);
 
   it("uploads a host-staged attachment and reads it back through the bridge", async () => {

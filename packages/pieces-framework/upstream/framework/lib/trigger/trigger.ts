@@ -327,5 +327,13 @@ export const createTrigger = <
         params.classification,
         params.propertyGroups,
       );
+    default: {
+      const { name, type, strategy } = params as Record<string, unknown>;
+      throw new Error(
+        type === undefined && strategy !== undefined
+          ? `createTrigger: trigger ${JSON.stringify(name)} sets \`strategy\`; the field is \`type\`, e.g. type: TriggerStrategy.POLLING`
+          : `createTrigger: trigger ${JSON.stringify(name)} has \`type\` ${JSON.stringify(type)}; set type: TriggerStrategy.POLLING or TriggerStrategy.WEBHOOK`,
+      );
+    }
   }
 };

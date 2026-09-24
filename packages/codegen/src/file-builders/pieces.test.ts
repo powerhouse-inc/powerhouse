@@ -179,6 +179,24 @@ describe("generatePiece", () => {
       readFileSync(join(dir, "pieces", "acme-crm", "index.ts"), "utf8"),
     ).toContain("auth: undefined");
   });
+
+  it.each(["secret", "custom"] as const)(
+    "puts the connection check and its label on the %s auth",
+    async (auth) => {
+      const dir = makeProject();
+      const project = buildTsMorphProject(dir);
+      await generatePiece({ pieceName: "acme-crm", auth }, project);
+      await project.save();
+
+      const piece = join(dir, "pieces", "acme-crm");
+      const authFile = readFileSync(join(piece, "lib", "auth.ts"), "utf8");
+      expect(authFile).toContain("validate: async ({ auth })");
+      expect(authFile).toContain("getConnectionIdentifier: async ({ auth })");
+      expect(readFileSync(join(piece, "index.ts"), "utf8")).toContain(
+        "auth: acmeCrmAuth",
+      );
+    },
+  );
 });
 
 // A piece is authored against a framework Activepieces pieces share, so what

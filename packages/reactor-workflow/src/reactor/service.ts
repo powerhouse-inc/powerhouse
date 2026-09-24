@@ -38,6 +38,7 @@ import {
 } from "../pieces/index.js";
 import {
   childLogger,
+  type Action,
   type ILogger,
   type OperationWithContext,
 } from "document-model";
@@ -319,18 +320,6 @@ export function collectLifecycleParentHints(
     });
   }
   return hints;
-}
-
-// A piece's checkConnection returns void | boolean |
-// { name | username | email | sub }; anything string-valued labels the account.
-function accountLabelFromCheckResult(result: unknown): string | undefined {
-  if (!result || typeof result !== "object") return undefined;
-  const record = result as Record<string, unknown>;
-  for (const key of ["name", "username", "email", "sub"]) {
-    const value = record[key];
-    if (typeof value === "string" && value !== "") return value;
-  }
-  return undefined;
 }
 
 // User-visible detail of a failed worker request; a piece error contributes only
@@ -1845,8 +1834,8 @@ export class WorkflowRuntimeService {
     });
   }
 
-  // Runs the piece's app.checkConnection (when declared) against the
-  // connection's credentials and records the outcome on the document.
+  // Runs the piece's auth.validate, then auth.getConnectionIdentifier for the
+  // account label, against the connection's credentials; records the outcome.
   async checkConnection(
     connectionId: string,
     ctx?: WorkflowCaller,
@@ -1935,7 +1924,7 @@ export class WorkflowRuntimeService {
       });
     }
 
-    // Plaintext auth crosses only into the piece worker: checkConnection is
+    // Plaintext auth crosses only into the piece worker: the auth's hooks are
     // untrusted piece code and must not run in the reactor process.
     let outcome: CheckConnectionOutcome;
     try {
@@ -1959,25 +1948,27 @@ export class WorkflowRuntimeService {
       });
     }
 
-    if (!outcome.declared) {
-      return this.recordCheckResult(document, {
-        ok: true,
-        detail: "piece declares no connection check; credentials resolved",
-        accountLabel,
-      });
-    }
-    if (outcome.result === false) {
+    if (!outcome.valid) {
       return this.recordCheckResult(document, {
         ok: false,
-        // auth.validate says why; app.checkConnection only ever says no.
         detail: outcome.detail ?? "Connection check failed",
         accountLabel,
       });
     }
+    // The label is best-effort: a failure keeps the previous one.
+    if (outcome.identifierError) {
+      this.logger.warn(
+        "Connection @id kept its label: getConnectionIdentifier failed: @detail",
+        connectionId,
+        outcome.identifierError,
+      );
+    }
     return this.recordCheckResult(document, {
       ok: true,
-      detail: null,
-      accountLabel: accountLabelFromCheckResult(outcome.result) ?? accountLabel,
+      detail: outcome.declared
+        ? null
+        : "piece declares no auth.validate; credentials resolved",
+      accountLabel: outcome.accountLabel ?? accountLabel,
     });
   }
 
@@ -2108,12 +2099,25 @@ export class WorkflowRuntimeService {
     document: ConnectionDocument,
     result: ConnectionCheckResult,
   ): Promise<ConnectionCheckResult> {
-    const action = connectionActions.recordCheckResult({
-      status: result.ok ? "OK" : "ERROR",
-      checkedAt: new Date().toISOString(),
-      error: result.ok ? undefined : (result.detail ?? undefined),
-    });
-    await this.host.reactorClient.execute(document.header.id, "main", [action]);
+    const actionList: Action[] = [
+      connectionActions.recordCheckResult({
+        status: result.ok ? "OK" : "ERROR",
+        checkedAt: new Date().toISOString(),
+        error: result.ok ? undefined : (result.detail ?? undefined),
+      }),
+    ];
+    // Stored so the connections query and the editors show it.
+    const label = result.accountLabel;
+    if (label && label !== (document.state.global.accountLabel ?? null)) {
+      actionList.push(
+        connectionActions.setAccountLabel({ accountLabel: label }),
+      );
+    }
+    await this.host.reactorClient.execute(
+      document.header.id,
+      "main",
+      actionList,
+    );
     return result;
   }
 

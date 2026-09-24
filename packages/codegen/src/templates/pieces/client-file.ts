@@ -90,7 +90,7 @@ export class ${v.pascalCaseName}Client {
     return body as T;
   }
 
-  /** The cheapest authenticated call there is; used by checkConnection. */
+  /** The cheapest authenticated call there is; the auth's validate uses it. */
   async ping(): Promise<unknown> {
     return await this.request({ path: "" });
   }

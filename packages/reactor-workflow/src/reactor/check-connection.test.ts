@@ -68,6 +68,7 @@ const PIECES = {
   refuses: { name: "@activepieces/piece-refuses", version: "1.0.0" },
   denied: { name: "@activepieces/piece-denied", version: "1.0.0" },
   env: { name: "@activepieces/piece-env", version: "1.0.0" },
+  labelThrows: { name: "@activepieces/piece-label-throws", version: "1.0.0" },
 } as const;
 
 const FIXTURE_BUNDLES: Record<keyof typeof PIECES, string> = {
@@ -75,17 +76,18 @@ const FIXTURE_BUNDLES: Record<keyof typeof PIECES, string> = {
 const app = {
   displayName: "Pass Fixture",
   actions: {},
-  checkConnection: async (ctx) => {
-    if (!ctx.auth || ctx.auth.type !== "CUSTOM_AUTH") {
-      throw new Error("fixture: unexpected auth shape");
-    }
-    if (ctx.auth.props.password !== "fixture-secret") {
-      throw new Error("fixture: secret was not resolved");
-    }
-    if (Object.keys(ctx).sort().join(",") !== "auth,server") {
-      throw new Error("fixture: validate receives auth and server only");
-    }
-    return { name: "pass-account" };
+  auth: {
+    type: "CUSTOM_AUTH",
+    validate: async (ctx) => {
+      if (ctx.auth.password !== "fixture-secret") {
+        throw new Error("fixture: secret was not resolved");
+      }
+      if (Object.keys(ctx).sort().join(",") !== "auth,server") {
+        throw new Error("fixture: validate receives auth and server only");
+      }
+      return { valid: true };
+    },
+    getConnectionIdentifier: async ({ auth }) => "pass-account @ " + auth.host,
   },
 };
 module.exports = { app };
@@ -94,8 +96,11 @@ module.exports = { app };
 const app = {
   displayName: "Fail Fixture",
   actions: {},
-  checkConnection: async () => {
-    throw new Error("auth failed: bad credentials");
+  auth: {
+    type: "CUSTOM_AUTH",
+    validate: async () => {
+      throw new Error("auth failed: bad credentials");
+    },
   },
 };
 module.exports = { app };
@@ -135,7 +140,7 @@ module.exports = { app };
 const app = {
   displayName: "Denied Fixture",
   actions: {},
-  checkConnection: async () => false,
+  auth: { type: "CUSTOM_AUTH", validate: async () => ({ valid: false }) },
 };
 module.exports = { app };
 `,
@@ -143,9 +148,26 @@ module.exports = { app };
 const app = {
   displayName: "Env Fixture",
   actions: {},
-  checkConnection: async () => ({
-    name: process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY ? "leaked" : "isolated",
-  }),
+  auth: {
+    type: "CUSTOM_AUTH",
+    validate: async () => ({ valid: true }),
+    getConnectionIdentifier: async () =>
+      process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY ? "leaked" : "isolated",
+  },
+};
+module.exports = { app };
+`,
+  labelThrows: `
+const app = {
+  displayName: "Label Throws Fixture",
+  actions: {},
+  auth: {
+    type: "CUSTOM_AUTH",
+    validate: async () => ({ valid: true }),
+    getConnectionIdentifier: async () => {
+      throw new Error("whoami answered 500");
+    },
+  },
 };
 module.exports = { app };
 `,
@@ -232,15 +254,24 @@ function makeDocument(
   return document;
 }
 
-function lastRecordInput(): RecordCheckResultInput {
+function lastActions(): Action[] {
   const call = execute.mock.calls.at(-1);
   expect(call, "execute should have been called").toBeDefined();
-  const actionList = call?.[2] as Action[];
-  expect(actionList).toHaveLength(1);
-  const action = actionList[0];
+  return call?.[2] as Action[];
+}
+
+function lastRecordInput(): RecordCheckResultInput {
+  const action = lastActions()[0];
   expect(action.type).toBe("RECORD_CHECK_RESULT");
   expect(action.scope).toBe("global");
   return action.input as RecordCheckResultInput;
+}
+
+// The SET_ACCOUNT_LABEL the last check wrote, if any.
+function lastLabelWritten(): string | null | undefined {
+  const action = lastActions().find((a) => a.type === "SET_ACCOUNT_LABEL");
+  return (action?.input as { accountLabel?: string | null } | undefined)
+    ?.accountLabel;
 }
 
 describe("WorkflowRuntimeService.checkConnection", () => {
@@ -312,7 +343,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     expect(result).toEqual({
       ok: true,
       detail: null,
-      accountLabel: "pass-account",
+      accountLabel: "pass-account @ imap.example.com",
     });
     expect(ensurePieceBundle).toHaveBeenCalledWith({
       name: PIECES.pass.name,
@@ -325,9 +356,42 @@ describe("WorkflowRuntimeService.checkConnection", () => {
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
     );
     expect(input.error).toBeUndefined();
-    expect(execute).toHaveBeenCalledWith(document.header.id, "main", [
-      expect.objectContaining({ type: "RECORD_CHECK_RESULT" }),
-    ]);
+    expect(lastLabelWritten()).toBe("pass-account @ imap.example.com");
+  });
+
+  it("writes no label that the connection already holds", async () => {
+    const document = reducer(
+      makeDocument(),
+      actions.setAccountLabel({
+        accountLabel: "pass-account @ imap.example.com",
+      }),
+    );
+    get.mockResolvedValueOnce(document);
+    execute.mockClear();
+
+    const result = await service.checkConnection(document.header.id, TEST_CTX);
+
+    expect(result.accountLabel).toBe("pass-account @ imap.example.com");
+    expect(lastActions()).toHaveLength(1);
+  });
+
+  it("passes the check and keeps the previous label when labelling throws", async () => {
+    const document = reducer(
+      makeDocument({ connectorId: `${PIECES.labelThrows.name}#labelThrows` }),
+      actions.setAccountLabel({ accountLabel: "ops@example.com" }),
+    );
+    get.mockResolvedValueOnce(document);
+    execute.mockClear();
+
+    const result = await service.checkConnection(document.header.id, TEST_CTX);
+
+    expect(result).toEqual({
+      ok: true,
+      detail: null,
+      accountLabel: "ops@example.com",
+    });
+    expect(lastRecordInput().status).toBe("OK");
+    expect(lastLabelWritten()).toBeUndefined();
   });
 
   it("records ERROR with the failure detail when the check throws", async () => {
@@ -366,7 +430,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     expect(lastRecordInput().status).toBe("OK");
   });
 
-  it("records ERROR when the check returns false", async () => {
+  it("records ERROR when validate refuses without a reason", async () => {
     const document = makeDocument({
       connectorId: `${PIECES.denied.name}#denied`,
     });
@@ -432,7 +496,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
       checkConnection: (sent) => {
         request = sent;
         return Promise.resolve({
-          output: { declared: false },
+          output: { declared: false, valid: true },
           touched: [],
           tlsPoisoned: false,
         });
@@ -450,7 +514,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     }
   });
 
-  it("reports resolved credentials when the piece declares no check", async () => {
+  it("reports resolved credentials when the piece declares no validate", async () => {
     const document = makeDocument({
       connectorId: `${PIECES.nocheck.name}#nocheck`,
     });
@@ -461,7 +525,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
 
     expect(result).toEqual({
       ok: true,
-      detail: "piece declares no connection check; credentials resolved",
+      detail: "piece declares no auth.validate; credentials resolved",
       accountLabel: null,
     });
     const input = lastRecordInput();
@@ -469,9 +533,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     expect(input.error).toBeUndefined();
   });
 
-  // No Activepieces piece declares checkConnection — validate is what their
-  // docs teach — so without this fallback the whole catalogue goes unchecked.
-  it("falls back to the framework's own auth.validate", async () => {
+  it("hands validate the property values flat", async () => {
     const document = makeDocument({
       connectorId: `${PIECES.validates.name}#validates`,
     });
@@ -481,8 +543,8 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     const result = await service.checkConnection(document.header.id, TEST_CTX);
 
     expect(result.ok).toBe(true);
-    // Not the "declares no connection check" answer: a check really ran, and
-    // it read the property values, which only the unwrapped form carries.
+    // Not the "declares no auth.validate" answer: a check really ran, and it
+    // read the property values, which only the unwrapped form carries.
     expect(result.detail).toBeNull();
     expect(lastRecordInput().status).toBe("OK");
   });
