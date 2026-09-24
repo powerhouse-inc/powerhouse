@@ -1,4 +1,5 @@
 import type { DocumentChangeEvent, PagedResults } from "@powerhousedao/reactor";
+import { DocumentRefetcher } from "./document-refetcher.js";
 import { DOCUMENT_CHANGE_TYPE } from "./reactor-interop.js";
 import type {
   Operation,
@@ -69,51 +70,6 @@ function fulfilledOnly(promises: Promise<PHDocument>[]): Promise<PHDocument[]> {
   });
 }
 
-/** The refetch snapshot of a document with nothing in flight and no kept failure. */
-export const IDLE_REFETCH_STATE: DocumentRefetchState = Object.freeze({
-  isRefetching: false,
-  error: undefined,
-});
-
-function fulfilledPromise<T>(value: T): FulfilledPromise<T> {
-  const promise = Promise.resolve(value) as FulfilledPromise<T>;
-  promise.status = "fulfilled";
-  promise.value = value;
-  return promise;
-}
-
-function rejectedPromise<T>(reason: unknown): RejectedPromise<T> {
-  const promise = Promise.reject(reason as Error) as RejectedPromise<T>;
-  promise.status = "rejected";
-  promise.reason = reason;
-  // Readers get the reason from `status`; the refetch caller gets the rejection.
-  promise.catch(() => undefined);
-  return promise;
-}
-
-const MISSING_DOCUMENT_ERRORS = [
-  "DocumentNotFoundError",
-  "DocumentDeletedError",
-];
-
-// The document is gone, so its last loaded state must not stay on screen.
-// The document view and GraphQL client throw a plain "Document not found" Error.
-function isMissingDocumentError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  return (
-    MISSING_DOCUMENT_ERRORS.includes(error.name) ||
-    error.message.startsWith("Document not found")
-  );
-}
-
-const noop = () => undefined;
-
-/** One refetch running per cache key, and at most one queued behind it. */
-type Refetch = {
-  running: Promise<PHDocument> | undefined;
-  queued: Promise<PHDocument> | undefined;
-};
-
 /** The snapshot every uncached document scope reads as. One frozen object, so `useSyncExternalStore` sees a stable value. */
 export const IDLE_OPERATIONS_ENTRY: OperationsCacheEntry = Object.freeze({
   status: "idle",
@@ -181,9 +137,16 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
   >();
   private listeners = new Map<string, (() => void)[]>();
 
-  /** Background refetches of loaded documents; `documents` keeps the loaded promise meanwhile. */
-  private refetches = new Map<string, Refetch>();
-  private refetchStates = new Map<string, DocumentRefetchState>();
+  private refetcher = new DocumentRefetcher({
+    documents: this.documents,
+    fetch: (id) => this.client.get(id),
+    notify: (id) => this.notifyListeners(id),
+    onFetched: (id, document) => {
+      if (document.header.id !== id) {
+        this.recordAlias(document.header.id, id);
+      }
+    },
+  });
 
   /**
    * Cache keys that fetched a document under a name other than its id --
@@ -238,8 +201,7 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
     for (const key of this.cacheKeysFor(documentId)) {
       const listeners = this.listeners.get(key);
       this.documents.delete(key);
-      this.refetches.delete(key);
-      this.refetchStates.delete(key);
+      this.refetcher.forget(key);
       this.invalidateBatchesContaining(key);
       if (listeners) {
         listeners.forEach((listener) => listener());
@@ -291,10 +253,10 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
     // A loaded document stays served while it refetches; a pending first load
     // may predate the change, so it gets a refetch queued behind it.
     if (currentData && currentData.status !== "rejected") {
-      return this.refetch(id);
+      return this.refetcher.refetch(id);
     }
 
-    this.refetches.delete(id);
+    this.refetcher.forget(id);
     const documentPromise = this.client.get(id);
     documentPromise.then(
       (doc) => {
@@ -310,100 +272,7 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
   }
 
   getRefetchState(id: string): DocumentRefetchState {
-    return this.refetchStates.get(id) ?? IDLE_REFETCH_STATE;
-  }
-
-  /** Serializes refetches per key: one runs, later requests share one queued run. */
-  private refetch(id: string): Promise<PHDocument> {
-    let entry = this.refetches.get(id);
-    if (!entry) {
-      entry = { running: undefined, queued: undefined };
-      this.refetches.set(id, entry);
-      const current = this.documents.get(id);
-      if (current?.status !== "pending") {
-        return this.startRefetch(id, entry);
-      }
-      entry.running = current;
-    }
-    const inFlight = entry;
-    inFlight.queued ??= (inFlight.running ?? Promise.resolve())
-      .then(noop, noop)
-      .then(() => this.startRefetch(id, inFlight));
-    return inFlight.queued;
-  }
-
-  private startRefetch(id: string, entry: Refetch): Promise<PHDocument> {
-    entry.queued = undefined;
-    entry.running = this.runRefetch(id, entry);
-    return entry.running;
-  }
-
-  private async runRefetch(id: string, entry: Refetch): Promise<PHDocument> {
-    const isCurrent = () => this.refetches.get(id) === entry;
-    // Superseded, e.g. by a deletion: answer the caller without touching the cache.
-    if (!isCurrent()) {
-      return this.client.get(id);
-    }
-    const started = this.setRefetchState(id, {
-      isRefetching: true,
-      error: this.getRefetchState(id).error,
-    });
-    if (started) {
-      this.notifyListeners(id);
-    }
-    try {
-      const document = await this.client.get(id);
-      if (isCurrent()) {
-        if (document.header.id !== id) {
-          this.recordAlias(document.header.id, id);
-        }
-        this.documents.set(id, fulfilledPromise(document));
-        this.finishRefetch(id, entry, undefined);
-      }
-      return document;
-    } catch (error) {
-      if (isCurrent()) {
-        if (isMissingDocumentError(error)) {
-          this.documents.set(id, rejectedPromise(error));
-          this.finishRefetch(id, entry, undefined);
-        } else {
-          console.warn(
-            "[DocumentCache] Refetch failed; keeping the loaded document:",
-            error,
-          );
-          this.finishRefetch(id, entry, error);
-        }
-      }
-      throw error;
-    }
-  }
-
-  private finishRefetch(id: string, entry: Refetch, error: unknown): void {
-    if (!entry.queued) {
-      this.refetches.delete(id);
-    }
-    this.setRefetchState(id, {
-      isRefetching: entry.queued !== undefined,
-      error,
-    });
-    this.notifyListeners(id);
-  }
-
-  /** Returns whether the snapshot changed; the caller notifies. */
-  private setRefetchState(id: string, state: DocumentRefetchState): boolean {
-    const current = this.getRefetchState(id);
-    if (
-      current.isRefetching === state.isRefetching &&
-      current.error === state.error
-    ) {
-      return false;
-    }
-    if (!state.isRefetching && state.error === undefined) {
-      this.refetchStates.delete(id);
-    } else {
-      this.refetchStates.set(id, Object.freeze({ ...state }));
-    }
-    return true;
+    return this.refetcher.getState(id);
   }
 
   getBatch(ids: string[]): Promise<PHDocument[]> {
@@ -748,8 +617,9 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
     }
     this.operationRequests.clear();
     this.operationEntries.clear();
-    this.refetches.clear();
-    this.refetchStates.clear();
+    this.refetcher.clear();
     this.operationListeners.clear();
   }
 }
+
+export { IDLE_REFETCH_STATE } from "./document-refetcher.js";
