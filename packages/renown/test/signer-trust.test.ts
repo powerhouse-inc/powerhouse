@@ -7,7 +7,6 @@ import {
 } from "../src/credential.js";
 import {
   createRenownTrustPolicy,
-  MISSING_CREDENTIAL_RETRY_AFTER_MS,
   MissingCredentialError,
 } from "../src/signer-trust.js";
 import type { SwitchboardRequestFn } from "../src/switchboard.js";
@@ -368,11 +367,7 @@ describe("createRenownTrustPolicy", () => {
 
       await expect(
         policy.authorizeSigner(signer, APP_KEY, DOCUMENT_ID),
-      ).rejects.toMatchObject({
-        name: "MissingCredentialError",
-        retryAfterMs: MISSING_CREDENTIAL_RETRY_AFTER_MS,
-        retryUntil: Date.now() + WINDOW,
-      });
+      ).rejects.toBeInstanceOf(MissingCredentialError);
       vi.advanceTimersByTime(WINDOW - 1);
       await expect(
         policy.authorizeSigner(signer, APP_KEY, DOCUMENT_ID),

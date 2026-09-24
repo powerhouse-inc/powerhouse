@@ -36,24 +36,13 @@ export interface RenownTrustPolicyOptions {
   missingCredentialWindowMs?: number;
 }
 
-/** The first delay a reactor waits before asking again; it doubles per retry. */
-export const MISSING_CREDENTIAL_RETRY_AFTER_MS = 1_000;
-
-/**
- * No credential binds the key yet; thrown inside the retry window. A reactor
- * reads `retryAfterMs` and retries the write later without charging its retry
- * limit.
- */
+/** No credential binds the key yet; thrown inside the retry window. */
 export class MissingCredentialError extends Error {
-  readonly retryAfterMs = MISSING_CREDENTIAL_RETRY_AFTER_MS;
-  readonly retryUntil: number;
-
   constructor(address: string, key: string, retryUntil: number) {
     super(
       `No Renown credential binds ${key} to ${address} yet; retried until ${new Date(retryUntil).toISOString()}`,
     );
     this.name = "MissingCredentialError";
-    this.retryUntil = retryUntil;
   }
 }
 
