@@ -5,6 +5,7 @@ export default defineConfig({
     "src/index.ts",
     "src/node.ts",
     "src/crypto.ts",
+    "src/trust.ts",
     "src/wallet/index.ts",
     "src/wallet/rainbow/index.ts",
     "src/wallet/rainbow/factory.ts",

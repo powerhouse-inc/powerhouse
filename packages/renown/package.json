@@ -32,6 +32,12 @@
       "import": "./dist/crypto.js",
       "default": "./dist/crypto.js"
     },
+    "./trust": {
+      "source": "./src/trust.ts",
+      "types": "./dist/trust.d.ts",
+      "import": "./dist/trust.js",
+      "default": "./dist/trust.js"
+    },
     "./wallet": {
       "source": "./src/wallet/index.ts",
       "types": "./dist/wallet/index.d.ts",
