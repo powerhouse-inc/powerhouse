@@ -142,19 +142,35 @@ must confirm that the document really does reference this hash. A denial is a
 single generic `404` either way, so it never tells the caller which of the two
 failed.
 
-Which model answers the first half depends on the composition. With auth
-enforcement on, the document's **own policy** decides, evaluated for the
-caller's subject — their address *and* the `did:key` of the app instance whose
-token authenticated them, because a grant can name either and a document's
-creator is recorded by key. Without it, there is no policy model to evaluate
-and the permission tables above decide alone.
+Which model answers the first half is the deployment's choice, and by default it
+is the permission tables above — unchanged.
 
-That distinction matters more than it looks. A deployment whose documents carry
-policies keeps no rows in the permission tables, so asking those tables about
-such a document returns whatever the host-wide policy says — under `OPEN`,
-`true`, for every caller including an anonymous one. Handing out bytes on that
-answer gives the file to anyone who learns its hash, which the document's own
-state may well have told them before their access was taken away.
+```bash
+# Decide an attachment read with the referencing document's own policy
+export ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY=true
+```
+
+With it on, the document's **own policy** decides, evaluated for the caller's
+subject: their address *and* the `did:key` of the app instance whose token
+authenticated them, because a grant can name either and a document's creator is
+recorded by key. It needs a policy model to evaluate, which auth enforcement is
+what supplies, and refuses to boot without one rather than leave the tables
+deciding while the configuration says otherwise.
+
+Why a deployment would want it: one whose documents carry policies keeps no rows
+in the permission tables, so asking those tables about such a document returns
+whatever the host-wide policy says — under `OPEN`, `true`, for every caller
+including an anonymous one. Handing out bytes on that answer gives the file to
+anyone who learns its hash, which the document's own state may well have told
+them before their access was taken away.
+
+Two things to know before turning it on. A document that carries **no** policy
+stays readable, because an uninitialized policy is not a denial — unless the
+host also sets `DEFAULT_PROTECTION`, which tells the gate to withhold what it
+cannot decide, and then attachments on unpolicied documents are refused along
+with everything else about them. And every non-browser client that downloads
+bytes — an extraction worker, an indexer — needs a read grant of its own on the
+documents it fetches, or it stops working the moment this is enabled.
 
 The presigned URL a target carries is short-lived by design: the authorization
 behind it is decided once, when it is issued, and the URL keeps working until it
