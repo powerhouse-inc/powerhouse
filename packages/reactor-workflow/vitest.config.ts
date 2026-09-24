@@ -21,7 +21,9 @@ export default defineConfig({
   },
   ssr: { resolve: { conditions } },
   test: {
+    // Includes test/upstream, generated from Activepieces' engine suites.
     include: ["src/**/*.test.ts", "test/**/*.test.ts"],
+    // Upstream's suites rely on the globals.
     globals: true,
     // PGlite's cold boot and a forked piece worker both outrun the default 5s.
     testTimeout: 30_000,

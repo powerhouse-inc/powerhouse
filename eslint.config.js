@@ -73,6 +73,7 @@ const normalIgnoredFiles = [
   // scripts/sync-upstream.mts; upstream's lint stance is not ours to fix.
   "packages/pieces-framework/upstream/",
   "packages/pieces-framework/test/upstream/",
+  "packages/reactor-workflow/test/upstream/",
 ];
 
 /** These files need to be ignored for builds to pass, but they do not have clear reasons to be ignored.

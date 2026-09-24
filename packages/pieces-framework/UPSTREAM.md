@@ -185,3 +185,35 @@ Current patches:
 
 The vendored trees are excluded from the root ESLint run: their lint stance is
 upstream's, and the codemod already applies this repo's formatting.
+
+## Conformance suite for reactor-workflow
+
+The same sync also generates
+[`../reactor-workflow/test/upstream/`](../reactor-workflow/test/upstream):
+Activepieces engine tests that run against our engine instead of vendored code.
+It lives in this script rather than a second one so that one run, from one
+checkout, regenerates both trees under one codemod and one patch contract.
+
+`CONFORMANCE` in `scripts/sync-upstream.mts` lists each upstream test and its
+target, optionally cut down to literal `excerpt` segments. For each file the
+sync:
+
+1. Rewrites `@activepieces/pieces-framework` and `@activepieces/pieces-common`
+   to our published `@powerhousedao/pieces-framework` entries.
+2. Rewrites every other upstream import through `IMPORT_REDIRECTS` to an adapter
+   in `../reactor-workflow/test/upstream-adapters/`, which exposes the upstream
+   API (`createContextStore`, `createConnectionResolver`, `ssrfGuard`,
+   `propsProcessor`, the `@activepieces/shared` symbols) over our code. An
+   import with no redirect fails the sync.
+3. Adds the header, formats, and applies `CONFORMANCE_PATCHES`, which carry the
+   same `count` and `why` as `PATCHES`.
+4. Marks each `CONFORMANCE_SKIPS` case `it.skip` and each `KNOWN_DIVERGENCES`
+   case `it.fails`, with a comment giving the reason and, for a divergence, the
+   issue or README item that fixes it; a deliberate divergence names none. A
+   name that no longer matches upstream fails the sync. When a fix lands, its
+   `it.fails` starts failing: drop the entry and re-sync.
+5. Writes `test/upstream/MANIFEST.json` there, with the upstream path and
+   SHA-256 of each original and the lists of divergences and skips.
+
+Nothing is taken from `packages/ee/` or `packages/server/api/src/app/ee`, which
+are not MIT.
