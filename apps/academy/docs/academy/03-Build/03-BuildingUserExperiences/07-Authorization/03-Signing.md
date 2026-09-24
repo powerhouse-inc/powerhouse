@@ -155,6 +155,8 @@ The `ReactorClient` automatically signs all actions before submitting them to th
 
 `execute()`, `executeAsync()` and `executeBatch()` resolve a slug to the document id before signing, because the signature is bound to the id the write is stored under.
 
+A `RemoteDocumentController` built with a slug does the same. Before it signs a push, it asks the remote for the document's id. If the id cannot be resolved, the push fails and nothing is signed.
+
 ```typescript
 // From reactor/src/core/utils.ts
 const signAction = async (action, signer, target, signal?) => {
@@ -255,10 +257,15 @@ A `SignerConfig` can carry it as `trustPolicy` and `workerTrustPolicy`, and `Rea
 - A throw, or no answer within 10 seconds (or half the job timeout, if shorter), fails the job, and the queue retries it. Nothing is dropped, so throw on a transient failure instead of returning `false`.
 - The answer must not depend on when it is asked, because replicas admit the same write at different times. Cache an acceptance and never expire it.
 - The reactor's own signer key, signing as the reactor's own user, is accepted without asking.
+- The reactor's own user is read on every ask, so a login takes effect immediately. Key a policy's cache on (`signer.user`, `key`) only. Invalidate nothing when the local identity changes, because other users' verdicts do not depend on it.
 
 With no policy, a signed write is refused while the `authEnforcement` feature flag is on and accepted otherwise, because the auth scope trusts `signer.user.address`.
 
 Under `authEnforcement`, the switchboard uses `createRenownTrustPolicy` from `@renown/sdk`. It accepts a key when a Renown credential issued by `did:pkh:<networkId>:<chainId>:<address>` delegates to that `did:key`, and the credential's EIP-712 proof recovers to the address. The credential is read from the Renown instance the switchboard authenticates against (`RENOWN_SOURCE`, `RENOWN_URL`, `SWITCHBOARD_URL`), and a failed read fails the job for a retry. Its expiry and revocation are ignored; revoke a user's access through auth-scope grants.
+
+A credential can reach a replica after the user's first writes do. While no credential is found, the lookup fails the job for a retry. This lasts for 5 minutes after the first miss for that address and key (`missingCredentialWindowMs` on `createRenownTrustPolicy`). After that the write is refused, and the refusal is remembered for 60 seconds.
+
+With `RENOWN_SOURCE=self`, pooled executor workers get no trust policy. A switchboard with `REACTOR_WORKERS` above 0 and `REACTOR_AUTH_ENFORCEMENT` on therefore refuses to boot. Use a remote Renown source, or set `REACTOR_WORKERS=0`.
 
 ### v2-required documents
 
@@ -294,6 +301,7 @@ await client.create(
 ```
 
 `client.create()` and `client.drives.addFile()` create the document under the header it carries. `withSignaturePolicy(document, policy, { id })` gives a document that has not been created a fresh header under `policy`; only a legacy header takes `id`.
+Under `v2-required` a given `id` is ignored and the id is derived, so code that needs a fixed id must ask for `legacy`.
 
 A `CREATE_DOCUMENT` whose id does not recompute from its own input is refused as `ID_MISMATCH`, and so is a legacy `CREATE_DOCUMENT` that takes an id of that shape. A copy of a v2-required document is v2-required, under a new derived id. A copy of a legacy document is created under the creation default below. An imported `.phd` keeps the policy it was exported with.
 
