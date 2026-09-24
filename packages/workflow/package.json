@@ -69,7 +69,8 @@
     "test:watch": "vitest",
     "build": "tsx ./build.ts",
     "ui:shots": "tsx ./scripts/ui-shots.ts",
-    "ui:serve": "tsx ./scripts/ui-shots.ts --serve"
+    "ui:serve": "tsx ./scripts/ui-shots.ts --serve",
+    "test:ui": "playwright test"
   },
   "dependencies": {
     "@powerhousedao/design-system": "workspace:*",
