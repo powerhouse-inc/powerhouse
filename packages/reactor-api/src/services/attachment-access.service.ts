@@ -1,4 +1,8 @@
-import type { AttachmentHash, AttachmentRef } from "@powerhousedao/reactor";
+import type {
+  AttachmentHash,
+  AttachmentRef,
+  IReactorClient,
+} from "@powerhousedao/reactor";
 import { createRef, parseRef } from "@powerhousedao/reactor-attachments";
 import type { IAttachmentReferenceReader } from "@powerhousedao/reactor-attachments";
 import type {
@@ -40,7 +44,11 @@ export interface AttachmentAccessRequest {
   documentId: string;
   attachmentRef: string;
   userAddress?: string;
+  appKey?: string;
 }
+
+/** The reactor's read gate, as the attachment facade consults it. */
+export type AttachmentReadGate = Pick<IReactorClient, "isServed" | "get">;
 
 export interface IAttachmentAccessService {
   canReadAttachment(
@@ -53,9 +61,14 @@ const HASH_PATTERN = /^[a-f0-9]{64}$/;
 /**
  * Composes document authorization with the projected document/ref
  * relationship. Order is fixed: validate ref, resolve the canonical document
- * id, check `canRead`, then check the reference index. A denied document
- * never reaches the reference reader, and the facade never touches
- * attachment metadata, storage backends, or presigners.
+ * id, check `canRead`, check the reactor's read gate serves the document, then
+ * check the reference index and that the subject may read a scope whose
+ * operations reference the attachment. A denied document never reaches the
+ * reference reader, and the facade never touches attachment metadata, storage
+ * backends, or presigners.
+ *
+ * The named document decides alone: an attachment several documents reference
+ * is readable through each of them on that document's own terms.
  */
 export class AttachmentAccessService implements IAttachmentAccessService {
   constructor(
@@ -63,6 +76,7 @@ export class AttachmentAccessService implements IAttachmentAccessService {
     private readonly authorization: IAuthorizationService,
     private readonly references: IAttachmentReferenceReader,
     private readonly projection: AttachmentReferenceProjectionCapability,
+    private readonly readGate: AttachmentReadGate,
   ) {}
 
   async canReadAttachment(
@@ -92,8 +106,34 @@ export class AttachmentAccessService implements IAttachmentAccessService {
       return { kind: "denied" };
     }
 
-    const referenced = await this.references.hasReference(documentId, ref);
-    if (!referenced) {
+    const subject = { address: request.userAddress, key: request.appKey };
+
+    let served: boolean;
+    try {
+      served = await this.readGate.isServed(documentId, { subject });
+    } catch {
+      return { kind: "denied" };
+    }
+    if (!served) {
+      return { kind: "denied" };
+    }
+
+    const scopes = await this.references.referencingScopes(documentId, ref);
+    if (scopes.length === 0) {
+      return { kind: "denied" };
+    }
+
+    let held: Record<string, unknown>;
+    try {
+      const document = await this.readGate.get(documentId, {
+        subject,
+        scopes,
+      });
+      held = document.state as Record<string, unknown>;
+    } catch {
+      return { kind: "denied" };
+    }
+    if (!scopes.some((scope) => scope in held)) {
       return { kind: "denied" };
     }
 

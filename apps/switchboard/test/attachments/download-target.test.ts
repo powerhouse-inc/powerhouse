@@ -126,6 +126,7 @@ describe("makeDownloadTargetHandler", () => {
       documentId: DOC_ID,
       attachmentRef: REF,
       userAddress: "0xverified",
+      appKey: "did:key:zAppTest",
     });
   });
 

@@ -551,6 +551,7 @@ export function makeDownloadTargetHandler(
         documentId,
         attachmentRef: createRef(canonicalHash),
         userAddress: actor?.user?.address,
+        appKey: actor?.user?.appKey,
       });
     } catch (err) {
       logger.error("Attachment access decision failed: @error", err);

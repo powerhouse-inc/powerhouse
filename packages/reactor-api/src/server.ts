@@ -1179,15 +1179,16 @@ async function _setupAPI(
     `Authorization service initialized (policy: ${authorizationConfig.policy})`,
   );
 
-  // Attachment reads are authorized by document permission plus the projected
-  // document/ref relationship; the facade owns that composition so routes
-  // never consult the reference store or authorization service directly.
+  // Attachment reads are authorized by document permission, the reactor's read
+  // gate, and the projected document/ref relationship; the facade owns that
+  // composition so routes never consult any of them directly.
   const attachmentAccess: IAttachmentAccessService =
     new AttachmentAccessService(
       createCanonicalDocumentIdResolver(reactorClient),
       authorizationService,
       attachmentReferenceIndex.store,
       attachmentReferenceProjection,
+      reactorClient,
     );
 
   // set up subgraph manager
