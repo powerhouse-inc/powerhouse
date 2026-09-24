@@ -391,7 +391,7 @@ export class ReactorClient implements IReactorClient {
     try {
       document = await reads.get(id, withAllScopes(view));
     } catch (error) {
-      await assertAbsent(this.documentView, id, error);
+      await assertAbsent(reads, id, error);
       return true;
     }
     return !refusesEveryDomainScope(

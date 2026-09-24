@@ -260,7 +260,7 @@ export class BareReadGate implements IReadGate {
  * inferred from the message, and a failed check surfaces the read's own error.
  */
 export async function assertAbsent(
-  documentView: IDocumentView,
+  documentView: Pick<IDocumentView, "exists">,
   documentId: string,
   error: unknown,
   signal?: AbortSignal,
