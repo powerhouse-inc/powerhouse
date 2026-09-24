@@ -49,6 +49,11 @@ export type SwitchboardReactorDefaultsOptions = {
    * through `workerSigner`; omit for unsigned operation.
    */
   signer?: SignerConfig;
+  /**
+   * Which keys may sign as which users (typically from
+   * `getRenownTrustPolicyConfig`); wins over one carried by `signer`.
+   */
+  trustPolicy?: Pick<SignerConfig, "trustPolicy" | "workerTrustPolicy">;
 };
 
 /**
@@ -128,5 +133,10 @@ export function applySwitchboardReactorDefaults(
       options.signer.signer,
       options.signer.workerSigner,
     );
+  }
+
+  const trust = options.trustPolicy ?? options.signer;
+  if (trust?.trustPolicy) {
+    reactorBuilder.withTrustPolicy(trust.trustPolicy, trust.workerTrustPolicy);
   }
 }

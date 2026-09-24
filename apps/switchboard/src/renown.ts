@@ -1,11 +1,15 @@
 import type { FactorySpec, SignerConfig } from "@powerhousedao/reactor";
 import {
+  createRenownTrustPolicy,
   DEFAULT_KEYPAIR_PATH,
   DEFAULT_RENOWN_URL,
   NodeKeyStorage,
   RenownBuilder,
   RenownCryptoBuilder,
+  resolveSwitchboardEndpoint,
   type IRenown,
+  type RenownTrustPolicyOptions,
+  type SwitchboardRequestFn,
 } from "@renown/sdk/node";
 import { childLogger } from "document-model";
 import { createRequire } from "node:module";
@@ -112,6 +116,65 @@ export function getRenownWorkerSignerSpec(
             },
           }
         : {}),
+    },
+  };
+}
+
+/** Where switchboard reads the credentials binding keys to wallets. */
+export type RenownTrustSource =
+  | { source: "remote"; renownUrl?: string; switchboardUrl?: string }
+  | { source: "self"; request: SwitchboardRequestFn };
+
+/** Admits a key as a signer for an address a Renown credential binds it to; a `self` source has no worker spec. */
+export async function getRenownTrustPolicyConfig(
+  trustSource: RenownTrustSource,
+  renown: IRenown | null,
+): Promise<Pick<SignerConfig, "trustPolicy" | "workerTrustPolicy">> {
+  const self = ownIdentity(renown);
+  if (trustSource.source === "self") {
+    return {
+      trustPolicy: createRenownTrustPolicy({
+        switchboard: trustSource.request,
+        self,
+      }),
+    };
+  }
+
+  const switchboardUrl = await resolveSwitchboardEndpoint({
+    switchboardUrl: trustSource.switchboardUrl,
+    baseUrl: trustSource.renownUrl,
+  });
+  const options = {
+    ...(switchboardUrl ? { switchboard: switchboardUrl } : {}),
+    ...(trustSource.renownUrl ? { renownUrl: trustSource.renownUrl } : {}),
+    ...(self ? { self } : {}),
+  } satisfies RenownTrustPolicyOptions;
+  return {
+    trustPolicy: createRenownTrustPolicy(options),
+    workerTrustPolicy: {
+      module: {
+        filePath: createRequire(import.meta.url).resolve("@renown/sdk/node"),
+        exportName: "createRenownTrustPolicy",
+      },
+      initArgs: options,
+    },
+  };
+}
+
+function ownIdentity(
+  renown: IRenown | null,
+): RenownTrustPolicyOptions["self"] | undefined {
+  const key = renown?.signer.app?.key;
+  if (!key) {
+    return undefined;
+  }
+  const user = renown.signer.user;
+  return {
+    key,
+    user: {
+      address: user?.address ?? "",
+      networkId: user?.networkId ?? "",
+      chainId: user?.chainId ?? 0,
     },
   };
 }

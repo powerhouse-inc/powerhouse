@@ -48,6 +48,7 @@ import {
   RENOWN_READ_MODEL_SUBGRAPH,
   type CredentialCheck,
   type IRenown,
+  type SwitchboardRequestFn,
 } from "@renown/sdk/node";
 import * as Sentry from "@sentry/node";
 import { childLogger, setLogLevel, type ILogger } from "document-model";
@@ -94,7 +95,11 @@ import {
   type SupportedPgMajor,
 } from "./pglite-version.js";
 import { resolveReactorFeatureFlags } from "./reactor-feature-flags.mjs";
-import { getRenownSignerConfig, initRenown } from "./renown.js";
+import {
+  getRenownSignerConfig,
+  getRenownTrustPolicyConfig,
+  initRenown,
+} from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
 import {
   addDefaultDrive,
@@ -498,6 +503,8 @@ async function initServer(
   // Set only when we build the reactor ourselves; a caller-provided one keeps
   // its own lifecycle and must not be torn down here.
   let ownedReactorModule: InProcessReactorClientModule | undefined;
+  // Bound once the api serves the renown read model; see `localCredentialCheck`.
+  let localRenownRequest: SwitchboardRequestFn | undefined;
   const initializeClient = async (
     documentModels: DocumentModelModule[],
     {
@@ -612,6 +619,28 @@ async function initServer(
       logger: reactorLogger,
       signer: renown
         ? getRenownSignerConfig(renown, options.identity?.keypairPath)
+        : undefined,
+      trustPolicy: reactorFeatureFlags.authEnforcement
+        ? await getRenownTrustPolicyConfig(
+            renownConfig.source === "self"
+              ? {
+                  source: "self",
+                  request: (query, variables) =>
+                    localRenownRequest
+                      ? localRenownRequest(query, variables)
+                      : Promise.reject(
+                          new Error(
+                            "The local renown read model is not bound yet",
+                          ),
+                        ),
+                }
+              : {
+                  source: "remote",
+                  renownUrl: renownConfig.url,
+                  switchboardUrl: renownConfig.switchboardUrl,
+                },
+            renown,
+          )
         : undefined,
     });
 
@@ -872,18 +901,16 @@ async function initServer(
           "(@powerhousedao/renown-package) or set RENOWN_SOURCE=remote.",
       );
     }
-    localCredentialCheck = createLocalCredentialVerifier(
-      (query, variables) =>
-        manager.executeSubgraphQuery(
-          RENOWN_READ_MODEL_SUBGRAPH,
-          query,
-          variables,
-        ),
-      {
-        onError: (error) =>
-          logger.error("Renown read model query failed: @error", error),
-      },
-    );
+    localRenownRequest = (query, variables) =>
+      manager.executeSubgraphQuery(
+        RENOWN_READ_MODEL_SUBGRAPH,
+        query,
+        variables,
+      );
+    localCredentialCheck = createLocalCredentialVerifier(localRenownRequest, {
+      onError: (error) =>
+        logger.error("Renown read model query failed: @error", error),
+    });
     logger.info(
       "Renown credentials will be verified against this switchboard's own " +
         "renown read model",
