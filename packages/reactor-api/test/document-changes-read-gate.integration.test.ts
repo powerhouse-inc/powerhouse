@@ -1,12 +1,15 @@
 import {
+  createDocumentAction,
   type ISyncManager,
   ReactorBuilder,
   ReactorClientBuilder,
   type InProcessReactorClientModule,
+  upgradeDocumentAction,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
   initializeAuth,
+  normalizeDocumentModelVersion,
   setGrant,
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
@@ -266,6 +269,65 @@ describe("documentChanges and findDocuments under OPEN with auth-scope policies"
       return { subgraph, policed, jobId: job.id };
     }
 
+    // Upgraded with no initialState, so the read model indexes no domain scope.
+    async function unindexedJob() {
+      const { client, subgraph } = await build();
+      const id = "job-unindexed";
+      const { header, state } =
+        documentModelDocumentModelModule.utils.createDocument();
+      await client.execute(id, "main", [
+        createDocumentAction({
+          model: header.documentType,
+          version: 0,
+          documentId: id,
+          signing: {
+            signature: id,
+            publicKey: header.sig.publicKey,
+            nonce: header.sig.nonce,
+            createdAtUtcIso: header.createdAtUtcIso,
+            documentType: header.documentType,
+          },
+          slug: header.slug,
+          name: header.name,
+          branch: header.branch,
+          meta: header.meta,
+          protocolVersions: header.protocolVersions ?? { "base-reducer": 2 },
+        }),
+        upgradeDocumentAction({
+          documentId: id,
+          model: header.documentType,
+          fromVersion: 0,
+          toVersion: normalizeDocumentModelVersion(
+            (state as Partial<typeof state>).document?.version,
+          ),
+        }),
+      ]);
+      const job = await client.executeAsync(id, "main", [
+        initializeAuth({
+          version: 1,
+          grants: [
+            {
+              id: "g-read",
+              description: "the reader reads the domain",
+              effect: "allow",
+              principal: { address: READER },
+              capability: { can: "read", scope: "global" },
+            },
+            {
+              id: "g-admin",
+              description: "only the admin administers",
+              effect: "allow",
+              principal: { address: "0xadmin" },
+              capability: { can: "execute", scope: "auth" },
+            },
+          ],
+        }),
+      ]);
+      await client.waitForJob(job.id);
+      const held = Object.keys((await module!.reactor.get(id)).state).sort();
+      return { subgraph, jobId: job.id, held };
+    }
+
     type JobAnswer = { id: string; status: string; error: string | null };
 
     it("jobStatus answers an unauthorised caller as for an unknown job", async () => {
@@ -293,6 +355,38 @@ describe("documentChanges and findDocuments under OPEN with auth-scope policies"
         contextFor(READER),
       );
 
+      expect(asOutsider.status).toBe(unknown.status);
+      expect(asOutsider.error).toBe(unknown.error);
+      expect(asReader.status).not.toBe(unknown.status);
+      expect(asReader.error).toBeNull();
+    });
+
+    it("jobStatus judges a document holding no domain scope on its declared scopes", async () => {
+      const { subgraph, jobId, held } = await unindexedJob();
+      const jobStatus = (
+        subgraph.resolvers.Query as Record<
+          string,
+          (p: unknown, a: unknown, c: Context) => Promise<JobAnswer>
+        >
+      ).jobStatus;
+
+      const asOutsider = await jobStatus(
+        undefined,
+        { jobId },
+        contextFor(OUTSIDER),
+      );
+      const unknown = await jobStatus(
+        undefined,
+        { jobId: "no-such-job" },
+        contextFor(OUTSIDER),
+      );
+      const asReader = await jobStatus(
+        undefined,
+        { jobId },
+        contextFor(READER),
+      );
+
+      expect(held).toEqual(["auth", "document"]);
       expect(asOutsider.status).toBe(unknown.status);
       expect(asOutsider.error).toBe(unknown.error);
       expect(asReader.status).not.toBe(unknown.status);

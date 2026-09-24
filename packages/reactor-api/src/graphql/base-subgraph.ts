@@ -1,9 +1,8 @@
-import {
-  ALWAYS_READABLE_SCOPES,
-  type IReactorClient,
-  type IRelationalDb,
-  type ISyncManager,
-  type SyncScopeGate,
+import type {
+  IReactorClient,
+  IRelationalDb,
+  ISyncManager,
+  SyncScopeGate,
 } from "@powerhousedao/reactor";
 import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import type {
@@ -185,11 +184,7 @@ export class BaseSubgraph implements ISubgraph {
     return { address: ctx.user?.address, key: ctx.user?.appKey };
   }
 
-  /**
-   * Whether the caller may read any domain scope of the document, the rule
-   * listings and the change feed withhold by. Fails closed: a document that
-   * cannot be fetched is not served.
-   */
+  /** Whether a listing would serve the document to the caller; fails closed. */
   protected async servesDocument(
     documentId: string,
     ctx: Context,
@@ -197,18 +192,13 @@ export class BaseSubgraph implements ISubgraph {
     if (!documentId) {
       return false;
     }
-    let state: Record<string, unknown>;
     try {
-      const document = await this.reactorClient.get(documentId, {
+      return await this.reactorClient.isServed(documentId, {
         subject: this.viewSubject(ctx),
       });
-      state = document.state as Record<string, unknown>;
     } catch {
       return false;
     }
-    return Object.keys(state).some(
-      (scope) => !ALWAYS_READABLE_SCOPES.has(scope),
-    );
   }
 
   /**
