@@ -4,6 +4,7 @@ import {
   lazy,
   Suspense,
   useEffect,
+  useId,
   useRef,
   useState,
   type ReactNode,
@@ -184,20 +185,25 @@ export function AvailableSoon(props: { children?: ReactNode }) {
   );
 }
 
+// The label points at its control by id rather than wrapping it: a wrapping
+// label would bind to the first control inside, the "Insert data" button.
 function FieldShell(props: {
   prop: BlockFormProp;
   invalid: boolean;
+  htmlFor?: string;
   picker?: ReactNode;
   children: ReactNode;
   error?: string | null;
-  as?: "label" | "div";
 }) {
   const { prop } = props;
-  const Tag = props.as ?? "label";
+  const LabelTag = props.htmlFor ? "label" : "span";
   return (
-    <Tag className="block">
-      <span className="mb-1.5 flex min-h-6 items-center justify-between gap-2">
-        <span className="flex min-w-0 items-baseline gap-1.5 text-[13px] font-medium text-foreground">
+    <div>
+      <div className="mb-1.5 flex min-h-6 items-center justify-between gap-2">
+        <LabelTag
+          htmlFor={props.htmlFor}
+          className="flex min-w-0 items-baseline gap-1.5 text-[13px] font-medium text-foreground"
+        >
           <span className="truncate">{prop.displayName}</span>
           {!prop.required ? (
             <span className="shrink-0 text-xs font-normal text-muted-foreground">
@@ -209,17 +215,17 @@ function FieldShell(props: {
               Needs a value
             </span>
           ) : null}
-        </span>
+        </LabelTag>
         {props.picker ? (
           <span className="flex shrink-0 items-center gap-0.5">
             {props.picker}
           </span>
         ) : null}
-      </span>
+      </div>
       {props.children}
       <FieldError>{props.error}</FieldError>
       <Hint text={prop.description} />
-    </Tag>
+    </div>
   );
 }
 
@@ -231,6 +237,7 @@ function OptionList(props: {
   loading?: boolean;
   onRefresh?: () => void;
   placeholder?: string;
+  id?: string;
 }) {
   const keyOf = (value: unknown) => stringifyValue(value);
   const byKey = new Map(
@@ -238,6 +245,7 @@ function OptionList(props: {
   );
   return (
     <Select
+      id={props.id}
       multiple
       options={props.options.map((option) => ({
         value: keyOf(option.value),
@@ -267,6 +275,7 @@ function OptionSelect(props: {
   onRefresh?: () => void;
   clearable?: boolean;
   emptyText?: string;
+  id?: string;
 }) {
   const keyOf = (value: unknown) => stringifyValue(value);
   const byKey = new Map(
@@ -274,6 +283,7 @@ function OptionSelect(props: {
   );
   return (
     <Select
+      id={props.id}
       options={props.options.map((option) => ({
         value: keyOf(option.value),
         label: option.label,
@@ -472,6 +482,7 @@ function SecretRefField(props: {
   secrets?: SecretFormService;
 }) {
   const { secrets } = props;
+  const fieldId = useId();
   const ref = typeof props.value === "string" ? props.value : "";
   const managed = ref.startsWith(SECRET_REF_PREFIX);
   const [draft, setDraft] = useState("");
@@ -522,7 +533,7 @@ function SecretRefField(props: {
 
   if (!secrets) {
     return (
-      <FieldShell prop={props.prop} invalid={props.invalid} as="div">
+      <FieldShell htmlFor={fieldId} prop={props.prop} invalid={props.invalid}>
         <p className="text-xs text-muted-foreground">
           Managed secrets are unavailable in this session.
         </p>
@@ -531,9 +542,9 @@ function SecretRefField(props: {
   }
   return (
     <FieldShell
+      htmlFor={fieldId}
       prop={props.prop}
       invalid={props.invalid}
-      as="div"
       error={error}
     >
       {managed ? (
@@ -549,6 +560,7 @@ function SecretRefField(props: {
       ) : null}
       <div className="flex items-center gap-1">
         <input
+          id={fieldId}
           className={`${textInputClass} ${props.invalid ? invalidClass : ""}`}
           type="password"
           value={draft}
@@ -593,6 +605,7 @@ function PropField(props: {
   webhookUrl?: string;
 }) {
   const { prop, value, onCommit } = props;
+  const fieldId = useId();
   const optionsUnavailable = Boolean(
     props.nested && prop.hasDynamicResolver && !props.loadOptions,
   );
@@ -670,6 +683,7 @@ function PropField(props: {
     <>
       <div className="flex items-center gap-1">
         <input
+          id={fieldId}
           ref={fieldRef as React.RefObject<HTMLInputElement>}
           type={extra.type ?? "text"}
           className={`${textInputClass} ${extra.mono ? "font-mono text-xs" : ""} ${
@@ -700,8 +714,9 @@ function PropField(props: {
       );
     case "PH_AUTOCOMPLETE":
       return (
-        <FieldShell prop={prop} invalid={invalid}>
+        <FieldShell htmlFor={fieldId} prop={prop} invalid={invalid}>
           <AutocompleteInput
+            id={fieldId}
             className={`${textInputClass} ${invalid ? invalidClass : ""}`}
             value={typeof value === "string" ? value : stringifyValue(value)}
             onCommit={(next) => onCommit(next === "" ? undefined : next)}
@@ -715,7 +730,7 @@ function PropField(props: {
       );
     case "PH_ACTIONS":
       return (
-        <FieldShell prop={prop} invalid={invalid} as="div">
+        <FieldShell htmlFor={fieldId} prop={prop} invalid={invalid}>
           <ActionListEditor
             value={value}
             onCommit={onCommit}
@@ -760,7 +775,12 @@ function PropField(props: {
     case "NUMBER":
       // Text input so expressions stay possible; numeric text commits a number.
       return (
-        <FieldShell prop={prop} invalid={invalid} picker={picker}>
+        <FieldShell
+          htmlFor={fieldId}
+          prop={prop}
+          invalid={invalid}
+          picker={picker}
+        >
           {textInput({
             commit: (raw) => {
               const trimmed = raw.trim();
@@ -773,7 +793,12 @@ function PropField(props: {
       );
     case "SECRET_TEXT":
       return (
-        <FieldShell prop={prop} invalid={invalid} picker={picker}>
+        <FieldShell
+          htmlFor={fieldId}
+          prop={prop}
+          invalid={invalid}
+          picker={picker}
+        >
           {textInput({
             type: "password",
             commit: (raw) => onCommit(raw === "" ? undefined : raw),
@@ -782,7 +807,12 @@ function PropField(props: {
       );
     case "FILE":
       return (
-        <FieldShell prop={prop} invalid={invalid} picker={picker}>
+        <FieldShell
+          htmlFor={fieldId}
+          prop={prop}
+          invalid={invalid}
+          picker={picker}
+        >
           {textInput({
             mono: true,
             placeholder: prop.placeholder ?? "https://… or data:…;base64,…",
@@ -794,7 +824,12 @@ function PropField(props: {
     case "DATE_TIME":
       if (textMode) {
         return (
-          <FieldShell prop={prop} invalid={invalid} picker={picker}>
+          <FieldShell
+            htmlFor={fieldId}
+            prop={prop}
+            invalid={invalid}
+            picker={picker}
+          >
             {textInput({
               mono: true,
               placeholder: "ISO 8601 or {{expression}}",
@@ -813,8 +848,14 @@ function PropField(props: {
         );
       }
       return (
-        <FieldShell prop={prop} invalid={invalid} picker={picker}>
+        <FieldShell
+          htmlFor={fieldId}
+          prop={prop}
+          invalid={invalid}
+          picker={picker}
+        >
           <input
+            id={fieldId}
             type="datetime-local"
             className={`${textInputClass} ${invalid ? invalidClass : ""}`}
             defaultValue={isoToLocalInput(value)}
@@ -834,7 +875,7 @@ function PropField(props: {
         options.every((option) => option.label.length <= 22)
       ) {
         return (
-          <FieldShell prop={prop} invalid={false} as="div">
+          <FieldShell htmlFor={fieldId} prop={prop} invalid={false}>
             <Segmented
               value={stringifyValue(value)}
               options={options.map((option) => ({
@@ -852,8 +893,9 @@ function PropField(props: {
         );
       }
       return (
-        <FieldShell prop={prop} invalid={invalid} as="div">
+        <FieldShell htmlFor={fieldId} prop={prop} invalid={invalid}>
           <OptionSelect
+            id={fieldId}
             options={prop.staticOptions ?? []}
             value={value}
             onChange={onCommit}
@@ -866,8 +908,9 @@ function PropField(props: {
     }
     case "STATIC_MULTI_SELECT_DROPDOWN":
       return (
-        <FieldShell prop={prop} invalid={invalid} as="div">
+        <FieldShell htmlFor={fieldId} prop={prop} invalid={invalid}>
           <OptionList
+            id={fieldId}
             options={prop.staticOptions ?? []}
             selected={Array.isArray(value) ? (value as unknown[]) : []}
             onChange={(next) => onCommit(next.length > 0 ? next : undefined)}
@@ -881,13 +924,14 @@ function PropField(props: {
       const current = stringifyValue(value);
       return (
         <FieldShell
+          htmlFor={fieldId}
           prop={prop}
           invalid={invalid}
-          as="div"
           error={loadError(dropdown.state)}
           picker={optionsUnavailable ? <AvailableSoon /> : undefined}
         >
           <OptionSelect
+            id={fieldId}
             options={result?.options ?? []}
             value={value}
             onChange={onCommit}
@@ -922,9 +966,9 @@ function PropField(props: {
         .map((entry) => ({ label: stringifyValue(entry), value: entry }));
       return (
         <FieldShell
+          htmlFor={fieldId}
           prop={prop}
           invalid={invalid}
-          as="div"
           error={loadError(dropdown.state)}
           picker={optionsUnavailable ? <AvailableSoon /> : undefined}
         >
@@ -934,6 +978,7 @@ function PropField(props: {
             </p>
           ) : (
             <OptionList
+              id={fieldId}
               options={[...extra, ...(result?.options ?? [])]}
               selected={selected}
               onChange={(next) => onCommit(next.length > 0 ? next : undefined)}
@@ -955,9 +1000,9 @@ function PropField(props: {
           : {};
       return (
         <FieldShell
+          htmlFor={fieldId}
           prop={prop}
           invalid={invalid && fields !== null && fields.length > 0}
-          as="div"
           error={loadError(dynamic.state)}
           picker={
             optionsUnavailable ? (
@@ -1002,7 +1047,7 @@ function PropField(props: {
     case "ARRAY": {
       if (prop.properties && prop.properties.length > 0) {
         return (
-          <FieldShell prop={prop} invalid={invalid} as="div">
+          <FieldShell htmlFor={fieldId} prop={prop} invalid={invalid}>
             <ArrayRows
               prop={prop}
               value={value}
@@ -1019,6 +1064,7 @@ function PropField(props: {
         : stringifyValue(value);
       return (
         <FieldShell
+          htmlFor={fieldId}
           prop={prop}
           invalid={invalid}
           picker={
@@ -1029,6 +1075,7 @@ function PropField(props: {
           }
         >
           <textarea
+            id={fieldId}
             ref={fieldRef as React.RefObject<HTMLTextAreaElement>}
             className={`${textAreaClass} font-mono text-xs ${
               invalid ? invalidClass : ""
@@ -1057,7 +1104,12 @@ function PropField(props: {
     case "OBJECT": {
       if (textMode) {
         return (
-          <FieldShell prop={prop} invalid={invalid} picker={picker}>
+          <FieldShell
+            htmlFor={fieldId}
+            prop={prop}
+            invalid={invalid}
+            picker={picker}
+          >
             {textInput({
               mono: true,
               placeholder: "{{expression}} yielding an object",
@@ -1078,7 +1130,12 @@ function PropField(props: {
           ? (value as Record<string, unknown>)
           : {};
       return (
-        <FieldShell prop={prop} invalid={invalid} as="div" picker={picker}>
+        <FieldShell
+          htmlFor={fieldId}
+          prop={prop}
+          invalid={invalid}
+          picker={picker}
+        >
           <ObjectRows value={record} onCommit={onCommit} invalid={invalid} />
         </FieldShell>
       );
@@ -1088,12 +1145,14 @@ function PropField(props: {
       const isJson = prop.type === "JSON";
       return (
         <FieldShell
+          htmlFor={fieldId}
           prop={prop}
           invalid={invalid}
           picker={picker}
           error={jsonError}
         >
           <textarea
+            id={fieldId}
             ref={fieldRef as React.RefObject<HTMLTextAreaElement>}
             className={`${textAreaClass} ${isJson ? "font-mono text-xs" : ""} ${
               invalid ? invalidClass : ""
@@ -1130,7 +1189,12 @@ function PropField(props: {
     }
     default:
       return (
-        <FieldShell prop={prop} invalid={invalid} picker={picker}>
+        <FieldShell
+          htmlFor={fieldId}
+          prop={prop}
+          invalid={invalid}
+          picker={picker}
+        >
           {textInput({
             commit: (raw) => onCommit(raw === "" ? undefined : raw),
           })}
