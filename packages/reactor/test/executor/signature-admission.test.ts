@@ -1073,4 +1073,63 @@ describe("signature admission", () => {
       expect(await stored()).toEqual([]);
     });
   });
+
+  describe("a malformed signer", () => {
+    const USER = { address: "0xabc", networkId: "eip155", chainId: 1 };
+    const KEY = "did:key:zMalformed";
+    const TUPLE = ["1", KEY, "hash", "", "0x00"];
+    const SHAPES: [string, unknown][] = [
+      ["no signatures", { user: USER, app: { name: "a", key: KEY } }],
+      [
+        "signatures that are not a list",
+        { user: USER, app: { name: "a", key: KEY }, signatures: {} },
+      ],
+      ["an app that is not an object", { user: USER, app: 1, signatures: [] }],
+      [
+        "a key that is not a string",
+        { user: USER, app: { name: "a", key: {} }, signatures: [TUPLE] },
+      ],
+      ["no user", { app: { name: "a", key: KEY }, signatures: [TUPLE] }],
+      [
+        "a short tuple",
+        { user: USER, app: { name: "a", key: KEY }, signatures: [["1", KEY]] },
+      ],
+    ];
+
+    function malformed(action: Action, signer: unknown): Action {
+      return { ...action, context: { signer } } as Action;
+    }
+
+    for (const [label, signer] of SHAPES) {
+      it(`with ${label} is dropped at load while the batch succeeds`, async () => {
+        await build("enforce");
+        const good1 = await renownSigned(moduleAction("a", 0));
+        const bad = malformed(moduleAction("b", 1), signer);
+        const good2 = await renownSigned(moduleAction("c", 2));
+
+        const job = await load([
+          asOperation(good1, 0),
+          asOperation(bad, 1),
+          asOperation(good2, 2),
+        ]);
+
+        expect(job.error).toBeUndefined();
+        expect(job.status).toBe(JobStatus.READ_READY);
+        expect(await storedActionIds()).toEqual([good1.id, good2.id]);
+        expect(refusals).toMatchObject([
+          { actionId: bad.id, code: "MALFORMED_TUPLE", path: "load" },
+        ]);
+      });
+
+      it(`with ${label} fails a mutation as MALFORMED_TUPLE`, async () => {
+        await build("enforce");
+        const job = await execute([malformed(moduleAction("m"), signer)]);
+
+        expect(job.status).toBe(JobStatus.FAILED);
+        expect(job.error?.name).toBe("InvalidSignatureError");
+        expect(job.error?.message).toContain("[MALFORMED_TUPLE]");
+        expect(await stored()).toEqual([]);
+      });
+    }
+  });
 });

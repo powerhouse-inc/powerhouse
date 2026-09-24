@@ -81,6 +81,91 @@ describe("verifyActionSignature", () => {
     expect(verdict).toMatchObject({ ok: false, code: "MALFORMED_TUPLE" });
   });
 
+  describe("a malformed signer", () => {
+    const user = { address: "0xabc", networkId: "eip155", chainId: 1 };
+    const tuple = ["1", "did:key:z", "hash", "", "0x00"];
+    const shapes: [string, unknown][] = [
+      ["a signer that is not an object", "signer"],
+      ["no signatures", { user, app: { name: "a", key: "did:key:z" } }],
+      [
+        "signatures that are not a list",
+        { user, app: { name: "a", key: "did:key:z" }, signatures: "x" },
+      ],
+      [
+        "an app that is not an object",
+        { user, app: "did:key:z", signatures: [tuple] },
+      ],
+      [
+        "a key that is not a string",
+        { user, app: { name: "a", key: 7 }, signatures: [tuple] },
+      ],
+      [
+        "no user",
+        { app: { name: "a", key: "did:key:z" }, signatures: [tuple] },
+      ],
+      [
+        "a tuple of four elements",
+        {
+          user,
+          app: { name: "a", key: "did:key:z" },
+          signatures: [tuple.slice(0, 4)],
+        },
+      ],
+      [
+        "a tuple holding a number",
+        {
+          user,
+          app: { name: "a", key: "did:key:z" },
+          signatures: [[1, "did:key:z", "hash", "", "0x00"]],
+        },
+      ],
+      [
+        "a tuple that is not a list",
+        { user, app: { name: "a", key: "did:key:z" }, signatures: ["tuple"] },
+      ],
+    ];
+
+    for (const [label, malformed] of shapes) {
+      it(`refuses ${label} without throwing`, async () => {
+        const a = { ...action(), context: { signer: malformed } } as Action;
+        for (const path of ["mutation", "load"] as const) {
+          expect(await verifyActionSignature(a, target, path)).toMatchObject({
+            ok: false,
+            code: "MALFORMED_TUPLE",
+          });
+        }
+      });
+    }
+
+    it("treats a signer with no app as unsigned", async () => {
+      const a = {
+        ...action(),
+        context: { signer: { user, signatures: [tuple] } },
+      } as unknown as Action;
+      expect(await verifyActionSignature(a, target, "load")).toEqual({
+        ok: true,
+        scheme: "unsigned",
+      });
+    });
+
+    it("refuses a malformed CREATE on a v2-required policy without throwing", async () => {
+      const create = {
+        ...createDocumentAction({
+          documentId: "x",
+          model: "powerhouse/document-model",
+          version: 0,
+        } as never),
+        context: { signer: { user, app: { name: "a", key: "k" } } },
+      } as Action;
+      const verdict = await verifyActionSignature(
+        create,
+        { ...target, policy: "v2-required" },
+        "load",
+      );
+      expect(verdict).toMatchObject({ ok: false, code: "ID_MISMATCH" });
+    });
+  });
+
   it("accepts a renown tuple at mutation admission", async () => {
     const a = action();
     const signed = signer.signed(a, await signer.renownTuple(a));

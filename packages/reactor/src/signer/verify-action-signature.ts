@@ -1,5 +1,6 @@
 import type {
   Action,
+  ActionSigner,
   CreateDocumentActionInput,
   Signature,
   SignaturePolicy,
@@ -48,8 +49,8 @@ export async function verifyActionSignature(
     return refusal;
   }
 
-  const signer = action.context?.signer;
-  if (!signer || !signer.app.key) {
+  const shape = signerShape(action.context?.signer);
+  if (shape.kind === "unsigned") {
     return policy === "v2-required"
       ? refuse(
           "unsigned",
@@ -58,17 +59,15 @@ export async function verifyActionSignature(
         )
       : { ok: true, scheme: "unsigned" };
   }
-
-  const tuple = signer.signatures.at(-1);
-  if (!isTuple(tuple)) {
+  if (shape.kind === "malformed") {
     return refuse(
       "legacy-unknown",
       "MALFORMED_TUPLE",
-      signer.signatures.length === 0
-        ? `action ${action.id} has a signer but no signatures`
-        : `action ${action.id} carries a malformed signature tuple`,
+      `action ${action.id} ${shape.reason}`,
     );
   }
+
+  const { signer, tuple } = shape;
 
   const scheme = schemeOf(tuple[2]);
 
@@ -169,12 +168,67 @@ function derivedCreateId(
 }
 
 function schemeOfAction(action: Action): SignatureScheme {
-  const signer = action.context?.signer;
-  if (!signer || !signer.app.key) {
+  const shape = signerShape(action.context?.signer);
+  if (shape.kind === "unsigned") {
     return "unsigned";
   }
-  const tuple = signer.signatures.at(-1);
-  return isTuple(tuple) ? schemeOf(tuple[2]) : "legacy-unknown";
+  return shape.kind === "signed" ? schemeOf(shape.tuple[2]) : "legacy-unknown";
+}
+
+type SignerShape =
+  | { kind: "unsigned" }
+  | { kind: "malformed"; reason: string }
+  | { kind: "signed"; signer: ActionSigner; tuple: Signature };
+
+/** Peers send arbitrary JSON, so nothing past `context` is assumed. */
+function signerShape(value: unknown): SignerShape {
+  if (value === undefined || value === null) {
+    return { kind: "unsigned" };
+  }
+  if (!isRecord(value)) {
+    return { kind: "malformed", reason: "has a signer that is not an object" };
+  }
+  const { app, user, signatures } = value;
+  if (app !== undefined && app !== null && !isRecord(app)) {
+    return {
+      kind: "malformed",
+      reason: "has a signer.app that is not an object",
+    };
+  }
+  const key = isRecord(app) ? app.key : undefined;
+  if (key !== undefined && key !== null && typeof key !== "string") {
+    return {
+      kind: "malformed",
+      reason: "has a signer.app.key that is not a string",
+    };
+  }
+  if (!key) {
+    return { kind: "unsigned" };
+  }
+  if (!isRecord(user) || typeof user.address !== "string") {
+    return { kind: "malformed", reason: "has a signer without a user address" };
+  }
+  if (!Array.isArray(signatures)) {
+    return {
+      kind: "malformed",
+      reason: "has a signer whose signatures are not a list",
+    };
+  }
+  const tuple: unknown = signatures.at(-1);
+  if (!isTuple(tuple)) {
+    return {
+      kind: "malformed",
+      reason:
+        signatures.length === 0
+          ? "has a signer but no signatures"
+          : "carries a malformed signature tuple",
+    };
+  }
+  return { kind: "signed", signer: value as ActionSigner, tuple };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 async function checkV2(
