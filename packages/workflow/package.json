@@ -67,7 +67,9 @@
     "lint": "cd ../.. && oxlint packages/workflow",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "build": "tsx ./build.ts"
+    "build": "tsx ./build.ts",
+    "ui:shots": "tsx ./scripts/ui-shots.ts",
+    "ui:serve": "tsx ./scripts/ui-shots.ts --serve"
   },
   "dependencies": {
     "@powerhousedao/design-system": "workspace:*",
@@ -84,6 +86,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@powerhousedao/powerhouse-vetra-packages": "workspace:*",
     "@tailwindcss/cli": "catalog:",
     "@types/node": "catalog:",
