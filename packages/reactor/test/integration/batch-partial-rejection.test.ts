@@ -4,11 +4,22 @@ import {
   deleteNode,
   driveDocumentModelModule,
 } from "@powerhousedao/shared/document-drive";
-import { generateId } from "@powerhousedao/shared/document-model";
+import {
+  generateId,
+  withSignaturePolicy,
+} from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor } from "../../src/core/types.js";
 import { JobStatus } from "../../src/shared/types.js";
+
+// IReactor.execute takes no signer, so its writes go unsigned.
+function createLegacyDrive(): DocumentDriveDocument {
+  return withSignaturePolicy(
+    driveDocumentModelModule.utils.createDocument(),
+    "legacy",
+  );
+}
 
 // A rejected action does not fail its job, so `JobInfo.result` is the only
 // place a caller learns it was rejected.
@@ -41,7 +52,7 @@ describe("a batch whose middle action a reducer rejects", () => {
   }
 
   it("reaches READ_READY, keeps the other two actions, and names the rejected one", async () => {
-    const document = driveDocumentModelModule.utils.createDocument();
+    const document = createLegacyDrive();
     const documentId = document.header.id;
     await waitForReadReady((await reactor.create(document)).id);
 
@@ -83,7 +94,7 @@ describe("a batch whose middle action a reducer rejects", () => {
   });
 
   it("reports every action applied when the whole batch succeeds", async () => {
-    const document = driveDocumentModelModule.utils.createDocument();
+    const document = createLegacyDrive();
     const documentId = document.header.id;
     await waitForReadReady((await reactor.create(document)).id);
 

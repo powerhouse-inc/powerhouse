@@ -100,6 +100,7 @@ export const createMockOperationIndex = (): IOperationIndex => ({
   getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
   getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
   getGroupReferencers: vi.fn().mockResolvedValue([]),
+  getOrdinalsByOpIds: vi.fn().mockResolvedValue(new Map()),
 });
 
 export const createMockOperationContext = (

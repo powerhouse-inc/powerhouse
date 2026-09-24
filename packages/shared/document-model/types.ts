@@ -3,6 +3,7 @@ import type { ProcessorFactoryBuilder } from "processors";
 import type { FC, ReactNode } from "react";
 import type { z } from "zod";
 import type { ZodRawShape } from "zod";
+import type { ActionSigningTarget } from "./action-signature.js";
 import type { Action } from "./actions.js";
 import type { PHDocument } from "./documents.js";
 import type { Operation } from "./operations.js";
@@ -1569,13 +1570,18 @@ export interface ISigner {
   verify: (data: Uint8Array, signature: Uint8Array) => Promise<void>;
 
   /**
-   * Signs an action (used for operation signing).
+   * Signs an action for the log it is written to.
    *
    * @param action - The action to sign.
+   * @param target - The document and branch whose log stores the action.
    * @param abortSignal - Optional abort signal to cancel the signing.
    * @returns The signature tuple.
    */
-  signAction: (action: Action, abortSignal?: AbortSignal) => Promise<Signature>;
+  signAction: (
+    action: Action,
+    target: ActionSigningTarget,
+    abortSignal?: AbortSignal,
+  ) => Promise<Signature>;
 }
 
 export type IsStateOfType<TState> = (state: unknown) => state is TState;

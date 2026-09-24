@@ -42,9 +42,6 @@ export type IdentityOptions = {
 
   /** Base url of the Renown instance to use */
   baseUrl?: string;
-
-  /** If true, unsigned actions will be rejected */
-  requireSignatures?: boolean;
 };
 
 export type StartServerOptions = {

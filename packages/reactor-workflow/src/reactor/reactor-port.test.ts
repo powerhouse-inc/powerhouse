@@ -79,6 +79,10 @@ function fakeReactor(documents: ReturnType<typeof doc>[] = []) {
         ],
       });
     },
+    // The fake documents carry legacy headers, which a legacy default keeps.
+    getCreateSignaturePolicy() {
+      return Promise.resolve("legacy" as const);
+    },
     getDocumentModelModule(documentType: string) {
       calls.push(`model ${documentType}`);
       return Promise.resolve({

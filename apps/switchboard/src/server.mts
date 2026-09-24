@@ -48,6 +48,7 @@ import {
   RENOWN_READ_MODEL_SUBGRAPH,
   type CredentialCheck,
   type IRenown,
+  type SwitchboardRequestFn,
 } from "@renown/sdk/node";
 import * as Sentry from "@sentry/node";
 import { childLogger, setLogLevel, type ILogger } from "document-model";
@@ -94,7 +95,13 @@ import {
   type SupportedPgMajor,
 } from "./pglite-version.js";
 import { resolveReactorFeatureFlags } from "./reactor-feature-flags.mjs";
-import { getRenownSignerConfig, initRenown } from "./renown.js";
+import { resolveCreateSignaturePolicy } from "./create-signature-policy.mjs";
+import {
+  assertWorkerTrustPolicy,
+  getRenownSignerConfig,
+  getRenownTrustPolicyConfig,
+  initRenown,
+} from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
 import {
   addDefaultDrive,
@@ -112,8 +119,6 @@ dotenv.config();
 // Feature flag constants
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED = "DOCUMENT_MODEL_SUBGRAPHS_ENABLED";
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT = true;
-const REQUIRE_SIGNATURES = "REQUIRE_SIGNATURES";
-const REQUIRE_SIGNATURES_DEFAULT = false;
 
 const DEFAULT_PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
 
@@ -413,6 +418,12 @@ async function initServer(
         "The executor worker pool (REACTOR_WORKERS) is not supported in dev mode: Vite-loaded document models cannot cross a worker-thread boundary",
       );
     }
+    assertWorkerTrustPolicy({
+      workers: workerPool.numWorkers,
+      authEnforcement:
+        resolveReactorFeatureFlags(process.env).flags.authEnforcement === true,
+      renownSource: renownConfig.source,
+    });
     if (!reactorDbUrl || !isPostgresUrl(reactorDbUrl)) {
       throw new Error(
         "The executor worker pool (REACTOR_WORKERS) requires a Postgres reactor database — set PH_REACTOR_DATABASE_URL or PH_SWITCHBOARD_DATABASE_URL. PGlite cannot be shared across worker threads.",
@@ -500,6 +511,8 @@ async function initServer(
   // Set only when we build the reactor ourselves; a caller-provided one keeps
   // its own lifecycle and must not be torn down here.
   let ownedReactorModule: InProcessReactorClientModule | undefined;
+  // Bound once the api serves the renown read model; see `localCredentialCheck`.
+  let localRenownRequest: SwitchboardRequestFn | undefined;
   const initializeClient = async (
     documentModels: DocumentModelModule[],
     {
@@ -613,7 +626,33 @@ async function initServer(
           : undefined,
       logger: reactorLogger,
       signer: renown
-        ? getRenownSignerConfig(renown, options.identity?.requireSignatures)
+        ? getRenownSignerConfig(renown, options.identity?.keypairPath)
+        : undefined,
+      createSignaturePolicy: resolveCreateSignaturePolicy(process.env, {
+        hasSigner: renown !== null,
+        logger,
+      }),
+      trustPolicy: reactorFeatureFlags.authEnforcement
+        ? await getRenownTrustPolicyConfig(
+            renownConfig.source === "self"
+              ? {
+                  source: "self",
+                  request: (query, variables) =>
+                    localRenownRequest
+                      ? localRenownRequest(query, variables)
+                      : Promise.reject(
+                          new Error(
+                            "The local renown read model is not bound yet",
+                          ),
+                        ),
+                }
+              : {
+                  source: "remote",
+                  renownUrl: renownConfig.url,
+                  switchboardUrl: renownConfig.switchboardUrl,
+                },
+            renown,
+          )
         : undefined,
     });
 
@@ -874,18 +913,16 @@ async function initServer(
           "(@powerhousedao/renown-package) or set RENOWN_SOURCE=remote.",
       );
     }
-    localCredentialCheck = createLocalCredentialVerifier(
-      (query, variables) =>
-        manager.executeSubgraphQuery(
-          RENOWN_READ_MODEL_SUBGRAPH,
-          query,
-          variables,
-        ),
-      {
-        onError: (error) =>
-          logger.error("Renown read model query failed: @error", error),
-      },
-    );
+    localRenownRequest = (query, variables) =>
+      manager.executeSubgraphQuery(
+        RENOWN_READ_MODEL_SUBGRAPH,
+        query,
+        variables,
+      );
+    localCredentialCheck = createLocalCredentialVerifier(localRenownRequest, {
+      onError: (error) =>
+        logger.error("Renown read model query failed: @error", error),
+    });
     logger.info(
       "Renown credentials will be verified against this switchboard's own " +
         "renown read model",
@@ -1168,13 +1205,6 @@ export const startSwitchboard = async (
 
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
-  const requireSignatures =
-    options.identity?.requireSignatures ??
-    (await featureFlags.getBooleanValue(
-      REQUIRE_SIGNATURES,
-      REQUIRE_SIGNATURES_DEFAULT,
-    ));
-
   const configPathForFlags = resolveConfigPath(options.configFile);
   const workflowsEnabled = await resolveWorkflowsEnabled({
     featureFlags,
@@ -1191,7 +1221,6 @@ export const startSwitchboard = async (
   );
   options.identity = {
     ...options.identity,
-    requireSignatures,
     baseUrl: options.identity?.baseUrl ?? renownConfig.url,
   };
 
@@ -1200,7 +1229,6 @@ export const startSwitchboard = async (
     JSON.stringify(
       {
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
-        REQUIRE_SIGNATURES: requireSignatures,
         PH_WORKFLOWS_ENABLED: workflowsEnabled,
       },
       null,

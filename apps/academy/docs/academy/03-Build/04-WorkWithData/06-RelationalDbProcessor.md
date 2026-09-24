@@ -432,12 +432,12 @@ Result:
 ```json
 {
   "data": {
-    "TodoList_createDocument": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b"
+    "TodoList_createDocument": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI"
   }
 }
 ```
 
-💡 **Key Insight**: The returned UUID (`72b73d31-4874-4b71-8cc3-289ed4cfbe2b`) is crucial - this is the document ID that will appear in our processor's database records, linking operations back to their source document. You will receive a different UUID.
+💡 **Key Insight**: The returned id (`pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI`) is crucial - this is the document ID that will appear in our processor's database records, linking operations back to their source document. New documents take a content-addressed id derived from their header, so you will receive a different one.
 
 ---
 
@@ -460,7 +460,7 @@ Variables:
 ```json
 {
   "driveId": "fc29ec1b-9934-410b-8682-4731b810d441",
-  "docId": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b",
+  "docId": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI",
   "input": {
     "text": "complete mutation"
   }
@@ -482,7 +482,7 @@ Result:
 1. **Document Model**: Stores the operation and updates document state
 2. **Reactor**: Packages the operation as an `OperationWithContext` (with `documentId`, `documentType`, `scope`, etc.) and routes it to matching processors via `onOperations()`
 3. **Our Processor**: Automatically receives the `OperationWithContext` and creates a database record
-4. **Database**: Now contains: `"72b73d31-4874-4b71-8cc3-289ed4cfbe2b-0: ADD_TODO_ITEM"`
+4. **Database**: Now contains: `"pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI-0: ADD_TODO_ITEM"`
 
 🔄 **Repeat this step 2-3 times** with different todo items to see multiple operations get processed. Each operation will have an incrementing revision number or index
 
@@ -516,7 +516,7 @@ Variables:
 ```json
 {
   "driveId": "fc29ec1b-9934-410b-8682-4731b810d441",
-  "docId": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b"
+  "docId": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI"
 }
 ```
 
@@ -527,15 +527,15 @@ Response:
   "data": {
     "todos": [
       {
-        "task": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b-0: ADD_TODO_ITEM",
+        "task": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI-0: ADD_TODO_ITEM",
         "status": true
       },
       {
-        "task": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b-1: ADD_TODO_ITEM",
+        "task": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI-1: ADD_TODO_ITEM",
         "status": true
       },
       {
-        "task": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b-2: ADD_TODO_ITEM",
+        "task": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI-2: ADD_TODO_ITEM",
         "status": true
       }
     ],

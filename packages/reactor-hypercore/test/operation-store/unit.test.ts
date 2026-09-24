@@ -336,6 +336,47 @@ describe("HypercoreOperationStore", () => {
     });
   });
 
+  describe("getOperationsByIds", () => {
+    it("reads back the latest row of each id in the stream", async () => {
+      const documentId = generateId();
+      const sharedOpId = generateId();
+      const documentType = "powerhouse/test-doc";
+      const action = makeAction("TEST_ACTION");
+
+      await store.apply(
+        documentId,
+        documentType,
+        "global",
+        "main",
+        0,
+        (txn) => {
+          txn.addOperations(makeOp(0, { id: sharedOpId, action }));
+        },
+      );
+      await store.apply(
+        documentId,
+        documentType,
+        "global",
+        "main",
+        1,
+        (txn) => {
+          txn.addOperations(makeOp(1, { id: sharedOpId, action }));
+        },
+      );
+
+      const found = await store.getOperationsByIds(
+        documentId,
+        "global",
+        "main",
+        [sharedOpId, generateId()],
+      );
+
+      expect(found.map((operation) => [operation.id, operation.index])).toEqual(
+        [[sharedOpId, 1]],
+      );
+    });
+  });
+
   describe("getSince", () => {
     it("should get operations since a given revision", async () => {
       const documentId = generateId();

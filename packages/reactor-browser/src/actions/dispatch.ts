@@ -73,7 +73,7 @@ export async function dispatchActions(
     return;
   }
 
-  const signedActionsWithContext = await makeSignedActionsWithContext(
+  const signedActionsWithContext = makeSignedActionsWithContext(
     actionOrActions,
     document,
   );

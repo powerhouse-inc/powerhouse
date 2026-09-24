@@ -12,6 +12,7 @@ import {
   type JobFailedEvent,
   type JobRunningEvent,
   type JobWriteReadyEvent,
+  type SignatureRefusedEvent,
 } from "../../../src/events/types.js";
 import type {
   IExecutorWorker,
@@ -551,6 +552,47 @@ describe("WorkerPoolJobExecutorManager", () => {
       );
       await flush(100);
       expect(writeReadyEvents).toHaveLength(0);
+      await manager.stop(true);
+    });
+  });
+
+  describe("signature refusals", () => {
+    it("re-emits a worker's refusals on the parent bus", async () => {
+      const refusal: SignatureRefusedEvent = {
+        jobId: "refused-job",
+        documentId: "doc-1",
+        scope: "global",
+        branch: "main",
+        actionId: "a-1",
+        code: "BAD_SIGNATURE",
+        scheme: "legacy-renown",
+        path: "load",
+        enforced: true,
+        reason: "does not verify",
+      };
+      const manager = buildManager(
+        (i) =>
+          new FakeWorker({
+            index: i,
+            outcome: (job) => ({
+              result: { job, success: true, operations: [] },
+              signatureRefusals: [refusal],
+            }),
+          }),
+      );
+      await manager.start(1);
+
+      const seen: SignatureRefusedEvent[] = [];
+      eventBus.subscribe(
+        ReactorEventTypes.SIGNATURE_REFUSED,
+        (_t: number, data: SignatureRefusedEvent) => {
+          seen.push(data);
+        },
+      );
+
+      await queue.enqueue(createTestJob({ id: "refused-job" }));
+      await flush(100);
+      expect(seen).toEqual([refusal]);
       await manager.stop(true);
     });
   });

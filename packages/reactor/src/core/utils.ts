@@ -1,9 +1,14 @@
 import type {
   Action,
+  ActionSigningTarget,
   ISigner,
   Operation,
   PHDocument,
   Signature,
+} from "@powerhousedao/shared/document-model";
+import {
+  actionSignerIdentity,
+  actionSigningTarget,
 } from "@powerhousedao/shared/document-model";
 import { v4 as uuidv4 } from "uuid";
 import type { ErrorInfo, JobMeta, PagedResults } from "../shared/types.js";
@@ -271,51 +276,51 @@ export function getSharedActionScope(actions: Action[]): string {
 }
 
 /**
- * Signs an action with the provided signer.
- * If the action already has valid signatures, it is returned unchanged.
+ * Signs an action for `target`, the log it is written to. An action already
+ * signed under a key is returned unchanged; one whose signer or last tuple has
+ * no key is unsigned, and is signed like any other.
  */
 export const signAction = async (
   action: Action,
   signer: ISigner,
+  target: ActionSigningTarget,
   signal?: AbortSignal,
 ): Promise<Action> => {
-  const existingSignatures = action.context?.signer?.signatures;
-  if (existingSignatures && existingSignatures.length > 0) {
+  const existing = action.context?.signer;
+  if (existing?.app?.key && existing.signatures.at(-1)?.[1]) {
     return action;
   }
 
-  const signature: Signature = await signer.signAction(action, signal);
+  const signature: Signature = await signer.signAction(action, target, signal);
 
   return {
     ...action,
     context: {
       ...action.context,
-      signer: {
-        user: {
-          address: signer.user?.address || "",
-          networkId: signer.user?.networkId || "",
-          chainId: signer.user?.chainId || 0,
-        },
-        app: {
-          name: signer.app?.name || "",
-          key: signer.app?.key || "",
-        },
-        signatures: [signature],
-      },
+      signer: { ...actionSignerIdentity(signer), signatures: [signature] },
     },
   };
 };
 
 /**
- * Signs multiple actions with the provided signer
+ * Signs the actions of a job on `job.documentId`, each for the log it is
+ * written to: a relationship action lands in its source document.
  */
 export const signActions = async (
   actions: Action[],
   signer: ISigner,
+  job: ActionSigningTarget,
   signal?: AbortSignal,
 ): Promise<Action[]> => {
   return Promise.all(
-    actions.map((action) => signAction(action, signer, signal)),
+    actions.map((action) =>
+      signAction(
+        action,
+        signer,
+        actionSigningTarget(action, job.documentId, job.branch),
+        signal,
+      ),
+    ),
   );
 };
 

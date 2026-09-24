@@ -60,7 +60,7 @@ const reactor = await new ReactorBuilder()
 | `withDocumentModelSources(sources)` | Register document-model sources: live modules, importable `{ filePath }` files, or importable `{ packageName }` packages |
 | `withUpgradeManifests(manifests)` | Register [upgrade manifests](/academy/Reference/Reactor/DocumentModelRegistry) for document model versioning |
 | `withLogger(logger)`              | Set the logger (defaults to `ConsoleLogger`)                             |
-| `withExecutorConfig(config)`      | Configure `maxConcurrency`, `jobTimeoutMs`, and the reactor `featureFlags` (see [Authorization](/academy/Reference/Reactor/Authorization)) |
+| `withExecutorConfig(config)`      | Configure `maxConcurrency`, `jobTimeoutMs`, `signatureVerification` (see [Signing](/academy/Build/BuildingUserExperiences/Authorization/Signing#signature-verification)), and the reactor `featureFlags` (see [Authorization](/academy/Reference/Reactor/Authorization)) |
 | `withWriteCacheConfig(config)`    | Configure `maxDocuments` and `ringBufferSize` for the write cache        |
 | `withMigrationStrategy(strategy)` | Set to `"auto"` to run database migrations on build                      |
 | `withKysely(kysely)`              | Provide a custom Kysely database instance (defaults to in-memory PGlite) |
@@ -73,14 +73,14 @@ const reactor = await new ReactorBuilder()
 | `withSync(syncBuilder)`           | Enable [synchronization with remote reactors](/academy/Reference/Reactor/Synchronization) |
 | `withChannelScheme(scheme)`       | Set the sync channel scheme                                              |
 | `withFeatures(features)`          | Set feature flags                                                        |
-| `withSignatureVerifier(verifier)` | Set a signature verification handler                                     |
 | `withJwtHandler(handler)`         | Set a JWT handler for authentication                                     |
 | `withDocumentModelLoader(loader)` | Set a lazy document-model loader: `load(documentType)` returns a `DocumentModelSource`; importable sources are broadcast to executor workers, live modules stay host-only |
 | `withDriveContainerTypes(types)`  | Set the document types treated as drive containers                       |
 | `withInstrumentedPool(instrumentation)` | Register an externally-built `pg.Pool` so its metrics surface through `pools` |
 | `withShutdownHook(hook)`          | Register an async cleanup hook to run during graceful shutdown           |
 | `withSignalHandlers()`            | Register OS signal handlers for graceful shutdown                        |
-| `withWorkerPool(options)`         | Run jobs in N worker threads instead of in-process — calling it enables the pool; `{ numWorkers, db, verifier? }` or `{ numWorkers, factory }` (see [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling)) |
+| `withTrustPolicy(policy, workerSpec?)` | Decide which keys may sign as which users (see [Trust policy](/academy/Build/BuildingUserExperiences/Authorization/Signing#trust-policy)) |
+| `withWorkerPool(options)`         | Run jobs in N worker threads instead of in-process — calling it enables the pool; `{ numWorkers, db }` or `{ numWorkers, factory }` (see [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling)) |
 | `withProjectionShards(config)`    | Run N sharded projection workers (see [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling)) |
 | `withProjectionWorkerFactory(factory)` | Inject a custom projection worker factory                           |
 
@@ -546,7 +546,7 @@ The `withReactor` path receives no feature flags and no registry, so the client 
 | `withLogger(logger)`                | Set the logger (defaults to `ConsoleLogger`)                         |
 | `withReactorBuilder(builder)`       | Build the reactor from a `ReactorBuilder` (mutually exclusive with `withReactor`) |
 | `withReactor(reactor, eventBus, documentIndexer, documentView)` | Wire an already-built reactor and its internals        |
-| `withSigner(config)`                | Set an `ISigner` or `SignerConfig` for signing/verification          |
+| `withSigner(config)`                | Set an `ISigner` or `SignerConfig` for signing                       |
 | `withSubscriptionManager(manager)`  | Provide a custom subscription manager                                |
 | `withJobAwaiter(awaiter)`           | Provide a custom job awaiter                                         |
 | `withDocumentModelLoader(loader)`   | Set a custom document model loader (forwarded to the reactor builder) |

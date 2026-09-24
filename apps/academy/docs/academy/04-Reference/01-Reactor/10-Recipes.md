@@ -200,11 +200,11 @@ A read-only processor that counts operations per signer address over a sliding w
 A standalone script that builds cryptographically signed operations with an `ISigner` and verifies each one per-signature, detecting tampered and unsigned operations.
 
 - Builds a self-contained ECDSA P-256 `ISigner` with `RenownCryptoBuilder` plus in-memory key storage — no filesystem or network.
-- `buildSignedAction` advances the document through the reducer between actions, so each signature captures the correct previous-state hash; `verifyOperationSignature` checks each signature tuple.
+- `buildSignedAction` advances the document through the reducer between actions, so each signature captures the correct previous-state hash. A reactor checks these tuples itself when it stores a write; see [Signature Verification](/academy/Build/BuildingUserExperiences/Authorization/Signing#signature-verification).
 - Tamper and unsigned detection: corrupting a signature element or removing `action.context` flips verification to invalid / unsigned respectively.
 
 **Source** · [`src/verify-operations.ts`](https://github.com/powerhouse-inc/recipes/blob/main/signed-operations-verifier/src/verify-operations.ts) · [`src/verify-operations.test.ts`](https://github.com/powerhouse-inc/recipes/blob/main/signed-operations-verifier/src/verify-operations.test.ts)
-**Concepts** · `ISigner` · `RenownCryptoSigner` · `buildSignedAction` · `verifyOperationSignature` — see [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage)
+**Concepts** · `ISigner` · `RenownCryptoSigner` · `buildSignedAction` · signature tuples — see [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage)
 
 ## Document-model patterns
 
