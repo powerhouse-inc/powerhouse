@@ -339,6 +339,22 @@ describe("feed and listing reads", () => {
       expect(asReader.results.map((d) => d.header.id)).toEqual([policed]);
     });
 
+    it("answer isServed as find does", async () => {
+      const client = await build();
+      const unindexed = await createUnindexed(client, "served-unindexed");
+      await policeUnindexed(client, unindexed);
+      const open = await createOpen(client, "served-open");
+
+      const served = (id: string, address?: string) =>
+        client.isServed(id, { subject: { address } });
+
+      expect(await served(unindexed, OUTSIDER)).toBe(false);
+      expect(await served(unindexed)).toBe(false);
+      expect(await served(unindexed, READER)).toBe(true);
+      expect(await served(open, OUTSIDER)).toBe(true);
+      expect(await served("served-absent", READER)).toBe(false);
+    });
+
     it("read only the view's scopes and the policy for a narrowed view", async () => {
       const client = await build();
       const policed = await createPoliced(client, "narrow-policed");

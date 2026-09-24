@@ -623,6 +623,28 @@ export class ReactorClient implements IReactorClient {
     return this.gateListing(results, view, signal);
   }
 
+  /** Whether `find` would serve the document; false when it is absent. */
+  async isServed(
+    identifier: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    this.logger.verbose("isServed(@identifier, @view)", identifier, view);
+    let document: PHDocument;
+    try {
+      document = await this.reactor.getByIdOrSlug(
+        identifier,
+        withAuthScope(view),
+        undefined,
+        signal,
+      );
+    } catch (error) {
+      await assertAbsent(this.documentView, identifier, error, signal);
+      return false;
+    }
+    return (await this.gateListed(document, view, signal)) !== undefined;
+  }
+
   /**
    * Predicts the admission verdict for each candidate. See
    * {@link IReactorClient.evaluateActions} for the contract and its caveats.
