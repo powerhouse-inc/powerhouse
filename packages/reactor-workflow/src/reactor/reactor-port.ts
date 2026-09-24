@@ -14,7 +14,12 @@ import type {
   ReactorModelSummary,
   ReactorPort,
 } from "../pieces/index.js";
-import { createAction, type Action, type PHDocument } from "document-model";
+import {
+  createAction,
+  withSignaturePolicy,
+  type Action,
+  type PHDocument,
+} from "document-model";
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 const DRIVE_DOCUMENT_TYPES = new Set([
@@ -272,7 +277,10 @@ export class SubgraphReactorPort implements ReactorPort {
     // createEmpty only records the parent relationship; a drive also needs an
     // ADD_FILE node, or the document is created but invisible in the drive.
     const module = await this.client.getDocumentModelModule(input.documentType);
-    const empty = module.utils.createDocument() as PHDocument;
+    const empty = withSignaturePolicy(
+      module.utils.createDocument() as PHDocument,
+      await this.client.getCreateSignaturePolicy(),
+    );
     // The node name comes from the header, so set it before the file lands.
     if (input.name) empty.header.name = input.name;
     const created = await this.client.drives.addFile<PHDocument>(

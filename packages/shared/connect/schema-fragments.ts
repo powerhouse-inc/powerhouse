@@ -425,6 +425,13 @@ export const phConnectRuntimeConfigSchema = {
             },
           },
         },
+        createSignaturePolicy: {
+          type: "string",
+          enum: ["legacy", "v2-required"],
+          description:
+            "What new documents are created as. `v2-required` documents accept only v2 action signatures and take content-addressed ids; set `legacy` while any peer Connect syncs with predates them. Existing documents keep their policy.",
+          default: "v2-required",
+        },
       },
     },
     pwa: {

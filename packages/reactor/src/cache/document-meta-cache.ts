@@ -214,6 +214,7 @@ export class DocumentMetaCache implements IDocumentMetaCache {
     return {
       state: document.state.document,
       documentType,
+      protocolVersions: createAction.input.protocolVersions,
       documentScopeRevision: documentScopeRevision + 1,
     };
   }

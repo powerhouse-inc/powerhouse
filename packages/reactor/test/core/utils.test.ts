@@ -1,6 +1,8 @@
 import type { Action, Signature } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import { signAction, signActions } from "../../src/core/utils.js";
+
+const TARGET = { documentId: "doc-1", branch: "main" };
 import { createMockSigner, createTestAction } from "../factories.js";
 
 describe("signAction", () => {
@@ -15,9 +17,9 @@ describe("signAction", () => {
         app: { name: "test-app", key: "test-key" },
       });
 
-      const result = await signAction(action, signer);
+      const result = await signAction(action, signer, TARGET);
 
-      expect(signer.signAction).toHaveBeenCalledWith(action, undefined);
+      expect(signer.signAction).toHaveBeenCalledWith(action, TARGET, undefined);
       expect(result.context?.signer).toBeDefined();
       expect(result.context?.signer?.signatures).toHaveLength(1);
       expect(result.context?.signer?.app.key).toBe("test-key");
@@ -41,7 +43,7 @@ describe("signAction", () => {
         app: { name: "new-app", key: "new-key" },
       });
 
-      const result = await signAction(action, signer);
+      const result = await signAction(action, signer, TARGET);
 
       expect(signer.signAction).toHaveBeenCalled();
       expect(result.context?.signer?.app.key).toBe("new-key");
@@ -58,9 +60,9 @@ describe("signAction", () => {
         app: { name: "my-app", key: "my-key" },
       });
 
-      const result = await signAction(action, signer);
+      const result = await signAction(action, signer, TARGET);
 
-      expect(signer.signAction).toHaveBeenCalledWith(action, undefined);
+      expect(signer.signAction).toHaveBeenCalledWith(action, TARGET, undefined);
       expect(result.context?.signer?.user.address).toBe("0xABC");
       expect(result.context?.signer?.app.name).toBe("my-app");
       expect(result.context?.signer?.signatures).toHaveLength(1);
@@ -71,13 +73,48 @@ describe("signAction", () => {
       const signer = createMockSigner();
       const abortController = new AbortController();
 
-      await signAction(action, signer, abortController.signal);
+      await signAction(action, signer, TARGET, abortController.signal);
 
       expect(signer.signAction).toHaveBeenCalledWith(
         action,
+        TARGET,
         abortController.signal,
       );
     });
+  });
+
+  describe("when its signatures carry no key", () => {
+    const EMPTY: Signature = ["", "", "", "", ""];
+
+    it.each([
+      ["an empty app key", "", ["ts", "did", "hash", "prev", "0xsig"]],
+      ["an empty tuple key", "did:key:claimed", EMPTY],
+    ] as const)(
+      "signs as its own signer an action with %s",
+      async (_, appKey, tuple) => {
+        const action: Action = {
+          ...createTestAction({ id: "action-1", type: "TEST_ACTION" }),
+          context: {
+            signer: {
+              user: { address: "0xvictim", networkId: "eip155", chainId: 1 },
+              app: { name: "", key: appKey },
+              signatures: [[...tuple]],
+            },
+          },
+        };
+        const signer = createMockSigner({
+          user: { address: "0xserver", networkId: "eip155", chainId: 1 },
+          app: { name: "server", key: "server-key" },
+        });
+
+        const result = await signAction(action, signer, TARGET);
+
+        expect(signer.signAction).toHaveBeenCalledOnce();
+        expect(result.context?.signer?.user.address).toBe("0xserver");
+        expect(result.context?.signer?.app.key).toBe("server-key");
+        expect(result.context?.signer?.signatures).toHaveLength(1);
+      },
+    );
   });
 
   describe("when action already has signatures", () => {
@@ -106,7 +143,7 @@ describe("signAction", () => {
         app: { name: "different-app", key: "different-key" },
       });
 
-      const result = await signAction(action, differentSigner);
+      const result = await signAction(action, differentSigner, TARGET);
 
       expect(differentSigner.signAction).not.toHaveBeenCalled();
       expect(result.context?.signer?.app.key).toBe("original-key");
@@ -132,7 +169,7 @@ describe("signAction", () => {
       };
       const signer = createMockSigner();
 
-      const result = await signAction(action, signer);
+      const result = await signAction(action, signer, TARGET);
 
       expect(signer.signAction).not.toHaveBeenCalled();
       expect(result.context?.signer?.signatures).toHaveLength(2);
@@ -158,7 +195,7 @@ describe("signAction", () => {
       };
       const signer = createMockSigner();
 
-      const result = await signAction(action, signer);
+      const result = await signAction(action, signer, TARGET);
 
       expect(result).toBe(action);
     });
@@ -166,6 +203,27 @@ describe("signAction", () => {
 });
 
 describe("signActions", () => {
+  it("signs a relationship action for the source document it lands in", async () => {
+    const relationship: Action = createTestAction({
+      type: "ADD_RELATIONSHIP",
+      scope: "document",
+      input: {
+        sourceId: "drive",
+        targetId: "doc-1",
+        relationshipType: "child",
+      },
+    });
+    const signer = createMockSigner();
+
+    await signActions([relationship], signer, TARGET);
+
+    expect(signer.signAction).toHaveBeenCalledWith(
+      relationship,
+      { documentId: "drive", branch: "main" },
+      undefined,
+    );
+  });
+
   it("should preserve pre-signed actions while signing unsigned ones", async () => {
     const existingSignature: Signature = ["ts", "did", "hash", "prev", "0xsig"];
     const preSignedAction: Action = {
@@ -192,13 +250,18 @@ describe("signActions", () => {
     const results = await signActions(
       [preSignedAction, unsignedAction],
       signer,
+      TARGET,
     );
 
     expect(results[0].context?.signer?.app.key).toBe("original-key");
     expect(results[0].context?.signer?.signatures).toEqual([existingSignature]);
     expect(results[1].context?.signer?.app.key).toBe("new-key");
     expect(signer.signAction).toHaveBeenCalledTimes(1);
-    expect(signer.signAction).toHaveBeenCalledWith(unsignedAction, undefined);
+    expect(signer.signAction).toHaveBeenCalledWith(
+      unsignedAction,
+      TARGET,
+      undefined,
+    );
   });
 
   it("should sign all actions when none are pre-signed", async () => {
@@ -206,7 +269,7 @@ describe("signActions", () => {
     const action2: Action = createTestAction({ id: "action-2" });
     const signer = createMockSigner();
 
-    const results = await signActions([action1, action2], signer);
+    const results = await signActions([action1, action2], signer, TARGET);
 
     expect(signer.signAction).toHaveBeenCalledTimes(2);
     expect(results[0].context?.signer?.signatures).toHaveLength(1);
@@ -238,7 +301,7 @@ describe("signActions", () => {
     };
     const signer = createMockSigner();
 
-    const results = await signActions([action1, action2], signer);
+    const results = await signActions([action1, action2], signer, TARGET);
 
     expect(signer.signAction).not.toHaveBeenCalled();
     expect(results[0]).toBe(action1);
@@ -250,10 +313,11 @@ describe("signActions", () => {
     const signer = createMockSigner();
     const abortController = new AbortController();
 
-    await signActions([action], signer, abortController.signal);
+    await signActions([action], signer, TARGET, abortController.signal);
 
     expect(signer.signAction).toHaveBeenCalledWith(
       action,
+      TARGET,
       abortController.signal,
     );
   });

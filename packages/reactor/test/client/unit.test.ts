@@ -916,7 +916,11 @@ describe("ReactorClient Unit Tests", () => {
 
       const result = await client.execute(documentId, "main", actions);
 
-      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[0], undefined);
+      expect(mockSigner.signAction).toHaveBeenCalledWith(
+        actions[0],
+        { documentId, branch: "main" },
+        undefined,
+      );
       expect(mockReactor.execute).toHaveBeenCalledWith(
         documentId,
         "main",
@@ -983,7 +987,11 @@ describe("ReactorClient Unit Tests", () => {
 
       await client.execute(documentId, "main", actions, signal);
 
-      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[0], signal);
+      expect(mockSigner.signAction).toHaveBeenCalledWith(
+        actions[0],
+        { documentId, branch: "main" },
+        signal,
+      );
     });
 
     it("should sign multiple actions", async () => {
@@ -1020,8 +1028,16 @@ describe("ReactorClient Unit Tests", () => {
       await client.execute(documentId, "main", actions);
 
       expect(mockSigner.signAction).toHaveBeenCalledTimes(2);
-      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[0], undefined);
-      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[1], undefined);
+      expect(mockSigner.signAction).toHaveBeenCalledWith(
+        actions[0],
+        { documentId, branch: "main" },
+        undefined,
+      );
+      expect(mockSigner.signAction).toHaveBeenCalledWith(
+        actions[1],
+        { documentId, branch: "main" },
+        undefined,
+      );
     });
 
     it("should pass view and signal parameters", async () => {
@@ -1080,7 +1096,11 @@ describe("ReactorClient Unit Tests", () => {
 
       const result = await client.executeAsync(documentId, "main", actions);
 
-      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[0], undefined);
+      expect(mockSigner.signAction).toHaveBeenCalledWith(
+        actions[0],
+        { documentId, branch: "main" },
+        undefined,
+      );
       expect(mockReactor.execute).toHaveBeenCalledWith(
         documentId,
         "main",
@@ -1134,7 +1154,11 @@ describe("ReactorClient Unit Tests", () => {
 
       await client.executeAsync(documentId, "main", actions, signal);
 
-      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[0], signal);
+      expect(mockSigner.signAction).toHaveBeenCalledWith(
+        actions[0],
+        { documentId, branch: "main" },
+        signal,
+      );
     });
   });
 

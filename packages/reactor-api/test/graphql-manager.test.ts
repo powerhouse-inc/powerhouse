@@ -809,6 +809,65 @@ describe("GraphQLManager", () => {
       expect(intercepted).toContain(req);
     });
 
+    it("keeps each subscription subgraph's SSE route beside the supergraph's", async () => {
+      const { manager, handles, disposed } = makeHarness();
+      await registerSubscriptionSubgraph(manager);
+      await initAndFlush(manager);
+
+      const subgraphRoute = handles.get(
+        "/graphql/test-subscription-sub/stream",
+      );
+      const supergraphRoute = handles.get("/graphql/stream");
+      expect(subgraphRoute).toBeDefined();
+      expect(supergraphRoute).toBeDefined();
+      expect(disposed).not.toContain(subgraphRoute);
+      expect(disposed).not.toContain(supergraphRoute);
+    });
+
+    it("unmounts a removed subgraph's SSE route", async () => {
+      const { manager, handles, disposed } = makeHarness();
+      const { gql } = await import("graphql-tag");
+      class PackagedSubscriptions {
+        name = "packaged-subs";
+        hasSubscriptions = true;
+        typeDefs = gql`
+          type Query {
+            _placeholder: Boolean
+          }
+          type Subscription {
+            ping: String
+          }
+        `;
+        resolvers = {
+          Subscription: {
+            ping: {
+              subscribe: async function* () {
+                await Promise.resolve();
+                yield { ping: "pong" };
+              },
+            },
+          },
+        };
+        relationalDb = {} as IRelationalDb;
+        reactorClient = {} as IReactorClient;
+      }
+      await manager.registerSubgraph(
+        PackagedSubscriptions as unknown as SubgraphClass,
+        "graphql",
+        false,
+        "pkg",
+      );
+      await initAndFlush(manager);
+      const route = handles.get("/graphql/packaged-subs/stream");
+      expect(route).toBeDefined();
+
+      const unregistering = manager.unregisterPackage("pkg");
+      await vi.runAllTimersAsync();
+      await unregistering;
+
+      expect(disposed).toContain(route);
+    });
+
     it("does not wrap the SSE handler when no authMiddleware is provided", async () => {
       const { manager, mounts } = makeHarness();
       await registerSubscriptionSubgraph(manager);

@@ -8,6 +8,7 @@ import type { Action, Operation } from "@powerhousedao/shared/document-model";
 import {
   garbageCollect,
   sortOperations,
+  withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -74,10 +75,13 @@ describe("consecutive backdated writes", () => {
       .withExecutorConfig({ featureFlags: { documentDecisions: true } })
       .build();
 
-    const drive = driveCreateDocument({
-      global: { name: "Drive", icon: null, nodes: [] },
-    });
-    drive.header.id = driveId;
+    const drive = withSignaturePolicy(
+      driveCreateDocument({
+        global: { name: "Drive", icon: null, nodes: [] },
+      }),
+      "legacy",
+      { id: driveId },
+    );
     drive.header.slug = driveId;
     const created = await reactor.create(drive);
     await settle(created.id);

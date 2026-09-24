@@ -305,6 +305,7 @@ export class DocumentActionHandler {
     stores.documentMetaCache.putDocumentMeta(job.documentId, job.branch, {
       state: standing.state.document,
       documentType: standing.header.documentType,
+      protocolVersions: standing.header.protocolVersions,
       documentScopeRevision: operation.index + 1,
     });
 
@@ -359,9 +360,10 @@ export class DocumentActionHandler {
       branch: job.branch,
     });
 
+    // Header last: a state key named "header" must not replace it.
     const resultingStateObj: Record<string, unknown> = {
-      header: document.header,
       ...document.state,
+      header: document.header,
     };
     const resultingState = JSON.stringify(resultingStateObj);
 
@@ -421,6 +423,7 @@ export class DocumentActionHandler {
     stores.documentMetaCache.putDocumentMeta(document.header.id, job.branch, {
       state: document.state.document,
       documentType: document.header.documentType,
+      protocolVersions: document.header.protocolVersions,
       documentScopeRevision: 1,
     });
 
@@ -558,6 +561,7 @@ export class DocumentActionHandler {
     stores.documentMetaCache.putDocumentMeta(documentId, job.branch, {
       state: document.state.document,
       documentType: document.header.documentType,
+      protocolVersions: document.header.protocolVersions,
       documentScopeRevision: operation.index + 1,
     });
 
@@ -787,9 +791,10 @@ export class DocumentActionHandler {
       branch: job.branch,
     });
 
+    // Header last: a state key named "header" must not replace it.
     const resultingStateObj: Record<string, unknown> = {
-      header: document.header,
       ...document.state,
+      header: document.header,
     };
     // Vouches that every scope echoed here was fetched fresh before the
     // migration ran. Upgrade operations persisted by executors that never
@@ -858,6 +863,7 @@ export class DocumentActionHandler {
     stores.documentMetaCache.putDocumentMeta(documentId, job.branch, {
       state: document.state.document,
       documentType: document.header.documentType,
+      protocolVersions: document.header.protocolVersions,
       documentScopeRevision: operation.index + 1,
     });
 
@@ -1079,6 +1085,7 @@ export class DocumentActionHandler {
     stores.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
       state: sourceDoc.state.document,
       documentType: sourceDoc.header.documentType,
+      protocolVersions: sourceDoc.header.protocolVersions,
       documentScopeRevision: operation.index + 1,
     });
 

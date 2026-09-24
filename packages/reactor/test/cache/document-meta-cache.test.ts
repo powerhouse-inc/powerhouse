@@ -17,6 +17,8 @@ function createMockOperationStore(): IOperationStore {
     getConflicting: vi.fn(),
     getRevisions: vi.fn(),
     getStreamLatestTimestamp: vi.fn().mockResolvedValue(undefined),
+    findOperationIds: vi.fn().mockResolvedValue(new Set()),
+    getOperationsByIds: vi.fn().mockResolvedValue([]),
   };
 }
 
@@ -134,6 +136,7 @@ describe("DocumentMetaCache", () => {
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
+        protocolVersions: undefined,
         documentScopeRevision: 1,
       });
 
@@ -311,6 +314,7 @@ describe("DocumentMetaCache", () => {
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
+        protocolVersions: undefined,
         documentScopeRevision: 5,
       });
 
@@ -329,6 +333,7 @@ describe("DocumentMetaCache", () => {
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
+        protocolVersions: undefined,
         documentScopeRevision: 1,
       };
 
@@ -348,6 +353,7 @@ describe("DocumentMetaCache", () => {
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
+        protocolVersions: undefined,
         documentScopeRevision: 1,
       };
 
@@ -371,6 +377,7 @@ describe("DocumentMetaCache", () => {
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
+        protocolVersions: undefined,
         documentScopeRevision: 1,
       };
 
@@ -398,6 +405,7 @@ describe("DocumentMetaCache", () => {
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
+        protocolVersions: undefined,
         documentScopeRevision: 1,
       };
 
@@ -422,6 +430,7 @@ describe("DocumentMetaCache", () => {
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
+        protocolVersions: undefined,
         documentScopeRevision: 1,
       };
 
@@ -457,6 +466,7 @@ describe("DocumentMetaCache", () => {
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: docType,
+        protocolVersions: undefined,
         documentScopeRevision: 1,
       });
 

@@ -232,8 +232,8 @@ export class GraphQLManager {
   /** subgraphPath → the http adapter handle of its mounted route. */
   private readonly subgraphRouteHandles = new Map<string, AdapterRouteHandle>();
 
-  /** Handle of the currently mounted supergraph SSE route, if any. */
-  private sseRouteHandle: AdapterRouteHandle | undefined;
+  /** Mounted SSE routes, keyed by path: the supergraph's and each subgraph's. */
+  private readonly sseRouteHandles = new Map<string, AdapterRouteHandle>();
 
   /**
    * Package name → the subgraph instances registered from it, keyed by
@@ -651,6 +651,7 @@ export class GraphQLManager {
           routeHandle.dispose();
           this.subgraphRouteHandles.delete(subgraphPath);
         }
+        this.#disposeSSERoute(subgraphPath);
 
         const wsDisposer = this.subgraphWsDisposers.get(subgraphPath);
         if (wsDisposer) {
@@ -1232,10 +1233,7 @@ export class GraphQLManager {
     if (modules.length === 0) {
       // No subscription-capable subgraphs left: drop the SSE route rather
       // than keep serving an empty merged schema.
-      if (this.sseRouteHandle !== undefined) {
-        this.sseRouteHandle.dispose();
-        this.sseRouteHandle = undefined;
-      }
+      this.#disposeSSERoute(superGraphPath);
       return;
     }
 
@@ -1265,14 +1263,22 @@ export class GraphQLManager {
       contextFactory: this.#makeContextFactory(),
     });
     const handler = this.#composeFetchMiddleware(rawHandler);
-    // This handler is re-created on every router update: replace the
-    // previous SSE route instead of piling another one on top of it.
-    if (this.sseRouteHandle !== undefined) {
-      this.sseRouteHandle.dispose();
+    // Re-created on every router update: replace this path's previous route
+    // rather than pile another on top of it, and leave other paths' alone.
+    this.#disposeSSERoute(basePath);
+    this.sseRouteHandles.set(
+      ssePath,
+      this.httpAdapter.mount(ssePath, handler, { exact: true }),
+    );
+  }
+
+  #disposeSSERoute(basePath: string): void {
+    const ssePath = basePath + "/stream";
+    const handle = this.sseRouteHandles.get(ssePath);
+    if (handle !== undefined) {
+      handle.dispose();
+      this.sseRouteHandles.delete(ssePath);
     }
-    this.sseRouteHandle = this.httpAdapter.mount(ssePath, handler, {
-      exact: true,
-    });
   }
 
   /**

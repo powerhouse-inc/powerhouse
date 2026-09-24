@@ -154,6 +154,13 @@ type Options = {
      *  request. Off by default; `REQUIRE_AUTHENTICATED_CALLER` overrides.
      *  Requires identity resolution to be on — refused at boot without it. */
     requireAuthenticatedCaller?: boolean;
+    /** Mounted paths that stay reachable anonymously while
+     *  `requireAuthenticatedCaller` is on, for a flow that runs before
+     *  sign-in. Matched against the request's pathname in full, never as a
+     *  prefix. `REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS` overrides, as a
+     *  comma-separated list. Each entry is a hole in the floor: only ever name
+     *  a path serving operations that are safe without a caller. */
+    requireAuthenticatedCallerExemptPaths?: string[];
   };
   /** Renown coordinates the host already resolved, used verbatim instead of
    * resolving `auth.renown` and the env again (which would warn twice). */
@@ -252,7 +259,40 @@ export function assertSkipCredentialVerificationAllowed(
 export function assertRequireAuthenticatedCallerAllowed(
   requireAuthenticatedCaller: boolean,
   resolvesCallerIdentity: boolean,
+  exemptPaths: readonly string[] = [],
 ): void {
+  /**
+   * An exemption is only ever a hole in this floor, so configuring one while
+   * the floor is off is not a harmless no-op: it reads, to anyone auditing the
+   * configuration, as a surface that was deliberately opened — and therefore
+   * as a floor that exists. Refuse rather than let the two drift.
+   */
+  if (!requireAuthenticatedCaller && exemptPaths.length > 0) {
+    throw new Error(
+      "REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS is set but refused: " +
+        "REQUIRE_AUTHENTICATED_CALLER is off, so nothing is being exempted " +
+        "from anything and the configuration claims a protection the server " +
+        "is not applying. Enable the floor, or drop the exemptions.",
+    );
+  }
+
+  /**
+   * A path that cannot match anything is worse than no path: the operator
+   * believes the flow is reachable, and finds out when the first user cannot
+   * claim an invitation. `URL.pathname` is always absolute, so an entry that
+   * does not start with `/` never matches, whatever the router does.
+   */
+  const relative = exemptPaths.filter((path) => !path.trim().startsWith("/"));
+  if (relative.length > 0) {
+    throw new Error(
+      `REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS contains ${relative
+        .map((path) => `"${path}"`)
+        .join(", ")}, which cannot match: an exempt path is compared against ` +
+        "the request's pathname and must start with '/' (for example " +
+        "'/graphql/public').",
+    );
+  }
+
   if (!requireAuthenticatedCaller || resolvesCallerIdentity) {
     return;
   }
@@ -692,6 +732,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   let authEnabled = false;
   let configuredResolveIdentity: boolean | undefined;
   let configuredRequireAuth: boolean | undefined;
+  let configuredExemptPaths: string[] | undefined;
   let configuredRenown: RenownConfig | undefined;
   if (options.configFile) {
     const config = getConfig(options.configFile);
@@ -703,11 +744,13 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     authEnabled = options.auth.enabled;
     configuredResolveIdentity = options.auth.resolveIdentity;
     configuredRequireAuth = options.auth.requireAuthenticatedCaller;
+    configuredExemptPaths = options.auth.requireAuthenticatedCallerExemptPaths;
   }
   const {
     AUTH_ENABLED,
     RESOLVE_CALLER_IDENTITY,
     REQUIRE_AUTHENTICATED_CALLER,
+    REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS,
     ADMINS,
     DEFAULT_PROTECTION,
     DOCUMENT_PERMISSIONS_ENABLED,
@@ -751,6 +794,24 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   let requireAuthenticatedCaller = configuredRequireAuth ?? false;
   if (REQUIRE_AUTHENTICATED_CALLER !== undefined) {
     requireAuthenticatedCaller = REQUIRE_AUTHENTICATED_CALLER === "true";
+  }
+
+  /**
+   * The paths the floor above does not apply to. Comma-separated, like
+   * `ADMINS`, because a deployment configures this the same way it configures
+   * everything else: one variable, one line, however many values it has.
+   *
+   * Empty entries are dropped rather than refused, so a trailing comma or a
+   * value split across lines in a manifest is not a boot failure; a value that
+   * cannot ever match is refused, in
+   * {@link assertRequireAuthenticatedCallerAllowed}.
+   */
+  let requireAuthenticatedCallerExemptPaths = configuredExemptPaths ?? [];
+  if (REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS !== undefined) {
+    requireAuthenticatedCallerExemptPaths =
+      REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS.split(",")
+        .map((path) => path.trim())
+        .filter((path) => path.length > 0);
   }
   if (ADMINS !== undefined) {
     admins = ADMINS.split(",").map((a) => a.toLowerCase());
@@ -797,6 +858,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   assertRequireAuthenticatedCallerAllowed(
     requireAuthenticatedCaller,
     resolveCallerIdentity,
+    requireAuthenticatedCallerExemptPaths,
   );
   if (authEnabled && skipCredentialVerification) {
     logger.warn(
@@ -886,9 +948,17 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     });
     authFetchMiddleware = createAuthFetchMiddleware(authService);
     if (requireAuthenticatedCaller) {
-      requireAuthFetchMiddleware = createRequireAuthFetchMiddleware();
+      requireAuthFetchMiddleware = createRequireAuthFetchMiddleware(
+        requireAuthenticatedCallerExemptPaths,
+      );
+      // The exempt paths are named in the log, not merely counted: the one
+      // question an operator asks about this floor is what is still open, and
+      // the answer should be in the boot output rather than in a manifest they
+      // have to go and find.
       logger.info(
-        "Require-authenticated-caller middleware enabled: anonymous callers are rejected with a 401 before any subgraph",
+        requireAuthenticatedCallerExemptPaths.length > 0
+          ? `Require-authenticated-caller middleware enabled: anonymous callers are rejected with a 401 before any subgraph, except on ${requireAuthenticatedCallerExemptPaths.join(", ")}`
+          : "Require-authenticated-caller middleware enabled: anonymous callers are rejected with a 401 before any subgraph",
       );
     } else {
       // Auth is on in some form, so say plainly what it is not doing. The
@@ -1267,6 +1337,12 @@ async function _setupAPI(
     attachmentReferenceIndex,
     attachmentAccess,
     authService,
+    // Read from the composed middleware rather than from a second pass over
+    // the environment, and the same way `#makeWsContextFactory` reads it: the
+    // middleware exists exactly when the floor is on, so one value cannot
+    // disagree with another about whether this deployment serves anonymous
+    // callers.
+    requireAuthenticatedCaller: requireAuthFetchMiddleware !== undefined,
     // Handed back rather than kept private: a component the host composes
     // after boot (the workflow runtime) authorizes with this service and
     // stores in this database.

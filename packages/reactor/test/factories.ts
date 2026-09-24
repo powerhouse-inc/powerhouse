@@ -7,10 +7,12 @@ import type {
   Operation,
   OperationContext,
   PHDocument,
+  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
   deriveOperationId,
   generateId,
+  withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
@@ -519,13 +521,16 @@ export function createDocModelDocument(
     slug?: string;
     documentType?: string;
     state?: any;
+    signaturePolicy?: SignaturePolicy;
   } = {},
 ): PHDocument {
-  const baseDocument = documentModelDocumentModelModule.utils.createDocument();
+  // A fixed id cannot be content-addressed, so it defaults to legacy.
+  const policy = overrides.signaturePolicy ?? (overrides.id ? "legacy" : null);
+  const created = documentModelDocumentModelModule.utils.createDocument();
+  const baseDocument = policy
+    ? withSignaturePolicy(created, policy, { id: overrides.id })
+    : created;
 
-  if (overrides.id) {
-    baseDocument.header.id = overrides.id;
-  }
   if (overrides.slug) {
     baseDocument.header.slug = overrides.slug;
   }
@@ -665,6 +670,8 @@ export function createMockOperationStore(
       latestTimestamp: new Date(0).toISOString(),
     }),
     getStreamLatestTimestamp: vi.fn().mockResolvedValue(undefined),
+    findOperationIds: vi.fn().mockResolvedValue(new Set()),
+    getOperationsByIds: vi.fn().mockResolvedValue([]),
     ...overrides,
   } as unknown as IOperationStore;
 }
@@ -681,6 +688,7 @@ export function createMockDocumentMetaCache(
       hash: { algorithm: "sha256", encoding: "base64" },
     },
     documentType: "powerhouse/document-model",
+    protocolVersions: undefined,
     documentScopeRevision: 1,
   };
 
@@ -1140,104 +1148,6 @@ export function createTestChannelFactory(
       channelRegistry.set(remoteId, channel);
 
       return channel;
-    },
-  };
-}
-
-/**
- * Creates a signed test operation using the SimpleSigner.
- *
- * @param signer - The SimpleSigner instance to sign with
- * @param overrides - Optional operation overrides
- * @returns Promise resolving to a signed operation
- */
-export async function createSignedTestOperation(
-  signer: any,
-  documentId: string,
-  overrides: Partial<Operation> = {},
-): Promise<Operation> {
-  const operation = createTestOperation(documentId, overrides);
-  const publicKey = signer.getPublicKey();
-
-  const signerData: any = {
-    user: { address: "0x123", chainId: 1, networkId: "1" },
-    app: { name: "test", key: publicKey },
-    signatures: [],
-  };
-
-  const dataToSign = JSON.stringify({
-    action: operation.action,
-    index: operation.index,
-    timestamp: operation.timestampUtcMs,
-  });
-
-  const signatureHex = await signer.sign(new TextEncoder().encode(dataToSign));
-
-  const signature: any = [
-    operation.timestampUtcMs,
-    publicKey,
-    operation.action.id,
-    "",
-    `0x${signatureHex}`,
-  ];
-
-  signerData.signatures = [signature];
-
-  return {
-    ...operation,
-    action: {
-      ...operation.action,
-      context: {
-        ...operation.action.context,
-        signer: signerData,
-      },
-    },
-  };
-}
-
-/**
- * Creates a signed test action using the SimpleSigner.
- *
- * @param signer - The SimpleSigner instance to sign with
- * @param overrides - Optional action overrides
- * @returns Promise resolving to a signed action
- */
-export async function createSignedTestAction(
-  signer: any,
-  overrides: Partial<Action> = {},
-): Promise<Action> {
-  const action = createTestAction(overrides);
-  const publicKey = signer.getPublicKey();
-
-  const signerData: any = {
-    user: { address: "0x123", chainId: 1, networkId: "1" },
-    app: { name: "test", key: publicKey },
-    signatures: [],
-  };
-
-  const dataToSign = JSON.stringify({
-    action: action,
-    index: 0,
-    timestamp: action.timestampUtcMs,
-  });
-
-  const signatureHex = await signer.sign(new TextEncoder().encode(dataToSign));
-
-  const signature: any = [
-    action.timestampUtcMs,
-    publicKey,
-    action.id,
-    "",
-    `0x${signatureHex}`,
-  ];
-
-  signerData.signatures = [signature];
-
-  return {
-    ...action,
-    context: {
-      ...action.context,
-      signer: signerData,
     },
   };
 }

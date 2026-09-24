@@ -22,6 +22,7 @@ import {
   useDocumentSafe,
 } from "../src/hooks/document-cache.js";
 import type { IReactorBrowserClient } from "../src/types/reactor-browser-client.js";
+import { createP256Signer } from "./utils/p256-signer.js";
 
 // A real client whose `get` can be held open (the SharedWorker round trip) or
 // made to fail once. Every other member goes to the real client.
@@ -226,6 +227,7 @@ describe("useDocument under an outer Suspense boundary", () => {
     ensurePHEventHandlers();
 
     module = await new ReactorClientBuilder()
+      .withSigner(await createP256Signer())
       .withReactorBuilder(
         new ReactorBuilder().withDocumentModelSources([
           documentModelDocumentModelModule,

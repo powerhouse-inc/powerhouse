@@ -32,6 +32,7 @@ import {
 import type { ForwardingPoolInstrumentation } from "../../storage/pool-instrumentation.js";
 import type {
   DbConfig,
+  FactorySpec,
   HeartbeatMessage,
   LogMessage,
   MetricsMessage,
@@ -40,7 +41,6 @@ import type {
   ModelManifestEntry,
   PoolAcquireSamplesMessage,
   ResultMessage,
-  SignatureVerifierSpec,
   WorkerMessage,
   WorkerPoolConfig,
 } from "./protocol.js";
@@ -56,11 +56,13 @@ const DEFAULT_SHUTDOWN_GRACE_MS = 5_000;
 export type WorkerInitPayload = {
   poolConfig: WorkerPoolConfig;
   db: DbConfig;
-  /** Omitted = the worker performs no executor-side signature verification. */
-  signatureVerifier?: SignatureVerifierSpec;
   models: ModelManifestEntry[];
   /** Omitted = the worker builds its executor with the built-in defaults. */
   executorConfig?: JobExecutorConfig;
+  /** Builds the worker's signer for synthesized operations. */
+  signer?: FactorySpec;
+  /** Builds the worker's signature trust policy. */
+  trustPolicy?: FactorySpec;
 };
 
 export type WorkerHandleOptions = {
@@ -179,9 +181,10 @@ export class WorkerHandle implements IExecutorWorker {
       workerId: this.workerId,
       poolConfig: this.initPayload.poolConfig,
       db: this.initPayload.db,
-      signatureVerifier: this.initPayload.signatureVerifier,
       models: this.initPayload.models,
       executorConfig: this.initPayload.executorConfig,
+      signer: this.initPayload.signer,
+      trustPolicy: this.initPayload.trustPolicy,
     });
     await ready;
     this.phase = "ready";
@@ -507,10 +510,12 @@ export class WorkerHandle implements IExecutorWorker {
             success: false,
             error: fromErrorInfo(msg.error),
           },
+          signatureRefusals: msg.signatureRefusals,
         }
       : {
           result: msg.result,
           writeReady: msg.writeReady,
+          signatureRefusals: msg.signatureRefusals,
         };
     entry.resolve(outcome);
 

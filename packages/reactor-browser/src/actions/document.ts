@@ -26,6 +26,7 @@ import type {
   Operation,
   PHBaseState,
   PHDocument,
+  PHDocumentHeader,
   Reducer,
   VersionedReplayConfig,
 } from "@powerhousedao/shared/document-model";
@@ -34,14 +35,18 @@ import {
   baseLoadFromInput,
   baseLoadFromInputVersioned,
   baseSaveToFileHandle,
+  createCopyHeader,
   createPresignedHeader,
   createZip,
   documentModelDocumentType,
   generateId,
+  hasDerivedDocumentId,
   replayDocumentVersioned,
   setName,
   setPreferredEditor,
+  signaturePolicyOf,
   UnsupportedDocumentModelVersionError,
+  withSignaturePolicy,
   type UpgradeDocumentActionInput,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
@@ -478,7 +483,12 @@ export async function addDocument(
   }
 
   // create - use passed document's state if available
-  const newDocument = document ?? documentModelModule.utils.createDocument();
+  const newDocument =
+    document ??
+    withSignaturePolicy(
+      documentModelModule.utils.createDocument(),
+      await reactorClient.getCreateSignaturePolicy(),
+    );
   if (!document) {
     newDocument.state.document.version = documentModelModule.version ?? 1;
   }
@@ -558,15 +568,27 @@ async function createImportedDocument(
   name?: string,
   parentFolder?: string,
 ): Promise<{ documentId: string; fileNode: AddedFileNode }> {
-  let documentId = (await reactor.isDocumentIdTaken(document.header.id))
-    ? generateId()
-    : document.header.id;
+  // A v2-required import keeps the zip's id only while that id still derives
+  // from the zip's header, so the signatures bound to it keep verifying.
+  const v2Required = signaturePolicyOf(document.header) === "v2-required";
+  const keepsId =
+    (!v2Required || hasDerivedDocumentId(document.header)) &&
+    !(await reactor.isDocumentIdTaken(document.header.id));
+  let documentId = keepsId ? document.header.id : generateId();
 
   for (let attempt = 1; ; attempt++) {
-    const header = createPresignedHeader(
-      documentId,
-      document.header.documentType,
-    );
+    let header: PHDocumentHeader;
+    if (!v2Required) {
+      header = createPresignedHeader(documentId, document.header.documentType);
+    } else if (keepsId && attempt === 1) {
+      header = createPresignedHeader(documentId, document.header.documentType);
+      header.createdAtUtcIso = document.header.createdAtUtcIso;
+      header.sig = { ...header.sig, nonce: document.header.sig.nonce };
+      header.protocolVersions = { ...document.header.protocolVersions };
+    } else {
+      header = createCopyHeader(document.header);
+      documentId = header.id;
+    }
     header.lastModifiedAtUtcIso = document.header.createdAtUtcIso;
     header.meta = document.header.meta;
     header.name = name || document.header.name;
@@ -1114,7 +1136,11 @@ async function _duplicateDocument(
   }
 
   const config: VersionedReplayConfig = { reducers, upgradeManifest };
-  const header = createPresignedHeader(newId, documentType);
+  const header = createCopyHeader(
+    document.header,
+    newId,
+    await reactor.getCreateSignaturePolicy(),
+  );
 
   const duplicated = replayDocumentVersioned(
     document.initialState,
@@ -1198,6 +1224,8 @@ export async function copyNode(
       if (resolvedName) {
         duplicatedDocument.header.name = resolvedName;
       }
+      // A v2-required copy takes a derived id, which the drive's node must name.
+      fileNodeToCopy.targetId = duplicatedDocument.header.id;
 
       await reactor.drives.addFile(driveId, duplicatedDocument, target?.id);
     } catch (e) {
