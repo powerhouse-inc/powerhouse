@@ -15,10 +15,15 @@ export type HttpMethod = "DELETE" | "GET" | "HEAD" | "POST" | "PUT";
  * wrapping you must call `api.httpAdapter.mountNodeRoute` directly.
  *
  * `allowAnonymous` is reserved for routes whose handlers make a per-document
- * authorization decision themselves; identity-only routes must not use it.
+ * authorization decision themselves; identity-only routes must not use it. It
+ * is also not the last word: a deployment that refuses anonymous callers
+ * (`REQUIRE_AUTHENTICATED_CALLER`) refuses them here too, because these routes
+ * are mounted on the HTTP adapter and never reach the fetch chain that carries
+ * that floor for GraphQL. The flag is read from the API, so every route
+ * mounted through here inherits it without each one remembering to.
  */
 export function mountAuthenticatedNodeRoute(
-  api: Pick<API, "httpAdapter" | "authService">,
+  api: Pick<API, "httpAdapter" | "authService" | "requireAuthenticatedCaller">,
   method: HttpMethod,
   path: string,
   handler: NodeHandler,
@@ -27,6 +32,9 @@ export function mountAuthenticatedNodeRoute(
   api.httpAdapter.mountNodeRoute(
     method,
     path,
-    requireAuth(api.authService, handler, options),
+    requireAuth(api.authService, handler, {
+      ...options,
+      requireAuthenticatedCaller: api.requireAuthenticatedCaller,
+    }),
   );
 }

@@ -32,6 +32,19 @@ export type RequireAuthOptions = {
    * is rejected, never downgraded to anonymous.
    */
   allowAnonymous?: boolean;
+  /**
+   * Whether the deployment has said it accepts no anonymous callers at all
+   * (`REQUIRE_AUTHENTICATED_CALLER`). It overrides `allowAnonymous`, because
+   * the two answer different questions: `allowAnonymous` says "this handler
+   * authorizes per document, so it does not need identity to decide", while
+   * this says "this server does not serve callers it cannot name". A route can
+   * be happy to decide without identity and still not be allowed to.
+   *
+   * These routes are mounted straight on the HTTP adapter, so the fetch chain's
+   * own require-auth middleware never sees them — this is how the same floor
+   * reaches them.
+   */
+  requireAuthenticatedCaller?: boolean;
 };
 
 /**
@@ -39,7 +52,15 @@ export type RequireAuthOptions = {
  * enabled, the request must carry a verifiable Bearer token. The handler always
  * receives an actor context: the verified bearer user when auth is enabled, or
  * the anonymous context when it is disabled. With `allowAnonymous`, a missing
- * bearer yields an anonymous actor with `authEnabled: true` instead of a 401.
+ * bearer yields an anonymous actor with `authEnabled: true` instead of a 401 —
+ * unless `requireAuthenticatedCaller` says the deployment refuses anonymous
+ * callers outright, which overrides it.
+ *
+ * With no `authService` there is no bearer to read and every caller is
+ * anonymous, so nothing is refused here. That combination cannot carry the
+ * floor: `assertRequireAuthenticatedCallerAllowed` refuses to boot with
+ * `REQUIRE_AUTHENTICATED_CALLER` set and no identity resolution, and identity
+ * resolution is what builds the service.
  */
 export function requireAuth(
   authService: AuthService | undefined,
@@ -70,11 +91,16 @@ export function requireAuth(
       return;
     }
 
-    if (result.auth_enabled && !result.user && !options?.allowAnonymous) {
-      res.statusCode = 401;
-      res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({ error: "Authentication required" }));
-      return;
+    if (!result.user) {
+      const refuse =
+        options?.requireAuthenticatedCaller === true ||
+        (result.auth_enabled && !options?.allowAnonymous);
+      if (refuse) {
+        res.statusCode = 401;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ error: "Authentication required" }));
+        return;
+      }
     }
 
     await handler(req, res, body, {
