@@ -338,7 +338,10 @@ Each phase merges green to main on its own.
 - **Wire:** a `v2:` tuple survives `serializeSignature` and an old
   `deserializeSignature`; an old `createSignatureVerifier` accepts it.
 - **Hook:** the default denies under `authEnforcement` and accepts
-  otherwise; the reactor's own key is accepted for its own address.
+  otherwise; the reactor's own key is accepted for its own address. A
+  missing Renown credential refuses at admission immediately, so a user's
+  first operations must not be pushed before their credential is visible to
+  the receiving switchboard.
 - **Workers:** verification runs inside a pooled executor worker.
 - **Bench:** always-on verification on a reshuffle-heavy load, with the key
   cache.
@@ -360,3 +363,6 @@ Each phase merges green to main on its own.
 - GDPR erasure deletes whole documents. There is no operation-level
   redaction, so no signature void marker is needed.
 - No migration tool for existing documents. They stay legacy.
+- A missing Renown credential refuses at admission immediately, so a user's
+  first operations must not be pushed before their credential is visible to
+  the receiving switchboard.
