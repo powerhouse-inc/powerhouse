@@ -1,5 +1,6 @@
 import type { ActionContextIdentity } from "../context/action.js";
 import type { StagedFile } from "../context/files.js";
+import type { PropsValidationErrors } from "../context/normalize.js";
 import type {
   ExecutionType,
   ServerContext,
@@ -199,6 +200,8 @@ export interface SerializedPieceError {
   properties: Record<string, unknown>;
   // Set when the piece hit an unimplemented context member.
   unsupportedMember?: string;
+  // Set when the props failed validation, before piece code ran.
+  invalidProps?: PropsValidationErrors;
 }
 
 export interface ResultResponse {

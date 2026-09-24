@@ -19,7 +19,10 @@ import { DataUriFilesService, StagedFilesService } from "../context/files.js";
 import { setMaxFileBytes } from "../context/limits.js";
 import {
   normalizePropsValue,
+  preparePropsValue,
+  PropsValidationError,
   type NormalizeOptions,
+  type PropsValidationErrors,
 } from "../context/normalize.js";
 import {
   buildPropertyContext,
@@ -116,6 +119,9 @@ function serializeError(
     ) as Record<string, unknown>,
     unsupportedMember:
       error instanceof UnsupportedContextMemberError ? error.member : undefined,
+    ...(error instanceof PropsValidationError
+      ? { invalidProps: jsonSafe(error.errors) as PropsValidationErrors }
+      : {}),
   };
 }
 
@@ -222,9 +228,12 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   // says so on console.error, and the worker's stdio goes nowhere.
   const restoreConsole = request.captureLogs ? captureConsole() : undefined;
   const { context, touched } = buildActionContext({
-    propsValue: await normalizePropsValue(action.props, request.propsValue, {
-      resolveRef: stagedInputResolver(request.stagedInputs),
-    }),
+    propsValue: await preparePropsValue(
+      `action "${request.actionName}"`,
+      action.props,
+      request.propsValue,
+      { resolveRef: stagedInputResolver(request.stagedInputs) },
+    ),
     auth: request.auth,
     store:
       durableStore ??
@@ -276,8 +285,18 @@ async function handleTriggerHook(
     ? undefined
     : new InMemoryKeyValueStore(request.storeState);
   const runsPiece = request.hook === "run" || request.hook === "test";
+  // Teardown is never refused: a config that no longer validates must still
+  // release what onEnable registered.
+  const propsValue =
+    request.hook === "onDisable"
+      ? await normalizePropsValue(trigger.props, request.propsValue)
+      : await preparePropsValue(
+          `trigger "${request.triggerName}"`,
+          trigger.props,
+          request.propsValue,
+        );
   const handle = buildTriggerContext({
-    propsValue: await normalizePropsValue(trigger.props, request.propsValue),
+    propsValue,
     auth: request.auth,
     store: snapshot ?? new RemoteKeyValueStore(),
     hostPartitionedStore: request.durableStore,
