@@ -278,8 +278,11 @@ describe("documentChanges and findDocuments under OPEN with auth-scope policies"
     async function unindexedJob() {
       const { client, subgraph } = await build();
       const id = "job-unindexed";
-      const { header, state } =
-        documentModelDocumentModelModule.utils.createDocument();
+      const { header, state } = withSignaturePolicy(
+        documentModelDocumentModelModule.utils.createDocument(),
+        "legacy",
+        { id },
+      );
       await client.execute(id, "main", [
         createDocumentAction({
           model: header.documentType,
