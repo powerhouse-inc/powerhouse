@@ -304,10 +304,46 @@ export function makeDownloadHandler(attachments: AttachmentBuildResult) {
     );
     res.setHeader("Attachment-Metadata", buildMetadataHeader(header));
 
-    Readable.fromWeb(body as unknown as NodeReadableStream<Uint8Array>).pipe(
-      res,
+    const source = Readable.fromWeb(
+      body as unknown as NodeReadableStream<Uint8Array>,
     );
+    // The blob is opened lazily, so a file missing from disk (metadata still
+    // says "available", e.g. a pod-local store lost on restart) surfaces here
+    // as a stream error. `.pipe()` does not forward it: without a listener it
+    // is an unhandled 'error' event and takes the whole process down.
+    source.once("error", (err) => handleDownloadStreamError(res, hash, err));
+    source.pipe(res);
   };
+}
+
+function handleDownloadStreamError(
+  res: ServerResponse,
+  hash: string,
+  err: unknown,
+): void {
+  if (res.headersSent) {
+    // Bytes are already on the wire; finishing normally would hand the client
+    // a truncated file as if it were complete. Cut the connection instead —
+    // without passing the error, which would re-emit it on the response.
+    logger.error("Attachment stream failed mid-download: @error", err);
+    res.destroy();
+    return;
+  }
+  // Nothing sent yet: drop the download headers so they cannot describe the
+  // JSON error body, then answer like any other missing attachment.
+  res.removeHeader("Content-Length");
+  res.removeHeader("Content-Disposition");
+  res.removeHeader("Attachment-Metadata");
+  if ((err as NodeJS.ErrnoException | undefined)?.code === "ENOENT") {
+    logger.warn(
+      "Attachment @hash is recorded as available but its blob is missing",
+      hash,
+    );
+    sendJson(res, 404, ATTACHMENT_NOT_FOUND_BODY);
+    return;
+  }
+  logger.error("Attachment stream failed before sending: @error", err);
+  sendError(res, 500, "Internal error");
 }
 
 // Node rejects header values above U+00FF. Escaping everything outside
