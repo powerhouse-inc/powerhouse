@@ -230,11 +230,28 @@ type SignatureTrustPolicy = {
   `JobInfo.error`. A mutation job fails on the first refusal. A load job
   drops refused operations and continues; a refusal is never stored.
 - The hook returning `false` is a refusal. The hook throwing or timing out
-  is a job error, retried, never a drop.
-- Switchboard's hook verifies the Renown credential binding the app DID to
-  the address against Renown's issuer key and caches per (address, key)
-  with no expiry-based revocation. Revocation goes through auth-scope
-  grants. The hook accepts the reactor's own key for its own address.
+  is a job error, retried, never a drop. Admission bounds the hook at
+  `min(10s, jobTimeoutMs / 2)`, so a slow hook fails the job before the
+  executor manager's own timeout, which does not retry.
+- The reactor accepts its own signer's key for its own `signer.user` before
+  asking the hook, so every policy, the default included, admits the
+  operations the reactor signs. A configured hook is asked whatever the
+  flags; the default is the only part that reads `authEnforcement`.
+- Switchboard's hook is `createRenownTrustPolicy` (`@renown/sdk`), installed
+  only under `authEnforcement`. Renown has no issuer key: the credential is
+  an EIP-712 VC the wallet signs, issued by
+  `did:pkh:<networkId>:<chainId>:<address>` to the app `did:key`. The hook
+  checks that binding and that the proof recovers to the address; Renown is
+  trusted to return the credential, not to vouch for it. It ignores expiry
+  and revocation (the read-model query sets `includeRevoked`; the legacy
+  REST fallback returns only the active credential), caches acceptances per
+  (address, key) with no expiry, and remembers a refusal for 60s so a
+  credential written after the first ask is still found. A failed lookup
+  throws. Revocation goes through auth-scope grants. The hook accepts the
+  switchboard's own key for its own address. Pooled workers import it by
+  path, like the signer; a switchboard that reads its own renown read model
+  (`RENOWN_SOURCE=self`) has no spec to give them, so its pooled workers
+  apply the default.
   Connect and switchboard may answer differently; the switchboard is
   authoritative and a refused push is handled like any rejected push today.
 - `SignerConfig` (`packages/reactor/src/signer/types.ts`) loses `verifier`
