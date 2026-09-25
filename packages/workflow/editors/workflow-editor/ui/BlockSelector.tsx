@@ -1,6 +1,12 @@
 // Piece-selector-style popover, adapted from the Activepieces builder
 // pieces-selector (MIT, activepieces packages/web).
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { Icon, type IconName } from "../../shared/icons.js";
 import { useBlockMeta } from "./block-meta.js";
 import type { BlockPreset } from "./blocks.js";
@@ -127,9 +133,18 @@ function LogoFrame(props: {
     // with a small white tile rather than losing black artwork to the page.
     <div
       className={`flex shrink-0 items-center justify-center ${
-        props.bare ? "" : "dark:rounded-[22%] dark:bg-white dark:p-[12%]"
+        props.bare
+          ? ""
+          : "dark:rounded-[22%] dark:bg-white dark:p-[var(--logo-pad)]"
       }`}
-      style={{ width: props.size, height: props.size }}
+      // Pixels, not %: percentage padding follows the container's width.
+      style={
+        {
+          width: props.size,
+          height: props.size,
+          "--logo-pad": `${Math.round(props.size * 0.12)}px`,
+        } as CSSProperties
+      }
     >
       <img
         src={props.src}
