@@ -441,26 +441,39 @@ export async function openSeededPage(
   });
   await accept.click({ timeout: 15_000 }).catch(() => {});
   // The drive document has synced once the local reactor can read it.
-  await page.waitForFunction(
-    async (id) => {
-      const client = (window as unknown as PhWindow).ph?.reactorClientModule
-        ?.client;
-      return !!(await client?.get(id).catch(() => null));
-    },
-    drive,
-    { timeout: 60_000, polling: 500 },
-  );
+  const driveReady = () =>
+    page.waitForFunction(
+      async (id) => {
+        const client = (window as unknown as PhWindow).ph?.reactorClientModule
+          ?.client;
+        return !!(await client?.get(id).catch(() => null));
+      },
+      drive,
+      { timeout: 60_000, polling: 500 },
+    );
+  await driveReady();
 
   const botTokenRef = await createSecret(
     "xoxb-demo-token",
     "Ops Slack · Bot Token",
   );
-  const seeded = await seedInBrowser(page, {
-    root: ROOT,
-    drive,
-    blocks,
-    botTokenRef,
-  });
+  // A cold Vite server re-optimises deps and reloads the page once, which
+  // can land mid-seed; wait for the reactor again and start over.
+  let seeded: Seeded | undefined;
+  for (let attempt = 0; !seeded; attempt++) {
+    try {
+      seeded = await seedInBrowser(page, {
+        root: ROOT,
+        drive,
+        blocks,
+        botTokenRef,
+      });
+    } catch (error) {
+      if (attempt >= 2) throw error;
+      await page.waitForLoadState("load");
+      await driveReady();
+    }
+  }
   // One succeeded and one failed run, for the runs views.
   await fireWhenSynced(seeded.smoke);
   await fireWhenSynced(seeded.ping, { url: "https://status.acme.dev/health" });
