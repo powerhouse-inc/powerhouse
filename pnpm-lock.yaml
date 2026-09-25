@@ -3014,6 +3014,9 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
+      '@uiw/react-json-view':
+        specifier: 2.0.0-alpha.42
+        version: 2.0.0-alpha.42(@babel/runtime@7.29.2)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@xyflow/react':
         specifier: 12.11.6
         version: 12.11.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)

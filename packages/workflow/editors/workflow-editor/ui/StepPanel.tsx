@@ -36,6 +36,7 @@ import {
   type WorkflowModel,
 } from "./model.js";
 import { AvailableSoon, PropertyForm } from "./PropertyForm.js";
+import { DataViewer } from "../../shared/data-viewer.js";
 import { ScheduleBuilder } from "./ScheduleBuilder.js";
 import { describeTrigger } from "./trigger-text.js";
 import { missingForBlock } from "./validation.js";
@@ -836,44 +837,6 @@ function useLatestRun(designTime?: DesignTimeService) {
   return designTime?.latestRun ? state : null;
 }
 
-function DataBlock(props: { label: string; value: unknown }) {
-  const text =
-    props.value === undefined ? "" : JSON.stringify(props.value, null, 2);
-  const [open, setOpen] = useState(false);
-  if (!text || text === "{}" || text === "null") {
-    return (
-      <div className="flex items-center justify-between text-xs">
-        <span className="font-medium text-foreground">{props.label}</span>
-        <span className="text-muted-foreground">Nothing</span>
-      </div>
-    );
-  }
-  const long = text.split("\n").length > 8;
-  return (
-    <div>
-      <div className="mb-1 flex items-center justify-between text-xs">
-        <span className="font-medium text-foreground">{props.label}</span>
-        {long ? (
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-foreground"
-            onClick={() => setOpen((value) => !value)}
-          >
-            {open ? "Show less" : "Show all"}
-          </button>
-        ) : null}
-      </div>
-      <pre
-        className={`overflow-auto rounded-md bg-muted/70 p-2.5 font-mono text-[11px] leading-relaxed text-foreground ${
-          long && !open ? "max-h-36" : "max-h-96"
-        }`}
-      >
-        {text}
-      </pre>
-    </div>
-  );
-}
-
 const RUN_TEXT: Record<string, string> = {
   SUCCEEDED: "text-wf-ok",
   FAILED: "text-wf-fail",
@@ -940,11 +903,19 @@ function LastRunSection(props: {
           ) : null}
           {step ? (
             <>
-              <DataBlock label="Received" value={step.input} />
-              <DataBlock label="Produced" value={step.output} />
+              <DataViewer label="Received" value={step.input} />
+              <DataViewer
+                label="Produced"
+                value={step.output}
+                root={`steps.${props.stepKey}.output`}
+              />
             </>
           ) : (
-            <DataBlock label="Payload" value={run.triggerPayload} />
+            <DataViewer
+              label="Payload"
+              value={run.triggerPayload}
+              root="trigger.payload"
+            />
           )}
         </div>
       )}
