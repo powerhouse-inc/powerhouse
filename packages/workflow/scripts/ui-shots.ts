@@ -92,6 +92,10 @@ const SCENES: Record<string, (page: Page) => Promise<void>> = {
     await page.getByText("Create connection").click();
     await page.getByRole("button", { name: "Use this connection" }).waitFor();
   },
+  "workflow-editor-slack-step": async (page) => {
+    await openWorkflowEditor(page, "Uptime ping");
+    await canvasNode(page, "Alert #ops").click();
+  },
   "workflow-editor-select": async (page) => {
     await openWorkflowEditor(page);
     await canvasNode(page, "Summarise").click();

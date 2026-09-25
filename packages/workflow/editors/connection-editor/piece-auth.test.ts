@@ -4,7 +4,9 @@ import {
   isAuthComplete,
   isConfigValueMissing,
   packageFromConnectorId,
+  planForConnection,
   planFromAuth,
+  plansFromAuth,
   type AuthPlan,
 } from "./piece-auth.js";
 
@@ -160,5 +162,49 @@ describe("connector ids", () => {
     expect(packageFromConnectorId("@activepieces/piece-slack")).toBe(
       "@activepieces/piece-slack",
     );
+  });
+});
+
+describe("sign-in methods", () => {
+  const slack = [
+    { type: "OAUTH2", displayName: "Connection", required: true },
+    {
+      type: "CUSTOM_AUTH",
+      displayName: "Bot Token",
+      required: true,
+      props: {
+        botToken: {
+          type: "SECRET_TEXT",
+          displayName: "Bot Token",
+          required: true,
+        },
+      },
+    },
+  ];
+
+  it("lists each method in the piece's order, runnable or not", () => {
+    expect(
+      plansFromAuth(slack).map((plan) => [plan.authType, plan.supported]),
+    ).toEqual([
+      ["OAUTH2", false],
+      ["CUSTOM_AUTH", true],
+    ]);
+  });
+
+  it("uses the connection's method, or the first runnable one", () => {
+    expect(planForConnection(slack, "CUSTOM_AUTH").secretFields).toMatchObject([
+      { name: "botToken" },
+    ]);
+    // OAuth2 can't run, so a connection still on it falls back.
+    expect(planForConnection(slack, "OAUTH2").authType).toBe("CUSTOM_AUTH");
+  });
+
+  it("takes the runtime's refusal of a method at its word", () => {
+    const refreshing = {
+      type: "CUSTOM_AUTH",
+      props: {},
+      unsupported: "CustomAuth refresh is not supported yet",
+    };
+    expect(planFromAuth(refreshing).supported).toBe(false);
   });
 });
