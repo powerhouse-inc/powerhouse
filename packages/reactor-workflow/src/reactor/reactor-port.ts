@@ -5,6 +5,7 @@
 // and their factories, drive nodes, a PHDocument's operations — so the piece
 // keeps the block's own semantics and the reactor stays on this side of it.
 import type { WorkflowCaller, WorkflowRuntimeHostDeps } from "./host.js";
+import { currentDocumentRecorder } from "./run-scope.js";
 import type {
   ReactorCreateInput,
   ReactorDocumentSummary,
@@ -204,7 +205,7 @@ export class SubgraphReactorPort implements ReactorPort {
     branch?: string;
   }): Promise<ReactorDocumentSummary> {
     const document = await this.client.get<PHDocument>(input.documentId);
-    return documentSummary(document, true);
+    return this.handOver(documentSummary(document, true));
   }
 
   async find(input: ReactorFindInput): Promise<ReactorDocumentSummary[]> {
@@ -237,7 +238,7 @@ export class SubgraphReactorPort implements ReactorPort {
       results = pages.flat();
     }
     const seen = new Set<string>();
-    return (
+    return this.handOver(
       results
         .filter((document) => {
           if (seen.has(document.header.id)) return false;
@@ -249,7 +250,7 @@ export class SubgraphReactorPort implements ReactorPort {
         // the page holds raises `limit`; silently matching a prefix of the type
         // would look like "no such document".
         .filter((document) => matchesState(document, input.match))
-        .map((document) => documentSummary(document, input.withState === true))
+        .map((document) => documentSummary(document, input.withState === true)),
     );
   }
 
@@ -264,7 +265,7 @@ export class SubgraphReactorPort implements ReactorPort {
       );
       // createEmpty takes no name, so naming it is a first operation. The
       // drive path below sets the header instead, before the file lands.
-      if (!input.name) return documentSummary(created, true);
+      if (!input.name) return this.handOver(documentSummary(created, true));
       const naming = createAction("SET_NAME", { name: input.name });
       const named = await this.client.execute<PHDocument>(
         created.header.id,
@@ -272,7 +273,7 @@ export class SubgraphReactorPort implements ReactorPort {
         [naming],
       );
       assertOperationsApplied(named, [naming]);
-      return documentSummary(named, true);
+      return this.handOver(documentSummary(named, true));
     }
     // createEmpty only records the parent relationship; a drive also needs an
     // ADD_FILE node, or the document is created but invisible in the drive.
@@ -288,7 +289,7 @@ export class SubgraphReactorPort implements ReactorPort {
       empty,
       target.parentFolder,
     );
-    return documentSummary(created, true);
+    return this.handOver(documentSummary(created, true));
   }
 
   async execute(input: ReactorExecuteInput): Promise<ReactorDocumentSummary> {
@@ -309,7 +310,22 @@ export class SubgraphReactorPort implements ReactorPort {
     // The inputs rather than the built actions: they carry the scope each one
     // was asked for, which is the scope its operation was appended to.
     assertOperationsApplied(document, input.actions);
-    return documentSummary(document, true);
+    return this.handOver(documentSummary(document, true));
+  }
+
+  // A run is served only with what its steps read, so each document is
+  // journaled against the run before its summary leaves the host.
+  private async handOver<
+    T extends ReactorDocumentSummary | ReactorDocumentSummary[],
+  >(summaries: T): Promise<T> {
+    const record = currentDocumentRecorder();
+    if (record) {
+      const list: ReactorDocumentSummary[] = Array.isArray(summaries)
+        ? summaries
+        : [summaries];
+      await record(list.map((summary) => summary.documentId));
+    }
+    return summaries;
   }
 
   private async findByType(

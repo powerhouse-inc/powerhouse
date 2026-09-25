@@ -14,6 +14,9 @@ export interface RunScope {
   // The worker child this run's piece steps go to, held for the length of the
   // run. Absent outside a pooled run, where the executor falls back to its own.
   pieceWorker?: IPieceWorker;
+  // Journals the documents the reactor port hands this run's steps, before
+  // they are handed over; absent where there is no journal to gate.
+  recordDocuments?: (documentIds: string[]) => Promise<void>;
 }
 
 const storage = new AsyncLocalStorage<RunScope>();
@@ -37,6 +40,12 @@ export function currentRunId(): string | undefined {
 // nothing": only a run establishes a binding.
 export function currentBoundConnections(): ReadonlySet<string> | undefined {
   return storage.getStore()?.connections;
+}
+
+export function currentDocumentRecorder():
+  | ((documentIds: string[]) => Promise<void>)
+  | undefined {
+  return storage.getStore()?.recordDocuments;
 }
 
 // The run's own worker, asked for per step rather than held by the executor:

@@ -13,6 +13,7 @@ import {
 import {
   AuthorizationPolicy,
   ForbiddenError,
+  callerSubject,
   createCanonicalDocumentIdResolver,
   type AttachmentReferenceProjectionCapability,
   type CanonicalDocumentId,
@@ -141,15 +142,15 @@ export interface ComposedWorkflowRuntime {
   stop(): Promise<void>;
 }
 
-// The engine's own access check, answered as BaseSubgraph answers it: an admin
-// passes, another policy fails closed, an unresolvable identifier is a denial.
+// The engine's own access check, answered as BaseSubgraph answers it: the
+// host ACL (an admin passes, another policy fails closed, an unresolvable
+// identifier is a denial), then the reactor's read gate as the caller.
 function readAssertion(
   authorizationService: IAuthorizationService,
   reactorClient: IReactorClient,
 ): WorkflowRuntimeHostDeps["assertCanRead"] {
   const resolveCanonical = createCanonicalDocumentIdResolver(reactorClient);
-  return async (identifier: string, caller: WorkflowCaller) => {
-    const ctx = caller as Context;
+  const hostCanRead = async (identifier: string, ctx: Context) => {
     if (authorizationService.isSupremeAdmin(ctx.user?.address)) return;
     if (
       authorizationService.config.policy !==
@@ -168,6 +169,19 @@ function readAssertion(
       ctx.user?.address,
     );
     if (!canRead) throw new ForbiddenError("to read this document");
+  };
+  return async (identifier: string, caller: WorkflowCaller) => {
+    const ctx = caller as Context;
+    await hostCanRead(identifier, ctx);
+    let served: boolean;
+    try {
+      served = await reactorClient.isServed(identifier, {
+        subject: callerSubject(ctx.user),
+      });
+    } catch {
+      throw new ForbiddenError();
+    }
+    if (!served) throw new ForbiddenError("to read this document");
   };
 }
 
@@ -319,6 +333,7 @@ export async function composeWorkflowRuntime(
     relationalDb: deps.relationalDb,
     reactorClient: deps.reactorClient,
     assertCanRead: readAssertion(deps.authorizationService, deps.reactorClient),
+    subjectOf: (caller) => callerSubject((caller as Context).user),
     assertCanWrite: writeAssertion(
       deps.authorizationService,
       deps.reactorClient,

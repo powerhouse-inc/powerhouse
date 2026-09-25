@@ -263,6 +263,38 @@ function stringField(
   return typeof value === "string" && value !== "" ? value : undefined;
 }
 
+// The documents a run's trigger names: the one whose operation fired it, and
+// the drive it sits in.
+function journaledTriggerDocumentIds(payload: string | null): string[] {
+  if (payload === null) return [];
+  try {
+    return triggerDocumentIds(JSON.parse(payload));
+  } catch {
+    return [];
+  }
+}
+
+function triggerDocumentIds(payload: unknown): string[] {
+  const record = inputRecord(payload);
+  return [
+    ...new Set(
+      [
+        stringField(record, "documentId"),
+        stringField(record, "driveId"),
+      ].filter((id): id is string => id !== undefined),
+    ),
+  ];
+}
+
+// Absence is reported by name: the error may cross an RPC boundary.
+function isAbsent(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === "DocumentNotFoundError" ||
+      error.name === "DocumentDeletedError")
+  );
+}
+
 function inputRecord(input: unknown): Record<string, unknown> {
   if (input === null || typeof input !== "object") return {};
   return input as Record<string, unknown>;
@@ -1789,9 +1821,8 @@ export class WorkflowRuntimeService {
       return [];
     }
     const rows = await store.listRuns(scope, args.limit ?? 25);
-    const readable = await this.readableRows(
-      rows,
-      (row) => row.workflow_id,
+    const readable = await this.servedRuns(
+      await this.readableRows(rows, (row) => row.workflow_id, ctx),
       ctx,
     );
     return Promise.all(
@@ -1810,20 +1841,30 @@ export class WorkflowRuntimeService {
     const row = await store.getRun(runId);
     if (!row) return null;
     if (!(await this.canReadDocument(row.workflow_id, ctx))) return null;
+    if ((await this.servedRuns([row], ctx)).length === 0) return null;
     return { row, steps: await store.getSteps(row.id) };
   }
 
-  // Design-time: the powerhouse/connection documents this caller may read.
-  // The reactor client is unscoped, so the filter is ours to apply.
+  // Design-time: the powerhouse/connection documents this caller may read,
+  // read as the caller and then held to the host's own check.
   async connections(ctx?: WorkflowCaller): Promise<ConnectionSummary[]> {
-    const page = await this.host.reactorClient.find({
-      type: "powerhouse/connection",
-    });
+    const subject = ctx && this.host.subjectOf?.(ctx);
+    const page = await this.host.reactorClient.find(
+      { type: "powerhouse/connection" },
+      subject ? { subject } : undefined,
+    );
     const readable = await this.readableDocuments(
       page.results as ConnectionDocument[],
       ctx,
     );
-    return readable.map((document) => {
+    // A listing serves a document any domain scope of which is readable, so
+    // one whose global scope the gate stripped is dropped here.
+    const withGlobal = readable.filter(
+      (document) =>
+        (document.state as Partial<ConnectionDocument["state"]>).global !==
+        undefined,
+    );
+    return withGlobal.map((document) => {
       const state = document.state.global;
       return {
         id: document.header.id,
@@ -2331,6 +2372,64 @@ export class WorkflowRuntimeService {
       .catch(() => false);
   }
 
+  // A run carries its trigger payload and every step's input and output, drawn
+  // from the documents its trigger names and those the reactor port handed its
+  // steps, so it is served only to a caller who is served each of them. One no
+  // longer live has no content left to protect, or a deletion's runs would be
+  // served to nobody.
+  private async servedRuns(
+    rows: RunRow[],
+    ctx: WorkflowCaller | undefined,
+  ): Promise<RunRow[]> {
+    if (!ctx) return [];
+    const decisions = new Map<string, Promise<boolean>>();
+    const store = await this.store();
+    const served = await Promise.all(
+      rows.map(async (row) =>
+        this.servesDocuments(
+          [
+            ...journaledTriggerDocumentIds(row.trigger_payload),
+            ...((await store?.getRunDocuments(row.id)) ?? []),
+          ],
+          ctx,
+          decisions,
+        ),
+      ),
+    );
+    return rows.filter((_, index) => served[index]);
+  }
+
+  private async servesDocuments(
+    documentIds: string[],
+    ctx: WorkflowCaller,
+    decisions = new Map<string, Promise<boolean>>(),
+  ): Promise<boolean> {
+    const served = await Promise.all(
+      [...new Set(documentIds)].map((documentId) => {
+        let decision = decisions.get(documentId);
+        if (!decision) {
+          decision = this.servesRunDocument(documentId, ctx);
+          decisions.set(documentId, decision);
+        }
+        return decision;
+      }),
+    );
+    return served.every(Boolean);
+  }
+
+  private async servesRunDocument(
+    documentId: string,
+    ctx: WorkflowCaller,
+  ): Promise<boolean> {
+    if (await this.canReadDocument(documentId, ctx)) return true;
+    try {
+      await this.host.reactorClient.get(documentId, { scopes: ["document"] });
+    } catch (error) {
+      return isAbsent(error);
+    }
+    return false;
+  }
+
   private async assertCanReadDocument(
     documentId: string,
     ctx: WorkflowCaller | undefined,
@@ -2679,8 +2778,22 @@ export class WorkflowRuntimeService {
       // here, and the journal records the run as failed rather than leaving it
       // to be swept up as an orphan.
       session = this.workers().session();
+      const journal = store;
+      const journaledRunId = runId;
+      const handed = new Set<string>();
       const result = await withRunScope(
-        { workflowId, runId, connections, pieceWorker: session },
+        {
+          workflowId,
+          runId,
+          connections,
+          pieceWorker: session,
+          recordDocuments: async (documentIds: string[]) => {
+            for (const documentId of documentIds) handed.add(documentId);
+            if (journal && journaledRunId) {
+              await journal.recordRunDocuments(journaledRunId, documentIds);
+            }
+          },
+        },
         () =>
           runWorkflow({
             definition,
@@ -2721,7 +2834,14 @@ export class WorkflowRuntimeService {
           );
         }
       }
-      return { ...result, runId };
+      const finished = { ...result, runId };
+      if (!ctx) return finished;
+      // Handed back only as `run` would serve it, so a step's output never
+      // reaches a caller the journal would withhold it from.
+      const ids = [...triggerDocumentIds(triggerPayload), ...handed];
+      return (await this.servesDocuments(ids, ctx))
+        ? finished
+        : { status: finished.status, steps: [], runId };
     } catch (error) {
       if (store && runId) {
         await store.failRun(
@@ -2750,6 +2870,9 @@ export class WorkflowRuntimeService {
     // A replay is the workflow's own side effects again, so it is the
     // workflow — not the run id — that the caller has to be allowed to touch.
     await this.assertCanReadDocument(run.workflow_id, ctx);
+    if (!ctx || (await this.servedRuns([run], ctx)).length === 0) {
+      throw new Error(`Run "${runId}" not found`);
+    }
     if (run.status !== "FAILED") {
       throw new Error(`Only FAILED runs can be rerun; run is ${run.status}`);
     }
@@ -2793,10 +2916,13 @@ export class WorkflowRuntimeService {
         port: row.port,
       });
     }
-    return this.fire(run.workflow_id, triggerPayload, "rerun", {
-      completedSteps,
-      rerunOf: runId,
-    });
+    return this.fire(
+      run.workflow_id,
+      triggerPayload,
+      "rerun",
+      { completedSteps, rerunOf: runId },
+      ctx,
+    );
   }
 }
 
