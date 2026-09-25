@@ -1,2 +1,3 @@
 packages:
   - "!test/test-consumer-project/**"
+  - "!apps/academy/**"

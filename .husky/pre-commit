@@ -17,11 +17,12 @@ apps/academy/llms-full.txt
 apps/academy/static/llms.txt
 apps/academy/static/llms-full.txt"
 
-# Run a generator from inside apps/academy; abort the commit if it fails.
+# Run an academy generator with the root tsx (they only use node builtins, so the
+# academy's own install isn't needed); abort the commit if it fails.
 run_generator() {
-  echo "Running 'pnpm $1' in $ACADEMY_DIR..."
-  (cd "$ACADEMY_DIR" && pnpm "$1") || {
-    echo "'pnpm $1' failed. Aborting commit."
+  echo "Running $ACADEMY_DIR/scripts/$1..."
+  pnpm exec tsx "$ACADEMY_DIR/scripts/$1" || {
+    echo "$1 failed. Aborting commit."
     exit 1
   }
 }
@@ -60,7 +61,7 @@ fi
 
 if [ "$should_run_cli_docs_generation" = true ]; then
   echo "Relevant CLI COMMANDS.md file changed. Generating Academy CLI documentation..."
-  run_generator generate:cli-docs
+  run_generator generate-combined-cli-docs.ts
   stage_generated "$CLI_DOC_OUTPUTS"
 
   # Regenerated CLI docs are themselves academy markdown, so the LLM docs are
@@ -74,7 +75,7 @@ fi
 
 if [ "$should_run_llm_docs_generation" = true ]; then
   echo "Academy markdown files changed. Regenerating LLM-optimized documentation..."
-  run_generator generate:llm-docs
+  run_generator generate-llm-docs.ts
   stage_generated "$LLM_DOC_OUTPUTS"
 else
   echo "No academy markdown changes detected. Skipping LLM documentation generation."
