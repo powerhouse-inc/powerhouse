@@ -32,8 +32,6 @@ const EXEMPT: Record<string, Record<string, string>> = {
   reactor: {
     "Query.documentModels":
       "Document model metadata, not document content (AUTH_REVIEW §4: low-sensitivity).",
-    "Query.jobStatus":
-      "Job status by id, not document content (AUTH_REVIEW §4: low-sensitivity).",
   },
   auth: {
     "Query.userDocumentPermissions":
@@ -59,7 +57,7 @@ const EXEMPT: Record<string, Record<string, string>> = {
  * the packages requireAdmin helper.
  */
 const GUARD_PATTERN =
-  /\bassertCan(Read|Write|Create|ExecuteOperation|ExecuteOperations)(Canonical)?\b|\bauthorizationService\b|\bcanReadDocument\b|\brequireAdmin\b/;
+  /\bassertCan(Read|Write|Create|ExecuteOperation|ExecuteOperations)(Canonical)?\b|\bauthorizationService\b|\bcanReadDocument\b|\bservesDocument\b|\brequireAdmin\b/;
 
 function resolverSource(value: unknown): string {
   if (typeof value === "function") return value.toString();

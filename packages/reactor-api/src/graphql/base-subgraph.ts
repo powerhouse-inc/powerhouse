@@ -184,6 +184,23 @@ export class BaseSubgraph implements ISubgraph {
     return { address: ctx.user?.address, key: ctx.user?.appKey };
   }
 
+  /** Whether a listing would serve the document to the caller; fails closed. */
+  protected async servesDocument(
+    documentId: string,
+    ctx: Context,
+  ): Promise<boolean> {
+    if (!documentId) {
+      return false;
+    }
+    try {
+      return await this.reactorClient.isServed(documentId, {
+        subject: this.viewSubject(ctx),
+      });
+    } catch {
+      return false;
+    }
+  }
+
   /**
    * Asserts read access, resolving a slug first. Returns a handle whose
    * `fetchIdentifier` the caller reuses for the data fetch; a denial throws.
