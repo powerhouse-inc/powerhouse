@@ -69,6 +69,8 @@ export interface PieceSummary {
   // Why no block of the piece can run here. Listed, so a
   // search explains the piece rather than silently missing it.
   unsupported?: string;
+  // The publisher retired it; listed, but marked, so a search still finds it.
+  deprecated?: boolean;
 }
 
 export interface PieceActionEntry {
@@ -118,6 +120,7 @@ type CatalogEntry = Partial<
   triggers?: number | Record<string, PieceDetailTrigger>;
   categories?: string[];
   auth?: unknown;
+  deprecated?: boolean;
 };
 
 type PieceDetailAction = Partial<
@@ -269,6 +272,7 @@ function toSummaries(raw: CatalogEntry[]): PieceSummary[] {
       triggerCount: typeof entry.triggers === "number" ? entry.triggers : 0,
       categories: entry.categories ?? [],
       auth: entry.auth ?? null,
+      ...(entry.deprecated === true ? { deprecated: true } : {}),
       ...reasonOf(unsupportedAuth(entry.auth)),
     }));
 }

@@ -2358,6 +2358,7 @@ export class WorkflowRuntimeService {
     input?: unknown,
     connectionId?: string,
     ctx?: WorkflowCaller,
+    searchValue?: string,
   ): Promise<unknown> {
     const parsed = await this.resolvedBlock(blockType);
     if (!parsed) {
@@ -2388,6 +2389,7 @@ export class WorkflowRuntimeService {
         kind: parsed.kind,
         propName,
         refresherValues: (input ?? {}) as Record<string, unknown>,
+        ...(searchValue !== undefined ? { searchValue } : {}),
         auth,
         projectId: PROJECT_SCOPE_KEY,
         // The reactor piece's options() reads the reactor it offers choices

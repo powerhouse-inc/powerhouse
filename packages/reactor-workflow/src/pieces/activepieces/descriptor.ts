@@ -5,6 +5,7 @@ import {
   type ApProperty,
   type ApPropertyType,
   type ApDropdownOption,
+  type ApPropertyGroup,
   type ApTrigger,
   type ApTriggerStrategy,
 } from "./types.js";
@@ -35,6 +36,36 @@ export interface PiecePropDescriptor {
   // Nested shape: an ARRAY item's fields, or the props a DYNAMIC resolver
   // produced (see describeProperties). OBJECT props are free-form and carry none.
   properties?: PiecePropDescriptor[];
+  // Activepieces' layout hint: rendered in the collapsed advanced section.
+  advanced?: boolean;
+  // Layout and control hints (see describeHints); absent when not declared.
+  width?: "half" | "full";
+  icon?: string;
+  reveals?: string[];
+  variant?: string;
+  display?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  refreshOnSearch?: boolean;
+  formatProperty?: string;
+  // A STATIC_DROPDOWN's own state, beside its options.
+  staticDisabled?: boolean;
+  staticPlaceholder?: string;
+}
+
+export interface PiecePropertyGroupDescriptor {
+  key: string;
+  display: string;
+  label?: string;
+  description?: string;
+  icon?: string;
+  props: string[];
+}
+
+export interface PieceErrorHandlingDescriptor {
+  retryOnFailure?: { defaultValue?: boolean; hide?: boolean };
+  continueOnFailure?: { defaultValue?: boolean; hide?: boolean };
 }
 
 export interface PieceActionDescriptor {
@@ -50,6 +81,9 @@ export interface PieceActionDescriptor {
   // Orders the action picker, so a package piece that declares it must be
   // ordered by it too rather than counting as unset.
   audience?: string;
+  propertyGroups?: PiecePropertyGroupDescriptor[];
+  classification?: string;
+  errorHandlingOptions?: PieceErrorHandlingDescriptor;
 }
 
 export interface PieceTriggerDescriptor {
@@ -60,6 +94,7 @@ export interface PieceTriggerDescriptor {
   testStrategy?: string;
   requireAuth: boolean;
   props: PiecePropDescriptor[];
+  propertyGroups?: PiecePropertyGroupDescriptor[];
   outputSchema?: unknown;
   hasSampleData: boolean;
   // The sample itself, not just whether there is one: a trigger that declares
@@ -109,6 +144,7 @@ export interface PieceDescriptor {
   description?: string;
   logoUrl?: string;
   categories?: string[];
+  deprecated?: boolean;
   // A list when the piece offers several sign-in methods.
   auth?: PieceAuthDescriptor | PieceAuthDescriptor[];
   minimumSupportedRelease?: string;
@@ -117,6 +153,74 @@ export interface PieceDescriptor {
   triggers: PieceTriggerDescriptor[];
   // Set when no block of the piece can run here, e.g. an OAuth2 piece.
   unsupported?: UnsupportedFeature;
+}
+
+function optional<K extends string, V>(
+  key: K,
+  value: V | undefined,
+): Partial<Record<K, V>> {
+  return value === undefined ? {} : ({ [key]: value } as Record<K, V>);
+}
+
+export function describeOption(option: ApDropdownOption): ApDropdownOption {
+  return {
+    label: option.label,
+    value: option.value,
+    ...(typeof option.description === "string" && option.description
+      ? { description: option.description }
+      : {}),
+    ...(typeof option.icon === "string" && option.icon
+      ? { icon: option.icon }
+      : {}),
+  };
+}
+
+// Copied only when well-formed: a foreign bundle may carry anything here.
+function describeHints(prop: ApProperty): Partial<PiecePropDescriptor> {
+  const hints: Partial<PiecePropDescriptor> = {};
+  if (prop.width === "half" || prop.width === "full") hints.width = prop.width;
+  const strings = ["icon", "variant", "display", "formatProperty"] as const;
+  for (const key of strings) {
+    const value = prop[key];
+    if (typeof value === "string" && value !== "") hints[key] = value;
+  }
+  const numbers = ["min", "max", "step"] as const;
+  for (const key of numbers) {
+    const value = prop[key];
+    if (typeof value === "number" && Number.isFinite(value)) hints[key] = value;
+  }
+  if (Array.isArray(prop.reveals)) {
+    const reveals = prop.reveals.filter(
+      (name): name is string => typeof name === "string",
+    );
+    if (reveals.length > 0) hints.reveals = reveals;
+  }
+  if (prop.refreshOnSearch === true) hints.refreshOnSearch = true;
+  return hints;
+}
+
+function describeGroups(
+  groups: ApPropertyGroup[] | undefined,
+): PiecePropertyGroupDescriptor[] | undefined {
+  if (!Array.isArray(groups)) return undefined;
+  const described = groups
+    .filter(
+      (group) =>
+        typeof group.key === "string" &&
+        typeof group.display === "string" &&
+        Array.isArray(group.props),
+    )
+    .map((group) => ({
+      key: group.key!,
+      display: group.display!,
+      ...(group.label ? { label: group.label } : {}),
+      ...(group.description ? { description: group.description } : {}),
+      ...(group.icon ? { icon: group.icon } : {}),
+      props: group.props!.filter(
+        (name): name is string => typeof name === "string",
+      ),
+    }));
+  return described.length > 0 ? described : undefined;
 }
 
 function hasResolver(prop: ApProperty): boolean {
@@ -145,6 +249,7 @@ function toPropDescriptor(
   if (prop.defaultValue !== undefined) {
     descriptor.defaultValue = prop.defaultValue;
   }
+  if (prop.advanced === true) descriptor.advanced = true;
   if (dynamic && resolverId) {
     descriptor.dynamicResolverId = resolverId;
   }
@@ -154,11 +259,13 @@ function toPropDescriptor(
     );
   }
   if (typeof prop.options === "object" && Array.isArray(prop.options.options)) {
-    descriptor.staticOptions = prop.options.options.map((o) => ({
-      label: o.label,
-      value: o.value,
-    }));
+    descriptor.staticOptions = prop.options.options.map(describeOption);
+    if (prop.options.disabled === true) descriptor.staticDisabled = true;
+    if (typeof prop.options.placeholder === "string") {
+      descriptor.staticPlaceholder = prop.options.placeholder;
+    }
   }
+  Object.assign(descriptor, describeHints(prop));
   if (prop.properties && typeof prop.properties === "object") {
     const nested = describeProperties(prop.properties);
     if (nested.length > 0) descriptor.properties = nested;
@@ -233,6 +340,14 @@ export function buildDescriptor(
         ? { outputSchema: action.outputSchema }
         : {}),
       ...(action.audience !== undefined ? { audience: action.audience } : {}),
+      ...optional("propertyGroups", describeGroups(action.propertyGroups)),
+      ...optional(
+        "classification",
+        typeof action.classification === "string"
+          ? action.classification
+          : undefined,
+      ),
+      ...optional("errorHandlingOptions", action.errorHandlingOptions),
     }),
   );
 
@@ -258,6 +373,7 @@ export function buildDescriptor(
         ? { sampleData: trigger.sampleData }
         : {}),
       handshake: describeHandshake(trigger),
+      ...optional("propertyGroups", describeGroups(trigger.propertyGroups)),
       ...withUnsupported(unsupportedTrigger(trigger)),
     }),
   );
@@ -269,6 +385,7 @@ export function buildDescriptor(
     description: piece.description,
     logoUrl: piece.logoUrl,
     categories: piece.categories,
+    ...(piece.deprecated === true ? { deprecated: true } : {}),
     minimumSupportedRelease: piece.minimumSupportedRelease,
     maximumSupportedRelease: piece.maximumSupportedRelease,
     actions,

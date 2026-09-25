@@ -27,6 +27,8 @@ export const schema: DocumentNode = gql`
       propName: String!
       input: Unknown
       connectionId: String
+      "What the author typed, for a DROPDOWN declared with refreshOnSearch."
+      searchValue: String
     ): Unknown
     """
     All published Activepieces pieces with at least one action.

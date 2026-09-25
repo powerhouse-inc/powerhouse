@@ -65,6 +65,49 @@ const props: Record<string, ApProperty> = {
   },
   meta: { displayName: "Meta", type: "OBJECT", required: false },
   note: { displayName: "", description: "", type: "MARKDOWN", required: false },
+  retries: {
+    displayName: "Retries",
+    type: "NUMBER",
+    required: false,
+    advanced: true,
+    display: "stepper",
+    min: 0,
+    max: 5,
+    step: 1,
+    width: "half",
+  },
+  urgent: {
+    displayName: "Urgent",
+    type: "CHECKBOX",
+    required: false,
+    reveals: ["retries", 42 as unknown as string],
+  },
+  warning: {
+    displayName: "Careful",
+    type: "MARKDOWN",
+    required: false,
+    variant: "WARNING",
+  },
+  priority: {
+    displayName: "Priority",
+    type: "STATIC_DROPDOWN",
+    required: false,
+    display: "cards",
+    options: {
+      disabled: true,
+      placeholder: "Pick one",
+      options: [
+        { label: "High", value: "high", description: "Now", icon: "bolt" },
+      ],
+    },
+  },
+  bogus: {
+    displayName: "Bogus",
+    type: "SHORT_TEXT",
+    required: false,
+    width: "wide",
+    min: Number.NaN,
+  },
 };
 
 const piece: ApPiece = {
@@ -77,10 +120,24 @@ const piece: ApPiece = {
       displayName: "Create card",
       requireAuth: true,
       props,
+      propertyGroups: [
+        {
+          key: "main",
+          display: "section",
+          label: "Card",
+          props: ["title", "board"],
+        },
+        { key: "broken", display: "tabs" },
+      ],
+      classification: "DESTRUCTIVE",
+      errorHandlingOptions: {
+        retryOnFailure: { defaultValue: true, hide: true },
+      },
       run: noop,
     },
   },
   triggers: {},
+  deprecated: true,
 };
 
 describe("buildDescriptor", () => {
@@ -99,6 +156,49 @@ describe("buildDescriptor", () => {
     });
     expect(prop("note").description).toBeUndefined();
     expect(prop("note").placeholder).toBeUndefined();
+  });
+
+  it("marks props the piece put in the advanced section, and only those", () => {
+    expect(prop("retries").advanced).toBe(true);
+    expect(prop("title").advanced).toBeUndefined();
+  });
+
+  it("carries layout and control hints, dropping malformed ones", () => {
+    expect(prop("retries")).toMatchObject({
+      display: "stepper",
+      min: 0,
+      max: 5,
+      step: 1,
+      width: "half",
+    });
+    expect(prop("urgent").reveals).toEqual(["retries"]);
+    expect(prop("warning").variant).toBe("WARNING");
+    expect(prop("priority")).toMatchObject({
+      display: "cards",
+      staticDisabled: true,
+      staticPlaceholder: "Pick one",
+      staticOptions: [
+        { label: "High", value: "high", description: "Now", icon: "bolt" },
+      ],
+    });
+    expect(prop("bogus").width).toBeUndefined();
+    expect(prop("bogus").min).toBeUndefined();
+  });
+
+  it("carries the action's groups, classification and error handling", () => {
+    expect(action.propertyGroups).toEqual([
+      {
+        key: "main",
+        display: "section",
+        label: "Card",
+        props: ["title", "board"],
+      },
+    ]);
+    expect(action.classification).toBe("DESTRUCTIVE");
+    expect(action.errorHandlingOptions).toEqual({
+      retryOnFailure: { defaultValue: true, hide: true },
+    });
+    expect(descriptor.deprecated).toBe(true);
   });
 
   it("exposes refreshers and resolver ids on dynamic props only", () => {
