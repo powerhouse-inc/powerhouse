@@ -72,7 +72,7 @@ and `package.json`, which is why the root entry must stay browser-safe.
 one PNG per scene to `.ui-shots/` (gitignored):
 
 ```sh
-pnpm --filter @powerhousedao/workflow ui:serve    # optional: keep both servers warm
+pnpm --filter @powerhousedao/workflow ui:serve    # servers plus a browser window on a seeded demo drive
 pnpm --filter @powerhousedao/workflow ui:shots    # every scene
 pnpm --filter @powerhousedao/workflow ui:shots workflow-editor-step --theme dark
 pnpm --filter @powerhousedao/workflow ui:shots --list
