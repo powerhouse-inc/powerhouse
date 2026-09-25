@@ -97,7 +97,7 @@ test.describe("Workflow Studio", () => {
     await openDrive(app);
     await selectInSidebar(app, "Ops Slack");
     await expect(app.getByText("Connected", { exact: true })).toBeVisible();
-    await expect(app.getByText("OAuth 2")).toBeVisible();
+    await expect(app.getByText("Keys and tokens")).toBeVisible();
     await expect(app.getByText("2 workflows")).toBeVisible();
     const usedBy = app.locator("section", {
       has: app.getByRole("heading", { name: "Used by" }),

@@ -157,6 +157,17 @@ async function createRemoteDrive(slug: string): Promise<string> {
   return data.DocumentDrive.createDocument.id;
 }
 
+async function createSecret(value: string, label: string): Promise<string> {
+  const data = await gql<{
+    workflowRuntime: { createSecret: { ref: string } };
+  }>(
+    "/graphql/workflow-runtime",
+    `mutation($v: String!, $l: String) { workflowRuntime { createSecret(value: $v, label: $l) { ref } } }`,
+    { v: value, l: label },
+  );
+  return data.workflowRuntime.createSecret.ref;
+}
+
 async function pieceBlockType(pkg: string, action: string): Promise<string> {
   const data = await gql<{
     workflowRuntime: {
@@ -178,6 +189,7 @@ interface SeedInput {
   root: string;
   drive: string;
   blocks: { http: string; parseUrl: string; openai: string; slack: string };
+  botTokenRef: string;
 }
 
 export interface Seeded {
@@ -211,7 +223,7 @@ interface PhWindow {
 
 /** Creates the documents through Connect's reactor, which syncs them up. */
 function seedInBrowser(page: Page, input: SeedInput): Promise<Seeded> {
-  return page.evaluate(async ({ root, drive, blocks }) => {
+  return page.evaluate(async ({ root, drive, blocks, botTokenRef }) => {
     const w = window as unknown as PhWindow;
     const client = w.ph!.reactorClientModule!.client;
     // Served by Connect's Vite dev server straight from source.
@@ -238,8 +250,9 @@ function seedInBrowser(page: Page, input: SeedInput): Promise<Seeded> {
       cn.setConnectionName({ name: "Ops Slack" }),
       cn.setConnector({
         connectorId: "@activepieces/piece-slack",
-        authType: "OAUTH2",
+        authType: "CUSTOM_AUTH",
       }),
+      cn.setSecretRef({ id: "bot-token", name: "botToken", ref: botTokenRef }),
       cn.setAccountLabel({ accountLabel: "ops@acme.dev" }),
       cn.recordCheckResult({
         status: "OK",
@@ -438,7 +451,16 @@ export async function openSeededPage(
     { timeout: 60_000, polling: 500 },
   );
 
-  const seeded = await seedInBrowser(page, { root: ROOT, drive, blocks });
+  const botTokenRef = await createSecret(
+    "xoxb-demo-token",
+    "Ops Slack · Bot Token",
+  );
+  const seeded = await seedInBrowser(page, {
+    root: ROOT,
+    drive,
+    blocks,
+    botTokenRef,
+  });
   // One succeeded and one failed run, for the runs views.
   await fireWhenSynced(seeded.smoke);
   await fireWhenSynced(seeded.ping, { url: "https://status.acme.dev/health" });

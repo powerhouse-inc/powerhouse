@@ -23,7 +23,7 @@ export const AUTH_TYPE_LABEL: Record<ConnectionAuthType, string> = {
   NONE: "None",
   SECRET_TEXT: "API key",
   BASIC_AUTH: "Username and password",
-  CUSTOM_AUTH: "Custom",
+  CUSTOM_AUTH: "Keys and tokens",
   OAUTH2: "OAuth 2",
   OIDC: "OpenID Connect",
 };
