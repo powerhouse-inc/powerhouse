@@ -26,8 +26,8 @@
     "generate:llm-docs": "tsx ./scripts/generate-llm-docs.ts",
     "check:doc-snippets": "tsx ./scripts/check-doc-snippets.ts",
     "heroku-postbuild": "npm run build",
-    "slides:preview": "marp -s ./slides",
-    "slides:build": "marp ./slides"
+    "slides:preview": "pnpm dlx @marp-team/marp-cli@4.2.3 -s ./slides",
+    "slides:build": "pnpm dlx @marp-team/marp-cli@4.2.3 ./slides"
   },
   "dependencies": {
     "@docusaurus/core": "3.10.0",
@@ -47,7 +47,6 @@
     "@docusaurus/plugin-client-redirects": "3.10.0",
     "@docusaurus/tsconfig": "3.10.0",
     "@docusaurus/types": "3.10.0",
-    "@marp-team/marp-cli": "^4.2.3",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "tsx": "4.23.13"
