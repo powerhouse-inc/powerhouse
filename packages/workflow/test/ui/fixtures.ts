@@ -1,15 +1,20 @@
 import { test as base, type Page } from "@playwright/test";
-import { openSeededPage } from "../../scripts/ui-stack.js";
+import { openSeededPage, type SeededPage } from "../../scripts/ui-stack.js";
 
-export const test = base.extend<{ theme: "light" | "dark"; app: Page }>({
+export const test = base.extend<{
+  theme: "light" | "dark";
+  stack: SeededPage;
+  app: Page;
+}>({
   theme: ["light", { option: true }],
   // A fresh context on a new drive per test, so tests never share state.
-  app: async ({ browser, theme }, use) => {
-    const { context, page } = await openSeededPage(browser, {
-      colorScheme: theme,
-    });
-    await use(page);
-    await context.close();
+  stack: async ({ browser, theme }, use) => {
+    const stack = await openSeededPage(browser, { colorScheme: theme });
+    await use(stack);
+    await stack.context.close();
+  },
+  app: async ({ stack }, use) => {
+    await use(stack.page);
   },
 });
 
