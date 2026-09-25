@@ -85,6 +85,14 @@ const SCENES: Record<string, (page: Page) => Promise<void>> = {
     await selectInSidebar(page, "Ops Slack");
     await page.getByRole("button", { name: "Edit connection" }).click();
   },
+  "connection-editor-replace": async (page) => {
+    await openDrive(page);
+    await selectInSidebar(page, "Ops Slack");
+    await page.getByRole("button", { name: "Edit connection" }).click();
+    await page.getByRole("button", { name: "Replace" }).click();
+    await page.keyboard.type("xoxb-rotated-token");
+    await page.getByRole("button", { name: "Reference" }).first().click();
+  },
 };
 
 // ─── main ───────────────────────────────────────────────────────────────────

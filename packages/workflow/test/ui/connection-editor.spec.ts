@@ -34,4 +34,46 @@ test.describe("Connection editor", () => {
       app.getByRole("combobox").filter({ hasText: "Slack" }),
     ).toBeVisible();
   });
+
+  test("a saved token shows as saved, and Replace rotates it", async ({
+    app,
+  }) => {
+    const saved = app.getByText(/^Saved /);
+    await expect(saved).toBeVisible();
+    await expect(app.getByPlaceholder("Paste the bot token")).toBeHidden();
+
+    await app.getByRole("button", { name: "Replace" }).click();
+    const input = app.getByPlaceholder("Paste the new bot token");
+    await expect(input).toBeFocused();
+    await input.press("Escape");
+    await expect(input).toBeHidden();
+
+    await app.getByRole("button", { name: "Replace" }).click();
+    await input.fill("xoxb-rotated");
+    await expect(input).toHaveAttribute("type", "password");
+    await app.getByRole("button", { name: "Show Bot Token" }).click();
+    await expect(input).toHaveAttribute("type", "text");
+    await app.getByRole("button", { name: "Save Bot Token" }).click();
+    await expect(app.getByText("Saved just now")).toBeVisible();
+    await expect(input).toBeHidden();
+  });
+
+  test("pasting an optional token saves it", async ({ app }) => {
+    const save = app.getByRole("button", { name: "Save User Token" });
+    await expect(save).toBeDisabled();
+    await app.getByPlaceholder("Paste the user token").fill("xoxp-user");
+    await save.press("Enter");
+    await expect(app.getByPlaceholder("Paste the user token")).toBeHidden();
+    await expect(
+      app.getByRole("button", { name: "Remove saved value" }),
+    ).toHaveCount(2);
+  });
+
+  test("the reference sits behind a disclosure", async ({ app }) => {
+    await expect(app.getByLabel("Secret reference")).toBeHidden();
+    await app.getByRole("button", { name: "Reference" }).first().click();
+    await expect(app.getByLabel("Secret reference")).toHaveValue(
+      /^secret:\/\/v1:/,
+    );
+  });
 });
