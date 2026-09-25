@@ -5,9 +5,6 @@
   },
   "references": [
     {
-      "path": "apps/academy"
-    },
-    {
       "path": "apps/connect"
     },
     {
