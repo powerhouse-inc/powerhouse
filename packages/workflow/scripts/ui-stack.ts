@@ -89,6 +89,8 @@ export async function ensureServers(): Promise<ChildProcess[]> {
           PORT: String(SWITCHBOARD_PORT),
           PH_PGLITE_IN_MEMORY: "1",
           PH_WORKFLOWS_ENABLED: "true",
+          // Loopback only, so tests can reach the services they start.
+          PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES: "127.0.0.1/32",
         },
       ),
     );
@@ -157,7 +159,10 @@ async function createRemoteDrive(slug: string): Promise<string> {
   return data.DocumentDrive.createDocument.id;
 }
 
-async function createSecret(value: string, label: string): Promise<string> {
+export async function createSecret(
+  value: string,
+  label: string,
+): Promise<string> {
   const data = await gql<{
     workflowRuntime: { createSecret: { ref: string } };
   }>(
@@ -168,7 +173,10 @@ async function createSecret(value: string, label: string): Promise<string> {
   return data.workflowRuntime.createSecret.ref;
 }
 
-async function pieceBlockType(pkg: string, action: string): Promise<string> {
+export async function pieceBlockType(
+  pkg: string,
+  action: string,
+): Promise<string> {
   const data = await gql<{
     workflowRuntime: {
       pieceActions: { actions: { name: string; blockType: string }[] };
@@ -182,6 +190,26 @@ async function pieceBlockType(pkg: string, action: string): Promise<string> {
     (a) => a.name === action,
   );
   if (!hit) throw new Error(`No action ${action} in ${pkg}`);
+  return hit.blockType;
+}
+
+export async function pieceTriggerBlockType(
+  pkg: string,
+  trigger: string,
+): Promise<string> {
+  const data = await gql<{
+    workflowRuntime: {
+      pieceTriggers: { triggers: { name: string; blockType: string }[] };
+    };
+  }>(
+    "/graphql/workflow-runtime",
+    `query($p: String!) { workflowRuntime { pieceTriggers(packageName: $p) } }`,
+    { p: pkg },
+  );
+  const hit = data.workflowRuntime.pieceTriggers.triggers.find(
+    (t) => t.name === trigger,
+  );
+  if (!hit) throw new Error(`No trigger ${trigger} in ${pkg}`);
   return hit.blockType;
 }
 
@@ -396,6 +424,7 @@ export interface SeededPage {
   context: BrowserContext;
   page: Page;
   seeded: Seeded;
+  drive: string;
 }
 
 /** A fresh browser context on a new remote drive holding the demo documents. */
@@ -479,7 +508,136 @@ export async function openSeededPage(
   // One succeeded and one failed run, for the runs views.
   await fireWhenSynced(seeded.smoke);
   await fireWhenSynced(seeded.ping, { url: "https://status.acme.dev/health" });
-  return { context, page, seeded };
+  return { context, page, seeded, drive };
+}
+
+// ─── extra documents, for tests that need their own ────────────────────────
+
+export interface WorkflowSpec {
+  name: string;
+  trigger: { blockType: string; config: Record<string, unknown> };
+  // Run in order after the trigger.
+  steps: {
+    key: string;
+    name: string;
+    blockType: string;
+    config: Record<string, unknown>;
+    connectionId?: string;
+  }[];
+}
+
+/** Adds an enabled workflow to the drive through Connect's reactor. */
+export function createWorkflowInBrowser(
+  page: Page,
+  drive: string,
+  spec: WorkflowSpec,
+): Promise<string> {
+  return page.evaluate(
+    async ({ root, drive, spec }) => {
+      const client = (window as unknown as PhWindow).ph!.reactorClientModule!
+        .client;
+      const wf = (await import(
+        `/@fs${root}/packages/workflow/document-models/workflow/v1/index.ts`
+      )) as typeof WorkflowModel;
+      const doc = await client.drives.addFile(drive, wf.utils.createDocument());
+      const id = doc.header.id;
+      const actions: unknown[] = [
+        wf.setWorkflowName({ name: spec.name }),
+        wf.setTrigger({ id: "trigger", ...spec.trigger }),
+      ];
+      let from = "trigger";
+      for (const step of spec.steps) {
+        actions.push(wf.addStep({ id: step.key, ...step }));
+        actions.push(
+          wf.addEdge({ id: `e-${step.key}`, from, to: step.key, port: "next" }),
+        );
+        from = step.key;
+      }
+      actions.push(wf.setWorkflowStatus({ status: "ENABLED" }));
+      await client.execute(id, "main", actions);
+      await client.rename(id, spec.name);
+      return id;
+    },
+    { root: ROOT, drive, spec },
+  );
+}
+
+export interface ConnectionSpec {
+  name: string;
+  connectorId: string;
+  authType: "SECRET_TEXT" | "BASIC_AUTH" | "CUSTOM_AUTH";
+  config: Record<string, unknown>;
+  // Field name to secret:// ref, from createSecret.
+  secrets: Record<string, string>;
+}
+
+/** Adds a configured connection to the drive through Connect's reactor. */
+export function createConnectionInBrowser(
+  page: Page,
+  drive: string,
+  spec: ConnectionSpec,
+): Promise<string> {
+  return page.evaluate(
+    async ({ root, drive, spec }) => {
+      const client = (window as unknown as PhWindow).ph!.reactorClientModule!
+        .client;
+      const cn = (await import(
+        `/@fs${root}/packages/workflow/document-models/connection/v1/index.ts`
+      )) as typeof ConnectionModel;
+      const doc = await client.drives.addFile(drive, cn.utils.createDocument());
+      const id = doc.header.id;
+      const actions: unknown[] = [
+        cn.setConnectionName({ name: spec.name }),
+        cn.setConnector({
+          connectorId: spec.connectorId,
+          authType: spec.authType,
+        }),
+        cn.setConfig({ config: spec.config }),
+      ];
+      for (const [name, ref] of Object.entries(spec.secrets)) {
+        actions.push(cn.setSecretRef({ id: `secret-${name}`, name, ref }));
+      }
+      await client.execute(id, "main", actions);
+      await client.rename(id, spec.name);
+      return id;
+    },
+    { root: ROOT, drive, spec },
+  );
+}
+
+export interface RunResult {
+  id: string;
+  status: string;
+  error: string | null;
+  steps: {
+    stepKey: string;
+    status: string;
+    output: unknown;
+    error: string | null;
+  }[];
+}
+
+/** Fires a workflow and waits for its run to finish. */
+export async function fireAndWait(
+  workflowId: string,
+  payload?: unknown,
+): Promise<RunResult> {
+  const fired = (await fireWhenSynced(workflowId, payload)) as {
+    workflowRuntime: { fire: { runId: string } };
+  };
+  const runId = fired.workflowRuntime.fire.runId;
+  const deadline = Date.now() + 60_000;
+  for (;;) {
+    const data = await gql<{ workflowRuntime: { run: RunResult | null } }>(
+      "/graphql/workflow-runtime",
+      `query($id: String!) { workflowRuntime { run(id: $id) { id status error steps { stepKey status output error } } } }`,
+      { id: runId },
+    );
+    const run = data.workflowRuntime.run;
+    if (run && run.status !== "RUNNING") return run;
+    if (Date.now() > deadline) throw new Error(`Run ${runId} never finished`);
+    await new Promise((r) => setTimeout(r, 500));
+  }
 }
 
 // ─── navigation ─────────────────────────────────────────────────────────────
