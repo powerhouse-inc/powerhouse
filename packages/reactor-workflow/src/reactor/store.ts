@@ -40,6 +40,8 @@ export interface StepExecutionRow {
   output: string | null;
   port: string | null;
   error: string | null;
+  started_at: string | null;
+  ended_at: string | null;
 }
 
 // A document a run's steps were handed through the reactor port.
@@ -189,9 +191,23 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     .addColumn("output", "text")
     .addColumn("port", "text")
     .addColumn("error", "text")
+    .addColumn("started_at", "text")
+    .addColumn("ended_at", "text")
     .addUniqueConstraint("step_execution_run_step", ["run_id", "step_id"])
     .ifNotExists()
     .execute();
+
+  // Additive migration for journals created before step timings.
+  for (const column of ["started_at", "ended_at"]) {
+    try {
+      await db.schema
+        .alterTable("step_execution")
+        .addColumn(column, "text")
+        .execute();
+    } catch {
+      // column already exists
+    }
+  }
 
   // Additive migration for journals created before per-step journaling: the
   // upsert in recordStep/finishRun needs this constraint to conflict on.
@@ -535,6 +551,8 @@ function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
     output: jsonOrNull(redact(step.output)),
     port: step.port ?? null,
     error: step.error ? redactMessage(step.error) : null,
+    started_at: step.startedAt ?? null,
+    ended_at: step.endedAt ?? null,
   };
 }
 
@@ -827,6 +845,8 @@ export class WorkflowRunStore {
           output: eb.ref("excluded.output"),
           port: eb.ref("excluded.port"),
           error: eb.ref("excluded.error"),
+          started_at: eb.ref("excluded.started_at"),
+          ended_at: eb.ref("excluded.ended_at"),
         })),
       )
       .execute();

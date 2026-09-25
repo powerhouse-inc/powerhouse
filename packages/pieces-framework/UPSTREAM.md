@@ -91,11 +91,11 @@ Upstream is CommonJS with extensionless imports; this package is ESM under
    resolver will not infer for a subpath of a dependency with no `"exports"`
    map (`dayjs/plugin/utc` becomes `dayjs/plugin/utc.js`).
 4. Prepends a two-line header naming the upstream path and the tag.
-5. Runs `eslint --fix` with `scripts/sync-upstream.eslint.config.mjs`
-   (`consistent-type-imports`, `consistent-type-exports`, prettier) so
-   type-only imports and re-exports satisfy `verbatimModuleSyntax` and
-   `isolatedModules`. Unused-directive reporting is off there, so upstream's
-   `eslint-disable` comments survive even though their rules do not run.
+5. Marks type-only imports and re-exports with ts-morph
+   (`scripts/sync-upstream-type-only.mts`, a port of typescript-eslint's
+   `consistent-type-imports` and `consistent-type-exports` fixes) so they
+   satisfy `verbatimModuleSyntax` and `isolatedModules`, then formats the tree
+   with the repo's prettier config.
 6. Splits an `@activepieces/shared` import across the modules that really own
    each symbol, per `SHARED_SYMBOL_HOMES`.
 7. Applies the literal patches listed in `PATCHES` in

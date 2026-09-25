@@ -63,6 +63,8 @@ A `SignatureTrustPolicy` (`ReactorBuilder.withTrustPolicy`, or `SignerConfig.tru
 
 The reactor's own user is read on every ask, so a login takes effect immediately. A host policy caches on (address, key) only. `createRenownTrustPolicy` refuses a missing credential at admission immediately, so a user's first operations must not be pushed before their Renown credential is visible to the receiving switchboard. A switchboard refuses to boot with `REACTOR_WORKERS` above 0, `REACTOR_AUTH_ENFORCEMENT` on and `RENOWN_SOURCE=self`, because its pooled workers would have no trust policy. `RemoteDocumentController` resolves a slug to the document id before it signs. `withSignaturePolicy(document, "v2-required", { id })` ignores `id` and derives the id.
 
+Connect installs the same policy in its main-thread and SharedWorker reactors when `connect.reactor.featureFlags.authEnforcement` is on, reading credentials from `connect.renown.switchboardUrl` or `connect.renown.url`; with neither set the reactor fails to build.
+
 ### BREAKING CHANGES
 
 #### Signature verification enforces by default

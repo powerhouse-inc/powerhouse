@@ -21,11 +21,26 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-// A piece's auth, from the bundle or the listing.
+// A piece's auth, from the bundle or the listing. With several methods the
+// piece runs if any one does; the connection picks which.
 export function unsupportedAuth(auth: unknown): UnsupportedFeature | undefined {
   if (Array.isArray(auth)) {
-    return unsupported("Multi-auth (auth as an array)", 3091);
+    const reasons = auth.map(unsupportedMethod);
+    return reasons.some((reason) => reason === undefined)
+      ? undefined
+      : reasons[0];
   }
+  return unsupportedMethod(auth);
+}
+
+// The method a connection of `type` signs in with: the piece's only auth,
+// or the entry of that type among several (upstream's getAuthPropertyForValue).
+export function authMethodFor(auth: unknown, type: unknown): unknown {
+  if (!Array.isArray(auth)) return auth;
+  return auth.find((entry) => isRecord(entry) && entry.type === type);
+}
+
+function unsupportedMethod(auth: unknown): UnsupportedFeature | undefined {
   if (!isRecord(auth)) return undefined;
   if (auth.type === "OAUTH2") return unsupported("OAuth2 auth", 3091);
   if (auth.type === "OIDC") return unsupported("OIDC auth", 3091);

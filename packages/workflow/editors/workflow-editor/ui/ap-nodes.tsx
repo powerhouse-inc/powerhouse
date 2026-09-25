@@ -8,7 +8,7 @@ import {
   STEP_HEIGHT,
   STEP_WIDTH,
 } from "./ap-layout.js";
-import { blockMeta } from "./block-meta.js";
+import { useBlockMeta } from "./block-meta.js";
 import { BlockLogo, BlockSelector } from "./BlockSelector.js";
 import { STEP_PRESETS, TRIGGER_PRESETS, type BlockPreset } from "./blocks.js";
 import type { BlockForm } from "./forms.js";
@@ -61,7 +61,8 @@ export function ApStepNode(props: NodeProps) {
     | { kind: "step"; step: StepModel };
   const blockType =
     data.kind === "trigger" ? data.trigger.blockType : data.step.blockType;
-  const meta = blockMeta(blockType);
+  // Subscribed, so the piece name replaces the fallback once the catalog lands.
+  const meta = useBlockMeta(blockType);
   const title =
     data.kind === "trigger"
       ? meta.displayName
@@ -80,8 +81,8 @@ export function ApStepNode(props: NodeProps) {
   return (
     <div
       style={{ width: STEP_WIDTH, height: STEP_HEIGHT }}
-      className={`border-box group relative overflow-visible rounded-md border border-solid bg-white shadow-sm transition-all ${
-        props.selected ? "border-blue-500" : "border-slate-200"
+      className={`border-box group relative overflow-visible rounded-md border border-solid bg-card shadow-sm transition-all ${
+        props.selected ? "border-wf-run" : "border-foreground/10"
       } ${isDragged ? "opacity-40" : ""} ${
         data.kind === "step"
           ? // nodrag/nopan hand the gesture over: without them React Flow's
@@ -103,20 +104,22 @@ export function ApStepNode(props: NodeProps) {
       <div className="flex h-full items-center gap-3 px-3">
         <BlockLogo blockType={blockType} size={36} />
         <div className="min-w-0 grow">
-          <div className="truncate text-sm font-medium text-slate-800">
+          <div className="truncate text-sm font-medium text-foreground">
             {title}
           </div>
-          <div className="truncate text-xs text-slate-400">
+          <div className="truncate text-xs text-muted-foreground/80">
             {data.kind === "trigger"
-              ? `Trigger · ${meta.subtitle}`
-              : `${data.step.key} · ${meta.subtitle}`}
+              ? meta.subtitle === "Trigger"
+                ? "Trigger"
+                : meta.subtitle
+              : meta.subtitle}
           </div>
         </div>
       </div>
       {missing.length > 0 ? (
         <span
-          className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-solid border-white bg-amber-400"
-          title={`Missing: ${missing.join(", ")}`}
+          className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-solid border-card bg-wf-warn"
+          title={`Needs a value: ${missing.join(", ")}`}
         />
       ) : null}
       <Handle type="source" position={Position.Bottom} style={hiddenHandle} />
@@ -126,9 +129,9 @@ export function ApStepNode(props: NodeProps) {
 
 // Shared with the edges, which label a taken port the same way.
 export const PORT_LABEL_CLASSES: Record<string, string> = {
-  true: "bg-green-100 text-green-700 hover:bg-green-200",
-  false: "bg-red-100 text-red-600 hover:bg-red-200",
-  error: "bg-amber-100 text-amber-700 hover:bg-amber-200",
+  true: "bg-wf-ok/10 text-wf-ok hover:bg-green-200",
+  false: "bg-wf-fail/10 text-wf-fail hover:bg-red-200",
+  error: "bg-wf-warn/10 text-wf-warn hover:bg-wf-warn/20",
 };
 
 function AddButton(props: {
@@ -159,10 +162,10 @@ function AddButton(props: {
             : ""
         } ${
           open
-            ? "border-blue-500 bg-blue-500 text-white"
+            ? "border-wf-run bg-wf-run text-card"
             : label
-              ? `border-transparent ${PORT_LABEL_CLASSES[label] ?? "bg-slate-100 text-slate-500 hover:bg-slate-200"}`
-              : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+              ? `border-transparent ${PORT_LABEL_CLASSES[label] ?? "bg-muted text-muted-foreground hover:bg-foreground/10"}`
+              : "border-foreground/15 bg-card text-foreground hover:border-foreground/25"
         }`}
         onClick={(event) => {
           event.stopPropagation();
@@ -272,8 +275,8 @@ export function ApAppendNode(props: NodeProps) {
           style={{ width: STEP_WIDTH, height: STEP_HEIGHT }}
           className={`nodrag nopan absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md border-2 border-dashed text-xs font-medium transition-colors ${
             rejection
-              ? "border-slate-200 bg-slate-50 text-slate-400"
-              : "border-blue-400 bg-blue-50 text-blue-600"
+              ? "border-foreground/10 bg-muted/50 text-muted-foreground/80"
+              : "border-wf-run bg-wf-run/10 text-wf-run"
           }`}
           title={rejection ? MOVE_REJECTION_TEXT[rejection] : undefined}
           onDragOver={(event) => {
@@ -302,12 +305,12 @@ export function ApAppendNode(props: NodeProps) {
     return (
       <div
         style={{ width: STEP_WIDTH, height: STEP_HEIGHT }}
-        className="relative flex items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50/60"
+        className="relative flex items-center justify-center rounded-md border border-dashed border-foreground/15 bg-muted/40"
       >
         <Handle type="target" position={Position.Top} style={hiddenHandle} />
         <span
           className={`absolute left-3 top-3 rounded px-1.5 text-[10px] font-semibold ${
-            PORT_LABEL_CLASSES[data.port] ?? "bg-slate-100 text-slate-500"
+            PORT_LABEL_CLASSES[data.port] ?? "bg-muted text-muted-foreground"
           }`}
         >
           {data.port}
@@ -359,7 +362,7 @@ export function ApBigButtonNode(_props: NodeProps) {
         pieceMode="triggers"
         onPick={(preset) => getCanvasHandlers()?.pickTrigger(preset)}
       />
-      <span className="text-xs text-slate-400">Select a trigger</span>
+      <span className="text-xs text-muted-foreground/80">Select a trigger</span>
     </div>
   );
 }

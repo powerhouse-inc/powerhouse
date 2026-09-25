@@ -9,7 +9,7 @@ import type {
   IAttachmentAccessService,
 } from "@powerhousedao/reactor-api";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AttachmentActorContext } from "../../src/attachments/auth.js";
 import { registerAttachmentRoutes } from "../../src/attachments/index.js";
 import { makeDownloadTargetHandler } from "../../src/attachments/routes.js";
@@ -149,7 +149,7 @@ describe("makeDownloadTargetHandler", () => {
 
     expect(res.statusCode).toBe(200);
     expect(JSON.parse(res._body)).toMatchObject({ kind: "presigned-get" });
-    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, undefined);
+    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, 300);
   });
 
   it("passes a requested expiresIn through to the backend presigner", async () => {
@@ -169,7 +169,7 @@ describe("makeDownloadTargetHandler", () => {
 
     await handler(
       makeReq({
-        url: `/attachments/${HASH}/download-target?documentId=${DOC_ID}&expiresIn=3600`,
+        url: `/attachments/${HASH}/download-target?documentId=${DOC_ID}&expiresIn=60`,
       }),
       res,
       undefined,
@@ -177,10 +177,10 @@ describe("makeDownloadTargetHandler", () => {
     );
 
     expect(res.statusCode).toBe(200);
-    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, 3600);
+    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, 60);
   });
 
-  it("clamps expiresIn to the 7-day presigning ceiling", async () => {
+  it("clamps a requested expiresIn to the ceiling", async () => {
     const { access } = makeAccess(ALLOWED);
     const prepareDownloadTarget = vi.fn().mockResolvedValue({
       kind: "presigned-get",
@@ -204,10 +204,10 @@ describe("makeDownloadTargetHandler", () => {
       ACTOR,
     );
 
-    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, 604800);
+    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, 300);
   });
 
-  it("omits the TTL override when expiresIn is absent", async () => {
+  it("applies the ceiling when expiresIn is absent, rather than the backend default", async () => {
     const { access } = makeAccess(ALLOWED);
     const prepareDownloadTarget = vi.fn().mockResolvedValue({
       kind: "presigned-get",
@@ -223,7 +223,69 @@ describe("makeDownloadTargetHandler", () => {
 
     await handler(makeReq({}), makeRes(), undefined, ACTOR);
 
-    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, undefined);
+    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, 300);
+  });
+
+  describe("ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS", () => {
+    const ORIGINAL = process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS;
+
+    afterEach(() => {
+      if (ORIGINAL === undefined) {
+        delete process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS;
+      } else {
+        process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS = ORIGINAL;
+      }
+    });
+
+    async function ttlFor(configured: string | undefined, query = "") {
+      if (configured === undefined) {
+        delete process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS;
+      } else {
+        process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS = configured;
+      }
+      const { access } = makeAccess(ALLOWED);
+      const prepareDownloadTarget = vi.fn().mockResolvedValue({
+        kind: "presigned-get",
+        method: "GET",
+        url: "https://bucket.example.com/attachments/aa?sig=1",
+        headers: {},
+        expiresAtUtc: EXPIRES,
+      });
+      const attachments = makeAttachments({
+        backend: { kind: "s3", prepareDownloadTarget } as never,
+      });
+      const handler = makeDownloadTargetHandler(attachments, access);
+      await handler(
+        makeReq({
+          url: `/attachments/${HASH}/download-target?documentId=${DOC_ID}${query}`,
+        }),
+        makeRes(),
+        undefined,
+        ACTOR,
+      );
+      return (prepareDownloadTarget.mock.calls[0] as unknown[])[1];
+    }
+
+    it("raises the ceiling when a deployment configures one", async () => {
+      await expect(ttlFor("1800")).resolves.toBe(1800);
+    });
+
+    it("never lets a configured ceiling exceed the signing maximum", async () => {
+      await expect(ttlFor("99999999")).resolves.toBe(604800);
+    });
+
+    it.each(["not-a-number", "0", "-5", "12.5"])(
+      "falls back to the default, not the maximum, on %s",
+      async (configured) => {
+        // A typo must narrow nothing and widen nothing: falling back to the
+        // signing ceiling would turn a misconfiguration into a week-long URL.
+        await expect(ttlFor(configured)).resolves.toBe(300);
+      },
+    );
+
+    it("still clamps a caller's request to the configured ceiling", async () => {
+      await expect(ttlFor("1800", "&expiresIn=99999")).resolves.toBe(1800);
+    });
   });
 
   it.each([

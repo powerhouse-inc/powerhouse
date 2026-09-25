@@ -1,7 +1,8 @@
 // Presentation for the connection editor: connector picker driven by the
 // piece catalog, auth form driven by the piece's PieceAuth descriptor.
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type {
+  ConnectionAuthType,
   ConnectionState,
   ConnectionStatus,
 } from "document-models/connection";
@@ -13,11 +14,24 @@ import {
   type PieceSummary,
   type SecretStat,
 } from "../workflow-editor/runtime-api.js";
-import { AutocompleteInput } from "../workflow-editor/ui/Autocomplete.js";
+import { formatWhen } from "../workflow-studio/components/run-format.js";
+import { Icon } from "../shared/icons.js";
+import { AUTH_TYPE_LABEL } from "./status.js";
+import {
+  Button,
+  FieldError,
+  FieldLabel as LabelRow,
+  Hint as HintText,
+  IconButton,
+  Select,
+  Switch,
+  textInputClass,
+} from "../shared/controls.js";
 import {
   isAuthComplete,
   packageFromConnectorId,
-  planFromAuth,
+  planForConnection,
+  plansFromAuth,
   type AuthField,
   type AuthPlan,
 } from "./piece-auth.js";
@@ -25,27 +39,30 @@ import {
 export interface ConnectionCallbacks {
   setName: (name: string) => void;
   pickPiece: (piece: PieceSummary) => void;
+  // `keep` names the new method's fields; any other credential is dropped.
+  setAuthType: (
+    authType: ConnectionAuthType,
+    keep: { config: string[]; secrets: string[] },
+  ) => void;
   setConfigValue: (name: string, value: unknown) => void;
   setSecretRef: (name: string, ref: string) => void;
   removeSecretRef: (name: string) => void;
   setStatus: (status: ConnectionStatus) => void;
 }
 
-const inputClass =
-  "w-full rounded border border-solid border-slate-300 px-2 py-1.5 text-sm text-slate-800";
+const inputClass = textInputClass;
 
 function FieldLabel(props: { field: AuthField }) {
   return (
-    <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-      {props.field.displayName}
-      {props.field.required ? <span className="text-red-500"> *</span> : null}
-    </span>
+    <LabelRow
+      label={props.field.displayName}
+      optional={!props.field.required}
+    />
   );
 }
 
 function Hint(props: { children?: string }) {
-  if (!props.children) return null;
-  return <p className="mt-0.5 text-[11px] text-slate-400">{props.children}</p>;
+  return <HintText text={props.children ?? ""} />;
 }
 
 function ConfigField(props: {
@@ -56,34 +73,29 @@ function ConfigField(props: {
   const { field, value } = props;
   if (field.inputType === "CHECKBOX") {
     return (
-      <label className="flex items-center gap-2 text-sm text-slate-700">
-        <input
-          type="checkbox"
-          checked={Boolean(value)}
-          onChange={(event) => props.onCommit(event.target.checked)}
-        />
-        {field.displayName}
-      </label>
+      <Switch
+        checked={Boolean(value)}
+        onChange={(checked) => props.onCommit(checked)}
+        label={field.displayName}
+        description={field.description}
+      />
     );
   }
   if (field.inputType === "STATIC_DROPDOWN") {
     return (
-      <label className="block">
+      <div>
         <FieldLabel field={field} />
-        <select
-          className={inputClass}
+        <Select
           value={typeof value === "string" ? value : ""}
-          onChange={(event) => props.onCommit(event.target.value || undefined)}
-        >
-          <option value="">—</option>
-          {(field.options ?? []).map((option) => (
-            <option key={String(option.value)} value={String(option.value)}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          options={(field.options ?? []).map((option) => ({
+            value: String(option.value),
+            label: option.label,
+          }))}
+          clearable={!field.required}
+          onChange={(next) => props.onCommit(next || undefined)}
+        />
         <Hint>{field.description}</Hint>
-      </label>
+      </div>
     );
   }
   return (
@@ -114,8 +126,81 @@ function isManagedRef(ref: string): boolean {
   return ref.startsWith(SECRET_REF_PREFIX);
 }
 
+// Undefined while the stat loads; null when the ref doesn't resolve.
+function useSecretStat(refValue: string) {
+  const [stat, setStat] = useState<SecretStat | null | undefined>(undefined);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect -- clears the stale stat before the ref's own fetch
+    setStat(isManagedRef(refValue) ? undefined : null);
+    if (!isManagedRef(refValue)) return;
+    let cancelled = false;
+    fetchSecretStat(refValue).then(
+      (result) => {
+        if (!cancelled) setStat(result);
+      },
+      () => {
+        if (!cancelled) setStat(null);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [refValue]);
+  return [stat, setStat] as const;
+}
+
+function SavedSecret(props: {
+  stat: SecretStat | undefined;
+  fresh: boolean;
+  onReplace: () => void;
+  onRemove: () => void;
+}) {
+  const { stat, fresh } = props;
+  return (
+    <div
+      className="flex items-center gap-3 rounded-lg border border-solid border-foreground/10 bg-muted/40 px-3 py-2.5"
+      title={stat?.label ?? undefined}
+    >
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-wf-ok/12 text-wf-ok">
+        <Icon name="lock" className="h-4 w-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span
+          aria-hidden
+          className="block font-mono text-sm leading-5 tracking-[0.08em] text-foreground"
+        >
+          ••••••••••••
+        </span>
+        <span className="block text-xs text-muted-foreground">
+          {stat === undefined ? (
+            "Checking the saved value…"
+          ) : fresh ? (
+            <span className="inline-flex items-center gap-1 font-medium text-wf-ok">
+              <Icon name="check" className="h-3 w-3" />
+              Saved just now
+            </span>
+          ) : (
+            <span title={new Date(stat.updatedAt).toLocaleString()}>
+              Saved {formatWhen(stat.updatedAt)}
+              {stat.version > 1 ? `, version ${stat.version}` : ""}
+            </span>
+          )}
+        </span>
+      </span>
+      <Button size="sm" onClick={props.onReplace}>
+        Replace
+      </Button>
+      <IconButton
+        icon="trash"
+        label="Remove saved value"
+        onClick={props.onRemove}
+      />
+    </div>
+  );
+}
+
 // The input takes the VALUE; only the minted ref ever enters the document.
-// No ref: paste creates a secret. Managed ref: paste rotates in place.
+// A stored secret is replaced by rotating it in place unless asked otherwise.
 function SecretField(props: {
   field: AuthField;
   refValue: string;
@@ -124,45 +209,49 @@ function SecretField(props: {
   onRemove: () => void;
 }) {
   const { field, refValue } = props;
+  const inputId = useId();
   const managed = isManagedRef(refValue);
+  const [stat, setStat] = useSecretStat(refValue);
   const [value, setValue] = useState("");
+  const [reveal, setReveal] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [stat, setStat] = useState<SecretStat | null>(null);
-  // "Replace" mints a new ref instead of rotating the existing one.
-  const [replace, setReplace] = useState(false);
-  const [manualRef, setManualRef] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+  const [advanced, setAdvanced] = useState(false);
+  // Mints a new ref instead of rotating the existing one.
+  const [separate, setSeparate] = useState(false);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks-extra/set-state-in-effect -- clears the stale stat before the ref's own fetch
-    setStat(null);
-    if (!isManagedRef(refValue)) return;
-    let cancelled = false;
-    fetchSecretStat(refValue).then(
-      (result) => {
-        if (!cancelled) setStat(result);
-      },
-      () => undefined,
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [refValue]);
+  const stored = managed && stat !== null && stat?.status !== "DELETED";
+  const problem = !refValue
+    ? null
+    : stat?.status === "DELETED"
+      ? "The saved value was deleted on the switchboard. Paste a new one."
+      : stat === null
+        ? "The saved reference no longer resolves. Paste the value again."
+        : null;
+  const showEditor = !stored || editing;
 
-  const commitValue = () => {
-    const secretValue = value;
-    if (!secretValue || busy) return;
+  const cancel = () => {
+    setValue("");
+    setError(null);
+    setEditing(false);
+    setReveal(false);
+  };
+
+  const save = () => {
+    if (!value || busy) return;
     setBusy(true);
     setError(null);
     const label = `${props.connectionName || "connection"} · ${field.displayName}`;
     const request =
-      managed && !replace
-        ? rotateSecret(refValue, secretValue)
-        : createSecret(secretValue, label);
+      stored && !separate
+        ? rotateSecret(refValue, value)
+        : createSecret(value, label);
     request
       .then((result) => {
-        setValue("");
-        setReplace(false);
+        cancel();
+        setJustSaved(true);
         if (result.ref !== refValue) props.onCommit(result.ref);
         else setStat(result);
       })
@@ -177,112 +266,140 @@ function SecretField(props: {
   };
 
   return (
-    <label className="block">
-      <FieldLabel field={field} />
-      {managed ? (
-        <p className="mb-1 text-[11px] text-slate-500">
-          <span className="font-medium text-slate-600">
-            {stat?.label ?? refValue}
-          </span>
-          {stat ? (
-            <span>
-              {" "}
-              · v{stat.version} · rotated{" "}
-              {new Date(stat.updatedAt).toLocaleString()}
-            </span>
-          ) : null}
-          {stat?.status === "DELETED" ? (
-            <span className="font-medium text-red-600"> · deleted</span>
-          ) : null}
-        </p>
-      ) : null}
-      {refValue && !managed ? (
-        <p className="mb-1 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
-          Legacy ref <span className="font-mono">{refValue}</span> no longer
-          resolves. Paste the secret value to replace it with a managed secret.
-        </p>
-      ) : null}
-      <div className="flex gap-1">
-        <input
-          className={inputClass}
-          type="password"
-          value={value}
-          disabled={busy}
-          placeholder={
-            managed
-              ? replace
-                ? "Paste a value for the replacement secret"
-                : "•••••••• — paste a new value to rotate"
-              : "Paste the secret value"
-          }
-          autoComplete="off"
-          spellCheck={false}
-          onChange={(event) => setValue(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") commitValue();
+    <div>
+      <LabelRow
+        htmlFor={showEditor ? inputId : undefined}
+        label={field.displayName}
+        optional={!field.required}
+        needsValue={field.required && !stored}
+        action={
+          <button
+            type="button"
+            className="text-xs text-muted-foreground hover:text-foreground"
+            aria-expanded={advanced}
+            onClick={() => setAdvanced((open) => !open)}
+          >
+            {advanced ? "Hide reference" : "Reference"}
+          </button>
+        }
+      />
+      {stored && !editing ? (
+        <SavedSecret
+          stat={stat}
+          fresh={justSaved}
+          onReplace={() => {
+            setJustSaved(false);
+            setEditing(true);
           }}
-          onBlur={commitValue}
+          onRemove={props.onRemove}
         />
-        {refValue ? (
-          <button
-            type="button"
-            className="shrink-0 rounded border border-solid border-slate-200 px-2 text-xs text-slate-400 hover:text-red-500"
-            title="Remove secret ref"
-            onClick={props.onRemove}
-          >
-            ✕
-          </button>
-        ) : null}
-      </div>
-      {error ? (
-        <p className="mt-0.5 text-[11px] font-medium text-red-600">{error}</p>
       ) : null}
-      <div className="mt-0.5 flex gap-3">
-        {managed ? (
-          <button
-            type="button"
-            className="text-[11px] text-slate-400 underline hover:text-slate-600"
-            onClick={() => setReplace((mode) => !mode)}
-          >
-            {replace
-              ? "Rotate the existing secret instead"
-              : "Replace with a different secret"}
-          </button>
-        ) : null}
-        <button
-          type="button"
-          className="text-[11px] text-slate-400 underline hover:text-slate-600"
-          onClick={() => setManualRef((mode) => !mode)}
-        >
-          {manualRef ? "Hide ref" : "Enter a ref manually"}
-        </button>
-      </div>
-      {manualRef ? (
-        <input
-          className={`${inputClass} mt-1 font-mono text-xs`}
-          defaultValue={refValue}
-          placeholder="secret://v1:…"
-          spellCheck={false}
-          onBlur={(event) => {
-            const ref = event.target.value.trim();
-            if (ref && ref !== refValue) {
-              if (!isManagedRef(ref)) {
-                setError(
-                  "Only secret://v1: refs resolve. If this is a secret value, paste it in the field above instead.",
-                );
-                return;
+      {problem ? (
+        <p className="mb-2 flex items-start gap-2 rounded-md bg-wf-warn/10 px-3 py-2 text-xs text-wf-warn">
+          <Icon name="alert" className="mt-px h-3.5 w-3.5" />
+          {problem}
+        </p>
+      ) : null}
+      {showEditor ? (
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <input
+              id={inputId}
+              className={`${inputClass} pr-9 ${value && !reveal ? "font-mono tracking-wider" : ""}`}
+              type={reveal ? "text" : "password"}
+              value={value}
+              disabled={busy}
+              autoFocus={editing}
+              placeholder={
+                stored
+                  ? `Paste the new ${field.displayName.toLowerCase()}`
+                  : `Paste the ${field.displayName.toLowerCase()}`
               }
-              props.onCommit(ref);
-            }
-          }}
-        />
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(event) => setValue(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") save();
+                if (event.key === "Escape" && editing) cancel();
+              }}
+            />
+            <span className="absolute inset-y-0 right-1 flex items-center">
+              <IconButton
+                icon={reveal ? "eyeOff" : "eye"}
+                label={`${reveal ? "Hide" : "Show"} ${field.displayName}`}
+                onClick={() => setReveal((shown) => !shown)}
+              />
+            </span>
+          </div>
+          <Button
+            variant="primary"
+            aria-label={`Save ${field.displayName}`}
+            disabled={!value || busy}
+            onClick={save}
+          >
+            {busy ? "Saving…" : "Save"}
+          </Button>
+          {editing ? (
+            <Button variant="ghost" onClick={cancel}>
+              Cancel
+            </Button>
+          ) : null}
+          {problem ? (
+            <IconButton
+              icon="trash"
+              label="Remove saved value"
+              onClick={props.onRemove}
+            />
+          ) : null}
+        </div>
       ) : null}
-      <Hint>
-        {field.description ??
-          "The value is stored encrypted on the switchboard; the document only carries a reference to it."}
-      </Hint>
-    </label>
+      <FieldError>{error}</FieldError>
+      <Hint>{field.description}</Hint>
+      {advanced ? (
+        <div className="mt-3 flex flex-col gap-3 rounded-lg border border-dashed border-foreground/15 px-3 py-3">
+          <div>
+            <LabelRow htmlFor={`${inputId}-ref`} label="Secret reference" />
+            <input
+              id={`${inputId}-ref`}
+              key={refValue}
+              className={`${inputClass} font-mono text-xs`}
+              defaultValue={refValue}
+              placeholder="secret://v1:…"
+              spellCheck={false}
+              onBlur={(event) => {
+                const ref = event.target.value.trim();
+                if (!ref || ref === refValue) return;
+                if (!isManagedRef(ref)) {
+                  setError(
+                    "Only secret://v1: references resolve. To store a value, paste it above instead.",
+                  );
+                  return;
+                }
+                setError(null);
+                props.onCommit(ref);
+              }}
+            />
+            <HintText text="Point at a secret that already exists on the switchboard, for example one shared with another connection." />
+          </div>
+          {stored ? (
+            <Switch
+              checked={separate}
+              onChange={setSeparate}
+              label="Save replacements as a separate secret"
+              description="Leaves the current secret untouched for anything else that uses it, instead of adding a new version."
+            />
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
+}
+
+// A method's own name, unless it's the generic "Connection" OAuth2 uses.
+function methodLabel(plan: AuthPlan): string {
+  return plan.displayName && plan.displayName !== "Connection"
+    ? plan.displayName
+    : AUTH_TYPE_LABEL[plan.authType];
 }
 
 export function ConnectionForm(props: {
@@ -310,8 +427,9 @@ export function ConnectionForm(props: {
   const piece = catalog?.find((entry) => entry.name === packageName);
   // Descriptor plan when the piece is known; otherwise reconstruct enough
   // from state so existing refs stay editable.
+  const plans = piece ? plansFromAuth(piece.auth) : [];
   const plan: AuthPlan = piece
-    ? planFromAuth(piece.auth)
+    ? planForConnection(piece.auth, state.authType)
     : {
         authType: state.authType,
         configFields: [],
@@ -344,57 +462,73 @@ export function ConnectionForm(props: {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Connector
-        </span>
-        <AutocompleteInput
+        <LabelRow label="Service" />
+        <Select
           value={packageName}
-          placeholder="Pick a piece, e.g. @activepieces/piece-slack"
-          onCommit={() => undefined}
-          onPick={(option) => {
-            const picked = catalog?.find(
-              (entry) => entry.name === option.value,
-            );
+          loading={catalog === null}
+          placeholder="Choose the service to connect"
+          options={(catalog ?? []).map((entry) => ({
+            value: entry.name,
+            label: entry.displayName,
+            description: entry.description,
+            icon: entry.logoUrl ? (
+              <img
+                src={entry.logoUrl}
+                alt=""
+                loading="lazy"
+                className="h-4 w-4 shrink-0 object-contain"
+              />
+            ) : undefined,
+          }))}
+          onChange={(name) => {
+            const picked = catalog?.find((entry) => entry.name === name);
             if (picked) callbacks.pickPiece(picked);
           }}
-          loadOptions={() =>
-            fetchPieceCatalog().then((pieces) => ({
-              options: pieces.map((entry) => ({
-                label: entry.displayName,
-                value: entry.name,
-              })),
-            }))
-          }
         />
-        {piece ? (
-          <div className="mt-2 flex items-center gap-2 rounded border border-solid border-slate-200 bg-slate-50 p-2">
-            <img
-              src={piece.logoUrl}
-              alt={piece.displayName}
-              className="h-8 w-8 object-contain"
-            />
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-slate-800">
-                {piece.displayName}
-              </div>
-              <div className="truncate text-xs text-slate-400">
-                {plan.displayName ?? plan.authType} · {piece.description}
-              </div>
-            </div>
-          </div>
-        ) : null}
+        {piece ? <HintText text={piece.description} /> : null}
       </div>
 
+      {plans.length > 1 ? (
+        <div>
+          <LabelRow label="Sign in with" />
+          <Select
+            value={plan.authType}
+            options={plans.map((option) => ({
+              value: option.authType,
+              label: methodLabel(option),
+              description: option.supported
+                ? AUTH_TYPE_LABEL[option.authType]
+                : "Not supported yet",
+              disabled: !option.supported,
+            }))}
+            onChange={(value) => {
+              const authType = value as ConnectionAuthType;
+              const next = plans.find((option) => option.authType === authType);
+              if (!next) return;
+              callbacks.setAuthType(authType, {
+                config: next.configFields.map((field) => field.name),
+                secrets: next.secretFields.map((field) => field.name),
+              });
+              // Switching resets the status; a method already filled in is ready.
+              if (isAuthComplete(next, config, refByName)) {
+                callbacks.setStatus("OK");
+              }
+            }}
+          />
+          {plan.description ? <HintText text={plan.description} /> : null}
+        </div>
+      ) : null}
+
       {plan.supported ? null : (
-        <p className="rounded bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        <p className="rounded-md bg-wf-warn/10 px-3 py-2 text-xs text-wf-warn">
           {plan.authType} connections are not executable by the workflow runtime
           yet.
         </p>
       )}
 
       {plan.configFields.length > 0 ? (
-        <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-semibold text-slate-700">
+        <div className="flex flex-col gap-5 border-t border-solid border-foreground/10 pt-5">
+          <h3 className="text-[13px] font-semibold text-foreground">
             Configuration
           </h3>
           {plan.configFields.map((field) => (
@@ -415,8 +549,16 @@ export function ConnectionForm(props: {
       ) : null}
 
       {plan.secretFields.length > 0 ? (
-        <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-semibold text-slate-700">Secrets</h3>
+        <div className="flex flex-col gap-5 border-t border-solid border-foreground/10 pt-5">
+          <div>
+            <h3 className="text-[13px] font-semibold text-foreground">
+              Credentials
+            </h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Saved encrypted on the switchboard. This connection only keeps a
+              reference, so nobody reading it can see the values.
+            </p>
+          </div>
           {plan.secretFields.map((field) => (
             <SecretField
               key={field.name}
@@ -441,7 +583,7 @@ export function ConnectionForm(props: {
       ) : null}
 
       {state.lastError ? (
-        <p className="rounded bg-red-50 px-3 py-2 text-xs text-red-600">
+        <p className="rounded-md bg-wf-fail/10 px-3 py-2 text-xs text-wf-fail">
           {state.lastError}
         </p>
       ) : null}

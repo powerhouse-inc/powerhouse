@@ -47,17 +47,28 @@ function parsePieceBlockType(blockType: string) {
 // Logos keyed by package name ("@activepieces/piece-date-helper"), as given
 // by the piece catalog. Module-level so every block view shares one lookup.
 const pieceLogos = new Map<string, string>();
+// Catalog display names ("HTTP", "OpenAI"), which the package name can't give.
+const pieceNames = new Map<string, string>();
 const listeners = new Set<() => void>();
 // Bumped on every registration so useSyncExternalStore re-reads.
 let logoRevision = 0;
 
 export function registerPieceLogos(
-  entries: Iterable<{ name: string; logoUrl?: string | null }>,
+  entries: Iterable<{
+    name: string;
+    logoUrl?: string | null;
+    displayName?: string | null;
+  }>,
 ): void {
   let changed = false;
   for (const entry of entries) {
-    if (!entry.name || !entry.logoUrl) continue;
-    if (pieceLogos.get(entry.name) === entry.logoUrl) continue;
+    if (!entry.name) continue;
+    if (entry.displayName && pieceNames.get(entry.name) !== entry.displayName) {
+      pieceNames.set(entry.name, entry.displayName);
+      changed = true;
+    }
+    if (!entry.logoUrl || pieceLogos.get(entry.name) === entry.logoUrl)
+      continue;
     pieceLogos.set(entry.name, entry.logoUrl);
     changed = true;
   }
@@ -70,9 +81,63 @@ export function pieceLogo(packageName: string): string | undefined {
   return pieceLogos.get(packageName);
 }
 
+export function pieceDisplayName(packageName: string): string | undefined {
+  return pieceNames.get(packageName);
+}
+
+// Action and trigger names ("Ask ChatGPT"), keyed by version-free block type,
+// loaded per piece the first time one of its blocks is shown.
+const blockNames = new Map<string, string>();
+const namesRequested = new Set<string>();
+
+function nameKey(blockType: string): string | undefined {
+  const piece = parsePieceBlockType(blockType);
+  if (!piece) return undefined;
+  const fragment = piece.isTrigger
+    ? `trigger:${piece.actionName}`
+    : piece.actionName;
+  return `${piece.packageName}#${fragment}`;
+}
+
+export function registerBlockNames(
+  entries: Iterable<{ blockType: string; displayName: string }>,
+): void {
+  let changed = false;
+  for (const entry of entries) {
+    const key = nameKey(entry.blockType);
+    if (!key || !entry.displayName || blockNames.get(key) === entry.displayName)
+      continue;
+    blockNames.set(key, entry.displayName);
+    changed = true;
+  }
+  if (!changed) return;
+  logoRevision += 1;
+  for (const listener of listeners) listener();
+}
+
+// Fire-and-forget, once per piece; a failure clears the mark so a later
+// render retries. The runtime layer caches the requests themselves.
+function requestBlockNames(packageName: string): void {
+  if (namesRequested.has(packageName)) return;
+  const source = getPieceSource();
+  if (!source) return;
+  namesRequested.add(packageName);
+  Promise.all([
+    source.loadActions(packageName),
+    source.loadTriggers(packageName),
+  ])
+    .then(([actions, triggers]) =>
+      registerBlockNames([...actions, ...triggers]),
+    )
+    .catch(() => namesRequested.delete(packageName));
+}
+
 // Test seam: drop the cache so a fresh catalog can be registered.
 export function resetPieceLogos(): void {
   pieceLogos.clear();
+  pieceNames.clear();
+  blockNames.clear();
+  namesRequested.clear();
   catalogLoad = undefined;
   logoRevision += 1;
   for (const listener of listeners) listener();
@@ -109,11 +174,14 @@ export function blockMeta(blockType: string): BlockMeta {
   if (core) return core;
   const piece = parsePieceBlockType(blockType);
   if (piece) {
+    const pieceLabel =
+      pieceNames.get(piece.packageName) ?? titleCase(piece.pieceName);
+    const known = blockNames.get(nameKey(blockType) ?? "");
+    if (!known) requestBlockNames(piece.packageName);
     return {
-      displayName: titleCase(piece.actionName),
-      subtitle: piece.isTrigger
-        ? `${titleCase(piece.pieceName)} · Trigger`
-        : titleCase(piece.pieceName),
+      // The id reads as a name until the piece's own list arrives.
+      displayName: known ?? titleCase(piece.actionName),
+      subtitle: piece.isTrigger ? `${pieceLabel} · Trigger` : pieceLabel,
       logoUrl: pieceLogo(piece.packageName),
       // Shown until the catalog arrives, and whenever the logo fails to load.
       glyph: piece.pieceName.slice(0, 1).toUpperCase() || "?",

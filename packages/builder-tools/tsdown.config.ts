@@ -1,10 +1,12 @@
 import { defineConfig } from "tsdown";
+import { dtsExportList } from "../../tsdown.dts.mjs";
 
 export default defineConfig({
   entry: ["./index.mts"],
   outDir: "dist",
   clean: true,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
   // The hand-written service worker is NOT bundled — it is copied verbatim into
   // dist/service-worker/ (the `service-worker` dir keeps its basename under

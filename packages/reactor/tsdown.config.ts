@@ -1,4 +1,5 @@
 import { defineConfig } from "tsdown";
+import { dtsExportList } from "../../tsdown.dts.mjs";
 
 export default defineConfig({
   entry: {
@@ -10,6 +11,7 @@ export default defineConfig({
   platform: "neutral",
   outDir: "dist",
   clean: true,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
 });

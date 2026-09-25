@@ -40,6 +40,7 @@ import {
   type ApTrigger,
 } from "../types.js";
 import {
+  authMethodFor,
   unsupportedAuth,
   unsupportedTrigger,
   UnsupportedPieceFeatureError,
@@ -220,9 +221,21 @@ function stagedInputResolver(
 function assertRunnable(
   piece: ApPiece,
   pieceName: string,
+  auth: unknown,
   trigger?: { name: string; trigger: ApTrigger },
 ): void {
-  const pieceFeature = unsupportedAuth(piece.auth);
+  // With several methods, the one this connection signs in with decides.
+  const type = (auth as { type?: unknown } | null | undefined)?.type;
+  const method =
+    Array.isArray(piece.auth) && type !== undefined
+      ? authMethodFor(piece.auth, type)
+      : piece.auth;
+  if (Array.isArray(piece.auth) && type !== undefined && !method) {
+    throw new Error(
+      `Piece "${pieceName}" has no ${String(type)} sign-in method for this connection`,
+    );
+  }
+  const pieceFeature = unsupportedAuth(method);
   if (pieceFeature) {
     throw new UnsupportedPieceFeatureError(
       `Piece "${pieceName}"`,
@@ -249,7 +262,7 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
       `No action "${request.actionName}" in ${pieceRefKey(request)}`,
     );
   }
-  assertRunnable(piece, piece.displayName);
+  assertRunnable(piece, piece.displayName, request.auth);
   const files = request.stagingDir
     ? new StagedFilesService(request.stagingDir)
     : new DataUriFilesService();
@@ -320,7 +333,7 @@ async function handleTriggerHook(
   }
   // Teardown still runs, so a registration made before the check is released.
   if (request.hook !== "onDisable") {
-    assertRunnable(piece, piece.displayName, {
+    assertRunnable(piece, piece.displayName, request.auth, {
       name: request.triggerName,
       trigger,
     });
@@ -427,8 +440,11 @@ async function handleCheckConnection(
 ): Promise<WorkerResponse> {
   const { request } = message;
   const { piece } = await loadCached(request);
-  // An auth array has no hooks here: a connection records no choice among them.
-  const auth = (piece as { auth?: unknown }).auth as
+  // With several methods, the hooks are the ones of the connection's method.
+  const auth = authMethodFor(
+    (piece as { auth?: unknown }).auth,
+    (request.auth as { type?: unknown } | null | undefined)?.type,
+  ) as
     | {
         validate?: (context: unknown) => unknown;
         getConnectionIdentifier?: (context: unknown) => unknown;

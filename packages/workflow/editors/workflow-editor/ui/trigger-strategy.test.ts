@@ -5,8 +5,7 @@ import { blockUnavailable, triggerStrategyRuns } from "./piece-source.js";
 
 describe("triggerStrategyRuns", () => {
   it("offers polling and webhook triggers", () => {
-    // WEBHOOK was gated with APP_WEBHOOK before the reactor could serve a
-    // package's endpoints; it runs now, so gating it hid working pieces.
+    // The reactor serves each package's webhook endpoints.
     expect(triggerStrategyRuns("POLLING")).toBe(true);
     expect(triggerStrategyRuns("WEBHOOK")).toBe(true);
   });

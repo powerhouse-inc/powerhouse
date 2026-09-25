@@ -85,7 +85,7 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "@powerhousedao/renown-package": "latest",
+    "@powerhousedao/renown-package": "2.0.0-dev.0",
     "@powerhousedao/shared": "workspace:*",
     "@privy-io/react-auth": "3.35.0",
     "@tailwindcss/cli": "catalog:",

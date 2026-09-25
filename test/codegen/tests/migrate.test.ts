@@ -1,5 +1,6 @@
 import { migrate } from "@powerhousedao/codegen";
-import { describe, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
+import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { updatePackage } from "write-package";
 import { TEST_OUTPUT, WITH_EDITORS } from "../constants.js";
@@ -15,8 +16,21 @@ describe("migrate", () => {
     const versionedDocumentModelsDir = join(outDir, "versioned");
     await cpForce(WITH_EDITORS, legacyDocumentModelsDir);
     await cpForce(WITH_EDITORS, versionedDocumentModelsDir);
+    // A secondary tsconfig with options TypeScript 7 removed.
+    const extraTsconfig = join(legacyDocumentModelsDir, "tsconfig.node.json");
+    writeFileSync(
+      extraTsconfig,
+      JSON.stringify({
+        compilerOptions: { baseUrl: ".", moduleResolution: "node" },
+      }),
+    );
     const version = "dev";
     await migrate(version, legacyDocumentModelsDir);
+    const migrated = JSON.parse(readFileSync(extraTsconfig, "utf8")) as {
+      compilerOptions: Record<string, unknown>;
+    };
+    expect(migrated.compilerOptions.baseUrl).toBeUndefined();
+    expect(migrated.compilerOptions.moduleResolution).toBe("bundler");
     await updatePackage(legacyDocumentModelsDir, {
       exports: null,
     });
