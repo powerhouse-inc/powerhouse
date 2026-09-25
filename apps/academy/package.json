@@ -30,7 +30,6 @@
     "slides:build": "marp ./slides"
   },
   "dependencies": {
-    "@codesandbox/sandpack-react": "^2.14.4",
     "@docusaurus/core": "3.10.0",
     "@docusaurus/faster": "3.10.0",
     "@docusaurus/plugin-content-docs": "3.10.0",
