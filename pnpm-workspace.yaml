@@ -196,3 +196,8 @@ overrides:
   # cuer (RainbowKit's QR component) asks for `qr: ~0` but calls encodeQR with
   # border: 0, which qr@0.6.0 started rejecting. 0.5.5 is the last one allowing it.
   qr@>=0.6: "0.5.5"
+  # renown-package pins a staging build of the stack; share the UI/tooling packages with the workspace.
+  # document-model and common stay published: its bundled code derives document ids with them.
+  "@powerhousedao/renown-package>@powerhousedao/builder-tools": "workspace:*"
+  "@powerhousedao/renown-package>@powerhousedao/design-system": "workspace:*"
+  "@powerhousedao/renown-package>@powerhousedao/vetra": "workspace:*"
