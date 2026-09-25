@@ -65,8 +65,6 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@pnpm/find-workspace-dir": "^1000.1.5",
-    "@pnpm/find-workspace-packages": "^6.0.9",
     "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3",
     "@types/npm-registry-fetch": "^8.0.9",
     "graphql": "catalog:",
