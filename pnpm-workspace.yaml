@@ -9,8 +9,9 @@ packages:
   - "scripts/*"
   - "tools/*"
   - "!releases"
-  # Installed on its own (see apps/academy/README.md); nothing in the workspace depends on it.
+  # Standalone pnpm projects with their own lockfiles; nothing in the workspace depends on them.
   - "!apps/academy"
+  - "!packages/switchboard-gui"
 
 minimumReleaseAge: 10080
 # Exact-pinned dep; the cooldown adds nothing once resolution is manual.
