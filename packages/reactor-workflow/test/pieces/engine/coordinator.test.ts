@@ -106,6 +106,33 @@ describe("runWorkflow", () => {
     expect(run.steps[1].output).toEqual({ got: "hello" });
   });
 
+  it("times the steps that ran, and only those", async () => {
+    const executor = new FakeExecutor();
+    const definition: WorkflowDefinition = {
+      trigger: TRIGGER,
+      steps: [
+        { id: "a", key: "ok", blockType: "fake#ok", config: {} },
+        { id: "b", key: "fails", blockType: "fake#fail", config: {} },
+        { id: "c", key: "after", blockType: "fake#ok", config: {} },
+      ],
+      edges: [edge("e1", "t", "a"), edge("e2", "a", "b"), edge("e3", "b", "c")],
+    };
+
+    const run = await runWorkflow({ definition, executor });
+
+    const [ok, fails, after] = run.steps;
+    for (const step of [ok, fails]) {
+      expect(Date.parse(step.startedAt!)).toBeLessThanOrEqual(
+        Date.parse(step.endedAt!),
+      );
+    }
+    expect(Date.parse(ok.endedAt!)).toBeLessThanOrEqual(
+      Date.parse(fails.startedAt!),
+    );
+    expect(after.status).toBe("SKIPPED");
+    expect(after.startedAt).toBeUndefined();
+  });
+
   it("journals each terminal step as it lands, skips only in the final sweep", async () => {
     const executor = new FakeExecutor();
     const journaled: Array<[string, string, number]> = [];
