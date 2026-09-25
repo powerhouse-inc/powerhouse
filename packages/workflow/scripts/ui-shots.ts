@@ -124,14 +124,28 @@ async function main() {
     return;
   }
   if (values.serve) {
+    await buildCss();
     const started = await ensureServers();
+    // A real window on a seeded drive: the config override that turns
+    // workflows on lives in this browser context, so use this window.
+    // The installed Chrome: Playwright may only have the headless shell.
+    const browser = await chromium
+      .launch({ headless: false, channel: "chrome" })
+      .catch(() => chromium.launch({ headless: false }));
+    const { page } = await openSeededPage(browser, {
+      colorScheme: values.theme === "dark" ? "dark" : "light",
+      viewport: { width: Number(values.width), height: Number(values.height) },
+    });
+    await openDrive(page);
     console.log(
-      `Connect ${CONNECT} · switchboard ${SWITCHBOARD} — Ctrl-C to stop`,
+      `Connect ${CONNECT} · switchboard ${SWITCHBOARD} — seeded browser open, Ctrl-C to stop`,
     );
     const stop = () => {
+      void browser.close();
       for (const child of started) child.kill();
       process.exit(0);
     };
+    browser.on("disconnected", stop);
     process.on("SIGINT", stop);
     process.on("SIGTERM", stop);
     await new Promise(() => {});
