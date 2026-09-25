@@ -192,6 +192,29 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          # The PR's base commit, for the workflow UI filter below.
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: diff
+        uses: ./.github/actions/changed-files
+
+      # The workflow UI suite runs on PRs that touch what it exercises, and
+      # always on main, so a break arriving through Connect or a shared
+      # package still surfaces right after it merges.
+      - name: Decide whether to run the workflow UI tests
+        id: workflow-ui
+        env:
+          FILES: ${{ steps.diff.outputs.files }}
+        run: |
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif printf '%s\n' $FILES | grep -qE '^(packages/workflow/|packages/reactor-workflow/|packages/pieces-framework/|apps/switchboard/src/workflow/|\.github/workflows/e2e-tests\.yml$)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -224,6 +247,40 @@ jobs:
       # the failed assertions in its own output.
       - name: Run workflow piece E2E flow
         run: pnpm test:e2e:workflow-piece
+
+      - name: Resolve Playwright version
+        if: steps.workflow-ui.outputs.run == 'true'
+        id: playwright-version
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+        working-directory: ./packages/workflow
+
+      - name: Cache Playwright browsers
+        if: steps.workflow-ui.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Browsers
+        if: steps.workflow-ui.outputs.run == 'true'
+        run: pnpm exec playwright install --with-deps chromium
+        working-directory: ./packages/workflow
+
+      # Starts switchboard from dist and Connect's dev server, then drives the
+      # workflow editors in a browser; each test seeds its own drive.
+      - name: Run workflow UI tests
+        if: steps.workflow-ui.outputs.run == 'true'
+        run: pnpm --filter @powerhousedao/workflow test:ui
+
+      - name: Upload workflow UI report
+        uses: actions/upload-artifact@v4
+        if: failure() && steps.workflow-ui.outputs.run == 'true'
+        with:
+          name: workflow-ui-playwright-report
+          path: |
+            packages/workflow/playwright-report/
+            packages/workflow/test-results/
+          retention-days: 30
 
   analytics-engine-integration-tests:
     name: Run Analytics Engine Integration Tests
