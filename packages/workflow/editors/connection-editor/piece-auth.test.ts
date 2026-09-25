@@ -118,14 +118,31 @@ describe("isAuthComplete", () => {
     expect(isAuthComplete(plan, { host: "a" }, new Map())).toBe(false);
   });
 
-  it("ignores optional fields", () => {
+  it("ignores optional fields whether filled or not", () => {
+    const withOptionalSecret: AuthPlan = {
+      ...plan,
+      secretFields: [
+        ...plan.secretFields,
+        { name: "refresh", displayName: "Refresh", required: false },
+      ],
+    };
+    const token = new Map([["token", "ref-1"]]);
+    expect(isAuthComplete(withOptionalSecret, { host: "a" }, token)).toBe(true);
     expect(
       isAuthComplete(
-        plan,
-        { host: "a", port: undefined },
-        new Map([["token", "ref-1"]]),
+        withOptionalSecret,
+        { host: "a", port: 8080 },
+        new Map([...token, ["refresh", "ref-2"]]),
       ),
     ).toBe(true);
+    // An optional value never stands in for a required one.
+    expect(
+      isAuthComplete(
+        withOptionalSecret,
+        { port: 8080 },
+        new Map([["refresh", "ref-2"]]),
+      ),
+    ).toBe(false);
   });
 });
 

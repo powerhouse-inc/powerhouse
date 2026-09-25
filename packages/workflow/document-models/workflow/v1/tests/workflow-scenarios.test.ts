@@ -492,4 +492,47 @@ describe("workflow scenarios", () => {
     document = reducer(document, setPolicy({ retainRunsDays: null }));
     expect(document.state.global.policy.retainRunsDays).toBe(90);
   });
+
+  it("clears retry, timeout and idempotency when updated with null", () => {
+    let document = utils.createDocument();
+    document = reducer(
+      document,
+      addStep({
+        id: "s1",
+        key: "s1",
+        name: "Step",
+        blockType: "@powerhousedao/piece-reactor#document-get",
+        config: {},
+        retry: {
+          maxAttempts: 2,
+          backoff: "FIXED",
+          initialDelaySeconds: 1,
+          maxDelaySeconds: 2,
+          retryOn: [],
+        },
+        timeoutSeconds: 30,
+        idempotencyKeyExpression: "{{trigger.payload.id}}",
+      }),
+    );
+    // Undefined fields leave the runtime options untouched.
+    document = reducer(document, updateStep({ id: "s1", name: "Renamed" }));
+    const untouched = document.state.global.steps[0];
+    expect(untouched.retry?.maxAttempts).toBe(2);
+    expect(untouched.timeoutSeconds).toBe(30);
+    expect(untouched.idempotencyKeyExpression).toBe("{{trigger.payload.id}}");
+
+    document = reducer(
+      document,
+      updateStep({
+        id: "s1",
+        retry: null,
+        timeoutSeconds: null,
+        idempotencyKeyExpression: null,
+      }),
+    );
+    const cleared = document.state.global.steps[0];
+    expect(cleared.retry).toBeNull();
+    expect(cleared.timeoutSeconds).toBeNull();
+    expect(cleared.idempotencyKeyExpression).toBeNull();
+  });
 });

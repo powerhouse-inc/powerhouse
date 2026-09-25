@@ -50,9 +50,7 @@ describe("blockMeta", () => {
     expect(meta.subtitle).toBe("Slack · Trigger");
   });
 
-  // Regression: the logo URL used to be synthesised as
-  // /pieces/<piece>.png, which 404s for ~10% of pieces (date-helper is
-  // really served from /pieces/new-core/date-helper.svg).
+  // Logo paths vary by piece (date-helper is /pieces/new-core/date-helper.svg).
   it("never guesses a logo URL for an unknown piece", () => {
     expect(blockMeta(DATE_HELPER).logoUrl).toBeUndefined();
   });

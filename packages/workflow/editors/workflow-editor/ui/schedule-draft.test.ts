@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   configFromDraft,
+  cronFromDraft,
   draftFromConfig,
+  type ScheduleDraft,
   switchKind,
   timezoneOf,
 } from "./schedule-draft.js";
+import { describeCron, describeSchedule } from "./trigger-text.js";
 
 describe("draftFromConfig", () => {
   it.each([
@@ -76,5 +79,30 @@ describe("switchKind", () => {
       kind: "custom",
       cron: "0 7 * * 1,3",
     });
+  });
+});
+
+describe("cronFromDraft", () => {
+  it("defaults a weekly draft with no days to Monday", () => {
+    const cron = cronFromDraft({ kind: "weekly", time: "08:30", days: [] });
+    expect(cron).toBe("30 8 * * 1");
+    expect(draftFromConfig({ cron })).toEqual({
+      kind: "weekly",
+      time: "08:30",
+      days: [1],
+    });
+  });
+
+  it.each<ScheduleDraft>([
+    { kind: "daily", time: "09:00", weekdaysOnly: false },
+    { kind: "daily", time: "17:30", weekdaysOnly: true },
+    { kind: "weekly", time: "07:15", days: [1] },
+    { kind: "weekly", time: "07:00", days: [0, 6] },
+    { kind: "weekly", time: "07:00", days: [1, 3, 5] },
+    { kind: "weekly", time: "07:00", days: [] },
+  ])("describes the preset %j in words", (draft) => {
+    const config = configFromDraft(draft, "UTC");
+    expect(describeCron(config.cron as string)).toBeDefined();
+    expect(describeSchedule(config)).not.toMatch(/^On schedule /);
   });
 });

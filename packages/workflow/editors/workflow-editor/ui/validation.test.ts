@@ -112,8 +112,7 @@ describe("flowPorts", () => {
     expect(flowPorts("core#branch")).toEqual(["true", "false"]);
   });
 
-  it("leaves the error route out", () => {
-    expect(flowPorts("core#branch")).not.toContain("error");
-    expect(flowPorts("core#assert")).not.toContain("error");
+  it("leaves the error route out of a step that can fail", () => {
+    expect(flowPorts("core#assert")).toEqual(["next"]);
   });
 });

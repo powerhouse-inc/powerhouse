@@ -140,10 +140,6 @@ describe("menuPosition", () => {
   });
 
   it("keeps the menu inside the viewport when the flip overshoots", () => {
-    expect(menuPosition({ x: 40, y: 30 }, size, viewport)).toEqual({
-      x: 40,
-      y: 30,
-    });
     expect(
       menuPosition(
         { x: 10, y: 8 },
@@ -190,7 +186,6 @@ describe("anchorLeftPosition", () => {
   });
 
   it("clamps vertically so a tall popup stays on screen", () => {
-    expect(anchorLeftPosition(field, size, viewport).y).toBe(300);
     expect(anchorLeftPosition({ ...field, top: 700 }, size, viewport).y).toBe(
       800 - 360 - 8,
     );

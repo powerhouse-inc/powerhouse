@@ -73,7 +73,7 @@ describe("attachableSteps", () => {
       ["a", "b"],
       ["b", "c"],
     ]);
-    expect(attachableSteps(wf, "c")).toEqual([]);
+    expect(attachableSteps(wf, "a")).toEqual([]);
   });
 });
 

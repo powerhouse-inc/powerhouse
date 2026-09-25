@@ -482,13 +482,19 @@ export async function openSeededPage(
 
 // ─── navigation ─────────────────────────────────────────────────────────────
 
+// The seeded drive's tile on Connect's home page.
 export async function openDrive(page: Page) {
-  await page.getByText("Workflows", { exact: true }).first().click();
+  await page
+    .getByRole("heading", { name: "Workflows", level: 3, exact: true })
+    .click();
   await page.getByRole("heading", { name: "Workflows", level: 2 }).waitFor();
 }
 
 export async function selectInSidebar(page: Page, name: string) {
-  await page.getByText(name, { exact: true }).first().click();
+  await page
+    .getByRole("complementary")
+    .getByRole("button", { name, exact: true })
+    .click();
 }
 
 export async function openWorkflowEditor(page: Page, name = "Daily digest") {
@@ -498,6 +504,9 @@ export async function openWorkflowEditor(page: Page, name = "Daily digest") {
   await page.locator(".react-flow__node").first().waitFor();
 }
 
-export function canvasNode(page: Page, text: string) {
-  return page.locator(".react-flow__node", { hasText: text }).first();
+// Matches the node's title exactly: "Summarise" never finds "Summarise metrics".
+export function canvasNode(page: Page, title: string) {
+  return page
+    .locator(".react-flow__node")
+    .filter({ has: page.getByText(title, { exact: true }) });
 }

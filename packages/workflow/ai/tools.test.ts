@@ -477,23 +477,27 @@ describe("checkConnection", () => {
       variables: { connectionId: string };
     };
     expect(sent.variables).toEqual({ connectionId: "conn-1" });
-    // The supergraph rejects a ConnectionCheckResult field without a
-    // selection set, so the mutation must request every subfield.
-    expect(sent.query).toContain("ok");
-    expect(sent.query).toContain("detail");
-    expect(sent.query).toContain("accountLabel");
+    // The supergraph rejects a ConnectionCheckResult without a selection set.
+    expect(sent.query.replaceAll(/\s+/g, " ")).toBe(
+      "mutation CheckConnection($connectionId: String!) { workflowRuntime { " +
+        "checkConnection(connectionId: $connectionId) { ok detail accountLabel } } }",
+    );
   });
 });
 
 describe("tool descriptors", () => {
-  it("exposes the three read-only connection tools ahead of the workflow tools", () => {
+  it("exposes the three read-only connection tools ahead of the workflow tools", async () => {
+    const { workflowTools } = await import("./workflow-tools.js");
     const connectionTools = [
       "getConnectors",
       "getConnections",
       "checkConnection",
     ];
     const names = tools.aiTools.map((tool) => tool.name);
-    expect(names.slice(0, 3)).toEqual(connectionTools);
+    expect(names).toEqual([
+      ...connectionTools,
+      ...workflowTools.map((tool) => tool.name),
+    ]);
     expect(new Set(names).size).toBe(names.length);
     for (const tool of tools.aiTools.slice(0, 3)) {
       expect(tool.annotations?.readOnlyHint).toBe(true);
