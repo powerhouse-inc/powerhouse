@@ -51,7 +51,13 @@
     "bench:fix": "tsx bench/fix/run-fix.ts",
     "bench:ui": "node bench/ui/serve.mjs",
     "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "spec:typecheck": "cd spec && quint typecheck PeerAgreement.qnt && quint typecheck PeerAgreementTest.qnt",
+    "spec:test": "cd spec && quint test --max-samples=100 PeerAgreementTest.qnt",
+    "spec:sim": "sh spec/scripts/sim.sh",
+    "spec:verify": "sh spec/scripts/verify-all.sh",
+    "spec:check": "pnpm spec:typecheck && pnpm spec:test && pnpm spec:sim && pnpm spec:verify",
+    "spec:trace": "python3 spec/scripts/trace.py"
   },
   "publishConfig": {
     "access": "public"
@@ -80,6 +86,7 @@
     "document-model": "workspace:*"
   },
   "devDependencies": {
+    "@informalsystems/quint": "0.32.0",
     "@powerhousedao/pglite-fs": "workspace:*",
     "@types/pg": "catalog:",
     "@vitest/coverage-v8": "catalog:",
