@@ -20,7 +20,7 @@ import {
 
 type Resolver = (p: unknown, a: unknown, c: Context) => Promise<unknown>;
 type Served = { id: string; state: unknown };
-type Page = { items: Served[]; totalCount: number };
+type Page = { items: Served[] };
 
 describe("generated document-model subgraph reads as the caller", () => {
   let module: InProcessReactorClientModule | undefined;
