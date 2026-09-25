@@ -53,6 +53,7 @@ interface AuthPropDescriptor {
 
 interface PieceAuthDescriptor {
   type?: string;
+  unsupported?: string;
   displayName?: string;
   description?: string;
   required?: boolean;
@@ -75,6 +76,28 @@ function toField(name: string, prop: AuthPropDescriptor): AuthField {
   };
 }
 
+// Every sign-in method a piece offers, in its order, one per auth type.
+export function plansFromAuth(auth: unknown): AuthPlan[] {
+  const plans = (Array.isArray(auth) ? auth : [auth]).map(planFromAuth);
+  return plans.filter(
+    (plan, index) =>
+      plans.findIndex((other) => other.authType === plan.authType) === index,
+  );
+}
+
+// The method a connection signs in with: the one of its auth type when the
+// runtime can run it, otherwise the piece's default.
+export function planForConnection(
+  auth: unknown,
+  authType: ConnectionAuthType,
+): AuthPlan {
+  return (
+    plansFromAuth(auth).find(
+      (plan) => plan.authType === authType && plan.supported,
+    ) ?? planFromAuth(auth)
+  );
+}
+
 export function planFromAuth(auth: unknown): AuthPlan {
   // Some pieces declare multiple auth methods; prefer one the runtime supports.
   if (Array.isArray(auth)) {
@@ -86,6 +109,12 @@ export function planFromAuth(auth: unknown): AuthPlan {
     );
   }
   const descriptor = (auth ?? null) as PieceAuthDescriptor | null;
+  const plan = planForDescriptor(descriptor);
+  // The runtime's own verdict, e.g. a CUSTOM_AUTH that needs token refresh.
+  return descriptor?.unsupported ? { ...plan, supported: false } : plan;
+}
+
+function planForDescriptor(descriptor: PieceAuthDescriptor | null): AuthPlan {
   const base = {
     displayName: descriptor?.displayName,
     description: descriptor?.description,

@@ -122,6 +122,8 @@ export async function generateEditor(
 export async function generateAllEditors(project: Project) {
   const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
   const projectDir = editorsDir.getParentOrThrow().getPath();
+  // The project starts without files, so load the ones discovery reads.
+  project.addSourceFilesAtPaths(join(editorsDir.getPath(), "*", "module.ts"));
 
   /* An editor's `id`, `name`, and `documentTypes` args can be found in the `module.ts` file */
   const editorsToAdd = pipe(
@@ -240,6 +242,7 @@ export async function generateAllSubgraphs(project: Project) {
     "subgraphs",
   );
   const projectDir = subgraphsDir.getParentOrThrow().getPath();
+  project.addSourceFilesAtPaths(join(subgraphsDir.getPath(), "*", "index.ts"));
   /* The subgraph's name is found in the `index.ts` file */
   const subgraphNames = pipe(
     subgraphsDir.getDirectories(),
@@ -282,6 +285,11 @@ export async function generateAllProcessors(project: Project) {
     "processors",
   );
   const projectDir = processorsDir.getParentOrThrow().getPath();
+  // connect.ts and switchboard.ts decide each processor's apps.
+  project.addSourceFilesAtPaths([
+    join(processorsDir.getPath(), "*.ts"),
+    join(processorsDir.getPath(), "*", "*.ts"),
+  ]);
   const processorsToGenerate = pipe(
     processorsDir.getDirectories(),
     map((dir) => dir.getBaseName()),

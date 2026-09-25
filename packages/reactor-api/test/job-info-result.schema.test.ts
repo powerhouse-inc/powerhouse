@@ -50,7 +50,7 @@ const ask = (job: unknown) =>
     variableValues: { jobId: "job-1" },
     rootValue: {
       jobStatus: (args: { jobId: string }) =>
-        jobStatus(clientReturning(job), args),
+        jobStatus(clientReturning(job), args, () => Promise.resolve(true)),
     },
   });
 

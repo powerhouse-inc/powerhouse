@@ -35,6 +35,7 @@ import { buildTsMorphProject, fixGenerateMockImports } from "utils";
 import { writePackage } from "write-package";
 import { detectFeatures, type Feature } from "./features.js";
 import { generateAll } from "./generate.js";
+import { migrateTsconfigFiles } from "./migrate-tsconfig.js";
 import { sortByKey } from "./utils.js";
 
 // Anchor dist-tag resolution to ph-cli. Releases publish in topological order
@@ -282,6 +283,10 @@ export async function migrate(version: string, projectDir = process.cwd()) {
   removeLegacyLintFormatFiles(projectDir);
   console.log("Overwriting project root files...");
   await writeAllGeneratedProjectFiles(projectDir);
+  console.log("Removing compiler options TypeScript 7 dropped...");
+  for (const file of migrateTsconfigFiles(projectDir)) {
+    console.log(`  updated ${file}`);
+  }
   console.log("Moving unversioned document models...");
   moveLegacyDocumentModels(projectDir);
   const project = buildTsMorphProject(projectDir);

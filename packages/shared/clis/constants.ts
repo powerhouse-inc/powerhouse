@@ -307,7 +307,7 @@ export const externalDevDependencies = {
   oxlint: "1.70.0",
   "oxlint-tsgolint": "0.23.0",
   tailwindcss: "^4.1.16",
-  typescript: "^5.9.3",
+  typescript: "~7.0.2",
   vite: "^8.0.10",
   "vite-tsconfig-paths": "6.1.1",
   vitest: "4.1.1",

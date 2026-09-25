@@ -59,7 +59,9 @@ A **connection** is its own document, of type `powerhouse/connection`: one crede
 
 This matters for a reason that goes beyond tidiness. A workflow document syncs, has a full operation log, and is readable by anyone who can read the drive. A credential written into a step's config would inherit all of that. Keeping it in a connection means the secret itself is held by the runtime and only ever referred to by reference — what the documents carry is a pointer, not the key.
 
-A piece can also declare a **connection check**, which is what lets Connect show a connection as working or broken, with the account it's actually authenticated as, instead of leaving you to find out when a run fails at 3am.
+Some pieces offer more than one way to sign in, such as Slack's bot token or its OAuth flow. A connection picks one of them, and the piece runs with that method.
+
+A piece can also declare a **connection check**, which is what lets Connect show a connection as working or broken, with the account it's actually authenticated as, instead of leaving you to find out when a run fails at 3am. The connection editor's **Test connection** button runs it on demand.
 
 ## What a piece is allowed to do
 

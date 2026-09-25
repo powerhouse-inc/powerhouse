@@ -75,18 +75,23 @@ import {
 import { buildDecisionModel } from "../decision/build-decision-model.js";
 import type { IReadGate } from "../decision/read-gate.js";
 import {
-  ALWAYS_READABLE_SCOPES,
+  assertAbsent,
   BareReadGate,
+  refusesEveryDomainScope,
   SeededStateReader,
+  unheldScopesReadOnState,
 } from "../decision/read-gate.js";
 import type { DocumentDecisionModel } from "../decision/document-decision-model.js";
 import type { RegisteredDecisionModel } from "../decision/registered-model.js";
 import type { DecisionModel, Evaluation } from "../decision/types.js";
 import { GATED_DOCUMENT_ACTIONS, targetDocumentId } from "../executor/util.js";
+import { type EventReads, EventReadsSource } from "./event-reads.js";
 import type { ReactorFeatureFlags } from "../executor/types.js";
 import {
   authSubjectFromSigner,
   filterReadableScopes,
+  narrowedScopes,
+  withAllScopes,
   withAuthScope,
 } from "./util.js";
 
@@ -179,6 +184,7 @@ export class ReactorClient implements IReactorClient {
   private documentIndexer: IDocumentIndexer;
   private documentView: IDocumentView;
   private readGate: IReadGate;
+  private eventReads: EventReadsSource;
   private actionEvaluation: ActionEvaluationConfig | undefined;
   private readonly createSignaturePolicy: SignaturePolicy;
 
@@ -204,49 +210,11 @@ export class ReactorClient implements IReactorClient {
     this.documentIndexer = documentIndexer;
     this.documentView = documentView;
     this.readGate = readGate;
+    this.eventReads = new EventReadsSource(reactor, documentView, readGate);
     this.actionEvaluation = actionEvaluation;
     this.createSignaturePolicy = createSignaturePolicy;
     this.drives = new DriveClient(this, logger, reactor, signer);
     this.logger.verbose("ReactorClient initialized");
-  }
-
-  private readSubject(subject?: AuthSubject): AuthSubject {
-    return subject ?? authSubjectFromSigner(this.signer);
-  }
-
-  /**
-   * Which scopes of one document the subject may read. Resolved once per
-   * document, so the gate builds its model once however many scopes are then
-   * tested, and the filtering itself stays synchronous.
-   */
-  private readableScopes(
-    document: PHDocument,
-    view?: ViewFilter,
-    signal?: AbortSignal,
-  ): Promise<(scope: string) => boolean> {
-    return this.readGate.scopePredicate(
-      document,
-      this.readSubject(view?.subject),
-      view?.branch ?? "main",
-      signal,
-    );
-  }
-
-  /**
-   * One document, filtered to the scopes the subject may read. Every method
-   * that hands a document back goes through here, including the ones that
-   * follow a write: a document returned from a mutation is a read like any
-   * other, and returning it whole served scopes the same subject would be
-   * refused by `get`. Its author still sees what it wrote, because an allow on
-   * execute confers read of that scope.
-   */
-  private async gateDocument<TDocument extends PHDocument>(
-    document: TDocument,
-    view: ViewFilter | undefined,
-    signal: AbortSignal | undefined,
-  ): Promise<TDocument> {
-    const readable = await this.readableScopes(document, view, signal);
-    return filterReadableScopes(document, readable);
   }
 
   /**
@@ -478,51 +446,6 @@ export class ReactorClient implements IReactorClient {
     return { results: allOperations, options: effectivePaging, nextCursor };
   }
 
-  private async getOperationsWithCompositeCursor(
-    documentId: string,
-    view: ViewFilter | undefined,
-    filter: OperationFilter | undefined,
-    paging: PagingOptions,
-    signal: AbortSignal | undefined,
-    canRead: (scope: string) => boolean,
-  ): Promise<PagedResults<Operation>> {
-    const scopeCursors = decodeCompositeCursor(paging.cursor);
-    const allOperations: Operation[] = [];
-    const activeCursors: Record<string, string> = {};
-
-    for (const [scopeName, cursor] of Object.entries(scopeCursors)) {
-      if (!canRead(scopeName)) {
-        continue;
-      }
-      const scopeView: ViewFilter = { ...view, scopes: [scopeName] };
-      const scopePaging: PagingOptions = { cursor, limit: paging.limit };
-
-      const operationsByScope = await this.reactor.getOperations(
-        documentId,
-        scopeView,
-        filter,
-        scopePaging,
-        undefined,
-        signal,
-      );
-
-      const scopeResult = operationsByScope[scopeName];
-      allOperations.push(...scopeResult.results);
-      if (scopeResult.nextCursor) {
-        activeCursors[scopeName] = scopeResult.nextCursor;
-      }
-    }
-
-    allOperations.sort((a, b) => a.index - b.index);
-
-    const nextCursor =
-      Object.keys(activeCursors).length > 0
-        ? encodeCompositeCursor(activeCursors)
-        : undefined;
-
-    return { results: allOperations, options: paging, nextCursor };
-  }
-
   /**
    * Retrieves outgoing relationships of a given type from a source document.
    */
@@ -688,122 +611,6 @@ export class ReactorClient implements IReactorClient {
   }
 
   /**
-   * Drops the edges whose far-end document the subject may read no domain scope
-   * of. An edge is withheld whole rather than stripped of its metadata: the
-   * document-shaped relationship reads already answer with the far end stripped
-   * to the scopes the gate allows, so the far end's existence is disclosed
-   * either way, but an edge's metadata is content about the pair that the far
-   * end's own reads would refuse. An edge to a far end stripped to nothing
-   * therefore carries content past a refusal, and there is no useful shell to
-   * hand back in its place.
-   *
-   * `nextCursor` and `options` are left as the underlying stream reported them,
-   * because a caller must feed them back to resume from the right position. A
-   * gated page can therefore be shorter than the limit it asked for.
-   */
-  private async gateEdges(
-    page: PagedResults<DocumentRelationship>,
-    farEnd: "sourceId" | "targetId",
-    view: ViewFilter | undefined,
-    signal: AbortSignal | undefined,
-  ): Promise<PagedResults<DocumentRelationship>> {
-    const ids = [...new Set(page.results.map((edge) => edge[farEnd]))];
-    if (ids.length === 0) {
-      return page;
-    }
-
-    // No scopes: the gate must see every scope the document holds. Honouring a
-    // caller-supplied narrowing would let `scopes: ["auth"]` leave a document
-    // with no visible domain scope and switch the gate off. The explicit limit
-    // keeps the tail of a large page from paging out of sight and reading as
-    // absent.
-    const farEndView: ViewFilter = {
-      subject: view?.subject,
-      branch: view?.branch,
-    };
-    const documents = await this.reactor.find(
-      { ids },
-      farEndView,
-      { cursor: "0", limit: ids.length },
-      undefined,
-      signal,
-    );
-
-    const readable = new Map(
-      await Promise.all(
-        documents.results.map(async (doc) => {
-          const allows = await this.readableScopes(doc, view, signal);
-          const domainScopes = Object.keys(doc.state).filter(
-            (scope) => !ALWAYS_READABLE_SCOPES.has(scope),
-          );
-          return [
-            doc.header.id,
-            domainScopes.length === 0 || domainScopes.some(allows),
-          ] as const;
-        }),
-      ),
-    );
-
-    // A far end `find` did not return is readable. `addRelationship` tolerates a
-    // missing target, so a dangling edge is legitimate and failing closed would
-    // hide it; and `find` never drops a document for authorization, so absence
-    // here means genuinely absent and there is no content to protect.
-    const results = page.results.filter(
-      (edge) => readable.get(edge[farEnd]) !== false,
-    );
-    if (results.length === page.results.length) {
-      return page;
-    }
-
-    const nextPage = page.next;
-    return {
-      ...page,
-      results,
-      next: nextPage
-        ? async () => this.gateEdges(await nextPage(), farEnd, view, signal)
-        : undefined,
-    };
-  }
-
-  /**
-   * One relationship edge, or undefined when it does not exist. A point lookup:
-   * the pair is filtered in SQL rather than scanned out of the source's edge
-   * list, which on a drive with thousands of children is the difference between
-   * one query and dozens.
-   */
-  private async readRelationshipEdge(
-    sourceIdentifier: string,
-    targetIdentifier: string,
-    relationshipType: string,
-    view?: ViewFilter,
-    signal?: AbortSignal,
-  ): Promise<DocumentRelationship | undefined> {
-    const sourceId = await this.documentView.resolveIdOrSlug(
-      sourceIdentifier,
-      view,
-      undefined,
-      signal,
-    );
-    const targetId = await this.documentView.resolveIdOrSlug(
-      targetIdentifier,
-      view,
-      undefined,
-      signal,
-    );
-
-    const edges = await this.documentIndexer.getDirectedRelationships(
-      sourceId,
-      targetId,
-      [relationshipType],
-      { cursor: "0", limit: 1 },
-      undefined,
-      signal,
-    );
-
-    return edges.results[0];
-  }
-
-  /**
    * Filters documents by criteria and returns a list of them
    */
   async find(
@@ -820,17 +627,29 @@ export class ReactorClient implements IReactorClient {
       undefined,
       signal,
     );
-    return {
-      ...results,
-      results: await Promise.all(
-        results.results.map(async (doc) =>
-          filterReadableScopes(
-            doc,
-            await this.readableScopes(doc, view, signal),
-          ),
-        ),
-      ),
-    };
+    return this.gateListing(results, view, signal);
+  }
+
+  /** Whether `find` would serve the document; false when it is absent. */
+  async isServed(
+    identifier: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    this.logger.verbose("isServed(@identifier, @view)", identifier, view);
+    let document: PHDocument;
+    try {
+      document = await this.reactor.getByIdOrSlug(
+        identifier,
+        withAuthScope(view),
+        undefined,
+        signal,
+      );
+    } catch (error) {
+      await assertAbsent(this.documentView, identifier, error, signal);
+      return false;
+    }
+    return (await this.gateListed(document, view, signal)) !== undefined;
   }
 
   /**
@@ -915,54 +734,6 @@ export class ReactorClient implements IReactorClient {
       anyAllowed: allowed > 0,
       allDenied: candidates.length > 0 && allowed === 0,
       anyDenied: allowed < candidates.length,
-    };
-  }
-
-  /**
-   * The decision model for one target document, built at its stream heads.
-   *
-   * The document is fetched unfiltered, because the policy is what decides:
-   * reading it through the read gate would withhold the very scopes the
-   * decision is about. A deleted document is served at its deletion boundary,
-   * which is what lets the model refuse an execute against it -- authEnforcement
-   * requires documentDecisions, so that read is available whenever this runs.
-   *
-   * Reading past the gate discloses nothing a submit does not. The `auth` and
-   * `document` scopes are readable by every holder, so a verdict resting on the
-   * policy alone is one the caller could compute unaided; and a verdict resting
-   * on a conditional grant reads the executing scope's state exactly as
-   * admission reads it, so the answer here is what submitting and being refused
-   * would have revealed anyway.
-   *
-   * The append condition the build records is dropped. It guards a write, and
-   * this makes none; reproducing it is also what the preflight cannot do, which
-   * is why the answer is a prediction.
-   */
-  private async buildEvaluationTarget(
-    config: ActionEvaluationConfig,
-    documentId: string,
-    branch: string,
-    signal?: AbortSignal,
-  ): Promise<EvaluationTarget> {
-    const document = await this.documentView.get(
-      documentId,
-      { branch },
-      undefined,
-      signal,
-    );
-
-    const target = { documentId, branch };
-    const built = await buildDecisionModel(
-      new SeededStateReader(this.documentView, document, branch),
-      config.model,
-      target,
-      signal,
-    );
-
-    return {
-      definition: config.model(target),
-      model: built.model,
-      scopeStates: (document.state ?? {}) as Record<string, unknown>,
     };
   }
 
@@ -1345,39 +1116,6 @@ export class ReactorClient implements IReactorClient {
     );
 
     return this.reactor.execute(documentId, branch, signedActions, signal);
-  }
-
-  /**
-   * The id a write on `identifier` is stored under, which its signatures bind.
-   * A create names its own id, and an id no slug maps to is taken as given, so
-   * a document still in flight resolves to itself.
-   */
-  private async resolveWriteTarget(
-    identifier: string,
-    branch: string,
-    actions: readonly Action[],
-    signal?: AbortSignal,
-  ): Promise<string> {
-    if (actions.some((action) => action.type === "CREATE_DOCUMENT")) {
-      return identifier;
-    }
-
-    const view = { branch };
-    const bySlug = await this.documentView.resolveSlug(
-      identifier,
-      view,
-      undefined,
-      signal,
-    );
-    if (bySlug === undefined || bySlug === identifier) {
-      return identifier;
-    }
-    return this.documentView.resolveIdOrSlug(
-      identifier,
-      view,
-      undefined,
-      signal,
-    );
   }
 
   async executeBatch(
@@ -1863,12 +1601,24 @@ export class ReactorClient implements IReactorClient {
   ): () => void {
     this.logger.verbose("subscribe(@search, @view)", search, view);
 
-    // A subscription is a read. The filter lives here because the subscription
-    // manager is a read model, which sees everything.
-    const readable = async <TDocument extends PHDocument>(
-      document: TDocument,
-    ): Promise<TDocument> =>
-      filterReadableScopes(document, await this.readableScopes(document, view));
+    // A subscription is a read, gated here because the subscription manager is
+    // a read model, which sees everything. It is gated as a listing is: an
+    // event for a document the subject can read no domain scope of is withheld.
+    const served = async (
+      type: DocumentChangeType,
+      documents: PHDocument[],
+      reads: EventReads,
+    ): Promise<DocumentChangeEvent | undefined> => {
+      const documentsServed = await this.gateServedAll(
+        documents,
+        view,
+        undefined,
+        reads,
+      );
+      return documentsServed.length > 0
+        ? { type, documents: documentsServed }
+        : undefined;
+    };
 
     let disposed = false;
     let delivering: Promise<void> = Promise.resolve();
@@ -1884,11 +1634,9 @@ export class ReactorClient implements IReactorClient {
      * gated is withheld, because serving it unfiltered would leak the scopes
      * the gate did not clear -- but it is logged rather than swallowed, since
      * the gate rethrows a transient failure precisely so it is not read as a
-     * denial.
+     * denial. An event that resolves to undefined was withheld.
      */
-    const deliver = (
-      event: DocumentChangeEvent | Promise<DocumentChangeEvent>,
-    ): void => {
+    const deliver = (event: Promise<DocumentChangeEvent | undefined>): void => {
       // Attached now, or a rejection while the chain is parked on real I/O
       // waits a full turn with no handler, which Node reports as unhandled.
       void Promise.resolve(event).catch(() => undefined);
@@ -1896,7 +1644,7 @@ export class ReactorClient implements IReactorClient {
       delivering = delivering
         .then(async () => {
           const built = await event;
-          if (disposed) {
+          if (disposed || !built) {
             return;
           }
           callback(built);
@@ -1912,21 +1660,15 @@ export class ReactorClient implements IReactorClient {
 
     const unsubscribeCreated = this.subscriptionManager.onDocumentCreated(
       (result) => {
+        const reads = this.eventReads.forEvent();
         deliver(
           (async () => {
-            // withAuthScope, or a view that narrows scopes would leave the
-            // policy out of the fetch and the gate would read an absent one as
-            // uninitialized, which allows everything.
+            // Unnarrowed: a narrowed fetch could omit the policy, which the
+            // gate reads as uninitialized, or every domain scope.
             const documents = await Promise.all(
-              result.results.map((id) =>
-                this.reactor.get(id, withAuthScope(view), undefined, undefined),
-              ),
+              result.results.map((id) => reads.get(id, withAllScopes(view))),
             );
-
-            return {
-              type: DocumentChangeType.Created,
-              documents: await Promise.all(documents.map(readable)),
-            };
+            return served(DocumentChangeType.Created, documents, reads);
           })(),
         );
       },
@@ -1935,11 +1677,19 @@ export class ReactorClient implements IReactorClient {
 
     const unsubscribeDeleted = this.subscriptionManager.onDocumentDeleted(
       (documentIds) => {
-        deliver({
-          type: DocumentChangeType.Deleted,
-          documents: [],
-          context: { childId: documentIds[0] },
-        });
+        const reads = this.eventReads.forEvent();
+        for (const childId of documentIds) {
+          deliver(
+            (async () =>
+              (await this.servesEvery([childId], view, reads))
+                ? {
+                    type: DocumentChangeType.Deleted,
+                    documents: [],
+                    context: { childId },
+                  }
+                : undefined)(),
+          );
+        }
       },
       search,
     );
@@ -1947,10 +1697,11 @@ export class ReactorClient implements IReactorClient {
     const unsubscribeUpdated = this.subscriptionManager.onDocumentStateUpdated(
       (result) => {
         deliver(
-          (async () => ({
-            type: DocumentChangeType.Updated,
-            documents: await Promise.all(result.results.map(readable)),
-          }))(),
+          served(
+            DocumentChangeType.Updated,
+            result.results,
+            this.eventReads.forEvent(),
+          ),
         );
       },
       search,
@@ -1960,17 +1711,20 @@ export class ReactorClient implements IReactorClient {
     const unsubscribeRelationship =
       this.subscriptionManager.onRelationshipChanged(
         (parentId, childId, changeType) => {
-          deliver({
-            type:
-              changeType === RelationshipChangeType.Added
-                ? DocumentChangeType.ChildAdded
-                : DocumentChangeType.ChildRemoved,
-            documents: [],
-            context: {
-              parentId,
-              childId,
-            },
-          });
+          const reads = this.eventReads.forEvent();
+          deliver(
+            (async () =>
+              (await this.servesEvery([parentId, childId], view, reads))
+                ? {
+                    type:
+                      changeType === RelationshipChangeType.Added
+                        ? DocumentChangeType.ChildAdded
+                        : DocumentChangeType.ChildRemoved,
+                    documents: [],
+                    context: { parentId, childId },
+                  }
+                : undefined)(),
+          );
         },
         search,
       );
@@ -1981,6 +1735,435 @@ export class ReactorClient implements IReactorClient {
       unsubscribeDeleted();
       unsubscribeUpdated();
       unsubscribeRelationship();
+    };
+  }
+
+  private readSubject(subject?: AuthSubject): AuthSubject {
+    return subject ?? authSubjectFromSigner(this.signer);
+  }
+
+  /**
+   * Which scopes of one document the subject may read. Resolved once per
+   * document, so the gate builds its model once however many scopes are then
+   * tested, and the filtering itself stays synchronous.
+   */
+  private readableScopes(
+    document: PHDocument,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+    reads?: EventReads,
+  ): Promise<(scope: string) => boolean> {
+    const subject = this.readSubject(view?.subject);
+    const branch = view?.branch ?? "main";
+    return reads
+      ? reads.scopePredicate(document, subject, branch)
+      : this.readGate.scopePredicate(document, subject, branch, signal);
+  }
+
+  /**
+   * One document, filtered to the scopes the subject may read. Every method
+   * that hands a document back goes through here, including the ones that
+   * follow a write: a document returned from a mutation is a read like any
+   * other, and returning it whole served scopes the same subject would be
+   * refused by `get`. Its author still sees what it wrote, because an allow on
+   * execute confers read of that scope.
+   */
+  private async gateDocument<TDocument extends PHDocument>(
+    document: TDocument,
+    view: ViewFilter | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<TDocument> {
+    const readable = await this.readableScopes(document, view, signal);
+    return filterReadableScopes(document, readable);
+  }
+
+  /**
+   * One document as a listing or a feed serves it, or undefined when withheld.
+   * The document must hold every scope, or withholding is decided on a subset;
+   * a narrowing view is applied here instead.
+   */
+  private async gateServed<TDocument extends PHDocument>(
+    document: TDocument,
+    view: ViewFilter | undefined,
+    signal?: AbortSignal,
+    reads?: EventReads,
+  ): Promise<TDocument | undefined> {
+    const readable = await this.readableScopes(document, view, signal, reads);
+    if (refusesEveryDomainScope(document, readable)) {
+      return undefined;
+    }
+    const narrowed = narrowedScopes(view);
+    return filterReadableScopes(
+      document,
+      narrowed ? (scope) => readable(scope) && narrowed.has(scope) : readable,
+    );
+  }
+
+  private async gateServedAll(
+    documents: PHDocument[],
+    view: ViewFilter | undefined,
+    signal?: AbortSignal,
+    reads?: EventReads,
+  ): Promise<PHDocument[]> {
+    const served = await Promise.all(
+      documents.map((document) =>
+        this.gateServed(document, view, signal, reads),
+      ),
+    );
+    return served.filter((document) => document !== undefined);
+  }
+
+  /**
+   * Gates a page and every page after it. `totalCount` is restated over what
+   * was withheld so the difference is not a count of refused documents;
+   * `nextCursor` is left as the stream reported it.
+   */
+  private async gateListing(
+    page: PagedResults<PHDocument>,
+    view: ViewFilter | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<PagedResults<PHDocument>> {
+    const listed = await Promise.all(
+      page.results.map((document) => this.gateListed(document, view, signal)),
+    );
+    const results = listed.filter((document) => document !== undefined);
+    const withheld = page.results.length - results.length;
+    const next = page.next;
+    return {
+      ...page,
+      results,
+      totalCount:
+        page.totalCount === undefined
+          ? undefined
+          : Math.max(0, page.totalCount - withheld),
+      next: next
+        ? async () => this.gateListing(await next(), view, signal)
+        : undefined,
+    };
+  }
+
+  /**
+   * One document as a listing serves it, or undefined when withheld. It holds
+   * only the view's scopes; a domain scope it lacks is decided on its name, or
+   * on its state read now when a condition needs that.
+   */
+  private async gateListed(
+    document: PHDocument,
+    view: ViewFilter | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<PHDocument | undefined> {
+    const readable = await this.readableScopes(document, view, signal);
+    const unheld = unheldScopesReadOnState(document);
+    const decided =
+      unheld.length === 0
+        ? readable
+        : (scope: string) => !unheld.includes(scope) && readable(scope);
+    if (
+      refusesEveryDomainScope(document, decided) &&
+      !(await this.servesUnheld(document, unheld, view, signal))
+    ) {
+      return undefined;
+    }
+    return filterReadableScopes(document, readable);
+  }
+
+  private async servesUnheld(
+    document: PHDocument,
+    scopes: string[],
+    view: ViewFilter | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<boolean> {
+    if (scopes.length === 0) {
+      return false;
+    }
+    const id = document.header.id;
+    let held: PHDocument;
+    try {
+      held = await this.reactor.get(
+        id,
+        withAuthScope({ ...view, scopes }),
+        undefined,
+        signal,
+      );
+    } catch (error) {
+      await assertAbsent(this.documentView, id, error, signal);
+      return false;
+    }
+    const readable = await this.readableScopes(held, view, signal);
+    return scopes.some(readable);
+  }
+
+  /**
+   * Whether an event naming only these ids may reach the subject. An id with no
+   * live document behind it has no content left to protect, so it does not
+   * withhold; a deleted document is read at its deletion boundary when
+   * deletion is positional, and gated like any other.
+   */
+  private async servesEvery(
+    ids: string[],
+    view: ViewFilter | undefined,
+    reads: EventReads,
+  ): Promise<boolean> {
+    const served = await Promise.all(
+      ids.map((id) => this.servesId(id, view, reads)),
+    );
+    return served.every(Boolean);
+  }
+
+  private async servesId(
+    id: string,
+    view: ViewFilter | undefined,
+    reads: EventReads,
+  ): Promise<boolean> {
+    let document: PHDocument;
+    try {
+      document = await reads.get(id, withAllScopes(view));
+    } catch (error) {
+      await assertAbsent(reads, id, error);
+      return true;
+    }
+    return !refusesEveryDomainScope(
+      document,
+      await this.readableScopes(document, view, undefined, reads),
+    );
+  }
+
+  private async getOperationsWithCompositeCursor(
+    documentId: string,
+    view: ViewFilter | undefined,
+    filter: OperationFilter | undefined,
+    paging: PagingOptions,
+    signal: AbortSignal | undefined,
+    canRead: (scope: string) => boolean,
+  ): Promise<PagedResults<Operation>> {
+    const scopeCursors = decodeCompositeCursor(paging.cursor);
+    const allOperations: Operation[] = [];
+    const activeCursors: Record<string, string> = {};
+
+    for (const [scopeName, cursor] of Object.entries(scopeCursors)) {
+      if (!canRead(scopeName)) {
+        continue;
+      }
+      const scopeView: ViewFilter = { ...view, scopes: [scopeName] };
+      const scopePaging: PagingOptions = { cursor, limit: paging.limit };
+
+      const operationsByScope = await this.reactor.getOperations(
+        documentId,
+        scopeView,
+        filter,
+        scopePaging,
+        undefined,
+        signal,
+      );
+
+      const scopeResult = operationsByScope[scopeName];
+      allOperations.push(...scopeResult.results);
+      if (scopeResult.nextCursor) {
+        activeCursors[scopeName] = scopeResult.nextCursor;
+      }
+    }
+
+    allOperations.sort((a, b) => a.index - b.index);
+
+    const nextCursor =
+      Object.keys(activeCursors).length > 0
+        ? encodeCompositeCursor(activeCursors)
+        : undefined;
+
+    return { results: allOperations, options: paging, nextCursor };
+  }
+
+  /**
+   * Drops the edges whose far-end document the subject may read no domain scope
+   * of. An edge is withheld whole rather than stripped of its metadata: the
+   * document-shaped relationship reads already answer with the far end stripped
+   * to the scopes the gate allows, so the far end's existence is disclosed
+   * either way, but an edge's metadata is content about the pair that the far
+   * end's own reads would refuse. An edge to a far end stripped to nothing
+   * therefore carries content past a refusal, and there is no useful shell to
+   * hand back in its place.
+   *
+   * `nextCursor` and `options` are left as the underlying stream reported them,
+   * because a caller must feed them back to resume from the right position. A
+   * gated page can therefore be shorter than the limit it asked for.
+   */
+  private async gateEdges(
+    page: PagedResults<DocumentRelationship>,
+    farEnd: "sourceId" | "targetId",
+    view: ViewFilter | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<PagedResults<DocumentRelationship>> {
+    const ids = [...new Set(page.results.map((edge) => edge[farEnd]))];
+    if (ids.length === 0) {
+      return page;
+    }
+
+    // No scopes: the gate must see every scope the document holds. Honouring a
+    // caller-supplied narrowing would let `scopes: ["auth"]` leave a document
+    // with no visible domain scope and switch the gate off. The explicit limit
+    // keeps the tail of a large page from paging out of sight and reading as
+    // absent.
+    const farEndView: ViewFilter = {
+      subject: view?.subject,
+      branch: view?.branch,
+    };
+    const documents = await this.reactor.find(
+      { ids },
+      farEndView,
+      { cursor: "0", limit: ids.length },
+      undefined,
+      signal,
+    );
+
+    const readable = new Map(
+      await Promise.all(
+        documents.results.map(async (doc) => {
+          const allows = await this.readableScopes(doc, view, signal);
+          return [
+            doc.header.id,
+            !refusesEveryDomainScope(doc, allows),
+          ] as const;
+        }),
+      ),
+    );
+
+    // A far end `find` did not return is readable. `addRelationship` tolerates a
+    // missing target, so a dangling edge is legitimate and failing closed would
+    // hide it; and `find` never drops a document for authorization, so absence
+    // here means genuinely absent and there is no content to protect.
+    const results = page.results.filter(
+      (edge) => readable.get(edge[farEnd]) !== false,
+    );
+    if (results.length === page.results.length) {
+      return page;
+    }
+
+    const nextPage = page.next;
+    return {
+      ...page,
+      results,
+      next: nextPage
+        ? async () => this.gateEdges(await nextPage(), farEnd, view, signal)
+        : undefined,
+    };
+  }
+
+  /**
+   * One relationship edge, or undefined when it does not exist. A point lookup:
+   * the pair is filtered in SQL rather than scanned out of the source's edge
+   * list, which on a drive with thousands of children is the difference between
+   * one query and dozens.
+   */
+  private async readRelationshipEdge(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<DocumentRelationship | undefined> {
+    const sourceId = await this.documentView.resolveIdOrSlug(
+      sourceIdentifier,
+      view,
+      undefined,
+      signal,
+    );
+    const targetId = await this.documentView.resolveIdOrSlug(
+      targetIdentifier,
+      view,
+      undefined,
+      signal,
+    );
+
+    const edges = await this.documentIndexer.getDirectedRelationships(
+      sourceId,
+      targetId,
+      [relationshipType],
+      { cursor: "0", limit: 1 },
+      undefined,
+      signal,
+    );
+
+    return edges.results[0];
+  }
+
+  /**
+   * The id a write on `identifier` is stored under, which its signatures bind.
+   * A create names its own id, and an id no slug maps to is taken as given, so
+   * a document still in flight resolves to itself.
+   */
+  private async resolveWriteTarget(
+    identifier: string,
+    branch: string,
+    actions: readonly Action[],
+    signal?: AbortSignal,
+  ): Promise<string> {
+    if (actions.some((action) => action.type === "CREATE_DOCUMENT")) {
+      return identifier;
+    }
+
+    const view = { branch };
+    const bySlug = await this.documentView.resolveSlug(
+      identifier,
+      view,
+      undefined,
+      signal,
+    );
+    if (bySlug === undefined || bySlug === identifier) {
+      return identifier;
+    }
+    return this.documentView.resolveIdOrSlug(
+      identifier,
+      view,
+      undefined,
+      signal,
+    );
+  }
+
+  /**
+   * The decision model for one target document, built at its stream heads.
+   *
+   * The document is fetched unfiltered, because the policy is what decides:
+   * reading it through the read gate would withhold the very scopes the
+   * decision is about. A deleted document is served at its deletion boundary,
+   * which is what lets the model refuse an execute against it -- authEnforcement
+   * requires documentDecisions, so that read is available whenever this runs.
+   *
+   * Reading past the gate discloses nothing a submit does not. The `auth` and
+   * `document` scopes are readable by every holder, so a verdict resting on the
+   * policy alone is one the caller could compute unaided; and a verdict resting
+   * on a conditional grant reads the executing scope's state exactly as
+   * admission reads it, so the answer here is what submitting and being refused
+   * would have revealed anyway.
+   *
+   * The append condition the build records is dropped. It guards a write, and
+   * this makes none; reproducing it is also what the preflight cannot do, which
+   * is why the answer is a prediction.
+   */
+  private async buildEvaluationTarget(
+    config: ActionEvaluationConfig,
+    documentId: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<EvaluationTarget> {
+    const document = await this.documentView.get(
+      documentId,
+      { branch },
+      undefined,
+      signal,
+    );
+
+    const target = { documentId, branch };
+    const built = await buildDecisionModel(
+      new SeededStateReader(this.documentView, document, branch),
+      config.model,
+      target,
+      signal,
+    );
+
+    return {
+      definition: config.model(target),
+      model: built.model,
+      scopeStates: (document.state ?? {}) as Record<string, unknown>,
     };
   }
 

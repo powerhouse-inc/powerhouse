@@ -1,5 +1,6 @@
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 /** Minimal interface for an HTTP adapter that supports Node.js-style route handlers. */
@@ -17,8 +18,12 @@ interface NodeRouteAdapter {
 import { logger } from "./logger.js";
 import { createServer } from "./server.js";
 
+/**
+ * An authorized request names the subject its tools read as. Anonymous is an
+ * empty subject, never the host's signer.
+ */
 export type McpAuthorizationResult =
-  | { authorized: true }
+  | { authorized: true; subject: AuthSubject }
   | { authorized: false; status: number; message: string };
 
 /**
@@ -59,6 +64,13 @@ type NodeRouteHandler = (
   body?: unknown,
 ) => void | Promise<void>;
 
+type AuthorizedRouteHandler = (
+  req: IncomingMessage,
+  res: ServerResponse,
+  body: unknown,
+  subject: AuthSubject,
+) => void | Promise<void>;
+
 /**
  * Authorizes the request before running the handler. Failures respond with
  * the authorizer's status and a JSON-RPC error; an authorizer fault fails
@@ -66,7 +78,7 @@ type NodeRouteHandler = (
  */
 function withAuthorization(
   authorize: McpRequestAuthorizer,
-  handler: NodeRouteHandler,
+  handler: AuthorizedRouteHandler,
 ): NodeRouteHandler {
   return async (req: IncomingMessage, res: ServerResponse, body?: unknown) => {
     let result: McpAuthorizationResult;
@@ -87,7 +99,7 @@ function withAuthorization(
         .end(jsonRpcError(result.message));
       return;
     }
-    await handler(req, res, body);
+    await handler(req, res, body, result.subject);
   };
 }
 
@@ -104,31 +116,32 @@ export function setupMcpServer(
   httpAdapter.mountNodeRoute(
     "POST",
     "/mcp",
-    withAuthorization(
-      authorizeRequest,
-      async (req: IncomingMessage, res: ServerResponse, body?: unknown) => {
-        // Stateless mode: every request owns its McpServer + transport so
-        // concurrent or slow handlers cannot collide on a shared Protocol
-        // instance (which throws "Already connected to a transport").
-        try {
-          const server = await createServer(options);
-          const transport = createTransport({ sessionIdGenerator: undefined });
-          res.on("close", () => {
-            void transport.close();
-            void server.close();
-          });
-          await server.connect(transport);
-          await transport.handleRequest(req, res, body);
-        } catch (error) {
-          logger.error("Error handling MCP request: @error", error);
-          if (!res.headersSent) {
-            res
-              .writeHead(500, { "Content-Type": "application/json" })
-              .end(INTERNAL_SERVER_ERROR);
-          }
+    withAuthorization(authorizeRequest, async (req, res, body, subject) => {
+      // Stateless mode: every request owns its McpServer + transport so
+      // concurrent or slow handlers cannot collide on a shared Protocol
+      // instance (which throws "Already connected to a transport").
+      try {
+        const server = await createServer({
+          client: options.client,
+          syncManager: options.syncManager,
+          subject,
+        });
+        const transport = createTransport({ sessionIdGenerator: undefined });
+        res.on("close", () => {
+          void transport.close();
+          void server.close();
+        });
+        await server.connect(transport);
+        await transport.handleRequest(req, res, body);
+      } catch (error) {
+        logger.error("Error handling MCP request: @error", error);
+        if (!res.headersSent) {
+          res
+            .writeHead(500, { "Content-Type": "application/json" })
+            .end(INTERNAL_SERVER_ERROR);
         }
-      },
-    ),
+      }
+    }),
   );
 
   // GET/DELETE always answer 405 in stateless mode and reach no MCP tool, so

@@ -14,6 +14,7 @@ import {
   BareReadGate,
   ModelReadGate,
   readDecisionModel,
+  unheldScopesReadOnState,
 } from "../../src/decision/read-gate.js";
 import type { ReactorFeatureFlags } from "../../src/executor/types.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
@@ -411,6 +412,32 @@ describe("the model read gate", () => {
     ).rejects.toThrow("connection terminated");
   });
 
+  it("reads a named group once however many subjects it decides for", async () => {
+    const view = mockView({
+      "grp-1": doc({
+        id: "grp-1",
+        documentType: groupDocumentType,
+        global: { members: [MEMBER] },
+      }),
+    });
+
+    const decide = await gate(allFlags, view).prepare(
+      doc({ auth: policy([readGlobal({ group: "grp-1" })]) }),
+      "main",
+    );
+    const readable = await Promise.all(
+      [MEMBER, OTHER, "0xa", "0xb"].map((address) => decide({ address })),
+    );
+
+    expect(readable.map((scopes) => scopes("global"))).toEqual([
+      true,
+      false,
+      false,
+      false,
+    ]);
+    expect(view.get).toHaveBeenCalledTimes(1);
+  });
+
   it("reads the target's own streams from the document it was handed", async () => {
     const view = mockView();
     await gate(allFlags, view).scopePredicate(
@@ -511,6 +538,30 @@ describe("serving a policy-named group to the policy's audience", () => {
     expect(readable("global")).toBe(false);
   });
 
+  // Its model declares domain scopes the read model has not indexed yet.
+  it("judges a referencer holding no domain scope yet on the declared ones", async () => {
+    const stateless = referencer(policy([readGlobal({ address: MEMBER })]));
+    const state = stateless.state as Record<string, unknown>;
+    delete state.global;
+    delete state.local;
+
+    const view = mockView({ [REFERENCER]: stateless });
+    const index = mockIndex({ [GROUP]: [REFERENCER] });
+    const member = await groupGate(view, index).scopePredicate(
+      groupDoc(),
+      { address: MEMBER },
+      "main",
+    );
+    const other = await groupGate(view, index).scopePredicate(
+      groupDoc(),
+      { address: OTHER },
+      "main",
+    );
+
+    expect(member("global")).toBe(true);
+    expect(other("global")).toBe(false);
+  });
+
   it("serves it when any one of several referencers serves the subject", async () => {
     const view = mockView({
       "stmt-a": referencer(policy([]), "stmt-a"),
@@ -604,6 +655,28 @@ describe("serving a policy-named group to the policy's audience", () => {
 
     expect(readable("global")).toBe(true);
     expect(index.getGroupReferencers).not.toHaveBeenCalled();
+  });
+
+  it("reads the relation and each referencer once however many subjects it decides for", async () => {
+    const view = mockView({
+      "stmt-a": referencer(policy([]), "stmt-a"),
+      "stmt-b": referencer(policy([readGlobal({ address: MEMBER })]), "stmt-b"),
+    });
+    const index = mockIndex({ [GROUP]: ["stmt-a", "stmt-b"] });
+
+    const decide = await groupGate(view, index).prepare(groupDoc(), "main");
+    const readable = await Promise.all(
+      [MEMBER, OTHER, "0xa", "0xb"].map((address) => decide({ address })),
+    );
+
+    expect(readable.map((scopes) => scopes("global"))).toEqual([
+      true,
+      false,
+      false,
+      false,
+    ]);
+    expect(index.getGroupReferencers).toHaveBeenCalledTimes(1);
+    expect(view.get).toHaveBeenCalledTimes(2);
   });
 
   it("does nothing without an operation index to consult", async () => {
@@ -817,6 +890,34 @@ describe("serving a policy-named group to the policy's audience", () => {
         ),
       ).rejects.toThrow("connection terminated");
     });
+  });
+});
+
+describe("the unheld scopes a read decides on state", () => {
+  function narrowed(auth: PHAuthState): PHDocument {
+    const document = doc({ auth });
+    const state = document.state as Record<string, unknown>;
+    delete state.global;
+    delete state.local;
+    return document;
+  }
+
+  it("names a scope a condition reads that the document does not hold", () => {
+    expect(unheldScopesReadOnState(narrowed(policy([rtoReadsOwn])))).toEqual([
+      "global",
+    ]);
+  });
+
+  it("names nothing once the document holds that scope", () => {
+    expect(
+      unheldScopesReadOnState(doc({ auth: policy([rtoReadsOwn]) })),
+    ).toEqual([]);
+  });
+
+  it("names nothing for a policy without conditions", () => {
+    expect(
+      unheldScopesReadOnState(narrowed(policy([readGlobal({ address: RTO })]))),
+    ).toEqual([]);
   });
 });
 

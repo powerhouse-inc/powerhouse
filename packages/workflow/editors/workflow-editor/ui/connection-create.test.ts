@@ -57,7 +57,11 @@ describe("connectionDraftFor", () => {
   });
 
   it("offers the entry for optional connections too", () => {
-    expect(draft({ authMode: "optional" })).not.toBeNull();
+    expect(draft({ authMode: "optional" })).toEqual({
+      piecePackage: "@activepieces/piece-slack",
+      connectorId: "@activepieces/piece-slack#slack",
+      name: "Slack connection",
+    });
   });
 
   it("stays out of the way while the form loads", () => {

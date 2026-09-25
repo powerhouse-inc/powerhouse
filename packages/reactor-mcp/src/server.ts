@@ -1,10 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import { createReactorMcpProvider } from "./tools/reactor.js";
 
 export interface CreateServerOptions {
   client: IReactorClient;
   syncManager?: ISyncManager;
+  /** Who the tools read as; omitted, the client's signer. */
+  subject?: AuthSubject;
 }
 
 export const ReactorMcpInstructions = `MUST BE USED when handling documents or document-models for the Powerhouse/Vetra ecosystem.
@@ -26,7 +29,7 @@ Examples:
 export async function createServer(
   options: CreateServerOptions,
 ): Promise<McpServer> {
-  const { client, syncManager } = options;
+  const { client, syncManager, subject } = options;
   const server = new McpServer(
     {
       name: "reactor-mcp-server",
@@ -68,6 +71,7 @@ export async function createServer(
   const reactorProvider = await createReactorMcpProvider({
     client,
     syncManager,
+    subject,
   });
 
   // const { callback, ...toolSchema } = reactorProvider.tools.getDocumentModels;

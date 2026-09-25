@@ -37,6 +37,7 @@ import {
   createMergedSchema,
   createSchema,
 } from "../utils/create-schema.js";
+import { callerSubject } from "./base-subgraph.js";
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
 import {
   getAuthContext,
@@ -347,9 +348,14 @@ export class GraphQLManager {
         );
       }
 
+      const user = getAuthContext(request)?.user;
       try {
-        const driveDoc =
-          await this.reactorClient.get<DocumentDriveDocument>(driveIdOrSlug);
+        // Read as the caller, so a drive whose domain it may not read serves
+        // its header alone; discovery must still reach graphqlEndpoint.
+        const driveDoc = await this.reactorClient.get<DocumentDriveDocument>(
+          driveIdOrSlug,
+          { subject: callerSubject(user) },
+        );
 
         // Drive metadata is a document read, so it answers to the same
         // authorization as every GraphQL read (`assertCanReadCanonical`).
@@ -357,7 +363,7 @@ export class GraphQLManager {
         // be able to tell "protected" from "does not exist" by probing slugs.
         const canRead = await this.authorizationService.canRead(
           driveDoc.header.id as CanonicalDocumentId,
-          getAuthContext(request)?.user?.address,
+          user?.address,
         );
         if (!canRead) {
           this.logger.debug(`Drive read refused: ${driveIdOrSlug}`);
@@ -385,12 +391,15 @@ export class GraphQLManager {
         const basePath = forwardedPrefix + localBase;
         const graphqlEndpoint = `${protocol}//${host}${basePath}/graphql/r`;
 
+        // Absent when the gate stripped it.
+        const global = (driveDoc.state as Partial<typeof driveDoc.state>)
+          .global;
         return Response.json({
           id: driveDoc.header.id,
           slug: driveDoc.header.slug,
           meta: driveDoc.header.meta,
-          name: driveDoc.state.global.name || driveDoc.header.name,
-          icon: driveDoc.state.global.icon ?? undefined,
+          name: global?.name || driveDoc.header.name,
+          icon: global?.icon ?? undefined,
           ...(graphqlEndpoint && { graphqlEndpoint }),
         });
       } catch (error: unknown) {

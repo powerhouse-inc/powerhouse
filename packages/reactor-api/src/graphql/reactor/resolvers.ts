@@ -10,6 +10,7 @@ import {
   type IReactorClient,
   type ISyncManager,
   type JobInfo,
+  JobStatus,
   type OperationFilter,
   type PagedResults,
   type PagingOptions,
@@ -53,6 +54,28 @@ function pickDriveClient(
     return reactorDriveClient;
   }
   return reactorClient.drives;
+}
+
+/**
+ * A mutation's document re-read as the caller, since the client reads it back
+ * as its signer. A caller who may write but not read gets it stripped.
+ */
+async function readAsCaller(
+  reactorClient: IReactorClient,
+  document: PHDocument,
+  subject: AuthSubject | undefined,
+  branch?: string,
+): Promise<PHDocument> {
+  if (!subject) {
+    return document;
+  }
+  try {
+    return await reactorClient.get(document.header.id, { subject, branch });
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to read the document back: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
 }
 
 export const MAX_OPERATIONS_PER_ENVELOPE = 25;
@@ -491,11 +514,30 @@ export async function findDocuments(
   }
 }
 
+/**
+ * The answer for a job the caller may not see, shaped as the reactor answers
+ * an unknown one so that the two cannot be told apart.
+ */
+function unknownJob(jobId: string): JobInfo {
+  const now = new Date().toISOString();
+  return {
+    id: jobId,
+    documentId: "",
+    status: JobStatus.FAILED,
+    createdAtUtcIso: now,
+    completedAtUtcIso: now,
+    error: { name: "Error", message: "Job not found", stack: "" },
+    consistencyToken: { version: 1, createdAtUtcIso: now, coordinates: [] },
+    meta: { batchId: jobId, batchJobIds: [jobId] },
+  };
+}
+
 export async function jobStatus(
   reactorClient: IReactorClient,
   args: {
     jobId: string;
   },
+  serves: (documentId: string) => Promise<boolean>,
 ): Promise<GqlJobInfo> {
   let result: JobInfo;
   try {
@@ -504,6 +546,9 @@ export async function jobStatus(
     throw new GraphQLError(
       `Failed to fetch job status: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
+  }
+  if (!(await serves(result.documentId))) {
+    result = unknownJob(args.jobId);
   }
 
   try {
@@ -663,6 +708,7 @@ export async function createDocument(
     parentIdentifier?: string | null;
   },
   reactorDriveClient?: IDriveClient,
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   // Validate that document is a PHDocument
   if (!args.document || typeof args.document !== "object") {
@@ -681,7 +727,10 @@ export async function createDocument(
   let result: PHDocument;
   try {
     if (parentIdentifier) {
-      const parent = await reactorClient.get(parentIdentifier);
+      const parent = await reactorClient.get(
+        parentIdentifier,
+        subject && { subject },
+      );
       if (isDriveContainerType(parent.header.documentType)) {
         const driveClient = pickDriveClient(
           reactorClient,
@@ -701,6 +750,8 @@ export async function createDocument(
     );
   }
 
+  result = await readAsCaller(reactorClient, result, subject);
+
   try {
     return toGqlPhDocument(result);
   } catch (error) {
@@ -718,6 +769,7 @@ export async function createEmptyDocument(
     name?: string | null;
   },
   reactorDriveClient?: IDriveClient,
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const parentIdentifier = fromInputMaybe(args.parentIdentifier);
   const name = fromInputMaybe(args.name);
@@ -725,7 +777,10 @@ export async function createEmptyDocument(
   let result: PHDocument;
   try {
     if (parentIdentifier) {
-      const parent = await reactorClient.get(parentIdentifier);
+      const parent = await reactorClient.get(
+        parentIdentifier,
+        subject && { subject },
+      );
       if (isDriveContainerType(parent.header.documentType)) {
         const module = await reactorClient.getDocumentModelModule(
           args.documentType,
@@ -757,6 +812,8 @@ export async function createEmptyDocument(
     );
   }
 
+  result = await readAsCaller(reactorClient, result, subject);
+
   try {
     return toGqlPhDocument(result);
   } catch (error) {
@@ -777,6 +834,7 @@ export async function createDocumentWithInitialState(
     initialState: Record<string, Record<string, unknown>>;
   },
   reactorDriveClient?: IDriveClient,
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const parentIdentifier = fromInputMaybe(args.parentIdentifier);
   const name = fromInputMaybe(args.name);
@@ -823,7 +881,10 @@ export async function createDocumentWithInitialState(
   if (parentIdentifier) {
     let parent: PHDocument;
     try {
-      parent = await reactorClient.get(parentIdentifier);
+      parent = await reactorClient.get(
+        parentIdentifier,
+        subject && { subject },
+      );
     } catch (error) {
       throw new GraphQLError(
         `Parent document not found: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -862,6 +923,8 @@ export async function createDocumentWithInitialState(
     }
   }
 
+  result = await readAsCaller(reactorClient, result, subject);
+
   try {
     return toGqlPhDocument(result);
   } catch (error) {
@@ -889,6 +952,7 @@ export async function execute(
     actions: readonly ActionInput[];
     branch?: string | null;
   },
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const actions = toSubmittableActions(args.actions);
   const branch = fromInputMaybe(args.branch) ?? DEFAULT_BRANCH;
@@ -899,6 +963,8 @@ export async function execute(
       args.documentIdentifier,
       branch,
       actions,
+      undefined,
+      subject,
     );
   } catch (error) {
     throw new GraphQLError(
@@ -959,6 +1025,7 @@ export async function mutateDocument(
       scopes?: readonly string[] | null;
     } | null;
   },
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   // Validate actions
   let validatedActions;
@@ -982,6 +1049,8 @@ export async function mutateDocument(
       args.documentIdentifier,
       branch,
       validatedActions,
+      undefined,
+      subject,
     );
   } catch (error) {
     throw new GraphQLError(
@@ -1049,6 +1118,7 @@ export async function renameDocument(
     branch?: string | null;
   },
   signal?: AbortSignal,
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
 
@@ -1065,6 +1135,8 @@ export async function renameDocument(
       `Failed to rename document: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+
+  result = await readAsCaller(reactorClient, result, subject, branch);
 
   try {
     return toGqlPhDocument(result);
@@ -1083,6 +1155,7 @@ export async function setPreferredEditor(
     branch?: string | null;
   },
   signal?: AbortSignal,
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
   const preferredEditor = fromInputMaybe(args.preferredEditor) ?? null;
@@ -1100,6 +1173,8 @@ export async function setPreferredEditor(
       `Failed to set preferred editor: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+
+  result = await readAsCaller(reactorClient, result, subject, branch);
 
   try {
     return toGqlPhDocument(result);
@@ -1119,6 +1194,7 @@ export async function addRelationship(
     metadata?: Record<string, unknown> | null;
     branch?: string | null;
   },
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
   const metadata = fromInputMaybe(args.metadata);
@@ -1138,6 +1214,8 @@ export async function addRelationship(
     );
   }
 
+  result = await readAsCaller(reactorClient, result, subject, branch);
+
   try {
     return toGqlPhDocument(result);
   } catch (error) {
@@ -1156,6 +1234,7 @@ export async function updateRelationship(
     metadata?: Record<string, unknown> | null;
     branch?: string | null;
   },
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
   // The action's metadata is required and nullable: omitting it clears the edge.
@@ -1176,6 +1255,8 @@ export async function updateRelationship(
     );
   }
 
+  result = await readAsCaller(reactorClient, result, subject, branch);
+
   try {
     return toGqlPhDocument(result);
   } catch (error) {
@@ -1193,6 +1274,7 @@ export async function removeRelationship(
     relationshipType: string;
     branch?: string | null;
   },
+  subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
 
@@ -1209,6 +1291,8 @@ export async function removeRelationship(
       `Failed to remove relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+
+  result = await readAsCaller(reactorClient, result, subject, branch);
 
   try {
     return toGqlPhDocument(result);
@@ -1228,6 +1312,7 @@ export async function moveRelationship(
     relationshipType: string;
     branch?: string | null;
   },
+  subject?: AuthSubject,
 ): Promise<{
   source: ReturnType<typeof toGqlPhDocument>;
   target: ReturnType<typeof toGqlPhDocument>;
@@ -1248,6 +1333,11 @@ export async function moveRelationship(
       `Failed to move relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+
+  result = {
+    source: await readAsCaller(reactorClient, result.source, subject, branch),
+    target: await readAsCaller(reactorClient, result.target, subject, branch),
+  };
 
   try {
     return {

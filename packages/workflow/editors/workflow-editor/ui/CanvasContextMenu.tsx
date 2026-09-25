@@ -84,16 +84,16 @@ export function CanvasContextMenu(props: {
       ) : (
         <div
           style={{ width: MENU_WIDTH }}
-          className="rounded-md border border-solid border-slate-200 bg-white py-1 shadow-lg"
+          className="rounded-md border border-solid border-foreground/10 bg-card py-1 shadow-lg"
         >
           {items.map((item) => (
             <button
               key={item.id}
               type="button"
-              className={`flex w-full items-center px-3 py-1.5 text-left text-xs text-slate-700 ${
+              className={`flex w-full items-center px-3 py-1.5 text-left text-xs text-foreground ${
                 item.disabled
                   ? "cursor-not-allowed opacity-50"
-                  : "hover:bg-slate-50"
+                  : "hover:bg-muted/50"
               }`}
               disabled={item.disabled}
               onClick={() => {
