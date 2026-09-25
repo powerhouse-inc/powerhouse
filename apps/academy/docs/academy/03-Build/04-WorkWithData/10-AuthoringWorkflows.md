@@ -178,7 +178,7 @@ build one of those the same way — with operations, in order.
 | Field | What goes in it |
 | --- | --- |
 | `connectorId` | The piece id, e.g. `@acme/piece-crm`. Not a block type: no action, no `#` fragment. |
-| `authType` | Which `PieceAuth` kind the piece declares: `CUSTOM_AUTH`, `SECRET_TEXT`, `BASIC_AUTH`, `OAUTH2`, `OIDC` or `NONE`. |
+| `authType` | The `PieceAuth` kind this connection signs in with: `CUSTOM_AUTH`, `SECRET_TEXT`, `BASIC_AUTH`, `OAUTH2`, `OIDC` or `NONE`. A piece that offers several methods (its `auth` is an array) runs through the one of this type. `OAUTH2` and `OIDC` can be declared but don't run yet. |
 | `config` | The **non-secret** auth properties, keyed by property name. |
 | `secretRefs` | One entry per secret property: `{ id, name, ref }`. |
 
@@ -293,14 +293,15 @@ query {
   workflowRuntime {
     runs(workflowId: "...", limit: 10) {
       id status error startedAt endedAt workflowVersion
-      steps { stepKey blockType status port input output error }
+      steps { stepKey blockType status port input output error startedAt endedAt }
     }
   }
 }
 ```
 
-Per step: the config **as resolved** (`input`), what came back (`output`), and
-which port it left by. That resolved input is how you catch an expression that
+Per step: the config **as resolved** (`input`), what came back (`output`),
+which port it left by, and when it started and ended, which is how you find the
+step a slow run spent its time in. That resolved input is how you catch an expression that
 silently resolved to nothing — the commonest cause of a workflow that runs green
 and does nothing.
 
