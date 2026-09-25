@@ -10,6 +10,7 @@ import {
   blockMeta,
   usePieceLogos,
 } from "../../workflow-editor/ui/block-meta.js";
+import { describeTrigger } from "../../workflow-editor/ui/trigger-text.js";
 import {
   formatAbsolute,
   formatDuration,
@@ -168,6 +169,10 @@ export const TRIGGER_LABEL: Record<string, string> = {
 };
 
 export function triggerLabel(kind: string): string {
+  // A piece run records "piece:<blockType>"; name it as the workflow list does.
+  if (kind.startsWith("piece:")) {
+    return describeTrigger({ blockType: kind.slice(6), config: null });
+  }
   return TRIGGER_LABEL[kind] ?? formatTrigger(kind);
 }
 
