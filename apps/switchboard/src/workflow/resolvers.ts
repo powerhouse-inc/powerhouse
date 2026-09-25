@@ -91,6 +91,7 @@ export const getResolvers = (
           propName: string;
           input?: unknown;
           connectionId?: string | null;
+          searchValue?: string | null;
         },
         ctx: Context,
       ) =>
@@ -100,6 +101,7 @@ export const getResolvers = (
           args.input,
           args.connectionId ?? undefined,
           ctx,
+          args.searchValue ?? undefined,
         ),
       pieceCatalog: () => runtime.pieceCatalog(),
       pieceActions: (_parent: unknown, args: { packageName: string }) =>
