@@ -1,8 +1,10 @@
 import type { AttachmentRef } from "@powerhousedao/reactor";
 import type { IAttachmentReferenceReader } from "@powerhousedao/reactor-attachments";
 import { describe, expect, it, vi } from "vitest";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import {
   AttachmentAccessService,
+  type AttachmentReadGate,
   type AttachmentReferenceProjectionCapability,
   type IDocumentScopeGate,
 } from "../src/services/attachment-access.service.js";
@@ -68,11 +70,50 @@ function makeAuthorization(
 function makeReader(
   recorded: Recorded,
   hasReference: boolean,
+  scopes: string[] = ["global"],
 ): IAttachmentReferenceReader {
   return {
     hasReference: (documentId: string, ref: AttachmentRef) => {
       recorded.calls.push(`hasReference:${documentId}:${ref}`);
       return Promise.resolve(hasReference);
+    },
+    referencingScopes: (documentId: string, ref: AttachmentRef) => {
+      recorded.calls.push(`referencingScopes:${documentId}:${ref}`);
+      return Promise.resolve(hasReference ? scopes : []);
+    },
+  };
+}
+
+function makeReadGate(
+  recorded: Recorded,
+  options: {
+    served?: boolean | Error;
+    readable?: string[] | Error;
+  } = {},
+): AttachmentReadGate {
+  return {
+    isServed: (identifier, view) => {
+      recorded.calls.push(
+        `isServed:${identifier}:${view?.subject?.address ?? ""}`,
+      );
+      const served = options.served ?? true;
+      if (served instanceof Error) return Promise.reject(served);
+      return Promise.resolve(served);
+    },
+    get: <TDocument extends PHDocument>(
+      identifier: string,
+      view?: { scopes?: string[] | null },
+    ) => {
+      const scopes = view?.scopes ?? [];
+      recorded.calls.push(`get:${identifier}:${scopes.join(",")}`);
+      const readable = options.readable ?? scopes;
+      if (readable instanceof Error) return Promise.reject(readable);
+      const state = Object.fromEntries(
+        scopes
+          .filter((scope) => readable.includes(scope))
+          .map((scope) => [scope, {}]),
+      );
+      return Promise.resolve({ state } as unknown as TDocument);
     },
   };
 }
@@ -107,6 +148,7 @@ function service(options: {
   authorization?: IAuthorizationService;
   reader?: IAttachmentReferenceReader;
   projection?: AttachmentReferenceProjectionCapability;
+  readGate?: AttachmentReadGate;
   scopeGate?: IDocumentScopeGate;
 }): AttachmentAccessService {
   return new AttachmentAccessService(
@@ -114,6 +156,7 @@ function service(options: {
     options.authorization ?? makeAuthorization(options.recorded, true),
     options.reader ?? makeReader(options.recorded, true),
     options.projection ?? AVAILABLE,
+    options.readGate ?? makeReadGate(options.recorded),
     options.scopeGate,
   );
 }
@@ -133,7 +176,9 @@ describe("AttachmentAccessService", () => {
     expect(recorded.calls).toEqual([
       `resolve:${DOC_ID}`,
       `canRead:${DOC_ID}:${USER}`,
-      `hasReference:${DOC_ID}:${REF_A}`,
+      `isServed:${DOC_ID}:${USER}`,
+      `referencingScopes:${DOC_ID}:${REF_A}`,
+      `get:${DOC_ID}:global`,
     ]);
   });
 
@@ -158,7 +203,9 @@ describe("AttachmentAccessService", () => {
     expect(recorded.calls).toEqual([
       "resolve:my-slug",
       `canRead:canonical-id:${USER}`,
-      `hasReference:canonical-id:${REF_A}`,
+      `isServed:canonical-id:${USER}`,
+      `referencingScopes:canonical-id:${REF_A}`,
+      `get:canonical-id:global`,
     ]);
   });
 
@@ -259,6 +306,7 @@ describe("AttachmentAccessService", () => {
     const recorded: Recorded = { calls: [] };
     const reader: IAttachmentReferenceReader = {
       hasReference: () => Promise.reject(new Error("index outage")),
+      referencingScopes: () => Promise.reject(new Error("index outage")),
     };
     const access = service({ recorded, reader });
 
@@ -269,6 +317,111 @@ describe("AttachmentAccessService", () => {
         userAddress: USER,
       }),
     ).rejects.toThrow("index outage");
+  });
+
+  it("denies a document the read gate does not serve, without reference-index calls", async () => {
+    const recorded: Recorded = { calls: [] };
+    const access = service({
+      recorded,
+      readGate: makeReadGate(recorded, { served: false }),
+    });
+
+    const result = await access.canReadAttachment({
+      documentId: DOC_ID,
+      attachmentRef: REF_A,
+      userAddress: USER,
+    });
+
+    expect(result).toEqual({ kind: "denied" });
+    expect(recorded.calls).toEqual([
+      `resolve:${DOC_ID}`,
+      `canRead:${DOC_ID}:${USER}`,
+      `isServed:${DOC_ID}:${USER}`,
+    ]);
+  });
+
+  it("denies when no referencing scope is readable to the subject", async () => {
+    const recorded: Recorded = { calls: [] };
+    const access = service({
+      recorded,
+      reader: makeReader(recorded, true, ["local"]),
+      readGate: makeReadGate(recorded, { readable: ["global"] }),
+    });
+
+    const result = await access.canReadAttachment({
+      documentId: DOC_ID,
+      attachmentRef: REF_A,
+      userAddress: USER,
+    });
+
+    expect(result).toEqual({ kind: "denied" });
+  });
+
+  it("allows when any one referencing scope is readable to the subject", async () => {
+    const recorded: Recorded = { calls: [] };
+    const access = service({
+      recorded,
+      reader: makeReader(recorded, true, ["local", "global"]),
+      readGate: makeReadGate(recorded, { readable: ["global"] }),
+    });
+
+    const result = await access.canReadAttachment({
+      documentId: DOC_ID,
+      attachmentRef: REF_A,
+      userAddress: USER,
+    });
+
+    expect(result).toMatchObject({ kind: "allowed" });
+  });
+
+  it("passes the caller's address and app key to the read gate as the subject", async () => {
+    const recorded: Recorded = { calls: [] };
+    const subjects: unknown[] = [];
+    const gate = makeReadGate(recorded);
+    const access = service({
+      recorded,
+      readGate: {
+        isServed: (identifier, view, signal) => {
+          subjects.push(view?.subject);
+          return gate.isServed(identifier, view, signal);
+        },
+        get: (identifier, view, signal) => {
+          subjects.push(view?.subject);
+          return gate.get(identifier, view, signal);
+        },
+      },
+    });
+
+    await access.canReadAttachment({
+      documentId: DOC_ID,
+      attachmentRef: REF_A,
+      userAddress: USER,
+      appKey: "did:key:app",
+    });
+
+    expect(subjects).toEqual([
+      { address: USER, key: "did:key:app" },
+      { address: USER, key: "did:key:app" },
+    ]);
+  });
+
+  it.each([
+    ["isServed", { served: new Error("gate outage") }],
+    ["get", { readable: new Error("gate outage") }],
+  ] as const)("denies when the read gate's %s fails", async (_, options) => {
+    const recorded: Recorded = { calls: [] };
+    const access = service({
+      recorded,
+      readGate: makeReadGate(recorded, options),
+    });
+
+    const result = await access.canReadAttachment({
+      documentId: DOC_ID,
+      attachmentRef: REF_A,
+      userAddress: USER,
+    });
+
+    expect(result).toEqual({ kind: "denied" });
   });
 
   it("reports projection-unavailable before any dependency call", async () => {
@@ -467,7 +620,9 @@ describe("AttachmentAccessService", () => {
       expect(recorded.calls).toEqual([
         `resolve:${DOC_ID}`,
         `scopeGate:${DOC_ID}:${USER}:${APP_KEY}:main`,
-        `hasReference:${DOC_ID}:${REF_A}`,
+        `isServed:${DOC_ID}:${USER}`,
+        `referencingScopes:${DOC_ID}:${REF_A}`,
+        `get:${DOC_ID}:global`,
       ]);
     });
 
@@ -493,7 +648,7 @@ describe("AttachmentAccessService", () => {
         `scopeGate:${DOC_ID}:${USER}::main`,
       ]);
       expect(
-        recorded.calls.some((call) => call.startsWith("hasReference")),
+        recorded.calls.some((call) => call.startsWith("referencingScopes")),
       ).toBe(false);
     });
 

@@ -425,6 +425,13 @@ export interface IReactorClient {
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>>;
 
+  /** Whether {@link find} would serve the document; false when it is absent. */
+  isServed(
+    identifier: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<boolean>;
+
   /**
    * Predicts whether the subject would be admitted to execute each of a set of
    * candidate operations, without submitting any of them. A UI asks this to

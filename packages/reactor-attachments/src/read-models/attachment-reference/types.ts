@@ -11,6 +11,8 @@ export interface AttachmentReferenceInput {
 
 export interface IAttachmentReferenceReader {
   hasReference(documentId: string, ref: AttachmentRef): Promise<boolean>;
+  /** The scopes whose operations reference the attachment; empty when none. */
+  referencingScopes(documentId: string, ref: AttachmentRef): Promise<string[]>;
 }
 
 export interface IAttachmentReferenceWriter {
