@@ -167,8 +167,6 @@ allowBuilds:
   "@swc/core": true
   "bufferutil": true
   "core-js": false
-  # Binary download; run `pnpm exec cypress install` before `cy:open`.
-  "cypress": false
   "es5-ext": false
   "keccak": true
   "msw": true
