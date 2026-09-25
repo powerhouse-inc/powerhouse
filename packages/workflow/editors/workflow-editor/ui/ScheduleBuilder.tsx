@@ -76,6 +76,44 @@ function TimeField(props: { time: string; onChange: (time: string) => void }) {
   );
 }
 
+// Holds what's typed, so the field can be cleared and retyped; only a whole
+// number of at least 1 is saved, and leaving it empty puts the saved value back.
+function EveryInput(props: {
+  id: string;
+  every: number;
+  onCommit: (every: number) => void;
+}) {
+  const [text, setText] = useState(String(props.every));
+  const [saved, setSaved] = useState(props.every);
+  if (saved !== props.every) {
+    setSaved(props.every);
+    setText(String(props.every));
+  }
+  return (
+    <input
+      id={props.id}
+      type="number"
+      min={1}
+      step={1}
+      className={`${textInputClass} w-24 tabular-nums`}
+      value={text}
+      onChange={(event) => {
+        setText(event.target.value);
+        const every = Number(event.target.value);
+        if (
+          event.target.value !== "" &&
+          Number.isInteger(every) &&
+          every >= 1
+        ) {
+          setSaved(every);
+          props.onCommit(every);
+        }
+      }}
+      onBlur={() => setText(String(props.every))}
+    />
+  );
+}
+
 export function ScheduleBuilder(props: {
   config: unknown;
   onChange: (config: Record<string, unknown>) => void;
@@ -168,17 +206,10 @@ export function ScheduleBuilder(props: {
         <div>
           <FieldLabel htmlFor={everyId} label="Every" />
           <div className="flex items-center gap-2">
-            <input
+            <EveryInput
               id={everyId}
-              type="number"
-              min={1}
-              className={`${textInputClass} w-24 tabular-nums`}
-              value={draft.every}
-              onChange={(event) => {
-                const every = Number(event.target.value);
-                if (Number.isFinite(every) && every >= 1)
-                  commit({ ...draft, every });
-              }}
+              every={draft.every}
+              onCommit={(every) => commit({ ...draft, every })}
             />
             <div className="w-32">
               <Select

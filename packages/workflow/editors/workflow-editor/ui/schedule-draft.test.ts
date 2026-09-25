@@ -106,3 +106,26 @@ describe("cronFromDraft", () => {
     expect(describeSchedule(config)).not.toMatch(/^On schedule /);
   });
 });
+
+describe("intervals stored as everyMs", () => {
+  it("reads them in the largest unit they divide into", () => {
+    expect(draftFromConfig({ mode: "interval", everyMs: 3_600_000 })).toEqual({
+      kind: "interval",
+      every: 1,
+      unit: "hours",
+    });
+    expect(draftFromConfig({ everyMs: 2 * 86_400_000 })).toEqual({
+      kind: "interval",
+      every: 2,
+      unit: "days",
+    });
+  });
+
+  it("rounds a sub-minute remainder to whole minutes", () => {
+    expect(draftFromConfig({ mode: "interval", everyMs: 90_000 })).toEqual({
+      kind: "interval",
+      every: 2,
+      unit: "minutes",
+    });
+  });
+});

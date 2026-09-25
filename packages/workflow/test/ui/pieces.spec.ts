@@ -55,6 +55,18 @@ test.describe("HTTP", () => {
             headers: { "x-run-tag": "{{trigger.payload.tag}}" },
           },
         },
+        {
+          key: "parse",
+          name: "Parse the echoed path",
+          blockType: await pieceBlockType(
+            "@activepieces/piece-http",
+            "parse_url",
+          ),
+          // A later step reads an earlier one's output by its full reference.
+          config: {
+            url: `http://127.0.0.1:${port}{{steps.call.output.body.path}}`,
+          },
+        },
       ],
     });
     const run = await fireAndWait(id, { tag: "piece-test" });
@@ -63,6 +75,7 @@ test.describe("HTTP", () => {
       status: 200,
       body: { ok: true, path: "/echo?from=workflow" },
     });
+    expect(run.steps[1].output).toMatchObject({ path: "/echo" });
     // The header came from the trigger payload, through an expression.
     expect(
       seen.some((request) => request.headers["x-run-tag"] === "piece-test"),

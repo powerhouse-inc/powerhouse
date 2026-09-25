@@ -20,7 +20,8 @@ export interface BlockFormProp {
   advanced?: boolean;
   // Shown only while a sibling prop holds one of these values; data, not a
   // predicate, so a piece form arriving as JSON can express it too.
-  showWhen?: { prop: string; oneOf: unknown[] };
+  // Hidden also when `unlessSet` has a value (a mode the runtime infers).
+  showWhen?: { prop: string; oneOf: unknown[]; unlessSet?: string };
 }
 
 export interface BlockForm {
@@ -216,16 +217,20 @@ export const CORE_FORMS: Record<string, BlockForm> = {
         ]),
         defaultValue: "cron",
       },
-      shownWhen(
-        text(
+      // No mode but an `every` is interval mode to the runtime, so no cron.
+      {
+        ...text(
           "cron",
           "Cron expression",
           true,
           "Five fields, e.g. 0 9 * * 1-5 runs at 09:00 on weekdays.",
         ),
-        "mode",
-        ["cron", undefined],
-      ),
+        showWhen: {
+          prop: "mode",
+          oneOf: ["cron", undefined],
+          unlessSet: "every",
+        },
+      },
       shownWhen(
         number("every", "Every", true, "At least one minute."),
         "mode",

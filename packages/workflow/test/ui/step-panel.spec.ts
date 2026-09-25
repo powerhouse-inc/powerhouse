@@ -46,7 +46,7 @@ test.describe("Step panel", () => {
     await expect(app.getByText("Connection needs a value")).toBeVisible();
     await expect(app.getByText("OpenAI · Ask ChatGPT")).toBeVisible();
     await expect(app.getByRole("textbox", { name: /Question/ })).toHaveValue(
-      "Summarise {{fetch.body}} in three bullets.",
+      "Summarise {{steps.fetch.output.body}} in three bullets.",
     );
     // Optional fields say so rather than flagging every required one.
     await expect(
@@ -77,6 +77,8 @@ test.describe("Step panel", () => {
     await expect(
       app.getByRole("textbox", { name: "Key", exact: true }),
     ).toHaveValue("summarise");
+    // The form a later step's expression resolves, from the run's scope root.
+    await expect(app.getByText("{{steps.summarise.output.…}}")).toBeVisible();
     const next = app.locator("section", {
       has: app.getByRole("heading", { name: "What runs next" }),
     });
@@ -152,6 +154,14 @@ test.describe("Step panel", () => {
     await expect(app.getByLabel("Every", { exact: true })).toHaveValue("15");
     await expect(
       app.getByText("Every 15 minutes", { exact: true }),
+    ).toBeVisible();
+    // Cleared and retyped, not appended to what was there.
+    const every = app.getByLabel("Every", { exact: true });
+    await every.fill("");
+    await every.pressSequentially("30");
+    await expect(every).toHaveValue("30");
+    await expect(
+      app.getByText("Every 30 minutes", { exact: true }),
     ).toBeVisible();
 
     await app.getByRole("radio", { name: "Custom" }).click();

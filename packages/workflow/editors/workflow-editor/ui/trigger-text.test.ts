@@ -48,6 +48,10 @@ describe("describeSchedule", () => {
     expect(
       describeSchedule({ mode: "interval", every: 1, unit: "hours" }),
     ).toBe("Every hour");
+    // The runtime also accepts a bare everyMs.
+    expect(describeSchedule({ mode: "interval", everyMs: 3_600_000 })).toBe(
+      "Every hour",
+    );
   });
 
   it("shows a cron it can't describe as it is", () => {
