@@ -46,6 +46,10 @@ it("keeps server-only pieces filtered", async () => {
 // Auth and trigger fields as the cloud listing serves them (0.91.0), trimmed.
 const ISSUES = "https://github.com/powerhouse-inc/powerhouse/issues";
 const LISTED_AUTH = {
+  "google-drive": [
+    { type: "OAUTH2", displayName: "Connection", required: true },
+    { type: "OIDC", displayName: "Workload identity", required: true },
+  ],
   gmail: [
     { type: "OAUTH2", displayName: "Connection", required: true },
     { type: "CUSTOM_AUTH", displayName: "Service account", required: true },
@@ -69,7 +73,9 @@ it("flags the listed pieces whose auth this engine cannot run", async () => {
   expect(
     Object.fromEntries(catalog.map((p) => [p.displayName, p.unsupported])),
   ).toEqual({
-    gmail: `Multi-auth (auth as an array) is not supported yet (${ISSUES}/3091)`,
+    // OAuth2 or a service account: the service account runs.
+    gmail: undefined,
+    "google-drive": `OAuth2 auth is not supported yet (${ISSUES}/3091)`,
     slack: `OAuth2 auth is not supported yet (${ISSUES}/3091)`,
     omnihr: `CustomAuth refresh is not supported yet (${ISSUES}/3091)`,
     notion: undefined,

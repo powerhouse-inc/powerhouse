@@ -1,6 +1,13 @@
 // Piece-selector-style popover, adapted from the Activepieces builder
 // pieces-selector (MIT, activepieces packages/web).
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import { Icon, type IconName } from "../../shared/icons.js";
 import { useBlockMeta } from "./block-meta.js";
 import type { BlockPreset } from "./blocks.js";
 import type { StepModel } from "./model.js";
@@ -19,14 +26,66 @@ export type PieceMode = "actions" | "triggers";
 // Logo size for the picker's rows: presets, pieces, search hits and attach.
 const ROW_LOGO = 24;
 
-export function BlockLogo(props: { blockType: string; size?: number }) {
+// Built-in blocks have no artwork of their own; each gets a coloured tile.
+const CORE_TILE: Record<string, { icon: IconName; color: string }> = {
+  "core#manual": { icon: "play", color: "#2563eb" },
+  "core#schedule": { icon: "clock", color: "#7c3aed" },
+  "core#webhook": { icon: "bolt", color: "#0891b2" },
+  "core#branch": { icon: "branch", color: "#d97706" },
+  "core#assert": { icon: "alert", color: "#dc2626" },
+};
+
+function CoreTile(props: { blockType: string; size: number; bare?: boolean }) {
+  const tile = CORE_TILE[props.blockType];
+  const glyph = Math.round(props.size * (props.bare ? 0.9 : 0.55));
+  // Bare: the caller's badge is the tile, so only the icon is drawn.
+  if (props.bare) {
+    return (
+      <span
+        className="flex shrink-0 items-center justify-center"
+        style={{ width: props.size, height: props.size, color: tile.color }}
+      >
+        <Icon name={tile.icon} size={glyph} />
+      </span>
+    );
+  }
+  return (
+    <span
+      className="flex shrink-0 items-center justify-center rounded-[22%] text-white"
+      style={{
+        width: props.size,
+        height: props.size,
+        backgroundColor: tile.color,
+      }}
+    >
+      <Icon name={tile.icon} size={glyph} />
+    </span>
+  );
+}
+
+export function BlockLogo(props: {
+  blockType: string;
+  size?: number;
+  // Set where the caller already draws a light badge behind the logo.
+  bare?: boolean;
+}) {
   const meta = useBlockMeta(props.blockType);
+  if (props.blockType in CORE_TILE) {
+    return (
+      <CoreTile
+        blockType={props.blockType}
+        size={props.size ?? 36}
+        bare={props.bare}
+      />
+    );
+  }
   return (
     <LogoFrame
       src={meta.logoUrl}
       alt={meta.displayName}
       size={props.size ?? 36}
       glyph={meta.glyph}
+      bare={props.bare}
     />
   );
 }
@@ -34,7 +93,7 @@ export function BlockLogo(props: { blockType: string; size?: number }) {
 function GlyphBadge(props: { glyph?: string; size: number }) {
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-sm border border-solid border-slate-200 bg-slate-50 text-slate-600"
+      className="flex shrink-0 items-center justify-center rounded-sm border border-solid border-foreground/10 bg-muted/50 text-muted-foreground"
       style={{
         width: props.size,
         height: props.size,
@@ -53,6 +112,7 @@ function LogoFrame(props: {
   alt: string;
   size: number;
   glyph?: string;
+  bare?: boolean;
 }) {
   const [broken, setBroken] = useState(false);
   useEffect(() => {
@@ -69,9 +129,22 @@ function LogoFrame(props: {
   // and no single radius matches every piece, so the frame is left to the
   // glyph badge, which is the only case where we draw the tile ourselves.
   return (
+    // Piece logos are drawn for light backgrounds, so dark mode backs them
+    // with a small white tile rather than losing black artwork to the page.
     <div
-      className="flex shrink-0 items-center justify-center"
-      style={{ width: props.size, height: props.size }}
+      className={`flex shrink-0 items-center justify-center ${
+        props.bare
+          ? ""
+          : "dark:rounded-[22%] dark:bg-white dark:p-[var(--logo-pad)]"
+      }`}
+      // Pixels, not %: percentage padding follows the container's width.
+      style={
+        {
+          width: props.size,
+          height: props.size,
+          "--logo-pad": `${Math.round(props.size * 0.12)}px`,
+        } as CSSProperties
+      }
     >
       <img
         src={props.src}
@@ -97,17 +170,17 @@ function Row(props: {
     <button
       type="button"
       className={`flex w-full items-center gap-2 px-3 py-1.5 text-left ${
-        props.disabled ? "cursor-not-allowed opacity-50" : "hover:bg-slate-50"
+        props.disabled ? "cursor-not-allowed opacity-50" : "hover:bg-muted/50"
       }`}
       disabled={props.disabled}
       onClick={props.onClick}
     >
       {props.logo}
       <span className="min-w-0">
-        <span className="block truncate text-xs font-medium text-slate-800">
+        <span className="block truncate text-xs font-medium text-foreground">
           {props.label}
         </span>
-        <span className="block truncate text-[11px] text-slate-400">
+        <span className="block truncate text-[11px] text-muted-foreground/80">
           {props.description}
         </span>
       </span>
@@ -117,7 +190,7 @@ function Row(props: {
 
 function SectionLabel(props: { children: string }) {
   return (
-    <div className="px-3 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+    <div className="px-3 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">
       {props.children}
     </div>
   );
@@ -230,15 +303,17 @@ function PieceEntries(props: {
     <div className="max-h-80 overflow-y-auto py-1">
       <button
         type="button"
-        className="flex w-full items-center gap-1 px-3 py-1 text-[11px] text-slate-400 hover:text-slate-600"
+        className="flex w-full items-center gap-1 px-3 py-1 text-[11px] text-muted-foreground/80 hover:text-muted-foreground"
         onClick={props.onBack}
       >
         ← {props.piece.displayName}
       </button>
       {error ? (
-        <div className="px-3 py-2 text-xs text-red-500">{error}</div>
+        <div className="px-3 py-2 text-xs text-wf-fail">{error}</div>
       ) : entries === null ? (
-        <div className="px-3 py-2 text-xs text-slate-400">Loading…</div>
+        <div className="px-3 py-2 text-xs text-muted-foreground/80">
+          Loading…
+        </div>
       ) : (
         entries.map((entry) => {
           // Visible but inert: picking one would build a step that never runs.
@@ -342,8 +417,8 @@ function Chip(props: { label: string; active: boolean; onClick: () => void }) {
       type="button"
       className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
         props.active
-          ? "border-slate-800 bg-slate-800 text-white"
-          : "border-slate-200 text-slate-500 hover:border-slate-400"
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-foreground/10 text-muted-foreground hover:border-foreground/25"
       }`}
       onClick={props.onClick}
     >
@@ -483,18 +558,18 @@ export function BlockSelector(props: {
   return (
     <div
       ref={containerRef}
-      className="nodrag nopan nowheel w-80 rounded-md border border-solid border-slate-200 bg-white shadow-lg"
+      className="nodrag nopan nowheel w-80 rounded-md border border-solid border-foreground/10 bg-card shadow-lg"
       onClick={(event) => event.stopPropagation()}
     >
-      <div className="border-b border-slate-100 p-2">
-        <div className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+      <div className="border-b border-foreground/10 p-2">
+        <div className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
           {props.title}
         </div>
         {piece ? null : (
           <>
             <input
               autoFocus
-              className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
+              className="w-full rounded border border-foreground/10 px-2 py-1 text-xs"
               placeholder={
                 pieceSource ? "Search pieces, actions, triggers…" : "Search…"
               }
@@ -555,11 +630,11 @@ export function BlockSelector(props: {
                 {mode === "triggers" ? "Triggers" : "Actions & triggers"}
               </SectionLabel>
               {search.kind === "loading" ? (
-                <div className="px-3 py-1 text-xs text-slate-400">
+                <div className="px-3 py-1 text-xs text-muted-foreground/80">
                   Searching…
                 </div>
               ) : search.kind === "error" ? (
-                <div className="px-3 py-1 text-xs text-red-500">
+                <div className="px-3 py-1 text-xs text-wf-fail">
                   {search.message}
                 </div>
               ) : (
@@ -596,15 +671,15 @@ export function BlockSelector(props: {
                   {/* Status describes the published catalog only. Blocks this
                     reactor ships are already listed above it. */}
                   {search.result.status === "indexing" ? (
-                    <div className="px-3 py-1 text-xs text-slate-400">
+                    <div className="px-3 py-1 text-xs text-muted-foreground/80">
                       Indexing the catalog… more results appear shortly.
                     </div>
                   ) : search.result.status === "error" ? (
-                    <div className="px-3 py-1 text-xs text-red-500">
+                    <div className="px-3 py-1 text-xs text-wf-fail">
                       {search.result.error ?? "Search failed"}
                     </div>
                   ) : hits.length === 0 ? (
-                    <div className="px-3 py-1 text-xs text-slate-400">
+                    <div className="px-3 py-1 text-xs text-muted-foreground/80">
                       No matching {wantedKind}s
                     </div>
                   ) : null}
@@ -616,11 +691,11 @@ export function BlockSelector(props: {
             <>
               <SectionLabel>Pieces</SectionLabel>
               {catalog === null ? (
-                <div className="px-3 py-2 text-xs text-slate-400">
+                <div className="px-3 py-2 text-xs text-muted-foreground/80">
                   Loading catalog…
                 </div>
               ) : catalog.error ? (
-                <div className="px-3 py-2 text-xs text-red-500">
+                <div className="px-3 py-2 text-xs text-wf-fail">
                   {catalog.error}
                 </div>
               ) : (
@@ -651,7 +726,9 @@ export function BlockSelector(props: {
           filteredPieces.length === 0 &&
           filteredAttach.length === 0 &&
           !searchActive ? (
-            <div className="px-3 py-2 text-xs text-slate-400">No matches</div>
+            <div className="px-3 py-2 text-xs text-muted-foreground/80">
+              No matches
+            </div>
           ) : null}
         </div>
       )}

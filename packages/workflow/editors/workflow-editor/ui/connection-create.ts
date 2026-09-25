@@ -1,6 +1,7 @@
 // When the connection picker offers to create a connection, and what the new
 // powerhouse/connection document gets prefilled with.
 import { connectorIdForPiece } from "../../connection-editor/piece-auth.js";
+import { pieceDisplayName } from "./block-meta.js";
 
 export const CONNECTION_TYPE = "powerhouse/connection";
 
@@ -37,7 +38,11 @@ export interface ConnectionDraft {
 }
 
 // "@activepieces/piece-google-sheets" -> "Google Sheets connection"
-export function connectionNameFor(piecePackage: string): string {
+export function connectionNameFor(
+  piecePackage: string,
+  displayName?: string,
+): string {
+  if (displayName) return `${displayName} connection`;
   const short =
     piecePackage
       .split("/")
@@ -65,6 +70,6 @@ export function connectionDraftFor(input: {
   return {
     piecePackage,
     connectorId: connectorIdForPiece(piecePackage),
-    name: connectionNameFor(piecePackage),
+    name: connectionNameFor(piecePackage, pieceDisplayName(piecePackage)),
   };
 }

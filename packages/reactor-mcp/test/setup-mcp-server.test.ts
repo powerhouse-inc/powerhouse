@@ -125,7 +125,7 @@ const mockClient = {} as IReactorClient;
 const mockSyncManager = {} as ISyncManager;
 
 const allowAll: McpRequestAuthorizer = () =>
-  Promise.resolve({ authorized: true });
+  Promise.resolve({ authorized: true, subject: {} });
 
 const denyWith =
   (status: number, message: string): McpRequestAuthorizer =>
@@ -257,6 +257,29 @@ describe("setupMcpServer", () => {
 
       expect(handleRequest).toHaveBeenCalledOnce();
       expect(handleRequest).toHaveBeenCalledWith(req, res, body);
+    });
+
+    it("builds the request's server to read as the authorized subject", async () => {
+      const { Transport } = makeTransportMock();
+      const { adapter, routes } = makeMockAdapter();
+      const subject = { address: "0xcaller", key: "did:key:zCaller" };
+      await setupMcpServer(
+        {
+          client: mockClient,
+          authorizeRequest: () =>
+            Promise.resolve({ authorized: true, subject }),
+        },
+        adapter,
+        Transport,
+      );
+
+      await invokePost(routes);
+
+      expect(createServer).toHaveBeenCalledWith({
+        client: mockClient,
+        syncManager: undefined,
+        subject,
+      });
     });
 
     it("creates a fresh transport per request for stateless isolation", async () => {
@@ -468,7 +491,7 @@ describe("setupMcpServer", () => {
     it("passes the incoming request to the authorizer", async () => {
       const authorize = vi
         .fn<McpRequestAuthorizer>()
-        .mockResolvedValue({ authorized: true });
+        .mockResolvedValue({ authorized: true, subject: {} });
       const { Transport } = makeTransportMock();
       const { adapter, routes } = makeMockAdapter();
       await setupMcpServer(

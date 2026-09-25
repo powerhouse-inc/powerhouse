@@ -1677,18 +1677,19 @@ export class ReactorClient implements IReactorClient {
 
     const unsubscribeDeleted = this.subscriptionManager.onDocumentDeleted(
       (documentIds) => {
-        const childId = documentIds[0];
         const reads = this.eventReads.forEvent();
-        deliver(
-          (async () =>
-            (await this.servesEvery([childId], view, reads))
-              ? {
-                  type: DocumentChangeType.Deleted,
-                  documents: [],
-                  context: { childId },
-                }
-              : undefined)(),
-        );
+        for (const childId of documentIds) {
+          deliver(
+            (async () =>
+              (await this.servesEvery([childId], view, reads))
+                ? {
+                    type: DocumentChangeType.Deleted,
+                    documents: [],
+                    context: { childId },
+                  }
+                : undefined)(),
+          );
+        }
       },
       search,
     );

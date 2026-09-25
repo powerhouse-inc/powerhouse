@@ -163,6 +163,8 @@ export const schema: DocumentNode = gql`
     output: Unknown
     port: String
     error: String
+    startedAt: String
+    endedAt: String
   }
 
   type WorkflowRunRecord {

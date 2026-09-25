@@ -28,6 +28,24 @@ export function connectionCallbacks(
         }),
       );
     },
+    // Same connector, another sign-in method: only the fields the new method
+    // asks for survive, so a SECRET_TEXT never carries a CUSTOM_AUTH token.
+    setAuthType: (authType, keep) => {
+      dispatch(
+        actions.setConnector({ connectorId: state.connectorId, authType }),
+      );
+      const config = Object.fromEntries(
+        Object.entries((state.config ?? {}) as Record<string, unknown>).filter(
+          ([name]) => keep.config.includes(name),
+        ),
+      );
+      dispatch(actions.setConfig({ config }));
+      for (const ref of state.secretRefs) {
+        if (!keep.secrets.includes(ref.name)) {
+          dispatch(actions.removeSecretRef({ id: ref.id }));
+        }
+      }
+    },
     setConfigValue: (name, value) => {
       const config = {
         ...((state.config ?? {}) as Record<string, unknown>),

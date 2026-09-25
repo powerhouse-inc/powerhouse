@@ -6,6 +6,7 @@ import {
   AttachmentAccessService,
   type AttachmentReadGate,
   type AttachmentReferenceProjectionCapability,
+  type IDocumentScopeGate,
 } from "../src/services/attachment-access.service.js";
 import {
   createAuthorizationService,
@@ -117,6 +118,30 @@ function makeReadGate(
   };
 }
 
+/**
+ * A scope gate that answers for `global` and records the subject it was asked
+ * about, so a test can prove the decision was made as the CALLER and not as
+ * whoever this process happens to be.
+ */
+function makeScopeGate(
+  recorded: Recorded,
+  readable: boolean | Error,
+): IDocumentScopeGate {
+  return {
+    scopePredicateById: (
+      documentId: string,
+      subject: { address?: string; key?: string },
+      branch: string,
+    ) => {
+      recorded.calls.push(
+        `scopeGate:${documentId}:${subject.address ?? ""}:${subject.key ?? ""}:${branch}`,
+      );
+      if (readable instanceof Error) return Promise.reject(readable);
+      return Promise.resolve((scope: string) => readable && scope === "global");
+    },
+  };
+}
+
 function service(options: {
   recorded: Recorded;
   resolver?: CanonicalDocumentIdResolver;
@@ -124,6 +149,7 @@ function service(options: {
   reader?: IAttachmentReferenceReader;
   projection?: AttachmentReferenceProjectionCapability;
   readGate?: AttachmentReadGate;
+  scopeGate?: IDocumentScopeGate;
 }): AttachmentAccessService {
   return new AttachmentAccessService(
     options.resolver ?? makeResolver(options.recorded),
@@ -131,6 +157,7 @@ function service(options: {
     options.reader ?? makeReader(options.recorded, true),
     options.projection ?? AVAILABLE,
     options.readGate ?? makeReadGate(options.recorded),
+    options.scopeGate,
   );
 }
 
@@ -545,6 +572,169 @@ describe("AttachmentAccessService", () => {
     it("denies a grantless caller on a protected document", async () => {
       const auth = permissionsService(permissionData({ grant: null }));
       await expect(decide(auth, USER)).resolves.toEqual({ kind: "denied" });
+    });
+  });
+
+  /**
+   * With a policy model to enforce, the document's own policy decides, for the
+   * caller's subject — not the host's permission tables, which a deployment
+   * running policies keeps no rows in and which therefore answer whatever the
+   * host-wide policy says.
+   */
+  describe("with a document scope gate", () => {
+    const APP_KEY = "did:key:zCaller";
+
+    it("allows when the caller may read the document's global scope", async () => {
+      const recorded: Recorded = { calls: [] };
+      const access = service({
+        recorded,
+        // Would deny on its own, so an allow can only have come from the gate.
+        authorization: makeAuthorization(recorded, false),
+        scopeGate: makeScopeGate(recorded, true),
+      });
+
+      await expect(
+        access.canReadAttachment({
+          documentId: DOC_ID,
+          attachmentRef: REF_A,
+          userAddress: USER,
+          appKey: APP_KEY,
+        }),
+      ).resolves.toEqual({ kind: "allowed", documentId: DOC_ID, ref: REF_A });
+    });
+
+    it("decides as the caller: both address and app key reach the gate", async () => {
+      const recorded: Recorded = { calls: [] };
+      const access = service({
+        recorded,
+        scopeGate: makeScopeGate(recorded, true),
+      });
+
+      await access.canReadAttachment({
+        documentId: DOC_ID,
+        attachmentRef: REF_A,
+        userAddress: USER,
+        appKey: APP_KEY,
+      });
+
+      expect(recorded.calls).toEqual([
+        `resolve:${DOC_ID}`,
+        `scopeGate:${DOC_ID}:${USER}:${APP_KEY}:main`,
+        `isServed:${DOC_ID}:${USER}`,
+        `referencingScopes:${DOC_ID}:${REF_A}`,
+        `get:${DOC_ID}:global`,
+      ]);
+    });
+
+    it("denies without consulting the reference reader", async () => {
+      const recorded: Recorded = { calls: [] };
+      const access = service({
+        recorded,
+        // Would allow on its own, so a denial can only have come from the gate.
+        authorization: makeAuthorization(recorded, true),
+        scopeGate: makeScopeGate(recorded, false),
+      });
+
+      await expect(
+        access.canReadAttachment({
+          documentId: DOC_ID,
+          attachmentRef: REF_A,
+          userAddress: USER,
+        }),
+      ).resolves.toEqual({ kind: "denied" });
+
+      expect(recorded.calls).toEqual([
+        `resolve:${DOC_ID}`,
+        `scopeGate:${DOC_ID}:${USER}::main`,
+      ]);
+      expect(
+        recorded.calls.some((call) => call.startsWith("referencingScopes")),
+      ).toBe(false);
+    });
+
+    it("denies an anonymous caller the gate refuses", async () => {
+      const recorded: Recorded = { calls: [] };
+      const access = service({
+        recorded,
+        scopeGate: makeScopeGate(recorded, false),
+      });
+
+      await expect(
+        access.canReadAttachment({
+          documentId: DOC_ID,
+          attachmentRef: REF_A,
+        }),
+      ).resolves.toEqual({ kind: "denied" });
+    });
+
+    it("never asks the permission tables once the gate is present", async () => {
+      const recorded: Recorded = { calls: [] };
+      const access = service({
+        recorded,
+        authorization: makeAuthorization(recorded, true),
+        scopeGate: makeScopeGate(recorded, true),
+      });
+
+      await access.canReadAttachment({
+        documentId: DOC_ID,
+        attachmentRef: REF_A,
+        userAddress: USER,
+      });
+
+      expect(recorded.calls.some((call) => call.startsWith("canRead"))).toBe(
+        false,
+      );
+    });
+
+    it("rethrows a gate failure rather than answering denied", async () => {
+      const recorded: Recorded = { calls: [] };
+      const access = service({
+        recorded,
+        scopeGate: makeScopeGate(recorded, new Error("read side is down")),
+      });
+
+      await expect(
+        access.canReadAttachment({
+          documentId: DOC_ID,
+          attachmentRef: REF_A,
+          userAddress: USER,
+        }),
+      ).rejects.toThrow(/read side is down/);
+    });
+
+    it("still refuses an unindexed reference the gate would allow", async () => {
+      const recorded: Recorded = { calls: [] };
+      const access = service({
+        recorded,
+        reader: makeReader(recorded, false),
+        scopeGate: makeScopeGate(recorded, true),
+      });
+
+      await expect(
+        access.canReadAttachment({
+          documentId: DOC_ID,
+          attachmentRef: REF_A,
+          userAddress: USER,
+        }),
+      ).resolves.toEqual({ kind: "denied" });
+    });
+
+    it("still answers projection-unavailable before deciding anything", async () => {
+      const recorded: Recorded = { calls: [] };
+      const access = service({
+        recorded,
+        projection: UNAVAILABLE,
+        scopeGate: makeScopeGate(recorded, true),
+      });
+
+      await expect(
+        access.canReadAttachment({
+          documentId: DOC_ID,
+          attachmentRef: REF_A,
+          userAddress: USER,
+        }),
+      ).resolves.toEqual({ kind: "projection-unavailable" });
+      expect(recorded.calls).toEqual([]);
     });
   });
 });

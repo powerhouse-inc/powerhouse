@@ -21,24 +21,26 @@ export function DocumentLoadError(props: {
   onDismiss?: () => void;
 }) {
   return (
-    <div className="m-3 rounded border border-solid border-red-200 bg-red-50 p-3">
-      <p className="text-sm font-medium text-red-700">
+    <div className="m-3 rounded border border-solid border-wf-fail/40 bg-wf-fail/10 p-3">
+      <p className="text-sm font-medium text-wf-fail">
         {props.title ?? "This document could not be loaded"}
       </p>
       {props.label ? (
-        <p className="mt-0.5 text-xs text-red-600">{props.label}</p>
+        <p className="mt-0.5 text-xs text-wf-fail">{props.label}</p>
       ) : null}
       {props.documentId ? (
-        <p className="mt-0.5 font-mono text-[11px] text-red-500">
+        <p className="mt-0.5 font-mono text-[11px] text-wf-fail">
           {props.documentId}
         </p>
       ) : null}
-      <p className="mt-1 text-xs text-slate-500">{errorMessage(props.error)}</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {errorMessage(props.error)}
+      </p>
       <div className="mt-2 flex gap-2">
         {props.onRetry ? (
           <button
             type="button"
-            className="rounded border border-solid border-red-300 px-2 py-0.5 text-xs font-medium text-red-600"
+            className="rounded border border-solid border-wf-fail/40 px-2 py-0.5 text-xs font-medium text-wf-fail"
             onClick={props.onRetry}
           >
             Retry
@@ -47,7 +49,7 @@ export function DocumentLoadError(props: {
         {props.onDismiss ? (
           <button
             type="button"
-            className="rounded border border-solid border-slate-300 px-2 py-0.5 text-xs text-slate-600"
+            className="rounded border border-solid border-foreground/15 px-2 py-0.5 text-xs text-muted-foreground"
             onClick={props.onDismiss}
           >
             Dismiss

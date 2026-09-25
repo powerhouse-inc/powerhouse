@@ -55,11 +55,9 @@ jobs:
           node-version: 24
           cache: "pnpm"
 
-      - name: Install deps (frozen lockfile)
-        run: pnpm install-ci
-
-      - name: Build
-        run: pnpm build
+      # Only test-codegen and the workspace packages it depends on.
+      - name: Install and build
+        run: bash .github/actions/setup/install-and-build.sh "test-codegen..."
 
       - name: Run tests
         run: pnpm test:codegen

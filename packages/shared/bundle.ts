@@ -1,4 +1,5 @@
 import { build } from "tsdown";
+import { dtsExportList } from "../../tsdown.dts.mjs";
 
 await build({
   entry: [
@@ -27,7 +28,8 @@ await build({
   outDir: "dist",
   platform: "neutral",
   clean: true,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
   deps: {
     neverBundle: [/^node:.*/],
@@ -39,7 +41,8 @@ await build({
   outDir: "dist/clis",
   platform: "node",
   clean: false,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
 });
 
@@ -50,7 +53,8 @@ await build({
   outDir: "dist/clis/args",
   platform: "node",
   clean: false,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
 });
 
@@ -68,6 +72,7 @@ await build({
   outDir: "dist/clis",
   platform: "node",
   clean: false,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
 });

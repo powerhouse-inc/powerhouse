@@ -4,6 +4,8 @@ import workflowPkg from "@powerhousedao/workflow/package.json" with { type: "jso
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BrowserPackageManager,
+  declareExternalPackagesLayer,
+  LAYER_ORDER,
   sharedDepMismatchWarnings,
 } from "./package-manager.js";
 
@@ -106,5 +108,18 @@ describe("BrowserPackageManager.init — flag-gated local packages", () => {
     await pm.init(undefined, undefined, true, true);
     expect(pm.getPackageSource(VETRA)).toBe("common");
     expect(pm.getPackageSource(WORKFLOW)).toBe("common");
+  });
+});
+
+describe("declareExternalPackagesLayer", () => {
+  it("declares the layer before any stylesheet, once", () => {
+    // Stands in for the project's stylesheet, already in <head>.
+    document.head.innerHTML = '<meta name="project-stylesheet" />';
+    declareExternalPackagesLayer();
+    declareExternalPackagesLayer();
+    const first = document.head.firstElementChild;
+    expect(first?.tagName).toBe("STYLE");
+    expect(first?.textContent).toBe(LAYER_ORDER);
+    expect(document.head.querySelectorAll("style")).toHaveLength(1);
   });
 });

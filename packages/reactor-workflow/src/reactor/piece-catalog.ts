@@ -10,6 +10,7 @@ import type {
   TriggerBase,
 } from "@powerhousedao/pieces-framework";
 import { childLogger } from "document-model";
+import type { PieceAuthDescriptor } from "../pieces/activepieces/descriptor.js";
 import { pieceRegistrySource } from "../pieces/activepieces/registry-source.js";
 import {
   unsupportedAuth,
@@ -40,6 +41,18 @@ export function reasonOf(feature: UnsupportedFeature | undefined): {
   unsupported?: string;
 } {
   return feature ? { unsupported: feature.reason } : {};
+}
+
+// A descriptor's auth as clients read it: each method's refusal as its reason.
+export function clientAuth(
+  auth: PieceAuthDescriptor | PieceAuthDescriptor[] | undefined,
+): unknown {
+  if (!auth) return null;
+  const one = ({ unsupported, ...method }: PieceAuthDescriptor) => ({
+    ...method,
+    ...reasonOf(unsupported),
+  });
+  return Array.isArray(auth) ? auth.map(one) : one(auth);
 }
 
 export interface PieceSummary {

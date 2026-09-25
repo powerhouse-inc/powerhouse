@@ -1,11 +1,13 @@
 import { build } from "tsdown";
+import { dtsExportList } from "../../tsdown.dts.mjs";
 
 await build({
   entry: ["index.ts", "mock.ts"],
   outDir: "dist",
   platform: "neutral",
   clean: true,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
 });
 
@@ -14,6 +16,7 @@ await build({
   outDir: "dist",
   platform: "node",
   clean: false,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
 });
