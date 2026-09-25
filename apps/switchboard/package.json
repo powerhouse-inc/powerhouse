@@ -85,7 +85,7 @@
     "@sentry/opentelemetry": "^10.53.1",
     "document-model": "workspace:*",
     "dotenv": "^16.4.7",
-    "express": "^4.21.2",
+    "express": "^4.22.1",
     "graphql": "catalog:",
     "graphql-tag": "catalog:",
     "kysely": "catalog:",
