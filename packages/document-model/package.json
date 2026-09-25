@@ -52,7 +52,6 @@
     "@types/mime": "^4.0.0",
     "@types/node": "catalog:",
     "change-case": "catalog:",
-    "jest": "^30.0.5",
     "mutative": "^1.0.5",
     "tsdown": "catalog:",
     "tsx": "catalog:",
