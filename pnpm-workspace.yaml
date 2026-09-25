@@ -20,6 +20,8 @@ minimumReleaseAgeExclude:
   # Exact-pinned in the catalog; Mastra ships several minors a week.
   - "@mastra/*"
   - "mastra"
+  # Our own package, published from powerhouse-inc/renown-package.
+  - "@powerhousedao/renown-package"
 dedupePeerDependents: false
 
 # pnpm 12 dropped built-in @jsr scope resolution.
@@ -160,10 +162,6 @@ allowBuilds:
   "@apollo/protobufjs": true
   "@datadog/pprof": true
   "@parcel/watcher": true
-  # Only renown-package's published staging stack pulls prisma; nothing runs it.
-  "@prisma/client": false
-  "@prisma/engines": false
-  "prisma": false
   "@sentry/cli": true
   "@swc/core": true
   "bufferutil": true
@@ -195,10 +193,5 @@ overrides:
   # cuer (RainbowKit's QR component) asks for `qr: ~0` but calls encodeQR with
   # border: 0, which qr@0.6.0 started rejecting. 0.5.5 is the last one allowing it.
   qr@>=0.6: "0.5.5"
-  # renown-package pins a staging build of the stack; share the UI/tooling packages with the workspace.
-  # document-model and common stay published: its bundled code derives document ids with them.
-  "@powerhousedao/renown-package>@powerhousedao/builder-tools": "workspace:*"
-  "@powerhousedao/renown-package>@powerhousedao/design-system": "workspace:*"
-  "@powerhousedao/renown-package>@powerhousedao/vetra": "workspace:*"
   # tsdown peers on `unrun: *`; 0.3 shares vite's stable rolldown instead of an rc.
   unrun: "^0.3.1"
