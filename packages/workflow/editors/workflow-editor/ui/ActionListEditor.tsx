@@ -28,6 +28,17 @@ function stringifyInput(input: unknown): string {
   }
 }
 
+const INVALID = Symbol("invalid");
+
+function parseInput(text: string): unknown {
+  if (text.trim() === "") return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return INVALID;
+  }
+}
+
 const inputClass =
   "w-full rounded border border-foreground/15 px-2 py-1.5 text-sm text-foreground";
 
@@ -87,15 +98,13 @@ function ActionRowEditor(props: {
         spellCheck={false}
         onChange={(event) => setJsonText(event.target.value)}
         onBlur={() => {
-          try {
-            props.onChange({
-              ...row,
-              input: jsonText.trim() === "" ? {} : JSON.parse(jsonText),
-            });
-            setJsonError(null);
-          } catch {
+          const input = parseInput(jsonText);
+          if (input === INVALID) {
             setJsonError("Invalid JSON — input not saved");
+            return;
           }
+          props.onChange({ ...row, input });
+          setJsonError(null);
         }}
       />
       {jsonError ? (
