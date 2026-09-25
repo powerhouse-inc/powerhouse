@@ -1,6 +1,9 @@
 import "@xyflow/react/dist/style.css";
 import "./ui/canvas.css";
-import { useSelectedDocumentId } from "@powerhousedao/reactor-browser";
+import {
+  useFileNodesInSelectedDrive,
+  useSelectedDocumentId,
+} from "@powerhousedao/reactor-browser";
 import { useSelectedWorkflowDocument } from "document-models/workflow";
 import { useEffect, useMemo, useState } from "react";
 import { useWorkflowModel } from "./document/useWorkflowModel.js";
@@ -105,13 +108,28 @@ function WorkflowEditor() {
   const [document] = useSelectedWorkflowDocument();
   const workflowId = document.header.id;
 
+  // The runtime lists every connection it holds; offer only this drive's.
+  // Null outside a drive, where there's nothing to scope to.
+  const driveNodes = useFileNodesInSelectedDrive();
+  const driveConnections = driveNodes
+    ? driveNodes
+        .filter((node) => node.documentType === "powerhouse/connection")
+        .map((node) => node.id)
+        .join(",")
+    : null;
+
   const designTime = useMemo<DesignTimeService>(
     () => ({
       getBlockForm,
       loadOptions: loadBlockOptions,
       testTrigger: () => testTrigger(workflowId),
       webhookEndpoint: () => fetchWebhookEndpoint(workflowId),
-      listConnections: fetchConnections,
+      listConnections: () =>
+        fetchConnections().then((connections) => {
+          if (driveConnections === null) return connections;
+          const inDrive = new Set(driveConnections.split(",").filter(Boolean));
+          return connections.filter((connection) => inDrive.has(connection.id));
+        }),
       refreshConnections: invalidateConnections,
       latestRun: () =>
         fetchRuns({ workflowId, limit: 1 }).then((runs) => runs.at(0) ?? null),
@@ -121,7 +139,7 @@ function WorkflowEditor() {
         stat: fetchSecretStat,
       },
     }),
-    [workflowId],
+    [workflowId, driveConnections],
   );
 
   // Scope for the {} picker: journaled outputs from the latest run where

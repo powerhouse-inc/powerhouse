@@ -116,6 +116,9 @@ function CreateRow(props: {
   );
 }
 
+const LINK_ATTEMPTS = 30;
+const LINK_INTERVAL_MS = 500;
+
 export function ConnectionField(props: {
   blockType: string;
   value: string;
@@ -131,6 +134,7 @@ export function ConnectionField(props: {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [linking, setLinking] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const driveId = useSelectedDriveId();
 
@@ -149,8 +153,8 @@ export function ConnectionField(props: {
     };
   }, [props.blockType, props.designTime]);
 
+  // Loaded up front so a bound connection shows by name, and again on open.
   useEffect(() => {
-    if (!open) return;
     let alive = true;
     props.designTime?.listConnections?.().then(
       (result) => {
@@ -158,17 +162,21 @@ export function ConnectionField(props: {
       },
       () => undefined,
     );
+    return () => {
+      alive = false;
+    };
+  }, [open, props.designTime]);
+
+  useEffect(() => {
+    if (!open) return;
     const handler = (event: MouseEvent) => {
       if (!containerRef.current?.contains(event.target as globalThis.Node)) {
         setOpen(false);
       }
     };
     window.addEventListener("mousedown", handler);
-    return () => {
-      alive = false;
-      window.removeEventListener("mousedown", handler);
-    };
-  }, [open, props.designTime]);
+    return () => window.removeEventListener("mousedown", handler);
+  }, [open]);
 
   // The selected connection may configure another piece (a stale value, or one
   // pasted by hand), so it is resolved against the whole listing.
@@ -223,16 +231,40 @@ export function ConnectionField(props: {
     if (props.value) props.onChange(null);
   };
 
+  // The new document reaches the switchboard a moment after the modal closes;
+  // binding it earlier leaves the step pointing at an id nothing resolves.
   const finishCreate = (connectionId: string) => {
     setDraftId(null);
-    pick(connectionId);
-    // The listing is cached, so the new document has to be pulled in for the
-    // name and icon below the input to resolve it.
+    setLinking(true);
     props.designTime?.refreshConnections?.();
-    props.designTime?.listConnections?.().then(
-      (result) => setConnections(result),
-      () => undefined,
-    );
+    const poll = (attempt: number) => {
+      const done = (result?: ConnectionSummary[]) => {
+        if (result) setConnections(result);
+        setLinking(false);
+        pick(connectionId);
+      };
+      const list = props.designTime?.listConnections;
+      if (!list) return done();
+      list().then(
+        (result) => {
+          // Ready once the synced document names this block's piece.
+          const ready = result.some(
+            (connection) =>
+              connection.id === connectionId &&
+              packageOf(connection.connectorId) === packageOf(props.blockType),
+          );
+          if (ready) {
+            done(result);
+          } else if (attempt >= LINK_ATTEMPTS) {
+            done(result);
+          } else {
+            setTimeout(() => poll(attempt + 1), LINK_INTERVAL_MS);
+          }
+        },
+        () => done(),
+      );
+    };
+    poll(0);
   };
 
   return (
@@ -318,6 +350,7 @@ export function ConnectionField(props: {
       {!props.value && authMode === "required" ? (
         <Hint>This block signs in to its service through a connection.</Hint>
       ) : null}
+      {linking ? <Hint>Linking the new connection…</Hint> : null}
       {createError ? (
         <p className="mt-1.5 text-xs font-medium text-wf-fail">{createError}</p>
       ) : null}

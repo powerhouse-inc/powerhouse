@@ -78,6 +78,7 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "@uiw/react-json-view": "2.0.0-alpha.42",
     "@xyflow/react": "12.11.6",
     "document-model": "workspace:*",
     "react": "catalog:",

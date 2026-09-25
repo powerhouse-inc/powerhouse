@@ -30,6 +30,7 @@ import {
 import { useWorkflowDocumentsInSelectedDrive } from "document-models/workflow";
 import { MiniChain, runLinks } from "./chain.js";
 import { Select } from "../../shared/controls.js";
+import { DataViewer } from "../../shared/data-viewer.js";
 import { Button, Icon, StatusText } from "./ui.js";
 
 type StatusFilter = "ALL" | (typeof RUN_STATUSES)[number];
@@ -132,22 +133,25 @@ function StepRow(props: {
               {step.error}
             </pre>
           ) : null}
-          <details>
-            <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
-              Input
-            </summary>
-            <pre className="mt-1 max-h-48 overflow-auto rounded-md bg-muted p-2 text-xs text-foreground">
-              {stringify(step.input)}
-            </pre>
-          </details>
-          <details>
-            <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
-              Output
-            </summary>
-            <pre className="mt-1 max-h-48 overflow-auto rounded-md bg-muted p-2 text-xs text-foreground">
-              {stringify(step.output)}
-            </pre>
-          </details>
+          {step.status === "SKIPPED" ? (
+            <p className="text-xs text-muted-foreground">
+              The run never reached this step.
+            </p>
+          ) : (
+            <div className="grid items-start gap-2 md:grid-cols-2">
+              <DataViewer label="Received" value={step.input} />
+              <DataViewer
+                label="Produced"
+                value={step.output}
+                root={`steps.${step.stepKey}.output`}
+                emptyText={
+                  step.status === "FAILED"
+                    ? "Nothing, the step failed"
+                    : undefined
+                }
+              />
+            </div>
+          )}
         </div>
       ) : null}
     </div>
@@ -224,10 +228,11 @@ function TriggerRow(props: { run: RunRecord }) {
       </button>
       {open ? (
         <div className="pb-3 pl-10 pr-3">
-          <p className="text-xs text-muted-foreground">Payload</p>
-          <pre className="mt-1 max-h-48 overflow-auto rounded-md bg-muted p-2 text-xs text-foreground">
-            {payload}
-          </pre>
+          <DataViewer
+            label="Payload"
+            value={run.triggerPayload}
+            root="trigger.payload"
+          />
         </div>
       ) : null}
     </div>

@@ -10,6 +10,7 @@
   --wf-warn: #9a5800;
   --wf-run: #1d63d6;
   --wf-edge: #cbd5e1;
+  --wf-literal: #7c3aed;
 }
 
 .dark {
@@ -18,6 +19,7 @@
   --wf-warn: #e9a23b;
   --wf-run: #6aa6ff;
   --wf-edge: #3a4146;
+  --wf-literal: #b794f6;
 }
 
 @theme inline {
@@ -25,4 +27,32 @@
   --color-wf-fail: var(--wf-fail);
   --color-wf-warn: var(--wf-warn);
   --color-wf-run: var(--wf-run);
+}
+
+/* @uiw/react-json-view reads its colours from these; mapped to theme tokens
+   so run data follows light and dark mode. */
+.wf-data-tree {
+  --w-rjv-font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --w-rjv-background-color: transparent;
+  --w-rjv-color: var(--foreground);
+  --w-rjv-key-string: var(--muted-foreground);
+  --w-rjv-key-number: var(--muted-foreground);
+  --w-rjv-line-color: var(--border);
+  --w-rjv-arrow-color: var(--muted-foreground);
+  --w-rjv-info-color: var(--muted-foreground);
+  --w-rjv-curlybraces-color: var(--muted-foreground);
+  --w-rjv-brackets-color: var(--muted-foreground);
+  --w-rjv-colon-color: var(--muted-foreground);
+  --w-rjv-quotes-string-color: var(--foreground);
+  --w-rjv-type-string-color: var(--foreground);
+  --w-rjv-type-int-color: var(--wf-run);
+  --w-rjv-type-float-color: var(--wf-run);
+  --w-rjv-type-bigint-color: var(--wf-run);
+  --w-rjv-type-boolean-color: var(--wf-literal);
+  --w-rjv-type-null-color: var(--muted-foreground);
+  --w-rjv-type-undefined-color: var(--muted-foreground);
+  --w-rjv-type-url-color: var(--wf-run);
+  --w-rjv-type-date-color: var(--foreground);
+  font-size: 12px;
+  line-height: 1.7;
 }

@@ -43,6 +43,22 @@ const SCENES: Record<string, (page: Page) => Promise<void>> = {
     await openDrive(page);
     await page.getByText("Failed", { exact: true }).last().click();
   },
+  "studio-run-data": async (page) => {
+    await openDrive(page);
+    await page.getByRole("row").filter({ hasText: "Link checker" }).click();
+    await page
+      .getByRole("list", { name: "Steps of this run" })
+      .getByRole("button", { name: /Parse URL/ })
+      .click();
+    await page
+      .getByRole("region", { name: "Produced" })
+      .getByText("domain")
+      .waitFor();
+    await page
+      .getByRole("region", { name: "Produced" })
+      .getByText("domain", { exact: true })
+      .hover();
+  },
   "studio-workflow-failed": async (page) => {
     await openDrive(page);
     await selectInSidebar(page, "Uptime ping");

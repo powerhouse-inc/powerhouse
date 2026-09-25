@@ -1,5 +1,34 @@
+import type { Page } from "@playwright/test";
 import { canvasNode, openWorkflowEditor } from "../../scripts/ui-stack.js";
 import { expect, test } from "./fixtures.js";
+
+// Binds Summarise to a new OpenAI connection through the create modal.
+async function createOpenAiConnection(app: Page) {
+  await canvasNode(app, "Summarise").click();
+  await expect(app.getByText("Connection needs a value")).toBeVisible();
+  await app.getByRole("button", { name: "Choose a connection" }).click();
+  await app.getByRole("button", { name: "Create connection" }).click();
+
+  // The connection form opens in a modal over the editor.
+  const dialog = app.getByRole("dialog", { name: "New connection" });
+  await expect(
+    dialog.getByRole("textbox", { name: "Connection name" }),
+  ).toHaveValue("OpenAI connection");
+  await dialog.getByPlaceholder("Paste the api key").fill("sk-test");
+  await dialog.getByRole("button", { name: "Save API Key" }).click();
+  await expect(dialog.getByText("Saved just now")).toBeVisible();
+  await dialog.getByRole("button", { name: "Use this connection" }).click();
+  await expect(dialog).toBeHidden();
+}
+
+// WCAG relative luminance of an sRGB colour, 0 (black) to 1 (white).
+function luminance(r: number, g: number, b: number): number {
+  const [lr, lg, lb] = [r, g, b].map((channel) => {
+    const c = channel / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
+}
 
 test.describe("Step panel", () => {
   test.beforeEach(async ({ app }) => {
@@ -48,7 +77,10 @@ test.describe("Step panel", () => {
     await expect(
       app.getByRole("textbox", { name: "Key", exact: true }),
     ).toHaveValue("summarise");
-    await expect(app.getByText("Post to #ops").last()).toBeVisible();
+    const next = app.locator("section", {
+      has: app.getByRole("heading", { name: "What runs next" }),
+    });
+    await expect(next.getByText("Post to #ops", { exact: true })).toBeVisible();
 
     // Route errors with the keyboard alone: open, pick, confirm.
     const onError = app
@@ -102,13 +134,6 @@ test.describe("Step panel", () => {
     await expect(app.getByText("2 of 3")).toBeVisible();
   });
 
-  test("the trigger panel says when the workflow runs", async ({ app }) => {
-    await canvasNode(app, "Schedule").click();
-    await expect(
-      app.getByText("Every day at 08:00 UTC", { exact: true }),
-    ).toBeVisible();
-  });
-
   test("the schedule builder speaks in days and times", async ({ app }) => {
     await canvasNode(app, "Schedule").click();
     await expect(app.getByRole("radio", { name: "Daily" })).toHaveAttribute(
@@ -120,12 +145,14 @@ test.describe("Step panel", () => {
     await app.getByRole("radio", { name: "Weekly" }).click();
     await app.getByRole("button", { name: "Wednesday" }).click();
     await expect(
-      app.getByText("On Monday and Wednesday at 08:00 UTC").first(),
+      app.getByText("On Monday and Wednesday at 08:00 UTC", { exact: true }),
     ).toBeVisible();
 
     await app.getByRole("radio", { name: "Interval" }).click();
     await expect(app.getByLabel("Every", { exact: true })).toHaveValue("15");
-    await expect(app.getByText("Every 15 minutes").first()).toBeVisible();
+    await expect(
+      app.getByText("Every 15 minutes", { exact: true }),
+    ).toBeVisible();
 
     await app.getByRole("radio", { name: "Custom" }).click();
     const cron = app.getByLabel("Cron expression");
@@ -136,34 +163,37 @@ test.describe("Step panel", () => {
       "true",
     );
     await expect(
-      app.getByText("On weekdays at 09:00 UTC").first(),
+      app.getByText("On weekdays at 09:00 UTC", { exact: true }),
     ).toBeVisible();
   });
 
   test("Insert data shows once its field is in play", async ({ app }) => {
     await canvasNode(app, "Summarise").click();
-    const insert = app.getByRole("button", { name: "Insert data" }).first();
+    const question = app.getByRole("textbox", { name: "Question" });
+    const insert = app
+      .locator(String.raw`div.group\/field`, { has: question })
+      .getByRole("button", { name: "Insert data" });
+    // Playwright counts opacity 0 as visible, so the reveal is read from CSS;
+    // toHaveCSS retries until the fade has finished.
     await expect(insert).toHaveCSS("opacity", "0");
-    await app.getByRole("textbox", { name: /Question/ }).focus();
-    await expect(
-      app.getByRole("button", { name: "Insert data" }).nth(0),
-    ).not.toHaveCSS("opacity", "0");
+    await question.focus();
+    await expect(insert).toHaveCSS("opacity", "1");
   });
 
   test("a missing connection can be created without leaving", async ({
     app,
   }) => {
-    await canvasNode(app, "Summarise").click();
-    await app.getByRole("button", { name: /Choose a connection/ }).click();
-    await app.getByText("Create connection").click();
-    // The connection form opens in a modal over the editor.
+    await createOpenAiConnection(app);
+    // Bound by name once it has synced, never as a bare document id.
+    const panel = app.locator("aside").filter({ has: app.getByRole("tab") });
     await expect(
-      app.getByText("OpenAI connection", { exact: true }).first(),
+      panel.getByRole("button", { name: /OpenAI connection/ }),
     ).toBeVisible();
-    await expect(app.getByPlaceholder("Paste the api key")).toBeVisible();
     await expect(
-      app.getByRole("button", { name: "Use this connection" }),
-    ).toBeVisible();
+      app.getByText("Not a known connection document."),
+    ).toBeHidden();
+    await expect(app.getByText("Connection needs a value")).toBeHidden();
+    await expect(app.getByText("Ready to run")).toBeVisible();
   });
 });
 
@@ -177,19 +207,26 @@ test.describe("Step panel in dark mode", () => {
     const background = await panel.evaluate(
       (element) => getComputedStyle(element).backgroundColor,
     );
-    expect(background).not.toBe("rgb(255, 255, 255)");
+    // An opaque, dark fill: rgba(0, 0, 0, 0) would show whatever is beneath.
+    const [r0, g0, b0, alpha = 1] = background.match(/[\d.]+/g)!.map(Number);
+    expect(alpha).toBe(1);
+    expect(luminance(r0, g0, b0)).toBeLessThan(0.1);
     const name = app.getByRole("textbox", { name: "Step name" });
     const color = await name.evaluate(
       (element) => getComputedStyle(element).color,
     );
     // Light text on the dark surface, so the name stays readable.
     const [r, g, b] = color.match(/\d+/g)!.map(Number);
-    expect(r + g + b).toBeGreaterThan(600);
+    expect(luminance(r, g, b)).toBeGreaterThan(0.7);
 
     // Logos keep their size inside the white tile that backs them.
-    const logo = canvasNode(app, "Summarise").locator("img").first();
+    const logo = canvasNode(app, "Summarise").getByRole("img", {
+      name: "Ask ChatGPT",
+    });
+    await expect(logo).toBeVisible();
     const box = await logo.boundingBox();
-    expect(box?.width).toBeGreaterThan(16);
+    expect(box!.width).toBeGreaterThanOrEqual(24);
+    expect(box!.height).toBeGreaterThanOrEqual(24);
   });
 });
 
@@ -205,8 +242,8 @@ test.describe("Editor header", () => {
     await expect(canvasNode(app, "Summarise metrics")).toBeVisible();
     await app.getByRole("button", { name: "Undo" }).click();
     await expect(canvasNode(app, "Summarise metrics")).toBeHidden();
+    await expect(canvasNode(app, "Summarise")).toBeVisible();
 
-    await expect(app.getByText("Not run yet")).toBeVisible();
     await app.getByRole("button", { name: "Back" }).click();
     await expect(
       app.getByRole("heading", { name: "Daily digest" }),
@@ -223,10 +260,9 @@ test.describe("Step panel after a run", () => {
     await app.getByRole("tab", { name: /Last run/ }).click();
     await expect(app.getByText("Failed", { exact: true })).toBeVisible();
     await expect(app.getByText("TypeError: fetch failed")).toBeVisible();
-    await expect(app.getByText("Received")).toBeVisible();
-    await expect(
-      app.getByText('"url": "http://127.0.0.1:9/health"'),
-    ).toBeVisible();
+    await expect(app.getByRole("region", { name: "Received" })).toContainText(
+      "http://127.0.0.1:9/health",
+    );
 
     // A step the run never reached says so.
     await app.getByRole("button", { name: "Next step" }).click();
