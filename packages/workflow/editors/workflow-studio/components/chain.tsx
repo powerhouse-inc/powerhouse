@@ -35,9 +35,16 @@ const RAIL: Record<Tone, string> = {
   idle: "bg-foreground/15",
 };
 
+// Past this many stops the chain ends in "+N", so a long workflow can't spill
+// into the next column; the label still names every step.
+const MAX_STOPS = 6;
+
 export function MiniChain(props: { links: ChainLink[]; size?: "sm" | "md" }) {
   const md = props.size === "md";
-  const tones = props.links.map((link) =>
+  const overflow = props.links.length > MAX_STOPS;
+  const shown = overflow ? props.links.slice(0, MAX_STOPS - 1) : props.links;
+  const hidden = props.links.length - shown.length;
+  const tones = shown.map((link) =>
     link.status ? toneOf(STEP_TONE, link.status) : "idle",
   );
   return (
@@ -50,7 +57,7 @@ export function MiniChain(props: { links: ChainLink[]; size?: "sm" | "md" }) {
         )
         .join(", ")}
     >
-      {props.links.map((link, index) => (
+      {shown.map((link, index) => (
         <li key={link.id} className="flex items-center">
           {index > 0 ? (
             <span
@@ -72,6 +79,22 @@ export function MiniChain(props: { links: ChainLink[]; size?: "sm" | "md" }) {
           </span>
         </li>
       ))}
+      {overflow ? (
+        <li aria-hidden className="flex items-center">
+          <span className={`h-0.5 ${md ? "w-5" : "w-3"} bg-foreground/15`} />
+          <span
+            title={props.links
+              .slice(shown.length)
+              .map((link) => link.label)
+              .join(", ")}
+            className={`flex shrink-0 items-center justify-center rounded-full bg-muted px-1.5 text-[11px] font-medium tabular-nums text-muted-foreground ${
+              md ? "h-8" : "h-6"
+            }`}
+          >
+            +{hidden}
+          </span>
+        </li>
+      ) : null}
     </ol>
   );
 }
