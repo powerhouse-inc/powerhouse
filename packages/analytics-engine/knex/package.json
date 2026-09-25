@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/analytics-engine-knex",
-  "version": "6.2.3-dev.23",
+  "version": "6.2.3-dev.25",
   "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",
@@ -37,5 +37,13 @@
     "vitest": "catalog:",
     "@types/luxon": "catalog:",
     "tsdown": "catalog:"
+  },
+  "peerDependencies": {
+    "knex": "^3.1.0"
+  },
+  "peerDependenciesMeta": {
+    "knex": {
+      "optional": true
+    }
   }
 }

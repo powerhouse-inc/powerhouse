@@ -40,8 +40,10 @@ import {
 import {
   BrowserKeyStorage,
   RenownCryptoBuilder,
-  RenownCryptoSigner,
+  type RenownCryptoSigner,
 } from "@renown/sdk/crypto";
+import { createWorkerSignerConfig } from "./reactor-worker-signer.js";
+import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
 import type * as PgLiveModuleNs from "@electric-sql/pglite/live";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -64,9 +66,6 @@ import {
 } from "./utils/pglite-migrate-core.js";
 
 console.info("[reactor.worker] module evaluating");
-
-// Matches the main thread's RenownBuilder("connect").
-const RENOWN_APP_NAME = "connect";
 
 // Common models the tab bundles as a local package; not CDN-loadable, so the
 // worker imports them directly. Vetra and workflow are flag-gated chunks.
@@ -94,6 +93,8 @@ type WorkerConstruct = {
   featureFlags?: Partial<ReactorFeatureFlags>;
   // What new documents are created as; absent means the reactor's default.
   createSignaturePolicy?: SignaturePolicy;
+  // Where the trust policy verifies signers under authEnforcement.
+  renownEndpoints?: RenownTrustEndpoints;
 };
 
 type ModelRegistry = {
@@ -337,11 +338,13 @@ const host = new ReactorHost({
       phase = "building crypto";
       console.info(`[reactor.worker] boot: ${phase}`);
       const crypto = await buildWorkerCrypto(construct.renownChainId);
-      signer = new RenownCryptoSigner(
+      phase = "building signer";
+      const built = await createWorkerSignerConfig(
         crypto,
-        RENOWN_APP_NAME,
+        construct,
         currentIdentity ?? undefined,
       );
+      signer = built.signer;
       const jwtHandler: JwtHandler = async () =>
         currentIdentity
           ? crypto.getBearerToken(currentIdentity.address, { expiresIn: 10 })
@@ -349,7 +352,7 @@ const host = new ReactorHost({
       phase = "building reactor module";
       console.info(`[reactor.worker] boot: ${phase}`);
       const builder = new ReactorClientBuilder()
-        .withSigner({ signer })
+        .withSigner(built.signerConfig)
         .withReactorBuilder(
           new ReactorBuilder()
             .withDocumentModelSources(models)

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "6.2.3-dev.23",
+  "version": "6.2.3-dev.25",
   "description": "Powerhouse document-engineering design system — GraphQL scalar UI components for building consistent Powerhouse editors.",
   "files": [
     "dist",
@@ -112,7 +112,6 @@
     "@types/react-virtualized": "^9.22.3",
     "camelcase": "^8.0.0",
     "happy-dom": "^20.8.9",
-    "jsdom": "^24.0.0",
     "react": "catalog:",
     "react-dom": "catalog:",
     "storybook": "^8.6.18",

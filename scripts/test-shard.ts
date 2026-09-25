@@ -1,5 +1,5 @@
 // Split the `test:ci` package list into balanced shards and run one.
-// Usage: tsx scripts/test-shard.ts <shard> <total> | --print <total>
+// Usage: tsx scripts/test-shard.ts <shard> <total> | --print <total> | --selectors <shard> <total>
 
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -43,10 +43,16 @@ function split(names: string[], total: number) {
   return shards;
 }
 
-const [first, second] = process.argv.slice(2);
+const args = process.argv.slice(2);
+// `--selectors`: print the shard's pnpm selectors (each package plus its deps) for a filtered install.
+const selectorsOnly = args[0] === "--selectors";
+if (selectorsOnly) args.shift();
+const [first, second] = args;
 const total = Number(second);
 if (!Number.isInteger(total) || total < 1) {
-  console.error("usage: test-shard.ts <shard> <total> | --print <total>");
+  console.error(
+    "usage: test-shard.ts <shard> <total> | --print <total> | --selectors <shard> <total>",
+  );
   process.exit(2);
 }
 
@@ -69,6 +75,10 @@ if (!Number.isInteger(index) || index < 1 || index > total) {
 }
 
 const mine = shards[index - 1];
+if (selectorsOnly) {
+  console.log(mine.names.map((n) => `${n}...`).join(" "));
+  process.exit(0);
+}
 console.log(`shard ${index}/${total}: ${mine.names.join(" ")}`);
 
 // spawnSync, not execFileSync: a failing suite should surface vitest's own

@@ -32,6 +32,7 @@
     "@powerhousedao/load-test-client": "workspace:*",
     "document-model": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "@renown/sdk": "workspace:*",
     "colorette": "catalog:",
     "commander": "catalog:"
   },

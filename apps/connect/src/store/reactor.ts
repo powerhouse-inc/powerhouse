@@ -349,6 +349,11 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   }
   const createSignaturePolicy =
     runtimeConfig.connect?.reactor?.createSignaturePolicy;
+  // Both hosts verify signers against the endpoints the tab's Renown uses.
+  const renownEndpoints = {
+    renownUrl: phGlobalConfig.renownUrl,
+    switchboardUrl: phGlobalConfig.switchboardUrl,
+  };
 
   // create reactor v2 with all versions and upgrade manifests
   let reactorClientModule:
@@ -402,6 +407,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       renownChainId,
       featureFlags: reactorFeatureFlags,
       createSignaturePolicy,
+      renownEndpoints,
       documentModelModules,
       upgradeManifests,
       documentModelLoader,
@@ -432,6 +438,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       reactorFeatureFlags,
       discoveryService,
       createSignaturePolicy,
+      renownEndpoints,
     );
   }
 

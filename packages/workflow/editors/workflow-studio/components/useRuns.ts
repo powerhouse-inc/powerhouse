@@ -15,7 +15,8 @@ export interface RunsFeed {
   reload: () => void;
 }
 
-export function useRuns(scope: RunsScope): RunsFeed {
+// Inactive feeds hold no subscription, so a pane can borrow another's rows.
+export function useRuns(scope: RunsScope, active = true): RunsFeed {
   const { workflowId, driveId, limit } = scope;
   const [runs, setRuns] = useState<RunRecord[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +24,7 @@ export function useRuns(scope: RunsScope): RunsFeed {
   const load = useRef<() => void>(() => undefined);
 
   useEffect(() => {
+    if (!active) return;
     let cancelled = false;
     const run = () => {
       fetchRuns({ workflowId, driveId, limit }).then(
@@ -48,7 +50,7 @@ export function useRuns(scope: RunsScope): RunsFeed {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [workflowId, driveId, limit]);
+  }, [workflowId, driveId, limit, active]);
 
   const reload = useCallback(() => load.current(), []);
   return { runs, error, reload };

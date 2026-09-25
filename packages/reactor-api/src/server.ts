@@ -161,6 +161,12 @@ type Options = {
      *  comma-separated list. Each entry is a hole in the floor: only ever name
      *  a path serving operations that are safe without a caller. */
     requireAuthenticatedCallerExemptPaths?: string[];
+    /** Decide an attachment read with the referencing document's own policy
+     *  instead of the host permission tables. Off by default;
+     *  `ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY` overrides. Requires auth
+     *  enforcement, which is what supplies the model — refused at boot
+     *  without it. */
+    attachmentReadsFollowDocumentPolicy?: boolean;
   };
   /** Renown coordinates the host already resolved, used verbatim instead of
    * resolving `auth.renown` and the env again (which would warn twice). */
@@ -302,6 +308,29 @@ export function assertRequireAuthenticatedCallerAllowed(
       "RESOLVE_CALLER_IDENTITY the server never reads a bearer, so it would " +
       "reject every caller, including authenticated ones. Enable identity " +
       "resolution first (RESOLVE_CALLER_IDENTITY=true or AUTH_ENABLED=true).",
+  );
+}
+
+/**
+ * Deciding an attachment read by the document's policy needs a policy model to
+ * decide with, and that is what auth enforcement supplies. Without one there is
+ * nothing to consult, so the setting would silently leave the permission tables
+ * in charge — configuration that describes a protection the server is not
+ * applying, which is worse than no configuration at all. Refuse instead.
+ */
+export function assertAttachmentPolicyReadsAllowed(
+  attachmentReadsFollowDocumentPolicy: boolean,
+  hasDecisionModel: boolean,
+): void {
+  if (!attachmentReadsFollowDocumentPolicy || hasDecisionModel) {
+    return;
+  }
+  throw new Error(
+    "ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY is set but refused: deciding an " +
+      "attachment read by the referencing document's policy requires a policy " +
+      "model to evaluate, and this composition has none, so the host " +
+      "permission tables would keep deciding while the configuration says " +
+      "otherwise. Enable auth enforcement first (REACTOR_AUTH_ENFORCEMENT=true).",
   );
 }
 
@@ -722,6 +751,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   dbClosers: Array<() => Promise<void>>;
   readiness: ReadinessGate;
   httpRoutes: HttpRouteService;
+  attachmentReadsFollowDocumentPolicy: boolean;
 }> {
   const port = options.port ?? DEFAULT_PORT;
   const { adapter: httpAdapter } = await createHttpAdapter("express");
@@ -733,6 +763,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   let configuredResolveIdentity: boolean | undefined;
   let configuredRequireAuth: boolean | undefined;
   let configuredExemptPaths: string[] | undefined;
+  let configuredAttachmentPolicyReads: boolean | undefined;
   let configuredRenown: RenownConfig | undefined;
   if (options.configFile) {
     const config = getConfig(options.configFile);
@@ -745,12 +776,15 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     configuredResolveIdentity = options.auth.resolveIdentity;
     configuredRequireAuth = options.auth.requireAuthenticatedCaller;
     configuredExemptPaths = options.auth.requireAuthenticatedCallerExemptPaths;
+    configuredAttachmentPolicyReads =
+      options.auth.attachmentReadsFollowDocumentPolicy;
   }
   const {
     AUTH_ENABLED,
     RESOLVE_CALLER_IDENTITY,
     REQUIRE_AUTHENTICATED_CALLER,
     REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS,
+    ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY,
     ADMINS,
     DEFAULT_PROTECTION,
     DOCUMENT_PERMISSIONS_ENABLED,
@@ -813,6 +847,24 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
         .map((path) => path.trim())
         .filter((path) => path.length > 0);
   }
+
+  /**
+   * Whether an attachment read is decided by the referencing document's own
+   * policy rather than by the host's permission tables.
+   *
+   * Off by default, and a deployment's choice rather than something derived
+   * from the flags around it. Which model governs those bytes is configuration
+   * in the same sense the storage backend behind them is: a host that has said
+   * nothing keeps exactly the behaviour it has, and one that wants the change
+   * asks for it and can take it back without disturbing anything else.
+   */
+  let attachmentReadsFollowDocumentPolicy =
+    configuredAttachmentPolicyReads ?? false;
+  if (ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY !== undefined) {
+    attachmentReadsFollowDocumentPolicy =
+      ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY === "true";
+  }
+
   if (ADMINS !== undefined) {
     admins = ADMINS.split(",").map((a) => a.toLowerCase());
   }
@@ -1110,6 +1162,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     packages,
     dbClosers,
     readiness,
+    attachmentReadsFollowDocumentPolicy,
   };
 }
 
@@ -1143,6 +1196,7 @@ async function _setupAPI(
   reactorDriveClient?: IDriveClient,
   syncServingGate?: SyncScopeGate,
   httpRoutes?: HttpRouteService,
+  attachmentReadsFollowDocumentPolicy = false,
 ): Promise<API> {
   const hostModuleBase: IProcessorHostModule = {
     ...createReactorHostModuleBase({
@@ -1249,9 +1303,23 @@ async function _setupAPI(
     `Authorization service initialized (policy: ${authorizationConfig.policy})`,
   );
 
-  // Attachment reads are authorized by document permission, the reactor's read
+  // Attachment reads are authorized by the document read, the reactor's read
   // gate, and the projected document/ref relationship; the facade owns that
   // composition so routes never consult any of them directly.
+  //
+  // The document-read gate is the one sync serving already decides with, rather
+  // than a second one built here: two gates over one document model would be
+  // two policies that can disagree, and the question both are asking is the
+  // same one — may this subject read this document's state.
+  //
+  // Handed over only when the host asks for it. Which model decides an
+  // attachment read is a deployment's choice, the same way the storage backend
+  // behind those bytes is, and a host that has not asked keeps the behaviour it
+  // has — whatever else it has turned on.
+  assertAttachmentPolicyReadsAllowed(
+    attachmentReadsFollowDocumentPolicy,
+    syncServingGate !== undefined,
+  );
   const attachmentAccess: IAttachmentAccessService =
     new AttachmentAccessService(
       createCanonicalDocumentIdResolver(reactorClient),
@@ -1259,6 +1327,7 @@ async function _setupAPI(
       attachmentReferenceIndex.store,
       attachmentReferenceProjection,
       reactorClient,
+      attachmentReadsFollowDocumentPolicy ? syncServingGate : undefined,
     );
 
   // set up subgraph manager
@@ -1492,6 +1561,7 @@ export async function initializeAndStartAPI(
     packages,
     dbClosers,
     readiness,
+    attachmentReadsFollowDocumentPolicy,
   } = await _setupCommonInfrastructure(options);
 
   const { documentModels, upgradeManifests, processors, subgraphs } =
@@ -1571,6 +1641,7 @@ export async function initializeAndStartAPI(
       options.logger ?? defaultLogger,
     ),
     httpRoutes,
+    attachmentReadsFollowDocumentPolicy,
   );
 
   return {

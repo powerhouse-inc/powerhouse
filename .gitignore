@@ -47,3 +47,5 @@ pnpm-publish-summary.json
 .renown.json
 .keypair.json
 .mcp.json
+
+.ui-shots/

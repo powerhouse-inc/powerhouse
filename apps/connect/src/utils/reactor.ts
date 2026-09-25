@@ -12,7 +12,6 @@ import {
   type IDocumentModelLoader,
   type JwtHandler,
   type ReactorFeatureFlags,
-  type SignerConfig,
 } from "@powerhousedao/reactor-browser";
 import type {
   PHConnectDefaultDrive,
@@ -30,6 +29,10 @@ import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { getReactorPGlite } from "../pglite.db.js";
+import {
+  createConnectSignerConfig,
+  type RenownTrustEndpoints,
+} from "./renown-trust.js";
 
 /**
  * Creates a Reactor that plugs into legacy storage but syncs through the new
@@ -42,8 +45,13 @@ export async function createBrowserReactor(
   featureFlags: Partial<ReactorFeatureFlags>,
   documentModelLoader?: IDocumentModelLoader,
   createSignaturePolicy?: SignaturePolicy,
+  renownEndpoints: RenownTrustEndpoints = {},
 ): Promise<BrowserReactorClientModule> {
-  const signerConfig: SignerConfig = { signer: renown.signer };
+  const signerConfig = await createConnectSignerConfig(
+    renown.signer,
+    featureFlags,
+    renownEndpoints,
+  );
 
   const jwtHandler: JwtHandler = async (_url: string) => {
     if (!renown.user) {

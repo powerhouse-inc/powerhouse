@@ -15,8 +15,17 @@ export function isPropVisible(
   prop: BlockFormProp,
   config: Record<string, unknown>,
 ): boolean {
-  if (!prop.showWhen) return true;
-  return prop.showWhen.oneOf.includes(config[prop.showWhen.prop] ?? undefined);
+  const rule = prop.showWhen;
+  if (!rule) return true;
+  const value = config[rule.prop] ?? undefined;
+  // An explicit match wins; only an inferred one yields to `unlessSet`.
+  if (
+    value === undefined &&
+    rule.unlessSet &&
+    config[rule.unlessSet] !== undefined
+  )
+    return false;
+  return rule.oneOf.includes(value);
 }
 
 // Display names of required props with no value; MARKDOWN is informational.
