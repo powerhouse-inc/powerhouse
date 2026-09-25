@@ -185,6 +185,11 @@ test.describe("Step panel in dark mode", () => {
     // Light text on the dark surface, so the name stays readable.
     const [r, g, b] = color.match(/\d+/g)!.map(Number);
     expect(r + g + b).toBeGreaterThan(600);
+
+    // Logos keep their size inside the white tile that backs them.
+    const logo = canvasNode(app, "Summarise").locator("img").first();
+    const box = await logo.boundingBox();
+    expect(box?.width).toBeGreaterThan(16);
   });
 });
 
