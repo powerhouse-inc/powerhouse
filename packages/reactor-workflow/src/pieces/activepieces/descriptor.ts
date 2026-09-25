@@ -81,6 +81,8 @@ export interface PieceAuthDescriptor {
   // ask for, which is what a piece read from a package rather than a published
   // listing would otherwise leave the editor with.
   props?: PiecePropDescriptor[];
+  // Set when this engine can't sign in this way (OAuth2, for one).
+  unsupported?: UnsupportedFeature;
 }
 
 // NONE is how the framework spells "no handshake", so it is not carried:
@@ -107,7 +109,8 @@ export interface PieceDescriptor {
   description?: string;
   logoUrl?: string;
   categories?: string[];
-  auth?: PieceAuthDescriptor;
+  // A list when the piece offers several sign-in methods.
+  auth?: PieceAuthDescriptor | PieceAuthDescriptor[];
   minimumSupportedRelease?: string;
   maximumSupportedRelease?: string;
   actions: PieceActionDescriptor[];
@@ -192,6 +195,25 @@ function withUnsupported(feature: UnsupportedFeature | undefined): {
 
 // Pure translation over a loaded piece; performs no I/O and never executes
 // piece code beyond the actions()/triggers() accessors.
+function describeAuthMethod(auth: unknown): PieceAuthDescriptor | undefined {
+  if (!auth || typeof auth !== "object") return undefined;
+  const method = auth as ApProperty;
+  // CUSTOM_AUTH carries a record here; a DYNAMIC prop would carry a
+  // resolver function, which is not an auth shape at all.
+  const props =
+    method.props && typeof method.props === "object"
+      ? describeProperties(method.props)
+      : [];
+  return {
+    type: method.type ?? "UNKNOWN",
+    displayName: method.displayName,
+    description: method.description,
+    required: method.required,
+    ...(props.length > 0 ? { props } : {}),
+    ...withUnsupported(unsupportedAuth(method)),
+  };
+}
+
 export function buildDescriptor(
   piece: ApPiece,
   source: PieceSource,
@@ -253,21 +275,16 @@ export function buildDescriptor(
     triggers,
     ...withUnsupported(unsupportedAuth(piece.auth)),
   };
-  if (Array.isArray(piece.auth)) return descriptor;
-  if (piece.auth && typeof piece.auth === "object") {
-    // CUSTOM_AUTH carries a record here; a DYNAMIC prop would carry a
-    // resolver function, which is not an auth shape at all.
-    const authProps =
-      piece.auth.props && typeof piece.auth.props === "object"
-        ? describeProperties(piece.auth.props)
-        : [];
-    descriptor.auth = {
-      type: piece.auth.type ?? "UNKNOWN",
-      displayName: piece.auth.displayName,
-      description: piece.auth.description,
-      required: piece.auth.required,
-      ...(authProps.length > 0 ? { props: authProps } : {}),
-    };
+  // Several methods stay a list, in the piece's order; each says whether this
+  // engine can run it.
+  if (Array.isArray(piece.auth)) {
+    const methods = piece.auth
+      .map(describeAuthMethod)
+      .filter((method) => method !== undefined);
+    if (methods.length > 0) descriptor.auth = methods;
+  } else {
+    const method = describeAuthMethod(piece.auth);
+    if (method) descriptor.auth = method;
   }
   return descriptor;
 }
