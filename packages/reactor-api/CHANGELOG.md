@@ -1,3 +1,23 @@
+## 6.2.3-dev.24 (2026-09-25)
+
+### 🚀 Features
+
+- **reactor-api:** exempt named paths from the authenticated-caller floor, and carry it to the attachment routes ([#3108](https://github.com/powerhouse-inc/powerhouse/pull/3108))
+- **reactor:** action signature integrity ([#3088](https://github.com/powerhouse-inc/powerhouse/pull/3088), [#2894](https://github.com/powerhouse-inc/powerhouse/issues/2894), [#7](https://github.com/powerhouse-inc/powerhouse/issues/7))
+
+### 🩹 Fixes
+
+- **reactor-api:** keep each subgraph's SSE route mounted ([bae6f0dce](https://github.com/powerhouse-inc/powerhouse/commit/bae6f0dce))
+- **workflow:** build after powerhouse-vetra-packages so their tsc --build runs never overlap ([#3101](https://github.com/powerhouse-inc/powerhouse/pull/3101))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.3-dev.23 (2026-09-24)
 
 ### 🩹 Fixes

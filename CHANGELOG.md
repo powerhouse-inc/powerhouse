@@ -1,3 +1,45 @@
+## 6.2.3-dev.24 (2026-09-25)
+
+### 🚀 Features
+
+- type-safe piece authoring, upstream connection hooks, and a ph build that typechecks first ([#3082](https://github.com/powerhouse-inc/powerhouse/pull/3082))
+- **academy:** Umami tracking ([#3089](https://github.com/powerhouse-inc/powerhouse/pull/3089))
+- **connect:** install the Renown trust policy under authEnforcement ([cdddf7e0b](https://github.com/powerhouse-inc/powerhouse/commit/cdddf7e0b))
+- **reactor:** the cache bench times the real drive and document-model delete reducers ([1a94baa73](https://github.com/powerhouse-inc/powerhouse/commit/1a94baa73))
+- **reactor:** action signature integrity ([#3088](https://github.com/powerhouse-inc/powerhouse/pull/3088), [#2894](https://github.com/powerhouse-inc/powerhouse/issues/2894), [#7](https://github.com/powerhouse-inc/powerhouse/issues/7))
+- **reactor-api:** exempt named paths from the authenticated-caller floor, and carry it to the attachment routes ([#3108](https://github.com/powerhouse-inc/powerhouse/pull/3108))
+- **reactor-workflow:** validate props before a piece runs, naming each field ([de6288f85](https://github.com/powerhouse-inc/powerhouse/commit/de6288f85))
+- **reactor-workflow:** hand pieces the real run, workflow, project and step ids ([3ad6c1c60](https://github.com/powerhouse-inc/powerhouse/commit/3ad6c1c60))
+- **reactor-workflow:** refuse the auth and trigger features the engine can't run ([7ce03d28f](https://github.com/powerhouse-inc/powerhouse/commit/7ce03d28f))
+- **renown:** add a worker-safe trust entry ([87fbba276](https://github.com/powerhouse-inc/powerhouse/commit/87fbba276))
+
+### 🩹 Fixes
+
+- **reactor:** bench:fix reads the Postgres URL from REACTOR_TEST_PG_URL ([d4be0ac90](https://github.com/powerhouse-inc/powerhouse/commit/d4be0ac90))
+- **reactor:** the records adapter groups bench cases by the sizes they state in each target's units ([47ef2da2b](https://github.com/powerhouse-inc/powerhouse/commit/47ef2da2b))
+- **reactor:** the async emission bench spread only pairs cases at the same delay ([c6980913b](https://github.com/powerhouse-inc/powerhouse/commit/c6980913b))
+- **reactor:** the records adapter files adjacent mechanism-isolating spreads for multi-case suites and refuses a fastest-over-slowest fold on any same-size group of three or more undeclared cases ([071390bc3](https://github.com/powerhouse-inc/powerhouse/commit/071390bc3))
+- **reactor:** the cache bench records flag split slopes that round to zero instead of printing them as a measured 0 ([3626cf81e](https://github.com/powerhouse-inc/powerhouse/commit/3626cf81e))
+- **reactor:** the FIXED gate requires a record at the fix sha in the tier and storage a GAP's experiment names ([3a126e599](https://github.com/powerhouse-inc/powerhouse/commit/3a126e599))
+- **reactor:** bench:fix criterion can bound a case that exists only in the after-run ([07496793c](https://github.com/powerhouse-inc/powerhouse/commit/07496793c))
+- **reactor:** post-ready read models run on their own per-key chain ([f3432fdc2](https://github.com/powerhouse-inc/powerhouse/commit/f3432fdc2))
+- **reactor:** the processors bench target declares its size units ([9438ef7e6](https://github.com/powerhouse-inc/powerhouse/commit/9438ef7e6))
+- **reactor:** work the next ten verified bench findings in order ([#3085](https://github.com/powerhouse-inc/powerhouse/pull/3085))
+- **reactor-api:** keep each subgraph's SSE route mounted ([bae6f0dce](https://github.com/powerhouse-inc/powerhouse/commit/bae6f0dce))
+- **reactor-api:** keep each subgraph's SSE route mounted ([#3104](https://github.com/powerhouse-inc/powerhouse/pull/3104))
+- **reactor-browser:** keep a loaded document on screen while it refetches ([#3098](https://github.com/powerhouse-inc/powerhouse/pull/3098))
+- **shared:** drive and document-model reducers assign frozen lists built from the base array ([74dbb1426](https://github.com/powerhouse-inc/powerhouse/commit/74dbb1426))
+- **workflow:** build after powerhouse-vetra-packages so their tsc --build runs never overlap ([#3101](https://github.com/powerhouse-inc/powerhouse/pull/3101))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Frank @froid1911
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.3-dev.23 (2026-09-24)
 
 ### 🚀 Features

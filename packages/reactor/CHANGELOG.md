@@ -1,3 +1,30 @@
+## 6.2.3-dev.24 (2026-09-25)
+
+### 🚀 Features
+
+- **reactor:** action signature integrity ([#3088](https://github.com/powerhouse-inc/powerhouse/pull/3088), [#2894](https://github.com/powerhouse-inc/powerhouse/issues/2894), [#7](https://github.com/powerhouse-inc/powerhouse/issues/7))
+- **reactor:** the cache bench times the real drive and document-model delete reducers ([1a94baa73](https://github.com/powerhouse-inc/powerhouse/commit/1a94baa73))
+
+### 🩹 Fixes
+
+- **workflow:** build after powerhouse-vetra-packages so their tsc --build runs never overlap ([#3101](https://github.com/powerhouse-inc/powerhouse/pull/3101))
+- **reactor:** the processors bench target declares its size units ([9438ef7e6](https://github.com/powerhouse-inc/powerhouse/commit/9438ef7e6))
+- **reactor:** post-ready read models run on their own per-key chain ([f3432fdc2](https://github.com/powerhouse-inc/powerhouse/commit/f3432fdc2))
+- **reactor:** bench:fix criterion can bound a case that exists only in the after-run ([07496793c](https://github.com/powerhouse-inc/powerhouse/commit/07496793c))
+- **reactor:** the FIXED gate requires a record at the fix sha in the tier and storage a GAP's experiment names ([3a126e599](https://github.com/powerhouse-inc/powerhouse/commit/3a126e599))
+- **reactor:** the cache bench records flag split slopes that round to zero instead of printing them as a measured 0 ([3626cf81e](https://github.com/powerhouse-inc/powerhouse/commit/3626cf81e))
+- **reactor:** the records adapter files adjacent mechanism-isolating spreads for multi-case suites and refuses a fastest-over-slowest fold on any same-size group of three or more undeclared cases ([071390bc3](https://github.com/powerhouse-inc/powerhouse/commit/071390bc3))
+- **reactor:** the async emission bench spread only pairs cases at the same delay ([c6980913b](https://github.com/powerhouse-inc/powerhouse/commit/c6980913b))
+- **reactor:** the records adapter groups bench cases by the sizes they state in each target's units ([47ef2da2b](https://github.com/powerhouse-inc/powerhouse/commit/47ef2da2b))
+- **reactor:** bench:fix reads the Postgres URL from REACTOR_TEST_PG_URL ([d4be0ac90](https://github.com/powerhouse-inc/powerhouse/commit/d4be0ac90))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+
 ## 6.2.3-dev.23 (2026-09-24)
 
 ### 🚀 Features
