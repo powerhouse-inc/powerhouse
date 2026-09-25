@@ -23,9 +23,6 @@
       "path": "packages/shared"
     },
     {
-      "path": "packages/switchboard-gui"
-    },
-    {
       "path": "packages/analytics-engine/benchmarks"
     },
     {
