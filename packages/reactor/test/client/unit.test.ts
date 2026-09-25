@@ -23,10 +23,14 @@ import type { IReactorClient } from "../../src/client/types.js";
 import { DocumentChangeType } from "../../src/client/types.js";
 import type { BatchExecutionResult, IReactor } from "../../src/core/types.js";
 import type { IJobAwaiter } from "../../src/shared/awaiter.js";
-import { RelationshipNotFoundError } from "../../src/shared/errors.js";
+import {
+  DocumentNotFoundError,
+  RelationshipNotFoundError,
+} from "../../src/shared/errors.js";
 import {
   JobStatus,
   PropagationMode,
+  RelationshipChangeType,
   type JobInfo,
   type PagedResults,
 } from "../../src/shared/types.js";
@@ -1490,7 +1494,7 @@ describe("ReactorClient Unit Tests", () => {
       );
     });
 
-    it("keeps an outgoing edge whose far end holds no domain scope to withhold", async () => {
+    it("withholds an outgoing edge whose far end holds no domain scope yet", async () => {
       vi.mocked(mockReactor.getOutgoingRelationshipEdges).mockResolvedValue({
         results: [edgeBetween("p", "meta-only")],
         options: { cursor: "0", limit: 100 },
@@ -1500,11 +1504,15 @@ describe("ReactorClient Unit Tests", () => {
         options: { cursor: "0", limit: 1 },
       });
 
-      const result = await clientRefusing(
+      const refused = await clientRefusing(
         "meta-only",
       ).getOutgoingRelationshipEdges("p", "child");
+      const allowed = await clientRefusing(
+        "other",
+      ).getOutgoingRelationshipEdges("p", "child");
 
-      expect(result.results).toHaveLength(1);
+      expect(refused.results).toHaveLength(0);
+      expect(allowed.results).toHaveLength(1);
     });
 
     it("withholds an incoming edge whose far end refuses every domain scope", async () => {
@@ -1530,6 +1538,41 @@ describe("ReactorClient Unit Tests", () => {
       expect(result.results.map((edge) => edge.sourceId)).toEqual([
         "readable-parent",
       ]);
+    });
+
+    // Its model declares domain scopes the read model has not indexed yet.
+    it("judges a listed document holding no domain scope yet on the declared ones", async () => {
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: [documentWithScopes("meta-only", ["auth", "document"])],
+        options: { cursor: "0", limit: 10 },
+      });
+
+      const refused = await clientRefusing("meta-only").find({
+        ids: ["meta-only"],
+      });
+      const allowed = await clientRefusing("other").find({
+        ids: ["meta-only"],
+      });
+
+      expect(refused.results).toHaveLength(0);
+      expect(allowed.results.map((d) => d.header.id)).toEqual(["meta-only"]);
+    });
+
+    it("lists a document handed over with no state at all", async () => {
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: [
+          {
+            header: { id: "stateless", documentType: "test", branch: "main" },
+          } as unknown as PHDocument,
+        ],
+        options: { cursor: "0", limit: 10 },
+      });
+
+      const listed = await clientRefusing("stateless").find({
+        ids: ["stateless"],
+      });
+
+      expect(listed.results.map((d) => d.header.id)).toEqual(["stateless"]);
     });
   });
 
@@ -2232,9 +2275,9 @@ describe("ReactorClient Unit Tests", () => {
       expect((filtered.initialState as any).local).toBeUndefined();
     });
 
-    it("keeps the auth scope in a scope-narrowed subscription fetch", async () => {
-      // Without it the fetch omits the policy, decide() reads an absent policy
-      // as uninitialized, and the gate allows everything.
+    it("fetches a scope-narrowed subscription whole, then narrows", async () => {
+      // A narrowed fetch could omit the policy or every domain scope, and
+      // withholding would be decided on neither.
       let onCreated: ((result: { results: string[] }) => void) | undefined;
       vi.mocked(mockSubscriptionManager.onDocumentCreated).mockImplementation(
         (handler: any) => {
@@ -2246,19 +2289,24 @@ describe("ReactorClient Unit Tests", () => {
         docWithScopes("d1", readGlobalPolicy, { global: { x: 1 } }),
       );
 
-      client.subscribe({} as any, () => {}, {
+      const callback = vi.fn();
+      client.subscribe({} as any, callback, {
         scopes: ["global"],
         subject: { address: "0xreader" },
       });
 
       onCreated?.({ results: ["d1"] });
 
-      await vi.waitFor(() => {
-        expect(mockReactor.get).toHaveBeenCalled();
-      });
+      await vi.waitFor(() => expect(callback).toHaveBeenCalled());
       const viewArg = vi.mocked(mockReactor.get).mock.calls[0][1];
-      expect(viewArg?.scopes).toContain("auth");
-      expect(viewArg?.scopes).toContain("global");
+      expect(viewArg?.scopes).toBeUndefined();
+      expect(viewArg?.subject).toEqual({ address: "0xreader" });
+      const event = callback.mock.calls[0][0] as { documents: PHDocument[] };
+      expect(Object.keys(event.documents[0].state).sort()).toEqual([
+        "auth",
+        "document",
+        "global",
+      ]);
     });
 
     it("falls back to the client's own signer when no subject is given", async () => {
@@ -2720,6 +2768,11 @@ describe("ReactorClient Unit Tests", () => {
             gate,
           );
 
+          // The delete is gated on the document read at its deletion boundary.
+          vi.mocked(mockReactor.get).mockResolvedValue(
+            docWithScopes("d1", readGlobalPolicy, { global: { x: 0 } }),
+          );
+
           const unsubscribe = client.subscribe({}, callback, {
             subject: { address: "0xreader" },
           });
@@ -2843,6 +2896,81 @@ describe("ReactorClient Unit Tests", () => {
 
           await vi.waitFor(() => expect(callback).toHaveBeenCalledTimes(1));
           expect(deliveredXs(callback)).toEqual([2]);
+        });
+      });
+
+      describe("gating a relationship event", () => {
+        function subscribeToRelationships(logger = createMockLogger()) {
+          const callback = vi.fn();
+          let fire:
+            | ((parentId: string, childId: string, type: string) => void)
+            | undefined;
+          const manager = createMockSubscriptionManager({
+            onRelationshipChanged: vi.fn((cb: typeof fire) => {
+              fire = cb;
+              return () => {};
+            }) as never,
+          });
+          const client = new ReactorClient(
+            logger,
+            mockReactor,
+            createMockSigner(),
+            manager,
+            mockJobAwaiter,
+            mockDocumentIndexer,
+            mockDocumentView,
+            new BareReadGate(),
+          );
+          client.subscribe({}, callback, { subject: { address: "0xreader" } });
+          return {
+            callback,
+            added: () =>
+              fire?.("parent", "child", RelationshipChangeType.Added),
+          };
+        }
+
+        it("reads parent and child concurrently", async () => {
+          const pending: string[] = [];
+          vi.mocked(mockReactor.get).mockImplementation((id: string) => {
+            pending.push(id);
+            return new Promise(() => {});
+          });
+          const { added } = subscribeToRelationships();
+
+          added();
+
+          await vi.waitFor(() =>
+            expect(pending.sort()).toEqual(["child", "parent"]),
+          );
+        });
+
+        it("surfaces the read's own error when the absence check fails too", async () => {
+          const logger = createMockLogger();
+          const failed = vi.spyOn(logger, "error");
+          const readFailure = new Error("read side unavailable");
+          vi.mocked(mockReactor.get).mockRejectedValue(readFailure);
+          vi.mocked(mockDocumentView.exists).mockRejectedValue(
+            new Error("existence check unavailable"),
+          );
+          const { callback, added } = subscribeToRelationships(logger);
+
+          added();
+
+          await vi.waitFor(() => expect(failed).toHaveBeenCalled());
+          expect(failed.mock.calls[0][2]).toBe(readFailure);
+          expect(callback).not.toHaveBeenCalled();
+        });
+
+        it("delivers without an absence check for a document not found", async () => {
+          vi.mocked(mockReactor.get).mockRejectedValue(
+            new DocumentNotFoundError("child"),
+          );
+          const { callback, added } = subscribeToRelationships();
+
+          added();
+
+          await vi.waitFor(() => expect(callback).toHaveBeenCalled());
+          expect(mockDocumentView.exists).not.toHaveBeenCalled();
         });
       });
     });

@@ -20,7 +20,7 @@ import {
 import { isDriveContainerType } from "./constants.js";
 import type { Resolvers } from "./gen/graphql.js";
 import {
-  ensureGlobalDocumentSubscription,
+  DocumentChangeFeed,
   ensureJobSubscription,
   getPubSub,
   SUBSCRIPTION_TRIGGERS,
@@ -40,6 +40,13 @@ export class ReactorSubgraph extends BaseSubgraph {
 
   name = "r";
   hasSubscriptions = true;
+
+  #documentChanges: DocumentChangeFeed | undefined;
+
+  private get documentChanges(): DocumentChangeFeed {
+    this.#documentChanges ??= new DocumentChangeFeed(this.reactorClient);
+    return this.#documentChanges;
+  }
 
   /**
    * Check operation-level permissions for an array of actions.
@@ -1113,9 +1120,9 @@ export class ReactorSubgraph extends BaseSubgraph {
 
     Subscription: {
       documentChanges: {
-        // Drop events referencing any document the subscriber cannot read. The
-        // check lives in the withFilter predicate (fail-closed on throw) so it
-        // covers both transports, which share this resolver.
+        // Each subscriber reads the reactor's feed as its own subject, so the
+        // client withholds what the policy refuses it. The predicate adds the
+        // host's legacy check; both transports share this resolver.
         subscribe: (
           rootValue: unknown,
           args: {
@@ -1135,12 +1142,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             },
             Context
           >(
-            () => {
-              ensureGlobalDocumentSubscription(this.reactorClient);
-              return getPubSub().asyncIterableIterator<DocumentChangesPayload>(
-                SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES,
-              );
-            },
+            () => this.documentChanges.subscribe(this.viewSubject(ctx)),
             async (payload, filterArgs, filterCtx) => {
               if (!payload) return false;
 

@@ -1,4 +1,9 @@
-import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type {
+  DocumentChangeEvent,
+  IReactorClient,
+  ISyncManager,
+  ViewFilter,
+} from "@powerhousedao/reactor";
 import { DocumentChangeType } from "@powerhousedao/reactor";
 import { documentModelDocumentModelModule } from "document-model";
 import { buildSchema, print, subscribe, parse } from "graphql";
@@ -20,13 +25,36 @@ import { createGraphQLSSEHandler } from "../src/graphql/sse.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import { createSchema } from "../src/utils/create-schema.js";
 
-// Instantiate the actual ReactorSubgraph to get its typeDefs and resolvers.
-// The mock reactorClient needs subscribe() (called by ensureGlobalDocumentSubscription)
-// and getJobStatus() (called by ensureJobSubscription).
+// The reactor feeds each subject reads, keyed by the view's subject address.
+const liveFeeds = new Set<{
+  address: string | undefined;
+  callback: (event: DocumentChangeEvent) => void;
+}>();
+
 const mockReactorClient = {
-  subscribe: vi.fn(() => vi.fn()),
+  subscribe: vi.fn(
+    (
+      _search: unknown,
+      callback: (event: DocumentChangeEvent) => void,
+      view?: ViewFilter,
+    ) => {
+      const feed = { address: view?.subject?.address, callback };
+      liveFeeds.add(feed);
+      return () => liveFeeds.delete(feed);
+    },
+  ),
   getJobStatus: vi.fn(),
 } as unknown as IReactorClient;
+
+// Emits as the reactor would on the feed read as `address`.
+function emitDocumentChange(
+  event: DocumentChangeEvent,
+  address: string = "0xreader",
+): void {
+  for (const feed of liveFeeds) {
+    if (feed.address === address) feed.callback(event);
+  }
+}
 
 /** Authorization stub that grants read to everyone unless overridden. */
 function makeAuthorizationService(
@@ -161,7 +189,7 @@ describe("Subscription SSE Integration", () => {
 
       const nextPromise = iterator.next();
       await delay(10);
-      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES, payload);
+      emitDocumentChange(payload.documentChanges);
 
       const next = await nextPromise;
       expect(next.done).toBe(false);
@@ -272,13 +300,10 @@ describe("Subscription SSE Integration", () => {
 
       const firstPromise = iterator.next();
       await delay(10);
-      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES, {
-        documentChanges: {
-          type: DocumentChangeType.Created,
-          documents: [doc1],
-        },
-        search: {},
-      } satisfies DocumentChangesPayload);
+      emitDocumentChange({
+        type: DocumentChangeType.Created,
+        documents: [doc1],
+      });
 
       const first = await firstPromise;
       expect(first.value).toEqual({
@@ -292,13 +317,10 @@ describe("Subscription SSE Integration", () => {
 
       const secondPromise = iterator.next();
       await delay(10);
-      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES, {
-        documentChanges: {
-          type: DocumentChangeType.Updated,
-          documents: [doc2],
-        },
-        search: {},
-      } satisfies DocumentChangesPayload);
+      emitDocumentChange({
+        type: DocumentChangeType.Updated,
+        documents: [doc2],
+      });
 
       const second = await secondPromise;
       expect(second.value).toEqual({
@@ -375,6 +397,94 @@ describe("Subscription SSE Integration", () => {
     });
   });
 
+  describe("Per-subscriber reads", () => {
+    type Feed = {
+      view: { subject?: { address?: string } } | undefined;
+      callback: (event: unknown) => void;
+    };
+
+    function recordingClient(feeds: Feed[]): IReactorClient {
+      return {
+        subscribe: vi.fn(
+          (
+            _search: unknown,
+            callback: Feed["callback"],
+            view: Feed["view"],
+          ) => {
+            feeds.push({ view, callback });
+            return vi.fn();
+          },
+        ),
+        getJobStatus: vi.fn(),
+      } as unknown as IReactorClient;
+    }
+
+    async function subscribeAs(
+      schema: ReturnType<typeof buildSchema>,
+      address: string,
+    ) {
+      const result = await subscribe({
+        schema,
+        contextValue: {
+          user: { address },
+          headers: {},
+          db: null,
+        } as unknown as Context,
+        document: parse(`
+          subscription {
+            documentChanges(search: {}) { type documents { id } }
+          }
+        `),
+      });
+      return firstEvent(result);
+    }
+
+    it("reads the reactor feed as each subscriber, not as the host", async () => {
+      const feeds: Feed[] = [];
+      const subgraph = new ReactorSubgraph({
+        reactorClient: recordingClient(feeds),
+        syncManager: {} as ISyncManager,
+        // OPEN: the legacy layer admits everyone, so only the view can gate.
+        authorizationService: makeAuthorizationService({
+          isSupremeAdmin: () => true,
+        }),
+      } as SubgraphArgs);
+      const schema = buildSubscriptionSchema(subgraph);
+
+      const alice = await subscribeAs(schema, "0xalice");
+      const bob = await subscribeAs(schema, "0xbob");
+      await delay(10);
+
+      const feedOf = (address: string) =>
+        feeds.find((feed) => feed.view?.subject?.address === address);
+      expect(feedOf("0xalice")).toBeDefined();
+      expect(feedOf("0xbob")).toBeDefined();
+
+      feedOf("0xalice")!.callback({
+        type: DocumentChangeType.Created,
+        documents: [documentWithId("alice-doc")],
+      });
+
+      const delivered = await alice.next;
+      expect(delivered.value).toEqual({
+        data: {
+          documentChanges: {
+            type: "CREATED",
+            documents: [expect.objectContaining({ id: "alice-doc" })],
+          },
+        },
+      });
+      const bobGot = await Promise.race([
+        bob.next.then(() => "event"),
+        delay(50).then(() => "nothing"),
+      ]);
+      expect(bobGot).toBe("nothing");
+
+      await alice.iterator.return?.();
+      await bob.iterator.return?.();
+    });
+  });
+
   describe("Subscription Authorization (S-H2)", () => {
     it("drops documentChanges events for documents the subscriber cannot read", async () => {
       const subgraph = makeReactorSubgraph(
@@ -398,22 +508,16 @@ describe("Subscription SSE Integration", () => {
 
       await delay(10);
       // Unreadable document: must be dropped.
-      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES, {
-        documentChanges: {
-          type: DocumentChangeType.Created,
-          documents: [documentWithId("secret-doc")],
-        },
-        search: {},
-      } as DocumentChangesPayload);
+      emitDocumentChange({
+        type: DocumentChangeType.Created,
+        documents: [documentWithId("secret-doc")],
+      });
       await delay(10);
       // Readable document: must be delivered.
-      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES, {
-        documentChanges: {
-          type: DocumentChangeType.Created,
-          documents: [documentWithId("readable-doc")],
-        },
-        search: {},
-      } as DocumentChangesPayload);
+      emitDocumentChange({
+        type: DocumentChangeType.Created,
+        documents: [documentWithId("readable-doc")],
+      });
 
       const next = await nextPromise;
       expect(next.value).toEqual({
@@ -455,24 +559,18 @@ describe("Subscription SSE Integration", () => {
 
       await delay(10);
       // ChildAdded references an unreadable parent -> must be dropped.
-      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES, {
-        documentChanges: {
-          type: DocumentChangeType.ChildAdded,
-          documents: [],
-          context: { parentId: "secret-parent", childId: "visible-child" },
-        },
-        search: {},
-      } as DocumentChangesPayload);
+      emitDocumentChange({
+        type: DocumentChangeType.ChildAdded,
+        documents: [],
+        context: { parentId: "secret-parent", childId: "visible-child" },
+      });
       await delay(10);
       // Deleted references only a readable child -> must be delivered.
-      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES, {
-        documentChanges: {
-          type: DocumentChangeType.Deleted,
-          documents: [],
-          context: { childId: "visible-child" },
-        },
-        search: {},
-      } as DocumentChangesPayload);
+      emitDocumentChange({
+        type: DocumentChangeType.Deleted,
+        documents: [],
+        context: { childId: "visible-child" },
+      });
 
       const next = await nextPromise;
       expect(next.value).toEqual({
@@ -506,13 +604,13 @@ describe("Subscription SSE Integration", () => {
       const { iterator, next: nextPromise } = firstEvent(result);
 
       await delay(10);
-      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES, {
-        documentChanges: {
+      emitDocumentChange(
+        {
           type: DocumentChangeType.Created,
           documents: [documentWithId("any-doc")],
         },
-        search: {},
-      } as DocumentChangesPayload);
+        "0xadmin",
+      );
 
       const next = await nextPromise;
       expect(next.value).toEqual({
