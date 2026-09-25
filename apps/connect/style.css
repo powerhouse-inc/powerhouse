@@ -1,8 +1,6 @@
-/* Declare the external-packages layer first so it has the lowest priority in the
-   cascade. Any CSS injected by dynamically loaded packages (via the package
-   manager) is placed into this layer, preventing it from overriding connect,
-   design-system, vetra, or powerhouse-vetra-packages styles. */
-@layer external-packages;
+/* Package CSS goes in external-packages: above the reset, below Connect's
+   utilities. Keep in sync with LAYER_ORDER in src/package-styles.ts. */
+@layer theme, base, components, external-packages, utilities;
 /* Pull in the design-system's Tailwind theme extension (theme block with all
    color, font, and spacing tokens) so they are available before Tailwind
    generates utility classes below. Also defines the dark-mode custom variant. */

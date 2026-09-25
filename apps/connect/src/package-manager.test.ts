@@ -6,6 +6,11 @@ import {
   BrowserPackageManager,
   sharedDepMismatchWarnings,
 } from "./package-manager.js";
+import {
+  declareExternalPackagesLayer,
+  LAYER_ORDER,
+  mountPackageStyles,
+} from "./package-styles.js";
 
 // Both packages are reached through a lazy `import()`, so the fake stands in
 // for the code-split chunk without pulling either package's editors in here.
@@ -106,5 +111,35 @@ describe("BrowserPackageManager.init — flag-gated local packages", () => {
     await pm.init(undefined, undefined, true, true);
     expect(pm.getPackageSource(VETRA)).toBe("common");
     expect(pm.getPackageSource(WORKFLOW)).toBe("common");
+  });
+});
+
+describe("declareExternalPackagesLayer", () => {
+  it("declares the layer before any stylesheet, once", () => {
+    // Stands in for the project's stylesheet, already in <head>.
+    document.head.innerHTML = '<meta name="project-stylesheet" />';
+    declareExternalPackagesLayer();
+    declareExternalPackagesLayer();
+    const first = document.head.firstElementChild;
+    expect(first?.tagName).toBe("STYLE");
+    expect(first?.textContent).toBe(LAYER_ORDER);
+    expect(document.head.querySelectorAll("style")).toHaveLength(1);
+  });
+});
+
+describe("mountPackageStyles", () => {
+  it("imports the CSS into the external-packages layer, replacing on update", () => {
+    document.head.innerHTML = '<meta name="project-stylesheet" />';
+    mountPackageStyles("umh-production-ledger", ".a{color:red}");
+    mountPackageStyles("umh-production-ledger", ".a{color:blue}");
+    const styles = document.head.querySelectorAll(
+      "style[data-ph-package-styles]",
+    );
+    expect(styles).toHaveLength(1);
+    expect(styles[0].textContent).toMatch(
+      /^@import url\("blob:.+"\) layer\(external-packages\);$/,
+    );
+    // The order is declared before everything else.
+    expect(document.head.firstElementChild?.textContent).toBe(LAYER_ORDER);
   });
 });

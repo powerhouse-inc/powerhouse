@@ -1,19 +1,14 @@
 import { css } from "@tmpl/core";
 
 export const styleTemplate = css`
+  /* This package's styles: installs load them inside Connect, which already
+     provides its reset and its own UI styles, so only tokens and utilities. */
+  @import "tailwindcss/theme.css" layer(theme);
   @import "@powerhousedao/design-system/theme.css";
-  @custom-variant dark (&:where(.dark, .dark *));
-  @import "tailwindcss";
-  @import "@powerhousedao/connect/style.css";
+  @import "tailwindcss/utilities.css" layer(utilities);
 
   @theme {
-    /* You can customize the theme by overriding the theme variables here */
-    /* See https://tailwindcss.com/docs/theme#using-a-custom-theme for details */
-
-    /* If you would prefer to use plain css, add your styles below this @theme tag as you normally would */
-
-    /* A sensible CSS reset is applied by default. If you would prefer to use a different reset or none at all, uncomment the following line */
-
-    /* --*: initial; */
+    /* Customize this package's theme variables here. */
+    /* See https://tailwindcss.com/docs/theme#using-a-custom-theme */
   }
 `.raw;

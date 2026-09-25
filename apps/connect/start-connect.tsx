@@ -1,5 +1,6 @@
 import type { DocumentModelLib } from "@powerhousedao/shared/document-model";
 import { bootConnect } from "./src/boot.js";
+import { mountPackageStyles } from "./src/package-styles.js";
 
 // Paint the config-independent skeleton, then bootstrap the runtime config,
 // BEFORE the React tree imports. Any module that imports start-connect.tsx —
@@ -20,7 +21,8 @@ const components = root ? await import("./src/components/index.js") : null;
  *
  * // main.tsx
  * import * as localPackage from "./index.js";
- * const { updateLocalPackage } = startConnect(localPackage);
+ * import styles from "./style.css?inline";
+ * const { updateLocalPackage } = startConnect(localPackage, { styles });
  *
  * if (import.meta.hot) {
  *   import.meta.hot.accept(["./index.js"], ([newModule]) => {
@@ -52,7 +54,23 @@ function updateLocalPackage(pkg: DocumentModelLib<any> | ModuleNamespace) {
   window.ph?.vetraPackageManager?.updateLocalPackage(pkg as DocumentModelLib);
 }
 
-export function startConnect(localPackage: DocumentModelLib<any>) {
+export interface StartConnectOptions {
+  /** The project's compiled package stylesheet, e.g. `./style.css?inline`. */
+  styles?: string;
+}
+
+// The project's own package, styled like any installed one.
+const LOCAL_STYLES = "local-package";
+
+function updateLocalStyles(styles: string) {
+  mountPackageStyles(LOCAL_STYLES, styles);
+}
+
+export function startConnect(
+  localPackage: DocumentModelLib<any>,
+  options: StartConnectOptions = {},
+) {
+  if (options.styles !== undefined) updateLocalStyles(options.styles);
   // Rendered into the same root the skeleton was painted into, so the swap is
   // a reconciliation rather than a second mount point.
   if (root && components) {
@@ -63,5 +81,6 @@ export function startConnect(localPackage: DocumentModelLib<any>) {
 
   return {
     updateLocalPackage,
+    updateLocalStyles,
   };
 }

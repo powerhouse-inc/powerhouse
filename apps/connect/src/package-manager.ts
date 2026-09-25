@@ -31,6 +31,7 @@ import {
 import { refreshPwaManifestLink } from "./utils/pwa-manifest-link.js";
 import vetraPkg from "@powerhousedao/vetra/package.json" with { type: "json" };
 import workflowPkg from "@powerhousedao/workflow/package.json" with { type: "json" };
+import { declareExternalPackagesLayer } from "./package-styles.js";
 
 type PackageMeta = {
   name: string;
@@ -502,6 +503,7 @@ export class BrowserPackageManager implements IPackageManager {
     const existing = this.#stylesheets.get(name);
     if (existing) return existing;
 
+    declareExternalPackagesLayer();
     const style = document.createElement("style");
     style.textContent = `@import url("${href}") layer(external-packages);`;
     document.head.appendChild(style);
