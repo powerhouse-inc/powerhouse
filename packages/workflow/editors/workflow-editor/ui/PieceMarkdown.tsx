@@ -10,7 +10,7 @@ import remarkGfm from "remark-gfm";
 // a large graph, and most blocks have no markdown at all.
 export default function PieceMarkdown({ text }: { text: string }) {
   return (
-    <div className="rounded bg-muted px-2 py-1.5 text-xs text-muted-foreground">
+    <div className="text-xs text-muted-foreground">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

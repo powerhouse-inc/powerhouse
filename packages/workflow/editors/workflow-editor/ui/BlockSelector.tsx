@@ -709,7 +709,11 @@ export function BlockSelector(props: {
                         size={ROW_LOGO}
                       />
                     }
-                    label={entry.displayName}
+                    label={
+                      entry.deprecated
+                        ? `${entry.displayName} (deprecated)`
+                        : entry.displayName
+                    }
                     description={
                       entry.unsupported ??
                       (mode === "triggers"

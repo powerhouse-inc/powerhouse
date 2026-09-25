@@ -12,6 +12,8 @@ export interface PieceSummaryUi {
   categories: string[];
   // Why none of the piece's blocks can run on this reactor.
   unsupported?: string | null;
+  // Retired by its publisher: still listed, marked as such.
+  deprecated?: boolean;
 }
 
 export interface BlockSearchHitUi {

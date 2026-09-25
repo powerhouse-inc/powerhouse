@@ -9,7 +9,7 @@ import type * as ConnectionModel from "../document-models/connection/v1/index.js
 import type * as WorkflowModel from "../document-models/workflow/v1/index.js";
 
 export const PKG = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const ROOT = resolve(PKG, "../..");
+export const ROOT = resolve(PKG, "../..");
 const SWITCHBOARD_PORT = 4001;
 const CONNECT_PORT = Number(process.env.UI_SHOTS_CONNECT_PORT ?? 3100);
 export const SWITCHBOARD = `http://localhost:${SWITCHBOARD_PORT}`;
@@ -227,7 +227,7 @@ export interface Seeded {
   connection: string;
 }
 
-interface PhWindow {
+export interface PhWindow {
   ph?: {
     reactorClientModule?: {
       client: {
@@ -236,6 +236,11 @@ interface PhWindow {
             drive: string,
             doc: unknown,
           ): Promise<{ header: { id: string } }>;
+          addFolder(
+            drive: string,
+            name: string,
+            parentFolder?: string,
+          ): Promise<{ state: unknown }>;
         };
         execute(
           id: string,

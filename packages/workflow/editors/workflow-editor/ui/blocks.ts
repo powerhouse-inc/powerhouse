@@ -3,7 +3,16 @@
 // The document blocks live in the reactor piece, and are offered here too:
 // they are what most workflows on a reactor are built from, and a picker that
 // made an author search for them would be a worse picker.
-import { REACTOR_PIECE } from "./reactor-piece-form.js";
+
+// The reactor piece this package ships, named as pieces/index.ts declares it.
+export const REACTOR_PIECE = "@powerhousedao/piece-reactor";
+
+export function isReactorPieceBlock(blockType: string): boolean {
+  return (
+    blockType.startsWith(`${REACTOR_PIECE}#`) ||
+    blockType.startsWith(`${REACTOR_PIECE}@`)
+  );
+}
 
 export interface BlockPreset {
   label: string;
@@ -91,7 +100,7 @@ export const STEP_PRESETS: BlockPreset[] = [
     blockType: `${REACTOR_PIECE}#document-dispatch`,
     group: "powerhouse",
     description: "Sends actions to a document.",
-    defaultConfig: { documentId: "", actions: [] },
+    defaultConfig: { documentId: "" },
   },
   {
     label: "Get document",
