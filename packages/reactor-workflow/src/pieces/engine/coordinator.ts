@@ -148,6 +148,7 @@ export async function runWorkflow(
       return;
     }
     const input = resolveExpressions(step.config, scope);
+    const startedAt = new Date().toISOString();
     try {
       const result = await executor.execute({
         blockType: step.blockType,
@@ -164,6 +165,8 @@ export async function runWorkflow(
         input: journaled(input, result.redactValues),
         output: journaled(result.output, result.redactValues),
         port,
+        startedAt,
+        endedAt: new Date().toISOString(),
       };
       records.set(step.id, record);
       await journal(record);
@@ -181,6 +184,8 @@ export async function runWorkflow(
         status: "FAILED",
         input: journaled(input, values),
         error: detail,
+        startedAt,
+        endedAt: new Date().toISOString(),
       };
       records.set(step.id, record);
       await journal(record);
