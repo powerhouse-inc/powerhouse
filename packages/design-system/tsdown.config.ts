@@ -1,5 +1,6 @@
 import { babel } from "@rollup/plugin-babel";
 import { defineConfig } from "tsdown";
+import { dtsExportList } from "../../tsdown.dts.mjs";
 
 export default defineConfig({
   entry: [
@@ -20,9 +21,10 @@ export default defineConfig({
   outDir: "dist",
   platform: "browser",
   clean: true,
-  dts: true,
+  dts: { generator: "tsgo" },
   sourcemap: true,
   plugins: [
+    dtsExportList(),
     babel({
       babelHelpers: "bundled",
       extensions: [".ts", ".tsx", ".js", ".jsx"],

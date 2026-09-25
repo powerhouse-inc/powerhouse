@@ -1,4 +1,5 @@
 import { defineConfig } from "tsdown";
+import { dtsExportList } from "../../tsdown.dts.mjs";
 
 export default defineConfig({
   entry: [
@@ -14,7 +15,8 @@ export default defineConfig({
   platform: "browser",
   outDir: "dist",
   clean: true,
-  dts: true,
+  dts: { generator: "tsgo" },
+  plugins: [dtsExportList()],
   sourcemap: true,
   copy: [{ from: "powerhouse.manifest.json", to: "dist" }],
 });

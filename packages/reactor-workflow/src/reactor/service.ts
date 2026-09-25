@@ -85,6 +85,7 @@ import {
   fetchPieceDetail,
   fetchPieceTriggers,
   CatalogStatusError,
+  clientAuth,
   type PieceActionsResult,
   type PieceSummary,
   type PieceTriggersResult,
@@ -2262,7 +2263,7 @@ export class WorkflowRuntimeService {
     const common = {
       displayName: descriptor.displayName,
       logoUrl: descriptor.logoUrl,
-      auth: descriptor.auth ?? null,
+      auth: clientAuth(descriptor.auth),
     };
     if (parsed.kind === "trigger") {
       const trigger = descriptor.triggers.find(

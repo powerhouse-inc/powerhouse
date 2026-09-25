@@ -229,7 +229,7 @@ describe("buildPieceBuildConfig", () => {
   it("externalizes nothing, and says so without tsdown's bundling hint", () => {
     expect(cfg.deps!.alwaysBundle).toEqual(["**"]);
     expect(cfg.deps!.neverBundle).toEqual([]);
-    expect(cfg.deps!.onlyAllowBundle).toBe(false);
+    expect(cfg.deps!.onlyBundle).toBe(false);
   });
 
   it("does not emit declarations itself (tsc does)", () => {

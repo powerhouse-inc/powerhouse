@@ -105,7 +105,8 @@ describe("buildSearchIndex over blocks this engine cannot run", () => {
     ).toEqual({
       "@activepieces/piece-google-sheets@0.17.0#insert_row": undefined,
       "@activepieces/piece-google-sheets@0.17.0#trigger:googlesheets_new_row_added": `renewConfiguration is not supported yet (${ISSUES}/3090)`,
-      "@activepieces/piece-gmail@0.16.0#send_email": `Multi-auth (auth as an array) is not supported yet (${ISSUES}/3091)`,
+      // Runs through its CUSTOM_AUTH method.
+      "@activepieces/piece-gmail@0.16.0#send_email": undefined,
     });
   });
 });

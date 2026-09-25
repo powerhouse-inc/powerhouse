@@ -74,11 +74,15 @@ jobs:
         with:
           bun-version: 1.3.8
 
-      - name: Install dependencies
-        run: pnpm install-ci
-
-      - name: Build
-        run: pnpm build
+      # Only the reactor packages this job tests and lints (bench/host sits
+      # under packages/reactor, so its lint needs it too).
+      - name: Install and build
+        run: >-
+          bash .github/actions/setup/install-and-build.sh
+          @powerhousedao/reactor...
+          @powerhousedao/reactor-drive...
+          @powerhousedao/reactor-attachments...
+          @powerhousedao/reactor-bench-host...
 
       # Coverage is off: nothing in CI reads the report.
       - name: Run tests
@@ -129,15 +133,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # The load test spawns switchboard from source, outside its own deps.
           - name: load test, reactor-drive 1 spoke
+            filter: "@powerhousedao/reactor-api... @powerhousedao/load-test-connect... @powerhousedao/switchboard..."
             run: >-
               pnpm --filter=@powerhousedao/load-test-connect run test:integration &&
               pnpm --filter=@powerhousedao/reactor-api run test:integration -t "reactor-drive.*converges 1 spoke"
           - name: document-drive, 1 spoke
+            filter: "@powerhousedao/reactor-api..."
             run: pnpm --filter=@powerhousedao/reactor-api run test:integration -t "document-drive.*converges 1 spoke"
           - name: document-drive, 3 spokes
+            filter: "@powerhousedao/reactor-api..."
             run: pnpm --filter=@powerhousedao/reactor-api run test:integration -t "document-drive.*converges 3 spoke"
           - name: reactor-drive, 3 spokes
+            filter: "@powerhousedao/reactor-api..."
             run: pnpm --filter=@powerhousedao/reactor-api run test:integration -t "reactor-drive.*converges 3 spoke"
 
     services:
@@ -189,11 +198,8 @@ jobs:
           apt-get install -y --no-install-recommends postgresql-client-17
           pg_restore --version
 
-      - name: Install dependencies
-        run: pnpm install-ci
-
-      - name: Build
-        run: pnpm build
+      - name: Install and build
+        run: bash .github/actions/setup/install-and-build.sh ${{ matrix.filter }}
 
       - name: Run integration tests
         run: ${{ matrix.run }}

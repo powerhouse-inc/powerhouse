@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-24T16:01:30.031Z
+> Generated: 2026-09-25T12:32:33.411Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -2723,7 +2723,9 @@ A **connection** is its own document, of type `powerhouse/connection`: one crede
 
 This matters for a reason that goes beyond tidiness. A workflow document syncs, has a full operation log, and is readable by anyone who can read the drive. A credential written into a step's config would inherit all of that. Keeping it in a connection means the secret itself is held by the runtime and only ever referred to by reference — what the documents carry is a pointer, not the key.
 
-A piece can also declare a **connection check**, which is what lets Connect show a connection as working or broken, with the account it's actually authenticated as, instead of leaving you to find out when a run fails at 3am.
+Some pieces offer more than one way to sign in, such as Slack's bot token or its OAuth flow. A connection picks one of them, and the piece runs with that method.
+
+A piece can also declare a **connection check**, which is what lets Connect show a connection as working or broken, with the account it's actually authenticated as, instead of leaving you to find out when a run fails at 3am. The connection editor's **Test connection** button runs it on demand.
 
 ## What a piece is allowed to do
 
@@ -30634,7 +30636,7 @@ build one of those the same way — with operations, in order.
 | Field | What goes in it |
 | --- | --- |
 | `connectorId` | The piece id, e.g. `@acme/piece-crm`. Not a block type: no action, no `#` fragment. |
-| `authType` | Which `PieceAuth` kind the piece declares: `CUSTOM_AUTH`, `SECRET_TEXT`, `BASIC_AUTH`, `OAUTH2`, `OIDC` or `NONE`. |
+| `authType` | The `PieceAuth` kind this connection signs in with: `CUSTOM_AUTH`, `SECRET_TEXT`, `BASIC_AUTH`, `OAUTH2`, `OIDC` or `NONE`. A piece that offers several methods (its `auth` is an array) runs through the one of this type. `OAUTH2` and `OIDC` can be declared but don't run yet. |
 | `config` | The **non-secret** auth properties, keyed by property name. |
 | `secretRefs` | One entry per secret property: `{ id, name, ref }`. |
 
@@ -30749,14 +30751,15 @@ query {
   workflowRuntime {
     runs(workflowId: "...", limit: 10) {
       id status error startedAt endedAt workflowVersion
-      steps { stepKey blockType status port input output error }
+      steps { stepKey blockType status port input output error startedAt endedAt }
     }
   }
 }
 ```
 
-Per step: the config **as resolved** (`input`), what came back (`output`), and
-which port it left by. That resolved input is how you catch an expression that
+Per step: the config **as resolved** (`input`), what came back (`output`),
+which port it left by, and when it started and ended, which is how you find the
+step a slow run spent its time in. That resolved input is how you catch an expression that
 silently resolved to nothing — the commonest cause of a workflow that runs green
 and does nothing.
 

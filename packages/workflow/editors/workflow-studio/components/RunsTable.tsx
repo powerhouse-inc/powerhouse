@@ -6,24 +6,39 @@ import {
   type RunRecord,
   type RunStepRecord,
 } from "../../workflow-editor/runtime-api.js";
-import { blockMeta } from "../../workflow-editor/ui/block-meta.js";
+import {
+  blockMeta,
+  usePieceLogos,
+} from "../../workflow-editor/ui/block-meta.js";
+import { describeTrigger } from "../../workflow-editor/ui/trigger-text.js";
 import {
   formatAbsolute,
   formatDuration,
+  formatMs,
   formatTrigger,
   formatWhen,
   durationMs,
-  RUN_DOT,
   RUN_STATUSES,
-  RUN_TEXT,
-  STEP_TEXT,
+  RUN_TONE,
+  runTimeline,
+  STEP_TONE,
+  statusLabel,
+  toneOf,
+  TONE_DOT,
+  type TimelineSpan,
+  type Tone,
 } from "./run-format.js";
+import { useWorkflowDocumentsInSelectedDrive } from "document-models/workflow";
+import { MiniChain, runLinks } from "./chain.js";
+import { Select } from "../../shared/controls.js";
+import { DataViewer } from "../../shared/data-viewer.js";
+import { Button, Icon, StatusText } from "./ui.js";
 
 type StatusFilter = "ALL" | (typeof RUN_STATUSES)[number];
 type SortKey = "startedAt" | "duration";
 
 const CONTROL =
-  "rounded border border-solid border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 focus:border-slate-400 focus:outline-none";
+  "h-8 rounded-md border border-solid border-border bg-card px-2.5 text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function stringify(value: unknown): string {
   if (value === undefined) return "";
@@ -34,90 +49,231 @@ function stringify(value: unknown): string {
   }
 }
 
-function StepRow(props: { step: RunStepRecord }) {
+// The step's slice of the run, drawn on a track shared by every row.
+function TimelineBar(props: { span?: TimelineSpan; tone: Tone }) {
+  return (
+    <span className="ml-auto flex shrink-0 items-center gap-2">
+      <span
+        aria-hidden
+        className="relative hidden h-1.5 w-40 overflow-hidden rounded-full bg-muted sm:block"
+      >
+        {props.span ? (
+          <span
+            className={`absolute inset-y-0 rounded-full ${TONE_DOT[props.tone]}`}
+            style={{
+              left: `${props.span.offset * 100}%`,
+              width: `max(${props.span.width * 100}%, 4px)`,
+            }}
+          />
+        ) : null}
+      </span>
+      <span className="w-14 text-right text-[11px] tabular-nums text-muted-foreground">
+        {props.span ? formatMs(props.span.ms) : "–"}
+      </span>
+    </span>
+  );
+}
+
+function StepRow(props: {
+  step: RunStepRecord;
+  name?: string;
+  span?: TimelineSpan;
+}) {
   const { step } = props;
   const meta = blockMeta(step.blockType);
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-t border-solid border-slate-100 first:border-t-0">
+    <div role="listitem" className="border-t border-solid border-border">
       <button
         type="button"
         aria-expanded={open}
-        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-white focus-visible:bg-white focus-visible:outline-none"
+        className="flex w-full items-center gap-3 px-3 py-2 text-left text-[13px] hover:bg-accent/60 focus-visible:bg-accent/60 focus-visible:outline-none"
         onClick={() => setOpen((value) => !value)}
       >
+        <Icon
+          name="chevron"
+          className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`}
+        />
+        <StatusText
+          tone={toneOf(STEP_TONE, step.status)}
+          status={step.status}
+          className="w-24 shrink-0 text-xs"
+        />
         <span
-          className={`w-16 shrink-0 text-[11px] font-semibold ${STEP_TEXT[step.status] ?? "text-slate-500"}`}
+          className="shrink-0 font-medium text-foreground"
+          title={`Key: ${step.stepKey}`}
         >
-          {step.status}
+          {props.name ?? step.stepKey}
         </span>
-        <span className="shrink-0 text-xs font-medium text-slate-700">
-          {step.stepKey}
+        <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+          {meta.logoUrl ? (
+            <img
+              src={meta.logoUrl}
+              alt=""
+              title={meta.subtitle}
+              className="h-3.5 w-3.5"
+            />
+          ) : null}
+          <span className="truncate">
+            {meta.logoUrl
+              ? meta.displayName
+              : `${meta.subtitle}: ${meta.displayName}`}
+          </span>
         </span>
-        <span className="truncate text-xs text-slate-400">
-          {meta.displayName} · {meta.subtitle}
-        </span>
-        {step.port ? (
-          <span className="ml-auto shrink-0 rounded bg-slate-100 px-1 text-[10px] text-slate-500">
-            → {step.port}
+        {step.port && step.port !== "next" ? (
+          <span className="shrink-0 rounded bg-muted px-1.5 text-[11px] text-muted-foreground">
+            took {step.port}
           </span>
         ) : null}
+        <TimelineBar span={props.span} tone={toneOf(STEP_TONE, step.status)} />
       </button>
       {open ? (
-        <div className="space-y-1 px-3 pb-2">
+        <div className="space-y-2 pb-3 pl-10 pr-3">
           {step.error ? (
-            <pre className="overflow-x-auto rounded bg-red-50 p-2 text-[11px] text-red-600">
+            <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-wf-fail/10 p-2 text-xs text-wf-fail">
               {step.error}
             </pre>
           ) : null}
-          <details>
-            <summary className="cursor-pointer text-[11px] text-slate-400">
-              input
-            </summary>
-            <pre className="max-h-48 overflow-auto rounded bg-white p-2 text-[11px] text-slate-600">
-              {stringify(step.input)}
-            </pre>
-          </details>
-          <details>
-            <summary className="cursor-pointer text-[11px] text-slate-400">
-              output
-            </summary>
-            <pre className="max-h-48 overflow-auto rounded bg-white p-2 text-[11px] text-slate-600">
-              {stringify(step.output)}
-            </pre>
-          </details>
+          {step.status === "SKIPPED" ? (
+            <p className="text-xs text-muted-foreground">
+              The run never reached this step.
+            </p>
+          ) : (
+            <div className="grid items-start gap-2 md:grid-cols-2">
+              <DataViewer label="Received" value={step.input} />
+              <DataViewer
+                label="Produced"
+                value={step.output}
+                root={`steps.${step.stepKey}.output`}
+                emptyText={
+                  step.status === "FAILED"
+                    ? "Nothing, the step failed"
+                    : undefined
+                }
+              />
+            </div>
+          )}
         </div>
       ) : null}
     </div>
   );
 }
 
-function RunDetail(props: { run: RunRecord; onChanged: () => void }) {
+export const TRIGGER_LABEL: Record<string, string> = {
+  manual: "Manual",
+  schedule: "Schedule",
+  webhook: "Webhook",
+  "document-event": "Document change",
+  piece: "Piece trigger",
+  rerun: "Rerun",
+};
+
+export function triggerLabel(kind: string): string {
+  // A piece run records "piece:<blockType>"; name it as the workflow list does.
+  if (kind.startsWith("piece:")) {
+    return describeTrigger({ blockType: kind.slice(6), config: null });
+  }
+  return TRIGGER_LABEL[kind] ?? formatTrigger(kind);
+}
+
+// "Step \"ping\" failed: …" reads better with the step's own name.
+function describeRunError(error: string, names: Map<string, string>): string {
+  return error.replace(/^Step "([^"]+)" failed: /, (whole, key: string) => {
+    const name = names.get(key);
+    return name ? `${name} failed: ` : whole;
+  });
+}
+
+// What started the run, drawn as the first row of its step list.
+function TriggerRow(props: { run: RunRecord }) {
   const { run } = props;
+  const [open, setOpen] = useState(false);
+  const payload = stringify(run.triggerPayload);
+  const hasPayload = payload !== "" && payload !== "null" && payload !== "{}";
+  return (
+    <div role="listitem">
+      <button
+        type="button"
+        aria-expanded={hasPayload ? open : undefined}
+        disabled={!hasPayload}
+        className="flex w-full items-center gap-3 px-3 py-2 text-left text-[13px] enabled:hover:bg-accent/60 focus-visible:bg-accent/60 focus-visible:outline-none"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Icon
+          name="chevron"
+          className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${open ? "rotate-90" : ""} ${hasPayload ? "" : "invisible"}`}
+        />
+        <StatusText
+          tone="ok"
+          status="FIRED"
+          className="w-24 shrink-0 text-xs"
+        />
+        <span className="shrink-0 font-medium text-foreground">Trigger</span>
+        <span className="truncate text-xs text-muted-foreground">
+          {triggerLabel(run.triggerKind)}
+        </span>
+        {!hasPayload ? (
+          <span className="shrink-0 text-[11px] text-muted-foreground">
+            No payload
+          </span>
+        ) : null}
+        <span className="ml-auto flex shrink-0 items-center gap-2">
+          <span aria-hidden className="relative hidden h-1.5 w-40 sm:block">
+            <span className="absolute inset-y-0 left-0 w-1 rounded-full bg-wf-ok" />
+          </span>
+          <span className="w-14 text-right text-[11px] tabular-nums text-muted-foreground">
+            {new Date(run.startedAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: false,
+            })}
+          </span>
+        </span>
+      </button>
+      {open ? (
+        <div className="pb-3 pl-10 pr-3">
+          <DataViewer
+            label="Payload"
+            value={run.triggerPayload}
+            root="trigger.payload"
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function RunDetail(props: {
+  run: RunRecord;
+  names: Map<string, string>;
+  onChanged: () => void;
+}) {
+  const { run, names } = props;
+  const timeline = runTimeline(run);
   const [rerunning, setRerunning] = useState(false);
   const [rerunError, setRerunError] = useState<string | null>(null);
   return (
-    <div className="space-y-2 bg-slate-50 px-4 py-3">
+    <div className="space-y-3 bg-muted/40 px-4 py-4">
       {run.error ? (
-        <p className="rounded bg-red-50 px-2 py-1 text-xs text-red-600">
-          {run.error}
+        <p className="rounded-md bg-wf-fail/10 px-3 py-2 text-[13px] text-wf-fail">
+          {describeRunError(run.error, names)}
         </p>
       ) : null}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
         <span>
-          run <span className="font-mono">{run.id.slice(0, 8)}</span>
+          Run <span className="font-mono">{run.id.slice(0, 8)}</span>
         </span>
-        <span>started {formatAbsolute(run.startedAt)}</span>
+        <span>Started {formatAbsolute(run.startedAt)}</span>
         {run.rerunOf ? (
           <span>
-            resumes <span className="font-mono">{run.rerunOf.slice(0, 8)}</span>
+            Resumes <span className="font-mono">{run.rerunOf.slice(0, 8)}</span>
           </span>
         ) : null}
         {run.status === "FAILED" ? (
-          <button
-            type="button"
+          <Button
+            className="ml-auto"
             disabled={rerunning}
-            className="rounded border border-solid border-slate-300 bg-white px-2 py-1 font-medium text-slate-600 hover:border-slate-400 disabled:opacity-50"
             onClick={() => {
               setRerunning(true);
               setRerunError(null);
@@ -134,20 +290,32 @@ function RunDetail(props: { run: RunRecord; onChanged: () => void }) {
                 });
             }}
           >
-            {rerunning ? "Rerunning…" : "↻ Rerun from failure"}
-          </button>
+            <Icon name="retry" className="h-3.5 w-3.5" />
+            {rerunning ? "Rerunning…" : "Rerun from failed step"}
+          </Button>
         ) : null}
-        {rerunError ? <span className="text-red-600">{rerunError}</span> : null}
+        {rerunError ? <span className="text-wf-fail">{rerunError}</span> : null}
       </div>
-      {run.steps.length === 0 ? (
-        <p className="text-xs text-slate-400">This run recorded no steps.</p>
-      ) : (
-        <div className="rounded border border-solid border-slate-200 bg-slate-50">
-          {run.steps.map((step) => (
-            <StepRow key={step.stepId + step.stepKey} step={step} />
-          ))}
-        </div>
-      )}
+      <div
+        role="list"
+        aria-label="Steps of this run"
+        className="overflow-hidden rounded-md border border-solid border-border bg-card"
+      >
+        <TriggerRow run={run} />
+        {run.steps.map((step) => (
+          <StepRow
+            key={step.stepId + step.stepKey}
+            step={step}
+            name={names.get(step.stepKey)}
+            span={timeline.get(step.stepId)}
+          />
+        ))}
+        {run.steps.length === 0 ? (
+          <p className="border-t border-solid border-border px-3 py-2 pl-10 text-xs text-muted-foreground">
+            No steps ran.
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -163,7 +331,7 @@ function SortHeader(props: {
     <th scope="col" className={props.className}>
       <button
         type="button"
-        className={`flex items-center gap-1 hover:text-slate-700 ${props.active ? "text-slate-700" : ""}`}
+        className={`flex items-center gap-1 hover:text-foreground ${props.active ? "text-foreground" : ""}`}
         onClick={props.onClick}
       >
         {props.label}
@@ -187,6 +355,29 @@ export function RunsTable(props: {
   const [sort, setSort] = useState<SortKey>("startedAt");
   const [descending, setDescending] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
+  // Each run's chain starts at its workflow's trigger block.
+  const documents = useWorkflowDocumentsInSelectedDrive() ?? [];
+  const triggerBlock = new Map(
+    documents.map((document) => [
+      document.header.id,
+      document.state.global.trigger?.blockType,
+    ]),
+  );
+  // Step names by key, per workflow; a run of an older version falls back
+  // to the keys it recorded.
+  const stepNames = new Map(
+    documents.map((document) => [
+      document.header.id,
+      new Map(
+        document.state.global.steps.map((step) => [
+          step.key,
+          step.name || step.key,
+        ]),
+      ),
+    ]),
+  );
+  // Piece logos and names arrive with the catalog.
+  usePieceLogos();
 
   const workflowOptions = useMemo(
     () =>
@@ -258,24 +449,22 @@ export function RunsTable(props: {
 
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <div className="flex overflow-hidden rounded border border-solid border-slate-300">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="flex h-8 items-center gap-0.5 rounded-md bg-muted p-0.5">
           {(["ALL", ...RUN_STATUSES] as StatusFilter[]).map((option) => (
             <button
               key={option}
               type="button"
               aria-pressed={status === option}
-              className={`border-r border-solid border-slate-200 px-2.5 py-1 text-xs last:border-r-0 ${
+              className={`h-7 rounded px-2.5 text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 status === option
-                  ? "bg-slate-800 text-white"
-                  : "bg-white text-slate-600 hover:bg-slate-50"
+                  ? "bg-card font-medium text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
               onClick={() => setStatus(option)}
             >
-              {option === "ALL"
-                ? "All"
-                : option.charAt(0) + option.slice(1).toLowerCase()}
-              <span className="ml-1.5 tabular-nums opacity-60">
+              {option === "ALL" ? "All" : statusLabel(option)}
+              <span className="ml-1.5 tabular-nums text-muted-foreground">
                 {counts[option]}
               </span>
             </button>
@@ -283,43 +472,45 @@ export function RunsTable(props: {
         </div>
         <input
           type="search"
-          className={`${CONTROL} w-44`}
+          className={`${CONTROL} w-48`}
           placeholder="Search runs"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
         {props.showWorkflow && workflowOptions.length > 1 ? (
-          <select
-            className={CONTROL}
-            value={workflow}
-            onChange={(event) => setWorkflow(event.target.value)}
-          >
-            <option value="ALL">Every workflow</option>
-            {workflowOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.name}
-              </option>
-            ))}
-          </select>
+          <div className="w-44">
+            <Select
+              value={workflow}
+              options={[
+                { value: "ALL", label: "Every workflow" },
+                ...workflowOptions.map((option) => ({
+                  value: option.id,
+                  label: option.name,
+                })),
+              ]}
+              onChange={setWorkflow}
+            />
+          </div>
         ) : null}
         {triggerOptions.length > 1 ? (
-          <select
-            className={CONTROL}
-            value={trigger}
-            onChange={(event) => setTrigger(event.target.value)}
-          >
-            <option value="ALL">Every trigger</option>
-            {triggerOptions.map((option) => (
-              <option key={option} value={option}>
-                {formatTrigger(option)}
-              </option>
-            ))}
-          </select>
+          <div className="w-40">
+            <Select
+              value={trigger}
+              options={[
+                { value: "ALL", label: "Every trigger" },
+                ...triggerOptions.map((option) => ({
+                  value: option,
+                  label: triggerLabel(option),
+                })),
+              ]}
+              onChange={setTrigger}
+            />
+          </div>
         ) : null}
         {filtered ? (
           <button
             type="button"
-            className="text-xs text-slate-500 underline hover:text-slate-800"
+            className="text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
             onClick={() => {
               setQuery("");
               setWorkflow("ALL");
@@ -329,41 +520,41 @@ export function RunsTable(props: {
             Clear filters
           </button>
         ) : null}
-        <span className="ml-auto text-[11px] tabular-nums text-slate-400">
+        <span className="ml-auto text-xs tabular-nums text-muted-foreground">
           {visible.length} of {props.runs.length} runs
         </span>
       </div>
 
-      <div className="overflow-x-auto rounded-md border border-solid border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-lg border border-solid border-border bg-card">
         <table className="w-full border-collapse text-left">
           <thead>
-            <tr className="border-b border-solid border-slate-200 text-[11px] font-medium text-slate-400">
-              <th scope="col" className="px-3 py-2">
+            <tr className="border-b border-solid border-border text-xs font-medium text-muted-foreground">
+              <th scope="col" className="px-3 py-2.5 font-medium">
                 Status
               </th>
               {props.showWorkflow ? (
-                <th scope="col" className="px-3 py-2">
+                <th scope="col" className="px-3 py-2.5 font-medium">
                   Workflow
                 </th>
               ) : null}
-              <th scope="col" className="px-3 py-2">
+              <th scope="col" className="px-3 py-2.5 font-medium">
                 Trigger
               </th>
               <SortHeader
                 label="Started"
-                className="px-3 py-2"
+                className="px-3 py-2.5 font-medium"
                 active={sort === "startedAt"}
                 descending={descending}
                 onClick={() => sortBy("startedAt")}
               />
               <SortHeader
                 label="Duration"
-                className="px-3 py-2"
+                className="px-3 py-2.5 font-medium"
                 active={sort === "duration"}
                 descending={descending}
                 onClick={() => sortBy("duration")}
               />
-              <th scope="col" className="px-3 py-2">
+              <th scope="col" className="px-3 py-2.5 font-medium">
                 Steps
               </th>
               <th scope="col" className="w-8 px-3 py-2">
@@ -376,7 +567,7 @@ export function RunsTable(props: {
               <tr>
                 <td
                   colSpan={props.showWorkflow ? 7 : 6}
-                  className="px-3 py-6 text-center text-sm text-slate-400"
+                  className="px-3 py-8 text-center text-[13px] text-muted-foreground"
                 >
                   No runs match these filters.
                 </td>
@@ -387,59 +578,60 @@ export function RunsTable(props: {
                 return (
                   <Fragment key={run.id}>
                     <tr
-                      className={`cursor-pointer border-b border-solid border-slate-100 text-sm ${
-                        open ? "bg-slate-50" : "hover:bg-slate-50"
+                      className={`cursor-pointer border-b border-solid border-border text-[13px] last:border-b-0 ${
+                        open ? "bg-muted/40" : "hover:bg-accent/60"
                       }`}
                       onClick={() => setExpanded(open ? null : run.id)}
                     >
-                      <td className="px-3 py-2">
-                        <span className="flex items-center gap-2">
-                          <span
-                            className={`h-2 w-2 shrink-0 rounded-full ${RUN_DOT[run.status] ?? "bg-slate-300"}`}
-                          />
-                          <span
-                            className={`text-xs font-medium ${RUN_TEXT[run.status] ?? "text-slate-500"}`}
-                          >
-                            {run.status.charAt(0) +
-                              run.status.slice(1).toLowerCase()}
-                          </span>
-                        </span>
+                      <td className="px-3 py-2.5">
+                        <StatusText
+                          tone={toneOf(RUN_TONE, run.status)}
+                          status={run.status}
+                        />
                       </td>
                       {props.showWorkflow ? (
-                        <td className="max-w-48 truncate px-3 py-2 text-slate-800">
+                        <td className="max-w-48 truncate px-3 py-2.5 font-medium text-foreground">
                           {run.workflowName}
                         </td>
                       ) : null}
-                      <td className="px-3 py-2 text-xs text-slate-500">
-                        {formatTrigger(run.triggerKind)}
-                        <span className="ml-1 text-slate-300">
+                      <td className="px-3 py-2.5 text-muted-foreground">
+                        {triggerLabel(run.triggerKind)}
+                        <span className="ml-1.5 text-xs text-muted-foreground/70">
                           v{run.workflowVersion}
                         </span>
                       </td>
                       <td
-                        className="whitespace-nowrap px-3 py-2 text-xs tabular-nums text-slate-500"
+                        className="whitespace-nowrap px-3 py-2.5 tabular-nums text-muted-foreground"
                         title={formatAbsolute(run.startedAt)}
                       >
                         {formatWhen(run.startedAt)}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums text-slate-500">
+                      <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-muted-foreground">
                         {formatDuration(run.startedAt, run.endedAt)}
                       </td>
-                      <td className="px-3 py-2 text-xs tabular-nums text-slate-500">
-                        {run.steps.length}
-                      </td>
                       <td className="px-3 py-2">
+                        <MiniChain
+                          links={runLinks(
+                            run,
+                            triggerBlock.get(run.workflowId),
+                          )}
+                        />
+                      </td>
+                      <td className="px-3 py-2.5">
                         <button
                           type="button"
                           aria-expanded={open}
                           aria-label={`${open ? "Hide" : "Show"} steps of the run started ${formatAbsolute(run.startedAt)}`}
-                          className="rounded px-1 text-xs text-slate-400 hover:text-slate-700"
+                          className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           onClick={(event) => {
                             event.stopPropagation();
                             setExpanded(open ? null : run.id);
                           }}
                         >
-                          <span aria-hidden>{open ? "▾" : "▸"}</span>
+                          <Icon
+                            name="chevron"
+                            className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-90" : ""}`}
+                          />
                         </button>
                       </td>
                     </tr>
@@ -447,9 +639,13 @@ export function RunsTable(props: {
                       <tr>
                         <td
                           colSpan={props.showWorkflow ? 7 : 6}
-                          className="border-b border-solid border-slate-200 p-0"
+                          className="border-b border-solid border-border p-0"
                         >
-                          <RunDetail run={run} onChanged={props.onChanged} />
+                          <RunDetail
+                            run={run}
+                            names={stepNames.get(run.workflowId) ?? new Map()}
+                            onChanged={props.onChanged}
+                          />
                         </td>
                       </tr>
                     ) : null}

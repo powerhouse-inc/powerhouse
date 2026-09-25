@@ -442,6 +442,40 @@ const ATTACHMENT_NOT_FOUND_BODY = { error: "Attachment not found" };
 const MAX_DOWNLOAD_TARGET_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 /**
+ * How long a download target may live, by default.
+ *
+ * The authorization behind a presigned URL is decided once, when it is issued,
+ * and the URL keeps working until it expires however the document's policy
+ * changes in between. A week of that is a revocation that does not revoke: an
+ * account deactivated, a company reassigned or a group left, and the bytes stay
+ * fetchable by anyone holding the link. Minutes are enough to open a file;
+ * days are only enough to lose control of it.
+ *
+ * A deployment that needs longer sets ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS,
+ * still bounded by the signing ceiling above.
+ */
+const DEFAULT_DOWNLOAD_TARGET_TTL_SECONDS = 300;
+
+/**
+ * The ceiling in force, read per call so a deployment can set it without the
+ * value being frozen at import — which is also what lets a test cover it.
+ * Anything unparseable falls back to the default rather than to the maximum:
+ * a typo must not quietly widen the window it was meant to narrow.
+ */
+function downloadTargetTtlCapSeconds(): number {
+  const configured = process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS;
+  if (configured === undefined) return DEFAULT_DOWNLOAD_TARGET_TTL_SECONDS;
+  const parsed = Number(configured);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    logger.warn(
+      `Ignoring invalid ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS="${configured}" (expected a positive integer number of seconds) — using ${DEFAULT_DOWNLOAD_TARGET_TTL_SECONDS}`,
+    );
+    return DEFAULT_DOWNLOAD_TARGET_TTL_SECONDS;
+  }
+  return Math.min(parsed, MAX_DOWNLOAD_TARGET_TTL_SECONDS);
+}
+
+/**
  * Returns the single `documentId` query value, or null when it is missing,
  * duplicated, blank, or oversized. Validation happens before authorization so
  * malformed requests never reach the access service.
@@ -464,26 +498,29 @@ function extractSingleDocumentId(req: IncomingMessage): string | null {
 }
 
 /**
- * Returns the requested target TTL in seconds: undefined when absent,
- * "invalid" when malformed (duplicated, non-integer, or non-positive), and
- * otherwise the value clamped to the presigning ceiling.
+ * Returns the target TTL in seconds, or "invalid" when the caller's own value
+ * is malformed (duplicated, non-integer, or non-positive).
+ *
+ * The cap applies whether or not the caller asked for a lifetime: omitting
+ * `expiresIn` used to fall through to whatever the storage backend was
+ * configured with, which would make the ceiling something a client opts out of
+ * by saying nothing.
  */
-function extractExpiresIn(
-  req: IncomingMessage,
-): number | undefined | "invalid" {
-  if (!req.url) return undefined;
+function extractExpiresIn(req: IncomingMessage): number | "invalid" {
+  const cap = downloadTargetTtlCapSeconds();
+  if (!req.url) return cap;
   let url: URL;
   try {
     url = new URL(req.url, "http://switchboard.invalid");
   } catch {
-    return undefined;
+    return cap;
   }
   const values = url.searchParams.getAll("expiresIn");
-  if (values.length === 0) return undefined;
+  if (values.length === 0) return cap;
   if (values.length > 1) return "invalid";
   const parsed = Number(values[0]);
   if (!Number.isInteger(parsed) || parsed <= 0) return "invalid";
-  return Math.min(parsed, MAX_DOWNLOAD_TARGET_TTL_SECONDS);
+  return Math.min(parsed, cap);
 }
 
 /**
@@ -551,6 +588,7 @@ export function makeDownloadTargetHandler(
         documentId,
         attachmentRef: createRef(canonicalHash),
         userAddress: actor?.user?.address,
+        appKey: actor?.user?.appKey,
       });
     } catch (err) {
       logger.error("Attachment access decision failed: @error", err);

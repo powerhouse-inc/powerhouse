@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { VariableModel, WorkflowEditorCallbacks } from "./model.js";
 
 const inputClass =
-  "w-full rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800";
+  "w-full rounded border border-foreground/15 px-2 py-1.5 text-sm text-foreground";
 
 const KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -66,7 +66,7 @@ function VariableRow(props: {
       />
       <button
         type="button"
-        className="mt-1.5 shrink-0 text-[11px] text-red-500"
+        className="mt-1.5 shrink-0 text-[11px] text-wf-fail"
         title="Remove variable"
         onClick={() => callbacks.removeVariable(variable.id)}
       >
@@ -106,21 +106,21 @@ export function VariablesEditor(props: {
   return (
     <div className="flex flex-col gap-3 p-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-700">Variables</h3>
+        <h3 className="text-sm font-semibold text-foreground">Variables</h3>
         <button
           type="button"
-          className="text-xs text-slate-400"
+          className="text-xs text-muted-foreground/80"
           onClick={props.onClose}
         >
           Close
         </button>
       </div>
-      <p className="text-[11px] text-slate-400">
+      <p className="text-[11px] text-muted-foreground/80">
         Reference a variable in any step field as{" "}
         <code className="font-mono">{"{{variables.name}}"}</code>.
       </p>
       {props.variables.length === 0 ? (
-        <p className="text-xs text-slate-400">No variables yet.</p>
+        <p className="text-xs text-muted-foreground/80">No variables yet.</p>
       ) : (
         <div className="flex flex-col gap-1">
           {props.variables.map((variable) => (
@@ -132,8 +132,8 @@ export function VariablesEditor(props: {
           ))}
         </div>
       )}
-      <div className="rounded border border-slate-200 bg-white p-2">
-        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+      <div className="rounded border border-foreground/10 bg-card p-2">
+        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
           Add variable
         </div>
         <div className="flex items-start gap-1">
@@ -159,7 +159,7 @@ export function VariablesEditor(props: {
           />
           <button
             type="button"
-            className="mt-0.5 shrink-0 rounded bg-slate-800 px-2 py-1 text-xs font-medium text-white disabled:opacity-40"
+            className="mt-0.5 shrink-0 rounded bg-primary px-2 py-1 text-xs font-medium text-primary-foreground disabled:opacity-40"
             disabled={!canAdd}
             onClick={add}
           >
@@ -167,7 +167,7 @@ export function VariablesEditor(props: {
           </button>
         </div>
         {keyError ? (
-          <p className="mt-1 text-[11px] text-red-500">{keyError}</p>
+          <p className="mt-1 text-[11px] text-wf-fail">{keyError}</p>
         ) : null}
       </div>
     </div>

@@ -112,6 +112,23 @@ export function sharedDepMismatchWarnings(
 
 const LOCAL_PACKAGE_NAME = "Local" as const;
 
+// Package CSS goes in external-packages: above Connect's reset so it can style
+// its editors, below Connect's utilities so it can't override them.
+export const LAYER_ORDER =
+  "@layer theme, base, components, external-packages, utilities;";
+const LAYER_ORDER_ATTR = "data-ph-layer-order";
+
+// Layer order is set by the first declaration in the document, and a project's
+// style.css declares Tailwind's layers first, so this goes first in <head>.
+
+export function declareExternalPackagesLayer(): void {
+  if (document.head.querySelector(`style[${LAYER_ORDER_ATTR}]`)) return;
+  const order = document.createElement("style");
+  order.setAttribute(LAYER_ORDER_ATTR, "");
+  order.textContent = LAYER_ORDER;
+  document.head.prepend(order);
+}
+
 export class BrowserPackageManager implements IPackageManager {
   registryUrl: string | null;
   #storage: BrowserLocalStorage<PackageMeta>;
@@ -502,6 +519,7 @@ export class BrowserPackageManager implements IPackageManager {
     const existing = this.#stylesheets.get(name);
     if (existing) return existing;
 
+    declareExternalPackagesLayer();
     const style = document.createElement("style");
     style.textContent = `@import url("${href}") layer(external-packages);`;
     document.head.appendChild(style);

@@ -6,11 +6,55 @@ import {
 } from "@powerhousedao/reactor";
 import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  actionSignerIdentity,
+  actionSigningTarget,
+  type Action,
+  type ISigner,
+} from "@powerhousedao/shared/document-model";
+import {
+  MemoryKeyStorage,
+  RenownCryptoBuilder,
+  RenownCryptoSigner,
+} from "@renown/sdk/crypto";
 import { documentModelDocumentModelModule, type ILogger } from "document-model";
 import type { ConnectTestConfig } from "./types.js";
 
+/** A fresh key per client: the switchboard creates v2-required documents. */
+export async function createClientSigner(): Promise<ISigner> {
+  const crypto = await new RenownCryptoBuilder()
+    .withKeyPairStorage(new MemoryKeyStorage())
+    .build();
+  return new RenownCryptoSigner(crypto, "load-test-connect");
+}
+
+/** `actions` signed for the logs they are written to. */
+export function signActions(
+  signer: ISigner,
+  actions: Action[],
+  documentId: string,
+  branch: string,
+): Promise<Action[]> {
+  return Promise.all(
+    actions.map(async (action) => {
+      const signature = await signer.signAction(
+        action,
+        actionSigningTarget(action, documentId, branch),
+      );
+      return {
+        ...action,
+        context: {
+          ...action.context,
+          signer: { ...actionSignerIdentity(signer), signatures: [signature] },
+        },
+      };
+    }),
+  );
+}
+
 export async function createReactorWithSync(
   config: ConnectTestConfig,
+  signer: ISigner,
   logger?: ILogger,
 ): Promise<InProcessReactorModule> {
   const builder = new ReactorBuilder()
@@ -20,6 +64,7 @@ export async function createReactorWithSync(
       documentModelDocumentModelModule,
     ])
     .withChannelScheme(ChannelScheme.CONNECT)
+    .withSigner(signer)
     .withSignalHandlers();
 
   if (config.maxSkipThreshold !== undefined) {

@@ -3,13 +3,42 @@
 import { useEffect, useState } from "react";
 import type { ConnectionState } from "document-models/connection";
 import {
+  checkConnection,
   fetchPieceCatalog,
+  type ConnectionCheckResult,
   type PieceSummary,
 } from "../workflow-editor/runtime-api.js";
 import { packageFromConnectorId } from "./piece-auth.js";
-import { CONNECTION_STATUS_STYLES } from "./status.js";
+import { Button } from "../shared/controls.js";
+import { Icon } from "../shared/icons.js";
+import { formatWhen } from "../workflow-studio/components/run-format.js";
+import { CONNECTION_STATUS_LABEL, CONNECTION_STATUS_STYLES } from "./status.js";
+
+// Runs the piece's own check server-side; the outcome lands on the document.
+function useConnectionTest(connectionId: string) {
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<ConnectionCheckResult | null>(null);
+  const test = () => {
+    setTesting(true);
+    setResult(null);
+    checkConnection(connectionId)
+      .then(setResult)
+      .catch((error: unknown) =>
+        setResult({
+          ok: false,
+          detail: error instanceof Error ? error.message : String(error),
+          accountLabel: null,
+        }),
+      )
+      .finally(() => setTesting(false));
+  };
+  return { testing, result, test };
+}
 
 export function ConnectionToolbar(props: {
+  connectionId: string;
+  // Enabled workflows that stop working if this is revoked.
+  enabledDependents: number;
   state: ConnectionState;
   onRename: (name: string) => void;
   onSetStatus: (status: "OK" | "REVOKED") => void;
@@ -37,76 +66,108 @@ export function ConnectionToolbar(props: {
   const packageName = packageFromConnectorId(state.connectorId);
   const piece = catalog?.find((entry) => entry.name === packageName);
   const revoked = state.status === "REVOKED";
+  const { testing, result, test } = useConnectionTest(props.connectionId);
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-solid border-slate-200 px-4 py-2">
-      <input
-        key={state.name}
-        className="min-w-0 max-w-72 rounded border border-transparent px-1 py-0.5 text-sm font-semibold text-slate-800 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
-        defaultValue={state.name}
-        placeholder="Untitled connection"
-        spellCheck={false}
-        aria-label="Connection name"
-        onKeyDown={(event) => {
-          if (event.key === "Enter") event.currentTarget.blur();
-        }}
-        onBlur={(event) => {
-          const name = event.target.value.trim();
-          if (name && name !== state.name) props.onRename(name);
-        }}
-      />
-      {piece ? (
-        <span className="flex min-w-0 items-center gap-1.5">
-          <img
-            src={piece.logoUrl}
-            alt=""
-            className="h-4 w-4 shrink-0 object-contain"
-          />
-          <span className="truncate text-xs text-slate-600">
-            {piece.displayName}
-          </span>
-        </span>
-      ) : packageName ? (
-        <span className="truncate text-xs text-slate-400">{packageName}</span>
-      ) : (
-        <span className="text-xs text-slate-400">No connector picked</span>
-      )}
-      <span
-        className={`rounded px-2 py-0.5 text-[11px] font-semibold ${CONNECTION_STATUS_STYLES[state.status]}`}
-      >
-        {state.status}
-      </span>
-      {state.accountLabel ? (
-        <span className="truncate text-xs text-slate-500">
-          {state.accountLabel}
-        </span>
-      ) : null}
-      <span className="ml-auto flex items-center gap-3">
-        {state.lastCheckedAt ? (
-          <span
-            className="text-[11px] text-slate-400"
-            title={new Date(state.lastCheckedAt).toLocaleString()}
-          >
-            Checked {new Date(state.lastCheckedAt).toLocaleDateString()}
-          </span>
+    <header className="mb-8 flex flex-wrap items-start gap-4">
+      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-solid border-foreground/10 bg-white">
+        {piece?.logoUrl ? (
+          <img src={piece.logoUrl} alt="" className="h-8 w-8 object-contain" />
         ) : (
-          <span className="text-[11px] text-slate-400">Never checked</span>
+          <Icon name="link" className="h-6 w-6 text-neutral-500" />
         )}
-        <button
-          type="button"
-          className="rounded border border-solid border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+      </div>
+      <div className="min-w-0 flex-1">
+        <input
+          key={state.name}
+          className="-mx-1.5 w-full max-w-md rounded-md border border-solid border-transparent bg-transparent px-1.5 text-xl font-semibold tracking-tight text-foreground hover:border-foreground/15 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/25"
+          defaultValue={state.name}
+          placeholder="Untitled connection"
+          spellCheck={false}
+          aria-label="Connection name"
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.currentTarget.blur();
+          }}
+          onBlur={(event) => {
+            const name = event.target.value.trim();
+            if (name && name !== state.name) props.onRename(name);
+          }}
+        />
+        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted-foreground">
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs font-medium ${CONNECTION_STATUS_STYLES[state.status]}`}
+          >
+            {CONNECTION_STATUS_LABEL[state.status]}
+          </span>
+          <span>
+            {piece?.displayName ?? (packageName || "No service picked")}
+            {state.accountLabel ? (
+              <>
+                {" "}
+                as{" "}
+                <span className="font-medium text-foreground">
+                  {state.accountLabel}
+                </span>
+              </>
+            ) : null}
+          </span>
+        </p>
+        <p
+          className="mt-1 text-xs text-muted-foreground"
+          title={
+            state.lastCheckedAt
+              ? new Date(state.lastCheckedAt).toLocaleString()
+              : undefined
+          }
+        >
+          {state.lastCheckedAt
+            ? `Last checked ${formatWhen(state.lastCheckedAt)}`
+            : "Never checked"}
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button size="sm" variant="danger" onClick={props.onDelete}>
+          Delete
+        </Button>
+        <Button
+          size="sm"
+          title={
+            !revoked && props.enabledDependents > 0
+              ? `${props.enabledDependents} enabled ${props.enabledDependents === 1 ? "workflow stops" : "workflows stop"} working while it's revoked`
+              : undefined
+          }
           onClick={() => props.onSetStatus(revoked ? "OK" : "REVOKED")}
         >
           {revoked ? "Reactivate" : "Revoke"}
-        </button>
-        <button
-          type="button"
-          className="rounded border border-solid border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:border-red-300 hover:bg-red-50"
-          onClick={props.onDelete}
+        </Button>
+        <Button
+          size="sm"
+          variant="primary"
+          disabled={testing || revoked || !packageName}
+          onClick={test}
         >
-          Delete
-        </button>
-      </span>
-    </div>
+          <Icon name="check" className="h-3.5 w-3.5" />
+          {testing ? "Testing…" : "Test connection"}
+        </Button>
+      </div>
+      {result ? (
+        <p
+          role="status"
+          className={`flex w-full items-start gap-2 rounded-md px-3 py-2 text-xs ${
+            result.ok ? "bg-wf-ok/10 text-wf-ok" : "bg-wf-fail/10 text-wf-fail"
+          }`}
+        >
+          <Icon
+            name={result.ok ? "check" : "alert"}
+            className="mt-px h-3.5 w-3.5"
+          />
+          <span className="min-w-0 break-words">
+            {result.ok
+              ? `It works${result.accountLabel ? `, signed in as ${result.accountLabel}` : ""}.`
+              : result.detail}
+          </span>
+        </p>
+      ) : null}
+    </header>
   );
 }

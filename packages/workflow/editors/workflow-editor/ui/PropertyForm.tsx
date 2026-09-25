@@ -4,10 +4,24 @@ import {
   lazy,
   Suspense,
   useEffect,
+  useId,
   useRef,
   useState,
   type ReactNode,
 } from "react";
+import {
+  Button,
+  FieldError,
+  Hint,
+  IconButton,
+  invalidClass,
+  Segmented,
+  Select,
+  Switch,
+  textAreaClass,
+  textInputClass,
+} from "../../shared/controls.js";
+import { Icon } from "../../shared/icons.js";
 import { ActionListEditor } from "./ActionListEditor.js";
 import { AutocompleteInput } from "./Autocomplete.js";
 import {
@@ -31,12 +45,6 @@ function insertAtCursor(
     element.value.slice(0, start) + text + element.value.slice(end);
   return element.value;
 }
-
-const inputClass =
-  "w-full rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800";
-const invalidClass = "border-red-400";
-const smallButtonClass =
-  "shrink-0 rounded border border-slate-300 px-2 text-xs text-slate-600 hover:border-slate-400";
 
 const WHOLE_EXPRESSION = /^\{\{\s*[^{}]+?\s*\}\}$/;
 
@@ -103,11 +111,12 @@ function useResolvedProp<T>(
   const [state, setState] = useState<LoadState<T>>({ kind: "idle" });
   const [attempt, setAttempt] = useState(0);
   const loadRef = useRef(load);
-  // eslint-disable-next-line react-hooks-extra/refs -- latest-value refs, only read inside the effect below
-  loadRef.current = load;
   const parseRef = useRef(parse);
-  // eslint-disable-next-line react-hooks-extra/refs -- latest-value refs, only read inside the effect below
-  parseRef.current = parse;
+  // Declared before the loading effect, so it sees this render's values.
+  useEffect(() => {
+    loadRef.current = load;
+    parseRef.current = parse;
+  });
   const first = useRef(true);
 
   useEffect(() => {
@@ -169,46 +178,55 @@ export function fillPiecePlaceholders(
 export function AvailableSoon(props: { children?: ReactNode }) {
   return (
     <span
-      className="inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium normal-case tracking-normal text-amber-700"
+      className="inline-flex items-center gap-1 rounded-full bg-wf-warn/10 px-2 py-0.5 text-[11px] font-medium normal-case tracking-normal text-wf-warn"
       title="Not supported by the runtime yet"
     >
-      Available soon{props.children ? <span>· {props.children}</span> : null}
+      Available soon{props.children ? <span>: {props.children}</span> : null}
     </span>
   );
 }
 
+// The label points at its control by id rather than wrapping it: a wrapping
+// label would bind to the first control inside, the "Insert data" button.
 function FieldShell(props: {
   prop: BlockFormProp;
   invalid: boolean;
+  htmlFor?: string;
   picker?: ReactNode;
   children: ReactNode;
   error?: string | null;
-  as?: "label" | "div";
 }) {
   const { prop } = props;
-  const Tag = props.as ?? "label";
+  const LabelTag = props.htmlFor ? "label" : "span";
   return (
-    <Tag className="block">
-      <span className="mb-1 flex items-end justify-between gap-1">
-        <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {prop.displayName}
-          {prop.required ? <span className="text-red-500"> *</span> : null}
-          {props.invalid ? (
-            <span className="ml-2 font-normal normal-case tracking-normal text-red-500">
-              Required
+    <div className="group/field">
+      <div className="mb-1.5 flex min-h-6 items-center justify-between gap-2">
+        <LabelTag
+          htmlFor={props.htmlFor}
+          className="flex min-w-0 items-baseline gap-1.5 text-[13px] font-medium text-foreground"
+        >
+          <span className="truncate">{prop.displayName}</span>
+          {!prop.required ? (
+            <span className="shrink-0 text-xs font-normal text-muted-foreground">
+              Optional
             </span>
           ) : null}
-        </span>
-        {props.picker}
-      </span>
+          {props.invalid ? (
+            <span className="shrink-0 text-xs font-normal text-wf-warn">
+              Needs a value
+            </span>
+          ) : null}
+        </LabelTag>
+        {props.picker ? (
+          <span className="flex shrink-0 items-center gap-0.5">
+            {props.picker}
+          </span>
+        ) : null}
+      </div>
       {props.children}
-      {props.error ? (
-        <p className="mt-0.5 text-[11px] text-red-500">{props.error}</p>
-      ) : null}
-      {prop.description ? (
-        <p className="mt-0.5 text-[11px] text-slate-400">{prop.description}</p>
-      ) : null}
-    </Tag>
+      <FieldError>{props.error}</FieldError>
+      <Hint text={prop.description} />
+    </div>
   );
 }
 
@@ -217,41 +235,72 @@ function OptionList(props: {
   selected: unknown[];
   onChange: (next: unknown[]) => void;
   invalid: boolean;
+  loading?: boolean;
+  onRefresh?: () => void;
+  placeholder?: string;
+  id?: string;
 }) {
   const keyOf = (value: unknown) => stringifyValue(value);
-  const selectedKeys = new Set(props.selected.map(keyOf));
+  const byKey = new Map(
+    props.options.map((option) => [keyOf(option.value), option]),
+  );
   return (
-    <div
-      className={`max-h-40 overflow-y-auto rounded border bg-white px-2 py-1 ${
-        props.invalid ? invalidClass : "border-slate-300"
-      }`}
-    >
-      {props.options.length === 0 ? (
-        <p className="py-0.5 text-xs text-slate-400">No options</p>
-      ) : null}
-      {props.options.map((option) => {
-        const key = keyOf(option.value);
-        return (
-          <label
-            key={key}
-            className="flex items-center gap-2 py-0.5 text-sm text-slate-700"
-          >
-            <input
-              type="checkbox"
-              checked={selectedKeys.has(key)}
-              onChange={(event) => {
-                const next = props.selected.filter(
-                  (entry) => keyOf(entry) !== key,
-                );
-                if (event.target.checked) next.push(option.value);
-                props.onChange(next);
-              }}
-            />
-            {option.label}
-          </label>
-        );
-      })}
-    </div>
+    <Select
+      id={props.id}
+      multiple
+      options={props.options.map((option) => ({
+        value: keyOf(option.value),
+        label: option.label,
+      }))}
+      value={props.selected.map(keyOf)}
+      onChange={(keys) =>
+        props.onChange(keys.map((key) => byKey.get(key)?.value ?? key))
+      }
+      invalid={props.invalid}
+      loading={props.loading}
+      onRefresh={props.onRefresh}
+      placeholder={props.placeholder ?? "Choose any"}
+    />
+  );
+}
+
+// Single choice over typed option values, keyed by their serialised form.
+function OptionSelect(props: {
+  options: { label: string; value: unknown }[];
+  value: unknown;
+  onChange: (next: unknown) => void;
+  invalid: boolean;
+  placeholder?: string;
+  loading?: boolean;
+  disabled?: boolean;
+  onRefresh?: () => void;
+  clearable?: boolean;
+  emptyText?: string;
+  id?: string;
+}) {
+  const keyOf = (value: unknown) => stringifyValue(value);
+  const byKey = new Map(
+    props.options.map((option) => [keyOf(option.value), option]),
+  );
+  return (
+    <Select
+      id={props.id}
+      options={props.options.map((option) => ({
+        value: keyOf(option.value),
+        label: option.label,
+      }))}
+      value={keyOf(props.value)}
+      onChange={(key) =>
+        props.onChange(key === "" ? undefined : (byKey.get(key)?.value ?? key))
+      }
+      invalid={props.invalid}
+      placeholder={props.placeholder}
+      loading={props.loading}
+      disabled={props.disabled}
+      onRefresh={props.onRefresh}
+      clearable={props.clearable}
+      emptyText={props.emptyText}
+    />
   );
 }
 
@@ -275,26 +324,22 @@ function ArrayRows(props: {
     props.onCommit(next.length > 0 ? next : undefined);
   return (
     <div
-      className={`flex flex-col gap-2 rounded border p-2 ${
-        props.invalid ? invalidClass : "border-slate-200"
-      }`}
+      className={`flex flex-col gap-2 ${props.invalid ? "rounded-md ring-1 ring-wf-warn/50" : ""}`}
     >
       {rows.map((row, index) => (
         <div
           key={index}
-          className="rounded border border-solid border-slate-200 bg-white p-2"
+          className="rounded-lg border border-solid border-foreground/10 bg-muted/40 p-3"
         >
-          <div className="mb-1 flex items-center justify-between">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">
               Item {index + 1}
             </span>
-            <button
-              type="button"
-              className="text-[11px] text-red-500"
+            <IconButton
+              icon="trash"
+              label={`Remove item ${index + 1}`}
               onClick={() => update(rows.filter((_, i) => i !== index))}
-            >
-              Remove
-            </button>
+            />
           </div>
           <PropertyForm
             props={fields}
@@ -307,13 +352,14 @@ function ArrayRows(props: {
           />
         </div>
       ))}
-      <button
-        type="button"
-        className="self-start rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-600"
+      <Button
+        size="sm"
+        className="self-start"
         onClick={() => update([...rows, {}])}
       >
-        + Add item
-      </button>
+        <Icon name="plus" className="h-3.5 w-3.5" />
+        Add item
+      </Button>
     </div>
   );
 }
@@ -350,15 +396,13 @@ function ObjectRows(props: {
   };
   return (
     <div
-      className={`flex flex-col gap-1 rounded border p-2 ${
-        props.invalid ? invalidClass : "border-slate-200"
-      }`}
+      className={`flex flex-col gap-1.5 ${props.invalid ? "rounded-md ring-1 ring-wf-warn/50" : ""}`}
     >
       {rows.map((row, index) => (
         <div key={index} className="flex items-center gap-1">
           <input
-            className={`${inputClass} font-mono text-xs`}
-            placeholder="key"
+            className={`${textInputClass} font-mono text-xs`}
+            placeholder="Key"
             value={row.key}
             onChange={(event) =>
               setRows(
@@ -370,8 +414,8 @@ function ObjectRows(props: {
             onBlur={() => commit(rows)}
           />
           <input
-            className={`${inputClass} font-mono text-xs`}
-            placeholder="value"
+            className={`${textInputClass} font-mono text-xs`}
+            placeholder="Value"
             value={row.value}
             onChange={(event) =>
               setRows(
@@ -382,22 +426,21 @@ function ObjectRows(props: {
             }
             onBlur={() => commit(rows)}
           />
-          <button
-            type="button"
-            className="shrink-0 text-[11px] text-red-500"
+          <IconButton
+            icon="close"
+            label="Remove entry"
             onClick={() => commit(rows.filter((_, i) => i !== index))}
-          >
-            ✕
-          </button>
+          />
         </div>
       ))}
-      <button
-        type="button"
-        className="self-start rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-600"
+      <Button
+        size="sm"
+        className="self-start"
         onClick={() => setRows([...rows, { key: "", value: "" }])}
       >
-        + Add entry
-      </button>
+        <Icon name="plus" className="h-3.5 w-3.5" />
+        Add entry
+      </Button>
     </div>
   );
 }
@@ -440,6 +483,7 @@ function SecretRefField(props: {
   secrets?: SecretFormService;
 }) {
   const { secrets } = props;
+  const fieldId = useId();
   const ref = typeof props.value === "string" ? props.value : "";
   const managed = ref.startsWith(SECRET_REF_PREFIX);
   const [draft, setDraft] = useState("");
@@ -490,8 +534,8 @@ function SecretRefField(props: {
 
   if (!secrets) {
     return (
-      <FieldShell prop={props.prop} invalid={props.invalid} as="div">
-        <p className="text-[11px] text-slate-400">
+      <FieldShell htmlFor={fieldId} prop={props.prop} invalid={props.invalid}>
+        <p className="text-xs text-muted-foreground">
           Managed secrets are unavailable in this session.
         </p>
       </FieldShell>
@@ -499,31 +543,32 @@ function SecretRefField(props: {
   }
   return (
     <FieldShell
+      htmlFor={fieldId}
       prop={props.prop}
       invalid={props.invalid}
-      as="div"
       error={error}
     >
       {managed ? (
-        <p className="mb-1 text-[11px] text-slate-500">
-          <span className="font-medium text-slate-600">
+        <p className="mb-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">
             {stat?.label ?? ref}
           </span>
-          {stat ? <span> · v{stat.version}</span> : null}
+          {stat ? <span>version {stat.version}</span> : null}
           {stat?.status === "DELETED" ? (
-            <span className="font-medium text-red-600"> · deleted</span>
+            <span className="font-medium text-wf-fail">deleted</span>
           ) : null}
         </p>
       ) : null}
-      <div className="flex gap-1">
+      <div className="flex items-center gap-1">
         <input
-          className={`${inputClass} ${props.invalid ? invalidClass : ""}`}
+          id={fieldId}
+          className={`${textInputClass} ${props.invalid ? invalidClass : ""}`}
           type="password"
           value={draft}
           disabled={busy}
           placeholder={
             managed
-              ? "•••••••• — paste a new value to rotate"
+              ? "Paste a new value to replace it"
               : "Paste the secret value"
           }
           autoComplete="off"
@@ -535,14 +580,11 @@ function SecretRefField(props: {
           onBlur={commit}
         />
         {ref ? (
-          <button
-            type="button"
-            className={smallButtonClass}
-            title="Remove secret ref"
+          <IconButton
+            icon="close"
+            label="Remove secret"
             onClick={() => props.onCommit(undefined)}
-          >
-            ✕
-          </button>
+          />
         ) : null}
       </div>
     </FieldShell>
@@ -564,6 +606,7 @@ function PropField(props: {
   webhookUrl?: string;
 }) {
   const { prop, value, onCommit } = props;
+  const fieldId = useId();
   const optionsUnavailable = Boolean(
     props.nested && prop.hasDynamicResolver && !props.loadOptions,
   );
@@ -622,15 +665,12 @@ function PropField(props: {
   );
 
   const retryButton = (state: LoadState<unknown>, reload: () => void) => (
-    <button
-      type="button"
-      className={smallButtonClass}
-      title="Reload options"
+    <IconButton
+      icon="retry"
+      label="Reload"
       disabled={state.kind === "loading"}
       onClick={reload}
-    >
-      {state.kind === "loading" ? "…" : "↻"}
-    </button>
+    />
   );
   const loadError = (state: LoadState<unknown>) =>
     state.kind === "error" ? state.message : null;
@@ -644,9 +684,10 @@ function PropField(props: {
     <>
       <div className="flex items-center gap-1">
         <input
+          id={fieldId}
           ref={fieldRef as React.RefObject<HTMLInputElement>}
           type={extra.type ?? "text"}
-          className={`${inputClass} ${extra.mono ? "font-mono text-xs" : ""} ${
+          className={`${textInputClass} ${extra.mono ? "font-mono text-xs" : ""} ${
             invalid ? invalidClass : ""
           }`}
           defaultValue={stringifyValue(value)}
@@ -674,9 +715,10 @@ function PropField(props: {
       );
     case "PH_AUTOCOMPLETE":
       return (
-        <FieldShell prop={prop} invalid={invalid}>
+        <FieldShell htmlFor={fieldId} prop={prop} invalid={invalid}>
           <AutocompleteInput
-            className={`${inputClass} ${invalid ? invalidClass : ""}`}
+            id={fieldId}
+            className={`${textInputClass} ${invalid ? invalidClass : ""}`}
             value={typeof value === "string" ? value : stringifyValue(value)}
             onCommit={(next) => onCommit(next === "" ? undefined : next)}
             loadOptions={
@@ -689,7 +731,7 @@ function PropField(props: {
       );
     case "PH_ACTIONS":
       return (
-        <FieldShell prop={prop} invalid={invalid} as="div">
+        <FieldShell htmlFor={fieldId} prop={prop} invalid={invalid}>
           <ActionListEditor
             value={value}
             onCommit={onCommit}
@@ -713,7 +755,7 @@ function PropField(props: {
       return (
         <Suspense
           fallback={
-            <p className="whitespace-pre-wrap rounded bg-slate-100 px-2 py-1.5 text-xs text-slate-500">
+            <p className="whitespace-pre-wrap rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
               {markdown}
             </p>
           }
@@ -724,24 +766,22 @@ function PropField(props: {
     }
     case "CHECKBOX":
       return (
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input
-            type="checkbox"
-            checked={Boolean(value)}
-            onChange={(event) => onCommit(event.target.checked)}
-          />
-          {prop.displayName}
-          {prop.description ? (
-            <span className="text-[11px] text-slate-400">
-              {prop.description}
-            </span>
-          ) : null}
-        </label>
+        <Switch
+          checked={Boolean(value)}
+          onChange={(checked) => onCommit(checked)}
+          label={prop.displayName}
+          description={prop.description}
+        />
       );
     case "NUMBER":
       // Text input so expressions stay possible; numeric text commits a number.
       return (
-        <FieldShell prop={prop} invalid={invalid} picker={picker}>
+        <FieldShell
+          htmlFor={fieldId}
+          prop={prop}
+          invalid={invalid}
+          picker={picker}
+        >
           {textInput({
             commit: (raw) => {
               const trimmed = raw.trim();
@@ -754,7 +794,12 @@ function PropField(props: {
       );
     case "SECRET_TEXT":
       return (
-        <FieldShell prop={prop} invalid={invalid} picker={picker}>
+        <FieldShell
+          htmlFor={fieldId}
+          prop={prop}
+          invalid={invalid}
+          picker={picker}
+        >
           {textInput({
             type: "password",
             commit: (raw) => onCommit(raw === "" ? undefined : raw),
@@ -763,7 +808,12 @@ function PropField(props: {
       );
     case "FILE":
       return (
-        <FieldShell prop={prop} invalid={invalid} picker={picker}>
+        <FieldShell
+          htmlFor={fieldId}
+          prop={prop}
+          invalid={invalid}
+          picker={picker}
+        >
           {textInput({
             mono: true,
             placeholder: prop.placeholder ?? "https://… or data:…;base64,…",
@@ -775,7 +825,12 @@ function PropField(props: {
     case "DATE_TIME":
       if (textMode) {
         return (
-          <FieldShell prop={prop} invalid={invalid} picker={picker}>
+          <FieldShell
+            htmlFor={fieldId}
+            prop={prop}
+            invalid={invalid}
+            picker={picker}
+          >
             {textInput({
               mono: true,
               placeholder: "ISO 8601 or {{expression}}",
@@ -794,51 +849,69 @@ function PropField(props: {
         );
       }
       return (
-        <FieldShell prop={prop} invalid={invalid} picker={picker}>
+        <FieldShell
+          htmlFor={fieldId}
+          prop={prop}
+          invalid={invalid}
+          picker={picker}
+        >
           <input
+            id={fieldId}
             type="datetime-local"
-            className={`${inputClass} ${invalid ? invalidClass : ""}`}
+            className={`${textInputClass} ${invalid ? invalidClass : ""}`}
             defaultValue={isoToLocalInput(value)}
             onFocus={field.focus}
             onBlur={(event) => onCommit(localInputToIso(event.target.value))}
           />
         </FieldShell>
       );
-    case "STATIC_DROPDOWN":
+    case "STATIC_DROPDOWN": {
+      const options = prop.staticOptions ?? [];
+      // A short either/or reads faster as buttons than as a closed list.
+      if (
+        prop.required !== true &&
+        prop.defaultValue !== undefined &&
+        options.length >= 2 &&
+        options.length <= 3 &&
+        options.every((option) => option.label.length <= 22)
+      ) {
+        return (
+          <FieldShell htmlFor={fieldId} prop={prop} invalid={false}>
+            <Segmented
+              value={stringifyValue(value)}
+              options={options.map((option) => ({
+                value: stringifyValue(option.value),
+                label: option.label,
+              }))}
+              onChange={(key) =>
+                onCommit(
+                  options.find((option) => stringifyValue(option.value) === key)
+                    ?.value ?? key,
+                )
+              }
+            />
+          </FieldShell>
+        );
+      }
       return (
-        <FieldShell prop={prop} invalid={invalid}>
-          <select
-            className={`${inputClass} ${invalid ? invalidClass : ""}`}
-            value={stringifyValue(value)}
-            onChange={(event) => {
-              const picked = prop.staticOptions?.find(
-                (option) => stringifyValue(option.value) === event.target.value,
-              );
-              onCommit(
-                picked
-                  ? picked.value
-                  : event.target.value === ""
-                    ? undefined
-                    : event.target.value,
-              );
-            }}
-          >
-            <option value="">{prop.placeholder ?? "—"}</option>
-            {(prop.staticOptions ?? []).map((option) => (
-              <option
-                key={stringifyValue(option.value)}
-                value={stringifyValue(option.value)}
-              >
-                {option.label}
-              </option>
-            ))}
-          </select>
+        <FieldShell htmlFor={fieldId} prop={prop} invalid={invalid}>
+          <OptionSelect
+            id={fieldId}
+            options={prop.staticOptions ?? []}
+            value={value}
+            onChange={onCommit}
+            invalid={invalid}
+            placeholder={prop.placeholder}
+            clearable={!prop.required}
+          />
         </FieldShell>
       );
+    }
     case "STATIC_MULTI_SELECT_DROPDOWN":
       return (
-        <FieldShell prop={prop} invalid={invalid} as="div">
+        <FieldShell htmlFor={fieldId} prop={prop} invalid={invalid}>
           <OptionList
+            id={fieldId}
             options={prop.staticOptions ?? []}
             selected={Array.isArray(value) ? (value as unknown[]) : []}
             onChange={(next) => onCommit(next.length > 0 ? next : undefined)}
@@ -850,58 +923,34 @@ function PropField(props: {
       const result =
         dropdown.state.kind === "ready" ? dropdown.state.result : null;
       const current = stringifyValue(value);
-      const known = result?.options.some(
-        (option) => stringifyValue(option.value) === current,
-      );
       return (
         <FieldShell
+          htmlFor={fieldId}
           prop={prop}
           invalid={invalid}
           error={loadError(dropdown.state)}
-          picker={
-            optionsUnavailable ? (
-              <AvailableSoon />
-            ) : dynamicLoad ? (
-              retryButton(dropdown.state, dropdown.reload)
-            ) : undefined
-          }
+          picker={optionsUnavailable ? <AvailableSoon /> : undefined}
         >
-          <select
-            className={`${inputClass} ${invalid ? invalidClass : ""}`}
-            value={current}
+          <OptionSelect
+            id={fieldId}
+            options={result?.options ?? []}
+            value={value}
+            onChange={onCommit}
+            invalid={invalid}
+            loading={dropdown.state.kind === "loading"}
             disabled={(result?.disabled && !current) || optionsUnavailable}
-            onChange={(event) => {
-              const picked = result?.options.find(
-                (option) => stringifyValue(option.value) === event.target.value,
-              );
-              onCommit(
-                picked
-                  ? picked.value
-                  : event.target.value === ""
-                    ? undefined
-                    : event.target.value,
-              );
-            }}
-          >
-            <option value="">
-              {optionsUnavailable
+            onRefresh={dynamicLoad ? dropdown.reload : undefined}
+            clearable={!prop.required}
+            emptyText={
+              result?.placeholder ??
+              "Nothing to choose from yet. Some lists need a connection first."
+            }
+            placeholder={
+              optionsUnavailable
                 ? "Options for nested fields are available soon"
-                : (result?.placeholder ??
-                  prop.placeholder ??
-                  (dropdown.state.kind === "loading" ? "Loading…" : "—"))}
-            </option>
-            {current && !known ? (
-              <option value={current}>{current}</option>
-            ) : null}
-            {(result?.options ?? []).map((option) => (
-              <option
-                key={stringifyValue(option.value)}
-                value={stringifyValue(option.value)}
-              >
-                {option.label}
-              </option>
-            ))}
-          </select>
+                : (result?.placeholder ?? prop.placeholder)
+            }
+          />
         </FieldShell>
       );
     }
@@ -918,30 +967,26 @@ function PropField(props: {
         .map((entry) => ({ label: stringifyValue(entry), value: entry }));
       return (
         <FieldShell
+          htmlFor={fieldId}
           prop={prop}
           invalid={invalid}
-          as="div"
           error={loadError(dropdown.state)}
-          picker={
-            optionsUnavailable ? (
-              <AvailableSoon />
-            ) : dynamicLoad ? (
-              retryButton(dropdown.state, dropdown.reload)
-            ) : undefined
-          }
+          picker={optionsUnavailable ? <AvailableSoon /> : undefined}
         >
           {optionsUnavailable ? (
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted-foreground">
               Options for nested fields are available soon.
             </p>
-          ) : dropdown.state.kind === "loading" && !result ? (
-            <p className="text-xs text-slate-400">Loading options…</p>
           ) : (
             <OptionList
+              id={fieldId}
               options={[...extra, ...(result?.options ?? [])]}
               selected={selected}
               onChange={(next) => onCommit(next.length > 0 ? next : undefined)}
               invalid={invalid}
+              loading={dropdown.state.kind === "loading"}
+              onRefresh={dynamicLoad ? dropdown.reload : undefined}
+              placeholder={result?.placeholder ?? prop.placeholder}
             />
           )}
         </FieldShell>
@@ -956,9 +1001,9 @@ function PropField(props: {
           : {};
       return (
         <FieldShell
+          htmlFor={fieldId}
           prop={prop}
           invalid={invalid && fields !== null && fields.length > 0}
-          as="div"
           error={loadError(dynamic.state)}
           picker={
             optionsUnavailable ? (
@@ -969,17 +1014,19 @@ function PropField(props: {
           }
         >
           {optionsUnavailable ? (
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted-foreground">
               Nested dynamic properties are available soon.
             </p>
           ) : dynamic.state.kind === "loading" && !fields ? (
-            <p className="text-xs text-slate-400">Resolving properties…</p>
+            <p className="text-xs text-muted-foreground">
+              Resolving properties…
+            </p>
           ) : !dynamicLoad ? (
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted-foreground">
               Properties resolve once the runtime is reachable.
             </p>
           ) : fields && fields.length > 0 ? (
-            <div className="rounded border border-slate-200 p-2">
+            <div className="rounded-lg border border-solid border-foreground/10 bg-muted/40 p-3">
               <PropertyForm
                 props={fields}
                 value={record}
@@ -991,7 +1038,7 @@ function PropField(props: {
               />
             </div>
           ) : fields ? (
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted-foreground">
               No properties for the current selection.
             </p>
           ) : null}
@@ -1001,7 +1048,7 @@ function PropField(props: {
     case "ARRAY": {
       if (prop.properties && prop.properties.length > 0) {
         return (
-          <FieldShell prop={prop} invalid={invalid} as="div">
+          <FieldShell htmlFor={fieldId} prop={prop} invalid={invalid}>
             <ArrayRows
               prop={prop}
               value={value}
@@ -1018,6 +1065,7 @@ function PropField(props: {
         : stringifyValue(value);
       return (
         <FieldShell
+          htmlFor={fieldId}
           prop={prop}
           invalid={invalid}
           picker={
@@ -1028,8 +1076,9 @@ function PropField(props: {
           }
         >
           <textarea
+            id={fieldId}
             ref={fieldRef as React.RefObject<HTMLTextAreaElement>}
-            className={`${inputClass} min-h-20 font-mono text-xs ${
+            className={`${textAreaClass} font-mono text-xs ${
               invalid ? invalidClass : ""
             }`}
             defaultValue={lines}
@@ -1056,7 +1105,12 @@ function PropField(props: {
     case "OBJECT": {
       if (textMode) {
         return (
-          <FieldShell prop={prop} invalid={invalid} picker={picker}>
+          <FieldShell
+            htmlFor={fieldId}
+            prop={prop}
+            invalid={invalid}
+            picker={picker}
+          >
             {textInput({
               mono: true,
               placeholder: "{{expression}} yielding an object",
@@ -1077,7 +1131,12 @@ function PropField(props: {
           ? (value as Record<string, unknown>)
           : {};
       return (
-        <FieldShell prop={prop} invalid={invalid} as="div" picker={picker}>
+        <FieldShell
+          htmlFor={fieldId}
+          prop={prop}
+          invalid={invalid}
+          picker={picker}
+        >
           <ObjectRows value={record} onCommit={onCommit} invalid={invalid} />
         </FieldShell>
       );
@@ -1087,14 +1146,16 @@ function PropField(props: {
       const isJson = prop.type === "JSON";
       return (
         <FieldShell
+          htmlFor={fieldId}
           prop={prop}
           invalid={invalid}
           picker={picker}
           error={jsonError}
         >
           <textarea
+            id={fieldId}
             ref={fieldRef as React.RefObject<HTMLTextAreaElement>}
-            className={`${inputClass} min-h-20 ${isJson ? "font-mono text-xs" : ""} ${
+            className={`${textAreaClass} ${isJson ? "font-mono text-xs" : ""} ${
               invalid ? invalidClass : ""
             }`}
             defaultValue={stringifyValue(value)}
@@ -1119,7 +1180,7 @@ function PropField(props: {
                 onCommit(JSON.parse(trimmed));
                 setJsonError(null);
               } catch {
-                setJsonError("Invalid JSON — value not saved");
+                setJsonError("Not valid JSON, so it wasn't saved.");
               }
             }}
           />
@@ -1129,7 +1190,12 @@ function PropField(props: {
     }
     default:
       return (
-        <FieldShell prop={prop} invalid={invalid} picker={picker}>
+        <FieldShell
+          htmlFor={fieldId}
+          prop={prop}
+          invalid={invalid}
+          picker={picker}
+        >
           {textInput({
             commit: (raw) => onCommit(raw === "" ? undefined : raw),
           })}
@@ -1221,20 +1287,28 @@ export function PropertyForm(props: {
   );
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className={`flex flex-col ${props.nested ? "gap-4" : "gap-5"}`}>
       {essential.map(field)}
       {advanced.length > 0 ? (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-5 border-t border-solid border-foreground/10 pt-4">
           <button
             type="button"
-            className="self-start text-[11px] font-medium text-slate-500 hover:text-slate-700"
+            className="-mx-1 flex items-center gap-1.5 self-start rounded px-1 text-[13px] font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             aria-expanded={showAdvanced}
             onClick={() => setShowAdvanced((open) => !open)}
           >
-            {showAdvanced ? "▾" : "▸"} Advanced
-            {advancedSet > 0 ? ` · ${advancedSet} set` : ""}
+            <Icon
+              name="chevron"
+              className={`h-3.5 w-3.5 transition-transform ${showAdvanced ? "rotate-90" : ""}`}
+            />
+            More options
+            <span className="font-normal">
+              {advancedSet > 0
+                ? `${advanced.length} fields, ${advancedSet} set`
+                : `${advanced.length} fields`}
+            </span>
           </button>
-          <div hidden={!showAdvanced} className="flex flex-col gap-3">
+          <div hidden={!showAdvanced} className="flex flex-col gap-5">
             {advanced.map(field)}
           </div>
         </div>

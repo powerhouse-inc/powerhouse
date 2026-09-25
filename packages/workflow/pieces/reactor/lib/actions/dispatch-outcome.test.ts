@@ -51,6 +51,10 @@ describe("document-dispatch", () => {
       context({ documentId: DOCUMENT, actions: ACTIONS }, service),
     );
 
+    expect(service.execute).toHaveBeenCalledExactlyOnceWith({
+      documentId: DOCUMENT,
+      actions: ACTIONS,
+    });
     expect(output).toEqual(summary);
   });
 });

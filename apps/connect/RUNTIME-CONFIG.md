@@ -126,6 +126,16 @@ new build — without that, the worker would keep enforcing the flags it booted
 with while the tab believed the new set was live. Other tabs still on the old
 worker reload as they refresh.
 
+With `authEnforcement` on, both hosts install the Renown trust policy that
+switchboard installs under `REACTOR_AUTH_ENFORCEMENT`: a signed write is
+accepted when a Renown credential binds its key to the wallet it claims, and
+the logged-in user's own key is accepted without a lookup. Credentials are
+read from `connect.renown.switchboardUrl`, or the switchboard `connect.renown.url`
+advertises, else Renown's REST API at `connect.renown.url`, so that endpoint must
+be reachable from the browser. With neither set, the reactor fails to build
+rather than refuse every signed write. The worker gets both URLs in its construct
+message and keeps the ones the first tab booted it with.
+
 ### Creation signature policy (`connect.reactor.createSignaturePolicy`)
 
 What the documents and drives Connect creates are born as: `"v2-required"`

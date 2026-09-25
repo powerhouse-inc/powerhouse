@@ -20,7 +20,8 @@ export interface BlockFormProp {
   advanced?: boolean;
   // Shown only while a sibling prop holds one of these values; data, not a
   // predicate, so a piece form arriving as JSON can express it too.
-  showWhen?: { prop: string; oneOf: unknown[] };
+  // Hidden also when `unlessSet` has a value (a mode the runtime infers).
+  showWhen?: { prop: string; oneOf: unknown[]; unlessSet?: string };
 }
 
 export interface BlockForm {
@@ -90,6 +91,21 @@ export interface DesignTimeService {
   listConnections?: () => Promise<ConnectionSummary[]>;
   // Drops the cached listing after the picker creates a connection.
   refreshConnections?: () => void;
+  // The current workflow's most recent run, for a step's "Last run" preview.
+  latestRun?: () => Promise<LatestRun | null>;
+}
+
+export interface LatestRun {
+  status: string;
+  startedAt: string;
+  triggerPayload: unknown;
+  steps: {
+    stepKey: string;
+    status: string;
+    input: unknown;
+    output: unknown;
+    error: string | null;
+  }[];
 }
 
 // Ours, not the piece's: the reactor's poll cadence for a piece trigger.
@@ -192,37 +208,51 @@ export const CORE_FORMS: Record<string, BlockForm> = {
     requireAuth: false,
     auth: "none",
     props: [
-      dropdown(
+      // Optional at run time: an omitted mode follows whichever of cron or
+      // every is set, so the form defaults to cron rather than demanding one.
+      {
+        ...dropdown("mode", "Runs", [
+          { label: "On a cron schedule", value: "cron" },
+          { label: "At a fixed interval", value: "interval" },
+        ]),
+        defaultValue: "cron",
+      },
+      // No mode but an `every` is interval mode to the runtime, so no cron.
+      {
+        ...text(
+          "cron",
+          "Cron expression",
+          true,
+          "Five fields, e.g. 0 9 * * 1-5 runs at 09:00 on weekdays.",
+        ),
+        showWhen: {
+          prop: "mode",
+          oneOf: ["cron", undefined],
+          unlessSet: "every",
+        },
+      },
+      shownWhen(
+        number("every", "Every", true, "At least one minute."),
         "mode",
-        "Mode",
-        [
-          { label: "Cron expression", value: "cron" },
-          { label: "Fixed interval", value: "interval" },
-        ],
-        true,
+        ["interval"],
       ),
-      text(
-        "cron",
-        "Cron expression",
-        false,
-        "Five fields, e.g. 0 9 * * 1-5 (09:00 on weekdays); cron mode only",
+      shownWhen(
+        {
+          ...dropdown("unit", "Unit", [
+            { label: "Minutes", value: "minutes" },
+            { label: "Hours", value: "hours" },
+            { label: "Days", value: "days" },
+          ]),
+          defaultValue: "minutes",
+        },
+        "mode",
+        ["interval"],
       ),
-      number(
-        "every",
-        "Every",
-        false,
-        "Interval mode only; at least one minute",
-      ),
-      dropdown("unit", "Unit", [
-        { label: "Minutes", value: "minutes" },
-        { label: "Hours", value: "hours" },
-        { label: "Days", value: "days" },
-      ]),
       text(
         "timezone",
         "Timezone",
         false,
-        "IANA name, e.g. Europe/Lisbon; defaults to UTC",
+        "An IANA name such as Europe/Lisbon. Defaults to UTC.",
       ),
     ],
   },
