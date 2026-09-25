@@ -60,7 +60,6 @@
     "build:css": "pnpm exec tailwindcss -i style.css -o dist/style.css",
     "build:debug": "cross-env PH_DEBUG_BUILD=true vite build",
     "preview": "vite preview",
-    "cy:open": "cypress open",
     "docker:build": "docker build -f ./Dockerfile --tag connect-test-dev --build-arg TAG=dev .",
     "docker:run": "docker run -it -p 4000:4000 -v $(realpath ../../../monorepo):/monorepo -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf.template -e PH_CONNECT_BASE_PATH=/develop/powerhouse/connect -e PORT=4000 connect-test-dev"
   },
@@ -114,7 +113,6 @@
     "@types/react-dom": "catalog:",
     "@types/wicg-file-system-access": "^2023.10.7",
     "@vitejs/plugin-react": "catalog:",
-    "cypress": "^14.5.4",
     "happy-dom": "^20.8.9",
     "react": "catalog:",
     "react-dom": "catalog:",
