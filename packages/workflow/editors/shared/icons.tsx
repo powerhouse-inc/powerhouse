@@ -23,12 +23,23 @@ const ICON_PATHS = {
   eye: "M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12zM12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",
   eyeOff:
     "M3 3l18 18M10.6 5.6A10 10 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3 3.7M6.6 6.6C4 8.3 2.5 12 2.5 12s3.5 6.5 9.5 6.5a9.6 9.6 0 0 0 4.4-1M9.9 9.9a3 3 0 0 0 4.2 4.2",
+  undo: "M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3",
+  redo: "M15 14l5-5-5-5M20 9H10a6 6 0 0 0 0 12h3",
+  clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2",
+  bolt: "M13 3L5 13h6l-1 8 8-10h-6l1-8z",
+  branch:
+    "M6 4v10M6 14a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM18 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM18 10c0 4-6 3-11 6",
   lock: "M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3M12 15v2",
 };
 
 export type IconName = keyof typeof ICON_PATHS;
 
-export function Icon(props: { name: IconName; className?: string }) {
+export function Icon(props: {
+  name: IconName;
+  className?: string;
+  // Pixel size; otherwise 16px, overridable through className.
+  size?: number;
+}) {
   return (
     <svg
       aria-hidden
@@ -38,7 +49,9 @@ export function Icon(props: { name: IconName; className?: string }) {
       strokeWidth={1.75}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={`h-4 w-4 shrink-0 ${props.className ?? ""}`}
+      width={props.size}
+      height={props.size}
+      className={`shrink-0 ${props.size ? "" : "h-4 w-4"} ${props.className ?? ""}`}
     >
       <path d={ICON_PATHS[props.name]} />
     </svg>

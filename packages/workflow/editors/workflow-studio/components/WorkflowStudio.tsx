@@ -10,13 +10,11 @@ import {
   useSelectedNode,
 } from "@powerhousedao/reactor-browser";
 import type { FileNode } from "@powerhousedao/shared/document-drive";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { type WorkflowDocument } from "document-models/workflow";
 import { fireWorkflow } from "../../workflow-editor/runtime-api.js";
 import "../../workflow-editor/runtime-piece-source.js";
 import { DocumentErrorBoundary } from "../../shared/DocumentErrorBoundary.js";
-import { EditorToolbar } from "./EditorToolbar.js";
-import { ConnectionView } from "./ConnectionView.js";
 import { RunsView } from "./RunsView.js";
 import { Sidebar } from "./Sidebar.js";
 import { useHashSelection } from "./use-hash-selection.js";
@@ -72,29 +70,40 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
 
   // Resolved from the drive each render, so a deleted node drops out on its own.
   const liveTarget = workflows.find((node) => node.id === selectedId) ?? null;
-  const liveConnection =
-    connections.find((node) => node.id === selectedId) ?? null;
-  const openNode = fileNodes.find((node) => node.id === selectedNodeId);
+  // Connections have no page of their own; closing the editor lands on the
+  // overview rather than on a selection nothing shows.
+  const connectionSelected = connections.some((node) => node.id === selectedId);
+  const wasEditing = useRef(editorOpen);
+  useEffect(() => {
+    if (wasEditing.current && !editorOpen && connectionSelected)
+      select(undefined);
+    wasEditing.current = editorOpen;
+  }, [editorOpen, connectionSelected, select]);
   // A deleted node must not keep the hash pointing at nothing.
   const selectionExists = fileNodes.some((node) => node.id === selectedId);
   useEffect(() => {
     if (selectedId && fileNodes.length > 0 && !selectionExists)
       select(undefined);
   }, [fileNodes.length, select, selectedId, selectionExists]);
-  const editedWorkflow = editorOpen
-    ? (workflows.find((node) => node.id === selectedNodeId) ?? null)
-    : null;
-  // One feed per pane, shared by the header, the table and the toolbar: the
-  // focused workflow's runs, or every run in this drive.
-  const focusedWorkflow = editedWorkflow ?? liveTarget;
+  // One feed per pane, shared by the header and the table: the focused
+  // workflow's runs, or every run in this drive.
+  const focusedWorkflow = liveTarget;
+  // The drive feed colours the sidebar and is the overview's own feed; a
+  // focused workflow gets its own, so older runs of it aren't cut off.
+  const driveFeed = useRuns({ driveId });
+  const workflowFeed = useRuns(
+    { workflowId: focusedWorkflow?.id },
+    Boolean(focusedWorkflow),
+  );
   const {
     runs,
     error: runsError,
     reload: reloadRuns,
-  } = useRuns({
-    workflowId: focusedWorkflow?.id,
-    driveId: focusedWorkflow ? undefined : driveId,
-  });
+  } = focusedWorkflow ? workflowFeed : driveFeed;
+  const lastRuns = new Map<string, string>();
+  for (const run of driveFeed.runs ?? []) {
+    if (!lastRuns.has(run.workflowId)) lastRuns.set(run.workflowId, run.status);
+  }
 
   // Manual fire only makes sense for core#manual triggers.
   const { data: targetDocument } = useDocumentSafe(liveTarget?.id ?? null);
@@ -108,6 +117,7 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
       <Sidebar
         workflows={workflows}
         connections={connections}
+        lastRuns={lastRuns}
         activeId={selectedId}
         allRunsActive={!selectedId}
         creating={creating}
@@ -117,8 +127,7 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
           select(node.id);
           setSelectedNode(node.id);
         }}
-        onOpenConnection={(node) => showRuns(node)}
-        onEditConnection={(node) => {
+        onOpenConnection={(node) => {
           select(node.id);
           setSelectedNode(node.id);
         }}
@@ -132,11 +141,6 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
       <main className="min-w-0 flex-1 overflow-y-auto">
         {editorOpen ? (
           <div className="flex h-full min-h-0 flex-col">
-            <EditorToolbar
-              node={openNode}
-              runs={editedWorkflow ? runs : null}
-              onBack={() => setSelectedNode(undefined)}
-            />
             <div className="flex min-h-0 flex-1 flex-col [&>#document-editor-container]:min-h-0">
               <DocumentErrorBoundary
                 key={selectedNodeId}
@@ -148,16 +152,6 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
               </DocumentErrorBoundary>
             </div>
           </div>
-        ) : liveConnection ? (
-          <ConnectionView
-            key={liveConnection.id}
-            node={liveConnection}
-            onEdit={() => {
-              select(liveConnection.id);
-              setSelectedNode(liveConnection.id);
-            }}
-            onOpenWorkflow={(workflowId) => select(workflowId)}
-          />
         ) : (
           <div className="mx-auto w-full max-w-6xl px-8 py-10">
             {liveTarget ? (

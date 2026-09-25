@@ -36,6 +36,7 @@ import {
   type WorkflowModel,
 } from "./model.js";
 import { AvailableSoon, PropertyForm } from "./PropertyForm.js";
+import { ScheduleBuilder } from "./ScheduleBuilder.js";
 import { describeTrigger } from "./trigger-text.js";
 import { missingForBlock } from "./validation.js";
 
@@ -650,7 +651,7 @@ function IdempotencyField(props: {
     },
   });
   return (
-    <div>
+    <div className="group/field">
       <FieldLabel
         label="Idempotency key"
         optional
@@ -1322,19 +1323,27 @@ export function TriggerPanel(props: {
             designTime={props.designTime}
           />
         ) : null}
-        <ConfigSection
-          key={trigger.id}
-          blockType={trigger.blockType}
-          form={form}
-          formError={formError}
-          config={trigger.config}
-          onChange={(config) => setTrigger({ config })}
-          designTime={props.designTime}
-          connectionId={trigger.connectionId ?? undefined}
-          webhookUrl={
-            endpoint.kind === "ready" ? endpoint.endpoint.url : undefined
-          }
-        />
+        {trigger.blockType === "core#schedule" ? (
+          <ScheduleBuilder
+            key={trigger.id}
+            config={trigger.config}
+            onChange={(config) => setTrigger({ config })}
+          />
+        ) : (
+          <ConfigSection
+            key={trigger.id}
+            blockType={trigger.blockType}
+            form={form}
+            formError={formError}
+            config={trigger.config}
+            onChange={(config) => setTrigger({ config })}
+            designTime={props.designTime}
+            connectionId={trigger.connectionId ?? undefined}
+            webhookUrl={
+              endpoint.kind === "ready" ? endpoint.endpoint.url : undefined
+            }
+          />
+        )}
         <LastRunSection designTime={props.designTime} />
         {isPieceTrigger && props.designTime?.testTrigger ? (
           <Section title="Try it">

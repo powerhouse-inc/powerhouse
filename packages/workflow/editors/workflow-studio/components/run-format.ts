@@ -54,6 +54,21 @@ export const WORKFLOW_TONE: Record<string, Tone> = {
   ARCHIVED: "idle",
 };
 
+// A workflow's dot: how its last run went while it's enabled, hollow while
+// it's a draft, paused, or has never run.
+export function workflowHealth(
+  status: string | undefined,
+  lastRunStatus: string | undefined,
+): { tone: Tone; label: string } {
+  const state = statusLabel(status ?? "DRAFT");
+  if (status !== "ENABLED") return { tone: "idle", label: state };
+  if (!lastRunStatus) return { tone: "idle", label: `${state}, not run yet` };
+  return {
+    tone: toneOf(RUN_TONE, lastRunStatus),
+    label: `${state}, last run ${statusLabel(lastRunStatus).toLowerCase()}`,
+  };
+}
+
 export const CONNECTION_TONE: Record<string, Tone> = {
   OK: "ok",
   ERROR: "fail",
@@ -76,7 +91,45 @@ export function formatDuration(
   endedAt: string | null,
 ): string {
   if (!endedAt) return "…";
-  const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
+  return formatMs(new Date(endedAt).getTime() - new Date(startedAt).getTime());
+}
+
+export interface TimelineSpan {
+  // Fractions of the run's length, for positioning a bar.
+  offset: number;
+  width: number;
+  ms: number;
+}
+
+// Where each timed step sat within its run; untimed steps (skipped, replayed,
+// journaled before timings) get no span.
+export function runTimeline(run: {
+  startedAt: string;
+  endedAt: string | null;
+  steps: { stepId: string; startedAt: string | null; endedAt: string | null }[];
+}): Map<string, TimelineSpan> {
+  const start = new Date(run.startedAt).getTime();
+  const ends = run.steps
+    .map((step) => (step.endedAt ? new Date(step.endedAt).getTime() : 0))
+    .concat(run.endedAt ? new Date(run.endedAt).getTime() : 0);
+  const total = Math.max(...ends) - start;
+  const spans = new Map<string, TimelineSpan>();
+  if (total <= 0) return spans;
+  for (const step of run.steps) {
+    if (!step.startedAt || !step.endedAt) continue;
+    const from = new Date(step.startedAt).getTime() - start;
+    const ms =
+      new Date(step.endedAt).getTime() - new Date(step.startedAt).getTime();
+    spans.set(step.stepId, {
+      offset: Math.min(Math.max(from / total, 0), 1),
+      width: Math.min(Math.max(ms / total, 0), 1),
+      ms,
+    });
+  }
+  return spans;
+}
+
+export function formatMs(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
   return `${Math.floor(ms / 60_000)}m ${Math.round((ms % 60_000) / 1000)}s`;

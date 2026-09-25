@@ -199,7 +199,7 @@ function FieldShell(props: {
   const { prop } = props;
   const LabelTag = props.htmlFor ? "label" : "span";
   return (
-    <div>
+    <div className="group/field">
       <div className="mb-1.5 flex min-h-6 items-center justify-between gap-2">
         <LabelTag
           htmlFor={props.htmlFor}

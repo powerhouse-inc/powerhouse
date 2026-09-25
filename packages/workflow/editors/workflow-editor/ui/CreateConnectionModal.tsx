@@ -7,7 +7,10 @@ import { connectionCallbacks } from "../../connection-editor/connection-callback
 import { ConnectionForm } from "../../connection-editor/connection-form.js";
 import { planFromAuth } from "../../connection-editor/piece-auth.js";
 import { fetchPieceCatalog } from "../runtime-api.js";
-import type { ConnectionDraft } from "./connection-create.js";
+import {
+  connectionNameFor,
+  type ConnectionDraft,
+} from "./connection-create.js";
 
 export function CreateConnectionModal(props: {
   connectionId: string;
@@ -35,10 +38,21 @@ export function CreateConnectionModal(props: {
         }),
       );
     fetchPieceCatalog().then(
-      (pieces) =>
-        setConnector(
-          pieces.find((piece) => piece.name === props.draft.piecePackage)?.auth,
-        ),
+      (pieces) => {
+        const piece = pieces.find(
+          (entry) => entry.name === props.draft.piecePackage,
+        );
+        setConnector(piece?.auth);
+        // The draft may have been named before the catalog knew the piece.
+        const name = connectionNameFor(
+          props.draft.piecePackage,
+          piece?.displayName,
+        );
+        if (name !== props.draft.name) {
+          dispatch(actions.setConnectionName({ name }));
+          dispatch(actions.setName(name));
+        }
+      },
       // Unreachable catalog: the connector still points at the piece and the
       // form recovers the auth kind once the catalog loads.
       () => setConnector(null),

@@ -8,7 +8,7 @@ import {
   STEP_HEIGHT,
   STEP_WIDTH,
 } from "./ap-layout.js";
-import { blockMeta } from "./block-meta.js";
+import { useBlockMeta } from "./block-meta.js";
 import { BlockLogo, BlockSelector } from "./BlockSelector.js";
 import { STEP_PRESETS, TRIGGER_PRESETS, type BlockPreset } from "./blocks.js";
 import type { BlockForm } from "./forms.js";
@@ -61,7 +61,8 @@ export function ApStepNode(props: NodeProps) {
     | { kind: "step"; step: StepModel };
   const blockType =
     data.kind === "trigger" ? data.trigger.blockType : data.step.blockType;
-  const meta = blockMeta(blockType);
+  // Subscribed, so the piece name replaces the fallback once the catalog lands.
+  const meta = useBlockMeta(blockType);
   const title =
     data.kind === "trigger"
       ? meta.displayName

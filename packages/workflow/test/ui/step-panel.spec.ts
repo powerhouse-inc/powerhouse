@@ -104,25 +104,66 @@ test.describe("Step panel", () => {
 
   test("the trigger panel says when the workflow runs", async ({ app }) => {
     await canvasNode(app, "Schedule").click();
-    await expect(app.getByText("Every day at 08:00 UTC")).toBeVisible();
+    await expect(
+      app.getByText("Every day at 08:00 UTC", { exact: true }),
+    ).toBeVisible();
   });
 
-  test("the schedule trigger shows only the fields for its mode", async ({
+  test("the schedule builder speaks in days and times", async ({ app }) => {
+    await canvasNode(app, "Schedule").click();
+    await expect(app.getByRole("radio", { name: "Daily" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await expect(app.getByLabel("At", { exact: true })).toHaveValue("08:00");
+
+    await app.getByRole("radio", { name: "Weekly" }).click();
+    await app.getByRole("button", { name: "Wednesday" }).click();
+    await expect(
+      app.getByText("On Monday and Wednesday at 08:00 UTC").first(),
+    ).toBeVisible();
+
+    await app.getByRole("radio", { name: "Interval" }).click();
+    await expect(app.getByLabel("Every", { exact: true })).toHaveValue("15");
+    await expect(app.getByText("Every 15 minutes").first()).toBeVisible();
+
+    await app.getByRole("radio", { name: "Custom" }).click();
+    const cron = app.getByLabel("Cron expression");
+    await cron.fill("0 9 * * 1-5");
+    // Custom stays open even when the cron spells a preset.
+    await expect(app.getByRole("radio", { name: "Custom" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await expect(
+      app.getByText("On weekdays at 09:00 UTC").first(),
+    ).toBeVisible();
+  });
+
+  test("Insert data shows once its field is in play", async ({ app }) => {
+    await canvasNode(app, "Summarise").click();
+    const insert = app.getByRole("button", { name: "Insert data" }).first();
+    await expect(insert).toHaveCSS("opacity", "0");
+    await app.getByRole("textbox", { name: /Question/ }).focus();
+    await expect(
+      app.getByRole("button", { name: "Insert data" }).nth(0),
+    ).not.toHaveCSS("opacity", "0");
+  });
+
+  test("a missing connection can be created without leaving", async ({
     app,
   }) => {
-    await canvasNode(app, "Schedule").click();
-    await expect(app.getByText("Ready to run")).toBeVisible();
+    await canvasNode(app, "Summarise").click();
+    await app.getByRole("button", { name: /Choose a connection/ }).click();
+    await app.getByText("Create connection").click();
+    // The connection form opens in a modal over the editor.
     await expect(
-      app.getByText("Cron expression", { exact: true }),
+      app.getByText("OpenAI connection", { exact: true }).first(),
     ).toBeVisible();
-    await expect(app.getByText("Every", { exact: true })).toBeHidden();
-
-    await app.getByRole("radio", { name: "At a fixed interval" }).click();
-    await expect(app.getByText("Every", { exact: true })).toBeVisible();
+    await expect(app.getByPlaceholder("Paste the api key")).toBeVisible();
     await expect(
-      app.getByText("Cron expression", { exact: true }),
-    ).toBeHidden();
-    await expect(app.getByText("Every needs a value")).toBeVisible();
+      app.getByRole("button", { name: "Use this connection" }),
+    ).toBeVisible();
   });
 });
 
@@ -144,6 +185,27 @@ test.describe("Step panel in dark mode", () => {
     // Light text on the dark surface, so the name stays readable.
     const [r, g, b] = color.match(/\d+/g)!.map(Number);
     expect(r + g + b).toBeGreaterThan(600);
+  });
+});
+
+test.describe("Editor header", () => {
+  test("Back returns to the workflow and undo reverts an edit", async ({
+    app,
+  }) => {
+    await openWorkflowEditor(app);
+    await canvasNode(app, "Summarise").click();
+    const name = app.getByRole("textbox", { name: "Step name" });
+    await name.fill("Summarise metrics");
+    await name.press("Enter");
+    await expect(canvasNode(app, "Summarise metrics")).toBeVisible();
+    await app.getByRole("button", { name: "Undo" }).click();
+    await expect(canvasNode(app, "Summarise metrics")).toBeHidden();
+
+    await expect(app.getByText("Not run yet")).toBeVisible();
+    await app.getByRole("button", { name: "Back" }).click();
+    await expect(
+      app.getByRole("heading", { name: "Daily digest" }),
+    ).toBeVisible();
   });
 });
 
