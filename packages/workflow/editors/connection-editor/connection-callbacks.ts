@@ -28,6 +28,12 @@ export function connectionCallbacks(
         }),
       );
     },
+    // Same connector, another of its sign-in methods: credentials stay.
+    setAuthType: (authType) => {
+      dispatch(
+        actions.setConnector({ connectorId: state.connectorId, authType }),
+      );
+    },
     setConfigValue: (name, value) => {
       const config = {
         ...((state.config ?? {}) as Record<string, unknown>),

@@ -470,6 +470,8 @@ export async function openSeededPage(
       });
     } catch (error) {
       if (attempt >= 2) throw error;
+      // The reload may not have started yet; let it land before re-checking.
+      await page.waitForTimeout(2000);
       await page.waitForLoadState("load");
       await driveReady();
     }

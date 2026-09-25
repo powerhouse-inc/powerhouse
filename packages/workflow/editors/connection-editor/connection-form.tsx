@@ -2,6 +2,7 @@
 // piece catalog, auth form driven by the piece's PieceAuth descriptor.
 import { useEffect, useId, useState } from "react";
 import type {
+  ConnectionAuthType,
   ConnectionState,
   ConnectionStatus,
 } from "document-models/connection";
@@ -15,6 +16,7 @@ import {
 } from "../workflow-editor/runtime-api.js";
 import { formatWhen } from "../workflow-studio/components/run-format.js";
 import { Icon } from "../shared/icons.js";
+import { AUTH_TYPE_LABEL } from "./status.js";
 import {
   Button,
   FieldError,
@@ -28,7 +30,8 @@ import {
 import {
   isAuthComplete,
   packageFromConnectorId,
-  planFromAuth,
+  planForConnection,
+  plansFromAuth,
   type AuthField,
   type AuthPlan,
 } from "./piece-auth.js";
@@ -36,6 +39,7 @@ import {
 export interface ConnectionCallbacks {
   setName: (name: string) => void;
   pickPiece: (piece: PieceSummary) => void;
+  setAuthType: (authType: ConnectionAuthType) => void;
   setConfigValue: (name: string, value: unknown) => void;
   setSecretRef: (name: string, ref: string) => void;
   removeSecretRef: (name: string) => void;
@@ -387,6 +391,13 @@ function SecretField(props: {
   );
 }
 
+// A method's own name, unless it's the generic "Connection" OAuth2 uses.
+function methodLabel(plan: AuthPlan): string {
+  return plan.displayName && plan.displayName !== "Connection"
+    ? plan.displayName
+    : AUTH_TYPE_LABEL[plan.authType];
+}
+
 export function ConnectionForm(props: {
   state: ConnectionState;
   callbacks: ConnectionCallbacks;
@@ -412,8 +423,9 @@ export function ConnectionForm(props: {
   const piece = catalog?.find((entry) => entry.name === packageName);
   // Descriptor plan when the piece is known; otherwise reconstruct enough
   // from state so existing refs stay editable.
+  const plans = piece ? plansFromAuth(piece.auth) : [];
   const plan: AuthPlan = piece
-    ? planFromAuth(piece.auth)
+    ? planForConnection(piece.auth, state.authType)
     : {
         authType: state.authType,
         configFields: [],
@@ -471,6 +483,33 @@ export function ConnectionForm(props: {
         />
         {piece ? <HintText text={piece.description} /> : null}
       </div>
+
+      {plans.length > 1 ? (
+        <div>
+          <LabelRow label="Sign in with" />
+          <Select
+            value={plan.authType}
+            options={plans.map((option) => ({
+              value: option.authType,
+              label: methodLabel(option),
+              description: option.supported
+                ? AUTH_TYPE_LABEL[option.authType]
+                : "Not supported yet",
+              disabled: !option.supported,
+            }))}
+            onChange={(value) => {
+              const authType = value as ConnectionAuthType;
+              const next = plans.find((option) => option.authType === authType);
+              callbacks.setAuthType(authType);
+              // Switching resets the status; a method already filled in is ready.
+              if (next && isAuthComplete(next, config, refByName)) {
+                callbacks.setStatus("OK");
+              }
+            }}
+          />
+          {plan.description ? <HintText text={plan.description} /> : null}
+        </div>
+      ) : null}
 
       {plan.supported ? null : (
         <p className="rounded-md bg-wf-warn/10 px-3 py-2 text-xs text-wf-warn">

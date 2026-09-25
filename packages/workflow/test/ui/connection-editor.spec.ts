@@ -12,7 +12,10 @@ test.describe("Connection editor", () => {
     await expect(
       app.getByRole("combobox").filter({ hasText: "Slack" }),
     ).toBeVisible();
-    await expect(app.getByText("Bot Token", { exact: true })).toBeVisible();
+    // The bot-token method's own field, by its hint.
+    await expect(
+      app.getByText("The bot token for your Slack app (starts with xoxb-)"),
+    ).toBeVisible();
     await expect(
       app.getByText("User Token", { exact: true }).locator(".."),
     ).toContainText("Optional");
@@ -108,9 +111,31 @@ test.describe("Connection editor", () => {
     app,
   }) => {
     await app.getByRole("button", { name: "Test connection" }).click();
-    await expect(app.getByRole("status")).toContainText(
-      "It works, signed in as ops@acme.dev",
-    );
+    // Slack's own check runs against the demo token; the answer depends on
+    // the network, so assert the outcome is reported and the status follows it.
+    const result = app.getByRole("status");
+    await expect(result).toBeVisible();
+    const works = (await result.textContent())?.startsWith("It works");
+    await expect(
+      app.getByText(works ? "Connected" : "Error", { exact: true }),
+    ).toBeVisible();
     await expect(app.getByText("Last checked just now")).toBeVisible();
+  });
+
+  test("a piece with several sign-in methods offers the ones that run", async ({
+    app,
+  }) => {
+    const method = app.getByRole("combobox").filter({ hasText: "Bot Token" });
+    await expect(method).toBeVisible();
+    await method.click();
+    const options = app.getByRole("listbox").getByRole("option");
+    await expect(options).toHaveText([
+      /OAuth 2.*Not supported yet/,
+      /Bot Token/,
+    ]);
+    await expect(options.filter({ hasText: "OAuth 2" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
   });
 });
