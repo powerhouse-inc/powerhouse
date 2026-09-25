@@ -1,10 +1,23 @@
-import { findWorkspaceDir } from "@pnpm/find-workspace-dir";
-import { findWorkspacePackages } from "@pnpm/find-workspace-packages";
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { defineConfig } from "tsdown";
 import { dtsExportList } from "../../tsdown.dts.mjs";
 
-const workspaceDir = await findWorkspaceDir(process.cwd());
-const workspacePackages = await findWorkspacePackages(workspaceDir!);
+const workspacePackages = (
+  JSON.parse(
+    execFileSync("pnpm", ["ls", "-r", "--depth", "-1", "--json"], {
+      encoding: "utf8",
+      shell: process.platform === "win32",
+    }),
+  ) as { path: string }[]
+).map(({ path }) => ({
+  dir: path,
+  manifest: JSON.parse(readFileSync(join(path, "package.json"), "utf8")) as {
+    name?: string;
+    private?: boolean;
+  },
+}));
 
 const version =
   process.env.WORKSPACE_VERSION ?? process.env.npm_package_version ?? "unknown";
