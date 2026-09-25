@@ -152,7 +152,7 @@ describe("makeDownloadTargetHandler", () => {
     });
   });
 
-  it("signs for the requested expiresIn, clamped to the presigning ceiling", async () => {
+  it("signs for the requested expiresIn, clamped to the download-target ceiling", async () => {
     const { access } = makeAccess(ALLOWED);
     const handler = makeDownloadTargetHandler(
       makeAttachments({}),
@@ -161,8 +161,9 @@ describe("makeDownloadTargetHandler", () => {
     );
 
     for (const [requested, granted] of [
-      [3600, 3600],
-      [99999999, 604800],
+      [60, 60],
+      [3600, 300],
+      [99999999, 300],
     ]) {
       const res = makeRes();
       await handler(
@@ -352,7 +353,7 @@ describe("makeDownloadTargetHandler", () => {
       const attachments = makeAttachments({
         backend: { kind: "s3", prepareDownloadTarget } as never,
       });
-      const handler = makeDownloadTargetHandler(attachments, access);
+      const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
       await handler(
         makeReq({
           url: `/attachments/${HASH}/download-target?documentId=${DOC_ID}${query}`,

@@ -1,7 +1,6 @@
 import {
   AttachmentAlreadyExists,
   AttachmentNotFound,
-  DEFAULT_S3_DOWNLOAD_TTL_SECONDS,
   AttachmentPending,
   HashMismatch,
   InvalidAttachmentRef,
@@ -780,7 +779,7 @@ export function makeDownloadTargetHandler(
       const signed = urlSigner.sign(
         canonicalHash,
         decision.documentId,
-        expiresIn ?? DEFAULT_S3_DOWNLOAD_TTL_SECONDS,
+        expiresIn,
       );
       try {
         target = parseAttachmentDownloadTarget({
