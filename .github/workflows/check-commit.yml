@@ -108,12 +108,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      # Node 24 runs test-shard.ts directly (type stripping), before any install.
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Select shard packages
+        id: shard
+        run: echo "selectors=$(node scripts/test-shard.ts --selectors ${{ matrix.shard }} 3)" >> "$GITHUB_OUTPUT"
+
+      # Installs and builds only this shard's packages and their dependencies.
       - name: General setup
         uses: ./.github/actions/setup
+        with:
+          filter: ${{ steps.shard.outputs.selectors }}
 
       # reactor-browser runs half its suite in a real chromium (vitest browser
-      # mode). Installed in every shard so the split can be rebalanced freely.
+      # mode). Keyed on the shard's packages so the split can be rebalanced freely.
       - name: Install playwright chromium
+        if: contains(steps.shard.outputs.selectors, '@powerhousedao/reactor-browser...')
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./packages/reactor-browser
 

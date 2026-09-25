@@ -5,9 +5,6 @@
   },
   "references": [
     {
-      "path": "apps/academy"
-    },
-    {
       "path": "apps/connect"
     },
     {
@@ -20,13 +17,16 @@
       "path": "packages/builder-tools"
     },
     {
+      "path": "packages/document-model"
+    },
+    {
+      "path": "packages/reactor-browser"
+    },
+    {
       "path": "packages/reactor-hypercore"
     },
     {
       "path": "packages/shared"
-    },
-    {
-      "path": "packages/switchboard-gui"
     },
     {
       "path": "packages/analytics-engine/benchmarks"

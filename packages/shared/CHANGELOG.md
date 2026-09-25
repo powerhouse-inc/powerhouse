@@ -1,3 +1,38 @@
+## 6.2.3-dev.25 (2026-09-25)
+
+### 🚀 Features
+
+- **workflow:** show run data in a lazy-loaded tree with copyable references, and scope the connection picker to the drive ([1d286f4a6](https://github.com/powerhouse-inc/powerhouse/commit/1d286f4a6))
+- **codegen:** scaffold projects on TypeScript 7 and migrate removed tsconfig options ([83647b867](https://github.com/powerhouse-inc/powerhouse/commit/83647b867))
+
+### 🩹 Fixes
+
+- **ci:** let the release skip the transpiler TypeScript 7 broke ([#36306](https://github.com/powerhouse-inc/powerhouse/issues/36306))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+
+## 6.2.3-dev.24 (2026-09-25)
+
+### 🚀 Features
+
+- **reactor:** action signature integrity ([#3088](https://github.com/powerhouse-inc/powerhouse/pull/3088), [#2894](https://github.com/powerhouse-inc/powerhouse/issues/2894), [#7](https://github.com/powerhouse-inc/powerhouse/issues/7))
+- type-safe piece authoring, upstream connection hooks, and a ph build that typechecks first ([#3082](https://github.com/powerhouse-inc/powerhouse/pull/3082))
+
+### 🩹 Fixes
+
+- **workflow:** build after powerhouse-vetra-packages so their tsc --build runs never overlap ([#3101](https://github.com/powerhouse-inc/powerhouse/pull/3101))
+- **shared:** drive and document-model reducers assign frozen lists built from the base array ([74dbb1426](https://github.com/powerhouse-inc/powerhouse/commit/74dbb1426))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+
 ## 6.2.3-dev.23 (2026-09-24)
 
 ### 🩹 Fixes

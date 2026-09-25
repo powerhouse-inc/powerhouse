@@ -248,3 +248,27 @@ export function layoutWorkflow(model: WorkflowModel): ApLayout {
 
   return { nodes, edges };
 }
+
+// Steps in the order a run meets them (depth first, branches in port order),
+// then anything the trigger can't reach, in authored order.
+export function flowOrder(model: WorkflowModel): string[] {
+  const stepIds = new Set(model.steps.map((step) => step.id));
+  const seen = new Set<string>();
+  const order: string[] = [];
+  const visit = (from: string) => {
+    const next = model.edges
+      .filter((edge) => edge.from === from && stepIds.has(edge.to))
+      .sort((a, b) => portRank(a.port) - portRank(b.port));
+    for (const edge of next) {
+      if (seen.has(edge.to)) continue;
+      seen.add(edge.to);
+      order.push(edge.to);
+      visit(edge.to);
+    }
+  };
+  if (model.trigger) visit(model.trigger.id);
+  for (const step of model.steps) {
+    if (!seen.has(step.id)) order.push(step.id);
+  }
+  return order;
+}

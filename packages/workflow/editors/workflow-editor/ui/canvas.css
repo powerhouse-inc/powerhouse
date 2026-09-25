@@ -22,3 +22,36 @@
 .workflow-expression-popup {
   z-index: 1004;
 }
+
+/* Select popovers are portalled to <body>; keep them above every canvas
+   layer and the expression picker. */
+.workflow-select-popover {
+  z-index: 1005;
+}
+
+/* React Flow chrome follows Connect's theme tokens. */
+.react-flow {
+  --xy-background-pattern-dots-color-default: color-mix(
+    in oklab,
+    var(--foreground) 18%,
+    transparent
+  );
+  --xy-controls-button-background-color-default: var(--card);
+  --xy-controls-button-background-color-hover-default: var(--accent);
+  --xy-controls-button-color-default: var(--foreground);
+  --xy-controls-button-color-hover-default: var(--foreground);
+  --xy-controls-button-border-color-default: var(--border);
+  --xy-minimap-background-color-default: var(--card);
+  --xy-minimap-mask-background-color-default: color-mix(
+    in oklab,
+    var(--foreground) 8%,
+    transparent
+  );
+}
+
+.react-flow__controls {
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  box-shadow: none;
+}

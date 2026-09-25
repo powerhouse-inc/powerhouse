@@ -215,7 +215,9 @@ releases what an earlier enable registered. The reason reads
 **Auth**
 
 - CustomAuth `refresh`: rejected, as `CustomAuth refresh` (#3091).
-- `auth` as an array: rejected, as `Multi-auth (auth as an array)` (#3091).
+- `auth` as an array runs through the method whose type matches the
+  connection's. The piece is refused only when none of its methods can run,
+  with the first method's reason.
 - OAuth2 and OIDC: rejected, as `OAuth2 auth` and `OIDC auth` (#3091). Their
   connections are refused at check and run too.
 - `server` in `validate` and `getConnectionIdentifier` is a throwing stub.

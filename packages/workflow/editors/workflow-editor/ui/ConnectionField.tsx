@@ -5,6 +5,8 @@ import {
   useSelectedDriveId,
 } from "@powerhousedao/reactor-browser";
 import { useEffect, useRef, useState } from "react";
+import { FieldLabel, Hint, textInputClass } from "../../shared/controls.js";
+import { Icon } from "../../shared/icons.js";
 import { pieceLogo, usePieceLogos } from "./block-meta.js";
 import {
   CONNECTION_TYPE,
@@ -22,10 +24,10 @@ import type {
 } from "./forms.js";
 
 const STATUS_DOT: Record<string, string> = {
-  OK: "bg-emerald-500",
-  UNCONFIGURED: "bg-amber-400",
-  ERROR: "bg-red-500",
-  REVOKED: "bg-red-500",
+  OK: "bg-wf-ok",
+  UNCONFIGURED: "bg-wf-warn",
+  ERROR: "bg-wf-fail",
+  REVOKED: "bg-wf-fail",
 };
 
 // The piece's own logo, falling back to its initial until the catalog lands.
@@ -41,7 +43,7 @@ function ConnectorIcon(props: { connectorId: string }) {
         .pop()
         ?.replace(/^piece-/, "") ?? "";
     return (
-      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-solid border-slate-200 bg-slate-50 text-[9px] text-slate-500">
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-solid border-foreground/10 bg-muted/50 text-[9px] text-muted-foreground">
         {short.slice(0, 1).toUpperCase() || "?"}
       </span>
     );
@@ -64,7 +66,7 @@ function ConnectionRow(props: {
   return (
     <button
       type="button"
-      className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-slate-50"
+      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] hover:bg-accent"
       // mousedown so the pick lands before the input's blur.
       onMouseDown={(event) => {
         event.preventDefault();
@@ -72,17 +74,16 @@ function ConnectionRow(props: {
       }}
     >
       <ConnectorIcon connectorId={connection.connectorId} />
-      <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-700">
+      <span className="min-w-0 flex-1 truncate font-medium text-foreground">
         {connection.name}
         {connection.accountLabel ? (
-          <span className="font-normal text-slate-400">
-            {" "}
-            · {connection.accountLabel}
+          <span className="ml-1.5 font-normal text-muted-foreground">
+            {connection.accountLabel}
           </span>
         ) : null}
       </span>
       <span
-        className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[connection.status] ?? "bg-slate-300"}`}
+        className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[connection.status] ?? "bg-muted-foreground/40"}`}
         title={connection.status}
       />
     </button>
@@ -97,7 +98,7 @@ function CreateRow(props: {
   return (
     <button
       type="button"
-      className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-slate-50 disabled:opacity-50"
+      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] hover:bg-accent disabled:opacity-50"
       disabled={props.busy}
       // mousedown so the click lands before the input's blur.
       onMouseDown={(event) => {
@@ -105,15 +106,18 @@ function CreateRow(props: {
         props.onCreate();
       }}
     >
-      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-solid border-slate-300 text-[10px] text-slate-500">
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-solid border-foreground/15 text-[10px] text-muted-foreground">
         +
       </span>
-      <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-700">
+      <span className="min-w-0 flex-1 truncate font-medium text-foreground">
         {props.busy ? "Creating connection…" : "Create connection"}
       </span>
     </button>
   );
 }
+
+const LINK_ATTEMPTS = 30;
+const LINK_INTERVAL_MS = 500;
 
 export function ConnectionField(props: {
   blockType: string;
@@ -130,6 +134,7 @@ export function ConnectionField(props: {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [linking, setLinking] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const driveId = useSelectedDriveId();
 
@@ -148,8 +153,8 @@ export function ConnectionField(props: {
     };
   }, [props.blockType, props.designTime]);
 
+  // Loaded up front so a bound connection shows by name, and again on open.
   useEffect(() => {
-    if (!open) return;
     let alive = true;
     props.designTime?.listConnections?.().then(
       (result) => {
@@ -157,17 +162,21 @@ export function ConnectionField(props: {
       },
       () => undefined,
     );
+    return () => {
+      alive = false;
+    };
+  }, [open, props.designTime]);
+
+  useEffect(() => {
+    if (!open) return;
     const handler = (event: MouseEvent) => {
       if (!containerRef.current?.contains(event.target as globalThis.Node)) {
         setOpen(false);
       }
     };
     window.addEventListener("mousedown", handler);
-    return () => {
-      alive = false;
-      window.removeEventListener("mousedown", handler);
-    };
-  }, [open, props.designTime]);
+    return () => window.removeEventListener("mousedown", handler);
+  }, [open]);
 
   // The selected connection may configure another piece (a stale value, or one
   // pasted by hand), so it is resolved against the whole listing.
@@ -222,34 +231,65 @@ export function ConnectionField(props: {
     if (props.value) props.onChange(null);
   };
 
+  // The new document reaches the switchboard a moment after the modal closes;
+  // binding it earlier leaves the step pointing at an id nothing resolves.
   const finishCreate = (connectionId: string) => {
     setDraftId(null);
-    pick(connectionId);
-    // The listing is cached, so the new document has to be pulled in for the
-    // name and icon below the input to resolve it.
+    setLinking(true);
     props.designTime?.refreshConnections?.();
-    props.designTime?.listConnections?.().then(
-      (result) => setConnections(result),
-      () => undefined,
-    );
+    const poll = (attempt: number) => {
+      const done = (result?: ConnectionSummary[]) => {
+        if (result) setConnections(result);
+        setLinking(false);
+        pick(connectionId);
+      };
+      const list = props.designTime?.listConnections;
+      if (!list) return done();
+      list().then(
+        (result) => {
+          // Ready once the synced document names this block's piece.
+          const ready = result.some(
+            (connection) =>
+              connection.id === connectionId &&
+              packageOf(connection.connectorId) === packageOf(props.blockType),
+          );
+          if (ready) {
+            done(result);
+          } else if (attempt >= LINK_ATTEMPTS) {
+            done(result);
+          } else {
+            setTimeout(() => poll(attempt + 1), LINK_INTERVAL_MS);
+          }
+        },
+        () => done(),
+      );
+    };
+    poll(0);
   };
-
-  const label =
-    authMode === "required"
-      ? "Connection (required)"
-      : authMode === "loading"
-        ? "Connection"
-        : "Connection (optional)";
 
   return (
     <div ref={containerRef} className="relative">
-      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-        {label}
-      </span>
+      <FieldLabel
+        label="Connection"
+        optional={authMode === "optional"}
+        needsValue={!props.value && authMode === "required"}
+        action={
+          props.value && !open ? (
+            <button
+              type="button"
+              className="rounded px-1 text-xs text-muted-foreground hover:text-foreground"
+              onClick={clear}
+            >
+              Clear
+            </button>
+          ) : undefined
+        }
+      />
       {open ? (
         <input
           autoFocus
-          className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs text-slate-800"
+          aria-label="Search connections"
+          className={`${textInputClass} border-ring ring-2 ring-ring/25`}
           value={query}
           placeholder="Search connections or paste a document id"
           onChange={(event) => setQuery(event.target.value)}
@@ -264,65 +304,58 @@ export function ConnectionField(props: {
         // Closed, the field reads as the chosen connection rather than its id.
         <button
           type="button"
-          className="flex w-full items-center gap-2 rounded border border-solid border-slate-300 px-2 py-1.5 text-left text-xs hover:bg-slate-50"
+          className={`${textInputClass} flex items-center gap-2 text-left ${
+            !props.value && authMode === "required"
+              ? "border-wf-warn/70 hover:border-wf-warn"
+              : ""
+          }`}
           onClick={() => setOpen(true)}
         >
           {selected ? (
             <>
               <ConnectorIcon connectorId={selected.connectorId} />
-              <span className="min-w-0 flex-1 truncate text-slate-800">
+              <span className="min-w-0 flex-1 truncate text-foreground">
                 {selected.name}
                 {selected.accountLabel ? (
-                  <span className="text-slate-400">
-                    {" "}
-                    · {selected.accountLabel}
+                  <span className="ml-1.5 text-muted-foreground">
+                    {selected.accountLabel}
                   </span>
                 ) : null}
               </span>
               <span
-                className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[selected.status] ?? "bg-slate-300"}`}
+                className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[selected.status] ?? "bg-muted-foreground/40"}`}
                 title={selected.status}
               />
             </>
           ) : (
-            <span className="flex-1 truncate text-slate-400">
-              {props.value ? props.value : "Select a connection"}
+            <span className="flex-1 truncate text-muted-foreground/70">
+              {props.value ? props.value : "Choose a connection"}
             </span>
           )}
+          <Icon
+            name="chevronDown"
+            className="h-3.5 w-3.5 text-muted-foreground"
+          />
         </button>
       )}
-      {props.value && !open ? (
-        <button
-          type="button"
-          className="mt-1 text-[11px] text-slate-400 hover:text-slate-600"
-          onClick={clear}
-        >
-          Clear
-        </button>
-      ) : null}
       {props.value && !selected ? (
-        <p className="mt-1 text-[11px] text-slate-400">
-          Not a known connection document.
-        </p>
+        <Hint>Not a known connection document.</Hint>
       ) : null}
       {selected &&
       packageOf(selected.connectorId) !== packageOf(props.blockType) ? (
-        <p className="mt-1 text-[11px] text-amber-600">
+        <p className="mt-1.5 text-xs text-wf-warn">
           Configures {selected.connectorId}, not this block&apos;s piece.
         </p>
       ) : null}
       {!props.value && authMode === "required" ? (
-        <p className="mt-1 text-[11px] text-amber-600">
-          This block requires a connection.
-        </p>
+        <Hint>This block signs in to its service through a connection.</Hint>
       ) : null}
+      {linking ? <Hint>Linking the new connection…</Hint> : null}
       {createError ? (
-        <p className="mt-1 text-[11px] font-medium text-red-600">
-          {createError}
-        </p>
+        <p className="mt-1.5 text-xs font-medium text-wf-fail">{createError}</p>
       ) : null}
       {open ? (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-solid border-slate-200 bg-white py-1 shadow-lg">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-solid border-foreground/10 bg-popover p-1 shadow-lg">
           {visible.map((connection) => (
             <ConnectionRow
               key={connection.id}
@@ -340,20 +373,22 @@ export function ConnectionField(props: {
           {visible.length === 0 && looksLikeDocumentId(query) ? (
             <button
               type="button"
-              className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-slate-50"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] hover:bg-accent"
               onMouseDown={(event) => {
                 event.preventDefault();
                 pick(query.trim());
               }}
             >
-              <span className="min-w-0 flex-1 truncate text-xs text-slate-700">
+              <span className="min-w-0 flex-1 truncate text-xs text-foreground">
                 Use document id{" "}
-                <span className="font-mono text-slate-500">{query.trim()}</span>
+                <span className="font-mono text-muted-foreground">
+                  {query.trim()}
+                </span>
               </span>
             </button>
           ) : null}
           {visible.length === 0 && !draft && !looksLikeDocumentId(query) ? (
-            <p className="px-2 py-1.5 text-xs text-slate-400">
+            <p className="px-2 py-1.5 text-xs text-muted-foreground/80">
               {needle
                 ? "No matching connection."
                 : "No connection for this piece yet."}

@@ -50,6 +50,8 @@ function toStepRecord(row: StepExecutionRow) {
     output: parseJson(row.output),
     port: row.port,
     error: row.error,
+    startedAt: row.started_at,
+    endedAt: row.ended_at,
   };
 }
 

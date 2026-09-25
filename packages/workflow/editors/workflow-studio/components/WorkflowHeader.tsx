@@ -6,37 +6,29 @@ import {
   useDocumentSafe,
 } from "@powerhousedao/reactor-browser";
 import type { FileNode } from "@powerhousedao/shared/document-drive";
-import type { ReactNode } from "react";
 import {
   actions as workflowActions,
   type WorkflowDocument,
 } from "document-models/workflow";
 import type { RunRecord } from "../../workflow-editor/runtime-api.js";
-import { blockMeta } from "../../workflow-editor/ui/block-meta.js";
 import { DocumentLoadError } from "../../shared/DocumentErrorBoundary.js";
 import {
   formatAbsolute,
   formatWhen,
-  RUN_DOT,
-  RUN_TEXT,
+  RUN_TONE,
   runStats,
-  WORKFLOW_STATUS_STYLES,
+  toneOf,
+  TONE_BADGE,
+  TONE_TEXT,
+  statusLabel,
+  WORKFLOW_TONE,
 } from "./run-format.js";
+import { Button, Fact, StatusDot } from "./ui.js";
+import { describeTrigger } from "../../workflow-editor/ui/trigger-text.js";
+import { RunStrip } from "./chain.js";
 import { WorkflowSteps } from "./WorkflowSteps.js";
 
 const WORKFLOW_TYPE = "powerhouse/workflow";
-
-const ACTION =
-  "rounded border border-solid border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50";
-
-function Stat(props: { label: string; children: ReactNode }) {
-  return (
-    <div className="min-w-0 grow border-l border-solid border-slate-200 px-3 py-2 first:border-l-0 first:pl-0">
-      <div className="text-[11px] text-slate-400">{props.label}</div>
-      <div className="truncate text-xs text-slate-800">{props.children}</div>
-    </div>
-  );
-}
 
 export function WorkflowHeader(props: {
   node: FileNode;
@@ -65,96 +57,94 @@ export function WorkflowHeader(props: {
   const state = workflow.state.global;
   const enabled = state.status === "ENABLED";
   const stats = runStats(props.runs ?? []);
-  const trigger = state.trigger
-    ? blockMeta(state.trigger.blockType).displayName
-    : null;
+
+  const lastTone = toneOf(RUN_TONE, stats.lastRun?.status);
+  const statusTone = toneOf(WORKFLOW_TONE, state.status);
 
   return (
-    <header className="mb-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="min-w-0 truncate text-base font-semibold text-slate-800">
-          {state.name || props.node.name || "Untitled workflow"}
-        </h2>
-        <span
-          className={`rounded px-2 py-0.5 text-[11px] font-semibold ${WORKFLOW_STATUS_STYLES[state.status] ?? "bg-slate-100 text-slate-500"}`}
-        >
-          {state.status}
-        </span>
-        <span className="grow" />
-        <button
-          type="button"
-          className={ACTION}
-          onClick={() =>
-            dispatch(
-              workflowActions.setWorkflowStatus({
-                status: enabled ? "DISABLED" : "ENABLED",
-              }),
-            )
+    <header className="mb-8">
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="min-w-0 grow">
+          <div className="flex items-center gap-2.5">
+            <h2 className="min-w-0 truncate text-xl font-semibold tracking-tight text-foreground">
+              {state.name || props.node.name || "Untitled workflow"}
+            </h2>
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${TONE_BADGE[statusTone]}`}
+            >
+              {statusLabel(state.status)}
+            </span>
+          </div>
+          {state.description ? (
+            <p className="mt-1 max-w-prose text-[13px] text-muted-foreground">
+              {state.description}
+            </p>
+          ) : null}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="danger"
+            onClick={() => showDeleteNodeModal(props.node)}
+          >
+            Delete
+          </Button>
+          <Button
+            onClick={() =>
+              dispatch(
+                workflowActions.setWorkflowStatus({
+                  status: enabled ? "DISABLED" : "ENABLED",
+                }),
+              )
+            }
+          >
+            {enabled ? "Disable" : "Enable"}
+          </Button>
+          <Button variant="primary" onClick={props.onEdit}>
+            Edit workflow
+          </Button>
+        </div>
+      </div>
+      <dl className="mt-5 flex flex-wrap gap-x-10 gap-y-3">
+        <Fact label="Starts">
+          {state.trigger ? (
+            describeTrigger(state.trigger)
+          ) : (
+            <span className="text-wf-warn">Never: no trigger</span>
+          )}
+        </Fact>
+        <Fact
+          label="Last run"
+          title={
+            stats.lastRun ? formatAbsolute(stats.lastRun.startedAt) : undefined
           }
         >
-          {enabled ? "Disable" : "Enable"}
-        </button>
-        <button type="button" className={ACTION} onClick={props.onEdit}>
-          Edit workflow
-        </button>
-        <button
-          type="button"
-          className="rounded border border-solid border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 hover:border-red-300 hover:bg-red-50"
-          // The host modal confirms; the studio drops the target once the
-          // node leaves the drive.
-          onClick={() => showDeleteNodeModal(props.node)}
-        >
-          Delete
-        </button>
-      </div>
-      {state.description ? (
-        <p className="mt-1 max-w-2xl text-xs text-slate-500">
-          {state.description}
-        </p>
-      ) : null}
-      <div className="mt-3 flex flex-wrap items-stretch rounded-md border border-solid border-slate-200 bg-white px-3">
-        <Stat label="Trigger">
-          {trigger ?? <span className="text-slate-400">None set</span>}
-        </Stat>
-        <Stat label="Last run">
           {stats.lastRun ? (
             <span
-              className="flex items-center gap-1.5"
-              title={formatAbsolute(stats.lastRun.startedAt)}
+              className={`inline-flex items-center gap-1.5 ${TONE_TEXT[lastTone]}`}
             >
-              <span
-                className={`h-2 w-2 shrink-0 rounded-full ${RUN_DOT[stats.lastRun.status] ?? "bg-slate-300"}`}
-              />
-              <span className={RUN_TEXT[stats.lastRun.status] ?? ""}>
-                {formatWhen(stats.lastRun.startedAt)}
-              </span>
+              <StatusDot tone={lastTone} />
+              {formatWhen(stats.lastRun.startedAt)}
             </span>
           ) : (
-            <span className="text-slate-400">Never run</span>
+            <span className="text-muted-foreground">Never</span>
           )}
-        </Stat>
-        <Stat label="Recent runs">
-          <span className="tabular-nums">
-            {stats.total}
-            {stats.failed > 0 ? (
-              <span className="text-red-600"> · {stats.failed} failed</span>
-            ) : null}
-            {stats.running > 0 ? (
-              <span className="text-amber-700"> · {stats.running} running</span>
-            ) : null}
-          </span>
-        </Stat>
-        <Stat label="Success rate">
-          {stats.successRate === null ? (
-            <span className="text-slate-400">—</span>
+        </Fact>
+        <Fact label="Recent runs">
+          {stats.total > 0 ? (
+            <RunStrip runs={props.runs ?? []} />
           ) : (
-            <span className="tabular-nums">{stats.successRate}%</span>
+            <span className="text-muted-foreground">None yet</span>
           )}
-        </Stat>
-        <Stat label="Version">
-          <span className="tabular-nums">v{state.version}</span>
-        </Stat>
-      </div>
+        </Fact>
+        <Fact label="Success rate">
+          {stats.successRate === null ? (
+            <span className="text-muted-foreground">No finished runs</span>
+          ) : (
+            `${stats.successRate}%`
+          )}
+        </Fact>
+        <Fact label="Version">v{state.version}</Fact>
+      </dl>
       <WorkflowSteps
         state={state}
         latestRun={stats.lastRun}

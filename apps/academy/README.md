@@ -34,14 +34,18 @@ This creates `ACADEMY_LLM_COMPLETE.md` - a single, structured file containing al
 
 ### Installation
 
+The academy is its own pnpm project with its own lockfile, outside the monorepo workspace, so the root `pnpm install` doesn't install it. It is still versioned and released with the monorepo.
+
 ```
-$ npm install
+$ pnpm install        # from apps/academy
+$ pnpm academy:install  # or from the repo root
 ```
 
 ### Local Development
 
 ```
-$ npm run dev
+$ pnpm dev            # from apps/academy
+$ pnpm academy:dev    # or from the repo root
 ```
 
 This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server. The server will break upon broken links or big navigation/relinking.
@@ -49,7 +53,7 @@ This command starts a local development server and opens up a browser window. Mo
 ### Build
 
 ```
-$ npm run build
+$ pnpm build
 ```
 
 This command generates static content into the `build` directory and can be served using any static contents hosting service.
