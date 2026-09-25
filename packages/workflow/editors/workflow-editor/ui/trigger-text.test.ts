@@ -60,7 +60,7 @@ describe("describeSchedule", () => {
 describe("describeTrigger", () => {
   it("names the core triggers", () => {
     expect(describeTrigger({ blockType: "core#manual", config: {} })).toBe(
-      "When started by hand",
+      "Manual",
     );
     expect(describeTrigger({ blockType: "core#webhook", config: {} })).toBe(
       "When its webhook is called",

@@ -3,15 +3,42 @@
 import { useEffect, useState } from "react";
 import type { ConnectionState } from "document-models/connection";
 import {
+  checkConnection,
   fetchPieceCatalog,
+  type ConnectionCheckResult,
   type PieceSummary,
 } from "../workflow-editor/runtime-api.js";
 import { packageFromConnectorId } from "./piece-auth.js";
 import { Button } from "../shared/controls.js";
 import { Icon } from "../shared/icons.js";
+import { formatWhen } from "../workflow-studio/components/run-format.js";
 import { CONNECTION_STATUS_LABEL, CONNECTION_STATUS_STYLES } from "./status.js";
 
+// Runs the piece's own check server-side; the outcome lands on the document.
+function useConnectionTest(connectionId: string) {
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<ConnectionCheckResult | null>(null);
+  const test = () => {
+    setTesting(true);
+    setResult(null);
+    checkConnection(connectionId)
+      .then(setResult)
+      .catch((error: unknown) =>
+        setResult({
+          ok: false,
+          detail: error instanceof Error ? error.message : String(error),
+          accountLabel: null,
+        }),
+      )
+      .finally(() => setTesting(false));
+  };
+  return { testing, result, test };
+}
+
 export function ConnectionToolbar(props: {
+  connectionId: string;
+  // Enabled workflows that stop working if this is revoked.
+  enabledDependents: number;
   state: ConnectionState;
   onRename: (name: string) => void;
   onSetStatus: (status: "OK" | "REVOKED") => void;
@@ -39,6 +66,7 @@ export function ConnectionToolbar(props: {
   const packageName = packageFromConnectorId(state.connectorId);
   const piece = catalog?.find((entry) => entry.name === packageName);
   const revoked = state.status === "REVOKED";
+  const { testing, result, test } = useConnectionTest(props.connectionId);
 
   return (
     <header className="mb-8 flex flex-wrap items-start gap-4">
@@ -93,7 +121,7 @@ export function ConnectionToolbar(props: {
           }
         >
           {state.lastCheckedAt
-            ? `Last checked ${new Date(state.lastCheckedAt).toLocaleDateString()}`
+            ? `Last checked ${formatWhen(state.lastCheckedAt)}`
             : "Never checked"}
         </p>
       </div>
@@ -103,11 +131,43 @@ export function ConnectionToolbar(props: {
         </Button>
         <Button
           size="sm"
+          title={
+            !revoked && props.enabledDependents > 0
+              ? `${props.enabledDependents} enabled ${props.enabledDependents === 1 ? "workflow stops" : "workflows stop"} working while it's revoked`
+              : undefined
+          }
           onClick={() => props.onSetStatus(revoked ? "OK" : "REVOKED")}
         >
           {revoked ? "Reactivate" : "Revoke"}
         </Button>
+        <Button
+          size="sm"
+          variant="primary"
+          disabled={testing || revoked || !packageName}
+          onClick={test}
+        >
+          <Icon name="check" className="h-3.5 w-3.5" />
+          {testing ? "Testing…" : "Test connection"}
+        </Button>
       </div>
+      {result ? (
+        <p
+          role="status"
+          className={`flex w-full items-start gap-2 rounded-md px-3 py-2 text-xs ${
+            result.ok ? "bg-wf-ok/10 text-wf-ok" : "bg-wf-fail/10 text-wf-fail"
+          }`}
+        >
+          <Icon
+            name={result.ok ? "check" : "alert"}
+            className="mt-px h-3.5 w-3.5"
+          />
+          <span className="min-w-0 break-words">
+            {result.ok
+              ? `It works${result.accountLabel ? `, signed in as ${result.accountLabel}` : ""}.`
+              : result.detail}
+          </span>
+        </p>
+      ) : null}
     </header>
   );
 }

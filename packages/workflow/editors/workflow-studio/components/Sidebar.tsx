@@ -7,7 +7,7 @@ import {
 import type { FileNode } from "@powerhousedao/shared/document-drive";
 import { useEffect, type ReactNode } from "react";
 import { errorMessage } from "../../shared/DocumentErrorBoundary.js";
-import { CONNECTION_TONE, toneOf, WORKFLOW_TONE } from "./run-format.js";
+import { CONNECTION_TONE, toneOf, workflowHealth } from "./run-format.js";
 import { Icon, StatusDot } from "./ui.js";
 
 const WORKFLOW_TYPE = "powerhouse/workflow";
@@ -77,6 +77,7 @@ function DeleteButton(props: { node: FileNode; label: string }) {
 // broken node degrades to its drive name plus a warning marker.
 function NodeRow(props: {
   node: FileNode;
+  lastRunStatus?: string;
   active: boolean;
   onOpen: () => void;
   onEdit?: () => void;
@@ -115,10 +116,10 @@ function NodeRow(props: {
   }
 
   const status = documentStatus(document);
-  const tone = toneOf(
-    node.documentType === WORKFLOW_TYPE ? WORKFLOW_TONE : CONNECTION_TONE,
-    status,
-  );
+  const { tone, label } =
+    node.documentType === WORKFLOW_TYPE
+      ? workflowHealth(status, props.lastRunStatus)
+      : { tone: toneOf(CONNECTION_TONE, status), label: status };
   return (
     <Row
       active={props.active}
@@ -140,7 +141,7 @@ function NodeRow(props: {
         </span>
       }
     >
-      <span title={status} className="flex">
+      <span title={label} className="flex">
         <StatusDot tone={tone} />
       </span>
       <span className="min-w-0 truncate">
@@ -155,6 +156,7 @@ function Section(props: {
   addLabel: string;
   empty: string;
   nodes: FileNode[];
+  lastRuns?: Map<string, string>;
   activeId?: string | null;
   onOpen: (node: FileNode) => void;
   onEdit?: (node: FileNode) => void;
@@ -186,6 +188,7 @@ function Section(props: {
             <NodeRow
               key={node.id}
               node={node}
+              lastRunStatus={props.lastRuns?.get(node.id)}
               active={props.activeId === node.id}
               onOpen={() => props.onOpen(node)}
               onEdit={props.onEdit ? () => props.onEdit!(node) : undefined}
@@ -200,6 +203,8 @@ function Section(props: {
 export function Sidebar(props: {
   workflows: FileNode[];
   connections: FileNode[];
+  // Each workflow's latest run status, by workflow id.
+  lastRuns: Map<string, string>;
   activeId?: string | null;
   allRunsActive: boolean;
   creating: boolean;
@@ -207,7 +212,6 @@ export function Sidebar(props: {
   onOpenWorkflow: (node: FileNode) => void;
   onEditWorkflow: (node: FileNode) => void;
   onOpenConnection: (node: FileNode) => void;
-  onEditConnection: (node: FileNode) => void;
   onCreateWorkflow: () => void;
   onCreateConnection: () => void;
 }) {
@@ -222,6 +226,7 @@ export function Sidebar(props: {
         addLabel="New workflow"
         empty="No workflows yet."
         nodes={props.workflows}
+        lastRuns={props.lastRuns}
         activeId={props.activeId}
         onOpen={props.onOpenWorkflow}
         onEdit={props.onEditWorkflow}
@@ -235,7 +240,6 @@ export function Sidebar(props: {
         nodes={props.connections}
         activeId={props.activeId}
         onOpen={props.onOpenConnection}
-        onEdit={props.onEditConnection}
         onCreate={props.onCreateConnection}
         creating={props.creating}
       />

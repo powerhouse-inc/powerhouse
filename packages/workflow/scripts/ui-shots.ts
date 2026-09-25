@@ -47,11 +47,11 @@ const SCENES: Record<string, (page: Page) => Promise<void>> = {
     await openDrive(page);
     await selectInSidebar(page, "Uptime ping");
     await page.getByText("Failed", { exact: true }).last().click();
-    await page.getByText("Started by hand", { exact: true }).click();
-  },
-  "studio-connection": async (page) => {
-    await openDrive(page);
-    await selectInSidebar(page, "Ops Slack");
+    await page
+      .getByRole("list", { name: "Steps of this run" })
+      .getByRole("button")
+      .first()
+      .click();
   },
   "workflow-editor": async (page) => {
     await openWorkflowEditor(page);
@@ -63,6 +63,18 @@ const SCENES: Record<string, (page: Page) => Promise<void>> = {
   "workflow-editor-trigger": async (page) => {
     await openWorkflowEditor(page);
     await canvasNode(page, "Schedule").click();
+  },
+  "workflow-editor-schedule": async (page) => {
+    await openWorkflowEditor(page);
+    await canvasNode(page, "Schedule").click();
+    await page.getByRole("radio", { name: "Weekly" }).click();
+  },
+  "workflow-editor-new-connection": async (page) => {
+    await openWorkflowEditor(page);
+    await canvasNode(page, "Summarise").click();
+    await page.getByRole("button", { name: /Choose a connection/ }).click();
+    await page.getByText("Create connection").click();
+    await page.getByRole("button", { name: "Use this connection" }).waitFor();
   },
   "workflow-editor-select": async (page) => {
     await openWorkflowEditor(page);
@@ -83,12 +95,16 @@ const SCENES: Record<string, (page: Page) => Promise<void>> = {
   "connection-editor": async (page) => {
     await openDrive(page);
     await selectInSidebar(page, "Ops Slack");
-    await page.getByRole("button", { name: "Edit connection" }).click();
+  },
+  "connection-editor-test": async (page) => {
+    await openDrive(page);
+    await selectInSidebar(page, "Ops Slack");
+    await page.getByRole("button", { name: "Test connection" }).click();
+    await page.getByRole("status").waitFor();
   },
   "connection-editor-replace": async (page) => {
     await openDrive(page);
     await selectInSidebar(page, "Ops Slack");
-    await page.getByRole("button", { name: "Edit connection" }).click();
     await page.getByRole("button", { name: "Replace" }).click();
     await page.keyboard.type("xoxb-rotated-token");
     await page.getByRole("button", { name: "Reference" }).first().click();

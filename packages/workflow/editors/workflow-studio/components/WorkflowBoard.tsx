@@ -11,7 +11,7 @@ import {
   RUN_TONE,
   statusLabel,
   toneOf,
-  WORKFLOW_TONE,
+  workflowHealth,
 } from "./run-format.js";
 import { stepOutline } from "./step-outline.js";
 import { Button, Icon, StatusDot } from "./ui.js";
@@ -132,6 +132,7 @@ export function WorkflowBoard(props: {
           {rows.map((row) => {
             const latest = row.runs.at(0);
             const latestTone = toneOf(RUN_TONE, latest?.status);
+            const health = workflowHealth(row.status, latest?.status);
             return (
               <li
                 key={row.id}
@@ -144,8 +145,8 @@ export function WorkflowBoard(props: {
                 >
                   <span className="min-w-0">
                     <span className="flex items-center gap-2">
-                      <span title={statusLabel(row.status)} className="flex">
-                        <StatusDot tone={toneOf(WORKFLOW_TONE, row.status)} />
+                      <span title={health.label} className="flex">
+                        <StatusDot tone={health.tone} />
                       </span>
                       <span className="truncate text-[15px] font-semibold text-foreground">
                         {row.name}

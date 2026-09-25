@@ -13,7 +13,7 @@ test.describe("Workflow Studio", () => {
     await expect(digest).toContainText("Every day at 08:00 UTC");
     await expect(digest).toContainText("Not run yet");
     const ping = board.getByRole("listitem").filter({ hasText: "Uptime ping" });
-    await expect(ping).toContainText("When started by hand");
+    await expect(ping).toContainText("Manual");
     await expect(ping).toContainText("Failed");
     await expect(ping.getByRole("list").first()).toHaveAccessibleName(
       /Ping host: failed.*Alert #ops/,
@@ -52,11 +52,17 @@ test.describe("Workflow Studio", () => {
       .getByRole("listitem");
     await expect(steps).toHaveCount(4);
     await expect(steps.nth(0)).toContainText("Fired");
-    await expect(steps.nth(0)).toContainText("Started by hand");
+    await expect(steps.nth(0)).toContainText("Manual");
     await expect(steps.nth(1)).toContainText("Succeeded");
+    await expect(steps.nth(1)).toContainText("Parse URL");
     await expect(steps.nth(2)).toContainText("Failed");
+    await expect(steps.nth(2)).toContainText("Ping host");
     await expect(steps.nth(3)).toContainText("Skipped");
     await expect(steps.nth(2)).toContainText("Send HTTP request");
+    // Steps read by name, and each timed step shows how long it took.
+    await expect(app.getByText("Ping host failed: TypeError")).toBeVisible();
+    await expect(steps.nth(1)).toContainText(/\d+ms/);
+    await expect(steps.nth(3)).toContainText("–");
 
     // The trigger row opens onto the payload the run started with.
     await steps.nth(0).getByRole("button").click();
@@ -91,20 +97,33 @@ test.describe("Workflow Studio", () => {
     await expect(app.getByText("Send Message To A Channel")).toBeVisible();
   });
 
-  test("a connection names its service and the workflows using it", async ({
-    app,
-  }) => {
+  test("a workflow's dot follows its last run", async ({ app }) => {
+    await openDrive(app);
+    const sidebar = app.getByRole("complementary");
+    await expect(
+      sidebar.getByRole("button", { name: "Uptime ping" }).locator("[title]"),
+    ).toHaveAttribute("title", "Enabled, last run failed");
+    await expect(
+      sidebar.getByRole("button", { name: "Daily digest" }).locator("[title]"),
+    ).toHaveAttribute("title", "Enabled, not run yet");
+  });
+
+  test("picking a connection opens its editor", async ({ app }) => {
     await openDrive(app);
     await selectInSidebar(app, "Ops Slack");
-    await expect(app.getByText("Connected", { exact: true })).toBeVisible();
-    await expect(app.getByText("Keys and tokens")).toBeVisible();
-    await expect(app.getByText("2 workflows")).toBeVisible();
+    await expect(
+      app.getByRole("textbox", { name: "Connection name" }),
+    ).toHaveValue("Ops Slack");
     const usedBy = app.locator("section", {
       has: app.getByRole("heading", { name: "Used by" }),
     });
     await expect(usedBy.getByRole("button")).toHaveText([
-      /Daily digest/,
-      /Uptime ping/,
+      /Daily digest.*Post to #ops/,
+      /Uptime ping.*Alert #ops/,
     ]);
+    await app.getByRole("button", { name: "Back" }).click();
+    await expect(
+      app.getByRole("heading", { name: "Workflows", level: 2 }),
+    ).toBeVisible();
   });
 });

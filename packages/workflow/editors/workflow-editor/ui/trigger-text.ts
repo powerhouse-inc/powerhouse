@@ -104,7 +104,7 @@ export function describeTrigger(
   if (!trigger) return "Never starts: no trigger";
   switch (trigger.blockType) {
     case "core#manual":
-      return "When started by hand";
+      return "Manual";
     case "core#webhook":
       return "When its webhook is called";
     case "core#schedule":

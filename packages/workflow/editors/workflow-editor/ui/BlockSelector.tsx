@@ -1,6 +1,7 @@
 // Piece-selector-style popover, adapted from the Activepieces builder
 // pieces-selector (MIT, activepieces packages/web).
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Icon, type IconName } from "../../shared/icons.js";
 import { useBlockMeta } from "./block-meta.js";
 import type { BlockPreset } from "./blocks.js";
 import type { StepModel } from "./model.js";
@@ -19,6 +20,43 @@ export type PieceMode = "actions" | "triggers";
 // Logo size for the picker's rows: presets, pieces, search hits and attach.
 const ROW_LOGO = 24;
 
+// Built-in blocks have no artwork of their own; each gets a coloured tile.
+const CORE_TILE: Record<string, { icon: IconName; color: string }> = {
+  "core#manual": { icon: "play", color: "#2563eb" },
+  "core#schedule": { icon: "clock", color: "#7c3aed" },
+  "core#webhook": { icon: "bolt", color: "#0891b2" },
+  "core#branch": { icon: "branch", color: "#d97706" },
+  "core#assert": { icon: "alert", color: "#dc2626" },
+};
+
+function CoreTile(props: { blockType: string; size: number; bare?: boolean }) {
+  const tile = CORE_TILE[props.blockType];
+  const glyph = Math.round(props.size * (props.bare ? 0.9 : 0.55));
+  // Bare: the caller's badge is the tile, so only the icon is drawn.
+  if (props.bare) {
+    return (
+      <span
+        className="flex shrink-0 items-center justify-center"
+        style={{ width: props.size, height: props.size, color: tile.color }}
+      >
+        <Icon name={tile.icon} size={glyph} />
+      </span>
+    );
+  }
+  return (
+    <span
+      className="flex shrink-0 items-center justify-center rounded-[22%] text-white"
+      style={{
+        width: props.size,
+        height: props.size,
+        backgroundColor: tile.color,
+      }}
+    >
+      <Icon name={tile.icon} size={glyph} />
+    </span>
+  );
+}
+
 export function BlockLogo(props: {
   blockType: string;
   size?: number;
@@ -26,6 +64,15 @@ export function BlockLogo(props: {
   bare?: boolean;
 }) {
   const meta = useBlockMeta(props.blockType);
+  if (props.blockType in CORE_TILE) {
+    return (
+      <CoreTile
+        blockType={props.blockType}
+        size={props.size ?? 36}
+        bare={props.bare}
+      />
+    );
+  }
   return (
     <LogoFrame
       src={meta.logoUrl}

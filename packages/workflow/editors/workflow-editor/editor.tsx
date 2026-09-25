@@ -1,9 +1,8 @@
 import "@xyflow/react/dist/style.css";
 import "./ui/canvas.css";
-import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useSelectedDocumentId } from "@powerhousedao/reactor-browser";
 import { useSelectedWorkflowDocument } from "document-models/workflow";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useWorkflowModel } from "./document/useWorkflowModel.js";
 import "./runtime-piece-source.js";
 import {
@@ -19,7 +18,18 @@ import {
   rotateSecret,
   testTrigger,
   type OutputTreeNode,
+  type RunRecord,
 } from "./runtime-api.js";
+import { BackButton, UndoRedo } from "../shared/editor-chrome.js";
+import {
+  formatAbsolute,
+  formatDuration,
+  formatWhen,
+  RUN_TONE,
+  toneOf,
+  TONE_DOT,
+  TONE_TEXT,
+} from "../workflow-studio/components/run-format.js";
 import { buildExpressionScope, EMPTY_SCOPE } from "./ui/expression-scope.js";
 import { registerExpressionScopeSource } from "./ui/ExpressionPicker.js";
 import type { DesignTimeService } from "./ui/forms.js";
@@ -45,6 +55,48 @@ async function authoredOutput(blockType: string, config: unknown) {
   } catch {
     return {};
   }
+}
+
+const LAST_RUN_POLL_MS = 10_000;
+
+function LastRunFact(props: { workflowId: string }) {
+  const [run, setRun] = useState<RunRecord | null | undefined>(undefined);
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      fetchRuns({ workflowId: props.workflowId, limit: 1 }).then(
+        (runs) => {
+          if (alive) setRun(runs.at(0) ?? null);
+        },
+        () => {
+          if (alive) setRun(null);
+        },
+      );
+    void load();
+    const timer = setInterval(() => void load(), LAST_RUN_POLL_MS);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [props.workflowId]);
+  if (run === undefined) return null;
+  if (run === null) {
+    return <span className="text-xs text-muted-foreground">Not run yet</span>;
+  }
+  const tone = toneOf(RUN_TONE, run.status);
+  return (
+    <span
+      className="flex items-center gap-1.5 text-xs text-muted-foreground"
+      title={formatAbsolute(run.startedAt)}
+    >
+      Last run
+      <span className={`h-1.5 w-1.5 rounded-full ${TONE_DOT[tone]}`} />
+      <span className={TONE_TEXT[tone]}>{formatWhen(run.startedAt)}</span>
+      <span className="tabular-nums">
+        {formatDuration(run.startedAt, run.endedAt)}
+      </span>
+    </span>
+  );
 }
 
 function WorkflowEditor() {
@@ -95,11 +147,17 @@ function WorkflowEditor() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
-      <DocumentToolbar />
       <WorkflowEditorApp
         model={model}
         callbacks={callbacks}
         designTime={designTime}
+        leading={<BackButton />}
+        trailing={
+          <>
+            <LastRunFact workflowId={workflowId} />
+            <UndoRedo documentId={workflowId} />
+          </>
+        }
       />
     </div>
   );

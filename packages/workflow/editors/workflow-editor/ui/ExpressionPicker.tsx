@@ -475,7 +475,8 @@ export function ExpressionPickerButton(props: {
       className={`inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
         props.active
           ? "bg-wf-run/10 text-wf-run"
-          : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          : // Revealed with its field, so a long form isn't a column of buttons.
+            "text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground focus-visible:opacity-100 group-focus-within/field:opacity-100 group-hover/field:opacity-100 [@media(hover:none)]:opacity-100"
       }`}
       onClick={props.onFocusField}
     >

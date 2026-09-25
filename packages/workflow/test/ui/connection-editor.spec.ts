@@ -5,7 +5,6 @@ test.describe("Connection editor", () => {
   test.beforeEach(async ({ app }) => {
     await openDrive(app);
     await selectInSidebar(app, "Ops Slack");
-    await app.getByRole("button", { name: "Edit connection" }).click();
   });
 
   test("shows the service and its readable status", async ({ app }) => {
@@ -75,5 +74,15 @@ test.describe("Connection editor", () => {
     await expect(app.getByLabel("Secret reference")).toHaveValue(
       /^secret:\/\/v1:/,
     );
+  });
+
+  test("Test connection runs the check and says how it went", async ({
+    app,
+  }) => {
+    await app.getByRole("button", { name: "Test connection" }).click();
+    await expect(app.getByRole("status")).toContainText(
+      "It works, signed in as ops@acme.dev",
+    );
+    await expect(app.getByText("Last checked just now")).toBeVisible();
   });
 });

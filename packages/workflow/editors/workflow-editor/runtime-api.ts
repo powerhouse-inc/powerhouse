@@ -407,6 +407,9 @@ export interface RunStepRecord {
   output: unknown;
   port: string | null;
   error: string | null;
+  // Null for skipped and replayed steps, and for runs journaled before timings.
+  startedAt: string | null;
+  endedAt: string | null;
 }
 
 export interface RunRecord {
@@ -426,7 +429,7 @@ export interface RunRecord {
 
 const RUN_FIELDS = `id workflowId workflowName workflowVersion triggerKind
   triggerPayload status error startedAt endedAt rerunOf
-  steps { stepId stepKey blockType status input output port error }`;
+  steps { stepId stepKey blockType status input output port error startedAt endedAt }`;
 
 export interface RunsScope {
   workflowId?: string;
