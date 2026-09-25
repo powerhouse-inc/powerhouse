@@ -112,7 +112,6 @@
     "@types/react-virtualized": "^9.22.3",
     "camelcase": "^8.0.0",
     "happy-dom": "^20.8.9",
-    "jsdom": "^24.0.0",
     "react": "catalog:",
     "react-dom": "catalog:",
     "storybook": "^8.6.18",

@@ -55,9 +55,7 @@
     "@types/express": "^4.17.21",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
-    "@types/supertest": "^6.0.2",
     "pg-mem": "^3.0.14",
-    "supertest": "^7.1.0",
     "vitest": "catalog:"
   },
   "homepage": "https://academy.vetra.io"
