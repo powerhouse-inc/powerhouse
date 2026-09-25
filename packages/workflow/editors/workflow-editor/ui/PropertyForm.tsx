@@ -111,11 +111,12 @@ function useResolvedProp<T>(
   const [state, setState] = useState<LoadState<T>>({ kind: "idle" });
   const [attempt, setAttempt] = useState(0);
   const loadRef = useRef(load);
-  // eslint-disable-next-line react-hooks-extra/refs -- latest-value refs, only read inside the effect below
-  loadRef.current = load;
   const parseRef = useRef(parse);
-  // eslint-disable-next-line react-hooks-extra/refs -- latest-value refs, only read inside the effect below
-  parseRef.current = parse;
+  // Declared before the loading effect, so it sees this render's values.
+  useEffect(() => {
+    loadRef.current = load;
+    parseRef.current = parse;
+  });
   const first = useRef(true);
 
   useEffect(() => {

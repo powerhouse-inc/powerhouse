@@ -105,8 +105,9 @@ export function useExpressionField(options: {
   const id = useId();
   const context = useExpressionTarget();
   const insertRef = useRef(options.insert);
-  // eslint-disable-next-line react-hooks-extra/refs -- latest-value ref, only read from the focus callback
-  insertRef.current = options.insert;
+  useEffect(() => {
+    insertRef.current = options.insert;
+  });
   const { stepId, label } = options;
   return {
     active: context?.target?.id === id,

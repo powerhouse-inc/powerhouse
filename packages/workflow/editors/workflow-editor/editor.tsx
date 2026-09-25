@@ -27,6 +27,26 @@ import { DocumentErrorBoundary } from "../shared/DocumentErrorBoundary.js";
 import { useSyncWorkflowRuntimeUrl } from "./use-runtime-url.js";
 import { WorkflowEditorApp } from "./ui/WorkflowEditorApp.js";
 
+function treeValue(nodes: OutputTreeNode[]): Record<string, unknown> {
+  return Object.fromEntries(
+    nodes.map((node) => [
+      node.name,
+      node.children ? treeValue(node.children) : node.type,
+    ]),
+  );
+}
+
+async function authoredOutput(blockType: string, config: unknown) {
+  try {
+    const tree = await fetchBlockOutputTree(blockType, config);
+    if (tree.nodes.length > 0) return treeValue(tree.nodes);
+    // Schema with no sub-paths = the output itself is the value.
+    return tree.source === "none" ? "no declared schema" : "value";
+  } catch {
+    return {};
+  }
+}
+
 function WorkflowEditor() {
   useSyncWorkflowRuntimeUrl();
   const { model, callbacks } = useWorkflowModel();
@@ -55,23 +75,6 @@ function WorkflowEditor() {
   // Scope for the {} picker: journaled outputs from the latest run where
   // available, authored shapes (declared types as leaves) otherwise.
   useEffect(() => {
-    const treeValue = (nodes: OutputTreeNode[]): Record<string, unknown> =>
-      Object.fromEntries(
-        nodes.map((node) => [
-          node.name,
-          node.children ? treeValue(node.children) : node.type,
-        ]),
-      );
-    const authoredOutput = async (blockType: string, config: unknown) => {
-      try {
-        const tree = await fetchBlockOutputTree(blockType, config);
-        if (tree.nodes.length > 0) return treeValue(tree.nodes);
-        // Schema with no sub-paths = the output itself is the value.
-        return tree.source === "none" ? "no declared schema" : "value";
-      } catch {
-        return {};
-      }
-    };
     registerExpressionScopeSource({
       load: async ({ stepId }) => {
         // Trigger config fields run before any step; nothing to reference.
