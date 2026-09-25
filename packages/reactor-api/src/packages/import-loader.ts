@@ -29,6 +29,9 @@ export class ImportPackageLoader implements IPackageLoader {
 
   readonly name = "ImportPackageLoader";
 
+  // Where the host's own dependencies are installed; the process's cwd.
+  constructor(private readonly hostDir = process.cwd()) {}
+
   // Said once per package: a project rebuilt while the reactor runs answers
   // on the next load, and repeating the advice every time would only nag.
   private readonly reportedUnbuilt = new Set<string>();
@@ -115,7 +118,7 @@ export class ImportPackageLoader implements IPackageLoader {
 
     // A name is left to throw, so the manager can read the resolution error's
     // shape; a path answers for itself, and an absent list means none.
-    const { root, listPath } = pieceListLocation(identifier);
+    const { root, listPath } = pieceListLocation(identifier, this.hostDir);
     if (!existsSync(listPath)) {
       this.reportUnbuilt(identifier, root, listPath);
       return [];
