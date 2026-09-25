@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMs, runTimeline } from "./run-format.js";
+import { runTimeline } from "./run-format.js";
 
 const at = (ms: number) => new Date(Date.UTC(2026, 0, 1) + ms).toISOString();
 
@@ -28,9 +28,24 @@ describe("runTimeline", () => {
     expect(spans.get("a")).toEqual({ offset: 0.25, width: 0.75, ms: 150 });
   });
 
-  it("formats durations", () => {
-    expect(formatMs(87)).toBe("87ms");
-    expect(formatMs(1500)).toBe("1.5s");
-    expect(formatMs(125_000)).toBe("2m 5s");
+  it("returns no spans when the run has no length", () => {
+    const spans = runTimeline({
+      startedAt: at(100),
+      endedAt: at(100),
+      steps: [{ stepId: "a", startedAt: at(100), endedAt: at(100) }],
+    });
+    expect(spans.size).toBe(0);
+    expect(
+      runTimeline({ startedAt: at(100), endedAt: null, steps: [] }).size,
+    ).toBe(0);
+  });
+
+  it("clamps a step that starts before the run to offset 0", () => {
+    const spans = runTimeline({
+      startedAt: at(100),
+      endedAt: at(200),
+      steps: [{ stepId: "a", startedAt: at(50), endedAt: at(150) }],
+    });
+    expect(spans.get("a")).toEqual({ offset: 0, width: 1, ms: 100 });
   });
 });

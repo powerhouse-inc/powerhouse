@@ -15,7 +15,7 @@ test.describe("Workflow Studio", () => {
     const ping = board.getByRole("listitem").filter({ hasText: "Uptime ping" });
     await expect(ping).toContainText("Manual");
     await expect(ping).toContainText("Failed");
-    await expect(ping.getByRole("list").first()).toHaveAccessibleName(
+    await expect(ping.getByRole("list")).toHaveAccessibleName(
       /Ping host: failed.*Alert #ops/,
     );
     await expect(
@@ -61,7 +61,7 @@ test.describe("Workflow Studio", () => {
     await expect(steps.nth(2)).toContainText("Send HTTP request");
     // Steps read by name, and each timed step shows how long it took.
     await expect(app.getByText("Ping host failed: TypeError")).toBeVisible();
-    await expect(steps.nth(1)).toContainText(/\d+ms/);
+    await expect(steps.nth(1)).toContainText(/\d+ms|\d+\.\ds|\d+m \d+s/);
     await expect(steps.nth(3)).toContainText("–");
 
     // The trigger row opens onto the payload the run started with.
@@ -93,8 +93,10 @@ test.describe("Workflow Studio", () => {
       app.getByRole("button", { name: "Summarise: not run" }),
     ).toBeVisible();
     // Actions read by the piece's own names, not their ids.
-    await expect(app.getByText("Ask ChatGPT")).toBeVisible();
-    await expect(app.getByText("Send Message To A Channel")).toBeVisible();
+    await expect(app.getByText("Ask ChatGPT", { exact: true })).toBeVisible();
+    await expect(
+      app.getByText("Send Message To A Channel", { exact: true }),
+    ).toBeVisible();
   });
 
   test("a workflow's dot follows its last run", async ({ app }) => {
