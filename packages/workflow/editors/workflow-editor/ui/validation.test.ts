@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { flowPorts } from "./model.js";
-import type { BlockForm, BlockFormProp } from "./forms.js";
+import { CORE_FORMS, type BlockForm, type BlockFormProp } from "./forms.js";
 import {
   isEmptyValue,
   missingForBlock,
@@ -80,6 +80,21 @@ describe("isPropVisible / conditional required fields", () => {
         secretRef: "secret://v1:a",
       }),
     ).toEqual([]);
+  });
+});
+
+describe("the schedule trigger's required fields", () => {
+  const props = CORE_FORMS["core#schedule"].props;
+
+  it("reads a mode-less config with `every` as an interval, as the runtime does", () => {
+    expect(missingRequired(props, { every: 5, unit: "minutes" })).toEqual([]);
+  });
+
+  it("still asks for a cron in cron mode, explicit or empty", () => {
+    expect(missingRequired(props, {})).toEqual(["Cron expression"]);
+    expect(missingRequired(props, { mode: "cron", every: 5 })).toEqual([
+      "Cron expression",
+    ]);
   });
 });
 

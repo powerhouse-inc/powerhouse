@@ -700,10 +700,12 @@ function KeyField(props: {
             label="Copy reference"
             onClick={(event) => {
               event.preventDefault();
-              navigator.clipboard.writeText(`{{${step.key}}}`).then(
-                () => setCopied(true),
-                () => undefined,
-              );
+              navigator.clipboard
+                .writeText(`{{steps.${step.key}.output}}`)
+                .then(
+                  () => setCopied(true),
+                  () => undefined,
+                );
             }}
           />
         }
@@ -724,7 +726,7 @@ function KeyField(props: {
       <Hint>
         Later steps read this step&apos;s output as{" "}
         <code className="rounded bg-muted px-1 font-mono text-[11px] text-foreground">
-          {`{{${step.key}.…}}`}
+          {`{{steps.${step.key}.output.…}}`}
         </code>
         . Renaming it doesn&apos;t update expressions that use it.
       </Hint>

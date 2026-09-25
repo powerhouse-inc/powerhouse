@@ -1,6 +1,7 @@
 // Plain-language descriptions of when a workflow starts: "Every day at
 // 08:00 UTC" rather than "0 8 * * *". Unknown shapes fall back to the raw text.
 import { blockMeta } from "./block-meta.js";
+import { intervalOf } from "./schedule-draft.js";
 
 const WEEKDAYS = [
   "Sunday",
@@ -82,14 +83,16 @@ export function describeSchedule(config: unknown): string {
       ? record.timezone
       : "UTC";
   const interval =
-    record.mode === "interval" || (!record.cron && record.every !== undefined);
+    record.mode === "interval" ||
+    (!record.cron &&
+      (record.every !== undefined || record.everyMs !== undefined));
   if (interval) {
-    const every = Number(record.every);
-    const unit =
-      UNIT_LABEL[typeof record.unit === "string" ? record.unit : "minutes"] ??
-      UNIT_LABEL.minutes;
-    if (!Number.isFinite(every) || every <= 0) return "On a fixed interval";
-    return every === 1 ? `Every ${unit[0]}` : `Every ${every} ${unit[1]}`;
+    const cadence = intervalOf(record);
+    if (!cadence) return "On a fixed interval";
+    const unit = UNIT_LABEL[cadence.unit];
+    return cadence.every === 1
+      ? `Every ${unit[0]}`
+      : `Every ${cadence.every} ${unit[1]}`;
   }
   const cron = typeof record.cron === "string" ? record.cron : "";
   if (!cron) return "On a schedule";

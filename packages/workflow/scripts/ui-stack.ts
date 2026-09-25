@@ -317,7 +317,9 @@ function seedInBrowser(page: Page, input: SeedInput): Promise<Seeded> {
         key: "summarise",
         name: "Summarise",
         blockType: blocks.openai,
-        config: { prompt: "Summarise {{fetch.body}} in three bullets." },
+        config: {
+          prompt: "Summarise {{steps.fetch.output.body}} in three bullets.",
+        },
       }),
       wf.addStep({
         id: "post",
@@ -325,7 +327,7 @@ function seedInBrowser(page: Page, input: SeedInput): Promise<Seeded> {
         name: "Post to #ops",
         blockType: blocks.slack,
         connectionId: connection,
-        config: { channel: "#ops", text: "{{summarise.output}}" },
+        config: { channel: "#ops", text: "{{steps.summarise.output}}" },
       }),
       wf.addEdge({ id: "e1", from: "trigger", to: "fetch", port: "next" }),
       wf.addEdge({ id: "e2", from: "fetch", to: "summarise", port: "next" }),
@@ -388,7 +390,10 @@ function seedInBrowser(page: Page, input: SeedInput): Promise<Seeded> {
         name: "Alert #ops",
         blockType: blocks.slack,
         connectionId: connection,
-        config: { channel: "#ops", text: "Host down: {{parse.hostname}}" },
+        config: {
+          channel: "#ops",
+          text: "Host down: {{steps.parse.output.hostname}}",
+        },
       }),
       wf.addEdge({ id: "e1", from: "trigger", to: "parse", port: "next" }),
       wf.addEdge({ id: "e2", from: "parse", to: "ping", port: "next" }),

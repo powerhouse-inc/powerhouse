@@ -39,7 +39,11 @@ import {
 export interface ConnectionCallbacks {
   setName: (name: string) => void;
   pickPiece: (piece: PieceSummary) => void;
-  setAuthType: (authType: ConnectionAuthType) => void;
+  // `keep` names the new method's fields; any other credential is dropped.
+  setAuthType: (
+    authType: ConnectionAuthType,
+    keep: { config: string[]; secrets: string[] },
+  ) => void;
   setConfigValue: (name: string, value: unknown) => void;
   setSecretRef: (name: string, ref: string) => void;
   removeSecretRef: (name: string) => void;
@@ -500,9 +504,13 @@ export function ConnectionForm(props: {
             onChange={(value) => {
               const authType = value as ConnectionAuthType;
               const next = plans.find((option) => option.authType === authType);
-              callbacks.setAuthType(authType);
+              if (!next) return;
+              callbacks.setAuthType(authType, {
+                config: next.configFields.map((field) => field.name),
+                secrets: next.secretFields.map((field) => field.name),
+              });
               // Switching resets the status; a method already filled in is ready.
-              if (next && isAuthComplete(next, config, refByName)) {
+              if (isAuthComplete(next, config, refByName)) {
                 callbacks.setStatus("OK");
               }
             }}

@@ -27,21 +27,46 @@ function fromTime(time: string): { hour: number; minute: number } {
   return { hour: Number(hour), minute: Number(minute) };
 }
 
-/** Reads a stored config back into the builder's terms. */
-export function draftFromConfig(config: unknown): ScheduleDraft {
-  const record = (config ?? {}) as Record<string, unknown>;
-  const interval =
-    record.mode === "interval" || (!record.cron && record.every !== undefined);
-  if (interval) {
+const UNIT_MS: [IntervalUnit, number][] = [
+  ["days", 86_400_000],
+  ["hours", 3_600_000],
+  ["minutes", 60_000],
+];
+
+/** An interval config's cadence, from `every` + `unit` or a bare `everyMs`. */
+export function intervalOf(
+  record: Record<string, unknown>,
+): { every: number; unit: IntervalUnit } | undefined {
+  const every = Number(record.every);
+  if (record.every !== undefined && Number.isFinite(every) && every > 0) {
     const unit =
       record.unit === "hours" || record.unit === "days"
         ? record.unit
         : "minutes";
-    const every = Number(record.every);
+    return { every, unit };
+  }
+  const ms = Number(record.everyMs);
+  if (record.everyMs === undefined || !Number.isFinite(ms) || ms <= 0) {
+    return undefined;
+  }
+  // The largest unit it divides into evenly; sub-minute rounds up to a minute.
+  for (const [unit, size] of UNIT_MS) {
+    if (ms % size === 0) return { every: ms / size, unit };
+  }
+  return { every: Math.max(1, Math.round(ms / 60_000)), unit: "minutes" };
+}
+
+/** Reads a stored config back into the builder's terms. */
+export function draftFromConfig(config: unknown): ScheduleDraft {
+  const record = (config ?? {}) as Record<string, unknown>;
+  const interval =
+    record.mode === "interval" ||
+    (!record.cron &&
+      (record.every !== undefined || record.everyMs !== undefined));
+  if (interval) {
     return {
       kind: "interval",
-      every: Number.isFinite(every) && every > 0 ? every : 15,
-      unit,
+      ...(intervalOf(record) ?? { every: 15, unit: "minutes" }),
     };
   }
   const cron = typeof record.cron === "string" ? record.cron.trim() : "";
