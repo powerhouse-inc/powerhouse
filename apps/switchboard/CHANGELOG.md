@@ -1,3 +1,41 @@
+## 6.2.3-dev.25 (2026-09-25)
+
+### 🚀 Features
+
+- **workflow:** show run data in a lazy-loaded tree with copyable references, and scope the connection picker to the drive ([1d286f4a6](https://github.com/powerhouse-inc/powerhouse/commit/1d286f4a6))
+- **reactor-workflow:** record when each step starts and ends ([6f6d8a233](https://github.com/powerhouse-inc/powerhouse/commit/6f6d8a233))
+- **reactor-api:** serve an attachment only to callers who may read its document ([#3109](https://github.com/powerhouse-inc/powerhouse/pull/3109))
+
+### 🩹 Fixes
+
+- **ci:** let the release skip the transpiler TypeScript 7 broke ([#36306](https://github.com/powerhouse-inc/powerhouse/issues/36306))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente
+- Guillermo Puente Sandoval
+
+## 6.2.3-dev.24 (2026-09-25)
+
+### 🚀 Features
+
+- **reactor-api:** exempt named paths from the authenticated-caller floor, and carry it to the attachment routes ([#3108](https://github.com/powerhouse-inc/powerhouse/pull/3108))
+- **reactor:** action signature integrity ([#3088](https://github.com/powerhouse-inc/powerhouse/pull/3088), [#2894](https://github.com/powerhouse-inc/powerhouse/issues/2894), [#7](https://github.com/powerhouse-inc/powerhouse/issues/7))
+- **reactor-workflow:** refuse the auth and trigger features the engine can't run ([7ce03d28f](https://github.com/powerhouse-inc/powerhouse/commit/7ce03d28f))
+- type-safe piece authoring, upstream connection hooks, and a ph build that typechecks first ([#3082](https://github.com/powerhouse-inc/powerhouse/pull/3082))
+
+### 🩹 Fixes
+
+- **workflow:** build after powerhouse-vetra-packages so their tsc --build runs never overlap ([#3101](https://github.com/powerhouse-inc/powerhouse/pull/3101))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.3-dev.23 (2026-09-24)
 
 ### 🩹 Fixes

@@ -121,21 +121,39 @@ describe("buildExpressionScope", () => {
     expect(scope.captions["trigger.payload"]).toMatch(/^from run /);
   });
 
-  it("ignores journaled steps that failed, changed type, or have no output", async () => {
+  it.each([
+    [
+      "changed type",
+      {
+        blockType: "@powerhousedao/piece-reactor#document-find",
+        status: "SUCCEEDED",
+        output: { count: 1 },
+      },
+    ],
+    [
+      "failed",
+      {
+        blockType: "@powerhousedao/piece-reactor#document-get",
+        status: "FAILED",
+        output: { documentId: "d1" },
+      },
+    ],
+    [
+      "has no output",
+      {
+        blockType: "@powerhousedao/piece-reactor#document-get",
+        status: "SUCCEEDED",
+        output: null,
+      },
+    ],
+  ])("ignores a journaled step that %s", async (_, journaled) => {
     const scope = await buildExpressionScope({
       model,
       stepId: "b",
       latestRun: {
         startedAt: "2026-09-04T09:14:00Z",
         triggerPayload: null,
-        steps: [
-          {
-            stepKey: "a",
-            blockType: "@powerhousedao/piece-reactor#document-find",
-            status: "SUCCEEDED",
-            output: { count: 1 },
-          },
-        ],
+        steps: [{ stepKey: "a", ...journaled }],
       },
       authoredOutput: authored,
     });

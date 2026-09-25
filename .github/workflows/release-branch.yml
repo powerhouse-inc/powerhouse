@@ -112,6 +112,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PNPM_CONFIG_PROVENANCE: "true"
+          # nx loads its changelog renderer through registerTsProject, which picks
+          # up @swc-node/register by walking out of releases/ into the root
+          # node_modules — where pnpm has wired it to the root's typescript, now
+          # 7.0.2. TypeScript 7 ships no in-process compiler API (require lands on
+          # lib/version.cjs, which exports only `version`), so swc-node dies on
+          # `ts.ScriptTarget.ES2018` and nx reports it as "cannot resolve the
+          # changelog renderer". nx 22.7.x excludes TypeScript 7 upstream
+          # (nrwl/nx#36306). This opts into Node's native type stripping instead,
+          # so no transpiler is registered at all; the renderer is plain JS and
+          # nx.json configures none of its own, so there is nothing to transpile.
+          # Inert where the runtime lacks process.features.typescript.
+          NX_PREFER_NODE_STRIP_TYPES: "true"
         run: |
           pnpm run run-release -- \
           --release-mode="${{ inputs.release_mode || 'prerelease' }}" \

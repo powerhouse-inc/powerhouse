@@ -36,7 +36,7 @@ export function ApEdge(props: EdgeProps) {
       <BaseEdge
         id={props.id}
         path={path}
-        style={{ stroke: "#cbd5e1", strokeWidth: 1.5 }}
+        style={{ stroke: "var(--wf-edge)", strokeWidth: 1.5 }}
       />
       <EdgeLabelRenderer>
         <div
@@ -48,7 +48,8 @@ export function ApEdge(props: EdgeProps) {
           {portLabel ? (
             <span
               className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-                PORT_LABEL_CLASSES[portLabel] ?? "bg-slate-100 text-slate-500"
+                PORT_LABEL_CLASSES[portLabel] ??
+                "bg-muted text-muted-foreground"
               }`}
             >
               {portLabel}
@@ -83,7 +84,11 @@ export function ApLinkEdge(props: EdgeProps) {
     <BaseEdge
       id={props.id}
       path={path}
-      style={{ stroke: "#cbd5e1", strokeWidth: 1.5, strokeDasharray: "4 3" }}
+      style={{
+        stroke: "var(--wf-edge)",
+        strokeWidth: 1.5,
+        strokeDasharray: "4 3",
+      }}
     />
   );
 }

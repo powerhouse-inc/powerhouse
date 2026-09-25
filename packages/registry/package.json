@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/registry",
-  "version": "6.2.3-dev.23",
+  "version": "6.2.3-dev.25",
   "description": "Powerhouse package registry — resolves and manages document model package dependencies within the Powerhouse ecosystem.",
   "type": "module",
   "repository": {
@@ -55,9 +55,7 @@
     "@types/express": "^4.17.21",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
-    "@types/supertest": "^6.0.2",
     "pg-mem": "^3.0.14",
-    "supertest": "^7.1.0",
     "vitest": "catalog:"
   },
   "homepage": "https://academy.vetra.io"

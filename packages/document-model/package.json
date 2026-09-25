@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "6.2.3-dev.23",
+  "version": "6.2.3-dev.25",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -52,7 +52,6 @@
     "@types/mime": "^4.0.0",
     "@types/node": "catalog:",
     "change-case": "catalog:",
-    "jest": "^30.0.5",
     "mutative": "^1.0.5",
     "tsdown": "catalog:",
     "tsx": "catalog:",

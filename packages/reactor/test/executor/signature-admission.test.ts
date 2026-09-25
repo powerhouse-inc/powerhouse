@@ -1,6 +1,7 @@
 import type {
   Action,
   ActionSigner,
+  DocumentModelDocument,
   ISigner,
   Operation,
   OperationWithContext,
@@ -8,7 +9,10 @@ import type {
 import {
   addModule,
   deriveOperationId,
+  garbageCollect,
   initializeAuth,
+  sortOperations,
+  undo,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -189,6 +193,14 @@ describe("signature admission", () => {
       (revisions.revision as Record<string, number | undefined>).global ?? 0;
     await store.apply(docId, DOC_TYPE, "global", "main", index, (txn) => {
       txn.addOperations(asOperation(action, index));
+    });
+    module!.writeCache.invalidate(docId, "global", "main");
+  }
+
+  async function storeRows(operations: Operation[]): Promise<void> {
+    const store = module!.operationStore;
+    await store.apply(docId, DOC_TYPE, "global", "main", 0, (txn) => {
+      txn.addOperations(...operations);
     });
     module!.writeCache.invalidate(docId, "global", "main");
   }
@@ -522,6 +534,104 @@ describe("signature admission", () => {
       expect(refusals).toMatchObject([
         { actionId: action.id, code: "DUPLICATE_ACTION", path: "load" },
       ]);
+    });
+  });
+
+  describe("an action the stream already holds", () => {
+    async function liveActionIds(): Promise<string[]> {
+      return garbageCollect(sortOperations(await stored())).map(
+        (operation) => operation.action.id,
+      );
+    }
+
+    async function moduleIds(): Promise<string[]> {
+      const document = await module!.reactor.get<DocumentModelDocument>(docId);
+      return document.state.global.specifications[0].modules.map(
+        (entry) => entry.id,
+      );
+    }
+
+    /** A stream an earlier load left rewinding b and c without re-appending them. */
+    async function rewound(): Promise<Record<"a" | "b" | "c" | "d", Action>> {
+      const a = await renownSigned(moduleAction("a", 0));
+      const b = await renownSigned(moduleAction("b", 10));
+      const c = await renownSigned(moduleAction("c", 20));
+      const d = await renownSigned(moduleAction("d", 15));
+      await storeRows([
+        asOperation(a, 0),
+        asOperation(b, 1),
+        asOperation(c, 2),
+        { ...asOperation(a, 3), skip: 3 },
+        asOperation(d, 4),
+      ]);
+      expect(await liveActionIds()).toEqual([a.id, d.id]);
+      return { a, b, c, d };
+    }
+
+    it("re-applies what a reshuffle rewound, in timestamp order", async () => {
+      await build("enforce");
+      const { a, b, c, d } = await rewound();
+
+      const job = await load([asOperation(b, 12), asOperation(c, 13)]);
+
+      expect(job.status).toBe(JobStatus.READ_READY);
+      expect(refusals).toEqual([]);
+      expect(await liveActionIds()).toEqual([a.id, b.id, d.id, c.id]);
+      expect(await moduleIds()).toEqual(["a", "b", "d", "c"]);
+    });
+
+    it("refuses a rewound action id re-sent with other content", async () => {
+      await build("enforce");
+      const { a, b, d } = await rewound();
+
+      const altered = { ...b, input: { id: "b", name: "altered" } };
+      expect((await load([asOperation(altered, 12)])).status).toBe(
+        JobStatus.READ_READY,
+      );
+
+      expect(refusals).toMatchObject([
+        { actionId: b.id, code: "DUPLICATE_ACTION", path: "load" },
+      ]);
+      expect(await liveActionIds()).toEqual([a.id, d.id]);
+    });
+
+    describe("of an undone action", () => {
+      async function undone(): Promise<Action> {
+        const action = await renownSigned(moduleAction("x", 0));
+        expect((await execute([action])).status).toBe(JobStatus.READ_READY);
+        expect(
+          (await execute([{ ...undo(), timestampUtcMs: at(10) }])).status,
+        ).toBe(JobStatus.READ_READY);
+        expect(await moduleIds()).toEqual([]);
+        return action;
+      }
+
+      it.each([
+        ["where the peer holds it", 0],
+        ["from far above the local head", 999],
+      ])("does not redo it when loaded %s", async (_label, index) => {
+        await build("enforce");
+        const action = await undone();
+
+        expect((await load([asOperation(action, index)])).status).toBe(
+          JobStatus.READ_READY,
+        );
+
+        expect(await liveActionIds()).not.toContain(action.id);
+        expect(await moduleIds()).toEqual([]);
+      });
+
+      it("does not redo it when resubmitted", async () => {
+        await build("enforce");
+        const action = await undone();
+
+        const job = await execute([action]);
+
+        expect(job.status).toBe(JobStatus.FAILED);
+        expect(job.error?.message).toContain("[DUPLICATE_ACTION]");
+        expect(await liveActionIds()).not.toContain(action.id);
+        expect(await moduleIds()).toEqual([]);
+      });
     });
   });
 

@@ -179,9 +179,9 @@ export class ReactorSubgraph extends BaseSubgraph {
    * reports the liveness that keeps it from being reclaimed -- but they never
    * adopt, since the push path has no drive check to clear the claimant.
    *
-   * Nothing is enforced or adopted without a serving gate. Below
-   * `authEnforcement` there is no policy being enforced for the channel to
-   * belong to, and refusing a poll there would break sync for no gain.
+   * Nothing is enforced or adopted without a serving gate: with no gate the
+   * channel serves every subject alike, so there is no subject for it to
+   * belong to.
    */
   async #bindOrRefuseChannel(
     channelId: string,
@@ -420,10 +420,12 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      jobStatus: async (_parent, args) => {
+      jobStatus: async (_parent, args, ctx: Context) => {
         this.logger.debug("jobStatus(@args)", args);
         try {
-          return await resolvers.jobStatus(this.reactorClient, args);
+          return await resolvers.jobStatus(this.reactorClient, args, (id) =>
+            this.servesDocument(id, ctx),
+          );
         } catch (error) {
           this.logger.error("Error in jobStatus: @Error", error);
           throw error;
@@ -609,6 +611,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.reactorClient,
             args,
             this.graphqlManager.reactorDriveClient,
+            this.viewSubject(ctx),
           );
 
           if (result?.id && isDriveContainerType(result.documentType)) {
@@ -655,6 +658,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.reactorClient,
             args,
             this.graphqlManager.reactorDriveClient,
+            this.viewSubject(ctx),
           );
 
           if (result?.id && isDriveContainerType(result.documentType)) {
@@ -691,10 +695,11 @@ export class ReactorSubgraph extends BaseSubgraph {
             ctx,
           );
 
-          return await resolvers.execute(this.reactorClient, {
-            ...args,
-            documentIdentifier: handle.fetchIdentifier,
-          });
+          return await resolvers.execute(
+            this.reactorClient,
+            { ...args, documentIdentifier: handle.fetchIdentifier },
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error("Error in execute(@args): @Error", args, error);
           throw error;
@@ -734,10 +739,11 @@ export class ReactorSubgraph extends BaseSubgraph {
             ctx,
           );
 
-          return await resolvers.mutateDocument(this.reactorClient, {
-            ...args,
-            documentIdentifier: handle.fetchIdentifier,
-          });
+          return await resolvers.mutateDocument(
+            this.reactorClient,
+            { ...args, documentIdentifier: handle.fetchIdentifier },
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error(
             "Error in mutateDocument(@args): @Error",
@@ -779,10 +785,12 @@ export class ReactorSubgraph extends BaseSubgraph {
             ctx,
           );
 
-          return await resolvers.renameDocument(this.reactorClient, {
-            ...args,
-            documentIdentifier: handle.fetchIdentifier,
-          });
+          return await resolvers.renameDocument(
+            this.reactorClient,
+            { ...args, documentIdentifier: handle.fetchIdentifier },
+            undefined,
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error(
             "Error in renameDocument(@args): @Error",
@@ -801,10 +809,12 @@ export class ReactorSubgraph extends BaseSubgraph {
             ctx,
           );
 
-          return await resolvers.setPreferredEditor(this.reactorClient, {
-            ...args,
-            documentIdentifier: handle.fetchIdentifier,
-          });
+          return await resolvers.setPreferredEditor(
+            this.reactorClient,
+            { ...args, documentIdentifier: handle.fetchIdentifier },
+            undefined,
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error(
             "Error in setPreferredEditor(@args): @Error",
@@ -820,10 +830,11 @@ export class ReactorSubgraph extends BaseSubgraph {
         try {
           const handle = await this.assertCanWrite(args.sourceIdentifier, ctx);
 
-          return await resolvers.addRelationship(this.reactorClient, {
-            ...args,
-            sourceIdentifier: handle.fetchIdentifier,
-          });
+          return await resolvers.addRelationship(
+            this.reactorClient,
+            { ...args, sourceIdentifier: handle.fetchIdentifier },
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error(
             "Error in addRelationship(@args): @Error",
@@ -839,10 +850,11 @@ export class ReactorSubgraph extends BaseSubgraph {
         try {
           const handle = await this.assertCanWrite(args.sourceIdentifier, ctx);
 
-          return await resolvers.updateRelationship(this.reactorClient, {
-            ...args,
-            sourceIdentifier: handle.fetchIdentifier,
-          });
+          return await resolvers.updateRelationship(
+            this.reactorClient,
+            { ...args, sourceIdentifier: handle.fetchIdentifier },
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error(
             "Error in updateRelationship(@args): @Error",
@@ -858,10 +870,11 @@ export class ReactorSubgraph extends BaseSubgraph {
         try {
           const handle = await this.assertCanWrite(args.sourceIdentifier, ctx);
 
-          return await resolvers.removeRelationship(this.reactorClient, {
-            ...args,
-            sourceIdentifier: handle.fetchIdentifier,
-          });
+          return await resolvers.removeRelationship(
+            this.reactorClient,
+            { ...args, sourceIdentifier: handle.fetchIdentifier },
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error(
             "Error in removeRelationship(@args): @Error",
@@ -884,11 +897,15 @@ export class ReactorSubgraph extends BaseSubgraph {
             ctx,
           );
 
-          return await resolvers.moveRelationship(this.reactorClient, {
-            ...args,
-            sourceParentIdentifier: sourceHandle.fetchIdentifier,
-            targetParentIdentifier: targetHandle.fetchIdentifier,
-          });
+          return await resolvers.moveRelationship(
+            this.reactorClient,
+            {
+              ...args,
+              sourceParentIdentifier: sourceHandle.fetchIdentifier,
+              targetParentIdentifier: targetHandle.fetchIdentifier,
+            },
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error(
             "Error in moveRelationship(@args): @Error @args",
@@ -1183,6 +1200,14 @@ export class ReactorSubgraph extends BaseSubgraph {
             async (payload, filterArgs, filterCtx) => {
               if (!payload || !filterArgs) return false;
               if (!matchesJobFilter(payload, filterArgs)) return false;
+              if (
+                !(await this.servesDocument(
+                  payload.documentId,
+                  filterCtx as Context,
+                ))
+              ) {
+                return false;
+              }
 
               if (
                 this.authorizationService.isSupremeAdmin(

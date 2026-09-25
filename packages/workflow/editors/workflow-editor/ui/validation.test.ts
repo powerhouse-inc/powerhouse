@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { flowPorts } from "./model.js";
-import type { BlockForm, BlockFormProp } from "./forms.js";
+import { CORE_FORMS, type BlockForm, type BlockFormProp } from "./forms.js";
 import {
   isEmptyValue,
   missingForBlock,
@@ -83,6 +83,21 @@ describe("isPropVisible / conditional required fields", () => {
   });
 });
 
+describe("the schedule trigger's required fields", () => {
+  const props = CORE_FORMS["core#schedule"].props;
+
+  it("reads a mode-less config with `every` as an interval, as the runtime does", () => {
+    expect(missingRequired(props, { every: 5, unit: "minutes" })).toEqual([]);
+  });
+
+  it("still asks for a cron in cron mode, explicit or empty", () => {
+    expect(missingRequired(props, {})).toEqual(["Cron expression"]);
+    expect(missingRequired(props, { mode: "cron", every: 5 })).toEqual([
+      "Cron expression",
+    ]);
+  });
+});
+
 describe("missingForBlock", () => {
   it("adds the connection first when the block requires one", () => {
     expect(missingForBlock(form, { to: "a@b" }, null)).toEqual([
@@ -112,8 +127,7 @@ describe("flowPorts", () => {
     expect(flowPorts("core#branch")).toEqual(["true", "false"]);
   });
 
-  it("leaves the error route out", () => {
-    expect(flowPorts("core#branch")).not.toContain("error");
-    expect(flowPorts("core#assert")).not.toContain("error");
+  it("leaves the error route out of a step that can fail", () => {
+    expect(flowPorts("core#assert")).toEqual(["next"]);
   });
 });

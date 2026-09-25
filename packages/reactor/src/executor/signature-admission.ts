@@ -190,6 +190,13 @@ export class SignatureAdmission {
       signal,
     );
 
+    const redelivered = await this.redelivered(
+      candidates,
+      live,
+      operationStore,
+      signal,
+    );
+
     await resolvePolicies(
       candidates,
       job.operations.map((operation) => operation.action),
@@ -204,6 +211,7 @@ export class SignatureAdmission {
         undefined,
         "load",
         signal,
+        redelivered.has(candidates[i]),
       );
       if (verdict.ok) {
         continue;
@@ -221,6 +229,7 @@ export class SignatureAdmission {
     submitted: Set<string> | undefined,
     path: AdmissionPath,
     signal?: AbortSignal,
+    known = false,
   ): Promise<SignatureVerdict> {
     const verdict = await verifyActionSignature(
       entry.action,
@@ -235,7 +244,7 @@ export class SignatureAdmission {
     if (!verdict.ok) {
       return verdict;
     }
-    if (isLive(entry, live) || submitted?.has(entry.opId)) {
+    if (!known && (isLive(entry, live) || submitted?.has(entry.opId))) {
       return {
         ok: false,
         scheme: verdict.scheme,
@@ -253,6 +262,9 @@ export class SignatureAdmission {
             reason: `action ${entry.action.id} is unsigned but claims to act as ${address}`,
           }
         : verdict;
+    }
+    if (known) {
+      return verdict;
     }
 
     const signer = entry.action.context!.signer!;
@@ -313,7 +325,9 @@ export class SignatureAdmission {
   }
 
   /**
-   * The live candidates stored exactly as submitted. A synthesized operation
+   * The live candidates stored exactly as submitted and still standing: one
+   * an undo or a reshuffle has since superseded is refused, not re-emitted with
+   * the state it once produced. A synthesized operation
    * holds another action, so it cannot be compared; only a retry, whose first
    * attempt this job was, takes it as committed.
    */
@@ -346,14 +360,70 @@ export class SignatureAdmission {
       const byId = new Map(
         stored.map((operation) => [operation.id, operation]),
       );
-      for (const entry of entries) {
+      const matching = entries.filter((entry) => {
         const operation = byId.get(entry.opId);
-        if (operation && sameContent(operation.action, entry.action)) {
+        return operation && sameContent(operation.action, entry.action);
+      });
+      if (matching.length === 0) {
+        continue;
+      }
+      const later = await operationStore.getSince(
+        stream.documentId,
+        stream.scope,
+        stream.branch,
+        Math.min(...matching.map((entry) => byId.get(entry.opId)!.index)),
+        undefined,
+        undefined,
+        signal,
+      );
+      for (const entry of matching) {
+        if (!isSuperseded(byId.get(entry.opId)!, later.results)) {
           committed.set(entry, committedWrite(entry, entry.opId));
         }
       }
     }
     return committed;
+  }
+
+  /**
+   * The load candidates stored exactly as they arrive, timestamp included: a
+   * peer re-sending what this stream holds, not a replay of its action.
+   */
+  private async redelivered(
+    candidates: Candidate[],
+    live: Set<string>,
+    operationStore: IOperationStore,
+    signal?: AbortSignal,
+  ): Promise<Set<Candidate>> {
+    const found = new Set<Candidate>();
+    const toCompare = candidates.filter(
+      (entry) =>
+        live.has(entry.opId) &&
+        !(entry.synthesizedOpId && live.has(entry.synthesizedOpId)),
+    );
+    for (const [stream, entries] of byStream(toCompare)) {
+      const stored = await operationStore.getOperationsByIds(
+        stream.documentId,
+        stream.scope,
+        stream.branch,
+        entries.map((entry) => entry.opId),
+        signal,
+      );
+      for (const entry of entries) {
+        if (
+          stored.some(
+            (operation) =>
+              operation.id === entry.opId &&
+              Date.parse(operation.timestampUtcMs) ===
+                Date.parse(entry.operation?.timestampUtcMs ?? "") &&
+              sameContent(operation.action, entry.action),
+          )
+        ) {
+          found.add(entry);
+        }
+      }
+    }
+    return found;
   }
 
   private async liveOperationIds(
@@ -550,6 +620,15 @@ function isRetry(job: Job): boolean {
 
 function committedWrite(entry: Candidate, opId: string): CommittedWrite {
   return { ...entry.stream, actionId: entry.action.id, opId };
+}
+
+function isSuperseded(operation: Operation, later: Operation[]): boolean {
+  return later.some(
+    (next) =>
+      next.index > operation.index &&
+      next.skip > 0 &&
+      next.index - next.skip <= operation.index,
+  );
 }
 
 function sameContent(stored: Action, submitted: Action): boolean {

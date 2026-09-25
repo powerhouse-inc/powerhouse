@@ -32,6 +32,7 @@ import type { IRenown, User } from "@renown/sdk";
 import { setWorkerConnectionStatus } from "./connection-state.js";
 import { reactorWorkerName } from "./reactor-worker-name.js";
 import { getGitSha, getVersion } from "./utils/build-info.js";
+import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
 
 const PING_INTERVAL_MS = 2000;
 const PING_DEADLINE_MS = 3000;
@@ -54,6 +55,8 @@ export type WorkerReactorClientArgs = {
   featureFlags: Partial<ReactorFeatureFlags>;
   /** What the worker's client creates new documents as. */
   createSignaturePolicy?: SignaturePolicy;
+  /** Where the worker's trust policy verifies signers under authEnforcement. */
+  renownEndpoints?: RenownTrustEndpoints;
   documentModelModules: DocumentModelModule[];
   upgradeManifests: UpgradeManifest<readonly number[]>[];
   documentModelLoader: IDocumentModelLoader;
@@ -144,6 +147,7 @@ export function createWorkerReactorClientModule(
         renownChainId: args.renownChainId,
         featureFlags: args.featureFlags,
         createSignaturePolicy: args.createSignaturePolicy,
+        renownEndpoints: args.renownEndpoints,
       },
       packages: args.packageSpecs,
     },

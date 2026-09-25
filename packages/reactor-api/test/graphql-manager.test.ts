@@ -426,12 +426,14 @@ describe("GraphQLManager", () => {
       expect(typeof body.graphqlEndpoint).toBe("string");
     });
 
-    it("passes the drive ID from the URL to the reactor client", async () => {
+    it("passes the drive ID from the URL to the reactor client, read as the anonymous caller", async () => {
       const { handler, reactorClient } = await getHandler();
 
       await handler(new Request("http://localhost/d/drive-abc-123"));
 
-      expect(reactorClient.get).toHaveBeenCalledWith("drive-abc-123");
+      expect(reactorClient.get).toHaveBeenCalledWith("drive-abc-123", {
+        subject: { address: undefined, key: undefined },
+      });
     });
 
     it("uses x-forwarded-proto when present", async () => {

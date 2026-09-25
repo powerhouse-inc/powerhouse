@@ -42,8 +42,10 @@ export const typeDefs = gql`
     id: ID!
     name: String!
     icon: String
-    sharingType: String!
-    availableOffline: Boolean!
+    "Null when the caller may not read the drive's local scope."
+    sharingType: String
+    "Null when the caller may not read the drive's local scope."
+    availableOffline: Boolean
     rootNodes(
       paging: ReactorDrivePagingInput
       kind: ReactorDriveNodeKind

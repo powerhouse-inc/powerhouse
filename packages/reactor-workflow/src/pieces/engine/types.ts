@@ -78,6 +78,9 @@ export interface StepExecutionRecord {
   output?: unknown;
   port?: string;
   error?: string;
+  // ISO times the block ran between; absent for skipped and replayed steps.
+  startedAt?: string;
+  endedAt?: string;
 }
 
 export type WorkflowRunStatus = "SUCCEEDED" | "FAILED";

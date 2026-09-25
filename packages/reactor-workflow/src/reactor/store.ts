@@ -40,6 +40,14 @@ export interface StepExecutionRow {
   output: string | null;
   port: string | null;
   error: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+}
+
+// A document a run's steps were handed through the reactor port.
+export interface RunDocumentRow {
+  run_id: string;
+  document_id: string;
 }
 
 export interface TriggerStateRow {
@@ -84,6 +92,7 @@ export interface PieceStoreRow {
 export interface WorkflowRuntimeDB {
   run: RunRow;
   step_execution: StepExecutionRow;
+  run_document: RunDocumentRow;
   trigger_state: TriggerStateRow;
   trigger_dedupe: TriggerDedupeRow;
   piece_store: PieceStoreRow;
@@ -182,9 +191,23 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     .addColumn("output", "text")
     .addColumn("port", "text")
     .addColumn("error", "text")
+    .addColumn("started_at", "text")
+    .addColumn("ended_at", "text")
     .addUniqueConstraint("step_execution_run_step", ["run_id", "step_id"])
     .ifNotExists()
     .execute();
+
+  // Additive migration for journals created before step timings.
+  for (const column of ["started_at", "ended_at"]) {
+    try {
+      await db.schema
+        .alterTable("step_execution")
+        .addColumn(column, "text")
+        .execute();
+    } catch {
+      // column already exists
+    }
+  }
 
   // Additive migration for journals created before per-step journaling: the
   // upsert in recordStep/finishRun needs this constraint to conflict on.
@@ -204,6 +227,14 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
       );
     }
   }
+
+  await db.schema
+    .createTable("run_document")
+    .addColumn("run_id", "text", (col) => col.notNull())
+    .addColumn("document_id", "text", (col) => col.notNull())
+    .addPrimaryKeyConstraint("run_document_pk", ["run_id", "document_id"])
+    .ifNotExists()
+    .execute();
 
   await db.schema
     .createTable("piece_store")
@@ -520,6 +551,8 @@ function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
     output: jsonOrNull(redact(step.output)),
     port: step.port ?? null,
     error: step.error ? redactMessage(step.error) : null,
+    started_at: step.startedAt ?? null,
+    ended_at: step.endedAt ?? null,
   };
 }
 
@@ -812,6 +845,8 @@ export class WorkflowRunStore {
           output: eb.ref("excluded.output"),
           port: eb.ref("excluded.port"),
           error: eb.ref("excluded.error"),
+          started_at: eb.ref("excluded.started_at"),
+          ended_at: eb.ref("excluded.ended_at"),
         })),
       )
       .execute();
@@ -865,6 +900,32 @@ export class WorkflowRunStore {
       .where("run_id", "=", runId)
       .orderBy("ordinal", "asc")
       .execute();
+  }
+
+  async recordRunDocuments(
+    runId: string,
+    documentIds: string[],
+  ): Promise<void> {
+    if (documentIds.length === 0) return;
+    await this.db
+      .insertInto("run_document")
+      .values(
+        [...new Set(documentIds)].map((documentId) => ({
+          run_id: runId,
+          document_id: documentId,
+        })),
+      )
+      .onConflict((oc) => oc.columns(["run_id", "document_id"]).doNothing())
+      .execute();
+  }
+
+  async getRunDocuments(runId: string): Promise<string[]> {
+    const rows = await this.db
+      .selectFrom("run_document")
+      .select("document_id")
+      .where("run_id", "=", runId)
+      .execute();
+    return rows.map((row) => row.document_id);
   }
 
   async getTriggerState(

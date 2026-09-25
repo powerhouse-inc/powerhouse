@@ -26,6 +26,14 @@ import {
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import type { Context } from "./types.js";
 
+/**
+ * The subject a request reads as: its address and the app key its token
+ * carries. Anonymous is an empty subject, never the host's signer.
+ */
+export function callerSubject(user: Context["user"]): AuthSubject {
+  return { address: user?.address, key: user?.appKey };
+}
+
 export class BaseSubgraph implements ISubgraph {
   name = "example";
   // The host's base path as injected by the GraphQL manager. Routing
@@ -181,7 +189,24 @@ export class BaseSubgraph implements ISubgraph {
    * carries the same key. Anonymous callers supply neither.
    */
   protected viewSubject(ctx: Context): AuthSubject {
-    return { address: ctx.user?.address, key: ctx.user?.appKey };
+    return callerSubject(ctx.user);
+  }
+
+  /** Whether a listing would serve the document to the caller; fails closed. */
+  protected async servesDocument(
+    documentId: string,
+    ctx: Context,
+  ): Promise<boolean> {
+    if (!documentId) {
+      return false;
+    }
+    try {
+      return await this.reactorClient.isServed(documentId, {
+        subject: this.viewSubject(ctx),
+      });
+    } catch {
+      return false;
+    }
   }
 
   /**

@@ -25,6 +25,7 @@ import {
   PGLITE_UTC_PARSERS,
   initializeAndStartAPI,
   resolveRenownConfig,
+  type CanonicalDocumentId,
   type ClientInitializerDependencies,
   type CredentialVerifier,
   type IPackageLoader,
@@ -1050,10 +1051,19 @@ async function initServer(
       readModel: driveNodeView,
     });
 
+    const authorizationService = graphqlManager.getAuthorizationService();
     const reactorDriveSubgraph = {
       name: "reactor-drive",
       path: graphqlManager.getBasePath(),
-      resolvers: createReactorDriveResolvers(),
+      resolvers: createReactorDriveResolvers({
+        reactorClient: client,
+        readModel: driveNodeView,
+        hostCanRead: (documentId, address) =>
+          authorizationService.canRead(
+            documentId as CanonicalDocumentId,
+            address,
+          ),
+      }),
       typeDefs: reactorDriveSubgraphTypeDefs,
       reactorClient: client,
       relationalDb: undefined as never,
