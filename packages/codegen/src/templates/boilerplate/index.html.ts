@@ -20,7 +20,8 @@ export const indexHtmlTemplate = html`<!doctype html>
     </head>
     <body>
       <div id="root"></div>
-      <link href="/style.css" rel="stylesheet" />
+      <!-- Global styles for this Connect only; package styles go in style.css -->
+      <!-- <link href="/global.css" rel="stylesheet" /> -->
       <script type="module" src="/main.tsx"></script>
     </body>
   </html> `.raw;

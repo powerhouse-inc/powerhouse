@@ -4,10 +4,13 @@ import workflowPkg from "@powerhousedao/workflow/package.json" with { type: "jso
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BrowserPackageManager,
-  declareExternalPackagesLayer,
-  LAYER_ORDER,
   sharedDepMismatchWarnings,
 } from "./package-manager.js";
+import {
+  declareExternalPackagesLayer,
+  LAYER_ORDER,
+  mountPackageStyles,
+} from "./package-styles.js";
 
 // Both packages are reached through a lazy `import()`, so the fake stands in
 // for the code-split chunk without pulling either package's editors in here.
@@ -121,5 +124,22 @@ describe("declareExternalPackagesLayer", () => {
     expect(first?.tagName).toBe("STYLE");
     expect(first?.textContent).toBe(LAYER_ORDER);
     expect(document.head.querySelectorAll("style")).toHaveLength(1);
+  });
+});
+
+describe("mountPackageStyles", () => {
+  it("imports the CSS into the external-packages layer, replacing on update", () => {
+    document.head.innerHTML = '<meta name="project-stylesheet" />';
+    mountPackageStyles("umh-production-ledger", ".a{color:red}");
+    mountPackageStyles("umh-production-ledger", ".a{color:blue}");
+    const styles = document.head.querySelectorAll(
+      "style[data-ph-package-styles]",
+    );
+    expect(styles).toHaveLength(1);
+    expect(styles[0].textContent).toMatch(
+      /^@import url\("blob:.+"\) layer\(external-packages\);$/,
+    );
+    // The order is declared before everything else.
+    expect(document.head.firstElementChild?.textContent).toBe(LAYER_ORDER);
   });
 });
