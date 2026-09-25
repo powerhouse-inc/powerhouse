@@ -2,15 +2,14 @@
 // and dynamic option resolution. Not document-model coupled.
 import { ambientRenownTokenProvider } from "@powerhousedao/reactor-browser/graphql-client";
 import {
-  adaptReactorProps,
-  isReactorPieceBlock,
-} from "./ui/reactor-piece-form.js";
-import {
   CORE_FORMS,
   POLL_INTERVAL_PROP,
   type BlockForm,
   type BlockFormProp,
+  type ErrorHandlingDefaults,
+  type PropertyGroup,
 } from "./ui/forms.js";
+import { isReactorPieceBlock } from "./ui/blocks.js";
 
 export const DEFAULT_RUNTIME_URL =
   "http://localhost:4001/graphql/workflow-runtime";
@@ -57,10 +56,14 @@ async function gql<T>(
 
 interface BlockEntryDescriptor {
   displayName: string;
+  description?: string;
   requireAuth: boolean;
   props: BlockFormProp[];
   // Triggers only: POLLING | WEBHOOK | APP_WEBHOOK.
   strategy?: string;
+  propertyGroups?: PropertyGroup[];
+  classification?: string;
+  errorHandlingOptions?: ErrorHandlingDefaults;
 }
 
 interface BlockDescriptorResult {
@@ -94,9 +97,11 @@ export function getBlockForm(blockType: string): Promise<BlockForm | null> {
       // A poll cadence is meaningless for a trigger the provider pushes to,
       // or for one this reactor fires itself, so the prop is only offered
       // where it actually applies.
-      const reactorPiece = isReactorPieceBlock(blockType);
-      const polled = isTrigger && entry.strategy !== "WEBHOOK" && !reactorPiece;
-      const props = reactorPiece ? adaptReactorProps(entry.props) : entry.props;
+      const polled =
+        isTrigger &&
+        entry.strategy !== "WEBHOOK" &&
+        !isReactorPieceBlock(blockType);
+      const props = entry.props;
       return {
         title: `${descriptor.displayName} · ${entry.displayName}`,
         requireAuth: entry.requireAuth,
@@ -107,6 +112,16 @@ export function getBlockForm(blockType: string): Promise<BlockForm | null> {
             : ("optional" as const),
         props: polled ? [...props, POLL_INTERVAL_PROP] : props,
         triggerStrategy: isTrigger ? entry.strategy : undefined,
+        ...(entry.description ? { description: entry.description } : {}),
+        ...(entry.propertyGroups
+          ? { propertyGroups: entry.propertyGroups }
+          : {}),
+        ...(entry.classification
+          ? { classification: entry.classification }
+          : {}),
+        ...(entry.errorHandlingOptions
+          ? { errorHandling: entry.errorHandlingOptions }
+          : {}),
       };
     });
     formCache.set(blockType, cached);
@@ -129,6 +144,7 @@ export interface PieceSummary {
   auth?: unknown;
   // Why none of the piece's blocks can run on this reactor.
   unsupported?: string | null;
+  deprecated?: boolean;
 }
 
 export interface PieceActionEntry {
@@ -492,12 +508,19 @@ export async function loadBlockOptions(
   propName: string,
   input: Record<string, unknown>,
   connectionId?: string,
+  searchValue?: string,
 ): Promise<unknown> {
   const data = await gql<BlockOptionsResult>(
-    `query Options($blockType: String!, $propName: String!, $input: Unknown, $connectionId: String) {
-      workflowRuntime { blockOptions(blockType: $blockType, propName: $propName, input: $input, connectionId: $connectionId) }
+    `query Options($blockType: String!, $propName: String!, $input: Unknown, $connectionId: String, $searchValue: String) {
+      workflowRuntime { blockOptions(blockType: $blockType, propName: $propName, input: $input, connectionId: $connectionId, searchValue: $searchValue) }
     }`,
-    { blockType, propName, input, connectionId: connectionId ?? null },
+    {
+      blockType,
+      propName,
+      input,
+      connectionId: connectionId ?? null,
+      searchValue: searchValue ?? null,
+    },
   );
   return data.workflowRuntime.blockOptions;
 }

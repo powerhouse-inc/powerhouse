@@ -26,6 +26,7 @@ import type {
   DesignTimeService,
   LatestRun,
   WebhookEndpoint,
+  ErrorHandlingDefaults,
 } from "./forms.js";
 import {
   flowPorts,
@@ -198,6 +199,21 @@ function ConfigSection(props: {
   if (form === "loading") return <FormSkeleton />;
   return (
     <div className="flex flex-col gap-5">
+      {form?.description || form?.classification === "DESTRUCTIVE" ? (
+        <div className="flex flex-col gap-2">
+          {form.classification === "DESTRUCTIVE" ? (
+            <span className="inline-flex items-center gap-1 self-start rounded-full bg-wf-fail/10 px-2 py-0.5 text-[11px] font-medium text-wf-fail">
+              <Icon name="alert" className="h-3 w-3" />
+              Changes or deletes data
+            </span>
+          ) : null}
+          {form.description ? (
+            <p className="text-[13px] leading-relaxed text-muted-foreground">
+              {form.description}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       {props.formError ? (
         <p className="rounded-md bg-wf-fail/10 px-3 py-2 text-xs text-wf-fail">
           {props.formError}
@@ -206,6 +222,7 @@ function ConfigSection(props: {
       {form && form.props.length > 0 ? (
         <PropertyForm
           props={form.props}
+          groups={form.propertyGroups}
           value={configRecord}
           onChange={props.onChange}
           scopeStepId={props.scopeStepId}
@@ -214,12 +231,13 @@ function ConfigSection(props: {
           webhookUrl={props.webhookUrl}
           loadOptions={
             props.designTime
-              ? (propName, current) =>
+              ? (propName, current, searchValue) =>
                   props.designTime!.loadOptions(
                     props.blockType,
                     propName,
                     current,
                     props.connectionId,
+                    searchValue,
                   )
               : undefined
           }
@@ -738,6 +756,8 @@ function StepSettings(props: {
   step: StepModel;
   model: WorkflowModel;
   callbacks: WorkflowEditorCallbacks;
+  // The piece's defaults for how the step handles failure.
+  errorHandling?: ErrorHandlingDefaults;
   onRemoved: () => void;
 }) {
   const { step, callbacks } = props;
@@ -770,8 +790,12 @@ function StepSettings(props: {
               callbacks.updateStep({ id: step.id, timeoutSeconds: next });
           }}
         />
+        {props.errorHandling?.retryOnFailure?.defaultValue ? (
+          <Hint>This piece suggests retrying the step when it fails.</Hint>
+        ) : null}
         {/* Stored on the step, but the runtime does not enforce them yet. */}
         <fieldset
+          hidden={props.errorHandling?.retryOnFailure?.hide === true}
           disabled
           className="m-0 flex min-w-0 flex-col gap-4 rounded-lg border border-dashed border-foreground/15 p-3"
         >
@@ -1070,6 +1094,9 @@ export function StepPanel(props: {
             step={step}
             model={props.model}
             callbacks={callbacks}
+            errorHandling={
+              form && form !== "loading" ? form.errorHandling : undefined
+            }
             onRemoved={props.onClose}
           />
         )}

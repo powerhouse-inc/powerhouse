@@ -7,7 +7,10 @@ export interface BlockFormProp {
   type: string;
   required: boolean;
   defaultValue?: unknown;
-  staticOptions?: { label: string; value: unknown }[];
+  staticOptions?: FormOption[];
+  // A STATIC_DROPDOWN's own state, beside its options.
+  staticDisabled?: boolean;
+  staticPlaceholder?: string;
   hasDynamicResolver?: boolean;
   description?: string;
   placeholder?: string;
@@ -22,6 +25,44 @@ export interface BlockFormProp {
   // predicate, so a piece form arriving as JSON can express it too.
   // Hidden also when `unlessSet` has a value (a mode the runtime infers).
   showWhen?: { prop: string; oneOf: unknown[]; unlessSet?: string };
+  // Activepieces layout and control hints, as the piece declared them.
+  width?: "half" | "full";
+  icon?: string;
+  // CHECKBOX: sibling props shown only while it is checked.
+  reveals?: string[];
+  // MARKDOWN: BORDERLESS | INFO | WARNING | TIP.
+  variant?: string;
+  // STATIC_DROPDOWN "cards", NUMBER "stepper", DATE_RANGE "dropdown".
+  display?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  // DROPDOWN: options() is re-run with what the author types.
+  refreshOnSearch?: boolean;
+  // RICH_TEXT: the sibling whose value picks plain, markdown or html.
+  formatProperty?: string;
+}
+
+export interface FormOption {
+  label: string;
+  value: unknown;
+  description?: string;
+  icon?: string;
+}
+
+export interface PropertyGroup {
+  key: string;
+  // tabs | section | summary | builder | footer
+  display: string;
+  label?: string;
+  description?: string;
+  icon?: string;
+  props: string[];
+}
+
+export interface ErrorHandlingDefaults {
+  retryOnFailure?: { defaultValue?: boolean; hide?: boolean };
+  continueOnFailure?: { defaultValue?: boolean; hide?: boolean };
 }
 
 export interface BlockForm {
@@ -33,6 +74,12 @@ export interface BlockForm {
   // Piece triggers only: POLLING | WEBHOOK | APP_WEBHOOK. WEBHOOK triggers
   // are fed by a request, so the panel shows their endpoint URL.
   triggerStrategy?: string;
+  // What the step does, as the piece describes it.
+  description?: string;
+  propertyGroups?: PropertyGroup[];
+  // READ | SEARCH | WRITE | DESTRUCTIVE
+  classification?: string;
+  errorHandling?: ErrorHandlingDefaults;
 }
 
 export interface ConnectionSummary {
@@ -80,6 +127,7 @@ export interface DesignTimeService {
     propName: string,
     input: Record<string, unknown>,
     connectionId?: string,
+    searchValue?: string,
   ) => Promise<unknown>;
   // Runs the current workflow's piece trigger test hook; sample items back.
   testTrigger?: () => Promise<unknown>;

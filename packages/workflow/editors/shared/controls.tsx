@@ -290,6 +290,19 @@ interface SelectProps {
   // Reloads options from their source; shown in the list header.
   onRefresh?: () => void;
   emptyText?: string;
+  // Always show the search box, not only once the list is long.
+  searchable?: boolean;
+  // Search happens at the source: every keystroke is reported, and the list
+  // shown is the options given, unfiltered.
+  onQueryChange?: (query: string) => void;
+  // Extra actions at the foot of the list; each closes it when chosen.
+  actions?: SelectAction[];
+}
+
+export interface SelectAction {
+  label: string;
+  icon?: IconName;
+  onSelect: () => void;
 }
 
 type SingleSelectProps = SelectProps & {
@@ -329,22 +342,27 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
       ? [props.value]
       : [];
   const selectedSet = new Set(selected);
-  const searchable = props.options.length > SEARCH_THRESHOLD;
+  const searchable =
+    props.searchable ||
+    Boolean(props.onQueryChange) ||
+    props.options.length > SEARCH_THRESHOLD;
   const needle = query.trim().toLowerCase();
+  const serverSide = Boolean(props.onQueryChange);
   const visible = useMemo(
     () =>
-      needle
+      needle && !serverSide
         ? props.options.filter((option) =>
             `${option.label} ${option.description ?? ""}`
               .toLowerCase()
               .includes(needle),
           )
         : props.options,
-    [needle, props.options],
+    [needle, props.options, serverSide],
   );
 
   const close = () => {
     setOpen(false);
+    if (query) props.onQueryChange?.("");
     setQuery("");
     triggerRef.current?.focus();
   };
@@ -544,6 +562,7 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
                         onChange={(event) => {
                           setQuery(event.target.value);
                           setActive(0);
+                          props.onQueryChange?.(event.target.value);
                         }}
                       />
                     </>
@@ -629,6 +648,28 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
                   })
                 )}
               </div>
+              {props.actions?.length ? (
+                <div className="border-t border-solid border-foreground/10 p-1">
+                  {props.actions.map((action) => (
+                    <button
+                      key={action.label}
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        setOpen(false);
+                        setQuery("");
+                        action.onSelect();
+                      }}
+                    >
+                      {action.icon ? (
+                        <Icon name={action.icon} className="h-3.5 w-3.5" />
+                      ) : null}
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               {!props.multiple && props.clearable && props.value ? (
                 <div className="border-t border-solid border-foreground/10 p-1">
                   {
