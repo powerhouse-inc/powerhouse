@@ -7,7 +7,11 @@ export default defineConfig({
   timeout: 120_000,
   expect: { timeout: 15_000 },
   workers: 2,
-  reporter: [["list"]],
+  retries: process.env.CI ? 2 : 0,
+  forbidOnly: !!process.env.CI,
+  reporter: process.env.CI
+    ? [["list"], ["html", { open: "never" }]]
+    : [["list"]],
   globalSetup: "./test/ui/global-setup.ts",
   use: {
     trace: "retain-on-failure",
