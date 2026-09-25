@@ -1,4 +1,9 @@
-import { openDrive, selectInSidebar } from "../../scripts/ui-stack.js";
+import {
+  createWorkflowInBrowser,
+  openDrive,
+  pieceBlockType,
+  selectInSidebar,
+} from "../../scripts/ui-stack.js";
 import { expect, test } from "./fixtures.js";
 
 test.describe("Workflow Studio", () => {
@@ -127,5 +132,35 @@ test.describe("Workflow Studio", () => {
     await expect(
       app.getByRole("heading", { name: "Workflows", level: 2 }),
     ).toBeVisible();
+  });
+
+  test("a long workflow's chain ends in +N instead of spilling over", async ({
+    stack,
+  }) => {
+    const parse = await pieceBlockType("@activepieces/piece-http", "parse_url");
+    await createWorkflowInBrowser(stack.page, stack.drive, {
+      name: "Long chain",
+      trigger: { blockType: "core#manual", config: {} },
+      steps: Array.from({ length: 8 }, (_, i) => ({
+        key: `step${i + 1}`,
+        name: `Step ${i + 1}`,
+        blockType: parse,
+        config: { url: "https://acme.dev" },
+      })),
+    });
+    await openDrive(stack.page);
+    const row = stack.page
+      .getByRole("list", { name: "Workflows" })
+      .getByRole("listitem")
+      .filter({ hasText: "Long chain" });
+    // Trigger + 8 steps = 9 stops: 5 drawn, then "+4".
+    await expect(row.getByText("+4", { exact: true })).toBeVisible();
+    await expect(row.getByRole("list").first()).toHaveAccessibleName(
+      /Trigger.*Step 8/,
+    );
+    // The chain stays inside its column, clear of the last-run text.
+    const chain = await row.getByRole("list").first().boundingBox();
+    const lastRun = await row.getByText("Not run yet").boundingBox();
+    expect(chain!.x + chain!.width).toBeLessThan(lastRun!.x);
   });
 });
