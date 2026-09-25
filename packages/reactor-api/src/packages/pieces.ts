@@ -5,6 +5,7 @@
 import { packageJsonExports } from "@powerhousedao/shared/clis/constants";
 import type { ILogger } from "document-model";
 import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { PackagePiece, PackagePieceEntry } from "./types.js";
@@ -37,17 +38,32 @@ export interface PieceListLocation {
   listPath: string;
 }
 
+// Resolved from this module first, then from the host's own dependencies,
+// which is where document models are found too; the first error is the one kept.
+function resolvePieceList(specifier: string, hostDir: string): string {
+  try {
+    return fileURLToPath(import.meta.resolve(specifier));
+  } catch (error) {
+    try {
+      return createRequire(join(hostDir, "package.json")).resolve(specifier);
+    } catch {
+      throw error;
+    }
+  }
+}
+
 // Where a package's piece list sits and what its entries are relative to. A
 // path identifier is its own root; a name resolves as a host would import it.
-export function pieceListLocation(identifier: string): PieceListLocation {
+export function pieceListLocation(
+  identifier: string,
+  hostDir = process.cwd(),
+): PieceListLocation {
   if (isAbsolute(identifier)) {
     return { root: identifier, listPath: join(identifier, BUILT_PIECE_LIST) };
   }
-  // Left to throw, and through the ESM resolver rather than require's: its
-  // error codes are the ones the package manager reads a miss from.
-  const listPath = fileURLToPath(
-    import.meta.resolve(`${identifier}/${PIECES_SUBPATH}`),
-  );
+  // Left to throw, with the ESM resolver's error codes: they're what the
+  // package manager reads a miss from.
+  const listPath = resolvePieceList(`${identifier}/${PIECES_SUBPATH}`, hostDir);
   const root = packageRootOf(dirname(listPath));
   if (!root) {
     throw new Error(`No package.json above ${listPath}`);

@@ -1,6 +1,6 @@
 // What the package manager reports for a package's pieces: an absolute path
 // per declared entry, nothing for a package that ships none.
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -109,6 +109,54 @@ describe("ImportPackageLoader.loadPieces", () => {
     await writeFile(join(root, BUILT_PIECE_LIST), "export const other = 1;\n");
 
     expect(await new ImportPackageLoader().loadPieces(root)).toEqual([]);
+  });
+
+  it("finds a package the host installed, which reactor-api can't see", async () => {
+    // A host whose node_modules holds a package reactor-api doesn't depend on,
+    // as a monorepo app with its own dependencies has.
+    const host = join(root, "host");
+    const pkg = join(host, "node_modules", "@acme", "pieces-pkg");
+    await mkdir(join(pkg, "dist", "node", "pieces"), { recursive: true });
+    await writeFile(
+      join(host, "package.json"),
+      JSON.stringify({ name: "host" }),
+    );
+    await writeFile(
+      join(pkg, "package.json"),
+      JSON.stringify({
+        name: "@acme/pieces-pkg",
+        exports: { "./pieces": { node: BUILT_PIECE_LIST } },
+      }),
+    );
+    await writeFile(
+      join(pkg, BUILT_PIECE_LIST),
+      `export const pieces = ${JSON.stringify([
+        {
+          name: "@acme/piece-x",
+          version: "1.0.0",
+          bundle: "dist/node/pieces/x",
+        },
+      ])};\n`,
+    );
+    const bundle = join(pkg, "dist", "node", "pieces", "x");
+    await mkdir(bundle, { recursive: true });
+    await writeFile(
+      join(bundle, "package.json"),
+      JSON.stringify({ name: "x" }),
+    );
+
+    const pieces = await new ImportPackageLoader(host).loadPieces(
+      "@acme/pieces-pkg",
+    );
+
+    // Resolved to the real path, as a symlinked install would be.
+    expect(pieces).toEqual([
+      {
+        name: "@acme/piece-x",
+        version: "1.0.0",
+        bundleDir: await realpath(bundle),
+      },
+    ]);
   });
 
   it("throws a resolution error for a package that is not installed", async () => {
