@@ -156,31 +156,29 @@ allowBuilds:
   lightningcss: true
   "@apollo/protobufjs": true
   "@datadog/pprof": true
-  "@ipshipyard/node-datachannel": true
   "@parcel/watcher": true
-  "@prisma/client": true
-  "@prisma/engines": true
+  # Only renown-package's published staging stack pulls prisma; nothing runs it.
+  "@prisma/client": false
+  "@prisma/engines": false
+  "prisma": false
   "@sentry/cli": true
   "@swc/core": true
   "bufferutil": true
-  "core-js": true
-  "core-js-pure": true
-  "cypress": true
-  "edgedriver": true
-  "es5-ext": true
-  "geckodriver": true
+  "core-js": false
+  # Binary download; run `pnpm exec cypress install` before `cy:open`.
+  "cypress": false
+  "es5-ext": false
   "keccak": true
   "msw": true
   "nx": true
-  "prisma": true
   "protobufjs": true
   "oxfmt": true
   "sharp": true
   "unrs-resolver": true
   "utf-8-validate": true
-  aws-sdk: true
+  aws-sdk: false
   esbuild: true
-  '@reown/appkit': true
+  '@reown/appkit': false
   sqlite3: false
 overrides:
   axios: ">=1.15.0"
