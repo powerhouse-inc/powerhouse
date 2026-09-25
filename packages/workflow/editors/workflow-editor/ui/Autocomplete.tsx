@@ -38,7 +38,7 @@ export function parseAutocompleteResult(result: unknown): AutocompleteResult {
 }
 
 const inputClass =
-  "w-full rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800";
+  "w-full rounded border border-foreground/15 px-2 py-1.5 text-sm text-foreground";
 
 export function AutocompleteInput(props: {
   value: string;
@@ -47,6 +47,7 @@ export function AutocompleteInput(props: {
   placeholder?: string;
   className?: string;
   loadOptions?: () => Promise<unknown>;
+  id?: string;
 }) {
   const listId = useId();
   const [text, setText] = useState(props.value);
@@ -80,6 +81,7 @@ export function AutocompleteInput(props: {
   return (
     <div>
       <input
+        id={props.id}
         className={props.className ?? inputClass}
         value={text}
         list={listId}
@@ -109,7 +111,7 @@ export function AutocompleteInput(props: {
         ))}
       </datalist>
       {error ? (
-        <p className="mt-0.5 text-[11px] text-red-500">{error}</p>
+        <p className="mt-0.5 text-[11px] text-wf-fail">{error}</p>
       ) : null}
     </div>
   );

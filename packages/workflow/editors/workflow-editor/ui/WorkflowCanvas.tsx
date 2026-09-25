@@ -48,8 +48,10 @@ function presetToInput(
   };
 }
 
+const MINIMAP_MIN_STEPS = 8;
+
 const MINIMAP_NODE_COLOR = (node: Node) =>
-  node.type === "apStep" ? "#cbd5e1" : "transparent";
+  node.type === "apStep" ? "var(--wf-edge)" : "transparent";
 
 export function WorkflowCanvas({
   model,
@@ -237,13 +239,16 @@ export function WorkflowCanvas({
       >
         <Background gap={16} />
         <Controls showInteractive={false} />
-        <MiniMap
-          pannable
-          zoomable
-          nodeColor={MINIMAP_NODE_COLOR}
-          nodeStrokeWidth={0}
-          style={{ width: 140, height: 90 }}
-        />
+        {/* Only worth the space once the flow outgrows the viewport. */}
+        {model.steps.length > MINIMAP_MIN_STEPS ? (
+          <MiniMap
+            pannable
+            zoomable
+            nodeColor={MINIMAP_NODE_COLOR}
+            nodeStrokeWidth={0}
+            style={{ width: 140, height: 90 }}
+          />
+        ) : null}
       </ReactFlow>
       {menu ? (
         <CanvasContextMenu

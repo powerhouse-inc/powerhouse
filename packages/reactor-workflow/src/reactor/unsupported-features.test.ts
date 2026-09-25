@@ -37,6 +37,7 @@ import { TriggerSupervisor } from "./trigger-supervisor.js";
 
 const OAUTH = "@powerhousedao/piece-oauth-fixture";
 const TRIGGERS = "@powerhousedao/piece-trigger-fixture";
+const MULTI = "@powerhousedao/piece-multi-auth-fixture";
 const ISSUES = "https://github.com/powerhouse-inc/powerhouse/issues";
 
 // The shapes PieceAuth.OAuth2 and createTrigger build, as plain data.
@@ -53,6 +54,43 @@ export const oauth = {
   },
   actions: {
     echo: { name: "echo", displayName: "Echo", props: {}, run: async () => "ran" },
+  },
+  triggers: {},
+};
+`;
+
+// OAuth2 or a token: the token runs, and it is the one validate sees.
+const MULTI_SOURCE = `
+export const multi = {
+  displayName: "Multi Auth Fixture",
+  auth: [
+    {
+      type: "OAUTH2",
+      displayName: "Connection",
+      required: true,
+      authUrl: "https://example.com/auth",
+      tokenUrl: "https://example.com/token",
+      scope: [],
+    },
+    {
+      type: "CUSTOM_AUTH",
+      displayName: "Token",
+      required: true,
+      props: {
+        token: { type: "SECRET_TEXT", displayName: "Token", required: true },
+      },
+      validate: async ({ auth }) =>
+        auth.token === "good" ? { valid: true } : { valid: false, error: "bad token" },
+    },
+  ],
+  actions: {
+    whoami: {
+      name: "whoami",
+      displayName: "Who am I",
+      requireAuth: true,
+      props: {},
+      run: async (ctx) => ctx.auth.type + ":" + ctx.auth.props.token,
+    },
   },
   triggers: {},
 };
@@ -112,9 +150,11 @@ describe("unsupported piece features", () => {
     root = await mkdtemp(join(tmpdir(), "unsupported-features-"));
     await writeFile(entry("oauth"), OAUTH_SOURCE);
     await writeFile(entry("triggers"), TRIGGER_SOURCE);
+    await writeFile(entry("multi"), MULTI_SOURCE);
     packagePieces.setPieces([
       { name: OAUTH, version: "1.0.0", entryPath: entry("oauth") },
       { name: TRIGGERS, version: "1.0.0", entryPath: entry("triggers") },
+      { name: MULTI, version: "1.0.0", entryPath: entry("multi") },
     ]);
   });
 
@@ -161,7 +201,29 @@ describe("unsupported piece features", () => {
         [`${TRIGGERS}#trigger:plain`]: undefined,
         [`${TRIGGERS}#trigger:manual`]: MANUAL_REASON,
         [`${TRIGGERS}#trigger:renewing`]: RENEW_REASON,
+        [`${MULTI}#whoami`]: undefined,
       });
+    });
+  });
+
+  describe("a piece with several sign-in methods", () => {
+    it("is listed as runnable when one of its methods runs", async () => {
+      const catalog = await runtime.pieceCatalog();
+      expect(
+        catalog.find((piece) => piece.name === MULTI)?.unsupported,
+      ).toBeUndefined();
+    });
+
+    it("describes each method, and which of them can't run", async () => {
+      const described = (await runtime.blockDescriptor(`${MULTI}#whoami`)) as {
+        auth: { type: string; unsupported?: string }[];
+      };
+      expect(
+        described.auth.map((method) => [method.type, method.unsupported]),
+      ).toEqual([
+        ["OAUTH2", OAUTH_REASON],
+        ["CUSTOM_AUTH", undefined],
+      ]);
     });
   });
 
@@ -246,6 +308,39 @@ describe("unsupported piece features", () => {
         "OAuth2 auth",
       );
       expect((error as PieceWorkerError).message).toContain(OAUTH_REASON);
+    });
+
+    it("runs a multi-auth piece through the connection's own method", async () => {
+      const run = (auth: unknown) =>
+        worker.runAction({
+          entryPath: entry("multi"),
+          actionName: "whoami",
+          propsValue: {},
+          auth,
+        });
+      await expect(
+        run({ type: "CUSTOM_AUTH", props: { token: "good" } }),
+      ).resolves.toMatchObject({ output: "CUSTOM_AUTH:good" });
+      await expect(run({ type: "OAUTH2", access_token: "t" })).rejects.toThrow(
+        OAUTH_REASON,
+      );
+      await expect(
+        run({ type: "BASIC_AUTH", username: "u", password: "p" }),
+      ).rejects.toThrow("has no BASIC_AUTH sign-in method");
+    });
+
+    it("checks a multi-auth connection with its method's validate", async () => {
+      const check = (token: string) =>
+        worker.checkConnection({
+          entryPath: entry("multi"),
+          auth: { type: "CUSTOM_AUTH", props: { token } },
+        });
+      await expect(check("good")).resolves.toMatchObject({
+        output: { declared: true, valid: true },
+      });
+      await expect(check("nope")).resolves.toMatchObject({
+        output: { declared: true, valid: false, detail: "bad token" },
+      });
     });
 
     it("refuses a MANUAL trigger's hooks but still tears one down", async () => {

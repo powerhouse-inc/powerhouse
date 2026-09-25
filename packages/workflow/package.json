@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/workflow",
-  "version": "6.2.3-dev.23",
+  "version": "6.2.3-dev.25",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": [
@@ -67,7 +67,10 @@
     "lint": "cd ../.. && oxlint packages/workflow",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "build": "tsx ./build.ts"
+    "build": "tsx ./build.ts",
+    "ui:shots": "tsx ./scripts/ui-shots.ts",
+    "ui:serve": "tsx ./scripts/ui-shots.ts --serve",
+    "test:ui": "playwright test"
   },
   "dependencies": {
     "@powerhousedao/design-system": "workspace:*",
@@ -75,6 +78,7 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "@uiw/react-json-view": "2.0.0-alpha.42",
     "@xyflow/react": "12.11.6",
     "document-model": "workspace:*",
     "react": "catalog:",
@@ -84,6 +88,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@powerhousedao/powerhouse-vetra-packages": "workspace:*",
     "@tailwindcss/cli": "catalog:",
     "@types/node": "catalog:",
@@ -94,6 +99,7 @@
     "tailwindcss": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:",
+    "typescript": "catalog:",
     "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"
   },

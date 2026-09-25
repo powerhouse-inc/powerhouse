@@ -66,6 +66,43 @@ then asserts every declared piece actually came out of the build. Connect
 loads an external package through `dist/browser/index.js`, `dist/style.css`
 and `package.json`, which is why the root entry must stay browser-safe.
 
+### UI screenshots
+
+`ui:shots` renders the editors in Connect against a live switchboard and saves
+one PNG per scene to `.ui-shots/` (gitignored):
+
+```sh
+pnpm --filter @powerhousedao/workflow ui:serve    # servers plus a browser window on a seeded demo drive
+pnpm --filter @powerhousedao/workflow ui:shots    # every scene
+pnpm --filter @powerhousedao/workflow ui:shots workflow-editor-step --theme dark
+pnpm --filter @powerhousedao/workflow ui:shots --list
+```
+
+It starts whichever of switchboard (`:4001`, in-memory, workflows on) and
+Connect's Vite dev server (`:3100`) is not already running, and stops the ones
+it started. Each run creates a new remote drive, seeds workflows and a
+connection through Connect's reactor, and fires two manual workflows (one
+succeeds, one fails) so the runs views have data. Flags: `--width`,
+`--height`, `--out`; `UI_SHOTS_VERBOSE=1` prints the server logs.
+
+Connect dev serves the editors from source, so every run picks up the latest
+edits. `style.css` is recompiled into `dist/style.css` before each run so new
+Tailwind classes show up too. The switchboard runs from `apps/switchboard/dist`,
+so a change to the runtime side needs a rebuild of that package first. Scenes
+live in `SCENES` in `scripts/ui-shots.ts`.
+
+### UI tests
+
+`test:ui` runs the Playwright specs in `test/ui/` against the same stack, one
+fresh seeded drive per test:
+
+```sh
+pnpm --filter @powerhousedao/workflow test:ui
+```
+
+Both commands share `scripts/ui-stack.ts`, which starts the servers and seeds
+the documents.
+
 ## Shipping a piece from a package
 
 This package is the worked example an external reactor package copies. A piece

@@ -7,12 +7,16 @@ import {
   WebhookRenewStrategy,
 } from "@powerhousedao/pieces-framework";
 import { describe, expect, it } from "vitest";
-import { unsupportedAuth, unsupportedTrigger } from "./unsupported.js";
+import {
+  authMethodFor,
+  unsupportedAuth,
+  unsupportedTrigger,
+} from "./unsupported.js";
 
 const feature = (value: { feature: string } | undefined) => value?.feature;
 
 describe("unsupportedAuth", () => {
-  it("names OAuth2, OIDC, multi-auth and CustomAuth refresh", () => {
+  it("names OAuth2, OIDC and CustomAuth refresh", () => {
     const oauth = PieceAuth.OAuth2({
       authUrl: "https://example.com/auth",
       tokenUrl: "https://example.com/token",
@@ -36,9 +40,9 @@ describe("unsupportedAuth", () => {
     expect(
       feature(unsupportedAuth(PieceAuth.OIDC({ required: true, props: {} }))),
     ).toBe("OIDC auth");
-    expect(feature(unsupportedAuth([custom, oauth]))).toBe(
-      "Multi-auth (auth as an array)",
-    );
+    // Several methods run if any one does; otherwise the first says why.
+    expect(unsupportedAuth([custom, oauth])).toBeUndefined();
+    expect(feature(unsupportedAuth([oauth, refreshing]))).toBe("OAuth2 auth");
     expect(feature(unsupportedAuth(refreshing))).toBe("CustomAuth refresh");
   });
 
@@ -52,6 +56,20 @@ describe("unsupportedAuth", () => {
     expect(
       unsupportedAuth(PieceAuth.CustomAuth({ required: true, props: {} })),
     ).toBeUndefined();
+  });
+});
+
+describe("authMethodFor", () => {
+  const key = PieceAuth.SecretText({ displayName: "Key", required: true });
+  const custom = PieceAuth.CustomAuth({ required: true, props: {} });
+
+  it("picks the method of the connection's type among several", () => {
+    expect(authMethodFor([key, custom], "CUSTOM_AUTH")).toBe(custom);
+    expect(authMethodFor([key, custom], "BASIC_AUTH")).toBeUndefined();
+  });
+
+  it("returns a single method whatever the type", () => {
+    expect(authMethodFor(key, "CUSTOM_AUTH")).toBe(key);
   });
 });
 

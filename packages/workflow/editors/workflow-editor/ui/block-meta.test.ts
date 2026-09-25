@@ -3,6 +3,7 @@ import {
   blockMeta,
   ensurePieceLogos,
   pieceLogo,
+  registerBlockNames,
   registerPieceLogos,
   resetPieceLogos,
 } from "./block-meta.js";
@@ -49,9 +50,7 @@ describe("blockMeta", () => {
     expect(meta.subtitle).toBe("Slack · Trigger");
   });
 
-  // Regression: the logo URL used to be synthesised as
-  // /pieces/<piece>.png, which 404s for ~10% of pieces (date-helper is
-  // really served from /pieces/new-core/date-helper.svg).
+  // Logo paths vary by piece (date-helper is /pieces/new-core/date-helper.svg).
   it("never guesses a logo URL for an unknown piece", () => {
     expect(blockMeta(DATE_HELPER).logoUrl).toBeUndefined();
   });
@@ -141,5 +140,62 @@ describe("ensurePieceLogos", () => {
     await expect(ensurePieceLogos()).resolves.toBeUndefined();
     expect(blockMeta(DATE_HELPER).logoUrl).toBeUndefined();
     expect(blockMeta(DATE_HELPER).glyph).toBe("D");
+  });
+});
+
+describe("action names", () => {
+  it("uses the piece's own name for an action, whatever the version", () => {
+    registerBlockNames([
+      {
+        blockType: "@activepieces/piece-openai@0.11.0#ask_chatgpt",
+        displayName: "Ask ChatGPT",
+      },
+    ]);
+    expect(
+      blockMeta("@activepieces/piece-openai@0.12.3#ask_chatgpt").displayName,
+    ).toBe("Ask ChatGPT");
+  });
+
+  it("keeps triggers and actions of the same name apart", () => {
+    registerBlockNames([
+      {
+        blockType: "@activepieces/piece-slack@1.0.0#trigger:new_message",
+        displayName: "New Message Posted",
+      },
+    ]);
+    expect(
+      blockMeta("@activepieces/piece-slack@1.0.0#trigger:new_message")
+        .displayName,
+    ).toBe("New Message Posted");
+    expect(
+      blockMeta("@activepieces/piece-slack@1.0.0#new_message").displayName,
+    ).toBe("New message");
+  });
+
+  it("loads a piece's names once, the first time one of its blocks shows", async () => {
+    const loadActions = vi.fn(() =>
+      Promise.resolve([
+        {
+          name: "ask_chatgpt",
+          displayName: "Ask ChatGPT",
+          description: "",
+          blockType: "@activepieces/piece-openai@0.11.0#ask_chatgpt",
+        },
+      ]),
+    );
+    const loadTriggers = vi.fn(() => Promise.resolve([]));
+    registerPieceSource({
+      loadCatalog: () => Promise.resolve([]),
+      loadActions,
+      loadTriggers,
+    });
+    const blockType = "@activepieces/piece-openai@0.11.0#ask_chatgpt";
+    expect(blockMeta(blockType).displayName).toBe("Ask chatgpt");
+    blockMeta("@activepieces/piece-openai@0.11.0#vision_prompt");
+    await vi.waitFor(() =>
+      expect(blockMeta(blockType).displayName).toBe("Ask ChatGPT"),
+    );
+    expect(loadActions).toHaveBeenCalledTimes(1);
+    expect(loadActions).toHaveBeenCalledWith("@activepieces/piece-openai");
   });
 });

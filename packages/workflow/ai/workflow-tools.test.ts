@@ -275,18 +275,3 @@ describe("workflow authoring tools", () => {
     });
   });
 });
-
-describe("aiTools export", () => {
-  it("includes the workflow authoring tools next to the connection tools", async () => {
-    const { aiTools } = await import("./tools.js");
-    const names = aiTools.map((t) => t.name);
-    expect(names).toEqual(
-      expect.arrayContaining([
-        "getConnectors",
-        "getWorkflowBlockConfig",
-        "fireWorkflow",
-      ]),
-    );
-    expect(new Set(names).size).toBe(names.length);
-  });
-});

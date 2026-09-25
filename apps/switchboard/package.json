@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "6.2.3-dev.23",
+  "version": "6.2.3-dev.25",
   "main": "dist/index.mjs",
   "exports": {
     ".": {
@@ -85,7 +85,7 @@
     "@sentry/opentelemetry": "^10.53.1",
     "document-model": "workspace:*",
     "dotenv": "^16.4.7",
-    "express": "^4.21.2",
+    "express": "^4.22.1",
     "graphql": "catalog:",
     "graphql-tag": "catalog:",
     "kysely": "catalog:",

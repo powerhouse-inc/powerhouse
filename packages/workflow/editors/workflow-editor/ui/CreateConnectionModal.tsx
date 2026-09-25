@@ -7,7 +7,10 @@ import { connectionCallbacks } from "../../connection-editor/connection-callback
 import { ConnectionForm } from "../../connection-editor/connection-form.js";
 import { planFromAuth } from "../../connection-editor/piece-auth.js";
 import { fetchPieceCatalog } from "../runtime-api.js";
-import type { ConnectionDraft } from "./connection-create.js";
+import {
+  connectionNameFor,
+  type ConnectionDraft,
+} from "./connection-create.js";
 
 export function CreateConnectionModal(props: {
   connectionId: string;
@@ -35,10 +38,21 @@ export function CreateConnectionModal(props: {
         }),
       );
     fetchPieceCatalog().then(
-      (pieces) =>
-        setConnector(
-          pieces.find((piece) => piece.name === props.draft.piecePackage)?.auth,
-        ),
+      (pieces) => {
+        const piece = pieces.find(
+          (entry) => entry.name === props.draft.piecePackage,
+        );
+        setConnector(piece?.auth);
+        // The draft may have been named before the catalog knew the piece.
+        const name = connectionNameFor(
+          props.draft.piecePackage,
+          piece?.displayName,
+        );
+        if (name !== props.draft.name) {
+          dispatch(actions.setConnectionName({ name }));
+          dispatch(actions.setName(name));
+        }
+      },
       // Unreachable catalog: the connector still points at the piece and the
       // form recovers the auth kind once the catalog loads.
       () => setConnector(null),
@@ -63,7 +77,7 @@ export function CreateConnectionModal(props: {
         <div className="flex items-center gap-2">
           <input
             key={state?.name}
-            className="min-w-0 flex-1 rounded border border-transparent px-1 py-0.5 text-sm font-semibold text-slate-800 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
+            className="min-w-0 flex-1 rounded border border-transparent px-1 py-0.5 text-sm font-semibold text-foreground hover:border-foreground/10 focus:border-foreground/15 focus:outline-none"
             defaultValue={state?.name ?? props.draft.name}
             placeholder="Untitled connection"
             spellCheck={false}
@@ -78,7 +92,7 @@ export function CreateConnectionModal(props: {
           />
           <button
             type="button"
-            className="shrink-0 rounded bg-slate-800 px-3 py-1.5 text-xs font-medium text-white"
+            className="shrink-0 rounded bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
             onClick={() => props.onDone(props.connectionId)}
           >
             Use this connection
@@ -87,7 +101,7 @@ export function CreateConnectionModal(props: {
         {state && callbacks ? (
           <ConnectionForm state={state} callbacks={callbacks} />
         ) : (
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted-foreground/80">
             Loading the new connection document…
           </p>
         )}

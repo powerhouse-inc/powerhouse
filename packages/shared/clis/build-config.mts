@@ -233,7 +233,7 @@ export function buildPieceBuildConfig(
       neverBundle: [],
       // Inlining dependencies is the point here, so tsdown's hint about it
       // would only be noise on every piece.
-      onlyAllowBundle: false,
+      onlyBundle: false,
     },
     outputOptions: { codeSplitting: false },
     config,

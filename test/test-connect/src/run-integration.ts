@@ -19,7 +19,7 @@ const SWITCHBOARD_SERVER_PATH = path.resolve(
   "../../../apps/switchboard/src/server.mts",
 );
 
-const PORT = 4001;
+const PORT = Number(process.env.PH_LOAD_TEST_PORT ?? 4001);
 const CLIENT_COUNT = 4;
 const DURATION = 15_000;
 const MUTATION_INTERVAL = 1_000;

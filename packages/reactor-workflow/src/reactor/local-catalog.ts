@@ -7,6 +7,7 @@ import type { PieceDescriptor } from "../pieces/index.js";
 import type { BlockSearchHit } from "./block-search.js";
 import {
   aiLast,
+  clientAuth,
   reasonOf,
   type PieceActionsResult,
   type PieceSummary,
@@ -40,7 +41,7 @@ export function catalogEntry(
     actionCount: descriptor.actions.length,
     triggerCount: descriptor.triggers.length,
     categories: descriptor.categories ?? [],
-    auth: descriptor.auth ?? null,
+    auth: clientAuth(descriptor.auth),
     ...reasonOf(descriptor.unsupported),
   };
 }
@@ -66,7 +67,7 @@ export function actionsResult(
       }))
       // Agent-targeted atomics last, as the published listing sorts them.
       .sort((a, b) => aiLast(a.audience) - aiLast(b.audience)),
-    auth: descriptor.auth ?? null,
+    auth: clientAuth(descriptor.auth),
   };
 }
 
@@ -87,7 +88,7 @@ export function triggersResult(
       blockType: localBlockType(pieceName, trigger.name, "trigger"),
       ...reasonOf(descriptor.unsupported ?? trigger.unsupported),
     })),
-    auth: descriptor.auth ?? null,
+    auth: clientAuth(descriptor.auth),
   };
 }
 
@@ -140,7 +141,7 @@ export function detailResult(
     logoUrl: descriptor.logoUrl ?? "",
     version,
     categories: descriptor.categories ?? [],
-    auth: descriptor.auth ?? null,
+    auth: clientAuth(descriptor.auth),
     actions: Object.fromEntries(
       descriptor.actions.map((action) => [
         action.name,
