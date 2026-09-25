@@ -2,11 +2,11 @@
 // run walks it, annotated with how that step fared in the latest run.
 import type { WorkflowState } from "document-models/workflow";
 import type { RunRecord } from "../../workflow-editor/runtime-api.js";
-import { useState } from "react";
 import {
   blockMeta,
   usePieceLogos,
 } from "../../workflow-editor/ui/block-meta.js";
+import { BlockLogo } from "../../workflow-editor/ui/BlockSelector.js";
 import { STEP_TONE, toneOf, type Tone } from "./run-format.js";
 import { stepOutline, type OutlineStep } from "./step-outline.js";
 
@@ -26,30 +26,11 @@ const RING: Record<Tone, string> = {
   idle: "ring-border",
 };
 
-// The piece logo, degrading to the block glyph when absent or unloadable.
-function StopLogo(props: { logoUrl?: string; glyph?: string }) {
-  const [broken, setBroken] = useState(false);
-  if (props.logoUrl && !broken) {
-    return (
-      <img
-        src={props.logoUrl}
-        alt=""
-        className="h-5 w-5"
-        onError={() => setBroken(true)}
-      />
-    );
-  }
-  return (
-    <span className="text-sm text-muted-foreground">{props.glyph ?? "▪"}</span>
-  );
-}
-
 interface Stop {
   id: string;
   title: string;
   subtitle: string;
-  glyph?: string;
-  logoUrl?: string;
+  blockType: string;
   // How the latest run fared here; undefined when it never reached this stop.
   status?: string;
   // The port the run takes to arrive here, shown on the rail.
@@ -94,7 +75,7 @@ function TrackStop(props: {
         className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-card ring-2 transition-shadow dark:bg-white hover:ring-4 focus-visible:outline-none focus-visible:ring-4 ${RING[tone]}`}
         onClick={props.onClick}
       >
-        <StopLogo logoUrl={stop.logoUrl} glyph={stop.glyph} />
+        <BlockLogo bare blockType={stop.blockType} size={20} />
       </button>
       <span className="mt-2 max-w-full truncate px-2 text-[13px] font-medium text-foreground">
         {stop.title}
@@ -114,7 +95,8 @@ function Track(props: { stops: Stop[]; onOpenEditor: () => void }) {
     stop.status ? toneOf(STEP_TONE, stop.status) : "idle",
   );
   return (
-    <ol className="-mx-6 flex overflow-x-auto px-6 pb-1">
+    // Scrolling clips both axes, so the padding leaves room for the rings.
+    <ol className="-mx-6 flex overflow-x-auto px-6 py-1.5">
       {props.stops.map((stop, index) => (
         <TrackStop
           key={stop.id}
@@ -154,8 +136,7 @@ export function WorkflowSteps(props: {
       id: step.id,
       title: step.name || step.key,
       subtitle: meta.displayName,
-      glyph: meta.glyph,
-      logoUrl: meta.logoUrl,
+      blockType: step.blockType,
       status: statusByKey.get(step.key),
       port,
     };
@@ -187,8 +168,7 @@ export function WorkflowSteps(props: {
             id: state.trigger.id,
             title: triggerMeta.displayName,
             subtitle: "Trigger",
-            glyph: triggerMeta.glyph,
-            logoUrl: triggerMeta.logoUrl,
+            blockType: state.trigger.blockType,
             // Any recorded run means the trigger fired.
             status: props.latestRun ? "SUCCEEDED" : undefined,
           },
@@ -216,7 +196,7 @@ export function WorkflowSteps(props: {
           <p className="mb-3 text-xs text-muted-foreground">
             Not connected to the trigger, so runs never reach these:
           </p>
-          <ol className="-mx-6 flex overflow-x-auto px-6 opacity-60">
+          <ol className="-mx-6 flex overflow-x-auto px-6 py-1.5 opacity-60">
             {outline.orphans.map((step) => (
               <TrackStop
                 key={step.id}
