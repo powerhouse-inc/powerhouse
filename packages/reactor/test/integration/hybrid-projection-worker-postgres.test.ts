@@ -301,6 +301,20 @@ describe("hybrid projection worker over Postgres", () => {
     expect(doc.header.id).toBe(docId);
   });
 
+  it("reports the projection worker's consumers in the host catch-up status", async () => {
+    await vi.waitFor(
+      () => {
+        const projected = module!.catchUp
+          .status()
+          .consumers.filter((consumer) => consumer.thread === "projection")
+          .map((consumer) => consumer.consumerId)
+          .sort();
+        expect(projected).toEqual(["document-indexer", "document-view"]);
+      },
+      { timeout: WITHIN_MS },
+    );
+  });
+
   // Last: covers every operation the cases above produced.
   it("host read model saw every operation exactly once, before READ_READY", () => {
     expect(readReady.length).toBeGreaterThan(0);

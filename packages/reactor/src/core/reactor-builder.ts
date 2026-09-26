@@ -20,11 +20,13 @@ import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
 import { CatchUpScheduler, isCatchUpConsumer } from "../catch-up/scheduler.js";
 import {
   createKyselyWatermarkProbe,
+  describeWaitingSessions,
   SettledWatermark,
 } from "../catch-up/settled-watermark.js";
 import {
   defaultCatchUpConfig,
   type CatchUpConfig,
+  type CatchUpStatus,
   type ICatchUpConsumer,
 } from "../catch-up/types.js";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
@@ -257,6 +259,18 @@ function validateShardCount(shardCount: number): void {
       `shardCount ${shardCount} is not supported: read-side catch-up keeps one cursor per read model, so projection runs in exactly one worker (shardCount: 1)`,
     );
   }
+}
+
+/** A coordinator whose models sweep in a worker reports that status. */
+function hasCatchUpStatuses(
+  coordinator: IReadModelCoordinator,
+): coordinator is IReadModelCoordinator & {
+  catchUpStatuses(): CatchUpStatus[];
+} {
+  return (
+    "catchUpStatuses" in coordinator &&
+    typeof coordinator.catchUpStatuses === "function"
+  );
 }
 
 function sameDatabaseTarget(a: DbConfig, b: DbConfig): boolean {
@@ -763,6 +777,13 @@ export class ReactorBuilder {
       operationIndex,
       this.catchUpConfig,
       this.logger,
+      {
+        onSwept: (result, thread) =>
+          void eventBus
+            .emit(ReactorEventTypes.CATCHUP_SWEPT, { ...result, thread })
+            .catch(() => {}),
+        describeSessions: (xids) => describeWaitingSessions(database, xids),
+      },
     );
 
     const documentMetaCache = new DocumentMetaCache(operationStore, {
@@ -1031,6 +1052,13 @@ export class ReactorBuilder {
               processorManager,
             ]);
 
+    if (hasCatchUpStatuses(readModelCoordinator)) {
+      catchUp.addStatusSource(() =>
+        readModelCoordinator
+          .catchUpStatuses()
+          .flatMap((status) => status.consumers),
+      );
+    }
     const indexedReadModels =
       readModelCoordinator.indexedReadModels?.bind(readModelCoordinator);
     if (indexedReadModels) {

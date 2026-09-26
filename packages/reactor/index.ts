@@ -146,6 +146,7 @@ export {
   type JobFailedEvent as ReactorJobFailedEvent,
   type ReadModelBatchCompletedEvent,
   type ReadModelIndexedEvent,
+  type CatchUpSweptEvent,
   type ReadModelStage,
   type ReadModelIndexingStage,
   type SignatureRefusedEvent,

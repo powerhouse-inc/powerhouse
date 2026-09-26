@@ -148,4 +148,129 @@ describe("CatchUpScheduler", () => {
       vi.useRealTimers();
     }
   });
+
+  describe("observability", () => {
+    it("reports a sweep that moved, and skips one that did nothing", async () => {
+      const { index } = indexOver([1]);
+      const onSwept = vi.fn();
+      const scheduler = new CatchUpScheduler(
+        fixedWatermark(1),
+        index,
+        defaultCatchUpConfig,
+        logger,
+        { onSwept, describeSessions: () => Promise.resolve([]) },
+      );
+      scheduler.addConsumer(consumer("moving", 0).value, "projection");
+      scheduler.addConsumer(consumer("idle", 1).value, "host");
+
+      await scheduler.sweepNow();
+
+      expect(onSwept).toHaveBeenCalledTimes(1);
+      expect(onSwept).toHaveBeenCalledWith(
+        expect.objectContaining({ consumerId: "moving", from: 0, to: 1 }),
+        "projection",
+      );
+    });
+
+    it("warns once, naming the sessions, when the watermark is held", async () => {
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(1_000_000);
+        const watermark: ISettledWatermark = {
+          settledThrough: 4,
+          refresh: () => Promise.resolve(4),
+          onAdvance: () => () => {},
+          status: () => ({
+            head: 9,
+            settledThrough: 4,
+            waitingOn: ["77"],
+            stalledSinceUtcMs: 1_000_000 - 61_000,
+          }),
+        };
+        const warnLogger = new ConsoleLogger(["test"]);
+        const warn = vi.spyOn(warnLogger, "warn").mockImplementation(() => {});
+        const describeSessions = vi.fn(() =>
+          Promise.resolve([
+            {
+              pid: 42,
+              applicationName: "batch-import",
+              state: "idle in transaction",
+              xactStart: "2026-09-25T00:00:00.000Z",
+              xid: "77",
+            },
+          ]),
+        );
+        const scheduler = new CatchUpScheduler(
+          watermark,
+          indexOver([]).index,
+          defaultCatchUpConfig,
+          warnLogger,
+          { onSwept: () => {}, describeSessions },
+        );
+        scheduler.addConsumer(consumer("c", 4).value, "host");
+
+        await scheduler.sweepNow();
+        await scheduler.sweepNow();
+
+        const held = warn.mock.calls.filter(([message]) =>
+          String(message).startsWith("settled watermark held"),
+        );
+        expect(held).toHaveLength(1);
+        expect(held[0]).toEqual([
+          expect.any(String),
+          4,
+          9,
+          61_000,
+          "77",
+          expect.stringContaining("pid 42 batch-import"),
+        ]);
+        expect(describeSessions).toHaveBeenCalledWith(["77"]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("warns once when a consumer's cursor is held past the limit", async () => {
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(0);
+        const warnLogger = new ConsoleLogger(["test"]);
+        const warn = vi.spyOn(warnLogger, "warn").mockImplementation(() => {});
+        vi.spyOn(warnLogger, "error").mockImplementation(() => {});
+        const stuck: ICatchUpConsumer = {
+          consumerId: "stuck",
+          appliedThrough: 2,
+          trackedAbove: 0,
+          sweep: () =>
+            Promise.resolve({
+              consumerId: "stuck",
+              from: 2,
+              to: 2,
+              durationMs: 0,
+              replayed: 0,
+              reapplied: 0,
+            }),
+        };
+        const scheduler = new CatchUpScheduler(
+          fixedWatermark(5),
+          indexOver([3, 4, 5]).index,
+          { ...defaultCatchUpConfig, stuckWarnMs: 1000 },
+          warnLogger,
+        );
+        scheduler.addConsumer(stuck, "host");
+
+        await scheduler.sweepNow();
+        vi.setSystemTime(1500);
+        await scheduler.sweepNow();
+        await scheduler.sweepNow();
+
+        const held = warn.mock.calls.filter(([message]) =>
+          String(message).includes("cursor held at"),
+        );
+        expect(held).toEqual([[expect.any(String), "stuck", 2, 1500, 5]]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
 });

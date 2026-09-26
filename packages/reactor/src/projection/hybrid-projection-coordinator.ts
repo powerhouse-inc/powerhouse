@@ -1,4 +1,5 @@
 import type { ILogger } from "document-model";
+import type { CatchUpStatus } from "../catch-up/types.js";
 import type { IEventBus } from "../events/interfaces.js";
 import {
   ReactorEventTypes,
@@ -106,6 +107,10 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
 
   indexedReadModels(): readonly IReadModel[] {
     return [...this.preReady, ...this.postReady];
+  }
+
+  catchUpStatuses(): CatchUpStatus[] {
+    return this.manager.catchUpStatuses();
   }
 
   /** Worker chains flush first, so every relayed read-ready is in `chains`. */

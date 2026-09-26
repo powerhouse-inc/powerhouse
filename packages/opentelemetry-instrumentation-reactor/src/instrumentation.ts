@@ -4,6 +4,7 @@ import {
   SyncEventTypes,
 } from "@powerhousedao/reactor";
 import type {
+  CatchUpSweptEvent,
   DeadLetterAddedEvent,
   IEventBus,
   IJobExecutorManager,
@@ -57,6 +58,7 @@ export class ReactorInstrumentation {
     this.subscribeSignatureRefused(eventBus);
     this.subscribeReadModelBatchCompleted(eventBus);
     this.subscribeReadModelIndexed(eventBus);
+    this.subscribeCatchUpSwept(eventBus);
     this.registerObservableGauges(
       queue,
       executorManager,
@@ -64,6 +66,7 @@ export class ReactorInstrumentation {
       syncModule,
     );
     this.registerPoolInstrumentation(pools);
+    this.registerCatchUpGauges();
   }
 
   stop(): void {
@@ -284,6 +287,69 @@ export class ReactorInstrumentation {
         },
       ),
     );
+  }
+
+  private subscribeCatchUpSwept(eventBus: IEventBus): void {
+    this.unsubscribes.push(
+      eventBus.subscribe<CatchUpSweptEvent>(
+        ReactorEventTypes.CATCHUP_SWEPT,
+        (_type, event) => {
+          if (!this.metrics) return;
+          const attrs = { consumer: event.consumerId, thread: event.thread };
+          this.metrics.catchupSweepDuration.record(event.durationMs, attrs);
+          if (event.replayed > 0) {
+            this.metrics.catchupSweepReplayed.add(event.replayed, attrs);
+          }
+          if (event.blockedAt !== undefined) {
+            this.metrics.catchupSweepFailures.add(1, attrs);
+          }
+          this.metrics.eventbusEventsEmitted.add(1, {
+            "event.type": "CATCHUP_SWEPT",
+          });
+        },
+      ),
+    );
+  }
+
+  private registerCatchUpGauges(): void {
+    if (!this.metrics) return;
+    const { catchUp } = this.module;
+    const gauges: Array<[ObservableGauge, ObservableCallback]> = [
+      [
+        this.metrics.catchupSequenceHead,
+        (result) => result.observe(catchUp.status().watermark.head),
+      ],
+      [
+        this.metrics.catchupSettledThrough,
+        (result) => result.observe(catchUp.status().watermark.settledThrough),
+      ],
+      [
+        this.metrics.catchupSettleLag,
+        (result) => {
+          const { head, settledThrough } = catchUp.status().watermark;
+          result.observe(Math.max(0, head - settledThrough));
+        },
+      ],
+      [
+        this.metrics.catchupConsumerLag,
+        (result) => {
+          const status = catchUp.status();
+          for (const consumer of status.consumers) {
+            result.observe(
+              Math.max(
+                0,
+                status.watermark.settledThrough - consumer.appliedThrough,
+              ),
+              { consumer: consumer.consumerId, thread: consumer.thread },
+            );
+          }
+        },
+      ],
+    ];
+    for (const [gauge, callback] of gauges) {
+      gauge.addCallback(callback);
+      this.observableCallbacks.push([gauge, callback]);
+    }
   }
 
   private subscribeDeadLetterAdded(eventBus: IEventBus): void {

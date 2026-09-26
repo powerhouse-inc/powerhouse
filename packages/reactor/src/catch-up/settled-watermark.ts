@@ -290,3 +290,41 @@ export class SettledWatermark implements ISettledWatermark {
     return after;
   }
 }
+
+export type WatermarkSession = {
+  pid: number;
+  applicationName: string;
+  state: string;
+  xactStart: string | null;
+  xid: string;
+};
+
+/** Sessions holding these xids open; empty without pg_stat_activity. */
+export async function describeWaitingSessions<DB>(
+  db: Kysely<DB>,
+  xids: readonly string[],
+): Promise<WatermarkSession[]> {
+  if (xids.length === 0) return [];
+  const epochless = xids.map((xid) => (BigInt(xid) % 2n ** 32n).toString());
+  try {
+    const result = await sql<{
+      pid: number;
+      application_name: string | null;
+      state: string | null;
+      xact_start: Date | string | null;
+      xid: string;
+    }>`select pid, application_name, state, xact_start, backend_xid::text as xid
+       from pg_stat_activity
+       where backend_xid::text in (${sql.join(epochless)})`.execute(db);
+    return result.rows.map((row) => ({
+      pid: Number(row.pid),
+      applicationName: row.application_name ?? "",
+      state: row.state ?? "",
+      xactStart:
+        row.xact_start === null ? null : new Date(row.xact_start).toISOString(),
+      xid: row.xid,
+    }));
+  } catch {
+    return [];
+  }
+}

@@ -589,6 +589,12 @@ export class ProjectionShardManager implements IReadModelCoordinator {
         this.trackersByReadModelName
           .get(msg.readModelName)
           ?.update(msg.coordinates);
+        void this.hostBus
+          .emit(ReactorEventTypes.CATCHUP_SWEPT, {
+            ...msg.result,
+            thread: "projection",
+          })
+          .catch(() => {});
         return;
       case "catchup-status":
         shard.catchUpStatus = msg.status;

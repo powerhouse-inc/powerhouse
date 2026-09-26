@@ -1,5 +1,6 @@
 import type { ILogger } from "document-model";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
+import type { WatermarkSession } from "./settled-watermark.js";
 import type {
   CatchUpConfig,
   CatchUpConsumerStatus,
@@ -17,6 +18,19 @@ type ConsumerEntry = {
   thread: CatchUpThread;
   blockedAt?: SweepBlockedAt;
   lastAdvanceUtcMs: number;
+  warnedHeld: boolean;
+};
+
+export type CatchUpSchedulerHooks = {
+  /** Called for every sweep that moved, replayed or failed. */
+  onSwept: (result: SweepResult, thread: CatchUpThread) => void;
+  /** Names the sessions holding the watermark, for the stall warning. */
+  describeSessions: (xids: readonly string[]) => Promise<WatermarkSession[]>;
+};
+
+const noHooks: CatchUpSchedulerHooks = {
+  onSwept: () => {},
+  describeSessions: () => Promise.resolve([]),
 };
 
 type PresentPage = { bound: number; present: number[] };
@@ -45,13 +59,15 @@ export class CatchUpScheduler implements ICatchUp {
   private running: Promise<SweepResult[]> | undefined;
   private started = false;
   private stopped = false;
+  private warnedStallSince: number | undefined;
+  private readonly statusSources: Array<() => CatchUpConsumerStatus[]> = [];
 
   constructor(
     private readonly watermark: ISettledWatermark,
     private readonly operationIndex: IOperationIndex,
     private readonly config: CatchUpConfig,
     private readonly logger: ILogger,
-    private readonly onSwept: (result: SweepResult) => void = () => {},
+    private readonly hooks: CatchUpSchedulerHooks = noHooks,
   ) {}
 
   get settledWatermark(): ISettledWatermark {
@@ -60,7 +76,12 @@ export class CatchUpScheduler implements ICatchUp {
 
   addConsumer(consumer: ICatchUpConsumer, thread: CatchUpThread): void {
     if (this.fixed.some((entry) => entry.consumer === consumer)) return;
-    this.fixed.push({ consumer, thread, lastAdvanceUtcMs: Date.now() });
+    this.fixed.push({
+      consumer,
+      thread,
+      lastAdvanceUtcMs: Date.now(),
+      warnedHeld: false,
+    });
     this.ensureTimer();
   }
 
@@ -71,6 +92,11 @@ export class CatchUpScheduler implements ICatchUp {
   ): void {
     this.sources.push({ consumers, thread });
     this.ensureTimer();
+  }
+
+  /** Consumers another thread sweeps, reported in status(). */
+  addStatusSource(source: () => CatchUpConsumerStatus[]): void {
+    this.statusSources.push(source);
   }
 
   start(): void {
@@ -99,16 +125,18 @@ export class CatchUpScheduler implements ICatchUp {
   status(): CatchUpStatus {
     return {
       watermark: this.watermark.status(),
-      consumers: this.entries().map((entry): CatchUpConsumerStatus => ({
-        consumerId: entry.consumer.consumerId,
-        thread: entry.thread,
-        appliedThrough: entry.consumer.appliedThrough,
-        trackedAbove: entry.consumer.trackedAbove,
-        ...(entry.blockedAt !== undefined
-          ? { blockedAt: entry.blockedAt }
-          : {}),
-        lastAdvanceUtcMs: entry.lastAdvanceUtcMs,
-      })),
+      consumers: this.entries()
+        .map((entry): CatchUpConsumerStatus => ({
+          consumerId: entry.consumer.consumerId,
+          thread: entry.thread,
+          appliedThrough: entry.consumer.appliedThrough,
+          trackedAbove: entry.consumer.trackedAbove,
+          ...(entry.blockedAt !== undefined
+            ? { blockedAt: entry.blockedAt }
+            : {}),
+          lastAdvanceUtcMs: entry.lastAdvanceUtcMs,
+        }))
+        .concat(this.statusSources.flatMap((source) => source())),
     };
   }
 
@@ -136,6 +164,7 @@ export class CatchUpScheduler implements ICatchUp {
 
   private async tick(): Promise<SweepResult[]> {
     const settled = await this.watermark.refresh();
+    await this.warnIfWatermarkHeld();
     const entries = this.entries();
     if (entries.length === 0) return [];
 
@@ -167,6 +196,7 @@ export class CatchUpScheduler implements ICatchUp {
             consumer,
             thread: source.thread,
             lastAdvanceUtcMs: Date.now(),
+            warnedHeld: false,
           };
           this.sourced.set(consumer, entry);
         }
@@ -208,10 +238,65 @@ export class CatchUpScheduler implements ICatchUp {
       return undefined;
     }
 
-    if (result.to > result.from) entry.lastAdvanceUtcMs = Date.now();
+    if (result.to > result.from) {
+      entry.lastAdvanceUtcMs = Date.now();
+      entry.warnedHeld = false;
+    }
     entry.blockedAt = result.blockedAt;
-    this.onSwept(result);
+    this.warnIfConsumerHeld(entry, settled);
+    if (
+      result.to > result.from ||
+      result.replayed > 0 ||
+      result.blockedAt !== undefined
+    ) {
+      this.hooks.onSwept(result, entry.thread);
+    }
     return result;
+  }
+
+  private async warnIfWatermarkHeld(): Promise<void> {
+    const status = this.watermark.status();
+    const since = status.stalledSinceUtcMs;
+    if (since === undefined) {
+      this.warnedStallSince = undefined;
+      return;
+    }
+    const heldMs = Date.now() - since;
+    if (heldMs < this.config.stuckWarnMs || this.warnedStallSince === since) {
+      return;
+    }
+    this.warnedStallSince = since;
+    const sessions: WatermarkSession[] = await this.hooks
+      .describeSessions(status.waitingOn)
+      .catch(() => []);
+    this.logger.warn(
+      "settled watermark held at @settled (head @head) for @ms ms, waiting on xid @xids: @sessions",
+      status.settledThrough,
+      status.head,
+      heldMs,
+      status.waitingOn.join(", "),
+      sessions
+        .map(
+          (session) =>
+            `pid ${session.pid} ${session.applicationName} ${session.state} since ${session.xactStart ?? "?"}`,
+        )
+        .join("; "),
+    );
+  }
+
+  private warnIfConsumerHeld(entry: ConsumerEntry, settled: number): void {
+    const applied = entry.consumer.appliedThrough;
+    if (applied >= settled || entry.warnedHeld) return;
+    const heldMs = Date.now() - entry.lastAdvanceUtcMs;
+    if (heldMs < this.config.stuckWarnMs) return;
+    entry.warnedHeld = true;
+    this.logger.warn(
+      "@consumer cursor held at @applied for @ms ms (settled @settled)",
+      entry.consumer.consumerId,
+      applied,
+      heldMs,
+      settled,
+    );
   }
 
   private async readPage(after: number, settled: number): Promise<PresentPage> {

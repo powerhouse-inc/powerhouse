@@ -217,7 +217,12 @@ function relaySweeps(
       const unsubscribe = model.onSwept((swept) => coordinates.push(...swept));
       try {
         const result = await model.sweep(settledThrough, present, signal);
-        if (coordinates.length > 0 || result.replayed > 0) {
+        if (
+          coordinates.length > 0 ||
+          result.to > result.from ||
+          result.replayed > 0 ||
+          result.blockedAt !== undefined
+        ) {
           events.onReadModelSwept(model.name, coordinates, result);
         }
         return result;
