@@ -45,6 +45,8 @@ module PeerAgreement {
   const RECHECK_HOLDS: bool
   /** Fix: manifests carry a sequence that grows on every start; it is part of the revision and older ones are ignored. */
   const MANIFEST_SEQ: bool
+  /** Fix: a poll names the client's revision; a feature server records a client that names none as silent before serving. */
+  const POLL_REVISION: bool
 
   // -------------------------------------------------------------------- types
 
@@ -312,23 +314,29 @@ module PeerAgreement {
     val h = (a, b, d)
     val v = docVersion.get(d)
     val sent = rowsFor(a, d)
-    val sendHeld = SEND_GATE and GATE and hasFeature(build.get(a)) and not(peerSupports(a, b).contains(v))
+    // The client names its revision while it records the server as serving agreement.
+    val namesRevision = hasFeature(bb) and known.get(b).get(a).ann != SILENT
+    val pollSilenced = POLL_REVISION and PUSH_EDGES.contains((b, a)) and hasFeature(build.get(a)) and
+      not(namesRevision) and known.get(a).get(b).ann != SILENT
+    val sendHeld = not(pollSilenced) and SEND_GATE and GATE and hasFeature(build.get(a)) and
+      not(peerSupports(a, b).contains(v))
     val carriesField = PUSH_FIELD and PUSH_EDGES.contains((a, b)) and hasFeature(build.get(a)) and
       known.get(a).get(b).ann != SILENT
     val fieldRejected = not(sendHeld) and carriesField and not(hasFeature(bb))
-    val delivered = not(sendHeld) and not(fieldRejected)
+    // Either end records the other silent; unsent items it no longer supports become holds.
+    val silenced = fieldRejected or pollSilenced
+    val delivered = not(sendHeld) and not(silenced)
     val refuse = delivered and RECEIPT_CHECK and refusesUnsupported(bb) and not(runs(bb).contains(v))
     val peerRefuse = delivered and not(refuse) and PEER_CHECK and hasFeature(bb) and
       not(peerSupports(b, a).contains(v))
     val accept = delivered and not(refuse) and not(peerRefuse)
-    // The client reports the server silent; unsent items it no longer supports become holds, the rest are retried.
-    val fallback = if (fieldRejected) unsentFor(a, b, BASELINE) else Set()
+    val fallback = if (silenced) unsentFor(a, b, BASELINE) else Set()
     all {
       outbox.contains(h),
       not(HANDSHAKE_FIRST) or channelReady(a, b),
-      outbox' = if (fieldRejected) outbox.exclude(fallback) else outbox.exclude(Set(h)),
+      outbox' = if (silenced) outbox.exclude(fallback) else outbox.exclude(Set(h)),
       known' =
-        if (fieldRejected) known.setBy(a, ka => ka.set(b, { ann: SILENT, seq: seq.get(b) }))
+        if (silenced) known.setBy(a, ka => ka.set(b, { ann: SILENT, seq: seq.get(b) }))
         else known,
       holds' =
         if (sendHeld) plus(ITEMS, holds, Set(h))
@@ -438,7 +446,7 @@ module stage1 {
     BUILDS = Set("narrow", "wide"),
     MAX_DOCS = 2,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false
+    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false, POLL_REVISION = false
   ).*
 }
 
@@ -450,7 +458,7 @@ module stage1Recheck {
     BUILDS = Set("narrow", "wide"),
     MAX_DOCS = 2,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = true, MANIFEST_SEQ = false
+    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = true, MANIFEST_SEQ = false, POLL_REVISION = false
   ).*
 }
 
@@ -462,7 +470,7 @@ module stage1Seq {
     BUILDS = Set("narrow", "wide"),
     MAX_DOCS = 2,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = true
+    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = true, POLL_REVISION = false
   ).*
 }
 
@@ -475,7 +483,7 @@ module gateOnly {
     BUILDS = Set("narrow", "wide"),
     MAX_DOCS = 2,
     GATE = true, RECEIPT_CHECK = false, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false
+    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false, POLL_REVISION = false
   ).*
 }
 
@@ -488,7 +496,7 @@ module receiptOnly {
     BUILDS = Set("narrow", "wide"),
     MAX_DOCS = 2,
     GATE = false, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false
+    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false, POLL_REVISION = false
   ).*
 }
 
@@ -501,7 +509,7 @@ module legacy {
     BUILDS = Set("legacy", "narrow", "wide"),
     MAX_DOCS = 2,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false
+    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false, POLL_REVISION = false
   ).*
 }
 
@@ -513,7 +521,7 @@ module legacySendGate {
     BUILDS = Set("legacy", "narrow", "wide"),
     MAX_DOCS = 2,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = true, RECHECK_HOLDS = false, MANIFEST_SEQ = false
+    PUSH_FIELD = false, SEND_GATE = true, RECHECK_HOLDS = false, MANIFEST_SEQ = false, POLL_REVISION = false
   ).*
 }
 
@@ -525,7 +533,7 @@ module legacyPushField {
     BUILDS = Set("legacy", "narrow", "wide"),
     MAX_DOCS = 2,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false
+    PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false, POLL_REVISION = false
   ).*
 }
 
@@ -538,7 +546,7 @@ module misconfigured {
     BUILDS = Set("misconfigured", "wide"),
     MAX_DOCS = 2,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false
+    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false, POLL_REVISION = false
   ).*
 }
 
@@ -550,7 +558,7 @@ module misconfiguredRecheck {
     BUILDS = Set("misconfigured", "wide"),
     MAX_DOCS = 2,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = true, MANIFEST_SEQ = false
+    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = true, MANIFEST_SEQ = false, POLL_REVISION = false
   ).*
 }
 
@@ -562,7 +570,7 @@ module misconfiguredSeq {
     BUILDS = Set("misconfigured", "wide"),
     MAX_DOCS = 2,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = true
+    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = true, POLL_REVISION = false
   ).*
 }
 
@@ -575,11 +583,11 @@ module liar {
     BUILDS = Set("liar", "wide"),
     MAX_DOCS = 2,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false
+    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false, POLL_REVISION = false
   ).*
 }
 
-/** Every honest build with the push field and manifest sequences. */
+/** Every honest build with the push field, manifest sequences and poll revisions. */
 module fixed {
   import PeerAgreement(
     REACTORS = Set("A", "S", "B"),
@@ -588,7 +596,7 @@ module fixed {
     BUILDS = Set("legacy", "narrow", "wide", "misconfigured"),
     MAX_DOCS = 2,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = true
+    PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = true, POLL_REVISION = true
   ).*
 }
 
@@ -600,12 +608,12 @@ module fixedNoHandshake {
     BUILDS = Set("legacy", "narrow", "wide", "misconfigured"),
     MAX_DOCS = 2,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = false,
-    PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = true
+    PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = true, POLL_REVISION = true
   ).*
 }
 
-// Verify instances: one document. Documents share only peer records, which a touch reaches as well,
-// and the decision 19 guard, which more documents only tighten; per-document safety needs one.
+// Verify instances: one document. The argument, not checked: documents share only peer records, which
+// a touch reaches as well, and the decision 19 guard, which more documents only tighten.
 
 module stage1One {
   import PeerAgreement(
@@ -615,7 +623,7 @@ module stage1One {
     BUILDS = Set("narrow", "wide"),
     MAX_DOCS = 1,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false
+    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false, POLL_REVISION = false
   ).*
 }
 
@@ -627,7 +635,7 @@ module stage1SeqOne {
     BUILDS = Set("narrow", "wide"),
     MAX_DOCS = 1,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = true
+    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = true, POLL_REVISION = false
   ).*
 }
 
@@ -639,7 +647,7 @@ module gateOnlyOne {
     BUILDS = Set("narrow", "wide"),
     MAX_DOCS = 1,
     GATE = true, RECEIPT_CHECK = false, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false
+    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false, POLL_REVISION = false
   ).*
 }
 
@@ -651,7 +659,7 @@ module legacyOne {
     BUILDS = Set("legacy", "narrow", "wide"),
     MAX_DOCS = 1,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false
+    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false, POLL_REVISION = false
   ).*
 }
 
@@ -663,7 +671,7 @@ module legacySendGateOne {
     BUILDS = Set("legacy", "narrow", "wide"),
     MAX_DOCS = 1,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = true, RECHECK_HOLDS = false, MANIFEST_SEQ = false
+    PUSH_FIELD = false, SEND_GATE = true, RECHECK_HOLDS = false, MANIFEST_SEQ = false, POLL_REVISION = false
   ).*
 }
 
@@ -675,7 +683,7 @@ module legacyPushFieldOne {
     BUILDS = Set("legacy", "narrow", "wide"),
     MAX_DOCS = 1,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false
+    PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false, POLL_REVISION = false
   ).*
 }
 
@@ -687,7 +695,20 @@ module fixedOne {
     BUILDS = Set("legacy", "narrow", "wide", "misconfigured"),
     MAX_DOCS = 1,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = true
+    PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = true, POLL_REVISION = true
+  ).*
+}
+
+/** A server that ran a legacy build keeps its stale record of a client that rolled back meanwhile. */
+module fixedNoPollRevisionOne {
+  import PeerAgreement(
+    REACTORS = Set("A", "S", "B"),
+    EDGES = Set(("A", "S"), ("S", "A"), ("S", "B"), ("B", "S")),
+    PUSH_EDGES = Set(("A", "S"), ("B", "S")),
+    BUILDS = Set("legacy", "narrow", "wide", "misconfigured"),
+    MAX_DOCS = 1,
+    GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
+    PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = true, POLL_REVISION = false
   ).*
 }
 
@@ -699,6 +720,6 @@ module fixedNoHandshakeOne {
     BUILDS = Set("legacy", "narrow", "wide", "misconfigured"),
     MAX_DOCS = 1,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = false,
-    PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = true
+    PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = true, POLL_REVISION = true
   ).*
 }
