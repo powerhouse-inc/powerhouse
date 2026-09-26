@@ -188,6 +188,10 @@ describe.each(testSyncStorageBackends)(
       expect(() => second.getByName("client")).toThrow();
       const stored = await storage.syncRemoteStorage.get("client");
       expect(stored.peer?.manifest).toEqual(PEER);
+      // Agreement reads the persisted record, live or not.
+      expect(
+        second.agreement().members([COLLECTION.key]).get("client"),
+      ).toEqual(PEER);
     });
 
     it("announces the local manifest to the channel", async () => {

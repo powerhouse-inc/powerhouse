@@ -25,6 +25,7 @@ export {
   type DocumentChangeEvent,
   type IDriveClient,
   type IReactorClient,
+  type ProtocolSelection,
 } from "./src/client/types.js";
 export {
   ReactorBuilder,

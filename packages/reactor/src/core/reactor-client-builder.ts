@@ -7,6 +7,7 @@ import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
 import type { ActionEvaluationConfig } from "../client/reactor-client.js";
 import { ReactorClient } from "../client/reactor-client.js";
+import type { ProtocolSelection } from "../client/types.js";
 import type { IReadGate } from "../decision/read-gate.js";
 import {
   BareReadGate,
@@ -195,6 +196,23 @@ export class ReactorClientBuilder {
       : undefined;
   }
 
+  /** Selection reads the sync manager's agreement; without a module, none. */
+  private resolveProtocolSelection(
+    reactorModule: InProcessReactorModule | undefined,
+  ): ProtocolSelection | undefined {
+    if (!reactorModule || !this.reactorBuilder) {
+      return undefined;
+    }
+    const syncManager = reactorModule.syncModule?.syncManager;
+    return {
+      capabilities: this.reactorBuilder.getPeerCapabilities(),
+      flags: reactorModule.featureFlags,
+      agreement: syncManager ? () => syncManager.agreement() : undefined,
+      collectionsOf: (documentIds) =>
+        reactorModule.operationIndex.getCollectionsForDocuments(documentIds),
+    };
+  }
+
   public async build(): Promise<ReactorClient> {
     const module = await this.buildModule();
     return module.client;
@@ -278,6 +296,7 @@ export class ReactorClientBuilder {
         this.resolveReadGate(reactorModule, documentView, decisionModel),
       this.resolveActionEvaluation(reactorModule, decisionModel),
       this.createSignaturePolicy,
+      this.resolveProtocolSelection(reactorModule),
     );
 
     return {

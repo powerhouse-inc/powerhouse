@@ -7,9 +7,12 @@ import {
   type PeerCapability,
   type PeerManifest,
 } from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { vi } from "vitest";
 import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
+import type { ReactorClient } from "../../../src/client/reactor-client.js";
 import { ReactorBuilder } from "../../../src/core/reactor-builder.js";
+import { ReactorClientBuilder } from "../../../src/core/reactor-client-builder.js";
 import type {
   InProcessReactorModule,
   IReactor,
@@ -56,6 +59,7 @@ export const manifestFor = (versions: number[]): PeerManifest =>
 
 export type Node = {
   name: string;
+  client: ReactorClient;
   module: InProcessReactorModule;
   reactor: IReactor;
   sync: ISyncManager;
@@ -107,15 +111,25 @@ export class Fleet {
       },
     } as IChannelFactory;
 
-    const module = await new ReactorBuilder()
-      .withLogger(createMockLogger())
-      .withEventBus(new EventBus())
-      .withDocumentModelSources([driveDocumentModelModule as never])
-      .withPeerCapabilities([testProtocol(versions)])
-      .withSync(new SyncBuilder().withChannelFactory(factory))
+    const built = await new ReactorClientBuilder()
+      .withReactorBuilder(
+        new ReactorBuilder()
+          .withLogger(createMockLogger())
+          .withEventBus(new EventBus())
+          .withDocumentModelSources([
+            driveDocumentModelModule as never,
+            documentModelDocumentModelModule,
+          ])
+          .withPeerCapabilities([testProtocol(versions)])
+          .withSync(new SyncBuilder().withChannelFactory(factory)),
+      )
+      // Unsigned test writes: legacy documents.
+      .withCreateSignaturePolicy("legacy")
       .buildModule();
+    const module = built.reactorModule!;
     const node = {
       name,
+      client: built.client,
       module,
       reactor: module.reactor,
       sync: module.syncModule!.syncManager,
