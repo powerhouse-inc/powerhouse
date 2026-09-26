@@ -325,7 +325,7 @@ describe("a lost JOB_WRITE_READY", () => {
     );
   });
 
-  it.fails("P6: a membership change indexed without an event enqueues its re-evaluation", async () => {
+  it("P6: a membership change indexed without an event enqueues its re-evaluation", async () => {
     const deployment = await deploy({ authGroups: true });
     const { module, bus } = deployment;
 

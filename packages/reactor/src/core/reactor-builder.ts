@@ -65,6 +65,7 @@ import {
   type ReadModelIndexingConfig,
 } from "../read-models/base-read-model.js";
 import { ReadModelCoordinator } from "../read-models/coordinator.js";
+import type { DocumentViewDatabase } from "../read-models/types.js";
 import {
   DeletedDocumentRead,
   KyselyDocumentView,
@@ -1098,8 +1099,14 @@ export class ReactorBuilder {
         eventBus,
         queue,
         operationIndex,
+        database as unknown as Kysely<DocumentViewDatabase>,
       );
-      groupReevaluationTrigger.startup();
+      groupReevaluationTrigger.attachCatchUp(
+        settledWatermark,
+        this.catchUpConfig.maxTrackedAboveCursor,
+      );
+      await groupReevaluationTrigger.startup();
+      catchUp.addConsumer(groupReevaluationTrigger, "host");
     }
 
     const module: InProcessReactorModule = {
