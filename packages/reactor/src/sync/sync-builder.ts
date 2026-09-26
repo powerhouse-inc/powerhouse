@@ -6,13 +6,16 @@ import type { IEventBus } from "../events/interfaces.js";
 import type {
   ISyncCursorStorage,
   ISyncDeadLetterStorage,
+  ISyncHoldStorage,
   ISyncRemoteStorage,
 } from "../storage/interfaces.js";
 import { KyselySyncCursorStorage } from "../storage/kysely/sync-cursor-storage.js";
 import { KyselySyncDeadLetterStorage } from "../storage/kysely/sync-dead-letter-storage.js";
+import { KyselySyncHoldStorage } from "../storage/kysely/sync-hold-storage.js";
 import { KyselySyncRemoteStorage } from "../storage/kysely/sync-remote-storage.js";
 import type { Database } from "../storage/kysely/types.js";
 import type { IChannelFactory, ISyncManager } from "./interfaces.js";
+import type { LocalPeer } from "./types.js";
 import { SyncManager, type SyncManagerConfig } from "./sync-manager.js";
 
 export class SyncBuilder {
@@ -20,6 +23,7 @@ export class SyncBuilder {
   private remoteStorage?: ISyncRemoteStorage;
   private cursorStorage?: ISyncCursorStorage;
   private deadLetterStorage?: ISyncDeadLetterStorage;
+  private holdStorage?: ISyncHoldStorage;
   private config: Partial<SyncManagerConfig> = {};
 
   withChannelFactory(factory: IChannelFactory): this {
@@ -39,6 +43,11 @@ export class SyncBuilder {
 
   withDeadLetterStorage(storage: ISyncDeadLetterStorage): this {
     this.deadLetterStorage = storage;
+    return this;
+  }
+
+  withHoldStorage(storage: ISyncHoldStorage): this {
+    this.holdStorage = storage;
     return this;
   }
 
@@ -69,6 +78,7 @@ export class SyncBuilder {
     eventBus: IEventBus,
     db: Kysely<Database>,
     driveContainerTypes: ReadonlySet<string>,
+    localPeer?: LocalPeer,
   ): ISyncManager {
     const module = this.buildModule(
       reactor,
@@ -77,6 +87,7 @@ export class SyncBuilder {
       eventBus,
       db,
       driveContainerTypes,
+      localPeer,
     );
     return module.syncManager;
   }
@@ -88,6 +99,7 @@ export class SyncBuilder {
     eventBus: IEventBus,
     db: Kysely<Database>,
     driveContainerTypes: ReadonlySet<string>,
+    localPeer?: LocalPeer,
   ): InProcessSyncModule {
     if (!this.channelFactory) {
       throw new Error("Channel factory is required");
@@ -97,6 +109,7 @@ export class SyncBuilder {
     const cursorStorage = this.cursorStorage ?? new KyselySyncCursorStorage(db);
     const deadLetterStorage =
       this.deadLetterStorage ?? new KyselySyncDeadLetterStorage(db);
+    const holdStorage = this.holdStorage ?? new KyselySyncHoldStorage(db);
 
     const syncManager = new SyncManager(
       logger,
@@ -109,12 +122,15 @@ export class SyncBuilder {
       eventBus,
       driveContainerTypes,
       this.config,
+      localPeer,
+      holdStorage,
     );
 
     return {
       remoteStorage,
       cursorStorage,
       deadLetterStorage,
+      holdStorage,
       channelFactory: this.channelFactory,
       syncManager,
     };

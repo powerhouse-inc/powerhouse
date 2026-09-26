@@ -1,9 +1,18 @@
 import { Icon } from "#design-system";
-import type { Remote, RemoteFilter } from "@powerhousedao/reactor-browser";
+import type {
+  IPeerAgreement,
+  Remote,
+  RemoteFilter,
+  SyncHold,
+} from "@powerhousedao/reactor-browser";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { ChannelInspector } from "./components/channel-inspector.js";
 import { ConnectionStateBadge } from "./components/connection-state-badge.js";
+import {
+  PeerAgreementPanel,
+  peerManifestLabel,
+} from "./components/peer-agreement-panel.js";
 import { SortIcon } from "./components/sort-icon.js";
 import {
   type ColumnDef,
@@ -27,6 +36,9 @@ export type RemotesInspectorProps = {
   readonly addRemoteManual?: (url: string) => Promise<void>;
   readonly triggerPull?: (name: string) => void;
   readonly connectionStates?: ReadonlyMap<string, ConnectionStateSummary>;
+  /** Shows each remote's manifest, what it limits and what is held from it. */
+  readonly getAgreement?: () => IPeerAgreement;
+  readonly getHolds?: (remoteName: string) => Promise<SyncHold[]>;
 };
 
 const BASE_COLUMNS: ColumnDef[] = [
@@ -35,6 +47,7 @@ const BASE_COLUMNS: ColumnDef[] = [
   { key: "status", label: "Status", width: "120px" },
   { key: "collectionId", label: "Collection ID", width: "200px" },
   { key: "filter", label: "Filter", width: "200px" },
+  { key: "peer", label: "Peer", width: "160px" },
   { key: "channel", label: "Channel", width: "100px" },
 ];
 
@@ -104,6 +117,8 @@ export function RemotesInspector({
   addRemoteManual,
   triggerPull,
   connectionStates,
+  getAgreement,
+  getHolds,
 }: RemotesInspectorProps) {
   const [remotes, setRemotes] = useState<Remote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,6 +127,7 @@ export function RemotesInspector({
   const [manualUrl, setManualUrl] = useState("");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | undefined>();
+  const [holds, setHolds] = useState<SyncHold[]>([]);
 
   const hasRowActions = !!removeRemote || !!triggerPull;
   const columns = useMemo(
@@ -131,6 +147,21 @@ export function RemotesInspector({
     void loadRemotes();
   }, [loadRemotes]);
 
+  useEffect(() => {
+    if (!selectedRemote || !getHolds) return;
+    let current = true;
+    void getHolds(selectedRemote.meta.name)
+      .then((loaded) => {
+        if (current) setHolds(loaded);
+      })
+      .catch(() => {
+        if (current) setHolds([]);
+      });
+    return () => {
+      current = false;
+    };
+  }, [selectedRemote, getHolds]);
+
   const handleRefresh = useCallback(async () => {
     await loadRemotes();
     if (selectedRemote) {
@@ -143,7 +174,8 @@ export function RemotesInspector({
     if (
       columnKey === "channel" ||
       columnKey === "actions" ||
-      columnKey === "status"
+      columnKey === "status" ||
+      columnKey === "peer"
     )
       return;
 
@@ -198,14 +230,32 @@ export function RemotesInspector({
   );
 
   if (selectedRemote) {
+    let agreement: IPeerAgreement | undefined;
+    try {
+      agreement = getAgreement?.();
+    } catch {
+      // Not yet available, e.g. before the worker has answered.
+      agreement = undefined;
+    }
     return (
-      <ChannelInspector
-        channel={selectedRemote.channel}
-        connectionState={connectionStates?.get(selectedRemote.meta.name)}
-        onBack={handleBack}
-        onRefresh={() => void handleRefresh()}
-        remoteName={selectedRemote.meta.name}
-      />
+      <div className="flex h-full flex-col gap-2 overflow-auto">
+        {agreement && (
+          <PeerAgreementPanel
+            agreement={agreement}
+            collectionId={selectedRemote.meta.collectionId.key}
+            holds={holds}
+            peer={selectedRemote.meta.peer}
+            remoteName={selectedRemote.meta.name}
+          />
+        )}
+        <ChannelInspector
+          channel={selectedRemote.channel}
+          connectionState={connectionStates?.get(selectedRemote.meta.name)}
+          onBack={handleBack}
+          onRefresh={() => void handleRefresh()}
+          remoteName={selectedRemote.meta.name}
+        />
+      </div>
     );
   }
 
@@ -269,7 +319,8 @@ export function RemotesInspector({
                 const isSortable =
                   column.key !== "channel" &&
                   column.key !== "actions" &&
-                  column.key !== "status";
+                  column.key !== "status" &&
+                  column.key !== "peer";
 
                 return (
                   <th
@@ -354,6 +405,11 @@ export function RemotesInspector({
                       title={formatFilter(remote.meta.filter)}
                     >
                       {formatFilter(remote.meta.filter)}
+                    </span>
+                  </td>
+                  <td className="border-l border-border px-3 py-2 text-xs text-foreground">
+                    <span className="block truncate">
+                      {peerManifestLabel(remote.meta.peer)}
                     </span>
                   </td>
                   <td className="border-l border-border px-3 py-2">

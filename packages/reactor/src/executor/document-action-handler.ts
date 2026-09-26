@@ -1,5 +1,6 @@
 import type {
   CreateDocumentAction,
+  CreateDocumentActionInput,
   DeleteDocumentActionInput,
   Operation,
   PHDocument,
@@ -53,6 +54,7 @@ import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   DocumentDeletedError,
   DocumentNotFoundError,
+  UnsupportedProtocolVersionError,
   UpgradePreconditionFailedError,
 } from "../shared/errors.js";
 import { AppendConditionFailedError } from "../storage/interfaces.js";
@@ -61,6 +63,7 @@ import type {
   ExecutingJob,
   JobResult,
   PendingWrite,
+  ProtocolSupport,
   ReactorFeatureFlags,
 } from "./types.js";
 import type { RegisteredDecisionModel } from "../decision/registered-model.js";
@@ -81,13 +84,49 @@ import {
 import { SnapshotPosition } from "../cache/write-cache-types.js";
 
 export class DocumentActionHandler {
+  private readonly loggedUnregisteredProtocols = new Set<string>();
+
   constructor(
     private registry: IDocumentModelRegistry,
     private logger: ILogger,
     private driveContainerTypes: ReadonlySet<string>,
     private featureFlags: ReactorFeatureFlags,
     private decisionModel: RegisteredDecisionModel,
+    private protocolSupport: ProtocolSupport,
   ) {}
+
+  /** Keys this reactor does not register are admitted: it cannot judge them. */
+  private unsupportedProtocol(
+    input: CreateDocumentActionInput,
+  ): UnsupportedProtocolVersionError | undefined {
+    for (const [protocol, version] of Object.entries(
+      input.protocolVersions ?? {},
+    )) {
+      const supported = this.protocolSupport[protocol] as
+        | readonly number[]
+        | undefined;
+      if (supported === undefined) {
+        if (!this.loggedUnregisteredProtocols.has(protocol)) {
+          this.loggedUnregisteredProtocols.add(protocol);
+          this.logger.info(
+            "Admitting document @documentId with unregistered protocol @protocol @version",
+            input.documentId,
+            protocol,
+            version,
+          );
+        }
+        continue;
+      }
+      if (!supported.includes(version)) {
+        return new UnsupportedProtocolVersionError(
+          input.documentId,
+          protocol,
+          version,
+        );
+      }
+    }
+    return undefined;
+  }
 
   /** Whether the write arrives with its evaluation already decided. */
   private alreadyEvaluated(executing: ExecutingJob): boolean {
@@ -350,6 +389,13 @@ export class DocumentActionHandler {
         ),
         duration: Date.now() - startTime,
       };
+    }
+
+    const unsupported = this.unsupportedProtocol(
+      action.input as CreateDocumentActionInput,
+    );
+    if (unsupported) {
+      return buildErrorResult(job, unsupported, startTime);
     }
 
     const document = createDocumentFromAction(action as CreateDocumentAction);

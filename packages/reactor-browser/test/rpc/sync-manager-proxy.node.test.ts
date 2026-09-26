@@ -108,6 +108,47 @@ describe("createSyncManagerProxy", () => {
     expect(remote.channel.getConnectionState().state).toBe("connected");
   });
 
+  it("serves the worker's manifest and each remote's peer record", async () => {
+    const { transport, posted, deliver } = createFakeTransport();
+    const router = new MessageRouter();
+    router.attach(transport);
+    const manager = createSyncManagerProxy(
+      router,
+      createReactorEventBusProxy(router),
+    );
+    const manifest = {
+      format: 1,
+      revision: "r-local",
+      protocols: { "base-reducer": [1, 2] },
+      features: {},
+    };
+    const basis = {
+      local: manifest,
+      legacy: { protocols: { "base-reducer": [1, 2] }, features: {} },
+      wanted: { "base-reducer": 2 },
+    };
+    const peer = { manifest: null, receivedAtUtcMs: 5 };
+
+    expect(() => manager.localManifest()).toThrow();
+    deliver({
+      k: "res",
+      id: lastSyncOp(posted, "peerAgreementBasis").id,
+      value: basis,
+    });
+    const remote = wireRemote("r1", "remote-a", "drive-1", "connected");
+    deliver({
+      k: "res",
+      id: lastSyncOp(posted, "list").id,
+      value: [{ ...remote, meta: { ...remote.meta, peer } }],
+    });
+
+    await vi.waitFor(() => expect(manager.list()).toHaveLength(1));
+    expect(manager.localManifest()).toEqual(manifest);
+    expect(manager.list()[0].meta.peer).toEqual(peer);
+    // A silent peer gets the baselines, from the cached remotes alone.
+    expect(manager.agreement().peer("remote-a")).toEqual(basis.legacy);
+  });
+
   it("updates connection state from CONNECTION_STATE_CHANGED bus events", async () => {
     const { transport, posted, deliver } = createFakeTransport();
     const router = new MessageRouter();

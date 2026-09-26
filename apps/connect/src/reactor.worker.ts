@@ -25,6 +25,7 @@ import {
 } from "@powerhousedao/reactor-browser/rpc";
 import type {
   DocumentModelModule,
+  PeerManifest,
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -445,6 +446,18 @@ const host = new ReactorHost({
       case "bindRemote":
         await syncManager.bindRemote(args[0] as string, args[1] as string);
         return undefined;
+      case "setPeerManifest":
+        await syncManager.setPeerManifest(
+          args[0] as string,
+          args[1] as PeerManifest | null,
+        );
+        return undefined;
+      case "peerAgreementBasis":
+        return syncManager.agreement().basis();
+      case "listHolds":
+        return syncManager.listHolds(
+          args[0] as { remoteName?: string; documentId?: string } | undefined,
+        );
       case "remove":
         await syncManager.remove(args[0] as string);
         return undefined;

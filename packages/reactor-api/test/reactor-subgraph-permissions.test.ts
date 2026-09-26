@@ -86,7 +86,11 @@ describe("ReactorSubgraph Permission Checks", () => {
           size: () => 0,
         },
       } as any,
-      syncManager: syncManager as ISyncManager,
+      syncManager: {
+        localManifest: () => ({ revision: "server" }),
+        setPeerManifest: () => Promise.resolve(),
+        ...syncManager,
+      } as ISyncManager,
     } as SubgraphArgs);
 
   beforeEach(() => {
@@ -950,7 +954,11 @@ describe("ReactorSubgraph Permission Checks", () => {
 
       const result = await callTouchChannel(subgraph, ctx, ["doc-1", "doc-2"]);
 
-      expect(result).toEqual({ success: true, ackOrdinal: 0 });
+      expect(result).toEqual({
+        success: true,
+        ackOrdinal: 0,
+        manifest: { revision: "server" },
+      });
       expect(mockAuthorizationService.canRead).toHaveBeenCalledWith(
         "drive-1",
         "0xpermitted",
@@ -969,7 +977,11 @@ describe("ReactorSubgraph Permission Checks", () => {
 
       const result = await callTouchChannel(subgraph, ctx);
 
-      expect(result).toEqual({ success: true, ackOrdinal: 0 });
+      expect(result).toEqual({
+        success: true,
+        ackOrdinal: 0,
+        manifest: { revision: "server" },
+      });
       expect(mockAuthorizationService.canRead).not.toHaveBeenCalled();
       expect(syncManager.add).toHaveBeenCalledOnce();
     });
@@ -1025,6 +1037,7 @@ describe("ReactorSubgraph Permission Checks", () => {
           expect.anything(),
           expect.objectContaining({ boundAddress: "0xcreator" }),
           "channel-1",
+          null,
         );
       });
 
@@ -1046,6 +1059,7 @@ describe("ReactorSubgraph Permission Checks", () => {
           expect.anything(),
           expect.objectContaining({ boundAddress: undefined }),
           "channel-1",
+          null,
         );
       });
 
@@ -1097,6 +1111,7 @@ describe("ReactorSubgraph Permission Checks", () => {
           expect.anything(),
           expect.objectContaining({ boundAddress: undefined }),
           "channel-1",
+          null,
         );
       });
     });

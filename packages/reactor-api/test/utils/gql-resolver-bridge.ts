@@ -165,6 +165,8 @@ export function createResolverBridge(
           envelopes: normalizedEnvelopes,
           ackOrdinal: result.ackOrdinal,
           hasMore: result.hasMore,
+          manifestRevision: result.manifestRevision,
+          peerManifestRevision: result.peerManifestRevision,
         },
       });
     }
@@ -220,6 +222,7 @@ export function createResolverBridge(
             branch: string;
           };
           sinceTimestampUtcMs: string;
+          manifest?: unknown;
         };
       };
 

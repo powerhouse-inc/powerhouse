@@ -20,6 +20,7 @@ export type {
   Database,
   IChannel,
   IDocumentModelLoader,
+  IPeerAgreement,
   IProcessor,
   IProcessorHostModuleBase,
   IQueue,
@@ -38,8 +39,10 @@ export type {
   Remote,
   RemoteFilter,
   RemoteMeta,
+  RemotePeer,
   SignerConfig,
   SnapshotValidationIssue,
+  SyncHold,
   SyncOperation,
   ValidationResult,
 } from "@powerhousedao/reactor";

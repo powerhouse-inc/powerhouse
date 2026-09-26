@@ -27,6 +27,8 @@ import {
   type CreateDocumentActionInput,
   type ISigner,
   type PHDocument,
+  type PHDocumentHeader,
+  type ProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import {
@@ -50,6 +52,19 @@ import type { IDriveClient, IReactorClient } from "./types.js";
  * for batch execution. The back-reference is captured but never invoked
  * during construction, so the partial-`this` hazard does not apply.
  */
+/** A copy keeps its source's versions; selection fills only the keys it lacks. */
+function withSelectedVersions(
+  header: PHDocumentHeader,
+  selected: ProtocolVersions,
+): Pick<PHDocumentHeader, "documentType" | "protocolVersions"> {
+  return {
+    documentType: header.documentType,
+    protocolVersions: header.protocolVersions
+      ? { ...selected, ...header.protocolVersions }
+      : undefined,
+  };
+}
+
 export class DriveClient implements IDriveClient {
   constructor(
     private readonly client: IReactorClient,
@@ -75,7 +90,12 @@ export class DriveClient implements IDriveClient {
         input,
         await this.client.getCreateSignaturePolicy(),
       ),
-      { protocolVersions: input.protocolVersions },
+      {
+        protocolVersions: {
+          ...(await this.client.getCreateProtocolVersions(undefined, signal)),
+          ...input.protocolVersions,
+        },
+      },
     );
     if (input.preferredEditor) {
       driveDoc.header.meta = {
@@ -404,6 +424,10 @@ export class DriveClient implements IDriveClient {
     }
 
     const policy = await this.client.getCreateSignaturePolicy();
+    const base = await this.client.getCreateProtocolVersions(
+      drive.header.id,
+      signal,
+    );
     for (const entry of copyPlan) {
       const node = drive.state.global.nodes.find((n) => n.id === entry.srcId);
       if (!node || !isFileNode(node)) continue;
@@ -415,7 +439,11 @@ export class DriveClient implements IDriveClient {
       // already current.
       const duplicated: PHDocument = {
         ...srcDoc,
-        header: createCopyHeader(srcDoc.header, entry.targetId, policy),
+        header: createCopyHeader(
+          withSelectedVersions(srcDoc.header, base),
+          entry.targetId,
+          policy,
+        ),
         initialState: srcDoc.state,
         operations: {},
       };

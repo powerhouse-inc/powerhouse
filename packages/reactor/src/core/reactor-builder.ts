@@ -1,6 +1,12 @@
 import type {
   ISigner,
+  PeerCapability,
   UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
+import {
+  localSupports,
+  mergePeerCapabilities,
+  PEER_CAPABILITIES,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
@@ -101,7 +107,7 @@ import { GroupReevaluationTrigger } from "./group-reevaluation-trigger.js";
 import { GqlRequestChannelFactory } from "../sync/channels/gql-request-channel-factory.js";
 import { GqlResponseChannelFactory } from "../sync/channels/gql-response-channel-factory.js";
 import { SyncBuilder } from "../sync/sync-builder.js";
-import type { JwtHandler } from "../sync/types.js";
+import type { JwtHandler, LocalPeer } from "../sync/types.js";
 import { ChannelScheme } from "../sync/types.js";
 import { createDefaultDatabase } from "./create-default-database.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
@@ -313,6 +319,7 @@ export class ReactorBuilder {
   private projectionShardConfig?: ProjectionShardBuilderConfig;
   private projectionWorkerFactory?: ProjectionWorkerFactory;
   private instrumentedPools: PoolInstrumentation[] = [];
+  private extraPeerCapabilities: PeerCapability[] = [];
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -329,6 +336,20 @@ export class ReactorBuilder {
   withDocumentModelSources(sources: DocumentModelSource[]): this {
     this.documentModelSources.push(...sources);
     return this;
+  }
+
+  /** Capabilities beyond the registry, for tests and hosts that ship their own. */
+  withPeerCapabilities(extra: readonly PeerCapability[]): this {
+    this.extraPeerCapabilities = mergePeerCapabilities(
+      this.extraPeerCapabilities,
+      extra,
+    );
+    return this;
+  }
+
+  /** The registry plus any capabilities added with withPeerCapabilities. */
+  getPeerCapabilities(): readonly PeerCapability[] {
+    return mergePeerCapabilities(PEER_CAPABILITIES, this.extraPeerCapabilities);
   }
 
   withUpgradeManifests(manifests: UpgradeManifest<readonly number[]>[]): this {
@@ -553,6 +574,13 @@ export class ReactorBuilder {
     }
 
     const featureFlags = resolveFeatureFlags(this.executorConfig.featureFlags);
+    if (this.executorConfig.protocolSupport === undefined) {
+      this.executorConfig = {
+        ...this.executorConfig,
+        protocolSupport: localSupports(this.getPeerCapabilities(), featureFlags)
+          .protocols,
+      };
+    }
 
     if (
       this.readModelCoordinator !== undefined &&
@@ -992,6 +1020,22 @@ export class ReactorBuilder {
       executorManager,
     );
 
+    const localPeer: LocalPeer = {
+      capabilities: this.getPeerCapabilities(),
+      flags: featureFlags,
+      appKey: this.signer?.app?.key,
+      protocolVersionsOf: async (documentId, branch) => {
+        try {
+          const meta = await documentMetaCache.getDocumentMeta(
+            documentId,
+            branch,
+          );
+          return meta.protocolVersions;
+        } catch {
+          return undefined;
+        }
+      },
+    };
     let syncModule: InProcessSyncModule | undefined = undefined;
     if (this.channelScheme) {
       const factory =
@@ -1007,6 +1051,7 @@ export class ReactorBuilder {
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
         this.driveContainerTypes,
+        localPeer,
       );
       await syncModule.syncManager.startup();
     } else if (this.syncBuilder) {
@@ -1017,6 +1062,7 @@ export class ReactorBuilder {
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
         this.driveContainerTypes,
+        localPeer,
       );
       await syncModule.syncManager.startup();
     }

@@ -9,9 +9,22 @@ import type {
   AuthSubject,
   DocumentModelModule,
   Operation,
+  PeerCapability,
+  PeerCapabilityFlags,
   PHDocument,
+  ProtocolVersions,
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
+import type { IPeerAgreement } from "../sync/peer-agreement.js";
+
+/** What creation selects protocol versions from. */
+export type ProtocolSelection = {
+  capabilities: readonly PeerCapability[];
+  flags: PeerCapabilityFlags;
+  /** Absent without sync: no members, so the local preference. */
+  agreement?: () => IPeerAgreement;
+  collectionsOf: (documentIds: string[]) => Promise<Record<string, string[]>>;
+};
 
 import type {
   BatchExecutionRequest,
@@ -482,6 +495,16 @@ export interface IReactorClient {
    * caller does not choose one. It never changes an existing document.
    */
   getCreateSignaturePolicy(): Promise<SignaturePolicy>;
+
+  /**
+   * protocolVersions for a new document under `parentIdentifier`, before the
+   * signature policy: what this reactor and the direct peers of the parent's
+   * collections agree on. Without a parent, the local preference.
+   */
+  getCreateProtocolVersions(
+    parentIdentifier?: string,
+    signal?: AbortSignal,
+  ): Promise<ProtocolVersions>;
 
   /**
    * Creates a document and waits for completion. The document keeps the

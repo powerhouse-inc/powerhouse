@@ -25,9 +25,13 @@ import type {
   AuthSubject,
   DocumentModelModule,
   Operation,
+  PeerManifest,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { withSignaturePolicy } from "@powerhousedao/shared/document-model";
+import {
+  readPeerManifest,
+  withSignaturePolicy,
+} from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 
 import { AuthEvaluationUnsupportedError } from "../errors.js";
@@ -1427,19 +1431,31 @@ export async function touchChannel(
         branch: string;
       };
       sinceTimestampUtcMs: string;
+      manifest?: unknown;
     };
   },
   boundAddress?: string,
-): Promise<{ success: boolean; ackOrdinal: number }> {
-  try {
-    const remote = syncManager.getById(args.input.id);
+): Promise<{
+  success: boolean;
+  ackOrdinal: number;
+  manifest: PeerManifest;
+}> {
+  // A touch without a manifest is a client without the feature: silent.
+  const peer = readPeerManifest(args.input.manifest);
 
-    return {
-      success: true,
-      ackOrdinal: remote.channel.inbox.ackOrdinal,
-    };
+  let existing;
+  try {
+    existing = syncManager.getById(args.input.id);
   } catch {
     // getById will throw if the remote does not exist
+  }
+  if (existing) {
+    await syncManager.setPeerManifest(args.input.id, peer);
+    return {
+      success: true,
+      ackOrdinal: existing.channel.inbox.ackOrdinal,
+      manifest: syncManager.localManifest(),
+    };
   }
 
   const filter: RemoteFilter = {
@@ -1464,6 +1480,7 @@ export async function touchChannel(
       filter,
       options,
       args.input.id,
+      peer,
     );
   } catch (error) {
     throw new GraphQLError(
@@ -1471,7 +1488,50 @@ export async function touchChannel(
     );
   }
 
-  return { success: true, ackOrdinal: 0 };
+  return {
+    success: true,
+    ackOrdinal: 0,
+    manifest: syncManager.localManifest(),
+  };
+}
+
+export async function syncHolds(
+  syncManager: ISyncManager,
+  args: { remoteName?: string | null; documentId?: string | null },
+) {
+  const holds = await syncManager.listHolds({
+    remoteName: args.remoteName ?? undefined,
+    documentId: args.documentId ?? undefined,
+  });
+  return holds.map((hold) => ({
+    ...hold,
+    reason: { ...hold.reason, peerSupports: [...hold.reason.peerSupports] },
+    heldAtUtcMs: String(hold.heldAtUtcMs),
+  }));
+}
+
+export function peerAgreement(
+  syncManager: ISyncManager,
+  args: { collectionId: string },
+) {
+  const agreement = syncManager.agreement();
+  const members = [...agreement.members([args.collectionId])].map(
+    ([remoteName, supports]) => ({
+      remoteName,
+      announced: "revision" in supports,
+      protocols: supports.protocols,
+      features: supports.features,
+    }),
+  );
+  return {
+    collectionId: args.collectionId,
+    local: agreement.local(),
+    members,
+    limitedBy: Object.keys(agreement.basis().wanted).map((protocol) => ({
+      protocol,
+      remoteNames: agreement.limitedBy(args.collectionId, protocol),
+    })),
+  };
 }
 
 /**
@@ -1565,6 +1625,8 @@ export function pollSyncEnvelopes(
     operationCount: number;
   }>;
   hasMore: boolean;
+  manifestRevision: string;
+  peerManifestRevision: string | null;
 } {
   // The gate ran against a snapshot taken before its first await, so an entry
   // the outbox gained while it was deciding carries no verdict. Serving one
@@ -1588,6 +1650,11 @@ export function pollSyncEnvelopes(
   // here is an authorized poll: the only evidence the switchboard has that this
   // channel still has a holder.
   remote.channel.notePoll();
+
+  const revisions = {
+    manifestRevision: syncManager.localManifest().revision,
+    peerManifestRevision: remote.meta.peer?.manifest?.revision ?? null,
+  };
 
   // Dead-letter items can originate from failed inbox jobs whose documentId is
   // outside this channel's collection, so they are filtered by the caller's read
@@ -1657,6 +1724,7 @@ export function pollSyncEnvelopes(
       ackOrdinal: remote.channel.inbox.ackOrdinal,
       deadLetters,
       hasMore: false,
+      ...revisions,
     };
   }
 
@@ -1794,6 +1862,7 @@ export function pollSyncEnvelopes(
     ackOrdinal: remote.channel.inbox.ackOrdinal,
     deadLetters,
     hasMore,
+    ...revisions,
   };
 }
 

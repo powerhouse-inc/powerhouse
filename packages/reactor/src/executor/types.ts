@@ -212,7 +212,13 @@ export type JobExecutorConfig = {
 
   /** Defaults to `enforce`; `log` counts refusals and admits the write. */
   signatureVerification?: SignatureVerificationMode;
+
+  /** Versions run per registered protocol; defaults to the registry's. */
+  protocolSupport?: ProtocolSupport;
 };
+
+/** Cloneable, so a pooled worker refuses exactly what the host refuses. */
+export type ProtocolSupport = { [protocol: string]: readonly number[] };
 
 /**
  * Event types for the job executor

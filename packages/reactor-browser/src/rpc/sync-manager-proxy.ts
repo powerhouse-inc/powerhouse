@@ -1,4 +1,6 @@
+import type { PeerManifest } from "@powerhousedao/shared/document-model";
 import {
+  createPeerAgreement,
   DriveCollectionId,
   SyncEventTypes,
   type ChannelConfig,
@@ -8,12 +10,16 @@ import {
   type IChannel,
   type IEventBus,
   type IMailbox,
+  type IPeerAgreement,
+  type PeerAgreementBasis,
   type ISyncManager,
   type Remote,
   type RemoteFilter,
   type RemoteMeta,
   type RemoteOptions,
+  type RemotePeer,
   type ShutdownStatus,
+  type SyncHold,
   type SyncOperation,
   type SyncStatus,
   type SyncStatusChangeCallback,
@@ -42,6 +48,7 @@ type WireRemoteMeta = {
   channelConfig: ChannelConfig;
   filter: RemoteFilter;
   options: RemoteOptions;
+  peer?: RemotePeer;
 };
 type WireRemote = {
   meta: WireRemoteMeta;
@@ -100,6 +107,7 @@ function rehydrateMeta(wire: WireRemoteMeta): RemoteMeta {
     channelConfig: wire.channelConfig,
     filter: wire.filter,
     options: wire.options,
+    peer: wire.peer,
   };
 }
 
@@ -119,6 +127,7 @@ export class SyncManagerProxy implements ISyncManager {
   private readonly syncStatuses = new Map<string, SyncStatus>();
   private readonly syncStatusListeners = new Listeners<[string, SyncStatus]>();
   private remotes: Remote[] = [];
+  private basis: PeerAgreementBasis | undefined;
   private seedPromise: Promise<void> | null = null;
 
   constructor(router: MessageRouter, busProxy: IEventBus) {
@@ -198,6 +207,42 @@ export class SyncManagerProxy implements ISyncManager {
     return this.getByName(name);
   }
 
+  async setPeerManifest(
+    id: string,
+    manifest: PeerManifest | null,
+  ): Promise<void> {
+    await this.callSyncOp("setPeerManifest", [id, manifest]);
+    await this.refreshRemotes();
+  }
+
+  /** Fetched once; the worker's flags do not change at runtime. */
+  localManifest(): PeerManifest {
+    return this.agreementBasis().local;
+  }
+
+  async listHolds(filter?: {
+    remoteName?: string;
+    documentId?: string;
+  }): Promise<SyncHold[]> {
+    return (await this.callSyncOp("listHolds", [filter])) as SyncHold[];
+  }
+
+  agreement(): IPeerAgreement {
+    return createPeerAgreement(
+      this.agreementBasis(),
+      this.remotes.map((remote) => remote.meta),
+    );
+  }
+
+  private agreementBasis(): PeerAgreementBasis {
+    if (!this.basis) {
+      throw new Error(
+        "Peer agreement has not been fetched from the worker yet",
+      );
+    }
+    return this.basis;
+  }
+
   async bindRemote(id: string, boundAddress: string): Promise<void> {
     await this.callSyncOp("bindRemote", [id, boundAddress]);
     await this.refreshRemotes();
@@ -269,6 +314,8 @@ export class SyncManagerProxy implements ISyncManager {
       },
       notePoll: () => {},
       lastHolderPollUtcMs: () => undefined,
+      setLocalManifest: () => {},
+      onPeerManifest: () => () => {},
       config: { url },
     };
     return channel;
@@ -295,6 +342,13 @@ export class SyncManagerProxy implements ISyncManager {
 
   // Shared in-flight seed so the eager kick-off and startup() share one list RPC.
   private ensureSeeded(): Promise<void> {
+    if (!this.basis) {
+      this.callSyncOp("peerAgreementBasis", [])
+        .then((basis) => {
+          this.basis = basis as PeerAgreementBasis;
+        })
+        .catch(() => {});
+    }
     if (!this.seedPromise) {
       const pending = this.refreshRemotes();
       this.seedPromise = pending;

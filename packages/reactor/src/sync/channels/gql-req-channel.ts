@@ -1,3 +1,7 @@
+import {
+  readPeerManifest,
+  type PeerManifest,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type {
   DriveCollectionId,
@@ -62,20 +66,31 @@ export type GqlChannelConfig = {
  */
 const DECISION_FIELDS = ["deniedReason", "errorType"] as const;
 
+/** Fields peer agreement added; a remote without them is a silent peer. */
+const AGREEMENT_FIELDS = [
+  "manifest",
+  "manifestRevision",
+  "peerManifestRevision",
+] as const;
+
+type DeadLetterWire = {
+  documentId: string;
+  error: string;
+  errorType?: string | null;
+  jobId: string;
+  branch: string;
+  scopes: string[];
+  operationCount: number;
+};
+
 type PollSyncEnvelopesResult = {
   pollSyncEnvelopes: {
     envelopes: SyncEnvelope[];
     ackOrdinal: number;
-    deadLetters?: Array<{
-      documentId: string;
-      error: string;
-      errorType?: string | null;
-      jobId: string;
-      branch: string;
-      scopes: string[];
-      operationCount: number;
-    }>;
+    deadLetters?: DeadLetterWire[];
     hasMore: boolean;
+    manifestRevision?: string | null;
+    peerManifestRevision?: string | null;
   };
 };
 
@@ -109,6 +124,15 @@ export class GqlRequestChannel implements IChannel {
   private receivingPages: boolean = false;
   /** Cleared for good the first time the remote rejects {@link DECISION_FIELDS}. */
   private peerServesDecisionFields: boolean = true;
+  /** Cleared for good the first time the remote rejects {@link AGREEMENT_FIELDS}. */
+  private peerServesAgreement: boolean = true;
+  private localManifestProvider?: () => PeerManifest;
+  /** Undefined until the first handshake; null for a silent peer. */
+  private peerManifest: PeerManifest | null | undefined = undefined;
+  private readonly peerManifestCallbacks = new Set<
+    (manifest: PeerManifest | null) => void
+  >();
+  private manifestRefresh: Promise<void> | undefined;
   private isRecovering: boolean = false;
   private connectionState: ConnectionState = "connecting";
   /** Latest unrecoverable error was an auth rejection; cleared on connect. */
@@ -270,6 +294,72 @@ export class GqlRequestChannel implements IChannel {
     return undefined;
   }
 
+  setLocalManifest(provider: () => PeerManifest): void {
+    this.localManifestProvider = provider;
+  }
+
+  onPeerManifest(
+    callback: (manifest: PeerManifest | null) => void,
+  ): () => void {
+    this.peerManifestCallbacks.add(callback);
+    return () => {
+      this.peerManifestCallbacks.delete(callback);
+    };
+  }
+
+  private hearPeer(manifest: PeerManifest | null): void {
+    if (
+      this.peerManifest !== undefined &&
+      (this.peerManifest?.revision ?? null) === (manifest?.revision ?? null)
+    ) {
+      return;
+    }
+    this.peerManifest = manifest;
+    for (const callback of this.peerManifestCallbacks) {
+      try {
+        callback(manifest);
+      } catch (error) {
+        this.logger.error("Peer manifest callback error: @Error", error);
+      }
+    }
+  }
+
+  /** Re-touches once when either side's manifest moved; touching is idempotent. */
+  private refreshManifestsIfStale(
+    manifestRevision: string | null | undefined,
+    peerManifestRevision: string | null | undefined,
+  ): void {
+    if (!this.peerServesAgreement || typeof manifestRevision !== "string") {
+      return;
+    }
+    const local = this.localManifestProvider?.().revision ?? null;
+    if (
+      manifestRevision === (this.peerManifest?.revision ?? null) &&
+      (peerManifestRevision ?? null) === local
+    ) {
+      return;
+    }
+    if (this.manifestRefresh || this.isShutdown) {
+      return;
+    }
+    this.manifestRefresh = this.touchRemoteChannel()
+      .then(({ ackOrdinal }) => {
+        if (ackOrdinal > 0) {
+          trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
+        }
+      })
+      .catch((error: unknown) => {
+        this.logger.error(
+          "GqlChannel @ChannelId manifest refresh failed: @Error",
+          this.channelId,
+          error,
+        );
+      })
+      .finally(() => {
+        this.manifestRefresh = undefined;
+      });
+  }
+
   /**
    * Initializes the channel by registering it on the remote server and starting polling.
    */
@@ -334,7 +424,14 @@ export class GqlRequestChannel implements IChannel {
       return;
     }
 
-    const { envelopes, ackOrdinal, deadLetters, hasMore } = response;
+    const {
+      envelopes,
+      ackOrdinal,
+      deadLetters,
+      hasMore,
+      manifestRevision,
+      peerManifestRevision,
+    } = response;
 
     // first: trim outbox
     if (ackOrdinal > 0) {
@@ -379,23 +476,15 @@ export class GqlRequestChannel implements IChannel {
     this.lastSuccessUtcMs = Date.now();
     this.failureCount = 0;
     this.transitionConnectionState("connected");
+
+    this.refreshManifestsIfStale(manifestRevision, peerManifestRevision);
   }
 
   /**
    * Handles dead letters reported by the remote server.
    * Creates local dead letter SyncOperations so the channel quiesces.
    */
-  private handleRemoteDeadLetters(
-    deadLetters: Array<{
-      documentId: string;
-      error: string;
-      errorType?: string | null;
-      jobId: string;
-      branch: string;
-      scopes: string[];
-      operationCount: number;
-    }>,
-  ): void {
+  private handleRemoteDeadLetters(deadLetters: DeadLetterWire[]): void {
     for (const dl of deadLetters) {
       this.logger.error(
         "Remote dead letter on @ChannelId: document @DocumentId failed with: @Error",
@@ -578,16 +667,10 @@ export class GqlRequestChannel implements IChannel {
   ): Promise<{
     envelopes: SyncEnvelope[];
     ackOrdinal: number;
-    deadLetters: Array<{
-      documentId: string;
-      error: string;
-      errorType?: string | null;
-      jobId: string;
-      branch: string;
-      scopes: string[];
-      operationCount: number;
-    }>;
+    deadLetters: DeadLetterWire[];
     hasMore: boolean;
+    manifestRevision?: string | null;
+    peerManifestRevision?: string | null;
   }> {
     const variables = {
       channelId: this.channelId,
@@ -595,25 +678,32 @@ export class GqlRequestChannel implements IChannel {
       outboxLatest: latestOrdinal,
     };
 
+    // Each flag only ever clears, so this settles within three attempts.
     let response: PollSyncEnvelopesResult;
-    try {
-      response = await this.executeGraphQL<PollSyncEnvelopesResult>(
-        this.pollQuery(this.peerServesDecisionFields),
-        variables,
-      );
-    } catch (error) {
-      if (!this.rejectsDecisionFields(error)) {
-        throw error;
+    for (;;) {
+      try {
+        response = await this.executeGraphQL<PollSyncEnvelopesResult>(
+          this.pollQuery(
+            this.peerServesDecisionFields,
+            this.peerServesAgreement,
+          ),
+          variables,
+        );
+        break;
+      } catch (error) {
+        if (this.rejectsAgreementFields(error)) {
+          this.stopAgreement();
+          continue;
+        }
+        if (!this.rejectsDecisionFields(error)) {
+          throw error;
+        }
+        this.logger.warn(
+          "Remote @channelId does not serve deniedReason/errorType; polling without them. The remote is on an older schema, so it has neither to report.",
+          this.channelId,
+        );
+        this.peerServesDecisionFields = false;
       }
-      this.logger.warn(
-        "Remote @channelId does not serve deniedReason/errorType; polling without them. The remote is on an older schema, so it has neither to report.",
-        this.channelId,
-      );
-      this.peerServesDecisionFields = false;
-      response = await this.executeGraphQL<PollSyncEnvelopesResult>(
-        this.pollQuery(false),
-        variables,
-      );
     }
 
     return {
@@ -621,7 +711,31 @@ export class GqlRequestChannel implements IChannel {
       ackOrdinal: response.pollSyncEnvelopes.ackOrdinal,
       deadLetters: response.pollSyncEnvelopes.deadLetters ?? [],
       hasMore: response.pollSyncEnvelopes.hasMore,
+      manifestRevision: response.pollSyncEnvelopes.manifestRevision,
+      peerManifestRevision: response.pollSyncEnvelopes.peerManifestRevision,
     };
+  }
+
+  private rejectsAgreementFields(error: unknown): boolean {
+    if (!this.peerServesAgreement) {
+      return false;
+    }
+    if (
+      !(error instanceof GraphQLRequestError) ||
+      error.category !== "graphql"
+    ) {
+      return false;
+    }
+    return AGREEMENT_FIELDS.some((field) => error.message.includes(field));
+  }
+
+  private stopAgreement(): void {
+    this.logger.warn(
+      "Remote @channelId does not serve peer manifests; treating it as a silent peer.",
+      this.channelId,
+    );
+    this.peerServesAgreement = false;
+    this.hearPeer(null);
   }
 
   /**
@@ -647,9 +761,15 @@ export class GqlRequestChannel implements IChannel {
    * The poll query. `withDecisionFields` selects the two fields added with the
    * auth projection; a remote on the previous schema is polled without them.
    */
-  private pollQuery(withDecisionFields: boolean): string {
+  private pollQuery(
+    withDecisionFields: boolean,
+    withAgreementFields: boolean,
+  ): string {
     const deniedReason = withDecisionFields ? "deniedReason" : "";
     const errorType = withDecisionFields ? "errorType" : "";
+    const revisions = withAgreementFields
+      ? "manifestRevision\n          peerManifestRevision"
+      : "";
 
     return `
       query PollSyncEnvelopes($channelId: String!, $outboxAck: Int!, $outboxLatest: Int!) {
@@ -717,6 +837,7 @@ export class GqlRequestChannel implements IChannel {
             operationCount
           }
           hasMore
+          ${revisions}
         }
       }
     `;
@@ -739,32 +860,53 @@ export class GqlRequestChannel implements IChannel {
       // If query fails, use default "0" (sends all operations)
     }
 
-    const mutation = `
+    const touch = (withAgreement: boolean) => {
+      const manifest = withAgreement
+        ? this.localManifestProvider?.()
+        : undefined;
+      return this.executeGraphQL<{
+        touchChannel: {
+          success: boolean;
+          ackOrdinal: number;
+          manifest?: unknown;
+        };
+      }>(
+        `
       mutation TouchChannel($input: TouchChannelInput!) {
         touchChannel(input: $input) {
           success
           ackOrdinal
+          ${withAgreement ? "manifest" : ""}
         }
       }
-    `;
-
-    const variables = {
-      input: {
-        id: this.channelId,
-        name: this.channelId,
-        collectionId: this.config.collectionId.key,
-        filter: {
-          documentId: this.config.filter.documentId,
-          scope: this.config.filter.scope,
-          branch: this.config.filter.branch,
+    `,
+        {
+          input: {
+            id: this.channelId,
+            name: this.channelId,
+            collectionId: this.config.collectionId.key,
+            filter: {
+              documentId: this.config.filter.documentId,
+              scope: this.config.filter.scope,
+              branch: this.config.filter.branch,
+            },
+            sinceTimestampUtcMs,
+            ...(manifest ? { manifest } : {}),
+          },
         },
-        sinceTimestampUtcMs,
-      },
+      );
     };
 
-    const data = await this.executeGraphQL<{
-      touchChannel: { success: boolean; ackOrdinal: number };
-    }>(mutation, variables);
+    let data;
+    try {
+      data = await touch(this.peerServesAgreement);
+    } catch (error) {
+      if (!this.rejectsAgreementFields(error)) {
+        throw error;
+      }
+      this.stopAgreement();
+      data = await touch(false);
+    }
 
     if (!data.touchChannel.success) {
       throw new GraphQLRequestError(
@@ -772,6 +914,12 @@ export class GqlRequestChannel implements IChannel {
         "graphql",
       );
     }
+
+    this.hearPeer(
+      this.peerServesAgreement
+        ? readPeerManifest(data.touchChannel.manifest)
+        : null,
+    );
 
     return { ackOrdinal: data.touchChannel.ackOrdinal };
   }

@@ -134,6 +134,31 @@ export class InvalidOperationTimestampError extends Error {
   }
 }
 
+/** A document requires a protocol version this reactor does not run. Terminal. */
+export class UnsupportedProtocolVersionError extends Error {
+  public readonly documentId: string;
+  public readonly protocol: string;
+  public readonly version: number;
+
+  constructor(documentId: string, protocol: string, version: number) {
+    super(
+      `Document ${documentId} requires ${protocol} ${version}, which this reactor does not support`,
+    );
+    this.name = "UnsupportedProtocolVersionError";
+    this.documentId = documentId;
+    this.protocol = protocol;
+    this.version = version;
+
+    Error.captureStackTrace(this, UnsupportedProtocolVersionError);
+  }
+
+  static isError(error: unknown): error is UnsupportedProtocolVersionError {
+    return (
+      Error.isError(error) && error.name === "UnsupportedProtocolVersionError"
+    );
+  }
+}
+
 /**
  * A load would move more operations than the bound allows, indicating a real
  * divergence between local and incoming history. Counts only first-time moves,

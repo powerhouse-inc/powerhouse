@@ -104,6 +104,8 @@ describe("SyncManager - Unit Tests", () => {
         receivingPages: false,
       }),
       onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
+      setLocalManifest: vi.fn(),
+      onPeerManifest: vi.fn().mockReturnValue(() => {}),
       triggerPull: vi.fn(),
     };
   }
@@ -176,6 +178,8 @@ describe("SyncManager - Unit Tests", () => {
         receivingPages: false,
       }),
       onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
+      setLocalManifest: vi.fn(),
+      onPeerManifest: vi.fn().mockReturnValue(() => {}),
       triggerPull: vi.fn(),
     } as any;
 
@@ -2984,6 +2988,8 @@ describe("SyncManager - Unit Tests", () => {
           pushFailureCount: 0,
         }),
         onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
+        setLocalManifest: vi.fn(),
+        onPeerManifest: vi.fn().mockReturnValue(() => {}),
         poller: {} as any,
         config: {} as any,
       } as any;
@@ -3158,6 +3164,8 @@ describe("SyncManager - Unit Tests", () => {
           pushFailureCount: 0,
         }),
         onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
+        setLocalManifest: vi.fn(),
+        onPeerManifest: vi.fn().mockReturnValue(() => {}),
         poller: {} as any,
         config: {} as any,
       } as any;
@@ -3736,6 +3744,8 @@ describe("SyncManager - Unit Tests", () => {
           pushFailureCount: 0,
         }),
         onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
+        setLocalManifest: vi.fn(),
+        onPeerManifest: vi.fn().mockReturnValue(() => {}),
         poller: {} as any,
         config: {} as any,
       } as any;
@@ -4932,6 +4942,8 @@ describe("SyncManager - Unit Tests", () => {
           pushFailureCount: 0,
         }),
         onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
+        setLocalManifest: vi.fn(),
+        onPeerManifest: vi.fn().mockReturnValue(() => {}),
         poller: {} as any,
         config: {} as any,
       } as any;

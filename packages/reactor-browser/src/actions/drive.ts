@@ -21,6 +21,7 @@ import {
   DEFAULT_SIGNATURE_POLICY,
   requestedSignaturePolicy,
   withSignaturePolicy,
+  type ProtocolVersions,
   type SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { fetchDriveInfo } from "./drive-info.js";
@@ -127,6 +128,12 @@ async function createSignaturePolicy(): Promise<SignaturePolicy> {
   return client ? client.getCreateSignaturePolicy() : DEFAULT_SIGNATURE_POLICY;
 }
 
+/** What the full client selects for a drive, which has no parent. */
+async function createProtocolVersions(): Promise<ProtocolVersions> {
+  const client = window.ph?.reactorClientModule?.client;
+  return client ? client.getCreateProtocolVersions() : {};
+}
+
 export async function addDrive(input: DriveInput, preferredEditor?: string) {
   const { isAllowedToCreateDocuments } = getUserPermissions();
   if (!isAllowedToCreateDocuments) {
@@ -153,7 +160,13 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
       input,
       input.id ? "legacy" : await createSignaturePolicy(),
     ),
-    { id: input.id || undefined, protocolVersions: input.protocolVersions },
+    {
+      id: input.id || undefined,
+      protocolVersions: {
+        ...(await createProtocolVersions()),
+        ...input.protocolVersions,
+      },
+    },
   );
 
   if (preferredEditor) {

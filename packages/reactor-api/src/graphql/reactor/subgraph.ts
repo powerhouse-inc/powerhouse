@@ -475,6 +475,51 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
+      syncHolds: async (
+        _parent: unknown,
+        args: { remoteName?: string | null; documentId?: string | null },
+        ctx: Context,
+      ) => {
+        const address = ctx.user?.address;
+        if (!this.authorizationService.isSupremeAdmin(address)) {
+          let bound: string | undefined;
+          try {
+            bound = args.remoteName
+              ? this.syncManager.getByName(args.remoteName).meta.options
+                  .boundAddress
+              : undefined;
+          } catch {
+            bound = undefined;
+          }
+          if (address === undefined || bound !== address) {
+            throw new ForbiddenError("to list sync holds");
+          }
+        }
+        return resolvers.syncHolds(this.syncManager, args);
+      },
+
+      peerAgreement: (
+        _parent: unknown,
+        args: { collectionId: string },
+        ctx: Context,
+      ) => {
+        const address = ctx.user?.address;
+        if (
+          !this.authorizationService.isSupremeAdmin(address) &&
+          (address === undefined ||
+            !this.syncManager
+              .list()
+              .some(
+                (remote) =>
+                  remote.meta.collectionId.key === args.collectionId &&
+                  remote.meta.options.boundAddress === address,
+              ))
+        ) {
+          throw new ForbiddenError("to read peer agreement");
+        }
+        return resolvers.peerAgreement(this.syncManager, args);
+      },
+
       pollSyncEnvelopes: async (
         _parent: unknown,
         args: { channelId: string; outboxAck: number; outboxLatest: number },
@@ -565,20 +610,13 @@ export class ReactorSubgraph extends BaseSubgraph {
                 )
               : new Set<string>();
 
-          const { envelopes, ackOrdinal, deadLetters, hasMore } =
-            resolvers.pollSyncEnvelopes(
-              this.syncManager,
-              args,
-              forbiddenIds,
-              heldOpIds,
-              gated && new Set(gated.map((syncOp) => syncOp.id)),
-            );
-          return {
-            envelopes,
-            ackOrdinal,
-            deadLetters,
-            hasMore,
-          };
+          return resolvers.pollSyncEnvelopes(
+            this.syncManager,
+            args,
+            forbiddenIds,
+            heldOpIds,
+            gated && new Set(gated.map((syncOp) => syncOp.id)),
+          );
         } catch (error) {
           this.logger.error(
             "Error in pollSyncEnvelopes(@args): @Error",
@@ -985,6 +1023,7 @@ export class ReactorSubgraph extends BaseSubgraph {
               branch: string;
             };
             sinceTimestampUtcMs: string;
+            manifest?: unknown;
           };
         },
         ctx: Context,

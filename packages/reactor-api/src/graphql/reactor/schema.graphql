@@ -143,6 +143,46 @@ type PollSyncEnvelopesResult {
   ackOrdinal: Int!
   deadLetters: [DeadLetterInfo!]!
   hasMore: Boolean!
+  # The server's current manifest revision
+  manifestRevision: String
+  # The client's manifest revision as the server holds it
+  peerManifestRevision: String
+}
+
+type SyncHoldReason {
+  protocol: String!
+  version: Int!
+  peerSupports: [Int!]!
+}
+
+# A document held back from a remote whose peer cannot run its versions
+type SyncHold {
+  remoteName: String!
+  documentId: String!
+  branch: String!
+  reason: SyncHoldReason!
+  heldAtUtcMs: String!
+}
+
+type PeerAgreementMember {
+  remoteName: String!
+  # False for a peer that announced nothing: it gets the baselines
+  announced: Boolean!
+  protocols: JSONObject!
+  features: JSONObject!
+}
+
+type PeerAgreementLimit {
+  protocol: String!
+  # The remotes whose peers lack the version new documents would take
+  remoteNames: [String!]!
+}
+
+type PeerAgreement {
+  collectionId: String!
+  local: JSONObject!
+  members: [PeerAgreementMember!]!
+  limitedBy: [PeerAgreementLimit!]!
 }
 
 type DocumentWithChildren {
@@ -431,11 +471,15 @@ input TouchChannelInput {
   collectionId: String!
   filter: RemoteFilterInput!
   sinceTimestampUtcMs: String!
+  # The client's peer manifest; absent from a client without peer agreement
+  manifest: JSONObject
 }
 
 type TouchChannelResult {
   success: Boolean!
   ackOrdinal: Int!
+  # The server's peer manifest
+  manifest: JSONObject
 }
 
 type Query {
@@ -551,6 +595,12 @@ type Query {
     outboxAck: Int!
     outboxLatest: Int!
   ): PollSyncEnvelopesResult!
+
+  # Supreme admin, or the address the named remote's channel is bound to
+  syncHolds(remoteName: String, documentId: String): [SyncHold!]!
+
+  # Supreme admin, or an address bound to a channel in the collection
+  peerAgreement(collectionId: String!): PeerAgreement!
 }
 
 type Mutation {
