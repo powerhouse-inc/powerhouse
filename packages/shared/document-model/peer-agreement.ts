@@ -1,0 +1,144 @@
+import { sha256 } from "@noble/hashes/sha2.js";
+import { canonicalJson } from "./action-signature.js";
+import { bytesToBase64Url } from "./crypto.js";
+
+/** The reactor feature flags a capability's support is a function of. */
+export type PeerCapabilityFlags = {
+  readonly [flag: string]: boolean | undefined;
+};
+
+/** A document protocol, named by its `protocolVersions` key. */
+export type ProtocolCapability = {
+  kind: "protocol";
+  name: string;
+  /** What a peer that announces nothing is assumed to support. */
+  baseline: readonly number[];
+  supported(flags: PeerCapabilityFlags): readonly number[];
+  /** The version new documents take when peers agree. Absent: not negotiated. */
+  preferred?(flags: PeerCapabilityFlags): number;
+  /** A header may omit the key. */
+  optional: boolean;
+};
+
+/** A feature that changes what a peer sends or expects on the wire. */
+export type FeatureCapability = {
+  kind: "feature";
+  name: string;
+  baseline: readonly number[];
+  supported(flags: PeerCapabilityFlags): readonly number[];
+};
+
+export type PeerCapability = ProtocolCapability | FeatureCapability;
+
+// Baselines are frozen at what the last release without peer agreement runs.
+export const PEER_CAPABILITIES: readonly PeerCapability[] = [
+  {
+    kind: "protocol",
+    name: "base-reducer",
+    baseline: [1, 2],
+    supported: () => [1, 2],
+    preferred: () => 2,
+    optional: false,
+  },
+  {
+    kind: "protocol",
+    name: "signature",
+    baseline: [2],
+    supported: () => [2],
+    optional: true,
+  },
+];
+
+/** `base` plus `extra`; an extra replaces a base entry of the same name. */
+export function mergePeerCapabilities(
+  base: readonly PeerCapability[],
+  extra: readonly PeerCapability[],
+): PeerCapability[] {
+  const key = (capability: PeerCapability) =>
+    `${capability.kind}:${capability.name}`;
+  const replaced = new Set(extra.map(key));
+  return [
+    ...base.filter((capability) => !replaced.has(key(capability))),
+    ...extra,
+  ];
+}
+
+export const PEER_MANIFEST_FORMAT = 1;
+
+export type Supports = {
+  protocols: { [protocol: string]: readonly number[] };
+  features: { [feature: string]: readonly number[] };
+};
+
+export type PeerManifest = Supports & {
+  format: 1;
+  /** The signer's did:key, when configured; informational. */
+  appKey?: string;
+  /** base64url(sha256(canonicalJson(Supports))) */
+  revision: string;
+};
+
+function versionSet(values: readonly number[]): number[] {
+  return [...new Set(values)].sort((a, b) => a - b);
+}
+
+function supportsFrom(
+  capabilities: readonly PeerCapability[],
+  values: (capability: PeerCapability) => readonly number[],
+): Supports {
+  const supports: Supports = { protocols: {}, features: {} };
+  for (const capability of capabilities) {
+    const target =
+      capability.kind === "protocol" ? supports.protocols : supports.features;
+    target[capability.name] = versionSet(values(capability));
+  }
+  return supports;
+}
+
+/** What this reactor supports, for every capability it registers. */
+export function localSupports(
+  capabilities: readonly PeerCapability[],
+  flags: PeerCapabilityFlags,
+): Supports {
+  return supportsFrom(capabilities, (capability) =>
+    capability.supported(flags),
+  );
+}
+
+/** What a peer that announces nothing supports. */
+export function legacySupports(
+  capabilities: readonly PeerCapability[],
+): Supports {
+  return supportsFrom(capabilities, (capability) => capability.baseline);
+}
+
+export function manifestRevision(supports: Supports): string {
+  const preimage = canonicalJson(
+    { protocols: supports.protocols, features: supports.features },
+    "peer manifest",
+  );
+  return bytesToBase64Url(sha256(new TextEncoder().encode(preimage)));
+}
+
+export function localPeerManifest(
+  capabilities: readonly PeerCapability[],
+  flags: PeerCapabilityFlags,
+  appKey?: string,
+): PeerManifest {
+  const supports = localSupports(capabilities, flags);
+  return {
+    format: PEER_MANIFEST_FORMAT,
+    ...(appKey !== undefined ? { appKey } : {}),
+    revision: manifestRevision(supports),
+    protocols: supports.protocols,
+    features: supports.features,
+  };
+}
+
+/** A peer's manifest, or the baselines for a peer that announced none. */
+export function peerSupports(
+  manifest: PeerManifest | null,
+  capabilities: readonly PeerCapability[],
+): Supports {
+  return manifest ?? legacySupports(capabilities);
+}

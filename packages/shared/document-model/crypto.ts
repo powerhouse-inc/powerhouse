@@ -136,6 +136,18 @@ export function base58Decode(input: string): Uint8Array | null {
   return Uint8Array.from(bytes.reverse());
 }
 
+/** Encodes bytes as unpadded base64url. */
+export function bytesToBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
 /** Decodes a base64url string to bytes (portable across node, browsers, workers). */
 export function base64UrlToBytes(input: string): Uint8Array {
   const base64 = input.replace(/-/g, "+").replace(/_/g, "/");
