@@ -651,13 +651,43 @@ module fixedNoHandshake {
   ).*
 }
 
-// As built on feat/peer-protocol-agreement. Hash revisions, polls without a revision, pushes without
-// a field, gate at derivation only, holds re-checked on every touch a server receives, a refusal
-// only of creations while the sender's record covers the local set, and client refusals of poll
-// responses unseen by the server. `misconfigured` is left out: the executor refuses by the host's
-// registry, which is also what is announced, so a build that runs less than it announces is `liar`.
+// As built on feat/peer-protocol-agreement: every run check, the push field, start sequences, poll
+// revisions and poll refusal holds; holds re-checked on every touch a server receives. `misconfigured`
+// is left out: the executor refuses by the host's registry, which is also what is announced, so a
+// build that runs less than it announces is `liar`.
 
 module asBuilt {
+  import PeerAgreement(
+    REACTORS = Set("A", "S", "B"),
+    EDGES = Set(("A", "S"), ("S", "A"), ("S", "B"), ("B", "S")),
+    PUSH_EDGES = Set(("A", "S"), ("B", "S")),
+    BUILDS = Set("legacy", "narrow", "wide"),
+    MAX_DOCS = 2,
+    GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
+    PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = true, MANIFEST_SEQ = true, POLL_REVISION = true,
+    RUN_CHECK = true, POLL_REFUSAL_HOLD = true, UNPARENTED = true
+  ).*
+}
+
+/** As built, without the handshake-first transport assumption. */
+module asBuiltNoHandshake {
+  import PeerAgreement(
+    REACTORS = Set("A", "S", "B"),
+    EDGES = Set(("A", "S"), ("S", "A"), ("S", "B"), ("B", "S")),
+    PUSH_EDGES = Set(("A", "S"), ("B", "S")),
+    BUILDS = Set("legacy", "narrow", "wide"),
+    MAX_DOCS = 2,
+    GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = false,
+    PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = true, MANIFEST_SEQ = true, POLL_REVISION = true,
+    RUN_CHECK = true, POLL_REFUSAL_HOLD = true, UNPARENTED = true
+  ).*
+}
+
+// The branch before the model's fixes (034dabf1cf): hash revisions, polls without a revision, pushes
+// without a field, a refusal only of creations while the sender's record covers the local set, and
+// client refusals of poll responses unseen by the server.
+
+module preFix {
   import PeerAgreement(
     REACTORS = Set("A", "S", "B"),
     EDGES = Set(("A", "S"), ("S", "A"), ("S", "B"), ("B", "S")),
@@ -670,8 +700,8 @@ module asBuilt {
   ).*
 }
 
-/** As built, without rollbacks below the feature. */
-module asBuiltNoRollback {
+/** Before the fixes, without rollbacks below the feature. */
+module preFixNoRollback {
   import PeerAgreement(
     REACTORS = Set("A", "S", "B"),
     EDGES = Set(("A", "S"), ("S", "A"), ("S", "B"), ("B", "S")),
@@ -684,7 +714,7 @@ module asBuiltNoRollback {
   ).*
 }
 
-module asBuiltNoRollbackPlusRunCheck {
+module preFixNoRollbackPlusRunCheck {
   import PeerAgreement(
     REACTORS = Set("A", "S", "B"),
     EDGES = Set(("A", "S"), ("S", "A"), ("S", "B"), ("B", "S")),
@@ -697,7 +727,7 @@ module asBuiltNoRollbackPlusRunCheck {
   ).*
 }
 
-module asBuiltPlusRunCheck {
+module preFixPlusRunCheck {
   import PeerAgreement(
     REACTORS = Set("A", "S", "B"),
     EDGES = Set(("A", "S"), ("S", "A"), ("S", "B"), ("B", "S")),
@@ -711,7 +741,7 @@ module asBuiltPlusRunCheck {
 }
 
 /** The smallest change set that keeps safety: the run check, the push field and poll revisions. */
-module asBuiltMinimal {
+module preFixMinimal {
   import PeerAgreement(
     REACTORS = Set("A", "S", "B"),
     EDGES = Set(("A", "S"), ("S", "A"), ("S", "B"), ("B", "S")),
@@ -721,20 +751,6 @@ module asBuiltMinimal {
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
     PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = true, MANIFEST_SEQ = false, POLL_REVISION = true,
     RUN_CHECK = true, POLL_REFUSAL_HOLD = false, UNPARENTED = true
-  ).*
-}
-
-/** Every proposed change: the run check, push field, sequences, poll revisions and poll refusal holds. */
-module asBuiltPlusAll {
-  import PeerAgreement(
-    REACTORS = Set("A", "S", "B"),
-    EDGES = Set(("A", "S"), ("S", "A"), ("S", "B"), ("B", "S")),
-    PUSH_EDGES = Set(("A", "S"), ("B", "S")),
-    BUILDS = Set("legacy", "narrow", "wide"),
-    MAX_DOCS = 2,
-    GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = true, SEND_GATE = false, RECHECK_HOLDS = true, MANIFEST_SEQ = true, POLL_REVISION = true,
-    RUN_CHECK = true, POLL_REFUSAL_HOLD = true, UNPARENTED = true
   ).*
 }
 
@@ -859,7 +875,7 @@ module fixedNoHandshakeOne {
   ).*
 }
 
-module asBuiltOne {
+module preFixOne {
   import PeerAgreement(
     REACTORS = Set("A", "S", "B"),
     EDGES = Set(("A", "S"), ("S", "A"), ("S", "B"), ("B", "S")),
@@ -872,7 +888,7 @@ module asBuiltOne {
   ).*
 }
 
-module asBuiltMinimalOne {
+module preFixMinimalOne {
   import PeerAgreement(
     REACTORS = Set("A", "S", "B"),
     EDGES = Set(("A", "S"), ("S", "A"), ("S", "B"), ("B", "S")),
@@ -885,7 +901,7 @@ module asBuiltMinimalOne {
   ).*
 }
 
-module asBuiltMinimalNoRunCheckOne {
+module preFixMinimalNoRunCheckOne {
   import PeerAgreement(
     REACTORS = Set("A", "S", "B"),
     EDGES = Set(("A", "S"), ("S", "A"), ("S", "B"), ("B", "S")),
@@ -898,7 +914,7 @@ module asBuiltMinimalNoRunCheckOne {
   ).*
 }
 
-module asBuiltMinimalNoPushFieldOne {
+module preFixMinimalNoPushFieldOne {
   import PeerAgreement(
     REACTORS = Set("A", "S", "B"),
     EDGES = Set(("A", "S"), ("S", "A"), ("S", "B"), ("B", "S")),
@@ -911,7 +927,7 @@ module asBuiltMinimalNoPushFieldOne {
   ).*
 }
 
-module asBuiltMinimalNoPollRevisionOne {
+module preFixMinimalNoPollRevisionOne {
   import PeerAgreement(
     REACTORS = Set("A", "S", "B"),
     EDGES = Set(("A", "S"), ("S", "A"), ("S", "B"), ("B", "S")),
@@ -924,7 +940,7 @@ module asBuiltMinimalNoPollRevisionOne {
   ).*
 }
 
-module asBuiltPlusAllOne {
+module asBuiltOne {
   import PeerAgreement(
     REACTORS = Set("A", "S", "B"),
     EDGES = Set(("A", "S"), ("S", "A"), ("S", "B"), ("B", "S")),

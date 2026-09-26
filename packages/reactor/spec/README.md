@@ -83,23 +83,34 @@ document suffices is an argument (see the comment above them), not a check.
 
 ### As built
 
-`feat/peer-protocol-agreement` as of 034dabf1cf. The switches match the code: revisions are
-content hashes, polls carry no revision, pushes carry no field, the gate runs at derivation only,
-a server re-checks holds on every touch it receives, only creations are refused while the
-sender's record covers the local set, and a client's refusal of a poll response never reaches
-the server. `UNPARENTED` is on. `misconfigured` is left out: the executor refuses by the host's
-registry, which is also what the host announces, so a build that runs less than it announces
-behaves as `liar`.
+`feat/peer-protocol-agreement` with the model's fixes, as of 50611d8c1b. The switches match
+the code: a build refuses every write and every received row into a stored document it does not
+run (`RUN_CHECK`); pushes name the server revision they were gated under (`PUSH_FIELD`); polls
+name the client's revision and a server silences a client that names none (`POLL_REVISION`);
+manifests carry the start time as a sequence and older ones are ignored (`MANIFEST_SEQ`); a
+client reports its refusals of polled rows (`POLL_REFUSAL_HOLD`); a server re-checks holds on
+every touch it receives (`RECHECK_HOLDS`); the gate runs at derivation only. `UNPARENTED` is on.
+`misconfigured` is left out: the executor refuses by the host's registry, which is also what the
+host announces, so a build that runs less than it announces behaves as `liar`.
 
-| instance                           | expected                                                                          |
-| ---------------------------------- | --------------------------------------------------------------------------------- |
-| `asBuilt`                          | every invariant violated                                                          |
-| `asBuiltNoRollback`                | safety violated without any rollback: a narrowed build writes into a v3 document  |
-| `asBuiltNoRollbackPlusRunCheck`    | safety holds                                                                      |
-| `asBuiltPlusRunCheck`              | the rollback leak remains                                                         |
-| `asBuiltMinimal`                   | run check + push field + poll revisions: safety holds; liveness invariants do not |
-| `asBuiltMinimalNo*One`             | each of the three changes removed: safety violated                                |
-| `asBuiltPlusAll`                   | also sequences and poll refusal holds: all but `noLostRows` hold                  |
+| instance             | expected                                                      |
+| -------------------- | ------------------------------------------------------------- |
+| `asBuilt`            | all but `noLostRows` hold                                     |
+| `asBuiltNoHandshake` | safety holds without the handshake-first transport assumption |
+| `asBuiltOne`         | verified: safety and the liveness invariants hold to 10 steps |
+
+### Before the fixes
+
+The branch as of 034dabf1cf, and the change sets considered from there.
+
+| instance                       | expected                                                                          |
+| ------------------------------ | --------------------------------------------------------------------------------- |
+| `preFix`                       | every invariant violated                                                          |
+| `preFixNoRollback`             | safety violated without any rollback: a narrowed build writes into a v3 document  |
+| `preFixNoRollbackPlusRunCheck` | safety holds                                                                      |
+| `preFixPlusRunCheck`           | the rollback leak remains                                                         |
+| `preFixMinimal`                | run check + push field + poll revisions: safety holds; liveness invariants do not |
+| `preFixMinimalNo*One`          | each of the three changes removed: safety violated                                |
 
 ## CI sketch
 
