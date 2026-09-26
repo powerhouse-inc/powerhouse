@@ -3212,7 +3212,6 @@ type PagedResults<T> = {
   options: PagingOptions;
   next?: () => Promise<PagedResults<T>>;
   nextCursor?: string;
-  totalCount?: number;
 };
 ```
 
@@ -8628,7 +8627,6 @@ query {
       documentType
       state
     }
-    totalCount
     hasNextPage
   }
 }
@@ -8657,7 +8655,8 @@ query {
           }
         }
       }
-      totalCount
+      hasNextPage
+      cursor
     }
   }
 }
@@ -8678,7 +8677,8 @@ query {
       name
       state
     }
-    totalCount
+    hasNextPage
+    cursor
   }
 }
 ```
@@ -8703,7 +8703,8 @@ query {
           }
         }
       }
-      totalCount
+      hasNextPage
+      cursor
     }
   }
 }

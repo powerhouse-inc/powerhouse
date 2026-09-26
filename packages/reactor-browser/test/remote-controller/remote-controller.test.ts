@@ -53,7 +53,6 @@ function makeDocWithOpsResponse(
         ...docData,
         operations: {
           items: operations.items,
-          totalCount: operations.items.length,
           hasNextPage: operations.hasNextPage ?? false,
           hasPreviousPage: false,
           cursor: operations.cursor ?? null,
@@ -95,7 +94,6 @@ function createMockClient(
     vi.fn().mockResolvedValue({
       documentOperations: {
         items: [],
-        totalCount: 0,
         hasNextPage: false,
         hasPreviousPage: false,
         cursor: null,
@@ -666,7 +664,6 @@ describe("RemoteDocumentController", () => {
                 },
               },
             ],
-            totalCount: 1,
             hasNextPage: false,
             hasPreviousPage: false,
             cursor: null,
@@ -1016,7 +1013,6 @@ describe("RemoteDocumentController", () => {
           return Promise.resolve({
             documentOperations: {
               items: filtered,
-              totalCount: filtered.length,
               hasNextPage: false,
               hasPreviousPage: false,
               cursor: null,
@@ -1077,7 +1073,6 @@ describe("RemoteDocumentController", () => {
             return Promise.resolve({
               documentOperations: {
                 items: [],
-                totalCount: 0,
                 hasNextPage: false,
                 hasPreviousPage: false,
                 cursor: null,
@@ -1088,7 +1083,6 @@ describe("RemoteDocumentController", () => {
           return Promise.resolve({
             documentOperations: {
               items: [makeOp(0), makeOp(1), makeOp(2)],
-              totalCount: 3,
               hasNextPage: false,
               hasPreviousPage: false,
               cursor: null,

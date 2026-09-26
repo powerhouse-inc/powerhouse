@@ -628,34 +628,28 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     const startIndex = paging?.cursor ? parseInt(paging.cursor) : 0;
     const limit = paging?.limit || 100;
 
-    const documents: PHDocument[] = [];
-    const processedDocumentIds = new Set<string>();
-    const allDocumentIds: string[] = [];
-
-    const snapshots = await this._db
+    const rows = await this._db
       .selectFrom("DocumentSnapshot")
-      .selectAll()
+      .select("documentId")
+      .select((eb) => eb.fn.max("lastUpdatedAt").as("lastUpdatedAt"))
       .where("documentType", "=", type)
       .where("branch", "=", branch)
       .where("isDeleted", "=", false)
+      .groupBy("documentId")
       .orderBy("lastUpdatedAt", "desc")
+      .orderBy("documentId", "asc")
+      .offset(startIndex)
+      .limit(limit + 1)
       .execute();
 
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
 
-    for (const snapshot of snapshots) {
-      if (processedDocumentIds.has(snapshot.documentId)) {
-        continue;
-      }
+    const hasMore = rows.length > limit;
+    const docsToFetch = rows.slice(0, limit).map((row) => row.documentId);
 
-      processedDocumentIds.add(snapshot.documentId);
-      allDocumentIds.push(snapshot.documentId);
-    }
-
-    const docsToFetch = allDocumentIds.slice(startIndex, startIndex + limit);
-
+    const documents: PHDocument[] = [];
     for (const documentId of docsToFetch) {
       if (signal?.aborted) {
         throw new Error("Operation aborted");
@@ -674,14 +668,12 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       }
     }
 
-    const hasMore = allDocumentIds.length > startIndex + limit;
     const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
     return {
       results: documents,
       options: paging || { cursor: "0", limit: 100 },
       nextCursor,
-      totalCount: allDocumentIds.length,
       next: hasMore
         ? () =>
             this.findByType(

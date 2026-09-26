@@ -183,7 +183,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         items.push(item);
       }
     }
-    return { ...page, items, totalCount: items.length };
+    return { ...page, items };
   }
 
   /**
@@ -393,11 +393,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             (item: PhDocument) => item.documentType === documentType,
           );
 
-          return {
-            ...readable,
-            items: filteredItems,
-            totalCount: filteredItems.length,
-          };
+          return { ...readable, items: filteredItems };
         },
 
         documentIncomingRelationships: async (

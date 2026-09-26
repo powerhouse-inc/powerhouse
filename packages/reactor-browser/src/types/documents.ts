@@ -59,8 +59,6 @@ export type OperationsCacheEntry = {
   error: unknown;
   /** Whether the last loaded page reported a further page. */
   hasNextPage: boolean;
-  /** Reported by the GraphQL client only; `undefined` for the in-browser reactor. */
-  totalCount: number | undefined;
 };
 
 /**

@@ -76,7 +76,6 @@ type PagedResults<T> = {
   options: PagingOptions;
   next?: () => Promise<PagedResults<T>>;
   nextCursor?: string;
-  totalCount?: number;
 };
 ```
 

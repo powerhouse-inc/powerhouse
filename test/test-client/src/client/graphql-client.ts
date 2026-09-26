@@ -56,12 +56,9 @@ export class GraphQLClient {
     return data.findDocuments.items;
   }
 
-  async findDocumentModels(): Promise<{
-    items: PhDocument[];
-    totalCount: number;
-  }> {
+  async findDocumentModels(): Promise<{ items: PhDocument[] }> {
     const data = await this.request<{
-      findDocuments: { items: PhDocument[]; totalCount: number };
+      findDocuments: { items: PhDocument[] };
     }>(FIND_DOCUMENT_MODELS_QUERY);
 
     return data.findDocuments;
