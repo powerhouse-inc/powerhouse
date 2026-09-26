@@ -209,10 +209,14 @@ describe("KyselyAttachmentStore", () => {
         },
       });
 
-      const response = await store.get(TEST_HASH);
+      const response = await store.get(TEST_HASH, undefined, "doc-1");
       const bytes = await streamToBytes(response.body);
       expect(new TextDecoder().decode(bytes)).toBe(TEST_CONTENT);
-      expect(transport.fetch).toHaveBeenCalledWith(TEST_HASH, undefined);
+      expect(transport.fetch).toHaveBeenCalledWith(
+        TEST_HASH,
+        "doc-1",
+        undefined,
+      );
     });
 
     it("throws AttachmentNotFound when evicted and transport returns not-found", async () => {
@@ -221,7 +225,20 @@ describe("KyselyAttachmentStore", () => {
 
       transport.fetch.mockResolvedValueOnce({ kind: "not-found" });
 
+      await expect(store.get(TEST_HASH, undefined, "doc-1")).rejects.toThrow(
+        AttachmentNotFound,
+      );
+    });
+
+    it("does not consult the transport without a documentId to authorize it", async () => {
+      await store.put(TEST_HASH, TEST_METADATA, streamFromString(TEST_CONTENT));
+      await store.evict(TEST_HASH);
+
       await expect(store.get(TEST_HASH)).rejects.toThrow(AttachmentNotFound);
+      await expect(store.get("unknown-hash")).rejects.toThrow(
+        AttachmentNotFound,
+      );
+      expect(transport.fetch).not.toHaveBeenCalled();
     });
   });
 
@@ -372,9 +389,9 @@ describe("KyselyAttachmentStore", () => {
     it("get throws AttachmentNotFound when no attachment row and no pending reservation and transport returns not-found", async () => {
       transport.fetch.mockResolvedValueOnce({ kind: "not-found" });
 
-      await expect(store.get(PENDING_HASH)).rejects.toBeInstanceOf(
-        AttachmentNotFound,
-      );
+      await expect(
+        store.get(PENDING_HASH, undefined, "doc-1"),
+      ).rejects.toBeInstanceOf(AttachmentNotFound);
     });
   });
 

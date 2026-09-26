@@ -14,6 +14,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
+import type { IAttachmentAccessService } from "@powerhousedao/reactor-api";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   buildContentDisposition,
@@ -28,6 +29,21 @@ import {
   parseReserveOptions,
   quoteFilename,
 } from "../../src/attachments/routes.js";
+
+// Byte-serving mechanics under a granted read; grant decisions are tested in
+// byte-grants.test.ts.
+const ALLOW_ALL: IAttachmentAccessService = {
+  canReadAttachment: (request) =>
+    Promise.resolve({
+      kind: "allowed",
+      documentId: request.documentId as never,
+      ref: request.attachmentRef as never,
+    }),
+};
+const grantedDownload = (attachments: AttachmentBuildResult) =>
+  makeDownloadHandler(attachments, ALLOW_ALL, null);
+const grantedStat = (attachments: AttachmentBuildResult) =>
+  makeStatHandler(attachments, ALLOW_ALL, null);
 
 type CapturedRes = ServerResponse & {
   _headers: Record<string, string>;
@@ -52,7 +68,7 @@ function makeReq(opts: {
     params?: Record<string, string>;
   };
   req.method = opts.method;
-  req.url = opts.url ?? "/";
+  req.url = opts.url ?? "/?documentId=doc-1";
   req.headers = {};
   if (opts.params) req.params = opts.params;
   return req as unknown as IncomingMessage;
@@ -222,7 +238,7 @@ describe("attachment routes", () => {
     expect(row!.deleted_at_utc).not.toBeNull();
 
     // Download
-    const downloadHandler = makeDownloadHandler(attachments);
+    const downloadHandler = grantedDownload(attachments);
     const downloadReq = makeReq({
       method: "GET",
       params: { hash: upload.hash },
@@ -271,7 +287,7 @@ describe("attachment routes", () => {
       hash: string;
     };
 
-    const downloadHandler = makeDownloadHandler(attachments);
+    const downloadHandler = grantedDownload(attachments);
     const downloadReq = makeReq({
       method: "GET",
       params: { hash: upload.hash },
@@ -314,7 +330,7 @@ describe("attachment routes", () => {
       hash: string;
     };
 
-    const statHandler = makeStatHandler(attachments);
+    const statHandler = grantedStat(attachments);
     const statReq = makeReq({
       method: "HEAD",
       params: { hash: upload.hash },
@@ -373,9 +389,9 @@ describe("attachment routes", () => {
     };
 
     const { createServer } = await import("node:http");
-    const statHandler = makeStatHandler(attachments);
+    const statHandler = grantedStat(attachments);
     const server = createServer((req, res) => {
-      const m = /^\/attachments\/([^/]+)$/.exec(req.url ?? "/");
+      const m = /^\/attachments\/([^/?]+)(?:\?|$)/.exec(req.url ?? "/");
       if (!m) {
         res.statusCode = 404;
         res.end();
@@ -391,7 +407,7 @@ describe("attachment routes", () => {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:${port}/attachments/${upload.hash}`,
+        `http://127.0.0.1:${port}/attachments/${upload.hash}?documentId=doc-1`,
         {
           method: "HEAD",
         },
@@ -412,7 +428,7 @@ describe("attachment routes", () => {
   });
 
   it("HEAD stat returns 404 for unknown hash", async () => {
-    const handler = makeStatHandler(attachments);
+    const handler = grantedStat(attachments);
     const req = makeReq({ method: "HEAD", params: { hash: "a".repeat(64) } });
     const res = makeRes();
     await handler(req, res);
@@ -421,7 +437,7 @@ describe("attachment routes", () => {
   });
 
   it("HEAD stat returns 400 for malformed hash", async () => {
-    const handler = makeStatHandler(attachments);
+    const handler = grantedStat(attachments);
     const req = makeReq({ method: "HEAD", params: { hash: "not-a-hash" } });
     const res = makeRes();
     await handler(req, res);
@@ -523,7 +539,7 @@ describe("attachment routes", () => {
   });
 
   it("GET download returns 404 for unknown hash", async () => {
-    const handler = makeDownloadHandler(attachments);
+    const handler = grantedDownload(attachments);
     const req = makeReq({
       method: "GET",
       params: { hash: "a".repeat(64) },
@@ -535,7 +551,7 @@ describe("attachment routes", () => {
   });
 
   it("GET download returns 400 for malformed hash", async () => {
-    const handler = makeDownloadHandler(attachments);
+    const handler = grantedDownload(attachments);
     const req = makeReq({
       method: "GET",
       params: { hash: "not-a-hash" },
@@ -574,7 +590,7 @@ describe("attachment routes", () => {
       hash: string;
     };
 
-    const handler = makeDownloadHandler(attachments);
+    const handler = grantedDownload(attachments);
     const req = makeReq({
       method: "GET",
       params: { hash: upload.hash.toUpperCase() },
@@ -612,7 +628,7 @@ describe("attachment routes", () => {
       hash: string;
     };
 
-    const statHandler = makeStatHandler(attachments);
+    const statHandler = grantedStat(attachments);
     const statReq = makeReq({
       method: "HEAD",
       params: { hash: upload.hash.toUpperCase() },
@@ -660,7 +676,7 @@ describe("attachment routes", () => {
       throw new Error(secret);
     };
     try {
-      const handler = makeDownloadHandler(attachments);
+      const handler = grantedDownload(attachments);
       const req = makeReq({
         method: "GET",
         params: { hash: "a".repeat(64) },
@@ -933,7 +949,7 @@ describe("attachment routes", () => {
     it("HEAD stat returns 202 with Retry-After and Attachment-Pending for pending hash", async () => {
       const { hash } = await createPendingReservation("pending content data");
 
-      const handler = makeStatHandler(attachments);
+      const handler = grantedStat(attachments);
       const req = makeReq({ method: "HEAD", params: { hash } });
       const res = makeRes();
       await handler(req, res);
@@ -958,7 +974,7 @@ describe("attachment routes", () => {
     it("HEAD stat 202 for pending hash does not set Content-Disposition or Attachment-Metadata", async () => {
       const { hash } = await createPendingReservation("no metadata content");
 
-      const handler = makeStatHandler(attachments);
+      const handler = grantedStat(attachments);
       const req = makeReq({ method: "HEAD", params: { hash } });
       const res = makeRes();
       await handler(req, res);
@@ -972,7 +988,7 @@ describe("attachment routes", () => {
     it("GET download returns 202 with Retry-After and Attachment-Pending for pending hash", async () => {
       const { hash } = await createPendingReservation("download pending data");
 
-      const handler = makeDownloadHandler(attachments);
+      const handler = grantedDownload(attachments);
       const req = makeReq({ method: "GET", params: { hash } });
       const res = makeRes();
       await handler(req, res);
@@ -994,7 +1010,7 @@ describe("attachment routes", () => {
       // the response as a successful zero-byte attachment.
       const { hash } = await createPendingReservation("check-headers content");
 
-      const handler = makeDownloadHandler(attachments);
+      const handler = grantedDownload(attachments);
       const req = makeReq({ method: "GET", params: { hash } });
       const res = makeRes();
       await handler(req, res);
@@ -1014,8 +1030,8 @@ describe("attachment routes", () => {
         );
 
         for (const [method, handler] of [
-          ["HEAD", makeStatHandler(attachments)],
-          ["GET", makeDownloadHandler(attachments)],
+          ["HEAD", grantedStat(attachments)],
+          ["GET", grantedDownload(attachments)],
         ] as const) {
           const req = makeReq({ method, params: { hash } });
           const res = makeRes();
@@ -1034,7 +1050,7 @@ describe("attachment routes", () => {
     it("GET download 202 body is empty (not a zero-byte attachment)", async () => {
       const { hash } = await createPendingReservation("empty body assertion");
 
-      const handler = makeDownloadHandler(attachments);
+      const handler = grantedDownload(attachments);
       const req = makeReq({ method: "GET", params: { hash } });
       const res = makeRes();
       await handler(req, res);
@@ -1322,7 +1338,7 @@ describe("attachment routes", () => {
     it("download with non-ASCII fileName produces RFC 6266 Content-Disposition", async () => {
       const reserveHandler = makeReserveHandler(attachments);
       const uploadHandler = makeUploadHandler(attachments);
-      const downloadHandler = makeDownloadHandler(attachments);
+      const downloadHandler = grantedDownload(attachments);
 
       const reserveReq = makeReq({
         method: "POST",
@@ -1392,8 +1408,8 @@ describe("attachment routes", () => {
       };
 
       for (const [method, handler] of [
-        ["HEAD", makeStatHandler(attachments)],
-        ["GET", makeDownloadHandler(attachments)],
+        ["HEAD", grantedStat(attachments)],
+        ["GET", grantedDownload(attachments)],
       ] as const) {
         const res = makeRes();
         await handler(makeReq({ method, params: { hash } }), res);

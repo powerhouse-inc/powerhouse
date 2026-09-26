@@ -6,7 +6,7 @@ import {
   type AttachmentBuildResult,
   createRemoteAttachmentService,
 } from "@powerhousedao/reactor-attachments";
-import type { API } from "@powerhousedao/reactor-api";
+import type { API, IAttachmentAccessService } from "@powerhousedao/reactor-api";
 import { createHttpAdapter } from "@powerhousedao/reactor-api";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -22,6 +22,16 @@ import { registerAttachmentRoutes } from "../../src/attachments/index.js";
 // signature this test guards against.
 const EMPTY_STRING_SHA256 =
   "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
+const DOC_ID = "doc-1";
+const ALLOW_ALL: IAttachmentAccessService = {
+  canReadAttachment: (request) =>
+    Promise.resolve({
+      kind: "allowed",
+      documentId: request.documentId as never,
+      ref: request.attachmentRef as never,
+    }),
+};
 
 describe("attachment routes through the real Express middleware stack", () => {
   let attachments: AttachmentBuildResult;
@@ -43,6 +53,7 @@ describe("attachment routes through the real Express middleware stack", () => {
     registerAttachmentRoutes({
       httpAdapter: adapter,
       attachments,
+      attachmentAccess: ALLOW_ALL,
       authService: undefined,
     } as unknown as API);
 
@@ -83,7 +94,7 @@ describe("attachment routes through the real Express middleware stack", () => {
     expect(result.hash).not.toBe(EMPTY_STRING_SHA256);
     expect(result.header.sizeBytes).toBe(bytes.byteLength);
 
-    const got = await service.get(result.ref);
+    const got = await service.get(result.ref, { documentId: DOC_ID });
     expect(got.header.sizeBytes).toBe(bytes.byteLength);
     expect(got.header.mimeType).toBe("application/json");
     const reader = got.body.getReader();
@@ -121,7 +132,10 @@ describe("attachment routes through the real Express middleware stack", () => {
     );
 
     for (const method of ["HEAD", "GET"]) {
-      const res = await fetch(`${baseUrl}/attachments/${hash}`, { method });
+      const res = await fetch(
+        `${baseUrl}/attachments/${hash}?documentId=${DOC_ID}`,
+        { method },
+      );
       expect(res.status).toBe(200);
       const meta = JSON.parse(res.headers.get("attachment-metadata")!) as {
         fileName: string;
@@ -178,6 +192,7 @@ describe("authenticated S3 reservation production path", () => {
     registerAttachmentRoutes({
       httpAdapter: adapter,
       attachments,
+      attachmentAccess: ALLOW_ALL,
       authService: { verifyBearer },
     } as unknown as API);
     const server = await adapter.listen(0);
