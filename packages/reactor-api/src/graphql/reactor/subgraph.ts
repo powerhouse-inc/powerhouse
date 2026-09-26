@@ -588,20 +588,13 @@ export class ReactorSubgraph extends BaseSubgraph {
                 )
               : new Set<string>();
 
-          const { envelopes, ackOrdinal, deadLetters, hasMore } =
-            resolvers.pollSyncEnvelopes(
-              this.syncManager,
-              args,
-              forbiddenIds,
-              heldOpIds,
-              gated && new Set(gated.map((syncOp) => syncOp.id)),
-            );
-          return {
-            envelopes,
-            ackOrdinal,
-            deadLetters,
-            hasMore,
-          };
+          return resolvers.pollSyncEnvelopes(
+            this.syncManager,
+            args,
+            forbiddenIds,
+            heldOpIds,
+            gated && new Set(gated.map((syncOp) => syncOp.id)),
+          );
         } catch (error) {
           this.logger.error(
             "Error in pollSyncEnvelopes(@args): @Error",
@@ -1008,6 +1001,7 @@ export class ReactorSubgraph extends BaseSubgraph {
               branch: string;
             };
             sinceTimestampUtcMs: string;
+            manifest?: unknown;
           };
         },
         ctx: Context,

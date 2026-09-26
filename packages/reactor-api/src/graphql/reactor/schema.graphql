@@ -147,6 +147,10 @@ type PollSyncEnvelopesResult {
   ackOrdinal: Int!
   deadLetters: [DeadLetterInfo!]!
   hasMore: Boolean!
+  # The server's current manifest revision
+  manifestRevision: String
+  # The client's manifest revision as the server holds it
+  peerManifestRevision: String
 }
 
 type DocumentWithChildren {
@@ -435,11 +439,15 @@ input TouchChannelInput {
   collectionId: String!
   filter: RemoteFilterInput!
   sinceTimestampUtcMs: String!
+  # The client's peer manifest; absent from a client without peer agreement
+  manifest: JSONObject
 }
 
 type TouchChannelResult {
   success: Boolean!
   ackOrdinal: Int!
+  # The server's peer manifest
+  manifest: JSONObject
 }
 
 type Query {

@@ -538,6 +538,8 @@ query PollSyncEnvelopes(
       errorType
     }
     hasMore
+    manifestRevision
+    peerManifestRevision
   }
 }
 
@@ -545,6 +547,7 @@ mutation TouchChannel($input: TouchChannelInput!) {
   touchChannel(input: $input) {
     success
     ackOrdinal
+    manifest
   }
 }
 

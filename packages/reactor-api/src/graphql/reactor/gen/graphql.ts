@@ -470,6 +470,8 @@ export type PollSyncEnvelopesResult = {
   readonly deadLetters: ReadonlyArray<DeadLetterInfo>;
   readonly envelopes: ReadonlyArray<SyncEnvelope>;
   readonly hasMore: Scalars["Boolean"]["output"];
+  readonly manifestRevision?: Maybe<Scalars["String"]["output"]>;
+  readonly peerManifestRevision?: Maybe<Scalars["String"]["output"]>;
 };
 
 export enum PropagationMode {
@@ -717,12 +719,14 @@ export type TouchChannelInput = {
   readonly collectionId: Scalars["String"]["input"];
   readonly filter: RemoteFilterInput;
   readonly id: Scalars["String"]["input"];
+  readonly manifest?: InputMaybe<Scalars["JSONObject"]["input"]>;
   readonly name: Scalars["String"]["input"];
   readonly sinceTimestampUtcMs: Scalars["String"]["input"];
 };
 
 export type TouchChannelResult = {
   readonly ackOrdinal: Scalars["Int"]["output"];
+  readonly manifest?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly success: Scalars["Boolean"]["output"];
 };
 
@@ -1409,6 +1413,8 @@ export type PollSyncEnvelopesQuery = {
   readonly pollSyncEnvelopes: {
     readonly ackOrdinal: number;
     readonly hasMore: boolean;
+    readonly manifestRevision?: string | null | undefined;
+    readonly peerManifestRevision?: string | null | undefined;
     readonly envelopes: ReadonlyArray<{
       readonly type: SyncEnvelopeType;
       readonly key?: string | null | undefined;
@@ -1489,6 +1495,7 @@ export type TouchChannelMutation = {
   readonly touchChannel: {
     readonly success: boolean;
     readonly ackOrdinal: number;
+    readonly manifest?: NonNullable<unknown> | null | undefined;
   };
 };
 
@@ -2237,6 +2244,16 @@ export type PollSyncEnvelopesResultResolvers<
     ContextType
   >;
   hasMore?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
+  manifestRevision?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
+  peerManifestRevision?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
 }>;
 
 export type QueryResolvers<
@@ -2486,6 +2503,11 @@ export type TouchChannelResultResolvers<
     ResolversParentTypes["TouchChannelResult"],
 > = ResolversObject<{
   ackOrdinal?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  manifest?: Resolver<
+    Maybe<ResolversTypes["JSONObject"]>,
+    ParentType,
+    ContextType
+  >;
   success?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
 }>;
 
@@ -2740,6 +2762,7 @@ export function TouchChannelInputSchema(): z.ZodObject<
     collectionId: z.string(),
     filter: z.lazy(() => RemoteFilterInputSchema()),
     id: z.string(),
+    manifest: z.custom<NonNullable<unknown>>((v) => v != null).nullish(),
     name: z.string(),
     sinceTimestampUtcMs: z.string(),
   });
@@ -3333,6 +3356,8 @@ export const PollSyncEnvelopesDocument = gql`
         errorType
       }
       hasMore
+      manifestRevision
+      peerManifestRevision
     }
   }
 `;
@@ -3341,6 +3366,7 @@ export const TouchChannelDocument = gql`
     touchChannel(input: $input) {
       success
       ackOrdinal
+      manifest
     }
   }
 `;
