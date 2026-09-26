@@ -142,6 +142,7 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
   private maxTrackedAboveCursor = defaultCatchUpConfig.maxTrackedAboveCursor;
   private loggedFailure: number | undefined;
   private failedItem: OperationWithContext | undefined;
+  private initialized = false;
   private readonly sweptListeners = new Set<
     (coordinates: ConsistencyCoordinate[]) => void
   >();
@@ -199,6 +200,11 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
 
   /** A chunk that throws ends the replay; sweeps continue from below it. */
   async init(): Promise<void> {
+    // A repeat init replays from where this process is, keeping what it applied.
+    if (this.initialized) {
+      await this.replayFromCursor();
+      return;
+    }
     let stored = await this.loadState();
 
     if (stored === undefined) {
@@ -206,6 +212,7 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
         const head = await this.settledWatermark().refresh();
         await this.initializeState(head);
         this.resetCursor(head);
+        this.initialized = true;
         return;
       }
       await this.initializeState(0);
@@ -213,6 +220,7 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     }
 
     this.resetCursor(stored);
+    this.initialized = true;
     await this.replayFromCursor();
   }
 

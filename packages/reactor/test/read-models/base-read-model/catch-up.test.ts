@@ -247,6 +247,20 @@ describe("BaseReadModel catch-up", () => {
     expect(await storedCursor()).toBe(3);
   });
 
+  it("applies nothing twice when init runs again after a live batch", async () => {
+    const [first, second] = await commit(["doc-a", 0], ["doc-b", 0]);
+    const model = makeModel({ replayStreamSuffix: false });
+    await model.init();
+    expect(model.commits).toEqual([[1, 2]]);
+
+    const [third] = await commit(["doc-c", 0]);
+    await model.indexOperations([third!]);
+    await model.init();
+
+    expect(model.commits).toEqual([[1, 2], [3]]);
+    expect(first!.context.ordinal + second!.context.ordinal).toBe(3);
+  });
+
   it("replays from a cursor lowered externally", async () => {
     await commit(
       ["doc-a", 0],
