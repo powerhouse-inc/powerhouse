@@ -1,4 +1,5 @@
-export { CatchUpScheduler } from "./scheduler.js";
+export { ContiguousCursor } from "./contiguous-cursor.js";
+export { CatchUpScheduler, isCatchUpConsumer } from "./scheduler.js";
 export {
   createKyselyWatermarkProbe,
   parseSnapshot,

@@ -962,6 +962,7 @@ describe("ProcessorManager Integration Tests", () => {
         .executeTakeFirst();
       expect(cursor?.lastOrdinal).toBe(maxOrdinal);
 
+      await reactorModule.catchUp.sweepNow();
       const viewState = await db
         .selectFrom("ViewState")
         .select("lastOrdinal")
@@ -1268,7 +1269,7 @@ describe("ProcessorManager Standalone Tests", () => {
       expect(processor.receivedOperations).toHaveLength(2);
     });
 
-    it("should update ViewState after processing", async () => {
+    it("leaves ViewState to the catch-up sweep", async () => {
       const driveId = generateId();
       const operations: OperationWithContext[] = [
         makeDriveCreateOp(driveId, 42),
@@ -1282,7 +1283,7 @@ describe("ProcessorManager Standalone Tests", () => {
         .where("readModelId", "=", "processor-manager")
         .executeTakeFirst();
 
-      expect(viewState?.lastOrdinal).toBe(42);
+      expect(viewState?.lastOrdinal).toBe(0);
     });
   });
 
@@ -1681,14 +1682,6 @@ describe("ProcessorManager Standalone Tests", () => {
 
       // The processor should still have received operations
       expect(goodProcessor.receivedOperations.length).toBeGreaterThan(0);
-
-      // The PM's ViewState cursor should still advance
-      const viewState = await db
-        .selectFrom("ViewState")
-        .selectAll()
-        .where("readModelId", "=", "processor-manager")
-        .executeTakeFirst();
-      expect(viewState?.lastOrdinal).toBe(5);
     });
 
     it("should clean up orphaned cursor rows when factory returns fewer processors", async () => {
@@ -1803,9 +1796,8 @@ describe("ProcessorManager Standalone Tests", () => {
       expect(tracked).toBeDefined();
       expect(tracked!.lastOrdinal).toBe(3);
 
-      const { cursor, viewState } = await readCursors(`f:${driveId}:0`);
+      const { cursor } = await readCursors(`f:${driveId}:0`);
       expect(cursor?.lastOrdinal).toBe(3);
-      expect(viewState?.lastOrdinal).toBe(3);
 
       // A restart backfills from the persisted cursors: op 3 must not repeat.
       const restarted = new ProcessorManager(
@@ -1862,9 +1854,8 @@ describe("ProcessorManager Standalone Tests", () => {
 
       expect(ordinalsOf(mock.processor)).toEqual([1, 2, 3]);
 
-      const { cursor, viewState } = await readCursors(`f:${driveId}:0`);
+      const { cursor } = await readCursors(`f:${driveId}:0`);
       expect(cursor?.lastOrdinal).toBe(3);
-      expect(viewState?.lastOrdinal).toBe(3);
     });
 
     it("should deliver an earlier ordinal that arrives after a later one", async () => {

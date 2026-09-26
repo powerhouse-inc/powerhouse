@@ -104,6 +104,10 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
     return this.manager.getChainDepth() + this.chains.size;
   }
 
+  indexedReadModels(): readonly IReadModel[] {
+    return [...this.preReady, ...this.postReady];
+  }
+
   /** Worker chains flush first, so every relayed read-ready is in `chains`. */
   async drain(): Promise<void> {
     await this.manager.drain();

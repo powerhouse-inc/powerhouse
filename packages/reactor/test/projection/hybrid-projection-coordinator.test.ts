@@ -1,4 +1,5 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import { defaultCatchUpConfig } from "../../src/catch-up/types.js";
 import { ConsoleLogger } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
@@ -264,6 +265,7 @@ describe("HybridProjectionCoordinator", () => {
       preReadyKinds: ["document-view", "document-indexer"],
       postReadyKinds: [],
       indexing: defaultReadModelIndexingConfig,
+      catchUp: defaultCatchUpConfig,
       factory,
       logger,
       hostBus: bus,

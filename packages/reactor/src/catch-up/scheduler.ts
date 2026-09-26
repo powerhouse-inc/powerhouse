@@ -21,9 +21,26 @@ type ConsumerEntry = {
 
 type PresentPage = { bound: number; present: number[] };
 
+type ConsumerSource = {
+  consumers: () => readonly ICatchUpConsumer[];
+  thread: CatchUpThread;
+};
+
+export function isCatchUpConsumer(value: unknown): value is ICatchUpConsumer {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<ICatchUpConsumer>;
+  return (
+    typeof candidate.sweep === "function" &&
+    typeof candidate.consumerId === "string" &&
+    typeof candidate.appliedThrough === "number"
+  );
+}
+
 /** Periodically sweeps every consumer up to the settled watermark. */
 export class CatchUpScheduler implements ICatchUp {
-  private readonly entries: ConsumerEntry[] = [];
+  private readonly fixed: ConsumerEntry[] = [];
+  private readonly sources: ConsumerSource[] = [];
+  private readonly sourced = new Map<ICatchUpConsumer, ConsumerEntry>();
   private timer: ReturnType<typeof setInterval> | undefined;
   private running: Promise<SweepResult[]> | undefined;
   private started = false;
@@ -42,8 +59,17 @@ export class CatchUpScheduler implements ICatchUp {
   }
 
   addConsumer(consumer: ICatchUpConsumer, thread: CatchUpThread): void {
-    if (this.entries.some((entry) => entry.consumer === consumer)) return;
-    this.entries.push({ consumer, thread, lastAdvanceUtcMs: Date.now() });
+    if (this.fixed.some((entry) => entry.consumer === consumer)) return;
+    this.fixed.push({ consumer, thread, lastAdvanceUtcMs: Date.now() });
+    this.ensureTimer();
+  }
+
+  /** Consumers read on every tick, so models registered later are swept too. */
+  addSource(
+    consumers: () => readonly ICatchUpConsumer[],
+    thread: CatchUpThread,
+  ): void {
+    this.sources.push({ consumers, thread });
     this.ensureTimer();
   }
 
@@ -73,7 +99,7 @@ export class CatchUpScheduler implements ICatchUp {
   status(): CatchUpStatus {
     return {
       watermark: this.watermark.status(),
-      consumers: this.entries.map((entry): CatchUpConsumerStatus => ({
+      consumers: this.entries().map((entry): CatchUpConsumerStatus => ({
         consumerId: entry.consumer.consumerId,
         thread: entry.thread,
         appliedThrough: entry.consumer.appliedThrough,
@@ -88,7 +114,7 @@ export class CatchUpScheduler implements ICatchUp {
 
   private ensureTimer(): void {
     if (!this.started || this.stopped || this.timer !== undefined) return;
-    if (this.entries.length === 0) return;
+    if (this.fixed.length === 0 && this.sources.length === 0) return;
 
     const timer = setInterval(() => {
       if (this.running !== undefined) return;
@@ -110,21 +136,44 @@ export class CatchUpScheduler implements ICatchUp {
 
   private async tick(): Promise<SweepResult[]> {
     const settled = await this.watermark.refresh();
-    if (this.entries.length === 0) return [];
+    const entries = this.entries();
+    if (entries.length === 0) return [];
 
     let lowest = Number.POSITIVE_INFINITY;
-    for (const entry of this.entries) {
+    for (const entry of entries) {
       lowest = Math.min(lowest, entry.consumer.appliedThrough);
     }
     const shared = await this.readPage(lowest, settled);
 
     const results: SweepResult[] = [];
-    for (const entry of [...this.entries]) {
+    for (const entry of entries) {
       if (this.stopped) break;
       const result = await this.sweepOne(entry, shared, settled);
       if (result !== undefined) results.push(result);
     }
     return results;
+  }
+
+  private entries(): ConsumerEntry[] {
+    const entries = [...this.fixed];
+    const seen = new Set(entries.map((entry) => entry.consumer));
+    for (const source of this.sources) {
+      for (const consumer of source.consumers()) {
+        if (seen.has(consumer)) continue;
+        seen.add(consumer);
+        let entry = this.sourced.get(consumer);
+        if (entry === undefined) {
+          entry = {
+            consumer,
+            thread: source.thread,
+            lastAdvanceUtcMs: Date.now(),
+          };
+          this.sourced.set(consumer, entry);
+        }
+        entries.push(entry);
+      }
+    }
+    return entries;
   }
 
   private async sweepOne(

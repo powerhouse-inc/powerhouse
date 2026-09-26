@@ -2,13 +2,14 @@
 # Run 11: sharded projection scaling sweep. Tests whether moving the per-
 # queueKey projection chain off the host event loop and into N worker
 # threads buys back the throughput Run 10 said was loop-bound. Matrix:
-#   (NUM_DRIVES, N_PROJECTION_SHARDS) in {(64,1),(64,2),(64,4),(64,8),(256,4)}
+#   (NUM_DRIVES, N_PROJECTION_SHARDS) in {(64,1),(256,1)}. The host refuses
+#   more than one shard since read-side catch-up (one cursor per read model).
 # Fixed: REACTOR_WORKERS=8, VUS=128, DURATION=60s. Host pool shrinks to 32
 # (less work on the host loop now); each shard owns its own pool of 16.
 #
 # Inputs (env overrides):
 #   CELL_LIST                space-separated NUM_DRIVES:N_SHARDS pairs
-#                            (default: "64:1 64:2 64:4 64:8 256:4")
+#                            (default: "64:1 256:1")
 #   VUS                      k6 virtual users (default: 128)
 #   DURATION                 k6 steady-state duration (default: 60s)
 #   POOL_HOST                host pool size (default: 32)
@@ -21,7 +22,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
-CELL_LIST="${CELL_LIST:-64:1 64:2 64:4 64:8 256:4}"
+CELL_LIST="${CELL_LIST:-64:1 256:1}"
 export VUS="${VUS:-128}"
 export DURATION="${DURATION:-60s}"
 export REACTOR_WORKERS="${REACTOR_WORKERS:-8}"

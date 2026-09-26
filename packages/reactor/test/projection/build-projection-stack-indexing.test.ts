@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { defaultCatchUpConfig } from "../../src/catch-up/types.js";
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { generateId } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
@@ -160,6 +161,7 @@ describe("buildProjectionStack indexing config", () => {
       postReadyKinds: ["document-indexer"],
       chainDepthReportIntervalMs: 1000,
       indexing: HOST_INDEXING,
+      catchUp: defaultCatchUpConfig,
     };
 
     return buildProjectionStack({
@@ -170,6 +172,7 @@ describe("buildProjectionStack indexing config", () => {
         onReadReady: () => {},
         onReadModelIndexed: () => {},
         onBatchCompleted: () => {},
+        onReadModelSwept: () => {},
       },
     });
   }

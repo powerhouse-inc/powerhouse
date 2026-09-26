@@ -34,6 +34,12 @@ import { createTestOperation } from "../../factories.js";
 // Combined database type that includes both storage and view tables
 type Database = StorageDatabase & DocumentViewDatabase;
 
+/** Ordinals are unique in the index; fixtures that create many documents draw from here. */
+let fixtureOrdinal = 0;
+function nextOrdinal(): number {
+  return ++fixtureOrdinal;
+}
+
 describe("KyselyDocumentView", () => {
   let db: Kysely<Database>;
   let view: KyselyDocumentView;
@@ -45,6 +51,7 @@ describe("KyselyDocumentView", () => {
   let dialect: any;
 
   beforeEach(async () => {
+    fixtureOrdinal = 0;
     // Create in-memory PGLite database for testing
     dialect = new PGliteDialect(new PGlite());
     const baseDb = new Kysely<Database>({
@@ -299,7 +306,7 @@ describe("KyselyDocumentView", () => {
           scope,
           branch,
           resultingState: JSON.stringify({ global: {} }),
-          ordinal: 1,
+          ordinal: 2,
         },
       };
 
@@ -1210,7 +1217,7 @@ describe("KyselyDocumentView", () => {
                 },
                 document: {},
               }),
-              ordinal: 1,
+              ordinal: nextOrdinal(),
             },
           },
         ]);
@@ -1426,7 +1433,7 @@ describe("KyselyDocumentView", () => {
                 },
                 document: {},
               }),
-              ordinal: 1,
+              ordinal: nextOrdinal(),
             },
           },
         ]);
@@ -1808,7 +1815,7 @@ describe("KyselyDocumentView", () => {
                 },
                 document: {},
               }),
-              ordinal: 1,
+              ordinal: nextOrdinal(),
             },
           },
         ]);
@@ -2364,7 +2371,7 @@ describe("KyselyDocumentView", () => {
             scope: "header",
             branch,
             resultingState,
-            ordinal: 1,
+            ordinal: nextOrdinal(),
           },
         },
         {
@@ -2383,7 +2390,7 @@ describe("KyselyDocumentView", () => {
             scope: "document",
             branch,
             resultingState,
-            ordinal: 2,
+            ordinal: nextOrdinal(),
           },
         },
       ]);
@@ -2425,7 +2432,7 @@ describe("KyselyDocumentView", () => {
             scope: "document",
             branch,
             resultingState,
-            ordinal: 3,
+            ordinal: nextOrdinal(),
           },
         },
       ]);
@@ -2607,7 +2614,7 @@ describe("KyselyDocumentView", () => {
               header: { id: documentId, documentType, slug, name: "Test" },
               global: { touched: true },
             }),
-            ordinal: 4,
+            ordinal: nextOrdinal(),
           },
         },
       ]);

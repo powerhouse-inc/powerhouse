@@ -17,12 +17,16 @@ import { CollectionMembershipCache } from "../cache/collection-membership-cache.
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
-import { CatchUpScheduler } from "../catch-up/scheduler.js";
+import { CatchUpScheduler, isCatchUpConsumer } from "../catch-up/scheduler.js";
 import {
   createKyselyWatermarkProbe,
   SettledWatermark,
 } from "../catch-up/settled-watermark.js";
-import { defaultCatchUpConfig, type CatchUpConfig } from "../catch-up/types.js";
+import {
+  defaultCatchUpConfig,
+  type CatchUpConfig,
+  type ICatchUpConsumer,
+} from "../catch-up/types.js";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { WriteCacheConfig } from "../cache/write-cache-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
@@ -244,6 +248,15 @@ export type ProjectionShardBuilderConfig = {
   drainTimeoutMs?: number;
   chainDepthReportIntervalMs?: number;
 };
+
+/** One contiguous cursor per read model cannot serve shards that each see part of the stream. */
+function validateShardCount(shardCount: number): void {
+  if (shardCount !== 1) {
+    throw new Error(
+      `shardCount ${shardCount} is not supported: read-side catch-up keeps one cursor per read model, so projection runs in exactly one worker (shardCount: 1)`,
+    );
+  }
+}
 
 function sameDatabaseTarget(a: DbConfig, b: DbConfig): boolean {
   return a.host === b.host && a.port === b.port && a.database === b.database;
@@ -623,6 +636,7 @@ export class ReactorBuilder {
     // pool opens, and again in createProjectionShardManager for the
     // coordinator-factory path.
     if (this.projectionShardConfig !== undefined) {
+      validateShardCount(this.projectionShardConfig.shardCount);
       validateBuiltInKindCoverage(
         this.projectionShardConfig.preReadyKinds,
         this.projectionShardConfig.postReadyKinds,
@@ -890,6 +904,10 @@ export class ReactorBuilder {
         : DeletedDocumentRead.NotFound,
       readModelIndexing,
     );
+    documentView.attachCatchUp(
+      settledWatermark,
+      this.catchUpConfig.maxTrackedAboveCursor,
+    );
 
     try {
       await documentView.init();
@@ -904,6 +922,10 @@ export class ReactorBuilder {
       writeCache,
       documentIndexerConsistencyTracker,
       readModelIndexing,
+    );
+    documentIndexer.attachCatchUp(
+      settledWatermark,
+      this.catchUpConfig.maxTrackedAboveCursor,
     );
 
     try {
@@ -929,6 +951,10 @@ export class ReactorBuilder {
       this.logger!,
       this.driveContainerTypes,
       { legacyProcessorIds: this.features.legacyProcessorIds !== false },
+    );
+    processorManager.attachCatchUp(
+      settledWatermark,
+      this.catchUpConfig.maxTrackedAboveCursor,
     );
 
     try {
@@ -1003,6 +1029,23 @@ export class ReactorBuilder {
               subscriptionNotificationReadModel,
               processorManager,
             ]);
+
+    const indexedReadModels =
+      readModelCoordinator.indexedReadModels?.bind(readModelCoordinator);
+    if (indexedReadModels) {
+      catchUp.addSource(
+        () =>
+          indexedReadModels().filter(
+            (model): model is IReadModel & ICatchUpConsumer =>
+              isCatchUpConsumer(model),
+          ),
+        "host",
+      );
+    } else {
+      this.logger.warn(
+        "The read model coordinator does not report indexedReadModels; the host runs no read-side catch-up sweep",
+      );
+    }
 
     const reactor = new Reactor(
       this.logger,
@@ -1196,6 +1239,7 @@ export class ReactorBuilder {
         );
       }
     }
+    validateShardCount(config.shardCount);
     validateBuiltInKindCoverage(config.preReadyKinds, config.postReadyKinds);
     // The executor pool guard in buildModule only runs with a worker pool.
     if (this.moduleOnlyModelKeys.length > 0) {
@@ -1229,6 +1273,7 @@ export class ReactorBuilder {
       preReadyKinds: config.preReadyKinds,
       postReadyKinds: config.postReadyKinds,
       indexing,
+      catchUp: this.catchUpConfig,
       factory,
       logger: this.logger!,
       hostBus: eventBus,

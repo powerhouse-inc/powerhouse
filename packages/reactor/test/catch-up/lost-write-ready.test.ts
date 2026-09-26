@@ -24,7 +24,7 @@ import { addRelationshipAction } from "../../src/actions/index.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { Database, InProcessReactorModule } from "../../src/core/types.js";
 import type { Job } from "../../src/queue/types.js";
-import { JobStatus } from "../../src/shared/types.js";
+import { JobStatus, type ConsistencyToken } from "../../src/shared/types.js";
 import { createDocModelDocument } from "../factories.js";
 import { TRUST_ANY_SIGNER } from "../utils/signed-as.js";
 import { DroppingEventBus } from "./helpers.js";
@@ -189,7 +189,7 @@ describe("a lost JOB_WRITE_READY", () => {
     await settled(module, job.id);
   }
 
-  it.fails("P1: the document view serves the document after one sweep", async () => {
+  it("P1: the document view serves the document after one sweep", async () => {
     const deployment = await deploy();
     await createLost(deployment, "lost-doc");
 
@@ -199,7 +199,7 @@ describe("a lost JOB_WRITE_READY", () => {
     expect(document.header.id).toBe("lost-doc");
   });
 
-  it.fails("P2: the document view serves it after a restart", async () => {
+  it("P2: the document view serves it after a restart", async () => {
     const first = await deploy();
     await createLost(first, "lost-doc");
     await createLive(first, "later-doc");
@@ -210,7 +210,37 @@ describe("a lost JOB_WRITE_READY", () => {
     expect(document.header.id).toBe("lost-doc");
   });
 
-  it.fails("P3: the indexer holds the relationship", async () => {
+  it("resolves a token for an operation only a sweep applied", async () => {
+    const deployment = await deploy();
+    await createLost(deployment, "lost-doc");
+
+    const indexed = await deployment.module.operationIndex.get("lost-doc");
+    const token: ConsistencyToken = {
+      version: 1,
+      createdAtUtcIso: new Date().toISOString(),
+      coordinates: indexed.results.map((entry) => ({
+        documentId: entry.documentId,
+        scope: entry.scope,
+        branch: entry.branch,
+        operationIndex: entry.index,
+      })),
+    };
+    let resolved = false;
+    const read = deployment.module.documentView
+      .get("lost-doc", undefined, token)
+      .then((document) => {
+        resolved = true;
+        return document;
+      });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(resolved).toBe(false);
+
+    await deployment.module.catchUp.sweepNow();
+
+    await expect(read).resolves.toMatchObject({ header: { id: "lost-doc" } });
+  });
+
+  it("P3: the indexer holds the relationship", async () => {
     const deployment = await deploy();
     await createLive(deployment, "parent-doc");
     await createLive(deployment, "child-doc");
@@ -236,7 +266,7 @@ describe("a lost JOB_WRITE_READY", () => {
     ]);
   });
 
-  it.fails("P4: a bound processor receives the operation", async () => {
+  it("P4: a bound processor receives the operation", async () => {
     const deployment = await deploy();
     const processor = recordingProcessor();
     await deployment.module.processorManager.registerFactory("pkg", () => [

@@ -12,6 +12,11 @@
 
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type {
+  CatchUpConfig,
+  CatchUpStatus,
+  SweepResult,
+} from "../catch-up/types.js";
+import type {
   DbConfig,
   ErrorInfo,
   ModelManifestEntry,
@@ -22,7 +27,7 @@ import type {
   ReadModelStage,
 } from "../events/types.js";
 import type { ReadModelIndexingConfig } from "../read-models/base-read-model.js";
-import type { JobMeta } from "../shared/types.js";
+import type { ConsistencyCoordinate, JobMeta } from "../shared/types.js";
 
 export type { DbConfig, ModelManifestEntry, ReadModelIndexingConfig };
 
@@ -68,6 +73,8 @@ export type ProjectionInitMessage = {
    * a tuned cadence cannot apply to one and not the other.
    */
   indexing: ReadModelIndexingConfig;
+  /** The worker sweeps its own read models on the host's schedule. */
+  catchUp: CatchUpConfig;
 };
 
 /**
@@ -231,6 +238,22 @@ export type ProjectionLogMessage = {
   timestamp: number;
 };
 
+/** What a worker sweep applied, so the host tracker for that model advances. */
+export type ProjectionReadModelSweptMessage = {
+  type: "readmodel-swept";
+  shardId: string;
+  readModelName: string;
+  coordinates: ConsistencyCoordinate[];
+  result: SweepResult;
+};
+
+/** The worker's catch-up status, every chainDepthReportIntervalMs. */
+export type ProjectionCatchUpStatusMessage = {
+  type: "catchup-status";
+  shardId: string;
+  status: CatchUpStatus;
+};
+
 export type ProjectionWorkerMessage =
   | ProjectionReadyMessage
   | ProjectionInitFailedMessage
@@ -240,7 +263,9 @@ export type ProjectionWorkerMessage =
   | ProjectionChainDepthMessage
   | ProjectionPoolAcquireSamplesMessage
   | ProjectionDrainedMessage
-  | ProjectionLogMessage;
+  | ProjectionLogMessage
+  | ProjectionReadModelSweptMessage
+  | ProjectionCatchUpStatusMessage;
 
 /**
  * Stage tag carried on a few host-side metrics so an operator can attribute
