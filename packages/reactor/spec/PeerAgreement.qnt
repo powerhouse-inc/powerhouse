@@ -115,8 +115,18 @@ module PeerAgreement {
   var regressed: bool
 
   pure val DOCS = 1.to(MAX_DOCS)
+  // Universes: every growing set is rebuilt as a filter over one, so Apalache's bound on it stays fixed.
+  pure val ITEMS: Set[Item] = tuples(REACTORS, REACTORS, DOCS).filter(i => EDGES.contains((i._1, i._2)))
+  pure val ROWS: Set[Row] = tuples(DOCS, REACTORS, Set(true, false))
+  pure val PLACES: Set[(str, int)] = tuples(REACTORS, DOCS)
 
-  def peersOf(r: str): Set[str] = EDGES.filter(e => e._1 == r).map(e => e._2)
+  /** s + t, bounded by u. */
+  pure def plus(u: Set[a], s: Set[a], t: Set[a]): Set[a] = u.filter(x => s.contains(x) or t.contains(x))
+  /** s - t + n, bounded by u. */
+  pure def swap(u: Set[a], s: Set[a], t: Set[a], n: Set[a]): Set[a] =
+    u.filter(x => (s.contains(x) and not(t.contains(x))) or n.contains(x))
+
+  def peersOf(r: str): Set[str] = REACTORS.filter(p => EDGES.contains((r, p)))
 
   def current(a: str): PeerRecord = { ann: announced(build.get(a)), seq: seq.get(a) }
 
@@ -139,8 +149,7 @@ module PeerAgreement {
     if (not(hasFeature(build.get(r)))) 2
     else if (agreed(r, 3)) 3 else if (agreed(r, 2)) 2 else 1
 
-  def rowsFor(r: str, d: int): Set[(str, bool)] =
-    rows.get(r).filter(w => w._1 == d).map(w => (w._2, w._3))
+  def rowsFor(r: str, d: int): Set[Row] = rows.get(r).filter(w => w._1 == d)
 
   /** Items a gated sender a must move from its outbox to holds when b's record becomes `sup`. */
   def unsentFor(a: str, b: str, sup: Set[int]): Set[Item] =
@@ -185,9 +194,9 @@ module PeerAgreement {
     seq' = seq.set(r, seq.get(r) + 1),
     outbox' = outbox.filter(o => o._1 != r),
     // A legacy client sends no manifest-bearing touch and reads none back: it owes only its own direction.
-    pendingTouch' = pendingTouch
-      .union(PUSH_EDGES.filter(e => e._1 == r))
-      .union(if (hasFeature(nb)) PUSH_EDGES.filter(e => e._1 == r).map(e => (e._2, e._1)) else Set()),
+    pendingTouch' = EDGES.filter(e => pendingTouch.contains(e) or
+      (e._1 == r and PUSH_EDGES.contains(e)) or
+      (e._2 == r and hasFeature(nb) and PUSH_EDGES.contains((e._2, e._1)))),
     narrowedInFlight' = (narrowedInFlight or outbox.exists(m =>
       m._2 == r and runs(build.get(r)).contains(docVersion.get(m._3)) and not(runs(nb).contains(docVersion.get(m._3))))),
     known' = known, manifestMsgs' = manifestMsgs, docVersion' = docVersion, stored' = stored,
@@ -232,9 +241,9 @@ module PeerAgreement {
       manifestMsgs' = manifestMsgs.exclude(Set(m)),
       known' = if (apply) known.setBy(b, kb => kb.set(a, { ann: m.ann, seq: m.seq })) else known,
       pendingTouch' = if (m.seq == seq.get(a)) pendingTouch.exclude(Set((a, b))) else pendingTouch,
-      holds' = holds.exclude(toRelease).union(unsent),
-      released' = released.union(toRelease),
-      outbox' = outbox.exclude(unsent).union(toRelease),
+      holds' = swap(ITEMS, holds, toRelease, unsent),
+      released' = plus(ITEMS, released, toRelease),
+      outbox' = swap(ITEMS, outbox, unsent, toRelease),
       regressed' = (regressed or (apply and m.seq < k.seq)),
       build' = build, seq' = seq, docVersion' = docVersion, stored' = stored, rows' = rows,
       badStores' = badStores, refusals' = refusals, peerRefusals' = peerRefusals, lostRows' = lostRows,
@@ -251,8 +260,8 @@ module PeerAgreement {
       // A stage 1+ executor refuses a CREATE it does not run (the misconfigured case).
       not(refusesUnsupported(b)) or runs(b).contains(v),
       docVersion' = docVersion.set(d, v),
-      stored' = stored.setBy(r, s => s.union(Set(d))),
-      rows' = rows.setBy(r, s => s.union(Set((d, r, not(runs(b).contains(v)))))),
+      stored' = stored.setBy(r, s => plus(DOCS, s, Set(d))),
+      rows' = rows.setBy(r, s => plus(ROWS, s, Set((d, r, not(runs(b).contains(v)))))),
       build' = build, seq' = seq, known' = known, manifestMsgs' = manifestMsgs,
       pendingTouch' = pendingTouch, outbox' = outbox, holds' = holds, badStores' = badStores,
       released' = released, refusals' = refusals, peerRefusals' = peerRefusals, lostRows' = lostRows,
@@ -269,7 +278,7 @@ module PeerAgreement {
       stored.get(r).contains(d),
       not(refusesUnsupported(b)) or runs(b).contains(v),
       not(rows.get(r).contains(w)),
-      rows' = rows.setBy(r, s => s.union(Set(w))),
+      rows' = rows.setBy(r, s => plus(ROWS, s, Set(w))),
       build' = build, seq' = seq, known' = known, manifestMsgs' = manifestMsgs,
       pendingTouch' = pendingTouch, outbox' = outbox, docVersion' = docVersion, stored' = stored,
       holds' = holds, badStores' = badStores, released' = released, refusals' = refusals,
@@ -287,8 +296,8 @@ module PeerAgreement {
       EDGES.contains((a, b)),
       stored.get(a).contains(d),
       not(holds.contains((a, b, d))),
-      if (held) all { holds' = holds.union(Set((a, b, d))), outbox' = outbox }
-      else all { not(outbox.contains(m)), outbox' = outbox.union(Set(m)), holds' = holds },
+      if (held) all { holds' = plus(ITEMS, holds, Set(m)), outbox' = outbox }
+      else all { not(outbox.contains(m)), outbox' = plus(ITEMS, outbox, Set(m)), holds' = holds },
       build' = build, seq' = seq, known' = known, manifestMsgs' = manifestMsgs,
       pendingTouch' = pendingTouch, docVersion' = docVersion, stored' = stored, rows' = rows,
       badStores' = badStores, released' = released, refusals' = refusals, peerRefusals' = peerRefusals,
@@ -322,21 +331,21 @@ module PeerAgreement {
         if (fieldRejected) known.setBy(a, ka => ka.set(b, { ann: SILENT, seq: seq.get(b) }))
         else known,
       holds' =
-        if (sendHeld) holds.union(Set(h))
+        if (sendHeld) plus(ITEMS, holds, Set(h))
         // Decision 11: an UNSUPPORTED_PROTOCOL refusal becomes a hold at the sender.
-        else if (refuse and hasFeature(build.get(a))) holds.union(Set(h))
-        else holds.union(fallback),
-      refusals' = if (refuse) refusals.union(Set(h)) else refusals,
-      peerRefusals' = if (peerRefuse) peerRefusals.union(Set(h)) else peerRefusals,
+        else if (refuse and hasFeature(build.get(a))) plus(ITEMS, holds, Set(h))
+        else plus(ITEMS, holds, fallback),
+      refusals' = if (refuse) plus(ITEMS, refusals, Set(h)) else refusals,
+      peerRefusals' = if (peerRefuse) plus(ITEMS, peerRefusals, Set(h)) else peerRefusals,
       lostRows' =
-        if (peerRefuse and sent.exists(w => not(w._2) and not(rows.get(b).contains((d, w._1, false)))))
-          lostRows.union(Set(h))
+        if (peerRefuse and sent.exists(w => not(w._3) and not(rows.get(b).contains(w))))
+          plus(ITEMS, lostRows, Set(h))
         else lostRows,
-      stored' = if (accept) stored.setBy(b, s => s.union(Set(d))) else stored,
-      rows' = if (accept) rows.setBy(b, s => s.union(rows.get(a).filter(w => w._1 == d))) else rows,
-      badStores' = if (accept and not(runs(bb).contains(v))) badStores.union(Set((b, d))) else badStores,
+      stored' = if (accept) stored.setBy(b, s => plus(DOCS, s, Set(d))) else stored,
+      rows' = if (accept) rows.setBy(b, s => ROWS.filter(w => s.contains(w) or (w._1 == d and rows.get(a).contains(w)))) else rows,
+      badStores' = if (accept and not(runs(bb).contains(v))) plus(PLACES, badStores, Set((b, d))) else badStores,
       misreadAdmitted' =
-        if (accept and hasFeature(bb) and sent.exists(w => w._2)) misreadAdmitted.union(Set((b, d)))
+        if (accept and hasFeature(bb) and sent.exists(w => w._3)) plus(PLACES, misreadAdmitted, Set((b, d)))
         else misreadAdmitted,
       build' = build, seq' = seq, manifestMsgs' = manifestMsgs, pendingTouch' = pendingTouch,
       docVersion' = docVersion, released' = released, narrowedInFlight' = narrowedInFlight,
@@ -607,6 +616,18 @@ module stage1One {
     MAX_DOCS = 1,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
     PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false
+  ).*
+}
+
+module stage1SeqOne {
+  import PeerAgreement(
+    REACTORS = Set("A", "S", "B"),
+    EDGES = Set(("A", "S"), ("S", "A"), ("S", "B"), ("B", "S")),
+    PUSH_EDGES = Set(("A", "S"), ("B", "S")),
+    BUILDS = Set("narrow", "wide"),
+    MAX_DOCS = 1,
+    GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
+    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = true
   ).*
 }
 

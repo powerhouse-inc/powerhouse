@@ -7,7 +7,9 @@ expect="$1"; main="$2"; inv="$3"; steps="$4"
 mkdir -p out
 base="out/verify-$main-$(echo "$inv" | tr ',' '+')"
 start=$(date +%s)
-quint verify PeerAgreement.qnt --main="$main" --invariant="$inv" --max-steps="$steps" \
+# Hard cap (macOS has no timeout): VERIFY_TIMEOUT seconds, default 900.
+perl -e 'alarm shift; exec @ARGV' "${VERIFY_TIMEOUT:-900}" \
+  quint verify PeerAgreement.qnt --main="$main" --invariant="$inv" --max-steps="$steps" \
   --apalache-config=apalache.json --out-itf="$base.itf.json" > "$base.log" 2>&1
 code=$?
 secs=$(( $(date +%s) - start ))
