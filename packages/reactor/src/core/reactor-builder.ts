@@ -1078,6 +1078,7 @@ export class ReactorBuilder {
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
         this.driveContainerTypes,
+        settledWatermark,
       );
       await syncModule.syncManager.startup();
     } else if (this.syncBuilder) {
@@ -1088,6 +1089,7 @@ export class ReactorBuilder {
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
         this.driveContainerTypes,
+        settledWatermark,
       );
       await syncModule.syncManager.startup();
     }

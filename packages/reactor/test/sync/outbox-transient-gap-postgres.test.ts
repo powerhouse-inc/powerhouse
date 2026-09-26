@@ -256,37 +256,40 @@ describe("sync outbox across a transient ordinal gap [Postgres]", () => {
       ]);
       await hold.waitUntilHeld();
 
+      // B's batch has been derived once sync calls find after it settles.
+      const find = vi.spyOn(reactorModule.operationIndex, "find");
       const jobB = await reactor.execute(docY, "main", [
         setModelName({ name: "committed-first" }),
       ]);
       await settled(jobB.id);
-      const indexedB = await reactorModule.operationIndex.get(docY);
-      const ordinalB = Math.max(
-        ...indexedB.results.map((entry) => entry.ordinal ?? 0),
-      );
-      await vi.waitUntil(() => channel().outbox.latestOrdinal >= ordinalB, {
+      await vi.waitUntil(() => find.mock.calls.length > 0, {
         timeout: 10_000,
       });
+      await Promise.all(find.mock.results.map((result) => result.value));
 
       await hold.release();
       await settled((await submittedA).id);
 
-      const indexedA = await reactorModule.operationIndex.get(docX);
-      const lastA = indexedA.results.at(-1)!;
+      const lastA = (await reactorModule.operationIndex.get(docX)).results.at(
+        -1,
+      )!;
+      const lastB = (await reactorModule.operationIndex.get(docY)).results.at(
+        -1,
+      )!;
       await vi.waitUntil(() => sentOpIds(sent).has(lastA.id), {
         timeout: 5_000,
       });
-      expect(sentOpIds(sent).has(lastA.id)).toBe(true);
+      expect(sentOpIds(sent).has(lastB.id)).toBe(true);
     } finally {
       await hold.remove();
     }
   }
 
-  it.fails("sends a lower ordinal that commits after a higher one", async () => {
+  it("sends a lower ordinal that commits after a higher one", async () => {
     await runScenario("workers");
   }, 60_000);
 
-  it.fails("sends a lower ordinal that commits after a higher one, in process", async () => {
+  it("sends a lower ordinal that commits after a higher one, in process", async () => {
     await runScenario("in-process");
   }, 60_000);
 });

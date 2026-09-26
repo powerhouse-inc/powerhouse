@@ -1,3 +1,4 @@
+import { settledAtHead } from "../../catch-up/helpers.js";
 import type { Operation } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
@@ -178,6 +179,7 @@ describe("bounding the entries one remote's outbox holds", () => {
       reactor,
       eventBus,
       DEFAULT_DRIVE_CONTAINER_TYPES,
+      settledAtHead(),
       config,
     );
     await syncManager.startup();

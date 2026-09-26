@@ -1,3 +1,4 @@
+import { settledAtHead } from "../catch-up/helpers.js";
 import type {
   Operation,
   OperationWithContext,
@@ -181,6 +182,7 @@ describe("Sync envelope grouping for same-timestamp runs", () => {
       mockReactor,
       eventBus,
       DEFAULT_DRIVE_CONTAINER_TYPES,
+      settledAtHead(),
     );
   });
 

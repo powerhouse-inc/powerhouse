@@ -1,3 +1,4 @@
+import { settledAtHead } from "../../catch-up/helpers.js";
 import type {
   Operation,
   OperationWithContext,
@@ -73,6 +74,7 @@ describe("SyncManager Integration", () => {
       mockReactor,
       eventBus,
       DEFAULT_DRIVE_CONTAINER_TYPES,
+      settledAtHead(),
     );
   });
 
@@ -567,7 +569,7 @@ describe("SyncManager Integration", () => {
       expect(findSpy).toHaveBeenCalledWith(
         "drive.main.collection1",
         0,
-        { excludeSourceRemote: "remote1" },
+        { excludeSourceRemote: "remote1", throughOrdinal: 2_147_483_647 },
         undefined,
         expect.any(AbortSignal),
       );
@@ -609,7 +611,7 @@ describe("SyncManager Integration", () => {
       expect(findSpy).toHaveBeenLastCalledWith(
         "drive.main.collection1",
         triggerOrdinal,
-        { excludeSourceRemote: "remote1" },
+        { excludeSourceRemote: "remote1", throughOrdinal: 2_147_483_647 },
         undefined,
         expect.any(AbortSignal),
       );
@@ -748,7 +750,7 @@ describe("SyncManager Integration", () => {
       expect(findSpy).toHaveBeenLastCalledWith(
         "drive.main.collection1",
         0,
-        { excludeSourceRemote: "remote1" },
+        { excludeSourceRemote: "remote1", throughOrdinal: 2_147_483_647 },
         undefined,
         expect.any(AbortSignal),
       );

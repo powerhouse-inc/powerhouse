@@ -45,6 +45,7 @@ describe("BatchAggregator", () => {
       logger,
       DEFAULT_DRIVE_CONTAINER_TYPES,
       onBatchReady,
+      () => Promise.resolve(),
     );
   });
 
@@ -403,6 +404,7 @@ describe("BatchAggregator", () => {
         logger,
         new Set(["my-custom-drive"]),
         onBatchReady,
+        () => Promise.resolve(),
       );
 
       const customOp = makeAddRelationshipOp(

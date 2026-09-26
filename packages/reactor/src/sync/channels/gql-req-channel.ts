@@ -22,7 +22,7 @@ import type {
   SyncEnvelope,
   SyncOperationErrorType,
 } from "../types.js";
-import { ChannelErrorSource } from "../types.js";
+import { ChannelErrorSource, SyncOperationStatus } from "../types.js";
 import {
   consolidateSyncOperations,
   trimMailboxFromAckOrdinal,
@@ -176,14 +176,19 @@ export class GqlRequestChannel implements IChannel {
     // to the mailbox. This is for efficiency: many syncops may fire on a trim,
     // but only one onRemoved callback will be fired for the batch.
     this.outbox.onRemoved((syncOps) => {
-      const maxOrdinal = getLatestAppliedOrdinal(syncOps);
-      if (maxOrdinal > this.lastPersistedOutboxOrdinal) {
-        this.lastPersistedOutboxOrdinal = maxOrdinal;
+      // Items for different documents apply out of order, so the highest
+      // applied ordinal can pass one still in flight; a restart would skip it.
+      const ordinal = Math.min(
+        getLatestAppliedOrdinal(syncOps),
+        this.unappliedFloor() - 1,
+      );
+      if (ordinal > this.lastPersistedOutboxOrdinal) {
+        this.lastPersistedOutboxOrdinal = ordinal;
         this.cursorStorage
           .upsert({
             remoteName: this.remoteName,
             cursorType: "outbox",
-            cursorOrdinal: maxOrdinal,
+            cursorOrdinal: ordinal,
             lastSyncedAtUtcMs: Date.now(),
           })
           .catch((error) => {
@@ -1091,5 +1096,18 @@ export class GqlRequestChannel implements IChannel {
 
   get poller(): IPollTimer {
     return this.pollTimer;
+  }
+
+  /** The lowest ordinal of an outbox item the remote has not applied. */
+  private unappliedFloor(): number {
+    let floor = Number.POSITIVE_INFINITY;
+    for (const syncOp of this.outbox.items) {
+      if (syncOp.status === SyncOperationStatus.Applied) continue;
+      for (const op of syncOp.operations) {
+        const ordinal = op.context.ordinal;
+        if (ordinal > 0 && ordinal < floor) floor = ordinal;
+      }
+    }
+    return floor;
   }
 }

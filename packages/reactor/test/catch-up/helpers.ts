@@ -10,6 +10,7 @@ import {
   ReactorEventTypes,
   type JobWriteReadyEvent,
 } from "../../src/events/types.js";
+import type { ISettledWatermark } from "../../src/catch-up/types.js";
 import type { Database } from "../../src/storage/kysely/types.js";
 
 export function indexEntry(
@@ -176,4 +177,15 @@ function tableName(db: Kysely<Database>): {
   const match = /from "([^"]+)"\."operation_index_operations"/.exec(compiled);
   const schema = match?.[1] ?? "public";
   return { schema, qualified: `"${schema}"."operation_index_operations"` };
+}
+
+/** A watermark that has settled everything, for tests without an index. */
+export function settledAtHead(): ISettledWatermark {
+  const through = 2_147_483_647;
+  return {
+    settledThrough: through,
+    refresh: () => Promise.resolve(through),
+    onAdvance: () => () => {},
+    status: () => ({ head: 0, settledThrough: through, waitingOn: [] }),
+  };
 }

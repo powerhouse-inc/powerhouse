@@ -1,3 +1,4 @@
+import type { ISettledWatermark } from "../catch-up/types.js";
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
@@ -69,6 +70,7 @@ export class SyncBuilder {
     eventBus: IEventBus,
     db: Kysely<Database>,
     driveContainerTypes: ReadonlySet<string>,
+    watermark: ISettledWatermark,
   ): ISyncManager {
     const module = this.buildModule(
       reactor,
@@ -77,6 +79,7 @@ export class SyncBuilder {
       eventBus,
       db,
       driveContainerTypes,
+      watermark,
     );
     return module.syncManager;
   }
@@ -88,6 +91,7 @@ export class SyncBuilder {
     eventBus: IEventBus,
     db: Kysely<Database>,
     driveContainerTypes: ReadonlySet<string>,
+    watermark: ISettledWatermark,
   ): InProcessSyncModule {
     if (!this.channelFactory) {
       throw new Error("Channel factory is required");
@@ -108,6 +112,7 @@ export class SyncBuilder {
       reactor,
       eventBus,
       driveContainerTypes,
+      watermark,
       this.config,
     );
 

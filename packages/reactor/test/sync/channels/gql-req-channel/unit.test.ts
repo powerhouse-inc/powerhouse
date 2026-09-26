@@ -1971,6 +1971,58 @@ describe("GqlRequestChannel", () => {
       );
     });
 
+    it("does not store an outbox cursor above an unapplied lower item", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        pushSyncEnvelopes: true,
+      });
+      global.fetch = mockFetch as unknown as typeof global.fetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+
+      const lower = createMockSyncOperation("syncop-5", "remote-1", 5, "doc-a");
+      const higher = createMockSyncOperation(
+        "syncop-7",
+        "remote-1",
+        7,
+        "doc-b",
+      );
+      channel.outbox.add(lower, higher);
+      await vi.advanceTimersByTimeAsync(500);
+      await vi.waitFor(() => {
+        expect(higher.status).toBe(SyncOperationStatus.TransportPending);
+      });
+
+      higher.executed();
+      channel.outbox.remove(higher);
+      await vi.advanceTimersByTimeAsync(500);
+
+      const stored = vi
+        .mocked(cursorStorage.upsert)
+        .mock.calls.map(([cursor]) => cursor)
+        .filter((cursor) => cursor.cursorType === "outbox");
+      for (const cursor of stored) {
+        expect(cursor.cursorOrdinal).toBeLessThan(5);
+      }
+
+      lower.executed();
+      channel.outbox.remove(lower);
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(cursorStorage.upsert).toHaveBeenLastCalledWith(
+        expect.objectContaining({ cursorType: "outbox", cursorOrdinal: 5 }),
+      );
+    });
+
     it("should persist inbox cursor when applied operations are removed", () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
