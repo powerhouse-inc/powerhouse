@@ -11,7 +11,7 @@ From `packages/reactor`:
 ```sh
 pnpm spec:typecheck   # both files
 pnpm spec:test        # scenario runs in PeerAgreementTest.qnt
-pnpm spec:sim         # scripts/sim.sh: simulator suite, about 2.5 minutes
+pnpm spec:sim         # scripts/sim.sh: simulator suite, about 4.5 minutes
 pnpm spec:verify      # scripts/verify-all.sh: Apalache suite, needs Java 17+
 pnpm spec:check       # all four
 pnpm spec:trace spec/out/<file>.itf.json   # print a counterexample, one line per step
@@ -46,6 +46,7 @@ pnpm spec:trace spec/out/<file>.itf.json   # print a counterexample, one line pe
 - `noStuckHold`: no hold whose release condition is met while nothing is left to trigger it.
 - `noManifestRegress`: no delayed manifest overwrites a newer record.
 - `noLostRows`: no PEER_PROTOCOL_UNSUPPORTED refusal drops a legitimate row the receiver lacks.
+- `noDroppedRefusal`: every UNSUPPORTED_PROTOCOL refusal at a feature sender becomes a hold (decision 11).
 - `witnessNo*`: reachability checks, expected to be violated.
 
 ## Switches and instances
@@ -53,6 +54,14 @@ pnpm spec:trace spec/out/<file>.itf.json   # print a counterexample, one line pe
 Constants: `GATE`, `RECEIPT_CHECK`, `PEER_CHECK`, the transport assumption `HANDSHAKE_FIRST`
 (after a client restart no data flows on its channel until both manifests are exchanged), and
 the candidate fixes `PUSH_FIELD`, `SEND_GATE`, `RECHECK_HOLDS`, `MANIFEST_SEQ` and `POLL_REVISION`.
+Three more describe the implementation. The plan instances set `RUN_CHECK` and `POLL_REFUSAL_HOLD`
+on and `UNPARENTED` off:
+
+- `RUN_CHECK`: a build refuses writes into a stored document at a version it does not run, not
+  only the document's creation.
+- `POLL_REFUSAL_HOLD`: a client's refusal of a poll response becomes a hold at the server.
+- `UNPARENTED`: a document with no parent takes the local preference.
+
 The `*One` instances have one document and are the ones `verify-all.sh` checks; that one
 document suffices is an argument (see the comment above them), not a check.
 
@@ -71,6 +80,26 @@ document suffices is an argument (see the comment above them), not a check.
 | `fixed`                  | push field + sequences + poll revisions: all but `noLostRows` hold                        |
 | `fixedNoPollRevisionOne` | `fixed` without `POLL_REVISION`: `noUnsupportedStore` violated                            |
 | `fixedNoHandshake`       | `fixed` without `HANDSHAKE_FIRST`: safety still holds                                     |
+
+### As built
+
+`feat/peer-protocol-agreement` as of 034dabf1cf. The switches match the code: revisions are
+content hashes, polls carry no revision, pushes carry no field, the gate runs at derivation only,
+a server re-checks holds on every touch it receives, only creations are refused while the
+sender's record covers the local set, and a client's refusal of a poll response never reaches
+the server. `UNPARENTED` is on. `misconfigured` is left out: the executor refuses by the host's
+registry, which is also what the host announces, so a build that runs less than it announces
+behaves as `liar`.
+
+| instance                           | expected                                                                          |
+| ---------------------------------- | --------------------------------------------------------------------------------- |
+| `asBuilt`                          | every invariant violated                                                          |
+| `asBuiltNoRollback`                | safety violated without any rollback: a narrowed build writes into a v3 document  |
+| `asBuiltNoRollbackPlusRunCheck`    | safety holds                                                                      |
+| `asBuiltPlusRunCheck`              | the rollback leak remains                                                         |
+| `asBuiltMinimal`                   | run check + push field + poll revisions: safety holds; liveness invariants do not |
+| `asBuiltMinimalNo*One`             | each of the three changes removed: safety violated                                |
+| `asBuiltPlusAll`                   | also sequences and poll refusal holds: all but `noLostRows` hold                  |
 
 ## CI sketch
 

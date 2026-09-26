@@ -8,7 +8,8 @@ module PeerAgreementTest {
     BUILDS = Set("legacy", "narrow", "wide", "misconfigured"),
     MAX_DOCS = 2,
     GATE = true, RECEIPT_CHECK = true, PEER_CHECK = true, HANDSHAKE_FIRST = true,
-    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false, POLL_REVISION = false
+    PUSH_FIELD = false, SEND_GATE = false, RECHECK_HOLDS = false, MANIFEST_SEQ = false, POLL_REVISION = false,
+    RUN_CHECK = true, POLL_REFUSAL_HOLD = true, UNPARENTED = false
   ).* from "./PeerAgreement"
 
   action deliverManifestOf(src: str, dst: str): bool = {

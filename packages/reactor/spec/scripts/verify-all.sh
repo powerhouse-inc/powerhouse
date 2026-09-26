@@ -23,4 +23,15 @@ run violated fixedNoPollRevisionOne noUnsupportedStore 10
 # Finding 4: with poll revisions, safety no longer needs the handshake-first transport assumption.
 run holds fixedNoHandshakeOne $SAFE 10
 
+# As built, and the smallest change set that restores safety: each of its three changes is needed.
+run violated asBuiltOne noMisreadRows 10
+run violated asBuiltOne noUnsupportedStore 10
+run violated asBuiltOne noDroppedRefusal 10
+run violated asBuiltOne noStuckHold 10
+run holds asBuiltMinimalOne $SAFE 10
+run violated asBuiltMinimalNoRunCheckOne noMisreadRows 10
+run violated asBuiltMinimalNoPushFieldOne noUnsupportedStore 10
+run violated asBuiltMinimalNoPollRevisionOne noUnsupportedStore 10
+run holds asBuiltPlusAllOne $SAFE,noStuckHold,noManifestRegress,noDroppedRefusal 10
+
 exit $status

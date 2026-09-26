@@ -40,4 +40,14 @@ violated fixed noLostRows
 # Trust: a peer that claims more spreads misread rows.
 violated liar noMisreadRowsSpread
 
+# As built. Refusing only creations breaks safety without any rollback; the run check restores it.
+violated asBuilt $SAFE noStuckHold noManifestRegress noLostRows noDroppedRefusal
+violated asBuiltNoRollback $SAFE noDroppedRefusal
+holds asBuiltNoRollbackPlusRunCheck $SAFE outboxGated
+violated asBuiltPlusRunCheck noUnsupportedStore noMisreadAdmitted
+holds asBuiltMinimal $SAFE outboxGated
+violated asBuiltMinimal noStuckHold noManifestRegress noDroppedRefusal
+holds asBuiltPlusAll $SAFE outboxGated noStuckHold noManifestRegress noDroppedRefusal
+violated asBuiltPlusAll noLostRows
+
 exit $status
