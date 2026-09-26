@@ -98,7 +98,11 @@ describe("peer manifest exchange over the sync resolvers", () => {
     return module.syncModule!.syncManager;
   }
 
-  function connect(client: ISyncManager, fetchFn: typeof fetch) {
+  function connect(
+    client: ISyncManager,
+    fetchFn: typeof fetch,
+    pollIntervalMs = 50,
+  ) {
     return client.add(
       "switchboard",
       DriveCollectionId.forDrive("drive-1"),
@@ -106,7 +110,7 @@ describe("peer manifest exchange over the sync resolvers", () => {
         type: "gql",
         parameters: {
           url: "http://switchboard/graphql",
-          pollIntervalMs: 50,
+          pollIntervalMs,
           fetchFn,
         },
       },
@@ -357,5 +361,124 @@ describe("peer manifest exchange over the sync resolvers", () => {
         reason: { protocol: "test-protocol", version: 2, peerSupports: [1] },
       }),
     ]);
+  });
+
+  /** A server on SCHEMA until `rollBack`, then on the previous schema. */
+  function rollbackServer(server: ISyncManager) {
+    let sdl = SCHEMA;
+    const pushes: Array<Record<string, unknown>> = [];
+    const fetchFn = async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(init!.body as string) as {
+        query: string;
+        variables: Record<string, unknown>;
+      };
+      if (body.query.includes("pushSyncEnvelopes")) {
+        pushes.push(body.variables);
+      }
+      const result = await graphql({
+        schema: buildSchema(sdl),
+        source: body.query,
+        variableValues: body.variables,
+        rootValue: {
+          touchChannel: (args: Parameters<typeof touchChannel>[1]) =>
+            touchChannel(server, args),
+          pollSyncEnvelopes: (args: Parameters<typeof pollSyncEnvelopes>[1]) =>
+            pollSyncEnvelopes(server, args),
+          pushSyncEnvelopes: (args: Parameters<typeof pushSyncEnvelopes>[1]) =>
+            pushSyncEnvelopes(server, args),
+        },
+      });
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+    return {
+      fetchFn: fetchFn as typeof fetch,
+      pushes,
+      rollBack: () => {
+        sdl = PREVIOUS_SCHEMA;
+      },
+    };
+  }
+
+  async function createDrive(
+    module: InProcessReactorModule,
+    version: number,
+  ): Promise<void> {
+    const info = await module.reactor.create(
+      withSignaturePolicy(
+        driveDocumentModelModule.utils.createDocument(),
+        "legacy",
+        { id: "drive-1", protocolVersions: { "test-protocol": version } },
+      ),
+    );
+    await vi.waitUntil(
+      async () =>
+        (await module.reactor.getJobStatus(info.id)).status ===
+        JobStatus.READ_READY,
+    );
+  }
+
+  it("names the server revision a push was gated under", async () => {
+    const server = await reactor([WIDE_SERVER]);
+    const client = await reactor([WIDE_SERVER]);
+    const clientModule = modules[modules.length - 1];
+    const { fetchFn, pushes } = rollbackServer(server);
+    await connect(client, fetchFn, 60_000);
+
+    await createDrive(clientModule, 2);
+
+    await vi.waitFor(() => expect(pushes.length).toBeGreaterThan(0));
+    expect(pushes[0].peerManifestRevision).toBe(
+      server.localManifest().revision,
+    );
+  });
+
+  it("holds what a rolled-back server cannot run before resending without the field", async () => {
+    const server = await reactor([WIDE_SERVER]);
+    const serverModule = modules[modules.length - 1];
+    const client = await reactor([WIDE_SERVER]);
+    const clientModule = modules[modules.length - 1];
+    const { fetchFn, pushes, rollBack } = rollbackServer(server);
+    const remote = await connect(client, fetchFn, 60_000);
+    rollBack();
+
+    await createDrive(clientModule, 2);
+
+    await vi.waitFor(
+      async () =>
+        expect(await client.listHolds({ remoteName: "switchboard" })).toEqual([
+          expect.objectContaining({ documentId: "drive-1" }),
+        ]),
+      { timeout: 10_000 },
+    );
+    expect(remote.meta.peer?.manifest).toBeNull();
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0]).toHaveProperty("peerManifestRevision");
+    await expect(serverModule.reactor.get("drive-1")).rejects.toThrow();
+  });
+
+  it("resends what a rolled-back server can run without the field", async () => {
+    const server = await reactor([WIDE_SERVER]);
+    const serverModule = modules[modules.length - 1];
+    const client = await reactor([WIDE_SERVER]);
+    const clientModule = modules[modules.length - 1];
+    const { fetchFn, pushes, rollBack } = rollbackServer(server);
+    await connect(client, fetchFn, 60_000);
+    rollBack();
+
+    await createDrive(clientModule, 1);
+
+    await vi.waitFor(
+      async () =>
+        expect((await serverModule.reactor.get("drive-1")).header.id).toBe(
+          "drive-1",
+        ),
+      { timeout: 10_000 },
+    );
+    expect(pushes).toHaveLength(2);
+    expect(pushes[1]).not.toHaveProperty("peerManifestRevision");
+    expect(await client.listHolds({ remoteName: "switchboard" })).toEqual([]);
   });
 });

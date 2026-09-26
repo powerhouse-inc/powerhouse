@@ -511,10 +511,11 @@ export class SyncManager implements ISyncManager {
   private queuePeerManifest(
     remote: Remote,
     manifest: PeerManifest | null,
+    undelivered?: readonly SyncOperation[],
   ): Promise<void> {
     const name = remote.meta.name;
     const next = (this.peerUpdates.get(name) ?? Promise.resolve()).then(() =>
-      this.applyPeerManifest(remote, manifest),
+      this.applyPeerManifest(remote, manifest, undelivered),
     );
     const settled = next.catch((error: unknown) => {
       this.logger.error(
@@ -530,6 +531,7 @@ export class SyncManager implements ISyncManager {
   private async applyPeerManifest(
     remote: Remote,
     manifest: PeerManifest | null,
+    undelivered?: readonly SyncOperation[],
   ): Promise<void> {
     const name = remote.meta.name;
     if (this.remotes.get(name) !== remote || this.removing.has(name)) {
@@ -548,7 +550,7 @@ export class SyncManager implements ISyncManager {
     }
     remote.meta.peer = { manifest, receivedAtUtcMs: Date.now() };
     await this.remoteStorage.upsert(this.recordOf(remote.meta));
-    await this.holdUnsupported(remote);
+    await this.holdUnsupported(remote, undelivered);
     await this.releaseSupported(remote);
   }
 
@@ -676,15 +678,20 @@ export class SyncManager implements ISyncManager {
   }
 
   /** Narrowed: unsent outbox items for documents the peer cannot run. */
-  private async holdUnsupported(remote: Remote): Promise<void> {
+  private async holdUnsupported(
+    remote: Remote,
+    undelivered: readonly SyncOperation[] = [],
+  ): Promise<void> {
     const support = this.peerSupportsOf(remote);
     if (coversLocal(support, this.localSupport, this.capabilities)) return;
     const verdicts = new Map<string, HoldReason | null>();
     const held: SyncOperation[] = [];
+    const unsent = new Set(undelivered);
     for (const item of remote.channel.outbox.items) {
       if (
-        item.status !== SyncOperationStatus.Unknown ||
-        item.emittedCount > 0
+        (item.status !== SyncOperationStatus.Unknown ||
+          item.emittedCount > 0) &&
+        !unsent.has(item)
       ) {
         continue;
       }
@@ -1157,9 +1164,9 @@ export class SyncManager implements ISyncManager {
     remote.channel.setLocalManifest(() => this.manifest);
     this.peerUnsubscribes.set(
       remote.meta.name,
-      remote.channel.onPeerManifest((manifest) => {
-        void this.queuePeerManifest(remote, manifest).catch(() => {});
-      }),
+      remote.channel.onPeerManifest((manifest, undelivered) =>
+        this.queuePeerManifest(remote, manifest, undelivered).catch(() => {}),
+      ),
     );
 
     this.syncStatusTracker.trackRemote(remote.meta.name, remote.channel);

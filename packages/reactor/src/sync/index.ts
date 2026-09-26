@@ -3,6 +3,7 @@ export type {
   IChannel,
   IChannelFactory,
   ISyncManager,
+  PeerManifestListener,
   Remote,
   RemoteMeta,
 } from "./interfaces.js";

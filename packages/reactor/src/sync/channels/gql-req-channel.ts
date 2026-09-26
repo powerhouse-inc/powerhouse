@@ -15,7 +15,11 @@ import {
   isDriveAuthError,
   isRecoverableGraphQLError,
 } from "../errors.js";
-import type { ConnectionStateChangeCallback, IChannel } from "../interfaces.js";
+import type {
+  ConnectionStateChangeCallback,
+  IChannel,
+  PeerManifestListener,
+} from "../interfaces.js";
 import { type IMailbox, Mailbox } from "../mailbox.js";
 import { SyncOperation } from "../sync-operation.js";
 import type {
@@ -73,6 +77,20 @@ const AGREEMENT_FIELDS = [
   "peerManifestRevision",
 ] as const;
 
+function pushMutation(withGatedUnder: boolean): string {
+  return withGatedUnder
+    ? `
+      mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!, $peerManifestRevision: String) {
+        pushSyncEnvelopes(envelopes: $envelopes, peerManifestRevision: $peerManifestRevision)
+      }
+    `
+    : `
+      mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!) {
+        pushSyncEnvelopes(envelopes: $envelopes)
+      }
+    `;
+}
+
 type DeadLetterWire = {
   documentId: string;
   error: string;
@@ -129,9 +147,7 @@ export class GqlRequestChannel implements IChannel {
   private localManifestProvider?: () => PeerManifest;
   /** Undefined until the first handshake; null for a silent peer. */
   private peerManifest: PeerManifest | null | undefined = undefined;
-  private readonly peerManifestCallbacks = new Set<
-    (manifest: PeerManifest | null) => void
-  >();
+  private readonly peerManifestCallbacks = new Set<PeerManifestListener>();
   private manifestRefresh: Promise<void> | undefined;
   private isRecovering: boolean = false;
   private connectionState: ConnectionState = "connecting";
@@ -298,16 +314,17 @@ export class GqlRequestChannel implements IChannel {
     this.localManifestProvider = provider;
   }
 
-  onPeerManifest(
-    callback: (manifest: PeerManifest | null) => void,
-  ): () => void {
+  onPeerManifest(callback: PeerManifestListener): () => void {
     this.peerManifestCallbacks.add(callback);
     return () => {
       this.peerManifestCallbacks.delete(callback);
     };
   }
 
-  private hearPeer(manifest: PeerManifest | null): void {
+  private async hearPeer(
+    manifest: PeerManifest | null,
+    undelivered?: readonly SyncOperation[],
+  ): Promise<void> {
     if (
       this.peerManifest !== undefined &&
       (this.peerManifest?.revision ?? null) === (manifest?.revision ?? null)
@@ -315,13 +332,15 @@ export class GqlRequestChannel implements IChannel {
       return;
     }
     this.peerManifest = manifest;
-    for (const callback of this.peerManifestCallbacks) {
-      try {
-        callback(manifest);
-      } catch (error) {
-        this.logger.error("Peer manifest callback error: @Error", error);
-      }
-    }
+    await Promise.all(
+      [...this.peerManifestCallbacks].map(async (callback) => {
+        try {
+          await callback(manifest, undelivered);
+        } catch (error) {
+          this.logger.error("Peer manifest callback error: @Error", error);
+        }
+      }),
+    );
   }
 
   /**
@@ -713,7 +732,7 @@ export class GqlRequestChannel implements IChannel {
         break;
       } catch (error) {
         if (this.rejectsAgreementFields(error)) {
-          this.stopAgreement();
+          await this.stopAgreement();
           continue;
         }
         if (!this.rejectsDecisionFields(error)) {
@@ -750,13 +769,16 @@ export class GqlRequestChannel implements IChannel {
     return AGREEMENT_FIELDS.some((field) => error.message.includes(field));
   }
 
-  private stopAgreement(): void {
+  /** Resolves once what the silent peer cannot run is held. */
+  private async stopAgreement(
+    undelivered?: readonly SyncOperation[],
+  ): Promise<void> {
     this.logger.warn(
       "Remote @channelId does not serve peer manifests; treating it as a silent peer.",
       this.channelId,
     );
     this.peerServesAgreement = false;
-    this.hearPeer(null);
+    await this.hearPeer(null, undelivered);
   }
 
   /**
@@ -932,7 +954,7 @@ export class GqlRequestChannel implements IChannel {
       if (!this.rejectsAgreementFields(error)) {
         throw error;
       }
-      this.stopAgreement();
+      await this.stopAgreement();
       data = await touch(false);
     }
 
@@ -943,7 +965,7 @@ export class GqlRequestChannel implements IChannel {
       );
     }
 
-    this.hearPeer(
+    await this.hearPeer(
       this.peerServesAgreement
         ? readPeerManifest(data.touchChannel.manifest)
         : null,
@@ -1096,6 +1118,42 @@ export class GqlRequestChannel implements IChannel {
       syncOp.started();
     }
 
+    // The server revision this push was gated under; a pre-feature server
+    // rejects it, which is how a rollback of the server is noticed.
+    const gatedUnder = this.peerServesAgreement
+      ? this.peerManifest?.revision
+      : undefined;
+    try {
+      await this.executeGraphQL<{ pushSyncEnvelopes: boolean }>(
+        pushMutation(gatedUnder !== undefined),
+        {
+          envelopes: this.envelopesFor(syncOps),
+          ...(gatedUnder !== undefined
+            ? { peerManifestRevision: gatedUnder }
+            : {}),
+        },
+      );
+      return;
+    } catch (error) {
+      if (gatedUnder === undefined || !this.rejectsAgreementFields(error)) {
+        throw error;
+      }
+    }
+
+    // Resending the same envelopes would deliver what the silent peer cannot
+    // run, so those are held first.
+    await this.stopAgreement(syncOps);
+    const unsent = new Set(this.outbox.items);
+    const remaining = syncOps.filter((syncOp) => unsent.has(syncOp));
+    if (remaining.length === 0) return;
+    await this.executeGraphQL<{ pushSyncEnvelopes: boolean }>(
+      pushMutation(false),
+      { envelopes: this.envelopesFor(remaining) },
+    );
+  }
+
+  /** One envelope per SyncOperation, with key/dependsOn for batch ordering. */
+  private envelopesFor(syncOps: SyncOperation[]): unknown[] {
     const jobIdToKeys = new Map<string, string[]>();
     const envelopes: SyncEnvelope[] = [];
 
@@ -1135,20 +1193,7 @@ export class GqlRequestChannel implements IChannel {
       });
     }
 
-    const mutation = `
-      mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!) {
-        pushSyncEnvelopes(envelopes: $envelopes)
-      }
-    `;
-
-    const variables = {
-      envelopes: envelopes.map((e) => serializeEnvelope(e)),
-    };
-
-    await this.executeGraphQL<{ pushSyncEnvelopes: boolean }>(
-      mutation,
-      variables,
-    );
+    return envelopes.map((e) => serializeEnvelope(e));
   }
 
   /**

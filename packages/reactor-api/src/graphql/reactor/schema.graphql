@@ -733,7 +733,11 @@ type Mutation {
   touchChannel(input: TouchChannelInput!): TouchChannelResult!
 
   # Push sync envelopes to a channel
-  pushSyncEnvelopes(envelopes: [SyncEnvelopeInput!]!): Boolean!
+  pushSyncEnvelopes(
+    envelopes: [SyncEnvelopeInput!]!
+    # The server's manifest revision the client gated these envelopes under
+    peerManifestRevision: String
+  ): Boolean!
 }
 
 type Subscription {

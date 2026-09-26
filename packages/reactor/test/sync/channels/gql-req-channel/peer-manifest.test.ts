@@ -134,7 +134,9 @@ function channelWith(
   );
   const heard: Array<PeerManifest | null> = [];
   channel.setLocalManifest(() => LOCAL);
-  channel.onPeerManifest((manifest) => heard.push(manifest));
+  channel.onPeerManifest((manifest) => {
+    heard.push(manifest);
+  });
   return { channel, heard };
 }
 

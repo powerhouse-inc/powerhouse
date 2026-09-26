@@ -553,6 +553,12 @@ mutation TouchChannel($input: TouchChannelInput!) {
   }
 }
 
-mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!) {
-  pushSyncEnvelopes(envelopes: $envelopes)
+mutation PushSyncEnvelopes(
+  $envelopes: [SyncEnvelopeInput!]!
+  $peerManifestRevision: String
+) {
+  pushSyncEnvelopes(
+    envelopes: $envelopes
+    peerManifestRevision: $peerManifestRevision
+  )
 }

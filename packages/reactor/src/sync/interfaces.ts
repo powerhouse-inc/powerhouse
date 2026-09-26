@@ -6,6 +6,7 @@ import type {
 import type { ShutdownStatus } from "../shared/types.js";
 import type { ISyncCursorStorage } from "../storage/interfaces.js";
 import type { IMailbox } from "./mailbox.js";
+import type { SyncOperation } from "./sync-operation.js";
 import type { IPeerAgreement } from "./peer-agreement.js";
 import type {
   SyncStatus,
@@ -108,8 +109,17 @@ export interface IChannel {
    * Fires when the peer's manifest changes; null for a silent peer. A channel
    * whose peer announces through the sync manager instead never fires.
    */
-  onPeerManifest(callback: (manifest: PeerManifest | null) => void): () => void;
+  onPeerManifest(callback: PeerManifestListener): () => void;
 }
+
+/**
+ * `undelivered`: outbox items the channel sent that the peer never received,
+ * to be judged as unsent. The channel awaits the listener before sending more.
+ */
+export type PeerManifestListener = (
+  manifest: PeerManifest | null,
+  undelivered?: readonly SyncOperation[],
+) => void | Promise<void>;
 
 /**
  * Factory for creating channel instances.
