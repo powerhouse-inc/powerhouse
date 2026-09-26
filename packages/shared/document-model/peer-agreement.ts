@@ -229,3 +229,31 @@ export function coversLocal(
   }
   return true;
 }
+
+/**
+ * protocolVersions for a new document: per negotiated protocol, the highest
+ * version up to the local preference that every member supports, else the
+ * lowest local one. `requested` wins over what is selected.
+ */
+export function selectProtocolVersions(input: {
+  capabilities: readonly PeerCapability[];
+  flags: PeerCapabilityFlags;
+  members: Iterable<Supports>;
+  requested?: { readonly [protocol: string]: number };
+}): { [protocol: string]: number } {
+  const members = [...input.members];
+  const selected: { [protocol: string]: number } = {};
+  for (const capability of input.capabilities) {
+    if (capability.kind !== "protocol" || !capability.preferred) continue;
+    const preferred = capability.preferred(input.flags);
+    const supported = capability.supported(input.flags);
+    let agreed = supported.filter((version) => version <= preferred);
+    for (const member of members) {
+      const theirs = member.protocols[capability.name] ?? [];
+      agreed = agreed.filter((version) => theirs.includes(version));
+    }
+    selected[capability.name] =
+      agreed.length > 0 ? Math.max(...agreed) : Math.min(...supported);
+  }
+  return { ...selected, ...input.requested };
+}

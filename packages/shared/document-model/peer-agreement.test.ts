@@ -9,7 +9,9 @@ import {
   mergePeerCapabilities,
   peerSupports,
   readPeerManifest,
+  selectProtocolVersions,
   type PeerCapability,
+  type Supports,
 } from "./peer-agreement.js";
 
 const TEST_PROTOCOL: PeerCapability = {
@@ -157,5 +159,68 @@ describe("holdReason", () => {
     ).toBe(true);
     expect(coversLocal(silent, wide, capabilities)).toBe(false);
     expect(coversLocal(wide, wide, capabilities)).toBe(true);
+  });
+});
+
+describe("selectProtocolVersions", () => {
+  const capabilities = mergePeerCapabilities(PEER_CAPABILITIES, [
+    TEST_PROTOCOL,
+  ]);
+  const wideFlags = { testProtocol: true };
+  const narrow = localSupports(capabilities, {});
+  const wide = localSupports(capabilities, wideFlags);
+  const select = (
+    members: Supports[],
+    flags: Record<string, boolean> = wideFlags,
+    requested?: Record<string, number>,
+  ) => selectProtocolVersions({ capabilities, flags, members, requested });
+
+  it("selects base-reducer 2 alone under the default registry", () => {
+    expect(
+      selectProtocolVersions({
+        capabilities: PEER_CAPABILITIES,
+        flags: {},
+        members: [legacySupports(PEER_CAPABILITIES)],
+      }),
+    ).toEqual({ "base-reducer": 2 });
+  });
+
+  it.each([
+    ["no members: the local preference", [], 2],
+    ["every member wide", () => [wide, wide], 2],
+    ["one member at [1]", () => [wide, narrow], 1],
+    ["a silent member", () => [legacySupports(capabilities)], 1],
+  ] as const)("with %s", (_label, members, expected) => {
+    const list = typeof members === "function" ? members() : [...members];
+    expect(select(list)["test-protocol"]).toBe(expected);
+  });
+
+  it("falls back to the lowest local version when nothing is agreed", () => {
+    const none = { protocols: { "test-protocol": [7] }, features: {} };
+    expect(select([none])["test-protocol"]).toBe(1);
+  });
+
+  it("does not negotiate a capability without a preference", () => {
+    expect(select([])).not.toHaveProperty("signature");
+  });
+
+  it("stays at the local preference when members support more", () => {
+    expect(select([wide], {})["test-protocol"]).toBe(1);
+  });
+
+  it("lets the caller's versions win", () => {
+    expect(select([narrow], wideFlags, { "test-protocol": 2 })).toEqual({
+      "base-reducer": 2,
+      "test-protocol": 2,
+    });
+  });
+
+  it("reads a format-2 manifest member by its maps", () => {
+    const member = readPeerManifest({
+      format: 2,
+      protocols: { "base-reducer": [1, 2], "test-protocol": [1, 2] },
+      extra: true,
+    })!;
+    expect(select([member])["test-protocol"]).toBe(2);
   });
 });
