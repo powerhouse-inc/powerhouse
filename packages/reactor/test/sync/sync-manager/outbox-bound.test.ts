@@ -36,6 +36,8 @@ const STALE_WINDOW_MS = 50;
  * cannot age out of mid-batch.
  */
 const LIVE_WINDOW_MS = 1_000;
+/** Outlasts any backfill, for tests not about a silent holder. */
+const IDLE_WINDOW_MS = 300_000;
 
 /**
  * A client channel: it polls a remote itself, so it has no holder to report.
@@ -284,7 +286,7 @@ describe("bounding the entries one remote's outbox holds", () => {
 
     await buildManager({
       maxHeldOperationsPerRemote: 3,
-      staleRemotePollWindowMs: STALE_WINDOW_MS,
+      staleRemotePollWindowMs: IDLE_WINDOW_MS,
     });
   });
 
@@ -370,12 +372,6 @@ describe("bounding the entries one remote's outbox holds", () => {
   });
 
   it("derives the evicted entries again once the outbox drains", async () => {
-    // Nothing here is about a silent holder, and this test outlives the
-    // suite's 50ms window, so it gets one it cannot age out of.
-    await rebuildManager({
-      maxHeldOperationsPerRemote: 3,
-      staleRemotePollWindowMs: 300_000,
-    });
     await seedAndAdd(6);
 
     const remote = syncManager.getByName("remote-bound");
@@ -398,6 +394,10 @@ describe("bounding the entries one remote's outbox holds", () => {
   it("removes a serving remote whose holder has stopped polling", async () => {
     // Registered as "gql", the string the old type gate exempted: what makes a
     // remote removable is that its channel serves a holder, not its config.
+    await rebuildManager({
+      maxHeldOperationsPerRemote: 3,
+      staleRemotePollWindowMs: STALE_WINDOW_MS,
+    });
     await seedAndAdd(6, "gql");
     expect(outboxDocumentIds()).toEqual(["doc-1", "doc-2", "doc-3"]);
 
@@ -410,6 +410,10 @@ describe("bounding the entries one remote's outbox holds", () => {
   });
 
   it("takes the stale remote's persisted rows with it", async () => {
+    await rebuildManager({
+      maxHeldOperationsPerRemote: 3,
+      staleRemotePollWindowMs: STALE_WINDOW_MS,
+    });
     await seedAndAdd(6, "polling");
     await storage.syncCursorStorage.upsert({
       remoteName: "remote-bound",
@@ -442,10 +446,6 @@ describe("bounding the entries one remote's outbox holds", () => {
   });
 
   it("only evicts while the holder is still within the poll window", async () => {
-    await rebuildManager({
-      maxHeldOperationsPerRemote: 3,
-      staleRemotePollWindowMs: 300_000,
-    });
     await seedAndAdd(6, "polling");
 
     await emitWriteReady("doc-7", 7);
@@ -460,6 +460,10 @@ describe("bounding the entries one remote's outbox holds", () => {
     // Registered as "polling", the string the old type gate made prunable:
     // this channel has no holder, so its silence strands nobody and its drive
     // remote must survive the outage.
+    await rebuildManager({
+      maxHeldOperationsPerRemote: 3,
+      staleRemotePollWindowMs: STALE_WINDOW_MS,
+    });
     await seedAndAdd(6, "polling", "client-bound");
 
     await sleepPastWindow();
