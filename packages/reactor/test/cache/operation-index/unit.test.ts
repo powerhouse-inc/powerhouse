@@ -5,6 +5,16 @@ import {
 } from "../../../src/cache/kysely-operation-index.js";
 import type { OperationIndexEntry } from "../../../src/cache/operation-index-types.js";
 
+/** Serves the raw statements the commit issues: version, then the xid. */
+const rawSqlExecutor = {
+  getExecutor: () => ({
+    transformQuery: (node: unknown) => node,
+    compileQuery: () => ({ sql: "", parameters: [] }),
+    executeQuery: () =>
+      Promise.resolve({ rows: [{ version: "170005", xid: "1" }] }),
+  }),
+};
+
 function createMockKysely() {
   const mockExecute = vi.fn();
   const mockExecuteTakeFirst = vi.fn();
@@ -295,6 +305,7 @@ describe("KyselyOperationIndex.commit()", () => {
 
     mocks.transactionExecute.mockImplementation(async (fn) => {
       const mockTrx = {
+        ...rawSqlExecutor,
         insertInto: mocks.insertInto,
       };
       return await fn(mockTrx);
@@ -315,6 +326,7 @@ describe("KyselyOperationIndex.commit()", () => {
 
     mocks.transactionExecute.mockImplementation(async (fn) => {
       const mockTrx = {
+        ...rawSqlExecutor,
         insertInto: mocks.insertInto,
       };
       return await fn(mockTrx);
@@ -364,6 +376,7 @@ describe("KyselyOperationIndex.commit()", () => {
 
     mocks.transactionExecute.mockImplementation(async (fn) => {
       const mockTrx = {
+        ...rawSqlExecutor,
         insertInto: mocks.insertInto,
         selectFrom: mocks.selectFrom,
       };
@@ -408,6 +421,7 @@ describe("KyselyOperationIndex.commit()", () => {
 
     mocks.transactionExecute.mockImplementation(async (fn) => {
       const mockTrx = {
+        ...rawSqlExecutor,
         insertInto: mocks.insertInto,
       };
       mocks.execute.mockResolvedValueOnce([{ ordinal: 1 }]);
@@ -461,6 +475,7 @@ describe("KyselyOperationIndex.commit()", () => {
 
     mocks.transactionExecute.mockImplementation(async (fn) => {
       const mockTrx = {
+        ...rawSqlExecutor,
         insertInto: mocks.insertInto,
       };
       return await fn(mockTrx);
@@ -481,6 +496,7 @@ describe("KyselyOperationIndex.commit()", () => {
 
     mocks.transactionExecute.mockImplementation(async (fn) => {
       const mockTrx = {
+        ...rawSqlExecutor,
         insertInto: mocks.insertInto,
       };
       return await fn(mockTrx);

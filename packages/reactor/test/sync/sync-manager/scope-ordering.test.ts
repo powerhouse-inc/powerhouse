@@ -1,3 +1,4 @@
+import { settledAtHead } from "../../catch-up/helpers.js";
 import type { Operation } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
@@ -94,6 +95,7 @@ describe("updateOutbox scope ordering", () => {
       mockReactor,
       eventBus,
       DEFAULT_DRIVE_CONTAINER_TYPES,
+      settledAtHead(),
     );
     await syncManager.startup();
   });

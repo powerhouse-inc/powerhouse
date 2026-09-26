@@ -9,6 +9,7 @@ import type {
   BatchLoadResult,
   IReactor,
 } from "../core/types.js";
+import type { ISettledWatermark } from "../catch-up/types.js";
 import type { IEventBus } from "../events/interfaces.js";
 import {
   ReactorEventTypes,
@@ -163,6 +164,10 @@ export class SyncManager implements ISyncManager {
   private pruneDrainDeferred = false;
   private readonly removing = new Set<string>();
   private readonly lastEnqueuedJobIdByKey = new Map<string, string>();
+  private readonly watermark: ISettledWatermark;
+  // remote name -> ordinal its outbox is owed through
+  private readonly owed = new Map<string, number>();
+  private settledUnsubscribe?: () => void;
   private inboxChunkChain: Promise<void> = Promise.resolve();
 
   constructor(
@@ -175,8 +180,10 @@ export class SyncManager implements ISyncManager {
     reactor: IReactor,
     eventBus: IEventBus,
     driveContainerTypes: ReadonlySet<string>,
+    watermark: ISettledWatermark,
     config: Partial<SyncManagerConfig> = {},
   ) {
+    this.watermark = watermark;
     this.logger = logger;
     this.remoteStorage = remoteStorage;
     this.cursorStorage = cursorStorage;
@@ -196,6 +203,7 @@ export class SyncManager implements ISyncManager {
       logger,
       driveContainerTypes,
       (batch) => this.processCompleteBatch(batch),
+      () => this.deriveSettled(),
     );
     this.syncStatusTracker = new SyncStatusTracker();
   }
@@ -219,6 +227,7 @@ export class SyncManager implements ISyncManager {
     }
 
     const remoteRecords = await this.remoteStorage.list();
+    const head = await this.watermarkHead();
 
     for (const record of remoteRecords) {
       const channel = this.channelFactory.instance(
@@ -245,6 +254,7 @@ export class SyncManager implements ISyncManager {
       };
 
       this.remotes.set(record.name, remote);
+      this.owe(record.name, head);
       await this.loadDeadLetters(remote);
       this.wireChannelCallbacks(remote);
 
@@ -286,6 +296,10 @@ export class SyncManager implements ISyncManager {
       }
     }
 
+    this.settledUnsubscribe = this.watermark.onAdvance(
+      () => void this.batchAggregator.enqueueSettled(),
+    );
+
     this.eventUnsubscribe = this.eventBus.subscribe<JobWriteReadyEvent>(
       ReactorEventTypes.JOB_WRITE_READY,
       async (_type, event) => this.batchAggregator.enqueueWriteReady(event),
@@ -309,6 +323,9 @@ export class SyncManager implements ISyncManager {
     this.prunePending.clear();
     this.pruneDrainDeferred = false;
     this.batchAggregator.clear();
+    this.owed.clear();
+    this.settledUnsubscribe?.();
+    this.settledUnsubscribe = undefined;
 
     if (this.eventUnsubscribe) {
       this.eventUnsubscribe();
@@ -476,6 +493,8 @@ export class SyncManager implements ISyncManager {
       throw error;
     }
 
+    this.owe(name, await this.watermarkHead());
+
     // backfill asynchronously -- don't block channel registration
     const backfillController = new AbortController();
     this.backfillAbortControllers.set(name, backfillController);
@@ -519,6 +538,7 @@ export class SyncManager implements ISyncManager {
     // entry does, and a batch landing in that gap would otherwise pick this
     // remote up and derive into mailboxes that are already being torn down.
     this.removing.add(name);
+    this.owed.delete(name);
     try {
       await this.teardownRemoteResources(remote);
 
@@ -804,6 +824,15 @@ export class SyncManager implements ISyncManager {
       trimMailboxFromBatch(remote.channel.inbox, batch);
     }
 
+    // With no other write open, this batch's own operations are settled now.
+    const through = await this.watermark.refresh();
+    let batchMax = 0;
+    for (const { event } of batch.entries) {
+      for (const op of event.operations) {
+        batchMax = Math.max(batchMax, op.context.ordinal);
+      }
+    }
+
     // finally, work through the affected remotes and backfill based on the last operation in the outbox
     for (const remote of affectedRemotes) {
       // A drain between two derivations can remove a remote this list was
@@ -820,9 +849,49 @@ export class SyncManager implements ISyncManager {
         remote.channel.outbox.latestOrdinal,
         OutboxMode.BatchTriggered,
       );
+      if (batchMax > through) {
+        this.owe(remote.meta.name, batchMax);
+      }
     }
 
     await this.drainPrunes();
+  }
+
+  /** Derives every owed remote up to the watermark. */
+  private async deriveSettled(): Promise<void> {
+    if (this.isShutdown) return;
+    const through = this.watermark.settledThrough;
+    for (const [name, upTo] of [...this.owed]) {
+      const remote = this.remotes.get(name);
+      if (!remote || this.removing.has(name)) {
+        this.owed.delete(name);
+        continue;
+      }
+      await this.updateOutbox(
+        remote,
+        remote.channel.outbox.latestOrdinal,
+        OutboxMode.BatchTriggered,
+      );
+      if (through >= upTo) this.owed.delete(name);
+    }
+    await this.drainPrunes();
+  }
+
+  private owe(name: string, upTo: number): void {
+    this.owed.set(name, Math.max(this.owed.get(name) ?? 0, upTo));
+  }
+
+  /** The sequence head after a fresh probe; a remote is owed through it. */
+  private async watermarkHead(): Promise<number> {
+    try {
+      await this.watermark.refresh();
+    } catch (error) {
+      this.logger.warn(
+        "Settled watermark probe failed; owed remotes wait for the next one: @error",
+        error,
+      );
+    }
+    return this.watermark.status().head;
   }
 
   private handleInboxAdded(remote: Remote, syncOps: SyncOperation[]): void {
@@ -1348,7 +1417,10 @@ export class SyncManager implements ISyncManager {
     let page = await this.operationIndex.find(
       remote.meta.collectionId.key,
       startOrdinal,
-      { excludeSourceRemote: remote.meta.name },
+      {
+        excludeSourceRemote: remote.meta.name,
+        throughOrdinal: this.watermark.settledThrough,
+      },
       undefined,
       composedSignal,
     );

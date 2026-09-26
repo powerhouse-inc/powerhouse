@@ -146,6 +146,7 @@ export {
   type JobFailedEvent as ReactorJobFailedEvent,
   type ReadModelBatchCompletedEvent,
   type ReadModelIndexedEvent,
+  type CatchUpSweptEvent,
   type ReadModelStage,
   type ReadModelIndexingStage,
   type SignatureRefusedEvent,
@@ -481,3 +482,4 @@ export type {
   ValidationResult,
 } from "./src/admin/types.js";
 export { ProcessorManager } from "./src/processors/index.js";
+export * from "./src/catch-up/index.js";

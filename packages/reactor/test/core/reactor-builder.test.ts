@@ -472,6 +472,21 @@ describe("ReactorBuilder", () => {
       }
     });
 
+    it("refuses shardCount 2", async () => {
+      const builder = new ReactorBuilder()
+        .withDocumentModelSources(FIXTURE_SOURCES)
+        .withProjectionShards({
+          db: TEST_DB_CONFIG,
+          shardCount: 2,
+          preReadyKinds: ["document-view", "document-indexer"],
+          postReadyKinds: [],
+        });
+
+      await expect(builder.buildModule()).rejects.toThrow(
+        "shardCount 2 is not supported: read-side catch-up keeps one cursor per read model, so projection runs in exactly one worker (shardCount: 1)",
+      );
+    });
+
     it("rejects a worker pool and projection shards pointed at different databases", async () => {
       const builder = new ReactorBuilder()
         .withDocumentModelSources(FIXTURE_SOURCES)

@@ -83,6 +83,7 @@ function harness(
     onOperations?: (ops: OperationWithContext[]) => Promise<void>;
     onDisconnect?: () => Promise<void>;
     routedThrough?: () => number;
+    confirmedThrough?: () => number;
   } = {},
 ): Harness {
   const delivered: number[][] = [];
@@ -108,6 +109,8 @@ function harness(
     floor: options.floor ?? 0,
     readSince: options.readSince ?? pagedIndex(options.index ?? []),
     routedThrough: options.routedThrough ?? (() => Number.MAX_SAFE_INTEGER),
+    confirmedThrough:
+      options.confirmedThrough ?? (() => Number.MAX_SAFE_INTEGER),
     persist: (state) => {
       persisted.push({ ...state });
       return Promise.resolve();
@@ -118,6 +121,30 @@ function harness(
 }
 
 describe("ProcessorQueue", () => {
+  describe("confirmed cursor", () => {
+    it("never raises the cursor past the manager's", async () => {
+      let confirmed = 2;
+      const { queue, cursor, delivered } = harness({
+        confirmedThrough: () => confirmed,
+        index: [op(1), op(2), op(3), op(4)],
+      });
+
+      await queue.live([op(1), op(2), op(3)]);
+      expect(delivered).toEqual([[1, 2, 3]]);
+      expect(cursor.lastOrdinal).toBe(2);
+
+      await queue.advance(10);
+      expect(cursor.lastOrdinal).toBe(2);
+
+      await queue.backfill();
+      expect(cursor.lastOrdinal).toBe(2);
+
+      confirmed = 4;
+      await queue.advance(4);
+      expect(cursor.lastOrdinal).toBe(4);
+    });
+  });
+
   describe("ordering", () => {
     it("should deliver tasks in the order they were enqueued", async () => {
       const gate = deferred();
@@ -297,6 +324,7 @@ describe("ProcessorQueue", () => {
         floor: 0,
         readSince: pagedIndex([]),
         routedThrough: () => Number.MAX_SAFE_INTEGER,
+        confirmedThrough: () => Number.MAX_SAFE_INTEGER,
         persist: () => Promise.reject(new Error("db down")),
         logger: createMockLogger(),
       });

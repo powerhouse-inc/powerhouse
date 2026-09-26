@@ -328,6 +328,7 @@ describe("ProcessorManager Integration Tests", () => {
 
   beforeEach(async () => {
     reactorModule = await new ReactorBuilder()
+      .withCatchUp({ intervalMs: 20 })
       .withDocumentModelSources([
         documentModelDocumentModelModule as unknown as DocumentModelModule,
         driveDocumentModelModule as unknown as DocumentModelModule,
@@ -962,6 +963,7 @@ describe("ProcessorManager Integration Tests", () => {
         .executeTakeFirst();
       expect(cursor?.lastOrdinal).toBe(maxOrdinal);
 
+      await reactorModule.catchUp.sweepNow();
       const viewState = await db
         .selectFrom("ViewState")
         .select("lastOrdinal")
@@ -1047,6 +1049,15 @@ describe("ProcessorManager Standalone Tests", () => {
   afterEach(async () => {
     await db.destroy();
   });
+
+  /** Moves the manager's cursor as a sweep does; queues follow. */
+  async function confirm(
+    through: number,
+    manager: ProcessorManager = processorManager,
+  ): Promise<void> {
+    await manager.sweep(through, []);
+    await manager.whenCursorsAdvanced();
+  }
 
   describe("init", () => {
     it("should initialize ViewState table entry", async () => {
@@ -1268,7 +1279,7 @@ describe("ProcessorManager Standalone Tests", () => {
       expect(processor.receivedOperations).toHaveLength(2);
     });
 
-    it("should update ViewState after processing", async () => {
+    it("leaves ViewState to the catch-up sweep", async () => {
       const driveId = generateId();
       const operations: OperationWithContext[] = [
         makeDriveCreateOp(driveId, 42),
@@ -1282,7 +1293,7 @@ describe("ProcessorManager Standalone Tests", () => {
         .where("readModelId", "=", "processor-manager")
         .executeTakeFirst();
 
-      expect(viewState?.lastOrdinal).toBe(42);
+      expect(viewState?.lastOrdinal).toBe(0);
     });
   });
 
@@ -1340,6 +1351,7 @@ describe("ProcessorManager Standalone Tests", () => {
 
       await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
       await processorManager.indexOperations([makeOp(driveId, 5)]);
+      await confirm(5);
 
       const cursors = await db
         .selectFrom("ProcessorCursor")
@@ -1370,6 +1382,7 @@ describe("ProcessorManager Standalone Tests", () => {
       await processorManager.registerFactory("bad-factory", factory);
 
       await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      await confirm(1);
       await processorManager.indexOperations([makeOp(driveId, 5)]);
 
       const tracked = processorManager.get(`bad-factory:${driveId}:0`);
@@ -1413,7 +1426,9 @@ describe("ProcessorManager Standalone Tests", () => {
       await processorManager.registerFactory("bad-factory", badFactory);
 
       await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      await confirm(1);
       await processorManager.indexOperations([makeOp(driveId, 5)]);
+      await confirm(5);
 
       const good = processorManager.get(`good-factory:${driveId}:0`);
       const bad = processorManager.get(`bad-factory:${driveId}:0`);
@@ -1442,6 +1457,7 @@ describe("ProcessorManager Standalone Tests", () => {
       await processorManager.indexOperations([ops[0]!]);
       await processorManager.indexOperations([ops[1]!]);
       await processorManager.indexOperations([ops[2]!]);
+      await confirm(3);
 
       // Now register a factory late — it should get backfilled
       const { factory, processor } = createMockProcessorFactory();
@@ -1496,6 +1512,7 @@ describe("ProcessorManager Standalone Tests", () => {
 
       await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
       await processorManager.indexOperations([makeOp(driveId, 10)]);
+      await confirm(10);
 
       // Verify cursor was persisted
       const cursor = await db
@@ -1681,14 +1698,6 @@ describe("ProcessorManager Standalone Tests", () => {
 
       // The processor should still have received operations
       expect(goodProcessor.receivedOperations.length).toBeGreaterThan(0);
-
-      // The PM's ViewState cursor should still advance
-      const viewState = await db
-        .selectFrom("ViewState")
-        .selectAll()
-        .where("readModelId", "=", "processor-manager")
-        .executeTakeFirst();
-      expect(viewState?.lastOrdinal).toBe(5);
     });
 
     it("should clean up orphaned cursor rows when factory returns fewer processors", async () => {
@@ -1796,6 +1805,7 @@ describe("ProcessorManager Standalone Tests", () => {
 
       await processorManager.indexOperations([ops[2]!]);
       await processorManager.indexOperations([ops[0]!, ops[1]!]);
+      await confirm(3);
 
       expect(ordinalsOf(processor)).toEqual([1, 2, 3]);
 
@@ -1803,9 +1813,8 @@ describe("ProcessorManager Standalone Tests", () => {
       expect(tracked).toBeDefined();
       expect(tracked!.lastOrdinal).toBe(3);
 
-      const { cursor, viewState } = await readCursors(`f:${driveId}:0`);
+      const { cursor } = await readCursors(`f:${driveId}:0`);
       expect(cursor?.lastOrdinal).toBe(3);
-      expect(viewState?.lastOrdinal).toBe(3);
 
       // A restart backfills from the persisted cursors: op 3 must not repeat.
       const restarted = new ProcessorManager(
@@ -1859,12 +1868,12 @@ describe("ProcessorManager Standalone Tests", () => {
       await creation;
       release.resolve();
       await edit;
+      await confirm(3, pm);
 
       expect(ordinalsOf(mock.processor)).toEqual([1, 2, 3]);
 
-      const { cursor, viewState } = await readCursors(`f:${driveId}:0`);
+      const { cursor } = await readCursors(`f:${driveId}:0`);
       expect(cursor?.lastOrdinal).toBe(3);
-      expect(viewState?.lastOrdinal).toBe(3);
     });
 
     it("should deliver an earlier ordinal that arrives after a later one", async () => {
@@ -1883,6 +1892,7 @@ describe("ProcessorManager Standalone Tests", () => {
       await processorManager.indexOperations([
         makeOp(generateId(), 2, { documentType: "powerhouse/document-model" }),
       ]);
+      await confirm(3);
 
       expect(ordinalsOf(processor)).toContain(2);
 
@@ -2018,6 +2028,7 @@ describe("ProcessorManager Standalone Tests", () => {
 
       release.resolve();
       await registration;
+      await confirm(3);
 
       const tracked = processorManager.get(`late:${driveId}:0`);
       await vi.waitFor(() => expect(tracked!.lastOrdinal).toBe(3));
@@ -2058,6 +2069,7 @@ describe("ProcessorManager Standalone Tests", () => {
       const later = createMockProcessorFactory({ documentId: ["*"] });
       await processorManager.registerFactory("later", later.factory);
       await processorManager.indexOperations([ops[1]!]);
+      await confirm(2);
       await vi.waitFor(() =>
         expect(processorManager.get(`later:${driveId}:0`)!.lastOrdinal).toBe(2),
       );
@@ -2102,6 +2114,7 @@ describe("ProcessorManager Standalone Tests", () => {
       await writeToOperationIndex(operationIndex, ops);
 
       await processorManager.indexOperations([ops[0]!]);
+      await confirm(1);
       await processorManager.indexOperations([ops[2]!]);
       await processorManager.indexOperations([ops[1]!]);
 
@@ -2145,6 +2158,7 @@ describe("ProcessorManager Standalone Tests", () => {
       await writeToOperationIndex(operationIndex, ops);
 
       await processorManager.indexOperations([ops[0]!]);
+      await confirm(1);
       await processorManager.indexOperations([ops[3]!]);
       await processorManager.indexOperations([ops[2]!]);
       await processorManager.indexOperations([ops[1]!]);
@@ -2377,6 +2391,7 @@ describe("ProcessorManager Standalone Tests", () => {
       await processorManager.registerFactory("f", factory);
       await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
       await processorManager.indexOperations([makeOp(driveId, 7)]);
+      await confirm(7);
       expect((await cursorRow(`f:${driveId}:0`))?.lastOrdinal).toBe(7);
 
       for (const factory of [
@@ -2567,6 +2582,7 @@ describe("ProcessorManager Standalone Tests", () => {
       ];
       await processorManager.registerFactory("f", factory);
       await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      await confirm(1);
 
       // Document B's batch lands while A's is failing.
       const failing = processorManager.indexOperations([
@@ -2582,6 +2598,146 @@ describe("ProcessorManager Standalone Tests", () => {
       expect(tracked!.status).toBe("errored");
       expect(tracked!.lastOrdinal).toBe(1);
       expect((await cursorRow(`f:${driveId}:0`))?.lastOrdinal).toBe(1);
+    });
+  });
+  describe("Catch-up", () => {
+    async function sweepThrough(
+      through: number,
+      manager: ProcessorManager = processorManager,
+    ) {
+      const present = await operationIndex.getOrdinalsInRange(
+        manager.appliedThrough,
+        through,
+        100_000,
+      );
+      const result = await manager.sweep(through, present);
+      await manager.whenCursorsAdvanced();
+      return result;
+    }
+
+    function callsOf(processor: { onOperations: unknown }): number[][] {
+      return (
+        processor.onOperations as ReturnType<typeof vi.fn>
+      ).mock.calls.map((call) =>
+        (call[0] as OperationWithContext[]).map((op) => op.context.ordinal),
+      );
+    }
+
+    it("advances every bound processor after a sweep", async () => {
+      const driveId = generateId();
+      const matching = createMockProcessor();
+      const idle = createMockProcessor();
+      await processorManager.registerFactory("f", () => [
+        {
+          processor: matching,
+          filter: { documentType: [DRIVE_DOCUMENT_TYPE] },
+        },
+        { processor: idle, filter: { documentType: ["nothing/matches"] } },
+      ]);
+
+      const ops = [makeDriveCreateOp(driveId, 1), makeOp(driveId, 2)];
+      await writeToOperationIndex(operationIndex, ops);
+      await processorManager.indexOperations([ops[0]!]);
+      await processorManager.indexOperations([ops[1]!]);
+
+      expect(processorManager.get(`f:${driveId}:0`)!.lastOrdinal).toBe(0);
+      expect(processorManager.get(`f:${driveId}:1`)!.lastOrdinal).toBe(0);
+
+      await sweepThrough(2);
+
+      expect(processorManager.get(`f:${driveId}:0`)!.lastOrdinal).toBe(2);
+      expect(processorManager.get(`f:${driveId}:1`)!.lastOrdinal).toBe(2);
+    });
+
+    it("delivers a late operation followed by the later operations of its stream", async () => {
+      const driveId = generateId();
+      const processor = createMockProcessor();
+      await processorManager.registerFactory("f", () => [
+        { processor, filter: { documentType: [DRIVE_DOCUMENT_TYPE] } },
+      ]);
+
+      const ops = [
+        makeDriveCreateOp(driveId, 1),
+        makeOp(driveId, 2, { index: 0 }),
+        makeOp(driveId, 3, { index: 1 }),
+      ];
+      await writeToOperationIndex(operationIndex, ops);
+      await processorManager.indexOperations([ops[0]!]);
+      await processorManager.indexOperations([ops[2]!]);
+
+      const result = await sweepThrough(3);
+
+      expect(result).toMatchObject({ replayed: 1, reapplied: 1, to: 3 });
+      expect(callsOf(processor)).toEqual([[1], [3], [2, 3]]);
+      expect(processorManager.get(`f:${driveId}:0`)!.lastOrdinal).toBe(3);
+    });
+
+    it("backfills from below an operation the processor was never given, after a restart", async () => {
+      const driveId = generateId();
+      const before = createMockProcessor();
+      await processorManager.registerFactory("f", () => [
+        { processor: before, filter: {} },
+      ]);
+
+      const ops = [
+        makeDriveCreateOp(driveId, 1),
+        makeOp(generateId(), 2, { documentType: "powerhouse/document-model" }),
+        makeOp(generateId(), 3, { documentType: "powerhouse/document-model" }),
+      ];
+      await writeToOperationIndex(operationIndex, ops);
+      await processorManager.indexOperations([ops[0]!]);
+      await processorManager.indexOperations([ops[2]!]);
+      expect(ordinalsOf(before)).toEqual([1, 3]);
+
+      const restarted = new ProcessorManager(
+        db as unknown as Kysely<DocumentViewDatabase>,
+        operationIndex,
+        mockWriteCache,
+        new ConsistencyTracker(),
+        new ConsoleLogger(["test"]),
+        DEFAULT_DRIVE_CONTAINER_TYPES,
+      );
+      await restarted.init();
+      const after = createMockProcessor();
+      await restarted.registerFactory("f", () => [
+        { processor: after, filter: {} },
+      ]);
+
+      await vi.waitFor(() => expect(ordinalsOf(after)).toContain(2));
+    });
+
+    it("replays from a processor cursor lowered externally", async () => {
+      const driveId = generateId();
+      const processor = createMockProcessor();
+      await processorManager.registerFactory("f", () => [
+        { processor, filter: { documentType: [DRIVE_DOCUMENT_TYPE] } },
+      ]);
+
+      const ops = [
+        makeDriveCreateOp(driveId, 1),
+        makeOp(driveId, 2, { index: 0 }),
+        makeOp(driveId, 3, { index: 1 }),
+      ];
+      await writeToOperationIndex(operationIndex, ops);
+      for (const op of ops) await processorManager.indexOperations([op]);
+      await sweepThrough(3);
+      expect(processorManager.get(`f:${driveId}:0`)!.lastOrdinal).toBe(3);
+
+      await db
+        .updateTable("ProcessorCursor")
+        .set({ lastOrdinal: 1 })
+        .where("processorId", "=", `f:${driveId}:0`)
+        .execute();
+      processor.receivedOperations.length = 0;
+
+      const next = makeOp(driveId, 4, { index: 2 });
+      await writeToOperationIndex(operationIndex, [next]);
+      await processorManager.indexOperations([next]);
+      await sweepThrough(4);
+
+      await vi.waitFor(() =>
+        expect(ordinalsOf(processor)).toEqual(expect.arrayContaining([2, 3])),
+      );
     });
   });
 });
@@ -2655,6 +2811,7 @@ describe("ProcessorManager Backfill Paging Regression", () => {
     await processorManager.indexOperations([
       makeDriveCreateOp(driveId, HUGE_PAGE_SIZE),
     ]);
+    await processorManager.sweep(HUGE_PAGE_SIZE, []);
 
     let receivedCount = 0;
     let lastReceivedOrdinal = 0;
@@ -2704,6 +2861,7 @@ describe("ProcessorManager Cursor Identity Across Restarts", () => {
   // Each call is one deployment; they share the database like a redeploy does.
   async function deploy(): Promise<InProcessReactorModule> {
     const module = await new ReactorBuilder()
+      .withCatchUp({ intervalMs: 20 })
       .withKysely(database)
       .withFeatures({ legacyProcessorIds: false })
       .withDocumentModelSources([

@@ -11,6 +11,11 @@ export type PreparedBatch = {
   }>;
 };
 
+/** Queued between write-ready events when the settled watermark advances. */
+const SETTLED = Symbol("settled");
+
+type QueueItem = JobWriteReadyEvent | typeof SETTLED;
+
 type PendingBatch = {
   expectedJobIds: Set<string>;
   arrivedJobIds: Set<string>;
@@ -21,7 +26,8 @@ export class BatchAggregator {
   private readonly logger: ILogger;
   private readonly driveContainerTypes: ReadonlySet<string>;
   private readonly onBatchReady: (batch: PreparedBatch) => Promise<void>;
-  private queue: JobWriteReadyEvent[] = [];
+  private readonly onSettled: () => Promise<void>;
+  private queue: QueueItem[] = [];
   private processing: boolean = false;
   private readonly pendingBatches: Map<string, PendingBatch> = new Map();
 
@@ -29,14 +35,24 @@ export class BatchAggregator {
     logger: ILogger,
     driveContainerTypes: ReadonlySet<string>,
     onBatchReady: (batch: PreparedBatch) => Promise<void>,
+    onSettled: () => Promise<void>,
   ) {
     this.logger = logger;
     this.driveContainerTypes = driveContainerTypes;
     this.onBatchReady = onBatchReady;
+    this.onSettled = onSettled;
   }
 
   async enqueueWriteReady(event: JobWriteReadyEvent): Promise<void> {
     this.queue.push(event);
+    await this.processQueue();
+  }
+
+  /** Runs onSettled on the serial queue; one queued run covers many. */
+  async enqueueSettled(): Promise<void> {
+    if (!this.queue.includes(SETTLED)) {
+      this.queue.push(SETTLED);
+    }
     await this.processQueue();
   }
 
@@ -70,14 +86,25 @@ export class BatchAggregator {
 
     try {
       while (this.queue.length > 0) {
-        const event = this.queue.shift()!;
+        const item = this.queue.shift()!;
+        if (item === SETTLED) {
+          try {
+            await this.onSettled();
+          } catch (error) {
+            this.logger.error(
+              "Failed to derive settled outboxes (@error)",
+              error instanceof Error ? error.message : String(error),
+            );
+          }
+          continue;
+        }
         try {
-          await this.handleWriteReady(event);
+          await this.handleWriteReady(item);
         } catch (error) {
           const err = error instanceof Error ? error : new Error(String(error));
           this.logger.error(
             "Failed to process write-ready event (@jobId, @error)",
-            event.jobId,
+            item.jobId,
             err.message,
           );
         }

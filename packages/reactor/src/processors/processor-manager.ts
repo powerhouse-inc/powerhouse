@@ -67,6 +67,9 @@ export class ProcessorManager
   private knownDrives: Map<string, string> = new Map();
   private highestRoutedOrdinal = 0;
   private cursorCache: Map<string, ProcessorCursorRow> = new Map();
+  // lastOrdinal each processor's row holds, as this process last read or wrote it.
+  private persistedOrdinals: Map<string, number> = new Map();
+  private advancing: Promise<void> = Promise.resolve();
   // Serializes every cursor row write per processor id.
   private cursorWrites: Map<string, Promise<void>> = new Map();
   // Removed processors per factory id, until each has disconnected.
@@ -481,10 +484,25 @@ export class ProcessorManager
       floor,
       readSince: (ordinal) => this.operationIndex.getSinceOrdinal(ordinal),
       routedThrough: () => this.highWater(),
+      confirmedThrough: () => this.lastOrdinal,
       persist: (state) => this.writeCursor(tracked, state),
       logger: this.logger,
     });
     return { tracked, queue };
+  }
+
+  /** Resolves once every queue has taken the latest cursor advance. */
+  whenCursorsAdvanced(): Promise<void> {
+    return this.advancing;
+  }
+
+  /** Every bound processor may now move up to the manager's cursor. */
+  protected override onCursorAdvanced(appliedThrough: number): void {
+    const advances: Promise<void>[] = [];
+    for (const { queue } of this.allBound()) {
+      advances.push(queue.advance(appliedThrough));
+    }
+    this.advancing = Promise.all(advances).then(() => undefined);
   }
 
   private async discard(
@@ -547,6 +565,7 @@ export class ProcessorManager
 
     for (const row of rows) {
       this.cursorCache.set(row.processorId, row);
+      this.persistedOrdinals.set(row.processorId, row.lastOrdinal);
     }
   }
 
@@ -593,31 +612,93 @@ export class ProcessorManager
     };
     this.cursorCache.set(row.processorId, row);
 
-    return this.lane(row.processorId, () =>
-      this.db
-        .insertInto("ProcessorCursor")
-        .values({
-          processorId: row.processorId,
-          factoryId: row.factoryId,
-          driveId: row.driveId,
-          processorIndex: row.processorIndex,
+    return this.lane(row.processorId, async () => {
+      const expected = this.persistedOrdinals.get(row.processorId);
+      if (expected === undefined) {
+        await this.insertCursor(row, now);
+        return;
+      }
+      const result = await this.db
+        .updateTable("ProcessorCursor")
+        .set({
           lastOrdinal: row.lastOrdinal,
           status: row.status,
           lastError: row.lastError,
           lastErrorTimestamp: row.lastErrorTimestamp,
           updatedAt: now,
         })
-        .onConflict((oc) =>
-          oc.column("processorId").doUpdateSet({
-            lastOrdinal: row.lastOrdinal,
-            status: row.status,
-            lastError: row.lastError,
-            lastErrorTimestamp: row.lastErrorTimestamp,
-            updatedAt: now,
-          }),
-        )
-        .execute(),
+        .where("processorId", "=", row.processorId)
+        .where("lastOrdinal", "=", expected)
+        .executeTakeFirst();
+      if (Number(result.numUpdatedRows) > 0) {
+        this.persistedOrdinals.set(row.processorId, row.lastOrdinal);
+        return;
+      }
+      await this.reconcileCursor(tracked, row, now);
+    });
+  }
+
+  private async insertCursor(
+    row: ProcessorCursorRow,
+    now: Date,
+  ): Promise<void> {
+    await this.db
+      .insertInto("ProcessorCursor")
+      .values({
+        processorId: row.processorId,
+        factoryId: row.factoryId,
+        driveId: row.driveId,
+        processorIndex: row.processorIndex,
+        lastOrdinal: row.lastOrdinal,
+        status: row.status,
+        lastError: row.lastError,
+        lastErrorTimestamp: row.lastErrorTimestamp,
+        updatedAt: now,
+      })
+      .onConflict((oc) =>
+        oc.column("processorId").doUpdateSet({
+          lastOrdinal: row.lastOrdinal,
+          status: row.status,
+          lastError: row.lastError,
+          lastErrorTimestamp: row.lastErrorTimestamp,
+          updatedAt: now,
+        }),
+      )
+      .execute();
+    this.persistedOrdinals.set(row.processorId, row.lastOrdinal);
+  }
+
+  /** A failed compare-and-set: a lowered row resets the cursor and backfills. */
+  private async reconcileCursor(
+    tracked: TrackedProcessor,
+    row: ProcessorCursorRow,
+    now: Date,
+  ): Promise<void> {
+    const stored = await this.db
+      .selectFrom("ProcessorCursor")
+      .select("lastOrdinal")
+      .where("processorId", "=", row.processorId)
+      .executeTakeFirst();
+    if (stored === undefined) {
+      await this.insertCursor(row, now);
+      return;
+    }
+    this.persistedOrdinals.set(row.processorId, stored.lastOrdinal);
+    if (stored.lastOrdinal >= row.lastOrdinal) return;
+
+    this.logger.info(
+      "Processor '@ProcessorId' cursor lowered externally from @Old to @New; replaying",
+      row.processorId,
+      row.lastOrdinal,
+      stored.lastOrdinal,
     );
+    tracked.lastOrdinal = stored.lastOrdinal;
+    row.lastOrdinal = stored.lastOrdinal;
+    for (const bound of this.allBound()) {
+      if (bound.tracked.processorId === row.processorId) {
+        void bound.queue.backfill();
+      }
+    }
   }
 
   private deleteCursors(
@@ -627,6 +708,7 @@ export class ProcessorManager
     for (const [processorId, row] of this.cursorCache) {
       if (!matches(row)) continue;
       this.cursorCache.delete(processorId);
+      this.persistedOrdinals.delete(processorId);
       deletes.push(
         this.lane(processorId, () =>
           this.db

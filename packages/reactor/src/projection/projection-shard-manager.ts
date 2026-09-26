@@ -1,6 +1,7 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { childLogger, type ILogger } from "document-model";
 import { randomUUID } from "node:crypto";
+import type { CatchUpConfig, CatchUpStatus } from "../catch-up/types.js";
 import { fromErrorInfo } from "../executor/worker/error-info.js";
 import type { IEventBus } from "../events/interfaces.js";
 import {
@@ -110,6 +111,7 @@ export type ProjectionShardManagerConfig = ProjectionShardHooks & {
    * host config the in-process read models get, so the two paths cannot drift.
    */
   indexing: ReadModelIndexingConfig;
+  catchUp: CatchUpConfig;
   factory: ProjectionWorkerFactory;
   logger: ILogger;
   hostBus: IEventBus;
@@ -160,6 +162,7 @@ type ShardState = {
    * `readmodel-batch-completed`, and are dropped when the shard exits.
    */
   pendingCoordinates: Map<string, ConsistencyCoordinate[]>;
+  catchUpStatus?: CatchUpStatus;
   /**
    * Correlation id of this shard's `init` while it is unsettled; cleared once
    * the shard reports ready, fails, or dies. Lets a transport error or a
@@ -291,6 +294,7 @@ export class ProjectionShardManager implements IReadModelCoordinator {
         postReadyKinds: this.config.postReadyKinds,
         chainDepthReportIntervalMs: reportIntervalMs,
         indexing: this.config.indexing,
+        catchUp: this.config.catchUp,
       };
       transport.postMessage(init);
       initPromises.push(initPromise);
@@ -366,12 +370,25 @@ export class ProjectionShardManager implements IReadModelCoordinator {
     return this.hostBus.emit(ReactorEventTypes.JOB_READ_READY, event);
   }
 
+  indexedReadModels(): readonly IReadModel[] {
+    return [];
+  }
+
   getChainDepth(): number {
     let total = 0;
     for (const shard of this.shards) {
       total += shard.lastDepth;
     }
     return total;
+  }
+
+  /** The last catch-up status each ready shard reported. */
+  catchUpStatuses(): CatchUpStatus[] {
+    const statuses: CatchUpStatus[] = [];
+    for (const shard of this.shards) {
+      if (shard.catchUpStatus) statuses.push(shard.catchUpStatus);
+    }
+    return statuses;
   }
 
   getShardDepths(): ChainDepthReport[] {
@@ -567,6 +584,20 @@ export class ProjectionShardManager implements IReadModelCoordinator {
         return;
       case "log":
         this.handleLog(shard, msg);
+        return;
+      case "readmodel-swept":
+        this.trackersByReadModelName
+          .get(msg.readModelName)
+          ?.update(msg.coordinates);
+        void this.hostBus
+          .emit(ReactorEventTypes.CATCHUP_SWEPT, {
+            ...msg.result,
+            thread: "projection",
+          })
+          .catch(() => {});
+        return;
+      case "catchup-status":
+        shard.catchUpStatus = msg.status;
         return;
       default: {
         const exhaustive: never = msg;

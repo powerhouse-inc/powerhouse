@@ -10,6 +10,7 @@ import type { Kysely } from "kysely";
 import type { IProcessorManager } from "@powerhousedao/shared/processors";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
+import type { ICatchUp, ISettledWatermark } from "../catch-up/types.js";
 import type { ReactorClient } from "../client/reactor-client.js";
 import type { IReactorClient } from "../client/types.js";
 import type { IEventBus } from "../events/interfaces.js";
@@ -595,6 +596,10 @@ export interface InProcessReactorModule extends ReactorModule {
    * a clean boot. See {@link DegradedComponent}.
    */
   degradedComponents: DegradedComponent[];
+  /** Read-side catch-up: status and an on-demand sweep. */
+  catchUp: ICatchUp;
+  /** The settled watermark this thread's catch-up sweeps up to. */
+  settledWatermark: ISettledWatermark;
 }
 
 /**

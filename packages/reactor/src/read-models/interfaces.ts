@@ -50,6 +50,9 @@ export interface IReadModelCoordinator {
    * Used as a backpressure signal by observability gauges.
    */
   getChainDepth(): number;
+
+  /** The models indexed on this thread; catch-up sweeps them. */
+  indexedReadModels?(): readonly IReadModel[];
 }
 
 export type ReadModelRegistrationStage = "pre_ready" | "post_ready";

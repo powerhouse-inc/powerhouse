@@ -1,7 +1,7 @@
 # Plan: Read-side catch-up for committed operations
 
 Date: 2026-09-24
-Status: proposal, questions resolved, not started
+Status: implemented on feat/read-side-catchup (stages 1 to 7); bench records before and after not taken
 Runs alongside: [Peer protocol agreement](2026-09-25-peer-protocol-agreement.md)
 Lands before: [Document erasure](2026-09-24-document-erasure.md)
 

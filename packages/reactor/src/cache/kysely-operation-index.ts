@@ -1,6 +1,8 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Kysely, Transaction } from "kysely";
 import { sql } from "kysely";
+import { readSnapshotFunctions } from "../catch-up/settled-watermark.js";
+import type { DocumentStreamKey } from "./write-cache-types.js";
 import type { PagedResults, PagingOptions } from "../shared/types.js";
 import type { ViewFilter } from "../storage/interfaces.js";
 import type { Database } from "../storage/kysely/types.js";
@@ -53,6 +55,9 @@ type GroupReferenceRecord = {
   // the index of the referencing auth operation in the operations array
   operationIndex: number;
 };
+
+/** Per database: the function that assigns the transaction's xid. */
+const xidFunctions = new WeakMap<object, Promise<string>>();
 
 class KyselyOperationIndexTxn implements IOperationIndexTxn {
   private collections: string[] = [];
@@ -250,6 +255,8 @@ export class KyselyOperationIndex implements IOperationIndex {
 
     let operationOrdinals: number[] = [];
     if (operations.length > 0) {
+      await this.assignXid(trx);
+
       const operationRows: InsertableOperationIndexOperation[] = operations.map(
         (op) => ({
           opId: op.id || "",
@@ -380,6 +387,76 @@ export class KyselyOperationIndex implements IOperationIndex {
     return operationOrdinals;
   }
 
+  async getOrdinalsInRange(
+    after: number,
+    through: number,
+    limit: number,
+    signal?: AbortSignal,
+  ): Promise<number[]> {
+    signal?.throwIfAborted();
+    if (through <= after || limit <= 0) {
+      return [];
+    }
+
+    const rows = await this.queryExecutor
+      .selectFrom("operation_index_operations")
+      .select("ordinal")
+      .where("ordinal", ">", after)
+      .where("ordinal", "<=", through)
+      .orderBy("ordinal", "asc")
+      .limit(limit)
+      .execute();
+
+    return rows.map((row) => Number(row.ordinal));
+  }
+
+  async getByOrdinals(
+    ordinals: readonly number[],
+    signal?: AbortSignal,
+  ): Promise<OperationWithContext[]> {
+    signal?.throwIfAborted();
+    if (ordinals.length === 0) {
+      return [];
+    }
+
+    const results: OperationWithContext[] = [];
+    for (let i = 0; i < ordinals.length; i += MAX_BIND_PARAMETERS) {
+      const chunk = ordinals.slice(i, i + MAX_BIND_PARAMETERS);
+      const rows = await this.queryExecutor
+        .selectFrom("operation_index_operations")
+        .selectAll()
+        .where("ordinal", "in", chunk)
+        .orderBy("ordinal", "asc")
+        .execute();
+      for (const row of rows) {
+        results.push(this.rowToOperationWithContext(row));
+      }
+    }
+
+    results.sort((a, b) => a.context.ordinal - b.context.ordinal);
+    return results;
+  }
+
+  async getStreamAfter(
+    stream: DocumentStreamKey,
+    after: number,
+    signal?: AbortSignal,
+  ): Promise<OperationWithContext[]> {
+    signal?.throwIfAborted();
+
+    const rows = await this.queryExecutor
+      .selectFrom("operation_index_operations")
+      .selectAll()
+      .where("documentId", "=", stream.documentId)
+      .where("branch", "=", stream.branch)
+      .where("scope", "=", stream.scope)
+      .where("ordinal", ">", after)
+      .orderBy("ordinal", "asc")
+      .execute();
+
+    return rows.map((row) => this.rowToOperationWithContext(row));
+  }
+
   async getGroupReferencers(
     groupId: string,
     signal?: AbortSignal,
@@ -473,6 +550,11 @@ export class KyselyOperationIndex implements IOperationIndex {
       }
       if (view?.excludeSourceRemote) {
         qb = qb.where("oi.sourceRemote", "!=", view.excludeSourceRemote);
+      }
+      if (view?.throughOrdinal !== undefined) {
+        qb = qb
+          .where("oi.ordinal", "<=", view.throughOrdinal)
+          .where("dc.joinedOrdinal", "<=", BigInt(view.throughOrdinal));
       }
 
       return qb;
@@ -635,6 +717,18 @@ export class KyselyOperationIndex implements IOperationIndex {
             )
         : undefined,
     };
+  }
+
+  /** Takes the xid before the first ordinal, as the settled watermark needs. */
+  private async assignXid(trx: Transaction<Database>): Promise<void> {
+    let fn = xidFunctions.get(this.db);
+    if (fn === undefined) {
+      fn = readSnapshotFunctions<Database>(trx).then((fns) => fns.currentXid);
+      xidFunctions.set(this.db, fn);
+      fn.catch(() => xidFunctions.delete(this.db));
+    }
+    const name = await fn;
+    await sql`select ${sql.raw(name)}()`.execute(trx);
   }
 
   private rowToOperationWithContext(

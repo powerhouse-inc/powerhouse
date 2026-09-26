@@ -17,6 +17,18 @@ import { CollectionMembershipCache } from "../cache/collection-membership-cache.
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
+import { CatchUpScheduler, isCatchUpConsumer } from "../catch-up/scheduler.js";
+import {
+  createKyselyWatermarkProbe,
+  describeWaitingSessions,
+  SettledWatermark,
+} from "../catch-up/settled-watermark.js";
+import {
+  defaultCatchUpConfig,
+  type CatchUpConfig,
+  type CatchUpStatus,
+  type ICatchUpConsumer,
+} from "../catch-up/types.js";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { WriteCacheConfig } from "../cache/write-cache-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
@@ -55,6 +67,7 @@ import {
   type ReadModelIndexingConfig,
 } from "../read-models/base-read-model.js";
 import { ReadModelCoordinator } from "../read-models/coordinator.js";
+import type { DocumentViewDatabase } from "../read-models/types.js";
 import {
   DeletedDocumentRead,
   KyselyDocumentView,
@@ -239,6 +252,27 @@ export type ProjectionShardBuilderConfig = {
   chainDepthReportIntervalMs?: number;
 };
 
+/** One contiguous cursor per read model cannot serve shards that each see part of the stream. */
+function validateShardCount(shardCount: number): void {
+  if (shardCount !== 1) {
+    throw new Error(
+      `shardCount ${shardCount} is not supported: read-side catch-up keeps one cursor per read model, so projection runs in exactly one worker (shardCount: 1)`,
+    );
+  }
+}
+
+/** A coordinator whose models sweep in a worker reports that status. */
+function hasCatchUpStatuses(
+  coordinator: IReadModelCoordinator,
+): coordinator is IReadModelCoordinator & {
+  catchUpStatuses(): CatchUpStatus[];
+} {
+  return (
+    "catchUpStatuses" in coordinator &&
+    typeof coordinator.catchUpStatuses === "function"
+  );
+}
+
 function sameDatabaseTarget(a: DbConfig, b: DbConfig): boolean {
   return a.host === b.host && a.port === b.port && a.database === b.database;
 }
@@ -313,6 +347,7 @@ export class ReactorBuilder {
   private projectionShardConfig?: ProjectionShardBuilderConfig;
   private projectionWorkerFactory?: ProjectionWorkerFactory;
   private instrumentedPools: PoolInstrumentation[] = [];
+  private catchUpConfig: CatchUpConfig = defaultCatchUpConfig;
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -400,6 +435,12 @@ export class ReactorBuilder {
 
   withSync(syncBuilder: SyncBuilder): this {
     this.syncBuilder = syncBuilder;
+    return this;
+  }
+
+  /** Tunes the read-side catch-up sweep. */
+  withCatchUp(config: Partial<CatchUpConfig>): this {
+    this.catchUpConfig = { ...this.catchUpConfig, ...config };
     return this;
   }
 
@@ -610,6 +651,7 @@ export class ReactorBuilder {
     // pool opens, and again in createProjectionShardManager for the
     // coordinator-factory path.
     if (this.projectionShardConfig !== undefined) {
+      validateShardCount(this.projectionShardConfig.shardCount);
       validateBuiltInKindCoverage(
         this.projectionShardConfig.preReadyKinds,
         this.projectionShardConfig.postReadyKinds,
@@ -722,6 +764,26 @@ export class ReactorBuilder {
 
     const operationIndex = new KyselyOperationIndex(
       database as unknown as Kysely<StorageDatabase>,
+    );
+
+    const settledWatermark = new SettledWatermark(
+      createKyselyWatermarkProbe(
+        database as unknown as Kysely<StorageDatabase>,
+      ),
+      this.logger,
+    );
+    const catchUp = new CatchUpScheduler(
+      settledWatermark,
+      operationIndex,
+      this.catchUpConfig,
+      this.logger,
+      {
+        onSwept: (result, thread) =>
+          void eventBus
+            .emit(ReactorEventTypes.CATCHUP_SWEPT, { ...result, thread })
+            .catch(() => {}),
+        describeSessions: (xids) => describeWaitingSessions(database, xids),
+      },
     );
 
     const documentMetaCache = new DocumentMetaCache(operationStore, {
@@ -864,6 +926,10 @@ export class ReactorBuilder {
         : DeletedDocumentRead.NotFound,
       readModelIndexing,
     );
+    documentView.attachCatchUp(
+      settledWatermark,
+      this.catchUpConfig.maxTrackedAboveCursor,
+    );
 
     try {
       await documentView.init();
@@ -878,6 +944,10 @@ export class ReactorBuilder {
       writeCache,
       documentIndexerConsistencyTracker,
       readModelIndexing,
+    );
+    documentIndexer.attachCatchUp(
+      settledWatermark,
+      this.catchUpConfig.maxTrackedAboveCursor,
     );
 
     try {
@@ -903,6 +973,10 @@ export class ReactorBuilder {
       this.logger!,
       this.driveContainerTypes,
       { legacyProcessorIds: this.features.legacyProcessorIds !== false },
+    );
+    processorManager.attachCatchUp(
+      settledWatermark,
+      this.catchUpConfig.maxTrackedAboveCursor,
     );
 
     try {
@@ -978,6 +1052,30 @@ export class ReactorBuilder {
               processorManager,
             ]);
 
+    if (hasCatchUpStatuses(readModelCoordinator)) {
+      catchUp.addStatusSource(() =>
+        readModelCoordinator
+          .catchUpStatuses()
+          .flatMap((status) => status.consumers),
+      );
+    }
+    const indexedReadModels =
+      readModelCoordinator.indexedReadModels?.bind(readModelCoordinator);
+    if (indexedReadModels) {
+      catchUp.addSource(
+        () =>
+          indexedReadModels().filter(
+            (model): model is IReadModel & ICatchUpConsumer =>
+              isCatchUpConsumer(model),
+          ),
+        "host",
+      );
+    } else {
+      this.logger.warn(
+        "The read model coordinator does not report indexedReadModels; the host runs no read-side catch-up sweep",
+      );
+    }
+
     const reactor = new Reactor(
       this.logger,
       documentModelRegistry,
@@ -990,6 +1088,7 @@ export class ReactorBuilder {
       operationStore,
       eventBus,
       executorManager,
+      catchUp,
     );
 
     let syncModule: InProcessSyncModule | undefined = undefined;
@@ -1007,6 +1106,7 @@ export class ReactorBuilder {
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
         this.driveContainerTypes,
+        settledWatermark,
       );
       await syncModule.syncManager.startup();
     } else if (this.syncBuilder) {
@@ -1017,6 +1117,7 @@ export class ReactorBuilder {
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
         this.driveContainerTypes,
+        settledWatermark,
       );
       await syncModule.syncManager.startup();
     }
@@ -1028,8 +1129,14 @@ export class ReactorBuilder {
         eventBus,
         queue,
         operationIndex,
+        database as unknown as Kysely<DocumentViewDatabase>,
       );
-      groupReevaluationTrigger.startup();
+      groupReevaluationTrigger.attachCatchUp(
+        settledWatermark,
+        this.catchUpConfig.maxTrackedAboveCursor,
+      );
+      await groupReevaluationTrigger.startup();
+      catchUp.addConsumer(groupReevaluationTrigger, "host");
     }
 
     const module: InProcessReactorModule = {
@@ -1057,7 +1164,11 @@ export class ReactorBuilder {
       groupReevaluationTrigger,
       pools: this.instrumentedPools,
       degradedComponents,
+      catchUp,
+      settledWatermark,
     };
+
+    catchUp.start();
 
     if (degradedComponents.length > 0) {
       // buildModule assigns a default logger before anything here runs.
@@ -1165,6 +1276,7 @@ export class ReactorBuilder {
         );
       }
     }
+    validateShardCount(config.shardCount);
     validateBuiltInKindCoverage(config.preReadyKinds, config.postReadyKinds);
     // The executor pool guard in buildModule only runs with a worker pool.
     if (this.moduleOnlyModelKeys.length > 0) {
@@ -1198,6 +1310,7 @@ export class ReactorBuilder {
       preReadyKinds: config.preReadyKinds,
       postReadyKinds: config.postReadyKinds,
       indexing,
+      catchUp: this.catchUpConfig,
       factory,
       logger: this.logger!,
       hostBus: eventBus,

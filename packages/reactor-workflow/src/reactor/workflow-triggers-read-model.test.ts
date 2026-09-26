@@ -1,9 +1,10 @@
-// The runtime's intake as a read model: it delegates the batch and then, and
-// only then, moves the cursor. First registration starts at head.
+// The runtime's intake as a read model: it delegates every batch, and only a
+// sweep moves the cursor. First registration starts at head.
 import type {
   DocumentViewDatabase,
   IConsistencyTracker,
   IOperationIndex,
+  ISettledWatermark,
   IWriteCache,
   PagedResults,
 } from "@powerhousedao/reactor";
@@ -19,7 +20,7 @@ import {
 } from "./workflow-triggers-read-model.js";
 
 // The reactor's own cursor table, migrated here as the reactor migrates it:
-// what the base class reads on init and updates after every batch.
+// what the base class reads on init and a sweep updates.
 const db = createTestRelationalDb() as unknown as Kysely<DocumentViewDatabase>;
 
 function op(ordinal: number): OperationWithContext {
@@ -67,7 +68,16 @@ function pagedIndex(pages: OperationWithContext[][]) {
   });
 }
 
-function readModel(pages: OperationWithContext[][] = []) {
+function settledAt(settledThrough: number): ISettledWatermark {
+  return {
+    settledThrough,
+    refresh: () => Promise.resolve(settledThrough),
+    onAdvance: () => () => {},
+    status: () => ({ head: settledThrough, settledThrough, waitingOn: [] }),
+  };
+}
+
+function readModel(pages: OperationWithContext[][] = [], settledThrough = 0) {
   const batches: OperationWithContext[][] = [];
   const onOperations = vi.fn((operations: OperationWithContext[]) => {
     batches.push(operations);
@@ -75,13 +85,25 @@ function readModel(pages: OperationWithContext[][] = []) {
   });
   const runtime = { onOperations } as unknown as WorkflowRuntimeService;
   const getSinceOrdinal = pagedIndex(pages);
+  const stored = pages.flat();
+  const getByOrdinals = vi.fn((wanted: readonly number[]) =>
+    Promise.resolve(
+      stored.filter((item) => wanted.includes(item.context.ordinal)),
+    ),
+  );
+  const getStreamAfter = vi.fn(() => Promise.resolve([]));
   const model = new WorkflowTriggersReadModel(
     db,
-    { getSinceOrdinal } as unknown as IOperationIndex,
+    {
+      getSinceOrdinal,
+      getByOrdinals,
+      getStreamAfter,
+    } as unknown as IOperationIndex,
     {} as IWriteCache,
     { update: vi.fn(), waitFor: vi.fn() } as unknown as IConsistencyTracker,
     runtime,
   );
+  model.attachCatchUp(settledAt(settledThrough), 100_000);
   return { batches, getSinceOrdinal, model, onOperations };
 }
 
@@ -113,50 +135,60 @@ describe("WorkflowTriggersReadModel", () => {
     expect(WORKFLOW_TRIGGERS_READ_MODEL_STAGE).toBe("post_ready");
   });
 
-  it("replays nothing on a first registration, and leaves no row behind", async () => {
-    const { batches, getSinceOrdinal, model } = readModel([[op(1), op(2)]]);
+  it("starts a first registration at the watermark and replays nothing", async () => {
+    const { batches, getSinceOrdinal, model } = readModel([[op(1), op(2)]], 2);
 
     await model.init();
 
-    // No cursor row means nothing to catch up to, and a row at ordinal zero
-    // would be an instruction to replay every operation ever written.
     expect(getSinceOrdinal).not.toHaveBeenCalled();
     expect(batches).toHaveLength(0);
-    expect(await cursor()).toBe(undefined);
+    expect(await cursor()).toBe(2);
   });
 
-  it("delegates the first batch and opens the cursor on it", async () => {
-    const { batches, model, onOperations } = readModel();
+  it("delegates a live batch and leaves the cursor to the sweep", async () => {
+    const { batches, model, onOperations } = readModel([], 10);
 
     await model.init();
     await model.indexOperations([op(11), op(13), op(12)]);
 
     expect(onOperations).toHaveBeenCalledTimes(1);
     expect(batches).toEqual([[op(11), op(13), op(12)]]);
+    expect(await cursor()).toBe(10);
+
+    await model.sweep(13, [11, 12, 13]);
+    expect(onOperations).toHaveBeenCalledTimes(1);
     expect(await cursor()).toBe(13);
   });
 
-  it("leaves the cursor where it was when the runtime throws", async () => {
-    const { model, onOperations } = readModel();
+  it("holds the cursor below an operation the runtime threw on", async () => {
+    const { model, onOperations } = readModel([[op(11), op(99)]], 10);
     await model.init();
     await model.indexOperations([op(11)]);
-    onOperations.mockRejectedValueOnce(new Error("boom"));
+    onOperations
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockRejectedValueOnce(new Error("boom"));
 
     await expect(model.indexOperations([op(99)])).rejects.toThrow("boom");
 
     // An operation the runtime refused must be re-read, never skipped.
-    expect(await cursor()).toBe(11);
+    await model.sweep(99, [11, 99]);
+    expect(await cursor()).toBe(98);
+
+    await model.sweep(99, [11, 99]);
+    expect(await cursor()).toBe(99);
   });
 
   it("catches up from the stored cursor on a later start", async () => {
-    const before = readModel();
+    const before = readModel([], 13);
     await before.model.init();
-    await before.model.indexOperations([op(13)]);
 
-    const { batches, getSinceOrdinal, model } = readModel([
-      [op(12), op(13), op(14)],
-      [op(15), op(16)],
-    ]);
+    const { batches, getSinceOrdinal, model } = readModel(
+      [
+        [op(12), op(13), op(14)],
+        [op(15), op(16)],
+      ],
+      16,
+    );
     await model.init();
 
     expect(getSinceOrdinal).toHaveBeenCalledWith(13);

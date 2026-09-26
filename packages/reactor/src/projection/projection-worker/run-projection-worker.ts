@@ -192,6 +192,11 @@ export function runProjectionWorker(
       if (!stack) {
         return;
       }
+      post({
+        type: "catchup-status",
+        shardId,
+        status: stack.catchUpStatus(),
+      });
       const depth = stack.getChainDepth();
       if (depth === lastReportedDepth) {
         return;
@@ -245,6 +250,15 @@ export function runProjectionWorker(
             durationMs: event.durationMs,
             operationCount: event.operationCount,
             success: event.success,
+          });
+        },
+        onReadModelSwept: (readModelName, coordinates, result) => {
+          post({
+            type: "readmodel-swept",
+            shardId,
+            readModelName,
+            coordinates,
+            result,
           });
         },
         onBatchCompleted: (event: ReadModelBatchCompletedEvent) => {

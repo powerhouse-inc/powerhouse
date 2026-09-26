@@ -2,6 +2,10 @@ import type { DivProps } from "#design-system";
 import { Icon, Modal } from "#design-system";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
+import {
+  CatchUpInspector,
+  type CatchUpInspectorProps,
+} from "../../catch-up-inspector/index.js";
 import { DBExplorer, type DBExplorerProps } from "../../db-explorer/index.js";
 import {
   IntegrityInspector,
@@ -34,6 +38,7 @@ export type InspectorTab =
   | "Queue"
   | "Processors"
   | "Integrity"
+  | "CatchUp"
   | "Worker";
 
 export type InspectorUnavailableTabs = {
@@ -50,6 +55,7 @@ export type InspectorModalProps = {
   readonly queueInspectorProps?: QueueInspectorProps;
   readonly processorsInspectorProps?: ProcessorsInspectorProps;
   readonly integrityInspectorProps?: IntegrityInspectorProps;
+  readonly catchUpInspectorProps?: CatchUpInspectorProps;
   readonly workerInspectorProps?: WorkerInspectorProps;
   readonly unavailableTabs?: InspectorUnavailableTabs;
   readonly defaultTab?: InspectorTab;
@@ -76,6 +82,7 @@ export function InspectorModal({
   queueInspectorProps,
   processorsInspectorProps,
   integrityInspectorProps,
+  catchUpInspectorProps,
   workerInspectorProps,
   unavailableTabs,
   defaultTab = "Database",
@@ -151,6 +158,25 @@ export function InspectorModal({
             ) : unavailableTabs?.Integrity ? (
               <TabContent description="Integrity inspector" label="Integrity">
                 <InspectorUnavailable message={unavailableTabs.Integrity} />
+              </TabContent>
+            ) : null}
+            {catchUpInspectorProps ? (
+              <TabContent
+                description="Catch-up inspector"
+                label="Catch-up"
+                value="CatchUp"
+              >
+                <div className="h-full">
+                  <CatchUpInspector {...catchUpInspectorProps} />
+                </div>
+              </TabContent>
+            ) : unavailableTabs?.CatchUp ? (
+              <TabContent
+                description="Catch-up inspector"
+                label="Catch-up"
+                value="CatchUp"
+              >
+                <InspectorUnavailable message={unavailableTabs.CatchUp} />
               </TabContent>
             ) : null}
             {workerInspectorProps && (

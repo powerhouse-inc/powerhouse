@@ -1,3 +1,4 @@
+import { settledAtHead } from "../catch-up/helpers.js";
 import type {
   Operation,
   OperationWithContext,
@@ -75,6 +76,27 @@ class SmallPageOperationIndex implements IOperationIndex {
     signal?: AbortSignal,
   ) {
     return this.inner.get(documentId, view, paging, signal);
+  }
+
+  getOrdinalsInRange(
+    after: number,
+    through: number,
+    limit: number,
+    signal?: AbortSignal,
+  ) {
+    return this.inner.getOrdinalsInRange(after, through, limit, signal);
+  }
+
+  getByOrdinals(ordinals: readonly number[], signal?: AbortSignal) {
+    return this.inner.getByOrdinals(ordinals, signal);
+  }
+
+  getStreamAfter(
+    stream: Parameters<IOperationIndex["getStreamAfter"]>[0],
+    after: number,
+    signal?: AbortSignal,
+  ) {
+    return this.inner.getStreamAfter(stream, after, signal);
   }
 
   getSinceOrdinal(
@@ -160,6 +182,7 @@ describe("Sync envelope grouping for same-timestamp runs", () => {
       mockReactor,
       eventBus,
       DEFAULT_DRIVE_CONTAINER_TYPES,
+      settledAtHead(),
     );
   });
 

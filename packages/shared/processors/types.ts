@@ -65,14 +65,12 @@ export interface IProcessor {
    * Processes a list of operations with context.
    * Called when operations match this processor's filter.
    *
-   * Delivery is at-least-once: a processor may see an operation again after
-   * a restart or a retry, or when a backfill reads an operation whose live
-   * batch has not reached the manager yet. Within one document's scope and
-   * branch, operations arrive in ordinal order. Across documents there is no
-   * ordering guarantee. A processor receives one `onOperations` call at a
-   * time; the next call begins after the previous resolves. A crash between
-   * two concurrently projected documents, after the higher ordinal's cursor
-   * was persisted, can leave the lower ordinals unreplayed.
+   * Delivery is at-least-once. Within a document's scope and branch, each
+   * call is in ordinal order, and an operation delivered late comes with
+   * every later operation of its stream this processor was already given.
+   * Across documents there is no ordering guarantee. A processor receives one
+   * `onOperations` call at a time; the next call begins after the previous
+   * resolves.
    */
   onOperations(operations: OperationWithContext[]): Promise<void>;
 

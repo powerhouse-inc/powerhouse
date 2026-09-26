@@ -83,6 +83,10 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
     return this.chains.size;
   }
 
+  indexedReadModels(): readonly IReadModel[] {
+    return [...this.preReady, ...this.postReady];
+  }
+
   addReadModel(readModel: IReadModel, stage: ReadModelRegistrationStage): void {
     if (this.readModels.some(({ name }) => name === readModel.name)) {
       throw new Error(`Read model "${readModel.name}" is already registered`);

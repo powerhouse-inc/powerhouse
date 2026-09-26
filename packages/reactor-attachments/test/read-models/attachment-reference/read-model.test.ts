@@ -3,6 +3,7 @@ import type {
   IConsistencyTracker,
   IDocumentModelRegistry,
   IOperationIndex,
+  ISettledWatermark,
   IWriteCache,
   PagedResults,
 } from "@powerhousedao/reactor";
@@ -121,6 +122,20 @@ type FakeCursorDb = Kysely<DocumentViewDatabase> & {
 
 function cursorDb(cursor?: number): FakeCursorDb {
   const state = { cursor, failNextSave: false };
+  const update = (value: { lastOrdinal: number }) => {
+    const chain = {
+      where: () => chain,
+      executeTakeFirst: () => {
+        if (state.failNextSave) {
+          state.failNextSave = false;
+          return Promise.reject(new Error("cursor save failed"));
+        }
+        state.cursor = value.lastOrdinal;
+        return Promise.resolve({ numUpdatedRows: 1n });
+      },
+    };
+    return chain;
+  };
   const db = {
     get cursor() {
       return state.cursor;
@@ -148,31 +163,15 @@ function cursorDb(cursor?: number): FakeCursorDb {
     }),
     insertInto: () => ({
       values: (value: { lastOrdinal: number }) => ({
-        execute: () => {
-          state.cursor = value.lastOrdinal;
-          return Promise.resolve();
-        },
+        onConflict: () => ({
+          execute: () => {
+            state.cursor ??= value.lastOrdinal;
+            return Promise.resolve();
+          },
+        }),
       }),
     }),
-    transaction: () => ({
-      execute: (callback: (trx: unknown) => Promise<void>) =>
-        callback({
-          updateTable: () => ({
-            set: (value: { lastOrdinal: number }) => ({
-              where: () => ({
-                execute: () => {
-                  if (state.failNextSave) {
-                    state.failNextSave = false;
-                    return Promise.reject(new Error("cursor save failed"));
-                  }
-                  state.cursor = value.lastOrdinal;
-                  return Promise.resolve();
-                },
-              }),
-            }),
-          }),
-        }),
-    }),
+    updateTable: () => ({ set: update }),
   };
   return db as unknown as FakeCursorDb;
 }
@@ -203,14 +202,37 @@ function operationIndex(
     getSinceOrdinal: vi.fn((ordinal: number) =>
       Promise.resolve(since(results, ordinal)),
     ),
+    getByOrdinals: vi.fn((ordinals: readonly number[]) =>
+      Promise.resolve(
+        results
+          .filter((item) => ordinals.includes(item.context.ordinal))
+          .sort((left, right) => left.context.ordinal - right.context.ordinal),
+      ),
+    ),
+    getStreamAfter: vi.fn(() => Promise.resolve([])),
   } as unknown as IOperationIndex & {
     getSinceOrdinal: ReturnType<typeof vi.fn>;
   };
 }
 
-/** A getSinceOrdinal fake backed by a store that grows as ordinals commit. */
-function pagesFrom(store: OperationWithContext[]) {
-  return vi.fn((ordinal: number) => Promise.resolve(since(store, ordinal)));
+/** Everything in the store is settled. */
+function storeWatermark(
+  store: readonly OperationWithContext[],
+): ISettledWatermark {
+  const settled = () =>
+    store.reduce((max, item) => Math.max(max, item.context.ordinal), 0);
+  return {
+    get settledThrough() {
+      return settled();
+    },
+    refresh: () => Promise.resolve(settled()),
+    onAdvance: () => () => {},
+    status: () => ({
+      head: settled(),
+      settledThrough: settled(),
+      waitingOn: [],
+    }),
+  };
 }
 
 function dependencies(options?: {
@@ -220,8 +242,9 @@ function dependencies(options?: {
   compiler?: AttachmentSchemaCompiler;
   writer?: IAttachmentReferenceWriter;
 }) {
+  const store = options?.indexOperations ?? [];
   const db = cursorDb(options?.cursor);
-  const index = operationIndex(options?.indexOperations);
+  const index = operationIndex(store);
   const registry = {
     getModule: vi.fn(() => options?.module ?? standardModule),
   } as unknown as IDocumentModelRegistry & {
@@ -241,7 +264,24 @@ function dependencies(options?: {
     compiler,
     writer,
   );
-  return { addReferences, compiler, db, index, model, registry, tracker };
+  model.attachCatchUp(storeWatermark(store), 100_000);
+  const sweep = () => {
+    const present = store
+      .map((item) => item.context.ordinal)
+      .sort((left, right) => left - right);
+    return model.sweep(Math.max(0, ...present), present);
+  };
+  return {
+    addReferences,
+    compiler,
+    db,
+    index,
+    model,
+    registry,
+    store,
+    sweep,
+    tracker,
+  };
 }
 
 describe("AttachmentReferenceReadModel", () => {
@@ -273,11 +313,17 @@ describe("AttachmentReferenceReadModel", () => {
     ]);
   });
 
-  it("ignores failed operations while advancing their ordinal", async () => {
-    const { addReferences, db, model, registry } = dependencies();
-    await model.indexOperations([op(1, "UNKNOWN", {}, "document-1", "failed")]);
+  it("ignores failed operations while a sweep advances past their ordinal", async () => {
+    const failed = op(1, "UNKNOWN", {}, "document-1", "failed");
+    const { addReferences, db, model, registry, sweep } = dependencies({
+      cursor: 0,
+      indexOperations: [failed],
+    });
+    await model.indexOperations([failed]);
     expect(addReferences).not.toHaveBeenCalled();
     expect(registry.getModule).not.toHaveBeenCalled();
+
+    await sweep();
     expect(db.cursor).toBe(1);
   });
 
@@ -335,135 +381,102 @@ describe("AttachmentReferenceReadModel", () => {
     expect(db.cursor).toBe(2);
   });
 
-  it("restores ordinal 99 after failure at 100, then refills 100 and 101", async () => {
+  it("holds the cursor at 99 after a failure at 100, then a sweep refills 100", async () => {
     const addReferences = vi
       .fn()
       .mockRejectedValueOnce(new Error("insert failed"))
       .mockResolvedValue(undefined);
-    const { db, index, model } = dependencies({
+    const { db, model, store, sweep } = dependencies({
       cursor: 99,
       writer: { addReferences },
     });
     await model.init();
-    const refill = vi.fn((ordinal: number) =>
-      Promise.resolve(
-        page(
-          [op(100), op(101)].filter((item) => item.context.ordinal > ordinal),
-        ),
-      ),
-    );
-    Object.assign(index, { getSinceOrdinal: refill });
+    store.push(op(100), op(101));
+
     await expect(model.indexOperations([op(100)])).rejects.toThrow(
       "insert failed",
     );
-    expect(db.cursor).toBe(99);
-
     await model.indexOperations([op(101)]);
-    expect(refill).toHaveBeenCalledWith(99);
+    await sweep();
+
     expect(addReferences).toHaveBeenLastCalledWith([
       expect.objectContaining({ ordinal: 100 }),
-      expect.objectContaining({ ordinal: 101 }),
     ]);
     expect(db.cursor).toBe(101);
   });
 
-  it("serializes cross-document calls in global ordinal order", async () => {
-    let releaseFirst!: () => void;
-    const firstBlocked = new Promise<void>((resolve) => {
-      releaseFirst = resolve;
+  it("keeps what it applied when a sweep's cursor write fails", async () => {
+    const { addReferences, db, model, sweep } = dependencies({
+      cursor: 0,
+      indexOperations: [op(1)],
     });
-    const committed: number[] = [];
-    const writer: IAttachmentReferenceWriter = {
-      addReferences: vi.fn(
-        async (references: readonly AttachmentReferenceInput[]) => {
-          committed.push(...references.map(({ ordinal }) => ordinal));
-          if (references[0]?.ordinal === 1) await firstBlocked;
-        },
-      ),
-    };
-    const { model } = dependencies({ writer });
-    const first = model.indexOperations([op(1, undefined, undefined, "alpha")]);
-    const second = model.indexOperations([op(2, undefined, undefined, "beta")]);
-    await Promise.resolve();
-    expect(committed).toEqual([1]);
-    releaseFirst();
-    await Promise.all([first, second]);
-    expect(committed).toEqual([1, 2]);
-  });
-
-  it("replays idempotently when insert succeeds but cursor save fails", async () => {
-    const stored = new Set<string>();
-    const addReferences = vi.fn(
-      (references: readonly AttachmentReferenceInput[]) => {
-        for (const reference of references) {
-          stored.add(`${reference.documentId}:${reference.ref}`);
-        }
-        return Promise.resolve();
-      },
-    );
-    const writer: IAttachmentReferenceWriter = {
-      addReferences,
-    };
-    const { db, model } = dependencies({ cursor: 0, writer });
-    db.failNextSave = true;
-    await expect(model.indexOperations([op(1)])).rejects.toThrow(
-      "cursor save failed",
-    );
-    expect(db.cursor).toBe(0);
     await model.indexOperations([op(1)]);
-    expect(stored.size).toBe(1);
-    expect(addReferences).toHaveBeenCalledTimes(2);
+
+    db.failNextSave = true;
+    await expect(sweep()).rejects.toThrow("cursor save failed");
+    expect(db.cursor).toBe(0);
+
+    await sweep();
+    expect(addReferences).toHaveBeenCalledTimes(1);
     expect(db.cursor).toBe(1);
   });
 
-  it("re-indexes redelivered ordinals without replaying or regressing the cursor", async () => {
+  it("drops a redelivered ordinal at or below the cursor", async () => {
     const { addReferences, db, index, model } = dependencies({ cursor: 5 });
     await model.init();
     index.getSinceOrdinal.mockClear();
 
     await model.indexOperations([op(4), op(5)]);
 
-    // Redelivery below the cursor is indexed again -- the store is idempotent --
-    // rather than dropped, and neither triggers a replay nor moves the cursor.
-    expect(addReferences).toHaveBeenCalledWith([
-      expect.objectContaining({ ordinal: 4 }),
-      expect.objectContaining({ ordinal: 5 }),
-    ]);
+    expect(addReferences).not.toHaveBeenCalled();
     expect(index.getSinceOrdinal).not.toHaveBeenCalled();
     expect(db.cursor).toBe(5);
   });
 
-  it("keeps errors observable and the queue reusable", async () => {
+  it("keeps errors observable and the live path reusable", async () => {
     const addReferences = vi
       .fn()
       .mockRejectedValueOnce(new Error("visible failure"))
       .mockResolvedValue(undefined);
-    const { db, model } = dependencies({ writer: { addReferences } });
+    const { db, model, sweep } = dependencies({
+      cursor: 0,
+      writer: { addReferences },
+      indexOperations: [op(1)],
+    });
     await expect(model.indexOperations([op(1)])).rejects.toThrow(
       "visible failure",
     );
     await model.indexOperations([op(1)]);
+    await sweep();
+    expect(addReferences).toHaveBeenCalledTimes(2);
     expect(db.cursor).toBe(1);
   });
 
-  it("keeps a missing-module cursor retryable and gap-recovers after registration", async () => {
-    const { db, index, model, registry } = dependencies({ cursor: 0 });
+  it("keeps a missing-module operation retryable and sweeps it after registration", async () => {
+    const { addReferences, db, model, registry, store, sweep } = dependencies({
+      cursor: 0,
+    });
     await model.init();
-    registry.getModule.mockImplementationOnce(() => {
+    store.push(op(1), op(2, "ATTACH_FILES", { refs: [REF_B] }));
+    registry.getModule.mockImplementation(() => {
       throw new Error("module not registered");
     });
     await expect(model.indexOperations([op(1)])).rejects.toThrow(
       "module not registered",
     );
-    expect(db.cursor).toBe(0);
+
+    const held = await sweep();
+    expect(held.to).toBe(0);
+    expect(held.blockedAt).toMatchObject({ ordinal: 1 });
 
     registry.getModule.mockReturnValue(standardModule);
-    index.getSinceOrdinal.mockResolvedValue(
-      page([op(1), op(2, "ATTACH_FILES", { refs: [REF_B] })]),
-    );
-    await model.indexOperations([op(2, "ATTACH_FILES", { refs: [REF_B] })]);
-
-    expect(index.getSinceOrdinal).toHaveBeenCalledWith(0);
+    await sweep();
+    expect(addReferences).toHaveBeenCalledWith([
+      expect.objectContaining({ ordinal: 1 }),
+    ]);
+    expect(addReferences).toHaveBeenCalledWith([
+      expect.objectContaining({ ordinal: 2 }),
+    ]);
     expect(db.cursor).toBe(2);
   });
 
@@ -493,29 +506,6 @@ describe("AttachmentReferenceReadModel", () => {
     expect(addReferences).not.toHaveBeenCalled();
   });
 
-  it("fills internal gaps across pages and rejects unresolved gaps", async () => {
-    const { db, index, model } = dependencies({ cursor: 9 });
-    await model.init();
-    index.getSinceOrdinal.mockResolvedValueOnce(
-      page([op(10)], () => Promise.resolve(page([op(11), op(12)]))),
-    );
-    await model.indexOperations([op(10), op(12)]);
-    expect(db.cursor).toBe(12);
-
-    // An unresolved gap is a normal property of the ordinal sequence (the
-    // column is a serial, and a rolled-back insert burns a value), so 22 is
-    // indexed and the cursor parks below the hole instead of rejecting.
-    const unresolved = dependencies({ cursor: 20 });
-    await unresolved.model.init();
-    await expect(
-      unresolved.model.indexOperations([op(22)]),
-    ).resolves.toBeUndefined();
-    expect(unresolved.addReferences).toHaveBeenCalledWith([
-      expect.objectContaining({ ordinal: 22 }),
-    ]);
-    expect(unresolved.db.cursor).toBe(20);
-  });
-
   it("catches up across a permanent hole on init instead of throwing", async () => {
     const { addReferences, db, model } = dependencies({
       cursor: 10,
@@ -528,249 +518,21 @@ describe("AttachmentReferenceReadModel", () => {
       expect.objectContaining({ ordinal: 11 }),
       expect.objectContaining({ ordinal: 13 }),
     ]);
-    expect(db.cursor).toBe(11);
+    expect(db.cursor).toBe(13);
   });
 
-  it("indexes an operation above an in-flight gap and picks the gap up later", async () => {
-    const indexed: number[] = [];
-    const addReferences = vi.fn(
-      (references: readonly AttachmentReferenceInput[]) => {
-        indexed.push(...references.map(({ ordinal }) => ordinal));
-        return Promise.resolve();
-      },
-    );
-    const { db, index, model } = dependencies({
-      cursor: 4,
-      writer: { addReferences },
+  it("P7: indexes a reference whose batch never arrived, without a later batch", async () => {
+    const { addReferences, db, model, store, sweep } = dependencies({
+      cursor: 0,
     });
     await model.init();
 
-    // Ordinal 6 commits while 5 is still an open transaction.
-    index.getSinceOrdinal.mockResolvedValue(page([op(6)]));
-    await model.indexOperations([op(6)]);
-    expect(indexed).toEqual([6]);
-    expect(db.cursor).toBe(4);
+    store.push(op(1));
+    await sweep();
 
-    // 5 commits and is delivered live; it is indexed, not filtered away.
-    index.getSinceOrdinal.mockResolvedValue(page([op(5), op(6)]));
-    await model.indexOperations([op(5)]);
-
-    expect(indexed).toEqual([6, 5]);
-    expect(db.cursor).toBe(5);
-  });
-
-  it("replays a bounded range instead of restarting at a permanent hole", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    try {
-      // Ordinal 12 was burned by a rolled-back insert and never arrives.
-      const store = [op(11), op(13), op(14)];
-      const { db, index, model } = dependencies({ cursor: 10 });
-      const since = pagesFrom(store);
-      Object.assign(index, { getSinceOrdinal: since });
-      await model.init();
-      expect(db.cursor).toBe(11);
-      since.mockClear();
-
-      for (const ordinal of [15, 16, 17]) {
-        store.push(op(ordinal));
-        await model.indexOperations([op(ordinal)]);
-        expect(db.cursor).toBe(11);
-      }
-
-      // A parked batch reads twice: one bounded page probing the hole at the
-      // cursor, in case a writer elsewhere filled it, and a replay resuming
-      // where the last one ended. The first batch has no mark yet to probe.
-      const starts = since.mock.calls.map(([start]) => start);
-      expect(starts).toEqual([11, 11, 15, 11, 16]);
-
-      const replays = starts.filter((_, i) => i % 2 === 0);
-      const probes = starts.filter((_, i) => i % 2 === 1);
-      // The probe is pinned at the cursor, so it stays one page however far
-      // the tail runs ahead; only the replay leg advances.
-      expect(probes).toEqual([11, 11]);
-      expect(replays).toEqual([11, 15, 16]);
-      expect(
-        replays.every((start, i) => i === 0 || start > replays[i - 1]!),
-      ).toBe(true);
-    } finally {
-      warn.mockRestore();
-    }
-  });
-
-  it("drops the replay mark when a gap-filling batch fails", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    try {
-      const indexed: number[] = [];
-      const addReferences = vi.fn(
-        (references: readonly AttachmentReferenceInput[]) => {
-          indexed.push(...references.map(({ ordinal }) => ordinal));
-          return Promise.resolve();
-        },
-      );
-      const store = [op(11), op(13), op(14)];
-      const { db, index, model } = dependencies({
-        cursor: 10,
-        writer: { addReferences },
-      });
-      const since = pagesFrom(store);
-      Object.assign(index, { getSinceOrdinal: since });
-      await model.init();
-      store.push(op(15));
-      await model.indexOperations([op(15)]);
-      expect(db.cursor).toBe(11);
-      since.mockClear();
-
-      // 12 fills the gap but its write fails, so nothing above it is committed.
-      addReferences.mockImplementationOnce(() =>
-        Promise.reject(new Error("insert failed")),
-      );
-      store.push(op(12));
-      await expect(model.indexOperations([op(12)])).rejects.toThrow(
-        "insert failed",
-      );
-      expect(db.cursor).toBe(11);
-
-      // The next replay must restart at the checkpoint, not above 12.
-      store.push(op(16));
-      await model.indexOperations([op(16)]);
-      expect(since).toHaveBeenCalledWith(11);
-      expect(db.cursor).toBe(16);
-      expect(indexed).toContain(12);
-    } finally {
-      warn.mockRestore();
-    }
-  });
-
-  it("sweeps the cursor past a hole that finally fills", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    try {
-      const indexed: number[] = [];
-      const addReferences = vi.fn(
-        (references: readonly AttachmentReferenceInput[]) => {
-          indexed.push(...references.map(({ ordinal }) => ordinal));
-          return Promise.resolve();
-        },
-      );
-      const store = [op(11), op(13), op(14)];
-      const { db, index, model } = dependencies({
-        cursor: 10,
-        writer: { addReferences },
-      });
-      const since = pagesFrom(store);
-      Object.assign(index, { getSinceOrdinal: since });
-      await model.init();
-      for (const ordinal of [15, 16, 17]) {
-        store.push(op(ordinal));
-        await model.indexOperations([op(ordinal)]);
-      }
-      expect(db.cursor).toBe(11);
-      since.mockClear();
-
-      // 12 was a still-open transaction after all, and commits.
-      store.push(op(12));
-      await model.indexOperations([op(12)]);
-      expect(db.cursor).toBe(12);
-      expect(since).not.toHaveBeenCalled();
-
-      // Clearing the mark costs one replay from the checkpoint, which sweeps
-      // the cursor past the operations already indexed above the hole.
-      store.push(op(18));
-      await model.indexOperations([op(18)]);
-      expect(since).toHaveBeenCalledWith(12);
-      expect(db.cursor).toBe(18);
-      expect(indexed.filter((ordinal) => ordinal === 12)).toEqual([12]);
-      expect(new Set(indexed)).toEqual(
-        new Set([11, 12, 13, 14, 15, 16, 17, 18]),
-      );
-    } finally {
-      warn.mockRestore();
-    }
-  });
-
-  it("sweeps past a hole filled by a writer it never hears from", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    try {
-      const indexed: number[] = [];
-      const addReferences = vi.fn(
-        (references: readonly AttachmentReferenceInput[]) => {
-          indexed.push(...references.map(({ ordinal }) => ordinal));
-          return Promise.resolve();
-        },
-      );
-      const store = [op(11), op(13), op(14)];
-      const { db, index, model } = dependencies({
-        cursor: 10,
-        writer: { addReferences },
-      });
-      const since = pagesFrom(store);
-      Object.assign(index, { getSinceOrdinal: since });
-      await model.init();
-      for (const ordinal of [15, 16, 17]) {
-        store.push(op(ordinal));
-        await model.indexOperations([op(ordinal)]);
-      }
-      expect(db.cursor).toBe(11);
-
-      // 12 commits, but nothing delivers it here: a second reactor on the same
-      // database wrote it, so it exists only in the index. A mark taken on
-      // trust would skip past it forever and never write its references.
-      store.push(op(12));
-      await model.indexOperations([op(18)]);
-
-      expect(indexed).toContain(12);
-      expect(db.cursor).toBe(18);
-    } finally {
-      warn.mockRestore();
-    }
-  });
-
-  it("warns once per parked ordinal rather than once per batch", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    try {
-      const store: OperationWithContext[] = [];
-      const { db, index, model } = dependencies({ cursor: 20 });
-      const since = pagesFrom(store);
-      Object.assign(index, { getSinceOrdinal: since });
-      await model.init();
-
-      for (const ordinal of [22, 23, 24]) {
-        store.push(op(ordinal));
-        await model.indexOperations([op(ordinal)]);
-      }
-      expect(db.cursor).toBe(20);
-      expect(warn).toHaveBeenCalledTimes(1);
-      expect(warn.mock.calls[0]![0]).toContain("ordinal 21 is missing");
-
-      store.push(op(21));
-      await model.indexOperations([op(21)]);
-      expect(db.cursor).toBe(21);
-      expect(warn).toHaveBeenCalledTimes(1);
-
-      store.push(op(26));
-      await model.indexOperations([op(26)]);
-      expect(db.cursor).toBe(24);
-      expect(warn).toHaveBeenCalledTimes(2);
-      expect(warn.mock.calls[1]![0]).toContain("ordinal 25 is missing");
-    } finally {
-      warn.mockRestore();
-    }
-  });
-
-  it("warns when the cursor parks short of the delivered maximum", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    try {
-      const { db, model } = dependencies({ cursor: 20 });
-      await model.init();
-      await model.indexOperations([op(22)]);
-
-      expect(warn).toHaveBeenCalledTimes(1);
-      expect(warn.mock.calls[0]![0]).toContain(
-        ATTACHMENT_REFERENCE_READ_MODEL_ID,
-      );
-      expect(warn.mock.calls[0]![0]).toContain("ordinal 21 is missing");
-      expect(db.cursor).toBe(20);
-    } finally {
-      warn.mockRestore();
-    }
+    expect(addReferences).toHaveBeenCalledWith([
+      expect.objectContaining({ ref: REF_A, ordinal: 1 }),
+    ]);
+    expect(db.cursor).toBe(1);
   });
 });

@@ -21,9 +21,11 @@ import { createProjectionThreadTransport } from "../../src/projection/transport.
 import type { IReadModel } from "../../src/read-models/interfaces.js";
 import {
   JobStatus,
+  type ConsistencyToken,
   type JobInfo,
   type PagedResults,
 } from "../../src/shared/types.js";
+import { DroppingEventBus } from "../catch-up/helpers.js";
 import { createDocModelDocument } from "../factories.js";
 
 const PG_TEST_URL =
@@ -110,6 +112,7 @@ describe("hybrid projection worker over Postgres", () => {
   let adminPool: Pool | undefined;
   let baseDb: Kysely<Database> | undefined;
   let module: InProcessReactorModule | undefined;
+  const bus = new DroppingEventBus();
 
   async function waitForJob(
     jobId: string,
@@ -152,6 +155,8 @@ describe("hybrid projection worker over Postgres", () => {
 
     module = await new ReactorBuilder()
       .withKysely(baseDb)
+      .withEventBus(bus)
+      .withCatchUp({ intervalMs: 200 })
       .withDocumentModelSources([
         {
           packageName: "document-model",
@@ -268,6 +273,46 @@ describe("hybrid projection worker over Postgres", () => {
     ]);
     const info = await waitForJob(job.id, [JobStatus.READ_READY]);
     expect(info.status).toBe(JobStatus.READ_READY);
+  });
+
+  it("resolves a token for an operation only a sweep applied", async () => {
+    const docId = "hybrid-swept-doc";
+    const dropped = bus.dropWriteReadyFor(docId);
+    await module!.reactor.create(createDocModelDocument({ id: docId }));
+    await within(dropped, "the dropped JOB_WRITE_READY");
+
+    const indexed = await module!.operationIndex.get(docId);
+    const token: ConsistencyToken = {
+      version: 1,
+      createdAtUtcIso: new Date().toISOString(),
+      coordinates: indexed.results.map((entry) => ({
+        documentId: entry.documentId,
+        scope: entry.scope,
+        branch: entry.branch,
+        operationIndex: entry.index,
+      })),
+    };
+
+    const doc = await within(
+      module!.reactor.get<DocumentModelDocument>(docId, undefined, token),
+      "a token read the worker's sweep resolves",
+      10_000,
+    );
+    expect(doc.header.id).toBe(docId);
+  });
+
+  it("reports the projection worker's consumers in the host catch-up status", async () => {
+    await vi.waitFor(
+      () => {
+        const projected = module!.catchUp
+          .status()
+          .consumers.filter((consumer) => consumer.thread === "projection")
+          .map((consumer) => consumer.consumerId)
+          .sort();
+        expect(projected).toEqual(["document-indexer", "document-view"]);
+      },
+      { timeout: WITHIN_MS },
+    );
   });
 
   // Last: covers every operation the cases above produced.
