@@ -1,3 +1,4 @@
+import type { PeerManifest } from "@powerhousedao/shared/document-model";
 import {
   DriveCollectionId,
   SyncEventTypes,
@@ -13,6 +14,7 @@ import {
   type RemoteFilter,
   type RemoteMeta,
   type RemoteOptions,
+  type RemotePeer,
   type ShutdownStatus,
   type SyncOperation,
   type SyncStatus,
@@ -42,6 +44,7 @@ type WireRemoteMeta = {
   channelConfig: ChannelConfig;
   filter: RemoteFilter;
   options: RemoteOptions;
+  peer?: RemotePeer;
 };
 type WireRemote = {
   meta: WireRemoteMeta;
@@ -100,6 +103,7 @@ function rehydrateMeta(wire: WireRemoteMeta): RemoteMeta {
     channelConfig: wire.channelConfig,
     filter: wire.filter,
     options: wire.options,
+    peer: wire.peer,
   };
 }
 
@@ -119,6 +123,7 @@ export class SyncManagerProxy implements ISyncManager {
   private readonly syncStatuses = new Map<string, SyncStatus>();
   private readonly syncStatusListeners = new Listeners<[string, SyncStatus]>();
   private remotes: Remote[] = [];
+  private manifest: PeerManifest | undefined;
   private seedPromise: Promise<void> | null = null;
 
   constructor(router: MessageRouter, busProxy: IEventBus) {
@@ -198,6 +203,22 @@ export class SyncManagerProxy implements ISyncManager {
     return this.getByName(name);
   }
 
+  async setPeerManifest(
+    id: string,
+    manifest: PeerManifest | null,
+  ): Promise<void> {
+    await this.callSyncOp("setPeerManifest", [id, manifest]);
+    await this.refreshRemotes();
+  }
+
+  /** Fetched with the remotes; the worker's flags do not change at runtime. */
+  localManifest(): PeerManifest {
+    if (!this.manifest) {
+      throw new Error("The local manifest has not been fetched yet");
+    }
+    return this.manifest;
+  }
+
   async bindRemote(id: string, boundAddress: string): Promise<void> {
     await this.callSyncOp("bindRemote", [id, boundAddress]);
     await this.refreshRemotes();
@@ -269,6 +290,8 @@ export class SyncManagerProxy implements ISyncManager {
       },
       notePoll: () => {},
       lastHolderPollUtcMs: () => undefined,
+      setLocalManifest: () => {},
+      onPeerManifest: () => () => {},
       config: { url },
     };
     return channel;
@@ -295,6 +318,13 @@ export class SyncManagerProxy implements ISyncManager {
 
   // Shared in-flight seed so the eager kick-off and startup() share one list RPC.
   private ensureSeeded(): Promise<void> {
+    if (!this.manifest) {
+      this.callSyncOp("localManifest", [])
+        .then((manifest) => {
+          this.manifest = manifest as PeerManifest;
+        })
+        .catch(() => {});
+    }
     if (!this.seedPromise) {
       const pending = this.refreshRemotes();
       this.seedPromise = pending;
