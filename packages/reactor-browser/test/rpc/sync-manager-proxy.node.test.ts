@@ -122,13 +122,18 @@ describe("createSyncManagerProxy", () => {
       protocols: { "base-reducer": [1, 2] },
       features: {},
     };
+    const basis = {
+      local: manifest,
+      legacy: { protocols: { "base-reducer": [1, 2] }, features: {} },
+      wanted: { "base-reducer": 2 },
+    };
     const peer = { manifest: null, receivedAtUtcMs: 5 };
 
     expect(() => manager.localManifest()).toThrow();
     deliver({
       k: "res",
-      id: lastSyncOp(posted, "localManifest").id,
-      value: manifest,
+      id: lastSyncOp(posted, "peerAgreementBasis").id,
+      value: basis,
     });
     const remote = wireRemote("r1", "remote-a", "drive-1", "connected");
     deliver({
@@ -140,6 +145,8 @@ describe("createSyncManagerProxy", () => {
     await vi.waitFor(() => expect(manager.list()).toHaveLength(1));
     expect(manager.localManifest()).toEqual(manifest);
     expect(manager.list()[0].meta.peer).toEqual(peer);
+    // A silent peer gets the baselines, from the cached remotes alone.
+    expect(manager.agreement().peer("remote-a")).toEqual(basis.legacy);
   });
 
   it("updates connection state from CONNECTION_STATE_CHANGED bus events", async () => {

@@ -452,8 +452,12 @@ const host = new ReactorHost({
           args[1] as PeerManifest | null,
         );
         return undefined;
-      case "localManifest":
-        return syncManager.localManifest();
+      case "peerAgreementBasis":
+        return syncManager.agreement().basis();
+      case "listHolds":
+        return syncManager.listHolds(
+          args[0] as { remoteName?: string; documentId?: string } | undefined,
+        );
       case "remove":
         await syncManager.remove(args[0] as string);
         return undefined;
