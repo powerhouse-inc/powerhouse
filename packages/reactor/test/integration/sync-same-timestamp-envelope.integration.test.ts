@@ -77,6 +77,27 @@ class SmallPageOperationIndex implements IOperationIndex {
     return this.inner.get(documentId, view, paging, signal);
   }
 
+  getOrdinalsInRange(
+    after: number,
+    through: number,
+    limit: number,
+    signal?: AbortSignal,
+  ) {
+    return this.inner.getOrdinalsInRange(after, through, limit, signal);
+  }
+
+  getByOrdinals(ordinals: readonly number[], signal?: AbortSignal) {
+    return this.inner.getByOrdinals(ordinals, signal);
+  }
+
+  getStreamAfter(
+    stream: Parameters<IOperationIndex["getStreamAfter"]>[0],
+    after: number,
+    signal?: AbortSignal,
+  ) {
+    return this.inner.getStreamAfter(stream, after, signal);
+  }
+
   getSinceOrdinal(
     ordinal: number,
     paging?: PagingOptions,

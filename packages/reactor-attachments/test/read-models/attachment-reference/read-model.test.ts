@@ -1,5 +1,6 @@
 import type {
   DocumentViewDatabase,
+  ICatchUpConsumer,
   IConsistencyTracker,
   IDocumentModelRegistry,
   IOperationIndex,
@@ -203,6 +204,14 @@ function operationIndex(
     getSinceOrdinal: vi.fn((ordinal: number) =>
       Promise.resolve(since(results, ordinal)),
     ),
+    getByOrdinals: vi.fn((ordinals: readonly number[]) =>
+      Promise.resolve(
+        results
+          .filter((item) => ordinals.includes(item.context.ordinal))
+          .sort((left, right) => left.context.ordinal - right.context.ordinal),
+      ),
+    ),
+    getStreamAfter: vi.fn(() => Promise.resolve([])),
   } as unknown as IOperationIndex & {
     getSinceOrdinal: ReturnType<typeof vi.fn>;
   };
@@ -772,5 +781,21 @@ describe("AttachmentReferenceReadModel", () => {
     } finally {
       warn.mockRestore();
     }
+  });
+
+  it.fails("P7: indexes a reference whose batch never arrived, without a later batch", async () => {
+    const store: OperationWithContext[] = [];
+    const { addReferences, db, model } = dependencies({
+      indexOperations: store,
+    });
+    await model.init();
+
+    store.push(op(1));
+    await (model as unknown as ICatchUpConsumer).sweep(1, [1]);
+
+    expect(addReferences).toHaveBeenCalledWith([
+      expect.objectContaining({ ref: REF_A, ordinal: 1 }),
+    ]);
+    expect(db.cursor).toBe(1);
   });
 });

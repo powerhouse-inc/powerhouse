@@ -404,6 +404,8 @@ export interface ViewFilter {
   scopes?: string[];
   /** Exclude operations originating from this remote name. */
   excludeSourceRemote?: string;
+  /** Bounds find: ordinals and collection joins at or below this only. */
+  throughOrdinal?: number;
 }
 
 /**

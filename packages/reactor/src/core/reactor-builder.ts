@@ -17,6 +17,12 @@ import { CollectionMembershipCache } from "../cache/collection-membership-cache.
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
+import { CatchUpScheduler } from "../catch-up/scheduler.js";
+import {
+  createKyselyWatermarkProbe,
+  SettledWatermark,
+} from "../catch-up/settled-watermark.js";
+import { defaultCatchUpConfig, type CatchUpConfig } from "../catch-up/types.js";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { WriteCacheConfig } from "../cache/write-cache-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
@@ -313,6 +319,7 @@ export class ReactorBuilder {
   private projectionShardConfig?: ProjectionShardBuilderConfig;
   private projectionWorkerFactory?: ProjectionWorkerFactory;
   private instrumentedPools: PoolInstrumentation[] = [];
+  private catchUpConfig: CatchUpConfig = defaultCatchUpConfig;
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -400,6 +407,12 @@ export class ReactorBuilder {
 
   withSync(syncBuilder: SyncBuilder): this {
     this.syncBuilder = syncBuilder;
+    return this;
+  }
+
+  /** Tunes the read-side catch-up sweep. */
+  withCatchUp(config: Partial<CatchUpConfig>): this {
+    this.catchUpConfig = { ...this.catchUpConfig, ...config };
     return this;
   }
 
@@ -724,6 +737,19 @@ export class ReactorBuilder {
       database as unknown as Kysely<StorageDatabase>,
     );
 
+    const settledWatermark = new SettledWatermark(
+      createKyselyWatermarkProbe(
+        database as unknown as Kysely<StorageDatabase>,
+      ),
+      this.logger,
+    );
+    const catchUp = new CatchUpScheduler(
+      settledWatermark,
+      operationIndex,
+      this.catchUpConfig,
+      this.logger,
+    );
+
     const documentMetaCache = new DocumentMetaCache(operationStore, {
       maxDocuments: 1000,
     });
@@ -990,6 +1016,7 @@ export class ReactorBuilder {
       operationStore,
       eventBus,
       executorManager,
+      catchUp,
     );
 
     let syncModule: InProcessSyncModule | undefined = undefined;
@@ -1057,7 +1084,11 @@ export class ReactorBuilder {
       groupReevaluationTrigger,
       pools: this.instrumentedPools,
       degradedComponents,
+      catchUp,
+      settledWatermark,
     };
+
+    catchUp.start();
 
     if (degradedComponents.length > 0) {
       // buildModule assigns a default logger before anything here runs.
