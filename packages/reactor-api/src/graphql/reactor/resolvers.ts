@@ -1608,6 +1608,7 @@ export function pollSyncEnvelopes(
     channelId: string;
     outboxAck: number;
     outboxLatest: number;
+    manifestRevision?: string | null;
   },
   forbiddenIds: ReadonlySet<string> = new Set(),
   heldOpIds: ReadonlySet<string> = new Set(),
@@ -1887,6 +1888,28 @@ type SyncEnvelopeArg = {
   key?: string;
   dependsOn?: string[];
 };
+
+/**
+ * A poll naming no revision is from a client without peer agreement: it is
+ * recorded silent, and what it can no longer run is held, before it is served.
+ */
+export async function silenceUnversionedPoll(
+  syncManager: ISyncManager,
+  channelId: string,
+  manifestRevision: string | null | undefined,
+): Promise<void> {
+  if (typeof manifestRevision === "string") return;
+  let remote;
+  try {
+    remote = syncManager.getById(channelId);
+  } catch {
+    // The poll resolver reports the missing channel.
+    return;
+  }
+  if (remote.meta.peer?.manifest) {
+    await syncManager.setPeerManifest(channelId, null);
+  }
+}
 
 /**
  * Receives sync envelopes pushed by a client and adds them to the

@@ -598,6 +598,8 @@ type Query {
     channelId: String!
     outboxAck: Int!
     outboxLatest: Int!
+    # The client's manifest revision; absent from a client without peer agreement
+    manifestRevision: String
   ): PollSyncEnvelopesResult!
 
   # Supreme admin, or the address the named remote's channel is bound to

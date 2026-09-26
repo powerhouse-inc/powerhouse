@@ -545,7 +545,12 @@ export class ReactorSubgraph extends BaseSubgraph {
 
       pollSyncEnvelopes: async (
         _parent: unknown,
-        args: { channelId: string; outboxAck: number; outboxLatest: number },
+        args: {
+          channelId: string;
+          outboxAck: number;
+          outboxLatest: number;
+          manifestRevision?: string | null;
+        },
         ctx: Context,
       ) => {
         this.logger.debug("pollSyncEnvelopes(@args)", args);
@@ -579,6 +584,12 @@ export class ReactorSubgraph extends BaseSubgraph {
           // `bindRemote` will not rebind, so a stray claim would lock the
           // rightful owner out for good. touchChannel orders these the same way.
           await this.#bindOrRefuseChannel(args.channelId, ctx);
+
+          await resolvers.silenceUnversionedPoll(
+            this.syncManager,
+            args.channelId,
+            args.manifestRevision,
+          );
 
           // Tier 2/3: drop operations and dead letters for documents the caller
           // cannot read individually.

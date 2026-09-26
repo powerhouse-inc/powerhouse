@@ -5,6 +5,7 @@ import {
   touchChannel,
   pollSyncEnvelopes,
   pushSyncEnvelopes,
+  silenceUnversionedPoll,
 } from "../../src/graphql/reactor/resolvers.js";
 
 /**
@@ -110,7 +111,14 @@ export function createResolverBridge(
         channelId: string;
         outboxAck: number;
         outboxLatest: number;
+        manifestRevision?: string | null;
       };
+
+      await silenceUnversionedPoll(
+        syncManager,
+        variables.channelId,
+        variables.manifestRevision,
+      );
 
       // Resolved only for a gated target: an ungated poll must reach the
       // resolver's own channel lookup, whose "Channel not found" is what a

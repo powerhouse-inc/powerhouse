@@ -474,11 +474,13 @@ query PollSyncEnvelopes(
   $channelId: String!
   $outboxAck: Int!
   $outboxLatest: Int!
+  $manifestRevision: String
 ) {
   pollSyncEnvelopes(
     channelId: $channelId
     outboxAck: $outboxAck
     outboxLatest: $outboxLatest
+    manifestRevision: $manifestRevision
   ) {
     envelopes {
       type

@@ -617,6 +617,7 @@ export type QueryPeerAgreementArgs = {
 
 export type QueryPollSyncEnvelopesArgs = {
   channelId: Scalars["String"]["input"];
+  manifestRevision?: InputMaybe<Scalars["String"]["input"]>;
   outboxAck: Scalars["Int"]["input"];
   outboxLatest: Scalars["Int"]["input"];
 };
@@ -1451,6 +1452,7 @@ export type PollSyncEnvelopesQueryVariables = Exact<{
   channelId: Scalars["String"]["input"];
   outboxAck: Scalars["Int"]["input"];
   outboxLatest: Scalars["Int"]["input"];
+  manifestRevision?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type PollSyncEnvelopesQuery = {
@@ -3432,11 +3434,13 @@ export const PollSyncEnvelopesDocument = gql`
     $channelId: String!
     $outboxAck: Int!
     $outboxLatest: Int!
+    $manifestRevision: String
   ) {
     pollSyncEnvelopes(
       channelId: $channelId
       outboxAck: $outboxAck
       outboxLatest: $outboxLatest
+      manifestRevision: $manifestRevision
     ) {
       envelopes {
         type

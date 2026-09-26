@@ -301,4 +301,61 @@ describe("peer manifest exchange over the sync resolvers", () => {
       ),
     ).toEqual([]);
   });
+
+  it("silences a client whose poll names no revision, holding what it cannot run before serving", async () => {
+    const server = await reactor([WIDE_SERVER]);
+    const serverModule = modules[modules.length - 1];
+    const wide = localPeerManifest(
+      mergePeerCapabilities(PEER_CAPABILITIES, [WIDE_SERVER]),
+      {},
+    );
+    await touchChannel(server, {
+      input: {
+        id: "rolled-back",
+        name: "rolled-back",
+        collectionId: DriveCollectionId.forDrive("drive-1").key,
+        filter: FILTER,
+        sinceTimestampUtcMs: "0",
+        manifest: wide,
+      },
+    });
+    const info = await serverModule.reactor.create(
+      withSignaturePolicy(
+        driveDocumentModelModule.utils.createDocument(),
+        "legacy",
+        { id: "drive-1", protocolVersions: { "test-protocol": 2 } },
+      ),
+    );
+    await vi.waitUntil(
+      async () =>
+        (await serverModule.reactor.getJobStatus(info.id)).status ===
+        JobStatus.READ_READY,
+    );
+    const outbox = server.getById("rolled-back").channel.outbox;
+    await vi.waitFor(() => expect(outbox.items.length).toBeGreaterThan(0));
+
+    // The client rolled back to a build without peer agreement.
+    const bridge = createResolverBridge(new Map([["switchboard", server]]), {
+      log: false,
+    });
+    const response = await bridge("http://switchboard/graphql", {
+      method: "POST",
+      body: JSON.stringify({
+        query: "query PollSyncEnvelopes { pollSyncEnvelopes { ackOrdinal } }",
+        variables: { channelId: "rolled-back", outboxAck: 0, outboxLatest: 0 },
+      }),
+    });
+    const { data } = (await response.json()) as {
+      data: { pollSyncEnvelopes: { envelopes: unknown[] } };
+    };
+
+    expect(data.pollSyncEnvelopes.envelopes).toEqual([]);
+    expect(server.getById("rolled-back").meta.peer?.manifest).toBeNull();
+    expect(await server.listHolds({ remoteName: "rolled-back" })).toEqual([
+      expect.objectContaining({
+        documentId: "drive-1",
+        reason: { protocol: "test-protocol", version: 2, peerSupports: [1] },
+      }),
+    ]);
+  });
 });
