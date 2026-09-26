@@ -3,6 +3,7 @@ import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import {
   collectHeldSyncOperations,
   touchChannel,
+  holdPollRefusals,
   pollSyncEnvelopes,
   pushSyncEnvelopes,
   silenceUnversionedPoll,
@@ -112,8 +113,10 @@ export function createResolverBridge(
         outboxAck: number;
         outboxLatest: number;
         manifestRevision?: string | null;
+        refusals?: Array<{ documentId: string; branch: string }> | null;
       };
 
+      holdPollRefusals(syncManager, variables.channelId, variables.refusals);
       await silenceUnversionedPoll(
         syncManager,
         variables.channelId,

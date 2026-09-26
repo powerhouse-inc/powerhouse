@@ -2,6 +2,8 @@ import {
   type ActionCandidate,
   type ActionEvaluations,
   AuthEnforcementDisabledError,
+  ChannelError,
+  ChannelErrorSource,
   consolidateSyncOperations,
   type DocumentRelationship,
   DriveCollectionId,
@@ -17,7 +19,7 @@ import {
   type RemoteFilter,
   type SearchFilter,
   syncOperationErrorType,
-  type SyncOperation,
+  SyncOperation,
   type SyncScopeGate,
   type ViewFilter,
 } from "@powerhousedao/reactor";
@@ -1609,6 +1611,7 @@ export function pollSyncEnvelopes(
     outboxAck: number;
     outboxLatest: number;
     manifestRevision?: string | null;
+    refusals?: ReadonlyArray<{ documentId: string; branch: string }> | null;
   },
   forbiddenIds: ReadonlySet<string> = new Set(),
   heldOpIds: ReadonlySet<string> = new Set(),
@@ -1888,6 +1891,49 @@ type SyncEnvelopeArg = {
   key?: string;
   dependsOn?: string[];
 };
+
+/**
+ * The client's UNSUPPORTED_PROTOCOL refusals of polled rows. Each becomes a hold
+ * for that client, as a pushed refusal does, rather than counting as delivered.
+ */
+export function holdPollRefusals(
+  syncManager: ISyncManager,
+  channelId: string,
+  refusals:
+    | ReadonlyArray<{ documentId: string; branch: string }>
+    | null
+    | undefined,
+): void {
+  if (!refusals?.length) return;
+  let remote;
+  try {
+    remote = syncManager.getById(channelId);
+  } catch {
+    // The poll resolver reports the missing channel.
+    return;
+  }
+  const refused = refusals.map((refusal) => {
+    const syncOp = new SyncOperation(
+      crypto.randomUUID(),
+      "",
+      [],
+      remote.meta.name,
+      refusal.documentId,
+      [],
+      refusal.branch,
+      [],
+    );
+    syncOp.failed(
+      new ChannelError(
+        ChannelErrorSource.Outbox,
+        new Error(`Refused by ${remote.meta.name}`),
+        "UNSUPPORTED_PROTOCOL",
+      ),
+    );
+    return syncOp;
+  });
+  remote.channel.deadLetter.add(...refused);
+}
 
 /**
  * A poll naming no revision is from a client without peer agreement: it is

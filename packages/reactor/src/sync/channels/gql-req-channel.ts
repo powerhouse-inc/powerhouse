@@ -33,6 +33,7 @@ import type {
 import { ChannelErrorSource } from "../types.js";
 import {
   consolidateSyncOperations,
+  syncOperationErrorType,
   trimMailboxFromAckOrdinal,
 } from "../utils.js";
 import { calculateBackoffDelay } from "./interval-poll-timer.js";
@@ -75,7 +76,11 @@ const AGREEMENT_FIELDS = [
   "manifest",
   "manifestRevision",
   "peerManifestRevision",
+  "refusals",
+  "SyncRefusalInput",
 ] as const;
+
+type RefusalWire = { documentId: string; branch: string };
 
 function pushMutation(withGatedUnder: boolean): string {
   return withGatedUnder
@@ -149,6 +154,8 @@ export class GqlRequestChannel implements IChannel {
   private peerManifest: PeerManifest | null | undefined = undefined;
   private readonly peerManifestCallbacks = new Set<PeerManifestListener>();
   private manifestRefresh: Promise<void> | undefined;
+  /** Polled rows this reactor could not run, reported on the next poll. */
+  private readonly pendingRefusals = new Map<string, RefusalWire>();
   private isRecovering: boolean = false;
   private connectionState: ConnectionState = "connecting";
   /** Latest unrecoverable error was an auth rejection; cleared on connect. */
@@ -194,6 +201,15 @@ export class GqlRequestChannel implements IChannel {
           syncOp.documentId,
           this.channelId,
         );
+        if (
+          syncOp.error?.source === ChannelErrorSource.Inbox &&
+          syncOperationErrorType(syncOp.error) === "UNSUPPORTED_PROTOCOL"
+        ) {
+          this.pendingRefusals.set(`${syncOp.documentId}:${syncOp.branch}`, {
+            documentId: syncOp.documentId,
+            branch: syncOp.branch,
+          });
+        }
       }
     });
 
@@ -715,19 +731,23 @@ export class GqlRequestChannel implements IChannel {
 
     // Each flag only ever clears, so this settles within three attempts.
     let response: PollSyncEnvelopesResult;
+    let refusals: RefusalWire[] = [];
     for (;;) {
       const revision = this.peerServesAgreement
         ? this.localManifestProvider?.().revision
         : undefined;
+      refusals = this.peerServesAgreement
+        ? [...this.pendingRefusals.values()]
+        : [];
       try {
         response = await this.executeGraphQL<PollSyncEnvelopesResult>(
           this.pollQuery(
             this.peerServesDecisionFields,
             this.peerServesAgreement,
           ),
-          revision === undefined
-            ? variables
-            : { ...variables, manifestRevision: revision },
+          this.peerServesAgreement
+            ? { ...variables, manifestRevision: revision, refusals }
+            : variables,
         );
         break;
       } catch (error) {
@@ -744,6 +764,11 @@ export class GqlRequestChannel implements IChannel {
         );
         this.peerServesDecisionFields = false;
       }
+    }
+
+    // The server holds what was reported; a silent one keeps them pending.
+    for (const refusal of refusals) {
+      this.pendingRefusals.delete(`${refusal.documentId}:${refusal.branch}`);
     }
 
     return {
@@ -815,10 +840,10 @@ export class GqlRequestChannel implements IChannel {
       : "";
 
     const revisionVariable = withAgreementFields
-      ? ", $manifestRevision: String"
+      ? ", $manifestRevision: String, $refusals: [SyncRefusalInput!]"
       : "";
     const revisionArgument = withAgreementFields
-      ? ", manifestRevision: $manifestRevision"
+      ? ", manifestRevision: $manifestRevision, refusals: $refusals"
       : "";
 
     return `

@@ -475,12 +475,14 @@ query PollSyncEnvelopes(
   $outboxAck: Int!
   $outboxLatest: Int!
   $manifestRevision: String
+  $refusals: [SyncRefusalInput!]
 ) {
   pollSyncEnvelopes(
     channelId: $channelId
     outboxAck: $outboxAck
     outboxLatest: $outboxLatest
     manifestRevision: $manifestRevision
+    refusals: $refusals
   ) {
     envelopes {
       type

@@ -6,6 +6,9 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GqlRequestChannel } from "../../../../src/sync/channels/gql-req-channel.js";
+import { ChannelError } from "../../../../src/sync/errors.js";
+import { SyncOperation } from "../../../../src/sync/sync-operation.js";
+import { ChannelErrorSource } from "../../../../src/sync/types.js";
 import {
   ManualPollTimer,
   createMockCursorStorage,
@@ -28,7 +31,11 @@ const SERVER_WIDE = localPeerManifest([TEST_PROTOCOL], { wide: true });
 
 type Body = {
   query: string;
-  variables: { input?: Record<string, unknown>; manifestRevision?: string };
+  variables: {
+    input?: Record<string, unknown>;
+    manifestRevision?: string;
+    refusals?: unknown[];
+  };
 };
 
 /** A server with peer agreement, holding what the client last touched with. */
@@ -274,5 +281,40 @@ describe("GqlRequestChannel peer manifests", () => {
     await vi.waitFor(() => expect(heardAtAdmission).toHaveLength(1));
     expect(heardAtAdmission[0]).toEqual(SERVER_NARROW);
     expect(state.touches).toHaveLength(2);
+  });
+
+  it("reports its refusals of polled rows on the next poll, once", async () => {
+    const { state, fetchFn } = agreementServer(SERVER_WIDE);
+    const timer = new ManualPollTimer();
+    const { channel } = channelWith(fetchFn, timer);
+    channels.push(channel);
+    await channel.init();
+
+    const refused = new SyncOperation(
+      "sync-1",
+      "job-1",
+      [],
+      "remote-1",
+      "doc",
+      ["global"],
+      "main",
+      [],
+    );
+    refused.failed(
+      new ChannelError(
+        ChannelErrorSource.Inbox,
+        new Error("unsupported"),
+        "UNSUPPORTED_PROTOCOL",
+      ),
+    );
+    channel.deadLetter.add(refused);
+
+    await timer.tick();
+    await timer.tick();
+
+    expect(state.polls[0].variables.refusals).toEqual([
+      { documentId: "doc", branch: "main" },
+    ]);
+    expect(state.polls[1].variables.refusals).toEqual([]);
   });
 });

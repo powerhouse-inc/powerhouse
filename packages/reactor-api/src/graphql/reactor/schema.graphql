@@ -469,6 +469,11 @@ input RemoteFilterInput {
   branch: String!
 }
 
+input SyncRefusalInput {
+  documentId: String!
+  branch: String!
+}
+
 input TouchChannelInput {
   id: String!
   name: String!
@@ -600,6 +605,8 @@ type Query {
     outboxLatest: Int!
     # The client's manifest revision; absent from a client without peer agreement
     manifestRevision: String
+    # Documents the client refused as UNSUPPORTED_PROTOCOL from earlier polls
+    refusals: [SyncRefusalInput!]
   ): PollSyncEnvelopesResult!
 
   # Supreme admin, or the address the named remote's channel is bound to

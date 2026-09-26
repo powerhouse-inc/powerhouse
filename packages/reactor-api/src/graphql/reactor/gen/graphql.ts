@@ -621,6 +621,7 @@ export type QueryPollSyncEnvelopesArgs = {
   manifestRevision?: InputMaybe<Scalars["String"]["input"]>;
   outboxAck: Scalars["Int"]["input"];
   outboxLatest: Scalars["Int"]["input"];
+  refusals?: InputMaybe<ReadonlyArray<SyncRefusalInput>>;
 };
 
 export type QuerySyncHoldsArgs = {
@@ -759,6 +760,11 @@ export type SyncHoldReason = {
   readonly peerSupports: ReadonlyArray<Scalars["Int"]["output"]>;
   readonly protocol: Scalars["String"]["output"];
   readonly version: Scalars["Int"]["output"];
+};
+
+export type SyncRefusalInput = {
+  readonly branch: Scalars["String"]["input"];
+  readonly documentId: Scalars["String"]["input"];
 };
 
 export type TouchChannelInput = {
@@ -1454,6 +1460,7 @@ export type PollSyncEnvelopesQueryVariables = Exact<{
   outboxAck: Scalars["Int"]["input"];
   outboxLatest: Scalars["Int"]["input"];
   manifestRevision?: InputMaybe<Scalars["String"]["input"]>;
+  refusals?: InputMaybe<ReadonlyArray<SyncRefusalInput>>;
 }>;
 
 export type PollSyncEnvelopesQuery = {
@@ -1738,6 +1745,7 @@ export type ResolversTypes = ResolversObject<{
   SyncEnvelopeType: SyncEnvelopeType;
   SyncHold: ResolverTypeWrapper<SyncHold>;
   SyncHoldReason: ResolverTypeWrapper<SyncHoldReason>;
+  SyncRefusalInput: SyncRefusalInput;
   TouchChannelInput: TouchChannelInput;
   TouchChannelResult: ResolverTypeWrapper<TouchChannelResult>;
   ViewFilterInput: ViewFilterInput;
@@ -1804,6 +1812,7 @@ export type ResolversParentTypes = ResolversObject<{
   SyncEnvelopeInput: SyncEnvelopeInput;
   SyncHold: SyncHold;
   SyncHoldReason: SyncHoldReason;
+  SyncRefusalInput: SyncRefusalInput;
   TouchChannelInput: TouchChannelInput;
   TouchChannelResult: TouchChannelResult;
   ViewFilterInput: ViewFilterInput;
@@ -2899,6 +2908,15 @@ export function SyncEnvelopeInputSchema(): z.ZodObject<
   });
 }
 
+export function SyncRefusalInputSchema(): z.ZodObject<
+  Properties<SyncRefusalInput>
+> {
+  return z.object({
+    branch: z.string(),
+    documentId: z.string(),
+  });
+}
+
 export function TouchChannelInputSchema(): z.ZodObject<
   Properties<TouchChannelInput>
 > {
@@ -3437,12 +3455,14 @@ export const PollSyncEnvelopesDocument = gql`
     $outboxAck: Int!
     $outboxLatest: Int!
     $manifestRevision: String
+    $refusals: [SyncRefusalInput!]
   ) {
     pollSyncEnvelopes(
       channelId: $channelId
       outboxAck: $outboxAck
       outboxLatest: $outboxLatest
       manifestRevision: $manifestRevision
+      refusals: $refusals
     ) {
       envelopes {
         type

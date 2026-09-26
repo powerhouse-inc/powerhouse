@@ -37,11 +37,13 @@ const SCHEMA = readFileSync(
   "utf8",
 );
 
-/** The schema as it was before peer agreement added its four fields. */
+/** The schema as it was before peer agreement added its fields. */
 const PREVIOUS_SCHEMA = SCHEMA.split("\n")
   .filter(
     (line) =>
-      !/^\s*(manifest|manifestRevision|peerManifestRevision): /.test(line),
+      !/^\s*(manifest|manifestRevision|peerManifestRevision|refusals): /.test(
+        line,
+      ),
   )
   .join("\n");
 
@@ -480,5 +482,56 @@ describe("peer manifest exchange over the sync resolvers", () => {
     expect(pushes).toHaveLength(2);
     expect(pushes[1]).not.toHaveProperty("peerManifestRevision");
     expect(await client.listHolds({ remoteName: "switchboard" })).toEqual([]);
+  });
+
+  it("holds a document the client reports refusing from an earlier poll", async () => {
+    const server = await reactor([WIDE_SERVER]);
+    const serverModule = modules[modules.length - 1];
+    const wide = localPeerManifest(
+      mergePeerCapabilities(PEER_CAPABILITIES, [WIDE_SERVER]),
+      {},
+    );
+    await touchChannel(server, {
+      input: {
+        id: "refusing",
+        name: "refusing",
+        collectionId: DriveCollectionId.forDrive("drive-1").key,
+        filter: FILTER,
+        sinceTimestampUtcMs: "0",
+        manifest: wide,
+      },
+    });
+    await createDrive(serverModule, 2);
+    const bridge = createResolverBridge(new Map([["switchboard", server]]), {
+      log: false,
+    });
+
+    await bridge("http://switchboard/graphql", {
+      method: "POST",
+      body: JSON.stringify({
+        query: "query PollSyncEnvelopes { pollSyncEnvelopes { ackOrdinal } }",
+        variables: {
+          channelId: "refusing",
+          outboxAck: 0,
+          outboxLatest: 0,
+          manifestRevision: wide.revision,
+          refusals: [{ documentId: "drive-1", branch: "main" }],
+        },
+      }),
+    });
+
+    await vi.waitFor(async () =>
+      expect(await server.listHolds({ remoteName: "refusing" })).toEqual([
+        expect.objectContaining({
+          documentId: "drive-1",
+          reason: {
+            protocol: "test-protocol",
+            version: 2,
+            peerSupports: [1, 2],
+          },
+        }),
+      ]),
+    );
+    expect(server.getById("refusing").channel.deadLetter.items).toEqual([]);
   });
 });

@@ -550,6 +550,10 @@ export class ReactorSubgraph extends BaseSubgraph {
           outboxAck: number;
           outboxLatest: number;
           manifestRevision?: string | null;
+          refusals?: ReadonlyArray<{
+            documentId: string;
+            branch: string;
+          }> | null;
         },
         ctx: Context,
       ) => {
@@ -585,6 +589,11 @@ export class ReactorSubgraph extends BaseSubgraph {
           // rightful owner out for good. touchChannel orders these the same way.
           await this.#bindOrRefuseChannel(args.channelId, ctx);
 
+          resolvers.holdPollRefusals(
+            this.syncManager,
+            args.channelId,
+            args.refusals,
+          );
           await resolvers.silenceUnversionedPoll(
             this.syncManager,
             args.channelId,
