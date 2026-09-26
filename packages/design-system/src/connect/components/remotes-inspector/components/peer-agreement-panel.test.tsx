@@ -12,6 +12,7 @@ const COLLECTION = "drive.main.drive-1";
 
 const local = {
   format: 1 as const,
+  sequence: 1,
   revision: "localrev0001",
   protocols: { "base-reducer": [1, 2, 3], signature: [2] },
   features: { "sync.anti-entropy": [1] },
@@ -22,6 +23,7 @@ const legacy = {
 };
 const announced = {
   format: 1 as const,
+  sequence: 1,
   revision: "peerrev12345678",
   protocols: { "base-reducer": [1, 2], signature: [2] },
   features: {},

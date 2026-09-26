@@ -118,6 +118,7 @@ describe("createSyncManagerProxy", () => {
     );
     const manifest = {
       format: 1,
+      sequence: 1,
       revision: "r-local",
       protocols: { "base-reducer": [1, 2] },
       features: {},

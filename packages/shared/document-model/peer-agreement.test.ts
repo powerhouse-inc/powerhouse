@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   coversLocal,
   holdReason,
+  isOlderManifest,
   PEER_CAPABILITIES,
   legacySupports,
   localPeerManifest,
@@ -75,6 +76,17 @@ describe("localPeerManifest", () => {
     expect(wide.protocols["test-protocol"]).toEqual([1, 2]);
     expect(wide.revision).not.toBe(narrow.revision);
   });
+
+  it("changes revision with the start sequence, and orders by it", () => {
+    const before = localPeerManifest(PEER_CAPABILITIES, {}, undefined, 1);
+    const after = localPeerManifest(PEER_CAPABILITIES, {}, undefined, 2);
+
+    expect(after.revision).not.toBe(before.revision);
+    expect(isOlderManifest(before, after)).toBe(true);
+    expect(isOlderManifest(after, before)).toBe(false);
+    expect(isOlderManifest(before, null)).toBe(false);
+    expect(isOlderManifest(null, after)).toBe(false);
+  });
 });
 
 describe("readPeerManifest", () => {
@@ -95,6 +107,7 @@ describe("readPeerManifest", () => {
     });
     expect(read).toEqual({
       format: 1,
+      sequence: 0,
       revision: "r2",
       protocols: { "base-reducer": [1, 2, 3] },
       features: { "sync.anti-entropy": [1] },

@@ -74,7 +74,9 @@ export type PeerManifest = Supports & {
   format: 1;
   /** The signer's did:key, when configured; informational. */
   appKey?: string;
-  /** base64url(sha256(canonicalJson(Supports))) */
+  /** Grows with every start of the reactor; a peer ignores an older one. */
+  sequence: number;
+  /** base64url(sha256(canonicalJson(Supports & { sequence }))) */
   revision: string;
 };
 
@@ -112,9 +114,9 @@ export function legacySupports(
   return supportsFrom(capabilities, (capability) => capability.baseline);
 }
 
-export function manifestRevision(supports: Supports): string {
+export function manifestRevision(supports: Supports, sequence = 0): string {
   const preimage = canonicalJson(
-    { protocols: supports.protocols, features: supports.features },
+    { protocols: supports.protocols, features: supports.features, sequence },
     "peer manifest",
   );
   return bytesToBase64Url(sha256(new TextEncoder().encode(preimage)));
@@ -124,15 +126,25 @@ export function localPeerManifest(
   capabilities: readonly PeerCapability[],
   flags: PeerCapabilityFlags,
   appKey?: string,
+  sequence = 0,
 ): PeerManifest {
   const supports = localSupports(capabilities, flags);
   return {
     format: PEER_MANIFEST_FORMAT,
     ...(appKey !== undefined ? { appKey } : {}),
-    revision: manifestRevision(supports),
+    sequence,
+    revision: manifestRevision(supports, sequence),
     protocols: supports.protocols,
     features: supports.features,
   };
+}
+
+/** A manifest sent before the one already held; silence carries no sequence. */
+export function isOlderManifest(
+  next: PeerManifest | null,
+  held: PeerManifest | null | undefined,
+): boolean {
+  return next !== null && held != null && next.sequence < held.sequence;
 }
 
 /** A peer's manifest, or the baselines for a peer that announced none. */
@@ -176,13 +188,17 @@ export function readPeerManifest(value: unknown): PeerManifest | null {
   if (!protocols || !features) {
     return null;
   }
+  const sequence = Number.isSafeInteger(raw.sequence)
+    ? (raw.sequence as number)
+    : 0;
   return {
     format: PEER_MANIFEST_FORMAT,
     ...(typeof raw.appKey === "string" ? { appKey: raw.appKey } : {}),
+    sequence,
     revision:
       typeof raw.revision === "string"
         ? raw.revision
-        : manifestRevision({ protocols, features }),
+        : manifestRevision({ protocols, features }, sequence),
     protocols,
     features,
   };
