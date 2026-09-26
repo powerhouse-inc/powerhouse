@@ -1,3 +1,13 @@
+## 6.2.3-dev.26 (2026-09-26)
+
+### 🩹 Fixes
+
+- **connect:** rank package CSS above Connect's reset and below its utilities ([666718f6e](https://github.com/powerhouse-inc/powerhouse/commit/666718f6e))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features

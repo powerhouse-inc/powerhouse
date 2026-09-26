@@ -1,3 +1,72 @@
+## 6.2.3-dev.26 (2026-09-26)
+
+### 🚀 Features
+
+- **reactor:** prepare a read-gate decision once for many subjects ([19d3ee8a2](https://github.com/powerhouse-inc/powerhouse/commit/19d3ee8a2))
+- **reactor:** answer whether a listing serves one document ([563af9de3](https://github.com/powerhouse-inc/powerhouse/commit/563af9de3))
+- **reactor-api:** let IHttpAdapter.listen bind a given host ([acb966320](https://github.com/powerhouse-inc/powerhouse/commit/acb966320))
+- **reactor-attachments:** answer which scopes reference an attachment ([fc4670bd9](https://github.com/powerhouse-inc/powerhouse/commit/fc4670bd9))
+- ⚠️  **reactor-attachments:** carry the documentId on every remote attachment read ([e5af0558b](https://github.com/powerhouse-inc/powerhouse/commit/e5af0558b))
+- **switchboard:** sign short-lived attachment byte-route URLs ([18e09cdb5](https://github.com/powerhouse-inc/powerhouse/commit/18e09cdb5))
+- ⚠️  **switchboard:** serve attachment bytes only under a document grant ([275e88da0](https://github.com/powerhouse-inc/powerhouse/commit/275e88da0))
+
+### 🩹 Fixes
+
+- leave totalCount as it was; #3107 removes it ([#3107](https://github.com/powerhouse-inc/powerhouse/issues/3107))
+- withhold unreadable documents from documentChanges and listings ([#3103](https://github.com/powerhouse-inc/powerhouse/pull/3103))
+- read every caller-facing path as the caller's subject ([#3114](https://github.com/powerhouse-inc/powerhouse/pull/3114))
+- **codegen:** load module files before generate all discovers editors, subgraphs and processors ([366c438cb](https://github.com/powerhouse-inc/powerhouse/commit/366c438cb))
+- **connect:** rank package CSS above Connect's reset and below its utilities ([666718f6e](https://github.com/powerhouse-inc/powerhouse/commit/666718f6e))
+- **reactor:** withhold documents serving no readable domain scope ([#243](https://github.com/powerhouse-inc/powerhouse/issues/243))
+- **reactor:** serve a stateless document from listings ([a87664c90](https://github.com/powerhouse-inc/powerhouse/commit/a87664c90))
+- **reactor:** deliver every id of a multi-document delete to subscribers ([6bb4c95ef](https://github.com/powerhouse-inc/powerhouse/commit/6bb4c95ef))
+- **reactor:** judge a document with no domain-scope rows on its declared scopes ([a70d94c77](https://github.com/powerhouse-inc/powerhouse/commit/a70d94c77))
+- **reactor:** share one change event's reads across its subscriptions ([f0fb16103](https://github.com/powerhouse-inc/powerhouse/commit/f0fb16103))
+- **reactor:** check an event read's absence through the event's reads ([c9317e5d5](https://github.com/powerhouse-inc/powerhouse/commit/c9317e5d5))
+- **reactor:** re-apply a re-delivered operation a reshuffle rewound ([#3088](https://github.com/powerhouse-inc/powerhouse/issues/3088))
+- **reactor:** refuse resubmitting an action the stream has superseded ([0a0da9e7c](https://github.com/powerhouse-inc/powerhouse/commit/0a0da9e7c))
+- **reactor:** re-append every live operation a load's skip rewinds ([9bd03846b](https://github.com/powerhouse-inc/powerhouse/commit/9bd03846b))
+- **reactor:** stop a re-appended local NOOP undoing another operation ([4a9d3d2ed](https://github.com/powerhouse-inc/powerhouse/commit/4a9d3d2ed))
+- **reactor:** keep retracted what a re-evaluated reshuffle head retracted ([718527443](https://github.com/powerhouse-inc/powerhouse/commit/718527443))
+- **reactor:** deliver every id of a multi-document delete to subscribers ([#3106](https://github.com/powerhouse-inc/powerhouse/pull/3106))
+- **reactor-api:** read documentChanges as each subscriber's subject ([#243](https://github.com/powerhouse-inc/powerhouse/issues/243))
+- **reactor-api:** gate job status on the job document's auth scope ([225258bdb](https://github.com/powerhouse-inc/powerhouse/commit/225258bdb))
+- **reactor-api:** gate jobs through the reactor's read gate ([00070c2be](https://github.com/powerhouse-inc/powerhouse/commit/00070c2be))
+- **reactor-api:** gate attachment reads through the reactor's read gate ([d6c3b4df1](https://github.com/powerhouse-inc/powerhouse/commit/d6c3b4df1))
+- **reactor-api:** return reactor subgraph mutation results read as the caller ([43426a383](https://github.com/powerhouse-inc/powerhouse/commit/43426a383))
+- **reactor-api:** read generated document-model subgraphs as the caller ([b1ab86529](https://github.com/powerhouse-inc/powerhouse/commit/b1ab86529))
+- **reactor-api:** read drive info as the caller and gate analytics ([ca9c8337f](https://github.com/powerhouse-inc/powerhouse/commit/ca9c8337f))
+- **reactor-api:** gate sync serving through the policy below authEnforcement ([8accf43c8](https://github.com/powerhouse-inc/powerhouse/commit/8accf43c8))
+- **reactor-api:** gate job status on the job document's auth scope ([#3105](https://github.com/powerhouse-inc/powerhouse/pull/3105))
+- **reactor-api:** gate attachment reads through the reactor's read gate ([#3111](https://github.com/powerhouse-inc/powerhouse/pull/3111))
+- **reactor-api:** bind loopback in test servers that dial loopback ([#3115](https://github.com/powerhouse-inc/powerhouse/pull/3115))
+- **reactor-attachments:** leave remote hash-first dedup to the server's 409 ([f33b4c467](https://github.com/powerhouse-inc/powerhouse/commit/f33b4c467))
+- **reactor-drive:** gate the reactor-drive subgraph as the caller ([7041635f4](https://github.com/powerhouse-inc/powerhouse/commit/7041635f4))
+- **reactor-mcp:** read MCP tools as the request's subject ([6b526382b](https://github.com/powerhouse-inc/powerhouse/commit/6b526382b))
+- **reactor-workflow:** serve workflow reads and runs as the caller ([b2ddd126a](https://github.com/powerhouse-inc/powerhouse/commit/b2ddd126a))
+- **reactor-workflow:** gate a run on the documents its steps were handed ([f50b602a4](https://github.com/powerhouse-inc/powerhouse/commit/f50b602a4))
+- **reactor-workflow:** hand a fired run back only as run would serve it ([8b9237433](https://github.com/powerhouse-inc/powerhouse/commit/8b9237433))
+- **switchboard:** sign byte-route URLs under main's download-target TTL cap ([d503b4f67](https://github.com/powerhouse-inc/powerhouse/commit/d503b4f67))
+- ⚠️  **switchboard:** serve attachment bytes only through the document read gate ([#3112](https://github.com/powerhouse-inc/powerhouse/pull/3112))
+- **workflow:** end long logo chains in +N instead of overflowing the next column ([8730c9407](https://github.com/powerhouse-inc/powerhouse/commit/8730c9407))
+- **workflow:** name a piece run's trigger in the runs table instead of showing its block type ([83b2956b4](https://github.com/powerhouse-inc/powerhouse/commit/83b2956b4))
+
+### 🔥 Performance
+
+- **reactor:** fetch only the view's scopes for a listing ([59411e697](https://github.com/powerhouse-inc/powerhouse/commit/59411e697))
+
+### ⚠️  Breaking Changes
+
+- **switchboard:** serve attachment bytes only through the document read gate  ([#3112](https://github.com/powerhouse-inc/powerhouse/pull/3112))
+- **switchboard:** serve attachment bytes only under a document grant  ([275e88da0](https://github.com/powerhouse-inc/powerhouse/commit/275e88da0))
+- **reactor-attachments:** carry the documentId on every remote attachment read  ([e5af0558b](https://github.com/powerhouse-inc/powerhouse/commit/e5af0558b))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features

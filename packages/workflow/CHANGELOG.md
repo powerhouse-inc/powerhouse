@@ -1,3 +1,14 @@
+## 6.2.3-dev.26 (2026-09-26)
+
+### 🩹 Fixes
+
+- **workflow:** name a piece run's trigger in the runs table instead of showing its block type ([83b2956b4](https://github.com/powerhouse-inc/powerhouse/commit/83b2956b4))
+- **workflow:** end long logo chains in +N instead of overflowing the next column ([8730c9407](https://github.com/powerhouse-inc/powerhouse/commit/8730c9407))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features

@@ -1,3 +1,28 @@
+## 6.2.3-dev.26 (2026-09-26)
+
+### 🚀 Features
+
+- **reactor-api:** let IHttpAdapter.listen bind a given host ([acb966320](https://github.com/powerhouse-inc/powerhouse/commit/acb966320))
+
+### 🩹 Fixes
+
+- leave totalCount as it was; #3107 removes it ([#3107](https://github.com/powerhouse-inc/powerhouse/issues/3107))
+- **reactor-api:** gate sync serving through the policy below authEnforcement ([8accf43c8](https://github.com/powerhouse-inc/powerhouse/commit/8accf43c8))
+- **reactor-api:** read drive info as the caller and gate analytics ([ca9c8337f](https://github.com/powerhouse-inc/powerhouse/commit/ca9c8337f))
+- **reactor-api:** read generated document-model subgraphs as the caller ([b1ab86529](https://github.com/powerhouse-inc/powerhouse/commit/b1ab86529))
+- **reactor-api:** return reactor subgraph mutation results read as the caller ([43426a383](https://github.com/powerhouse-inc/powerhouse/commit/43426a383))
+- **reactor-mcp:** read MCP tools as the request's subject ([6b526382b](https://github.com/powerhouse-inc/powerhouse/commit/6b526382b))
+- **reactor-api:** gate attachment reads through the reactor's read gate ([d6c3b4df1](https://github.com/powerhouse-inc/powerhouse/commit/d6c3b4df1))
+- **reactor-api:** gate jobs through the reactor's read gate ([00070c2be](https://github.com/powerhouse-inc/powerhouse/commit/00070c2be))
+- **reactor:** share one change event's reads across its subscriptions ([f0fb16103](https://github.com/powerhouse-inc/powerhouse/commit/f0fb16103))
+- **reactor-api:** gate job status on the job document's auth scope ([225258bdb](https://github.com/powerhouse-inc/powerhouse/commit/225258bdb))
+- **reactor-api:** read documentChanges as each subscriber's subject ([#243](https://github.com/powerhouse-inc/powerhouse/issues/243))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features

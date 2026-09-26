@@ -1,3 +1,23 @@
+## 6.2.3-dev.26 (2026-09-26)
+
+### 🚀 Features
+
+- ⚠️  **reactor-attachments:** carry the documentId on every remote attachment read ([e5af0558b](https://github.com/powerhouse-inc/powerhouse/commit/e5af0558b))
+- **reactor-attachments:** answer which scopes reference an attachment ([fc4670bd9](https://github.com/powerhouse-inc/powerhouse/commit/fc4670bd9))
+
+### 🩹 Fixes
+
+- **reactor-attachments:** leave remote hash-first dedup to the server's 409 ([f33b4c467](https://github.com/powerhouse-inc/powerhouse/commit/f33b4c467))
+
+### ⚠️  Breaking Changes
+
+- **reactor-attachments:** carry the documentId on every remote attachment read  ([e5af0558b](https://github.com/powerhouse-inc/powerhouse/commit/e5af0558b))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features

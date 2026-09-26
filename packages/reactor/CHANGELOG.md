@@ -1,3 +1,33 @@
+## 6.2.3-dev.26 (2026-09-26)
+
+### 🚀 Features
+
+- **reactor:** answer whether a listing serves one document ([563af9de3](https://github.com/powerhouse-inc/powerhouse/commit/563af9de3))
+- **reactor:** prepare a read-gate decision once for many subjects ([19d3ee8a2](https://github.com/powerhouse-inc/powerhouse/commit/19d3ee8a2))
+
+### 🩹 Fixes
+
+- **reactor:** keep retracted what a re-evaluated reshuffle head retracted ([718527443](https://github.com/powerhouse-inc/powerhouse/commit/718527443))
+- **reactor:** stop a re-appended local NOOP undoing another operation ([4a9d3d2ed](https://github.com/powerhouse-inc/powerhouse/commit/4a9d3d2ed))
+- **reactor:** re-append every live operation a load's skip rewinds ([9bd03846b](https://github.com/powerhouse-inc/powerhouse/commit/9bd03846b))
+- **reactor:** refuse resubmitting an action the stream has superseded ([0a0da9e7c](https://github.com/powerhouse-inc/powerhouse/commit/0a0da9e7c))
+- **reactor:** re-apply a re-delivered operation a reshuffle rewound ([#3088](https://github.com/powerhouse-inc/powerhouse/issues/3088))
+- **reactor:** check an event read's absence through the event's reads ([c9317e5d5](https://github.com/powerhouse-inc/powerhouse/commit/c9317e5d5))
+- **reactor:** share one change event's reads across its subscriptions ([f0fb16103](https://github.com/powerhouse-inc/powerhouse/commit/f0fb16103))
+- **reactor:** judge a document with no domain-scope rows on its declared scopes ([a70d94c77](https://github.com/powerhouse-inc/powerhouse/commit/a70d94c77))
+- **reactor:** deliver every id of a multi-document delete to subscribers ([6bb4c95ef](https://github.com/powerhouse-inc/powerhouse/commit/6bb4c95ef))
+- **reactor:** serve a stateless document from listings ([a87664c90](https://github.com/powerhouse-inc/powerhouse/commit/a87664c90))
+- **reactor:** withhold documents serving no readable domain scope ([#243](https://github.com/powerhouse-inc/powerhouse/issues/243))
+
+### 🔥 Performance
+
+- **reactor:** fetch only the view's scopes for a listing ([59411e697](https://github.com/powerhouse-inc/powerhouse/commit/59411e697))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features

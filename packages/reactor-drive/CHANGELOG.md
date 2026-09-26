@@ -1,3 +1,15 @@
+## 6.2.3-dev.26 (2026-09-26)
+
+### 🩹 Fixes
+
+- leave totalCount as it was; #3107 removes it ([#3107](https://github.com/powerhouse-inc/powerhouse/issues/3107))
+- **reactor-drive:** gate the reactor-drive subgraph as the caller ([7041635f4](https://github.com/powerhouse-inc/powerhouse/commit/7041635f4))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features

@@ -1,3 +1,14 @@
+## 6.2.3-dev.26 (2026-09-26)
+
+### 🩹 Fixes
+
+- **reactor-mcp:** read MCP tools as the request's subject ([6b526382b](https://github.com/powerhouse-inc/powerhouse/commit/6b526382b))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features

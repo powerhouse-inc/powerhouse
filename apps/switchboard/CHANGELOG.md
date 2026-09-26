@@ -1,3 +1,26 @@
+## 6.2.3-dev.26 (2026-09-26)
+
+### 🚀 Features
+
+- ⚠️  **switchboard:** serve attachment bytes only under a document grant ([275e88da0](https://github.com/powerhouse-inc/powerhouse/commit/275e88da0))
+- **switchboard:** sign short-lived attachment byte-route URLs ([18e09cdb5](https://github.com/powerhouse-inc/powerhouse/commit/18e09cdb5))
+
+### 🩹 Fixes
+
+- **switchboard:** sign byte-route URLs under main's download-target TTL cap ([d503b4f67](https://github.com/powerhouse-inc/powerhouse/commit/d503b4f67))
+- **reactor-workflow:** serve workflow reads and runs as the caller ([b2ddd126a](https://github.com/powerhouse-inc/powerhouse/commit/b2ddd126a))
+- **reactor-drive:** gate the reactor-drive subgraph as the caller ([7041635f4](https://github.com/powerhouse-inc/powerhouse/commit/7041635f4))
+- **reactor-api:** gate attachment reads through the reactor's read gate ([d6c3b4df1](https://github.com/powerhouse-inc/powerhouse/commit/d6c3b4df1))
+
+### ⚠️  Breaking Changes
+
+- **switchboard:** serve attachment bytes only under a document grant  ([275e88da0](https://github.com/powerhouse-inc/powerhouse/commit/275e88da0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features

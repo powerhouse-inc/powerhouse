@@ -1,3 +1,13 @@
+## 6.2.3-dev.26 (2026-09-26)
+
+### 🩹 Fixes
+
+- **codegen:** load module files before generate all discovers editors, subgraphs and processors ([366c438cb](https://github.com/powerhouse-inc/powerhouse/commit/366c438cb))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features

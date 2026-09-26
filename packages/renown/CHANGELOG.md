@@ -1,3 +1,7 @@
+## 6.2.3-dev.26 (2026-09-26)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features
