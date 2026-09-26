@@ -52,23 +52,25 @@ pnpm spec:trace spec/out/<file>.itf.json   # print a counterexample, one line pe
 
 Constants: `GATE`, `RECEIPT_CHECK`, `PEER_CHECK`, the transport assumption `HANDSHAKE_FIRST`
 (after a client restart no data flows on its channel until both manifests are exchanged), and
-the candidate fixes `PUSH_FIELD`, `SEND_GATE`, `RECHECK_HOLDS` and `MANIFEST_SEQ`.
-The `*One` instances have one document and are the ones `verify-all.sh` checks.
+the candidate fixes `PUSH_FIELD`, `SEND_GATE`, `RECHECK_HOLDS`, `MANIFEST_SEQ` and `POLL_REVISION`.
+The `*One` instances have one document and are the ones `verify-all.sh` checks; that one
+document suffices is an argument (see the comment above them), not a check.
 
-| instance               | expected                                                                  |
-| ---------------------- | ------------------------------------------------------------------------- |
-| `stage1`               | safety holds; `noStuckHold`, `noManifestRegress`, `noLostRows` violated   |
-| `gateOnly`             | `noUnsupportedStore` violated: the receipt refusals carry safety          |
-| `receiptOnly`          | safety holds without the gate                                             |
-| `stage1Recheck`        | `noStuckHold` still violated: nothing touches, so nothing re-checks       |
-| `stage1Seq`            | `noStuckHold` and `noManifestRegress` hold                                |
-| `legacy`               | the rollback leak: every safety invariant violated                        |
-| `legacySendGate`       | still violated: the gate at send uses the same stale record               |
-| `legacyPushField`      | push path closed; `noUnsupportedStore` violated via a regressed manifest  |
-| `misconfigured*`       | as `stage1*`, for a fixed misconfigured host that announces the same set  |
-| `liar`                 | `noMisreadRowsSpread` violated                                            |
-| `fixed`                | push field + sequences: all but `noLostRows` hold                         |
-| `fixedNoHandshake`     | `fixed` without `HANDSHAKE_FIRST`: safety violated                        |
+| instance                 | expected                                                                                  |
+| ------------------------ | ----------------------------------------------------------------------------------------- |
+| `stage1`                 | safety holds; `noStuckHold`, `noManifestRegress`, `noLostRows` violated                   |
+| `gateOnly`               | `noUnsupportedStore` violated: the receipt refusals carry safety                          |
+| `receiptOnly`            | safety holds without the gate                                                             |
+| `stage1Recheck`          | `noStuckHold` still violated: nothing touches, so nothing re-checks                       |
+| `stage1Seq`              | `noStuckHold` and `noManifestRegress` hold                                                |
+| `legacy`                 | the rollback leak: every safety invariant violated                                        |
+| `legacySendGate`         | still violated: the gate at send uses the same stale record                               |
+| `legacyPushField`        | push path closed; the poll path leaks via a regressed manifest or a server's legacy build |
+| `misconfigured*`         | as `stage1*`, for a fixed misconfigured host that announces the same set                  |
+| `liar`                   | `noMisreadRowsSpread` violated                                                            |
+| `fixed`                  | push field + sequences + poll revisions: all but `noLostRows` hold                        |
+| `fixedNoPollRevisionOne` | `fixed` without `POLL_REVISION`: `noUnsupportedStore` violated                            |
+| `fixedNoHandshake`       | `fixed` without `HANDSHAKE_FIRST`: safety still holds                                     |
 
 ## CI sketch
 

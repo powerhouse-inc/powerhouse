@@ -19,8 +19,8 @@ violated legacy $SAFE
 violated legacySendGate $SAFE
 violated legacyPushField noUnsupportedStore noManifestRegress
 
-# Finding 4: without the handshake-first transport assumption, every fix together still leaks.
-violated fixedNoHandshake $SAFE
+# Finding 4: with poll revisions, safety no longer needs the handshake-first transport assumption.
+holds fixedNoHandshake $SAFE
 
 # Findings 3 and 6: stuck holds and regressed manifests. Re-checking alone does not help; sequences fix both.
 violated stage1 noStuckHold noManifestRegress
