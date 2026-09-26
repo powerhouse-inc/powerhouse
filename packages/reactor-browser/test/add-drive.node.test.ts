@@ -64,7 +64,11 @@ describe("addDrive (issue #2838)", () => {
     window.ph = {
       reactorClient: { create },
       reactorClientModule: {
-        client: { getCreateSignaturePolicy: () => Promise.resolve("legacy") },
+        client: {
+          getCreateSignaturePolicy: () => Promise.resolve("legacy"),
+          getCreateProtocolVersions: () =>
+            Promise.resolve({ "base-reducer": 2 }),
+        },
       },
     } as unknown as PHGlobal;
 
