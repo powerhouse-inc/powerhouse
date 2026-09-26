@@ -311,6 +311,10 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     return this.cursor.appliedThrough;
   }
 
+  /** Called after the cursor advances. */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected onCursorAdvanced(appliedThrough: number): void {}
+
   // Subclass does domain-specific work here (snapshots, relationships, processor routing, etc.).
   protected async commitOperations(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -649,7 +653,7 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
   /** Compare-and-set against the value this process last wrote. */
   private async moveCursor(to: number): Promise<void> {
     if (to <= this.persisted) {
-      this.cursor.advance(to);
+      this.advanceCursor(to);
       return;
     }
 
@@ -663,7 +667,7 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
 
     if (Number(result.numUpdatedRows) > 0) {
       this.persisted = to;
-      this.cursor.advance(to);
+      this.advanceCursor(to);
       return;
     }
 
@@ -678,7 +682,15 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
       return;
     }
     this.persisted = stored;
-    this.cursor.advance(Math.min(to, stored));
+    this.advanceCursor(Math.min(to, stored));
+  }
+
+  private advanceCursor(to: number): void {
+    const before = this.cursor.appliedThrough;
+    this.cursor.advance(to);
+    if (this.cursor.appliedThrough > before) {
+      this.onCursorAdvanced(this.cursor.appliedThrough);
+    }
   }
 
   private lowered(to: number): void {

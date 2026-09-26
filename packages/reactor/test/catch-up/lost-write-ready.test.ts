@@ -289,7 +289,7 @@ describe("a lost JOB_WRITE_READY", () => {
     );
   });
 
-  it.fails("P5: a processor bound after a restart receives it, after a later batch raised its cursor", async () => {
+  it("P5: a processor bound after a restart receives it, after a later batch raised its cursor", async () => {
     const first = await deploy();
     const before = recordingProcessor();
     await first.module.processorManager.registerFactory("pkg", () => [
