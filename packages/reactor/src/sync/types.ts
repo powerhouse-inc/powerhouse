@@ -103,6 +103,8 @@ export type SyncOperationErrorType =
    * quarantine would stop.
    */
   | "AUTH_TIMESTAMP_NOT_MONOTONIC"
+  /** The document requires a protocol version this reactor does not run. */
+  | "UNSUPPORTED_PROTOCOL"
   /** An arriving operation carried a timestamp that is not an ISO-8601 instant. */
   | "INVALID_TIMESTAMP"
   /** No classification applies, including rows written before the field. */

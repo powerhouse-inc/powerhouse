@@ -4,6 +4,7 @@ import {
   AuthorizationDeniedError,
   ExcessiveReshuffleError,
   InvalidOperationTimestampError,
+  UnsupportedProtocolVersionError,
 } from "../../src/shared/errors.js";
 import {
   classifyJobFailure,
@@ -44,6 +45,12 @@ describe("classifyJobFailure", () => {
     expect(classifyJobFailure(error.name)).toBe("INVALID_TIMESTAMP");
   });
 
+  it("names a protocol version this reactor does not run", () => {
+    const error = new UnsupportedProtocolVersionError("doc", "base-reducer", 7);
+
+    expect(classifyJobFailure(error.name)).toBe("UNSUPPORTED_PROTOCOL");
+  });
+
   it("falls back to UNCLASSIFIED for anything it does not know", () => {
     expect(classifyJobFailure("Error")).toBe("UNCLASSIFIED");
     expect(
@@ -69,6 +76,11 @@ describe("classifyJobFailure", () => {
 describe("quarantinesDocument", () => {
   it("exempts a held auth operation", () => {
     expect(quarantinesDocument("AUTH_TIMESTAMP_NOT_MONOTONIC")).toBe(false);
+  });
+
+  // A protocol refusal concerns one peer; quarantine is global to the document.
+  it("exempts a protocol refusal", () => {
+    expect(quarantinesDocument("UNSUPPORTED_PROTOCOL")).toBe(false);
   });
 
   it("quarantines every other classification", () => {

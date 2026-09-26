@@ -553,6 +553,8 @@ export function classifyJobFailure(errorName: string): SyncOperationErrorType {
       return "SIGNATURE_INVALID";
     case "HashMismatchError":
       return "HASH_MISMATCH";
+    case "UnsupportedProtocolVersionError":
+      return "UNSUPPORTED_PROTOCOL";
     default:
       return "UNCLASSIFIED";
   }
@@ -567,11 +569,12 @@ export function syncOperationErrorType(
 
 /** Dead-letter types that must not stop the document syncing. */
 const NON_QUARANTINING_ERROR_TYPES: ReadonlySet<SyncOperationErrorType> =
-  new Set(["AUTH_TIMESTAMP_NOT_MONOTONIC"]);
+  new Set(["AUTH_TIMESTAMP_NOT_MONOTONIC", "UNSUPPORTED_PROTOCOL"]);
 
 /**
  * A held auth operation must not quarantine: reconciling the two policies needs
- * the traffic a quarantine would stop.
+ * the traffic a quarantine would stop. A protocol refusal concerns one peer,
+ * and quarantine is global to the document.
  */
 export function quarantinesDocument(
   errorType: SyncOperationErrorType,

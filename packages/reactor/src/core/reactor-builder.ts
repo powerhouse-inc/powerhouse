@@ -1,6 +1,12 @@
 import type {
   ISigner,
+  PeerCapability,
   UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
+import {
+  localSupports,
+  mergePeerCapabilities,
+  PEER_CAPABILITIES,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
@@ -313,6 +319,7 @@ export class ReactorBuilder {
   private projectionShardConfig?: ProjectionShardBuilderConfig;
   private projectionWorkerFactory?: ProjectionWorkerFactory;
   private instrumentedPools: PoolInstrumentation[] = [];
+  private extraPeerCapabilities: PeerCapability[] = [];
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -329,6 +336,20 @@ export class ReactorBuilder {
   withDocumentModelSources(sources: DocumentModelSource[]): this {
     this.documentModelSources.push(...sources);
     return this;
+  }
+
+  /** Capabilities beyond the registry, for tests and hosts that ship their own. */
+  withPeerCapabilities(extra: readonly PeerCapability[]): this {
+    this.extraPeerCapabilities = mergePeerCapabilities(
+      this.extraPeerCapabilities,
+      extra,
+    );
+    return this;
+  }
+
+  /** The registry plus any capabilities added with withPeerCapabilities. */
+  getPeerCapabilities(): readonly PeerCapability[] {
+    return mergePeerCapabilities(PEER_CAPABILITIES, this.extraPeerCapabilities);
   }
 
   withUpgradeManifests(manifests: UpgradeManifest<readonly number[]>[]): this {
@@ -553,6 +574,13 @@ export class ReactorBuilder {
     }
 
     const featureFlags = resolveFeatureFlags(this.executorConfig.featureFlags);
+    if (this.executorConfig.protocolSupport === undefined) {
+      this.executorConfig = {
+        ...this.executorConfig,
+        protocolSupport: localSupports(this.getPeerCapabilities(), featureFlags)
+          .protocols,
+      };
+    }
 
     if (
       this.readModelCoordinator !== undefined &&
