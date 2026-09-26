@@ -80,6 +80,8 @@ describe("DocumentModelSubgraph Permission Checks", () => {
 
   const mockDocument = createMockDocument("doc-123", "Test Document");
 
+  const asAdmin = { subject: { address: "0xadmin", key: undefined } };
+
   const createContext = (options: { userAddress?: string }): Context =>
     ({
       user: options.userAddress ? { address: options.userAddress } : undefined,
@@ -248,10 +250,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
 
         await callGetDocument(ctx, "doc-123");
 
-        expect(mockReactorClient.get).toHaveBeenCalledWith(
-          "doc-123",
-          undefined,
-        );
+        expect(mockReactorClient.get).toHaveBeenCalledWith("doc-123", asAdmin);
       });
     });
   });
@@ -356,7 +355,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
             type: "powerhouse/test-model",
             parentId: "drive-1",
           }),
-          undefined,
+          asAdmin,
           expect.objectContaining({
             limit: 10,
           }),
@@ -450,7 +449,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           expect.objectContaining({
             type: "powerhouse/test-model",
           }),
-          undefined,
+          asAdmin,
           expect.objectContaining({
             limit: 10,
           }),
@@ -616,6 +615,8 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           "doc-123",
           "main",
           [expect.objectContaining({ type: "SET_NAME" })],
+          undefined,
+          asAdmin.subject,
         );
       });
 
@@ -623,6 +624,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         // Make createEmpty return a doc whose name already matches
         const namedDoc = createMockDocument("doc-123", "Same Name");
         mockReactorClient.createEmpty = vi.fn().mockResolvedValue(namedDoc);
+        mockReactorClient.get = vi.fn().mockResolvedValue(namedDoc);
         vi.mocked(mockAuthorizationService.isSupremeAdmin!).mockReturnValue(
           true,
         );
@@ -771,7 +773,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
 
         await callMutation(ctx, "setName", "doc-123", { name: "New Name" });
 
-        expect(mockReactorClient.get).toHaveBeenCalledWith("doc-123");
+        expect(mockReactorClient.get).toHaveBeenCalledWith("doc-123", asAdmin);
       });
 
       it("should use reactorClient.execute to apply action", async () => {
@@ -784,6 +786,8 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           "doc-123",
           "main",
           [expect.objectContaining({ type: "SET_NAME" })],
+          undefined,
+          asAdmin.subject,
         );
       });
 

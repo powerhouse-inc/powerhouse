@@ -13,11 +13,7 @@ import type {
   InProcessReactorClientModule,
   ProcessorRecord as ReactorProcessorRecord,
 } from "@powerhousedao/reactor";
-import {
-  ModelReadGate,
-  readDecisionModel,
-  SyncScopeGate,
-} from "@powerhousedao/reactor";
+import type { SyncScopeGate } from "@powerhousedao/reactor";
 import {
   AttachmentBuilder,
   AttachmentReferenceIndexBuilder,
@@ -108,6 +104,7 @@ import {
 import { DocumentPermissionService } from "./services/document-permission.service.js";
 import { createGetParentIdsFn } from "./services/get-parent-ids.js";
 import { createMcpRequestAuthorizer } from "./services/mcp-request-authorizer.js";
+import { buildSyncServingGate } from "./services/sync-serving-gate.js";
 import {
   assertCredentialVerifierForSource,
   resolveRenownConfig,
@@ -412,51 +409,6 @@ function makeDbClosers(
   return closers;
 }
 
-/**
- * The gate sync serving evaluates a document's own policy through, or undefined
- * when there is none to evaluate.
- *
- * It is built here rather than taken off the reactor client because it is not
- * the same gate reads use: it carries the host's closes-by-default setting,
- * which withholds the domain scopes of a document nobody has policied yet. That
- * answer belongs to serving alone -- replay must keep reading an uninitialized
- * document in full -- so the two gates are deliberately separate objects over
- * the same model.
- *
- * Undefined below `authEnforcement`, where the registered model ignores the auth
- * scope: gating through it would serve every domain scope of a policied document
- * to anyone, which is worse than not gating at all.
- */
-function buildSyncServingGate(
-  reactorModule: InProcessReactorModule | undefined,
-  authorizationConfig: AuthorizationConfig,
-  logger: ILogger,
-): SyncScopeGate | undefined {
-  if (!reactorModule) {
-    return undefined;
-  }
-
-  const model = readDecisionModel(
-    reactorModule.featureFlags,
-    reactorModule.documentModelRegistry,
-  );
-  if (!model) {
-    return undefined;
-  }
-
-  return new SyncScopeGate(
-    new ModelReadGate(
-      model,
-      reactorModule.documentView,
-      reactorModule.featureFlags.authGroups,
-      reactorModule.operationIndex,
-      logger,
-      { withholdUninitialized: authorizationConfig.defaultProtection },
-    ),
-    reactorModule.documentView,
-    logger,
-  );
-}
 /**
  * Resolves the gateway adapter type from the `GATEWAY_ADAPTER` env var.
  * Defaults to "apollo" (the federation gateway, production behavior).

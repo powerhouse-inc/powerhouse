@@ -45,6 +45,7 @@ const store = {
   listRuns: () => Promise.resolve(rows),
   getRun: (id: string) => Promise.resolve(rows.find((row) => row.id === id)),
   getSteps: () => Promise.resolve([]),
+  getRunDocuments: () => Promise.resolve([]),
 };
 
 function serviceWith(
