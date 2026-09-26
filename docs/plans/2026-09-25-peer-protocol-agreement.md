@@ -1,7 +1,7 @@
 # Plan: Peer protocol agreement
 
 Date: 2026-09-25
-Status: proposal, questions resolved, not started
+Status: built on feat/peer-protocol-agreement; one open question (see Open)
 
 ## Overview
 
@@ -18,14 +18,15 @@ This plan adds peer protocol agreement: every two connected reactors exchange
 what they support, and the sync layer uses that to choose versions for new
 documents and to hold documents back from a peer that cannot run them.
 
-From a high level, we propose a `PeerCapability` registry with `base-reducer`
-and `signature` registered, a versioned `PeerManifest` per reactor exchanged
-through `touchChannel`, revision-checked on `pollSyncEnvelopes` and stored on
-`sync_remotes`, `selectProtocolVersions`
-behind `IReactorClient.getCreateProtocolVersions`, an outbox gate that records
-`SyncHold` rows and releases them when a peer's manifest widens, and
-`UnsupportedProtocolVersionError` with a non-quarantining
-`UNSUPPORTED_PROTOCOL` refusal on receipt.
+From a high level: a `PeerCapability` registry with `base-reducer` and
+`signature` registered; a `PeerManifest` per reactor, ordered by a start
+sequence, exchanged through `touchChannel` and stored on `sync_remotes`;
+revisions named in both directions on every poll and on every push;
+`selectProtocolVersions` behind `IReactorClient.getCreateProtocolVersions`; an
+outbox gate that records `SyncHold` rows and releases them when a peer's
+manifest widens; and a run check that makes a stored document at a version this
+reactor does not run read-only, refused on every job and on receipt as a
+non-quarantining `UNSUPPORTED_PROTOCOL`.
 
 ## Current behaviour
 
@@ -133,20 +134,28 @@ export type Supports = {
 export type PeerManifest = Supports & {
   format: 1;
   appKey?: string;            // the signer's did:key, when configured; informational
-  revision: string;           // base64url(sha256(canonicalJson(Supports)))
+  sequence: number;           // the sync manager's start time (ms); grows with every start
+  revision: string;           // base64url(sha256(canonicalJson(Supports & { sequence })))
 };
 
 export function localPeerManifest(
   capabilities: readonly PeerCapability[],
   flags: ReactorFeatureFlags,
   appKey?: string,
+  sequence?: number,          // SyncManager: LocalPeer.sequence ?? Date.now()
 ): PeerManifest;
+
+/** Ignored by applyPeerManifest (server) and hearPeer (client). Silence carries no sequence. */
+export function isOlderManifest(next: PeerManifest | null, held: PeerManifest | null | undefined): boolean {
+  return next !== null && held != null && next.sequence < held.sequence;
+}
 ```
 
 ```json
 {
   "format": 1,
   "appKey": "did:key:zDn…",
+  "sequence": 1790426339472,
   "revision": "q3Vd…",
   "protocols": { "base-reducer": [1, 2, 3], "signature": [2] },
   "features": { "sync.anti-entropy": [1] }
@@ -174,11 +183,35 @@ and `features` maps only; formats only add fields.
 ### Transport
 
 Manifests travel on the channel handshake, between the two reactors the
-channel connects and no further. Poll results carry revisions, so either
-side's change reaches the other within one poll interval. The client drives
-both directions by touching again.
+channel connects and no further. Every poll names the client's revision and its
+result names both, and every push names the server revision it was gated
+under, so either side's change reaches the other within one poll interval and
+a rollback on either side is noticed before data flows. The client drives both
+directions by touching again.
 
 ```graphql
+type Query {
+  pollSyncEnvelopes(
+    channelId: String!
+    outboxAck: Int!
+    outboxLatest: Int!
+    manifestRevision: String            # the client's manifest; absent from a client without this feature
+    refusals: [SyncRefusalInput!]       # documents the client refused as UNSUPPORTED_PROTOCOL
+  ): PollSyncEnvelopesResult!
+}
+
+type Mutation {
+  pushSyncEnvelopes(
+    envelopes: [SyncEnvelopeInput!]!
+    peerManifestRevision: String        # the server's manifest the push was gated under
+  ): Boolean!
+}
+
+input SyncRefusalInput {
+  documentId: String!
+  branch: String!
+}
+
 input TouchChannelInput {
   id: String!
   name: String!
@@ -206,25 +239,46 @@ type PollSyncEnvelopesResult {
 
 ```ts
 // GqlRequestChannel
-const AGREEMENT_FIELDS = ["manifest", "manifestRevision", "peerManifestRevision"] as const;
+const AGREEMENT_FIELDS = [
+  "manifest", "manifestRevision", "peerManifestRevision", "refusals", "SyncRefusalInput",
+] as const;
 private peerServesAgreement = true;
-// touch and poll name AGREEMENT_FIELDS while peerServesAgreement. A validation error that
-// names one clears it, retries without, and reports the server as silent (null).
+// Poll and push name AGREEMENT_FIELDS while peerServesAgreement. A validation error that
+// names one clears it and reports the server as silent (null); the request is retried
+// without them only after stopAgreement() resolves, i.e. after the sync manager has moved
+// unsent items above the baselines to holds.
 
-// after every successful poll
+// every poll, before its rows reach the inbox
 if (
   this.peerServesAgreement &&
   (result.manifestRevision !== this.peerManifest?.revision ||
     result.peerManifestRevision !== this.localManifest().revision)
 ) {
-  void this.touchRemoteChannel();       // idempotent; refreshes both manifests
+  await this.touchRemoteChannel();      // idempotent; refreshes both records
+  // on failure the rows are not admitted; unacked, they are served again
 }
+// the inbox awaits queued manifest updates before judging a row
+
+// push rejected for peerManifestRevision by a server rolled back below this feature
+await this.stopAgreement(syncOps);      // the rejected items count as unsent
+resend(syncOps.filter((op) => this.outbox.items.includes(op)));   // without the field
+
+// refusals: inbox dead letters with errorType UNSUPPORTED_PROTOCOL, sent once on the next poll
+
+// re-probe: every touch asks for agreement first and sets peerServesAgreement on success;
+// while it is cleared, the poll touches again every 5 minutes
 
 // touchChannel resolver
 //   new remote:      syncManager.add(..., options, id, input.manifest ?? null)
 //   existing remote: syncManager.setPeerManifest(id, input.manifest ?? null)
 //   both:            return { success, ackOrdinal, manifest: syncManager.localManifest() }
 // A re-touch without a manifest is a client that no longer has the feature: silent.
+
+// pollSyncEnvelopes resolver, after the drive and binding checks, before the gate snapshot
+holdPollRefusals(syncManager, channelId, refusals);    // each becomes a hold, as a push refusal does
+if (manifestRevision == null && remote.meta.peer?.manifest) {
+  await syncManager.setPeerManifest(channelId, null);  // silent; narrowing runs before serving
+}
 ```
 
 ```ts
@@ -232,8 +286,14 @@ interface IChannel {
   /** Read on every touch. */
   setLocalManifest(provider: () => PeerManifest): void;
   /** Fires when the peer's manifest changes; null for a silent peer. */
-  onPeerManifest(callback: (manifest: PeerManifest | null) => void): () => void;
+  onPeerManifest(callback: PeerManifestListener): () => void;
 }
+
+/** `undelivered`: items the channel sent that never arrived. The channel awaits the listener. */
+type PeerManifestListener = (
+  manifest: PeerManifest | null,
+  undelivered?: readonly SyncOperation[],
+) => void | Promise<void>;
 
 interface ISyncManager {
   add(name, collectionId, channelConfig, filter?, options?, id?, peer?: PeerManifest | null): Promise<Remote>;
@@ -395,15 +455,20 @@ async onPeerManifest(remote: Remote, next: PeerManifest | null): Promise<void> {
 
 ### Receipt
 
-Two refusals, both before `reactor.load` and both non-quarantining.
+Two refusals, both before `reactor.load` and both non-quarantining, for every
+sync operation, not only creations.
 
 ```ts
-// SyncManager inbox, per document in a batch
+// SyncManager inbox, per sync operation, after the remote's queued manifest updates
 const versions = createInputIn(batch)?.protocolVersions ?? (await this.versionsOf(documentId));
 if (holdReason(local, versions, capabilities))      -> dead letter UNSUPPORTED_PROTOCOL
 if (holdReason(peer(remote), versions, capabilities)) -> dead letter PEER_PROTOCOL_UNSUPPORTED
 
-// executor, CREATE_DOCUMENT on execute and load, for every registered protocol key
+// executor, for every registered protocol key:
+//   CREATE_DOCUMENT input, on execute and load
+//   every execute, load and reevaluation job into a stored document: its stored protocolVersions,
+//   read from the meta cache, or from the write cache's document scope with documentDecisions
+// A stored document at a version this reactor does not run is read-only on it.
 export class UnsupportedProtocolVersionError extends Error {
   readonly name = "UnsupportedProtocolVersionError";
   constructor(readonly documentId: string, readonly protocol: string, readonly version: number) {
@@ -459,9 +524,19 @@ manifest (or "silent, baseline") and its holds.
 ```
 client        server        result
 new           new           manifests both ways; gate and selection use them
-new           old           touch fails validation on `manifest`; retried without; server silent
-old           new           touch has no manifest; client silent
+new           old           touch fails validation on `manifest`; retried without; server silent;
+                            re-probed on every touch and every 5 minutes
+old           new           touch has no manifest and polls name no revision; client silent
 old           old           unchanged
+
+rollbacks while connected
+server -> old               the next push fails on `peerManifestRevision` (or the next poll on
+                            `manifestRevision`); unsent items above the baselines become holds,
+                            then the rest is resent without the field
+client -> old               its next poll names no revision; the server records it silent and
+                            holds what it cannot run before serving that poll
+back to new                 the new start sequence changes the revision; the poll mismatch
+                            re-touches, both records refresh, and holds are re-checked
 ```
 
 A silent peer supports exactly the baselines, which is everything existing
@@ -500,15 +575,25 @@ peer narrowed      documents created at the wider set are held for that peer, re
 peer narrows                 re-touch with the smaller manifest (or none); unsent items become holds;
                              later writes are gated; its writes into those documents are refused
                              (PEER_PROTOCOL_UNSUPPORTED)
-peer drops below a version   what it already stores stays there; it refuses to run it
-it stores                    (UnsupportedProtocolVersionError) from the release that registers the version
+peer drops below a version   what it already stores stays there, read-only: every job into it and
+it stores                    every received row is refused (UnsupportedProtocolVersionError,
+                             UNSUPPORTED_PROTOCOL) from the release that registers the version
+refused by a peer that       push: the server's dead letter becomes a hold; poll: the client reports
+announced the version        the refusal on its next poll and the server holds; released when the
+                             peer's next manifest (a new start sequence) supports it
 peer drops below this        not supported once it stores documents above the baselines: it is silent
 feature                      to its peers, which gate correctly, but it runs its stored documents under
                              its old rules
+restart, either side         the start sequence changes the revision, so the other side re-touches
+                             without waiting for a handshake; a delayed older manifest is ignored
 new peer joins a collection  initial backfill holds documents it cannot run; new documents created
                              at that reactor take the narrower set
 widening                     holds released and backfilled whole
 ```
+
+Safety does not depend on a handshake completing before data flows: poll
+revisions, the push field and the run check keep a stale record from
+delivering or admitting a document either side cannot run.
 
 ### Trust
 
@@ -529,21 +614,28 @@ in use is in every baseline.
 1. **Registry and admission.** `PeerCapability`, `PEER_CAPABILITIES`
    (`base-reducer` [1, 2], `signature` [2]), `localPeerManifest`,
    `legacySupports`, `withPeerCapabilities`.
-   `UnsupportedProtocolVersionError` on CREATE_DOCUMENT execute and load for
-   registered keys; `classifyJobFailure` maps it to `UNSUPPORTED_PROTOCOL`,
-   non-quarantining.
-   Tests: base-reducer 7 refused on execute and on load; unregistered key
-   admitted and logged; the error name survives the queue to `JobInfo.error`
-   and the dead letter's `errorType`; worker-pool parity for the refusal;
-   manifest revision stable across restarts with the same flags.
+   `UnsupportedProtocolVersionError` on CREATE_DOCUMENT execute and load, and
+   on every job into a stored document, for registered keys;
+   `classifyJobFailure` maps it to `UNSUPPORTED_PROTOCOL`, non-quarantining.
+   Tests: base-reducer 7 refused on execute and on load; writes and loads into
+   a stored document refused after the registry narrows, with and without
+   `documentDecisions`; unregistered key admitted and logged; the error name
+   survives the queue to `JobInfo.error` and the dead letter's `errorType`;
+   worker-pool parity for the refusal; manifest revision stable for the same
+   flags and start sequence.
 2. **Transport.** `sync_remotes.peer_manifest`, `TouchChannelInput` and
-   result fields, poll revisions, `AGREEMENT_FIELDS` fallback, resolver update
-   on re-touch, `IChannel` manifest methods, `RemoteMeta.peer`, `TestChannel`
-   support. Nothing gates.
+   result fields, poll revisions both ways, the push field, poll refusals,
+   start sequences, `AGREEMENT_FIELDS` fallback with hold-before-retry and
+   re-probe, resolver update on re-touch and on an unversioned poll, `IChannel`
+   manifest methods, `RemoteMeta.peer`, `TestChannel` support. Nothing gates.
    Tests: new with new; new client against a server schema without the fields;
    old client (no manifest) against a new server, including re-touch clearing
-   an earlier manifest; revision change on either side triggers one re-touch;
-   manifest persisted and read after a restart with the channel offline.
+   an earlier manifest; an unversioned poll silences a client and holds before
+   serving; revision change on either side triggers one re-touch, before the
+   polled rows reach the inbox; a push to a rolled-back server holds what it
+   cannot run and resends the rest; a refusal reported on a poll becomes a
+   hold; an older manifest is ignored; a silent server is re-probed; manifest
+   persisted and read after a restart with the channel offline.
 3. **Gate, holds and receipt.** `holdReason`, the derive-time gate,
    `sync_holds`, narrowing and release in `onPeerManifest`,
    `backfillDocument`, `PEER_PROTOCOL_UNSUPPORTED`, dead-letter-to-hold
@@ -698,3 +790,46 @@ if (agreement.peer(remote.meta.name).features["sync.anti-entropy"]?.includes(1))
     in use.** Such a peer is silent, so its peers gate correctly towards it,
     but it runs the documents it already stores under its old rules. We
     document this rather than enforce a minimum build.
+20. **The run check covers every job and every received row.** Refusing only
+    creations let a reactor whose registry narrowed keep writing into a
+    stored document it reads as an older version; the model found misread
+    rows in three steps, and admitted in five while the sender's record
+    covered the local set. The stored document becomes read-only on that
+    reactor.
+21. **Polls name the client's revision; an unversioned poll silences.** A
+    server back from a legacy build trusted its persisted record of a client
+    that rolled back meanwhile and served it documents it cannot run (eight
+    steps). The server records such a client silent and holds before serving.
+22. **The client refreshes a stale record before admitting polled rows.**
+    Comparing revisions after `inbox.add` judged the rows against the old
+    record (five steps).
+23. **Pushes name the server revision they were gated under, and hold before
+    resending.** A pre-feature server accepted a v3 push, because nothing in
+    it failed validation (four steps). Resending the same envelopes after the
+    rejection keeps the leak, so the rejected items are held first.
+24. **A client reports its refusals of polled rows.** Only a push refusal
+    reached the sender, so a poll refusal was counted as delivered and the
+    document never resent (ten steps). Reported refusals become holds, as
+    decision 11 intends.
+25. **Manifests carry a start sequence, and older ones are ignored.** A
+    content hash does not change after a narrow and a re-widen, so nothing
+    re-touched and a hold stayed stuck (five steps), and a delayed manifest
+    could overwrite a newer record. The sequence is the sync manager's start
+    time: a restart always moves it forward, only one reactor's own sequences
+    are compared, and a clock that steps back across a restart costs only
+    liveness, because the run check still refuses. A persisted counter would
+    need a migration for no safety gain. Silence carries no sequence, so a
+    manifest after silence always applies.
+26. **Agreement is re-probed.** A client that saw a pre-feature server kept
+    it silent for the channel's lifetime and never learned of its upgrade.
+    Every touch asks again, and a silent channel touches every 5 minutes.
+27. **No handshake-first assumption.** With poll revisions and the push field
+    the model keeps safety when data flows before a restarted peer's
+    manifests are exchanged.
+
+## Open
+
+- **Legitimate rows refused as `PEER_PROTOCOL_UNSUPPORTED`.** After a peer
+  narrows, rows it wrote while it still ran the version are refused with
+  the rows it writes afterwards; nothing resends them once it widens again.
+  The model's `noLostRows` fails with every fix in place.
