@@ -202,7 +202,9 @@ describe("remote attachment service end-to-end", () => {
         res.end(String(err));
       });
     });
-    await new Promise<void>((resolve) => server.listen(0, resolve));
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
     const addr = server.address();
     if (!addr || typeof addr === "string") throw new Error("no addr");
     baseUrl = `http://127.0.0.1:${addr.port}`;

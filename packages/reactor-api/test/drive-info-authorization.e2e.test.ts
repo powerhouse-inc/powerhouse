@@ -166,7 +166,7 @@ async function startServer(
   { withAuth = true }: { withAuth?: boolean } = {},
 ): Promise<ServerHandle> {
   const httpAdapter = new ExpressHttpAdapter();
-  const server = await httpAdapter.listen(0);
+  const server = await httpAdapter.listen(0, undefined, "127.0.0.1");
   const { port } = server.address() as { port: number };
 
   const manager = new GraphQLManager(

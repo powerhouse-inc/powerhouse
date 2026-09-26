@@ -177,7 +177,7 @@ describe("attachment byte routes behind the reactor's read gate", () => {
         urlSigner: new AttachmentUrlSigner("i".repeat(32), () => now),
       },
     );
-    server = await adapter.listen(0);
+    server = await adapter.listen(0, undefined, "127.0.0.1");
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("no addr");
     baseUrl = `http://127.0.0.1:${address.port}`;
