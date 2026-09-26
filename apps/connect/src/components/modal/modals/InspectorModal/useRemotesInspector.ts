@@ -1,6 +1,8 @@
 import type {
   ConnectionStateSnapshot,
+  IPeerAgreement,
   Remote,
+  SyncHold,
 } from "@powerhousedao/reactor-browser";
 import {
   addRemoteDrive,
@@ -16,6 +18,8 @@ export function useRemotesInspector(): {
   addRemoteManual: (url: string) => Promise<void>;
   triggerPull: (name: string) => void;
   connectionStates: ReadonlyMap<string, ConnectionStateSnapshot>;
+  getAgreement: () => IPeerAgreement;
+  getHolds: (remoteName: string) => Promise<SyncHold[]>;
 } {
   const syncManager = useSync();
   if (!syncManager) {
@@ -44,7 +48,19 @@ export function useRemotesInspector(): {
     [syncManager],
   );
 
+  const getAgreement = useCallback(
+    () => syncManager.agreement(),
+    [syncManager],
+  );
+
+  const getHolds = useCallback(
+    (remoteName: string) => syncManager.listHolds({ remoteName }),
+    [syncManager],
+  );
+
   return {
+    getAgreement,
+    getHolds,
     getRemotes,
     removeRemote,
     addRemoteManual,
