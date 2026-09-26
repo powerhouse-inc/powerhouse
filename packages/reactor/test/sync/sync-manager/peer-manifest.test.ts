@@ -147,6 +147,38 @@ describe.each(testSyncStorageBackends)(
       expect(stored.peer?.receivedAtUtcMs).toBeGreaterThan(0);
     });
 
+    it("ignores a manifest older than the one it holds", async () => {
+      const manager = await start();
+      const current = localPeerManifest(
+        [...PEER_CAPABILITIES],
+        {},
+        undefined,
+        2,
+      );
+      const delayed = localPeerManifest(
+        [...PEER_CAPABILITIES, WIDE],
+        {},
+        undefined,
+        1,
+      );
+      await manager.add(
+        "client",
+        COLLECTION,
+        CONFIG,
+        FILTER,
+        {},
+        "c1",
+        current,
+      );
+
+      await manager.setPeerManifest("c1", delayed);
+
+      expect(manager.getByName("client").meta.peer?.manifest).toEqual(current);
+      expect(
+        (await storage.syncRemoteStorage.get("client")).peer?.manifest,
+      ).toEqual(current);
+    });
+
     it("leaves a remote never heard from without a peer", async () => {
       const manager = await start();
       await manager.add("client", COLLECTION, CONFIG, FILTER, {}, "c1");
@@ -196,9 +228,11 @@ describe.each(testSyncStorageBackends)(
 
     it("announces the local manifest to the channel", async () => {
       const manager = await start();
-      expect(manager.localManifest()).toEqual(
-        localPeerManifest(PEER_CAPABILITIES, {}),
+      const manifest = manager.localManifest();
+      expect(manifest).toEqual(
+        localPeerManifest(PEER_CAPABILITIES, {}, undefined, manifest.sequence),
       );
+      expect(manifest.sequence).toBeGreaterThan(0);
     });
   },
 );

@@ -166,6 +166,9 @@ export class Fleet {
     for (const node of this.nodes.splice(0)) {
       node.reactor.kill();
     }
+    // A later test's channel must not handshake with this one's.
+    this.channels.clear();
+    this.options.clear();
   }
 }
 

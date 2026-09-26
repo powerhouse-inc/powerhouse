@@ -1,4 +1,5 @@
 import {
+  isOlderManifest,
   readPeerManifest,
   type PeerManifest,
 } from "@powerhousedao/shared/document-model";
@@ -82,6 +83,9 @@ const AGREEMENT_FIELDS = [
 
 type RefusalWire = { documentId: string; branch: string };
 
+/** How often a channel whose remote went silent asks again whether it serves agreement. */
+const AGREEMENT_PROBE_INTERVAL_MS = 5 * 60_000;
+
 function pushMutation(withGatedUnder: boolean): string {
   return withGatedUnder
     ? `
@@ -147,8 +151,9 @@ export class GqlRequestChannel implements IChannel {
   private receivingPages: boolean = false;
   /** Cleared for good the first time the remote rejects {@link DECISION_FIELDS}. */
   private peerServesDecisionFields: boolean = true;
-  /** Cleared for good the first time the remote rejects {@link AGREEMENT_FIELDS}. */
+  /** Cleared when the remote rejects {@link AGREEMENT_FIELDS}; set again by a touch that carries them. */
   private peerServesAgreement: boolean = true;
+  private agreementStoppedUtcMs = 0;
   private localManifestProvider?: () => PeerManifest;
   /** Undefined until the first handshake; null for a silent peer. */
   private peerManifest: PeerManifest | null | undefined = undefined;
@@ -342,8 +347,10 @@ export class GqlRequestChannel implements IChannel {
     undelivered?: readonly SyncOperation[],
   ): Promise<void> {
     if (
-      this.peerManifest !== undefined &&
-      (this.peerManifest?.revision ?? null) === (manifest?.revision ?? null)
+      (this.peerManifest !== undefined &&
+        (this.peerManifest?.revision ?? null) ===
+          (manifest?.revision ?? null)) ||
+      isOlderManifest(manifest, this.peerManifest)
     ) {
       return;
     }
@@ -402,6 +409,23 @@ export class GqlRequestChannel implements IChannel {
     }
   }
 
+  /** Re-touches a silent remote in case it was upgraded. */
+  private async probeAgreement(): Promise<void> {
+    this.agreementStoppedUtcMs = Date.now();
+    try {
+      const { ackOrdinal } = await this.touchRemoteChannel();
+      if (ackOrdinal > 0) {
+        trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
+      }
+    } catch (error) {
+      this.logger.error(
+        "GqlChannel @ChannelId agreement probe failed: @Error",
+        this.channelId,
+        error,
+      );
+    }
+  }
+
   /**
    * Initializes the channel by registering it on the remote server and starting polling.
    */
@@ -451,6 +475,13 @@ export class GqlRequestChannel implements IChannel {
   private async poll(): Promise<void> {
     if (this.isShutdown) {
       return;
+    }
+
+    if (
+      !this.peerServesAgreement &&
+      Date.now() - this.agreementStoppedUtcMs >= AGREEMENT_PROBE_INTERVAL_MS
+    ) {
+      await this.probeAgreement();
     }
 
     let response;
@@ -782,9 +813,10 @@ export class GqlRequestChannel implements IChannel {
   }
 
   private rejectsAgreementFields(error: unknown): boolean {
-    if (!this.peerServesAgreement) {
-      return false;
-    }
+    return this.peerServesAgreement && this.isAgreementRejection(error);
+  }
+
+  private isAgreementRejection(error: unknown): boolean {
     if (
       !(error instanceof GraphQLRequestError) ||
       error.category !== "graphql"
@@ -803,6 +835,7 @@ export class GqlRequestChannel implements IChannel {
       this.channelId,
     );
     this.peerServesAgreement = false;
+    this.agreementStoppedUtcMs = Date.now();
     await this.hearPeer(null, undelivered);
   }
 
@@ -972,11 +1005,13 @@ export class GqlRequestChannel implements IChannel {
       );
     };
 
+    // Every touch asks for agreement, so an upgraded remote is heard again.
     let data;
     try {
-      data = await touch(this.peerServesAgreement);
+      data = await touch(true);
+      this.peerServesAgreement = true;
     } catch (error) {
-      if (!this.rejectsAgreementFields(error)) {
+      if (!this.isAgreementRejection(error)) {
         throw error;
       }
       await this.stopAgreement();

@@ -317,4 +317,49 @@ describe("GqlRequestChannel peer manifests", () => {
     ]);
     expect(state.polls[1].variables.refusals).toEqual([]);
   });
+
+  it("hears a server restarted into the same build, so its holds are re-checked", async () => {
+    const before = localPeerManifest([TEST_PROTOCOL], {}, undefined, 1);
+    const after = localPeerManifest([TEST_PROTOCOL], {}, undefined, 2);
+    const { state, fetchFn } = agreementServer(before);
+    const timer = new ManualPollTimer();
+    const { channel, heard } = channelWith(fetchFn, timer);
+    channels.push(channel);
+    await channel.init();
+
+    state.server = after;
+    await timer.tick();
+
+    await vi.waitFor(() => expect(heard).toEqual([before, after]));
+  });
+
+  it("probes a silent server again and hears it once it serves agreement", async () => {
+    const previous = previousSchemaServer();
+    const upgraded = agreementServer(SERVER_WIDE);
+    let serving = previous.fetchFn;
+    const fetchFn = vi.fn((url: string, options: RequestInit) =>
+      serving(url, options),
+    );
+    const timer = new ManualPollTimer();
+    const { channel, heard } = channelWith(fetchFn, timer);
+    channels.push(channel);
+    await channel.init();
+    expect(heard).toEqual([null]);
+
+    serving = upgraded.fetchFn;
+    const now = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now + 5 * 60_000);
+    try {
+      await timer.tick();
+      await timer.tick();
+    } finally {
+      clock.mockRestore();
+    }
+
+    expect(heard).toEqual([null, SERVER_WIDE]);
+    expect(upgraded.state.touches[0].variables.input?.manifest).toEqual(LOCAL);
+    expect(upgraded.state.polls.at(-1)?.variables.manifestRevision).toBe(
+      LOCAL.revision,
+    );
+  });
 });

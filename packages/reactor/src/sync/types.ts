@@ -169,6 +169,8 @@ export type LocalPeer = {
   flags: PeerCapabilityFlags;
   /** The signer's did:key, when configured. */
   appKey?: string;
+  /** The manifest's start sequence; defaults to the process start time. */
+  sequence?: number;
   /** A document's protocolVersions; undefined when it is not stored here. */
   protocolVersionsOf?: (
     documentId: string,

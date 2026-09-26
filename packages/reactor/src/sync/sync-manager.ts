@@ -8,6 +8,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   coversLocal,
+  isOlderManifest,
   holdReason,
   legacySupports,
   localPeerManifest,
@@ -254,10 +255,12 @@ export class SyncManager implements ISyncManager {
     holds: ISyncHoldStorage = new InMemorySyncHoldStorage(),
   ) {
     this.capabilities = localPeer.capabilities;
+    // A restart always moves the start time forward, which is all ordering needs.
     this.manifest = localPeerManifest(
       localPeer.capabilities,
       localPeer.flags,
       localPeer.appKey,
+      localPeer.sequence ?? Date.now(),
     );
     this.localSupport = localSupports(localPeer.capabilities, localPeer.flags);
     this.legacy = legacySupports(localPeer.capabilities);
@@ -538,6 +541,9 @@ export class SyncManager implements ISyncManager {
       return;
     }
     const known = remote.meta.peer;
+    if (isOlderManifest(manifest, known?.manifest)) {
+      return;
+    }
     if (
       known !== undefined &&
       (known.manifest?.revision ?? null) === (manifest?.revision ?? null)
