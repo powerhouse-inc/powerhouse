@@ -28,7 +28,7 @@ const SERVER_WIDE = localPeerManifest([TEST_PROTOCOL], { wide: true });
 
 type Body = {
   query: string;
-  variables: { input?: Record<string, unknown> };
+  variables: { input?: Record<string, unknown>; manifestRevision?: string };
 };
 
 /** A server with peer agreement, holding what the client last touched with. */
@@ -38,6 +38,7 @@ function agreementServer(initial: PeerManifest) {
     held: null as PeerManifest | null,
     touches: [] as Body[],
     polls: [] as Body[],
+    envelopes: [] as unknown[],
   };
   const fetchFn = vi
     .fn()
@@ -57,7 +58,7 @@ function agreementServer(initial: PeerManifest) {
       state.polls.push(body);
       return respond({
         pollSyncEnvelopes: {
-          envelopes: [],
+          envelopes: state.envelopes.splice(0),
           ackOrdinal: 0,
           deadLetters: [],
           hasMore: false,
@@ -161,6 +162,7 @@ describe("GqlRequestChannel peer manifests", () => {
     await timer.tick();
     expect(state.polls[0].query).toContain("manifestRevision");
     expect(state.polls[0].query).toContain("peerManifestRevision");
+    expect(state.polls[0].variables.manifestRevision).toBe(LOCAL.revision);
     // Both revisions match: no re-touch.
     expect(state.touches).toHaveLength(1);
   });
@@ -181,7 +183,11 @@ describe("GqlRequestChannel peer manifests", () => {
     expect(heard).toEqual([null]);
     expect(polls).toHaveLength(2);
     expect(
-      polls.every((poll) => !poll.query.includes("manifestRevision")),
+      polls.every(
+        (poll) =>
+          !poll.query.includes("manifestRevision") &&
+          !("manifestRevision" in poll.variables),
+      ),
     ).toBe(true);
     expect(channel.getConnectionState().state).toBe("connected");
   });
@@ -217,6 +223,54 @@ describe("GqlRequestChannel peer manifests", () => {
 
     await timer.tick();
     await timer.tick();
+    expect(state.touches).toHaveLength(2);
+  });
+
+  it("refreshes a stale record before the polled rows reach the inbox", async () => {
+    const { state, fetchFn } = agreementServer(SERVER_WIDE);
+    const timer = new ManualPollTimer();
+    const { channel, heard } = channelWith(fetchFn, timer);
+    channels.push(channel);
+    await channel.init();
+
+    // The server restarted narrower and serves rows under its new manifest.
+    state.server = SERVER_NARROW;
+    state.envelopes.push({
+      type: "operations",
+      channelMeta: { id: "channel-1" },
+      operations: [
+        {
+          operation: {
+            index: 0,
+            timestampUtcMs: "2026-09-26T00:00:00.000Z",
+            hash: "h",
+            skip: 0,
+            id: "op-1",
+            action: {
+              id: "a-1",
+              type: "ADD_FOLDER",
+              timestampUtcMs: "2026-09-26T00:00:00.000Z",
+              input: {},
+              scope: "global",
+            },
+          },
+          context: {
+            documentId: "doc",
+            documentType: "powerhouse/document-drive",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+          },
+        },
+      ],
+    });
+    const heardAtAdmission: Array<PeerManifest | null> = [];
+    channel.inbox.onAdded(() => heardAtAdmission.push(heard.at(-1) ?? null));
+
+    await timer.tick();
+
+    await vi.waitFor(() => expect(heardAtAdmission).toHaveLength(1));
+    expect(heardAtAdmission[0]).toEqual(SERVER_NARROW);
     expect(state.touches).toHaveLength(2);
   });
 });

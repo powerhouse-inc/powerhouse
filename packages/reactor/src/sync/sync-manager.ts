@@ -809,6 +809,8 @@ export class SyncManager implements ISyncManager {
     remote: Remote,
     syncOps: readonly SyncOperation[],
   ): Promise<Set<SyncOperation>> {
+    // A manifest the channel heard before handing these over is applied first.
+    await this.peerUpdates.get(remote.meta.name);
     const peer = this.peerSupportsOf(remote);
     const refused = new Set<SyncOperation>();
     for (const syncOp of syncOps) {

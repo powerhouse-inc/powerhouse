@@ -324,40 +324,47 @@ export class GqlRequestChannel implements IChannel {
     }
   }
 
-  /** Re-touches once when either side's manifest moved; touching is idempotent. */
-  private refreshManifestsIfStale(
+  /**
+   * Re-touches once when either side's manifest moved; touching is idempotent.
+   * False when the refresh failed, so polled rows must not be judged yet.
+   */
+  private async refreshManifestsIfStale(
     manifestRevision: string | null | undefined,
     peerManifestRevision: string | null | undefined,
-  ): void {
+  ): Promise<boolean> {
     if (!this.peerServesAgreement || typeof manifestRevision !== "string") {
-      return;
+      return true;
     }
     const local = this.localManifestProvider?.().revision ?? null;
     if (
       manifestRevision === (this.peerManifest?.revision ?? null) &&
       (peerManifestRevision ?? null) === local
     ) {
-      return;
+      return true;
     }
-    if (this.manifestRefresh || this.isShutdown) {
-      return;
+    if (this.isShutdown) {
+      return false;
     }
-    this.manifestRefresh = this.touchRemoteChannel()
+    this.manifestRefresh ??= this.touchRemoteChannel()
       .then(({ ackOrdinal }) => {
         if (ackOrdinal > 0) {
           trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
         }
       })
-      .catch((error: unknown) => {
-        this.logger.error(
-          "GqlChannel @ChannelId manifest refresh failed: @Error",
-          this.channelId,
-          error,
-        );
-      })
       .finally(() => {
         this.manifestRefresh = undefined;
       });
+    try {
+      await this.manifestRefresh;
+      return true;
+    } catch (error) {
+      this.logger.error(
+        "GqlChannel @ChannelId manifest refresh failed: @Error",
+        this.channelId,
+        error,
+      );
+      return false;
+    }
   }
 
   /**
@@ -438,6 +445,17 @@ export class GqlRequestChannel implements IChannel {
       trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
     }
 
+    // Rows are judged against the sender's record, so a stale one is refreshed
+    // first. Unadmitted rows stay unacked and are served again.
+    if (
+      !(await this.refreshManifestsIfStale(
+        manifestRevision,
+        peerManifestRevision,
+      ))
+    ) {
+      return;
+    }
+
     // convert the envelopes to sync operations
     const allSyncOps: SyncOperation[] = [];
     for (const envelope of envelopes) {
@@ -476,8 +494,6 @@ export class GqlRequestChannel implements IChannel {
     this.lastSuccessUtcMs = Date.now();
     this.failureCount = 0;
     this.transitionConnectionState("connected");
-
-    this.refreshManifestsIfStale(manifestRevision, peerManifestRevision);
   }
 
   /**
@@ -681,13 +697,18 @@ export class GqlRequestChannel implements IChannel {
     // Each flag only ever clears, so this settles within three attempts.
     let response: PollSyncEnvelopesResult;
     for (;;) {
+      const revision = this.peerServesAgreement
+        ? this.localManifestProvider?.().revision
+        : undefined;
       try {
         response = await this.executeGraphQL<PollSyncEnvelopesResult>(
           this.pollQuery(
             this.peerServesDecisionFields,
             this.peerServesAgreement,
           ),
-          variables,
+          revision === undefined
+            ? variables
+            : { ...variables, manifestRevision: revision },
         );
         break;
       } catch (error) {
@@ -771,9 +792,16 @@ export class GqlRequestChannel implements IChannel {
       ? "manifestRevision\n          peerManifestRevision"
       : "";
 
+    const revisionVariable = withAgreementFields
+      ? ", $manifestRevision: String"
+      : "";
+    const revisionArgument = withAgreementFields
+      ? ", manifestRevision: $manifestRevision"
+      : "";
+
     return `
-      query PollSyncEnvelopes($channelId: String!, $outboxAck: Int!, $outboxLatest: Int!) {
-        pollSyncEnvelopes(channelId: $channelId, outboxAck: $outboxAck, outboxLatest: $outboxLatest) {
+      query PollSyncEnvelopes($channelId: String!, $outboxAck: Int!, $outboxLatest: Int!${revisionVariable}) {
+        pollSyncEnvelopes(channelId: $channelId, outboxAck: $outboxAck, outboxLatest: $outboxLatest${revisionArgument}) {
           envelopes {
             type
             channelMeta {
