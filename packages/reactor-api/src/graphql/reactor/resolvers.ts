@@ -1495,6 +1495,45 @@ export async function touchChannel(
   };
 }
 
+export async function syncHolds(
+  syncManager: ISyncManager,
+  args: { remoteName?: string | null; documentId?: string | null },
+) {
+  const holds = await syncManager.listHolds({
+    remoteName: args.remoteName ?? undefined,
+    documentId: args.documentId ?? undefined,
+  });
+  return holds.map((hold) => ({
+    ...hold,
+    reason: { ...hold.reason, peerSupports: [...hold.reason.peerSupports] },
+    heldAtUtcMs: String(hold.heldAtUtcMs),
+  }));
+}
+
+export function peerAgreement(
+  syncManager: ISyncManager,
+  args: { collectionId: string },
+) {
+  const agreement = syncManager.agreement();
+  const members = [...agreement.members([args.collectionId])].map(
+    ([remoteName, supports]) => ({
+      remoteName,
+      announced: "revision" in supports,
+      protocols: supports.protocols,
+      features: supports.features,
+    }),
+  );
+  return {
+    collectionId: args.collectionId,
+    local: agreement.local(),
+    members,
+    limitedBy: Object.keys(agreement.basis().wanted).map((protocol) => ({
+      protocol,
+      remoteNames: agreement.limitedBy(args.collectionId, protocol),
+    })),
+  };
+}
+
 /**
  * The sync operations in `syncOps` this subject may not be served.
  *

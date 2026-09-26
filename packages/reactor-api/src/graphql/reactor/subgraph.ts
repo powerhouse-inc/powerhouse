@@ -498,6 +498,51 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
+      syncHolds: async (
+        _parent: unknown,
+        args: { remoteName?: string | null; documentId?: string | null },
+        ctx: Context,
+      ) => {
+        const address = ctx.user?.address;
+        if (!this.authorizationService.isSupremeAdmin(address)) {
+          let bound: string | undefined;
+          try {
+            bound = args.remoteName
+              ? this.syncManager.getByName(args.remoteName).meta.options
+                  .boundAddress
+              : undefined;
+          } catch {
+            bound = undefined;
+          }
+          if (address === undefined || bound !== address) {
+            throw new ForbiddenError("to list sync holds");
+          }
+        }
+        return resolvers.syncHolds(this.syncManager, args);
+      },
+
+      peerAgreement: (
+        _parent: unknown,
+        args: { collectionId: string },
+        ctx: Context,
+      ) => {
+        const address = ctx.user?.address;
+        if (
+          !this.authorizationService.isSupremeAdmin(address) &&
+          (address === undefined ||
+            !this.syncManager
+              .list()
+              .some(
+                (remote) =>
+                  remote.meta.collectionId.key === args.collectionId &&
+                  remote.meta.options.boundAddress === address,
+              ))
+        ) {
+          throw new ForbiddenError("to read peer agreement");
+        }
+        return resolvers.peerAgreement(this.syncManager, args);
+      },
+
       pollSyncEnvelopes: async (
         _parent: unknown,
         args: { channelId: string; outboxAck: number; outboxLatest: number },

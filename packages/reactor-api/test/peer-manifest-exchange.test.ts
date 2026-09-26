@@ -2,6 +2,7 @@ import {
   DriveCollectionId,
   GqlRequestChannelFactory,
   GqlResponseChannelFactory,
+  JobStatus,
   ReactorBuilder,
   SyncBuilder,
   type IChannel,
@@ -11,9 +12,14 @@ import {
   type ISyncManager,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import type {
-  DocumentModelModule,
-  PeerCapability,
+import {
+  localPeerManifest,
+  mergePeerCapabilities,
+  PEER_CAPABILITIES,
+  withSignaturePolicy,
+  type DocumentModelModule,
+  type PeerCapability,
+  type PeerManifest,
 } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
 import { buildSchema, graphql } from "graphql";
@@ -21,6 +27,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   pollSyncEnvelopes,
+  pushSyncEnvelopes,
   touchChannel,
 } from "../src/graphql/reactor/resolvers.js";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
@@ -204,5 +211,94 @@ describe("peer manifest exchange over the sync resolvers", () => {
         .filter((q) => q.includes("pollSyncEnvelopes"))
         .every((q) => !q.includes("manifestRevision")),
     ).toBe(true);
+  });
+
+  /** A server run through graphql-js on `sdl`, announcing `claims` if set. */
+  function schemaServer(
+    server: ISyncManager,
+    sdl: string,
+    claims?: PeerManifest,
+  ) {
+    const schema = buildSchema(sdl);
+    const requests: string[] = [];
+    const fetchFn = async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(init!.body as string) as {
+        query: string;
+        variables: Record<string, unknown>;
+      };
+      requests.push(body.query);
+      const result = await graphql({
+        schema,
+        source: body.query,
+        variableValues: body.variables,
+        rootValue: {
+          touchChannel: async (args: Parameters<typeof touchChannel>[1]) => {
+            const touched = await touchChannel(server, args);
+            return claims ? { ...touched, manifest: claims } : touched;
+          },
+          pollSyncEnvelopes: (
+            args: Parameters<typeof pollSyncEnvelopes>[1],
+          ) => {
+            const polled = pollSyncEnvelopes(server, args);
+            return claims
+              ? { ...polled, manifestRevision: claims.revision }
+              : polled;
+          },
+          pushSyncEnvelopes: (args: Parameters<typeof pushSyncEnvelopes>[1]) =>
+            pushSyncEnvelopes(server, args),
+        },
+      });
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+    return { fetchFn: fetchFn as typeof fetch, requests };
+  }
+
+  it("turns a server's refusal of a document it claimed into a hold", async () => {
+    const narrow: PeerCapability = { ...WIDE_SERVER, supported: () => [1] };
+    const server = await reactor([narrow]);
+    const client = await reactor([WIDE_SERVER]);
+    const claims = localPeerManifest(
+      mergePeerCapabilities(PEER_CAPABILITIES, [WIDE_SERVER]),
+      {},
+    );
+    const { fetchFn } = schemaServer(server, SCHEMA, claims);
+    const remote = await connect(client, fetchFn);
+
+    const clientModule = modules[modules.length - 1];
+    const info = await clientModule.reactor.create(
+      withSignaturePolicy(
+        driveDocumentModelModule.utils.createDocument(),
+        "legacy",
+        { id: "drive-1", protocolVersions: { "test-protocol": 2 } },
+      ),
+    );
+    await vi.waitUntil(
+      async () =>
+        (await clientModule.reactor.getJobStatus(info.id)).status ===
+        JobStatus.READ_READY,
+    );
+
+    await vi.waitFor(
+      async () =>
+        expect(await client.listHolds({ remoteName: "switchboard" })).toEqual([
+          expect.objectContaining({
+            documentId: "drive-1",
+            reason: {
+              protocol: "test-protocol",
+              version: 2,
+              peerSupports: [1, 2],
+            },
+          }),
+        ]),
+      { timeout: 10_000 },
+    );
+    expect(
+      remote.channel.deadLetter.items.filter(
+        (item) => item.documentId === "drive-1",
+      ),
+    ).toEqual([]);
   });
 });
