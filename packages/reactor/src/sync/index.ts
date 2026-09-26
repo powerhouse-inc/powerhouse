@@ -26,6 +26,9 @@ export type {
   RemoteRecord,
   RemoteStatus,
   SyncEnvelope,
+  SyncHeldEvent,
+  SyncHold,
+  SyncReleasedEvent,
   SyncEnvelopeType,
   SyncFailedEvent,
   SyncOperationErrorType,
@@ -73,6 +76,12 @@ export {
 } from "./channels/index.js";
 
 export { SyncBuilder } from "./sync-builder.js";
+export { InMemorySyncHoldStorage } from "./memory-hold-storage.js";
+export {
+  createPeerAgreement,
+  type IPeerAgreement,
+  type PeerAgreementBasis,
+} from "./peer-agreement.js";
 export { SyncManager, type SyncManagerConfig } from "./sync-manager.js";
 export { SyncStatus, SyncStatusTracker } from "./sync-status-tracker.js";
 export type {

@@ -1,4 +1,5 @@
 import type {
+  HoldReason,
   OperationWithContext,
   PeerCapability,
   PeerCapabilityFlags,
@@ -110,6 +111,8 @@ export type SyncOperationErrorType =
   | "AUTH_TIMESTAMP_NOT_MONOTONIC"
   /** The document requires a protocol version this reactor does not run. */
   | "UNSUPPORTED_PROTOCOL"
+  /** A peer wrote into a document at a version it does not announce. */
+  | "PEER_PROTOCOL_UNSUPPORTED"
   /** An arriving operation carried a timestamp that is not an ISO-8601 instant. */
   | "INVALID_TIMESTAMP"
   /** No classification applies, including rows written before the field. */
@@ -166,6 +169,11 @@ export type LocalPeer = {
   flags: PeerCapabilityFlags;
   /** The signer's did:key, when configured. */
   appKey?: string;
+  /** A document's protocolVersions; undefined when it is not stored here. */
+  protocolVersionsOf?: (
+    documentId: string,
+    branch: string,
+  ) => Promise<{ [protocol: string]: number } | undefined>;
 };
 
 /** What the peer announced, and when; a null manifest is a silent peer. */
@@ -197,7 +205,31 @@ export const SyncEventTypes = {
   SYNC_FAILED: 20003,
   DEAD_LETTER_ADDED: 20004,
   CONNECTION_STATE_CHANGED: 20005,
+  SYNC_HELD: 20006,
+  SYNC_RELEASED: 20007,
 } as const;
+
+/** A document held back from one remote because its peer cannot run it. */
+export type SyncHold = {
+  remoteName: string;
+  documentId: string;
+  branch: string;
+  reason: HoldReason;
+  heldAtUtcMs: number;
+};
+
+export type SyncHeldEvent = {
+  remoteName: string;
+  documentId: string;
+  branch: string;
+  reason: HoldReason;
+};
+
+export type SyncReleasedEvent = {
+  remoteName: string;
+  documentId: string;
+  branch: string;
+};
 
 /**
  * Event emitted when all SyncOperations for a job are queued in outboxes.

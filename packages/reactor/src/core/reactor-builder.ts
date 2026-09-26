@@ -1024,6 +1024,17 @@ export class ReactorBuilder {
       capabilities: this.getPeerCapabilities(),
       flags: featureFlags,
       appKey: this.signer?.app?.key,
+      protocolVersionsOf: async (documentId, branch) => {
+        try {
+          const meta = await documentMetaCache.getDocumentMeta(
+            documentId,
+            branch,
+          );
+          return meta.protocolVersions;
+        } catch {
+          return undefined;
+        }
+      },
     };
     let syncModule: InProcessSyncModule | undefined = undefined;
     if (this.channelScheme) {

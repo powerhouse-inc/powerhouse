@@ -569,7 +569,11 @@ export function syncOperationErrorType(
 
 /** Dead-letter types that must not stop the document syncing. */
 const NON_QUARANTINING_ERROR_TYPES: ReadonlySet<SyncOperationErrorType> =
-  new Set(["AUTH_TIMESTAMP_NOT_MONOTONIC", "UNSUPPORTED_PROTOCOL"]);
+  new Set([
+    "AUTH_TIMESTAMP_NOT_MONOTONIC",
+    "UNSUPPORTED_PROTOCOL",
+    "PEER_PROTOCOL_UNSUPPORTED",
+  ]);
 
 /**
  * A held auth operation must not quarantine: reconciling the two policies needs

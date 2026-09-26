@@ -24,6 +24,7 @@ import * as migration018 from "./018_add_sync_remote_bound_address.js";
 import * as migration019 from "./019_require_action_id.js";
 import * as migration020 from "./020_add_snapshot_operation_ordinal.js";
 import * as migration021 from "./021_add_sync_remote_peer.js";
+import * as migration022 from "./022_create_sync_holds.js";
 
 const migrations = {
   "001_create_operation_table": migration001,
@@ -47,6 +48,7 @@ const migrations = {
   "019_require_action_id": migration019,
   "020_add_snapshot_operation_ordinal": migration020,
   "021_add_sync_remote_peer": migration021,
+  "022_create_sync_holds": migration022,
 };
 
 class ProgrammaticMigrationProvider implements MigrationProvider {

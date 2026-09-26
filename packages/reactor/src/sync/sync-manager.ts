@@ -1,11 +1,19 @@
 import type {
+  HoldReason,
   Operation,
   PeerCapability,
   PeerManifest,
+  ProtocolVersions,
+  Supports,
 } from "@powerhousedao/shared/document-model";
 import {
+  coversLocal,
+  holdReason,
+  legacySupports,
   localPeerManifest,
+  localSupports,
   PEER_CAPABILITIES,
+  peerSupports,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type {
@@ -33,7 +41,9 @@ import type {
   DeadLetterRecord,
   ISyncCursorStorage,
   ISyncDeadLetterStorage,
+  ISyncHoldStorage,
   ISyncRemoteStorage,
+  SyncHoldRecord,
 } from "../storage/interfaces.js";
 import { BatchAggregator, type PreparedBatch } from "./batch-aggregator.js";
 import {
@@ -47,6 +57,8 @@ import type {
   Remote,
   RemoteMeta,
 } from "./interfaces.js";
+import { InMemorySyncHoldStorage } from "./memory-hold-storage.js";
+import { createPeerAgreement, type IPeerAgreement } from "./peer-agreement.js";
 import { SyncAwaiter } from "./sync-awaiter.js";
 import { SyncOperation } from "./sync-operation.js";
 import {
@@ -62,6 +74,10 @@ import type {
   RemoteFilter,
   RemoteOptions,
   RemoteRecord,
+  SyncHeldEvent,
+  SyncHold,
+  SyncOperationErrorType,
+  SyncReleasedEvent,
   SyncResult,
 } from "./types.js";
 import {
@@ -135,6 +151,36 @@ function isCredentialOrNetworkError(error: unknown): boolean {
   return error instanceof GraphQLRequestError && error.category === "network";
 }
 
+const holdKey = (documentId: string, branch: string): string =>
+  `${documentId}\u0000${branch}`;
+
+const VERSION_CACHE_CAP = 10000;
+
+/** The versions a CREATE_DOCUMENT among `operations` fixes for the document. */
+function createdVersions(
+  operations: readonly OperationWithContext[],
+  documentId: string,
+): ProtocolVersions | undefined {
+  for (const { operation, context } of operations) {
+    if (
+      context.documentId === documentId &&
+      operation.action.type === "CREATE_DOCUMENT"
+    ) {
+      const input = operation.action.input as {
+        protocolVersions?: ProtocolVersions;
+      };
+      return input.protocolVersions ?? {};
+    }
+  }
+  return undefined;
+}
+
+/** A job's dependency chain through one derivation's emitted batches. */
+type EmitChain = {
+  lastJobByDoc: Map<string, string>;
+  prevChainJobId?: string;
+};
+
 /** Where a sync operation's run of ordinals begins. */
 function firstOrdinalOf(syncOp: SyncOperation): number {
   return syncOp.operations.length > 0
@@ -179,6 +225,17 @@ export class SyncManager implements ISyncManager {
   private inboxChunkChain: Promise<void> = Promise.resolve();
   private readonly capabilities: readonly PeerCapability[];
   private readonly manifest: PeerManifest;
+  private readonly localSupport: Supports;
+  private readonly legacy: Supports;
+  private readonly wanted: { [protocol: string]: number } = {};
+  private readonly holds: ISyncHoldStorage;
+  private readonly heldKeys = new Map<string, Map<string, SyncHoldRecord>>();
+  private readonly records = new Map<string, RemoteMeta>();
+  private readonly versionCache = new Map<string, ProtocolVersions>();
+  private readonly protocolVersionsOf: (
+    documentId: string,
+    branch: string,
+  ) => Promise<ProtocolVersions | undefined>;
   private readonly peerUpdates = new Map<string, Promise<void>>();
   private readonly peerUnsubscribes = new Map<string, () => void>();
 
@@ -194,6 +251,7 @@ export class SyncManager implements ISyncManager {
     driveContainerTypes: ReadonlySet<string>,
     config: Partial<SyncManagerConfig> = {},
     localPeer: LocalPeer = { capabilities: PEER_CAPABILITIES, flags: {} },
+    holds: ISyncHoldStorage = new InMemorySyncHoldStorage(),
   ) {
     this.capabilities = localPeer.capabilities;
     this.manifest = localPeerManifest(
@@ -201,6 +259,20 @@ export class SyncManager implements ISyncManager {
       localPeer.flags,
       localPeer.appKey,
     );
+    this.localSupport = localSupports(localPeer.capabilities, localPeer.flags);
+    this.legacy = legacySupports(localPeer.capabilities);
+    for (const capability of localPeer.capabilities) {
+      if (capability.kind !== "protocol") continue;
+      const supported = capability.supported(localPeer.flags);
+      const wanted =
+        capability.preferred?.(localPeer.flags) ??
+        (supported.length > 0 ? Math.max(...supported) : undefined);
+      if (wanted !== undefined) this.wanted[capability.name] = wanted;
+    }
+    this.holds = holds;
+    this.protocolVersionsOf =
+      localPeer.protocolVersionsOf ??
+      ((documentId, branch) => this.indexedVersions(documentId, branch));
     this.logger = logger;
     this.remoteStorage = remoteStorage;
     this.cursorStorage = cursorStorage;
@@ -242,6 +314,20 @@ export class SyncManager implements ISyncManager {
       );
     }
 
+    try {
+      for (const hold of await this.holds.list()) {
+        this.heldFor(hold.remoteName).set(
+          holdKey(hold.documentId, hold.branch),
+          hold,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        "Failed to load sync holds (@error)",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+
     const remoteRecords = await this.remoteStorage.list();
 
     for (const record of remoteRecords) {
@@ -270,6 +356,7 @@ export class SyncManager implements ISyncManager {
       };
 
       this.remotes.set(record.name, remote);
+      this.records.set(record.name, remote.meta);
       await this.loadDeadLetters(remote);
       this.wireChannelCallbacks(remote);
 
@@ -453,10 +540,381 @@ export class SyncManager implements ISyncManager {
       known !== undefined &&
       (known.manifest?.revision ?? null) === (manifest?.revision ?? null)
     ) {
+      // A release interrupted before its hold was removed is retried here.
+      if (this.heldKeys.get(name)?.size) {
+        await this.releaseSupported(remote);
+      }
       return;
     }
     remote.meta.peer = { manifest, receivedAtUtcMs: Date.now() };
     await this.remoteStorage.upsert(this.recordOf(remote.meta));
+    await this.holdUnsupported(remote);
+    await this.releaseSupported(remote);
+  }
+
+  async listHolds(
+    filter: { remoteName?: string; documentId?: string } = {},
+  ): Promise<SyncHold[]> {
+    const records = await this.holds.list(filter);
+    return records.map((record) => ({
+      remoteName: record.remoteName,
+      documentId: record.documentId,
+      branch: record.branch,
+      reason: {
+        protocol: record.protocol,
+        version: record.version,
+        peerSupports:
+          this.agreement().peer(record.remoteName).protocols[record.protocol] ??
+          [],
+      },
+      heldAtUtcMs: record.heldAtUtcMs,
+    }));
+  }
+
+  agreement(): IPeerAgreement {
+    return createPeerAgreement(
+      { local: this.manifest, legacy: this.legacy, wanted: this.wanted },
+      [...this.records.values()],
+    );
+  }
+
+  private heldFor(remoteName: string): Map<string, SyncHoldRecord> {
+    let held = this.heldKeys.get(remoteName);
+    if (!held) {
+      held = new Map();
+      this.heldKeys.set(remoteName, held);
+    }
+    return held;
+  }
+
+  private async forgetRemote(name: string): Promise<void> {
+    this.records.delete(name);
+    this.heldKeys.delete(name);
+    await this.holds.removeRemote(name);
+  }
+
+  private peerSupportsOf(remote: Remote): Supports {
+    return peerSupports(remote.meta.peer?.manifest ?? null, this.capabilities);
+  }
+
+  /** Cached once found: a document's versions never change. */
+  private async versionsOf(
+    documentId: string,
+    branch: string,
+  ): Promise<ProtocolVersions | undefined> {
+    const key = holdKey(documentId, branch);
+    const cached = this.versionCache.get(key);
+    if (cached) return cached;
+    let versions: ProtocolVersions | undefined;
+    try {
+      versions = await this.protocolVersionsOf(documentId, branch);
+    } catch {
+      versions = undefined;
+    }
+    if (versions) {
+      if (this.versionCache.size >= VERSION_CACHE_CAP) {
+        const oldest = this.versionCache.keys().next().value;
+        if (oldest !== undefined) this.versionCache.delete(oldest);
+      }
+      this.versionCache.set(key, versions);
+    }
+    return versions;
+  }
+
+  /** The fallback without a meta cache: the document's indexed creation. */
+  private async indexedVersions(
+    documentId: string,
+    branch: string,
+  ): Promise<ProtocolVersions | undefined> {
+    const page = await this.operationIndex.get(
+      documentId,
+      { branch, scopes: ["document"] },
+      { cursor: "0", limit: 10 },
+    );
+    return createdVersions(
+      page.results.map((entry) => toOperationWithContext(entry)),
+      documentId,
+    );
+  }
+
+  private async hold(
+    remote: Remote,
+    documentId: string,
+    branch: string,
+    reason: HoldReason,
+  ): Promise<void> {
+    const held = this.heldFor(remote.meta.name);
+    const key = holdKey(documentId, branch);
+    if (held.has(key)) return;
+    const record: SyncHoldRecord = {
+      remoteName: remote.meta.name,
+      documentId,
+      branch,
+      protocol: reason.protocol,
+      version: reason.version,
+      heldAtUtcMs: Date.now(),
+    };
+    held.set(key, record);
+    try {
+      await this.holds.upsert(record);
+    } catch (error) {
+      this.logger.error(
+        "Failed to persist a sync hold (@remote, @documentId): @error",
+        remote.meta.name,
+        documentId,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+    void this.eventBus
+      .emit(SyncEventTypes.SYNC_HELD, {
+        remoteName: remote.meta.name,
+        documentId,
+        branch,
+        reason,
+      } satisfies SyncHeldEvent)
+      .catch(() => {});
+  }
+
+  /** Narrowed: unsent outbox items for documents the peer cannot run. */
+  private async holdUnsupported(remote: Remote): Promise<void> {
+    const support = this.peerSupportsOf(remote);
+    if (coversLocal(support, this.localSupport, this.capabilities)) return;
+    const verdicts = new Map<string, HoldReason | null>();
+    const held: SyncOperation[] = [];
+    for (const item of remote.channel.outbox.items) {
+      if (
+        item.status !== SyncOperationStatus.Unknown ||
+        item.emittedCount > 0
+      ) {
+        continue;
+      }
+      const key = holdKey(item.documentId, item.branch);
+      let reason = verdicts.get(key);
+      if (reason === undefined) {
+        const versions =
+          createdVersions(item.operations, item.documentId) ??
+          (await this.versionsOf(item.documentId, item.branch));
+        reason =
+          (versions && holdReason(support, versions, this.capabilities)) ??
+          null;
+        verdicts.set(key, reason);
+      }
+      if (reason) {
+        held.push(item);
+        await this.hold(remote, item.documentId, item.branch, reason);
+      }
+    }
+    if (held.length > 0) {
+      remote.channel.outbox.remove(...held);
+    }
+  }
+
+  /** Widened: held documents the peer can now run go out whole. */
+  private async releaseSupported(remote: Remote): Promise<void> {
+    const held = this.heldKeys.get(remote.meta.name);
+    if (!held?.size) return;
+    const support = this.peerSupportsOf(remote);
+    for (const [key, record] of [...held]) {
+      const versions = await this.versionsOf(record.documentId, record.branch);
+      if (versions && holdReason(support, versions, this.capabilities)) {
+        continue;
+      }
+      held.delete(key);
+      await this.backfillDocument(remote, record.documentId, record.branch);
+      await this.holds.remove(
+        record.remoteName,
+        record.documentId,
+        record.branch,
+      );
+      void this.eventBus
+        .emit(SyncEventTypes.SYNC_RELEASED, {
+          remoteName: record.remoteName,
+          documentId: record.documentId,
+          branch: record.branch,
+        } satisfies SyncReleasedEvent)
+        .catch(() => {});
+    }
+  }
+
+  /**
+   * Queues a released document's whole history. The peer never received it
+   * from this remote, so sinceTimestampUtcMs does not apply; the receiver
+   * dedups by action id.
+   */
+  private async backfillDocument(
+    remote: Remote,
+    documentId: string,
+    branch: string,
+  ): Promise<void> {
+    const entries = [];
+    let page = await this.operationIndex.get(
+      documentId,
+      { branch },
+      undefined,
+      this.abortController.signal,
+    );
+    for (;;) {
+      entries.push(...page.results);
+      if (!page.next) break;
+      page = await page.next();
+    }
+    let operations = entries
+      .filter((entry) => entry.sourceRemote !== remote.meta.name)
+      .map((entry) => toOperationWithContext(entry));
+    operations = filterOperations(operations, remote.meta.filter);
+    if (operations.length === 0) return;
+    operations.sort((a, b) => {
+      if (a.context.scope !== b.context.scope) {
+        if (a.context.scope === "document") return -1;
+        if (b.context.scope === "document") return 1;
+        return a.context.scope < b.context.scope ? -1 : 1;
+      }
+      return a.context.ordinal - b.context.ordinal;
+    });
+    this.emitBatches(remote, operations, OutboxMode.Backfill, {
+      lastJobByDoc: new Map(),
+    });
+  }
+
+  /** A peer that announced support refused the document: hold it from that peer. */
+  private async holdRefused(
+    remote: Remote,
+    syncOp: SyncOperation,
+  ): Promise<void> {
+    const versions =
+      (await this.versionsOf(syncOp.documentId, syncOp.branch)) ?? {};
+    const support = this.peerSupportsOf(remote);
+    const protocols = this.capabilities.filter(
+      (capability) =>
+        capability.kind === "protocol" &&
+        versions[capability.name] !== undefined,
+    );
+    const capability =
+      protocols.find(
+        (candidate) => !candidate.baseline.includes(versions[candidate.name]),
+      ) ?? protocols.at(0);
+    const protocol = capability?.name ?? "unknown";
+    await this.hold(remote, syncOp.documentId, syncOp.branch, {
+      protocol,
+      version: versions[protocol] ?? 0,
+      peerSupports: support.protocols[protocol] ?? [],
+    });
+  }
+
+  /**
+   * Refuses, before load, what this reactor cannot run and what the sending
+   * peer does not announce. Neither quarantines the document.
+   */
+  private refuseOnReceipt(
+    remote: Remote,
+    syncOps: readonly SyncOperation[],
+  ): Set<SyncOperation> | Promise<Set<SyncOperation>> {
+    const peer = this.peerSupportsOf(remote);
+    if (coversLocal(peer, this.localSupport, this.capabilities)) {
+      // Only a creation in the batch can carry a version to refuse.
+      const refused = new Set<SyncOperation>();
+      for (const syncOp of syncOps) {
+        const versions = createdVersions(syncOp.operations, syncOp.documentId);
+        if (versions && this.refuse(remote, syncOp, versions, undefined)) {
+          refused.add(syncOp);
+        }
+      }
+      return refused;
+    }
+    return this.refuseAgainstPeer(remote, syncOps, peer);
+  }
+
+  private async refuseAgainstPeer(
+    remote: Remote,
+    syncOps: readonly SyncOperation[],
+    peer: Supports,
+  ): Promise<Set<SyncOperation>> {
+    const refused = new Set<SyncOperation>();
+    for (const syncOp of syncOps) {
+      const versions =
+        createdVersions(syncOp.operations, syncOp.documentId) ??
+        (await this.versionsOf(syncOp.documentId, syncOp.branch));
+      if (versions && this.refuse(remote, syncOp, versions, peer)) {
+        refused.add(syncOp);
+      }
+    }
+    return refused;
+  }
+
+  /** Dead-letters a refused sync operation; `peer` unset skips the peer check. */
+  private refuse(
+    remote: Remote,
+    syncOp: SyncOperation,
+    versions: ProtocolVersions,
+    peer: Supports | undefined,
+  ): boolean {
+    let errorType: SyncOperationErrorType;
+    let reason = holdReason(this.localSupport, versions, this.capabilities);
+    if (reason) {
+      errorType = "UNSUPPORTED_PROTOCOL";
+    } else {
+      reason = peer && holdReason(peer, versions, this.capabilities);
+      if (!reason) return false;
+      errorType = "PEER_PROTOCOL_UNSUPPORTED";
+    }
+
+    const message =
+      errorType === "UNSUPPORTED_PROTOCOL"
+        ? `Document ${syncOp.documentId} requires ${reason.protocol} ${reason.version}, which this reactor does not support`
+        : `Remote ${remote.meta.name} wrote into document ${syncOp.documentId} at ${reason.protocol} ${reason.version}, which its peer does not announce`;
+    syncOp.failed(
+      new ChannelError(ChannelErrorSource.Inbox, new Error(message), errorType),
+    );
+    remote.channel.deadLetter.add(syncOp);
+    remote.channel.inbox.remove(syncOp);
+    return true;
+  }
+
+  /** Whether anything could be held from this remote; synchronous when not. */
+  private gates(remote: Remote): boolean {
+    return (
+      (this.heldKeys.get(remote.meta.name)?.size ?? 0) > 0 ||
+      !coversLocal(
+        this.peerSupportsOf(remote),
+        this.localSupport,
+        this.capabilities,
+      )
+    );
+  }
+
+  /** Drops rows of documents the remote's peer cannot run, recording holds. */
+  private async gateOutbound(
+    remote: Remote,
+    operations: OperationWithContext[],
+  ): Promise<OperationWithContext[]> {
+    if (operations.length === 0) return operations;
+    const held = this.heldKeys.get(remote.meta.name);
+    const support = this.peerSupportsOf(remote);
+
+    const verdicts = new Map<string, boolean>();
+    const kept: OperationWithContext[] = [];
+    for (const entry of operations) {
+      const { documentId, branch } = entry.context;
+      const key = holdKey(documentId, branch);
+      let isHeld = verdicts.get(key);
+      if (isHeld === undefined) {
+        isHeld = held?.has(key) ?? false;
+        if (!isHeld) {
+          const versions =
+            createdVersions(operations, documentId) ??
+            (await this.versionsOf(documentId, branch));
+          const reason =
+            versions && holdReason(support, versions, this.capabilities);
+          if (reason) {
+            await this.hold(remote, documentId, branch, reason);
+            isHeld = true;
+          }
+        }
+        verdicts.set(key, isHeld);
+      }
+      if (!isHeld) kept.push(entry);
+    }
+    return kept;
   }
 
   private recordOf(meta: RemoteMeta): RemoteRecord {
@@ -534,6 +992,7 @@ export class SyncManager implements ISyncManager {
     const remote: Remote = { meta, channel };
 
     this.remotes.set(name, remote);
+    this.records.set(name, meta);
     await this.loadDeadLetters(remote);
     this.wireChannelCallbacks(remote);
 
@@ -602,6 +1061,7 @@ export class SyncManager implements ISyncManager {
       // delete the remote's data
       await this.remoteStorage.remove(name);
       await this.cursorStorage.remove(name);
+      await this.forgetRemote(name);
     } finally {
       // Released last: while the slot is held, a concurrent add of the same
       // name is refused, so it cannot race the storage deletes above. The
@@ -630,6 +1090,7 @@ export class SyncManager implements ISyncManager {
       await this.teardownRemoteResources(remote);
       if (removeStorageRecord) {
         await this.remoteStorage.remove(name);
+        await this.forgetRemote(name);
       }
     } catch (error) {
       this.logger.error(
@@ -733,7 +1194,21 @@ export class SyncManager implements ISyncManager {
     });
     this.connectionStateUnsubscribes.set(remote.meta.name, unsubscribe);
 
-    remote.channel.deadLetter.onAdded((syncOps) => {
+    remote.channel.deadLetter.onAdded((added) => {
+      // A peer that refused a document it announced: a hold, not a failure.
+      const refusals = added.filter(
+        (syncOp) =>
+          syncOp.error?.source === ChannelErrorSource.Outbox &&
+          syncOperationErrorType(syncOp.error) === "UNSUPPORTED_PROTOCOL",
+      );
+      if (refusals.length > 0) {
+        remote.channel.deadLetter.remove(...refusals);
+        for (const syncOp of refusals) {
+          void this.holdRefused(remote, syncOp).catch(() => {});
+        }
+      }
+      const syncOps = added.filter((syncOp) => !refusals.includes(syncOp));
+
       for (const syncOp of syncOps) {
         this.logger.error(
           "Dead letter (@remote, @documentId, @jobId, @error, @dependencies)",
@@ -970,6 +1445,12 @@ export class SyncManager implements ISyncManager {
     remote: Remote,
     syncOp: SyncOperation,
   ): Promise<void> {
+    let refused = this.refuseOnReceipt(remote, [syncOp]);
+    if (refused instanceof Promise) refused = await refused;
+    if (refused.size > 0) {
+      return;
+    }
+
     const operations: Operation[] = syncOp.operations.map((op) => op.operation);
 
     let jobInfo;
@@ -1041,8 +1522,18 @@ export class SyncManager implements ISyncManager {
   }
 
   private async applyInboxBatch(
-    items: Array<{ remote: Remote; syncOp: SyncOperation }>,
+    received: Array<{ remote: Remote; syncOp: SyncOperation }>,
   ): Promise<void> {
+    const refused = new Set<SyncOperation>();
+    for (const { remote, syncOp } of received) {
+      let refusals = this.refuseOnReceipt(remote, [syncOp]);
+      if (refusals instanceof Promise) refusals = await refusals;
+      for (const refusal of refusals) {
+        refused.add(refusal);
+      }
+    }
+    const items = received.filter(({ syncOp }) => !refused.has(syncOp));
+    if (items.length === 0) return;
     const sourceRemote = items[0].remote.meta.name;
 
     const chunkKeys = new Set(items.map(({ syncOp }) => syncOp.jobId));
@@ -1375,6 +1866,53 @@ export class SyncManager implements ISyncManager {
     }
   }
 
+  private emitBatches(
+    remote: Remote,
+    operations: OperationWithContext[],
+    mode: OutboxMode,
+    chain: EmitChain,
+  ): void {
+    if (operations.length === 0) {
+      return;
+    }
+
+    const batches = batchOperationsByDocument(operations);
+
+    const syncOps: SyncOperation[] = [];
+    for (const batch of batches) {
+      const jobId = crypto.randomUUID();
+      const prevJobId = chain.lastJobByDoc.get(batch.documentId);
+
+      const deps: string[] = [];
+      if (prevJobId) deps.push(prevJobId);
+      if (
+        mode === OutboxMode.BatchTriggered &&
+        chain.prevChainJobId &&
+        chain.prevChainJobId !== prevJobId
+      ) {
+        deps.push(chain.prevChainJobId);
+      }
+
+      const syncOp = new SyncOperation(
+        crypto.randomUUID(),
+        jobId,
+        deps,
+        remote.meta.name,
+        batch.documentId,
+        [batch.scope],
+        batch.branch,
+        batch.operations,
+      );
+
+      syncOps.push(syncOp);
+      chain.lastJobByDoc.set(batch.documentId, jobId);
+      if (mode === OutboxMode.BatchTriggered) chain.prevChainJobId = jobId;
+    }
+
+    remote.channel.outbox.add(...syncOps);
+    this.evictPastOutboxBound(remote);
+  }
+
   private async deriveOutbox(
     remote: Remote,
     ackOrdinal: number,
@@ -1387,51 +1925,11 @@ export class SyncManager implements ISyncManager {
 
     const startOrdinal = this.refillOrdinal(remote, ackOrdinal);
     let maxOrdinal = startOrdinal;
-    const lastJobByDoc = new Map<string, string>();
-    let prevChainJobId: string | undefined;
+    const chain: EmitChain = { lastJobByDoc: new Map() };
     const sinceTimestamp = remote.meta.options.sinceTimestampUtcMs;
 
-    const emitBatches = (operations: OperationWithContext[]): void => {
-      if (operations.length === 0) {
-        return;
-      }
-
-      const batches = batchOperationsByDocument(operations);
-
-      const syncOps: SyncOperation[] = [];
-      for (const batch of batches) {
-        const jobId = crypto.randomUUID();
-        const prevJobId = lastJobByDoc.get(batch.documentId);
-
-        const deps: string[] = [];
-        if (prevJobId) deps.push(prevJobId);
-        if (
-          mode === OutboxMode.BatchTriggered &&
-          prevChainJobId &&
-          prevChainJobId !== prevJobId
-        ) {
-          deps.push(prevChainJobId);
-        }
-
-        const syncOp = new SyncOperation(
-          crypto.randomUUID(),
-          jobId,
-          deps,
-          remote.meta.name,
-          batch.documentId,
-          [batch.scope],
-          batch.branch,
-          batch.operations,
-        );
-
-        syncOps.push(syncOp);
-        lastJobByDoc.set(batch.documentId, jobId);
-        if (mode === OutboxMode.BatchTriggered) prevChainJobId = jobId;
-      }
-
-      remote.channel.outbox.add(...syncOps);
-      this.evictPastOutboxBound(remote);
-    };
+    const emitBatches = (operations: OperationWithContext[]): void =>
+      this.emitBatches(remote, operations, mode, chain);
 
     let page = await this.operationIndex.find(
       remote.meta.collectionId.key,
@@ -1470,6 +1968,9 @@ export class SyncManager implements ISyncManager {
       operations = operations.filter(
         (op) => !this.quarantinedDocumentIds.has(op.context.documentId),
       );
+      if (this.gates(remote)) {
+        operations = await this.gateOutbound(remote, operations);
+      }
 
       hasMore = !!page.next;
 

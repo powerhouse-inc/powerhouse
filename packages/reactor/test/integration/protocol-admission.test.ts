@@ -1,5 +1,6 @@
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
+  localPeerManifest,
   withSignaturePolicy,
   type PeerCapability,
 } from "@powerhousedao/shared/document-model";
@@ -138,7 +139,7 @@ describe("protocol admission", () => {
     ).toBe(true);
   });
 
-  it("dead-letters the refusal on receipt as UNSUPPORTED_PROTOCOL without quarantine", async () => {
+  it("dead-letters a document its peer claimed but cannot run as UNSUPPORTED_PROTOCOL, without quarantine", async () => {
     const channels = new Map<string, TestChannel>();
     const peers = new Map([
       ["toB", "toA"],
@@ -157,6 +158,14 @@ describe("protocol admission", () => {
           cursorStorage,
           (envelope: SyncEnvelope) =>
             channels.get(peers.get(remoteName)!)!.receive(envelope),
+          {
+            peer: () => channels.get(peers.get(remoteName)!),
+            // B claims base-reducer 7 without running it.
+            announce:
+              remoteName === "toA"
+                ? () => localPeerManifest([BASE_REDUCER_7], {})
+                : undefined,
+          },
         );
         channels.set(remoteName, channel);
         return channel;

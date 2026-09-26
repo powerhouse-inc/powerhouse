@@ -380,9 +380,12 @@ export {
 // Synchronization
 export {
   KyselySyncCursorStorage,
+  KyselySyncHoldStorage,
   KyselySyncRemoteStorage,
   type ISyncCursorStorage,
+  type ISyncHoldStorage,
   type ISyncRemoteStorage,
+  type SyncHoldRecord,
 } from "./src/storage/index.js";
 export {
   batchOperationsByDocument,
@@ -442,6 +445,13 @@ export {
   type RemoteRecord,
   type RemoteStatus,
   type SyncEnvelope,
+  type SyncHeldEvent,
+  type SyncHold,
+  type SyncReleasedEvent,
+  type IPeerAgreement,
+  type PeerAgreementBasis,
+  createPeerAgreement,
+  InMemorySyncHoldStorage,
   type SyncEnvelopeType,
   type SyncFailedEvent,
   type SyncOperationErrorType,

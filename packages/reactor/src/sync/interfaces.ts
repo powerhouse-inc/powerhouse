@@ -6,6 +6,7 @@ import type {
 import type { ShutdownStatus } from "../shared/types.js";
 import type { ISyncCursorStorage } from "../storage/interfaces.js";
 import type { IMailbox } from "./mailbox.js";
+import type { IPeerAgreement } from "./peer-agreement.js";
 import type {
   SyncStatus,
   SyncStatusChangeCallback,
@@ -16,6 +17,7 @@ import type {
   RemoteFilter,
   RemoteOptions,
   RemotePeer,
+  SyncHold,
   SyncResult,
 } from "./types.js";
 
@@ -242,6 +244,15 @@ export interface ISyncManager {
 
   /** What this reactor announces to its peers. */
   localManifest(): PeerManifest;
+
+  /** Documents held back from remotes whose peers cannot run them. */
+  listHolds(filter?: {
+    remoteName?: string;
+    documentId?: string;
+  }): Promise<SyncHold[]>;
+
+  /** Agreement over every persisted remote, live or not. */
+  agreement(): IPeerAgreement;
 
   /**
    * Binds a remote to an address, so only that address may poll it.
