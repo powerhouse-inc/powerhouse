@@ -116,12 +116,16 @@ describe("AttachmentBuilder", () => {
 
     // get() on evicted data calls transport.fetch
     try {
-      await store.get(TEST_HASH);
+      await store.get(TEST_HASH, undefined, "doc-1");
     } catch {
       // Expected: transport returns not-found so AttachmentNotFound is thrown
     }
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(mockTransport.fetch).toHaveBeenCalledWith(TEST_HASH, undefined);
+    expect(mockTransport.fetch).toHaveBeenCalledWith(
+      TEST_HASH,
+      "doc-1",
+      undefined,
+    );
   });
 
   it("withUploadFactory() overrides the default", async () => {

@@ -51,7 +51,6 @@ export function toDocumentModelResultPage(
     hasNextPage: !!result.nextCursor,
     hasPreviousPage: !!result.options.cursor,
     items: models.map(toGqlDocumentModelState),
-    totalCount: result.results.length,
   };
 }
 
@@ -93,7 +92,6 @@ export function toPhDocumentResultPage(
     hasNextPage: !!result.nextCursor,
     hasPreviousPage: !!result.options.cursor,
     items: result.results.map(toGqlPhDocument),
-    totalCount: result.totalCount ?? result.results.length,
   };
 }
 
@@ -125,7 +123,6 @@ export function toDocumentRelationshipResultPage(
     hasNextPage: !!result.nextCursor,
     hasPreviousPage: !!result.options.cursor,
     items: result.results.map(toGqlDocumentRelationship),
-    totalCount: result.totalCount ?? result.results.length,
   };
 }
 
@@ -596,7 +593,6 @@ export function toOperationResultPage(
     hasNextPage: !!result.nextCursor,
     hasPreviousPage: !!result.options.cursor && result.options.cursor !== "0",
     items: result.results.map(serializeOperationForGraphQL),
-    totalCount: result.results.length,
   };
 }
 

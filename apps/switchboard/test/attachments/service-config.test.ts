@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import type { API } from "@powerhousedao/reactor-api";
+import type { API, IAttachmentAccessService } from "@powerhousedao/reactor-api";
 import { createHttpAdapter } from "@powerhousedao/reactor-api";
 import {
   AttachmentBuilder,
@@ -109,6 +109,16 @@ describe("attachment service built from deriveAttachmentServiceConfig round-trip
     registerAttachmentRoutes({
       httpAdapter: adapter,
       attachments,
+      attachmentAccess: {
+        canReadAttachment: (
+          request: Parameters<IAttachmentAccessService["canReadAttachment"]>[0],
+        ) =>
+          Promise.resolve({
+            kind: "allowed",
+            documentId: request.documentId as never,
+            ref: request.attachmentRef as never,
+          }),
+      },
       authService: undefined,
     } as unknown as API);
 
@@ -149,7 +159,7 @@ describe("attachment service built from deriveAttachmentServiceConfig round-trip
     const result = await upload.send(stream);
     expect(result.header.sizeBytes).toBe(bytes.byteLength);
 
-    const got = await service.get(result.ref);
+    const got = await service.get(result.ref, { documentId: "doc-1" });
     expect(got.header.mimeType).toBe("text/plain");
     const reader = got.body.getReader();
     const chunks: Uint8Array[] = [];

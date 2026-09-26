@@ -19,6 +19,7 @@ import type {
   AttachmentDownloadTargetOptions,
   AttachmentHeader,
   AttachmentResponse,
+  AttachmentStatOptions,
   ReserveAttachmentOptions,
 } from "./types.js";
 
@@ -43,9 +44,14 @@ export class AttachmentService implements IAttachmentService {
     return this.uploadFactory.createUpload(reservation);
   }
 
-  async stat(ref: AttachmentRef): Promise<AttachmentHeader> {
+  async stat(
+    ref: AttachmentRef,
+    options?: AttachmentStatOptions,
+  ): Promise<AttachmentHeader> {
     const { hash } = parseRef(ref);
-    return this.store.stat(hash);
+    return options?.documentId === undefined
+      ? this.store.stat(hash)
+      : this.store.stat(hash, options.documentId);
   }
 
   async get(

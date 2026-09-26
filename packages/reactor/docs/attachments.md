@@ -253,19 +253,24 @@ interface IAttachmentService {
   reserve(options: ReserveAttachmentOptions): Promise<IAttachmentUpload>;
 
   /**
-   * Get attachment metadata by ref.
+   * Get attachment metadata by ref. Remote readers require the documentId
+   * whose operations reference the attachment.
    *
    * @throws AttachmentNotFound if the ref is unknown.
    */
-  stat(ref: AttachmentRef): Promise<AttachmentHeader>;
+  stat(
+    ref: AttachmentRef,
+    options?: { documentId?: string },
+  ): Promise<AttachmentHeader>;
 
   /**
-   * Retrieve attachment data.
-   *
-   * Always succeeds for any known ref. The underlying store handles
-   * re-fetching evicted data from the transport transparently.
+   * Retrieve attachment data. The underlying store handles re-fetching
+   * evicted data from the transport on behalf of `documentId`.
    */
-  get(ref: AttachmentRef, signal?: AbortSignal): Promise<AttachmentResponse>;
+  get(
+    ref: AttachmentRef,
+    options?: { documentId?: string; signal?: AbortSignal },
+  ): Promise<AttachmentResponse>;
 }
 ```
 
@@ -420,15 +425,18 @@ interface IAttachmentTransport {
    * S3 presigned URL, etc.) and returns a stream.
    *
    * @param hash - Content hash of the attachment
+   * @param documentId - Document whose operations reference the attachment;
+   *   the remote authorizes the fetch through it
    * @param signal - Abort signal for cancellation
-   * @returns The attachment data with metadata, or null if not available.
-   *          Returns TransportResponse (not AttachmentResponse) because
-   *          remote peers cannot populate local concerns like status/source.
+   * @returns Data, pending, or not-found. Data is a TransportResponse (not
+   *          AttachmentResponse) because remote peers cannot populate local
+   *          concerns like status/source.
    */
   fetch(
     hash: AttachmentHash,
+    documentId: string,
     signal?: AbortSignal,
-  ): Promise<TransportResponse | null>;
+  ): Promise<TransportFetchResult>;
 
   /**
    * Announce that this reactor has attachment data available.
@@ -490,10 +498,10 @@ sequenceDiagram
 
     Note over ReactorB: Later, when the attachment data is needed...
 
-    ReactorB->>ReactorB: attachmentService.get("attachment://v1:abc123")
-    ReactorB->>ReactorB: store.get("abc123") -- not available locally
-    ReactorB->>Transport: store re-fetches via transport.fetch("abc123")
-    Transport->>ReactorA: GET /attachments/abc123
+    ReactorB->>ReactorB: attachmentService.get("attachment://v1:abc123", { documentId })
+    ReactorB->>ReactorB: store.get("abc123", signal, documentId) -- not available locally
+    ReactorB->>Transport: store re-fetches via transport.fetch("abc123", documentId)
+    Transport->>ReactorA: GET /attachments/abc123?documentId=... (Reactor B's JWT)
     ReactorA-->>Transport: { hash, metadata, body }
     Transport-->>ReactorB: TransportResponse
     ReactorB->>ReactorB: store.put("abc123", metadata, body)
@@ -529,7 +537,7 @@ The client interacts with `IAttachmentService` for upload/download and dispatche
 
 2. **Use**: Client dispatches a domain action with the ref in its input (e.g., `ATTACH_INVOICE({ ref, vendorName, amount })`). The reducer stores the ref in document state.
 
-3. **Download**: Client calls `IAttachmentService.get(ref)` to retrieve attachment data. If the data has been evicted, the store re-fetches it from the transport transparently.
+3. **Download**: Client calls `IAttachmentService.get(ref, { documentId })` to retrieve attachment data, naming the document that references it. If the data has been evicted, the store re-fetches it from the transport on behalf of that document.
 
 4. **Validation** (optional): If attachment readiness should be checked before accepting the action, this belongs at the API boundary (e.g., the GraphQL resolver calls `IAttachmentService.stat()` before forwarding to `reactor.execute()`). The executor and reducer remain pure.
 
@@ -595,10 +603,12 @@ type Query {
 }
 ```
 
-The GraphQL layer exposes upload as a multipart mutation or delegates to a REST upload endpoint -- the specific mechanism depends on the deployment. Attachment data retrieval uses a REST endpoint to support streaming:
+The GraphQL layer exposes upload as a multipart mutation or delegates to a REST upload endpoint -- the specific mechanism depends on the deployment. Attachment data retrieval uses a REST endpoint to support streaming. Every read names the document that authorizes it, or carries a signed URL minted under one; a hash alone is answered 404:
 
 ```
-GET /attachments/:hash
+GET /attachments/:hash/download-target?documentId=<id>
+GET /attachments/:hash?documentId=<id>
+GET /attachments/:hash?documentId=<id>&expires=<unix-seconds>&signature=<hmac>
 ```
 
 ### Garbage Collection
@@ -672,7 +682,9 @@ sequenceDiagram
     Client->>Switchboard: mutateDocument(ATTACH_INVOICE, { ref, ... })
     Switchboard->>Switchboard: Reducer stores ref in document state
 
-    Client->>Switchboard: GET /attachments/:hash
+    Client->>Switchboard: GET /attachments/:hash/download-target?documentId=...
+    Switchboard-->>Client: signed URL for the byte route
+    Client->>Switchboard: GET /attachments/:hash?documentId=...&expires=...&signature=...
     Switchboard->>Store: SELECT header, touch last_accessed_at_utc
     Switchboard->>Disk: Open read stream
     Switchboard-->>Client: 200 OK (streamed)
@@ -684,12 +696,10 @@ When a switchboard instance needs attachment data that is not local (e.g., after
 
 ```ts
 class SwitchboardAttachmentTransport implements IAttachmentTransport {
-  async fetch(hash: AttachmentHash, signal?: AbortSignal) {
-    // Fetch from the remote switchboard's REST endpoint
-    const response = await fetch(`${this.remoteUrl}/attachments/${hash}`, {
-      signal,
-      headers: this.authHeaders(),
-    });
+  async fetch(hash: AttachmentHash, documentId: string, signal?: AbortSignal) {
+    // Authorized as this replica's JWT subject through the named document
+    const url = `${this.remoteUrl}/attachments/${hash}?documentId=${encodeURIComponent(documentId)}`;
+    const response = await fetch(url, { signal, headers: this.authHeaders() });
     // ...
   }
 

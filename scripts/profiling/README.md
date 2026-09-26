@@ -11,7 +11,6 @@ Scripts for benchmarking and profiling the Powerhouse reactor and switchboard.
   - [`pyroscope-analyse.ts`](#pyroscope-analysetts--pyroscope-profile-analysis)
   - [`pg-statement-diff.ts`](#pg-statement-diffts--attribute-a-delta-to-sql)
   - [`docs-create.ts`](#docs-createts--create-documents-via-graphql)
-  - [`docs-count.ts`](#docs-countts--count-documents-fast)
   - [`docs-list.ts`](#docs-listts--listcount-documents-paginated)
   - [`docs-reset.ts`](#docs-resetts--delete-all-documents)
   - [`run-reactor-direct.sh`](#run-reactor-directsh--build-and-run-reactor-direct)
@@ -288,27 +287,9 @@ tsx docs-create.ts 1 -o 100 -b 10 --async
 | `--percentiles`       | `-p`  | Show p50/p90/p95/p99 stats                                                  |
 | `--show-action-types` | `-a`  | Show action names in min/max timings                                        |
 
-### `docs-count.ts` — Count documents (fast)
-
-Counts documents using the `totalCount` GraphQL field (single request per type).
-
-```bash
-tsx docs-count.ts
-tsx docs-count.ts --type powerhouse/document-model
-tsx docs-count.ts --verbose
-```
-
-| Flag         | Short | Description                                                 |
-| ------------ | ----- | ----------------------------------------------------------- |
-| `--endpoint` |       | GraphQL endpoint (default: `http://localhost:4001/graphql`) |
-| `--type`     |       | Filter by document type                                     |
-| `--verbose`  | `-v`  | Show per-type counts                                        |
-
-> **Note:** `totalCount` may be inaccurate. Use `docs-list.ts --count-only` for a reliable count.
-
 ### `docs-list.ts` — List/count documents (paginated)
 
-Lists or counts documents using cursor-based pagination. More reliable than `docs-count.ts`.
+Lists or counts documents using cursor-based pagination.
 
 ```bash
 tsx docs-list.ts

@@ -23,9 +23,10 @@ export class SwitchboardAttachmentTransport implements IAttachmentTransport {
 
   async fetch(
     hash: AttachmentHash,
+    documentId: string,
     signal?: AbortSignal,
   ): Promise<TransportFetchResult> {
-    const url = `${this.remoteUrl}/attachments/${hash}`;
+    const url = `${this.remoteUrl}/attachments/${hash}?documentId=${encodeURIComponent(documentId)}`;
     const headers = await buildAuthHeaders(url, this.jwtHandler);
 
     const response = await this.fetchFn(url, { signal, headers });

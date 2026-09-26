@@ -100,17 +100,14 @@ export class ReactorSubgraph extends BaseSubgraph {
    * or they become a way to enumerate around that check. Supreme admins read
    * everything, so the per-edge check is skipped for them.
    *
-   * The counts describe what is served; the cursor describes where to resume in
-   * the underlying unfiltered stream, so it is left as it came. A filtered page
-   * is therefore often shorter than the requested limit, and that is the stream
-   * continuing rather than a sign it ended.
+   * The cursor describes where to resume in the underlying unfiltered stream,
+   * so it is left as it came. A filtered page is therefore often shorter than
+   * the requested limit, and that is the stream continuing rather than a sign
+   * it ended.
    */
   private async filterRelationshipEdges<
     TEdge extends { readonly sourceId: string; readonly targetId: string },
-    TPage extends {
-      readonly items: ReadonlyArray<TEdge>;
-      readonly totalCount: number;
-    },
+    TPage extends { readonly items: ReadonlyArray<TEdge> },
   >(
     page: TPage,
     farEnd: "sourceId" | "targetId",
@@ -137,27 +134,7 @@ export class ReactorSubgraph extends BaseSubgraph {
       }
     }
 
-    return this.servedPage(page, items);
-  }
-
-  /**
-   * Restates a page's totalCount over the items that survived a read filter, so
-   * that the difference between the two cannot be read off as a count of what
-   * the caller was not allowed to see.
-   */
-  private servedPage<
-    TItem,
-    TPage extends {
-      readonly items: ReadonlyArray<TItem>;
-      readonly totalCount: number;
-    },
-  >(page: TPage, items: TItem[]): TPage {
-    const withheld = page.items.length - items.length;
-    return {
-      ...page,
-      items,
-      totalCount: Math.max(0, page.totalCount - withheld),
-    };
+    return { ...page, items };
   }
 
   /**
@@ -353,7 +330,7 @@ export class ReactorSubgraph extends BaseSubgraph {
                 filteredItems.push(item);
               }
             }
-            return this.servedPage(result, filteredItems);
+            return { ...result, items: filteredItems };
           }
 
           return result;
@@ -433,7 +410,7 @@ export class ReactorSubgraph extends BaseSubgraph {
                 filteredItems.push(item);
               }
             }
-            return this.servedPage(result, filteredItems);
+            return { ...result, items: filteredItems };
           }
 
           return result;
