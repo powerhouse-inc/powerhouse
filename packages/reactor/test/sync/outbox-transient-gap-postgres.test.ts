@@ -84,31 +84,32 @@ describe("sync outbox across a transient ordinal gap [Postgres]", () => {
     );
     await adminPool.query(`DROP DATABASE IF EXISTS "${TEST_DATABASE}"`);
     await adminPool.query(`CREATE DATABASE "${TEST_DATABASE}"`);
-    baseDb = new Kysely<Database>({
-      dialect: new PostgresDialect({
-        pool: new Pool({
-          ...dbConfigFor(PG_TEST_URL, TEST_DATABASE),
-          max: 8,
-          application_name: "outbox-gap-host",
-        }),
-      }),
+    const pool = new Pool({
+      ...dbConfigFor(PG_TEST_URL, TEST_DATABASE),
+      max: 8,
+      application_name: "outbox-gap-host",
     });
+    // Dropping the database terminates whatever is still connected to it.
+    pool.on("error", (error: Error & { code?: string }) => {
+      if (error.code !== "57P01") throw error;
+    });
+    baseDb = new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
   });
 
   afterEach(async () => {
-    if (module) {
-      await module.reactor.kill().completed;
-      await module.syncModule?.syncManager.shutdown().completed;
-      module = undefined;
+    try {
+      if (module) {
+        await module.reactor.kill().completed;
+        await module.syncModule?.syncManager.shutdown().completed;
+        module = undefined;
+      }
+    } finally {
+      await baseDb.destroy();
+      await adminPool.query(
+        `DROP DATABASE IF EXISTS "${TEST_DATABASE}" WITH (FORCE)`,
+      );
+      await adminPool.end();
     }
-    await baseDb.destroy();
-    await adminPool.query(
-      `SELECT pg_terminate_backend(pid) FROM pg_stat_activity
-       WHERE datname = $1 AND pid <> pg_backend_pid()`,
-      [TEST_DATABASE],
-    );
-    await adminPool.query(`DROP DATABASE IF EXISTS "${TEST_DATABASE}"`);
-    await adminPool.end();
   });
 
   async function build(mode: "workers" | "in-process"): Promise<Harness> {
