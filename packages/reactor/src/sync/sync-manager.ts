@@ -1,4 +1,12 @@
-import type { Operation } from "@powerhousedao/shared/document-model";
+import type {
+  Operation,
+  PeerCapability,
+  PeerManifest,
+} from "@powerhousedao/shared/document-model";
+import {
+  localPeerManifest,
+  PEER_CAPABILITIES,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type {
   DriveCollectionId,
@@ -33,7 +41,12 @@ import {
   GraphQLRequestError,
   isDriveAuthError,
 } from "./errors.js";
-import type { IChannelFactory, ISyncManager, Remote } from "./interfaces.js";
+import type {
+  IChannelFactory,
+  ISyncManager,
+  Remote,
+  RemoteMeta,
+} from "./interfaces.js";
 import { SyncAwaiter } from "./sync-awaiter.js";
 import { SyncOperation } from "./sync-operation.js";
 import {
@@ -45,10 +58,10 @@ import type {
   ChannelConfig,
   ConnectionStateChangedEvent,
   DeadLetterAddedEvent,
+  LocalPeer,
   RemoteFilter,
   RemoteOptions,
   RemoteRecord,
-  RemoteStatus,
   SyncResult,
 } from "./types.js";
 import {
@@ -164,6 +177,10 @@ export class SyncManager implements ISyncManager {
   private readonly removing = new Set<string>();
   private readonly lastEnqueuedJobIdByKey = new Map<string, string>();
   private inboxChunkChain: Promise<void> = Promise.resolve();
+  private readonly capabilities: readonly PeerCapability[];
+  private readonly manifest: PeerManifest;
+  private readonly peerUpdates = new Map<string, Promise<void>>();
+  private readonly peerUnsubscribes = new Map<string, () => void>();
 
   constructor(
     logger: ILogger,
@@ -176,7 +193,14 @@ export class SyncManager implements ISyncManager {
     eventBus: IEventBus,
     driveContainerTypes: ReadonlySet<string>,
     config: Partial<SyncManagerConfig> = {},
+    localPeer: LocalPeer = { capabilities: PEER_CAPABILITIES, flags: {} },
   ) {
+    this.capabilities = localPeer.capabilities;
+    this.manifest = localPeerManifest(
+      localPeer.capabilities,
+      localPeer.flags,
+      localPeer.appKey,
+    );
     this.logger = logger;
     this.remoteStorage = remoteStorage;
     this.cursorStorage = cursorStorage;
@@ -240,6 +264,7 @@ export class SyncManager implements ISyncManager {
           channelConfig: record.channelConfig,
           filter: record.filter,
           options: record.options,
+          peer: record.peer,
         },
         channel,
       };
@@ -259,6 +284,7 @@ export class SyncManager implements ISyncManager {
         await this.dropRemoteAfterFailedInit(remote, false);
         continue;
       }
+      await this.peerUpdates.get(record.name);
 
       // backfill channels asynchronously -- don't block startup
       const outboxAckOrdinal = remote.channel.outbox.ackOrdinal;
@@ -328,6 +354,11 @@ export class SyncManager implements ISyncManager {
       unsub();
     }
     this.connectionStateUnsubscribes.clear();
+    for (const unsub of this.peerUnsubscribes.values()) {
+      unsub();
+    }
+    this.peerUnsubscribes.clear();
+    this.peerUpdates.clear();
 
     const promises: Promise<void>[] = [];
     for (const remote of this.remotes.values()) {
@@ -375,18 +406,73 @@ export class SyncManager implements ISyncManager {
 
     remote.meta.options = { ...remote.meta.options, boundAddress };
 
-    await this.remoteStorage.upsert({
-      id: remote.meta.id,
-      name: remote.meta.name,
-      collectionId: remote.meta.collectionId,
-      channelConfig: remote.meta.channelConfig,
-      filter: remote.meta.filter,
-      options: remote.meta.options,
+    await this.remoteStorage.upsert(this.recordOf(remote.meta));
+  }
+
+  localManifest(): PeerManifest {
+    return this.manifest;
+  }
+
+  async setPeerManifest(
+    id: string,
+    manifest: PeerManifest | null,
+  ): Promise<void> {
+    await this.queuePeerManifest(this.getById(id), manifest);
+  }
+
+  /** Applied in arrival order per remote; the handshake awaits the tail. */
+  private queuePeerManifest(
+    remote: Remote,
+    manifest: PeerManifest | null,
+  ): Promise<void> {
+    const name = remote.meta.name;
+    const next = (this.peerUpdates.get(name) ?? Promise.resolve()).then(() =>
+      this.applyPeerManifest(remote, manifest),
+    );
+    const settled = next.catch((error: unknown) => {
+      this.logger.error(
+        "Failed to record the peer manifest of @name: @error",
+        name,
+        error instanceof Error ? error.message : String(error),
+      );
+    });
+    this.peerUpdates.set(name, settled);
+    return next;
+  }
+
+  private async applyPeerManifest(
+    remote: Remote,
+    manifest: PeerManifest | null,
+  ): Promise<void> {
+    const name = remote.meta.name;
+    if (this.remotes.get(name) !== remote || this.removing.has(name)) {
+      return;
+    }
+    const known = remote.meta.peer;
+    if (
+      known !== undefined &&
+      (known.manifest?.revision ?? null) === (manifest?.revision ?? null)
+    ) {
+      return;
+    }
+    remote.meta.peer = { manifest, receivedAtUtcMs: Date.now() };
+    await this.remoteStorage.upsert(this.recordOf(remote.meta));
+  }
+
+  private recordOf(meta: RemoteMeta): RemoteRecord {
+    return {
+      id: meta.id,
+      name: meta.name,
+      collectionId: meta.collectionId,
+      channelConfig: meta.channelConfig,
+      filter: meta.filter,
+      options: meta.options,
       status: {
         push: createIdleHealth(),
         pull: createIdleHealth(),
       },
-    });
+      peer: meta.peer,
+    };
   }
 
   async add(
@@ -396,6 +482,7 @@ export class SyncManager implements ISyncManager {
     filter: RemoteFilter = { documentId: [], scope: [], branch: "" },
     options: RemoteOptions = { sinceTimestampUtcMs: "0" },
     id?: string,
+    peer?: PeerManifest | null,
   ): Promise<Remote> {
     if (this.isShutdown) {
       throw new Error("SyncManager is shutdown and cannot add remotes");
@@ -417,22 +504,21 @@ export class SyncManager implements ISyncManager {
 
     const remoteId = id ?? crypto.randomUUID();
 
-    const status: RemoteStatus = {
-      push: createIdleHealth(),
-      pull: createIdleHealth(),
-    };
-
-    const remoteRecord: RemoteRecord = {
+    // Written before the first backfill, so its derivation is already gated.
+    const meta: RemoteMeta = {
       id: remoteId,
       name,
       collectionId,
       channelConfig,
       filter,
       options,
-      status,
+      peer:
+        peer === undefined
+          ? undefined
+          : { manifest: peer, receivedAtUtcMs: Date.now() },
     };
 
-    await this.remoteStorage.upsert(remoteRecord);
+    await this.remoteStorage.upsert(this.recordOf(meta));
 
     const channel = this.channelFactory.instance(
       remoteId,
@@ -445,17 +531,7 @@ export class SyncManager implements ISyncManager {
       options,
     );
 
-    const remote: Remote = {
-      meta: {
-        id: remoteId,
-        name,
-        collectionId,
-        channelConfig,
-        filter,
-        options,
-      },
-      channel,
-    };
+    const remote: Remote = { meta, channel };
 
     this.remotes.set(name, remote);
     await this.loadDeadLetters(remote);
@@ -475,6 +551,7 @@ export class SyncManager implements ISyncManager {
 
       throw error;
     }
+    await this.peerUpdates.get(name);
 
     // backfill asynchronously -- don't block channel registration
     const backfillController = new AbortController();
@@ -593,6 +670,9 @@ export class SyncManager implements ISyncManager {
       }
       this.evictedOutboxFloors.delete(name);
       this.prunePending.delete(name);
+      this.peerUnsubscribes.get(name)?.();
+      this.peerUnsubscribes.delete(name);
+      this.peerUpdates.delete(name);
     }
   }
 
@@ -628,6 +708,14 @@ export class SyncManager implements ISyncManager {
   private wireChannelCallbacks(remote: Remote): void {
     remote.channel.inbox.onAdded((syncOps) =>
       this.handleInboxAdded(remote, syncOps),
+    );
+
+    remote.channel.setLocalManifest(() => this.manifest);
+    this.peerUnsubscribes.set(
+      remote.meta.name,
+      remote.channel.onPeerManifest((manifest) => {
+        void this.queuePeerManifest(remote, manifest).catch(() => {});
+      }),
     );
 
     this.syncStatusTracker.trackRemote(remote.meta.name, remote.channel);

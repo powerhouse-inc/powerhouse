@@ -6,6 +6,7 @@ import {
   localSupports,
   mergePeerCapabilities,
   peerSupports,
+  readPeerManifest,
   type PeerCapability,
 } from "./peer-agreement.js";
 
@@ -69,5 +70,37 @@ describe("localPeerManifest", () => {
 
     expect(wide.protocols["test-protocol"]).toEqual([1, 2]);
     expect(wide.revision).not.toBe(narrow.revision);
+  });
+});
+
+describe("readPeerManifest", () => {
+  it("round-trips a local manifest", () => {
+    const manifest = localPeerManifest(PEER_CAPABILITIES, {}, "did:key:a");
+    expect(readPeerManifest(JSON.parse(JSON.stringify(manifest)))).toEqual(
+      manifest,
+    );
+  });
+
+  it("reads a manifest of an unknown format as its maps", () => {
+    const read = readPeerManifest({
+      format: 2,
+      revision: "r2",
+      protocols: { "base-reducer": [3, 1, 2] },
+      features: { "sync.anti-entropy": [1] },
+      somethingNew: { nested: true },
+    });
+    expect(read).toEqual({
+      format: 1,
+      revision: "r2",
+      protocols: { "base-reducer": [1, 2, 3] },
+      features: { "sync.anti-entropy": [1] },
+    });
+  });
+
+  it("rejects what is not a manifest", () => {
+    expect(readPeerManifest(null)).toBeNull();
+    expect(readPeerManifest("manifest")).toBeNull();
+    expect(readPeerManifest({ protocols: { x: ["1"] } })).toBeNull();
+    expect(readPeerManifest({ features: {} })).toBeNull();
   });
 });

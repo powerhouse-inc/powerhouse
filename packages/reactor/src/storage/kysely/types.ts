@@ -1,4 +1,10 @@
-import type { Generated, Insertable, Selectable, Updateable } from "kysely";
+import type {
+  ColumnType,
+  Generated,
+  Insertable,
+  Selectable,
+  Updateable,
+} from "kysely";
 
 export interface OperationTable {
   id: Generated<number>;
@@ -73,6 +79,13 @@ export interface SyncRemoteTable {
   pull_last_failure_utc_ms: string | null;
   pull_failure_count: number;
   bound_address: string | null;
+  peer_manifest: string | null;
+  // bigint: pg returns a string, PGlite may return a number.
+  peer_manifest_at_utc_ms: ColumnType<
+    string | number | null,
+    number | null,
+    number | null
+  >;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }

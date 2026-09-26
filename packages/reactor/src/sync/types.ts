@@ -1,4 +1,9 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import type {
+  OperationWithContext,
+  PeerCapability,
+  PeerCapabilityFlags,
+  PeerManifest,
+} from "@powerhousedao/shared/document-model";
 import type { DriveCollectionId } from "../cache/operation-index-types.js";
 
 export enum ChannelScheme {
@@ -155,6 +160,20 @@ export type ChannelConfig = {
   parameters: Record<string, unknown>;
 };
 
+/** What this reactor announces, and the flags its support is a function of. */
+export type LocalPeer = {
+  capabilities: readonly PeerCapability[];
+  flags: PeerCapabilityFlags;
+  /** The signer's did:key, when configured. */
+  appKey?: string;
+};
+
+/** What the peer announced, and when; a null manifest is a silent peer. */
+export type RemotePeer = {
+  manifest: PeerManifest | null;
+  receivedAtUtcMs: number;
+};
+
 export type RemoteRecord = {
   id: string;
   name: string;
@@ -163,6 +182,8 @@ export type RemoteRecord = {
   filter: RemoteFilter;
   options: RemoteOptions;
   status: RemoteStatus;
+  /** Undefined: the peer has not been heard from. */
+  peer?: RemotePeer;
 };
 
 /**

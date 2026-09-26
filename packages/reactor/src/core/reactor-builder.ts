@@ -107,7 +107,7 @@ import { GroupReevaluationTrigger } from "./group-reevaluation-trigger.js";
 import { GqlRequestChannelFactory } from "../sync/channels/gql-request-channel-factory.js";
 import { GqlResponseChannelFactory } from "../sync/channels/gql-response-channel-factory.js";
 import { SyncBuilder } from "../sync/sync-builder.js";
-import type { JwtHandler } from "../sync/types.js";
+import type { JwtHandler, LocalPeer } from "../sync/types.js";
 import { ChannelScheme } from "../sync/types.js";
 import { createDefaultDatabase } from "./create-default-database.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
@@ -1020,6 +1020,11 @@ export class ReactorBuilder {
       executorManager,
     );
 
+    const localPeer: LocalPeer = {
+      capabilities: this.getPeerCapabilities(),
+      flags: featureFlags,
+      appKey: this.signer?.app?.key,
+    };
     let syncModule: InProcessSyncModule | undefined = undefined;
     if (this.channelScheme) {
       const factory =
@@ -1035,6 +1040,7 @@ export class ReactorBuilder {
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
         this.driveContainerTypes,
+        localPeer,
       );
       await syncModule.syncManager.startup();
     } else if (this.syncBuilder) {
@@ -1045,6 +1051,7 @@ export class ReactorBuilder {
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
         this.driveContainerTypes,
+        localPeer,
       );
       await syncModule.syncManager.startup();
     }

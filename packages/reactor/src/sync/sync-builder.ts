@@ -13,6 +13,7 @@ import { KyselySyncDeadLetterStorage } from "../storage/kysely/sync-dead-letter-
 import { KyselySyncRemoteStorage } from "../storage/kysely/sync-remote-storage.js";
 import type { Database } from "../storage/kysely/types.js";
 import type { IChannelFactory, ISyncManager } from "./interfaces.js";
+import type { LocalPeer } from "./types.js";
 import { SyncManager, type SyncManagerConfig } from "./sync-manager.js";
 
 export class SyncBuilder {
@@ -69,6 +70,7 @@ export class SyncBuilder {
     eventBus: IEventBus,
     db: Kysely<Database>,
     driveContainerTypes: ReadonlySet<string>,
+    localPeer?: LocalPeer,
   ): ISyncManager {
     const module = this.buildModule(
       reactor,
@@ -77,6 +79,7 @@ export class SyncBuilder {
       eventBus,
       db,
       driveContainerTypes,
+      localPeer,
     );
     return module.syncManager;
   }
@@ -88,6 +91,7 @@ export class SyncBuilder {
     eventBus: IEventBus,
     db: Kysely<Database>,
     driveContainerTypes: ReadonlySet<string>,
+    localPeer?: LocalPeer,
   ): InProcessSyncModule {
     if (!this.channelFactory) {
       throw new Error("Channel factory is required");
@@ -109,6 +113,7 @@ export class SyncBuilder {
       eventBus,
       driveContainerTypes,
       this.config,
+      localPeer,
     );
 
     return {

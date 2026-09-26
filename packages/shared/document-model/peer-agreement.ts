@@ -142,3 +142,48 @@ export function peerSupports(
 ): Supports {
   return manifest ?? legacySupports(capabilities);
 }
+
+function readVersionMap(
+  value: unknown,
+): { [name: string]: readonly number[] } | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  const map: { [name: string]: readonly number[] } = {};
+  for (const [name, versions] of Object.entries(value)) {
+    if (
+      !Array.isArray(versions) ||
+      !versions.every((v) => Number.isInteger(v))
+    ) {
+      return undefined;
+    }
+    map[name] = versionSet(versions as number[]);
+  }
+  return map;
+}
+
+/**
+ * A manifest as received from a peer, or null when it is not one. Formats only
+ * add fields, so one of an unknown format is read as its two maps.
+ */
+export function readPeerManifest(value: unknown): PeerManifest | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const raw = value as Record<string, unknown>;
+  const protocols = readVersionMap(raw.protocols);
+  const features = readVersionMap(raw.features ?? {});
+  if (!protocols || !features) {
+    return null;
+  }
+  return {
+    format: PEER_MANIFEST_FORMAT,
+    ...(typeof raw.appKey === "string" ? { appKey: raw.appKey } : {}),
+    revision:
+      typeof raw.revision === "string"
+        ? raw.revision
+        : manifestRevision({ protocols, features }),
+    protocols,
+    features,
+  };
+}
