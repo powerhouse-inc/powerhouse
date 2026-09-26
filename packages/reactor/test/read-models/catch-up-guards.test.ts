@@ -196,6 +196,55 @@ describe("catch-up duplicate guards", () => {
     await expect(view.get(documentId)).rejects.toThrow(/not found/i);
   });
 
+  it("writes a swept operation's scope state as the live path would", async () => {
+    const documentId = generateId();
+    vi.mocked(writeCache.getState).mockResolvedValue({
+      header: header(documentId),
+      state: { global: { count: 7 }, document: {} },
+    } as never);
+    const view = makeView();
+    const watermark = new SettledWatermark(
+      createKyselyWatermarkProbe(db as unknown as Kysely<StorageDatabase>),
+      new ConsoleLogger(["test"]),
+    );
+    view.attachCatchUp(watermark, 100_000);
+    await view.init();
+
+    const txn = operationIndex.start();
+    txn.write([
+      {
+        id: generateId(),
+        documentId,
+        documentType: "powerhouse/document-model",
+        scope: "global",
+        branch: BRANCH,
+        sourceRemote: "",
+        index: 0,
+        timestampUtcMs: "1700000000000",
+        hash: "hash-0",
+        skip: 0,
+        action: {
+          id: generateId(),
+          type: "SET",
+          scope: "global",
+          timestampUtcMs: "1700000000000",
+          input: {},
+        },
+      },
+    ]);
+    await operationIndex.commit(txn);
+
+    const settled = await watermark.refresh();
+    await view.sweep(
+      settled,
+      await operationIndex.getOrdinalsInRange(0, settled, 10),
+    );
+
+    expect((await snapshot(documentId, "global"))?.content).toEqual({
+      count: 7,
+    });
+  });
+
   it("keeps a relationship removed when the add is swept after the remove", async () => {
     const indexer = new KyselyDocumentIndexer(
       db as unknown as Kysely<IndexerDatabase>,

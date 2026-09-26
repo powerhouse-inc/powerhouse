@@ -321,9 +321,7 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     items: OperationWithContext[],
   ): Promise<void> {}
 
-  /**
-   * Rebuilds document state for each operation using the write cache.
-   */
+  /** Rebuilds resultingState as the executor writes it: scopes plus header. */
   protected async rebuildStateForOperations(
     operations: OperationWithContext[],
   ): Promise<OperationWithContext[]> {
@@ -344,7 +342,10 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
         operation: op.operation,
         context: {
           ...op.context,
-          resultingState: JSON.stringify(document),
+          resultingState: JSON.stringify({
+            ...document.state,
+            header: document.header,
+          }),
         },
       });
     }
