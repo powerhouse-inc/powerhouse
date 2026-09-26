@@ -723,7 +723,7 @@ export class KyselyOperationIndex implements IOperationIndex {
   private async assignXid(trx: Transaction<Database>): Promise<void> {
     let fn = xidFunctions.get(this.db);
     if (fn === undefined) {
-      fn = readSnapshotFunctions(trx).then((fns) => fns.currentXid);
+      fn = readSnapshotFunctions<Database>(trx).then((fns) => fns.currentXid);
       xidFunctions.set(this.db, fn);
       fn.catch(() => xidFunctions.delete(this.db));
     }
