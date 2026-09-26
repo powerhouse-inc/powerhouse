@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  coversLocal,
+  holdReason,
   PEER_CAPABILITIES,
   legacySupports,
   localPeerManifest,
@@ -102,5 +104,58 @@ describe("readPeerManifest", () => {
     expect(readPeerManifest("manifest")).toBeNull();
     expect(readPeerManifest({ protocols: { x: ["1"] } })).toBeNull();
     expect(readPeerManifest({ features: {} })).toBeNull();
+  });
+});
+
+describe("holdReason", () => {
+  const capabilities = mergePeerCapabilities(PEER_CAPABILITIES, [
+    TEST_PROTOCOL,
+  ]);
+  const silent = legacySupports(capabilities);
+  const wide = localSupports(capabilities, { testProtocol: true });
+
+  it.each([
+    ["no versions", {}, undefined],
+    ["baseline versions", { "base-reducer": 2, signature: 2 }, undefined],
+    ["an absent optional key", { "base-reducer": 1 }, undefined],
+    ["an unregistered key", { "base-reducer": 2, "app-key": 9 }, undefined],
+    [
+      "a version outside the baseline",
+      { "base-reducer": 2, "test-protocol": 2 },
+      { protocol: "test-protocol", version: 2, peerSupports: [1] },
+    ],
+    [
+      "a registered key the peer does not list",
+      { "base-reducer": 3 },
+      { protocol: "base-reducer", version: 3, peerSupports: [1, 2] },
+    ],
+  ])("against a silent peer, %s", (_label, versions, expected) => {
+    expect(holdReason(silent, versions, capabilities)).toEqual(expected);
+  });
+
+  it("holds nothing from a peer that supports the version", () => {
+    expect(
+      holdReason(wide, { "test-protocol": 2 }, capabilities),
+    ).toBeUndefined();
+  });
+
+  it("treats a capability missing from a manifest as supporting nothing", () => {
+    const manifest = readPeerManifest({
+      format: 2,
+      protocols: { "base-reducer": [1, 2] },
+    })!;
+    expect(holdReason(manifest, { "test-protocol": 1 }, capabilities)).toEqual({
+      protocol: "test-protocol",
+      version: 1,
+      peerSupports: [],
+    });
+  });
+
+  it("knows when a peer covers everything local", () => {
+    expect(
+      coversLocal(silent, localSupports(capabilities, {}), capabilities),
+    ).toBe(true);
+    expect(coversLocal(silent, wide, capabilities)).toBe(false);
+    expect(coversLocal(wide, wide, capabilities)).toBe(true);
   });
 });

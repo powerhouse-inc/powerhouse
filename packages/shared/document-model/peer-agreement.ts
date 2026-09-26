@@ -187,3 +187,45 @@ export function readPeerManifest(value: unknown): PeerManifest | null {
     features,
   };
 }
+
+/** Why a document may not go to a peer. */
+export type HoldReason = {
+  protocol: string;
+  version: number;
+  peerSupports: readonly number[];
+};
+
+/** Only keys this reactor registers are judged; an absent key agrees. */
+export function holdReason(
+  peer: Supports,
+  versions: { readonly [protocol: string]: number },
+  capabilities: readonly PeerCapability[],
+): HoldReason | undefined {
+  for (const capability of capabilities) {
+    if (capability.kind !== "protocol") continue;
+    const version = versions[capability.name] as number | undefined;
+    if (version === undefined) continue;
+    const supported = peer.protocols[capability.name] ?? [];
+    if (!supported.includes(version)) {
+      return { protocol: capability.name, version, peerSupports: supported };
+    }
+  }
+  return undefined;
+}
+
+/** Whether a peer runs every version this reactor does, so nothing is held. */
+export function coversLocal(
+  peer: Supports,
+  local: Supports,
+  capabilities: readonly PeerCapability[],
+): boolean {
+  for (const capability of capabilities) {
+    if (capability.kind !== "protocol") continue;
+    const theirs = peer.protocols[capability.name] ?? [];
+    const ours = local.protocols[capability.name] ?? [];
+    if (!ours.every((version) => theirs.includes(version))) {
+      return false;
+    }
+  }
+  return true;
+}
