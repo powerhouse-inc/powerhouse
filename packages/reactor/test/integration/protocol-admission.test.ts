@@ -7,7 +7,7 @@ import type { ILogger } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DriveCollectionId } from "../../src/cache/operation-index-types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
-import type { IReactor, ReactorModule } from "../../src/core/types.js";
+import type { InProcessReactorModule, IReactor } from "../../src/core/types.js";
 import { EventBus } from "../../src/events/event-bus.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import type { ISyncCursorStorage } from "../../src/storage/interfaces.js";
@@ -73,7 +73,7 @@ describe("protocol admission", () => {
 
   async function build(
     configure: (builder: ReactorBuilder) => ReactorBuilder = (b) => b,
-  ): Promise<ReactorModule> {
+  ): Promise<InProcessReactorModule> {
     const module = await configure(
       new ReactorBuilder().withDocumentModelSources([
         driveDocumentModelModule as never,
