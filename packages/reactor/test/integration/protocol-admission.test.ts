@@ -1,5 +1,9 @@
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
+  addFolder,
+  driveDocumentModelModule,
+} from "@powerhousedao/shared/document-drive";
+import {
+  generateId,
   localPeerManifest,
   withSignaturePolicy,
   type PeerCapability,
@@ -7,6 +11,7 @@ import {
 import type { ILogger } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DriveCollectionId } from "../../src/cache/operation-index-types.js";
+import { createDefaultDatabase } from "../../src/core/create-default-database.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule, IReactor } from "../../src/core/types.js";
 import { EventBus } from "../../src/events/event-bus.js";
@@ -16,7 +21,10 @@ import type { IChannelFactory } from "../../src/sync/interfaces.js";
 import { SyncBuilder } from "../../src/sync/sync-builder.js";
 import type { SyncEnvelope } from "../../src/sync/types.js";
 import { syncOperationErrorType } from "../../src/sync/utils.js";
-import { createCreateDocumentOperation } from "../factories.js";
+import {
+  createCreateDocumentOperation,
+  createTestOperation,
+} from "../factories.js";
 import { TestChannel } from "../sync/channels/test-channel.js";
 
 const DRIVE = "powerhouse/document-drive";
@@ -120,6 +128,47 @@ describe("protocol admission", () => {
 
     expect((await settled(reactor, info.id)).status).toBe(JobStatus.READ_READY);
   });
+
+  it.each([false, true])(
+    "refuses writes and loads into a stored document above a narrowed registry (documentDecisions %s)",
+    async (documentDecisions) => {
+      const db = await createDefaultDatabase();
+      const flags = (b: ReactorBuilder) =>
+        b
+          .withKysely(db)
+          .withExecutorConfig({ featureFlags: { documentDecisions } });
+      const wide = await build((b) =>
+        flags(b).withPeerCapabilities([BASE_REDUCER_7]),
+      );
+      const created = await wide.reactor.create(
+        driveAt({ "base-reducer": 7 }, "br7-stored"),
+      );
+      expect((await settled(wide.reactor, created.id)).status).toBe(
+        JobStatus.READ_READY,
+      );
+      await wide.reactor.kill().completed;
+
+      const narrow = await build(flags);
+
+      const write = await narrow.reactor.execute("br7-stored", "main", [
+        addFolder({ id: generateId(), name: "narrowed", parentFolder: null }),
+      ]);
+      const writeJob = await settled(narrow.reactor, write.id);
+      expect(writeJob.status).toBe(JobStatus.FAILED);
+      expect(writeJob.error?.name).toBe("UnsupportedProtocolVersionError");
+
+      const folder = addFolder({ id: generateId(), name: "loaded" });
+      const load = await narrow.reactor.load("br7-stored", "main", [
+        createTestOperation("br7-stored", {
+          index: 0,
+          action: { ...folder, scope: "global" },
+        }),
+      ]);
+      const loadJob = await settled(narrow.reactor, load.id);
+      expect(loadJob.status).toBe(JobStatus.FAILED);
+      expect(loadJob.error?.name).toBe("UnsupportedProtocolVersionError");
+    },
+  );
 
   it("admits and logs a key no capability registers", async () => {
     const logger = spyLogger();

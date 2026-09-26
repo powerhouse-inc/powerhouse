@@ -805,30 +805,11 @@ export class SyncManager implements ISyncManager {
    * Refuses, before load, what this reactor cannot run and what the sending
    * peer does not announce. Neither quarantines the document.
    */
-  private refuseOnReceipt(
+  private async refuseOnReceipt(
     remote: Remote,
     syncOps: readonly SyncOperation[],
-  ): Set<SyncOperation> | Promise<Set<SyncOperation>> {
-    const peer = this.peerSupportsOf(remote);
-    if (coversLocal(peer, this.localSupport, this.capabilities)) {
-      // Only a creation in the batch can carry a version to refuse.
-      const refused = new Set<SyncOperation>();
-      for (const syncOp of syncOps) {
-        const versions = createdVersions(syncOp.operations, syncOp.documentId);
-        if (versions && this.refuse(remote, syncOp, versions, undefined)) {
-          refused.add(syncOp);
-        }
-      }
-      return refused;
-    }
-    return this.refuseAgainstPeer(remote, syncOps, peer);
-  }
-
-  private async refuseAgainstPeer(
-    remote: Remote,
-    syncOps: readonly SyncOperation[],
-    peer: Supports,
   ): Promise<Set<SyncOperation>> {
+    const peer = this.peerSupportsOf(remote);
     const refused = new Set<SyncOperation>();
     for (const syncOp of syncOps) {
       const versions =
@@ -841,19 +822,19 @@ export class SyncManager implements ISyncManager {
     return refused;
   }
 
-  /** Dead-letters a refused sync operation; `peer` unset skips the peer check. */
+  /** Dead-letters a refused sync operation. */
   private refuse(
     remote: Remote,
     syncOp: SyncOperation,
     versions: ProtocolVersions,
-    peer: Supports | undefined,
+    peer: Supports,
   ): boolean {
     let errorType: SyncOperationErrorType;
     let reason = holdReason(this.localSupport, versions, this.capabilities);
     if (reason) {
       errorType = "UNSUPPORTED_PROTOCOL";
     } else {
-      reason = peer && holdReason(peer, versions, this.capabilities);
+      reason = holdReason(peer, versions, this.capabilities);
       if (!reason) return false;
       errorType = "PEER_PROTOCOL_UNSUPPORTED";
     }
@@ -1445,8 +1426,7 @@ export class SyncManager implements ISyncManager {
     remote: Remote,
     syncOp: SyncOperation,
   ): Promise<void> {
-    let refused = this.refuseOnReceipt(remote, [syncOp]);
-    if (refused instanceof Promise) refused = await refused;
+    const refused = await this.refuseOnReceipt(remote, [syncOp]);
     if (refused.size > 0) {
       return;
     }
@@ -1526,8 +1506,7 @@ export class SyncManager implements ISyncManager {
   ): Promise<void> {
     const refused = new Set<SyncOperation>();
     for (const { remote, syncOp } of received) {
-      let refusals = this.refuseOnReceipt(remote, [syncOp]);
-      if (refusals instanceof Promise) refusals = await refusals;
+      const refusals = await this.refuseOnReceipt(remote, [syncOp]);
       for (const refusal of refusals) {
         refused.add(refusal);
       }

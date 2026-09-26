@@ -356,6 +356,16 @@ export class SimpleJobExecutor implements IJobExecutor {
     } = params;
 
     let pendingEvent: JobWriteReadyEvent | undefined;
+
+    const unsupported = await this.unsupportedStoredProtocol(
+      job,
+      stores,
+      signal,
+    );
+    if (unsupported) {
+      return { result: buildErrorResult(job, unsupported, startTime) };
+    }
+
     const indexTxn = stores.operationIndex.start();
 
     if (job.kind === "load") {
@@ -553,6 +563,43 @@ export class SimpleJobExecutor implements IJobExecutor {
       actionResult.generatedOperations,
       stores,
       startTime,
+    );
+  }
+
+  /** A stored document at a version this reactor does not run is read-only here. */
+  private async unsupportedStoredProtocol(
+    job: Job,
+    stores: ExecutionStores,
+    signal?: AbortSignal,
+  ): Promise<Error | undefined> {
+    let versions;
+    try {
+      // Read the way admission reads: with decisions on, execution bypasses the meta cache.
+      versions =
+        this.featureFlags.documentDecisions && job.kind !== "load"
+          ? (
+              await stores.writeCache.getState(
+                job.documentId,
+                "document",
+                job.branch,
+                undefined,
+                signal,
+              )
+            ).header.protocolVersions
+          : (
+              await stores.documentMetaCache.getDocumentMeta(
+                job.documentId,
+                job.branch,
+                signal,
+              )
+            ).protocolVersions;
+    } catch {
+      // Not stored yet, or unreadable: the job's own reads decide.
+      return undefined;
+    }
+    return this.documentActionHandler.unsupportedProtocol(
+      job.documentId,
+      versions,
     );
   }
 

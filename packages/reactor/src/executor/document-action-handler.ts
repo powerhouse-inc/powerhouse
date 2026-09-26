@@ -96,12 +96,11 @@ export class DocumentActionHandler {
   ) {}
 
   /** Keys this reactor does not register are admitted: it cannot judge them. */
-  private unsupportedProtocol(
-    input: CreateDocumentActionInput,
+  unsupportedProtocol(
+    documentId: string,
+    protocolVersions: { readonly [protocol: string]: number } | undefined,
   ): UnsupportedProtocolVersionError | undefined {
-    for (const [protocol, version] of Object.entries(
-      input.protocolVersions ?? {},
-    )) {
+    for (const [protocol, version] of Object.entries(protocolVersions ?? {})) {
       const supported = this.protocolSupport[protocol] as
         | readonly number[]
         | undefined;
@@ -110,7 +109,7 @@ export class DocumentActionHandler {
           this.loggedUnregisteredProtocols.add(protocol);
           this.logger.info(
             "Admitting document @documentId with unregistered protocol @protocol @version",
-            input.documentId,
+            documentId,
             protocol,
             version,
           );
@@ -119,7 +118,7 @@ export class DocumentActionHandler {
       }
       if (!supported.includes(version)) {
         return new UnsupportedProtocolVersionError(
-          input.documentId,
+          documentId,
           protocol,
           version,
         );
@@ -391,8 +390,10 @@ export class DocumentActionHandler {
       };
     }
 
+    const input = action.input as CreateDocumentActionInput;
     const unsupported = this.unsupportedProtocol(
-      action.input as CreateDocumentActionInput,
+      input.documentId,
+      input.protocolVersions,
     );
     if (unsupported) {
       return buildErrorResult(job, unsupported, startTime);
