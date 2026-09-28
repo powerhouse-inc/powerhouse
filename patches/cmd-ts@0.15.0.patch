@@ -1,0 +1,19 @@
+diff --git a/package.json b/package.json
+index 6b5dcf0111f358342c96424ce908f71ece4b3ba4..bf3e35a2a9d7b13d7c7b3905b44939e8f3bfc6c2 100644
+--- a/package.json
++++ b/package.json
+@@ -64,5 +64,14 @@
+     "ts-node": "tsx",
+     "changeset:version": "changeset version && pnpm install --no-frozen-lockfile",
+     "changeset:publish": "pnpm run build && changeset publish"
++  },
++  "exports": {
++    ".": {
++      "types": "./dist/cjs/index.d.ts",
++      "bun": "./dist/esm/index.js",
++      "default": "./dist/cjs/index.js"
++    },
++    "./package.json": "./package.json",
++    "./*": "./*"
+   }
+ }
