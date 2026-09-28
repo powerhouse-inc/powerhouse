@@ -1,7 +1,7 @@
 import type { DocumentModelDocumentTypeMetadata } from "file-builders";
 import { readdirSync } from "fs";
 import { getDocumentModelVariableNames } from "name-builders";
-import { join } from "path";
+import { posix } from "path";
 import {
   filter,
   first,
@@ -56,7 +56,10 @@ export function getDocumentTypeMetadata({
     documentModelId,
     documentModelDocumentTypeName: phDocumentTypeName,
     documentModelDirName: kebabCaseDocumentType,
-    documentModelImportPath: join("document-models", kebabCaseDocumentType),
+    documentModelImportPath: posix.join(
+      "document-models",
+      kebabCaseDocumentType,
+    ),
   };
 
   return documentTypeMetadata;
