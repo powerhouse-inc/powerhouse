@@ -64,9 +64,13 @@ function parseType(raw: string): TypeRef {
 function parseFields(body: string): InputField[] {
   const fields: InputField[] = [];
   let description: string | undefined;
-  // Block descriptions first, so a `"` inside one can't open a line string.
+  // Block descriptions fold onto one line first, so none of their lines can
+  // read as a field or open a line string.
   const lines = body
-    .replace(/"""([\s\S]*?)"""/g, (_, text: string) => `"${text.trim()}"`)
+    .replace(
+      /"""([\s\S]*?)"""/g,
+      (_, text: string) => `"${text.trim().replace(/\s+/g, " ")}"`,
+    )
     .split("\n");
   for (const rawLine of lines) {
     const line = rawLine.replace(/#.*$/, "").trim();

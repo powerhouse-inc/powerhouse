@@ -116,6 +116,22 @@ test.describe("Prop controls", () => {
     await expect
       .poll(() => config(page))
       .toMatchObject({ user: "grace-hopper" });
+    // The pick keeps its label though the unfiltered list doesn't hold it.
+    const user = page.getByRole("combobox", { name: /User/ });
+    await expect(user).toContainText("Grace Hopper");
+
+    // Dismissing mid-search drops the results with the query.
+    await user.click();
+    await page.getByPlaceholder("Search").fill("alan");
+    await expect(
+      page.getByRole("option", { name: "Alan Turing" }),
+    ).toBeVisible();
+    await page.getByTestId("config").click();
+    await user.click();
+    await expect(page.getByPlaceholder("Search")).toHaveValue("");
+    await expect(
+      page.getByRole("option", { name: "Alan Turing" }),
+    ).toBeHidden();
   });
 
   test("a date range commits a preset, or a custom pair", async ({ page }) => {

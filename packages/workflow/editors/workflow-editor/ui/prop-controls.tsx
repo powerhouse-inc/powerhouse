@@ -1,6 +1,6 @@
 // Controls for Activepieces prop types and display hints that PropertyForm
 // renders beyond plain inputs: callouts, steppers, date ranges, cards, colour.
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   IconButton,
   invalidClass,
@@ -336,14 +336,30 @@ export function ColorField(props: {
   onFocus?: (event: { currentTarget: Element }) => void;
 }) {
   const text = typeof props.value === "string" ? props.value : "";
+  // React's onChange fires on every drag tick; the native change event fires
+  // once the pick is done, so only that one commits.
+  const [draft, setDraft] = useState<string | null>(null);
+  const swatchRef = useRef<HTMLInputElement>(null);
+  const onCommit = props.onCommit;
+  useEffect(() => {
+    const swatch = swatchRef.current;
+    if (!swatch) return;
+    const commit = () => {
+      setDraft(null);
+      onCommit(swatch.value);
+    };
+    swatch.addEventListener("change", commit);
+    return () => swatch.removeEventListener("change", commit);
+  }, [onCommit]);
   return (
     <div className="flex items-center gap-2">
       <input
+        ref={swatchRef}
         type="color"
         aria-label="Pick a colour"
         className="h-9 w-10 shrink-0 cursor-pointer rounded-md border border-solid border-foreground/15 bg-card p-1"
-        value={HEX.test(text) ? text : "#000000"}
-        onChange={(event) => props.onCommit(event.target.value)}
+        value={draft ?? (HEX.test(text) ? text : "#000000")}
+        onChange={(event) => setDraft(event.target.value)}
       />
       <input
         id={props.id}

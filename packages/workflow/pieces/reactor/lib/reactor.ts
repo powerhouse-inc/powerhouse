@@ -270,10 +270,10 @@ export const actionInputProp = (displayName = "Input") =>
   });
 
 // The action and its input, in one card: they only make sense together.
-export const ACTION_GROUP = (description: string) => ({
+export const ACTION_GROUP = (when: string) => ({
   key: "action",
   display: "section" as const,
   label: "Action",
-  description,
+  description: `${when} Pick a type, then fill in its input: the action needs both.`,
   props: ["actionType", "input"],
 });

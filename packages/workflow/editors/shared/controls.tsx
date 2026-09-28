@@ -360,10 +360,16 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
     [needle, props.options, serverSide],
   );
 
-  const close = () => {
+  const onQueryChange = props.onQueryChange;
+  // Closing also ends a source search, so the next opening starts unfiltered.
+  const dismiss = () => {
     setOpen(false);
-    if (query) props.onQueryChange?.("");
     setQuery("");
+    onQueryChange?.("");
+  };
+
+  const close = () => {
+    dismiss();
     triggerRef.current?.focus();
   };
 
@@ -413,6 +419,7 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
       ) {
         setOpen(false);
         setQuery("");
+        onQueryChange?.("");
       }
     };
     window.addEventListener("mousedown", onPointer);
@@ -423,7 +430,7 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
-  }, [open, searchable]);
+  }, [open, searchable, onQueryChange]);
 
   useEffect(() => {
     popoverRef.current
@@ -461,8 +468,7 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
       close();
     } else if (event.key === "Tab") {
       // Let focus move on as usual.
-      setOpen(false);
-      setQuery("");
+      dismiss();
     }
   };
 
@@ -657,8 +663,7 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
                       className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground"
                       onMouseDown={(event) => {
                         event.preventDefault();
-                        setOpen(false);
-                        setQuery("");
+                        dismiss();
                         action.onSelect();
                       }}
                     >

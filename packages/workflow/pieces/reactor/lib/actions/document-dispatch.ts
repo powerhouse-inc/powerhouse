@@ -26,7 +26,7 @@ export const documentDispatchAction = createAction({
   displayName: "Dispatch actions",
   description: "Sends actions to a document.",
   requireAuth: false,
-  propertyGroups: [ACTION_GROUP("Sent to the document")],
+  propertyGroups: [ACTION_GROUP("Sent to the document.")],
   props: {
     documentId: documentIdProp(
       "Document id",
