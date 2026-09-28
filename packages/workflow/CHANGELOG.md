@@ -1,3 +1,13 @@
+## 6.2.3-dev.29 (2026-09-28)
+
+### 🩹 Fixes
+
+- **reactor-workflow:** refuse a secrets master key other than the one secrets were stored with ([87cfde0f5](https://github.com/powerhouse-inc/powerhouse/commit/87cfde0f5))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.28 (2026-09-28)
 
 ### 🚀 Features

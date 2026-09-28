@@ -1,3 +1,13 @@
+## 6.2.3-dev.29 (2026-09-28)
+
+### 🩹 Fixes
+
+- **codegen:** build generated module specifiers with posix separators ([13cba40ab](https://github.com/powerhouse-inc/powerhouse/commit/13cba40ab))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.28 (2026-09-28)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

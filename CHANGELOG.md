@@ -1,3 +1,16 @@
+## 6.2.3-dev.29 (2026-09-28)
+
+### 🩹 Fixes
+
+- **builder-tools:** shim missing exports from optional peers in the connect build ([999566051](https://github.com/powerhouse-inc/powerhouse/commit/999566051))
+- **codegen:** build generated module specifiers with posix separators ([13cba40ab](https://github.com/powerhouse-inc/powerhouse/commit/13cba40ab))
+- **reactor-workflow:** refuse a secrets master key other than the one secrets were stored with ([87cfde0f5](https://github.com/powerhouse-inc/powerhouse/commit/87cfde0f5))
+- **shared:** resolve the path before creating a file's directory ([720668368](https://github.com/powerhouse-inc/powerhouse/commit/720668368))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.28 (2026-09-28)
 
 ### 🚀 Features

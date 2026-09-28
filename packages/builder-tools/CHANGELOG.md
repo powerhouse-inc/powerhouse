@@ -1,3 +1,13 @@
+## 6.2.3-dev.29 (2026-09-28)
+
+### 🩹 Fixes
+
+- **builder-tools:** shim missing exports from optional peers in the connect build ([999566051](https://github.com/powerhouse-inc/powerhouse/commit/999566051))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.28 (2026-09-28)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
