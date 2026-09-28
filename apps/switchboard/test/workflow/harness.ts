@@ -18,6 +18,10 @@ import {
 import type { OperationWithContext } from "document-model";
 import type { Kysely } from "kysely";
 import { vi } from "vitest";
+import {
+  CORE_PIECE_NAME,
+  CORE_PIECE_VERSION,
+} from "@powerhousedao/reactor-workflow";
 
 export const WORKFLOW_TYPE = "powerhouse/workflow";
 export const PACKAGE_NAME = "@powerhousedao/workflow";
@@ -33,6 +37,19 @@ export interface FiredRun {
   kind: string;
 }
 
+export interface TriggerFields {
+  pieceName: string;
+  pieceVersion: string;
+  triggerName: string;
+}
+
+// The core piece's webhook trigger, pinned to the installed core piece.
+export const WEBHOOK_TRIGGER: TriggerFields = {
+  pieceName: CORE_PIECE_NAME,
+  pieceVersion: CORE_PIECE_VERSION,
+  triggerName: "webhook",
+};
+
 export interface WebhookHost {
   /** Origin the endpoint is served from, e.g. `http://127.0.0.1:53124`. */
   readonly url: string;
@@ -42,7 +59,7 @@ export interface WebhookHost {
   /** Publishes an ENABLED workflow with `config`; returns its endpoint. */
   arm(
     config: Record<string, unknown>,
-    options?: { blockType?: string; workflowId?: string },
+    options?: { trigger?: TriggerFields; workflowId?: string },
   ): Promise<{ token: string; url: string }>;
   /** Publishes the same workflow as DISABLED, keeping its endpoint row. */
   disarm(workflowId?: string): Promise<void>;
@@ -91,7 +108,11 @@ export function workflowOperation(
 // `publicUrl` is known only after `listen`: a family registered against the
 // wrong origin advertises URLs no caller can reach.
 export async function startWebhookHost(
-  options: { fire?: (run: FiredRun) => unknown } = {},
+  options: {
+    fire?: (run: FiredRun) => unknown;
+    // Reads and writes of the workflow documents; none by default.
+    reactorClient?: unknown;
+  } = {},
 ): Promise<WebhookHost> {
   // The public factory, not the adapter class: the class is internal, so
   // constructing it would test a path no consumer can take.
@@ -120,7 +141,7 @@ export async function startWebhookHost(
     relationalDb: createRelationalDb(
       db as unknown as Kysely<unknown>,
     ) as IRelationalDb,
-    reactorClient: {
+    reactorClient: options.reactorClient ?? {
       get: () => Promise.reject(new Error("not used")),
       find: () => Promise.resolve({ results: [] }),
     },
@@ -154,7 +175,7 @@ export async function startWebhookHost(
   const publish = async (
     config: Record<string, unknown>,
     status: string,
-    blockType: string,
+    trigger: TriggerFields,
     workflowId: string,
   ) => {
     await service.onOperations([
@@ -163,7 +184,7 @@ export async function startWebhookHost(
           name: "Integration",
           status,
           version: ordinal + 1,
-          trigger: { id: "t1", blockType, config },
+          trigger: { id: "t1", ...trigger, config },
           steps: [],
           edges: [],
           variables: [],
@@ -179,10 +200,11 @@ export async function startWebhookHost(
     service,
     async arm(config, opts = {}) {
       const workflowId = opts.workflowId ?? DEFAULT_WORKFLOW;
+      // The runtime requires a scheme; an unsigned suite names "none".
       await publish(
-        config,
+        { scheme: "none", ...config },
         "ENABLED",
-        opts.blockType ?? "core#webhook",
+        opts.trigger ?? WEBHOOK_TRIGGER,
         workflowId,
       );
       const endpoint = await service.webhookEndpoint(workflowId, CALLER);
@@ -194,7 +216,7 @@ export async function startWebhookHost(
       };
     },
     async disarm(workflowId = DEFAULT_WORKFLOW) {
-      await publish({}, "DISABLED", "core#webhook", workflowId);
+      await publish({}, "DISABLED", WEBHOOK_TRIGGER, workflowId);
     },
     policyFor(workflowId = DEFAULT_WORKFLOW) {
       return service.webhookPolicy(workflowId);

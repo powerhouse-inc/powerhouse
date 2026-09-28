@@ -24,7 +24,7 @@ interface PolicyShape {
   challengeField?: unknown;
 }
 
-describe("core#webhook redelivery", () => {
+describe("the core webhook trigger redelivery", () => {
   it("dedupes on a bare field name found in the query string", async () => {
     host = await startWebhookHost();
     const { token } = await host.arm({
@@ -207,7 +207,7 @@ describe("core#webhook redelivery", () => {
   });
 });
 
-describe("core#webhook endpoint verification", () => {
+describe("the core webhook trigger endpoint verification", () => {
   it("echoes a bare challenge field from the query string without running", async () => {
     host = await startWebhookHost();
     const { token } = await host.arm({
@@ -262,7 +262,7 @@ describe("core#webhook endpoint verification", () => {
   });
 });
 
-describe("core#webhook field policy", () => {
+describe("the core webhook trigger field policy", () => {
   it("hands the reactor a source-tagged field for a prefixed config", async () => {
     host = await startWebhookHost();
     await host.arm({
