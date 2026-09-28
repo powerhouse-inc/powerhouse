@@ -11,10 +11,6 @@ import path from "path";
 import {
   pieceActionFileTemplate,
   pieceAuthFileTemplate,
-  pieceAuthValueFileTemplate,
-  pieceClientFileTemplate,
-  pieceContextFileTemplate,
-  pieceErrorsFileTemplate,
   pieceIndexFileTemplate,
   pieceLogoFileTemplate,
   pieceTriggerFileTemplate,
@@ -37,9 +33,6 @@ import type {
   PieceNames,
   PieceTriggerStrategy,
 } from "./types.js";
-
-const EXAMPLE_ACTION = "get-record";
-const EXAMPLE_TRIGGER = "new-record";
 
 export function getPieceNames(pieceName: string): PieceNames {
   return {
@@ -182,7 +175,6 @@ function pieceDirPaths(project: Project, kebabCaseName: string) {
     piecesDirPath,
     pieceDirPath,
     libDirPath: path.join(pieceDirPath, "lib"),
-    commonDirPath: path.join(pieceDirPath, "lib", "common"),
     actionsDirPath: path.join(pieceDirPath, "lib", "actions"),
     triggersDirPath: path.join(pieceDirPath, "lib", "triggers"),
   };
@@ -219,9 +211,6 @@ export async function tsMorphGeneratePiece(args: {
     paths.piecesDirPath,
     paths.pieceDirPath,
     paths.libDirPath,
-    paths.actionsDirPath,
-    paths.triggersDirPath,
-    ...(withAuth ? [paths.commonDirPath] : []),
   );
 
   await writeUnlessExists(
@@ -230,70 +219,20 @@ export async function tsMorphGeneratePiece(args: {
     pieceLogoFileTemplate(names),
   );
   if (withAuth) {
-    const authKind = auth === "secret" ? "secret" : "custom";
-    await writeUnlessExists(
-      project,
-      path.join(paths.commonDirPath, "errors.ts"),
-      pieceErrorsFileTemplate(names),
-    );
-    await writeUnlessExists(
-      project,
-      path.join(paths.commonDirPath, "auth-value.ts"),
-      pieceAuthValueFileTemplate({ ...names, auth: authKind }),
-    );
-    await writeUnlessExists(
-      project,
-      path.join(paths.commonDirPath, "client.ts"),
-      pieceClientFileTemplate(names),
-    );
-    await writeUnlessExists(
-      project,
-      path.join(paths.commonDirPath, "context.ts"),
-      pieceContextFileTemplate(names),
-    );
     await writeUnlessExists(
       project,
       path.join(paths.libDirPath, "auth.ts"),
-      pieceAuthFileTemplate({ ...names, auth: authKind }),
+      pieceAuthFileTemplate({
+        ...names,
+        auth: auth === "secret" ? "secret" : "custom",
+      }),
     );
   }
 
   await writeUnlessExists(
     project,
-    path.join(paths.actionsDirPath, `${EXAMPLE_ACTION}.ts`),
-    pieceActionFileTemplate({
-      ...names,
-      exportName: actionExportName(names, EXAMPLE_ACTION),
-      actionName: EXAMPLE_ACTION,
-      actionDisplayName: capitalCase(EXAMPLE_ACTION),
-      withAuth,
-    }),
-  );
-  await writeUnlessExists(
-    project,
-    path.join(paths.triggersDirPath, `${EXAMPLE_TRIGGER}.ts`),
-    pieceTriggerFileTemplate({
-      ...names,
-      exportName: triggerExportName(names, EXAMPLE_TRIGGER),
-      triggerName: EXAMPLE_TRIGGER,
-      triggerDisplayName: capitalCase(EXAMPLE_TRIGGER),
-      strategy: "polling",
-      withAuth,
-    }),
-  );
-
-  await writeUnlessExists(
-    project,
     path.join(paths.pieceDirPath, "index.ts"),
-    pieceIndexFileTemplate({
-      ...names,
-      description,
-      withAuth,
-      actionExportName: actionExportName(names, EXAMPLE_ACTION),
-      actionFileName: EXAMPLE_ACTION,
-      triggerExportName: triggerExportName(names, EXAMPLE_TRIGGER),
-      triggerFileName: EXAMPLE_TRIGGER,
-    }),
+    pieceIndexFileTemplate({ ...names, description, withAuth }),
   );
 
   await addPieceToList({

@@ -113,6 +113,7 @@ export function getPieceMetadata(
     dirName,
     displayName: literal ? stringProperty(literal, "displayName") : undefined,
     description: literal ? stringProperty(literal, "description") : undefined,
-    hasAuth: auth !== undefined && auth !== "undefined",
+    hasAuth:
+      auth !== undefined && auth !== "undefined" && auth !== "PieceAuth.None()",
   };
 }
