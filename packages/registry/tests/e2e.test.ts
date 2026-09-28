@@ -2,6 +2,7 @@ import type { Manifest } from "@powerhousedao/shared";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { access, cp, mkdir, rm } from "node:fs/promises";
 import http from "node:http";
+import type { AddressInfo } from "node:net";
 import path from "node:path";
 import {
   afterAll,
@@ -13,7 +14,6 @@ import {
   vi,
 } from "vitest";
 import {
-  DEFAULT_PORT,
   DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
   DEFAULT_STORAGE_DIR_NAME,
 } from "../src/constants.js";
@@ -22,7 +22,8 @@ import { runRegistry } from "../src/run.js";
 import type { WebhookConfig } from "../src/types.js";
 import { packTarball } from "./pack.js";
 
-const REGISTRY_URL = `http://localhost:${DEFAULT_PORT}`;
+// Bound to an ephemeral port in runServer.
+let REGISTRY_URL = "";
 const TEST_PKG_NAME = "test-pkg";
 const TEST_PKG_VERSION = "1.0.0";
 const POLL_TIMEOUT = 15000;
@@ -104,7 +105,7 @@ describe("registry e2e", () => {
 
   async function runServer() {
     const server = await runRegistry({
-      port: 8080,
+      port: 0,
       storageDir: DEFAULT_STORAGE_DIR_NAME,
       cdnCacheDir: DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
       uplink: undefined,
@@ -121,6 +122,7 @@ describe("registry e2e", () => {
       server.once("listening", resolve);
       server.once("error", reject);
     });
+    REGISTRY_URL = `http://localhost:${(server.address() as AddressInfo).port}`;
     return server;
   }
 

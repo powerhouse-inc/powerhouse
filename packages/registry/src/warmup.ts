@@ -25,7 +25,8 @@ export function createWarmer(
   let lastWarmAt = 0;
 
   return async function warm(): Promise<void> {
-    if (warmInFlight) return;
+    // Port 0 is not bound yet: the listener sets the real port.
+    if (warmInFlight || config.port === 0) return;
     if (Date.now() - lastWarmAt < WARM_INTERVAL_MS) return;
     warmInFlight = true;
     try {

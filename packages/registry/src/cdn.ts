@@ -47,11 +47,21 @@ export function isExactVersion(tag?: string): boolean {
 
 export class CdnCache {
   #extractionLocks = new Map<string, Promise<void>>();
+  #registryUrl: string | (() => string);
 
+  // A function when the registry's own port is known only once it listens.
   constructor(
-    private registryUrl: string,
+    registryUrl: string | (() => string),
     private cdnCachePath: string,
-  ) {}
+  ) {
+    this.#registryUrl = registryUrl;
+  }
+
+  private get registryUrl(): string {
+    return typeof this.#registryUrl === "function"
+      ? this.#registryUrl()
+      : this.#registryUrl;
+  }
 
   async getFileByVersion(
     packageName: string,
