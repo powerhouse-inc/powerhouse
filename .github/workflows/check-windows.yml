@@ -62,6 +62,15 @@ jobs:
           node-version: 24
           cache: "pnpm"
 
+      # pnpm's supply-chain check of the lockfile takes ~90s here; it skips it
+      # when this verdict matches the lockfile and policy.
+      - name: Cache pnpm lockfile verification
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\pnpm-cache\lockfile-verified.jsonl
+          key: pnpm-lockfile-verified-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml') }}
+          restore-keys: pnpm-lockfile-verified-${{ runner.os }}-
+
       # bun is a hard prerequisite: the `postbuild` steps of ph-cli, ph-cmd and
       # registry all shell out to it, so `pnpm build` cannot finish without it.
       - name: Setup bun global install
