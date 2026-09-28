@@ -160,7 +160,7 @@ type WorkflowVariable {
   "The value a run reads as variables.<key>."
   value: Unknown
   description: String
-  "Null means untyped; consumers infer the type from the value."
+  "Null means untyped; consumers infer the kind of value it holds."
   type: VariableType
 }
 

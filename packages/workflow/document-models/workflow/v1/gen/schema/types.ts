@@ -404,7 +404,7 @@ export type WorkflowVariable = {
   id: Scalars["OID"]["output"];
   /** Name used in expressions. */
   key: Scalars["String"]["output"];
-  /** Null means untyped; consumers infer the type from the value. */
+  /** Null means untyped; consumers infer the kind of value it holds. */
   type: Maybe<VariableType>;
   /** The value a run reads as variables.<key>. */
   value: Maybe<Scalars["Unknown"]["output"]>;
