@@ -433,9 +433,7 @@ Generate a piece: a connector whose actions and triggers a workflow can call
 ### Options
 **Name** - The name of the piece to generate - Usage: `--name, -n <str>`
 
-**Id** - The piece id a workflow block type names, e.g. @acme/piece-crm. Defaults to one derived from the package name. - Usage: `--id <str>`
-
-**Piece Version** - The version the pieces list declares. Defaults to the package version when the piece is named after the package, else 1.0.0. - Usage: `--piece-version <str>`
+**Id** - The piece id, the pieceName a workflow step holds, e.g. @acme/piece-crm. Defaults to one derived from the package name. - Usage: `--id <str>`
 
 **Auth** - The kind of connection the piece asks for - Usage: `--auth <value>`
 
@@ -648,8 +646,10 @@ document models, editors, subgraphs and processors, type declarations, and its s
 
 Pieces under pieces/ are built too, each into its own self-contained module under
 dist/node/pieces/&lt;name&gt;, with a descriptor.json and package.json written beside it and
-the piece listed in dist/powerhouse.manifest.json. A package that ships only pieces is an
-ordinary package: it carries the same boilerplate, and every step above runs for it too.
+the piece listed in dist/powerhouse.manifest.json. A piece takes the package's version: an
+entry in pieces/index.ts that declares version fails the build. A package that ships only
+pieces is an ordinary package: it carries the same boilerplate, and every step above runs
+for it too.
 
 tsc runs first. If it reports type errors the build asks whether to go ahead, and stops
 where it can't ask. --ignore-type-errors builds without asking; a package built that way
@@ -756,7 +756,9 @@ Runtime-config overrides (all combinable — last wins on collision):
   ph connect build                                    Build with the current source config.
   ph connect build &lt;key&gt; &lt;value&gt;                      Build with a positional override applied (e.g. ph connect build connect.renown.url `https://renown.staging`).
   ph connect build --&lt;field&gt; &lt;value&gt;                  Build with a per-field flag override (e.g. --renown-url `https://renown.staging`).
-  ph connect build --json '\{"…":"…"\}'                Build with a bulk override.
+  ph connect build --json '\{"app":\{"workflowsEnabled":true\}\}'
+                                                      Build with a bulk override. The payload is the connect.* block
+                                                      without the "connect" wrapper; unknown keys are rejected.
 
 Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors out (use `ph connect config <key>` to read).
 
@@ -767,7 +769,7 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 **Out Dir** - Output directory - Usage: `--outDir <str>`
 
 **Default:** `.ph/connect-build/dist/`
-**Json** - Inline JSON override for the runtime connect.* block, e.g. '\{"renown":\{"url":"..."\}\}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
+**Json** - Inline JSON override for the runtime connect.* block, without the "connect" wrapper, e.g. '\{"app":\{"workflowsEnabled":true\},"renown":\{"url":"..."\}\}'. A top-level packageRegistryUrl is also accepted. Validated against the runtime schema (unknown keys fail); deep-merged on top of source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
 
 **Renown Url** - Override connect.renown.url. - Usage: `--renown-url <str>`
 

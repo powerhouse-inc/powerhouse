@@ -1,6 +1,6 @@
 # Building a piece
 
-A piece is a connector a workflow can call: a named bundle of **actions** (things a step does) and **triggers** (things that start a run). If you haven't met workflows yet, read [What are workflows?](/academy/Learn/workflows/what-are-workflows) first — this tutorial assumes you know what a step and a block type are.
+A piece is a connector a workflow can call: a named bundle of **actions** (things a step does) and **triggers** (things that start a run). If you haven't met workflows yet, read [What are workflows?](/academy/Learn/workflows/what-are-workflows) first — this tutorial assumes you know what a step and a block are.
 
 Your reactor package already ships document models, editors and processors. It can ship pieces the same way, and that's the route for anything the public connector catalogue can't cover: your internal API, your domain calculation, your service.
 
@@ -26,7 +26,7 @@ ph generate piece crm --id @acme/piece-crm --auth custom
 ```
 
 - **`crm`** names the directory, `pieces/crm/`.
-- **`--id`** is what a block type names. Defaults to something derived from your package name; pick it deliberately, because changing it later breaks every workflow already referring to it.
+- **`--id`** is the piece name a step's `pieceName` holds. Defaults to something derived from your package name; pick it deliberately, because changing it later breaks every workflow already referring to it.
 - **`--auth`** is the kind of connection the piece asks for: `custom` (a form you define), `secret` (a single token), or `none`.
 
 You get a working piece with one example action and one example trigger:
@@ -136,8 +136,8 @@ export const crmGetRecordAction = createAction({
 
 Three of those deserve attention, because they're what makes a step usable by someone who didn't write the piece:
 
-- **`name`** is the half after `#` in the block type. This step is `@acme/piece-crm#get-record`. Note there's no version in it: a piece your package ships is named unversioned, because the copy the reactor installed is the copy that runs. Renaming the action, though, breaks every workflow that referred to it.
-- **`props`** is the form Workflow Studio renders for the step. A property a user may reasonably leave empty must be `required: false`, or the step can't be saved half-built while someone is still assembling the workflow.
+- **`name`** is what a step's `actionName` holds. A step pins the piece version it was built against, so this step is `pieceName: "@acme/piece-crm"`, `pieceVersion: "1.4.0"`, `actionName: "get-record"` for version `1.4.0` of your package. Workflows keep working across upgrades, because the version is not part of a block's identity: the same action at another version is the same block. Renaming the action, though, breaks every workflow that referred to it.
+- **`props`** is the form Workflow Studio renders for the step. A property a user may reasonably leave empty should be `required: false`. A required property left empty marks the step incomplete, and Studio won't publish the workflow until it is filled in. When Studio adds the step, it writes each prop's `defaultValue` into the step's config, so the step keeps that default even if a later version of your piece changes it.
 - **`outputSchema`** is what a _later_ step can pick fields from. Without it, whoever builds the workflow has to run your action once and read the raw output to discover what it returns. It costs a few lines and saves every author that round trip.
 
 ## Writing a trigger
@@ -150,16 +150,16 @@ Every trigger declares a strategy with `type`, which decides how the reactor cal
 | ----------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | `TriggerStrategy.POLLING`     | On an interval: every minute by default, never more often than once a second                        | The service has no webhooks, or you can't reach them |
 | `TriggerStrategy.WEBHOOK`     | For each delivery to the workflow's endpoint, and on a slow reconciliation sweep (every 15 minutes) | The service can call a URL when something changes    |
-| `TriggerStrategy.APP_WEBHOOK` | Not supported: the reactor never reads the listeners it registers                                   | —                                                    |
-| `TriggerStrategy.MANUAL`      | Not supported for piece triggers                                                                    | Use `core#manual` instead                            |
+| `TriggerStrategy.APP_WEBHOOK` | Never: Studio lists the trigger as disabled, and enabling it puts the trigger in `ERROR`             | —                                                    |
+| `TriggerStrategy.MANUAL`      | Not supported for a package piece's triggers                                                      | Use the core piece's `manual` trigger instead        |
 
 `type` is required and must be the enum member, not a string. The generator writes it for you (`--strategy polling` or `--strategy webhook`).
 
 Every trigger has the same hooks:
 
-- **`onEnable`** runs when a workflow using the trigger is switched on or republished, and **`onDisable`** when it's switched off or deleted.
+- **`onEnable`** runs when a workflow using the trigger is enabled, or republished with a changed trigger, and **`onDisable`** when it's switched off or deleted.
 - **`run`** reports what's new.
-- **`test`** is optional. Studio calls it to fetch a real sample while someone is building the workflow. It gets a scratch `context.store` that's thrown away afterwards, so it can't move a live cursor.
+- **`test`** is optional. Studio calls it to fetch a real sample while someone is building the workflow. It gets a scratch `context.store` that's thrown away afterwards, so it can't move a live cursor. Studio saves the sample as the trigger's last test, and marks it stale once the trigger is edited.
 - **`sampleData`** is what Studio shows as the trigger's payload before it has ever fired. It lets someone build the rest of the workflow against real-looking fields rather than waiting for the trigger to fire.
 
 ### Polling
@@ -285,14 +285,19 @@ export const crmAuth = PieceAuth.CustomAuth({
 ## Reading and writing documents
 
 Your piece doesn't need to. Reading and writing Powerhouse documents is what the
-reactor's own piece is for — `#document-find`, `#document-get`,
-`#document-create` and `#document-dispatch` are steps a workflow author drops in
-beside yours, with no code from you at all.
+reactor's own piece, `@powerhousedao/piece-reactor`, is for. Its actions
+`document-find`, `document-get`, `document-create` and `document-dispatch` are
+steps a workflow author drops in beside yours, with no code from you at all.
 
 So a workflow that pulls a record from your service and records it on a document
-is two steps: your action, then `@powerhousedao/piece-reactor#document-create`
+is two steps: your action, then the reactor piece's `document-create` action
 reading the first step's output through an expression. Your piece stays a
 connector to your service, which is the thing only you can write.
+
+When the input comes from an AI step, set the document action's advanced
+**Parse** option to **Extract from AI output**. It reads ids and JSON out of the
+model's prose instead of taking them as given, and reports what it read them
+from in `extractedFrom`. **Exact**, the default, takes them as given.
 
 ## Registering it
 
@@ -306,11 +311,12 @@ import type { PackagePiece } from "@powerhousedao/pieces-framework";
 export const pieces: PackagePiece[] = [
   {
     name: "@acme/piece-crm",
-    version: "1.0.0",
     entry: "dist/node/pieces/crm/index.mjs",
   },
 ];
 ```
+
+There's no `version` field. **A piece's version is the version of the package that ships it**: `ph build` reads it from your `package.json` and writes it into the piece's descriptor, its `package.json` and the manifest. That way `@acme/piece-crm@1.4.0` names exactly one set of bytes wherever it's fetched from. A list entry that still declares `version` fails the build. Delete the field. To release a piece on its own schedule, give it its own package.
 
 And `powerhouse.manifest.json` names it again, so a host can see what the package offers without executing any of its code:
 
@@ -328,23 +334,18 @@ This bundles each `pieces/<name>/index.ts` into `dist/node/pieces/<name>/index.m
 
 The build then loads each piece once and writes a descriptor next to it — the display name, logo, auth and every action and trigger with its properties. That descriptor is how Workflow Studio can draw your step's form before anyone has installed anything.
 
-**A piece has to be built, not merely present.** A declared piece with no build output is the most common way to end up with a workflow whose block type resolves to nothing.
+**A piece has to be built, not merely present.** A declared piece with no build output is the most common way to end up with a workflow whose block resolves to nothing.
 
 ## Run it locally
 
 Three things have to be true before a workflow can name your block, and missing
 any one of them fails quietly in its own way.
 
-**1. Workflows are on, and the workflow package is installed.** The flag starts
-the runtime; it does not by itself give the reactor the workflow and connection
-document models. Those come from `@powerhousedao/workflow`, which has to be
-installed and listed like any other package — a reactor with the flag on but the
-package missing logs `Workflow runtime started` and then refuses to create a
-workflow with "Document model module not found".
-
-```bash
-pnpm add @powerhousedao/workflow
-```
+**1. Workflows are on, and `@powerhousedao/workflow` is installed.** With the
+flag on, Switchboard loads that package itself: the workflow and connection
+document models, and the reactor piece. You don't list it in `packages`. If it
+can't be loaded, Switchboard refuses to boot with "Workflows are enabled but
+@powerhousedao/workflow could not be loaded".
 
 **2. Your own package is in the `packages` list**, which is how the reactor
 finds both its document models and its pieces. There is no separate piece
@@ -353,7 +354,7 @@ install.
 ```json
 {
   "workflows": { "enabled": true },
-  "packages": ["@powerhousedao/workflow", "@acme/my-package"]
+  "packages": ["@acme/my-package"]
 }
 ```
 
@@ -365,13 +366,15 @@ server alone, which is what you want if you're driving it from a script or an
 agent. Either way the boot log tells you whether it worked:
 
 ```
-Loaded document models from package @powerhousedao/workflow: [...]
-[workflow][piece-registry] Loaded 1 package piece(s): @acme/piece-crm
+[...] Loaded document models from package @powerhousedao/workflow: [...]
+[workflow][piece-registry] Holding 1 package piece(s) on disk: @acme/piece-crm
 Workflow runtime started
 ```
 
-An empty piece list with no error almost always means the piece is declared but
-not built.
+A package loaded from a registry reports its pieces as `fetched when first run`
+instead of `on disk`. No `Holding` line at the default log level means the
+reactor found no pieces, which usually means the piece is declared but not
+built.
 
 **If your piece talks to something on localhost** — a stub service, a database,
 anything on your own machine — it will not connect until the deployment widens
@@ -385,8 +388,8 @@ setting that widens it is in
 
 With the reactor running, your actions and triggers are in the block catalogue
 alongside the reactor's own piece and anything from the registry. Create a
-connection for the CRM, then build a workflow whose trigger is
-`@acme/piece-crm#trigger:new-record`.
+connection for the CRM, then build a workflow whose trigger is the
+`new-record` trigger of `@acme/piece-crm` at your package's version.
 
 Authoring that workflow in Connect is Workflow Studio's job. To do it from a
 script or an agent instead — which is also how you'd seed an environment or test

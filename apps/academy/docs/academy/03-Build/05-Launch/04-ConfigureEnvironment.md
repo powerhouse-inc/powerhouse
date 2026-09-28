@@ -119,6 +119,12 @@ ph connect build \
 ph connect build --json '{"renown":{"url":"https://x"},"drives":{"allowAddDrive":false}}'
 ```
 
+The `--json` payload is the `connect.*` block **without** the `connect` wrapper, as nested objects. Dotted keys (`{"app.workflowsEnabled":true}`), a `{"connect":{...}}` wrapper, unknown keys, and wrong types fail the command with a validation error. For example, to enable workflows and add a default drive:
+
+```bash
+ph connect build --json '{"app":{"workflowsEnabled":true},"drives":{"defaultDrives":[{"url":"https://switchboard.example/d/my-workflows","name":"My workflows"}]}}'
+```
+
 Overrides apply at dist-emit time and are baked into the dist file — operators see the resulting values when the container boots.
 
 ### Full flag matrix
@@ -145,7 +151,7 @@ Every `connect.*` field has a dedicated flag. Both `ph connect config` and `ph c
 | `connect.renown.url`                         | `--renown-url`                 | string                                       |
 | `connect.renown.networkId`                   | `--renown-network-id`          | string                                       |
 | `connect.renown.chainId`                     | `--renown-chain-id`            | number                                       |
-| _(bulk, any subset of fields)_               | `--json '{...}'`               | partial `connect.*` JSON blob                |
+| _(bulk, any subset of fields)_               | `--json '{...}'`               | partial `connect.*` blob, no `connect` wrapper |
 
 Plus `ph connect config --get <connect.path>` to read a single value, `ph connect config --dist-dir <path>` to point at a non-default dist location (overrides `PH_CONNECT_OUTDIR`).
 
@@ -250,6 +256,9 @@ Or via env vars:
 PH_WORKFLOWS_ENABLED=true
 ```
 
+`PH_WORKFLOWS_ENABLED` also accepts `1` and `0`, and it overrides
+`workflows.enabled` in the config file.
+
 Connect's half has no env var — set it in the config, or pass
 `ph connect build --workflows true`.
 
@@ -274,6 +283,21 @@ PH_WORKFLOWS_SECRETS_MASTER_KEY=<64 hex chars>
 # machine or network fails to connect.
 PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES=127.0.0.1/32,::1/128
 ```
+
+**Webhook origin.** A webhook URL the runtime hands out uses `PUBLIC_URL`, then
+`RENDER_EXTERNAL_URL`, then `HEROKU_APP_DEFAULT_DOMAIN_NAME`, and falls back to
+`http://localhost:<port>`. Set one of them wherever a provider has to reach the
+reactor. This is not `PH_SWITCHBOARD_PUBLIC_URL`, which sets the attachment
+service URL.
+
+```bash
+PUBLIC_URL=https://switchboard.example.com
+```
+
+**Pieces from a registry.** The runtime also reads pieces from the registry
+Switchboard installs packages from (`packageRegistryUrl` in
+`powerhouse.config.json`, or `PH_REGISTRY_URL`), ahead of the Activepieces
+catalogue. There is no separate setting for it.
 
 :::note Variable names changed
 These names carry the `PH_WORKFLOWS_` prefix as of the release that introduced
