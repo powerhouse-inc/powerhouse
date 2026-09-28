@@ -32,6 +32,36 @@ If the package is not published locally, Verdaccio transparently proxies metadat
 
 Responses carry caching headers keyed on the request shape. Version-pinned requests (`<pkg>@1.2.3/...`) are served `Cache-Control: public, max-age=31536000, immutable`; moving requests (a dist-tag like `@dev`/`@latest`, or untagged) get `public, max-age=60, must-revalidate`. A version-derived weak `ETag` is sent, and a matching `If-None-Match` returns `304`. When the upstream metadata lookup fails (as opposed to a genuine not-found), the endpoint serves the latest cached version if present, otherwise responds `503` rather than a cacheable `404`.
 
+### Pieces
+
+A reactor's workflow runtime reads pieces from these endpoints, ahead of the
+Activepieces catalogue.
+
+#### `GET /pieces`
+
+The catalog of pieces that published packages ship, in the shape of
+cloud.activepieces.com's list endpoint. `?suggestionType=ACTION_AND_TRIGGER`
+adds suggested actions and triggers.
+
+#### `GET /pieces/<name>` and `GET /pieces/<name>?version=<v>`
+
+One piece's detail: the latest version, or the one named. An unknown version
+returns `404` with `available`, the versions the registry has.
+
+#### `GET /pieces/<name>/versions`
+
+Every version of the piece: `[{ version, packageVersion, publishedAt }]`. A
+piece's version is always the version of the package that ships it.
+
+#### `GET /-/pieces/bundled/<file>.tgz`
+
+The piece directory as an npm-shaped tarball, the file a reactor's piece worker
+downloads. The file name is the piece name with `/` replaced by `-`, then
+`-<version>`, as cdn.activepieces.com names its own. It is served immutable.
+
+Piece names under `@activepieces/` are reserved: a package that claims one is
+refused.
+
 ### Publish Notifications
 
 When a package is published, the registry can notify subscribers in real time via Server-Sent Events (SSE) and webhooks.

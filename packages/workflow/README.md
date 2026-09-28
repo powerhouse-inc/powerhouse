@@ -6,8 +6,8 @@ reactor piece that lets a workflow read and write documents.
 
 ## What is in here
 
-- **Document models.** `powerhouse/workflow` (steps, edges, trigger, variables,
-  policy, runtime) and `powerhouse/connection` (a credential a workflow step
+- **Document models.** `powerhouse/workflow` (a draft of the trigger, steps,
+  edges and variables, and the published snapshot runs execute) and `powerhouse/connection` (a credential a workflow step
   authenticates with). Both under `document-models/`, with their upgrade
   manifests.
 - **Editors.** The Workflow Editor (a React Flow canvas over the workflow
@@ -26,7 +26,7 @@ reactor piece that lets a workflow read and write documents.
 | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | [`@powerhousedao/pieces-framework`](../pieces-framework) | The piece authoring API (Activepieces', vendored).                                                             |
 | `@powerhousedao/workflow` (this one)                     | Models, editors, assistant tools and the reactor piece. Loaded by Connect; its models are loaded by a reactor. |
-| `@powerhousedao/reactor-workflow`                        | The engine that runs a workflow: scheduler, executor, piece host, and the GraphQL surface. Arrives next.       |
+| [`@powerhousedao/reactor-workflow`](../reactor-workflow) | The engine that runs a workflow: triggers, the run journal, secrets and the piece worker. Switchboard composes it and serves its GraphQL surface. |
 
 This package deliberately depends on neither the engine nor
 `@powerhousedao/reactor-api`, so Connect can load it without pulling a server
@@ -41,9 +41,8 @@ Turn them on in `powerhouse.config.json`:
 ```
 
 or with `PH_WORKFLOWS_ENABLED=true`, which wins over the config file. With the
-flag on, the reactor registers this package's two document models, so
-workflows and connections can be created and synced. Running them is the
-engine's job and follows in `@powerhousedao/reactor-workflow`.
+flag on, Switchboard loads this package (its two document models and the
+reactor piece) and starts the engine from `@powerhousedao/reactor-workflow`.
 
 What that engine reads from the environment is declared under `config` in
 [`powerhouse.manifest.json`](./powerhouse.manifest.json) — every entry prefixed
@@ -115,18 +114,19 @@ import type { PackagePiece } from "@powerhousedao/pieces-framework";
 export const pieces: PackagePiece[] = [
   {
     name: "@powerhousedao/piece-reactor",
-    version: "1.0.0",
     entry: "dist/node/pieces/reactor/index.mjs",
   },
 ];
 ```
 
-and is named again in `powerhouse.manifest.json` under `"pieces"`, which is
+It is named again in `powerhouse.manifest.json` under `"pieces"`, which is
 what a host reads without executing package code:
 
 ```json
 "pieces": [{ "id": "@powerhousedao/piece-reactor", "name": "Powerhouse Reactor" }]
 ```
+
+A piece has no version of its own: `ph build` gives it this package's version.
 
 The node build inlines the framework into the piece bundle, so the host loads
 one self-contained module. See the

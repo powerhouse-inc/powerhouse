@@ -60,6 +60,13 @@ rather than restated here.
   not parse reaches the piece as that text, as coercion already hands it on;
   and every declared prop is checked, so a required one absent from the input
   fails, where upstream's processor checks only the keys it was given.
+  A DYNAMIC prop's children are checked in the host, before the worker is
+  asked: the editor writes them as the step's `propertySettings[].schema`
+  in the SET_STEP_CONFIG (or SET_TRIGGER) of the edit they belong to, and
+  the run reads them from the published step. A value that is not an
+  object, or lacks a required child, fails the step (or parks the trigger)
+  naming each missing field. Nothing stores whether a step is complete: the
+  editor computes it where it shows it, and gates Publish on it.
 - **The SSRF table**, likewise from `./host`. `worker/egress.ts` classifies an
   address with `ssrfIpClassifier.isBlockedIp`; the connect-time socket and DNS
   hooks, the per-request policy and the allow-lists are ours. The one range the
@@ -104,6 +111,122 @@ transport finds that child's code by walking up to this package's own
 `package.json` and reading `dist/worker-entry.js`, so `pnpm build` must have run
 before anything executes a piece — including the suites here.
 
+## Blocks
+
+A step names its block the way Activepieces does, with three fields:
+`pieceName`, `pieceVersion` and `actionName`. The trigger has `pieceName`,
+`pieceVersion` and `triggerName`. `pieceVersion` is always an exact semver; the
+workflow model refuses anything else. A block's identity is the piece and the
+name (`blockKey` in `@powerhousedao/pieces-framework/block-type`), so the same
+action at another version is the same block.
+
+### The core piece
+
+The engine's own blocks are the built-in piece `@powerhousedao/piece-core`, in
+`src/pieces/core/`. Its actions are `branch` and `assert`; its triggers are
+`manual`, `schedule` and `webhook`. It is written with `createPiece`,
+`createAction` and `createTrigger`, and its version is this package's version.
+
+- The runtime registers it itself (`src/pieces/builtin.ts`); it is always
+  installed and never comes from a package list.
+- It is host-bound, like `@powerhousedao/piece-reactor`: it always runs the
+  installed copy.
+- It is this package's own code, so it is described and run in the reactor
+  process, not in the worker. Its descriptor comes from the same
+  `buildDescriptor` as any piece, which also reads its output ports and form
+  hints (`showWhen`, `emptyChoice`, the trigger's `display: "schedule"`).
+- `branch` and `assert` run through `ActivepiecesBlockExecutor` like any piece
+  action, with the same resolution and journaling. `branch` leaves on `true`
+  or `false` by its result.
+- The triggers are fed by the host: `reactor/schedule.ts`, `reactor/webhook.ts`
+  and the `fire` mutation. Their hooks are never called.
+
+## Block resolution
+
+One policy (`reactor/block-resolver.ts`) resolves every block, for steps,
+trigger arming, design-time descriptors, output trees, connection checks and
+step tests. A block whose version is not an exact semver resolves to `missing`.
+
+1. **Candidates.** The installed package piece (`local`). For a name outside
+   `@activepieces/`, the configured registry's `GET /pieces/<name>/versions`
+   (`registry`); npm's packument is read only when there is no registry or it
+   answers 404 (`npm`), so a name the registry owns never comes from npm. For
+   `@activepieces/*`, the npm packument (`activepieces`: fetched from their
+   CDN, then npm). Listings are cached for five minutes; a source that does not
+   answer within two seconds contributes nothing.
+2. **Exact** wins, `local` first on a tie, then `registry`, `activepieces`,
+   `npm`.
+3. **Otherwise the closest** (`rankClosestVersions`): the highest of the same
+   major (the same minor for `0.x`) at or above the pin is `compatible`;
+   anything else is `fallback`.
+   A candidate without the block's action or trigger is skipped for the next
+   in the same order (`Skipped 0.1.0: it has no action "send_request"` in the
+   note). At most five candidates are described per resolution.
+4. **Host-bound pieces** (`@powerhousedao/piece-core`,
+   `@powerhousedao/piece-reactor`) always run the installed copy, with match
+   `installed`.
+5. **Missing** is the only failure: no source has the piece, or none of the
+   candidates described has an action or trigger of that name.
+
+A version mismatch never blocks. The resolution is journaled on the step
+(`piece_version`, `piece_source`, `version_match`, `version_note`) and on the
+trigger state; a run's `warnings` counts its `fallback` steps and its edges on
+ports their source never takes. `blockResolutions(workflowId)` reports the
+resolution for every draft block before anything runs. The bundle is
+fetched from the chosen source only, and cached under `<cache>/<source>/`.
+
+## Execution order
+
+The coordinator (`pieces/engine/coordinator.ts`) runs one step at a time. It
+passes over the `steps` array in order until a pass changes nothing:
+
+- **Edges are decided by their source.** The trigger's edges are decided when
+  the run starts, on its `next` port. A step's edges are all decided once the
+  step runs or is skipped. An edge is taken when its port is the one the step
+  took and its condition, if any, holds.
+- **A step waits for every inbound edge.** Once all are decided, the step runs
+  if any of them was taken, and is skipped otherwise. A join is an OR.
+- **Siblings run in array order.** Two steps that become ready in the same pass
+  run in the order the `steps` array lists them, whatever their ports. A step
+  listed before the step that feeds it waits for the next pass.
+- **Entries.** A step with no inbound edges runs only when the workflow has no
+  trigger. With a trigger, it never runs.
+- **Never reached.** A step in a cycle, or fed by an edge from a step that does
+  not exist, is skipped when the run ends. So is every step not yet reached
+  when a step fails with no `error` edge taken.
+
+Which port a step takes changes which steps run, never the order steps are
+reached in. The studio's step outline (`stepOutline` in the workflow editor)
+lists steps in this order.
+
+## Expressions
+
+Every string in a step's config is a template, nested strings in objects and
+arrays included. A field's `propertySettings[].mode` is editor-only: it picks
+the control (the typed one, or the free expression box) and has no effect at
+run time.
+
+- **Literal braces.** `\{{` is a literal `{{`: `"Dear \{{name}}"` reaches the
+  piece as `Dear {{name}}`.
+- **Paths.** `trigger.payload.x`, `steps.<key>.output.y`, `steps.<key>.error`
+  and `variables.<key>`. Brackets read keys that are not plain names, and array
+  indexes: `steps.fetch.output.headers["content.type"]`, `output.items[0]`.
+- **Raw or text.** When the trimmed field is exactly one `{{…}}`, the field
+  takes the raw value (a number stays a number, an object an object). Any other
+  string is text, and each expression is interpolated: `null` as the empty
+  string, objects and arrays as JSON.
+- **Unresolved references fail the step.** A path that names nothing fails with
+  `Unresolved reference {{steps.x.output.y}}`. The optional form
+  `{{steps.x.output.y?}}` resolves to `null` instead. A path whose value is
+  `null` is not missing.
+- **Fallbacks.** `a || b || 'default'` takes the first term whose value is not
+  `null` or `""`. A missing path falls through to the next term; the last term
+  fails when missing, unless it is a literal or ends in `?`. Literals are
+  single- or double-quoted, with `\` escapes.
+
+Edge conditions are templates too. A condition with an unresolved reference
+fails the run.
+
 ## `./testing`
 
 `@powerhousedao/reactor-workflow/testing` re-exports the piece layer: the
@@ -134,7 +257,6 @@ explanation behind it.
 Each numeric one parses as `Number(raw) || default`: a value that is not a
 positive number falls back silently rather than failing at boot.
 
-One of them carries a caveat worth knowing before a deployment depends on it.
 **The secrets key is not optional in production.** Unset, `loadKey` generates
 `./.ph/secrets.key` — relative to the working directory, like the bundle cache
 and the attachment staging dir. A host whose working directory does not survive
@@ -200,13 +322,17 @@ releases what an earlier enable registered. The reason reads
 
 **Triggers**
 
-- `TriggerStrategy.APP_WEBHOOK` and `context.app.createListeners`: the
-  listeners are never read, so deliveries are refused (#3081).
+- `TriggerStrategy.APP_WEBHOOK` and `context.app.createListeners`: rejected,
+  as `TriggerStrategy APP_WEBHOOK` (#3081). There is no app-level endpoint or
+  listener table to route a delivery by. A strategy the engine does not know,
+  or none at all, is rejected the same way. One helper decides the strategy
+  (`triggerDelivery` in `@powerhousedao/pieces-framework/workflow`), and a
+  trigger whose descriptor cannot be read is `ERROR` with a retry, never polled.
 - `renewConfiguration` / `onRenew`: rejected when the strategy is not
   `NONE`, as `renewConfiguration` (#3090).
 - `TriggerStrategy.MANUAL` on a piece trigger: rejected, as
-  `TriggerStrategy.MANUAL` (#3091). The engine's own `core#manual` is not a
-  piece trigger and is unaffected.
+  `TriggerStrategy.MANUAL` (#3091). The core piece's `manual` trigger is fed by
+  the host's `fire` mutation and is unaffected.
 - Every `WEBHOOK` trigger's `run()` is called every 15 minutes without a
   `payload`, as a reconciliation sweep. A `run` that only maps the delivery
   either fails or fires a spurious run (#3090).

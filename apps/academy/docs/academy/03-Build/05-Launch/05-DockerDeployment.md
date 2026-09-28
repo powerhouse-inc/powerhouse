@@ -178,7 +178,7 @@ For the full configuration model, precedence ladder, and the complete list of `c
 
 ### Connect container env vars
 
-Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never from env vars at runtime. The container entrypoint, however, can apply operator-supplied JSON to that file at startup (operator-wins) — equivalent to pre-running `ph connect config --json '{...}'` on the dist file. The SPA then reads the file as usual.
+Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never from env vars at runtime. The container entrypoint, however, can apply operator-supplied JSON to that file at startup (operator-wins) — similar to pre-running `ph connect config --json '{...}'` on the dist file, but the payload keeps the `connect` wrapper (see below). The SPA then reads the file as usual.
 
 #### Container shape and secrets
 
@@ -220,7 +220,7 @@ docker run \
   connect:latest
 ```
 
-The schema for the JSON object lives at `packages/builder-tools/connect-utils/runtime-config.schema.json` (also served as the `$schema` URL of any generated file). The same shape that `ph connect config --json` accepts is what `PH_CONNECT_CONFIG_JSON` accepts here.
+The schema for the JSON object lives at `packages/builder-tools/connect-utils/runtime-config.schema.json` (also served as the `$schema` URL of any generated file). `PH_CONNECT_CONFIG_JSON` takes the whole-file shape, with the `connect` wrapper. `ph connect config --json` and `ph connect build --json` differ: they take the `connect.*` block alone.
 
 **Invalid input behaviour:** malformed JSON or a non-object payload aborts container startup with a clear stderr message rather than silently dropping the operator's intent.
 
