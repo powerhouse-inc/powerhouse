@@ -23,12 +23,16 @@ import {
 import {
   findPiece,
   findPieceByTarball,
+  findPieceVersion,
   invalidatePieceIndex,
   pieceCatalog,
   pieceDetail,
   pieceIndex,
   pieceNamesInTarball,
   pieceTarball,
+  pieceVersions,
+  RESERVED_PIECE_SCOPE,
+  versionSummary,
 } from "./pieces.js";
 import type { RegistryConfig } from "./types.js";
 import { createWarmer } from "./warmup.js";
@@ -61,6 +65,20 @@ const MIME_TYPES: Record<string, string> = {
   ".html": "text/html",
   ".svg": "image/svg+xml",
 };
+
+// Read per request: with port 0 the bound port is known only after listen.
+function localUrl(config: RegistryConfig): () => string {
+  return () => `http://localhost:${config.port}`;
+}
+
+// `<name>/versions` when `<name>` is a whole piece name (`x` or `@scope/x`).
+function versionsRouteName(raw: string): string | null {
+  if (!raw.endsWith("/versions")) return null;
+  const name = raw.slice(0, -"/versions".length);
+  const slashes = name.split("/").length - 1;
+  const valid = name.startsWith("@") ? slashes === 1 : slashes === 0;
+  return valid && name !== "" ? name : null;
+}
 
 function getContentType(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
@@ -143,10 +161,7 @@ export function createPowerhouseRouter(
   webhooks: WebhookChannel,
   ownerStore?: AuthStore,
 ): Router {
-  const cdn = new CdnCache(
-    `http://localhost:${config.port}`,
-    config.cdnCachePath,
-  );
+  const cdn = new CdnCache(localUrl(config), config.cdnCachePath);
   const router = Router();
 
   // Attach package owners from the auth store. Best-effort: a missing store or
@@ -326,14 +341,62 @@ export function createPowerhouseRouter(
     );
   });
 
-  // Wildcard, not `:name`: a scoped piece name carries a slash.
-  router.get("/pieces/*", (req: Request, res: Response) => {
+  // Wildcard, not `:name`: a scoped piece name carries a slash. Serves
+  // `<name>`, `<name>?version=<v>` and `<name>/versions`.
+  router.get("/pieces/*", async (req: Request, res: Response) => {
     void warm();
-    const name = (req.params as Record<string, string>)[0];
-    const entry = findPiece(config.cdnCachePath, name, config.storagePath);
-    const detail = entry ? pieceDetail(entry, originOf(req)) : null;
-    if (!detail) {
+    const raw = (req.params as Record<string, string>)[0];
+    const versionsOf = versionsRouteName(raw);
+    if (versionsOf) {
+      const versions = await pieceVersions(
+        cdn,
+        config.cdnCachePath,
+        versionsOf,
+        config.storagePath,
+      );
+      if (!versions) {
+        res.status(404).json({ error: `Piece not found: ${versionsOf}` });
+        return;
+      }
+      res.json(versions.map(versionSummary));
+      return;
+    }
+
+    const name = raw;
+    const version =
+      typeof req.query.version === "string" ? req.query.version : undefined;
+    if (version === undefined) {
+      const entry = findPiece(config.cdnCachePath, name, config.storagePath);
+      const detail = entry ? pieceDetail(entry, originOf(req)) : null;
+      if (!detail) {
+        res.status(404).json({ error: `Piece not found: ${name}` });
+        return;
+      }
+      res.json(detail);
+      return;
+    }
+
+    const found = await findPieceVersion(
+      cdn,
+      config.cdnCachePath,
+      name,
+      version,
+      config.storagePath,
+    );
+    if (found.kind === "unknown-piece") {
       res.status(404).json({ error: `Piece not found: ${name}` });
+      return;
+    }
+    if (found.kind === "unknown-version") {
+      res.status(404).json({
+        error: `Piece version not found: ${name}@${version}`,
+        available: found.available,
+      });
+      return;
+    }
+    const detail = pieceDetail(found.entry, originOf(req));
+    if (!detail) {
+      res.status(404).json({ error: `Piece not found: ${name}@${version}` });
       return;
     }
     res.json(detail);
@@ -344,7 +407,8 @@ export function createPowerhouseRouter(
   router.get("/-/pieces/bundled/*", async (req: Request, res: Response) => {
     void warm();
     const filename = (req.params as Record<string, string>)[0];
-    const entry = findPieceByTarball(
+    const entry = await findPieceByTarball(
+      cdn,
       config.cdnCachePath,
       filename,
       config.storagePath,
@@ -354,8 +418,8 @@ export function createPowerhouseRouter(
       res.status(404).json({ error: `Piece bundle not found: ${filename}` });
       return;
     }
-    // A piece bundle is immutable per (name, version), like the npm tarball it
-    // was cut from, so it can be cached for as long as a client likes.
+    // The filename carries the package version the bundle was cut from, so
+    // its bytes never change.
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
     const etag = `"${entry.packageName}-${filename}"`;
     res.setHeader("ETag", etag);
@@ -512,10 +576,7 @@ export function createUnpublishHook(
   config: RegistryConfig,
   notifications: NotificationChannel,
 ) {
-  const cdn = new CdnCache(
-    `http://localhost:${config.port}`,
-    config.cdnCachePath,
-  );
+  const cdn = new CdnCache(localUrl(config), config.cdnCachePath);
 
   // Reconcile the CDN cache after verdaccio rewrites a manifest to drop a
   // version. Re-fetch survivors — req.body isn't reliable on this route.
@@ -610,10 +671,7 @@ export function createPublishHook(
   config: RegistryConfig,
   notifications: NotificationChannel,
 ) {
-  const cdn = new CdnCache(
-    `http://localhost:${config.port}`,
-    config.cdnCachePath,
-  );
+  const cdn = new CdnCache(localUrl(config), config.cdnCachePath);
 
   // Publish bodies are read here, ahead of verdaccio: body-parser marks the
   // request parsed, so verdaccio reuses this one instead of a spent stream.
@@ -728,19 +786,24 @@ function publishedTarball(body: unknown): Buffer | null {
 }
 
 // A piece name is one package's for good: two packages claiming it would make
-// a block type ambiguous, and a reactor would download whichever won a scan.
+// a step's piece ambiguous. `@activepieces/` names are never a package's.
 async function pieceClaimConflict(
   config: RegistryConfig,
   packageName: string,
   body: unknown,
 ): Promise<string | null> {
-  // Nothing to collide with, so a registry that serves no pieces never pays
-  // for decompressing a publish to find out.
-  const index = pieceIndex(config.cdnCachePath, config.storagePath);
-  if (index.size === 0) return null;
   const tarball = publishedTarball(body);
   if (!tarball) return null;
-  for (const name of await pieceNamesInTarball(tarball)) {
+  const names = await pieceNamesInTarball(tarball);
+  if (names.length === 0) return null;
+  const reserved = names.filter((name) =>
+    name.startsWith(RESERVED_PIECE_SCOPE),
+  );
+  if (reserved.length > 0) {
+    return `Piece names in the ${RESERVED_PIECE_SCOPE} scope belong to Activepieces; ${packageName} cannot claim ${reserved.map((n) => `"${n}"`).join(", ")}. Rename the piece into your own scope.`;
+  }
+  const index = pieceIndex(config.cdnCachePath, config.storagePath);
+  for (const name of names) {
     const owner = index.get(name);
     if (owner && owner.packageName !== packageName) {
       return `Piece "${name}" is already published by ${owner.packageName}; ${packageName} cannot claim it.`;

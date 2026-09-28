@@ -26,6 +26,7 @@ function readPackageMetadata(
 ): {
   distTags?: Record<string, string>;
   versions?: string[];
+  time?: Record<string, string>;
   locallyPublished: boolean | undefined;
 } {
   if (!storagePath) return { locallyPublished: undefined };
@@ -36,16 +37,23 @@ function readPackageMetadata(
       "dist-tags"?: Record<string, string>;
       versions?: Record<string, unknown>;
       _attachments?: Record<string, unknown>;
+      time?: Record<string, unknown>;
     };
     const distTags = parsed["dist-tags"];
     const rawVersions = parsed.versions ? Object.keys(parsed.versions) : [];
     const versions = rawVersions.slice().sort(compareSemver);
     const locallyPublished =
       !!parsed._attachments && Object.keys(parsed._attachments).length > 0;
+    const time: Record<string, string> = {};
+    for (const version of versions) {
+      const at = parsed.time?.[version];
+      if (typeof at === "string") time[version] = at;
+    }
     return {
       distTags:
         distTags && Object.keys(distTags).length > 0 ? distTags : undefined,
       versions: versions.length > 0 ? versions : undefined,
+      time,
       locallyPublished,
     };
   } catch {
@@ -65,7 +73,7 @@ export function isLocallyPublished(
   return readPackageMetadata(storagePath, packageName).locallyPublished;
 }
 
-function readManifest(dir: string): Manifest | null {
+export function readManifest(dir: string): Manifest | null {
   const candidates = [
     path.join(dir, "powerhouse.manifest.json"),
     path.join(dir, "cdn", "powerhouse.manifest.json"),
@@ -97,16 +105,23 @@ function readPackageJsonVersion(dir: string): string | undefined {
   }
 }
 
-function getLatestVersionDir(pkgDir: string): string | null {
+/** Extracted version directories of a package, oldest first. */
+function listVersionDirs(pkgDir: string): string[] {
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(pkgDir, { withFileTypes: true });
   } catch {
-    return null;
+    return [];
   }
-  const versions = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+  return entries
+    .filter((e) => e.isDirectory() && !e.name.startsWith("."))
+    .map((e) => e.name)
+    .sort(compareSemver);
+}
+
+function getLatestVersionDir(pkgDir: string): string | null {
+  const versions = listVersionDirs(pkgDir);
   if (versions.length === 0) return null;
-  versions.sort(compareSemver);
   return path.join(pkgDir, versions[versions.length - 1]);
 }
 
@@ -187,13 +202,19 @@ function getDocumentTypesFromManifest(manifest: Manifest | undefined | null) {
 export interface ScannedPackage {
   /** Directory under the cdn cache: `name` or `@scope/name`. */
   dirName: string;
+  /** Absolute package directory under the cdn cache. */
+  packageDir: string;
   /** Absolute directory the manifest was read from (the version dir, if any). */
   manifestDir: string;
+  /** Extracted version directory names, oldest first. */
+  versionDirs: string[];
   manifest: Manifest | null;
   name: string;
   version?: string;
   distTags?: Record<string, string>;
   versions?: string[];
+  /** Publish time per version, from verdaccio metadata. */
+  time?: Record<string, string>;
   locallyPublished: boolean | undefined;
 }
 
@@ -203,24 +224,28 @@ function readPackageDir(
   storagePath: string | undefined,
 ): ScannedPackage {
   const pkgDir = path.join(cdnCachePath, dirName);
-  const versionDir = getLatestVersionDir(pkgDir);
-  const manifestDir = versionDir ?? pkgDir;
+  const versionDirs = listVersionDirs(pkgDir);
+  const latest = versionDirs.at(-1);
+  const manifestDir = latest ? path.join(pkgDir, latest) : pkgDir;
   const manifest = readManifest(manifestDir);
   // `||` (not `??`): slimManifest normalizes a missing manifest name to
   // "" — fall back to the directory name in that case too.
   const name = manifest?.name || dirName;
-  const { distTags, versions, locallyPublished } = readPackageMetadata(
+  const { distTags, versions, time, locallyPublished } = readPackageMetadata(
     storagePath,
     name,
   );
   return {
     dirName,
+    packageDir: pkgDir,
     manifestDir,
+    versionDirs,
     manifest,
     name,
     version: readPackageJsonVersion(manifestDir),
     distTags,
     versions,
+    time,
     locallyPublished,
   };
 }
