@@ -1,153 +1,38 @@
-// Pure config parsing and next-fire math for the core#schedule trigger: a
-// 5-field cron in an IANA timezone, or a fixed interval (min one second).
+// Next-fire math for the core schedule trigger. Config parsing is the shared
+// parser's; this adds croner's check that the cron is valid and ever fires.
+import {
+  DEFAULT_TIMEZONE,
+  parseScheduleConfig as parseSharedSchedule,
+  ScheduleConfigError,
+  type ScheduleConfig,
+} from "@powerhousedao/pieces-framework/workflow";
 import { Cron } from "croner";
 
-export const SCHEDULE_BLOCK = "core#schedule";
+export { DEFAULT_TIMEZONE, type ScheduleConfig };
 
 // The floor the supervisor clamps every poll cadence to, however a workflow
-// asked for it. A second, not a minute: a polling trigger here watches
-// something the reactor owns, and the cost of a poll is a request the operator
-// is already paying for. The cadence a workflow should actually run at is the
-// author's call, expressed in its own config; this only refuses nonsense.
+// asked for it. A schedule's own floor is a minute, its smallest unit.
 export const MIN_SCHEDULE_INTERVAL_MS = 1_000;
-export const DEFAULT_TIMEZONE = "UTC";
 
-export const INTERVAL_UNIT_MS = {
-  minutes: 60_000,
-  hours: 3_600_000,
-  days: 86_400_000,
-} as const;
-
-export type IntervalUnit = keyof typeof INTERVAL_UNIT_MS;
-
-export type ScheduleConfig =
-  | { mode: "cron"; cron: string; timezone: string }
-  | { mode: "interval"; everyMs: number; timezone: string };
-
-function asRecord(config: unknown): Record<string, unknown> {
-  if (config && typeof config === "object" && !Array.isArray(config)) {
-    return config as Record<string, unknown>;
-  }
-  if (typeof config === "string") {
-    try {
-      return asRecord(JSON.parse(config));
-    } catch {
-      return {};
-    }
-  }
-  return {};
-}
-
-// Intl is the authority on IANA names; croner defers to it as well.
-function parseTimezone(value: unknown): string {
-  if (value === undefined || value === null || value === "") {
-    return DEFAULT_TIMEZONE;
-  }
-  if (typeof value !== "string") {
-    throw new Error(`${SCHEDULE_BLOCK}: "timezone" must be an IANA name`);
-  }
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: value });
-  } catch {
-    throw new Error(
-      `${SCHEDULE_BLOCK}: unknown timezone "${value}" (use an IANA name such as Europe/Lisbon)`,
-    );
-  }
-  return value;
-}
-
-function toNumber(value: unknown): number | undefined {
-  if (typeof value === "number") return value;
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = Number(value);
-    return Number.isNaN(parsed) ? undefined : parsed;
-  }
-  return undefined;
-}
-
-// Exactly five fields: seconds would only mislead under a one-minute floor.
-function parseCronPattern(cron: unknown, timezone: string): string {
-  if (typeof cron !== "string" || cron.trim() === "") {
-    throw new Error(`${SCHEDULE_BLOCK}: "cron" is required in cron mode`);
-  }
-  const pattern = cron.trim().replace(/\s+/g, " ");
-  if (pattern.split(" ").length !== 5) {
-    throw new Error(
-      `${SCHEDULE_BLOCK}: cron "${pattern}" must have exactly five fields (minute hour day month weekday)`,
-    );
-  }
+export function parseScheduleConfig(config: unknown): ScheduleConfig {
+  const schedule = parseSharedSchedule(config);
+  if (schedule.mode !== "cron") return schedule;
   let cronJob: Cron;
   try {
-    cronJob = new Cron(pattern, { timezone, legacyMode: false });
+    cronJob = new Cron(schedule.cron, {
+      timezone: schedule.timezone,
+      legacyMode: false,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `${SCHEDULE_BLOCK}: invalid cron "${pattern}": ${message}`,
-      {
-        cause: error,
-      },
+    throw new ScheduleConfigError(
+      `invalid cron "${schedule.cron}": ${message}`,
     );
   }
   if (!cronJob.nextRun()) {
-    throw new Error(`${SCHEDULE_BLOCK}: cron "${pattern}" never fires`);
+    throw new ScheduleConfigError(`cron "${schedule.cron}" never fires`);
   }
-  return pattern;
-}
-
-// Config: { mode?, cron?, every?, unit?, everyMs?, timezone? }; an omitted
-// mode follows whichever of cron / every is present (cron wins).
-export function parseScheduleConfig(config: unknown): ScheduleConfig {
-  const record = asRecord(config);
-  const timezone = parseTimezone(record.timezone);
-  const mode =
-    record.mode === "cron" || record.mode === "interval"
-      ? record.mode
-      : record.cron
-        ? "cron"
-        : record.every !== undefined || record.everyMs !== undefined
-          ? "interval"
-          : undefined;
-  if (!mode) {
-    throw new Error(
-      `${SCHEDULE_BLOCK}: "mode" must be "cron" or "interval" (or set "cron" / "every")`,
-    );
-  }
-  if (mode === "cron") {
-    return { mode, cron: parseCronPattern(record.cron, timezone), timezone };
-  }
-  return { mode, everyMs: intervalMsFrom(record), timezone };
-}
-
-function intervalMsFrom(record: Record<string, unknown>): number {
-  const every = toNumber(record.every);
-  let everyMs: number | undefined;
-  if (every !== undefined) {
-    const unit = (record.unit ?? "minutes") as string;
-    if (!(unit in INTERVAL_UNIT_MS)) {
-      throw new Error(
-        `${SCHEDULE_BLOCK}: "unit" must be one of ${Object.keys(INTERVAL_UNIT_MS).join(", ")}`,
-      );
-    }
-    everyMs = every * INTERVAL_UNIT_MS[unit as IntervalUnit];
-  } else {
-    everyMs = toNumber(record.everyMs);
-  }
-  if (everyMs === undefined) {
-    throw new Error(
-      `${SCHEDULE_BLOCK}: "every" (with "unit") or "everyMs" is required in interval mode`,
-    );
-  }
-  if (!Number.isFinite(everyMs) || everyMs <= 0) {
-    throw new Error(
-      `${SCHEDULE_BLOCK}: the interval must be a positive number`,
-    );
-  }
-  if (everyMs < MIN_SCHEDULE_INTERVAL_MS) {
-    throw new Error(
-      `${SCHEDULE_BLOCK}: the interval must be at least ${MIN_SCHEDULE_INTERVAL_MS / 1000}s`,
-    );
-  }
-  return Math.round(everyMs);
+  return schedule;
 }
 
 // Strictly after `from`. A cron slot erased by a DST jump resolves to the
@@ -161,7 +46,7 @@ export function nextFireAt(schedule: ScheduleConfig, from: Date): Date {
     legacyMode: false,
   }).nextRun(from);
   if (!next) {
-    throw new Error(`${SCHEDULE_BLOCK}: cron "${schedule.cron}" never fires`);
+    throw new Error(`Schedule: cron "${schedule.cron}" never fires`);
   }
   return next;
 }

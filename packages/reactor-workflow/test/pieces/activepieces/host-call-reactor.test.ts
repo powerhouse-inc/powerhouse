@@ -11,7 +11,10 @@ import {
   type ReactorPort,
 } from "../../../src/pieces/engine/blocks.js";
 import type { PieceResolver } from "../../../src/pieces/activepieces/resolver.js";
-import type { BlockExecution } from "../../../src/pieces/engine/types.js";
+import {
+  stepBlock,
+  type BlockExecution,
+} from "../../../src/pieces/engine/types.js";
 import { PieceWorker } from "../../../src/pieces/activepieces/worker/host.js";
 
 const REACTOR_FIXTURE = `
@@ -88,7 +91,7 @@ let worker: PieceWorker;
 // layout for everything else, the way the runtime's registry does.
 function resolver(local: boolean): PieceResolver {
   return {
-    resolve(name: string, version: string) {
+    resolve({ name, version }) {
       return Promise.resolve(
         local
           ? { name, version, entryPath, local: true }
@@ -155,12 +158,16 @@ function reactorPort(): ReactorPort & { calls: string[] } {
   };
 }
 
-function execution(blockType: string): BlockExecution {
-  return {
-    blockType,
+function execution(pieceName: string, actionName: string): BlockExecution {
+  const step = {
+    id: "s1",
+    key: "step",
+    pieceName,
+    pieceVersion: "1.0.0",
+    actionName,
     config: {},
-    step: { id: "s1", key: "step", blockType } as BlockExecution["step"],
   };
+  return { block: stepBlock(step), config: {}, step };
 }
 
 describe("ctx.reactor over the host call channel", () => {
@@ -199,7 +206,7 @@ describe("ctx.reactor over the host call channel", () => {
     });
 
     const result = await executor.execute(
-      execution("@powerhousedao/piece-reactor@1.0.0#read"),
+      execution("@powerhousedao/piece-reactor", "read"),
     );
 
     expect(result.output).toEqual({
@@ -224,7 +231,7 @@ describe("ctx.reactor over the host call channel", () => {
     });
 
     const result = await executor.execute(
-      execution("@powerhousedao/piece-reactor@1.0.0#write"),
+      execution("@powerhousedao/piece-reactor", "write"),
     );
 
     expect(port.calls).toEqual(["execute SET_NAME"]);
@@ -240,9 +247,7 @@ describe("ctx.reactor over the host call channel", () => {
       reactor: port,
     });
 
-    await executor.execute(
-      execution("@powerhousedao/piece-reactor@1.0.0#greedy"),
-    );
+    await executor.execute(execution("@powerhousedao/piece-reactor", "greedy"));
 
     // Whatever a piece asks for, the host serves a page it is willing to
     // read: capped, whole, and at least one.
@@ -262,9 +267,7 @@ describe("ctx.reactor over the host call channel", () => {
       reactor: port,
     });
 
-    const result = await executor.execute(
-      execution("@test/fetched@1.0.0#blind"),
-    );
+    const result = await executor.execute(execution("@test/fetched", "blind"));
 
     const output = result.output as { reached: boolean; message: string };
     expect(output.reached).toBe(false);
@@ -281,7 +284,7 @@ describe("ctx.reactor over the host call channel", () => {
     });
 
     const result = await executor.execute(
-      execution("@powerhousedao/piece-reactor@1.0.0#blind"),
+      execution("@powerhousedao/piece-reactor", "blind"),
     );
 
     expect((result.output as { reached: boolean }).reached).toBe(false);
@@ -297,7 +300,7 @@ describe("ctx.reactor over the host call channel", () => {
     });
 
     const result = await executor.execute(
-      execution("@powerhousedao/piece-reactor@1.0.0#malformed"),
+      execution("@powerhousedao/piece-reactor", "malformed"),
     );
 
     const output = result.output as { threw: boolean; message: string };

@@ -1,4 +1,8 @@
 import {
+  PIECE_ACTION_PORTS,
+  TRIGGER_PORTS,
+} from "@powerhousedao/pieces-framework/workflow";
+import {
   getActions,
   getTriggers,
   type ApPiece,
@@ -52,6 +56,10 @@ export interface PiecePropDescriptor {
   // A STATIC_DROPDOWN's own state, beside its options.
   staticDisabled?: boolean;
   staticPlaceholder?: string;
+  // Shown while a sibling holds one of `oneOf`.
+  showWhen?: { prop: string; oneOf: unknown[] };
+  // A checkbox with this label that stores "" on purpose.
+  emptyChoice?: string;
 }
 
 export interface PiecePropertyGroupDescriptor {
@@ -75,6 +83,8 @@ export interface PieceActionDescriptor {
   // UI metadata only — not a credential contract (spike finding).
   requireAuth: boolean;
   props: PiecePropDescriptor[];
+  // Output ports the step can leave on; the editor draws only these.
+  ports: readonly string[];
   // Carried verbatim: it is what the expression picker builds a later step's
   // field list from, and a package piece has no published listing to read.
   outputSchema?: unknown;
@@ -92,8 +102,11 @@ export interface PieceTriggerDescriptor {
   description?: string;
   strategy: ApTriggerStrategy;
   testStrategy?: string;
+  // A form the editor draws instead of the props, e.g. "schedule".
+  display?: string;
   requireAuth: boolean;
   props: PiecePropDescriptor[];
+  ports: readonly string[];
   propertyGroups?: PiecePropertyGroupDescriptor[];
   outputSchema?: unknown;
   hasSampleData: boolean;
@@ -196,6 +209,14 @@ function describeHints(prop: ApProperty): Partial<PiecePropDescriptor> {
     if (reveals.length > 0) hints.reveals = reveals;
   }
   if (prop.refreshOnSearch === true) hints.refreshOnSearch = true;
+  const showWhen = prop.showWhen as { prop?: unknown; oneOf?: unknown } | null;
+  if (typeof showWhen?.prop === "string" && Array.isArray(showWhen.oneOf)) {
+    const oneOf: unknown[] = showWhen.oneOf;
+    hints.showWhen = { prop: showWhen.prop, oneOf: [...oneOf] };
+  }
+  if (typeof prop.emptyChoice === "string" && prop.emptyChoice !== "") {
+    hints.emptyChoice = prop.emptyChoice;
+  }
   return hints;
 }
 
@@ -321,9 +342,24 @@ function describeAuthMethod(auth: unknown): PieceAuthDescriptor | undefined {
   };
 }
 
+function declaredPorts(ports: unknown): readonly string[] | undefined {
+  if (!Array.isArray(ports) || ports.length === 0) return undefined;
+  return ports.every((port) => typeof port === "string")
+    ? (ports as string[])
+    : undefined;
+}
+
+export interface BuildDescriptorOptions {
+  // Read each action's own `ports`: only a piece whose results the host routes.
+  routed?: boolean;
+  // The host feeds the triggers itself, so no trigger strategy is refused.
+  hostFed?: boolean;
+}
+
 export function buildDescriptor(
   piece: ApPiece,
   source: PieceSource,
+  options: BuildDescriptorOptions = {},
 ): PieceDescriptor {
   const actions = Object.entries(getActions(piece)).map(
     ([actionName, action]): PieceActionDescriptor => ({
@@ -331,6 +367,9 @@ export function buildDescriptor(
       displayName: action.displayName ?? actionName,
       description: action.description,
       requireAuth: action.requireAuth ?? false,
+      ports:
+        (options.routed ? declaredPorts(action.ports) : undefined) ??
+        PIECE_ACTION_PORTS,
       props: describeProperties(
         action.props,
         (propName) =>
@@ -358,7 +397,11 @@ export function buildDescriptor(
       description: trigger.description,
       strategy: trigger.type ?? "UNKNOWN",
       testStrategy: trigger.testStrategy,
+      ...(typeof trigger.display === "string" && trigger.display !== ""
+        ? { display: trigger.display }
+        : {}),
       requireAuth: trigger.requireAuth ?? false,
+      ports: TRIGGER_PORTS,
       props: describeProperties(
         trigger.props,
         (propName) =>
@@ -374,7 +417,7 @@ export function buildDescriptor(
         : {}),
       handshake: describeHandshake(trigger),
       ...optional("propertyGroups", describeGroups(trigger.propertyGroups)),
-      ...withUnsupported(unsupportedTrigger(trigger)),
+      ...(options.hostFed ? {} : withUnsupported(unsupportedTrigger(trigger))),
     }),
   );
 

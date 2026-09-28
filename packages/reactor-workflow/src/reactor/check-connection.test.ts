@@ -1,14 +1,16 @@
-// checkConnection over offline fixture pieces: local bundle cache in the
-// production layout, real PGlite-backed secret store, stubbed piece catalog.
+// checkConnection over fixture pieces served by a local npm and CDN, with a
+// real PGlite-backed secret store.
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import type { WorkflowRuntimeHostDeps } from "./host.js";
 import {
   DEFAULT_EGRESS_POLICY,
-  ensurePieceBundle,
   PieceWorkerTimeoutError,
   type PieceWorker,
 } from "../pieces/index.js";
-import type * as ReactorConnectors from "../pieces/index.js";
+import {
+  startPieceSources,
+  type PieceSources,
+} from "../../test/helpers/piece-sources.js";
 import type { Action, PHDocument } from "document-model";
 import {
   actions,
@@ -18,10 +20,6 @@ import {
   type ConnectionDocument,
   type RecordCheckResultInput,
 } from "@powerhousedao/workflow/document-models/connection";
-import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import {
   afterAll,
   beforeAll,
@@ -32,22 +30,6 @@ import {
   type Mock,
 } from "vitest";
 
-// Bundle loads are redirected to a fixture cache (same layout as the real
-// one) so no test ever reaches the Activepieces cloud.
-vi.mock("../pieces/index.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof ReactorConnectors>();
-  return { ...actual, ensurePieceBundle: vi.fn() };
-});
-
-vi.mock("./piece-catalog.js", () => ({
-  fetchPieceCatalog: vi.fn(),
-  fetchPieceDetail: vi.fn(),
-  fetchPieceActions: vi.fn(),
-  fetchPieceTriggers: vi.fn(),
-}));
-
-import { fetchPieceCatalog, fetchPieceDetail } from "./piece-catalog.js";
-import { BUNDLE_CACHE_DIR } from "./lib.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 
@@ -173,45 +155,14 @@ module.exports = { app };
 `,
 };
 
-let cacheDir = "";
+let sources: PieceSources;
 let passwordRef = "";
 let get: Mock;
 let execute: Mock;
 
-function fixtureDir(piece: (typeof PIECES)[keyof typeof PIECES]): string {
-  return join(cacheDir, `${piece.name.replace("/", "-")}-${piece.version}`);
-}
-
-async function writeFixtureBundle(
-  piece: (typeof PIECES)[keyof typeof PIECES],
-  code: string,
-): Promise<void> {
-  const dir = fixtureDir(piece);
-  await mkdir(dir, { recursive: true });
-  await writeFile(
-    join(dir, "package.json"),
-    JSON.stringify({
-      name: piece.name,
-      version: piece.version,
-      main: "index.js",
-    }),
-  );
-  await writeFile(join(dir, "index.js"), code);
-}
-
-function summary(name: string, version: string) {
-  return {
-    name,
-    displayName: name,
-    description: "",
-    logoUrl: "",
-    version,
-    actionCount: 0,
-    triggerCount: 0,
-    categories: [],
-    auth: null,
-  };
-}
+// A bundle request to the fixture sources.
+const bundleRequests = () =>
+  sources.requests.filter((path) => path.endsWith(".tgz"));
 
 function makeDocument(
   options: {
@@ -279,34 +230,12 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     // Keep the key in-process so the encrypted store never writes a key file.
     process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY =
       "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
-    cacheDir = await mkdtemp(join(tmpdir(), "ap-check-connection-"));
-    for (const key of Object.keys(PIECES) as Array<keyof typeof PIECES>) {
-      await writeFixtureBundle(PIECES[key], FIXTURE_BUNDLES[key]);
-    }
-
-    vi.mocked(ensurePieceBundle).mockImplementation(
-      ({ name, version, cacheDir: requestedCacheDir }) => {
-        void requestedCacheDir;
-        const dir = join(cacheDir, `${name.replace("/", "-")}-${version}`);
-        if (!existsSync(join(dir, "package.json"))) {
-          return Promise.reject(
-            new Error(
-              `Offline check test: no fixture bundle for ${name}@${version}`,
-            ),
-          );
-        }
-        return Promise.resolve({
-          dir,
-          source: "cache" as const,
-          dependencies: {},
-          installed: false,
-        });
-      },
-    );
-    vi.mocked(fetchPieceCatalog).mockResolvedValue(
-      Object.values(PIECES).map((piece) => summary(piece.name, piece.version)),
-    );
-    vi.mocked(fetchPieceDetail).mockResolvedValue({ version: "1.0.0" });
+    sources = await startPieceSources({
+      npm: (Object.keys(PIECES) as Array<keyof typeof PIECES>).map((key) => ({
+        ...PIECES[key],
+        code: FIXTURE_BUNDLES[key],
+      })),
+    });
 
     get = vi.fn();
     execute = vi.fn(() => ({}) as PHDocument);
@@ -330,7 +259,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
   });
 
   afterAll(async () => {
-    await rm(cacheDir, { recursive: true, force: true });
+    await sources.stop();
   });
 
   it("runs a passing check and records OK with the account label", async () => {
@@ -345,11 +274,9 @@ describe("WorkflowRuntimeService.checkConnection", () => {
       detail: null,
       accountLabel: "pass-account @ imap.example.com",
     });
-    expect(ensurePieceBundle).toHaveBeenCalledWith({
-      name: PIECES.pass.name,
-      version: PIECES.pass.version,
-      cacheDir: BUNDLE_CACHE_DIR,
-    });
+    expect(sources.requests).toContain(
+      `/npm/${PIECES.pass.name.replace("/", "%2f")}`,
+    );
     const input = lastRecordInput();
     expect(input.status).toBe("OK");
     expect(input.checkedAt).toMatch(
@@ -582,7 +509,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
   it("refuses OAUTH2 without fetching a bundle", async () => {
     const document = makeDocument({ authType: "OAUTH2" });
     get.mockResolvedValueOnce(document);
-    vi.mocked(ensurePieceBundle).mockClear();
+    const before = bundleRequests().length;
     execute.mockClear();
 
     const result = await service.checkConnection(document.header.id, TEST_CTX);
@@ -592,7 +519,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
       detail: "OAUTH2 connections are not supported by the runtime yet",
       accountLabel: null,
     });
-    expect(ensurePieceBundle).not.toHaveBeenCalled();
+    expect(bundleRequests()).toHaveLength(before);
     expect(lastRecordInput()).toMatchObject({
       status: "ERROR",
       error: "OAUTH2 connections are not supported by the runtime yet",
@@ -602,7 +529,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
   it("refuses a connection with nothing to authenticate with, without fetching a bundle", async () => {
     const document = makeDocument({ configured: false, empty: true });
     get.mockResolvedValueOnce(document);
-    vi.mocked(ensurePieceBundle).mockClear();
+    const before = bundleRequests().length;
     execute.mockClear();
 
     const result = await service.checkConnection(document.header.id, TEST_CTX);
@@ -612,7 +539,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
       detail: "Connection is not configured",
       accountLabel: null,
     });
-    expect(ensurePieceBundle).not.toHaveBeenCalled();
+    expect(bundleRequests()).toHaveLength(before);
     expect(lastRecordInput()).toMatchObject({
       status: "ERROR",
       error: "Connection is not configured",
@@ -663,7 +590,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
       document = reducer(document, actionList[0]);
       return document;
     });
-    vi.mocked(ensurePieceBundle).mockClear();
+    const before = bundleRequests().length;
 
     await service.checkConnection(document.header.id, TEST_CTX);
     const second = await service.checkConnection(document.header.id, TEST_CTX);
@@ -672,7 +599,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     expect(second.detail).toContain("revoked");
     expect(document.state.global.status).toBe("REVOKED");
     // Nothing reached the piece, so nothing shaped the stored secrets.
-    expect(ensurePieceBundle).not.toHaveBeenCalled();
+    expect(bundleRequests()).toHaveLength(before);
   });
 
   it("refuses a caller the subgraph cannot identify", async () => {
@@ -684,20 +611,15 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     );
   });
 
-  it("resolves the version from piece detail when the catalog misses", async () => {
-    vi.mocked(fetchPieceCatalog).mockResolvedValueOnce([]);
-    vi.mocked(fetchPieceDetail).mockClear();
+  it("checks against the newest version the piece's packument lists", async () => {
     const document = makeDocument();
     get.mockResolvedValueOnce(document);
 
     const result = await service.checkConnection(document.header.id, TEST_CTX);
 
     expect(result.ok).toBe(true);
-    expect(fetchPieceDetail).toHaveBeenCalledWith(PIECES.pass.name);
-    expect(ensurePieceBundle).toHaveBeenCalledWith({
-      name: PIECES.pass.name,
-      version: "1.0.0",
-      cacheDir: BUNDLE_CACHE_DIR,
-    });
+    expect(bundleRequests()).toContain(
+      `/cdn/${PIECES.pass.name.replace("/", "-")}-${PIECES.pass.version}.tgz`,
+    );
   });
 });

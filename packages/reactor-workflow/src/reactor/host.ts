@@ -40,4 +40,6 @@ export interface WorkflowRuntimeHostDeps {
   // for a database that outlives the working directory.
   secretsKeyFile?: string | false;
   logger?: ILogger;
+  // How long a design-time call waits for a workflow still syncing here.
+  syncWaitMs?: number;
 }

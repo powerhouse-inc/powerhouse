@@ -116,4 +116,28 @@ describe("unsupportedTrigger", () => {
     });
     expect(feature(unsupportedTrigger(manual))).toBe("TriggerStrategy.MANUAL");
   });
+
+  it("names an APP_WEBHOOK trigger, which nothing here can deliver", () => {
+    const app = createTrigger({
+      name: "a",
+      displayName: "A",
+      description: "",
+      props: {},
+      sampleData: {},
+      type: TriggerStrategy.APP_WEBHOOK,
+      onEnable: () => Promise.resolve(),
+      onDisable: () => Promise.resolve(),
+      run: () => Promise.resolve([]),
+    });
+    const refused = unsupportedTrigger(app);
+    expect(feature(refused)).toBe("TriggerStrategy APP_WEBHOOK");
+    expect(refused?.reason).toContain("app-level webhooks");
+  });
+
+  it("names a strategy it has never heard of, or none at all", () => {
+    expect(unsupportedTrigger({ type: "STREAMING" })?.reason).toContain(
+      'Unknown trigger strategy "STREAMING"',
+    );
+    expect(unsupportedTrigger({})?.reason).toContain("declares no strategy");
+  });
 });

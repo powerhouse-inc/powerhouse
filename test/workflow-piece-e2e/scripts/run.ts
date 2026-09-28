@@ -472,6 +472,8 @@ async function main(): Promise<void> {
       fs.realpathSync(REGISTRY_PROJECT_DIR),
       ".ph",
       "ap-bundles",
+      // Downloads are cached per source.
+      "registry",
       `${FIXTURE_PACKAGE}-${FIXTURE_VERSION}`,
     );
     checks.ok(

@@ -4,6 +4,10 @@
 // Declared by the reactor piece, fired by this host: the processor sees every
 // operation, so matching one against a filter never leaves the process.
 import {
+  blockKey,
+  type BlockIdentity,
+} from "@powerhousedao/pieces-framework/block-type";
+import {
   DOCUMENT_CREATED_BLOCK,
   DOCUMENT_DELETED_BLOCK,
   DOCUMENT_EVENT_BLOCK,
@@ -16,11 +20,16 @@ export type TriggerKind =
   | "document-created"
   | "document-deleted";
 
-export const TRIGGER_KIND_BY_BLOCK: Record<string, TriggerKind> = {
+// Keyed by block key, so a trigger pinned to any version finds its kind.
+const TRIGGER_KIND_BY_BLOCK: Record<string, TriggerKind> = {
   [DOCUMENT_EVENT_BLOCK]: "document-event",
   [DOCUMENT_CREATED_BLOCK]: "document-created",
   [DOCUMENT_DELETED_BLOCK]: "document-deleted",
 };
+
+export function triggerKindOf(block: BlockIdentity): TriggerKind | undefined {
+  return TRIGGER_KIND_BY_BLOCK[blockKey(block)];
+}
 
 export interface DocumentEventFilter {
   documentType?: string[];

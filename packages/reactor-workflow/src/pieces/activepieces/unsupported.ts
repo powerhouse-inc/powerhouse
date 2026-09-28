@@ -1,3 +1,5 @@
+import { checkTriggerStrategy } from "@powerhousedao/pieces-framework/workflow";
+
 // Piece features this engine cannot run. Read off a loaded piece or off its
 // published listing alike, since both carry auth and triggers as data.
 const ISSUES_URL = "https://github.com/powerhouse-inc/powerhouse/issues/";
@@ -50,13 +52,22 @@ function unsupportedMethod(auth: unknown): UnsupportedFeature | undefined {
   return undefined;
 }
 
-// A piece trigger; core#manual is the engine's own and never passes here.
+// A piece trigger; the core piece's triggers are fed by the host and never pass here.
 export function unsupportedTrigger(trigger: {
   type?: unknown;
   renewConfiguration?: unknown;
 }): UnsupportedFeature | undefined {
   if (trigger.type === "MANUAL") {
     return unsupported("TriggerStrategy.MANUAL", 3091);
+  }
+  const strategy = checkTriggerStrategy(trigger.type);
+  if ("issue" in strategy) {
+    const issue = trigger.type === "APP_WEBHOOK" ? 3081 : 3091;
+    return {
+      feature: `TriggerStrategy ${String(trigger.type)}`,
+      issue,
+      reason: `${strategy.issue} (${ISSUES_URL}${issue})`,
+    };
   }
   const renew = trigger.renewConfiguration;
   // createTrigger fills in { strategy: "NONE" } for every trigger.

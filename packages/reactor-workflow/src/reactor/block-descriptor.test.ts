@@ -1,22 +1,12 @@
-// blockDescriptor over offline fixture pieces: the bundle is loaded in the
-// piece worker, so no piece module ever runs in this process.
-import { ensurePieceBundle } from "../pieces/index.js";
-import type * as ReactorConnectors from "../pieces/index.js";
-import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-
-// Bundle loads are redirected to a fixture cache (same layout as the real
-// one) so no test ever reaches the Activepieces cloud.
-vi.mock("../pieces/index.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof ReactorConnectors>();
-  return { ...actual, ensurePieceBundle: vi.fn() };
-});
-
-import { BUNDLE_CACHE_DIR } from "./lib.js";
+// blockDescriptor over fixture pieces served by a local npm and CDN: the bundle
+// is loaded in the piece worker, so no piece module ever runs in this process.
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  startPieceSources,
+  type PieceSources,
+} from "../../test/helpers/piece-sources.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
+import { CORE_PIECE_VERSION } from "../pieces/index.js";
 
 const runtime = testRuntime();
 
@@ -25,6 +15,15 @@ const PIECES = {
   env: { name: "@activepieces/piece-env", version: "1.0.0" },
   broken: { name: "@activepieces/piece-broken", version: "1.0.0" },
 } as const;
+
+function block(
+  piece: keyof typeof PIECES,
+  name: string,
+  kind: "action" | "trigger" = "action",
+) {
+  const { name: pieceName, version: pieceVersion } = PIECES[piece];
+  return { pieceName, pieceVersion, kind, name };
+}
 
 const FIXTURE_BUNDLES: Record<keyof typeof PIECES, string> = {
   card: `
@@ -87,69 +86,28 @@ throw new Error("fixture: exploded at module load");
 `,
 };
 
-let cacheDir = "";
-
-function fixtureDir(piece: (typeof PIECES)[keyof typeof PIECES]): string {
-  return join(cacheDir, `${piece.name.replace("/", "-")}-${piece.version}`);
-}
-
-async function writeFixtureBundle(
-  piece: (typeof PIECES)[keyof typeof PIECES],
-  code: string,
-): Promise<void> {
-  const dir = fixtureDir(piece);
-  await mkdir(dir, { recursive: true });
-  await writeFile(
-    join(dir, "package.json"),
-    JSON.stringify({
-      name: piece.name,
-      version: piece.version,
-      main: "index.js",
-    }),
-  );
-  await writeFile(join(dir, "index.js"), code);
-}
+let sources: PieceSources;
 
 describe("WorkflowRuntimeService.blockDescriptor", () => {
   beforeAll(async () => {
     process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY =
       "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
-    cacheDir = await mkdtemp(join(tmpdir(), "ap-block-descriptor-"));
-    for (const key of Object.keys(PIECES) as Array<keyof typeof PIECES>) {
-      await writeFixtureBundle(PIECES[key], FIXTURE_BUNDLES[key]);
-    }
-
-    vi.mocked(ensurePieceBundle).mockImplementation(
-      ({ name, version, cacheDir: requestedCacheDir }) => {
-        void requestedCacheDir;
-        const dir = join(cacheDir, `${name.replace("/", "-")}-${version}`);
-        if (!existsSync(join(dir, "package.json"))) {
-          return Promise.reject(
-            new Error(
-              `Offline descriptor test: no fixture bundle for ${name}@${version}`,
-            ),
-          );
-        }
-        return Promise.resolve({
-          dir,
-          source: "cache" as const,
-          // A fixture bundle carries its own code, which is the path 739 of
-          // the 760 published pieces take and the one that installs nothing.
-          dependencies: {},
-          installed: false,
-        });
-      },
-    );
+    sources = await startPieceSources({
+      npm: (Object.keys(PIECES) as Array<keyof typeof PIECES>).map((key) => ({
+        ...PIECES[key],
+        code: FIXTURE_BUNDLES[key],
+      })),
+    });
   });
 
   afterAll(async () => {
     delete process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY;
-    await rm(cacheDir, { recursive: true, force: true });
+    await sources.stop();
   });
 
   it("returns the action descriptor for a piece block", async () => {
     const descriptor = await runtime.blockDescriptor(
-      `${PIECES.card.name}@${PIECES.card.version}#create_card`,
+      block("card", "create_card"),
     );
 
     expect(descriptor).toEqual({
@@ -165,6 +123,7 @@ describe("WorkflowRuntimeService.blockDescriptor", () => {
         displayName: "Create Card",
         description: "Creates a card",
         requireAuth: true,
+        ports: ["next", "error"],
         props: [
           {
             name: "title",
@@ -185,16 +144,15 @@ describe("WorkflowRuntimeService.blockDescriptor", () => {
         ],
       },
     });
-    expect(ensurePieceBundle).toHaveBeenCalledWith({
-      name: PIECES.card.name,
-      version: PIECES.card.version,
-      cacheDir: BUNDLE_CACHE_DIR,
-    });
+    // An Activepieces piece: listed by its npm packument, fetched from the CDN.
+    expect(sources.requests).toContain(
+      `/cdn/${PIECES.card.name.replace("/", "-")}-${PIECES.card.version}.tgz`,
+    );
   });
 
   it("returns the trigger descriptor under a trigger key", async () => {
     const descriptor = await runtime.blockDescriptor(
-      `${PIECES.card.name}@${PIECES.card.version}#trigger:new_card`,
+      block("card", "new_card", "trigger"),
     );
 
     expect(descriptor).toMatchObject({
@@ -211,43 +169,49 @@ describe("WorkflowRuntimeService.blockDescriptor", () => {
   });
 
   it("serves a repeat descriptor from cache without re-resolving the bundle", async () => {
-    const blockType = `${PIECES.card.name}@${PIECES.card.version}#create_card`;
-    await runtime.blockDescriptor(blockType);
-    vi.mocked(ensurePieceBundle).mockClear();
+    const card = block("card", "create_card");
+    await runtime.blockDescriptor(card);
+    const asked = sources.requests.length;
 
-    const descriptor = await runtime.blockDescriptor(blockType);
+    const descriptor = await runtime.blockDescriptor(card);
 
     expect(descriptor).toMatchObject({ displayName: "Card Fixture" });
-    expect(ensurePieceBundle).not.toHaveBeenCalled();
+    expect(sources.requests).toHaveLength(asked);
   });
 
   // The piece module's top-level code must not see the reactor's environment;
   // a fixture that reads the master key would report "leaked" if it ran here.
   it("builds the descriptor outside the reactor process", async () => {
-    const descriptor = await runtime.blockDescriptor(
-      `${PIECES.env.name}@${PIECES.env.version}#probe`,
-    );
+    const descriptor = await runtime.blockDescriptor(block("env", "probe"));
 
     expect(descriptor).toMatchObject({ displayName: "isolated" });
   });
 
   it("surfaces a bundle that throws at module load as a clean error", async () => {
     await expect(
-      runtime.blockDescriptor(
-        `${PIECES.broken.name}@${PIECES.broken.version}#anything`,
-      ),
+      runtime.blockDescriptor(block("broken", "anything")),
     ).rejects.toThrow("fixture: exploded at module load");
   });
 
-  it("keeps the bundle resolution error wording", async () => {
-    await expect(
-      runtime.blockDescriptor("@activepieces/piece-absent@9.9.9#nope"),
-    ).rejects.toThrow(
-      "Offline descriptor test: no fixture bundle for @activepieces/piece-absent@9.9.9",
-    );
+  it("answers null for a piece no source has", async () => {
+    expect(
+      await runtime.blockDescriptor({
+        pieceName: "@activepieces/piece-absent",
+        pieceVersion: "9.9.9",
+        kind: "action" as const,
+        name: "nope",
+      }),
+    ).toBeNull();
   });
 
-  it("returns null for a block type that is not a piece", async () => {
-    expect(await runtime.blockDescriptor("core#manual")).toBeNull();
+  it("returns null for a block its piece does not have", async () => {
+    expect(
+      await runtime.blockDescriptor({
+        pieceName: "@powerhousedao/piece-core",
+        pieceVersion: CORE_PIECE_VERSION,
+        kind: "action" as const,
+        name: "nonsense",
+      }),
+    ).toBeNull();
   });
 });

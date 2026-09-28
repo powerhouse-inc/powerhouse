@@ -208,8 +208,13 @@ it("indexes the registry's blocks for block search", async () => {
     ],
   });
   const index = buildSearchIndex(await fetchCatalogWithSuggestions());
-  expect(index.entries.map((e) => e.hit.blockType)).toEqual([
-    "@acme/piece-invoices@1.0.0#send",
+  expect(index.entries.map((e) => e.hit)).toEqual([
+    expect.objectContaining({
+      pieceName: "@acme/piece-invoices",
+      pieceVersion: "1.0.0",
+      kind: "action",
+      name: "send",
+    }),
   ]);
 });
 

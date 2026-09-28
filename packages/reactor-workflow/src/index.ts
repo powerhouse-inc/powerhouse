@@ -5,6 +5,7 @@ export {
   type AttachmentClientLike,
 } from "./reactor/attachment-port.js";
 export { WORKFLOW_PACKAGE_NAME } from "./reactor/package-name.js";
+export { CORE_PIECE_NAME, CORE_PIECE_VERSION } from "./pieces/core/index.js";
 export { setPieceRegistryUrl } from "./pieces/activepieces/registry-source.js";
 export { PieceRegistry, packagePieces } from "./reactor/piece-registry.js";
 export type {
@@ -14,6 +15,7 @@ export type {
 export {
   createWorkflowRuntime,
   WorkflowRuntimeService,
+  type BlockResolutionRecord,
   type ConnectionCheckResult,
   type ConnectionSummary,
   type PersistedRunResult,
@@ -37,3 +39,10 @@ export type {
   TriggerBinding,
 } from "./reactor/trigger-supervisor.js";
 export type { WebhookConfig, WebhookPayload } from "./reactor/webhook.js";
+export type { StepTestResult } from "./reactor/step-test.js";
+export type { OutputTree, OutputTreeNode } from "./reactor/output-tree.js";
+export {
+  WORKFLOW_SYNCING_MESSAGE,
+  WorkflowSyncingError,
+  type WorkflowAccessOptions,
+} from "./reactor/sync-wait.js";

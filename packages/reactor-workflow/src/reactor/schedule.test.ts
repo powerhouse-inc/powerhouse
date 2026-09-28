@@ -18,34 +18,41 @@ describe("parseScheduleConfig", () => {
     });
   });
 
-  it("normalises whitespace and infers the mode from the fields present", () => {
-    expect(parseScheduleConfig({ cron: "  */15  *  * * *" })).toEqual({
-      mode: "cron",
-      cron: "*/15 * * * *",
-      timezone: "UTC",
-    });
-    expect(parseScheduleConfig({ every: 2, unit: "hours" })).toEqual({
+  it("normalises whitespace and reads interval mode as every + unit", () => {
+    expect(
+      parseScheduleConfig({ mode: "cron", cron: "  */15  *  * * *" }),
+    ).toMatchObject({ cron: "*/15 * * * *" });
+    expect(
+      parseScheduleConfig({ mode: "interval", every: 2, unit: "hours" }),
+    ).toEqual({
       mode: "interval",
+      every: 2,
+      unit: "hours",
       everyMs: 7_200_000,
-      timezone: "UTC",
-    });
-    expect(parseScheduleConfig({ everyMs: 90_000 })).toEqual({
-      mode: "interval",
-      everyMs: 90_000,
       timezone: "UTC",
     });
   });
 
-  it("accepts numeric strings and JSON-encoded configs", () => {
-    expect(
-      parseScheduleConfig(
-        JSON.stringify({
-          mode: "interval",
-          every: "5",
-          timezone: "Asia/Tokyo",
-        }),
-      ),
-    ).toEqual({ mode: "interval", everyMs: 300_000, timezone: "Asia/Tokyo" });
+  it("requires the mode instead of inferring it", () => {
+    expect(() => parseScheduleConfig({ cron: "0 9 * * *" })).toThrow(
+      /"mode" is required/,
+    );
+    expect(() => parseScheduleConfig({ every: 5, unit: "minutes" })).toThrow(
+      /"mode" is required/,
+    );
+    expect(() => parseScheduleConfig({ mode: "hourly" })).toThrow(
+      /"mode" must be "cron" or "interval"/,
+    );
+  });
+
+  it("takes neither a JSON string nor numeric strings", () => {
+    expect(() =>
+      parseScheduleConfig(JSON.stringify({ mode: "cron", cron: "0 9 * * *" })),
+    ).toThrow(/must be an object/);
+    expect(() =>
+      parseScheduleConfig({ mode: "interval", every: "5", unit: "minutes" }),
+    ).toThrow(/"every" must be a whole number/);
+    expect(() => parseScheduleConfig(null)).toThrow(/must be an object/);
   });
 
   it("rejects invalid cron patterns, field counts and never-firing crons", () => {
@@ -68,37 +75,36 @@ describe("parseScheduleConfig", () => {
 
   it("rejects unknown timezones", () => {
     expect(() =>
-      parseScheduleConfig({ cron: "0 9 * * *", timezone: "Mars/Olympus" }),
+      parseScheduleConfig({
+        mode: "cron",
+        cron: "0 9 * * *",
+        timezone: "Mars/Olympus",
+      }),
     ).toThrow(/unknown timezone "Mars\/Olympus"/);
   });
 
-  it("enforces the one-second floor and positive intervals", () => {
+  it("takes whole units of at least one, and no other unit", () => {
     expect(() =>
-      parseScheduleConfig({ mode: "interval", everyMs: 250 }),
-    ).toThrow(/at least 1s/);
-    expect(
-      parseScheduleConfig({ mode: "interval", everyMs: 1_000 }),
-    ).toMatchObject({ mode: "interval", everyMs: 1_000 });
-    expect(() => parseScheduleConfig({ mode: "interval", every: 0 })).toThrow(
-      /positive/,
-    );
+      parseScheduleConfig({ mode: "interval", every: 0, unit: "minutes" }),
+    ).toThrow(/at least 1/);
     expect(() =>
-      parseScheduleConfig({ mode: "interval", every: 1, unit: "weeks" }),
+      parseScheduleConfig({ mode: "interval", every: 1.5, unit: "minutes" }),
+    ).toThrow(/whole number/);
+    expect(() =>
+      parseScheduleConfig({ mode: "interval", every: 1, unit: "seconds" }),
     ).toThrow(/"unit" must be one of/);
-    expect(() => parseScheduleConfig({ mode: "interval" })).toThrow(
-      /"every" \(with "unit"\) or "everyMs" is required/,
+    expect(() => parseScheduleConfig({ mode: "interval", every: 1 })).toThrow(
+      /"unit" must be one of/,
     );
-  });
-
-  it("rejects a config with no mode and no schedule fields", () => {
-    expect(() => parseScheduleConfig({})).toThrow(/"mode" must be/);
-    expect(() => parseScheduleConfig(null)).toThrow(/"mode" must be/);
+    expect(() =>
+      parseScheduleConfig({ mode: "interval", everyMs: 90_000 }),
+    ).toThrow(/"every" must be/);
   });
 });
 
 describe("nextFireAt", () => {
   it("computes the next cron slot strictly after `from`", () => {
-    const schedule = parseScheduleConfig({ cron: "*/5 * * * *" });
+    const schedule = parseScheduleConfig({ mode: "cron", cron: "*/5 * * * *" });
     expect(nextFireAt(schedule, at("2026-09-04T10:02:00Z")).toISOString()).toBe(
       "2026-09-04T10:05:00.000Z",
     );
@@ -109,6 +115,7 @@ describe("nextFireAt", () => {
 
   it("evaluates the pattern in the schedule's timezone", () => {
     const schedule = parseScheduleConfig({
+      mode: "cron",
       cron: "0 9 * * *",
       timezone: "Asia/Tokyo",
     });
@@ -120,6 +127,7 @@ describe("nextFireAt", () => {
 
   it("follows a DST transition: same wall-clock time, shifted UTC instant", () => {
     const schedule = parseScheduleConfig({
+      mode: "cron",
       cron: "0 9 * * *",
       timezone: "Europe/Lisbon",
     });
@@ -134,6 +142,7 @@ describe("nextFireAt", () => {
 
   it("fires once past a wall-clock slot erased by a spring-forward jump", () => {
     const schedule = parseScheduleConfig({
+      mode: "cron",
       cron: "30 2 * * *",
       timezone: "America/New_York",
     });
@@ -147,7 +156,11 @@ describe("nextFireAt", () => {
   });
 
   it("adds the interval in interval mode", () => {
-    const schedule = parseScheduleConfig({ every: 10, unit: "minutes" });
+    const schedule = parseScheduleConfig({
+      mode: "interval",
+      every: 10,
+      unit: "minutes",
+    });
     expect(nextFireAt(schedule, at("2026-09-04T10:02:00Z")).toISOString()).toBe(
       "2026-09-04T10:12:00.000Z",
     );
@@ -156,7 +169,11 @@ describe("nextFireAt", () => {
 
 describe("rescheduleAfterFire", () => {
   it("keeps the interval phase when the fire was on time", () => {
-    const schedule = parseScheduleConfig({ every: 10, unit: "minutes" });
+    const schedule = parseScheduleConfig({
+      mode: "interval",
+      every: 10,
+      unit: "minutes",
+    });
     const next = rescheduleAfterFire(
       schedule,
       at("2026-09-04T10:00:00Z"),
@@ -166,7 +183,11 @@ describe("rescheduleAfterFire", () => {
   });
 
   it("rebases an overdue interval on now instead of replaying missed slots", () => {
-    const schedule = parseScheduleConfig({ every: 10, unit: "minutes" });
+    const schedule = parseScheduleConfig({
+      mode: "interval",
+      every: 10,
+      unit: "minutes",
+    });
     const next = rescheduleAfterFire(
       schedule,
       at("2026-09-04T10:00:00Z"),
@@ -176,7 +197,7 @@ describe("rescheduleAfterFire", () => {
   });
 
   it("takes the next cron slot after now", () => {
-    const schedule = parseScheduleConfig({ cron: "0 * * * *" });
+    const schedule = parseScheduleConfig({ mode: "cron", cron: "0 * * * *" });
     const next = rescheduleAfterFire(
       schedule,
       at("2026-09-04T08:00:00Z"),
@@ -189,6 +210,7 @@ describe("rescheduleAfterFire", () => {
 describe("schedulePayload", () => {
   it("exposes the slot, the fire time and the schedule shape", () => {
     const cron = parseScheduleConfig({
+      mode: "cron",
       cron: "0 9 * * *",
       timezone: "Europe/Lisbon",
     });
@@ -204,7 +226,11 @@ describe("schedulePayload", () => {
       timezone: "Europe/Lisbon",
       cron: "0 9 * * *",
     });
-    const interval = parseScheduleConfig({ every: 1, unit: "hours" });
+    const interval = parseScheduleConfig({
+      mode: "interval",
+      every: 1,
+      unit: "hours",
+    });
     expect(
       schedulePayload(
         interval,

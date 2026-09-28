@@ -5,6 +5,7 @@ import type { OperationWithContext } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkflowRuntimeService } from "./service.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
+import { CORE_PIECE_VERSION } from "../pieces/index.js";
 
 const WORKFLOW_TYPE = "powerhouse/workflow";
 const WORKFLOW = "wf-hook";
@@ -55,7 +56,13 @@ describe("WorkflowRuntimeService webhooks", () => {
         name: "Hook",
         status: "ENABLED",
         version: 1,
-        trigger: { id: "t1", blockType: "core#webhook", config },
+        trigger: {
+          id: "t1",
+          pieceName: "@powerhousedao/piece-core",
+          pieceVersion: CORE_PIECE_VERSION,
+          triggerName: "webhook",
+          config: { scheme: "none", ...config },
+        },
         steps: [],
         edges: [],
         variables: [],
@@ -70,7 +77,13 @@ describe("WorkflowRuntimeService webhooks", () => {
         name: "Hook",
         status: "DISABLED",
         version: 2,
-        trigger: { id: "t1", blockType: "core#webhook", config: {} },
+        trigger: {
+          id: "t1",
+          pieceName: "@powerhousedao/piece-core",
+          pieceVersion: CORE_PIECE_VERSION,
+          triggerName: "webhook",
+          config: {},
+        },
         steps: [],
         edges: [],
         variables: [],
@@ -247,6 +260,47 @@ describe("WorkflowRuntimeService webhooks", () => {
         absoluteUrl: false,
       });
     });
+
+    it("puts a trigger whose config is refused in ERROR, until it arms", async () => {
+      const store = (await service.store())!;
+      await service.onOperations([
+        workflowOp({
+          name: "Hook",
+          status: "ENABLED",
+          version: 1,
+          // No scheme: refused rather than armed unauthenticated.
+          trigger: {
+            id: "t1",
+            pieceName: "@powerhousedao/piece-core",
+            pieceVersion: CORE_PIECE_VERSION,
+            triggerName: "webhook",
+            config: {},
+          },
+          steps: [],
+          edges: [],
+          variables: [],
+        }),
+      ]);
+
+      await vi.waitFor(async () =>
+        expect((await store.getTriggerState(WORKFLOW))?.status).toBe("ERROR"),
+      );
+      const row = await store.getTriggerState(WORKFLOW);
+      expect(row).toMatchObject({
+        piece_name: "@powerhousedao/piece-core",
+        trigger_name: "webhook",
+      });
+      expect(row?.last_error).toContain('"scheme" is required');
+      expect(await policy()).toBeUndefined();
+
+      await arm({});
+      await vi.waitFor(async () =>
+        expect((await store.getTriggerState(WORKFLOW))?.status).toBe(
+          "DISABLED",
+        ),
+      );
+      expect(await policy()).toBeDefined();
+    });
   });
 
   // ── the policy handed to the webhook service ─────────────────────────────
@@ -266,6 +320,12 @@ describe("WorkflowRuntimeService webhooks", () => {
       // A signed scheme with no secret ref cannot be honoured, so the endpoint
       // must not be armed at all.
       await arm({ scheme: "hmac-prefixed" });
+      expect(await policy()).toBeUndefined();
+    });
+
+    it("is absent when the trigger names no scheme", async () => {
+      // A config written without one must not arm as an unverified endpoint.
+      await arm({ scheme: undefined });
       expect(await policy()).toBeUndefined();
     });
 
@@ -457,7 +517,13 @@ describe("WorkflowRuntimeService registry seeding", () => {
         name: "Hook",
         status: "ENABLED",
         version: 1,
-        trigger: { id: "t1", blockType: "core#webhook", config: {} },
+        trigger: {
+          id: "t1",
+          pieceName: "@powerhousedao/piece-core",
+          pieceVersion: CORE_PIECE_VERSION,
+          triggerName: "webhook",
+          config: { scheme: "none" },
+        },
         steps: [],
         edges: [],
         variables: [],

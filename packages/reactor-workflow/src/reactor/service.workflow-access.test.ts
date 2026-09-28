@@ -39,8 +39,16 @@ const rows = [runRow("run-mine", MINE), runRow("run-theirs", THEIRS)];
 const store = {
   listTriggerStates: () =>
     Promise.resolve([
-      { workflow_id: MINE, block_type: "core#webhook" },
-      { workflow_id: THEIRS, block_type: "core#webhook" },
+      {
+        workflow_id: MINE,
+        piece_name: "@powerhousedao/piece-core",
+        trigger_name: "webhook",
+      },
+      {
+        workflow_id: THEIRS,
+        piece_name: "@powerhousedao/piece-core",
+        trigger_name: "webhook",
+      },
     ]),
   listRuns: () => Promise.resolve(rows),
   getRun: (id: string) => Promise.resolve(rows.find((row) => row.id === id)),

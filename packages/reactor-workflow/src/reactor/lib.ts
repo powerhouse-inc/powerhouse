@@ -1,18 +1,18 @@
 // Scaffold file meant for customization; delete and re-run codegen to reset.
+import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
 import type { WorkflowRuntimeHostDeps } from "./host.js";
 import {
   ActivepiecesBlockExecutor,
   BoundConnectionResolver,
   CompositeBlockExecutor,
-  ensurePieceBundle,
-  localFirstResolver,
+  sourcedResolver,
   shapeConnection,
   type BlockExecutor,
   type ConnectionAuthType,
   type ConnectionRequest,
   type EngineConnectionResolver,
   type AttachmentPort,
-  type ParsedBlockType,
+  type BlockResolution,
   type PieceResolver,
   type PieceStorePort,
   type ResolvedConnection,
@@ -37,6 +37,7 @@ import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";
 import { packagePieces } from "./piece-registry.js";
 import { SubgraphReactorPort } from "./reactor-port.js";
 import { packageFromConnectorId } from "./connector-id.js";
+import { runnableDefinition, type RunnableDefinition } from "./runnable.js";
 
 const pieceLogger = childLogger(["workflow", "piece"]);
 const connectionLogger = childLogger(["workflow", "connection"]);
@@ -174,7 +175,17 @@ export function configuredEgress(): EgressPolicy | undefined {
   return { allowAddresses };
 }
 
-export const BUNDLE_CACHE_DIR = join(process.cwd(), ".ph", "ap-bundles");
+let bundleCache = join(process.cwd(), ".ph", "ap-bundles");
+
+export function bundleCacheDir(): string {
+  return bundleCache;
+}
+
+// Test seam: a suite keeps its fetched bundles apart from every other suite.
+export function setBundleCacheDir(dir: string): void {
+  bundleCache = dir;
+  resolver = undefined;
+}
 
 // Where a piece's ctx.files output and its staged attachment inputs live for
 // the length of one step. Under .ph so a host can sweep it on startup after a
@@ -185,31 +196,16 @@ export const ATTACHMENT_STAGING_DIR = join(
   "ap-attachment-staging",
 );
 
-// Where every piece in this runtime comes from: a package that ships one wins
-// for its own name, and everything else is fetched and cached as before.
-
-// One instance, because the registry behind it is one — a block type must not
-// resolve to a package piece in a run and to a published bundle in the editor.
+// Fetches a piece from the source its resolution chose. One instance: a run
+// and the editor must load the same bytes for the same resolution.
 let resolver: PieceResolver | undefined;
 
-// Spelled out rather than taken from the connectors package so the fetch goes
-// through this module's own import of it, which is the seam tests replace.
-export function fetchingResolver(cacheDir: string): PieceResolver {
-  return {
-    async resolve(name: string, version: string) {
-      const bundle = await ensurePieceBundle({ name, version, cacheDir });
-      return { name, version, bundleDir: bundle.dir, local: false };
-    },
-  };
-}
-
 export function pieceResolver(): PieceResolver {
-  return (resolver ??= localFirstResolver(
-    // Asked per call rather than captured: the host refills the registry as
-    // packages change, and a step must see what it holds now.
-    (name) => packagePieces.lookup(name),
-    fetchingResolver(BUNDLE_CACHE_DIR),
-  ));
+  return (resolver ??= sourcedResolver({
+    cacheDir: bundleCacheDir(),
+    // Asked per call: the host refills the registry as packages change.
+    lookup: (name) => packagePieces.lookup(name),
+  }));
 }
 
 // The executor is shared by every concurrent run, so the binding travels with
@@ -235,18 +231,14 @@ export function createBlockExecutor(
   secrets: SecretProvider,
   attachments?: AttachmentPort,
   pieceStore?: PieceStorePort,
-  // The host's own resolution, for a block type the registry below does not
-  // carry. Without one a step is left with the registry alone, which is how a
-  // workflow could arm on a piece none of its steps could then run.
-  resolveBlockType?: (
-    blockType: string,
-  ) => Promise<ParsedBlockType | undefined>,
+  // The runtime's resolution policy, shared with triggers and design time.
+  resolveBlock?: (block: BlockRef) => Promise<BlockResolution>,
 ): BlockExecutor {
   // No handler map: the document blocks are a piece now, and they reach the
   // reactor through the port below like any other package piece would.
   return new CompositeBlockExecutor(
     new ActivepiecesBlockExecutor({
-      cacheDir: BUNDLE_CACHE_DIR,
+      cacheDir: bundleCacheDir(),
       // Undefined leaves the connectors' default policy in force; a value only
       // ever widens it.
       egress: configuredEgress(),
@@ -261,10 +253,7 @@ export function createBlockExecutor(
         projectId: PROJECT_SCOPE_KEY,
       }),
       resolver: pieceResolver(),
-      // A package piece's block type carries no version; this is where the
-      // installed one comes from.
-      packages: () => Promise.resolve(packagePieces.versions()),
-      ...(resolveBlockType ? { resolveBlockType } : {}),
+      ...(resolveBlock ? { resolveBlock } : {}),
       // Served only to a piece this reactor's packages ship; the executor
       // withholds it from everything the resolver fetched.
       reactor: new SubgraphReactorPort(host),
@@ -292,37 +281,64 @@ export function createBlockExecutor(
   );
 }
 
-// The document state is the definition; strip nulls into engine shape.
+export function propertySettings(
+  settings:
+    | readonly { prop: string; mode: string; schema?: unknown }[]
+    | null
+    | undefined,
+): WorkflowDefinition["steps"][number]["propertySettings"] {
+  return settings?.map((setting) => ({
+    prop: setting.prop,
+    mode: setting.mode,
+    schema: setting.schema ?? null,
+  }));
+}
+
+// One runnable step in engine shape.
+export function stepDefinition(
+  step: RunnableDefinition["steps"][number],
+): WorkflowDefinition["steps"][number] {
+  return {
+    id: step.id,
+    key: step.key,
+    name: step.name,
+    pieceName: step.pieceName,
+    pieceVersion: step.pieceVersion,
+    actionName: step.actionName,
+    connectionId: step.connectionId,
+    config: step.config,
+    timeoutSeconds: step.timeoutSeconds,
+    propertySettings: propertySettings(step.propertySettings),
+    skip: step.skip,
+  };
+}
+
+// The runnable definition (see runnable.ts) in engine shape.
 export function toWorkflowDefinition(state: WorkflowState): WorkflowDefinition {
-  if (!state.trigger) {
+  const runnable = runnableDefinition(state);
+  if (!runnable.trigger) {
     throw new Error("Workflow has no trigger binding");
   }
   return {
     name: state.name,
     trigger: {
-      id: state.trigger.id,
-      blockType: state.trigger.blockType,
-      connectionId: state.trigger.connectionId,
-      config: state.trigger.config,
-      filter: state.trigger.filter,
+      id: runnable.trigger.id,
+      pieceName: runnable.trigger.pieceName,
+      pieceVersion: runnable.trigger.pieceVersion,
+      triggerName: runnable.trigger.triggerName,
+      connectionId: runnable.trigger.connectionId,
+      config: runnable.trigger.config,
+      propertySettings: propertySettings(runnable.trigger.propertySettings),
     },
-    steps: state.steps.map((step) => ({
-      id: step.id,
-      key: step.key,
-      name: step.name,
-      blockType: step.blockType,
-      connectionId: step.connectionId,
-      config: step.config,
-      timeoutSeconds: step.timeoutSeconds,
-    })),
-    edges: state.edges.map((edge) => ({
+    steps: runnable.steps.map(stepDefinition),
+    edges: runnable.edges.map((edge) => ({
       id: edge.id,
       from: edge.from,
       to: edge.to,
       port: edge.port,
       condition: edge.condition,
     })),
-    variables: state.variables.map((variable) => ({
+    variables: runnable.variables.map((variable) => ({
       key: variable.key,
       value: variable.value,
     })),

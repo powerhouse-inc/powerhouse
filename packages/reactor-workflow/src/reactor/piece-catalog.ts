@@ -32,8 +32,13 @@ export function aiLast(audience: string | null): number {
   return audience === "ai" ? 1 : 0;
 }
 
-function pieceUrl(packageName: string): string {
-  return `${CATALOG_URL}/${packageName}?audience=all`;
+function pieceUrl(packageName: string, version?: string): string {
+  const at = version ? `&version=${encodeURIComponent(version)}` : "";
+  return `${CATALOG_URL}/${packageName}?audience=all${at}`;
+}
+
+function atVersion(url: string, version?: string): string {
+  return version ? `${url}?version=${encodeURIComponent(version)}` : url;
 }
 
 // A listing field, set only for a block that cannot run here.
@@ -71,13 +76,14 @@ export interface PieceSummary {
   unsupported?: string;
   // The publisher retired it; listed, but marked, so a search still finds it.
   deprecated?: boolean;
+  // A package piece shadowing a published one: the version published.
+  publishedVersion?: string;
 }
 
 export interface PieceActionEntry {
   name: string;
   displayName: string;
   description: string;
-  blockType: string;
   // "human" | "ai" | "both"; absent on most pieces, which means "both".
   audience: string | null;
   unsupported?: string;
@@ -96,7 +102,6 @@ export interface PieceTriggerEntry {
   displayName: string;
   description: string;
   strategy: string;
-  blockType: string;
   unsupported?: string;
 }
 
@@ -304,11 +309,14 @@ function registrySilentOn(error: unknown): boolean {
   return error instanceof CatalogStatusError && error.status === 404;
 }
 
-async function fetchPieceJson(packageName: string): Promise<unknown> {
+async function fetchPieceJson(
+  packageName: string,
+  version?: string,
+): Promise<unknown> {
   const source = pieceRegistrySource();
   if (source) {
     try {
-      return await fetchJson(source.pieceUrl(packageName));
+      return await fetchJson(atVersion(source.pieceUrl(packageName), version));
     } catch (error) {
       if (!registrySilentOn(error)) throw error;
       logger.debug(
@@ -316,18 +324,22 @@ async function fetchPieceJson(packageName: string): Promise<unknown> {
       );
     }
   }
-  return fetchJson(pieceUrl(packageName));
+  return fetchJson(pieceUrl(packageName, version));
 }
 
 const detailCache = new Map<string, Cached<unknown>>();
 
 // Full piece detail, verbatim from whichever source answered for it
 // (PieceMetadataModel-shaped).
-export async function fetchPieceDetail(packageName: string): Promise<unknown> {
-  const cached = detailCache.get(packageName);
+export async function fetchPieceDetail(
+  packageName: string,
+  version?: string,
+): Promise<unknown> {
+  const key = `${packageName}@${version ?? ""}`;
+  const cached = detailCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
-  const value = await fetchPieceJson(packageName);
-  detailCache.set(packageName, { value, expiresAt: Date.now() + CACHE_TTL_MS });
+  const value = await fetchPieceJson(packageName, version);
+  detailCache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
   return value;
 }
 
@@ -335,10 +347,12 @@ const triggersCache = new Map<string, Cached<PieceTriggersResult>>();
 
 export async function fetchPieceTriggers(
   packageName: string,
+  requested?: string,
 ): Promise<PieceTriggersResult> {
-  const cached = triggersCache.get(packageName);
+  const key = `${packageName}@${requested ?? ""}`;
+  const cached = triggersCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
-  const detail = (await fetchPieceJson(packageName)) as CatalogEntry;
+  const detail = (await fetchPieceJson(packageName, requested)) as CatalogEntry;
   const version = detail.version ?? "";
   const pieceUnsupported = unsupportedAuth(detail.auth);
   const triggersRecord =
@@ -350,7 +364,6 @@ export async function fetchPieceTriggers(
     displayName: trigger.displayName ?? name,
     description: trigger.description ?? "",
     strategy: trigger.type ?? "",
-    blockType: `${packageName}@${version}#trigger:${name}`,
     ...reasonOf(pieceUnsupported ?? unsupportedTrigger(trigger)),
   }));
   const value: PieceTriggersResult = {
@@ -360,7 +373,7 @@ export async function fetchPieceTriggers(
     triggers,
     auth: detail.auth ?? null,
   };
-  triggersCache.set(packageName, {
+  triggersCache.set(key, {
     value,
     expiresAt: Date.now() + CACHE_TTL_MS,
   });
@@ -371,10 +384,12 @@ const actionsCache = new Map<string, Cached<PieceActionsResult>>();
 
 export async function fetchPieceActions(
   packageName: string,
+  requested?: string,
 ): Promise<PieceActionsResult> {
-  const cached = actionsCache.get(packageName);
+  const key = `${packageName}@${requested ?? ""}`;
+  const cached = actionsCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
-  const detail = (await fetchPieceJson(packageName)) as CatalogEntry;
+  const detail = (await fetchPieceJson(packageName, requested)) as CatalogEntry;
   const version = detail.version ?? "";
   const unsupported = reasonOf(unsupportedAuth(detail.auth));
   const actionsRecord =
@@ -384,7 +399,6 @@ export async function fetchPieceActions(
       name,
       displayName: action.displayName ?? name,
       description: action.description ?? "",
-      blockType: `${packageName}@${version}#${name}`,
       audience: action.audience ?? null,
       ...unsupported,
     }))
@@ -399,7 +413,7 @@ export async function fetchPieceActions(
     actions,
     auth: detail.auth ?? null,
   };
-  actionsCache.set(packageName, {
+  actionsCache.set(key, {
     value,
     expiresAt: Date.now() + CACHE_TTL_MS,
   });

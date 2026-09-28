@@ -9,7 +9,12 @@ import {
 
 const binding = (pollIntervalMs?: number): PieceTriggerBinding => ({
   workflowId: "wf",
-  blockType: "@acme/piece-x@1.0.0#trigger:new_thing",
+  block: {
+    pieceName: "@acme/piece-x",
+    pieceVersion: "1.0.0",
+    kind: "trigger" as const,
+    name: "new_thing",
+  },
   packageName: "@acme/piece-x",
   version: "1.0.0",
   triggerName: "new_thing",

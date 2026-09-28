@@ -6,9 +6,9 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ensurePieceBundle } from "./fetch.js";
-import { localFirstResolver } from "./resolver.js";
+import { sourcedResolver } from "./resolver.js";
 import type { LocalPiece } from "./resolver.js";
 
 const PIECE = "@powerhousedao/piece-umh";
@@ -128,21 +128,9 @@ describe("a package piece served by a registry", () => {
 });
 
 describe("a package piece already on this disk", () => {
-  const fallback = {
-    resolve: vi.fn(() =>
-      Promise.resolve({
-        name: PIECE,
-        version: VERSION,
-        bundleDir: "/fetched",
-        local: false,
-      }),
-    ),
-  };
-
   const resolverFor = (piece: LocalPiece) =>
-    localFirstResolver(() => piece, fallback);
-
-  beforeEach(() => fallback.resolve.mockClear());
+    sourcedResolver({ cacheDir, lookup: () => piece });
+  const local = { name: PIECE, version: VERSION, source: "local" as const };
 
   it("runs from its own build, without asking the network", async () => {
     // What a checkout's VitePackageLoader reports: a real path.
@@ -150,13 +138,11 @@ describe("a package piece already on this disk", () => {
       name: PIECE,
       version: VERSION,
       entryPath: "/checkout/dist/node/pieces/umh/index.mjs",
-    }).resolve(PIECE, VERSION);
+    }).resolve(local);
 
     expect(resolved.entryPath).toBe("/checkout/dist/node/pieces/umh/index.mjs");
     expect(resolved.local).toBe(true);
-    // The whole point: a developer editing pieces/ sees the change without
-    // publishing, so nothing may go to a registry for it.
-    expect(fallback.resolve).not.toHaveBeenCalled();
+    // A developer editing pieces/ sees the change without publishing.
     expect(fetched).toEqual([]);
   });
 
@@ -165,24 +151,33 @@ describe("a package piece already on this disk", () => {
       name: PIECE,
       version: VERSION,
       bundleDir: "/checkout/dist/node/pieces/umh",
-    }).resolve(PIECE, VERSION);
+    }).resolve(local);
 
     expect(resolved.bundleDir).toBe("/checkout/dist/node/pieces/umh");
-    expect(fallback.resolve).not.toHaveBeenCalled();
+    expect(fetched).toEqual([]);
   });
 
-  it("fetches only when the declaration carries no path", async () => {
-    await resolverFor({
+  it("fetches from the entryUrl when the declaration carries no path", async () => {
+    const resolved = await resolverFor({
       name: PIECE,
       version: VERSION,
       entryUrl: `${BASE}index.mjs`,
-    }).resolve(PIECE, VERSION);
+    }).resolve(local);
 
-    expect(fallback.resolve).toHaveBeenCalledWith(
-      PIECE,
-      VERSION,
-      `${BASE}index.mjs`,
+    expect(fetched).toEqual([`${BASE}package.json`, `${BASE}index.mjs`]);
+    expect(resolved.local).toBe(true);
+    expect(resolved.bundleDir).toBe(
+      join(cacheDir, "local", `${PIECE.replace("/", "-")}-${VERSION}`),
     );
+  });
+
+  it("refuses a local source at a version it does not hold", async () => {
+    await expect(
+      resolverFor({ name: PIECE, version: VERSION, entryPath: "/x" }).resolve({
+        ...local,
+        version: "9.9.9",
+      }),
+    ).rejects.toThrow("is not installed on this reactor");
   });
 });
 

@@ -10,19 +10,39 @@ const gunzip = promisify(gunzipCb);
 
 // Mirrors their pieceBundle.resolve(): CDN bundle when served, else the npm
 // tarball. Tarballs are immutable per (name, version), so the cache never expires.
-const CDN_PIECES_URL = "https://cdn.activepieces.com/pieces/bundled/";
-const NPM_REGISTRY_URL = "https://registry.npmjs.org";
+const DEFAULT_CDN_PIECES_URL = "https://cdn.activepieces.com/pieces/bundled";
+const DEFAULT_NPM_REGISTRY_URL = "https://registry.npmjs.org";
+
+let cdnPiecesUrl = DEFAULT_CDN_PIECES_URL;
+let npmRegistryUrl = DEFAULT_NPM_REGISTRY_URL;
+
+// Host and test seam: the public CDN and npm registry a piece is fetched from.
+export function setPublicPieceSources(sources: {
+  cdnUrl?: string;
+  npmRegistryUrl?: string;
+}): void {
+  const trim = (url: string) => url.trim().replace(/\/+$/, "");
+  cdnPiecesUrl = sources.cdnUrl ? trim(sources.cdnUrl) : DEFAULT_CDN_PIECES_URL;
+  npmRegistryUrl = sources.npmRegistryUrl
+    ? trim(sources.npmRegistryUrl)
+    : DEFAULT_NPM_REGISTRY_URL;
+}
+
+export function npmRegistryBaseUrl(): string {
+  return npmRegistryUrl;
+}
 
 export function cdnTarballUrl(name: string, version: string): string {
-  return `${CDN_PIECES_URL}${name.replace("/", "-")}-${version}.tgz`;
+  return `${cdnPiecesUrl}/${name.replace("/", "-")}-${version}.tgz`;
 }
 
 export function npmTarballUrl(name: string, version: string): string {
   const unscoped = name.startsWith("@") ? name.split("/")[1] : name;
-  return `${NPM_REGISTRY_URL}/${name}/-/${unscoped}-${version}.tgz`;
+  return `${npmRegistryUrl}/${name}/-/${unscoped}-${version}.tgz`;
 }
 
-// name/version come from a workflow step's blockType, an unconstrained string.
+// name/version come from a workflow step's pieceName and pieceVersion,
+// unconstrained strings.
 const NPM_NAME_RE = /^(@[a-z0-9][a-z0-9-_.]*\/)?[a-z0-9][a-z0-9-_.]*$/;
 const NPM_VERSION_RE = /^[A-Za-z0-9][A-Za-z0-9.+-]*$/;
 
@@ -102,6 +122,10 @@ export interface FetchPieceBundleOptions {
   // How long the install of a bundle's declared dependencies may run, for the
   // few that declare any. Bounds a hung registry rather than budgeting work.
   installTimeoutMs?: number;
+  // The only tarball sources to try, in order; every one when unset.
+  sources?: readonly BundleSource[];
+  // Cache subdirectory, so copies from different sources never alias.
+  cacheScope?: string;
 }
 
 /** Where a bundle came from, "cache" being a copy one of the others left. */
@@ -154,6 +178,15 @@ async function readBoundedBody(
 function tarballSources(
   name: string,
   version: string,
+  only?: readonly BundleSource[],
+): { source: BundleSource; url: string }[] {
+  const all = allTarballSources(name, version);
+  return only ? all.filter(({ source }) => only.includes(source)) : all;
+}
+
+function allTarballSources(
+  name: string,
+  version: string,
 ): { source: BundleSource; url: string }[] {
   const registry = pieceRegistrySource();
   return [
@@ -174,8 +207,9 @@ async function downloadTarball(
   name: string,
   version: string,
   timeoutMs: number,
+  only?: readonly BundleSource[],
 ): Promise<{ tgz: Buffer; source: BundleSource }> {
-  const sources = tarballSources(name, version);
+  const sources = tarballSources(name, version, only);
   let lastError: unknown;
   for (const { source, url } of sources) {
     try {
@@ -201,8 +235,9 @@ async function extractDownloadedTarball(
   version: string,
   timeoutMs: number,
   staging: string,
+  only?: readonly BundleSource[],
 ): Promise<BundleSource> {
-  const { tgz, source } = await downloadTarball(name, version, timeoutMs);
+  const { tgz, source } = await downloadTarball(name, version, timeoutMs, only);
   await extractTarball(tgz, staging);
   return source;
 }
@@ -248,6 +283,13 @@ async function downloadPackagePiece(
   return "package";
 }
 
+function bundleDirFor(options: FetchPieceBundleOptions): string {
+  const leaf = `${options.name.replace("/", "-")}-${options.version}`;
+  return options.cacheScope
+    ? path.join(options.cacheDir, options.cacheScope, leaf)
+    : path.join(options.cacheDir, leaf);
+}
+
 // Downloads and extracts a published piece bundle, returning the directory to
 // hand to loadPieceFromDir(). A cached extraction is reused, and re-checked.
 export async function fetchPieceBundle(
@@ -255,7 +297,7 @@ export async function fetchPieceBundle(
 ): Promise<FetchedBundle> {
   const { name, version, cacheDir, timeoutMs = 30_000 } = options;
   assertValidPackageCoordinate(name, version);
-  const dir = path.join(cacheDir, `${name.replace("/", "-")}-${version}`);
+  const dir = bundleDirFor(options);
   assertWithinCacheDir(dir, cacheDir);
   if (existsSync(path.join(dir, "package.json"))) {
     return {
@@ -272,7 +314,13 @@ export async function fetchPieceBundle(
   // so it is fetched file by file rather than extracted.
   const source = options.entryUrl
     ? await downloadPackagePiece(options.entryUrl, staging, timeoutMs)
-    : await extractDownloadedTarball(name, version, timeoutMs, staging);
+    : await extractDownloadedTarball(
+        name,
+        version,
+        timeoutMs,
+        staging,
+        options.sources,
+      );
   await rm(dir, { recursive: true, force: true });
   try {
     await rename(staging, dir);
@@ -298,7 +346,7 @@ const inFlight = new Map<string, Promise<FetchedBundle>>();
 export async function ensurePieceBundle(
   options: FetchPieceBundleOptions,
 ): Promise<FetchedBundle> {
-  const key = `${options.cacheDir}\u0000${options.name}@${options.version}`;
+  const key = bundleDirFor(options);
   const pending = inFlight.get(key);
   if (pending) return pending;
   // Dropped once settled, refusals included, so a later caller re-checks the
@@ -329,10 +377,7 @@ async function installPieceBundle(
 ): Promise<FetchedBundle> {
   const { name, version, cacheDir } = options;
   const timeoutMs = options.installTimeoutMs ?? INSTALL_TIMEOUT_MS;
-  const workspace = path.join(
-    cacheDir,
-    `${name.replace("/", "-")}-${version}.install`,
-  );
+  const workspace = `${bundleDirFor(options)}.install`;
   assertWithinCacheDir(workspace, cacheDir);
   const dir = path.join(workspace, "node_modules", name);
   // Written last, so a torn install is never mistaken for a finished one.
@@ -380,6 +425,7 @@ async function stageInstallWorkspace(
     options.name,
     options.version,
     options.timeoutMs ?? 30_000,
+    options.sources,
   );
   await rm(workspace, { recursive: true, force: true });
   await mkdir(workspace, { recursive: true });

@@ -1,5 +1,10 @@
 // The workflow runtime: one instance per host, serving the GraphQL subgraph
 // (config + manual fire) and the workflow-triggers read model alike.
+import {
+  blockKey,
+  type BlockRef,
+} from "@powerhousedao/pieces-framework/block-type";
+import { checkTriggerStrategy } from "@powerhousedao/pieces-framework/workflow";
 import type {
   IWebhookEndpoints,
   IWebhookScope,
@@ -10,12 +15,19 @@ import type {
 import type { WorkflowCaller, WorkflowRuntimeHostDeps } from "./host.js";
 
 import {
-  blockTypeParts,
+  blockLabel,
+  blockPorts,
+  builtinPiece,
   containsRedactedMarker,
+  describeBuiltinPiece,
+  isHostBound,
   servesReactorPort,
+  stepBlock,
+  triggerBlock,
   declaredConnectionIds,
   DEFAULT_EGRESS_POLICY,
-  parseBlockType,
+  resolvedBlock,
+  stepConfigHash,
   pieceModuleRef,
   reactorHandlers,
   PieceWorker,
@@ -23,18 +35,23 @@ import {
   PieceWorkerPool,
   PieceWorkerTimeoutError,
   rememberSecrets,
+  resolveExpressions,
   runWorkflow,
   UnsupportedPieceFeatureError,
   type BlockExecutor,
+  type BlockResolution,
   type LocalPiece,
   type ParsedBlockType,
+  type PieceTarget,
   type PieceModuleRef,
   type CheckConnectionOutcome,
   type PieceDescriptor,
   type EgressPolicy,
+  type ExpressionScope,
   type PieceWorkerSession,
   type SecretProvider,
   type SecretStore,
+  type StepExecutionRecord,
   type WorkflowRunResult,
 } from "../pieces/index.js";
 import {
@@ -47,9 +64,10 @@ import {
   actions as connectionActions,
   type ConnectionDocument,
 } from "@powerhousedao/workflow/document-models/connection";
-import type {
-  WorkflowDocument,
-  WorkflowState,
+import {
+  actions as workflowActions,
+  type WorkflowDocument,
+  type WorkflowState,
 } from "@powerhousedao/workflow/document-models/workflow";
 import {
   DOCUMENT_CREATE_BLOCK,
@@ -84,7 +102,6 @@ import {
   fetchPieceCatalog,
   fetchPieceDetail,
   fetchPieceTriggers,
-  CatalogStatusError,
   clientAuth,
   type PieceActionsResult,
   type PieceSummary,
@@ -103,31 +120,51 @@ import {
   type BlockSearchIndex,
   type BlockSearchResult,
 } from "./block-search.js";
-import { packagePieces } from "./piece-registry.js";
+import { installedPiece, installedPieces } from "./piece-registry.js";
+import { BlockResolver } from "./block-resolver.js";
 import { ScopedDesignTimeReactorPort } from "./reactor-port.js";
 import {
-  BUNDLE_CACHE_DIR,
+  bundleCacheDir,
   configuredEgress,
   createBlockExecutor,
   DocumentConnectionResolver,
   pieceResolver,
   resolveConnectionAuth,
+  stepDefinition,
   toWorkflowDefinition,
 } from "./lib.js";
 import { packageFromConnectorId } from "./connector-id.js";
-import { SCHEDULE_BLOCK } from "./schedule.js";
-import type { AttachmentPort } from "../pieces/index.js";
+import { parseScheduleConfig, schedulePayload } from "./schedule.js";
+import type { AttachmentPort, PieceOrigin } from "../pieces/index.js";
+import {
+  isNotHereYet,
+  SYNC_WAIT_MS,
+  waitForSync,
+  type WorkflowAccessOptions,
+} from "./sync-wait.js";
 import { createAttachmentPort } from "./attachment-port.js";
 import { createPieceStorePort, PROJECT_SCOPE_KEY } from "./piece-store-port.js";
 import { currentWorkflowId, withRunScope } from "./run-scope.js";
 import {
-  CORE_DESCRIPTOR,
-  CORE_PIECE_NAME,
-  CORE_PIECE_VERSION,
-  coreBlockDescriptor,
+  ASSERT_BLOCK,
+  BRANCH_BLOCK,
   isCoreBlock,
-} from "./core-catalog.js";
+  MANUAL_BLOCK,
+  SCHEDULE_BLOCK,
+  WEBHOOK_BLOCK,
+} from "./core-blocks.js";
 import { LocalEncryptedSecretStore } from "./secret-store.js";
+import { runnableDefinition } from "./runnable.js";
+import { resolveVariables } from "./variables.js";
+import {
+  draftStepDef,
+  scopeReferences,
+  triggerSamplePayload,
+  untestedError,
+  upstreamStepIds,
+  type StepTestResult,
+  type TestSample,
+} from "./step-test.js";
 import {
   WorkflowRunStore,
   type RunRow,
@@ -141,7 +178,6 @@ import {
 } from "./trigger-supervisor.js";
 import {
   parseWebhookConfig,
-  WEBHOOK_BLOCK,
   WEBHOOK_TRIGGER_KIND,
   type WebhookConfig,
   type WebhookPayload,
@@ -158,7 +194,7 @@ import {
   matchesLifecycleFilter,
   parseEventFilter,
   parseLifecycleFilter,
-  TRIGGER_KIND_BY_BLOCK,
+  triggerKindOf,
   type DocumentEventFilter,
   type LifecycleFilter,
   type TriggerKind,
@@ -166,26 +202,25 @@ import {
 
 export type PersistedRunResult = WorkflowRunResult & { runId: string | null };
 
-// "absent" is a source answering that it has no such piece; "unreachable" is
-// no source answering at all. Collapsing the two is what turned a network
-// blip into a permanent ERROR row telling an operator to install something.
-type VersionLookup =
-  | { kind: "found"; version: string }
-  | { kind: "absent" }
-  | { kind: "unreachable"; detail: string };
+// The piece a resolved block type loads.
+function targetOf(block: ParsedBlockType): PieceTarget {
+  return {
+    name: block.packageName,
+    version: block.version,
+    ...(block.source ? { source: block.source } : {}),
+  };
+}
 
-type BlockResolution =
-  | { kind: "resolved"; block: ParsedBlockType }
-  | { kind: "absent" }
-  | { kind: "unreachable"; detail: string };
+function localTarget(piece: LocalPiece): PieceTarget {
+  return { name: piece.name, version: piece.version, source: "local" };
+}
 
-interface VersionLookupOptions {
-  // Give up waiting after this long. The lookup itself runs on and fills the
-  // catalog's cache, so whatever asks next is answered from it.
-  timeoutMs?: number;
-  // Ask again even for a name remembered as absent. For a person who pressed
-  // a button: they may well have pressed it because they fixed something.
-  fresh?: boolean;
+function bindingTarget(binding: PieceTriggerBinding): PieceTarget {
+  return {
+    name: binding.packageName,
+    version: binding.version,
+    ...(binding.source ? { source: binding.source } : {}),
+  };
 }
 
 export interface ConnectionSummary {
@@ -207,6 +242,46 @@ export interface ConnectionCheckResult {
 export interface RunRecord {
   row: RunRow;
   steps: StepExecutionRow[];
+}
+
+/** One draft block as this reactor resolves it. */
+export interface BlockResolutionRecord {
+  stepId: string;
+  pieceName: string;
+  // The version the block pins.
+  pieceVersion: string;
+  name: string;
+  kind: "action" | "trigger";
+  resolvedVersion: string | null;
+  source: string | null;
+  match: string;
+  note: string | null;
+  latestVersion: string | null;
+}
+
+export interface TriggerTestOptions extends WorkflowAccessOptions {
+  // The core manual trigger: the sample payload.
+  payload?: unknown;
+  // The core webhook trigger: how long to wait for a delivery, capped at 5 minutes.
+  timeoutMs?: number;
+}
+
+const WEBHOOK_TEST_TIMEOUT_MS = 5 * 60_000;
+
+interface WebhookTest {
+  config: WebhookConfig;
+  resolve: (payload: WebhookPayload) => void;
+  reject: (error: Error) => void;
+  timer: NodeJS.Timeout;
+}
+
+function draftBlocks(state: WorkflowState): { id: string; block: BlockRef }[] {
+  return [
+    ...(state.trigger
+      ? [{ id: state.trigger.id, block: triggerBlock(state.trigger) }]
+      : []),
+    ...state.steps.map((step) => ({ id: step.id, block: stepBlock(step) })),
+  ];
 }
 
 export interface WebhookEndpointRecord {
@@ -391,10 +466,6 @@ export const PIECE_WEBHOOK_KIND = "piece-webhook";
 // has to release its registration.
 const SUPERVISED_KINDS = new Set(["piece", "schedule", PIECE_WEBHOOK_KIND]);
 
-// The engine's own namespace. No catalog has ever heard of it, and core#manual
-// reaches the resolution below every time a workflow is saved.
-const CORE_PACKAGE = "core";
-
 // Whether there is anything to authenticate with: a secret handle, or a
 // non-secret config value such as a base URL.
 function hasCredentials(state: {
@@ -410,22 +481,8 @@ function hasCredentials(state: {
   );
 }
 
-// A source that answered and has no such piece, as opposed to one that could
-// not be asked. Only the first is something to tell an operator to act on.
-function isAbsentFromCatalog(error: unknown): boolean {
-  return error instanceof CatalogStatusError && error.status === 404;
-}
-
-// How long a name the catalog answered for, and said it has nothing of, stays
-// unresolved. Only a definitive absence is remembered: a hit is already cached
-// by the catalog itself, and an unreachable catalog is not an answer at all.
-const PIECE_VERSION_MISS_TTL_MS = 5 * 60_000;
-
-// What a caller on an awaited path waits for a lookup before giving up on it.
-
-// Registration is awaited by the operation ingest and by seeding, which loops
-// workflows one at a time, and the design-time reads are somebody typing. The
-// fetch runs on regardless, so the retry behind it answers from the cache.
+// How long one source's version listing may take; registration and seeding
+// await it, and a source that does not answer in time contributes nothing.
 const PIECE_VERSION_LOOKUP_TIMEOUT_MS = 2_000;
 
 // How long before a trigger left unresolved by an unreachable catalog is tried
@@ -500,19 +557,21 @@ function parseWorkflowState(
   }
 }
 
+// What a registration is decided from, so a draft edit can be told apart.
+function registrationKey(state: WorkflowState): string {
+  const trigger = runnableDefinition(state).trigger;
+  // The trigger's last test never changes what arms.
+  const { lastTest: _lastTest, ...armed } = trigger ?? {};
+  return JSON.stringify({ status: state.status, trigger: trigger && armed });
+}
+
+// The run kind a design-time test is journaled under.
+export const TEST_TRIGGER_KIND = "test";
+
+// The reducer refuses a config that is not an object, so none reaches here.
 function configRecord(config: unknown): Record<string, unknown> {
   if (config && typeof config === "object" && !Array.isArray(config)) {
     return config as Record<string, unknown>;
-  }
-  if (typeof config === "string") {
-    try {
-      const parsed = JSON.parse(config) as unknown;
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        return parsed as Record<string, unknown>;
-      }
-    } catch {
-      // fall through
-    }
   }
   return {};
 }
@@ -658,9 +717,36 @@ export class WorkflowRuntimeService {
     return (await this.endpointCount()) > 0;
   }
 
+  // The registration key each workflow was last registered from.
+  private readonly registeredAs = new Map<string, string>();
+
   // Awaited by callers: the registry must be current before the next request
   // can arrive. Only arming, which does I/O, is left to run on its own.
+
+  // Registers the runnable trigger; `onlyIfChanged` passes over draft edits.
   private async updateRegistration(
+    workflowId: string,
+    state: WorkflowState,
+    onlyIfChanged = false,
+  ): Promise<void> {
+    const key = registrationKey(state);
+    if (
+      onlyIfChanged &&
+      !this.unarmed.has(workflowId) &&
+      this.registeredAs.get(workflowId) === key
+    ) {
+      return;
+    }
+    this.registeredAs.set(workflowId, key);
+    try {
+      await this.applyRegistration(workflowId, state);
+    } catch (error) {
+      this.registeredAs.delete(workflowId);
+      throw error;
+    }
+  }
+
+  private async applyRegistration(
     workflowId: string,
     state: WorkflowState,
   ): Promise<void> {
@@ -670,13 +756,17 @@ export class WorkflowRuntimeService {
     // Whatever this registration decides supersedes the pending retry, which
     // re-arms itself below if the catalog is still away.
     this.cancelResolutionRetry(workflowId);
-    const trigger = state.status === "ENABLED" ? state.trigger : undefined;
-    if (trigger?.blockType === WEBHOOK_BLOCK) {
-      await this.registerWebhook(workflowId, trigger.config);
+    const trigger =
+      state.status === "ENABLED"
+        ? runnableDefinition(state).trigger
+        : undefined;
+    const block = trigger ? triggerBlock(trigger) : undefined;
+    if (block && blockKey(block) === WEBHOOK_BLOCK) {
+      await this.registerWebhook(workflowId, block, trigger!.config);
       return;
     }
-    const kind: TriggerKind | undefined = trigger
-      ? TRIGGER_KIND_BY_BLOCK[trigger.blockType]
+    const kind: TriggerKind | undefined = block
+      ? triggerKindOf(block)
       : undefined;
     const { binding: supervised, resolution } =
       trigger && !kind
@@ -730,6 +820,10 @@ export class WorkflowRuntimeService {
     binding: PieceTriggerBinding,
   ): Promise<void> {
     const delivery = await this.pieceDelivery(binding);
+    if (typeof delivery !== "string") {
+      this.refusePieceTrigger(workflowId, binding, delivery);
+      return;
+    }
     const resolved = { ...binding, delivery };
     if (delivery === "webhook") {
       this.registry.set(workflowId, {
@@ -746,33 +840,69 @@ export class WorkflowRuntimeService {
     this.enableSupervised(workflowId, resolved);
   }
 
-  // Strategy comes from the piece catalog rather than the bundle: deciding
-  // poll-vs-webhook must not require loading piece code.
+  // From the descriptor of the version that will run; never a guess.
   private async pieceDelivery(
     binding: PieceTriggerBinding,
-  ): Promise<"poll" | "webhook"> {
+  ): Promise<"poll" | "webhook" | { reason: string; retry: boolean }> {
+    let strategy: unknown;
     try {
-      const { triggers } = await this.pieceTriggers(binding.packageName);
-      const strategy = triggers.find(
+      const descriptor = await this.pieceDescriptor(bindingTarget(binding));
+      const trigger = descriptor.triggers.find(
         (entry) => entry.name === binding.triggerName,
-      )?.strategy;
-      return strategy === "WEBHOOK" ? "webhook" : "poll";
-    } catch (error) {
-      // Unknown strategy polls: a poll that returns nothing is recoverable,
-      // a webhook endpoint nobody serves is not.
-      this.logger.warn(
-        "Could not resolve the trigger strategy for @block; polling",
-        binding.blockType,
-        error,
       );
-      return "poll";
+      if (!trigger) {
+        return {
+          reason: `${binding.packageName}@${binding.version} has no trigger "${binding.triggerName}"`,
+          retry: false,
+        };
+      }
+      strategy = trigger.strategy;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        reason: `Could not describe ${blockLabel(binding.block)}: ${message}`,
+        retry: true,
+      };
     }
+    const check = checkTriggerStrategy(strategy);
+    if ("issue" in check) return { reason: check.issue, retry: false };
+    if (check.delivery === "manual") {
+      return {
+        reason: "A piece's MANUAL trigger cannot be armed here",
+        retry: false,
+      };
+    }
+    return check.delivery;
+  }
+
+  // An ERROR row, not a fallback: a trigger armed the wrong way never fires.
+  private refusePieceTrigger(
+    workflowId: string,
+    binding: PieceTriggerBinding,
+    refusal: { reason: string; retry: boolean },
+  ): void {
+    this.registry.delete(workflowId);
+    this.unarmed.add(workflowId);
+    const retryAt = refusal.retry
+      ? new Date(Date.now() + this.scheduleResolutionRetry(workflowId))
+      : undefined;
+    const reason = `The trigger ${blockLabel(binding.block)} is not armed: ${refusal.reason}`;
+    this.logger.warn("Workflow @workflow: @reason", workflowId, reason);
+    this.supervisor()
+      .reject(workflowId, binding.block, binding.config, reason, retryAt)
+      .catch((error: unknown) => {
+        this.logger.error(
+          `Could not record the refused trigger for workflow ${workflowId}`,
+          error,
+        );
+      });
   }
 
   // A disabled or retyped webhook trigger loses its registry entry, so
   // deliveries stop; the endpoint row stays so re-enabling keeps the URL.
   private async registerWebhook(
     workflowId: string,
+    block: BlockRef,
     rawConfig: unknown,
   ): Promise<void> {
     const had = this.registry.get(workflowId);
@@ -786,6 +916,16 @@ export class WorkflowRuntimeService {
       this.logger.error(
         `Webhook trigger rejected for ${workflowId}: ${message}`,
       );
+      // An ERROR row, as for any trigger that cannot arm; cleared on re-registration.
+      this.unarmed.add(workflowId);
+      this.supervisor()
+        .reject(workflowId, block, configRecord(rawConfig), message)
+        .catch((recordError: unknown) => {
+          this.logger.error(
+            `Could not record the rejected webhook trigger for workflow ${workflowId}`,
+            recordError,
+          );
+        });
       return;
     }
     this.registry.set(workflowId, {
@@ -806,16 +946,19 @@ export class WorkflowRuntimeService {
     workflowId: string,
     trigger: NonNullable<WorkflowState["trigger"]>,
   ): Promise<{ binding?: TriggerBinding; resolution?: BlockResolution }> {
-    if (trigger.blockType === SCHEDULE_BLOCK) {
+    const block = triggerBlock(trigger);
+    if (blockKey(block) === SCHEDULE_BLOCK) {
       return {
         binding: {
           kind: "schedule",
           workflowId,
-          blockType: SCHEDULE_BLOCK,
+          block,
           config: configRecord(trigger.config),
         },
       };
     }
+    // The other core triggers are fed by the host: nothing for the tick to drive.
+    if (isCoreBlock(block)) return {};
     return this.pieceBinding(workflowId, trigger);
   }
 
@@ -823,87 +966,105 @@ export class WorkflowRuntimeService {
     workflowId: string,
     trigger: NonNullable<WorkflowState["trigger"]>,
   ): Promise<{ binding?: PieceTriggerBinding; resolution: BlockResolution }> {
-    const resolution = await this.resolveBlockType(
-      trigger.blockType,
-      `workflow ${workflowId}`,
-      // Bounded: seeding walks workflows one at a time and ingest awaits this,
-      // and while neither has finished every webhook delivery is refused.
-      { timeoutMs: PIECE_VERSION_LOOKUP_TIMEOUT_MS },
-    );
-    const parsed =
-      resolution.kind === "resolved" ? resolution.block : undefined;
-    // An action block type is no more a trigger than an unresolved one is.
+    const block = triggerBlock(trigger);
+    const resolution = await this.resolveBlock(block);
+    const parsed = resolvedBlock(resolution);
+    // An action is no more a trigger than an unresolved block is.
     if (parsed?.kind !== "trigger") return { resolution };
     const { config, pollIntervalMs } = splitPollInterval(
       configRecord(trigger.config),
+    );
+    const settings = trigger.propertySettings?.filter(
+      (setting) => setting.schema !== null && setting.schema !== undefined,
     );
     return {
       resolution,
       binding: {
         workflowId,
-        blockType: trigger.blockType,
+        block,
         packageName: parsed.packageName,
         version: parsed.version,
+        ...(parsed.source ? { source: parsed.source } : {}),
+        match: resolution.match,
+        ...(resolution.note ? { note: resolution.note } : {}),
         triggerName: parsed.name,
         config,
         connectionId: trigger.connectionId,
         pollIntervalMs,
+        ...(settings && settings.length > 0
+          ? { propertySettings: settings }
+          : {}),
       },
     };
   }
 
-  // One rule for turning a block type into the piece behind it, for every
-  // caller: design-time reads, a run's steps, and a trigger's binding alike.
+  // The one resolution policy (block-resolver.ts), for steps, triggers, design
+  // time and step tests alike. Bounded per source: an unreachable one adds nothing.
+  private readonly blockResolver = new BlockResolver({
+    local: installedPiece,
+    timeoutMs: PIECE_VERSION_LOOKUP_TIMEOUT_MS,
+    hasBlock: (ref, version, source) =>
+      this.versionHasBlock(ref, version, source),
+  });
 
-  // A pinned version or an installed piece resolves in-process; only a name
-  // neither answers for is looked up, and a piece that resolves for one caller
-  // has to resolve for all of them.
+  // Descriptors are cached per version, so a candidate is described once.
+  private async versionHasBlock(
+    ref: BlockRef,
+    version: string,
+    source: PieceOrigin,
+  ): Promise<boolean | undefined> {
+    let descriptor: PieceDescriptor;
+    try {
+      descriptor = await this.pieceDescriptor({
+        name: ref.pieceName,
+        version,
+        source,
+      });
+    } catch (error) {
+      // Loading fails the step itself, with the piece's own error.
+      this.logger.debug(
+        "Could not describe @piece: @error",
+        ref.pieceName,
+        error,
+      );
+      return undefined;
+    }
+    const entries =
+      ref.kind === "trigger" ? descriptor.triggers : descriptor.actions;
+    return entries.some((entry) => entry.name === ref.name);
+  }
 
-  // What the catalog serves moves when the registry publishes, so the version
-  // this lands on is logged rather than quietly adopted.
-  private async resolveBlockType(
-    blockType: string,
-    caller = "a design-time request",
-    options: VersionLookupOptions = {},
+  // (block, version, source) triples already logged as off-pin.
+  private readonly loggedResolutions = new Set<string>();
+
+  // The closest version that has the named block (versionHasBlock).
+  async resolveBlock(
+    block: BlockRef,
+    options: { fresh?: boolean; latest?: boolean } = {},
   ): Promise<BlockResolution> {
-    const parsed = parseBlockType(blockType, packagePieces.versions());
-    if (parsed) return { kind: "resolved", block: parsed };
-    // Nothing but an unversioned block type reaches here: a pinned one parses
-    // on its own, whether or not anything can serve what it pins.
-    const parts = blockTypeParts(blockType);
-    if (!parts) return { kind: "absent" };
-    const found = await this.pieceVersion(parts.packageName, options);
-    if (found.kind !== "found") return found;
-    // Block types carry a scoped package name, so they travel as logger values:
-    // inline, the logger reads the scope as a token and prints null/pack.
-    this.logger.info(
-      "Resolving @block for @caller: it pins no version and this reactor holds no package piece of that name, so it reads as version @version, the one the piece catalog serves today. Pin a version in the block type to hold it still across upgrades.",
-      blockType,
-      caller,
-      found.version,
-    );
-    return {
-      kind: "resolved",
-      block: {
-        packageName: parts.packageName,
-        version: found.version,
-        kind: parts.kind,
-        name: parts.name,
-      },
-    };
+    const resolution = await this.blockResolver.resolve(block, options);
+    if (resolvedBlock(resolution)) this.logResolution(resolution);
+    return resolution;
   }
 
-  // For the callers that only need the piece: a block type nobody serves and
-  // one nobody could be asked about both come back as nothing to work with.
-  private async resolvedBlock(
-    blockType: string,
+  private logResolution(resolution: BlockResolution): void {
+    if (!resolution.note || !resolution.resolved) return;
+    const key = `${blockLabel(resolution.requested)}\u0000${resolution.resolved.version}\u0000${resolution.resolved.source ?? ""}`;
+    if (this.loggedResolutions.has(key)) return;
+    this.loggedResolutions.add(key);
+    // Scoped names travel as logger values; inline they print as null/pack.
+    this.logger.info(
+      "Block @block: @note",
+      blockLabel(resolution.requested),
+      resolution.note,
+    );
+  }
+
+  // For the callers that only need the piece.
+  private async resolvedPiece(
+    block: BlockRef,
   ): Promise<ParsedBlockType | undefined> {
-    // Bounded: these are interactive, and an editor that hangs for a minute
-    // before drawing an empty form is worse than one that draws it at once.
-    const resolution = await this.resolveBlockType(blockType, undefined, {
-      timeoutMs: PIECE_VERSION_LOOKUP_TIMEOUT_MS,
-    });
-    return resolution.kind === "resolved" ? resolution.block : undefined;
+    return resolvedBlock(await this.resolveBlock(block));
   }
 
   // Workflows whose trigger resolved to nothing. Remembered only so the row
@@ -924,29 +1085,23 @@ export class WorkflowRuntimeService {
     trigger: NonNullable<WorkflowState["trigger"]>,
     resolution: BlockResolution | undefined,
   ): void {
-    const parts = blockTypeParts(trigger.blockType);
-    // Only a piece trigger is a failure here: core#manual and the document
-    // triggers reach this path in the ordinary course of things.
-    if (parts?.kind !== "trigger") return;
-    const unreachable = resolution?.kind === "unreachable";
+    const block = triggerBlock(trigger);
+    // Only a piece trigger is a failure here: the core manual trigger reaches
+    // this path in the ordinary course of things.
+    if (isCoreBlock(block)) return;
+    const unreachable = resolution?.unreachable;
     const retryAt = unreachable
       ? new Date(Date.now() + this.scheduleResolutionRetry(workflowId))
       : undefined;
+    const detail = resolution?.note ?? "it does not resolve";
     const reason = unreachable
-      ? `The piece behind the trigger block type "${trigger.blockType}" could not be resolved, so this workflow is not armed: it pins no version, this reactor holds no package piece of that name, and the piece catalog could not be reached (${resolution.detail}). ` +
+      ? `The piece behind the trigger ${blockLabel(block)} could not be resolved, so this workflow is not armed: ${detail}. ` +
         `Retrying at ${retryAt?.toISOString() ?? "the next registration"}; this is a connectivity failure, not a missing piece.`
-      : `No piece answers for the trigger block type "${trigger.blockType}", so this workflow will not arm: it pins no version, this reactor holds no package piece of that name, and the piece catalog has none either. ` +
-        "Pin a version in the block type, or install the package that ships the piece.";
+      : `The trigger ${blockLabel(block)} does not resolve, so this workflow will not arm: ${detail}.`;
     this.logger.warn("Workflow @workflow: @reason", workflowId, reason);
     this.unarmed.add(workflowId);
     this.supervisor()
-      .reject(
-        workflowId,
-        trigger.blockType,
-        configRecord(trigger.config),
-        reason,
-        retryAt,
-      )
+      .reject(workflowId, block, configRecord(trigger.config), reason, retryAt)
       .catch((error: unknown) => {
         this.logger.error(
           `Could not record the unresolved trigger for workflow ${workflowId}`,
@@ -1007,17 +1162,22 @@ export class WorkflowRuntimeService {
   private async refreshRegistration(
     workflowId: string,
     resultingState?: string,
+    onlyIfChanged = false,
   ): Promise<void> {
     // Parsed before awaiting, so only a malformed state falls through to a
     // fresh read; a registration failure must not trigger one.
     const carried = parseWorkflowState(resultingState);
     if (carried) {
-      await this.updateRegistration(workflowId, carried);
+      await this.updateRegistration(workflowId, carried, onlyIfChanged);
       return;
     }
     const document =
       await this.host.reactorClient.get<WorkflowDocument>(workflowId);
-    await this.updateRegistration(workflowId, document.state.global);
+    await this.updateRegistration(
+      workflowId,
+      document.state.global,
+      onlyIfChanged,
+    );
   }
 
   // The manager routes by filter only, so every per-drive processor instance
@@ -1054,9 +1214,11 @@ export class WorkflowRuntimeService {
       // A workflow edit updates the registry, then falls through: workflow docs are
       // also a document-event source, so a workflow can watch its own type.
       if (context.documentType === "powerhouse/workflow") {
+        // Only a status or published-trigger change re-arms.
         await this.refreshRegistration(
           context.documentId,
           operation.resultingState,
+          true,
         );
       }
       if (operation.error !== undefined) continue;
@@ -1370,7 +1532,7 @@ export class WorkflowRuntimeService {
       },
       webhookUrlFor: async (workflowId) =>
         (await this.mintWebhookEndpoint(workflowId))?.url,
-      cacheDir: BUNDLE_CACHE_DIR,
+      cacheDir: bundleCacheDir(),
       resolver: pieceResolver(),
       // Trigger hooks reach the same services steps do.
       egress: configuredEgress(),
@@ -1398,6 +1560,9 @@ export class WorkflowRuntimeService {
     for (const { timer } of this.resolutionRetries.values())
       clearTimeout(timer);
     this.resolutionRetries.clear();
+    for (const workflowId of [...this.webhookTests.keys()]) {
+      this.cancelTriggerTest(workflowId, "stopped: the runtime shut down");
+    }
     this.stopTriggerSupervisor();
     // Left in place, disposed: clearing it here would let a run that is still
     // between awaits build a replacement and fork into it after teardown.
@@ -1480,6 +1645,10 @@ export class WorkflowRuntimeService {
     // unseeded registry is indistinguishable from a bad token.
     await this.seedPromise;
 
+    // A waiting test verifies as the draft's trigger would once armed.
+    const test = this.webhookTests.get(workflowId);
+    if (test) return this.policyOf(test.config, workflowId);
+
     const registration = this.registry.get(workflowId);
     if (!registration) return undefined;
 
@@ -1487,8 +1656,13 @@ export class WorkflowRuntimeService {
     // the request means, or rejects it.
     if (registration.kind === PIECE_WEBHOOK_KIND) return {};
     if (registration.kind !== WEBHOOK_TRIGGER_KIND) return undefined;
+    return this.policyOf(registration.config, workflowId);
+  }
 
-    const { config } = registration;
+  private async policyOf(
+    config: WebhookConfig,
+    workflowId: string,
+  ): Promise<WebhookPolicy> {
     return {
       methods: config.methods,
       challengeField: config.challengeField,
@@ -1518,10 +1692,11 @@ export class WorkflowRuntimeService {
   async webhookEndpoint(
     workflowId: string,
     ctx?: WorkflowCaller,
+    access: WorkflowAccessOptions = {},
   ): Promise<WebhookEndpointRecord | null> {
     // The URL carries the token that is the entire credential for a public
     // route, so handing it out is a read of the workflow itself.
-    await this.assertCanReadDocument(workflowId, ctx);
+    await this.assertCanReadWorkflow(workflowId, ctx, access.driveId);
     return this.mintWebhookEndpoint(workflowId);
   }
 
@@ -1560,6 +1735,13 @@ export class WorkflowRuntimeService {
    * answered any challenge for; all that is left is deciding what it means. */
   async deliverWebhook(request: WebhookRequest): Promise<WebhookReply> {
     const workflowId = request.key;
+    const test = this.webhookTests.get(workflowId);
+    if (test) {
+      this.webhookTests.delete(workflowId);
+      clearTimeout(test.timer);
+      test.resolve(webhookPayload(request));
+      return { status: test.config.responseStatus };
+    }
     const registration = this.registry.get(workflowId);
     if (!registration) return UNAUTHORIZED;
     if (registration.kind === PIECE_WEBHOOK_KIND) {
@@ -1639,7 +1821,7 @@ export class WorkflowRuntimeService {
       // delivery: 500 tells it to retry rather than that the endpoint is gone.
       this.logger.error(
         "Handshake failed for @block on workflow @workflow",
-        binding.blockType,
+        blockLabel(binding.block),
         binding.workflowId,
         error,
       );
@@ -1651,10 +1833,7 @@ export class WorkflowRuntimeService {
     binding: PieceTriggerBinding,
   ): Promise<PieceHandshake | undefined> {
     try {
-      const descriptor = await this.pieceDescriptor(
-        binding.packageName,
-        binding.version,
-      );
+      const descriptor = await this.pieceDescriptor(bindingTarget(binding));
       return descriptor.triggers.find(
         (entry) => entry.name === binding.triggerName,
       )?.handshake;
@@ -1663,7 +1842,7 @@ export class WorkflowRuntimeService {
       // cost of guessing wrong is one probe answered as a delivery.
       this.logger.warn(
         "Could not read the handshake config for @block",
-        binding.blockType,
+        blockLabel(binding.block),
         error,
       );
       return undefined;
@@ -1688,7 +1867,7 @@ export class WorkflowRuntimeService {
         () => {
           this.logger.info(
             "Webhook delivered to @block for workflow @workflow",
-            binding.blockType,
+            blockLabel(binding.block),
             binding.workflowId,
           );
         },
@@ -1734,14 +1913,33 @@ export class WorkflowRuntimeService {
   private designEgress: EgressPolicy | undefined =
     configuredEgress() ?? DEFAULT_EGRESS_POLICY;
 
-  private async pieceDescriptor(
-    packageName: string,
-    version: string,
+  private readonly describing = new Map<string, Promise<PieceDescriptor>>();
+
+  // Keyed on the resolved version and its source, never on what was asked for.
+  private pieceDescriptor(target: PieceTarget): Promise<PieceDescriptor> {
+    const cacheKey = `${target.source ?? ""}:${target.name}@${target.version}`;
+    const cached = this.descriptors.get(cacheKey);
+    if (cached) return Promise.resolve(cached);
+    let pending = this.describing.get(cacheKey);
+    if (!pending) {
+      pending = this.describe(target, cacheKey).finally(() =>
+        this.describing.delete(cacheKey),
+      );
+      this.describing.set(cacheKey, pending);
+    }
+    return pending;
+  }
+
+  private async describe(
+    target: PieceTarget,
+    cacheKey: string,
   ): Promise<PieceDescriptor> {
-    const cacheKey = `${packageName}@${version}`;
+    const { name: packageName, version } = target;
+    const builtin = builtinPiece(packageName);
+    if (builtin) return describeBuiltinPiece(builtin);
     let descriptor = this.descriptors.get(cacheKey);
     if (!descriptor) {
-      const piece = await pieceResolver().resolve(packageName, version);
+      const piece = await pieceResolver().resolve(target);
       // Loading the bundle runs the piece module's top-level code, so the
       // descriptor is built in the worker, never in the reactor process.
       this.designWorker ??= new PieceWorker();
@@ -1930,15 +2128,22 @@ export class WorkflowRuntimeService {
       // A person pressed "check", quite possibly because they just fixed the
       // connectivity that made the last answer a miss: ask again rather than
       // serve them a remembered one, and wait for the real answer.
-      const found = await this.pieceVersion(packageName, { fresh: true });
-      if (found.kind !== "found") {
+      // A connection names no version: the installed piece, else the newest.
+      const found = await this.blockResolver.latest(packageName, {
+        fresh: true,
+      });
+      if (found.version === undefined) {
         throw new Error(
           `Could not resolve a version for piece "${packageName}"` +
-            (found.kind === "unreachable" ? `: ${found.detail}` : ""),
+            (found.unreachable ? `: ${found.unreachable}` : ""),
         );
       }
       moduleRef = pieceModuleRef(
-        await pieceResolver().resolve(packageName, found.version),
+        await pieceResolver().resolve({
+          name: packageName,
+          version: found.version,
+          source: found.source,
+        }),
       );
     } catch (error) {
       return this.recordCheckResult(document, {
@@ -1955,10 +2160,7 @@ export class WorkflowRuntimeService {
       shapedAuth = await resolveConnectionAuth(
         document,
         this.secretProvider(),
-        {
-          blockType: state.connectorId,
-          piecePackage: packageName,
-        },
+        { piecePackage: packageName },
       );
     } catch (error) {
       // A missing or deleted secret names its ref in the message.
@@ -2017,129 +2219,6 @@ export class WorkflowRuntimeService {
     });
   }
 
-  // Names a source answered for and had nothing of, and when it said so. An
-  // unreachable catalog is never recorded here: it is not an answer, and
-  // remembering it would hold a name unresolvable after connectivity is back.
-  private readonly versionMisses = new Map<string, number>();
-
-  // Lookups still in the air, so a burst of requests for one name costs one.
-  private readonly versionLookups = new Map<string, Promise<VersionLookup>>();
-
-  // The version to run a piece at, by the one rule every caller uses: what
-  // this reactor installed, else what the catalog serves for the name.
-  private pieceVersion(
-    packageName: string,
-    options: VersionLookupOptions = {},
-  ): Promise<VersionLookup> {
-    // A package piece is pinned by what this reactor installed, and no
-    // published listing has anything to say about it.
-    const local = packagePieces.lookup(packageName);
-    if (local)
-      return Promise.resolve({ kind: "found", version: local.version });
-    if (packageName === CORE_PACKAGE)
-      return Promise.resolve({ kind: "absent" });
-    const missedAt = this.versionMisses.get(packageName);
-    if (
-      !options.fresh &&
-      missedAt !== undefined &&
-      Date.now() - missedAt < PIECE_VERSION_MISS_TTL_MS
-    ) {
-      return Promise.resolve({ kind: "absent" });
-    }
-    if (options.fresh) this.versionMisses.delete(packageName);
-    const lookup =
-      this.versionLookups.get(packageName) ??
-      this.startVersionLookup(packageName);
-    return options.timeoutMs === undefined
-      ? lookup
-      : this.boundedLookup(packageName, lookup, options.timeoutMs);
-  }
-
-  private startVersionLookup(packageName: string): Promise<VersionLookup> {
-    const lookup = this.lookUpPieceVersion(packageName).then((found) => {
-      if (found.kind === "absent")
-        this.versionMisses.set(packageName, Date.now());
-      else if (found.kind === "found") this.versionMisses.delete(packageName);
-      this.versionLookups.delete(packageName);
-      return found;
-    });
-    this.versionLookups.set(packageName, lookup);
-    return lookup;
-  }
-
-  // A caller that cannot wait treats the deadline as the catalog not having
-  // answered, which is what it is. The lookup is left running: it fills the
-  // catalog's own cache, so the retry behind this is answered from memory.
-  private boundedLookup(
-    packageName: string,
-    lookup: Promise<VersionLookup>,
-    timeoutMs: number,
-  ): Promise<VersionLookup> {
-    return new Promise<VersionLookup>((resolve) => {
-      const timer = setTimeout(() => {
-        this.logger.debug(
-          "Gave the piece catalog @ms ms for @package and went on without it",
-          timeoutMs,
-          packageName,
-        );
-        resolve({
-          kind: "unreachable",
-          detail: `the piece catalog did not answer within ${timeoutMs}ms`,
-        });
-      }, timeoutMs);
-      timer.unref();
-      lookup.then(
-        (found) => {
-          clearTimeout(timer);
-          resolve(found);
-        },
-        () => {
-          clearTimeout(timer);
-          resolve({ kind: "unreachable", detail: "the piece catalog failed" });
-        },
-      );
-    });
-  }
-
-  // Catalog first, piece detail as fallback; the cache keeps this cheap.
-
-  // A source that answered and did not list the piece is an absence; both
-  // failing is an outage, and the two must not read the same to a caller.
-  private async lookUpPieceVersion(
-    packageName: string,
-  ): Promise<VersionLookup> {
-    try {
-      const catalog = await fetchPieceCatalog();
-      const version = catalog.find(
-        (entry) => entry.name === packageName,
-      )?.version;
-      if (version) return { kind: "found", version };
-    } catch {
-      // Unreachable listing; the piece's own detail may still answer.
-    }
-    try {
-      const detail = (await fetchPieceDetail(packageName)) as {
-        version?: unknown;
-      };
-      if (typeof detail.version === "string" && detail.version !== "") {
-        return { kind: "found", version: detail.version };
-      }
-      return { kind: "absent" };
-    } catch (error) {
-      // A 404 is the catalog answering that it has no such piece. Anything
-      // else left the question open, and the listing above is filtered, so
-      // missing from it is no answer either.
-      if (isAbsentFromCatalog(error)) return { kind: "absent" };
-      const detail = error instanceof Error ? error.message : String(error);
-      this.logger.debug(
-        "The piece catalog could not be reached for @package: @error",
-        packageName,
-        error,
-      );
-      return { kind: "unreachable", detail };
-    }
-  }
-
   private async recordCheckResult(
     document: ConnectionDocument,
     result: ConnectionCheckResult,
@@ -2174,12 +2253,9 @@ export class WorkflowRuntimeService {
     { piece: LocalPiece; descriptor: PieceDescriptor }[]
   > {
     const described = await Promise.all(
-      packagePieces.entries().map(async (piece) => {
+      installedPieces().map(async (piece) => {
         try {
-          const descriptor = await this.pieceDescriptor(
-            piece.name,
-            piece.version,
-          );
+          const descriptor = await this.pieceDescriptor(localTarget(piece));
           return { piece, descriptor };
         } catch (error) {
           this.logger.warn(
@@ -2195,11 +2271,11 @@ export class WorkflowRuntimeService {
   private async localPiece(
     packageName: string,
   ): Promise<{ piece: LocalPiece; descriptor: PieceDescriptor } | undefined> {
-    const piece = packagePieces.lookup(packageName);
+    const piece = installedPiece(packageName);
     if (!piece) return undefined;
     return {
       piece,
-      descriptor: await this.pieceDescriptor(piece.name, piece.version),
+      descriptor: await this.pieceDescriptor(localTarget(piece)),
     };
   }
 
@@ -2220,41 +2296,37 @@ export class WorkflowRuntimeService {
       this.logger.warn(`Serving package pieces only: ${String(error)}`);
       published = [];
     }
+    const publishedVersions = new Map(
+      published.map((entry) => [entry.name, entry.version]),
+    );
     return [
-      // The engine's blocks belong to no package; without this they are
-      // absent from every listing an author browses.
-      catalogEntry(CORE_DESCRIPTOR, CORE_PIECE_NAME, CORE_PIECE_VERSION),
-      ...entries,
+      ...entries.map((entry) => {
+        const publishedVersion = publishedVersions.get(entry.name);
+        return publishedVersion ? { ...entry, publishedVersion } : entry;
+      }),
       ...published.filter((entry) => !names.has(entry.name)),
     ].sort((a, b) => a.displayName.localeCompare(b.displayName));
   }
 
-  async pieceActions(packageName: string): Promise<PieceActionsResult> {
-    if (packageName === CORE_PIECE_NAME) {
-      return actionsResult(
-        CORE_DESCRIPTOR,
-        CORE_PIECE_NAME,
-        CORE_PIECE_VERSION,
-      );
-    }
-    const local = await this.localPiece(packageName);
+  // A version reads that version; without one, the installed piece or the latest.
+  async pieceActions(
+    packageName: string,
+    version?: string,
+  ): Promise<PieceActionsResult> {
+    const local = await this.localPieceAt(packageName, version);
     return local
       ? actionsResult(local.descriptor, local.piece.name, local.piece.version)
-      : fetchPieceActions(packageName);
+      : fetchPieceActions(packageName, version);
   }
 
-  async pieceTriggers(packageName: string): Promise<PieceTriggersResult> {
-    if (packageName === CORE_PIECE_NAME) {
-      return triggersResult(
-        CORE_DESCRIPTOR,
-        CORE_PIECE_NAME,
-        CORE_PIECE_VERSION,
-      );
-    }
-    const local = await this.localPiece(packageName);
+  async pieceTriggers(
+    packageName: string,
+    version?: string,
+  ): Promise<PieceTriggersResult> {
+    const local = await this.localPieceAt(packageName, version);
     return local
       ? triggersResult(local.descriptor, local.piece.name, local.piece.version)
-      : fetchPieceTriggers(packageName);
+      : fetchPieceTriggers(packageName, version);
   }
 
   // Catalog search, with this reactor's own pieces always in it: the index
@@ -2263,15 +2335,13 @@ export class WorkflowRuntimeService {
     query: string,
     limit?: number,
   ): Promise<BlockSearchResult> {
-    const core = localSearchHits(CORE_DESCRIPTOR, CORE_PIECE_NAME);
-    let local: BlockSearchIndex | undefined = indexFromHits(core);
+    let local: BlockSearchIndex | undefined;
     try {
-      local = indexFromHits([
-        ...core,
-        ...(await this.localPieces()).flatMap(({ piece, descriptor }) =>
-          localSearchHits(descriptor, piece.name),
+      local = indexFromHits(
+        (await this.localPieces()).flatMap(({ piece, descriptor }) =>
+          localSearchHits(descriptor, piece.name, piece.version),
         ),
-      ]);
+      );
     } catch (error) {
       // The published half is still worth serving without them.
       this.logger.warn(`Could not index the package pieces: ${String(error)}`);
@@ -2279,23 +2349,32 @@ export class WorkflowRuntimeService {
     return searchBlocks(query, limit, local);
   }
 
-  async pieceDetail(packageName: string): Promise<unknown> {
-    const local = await this.localPiece(packageName);
+  async pieceDetail(packageName: string, version?: string): Promise<unknown> {
+    const local = await this.localPieceAt(packageName, version);
     return local
       ? detailResult(local.descriptor, local.piece.name, local.piece.version)
-      : fetchPieceDetail(packageName);
+      : fetchPieceDetail(packageName, version);
+  }
+
+  // The installed piece when it answers for the version asked (or none was).
+  private async localPieceAt(
+    packageName: string,
+    version: string | undefined,
+  ): Promise<{ piece: LocalPiece; descriptor: PieceDescriptor } | undefined> {
+    const piece = installedPiece(packageName);
+    if (!piece) return undefined;
+    if (version && version !== piece.version && !isHostBound(piece.name)) {
+      return undefined;
+    }
+    return this.localPiece(packageName);
   }
 
   // Design-time: the action/trigger descriptor (props, auth) driving the
   // editor form; triggers come back under a "trigger" key.
-  async blockDescriptor(blockType: string): Promise<unknown> {
-    if (isCoreBlock(blockType)) return coreBlockDescriptor(blockType);
-    const parsed = await this.resolvedBlock(blockType);
+  async blockDescriptor(block: BlockRef): Promise<unknown> {
+    const parsed = await this.resolvedPiece(block);
     if (!parsed) return null;
-    const descriptor = await this.pieceDescriptor(
-      parsed.packageName,
-      parsed.version,
-    );
+    const descriptor = await this.pieceDescriptor(targetOf(parsed));
     // Refused here so no form is ever drawn for a block that cannot run.
     if (descriptor.unsupported) {
       throw new UnsupportedPieceFeatureError(
@@ -2442,6 +2521,28 @@ export class WorkflowRuntimeService {
     await this.host.assertCanRead(documentId, ctx);
   }
 
+  // A caller allowed on the drive waits (bounded) for a workflow that has not
+  // reached this reactor; anyone else is refused at once.
+  private async assertCanReadWorkflow(
+    workflowId: string,
+    ctx: WorkflowCaller | undefined,
+    driveId: string | undefined,
+  ): Promise<void> {
+    try {
+      await this.assertCanReadDocument(workflowId, ctx);
+    } catch (denied) {
+      const client = this.host.reactorClient;
+      if (!driveId || !(await isNotHereYet(client, workflowId))) throw denied;
+      await this.assertCanReadDocument(driveId, ctx);
+      await waitForSync(
+        client,
+        workflowId,
+        () => this.assertCanReadDocument(workflowId, ctx),
+        this.host.syncWaitMs ?? SYNC_WAIT_MS,
+      );
+    }
+  }
+
   private async assertCanWriteDocument(
     documentId: string,
     ctx: WorkflowCaller | undefined,
@@ -2454,34 +2555,34 @@ export class WorkflowRuntimeService {
 
   // Design-time DROPDOWN options() / DYNAMIC props(), run in the piece worker.
   async blockOptions(
-    blockType: string,
+    block: BlockRef,
     propName: string,
     input?: unknown,
     connectionId?: string,
     ctx?: WorkflowCaller,
     searchValue?: string,
   ): Promise<unknown> {
-    const parsed = await this.resolvedBlock(blockType);
-    if (!parsed) {
-      throw new Error(`Not a piece block type: "${blockType}"`);
-    }
     // Auth-dependent options() resolvers need the step's connection. Nothing
     // about the request authorizes it, so the caller's own read access does.
+    if (connectionId) await this.assertCanReadDocument(connectionId, ctx);
+    const resolution = await this.resolveBlock(block);
+    const parsed = resolvedBlock(resolution);
+    if (!parsed) {
+      throw new Error(
+        resolution.note ?? `${blockLabel(block)} does not resolve`,
+      );
+    }
+    if (builtinPiece(parsed.packageName)) {
+      throw new Error(`${blockLabel(block)} has no options to resolve`);
+    }
     let auth: unknown;
     if (connectionId) {
-      await this.assertCanReadDocument(connectionId, ctx);
       auth = await new DocumentConnectionResolver(
         this.host,
         this.secretProvider(),
-      ).resolve(connectionId, {
-        blockType,
-        piecePackage: parsed.packageName,
-      });
+      ).resolve(connectionId, { piecePackage: parsed.packageName });
     }
-    const piece = await pieceResolver().resolve(
-      parsed.packageName,
-      parsed.version,
-    );
+    const piece = await pieceResolver().resolve(targetOf(parsed));
     this.designWorker ??= new PieceWorker();
     const result = await this.designWorker.resolveOptions(
       {
@@ -2518,23 +2619,28 @@ export class WorkflowRuntimeService {
 
   // Authored output shape of a block, for the editor's expression picker.
   async blockOutputTree(
-    blockType: string,
+    block: BlockRef,
     config?: unknown,
   ): Promise<OutputTree> {
     const record = (config ?? {}) as Record<string, unknown>;
-    switch (blockType) {
-      case "core#manual":
+    switch (blockKey(block)) {
+      case MANUAL_BLOCK:
         return { source: "none", nodes: [] };
       case SCHEDULE_BLOCK:
         return { source: "static", nodes: scheduleTriggerTree() };
       case WEBHOOK_BLOCK:
         return { source: "static", nodes: webhookTriggerTree() };
-      case "core#branch":
+      case BRANCH_BLOCK:
         return {
           source: "static",
-          nodes: [{ name: "condition", type: "value" }],
+          nodes: [
+            { name: "operator", type: "String!" },
+            { name: "left", type: "value" },
+            { name: "right", type: "value" },
+            { name: "result", type: "Boolean!" },
+          ],
         };
-      case "core#assert":
+      case ASSERT_BLOCK:
         return { source: "static", nodes: [{ name: "value", type: "value" }] };
       case DOCUMENT_CREATED_BLOCK:
       case DOCUMENT_DELETED_BLOCK:
@@ -2576,11 +2682,14 @@ export class WorkflowRuntimeService {
         };
       }
       default: {
-        const parsed = await this.resolvedBlock(blockType);
+        const parsed = await this.resolvedPiece(block);
         if (!parsed) return { source: "none", nodes: [] };
-        // Through the service, not the published catalog: a package piece is
-        // often unpublished, and its detail comes from its own descriptor.
-        const detail = (await this.pieceDetail(parsed.packageName)) as {
+        // Described from the version that runs, not the catalog's latest.
+        const detail = detailResult(
+          await this.pieceDescriptor(targetOf(parsed)),
+          parsed.packageName,
+          parsed.version,
+        ) as {
           actions?: Record<string, unknown>;
           triggers?: Record<string, unknown>;
         };
@@ -2611,9 +2720,9 @@ export class WorkflowRuntimeService {
     try {
       const module =
         await this.host.reactorClient.getDocumentModelModule(documentType);
-      const sdl =
-        module.documentModel.global.specifications.at(-1)?.state.global.schema;
-      return sdl ? fieldsFromSdl(sdl) : [];
+      const model = module.documentModel.global;
+      const sdl = model.specifications.at(-1)?.state.global.schema;
+      return sdl ? fieldsFromSdl(sdl, { state: model.name }) : [];
     } catch {
       return [];
     }
@@ -2631,7 +2740,7 @@ export class WorkflowRuntimeService {
       for (const specModule of latest?.modules ?? []) {
         for (const operation of specModule.operations) {
           if (operation.name === actionType && operation.schema) {
-            return fieldsFromSdl(operation.schema);
+            return fieldsFromSdl(operation.schema, { input: operation.name });
           }
         }
       }
@@ -2641,27 +2750,222 @@ export class WorkflowRuntimeService {
     }
   }
 
-  // Runs the trigger's test hook; the test store prefix keeps cursors intact.
+  // Runs the draft trigger's test hook; the test store prefix keeps cursors
+  // intact. The sample is journaled as a "test" run and noted as lastTest.
 
   // It resolves the trigger's connection and hands the credentials to piece
   // code, so the caller must be able to read both documents.
+  // Core triggers: manual takes `payload` as its sample, schedule samples a
+  // fire now, and webhook waits (up to `timeoutMs`) for the next delivery.
   async testTrigger(
     workflowId: string,
     ctx?: WorkflowCaller,
+    options: TriggerTestOptions = {},
   ): Promise<unknown> {
-    await this.assertCanReadDocument(workflowId, ctx);
+    await this.assertCanReadWorkflow(workflowId, ctx, options.driveId);
     const document =
       await this.host.reactorClient.get<WorkflowDocument>(workflowId);
-    const trigger = document.state.global.trigger;
+    const state = document.state.global;
+    const trigger = state.trigger;
     if (!trigger) throw new Error("Workflow has no trigger");
     if (trigger.connectionId) {
       await this.assertCanReadDocument(trigger.connectionId, ctx);
     }
+    const test = await this.triggerTest(workflowId, trigger, options);
+    const startedAt = new Date().toISOString();
+    const recordTest = (
+      outcome: Pick<
+        StepExecutionRecord,
+        "status" | "output" | "port" | "error"
+      >,
+    ) =>
+      this.recordTest(workflowId, state, document.header.name, {
+        stepId: trigger.id,
+        key: "trigger",
+        pieceName: trigger.pieceName,
+        blockName: trigger.triggerName,
+        input: test.input,
+        ...outcome,
+        startedAt,
+        endedAt: new Date().toISOString(),
+      });
+    let output: unknown;
+    try {
+      output = await test.sample();
+    } catch (error) {
+      await recordTest({
+        status: "FAILED",
+        error: pieceFailureDetail(error, "Trigger test timed out"),
+      });
+      throw error;
+    }
+    await recordTest({ status: "SUCCEEDED", output, port: "next" });
+    return output;
+  }
+
+  // What a trigger test samples, and the config it journals as input.
+  private async triggerTest(
+    workflowId: string,
+    trigger: NonNullable<WorkflowState["trigger"]>,
+    options: TriggerTestOptions,
+  ): Promise<{ input: unknown; sample: () => Promise<unknown> }> {
+    const config = configRecord(trigger.config);
+    const block = triggerBlock(trigger);
+    switch (blockKey(block)) {
+      case MANUAL_BLOCK:
+        return {
+          input: config,
+          sample: () => Promise.resolve(options.payload ?? {}),
+        };
+      case SCHEDULE_BLOCK: {
+        const schedule = parseScheduleConfig(config);
+        return {
+          input: config,
+          sample: () => {
+            const now = new Date();
+            return Promise.resolve(schedulePayload(schedule, now, now));
+          },
+        };
+      }
+      case WEBHOOK_BLOCK: {
+        const webhook = parseWebhookConfig(config);
+        // Minted now, so the author can send to it while this waits.
+        if (!(await this.endpoints())) {
+          throw new Error("This host serves no webhooks");
+        }
+        await this.mintWebhookEndpoint(workflowId);
+        return {
+          input: config,
+          sample: () =>
+            this.awaitWebhookTest(workflowId, webhook, options.timeoutMs),
+        };
+      }
+    }
     const { binding } = await this.pieceBinding(workflowId, trigger);
     if (!binding) {
-      throw new Error(`"${trigger.blockType}" is not a piece trigger`);
+      throw new Error(
+        `${blockLabel(block)} is not a trigger this runtime can test`,
+      );
     }
-    return this.supervisor().test(binding);
+    return {
+      input: binding.config,
+      sample: () => this.supervisor().test(binding),
+    };
+  }
+
+  // One-shot listeners: the next delivery to the workflow's endpoint is the
+  // sample, and runs nothing.
+  private readonly webhookTests = new Map<string, WebhookTest>();
+
+  private awaitWebhookTest(
+    workflowId: string,
+    config: WebhookConfig,
+    timeoutMs = WEBHOOK_TEST_TIMEOUT_MS,
+  ): Promise<WebhookPayload> {
+    this.cancelTriggerTest(workflowId, "superseded by a newer test");
+    const waitMs = Math.min(Math.max(timeoutMs, 0), WEBHOOK_TEST_TIMEOUT_MS);
+    return new Promise<WebhookPayload>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.webhookTests.delete(workflowId);
+        reject(
+          new Error(
+            `No webhook delivery arrived within ${Math.round(waitMs / 1000)}s`,
+          ),
+        );
+      }, waitMs);
+      timer.unref();
+      this.webhookTests.set(workflowId, { config, resolve, reject, timer });
+    });
+  }
+
+  /** Stops a waiting webhook test; false when none was waiting. */
+  cancelTriggerTest(workflowId: string, reason = "cancelled"): boolean {
+    const pending = this.webhookTests.get(workflowId);
+    if (!pending) return false;
+    this.webhookTests.delete(workflowId);
+    clearTimeout(pending.timer);
+    pending.reject(new Error(`Trigger test ${reason}`));
+    return true;
+  }
+
+  // The caller may read the workflow, as for a test.
+  async cancelTriggerTestFor(
+    workflowId: string,
+    ctx?: WorkflowCaller,
+  ): Promise<boolean> {
+    await this.assertCanReadDocument(workflowId, ctx);
+    return this.cancelTriggerTest(workflowId);
+  }
+
+  // Journals a design-time test as a one-step "test" run, then points the
+  // tested block's lastTest at it. Both are best-effort.
+  private async recordTest(
+    workflowId: string,
+    state: WorkflowState,
+    name: string | undefined,
+    record: StepExecutionRecord,
+  ): Promise<void> {
+    const store = await this.store();
+    if (!store) return;
+    let runId: string;
+    try {
+      runId = await store.startRun({
+        workflowId,
+        workflowName: runJournalName(state.name, name),
+        workflowVersion: state.version,
+        triggerKind: TEST_TRIGGER_KIND,
+      });
+      await store.recordStep(runId, 0, record);
+      await store.finishRun(runId, {
+        status: record.status === "FAILED" ? "FAILED" : "SUCCEEDED",
+        steps: [record],
+        ...(record.error ? { error: record.error } : {}),
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Could not journal the test of "${record.key}" on workflow ${workflowId}`,
+        error,
+      );
+      return;
+    }
+    await this.noteLastTest(
+      workflowId,
+      record,
+      runId,
+      record.endedAt ?? new Date().toISOString(),
+    );
+  }
+
+  private async noteLastTest(
+    workflowId: string,
+    record: Pick<StepExecutionRecord, "stepId" | "key">,
+    runId: string,
+    testedAt: string,
+  ): Promise<void> {
+    try {
+      await this.host.reactorClient.execute(workflowId, "main", [
+        workflowActions.setLastTest({ id: record.stepId, runId, testedAt }),
+      ]);
+    } catch (error) {
+      this.logger.warn(
+        `Could not record the last test of "${record.key}" on workflow ${workflowId}`,
+        error,
+      );
+    }
+  }
+
+  // Without a journal there is nowhere durable to keep ctx.store, so the
+  // executor falls back to the worker's heap.
+  private blockExecutor(store: WorkflowRunStore | undefined): BlockExecutor {
+    return (this.executor ??= createBlockExecutor(
+      this.host,
+      this.secretProvider(),
+      this.attachments,
+      store ? createPieceStorePort(store, currentWorkflowId) : undefined,
+      // A step resolves its block the way every other caller does, so a
+      // trigger that arms cannot be followed by a step that cannot start.
+      (block) => this.resolveBlock(block),
+    ));
   }
 
   // One child per run, N runs at a time. Sized by the operator: each slot is a
@@ -2735,36 +3039,21 @@ export class WorkflowRuntimeService {
     // Bound once, to the connections this definition names: an edit landing
     // mid-run cannot widen what the run may resolve.
     const connections = declaredConnectionIds(definition);
-    // Without a journal there is nowhere durable to keep ctx.store, so the
-    // executor falls back to the worker's heap.
-    this.executor ??= createBlockExecutor(
-      this.host,
-      this.secretProvider(),
-      this.attachments,
-      store ? createPieceStorePort(store, currentWorkflowId) : undefined,
-      // A step resolves its block type the way every other caller does, so a
-      // trigger that arms cannot be followed by a step that cannot start.
-      async (stepBlockType) => {
-        const resolution = await this.resolveBlockType(
-          stepBlockType,
-          `a step of workflow ${currentWorkflowId() ?? "?"}`,
-        );
-        return resolution.kind === "resolved" ? resolution.block : undefined;
-      },
-    );
+    const executor = this.blockExecutor(store);
 
+    const runnable = runnableDefinition(state);
     let runId: string | null = enqueuedRunId ?? null;
     if (enqueuedRunId) {
       await store?.beginRun(enqueuedRunId, {
         workflowName: runJournalName(state.name, documentName),
-        workflowVersion: state.version,
+        workflowVersion: runnable.version,
       });
     } else {
       runId =
         (await store?.startRun({
           workflowId,
           workflowName: runJournalName(state.name, documentName),
-          workflowVersion: state.version,
+          workflowVersion: runnable.version,
           triggerKind,
           triggerPayload,
           rerunOf: resume?.rerunOf,
@@ -2782,6 +3071,11 @@ export class WorkflowRuntimeService {
       // here, and the journal records the run as failed rather than leaving it
       // to be swept up as an orphan.
       session = this.workers().session();
+      // Resolved per run, so a rotated secret takes effect on the next one.
+      const { variables, secretValues } = await resolveVariables(
+        runnable.variables,
+        this.secretProvider(),
+      );
       const journal = store;
       const journaledRunId = runId;
       const handed = new Set<string>();
@@ -2800,8 +3094,10 @@ export class WorkflowRuntimeService {
         },
         () =>
           runWorkflow({
-            definition,
-            executor: this.executor!,
+            definition: { ...definition, variables },
+            executor,
+            declaredPorts: blockPorts,
+            ...(secretValues.length > 0 ? { redactValues: secretValues } : {}),
             triggerPayload,
             completedSteps: resume?.completedSteps,
             // Journal each step as it lands, so a reactor that dies mid-run
@@ -2862,7 +3158,7 @@ export class WorkflowRuntimeService {
   }
 
   // Resume a FAILED run: journaled step outputs replay, execution restarts
-  // at the first step that didn't succeed. Runs the current definition.
+  // at the first step that didn't succeed. Runs the current runnable definition.
   async rerun(
     runId: string,
     ctx?: WorkflowCaller,
@@ -2896,10 +3192,13 @@ export class WorkflowRuntimeService {
       run.workflow_id,
     );
     const currentSteps = new Map(
-      document.state.global.steps.map((step) => [step.id, step]),
+      runnableDefinition(document.state.global).steps.map((step) => [
+        step.id,
+        stepDefinition(step),
+      ]),
     );
-    // Reuse an output only while the step is still the same step: outputs
-    // from renamed/retyped steps would poison downstream expressions.
+    // Reuse an output only while the step is the step that produced it: same
+    // key, and the same definition hash (block type, config, connection, schemas).
     const completedSteps = new Map<
       string,
       { output?: unknown; port?: string | null }
@@ -2909,8 +3208,9 @@ export class WorkflowRuntimeService {
       const current = currentSteps.get(row.step_id);
       if (
         !current ||
-        current.blockType !== row.block_type ||
-        current.key !== row.step_key
+        current.key !== row.step_key ||
+        row.config_hash === null ||
+        stepConfigHash(current) !== row.config_hash
       ) {
         continue;
       }
@@ -2927,6 +3227,363 @@ export class WorkflowRuntimeService {
       { completedSteps, rerunOf: runId },
       ctx,
     );
+  }
+
+  // Runs one draft step against the latest test outputs of the blocks it
+  // reads, journals it as a "test" run and notes it as the step's lastTest.
+
+  // It hands the step's connection to piece code, so the caller must be able
+  // to read the workflow and that connection, as for testTrigger.
+  async testStep(
+    workflowId: string,
+    stepId: string,
+    ctx?: WorkflowCaller,
+    access: WorkflowAccessOptions = {},
+  ): Promise<StepTestResult> {
+    await this.assertCanReadWorkflow(workflowId, ctx, access.driveId);
+    const document =
+      await this.host.reactorClient.get<WorkflowDocument>(workflowId);
+    const state = document.state.global;
+    const step = state.steps.find((candidate) => candidate.id === stepId);
+    if (!step) throw new Error(`Step "${stepId}" not found`);
+    if (step.connectionId) {
+      await this.assertCanReadDocument(step.connectionId, ctx);
+    }
+    const refused = (error: string): StepTestResult => ({
+      runId: null,
+      status: "FAILED",
+      error,
+      durationMs: 0,
+    });
+
+    const upstream = await this.testScope(state, step, ctx);
+    if ("error" in upstream) return refused(upstream.error);
+    let resolved;
+    try {
+      resolved = await resolveVariables(state.variables, this.secretProvider());
+    } catch (error) {
+      return refused(error instanceof Error ? error.message : String(error));
+    }
+    const { variables, secretValues } = resolved;
+    const definition = {
+      name: state.name,
+      trigger: null,
+      steps: [draftStepDef(step)],
+      edges: [],
+      variables,
+    };
+    // A journaled sample carries markers where secrets were: refuse to hand
+    // them to the step as if they were values.
+    let input: unknown;
+    try {
+      input = resolveExpressions(step.config, {
+        trigger: { payload: upstream.triggerPayload },
+        steps: upstream.priorSteps,
+        variables: Object.fromEntries(variables.map((v) => [v.key, v.value])),
+      });
+    } catch {
+      // The run below fails the step with the same error, and journals it.
+      input = step.config;
+    }
+    if (containsRedactedMarker(input) && !containsRedactedMarker(step.config)) {
+      const sources = upstream.samples
+        .filter((sample) => containsRedactedMarker(sample.value))
+        .map((sample) => sample.label);
+      return refused(
+        `"${step.key}" reads a value redacted from the last test of ${sources.join(", ") || "an earlier block"}`,
+      );
+    }
+
+    const store = await this.store();
+    let runId: string | null = null;
+    try {
+      runId =
+        (await store?.startRun({
+          workflowId,
+          workflowName: runJournalName(state.name, document.header.name),
+          workflowVersion: state.version,
+          triggerKind: TEST_TRIGGER_KIND,
+        })) ?? null;
+    } catch (error) {
+      this.logger.warn(
+        `Could not journal the test of "${step.key}" on workflow ${workflowId}`,
+        error,
+      );
+    }
+    const executor = this.blockExecutor(store);
+    const handed = new Set<string>();
+    const started = Date.now();
+    let session: PieceWorkerSession | undefined;
+    let result: WorkflowRunResult;
+    try {
+      session = this.workers().session();
+      const journaledRunId = runId;
+      result = await withRunScope(
+        {
+          workflowId,
+          runId,
+          connections: declaredConnectionIds(definition),
+          pieceWorker: session,
+          recordDocuments: async (documentIds: string[]) => {
+            for (const documentId of documentIds) handed.add(documentId);
+            if (store && journaledRunId) {
+              await store.recordRunDocuments(journaledRunId, documentIds);
+            }
+          },
+        },
+        () =>
+          runWorkflow({
+            definition,
+            executor,
+            ...(secretValues.length > 0 ? { redactValues: secretValues } : {}),
+            triggerPayload: upstream.triggerPayload,
+            priorSteps: upstream.priorSteps,
+            onStep:
+              store && journaledRunId
+                ? (record, ordinal) =>
+                    store.recordStep(journaledRunId, ordinal, record)
+                : undefined,
+          }),
+      );
+    } catch (error) {
+      if (store && runId) {
+        const detail = error instanceof Error ? error.message : String(error);
+        await store.failRun(runId, detail).catch(() => undefined);
+        await this.noteLastTest(
+          workflowId,
+          { stepId: step.id, key: step.key },
+          runId,
+          new Date().toISOString(),
+        );
+      }
+      throw error;
+    } finally {
+      session?.close();
+    }
+    const durationMs = Date.now() - started;
+    const [record] = result.steps;
+    if (store && runId) {
+      try {
+        await store.finishRun(runId, result);
+      } catch (error) {
+        this.logger.warn(
+          `Run ${runId}: closing the test of "${step.key}" out failed`,
+          error,
+        );
+      }
+      await this.noteLastTest(
+        workflowId,
+        record,
+        runId,
+        record.endedAt ?? new Date().toISOString(),
+      );
+    }
+    // Served as `run` would serve it: documents the caller cannot read stay out.
+    const ids = [...triggerDocumentIds(upstream.triggerPayload), ...handed];
+    const served = ctx ? await this.servesDocuments(ids, ctx) : false;
+    return {
+      runId,
+      status: record.status === "FAILED" ? "FAILED" : "SUCCEEDED",
+      ...(served && record.output !== undefined
+        ? { output: record.output }
+        : {}),
+      ...(record.error ? { error: record.error } : {}),
+      durationMs,
+    };
+  }
+
+  // The scope a step test runs in: the trigger's and each read step's latest
+  // test output. An untested block it reads is an error naming that block.
+  private async testScope(
+    state: WorkflowState,
+    step: WorkflowState["steps"][number],
+    ctx: WorkflowCaller | undefined,
+  ): Promise<
+    | { error: string }
+    | {
+        triggerPayload?: unknown;
+        priorSteps: ExpressionScope["steps"];
+        samples: { label: string; value: unknown }[];
+      }
+  > {
+    const refs = scopeReferences(step.config);
+    const samples: { label: string; value: unknown }[] = [];
+    let triggerPayload: unknown;
+    if (refs.trigger && state.trigger) {
+      const sample = await this.lastTestSample(
+        {
+          id: state.trigger.id,
+          pieceName: state.trigger.pieceName,
+          name: state.trigger.triggerName,
+          lastTest: state.trigger.lastTest,
+        },
+        ctx,
+      );
+      if (sample.kind !== "succeeded") {
+        return { error: untestedError("the trigger", sample) };
+      }
+      const { payload, empty } = triggerSamplePayload(sample.output);
+      if (empty) {
+        return {
+          error: "Test the trigger first: its last test returned no items",
+        };
+      }
+      triggerPayload = payload;
+      samples.push({ label: "the trigger", value: payload });
+    }
+    const upstream = upstreamStepIds(state, step.id);
+    const read = state.steps.filter(
+      (candidate) =>
+        candidate.id !== step.id &&
+        (refs.steps.has(candidate.key) ||
+          (refs.allSteps && upstream.has(candidate.id))),
+    );
+    const priorSteps: ExpressionScope["steps"] = {};
+    for (const candidate of read) {
+      // A skipped step continues with a null output, as in a run.
+      if (candidate.skip === true) {
+        priorSteps[candidate.key] = { output: null };
+        continue;
+      }
+      const label = `"${candidate.key}"`;
+      const sample = await this.lastTestSample(
+        {
+          id: candidate.id,
+          pieceName: candidate.pieceName,
+          name: candidate.actionName,
+          lastTest: candidate.lastTest,
+        },
+        ctx,
+      );
+      const fields = refs.steps.get(candidate.key);
+      const readsErrorOnly =
+        fields !== undefined && [...fields].every((field) => field === "error");
+      if (sample.kind === "failed" && readsErrorOnly) {
+        priorSteps[candidate.key] = { error: sample.error };
+        continue;
+      }
+      if (sample.kind !== "succeeded") {
+        return { error: untestedError(label, sample) };
+      }
+      priorSteps[candidate.key] = { output: sample.output };
+      samples.push({ label, value: sample.output });
+    }
+    return { triggerPayload, priorSteps, samples };
+  }
+
+  // A block's lastTest, read back from the journal. A test of a different
+  // block, or one the caller may not see, is no sample.
+  private async lastTestSample(
+    block: {
+      id: string;
+      pieceName: string;
+      name: string;
+      lastTest?: { runId: string; testedAt: string } | null;
+    },
+    ctx: WorkflowCaller | undefined,
+  ): Promise<TestSample> {
+    const lastTest = block.lastTest;
+    const store = await this.store();
+    if (!lastTest || !store) return { kind: "untested" };
+    const run = await store.getRun(lastTest.runId);
+    if (!run) return { kind: "untested" };
+    if ((await this.servedRuns([run], ctx)).length === 0) {
+      return { kind: "hidden" };
+    }
+    const row = (await store.getSteps(run.id)).find(
+      (candidate) => candidate.step_id === block.id,
+    );
+    if (!row) return { kind: "untested" };
+    if (row.piece_name !== block.pieceName || row.block_name !== block.name) {
+      return { kind: "stale" };
+    }
+    const { runId, testedAt } = lastTest;
+    if (row.status === "FAILED") {
+      return { kind: "failed", runId, testedAt, error: row.error ?? "" };
+    }
+    const output =
+      row.output === null ? null : (JSON.parse(row.output) as unknown);
+    return { kind: "succeeded", runId, testedAt, output };
+  }
+
+  // Output tree of a draft step or trigger for the expression picker: its
+  // latest test output when there is one, else the block's authored shape.
+  async stepOutputTree(
+    workflowId: string,
+    stepId: string,
+    ctx?: WorkflowCaller,
+  ): Promise<OutputTree> {
+    await this.assertCanReadDocument(workflowId, ctx);
+    const document =
+      await this.host.reactorClient.get<WorkflowDocument>(workflowId);
+    const state = document.state.global;
+    const isTrigger = state.trigger?.id === stepId;
+    const step = state.steps.find((candidate) => candidate.id === stepId);
+    const found =
+      isTrigger && state.trigger
+        ? { ...state.trigger, block: triggerBlock(state.trigger) }
+        : step
+          ? { ...step, block: stepBlock(step) }
+          : undefined;
+    if (!found) throw new Error(`Step "${stepId}" not found`);
+    const sample = await this.lastTestSample(
+      {
+        id: found.id,
+        pieceName: found.block.pieceName,
+        name: found.block.name,
+        lastTest: found.lastTest,
+      },
+      ctx,
+    );
+    if (sample.kind === "succeeded") {
+      const value = isTrigger
+        ? triggerSamplePayload(sample.output).payload
+        : sample.output;
+      return {
+        source: "test",
+        nodes: fromSample(value),
+        sample: value,
+        testedAt: sample.testedAt,
+        runId: sample.runId,
+      };
+    }
+    return this.blockOutputTree(found.block, found.config);
+  }
+
+  // Every block of the draft as this reactor would run it, for the editor's
+  // version badges and "update available".
+  async blockResolutions(
+    workflowId: string,
+    ctx?: WorkflowCaller,
+  ): Promise<BlockResolutionRecord[]> {
+    const state = await this.draftOf(workflowId, ctx);
+    return Promise.all(
+      draftBlocks(state).map(async ({ id, block }) => {
+        const resolution = await this.resolveBlock(block, { latest: true });
+        return {
+          stepId: id,
+          pieceName: block.pieceName,
+          pieceVersion: block.pieceVersion,
+          name: block.name,
+          kind: block.kind,
+          resolvedVersion: resolution.resolved?.version ?? null,
+          source: resolution.resolved?.source ?? null,
+          match: resolution.match,
+          note: resolution.note ?? null,
+          latestVersion: resolution.latestVersion ?? null,
+        };
+      }),
+    );
+  }
+
+  private async draftOf(
+    workflowId: string,
+    ctx: WorkflowCaller | undefined,
+  ): Promise<WorkflowState> {
+    await this.assertCanReadDocument(workflowId, ctx);
+    const document =
+      await this.host.reactorClient.get<WorkflowDocument>(workflowId);
+    return document.state.global;
   }
 }
 

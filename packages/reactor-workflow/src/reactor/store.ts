@@ -1,5 +1,6 @@
 // Persisted run journal in the relational "workflow_runtime" namespace.
 // Dates are ISO text columns: PGlite parses `timestamp` as local time.
+import type { BlockIdentity } from "@powerhousedao/pieces-framework/block-type";
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import {
   redact,
@@ -24,6 +25,10 @@ export interface RunRow {
   ended_at: string | null;
   // Failed run this one resumes; null for first-hand runs.
   rerun_of: string | null;
+  // How many warning_notes there are.
+  warnings: number;
+  // JSON list: fallback piece versions, edges on ports nothing emits.
+  warning_notes: string | null;
 }
 
 export interface StepExecutionRow {
@@ -34,7 +39,9 @@ export interface StepExecutionRow {
   ordinal: number;
   step_id: string;
   step_key: string;
-  block_type: string;
+  piece_name: string;
+  // The action a step ran, or the trigger a trigger test sampled.
+  block_name: string;
   status: string;
   input: string | null;
   output: string | null;
@@ -42,6 +49,13 @@ export interface StepExecutionRow {
   error: string | null;
   started_at: string | null;
   ended_at: string | null;
+  // The piece version that ran and how it matched the pin; null when unresolved.
+  piece_version: string | null;
+  piece_source: string | null;
+  version_match: string | null;
+  version_note: string | null;
+  // Hash of the step definition it ran from; rerun replays only on a match.
+  config_hash: string | null;
 }
 
 // A document a run's steps were handed through the reactor port.
@@ -52,7 +66,8 @@ export interface RunDocumentRow {
 
 export interface TriggerStateRow {
   workflow_id: string;
-  block_type: string;
+  piece_name: string;
+  trigger_name: string;
   config_hash: string;
   status: string; // ENABLED | DISABLED | ERROR
   // Vestigial: hook state lives in piece_store now, and this is written "{}"
@@ -67,6 +82,34 @@ export interface TriggerStateRow {
   lease_owner: string | null;
   lease_expires_at: string | null;
   updated_at: string;
+  // The piece version the trigger armed with; null for a host-fed trigger.
+  piece_version: string | null;
+  piece_source: string | null;
+  version_match: string | null;
+  version_note: string | null;
+}
+
+// A trigger row as written; the piece columns default to null.
+export type TriggerStateInput = Omit<
+  TriggerStateRow,
+  "piece_version" | "piece_source" | "version_match" | "version_note"
+> &
+  Partial<
+    Pick<
+      TriggerStateRow,
+      "piece_version" | "piece_source" | "version_match" | "version_note"
+    >
+  >;
+
+// The trigger a row was written for, and the columns that name it.
+export function triggerRowBlock(row: TriggerStateRow): BlockIdentity {
+  return { pieceName: row.piece_name, kind: "trigger", name: row.trigger_name };
+}
+
+export function triggerBlockColumns(
+  block: BlockIdentity,
+): Pick<TriggerStateRow, "piece_name" | "trigger_name"> {
+  return { piece_name: block.pieceName, trigger_name: block.name };
 }
 
 export interface TriggerDedupeRow {
@@ -153,7 +196,8 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
   await db.schema
     .createTable("trigger_state")
     .addColumn("workflow_id", "text", (col) => col.primaryKey())
-    .addColumn("block_type", "text", (col) => col.notNull())
+    .addColumn("piece_name", "text", (col) => col.notNull())
+    .addColumn("trigger_name", "text", (col) => col.notNull())
     .addColumn("config_hash", "text", (col) => col.notNull())
     .addColumn("status", "text", (col) => col.notNull())
     .addColumn("store_state", "text", (col) => col.notNull())
@@ -185,7 +229,8 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     .addColumn("ordinal", "integer", (col) => col.notNull())
     .addColumn("step_id", "text", (col) => col.notNull())
     .addColumn("step_key", "text", (col) => col.notNull())
-    .addColumn("block_type", "text", (col) => col.notNull())
+    .addColumn("piece_name", "text", (col) => col.notNull())
+    .addColumn("block_name", "text", (col) => col.notNull())
     .addColumn("status", "text", (col) => col.notNull())
     .addColumn("input", "text")
     .addColumn("output", "text")
@@ -226,6 +271,39 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
         { cause: error },
       );
     }
+  }
+
+  // Additive migration for block versioning: what each step and trigger ran.
+  for (const table of ["step_execution", "trigger_state"] as const) {
+    for (const column of [
+      "piece_version",
+      "piece_source",
+      "version_match",
+      "version_note",
+      ...(table === "step_execution" ? ["config_hash"] : []),
+    ]) {
+      try {
+        await db.schema.alterTable(table).addColumn(column, "text").execute();
+      } catch {
+        // column already exists
+      }
+    }
+  }
+  try {
+    await db.schema
+      .alterTable("run")
+      .addColumn("warnings", "integer", (col) => col.notNull().defaultTo(0))
+      .execute();
+  } catch {
+    // column already exists
+  }
+  try {
+    await db.schema
+      .alterTable("run")
+      .addColumn("warning_notes", "text")
+      .execute();
+  } catch {
+    // column already exists
   }
 
   await db.schema
@@ -545,7 +623,8 @@ function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
     ordinal,
     step_id: step.stepId,
     step_key: step.key,
-    block_type: step.blockType,
+    piece_name: step.pieceName,
+    block_name: step.blockName,
     status: step.status,
     input: jsonOrNull(redact(step.input)),
     output: jsonOrNull(redact(step.output)),
@@ -553,7 +632,27 @@ function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
     error: step.error ? redactMessage(step.error) : null,
     started_at: step.startedAt ?? null,
     ended_at: step.endedAt ?? null,
+    piece_version: step.piece?.version ?? null,
+    piece_source: step.piece?.source ?? null,
+    version_match: step.piece?.match ?? null,
+    version_note: step.piece?.note ?? null,
+    config_hash: step.configHash ?? null,
   };
+}
+
+// What a run should not be read as a plain success for.
+export function runWarningNotes(result: WorkflowRunResult): string[] {
+  const fallbacks = result.steps
+    .filter((step) => step.piece?.match === "fallback")
+    .map(
+      (step) =>
+        `Step "${step.key}" ran ${step.piece!.version}, a fallback for the version it pins`,
+    );
+  return [...fallbacks, ...(result.warnings ?? [])];
+}
+
+export function runWarnings(result: WorkflowRunResult): number {
+  return runWarningNotes(result).length;
 }
 
 function jsonOrNull(value: unknown): string | null {
@@ -692,6 +791,8 @@ export class WorkflowRunStore {
         started_at: new Date().toISOString(),
         ended_at: null,
         rerun_of: null,
+        warnings: 0,
+        warning_notes: null,
       })
       .execute();
     // In flight from here: the row is this process's to finish, and no sweep
@@ -735,6 +836,8 @@ export class WorkflowRunStore {
         started_at: new Date().toISOString(),
         ended_at: null,
         rerun_of: options.rerunOf ?? null,
+        warnings: 0,
+        warning_notes: null,
       })
       .execute();
     this.runsInFlight.add(id);
@@ -783,12 +886,15 @@ export class WorkflowRunStore {
         );
       }
     }
+    const notes = runWarningNotes(result);
     await this.db
       .updateTable("run")
       .set({
         status: result.status,
         error: result.error ? redactMessage(result.error) : null,
         ended_at: new Date().toISOString(),
+        warnings: notes.length,
+        warning_notes: notes.length > 0 ? JSON.stringify(notes) : null,
       })
       .where("id", "=", runId)
       .execute();
@@ -839,7 +945,8 @@ export class WorkflowRunStore {
         oc.columns(["run_id", "step_id"]).doUpdateSet((eb) => ({
           ordinal: eb.ref("excluded.ordinal"),
           step_key: eb.ref("excluded.step_key"),
-          block_type: eb.ref("excluded.block_type"),
+          piece_name: eb.ref("excluded.piece_name"),
+          block_name: eb.ref("excluded.block_name"),
           status: eb.ref("excluded.status"),
           input: eb.ref("excluded.input"),
           output: eb.ref("excluded.output"),
@@ -847,6 +954,11 @@ export class WorkflowRunStore {
           error: eb.ref("excluded.error"),
           started_at: eb.ref("excluded.started_at"),
           ended_at: eb.ref("excluded.ended_at"),
+          piece_version: eb.ref("excluded.piece_version"),
+          piece_source: eb.ref("excluded.piece_source"),
+          version_match: eb.ref("excluded.version_match"),
+          version_note: eb.ref("excluded.version_note"),
+          config_hash: eb.ref("excluded.config_hash"),
         })),
       )
       .execute();
@@ -940,8 +1052,12 @@ export class WorkflowRunStore {
 
   // last_error is whatever a piece's onEnable or a schedule parse threw, so it
   // goes through the same gate a poll failure does.
-  async upsertTriggerState(row: TriggerStateRow): Promise<void> {
-    const values = {
+  async upsertTriggerState(row: TriggerStateInput): Promise<void> {
+    const values: TriggerStateRow = {
+      piece_version: null,
+      piece_source: null,
+      version_match: null,
+      version_note: null,
       ...row,
       last_error: row.last_error ? redactMessage(row.last_error) : null,
     };

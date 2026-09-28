@@ -57,6 +57,9 @@ export type ApProperty = Partial<
     step?: number;
     refreshOnSearch?: boolean;
     formatProperty?: string;
+    // The core piece's form hints; see PiecePropDescriptor.
+    showWhen?: unknown;
+    emptyChoice?: unknown;
   };
 
 // Widened from PropertyGroupDisplay: tabs | section | summary | builder | footer.
@@ -91,6 +94,8 @@ export type ApAction = Partial<
     retryOnFailure?: ApErrorHandlingOption;
     continueOnFailure?: ApErrorHandlingOption;
   };
+  // Output ports, read only off a piece the host runs in process.
+  ports?: unknown;
   run: (ctx: unknown) => Promise<unknown>;
 };
 
@@ -113,6 +118,8 @@ export type ApTrigger = Partial<
   type?: ApTriggerStrategy;
   // Widened from TriggerTestStrategy: SIMULATION | TEST_FUNCTION.
   testStrategy?: string;
+  // A form the editor draws instead of the props, e.g. "schedule".
+  display?: unknown;
   props?: Record<string, ApProperty>;
   propertyGroups?: ApPropertyGroup[];
   outputSchema?: unknown;

@@ -1,7 +1,7 @@
 import os from "node:os";
 import path from "node:path";
-import { afterEach, expect, it, vi } from "vitest";
-import { ensurePieceBundle } from "./fetch.js";
+import { afterEach, beforeAll, expect, it, vi } from "vitest";
+import { ensurePieceBundle, setPublicPieceSources } from "./fetch.js";
 import { setPieceRegistryUrl } from "./registry-source.js";
 
 // Every source refuses, so the attempt itself is what the test reads: the
@@ -16,6 +16,9 @@ function recordingFetch(): string[] {
 }
 
 const cacheDir = path.join(os.tmpdir(), "ph-workflow-fetch-test");
+
+// The real public URLs, which the test setup points elsewhere.
+beforeAll(() => setPublicPieceSources({}));
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -56,5 +59,23 @@ it("falls through to the public sources when the registry does not have it", asy
     "https://registry.example.com/-/pieces/bundled/piece-a-1.0.0.tgz",
     "https://cdn.activepieces.com/pieces/bundled/piece-a-1.0.0.tgz",
     "https://registry.npmjs.org/piece-a/-/piece-a-1.0.0.tgz",
+  ]);
+});
+
+it("asks only the sources a resolution chose", async () => {
+  setPieceRegistryUrl("https://registry.example.com");
+  const urls = recordingFetch();
+  await expect(
+    ensurePieceBundle({
+      name: "piece-a",
+      version: "1.0.0",
+      cacheDir,
+      sources: ["registry"],
+      cacheScope: "registry",
+    }),
+  ).rejects.toThrow(/Failed to fetch piece bundle/);
+  // A registry-owned name never falls through to npm.
+  expect(urls).toEqual([
+    "https://registry.example.com/-/pieces/bundled/piece-a-1.0.0.tgz",
   ]);
 });
