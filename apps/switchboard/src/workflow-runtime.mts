@@ -298,8 +298,13 @@ export function bindPackagePieces(
   registry: { setPieces(pieces: readonly PackagePieceEntry[]): void },
   source: IPackagePieceSource,
 ): void {
+  // Sorted by package name, so which package keeps a contested piece is stable.
   const apply = (byPackage: Map<string, PackagePieceEntry[]>) => {
-    registry.setPieces([...byPackage.values()].flat());
+    registry.setPieces(
+      [...byPackage.entries()]
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+        .flatMap(([, pieces]) => pieces),
+    );
   };
   // The initial load already happened inside startAPI, so what it reported is
   // read here rather than waited for.
