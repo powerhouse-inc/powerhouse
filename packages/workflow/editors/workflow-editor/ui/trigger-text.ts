@@ -1,7 +1,9 @@
 // Plain-language descriptions of when a workflow starts: "Every day at
 // 08:00 UTC" rather than "0 8 * * *". Unknown shapes fall back to the raw text.
+import { blockKey } from "@powerhousedao/pieces-framework/block-type";
 import { blockMeta } from "./block-meta.js";
-import { intervalOf } from "./schedule-draft.js";
+import { MANUAL_TRIGGER, SCHEDULE_TRIGGER, WEBHOOK_TRIGGER } from "./blocks.js";
+import { parseScheduleConfig } from "@powerhousedao/pieces-framework/workflow";
 
 const WEEKDAYS = [
   "Sunday",
@@ -77,43 +79,46 @@ export function describeCron(cron: string): string | undefined {
 }
 
 export function describeSchedule(config: unknown): string {
-  const record = (config ?? {}) as Record<string, unknown>;
-  const zone =
-    typeof record.timezone === "string" && record.timezone
-      ? record.timezone
-      : "UTC";
-  const interval =
-    record.mode === "interval" ||
-    (!record.cron &&
-      (record.every !== undefined || record.everyMs !== undefined));
-  if (interval) {
-    const cadence = intervalOf(record);
-    if (!cadence) return "On a fixed interval";
-    const unit = UNIT_LABEL[cadence.unit];
-    return cadence.every === 1
-      ? `Every ${unit[0]}`
-      : `Every ${cadence.every} ${unit[1]}`;
+  let schedule;
+  try {
+    schedule = parseScheduleConfig(config);
+  } catch {
+    return "On a schedule that does not parse";
   }
-  const cron = typeof record.cron === "string" ? record.cron : "";
-  if (!cron) return "On a schedule";
-  const described = describeCron(cron);
-  return described ? `${described} ${zone}` : `On schedule ${cron}`;
+  if (schedule.mode === "interval") {
+    const unit = UNIT_LABEL[schedule.unit];
+    return schedule.every === 1
+      ? `Every ${unit[0]}`
+      : `Every ${schedule.every} ${unit[1]}`;
+  }
+  const described = describeCron(schedule.cron);
+  return described
+    ? `${described} ${schedule.timezone}`
+    : `On schedule ${schedule.cron}`;
 }
 
 /** When a workflow starts, from its trigger. */
 export function describeTrigger(
-  trigger: { blockType: string; config: unknown } | null | undefined,
+  trigger:
+    | { pieceName: string; triggerName: string; config: unknown }
+    | null
+    | undefined,
 ): string {
   if (!trigger) return "Never starts: no trigger";
-  switch (trigger.blockType) {
-    case "core#manual":
+  const block = {
+    pieceName: trigger.pieceName,
+    kind: "trigger" as const,
+    name: trigger.triggerName,
+  };
+  switch (blockKey(block)) {
+    case blockKey(MANUAL_TRIGGER):
       return "Manual";
-    case "core#webhook":
+    case blockKey(WEBHOOK_TRIGGER):
       return "When its webhook is called";
-    case "core#schedule":
+    case blockKey(SCHEDULE_TRIGGER):
       return describeSchedule(trigger.config);
     default: {
-      const meta = blockMeta(trigger.blockType);
+      const meta = blockMeta(block);
       const piece = meta.subtitle.replace(/ · Trigger$/, "");
       return `${meta.displayName} in ${piece}`;
     }

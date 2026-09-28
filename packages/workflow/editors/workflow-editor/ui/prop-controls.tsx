@@ -1,5 +1,6 @@
 // Controls for Activepieces prop types and display hints that PropertyForm
 // renders beyond plain inputs: callouts, steppers, date ranges, cards, colour.
+import type { DateRangePreset } from "@powerhousedao/pieces-framework";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   IconButton,
@@ -9,7 +10,6 @@ import {
 } from "../../shared/controls.js";
 import { Icon, isIconName } from "../../shared/icons.js";
 import type { FormOption } from "./forms.js";
-import { hasExpressions } from "./expression-tokens.js";
 
 // ─── markdown ───────────────────────────────────────────────────────────────
 
@@ -147,6 +147,8 @@ export function NumberStepper(props: {
   step?: number;
   invalid: boolean;
   onCommit: (value: unknown) => void;
+  // Typed text, parsed by the caller.
+  onCommitText: (raw: string) => void;
   onFocus?: (event: { currentTarget: Element }) => void;
 }) {
   const step = props.step ?? 1;
@@ -179,13 +181,7 @@ export function NumberStepper(props: {
         inputMode="decimal"
         spellCheck={false}
         onFocus={props.onFocus}
-        onBlur={(event) => {
-          const raw = event.target.value.trim();
-          if (raw === "") return props.onCommit(undefined);
-          if (hasExpressions(raw)) return props.onCommit(raw);
-          const parsed = Number(raw);
-          props.onCommit(Number.isFinite(parsed) ? parsed : raw);
-        }}
+        onBlur={(event) => props.onCommitText(event.target.value)}
       />
       <IconButton
         icon="plus"
@@ -209,16 +205,21 @@ export interface DateRangeValue {
   before?: string;
 }
 
-// The framework's DateRangePreset values, in its order.
-const DATE_PRESETS: { value: string; label: string }[] = [
-  { value: "any_time", label: "Any time" },
-  { value: "last_24_hours", label: "Last 24 hours" },
-  { value: "last_7_days", label: "Last 7 days" },
-  { value: "last_30_days", label: "Last 30 days" },
-  { value: "last_90_days", label: "Last 90 days" },
-  { value: "this_month", label: "This month" },
-  { value: "custom", label: "Custom" },
-];
+// Keyed by the framework's DateRangePreset, so the typecheck holds the set to
+// it; a type import, as the framework's entry is not browser-safe at runtime.
+const PRESET_LABELS: Record<DateRangePreset, string> = {
+  any_time: "Any time",
+  last_24_hours: "Last 24 hours",
+  last_7_days: "Last 7 days",
+  last_30_days: "Last 30 days",
+  last_90_days: "Last 90 days",
+  this_month: "This month",
+  custom: "Custom",
+};
+
+export const DATE_PRESETS = (
+  Object.entries(PRESET_LABELS) as [DateRangePreset, string][]
+).map(([value, label]) => ({ value, label }));
 
 function toLocalInput(iso: string | undefined): string {
   if (!iso) return "";
@@ -380,10 +381,10 @@ export function ColorField(props: {
 
 // ─── rich text ──────────────────────────────────────────────────────────────
 
-// The framework's convention for a RICH_TEXT prop's `formatProperty` sibling.
+// The mapping RichTextProperty's `formatProperty` doc declares (upstream
+// rich-text-property.ts): 'html', 'markdown' | 'md', anything else plain.
 export function richTextMode(format: unknown): "plain" | "markdown" | "html" {
-  const value = typeof format === "string" ? format.toLowerCase() : "";
-  if (value === "html") return "html";
-  if (value === "markdown" || value === "md") return "markdown";
+  if (format === "html") return "html";
+  if (format === "markdown" || format === "md") return "markdown";
   return "plain";
 }

@@ -24,7 +24,9 @@ function step(key: string, connectionId?: string | null) {
     id: `${key}-id`,
     key,
     name: key,
-    blockType: "piece#action",
+    pieceName: "piece",
+    pieceVersion: "1.0.0",
+    actionName: "action",
     connectionId,
   };
 }
@@ -44,7 +46,7 @@ describe("connectionUsage", () => {
   it("finds a trigger bound to the connection", () => {
     const usage = connectionUsage("conn-1", [
       workflow("a", {
-        trigger: { blockType: "piece#trigger", connectionId: "conn-1" },
+        trigger: { connectionId: "conn-1" },
       }),
     ]);
     expect(usage[0].trigger).toBe(true);
@@ -54,7 +56,7 @@ describe("connectionUsage", () => {
   it("reports a workflow that uses it in both places once", () => {
     const usage = connectionUsage("conn-1", [
       workflow("a", {
-        trigger: { blockType: "piece#trigger", connectionId: "conn-1" },
+        trigger: { connectionId: "conn-1" },
         steps: [step("post", "conn-1")],
       }),
     ]);

@@ -5,8 +5,13 @@ export { Icon } from "../../shared/icons.js";
 import { statusLabel, TONE_DOT, TONE_TEXT, type Tone } from "./run-format.js";
 
 // A draft or unknown state is hollow, so it never reads as healthy.
-export function StatusDot(props: { tone: Tone; className?: string }) {
-  const hollow = props.tone === "idle";
+export function StatusDot(props: {
+  tone: Tone;
+  // Defaults to hollow for the idle tone.
+  hollow?: boolean;
+  className?: string;
+}) {
+  const hollow = props.hollow ?? props.tone === "idle";
   return (
     <span
       aria-hidden
@@ -22,6 +27,8 @@ export function StatusDot(props: { tone: Tone; className?: string }) {
 export function StatusText(props: {
   tone: Tone;
   status: string;
+  // Replaces the status's own label, e.g. "Succeeded, 1 warning".
+  label?: string;
   className?: string;
 }) {
   return (
@@ -29,7 +36,7 @@ export function StatusText(props: {
       className={`inline-flex items-center gap-1.5 font-medium ${TONE_TEXT[props.tone]} ${props.className ?? ""}`}
     >
       <StatusDot tone={props.tone} />
-      {statusLabel(props.status)}
+      {props.label ?? statusLabel(props.status)}
     </span>
   );
 }

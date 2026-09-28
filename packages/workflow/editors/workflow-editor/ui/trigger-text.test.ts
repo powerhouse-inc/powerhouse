@@ -33,49 +33,67 @@ describe("describeCron", () => {
 
 describe("describeSchedule", () => {
   it("adds the timezone, UTC by default", () => {
-    expect(describeSchedule({ cron: "0 8 * * *" })).toBe(
+    expect(describeSchedule({ mode: "cron", cron: "0 8 * * *" })).toBe(
       "Every day at 08:00 UTC",
     );
     expect(
-      describeSchedule({ cron: "0 8 * * *", timezone: "Europe/Lisbon" }),
+      describeSchedule({
+        mode: "cron",
+        cron: "0 8 * * *",
+        timezone: "Europe/Lisbon",
+      }),
     ).toBe("Every day at 08:00 Europe/Lisbon");
   });
 
   it("describes intervals in their unit", () => {
-    expect(describeSchedule({ mode: "interval", every: 15 })).toBe(
-      "Every 15 minutes",
-    );
+    expect(
+      describeSchedule({ mode: "interval", every: 15, unit: "minutes" }),
+    ).toBe("Every 15 minutes");
     expect(
       describeSchedule({ mode: "interval", every: 1, unit: "hours" }),
     ).toBe("Every hour");
-    // The runtime also accepts a bare everyMs.
-    expect(describeSchedule({ mode: "interval", everyMs: 3_600_000 })).toBe(
-      "Every hour",
-    );
   });
 
   it("shows a cron it can't describe as it is", () => {
-    expect(describeSchedule({ cron: "0 8 * 1 *" })).toBe(
+    expect(describeSchedule({ mode: "cron", cron: "0 8 * 1 *" })).toBe(
       "On schedule 0 8 * 1 *",
+    );
+  });
+
+  it("says so when the runtime would refuse the config", () => {
+    expect(describeSchedule({ cron: "0 8 * * *" })).toBe(
+      "On a schedule that does not parse",
+    );
+    expect(describeSchedule({ mode: "interval", every: 15 })).toBe(
+      "On a schedule that does not parse",
     );
   });
 });
 
 describe("describeTrigger", () => {
   it("names the core triggers", () => {
-    expect(describeTrigger({ blockType: "core#manual", config: {} })).toBe(
-      "Manual",
-    );
-    expect(describeTrigger({ blockType: "core#webhook", config: {} })).toBe(
-      "When its webhook is called",
-    );
+    expect(
+      describeTrigger({
+        pieceName: "@powerhousedao/piece-core",
+        triggerName: "manual",
+        config: {},
+      }),
+    ).toBe("Manual");
+    expect(
+      describeTrigger({
+        pieceName: "@powerhousedao/piece-core",
+        triggerName: "webhook",
+        config: {},
+      }),
+    ).toBe("When its webhook is called");
     expect(describeTrigger(null)).toBe("Never starts: no trigger");
   });
 
   it("names a piece trigger with its piece", () => {
     expect(
       describeTrigger({
-        blockType: "@activepieces/piece-slack@1.0.0#trigger:new_message",
+        pieceName: "@activepieces/piece-slack",
+        triggerName: "new_message",
         config: {},
       }),
     ).toBe("New message in Slack");

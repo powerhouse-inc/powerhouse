@@ -1,5 +1,7 @@
-// Catalog source for the block selector's piece browser. Registered by the
-// editor shell (same pattern as registerCanvasHandlers) to keep ui/ decoupled.
+// Catalog source for the block selector's piece browser. Provided by the
+// editor shell's RuntimeProvider through context, to keep ui/ decoupled.
+import { checkTriggerStrategy } from "@powerhousedao/pieces-framework/workflow";
+import { createContext, useContext } from "react";
 
 export interface PieceSummaryUi {
   name: string;
@@ -14,11 +16,17 @@ export interface PieceSummaryUi {
   unsupported?: string | null;
   // Retired by its publisher: still listed, marked as such.
   deprecated?: boolean;
+  // The installed version; pins the blocks picked from it.
+  version?: string;
+  // A local package shadowing a published piece: the version published.
+  publishedVersion?: string;
 }
 
 export interface BlockSearchHitUi {
-  blockType: string;
   pieceName: string;
+  pieceVersion: string;
+  // The action or trigger name.
+  name: string;
   pieceDisplayName: string;
   logoUrl: string;
   displayName: string;
@@ -34,28 +42,25 @@ export interface BlockSearchResultUi {
   error: string | null;
 }
 
+// One action of a piece, at the version its listing answered with.
 export interface PieceActionUi {
+  pieceName: string;
+  pieceVersion: string;
   name: string;
   displayName: string;
   description: string;
-  blockType: string;
   unsupported?: string | null;
 }
 
 export interface PieceTriggerUi {
+  pieceName: string;
+  pieceVersion: string;
   name: string;
   displayName: string;
   description: string;
-  // POLLING | WEBHOOK | APP_WEBHOOK.
+  // Read through checkTriggerStrategy.
   strategy: string;
-  blockType: string;
   unsupported?: string | null;
-}
-
-// APP_WEBHOOK is the one the runtime cannot serve: it maps to polling, and an
-// app-webhook trigger's run hook needs a request, so a poll calls it blind.
-export function triggerStrategyRuns(strategy: string | null | undefined) {
-  return (strategy ?? "POLLING") !== "APP_WEBHOOK";
 }
 
 // Why a listed block cannot be picked, or undefined when it can: the
@@ -67,14 +72,14 @@ export function blockUnavailable(entry: {
 }): string | undefined {
   if (entry.unsupported) return entry.unsupported;
   if (entry.kind !== "trigger") return undefined;
-  const strategy = entry.strategy ?? "POLLING";
-  return triggerStrategyRuns(strategy)
-    ? undefined
-    : `${strategy.toLowerCase()} — not supported yet`;
+  const strategy = checkTriggerStrategy(entry.strategy);
+  return "issue" in strategy ? strategy.issue : undefined;
 }
 
 export interface PieceCatalogSource {
   loadCatalog: () => Promise<PieceSummaryUi[]>;
+  // Refetches past any cached answer; loadCatalog is used when absent.
+  reloadCatalog?: () => Promise<PieceSummaryUi[]>;
   loadActions: (packageName: string) => Promise<PieceActionUi[]>;
   loadTriggers: (packageName: string) => Promise<PieceTriggerUi[]>;
   // Catalog-wide action/trigger name search; optional for offline sources.
@@ -84,12 +89,12 @@ export interface PieceCatalogSource {
   ) => Promise<BlockSearchResultUi>;
 }
 
-let source: PieceCatalogSource | undefined;
+const PieceSourceContext = createContext<PieceCatalogSource | undefined>(
+  undefined,
+);
 
-export function registerPieceSource(next: PieceCatalogSource): void {
-  source = next;
-}
+export const PieceSourceProvider = PieceSourceContext.Provider;
 
-export function getPieceSource(): PieceCatalogSource | undefined {
-  return source;
+export function usePieceSource(): PieceCatalogSource | undefined {
+  return useContext(PieceSourceContext);
 }

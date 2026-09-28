@@ -1,4 +1,11 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {
+  isCoreBlock,
+  stepBlock,
+  triggerBlock,
+  triggerFields,
+  type BlockRef,
+} from "./blocks.js";
+import { useId, useRef, useState, type ReactNode } from "react";
 import {
   Button,
   FieldError,
@@ -21,15 +28,19 @@ import {
   ExpressionTokenLine,
   useExpressionField,
 } from "./ExpressionPicker.js";
-import type {
-  BlockForm,
-  DesignTimeService,
-  LatestRun,
-  WebhookEndpoint,
-  ErrorHandlingDefaults,
-} from "./forms.js";
 import {
-  flowPorts,
+  useBlockForm,
+  useDesignTime,
+  useLatestRun,
+  useRunById,
+  useTestTrigger,
+  useWebhookEndpoint,
+  type EndpointState,
+} from "./design-time.js";
+import type { BlockForm, ErrorHandlingDefaults } from "./forms.js";
+import { flowPorts } from "@powerhousedao/pieces-framework/workflow";
+import {
+  type PropertySettingModel,
   type RetryPolicyModel,
   type StepModel,
   type TriggerModel,
@@ -39,8 +50,16 @@ import {
 import { AvailableSoon, PropertyForm } from "./PropertyForm.js";
 import { DataViewer } from "../../shared/data-viewer.js";
 import { ScheduleBuilder } from "./ScheduleBuilder.js";
+import { StepTestSection } from "./StepTest.js";
+import { relativeTime, testState } from "./test-state.js";
 import { describeTrigger } from "./trigger-text.js";
-import { missingForBlock } from "./validation.js";
+import { useBlockCheck } from "./use-validity.js";
+import {
+  resolutionText,
+  runsDifferentVersion,
+  updateVersion,
+  useResolution,
+} from "./version-badge.js";
 
 function stringify(value: unknown): string {
   try {
@@ -130,43 +149,6 @@ function RawConfigEditor(props: {
   );
 }
 
-// Loads the block's form descriptor; null means "no form, fall back to JSON".
-// A refusal keeps its message, so a block that cannot run says why.
-function useBlockForm(
-  blockType: string,
-  designTime?: DesignTimeService,
-): { form: BlockForm | null | "loading"; error?: string } {
-  const [state, setState] = useState<{
-    blockType: string;
-    form: BlockForm | null | "loading";
-    error?: string;
-  }>({ blockType, form: designTime ? "loading" : null });
-  if (state.blockType !== blockType) {
-    setState({ blockType, form: designTime ? "loading" : null });
-  }
-  useEffect(() => {
-    if (!designTime) return;
-    let alive = true;
-    designTime.getBlockForm(blockType).then(
-      (result) => {
-        if (alive) setState({ blockType, form: result });
-      },
-      (error: unknown) => {
-        if (!alive) return;
-        setState({
-          blockType,
-          form: null,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      },
-    );
-    return () => {
-      alive = false;
-    };
-  }, [blockType, designTime]);
-  return { form: state.form, error: state.error };
-}
-
 function FormSkeleton() {
   return (
     <div className="flex animate-pulse flex-col gap-5" aria-label="Loading">
@@ -181,12 +163,14 @@ function FormSkeleton() {
 }
 
 function ConfigSection(props: {
-  blockType: string;
+  block: BlockRef;
   form: BlockForm | null | "loading";
   formError?: string;
   config: unknown;
-  onChange: (config: unknown) => void;
-  designTime?: DesignTimeService;
+  onChange: (config: unknown, settings?: PropertySettingModel[]) => void;
+  settings?: PropertySettingModel[] | null;
+  // False while read-only: edits carry no field modes or schemas.
+  writesSettings?: boolean;
   connectionId?: string;
   // Step whose config this is; scopes the expression picker to its ancestors.
   scopeStepId?: string;
@@ -194,6 +178,7 @@ function ConfigSection(props: {
   webhookUrl?: string;
 }) {
   const { form } = props;
+  const designTime = useDesignTime();
   const configRecord = (props.config ?? {}) as Record<string, unknown>;
 
   if (form === "loading") return <FormSkeleton />;
@@ -225,15 +210,18 @@ function ConfigSection(props: {
           groups={form.propertyGroups}
           value={configRecord}
           onChange={props.onChange}
+          settings={props.settings}
+          writesSettings={props.writesSettings}
           scopeStepId={props.scopeStepId}
           connectionId={props.connectionId}
-          secrets={props.designTime?.secrets}
+          secrets={designTime?.secrets}
+          block={props.block}
           webhookUrl={props.webhookUrl}
           loadOptions={
-            props.designTime
+            designTime
               ? (propName, current, searchValue) =>
-                  props.designTime!.loadOptions(
-                    props.blockType,
+                  designTime.loadOptions(
+                    props.block,
                     propName,
                     current,
                     props.connectionId,
@@ -259,12 +247,16 @@ function ConfigSection(props: {
 
 // Name, piece and readiness at the top of the panel; the name edits in place.
 function PanelHeader(props: {
-  blockType: string;
+  block: BlockRef;
   name: string;
   onRename?: (name: string) => void;
   actionLabel: string;
-  missing: string[];
+  // Null while unknown: nothing is claimed either way.
+  missing: string[] | null;
+  // Wiring errors, shown ahead of missing fields.
+  issues?: readonly string[];
   loading: boolean;
+  skipped?: boolean;
   onClose: () => void;
   position?: {
     index: number;
@@ -278,7 +270,7 @@ function PanelHeader(props: {
     <header className="border-b border-solid border-foreground/10 px-4 pt-4">
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-solid border-foreground/10 bg-card">
-          <BlockLogo blockType={props.blockType} size={24} />
+          <BlockLogo block={props.block} size={24} />
         </div>
         <div className="min-w-0 flex-1">
           {props.onRename ? (
@@ -332,9 +324,21 @@ function PanelHeader(props: {
         <IconButton icon="close" label="Close panel" onClick={props.onClose} />
       </div>
       <div className="mt-3 flex items-center gap-1.5 text-xs">
-        {props.loading ? (
+        {props.skipped ? (
+          <span className="flex items-center gap-1.5 text-muted-foreground">
+            Skipped: runs pass over this step
+          </span>
+        ) : props.loading ? (
           <span className="text-muted-foreground">Checking setup…</span>
-        ) : props.missing.length > 0 ? (
+        ) : props.issues && props.issues.length > 0 ? (
+          <span
+            className="flex min-w-0 items-center gap-1.5 text-wf-fail"
+            title={props.issues.join("\n")}
+          >
+            <Icon name="alert" className="h-3.5 w-3.5" />
+            <span className="truncate">{props.issues[0]}</span>
+          </span>
+        ) : props.missing === null ? null : props.missing.length > 0 ? (
           <span
             className="flex min-w-0 items-center gap-1.5 text-wf-warn"
             title={props.missing.join(", ")}
@@ -501,19 +505,21 @@ function EdgeRow(props: {
   target?: StepModel;
   fallback: string;
   onRemove: () => void;
-  tone?: "warn";
+  tone?: "warn" | "fail";
 }) {
   return (
     <div
       className={`flex min-w-0 items-center gap-2 rounded-md border border-solid px-2 py-1.5 text-[13px] ${
         props.tone === "warn"
           ? "border-wf-warn/30 bg-wf-warn/5"
-          : "border-foreground/10 bg-muted/40"
+          : props.tone === "fail"
+            ? "border-wf-fail/30 bg-wf-fail/5"
+            : "border-foreground/10 bg-muted/40"
       }`}
     >
       <Icon name="arrowRight" className="h-3.5 w-3.5 text-muted-foreground" />
       {props.target ? (
-        <BlockLogo blockType={props.target.blockType} size={16} />
+        <BlockLogo block={stepBlock(props.target)} size={16} />
       ) : null}
       <span className="min-w-0 flex-1 truncate text-foreground">
         {props.target ? props.target.name || props.target.key : props.fallback}
@@ -531,13 +537,37 @@ function FlowPortEditor(props: {
   callbacks: WorkflowEditorCallbacks;
 }) {
   const { step, model, callbacks } = props;
-  const ports = flowPorts(step.blockType);
+  const { form } = useBlockForm(stepBlock(step));
+  const declared = form && form !== "loading" ? form.ports : undefined;
+  const ports = declared ? flowPorts(declared) : [];
+  // Wired, but on a port the block never takes: listed so it can be removed.
+  const dead = declared
+    ? model.edges.filter(
+        (edge) => edge.from === step.id && !declared.includes(edge.port),
+      )
+    : [];
   const attached = model.trigger
     ? reachableFrom(model.trigger.id, model.edges)
     : new Set<string>();
   const candidates = acyclicTargets(model, step.id);
   return (
     <div className="flex flex-col gap-4">
+      {dead.length > 0 ? (
+        <div>
+          <FieldLabel label="Never taken" />
+          <div className="flex flex-col gap-1.5">
+            {dead.map((edge) => (
+              <EdgeRow
+                key={edge.id}
+                tone="fail"
+                target={model.steps.find((entry) => entry.id === edge.to)}
+                fallback={`${edge.to} (port "${edge.port}")`}
+                onRemove={() => callbacks.removeEdge(edge.id)}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
       {ports.map((port) => {
         const edges = model.edges.filter(
           (candidate) => candidate.from === step.id && candidate.port === port,
@@ -573,7 +603,7 @@ function FlowPortEditor(props: {
                   description: attached.has(target.id)
                     ? undefined
                     : "Not connected to the trigger yet",
-                  icon: <BlockLogo blockType={target.blockType} size={16} />,
+                  icon: <BlockLogo block={stepBlock(target)} size={16} />,
                 }))}
                 onChange={(to) => {
                   if (to) callbacks.addEdge({ from: step.id, to, port });
@@ -625,7 +655,7 @@ function ErrorPortEditor(props: {
           options={targets.map((target) => ({
             value: target.id,
             label: target.name || target.key,
-            icon: <BlockLogo blockType={target.blockType} size={16} />,
+            icon: <BlockLogo block={stepBlock(target)} size={16} />,
           }))}
           onChange={(to) => {
             if (to) callbacks.addEdge({ from: step.id, to, port: "error" });
@@ -752,6 +782,55 @@ function KeyField(props: {
   );
 }
 
+// Which piece version runs, and the newer one a source offers.
+function PieceVersionSection(props: {
+  id: string;
+  block: BlockRef;
+  kind: "step" | "trigger";
+  // Edits only the pinned version.
+  onUpdate?: (pieceVersion: string) => void;
+}) {
+  const resolution = useResolution(props.id, props.block);
+  const update = updateVersion(resolution);
+  const [updated, setUpdated] = useState<string | null>(null);
+  const differs = resolution ? runsDifferentVersion(resolution) : false;
+  if (!resolution && !updated) return null;
+  // The core piece always runs as installed; it is worth a line only when
+  // the pin has drifted from it.
+  if (isCoreBlock(props.block) && !differs && !update && !updated) return null;
+  return (
+    <Section title="Piece version">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          {resolution
+            ? differs
+              ? resolutionText(resolution)
+              : `Runs v${resolution.pieceVersion}${resolution.source ? ` from ${resolution.source}` : ""}`
+            : null}
+        </p>
+        {update && props.onUpdate ? (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              props.onUpdate!(update);
+              setUpdated(update);
+            }}
+          >
+            Update to v{update}
+          </Button>
+        ) : null}
+      </div>
+      {updated ? (
+        <p role="status" className="text-xs text-muted-foreground">
+          Updated to v{updated}. The {props.kind}'s fields are re-checked
+          against this version.
+        </p>
+      ) : null}
+    </Section>
+  );
+}
+
 function StepSettings(props: {
   step: StepModel;
   model: WorkflowModel;
@@ -763,6 +842,22 @@ function StepSettings(props: {
   const { step, callbacks } = props;
   return (
     <div className="flex flex-col gap-6">
+      <PieceVersionSection
+        id={step.id}
+        block={stepBlock(step)}
+        kind="step"
+        onUpdate={(pieceVersion) =>
+          callbacks.updateStep({ id: step.id, pieceVersion })
+        }
+      />
+      <Section title="Run">
+        <Switch
+          checked={step.skip === true}
+          onChange={(skip) => callbacks.updateStep({ id: step.id, skip })}
+          label="Skip this step"
+          description="Runs pass over it and carry on with the next step."
+        />
+      </Section>
       <Section title="Identity">
         <KeyField step={step} callbacks={callbacks} />
       </Section>
@@ -841,52 +936,19 @@ function StepSettings(props: {
   );
 }
 
-function useLatestRun(designTime?: DesignTimeService) {
-  const [state, setState] = useState<
-    { kind: "loading" } | { kind: "ready"; run: LatestRun | null }
-  >({ kind: "loading" });
-  useEffect(() => {
-    if (!designTime?.latestRun) return;
-    let alive = true;
-    designTime.latestRun().then(
-      (run) => {
-        if (alive) setState({ kind: "ready", run });
-      },
-      () => {
-        if (alive) setState({ kind: "ready", run: null });
-      },
-    );
-    return () => {
-      alive = false;
-    };
-  }, [designTime]);
-  return designTime?.latestRun ? state : null;
-}
-
 const RUN_TEXT: Record<string, string> = {
   SUCCEEDED: "text-wf-ok",
   FAILED: "text-wf-fail",
   SKIPPED: "text-muted-foreground",
 };
 
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  if (diff < 60_000) return "just now";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
-  return new Date(iso).toLocaleDateString();
-}
-
 // What this step (or the trigger) saw in the workflow's most recent run.
 function LastRunSection(props: {
-  designTime?: DesignTimeService;
   stepKey?: string;
   latest?: ReturnType<typeof useLatestRun>;
   bare?: boolean;
 }) {
-  const own = useLatestRun(
-    props.latest === undefined ? props.designTime : undefined,
-  );
+  const own = useLatestRun(props.latest === undefined);
   const latest = props.latest ?? own;
   if (!latest) return null;
   const run = latest.kind === "ready" ? latest.run : null;
@@ -971,18 +1033,23 @@ export function StepPanel(props: {
   callbacks: WorkflowEditorCallbacks;
   onClose: () => void;
   onSelect?: (id: string) => void;
-  designTime?: DesignTimeService;
+  readOnly?: boolean;
 }) {
   const { step, callbacks } = props;
   const [tab, setTab] = useState<StepTab>("setup");
-  const meta = useBlockMeta(step.blockType);
-  const { form, error: formError } = useBlockForm(
-    step.blockType,
-    props.designTime,
-  );
-  const missing = missingForBlock(form, step.config, step.connectionId);
+  const block = stepBlock(step);
+  const meta = useBlockMeta(block);
+  const { form, formError, missing, issues } = useBlockCheck({
+    ...step,
+    block,
+    outgoingPorts: props.model.edges
+      .filter((edge) => edge.from === step.id)
+      .map((edge) => edge.port),
+  });
+  const writes = !props.readOnly;
   const customised = settingsCustomised(step, props.model);
-  const latest = useLatestRun(props.designTime);
+  const update = updateVersion(useResolution(step.id, block));
+  const latest = useLatestRun();
   const lastStatus =
     latest?.kind === "ready"
       ? latest.run?.steps.find((entry) => entry.stepKey === step.key)?.status
@@ -1005,7 +1072,7 @@ export function StepPanel(props: {
   return (
     <div className="flex min-h-full flex-col">
       <PanelHeader
-        blockType={step.blockType}
+        block={block}
         name={step.name || step.key}
         onRename={(name) => callbacks.updateStep({ id: step.id, name })}
         actionLabel={
@@ -1014,7 +1081,9 @@ export function StepPanel(props: {
             : [meta.subtitle, meta.displayName].filter(Boolean).join(": ")
         }
         missing={missing}
+        issues={issues}
         loading={form === "loading"}
+        skipped={step.skip === true}
         onClose={props.onClose}
         position={position}
       >
@@ -1051,6 +1120,12 @@ export function StepPanel(props: {
                   <span className="rounded-full bg-muted px-1.5 text-[11px] tabular-nums text-muted-foreground">
                     {customised}
                   </span>
+                ) : update ? (
+                  <span
+                    aria-label="Update available"
+                    title={`v${update} is available`}
+                    className="h-1.5 w-1.5 rounded-full bg-wf-run"
+                  />
                 ) : undefined,
             },
           ]}
@@ -1061,34 +1136,42 @@ export function StepPanel(props: {
           <div className="flex flex-col gap-5">
             <ConnectionField
               key={`${step.id}-conn`}
-              blockType={step.blockType}
+              block={block}
               value={step.connectionId ?? ""}
               onChange={(connectionId) =>
                 callbacks.updateStep({ id: step.id, connectionId })
               }
-              designTime={props.designTime}
             />
             <ConfigSection
               key={`${step.id}-config`}
-              blockType={step.blockType}
+              block={block}
               form={form}
               formError={formError}
               config={step.config}
-              onChange={(config) =>
-                callbacks.updateStep({ id: step.id, config })
+              settings={step.propertySettings}
+              onChange={(config, settings) =>
+                callbacks.setStepConfig(
+                  step.id,
+                  config,
+                  writes ? { propertySettings: settings } : undefined,
+                )
               }
-              designTime={props.designTime}
+              writesSettings={writes}
               connectionId={step.connectionId ?? undefined}
               scopeStepId={step.id}
             />
+            {writes ? (
+              <Section title="Test">
+                <StepTestSection
+                  step={step}
+                  model={props.model}
+                  onSelect={props.onSelect}
+                />
+              </Section>
+            ) : null}
           </div>
         ) : tab === "run" ? (
-          <LastRunSection
-            designTime={props.designTime}
-            stepKey={step.key}
-            latest={latest}
-            bare
-          />
+          <LastRunSection stepKey={step.key} latest={latest} bare />
         ) : (
           <StepSettings
             step={step}
@@ -1105,14 +1188,72 @@ export function StepPanel(props: {
   );
 }
 
-function TestTriggerSection(props: { onTest: () => Promise<unknown> }) {
+// The trigger's last test: when, and whether it still describes the trigger.
+function LastTestLine(props: { trigger: TriggerModel }) {
+  const { trigger } = props;
+  const [open, setOpen] = useState(false);
+  const run = useRunById(trigger.lastTest?.runId);
+  const state = testState(trigger, run?.status);
+  if (!trigger.lastTest) {
+    return <p className="text-xs text-muted-foreground">Not tested yet</p>;
+  }
+  const output = run?.steps.at(0);
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
+        <button
+          type="button"
+          aria-expanded={open}
+          className={`font-medium underline decoration-foreground/20 underline-offset-2 hover:decoration-current ${
+            state === "failed" ? "text-wf-fail" : "text-foreground"
+          }`}
+          title={new Date(trigger.lastTest.testedAt).toLocaleString()}
+          onClick={() => setOpen((value) => !value)}
+        >
+          {state === "failed" ? "Test failed" : "Tested"}{" "}
+          {relativeTime(trigger.lastTest.testedAt)}
+        </button>
+        {state === "stale" ? (
+          <span className="text-wf-warn">
+            The trigger changed since, so test it again.
+          </span>
+        ) : null}
+      </p>
+      {open ? (
+        run === undefined ? (
+          <div className="h-12 animate-pulse rounded-md bg-foreground/5" />
+        ) : run === null ? (
+          <p className="text-xs text-muted-foreground">
+            That test run is no longer kept.
+          </p>
+        ) : output?.error || run.error ? (
+          <pre className="overflow-auto whitespace-pre-wrap rounded-md bg-wf-fail/10 p-2.5 text-xs text-wf-fail">
+            {output?.error ?? run.error}
+          </pre>
+        ) : (
+          <DataViewer
+            label="Sample"
+            value={output?.output}
+            root="trigger.payload"
+          />
+        )
+      ) : null}
+    </div>
+  );
+}
+
+function TestTriggerSection(props: {
+  trigger: TriggerModel;
+  onTest: () => Promise<unknown>;
+}) {
   const [state, setState] = useState<
     | { kind: "idle" }
     | { kind: "loading" }
     | { kind: "done"; result: string; failed: boolean }
   >({ kind: "idle" });
   return (
-    <div>
+    <div className="flex flex-col gap-3">
+      <LastTestLine trigger={props.trigger} />
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
           Fetch sample data to see what this trigger hands the next steps.
@@ -1158,45 +1299,6 @@ function TestTriggerSection(props: { onTest: () => Promise<unknown> }) {
   );
 }
 
-type EndpointState =
-  | { kind: "loading" }
-  | { kind: "empty" }
-  | { kind: "error"; message: string }
-  | { kind: "ready"; endpoint: WebhookEndpoint };
-
-// Loaded once in the panel: the URL box shows it and a piece's setup markdown
-// substitutes it, and two fetches would mint against two reads of `armed`.
-function useWebhookEndpoint(
-  load: (() => Promise<WebhookEndpoint | null>) | undefined,
-): EndpointState {
-  const [state, setState] = useState<EndpointState>({ kind: "loading" });
-
-  useEffect(() => {
-    if (!load) return;
-    let cancelled = false;
-    // eslint-disable-next-line react-hooks-extra/set-state-in-effect -- marks the load that starts on this very line
-    setState({ kind: "loading" });
-    load().then(
-      (endpoint) => {
-        if (cancelled) return;
-        setState(endpoint ? { kind: "ready", endpoint } : { kind: "empty" });
-      },
-      (error: unknown) => {
-        if (cancelled) return;
-        setState({
-          kind: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [load]);
-
-  return state;
-}
-
 // The endpoint URL is the whole credential, so it is read from the runtime
 // rather than derived here, and only exists once the workflow is enabled.
 function WebhookUrlSection(props: { state: EndpointState }) {
@@ -1208,6 +1310,11 @@ function WebhookUrlSection(props: { state: EndpointState }) {
       <FieldLabel label="Endpoint URL" />
       {state.kind === "loading" ? (
         <div className="h-9 animate-pulse rounded-md bg-foreground/5" />
+      ) : null}
+      {state.kind === "syncing" ? (
+        <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+          Syncing the workflow to the runtime…
+        </p>
       ) : null}
       {state.kind === "empty" ? (
         <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
@@ -1264,42 +1371,44 @@ export function TriggerPanel(props: {
   trigger: TriggerModel;
   callbacks: WorkflowEditorCallbacks;
   onClose: () => void;
-  designTime?: DesignTimeService;
+  readOnly?: boolean;
 }) {
   const { trigger, callbacks } = props;
-  const meta = useBlockMeta(trigger.blockType);
-  const isPieceTrigger = trigger.blockType.includes("#trigger:");
-  const { form, error: formError } = useBlockForm(
-    trigger.blockType,
-    props.designTime,
-  );
-  // core#webhook, and any piece trigger the provider pushes to: both are
+  const designTime = useDesignTime();
+  const testTrigger = useTestTrigger();
+  const block = triggerBlock(trigger);
+  const meta = useBlockMeta(block);
+  const isPieceTrigger = !isCoreBlock(block);
+  const { form, formError, missing } = useBlockCheck({ ...trigger, block });
+  const writes = !props.readOnly;
+  // The core webhook, and any piece trigger the provider pushes to: both are
   // reached through this workflow's endpoint URL.
   const isWebhookTrigger =
-    trigger.blockType === "core#webhook" ||
-    (form !== "loading" && form?.triggerStrategy === "WEBHOOK");
+    form !== "loading" && form?.triggerDelivery === "webhook";
   // Only a webhook trigger asks. The query mints on first ask, so opening
   // this panel on a schedule or document trigger must not create an endpoint.
-  const endpoint = useWebhookEndpoint(
-    isWebhookTrigger ? props.designTime?.webhookEndpoint : undefined,
-  );
-  const missing = missingForBlock(form, trigger.config, trigger.connectionId);
+  const endpoint = useWebhookEndpoint(isWebhookTrigger);
   const setTrigger = (patch: {
     config?: unknown;
     connectionId?: string | null;
-  }) =>
+    settings?: PropertySettingModel[];
+  }) => {
+    const config = patch.config === undefined ? trigger.config : patch.config;
+    const connectionId =
+      patch.connectionId === undefined
+        ? trigger.connectionId
+        : patch.connectionId;
     callbacks.setTrigger({
-      blockType: trigger.blockType,
-      config: patch.config === undefined ? trigger.config : patch.config,
-      connectionId:
-        patch.connectionId === undefined
-          ? trigger.connectionId
-          : patch.connectionId,
+      ...triggerFields(block),
+      config,
+      connectionId,
+      ...(writes ? { propertySettings: patch.settings } : {}),
     });
+  };
   return (
     <div className="flex min-h-full flex-col">
       <PanelHeader
-        blockType={trigger.blockType}
+        block={block}
         name={
           form && form !== "loading" && form.title
             ? form.title
@@ -1311,19 +1420,18 @@ export function TriggerPanel(props: {
         onClose={props.onClose}
       />
       <div className="flex flex-1 flex-col gap-6 px-4 py-5">
-        {isWebhookTrigger && props.designTime?.webhookEndpoint ? (
+        {isWebhookTrigger && designTime?.webhookEndpoint ? (
           <WebhookUrlSection state={endpoint} />
         ) : null}
         {isPieceTrigger ? (
           <ConnectionField
             key={`${trigger.id}-conn`}
-            blockType={trigger.blockType}
+            block={block}
             value={trigger.connectionId ?? ""}
             onChange={(connectionId) => setTrigger({ connectionId })}
-            designTime={props.designTime}
           />
         ) : null}
-        {trigger.blockType === "core#schedule" ? (
+        {form !== "loading" && form?.display === "schedule" ? (
           <ScheduleBuilder
             key={trigger.id}
             config={trigger.config}
@@ -1332,22 +1440,40 @@ export function TriggerPanel(props: {
         ) : (
           <ConfigSection
             key={trigger.id}
-            blockType={trigger.blockType}
+            block={block}
             form={form}
             formError={formError}
             config={trigger.config}
-            onChange={(config) => setTrigger({ config })}
-            designTime={props.designTime}
+            settings={trigger.propertySettings}
+            onChange={(config, settings) => setTrigger({ config, settings })}
+            writesSettings={writes}
             connectionId={trigger.connectionId ?? undefined}
             webhookUrl={
               endpoint.kind === "ready" ? endpoint.endpoint.url : undefined
             }
           />
         )}
-        <LastRunSection designTime={props.designTime} />
-        {isPieceTrigger && props.designTime?.testTrigger ? (
+        <LastRunSection />
+        <PieceVersionSection
+          id={trigger.id}
+          block={block}
+          kind="trigger"
+          onUpdate={
+            writes
+              ? (pieceVersion) =>
+                  callbacks.setTrigger({
+                    ...triggerFields(block),
+                    pieceVersion,
+                    config: trigger.config,
+                    connectionId: trigger.connectionId,
+                    propertySettings: trigger.propertySettings ?? undefined,
+                  })
+              : undefined
+          }
+        />
+        {isPieceTrigger && testTrigger ? (
           <Section title="Try it">
-            <TestTriggerSection onTest={props.designTime.testTrigger} />
+            <TestTriggerSection trigger={trigger} onTest={testTrigger} />
           </Section>
         ) : null}
         <Section title="Remove">

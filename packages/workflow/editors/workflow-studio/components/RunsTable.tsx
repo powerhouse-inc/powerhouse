@@ -1,11 +1,11 @@
 // The run journal as a filterable table. Rows expand in place to their step
 // executions, so drilling into a failure never leaves the list.
 import { Fragment, useMemo, useState } from "react";
-import {
-  rerunRun,
-  type RunRecord,
-  type RunStepRecord,
-} from "../../workflow-editor/runtime-api.js";
+import type {
+  RunRecord,
+  RunStepRecord,
+} from "../../workflow-editor/runtime-client.js";
+import { useRuntimeActions } from "../../workflow-editor/runtime-context.js";
 import {
   blockMeta,
   usePieceLogos,
@@ -19,8 +19,9 @@ import {
   formatWhen,
   durationMs,
   RUN_STATUSES,
-  RUN_TONE,
+  runStatusLabel,
   runTimeline,
+  runTone,
   STEP_TONE,
   statusLabel,
   toneOf,
@@ -29,7 +30,8 @@ import {
   type Tone,
 } from "./run-format.js";
 import { useWorkflowDocumentsInSelectedDrive } from "document-models/workflow";
-import { MiniChain, runLinks } from "./chain.js";
+import { MiniChain, runLinks, triggerOfKind } from "./chain.js";
+import { triggerBlock } from "../../workflow-editor/ui/blocks.js";
 import { Select } from "../../shared/controls.js";
 import { DataViewer } from "../../shared/data-viewer.js";
 import { Button, Icon, StatusText } from "./ui.js";
@@ -80,7 +82,11 @@ function StepRow(props: {
   span?: TimelineSpan;
 }) {
   const { step } = props;
-  const meta = blockMeta(step.blockType);
+  const meta = blockMeta({
+    pieceName: step.pieceName,
+    kind: "action",
+    name: step.blockName,
+  });
   const [open, setOpen] = useState(false);
   return (
     <div role="listitem" className="border-t border-solid border-border">
@@ -169,9 +175,14 @@ export const TRIGGER_LABEL: Record<string, string> = {
 };
 
 export function triggerLabel(kind: string): string {
-  // A piece run records "piece:<blockType>"; name it as the workflow list does.
+  // A piece run's kind names its trigger; name it as the workflow list does.
   if (kind.startsWith("piece:")) {
-    return describeTrigger({ blockType: kind.slice(6), config: null });
+    const trigger = triggerOfKind(kind);
+    return describeTrigger({
+      pieceName: trigger.pieceName,
+      triggerName: trigger.name,
+      config: null,
+    });
   }
   return TRIGGER_LABEL[kind] ?? formatTrigger(kind);
 }
@@ -250,6 +261,7 @@ function RunDetail(props: {
   onChanged: () => void;
 }) {
   const { run, names } = props;
+  const { rerunRun } = useRuntimeActions();
   const timeline = runTimeline(run);
   const [rerunning, setRerunning] = useState(false);
   const [rerunError, setRerunError] = useState<string | null>(null);
@@ -259,6 +271,16 @@ function RunDetail(props: {
         <p className="rounded-md bg-wf-fail/10 px-3 py-2 text-[13px] text-wf-fail">
           {describeRunError(run.error, names)}
         </p>
+      ) : null}
+      {run.warningNotes.length > 0 ? (
+        <ul
+          aria-label="Run warnings"
+          className="space-y-1 rounded-md bg-wf-warn/10 px-3 py-2 text-[13px] text-wf-warn"
+        >
+          {run.warningNotes.map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
       ) : null}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
         <span>
@@ -357,11 +379,11 @@ export function RunsTable(props: {
   const [expanded, setExpanded] = useState<string | null>(null);
   // Each run's chain starts at its workflow's trigger block.
   const documents = useWorkflowDocumentsInSelectedDrive() ?? [];
-  const triggerBlock = new Map(
-    documents.map((document) => [
-      document.header.id,
-      document.state.global.trigger?.blockType,
-    ]),
+  const triggerBlocks = new Map(
+    documents.map((document) => {
+      const trigger = document.state.global.trigger;
+      return [document.header.id, trigger ? triggerBlock(trigger) : undefined];
+    }),
   );
   // Step names by key, per workflow; a run of an older version falls back
   // to the keys it recorded.
@@ -585,8 +607,9 @@ export function RunsTable(props: {
                     >
                       <td className="px-3 py-2.5">
                         <StatusText
-                          tone={toneOf(RUN_TONE, run.status)}
+                          tone={runTone(run)}
                           status={run.status}
+                          label={runStatusLabel(run)}
                         />
                       </td>
                       {props.showWorkflow ? (
@@ -613,7 +636,7 @@ export function RunsTable(props: {
                         <MiniChain
                           links={runLinks(
                             run,
-                            triggerBlock.get(run.workflowId),
+                            triggerBlocks.get(run.workflowId),
                           )}
                         />
                       </td>

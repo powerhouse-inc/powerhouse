@@ -12,14 +12,19 @@ export interface AuthField {
   options?: { label: string; value: unknown }[];
 }
 
+// A piece auth type this runtime doesn't know: shown, never saved.
+export const UNKNOWN_AUTH = "UNKNOWN";
+
 export interface AuthPlan {
-  authType: ConnectionAuthType;
+  authType: ConnectionAuthType | typeof UNKNOWN_AUTH;
   displayName?: string;
   description?: string;
   configFields: AuthField[];
   secretFields: AuthField[];
   // OAUTH2 / OIDC are declared but not executable by the runtime yet.
   supported: boolean;
+  // The piece's own name for an UNKNOWN auth type.
+  declaredType?: string;
 }
 
 // Missing means unset, explicitly null, or emptied to "" - not `false`/`0`.
@@ -182,13 +187,23 @@ function planForDescriptor(descriptor: PieceAuthDescriptor | null): AuthPlan {
         secretFields: [],
         supported: false,
       };
-    default:
+    case undefined:
+    case "NONE":
       return {
         ...base,
         authType: "NONE",
         configFields: [],
         secretFields: [],
         supported: true,
+      };
+    default:
+      return {
+        ...base,
+        authType: UNKNOWN_AUTH,
+        declaredType: descriptor?.type,
+        configFields: [],
+        secretFields: [],
+        supported: false,
       };
   }
 }
@@ -203,7 +218,11 @@ export function connectorIdForPiece(packageName: string): string {
   return `${packageName}#${short}`;
 }
 
+// "<piece package>#<short name>" -> the package; a bare name is its own.
 export function packageFromConnectorId(connectorId: string): string {
   const separator = connectorId.lastIndexOf("#");
-  return separator > 0 ? connectorId.slice(0, separator) : connectorId;
+  if (separator <= 0) return connectorId;
+  const spec = connectorId.slice(0, separator);
+  const at = spec.indexOf("@", 1);
+  return at > 0 ? spec.slice(0, at) : spec;
 }

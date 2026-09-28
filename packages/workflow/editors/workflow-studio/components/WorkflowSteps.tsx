@@ -1,12 +1,17 @@
 // The workflow's shape as a pipeline: trigger, then each step in the order a
 // run walks it, annotated with how that step fared in the latest run.
 import type { WorkflowState } from "document-models/workflow";
-import type { RunRecord } from "../../workflow-editor/runtime-api.js";
+import type { RunRecord } from "../../workflow-editor/runtime-client.js";
 import {
   blockMeta,
   usePieceLogos,
 } from "../../workflow-editor/ui/block-meta.js";
 import { BlockLogo } from "../../workflow-editor/ui/BlockSelector.js";
+import {
+  stepBlock,
+  triggerBlock,
+  type BlockIdentity,
+} from "../../workflow-editor/ui/blocks.js";
 import { STEP_TONE, toneOf, type Tone } from "./run-format.js";
 import { stepOutline, type OutlineStep } from "./step-outline.js";
 
@@ -30,7 +35,7 @@ interface Stop {
   id: string;
   title: string;
   subtitle: string;
-  blockType: string;
+  block: BlockIdentity;
   // How the latest run fared here; undefined when it never reached this stop.
   status?: string;
   // The port the run takes to arrive here, shown on the rail.
@@ -75,7 +80,7 @@ function TrackStop(props: {
         className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-card ring-2 transition-shadow dark:bg-white hover:ring-4 focus-visible:outline-none focus-visible:ring-4 ${RING[tone]}`}
         onClick={props.onClick}
       >
-        <BlockLogo bare blockType={stop.blockType} size={20} />
+        <BlockLogo bare block={stop.block} size={20} />
       </button>
       <span className="mt-2 max-w-full truncate px-2 text-[13px] font-medium text-foreground">
         {stop.title}
@@ -131,12 +136,13 @@ export function WorkflowSteps(props: {
   );
 
   const stopFor = (step: OutlineStep, port: string | null): Stop => {
-    const meta = blockMeta(step.blockType);
+    const block = stepBlock(step);
+    const meta = blockMeta(block);
     return {
       id: step.id,
       title: step.name || step.key,
       subtitle: meta.displayName,
-      blockType: step.blockType,
+      block,
       status: statusByKey.get(step.key),
       port,
     };
@@ -160,15 +166,16 @@ export function WorkflowSteps(props: {
     );
   }
 
-  const triggerMeta = state.trigger ? blockMeta(state.trigger.blockType) : null;
+  const trigger = state.trigger ? triggerBlock(state.trigger) : null;
+  const triggerMeta = trigger ? blockMeta(trigger) : null;
   const stops: Stop[] = [
-    ...(state.trigger && triggerMeta
+    ...(state.trigger && trigger && triggerMeta
       ? [
           {
             id: state.trigger.id,
             title: triggerMeta.displayName,
             subtitle: "Trigger",
-            blockType: state.trigger.blockType,
+            block: trigger,
             // Any recorded run means the trigger fired.
             status: props.latestRun ? "SUCCEEDED" : undefined,
           },

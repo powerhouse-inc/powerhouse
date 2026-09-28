@@ -1,28 +1,22 @@
 import { describe, expect, it } from "vitest";
+import { BRANCH_BLOCK } from "./blocks.js";
 import {
   compatibleConnections,
   connectionDraftFor,
   connectionNameFor,
   looksLikeDocumentId,
-  packageOf,
 } from "./connection-create.js";
 
-const SLACK = "@activepieces/piece-slack@0.9.2#send_message";
+const SLACK = {
+  pieceName: "@activepieces/piece-slack",
+  kind: "action" as const,
+  name: "send_message",
+};
 
-describe("packageOf", () => {
-  it("drops the version and the entry name", () => {
-    expect(packageOf(SLACK)).toBe("@activepieces/piece-slack");
-  });
-
-  it("keeps an unversioned scope", () => {
-    expect(packageOf("@activepieces/piece-slack#slack")).toBe(
-      "@activepieces/piece-slack",
-    );
-  });
-
-  it("leaves core blocks alone", () => {
-    expect(packageOf("core#branch")).toBe("core");
-  });
+const discord = (name: string) => ({
+  pieceName: "@activepieces/piece-discord",
+  kind: "action" as const,
+  name,
 });
 
 describe("connectionNameFor", () => {
@@ -42,7 +36,7 @@ describe("connectionDraftFor", () => {
     overrides: Partial<Parameters<typeof connectionDraftFor>[0]>,
   ) =>
     connectionDraftFor({
-      blockType: SLACK,
+      block: SLACK,
       authMode: "required",
       matchingCount: 0,
       ...overrides,
@@ -73,11 +67,7 @@ describe("connectionDraftFor", () => {
   });
 
   it("skips core blocks", () => {
-    expect(draft({ blockType: "core#branch" })).toBeNull();
-  });
-
-  it("skips block types with no entry name", () => {
-    expect(draft({ blockType: "@activepieces/piece-slack" })).toBeNull();
+    expect(draft({ block: BRANCH_BLOCK })).toBeNull();
   });
 
   it("stands down once the piece already has a connection", () => {
@@ -87,30 +77,31 @@ describe("connectionDraftFor", () => {
 
 describe("compatibleConnections", () => {
   const listing = [
-    { id: "a", connectorId: "@activepieces/piece-discord" },
-    { id: "b", connectorId: "@activepieces/piece-slack" },
-    { id: "c", connectorId: "@activepieces/piece-discord@0.5.7" },
+    { id: "a", connectorId: "@activepieces/piece-discord#discord" },
+    { id: "b", connectorId: "@activepieces/piece-slack#slack" },
+    { id: "c", connectorId: "@activepieces/piece-discord@0.5.7#discord" },
   ];
 
   it("keeps only connections for the block's own piece", () => {
-    const kept = compatibleConnections(
-      listing,
-      "@activepieces/piece-discord@0.5.7#send_message",
-    );
+    const kept = compatibleConnections(listing, discord("send_message"));
     expect(kept.map((entry) => entry.id)).toEqual(["a", "c"]);
   });
 
   it("ignores the connector's version when comparing", () => {
     const kept = compatibleConnections(
-      [{ id: "c", connectorId: "@activepieces/piece-discord@0.4.0" }],
-      "@activepieces/piece-discord@0.5.7#send_message",
+      [{ id: "c", connectorId: "@activepieces/piece-discord@0.4.0#discord" }],
+      discord("send_message"),
     );
     expect(kept).toHaveLength(1);
   });
 
   it("returns nothing for a piece with no connections", () => {
     expect(
-      compatibleConnections(listing, "@activepieces/piece-gotify@0.4.6#send"),
+      compatibleConnections(listing, {
+        pieceName: "@activepieces/piece-gotify",
+        kind: "action",
+        name: "send",
+      }),
     ).toEqual([]);
   });
 });

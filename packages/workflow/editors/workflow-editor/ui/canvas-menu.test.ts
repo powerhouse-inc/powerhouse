@@ -6,17 +6,32 @@ import {
   menuPosition,
   MENU_WIDTH,
 } from "./canvas-menu.js";
+import { BRANCH_BLOCK, sameBlock, type BlockRef } from "./blocks.js";
 import type { StepModel, WorkflowModel } from "./model.js";
+import type { ContextMenuTarget } from "./canvas-menu.js";
+
+// The ports the core piece serves for branch, and every piece action's.
+const portsOf = (block: BlockRef) =>
+  sameBlock(block, BRANCH_BLOCK)
+    ? ["true", "false", "error"]
+    : ["next", "error"];
+
+const menu = (target: ContextMenuTarget, workflow: WorkflowModel) =>
+  contextMenuItems(target, workflow, portsOf);
 
 function step(
   id: string,
-  blockType = "@powerhousedao/piece-reactor#document-dispatch",
+  block = {
+    pieceName: "@powerhousedao/piece-reactor",
+    pieceVersion: "1.0.0",
+    actionName: "document-dispatch",
+  },
 ): StepModel {
   return {
     id,
     key: id,
     name: id,
-    blockType,
+    ...block,
     connectionId: null,
     config: {},
     retry: null,
@@ -36,7 +51,9 @@ function model(
     version: 1,
     trigger: {
       id: "t",
-      blockType: "core#manual",
+      pieceName: "@powerhousedao/piece-core",
+      pieceVersion: "1.0.0",
+      triggerName: "manual",
       config: {},
       connectionId: null,
     },
@@ -54,7 +71,7 @@ function model(
 
 describe("contextMenuItems", () => {
   it("offers the step actions, with add-below free on a leaf", () => {
-    const items = contextMenuItems(
+    const items = menu(
       { kind: "step", id: "a" },
       model([step("a")], [["t", "a", "next"]]),
     );
@@ -62,8 +79,20 @@ describe("contextMenuItems", () => {
       { id: "open", label: "Open settings" },
       { id: "addBelow", label: "Add step below", disabled: false },
       { id: "duplicate", label: "Duplicate step" },
+      { id: "toggleSkip", label: "Skip this step" },
       { id: "removeStep", label: "Remove step" },
     ]);
+  });
+
+  it("offers to stop skipping a skipped step", () => {
+    const skipped = { ...step("a"), skip: true };
+    const items = menu(
+      { kind: "step", id: "a" },
+      model([skipped], [["t", "a", "next"]]),
+    );
+    expect(items.find((item) => item.id === "toggleSkip")?.label).toBe(
+      "Stop skipping this step",
+    );
   });
 
   it("keeps add-below on a wired next port, since ports fan out", () => {
@@ -74,35 +103,46 @@ describe("contextMenuItems", () => {
         ["a", "b", "next"],
       ],
     );
-    expect(contextMenuItems({ kind: "step", id: "a" }, taken)[1]).toMatchObject(
-      { id: "addBelow", disabled: false },
-    );
+    expect(menu({ kind: "step", id: "a" }, taken)[1]).toMatchObject({
+      id: "addBelow",
+      disabled: false,
+    });
   });
 
   it("disables add-below on a branch, which has no next port", () => {
-    const branch = model([step("a", "core#branch")], [["t", "a", "next"]]);
-    expect(
-      contextMenuItems({ kind: "step", id: "a" }, branch)[1],
-    ).toMatchObject({ id: "addBelow", disabled: true });
+    const branch = model(
+      [
+        step("a", {
+          pieceName: "@powerhousedao/piece-core",
+          pieceVersion: "1.0.0",
+          actionName: "branch",
+        }),
+      ],
+      [["t", "a", "next"]],
+    );
+    expect(menu({ kind: "step", id: "a" }, branch)[1]).toMatchObject({
+      id: "addBelow",
+      disabled: true,
+    });
   });
 
   it("offers trigger actions whether or not it is already wired", () => {
     const empty = model([]);
-    expect(contextMenuItems({ kind: "trigger" }, empty)).toEqual([
+    expect(menu({ kind: "trigger" }, empty)).toEqual([
       { id: "open", label: "Open settings" },
       { id: "addBelow", label: "Add step below", disabled: false },
       { id: "changeTrigger", label: "Change trigger" },
       { id: "removeTrigger", label: "Remove trigger" },
     ]);
     const wired = model([step("a")], [["t", "a", "next"]]);
-    expect(contextMenuItems({ kind: "trigger" }, wired)[1]).toMatchObject({
+    expect(menu({ kind: "trigger" }, wired)[1]).toMatchObject({
       id: "addBelow",
       disabled: false,
     });
   });
 
   it("offers insert and remove on an edge", () => {
-    const items = contextMenuItems(
+    const items = menu(
       { kind: "edge", id: "e0" },
       model([step("a")], [["t", "a", "next"]]),
     );
@@ -110,14 +150,15 @@ describe("contextMenuItems", () => {
   });
 
   it("offers pane actions, with select-all disabled on an empty graph", () => {
-    expect(contextMenuItems({ kind: "pane" }, model([]))).toEqual([
+    expect(menu({ kind: "pane" }, model([]))).toEqual([
       { id: "addStep", label: "Add step here" },
       { id: "selectAll", label: "Select all steps", disabled: true },
       { id: "fitView", label: "Fit view" },
     ]);
-    expect(
-      contextMenuItems({ kind: "pane" }, model([step("a")]))[1],
-    ).toMatchObject({ id: "selectAll", disabled: false });
+    expect(menu({ kind: "pane" }, model([step("a")]))[1]).toMatchObject({
+      id: "selectAll",
+      disabled: false,
+    });
   });
 });
 

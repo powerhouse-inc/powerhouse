@@ -10,6 +10,7 @@ import {
   type ButtonHTMLAttributes,
   type KeyboardEvent,
   type ReactNode,
+  type Ref,
 } from "react";
 import { createPortal } from "react-dom";
 import { Icon, type IconName } from "./icons.js";
@@ -30,10 +31,12 @@ const BUTTON_VARIANT = {
     "border border-solid border-foreground/15 bg-card text-foreground hover:bg-accent",
   ghost: "text-muted-foreground hover:bg-accent hover:text-foreground",
   danger: "text-wf-fail hover:bg-wf-fail/10",
+  destructive: "bg-wf-fail text-white hover:opacity-90",
 };
 
 export function Button(
   props: ButtonHTMLAttributes<HTMLButtonElement> & {
+    ref?: Ref<HTMLButtonElement>;
     variant?: keyof typeof BUTTON_VARIANT;
     size?: keyof typeof BUTTON_SIZE;
   },
@@ -195,6 +198,70 @@ export function Switch(props: {
   );
 }
 
+// A bare switch for toolbars; the label is for assistive tech and the title.
+export function Toggle(props: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={props.checked}
+      aria-label={props.label}
+      disabled={props.disabled}
+      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING} ${
+        props.checked ? "bg-wf-ok" : "bg-foreground/20"
+      }`}
+      onClick={(event) => {
+        event.stopPropagation();
+        props.onChange(!props.checked);
+      }}
+    >
+      <span
+        className={`inline-block h-4 w-4 rounded-full bg-card shadow-sm transition-transform ${
+          props.checked ? "translate-x-[18px]" : "translate-x-0.5"
+        }`}
+      />
+    </button>
+  );
+}
+
+// Shows `content` on hover or focus; it stays open while the pointer is on it,
+// so it can hold a link. Disabled controls inside still trigger it.
+export function Tooltip(props: {
+  content: ReactNode;
+  children: ReactNode;
+  // Off renders the children alone.
+  enabled?: boolean;
+  align?: "start" | "end";
+  // Left of the control, for rows inside a clipping container.
+  side?: "below" | "left";
+}) {
+  if (props.enabled === false) return <>{props.children}</>;
+  const place =
+    props.side === "left"
+      ? "right-full top-1/2 -translate-y-1/2 pr-1.5"
+      : `top-full pt-1.5 ${props.align === "start" ? "left-0" : "right-0"}`;
+  return (
+    <span className="group/tip relative inline-flex">
+      {props.children}
+      <span
+        className={`invisible absolute z-50 opacity-0 transition-opacity group-focus-within/tip:visible group-focus-within/tip:opacity-100 group-hover/tip:visible group-hover/tip:opacity-100 ${place}`}
+      >
+        <span
+          role="tooltip"
+          className="block w-max max-w-64 rounded-md border border-solid border-foreground/10 bg-card px-2.5 py-1.5 text-xs text-foreground shadow-lg"
+        >
+          {props.content}
+        </span>
+      </span>
+    </span>
+  );
+}
+
 // ─── tabs ───────────────────────────────────────────────────────────────────
 
 export function Tabs<T extends string>(props: {
@@ -287,6 +354,8 @@ interface SelectProps {
   disabled?: boolean;
   invalid?: boolean;
   id?: string;
+  // Names the control when no <label> points at it.
+  ariaLabel?: string;
   // Reloads options from their source; shown in the list header.
   onRefresh?: () => void;
   emptyText?: string;
@@ -489,6 +558,7 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
       <button
         ref={triggerRef}
         id={props.id}
+        aria-label={props.ariaLabel}
         type="button"
         role="combobox"
         aria-expanded={open}

@@ -3,9 +3,9 @@ import { triggerLabel } from "./RunsTable.js";
 
 describe("triggerLabel", () => {
   it("names a piece run's trigger the way the workflow list does", () => {
-    expect(
-      triggerLabel("piece:@activepieces/piece-slack@1.0.0#trigger:new_message"),
-    ).toBe("New message in Slack");
+    expect(triggerLabel("piece:@activepieces/piece-slack:new_message")).toBe(
+      "New message in Slack",
+    );
   });
 
   it("keeps the core kinds' labels", () => {

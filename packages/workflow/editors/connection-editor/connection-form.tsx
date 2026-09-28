@@ -1,19 +1,20 @@
 // Presentation for the connection editor: connector picker driven by the
 // piece catalog, auth form driven by the piece's PieceAuth descriptor.
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import type {
   ConnectionAuthType,
   ConnectionState,
   ConnectionStatus,
 } from "document-models/connection";
+import type {
+  PieceSummary,
+  SecretStat,
+} from "../workflow-editor/runtime-client.js";
 import {
-  createSecret,
-  fetchPieceCatalog,
-  fetchSecretStat,
-  rotateSecret,
-  type PieceSummary,
-  type SecretStat,
-} from "../workflow-editor/runtime-api.js";
+  usePieceCatalog,
+  useRuntimeActions,
+  useSecretStat,
+} from "../workflow-editor/runtime-context.js";
 import { formatWhen } from "../workflow-studio/components/run-format.js";
 import { Icon } from "../shared/icons.js";
 import { AUTH_TYPE_LABEL } from "./status.js";
@@ -31,7 +32,9 @@ import {
   isAuthComplete,
   packageFromConnectorId,
   planForConnection,
+  planFromAuth,
   plansFromAuth,
+  UNKNOWN_AUTH,
   type AuthField,
   type AuthPlan,
 } from "./piece-auth.js";
@@ -126,29 +129,6 @@ function isManagedRef(ref: string): boolean {
   return ref.startsWith(SECRET_REF_PREFIX);
 }
 
-// Undefined while the stat loads; null when the ref doesn't resolve.
-function useSecretStat(refValue: string) {
-  const [stat, setStat] = useState<SecretStat | null | undefined>(undefined);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks-extra/set-state-in-effect -- clears the stale stat before the ref's own fetch
-    setStat(isManagedRef(refValue) ? undefined : null);
-    if (!isManagedRef(refValue)) return;
-    let cancelled = false;
-    fetchSecretStat(refValue).then(
-      (result) => {
-        if (!cancelled) setStat(result);
-      },
-      () => {
-        if (!cancelled) setStat(null);
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [refValue]);
-  return [stat, setStat] as const;
-}
-
 function SavedSecret(props: {
   stat: SecretStat | undefined;
   fresh: boolean;
@@ -211,7 +191,8 @@ function SecretField(props: {
   const { field, refValue } = props;
   const inputId = useId();
   const managed = isManagedRef(refValue);
-  const [stat, setStat] = useSecretStat(refValue);
+  const stat = useSecretStat(refValue, managed);
+  const actions = useRuntimeActions();
   const [value, setValue] = useState("");
   const [reveal, setReveal] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -246,14 +227,13 @@ function SecretField(props: {
     const label = `${props.connectionName || "connection"} · ${field.displayName}`;
     const request =
       stored && !separate
-        ? rotateSecret(refValue, value)
-        : createSecret(value, label);
+        ? actions.rotateSecret(refValue, value)
+        : actions.createSecret(value, label);
     request
       .then((result) => {
         cancel();
         setJustSaved(true);
         if (result.ref !== refValue) props.onCommit(result.ref);
-        else setStat(result);
       })
       .catch((requestError: unknown) => {
         setError(
@@ -407,21 +387,8 @@ export function ConnectionForm(props: {
   callbacks: ConnectionCallbacks;
 }) {
   const { state, callbacks } = props;
-  const [catalog, setCatalog] = useState<PieceSummary[] | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchPieceCatalog()
-      .then((pieces) => {
-        if (!cancelled) setCatalog(pieces);
-      })
-      .catch(() => {
-        if (!cancelled) setCatalog([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const catalogQuery = usePieceCatalog();
+  const catalog = catalogQuery.data ?? (catalogQuery.isError ? [] : null);
 
   const packageName = packageFromConnectorId(state.connectorId);
   const piece = catalog?.find((entry) => entry.name === packageName);
@@ -470,7 +437,10 @@ export function ConnectionForm(props: {
           options={(catalog ?? []).map((entry) => ({
             value: entry.name,
             label: entry.displayName,
-            description: entry.description,
+            // Its only sign-in method is one this runtime can't store.
+            ...(planFromAuth(entry.auth).authType === UNKNOWN_AUTH
+              ? { disabled: true, description: AUTH_TYPE_LABEL[UNKNOWN_AUTH] }
+              : { description: entry.description }),
             icon: entry.logoUrl ? (
               <img
                 src={entry.logoUrl}
@@ -496,9 +466,10 @@ export function ConnectionForm(props: {
             options={plans.map((option) => ({
               value: option.authType,
               label: methodLabel(option),
-              description: option.supported
-                ? AUTH_TYPE_LABEL[option.authType]
-                : "Not supported yet",
+              description:
+                option.supported || option.authType === UNKNOWN_AUTH
+                  ? AUTH_TYPE_LABEL[option.authType]
+                  : "Not supported yet",
               disabled: !option.supported,
             }))}
             onChange={(value) => {
@@ -521,8 +492,9 @@ export function ConnectionForm(props: {
 
       {plan.supported ? null : (
         <p className="rounded-md bg-wf-warn/10 px-3 py-2 text-xs text-wf-warn">
-          {plan.authType} connections are not executable by the workflow runtime
-          yet.
+          {plan.authType === UNKNOWN_AUTH
+            ? `${plan.declaredType ?? "This sign-in method"}: not supported by this runtime.`
+            : `${plan.authType} connections are not executable by the workflow runtime yet.`}
         </p>
       )}
 

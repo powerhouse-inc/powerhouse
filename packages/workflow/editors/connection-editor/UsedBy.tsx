@@ -3,6 +3,7 @@
 import { setSelectedNode } from "@powerhousedao/reactor-browser";
 import { useWorkflowDocumentsInSelectedDrive } from "document-models/workflow";
 import { BlockLogo } from "../workflow-editor/ui/BlockSelector.js";
+import { stepBlock } from "../workflow-editor/ui/blocks.js";
 import {
   connectionUsage,
   type ConnectionUsage,
@@ -57,7 +58,7 @@ export function UsedBy(props: { usage: ConnectionUsage[] }) {
                       key={step.id}
                       className="inline-flex items-center gap-1"
                     >
-                      <BlockLogo blockType={step.blockType} size={14} bare />
+                      <BlockLogo block={stepBlock(step)} size={14} bare />
                       {step.name || step.key}
                     </span>
                   ))}

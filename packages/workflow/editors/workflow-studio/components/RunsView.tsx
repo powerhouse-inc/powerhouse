@@ -1,7 +1,7 @@
 // The runs pane: what scope is being shown, how to fire it, and the journal.
 // The run feed is owned by the studio so the header shares these rows.
 import { useState } from "react";
-import type { RunRecord } from "../../workflow-editor/runtime-api.js";
+import type { RunRecord } from "../../workflow-editor/runtime-client.js";
 import { RunsTable } from "./RunsTable.js";
 import { Button, Icon } from "./ui.js";
 

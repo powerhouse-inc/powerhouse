@@ -8,6 +8,7 @@ import {
   STEP_WIDTH,
   VSPACE,
 } from "./ap-layout.js";
+import { BRANCH_BLOCK, sameBlock, type BlockRef } from "./blocks.js";
 import type { StepModel, WorkflowModel } from "./model.js";
 
 function step(id: string): StepModel {
@@ -15,7 +16,9 @@ function step(id: string): StepModel {
     id,
     key: id,
     name: id,
-    blockType: "@powerhousedao/piece-reactor#document-dispatch",
+    pieceName: "@powerhousedao/piece-reactor",
+    pieceVersion: "1.0.0",
+    actionName: "document-dispatch",
     connectionId: null,
     config: {},
     retry: null,
@@ -32,7 +35,9 @@ function model(edges: [string, string][]): WorkflowModel {
     version: 1,
     trigger: {
       id: "t",
-      blockType: "core#manual",
+      pieceName: "@powerhousedao/piece-core",
+      pieceVersion: "1.0.0",
+      triggerName: "manual",
       config: {},
       connectionId: null,
     },
@@ -78,14 +83,20 @@ describe("attachableSteps", () => {
 });
 
 function branchWith(takenPorts: string[]): WorkflowModel {
-  const branch: StepModel = { ...step("br"), blockType: "core#branch" };
+  const branch: StepModel = {
+    ...step("br"),
+    pieceName: "@powerhousedao/piece-core",
+    actionName: "branch",
+  };
   return {
     name: "wf",
     status: "DRAFT",
     version: 1,
     trigger: {
       id: "t",
-      blockType: "core#manual",
+      pieceName: "@powerhousedao/piece-core",
+      pieceVersion: "1.0.0",
+      triggerName: "manual",
       config: {},
       connectionId: null,
     },
@@ -104,15 +115,48 @@ function branchWith(takenPorts: string[]): WorkflowModel {
   };
 }
 
+// What the core piece serves for branch and triggers, and a piece action's.
+const portsOf = (block: BlockRef) =>
+  sameBlock(block, BRANCH_BLOCK)
+    ? ["true", "false", "error"]
+    : block.kind === "trigger"
+      ? ["next"]
+      : ["next", "error"];
+
+describe("layoutWorkflow declared ports", () => {
+  it("draws no append button until a block's ports are known", () => {
+    const nodes = layoutWorkflow(branchWith([])).nodes;
+    expect(nodes.some((n) => n.id.startsWith("__append:br:"))).toBe(false);
+  });
+
+  it("marks an edge on a port its source never takes", () => {
+    const { edges } = layoutWorkflow(branchWith(["next"]), portsOf);
+    const dead = edges.find((edge) => edge.id === "p0");
+    expect(dead?.data).toMatchObject({ port: "next", dead: true });
+    expect(edges.find((edge) => edge.id === "e0")?.data).toMatchObject({
+      dead: false,
+    });
+  });
+
+  it("hands each node the ports its edges leave on", () => {
+    const { nodes } = layoutWorkflow(branchWith(["true", "next"]), portsOf);
+    expect(nodes.find((n) => n.id === "br")?.data).toMatchObject({
+      outgoingPorts: ["true", "next"],
+    });
+  });
+});
+
 describe("layoutWorkflow append buttons", () => {
   const appendFor = (model: WorkflowModel, port: string) =>
-    layoutWorkflow(model).nodes.find(
+    layoutWorkflow(model, portsOf).nodes.find(
       (node) => node.id === `__append:br:${port}`,
     );
 
   it("keeps a free branch port clear of the taken port's edge", () => {
     const model = branchWith(["true"]);
-    const branch = layoutWorkflow(model).nodes.find((n) => n.id === "br")!;
+    const branch = layoutWorkflow(model, portsOf).nodes.find(
+      (n) => n.id === "br",
+    )!;
     const free = appendFor(model, "false");
     expect(appendFor(model, "true")).toBeUndefined();
     // The taken edge runs down the branch's centre, where it draws its own
@@ -133,7 +177,7 @@ describe("layoutWorkflow branch placeholders", () => {
 
   it("puts an unwired port's placeholder where its step would go", () => {
     const model = branchWith(["true"]);
-    const nodes = layoutWorkflow(model).nodes;
+    const nodes = layoutWorkflow(model, portsOf).nodes;
     const child = node(nodes, "a");
     const free = node(nodes, "__append:br:false");
     // Same row as the wired branch's step, in its own column beside it.
@@ -142,7 +186,7 @@ describe("layoutWorkflow branch placeholders", () => {
   });
 
   it("gives an unwired branch a column each side of the card", () => {
-    const nodes = layoutWorkflow(branchWith([])).nodes;
+    const nodes = layoutWorkflow(branchWith([]), portsOf).nodes;
     const centre = node(nodes, "br").position.x + STEP_WIDTH / 2;
     const left = node(nodes, "__append:br:true").position.x + STEP_WIDTH / 2;
     const right = node(nodes, "__append:br:false").position.x + STEP_WIDTH / 2;
@@ -153,7 +197,7 @@ describe("layoutWorkflow branch placeholders", () => {
 
   it("keeps a plain step's button on the mid-line, not in a column", () => {
     const plain = model([["t", "a"]]);
-    const nodes = layoutWorkflow(plain).nodes;
+    const nodes = layoutWorkflow(plain, portsOf).nodes;
     const step = node(nodes, "a");
     const button = node(nodes, "__append:a:next");
     expect(button.position.x + ADD_BUTTON_SIZE / 2).toBeCloseTo(
