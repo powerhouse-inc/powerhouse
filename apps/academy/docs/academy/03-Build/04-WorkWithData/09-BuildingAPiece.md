@@ -29,7 +29,7 @@ ph generate piece crm --id @acme/piece-crm --auth custom
 - **`--id`** is the piece name a step's `pieceName` holds. Defaults to something derived from your package name; pick it deliberately, because changing it later breaks every workflow already referring to it.
 - **`--auth`** is the kind of connection the piece asks for: `custom` (a form you define), `secret` (a single token), or `none`.
 
-You get a working piece with one example action and one example trigger:
+You get an empty piece, as the Activepieces CLI gives you, ready for its actions and triggers:
 
 ```
 pieces/
@@ -37,11 +37,8 @@ pieces/
 └── crm/
     ├── index.ts                # createPiece — the piece definition
     └── lib/
-        ├── auth.ts             # what a connection to this service holds
-        ├── logo.ts
-        ├── actions/get-record.ts
-        ├── triggers/new-record.ts
-        └── common/             # client, context, errors, auth value
+        ├── auth.ts             # what a connection to this service holds (not with --auth none)
+        └── logo.ts
 ```
 
 The generator also registers the piece in `pieces/index.ts` and adds it to `powerhouse.manifest.json` — you don't have to do either by hand.
@@ -51,26 +48,26 @@ The generator also registers the piece in `pieces/index.ts` and adds it to `powe
 `pieces/crm/index.ts` is the whole piece: what it's called, what it authenticates with, and everything it offers.
 
 ```typescript
-import { createPiece, PieceCategory } from "@powerhousedao/pieces-framework";
+import { createPiece } from "@powerhousedao/pieces-framework";
 import { crmAuth } from "./lib/auth.js";
-import { crmGetRecordAction } from "./lib/actions/get-record.js";
-import { crmNewRecordTrigger } from "./lib/triggers/new-record.js";
 import { CRM_LOGO } from "./lib/logo.js";
 
 export const crm = createPiece({
-  displayName: "Acme CRM",
-  description: "Read and watch records in the Acme CRM",
-  logoUrl: CRM_LOGO,
-  authors: ["acme"],
-  categories: [PieceCategory.PRODUCTIVITY],
-  minimumSupportedRelease: "0.30.0",
+  displayName: "Crm",
+  description: "Connect to Crm.",
   auth: crmAuth,
-  actions: [crmGetRecordAction],
-  triggers: [crmNewRecordTrigger],
+  minimumSupportedRelease: "0.30.0",
+  logoUrl: CRM_LOGO,
+  authors: [],
+  actions: [],
+  triggers: [],
 });
 
 export default crm;
 ```
+
+With `--auth none`, `auth` is `PieceAuth.None()` and there is no `lib/auth.ts`. The
+`actions` and `triggers` arrays fill up as you generate them, next.
 
 ### The generator commands
 
@@ -78,19 +75,22 @@ export default crm;
 `document-model`, `editor`, `processor`, `subgraph`, `migration-file` — and
 three of them are the piece family:
 
-| Command                            | What it does                                                                                            |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `ph generate piece <name>`         | A new piece: directory, auth, logo, one example action and one example trigger, plus both registrations |
-| `ph generate piece-action <name>`  | An action inside an existing piece, imported into its `index.ts` for you                                |
-| `ph generate piece-trigger <name>` | A trigger, `--strategy polling` (default) or `--strategy webhook`                                       |
+| Command                            | What it does                                                                     |
+| ---------------------------------- | -------------------------------------------------------------------------------- |
+| `ph generate piece <name>`         | A new, empty piece: directory, auth, logo and `createPiece`, plus both registrations |
+| `ph generate piece-action <name>`  | An action stub inside an existing piece, added to its `actions` for you          |
+| `ph generate piece-trigger <name>` | A trigger stub, `--strategy polling` (default) or `--strategy webhook`, added to its `triggers` |
+
+For the CRM, generate the action and the trigger this tutorial fills in:
 
 ```bash
-ph generate piece-action list-records
-ph generate piece-trigger record-updated --strategy webhook
+ph generate piece-action get-record
+ph generate piece-trigger new-record
 ```
 
 Both take `--piece <dir>` to say which piece to add to, which you can omit when
-the package ships exactly one.
+the package ships exactly one. Each writes a stub, as the Activepieces CLI does:
+the shape is there, and the body is yours.
 
 Two flags on `ph generate piece` are for maintenance rather than creation:
 `--dir <dir>` re-registers an existing piece, and `--all` refreshes the
@@ -100,17 +100,17 @@ directory by hand, or after a merge leaves the two registrations disagreeing.
 
 ## Writing an action
 
-An action declares the properties it takes, the shape of what it returns, and a `run` function.
+An action declares the properties it takes, the shape of what it returns, and a `run` function. The generator leaves `props` empty and `run` blank; filled in, `lib/actions/get-record.ts` reads:
 
 ```typescript
 import { createAction, Property } from "@powerhousedao/pieces-framework";
+import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
 import { crmAuth } from "../auth.js";
-import { clientForContext } from "../common/context.js";
 
 export const crmGetRecordAction = createAction({
   auth: crmAuth,
   name: "get-record",
-  displayName: "Get record",
+  displayName: "Get Record",
   description: "Reads one record by id",
   props: {
     recordId: Property.ShortText({
@@ -126,13 +126,20 @@ export const crmGetRecordAction = createAction({
     ],
   },
   async run(context) {
-    const { recordId } = context.propsValue;
-    return await clientForContext(context).request({
-      path: `records/${encodeURIComponent(String(recordId))}`,
+    const { baseUrl, apiKey } = context.auth.props;
+    const response = await httpClient.sendRequest<{ id: string; name: string }>({
+      method: HttpMethod.GET,
+      url: `${baseUrl}/records/${encodeURIComponent(context.propsValue.recordId)}`,
+      headers: { Authorization: `Bearer ${apiKey}` },
     });
+    return response.body;
   },
 });
 ```
+
+`httpClient` is Activepieces' HTTP client, from the framework's `/common` entry along
+with the rest of their `pieces-common` helpers. Once a second action makes the same
+call, move the request into a helper of your own under `lib/`.
 
 Three of those deserve attention, because they're what makes a step usable by someone who didn't write the piece:
 
@@ -164,41 +171,80 @@ Every trigger has the same hooks:
 
 ### Polling
 
-A polling trigger asks the service what's new and remembers what it has already reported:
+A polling trigger asks the service what's new and remembers what it has already reported. The generated one does the remembering with Activepieces' `pollingHelper`: you write `items`, which fetches, and the helper keeps the cursor. Filled in, `lib/triggers/new-record.ts` reads:
 
 ```typescript
 import {
   createTrigger,
   TriggerStrategy,
+  type AppConnectionValueForAuthProperty,
 } from "@powerhousedao/pieces-framework";
+import {
+  DedupeStrategy,
+  httpClient,
+  HttpMethod,
+  pollingHelper,
+  type Polling,
+} from "@powerhousedao/pieces-framework/common";
+import { crmAuth } from "../auth.js";
+
+interface CrmRecord {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+const polling: Polling<
+  AppConnectionValueForAuthProperty<typeof crmAuth>,
+  Record<string, never>
+> = {
+  strategy: DedupeStrategy.TIMEBASED,
+  items: async ({ auth, lastFetchEpochMS }) => {
+    const response = await httpClient.sendRequest<CrmRecord[]>({
+      method: HttpMethod.GET,
+      url: `${auth.props.baseUrl}/records`,
+      headers: { Authorization: `Bearer ${auth.props.apiKey}` },
+      queryParams: { createdAfter: new Date(lastFetchEpochMS).toISOString() },
+    });
+    return response.body.map((record) => ({
+      epochMilliSeconds: Date.parse(record.createdAt),
+      data: record,
+    }));
+  },
+};
 
 export const crmNewRecordTrigger = createTrigger({
   auth: crmAuth,
   name: "new-record",
-  displayName: "New record",
+  displayName: "New Record",
   description: "Fires once for each record created in the CRM",
-  type: TriggerStrategy.POLLING,
   props: {},
-  sampleData: { id: "rec_1", name: "Example record" },
+  sampleData: {
+    id: "rec_1",
+    name: "Example record",
+    createdAt: "2026-01-01T00:00:00Z",
+  },
+  type: TriggerStrategy.POLLING,
+  async test(context) {
+    return await pollingHelper.test(polling, context);
+  },
   async onEnable(context) {
-    // Seed the cursor, so enabling doesn't replay the service's history.
-    const records = await listRecords(context.auth);
-    await context.store.put(CURSOR_KEY, { seen: records.map((r) => r.id) });
+    const { store, auth, propsValue } = context;
+    await pollingHelper.onEnable(polling, { store, auth, propsValue });
   },
   async onDisable(context) {
-    await context.store.delete(CURSOR_KEY);
+    const { store, auth, propsValue } = context;
+    await pollingHelper.onDisable(polling, { store, auth, propsValue });
   },
   async run(context) {
-    const records = await listRecords(context.auth);
-    const cursor = await context.store.get<{ seen: string[] }>(CURSOR_KEY);
-    const seen = new Set(cursor?.seen ?? []);
-    await context.store.put(CURSOR_KEY, { seen: records.map((r) => r.id) });
-    return records.filter((record) => !seen.has(record.id));
+    return await pollingHelper.poll(polling, context);
   },
 });
 ```
 
-`context.store` is served by the host, scoped per workflow, so two workflows watching the same service keep their own cursors. The cursor's shape is yours to choose: a set of ids, a timestamp, the service's own page token. It's the only thing that stops a trigger reporting the same item twice.
+With `DedupeStrategy.TIMEBASED`, `onEnable` sets the cursor to the moment the workflow was switched on, so enabling doesn't replay the service's history. Each poll reports only the items whose `epochMilliSeconds` is newer than the cursor, then moves it to the newest. Passing `lastFetchEpochMS` on to the service, as here, only saves fetching what the helper would drop anyway. For a service whose items carry no timestamp, `DedupeStrategy.LAST_ITEM` does the same with ids: `items` returns `{ id, data }`, newest first.
+
+The cursor lives in `context.store`, which the host serves scoped per workflow, so two workflows watching the same service keep their own. It's the only thing that stops a trigger reporting the same item twice. The helper is a convenience, not a requirement: a trigger can read and write `context.store` itself, when the service's own page token makes a better cursor.
 
 A polling trigger can set its own cadence in `onEnable` with `context.setSchedule({ intervalMs })`. A `cronExpression` also works, but the reactor turns it into a fixed interval rather than firing at wall-clock times. A workflow author can override both with `pollEverySeconds` in the trigger's config, which the reactor reads itself and never passes to the piece.
 
@@ -282,14 +328,7 @@ The auth value arrives in two shapes, depending on where your code runs. This is
 | `validate({ auth })`                    | `{ baseUrl, apiKey }`                                 | the token string                              |
 | `getConnectionIdentifier({ auth })`     | `{ baseUrl, apiKey }`                                 | the token string                              |
 
-The framework's types say which shape you have: `context.auth` is typed as the envelope in an action or trigger, and as the flat props in `validate` and `getConnectionIdentifier`, so reading the wrong one is a compile error. The generated `lib/common/auth-value.ts` also reads the auth through one helper that accepts both shapes, which lets a client take either:
-
-```typescript
-export function readAuth(auth: unknown): { baseUrl: string; apiKey: string } {
-  const source = isRecord(auth) && isRecord(auth.props) ? auth.props : auth;
-  // ...check source.baseUrl and source.apiKey, then return them
-}
-```
+The framework's types say which shape you have: `context.auth` is typed as the envelope in an action or trigger, and as the flat props in `validate` and `getConnectionIdentifier`, so reading the wrong one is a compile error. A helper of your own that both call can take the two fields it needs, rather than either shape.
 
 ### Checking a connection
 
@@ -300,15 +339,23 @@ export const crmAuth = PieceAuth.CustomAuth({
   // ...displayName, description, props as above
   validate: async ({ auth }) => {
     try {
-      await clientFor(auth).ping();
+      await httpClient.sendRequest({
+        method: HttpMethod.GET,
+        url: `${auth.baseUrl}/me`,
+        headers: { Authorization: `Bearer ${auth.apiKey}` },
+      });
       return { valid: true };
     } catch (error) {
       return { valid: false, error: String(error) };
     }
   },
   getConnectionIdentifier: async ({ auth }) => {
-    const me = await clientFor(auth).request<{ email: string }>({ path: "me" });
-    return me.email;
+    const me = await httpClient.sendRequest<{ email: string }>({
+      method: HttpMethod.GET,
+      url: `${auth.baseUrl}/me`,
+      headers: { Authorization: `Bearer ${auth.apiKey}` },
+    });
+    return me.body.email;
   },
 });
 ```
@@ -376,22 +423,25 @@ The build then loads each piece once and writes a descriptor next to it — the 
 Three things have to be true before a workflow can name your block, and missing
 any one of them fails quietly in its own way.
 
-**1. Workflows are on, and `@powerhousedao/workflow` is installed.** With the
-flag on, Switchboard loads that package itself: the workflow and connection
-document models, and the reactor piece. You don't list it in `packages`. If it
-can't be loaded, Switchboard refuses to boot with "Workflows are enabled but
-@powerhousedao/workflow could not be loaded".
-
-**2. Your own package is in the `packages` list**, which is how the reactor
-finds both its document models and its pieces. There is no separate piece
-install.
+**1. Workflows are on.** Set it in `powerhouse.config.json`:
 
 ```json
 {
-  "workflows": { "enabled": true },
-  "packages": ["@acme/my-package"]
+  "workflows": { "enabled": true }
 }
 ```
+
+Nothing else to install or list. Switchboard ships `@powerhousedao/workflow` and
+loads it itself when the flag is on: the workflow and connection document
+models, and the reactor piece. Connect does the same for Workflow Studio when
+`connect.app.workflowsEnabled` is on. If the package can't be loaded,
+Switchboard refuses to boot with "Workflows are enabled but
+@powerhousedao/workflow could not be loaded".
+
+**2. The reactor is running from your package.** `ph vetra` and `ph switchboard`
+load the project they're started in, pieces included, unless you pass
+`--ignore-local`. There is no separate piece install. The `packages` list is for
+pieces shipped by _other_ packages, installed from a registry.
 
 **3. The piece is built.** `ph build` after every edit — see above.
 
@@ -433,7 +483,7 @@ an integration end to end — see
 
 ## Testing
 
-A piece is ordinary TypeScript, and an action's `run` is an ordinary async function — most of what you'll want to assert needs no workflow at all. Test the client and the transformations directly, the way you'd test any other module in the package.
+A piece is ordinary TypeScript, and an action's `run` is an ordinary async function — most of what you'll want to assert needs no workflow at all. Test your requests and transformations directly, the way you'd test any other module in the package.
 
 Typecheck it too. Vitest strips types without checking them, and the framework's types catch the mistakes that are easiest to make: a trigger with no `type`, `validate` returning the wrong shape, reading `context.auth` as flat props, a `Property.*` call that doesn't exist. `ph build` runs `tsc` before it bundles anything, and when `tsc` reports errors it asks whether to build anyway. Without a terminal to ask in, as in CI, it stops instead. `--ignore-type-errors` builds without asking, but it's unsafe: a piece with type errors can load and still fail at runtime, so fix the errors before you publish or deploy.
 
