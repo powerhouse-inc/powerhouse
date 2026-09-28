@@ -17,6 +17,7 @@ export {
   defaultPHState,
 } from "./ph-factories.js";
 export * from "./policy/operations.js";
+export * from "./publishing/operations.js";
 export * from "./reducer.js";
 export * from "./runtime/operations.js";
 export * from "./schema/index.js";

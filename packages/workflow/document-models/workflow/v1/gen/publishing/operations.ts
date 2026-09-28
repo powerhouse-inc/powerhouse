@@ -4,17 +4,20 @@
  */
 import { type SignalDispatch } from "document-model";
 import type { WorkflowGlobalState } from "../types.js";
-import type { SetLastRunAction, SetLastTestAction } from "./actions.js";
+import type {
+  PublishWorkflowAction,
+  RevertToPublishedAction,
+} from "./actions.js";
 
-export interface WorkflowRuntimeOperations {
-  setLastRunOperation: (
+export interface WorkflowPublishingOperations {
+  publishWorkflowOperation: (
     state: WorkflowGlobalState,
-    action: SetLastRunAction,
+    action: PublishWorkflowAction,
     dispatch?: SignalDispatch,
   ) => void;
-  setLastTestOperation: (
+  revertToPublishedOperation: (
     state: WorkflowGlobalState,
-    action: SetLastTestAction,
+    action: RevertToPublishedAction,
     dispatch?: SignalDispatch,
   ) => void;
 }
