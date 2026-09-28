@@ -263,9 +263,10 @@ Two are worth naming, because leaving them out fails in ways that are hard to
 diagnose:
 
 ```bash
-# 32 bytes of hex encrypting stored connection secrets. Unset, the runtime
-# generates a key next to its working directory — so a host that does not keep
-# that directory comes back unable to read the secrets it stored.
+# 32 bytes of hex encrypting stored connection secrets. Required when the
+# database is Postgres. Unset on PGlite, the runtime generates a key next to its
+# working directory. A key other than the one the secrets were stored with is
+# refused, so keep it: a lost key means re-entering every secret.
 PH_WORKFLOWS_SECRETS_MASTER_KEY=<64 hex chars>
 
 # Addresses a piece may reach, widening a policy that refuses private and

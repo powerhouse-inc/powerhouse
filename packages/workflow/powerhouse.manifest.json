@@ -47,7 +47,7 @@
     {
       "name": "PH_WORKFLOWS_SECRETS_MASTER_KEY",
       "type": "secret",
-      "description": "64 hex chars (32 bytes) encrypting connection secrets at rest. Unset, a key is generated at ./.ph/secrets.key and reused; a host whose working directory does not survive a restart must set this or every stored secret becomes undecryptable."
+      "description": "64 hex chars (32 bytes) encrypting connection secrets at rest. Required on Postgres; on PGlite, unset generates a key at ./.ph/secrets.key. A key other than the one the secrets were stored with is refused, so a lost key means re-entering every secret."
     },
     {
       "name": "PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES",

@@ -119,6 +119,9 @@ export interface ComposeWorkflowRuntimeDeps {
    * unavailable rather than quietly dropping every document trigger. */
   clientModule?: InProcessReactorClientModule;
   relationalDb: IRelationalDb;
+  /** False when relationalDb outlives the working directory, so the secret
+   * store needs PH_WORKFLOWS_SECRETS_MASTER_KEY rather than a generated key. */
+  secretsKeyFile?: false;
   attachments: AttachmentClientLike;
   /** The projected document/ref relationships a step's attachment read is
    * checked against; without them, or without the projection, nothing reads. */
@@ -331,6 +334,7 @@ export async function composeWorkflowRuntime(
 
   const runtime = engine.createWorkflowRuntime({
     relationalDb: deps.relationalDb,
+    secretsKeyFile: deps.secretsKeyFile,
     reactorClient: deps.reactorClient,
     assertCanRead: readAssertion(deps.authorizationService, deps.reactorClient),
     subjectOf: (caller) => callerSubject((caller as Context).user),

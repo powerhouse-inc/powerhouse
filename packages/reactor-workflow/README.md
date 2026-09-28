@@ -138,8 +138,15 @@ One of them carries a caveat worth knowing before a deployment depends on it.
 **The secrets key is not optional in production.** Unset, `loadKey` generates
 `./.ph/secrets.key` — relative to the working directory, like the bundle cache
 and the attachment staging dir. A host whose working directory does not survive
-a restart comes back with a new key, and every stored connection secret is
-undecryptable.
+a restart would come back with a new key, so the store guards against it:
+
+- A host passes `secretsKeyFile: false` when its database outlives the working
+  directory, and the store then requires `PH_WORKFLOWS_SECRETS_MASTER_KEY`
+  (`MasterKeyRequiredError`). Switchboard does this when its read model is on
+  Postgres.
+- The first key a namespace is used with is fingerprinted into
+  `secret_key_check`. Any other key is refused (`MasterKeyMismatchError`)
+  instead of failing later as an undecryptable secret.
 
 Only the host process reads any of these. The worker child is forked with an
 empty environment, so the two settings it enforces travel on the wire instead:

@@ -954,6 +954,8 @@ async function initServer(
       reactorClient: client,
       clientModule: options.reactor ?? ownedReactorModule,
       relationalDb: api.relationalDb,
+      // A Postgres read model outlives the pod; a key file beside it would not.
+      secretsKeyFile: readModelPgliteDir === null ? false : undefined,
       attachments: createAttachmentClient(api.attachments.service),
       // A step reads attachments with no caller behind it, so the projected
       // document/ref relationship is what authorizes the read.
