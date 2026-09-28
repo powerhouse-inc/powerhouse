@@ -6,6 +6,7 @@ import { baseActions } from "document-model";
 import {
   workflowEdgesActions,
   workflowPolicyActions,
+  workflowPublishingActions,
   workflowRuntimeActions,
   workflowStepsActions,
   workflowTriggerActions,
@@ -24,4 +25,5 @@ export const actions = {
   ...workflowVariablesActions,
   ...workflowPolicyActions,
   ...workflowRuntimeActions,
+  ...workflowPublishingActions,
 };

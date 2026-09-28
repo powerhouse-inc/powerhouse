@@ -3,9 +3,12 @@
  * This file is auto-generated and updated by codegen
  */
 import { createAction } from "document-model";
-import { SetLastRunInputSchema } from "../schema/zod.js";
-import type { SetLastRunInput } from "../types.js";
-import type { SetLastRunAction } from "./actions.js";
+import {
+  SetLastRunInputSchema,
+  SetLastTestInputSchema,
+} from "../schema/zod.js";
+import type { SetLastRunInput, SetLastTestInput } from "../types.js";
+import type { SetLastRunAction, SetLastTestAction } from "./actions.js";
 
 export const setLastRun = (input: SetLastRunInput) =>
   createAction<SetLastRunAction>(
@@ -13,5 +16,14 @@ export const setLastRun = (input: SetLastRunInput) =>
     { ...input },
     undefined,
     SetLastRunInputSchema,
+    "global",
+  );
+
+export const setLastTest = (input: SetLastTestInput) =>
+  createAction<SetLastTestAction>(
+    "SET_LAST_TEST",
+    { ...input },
+    undefined,
+    SetLastTestInputSchema,
     "global",
   );

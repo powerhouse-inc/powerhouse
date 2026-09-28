@@ -39,6 +39,7 @@ export function defaultGlobalState(): WorkflowGlobalState {
       retainRunsDays: 30,
       journalAsDocument: false,
     },
+    published: null,
     lastRunAt: null,
     lastRunStatus: null,
   };
