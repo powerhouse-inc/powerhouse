@@ -1,19 +1,45 @@
 // LocalEncryptedSecretStore over a real PGlite-backed relational namespace:
 // lifecycle, encryption at rest, tombstones, and key handling.
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
+import { PGlite } from "@electric-sql/pglite";
+import {
+  createRelationalDb,
+  type IRelationalDb,
+} from "@powerhousedao/shared/processors";
+import { Kysely } from "kysely";
+import { PGliteDialect } from "kysely-pglite-dialect";
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   InvalidSecretRefError,
   SecretDeletedError,
   SecretNotFoundError,
 } from "../pieces/index.js";
-import { LocalEncryptedSecretStore, type SecretRow } from "./secret-store.js";
+import {
+  LocalEncryptedSecretStore,
+  MasterKeyMismatchError,
+  MasterKeyRequiredError,
+  type SecretRow,
+} from "./secret-store.js";
 
 const KEY_A = randomBytes(32).toString("hex");
 const KEY_B = randomBytes(32).toString("hex");
+
+// A database of its own, for tests that pin a different master key.
+function freshDb(): IRelationalDb {
+  return createRelationalDb(
+    new Kysely<unknown>({ dialect: new PGliteDialect(new PGlite()) }),
+  );
+}
+
+function tempKeyFile(): string {
+  return join(
+    process.env.TMPDIR ?? "/tmp",
+    `secrets-test-${randomBytes(6).toString("hex")}.key`,
+  );
+}
 
 async function rawRows(): Promise<SecretRow[]> {
   const ns = (await createTestRelationalDb().createNamespace("secrets")) as {
@@ -103,30 +129,121 @@ describe("LocalEncryptedSecretStore", () => {
     );
   });
 
-  it("a store with a different master key cannot decrypt", async () => {
-    const created = await store.create({ value: "key-bound" });
-    const otherKey = await LocalEncryptedSecretStore.create(
-      createTestRelationalDb(),
-      { masterKeyHex: KEY_B },
-    );
-    await expect(otherKey.get(created.ref)).rejects.toThrow();
+  it("refuses a master key other than the one its secrets were stored with", async () => {
+    await store.create({ value: "key-bound" });
+    await expect(
+      LocalEncryptedSecretStore.create(createTestRelationalDb(), {
+        masterKeyHex: KEY_B,
+      }),
+    ).rejects.toThrow(MasterKeyMismatchError);
   });
 
   it("generates and reuses a key file when no master key is set", async () => {
-    const keyFile = join(
-      process.env.TMPDIR ?? "/tmp",
-      `secrets-test-${randomBytes(6).toString("hex")}.key`,
-    );
-    const first = await LocalEncryptedSecretStore.create(
-      createTestRelationalDb(),
-      { masterKeyHex: undefined, keyFile },
-    );
+    const db = freshDb();
+    const keyFile = tempKeyFile();
+    const first = await LocalEncryptedSecretStore.create(db, {
+      masterKeyHex: undefined,
+      keyFile,
+    });
     const created = await first.create({ value: "file-keyed" });
     expect(readFileSync(keyFile, "utf8").trim()).toMatch(/^[0-9a-f]{64}$/);
-    const second = await LocalEncryptedSecretStore.create(
-      createTestRelationalDb(),
-      { masterKeyHex: undefined, keyFile },
-    );
+    const second = await LocalEncryptedSecretStore.create(db, {
+      masterKeyHex: undefined,
+      keyFile,
+    });
     await expect(second.get(created.ref)).resolves.toBe("file-keyed");
+  });
+
+  it("refuses a regenerated key file, as after a restart that lost it", async () => {
+    const db = freshDb();
+    const first = await LocalEncryptedSecretStore.create(db, {
+      masterKeyHex: undefined,
+      keyFile: tempKeyFile(),
+    });
+    await first.create({ value: "lost-with-its-key" });
+    await expect(
+      LocalEncryptedSecretStore.create(db, {
+        masterKeyHex: undefined,
+        keyFile: tempKeyFile(),
+      }),
+    ).rejects.toThrow(MasterKeyMismatchError);
+  });
+
+  it("lets exactly one of two concurrent first starts claim the namespace", async () => {
+    const db = freshDb();
+    const results = await Promise.allSettled([
+      LocalEncryptedSecretStore.create(db, { masterKeyHex: KEY_A }),
+      LocalEncryptedSecretStore.create(db, { masterKeyHex: KEY_B }),
+    ]);
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(rejected).toHaveLength(1);
+    expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(
+      MasterKeyMismatchError,
+    );
+  });
+
+  it("judges a namespace from before the key check by its newest secret", async () => {
+    const db = freshDb();
+    const original = await LocalEncryptedSecretStore.create(db, {
+      masterKeyHex: KEY_A,
+    });
+    const created = await original.create({ value: "pre-check" });
+    const ns = await db.createNamespace<{ secret_key_check: { id: string } }>(
+      "secrets",
+    );
+    await ns.deleteFrom("secret_key_check").execute();
+
+    await expect(
+      LocalEncryptedSecretStore.create(db, { masterKeyHex: KEY_B }),
+    ).rejects.toThrow(MasterKeyMismatchError);
+    const reopened = await LocalEncryptedSecretStore.create(db, {
+      masterKeyHex: KEY_A,
+    });
+    await expect(reopened.get(created.ref)).resolves.toBe("pre-check");
+    await expect(
+      LocalEncryptedSecretStore.create(db, { masterKeyHex: KEY_B }),
+    ).rejects.toThrow(MasterKeyMismatchError);
+  });
+});
+
+describe("LocalEncryptedSecretStore without a master key", () => {
+  const saved = {
+    current: process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY,
+    legacy: process.env.PH_SECRETS_MASTER_KEY,
+  };
+
+  afterEach(() => {
+    for (const [name, value] of [
+      ["PH_WORKFLOWS_SECRETS_MASTER_KEY", saved.current],
+      ["PH_SECRETS_MASTER_KEY", saved.legacy],
+    ] as const) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  });
+
+  it("requires one when a generated key file is not allowed", async () => {
+    delete process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY;
+    delete process.env.PH_SECRETS_MASTER_KEY;
+    await expect(
+      LocalEncryptedSecretStore.create(freshDb(), { keyFile: false }),
+    ).rejects.toThrow(MasterKeyRequiredError);
+  });
+
+  it("names the variable the key was renamed from when that one is set", async () => {
+    delete process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY;
+    process.env.PH_SECRETS_MASTER_KEY = KEY_A;
+    await expect(
+      LocalEncryptedSecretStore.create(freshDb(), { keyFile: false }),
+    ).rejects.toThrow(/PH_SECRETS_MASTER_KEY is set but no longer read/);
+  });
+
+  it("reads the key from the environment even when a key file is not allowed", async () => {
+    process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY = KEY_A;
+    const store = await LocalEncryptedSecretStore.create(freshDb(), {
+      keyFile: false,
+    });
+    const created = await store.create({ value: "env-keyed" });
+    await expect(store.get(created.ref)).resolves.toBe("env-keyed");
   });
 });

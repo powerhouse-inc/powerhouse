@@ -9,13 +9,22 @@ import {
   type SecretStat,
   type SecretStore,
 } from "../pieces/index.js";
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHmac,
+  randomBytes,
+} from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const IV_BYTES = 12;
 const TAG_BYTES = 16;
 const KEY_BYTES = 32;
+const MASTER_KEY_ENV = "PH_WORKFLOWS_SECRETS_MASTER_KEY";
+const LEGACY_MASTER_KEY_ENV = "PH_SECRETS_MASTER_KEY";
+const KEY_CHECK_ID = "master";
+const KEY_CHECK_LABEL = "reactor-workflow/secrets/key-check/v1";
 
 export interface SecretRow {
   id: string;
@@ -28,8 +37,16 @@ export interface SecretRow {
   updated_at: string;
 }
 
+// Fingerprint of the key the namespace's secrets are encrypted with.
+interface KeyCheckRow {
+  id: string;
+  fingerprint: string;
+  created_at: string;
+}
+
 interface SecretsDB {
   secret: SecretRow;
+  secret_key_check: KeyCheckRow;
 }
 
 async function up(db: IRelationalDb<SecretsDB>): Promise<void> {
@@ -44,24 +61,55 @@ async function up(db: IRelationalDb<SecretsDB>): Promise<void> {
     .addColumn("updated_at", "text", (col) => col.notNull())
     .ifNotExists()
     .execute();
+  await db.schema
+    .createTable("secret_key_check")
+    .addColumn("id", "text", (col) => col.primaryKey())
+    .addColumn("fingerprint", "text", (col) => col.notNull())
+    .addColumn("created_at", "text", (col) => col.notNull())
+    .ifNotExists()
+    .execute();
 }
 
 export interface LocalSecretStoreOptions {
   // 64 hex chars (32 bytes); defaults to PH_WORKFLOWS_SECRETS_MASTER_KEY.
   masterKeyHex?: string;
-  // Dev fallback when no master key is set; generated on first use.
-  keyFile?: string;
+  // Where a key is generated when none is set; false requires one instead.
+  keyFile?: string | false;
+}
+
+function legacyKeyHint(): string {
+  return process.env[LEGACY_MASTER_KEY_ENV] !== undefined
+    ? ` ${LEGACY_MASTER_KEY_ENV} is set but no longer read; rename it to ${MASTER_KEY_ENV}.`
+    : "";
+}
+
+export class MasterKeyRequiredError extends Error {
+  constructor() {
+    super(
+      `${MASTER_KEY_ENV} must be set: this host's secrets outlive its working directory, so a generated key would be lost on restart.${legacyKeyHint()}`,
+    );
+    this.name = "MasterKeyRequiredError";
+  }
+}
+
+export class MasterKeyMismatchError extends Error {
+  constructor() {
+    super(
+      `The secrets master key is not the one this database's secrets were stored with. Set ${MASTER_KEY_ENV} to that key; if it is lost, the stored secrets cannot be recovered.${legacyKeyHint()}`,
+    );
+    this.name = "MasterKeyMismatchError";
+  }
 }
 
 function loadKey(options: LocalSecretStoreOptions): Buffer {
-  const hex =
-    options.masterKeyHex ?? process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY;
+  const hex = options.masterKeyHex ?? process.env[MASTER_KEY_ENV];
   if (hex !== undefined) {
     if (!/^[0-9a-f]{64}$/i.test(hex)) {
       throw new Error("Secrets master key must be 64 hex chars (32 bytes)");
     }
     return Buffer.from(hex, "hex");
   }
+  if (options.keyFile === false) throw new MasterKeyRequiredError();
   const file = options.keyFile ?? join(process.cwd(), ".ph", "secrets.key");
   try {
     const key = Buffer.from(readFileSync(file, "utf8").trim(), "hex");
@@ -78,6 +126,86 @@ function loadKey(options: LocalSecretStoreOptions): Buffer {
   return key;
 }
 
+function encrypt(key: Buffer, value: string): string {
+  const iv = randomBytes(IV_BYTES);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const ciphertext = Buffer.concat([
+    cipher.update(value, "utf8"),
+    cipher.final(),
+  ]);
+  return Buffer.concat([iv, cipher.getAuthTag(), ciphertext]).toString(
+    "base64",
+  );
+}
+
+function decrypt(key: Buffer, enc: string): string {
+  const raw = Buffer.from(enc, "base64");
+  const iv = raw.subarray(0, IV_BYTES);
+  const tag = raw.subarray(IV_BYTES, IV_BYTES + TAG_BYTES);
+  const decipher = createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([
+    decipher.update(raw.subarray(IV_BYTES + TAG_BYTES)),
+    decipher.final(),
+  ]).toString("utf8");
+}
+
+function decrypts(key: Buffer, enc: string): boolean {
+  try {
+    decrypt(key, enc);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function storedFingerprint(
+  db: IRelationalDb<SecretsDB>,
+): Promise<string | undefined> {
+  const row = await db
+    .selectFrom("secret_key_check")
+    .select("fingerprint")
+    .where("id", "=", KEY_CHECK_ID)
+    .executeTakeFirst();
+  return row?.fingerprint;
+}
+
+// Refuses a key other than the one the namespace was first used with. A
+// namespace from before the check is judged by its newest secret.
+async function verifyKey(
+  db: IRelationalDb<SecretsDB>,
+  key: Buffer,
+): Promise<void> {
+  const fingerprint = createHmac("sha256", key)
+    .update(KEY_CHECK_LABEL)
+    .digest("hex");
+  let stored = await storedFingerprint(db);
+  if (stored === undefined) {
+    const newest = await db
+      .selectFrom("secret")
+      .select("enc")
+      .where("enc", "is not", null)
+      .orderBy("updated_at", "desc")
+      .limit(1)
+      .executeTakeFirst();
+    if (newest?.enc && !decrypts(key, newest.enc)) {
+      throw new MasterKeyMismatchError();
+    }
+    await db
+      .insertInto("secret_key_check")
+      .values({
+        id: KEY_CHECK_ID,
+        fingerprint,
+        created_at: new Date().toISOString(),
+      })
+      .onConflict((oc) => oc.column("id").doNothing())
+      .execute();
+    // A concurrent first start may have written its own.
+    stored = await storedFingerprint(db);
+  }
+  if (stored !== fingerprint) throw new MasterKeyMismatchError();
+}
+
 export class LocalEncryptedSecretStore implements SecretStore {
   private constructor(
     private readonly db: IRelationalDb<SecretsDB>,
@@ -92,31 +220,17 @@ export class LocalEncryptedSecretStore implements SecretStore {
       "secrets",
     )) as IRelationalDb<SecretsDB>;
     await up(db);
-    return new LocalEncryptedSecretStore(db, loadKey(options));
+    const key = loadKey(options);
+    await verifyKey(db, key);
+    return new LocalEncryptedSecretStore(db, key);
   }
 
   private encrypt(value: string): string {
-    const iv = randomBytes(IV_BYTES);
-    const cipher = createCipheriv("aes-256-gcm", this.key, iv);
-    const ciphertext = Buffer.concat([
-      cipher.update(value, "utf8"),
-      cipher.final(),
-    ]);
-    return Buffer.concat([iv, cipher.getAuthTag(), ciphertext]).toString(
-      "base64",
-    );
+    return encrypt(this.key, value);
   }
 
   private decrypt(enc: string): string {
-    const raw = Buffer.from(enc, "base64");
-    const iv = raw.subarray(0, IV_BYTES);
-    const tag = raw.subarray(IV_BYTES, IV_BYTES + TAG_BYTES);
-    const decipher = createDecipheriv("aes-256-gcm", this.key, iv);
-    decipher.setAuthTag(tag);
-    return Buffer.concat([
-      decipher.update(raw.subarray(IV_BYTES + TAG_BYTES)),
-      decipher.final(),
-    ]).toString("utf8");
+    return decrypt(this.key, enc);
   }
 
   private async row(ref: string): Promise<SecretRow> {

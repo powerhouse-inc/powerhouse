@@ -584,7 +584,9 @@ export class WorkflowRuntimeService {
     this.secretsPromise ??=
       this.host.secrets !== undefined
         ? Promise.resolve(this.host.secrets)
-        : LocalEncryptedSecretStore.create(this.host.relationalDb);
+        : LocalEncryptedSecretStore.create(this.host.relationalDb, {
+            keyFile: this.host.secretsKeyFile,
+          });
     return this.secretsPromise;
   }
 
