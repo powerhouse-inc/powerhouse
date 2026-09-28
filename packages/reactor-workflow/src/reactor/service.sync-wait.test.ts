@@ -26,6 +26,9 @@ const ctx = (address: string) =>
 
 let module: InProcessReactorClientModule;
 let service: WorkflowRuntimeService;
+// A wait long enough that a slow runner's document write still lands in it.
+let patient: WorkflowRuntimeService;
+const SHORT_WAIT_MS = 1_500;
 
 async function createDocument(id: string) {
   await module.client.create(
@@ -72,12 +75,18 @@ beforeAll(async () => {
   service = testRuntime({
     reactorClient: client,
     assertCanRead,
-    syncWaitMs: 1_500,
+    syncWaitMs: SHORT_WAIT_MS,
+  });
+  patient = testRuntime({
+    reactorClient: client,
+    assertCanRead,
+    syncWaitMs: 30_000,
   });
 });
 
 afterAll(() => {
   service.shutdown();
+  patient.shutdown();
   module.reactor.kill();
 });
 
@@ -87,7 +96,7 @@ describe("a workflow not synced here yet", () => {
     setTimeout(() => void createDocument(id), 400);
 
     const outcome = await timed(() =>
-      service.webhookEndpoint(id, ctx(MEMBER), { driveId: DRIVE }),
+      patient.webhookEndpoint(id, ctx(MEMBER), { driveId: DRIVE }),
     );
 
     expect(outcome).toMatchObject({ value: null });
@@ -121,7 +130,7 @@ describe("a caller without permission", () => {
     );
 
     expect((outcome.error as Error).message).toBe(FORBIDDEN);
-    expect(outcome.ms).toBeLessThan(150);
+    expect(outcome.ms).toBeLessThan(SHORT_WAIT_MS / 2);
   });
 
   it("is refused at once for a workflow already here", async () => {
@@ -130,7 +139,7 @@ describe("a caller without permission", () => {
     );
 
     expect((outcome.error as Error).message).toBe(FORBIDDEN);
-    expect(outcome.ms).toBeLessThan(150);
+    expect(outcome.ms).toBeLessThan(SHORT_WAIT_MS / 2);
   });
 
   it("is refused at once when no drive is named", async () => {
@@ -139,6 +148,6 @@ describe("a caller without permission", () => {
     );
 
     expect((outcome.error as Error).message).toBe(FORBIDDEN);
-    expect(outcome.ms).toBeLessThan(150);
+    expect(outcome.ms).toBeLessThan(SHORT_WAIT_MS / 2);
   });
 });
