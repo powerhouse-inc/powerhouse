@@ -26,10 +26,10 @@ class CredentialedExecutor implements BlockExecutor {
 
   execute(execution: BlockExecution) {
     this.seen.push(execution);
-    const failure = this.failures.get(execution.blockType);
+    const failure = this.failures.get(execution.block.name);
     if (failure) return Promise.reject(failure);
     return Promise.resolve({
-      output: this.outputs.get(execution.blockType),
+      output: this.outputs.get(execution.block.name),
       redactValues: [TOKEN],
     });
   }
@@ -44,13 +44,18 @@ function definition(steps: WorkflowDefinition["steps"], edges = []) {
 describe("journaled step records", () => {
   it("redacts a known secret value from the output it journals", async () => {
     const executor = new CredentialedExecutor(
-      new Map([
-        ["piece#fetch", { access_token: TOKEN, note: `auth used ${TOKEN}` }],
-      ]),
+      new Map([["fetch", { access_token: TOKEN, note: `auth used ${TOKEN}` }]]),
     );
     const result = await runWorkflow({
       definition: definition([
-        { id: "s1", key: "fetch", blockType: "piece#fetch", config: {} },
+        {
+          id: "s1",
+          key: "fetch",
+          pieceName: "piece",
+          pieceVersion: "1.0.0",
+          actionName: "fetch",
+          config: {},
+        },
       ]),
       executor,
     });
@@ -64,19 +69,29 @@ describe("journaled step records", () => {
   it("passes the live output to the next step regardless", async () => {
     const executor = new CredentialedExecutor(
       new Map<string, unknown>([
-        ["piece#fetch", { token: TOKEN }],
-        ["piece#use", { ok: true }],
+        ["fetch", { token: TOKEN }],
+        ["use", { ok: true }],
       ]),
     );
     await runWorkflow({
       definition: definition(
         [
-          { id: "s1", key: "fetch", blockType: "piece#fetch", config: {} },
+          {
+            id: "s1",
+            key: "fetch",
+            pieceName: "piece",
+            pieceVersion: "1.0.0",
+            actionName: "fetch",
+            config: {},
+          },
           {
             id: "s2",
             key: "use",
-            blockType: "piece#use",
+            pieceName: "piece",
+            pieceVersion: "1.0.0",
+            actionName: "use",
             config: { header: "{{steps.fetch.output.token}}" },
+            propertySettings: [{ prop: "header", mode: "EXPRESSION" }],
           },
         ],
         [edge("e2", "s1", "s2")] as never,
@@ -89,14 +104,16 @@ describe("journaled step records", () => {
 
   it("redacts the key-named credential in the input it journals", async () => {
     const executor = new CredentialedExecutor(
-      new Map([["piece#fetch", { ok: true }]]),
+      new Map([["fetch", { ok: true }]]),
     );
     const result = await runWorkflow({
       definition: definition([
         {
           id: "s1",
           key: "fetch",
-          blockType: "piece#fetch",
+          pieceName: "piece",
+          pieceVersion: "1.0.0",
+          actionName: "fetch",
           config: { url: "https://api.example.com", apiKey: "literal-key" },
         },
       ]),
@@ -114,7 +131,7 @@ describe("journaled step records", () => {
       new Map(),
       new Map([
         [
-          "piece#fail",
+          "fail",
           new Error(
             "GET https://api.example.com/v1?api_key=abcd1234efgh failed: sent Bearer eyJhbGciOiJIUzI1NiJ9",
           ),
@@ -123,7 +140,14 @@ describe("journaled step records", () => {
     );
     const result = await runWorkflow({
       definition: definition([
-        { id: "s1", key: "fetch", blockType: "piece#fail", config: {} },
+        {
+          id: "s1",
+          key: "fetch",
+          pieceName: "piece",
+          pieceVersion: "1.0.0",
+          actionName: "fail",
+          config: {},
+        },
       ]),
       executor,
     });
@@ -136,10 +160,10 @@ describe("journaled step records", () => {
 
   it("hands the error branch the redacted message, not the raw one", async () => {
     const executor = new CredentialedExecutor(
-      new Map([["piece#note", {}]]),
+      new Map([["note", {}]]),
       new Map([
         [
-          "piece#fail",
+          "fail",
           new Error(
             "GET https://api.example.com/v1?api_key=abcd1234efgh failed",
           ),
@@ -149,12 +173,22 @@ describe("journaled step records", () => {
     const result = await runWorkflow({
       definition: definition(
         [
-          { id: "s1", key: "fetch", blockType: "piece#fail", config: {} },
+          {
+            id: "s1",
+            key: "fetch",
+            pieceName: "piece",
+            pieceVersion: "1.0.0",
+            actionName: "fail",
+            config: {},
+          },
           {
             id: "s2",
             key: "record",
-            blockType: "piece#note",
+            pieceName: "piece",
+            pieceVersion: "1.0.0",
+            actionName: "note",
             config: { reason: "{{steps.fetch.error}}" },
+            propertySettings: [{ prop: "reason", mode: "EXPRESSION" }],
           },
         ],
         [{ id: "e1", from: "s1", to: "s2", port: "error" }] as never,
@@ -172,11 +206,18 @@ describe("journaled step records", () => {
   it("leaves an ordinary failure readable", async () => {
     const executor = new CredentialedExecutor(
       new Map(),
-      new Map([["piece#fail", new Error("Request timed out after 30s")]]),
+      new Map([["fail", new Error("Request timed out after 30s")]]),
     );
     const result = await runWorkflow({
       definition: definition([
-        { id: "s1", key: "fetch", blockType: "piece#fail", config: {} },
+        {
+          id: "s1",
+          key: "fetch",
+          pieceName: "piece",
+          pieceVersion: "1.0.0",
+          actionName: "fail",
+          config: {},
+        },
       ]),
       executor,
     });
@@ -190,18 +231,26 @@ describe("journaled step records", () => {
 
 describe("replaying a journaled output", () => {
   it("refuses a redacted output instead of replaying the marker", async () => {
-    const executor = new CredentialedExecutor(
-      new Map([["piece#use", { ok: true }]]),
-    );
+    const executor = new CredentialedExecutor(new Map([["use", { ok: true }]]));
     const result = await runWorkflow({
       definition: definition(
         [
-          { id: "s1", key: "fetch", blockType: "piece#fetch", config: {} },
+          {
+            id: "s1",
+            key: "fetch",
+            pieceName: "piece",
+            pieceVersion: "1.0.0",
+            actionName: "fetch",
+            config: {},
+          },
           {
             id: "s2",
             key: "use",
-            blockType: "piece#use",
+            pieceName: "piece",
+            pieceVersion: "1.0.0",
+            actionName: "use",
             config: { header: "{{steps.fetch.output.access_token}}" },
+            propertySettings: [{ prop: "header", mode: "EXPRESSION" }],
           },
         ],
         [edge("e2", "s1", "s2")] as never,
@@ -221,14 +270,28 @@ describe("replaying a journaled output", () => {
 
   it("stops the rerun before another root step runs its side effects", async () => {
     const executor = new CredentialedExecutor(
-      new Map([["piece#notify", { sent: true }]]),
+      new Map([["notify", { sent: true }]]),
     );
     const result = await runWorkflow({
       // Two roots, no trigger: nothing connects them, so the second is free
       // to run unless a refused replay ends the iteration outright.
       definition: definition([
-        { id: "s1", key: "fetch", blockType: "piece#fetch", config: {} },
-        { id: "s2", key: "notify", blockType: "piece#notify", config: {} },
+        {
+          id: "s1",
+          key: "fetch",
+          pieceName: "piece",
+          pieceVersion: "1.0.0",
+          actionName: "fetch",
+          config: {},
+        },
+        {
+          id: "s2",
+          key: "notify",
+          pieceName: "piece",
+          pieceVersion: "1.0.0",
+          actionName: "notify",
+          config: {},
+        },
       ]),
       executor,
       completedSteps: new Map([
@@ -242,18 +305,26 @@ describe("replaying a journaled output", () => {
   });
 
   it("replays an output that carries no marker", async () => {
-    const executor = new CredentialedExecutor(
-      new Map([["piece#use", { ok: true }]]),
-    );
+    const executor = new CredentialedExecutor(new Map([["use", { ok: true }]]));
     const result = await runWorkflow({
       definition: definition(
         [
-          { id: "s1", key: "fetch", blockType: "piece#fetch", config: {} },
+          {
+            id: "s1",
+            key: "fetch",
+            pieceName: "piece",
+            pieceVersion: "1.0.0",
+            actionName: "fetch",
+            config: {},
+          },
           {
             id: "s2",
             key: "use",
-            blockType: "piece#use",
+            pieceName: "piece",
+            pieceVersion: "1.0.0",
+            actionName: "use",
             config: { header: "{{steps.fetch.output.id}}" },
+            propertySettings: [{ prop: "header", mode: "EXPRESSION" }],
           },
         ],
         [edge("e2", "s1", "s2")] as never,

@@ -29,10 +29,8 @@ export interface ConnectionSource {
 // Which step is asking. A resolver needs it to check the request against the
 // run's binding rather than trust the id it was handed.
 
-// piecePackage is the package the caller already resolved the block type to,
-// so a resolver never re-parses a block type to learn which piece is asking.
+// piecePackage is the piece the caller resolved the block to.
 export interface ConnectionRequest {
-  blockType: string;
   piecePackage?: string;
   stepId?: string;
   stepKey?: string;

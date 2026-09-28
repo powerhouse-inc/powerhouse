@@ -3,7 +3,7 @@
 // by the run that follows, and what closes it out when that run never starts.
 import type { OperationWithContext } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DOCUMENT_EVENT_BLOCK } from "./reactor-piece.js";
+import { REACTOR_PIECE } from "./reactor-piece.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 
@@ -20,7 +20,9 @@ const watcherState = {
   version: 3,
   trigger: {
     id: "t1",
-    blockType: DOCUMENT_EVENT_BLOCK,
+    pieceName: REACTOR_PIECE,
+    pieceVersion: "1.0.0",
+    triggerName: "document-event",
     config: { documentType: "powerhouse/note", actionType: "SET_TITLE" },
   },
   steps: [],

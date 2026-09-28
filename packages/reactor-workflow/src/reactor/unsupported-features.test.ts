@@ -25,7 +25,7 @@ vi.mock("./piece-catalog.js", async (importOriginal) => {
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 import {
-  localFirstResolver,
+  sourcedResolver,
   PieceWorker,
   PieceWorkerError,
   type PieceResolver,
@@ -194,14 +194,16 @@ describe("unsupported piece features", () => {
     it("flags the same blocks in search", async () => {
       const { hits } = await runtime.searchBlocks("fixture", 20);
       expect(
-        Object.fromEntries(hits.map((hit) => [hit.blockType, hit.unsupported])),
+        Object.fromEntries(
+          hits.map((hit) => [`${hit.pieceName} ${hit.name}`, hit.unsupported]),
+        ),
       ).toEqual({
-        [`${OAUTH}#echo`]: OAUTH_REASON,
-        [`${TRIGGERS}#ok`]: undefined,
-        [`${TRIGGERS}#trigger:plain`]: undefined,
-        [`${TRIGGERS}#trigger:manual`]: MANUAL_REASON,
-        [`${TRIGGERS}#trigger:renewing`]: RENEW_REASON,
-        [`${MULTI}#whoami`]: undefined,
+        [`${OAUTH} echo`]: OAUTH_REASON,
+        [`${TRIGGERS} ok`]: undefined,
+        [`${TRIGGERS} plain`]: undefined,
+        [`${TRIGGERS} manual`]: MANUAL_REASON,
+        [`${TRIGGERS} renewing`]: RENEW_REASON,
+        [`${MULTI} whoami`]: undefined,
       });
     });
   });
@@ -215,7 +217,12 @@ describe("unsupported piece features", () => {
     });
 
     it("describes each method, and which of them can't run", async () => {
-      const described = (await runtime.blockDescriptor(`${MULTI}#whoami`)) as {
+      const described = (await runtime.blockDescriptor({
+        pieceName: MULTI,
+        pieceVersion: "1.0.0",
+        kind: "action" as const,
+        name: "whoami",
+      })) as {
         auth: { type: string; unsupported?: string }[];
       };
       expect(
@@ -229,23 +236,48 @@ describe("unsupported piece features", () => {
 
   describe("describing a block", () => {
     it("refuses every block of an OAuth2 piece", async () => {
-      await expect(runtime.blockDescriptor(`${OAUTH}#echo`)).rejects.toThrow(
-        `Piece "${OAUTH}": ${OAUTH_REASON}`,
-      );
+      await expect(
+        runtime.blockDescriptor({
+          pieceName: OAUTH,
+          pieceVersion: "1.0.0",
+          kind: "action" as const,
+          name: "echo",
+        }),
+      ).rejects.toThrow(`Piece "${OAUTH}": ${OAUTH_REASON}`);
     });
 
     it("refuses a MANUAL or renewing trigger and describes the rest", async () => {
       await expect(
-        runtime.blockDescriptor(`${TRIGGERS}#trigger:manual`),
+        runtime.blockDescriptor({
+          pieceName: TRIGGERS,
+          pieceVersion: "1.0.0",
+          kind: "trigger" as const,
+          name: "manual",
+        }),
       ).rejects.toThrow(`Trigger "manual" of "${TRIGGERS}": ${MANUAL_REASON}`);
       await expect(
-        runtime.blockDescriptor(`${TRIGGERS}#trigger:renewing`),
+        runtime.blockDescriptor({
+          pieceName: TRIGGERS,
+          pieceVersion: "1.0.0",
+          kind: "trigger" as const,
+          name: "renewing",
+        }),
       ).rejects.toThrow(RENEW_REASON);
       await expect(
-        runtime.blockDescriptor(`${TRIGGERS}#trigger:plain`),
+        runtime.blockDescriptor({
+          pieceName: TRIGGERS,
+          pieceVersion: "1.0.0",
+          kind: "trigger" as const,
+          name: "plain",
+        }),
       ).resolves.toMatchObject({ trigger: { name: "plain" } });
       await expect(
-        runtime.blockDescriptor(`${TRIGGERS}#ok`),
+        runtime.blockDescriptor({
+          pieceName: TRIGGERS,
+          pieceVersion: "1.0.0",
+          kind: "action" as const,
+          name: "ok",
+        }),
       ).resolves.toMatchObject({ action: { name: "ok" } });
     });
   });
@@ -261,14 +293,25 @@ describe("unsupported piece features", () => {
         resolveAuth: () => Promise.resolve(undefined),
         fire: () => undefined,
         cacheDir: root,
-        resolver: localFirstResolver(packagePieces.lookup, nowhere),
+        // Every binding here names an installed piece.
+        resolver: {
+          resolve: (target) =>
+            sourcedResolver({ cacheDir: root, lookup: packagePieces.lookup })
+              .resolve({ ...target, source: "local" })
+              .catch(() => nowhere.resolve(target)),
+        },
         webhookUrlFor: () => Promise.resolve("https://example.com/hook"),
       });
       try {
         for (const name of ["manual", "renewing"]) {
           await supervisor.upsert({
             workflowId: `wf-${name}`,
-            blockType: `${TRIGGERS}@1.0.0#trigger:${name}`,
+            block: {
+              pieceName: TRIGGERS,
+              pieceVersion: "1.0.0",
+              kind: "trigger" as const,
+              name,
+            },
             packageName: TRIGGERS,
             version: "1.0.0",
             triggerName: name,

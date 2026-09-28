@@ -1,8 +1,9 @@
-// core#schedule through the supervisor over a real PGlite-backed store, with
+// the core schedule trigger through the supervisor over a real PGlite-backed store, with
 // an injected clock: enable, due fires, restart carry-over, errors, disable.
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { SCHEDULE_BLOCK, type SchedulePayload } from "./schedule.js";
+import type { SchedulePayload } from "./schedule.js";
+import { coreTrigger } from "./core-blocks.js";
 import { WorkflowRunStore } from "./store.js";
 import {
   TriggerSupervisor,
@@ -24,10 +25,15 @@ function scheduleBinding(
   workflowId: string,
   config: Record<string, unknown>,
 ): ScheduleTriggerBinding {
-  return { kind: "schedule", workflowId, blockType: SCHEDULE_BLOCK, config };
+  return {
+    kind: "schedule",
+    workflowId,
+    block: coreTrigger("schedule"),
+    config,
+  };
 }
 
-describe("TriggerSupervisor core#schedule", () => {
+describe("TriggerSupervisor the core schedule trigger", () => {
   let store: WorkflowRunStore;
   let supervisor: TriggerSupervisor;
   let fired: Fired[];
@@ -63,7 +69,8 @@ describe("TriggerSupervisor core#schedule", () => {
     );
     const row = await store.getTriggerState("wf-cron");
     expect(row?.status).toBe("ENABLED");
-    expect(row?.block_type).toBe(SCHEDULE_BLOCK);
+    expect(row?.piece_name).toBe("@powerhousedao/piece-core");
+    expect(row?.trigger_name).toBe("schedule");
     expect(row?.next_poll_at).toBe("2026-09-04T10:00:00.000Z");
     expect(row?.last_error).toBeNull();
   });
@@ -133,7 +140,11 @@ describe("TriggerSupervisor core#schedule", () => {
 
   it("runs interval mode on a fixed phase and rebases when overdue", async () => {
     await supervisor.upsert(
-      scheduleBinding("wf-interval", { mode: "interval", every: 15 }),
+      scheduleBinding("wf-interval", {
+        mode: "interval",
+        every: 15,
+        unit: "minutes",
+      }),
     );
     let row = await store.getTriggerState("wf-interval");
     expect(row?.interval_ms).toBe(900_000);
@@ -197,7 +208,7 @@ describe("TriggerSupervisor core#schedule", () => {
     );
     row = await store.getTriggerState("wf-too-fast");
     expect(row?.status).toBe("ERROR");
-    expect(row?.last_error).toMatch(/at least 1s/);
+    expect(row?.last_error).toMatch(/"every" must be/);
 
     setClock("2026-09-05T00:00:00.000Z");
     await supervisor.tick();

@@ -9,12 +9,19 @@ import {
   resolveExpressions,
   type ExpressionScope,
 } from "./expressions.js";
-import type {
-  BlockExecutor,
-  StepExecutionRecord,
-  WorkflowDefinition,
-  WorkflowRunResult,
-  WorkflowStepDef,
+import { checkDynamicProperties } from "./dynamic-props.js";
+import { undeclaredPortEdges } from "@powerhousedao/pieces-framework/workflow";
+import { stepConfigHash } from "./canonical.js";
+import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
+import { blockLabel, pieceRecord, resolutionOf } from "./resolution.js";
+import {
+  stepBlock,
+  triggerBlock,
+  type BlockExecutor,
+  type StepExecutionRecord,
+  type WorkflowDefinition,
+  type WorkflowRunResult,
+  type WorkflowStepDef,
 } from "./types.js";
 
 export interface RunWorkflowOptions {
@@ -32,6 +39,46 @@ export interface RunWorkflowOptions {
     record: StepExecutionRecord,
     ordinal: number,
   ) => void | Promise<void>;
+  // Resolved secret variables: kept out of every journaled record and error.
+  redactValues?: string[];
+  // Scope entries of steps outside the definition; a single-step test reads
+  // its upstream steps' test outputs from here.
+  priorSteps?: ExpressionScope["steps"];
+  // A block's declared output ports; an edge on any other is a warning.
+  declaredPorts?: (block: BlockRef) => readonly string[] | undefined;
+}
+
+// Edges no run can take, because their source never emits that port.
+export function deadPortWarnings(
+  definition: WorkflowDefinition,
+  declaredPorts: (block: BlockRef) => readonly string[] | undefined,
+): string[] {
+  const blocks = new Map<string, { key: string; block: BlockRef }>(
+    definition.steps.map((step) => [
+      step.id,
+      { key: step.key, block: stepBlock(step) },
+    ]),
+  );
+  if (definition.trigger) {
+    blocks.set(definition.trigger.id, {
+      key: "trigger",
+      block: triggerBlock(definition.trigger),
+    });
+  }
+  return undeclaredPortEdges(definition.edges, (id) => {
+    const source = blocks.get(id);
+    return source ? declaredPorts(source.block) : undefined;
+  }).map((edge) => {
+    const source = blocks.get(edge.from)!;
+    const target = blocks.get(edge.to)?.key ?? edge.to;
+    return `Edge from "${source.key}" to "${target}" leaves on port "${edge.port}", which ${blockLabel(source.block)} never takes`;
+  });
+}
+
+function withPiece(
+  piece: StepExecutionRecord["piece"],
+): Pick<StepExecutionRecord, "piece"> {
+  return piece ? { piece } : {};
 }
 
 function errorMessage(error: unknown): string {
@@ -51,9 +98,10 @@ export async function runWorkflow(
   options: RunWorkflowOptions,
 ): Promise<WorkflowRunResult> {
   const { definition, executor } = options;
+  const runSecrets = options.redactValues ?? [];
   const scope: ExpressionScope = {
     trigger: { payload: options.triggerPayload },
-    steps: {},
+    steps: { ...options.priorSteps },
     variables: Object.fromEntries(
       (definition.variables ?? []).map((v) => [v.key, v.value ?? null]),
     ),
@@ -81,9 +129,15 @@ export async function runWorkflow(
     for (const edge of definition.edges) {
       if (edge.from !== sourceId) continue;
       const portMatches = port !== undefined && edge.port === port;
-      const taken =
-        portMatches &&
-        (!edge.condition || evaluateCondition(edge.condition, scope));
+      let taken = portMatches;
+      if (taken && edge.condition) {
+        try {
+          taken = evaluateCondition(edge.condition, scope);
+        } catch (error) {
+          taken = false;
+          runFailed ??= `Condition of edge "${edge.id}": ${errorMessage(error)}`;
+        }
+      }
       edgeDecisions.set(edge.id, taken);
     }
   };
@@ -103,7 +157,8 @@ export async function runWorkflow(
     records.set(step.id, {
       stepId: step.id,
       key: step.key,
-      blockType: step.blockType,
+      pieceName: step.pieceName,
+      blockName: step.actionName,
       status: "SKIPPED",
     });
     decideOutgoing(step.id, undefined);
@@ -118,14 +173,36 @@ export async function runWorkflow(
     records.set(step.id, {
       stepId: step.id,
       key: step.key,
-      blockType: step.blockType,
+      pieceName: step.pieceName,
+      blockName: step.actionName,
       status: "FAILED",
       error,
     });
     runFailed = error;
   };
 
+  // An author-skipped step continues on "next" as if it output nothing.
+  const passStep = async (step: WorkflowStepDef) => {
+    const record: StepExecutionRecord = {
+      stepId: step.id,
+      key: step.key,
+      pieceName: step.pieceName,
+      blockName: step.actionName,
+      status: "SKIPPED",
+      output: null,
+      port: "next",
+    };
+    records.set(step.id, record);
+    await journal(record);
+    scope.steps[step.key] = { output: null };
+    decideOutgoing(step.id, "next");
+  };
+
   const executeStep = async (step: WorkflowStepDef) => {
+    if (step.skip === true) {
+      await passStep(step);
+      return;
+    }
     const replay = options.completedSteps?.get(step.id);
     if (replay) {
       if (containsRedactedMarker(replay.output)) {
@@ -136,10 +213,12 @@ export async function runWorkflow(
       const record: StepExecutionRecord = {
         stepId: step.id,
         key: step.key,
-        blockType: step.blockType,
+        pieceName: step.pieceName,
+        blockName: step.actionName,
         status: "REPLAYED",
         output: replay.output,
         port,
+        configHash: stepConfigHash(step),
       };
       records.set(step.id, record);
       await journal(record);
@@ -147,26 +226,33 @@ export async function runWorkflow(
       decideOutgoing(step.id, port);
       return;
     }
-    const input = resolveExpressions(step.config, scope);
     const startedAt = new Date().toISOString();
+    let input: unknown;
     try {
+      input = resolveExpressions(step.config, scope);
+      checkDynamicProperties(input, step.propertySettings);
       const result = await executor.execute({
-        blockType: step.blockType,
+        block: stepBlock(step),
         config: input,
         connectionId: step.connectionId,
         step,
+        ...(runSecrets.length > 0 ? { redactValues: runSecrets } : {}),
       });
       const port = result.port ?? "next";
+      const values = [...runSecrets, ...(result.redactValues ?? [])];
       const record: StepExecutionRecord = {
         stepId: step.id,
         key: step.key,
-        blockType: step.blockType,
+        pieceName: step.pieceName,
+        blockName: step.actionName,
         status: "SUCCEEDED",
-        input: journaled(input, result.redactValues),
-        output: journaled(result.output, result.redactValues),
+        input: journaled(input, values),
+        output: journaled(result.output, values),
         port,
         startedAt,
         endedAt: new Date().toISOString(),
+        ...withPiece(pieceRecord(result.resolution)),
+        configHash: stepConfigHash(step),
       };
       records.set(step.id, record);
       await journal(record);
@@ -175,17 +261,20 @@ export async function runWorkflow(
     } catch (error) {
       // A failed step is exactly where an input gets inspected, so it is
       // redacted with the same secrets the successful path uses.
-      const values = secretsFor(error);
+      const values = [...runSecrets, ...secretsFor(error)];
       const detail = redactMessage(errorMessage(error), { values });
       const record: StepExecutionRecord = {
         stepId: step.id,
         key: step.key,
-        blockType: step.blockType,
+        pieceName: step.pieceName,
+        blockName: step.actionName,
         status: "FAILED",
         input: journaled(input, values),
         error: detail,
         startedAt,
         endedAt: new Date().toISOString(),
+        ...withPiece(pieceRecord(resolutionOf(error))),
+        configHash: stepConfigHash(step),
       };
       records.set(step.id, record);
       await journal(record);
@@ -239,7 +328,11 @@ export async function runWorkflow(
   // A FAILED record with a taken error edge is a handled failure; only
   // unhandled ones set runFailed above.
   const steps = definition.steps.map((step) => records.get(step.id)!);
+  const warnings = options.declaredPorts
+    ? deadPortWarnings(definition, options.declaredPorts)
+    : [];
+  const noted = warnings.length > 0 ? { warnings } : {};
   return runFailed
-    ? { status: "FAILED", steps, error: runFailed }
-    : { status: "SUCCEEDED", steps };
+    ? { status: "FAILED", steps, error: runFailed, ...noted }
+    : { status: "SUCCEEDED", steps, ...noted };
 }

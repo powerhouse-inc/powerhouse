@@ -26,7 +26,8 @@ describe("WorkflowRunStore redaction", () => {
         {
           stepId: "a",
           key: "post",
-          blockType: "piece#post",
+          pieceName: "piece",
+          blockName: "post",
           status: "FAILED",
           input: {
             url: "https://api.example.com/v1",
@@ -91,7 +92,8 @@ describe("WorkflowRunStore redaction", () => {
   it("redacts the error a failed onEnable writes onto a trigger row", async () => {
     await store.upsertTriggerState({
       workflow_id: "wf-trigger-redact",
-      block_type: "piece#gmail",
+      piece_name: "piece",
+      trigger_name: "gmail",
       config_hash: "h1",
       status: "ERROR",
       store_state: "{}",

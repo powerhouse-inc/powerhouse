@@ -6,6 +6,7 @@ import { currentDocumentRecorder, withRunScope } from "./run-scope.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import { describe, expect, it, vi } from "vitest";
 import { testRuntime } from "../../test/helpers/runtime.js";
+import { CORE_PIECE_VERSION } from "../pieces/index.js";
 
 const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
 const WORKFLOW = "wf-mine";
@@ -230,8 +231,23 @@ describe("a fired run's result", () => {
         name: "Fired",
         status: "ENABLED",
         version: 1,
-        trigger: { id: "t1", blockType: "core#manual", config: {} },
-        steps: [{ id: "s", key: "read", blockType: "fake#ok", config: {} }],
+        trigger: {
+          id: "t1",
+          pieceName: "@powerhousedao/piece-core",
+          pieceVersion: CORE_PIECE_VERSION,
+          triggerName: "manual",
+          config: {},
+        },
+        steps: [
+          {
+            id: "s",
+            key: "read",
+            pieceName: "fake",
+            pieceVersion: "",
+            actionName: "ok",
+            config: {},
+          },
+        ],
         edges: [{ id: "e1", from: "t1", to: "s", port: "next" }],
         variables: [],
       },

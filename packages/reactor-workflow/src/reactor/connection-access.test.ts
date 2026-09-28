@@ -4,7 +4,12 @@ import type { WorkflowRuntimeHostDeps } from "./host.js";
 import { describe, expect, it, vi } from "vitest";
 import { testRuntime } from "../../test/helpers/runtime.js";
 
-const BLOCK = "@acme/piece-slack@1.0.0#send_message";
+const BLOCK = {
+  pieceName: "@acme/piece-slack",
+  pieceVersion: "1.0.0",
+  kind: "action" as const,
+  name: "send_message",
+};
 const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
 
 function connectionSummaryDocument(id: string) {
@@ -89,7 +94,13 @@ describe("design-time connection access", () => {
       header: { id: "conn-mine", documentType: "powerhouse/workflow" },
       state: {
         global: {
-          trigger: { id: "t", blockType: BLOCK, connectionId: "conn-theirs" },
+          trigger: {
+            id: "t",
+            pieceName: BLOCK.pieceName,
+            pieceVersion: BLOCK.pieceVersion,
+            triggerName: "new_message",
+            connectionId: "conn-theirs",
+          },
         },
       },
     } as never);

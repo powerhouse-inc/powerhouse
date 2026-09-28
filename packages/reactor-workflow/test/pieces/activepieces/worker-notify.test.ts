@@ -4,7 +4,10 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ActivepiecesBlockExecutor } from "../../../src/pieces/engine/blocks.js";
-import type { BlockExecution } from "../../../src/pieces/engine/types.js";
+import {
+  stepBlock,
+  type BlockExecution,
+} from "../../../src/pieces/engine/types.js";
 import { PieceWorker } from "../../../src/pieces/activepieces/worker/host.js";
 import type { PieceLogEntry } from "../../../src/pieces/activepieces/worker/protocol.js";
 
@@ -76,12 +79,16 @@ async function writeFixture(name: string, source: string): Promise<void> {
   await writeFile(join(dir, "index.js"), source);
 }
 
-function execution(blockType: string): BlockExecution {
-  return {
-    blockType,
+function execution(pieceName: string, actionName: string): BlockExecution {
+  const step = {
+    id: "s1",
+    key: "step",
+    pieceName,
+    pieceVersion: "1.0.0",
+    actionName,
     config: {},
-    step: { id: "s1", key: "step", blockType } as BlockExecution["step"],
   };
+  return { block: stepBlock(step), config: {}, step };
 }
 
 describe("worker notifications", () => {
@@ -104,7 +111,7 @@ describe("worker notifications", () => {
       onPieceLog: (entry) => logs.push(entry),
     });
 
-    const result = await executor.execute(execution("@test/noisy@1.0.0#talk"));
+    const result = await executor.execute(execution("@test/noisy", "talk"));
 
     expect(result.output).toEqual({ done: true });
     expect(logs.map((entry) => entry.level)).toEqual(["log", "warn", "error"]);
@@ -122,7 +129,7 @@ describe("worker notifications", () => {
       onPieceLog: (entry) => seen.push(`log:${entry.level}`),
     });
 
-    await executor.execute(execution("@test/noisy@1.0.0#talk"));
+    await executor.execute(execution("@test/noisy", "talk"));
     seen.push("result");
 
     // Ordering is the whole guarantee: nothing has to be drained at teardown.
@@ -137,9 +144,7 @@ describe("worker notifications", () => {
       onPartialOutput: (output) => partials.push(output),
     });
 
-    const result = await executor.execute(
-      execution("@test/noisy@1.0.0#progress"),
-    );
+    const result = await executor.execute(execution("@test/noisy", "progress"));
 
     expect(partials).toEqual([{ processed: 1 }, { processed: 2 }]);
     expect(result.output).toEqual({ processed: 2 });
@@ -149,7 +154,7 @@ describe("worker notifications", () => {
     const executor = new ActivepiecesBlockExecutor({ cacheDir, worker });
 
     const result = await executor.execute(
-      execution("@test/noisy@1.0.0#progressGuarded"),
+      execution("@test/noisy", "progressGuarded"),
     );
 
     // An unimplemented member fails by name rather than silently succeeding.
@@ -166,12 +171,10 @@ describe("worker notifications", () => {
       onPartialOutput: (output) => partials.push(output),
     });
 
-    await executor.execute(execution("@test/noisy@1.0.0#detached"));
+    await executor.execute(execution("@test/noisy", "detached"));
     // Long enough for the piece's stray timer to fire against a closed tap.
     await new Promise((resolve) => setTimeout(resolve, 60));
-    const result = await executor.execute(
-      execution("@test/noisy@1.0.0#progress"),
-    );
+    const result = await executor.execute(execution("@test/noisy", "progress"));
 
     // A notification carries no request id, so a late one would otherwise be
     // filed against whichever step happened to be running.
@@ -190,7 +193,7 @@ describe("worker notifications", () => {
       ) => void,
     });
 
-    const result = await executor.execute(execution("@test/noisy@1.0.0#talk"));
+    const result = await executor.execute(execution("@test/noisy", "talk"));
 
     expect(result.output).toEqual({ done: true });
   });
@@ -204,7 +207,7 @@ describe("worker notifications", () => {
       },
     });
 
-    const result = await executor.execute(execution("@test/noisy@1.0.0#talk"));
+    const result = await executor.execute(execution("@test/noisy", "talk"));
 
     expect(result.output).toEqual({ done: true });
   });

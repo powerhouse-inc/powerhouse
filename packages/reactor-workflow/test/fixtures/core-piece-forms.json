@@ -1,0 +1,562 @@
+{
+  "actions": [
+    {
+      "name": "branch",
+      "displayName": "Branch",
+      "description": "Takes the true port when the operator holds for its operands, else the false port. An operand of the wrong type (a number operator on text, a list operator on something that is not a list) fails the step.",
+      "requireAuth": false,
+      "ports": ["true", "false", "error"],
+      "props": [
+        {
+          "name": "left",
+          "displayName": "Value",
+          "description": "What to test, usually an expression.",
+          "type": "SHORT_TEXT",
+          "required": true,
+          "hasDynamicResolver": false,
+          "placeholder": "{{steps.fetch.output.status}}"
+        },
+        {
+          "name": "operator",
+          "displayName": "Condition",
+          "description": "How the value is tested.",
+          "type": "STATIC_DROPDOWN",
+          "required": true,
+          "hasDynamicResolver": false,
+          "defaultValue": "TEXT_EXACTLY_MATCHES",
+          "staticOptions": [
+            {
+              "value": "TEXT_EXACTLY_MATCHES",
+              "label": "Text is exactly"
+            },
+            {
+              "value": "TEXT_DOES_NOT_EXACTLY_MATCH",
+              "label": "Text is not exactly"
+            },
+            {
+              "value": "TEXT_CONTAINS",
+              "label": "Text contains"
+            },
+            {
+              "value": "TEXT_DOES_NOT_CONTAIN",
+              "label": "Text does not contain"
+            },
+            {
+              "value": "TEXT_STARTS_WITH",
+              "label": "Text starts with"
+            },
+            {
+              "value": "TEXT_DOES_NOT_START_WITH",
+              "label": "Text does not start with"
+            },
+            {
+              "value": "TEXT_ENDS_WITH",
+              "label": "Text ends with"
+            },
+            {
+              "value": "TEXT_DOES_NOT_END_WITH",
+              "label": "Text does not end with"
+            },
+            {
+              "value": "NUMBER_IS_EQUAL_TO",
+              "label": "Number equals"
+            },
+            {
+              "value": "NUMBER_IS_GREATER_THAN",
+              "label": "Number is greater than"
+            },
+            {
+              "value": "NUMBER_IS_LESS_THAN",
+              "label": "Number is less than"
+            },
+            {
+              "value": "DATE_IS_EQUAL",
+              "label": "Date is"
+            },
+            {
+              "value": "DATE_IS_BEFORE",
+              "label": "Date is before"
+            },
+            {
+              "value": "DATE_IS_AFTER",
+              "label": "Date is after"
+            },
+            {
+              "value": "BOOLEAN_IS_TRUE",
+              "label": "Is true"
+            },
+            {
+              "value": "BOOLEAN_IS_FALSE",
+              "label": "Is false"
+            },
+            {
+              "value": "LIST_CONTAINS",
+              "label": "List contains"
+            },
+            {
+              "value": "LIST_DOES_NOT_CONTAIN",
+              "label": "List does not contain"
+            },
+            {
+              "value": "LIST_IS_EMPTY",
+              "label": "List is empty"
+            },
+            {
+              "value": "LIST_IS_NOT_EMPTY",
+              "label": "List is not empty"
+            },
+            {
+              "value": "EXISTS",
+              "label": "Exists"
+            },
+            {
+              "value": "DOES_NOT_EXIST",
+              "label": "Does not exist"
+            }
+          ]
+        },
+        {
+          "name": "right",
+          "displayName": "Compared with",
+          "description": "The value the condition compares to.",
+          "type": "SHORT_TEXT",
+          "required": true,
+          "hasDynamicResolver": false,
+          "showWhen": {
+            "prop": "operator",
+            "oneOf": [
+              "TEXT_EXACTLY_MATCHES",
+              "TEXT_DOES_NOT_EXACTLY_MATCH",
+              "TEXT_CONTAINS",
+              "TEXT_DOES_NOT_CONTAIN",
+              "TEXT_STARTS_WITH",
+              "TEXT_DOES_NOT_START_WITH",
+              "TEXT_ENDS_WITH",
+              "TEXT_DOES_NOT_END_WITH",
+              "NUMBER_IS_EQUAL_TO",
+              "NUMBER_IS_GREATER_THAN",
+              "NUMBER_IS_LESS_THAN",
+              "DATE_IS_EQUAL",
+              "DATE_IS_BEFORE",
+              "DATE_IS_AFTER",
+              "LIST_CONTAINS",
+              "LIST_DOES_NOT_CONTAIN"
+            ]
+          }
+        },
+        {
+          "name": "caseSensitive",
+          "displayName": "Case sensitive",
+          "description": "Match letter case exactly.",
+          "type": "CHECKBOX",
+          "required": false,
+          "hasDynamicResolver": false,
+          "showWhen": {
+            "prop": "operator",
+            "oneOf": [
+              "TEXT_EXACTLY_MATCHES",
+              "TEXT_DOES_NOT_EXACTLY_MATCH",
+              "TEXT_CONTAINS",
+              "TEXT_DOES_NOT_CONTAIN",
+              "TEXT_STARTS_WITH",
+              "TEXT_DOES_NOT_START_WITH",
+              "TEXT_ENDS_WITH",
+              "TEXT_DOES_NOT_END_WITH",
+              "LIST_CONTAINS",
+              "LIST_DOES_NOT_CONTAIN"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "assert",
+      "displayName": "Assert",
+      "description": "Fails the step when its value is blank or rejected, so a bad value stops the run instead of reaching a step with a side effect.",
+      "requireAuth": false,
+      "ports": ["next", "error"],
+      "props": [
+        {
+          "name": "value",
+          "displayName": "Value",
+          "description": "e.g. {{steps.describe.output}} - the run fails when it is blank.",
+          "type": "SHORT_TEXT",
+          "required": true,
+          "hasDynamicResolver": false
+        },
+        {
+          "name": "rejectValues",
+          "displayName": "Rejected values",
+          "description": "One per line; the run fails when the value matches any of them.",
+          "type": "ARRAY",
+          "required": false,
+          "hasDynamicResolver": false
+        },
+        {
+          "name": "allowValues",
+          "displayName": "Allowed values",
+          "description": "One per line; when set, anything else fails. Safer than a reject list for model output.",
+          "type": "ARRAY",
+          "required": false,
+          "hasDynamicResolver": false
+        },
+        {
+          "name": "allowEmpty",
+          "displayName": "Allow empty",
+          "description": "Accept a blank value instead of failing.",
+          "type": "CHECKBOX",
+          "required": false,
+          "hasDynamicResolver": false
+        },
+        {
+          "name": "message",
+          "displayName": "Failure message",
+          "description": "Replaces the default error.",
+          "type": "SHORT_TEXT",
+          "required": false,
+          "hasDynamicResolver": false
+        }
+      ]
+    }
+  ],
+  "triggers": [
+    {
+      "name": "schedule",
+      "displayName": "Schedule",
+      "description": "Fires on a five-field cron expression, or every so many minutes, hours or days.",
+      "strategy": "POLLING",
+      "requireAuth": false,
+      "ports": ["next"],
+      "hasSampleData": true,
+      "display": "schedule",
+      "props": [
+        {
+          "name": "mode",
+          "displayName": "Runs",
+          "description": "cron or interval.",
+          "type": "STATIC_DROPDOWN",
+          "required": true,
+          "hasDynamicResolver": false,
+          "defaultValue": "cron",
+          "staticOptions": [
+            {
+              "value": "cron",
+              "label": "On a cron schedule"
+            },
+            {
+              "value": "interval",
+              "label": "At a fixed interval"
+            }
+          ]
+        },
+        {
+          "name": "cron",
+          "displayName": "Cron expression",
+          "description": "Five fields, e.g. 0 9 * * 1-5 runs at 09:00 on weekdays.",
+          "type": "SHORT_TEXT",
+          "required": true,
+          "hasDynamicResolver": false,
+          "defaultValue": "0 9 * * 1-5",
+          "showWhen": {
+            "prop": "mode",
+            "oneOf": ["cron"]
+          }
+        },
+        {
+          "name": "every",
+          "displayName": "Every",
+          "description": "A whole number of units, at least 1.",
+          "type": "NUMBER",
+          "required": true,
+          "hasDynamicResolver": false,
+          "defaultValue": 15,
+          "showWhen": {
+            "prop": "mode",
+            "oneOf": ["interval"]
+          }
+        },
+        {
+          "name": "unit",
+          "displayName": "Unit",
+          "description": "minutes, hours or days.",
+          "type": "STATIC_DROPDOWN",
+          "required": true,
+          "hasDynamicResolver": false,
+          "defaultValue": "minutes",
+          "staticOptions": [
+            {
+              "value": "minutes",
+              "label": "Minutes"
+            },
+            {
+              "value": "hours",
+              "label": "Hours"
+            },
+            {
+              "value": "days",
+              "label": "Days"
+            }
+          ],
+          "showWhen": {
+            "prop": "mode",
+            "oneOf": ["interval"]
+          }
+        },
+        {
+          "name": "timezone",
+          "displayName": "Timezone",
+          "description": "An IANA name such as Europe/Lisbon. Defaults to UTC.",
+          "type": "SHORT_TEXT",
+          "required": false,
+          "hasDynamicResolver": false,
+          "defaultValue": "UTC"
+        }
+      ]
+    },
+    {
+      "name": "webhook",
+      "displayName": "Webhook",
+      "description": "Fires on an HTTP delivery to the workflow's endpoint. Ask for the URL with the webhookEndpoint query rather than constructing it.",
+      "strategy": "WEBHOOK",
+      "requireAuth": false,
+      "ports": ["next"],
+      "hasSampleData": true,
+      "props": [
+        {
+          "name": "methods",
+          "displayName": "Method",
+          "description": "The HTTP method a delivery must use.",
+          "type": "STATIC_DROPDOWN",
+          "required": true,
+          "hasDynamicResolver": false,
+          "defaultValue": "POST",
+          "staticOptions": [
+            {
+              "value": "POST",
+              "label": "POST"
+            },
+            {
+              "value": "ANY",
+              "label": "Any"
+            },
+            {
+              "value": "GET",
+              "label": "GET"
+            },
+            {
+              "value": "PUT",
+              "label": "PUT"
+            },
+            {
+              "value": "PATCH",
+              "label": "PATCH"
+            },
+            {
+              "value": "DELETE",
+              "label": "DELETE"
+            }
+          ]
+        },
+        {
+          "name": "scheme",
+          "displayName": "Verification",
+          "description": "How a delivery proves its sender.",
+          "type": "STATIC_DROPDOWN",
+          "required": true,
+          "hasDynamicResolver": false,
+          "defaultValue": "none",
+          "staticOptions": [
+            {
+              "value": "none",
+              "label": "None — the URL's token only"
+            },
+            {
+              "value": "token",
+              "label": "Shared token in a header"
+            },
+            {
+              "value": "hmac",
+              "label": "HMAC digest"
+            },
+            {
+              "value": "hmac-prefixed",
+              "label": "HMAC digest with a label (sha256=…)"
+            },
+            {
+              "value": "hmac-timestamped",
+              "label": "HMAC digest, timestamped (t=…,v1=…)"
+            }
+          ]
+        },
+        {
+          "name": "secretRef",
+          "displayName": "Secret",
+          "description": "The shared secret: the value the header must equal, or the key the sender signs with",
+          "type": "PH_SECRET_REF",
+          "required": true,
+          "hasDynamicResolver": false,
+          "showWhen": {
+            "prop": "scheme",
+            "oneOf": ["token", "hmac", "hmac-prefixed", "hmac-timestamped"]
+          }
+        },
+        {
+          "name": "header",
+          "displayName": "Header",
+          "description": "Where the token or signature is read from. Defaults to the header the chosen scheme conventionally uses; set it only if the sender differs",
+          "type": "SHORT_TEXT",
+          "required": false,
+          "hasDynamicResolver": false,
+          "advanced": true,
+          "showWhen": {
+            "prop": "scheme",
+            "oneOf": ["token", "hmac", "hmac-prefixed", "hmac-timestamped"]
+          }
+        },
+        {
+          "name": "toleranceSeconds",
+          "displayName": "Replay window (seconds)",
+          "description": "Rejects a delivery signed longer ago than this, so a captured request expires. Default 300",
+          "type": "NUMBER",
+          "required": false,
+          "hasDynamicResolver": false,
+          "advanced": true,
+          "showWhen": {
+            "prop": "scheme",
+            "oneOf": ["hmac-timestamped"]
+          }
+        },
+        {
+          "name": "algorithm",
+          "displayName": "Hash",
+          "description": "How the digest was computed.",
+          "type": "STATIC_DROPDOWN",
+          "required": false,
+          "hasDynamicResolver": false,
+          "advanced": true,
+          "staticOptions": [
+            {
+              "value": "sha256",
+              "label": "SHA-256 (default)"
+            },
+            {
+              "value": "sha1",
+              "label": "SHA-1"
+            },
+            {
+              "value": "sha512",
+              "label": "SHA-512"
+            }
+          ],
+          "showWhen": {
+            "prop": "scheme",
+            "oneOf": ["hmac", "hmac-prefixed", "hmac-timestamped"]
+          }
+        },
+        {
+          "name": "encoding",
+          "displayName": "Digest encoding",
+          "description": "How the digest is written.",
+          "type": "STATIC_DROPDOWN",
+          "required": false,
+          "hasDynamicResolver": false,
+          "advanced": true,
+          "staticOptions": [
+            {
+              "value": "hex",
+              "label": "Hexadecimal (default)"
+            },
+            {
+              "value": "base64",
+              "label": "Base64"
+            }
+          ],
+          "showWhen": {
+            "prop": "scheme",
+            "oneOf": ["hmac", "hmac-prefixed", "hmac-timestamped"]
+          }
+        },
+        {
+          "name": "prefix",
+          "displayName": "Signature label",
+          "description": "The text before the digest. Left empty it is the hash name and an equals sign, e.g. sha256=. Tick No label when the sender sends the digest alone",
+          "type": "SHORT_TEXT",
+          "required": false,
+          "hasDynamicResolver": false,
+          "advanced": true,
+          "emptyChoice": "No label",
+          "showWhen": {
+            "prop": "scheme",
+            "oneOf": ["hmac-prefixed"]
+          }
+        },
+        {
+          "name": "dedupeField",
+          "displayName": "Event id field",
+          "description": "Where the sender puts its own event id, so a redelivery is accepted without a second run. A bare name reads a query param or a top-level body field; prefix with header: or body: to read a header or a nested path (header:x-delivery-id, body:data.object.id)",
+          "type": "SHORT_TEXT",
+          "required": false,
+          "hasDynamicResolver": false,
+          "advanced": true
+        },
+        {
+          "name": "dedupeTtlSeconds",
+          "displayName": "Dedupe window (seconds)",
+          "description": "How long an event id is remembered. Default 300",
+          "type": "NUMBER",
+          "required": false,
+          "hasDynamicResolver": false,
+          "advanced": true
+        },
+        {
+          "name": "challengeField",
+          "displayName": "Challenge field",
+          "description": "Echo this field back instead of running, for senders that verify the endpoint before registering it. Same header:/body: prefixes as the event id field",
+          "type": "SHORT_TEXT",
+          "required": false,
+          "hasDynamicResolver": false,
+          "advanced": true
+        },
+        {
+          "name": "responseMode",
+          "displayName": "Response",
+          "description": "Waiting holds the sender's socket open for the whole run",
+          "type": "STATIC_DROPDOWN",
+          "required": false,
+          "hasDynamicResolver": false,
+          "advanced": true,
+          "defaultValue": "async",
+          "staticOptions": [
+            {
+              "value": "async",
+              "label": "Answer immediately (202)"
+            },
+            {
+              "value": "sync",
+              "label": "Wait for the run (200)"
+            }
+          ]
+        },
+        {
+          "name": "responseStatus",
+          "displayName": "Success status",
+          "description": "Status returned on acceptance. Default 202 async, 200 sync",
+          "type": "NUMBER",
+          "required": false,
+          "hasDynamicResolver": false,
+          "advanced": true
+        }
+      ]
+    },
+    {
+      "name": "manual",
+      "displayName": "Manual",
+      "description": "Fires only when something asks it to, with the fire mutation. The trigger to use for a workflow driven by a test or a script.",
+      "strategy": "MANUAL",
+      "requireAuth": false,
+      "ports": ["next"],
+      "hasSampleData": false,
+      "props": []
+    }
+  ]
+}

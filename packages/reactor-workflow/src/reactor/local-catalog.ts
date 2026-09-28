@@ -14,19 +14,6 @@ import {
   type PieceTriggersResult,
 } from "./piece-catalog.js";
 
-// Block types of a package piece carry no version. The copy this reactor
-// installed is the one that runs, so an upgrade must not orphan the workflows
-// that name it — the registry answers with the installed version instead.
-export function localBlockType(
-  pieceName: string,
-  name: string,
-  kind: "action" | "trigger",
-): string {
-  return kind === "trigger"
-    ? `${pieceName}#trigger:${name}`
-    : `${pieceName}#${name}`;
-}
-
 export function catalogEntry(
   descriptor: PieceDescriptor,
   pieceName: string,
@@ -60,7 +47,6 @@ export function actionsResult(
         name: action.name,
         displayName: action.displayName,
         description: action.description ?? "",
-        blockType: localBlockType(pieceName, action.name, "action"),
         // The cloud's discovery filter. Absent counts as human-visible.
         audience: action.audience ?? null,
         ...reasonOf(descriptor.unsupported),
@@ -85,7 +71,6 @@ export function triggersResult(
       displayName: trigger.displayName,
       description: trigger.description ?? "",
       strategy: trigger.strategy,
-      blockType: localBlockType(pieceName, trigger.name, "trigger"),
       ...reasonOf(descriptor.unsupported ?? trigger.unsupported),
     })),
     auth: clientAuth(descriptor.auth),
@@ -97,13 +82,15 @@ export function triggersResult(
 export function localSearchHits(
   descriptor: PieceDescriptor,
   pieceName: string,
+  version: string,
 ): BlockSearchHit[] {
   const pieceDisplayName = descriptor.displayName || pieceName;
   const logoUrl = descriptor.logoUrl ?? "";
   return [
     ...descriptor.actions.map((action) => ({
-      blockType: localBlockType(pieceName, action.name, "action"),
       pieceName,
+      pieceVersion: version,
+      name: action.name,
       pieceDisplayName,
       logoUrl,
       displayName: action.displayName,
@@ -113,8 +100,9 @@ export function localSearchHits(
       ...reasonOf(descriptor.unsupported),
     })),
     ...descriptor.triggers.map((trigger) => ({
-      blockType: localBlockType(pieceName, trigger.name, "trigger"),
       pieceName,
+      pieceVersion: version,
+      name: trigger.name,
       pieceDisplayName,
       logoUrl,
       displayName: trigger.displayName,

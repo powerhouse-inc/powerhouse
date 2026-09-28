@@ -1,4 +1,4 @@
-// The block types of the piece this package ships.
+// The blocks of the piece this package ships.
 
 // The runtime knows these by name for two reasons only: the document triggers
 // are fired by the host rather than polled, and the output shape of a document
@@ -6,17 +6,20 @@
 // cannot express. Everything else about them comes from the piece.
 
 // Named where it is enforced: this is the one piece served ctx.reactor, and
-// the block types below are the surface that port exists for.
+// the blocks below are the surface that port exists for.
+import { blockKey } from "@powerhousedao/pieces-framework/block-type";
 import { REACTOR_PORT_PIECE } from "../pieces/index.js";
 
 export const REACTOR_PIECE = REACTOR_PORT_PIECE;
 
+// Block keys, never written to a document: compare a block's blockKey().
+
 function action(name: string): string {
-  return `${REACTOR_PIECE}#${name}`;
+  return blockKey({ pieceName: REACTOR_PIECE, kind: "action", name });
 }
 
 function trigger(name: string): string {
-  return `${REACTOR_PIECE}#trigger:${name}`;
+  return blockKey({ pieceName: REACTOR_PIECE, kind: "trigger", name });
 }
 
 export const DOCUMENT_CREATE_BLOCK = action("document-create");

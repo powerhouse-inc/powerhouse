@@ -2,7 +2,7 @@
 // so a workflow can watch powerhouse/workflow itself (e.g. status changes).
 import type { OperationWithContext } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DOCUMENT_EVENT_BLOCK } from "./reactor-piece.js";
+import { REACTOR_PIECE } from "./reactor-piece.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 
@@ -17,7 +17,9 @@ const watcherState = {
   version: 1,
   trigger: {
     id: "t1",
-    blockType: DOCUMENT_EVENT_BLOCK,
+    pieceName: REACTOR_PIECE,
+    pieceVersion: "1.0.0",
+    triggerName: "document-event",
     config: { documentType: WORKFLOW_TYPE, actionType: "SET_WORKFLOW_STATUS" },
   },
   steps: [],

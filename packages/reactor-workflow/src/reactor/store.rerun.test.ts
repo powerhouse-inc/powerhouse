@@ -48,7 +48,8 @@ describe("WorkflowRunStore rerun lineage", () => {
         {
           stepId: "a",
           key: "first",
-          blockType: "fake#ok",
+          pieceName: "fake",
+          blockName: "ok",
           status: "SUCCEEDED",
           input: { v: "hello" },
           output: { v: "hello" },
@@ -57,7 +58,8 @@ describe("WorkflowRunStore rerun lineage", () => {
         {
           stepId: "b",
           key: "second",
-          blockType: "fake#fail",
+          pieceName: "fake",
+          blockName: "fail",
           status: "FAILED",
           input: {},
           error: "boom",
@@ -79,7 +81,8 @@ describe("WorkflowRunStore rerun lineage", () => {
         {
           stepId: "a",
           key: "first",
-          blockType: "fake#ok",
+          pieceName: "fake",
+          blockName: "ok",
           status: "REPLAYED",
           output: { v: "hello" },
           port: "next",
@@ -87,7 +90,8 @@ describe("WorkflowRunStore rerun lineage", () => {
         {
           stepId: "b",
           key: "second",
-          blockType: "fake#ok",
+          pieceName: "fake",
+          blockName: "ok",
           status: "SUCCEEDED",
           input: { got: "hello" },
           output: { got: "hello" },
@@ -136,7 +140,8 @@ describe("WorkflowRunStore per-step journaling", () => {
     await store.recordStep(runId, 0, {
       stepId: "a",
       key: "first",
-      blockType: "fake#ok",
+      pieceName: "fake",
+      blockName: "ok",
       status: "SUCCEEDED",
       output: { v: 1 },
       port: "next",
@@ -154,7 +159,8 @@ describe("WorkflowRunStore per-step journaling", () => {
     await store.recordStep(runId, 0, {
       stepId: "a",
       key: "first",
-      blockType: "fake#ok",
+      pieceName: "fake",
+      blockName: "ok",
       status: "SUCCEEDED",
       output: { v: "kept" },
       port: "next",
@@ -175,7 +181,8 @@ describe("WorkflowRunStore per-step journaling", () => {
       await store.recordStep(runId, 0, {
         stepId: "a",
         key: "first",
-        blockType: "fake#ok",
+        pieceName: "fake",
+        blockName: "ok",
         status: attempt,
         output: { attempt },
         port: "next",
@@ -201,7 +208,8 @@ describe("WorkflowRunStore per-step journaling", () => {
       .addColumn("ordinal", "integer", (col) => col.notNull())
       .addColumn("step_id", "text", (col) => col.notNull())
       .addColumn("step_key", "text", (col) => col.notNull())
-      .addColumn("block_type", "text", (col) => col.notNull())
+      .addColumn("piece_name", "text", (col) => col.notNull())
+      .addColumn("block_name", "text", (col) => col.notNull())
       .addColumn("status", "text", (col) => col.notNull())
       .addColumn("input", "text")
       .addColumn("output", "text")
@@ -216,7 +224,8 @@ describe("WorkflowRunStore per-step journaling", () => {
       ordinal: 0,
       step_id: "s",
       step_key: "k",
-      block_type: "fake#ok",
+      piece_name: "fake",
+      block_name: "ok",
       status: "SUCCEEDED",
       input: null,
       output: null,
@@ -258,6 +267,7 @@ describe("WorkflowRunStore per-step journaling", () => {
         started_at: new Date().toISOString(),
         ended_at: null,
         rerun_of: null,
+        warnings: 0,
       })
       .execute();
     await journal
@@ -268,7 +278,8 @@ describe("WorkflowRunStore per-step journaling", () => {
         ordinal: 0,
         step_id: "a",
         step_key: "first",
-        block_type: "fake#ok",
+        piece_name: "fake",
+        block_name: "ok",
         status: "SUCCEEDED",
         input: null,
         output: JSON.stringify({ v: "survived" }),
@@ -297,7 +308,8 @@ describe("WorkflowRunStore per-step journaling", () => {
     const step = (id: string, status: string) => ({
       stepId: id,
       key: id,
-      blockType: "fake#ok",
+      pieceName: "fake",
+      blockName: "ok",
       status: status as "SUCCEEDED" | "SKIPPED",
       port: "next",
     });
@@ -333,7 +345,8 @@ describe("WorkflowRunStore per-step journaling", () => {
     await store.recordStep(runId, 0, {
       stepId: "a",
       key: "first",
-      blockType: "fake#ok",
+      pieceName: "fake",
+      blockName: "ok",
       status: "SUCCEEDED",
       input: { in: 1 },
       output: { v: 1 },
@@ -345,7 +358,8 @@ describe("WorkflowRunStore per-step journaling", () => {
         {
           stepId: "a",
           key: "first",
-          blockType: "fake#ok",
+          pieceName: "fake",
+          blockName: "ok",
           status: "SUCCEEDED",
           input: { in: 1 },
           output: { v: 1 },
@@ -354,7 +368,8 @@ describe("WorkflowRunStore per-step journaling", () => {
         {
           stepId: "b",
           key: "skipped",
-          blockType: "fake#ok",
+          pieceName: "fake",
+          blockName: "ok",
           status: "SKIPPED",
         },
       ],
@@ -384,7 +399,8 @@ describe("WorkflowRunStore per-step journaling", () => {
     const step = (id: string) => ({
       stepId: id,
       key: id,
-      blockType: "fake#ok",
+      pieceName: "fake",
+      blockName: "ok",
       status: "SUCCEEDED" as const,
       port: "next",
     });
@@ -433,7 +449,8 @@ describe("WorkflowRunStore per-step journaling", () => {
         {
           stepId: "a",
           key: "first",
-          blockType: "fake#ok",
+          pieceName: "fake",
+          blockName: "ok",
           status: "SUCCEEDED",
           port: "next",
         },

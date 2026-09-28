@@ -3,18 +3,20 @@
 // to a port standing in for the host's reactor client.
 import {
   ActivepiecesBlockExecutor,
-  localFirstResolver,
+  sourcedResolver,
   type PieceResolver,
   type ReactorPort,
 } from "../src/pieces/index.js";
 import type { BlockExecution, LocalPiece } from "../src/pieces/index.js";
 import type { PackagePiece } from "../src/pieces/index.js";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { BlockResolver } from "../src/reactor/block-resolver.js";
 import { PieceRegistry } from "../src/reactor/piece-registry.js";
+import { stepBlock } from "../src/pieces/engine/types.js";
 
 const PIECE = "@powerhousedao/piece-reactor";
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -45,12 +47,15 @@ async function builtPieces(root: string | undefined): Promise<LocalPiece[]> {
   const list = (await import(pathToFileURL(listPath).href)) as {
     pieces: PackagePiece[];
   };
+  const { version } = JSON.parse(
+    readFileSync(join(root, "package.json"), "utf8"),
+  ) as { version: string };
   return list.pieces.map((piece) => {
     const where = piece.entry ?? piece.bundle ?? "";
     const path = isAbsolute(where) ? where : join(root, where);
     return {
       name: piece.name,
-      version: piece.version,
+      version,
       ...(piece.entry ? { entryPath: path } : { bundleDir: path }),
     };
   });
@@ -117,13 +122,16 @@ function stubPort(): ReactorPort & { calls: string[] } {
   };
 }
 
-function execution(block: string, config: unknown): BlockExecution {
-  const blockType = `${PIECE}#${block}`;
-  return {
-    blockType,
+function execution(actionName: string, config: unknown): BlockExecution {
+  const step = {
+    id: "s1",
+    key: "step",
+    pieceName: PIECE,
+    pieceVersion: "0.0.1",
+    actionName,
     config,
-    step: { id: "s1", key: "step", blockType } as BlockExecution["step"],
   };
+  return { block: stepBlock(step), config, step };
 }
 
 let registry: PieceRegistry;
@@ -135,9 +143,9 @@ describe.skipIf(!workflowRoot)("the reactor piece", () => {
   beforeAll(async () => {
     registry = new PieceRegistry();
     registry.setPieces(await builtPieces(workflowRoot));
-    resolver = localFirstResolver(registry.lookup, {
-      resolve: () =>
-        Promise.reject(new Error("nothing is fetched in this test")),
+    resolver = sourcedResolver({
+      cacheDir: packageRoot,
+      lookup: registry.lookup,
     });
   }, 60_000);
 
@@ -146,9 +154,9 @@ describe.skipIf(!workflowRoot)("the reactor piece", () => {
     executor = new ActivepiecesBlockExecutor({
       cacheDir: packageRoot,
       resolver,
-      // The block types below carry no version, exactly as the editor writes
-      // them; the installed one comes from the registry.
-      packages: () => registry.versions(),
+      // Host-bound: the installed copy runs whatever the block pins.
+      resolveBlock: (block) =>
+        new BlockResolver({ local: registry.lookup }).resolve(block),
       reactor: port,
     });
   });
@@ -196,6 +204,7 @@ describe.skipIf(!workflowRoot)("the reactor piece", () => {
   it("takes the document type and actions from a model's JSON payload", async () => {
     await executor.execute(
       execution("document-create", {
+        parse: "extract",
         payload:
           '```json\n{"documentType":"powerhouse/connection","name":"From model","actions":[{"type":"SET_NAME","input":{"name":"x"}}]}\n```',
       }),
@@ -219,11 +228,26 @@ describe.skipIf(!workflowRoot)("the reactor piece", () => {
     expect(port.calls).toEqual([]);
   });
 
-  it("digs a document id out of prose an AI step produced", async () => {
-    await executor.execute(
+  it("refuses a document id inside prose by default", async () => {
+    await expect(
+      executor.execute(
+        execution("document-dispatch", {
+          documentId:
+            'The document is "01234567-89ab-cdef-0123-456789abcdef" — dispatch there.',
+          actions: [{ type: "SET_NAME", input: { name: "x" } }],
+        }),
+      ),
+    ).rejects.toThrow(/not a document id/);
+    expect(port.calls).toEqual([]);
+  });
+
+  it("digs a document id out of prose when asked to extract", async () => {
+    const documentId =
+      'The document is "01234567-89ab-cdef-0123-456789abcdef" — dispatch there.';
+    const result = await executor.execute(
       execution("document-dispatch", {
-        documentId:
-          'The document is "01234567-89ab-cdef-0123-456789abcdef" — dispatch there.',
+        parse: "extract",
+        documentId,
         actions: [{ type: "SET_NAME", input: { name: "x" } }],
       }),
     );
@@ -231,6 +255,7 @@ describe.skipIf(!workflowRoot)("the reactor piece", () => {
     expect(port.calls).toEqual([
       "execute 01234567-89ab-cdef-0123-456789abcdef SET_NAME",
     ]);
+    expect(result.output).toMatchObject({ extractedFrom: { documentId } });
   });
 
   it("filters found documents by name and caps the list", async () => {

@@ -215,6 +215,15 @@ export async function createWorkflow(
     );
   }
 
+  // Enabling requires a published snapshot.
+  await client.request(
+    WORKFLOW_PATH,
+    `mutation Publish($docId: PHID!, $input: Workflow_PublishWorkflowInput!) {
+      Workflow { publishWorkflow(docId: $docId, input: $input) { id } }
+    }`,
+    { docId: id, input: { publishedAt: new Date().toISOString() } },
+  );
+
   await client.request(
     WORKFLOW_PATH,
     `mutation Status($docId: PHID!, $input: Workflow_SetWorkflowStatusInput!) {

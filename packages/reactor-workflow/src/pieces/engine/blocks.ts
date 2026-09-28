@@ -1,3 +1,9 @@
+import {
+  blockKey,
+  isExactVersion,
+  type BlockKind,
+  type BlockRef,
+} from "@powerhousedao/pieces-framework/block-type";
 import { childLogger } from "document-model";
 import { randomUUID } from "node:crypto";
 import { mkdir, rm } from "node:fs/promises";
@@ -46,114 +52,25 @@ import type {
   ResolvedConnection,
 } from "./connections.js";
 import type { BlockExecution, BlockExecutor, BlockResult } from "./types.js";
+import { builtinPiece, isBuiltinPiece, runBuiltinAction } from "../builtin.js";
+import {
+  blockLabel,
+  missingError,
+  UnknownBlockError,
+  unpinnedNote,
+  withResolution,
+  type BlockResolution,
+  type PieceOrigin,
+} from "./resolution.js";
 
-export class UnknownBlockTypeError extends Error {
-  constructor(blockType: string) {
-    super(`No executor registered for block type "${blockType}"`);
-    this.name = "UnknownBlockTypeError";
-  }
-}
+export { UnknownBlockError };
 
 export class TriggerBlockAsStepError extends Error {
-  constructor(blockType: string) {
-    super(`Trigger block type "${blockType}" cannot run as a workflow step`);
+  constructor(block: BlockRef) {
+    super(
+      `${blockLabel(block)} is a trigger and cannot run as a workflow step`,
+    );
     this.name = "TriggerBlockAsStepError";
-  }
-}
-
-// Core blocks. core#branch routes on its (already resolved) condition: equal
-// to `equals` when that is set, otherwise truthiness. core#assert fails the
-// run on blank or rejected values.
-export class CoreBlockExecutor implements BlockExecutor {
-  static handles(blockType: string): boolean {
-    return blockType.startsWith("core#");
-  }
-
-  execute(execution: BlockExecution): Promise<BlockResult> {
-    if (execution.blockType === "core#branch") {
-      const { condition, equals } = execution.config as {
-        condition?: unknown;
-        equals?: unknown;
-      };
-      // Trimmed and case-insensitive: the condition is often model output.
-      const normalize = (value: unknown) =>
-        (typeof value === "string"
-          ? value
-          : value === undefined || value === null
-            ? ""
-            : JSON.stringify(value)
-        )
-          .trim()
-          .toLowerCase();
-      const taken =
-        typeof equals === "string"
-          ? normalize(condition) === normalize(equals)
-          : Boolean(condition) && condition !== "false" && condition !== "0";
-      return Promise.resolve({
-        output: { condition: condition ?? null },
-        port: taken ? "true" : "false",
-      });
-    }
-    if (execution.blockType === "core#assert") {
-      return this.assert(execution);
-    }
-    return Promise.reject(new UnknownBlockTypeError(execution.blockType));
-  }
-
-  // core#assert fails the step when its value is blank or is one of the
-  // rejected values. Model output is the motivating case: an empty
-  // completion, or a classifier answering the wrong question, must not flow
-  // on to a step with a side effect.
-  private assert(execution: BlockExecution): Promise<BlockResult> {
-    const { value, rejectValues, allowValues, allowEmpty, message } =
-      execution.config as {
-        value?: unknown;
-        rejectValues?: unknown;
-        allowValues?: unknown;
-        allowEmpty?: unknown;
-        message?: unknown;
-      };
-    const text =
-      typeof value === "string"
-        ? value
-        : value === undefined || value === null
-          ? ""
-          : JSON.stringify(value);
-    const trimmed = text.trim();
-    const fail = (reason: string) =>
-      Promise.reject(
-        new Error(
-          typeof message === "string" && message
-            ? message
-            : `core#assert: ${reason}`,
-        ),
-      );
-
-    if (!trimmed && allowEmpty !== true) {
-      return fail("value is empty");
-    }
-    const normalizeList = (entries: unknown) =>
-      (typeof entries === "string"
-        ? [entries]
-        : Array.isArray(entries)
-          ? entries
-          : []
-      )
-        .map((entry) => String(entry).trim().toLowerCase())
-        .filter(Boolean);
-
-    if (normalizeList(rejectValues).includes(trimmed.toLowerCase())) {
-      return fail(`value is a rejected value ("${trimmed}")`);
-    }
-    // An allow-list is the safer gate for model output: anything unforeseen
-    // fails here rather than reaching a step that writes.
-    const allowed = normalizeList(allowValues);
-    if (allowed.length > 0 && !allowed.includes(trimmed.toLowerCase())) {
-      return fail(
-        `value "${trimmed}" is not one of the allowed values (${allowed.join(", ")})`,
-      );
-    }
-    return Promise.resolve({ output: { value }, port: "next" });
   }
 }
 
@@ -387,23 +304,9 @@ const logger = childLogger(["workflow", "piece-staging"]);
 
 export interface ActivepiecesBlockExecutorOptions {
   cacheDir: string;
-  // Piece package name -> pinned version; the connector registry for this run.
-  // A blockType may instead pin inline: "@scope/pkg@1.2.3#action".
-
-  // A function is awaited per step, so a host whose registry loads lazily —
-  // package pieces are pinned by what is installed, not by the block type —
-  // answers with what it has by the time a step actually runs.
-  packages?:
-    | Record<string, string>
-    | (() => Record<string, string> | Promise<Record<string, string>>);
-  // Asked only for a block type the registry above could not resolve, so a
-  // host that can still find the piece some other way answers for it here.
-
-  // A map cannot: resolving an unpinned name means looking that one name up,
-  // which the registry, being what this host installed, has nothing to say to.
-  resolveBlockType?: (
-    blockType: string,
-  ) => Promise<ParsedBlockType | undefined>;
+  // Which piece version, from which source, runs a block. Without one a
+  // block runs its pin, fetched from any download source.
+  resolveBlock?: (block: BlockRef) => Promise<BlockResolution>;
   connections?: EngineConnectionResolver;
   // The worker piece steps go to. A function is asked once per step, so a
   // host handing each run its own child answers with that run's.
@@ -417,7 +320,7 @@ export interface ActivepiecesBlockExecutorOptions {
   // Without it `ctx.store` falls back to the worker's heap, which a step
   // timeout discards.
   pieceStore?: PieceStorePort;
-  // Where a block type's piece comes from. Defaults to fetching the pinned
+  // Where a block's piece comes from. Defaults to fetching the pinned
   // version into `cacheDir`, which is what a published piece needs.
   resolver?: PieceResolver;
   // Serves `ctx.reactor`, and only to a piece the resolver answered locally.
@@ -488,71 +391,52 @@ export function servesReactorPort(packageName: string): boolean {
   return packageName === REACTOR_PORT_PIECE;
 }
 
-export type BlockKind = "action" | "trigger";
+// The host's own code, so it always runs the installed copy.
+export function isHostBound(packageName: string): boolean {
+  return servesReactorPort(packageName) || isBuiltinPiece(packageName);
+}
 
+export type { BlockKind };
+
+// A block's piece with the version and source it runs at.
 export interface ParsedBlockType {
   packageName: string;
   version: string;
+  source?: PieceOrigin;
   kind: BlockKind;
   // Action or trigger name within the piece.
   name: string;
 }
 
-// Everything a block type says about itself, the version excepted: it is
-// absent when the block type pins none, and a caller resolves it from there.
-export interface BlockTypeParts {
-  packageName: string;
-  version?: string;
-  kind: BlockKind;
-  name: string;
-}
-
-const TRIGGER_FRAGMENT = "trigger:";
-
-// The block type's own halves, before any registry is consulted: a caller with
-// another source of versions still learns which piece an unresolved one names.
-export function blockTypeParts(blockType: string): BlockTypeParts | undefined {
-  const separator = blockType.lastIndexOf("#");
-  if (separator <= 0) return undefined;
-  const packageSpec = blockType.slice(0, separator);
-  const fragment = blockType.slice(separator + 1);
-  const isTrigger = fragment.startsWith(TRIGGER_FRAGMENT);
-  const name = isTrigger ? fragment.slice(TRIGGER_FRAGMENT.length) : fragment;
-  if (!name) return undefined;
-  const kind: BlockKind = isTrigger ? "trigger" : "action";
-  const versionAt = packageSpec.indexOf("@", 1);
-  if (versionAt > 0) {
-    return {
-      packageName: packageSpec.slice(0, versionAt),
-      version: packageSpec.slice(versionAt + 1),
-      kind,
-      name,
-    };
-  }
-  return { packageName: packageSpec, kind, name };
-}
-
-// "<pkg>[@<version>]#<action>" or "<pkg>[@<version>]#trigger:<trigger>" —
-// the version after the scope-less "@" wins over the registry.
-
-// Undefined means "no version anywhere", not "not a block type": treating the
-// two alike is how an unversioned name the reactor holds nothing for vanishes.
-export function parseBlockType(
-  blockType: string,
-  packages: Record<string, string> = {},
+// The piece a resolution runs; undefined for a missing one.
+export function resolvedBlock(
+  resolution: BlockResolution,
 ): ParsedBlockType | undefined {
-  const parts = blockTypeParts(blockType);
-  if (!parts) return undefined;
-  const { packageName, kind, name } = parts;
-  if (parts.version !== undefined) {
-    return { packageName, version: parts.version, kind, name };
-  }
-  const version = packages[packageName] as string | undefined;
-  if (!version) return undefined;
-  return { packageName, version, kind, name };
+  const { requested, resolved } = resolution;
+  if (!resolved || resolution.match === "missing") return undefined;
+  return {
+    packageName: requested.pieceName,
+    version: resolved.version,
+    ...(resolved.source ? { source: resolved.source } : {}),
+    kind: requested.kind,
+    name: requested.name,
+  };
 }
 
-// Executes "<packageName>#<actionName>" block types through the piece worker.
+// Without a host policy a block runs exactly what it pins.
+export function pinnedResolution(block: BlockRef): BlockResolution {
+  if (!isExactVersion(block.pieceVersion)) {
+    return { requested: block, match: "missing", note: unpinnedNote(block) };
+  }
+  return {
+    requested: block,
+    resolved: { version: block.pieceVersion },
+    match: "exact",
+  };
+}
+
+// Executes piece actions: a built-in piece in process, any other through the
+// piece worker.
 export class ActivepiecesBlockExecutor implements BlockExecutor {
   // Only set when nothing was supplied: the fallback this executor owns and
   // must dispose. A supplied worker belongs to whoever supplied it.
@@ -576,24 +460,34 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     return (this.own ??= new PieceWorker());
   }
 
-  private packages(): Promise<Record<string, string>> {
-    const supplied = this.options.packages;
-    return Promise.resolve(
-      typeof supplied === "function" ? supplied() : (supplied ?? {}),
-    );
+  async execute(execution: BlockExecution): Promise<BlockResult> {
+    const resolution = this.options.resolveBlock
+      ? await this.options.resolveBlock(execution.block)
+      : pinnedResolution(execution.block);
+    const parsed = resolvedBlock(resolution);
+    if (!parsed) throw missingError(resolution);
+    if (parsed.kind !== "action") {
+      throw new TriggerBlockAsStepError(execution.block);
+    }
+    try {
+      const builtin = builtinPiece(parsed.packageName);
+      const result = builtin
+        ? await runBuiltinAction(
+            builtin,
+            parsed.name,
+            execution.config as Record<string, unknown>,
+          )
+        : await this.run(execution, parsed);
+      return { ...result, resolution };
+    } catch (error) {
+      throw withResolution(error, resolution);
+    }
   }
 
-  async execute(execution: BlockExecution): Promise<BlockResult> {
-    const parsed =
-      parseBlockType(execution.blockType, await this.packages()) ??
-      (await this.options.resolveBlockType?.(execution.blockType));
-    if (!parsed) {
-      throw new UnknownBlockTypeError(execution.blockType);
-    }
-    if (parsed.kind !== "action") {
-      throw new TriggerBlockAsStepError(execution.blockType);
-    }
-
+  private async run(
+    execution: BlockExecution,
+    parsed: ParsedBlockType,
+  ): Promise<BlockResult> {
     // One staging directory per execution, removed in the finally below. A
     // host crash can still leave one behind, which is why it lives under a
     // root the host can sweep at startup.
@@ -603,20 +497,21 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
 
     // Bundle fetch and connection resolution belong inside the catch: a secret
     // provider or a resolver can fail with the credential in its own message.
-    let redactValues: string[] = [];
+    const runSecrets = execution.redactValues ?? [];
+    let redactValues: string[] = [...runSecrets];
     try {
-      const piece = await this.resolver.resolve(
-        parsed.packageName,
-        parsed.version,
-      );
+      const piece = await this.resolver.resolve({
+        name: parsed.packageName,
+        version: parsed.version,
+        ...(parsed.source ? { source: parsed.source } : {}),
+      });
       const connection = await this.resolveConnection(execution.connectionId, {
-        blockType: execution.blockType,
         piecePackage: parsed.packageName,
         stepId: execution.step.id,
         stepKey: execution.step.key,
       });
       const auth = connection?.auth;
-      redactValues = connection?.secretValues ?? [];
+      redactValues = [...runSecrets, ...(connection?.secretValues ?? [])];
 
       const timeoutMs = execution.step.timeoutSeconds
         ? execution.step.timeoutSeconds * 1000
@@ -761,24 +656,19 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
   }
 }
 
-// Routes explicit handlers first, then core#*, then the piece executor.
-// Handlers let a host add block types of its own, served in its process.
+// Routes explicit handlers first, then the piece executor. Handlers, keyed
+// by blockKey, let a host serve blocks of its own in its process.
 export class CompositeBlockExecutor implements BlockExecutor {
-  private readonly core = new CoreBlockExecutor();
-
   constructor(
     private readonly pieces: BlockExecutor,
     private readonly handlers: Record<string, BlockExecutor> = {},
   ) {}
 
   execute(execution: BlockExecution): Promise<BlockResult> {
-    const handler = this.handlers[execution.blockType] as
+    const handler = this.handlers[blockKey(execution.block)] as
       | BlockExecutor
       | undefined;
     if (handler) return handler.execute(execution);
-    if (CoreBlockExecutor.handles(execution.blockType)) {
-      return this.core.execute(execution);
-    }
     return this.pieces.execute(execution);
   }
 }

@@ -1,55 +1,67 @@
-// A trigger block type naming a piece the reactor does not hold, with no
-// version pinned, used to register nothing and say nothing about it.
-
-// No registry entry, no trigger state, no log, and a webhook endpoint
-// answering armed: false with nowhere to find the cause.
+// A trigger that does not resolve arms nothing, and says why: in the log and
+// on the trigger row, with a retry only when a source could not be asked.
 import type { OperationWithContext } from "document-model";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type * as PieceCatalog from "./piece-catalog.js";
-
-// The catalog is remote. Offline is the default here; a test that wants a
-// version out of it says so.
-vi.mock("./piece-catalog.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof PieceCatalog>();
-  return {
-    ...actual,
-    fetchPieceCatalog: vi.fn(() => Promise.reject(new Error("offline"))),
-    fetchPieceDetail: vi.fn(() => Promise.reject(new Error("offline"))),
-  };
-});
-
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import {
+  startPieceSources,
+  versionedPiece,
+  type FixturePiece,
+  type PieceSources,
+} from "../../test/helpers/piece-sources.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
-import { fetchPieceCatalog, fetchPieceDetail } from "./piece-catalog.js";
 import { packagePieces } from "./piece-registry.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import type { PieceTriggerBinding } from "./trigger-supervisor.js";
+import { CORE_PIECE_NAME, CORE_PIECE_VERSION } from "../pieces/index.js";
 
-const PIECE = "@powerhousedao/piece-paperless-ngx";
-const UNVERSIONED = `${PIECE}#trigger:new_document`;
-const PINNED = `${PIECE}@0.1.0#trigger:new_document`;
-const WORKFLOW = "wf-paperless";
+const PIECE = "@acme/piece-inbox";
+interface TriggerFields {
+  pieceName: string;
+  pieceVersion: string;
+  triggerName: string;
+}
+
+const pinned = (pieceVersion: string): TriggerFields => ({
+  pieceName: PIECE,
+  pieceVersion,
+  triggerName: "tick",
+});
+const UNPINNED = pinned("latest");
+const WORKFLOW = "wf-inbox";
 
 // Unique per operation: the service dedupes on the ordinal.
 let ordinal = 0;
 
-const enabledState = (blockType: string) => ({
-  name: "Paperless",
+const enabledState = (trigger: TriggerFields) => ({
+  name: "Inbox",
   status: "ENABLED",
   version: 1,
-  trigger: { id: "t1", blockType, config: {} },
+  trigger: { id: "t1", ...trigger, config: {} },
   steps: [],
   edges: [],
   variables: [],
 });
 
-function workflowOp(blockType: string): OperationWithContext {
+function workflowOp(trigger: TriggerFields): OperationWithContext {
   ordinal += 1;
   return {
     operation: {
       index: ordinal,
       timestampUtcMs: `${ordinal}`,
       action: { type: "SET_TRIGGER", input: {} },
-      resultingState: JSON.stringify(enabledState(blockType)),
+      resultingState: JSON.stringify(enabledState(trigger)),
     },
     context: {
       documentId: WORKFLOW,
@@ -70,13 +82,12 @@ const logger = {
   child: vi.fn(),
 };
 
-// Arming does I/O the moment the supervisor is handed a binding. What this
-// suite is about is which binding it is handed, and whether it is handed one.
+// What this suite reads is which binding the supervisor is handed, if any.
 const upsert = vi.fn((_binding: PieceTriggerBinding) => Promise.resolve());
 const reject = vi.fn(
   (
     _workflowId: string,
-    _blockType: string,
+    _block: unknown,
     _config: unknown,
     _message: string,
     _retryAt?: Date,
@@ -85,20 +96,40 @@ const reject = vi.fn(
 const remove = vi.fn((_workflowId: string) => Promise.resolve());
 
 let service: WorkflowRuntimeService;
+let sources: PieceSources | undefined;
+let dir = "";
+let inbox = "";
 
-const armed = (): PieceTriggerBinding => upsert.mock.calls[0]![0];
+// An installed copy the worker can actually describe.
+async function bundleDir(piece: FixturePiece): Promise<string> {
+  const target = join(dir, `${piece.name.replace("/", "-")}-${piece.version}`);
+  await mkdir(target, { recursive: true });
+  await writeFile(
+    join(target, "package.json"),
+    JSON.stringify({
+      name: piece.name,
+      version: piece.version,
+      main: "index.js",
+    }),
+  );
+  await writeFile(join(target, "index.js"), piece.code);
+  return target;
+}
 
-// The call whose message carries the token, so a suite reads the values it
-// was logged with rather than the position it was logged at.
-const logCall = (calls: unknown[][], token: string) =>
-  calls.find((call) => String(call[0]).includes(token));
+beforeAll(async () => {
+  dir = await mkdtemp(join(tmpdir(), "unresolved-trigger-"));
+  inbox = await bundleDir(versionedPiece(PIECE, "2.0.0"));
+});
+
+afterAll(async () => {
+  await rm(dir, { recursive: true, force: true });
+});
+
+const armed = (): PieceTriggerBinding => upsert.mock.calls.at(-1)![0];
+const reason = () => String(reject.mock.calls.at(-1)?.[3]);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // A source answering, with no such piece: clearing a mock keeps whatever the
-  // last test taught it. An unreachable catalog is its own case, below.
-  vi.mocked(fetchPieceCatalog).mockResolvedValue([]);
-  vi.mocked(fetchPieceDetail).mockResolvedValue({});
   packagePieces.reset();
   service = testRuntime({ logger } as never);
   (service as unknown as { triggerSupervisor: unknown }).triggerSupervisor = {
@@ -107,142 +138,123 @@ beforeEach(() => {
     remove,
     stop: vi.fn(),
   };
-  // Poll-vs-webhook comes from the piece's own metadata: not what is under
-  // test, and it would otherwise load a bundle or reach the network.
-  vi.spyOn(service, "pieceTriggers").mockResolvedValue({
-    name: PIECE,
-    displayName: "Paperless",
-    version: "0.1.0",
-    auth: null,
-    triggers: [
-      {
-        name: "new_document",
-        displayName: "New Document",
-        description: "",
-        strategy: "POLLING",
-        blockType: UNVERSIONED,
-      },
-    ],
-  });
 });
 
-afterEach(() => {
+afterEach(async () => {
   packagePieces.reset();
   service.shutdown();
+  await sources?.stop();
+  sources = undefined;
 });
 
-describe("a trigger block type with no version", () => {
-  it("runs the installed copy when the reactor holds the piece", async () => {
+describe("a pinned trigger", () => {
+  it("runs the installed copy at its exact version", async () => {
     packagePieces.setPieces([
-      { name: PIECE, version: "2.0.0", bundleDir: "/pkg/paperless" },
+      { name: PIECE, version: "2.0.0", bundleDir: inbox },
     ]);
 
-    await service.onOperations([workflowOp(UNVERSIONED)]);
+    await service.onOperations([workflowOp(pinned("2.0.0"))]);
 
-    expect(armed().version).toBe("2.0.0");
-    expect(armed().triggerName).toBe("new_document");
-    // Nothing is asked of the catalog, so an installed piece cannot be pulled
-    // out from under a workflow by somebody else's publish.
-    expect(fetchPieceDetail).not.toHaveBeenCalled();
+    expect(armed()).toMatchObject({
+      version: "2.0.0",
+      source: "local",
+      match: "exact",
+      triggerName: "tick",
+    });
     expect(reject).not.toHaveBeenCalled();
   });
 
-  it("falls back to the version the piece catalog serves, and names it", async () => {
-    vi.mocked(fetchPieceDetail).mockResolvedValue({ version: "0.1.0" });
+  it("arms the closest version a source has, and records how it matched", async () => {
+    sources = await startPieceSources({
+      registry: [
+        versionedPiece(PIECE, "1.0.0"),
+        versionedPiece(PIECE, "1.4.0"),
+      ],
+    });
 
-    await service.onOperations([workflowOp(UNVERSIONED)]);
+    await service.onOperations([workflowOp(pinned("1.2.0"))]);
 
-    expect(fetchPieceDetail).toHaveBeenCalledWith(PIECE);
-    expect(armed().version).toBe("0.1.0");
-    expect(logger.warn).not.toHaveBeenCalled();
+    expect(armed()).toMatchObject({
+      version: "1.4.0",
+      source: "registry",
+      match: "compatible",
+      note: "Pinned 1.2.0 is not available; runs 1.4.0 from registry",
+    });
     expect(reject).not.toHaveBeenCalled();
-    // The version is logged because it is the one part of this binding the
-    // workflow does not pin: the next publish moves it.
-    const logged = logCall(logger.info.mock.calls, "@version");
-    expect(logged?.slice(1)).toEqual([
-      UNVERSIONED,
-      `workflow ${WORKFLOW}`,
-      "0.1.0",
-    ]);
-    // Scoped names travel as logger values; inline they print as null/pack.
-    expect(String(logged?.[0])).not.toContain(PIECE);
   });
 
-  it("reports a piece nothing can resolve instead of dropping it", async () => {
-    await service.onOperations([workflowOp(UNVERSIONED)]);
+  it("reports a piece no source has, with no retry", async () => {
+    sources = await startPieceSources({ npm: [] });
+
+    await service.onOperations([workflowOp(pinned("1.0.0"))]);
 
     expect(upsert).not.toHaveBeenCalled();
-    const warned = logCall(logger.warn.mock.calls, "@reason");
-    expect(warned?.[1]).toBe(WORKFLOW);
-    expect(String(warned?.[2])).toContain(UNVERSIONED);
-    expect(String(warned?.[2])).toMatch(/pin a version/i);
-    expect(String(warned?.[0])).not.toContain(PIECE);
-    // And where every other trigger failure is read from. No retry time: an
-    // absent piece changes nothing on its own.
-    expect(reject).toHaveBeenCalledWith(
-      WORKFLOW,
-      UNVERSIONED,
-      {},
-      expect.stringContaining(UNVERSIONED),
-      undefined,
+    expect(reason()).toContain(`No source has the piece ${PIECE}`);
+    expect(reject.mock.calls[0]![4]).toBeUndefined();
+    const warned = logger.warn.mock.calls.find((call) =>
+      String(call[0]).includes("@reason"),
     );
+    expect(warned?.[1]).toBe(WORKFLOW);
   });
 
-  it("says the catalog was unreachable rather than that the piece is gone", async () => {
-    vi.mocked(fetchPieceCatalog).mockRejectedValue(new Error("offline"));
-    vi.mocked(fetchPieceDetail).mockRejectedValue(new Error("ECONNREFUSED"));
-
-    await service.onOperations([workflowOp(UNVERSIONED)]);
-
-    const warned = logCall(logger.warn.mock.calls, "@reason");
-    const reason = String(warned?.[2]);
-    // The old message asserted the catalog has no such piece and told the
-    // operator to install one. Neither is known here, and neither is the fix.
-    expect(reason).toContain("could not be reached");
-    expect(reason).toContain("connectivity failure, not a missing piece");
-    expect(reason).not.toMatch(/has none either/);
-    // Recorded with a time it will be tried again, not parked forever.
-    const [, , , , retryAt] = reject.mock.calls[0]!;
-    expect(retryAt).toBeInstanceOf(Date);
-  });
-
-  it("comes back for a trigger the catalog could not answer for", async () => {
-    vi.useFakeTimers();
+  it("says a source was unreachable, and comes back once it answers", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     try {
-      vi.mocked(fetchPieceCatalog).mockRejectedValue(new Error("offline"));
-      vi.mocked(fetchPieceDetail).mockRejectedValue(new Error("offline"));
       const get = vi.fn(() =>
         Promise.resolve({
           header: { id: WORKFLOW, documentType: "powerhouse/workflow" },
-          state: { global: enabledState(UNVERSIONED) },
+          state: { global: enabledState(pinned("1.0.0")) },
         }),
       );
       (
         service as unknown as { host: { reactorClient: { get: unknown } } }
       ).host.reactorClient.get = get;
 
-      await service.onOperations([workflowOp(UNVERSIONED)]);
+      // The default test sources refuse every connection.
+      await service.onOperations([workflowOp(pinned("1.0.0"))]);
       expect(upsert).not.toHaveBeenCalled();
+      expect(reason()).toContain("connectivity failure, not a missing piece");
+      expect(reject.mock.calls[0]![4]).toBeInstanceOf(Date);
 
-      // The outage ends, and nothing else would ever come back to this row.
-      vi.mocked(fetchPieceDetail).mockResolvedValue({ version: "0.1.0" });
+      sources = await startPieceSources({
+        npm: [versionedPiece(PIECE, "1.0.0")],
+      });
       await vi.advanceTimersByTimeAsync(30_000);
-      await vi.waitFor(() => expect(upsert).toHaveBeenCalled());
+      // The retry fetches, extracts and describes the piece for real.
+      await vi.waitFor(() => expect(upsert).toHaveBeenCalled(), {
+        timeout: 15_000,
+      });
 
-      expect(armed().version).toBe("0.1.0");
+      expect(armed()).toMatchObject({ version: "1.0.0", source: "npm" });
     } finally {
       vi.useRealTimers();
     }
   });
+});
 
-  it("drops the error it recorded once the workflow registers again", async () => {
-    await service.onOperations([workflowOp(UNVERSIONED)]);
+describe("a trigger whose version is not exact", () => {
+  it("is refused with the reason, and never looked up", async () => {
+    sources = await startPieceSources({
+      npm: [versionedPiece(PIECE, "1.0.0")],
+    });
+
+    await service.onOperations([workflowOp(UNPINNED)]);
+
+    expect(upsert).not.toHaveBeenCalled();
+    expect(reason()).toContain(
+      `pins "latest", which is not an exact semver version`,
+    );
+    expect(sources.requests).toEqual([]);
+  });
+
+  it("drops the error it recorded once the workflow arms again", async () => {
+    await service.onOperations([workflowOp(UNPINNED)]);
     expect(reject).toHaveBeenCalledTimes(1);
 
     packagePieces.setPieces([
-      { name: PIECE, version: "2.0.0", bundleDir: "/pkg/paperless" },
+      { name: PIECE, version: "2.0.0", bundleDir: inbox },
     ]);
-    await service.onOperations([workflowOp(UNVERSIONED)]);
+    await service.onOperations([workflowOp(pinned("2.0.0"))]);
 
     // Queued ahead of the enable, so the row the arming writes is the one left.
     expect(remove).toHaveBeenCalledWith(WORKFLOW);
@@ -250,22 +262,50 @@ describe("a trigger block type with no version", () => {
   });
 });
 
-describe("the block types this path must leave alone", () => {
-  it("keeps a pinned version exactly as the workflow wrote it", async () => {
-    await service.onOperations([workflowOp(PINNED)]);
+describe("a trigger whose strategy is not known for sure", () => {
+  it("is ERROR, not polled, when its descriptor cannot be read", async () => {
+    packagePieces.setPieces([
+      { name: PIECE, version: "2.0.0", bundleDir: join(dir, "missing") },
+    ]);
 
-    expect(armed().version).toBe("0.1.0");
-    expect(fetchPieceDetail).not.toHaveBeenCalled();
-    expect(reject).not.toHaveBeenCalled();
+    await service.onOperations([workflowOp(pinned("2.0.0"))]);
+
+    expect(upsert).not.toHaveBeenCalled();
+    expect(reason()).toContain("Could not describe");
+    // A read failure may clear up; a retry is scheduled.
+    expect(reject.mock.calls.at(-1)?.[4]).toBeInstanceOf(Date);
   });
 
-  it("says nothing about a trigger that was never a piece", async () => {
-    await service.onOperations([workflowOp("core#manual")]);
+  it("refuses an APP_WEBHOOK trigger without a retry", async () => {
+    const fixture = versionedPiece(PIECE, "3.0.0");
+    const bundle = await bundleDir({
+      ...fixture,
+      code: fixture.code.replace('type: "POLLING"', 'type: "APP_WEBHOOK"'),
+    });
+    packagePieces.setPieces([
+      { name: PIECE, version: "3.0.0", bundleDir: bundle },
+    ]);
+
+    await service.onOperations([workflowOp(pinned("3.0.0"))]);
+
+    expect(upsert).not.toHaveBeenCalled();
+    expect(reason()).toContain("APP_WEBHOOK");
+    expect(reject.mock.calls.at(-1)?.[4]).toBeUndefined();
+  });
+});
+
+describe("a trigger that was never a piece", () => {
+  it("says nothing", async () => {
+    await service.onOperations([
+      workflowOp({
+        pieceName: CORE_PIECE_NAME,
+        pieceVersion: CORE_PIECE_VERSION,
+        triggerName: "manual",
+      }),
+    ]);
 
     expect(upsert).not.toHaveBeenCalled();
     expect(reject).not.toHaveBeenCalled();
     expect(logger.warn).not.toHaveBeenCalled();
-    // core is the engine's own namespace; no catalog has heard of it.
-    expect(fetchPieceDetail).not.toHaveBeenCalled();
   });
 });
