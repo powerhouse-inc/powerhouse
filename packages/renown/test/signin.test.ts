@@ -89,14 +89,17 @@ describe("Renown.signIn", () => {
     expect(calls.some((c) => c.query.includes("renown_issueCredential"))).toBe(
       true,
     );
-    const profileWrite = calls.find((c) =>
-      c.query.includes("renown_upsertProfile"),
-    );
-    expect(profileWrite?.variables).toEqual({
+    // The profile write runs in the background after sign-in resolves.
+    const profileWrite = await vi.waitFor(() => {
+      const call = calls.find((c) => c.query.includes("renown_upsertProfile"));
+      if (!call) throw new Error("profile write not sent yet");
+      return call;
+    });
+    expect(profileWrite.variables).toEqual({
       address: ACCOUNT.address,
       username: "alice",
     });
-    expect(profileWrite?.authorization).toMatch(/^Bearer /);
+    expect(profileWrite.authorization).toMatch(/^Bearer /);
     // Nothing is written through the generic document mutations.
     expect(
       calls.some(
@@ -105,6 +108,40 @@ describe("Renown.signIn", () => {
           c.query.includes("mutateDocument"),
       ),
     ).toBe(false);
+  });
+
+  it("resolves without waiting for the profile write", async () => {
+    mockReactor();
+    const fetchMock = vi.mocked(globalThis.fetch);
+    const route = fetchMock.getMockImplementation()!;
+    // The profile write never settles; sign-in must not hang on it.
+    fetchMock.mockImplementation((input, init) =>
+      ((init?.body as string | undefined) ?? "").includes(
+        "renown_upsertProfile",
+      )
+        ? new Promise<Response>(() => undefined)
+        : route(input, init),
+    );
+    const renown = await makeRenown();
+
+    const user = await renown.signIn({
+      address: ACCOUNT.address,
+      chainId: 1,
+      signTypedData: sign,
+      username: "alice",
+    });
+
+    expect(user.address).toBe(ACCOUNT.address);
+    expect(renown.status).toBe("authorized");
+    await vi.waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([, init]) =>
+          ((init?.body as string | undefined) ?? "").includes(
+            "renown_upsertProfile",
+          ),
+        ),
+      ).toBe(true),
+    );
   });
 
   it("throws when no switchboard endpoint is configured", async () => {

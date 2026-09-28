@@ -225,9 +225,10 @@ export class Renown implements IRenown {
         credential,
       );
 
-      // Deferred best-effort profile write; never blocks or fails sign-in.
+      // Best-effort profile write in the background: sign-in resolves without
+      // waiting for it (it may retry for a few seconds) and never fails on it.
       if (username !== undefined || userImage !== undefined) {
-        await this.#writeProfile(address, { username, userImage }).catch(
+        void this.#writeProfile(address, { username, userImage }).catch(
           () => undefined,
         );
       }
