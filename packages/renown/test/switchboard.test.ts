@@ -484,6 +484,58 @@ describe("SwitchboardClient", () => {
     });
   });
 
+  describe("issueCredential fallback classification", () => {
+    const missingField =
+      'Cannot query field "renown_issueCredential" on type "Mutation".';
+
+    it.each([
+      ["a missing mutation field", missingField],
+      [
+        "a missing field plus its unknown input type",
+        `Unknown type "RenownCredential_InitInput".; ${missingField}`,
+      ],
+      [
+        "only the unknown input type",
+        'Unknown type "RenownCredential_InitInput".',
+      ],
+      [
+        "a JSON-encoded relay of the old-server error",
+        `request failed (400): ${JSON.stringify([{ message: missingField }])}`,
+      ],
+    ])("falls back on %s", async (_label, message) => {
+      const calls = mockReactor({
+        createId: "cred-doc-1",
+        errors: [{ match: "renown_issueCredential", message }],
+      });
+      await expect(client.issueCredential(makeCredential())).resolves.toBe(
+        "cred-doc-1",
+      );
+      expect(calls.some((c) => c.query.includes("createEmptyDocument"))).toBe(
+        true,
+      );
+    });
+
+    it.each([
+      [
+        "an input-coercion error from a new server",
+        'Variable "$input" got invalid value { extra: 1 }; Field "extra" is not defined by type "RenownCredential_InitInput".',
+      ],
+      [
+        "an unknown-type mention inside a coercion error",
+        'Variable "$input" got invalid value 1; Unknown type "RenownCredential_InitInput".',
+      ],
+      ["a rate limit", "Rate limited"],
+    ])("rethrows %s without falling back", async (_label, message) => {
+      const calls = mockReactor({
+        errors: [{ match: "renown_issueCredential", message }],
+      });
+      await expect(client.issueCredential(makeCredential())).rejects.toThrow(
+        message,
+      );
+      expect(calls).toHaveLength(1);
+    });
+  });
+
   describe("upsertUserProfile", () => {
     const upsertCall = (calls: ReactorCall[]) =>
       calls.find((c) => c.query.includes("renown_upsertProfile"));
@@ -590,7 +642,11 @@ describe("SwitchboardClient", () => {
       });
     });
 
-    it.each(["Forbidden", "Invalid request: username exceeds 64 characters"])(
+    it.each([
+      "Forbidden",
+      "Invalid request: username exceeds 255 characters",
+      "Rate limited",
+    ])(
       "rethrows a resolver rejection (%s) without falling back",
       async (message) => {
         const calls = mockReactor({
@@ -679,7 +735,7 @@ describe("SwitchboardClient", () => {
       ).rejects.toThrow(/not found/i);
     });
 
-    it.each(["Forbidden", "Not found"])(
+    it.each(["Forbidden", "Not found", "Rate limited"])(
       "rethrows a resolver rejection (%s) without falling back",
       async (message) => {
         const calls = mockReactor({

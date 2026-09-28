@@ -235,26 +235,31 @@ function authParts(auth: RenownWriteAuth): {
 const RENOWN_CREDENTIAL_DOC_TYPE = "powerhouse/renown-credential";
 const RENOWN_USER_DOC_TYPE = "powerhouse/renown-user";
 
-// GraphQL validation-error fragments meaning the switchboard's schema lacks a
-// field/type — i.e. it runs an older renown-package without the custom subgraph.
-const SCHEMA_ERROR_HINTS = [
-  "Cannot query field",
-  "Unknown field",
-  "Unknown type",
-  "Unknown argument",
-  "not defined",
-];
+// A `"name"` quote as graphql-js writes it; `\"` too, for transports that
+// relay the errors JSON-encoded inside their own message.
+function quoted(name: string): string {
+  return `\\\\?"${name}\\\\?"`;
+}
 
-// True when `error` is a schema-shape error naming one of `identifiers` — a
-// missing custom mutation/input, not a resolver rejection (bad signature, etc.).
+// True when `error` says the switchboard's schema lacks `field` itself (or
+// one of `types`) — an older renown-package without the renown-auth subgraph.
+// Anything else, including a NEW server's input-coercion failure such as
+// `Variable "$input" got invalid value …; Field "x" is not defined by type
+// "RenownCredential_InitInput"`, is a rejection and must not fall back.
 function isUnknownSchemaError(
   error: unknown,
-  ...identifiers: string[]
+  field: string,
+  ...types: string[]
 ): boolean {
   const message = error instanceof Error ? error.message : String(error);
+  if (new RegExp(`Cannot query field ${quoted(field)}`).test(message)) {
+    return true;
+  }
   return (
-    identifiers.some((id) => message.includes(id)) &&
-    SCHEMA_ERROR_HINTS.some((hint) => message.includes(hint))
+    !message.includes("got invalid value") &&
+    types.some((type) =>
+      new RegExp(`Unknown type ${quoted(type)}`).test(message),
+    )
   );
 }
 
