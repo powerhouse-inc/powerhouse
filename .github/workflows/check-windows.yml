@@ -38,6 +38,8 @@ jobs:
   check-windows:
     name: check-windows (shard ${{ matrix.shard }}/2)
     runs-on: windows-latest
+    # A shard takes 7–10 min; a hung build otherwise holds the runner for 6 h.
+    timeout-minutes: 25
     env:
       CI: true
       TEST_SHARD_SCRIPT: test:ci:platform

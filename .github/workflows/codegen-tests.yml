@@ -94,6 +94,7 @@ jobs:
   do-codegen-tests-windows:
     if: github.event_name != 'pull_request'
     runs-on: windows-latest
+    timeout-minutes: 45
     env:
       CI: true
 
