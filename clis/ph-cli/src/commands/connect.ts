@@ -36,7 +36,9 @@ Runtime-config overrides (all combinable — last wins on collision):
   ph connect build                                    Build with the current source config.
   ph connect build <key> <value>                      Build with a positional override applied (e.g. ph connect build connect.renown.url https://renown.staging).
   ph connect build --<field> <value>                  Build with a per-field flag override (e.g. --renown-url https://renown.staging).
-  ph connect build --json '{"…":"…"}'                Build with a bulk override.
+  ph connect build --json '{"app":{"workflowsEnabled":true}}'
+                                                      Build with a bulk override. The payload is the connect.* block
+                                                      without the "connect" wrapper; unknown keys are rejected.
 
 Build has no read mode; passing only <key> without <value> errors out (use \`ph connect config <key>\` to read).
 `,
@@ -78,7 +80,9 @@ Modes (mutually exclusive — positional, --get, --json, and field flags cannot 
   ph connect config --get <dotted.path>   Same as positional <key> (kept for backward compat).
   ph connect config <key> <value>         Set a single field and dual-write to source + dist (positional).
   ph connect config --<field> <value>     Set a single field via per-field flag (e.g. --renown-url https://renown.id).
-  ph connect config --json '{"…":"…"}'   Bulk-set multiple fields and dual-write.
+  ph connect config --json '{"renown":{"url":"…"}}'
+                                          Bulk-set multiple fields and dual-write. The payload is the connect.*
+                                          block without the "connect" wrapper; unknown keys are rejected.
 
 Writes go to:
   - <project>/powerhouse.config.json (source — picked up by the next build)

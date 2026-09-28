@@ -29,7 +29,11 @@ type ConnectPartial = Partial<PHConnectRuntimeConfig>;
 type AjvCtor = new (opts?: Record<string, unknown>) => {
   compile: (schema: unknown) => AjvValidate;
 };
-type AjvError = { instancePath?: string; message?: string };
+type AjvError = {
+  instancePath?: string;
+  message?: string;
+  params?: { additionalProperty?: string };
+};
 type AjvValidate = ((data: unknown) => boolean) & {
   errors?: AjvError[] | null;
 };
@@ -72,7 +76,9 @@ function formatErrors(errors: AjvError[] | null | undefined): string {
   return errors
     .map((e) => {
       const path = e.instancePath || "(root)";
-      return `  ${path} ${e.message ?? ""}`.trim();
+      const extra = e.params?.additionalProperty;
+      const suffix = extra === undefined ? "" : ` (${JSON.stringify(extra)})`;
+      return `  ${path} ${e.message ?? ""}${suffix}`.trim();
     })
     .join("\n");
 }
@@ -120,23 +126,35 @@ export function validateConnectKeyValue(
  * `connect.*` schema). If present in the payload, it is extracted before
  * validation so the connect-only blob can be checked against the schema,
  * then re-attached on the returned object so the caller can route it.
+ *
+ * `command` prefixes error messages (e.g. "ph connect build").
  */
-export function validateConnectPatch(raw: string): ConnectPartial & {
+export function validateConnectPatch(
+  raw: string,
+  command = "ph connect config",
+): ConnectPartial & {
   packageRegistryUrl?: unknown;
 } {
+  const label = `${command} --json`;
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     throw new Error(
-      `ph connect config --json: invalid JSON (${msg}). Expected a partial connect.* blob, e.g. --json '{"renown":{"url":"..."}}'.`,
+      `${label}: invalid JSON (${msg}). Expected a partial connect.* blob, e.g. --json '{"renown":{"url":"..."}}'.`,
       { cause: e },
     );
   }
   if (!isPlainObject(parsed)) {
     throw new Error(
-      `ph connect config --json: payload must be a JSON object, got ${typeof parsed}.`,
+      `${label}: payload must be a JSON object, got ${typeof parsed}.`,
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(parsed, "connect")) {
+    const inner = JSON.stringify((parsed as PlainObject).connect);
+    throw new Error(
+      `${label}: pass the connect.* block without the "connect" wrapper, e.g. --json '${inner}'.`,
     );
   }
   // Extract `packageRegistryUrl` (top-level field, not in the connect schema)
@@ -152,7 +170,7 @@ export function validateConnectPatch(raw: string): ConnectPartial & {
   delete connectOnly.packageRegistryUrl;
   if (!validateConnect(connectOnly)) {
     throw new Error(
-      `ph connect config --json: validation failed:\n${formatErrors(validateConnect.errors)}`,
+      `${label}: validation failed:\n${formatErrors(validateConnect.errors)}\nExpected a partial connect.* blob with nested keys, e.g. --json '{"app":{"workflowsEnabled":true}}'.`,
     );
   }
   return hasPackageRegistryUrl

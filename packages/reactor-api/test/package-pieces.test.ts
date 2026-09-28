@@ -33,6 +33,10 @@ async function writeBundle(dir: string, name: string): Promise<void> {
 describe("ImportPackageLoader.loadPieces", () => {
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), "package-pieces-"));
+    await writeFile(
+      join(root, "package.json"),
+      JSON.stringify({ name: "@acme/pkg", version: "1.2.3" }),
+    );
   });
 
   afterEach(async () => {
@@ -43,7 +47,6 @@ describe("ImportPackageLoader.loadPieces", () => {
     await writeList([
       {
         name: "@powerhousedao/piece-reactor",
-        version: "1.2.3",
         bundle: "dist/node/pieces/reactor",
       },
     ]);
@@ -72,7 +75,6 @@ describe("ImportPackageLoader.loadPieces", () => {
     await writeList([
       {
         name: "@acme/piece-solo",
-        version: "0.1.0",
         entry: "dist/node/pieces/solo.js",
       },
     ]);
@@ -82,17 +84,53 @@ describe("ImportPackageLoader.loadPieces", () => {
     expect(pieces).toEqual([
       {
         name: "@acme/piece-solo",
-        version: "0.1.0",
+        version: "1.2.3",
         entryPath: join(root, "dist", "node", "pieces", "solo.js"),
       },
     ]);
+  });
+
+  it("takes the package's version over one a stale list entry declares", async () => {
+    await writeList([
+      {
+        name: "@powerhousedao/piece-reactor",
+        version: "0.0.1",
+        bundle: "dist/node/pieces/reactor",
+      },
+    ]);
+    await writeBundle(
+      "dist/node/pieces/reactor",
+      "@powerhousedao/piece-reactor",
+    );
+
+    const pieces = await new ImportPackageLoader().loadPieces(root);
+
+    expect(pieces.map((piece) => piece.version)).toEqual(["1.2.3"]);
+  });
+
+  it("reports none for a package.json with no version", async () => {
+    await writeFile(
+      join(root, "package.json"),
+      JSON.stringify({ name: "@acme/pkg" }),
+    );
+    await writeList([
+      {
+        name: "@powerhousedao/piece-reactor",
+        bundle: "dist/node/pieces/reactor",
+      },
+    ]);
+    await writeBundle(
+      "dist/node/pieces/reactor",
+      "@powerhousedao/piece-reactor",
+    );
+
+    expect(await new ImportPackageLoader().loadPieces(root)).toEqual([]);
   });
 
   it("leaves out a piece whose declared entry was never built", async () => {
     await writeList([
       {
         name: "@acme/piece-ghost",
-        version: "1.0.0",
         bundle: "dist/node/pieces/ghost",
       },
     ]);
@@ -125,6 +163,7 @@ describe("ImportPackageLoader.loadPieces", () => {
       join(pkg, "package.json"),
       JSON.stringify({
         name: "@acme/pieces-pkg",
+        version: "4.0.0",
         exports: { "./pieces": { node: BUILT_PIECE_LIST } },
       }),
     );
@@ -133,7 +172,6 @@ describe("ImportPackageLoader.loadPieces", () => {
       `export const pieces = ${JSON.stringify([
         {
           name: "@acme/piece-x",
-          version: "1.0.0",
           bundle: "dist/node/pieces/x",
         },
       ])};\n`,
@@ -149,7 +187,7 @@ describe("ImportPackageLoader.loadPieces", () => {
       "@acme/pieces-pkg",
     );
 
-    expect(pieces).toMatchObject([{ name: "@acme/piece-x", version: "1.0.0" }]);
+    expect(pieces).toMatchObject([{ name: "@acme/piece-x", version: "4.0.0" }]);
     // Compared as real paths: Windows may hand back the 8.3 short temp dir.
     expect(await realpath(pieces[0]?.bundleDir ?? "")).toBe(
       await realpath(bundle),
