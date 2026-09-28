@@ -1,7 +1,9 @@
 // Mounts PropertyForm over every prop type and layout hint, for the UI tests
 // and screenshots: the real form and Connect's styles, resolvers stubbed.
+import { QueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
+import { DesignTimeProvider } from "../../../editors/workflow-editor/ui/design-time.js";
 import type {
   BlockFormProp,
   PropertyGroup,
@@ -163,21 +165,27 @@ function loadOptions(propName: string, _current: unknown, search?: string) {
 
 function Harness(props: { initial: Record<string, unknown> }) {
   const [value, setValue] = useState(props.initial);
+  // The resolver cache PropertyForm reads through; no service is needed.
+  const [queryClient] = useState(
+    () => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  );
   return (
-    <div className="flex gap-6 p-6">
-      <div className="w-[400px] shrink-0 rounded-lg border border-solid border-foreground/10 bg-background p-4">
-        <PropertyForm
-          props={KITCHEN_SINK}
-          groups={GROUPS}
-          value={value}
-          onChange={setValue}
-          loadOptions={loadOptions}
-        />
+    <DesignTimeProvider queryClient={queryClient} scope="harness">
+      <div className="flex gap-6 p-6">
+        <div className="w-[400px] shrink-0 rounded-lg border border-solid border-foreground/10 bg-background p-4">
+          <PropertyForm
+            props={KITCHEN_SINK}
+            groups={GROUPS}
+            value={value}
+            onChange={setValue}
+            loadOptions={loadOptions}
+          />
+        </div>
+        <pre data-testid="config" className="text-xs">
+          {JSON.stringify(value, null, 2)}
+        </pre>
       </div>
-      <pre data-testid="config" className="text-xs">
-        {JSON.stringify(value, null, 2)}
-      </pre>
-    </div>
+    </DesignTimeProvider>
   );
 }
 

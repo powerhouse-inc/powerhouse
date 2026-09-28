@@ -1,7 +1,8 @@
 import {
+  coreTrigger,
   createWorkflowInBrowser,
   openDrive,
-  pieceBlockType,
+  pieceAction,
   selectInSidebar,
 } from "../../scripts/ui-stack.js";
 import { expect, test } from "./fixtures.js";
@@ -27,7 +28,7 @@ test.describe("Workflow Studio", () => {
       app.getByText("3 workflows, 3 enabled, 1 failed on the last run"),
     ).toBeVisible();
 
-    await ping.getByRole("button").click();
+    await ping.getByRole("button").first().click();
     await expect(
       app.getByRole("heading", { name: "Uptime ping" }),
     ).toBeVisible();
@@ -109,10 +110,10 @@ test.describe("Workflow Studio", () => {
     const sidebar = app.getByRole("complementary");
     await expect(
       sidebar.getByRole("button", { name: "Uptime ping" }).locator("[title]"),
-    ).toHaveAttribute("title", "Enabled, last run failed");
+    ).toHaveAttribute("title", "Last run failed");
     await expect(
       sidebar.getByRole("button", { name: "Daily digest" }).locator("[title]"),
-    ).toHaveAttribute("title", "Enabled, not run yet");
+    ).toHaveAttribute("title", "Not run yet");
   });
 
   test("picking a connection opens its editor", async ({ app }) => {
@@ -137,14 +138,14 @@ test.describe("Workflow Studio", () => {
   test("a long workflow's chain ends in +N instead of spilling over", async ({
     stack,
   }) => {
-    const parse = await pieceBlockType("@activepieces/piece-http", "parse_url");
+    const parse = await pieceAction("@activepieces/piece-http", "parse_url");
     await createWorkflowInBrowser(stack.page, stack.drive, {
       name: "Long chain",
-      trigger: { blockType: "core#manual", config: {} },
+      trigger: { ...(await coreTrigger("manual")), config: {} },
       steps: Array.from({ length: 8 }, (_, i) => ({
         key: `step${i + 1}`,
         name: `Step ${i + 1}`,
-        blockType: parse,
+        ...parse,
         config: { url: "https://acme.dev" },
       })),
     });
