@@ -1,0 +1,15 @@
+{
+  "@powerhousedao/codegen": 23,
+  "@powerhousedao/connect": 75,
+  "@powerhousedao/load-test-connect": 1,
+  "@powerhousedao/pglite-fs": 36,
+  "@powerhousedao/ph-cli": 9,
+  "@powerhousedao/reactor-api": 219,
+  "@powerhousedao/reactor-mcp": 68,
+  "@powerhousedao/reactor-workflow": 150,
+  "@powerhousedao/registry": 15,
+  "@powerhousedao/switchboard": 200,
+  "@powerhousedao/versioned-documents": 8,
+  "@renown/sdk": 16,
+  "ph-cmd": 4
+}
