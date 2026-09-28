@@ -8,10 +8,12 @@ import { REGISTRY_URL, writeNpmrc } from "@powerhousedao/e2e-utils";
 export const FIXTURE_PACKAGE = "test-workflow-piece-package";
 export const FIXTURE_VERSION = "1.0.0";
 export const FIXTURE_PIECE_DIR = "greeter";
-export const FIXTURE_BLOCK_TYPE = `${FIXTURE_PACKAGE}#greet`;
-// What a published listing offers: a piece nobody installed is pinned by the
-// version the block type names, the way an Activepieces block is.
-export const FIXTURE_PUBLISHED_BLOCK_TYPE = `${FIXTURE_PACKAGE}@${FIXTURE_VERSION}#greet`;
+// The fixture's one action, pinned to the version the package ships and publishes.
+export const FIXTURE_ACTION = {
+  pieceName: FIXTURE_PACKAGE,
+  pieceVersion: FIXTURE_VERSION,
+  actionName: "greet",
+};
 
 export interface BuildFixtureOptions {
   /** The checked-in piece source, laid out as it sits in a package. */
