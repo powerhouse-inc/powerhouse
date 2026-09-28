@@ -526,6 +526,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     },
     build: {
       sourcemap: true,
+      // npm can nest privy's optional Solana peers out of its reach; vite
+      // stubs them, so named imports from the stub must not fail the build.
+      rolldownOptions: { shimMissingExports: true },
     },
   };
   return config;
