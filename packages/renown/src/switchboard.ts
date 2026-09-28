@@ -181,6 +181,57 @@ const ISSUE_CREDENTIAL_MUTATION = /* GraphQL */ `
   }
 `;
 
+const UPSERT_PROFILE_MUTATION = /* GraphQL */ `
+  mutation RenownUpsertProfile(
+    $address: String!
+    $username: String
+    $userImage: String
+    $signature: String
+    $timestamp: String
+  ) {
+    renown_upsertProfile(
+      address: $address
+      username: $username
+      userImage: $userImage
+      signature: $signature
+      timestamp: $timestamp
+    )
+  }
+`;
+
+const REVOKE_CREDENTIAL_MUTATION = /* GraphQL */ `
+  mutation RenownRevokeCredential(
+    $credentialId: String!
+    $signature: String
+    $timestamp: String
+  ) {
+    renown_revokeCredential(
+      credentialId: $credentialId
+      signature: $signature
+      timestamp: $timestamp
+    )
+  }
+`;
+
+/** How a caller authorizes a Renown write: a login (bearer) token for the
+ * address, or that address's `personal_sign` over the canonical message
+ * (`revokeMessage` / `profileMessage`) with the ISO-8601 timestamp it signed. */
+export type RenownWriteAuth =
+  | { token: string }
+  | { signature: string; timestamp: string };
+
+// Split a RenownWriteAuth into the bearer token and the signature variables.
+function authParts(auth: RenownWriteAuth): {
+  token?: string;
+  signed: { signature?: string; timestamp?: string };
+} {
+  return "token" in auth
+    ? { token: auth.token, signed: {} }
+    : {
+        signed: { signature: auth.signature, timestamp: auth.timestamp },
+      };
+}
+
 const RENOWN_CREDENTIAL_DOC_TYPE = "powerhouse/renown-credential";
 const RENOWN_USER_DOC_TYPE = "powerhouse/renown-user";
 
@@ -576,14 +627,43 @@ export class SwitchboardClient {
     }
   }
 
-  // Create or update the RenownUser profile for an address. Pass a bearer token
-  // so the switchboard authorizes the write as that address (prevents spoofing).
+  // Create or update the RenownUser profile for an address via the
+  // renown-package `renown_upsertProfile` mutation, authorized by a login token
+  // for the address or its personal_sign of `profileMessage`. Returns the
+  // profile document id.
   async upsertUserProfile(
     address: string,
     profile: { username?: string; userImage?: string },
-    options: { token?: string } = {},
+    auth: RenownWriteAuth,
   ): Promise<string> {
-    const { token } = options;
+    const { token, signed } = authParts(auth);
+    try {
+      const { renown_upsertProfile } = await this.#request<{
+        renown_upsertProfile: string;
+      }>(
+        UPSERT_PROFILE_MUTATION,
+        {
+          address,
+          username: profile.username,
+          userImage: profile.userImage,
+          ...signed,
+        },
+        token,
+      );
+      return renown_upsertProfile;
+    } catch (error) {
+      // Fallback for a switchboard on an older renown-package without the
+      // renown-auth subgraph: write via the generic reactor mutations instead.
+      if (!isUnknownSchemaError(error, "renown_upsertProfile")) throw error;
+      return this.#legacyUpsertUserProfile(address, profile, token);
+    }
+  }
+
+  async #legacyUpsertUserProfile(
+    address: string,
+    profile: { username?: string; userImage?: string },
+    token?: string,
+  ): Promise<string> {
     const updates: Action[] = [];
     if (profile.username != null) {
       updates.push(
@@ -616,14 +696,50 @@ export class SwitchboardClient {
     return documentId;
   }
 
-  // Revoke a credential by its document id.
-  async revokeCredential(documentId: string, reason?: string): Promise<void> {
-    await this.mutateDocument(documentId, [
-      createAction("REVOKE", {
-        revokedAt: new Date().toISOString(),
-        reason: reason ?? null,
-      }),
-    ]);
+  // Revoke a credential by its VC id (`credential.id`, not its document id) via
+  // the renown-package `renown_revokeCredential` mutation, authorized by a
+  // login token for the issuer or its personal_sign of `revokeMessage`.
+  async revokeCredential(
+    credentialId: string,
+    auth: RenownWriteAuth,
+  ): Promise<void> {
+    const { token, signed } = authParts(auth);
+    try {
+      await this.#request<{ renown_revokeCredential: boolean }>(
+        REVOKE_CREDENTIAL_MUTATION,
+        { credentialId, ...signed },
+        token,
+      );
+    } catch (error) {
+      // Fallback for a switchboard on an older renown-package without the
+      // renown-auth subgraph: REVOKE the credential's documents directly.
+      if (!isUnknownSchemaError(error, "renown_revokeCredential")) throw error;
+      await this.#legacyRevokeCredential(credentialId, token);
+    }
+  }
+
+  async #legacyRevokeCredential(
+    credentialId: string,
+    token?: string,
+  ): Promise<void> {
+    // The read model has no lookup by VC id, so scan the live credentials.
+    const { renownCredentials } = await this.#request<{
+      renownCredentials: ReadRenownCredential[];
+    }>(CREDENTIALS_QUERY, { input: { includeRevoked: false } }, token);
+    const documentIds = renownCredentials
+      .filter((row) => row.credentialId === credentialId)
+      .map((row) => row.documentId);
+    if (!documentIds.length) {
+      throw new Error(`Credential not found: ${credentialId}`);
+    }
+    const revokedAt = new Date().toISOString();
+    for (const documentId of documentIds) {
+      await this.mutateDocument(
+        documentId,
+        [createAction("REVOKE", { revokedAt, reason: null })],
+        token,
+      );
+    }
   }
 
   // A ProfileFetcher backed by this client; used as the default when the

@@ -30,7 +30,9 @@ function mockReactor() {
     const headers = (init?.headers ?? {}) as Record<string, string>;
     calls.push({ ...body, authorization: headers.Authorization });
     let data: unknown = {};
-    if (body.query.includes("renownUsers")) {
+    if (body.query.includes("renown_upsertProfile")) {
+      data = { renown_upsertProfile: "user-doc" };
+    } else if (body.query.includes("renownUsers")) {
       data = { renownUsers: [] };
     } else if (body.query.includes("renown_issueCredential")) {
       data = { renown_issueCredential: "cred-doc" };
@@ -82,13 +84,27 @@ describe("Renown.signIn", () => {
     expect(renown.status).toBe("authorized");
     expect(renown.user?.address).toBe(ACCOUNT.address);
 
-    // Credential issued via the auth-bypassing mutation; the profile is then
-    // written as a separate authenticated request (carries a bearer token).
+    // Credential issued via the self-authenticating mutation; the profile is
+    // then written through renown_upsertProfile with the login token.
     expect(calls.some((c) => c.query.includes("renown_issueCredential"))).toBe(
       true,
     );
-    const profileWrite = calls.find((c) => c.query.includes("mutateDocument"));
+    const profileWrite = calls.find((c) =>
+      c.query.includes("renown_upsertProfile"),
+    );
+    expect(profileWrite?.variables).toEqual({
+      address: ACCOUNT.address,
+      username: "alice",
+    });
     expect(profileWrite?.authorization).toMatch(/^Bearer /);
+    // Nothing is written through the generic document mutations.
+    expect(
+      calls.some(
+        (c) =>
+          c.query.includes("createEmptyDocument") ||
+          c.query.includes("mutateDocument"),
+      ),
+    ).toBe(false);
   });
 
   it("throws when no switchboard endpoint is configured", async () => {

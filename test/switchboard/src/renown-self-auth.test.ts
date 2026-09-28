@@ -137,7 +137,7 @@ describe("switchboard as its own renown auth provider", () => {
   let appCrypto: RenownCrypto;
   let bearerToken: string;
   let strangerToken: string;
-  let credentialDocumentId: string;
+  let credentialId: string;
   let run: RunningSwitchboard | undefined;
 
   const readClient = new SwitchboardClient(ENDPOINT);
@@ -186,10 +186,8 @@ describe("switchboard as its own renown auth provider", () => {
       app: "switchboard",
       appId: appCrypto.did,
     });
-    credentialDocumentId = await readClient.issueCredential(
-      credential,
-      DEFAULT_DRIVE_ID,
-    );
+    credentialId = credential.id;
+    await readClient.issueCredential(credential, DEFAULT_DRIVE_ID);
     await waitFor(
       credentialInReadModel,
       60_000,
@@ -250,7 +248,7 @@ describe("switchboard as its own renown auth provider", () => {
       }
       return body.data;
     });
-    await authedClient.revokeCredential(credentialDocumentId);
+    await authedClient.revokeCredential(credentialId, { token: bearerToken });
     await waitFor(
       async () => !(await credentialInReadModel()),
       60_000,
