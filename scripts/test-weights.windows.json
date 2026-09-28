@@ -1,15 +1,15 @@
 {
-  "@powerhousedao/codegen": 23,
-  "@powerhousedao/connect": 75,
+  "@powerhousedao/codegen": 10,
+  "@powerhousedao/connect": 29,
   "@powerhousedao/load-test-connect": 1,
-  "@powerhousedao/pglite-fs": 36,
-  "@powerhousedao/ph-cli": 9,
-  "@powerhousedao/reactor-api": 219,
-  "@powerhousedao/reactor-mcp": 68,
-  "@powerhousedao/reactor-workflow": 150,
-  "@powerhousedao/registry": 15,
-  "@powerhousedao/switchboard": 200,
-  "@powerhousedao/versioned-documents": 8,
-  "@renown/sdk": 16,
-  "ph-cmd": 4
+  "@powerhousedao/pglite-fs": 29,
+  "@powerhousedao/ph-cli": 6,
+  "@powerhousedao/reactor-api": 130,
+  "@powerhousedao/reactor-mcp": 21,
+  "@powerhousedao/reactor-workflow": 77,
+  "@powerhousedao/registry": 14,
+  "@powerhousedao/switchboard": 167,
+  "@powerhousedao/versioned-documents": 7,
+  "@renown/sdk": 9,
+  "ph-cmd": 3
 }
