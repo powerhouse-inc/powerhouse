@@ -647,6 +647,8 @@ function PropField(props: {
   scopeStepId?: string;
   // Changes whenever a refresher value or the connection changes.
   refresherKey: string;
+  // A sibling this prop's resolver reads that is still empty.
+  waitingOn?: string;
   // Inside an ARRAY item or DYNAMIC result: options cannot load yet.
   nested?: boolean;
   // Substituted into MARKDOWN props; absent until the endpoint is minted.
@@ -720,6 +722,9 @@ function PropField(props: {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
+  // A choice from search results, kept so the field still shows its label
+  // once the list falls back to the unfiltered options.
+  const [picked, setPicked] = useState<FormOption | null>(null);
   const loadOptions = props.loadOptions;
   const onSearch =
     prop.refreshOnSearch && loadOptions
@@ -1052,6 +1057,14 @@ function PropField(props: {
       const result =
         search.result ??
         (dropdown.state.kind === "ready" ? dropdown.state.result : null);
+      const listed = result?.options ?? [];
+      const keepPicked =
+        picked !== null &&
+        stringifyValue(picked.value) === stringifyValue(value) &&
+        !listed.some(
+          (option) => stringifyValue(option.value) === stringifyValue(value),
+        );
+      const options = keepPicked ? [...listed, picked] : listed;
       return (
         <FieldShell
           htmlFor={fieldId}
@@ -1062,9 +1075,17 @@ function PropField(props: {
         >
           <OptionSelect
             id={fieldId}
-            options={result?.options ?? []}
+            options={options}
             value={value}
-            onChange={onCommit}
+            onChange={(next) => {
+              setPicked(
+                listed.find(
+                  (option) =>
+                    stringifyValue(option.value) === stringifyValue(next),
+                ) ?? null,
+              );
+              onCommit(next);
+            }}
             invalid={invalid}
             loading={dropdown.state.kind === "loading"}
             disabled={
@@ -1182,7 +1203,9 @@ function PropField(props: {
             </div>
           ) : fields ? (
             <p className="text-xs text-muted-foreground">
-              No properties for the current selection.
+              {props.waitingOn
+                ? `Pick ${props.waitingOn} first; its fields show here.`
+                : "No properties for the current selection."}
             </p>
           ) : null}
         </FieldShell>
@@ -1494,6 +1517,13 @@ export function PropertyForm(props: {
       secrets={props.secrets}
       scopeStepId={props.scopeStepId}
       refresherKey={refresherKeyFor(prop, current, props.connectionId)}
+      waitingOn={
+        props.props.find(
+          (sibling) =>
+            prop.refreshers?.includes(sibling.name) &&
+            isEmptyValue(current[sibling.name]),
+        )?.displayName
+      }
       nested={props.nested}
       webhookUrl={props.webhookUrl}
     />

@@ -141,7 +141,8 @@ test.describe("Reactor steps", () => {
     await pick(app, "Document type", "connection", /powerhouse\/connection/);
     // Type and Input sit together in the Action section.
     const action = app.getByRole("region", { name: "Action" });
-    await expect(action).toBeVisible();
+    await expect(action).toContainText("the action needs both");
+    await expect(action).toContainText("Pick Type first");
     await action.getByRole("combobox", { name: /Type/ }).click();
     await app.getByPlaceholder("Search").fill("SET_CONNECTOR");
     await app.getByRole("option", { name: /SET_CONNECTOR/ }).click();

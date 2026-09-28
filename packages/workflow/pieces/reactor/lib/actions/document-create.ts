@@ -23,7 +23,7 @@ export const documentCreateAction = createAction({
   displayName: "Create document",
   description: "Creates a Powerhouse document.",
   requireAuth: false,
-  propertyGroups: [ACTION_GROUP("Dispatched right after the create")],
+  propertyGroups: [ACTION_GROUP("Optional, sent right after the create.")],
   props: {
     documentType: documentTypeProp(),
     name: Property.ShortText({ displayName: "Document name", required: false }),

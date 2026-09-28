@@ -66,6 +66,23 @@ input ClearAllInput { _: Boolean }`;
     expect(parseActionInputSchema(sdl, "CLEAR_ALL")?.root).toEqual([]);
   });
 
+  it("keeps a multi-line block description whole, never reading it as fields", () => {
+    const sdl = `input SetPriceInput {
+    """
+    The price.
+    Unit: cents
+    """
+    amount: Int!
+}`;
+    expect(parseActionInputSchema(sdl, "SET_PRICE")?.root).toEqual([
+      {
+        name: "amount",
+        type: { name: "Int", list: false, required: true },
+        description: "The price. Unit: cents",
+      },
+    ]);
+  });
+
   it("returns null without the action's root input", () => {
     expect(
       parseActionInputSchema("input OtherInput { a: Int }", "SET_NAME"),
