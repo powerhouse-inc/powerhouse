@@ -9,7 +9,7 @@ import {
   reactorOf,
   type ReactorService,
 } from "@powerhousedao/pieces-framework";
-import { staticString } from "./parse.js";
+import { PARSE_MODES, staticString, type ParseMode } from "./parse.js";
 import { inputProps } from "./input-props.js";
 import {
   parseActionInputSchema,
@@ -161,10 +161,30 @@ export const folderProp = (
     },
   });
 
-// A JSON array of {type, input, scope?}, for several actions in one step or
-// a payload an earlier step produced. Advanced: the single action is the form.
-export const actionsProp = (displayName: string, description?: string) =>
-  Property.Json({ displayName, required: false, description, advanced: true });
+// JSON text of [{type, input, scope?}]: text, so model output reaches the
+// piece's own parsing. Advanced: the single action is the form.
+// `display: "code"` asks the editor for a monospace field; upstream has no such hint.
+export const actionsProp = (displayName: string, description?: string) => ({
+  ...Property.LongText({
+    displayName,
+    required: false,
+    description,
+    advanced: true,
+  }),
+  display: "code",
+});
+
+// How ids and JSON are read: as given, or dug out of model output.
+export const parseProp = () =>
+  Property.StaticDropdown<ParseMode>({
+    displayName: "Parse",
+    description:
+      "Exact takes ids and JSON as given. Extract reads them out of an AI step's prose, and reports what it read from in extractedFrom",
+    required: false,
+    defaultValue: "exact",
+    advanced: true,
+    options: { options: PARSE_MODES },
+  });
 
 // The target type's own actions, each carrying its input SDL, plus the base
 // actions every document accepts.

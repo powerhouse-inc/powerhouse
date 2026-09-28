@@ -88,6 +88,48 @@ input ClearAllInput { _: Boolean }`;
       parseActionInputSchema("input OtherInput { a: Int }", "SET_NAME"),
     ).toBeNull();
   });
+
+  it("finds the root whatever its casing, as the model's own SDL names it", () => {
+    expect(
+      parseActionInputSchema("input SetURLInput { url: URL! }", "SET_URL")
+        ?.rootName,
+    ).toBe("SetURLInput");
+    expect(
+      parseActionInputSchema("input SetUrlInput { url: URL! }", "SET_URL")
+        ?.rootName,
+    ).toBe("SetUrlInput");
+  });
+
+  it("refuses to pick between two inputs that both fit", () => {
+    expect(
+      parseActionInputSchema(
+        "input SetUrlInput { a: Int }\ninput SetURLInput { b: Int }",
+        "SET_URL",
+      ),
+    ).toBeNull();
+  });
+
+  it("reads the grammar, not lines: comments, defaults, directives, one-line bodies", () => {
+    const sdl = `# a comment { with braces }
+scalar Custom
+type Ignored { a: String }
+input AddItemInput @oneOf { "Label" name: String! = "x" @deprecated(reason: "}") count: Int = 1, tags: [String!]! }`;
+    expect(parseActionInputSchema(sdl, "ADD_ITEM")?.root).toEqual([
+      {
+        name: "name",
+        type: { name: "String", list: false, required: true },
+        description: "Label",
+      },
+      { name: "count", type: { name: "Int", list: false, required: false } },
+      { name: "tags", type: { name: "String", list: true, required: true } },
+    ]);
+  });
+
+  it("throws on text that is not SDL rather than guessing at it", () => {
+    expect(() =>
+      parseActionInputSchema("input SetNameInput { name String }", "SET_NAME"),
+    ).toThrow(/Invalid input SDL/);
+  });
 });
 
 describe("fieldKind", () => {
@@ -108,6 +150,31 @@ describe("fieldKind", () => {
     const retry = schema.inputs.get("AddStepRetryPolicyInput")!;
     expect(fieldKind(retry[0].type, schema)).toBe("integer");
     expect(fieldKind(retry[1].type, schema)).toBe("enum");
+  });
+
+  it("maps the Amount scalars to what the model declares, and unknowns to unsupported", () => {
+    const schema = parseActionInputSchema(
+      `input PayInput {
+        money: Amount_Money
+        tokens: Amount_Tokens
+        fiat: Amount_Fiat
+        crypto: Amount_Crypto
+        amount: Amount
+        odd: Mystery
+      }`,
+      "PAY",
+    )!;
+    const kinds = Object.fromEntries(
+      schema.root.map((field) => [field.name, fieldKind(field.type, schema)]),
+    );
+    expect(kinds).toEqual({
+      money: "number",
+      tokens: "number",
+      fiat: "object",
+      crypto: "object",
+      amount: "object",
+      odd: "unsupported",
+    });
   });
 });
 
