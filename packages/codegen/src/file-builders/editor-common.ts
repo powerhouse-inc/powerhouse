@@ -87,7 +87,7 @@ export async function makeEditorsFile(args: {
     map(({ name, editorDir }) => ({
       name,
       namedImports: [name],
-      moduleSpecifier: `./${path.join(editorDir, "module.js")}`,
+      moduleSpecifier: `./${path.posix.join(editorDir, "module.js")}`,
     })),
     forEach(({ name, namedImports, moduleSpecifier }) => {
       sourceFile.addImportDeclaration({
@@ -130,7 +130,7 @@ export async function makeEditorsIndexFile(args: {
     })),
     map(({ name, editorDir }) => ({
       namedExports: [name],
-      moduleSpecifier: `./${path.join(editorDir, "module.js")}`,
+      moduleSpecifier: `./${path.posix.join(editorDir, "module.js")}`,
     })),
     forEach(({ namedExports, moduleSpecifier }) => {
       sourceFile.addExportDeclaration({

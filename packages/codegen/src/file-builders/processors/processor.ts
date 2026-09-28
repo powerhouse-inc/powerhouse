@@ -138,7 +138,7 @@ async function updateFactoryBuildersFile(v: {
     sourceFile.replaceWithText(template);
   }
   const name = `${camelCaseName}FactoryBuilder`;
-  const moduleSpecifier = path.join("processors", kebabCaseName);
+  const moduleSpecifier = path.posix.join("processors", kebabCaseName);
 
   const factoriesArrayName = "processorFactoryBuilders";
 
