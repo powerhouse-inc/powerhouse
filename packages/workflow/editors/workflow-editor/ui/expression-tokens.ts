@@ -1,6 +1,6 @@
 // Splits authored text into literal and {{expression}} runs for highlighting.
-// Pattern copied from the workflow engine's expression parser (node-only pkg).
-const EMBEDDED_EXPRESSION = /\{\{\s*([^{}]+?)\s*\}\}/g;
+// `\{{` is a literal `{{`, as in the workflow engine's evaluator.
+const EMBEDDED_EXPRESSION = /(?<!\\)\{\{\s*([^{}]+?)\s*\}\}/g;
 
 export type ExpressionToken =
   | { kind: "text"; text: string }

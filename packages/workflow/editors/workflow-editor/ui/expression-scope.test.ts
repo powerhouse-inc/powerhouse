@@ -2,19 +2,20 @@ import { describe, expect, it } from "vitest";
 import {
   buildExpressionScope,
   capValue,
+  childPath,
   upstreamStepIds,
 } from "./expression-scope.js";
+import type { BlockRef } from "./blocks.js";
 import type { StepModel, WorkflowModel } from "./model.js";
 
-function step(
-  id: string,
-  blockType = "@powerhousedao/piece-reactor#document-get",
-): StepModel {
+function step(id: string): StepModel {
   return {
     id,
     key: id,
     name: id,
-    blockType,
+    pieceName: "@powerhousedao/piece-reactor",
+    pieceVersion: "1.0.0",
+    actionName: "document-get",
     connectionId: null,
     config: {},
     retry: null,
@@ -30,7 +31,9 @@ const model: WorkflowModel = {
   version: 3,
   trigger: {
     id: "t",
-    blockType: "core#manual",
+    pieceName: "@powerhousedao/piece-core",
+    pieceVersion: "1.0.0",
+    triggerName: "manual",
     config: {},
     connectionId: null,
   },
@@ -41,12 +44,18 @@ const model: WorkflowModel = {
     { id: "e3", from: "a", to: "c", port: "next", condition: null },
   ],
   variables: [
-    { id: "v1", key: "apiBase", value: "https://x", description: null },
+    {
+      id: "v1",
+      key: "apiBase",
+      value: "https://x",
+      description: null,
+      type: "TEXT",
+    },
   ],
 };
 
-const authored = (blockType: string) =>
-  Promise.resolve({ declared: `${blockType} type` });
+const authored = (block: BlockRef) =>
+  Promise.resolve({ declared: `${block.pieceName} ${block.name} type` });
 
 describe("upstreamStepIds", () => {
   it("collects transitive ancestors only", () => {
@@ -72,11 +81,13 @@ describe("buildExpressionScope", () => {
       authoredOutput: authored,
     });
     expect(scope.value).toEqual({
-      trigger: { payload: { declared: "core#manual type" } },
+      trigger: {
+        payload: { declared: "@powerhousedao/piece-core manual type" },
+      },
       steps: {
         a: {
           output: {
-            declared: "@powerhousedao/piece-reactor#document-get type",
+            declared: "@powerhousedao/piece-reactor document-get type",
           },
         },
       },
@@ -86,6 +97,7 @@ describe("buildExpressionScope", () => {
       "trigger.payload": "declared type",
       "steps.a.output": "declared type",
       variables: "workflow variables",
+      "variables.apiBase": "text",
     });
   });
 
@@ -100,14 +112,16 @@ describe("buildExpressionScope", () => {
         steps: [
           {
             stepKey: "a",
-            blockType: "@powerhousedao/piece-reactor#document-get",
+            pieceName: "@powerhousedao/piece-reactor",
+            blockName: "document-get",
             status: "SUCCEEDED",
             output: { documentId: "d1" },
           },
           // Sibling branch: not upstream of b, must not appear.
           {
             stepKey: "c",
-            blockType: "@powerhousedao/piece-reactor#document-get",
+            pieceName: "@powerhousedao/piece-reactor",
+            blockName: "document-get",
             status: "SUCCEEDED",
             output: { documentId: "d2" },
           },
@@ -125,7 +139,8 @@ describe("buildExpressionScope", () => {
     [
       "changed type",
       {
-        blockType: "@powerhousedao/piece-reactor#document-find",
+        pieceName: "@powerhousedao/piece-reactor",
+        blockName: "document-find",
         status: "SUCCEEDED",
         output: { count: 1 },
       },
@@ -133,7 +148,8 @@ describe("buildExpressionScope", () => {
     [
       "failed",
       {
-        blockType: "@powerhousedao/piece-reactor#document-get",
+        pieceName: "@powerhousedao/piece-reactor",
+        blockName: "document-get",
         status: "FAILED",
         output: { documentId: "d1" },
       },
@@ -141,7 +157,8 @@ describe("buildExpressionScope", () => {
     [
       "has no output",
       {
-        blockType: "@powerhousedao/piece-reactor#document-get",
+        pieceName: "@powerhousedao/piece-reactor",
+        blockName: "document-get",
         status: "SUCCEEDED",
         output: null,
       },
@@ -159,10 +176,121 @@ describe("buildExpressionScope", () => {
     });
     expect(scope.value.steps).toEqual({
       a: {
-        output: { declared: "@powerhousedao/piece-reactor#document-get type" },
+        output: { declared: "@powerhousedao/piece-reactor document-get type" },
       },
     });
     expect(scope.captions["steps.a.output"]).toBe("declared type");
     expect(scope.captions["trigger.payload"]).toBe("declared type");
+  });
+
+  it("labels each variable with its type and hides a secret's reference", async () => {
+    const scope = await buildExpressionScope({
+      model: {
+        ...model,
+        variables: [
+          {
+            id: "v1",
+            key: "limit",
+            value: 5,
+            description: null,
+            type: "NUMBER",
+          },
+          {
+            id: "v2",
+            key: "token",
+            value: "secret://v1:abc",
+            description: null,
+            type: "SECRET",
+          },
+        ],
+      },
+      stepId: "b",
+      authoredOutput: authored,
+    });
+    expect(scope.value.variables).toEqual({ limit: 5, token: "secret" });
+    expect(scope.captions["variables.limit"]).toBe("number");
+    expect(scope.captions["variables.token"]).toBe("secret");
+  });
+});
+
+describe("buildExpressionScope with test samples", () => {
+  const tested: WorkflowModel = {
+    ...model,
+    trigger: {
+      ...model.trigger!,
+      lastTest: { runId: "rt", testedAt: "2026-09-04T08:00:00Z" },
+    },
+    steps: [
+      {
+        ...step("a"),
+        lastTest: { runId: "ra", testedAt: "2026-09-04T10:05:00Z" },
+      },
+      step("b"),
+      step("c"),
+    ],
+  };
+
+  it("prefers a block's last test over the latest run and the declared shape", async () => {
+    const asked: string[] = [];
+    const scope = await buildExpressionScope({
+      model: tested,
+      stepId: "b",
+      now: new Date("2026-09-04T12:00:00Z"),
+      latestRun: {
+        startedAt: "2026-09-04T09:14:00Z",
+        triggerPayload: { who: "run" },
+        steps: [
+          {
+            stepKey: "a",
+            pieceName: "@powerhousedao/piece-reactor",
+            blockName: "document-get",
+            status: "SUCCEEDED",
+            output: { from: "run" },
+          },
+        ],
+      },
+      authoredOutput: authored,
+      testOutput: (id) => {
+        asked.push(id);
+        return Promise.resolve({
+          value: { from: `test ${id}`, "content.type": "json" },
+          testedAt: "2026-09-04T10:05:00Z",
+        });
+      },
+    });
+    expect(asked.sort()).toEqual(["a", "t"]);
+    expect(scope.value.steps).toEqual({
+      a: { output: { from: "test a", "content.type": "json" } },
+    });
+    expect(scope.captions["steps.a.output"]).toMatch(/^from test \d\d:\d\d/);
+    expect(scope.captions["trigger.payload"]).toMatch(/^from test /);
+  });
+
+  it("falls back when the test has no sample", async () => {
+    const scope = await buildExpressionScope({
+      model: tested,
+      stepId: "b",
+      authoredOutput: authored,
+      testOutput: () => Promise.resolve(undefined),
+    });
+    expect(scope.captions["steps.a.output"]).toBe("declared type");
+  });
+});
+
+describe("childPath", () => {
+  it("dots identifiers, brackets anything else and indexes arrays", () => {
+    expect(childPath("steps.a.output", "body", false)).toBe(
+      "steps.a.output.body",
+    );
+    expect(childPath("steps.a.output", "content.type", false)).toBe(
+      'steps.a.output["content.type"]',
+    );
+    expect(childPath("steps.a.output", "x-id", false)).toBe(
+      'steps.a.output["x-id"]',
+    );
+    expect(childPath("steps.a.output.items", "0", true)).toBe(
+      "steps.a.output.items[0]",
+    );
+    expect(childPath("", "steps", false)).toBe("steps");
   });
 });

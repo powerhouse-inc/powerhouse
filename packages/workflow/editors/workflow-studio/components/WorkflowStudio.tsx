@@ -12,8 +12,15 @@ import {
 import type { FileNode } from "@powerhousedao/shared/document-drive";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { type WorkflowDocument } from "document-models/workflow";
-import { fireWorkflow } from "../../workflow-editor/runtime-api.js";
-import "../../workflow-editor/runtime-piece-source.js";
+import {
+  MANUAL_TRIGGER,
+  sameBlock,
+  triggerBlock,
+} from "../../workflow-editor/ui/blocks.js";
+import {
+  useRuntimeActions,
+  WorkflowRuntimeProvider,
+} from "../../workflow-editor/runtime-context.js";
 import { DocumentErrorBoundary } from "../../shared/DocumentErrorBoundary.js";
 import { RunsView } from "./RunsView.js";
 import { Sidebar } from "./Sidebar.js";
@@ -26,6 +33,15 @@ const WORKFLOW_TYPE = "powerhouse/workflow";
 const CONNECTION_TYPE = "powerhouse/connection";
 
 export function WorkflowStudio(props: { children?: ReactNode }) {
+  return (
+    <WorkflowRuntimeProvider>
+      <Studio>{props.children}</Studio>
+    </WorkflowRuntimeProvider>
+  );
+}
+
+function Studio(props: { children?: ReactNode }) {
+  const { fireWorkflow } = useRuntimeActions();
   const [drive] = useSelectedDrive();
   const fileNodes = useFileNodesInSelectedDrive() ?? [];
   const selectedNode = useSelectedNode();
@@ -105,12 +121,15 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
     if (!lastRuns.has(run.workflowId)) lastRuns.set(run.workflowId, run.status);
   }
 
-  // Manual fire only makes sense for core#manual triggers.
+  // Manual fire only makes sense for the core manual trigger.
   const { data: targetDocument } = useDocumentSafe(liveTarget?.id ?? null);
-  const manualTrigger =
-    targetDocument?.header.documentType === WORKFLOW_TYPE &&
-    (targetDocument as WorkflowDocument).state.global.trigger?.blockType ===
-      "core#manual";
+  const targetTrigger =
+    targetDocument?.header.documentType === WORKFLOW_TYPE
+      ? (targetDocument as WorkflowDocument).state.global.trigger
+      : null;
+  const manualTrigger = Boolean(
+    targetTrigger && sameBlock(triggerBlock(targetTrigger), MANUAL_TRIGGER),
+  );
 
   return (
     <div className="flex h-full min-h-0">
@@ -160,6 +179,7 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
                 node={liveTarget}
                 runs={runs}
                 onEdit={() => setSelectedNode(liveTarget.id)}
+                onDeleted={() => select(undefined)}
               />
             ) : (
               <WorkflowBoard

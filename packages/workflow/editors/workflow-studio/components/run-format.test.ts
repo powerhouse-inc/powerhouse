@@ -1,6 +1,8 @@
-import type { RunRecord } from "../../workflow-editor/runtime-api.js";
+import type { RunRecord } from "../../workflow-editor/runtime-client.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  runStatusLabel,
+  runTone,
   formatDuration,
   formatMs,
   formatWhen,
@@ -71,37 +73,41 @@ describe("formatWhen", () => {
 });
 
 describe("workflowHealth", () => {
-  it("is idle for anything but an enabled workflow", () => {
-    expect(workflowHealth(undefined, "FAILED")).toEqual({
+  it("is hollow until the workflow is first published", () => {
+    expect(workflowHealth("DRAFT", "FAILED", false)).toEqual({
       tone: "idle",
-      label: "Draft",
-    });
-    expect(workflowHealth("DISABLED", "SUCCEEDED")).toEqual({
-      tone: "idle",
-      label: "Disabled",
+      hollow: true,
+      label: "Not published yet",
     });
   });
 
-  it("is idle for an enabled workflow that never ran", () => {
-    expect(workflowHealth("ENABLED", undefined)).toEqual({
+  it("is a plain dot for a published workflow that never ran", () => {
+    expect(workflowHealth("ENABLED", undefined, true)).toEqual({
       tone: "idle",
-      label: "Enabled, not run yet",
+      hollow: false,
+      label: "Not run yet",
     });
   });
 
-  it("takes its tone from the last run", () => {
-    expect(workflowHealth("ENABLED", "SUCCEEDED")).toEqual({
+  it("takes its colour from the last run, and names a status that isn't on", () => {
+    expect(workflowHealth("ENABLED", "SUCCEEDED", true)).toEqual({
       tone: "ok",
-      label: "Enabled, last run succeeded",
+      hollow: false,
+      label: "Last run succeeded",
     });
-    expect(workflowHealth("ENABLED", "FAILED")).toEqual({
+    expect(workflowHealth("ENABLED", "FAILED", true)).toEqual({
       tone: "fail",
-      label: "Enabled, last run failed",
+      hollow: false,
+      label: "Last run failed",
     });
-    expect(workflowHealth("ENABLED", "MYSTERY")).toEqual({
-      tone: "idle",
-      label: "Enabled, last run mystery",
+    expect(workflowHealth("DISABLED", "FAILED", true)).toEqual({
+      tone: "fail",
+      hollow: false,
+      label: "Disabled, last run failed",
     });
+    expect(workflowHealth("ARCHIVED", undefined, true).label).toBe(
+      "Archived, not run yet",
+    );
   });
 });
 
@@ -118,6 +124,7 @@ describe("runStats", () => {
     startedAt: "2026-01-01T00:00:00.000Z",
     endedAt: null,
     rerunOf: null,
+    warningNotes: [],
     steps: [],
   });
 
@@ -148,5 +155,17 @@ describe("runStats", () => {
       lastRun: runs[0],
       successRate: 67,
     });
+  });
+});
+
+describe("runTone", () => {
+  it("reads a succeeded run with warnings as a warning", () => {
+    const warned = { status: "SUCCEEDED", warningNotes: ["edge never taken"] };
+    expect(runTone(warned)).toBe("warn");
+    expect(runStatusLabel(warned)).toBe("Succeeded, 1 warning");
+    expect(runTone({ status: "SUCCEEDED", warningNotes: [] })).toBe("ok");
+    expect(runStatusLabel({ status: "FAILED", warningNotes: ["x"] })).toBe(
+      "Failed",
+    );
   });
 });

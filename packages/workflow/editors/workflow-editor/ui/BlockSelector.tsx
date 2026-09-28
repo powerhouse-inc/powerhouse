@@ -8,17 +8,33 @@ import {
   type CSSProperties,
 } from "react";
 import { Icon, type IconName } from "../../shared/icons.js";
-import { useBlockMeta } from "./block-meta.js";
-import type { BlockPreset } from "./blocks.js";
-import type { StepModel } from "./model.js";
+import { blockKey } from "@powerhousedao/pieces-framework/block-type";
+import { registerPieceLogos, useBlockMeta } from "./block-meta.js";
 import {
-  getPieceSource,
+  ASSERT_BLOCK,
+  BRANCH_BLOCK,
+  isCoreBlock,
+  MANUAL_TRIGGER,
+  pinBlock,
+  SCHEDULE_TRIGGER,
+  stepBlock,
+  WEBHOOK_TRIGGER,
+  type BlockIdentity,
+  type BlockPreset,
+  type BlockRef,
+  type PickedPreset,
+} from "./blocks.js";
+import { useBlockFormPrefetch } from "./design-time.js";
+import type { StepModel } from "./model.js";
+import { useDraftBlocks } from "./version-badge.js";
+import {
   blockUnavailable,
   type BlockSearchHitUi,
   type BlockSearchResultUi,
   type PieceActionUi,
   type PieceSummaryUi,
   type PieceTriggerUi,
+  usePieceSource,
 } from "./piece-source.js";
 
 export type PieceMode = "actions" | "triggers";
@@ -28,15 +44,19 @@ const ROW_LOGO = 24;
 
 // Built-in blocks have no artwork of their own; each gets a coloured tile.
 const CORE_TILE: Record<string, { icon: IconName; color: string }> = {
-  "core#manual": { icon: "play", color: "#2563eb" },
-  "core#schedule": { icon: "clock", color: "#7c3aed" },
-  "core#webhook": { icon: "bolt", color: "#0891b2" },
-  "core#branch": { icon: "branch", color: "#d97706" },
-  "core#assert": { icon: "alert", color: "#dc2626" },
+  [blockKey(MANUAL_TRIGGER)]: { icon: "play", color: "#2563eb" },
+  [blockKey(SCHEDULE_TRIGGER)]: { icon: "clock", color: "#7c3aed" },
+  [blockKey(WEBHOOK_TRIGGER)]: { icon: "bolt", color: "#0891b2" },
+  [blockKey(BRANCH_BLOCK)]: { icon: "branch", color: "#d97706" },
+  [blockKey(ASSERT_BLOCK)]: { icon: "alert", color: "#dc2626" },
 };
 
-function CoreTile(props: { blockType: string; size: number; bare?: boolean }) {
-  const tile = CORE_TILE[props.blockType];
+function CoreTile(props: {
+  tile: { icon: IconName; color: string };
+  size: number;
+  bare?: boolean;
+}) {
+  const tile = props.tile;
   const glyph = Math.round(props.size * (props.bare ? 0.9 : 0.55));
   // Bare: the caller's badge is the tile, so only the icon is drawn.
   if (props.bare) {
@@ -64,20 +84,17 @@ function CoreTile(props: { blockType: string; size: number; bare?: boolean }) {
 }
 
 export function BlockLogo(props: {
-  blockType: string;
+  block: BlockIdentity;
   size?: number;
   // Set where the caller already draws a light badge behind the logo.
   bare?: boolean;
 }) {
-  const meta = useBlockMeta(props.blockType);
-  if (props.blockType in CORE_TILE) {
-    return (
-      <CoreTile
-        blockType={props.blockType}
-        size={props.size ?? 36}
-        bare={props.bare}
-      />
-    );
+  const meta = useBlockMeta(props.block);
+  const tile = CORE_TILE[blockKey(props.block)] as
+    | { icon: IconName; color: string }
+    | undefined;
+  if (tile) {
+    return <CoreTile tile={tile} size={props.size ?? 36} bare={props.bare} />;
   }
   return (
     <LogoFrame
@@ -164,16 +181,24 @@ function Row(props: {
   label: string;
   description: string;
   onClick: () => void;
+  // Warms what a pick will need, while the row is hovered or focused.
+  onHover?: () => void;
   disabled?: boolean;
+  // The piece version a pick pins to; shown on hover unless `versionNote`
+  // says why it matters here.
+  version?: string;
+  versionNote?: string;
 }) {
   return (
     <button
       type="button"
-      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left ${
+      className={`group flex w-full items-center gap-2 px-3 py-1.5 text-left ${
         props.disabled ? "cursor-not-allowed opacity-50" : "hover:bg-muted/50"
       }`}
       disabled={props.disabled}
       onClick={props.onClick}
+      onMouseEnter={props.onHover}
+      onFocus={props.onHover}
     >
       {props.logo}
       <span className="min-w-0">
@@ -184,8 +209,63 @@ function Row(props: {
           {props.description}
         </span>
       </span>
+      {props.version ? (
+        <span
+          className={`ml-auto shrink-0 pl-2 text-[10px] tabular-nums text-muted-foreground/70 ${
+            props.versionNote
+              ? ""
+              : "hidden group-hover:inline group-focus-visible:inline"
+          }`}
+          title={props.versionNote ?? `Pinned to version ${props.version}`}
+        >
+          v{props.version}
+        </span>
+      ) : null}
     </button>
   );
+}
+
+// The core piece is the runtime's own, so its rows carry no version.
+function shownVersion(
+  pieceName: string,
+  version: string | undefined,
+): string | undefined {
+  return isCoreBlock({ pieceName }) ? undefined : version;
+}
+
+type VersionNote = (
+  piece: string | undefined,
+  version: string | undefined,
+) => string | undefined;
+
+// Why a row's version is worth showing: a local build shadowing the published
+// piece, or other steps of the workflow on another version of it.
+function useVersionNote(
+  catalog: readonly PieceSummaryUi[] | undefined,
+): VersionNote {
+  const draft = useDraftBlocks();
+  return (piece, version) => {
+    if (!piece || !version) return undefined;
+    const others = [
+      ...new Set(
+        draft
+          .filter(
+            (block) =>
+              block.pieceName === piece && block.pieceVersion !== version,
+          )
+          .map((block) => `v${block.pieceVersion}`),
+      ),
+    ];
+    if (others.length > 0) {
+      return `Other steps of this workflow use ${others.join(", ")}`;
+    }
+    const published = catalog?.find(
+      (entry) => entry.name === piece,
+    )?.publishedVersion;
+    return published && published !== version
+      ? `A local build; v${published} is published`
+      : undefined;
+  };
 }
 
 function SectionLabel(props: { children: string }) {
@@ -269,16 +349,18 @@ function PieceEntries(props: {
   piece: PieceSummaryUi;
   mode: PieceMode;
   onPick: (preset: BlockPreset) => void;
+  onHover: (block: BlockRef) => void;
   onBack: () => void;
+  versionNote: VersionNote;
 }) {
   const [entries, setEntries] = useState<
     (PieceActionUi & Partial<PieceTriggerUi>)[] | null
   >(null);
   const [error, setError] = useState<string | null>(null);
+  const pieceSource = usePieceSource();
 
   useEffect(() => {
     let cancelled = false;
-    const pieceSource = getPieceSource();
     const load =
       props.mode === "triggers"
         ? pieceSource?.loadTriggers(props.piece.name)
@@ -297,7 +379,7 @@ function PieceEntries(props: {
     return () => {
       cancelled = true;
     };
-  }, [props.piece.name, props.mode]);
+  }, [props.piece.name, props.mode, pieceSource]);
 
   return (
     <div className="max-h-80 overflow-y-auto py-1">
@@ -317,10 +399,14 @@ function PieceEntries(props: {
       ) : (
         entries.map((entry) => {
           // Visible but inert: picking one would build a step that never runs.
-          const unavailable = blockUnavailable({
-            ...entry,
-            kind: props.mode === "triggers" ? "trigger" : "action",
-          });
+          const kind = props.mode === "triggers" ? "trigger" : "action";
+          const unavailable = blockUnavailable({ ...entry, kind });
+          const block: BlockRef = {
+            pieceName: entry.pieceName,
+            pieceVersion: entry.pieceVersion,
+            kind,
+            name: entry.name,
+          };
           return (
             <Row
               key={entry.name}
@@ -334,10 +420,20 @@ function PieceEntries(props: {
               label={entry.displayName}
               description={unavailable ?? entry.description}
               disabled={unavailable !== undefined}
+              version={shownVersion(entry.pieceName, entry.pieceVersion)}
+              versionNote={props.versionNote(
+                props.piece.name,
+                entry.pieceVersion,
+              )}
+              onHover={
+                unavailable === undefined
+                  ? () => props.onHover(block)
+                  : undefined
+              }
               onClick={() =>
                 props.onPick({
                   label: entry.displayName,
-                  blockType: entry.blockType,
+                  block,
                   description: entry.description,
                   defaultConfig: {},
                 })
@@ -366,9 +462,9 @@ function useBlockSearch(query: string, enabled: boolean): SearchState {
   const [attempt, setAttempt] = useState(0);
   const trimmed = query.trim();
   const active = enabled && trimmed.length >= SEARCH_MIN_CHARS;
+  const search = usePieceSource()?.searchBlocks;
 
   useEffect(() => {
-    const search = getPieceSource()?.searchBlocks;
     if (!active || !search) {
       // eslint-disable-next-line react-hooks-extra/set-state-in-effect -- drops a finished search when the query goes inactive
       setState({ kind: "idle" });
@@ -406,7 +502,7 @@ function useBlockSearch(query: string, enabled: boolean): SearchState {
       clearTimeout(timer);
       if (retry) clearTimeout(retry);
     };
-  }, [active, trimmed, attempt]);
+  }, [active, trimmed, attempt, search]);
 
   return active ? state : { kind: "idle" };
 }
@@ -430,7 +526,7 @@ function Chip(props: { label: string; active: boolean; onClick: () => void }) {
 export function BlockSelector(props: {
   title: string;
   presets: BlockPreset[];
-  onPick: (preset: BlockPreset) => void;
+  onPick: (preset: PickedPreset) => void;
   onClose: () => void;
   // Show the Activepieces catalog below the presets.
   showPieces?: boolean;
@@ -456,13 +552,17 @@ export function BlockSelector(props: {
     return () => window.removeEventListener("mousedown", handler);
   }, [props]);
 
-  const pieceSource = props.showPieces ? getPieceSource() : undefined;
+  const anySource = usePieceSource();
+  const pieceSource = props.showPieces ? anySource : undefined;
+  // Loaded even without the piece list: presets are pinned to its versions.
   useEffect(() => {
-    if (!pieceSource) return;
+    if (!anySource) return;
     let cancelled = false;
-    pieceSource
+    anySource
       .loadCatalog()
       .then((pieces) => {
+        // Canvas nodes read logos from the registry, not from this list.
+        registerPieceLogos(pieces);
         if (!cancelled) setCatalog({ pieces });
       })
       .catch((error: unknown) => {
@@ -476,7 +576,17 @@ export function BlockSelector(props: {
     return () => {
       cancelled = true;
     };
-  }, [pieceSource]);
+  }, [anySource]);
+
+  const installed = (name: string) =>
+    catalog?.pieces.find((entry) => entry.name === name)?.version;
+  const versionNote = useVersionNote(catalog?.pieces);
+  const pinned = (preset: BlockPreset) => pinBlock(preset.block, installed);
+  const pick = (preset: BlockPreset) => {
+    const block = pinned(preset);
+    if (block) props.onPick({ ...preset, block });
+  };
+  const prefetch = useBlockFormPrefetch();
 
   const mode: PieceMode = props.pieceMode ?? "actions";
   const lowered = query.toLowerCase();
@@ -501,7 +611,9 @@ export function BlockSelector(props: {
   const presetChip = chip === CORE_CHIP || chip === POWERHOUSE_CHIP;
   const showCatalog = pieceSource !== undefined && !presetChip;
   const matching = props.presets.filter((preset) =>
-    `${preset.label} ${preset.blockType}`.toLowerCase().includes(lowered),
+    `${preset.label} ${preset.block.pieceName} ${preset.block.name}`
+      .toLowerCase()
+      .includes(lowered),
   );
   // The engine's own blocks, then the reactor's. Two sections rather than one
   // "Core": the document blocks are a piece, and saying so is honest.
@@ -516,7 +628,7 @@ export function BlockSelector(props: {
   const filteredAttach = (
     props.onAttach ? (props.attachSteps ?? []) : []
   ).filter((step) =>
-    `${step.name} ${step.key} ${step.blockType}`
+    `${step.name} ${step.key} ${step.pieceName} ${step.actionName}`
       .toLowerCase()
       .includes(lowered),
   );
@@ -532,15 +644,28 @@ export function BlockSelector(props: {
 
   const search = useBlockSearch(query, showCatalog && !piece);
 
-  const presetRow = (preset: BlockPreset) => (
-    <Row
-      key={preset.blockType + preset.label}
-      logo={<BlockLogo blockType={preset.blockType} size={ROW_LOGO} />}
-      label={preset.label}
-      description={preset.description}
-      onClick={() => props.onPick(preset)}
-    />
-  );
+  const presetRow = (preset: BlockPreset) => {
+    const block = pinned(preset);
+    return (
+      <Row
+        key={blockKey(preset.block) + preset.label}
+        logo={<BlockLogo block={preset.block} size={ROW_LOGO} />}
+        label={preset.label}
+        description={
+          block
+            ? preset.description
+            : catalog === null
+              ? "Loading…"
+              : "Not installed on this runtime"
+        }
+        disabled={!block}
+        version={shownVersion(preset.block.pieceName, block?.pieceVersion)}
+        versionNote={versionNote(preset.block.pieceName, block?.pieceVersion)}
+        onHover={block ? () => prefetch(block) : undefined}
+        onClick={() => pick(preset)}
+      />
+    );
+  };
   // Labels earn their place once there is more than one thing to tell apart.
   const labelPresets =
     showCatalog ||
@@ -595,8 +720,10 @@ export function BlockSelector(props: {
         <PieceEntries
           piece={piece}
           mode={mode}
-          onPick={props.onPick}
+          onPick={pick}
+          onHover={prefetch}
           onBack={() => setPiece(null)}
+          versionNote={versionNote}
         />
       ) : (
         <div className="max-h-80 overflow-y-auto py-1">
@@ -606,9 +733,7 @@ export function BlockSelector(props: {
               {filteredAttach.map((step) => (
                 <Row
                   key={step.id}
-                  logo={
-                    <BlockLogo blockType={step.blockType} size={ROW_LOGO} />
-                  }
+                  logo={<BlockLogo block={stepBlock(step)} size={ROW_LOGO} />}
                   label={step.name}
                   description={`{{steps.${step.key}}} · detached`}
                   onClick={() => props.onAttach?.(step.id)}
@@ -641,9 +766,15 @@ export function BlockSelector(props: {
                 <>
                   {hits.map((hit) => {
                     const unavailable = blockUnavailable(hit);
+                    const block: BlockRef = {
+                      pieceName: hit.pieceName,
+                      pieceVersion: hit.pieceVersion,
+                      kind: hit.kind,
+                      name: hit.name,
+                    };
                     return (
                       <Row
-                        key={hit.blockType}
+                        key={blockKey(block)}
                         logo={
                           <LogoFrame
                             src={hit.logoUrl}
@@ -657,10 +788,20 @@ export function BlockSelector(props: {
                           (hit.description || hit.pieceDisplayName)
                         }
                         disabled={unavailable !== undefined}
+                        version={shownVersion(hit.pieceName, hit.pieceVersion)}
+                        versionNote={versionNote(
+                          hit.pieceName,
+                          hit.pieceVersion,
+                        )}
+                        onHover={
+                          unavailable === undefined
+                            ? () => prefetch(block)
+                            : undefined
+                        }
                         onClick={() =>
-                          props.onPick({
+                          pick({
                             label: hit.displayName,
-                            blockType: hit.blockType,
+                            block,
                             description: hit.description,
                             defaultConfig: {},
                           })
@@ -720,6 +861,8 @@ export function BlockSelector(props: {
                         ? `${entry.triggerCount} trigger${entry.triggerCount === 1 ? "" : "s"} · ${entry.description}`
                         : `${entry.actionCount} action${entry.actionCount === 1 ? "" : "s"} · ${entry.description}`)
                     }
+                    version={shownVersion(entry.name, entry.version)}
+                    versionNote={versionNote(entry.name, entry.version)}
                     onClick={() => setPiece(entry)}
                   />
                 ))

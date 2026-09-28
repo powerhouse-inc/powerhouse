@@ -1,13 +1,12 @@
 // Connection identity and state, in the same shape as the workflow editor's
 // toolbar: name, connector, status, and the one destructive action.
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { ConnectionState } from "document-models/connection";
+import type { ConnectionCheckResult } from "../workflow-editor/runtime-client.js";
 import {
-  checkConnection,
-  fetchPieceCatalog,
-  type ConnectionCheckResult,
-  type PieceSummary,
-} from "../workflow-editor/runtime-api.js";
+  usePieceCatalog,
+  useRuntimeActions,
+} from "../workflow-editor/runtime-context.js";
 import { packageFromConnectorId } from "./piece-auth.js";
 import { Button } from "../shared/controls.js";
 import { Icon } from "../shared/icons.js";
@@ -18,6 +17,7 @@ import { CONNECTION_STATUS_LABEL, CONNECTION_STATUS_STYLES } from "./status.js";
 function useConnectionTest(connectionId: string) {
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<ConnectionCheckResult | null>(null);
+  const { checkConnection } = useRuntimeActions();
   const test = () => {
     setTesting(true);
     setResult(null);
@@ -45,23 +45,8 @@ export function ConnectionToolbar(props: {
   onDelete: () => void;
 }) {
   const { state } = props;
-  const [catalog, setCatalog] = useState<PieceSummary[] | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    // Cached in the runtime client, so this costs nothing the form hasn't paid.
-    fetchPieceCatalog().then(
-      (pieces) => {
-        if (!cancelled) setCatalog(pieces);
-      },
-      () => {
-        if (!cancelled) setCatalog([]);
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Shared with the form below through the editor's query cache.
+  const catalog = usePieceCatalog().data;
 
   const packageName = packageFromConnectorId(state.connectorId);
   const piece = catalog?.find((entry) => entry.name === packageName);

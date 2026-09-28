@@ -11,11 +11,16 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
 import { createPortal } from "react-dom";
 import { blockMeta } from "./block-meta.js";
 import { BlockLogo } from "./BlockSelector.js";
 import { anchorLeftPosition, type MenuAnchor } from "./canvas-menu.js";
-import { EMPTY_SCOPE, type ExpressionScope } from "./expression-scope.js";
+import {
+  childPath,
+  EMPTY_SCOPE,
+  type ExpressionScope,
+} from "./expression-scope.js";
 import {
   describeExpression,
   splitExpressionTokens,
@@ -26,12 +31,15 @@ export interface ExpressionScopeSource {
   load: (context: { stepId?: string }) => Promise<ExpressionScope>;
 }
 
-let scopeSource: ExpressionScopeSource | undefined;
-const scopeListeners = new Set<() => void>();
+const ScopeSourceContext = createContext<ExpressionScopeSource | undefined>(
+  undefined,
+);
 
-export function registerExpressionScopeSource(next: ExpressionScopeSource) {
-  scopeSource = next;
-  for (const listener of scopeListeners) listener();
+// A new source value reloads an open picker's scope.
+export const ExpressionScopeSourceProvider = ScopeSourceContext.Provider;
+
+function useScopeSource(): ExpressionScopeSource | undefined {
+  return useContext(ScopeSourceContext);
 }
 
 // The field the popup inserts into, plus the box it hangs off.
@@ -46,17 +54,17 @@ export interface ExpressionTarget {
 interface TargetContextValue {
   target: ExpressionTarget | null;
   setTarget: (target: ExpressionTarget | null) => void;
-  // Step key → block type, so chips can show the referenced step's logo.
-  stepBlockTypes: Record<string, string>;
-  // The trigger's block type, for the same reason on the trigger's own node.
-  triggerBlockType?: string;
+  // Step key → block, so chips can show the referenced step's logo.
+  stepBlocks: Record<string, BlockRef>;
+  // The trigger's block, for the same reason on the trigger's own node.
+  triggerBlock?: BlockRef;
 }
 
 const TargetContext = createContext<TargetContextValue | null>(null);
 
 export function ExpressionTargetProvider(props: {
-  stepBlockTypes: Record<string, string>;
-  triggerBlockType?: string;
+  stepBlocks: Record<string, BlockRef>;
+  triggerBlock?: BlockRef;
   children: ReactNode;
 }) {
   const [target, setTarget] = useState<ExpressionTarget | null>(null);
@@ -64,10 +72,10 @@ export function ExpressionTargetProvider(props: {
     () => ({
       target,
       setTarget,
-      stepBlockTypes: props.stepBlockTypes,
-      triggerBlockType: props.triggerBlockType,
+      stepBlocks: props.stepBlocks,
+      triggerBlock: props.triggerBlock,
     }),
-    [target, props.stepBlockTypes, props.triggerBlockType],
+    [target, props.stepBlocks, props.triggerBlock],
   );
   return (
     <TargetContext.Provider value={value}>
@@ -172,10 +180,10 @@ function ValueNode(props: {
   // A step's own node reads as the block it runs; the key stays in the tooltip
   // alongside the expression it inserts.
   const stepKey = /^steps\.([^.]+)$/.exec(props.path)?.[1];
-  const nodeBlockType = stepKey
-    ? context?.stepBlockTypes[stepKey]
+  const nodeBlock = stepKey
+    ? context?.stepBlocks[stepKey]
     : props.path === "trigger"
-      ? context?.triggerBlockType
+      ? context?.triggerBlock
       : undefined;
   return (
     <div>
@@ -200,11 +208,11 @@ function ValueNode(props: {
           title={`{{${props.path}}}`}
           onClick={() => props.onPick(props.path)}
         >
-          {nodeBlockType ? (
+          {nodeBlock ? (
             <>
-              <BlockLogo blockType={nodeBlockType} size={16} />
+              <BlockLogo block={nodeBlock} size={16} />
               <span className="shrink-0 text-xs font-medium text-foreground">
-                {blockMeta(nodeBlockType).displayName}
+                {blockMeta(nodeBlock).displayName}
               </span>
             </>
           ) : (
@@ -223,7 +231,7 @@ function ValueNode(props: {
             <ValueNode
               key={key}
               name={key}
-              path={`${props.path}.${key}`}
+              path={childPath(props.path, key, Array.isArray(props.value))}
               value={child}
               depth={props.depth + 1}
               captions={props.captions}
@@ -250,10 +258,10 @@ function flatten(
   out: FlatEntry[],
 ) {
   for (const [key, child] of entriesOf(value)) {
-    const childPath = path ? `${path}.${key}` : key;
-    out.push({ path: childPath, value: child });
+    const nested = childPath(path, key, Array.isArray(value));
+    out.push({ path: nested, value: child });
     if (depth < SEARCH_DEPTH && isExpandable(child)) {
-      flatten(child, childPath, depth + 1, out);
+      flatten(child, nested, depth + 1, out);
     }
   }
 }
@@ -314,16 +322,8 @@ export function ExpressionPickerPopup() {
     | { kind: "ready"; scope: ExpressionScope }
     | { kind: "error"; message: string }
   >({ kind: "idle" });
-  const [sourceVersion, setSourceVersion] = useState(0);
+  const scopeSource = useScopeSource();
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const listener = () => setSourceVersion((value) => value + 1);
-    scopeListeners.add(listener);
-    return () => {
-      scopeListeners.delete(listener);
-    };
-  }, []);
 
   const stepId = target?.stepId;
   const hasTarget = target !== null;
@@ -348,7 +348,7 @@ export function ExpressionPickerPopup() {
     return () => {
       alive = false;
     };
-  }, [hasTarget, stepId, sourceVersion]);
+  }, [hasTarget, stepId, scopeSource]);
 
   // A fresh field starts from an unfiltered tree.
   const targetId = target?.id;
@@ -467,6 +467,7 @@ export function ExpressionPickerButton(props: {
   active: boolean;
   onFocusField: (event: { currentTarget: Element }) => void;
 }) {
+  const scopeSource = useScopeSource();
   if (!scopeSource) return null;
   return (
     <button
@@ -488,10 +489,10 @@ export function ExpressionPickerButton(props: {
 
 function Chip(props: {
   expression: string;
-  stepBlockTypes: Record<string, string>;
+  stepBlocks: Record<string, BlockRef>;
 }) {
   const ref = describeExpression(props.expression);
-  const blockType = ref.stepKey ? props.stepBlockTypes[ref.stepKey] : undefined;
+  const block = ref.stepKey ? props.stepBlocks[ref.stepKey] : undefined;
   const head =
     ref.root === "steps"
       ? ref.stepKey
@@ -505,7 +506,7 @@ function Chip(props: {
       className="inline-flex max-w-full items-center gap-1 rounded border border-solid border-wf-run/20 bg-wf-run/10 px-1 py-px font-mono text-[11px] text-wf-run"
       title={`{{${props.expression}}}`}
     >
-      {blockType ? <BlockLogo blockType={blockType} size={12} /> : null}
+      {block ? <BlockLogo block={block} size={12} /> : null}
       {head ? <span className="font-semibold">{head}</span> : null}
       <span className="truncate">
         {ref.root === "other" ? ref.rest : ref.rest || "*"}
@@ -531,7 +532,7 @@ export function ExpressionTokenLine(props: { value: string }) {
           <Chip
             key={index}
             expression={token.expression}
-            stepBlockTypes={context?.stepBlockTypes ?? {}}
+            stepBlocks={context?.stepBlocks ?? {}}
           />
         ),
       )}

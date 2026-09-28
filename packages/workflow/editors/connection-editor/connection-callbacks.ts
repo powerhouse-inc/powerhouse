@@ -8,7 +8,11 @@ import {
   type ConnectionState,
 } from "document-models/connection";
 import type { ConnectionCallbacks } from "./connection-form.js";
-import { connectorIdForPiece, planFromAuth } from "./piece-auth.js";
+import {
+  connectorIdForPiece,
+  planFromAuth,
+  UNKNOWN_AUTH,
+} from "./piece-auth.js";
 
 export function connectionCallbacks(
   state: ConnectionState,
@@ -21,6 +25,8 @@ export function connectionCallbacks(
     },
     pickPiece: (piece) => {
       const plan = planFromAuth(piece.auth);
+      // An auth type this runtime doesn't know is never stored as another.
+      if (plan.authType === UNKNOWN_AUTH) return;
       dispatch(
         actions.setConnector({
           connectorId: connectorIdForPiece(piece.name),

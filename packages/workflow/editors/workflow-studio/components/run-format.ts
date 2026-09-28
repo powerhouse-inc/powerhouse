@@ -1,6 +1,6 @@
 // Shared run vocabulary: one set of formatters and status colours so the
 // header, the table and the editor toolbar never disagree about a run.
-import type { RunRecord } from "../../workflow-editor/runtime-api.js";
+import type { RunRecord } from "../../workflow-editor/runtime-client.js";
 
 export const RUN_STATUSES = ["RUNNING", "SUCCEEDED", "FAILED"] as const;
 
@@ -54,18 +54,47 @@ export const WORKFLOW_TONE: Record<string, Tone> = {
   ARCHIVED: "idle",
 };
 
-// A workflow's dot: how its last run went while it's enabled, hollow while
-// it's a draft, paused, or has never run.
+// A workflow's dot: hollow until it is first published, then coloured by its
+// last run, and a plain filled dot while it has none.
+// A succeeded run with warnings reads as a warning, never as a plain success.
+export function runTone(run: {
+  status: string;
+  warningNotes?: readonly string[];
+}): Tone {
+  if (run.status === "SUCCEEDED" && (run.warningNotes?.length ?? 0) > 0) {
+    return "warn";
+  }
+  return toneOf(RUN_TONE, run.status);
+}
+
+export function runStatusLabel(run: {
+  status: string;
+  warningNotes?: readonly string[];
+}): string {
+  const count = run.warningNotes?.length ?? 0;
+  const label = statusLabel(run.status);
+  if (run.status !== "SUCCEEDED" || count === 0) return label;
+  return `${label}, ${count} ${count === 1 ? "warning" : "warnings"}`;
+}
+
 export function workflowHealth(
   status: string | undefined,
   lastRunStatus: string | undefined,
-): { tone: Tone; label: string } {
-  const state = statusLabel(status ?? "DRAFT");
-  if (status !== "ENABLED") return { tone: "idle", label: state };
-  if (!lastRunStatus) return { tone: "idle", label: `${state}, not run yet` };
+  published: boolean,
+): { tone: Tone; hollow: boolean; label: string } {
+  if (!published) {
+    return { tone: "idle", hollow: true, label: "Not published yet" };
+  }
+  const prefix =
+    status === "ENABLED" ? "" : `${statusLabel(status ?? "DISABLED")}, `;
+  const run = lastRunStatus
+    ? `last run ${statusLabel(lastRunStatus).toLowerCase()}`
+    : "not run yet";
+  const label = prefix + run;
   return {
     tone: toneOf(RUN_TONE, lastRunStatus),
-    label: `${state}, last run ${statusLabel(lastRunStatus).toLowerCase()}`,
+    hollow: false,
+    label: label.charAt(0).toUpperCase() + label.slice(1),
   };
 }
 

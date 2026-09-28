@@ -7,6 +7,7 @@ import {
   planForConnection,
   planFromAuth,
   plansFromAuth,
+  UNKNOWN_AUTH,
   type AuthPlan,
 } from "./piece-auth.js";
 
@@ -73,6 +74,24 @@ describe("planFromAuth", () => {
   it("defaults to NONE when authless", () => {
     expect(planFromAuth(null).authType).toBe("NONE");
     expect(planFromAuth(undefined).supported).toBe(true);
+    expect(planFromAuth({ type: "NONE" }).supported).toBe(true);
+  });
+
+  it("marks an auth type it doesn't know as unsupported, never as NONE", () => {
+    const plan = planFromAuth({ type: "SAML", displayName: "Single sign-on" });
+    expect(plan).toMatchObject({
+      authType: UNKNOWN_AUTH,
+      declaredType: "SAML",
+      supported: false,
+      configFields: [],
+      secretFields: [],
+    });
+  });
+
+  it("still prefers a known method over an unknown one", () => {
+    expect(
+      planFromAuth([{ type: "SAML" }, { type: "SECRET_TEXT" }]).authType,
+    ).toBe("SECRET_TEXT");
   });
 });
 

@@ -1,12 +1,13 @@
-// Flattens a workflow's graph into the order a run walks it, so the studio
+// Lists a workflow's steps in the order a run reaches them, so the studio
 // can show the shape of a workflow without drawing the canvas.
-import { portRank } from "../../workflow-editor/ui/ap-layout.js";
 
 export interface OutlineStep {
   id: string;
   key: string;
   name: string;
-  blockType: string;
+  pieceName: string;
+  pieceVersion: string;
+  actionName: string;
 }
 
 export interface OutlineEdge {
@@ -17,48 +18,57 @@ export interface OutlineEdge {
 
 export interface OutlineRow {
   step: OutlineStep;
-  // The port that led here; null on the entry step and on "next".
+  // The port of the first inbound edge decided; null on an entry and "next".
   port: string | null;
 }
 
 export interface StepOutline {
   rows: OutlineRow[];
-  // Authored but unreachable from the trigger, so no run ever executes them.
+  // Steps a run never reaches: unreachable, cyclic or fed by a missing step.
   orphans: OutlineStep[];
 }
 
+// The coordinator's order (reactor-workflow runWorkflow): passes over the
+// steps array, each step once every inbound edge is decided (an OR join).
 export function stepOutline(args: {
   triggerId?: string | null;
   steps: readonly OutlineStep[];
   edges: readonly OutlineEdge[];
 }): StepOutline {
-  const stepById = new Map(args.steps.map((step) => [step.id, step]));
-  const outgoing = new Map<string, OutlineEdge[]>();
+  const inbound = new Map<string, OutlineEdge[]>();
   for (const edge of args.edges) {
-    if (!stepById.has(edge.to)) continue;
-    const list = outgoing.get(edge.from) ?? [];
+    const list = inbound.get(edge.to) ?? [];
     list.push(edge);
-    outgoing.set(edge.from, list);
+    inbound.set(edge.to, list);
   }
-  for (const list of outgoing.values()) {
-    list.sort((a, b) => portRank(a.port) - portRank(b.port));
-  }
-
+  // A source's edges are all decided once it runs or is skipped; which port
+  // it takes changes what runs, never the order steps are reached in.
+  const decided: string[] = args.triggerId ? [args.triggerId] : [];
   const rows: OutlineRow[] = [];
   const seen = new Set<string>();
-  // Depth-first so a branch reads as a continuous path, as it runs.
-  const walk = (fromId: string, port: string | null) => {
-    const step = stepById.get(fromId);
-    if (step) {
-      if (seen.has(fromId)) return;
-      seen.add(fromId);
+  const firstDecided = (edges: OutlineEdge[]) =>
+    edges.reduce((first, edge) =>
+      decided.indexOf(edge.from) < decided.indexOf(first.from) ? edge : first,
+    );
+
+  let progressed = true;
+  while (progressed) {
+    progressed = false;
+    for (const step of args.steps) {
+      if (seen.has(step.id)) continue;
+      const edges = inbound.get(step.id) ?? [];
+      const entry = !args.triggerId && edges.length === 0;
+      if (!entry) {
+        if (edges.length === 0) continue;
+        if (!edges.every((edge) => decided.includes(edge.from))) continue;
+      }
+      seen.add(step.id);
+      decided.push(step.id);
+      const port = entry ? null : firstDecided(edges).port;
       rows.push({ step, port: port === "next" ? null : port });
+      progressed = true;
     }
-    for (const edge of outgoing.get(fromId) ?? []) {
-      walk(edge.to, edge.port);
-    }
-  };
-  if (args.triggerId) walk(args.triggerId, null);
+  }
 
   return {
     rows,

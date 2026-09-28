@@ -1,6 +1,8 @@
-// Builds the {} picker scope for a step: upstream step outputs and the
-// trigger payload from the latest run when journaled, authored shapes otherwise.
+// Builds the {} picker scope for a step: upstream step outputs and the trigger
+// payload from their last test, else the latest run, else the authored shape.
+import { stepBlock, triggerBlock, type BlockRef } from "./blocks.js";
 import type { WorkflowModel } from "./model.js";
+import { VARIABLE_TYPE_LABEL } from "./variable-types.js";
 
 export interface ExpressionScope {
   // { trigger: { payload }, steps: { key: { output } }, variables: {...} }.
@@ -13,7 +15,8 @@ export const EMPTY_SCOPE: ExpressionScope = { value: {}, captions: {} };
 
 export interface ScopeRunStep {
   stepKey: string;
-  blockType: string;
+  pieceName: string;
+  blockName: string;
   status: string;
   output: unknown;
 }
@@ -29,8 +32,15 @@ export interface BuildScopeOptions {
   stepId: string;
   latestRun?: ScopeRun;
   // Authored output shape of a block (declared types as leaves).
-  authoredOutput: (blockType: string, config: unknown) => Promise<unknown>;
+  authoredOutput: (block: BlockRef, config: unknown) => Promise<unknown>;
+  // A block's last test sample, by step or trigger id; undefined when none.
+  testOutput?: (blockId: string) => Promise<TestSample | undefined>;
   now?: Date;
+}
+
+export interface TestSample {
+  value: unknown;
+  testedAt: string;
 }
 
 const MAX_DEPTH = 6;
@@ -107,8 +117,19 @@ export async function buildExpressionScope(
   const value: Record<string, unknown> = {};
   const captions: Record<string, string> = {};
 
+  const testCaption = (sample: TestSample) =>
+    `from test ${formatRunTime(sample.testedAt, options.now)}`;
+  const tested = async (block: { id: string; lastTest?: unknown }) =>
+    block.lastTest && options.testOutput
+      ? options.testOutput(block.id).catch(() => undefined)
+      : undefined;
+
   if (model.trigger) {
-    if (
+    const sample = await tested(model.trigger);
+    if (sample) {
+      value.trigger = { payload: capValue(sample.value) };
+      captions["trigger.payload"] = testCaption(sample);
+    } else if (
       runCaption &&
       latestRun?.triggerPayload !== undefined &&
       latestRun.triggerPayload !== null
@@ -118,7 +139,7 @@ export async function buildExpressionScope(
     } else {
       value.trigger = {
         payload: await options.authoredOutput(
-          model.trigger.blockType,
+          triggerBlock(model.trigger),
           model.trigger.config,
         ),
       };
@@ -132,15 +153,26 @@ export async function buildExpressionScope(
     model.steps
       .filter((step) => upstream.has(step.id))
       .map(async (step) => {
+        const sample = await tested(step);
+        if (sample) {
+          steps[step.key] = { output: capValue(sample.value) };
+          captions[`steps.${step.key}.output`] = testCaption(sample);
+          return;
+        }
         const journaled = runSteps.get(step.key);
         // A renamed/retyped step's old output would mislead: match on both.
-        if (runCaption && journaled && journaled.blockType === step.blockType) {
+        if (
+          runCaption &&
+          journaled &&
+          journaled.pieceName === step.pieceName &&
+          journaled.blockName === step.actionName
+        ) {
           steps[step.key] = { output: capValue(journaled.output) };
           captions[`steps.${step.key}.output`] = runCaption;
           return;
         }
         steps[step.key] = {
-          output: await options.authoredOutput(step.blockType, step.config),
+          output: await options.authoredOutput(stepBlock(step), step.config),
         };
         captions[`steps.${step.key}.output`] = "declared type";
       }),
@@ -149,10 +181,36 @@ export async function buildExpressionScope(
   if (Object.keys(steps).length > 0) value.steps = steps;
 
   if (model.variables.length > 0) {
+    // A secret shows as such: its reference is no use in a field.
     value.variables = Object.fromEntries(
-      model.variables.map((variable) => [variable.key, variable.value ?? null]),
+      model.variables.map((variable) => [
+        variable.key,
+        variable.type === "SECRET" ? "secret" : (variable.value ?? null),
+      ]),
     );
     captions.variables = "workflow variables";
+    for (const variable of model.variables) {
+      if (variable.type) {
+        captions[`variables.${variable.key}`] =
+          VARIABLE_TYPE_LABEL[variable.type].toLowerCase();
+      }
+    }
   }
   return { value, captions };
+}
+
+// A path segment the picker can insert: dotted when it is an identifier,
+// bracketed otherwise, and indexed inside arrays.
+const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+
+export function childPath(
+  parent: string,
+  key: string,
+  parentIsArray: boolean,
+): string {
+  if (parentIsArray) return `${parent}[${key}]`;
+  if (!parent) return key;
+  return IDENTIFIER.test(key)
+    ? `${parent}.${key}`
+    : `${parent}[${JSON.stringify(key)}]`;
 }
