@@ -1,3 +1,13 @@
+## 6.2.3-dev.28 (2026-09-28)
+
+### 🚀 Features
+
+- **reactor-workflow:** carry Activepieces layout hints, property groups and search to the editor ([4eca1e1bd](https://github.com/powerhouse-inc/powerhouse/commit/4eca1e1bd))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.27 (2026-09-28)
 
 ### 🚀 Features

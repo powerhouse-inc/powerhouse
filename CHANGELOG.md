@@ -1,3 +1,33 @@
+## 6.2.3-dev.28 (2026-09-28)
+
+### 🚀 Features
+
+- **reactor-workflow:** carry Activepieces layout hints, property groups and search to the editor ([4eca1e1bd](https://github.com/powerhouse-inc/powerhouse/commit/4eca1e1bd))
+- **renown:** issue credentials via renown_issueCredential + authenticated profile writes ([#2881](https://github.com/powerhouse-inc/powerhouse/issues/2881))
+- **renown:** export the canonical revoke and profile signed messages ([f77b9b052](https://github.com/powerhouse-inc/powerhouse/commit/f77b9b052))
+- ⚠️  **renown:** write profiles and revocations via the renown-auth mutations ([ca8bf5d39](https://github.com/powerhouse-inc/powerhouse/commit/ca8bf5d39))
+- **workflow:** render every Activepieces prop type and layout hint in the step form ([908e74733](https://github.com/powerhouse-inc/powerhouse/commit/908e74733))
+- **workflow:** split drive and folder, and give the reactor steps an action form ([b1939e431](https://github.com/powerhouse-inc/powerhouse/commit/b1939e431))
+
+### 🩹 Fixes
+
+- **reactor-api:** resolve a package's pieces from the host when reactor-api can't ([3c6440dea](https://github.com/powerhouse-inc/powerhouse/commit/3c6440dea))
+- **renown:** fall back only when the switchboard lacks the renown mutation ([1e7539c42](https://github.com/powerhouse-inc/powerhouse/commit/1e7539c42))
+- **renown:** do not hold sign-in on the profile write ([f5b33911d](https://github.com/powerhouse-inc/powerhouse/commit/f5b33911d))
+- **workflow:** reset source search on dismiss, keep picked labels, commit colour once, fold block descriptions ([585993cb6](https://github.com/powerhouse-inc/powerhouse/commit/585993cb6))
+
+### ⚠️  Breaking Changes
+
+- **renown:** write profiles and revocations via the renown-auth mutations  ([ca8bf5d39](https://github.com/powerhouse-inc/powerhouse/commit/ca8bf5d39))
+  revokeCredential takes the credential's VC id and a
+  RenownWriteAuth instead of a document id and reason; upsertUserProfile
+  requires a RenownWriteAuth.
+
+### ❤️ Thank You
+
+- acaldas
+- Frank Pfeift
+
 ## 6.2.3-dev.27 (2026-09-28)
 
 ### 🚀 Features

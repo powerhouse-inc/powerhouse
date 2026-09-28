@@ -1,3 +1,18 @@
+## 6.2.3-dev.28 (2026-09-28)
+
+### 🚀 Features
+
+- **workflow:** split drive and folder, and give the reactor steps an action form ([b1939e431](https://github.com/powerhouse-inc/powerhouse/commit/b1939e431))
+- **workflow:** render every Activepieces prop type and layout hint in the step form ([908e74733](https://github.com/powerhouse-inc/powerhouse/commit/908e74733))
+
+### 🩹 Fixes
+
+- **workflow:** reset source search on dismiss, keep picked labels, commit colour once, fold block descriptions ([585993cb6](https://github.com/powerhouse-inc/powerhouse/commit/585993cb6))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.27 (2026-09-28)
 
 ### 🩹 Fixes

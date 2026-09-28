@@ -1,3 +1,13 @@
+## 6.2.3-dev.28 (2026-09-28)
+
+### 🩹 Fixes
+
+- **reactor-api:** resolve a package's pieces from the host when reactor-api can't ([3c6440dea](https://github.com/powerhouse-inc/powerhouse/commit/3c6440dea))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.27 (2026-09-28)
 
 ### 🚀 Features
