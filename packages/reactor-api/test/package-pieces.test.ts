@@ -149,14 +149,11 @@ describe("ImportPackageLoader.loadPieces", () => {
       "@acme/pieces-pkg",
     );
 
-    // Resolved to the real path, as a symlinked install would be.
-    expect(pieces).toEqual([
-      {
-        name: "@acme/piece-x",
-        version: "1.0.0",
-        bundleDir: await realpath(bundle),
-      },
-    ]);
+    expect(pieces).toMatchObject([{ name: "@acme/piece-x", version: "1.0.0" }]);
+    // Compared as real paths: Windows may hand back the 8.3 short temp dir.
+    expect(await realpath(pieces[0]?.bundleDir ?? "")).toBe(
+      await realpath(bundle),
+    );
   });
 
   it("throws a resolution error for a package that is not installed", async () => {

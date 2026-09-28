@@ -225,15 +225,11 @@ describe("dropdown search", () => {
     });
   });
 
-  // #3091: blockOptions takes no search value, so the editor cannot send one.
-  it.fails("reaches options() from the runtime's blockOptions", async () => {
+  it("reaches options() from the runtime's blockOptions", async () => {
     packagePieces.setPieces([{ name: PIECE, version: VERSION, bundleDir }]);
     const service = testRuntime();
     try {
-      const withSearch = service.blockOptions.bind(service) as (
-        ...args: unknown[]
-      ) => Promise<unknown>;
-      const output = await withSearch(
+      const output = await service.blockOptions(
         `${PIECE}@${VERSION}#pick`,
         "choice",
         {},
