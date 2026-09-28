@@ -2889,6 +2889,9 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
+      '@tanstack/react-query':
+        specifier: ^5.49.2
+        version: 5.90.21(react@19.2.6)
       '@uiw/react-json-view':
         specifier: 2.0.0-alpha.42
         version: 2.0.0-alpha.42(@babel/runtime@7.29.2)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -2898,6 +2901,9 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
+      graphql:
+        specifier: 'catalog:'
+        version: 16.12.0
       react:
         specifier: 'catalog:'
         version: 19.2.6
