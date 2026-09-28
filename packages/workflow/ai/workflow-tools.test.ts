@@ -32,6 +32,62 @@ function graphqlFetch(routes: Record<string, Handler>) {
   return { fetchMock, calls };
 }
 
+const CORE = "@powerhousedao/piece-core";
+const CORE_VERSION = "6.2.3-dev.27";
+
+// What the reactor serves for the core piece, trimmed to what these tests read.
+const CORE_DESCRIPTORS: Record<string, unknown> = {
+  branch: {
+    displayName: "Core",
+    auth: null,
+    action: {
+      displayName: "Branch",
+      requireAuth: false,
+      ports: ["true", "false", "error"],
+      props: [
+        {
+          name: "left",
+          displayName: "Value",
+          type: "SHORT_TEXT",
+          required: true,
+        },
+        {
+          name: "operator",
+          displayName: "Condition",
+          type: "STATIC_DROPDOWN",
+          required: true,
+        },
+      ],
+    },
+  },
+  assert: {
+    displayName: "Core",
+    auth: null,
+    action: { displayName: "Assert", requireAuth: false, props: [] },
+  },
+  manual: {
+    displayName: "Core",
+    auth: null,
+    trigger: {
+      displayName: "Manual",
+      requireAuth: false,
+      strategy: "MANUAL",
+      props: [],
+    },
+  },
+  schedule: {
+    displayName: "Core",
+    auth: null,
+    trigger: {
+      displayName: "Schedule",
+      requireAuth: false,
+      strategy: "POLLING",
+      display: "schedule",
+      props: [],
+    },
+  },
+};
+
 let tools: typeof WorkflowToolsModule;
 
 beforeEach(async () => {
@@ -64,36 +120,45 @@ describe("workflow authoring tools", () => {
     }
   });
 
-  it("getWorkflowPieceBlocks returns pinned block types for a piece's actions and triggers", async () => {
+  it("getWorkflowPieceBlocks returns the pinned fields of a piece's actions and triggers", async () => {
     const { fetchMock, calls } = graphqlFetch({
       Actions: () => ({
         workflowRuntime: {
           pieceActions: {
+            name: "@activepieces/piece-http",
+            version: "0.11.19",
             actions: [
               {
                 name: "send_request",
                 displayName: "Send HTTP request",
                 description: "d",
-                blockType: "@activepieces/piece-http@0.11.19#send_request",
               },
             ],
           },
         },
       }),
       Triggers: () => ({
-        workflowRuntime: { pieceTriggers: { triggers: [] } },
+        workflowRuntime: {
+          pieceTriggers: {
+            name: "@activepieces/piece-http",
+            version: "0.11.19",
+            triggers: [],
+          },
+        },
       }),
     });
     vi.stubGlobal("fetch", fetchMock);
     const result = (await tool("getWorkflowPieceBlocks").callback({
       packageName: "@activepieces/piece-http",
     } as never)) as {
-      actions: { blockType: string }[];
+      actions: Record<string, string>[];
       triggers: unknown[];
     };
-    expect(result.actions[0].blockType).toBe(
-      "@activepieces/piece-http@0.11.19#send_request",
-    );
+    expect(result.actions[0]).toMatchObject({
+      pieceName: "@activepieces/piece-http",
+      pieceVersion: "0.11.19",
+      actionName: "send_request",
+    });
     expect(result.triggers).toEqual([]);
     expect(
       calls.every(
@@ -102,22 +167,39 @@ describe("workflow authoring tools", () => {
     ).toBe(true);
   });
 
-  it("getWorkflowBlockConfig answers core blocks without touching the runtime", async () => {
-    const { fetchMock } = graphqlFetch({});
+  it("getWorkflowBlockConfig reads core blocks from the runtime like any other", async () => {
+    const { fetchMock, calls } = graphqlFetch({
+      Descriptor: () => ({
+        workflowRuntime: { blockDescriptor: CORE_DESCRIPTORS.branch },
+      }),
+    });
     vi.stubGlobal("fetch", fetchMock);
     const result = (await tool("getWorkflowBlockConfig").callback({
-      blockType: "core#branch",
+      pieceName: CORE,
+      pieceVersion: CORE_VERSION,
+      name: "branch",
+      kind: "action",
     } as never)) as {
+      actionName: string;
       kind: string;
+      title: string;
       props: { name: string }[];
       ports: string[];
       requiresConnection: boolean;
     };
     expect(result.kind).toBe("step");
-    expect(result.props.map((p) => p.name)).toContain("condition");
+    expect(result.actionName).toBe("branch");
+    expect(result.title).toBe("Branch");
+    expect(result.props.map((p) => p.name)).toEqual(["left", "operator"]);
     expect(result.ports).toEqual(["true", "false"]);
     expect(result.requiresConnection).toBe(false);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(calls.map((call) => call.operation)).toEqual(["Descriptor"]);
+    expect(calls[0].variables.block).toEqual({
+      pieceName: CORE,
+      pieceVersion: CORE_VERSION,
+      name: "branch",
+      kind: "action",
+    });
   });
 
   it("getWorkflowBlockConfig describes a piece block's props, options and connection need", async () => {
@@ -130,6 +212,7 @@ describe("workflow authoring tools", () => {
             action: {
               displayName: "Send HTTP request",
               requireAuth: false,
+              ports: ["next", "error"],
               props: [
                 {
                   name: "method",
@@ -152,7 +235,10 @@ describe("workflow authoring tools", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     const result = (await tool("getWorkflowBlockConfig").callback({
-      blockType: "@activepieces/piece-http@0.11.19#send_request",
+      pieceName: "@activepieces/piece-http",
+      pieceVersion: "0.11.19",
+      name: "send_request",
+      kind: "action",
     } as never)) as {
       props: { name: string; required: boolean; options?: unknown[] }[];
       requiresConnection: boolean;
@@ -164,36 +250,80 @@ describe("workflow authoring tools", () => {
     expect(result.props[0].options).toEqual(["GET"]);
   });
 
-  it("getWorkflowBlockConfig reports unknown block types instead of throwing", async () => {
+  it("getWorkflowBlockConfig reports unknown blocks instead of throwing", async () => {
     const { fetchMock } = graphqlFetch({
       Descriptor: () => ({ workflowRuntime: { blockDescriptor: null } }),
     });
     vi.stubGlobal("fetch", fetchMock);
     const result = (await tool("getWorkflowBlockConfig").callback({
-      blockType: "@acme/nope@1.0.0#x",
+      pieceName: "@acme/nope",
+      pieceVersion: "1.0.0",
+      name: "x",
+      kind: "action",
     } as never)) as { error?: string };
-    expect(result.error).toMatch(/unknown block type/i);
+    expect(result.error).toMatch(/unknown block/i);
   });
 
   it("listWorkflowCoreBlocks lists core blocks by role with expression syntax and graph rules", async () => {
+    const entry = (name: string) => ({
+      name,
+      displayName: name,
+      description: "",
+      strategy: "MANUAL",
+    });
+    const { fetchMock } = graphqlFetch({
+      Actions: () => ({
+        workflowRuntime: {
+          pieceActions: {
+            name: CORE,
+            version: CORE_VERSION,
+            actions: ["branch", "assert"].map(entry),
+          },
+        },
+      }),
+      Triggers: () => ({
+        workflowRuntime: {
+          pieceTriggers: {
+            name: CORE,
+            version: CORE_VERSION,
+            triggers: ["manual", "schedule"].map(entry),
+          },
+        },
+      }),
+      Descriptor: (variables) => ({
+        workflowRuntime: {
+          blockDescriptor:
+            CORE_DESCRIPTORS[(variables.block as { name: string }).name],
+        },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
     const result = (await tool("listWorkflowCoreBlocks").callback(
       {} as never,
     )) as {
-      blocks: { blockType: string; kind: string }[];
+      blocks: Record<string, string | undefined>[];
       expressions: string[];
       rules: string[];
     };
     const kind = Object.fromEntries(
-      result.blocks.map((b) => [b.blockType, b.kind]),
+      result.blocks.map((b): [string, string | undefined] => [
+        b.triggerName ?? b.actionName ?? "",
+        b.kind,
+      ]),
     );
-    expect(kind["core#manual"]).toBe("trigger");
-    expect(kind["core#schedule"]).toBe("trigger");
-    expect(kind["core#branch"]).toBe("step");
-    expect(kind["core#assert"]).toBe("step");
-    // The document blocks are a piece now; getWorkflowPieceBlocks lists them.
-    expect(Object.keys(kind).some((type) => type.includes("document"))).toBe(
-      false,
-    );
+    expect(kind).toEqual({
+      manual: "trigger",
+      schedule: "trigger",
+      branch: "step",
+      assert: "step",
+    });
+    expect(result.blocks[0]).toMatchObject({
+      pieceName: CORE,
+      pieceVersion: CORE_VERSION,
+      triggerName: "manual",
+    });
+    // The document blocks are a piece; getWorkflowPieceBlocks lists them.
+    expect(result.blocks.every((b) => b.pieceName === CORE)).toBe(true);
     expect(result.expressions.join("\n")).toContain("{{steps.<key>.output");
     expect(result.rules.join("\n")).toMatch(/ADD_EDGE/);
   });
@@ -219,7 +349,8 @@ describe("workflow authoring tools", () => {
                 {
                   stepId: "s",
                   stepKey: "call",
-                  blockType: "x",
+                  pieceName: "@acme/x",
+                  blockName: "x",
                   status: "FAILED",
                   input: {},
                   output: null,

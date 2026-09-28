@@ -114,13 +114,11 @@ describe("getConnectors", () => {
                       name: "fetchMailbox",
                       displayName: "Fetch mailbox",
                       description: "",
-                      blockType: "",
                     },
                     {
                       name: "fetchMessages",
                       displayName: "Fetch messages",
                       description: "",
-                      blockType: "",
                     },
                   ]
                 : [],
@@ -138,7 +136,6 @@ describe("getConnectors", () => {
                       displayName: "New message",
                       description: "",
                       strategy: "",
-                      blockType: "",
                     },
                   ]
                 : [],

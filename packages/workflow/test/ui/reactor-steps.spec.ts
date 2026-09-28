@@ -1,10 +1,11 @@
 import type { Page } from "@playwright/test";
 import {
   canvasNode,
+  coreTrigger,
   createWorkflowInBrowser,
   gql,
   openWorkflowEditor,
-  pieceBlockType,
+  pieceAction,
   type PhWindow,
 } from "../../scripts/ui-stack.js";
 import { expect, test } from "./fixtures.js";
@@ -49,15 +50,15 @@ test.describe("Reactor steps", () => {
   test.beforeEach(async ({ stack }) => {
     workflowId = await createWorkflowInBrowser(stack.page, stack.drive, {
       name: WORKFLOW,
-      trigger: { blockType: "core#manual", config: {} },
+      trigger: { ...(await coreTrigger("manual")), config: {} },
       steps: [
         {
           key: "create",
           name: STEP,
-          blockType: await pieceBlockType(
+          ...(await pieceAction(
             "@powerhousedao/piece-reactor",
             "document-create",
-          ),
+          )),
           config: {},
         },
       ],
