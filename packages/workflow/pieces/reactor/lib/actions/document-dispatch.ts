@@ -5,8 +5,9 @@ import {
 } from "@powerhousedao/pieces-framework";
 import {
   allowedActionTypes,
+  ConfigReader,
+  parseActionInput,
   parseDispatchPayload,
-  resolveDocumentId,
 } from "../parse.js";
 import { coerceInput } from "../input-props.js";
 import {
@@ -17,6 +18,7 @@ import {
   actionTypeProp,
   documentIdProp,
   documentTypeProp,
+  parseProp,
 } from "../reactor.js";
 
 const BLOCK = "document-dispatch";
@@ -56,33 +58,33 @@ export const documentDispatchAction = createAction({
       required: false,
       advanced: true,
     }),
+    parse: parseProp(),
   },
   run: async (ctx) => {
     const config = ctx.propsValue;
-    const payload = parseDispatchPayload(config.actions, BLOCK);
-    // The picked action goes first, its input typed by the model's schema.
-    const actionType =
-      typeof config.actionType === "string" ? config.actionType.trim() : "";
-    if (actionType) {
-      const schema = await actionInputSchema(
-        reactorOf(ctx),
-        config as Record<string, unknown>,
-      );
-      payload.actions.unshift({
-        type: actionType,
-        input: schema
-          ? coerceInput(schema, config.input)
-          : (config.input ?? {}),
-        scope: undefined,
-      });
-    }
+    const reader = ConfigReader.of(BLOCK, config.parse);
+    const payload = parseDispatchPayload(config.actions, reader);
     const documentId =
-      resolveDocumentId(config.documentId) ??
-      resolveDocumentId(payload.documentId);
+      reader.documentId(config.documentId, "documentId") ?? payload.documentId;
     if (!documentId) {
       throw new Error(
         `${BLOCK}: "documentId" is required, in the config or the actions payload`,
       );
+    }
+    // The picked action goes first, its input typed by the model's schema.
+    const actionType =
+      typeof config.actionType === "string" ? config.actionType.trim() : "";
+    if (actionType) {
+      const schema = await actionInputSchema(reactorOf(ctx), {
+        ...config,
+        documentId,
+      });
+      const input = parseActionInput(config.input, reader);
+      payload.actions.unshift({
+        type: actionType,
+        input: schema ? coerceInput(schema, input) : input,
+        scope: undefined,
+      });
     }
     // Enforced, not merely suggested: the payload may come from an LLM.
     const allowed = allowedActionTypes(config.allowedActions);
@@ -111,6 +113,7 @@ export const documentDispatchAction = createAction({
       documentType: document.documentType,
       name: document.name,
       state: document.state,
+      ...reader.output(),
     };
   },
 });

@@ -71,8 +71,8 @@ describe("coerceInput", () => {
         weight: "1.5",
         enabled: "true",
         backoff: "FIXED",
-        retry: '{ "maxAttempts": 3 }',
-        tags: '["a", "b"]',
+        retry: { maxAttempts: 3 },
+        tags: ["a", "b"],
         config: "",
         stray: "ignored",
       }),
@@ -86,10 +86,54 @@ describe("coerceInput", () => {
     });
   });
 
-  it("passes a value that won't convert through, for the model to reject", () => {
-    expect(coerceInput(schema, { weight: "heavy", enabled: false })).toEqual({
-      weight: "heavy",
-      enabled: false,
+  it("passes an Unknown field's value as given, never JSON-parsing text", () => {
+    expect(coerceInput(schema, { config: "true" })).toEqual({
+      config: "true",
     });
+  });
+
+  it("names the field whose value will not convert", () => {
+    expect(() => coerceInput(schema, { weight: "heavy" })).toThrow(
+      /input "weight" \(Float\) expects a number/,
+    );
+    expect(() => coerceInput(schema, { weight: "0x10" })).toThrow(/weight/);
+    expect(() => coerceInput(schema, { enabled: "yes" })).toThrow(
+      /input "enabled"/,
+    );
+    expect(() => coerceInput(schema, { retry: '{"maxAttempts":3}' })).toThrow(
+      /input "retry" .* expects an object/,
+    );
+    expect(() => coerceInput(schema, { tags: "a,b" })).toThrow(
+      /input "tags" .* expects a list/,
+    );
+    expect(() => coerceInput(schema, { key: 7 })).toThrow(/input "key"/);
+  });
+
+  it("refuses a non-object input rather than sending {}", () => {
+    expect(() => coerceInput(schema, '{"key":"fetch"}')).toThrow(
+      /"input" must be an object/,
+    );
+    expect(() => coerceInput(schema, [])).toThrow(/"input" must be an object/);
+    expect(coerceInput(schema, undefined)).toEqual({});
+  });
+
+  it("keeps Amount types as the model declares them", () => {
+    const amounts = parseActionInputSchema(
+      "input PayInput { money: Amount_Money, fiat: Amount_Fiat, count: Int }",
+      "PAY",
+    )!;
+    expect(
+      coerceInput(amounts, {
+        money: "100",
+        fiat: { unit: "EUR", value: 5 },
+        count: "3",
+      }),
+    ).toEqual({ money: 100, fiat: { unit: "EUR", value: 5 }, count: 3 });
+    expect(() => coerceInput(amounts, { fiat: "100" })).toThrow(
+      /input "fiat" \(Amount_Fiat\) expects an object/,
+    );
+    expect(() => coerceInput(amounts, { count: "1.5" })).toThrow(
+      /expects an integer/,
+    );
   });
 });

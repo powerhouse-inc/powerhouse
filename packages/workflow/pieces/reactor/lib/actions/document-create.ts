@@ -4,7 +4,12 @@ import {
   reactorOf,
 } from "@powerhousedao/pieces-framework";
 import { coerceInput } from "../input-props.js";
-import { parseActions, parseCreatePayload } from "../parse.js";
+import {
+  ConfigReader,
+  parseActionInput,
+  parseActions,
+  parseCreatePayload,
+} from "../parse.js";
 import {
   ACTION_GROUP,
   actionInputProp,
@@ -14,6 +19,7 @@ import {
   documentTypeProp,
   driveProp,
   folderProp,
+  parseProp,
 } from "../reactor.js";
 
 const BLOCK = "document-create";
@@ -42,12 +48,14 @@ export const documentCreateAction = createAction({
       required: false,
       advanced: true,
     }),
+    parse: parseProp(),
   },
   run: async (ctx) => {
     const reactor = reactorOf(ctx);
     const config = ctx.propsValue;
+    const reader = ConfigReader.of(BLOCK, config.parse);
     // A payload (typically model output) can name the type and the document.
-    const payload = parseCreatePayload(config.payload, BLOCK);
+    const payload = parseCreatePayload(config.payload, reader);
     const documentType =
       (typeof config.documentType === "string" && config.documentType) ||
       payload.documentType;
@@ -69,7 +77,10 @@ export const documentCreateAction = createAction({
 
     // The name travelled with the create; only the author's own actions are
     // left to dispatch.
-    const followUps = parseActions(config.actions ?? payload.actions, BLOCK);
+    const followUps =
+      config.actions !== undefined
+        ? parseActions(config.actions, reader)
+        : parseActions(payload.actions, reader, "payload.actions");
     const actionType =
       typeof config.actionType === "string" ? config.actionType.trim() : "";
     if (actionType) {
@@ -77,11 +88,10 @@ export const documentCreateAction = createAction({
         documentType,
         actionType,
       });
+      const input = parseActionInput(config.input, reader);
       followUps.unshift({
         type: actionType,
-        input: schema
-          ? coerceInput(schema, config.input)
-          : (config.input ?? {}),
+        input: schema ? coerceInput(schema, input) : input,
         scope: undefined,
       });
     }
@@ -97,6 +107,7 @@ export const documentCreateAction = createAction({
       documentType: document.documentType,
       name: document.name,
       state: document.state,
+      ...reader.output(),
     };
   },
 });

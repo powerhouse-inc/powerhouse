@@ -8,6 +8,7 @@ import {
   fieldKind,
   humanize,
   type ActionInputSchema,
+  type FieldKind,
   type InputField,
 } from "./input-schema.js";
 
@@ -54,6 +55,11 @@ function propFor(field: InputField, schema: ActionInputSchema) {
           })),
         },
       });
+    case "unsupported":
+      return Property.Json({
+        ...base,
+        description: `Type ${field.type.name} is not supported by this form`,
+      });
     default:
       return Property.Json(base);
   }
@@ -65,45 +71,85 @@ export function inputProps(schema: ActionInputSchema): DynamicPropsValue {
   return props as DynamicPropsValue;
 }
 
-function parseJson(value: unknown): unknown {
-  if (typeof value !== "string") return value;
-  try {
-    return JSON.parse(value);
-  } catch {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// JSON's number grammar, so "", "0x10" and "1e" are not numbers.
+const NUMBER = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/;
+
+function preview(value: unknown): string {
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  return text.length > 60 ? `${text.slice(0, 57)}...` : text;
+}
+
+function coerceField(
+  field: InputField,
+  kind: FieldKind,
+  value: unknown,
+): unknown {
+  const fail = (expected: string) =>
+    new Error(
+      `input "${field.name}" (${field.type.name}) expects ${expected}; got ${preview(value)}`,
+    );
+  if (field.type.list) {
+    if (!Array.isArray(value)) throw fail("a list");
     return value;
+  }
+  switch (kind) {
+    case "text":
+    case "enum":
+      if (typeof value !== "string") throw fail("text");
+      return value;
+    case "integer":
+    case "number": {
+      const number =
+        typeof value === "number"
+          ? value
+          : typeof value === "string" && NUMBER.test(value.trim())
+            ? Number(value.trim())
+            : Number.NaN;
+      if (!Number.isFinite(number)) throw fail("a number");
+      if (kind === "integer" && !Number.isInteger(number)) {
+        throw fail("an integer");
+      }
+      return number;
+    }
+    case "boolean":
+      if (typeof value === "boolean") return value;
+      if (value === "true" || value === "false") return value === "true";
+      throw fail("true or false");
+    case "object":
+      if (!isRecord(value)) throw fail("an object");
+      return value;
+    case "json":
+      return value;
+    case "unsupported":
+      throw new Error(
+        `input "${field.name}" has type ${field.type.name}, which this piece cannot map`,
+      );
   }
 }
 
-// Unset fields are left out; a value that won't convert is passed through
-// for the model's own schema to reject by name.
+// Unset fields are left out; a value of the wrong shape is an error naming
+// the field, never a guess at what was meant.
 export function coerceInput(
   schema: ActionInputSchema,
   raw: unknown,
 ): Record<string, unknown> {
-  const values =
-    typeof raw === "object" && raw !== null
-      ? (raw as Record<string, unknown>)
-      : {};
+  const values = raw ?? {};
+  if (!isRecord(values)) {
+    throw new Error(`"input" must be an object; got ${preview(values)}`);
+  }
   const input: Record<string, unknown> = {};
   for (const field of schema.root) {
     const value = values[field.name];
     if (value === undefined || value === null || value === "") continue;
-    if (field.type.list) {
-      input[field.name] = parseJson(value);
-      continue;
-    }
-    const kind = fieldKind(field.type, schema);
-    if (kind === "integer" || kind === "number") {
-      const number = typeof value === "string" ? Number(value.trim()) : value;
-      input[field.name] = Number.isFinite(number) ? number : value;
-    } else if (kind === "boolean") {
-      input[field.name] =
-        value === "true" ? true : value === "false" ? false : value;
-    } else if (kind === "object" || kind === "json") {
-      input[field.name] = parseJson(value);
-    } else {
-      input[field.name] = value;
-    }
+    input[field.name] = coerceField(
+      field,
+      fieldKind(field.type, schema),
+      value,
+    );
   }
   return input;
 }
