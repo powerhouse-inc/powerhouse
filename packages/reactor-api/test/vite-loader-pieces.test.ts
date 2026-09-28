@@ -27,7 +27,7 @@ async function writeSourceList(entries: string[]): Promise<void> {
 }
 
 function declared(name: string, dir: string): string {
-  return `  { name: "${name}", version: "1.0.0", entry: "dist/node/pieces/${dir}/index.mjs" }`;
+  return `  { name: "${name}", entry: "dist/node/pieces/${dir}/index.mjs" }`;
 }
 
 async function writeBuiltPiece(dir: string): Promise<void> {
@@ -43,7 +43,7 @@ describe("VitePackageLoader.loadPieces", () => {
     root = await realpath(await mkdtemp(join(tmpdir(), "vite-loader-pieces-")));
     await writeFile(
       join(root, "package.json"),
-      JSON.stringify({ name: PACKAGE, version: "1.0.0", type: "module" }),
+      JSON.stringify({ name: PACKAGE, version: "3.4.5", type: "module" }),
     );
     await writeSourceList([declared(PIECE, "greeter")]);
     await writeBuiltPiece("greeter");
@@ -60,7 +60,7 @@ describe("VitePackageLoader.loadPieces", () => {
     expect(await loader.loadPieces(root)).toEqual([
       {
         name: PIECE,
-        version: "1.0.0",
+        version: "3.4.5",
         entryPath: join(root, "dist", "node", "pieces", "greeter", "index.mjs"),
       },
     ]);
@@ -70,7 +70,7 @@ describe("VitePackageLoader.loadPieces", () => {
     expect(await loader.loadPieces(PACKAGE)).toEqual([
       {
         name: PIECE,
-        version: "1.0.0",
+        version: "3.4.5",
         entryPath: join(root, "dist", "node", "pieces", "greeter", "index.mjs"),
       },
     ]);

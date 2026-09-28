@@ -31,13 +31,7 @@ export const generatePieceCmd = command({
       type: optional(string),
       long: "id",
       description:
-        "The piece id a workflow block type names, e.g. @acme/piece-crm. Defaults to one derived from the package name.",
-    }),
-    pieceVersion: option({
-      type: optional(string),
-      long: "piece-version",
-      description:
-        "The version the pieces list declares. Defaults to the package version when the piece is named after the package, else 1.0.0.",
+        "The piece id, the pieceName a workflow step holds, e.g. @acme/piece-crm. Defaults to one derived from the package name.",
     }),
     auth: option({
       type: oneOf(["none", "secret", "custom"] as const),

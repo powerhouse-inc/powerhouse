@@ -8,7 +8,6 @@ import { getOrCreateDirectory } from "utils";
 
 export type PieceListEntry = {
   name: string;
-  version: string;
   entry?: string;
   bundle?: string;
 };
@@ -74,7 +73,6 @@ export function readPiecesList(project: Project): PieceListEntry[] {
     .filter((literal) => literal !== undefined)
     .map((literal) => ({
       name: stringProperty(literal, "name") ?? "",
-      version: stringProperty(literal, "version") ?? "",
       entry: stringProperty(literal, "entry"),
       bundle: stringProperty(literal, "bundle"),
     }))

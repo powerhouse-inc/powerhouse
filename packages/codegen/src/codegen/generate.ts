@@ -318,13 +318,9 @@ async function readProjectPackage(project: Project) {
   const projectDir = piecesProjectDir(project);
   try {
     const pkg = await readPackage({ cwd: projectDir, normalize: false });
-    return {
-      projectDir,
-      packageName: pkg.name ?? "",
-      packageVersion: pkg.version ?? "1.0.0",
-    };
+    return { projectDir, packageName: pkg.name ?? "" };
   } catch {
-    return { projectDir, packageName: "", packageVersion: "1.0.0" };
+    return { projectDir, packageName: "" };
   }
 }
 
@@ -361,13 +357,12 @@ export async function generatePiece(
   args: {
     pieceName: string;
     pieceId?: string;
-    pieceVersion?: string;
     auth?: PieceAuthKind;
     description?: string;
   },
   project: Project,
 ) {
-  const { packageName, packageVersion } = await readProjectPackage(project);
+  const { packageName } = await readProjectPackage(project);
   const names = getPieceNames(args.pieceName);
   if (args.pieceId === undefined && packageName === "") {
     throw new Error(
@@ -381,25 +376,10 @@ export async function generatePiece(
       slug: names.kebabCaseName,
       hasOtherPieces: readPiecesList(project).length > 0,
     }).id;
-  const pieceVersion =
-    args.pieceVersion ?? (pieceId === packageName ? packageVersion : "1.0.0");
-  // What `assertPieceVersion` would fail the build with, said before anything
-  // is written rather than after the next `ph build`.
-  if (pieceId === packageName && pieceVersion !== packageVersion) {
-    throw new Error(
-      `pieces: "${pieceId}" declares version ${pieceVersion}, package.json says ${packageVersion}`,
-    );
-  }
-  if (pieceId === packageName) {
-    console.log(
-      `piece "${pieceId}" is named after the package, so their versions are tied: a release must move both.`,
-    );
-  }
   await tsMorphGeneratePiece({
     project,
     pieceName: args.pieceName,
     pieceId,
-    pieceVersion,
     auth: args.auth ?? "custom",
     description: args.description ?? `Connect to ${names.displayName}.`,
   });
@@ -434,8 +414,8 @@ export async function generatePieceTrigger(
 
 /* Re-registers every piece on disk in the list and the manifest; scaffolds nothing */
 export async function generateAllPieces(project: Project, only?: string) {
-  const { packageName, packageVersion } = await readProjectPackage(project);
-  await syncPiecesRegistration({ project, packageName, packageVersion, only });
+  const { packageName } = await readProjectPackage(project);
+  await syncPiecesRegistration({ project, packageName, only });
 }
 
 /* Runs each module type's generateAll{moduleType} function for the current project */

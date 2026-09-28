@@ -82,12 +82,11 @@ function getPiecesArray(sourceFile: SourceFile) {
 }
 
 // Appended to with ts-morph rather than rewritten: every other element, its
-// comments and a hand-tuned version stay exactly as they were written.
+// comments and hand edits stay exactly as they were written.
 async function addPieceToList(v: {
   project: Project;
   piecesDirPath: string;
   pieceId: string;
-  pieceVersion: string;
   kebabCaseName: string;
 }) {
   const filePath = path.join(v.piecesDirPath, "index.ts");
@@ -101,10 +100,10 @@ async function addPieceToList(v: {
   const list = getPiecesArray(sourceFile);
   if (!list) {
     // A list we cannot find the array in is the user's: say what to paste
-    // rather than guess, which is how a hand-tuned version gets clobbered.
+    // rather than guess, which is how a hand-written list gets clobbered.
     throw new Error(
       `pieces/index.ts has no "pieces" array to add to. Add this entry by hand:\n` +
-        `  { name: "${v.pieceId}", version: "${v.pieceVersion}", entry: "${entry}" }`,
+        `  { name: "${v.pieceId}", entry: "${entry}" }`,
     );
   }
 
@@ -117,9 +116,7 @@ async function addPieceToList(v: {
     );
   if (already) return;
 
-  list.addElement(
-    `{\n  name: "${v.pieceId}",\n  version: "${v.pieceVersion}",\n  entry: "${entry}",\n}`,
-  );
+  list.addElement(`{\n  name: "${v.pieceId}",\n  entry: "${entry}",\n}`);
   await formatSourceFileWithPrettier(sourceFile);
 }
 
@@ -197,12 +194,10 @@ export async function tsMorphGeneratePiece(args: {
   pieceName: string;
   /** The piece id a block type names. */
   pieceId: string;
-  /** The version the list entry declares. */
-  pieceVersion: string;
   auth: PieceAuthKind;
   description: string;
 }): Promise<void> {
-  const { project, pieceName, pieceId, pieceVersion, auth, description } = args;
+  const { project, pieceName, pieceId, auth, description } = args;
   const names = getPieceNames(pieceName);
   const withAuth = auth !== "none";
   const paths = pieceDirPaths(project, names.kebabCaseName);
@@ -305,7 +300,6 @@ export async function tsMorphGeneratePiece(args: {
     project,
     piecesDirPath: paths.piecesDirPath,
     pieceId,
-    pieceVersion,
     kebabCaseName: names.kebabCaseName,
   });
 
@@ -400,11 +394,10 @@ export async function tsMorphGeneratePieceTrigger(args: {
 export async function syncPiecesRegistration(args: {
   project: Project;
   packageName: string;
-  packageVersion: string;
   /** Limit which directories may gain a list entry; the manifest still syncs whole. */
   only?: string;
 }): Promise<{ ids: string[] }> {
-  const { project, packageName, packageVersion, only } = args;
+  const { project, packageName, only } = args;
   const { directory: piecesDir } = getOrCreateDirectory(project, PIECES_DIR);
   const piecesDirPath = piecesDir.getPath();
   const projectDir = piecesDir.getParentOrThrow().getPath();
@@ -430,7 +423,6 @@ export async function syncPiecesRegistration(args: {
       project,
       piecesDirPath,
       pieceId: id,
-      pieceVersion: id === packageName ? packageVersion : "1.0.0",
       kebabCaseName: dirName,
     });
   }

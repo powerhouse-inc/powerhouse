@@ -177,7 +177,7 @@ describe("runBuild on a piece-only package", () => {
       ),
     ).toEqual(["index.mjs"]);
 
-    // The descriptor: the list's name and version, the piece's metadata,
+    // The descriptor: the list's name, the package's version, the piece's metadata,
     // and none of the functions a prop or an action carries.
     type Descriptor = {
       name: string;
@@ -213,7 +213,7 @@ describe("runBuild on a piece-only package", () => {
       join(dist, "node", "pieces", "goodbye", "descriptor.json"),
     );
     expect(goodbyeDescriptor.name).toBe("@fixture/piece-goodbye");
-    expect(goodbyeDescriptor.version).toBe("0.1.0");
+    expect(goodbyeDescriptor.version).toBe("1.2.3");
     expect(goodbyeDescriptor.displayName).toBe("Goodbye");
     expect(goodbyeDescriptor.deprecated).toBe(false);
     expect(goodbyeDescriptor.actions.say_hello.displayName).toBe("Say goodbye");
@@ -247,7 +247,7 @@ describe("runBuild on a piece-only package", () => {
       {
         id: "@fixture/piece-goodbye",
         name: "Goodbye",
-        version: "0.1.0",
+        version: "1.2.3",
         description: "Says goodbye.",
         bundle: "dist/node/pieces/goodbye",
         descriptor: "dist/node/pieces/goodbye/descriptor.json",
@@ -464,7 +464,7 @@ describe("runBuild on a generated piece", () => {
     };
     const descriptor = readJson<Descriptor>(join(pieceDir, "descriptor.json"));
     expect(descriptor.name).toBe("@fixture/piece-acme-crm");
-    expect(descriptor.version).toBe("1.0.0");
+    expect(descriptor.version).toBe("2.0.0");
     expect(descriptor.displayName).toBe("Acme Crm");
     expect(Object.keys(descriptor.actions)).toEqual(["get-record"]);
     expect(Object.keys(descriptor.triggers)).toEqual(["new-record"]);
@@ -473,7 +473,7 @@ describe("runBuild on a generated piece", () => {
       readJson<Record<string, unknown>>(join(pieceDir, "package.json")),
     ).toEqual({
       name: "@fixture/piece-acme-crm",
-      version: "1.0.0",
+      version: "2.0.0",
       description: "Connect to Acme CRM.",
       type: "module",
       main: "index.mjs",
@@ -488,7 +488,7 @@ describe("runBuild on a generated piece", () => {
       {
         id: "@fixture/piece-acme-crm",
         name: "Acme Crm",
-        version: "1.0.0",
+        version: "2.0.0",
         description: "Connect to Acme CRM.",
         bundle: "dist/node/pieces/acme-crm",
         descriptor: "dist/node/pieces/acme-crm/descriptor.json",

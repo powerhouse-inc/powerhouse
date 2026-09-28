@@ -47,7 +47,6 @@ export type PieceBuildTarget = {
 // Declared here so the build needs no dependency on a package meant for pieces.
 export type PackagePiece = {
   name: string;
-  version: string;
   entry?: string;
   bundle?: string;
 };
@@ -63,7 +62,6 @@ export type PieceMetadata = Record<string, unknown> & {
 
 export type DescribedPiece = {
   name: string;
-  version: string;
   metadata: PieceMetadata;
 };
 
@@ -285,7 +283,7 @@ for (const piece of list) {
       );
     }
     const metadata = JSON.parse(JSON.stringify(describePiece(found), createJsonReplacer()));
-    out.pieces.push({ name: piece.name, version: piece.version, metadata });
+    out.pieces.push({ name: piece.name, metadata });
   } catch (error) {
     out.errors.push({
       name: piece.name,
@@ -424,15 +422,15 @@ export function assertPiecesOutDir(target: {
   );
 }
 
-// A piece named after its package must carry the package's version: once
-// published, a drifted version resolves to the wrong tarball.
+// A piece's version is its package's, written by the build; a list entry that
+// declares one is refused, so `name@version` always names one tarball.
 export function assertPieceVersion(
   piece: PackagePiece,
   pkg: PackageIdentity,
 ): void {
-  if (piece.name === pkg.name && piece.version !== pkg.version) {
+  if ("version" in piece) {
     throw new Error(
-      `pieces: "${piece.name}" declares version ${piece.version}, package.json says ${pkg.version}`,
+      `pieces: "${piece.name}" declares version ${String(piece.version)}; a piece takes its package's version (${pkg.version}), so remove "version" from pieces/index.ts`,
     );
   }
 }
@@ -459,14 +457,26 @@ export function piecePackageJson(options: {
   };
 }
 
-// The descriptor written beside a piece: the list's name and version, then
-// whatever the piece said about itself, in the framework's PieceMetadata shape.
+// A prebuilt bundle's own package.json, restamped with the package's version.
+export function bundlePackageJson(
+  dir: string,
+  version: string,
+): Record<string, unknown> {
+  const current = JSON.parse(
+    readFileSync(join(dir, "package.json"), "utf8"),
+  ) as Record<string, unknown>;
+  return { ...current, version };
+}
+
+// The descriptor written beside a piece: the list's name, the package's version,
+// then whatever the piece said about itself, in the framework's PieceMetadata shape.
 export function pieceDescriptor(
   piece: PackagePiece,
+  version: string,
   metadata: PieceMetadata,
 ): Record<string, unknown> {
   const { name: _name, version: _version, ...rest } = metadata;
-  return { name: piece.name, version: piece.version, ...rest };
+  return { name: piece.name, version, ...rest };
 }
 
 // The manifest's `pieces` with what the build learned: a built piece replaces
@@ -530,7 +540,7 @@ export async function buildPieces(
     );
   }
 
-  // The list is the source of truth for names and versions; a package that
+  // The list is the source of truth for names; a package that
   // built pieces without a list has nothing a host could read.
   const listPath = pieceListPath(target);
   if (!existsSync(listPath)) {
@@ -563,34 +573,32 @@ export async function buildPieces(
     writeFileSync(
       join(location.dir, "descriptor.json"),
       JSON.stringify(
-        pieceDescriptor(piece, metadata),
+        pieceDescriptor(piece, pkg.version, metadata),
         createJsonReplacer(),
         2,
       ) + "\n",
     );
-    if (location.form === "entry" && location.entryFile) {
-      writeFileSync(
-        join(location.dir, "package.json"),
-        JSON.stringify(
-          piecePackageJson({
+    const piecePackage =
+      location.form === "entry" && location.entryFile
+        ? piecePackageJson({
             name: piece.name,
-            version: piece.version,
+            version: pkg.version,
             description: metadata.description,
             main: relative(location.dir, location.entryFile),
             license: pkg.license,
-          }),
-          null,
-          2,
-        ) + "\n",
-      );
-    }
+          })
+        : bundlePackageJson(location.dir, pkg.version);
+    writeFileSync(
+      join(location.dir, "package.json"),
+      JSON.stringify(piecePackage, null, 2) + "\n",
+    );
     console.log(
-      `piece: ${piece.name}@${piece.version} -> ${relDir} ` +
+      `piece: ${piece.name}@${pkg.version} -> ${relDir} ` +
         `(${count(metadata.actions)} actions, ${count(metadata.triggers)} triggers)`,
     );
     built.push({
       name: piece.name,
-      version: piece.version,
+      version: pkg.version,
       displayName: metadata.displayName,
       description: metadata.description,
       bundle: relDir,

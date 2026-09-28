@@ -83,16 +83,15 @@ describe("generatePiece", () => {
     ]);
   });
 
-  it("ties the version to the package when the piece is named after it", async () => {
+  // `ph build` stamps the package version and refuses a declared one.
+  it("writes no version into the list", async () => {
     const dir = makeProject("@acme/piece-crm", "3.1.0");
     const project = buildTsMorphProject(dir);
     await generatePiece({ pieceName: "crm" }, project);
     await project.save();
 
-    expect(readList(dir)).toContain('version: "3.1.0"');
-    await expect(
-      generatePiece({ pieceName: "crm", pieceVersion: "9.9.9" }, project),
-    ).rejects.toThrow("package.json says 3.1.0");
+    expect(readList(dir)).toContain('name: "@acme/piece-crm"');
+    expect(readList(dir)).not.toMatch(/version:/);
   });
 
   it("appends a second piece rather than rewriting the list", async () => {

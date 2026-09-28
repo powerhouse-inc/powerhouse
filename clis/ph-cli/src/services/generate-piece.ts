@@ -37,7 +37,8 @@ async function resolvePieceId(v: {
     {
       type: "input",
       name: "pieceId",
-      message: "What id should this piece have? A block type names it.",
+      message:
+        "What id should this piece have? A workflow step names it as its pieceName.",
       initial: id,
       required: true,
     },
@@ -53,7 +54,6 @@ export async function startGeneratePiece(
     namePositional,
     name: nameOption,
     id,
-    pieceVersion,
     auth,
     description,
     dir,
@@ -77,7 +77,7 @@ export async function startGeneratePiece(
       id,
     });
     await generatePiece(
-      { pieceName: name, pieceId, pieceVersion, auth, description },
+      { pieceName: name, pieceId, auth, description },
       project,
     );
   } else {

@@ -19,6 +19,20 @@ export interface HttpPackageLoaderLogger {
   error: (msg: string, err: unknown) => void;
 }
 
+// A published package.json version: never a range or a dist-tag.
+const EXACT_VERSION =
+  /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
+
+// Where a package version's pieces are served; exact, so an entryUrl never floats.
+export function piecesBaseUrl(
+  registryUrl: string,
+  packageName: string,
+  version: string,
+): string {
+  const root = registryUrl.endsWith("/") ? registryUrl : `${registryUrl}/`;
+  return `${root}-/cdn/${packageName}@${version}/node/pieces/`;
+}
+
 // Expected shape of the document-models bundle export
 type DocumentModelsExport = Record<string, DocumentModelModule>;
 
@@ -197,7 +211,14 @@ export class HttpPackageLoader implements IPackageLoader {
     if (!this.isValidPackageName(packageName)) {
       throw new Error(`Invalid package name: ${packageName}`);
     }
-    const base = `${this.registryUrl}-/cdn/${packageSpec}/node/pieces/`;
+    // Pinned before anything is read: a tag or an unversioned spec would let
+    // every entryUrl float to whatever the registry serves next.
+    const version = await this.packageVersion(packageSpec);
+    if (!version) {
+      this.logger.verbose(`No package version found for: ${packageSpec}`);
+      return [];
+    }
+    const base = piecesBaseUrl(this.registryUrl, packageName, version);
     this.logger.verbose(`Importing pieces from: ${base}index.mjs`);
     let module: unknown;
     try {
@@ -208,7 +229,13 @@ export class HttpPackageLoader implements IPackageLoader {
       this.logger.verbose(`No pieces found for: ${packageName}`, error);
       return [];
     }
-    const pieces = piecesFromCdnList(module, base, packageName, this.logger);
+    const pieces = piecesFromCdnList(
+      module,
+      base,
+      packageName,
+      this.logger,
+      version,
+    );
     this.logger.verbose(`Loaded ${pieces.length} pieces from ${packageName}`);
     return pieces;
   }
@@ -242,6 +269,26 @@ export class HttpPackageLoader implements IPackageLoader {
     }
 
     return allModels;
+  }
+
+  // The exact version a spec resolves to, read off the package.json the CDN serves.
+  async packageVersion(packageSpec: string): Promise<string | undefined> {
+    try {
+      const response = await fetch(
+        `${this.registryUrl}-/cdn/${packageSpec}/package.json`,
+      );
+      if (!response.ok) return undefined;
+      const pkg = (await response.json()) as { version?: unknown };
+      return typeof pkg.version === "string" && EXACT_VERSION.test(pkg.version)
+        ? pkg.version
+        : undefined;
+    } catch (error) {
+      this.logger.verbose(
+        `Could not read the version of ${packageSpec}`,
+        error,
+      );
+      return undefined;
+    }
   }
 
   private isValidPackageName(name: string): boolean {
