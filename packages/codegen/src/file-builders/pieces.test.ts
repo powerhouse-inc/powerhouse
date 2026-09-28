@@ -13,6 +13,7 @@ import {
   generateAllPieces,
   generatePiece,
   generatePieceAction,
+  generatePieceTrigger,
 } from "../codegen/generate.js";
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
 import { createOrUpdateManifest } from "./manifest.js";
@@ -58,19 +59,19 @@ describe("generatePiece", () => {
     await generatePiece({ pieceName: "acme-crm" }, project);
     await project.save();
 
-    for (const file of [
-      "index.ts",
-      "lib/logo.ts",
-      "lib/auth.ts",
-      "lib/common/errors.ts",
-      "lib/common/auth-value.ts",
-      "lib/common/client.ts",
-      "lib/common/context.ts",
-      "lib/actions/get-record.ts",
-      "lib/triggers/new-record.ts",
-    ]) {
+    for (const file of ["index.ts", "lib/logo.ts", "lib/auth.ts"]) {
       expect(existsSync(join(dir, "pieces", "acme-crm", file))).toBe(true);
     }
+    // No example parts: `ph generate piece-action` and `piece-trigger` add them.
+    for (const dir_ of ["lib/common", "lib/actions", "lib/triggers"]) {
+      expect(existsSync(join(dir, "pieces", "acme-crm", dir_))).toBe(false);
+    }
+    const pieceIndex = readFileSync(
+      join(dir, "pieces", "acme-crm", "index.ts"),
+      "utf8",
+    );
+    expect(pieceIndex).toContain("actions: []");
+    expect(pieceIndex).toContain("triggers: []");
 
     // The literal path `resolvePieceLocation` requires; anything else fails
     // the build with "declares ..., which is missing".
@@ -125,21 +126,14 @@ describe("generatePiece", () => {
     await generatePiece({ pieceName: "acme-crm" }, first);
     await first.save();
 
-    const actionFile = join(
-      dir,
-      "pieces",
-      "acme-crm",
-      "lib",
-      "actions",
-      "get-record.ts",
-    );
-    writeFileSync(actionFile, "// edited by hand\nexport const marker = 1;\n");
+    const authFile = join(dir, "pieces", "acme-crm", "lib", "auth.ts");
+    writeFileSync(authFile, "// edited by hand\nexport const marker = 1;\n");
 
     const second = buildTsMorphProject(dir);
     await generatePiece({ pieceName: "acme-crm" }, second);
     await second.save();
 
-    expect(readFileSync(actionFile, "utf8")).toContain("edited by hand");
+    expect(readFileSync(authFile, "utf8")).toContain("edited by hand");
     expect(readList(dir).match(/acme-crm/g)).toHaveLength(2);
   });
 
@@ -176,12 +170,15 @@ describe("generatePiece", () => {
     );
     expect(
       readFileSync(join(dir, "pieces", "acme-crm", "index.ts"), "utf8"),
-    ).toContain("auth: undefined");
+    ).toContain("auth: PieceAuth.None()");
   });
 
-  it.each(["secret", "custom"] as const)(
-    "puts the connection check and its label on the %s auth",
-    async (auth) => {
+  it.each([
+    ["secret", "PieceAuth.SecretText("],
+    ["custom", "PieceAuth.CustomAuth("],
+  ] as const)(
+    "declares the %s auth and hands it to the piece",
+    async (auth, declaration) => {
       const dir = makeProject();
       const project = buildTsMorphProject(dir);
       await generatePiece({ pieceName: "acme-crm", auth }, project);
@@ -189,8 +186,7 @@ describe("generatePiece", () => {
 
       const piece = join(dir, "pieces", "acme-crm");
       const authFile = readFileSync(join(piece, "lib", "auth.ts"), "utf8");
-      expect(authFile).toContain("validate: async ({ auth })");
-      expect(authFile).toContain("getConnectionIdentifier: async ({ auth })");
+      expect(authFile).toContain(`export const acmeCrmAuth = ${declaration}`);
       expect(readFileSync(join(piece, "index.ts"), "utf8")).toContain(
         "auth: acmeCrmAuth",
       );
@@ -205,11 +201,18 @@ describe("a scaffolded piece without auth", () => {
     const dir = makeProject();
     const project = buildTsMorphProject(dir);
     await generatePiece({ pieceName: "acme-crm", auth: "none" }, project);
+    await generatePieceAction({ actionName: "get-record" }, project);
+    await generatePieceTrigger({ triggerName: "new-record" }, project);
+    await generatePieceTrigger(
+      { triggerName: "record-updated", strategy: "webhook" },
+      project,
+    );
     await project.save();
 
     const sources = [
       "lib/actions/get-record.ts",
       "lib/triggers/new-record.ts",
+      "lib/triggers/record-updated.ts",
     ].map((file) =>
       readFileSync(join(dir, "pieces", "acme-crm", file), "utf8"),
     );
@@ -219,6 +222,8 @@ describe("a scaffolded piece without auth", () => {
     for (const source of sources) {
       expect(source).not.toContain("reactorOf");
       expect(source).not.toContain("ctx.reactor");
+      expect(source).toContain("requireAuth: false");
+      expect(source).not.toContain("../auth.js");
     }
   });
 });
@@ -243,15 +248,54 @@ describe("generatePieceAction", () => {
     expect(pieceIndex).toContain(
       'import { acmeCrmCreateRecordAction } from "./lib/actions/create-record.js"',
     );
-    expect(pieceIndex).toContain(
-      "actions: [acmeCrmGetRecordAction, acmeCrmCreateRecordAction]",
-    );
+    expect(pieceIndex).toContain("actions: [acmeCrmCreateRecordAction]");
 
     await generatePieceAction({ actionName: "create-record" }, project);
     await project.save();
     expect(
       readFileSync(join(dir, "pieces", "acme-crm", "index.ts"), "utf8"),
     ).toBe(pieceIndex);
+  });
+});
+
+describe("generatePieceTrigger", () => {
+  it("polls through pollingHelper rather than a cursor of its own", async () => {
+    const dir = makeProject();
+    const project = buildTsMorphProject(dir);
+    await generatePiece({ pieceName: "acme-crm" }, project);
+    await generatePieceTrigger({ triggerName: "new-record" }, project);
+    await project.save();
+
+    const piece = join(dir, "pieces", "acme-crm");
+    const trigger = readFileSync(
+      join(piece, "lib", "triggers", "new-record.ts"),
+      "utf8",
+    );
+    expect(trigger).toContain("strategy: DedupeStrategy.TIMEBASED");
+    expect(trigger).toContain("pollingHelper.poll(polling, context)");
+    expect(trigger).toContain("auth: acmeCrmAuth");
+    expect(readFileSync(join(piece, "index.ts"), "utf8")).toContain(
+      "triggers: [acmeCrmNewRecordTrigger]",
+    );
+  });
+
+  it("writes a webhook trigger that returns the delivery", async () => {
+    const dir = makeProject();
+    const project = buildTsMorphProject(dir);
+    await generatePiece({ pieceName: "acme-crm" }, project);
+    await generatePieceTrigger(
+      { triggerName: "record-updated", strategy: "webhook" },
+      project,
+    );
+    await project.save();
+
+    const trigger = readFileSync(
+      join(dir, "pieces", "acme-crm", "lib", "triggers", "record-updated.ts"),
+      "utf8",
+    );
+    expect(trigger).toContain("type: TriggerStrategy.WEBHOOK");
+    expect(trigger).toContain("Promise.resolve([context.payload.body])");
+    expect(trigger).not.toContain("pollingHelper");
   });
 });
 
