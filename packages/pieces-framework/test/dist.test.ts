@@ -61,21 +61,24 @@ async function runtimeExports(jsFile: string): Promise<string[]> {
   return Object.keys(module).sort();
 }
 
-describe.each(["index", "common", "host"])("dist/%s", (entry) => {
-  const js = path.join(dist, `${entry}.js`);
-  const dts = path.join(dist, `${entry}.d.ts`);
+describe.each(["index", "common", "host", "block-type", "workflow"])(
+  "dist/%s",
+  (entry) => {
+    const js = path.join(dist, `${entry}.js`);
+    const dts = path.join(dist, `${entry}.d.ts`);
 
-  it("is built (run `pnpm build` first)", () => {
-    expect(existsSync(js) && existsSync(dts)).toBe(true);
-  });
+    it("is built (run `pnpm build` first)", () => {
+      expect(existsSync(js) && existsSync(dts)).toBe(true);
+    });
 
-  it("declares no value the runtime lacks", async () => {
-    const runtime = await runtimeExports(js);
-    const claimed = valueExports(dts);
-    expect(claimed.length).toBeGreaterThan(0);
-    expect(claimed.filter((name) => !runtime.includes(name))).toEqual([]);
-  });
-});
+    it("declares no value the runtime lacks", async () => {
+      const runtime = await runtimeExports(js);
+      const claimed = valueExports(dts);
+      expect(claimed.length).toBeGreaterThan(0);
+      expect(claimed.filter((name) => !runtime.includes(name))).toEqual([]);
+    });
+  },
+);
 
 describe("dist", () => {
   it("imports exactly the declared dependencies", () => {
@@ -88,5 +91,12 @@ describe("dist", () => {
     expect([...new Set(imported)].sort()).toEqual(
       Object.keys(dependencies).sort(),
     );
+  });
+
+  // The editor bundles it for the browser.
+  it.each(["block-type", "workflow"])("%s imports nothing at all", (entry) => {
+    const source = readFileSync(path.join(dist, `${entry}.js`), "utf8");
+    expect(source).not.toMatch(/^\s*(import|export)\b[^\n;]*\bfrom\s*["']/m);
+    expect(source).not.toMatch(/\bimport\(|\brequire\(/);
   });
 });

@@ -34,6 +34,16 @@
       "types": "./dist/host.d.ts",
       "import": "./dist/host.js"
     },
+    "./block-type": {
+      "source": "./src/block-type.ts",
+      "types": "./dist/block-type.d.ts",
+      "import": "./dist/block-type.js"
+    },
+    "./workflow": {
+      "source": "./src/workflow.ts",
+      "types": "./dist/workflow.d.ts",
+      "import": "./dist/workflow.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
