@@ -56,12 +56,12 @@ export function detectFeatures(projectDir: string): Feature[] {
 // Idempotently adds the peer + dev deps required by `features` to the
 // project's package.json. Reuses the existing `document-model` pin as the
 // version anchor for new workspace peers so generated entries stay in sync
-// with whatever migrate last wrote. No-op if the entries are already present.
+// with whatever migrate last wrote. Returns the packages it added.
 export async function syncFeatureDependencies(
   features: readonly Feature[],
   projectDir: string,
-): Promise<void> {
-  if (features.length === 0) return;
+): Promise<string[]> {
+  if (features.length === 0) return [];
 
   const packageJson = await readPackage({ cwd: projectDir, normalize: false });
 
@@ -116,7 +116,7 @@ export async function syncFeatureDependencies(
     }
   }
 
-  if (added.length === 0) return;
+  if (added.length === 0) return [];
 
   // Spread, not a fixed key: a dev-only feature adds no peers, and an empty
   // peerDependencies block in a project that had none says nothing.
@@ -129,4 +129,5 @@ export async function syncFeatureDependencies(
   } as PackageJson;
   await writePackage(projectDir, updated);
   console.log(`Added peer/dev dependencies: ${added.join(", ")}`);
+  return added;
 }

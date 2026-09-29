@@ -9,6 +9,7 @@ import {
   string,
 } from "cmd-ts";
 import { Directory } from "cmd-ts/dist/cjs/batteries/fs.js";
+import { skipInstallArgs } from "../utils/install-added-dependencies.js";
 
 export const generatePieceCmd = command({
   name: "piece",
@@ -56,6 +57,7 @@ export const generatePieceCmd = command({
       description:
         "Re-register every piece in pieces/: refresh the pieces list and the manifest, and prune what is gone",
     }),
+    ...skipInstallArgs,
     ...debugArgs,
   },
   handler: async (args) => {
