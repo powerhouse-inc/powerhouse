@@ -9,7 +9,7 @@ import {
   type WorkflowRunResult,
 } from "../pieces/index.js";
 import { childLogger } from "document-model";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import { randomUUID } from "node:crypto";
 import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";
 
@@ -369,6 +369,35 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     .addColumn("updated_at", "text", (col) => col.notNull())
     .addPrimaryKeyConstraint("piece_store_pk", ["scope", "scope_key", "key"])
     .ifNotExists()
+    .execute();
+
+  // Run listings, scoped and unscoped, page newest first on (started_at, id).
+  await db.schema
+    .createIndex("run_workflow_started")
+    .ifNotExists()
+    .on("run")
+    .columns(["workflow_id", "started_at desc", "id desc"])
+    .execute();
+  await db.schema
+    .createIndex("run_started")
+    .ifNotExists()
+    .on("run")
+    .columns(["started_at desc", "id desc"])
+    .execute();
+  // claimDedupe prunes one workflow's expired keys on every claim.
+  await db.schema
+    .createIndex("trigger_dedupe_workflow_created")
+    .ifNotExists()
+    .on("trigger_dedupe")
+    .columns(["workflow_id", "created_at"])
+    .execute();
+  // The supervisor's due-trigger query on every tick.
+  await db.schema
+    .createIndex("trigger_state_due")
+    .ifNotExists()
+    .on("trigger_state")
+    .column("next_poll_at")
+    .where(sql.ref("status"), "=", "ENABLED")
     .execute();
 
   // The reactor's webhook service owns tokens now, in its own namespace, so
