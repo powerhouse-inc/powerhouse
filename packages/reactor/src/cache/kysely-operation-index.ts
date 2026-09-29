@@ -1,8 +1,13 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import {
+  isPurgeMarker,
+  type OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import type { Kysely, Transaction } from "kysely";
 import { sql } from "kysely";
 import { readSnapshotFunctions } from "../catch-up/settled-watermark.js";
 import type { DocumentStreamKey } from "./write-cache-types.js";
+import { DocumentPurgedError } from "../shared/errors.js";
+import { findPurged } from "../storage/kysely/document-purges.js";
 import type { PagedResults, PagingOptions } from "../shared/types.js";
 import type { ViewFilter } from "../storage/interfaces.js";
 import type { Database } from "../storage/kysely/types.js";
@@ -255,6 +260,7 @@ export class KyselyOperationIndex implements IOperationIndex {
 
     let operationOrdinals: number[] = [];
     if (operations.length > 0) {
+      await this.refusePurgedOperations(trx, operations);
       await this.assignXid(trx);
 
       const operationRows: InsertableOperationIndexOperation[] = operations.map(
@@ -717,6 +723,24 @@ export class KyselyOperationIndex implements IOperationIndex {
             )
         : undefined,
     };
+  }
+
+  /** Backstop to the store's refusal: only a marker indexes a purged id. */
+  private async refusePurgedOperations(
+    trx: Transaction<Database>,
+    operations: OperationIndexEntry[],
+  ): Promise<void> {
+    const ids = new Set(
+      operations
+        .filter((operation) => !isPurgeMarker(operation))
+        .map((operation) => operation.documentId),
+    );
+    const purged = await findPurged(trx, ids);
+    for (const id of ids) {
+      if (purged.has(id)) {
+        throw new DocumentPurgedError(id);
+      }
+    }
   }
 
   /** Takes the xid before the first ordinal, as the settled watermark needs. */
