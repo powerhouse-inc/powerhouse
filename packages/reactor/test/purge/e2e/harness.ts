@@ -155,6 +155,8 @@ export type NodeOptions = {
   catchUpIntervalMs?: number;
   /** Default legacy: tests write unsigned through the reactor. */
   createSignaturePolicy?: "legacy" | "v2-required";
+  /** Executors; a probe that holds one job open while another runs needs 2. */
+  maxConcurrency?: number;
 };
 
 export type Node = {
@@ -189,7 +191,10 @@ export async function buildNode(options: NodeOptions): Promise<Node> {
       documentModelDocumentModelModule as unknown as DocumentModelModule,
       driveDocumentModelModule as unknown as DocumentModelModule,
     ])
-    .withExecutorConfig({ featureFlags: options.featureFlags ?? {} });
+    .withExecutorConfig({
+      featureFlags: options.featureFlags ?? {},
+      maxConcurrency: options.maxConcurrency,
+    });
   if (options.peerCapabilities) {
     builder = builder.withPeerCapabilities(options.peerCapabilities);
   }
@@ -273,39 +278,6 @@ export function legacyDrive(id: string) {
   );
 }
 
-type PurgeService = {
-  enqueuePurge(
-    ids: string[],
-    requestId: string,
-    opts?: { allowLarge?: boolean },
-  ): Promise<JobInfo[]>;
-};
-type PurgeServiceModule = {
-  DocumentPurgeService: {
-    fromModule(module: InProcessReactorModule): PurgeService;
-  };
-};
-
-// Not a literal: the module lands with Track A and must not break tsc before.
-const PURGE_SERVICE_PATH = "../../../src/admin/document-purge-service.js";
-
-export async function purgeService(
-  module: InProcessReactorModule,
-): Promise<PurgeService> {
-  let loaded: PurgeServiceModule;
-  try {
-    loaded = (await import(
-      /* @vite-ignore */ PURGE_SERVICE_PATH
-    )) as PurgeServiceModule;
-  } catch (error) {
-    throw new Error(
-      `DocumentPurgeService not implemented (Track A): ${String(error)}`,
-      { cause: error },
-    );
-  }
-  return loaded.DocumentPurgeService.fromModule(module);
-}
-
 let requestCounter = 0;
 
 export async function enqueuePurge(
@@ -313,7 +285,7 @@ export async function enqueuePurge(
   id: string,
   opts: { requestId?: string; allowLarge?: boolean } = {},
 ): Promise<JobInfo> {
-  const service = await purgeService(node.module);
+  const service = node.module.documentPurgeService;
   const requestId = opts.requestId ?? `e2e-request-${++requestCounter}`;
   const jobs = await service.enqueuePurge([id], requestId, {
     allowLarge: opts.allowLarge,
@@ -1011,12 +983,16 @@ export class CaptureChannels {
     } as IChannelFactory;
   }
 
+  /** A remote announcing document-purge; a silent one is held from markers. */
   async add(node: Node, remoteName: string, driveId: string): Promise<void> {
     await node.sync!.add(
       remoteName,
       DriveCollectionId.forDrive(driveId),
       { type: "internal", parameters: {} },
       FILTER,
+      undefined,
+      undefined,
+      fullManifest(),
     );
   }
 

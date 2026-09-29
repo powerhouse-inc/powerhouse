@@ -264,6 +264,7 @@ describe("resurrection probes [Postgres]", () => {
       name: "a",
       db: pg,
       channelFactory: capture.factory(),
+      maxConcurrency: 2,
     });
   });
 
@@ -292,7 +293,8 @@ describe("resurrection probes [Postgres]", () => {
     );
 
     const rowLock = await holdRowLock(node.db, "y", "header");
-    let purgeJobId: string | undefined;
+    // enqueue resolves once an executor has run the job, so it is not awaited
+    let purging: Promise<JobInfo> | undefined;
     let applying: Promise<void> | undefined;
     try {
       // y first: the transaction stalls on y's row before it touches x.
@@ -305,7 +307,7 @@ describe("resurrection probes [Postgres]", () => {
         async () => (await lockWaiters(node.db)) >= 1,
       );
 
-      purgeJobId = (await enqueuePurge(node, "x")).id;
+      purging = enqueuePurge(node, "x");
       await until(
         "the purge waits behind the view transaction or has committed",
         async () =>
@@ -321,7 +323,7 @@ describe("resurrection probes [Postgres]", () => {
     }
 
     await waitForTombstone(node.db, "x");
-    await waitForJob(node.reactor, purgeJobId!);
+    await waitForJob(node.reactor, (await purging!).id);
     await expectPurged(node.db, "x", { documentType: DOC_TYPE });
   });
 
@@ -376,7 +378,7 @@ describe("resurrection probes [Postgres]", () => {
       loading = node.reactor.load("d", "main", [adoption]);
       await hold.waitUntilHeld();
 
-      const purgeJob = await enqueuePurge(node, "x");
+      const purging = enqueuePurge(node, "x");
       await until(
         "the purge waits on the load's lock or has committed",
         async () =>
@@ -386,7 +388,7 @@ describe("resurrection probes [Postgres]", () => {
       await hold.release();
 
       await succeeded(node.reactor, loading as Promise<JobInfo>);
-      await waitForJob(node.reactor, purgeJob.id);
+      await waitForJob(node.reactor, (await purging).id);
     } finally {
       await hold.remove();
       await loading?.catch(() => undefined);
@@ -426,12 +428,13 @@ describe("resurrection probes [Postgres]", () => {
     const adoption = (await documentOps(peer, "d")).at(-1)!;
 
     const hold = await holdIndexCommitOn(node, "x");
-    let loadJobId: string;
+    let purging: Promise<JobInfo> | undefined;
+    let loading: Promise<JobInfo> | undefined;
     try {
-      await enqueuePurge(node, "x");
+      purging = enqueuePurge(node, "x");
       await hold.waitUntilHeld();
 
-      loadJobId = (await node.reactor.load("d", "main", [adoption])).id;
+      loading = node.reactor.load("d", "main", [adoption]);
       await until(
         "the load waits on the purge's lock",
         async () => (await purgeLockWaiters(node.db)) >= 1,
@@ -441,8 +444,9 @@ describe("resurrection probes [Postgres]", () => {
       await hold.remove();
     }
 
+    await purging;
     await waitForTombstone(node.db, "x");
-    const load = await waitForJob(node.reactor, loadJobId!);
+    const load = await waitForJob(node.reactor, (await loading!).id);
     expect(load.status, load.error?.message).toBe(JobStatus.READ_READY);
     await node.module.readModelCoordinator.drain();
 
@@ -466,20 +470,22 @@ describe("resurrection probes [Postgres]", () => {
     await remove(node, "x");
 
     const hold = await holdIndexCommitOn(node, "x");
-    let loadJobId: string;
+    let purging: Promise<JobInfo> | undefined;
+    let loading: Promise<JobInfo> | undefined;
     try {
-      await enqueuePurge(node, "x");
+      purging = enqueuePurge(node, "x");
       await hold.waitUntilHeld();
-      loadJobId = (await node.reactor.load("x", "main", [old!])).id;
+      loading = node.reactor.load("x", "main", [old!]);
       await hold.release();
     } finally {
       await hold.remove();
     }
 
-    const load = await waitForJob(node.reactor, loadJobId!);
+    await purging;
+    const load = await waitForJob(node.reactor, (await loading!).id);
     expect(load.status).toBe(JobStatus.FAILED);
     expect(load.error?.name).toBe("DocumentPurgedError");
-    expect(load.errorHistory?.length ?? 1, "not retried").toBe(1);
+    expect(load.job?.retryCount ?? 0, "not retried").toBe(0);
     await expectPurged(node.db, "x", { documentType: DOC_TYPE });
   });
 
@@ -490,8 +496,10 @@ describe("resurrection probes [Postgres]", () => {
 
     const hold = await holdIndexCommitOn(node, "x");
     const jobId = crypto.randomUUID();
+    let purging: Promise<JobInfo> | undefined;
+    let queued: Promise<void> | undefined;
     try {
-      await enqueuePurge(node, "x");
+      purging = enqueuePurge(node, "x");
       await hold.waitUntilHeld();
 
       const job: Job = {
@@ -523,16 +531,18 @@ describe("resurrection probes [Postgres]", () => {
         },
         meta: job.meta,
       });
-      await node.module.queue.enqueue(job);
+      queued = node.module.queue.enqueue(job);
       await hold.release();
     } finally {
       await hold.remove();
     }
 
+    await purging;
+    await queued;
     const reevaluated = await waitForJob(node.reactor, jobId);
     expect(reevaluated.status).toBe(JobStatus.FAILED);
     expect(reevaluated.error?.name).toBe("DocumentPurgedError");
-    expect(reevaluated.errorHistory?.length ?? 1, "not retried").toBe(1);
+    expect(reevaluated.job?.retryCount ?? 0, "not retried").toBe(0);
     await expectPurged(node.db, "x", { documentType: DOC_TYPE });
   });
 
@@ -749,6 +759,7 @@ describe("resurrection probes [Postgres]", () => {
       name: "a",
       db: pg,
       channelFactory: capture.factory(),
+      maxConcurrency: 2,
     });
     node = a;
 
@@ -789,8 +800,9 @@ describe("resurrection probes [Postgres]", () => {
     const hold = await holdIndexCommitOn(node, "x");
     let markerId: string;
     let zOpId: string;
+    let purging: Promise<JobInfo> | undefined;
     try {
-      const purgeJob = await enqueuePurge(node, "x");
+      purging = enqueuePurge(node, "x");
       await hold.waitUntilHeld();
 
       await rename(node, "z", "while-purging");
@@ -818,7 +830,7 @@ describe("resurrection probes [Postgres]", () => {
       expect(capture.sentOpIds(REMOTE).has(zOpId), "z withheld").toBe(false);
 
       await hold.release();
-      await waitForJob(node.reactor, purgeJob.id, [
+      await waitForJob(node.reactor, (await purging).id, [
         JobStatus.WRITE_READY,
         JobStatus.READ_READY,
         JobStatus.FAILED,
