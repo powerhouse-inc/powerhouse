@@ -1,5 +1,8 @@
 import type { CatchUpThread, SweepResult } from "../catch-up/types.js";
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import type {
+  OperationContext,
+  OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import type { Job } from "../queue/types.js";
 import type { JobMeta } from "../shared/types.js";
 import type {
@@ -121,6 +124,9 @@ export type JobWriteReadyEvent = {
    */
   collectionMemberships?: Record<string, string[]>;
 };
+
+/** Set on a marker's context when its purge deleted a live document. */
+export type PurgeMarkerContext = OperationContext & { appliedDeletion?: true };
 
 /**
  * Event emitted after all read models have finished processing operations.

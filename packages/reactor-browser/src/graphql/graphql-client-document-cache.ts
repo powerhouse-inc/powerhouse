@@ -12,6 +12,13 @@ import type {
 import { phDocumentFromQuery } from "./adapters.js";
 import { DocumentFetcher } from "./document-fetcher.js";
 
+function isMissingDocumentMessage(message: string): boolean {
+  return (
+    message.includes("Document not found") ||
+    /Document \S+ was purged/.test(message)
+  );
+}
+
 // Unlike `reactorGraphqlFetchDocument`, failures reach the caller, so a
 // refetch can tell a missing document from an outage.
 async function fetchDocumentForRefetch(
@@ -33,7 +40,7 @@ async function fetchDocumentForRefetch(
       error instanceof ClientError
         ? (error.response.errors ?? []).map((e) => e.message)
         : [];
-    if (messages.some((message) => message.includes("Document not found"))) {
+    if (messages.some(isMissingDocumentMessage)) {
       throw notFound(error);
     }
     throw error;

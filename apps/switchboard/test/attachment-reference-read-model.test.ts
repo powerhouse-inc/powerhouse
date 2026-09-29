@@ -232,6 +232,8 @@ describe("Switchboard attachment-reference read model registration", () => {
         writtenOrdinals.push(...references.map(({ ordinal }) => ordinal));
         await attachmentReferenceIndex.store.addReferences(references);
       },
+      removeDocuments: (documentIds) =>
+        attachmentReferenceIndex.store.removeDocuments(documentIds),
     };
 
     const coordinator =
@@ -283,7 +285,10 @@ describe("Switchboard attachment-reference read model registration", () => {
       .withReadModelCoordinator(customCoordinator)
       .buildModule();
     const addReferences = vi.fn();
-    const writer = { addReferences } as IAttachmentReferenceWriter;
+    const writer: IAttachmentReferenceWriter = {
+      addReferences,
+      removeDocuments: vi.fn(),
+    };
 
     await expect(
       registerAttachmentReferenceReadModelOnModule(

@@ -21,6 +21,7 @@ type GraphQLBody = { query: string; variables: Record<string, unknown> };
 
 function stubSwitchboard() {
   const names = new Map<string, string>();
+  const purged = new Set<string>();
   const held = new Map<string, number>();
   let gate: Promise<void> | undefined;
   let release: () => void = () => undefined;
@@ -73,6 +74,14 @@ function stubSwitchboard() {
     if (outage) {
       throw new TypeError("Failed to fetch");
     }
+    if (purged.has(id)) {
+      return json({
+        data: null,
+        errors: [
+          { message: `Failed to fetch document: Document ${id} was purged` },
+        ],
+      });
+    }
     if (name === undefined) {
       // What reactor-api's `document` resolver answers for a missing id.
       return json({
@@ -90,6 +99,10 @@ function stubSwitchboard() {
   return {
     put: (id: string, name: string) => names.set(id, name),
     remove: (id: string) => names.delete(id),
+    purge(id: string) {
+      names.delete(id);
+      purged.add(id);
+    },
     heldCount: (id: string) => held.get(id) ?? 0,
     failNextRead() {
       outageNext = true;
@@ -360,6 +373,26 @@ describe("GraphQLClientDocumentCache under an outer Suspense boundary", () => {
     });
 
     switchboard.remove(id);
+    await expect(states.at(-1)!.reload!()).rejects.toThrow(
+      "Document not found",
+    );
+    await vi.waitFor(() => {
+      expect(states.at(-1)?.status).toBe("error");
+    });
+    expect(states.at(-1)?.data).toBeUndefined();
+    expect(states.at(-1)?.isRefetching).toBe(false);
+  });
+
+  it("drops the document when its refetch finds it purged", async () => {
+    const id = uniqueId("doc");
+    switchboard.put(id, "Erased");
+    const states: SafeState[] = [];
+    show(<SafeProbe id={id} states={states} />);
+    await vi.waitFor(() => {
+      expect(states.at(-1)?.status).toBe("success");
+    });
+
+    switchboard.purge(id);
     await expect(states.at(-1)!.reload!()).rejects.toThrow(
       "Document not found",
     );

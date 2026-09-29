@@ -2,7 +2,7 @@ import { generateId, type ISigner } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger, setModelName } from "document-model";
 import type { Kysely } from "kysely";
 import { fileURLToPath } from "node:url";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { DocumentPurgeService } from "../../../src/admin/document-purge-service.js";
 import { ReactorBuilder } from "../../../src/core/reactor-builder.js";
 import type { InProcessReactorModule } from "../../../src/core/types.js";
@@ -199,6 +199,29 @@ describe("purge under the executor worker pool [Postgres]", () => {
         ).id,
         "DocumentPurgedError",
       );
+    }
+  });
+
+  it("notifies Deleted when a pooled marker load deletes a live document", async () => {
+    const origin = (await TestP256Signer.create()).asISigner();
+    const deleted: string[] = [];
+    const unsubscribe = module.subscriptionManager.onDocumentDeleted((ids) =>
+      deleted.push(...ids),
+    );
+    try {
+      for (const id of idsAcrossWorkers()) {
+        const { reactor } = module;
+        await succeeded(
+          reactor,
+          (await reactor.create(createDocModelDocument({ id }))).id,
+        );
+        const marker = await signedPurgeMarker(origin, id);
+        await succeeded(reactor, (await reactor.load(id, "main", [marker])).id);
+        await expectPurged(db, id);
+        await vi.waitFor(() => expect(deleted).toContain(id));
+      }
+    } finally {
+      unsubscribe();
     }
   });
 });
