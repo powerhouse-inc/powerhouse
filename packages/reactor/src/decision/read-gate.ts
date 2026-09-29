@@ -255,8 +255,8 @@ export class BareReadGate implements IReadGate {
 }
 
 /**
- * Rethrows a failed read unless the document is confirmed not live. The read
- * side reports absence as a plain Error, so absence is checked rather than
+ * Rethrows a failed read unless the document is confirmed not live. Any error
+ * other than DocumentNotFoundError is checked against `exists` rather than
  * inferred from the message, and a failed check surfaces the read's own error.
  */
 export async function assertAbsent(
@@ -306,7 +306,7 @@ export class SeededStateReader implements IStreamStateReader {
    * A stream this replica does not hold has to reach buildDecisionModel as the
    * absence it recognises, or the whole read fails instead of leaving the group
    * out of the model, where its principal does not match and the policy fails
-   * closed. The read side reports absence as a plain Error, so the absence is
+   * closed. An error other than DocumentNotFoundError has its absence
    * confirmed rather than inferred from the message: a transient failure must
    * surface, not silently deny.
    */

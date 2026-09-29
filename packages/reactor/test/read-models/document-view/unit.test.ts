@@ -7,6 +7,7 @@ import {
   KyselyDocumentView,
 } from "../../../src/read-models/document-view.js";
 import type { IConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
+import { DocumentNotFoundError } from "../../../src/shared/errors.js";
 import {
   DocumentExistence,
   type IOperationStore,
@@ -298,9 +299,9 @@ describe("KyselyDocumentView Unit Tests", () => {
     it("should throw when document not found", async () => {
       mockDb.execute.mockResolvedValue([]);
 
-      await expect(view.get("non-existent")).rejects.toThrow(
-        "Document not found: non-existent",
-      );
+      const read = view.get("non-existent");
+      await expect(read).rejects.toThrow(DocumentNotFoundError);
+      await expect(read).rejects.toThrow("Document not found: non-existent");
     });
 
     it("should query all scopes when view.scopes is not specified", async () => {
