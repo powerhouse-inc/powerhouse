@@ -295,6 +295,8 @@ function AddButton(props: {
     <div className="relative" style={{ width: size, height: size }}>
       <button
         type="button"
+        aria-label={props.title}
+        aria-expanded={open}
         style={label ? { height: size } : { width: size, height: size }}
         // Labelled buttons keep the node's own footprint and overflow it
         // evenly, so the layout still positions them by their centre.

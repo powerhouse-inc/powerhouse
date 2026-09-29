@@ -9,7 +9,12 @@ import {
 } from "react";
 import { Icon, type IconName } from "../../shared/icons.js";
 import { blockKey } from "@powerhousedao/pieces-framework/block-type";
-import { registerPieceLogos, useBlockMeta } from "./block-meta.js";
+import {
+  CATALOG_MAX_ATTEMPTS,
+  CATALOG_RETRY_MS,
+  registerPieceLogos,
+  useBlockMeta,
+} from "./block-meta.js";
 import {
   ASSERT_BLOCK,
   BRANCH_BLOCK,
@@ -554,29 +559,45 @@ export function BlockSelector(props: {
 
   const anySource = usePieceSource();
   const pieceSource = props.showPieces ? anySource : undefined;
+  const [catalogRound, setCatalogRound] = useState(0);
   // Loaded even without the piece list: presets are pinned to its versions.
+  // A failed load retries with a fresh fetch, backing off, before it shows.
   useEffect(() => {
     if (!anySource) return;
     let cancelled = false;
-    anySource
-      .loadCatalog()
-      .then((pieces) => {
-        // Canvas nodes read logos from the registry, not from this list.
-        registerPieceLogos(pieces);
-        if (!cancelled) setCatalog({ pieces });
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const load = (attempt: number) => {
+      const request =
+        attempt > 0 && anySource.reloadCatalog
+          ? anySource.reloadCatalog()
+          : anySource.loadCatalog();
+      request
+        .then((pieces) => {
+          // Canvas nodes read logos from the registry, not from this list.
+          registerPieceLogos(pieces);
+          if (!cancelled) setCatalog({ pieces });
+        })
+        .catch((error: unknown) => {
+          if (cancelled) return;
+          if (attempt + 1 < CATALOG_MAX_ATTEMPTS) {
+            timer = setTimeout(
+              () => load(attempt + 1),
+              CATALOG_RETRY_MS * 2 ** attempt,
+            );
+            return;
+          }
           setCatalog({
             pieces: [],
             error: error instanceof Error ? error.message : String(error),
           });
-        }
-      });
+        });
+    };
+    load(catalogRound > 0 ? 1 : 0);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, [anySource]);
+  }, [anySource, catalogRound]);
 
   const installed = (name: string) =>
     catalog?.pieces.find((entry) => entry.name === name)?.version;
@@ -836,8 +857,18 @@ export function BlockSelector(props: {
                   Loading catalog…
                 </div>
               ) : catalog.error ? (
-                <div className="px-3 py-2 text-xs text-wf-fail">
-                  {catalog.error}
+                <div className="flex items-center gap-2 px-3 py-2 text-xs text-wf-fail">
+                  <span className="min-w-0 flex-1">{catalog.error}</span>
+                  <button
+                    type="button"
+                    className="shrink-0 cursor-pointer rounded border border-solid border-foreground/15 bg-card px-1.5 py-0.5 text-foreground hover:border-foreground/25"
+                    onClick={() => {
+                      setCatalog(null);
+                      setCatalogRound((round) => round + 1);
+                    }}
+                  >
+                    Retry
+                  </button>
                 </div>
               ) : (
                 filteredPieces.map((entry) => (
