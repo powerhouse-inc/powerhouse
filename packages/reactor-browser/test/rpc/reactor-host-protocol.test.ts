@@ -168,6 +168,35 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     expect(tab2.reloads).toEqual([]);
   });
 
+  it("fails ops after a failed build with its error until a hello rebuilds", async () => {
+    let builds = 0;
+    const host = new ReactorHost({
+      build: () => {
+        builds += 1;
+        return builds === 1
+          ? Promise.reject(new Error("store holds base-reducer 7"))
+          : Promise.resolve(fakeClient([]));
+      },
+      onSyncOp: () => Promise.resolve([]),
+    });
+
+    const ch = new MessageChannel();
+    host.connect(createPortTransport(ch.port1));
+    const tab = rawTab(ch.port2);
+    await expect(tab.send({ k: "hello", version: V1 })).rejects.toThrow(
+      "store holds base-reducer 7",
+    );
+    await expect(
+      tab.send({ k: "sync-op", method: "list", args: [] }),
+    ).rejects.toThrow("store holds base-reducer 7");
+
+    expect(await tab.send({ k: "hello", version: V1 })).toEqual({ ok: true });
+    expect(builds).toBe(2);
+    expect(await tab.send({ k: "sync-op", method: "list", args: [] })).toEqual(
+      [],
+    );
+  });
+
   it("answers a ping with a pong carrying ownerId/bootedAtMs before any build", async () => {
     let builds = 0;
     const host = new ReactorHost({
