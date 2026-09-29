@@ -326,6 +326,13 @@ describe("workflow authoring tools", () => {
     expect(result.blocks.every((b) => b.pieceName === CORE)).toBe(true);
     expect(result.expressions.join("\n")).toContain("{{steps.<key>.output");
     expect(result.rules.join("\n")).toMatch(/ADD_EDGE/);
+    // The reducer only snapshots: enabling is its own action.
+    expect(result.rules.join("\n")).toContain(
+      "dispatch SET_WORKFLOW_STATUS ENABLED after PUBLISH_WORKFLOW",
+    );
+    expect(result.rules.join("\n")).not.toMatch(
+      /snapshots the draft and enables/,
+    );
   });
 
   it("listWorkflowRuns returns compact run summaries with per-step outcomes", async () => {
