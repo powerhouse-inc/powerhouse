@@ -253,9 +253,17 @@ explanation behind it.
 | `PH_WORKFLOWS_WEBHOOK_RECONCILE_MS`   | `900000`           | How often a webhook trigger re-registers with its provider                                |
 | `PH_WORKFLOWS_WEBHOOK_TIMEOUT_MS`     | `30000`            | How long a sync-mode delivery holds the provider's socket                                 |
 | `PH_WORKFLOWS_PIECE_MAX_FILE_BYTES`   | `8388608`          | File-size ceiling for FILE-property hydration and `ctx.files.write`                       |
+| `PH_WORKFLOWS_RUN_RETENTION_DAYS`     | unset (off)        | Deletes finished runs older than this many days (`reactor/run-retention.ts`)              |
 
 Each numeric one parses as `Number(raw) || default`: a value that is not a
 positive number falls back silently rather than failing at boot.
+
+**Run retention is off by default**: the run journal keeps every run. With
+`PH_WORKFLOWS_RUN_RETENTION_DAYS` set, a sweep runs when the journal opens and
+hourly after, deleting runs that finished before the window together with their
+step executions and run documents, 500 runs per transaction. Unfinished runs
+are never pruned. The same sweep drops trigger dedupe keys older than the
+longest dedupe TTL (24h); a deleted workflow's keys go when it is deleted.
 
 **The secrets key is not optional in production.** Unset, `loadKey` generates
 `./.ph/secrets.key` — relative to the working directory, like the bundle cache

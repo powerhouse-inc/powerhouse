@@ -391,6 +391,19 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     .on("trigger_dedupe")
     .columns(["workflow_id", "created_at"])
     .execute();
+  // The retention sweep: finished runs by age, and dedupe keys past every TTL.
+  await db.schema
+    .createIndex("run_ended")
+    .ifNotExists()
+    .on("run")
+    .column("ended_at")
+    .execute();
+  await db.schema
+    .createIndex("trigger_dedupe_created")
+    .ifNotExists()
+    .on("trigger_dedupe")
+    .column("created_at")
+    .execute();
   // The supervisor's due-trigger query on every tick.
   await db.schema
     .createIndex("trigger_state_due")
@@ -805,6 +818,8 @@ export interface ListRunsOptions {
 }
 
 export const MAX_LIST_RUNS = 100;
+
+const PRUNE_BATCH_SIZE = 500;
 
 export interface EnqueueRunOptions {
   workflowId: string;
@@ -1457,6 +1472,58 @@ export class WorkflowRunStore {
     nowIso: string,
   ): Promise<boolean> {
     return claimDedupeIn(this.db, workflowId, dedupeKey, ttlMs, nowIso, null);
+  }
+
+  // A removed workflow's keys would otherwise wait for a claim that never comes.
+  async deleteDedupe(workflowId: string): Promise<void> {
+    await this.db
+      .deleteFrom("trigger_dedupe")
+      .where("workflow_id", "=", workflowId)
+      .execute();
+  }
+
+  // Deletes runs that finished before `cutoffIso`, with their steps and
+  // documents, a batch per transaction. Returns how many runs went.
+  async pruneFinishedRuns(
+    cutoffIso: string,
+    batchSize = PRUNE_BATCH_SIZE,
+  ): Promise<number> {
+    let pruned = 0;
+    for (;;) {
+      const deleted = await this.db.transaction().execute(async (trx) => {
+        const ids = (
+          await trx
+            .selectFrom("run")
+            .select("id")
+            .where("ended_at", "is not", null)
+            .where("ended_at", "<", cutoffIso)
+            .limit(batchSize)
+            .execute()
+        ).map((row) => row.id);
+        if (ids.length === 0) return 0;
+        await trx
+          .deleteFrom("step_execution")
+          .where("run_id", "in", ids)
+          .execute();
+        await trx
+          .deleteFrom("run_document")
+          .where("run_id", "in", ids)
+          .execute();
+        await trx.deleteFrom("run").where("id", "in", ids).execute();
+        return ids.length;
+      });
+      pruned += deleted;
+      if (deleted < batchSize) return pruned;
+    }
+  }
+
+  // Keys older than the longest dedupe TTL can no longer suppress anything.
+  async pruneDedupe(cutoffIso: string): Promise<number> {
+    const result = await this.db
+      .deleteFrom("trigger_dedupe")
+      .where("created_at", "<", cutoffIso)
+      .executeTakeFirst();
+    return Number(result.numDeletedRows);
   }
 
   async getPieceStoreValue(
