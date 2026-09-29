@@ -168,9 +168,18 @@ test.describe("Computed validity and publishing", () => {
       exact: true,
     });
     await expect(header.getByText("Draft", { exact: true })).toBeVisible();
+    // The banner's Show opens the first incomplete step.
+    const banner = app.getByRole("status").filter({
+      hasText: "You have unpublished changes",
+    });
     await expect(
-      app.getByRole("status").getByText("You have unpublished changes"),
+      banner.getByText("Incomplete steps", { exact: true }),
     ).toBeVisible();
+    await banner.getByRole("button", { name: "Show", exact: true }).click();
+    await expect(app.getByRole("textbox", { name: "Step name" })).toHaveValue(
+      STEP,
+    );
+    await app.getByRole("button", { name: "Close panel" }).click();
     // Off until published.
     const toggle = header.getByRole("switch", { name: /Turn the workflow on/ });
     await expect(toggle).toBeDisabled();
@@ -199,27 +208,6 @@ test.describe("Computed validity and publishing", () => {
     await expect(
       header.getByRole("switch", { name: /Turn the workflow off/ }),
     ).toBeEnabled();
-  });
-
-  test("the banner's Show opens the first incomplete step", async ({
-    stack,
-    app,
-  }) => {
-    await createDocumentWorkflow(app, stack.drive, "Show me", {
-      enabled: false,
-    });
-    await openWorkflowEditor(app, "Show me");
-    await expect(incomplete(app)).toBeVisible();
-    const banner = app.getByRole("status").filter({
-      hasText: "You have unpublished changes",
-    });
-    await expect(
-      banner.getByText("Incomplete steps", { exact: true }),
-    ).toBeVisible();
-    await banner.getByRole("button", { name: "Show", exact: true }).click();
-    await expect(app.getByRole("textbox", { name: "Step name" })).toHaveValue(
-      STEP,
-    );
   });
 
   test("Discard changes goes back to what was published", async ({
