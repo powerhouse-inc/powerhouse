@@ -249,16 +249,19 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     const unmark = this.markLive(owned);
     let done = false;
     return {
-      apply: async () => {
-        if (done) return;
+      apply: () => {
+        if (done) return Promise.resolve();
         done = true;
-        try {
-          // A cursor reset since the claim dropped it.
-          const mine = cursor === this.cursor ? owned : this.claimLive(items);
-          if (mine.length > 0) await this.applyChunked(mine);
-        } finally {
+        // A cursor reset since the claim dropped it.
+        if (cursor !== this.cursor) {
           unmark();
+          return this.indexOperations(items);
         }
+        if (owned.length === 0) {
+          unmark();
+          return Promise.resolve();
+        }
+        return this.applyChunked(owned, unmark);
       },
       release: () => {
         if (done) return;
@@ -510,8 +513,10 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
   }
 
   /** Commits in chunks, yielding with no transaction open. */
-  private async applyChunked(items: OperationWithContext[]): Promise<void> {
-    const release = this.markLive(items);
+  private async applyChunked(
+    items: OperationWithContext[],
+    release = this.markLive(items),
+  ): Promise<void> {
     try {
       const { commitChunkSize, yieldDeadlineMs } = this.indexing;
       let lastYield = performance.now();
