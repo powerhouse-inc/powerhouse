@@ -247,6 +247,9 @@ In **Switchboard** it starts the workflow runtime: trigger watching, runs, step
 execution. In **Connect** it loads Workflow Studio and the workflow and
 connection editors. It defaults to off.
 
+`ph vetra` also seeds a drive named **Workflows** (slug `workflows`) that opens
+in Workflow Studio, and adds it to Connect's default drives.
+
 To set Connect apart, give it `connect.app.workflowsEnabled`, which wins over
 `workflows.enabled` when present. For example, a Connect that browses workflows
 running on another reactor:

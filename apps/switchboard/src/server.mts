@@ -1173,6 +1173,7 @@ async function initServer(
     attachmentService,
     attachmentReferenceProjection: api.attachmentReferenceProjection,
     workflowTriggers: workflows?.triggers,
+    workflowsEnabled,
     renown,
     port: serverPort,
     shutdown,

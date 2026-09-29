@@ -183,6 +183,8 @@ export type SwitchboardReactor = {
   /** Whether the workflow runtime's operation intake is indexing. Undefined
    * when workflows are off; unavailable means no document trigger fires. */
   workflowTriggers?: WorkflowTriggersCapability;
+  /** Whether workflows are on, after the option, PH_WORKFLOWS_ENABLED and the config file. */
+  workflowsEnabled: boolean;
   /** The Renown instance if identity was initialized */
   renown: IRenown | null;
   /**
