@@ -190,6 +190,7 @@ async function parseZipData<TState extends PHBaseState>(
 
   const clearedOperations = garbageCollectDocumentOperations(operations);
   pinProtocolVersionsToCreate(header, operations);
+  backfillBaseReducerVersion(header);
 
   const operationsError = validateOperations(clearedOperations);
   if (operationsError.length) {
@@ -218,6 +219,14 @@ function pinProtocolVersionsToCreate(
     const { [SIGNATURE_PROTOCOL]: _dropped, ...rest } = header.protocolVersions;
     header.protocolVersions = rest;
   }
+}
+
+/** A zip with no recorded base-reducer version predates it: replay as v1. */
+function backfillBaseReducerVersion(header: PHDocumentHeader): void {
+  if (typeof header.protocolVersions?.["base-reducer"] === "number") {
+    return;
+  }
+  header.protocolVersions = { ...header.protocolVersions, "base-reducer": 1 };
 }
 
 async function loadFromZipData<TState extends PHBaseState>(
