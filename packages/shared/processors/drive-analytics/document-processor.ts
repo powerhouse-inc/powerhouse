@@ -5,6 +5,7 @@ import type {
   IAnalyticsStore,
 } from "../../analytics/types.js";
 import type { OperationWithContext } from "../../document-model/index.js";
+import { deletedDocumentId } from "../deletion.js";
 import type { IProcessor } from "../types.js";
 import type { NodeTarget } from "./types.js";
 
@@ -21,8 +22,19 @@ export class DocumentAnalyticsProcessor implements IProcessor {
     const CHUNK_SIZE = 50;
     const buffer: AnalyticsSeriesInput[] = [];
 
-    for (const { operation, context } of operations) {
+    for (const op of operations) {
+      const { operation, context } = op;
       const { documentType, documentId, branch, scope } = context;
+
+      const deleted = deletedDocumentId(op);
+      if (deleted !== undefined) {
+        await this.flush(buffer.splice(0));
+        await this.analyticsStore.clearSeriesBySource(
+          AnalyticsPath.fromString(`ph/doc/${deleted}`),
+          true,
+        );
+        continue;
+      }
 
       const source = AnalyticsPath.fromString(
         `ph/doc/${documentId}/${branch}/${scope}`,
@@ -59,6 +71,10 @@ export class DocumentAnalyticsProcessor implements IProcessor {
       }
     }
 
+    await this.flush(buffer);
+  }
+
+  private async flush(buffer: AnalyticsSeriesInput[]): Promise<void> {
     if (buffer.length > 0) {
       await this.analyticsStore.addSeriesValues(buffer);
     }

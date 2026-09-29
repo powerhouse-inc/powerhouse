@@ -48,6 +48,7 @@ export default defineConfig({
       "document-model/signature-policy.test.ts",
       "document-model/signature-transport.test.ts",
       "document-model/utils.test.ts",
+      "processors/**/*.test.ts",
       "registry/manifest-slim.test.ts",
       "registry/updates.test.ts",
     ],
