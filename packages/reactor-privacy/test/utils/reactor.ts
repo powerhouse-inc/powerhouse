@@ -64,7 +64,7 @@ export type TestReactor = {
 
 export async function startReactor(
   database: TestDatabase,
-  options: { signer: ISigner; eventBus?: IEventBus },
+  options: { signer: ISigner; eventBus?: IEventBus; sweepIntervalMs?: number },
 ): Promise<TestReactor> {
   const db = database.connect();
   const builder = new ReactorBuilder()
@@ -72,6 +72,9 @@ export async function startReactor(
     .withDocumentModelSources([driveDocumentModelModule as never])
     .withSigner(options.signer);
   if (options.eventBus) builder.withEventBus(options.eventBus);
+  if (options.sweepIntervalMs !== undefined) {
+    builder.withCatchUp({ intervalMs: options.sweepIntervalMs });
+  }
   const module = await builder.buildModule();
   return {
     module,

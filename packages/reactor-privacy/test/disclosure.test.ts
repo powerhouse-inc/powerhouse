@@ -283,10 +283,18 @@ describe("disclosure [Postgres]", () => {
     expect(
       await disclosure.disclose(ADDRESS_A.toUpperCase().replace("0X", "0x")),
     ).toEqual(a);
-    for (const row of a.documents) {
-      expect(row.firstOrdinal).toBeGreaterThan(0);
-      expect(row.lastOrdinal).toBeGreaterThanOrEqual(row.firstOrdinal);
-    }
+    const signedByA = (await streamOf(host, doc1)).map(
+      (op) => op.context.ordinal,
+    );
+    const [authOp] = await host.module.operationIndex.getStreamAfter(
+      { documentId: doc1, scope: "auth", branch: "main" },
+      0,
+    );
+    const ordinals = [...signedByA, authOp.context.ordinal];
+    expect(a.documents.find((row) => row.documentId === doc1)).toMatchObject({
+      firstOrdinal: Math.min(...ordinals),
+      lastOrdinal: Math.max(...ordinals),
+    });
   });
 
   it("lists an app key's documents, its header key and its auth creation", async () => {
@@ -414,9 +422,11 @@ describe("the subject index as a fenced read model [Postgres]", () => {
 
   it("applies a marker whose write-ready was dropped from the sweep, and resumes after a restart", async () => {
     const bus = new DroppingEventBus();
+    // Only sweepNow may apply the dropped marker; a scheduled tick would race it.
     const first = await startReactor(database, {
       signer: hostSigner,
       eventBus: bus,
+      sweepIntervalMs: 3_600_000,
     });
     const disclosure = new DisclosureService(first.db, SECRET);
     await registerSubjectDocumentsReadModel(first.module, {
