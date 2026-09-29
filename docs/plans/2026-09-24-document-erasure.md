@@ -1232,6 +1232,71 @@ rescan repair for cross-handle models).
 **Stage 4 — Connect.** Nothing for receipt. Optional: surface "erased" in
 the deletion notification so an open editor closes with a reason.
 
+### Parallel execution
+
+Stages still merge one PR at a time, in order. Within a stage, agents work
+in parallel, each in its own worktree with its own Postgres, branched from
+the stage branch. Parallel work is split so that each hot file has one
+owner; shared types land first so no track needs another track's files.
+
+**Stage 0.** Two agents: cascade order (`client/reactor-client.ts`) and the
+not-found error (`read-models/document-view.ts`).
+
+**Stage 1.**
+
+- *1a, serial: foundation.* One commit every track imports:
+  - the `PURGE_DOCUMENT` type, reserved name and document-scope membership;
+  - the `document-purge` capability;
+  - the five errors, with `DocumentPurgedError extends DocumentNotFoundError`,
+    and their terminal-list entries;
+  - migration 024;
+  - `PURGE_NS`, `acquirePurgeLocks(trx, ids, mode)`, `findPurged(trx, ids)`
+    and `isPurgeMarker`;
+  - the `ExecutionStores.documentLocks` interface;
+  - the exports from `packages/reactor/index.ts`.
+
+  It is reviewed before 1b starts. A type missed here makes two tracks edit
+  the same file.
+- *1b, parallel: five tracks.*
+
+  | Track | Owns | Tests alone by |
+  |---|---|---|
+  | A, executor | `simple-job-executor.ts`, `document-action-handler.ts`, `storage/kysely/store.ts`, the purger and `DocumentPurgeService`: `apply` refusal, job-start locks, the purge transaction, preconditions, `executePurgeLoad`, `ADD_RELATIONSHIP` targets | running its own purges |
+  | B, caches and replay | `shared/document-model/upgrades.ts`, `versioned-replay.ts`, `kysely-write-cache.ts`, `document-meta-cache.ts`, `core/reactor-builder.ts`, the projection worker: the marker as a deletion, lone-marker streams, derived protocol versions, locked keyframe persistence, evictions | streams holding a hand-written marker |
+  | C, read models | `read-models/base-read-model.ts` and its reactor-handle subclasses: the fence, `commitOperations(ops, trx)`, the `rebuildIfConfigured` pass-through, document view and indexer marker handling | seeded `document_purges` rows and markers |
+  | D, sync | `sync/sync-manager.ts`, `sync/utils.ts`: tombstone set, inbox and FAILED-branch drops, quarantine exemption, cache and hold eviction, remote dead letters, fleet-harness hold tests | synthetic markers in the index |
+  | E, tests first | new test files only: the resurrection probes, the two-reactor suite, peers without erasure | nothing: red until integration |
+
+  `core/reactor-builder.ts` belongs to B because its protocol-version lookup
+  reads the meta cache.
+- *1c, serial.* Integration merges the tracks and turns E's tests green;
+  then the sync bench and the purge-duration measurement that sets the
+  `maxPurgeOperations` default; then the adversarial review, before the PR.
+
+**Stage 2.** Four agents, which may start once 1a and track C's
+`commitOperations(ops, trx)` signature exist, alongside 1c:
+
+1. `NodeProcessor` (reactor-drive);
+2. `AttachmentReferenceReadModel` and `SubscriptionNotificationReadModel`;
+3. `WorkflowTriggersReadModel` (reactor-workflow);
+4. processors: the `ProcessorManager` reorder, delivery filtering including
+   `ProcessorQueue.backfill`, the codegen templates, analytics and Vetra,
+   processor-author documentation.
+
+The PR merges after stage 1.
+
+**Stage 3.** Work that does not depend on purge semantics starts early, in
+parallel: package scaffolding and migrations, `SubjectDocumentsReadModel`,
+the subgraph and the `canMutate` document-admin rule, and
+`IDeliveryTracking`. The scheduler starts only after stage 1 merges, since
+its states rest on stage 1's proven behaviour; switchboard wiring and
+operator documentation follow it.
+
+**Budget.** About 20 agent runs across all stages; stage 1b is the widest
+point at five concurrent agents, seven counting integration and review.
+Postgres-backed suites in four worktrees contend for one machine; stagger
+test runs when it cannot carry them.
+
 ### Conventions for implementing agents
 
 - `pnpm` only; `pnpm tsc --build` (TypeScript 7), never a global `tsc`.
