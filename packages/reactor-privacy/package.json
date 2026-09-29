@@ -31,9 +31,12 @@
   "dependencies": {
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "graphql": "catalog:",
+    "graphql-tag": "catalog:",
     "kysely": "catalog:"
   },
   "devDependencies": {
+    "@apollo/subgraph": "2.15.0",
     "@types/pg": "catalog:",
     "pg": "catalog:",
     "tsdown": "catalog:",

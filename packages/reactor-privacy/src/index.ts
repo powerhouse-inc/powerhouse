@@ -51,3 +51,15 @@ export {
   type PermissionRow,
   type SubjectDocument,
 } from "./disclosure/disclosure-service.js";
+export {
+  createPrivacyResolvers,
+  createPrivacySubgraph,
+  PRIVACY_SUBGRAPH_NAME,
+  privacySubgraphTypeDefs,
+  PrivacySubgraphOpenPolicyError,
+  type IDisclosureService,
+  type PrivacyAuthorization,
+  type PrivacyResolverDeps,
+  type PrivacySubgraph,
+  type PrivacySubgraphContext,
+} from "./subgraph/index.js";
