@@ -76,6 +76,24 @@ describe("planUndo", () => {
     expect(plan?.replay.map((action) => action.id)).toEqual(["again-action-1"]);
   });
 
+  it("hands the replay the edit it takes back, so it can drop a fact of it", () => {
+    const ops = [
+      op(0, "ADD_STEP"),
+      op(1, "SET_LAST_TEST"),
+      op(2, "SET_LAST_RUN"),
+    ];
+    const seen: Action[][] = [];
+    const plan = planUndo(ops, {
+      ...policy,
+      replay: (action, undone) => {
+        seen.push([...undone]);
+        return action.type === "SET_LAST_RUN" ? action : undefined;
+      },
+    });
+    expect(seen).toEqual([[ops[0].action], [ops[0].action]]);
+    expect(plan?.replay.map((action) => action.type)).toEqual(["SET_LAST_RUN"]);
+  });
+
   it("passes over failed operations", () => {
     const ops = [
       op(0, "SET_STEP_CONFIG"),
