@@ -65,7 +65,12 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
 
   const binding = () => ({
     workflowId: WF,
-    blockType: "@activepieces/piece-rss@0.5.9#trigger:new-item",
+    block: {
+      pieceName: "@activepieces/piece-rss",
+      pieceVersion: "0.5.9",
+      kind: "trigger" as const,
+      name: "new-item",
+    },
     packageName: "@activepieces/piece-rss",
     version: "0.5.9",
     triggerName: "new-item",
@@ -146,9 +151,7 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
     await forceDue();
     await supervisor.tick();
     expect(fired).toHaveLength(1);
-    expect(fired[0].kind).toBe(
-      "piece:@activepieces/piece-rss@0.5.9#trigger:new-item",
-    );
+    expect(fired[0].kind).toBe("piece:@activepieces/piece-rss:new-item");
     expect((fired[0].payload as { title?: string }).title).toBe("Second");
 
     const row = await store.getTriggerState(WF);
@@ -388,7 +391,12 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
 describe("TriggerSupervisor without a journal", () => {
   const binding = {
     workflowId: "wf-no-journal",
-    blockType: "@activepieces/piece-rss@0.5.9#trigger:new-item",
+    block: {
+      pieceName: "@activepieces/piece-rss",
+      pieceVersion: "0.5.9",
+      kind: "trigger" as const,
+      name: "new-item",
+    },
     packageName: "@activepieces/piece-rss",
     version: "0.5.9",
     triggerName: "new-item",
@@ -439,10 +447,12 @@ describe("interval parsing", () => {
     expect(intervalFromSchedules(undefined, 10_000)).toBe(10_000);
   });
 
-  it("hashes blockType and config together", () => {
-    const a = configHash("x#trigger:t", { url: "a" });
-    expect(a).toBe(configHash("x#trigger:t", { url: "a" }));
-    expect(a).not.toBe(configHash("x#trigger:t", { url: "b" }));
-    expect(a).not.toBe(configHash("y#trigger:t", { url: "a" }));
+  it("hashes the version-free block and config together", () => {
+    const x = { pieceName: "x", kind: "trigger" as const, name: "t" };
+    const a = configHash(x, { url: "a" });
+    const pinned = { ...x, pieceVersion: "2.0.0" };
+    expect(a).toBe(configHash(pinned, { url: "a" }));
+    expect(a).not.toBe(configHash(x, { url: "b" }));
+    expect(a).not.toBe(configHash({ ...x, pieceName: "y" }, { url: "a" }));
   });
 });

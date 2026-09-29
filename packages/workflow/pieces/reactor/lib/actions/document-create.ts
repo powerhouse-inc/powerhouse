@@ -3,12 +3,23 @@ import {
   Property,
   reactorOf,
 } from "@powerhousedao/pieces-framework";
-import { parseActions, parseCreatePayload } from "../parse.js";
+import { coerceInput } from "../input-props.js";
 import {
+  ConfigReader,
+  parseActionInput,
+  parseActions,
+  parseCreatePayload,
+} from "../parse.js";
+import {
+  ACTION_GROUP,
+  actionInputProp,
+  actionInputSchema,
   actionsProp,
   actionTypeProp,
   documentTypeProp,
   driveProp,
+  folderProp,
+  parseProp,
 } from "../reactor.js";
 
 const BLOCK = "document-create";
@@ -18,28 +29,33 @@ export const documentCreateAction = createAction({
   displayName: "Create document",
   description: "Creates a Powerhouse document.",
   requireAuth: false,
+  propertyGroups: [ACTION_GROUP("Optional, sent right after the create.")],
   props: {
     documentType: documentTypeProp(),
     name: Property.ShortText({ displayName: "Document name", required: false }),
-    parentId: driveProp("Parent drive/folder"),
-    actions: actionsProp("Initial actions"),
-    actionType: actionTypeProp(
-      "Action type",
-      false,
-      "Suggestions for the action list above",
+    parentId: driveProp("Parent drive"),
+    folderId: folderProp("Folder", "parentId", "Omit for the drive's root"),
+    actionType: actionTypeProp("Type", false),
+    input: actionInputProp("Input"),
+    actions: actionsProp(
+      "Action list (JSON)",
+      'Several actions after the create, or a payload from an earlier step: [{ "type": …, "input": … }]',
     ),
     payload: Property.ShortText({
       displayName: "Payload",
       description:
         "JSON {documentType, name, actions?}, e.g. {{steps.draft.output}}",
       required: false,
+      advanced: true,
     }),
+    parse: parseProp(),
   },
   run: async (ctx) => {
     const reactor = reactorOf(ctx);
     const config = ctx.propsValue;
+    const reader = ConfigReader.of(BLOCK, config.parse);
     // A payload (typically model output) can name the type and the document.
-    const payload = parseCreatePayload(config.payload, BLOCK);
+    const payload = parseCreatePayload(config.payload, reader);
     const documentType =
       (typeof config.documentType === "string" && config.documentType) ||
       payload.documentType;
@@ -53,12 +69,32 @@ export const documentCreateAction = createAction({
     const created = await reactor.create({
       documentType,
       ...(name ? { name } : {}),
-      ...(config.parentId ? { parentId: config.parentId } : {}),
+      // The host files into a folder by its id alone, finding its drive.
+      ...(config.folderId || config.parentId
+        ? { parentId: config.folderId || config.parentId }
+        : {}),
     });
 
     // The name travelled with the create; only the author's own actions are
     // left to dispatch.
-    const followUps = parseActions(config.actions ?? payload.actions, BLOCK);
+    const followUps =
+      config.actions !== undefined
+        ? parseActions(config.actions, reader)
+        : parseActions(payload.actions, reader, "payload.actions");
+    const actionType =
+      typeof config.actionType === "string" ? config.actionType.trim() : "";
+    if (actionType) {
+      const schema = await actionInputSchema(reactor, {
+        documentType,
+        actionType,
+      });
+      const input = parseActionInput(config.input, reader);
+      followUps.unshift({
+        type: actionType,
+        input: schema ? coerceInput(schema, input) : input,
+        scope: undefined,
+      });
+    }
     const document = followUps.length
       ? await reactor.execute({
           documentId: created.documentId,
@@ -71,6 +107,7 @@ export const documentCreateAction = createAction({
       documentType: document.documentType,
       name: document.name,
       state: document.state,
+      ...reader.output(),
     };
   },
 });

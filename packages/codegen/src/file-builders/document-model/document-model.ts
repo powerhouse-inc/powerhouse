@@ -5,7 +5,7 @@ import { kebabCase } from "change-case";
 import { createOrUpdateManifest } from "file-builders";
 import { getDocumentModelVariableNames } from "name-builders";
 import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { join, posix, relative } from "node:path";
 import {
   capitalize,
   filter,
@@ -89,7 +89,11 @@ export async function tsMorphGenerateDocumentModel(
     documentModelsDirPath,
     documentModelDirName,
   );
-  const documentModelImportPath = join("document-models", documentModelDirName);
+  // Module specifiers, so always `/`.
+  const documentModelImportPath = posix.join(
+    "document-models",
+    documentModelDirName,
+  );
   const upgradesDirPath = join(documentModelDirPath, "upgrades");
   const documentModelVariableNames = getDocumentModelVariableNames(name);
   await ensureDirectoriesExist(
@@ -129,7 +133,10 @@ export async function tsMorphGenerateDocumentModel(
     const { version } = specification;
     const versionDirName = `v${version}`;
     const versionDirPath = join(documentModelDirPath, versionDirName);
-    const versionImportPath = join(documentModelImportPath, versionDirName);
+    const versionImportPath = posix.join(
+      documentModelImportPath,
+      versionDirName,
+    );
     const srcDirPath = join(versionDirPath, "src");
     const testsDirPath = join(versionDirPath, "tests");
     const genDirPath = join(versionDirPath, "gen");
@@ -292,7 +299,11 @@ async function makeUpgradeManifestsFile(args: {
     map(({ name, documentModelDir }) => ({
       name,
       namedImports: [name],
-      moduleSpecifier: join("document-models", documentModelDir, "upgrades"),
+      moduleSpecifier: posix.join(
+        "document-models",
+        documentModelDir,
+        "upgrades",
+      ),
     })),
     // add import of each upgrade manifest and add it to the upgradeManifests array
     forEach(({ name, namedImports, moduleSpecifier }) => {
@@ -343,7 +354,7 @@ async function makeDocumentModelsFile(args: {
       name: `${name}${capitalize(version)}`,
       // imports the document model with the version appended to the name
       namedImports: [`${name} as ${name}${capitalize(version)}`],
-      moduleSpecifier: join("document-models", documentModelDir, version),
+      moduleSpecifier: posix.join("document-models", documentModelDir, version),
     })),
     forEach(({ name, namedImports, moduleSpecifier }) => {
       sourceFile.addImportDeclaration({

@@ -5,14 +5,16 @@ export interface UsageStep {
   id: string;
   key: string;
   name: string;
-  blockType: string;
+  pieceName: string;
+  pieceVersion: string;
+  actionName: string;
 }
 
 export interface UsageWorkflow {
   id: string;
   name: string;
   status: string;
-  trigger?: { blockType: string; connectionId?: string | null } | null;
+  trigger?: { connectionId?: string | null } | null;
   steps: readonly UsageStep[];
 }
 

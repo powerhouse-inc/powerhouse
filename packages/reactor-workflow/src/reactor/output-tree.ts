@@ -17,8 +17,13 @@ export interface OutputTreeNode {
 }
 
 export interface OutputTree {
-  source: "schema" | "sample" | "static" | "none";
+  // "test": the block's latest test output, the picker's "from test" source.
+  source: "schema" | "sample" | "static" | "none" | "test";
   nodes: OutputTreeNode[];
+  // "test" only: the output itself, and when and in which run it was taken.
+  sample?: unknown;
+  testedAt?: string;
+  runId?: string;
 }
 
 const MAX_DEPTH = 6;
@@ -40,12 +45,23 @@ function typeName(node: TypeNode): { name: string; display: string } {
 
 type FieldNode = FieldDefinitionNode | InputValueDefinitionNode;
 
-// Field tree of `rootType` (object or input), recursing into types defined in
-// the same SDL; unknown/scalar types are leaves labeled by their display name.
-export function fieldsFromSdl(
-  sdl: string,
-  rootType?: string,
-): OutputTreeNode[] {
+// The type a spec names for its root: `<Model>State` for the global state
+// (`<Model>GlobalState` also valid), `<Operation>Input` for an operation.
+export type SdlRoot = { state: string } | { input: string };
+
+// Case- and separator-insensitive, so SET_URL matches SetUrlInput and SetURLInput.
+const normalize = (name: string) =>
+  name.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+function rootCandidates(root: SdlRoot): string[] {
+  if ("input" in root) return [`${normalize(root.input)}input`];
+  const model = normalize(root.state);
+  return [`${model}state`, `${model}globalstate`];
+}
+
+// Field tree of the spec's root type (object or input), recursing into types
+// defined in the same SDL; unknown/scalar types are leaves.
+export function fieldsFromSdl(sdl: string, root: SdlRoot): OutputTreeNode[] {
   let definitions;
   try {
     definitions = parse(sdl).definitions;
@@ -53,8 +69,7 @@ export function fieldsFromSdl(
     return [];
   }
   const types = new Map<string, readonly FieldNode[]>();
-  let firstType: string | undefined;
-  let stateType: string | undefined;
+  const byNormalized = new Map<string, string>();
   for (const def of definitions) {
     if (
       def.kind !== Kind.OBJECT_TYPE_DEFINITION &&
@@ -64,13 +79,14 @@ export function fieldsFromSdl(
     }
     const name = def.name.value;
     types.set(name, def.fields ?? []);
-    firstType ??= name;
-    if (name.endsWith("State") && !name.endsWith("LocalState")) {
-      stateType ??= name;
+    if (!byNormalized.has(normalize(name))) {
+      byNormalized.set(normalize(name), name);
     }
   }
-  const root = rootType ?? stateType ?? firstType;
-  if (!root) return [];
+  const rootName = rootCandidates(root)
+    .map((candidate) => byNormalized.get(candidate))
+    .find((name) => name !== undefined);
+  if (!rootName) return [];
 
   const build = (name: string, depth: number): OutputTreeNode[] => {
     const fields = types.get(name);
@@ -86,7 +102,7 @@ export function fieldsFromSdl(
       };
     });
   };
-  return build(root, 0);
+  return build(rootName, 0);
 }
 
 interface ApOutputSchemaField {
@@ -273,7 +289,7 @@ export function lifecycleTriggerTree(): OutputTreeNode[] {
   ];
 }
 
-// core#schedule payload; exactly one of cron / everyMs is present.
+// The core schedule trigger's payload; exactly one of cron / everyMs is present.
 export function scheduleTriggerTree(): OutputTreeNode[] {
   return [
     leaf("scheduledFor", "DateTime!", "The slot that came due (ISO 8601)"),
@@ -284,7 +300,7 @@ export function scheduleTriggerTree(): OutputTreeNode[] {
   ];
 }
 
-// core#webhook payload: Activepieces' catch-webhook shape. Headers and query
+// The core webhook trigger's payload: Activepieces' catch-webhook shape. Headers and query
 // are open maps, so they stay leaves the author addresses by name.
 export function webhookTriggerTree(): OutputTreeNode[] {
   return [

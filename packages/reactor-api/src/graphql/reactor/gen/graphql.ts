@@ -186,7 +186,6 @@ export type DocumentModelResultPage = {
   readonly hasNextPage: Scalars["Boolean"]["output"];
   readonly hasPreviousPage: Scalars["Boolean"]["output"];
   readonly items: ReadonlyArray<DocumentModelGlobalState>;
-  readonly totalCount: Scalars["Int"]["output"];
 };
 
 export type DocumentOperationsFilterInput = {
@@ -212,7 +211,6 @@ export type DocumentRelationshipResultPage = {
   readonly hasNextPage: Scalars["Boolean"]["output"];
   readonly hasPreviousPage: Scalars["Boolean"]["output"];
   readonly items: ReadonlyArray<DocumentRelationship>;
-  readonly totalCount: Scalars["Int"]["output"];
 };
 
 export type DocumentWithChildren = {
@@ -457,7 +455,6 @@ export type PhDocumentResultPage = {
   readonly hasNextPage: Scalars["Boolean"]["output"];
   readonly hasPreviousPage: Scalars["Boolean"]["output"];
   readonly items: ReadonlyArray<PhDocument>;
-  readonly totalCount: Scalars["Int"]["output"];
 };
 
 export type PagingInput = {
@@ -645,7 +642,6 @@ export type ReactorOperationResultPage = {
   readonly hasNextPage: Scalars["Boolean"]["output"];
   readonly hasPreviousPage: Scalars["Boolean"]["output"];
   readonly items: ReadonlyArray<ReactorOperation>;
-  readonly totalCount: Scalars["Int"]["output"];
 };
 
 export type ReactorSigner = {
@@ -817,7 +813,6 @@ export type GetDocumentModelsQueryVariables = Exact<{
 
 export type GetDocumentModelsQuery = {
   readonly documentModels: {
-    readonly totalCount: number;
     readonly hasNextPage: boolean;
     readonly hasPreviousPage: boolean;
     readonly cursor?: string | null | undefined;
@@ -879,7 +874,6 @@ export type GetDocumentWithOperationsQuery = {
           readonly lastModifiedAtUtcIso: string | Date;
           readonly operations?:
             | {
-                readonly totalCount: number;
                 readonly hasNextPage: boolean;
                 readonly hasPreviousPage: boolean;
                 readonly cursor?: string | null | undefined;
@@ -947,7 +941,6 @@ export type GetDocumentOutgoingRelationshipsQueryVariables = Exact<{
 
 export type GetDocumentOutgoingRelationshipsQuery = {
   readonly documentOutgoingRelationships: {
-    readonly totalCount: number;
     readonly hasNextPage: boolean;
     readonly hasPreviousPage: boolean;
     readonly cursor?: string | null | undefined;
@@ -976,7 +969,6 @@ export type GetDocumentIncomingRelationshipsQueryVariables = Exact<{
 
 export type GetDocumentIncomingRelationshipsQuery = {
   readonly documentIncomingRelationships: {
-    readonly totalCount: number;
     readonly hasNextPage: boolean;
     readonly hasPreviousPage: boolean;
     readonly cursor?: string | null | undefined;
@@ -1005,7 +997,6 @@ export type GetDocumentOutgoingRelationshipEdgesQueryVariables = Exact<{
 
 export type GetDocumentOutgoingRelationshipEdgesQuery = {
   readonly documentOutgoingRelationshipEdges: {
-    readonly totalCount: number;
     readonly hasNextPage: boolean;
     readonly hasPreviousPage: boolean;
     readonly cursor?: string | null | undefined;
@@ -1029,7 +1020,6 @@ export type GetDocumentIncomingRelationshipEdgesQueryVariables = Exact<{
 
 export type GetDocumentIncomingRelationshipEdgesQuery = {
   readonly documentIncomingRelationshipEdges: {
-    readonly totalCount: number;
     readonly hasNextPage: boolean;
     readonly hasPreviousPage: boolean;
     readonly cursor?: string | null | undefined;
@@ -1052,7 +1042,6 @@ export type FindDocumentsQueryVariables = Exact<{
 
 export type FindDocumentsQuery = {
   readonly findDocuments: {
-    readonly totalCount: number;
     readonly hasNextPage: boolean;
     readonly hasPreviousPage: boolean;
     readonly cursor?: string | null | undefined;
@@ -1079,7 +1068,6 @@ export type GetDocumentOperationsQueryVariables = Exact<{
 
 export type GetDocumentOperationsQuery = {
   readonly documentOperations: {
-    readonly totalCount: number;
     readonly hasNextPage: boolean;
     readonly hasPreviousPage: boolean;
     readonly cursor?: string | null | undefined;
@@ -1977,7 +1965,6 @@ export type DocumentModelResultPageResolvers<
     ParentType,
     ContextType
   >;
-  totalCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
 }>;
 
 export type DocumentRelationshipResolvers<
@@ -2018,7 +2005,6 @@ export type DocumentRelationshipResultPageResolvers<
     ParentType,
     ContextType
   >;
-  totalCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
 }>;
 
 export type DocumentWithChildrenResolvers<
@@ -2291,7 +2277,6 @@ export type PhDocumentResultPageResolvers<
     ParentType,
     ContextType
   >;
-  totalCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
 }>;
 
 export type PeerAgreementResolvers<
@@ -2502,7 +2487,6 @@ export type ReactorOperationResultPageResolvers<
     ParentType,
     ContextType
   >;
-  totalCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
 }>;
 
 export type ReactorSignerResolvers<
@@ -2974,7 +2958,6 @@ export const GetDocumentModelsDocument = gql`
         version
         specification
       }
-      totalCount
       hasNextPage
       hasPreviousPage
       cursor
@@ -3033,7 +3016,6 @@ export const GetDocumentWithOperationsDocument = gql`
               }
             }
           }
-          totalCount
           hasNextPage
           hasPreviousPage
           cursor
@@ -3060,7 +3042,6 @@ export const GetDocumentOutgoingRelationshipsDocument = gql`
       items {
         ...PHDocumentFields
       }
-      totalCount
       hasNextPage
       hasPreviousPage
       cursor
@@ -3084,7 +3065,6 @@ export const GetDocumentIncomingRelationshipsDocument = gql`
       items {
         ...PHDocumentFields
       }
-      totalCount
       hasNextPage
       hasPreviousPage
       cursor
@@ -3108,7 +3088,6 @@ export const GetDocumentOutgoingRelationshipEdgesDocument = gql`
       items {
         ...DocumentRelationshipFields
       }
-      totalCount
       hasNextPage
       hasPreviousPage
       cursor
@@ -3132,7 +3111,6 @@ export const GetDocumentIncomingRelationshipEdgesDocument = gql`
       items {
         ...DocumentRelationshipFields
       }
-      totalCount
       hasNextPage
       hasPreviousPage
       cursor
@@ -3150,7 +3128,6 @@ export const FindDocumentsDocument = gql`
       items {
         ...PHDocumentFields
       }
-      totalCount
       hasNextPage
       hasPreviousPage
       cursor
@@ -3194,7 +3171,6 @@ export const GetDocumentOperationsDocument = gql`
           }
         }
       }
-      totalCount
       hasNextPage
       hasPreviousPage
       cursor

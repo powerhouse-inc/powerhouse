@@ -1,26 +1,23 @@
 // When the connection picker offers to create a connection, and what the new
 // powerhouse/connection document gets prefilled with.
-import { connectorIdForPiece } from "../../connection-editor/piece-auth.js";
+import {
+  connectorIdForPiece,
+  packageFromConnectorId,
+} from "../../connection-editor/piece-auth.js";
 import { pieceDisplayName } from "./block-meta.js";
+import { isCoreBlock, type BlockIdentity } from "./blocks.js";
 
 export const CONNECTION_TYPE = "powerhouse/connection";
-
-// "@scope/pkg@1.2.3#name" -> "@scope/pkg" (works for connectorIds too).
-export function packageOf(id: string): string {
-  const head = id.split("#")[0];
-  const at = head.lastIndexOf("@");
-  return at > 0 ? head.slice(0, at) : head;
-}
 
 // A connection is usable by a block when it configures the block's own piece.
 // Everything else is noise: picking it would just fail at run time.
 export function compatibleConnections<T extends { connectorId: string }>(
   connections: T[],
-  blockType: string,
+  block: BlockIdentity,
 ): T[] {
-  const piecePackage = packageOf(blockType);
   return connections.filter(
-    (connection) => packageOf(connection.connectorId) === piecePackage,
+    (connection) =>
+      packageFromConnectorId(connection.connectorId) === block.pieceName,
   );
 }
 
@@ -58,15 +55,14 @@ export function connectionNameFor(
 // Only piece blocks that take a connection and have none for their own package
 // yet: everything else already has a better answer in the list.
 export function connectionDraftFor(input: {
-  blockType: string;
+  block: BlockIdentity;
   authMode: "loading" | "none" | "optional" | "required";
   matchingCount: number;
 }): ConnectionDraft | null {
   if (input.authMode === "none" || input.authMode === "loading") return null;
   if (input.matchingCount > 0) return null;
-  if (!input.blockType.includes("#")) return null;
-  const piecePackage = packageOf(input.blockType);
-  if (!piecePackage || piecePackage === "core") return null;
+  if (isCoreBlock(input.block)) return null;
+  const piecePackage = input.block.pieceName;
   return {
     piecePackage,
     connectorId: connectorIdForPiece(piecePackage),

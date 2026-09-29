@@ -67,6 +67,12 @@ describe("buildPowerhouseConfigTemplate", () => {
     assertContainsLeaves(parsed.connect, DEFAULT_CONNECT_CONFIG);
   });
 
+  test("leaves connect.app.workflowsEnabled out, so Connect follows workflows.enabled", async () => {
+    const out = await buildPowerhouseConfigTemplate({ name: NAME });
+    const parsed = JSON.parse(out) as { connect: { app: Plain } };
+    expect(parsed.connect.app).not.toHaveProperty("workflowsEnabled");
+  });
+
   test("preserves existing top-level fields", async () => {
     const out = await buildPowerhouseConfigTemplate({ name: NAME });
     const parsed = JSON.parse(out) as Plain;

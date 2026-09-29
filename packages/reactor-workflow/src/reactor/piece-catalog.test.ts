@@ -55,6 +55,7 @@ const LISTED_AUTH = {
     { type: "CUSTOM_AUTH", displayName: "Service account", required: true },
   ],
   slack: { type: "OAUTH2", displayName: "Connection", required: true },
+  "aws-s3": { type: "OIDC", displayName: "Workload identity", required: true },
   omnihr: { type: "CUSTOM_AUTH", required: true, refresh: {} },
   notion: { type: "SECRET_TEXT", required: true },
 };
@@ -73,16 +74,17 @@ it("flags the listed pieces whose auth this engine cannot run", async () => {
   expect(
     Object.fromEntries(catalog.map((p) => [p.displayName, p.unsupported])),
   ).toEqual({
-    // OAuth2 or a service account: the service account runs.
     gmail: undefined,
-    "google-drive": `OAuth2 auth is not supported yet (${ISSUES}/3091)`,
-    slack: `OAuth2 auth is not supported yet (${ISSUES}/3091)`,
+    // OAuth2 runs; OIDC alone would not.
+    "google-drive": undefined,
+    slack: undefined,
+    "aws-s3": `OIDC auth is not supported yet (${ISSUES}/3091)`,
     omnihr: `CustomAuth refresh is not supported yet (${ISSUES}/3091)`,
     notion: undefined,
   });
 });
 
-it("flags a listed trigger that renews or is MANUAL", async () => {
+it("flags a listed trigger that is MANUAL or renews in a way that cannot run", async () => {
   vi.stubGlobal("fetch", (() =>
     Promise.resolve(
       Response.json({
@@ -96,6 +98,10 @@ it("flags a listed trigger that renews or is MANUAL", async () => {
               strategy: "CRON",
               cronExpression: "0 */12 * * *",
             },
+          },
+          event_started: {
+            type: "WEBHOOK",
+            renewConfiguration: { strategy: "CRON", cronExpression: "never" },
           },
           manual_trigger: {
             type: "MANUAL",
@@ -114,7 +120,8 @@ it("flags a listed trigger that renews or is MANUAL", async () => {
   expect(
     Object.fromEntries(triggers.map((t) => [t.name, t.unsupported])),
   ).toEqual({
-    new_event: `renewConfiguration is not supported yet (${ISSUES}/3090)`,
+    new_event: undefined,
+    event_started: `renewConfiguration cron "never" is invalid (${ISSUES}/3090)`,
     manual_trigger: `TriggerStrategy.MANUAL is not supported yet (${ISSUES}/3091)`,
     event_ended: undefined,
   });
@@ -208,8 +215,13 @@ it("indexes the registry's blocks for block search", async () => {
     ],
   });
   const index = buildSearchIndex(await fetchCatalogWithSuggestions());
-  expect(index.entries.map((e) => e.hit.blockType)).toEqual([
-    "@acme/piece-invoices@1.0.0#send",
+  expect(index.entries.map((e) => e.hit)).toEqual([
+    expect.objectContaining({
+      pieceName: "@acme/piece-invoices",
+      pieceVersion: "1.0.0",
+      kind: "action",
+      name: "send",
+    }),
   ]);
 });
 

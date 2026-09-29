@@ -6,11 +6,12 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
-import { localFirstResolver, type PieceResolver } from "../pieces/index.js";
+import { sourcedResolver, type PieceResolver } from "../pieces/index.js";
 import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";
 import { packagePieces } from "./piece-registry.js";
 import { WorkflowRunStore } from "./store.js";
 import { TriggerSupervisor } from "./trigger-supervisor.js";
+import { CORE_PIECE_VERSION } from "../pieces/index.js";
 
 const PIECE = "@powerhousedao/piece-identity";
 const WORKFLOW_ID = "wf-identity";
@@ -53,13 +54,21 @@ function workflowDocument() {
         name: "Identity",
         status: "ENABLED",
         version: 1,
-        trigger: { id: "t1", blockType: "core#manual", config: {} },
+        trigger: {
+          id: "t1",
+          pieceName: "@powerhousedao/piece-core",
+          pieceVersion: CORE_PIECE_VERSION,
+          triggerName: "manual",
+          config: {},
+        },
         steps: [
           {
             id: "s1",
             key: "ask",
             name: "Ask",
-            blockType: `${PIECE}#whoami`,
+            pieceName: PIECE,
+            pieceVersion: "1.0.0",
+            actionName: "whoami",
             config: {},
           },
         ],
@@ -125,12 +134,23 @@ describe("the identity a step's piece is handed", () => {
       resolveAuth: () => Promise.resolve(undefined),
       fire: () => undefined,
       cacheDir: dir,
-      resolver: localFirstResolver(packagePieces.lookup, nowhere),
+      // The binding names an installed piece.
+      resolver: {
+        resolve: (target) =>
+          sourcedResolver({ cacheDir: dir, lookup: packagePieces.lookup })
+            .resolve({ ...target, source: "local" })
+            .catch(() => nowhere.resolve(target)),
+      },
     });
     try {
       const output = await supervisor.test({
         workflowId: WORKFLOW_ID,
-        blockType: `${PIECE}@1.0.0#trigger:poll`,
+        block: {
+          pieceName: PIECE,
+          pieceVersion: "1.0.0",
+          kind: "trigger" as const,
+          name: "poll",
+        },
         packageName: PIECE,
         version: "1.0.0",
         triggerName: "poll",

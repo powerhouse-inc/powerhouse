@@ -872,13 +872,11 @@ function createFakeOperation(index: number, scope = "global"): Operation {
 function makePage(
   results: Operation[],
   cursor?: string,
-  totalCount?: number,
 ): PagedResults<Operation> {
   return {
     results,
     options: { cursor: "", limit: results.length },
     nextCursor: cursor,
-    totalCount,
   };
 }
 
@@ -932,7 +930,7 @@ describe("DocumentCache operations", () => {
   it("loads the first page for one scope with the given limit", async () => {
     const { client, getOperations } = createOperationsClient();
     getOperations.mockResolvedValue(
-      makePage([createFakeOperation(0), createFakeOperation(1)], undefined, 2),
+      makePage([createFakeOperation(0), createFakeOperation(1)]),
     );
     const cache = new DocumentCache(client);
     const listener = vi.fn();
@@ -956,7 +954,6 @@ describe("DocumentCache operations", () => {
     const entry = cache.getOperationsState("doc-1", "global");
     expect(entry.operations.map((op) => op.index)).toEqual([0, 1]);
     expect(entry.hasNextPage).toBe(false);
-    expect(entry.totalCount).toBe(2);
     // pending, then success
     expect(listener).toHaveBeenCalledTimes(2);
   });

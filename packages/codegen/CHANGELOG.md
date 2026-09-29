@@ -1,3 +1,72 @@
+## 6.2.3-dev.32 (2026-09-29)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- **ph-cli:** install the dependencies generate commands add ([04bfa515f](https://github.com/powerhouse-inc/powerhouse/commit/04bfa515f))
+- ⚠️  **codegen:** minimal Activepieces-style piece scaffolds ([fc67bee2d](https://github.com/powerhouse-inc/powerhouse/commit/fc67bee2d))
+- ⚠️  take a piece's version from its package, and validate ph connect build --json ([9100973ca](https://github.com/powerhouse-inc/powerhouse/commit/9100973ca))
+
+### 🩹 Fixes
+
+- **codegen:** scaffold every hook a piece needs, with field comments ([b63fe72cf](https://github.com/powerhouse-inc/powerhouse/commit/b63fe72cf))
+
+### ⚠️  Breaking Changes
+
+- **codegen:** minimal Activepieces-style piece scaffolds  ([fc67bee2d](https://github.com/powerhouse-inc/powerhouse/commit/fc67bee2d))
+- take a piece's version from its package, and validate ph connect build --json  ([9100973ca](https://github.com/powerhouse-inc/powerhouse/commit/9100973ca))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.30 (2026-09-29)
+
+### 🩹 Fixes
+
+- **deps:** load cmd-ts's ESM build under bun, which fails to require chalk from its CJS build ([749528c71](https://github.com/powerhouse-inc/powerhouse/commit/749528c71))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.29 (2026-09-28)
+
+### 🩹 Fixes
+
+- **codegen:** build generated module specifiers with posix separators ([13cba40ab](https://github.com/powerhouse-inc/powerhouse/commit/13cba40ab))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.28 (2026-09-28)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.27 (2026-09-28)
+
+### 🩹 Fixes
+
+- **codegen:** load module files before generate all discovers editors, subgraphs and processors ([366c438cb](https://github.com/powerhouse-inc/powerhouse/commit/366c438cb))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.26 (2026-09-26)
+
+### 🩹 Fixes
+
+- **codegen:** load module files before generate all discovers editors, subgraphs and processors ([366c438cb](https://github.com/powerhouse-inc/powerhouse/commit/366c438cb))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features

@@ -112,6 +112,43 @@ const SCENES: Record<string, (page: Page) => Promise<void>> = {
     await canvasNode(page, "Summarise").click();
     await page.getByRole("tab", { name: "Settings" }).click();
   },
+  "workflow-editor-draft": async (page) => {
+    await openWorkflowEditor(page);
+    await canvasNode(page, "Summarise").getByText("Incomplete").waitFor();
+  },
+  "workflow-editor-publish-blocked": async (page) => {
+    await openWorkflowEditor(page);
+    await canvasNode(page, "Summarise").getByText("Incomplete").waitFor();
+    const publish = page
+      .getByRole("status")
+      .getByRole("button", { name: "Publish", exact: true });
+    await publish.and(page.locator(":disabled")).waitFor();
+    // The disabled button takes no pointer; its wrapper shows the tooltip.
+    await publish.locator("..").hover();
+    await page
+      .getByRole("button", { name: "You have incomplete steps" })
+      .waitFor();
+  },
+  "workflow-editor-skipped": async (page) => {
+    await openWorkflowEditor(page);
+    await canvasNode(page, "Post to #ops").click({ button: "right" });
+    await page.getByRole("button", { name: "Skip this step" }).click();
+    await canvasNode(page, "Post to #ops").getByText("Skipped").waitFor();
+    await canvasNode(page, "Post to #ops").click();
+    await page.getByRole("tab", { name: /Settings/ }).click();
+  },
+  "workflow-editor-variables": async (page) => {
+    await openWorkflowEditor(page);
+    await page.getByRole("button", { name: /Variables/ }).click();
+    await page
+      .getByRole("textbox", { name: "New variable name" })
+      .fill("limit");
+    await page.getByRole("combobox", { name: "New variable type" }).click();
+    await page.getByRole("option", { name: "Number", exact: true }).click();
+    await page
+      .getByRole("textbox", { name: "New variable value" })
+      .fill("0x10");
+  },
   "connection-editor": async (page) => {
     await openDrive(page);
     await selectInSidebar(page, "Ops Slack");

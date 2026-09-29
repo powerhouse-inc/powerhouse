@@ -7,7 +7,7 @@ import {
 async function createHarness(): Promise<ScopeHarness> {
   const adapter = new FastifyHttpAdapter();
   adapter.setupMiddleware({});
-  const httpServer = await adapter.listen(0);
+  const httpServer = await adapter.listen(0, undefined, "127.0.0.1");
   const addr = httpServer.address() as { port: number };
   return {
     adapter,

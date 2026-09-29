@@ -1,3 +1,6 @@
+import { checkTriggerStrategy } from "@powerhousedao/pieces-framework/workflow";
+import { Cron } from "croner";
+
 // Piece features this engine cannot run. Read off a loaded piece or off its
 // published listing alike, since both carry auth and triggers as data.
 const ISSUES_URL = "https://github.com/powerhouse-inc/powerhouse/issues/";
@@ -42,7 +45,9 @@ export function authMethodFor(auth: unknown, type: unknown): unknown {
 
 function unsupportedMethod(auth: unknown): UnsupportedFeature | undefined {
   if (!isRecord(auth)) return undefined;
-  if (auth.type === "OAUTH2") return unsupported("OAuth2 auth", 3091);
+  if (auth.type === "OAUTH2" && auth.grantType === "client_credentials") {
+    return unsupported("OAuth2 client credentials", 3091);
+  }
   if (auth.type === "OIDC") return unsupported("OIDC auth", 3091);
   if (auth.type === "CUSTOM_AUTH" && auth.refresh != null) {
     return unsupported("CustomAuth refresh", 3091);
@@ -50,7 +55,7 @@ function unsupportedMethod(auth: unknown): UnsupportedFeature | undefined {
   return undefined;
 }
 
-// A piece trigger; core#manual is the engine's own and never passes here.
+// A piece trigger; the core piece's triggers are fed by the host and never pass here.
 export function unsupportedTrigger(trigger: {
   type?: unknown;
   renewConfiguration?: unknown;
@@ -58,12 +63,65 @@ export function unsupportedTrigger(trigger: {
   if (trigger.type === "MANUAL") {
     return unsupported("TriggerStrategy.MANUAL", 3091);
   }
-  const renew = trigger.renewConfiguration;
-  // createTrigger fills in { strategy: "NONE" } for every trigger.
-  if (isRecord(renew) && renew.strategy !== "NONE") {
-    return unsupported("renewConfiguration", 3090);
+  const strategy = checkTriggerStrategy(trigger.type);
+  if ("issue" in strategy) {
+    const issue = trigger.type === "APP_WEBHOOK" ? 3081 : 3091;
+    return {
+      feature: `TriggerStrategy ${String(trigger.type)}`,
+      issue,
+      reason: `${strategy.issue} (${ISSUES_URL}${issue})`,
+    };
+  }
+  const problem = renewProblem(trigger.renewConfiguration);
+  if (problem) {
+    return {
+      feature: "renewConfiguration",
+      issue: 3090,
+      reason: `renewConfiguration ${problem} (${ISSUES_URL}3090)`,
+    };
   }
   return undefined;
+}
+
+// A subscription the supervisor renews on a UTC cron by calling onRenew.
+export interface TriggerRenew {
+  strategy: "CRON";
+  cronExpression: string;
+}
+
+function cronFires(cron: string): boolean {
+  try {
+    return (
+      new Cron(cron, { timezone: "UTC", legacyMode: false }).nextRun() !== null
+    );
+  } catch {
+    return false;
+  }
+}
+
+// createTrigger fills in { strategy: "NONE" } for every trigger.
+function renewProblem(renew: unknown): string | undefined {
+  if (renew === undefined || renew === null) return undefined;
+  if (!isRecord(renew)) return "is not an object";
+  if (renew.strategy === "NONE") return undefined;
+  if (renew.strategy !== "CRON") {
+    return `strategy ${String(renew.strategy)} is not supported`;
+  }
+  const cron = renew.cronExpression;
+  if (typeof cron !== "string" || !cronFires(cron)) {
+    return `cron ${JSON.stringify(cron)} is invalid`;
+  }
+  return undefined;
+}
+
+// The trigger's renewal, when it declares a valid CRON one.
+export function triggerRenew(trigger: {
+  renewConfiguration?: unknown;
+}): TriggerRenew | undefined {
+  const renew = trigger.renewConfiguration;
+  if (!isRecord(renew) || renew.strategy !== "CRON") return undefined;
+  if (renewProblem(renew)) return undefined;
+  return { strategy: "CRON", cronExpression: renew.cronExpression as string };
 }
 
 export class UnsupportedPieceFeatureError extends Error {

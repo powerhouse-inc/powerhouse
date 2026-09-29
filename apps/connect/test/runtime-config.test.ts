@@ -95,7 +95,7 @@ describe("runtime-config loader", () => {
     ).toEqual({ a: 1 });
   });
 
-  it("defaults connect.app.workflowsEnabled to false and reads it independently of studioMode", async () => {
+  it("leaves connect.app.workflowsEnabled unset by default, which Connect reads as off", async () => {
     // Connect's workflows flag is file-only, like every other runtime field:
     // off unless the emitted config turns it on, and orthogonal to studio mode.
     stubFetch({
@@ -106,8 +106,8 @@ describe("runtime-config loader", () => {
     });
     const { loadRuntimeConfig } = await import("../src/runtime-config.js");
     const config = await loadRuntimeConfig();
-    expect(config.connect.app?.workflowsEnabled).toBe(false);
-    expect(DEFAULT_CONNECT_CONFIG.app?.workflowsEnabled).toBe(false);
+    expect(config.connect.app?.workflowsEnabled).toBeUndefined();
+    expect(DEFAULT_CONNECT_CONFIG.app).not.toHaveProperty("workflowsEnabled");
   });
 
   it("lets the file turn workflows on without turning studio mode on", async () => {
@@ -133,7 +133,7 @@ describe("runtime-config loader", () => {
     const { loadRuntimeConfig } = await import("../src/runtime-config.js");
     const config = await loadRuntimeConfig();
     expect(config.connect.app?.studioMode).toBe(true);
-    expect(config.connect.app?.workflowsEnabled).toBe(false);
+    expect(config.connect.app?.workflowsEnabled).toBeUndefined();
   });
 
   it("caches the loaded config across calls (single fetch)", async () => {

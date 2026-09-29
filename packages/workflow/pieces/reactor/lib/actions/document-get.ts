@@ -1,9 +1,11 @@
 import { createAction, reactorOf } from "@powerhousedao/pieces-framework";
-import { resolveDocumentId } from "../parse.js";
-import { documentIdProp, documentTypeProp } from "../reactor.js";
+import { ConfigReader } from "../parse.js";
+import { documentIdProp, documentTypeProp, parseProp } from "../reactor.js";
+
+const BLOCK = "document-get";
 
 export const documentGetAction = createAction({
-  name: "document-get",
+  name: BLOCK,
   displayName: "Get document",
   description: "Reads a document's current state.",
   requireAuth: false,
@@ -18,12 +20,20 @@ export const documentGetAction = createAction({
       false,
       "Design-time hint when the document id is an expression",
     ),
+    parse: parseProp(),
   },
   run: async (ctx) => {
-    const documentId = resolveDocumentId(ctx.propsValue.documentId);
+    const reader = ConfigReader.of(BLOCK, ctx.propsValue.parse);
+    const documentId = reader.documentId(
+      ctx.propsValue.documentId,
+      "documentId",
+    );
     if (!documentId) {
-      throw new Error('document-get: "documentId" is required');
+      throw new Error(`${BLOCK}: "documentId" is required`);
     }
-    return reactorOf(ctx).get({ documentId });
+    return {
+      ...(await reactorOf(ctx).get({ documentId })),
+      ...reader.output(),
+    };
   },
 });

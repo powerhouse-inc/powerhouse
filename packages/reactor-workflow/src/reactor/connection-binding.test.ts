@@ -19,11 +19,8 @@ import { withRunScope } from "./run-scope.js";
 
 const SLACK_PACKAGE = "@activepieces/piece-slack";
 const IMAP_PACKAGE = "@activepieces/piece-imap";
-const SLACK_STEP = `${SLACK_PACKAGE}@0.9.0#send_message`;
-const IMAP_TRIGGER = `${IMAP_PACKAGE}@0.6.0#trigger:new_email`;
-
-const asSlack = { blockType: SLACK_STEP, piecePackage: SLACK_PACKAGE };
-const asImap = { blockType: IMAP_TRIGGER, piecePackage: IMAP_PACKAGE };
+const asSlack = { piecePackage: SLACK_PACKAGE };
+const asImap = { piecePackage: IMAP_PACKAGE };
 
 function connectionDocument(
   id: string,
@@ -78,15 +75,18 @@ function workflowState(
     name: "wf",
     trigger: {
       id: "t",
-      blockType: IMAP_TRIGGER,
+      pieceName: IMAP_PACKAGE,
+      pieceVersion: "0.6.0",
+      triggerName: "new_email",
       connectionId: "conn-imap",
       config: {},
-      filter: null,
     },
     steps: steps.map((step) => ({
       ...step,
       name: step.key,
-      blockType: SLACK_STEP,
+      pieceName: SLACK_PACKAGE,
+      pieceVersion: "0.9.0",
+      actionName: "send_message",
       config: {},
       timeoutSeconds: null,
     })),
@@ -241,18 +241,6 @@ describe("connector binding", () => {
     await expect(resolver.resolve("conn-imap", asSlack)).rejects.toBeInstanceOf(
       ConnectorMismatchError,
     );
-  });
-
-  it("ignores the version a blockType pins", async () => {
-    const { subgraph } = fakeSubgraph();
-    const resolver = new DocumentConnectionResolver(subgraph, secrets);
-
-    await expect(
-      resolver.resolve("conn-slack", {
-        blockType: `${SLACK_PACKAGE}@9.9.9#send_message`,
-        piecePackage: SLACK_PACKAGE,
-      }),
-    ).resolves.toBeDefined();
   });
 
   it("refuses when nothing identifies the asking block", async () => {

@@ -103,6 +103,9 @@ describe("KyselyDocumentView Unit Tests", () => {
       where: vi.fn().mockReturnThis(),
       distinct: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockReturnThis(),
+      offset: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
       execute: vi.fn(),
       executeTakeFirst: vi.fn(),
       insertInto: vi.fn().mockReturnThis(),
@@ -674,56 +677,20 @@ describe("KyselyDocumentView Unit Tests", () => {
       expect(result.nextCursor).toBeUndefined();
     });
 
-    it("should deduplicate documents when multiple scopes exist", async () => {
-      const snapshots = [
-        {
-          documentId: "doc-1",
-          scope: "header",
-          content: { id: "doc-1", documentType: "test-type" },
-          branch: "main",
-          ordinal: 1,
-          isDeleted: false,
-          documentType: "test-type",
-          lastUpdatedAt: new Date(),
-        },
-        {
-          documentId: "doc-1",
-          scope: "document",
-          content: {},
-          branch: "main",
-          ordinal: 1,
-          isDeleted: false,
-          documentType: "test-type",
-          lastUpdatedAt: new Date(),
-        },
-        {
-          documentId: "doc-2",
-          scope: "header",
-          content: { id: "doc-2", documentType: "test-type" },
-          branch: "main",
-          ordinal: 1,
-          isDeleted: false,
-          documentType: "test-type",
-          lastUpdatedAt: new Date(),
-        },
-      ];
-      mockDb.execute.mockResolvedValue(snapshots);
+    it("should group snapshot rows by document", async () => {
+      await view.findByType("test-type");
 
-      vi.spyOn(view, "get").mockResolvedValue({
-        header: {
-          protocolVersions: { "base-reducer": 2 },
-          id: "doc-1",
-          documentType: "test-type",
-        },
-        state: {},
-        operations: {},
-        initialState: {},
-        clipboard: [],
-      } as any);
+      expect(mockDb.groupBy).toHaveBeenCalledWith("documentId");
+    });
 
-      const result = await view.findByType("test-type");
+    it("should page in the query and fetch one extra row", async () => {
+      await view.findByType("test-type", undefined, {
+        cursor: "20",
+        limit: 10,
+      });
 
-      expect(result.results).toHaveLength(2);
+      expect(mockDb.offset).toHaveBeenCalledWith(20);
+      expect(mockDb.limit).toHaveBeenCalledWith(11);
     });
 
     it("should skip documents that fail to retrieve", async () => {

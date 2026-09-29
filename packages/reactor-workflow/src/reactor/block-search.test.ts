@@ -86,6 +86,12 @@ describe("buildSearchIndex over blocks this engine cannot run", () => {
             cronExpression: "0 */12 * * *",
           },
         },
+        {
+          name: "googlesheets_row_expiring",
+          displayName: "Row Expiring",
+          type: "WEBHOOK",
+          renewConfiguration: { strategy: "INTERVAL" },
+        },
       ],
     },
     {
@@ -100,13 +106,15 @@ describe("buildSearchIndex over blocks this engine cannot run", () => {
   it("carries the reason on each hit that cannot run", () => {
     expect(
       Object.fromEntries(
-        index.entries.map(({ hit }) => [hit.blockType, hit.unsupported]),
+        index.entries.map(({ hit }) => [hit.name, hit.unsupported]),
       ),
     ).toEqual({
-      "@activepieces/piece-google-sheets@0.17.0#insert_row": undefined,
-      "@activepieces/piece-google-sheets@0.17.0#trigger:googlesheets_new_row_added": `renewConfiguration is not supported yet (${ISSUES}/3090)`,
+      insert_row: undefined,
+      // Renews on its cron.
+      googlesheets_new_row_added: undefined,
+      googlesheets_row_expiring: `renewConfiguration strategy INTERVAL is not supported (${ISSUES}/3090)`,
       // Runs through its CUSTOM_AUTH method.
-      "@activepieces/piece-gmail@0.16.0#send_email": undefined,
+      send_email: undefined,
     });
   });
 });
@@ -114,14 +122,14 @@ describe("buildSearchIndex over blocks this engine cannot run", () => {
 describe("buildSearchIndex", () => {
   const index = buildSearchIndex(raw);
 
-  it("indexes actions and triggers with ready-to-use block types", () => {
+  it("indexes actions and triggers at the version to pin", () => {
     expect(index.pieces).toBe(2);
-    expect(index.entries.map((entry) => entry.hit.blockType)).toEqual([
-      "@activepieces/piece-slack@0.9.1#send_channel_message",
-      "@activepieces/piece-slack@0.9.1#upload_file",
-      "@activepieces/piece-slack@0.9.1#trigger:new_message",
-      "@activepieces/piece-gmail@0.7.0#send_email",
-      "@activepieces/piece-gmail@0.7.0#trigger:new_email",
+    expect(index.entries.map((entry) => blockOf(entry.hit))).toEqual([
+      ["@activepieces/piece-slack", "0.9.1", "action", "send_channel_message"],
+      ["@activepieces/piece-slack", "0.9.1", "action", "upload_file"],
+      ["@activepieces/piece-slack", "0.9.1", "trigger", "new_message"],
+      ["@activepieces/piece-gmail", "0.7.0", "action", "send_email"],
+      ["@activepieces/piece-gmail", "0.7.0", "trigger", "new_email"],
     ]);
     const trigger = index.entries.find(
       (entry) => entry.hit.kind === "trigger",
@@ -167,11 +175,17 @@ describe("searchIndex", () => {
   });
 });
 
+// A hit's block, in the order a workflow names it.
+function blockOf(hit: BlockSearchHit) {
+  return [hit.pieceName, hit.pieceVersion, hit.kind, hit.name];
+}
+
 // A piece a reactor package ships, as the runtime hands it to the search.
 function localHit(pieceName: string, name: string): BlockSearchHit {
   return {
-    blockType: `${pieceName}#${name}`,
     pieceName,
+    pieceVersion: "1.0.0",
+    name,
     pieceDisplayName: "Slack",
     logoUrl: "",
     displayName: "Send Message To A Channel",
@@ -206,8 +220,9 @@ describe("local pieces in the search", () => {
     expect(
       result.hits.some(
         (hit) =>
-          hit.blockType ===
-          "@activepieces/piece-slack@0.9.1#send_channel_message",
+          hit.pieceName === "@activepieces/piece-slack" &&
+          hit.pieceVersion === "0.9.1" &&
+          hit.name === "send_channel_message",
       ),
     ).toBe(true);
   });
@@ -225,9 +240,12 @@ describe("local pieces in the search", () => {
     // One listing, and it is the installed one: picking the published block
     // would run a different copy from the one this reactor loads.
     expect(slack).toHaveLength(1);
-    expect(slack[0].blockType).toBe(
-      "@activepieces/piece-slack#send_channel_message",
-    );
+    expect(blockOf(slack[0])).toEqual([
+      "@activepieces/piece-slack",
+      "1.0.0",
+      "action",
+      "send_channel_message",
+    ]);
     // Counted once, rather than once per listing merged.
     expect(result.indexedPieces).toBe(buildSearchIndex(raw).pieces);
   });

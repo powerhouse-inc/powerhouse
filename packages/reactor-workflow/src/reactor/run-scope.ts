@@ -17,6 +17,8 @@ export interface RunScope {
   // Journals the documents the reactor port hands this run's steps, before
   // they are handed over; absent where there is no journal to gate.
   recordDocuments?: (documentIds: string[]) => Promise<void>;
+  // A single-step test: actions run their test method, falling back to run.
+  stepTest?: boolean;
 }
 
 const storage = new AsyncLocalStorage<RunScope>();
@@ -52,4 +54,8 @@ export function currentDocumentRecorder():
 // the executor is shared, and the child it should use is not.
 export function currentPieceWorker(): IPieceWorker | undefined {
   return storage.getStore()?.pieceWorker;
+}
+
+export function currentStepTest(): boolean {
+  return storage.getStore()?.stepTest ?? false;
 }

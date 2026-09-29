@@ -1,4 +1,4 @@
-// The signature-verifying half of core#webhook, over a real socket: config,
+// The signature-verifying half of the core webhook trigger, over a real socket: config,
 // resolved policy and the reactor's verifier have to agree on the wire format.
 import { createHmac } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
@@ -42,7 +42,7 @@ async function expectNoRun(current: WebhookHost): Promise<void> {
   expect(current.fired).toHaveLength(0);
 }
 
-describe("core#webhook signature verification", () => {
+describe("the core webhook trigger signature verification", () => {
   describe("the three layouts", () => {
     it("accepts a bare digest under hmac and starts a run", async () => {
       host = await startWebhookHost();

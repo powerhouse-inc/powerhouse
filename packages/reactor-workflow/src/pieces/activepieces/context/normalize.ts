@@ -275,18 +275,9 @@ export async function normalizeValue(
   const type = prop.type;
   const processor = type ? table[type] : undefined;
   if (!processor) return value;
+  // Unreadable JSON drops here like any other type; validation names it.
   const processed = plainFile(await processor(prop as PieceProperty, value));
-  // Every other type keeps its promise to the piece: a DATE_TIME prop is an
-  // ISO string or nothing, a NUMBER is a number or NaN. JSON is the exception,
-  // because the thing most often routed into one is a model's answer, and a
-  // model wraps its object in prose. jsonProcessor answers undefined for that,
-  // which would drop the value entirely — so hand back what the author wrote
-  // and let the piece parse it. The pieces that take model output this way
-  // carry their own tolerant parsing for exactly this case.
-  if (processed === undefined && type && JSON_LIKE.has(type) && value !== "") {
-    return value;
-  }
-  return processed;
+  return type === "OBJECT" && !isRecord(processed) ? undefined : processed;
 }
 
 // Normalises every configured value with a matching prop schema; keys
@@ -316,19 +307,26 @@ function hasErrors(errors: PropsValidationErrors): boolean {
   return Object.keys(errors).length > 0;
 }
 
-// normalizeValue hands a JSON prop's unparseable text back on purpose; the
-// validator would call that "not JSON".
-function isToleratedJson(
+function preview(value: unknown): string {
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  return text.length > 60 ? `${text.slice(0, 57)}...` : text;
+}
+
+// A JSON or OBJECT value its processor could not read: an optional prop would
+// otherwise pass the validator as simply absent.
+function unreadableJson(
   prop: ApProperty,
   value: unknown,
   original: unknown,
-): boolean {
-  return (
-    prop.type !== undefined &&
-    JSON_LIKE.has(prop.type) &&
-    typeof value === "string" &&
-    value === original
-  );
+): string | undefined {
+  if (prop.type === undefined || !JSON_LIKE.has(prop.type)) return undefined;
+  if (value !== undefined || original === undefined || original === null) {
+    return undefined;
+  }
+  if (original === "") return undefined;
+  return prop.type === "OBJECT"
+    ? `expects a JSON object, received: ${preview(original)}`
+    : `is not valid JSON, received: ${preview(original)}`;
 }
 
 // Upstream's validator over values our processors already coerced. Every
@@ -360,7 +358,11 @@ export function validatePropsValue(
       if (rows.some(hasErrors)) errors[name] = { properties: rows };
       continue;
     }
-    if (isToleratedJson(prop, value, raw)) continue;
+    const unreadable = unreadableJson(prop, value, raw);
+    if (unreadable) {
+      errors[name] = [unreadable];
+      continue;
+    }
     const messages = validateProperty(prop as PieceProperty, value, raw);
     if (messages.length > 0) errors[name] = messages;
   }

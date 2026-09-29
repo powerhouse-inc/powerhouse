@@ -15,6 +15,7 @@ import {
   CommaSeparatedStrings,
   splitCommaSeparated,
 } from "../utils/comma-separated.js";
+import { skipInstallArgs } from "../utils/install-added-dependencies.js";
 
 const ProcessorAppType: Type<string[], ("connect" | "switchboard")[]> = {
   from(rawProcessorApps) {
@@ -98,6 +99,7 @@ export const generateProcessorCmd = command({
       description:
         "Write a powerhouse/processor spec for each existing processor into specs/processors/",
     }),
+    ...skipInstallArgs,
     ...debugArgs,
   },
   handler: async (args) => {

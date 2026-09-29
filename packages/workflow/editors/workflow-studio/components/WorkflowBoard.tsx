@@ -1,7 +1,13 @@
 // The drive's workflows at a glance: when each starts, its chain coloured by
 // the latest run, and its recent runs. The studio's landing view.
-import { useWorkflowDocumentsInSelectedDrive } from "document-models/workflow";
-import type { RunRecord } from "../../workflow-editor/runtime-api.js";
+import { useDispatch } from "@powerhousedao/reactor-browser";
+import {
+  actions as workflowActions,
+  useWorkflowDocumentsInSelectedDrive,
+  type WorkflowDocument,
+} from "document-models/workflow";
+import { StatusToggle } from "../../workflow-editor/ui/PublishControls.js";
+import type { RunRecord } from "../../workflow-editor/runtime-client.js";
 import { usePieceLogos } from "../../workflow-editor/ui/block-meta.js";
 import { describeTrigger } from "../../workflow-editor/ui/trigger-text.js";
 import { MiniChain, RunStrip, type ChainLink } from "./chain.js";
@@ -14,9 +20,28 @@ import {
   workflowHealth,
 } from "./run-format.js";
 import { stepOutline } from "./step-outline.js";
+import { stepBlock, triggerBlock } from "../../workflow-editor/ui/blocks.js";
 import { Button, Icon, StatusDot } from "./ui.js";
+import { WorkflowMenu } from "./WorkflowMenu.js";
+
+// Its own component so each row holds its document's dispatch.
+function RowToggle(props: { document: WorkflowDocument }) {
+  const [, dispatch] = useDispatch(props.document);
+  const state = props.document.state.global;
+  return (
+    <StatusToggle
+      tooltipSide="left"
+      published={Boolean(state.published)}
+      status={state.status}
+      onChange={(status) =>
+        dispatch(workflowActions.setWorkflowStatus({ status }))
+      }
+    />
+  );
+}
 
 interface BoardRow {
+  document: WorkflowDocument;
   id: string;
   name: string;
   status: string;
@@ -64,7 +89,7 @@ export function WorkflowBoard(props: {
           ? [
               {
                 id: state.trigger.id,
-                blockType: state.trigger.blockType,
+                block: triggerBlock(state.trigger),
                 label: "Trigger",
                 status: latest ? "SUCCEEDED" : undefined,
               },
@@ -72,12 +97,13 @@ export function WorkflowBoard(props: {
           : []),
         ...outline.rows.map((row) => ({
           id: row.step.id,
-          blockType: row.step.blockType,
+          block: stepBlock(row.step),
           label: row.step.name || row.step.key,
           status: statusByKey.get(row.step.key),
         })),
       ];
       return {
+        document,
         id: document.header.id,
         name: state.name || document.header.name || "Untitled workflow",
         status: state.status,
@@ -132,21 +158,25 @@ export function WorkflowBoard(props: {
           {rows.map((row) => {
             const latest = row.runs.at(0);
             const latestTone = toneOf(RUN_TONE, latest?.status);
-            const health = workflowHealth(row.status, latest?.status);
+            const health = workflowHealth(
+              row.status,
+              latest?.status,
+              Boolean(row.document.state.global.published),
+            );
             return (
               <li
                 key={row.id}
-                className="border-b border-solid border-foreground/10 last:border-b-0"
+                className="flex items-center border-b border-solid border-foreground/10 last:border-b-0"
               >
                 <button
                   type="button"
-                  className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-3 px-5 py-4 text-left transition-colors hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:outline-none md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto]"
+                  className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-3 px-5 py-4 text-left transition-colors hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:outline-none md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto]"
                   onClick={() => props.onOpen(row.id)}
                 >
                   <span className="min-w-0">
                     <span className="flex items-center gap-2">
                       <span title={health.label} className="flex">
-                        <StatusDot tone={health.tone} />
+                        <StatusDot tone={health.tone} hollow={health.hollow} />
                       </span>
                       <span className="truncate text-[15px] font-semibold text-foreground">
                         {row.name}
@@ -187,6 +217,10 @@ export function WorkflowBoard(props: {
                   </span>
                   <RunStrip runs={row.runs} />
                 </button>
+                <span className="flex shrink-0 items-center gap-1 pr-3">
+                  <RowToggle document={row.document} />
+                  <WorkflowMenu document={row.document} />
+                </span>
               </li>
             );
           })}

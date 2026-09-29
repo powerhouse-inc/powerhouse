@@ -5,8 +5,12 @@ import { actions, useConnectionDocumentById } from "document-models/connection";
 import { useEffect, useState } from "react";
 import { connectionCallbacks } from "../../connection-editor/connection-callbacks.js";
 import { ConnectionForm } from "../../connection-editor/connection-form.js";
-import { planFromAuth } from "../../connection-editor/piece-auth.js";
-import { fetchPieceCatalog } from "../runtime-api.js";
+import {
+  planFromAuth,
+  UNKNOWN_AUTH,
+} from "../../connection-editor/piece-auth.js";
+import { useRuntime } from "../runtime-context.js";
+import { catalogQuery } from "../runtime-queries.js";
 import {
   connectionNameFor,
   type ConnectionDraft,
@@ -19,6 +23,7 @@ export function CreateConnectionModal(props: {
 }) {
   const [document, dispatch] = useConnectionDocumentById(props.connectionId);
   const [prefilled, setPrefilled] = useState(false);
+  const { client, queryClient } = useRuntime();
   const state = document?.state.global;
 
   // The picker knows the piece; the connector is prefilled once, exactly as
@@ -30,14 +35,18 @@ export function CreateConnectionModal(props: {
     setPrefilled(true);
     dispatch(actions.setConnectionName({ name: props.draft.name }));
     dispatch(actions.setName(props.draft.name));
-    const setConnector = (auth: unknown) =>
+    const setConnector = (auth: unknown) => {
+      const { authType } = planFromAuth(auth);
+      // Left unset rather than saved as another type; the form says why.
+      if (authType === UNKNOWN_AUTH) return;
       dispatch(
         actions.setConnector({
           connectorId: props.draft.connectorId,
-          authType: planFromAuth(auth).authType,
+          authType,
         }),
       );
-    fetchPieceCatalog().then(
+    };
+    queryClient.fetchQuery(catalogQuery(client)).then(
       (pieces) => {
         const piece = pieces.find(
           (entry) => entry.name === props.draft.piecePackage,
@@ -57,7 +66,7 @@ export function CreateConnectionModal(props: {
       // form recovers the auth kind once the catalog loads.
       () => setConnector(null),
     );
-  }, [dispatch, prefilled, props.draft, state]);
+  }, [dispatch, prefilled, props.draft, state, client, queryClient]);
 
   const callbacks =
     state && dispatch ? connectionCallbacks(state, dispatch) : null;
@@ -99,7 +108,11 @@ export function CreateConnectionModal(props: {
           </button>
         </div>
         {state && callbacks ? (
-          <ConnectionForm state={state} callbacks={callbacks} />
+          <ConnectionForm
+            state={state}
+            callbacks={callbacks}
+            connectionId={props.connectionId}
+          />
         ) : (
           <p className="text-xs text-muted-foreground/80">
             Loading the new connection document…

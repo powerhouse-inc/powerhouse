@@ -125,13 +125,7 @@ export const generateArgs = {
     type: optional(string),
     long: "piece-id",
     description:
-      "Piece id a workflow block type names, e.g. @acme/piece-crm. Defaults to one derived from the package name.",
-  }),
-  pieceVersion: option({
-    type: optional(string),
-    long: "piece-version",
-    description:
-      "Version the pieces list declares for the generated piece. Defaults to the package version when the piece is named after the package.",
+      "Piece id, the pieceName a workflow step holds, e.g. @acme/piece-crm. Defaults to one derived from the package name.",
   }),
   pieceAuth: option({
     type: oneOf(["none", "secret", "custom"] as const),

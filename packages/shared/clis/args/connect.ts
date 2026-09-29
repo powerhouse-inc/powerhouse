@@ -75,7 +75,7 @@ const connectRuntimeOverrideArgs = {
     type: optional(string),
     long: "json",
     description:
-      'Inline JSON override for the runtime connect.* block, e.g. \'{"renown":{"url":"..."}}\'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision.',
+      'Inline JSON override for the runtime connect.* block, without the "connect" wrapper, e.g. \'{"app":{"workflowsEnabled":true},"renown":{"url":"..."}}\'. A top-level packageRegistryUrl is also accepted. Validated against the runtime schema (unknown keys fail); deep-merged on top of source powerhouse.config.json. Individual --flag values beat --json on collision.',
   }),
   renownUrl: option({
     type: optional(string),

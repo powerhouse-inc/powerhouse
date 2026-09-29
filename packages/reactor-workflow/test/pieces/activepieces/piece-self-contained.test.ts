@@ -3,7 +3,10 @@
 
 // 739 of the 760 published pieces take the first path. This suite reaches the
 // real CDN and the real npm registry rather than pretending to.
-import { ensurePieceBundle } from "../../../src/pieces/activepieces/fetch.js";
+import {
+  ensurePieceBundle,
+  setPublicPieceSources,
+} from "../../../src/pieces/activepieces/fetch.js";
 import { buildDescriptor } from "../../../src/pieces/activepieces/descriptor.js";
 import { loadPieceFromDir } from "../../../src/pieces/activepieces/loader.js";
 import { getActions } from "../../../src/pieces/activepieces/types.js";
@@ -45,6 +48,9 @@ describe.skipIf(!online)("a bundle that carries its own code", () => {
 describe("a published bundle that declares a dependency", () => {
   const PIECE = "@activepieces/piece-text-helper";
   const VERSION = "0.6.6";
+
+  // After the setup file's beforeAll, which points the sources offline.
+  beforeAll(() => setPublicPieceSources({}));
 
   it("installs what it declares and loads the piece", async () => {
     const bundle = await ensurePieceBundle({

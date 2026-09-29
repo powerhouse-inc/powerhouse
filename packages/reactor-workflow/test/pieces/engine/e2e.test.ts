@@ -1,4 +1,4 @@
-// End-to-end skeleton run: trigger payload -> piece-http fetch -> core#branch
+// End-to-end skeleton run: trigger payload -> piece-http fetch -> the core branch
 // -> gotify notification with a CUSTOM_AUTH connection, all via the worker.
 import http from "node:http";
 import type { AddressInfo } from "node:net";
@@ -14,6 +14,7 @@ import {
   bundleCacheDir,
   fetchBundleForTest,
 } from "../activepieces/bundle-cache.js";
+import { CORE_PIECE_VERSION } from "../../../src/pieces/index.js";
 
 const httpBundle = await fetchBundleForTest(
   "@activepieces/piece-http",
@@ -60,10 +61,6 @@ describe.skipIf(!httpBundle || !gotifyBundle)("workflow engine e2e", () => {
       cacheDir: bundleCacheDir,
       // The mock service is on loopback, which the default policy refuses.
       egress: { allowAddresses: ["127.0.0.1/32", "::1/128"] },
-      packages: {
-        "@activepieces/piece-http": "0.11.19",
-        "@activepieces/piece-gotify": "0.4.6",
-      },
       connections: new StaticConnectionResolver(
         {
           "gotify-ops": {
@@ -85,12 +82,20 @@ describe.skipIf(!httpBundle || !gotifyBundle)("workflow engine e2e", () => {
   function definition(): WorkflowDefinition {
     return {
       name: "Alert on status",
-      trigger: { id: "t", blockType: "core#manual", config: {} },
+      trigger: {
+        id: "t",
+        pieceName: "@powerhousedao/piece-core",
+        pieceVersion: CORE_PIECE_VERSION,
+        triggerName: "manual",
+        config: {},
+      },
       steps: [
         {
           id: "s1",
           key: "fetch",
-          blockType: "@activepieces/piece-http#send_request",
+          pieceName: "@activepieces/piece-http",
+          pieceVersion: "0.11.19",
+          actionName: "send_request",
           config: {
             method: "GET",
             url: "{{trigger.payload.statusUrl}}",
@@ -100,27 +105,39 @@ describe.skipIf(!httpBundle || !gotifyBundle)("workflow engine e2e", () => {
             timeout: 10,
             failureMode: "continue_none",
           },
+          propertySettings: [{ prop: "url", mode: "EXPRESSION" }],
         },
         {
           id: "s2",
           key: "check",
-          blockType: "core#branch",
-          config: { condition: "{{steps.fetch.output.body.ok}}" },
+          pieceName: "@powerhousedao/piece-core",
+          pieceVersion: CORE_PIECE_VERSION,
+          actionName: "branch",
+          config: {
+            operator: "BOOLEAN_IS_TRUE",
+            left: "{{steps.fetch.output.body.ok}}",
+          },
+          propertySettings: [{ prop: "left", mode: "EXPRESSION" }],
         },
         {
           id: "s3",
           key: "notify",
-          blockType: "@activepieces/piece-gotify#send_notification",
+          pieceName: "@activepieces/piece-gotify",
+          pieceVersion: "0.4.6",
+          actionName: "send_notification",
           connectionId: "gotify-ops",
           config: {
             title: "Status alert",
             message: "Server says: {{steps.fetch.output.body.message}}",
           },
+          propertySettings: [{ prop: "message", mode: "EXPRESSION" }],
         },
         {
           id: "s4",
           key: "quiet",
-          blockType: "@activepieces/piece-gotify#send_notification",
+          pieceName: "@activepieces/piece-gotify",
+          pieceVersion: "0.4.6",
+          actionName: "send_notification",
           connectionId: "gotify-ops",
           config: { title: "All clear", message: "nothing to report" },
         },

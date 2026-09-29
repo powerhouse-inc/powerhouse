@@ -10,7 +10,8 @@ export {
 } from "./pieces/activepieces/fetch.js";
 export { loadPieceFromDir } from "./pieces/activepieces/loader.js";
 export {
-  localFirstResolver,
+  sourcedResolver,
+  type PieceTarget,
   type LocalPiece,
   type PackagePiece,
   type PieceResolver,

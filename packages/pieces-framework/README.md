@@ -43,9 +43,10 @@ import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
    framework:
 
    ```sh
-   pnpm add @powerhousedao/pieces-framework
+   pnpm add -D @powerhousedao/pieces-framework
    ```
 
+   A dev dependency: `ph build` inlines the framework into each piece bundle.
    The types need `@types/node`, which a `ph init` project already has.
 
 2. **Write the piece** in `pieces/<name>/index.ts` with `createPiece`,
@@ -129,7 +130,6 @@ import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
    export const pieces: PackagePiece[] = [
      {
        name: "@acme/pieces-invoices",
-       version: "1.0.0",
        entry: "dist/node/pieces/invoices/index.mjs",
      },
    ];
@@ -149,7 +149,9 @@ import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
    with its properties), and a `package.json` that makes the directory a
    complete bundle. The `pieces` list in `dist/powerhouse.manifest.json` gets
    each piece's version, description, `bundle` and `descriptor` paths, so a
-   registry can offer the piece before anyone installs the package.
+   registry can offer the piece before anyone installs the package. A piece's
+   version is always the package's own: the build writes it, and refuses a
+   list entry that declares one.
 
    A package that ships only pieces is still an ordinary reactor package: it
    carries the same boilerplate as any other, including a root `index.ts`,
@@ -219,6 +221,30 @@ The coercion half comes from `@activepieces/engine`, of which this package
 vendors only the prop-coercion files, for the reasons in
 [UPSTREAM.md](./UPSTREAM.md). `dayjs` (the DATE_TIME processor) and `ipaddr.js`
 (the classifier) are runtime dependencies because `./host` reaches them.
+
+## `./block-type`, block identity and versions
+
+A workflow names a block the way Activepieces does, with three fields:
+`pieceName`, `pieceVersion` and `actionName` for a step, or `triggerName` for a
+trigger. The engine's own blocks are a piece too, `@powerhousedao/piece-core`
+(`CORE_PIECE_NAME` in `./workflow`). This module has no dependencies and is safe
+in the browser, so the editor and the runtime share it.
+
+A piece's version is the version of its package. The version is exact semver
+2.0: prereleases and build metadata are allowed, ranges and dist-tags are not.
+
+- `isExactVersion(v)` says whether a version can be pinned.
+- `blockKey({ pieceName, kind, name })` is the version-free identity as one
+  string, for map and cache keys.
+- `compareVersions(a, b)` orders by semver precedence.
+- `pickClosestVersion(requested, available)` returns `{ version, match }`,
+  picking the first rule that matches:
+  1. The exact version (`exact`).
+  2. The highest same-major version at or above the request (`compatible`).
+  3. The highest same-major version below the request (`fallback`).
+  4. The highest version of any major (`fallback`).
+
+  For `0.x`, same major means same minor.
 
 ## Publishing the same piece to Activepieces
 

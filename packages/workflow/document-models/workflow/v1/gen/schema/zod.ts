@@ -5,30 +5,41 @@ import type {
   AddEdgeInput,
   AddStepInput,
   AddStepPositionInput,
+  AddStepPropertySettingInput,
   AddStepRetryPolicyInput,
   BackoffKind,
   ClearTriggerInput,
   ConcurrencyMode,
   FailureMode,
   Point,
+  PropertyMode,
+  PropertySetting,
+  PublishWorkflowInput,
+  PublishedWorkflow,
   RemoveEdgeInput,
   RemoveStepInput,
   RemoveVariableInput,
   RetryPolicy,
+  RevertToPublishedInput,
   RunStatus,
   SetLastRunInput,
+  SetLastTestInput,
   SetPolicyInput,
   SetPolicyRetryPolicyInput,
   SetStepConfigInput,
+  SetStepConfigPropertySettingInput,
   SetTriggerInput,
+  SetTriggerPropertySettingInput,
   SetVariableInput,
   SetWorkflowDescriptionInput,
   SetWorkflowNameInput,
   SetWorkflowStatusInput,
+  StepTestRecord,
   TriggerBinding,
   UpdateStepInput,
   UpdateStepPositionInput,
   UpdateStepRetryPolicyInput,
+  VariableType,
   WorkflowEdge,
   WorkflowPolicy,
   WorkflowState,
@@ -56,6 +67,8 @@ export const ConcurrencyModeSchema = z.enum(["PARALLEL", "QUEUE", "SINGLETON"]);
 
 export const FailureModeSchema = z.enum(["IGNORE", "NOTIFY", "PARK"]);
 
+export const PropertyModeSchema = z.enum(["EXPRESSION", "MANUAL"]);
+
 export const RunStatusSchema = z.enum([
   "CANCELLED",
   "FAILED",
@@ -64,6 +77,14 @@ export const RunStatusSchema = z.enum([
   "RUNNING",
   "SUCCEEDED",
   "WAITING",
+]);
+
+export const VariableTypeSchema = z.enum([
+  "BOOLEAN",
+  "JSON",
+  "NUMBER",
+  "SECRET",
+  "TEXT",
 ]);
 
 export const WorkflowStatusSchema = z.enum([
@@ -85,15 +106,21 @@ export function AddEdgeInputSchema(): z.ZodObject<Properties<AddEdgeInput>> {
 
 export function AddStepInputSchema(): z.ZodObject<Properties<AddStepInput>> {
   return z.object({
-    blockType: z.string(),
+    actionName: z.string(),
     config: z.unknown(),
     connectionId: z.string().nullish(),
     id: z.string(),
     idempotencyKeyExpression: z.string().nullish(),
     key: z.string(),
     name: z.string(),
+    pieceName: z.string(),
+    pieceVersion: z.string(),
     position: z.lazy(() => AddStepPositionInputSchema().nullish()),
+    propertySettings: z
+      .array(z.lazy(() => AddStepPropertySettingInputSchema()))
+      .nullish(),
     retry: z.lazy(() => AddStepRetryPolicyInputSchema().nullish()),
+    skip: z.boolean().nullish(),
     timeoutSeconds: z.number().nullish(),
   });
 }
@@ -104,6 +131,16 @@ export function AddStepPositionInputSchema(): z.ZodObject<
   return z.object({
     x: z.number(),
     y: z.number(),
+  });
+}
+
+export function AddStepPropertySettingInputSchema(): z.ZodObject<
+  Properties<AddStepPropertySettingInput>
+> {
+  return z.object({
+    mode: PropertyModeSchema,
+    prop: z.string(),
+    schema: z.unknown().nullish(),
   });
 }
 
@@ -132,6 +169,40 @@ export function PointSchema(): z.ZodObject<Properties<Point>> {
     __typename: z.literal("Point").optional(),
     x: z.number(),
     y: z.number(),
+  });
+}
+
+export function PropertySettingSchema(): z.ZodObject<
+  Properties<PropertySetting>
+> {
+  return z.object({
+    __typename: z.literal("PropertySetting").optional(),
+    mode: PropertyModeSchema,
+    prop: z.string(),
+    schema: z.unknown().nullish(),
+  });
+}
+
+export function PublishWorkflowInputSchema(): z.ZodObject<
+  Properties<PublishWorkflowInput>
+> {
+  return z.object({
+    publishedAt: z.iso.datetime(),
+  });
+}
+
+export function PublishedWorkflowSchema(): z.ZodObject<
+  Properties<PublishedWorkflow>
+> {
+  return z.object({
+    __typename: z.literal("PublishedWorkflow").optional(),
+    edges: z.array(z.lazy(() => WorkflowEdgeSchema())),
+    policy: z.lazy(() => WorkflowPolicySchema()),
+    publishedAt: z.iso.datetime(),
+    steps: z.array(z.lazy(() => WorkflowStepSchema())),
+    trigger: z.lazy(() => TriggerBindingSchema().nullish()),
+    variables: z.array(z.lazy(() => WorkflowVariableSchema())),
+    version: z.number(),
   });
 }
 
@@ -170,12 +241,30 @@ export function RetryPolicySchema(): z.ZodObject<Properties<RetryPolicy>> {
   });
 }
 
+export function RevertToPublishedInputSchema(): z.ZodObject<
+  Properties<RevertToPublishedInput>
+> {
+  return z.object({
+    _: z.boolean().nullish(),
+  });
+}
+
 export function SetLastRunInputSchema(): z.ZodObject<
   Properties<SetLastRunInput>
 > {
   return z.object({
     lastRunAt: z.iso.datetime(),
     lastRunStatus: RunStatusSchema,
+  });
+}
+
+export function SetLastTestInputSchema(): z.ZodObject<
+  Properties<SetLastTestInput>
+> {
+  return z.object({
+    id: z.string(),
+    runId: z.string(),
+    testedAt: z.iso.datetime(),
   });
 }
 
@@ -212,6 +301,19 @@ export function SetStepConfigInputSchema(): z.ZodObject<
   return z.object({
     config: z.unknown(),
     id: z.string(),
+    propertySettings: z
+      .array(z.lazy(() => SetStepConfigPropertySettingInputSchema()))
+      .nullish(),
+  });
+}
+
+export function SetStepConfigPropertySettingInputSchema(): z.ZodObject<
+  Properties<SetStepConfigPropertySettingInput>
+> {
+  return z.object({
+    mode: PropertyModeSchema,
+    prop: z.string(),
+    schema: z.unknown().nullish(),
   });
 }
 
@@ -219,11 +321,25 @@ export function SetTriggerInputSchema(): z.ZodObject<
   Properties<SetTriggerInput>
 > {
   return z.object({
-    blockType: z.string(),
     config: z.unknown(),
     connectionId: z.string().nullish(),
-    filter: z.unknown().nullish(),
     id: z.string(),
+    pieceName: z.string(),
+    pieceVersion: z.string(),
+    propertySettings: z
+      .array(z.lazy(() => SetTriggerPropertySettingInputSchema()))
+      .nullish(),
+    triggerName: z.string(),
+  });
+}
+
+export function SetTriggerPropertySettingInputSchema(): z.ZodObject<
+  Properties<SetTriggerPropertySettingInput>
+> {
+  return z.object({
+    mode: PropertyModeSchema,
+    prop: z.string(),
+    schema: z.unknown().nullish(),
   });
 }
 
@@ -234,6 +350,7 @@ export function SetVariableInputSchema(): z.ZodObject<
     description: z.string().nullish(),
     id: z.string(),
     key: z.string(),
+    type: VariableTypeSchema.nullish(),
     value: z.unknown().nullish(),
   });
 }
@@ -262,16 +379,30 @@ export function SetWorkflowStatusInputSchema(): z.ZodObject<
   });
 }
 
+export function StepTestRecordSchema(): z.ZodObject<
+  Properties<StepTestRecord>
+> {
+  return z.object({
+    __typename: z.literal("StepTestRecord").optional(),
+    runId: z.string(),
+    testedAt: z.iso.datetime(),
+  });
+}
+
 export function TriggerBindingSchema(): z.ZodObject<
   Properties<TriggerBinding>
 > {
   return z.object({
     __typename: z.literal("TriggerBinding").optional(),
-    blockType: z.string(),
     config: z.unknown(),
     connectionId: z.string().nullish(),
-    filter: z.unknown().nullish(),
     id: z.string(),
+    lastTest: z.lazy(() => StepTestRecordSchema().nullish()),
+    pieceName: z.string(),
+    pieceVersion: z.string(),
+    propertySettings: z.array(z.lazy(() => PropertySettingSchema())).nullish(),
+    triggerName: z.string(),
+    updatedAt: z.iso.datetime().nullish(),
   });
 }
 
@@ -279,15 +410,18 @@ export function UpdateStepInputSchema(): z.ZodObject<
   Properties<UpdateStepInput>
 > {
   return z.object({
-    blockType: z.string().nullish(),
+    actionName: z.string().nullish(),
     config: z.unknown().nullish(),
     connectionId: z.string().nullish(),
     id: z.string(),
     idempotencyKeyExpression: z.string().nullish(),
     key: z.string().nullish(),
     name: z.string().nullish(),
+    pieceName: z.string().nullish(),
+    pieceVersion: z.string().nullish(),
     position: z.lazy(() => UpdateStepPositionInputSchema().nullish()),
     retry: z.lazy(() => UpdateStepRetryPolicyInputSchema().nullish()),
+    skip: z.boolean().nullish(),
     timeoutSeconds: z.number().nullish(),
   });
 }
@@ -349,6 +483,7 @@ export function WorkflowStateSchema(): z.ZodObject<Properties<WorkflowState>> {
     lastRunStatus: RunStatusSchema.nullish(),
     name: z.string(),
     policy: z.lazy(() => WorkflowPolicySchema()),
+    published: z.lazy(() => PublishedWorkflowSchema().nullish()),
     status: WorkflowStatusSchema,
     steps: z.array(z.lazy(() => WorkflowStepSchema())),
     trigger: z.lazy(() => TriggerBindingSchema().nullish()),
@@ -360,16 +495,22 @@ export function WorkflowStateSchema(): z.ZodObject<Properties<WorkflowState>> {
 export function WorkflowStepSchema(): z.ZodObject<Properties<WorkflowStep>> {
   return z.object({
     __typename: z.literal("WorkflowStep").optional(),
-    blockType: z.string(),
+    actionName: z.string(),
     config: z.unknown(),
     connectionId: z.string().nullish(),
     id: z.string(),
     idempotencyKeyExpression: z.string().nullish(),
     key: z.string(),
+    lastTest: z.lazy(() => StepTestRecordSchema().nullish()),
     name: z.string(),
+    pieceName: z.string(),
+    pieceVersion: z.string(),
     position: z.lazy(() => PointSchema().nullish()),
+    propertySettings: z.array(z.lazy(() => PropertySettingSchema())).nullish(),
     retry: z.lazy(() => RetryPolicySchema().nullish()),
+    skip: z.boolean().nullish(),
     timeoutSeconds: z.number().nullish(),
+    updatedAt: z.iso.datetime().nullish(),
   });
 }
 
@@ -381,6 +522,7 @@ export function WorkflowVariableSchema(): z.ZodObject<
     description: z.string().nullish(),
     id: z.string(),
     key: z.string(),
+    type: VariableTypeSchema.nullish(),
     value: z.unknown().nullish(),
   });
 }

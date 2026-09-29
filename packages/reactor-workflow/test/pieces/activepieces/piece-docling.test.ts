@@ -67,7 +67,12 @@ describe.skipIf(!existsSync(PIECE_PKG))(
 
     it("converts a data-URI file step and returns the markdown", async () => {
       const result = await executor.execute({
-        blockType: "@powerhousedao/piece-docling@1.0.0#convert_file",
+        block: {
+          pieceName: "@powerhousedao/piece-docling",
+          pieceVersion: "1.0.0",
+          kind: "action",
+          name: "convert_file",
+        },
         connectionId: "phd:connection-1",
         config: {
           file:
@@ -84,7 +89,9 @@ describe.skipIf(!existsSync(PIECE_PKG))(
           id: "s1",
           key: "convert",
           name: "Convert",
-          blockType: "@powerhousedao/piece-docling@1.0.0#convert_file",
+          pieceName: "@powerhousedao/piece-docling",
+          pieceVersion: "1.0.0",
+          actionName: "convert_file",
           connectionId: "phd:connection-1",
           config: {},
         },
@@ -116,7 +123,12 @@ describe.skipIf(!existsSync(PIECE_PKG))(
       });
       try {
         await bad.execute({
-          blockType: "@powerhousedao/piece-docling@1.0.0#convert_file",
+          block: {
+            pieceName: "@powerhousedao/piece-docling",
+            pieceVersion: "1.0.0",
+            kind: "action",
+            name: "convert_file",
+          },
           connectionId: "phd:bad",
           config: {
             file:
@@ -128,7 +140,9 @@ describe.skipIf(!existsSync(PIECE_PKG))(
             id: "s2",
             key: "convert",
             name: "Convert",
-            blockType: "@powerhousedao/piece-docling@1.0.0#convert_file",
+            pieceName: "@powerhousedao/piece-docling",
+            pieceVersion: "1.0.0",
+            actionName: "convert_file",
             connectionId: "phd:bad",
             config: {},
           },
@@ -171,13 +185,20 @@ describe.skipIf(!existsSync(PIECE_PKG))(
           egress: { allowAddresses: ["127.0.0.1/32", "::1/128"] },
         });
         const result = await unauth.execute({
-          blockType: "@powerhousedao/piece-docling@1.0.0#health",
+          block: {
+            pieceName: "@powerhousedao/piece-docling",
+            pieceVersion: "1.0.0",
+            kind: "action",
+            name: "health",
+          },
           connectionId: "phd:open",
           config: {},
           step: {
             id: "s3",
             key: "health",
-            blockType: "@powerhousedao/piece-docling@1.0.0#health",
+            pieceName: "@powerhousedao/piece-docling",
+            pieceVersion: "1.0.0",
+            actionName: "health",
             connectionId: "phd:open",
             config: {},
           },

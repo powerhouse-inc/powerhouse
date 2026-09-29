@@ -14,8 +14,12 @@ on:
       - "apps/academy/**"
       - ".claude/**"
       - "LICENSE"
+  # Also skips workspace packages outside test/codegen's dependency closure
+  # (`pnpm list --filter "test-codegen..."`) except ph-cmd, which codegen reaches undeclared.
   pull_request:
-    branches: ["main"]
+    # ci/** lets a change to this workflow be exercised by a pull request
+    # stacked on its branch before it reaches main.
+    branches: ["main", "ci/**"]
     types: [opened, reopened, synchronize]
     paths-ignore:
       - "**/*.md"
@@ -23,6 +27,29 @@ on:
       - "apps/academy/**"
       - ".claude/**"
       - "LICENSE"
+      - "packages/analytics-engine/benchmarks/**"
+      - "packages/analytics-engine/compat/**"
+      - "packages/reactor-hypercore/**"
+      - "packages/reactor/bench/**"
+      - "packages/registry/**"
+      - "packages/switchboard-gui/**"
+      - "scripts/dark-mode/**"
+      - "scripts/profiling/**"
+      - "scripts/release/**"
+      - "test/e2e-utils/**"
+      - "test/lb-loadtest/**"
+      - "test/package-e2e/**"
+      - "test/recipes-e2e/**"
+      - "test/switchboard/**"
+      - "test/test-client/**"
+      - "test/test-connect/**"
+      - "test/test-consumer-project/**"
+      - "test/test-fusion/**"
+      - "test/test-sync-queue/**"
+      - "test/versioned-documents/**"
+      - "test/vetra-e2e/**"
+      - "test/workflow-piece-e2e/**"
+      - "tools/**"
 
 permissions:
   contents: read
@@ -62,9 +89,50 @@ jobs:
       - name: Run tests
         run: pnpm test:codegen
 
+  # Generated projects on Windows: paths, line endings and spawned package
+  # managers. Too slow for every PR, so it runs after merge and on dispatch.
+  do-codegen-tests-windows:
+    if: github.event_name != 'pull_request'
+    runs-on: windows-latest
+    env:
+      CI: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup bun global install
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.8
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.5.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      # Full install, like Check Windows: both save the same Windows store cache.
+      - name: Install deps (frozen lockfile)
+        run: pnpm install-ci
+
+      - name: Build
+        run: pnpm build
+
+      - name: Re-link workspace bins now that dist files exist
+        run: pnpm rebuild --recursive
+
+      - name: Run tests
+        run: pnpm test:codegen
+
   notify-discord:
     if: failure() && github.event_name != 'pull_request'
-    needs: [do-codegen-tests]
+    needs: [do-codegen-tests, do-codegen-tests-windows]
     runs-on: ubuntu-latest
     steps:
       - name: Send Discord notification
@@ -81,7 +149,7 @@ jobs:
           curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
             "embeds": [{
               "title": "⚠️ Codegen tests failed",
-              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed job:** [`do-codegen-tests`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Run:** [`codegen-tests`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
               "color": 16711680
             }]
           }'

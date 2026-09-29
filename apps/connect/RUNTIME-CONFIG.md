@@ -55,6 +55,7 @@ Schema lives in `packages/builder-tools/connect-utils/runtime-config-schema.ts`.
     "drives":    { "allowAddDrive": true, "defaultDrives": [...], "preserveStrategy": "...", "sections": {...} },
     "packages":  { "externalEnabled": true },
     "sentry":    { "dsn": null, "env": "dev", "tracing": false },
+    "openPanel": { "clientId": "", "apiUrl": "..." | undefined, "trackUiEvents": true, "trackOperations": true },
     "reactor":   { "featureFlags": { "documentDecisions": false, "authEnforcement": false, "authGroups": false, "authConditions": false }, "createSignaturePolicy": "v2-required" },
     "pwa":       { ... } // build-time only, see below
   }
@@ -200,11 +201,18 @@ Two special-case writers also exist:
 - `<key> <value>` (positional) or `--<field> <value>` → set mode: Ajv-validates the value against the schema at that path and dual-writes to source and dist (dist is skipped silently if no build has happened yet). Coercion is JSON-aware — `true`/`false`/numbers parse correctly; arrays and objects should go through `--json` instead.
 - `--json '{...}'` → bulk-set mode: validates the full patch and dual-writes.
 
+**`--json` payload shape.** Both `ph connect config --json` and `ph connect build --json` take the `connect.*` block **without** the `connect` wrapper, as nested objects (not dotted keys). A top-level `packageRegistryUrl` is also accepted. The payload is Ajv-validated against the runtime schema: an unknown key, a `{"connect":{...}}` wrapper, a dotted key such as `"app.workflowsEnabled"`, or a wrong type fails the command instead of being dropped.
+
+```bash
+# Enables workflows and adds a default drive.
+ph connect build --json '{"app":{"workflowsEnabled":true},"drives":{"defaultDrives":[{"url":"http://localhost:4001/d/my-workflows","name":"My workflows"}]}}'
+```
+
 **`ph connect build` overrides.** Three combinable forms (last wins on collision): `<key> <value>` positional, `--<field> <value>` per-field flag, or `--json '{...}'` bulk. The same shared spec drives both `build` and `config`, so the positional grammar matches. **`--base` IS available here** (build-time field). The 4 flags inherited from `commonArgs` (`--base`, `--log-level`, `--default-drives-url`, `--drive-preserve-strategy`) carry cmd-ts defaults, so they're gated through `wasFlagExplicitlyPassed` — if the user didn't type the flag, the source value wins. CLI overrides beat source. Build has no read mode; passing only `<key>` without `<value>` errors with a pointer to `ph connect config <key>`.
 
 **`--base` is build-time only.** `ph connect build --base /foo` writes `connect.app.basePath` AND bakes the value into the Vite bundle's asset URLs AND templates the nginx config. `ph connect config --base /foo` would only write the first one, leaving the SPA's router and the deployed assets disagreeing — so `ph connect config` rejects `--base` up front with an actionable error pointing at `ph connect build --base`.
 
-**Docker entrypoint.** `docker/connect-entrypoint.sh` runs at container start and accepts a single env var, `PH_CONNECT_CONFIG_JSON`, carrying a full `powerhouse.config.json` payload (same shape as `ph connect config --json '{...}'`). It deep-merges that JSON into the dist file with **operator-wins semantics**: a concrete value in the env JSON (including `false`/`""`/`[]`/`0`) overwrites whatever the build baked; a `null` leaf (or an omitted key) keeps the file's value, so baked defaults only apply where the operator expressed no opinion. One exception: `connect.app.basePath` is stripped from the payload — the base path is baked into the bundled asset URLs and cannot be changed at runtime (rebuild with `--base`, or use `--dynamic-base`). This is the only env-var path still active — the SPA itself does not read env vars. Operators get the deployment-time knob without env vars leaking into runtime behaviour.
+**Docker entrypoint.** `docker/connect-entrypoint.sh` runs at container start and accepts a single env var, `PH_CONNECT_CONFIG_JSON`, carrying a full `powerhouse.config.json` payload, with the `connect` wrapper (unlike `--json`, which takes the `connect.*` block alone). It deep-merges that JSON into the dist file with **operator-wins semantics**: a concrete value in the env JSON (including `false`/`""`/`[]`/`0`) overwrites whatever the build baked; a `null` leaf (or an omitted key) keeps the file's value, so baked defaults only apply where the operator expressed no opinion. One exception: `connect.app.basePath` is stripped from the payload — the base path is baked into the bundled asset URLs and cannot be changed at runtime (rebuild with `--base`, or use `--dynamic-base`). This is the only env-var path still active — the SPA itself does not read env vars. Operators get the deployment-time knob without env vars leaking into runtime behaviour.
 
 ```bash
 docker run \
@@ -306,6 +314,19 @@ docker run -e PH_CONNECT_CONFIG_JSON='{
 ```
 
 `dsn: null` (the default) disables Sentry — the SPA never loads the Sentry SDK chunk. The Sentry **release** tag, in contrast, stays build-time (stamped via Vite's `define` from `WORKSPACE_VERSION`) so it always matches the sourcemap upload tag CI used.
+
+**"I want OpenPanel analytics on this deployment."**
+Set `connect.openPanel.clientId` (and `apiUrl` for a self-hosted OpenPanel):
+
+```bash
+docker run -e PH_CONNECT_CONFIG_JSON='{
+  "connect": {
+    "openPanel": { "clientId": "<client-id>", "apiUrl": "https://openpanel.example/api" }
+  }
+}' connect:latest
+```
+
+An empty `clientId` (the default) keeps OpenPanel off, and events are only sent after the user accepts analytics cookies. The runtime values take precedence over the build-time `PH_CONNECT_OPENPANEL_*` env vars, which remain a fallback for builds that bake them.
 
 **"I'm turning auth enforcement on for this fleet."**
 Set the whole flag set on the container, matching the switchboard's `REACTOR_*` env vars exactly:

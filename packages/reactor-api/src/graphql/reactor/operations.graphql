@@ -33,7 +33,6 @@ query GetDocumentModels($namespace: String, $paging: PagingInput) {
       version
       specification
     }
-    totalCount
     hasNextPage
     hasPreviousPage
     cursor
@@ -89,7 +88,6 @@ query GetDocumentWithOperations(
             }
           }
         }
-        totalCount
         hasNextPage
         hasPreviousPage
         cursor
@@ -114,7 +112,6 @@ query GetDocumentOutgoingRelationships(
     items {
       ...PHDocumentFields
     }
-    totalCount
     hasNextPage
     hasPreviousPage
     cursor
@@ -136,7 +133,6 @@ query GetDocumentIncomingRelationships(
     items {
       ...PHDocumentFields
     }
-    totalCount
     hasNextPage
     hasPreviousPage
     cursor
@@ -158,7 +154,6 @@ query GetDocumentOutgoingRelationshipEdges(
     items {
       ...DocumentRelationshipFields
     }
-    totalCount
     hasNextPage
     hasPreviousPage
     cursor
@@ -180,7 +175,6 @@ query GetDocumentIncomingRelationshipEdges(
     items {
       ...DocumentRelationshipFields
     }
-    totalCount
     hasNextPage
     hasPreviousPage
     cursor
@@ -196,7 +190,6 @@ query FindDocuments(
     items {
       ...PHDocumentFields
     }
-    totalCount
     hasNextPage
     hasPreviousPage
     cursor
@@ -238,7 +231,6 @@ query GetDocumentOperations(
         }
       }
     }
-    totalCount
     hasNextPage
     hasPreviousPage
     cursor

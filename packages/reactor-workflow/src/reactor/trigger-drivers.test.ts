@@ -13,6 +13,7 @@ import {
   pieceWebhookDriver,
   scheduleDriver,
 } from "./trigger-drivers.js";
+import { CORE_PIECE_VERSION } from "../pieces/index.js";
 
 const WF = "wf-1";
 const NOW = new Date("2026-09-07T12:00:00.000Z");
@@ -21,7 +22,12 @@ const piece = (
   overrides: Partial<PieceTriggerBinding> = {},
 ): PieceTriggerBinding => ({
   workflowId: WF,
-  blockType: "@acme/piece-x@1.0.0#trigger:new_thing",
+  block: {
+    pieceName: "@acme/piece-x",
+    pieceVersion: "1.0.0",
+    kind: "trigger" as const,
+    name: "new_thing",
+  },
   packageName: "@acme/piece-x",
   version: "1.0.0",
   triggerName: "new_thing",
@@ -33,13 +39,19 @@ const piece = (
 const schedule = (): ScheduleTriggerBinding => ({
   kind: "schedule",
   workflowId: WF,
-  blockType: "core#schedule",
+  block: {
+    pieceName: "@powerhousedao/piece-core",
+    pieceVersion: CORE_PIECE_VERSION,
+    kind: "trigger" as const,
+    name: "schedule",
+  },
   config: { mode: "interval", every: 5, unit: "minutes" },
 });
 
 const row = (overrides: Partial<TriggerStateRow> = {}): TriggerStateRow => ({
   workflow_id: WF,
-  block_type: "@acme/piece-x@1.0.0#trigger:new_thing",
+  piece_name: "@acme/piece-x",
+  trigger_name: "new_thing",
   config_hash: "abc",
   status: "ENABLED",
   store_state: "{}",
@@ -51,6 +63,13 @@ const row = (overrides: Partial<TriggerStateRow> = {}): TriggerStateRow => ({
   lease_owner: null,
   lease_expires_at: null,
   updated_at: NOW.toISOString(),
+  piece_version: null,
+  piece_source: null,
+  version_match: null,
+  version_note: null,
+  next_renew_at: null,
+  renew_error: null,
+  renew_failures: 0,
   ...overrides,
 });
 
@@ -270,7 +289,7 @@ describe("pieceWebhookDriver.deliver", () => {
     expect(fired).toEqual([
       {
         payload: { id: "evt_1" },
-        kind: "piece:@acme/piece-x@1.0.0#trigger:new_thing",
+        kind: "piece:@acme/piece-x:new_thing",
       },
     ]);
   });

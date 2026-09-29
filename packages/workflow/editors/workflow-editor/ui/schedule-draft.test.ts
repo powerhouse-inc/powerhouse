@@ -107,24 +107,18 @@ describe("cronFromDraft", () => {
   });
 });
 
-describe("intervals stored as everyMs", () => {
-  it("reads them in the largest unit they divide into", () => {
-    expect(draftFromConfig({ mode: "interval", everyMs: 3_600_000 })).toEqual({
-      kind: "interval",
-      every: 1,
-      unit: "hours",
-    });
-    expect(draftFromConfig({ everyMs: 2 * 86_400_000 })).toEqual({
-      kind: "interval",
-      every: 2,
-      unit: "days",
-    });
+describe("a config without a mode", () => {
+  it("is not read as an interval because it has `every`", () => {
+    // The runtime refuses a mode-less config; the builder opens on cron.
+    expect(draftFromConfig({ every: 2, unit: "days" }).kind).not.toBe(
+      "interval",
+    );
   });
 
-  it("rounds a sub-minute remainder to whole minutes", () => {
+  it("opens an interval builder on an interval mode it cannot parse yet", () => {
     expect(draftFromConfig({ mode: "interval", everyMs: 90_000 })).toEqual({
       kind: "interval",
-      every: 2,
+      every: 15,
       unit: "minutes",
     });
   });

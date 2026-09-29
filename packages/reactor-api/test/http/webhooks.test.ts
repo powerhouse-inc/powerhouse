@@ -23,7 +23,7 @@ describe("WebhookService", () => {
   beforeEach(async () => {
     adapter = new ExpressHttpAdapter();
     adapter.setupMiddleware({});
-    const server = await adapter.listen(0);
+    const server = await adapter.listen(0, undefined, "127.0.0.1");
     const addr = server.address() as { port: number };
     url = `http://127.0.0.1:${addr.port}`;
     close = () =>

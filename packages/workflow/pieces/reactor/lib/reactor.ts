@@ -9,16 +9,23 @@ import {
   reactorOf,
   type ReactorService,
 } from "@powerhousedao/pieces-framework";
-import { staticString } from "./parse.js";
+import { PARSE_MODES, staticString, type ParseMode } from "./parse.js";
+import { inputProps } from "./input-props.js";
+import {
+  parseActionInputSchema,
+  type ActionInputSchema,
+} from "./input-schema.js";
+import { folderOptions, withReferencedEnums } from "./schema-text.js";
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 
 interface OptionEntry {
   label: string;
   value: string;
-  // actionType only: SDL of the operation's input type, which the editor's
-  // action list turns into a starter input object.
+  // actionType only: the input's SDL and the model it belongs to, which the
+  // editor's action list builds a form from and validates against.
   inputSchema?: string;
+  documentType?: string;
 }
 
 interface OptionState {
@@ -37,14 +44,32 @@ async function documentOptions(
   documentType: string | undefined,
 ): Promise<OptionState> {
   const documents = await reactor.find(documentType ? { documentType } : {});
+  const nameOf = (document: (typeof documents)[number]) =>
+    document.name || document.slug || "(unnamed)";
+  const seen = new Map<string, number>();
+  for (const document of documents) {
+    seen.set(nameOf(document), (seen.get(nameOf(document)) ?? 0) + 1);
+  }
   return {
-    options: documents.map((document) => ({
-      label: `${document.name || document.slug || "(unnamed)"} — ${document.documentType}`,
-      value: document.documentId,
-    })),
-    placeholder: documentType
-      ? `Documents of type ${documentType}`
-      : "All documents on this reactor",
+    options: documents.map((document) => {
+      const name = nameOf(document);
+      // Two documents of one name are told apart by slug, else a short id.
+      const shown =
+        (seen.get(name) ?? 0) > 1
+          ? `${name} (${document.slug && document.slug !== name ? document.slug : document.documentId.slice(0, 8)})`
+          : name;
+      // The type is noise when every option shares it.
+      return {
+        label: documentType ? shown : `${shown} — ${document.documentType}`,
+        value: document.documentId,
+      };
+    }),
+    placeholder:
+      documentType === DRIVE_DOCUMENT_TYPE
+        ? "Choose a drive"
+        : documentType
+          ? `Documents of type ${documentType}`
+          : "All documents on this reactor",
   };
 }
 
@@ -103,15 +128,62 @@ export const driveProp = (displayName: string, description?: string) =>
       documentOptions(reactorOf(ctx), DRIVE_DOCUMENT_TYPE),
   });
 
-// The actions to dispatch: a JSON array of {type, input, scope?}. This editor
-// renders it as a list whose types come from actionTypeProp below; elsewhere
-// it is the JSON it says it is.
-export const actionsProp = (displayName: string, required = false) =>
-  Property.Json({
+// A folder inside the drive the `driveProp` sibling names, labelled by path;
+// the step files the document there instead of at the drive's root.
+export const folderProp = (
+  displayName: string,
+  driveProp: string,
+  description?: string,
+) =>
+  Property.Dropdown<string>({
+    auth: undefined,
     displayName,
+    description,
+    required: false,
+    refreshers: [driveProp],
+    options: async (propsValue, ctx) => {
+      const driveId = staticString(propsValue[driveProp]);
+      if (!driveId) {
+        return {
+          disabled: true,
+          options: [],
+          placeholder: "Pick a drive first",
+        };
+      }
+      const drive = await reactorOf(ctx).get({ documentId: driveId });
+      const options = folderOptions(drive.state);
+      return {
+        options,
+        placeholder: options.length
+          ? `Folders in ${drive.name || "this drive"}`
+          : `${drive.name || "This drive"} has no folders`,
+      };
+    },
+  });
+
+// JSON text of [{type, input, scope?}]: text, so model output reaches the
+// piece's own parsing. Advanced: the single action is the form.
+// `display: "code"` asks the editor for a monospace field; upstream has no such hint.
+export const actionsProp = (displayName: string, description?: string) => ({
+  ...Property.LongText({
+    displayName,
+    required: false,
+    description,
+    advanced: true,
+  }),
+  display: "code",
+});
+
+// How ids and JSON are read: as given, or dug out of model output.
+export const parseProp = () =>
+  Property.StaticDropdown<ParseMode>({
+    displayName: "Parse",
     description:
-      'e.g. [{ "type": "SET_NAME", "input": { "name": "Invoice" } }]',
-    required,
+      "Exact takes ids and JSON as given. Extract reads them out of an AI step's prose, and reports what it read from in extractedFrom",
+    required: false,
+    defaultValue: "exact",
+    advanced: true,
+    options: { options: PARSE_MODES },
   });
 
 // The target type's own actions, each carrying its input SDL, plus the base
@@ -140,9 +212,9 @@ export const actionTypeProp = (
       }
       if (!documentType) {
         return {
+          disabled: true,
           options: [SET_NAME],
-          placeholder:
-            "Set a document type (or a resolvable document id) to list its actions",
+          placeholder: "Pick a document type first",
         };
       }
       const model = await reactor.model(documentType);
@@ -151,10 +223,77 @@ export const actionTypeProp = (
           ...model.actions.map((action) => ({
             label: `${action.type} (${action.module})`,
             value: action.type,
-            ...(action.inputSchema ? { inputSchema: action.inputSchema } : {}),
+            documentType,
+            ...(action.inputSchema
+              ? {
+                  inputSchema: withReferencedEnums(
+                    action.inputSchema,
+                    model.stateSchema,
+                  ),
+                }
+              : {}),
           })),
         ],
         placeholder: `Actions of ${documentType}`,
       };
     },
   });
+
+// The model a step targets: named, or read off the document it names.
+async function targetType(
+  reactor: ReactorService,
+  propsValue: Record<string, unknown>,
+): Promise<string | undefined> {
+  const named = staticString(propsValue.documentType);
+  if (named) return named;
+  const documentId = staticString(propsValue.documentId);
+  return documentId
+    ? (await reactor.get({ documentId })).documentType
+    : undefined;
+}
+
+// The chosen action's input schema, with the enums it uses; undefined when the
+// step doesn't yet say which model and action.
+export async function actionInputSchema(
+  reactor: ReactorService,
+  propsValue: Record<string, unknown>,
+): Promise<ActionInputSchema | undefined> {
+  const actionType = staticString(propsValue.actionType);
+  if (!actionType) return undefined;
+  const documentType = await targetType(reactor, propsValue);
+  if (!documentType) return undefined;
+  const model = await reactor.model(documentType);
+  const action = model.actions.find((entry) => entry.type === actionType);
+  if (!action?.inputSchema) return undefined;
+  return (
+    parseActionInputSchema(
+      withReferencedEnums(action.inputSchema, model.stateSchema),
+      actionType,
+    ) ?? undefined
+  );
+}
+
+// One field per input field of the chosen action, rebuilt when it changes.
+export const actionInputProp = (displayName = "Input") =>
+  Property.DynamicProperties({
+    auth: undefined,
+    displayName,
+    required: false,
+    refreshers: ["documentType", "documentId", "actionType"],
+    props: async (propsValue, ctx) => {
+      const schema = await actionInputSchema(
+        reactorOf(ctx),
+        propsValue as Record<string, unknown>,
+      );
+      return schema ? inputProps(schema) : {};
+    },
+  });
+
+// The action and its input, in one card: they only make sense together.
+export const ACTION_GROUP = (when: string) => ({
+  key: "action",
+  display: "section" as const,
+  label: "Action",
+  description: `${when} Pick a type, then fill in its input: the action needs both.`,
+  props: ["actionType", "input"],
+});

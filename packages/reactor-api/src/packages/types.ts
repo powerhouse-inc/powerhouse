@@ -12,7 +12,6 @@ import type { ILogger } from "document-model";
 // imported so reactor-api needs no dependency on a package meant for pieces.
 export interface PackagePiece {
   name: string;
-  version: string;
   /** Built output, relative to the package root: a directory in npm shape. */
   bundle?: string;
   /** Built output, relative to the package root: a single module file. */
@@ -26,6 +25,7 @@ export interface PackagePiece {
 // registry, which serves the built module but nothing to point a path at.
 export interface PackagePieceEntry {
   name: string;
+  /** The version of the package that ships it. */
   version: string;
   entryPath?: string;
   bundleDir?: string;

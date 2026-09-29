@@ -7,18 +7,38 @@ import {
   type Node,
   type ReactFlowInstance,
 } from "@xyflow/react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { apEdgeTypes } from "./ap-edge.js";
 import { attachableSteps, layoutWorkflow } from "./ap-layout.js";
+import {
+  flowPorts,
+  knownPorts,
+} from "@powerhousedao/pieces-framework/workflow";
+import {
+  useBlockFormLoader,
+  useBlockPorts,
+  useCachedBlockForm,
+} from "./design-time.js";
 import { moveRejection } from "./step-drag.js";
-import { apNodeTypes, registerCanvasHandlers } from "./ap-nodes.js";
-import type { BlockPreset } from "./blocks.js";
+import type { AddedBlock } from "./add-follow-up.js";
+import { withPropDefaults } from "./prop-defaults.js";
+import {
+  apNodeTypes,
+  CanvasHandlersProvider,
+  type ApCanvasHandlers,
+} from "./ap-nodes.js";
+import {
+  stepBlock,
+  stepFields,
+  triggerBlock,
+  triggerFields,
+  type PickedPreset,
+} from "./blocks.js";
 import {
   CanvasContextMenu,
   type CanvasMenuState,
 } from "./CanvasContextMenu.js";
 import type { ContextMenuActionId, ContextMenuTarget } from "./canvas-menu.js";
-import type { DesignTimeService } from "./forms.js";
 import {
   uniqueStepKey,
   type AddStepInputModel,
@@ -30,12 +50,12 @@ interface WorkflowCanvasProps {
   model: WorkflowModel;
   callbacks: WorkflowEditorCallbacks;
   onSelect: (id: string | null) => void;
-  designTime?: DesignTimeService;
 }
 
 function presetToInput(
-  preset: BlockPreset,
+  preset: PickedPreset,
   model: WorkflowModel,
+  config: unknown,
 ): AddStepInputModel {
   return {
     key: uniqueStepKey(
@@ -43,8 +63,8 @@ function presetToInput(
       preset.label,
     ),
     name: preset.label,
-    blockType: preset.blockType,
-    config: preset.defaultConfig,
+    ...stepFields(preset.block),
+    config,
   };
 }
 
@@ -57,33 +77,103 @@ export function WorkflowCanvas({
   model,
   callbacks,
   onSelect,
-  designTime,
 }: WorkflowCanvasProps) {
-  const { nodes, edges } = useMemo(() => layoutWorkflow(model), [model]);
+  const blocks = useMemo(
+    () => [
+      ...(model.trigger ? [triggerBlock(model.trigger)] : []),
+      ...model.steps.map(stepBlock),
+    ],
+    [model],
+  );
+  const portsOf = useBlockPorts(blocks);
+  const loadForm = useBlockFormLoader();
+  const cachedForm = useCachedBlockForm();
+  const portsKey = blocks.map((block) => portsOf(block)?.join("|")).join(",");
+  const { nodes, edges } = useMemo(
+    () => layoutWorkflow(model, portsOf),
+    // portsKey stands for what portsOf answers.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    [model, portsKey],
+  );
+  // Local-first: a block is added at once, with its piece's defaults when
+  // the form is cached; otherwise they follow once it loads. Adding selects
+  // the block, which opens its panel.
+  const add = useCallback(
+    (
+      preset: PickedPreset,
+      commit: (config: unknown) => AddedBlock | undefined,
+    ) => {
+      const cached = cachedForm(preset.block);
+      const added = commit(
+        cached
+          ? withPropDefaults(cached.props, preset.defaultConfig)
+          : preset.defaultConfig,
+      );
+      if (!added) return;
+      onSelect(added.id);
+      if (cached) return;
+      void loadForm(preset.block).then((form) => {
+        if (form) callbacks.completeBlock(added, form);
+      });
+    },
+    [cachedForm, loadForm, callbacks, onSelect],
+  );
+  // The inserted block continues on its first flow port, known from its kind
+  // until the form loads; the follow-up corrects it if the form disagrees.
+  const insertOnEdge = useCallback(
+    (edgeId: string, preset: PickedPreset) => {
+      const ports = cachedForm(preset.block)?.ports ?? knownPorts(preset.block);
+      const port = flowPorts(ports)[0];
+      if (!port) {
+        console.error(
+          `${preset.block.pieceName} ${preset.block.name} declares no port to continue on`,
+        );
+        return;
+      }
+      add(preset, (config) =>
+        callbacks.insertStepOnEdge(
+          edgeId,
+          presetToInput(preset, model, config),
+          port,
+        ),
+      );
+    },
+    [add, cachedForm, callbacks, model],
+  );
   const [menu, setMenu] = useState<CanvasMenuState | null>(null);
   const [flow, setFlow] = useState<ReactFlowInstance | null>(null);
+  const appendStep = (fromId: string, port: string, preset: PickedPreset) =>
+    add(preset, (config) =>
+      callbacks.appendStep(fromId, port, presetToInput(preset, model, config)),
+    );
+  const pickTrigger = (preset: PickedPreset) =>
+    add(preset, (config) =>
+      callbacks.setTrigger({ ...triggerFields(preset.block), config }),
+    );
 
-  useEffect(() => {
-    registerCanvasHandlers({
+  const handlers = useMemo<ApCanvasHandlers>(
+    () => ({
       appendStep: (fromId, port, preset) =>
-        callbacks.appendStep(fromId, port, presetToInput(preset, model)),
-      insertOnEdge: (edgeId, preset) =>
-        callbacks.insertStepOnEdge(edgeId, presetToInput(preset, model)),
+        add(preset, (config) =>
+          callbacks.appendStep(
+            fromId,
+            port,
+            presetToInput(preset, model, config),
+          ),
+        ),
+      insertOnEdge,
       pickTrigger: (preset) =>
-        callbacks.setTrigger({
-          blockType: preset.blockType,
-          config: preset.defaultConfig,
-        }),
+        add(preset, (config) =>
+          callbacks.setTrigger({ ...triggerFields(preset.block), config }),
+        ),
       attachableSteps: (fromId) => attachableSteps(model, fromId),
       moveStep: (move) => callbacks.moveStep(move),
       moveRejection: (move) => moveRejection(model, move),
       attachStep: (fromId, port, stepId) =>
         callbacks.addEdge({ from: fromId, to: stepId, port }),
-      getBlockForm: designTime
-        ? (blockType) => designTime.getBlockForm(blockType)
-        : undefined,
-    });
-  }, [callbacks, model, designTime]);
+    }),
+    [callbacks, model, add, insertOnEdge],
+  );
 
   // Delete/Backspace on a selection: steps go through removeStep (which
   // drops their edges); only edges between surviving steps are removed here.
@@ -121,7 +211,7 @@ export function WorkflowCanvas({
     setMenu({ target, point: { x: event.clientX, y: event.clientY } });
   };
 
-  const onMenuAction = (action: ContextMenuActionId, preset?: BlockPreset) => {
+  const onMenuAction = (action: ContextMenuActionId, preset?: PickedPreset) => {
     if (!menu) return;
     const target = menu.target;
     const point = menu.point;
@@ -134,13 +224,17 @@ export function WorkflowCanvas({
         break;
       case "addBelow": {
         const fromId = target.kind === "step" ? target.id : model.trigger?.id;
-        if (preset && fromId) {
-          callbacks.appendStep(fromId, "next", presetToInput(preset, model));
-        }
+        if (preset && fromId) appendStep(fromId, "next", preset);
         break;
       }
       case "duplicate":
         if (target.kind === "step") callbacks.duplicateStep(target.id);
+        break;
+      case "toggleSkip":
+        if (target.kind === "step") {
+          const step = model.steps.find((entry) => entry.id === target.id);
+          if (step) callbacks.updateStep({ id: step.id, skip: !step.skip });
+        }
         break;
       case "removeStep":
         if (target.kind === "step") {
@@ -149,31 +243,27 @@ export function WorkflowCanvas({
         }
         break;
       case "changeTrigger":
-        if (preset) {
-          callbacks.setTrigger({
-            blockType: preset.blockType,
-            config: preset.defaultConfig,
-          });
-        }
+        if (preset) pickTrigger(preset);
         break;
       case "removeTrigger":
         callbacks.clearTrigger();
         onSelect(null);
         break;
       case "insertStep":
-        if (preset && target.kind === "edge") {
-          callbacks.insertStepOnEdge(target.id, presetToInput(preset, model));
-        }
+        if (preset && target.kind === "edge") insertOnEdge(target.id, preset);
         break;
       case "removeEdge":
         if (target.kind === "edge") callbacks.removeEdge(target.id);
         break;
       case "addStep":
         if (preset) {
-          callbacks.addStep({
-            ...presetToInput(preset, model),
-            position: flow?.screenToFlowPosition(point),
-          });
+          const position = flow?.screenToFlowPosition(point);
+          add(preset, (config) =>
+            callbacks.addStep({
+              ...presetToInput(preset, model, config),
+              position,
+            }),
+          );
         }
         break;
       case "selectAll":
@@ -190,74 +280,77 @@ export function WorkflowCanvas({
   };
 
   return (
-    <div
-      className="relative h-full w-full"
-      onContextMenu={(event) => event.preventDefault()}
-    >
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={apNodeTypes}
-        edgeTypes={apEdgeTypes}
-        onInit={setFlow}
-        onNodeClick={(_event, node) => {
-          setMenu(null);
-          if (node.type === "apStep") onSelect(node.id);
-        }}
-        onPaneClick={() => {
-          setMenu(null);
-          onSelect(null);
-        }}
-        onNodeContextMenu={(event, node) =>
-          openMenu(
-            event,
-            node.type !== "apStep"
-              ? { kind: "pane" }
-              : node.id === model.trigger?.id
-                ? { kind: "trigger" }
-                : { kind: "step", id: node.id },
-          )
-        }
-        onEdgeContextMenu={(event, edge) =>
-          openMenu(
-            event,
-            edge.type === "apEdge"
-              ? { kind: "edge", id: edge.id }
-              : { kind: "pane" },
-          )
-        }
-        onPaneContextMenu={(event) => openMenu(event, { kind: "pane" })}
-        onMove={() => setMenu(null)}
-        onDelete={onDelete}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        deleteKeyCode={["Backspace", "Delete"]}
-        zoomOnDoubleClick={false}
-        fitView
-        fitViewOptions={{ padding: 0.25, maxZoom: 1 }}
-        proOptions={{ hideAttribution: true }}
+    <CanvasHandlersProvider value={handlers}>
+      <div
+        className="relative h-full w-full"
+        onContextMenu={(event) => event.preventDefault()}
       >
-        <Background gap={16} />
-        <Controls showInteractive={false} />
-        {/* Only worth the space once the flow outgrows the viewport. */}
-        {model.steps.length > MINIMAP_MIN_STEPS ? (
-          <MiniMap
-            pannable
-            zoomable
-            nodeColor={MINIMAP_NODE_COLOR}
-            nodeStrokeWidth={0}
-            style={{ width: 140, height: 90 }}
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={apNodeTypes}
+          edgeTypes={apEdgeTypes}
+          onInit={setFlow}
+          onNodeClick={(_event, node) => {
+            setMenu(null);
+            if (node.type === "apStep") onSelect(node.id);
+          }}
+          onPaneClick={() => {
+            setMenu(null);
+            onSelect(null);
+          }}
+          onNodeContextMenu={(event, node) =>
+            openMenu(
+              event,
+              node.type !== "apStep"
+                ? { kind: "pane" }
+                : node.id === model.trigger?.id
+                  ? { kind: "trigger" }
+                  : { kind: "step", id: node.id },
+            )
+          }
+          onEdgeContextMenu={(event, edge) =>
+            openMenu(
+              event,
+              edge.type === "apEdge"
+                ? { kind: "edge", id: edge.id }
+                : { kind: "pane" },
+            )
+          }
+          onPaneContextMenu={(event) => openMenu(event, { kind: "pane" })}
+          onMove={() => setMenu(null)}
+          onDelete={onDelete}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          deleteKeyCode={["Backspace", "Delete"]}
+          zoomOnDoubleClick={false}
+          fitView
+          fitViewOptions={{ padding: 0.25, maxZoom: 1 }}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background gap={16} />
+          <Controls showInteractive={false} />
+          {/* Only worth the space once the flow outgrows the viewport. */}
+          {model.steps.length > MINIMAP_MIN_STEPS ? (
+            <MiniMap
+              pannable
+              zoomable
+              nodeColor={MINIMAP_NODE_COLOR}
+              nodeStrokeWidth={0}
+              style={{ width: 140, height: 90 }}
+            />
+          ) : null}
+        </ReactFlow>
+        {menu ? (
+          <CanvasContextMenu
+            portsOf={portsOf}
+            state={menu}
+            model={model}
+            onAction={onMenuAction}
+            onClose={() => setMenu(null)}
           />
         ) : null}
-      </ReactFlow>
-      {menu ? (
-        <CanvasContextMenu
-          state={menu}
-          model={model}
-          onAction={onMenuAction}
-          onClose={() => setMenu(null)}
-        />
-      ) : null}
-    </div>
+      </div>
+    </CanvasHandlersProvider>
   );
 }

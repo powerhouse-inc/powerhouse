@@ -67,7 +67,6 @@ export async function getDocumentOperations(
   const data = await graphql<{
     documentOperations: {
       items: DocumentOperationRecord[];
-      totalCount: number;
     };
   }>(
     "/graphql",
@@ -84,7 +83,6 @@ export async function getDocumentOperations(
               scope
             }
           }
-          totalCount
         }
       }
     `,

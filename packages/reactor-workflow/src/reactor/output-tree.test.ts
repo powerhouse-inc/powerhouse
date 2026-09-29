@@ -28,7 +28,7 @@ type TicketLocalState {
 
 describe("fieldsFromSdl", () => {
   it("builds the state type's field tree, recursing into local types", () => {
-    expect(fieldsFromSdl(SDL)).toEqual([
+    expect(fieldsFromSdl(SDL, { state: "Ticket" })).toEqual([
       { name: "title", type: "String!" },
       { name: "status", type: "Status!" },
       {
@@ -42,13 +42,55 @@ describe("fieldsFromSdl", () => {
     ]);
   });
 
-  it("parses input types for operation schemas", () => {
-    const input = `input SetNameInput {\n  name: String!\n}`;
-    expect(fieldsFromSdl(input)).toEqual([{ name: "name", type: "String!" }]);
+  it("takes the state root from the model name, not declaration order", () => {
+    const sdl = `
+type AddressState { street: String! }
+type InvoiceState { total: Float!, billTo: AddressState }
+`;
+    expect(fieldsFromSdl(sdl, { state: "Invoice" })).toEqual([
+      { name: "total", type: "Float!" },
+      {
+        name: "billTo",
+        type: "AddressState",
+        children: [{ name: "street", type: "String!" }],
+      },
+    ]);
+  });
+
+  it("accepts the <Model>GlobalState name", () => {
+    const sdl = `type DocumentModelGlobalState { name: String! }`;
+    expect(fieldsFromSdl(sdl, { state: "DocumentModel" })).toEqual([
+      { name: "name", type: "String!" },
+    ]);
+  });
+
+  it("takes the operation input root from the operation name", () => {
+    const input = `
+input LineInput { amount: Float! }
+input SetUrlInput { url: URL!, line: LineInput }
+`;
+    expect(fieldsFromSdl(input, { input: "SET_URL" })).toEqual([
+      { name: "url", type: "URL!" },
+      {
+        name: "line",
+        type: "LineInput",
+        children: [{ name: "amount", type: "Float!" }],
+      },
+    ]);
+    expect(
+      fieldsFromSdl("input SetURLInput { url: URL! }", { input: "SET_URL" }),
+    ).toEqual([{ name: "url", type: "URL!" }]);
+  });
+
+  it("returns [] when the spec's root type is not declared", () => {
+    expect(fieldsFromSdl(SDL, { state: "Invoice" })).toEqual([]);
+    expect(
+      fieldsFromSdl("input OtherInput { a: Int }", { input: "SET_URL" }),
+    ).toEqual([]);
   });
 
   it("returns [] for unparseable SDL", () => {
-    expect(fieldsFromSdl("not sdl {{")).toEqual([]);
+    expect(fieldsFromSdl("not sdl {{", { state: "Ticket" })).toEqual([]);
   });
 });
 

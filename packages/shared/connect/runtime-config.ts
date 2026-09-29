@@ -24,7 +24,6 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
     basePath: "/",
     offline: true,
     studioMode: false,
-    workflowsEnabled: false,
   },
   ai: {
     assistantEnabled: false,
@@ -53,6 +52,14 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
     dsn: null,
     env: "dev",
     tracing: false,
+  },
+  openPanel: {
+    // An empty `clientId` keeps OpenPanel disabled. Enable it per deploy by
+    // including `connect.openPanel.clientId` in PH_CONNECT_CONFIG_JSON.
+    // `apiUrl` has no default: unset means OpenPanel's hosted API.
+    clientId: "",
+    trackUiEvents: true,
+    trackOperations: true,
   },
   instance: {
     namespace: null,

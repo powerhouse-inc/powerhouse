@@ -1,29 +1,47 @@
-import { CompositeBlockExecutor } from "../../../src/pieces/engine/blocks.js";
+import {
+  ActivepiecesBlockExecutor,
+  CompositeBlockExecutor,
+} from "../../../src/pieces/engine/blocks.js";
 import { runWorkflow } from "../../../src/pieces/engine/coordinator.js";
 import {
   lookupPath,
   resolveExpressions,
 } from "../../../src/pieces/engine/expressions.js";
-import type {
-  BlockExecution,
-  BlockExecutor,
-  WorkflowDefinition,
+import {
+  blockKey,
+  type BlockRef,
+} from "@powerhousedao/pieces-framework/block-type";
+import {
+  stepBlock,
+  type BlockExecution,
+  type BlockExecutor,
+  type WorkflowDefinition,
 } from "../../../src/pieces/engine/types.js";
+import {
+  CORE_PIECE_NAME,
+  CORE_PIECE_VERSION,
+} from "../../../src/pieces/index.js";
 
-// Fake executor: echoes resolved config; blockType "fake#fail" throws.
+// Fake executor: echoes resolved config; the action "fail" throws.
 class FakeExecutor implements BlockExecutor {
   readonly calls: BlockExecution[] = [];
 
   execute(execution: BlockExecution) {
     this.calls.push(execution);
-    if (execution.blockType === "fake#fail") {
+    if (execution.block.name === "fail") {
       return Promise.reject(new Error("boom"));
     }
     return Promise.resolve({ output: execution.config });
   }
 }
 
-const TRIGGER = { id: "t", blockType: "core#manual", config: {} };
+const TRIGGER = {
+  id: "t",
+  pieceName: "@powerhousedao/piece-core",
+  pieceVersion: CORE_PIECE_VERSION,
+  triggerName: "manual",
+  config: {},
+};
 
 function edge(
   id: string,
@@ -62,16 +80,25 @@ describe("expressions", () => {
     ).toBe("items: [1,2]");
   });
 
-  it("recurses through objects and arrays, missing paths yield undefined", () => {
+  it("recurses through objects and arrays, and fails on a missing path", () => {
     expect(
       resolveExpressions(
-        { a: ["{{variables.region}}"], b: { c: "{{missing.path}}" } },
+        { a: ["{{variables.region}}"], b: { c: "{{missing.path?}}" } },
         scope,
       ),
-    ).toEqual({ a: ["eu"], b: { c: undefined } });
-    expect(lookupPath(scope, "steps.fetch.output.body.items")).toEqual([1, 2]);
+    ).toEqual({ a: ["eu"], b: { c: null } });
+    expect(() => resolveExpressions("{{missing.path}}", scope)).toThrow(
+      "Unresolved reference {{missing.path}}",
+    );
+    expect(
+      lookupPath(scope, ["steps", "fetch", "output", "body", "items"]),
+    ).toEqual([1, 2]);
   });
 });
+
+function expressions(...props: string[]) {
+  return props.map((prop) => ({ prop, mode: "EXPRESSION" }));
+}
 
 describe("runWorkflow", () => {
   it("runs a linear flow passing outputs between steps", async () => {
@@ -82,14 +109,20 @@ describe("runWorkflow", () => {
         {
           id: "a",
           key: "first",
-          blockType: "fake#ok",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
           config: { v: "{{trigger.payload.msg}}" },
+          propertySettings: expressions("v"),
         },
         {
           id: "b",
           key: "second",
-          blockType: "fake#ok",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
           config: { got: "{{steps.first.output.v}}" },
+          propertySettings: expressions("got"),
         },
       ],
       edges: [edge("e1", "t", "a"), edge("e2", "a", "b")],
@@ -111,9 +144,30 @@ describe("runWorkflow", () => {
     const definition: WorkflowDefinition = {
       trigger: TRIGGER,
       steps: [
-        { id: "a", key: "ok", blockType: "fake#ok", config: {} },
-        { id: "b", key: "fails", blockType: "fake#fail", config: {} },
-        { id: "c", key: "after", blockType: "fake#ok", config: {} },
+        {
+          id: "a",
+          key: "ok",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: {},
+        },
+        {
+          id: "b",
+          key: "fails",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "fail",
+          config: {},
+        },
+        {
+          id: "c",
+          key: "after",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: {},
+        },
       ],
       edges: [edge("e1", "t", "a"), edge("e2", "a", "b"), edge("e3", "b", "c")],
     };
@@ -139,9 +193,30 @@ describe("runWorkflow", () => {
     const definition: WorkflowDefinition = {
       trigger: TRIGGER,
       steps: [
-        { id: "a", key: "first", blockType: "fake#ok", config: {} },
-        { id: "b", key: "taken", blockType: "fake#ok", config: {} },
-        { id: "c", key: "untaken", blockType: "fake#ok", config: {} },
+        {
+          id: "a",
+          key: "first",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: {},
+        },
+        {
+          id: "b",
+          key: "taken",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: {},
+        },
+        {
+          id: "c",
+          key: "untaken",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: {},
+        },
       ],
       edges: [
         edge("e1", "t", "a"),
@@ -176,8 +251,22 @@ describe("runWorkflow", () => {
     const definition: WorkflowDefinition = {
       trigger: TRIGGER,
       steps: [
-        { id: "a", key: "first", blockType: "fake#ok", config: {} },
-        { id: "b", key: "second", blockType: "fake#fail", config: {} },
+        {
+          id: "a",
+          key: "first",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: {},
+        },
+        {
+          id: "b",
+          key: "second",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "fail",
+          config: {},
+        },
       ],
       edges: [edge("e1", "t", "a"), edge("e2", "a", "b")],
     };
@@ -205,10 +294,20 @@ describe("runWorkflow", () => {
         {
           id: "a",
           key: "first",
-          blockType: "fake#ok",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
           config: { v: "{{trigger.payload.msg}}" },
+          propertySettings: expressions("v"),
         },
-        { id: "b", key: "second", blockType: "fake#fail", config: {} },
+        {
+          id: "b",
+          key: "second",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "fail",
+          config: {},
+        },
       ],
       edges: [edge("e1", "t", "a"), edge("e2", "a", "b")],
     };
@@ -222,8 +321,9 @@ describe("runWorkflow", () => {
     expect(failed.steps.map((s) => s.status)).toEqual(["SUCCEEDED", "FAILED"]);
 
     // "Fix" the workflow and resume with step a's journaled output.
-    definition.steps[1].blockType = "fake#ok";
+    definition.steps[1].actionName = "ok";
     definition.steps[1].config = { got: "{{steps.first.output.v}}" };
+    definition.steps[1].propertySettings = expressions("got");
     const executor = new FakeExecutor();
     const resumed = await runWorkflow({
       definition,
@@ -244,19 +344,46 @@ describe("runWorkflow", () => {
     expect(resumed.steps[1].output).toEqual({ got: "hello" });
   });
 
-  it("routes core#branch ports and skips the untaken side", async () => {
-    const executor = new CompositeBlockExecutor(new FakeExecutor());
+  it("routes the core branch's ports and skips the untaken side", async () => {
+    // The core piece runs in process, through the piece executor.
+    const executor = new CompositeBlockExecutor(new FakeExecutor(), {
+      [blockKey({
+        pieceName: CORE_PIECE_NAME,
+        kind: "action",
+        name: "branch",
+      })]: new ActivepiecesBlockExecutor({ cacheDir: "/tmp/na" }),
+    });
     const definition: WorkflowDefinition = {
       trigger: TRIGGER,
       steps: [
         {
           id: "br",
           key: "check",
-          blockType: "core#branch",
-          config: { condition: "{{trigger.payload.go}}" },
+          pieceName: "@powerhousedao/piece-core",
+          pieceVersion: CORE_PIECE_VERSION,
+          actionName: "branch",
+          config: {
+            operator: "BOOLEAN_IS_TRUE",
+            left: "{{trigger.payload.go}}",
+          },
+          propertySettings: expressions("left"),
         },
-        { id: "yes", key: "yes", blockType: "fake#ok", config: {} },
-        { id: "no", key: "no", blockType: "fake#ok", config: {} },
+        {
+          id: "yes",
+          key: "yes",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: {},
+        },
+        {
+          id: "no",
+          key: "no",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: {},
+        },
       ],
       edges: [
         edge("e1", "t", "br"),
@@ -288,10 +415,20 @@ describe("runWorkflow", () => {
         {
           id: "a",
           key: "a",
-          blockType: "fake#ok",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
           config: { n: "{{trigger.payload.n}}" },
+          propertySettings: expressions("n"),
         },
-        { id: "b", key: "b", blockType: "fake#ok", config: {} },
+        {
+          id: "b",
+          key: "b",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: {},
+        },
       ],
       edges: [
         edge("e1", "t", "a"),
@@ -319,9 +456,30 @@ describe("runWorkflow", () => {
     const definition: WorkflowDefinition = {
       trigger: TRIGGER,
       steps: [
-        { id: "a", key: "risky", blockType: "fake#fail", config: {} },
-        { id: "b", key: "ok-path", blockType: "fake#ok", config: {} },
-        { id: "c", key: "recover", blockType: "fake#ok", config: {} },
+        {
+          id: "a",
+          key: "risky",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "fail",
+          config: {},
+        },
+        {
+          id: "b",
+          key: "ok-path",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: {},
+        },
+        {
+          id: "c",
+          key: "recover",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: {},
+        },
       ],
       edges: [
         edge("e1", "t", "a"),
@@ -347,13 +505,23 @@ describe("runWorkflow", () => {
     const definition: WorkflowDefinition = {
       trigger: TRIGGER,
       steps: [
-        { id: "a", key: "risky", blockType: "fake#fail", config: {} },
+        {
+          id: "a",
+          key: "risky",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "fail",
+          config: {},
+        },
         {
           id: "c",
           key: "recover",
-          blockType: "fake#ok",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
           // What a document-dispatch on the failure branch would write.
           config: { note: "could not reach it: {{steps.risky.error}}" },
+          propertySettings: expressions("note"),
         },
       ],
       edges: [edge("e1", "t", "a"), edge("e2", "a", "c", "error")],
@@ -372,15 +540,25 @@ describe("runWorkflow", () => {
     const definition: WorkflowDefinition = {
       trigger: TRIGGER,
       steps: [
-        { id: "a", key: "fine", blockType: "fake#ok", config: { v: 1 } },
+        {
+          id: "a",
+          key: "fine",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: { v: 1 },
+        },
         {
           id: "b",
           key: "after",
-          blockType: "fake#ok",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
           config: {
-            was: "{{steps.fine.error}}",
+            was: "{{steps.fine.error?}}",
             got: "{{steps.fine.output.v}}",
           },
+          propertySettings: expressions("was", "got"),
         },
       ],
       edges: [edge("e1", "t", "a"), edge("e2", "a", "b")],
@@ -388,7 +566,7 @@ describe("runWorkflow", () => {
 
     const run = await runWorkflow({ definition, executor });
 
-    expect(run.steps[1].output).toEqual({ was: undefined, got: 1 });
+    expect(run.steps[1].output).toEqual({ was: null, got: 1 });
   });
 
   it("runs every successor on a port, not just the first", async () => {
@@ -396,9 +574,30 @@ describe("runWorkflow", () => {
     const definition: WorkflowDefinition = {
       trigger: TRIGGER,
       steps: [
-        { id: "a", key: "risky", blockType: "fake#fail", config: {} },
-        { id: "b", key: "notify", blockType: "fake#ok", config: {} },
-        { id: "c", key: "cleanup", blockType: "fake#ok", config: {} },
+        {
+          id: "a",
+          key: "risky",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "fail",
+          config: {},
+        },
+        {
+          id: "b",
+          key: "notify",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: {},
+        },
+        {
+          id: "c",
+          key: "cleanup",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: {},
+        },
       ],
       edges: [
         edge("e1", "t", "a"),
@@ -424,8 +623,22 @@ describe("runWorkflow", () => {
     const definition: WorkflowDefinition = {
       trigger: TRIGGER,
       steps: [
-        { id: "a", key: "risky", blockType: "fake#fail", config: {} },
-        { id: "b", key: "after", blockType: "fake#ok", config: {} },
+        {
+          id: "a",
+          key: "risky",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "fail",
+          config: {},
+        },
+        {
+          id: "b",
+          key: "after",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: {},
+        },
       ],
       edges: [edge("e1", "t", "a"), edge("e2", "a", "b")],
     };
@@ -440,7 +653,16 @@ describe("runWorkflow", () => {
   it("treats no-inbound steps as entries only without a trigger", async () => {
     const executor = new FakeExecutor();
     const noTrigger: WorkflowDefinition = {
-      steps: [{ id: "a", key: "solo", blockType: "fake#ok", config: {} }],
+      steps: [
+        {
+          id: "a",
+          key: "solo",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: {},
+        },
+      ],
       edges: [],
     };
     const run = await runWorkflow({ definition: noTrigger, executor });
@@ -448,7 +670,16 @@ describe("runWorkflow", () => {
 
     const withTrigger: WorkflowDefinition = {
       trigger: TRIGGER,
-      steps: [{ id: "a", key: "orphan", blockType: "fake#ok", config: {} }],
+      steps: [
+        {
+          id: "a",
+          key: "orphan",
+          pieceName: "fake",
+          pieceVersion: "1.0.0",
+          actionName: "ok",
+          config: {},
+        },
+      ],
       edges: [],
     };
     const orphanRun = await runWorkflow({ definition: withTrigger, executor });
@@ -456,111 +687,77 @@ describe("runWorkflow", () => {
   });
 });
 
-describe("parseBlockType", () => {
-  it("resolves versions inline or from the registry", async () => {
-    const { parseBlockType } =
+const PIECE_X = {
+  pieceName: "@acme/piece-x",
+  pieceVersion: "1.2.0",
+  actionName: "do_thing",
+};
+
+function execution(step: {
+  pieceName: string;
+  pieceVersion: string;
+  actionName: string;
+}): BlockExecution {
+  const def = { id: "s1", key: "s1", ...step, config: {} };
+  return { block: stepBlock(def), config: {}, step: def };
+}
+
+describe("pinnedResolution", () => {
+  it("runs a block at its pin", async () => {
+    const { pinnedResolution } =
       await import("../../../src/pieces/engine/blocks.js");
     expect(
-      parseBlockType("@activepieces/piece-http@0.11.19#send_request"),
-    ).toEqual({
-      packageName: "@activepieces/piece-http",
-      version: "0.11.19",
-      kind: "action",
-      name: "send_request",
-    });
-    expect(
-      parseBlockType("@activepieces/piece-http#send_request", {
-        "@activepieces/piece-http": "0.11.19",
+      pinnedResolution({
+        pieceName: "@activepieces/piece-http",
+        pieceVersion: "0.11.19",
+        kind: "action",
+        name: "send_request",
       }),
-    ).toEqual({
-      packageName: "@activepieces/piece-http",
-      version: "0.11.19",
-      kind: "action",
-      name: "send_request",
+    ).toMatchObject({
+      match: "exact",
+      resolved: { version: "0.11.19" },
+      requested: { pieceName: "@activepieces/piece-http", kind: "action" },
     });
-    expect(
-      parseBlockType("@activepieces/piece-http#send_request"),
-    ).toBeUndefined();
-    expect(parseBlockType("no-action")).toBeUndefined();
   });
 
-  it("classifies trigger block types", async () => {
-    const { parseBlockType } =
+  it("refuses an inexact version", async () => {
+    const { pinnedResolution } =
       await import("../../../src/pieces/engine/blocks.js");
-    expect(
-      parseBlockType("@activepieces/piece-rss@0.5.0#trigger:new_item"),
-    ).toEqual({
-      packageName: "@activepieces/piece-rss",
-      version: "0.5.0",
-      kind: "trigger",
-      name: "new_item",
+    const block = {
+      pieceName: "@acme/piece-x",
+      pieceVersion: "latest",
+      kind: "action" as const,
+      name: "go",
+    };
+    expect(pinnedResolution(block)).toMatchObject({
+      match: "missing",
+      note: '@acme/piece-x action "go" pins "latest", which is not an exact semver version',
     });
-    expect(
-      parseBlockType("@activepieces/piece-rss#trigger:new_item", {
-        "@activepieces/piece-rss": "0.5.0",
-      }),
-    ).toEqual({
-      packageName: "@activepieces/piece-rss",
-      version: "0.5.0",
-      kind: "trigger",
-      name: "new_item",
-    });
-    expect(
-      parseBlockType("@activepieces/piece-rss@0.5.0#trigger:"),
-    ).toBeUndefined();
   });
+});
 
-  it("keeps the halves of a block type no version resolves", async () => {
-    const { blockTypeParts } =
-      await import("../../../src/pieces/engine/blocks.js");
-    // What a caller with another source of versions needs: which piece, which
-    // block, and the fact that the block type itself named no version.
-    expect(blockTypeParts("@activepieces/piece-rss#trigger:new_item")).toEqual({
-      packageName: "@activepieces/piece-rss",
-      kind: "trigger",
-      name: "new_item",
-    });
-    expect(
-      blockTypeParts("@activepieces/piece-rss@0.5.0#trigger:new_item"),
-    ).toEqual({
-      packageName: "@activepieces/piece-rss",
-      version: "0.5.0",
-      kind: "trigger",
-      name: "new_item",
-    });
-    expect(blockTypeParts("core#manual")).toEqual({
-      packageName: "core",
-      kind: "action",
-      name: "manual",
-    });
-    expect(blockTypeParts("no-action")).toBeUndefined();
-    expect(blockTypeParts("@acme/piece-x#trigger:")).toBeUndefined();
-  });
-
-  it("asks the host for a block type its registry cannot resolve", async () => {
+describe("ActivepiecesBlockExecutor resolution", () => {
+  it("runs the version and source the host's policy chose", async () => {
     const { ActivepiecesBlockExecutor } =
       await import("../../../src/pieces/engine/blocks.js");
-    const asked: string[] = [];
-    const resolved: { name: string; version: string }[] = [];
+    const asked: BlockRef[] = [];
+    const resolved: unknown[] = [];
     const executor = new ActivepiecesBlockExecutor({
       cacheDir: "/tmp/na",
-      // What this host installed: nothing by this name.
-      packages: {},
-      resolveBlockType: (blockType) => {
-        asked.push(blockType);
+      resolveBlock: (block) => {
+        asked.push(block);
         return Promise.resolve({
-          packageName: "@acme/piece-x",
-          version: "1.2.3",
-          kind: "action" as const,
-          name: "do_thing",
+          requested: block,
+          resolved: { version: "1.2.3", source: "registry" },
+          match: "compatible",
+          note: "Pinned 1.2.0 is not available; runs 1.2.3 from registry",
         });
       },
       resolver: {
-        resolve: (name: string, version: string) => {
-          resolved.push({ name, version });
+        resolve: (target) => {
+          resolved.push(target);
           return Promise.resolve({
-            name,
-            version,
+            ...target,
             bundleDir: "/bundle",
             local: false,
           });
@@ -570,88 +767,83 @@ describe("parseBlockType", () => {
         runAction: () => Promise.resolve({ output: { ok: true } }),
       } as never,
     });
-    const blockType = "@acme/piece-x#do_thing";
 
-    const result = await executor.execute({
-      blockType,
-      config: {},
-      step: { id: "s1", key: "s1", blockType, config: {} },
-    });
+    const result = await executor.execute(execution(PIECE_X));
 
     expect(result.output).toEqual({ ok: true });
-    expect(asked).toEqual([blockType]);
-    // The host's version is the one the bundle is fetched at.
-    expect(resolved).toEqual([{ name: "@acme/piece-x", version: "1.2.3" }]);
+    expect(result.resolution?.match).toBe("compatible");
+    expect(asked).toEqual([
+      {
+        pieceName: "@acme/piece-x",
+        pieceVersion: "1.2.0",
+        kind: "action",
+        name: "do_thing",
+      },
+    ]);
+    expect(resolved).toEqual([
+      { name: "@acme/piece-x", version: "1.2.3", source: "registry" },
+    ]);
     executor.dispose();
   });
 
-  it("still refuses a block type the host cannot resolve either", async () => {
-    const { ActivepiecesBlockExecutor, UnknownBlockTypeError } =
+  it("fails a missing resolution with its note", async () => {
+    const { ActivepiecesBlockExecutor, UnknownBlockError } =
       await import("../../../src/pieces/engine/blocks.js");
-    const executor = new ActivepiecesBlockExecutor({
-      cacheDir: "/tmp/na",
-      packages: {},
-      resolveBlockType: () => Promise.resolve(undefined),
-    });
-    const blockType = "@acme/piece-x#do_thing";
+    const executor = new ActivepiecesBlockExecutor({ cacheDir: "/tmp/na" });
 
-    await expect(
-      executor.execute({
-        blockType,
-        config: {},
-        step: { id: "s1", key: "s1", blockType, config: {} },
-      }),
-    ).rejects.toBeInstanceOf(UnknownBlockTypeError);
+    const failure = executor.execute(
+      execution({ ...PIECE_X, pieceVersion: "^1.2.0" }),
+    );
+    await expect(failure).rejects.toBeInstanceOf(UnknownBlockError);
+    await expect(failure).rejects.toThrow("not an exact semver version");
     executor.dispose();
   });
 
-  it("refuses to execute a trigger block type as a step", async () => {
+  it("refuses to execute a trigger as a step", async () => {
     const { ActivepiecesBlockExecutor, TriggerBlockAsStepError } =
       await import("../../../src/pieces/engine/blocks.js");
     const executor = new ActivepiecesBlockExecutor({ cacheDir: "/tmp/na" });
-    const blockType = "@activepieces/piece-rss@0.5.0#trigger:new_item";
+    const run = execution({
+      pieceName: "@activepieces/piece-rss",
+      pieceVersion: "0.5.0",
+      actionName: "new_item",
+    });
     await expect(
-      executor.execute({
-        blockType,
-        config: {},
-        step: { id: "s1", key: "s1", blockType, config: {} },
-      }),
+      executor.execute({ ...run, block: { ...run.block, kind: "trigger" } }),
     ).rejects.toBeInstanceOf(TriggerBlockAsStepError);
     executor.dispose();
   });
 });
 
 describe("CompositeBlockExecutor handlers", () => {
-  it("routes registered block types to their handler first", async () => {
+  it("routes a handler's block, by block key, to it first", async () => {
     const handled: string[] = [];
     const handler = {
       execute: (execution: BlockExecution) => {
-        handled.push(execution.blockType);
+        handled.push(execution.block.name);
         return Promise.resolve({ output: "handled" });
       },
     };
+    const custom = {
+      pieceName: "host",
+      pieceVersion: "1.0.0",
+      actionName: "custom-block",
+    };
     const executor = new CompositeBlockExecutor(new FakeExecutor(), {
-      "host#custom-block": handler,
+      [blockKey({
+        pieceName: "host",
+        kind: "action" as const,
+        name: "custom-block",
+      })]: handler,
     });
 
-    const result = await executor.execute({
-      blockType: "host#custom-block",
-      config: {},
-      step: {
-        id: "s",
-        key: "s",
-        blockType: "host#custom-block",
-        config: {},
-      },
-    });
+    const result = await executor.execute(execution(custom));
     expect(result.output).toBe("handled");
-    expect(handled).toEqual(["host#custom-block"]);
+    expect(handled).toEqual(["custom-block"]);
 
-    const branch = await executor.execute({
-      blockType: "core#branch",
-      config: { condition: true },
-      step: { id: "b", key: "b", blockType: "core#branch", config: {} },
-    });
-    expect(branch.port).toBe("true");
+    const other = await executor.execute(
+      execution({ ...custom, actionName: "other" }),
+    );
+    expect(other.output).toEqual({});
   });
 });

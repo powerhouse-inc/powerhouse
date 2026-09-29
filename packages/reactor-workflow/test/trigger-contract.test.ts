@@ -10,6 +10,7 @@ import type { CheckConnectionOutcome } from "../src/pieces/activepieces/worker/p
 import { packagePieces } from "../src/reactor/piece-registry.js";
 import type { WorkflowRuntimeService } from "../src/reactor/service.js";
 import { testRuntime } from "./helpers/runtime.js";
+import { CORE_PIECE_VERSION } from "../src/pieces/index.js";
 
 const PIECE = "@fixture/piece-contract";
 const VERSION = "1.0.0";
@@ -152,7 +153,13 @@ describe("webhook delivery", () => {
             name: "Hook",
             status: "ENABLED",
             version: 1,
-            trigger: { id: "t1", blockType: "core#webhook", config: {} },
+            trigger: {
+              id: "t1",
+              pieceName: "@powerhousedao/piece-core",
+              pieceVersion: CORE_PIECE_VERSION,
+              triggerName: "webhook",
+              config: { scheme: "none" },
+            },
             steps: [],
             edges: [],
             variables: [],
@@ -225,16 +232,17 @@ describe("dropdown search", () => {
     });
   });
 
-  // #3091: blockOptions takes no search value, so the editor cannot send one.
-  it.fails("reaches options() from the runtime's blockOptions", async () => {
+  it("reaches options() from the runtime's blockOptions", async () => {
     packagePieces.setPieces([{ name: PIECE, version: VERSION, bundleDir }]);
     const service = testRuntime();
     try {
-      const withSearch = service.blockOptions.bind(service) as (
-        ...args: unknown[]
-      ) => Promise<unknown>;
-      const output = await withSearch(
-        `${PIECE}@${VERSION}#pick`,
+      const output = await service.blockOptions(
+        {
+          pieceName: PIECE,
+          pieceVersion: VERSION,
+          kind: "action",
+          name: "pick",
+        },
         "choice",
         {},
         undefined,

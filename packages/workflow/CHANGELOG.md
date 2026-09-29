@@ -1,3 +1,91 @@
+## 6.2.3-dev.32 (2026-09-29)
+
+This was a version bump only for @powerhousedao/workflow to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- **workflow:** sign connections in with OAuth2 using their own app ([b03b33bf0](https://github.com/powerhouse-inc/powerhouse/commit/b03b33bf0))
+- **reactor-workflow:** opt-in run retention sweep and dedupe cleanup for deleted workflows ([e2b6484aa](https://github.com/powerhouse-inc/powerhouse/commit/e2b6484aa))
+- **reactor-workflow:** keyset-paginate the run listing through the subgraph and runs views ([d22a4eea5](https://github.com/powerhouse-inc/powerhouse/commit/d22a4eea5))
+- **workflow:** publishing, step testing, versions, computed validity, ports and typed variables in the editors ([e2be02d2d](https://github.com/powerhouse-inc/powerhouse/commit/e2be02d2d))
+- ⚠️  **workflow:** piece fields, publishing, skip, tests and typed variables in the workflow model ([60fb3777f](https://github.com/powerhouse-inc/powerhouse/commit/60fb3777f))
+
+### 🩹 Fixes
+
+- **workflow:** keep the field focused and the tree up while picking data ([5e93b1a38](https://github.com/powerhouse-inc/powerhouse/commit/5e93b1a38))
+- **workflow:** open the panel for an added block and keep the connection field hidden until its form loads ([7edc28408](https://github.com/powerhouse-inc/powerhouse/commit/7edc28408))
+- **workflow:** name canvas add buttons and retry a failed catalog load ([2d43667fc](https://github.com/powerhouse-inc/powerhouse/commit/2d43667fc))
+- **workflow:** reword the variable type description so the subgraph doesn't read it as a type declaration ([030bad026](https://github.com/powerhouse-inc/powerhouse/commit/030bad026))
+- ⚠️  **workflow:** read reactor piece ids, JSON and action input strictly ([1282ff102](https://github.com/powerhouse-inc/powerhouse/commit/1282ff102))
+
+### ⚠️  Breaking Changes
+
+- **workflow:** read reactor piece ids, JSON and action input strictly  ([1282ff102](https://github.com/powerhouse-inc/powerhouse/commit/1282ff102))
+- **workflow:** piece fields, publishing, skip, tests and typed variables in the workflow model  ([60fb3777f](https://github.com/powerhouse-inc/powerhouse/commit/60fb3777f))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.30 (2026-09-29)
+
+### 🩹 Fixes
+
+- **deps:** load cmd-ts's ESM build under bun, which fails to require chalk from its CJS build ([749528c71](https://github.com/powerhouse-inc/powerhouse/commit/749528c71))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.29 (2026-09-28)
+
+### 🩹 Fixes
+
+- **reactor-workflow:** refuse a secrets master key other than the one secrets were stored with ([87cfde0f5](https://github.com/powerhouse-inc/powerhouse/commit/87cfde0f5))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.28 (2026-09-28)
+
+### 🚀 Features
+
+- **workflow:** split drive and folder, and give the reactor steps an action form ([b1939e431](https://github.com/powerhouse-inc/powerhouse/commit/b1939e431))
+- **workflow:** render every Activepieces prop type and layout hint in the step form ([908e74733](https://github.com/powerhouse-inc/powerhouse/commit/908e74733))
+
+### 🩹 Fixes
+
+- **workflow:** reset source search on dismiss, keep picked labels, commit colour once, fold block descriptions ([585993cb6](https://github.com/powerhouse-inc/powerhouse/commit/585993cb6))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.27 (2026-09-28)
+
+### 🩹 Fixes
+
+- **workflow:** name a piece run's trigger in the runs table instead of showing its block type ([83b2956b4](https://github.com/powerhouse-inc/powerhouse/commit/83b2956b4))
+- **workflow:** end long logo chains in +N instead of overflowing the next column ([8730c9407](https://github.com/powerhouse-inc/powerhouse/commit/8730c9407))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.26 (2026-09-26)
+
+### 🩹 Fixes
+
+- **workflow:** name a piece run's trigger in the runs table instead of showing its block type ([83b2956b4](https://github.com/powerhouse-inc/powerhouse/commit/83b2956b4))
+- **workflow:** end long logo chains in +N instead of overflowing the next column ([8730c9407](https://github.com/powerhouse-inc/powerhouse/commit/8730c9407))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features

@@ -1,4 +1,4 @@
-// Config parsing for core#webhook: the editor-facing shape of the trigger block.
+// Config parsing for the core webhook trigger: the editor-facing shape of its form.
 // Verification, redaction and payload mechanics belong to the reactor's service.
 import type {
   WebhookField,
@@ -6,7 +6,8 @@ import type {
   WebhookSignatureEncoding,
 } from "@powerhousedao/shared/processors";
 
-export const WEBHOOK_BLOCK = "core#webhook";
+// Prefixes a config error, as the schedule's parser does.
+const WEBHOOK = "Webhook";
 
 export const WEBHOOK_TRIGGER_KIND = "webhook";
 
@@ -94,14 +95,7 @@ function asRecord(config: unknown): Record<string, unknown> {
   if (config && typeof config === "object" && !Array.isArray(config)) {
     return config as Record<string, unknown>;
   }
-  if (typeof config === "string") {
-    try {
-      return asRecord(JSON.parse(config));
-    } catch {
-      return {};
-    }
-  }
-  return {};
+  throw new Error(`${WEBHOOK}: the config must be an object`);
 }
 
 function toNumber(value: unknown): number | undefined {
@@ -129,7 +123,7 @@ function parseWebhookField(value: unknown): WebhookField | undefined {
     const body = nonEmptyString(record.body);
     if (body) return { body };
     throw new Error(
-      `${WEBHOOK_BLOCK}: a field source must name either "header" or "body"`,
+      `${WEBHOOK}: a field source must name either "header" or "body"`,
     );
   }
   const text = nonEmptyString(value);
@@ -143,64 +137,68 @@ function parseWebhookField(value: unknown): WebhookField | undefined {
   return source === "header" ? { header: name.toLowerCase() } : { body: name };
 }
 
-// A named choice, rejected loudly: an unknown hash would otherwise reach the
-// reactor and fail every delivery with nothing pointing at the config.
+// "" is the empty label, kept as given; only an absent prefix is the default.
+function parsePrefix(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "string") {
+    throw new Error(`${WEBHOOK}: "prefix" must be a string`);
+  }
+  return value;
+}
+
+// A named choice, compared exactly and rejected loudly: an unknown hash would
+// otherwise reach the reactor and fail every delivery.
 function parseEnum<T extends string>(
   value: unknown,
-  allowed: Set<T>,
+  allowed: ReadonlySet<T>,
   field: string,
 ): T | undefined {
-  const text = nonEmptyString(value)?.toLowerCase();
-  if (!text) return undefined;
-  if (!allowed.has(text as T)) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "string" || !allowed.has(value as T)) {
     throw new Error(
-      `${WEBHOOK_BLOCK}: "${field}" must be one of ${[...allowed].join(", ")}`,
+      `${WEBHOOK}: "${field}" must be one of ${[...allowed].join(", ")}`,
     );
   }
-  return text as T;
+  return value as T;
 }
 
-// "ANY" and "" both mean every method, which is how the editor spells it.
+const METHOD_CHOICES = new Set<string>([...HTTP_METHODS, "ANY"]);
+
+const RESPONSE_MODES = new Set(["async", "sync"] as const);
+
+// "ANY" or no value means every method; the editor spells it "ANY".
 function parseMethods(value: unknown): string[] | undefined {
-  const list =
-    typeof value === "string"
-      ? value === "" || value.toUpperCase() === "ANY"
-        ? []
-        : [value]
-      : Array.isArray(value)
-        ? value.filter((item): item is string => typeof item === "string")
-        : [];
-  if (list.length === 0) return undefined;
-  const methods = list.map((method) => method.trim().toUpperCase());
-  for (const method of methods) {
-    if (!(HTTP_METHODS as readonly string[]).includes(method)) {
-      throw new Error(
-        `${WEBHOOK_BLOCK}: "${method}" is not one of ${HTTP_METHODS.join(", ")}`,
-      );
+  const list = Array.isArray(value) ? value : [value];
+  const methods = list.flatMap((method) => {
+    const parsed = parseEnum(method, METHOD_CHOICES, "methods");
+    return parsed ? [parsed] : [];
+  });
+  if (methods.includes("ANY")) {
+    if (methods.length > 1) {
+      throw new Error(`${WEBHOOK}: "ANY" cannot be listed with methods`);
     }
+    return undefined;
   }
-  return methods;
+  return methods.length ? methods : undefined;
 }
 
-// Config: { methods?, scheme?, header?, secretRef?, toleranceSeconds?,
+// Config: { methods?, scheme, header?, secretRef?, toleranceSeconds?,
 // responseMode?, responseStatus?, challengeField? }.
 export function parseWebhookConfig(config: unknown): WebhookConfig {
   const record = asRecord(config);
-  const rawScheme = nonEmptyString(record.scheme) ?? "none";
-  if (!SCHEMES.has(rawScheme as WebhookScheme)) {
+  // No default: an unverified endpoint must be chosen, never fallen into.
+  if (record.scheme === undefined || record.scheme === null) {
     throw new Error(
-      `${WEBHOOK_BLOCK}: "scheme" must be one of ${[...SCHEMES].join(", ")}`,
+      `${WEBHOOK}: "scheme" is required; choose "none" for an endpoint guarded only by its URL token`,
     );
   }
-  const scheme = rawScheme as WebhookScheme;
+  const scheme = parseEnum(record.scheme, SCHEMES, "scheme")!;
   const secretRef = nonEmptyString(record.secretRef);
   if (SIGNED_SCHEMES.has(scheme) && !secretRef) {
-    throw new Error(
-      `${WEBHOOK_BLOCK}: the "${scheme}" scheme needs a "secretRef"`,
-    );
+    throw new Error(`${WEBHOOK}: the "${scheme}" scheme needs a "secretRef"`);
   }
   const responseMode =
-    record.responseMode === "sync" ? ("sync" as const) : ("async" as const);
+    parseEnum(record.responseMode, RESPONSE_MODES, "responseMode") ?? "async";
   const status =
     toNumber(record.responseStatus) ??
     (responseMode === "sync"
@@ -208,22 +206,18 @@ export function parseWebhookConfig(config: unknown): WebhookConfig {
       : DEFAULT_RESPONSE_STATUS);
   if (!Number.isInteger(status) || status < 200 || status > 599) {
     throw new Error(
-      `${WEBHOOK_BLOCK}: "responseStatus" must be an integer between 200 and 599`,
+      `${WEBHOOK}: "responseStatus" must be an integer between 200 and 599`,
     );
   }
   const tolerance =
     toNumber(record.toleranceSeconds) ?? DEFAULT_TOLERANCE_SECONDS;
   if (!Number.isFinite(tolerance) || tolerance <= 0) {
-    throw new Error(
-      `${WEBHOOK_BLOCK}: "toleranceSeconds" must be a positive number`,
-    );
+    throw new Error(`${WEBHOOK}: "toleranceSeconds" must be a positive number`);
   }
   const dedupeTtl =
     toNumber(record.dedupeTtlSeconds) ?? DEFAULT_DEDUPE_TTL_SECONDS;
   if (!Number.isFinite(dedupeTtl) || dedupeTtl <= 0) {
-    throw new Error(
-      `${WEBHOOK_BLOCK}: "dedupeTtlSeconds" must be a positive number`,
-    );
+    throw new Error(`${WEBHOOK}: "dedupeTtlSeconds" must be a positive number`);
   }
   return {
     methods: parseMethods(record.methods),
@@ -237,7 +231,7 @@ export function parseWebhookConfig(config: unknown): WebhookConfig {
     responseStatus: status,
     algorithm: parseEnum(record.algorithm, ALGORITHMS, "algorithm"),
     encoding: parseEnum(record.encoding, ENCODINGS, "encoding"),
-    prefix: typeof record.prefix === "string" ? record.prefix : undefined,
+    prefix: parsePrefix(record.prefix),
     challengeField: parseWebhookField(record.challengeField),
     dedupeField: parseWebhookField(record.dedupeField),
     dedupeTtlSeconds: dedupeTtl,

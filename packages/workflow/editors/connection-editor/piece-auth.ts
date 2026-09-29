@@ -12,14 +12,21 @@ export interface AuthField {
   options?: { label: string; value: unknown }[];
 }
 
+// A piece auth type this runtime doesn't know: shown, never saved.
+export const UNKNOWN_AUTH = "UNKNOWN";
+
 export interface AuthPlan {
-  authType: ConnectionAuthType;
+  authType: ConnectionAuthType | typeof UNKNOWN_AUTH;
   displayName?: string;
   description?: string;
   configFields: AuthField[];
   secretFields: AuthField[];
-  // OAUTH2 / OIDC are declared but not executable by the runtime yet.
+  // OIDC is declared but not executable by the runtime yet.
   supported: boolean;
+  // Signed in through the provider; the token is stored by the switchboard.
+  oauth2?: boolean;
+  // The piece's own name for an UNKNOWN auth type.
+  declaredType?: string;
 }
 
 // Missing means unset, explicitly null, or emptied to "" - not `false`/`0`.
@@ -57,7 +64,26 @@ interface PieceAuthDescriptor {
   displayName?: string;
   description?: string;
   required?: boolean;
-  props?: Partial<Record<string, AuthPropDescriptor>>;
+  // A record in a published listing; a named list from a loaded piece.
+  props?:
+    | Partial<Record<string, AuthPropDescriptor>>
+    | (AuthPropDescriptor & { name?: string })[];
+}
+
+// Names the connection's config and secretRefs use for an OAuth2 app.
+export const OAUTH_CLIENT_ID = "client_id";
+export const OAUTH_CLIENT_SECRET = "client_secret";
+export const OAUTH_TOKEN = "token";
+
+function propEntries(
+  props: PieceAuthDescriptor["props"],
+): [string, AuthPropDescriptor][] {
+  if (Array.isArray(props)) {
+    return props.flatMap((prop) => (prop.name ? [[prop.name, prop]] : []));
+  }
+  return Object.entries(props ?? {}).filter(
+    (entry): entry is [string, AuthPropDescriptor] => entry[1] !== undefined,
+  );
 }
 
 function toField(name: string, prop: AuthPropDescriptor): AuthField {
@@ -136,7 +162,8 @@ function planForDescriptor(descriptor: PieceAuthDescriptor | null): AuthPlan {
         supported: true,
       };
     case "BASIC_AUTH": {
-      const props = descriptor.props ?? {};
+      const props: Partial<Record<string, AuthPropDescriptor>> =
+        Object.fromEntries(propEntries(descriptor.props));
       return {
         ...base,
         authType: "BASIC_AUTH",
@@ -150,10 +177,7 @@ function planForDescriptor(descriptor: PieceAuthDescriptor | null): AuthPlan {
       };
     }
     case "CUSTOM_AUTH": {
-      const entries = Object.entries(descriptor.props ?? {}).filter(
-        (entry): entry is [string, AuthPropDescriptor] =>
-          entry[1] !== undefined,
-      );
+      const entries = propEntries(descriptor.props);
       return {
         ...base,
         authType: "CUSTOM_AUTH",
@@ -166,14 +190,36 @@ function planForDescriptor(descriptor: PieceAuthDescriptor | null): AuthPlan {
         supported: true,
       };
     }
-    case "OAUTH2":
+    case "OAUTH2": {
+      const entries = propEntries(descriptor.props);
       return {
         ...base,
         authType: "OAUTH2",
-        configFields: [],
-        secretFields: [],
-        supported: false,
+        configFields: [
+          {
+            name: OAUTH_CLIENT_ID,
+            displayName: "Client ID",
+            required: true,
+            description: "From the OAuth app you registered with the service.",
+          },
+          ...entries
+            .filter(([, prop]) => prop.type !== "SECRET_TEXT")
+            .map(([name, prop]) => toField(name, prop)),
+        ],
+        secretFields: [
+          {
+            name: OAUTH_CLIENT_SECRET,
+            displayName: "Client secret",
+            required: true,
+          },
+          ...entries
+            .filter(([, prop]) => prop.type === "SECRET_TEXT")
+            .map(([name, prop]) => toField(name, prop)),
+        ],
+        supported: true,
+        oauth2: true,
       };
+    }
     case "OIDC":
       return {
         ...base,
@@ -182,13 +228,23 @@ function planForDescriptor(descriptor: PieceAuthDescriptor | null): AuthPlan {
         secretFields: [],
         supported: false,
       };
-    default:
+    case undefined:
+    case "NONE":
       return {
         ...base,
         authType: "NONE",
         configFields: [],
         secretFields: [],
         supported: true,
+      };
+    default:
+      return {
+        ...base,
+        authType: UNKNOWN_AUTH,
+        declaredType: descriptor?.type,
+        configFields: [],
+        secretFields: [],
+        supported: false,
       };
   }
 }
@@ -203,7 +259,11 @@ export function connectorIdForPiece(packageName: string): string {
   return `${packageName}#${short}`;
 }
 
+// "<piece package>#<short name>" -> the package; a bare name is its own.
 export function packageFromConnectorId(connectorId: string): string {
   const separator = connectorId.lastIndexOf("#");
-  return separator > 0 ? connectorId.slice(0, separator) : connectorId;
+  if (separator <= 0) return connectorId;
+  const spec = connectorId.slice(0, separator);
+  const at = spec.indexOf("@", 1);
+  return at > 0 ? spec.slice(0, at) : spec;
 }

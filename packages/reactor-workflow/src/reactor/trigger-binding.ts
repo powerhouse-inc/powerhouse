@@ -1,10 +1,14 @@
 // What the runtime hands the supervisor for one workflow, plus the pure
 // helpers over it. Split out so drivers need not import the supervisor.
-import type { RecordedSchedule } from "../pieces/index.js";
+import {
+  blockKey,
+  type BlockIdentity,
+  type BlockRef,
+} from "@powerhousedao/pieces-framework/block-type";
+import { blockLabel, type RecordedSchedule } from "../pieces/index.js";
 import { childLogger } from "document-model";
 import { createHash } from "node:crypto";
 import { cronIntervalMs, MIN_SCHEDULE_INTERVAL_MS } from "./schedule.js";
-import type { SCHEDULE_BLOCK } from "./schedule.js";
 import type { TriggerStateRow } from "./store.js";
 
 const logger = childLogger(["workflow", "trigger-binding"]);
@@ -14,7 +18,8 @@ export const MIN_INTERVAL_MS = MIN_SCHEDULE_INTERVAL_MS;
 export interface PieceTriggerBinding {
   kind?: "piece";
   workflowId: string;
-  blockType: string;
+  // The trigger as the workflow pins it.
+  block: BlockRef;
   packageName: string;
   version: string;
   triggerName: string;
@@ -28,11 +33,11 @@ export interface PieceTriggerBinding {
   delivery?: "poll" | "webhook";
 }
 
-// core#schedule: no piece hooks; next_poll_at is the next fire time.
+// The core schedule trigger: no piece hooks; next_poll_at is the next fire time.
 export interface ScheduleTriggerBinding {
   kind: "schedule";
   workflowId: string;
-  blockType: typeof SCHEDULE_BLOCK;
+  block: BlockRef;
   config: Record<string, unknown>;
 }
 
@@ -52,24 +57,34 @@ export function deliveryKindFor(binding: TriggerBinding): TriggerDeliveryKind {
 // the binding was routed to the wrong driver, which is a bug, not input.
 export function asPiece(binding: TriggerBinding): PieceTriggerBinding {
   if (binding.kind === "schedule") {
-    throw new Error(`Expected a piece binding, got ${binding.blockType}`);
+    throw new Error(
+      `Expected a piece binding, got ${blockLabel(binding.block)}`,
+    );
   }
   return binding;
 }
 
 export function asSchedule(binding: TriggerBinding): ScheduleTriggerBinding {
   if (binding.kind !== "schedule") {
-    throw new Error(`Expected a schedule binding, got ${binding.blockType}`);
+    throw new Error(
+      `Expected a schedule binding, got ${blockLabel(binding.block)}`,
+    );
   }
   return binding;
 }
 
-export function configHash(blockType: string, config: unknown): string {
+export function configHash(block: BlockIdentity, config: unknown): string {
   return createHash("sha256")
-    .update(blockType)
+    .update(blockKey(block))
     .update(JSON.stringify(config ?? {}))
     .digest("hex")
     .slice(0, 16);
+}
+
+// A run's trigger kind for a piece trigger: "piece:<pieceName>:<triggerName>".
+// A package name never holds a colon, so the first one splits it.
+export function pieceTriggerKind(block: BlockIdentity): string {
+  return `piece:${block.pieceName}:${block.name}`;
 }
 
 // The poll cadence setSchedule asked for: the named interval, or the gap between

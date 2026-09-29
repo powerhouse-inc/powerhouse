@@ -1,7 +1,5 @@
-// What a processor does when it cannot coerce. The upstream processors answer
-// undefined, and upstream's validators turn that into "Expected JSON,
-// received: …". For JSON we hand the text to the piece instead, and skip that
-// validator, or a model's prose-wrapped answer reaches the action as nothing.
+// What a processor does when it cannot coerce: it answers undefined, and for
+// JSON and OBJECT props validation then names the prop and the text.
 import { expect, it } from "vitest";
 import {
   normalizePropsValue,
@@ -10,15 +8,16 @@ import {
 } from "./normalize.js";
 
 const jsonProp = { type: "JSON", displayName: "Actions", required: true };
+const optionalJson = { type: "JSON", displayName: "Extra", required: false };
+const objectProp = { type: "OBJECT", displayName: "Headers", required: false };
 
-// The shape a reasoning model actually answers with: pages of deliberation,
-// the object on the end, behind a leaked channel marker.
+// A model's prose-wrapped answer, which is not JSON.
 const MODEL_ANSWER =
   "We need to parse the OCR text and fill the fields.\n\nNow produce final " +
   'answer.assistantfinal{"actions":[{"type":"SET_COMMITMENT","input":{"customer":"BuildCorp AG"}}]}';
 
-it("hands back a string the JSON processor cannot parse", async () => {
-  expect(await normalizeValue(jsonProp, MODEL_ANSWER)).toBe(MODEL_ANSWER);
+it("drops a string the JSON processor cannot parse", async () => {
+  expect(await normalizeValue(jsonProp, MODEL_ANSWER)).toBeUndefined();
 });
 
 it("still parses a string that is strict JSON", async () => {
@@ -26,24 +25,38 @@ it("still parses a string that is strict JSON", async () => {
   expect(parsed).toEqual({ actions: [] });
 });
 
-it("keeps a JSON key whose value it could not parse", async () => {
-  const out = await normalizePropsValue(
-    { actions: jsonProp },
-    { actions: MODEL_ANSWER, documentId: "abc" },
+it("refuses unparseable JSON text, naming the prop", async () => {
+  await expect(
+    preparePropsValue(
+      'action "dispatch"',
+      { actions: jsonProp },
+      { actions: MODEL_ANSWER },
+    ),
+  ).rejects.toThrow(
+    /Invalid input for action "dispatch": Actions \(actions\): is not valid JSON, received: We need/,
   );
-  // The regression this guards: `delete out[name]` here made the action see
-  // no `actions` prop at all, and refuse an empty list rather than the text.
-  expect(Object.keys(out).sort()).toEqual(["actions", "documentId"]);
-  expect(out.actions).toBe(MODEL_ANSWER);
 });
 
-it("validates past a JSON value it could not parse", async () => {
-  const out = await preparePropsValue(
-    'action "dispatch"',
-    { actions: jsonProp },
-    { actions: MODEL_ANSWER },
-  );
-  expect(out.actions).toBe(MODEL_ANSWER);
+it("refuses unparseable text for an optional JSON prop too", async () => {
+  // Optional, the validator would read the dropped value as simply unset.
+  await expect(
+    preparePropsValue('action "x"', { extra: optionalJson }, { extra: "{a" }),
+  ).rejects.toThrow(/Extra \(extra\): is not valid JSON/);
+});
+
+it("refuses an OBJECT prop given text or a list that is not an object", async () => {
+  for (const headers of ["not json", "[1,2]", [1, 2]]) {
+    await expect(
+      preparePropsValue('action "x"', { headers: objectProp }, { headers }),
+    ).rejects.toThrow(/Headers \(headers\): expects a JSON object/);
+  }
+  expect(
+    await preparePropsValue(
+      'action "x"',
+      { headers: objectProp },
+      { headers: '{"a":"1"}' },
+    ),
+  ).toEqual({ headers: { a: "1" } });
 });
 
 it("refuses an empty required JSON value", async () => {
@@ -58,8 +71,17 @@ it("refuses an empty required JSON value", async () => {
   );
 });
 
-// Narrow on purpose. Every other type keeps its promise to the piece, and
-// those drops are deliberate — a DATE_TIME prop is an ISO string or nothing.
+it("drops unparseable JSON without throwing where nothing validates", async () => {
+  // Teardown normalises without validating, and must still run.
+  const out = await normalizePropsValue(
+    { actions: jsonProp },
+    { actions: MODEL_ANSWER, documentId: "abc" },
+  );
+  expect(out).toEqual({ documentId: "abc" });
+});
+
+// Every other type keeps its promise to the piece: a DATE_TIME prop is an ISO
+// string or nothing.
 it("still drops what a non-JSON processor cannot read", async () => {
   const when = { type: "DATE_TIME", displayName: "When", required: false };
   expect(await normalizeValue(when, "tomorrow-ish")).toBeUndefined();

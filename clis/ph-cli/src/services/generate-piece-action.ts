@@ -5,6 +5,7 @@ import {
 } from "@powerhousedao/codegen";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import type { GeneratePieceActionArgs } from "../types.js";
+import { installAddedDependencies } from "../utils/install-added-dependencies.js";
 
 export async function startGeneratePieceAction(
   args: GeneratePieceActionArgs,
@@ -22,5 +23,9 @@ export async function startGeneratePieceAction(
   const project = buildTsMorphProject(projectDir);
   await generatePieceAction({ pieceDir: piece, actionName }, project);
   await project.save();
-  await syncFeatureDependencies(detectFeatures(projectDir), projectDir);
+  const added = await syncFeatureDependencies(
+    detectFeatures(projectDir),
+    projectDir,
+  );
+  await installAddedDependencies(added, projectDir, args.skipInstall);
 }

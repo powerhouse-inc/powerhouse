@@ -99,4 +99,43 @@ describe("RelationalWebhookStore", () => {
     expect(await store.seen(one.token, "evt-1", 300)).toBe(false);
     expect(await store.seen(two.token, "evt-1", 300)).toBe(false);
   });
+
+  it("ages each token's keys out on its own TTL", async () => {
+    const short = await store.ensure(ns, "trigger", "short");
+    const long = await store.ensure(ns, "trigger", "long");
+
+    expect(await store.seen(long.token, "evt-1", 300)).toBe(false);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    // A shorter-TTL delivery on another token must not prune this key.
+    expect(await store.seen(short.token, "evt-1", 0)).toBe(false);
+    expect(await store.seen(long.token, "evt-1", 300)).toBe(true);
+  });
+
+  it("prunes a legacy row with no expiry on the caller's TTL", async () => {
+    const row = await store.ensure(ns, "trigger", "legacy");
+    const db = await createRelationalDb(
+      getDbClient().db as unknown as Kysely<unknown>,
+    ).createNamespace<{
+      webhook_deliveries: {
+        token: string;
+        dedupe_key: string;
+        seen_at: string;
+        expires_at: string | null;
+        claim_id: string;
+      };
+    }>("reactor_webhooks");
+    await db
+      .insertInto("webhook_deliveries")
+      .values({
+        token: row.token,
+        dedupe_key: "evt-legacy",
+        seen_at: new Date(Date.now() - 60_000).toISOString(),
+        expires_at: null,
+        claim_id: "legacy",
+      })
+      .execute();
+
+    expect(await store.seen(row.token, "evt-legacy", 300)).toBe(true);
+    expect(await store.seen(row.token, "evt-legacy", 30)).toBe(false);
+  });
 });

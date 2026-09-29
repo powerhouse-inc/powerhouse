@@ -7,17 +7,114 @@ import type {
   StepExecutionRow,
   WorkflowRuntimeService,
 } from "@powerhousedao/reactor-workflow";
-import { GraphQLError } from "graphql";
+import {
+  GraphQLError,
+  Kind,
+  type GraphQLResolveInfo,
+  type SelectionSetNode,
+} from "graphql";
 
 interface FireArgs {
   workflowId: string;
   payload?: unknown;
 }
 
+interface PieceArgs {
+  packageName: string;
+  version?: string | null;
+}
+
+type BlockRef = Parameters<WorkflowRuntimeService["blockDescriptor"]>[0];
+
+interface BlockInput {
+  pieceName: string;
+  pieceVersion: string;
+  name: string;
+  kind: string;
+}
+
+function blockRef(input: BlockInput): BlockRef {
+  if (input.kind !== "action" && input.kind !== "trigger") {
+    throw new GraphQLError(
+      `A block's kind is "action" or "trigger", got "${input.kind}"`,
+    );
+  }
+  return {
+    pieceName: input.pieceName,
+    pieceVersion: input.pieceVersion,
+    name: input.name,
+    kind: input.kind,
+  };
+}
+
 interface RunsArgs {
   workflowId?: string;
   driveId?: string;
   limit?: number;
+  excludeTriggerKinds?: string[];
+}
+
+interface RunsPageArgs {
+  workflowId?: string;
+  driveId?: string;
+  excludeTriggerKinds?: string[];
+  paging?: { limit?: number | null; cursor?: string | null } | null;
+}
+
+// A cursor the runtime did not issue is the caller's error, not ours.
+async function cursorAware<T>(call: () => Promise<T>): Promise<T> {
+  try {
+    return await call();
+  } catch (error) {
+    if (error instanceof Error && error.name === "InvalidRunCursorError") {
+      throw new GraphQLError(error.message, {
+        extensions: { code: "BAD_USER_INPUT" },
+      });
+    }
+    throw error;
+  }
+}
+
+// Whether a runs query reads any step's input or output, so a listing that
+// doesn't can skip those blobs. Fragments count as asking for them.
+function selectsStepData(
+  selections: readonly SelectionSetNode[],
+  path: string[],
+): boolean {
+  let level = selections;
+  for (const name of [...path, "steps"]) {
+    const next: SelectionSetNode[] = [];
+    for (const set of level) {
+      for (const selection of set.selections) {
+        if (selection.kind !== Kind.FIELD) return true;
+        if (selection.name.value === name && selection.selectionSet) {
+          next.push(selection.selectionSet);
+        }
+      }
+    }
+    if (next.length === 0) return false;
+    level = next;
+  }
+  return level.some((set) =>
+    set.selections.some(
+      (selection) =>
+        selection.kind !== Kind.FIELD ||
+        selection.name.value === "input" ||
+        selection.name.value === "output",
+    ),
+  );
+}
+
+// With no resolve info (a direct call) the full shape is served.
+function readsStepData(
+  info: GraphQLResolveInfo | undefined,
+  path: string[],
+): boolean {
+  if (!info) return true;
+  const selections = info.fieldNodes.flatMap((node) =>
+    node.selectionSet ? [node.selectionSet] : [],
+  );
+  return selectsStepData(selections, path);
 }
 
 // A secret belongs to the reactor, not to any one document, so writing one is
@@ -28,6 +125,20 @@ function requireAdmin(
 ): void {
   if (!authorizationService.isSupremeAdmin(ctx.user?.address)) {
     throw new GraphQLError("Admin access required");
+  }
+}
+
+// The runtime's retryable "not synced here yet", tagged for clients.
+async function syncAware<T>(call: () => Promise<T>): Promise<T> {
+  try {
+    return await call();
+  } catch (error) {
+    if (error instanceof Error && error.name === "WorkflowSyncingError") {
+      throw new GraphQLError(error.message, {
+        extensions: { code: "WORKFLOW_SYNCING", retryable: true },
+      });
+    }
+    throw error;
   }
 }
 
@@ -44,7 +155,8 @@ function toStepRecord(row: StepExecutionRow) {
   return {
     stepId: row.step_id,
     stepKey: row.step_key,
-    blockType: row.block_type,
+    pieceName: row.piece_name,
+    blockName: row.block_name,
     status: row.status,
     input: parseJson(row.input),
     output: parseJson(row.output),
@@ -52,6 +164,10 @@ function toStepRecord(row: StepExecutionRow) {
     error: row.error,
     startedAt: row.started_at,
     endedAt: row.ended_at,
+    pieceVersion: row.piece_version,
+    pieceSource: row.piece_source,
+    versionMatch: row.version_match,
+    versionNote: row.version_note,
   };
 }
 
@@ -68,13 +184,76 @@ function toRunRecord(row: RunRow, steps: StepExecutionRow[]) {
     startedAt: row.started_at,
     endedAt: row.ended_at,
     rerunOf: row.rerun_of,
+    warnings: row.warnings,
+    warningNotes: parseJson(row.warning_notes) ?? [],
     steps: steps.map(toStepRecord),
   };
+}
+
+export interface OAuthRouting {
+  // Absolute, or a bare path when the host's public origin is unknown.
+  callbackUrl: string;
+}
+
+function isAbsolute(url: string): boolean {
+  return /^https?:\/\//i.test(url);
+}
+
+// The redirect a sign-in uses: the host's own when it knows its origin,
+// otherwise the caller's, provided it names this host's callback path.
+function redirectUriFor(
+  routing: OAuthRouting | undefined,
+  requested: string | null | undefined,
+): string {
+  if (!routing) throw new GraphQLError("This host serves no OAuth2 callback");
+  if (isAbsolute(routing.callbackUrl)) return routing.callbackUrl;
+  if (!requested) {
+    throw new GraphQLError(
+      "This host does not know its public URL; pass redirectUri",
+    );
+  }
+  let url: URL;
+  try {
+    url = new URL(requested);
+  } catch {
+    throw new GraphQLError(`"${requested}" is not a URL`);
+  }
+  if (
+    (url.protocol !== "https:" && url.protocol !== "http:") ||
+    url.pathname !== routing.callbackUrl ||
+    url.search !== "" ||
+    url.hash !== ""
+  ) {
+    throw new GraphQLError(
+      `redirectUri must be this host's ${routing.callbackUrl}`,
+    );
+  }
+  return url.href;
+}
+
+// Only back to the page that asked: its Origin header is the browser's.
+function returnUrlFor(
+  requested: string | null | undefined,
+  ctx: Context,
+): string | undefined {
+  if (!requested) return undefined;
+  const origin = ctx.headers.origin;
+  let url: URL | undefined;
+  try {
+    url = new URL(requested);
+  } catch {
+    url = undefined;
+  }
+  if (!url || !origin || url.origin !== origin) {
+    throw new GraphQLError("returnUrl must be on the requesting page's origin");
+  }
+  return url.href;
 }
 
 export const getResolvers = (
   runtime: WorkflowRuntimeService,
   authorizationService: IAuthorizationService,
+  oauth?: OAuthRouting,
 ): Record<string, unknown> => {
   return {
     Query: {
@@ -82,36 +261,48 @@ export const getResolvers = (
     },
     WorkflowRuntimeQueries: {
       health: () => "ok",
-      blockDescriptor: (_parent: unknown, args: { blockType: string }) =>
-        runtime.blockDescriptor(args.blockType),
+      blockDescriptor: (_parent: unknown, args: { block: BlockInput }) =>
+        runtime.blockDescriptor(blockRef(args.block)),
       blockOptions: (
         _parent: unknown,
         args: {
-          blockType: string;
+          block: BlockInput;
           propName: string;
           input?: unknown;
           connectionId?: string | null;
+          searchValue?: string | null;
         },
         ctx: Context,
       ) =>
         runtime.blockOptions(
-          args.blockType,
+          blockRef(args.block),
           args.propName,
           args.input,
           args.connectionId ?? undefined,
           ctx,
+          args.searchValue ?? undefined,
         ),
       pieceCatalog: () => runtime.pieceCatalog(),
-      pieceActions: (_parent: unknown, args: { packageName: string }) =>
-        runtime.pieceActions(args.packageName),
-      pieceTriggers: (_parent: unknown, args: { packageName: string }) =>
-        runtime.pieceTriggers(args.packageName),
+      pieceActions: (_parent: unknown, args: PieceArgs) =>
+        runtime.pieceActions(args.packageName, args.version ?? undefined),
+      pieceTriggers: (_parent: unknown, args: PieceArgs) =>
+        runtime.pieceTriggers(args.packageName, args.version ?? undefined),
       blockOutputTree: (
         _parent: unknown,
-        args: { blockType: string; config?: unknown },
-      ) => runtime.blockOutputTree(args.blockType, args.config),
-      pieceDetail: (_parent: unknown, args: { packageName: string }) =>
-        runtime.pieceDetail(args.packageName),
+        args: { block: BlockInput; config?: unknown },
+      ) => runtime.blockOutputTree(blockRef(args.block), args.config),
+      stepOutputTree: (
+        _parent: unknown,
+        args: { workflowId: string; stepId: string },
+        ctx: Context,
+      ) => runtime.stepOutputTree(args.workflowId, args.stepId, ctx),
+      blockResolutions: (
+        _parent: unknown,
+        args: { workflowId: string },
+        ctx: Context,
+      ) => runtime.blockResolutions(args.workflowId, ctx),
+      pieceDetail: (_parent: unknown, args: PieceArgs) =>
+        runtime.pieceDetail(args.packageName, args.version ?? undefined),
       searchBlocks: (
         _parent: unknown,
         args: { query: string; limit?: number | null },
@@ -120,9 +311,14 @@ export const getResolvers = (
         runtime.connections(ctx),
       webhookEndpoint: (
         _parent: unknown,
-        args: { workflowId: string },
+        args: { workflowId: string; driveId?: string | null },
         ctx: Context,
-      ) => runtime.webhookEndpoint(args.workflowId, ctx),
+      ) =>
+        syncAware(() =>
+          runtime.webhookEndpoint(args.workflowId, ctx, {
+            driveId: args.driveId ?? undefined,
+          }),
+        ),
       secret: async (_parent: unknown, args: { ref: string }) => {
         try {
           return await (await runtime.secrets()).stat(args.ref);
@@ -132,21 +328,67 @@ export const getResolvers = (
         }
       },
       secrets: async () => (await runtime.secrets()).list(),
+      oauthRedirectUri: () => oauth?.callbackUrl ?? null,
+      oauthAttempt: (_parent: unknown, args: { state: string }, ctx: Context) =>
+        runtime.oauthAttempt(args.state, ctx),
       triggerStates: async (_parent: unknown, _args: unknown, ctx: Context) =>
         (await runtime.triggerStates(ctx)).map((row) => ({
           workflowId: row.workflow_id,
-          blockType: row.block_type,
+          pieceName: row.piece_name,
+          triggerName: row.trigger_name,
           status: row.status,
           intervalMs: row.interval_ms,
           nextPollAt: row.next_poll_at,
           lastPollAt: row.last_poll_at,
           lastError: row.last_error,
           consecutiveFailures: row.consecutive_failures,
+          nextRenewAt: row.next_renew_at,
+          renewError: row.renew_error,
+          renewFailures: row.renew_failures,
+          pieceVersion: row.piece_version,
+          pieceSource: row.piece_source,
+          versionMatch: row.version_match,
+          versionNote: row.version_note,
         })),
-      runs: async (_parent: unknown, args: RunsArgs, ctx: Context) =>
-        (await runtime.runs(args, ctx)).map((record) =>
-          toRunRecord(record.row, record.steps),
-        ),
+      runs: async (
+        _parent: unknown,
+        args: RunsArgs,
+        ctx: Context,
+        info?: GraphQLResolveInfo,
+      ) =>
+        (
+          await runtime.runs(
+            { ...args, withStepData: readsStepData(info, []) },
+            ctx,
+          )
+        ).map((record) => toRunRecord(record.row, record.steps)),
+      runsPage: async (
+        _parent: unknown,
+        args: RunsPageArgs,
+        ctx: Context,
+        info?: GraphQLResolveInfo,
+      ) => {
+        const { paging, ...scope } = args;
+        const page = await cursorAware(() =>
+          runtime.runsPage(
+            {
+              ...scope,
+              limit: paging?.limit ?? undefined,
+              cursor: paging?.cursor ?? null,
+              withStepData: readsStepData(info, ["items"]),
+            },
+            ctx,
+          ),
+        );
+        return {
+          items: page.records.map((record) =>
+            toRunRecord(record.row, record.steps),
+          ),
+          hasNextPage: page.hasNextPage,
+          hasPreviousPage: Boolean(paging?.cursor),
+          cursor: page.cursor,
+        };
+      },
       run: async (_parent: unknown, args: { id: string }, ctx: Context) => {
         const record = await runtime.run(args.id, ctx);
         return record ? toRunRecord(record.row, record.steps) : null;
@@ -160,9 +402,38 @@ export const getResolvers = (
         runtime.fire(args.workflowId, args.payload, "manual", undefined, ctx),
       testTrigger: (
         _parent: unknown,
+        args: {
+          workflowId: string;
+          payload?: unknown;
+          timeoutSeconds?: number | null;
+          driveId?: string | null;
+        },
+        ctx: Context,
+      ) =>
+        syncAware(() =>
+          runtime.testTrigger(args.workflowId, ctx, {
+            ...(args.payload !== undefined ? { payload: args.payload } : {}),
+            ...(typeof args.timeoutSeconds === "number"
+              ? { timeoutMs: args.timeoutSeconds * 1000 }
+              : {}),
+            driveId: args.driveId ?? undefined,
+          }),
+        ),
+      cancelTriggerTest: (
+        _parent: unknown,
         args: { workflowId: string },
         ctx: Context,
-      ) => runtime.testTrigger(args.workflowId, ctx),
+      ) => runtime.cancelTriggerTestFor(args.workflowId, ctx),
+      testStep: (
+        _parent: unknown,
+        args: { workflowId: string; stepId: string; driveId?: string | null },
+        ctx: Context,
+      ) =>
+        syncAware(() =>
+          runtime.testStep(args.workflowId, args.stepId, ctx, {
+            driveId: args.driveId ?? undefined,
+          }),
+        ),
       rerun: (_parent: unknown, args: { runId: string }, ctx: Context) =>
         runtime.rerun(args.runId, ctx),
       createSecret: async (
@@ -198,6 +469,23 @@ export const getResolvers = (
         args: { connectionId: string },
         ctx: Context,
       ) => runtime.checkConnection(args.connectionId, ctx),
+      // Signing in mints a secret, so it takes what createSecret takes.
+      startOAuth: (
+        _parent: unknown,
+        args: {
+          connectionId: string;
+          redirectUri?: string | null;
+          returnUrl?: string | null;
+        },
+        ctx: Context,
+      ) => {
+        requireAdmin(authorizationService, ctx);
+        const returnUrl = returnUrlFor(args.returnUrl, ctx);
+        return runtime.startOAuth(args.connectionId, ctx, {
+          redirectUri: redirectUriFor(oauth, args.redirectUri),
+          ...(returnUrl ? { returnUrl } : {}),
+        });
+      },
     },
   };
 };

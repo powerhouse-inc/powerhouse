@@ -12,147 +12,110 @@ export type PieceTriggerTemplateArgs = PieceNames & {
   withAuth: boolean;
 };
 
-const STORE_LIKE = `// The half of the framework's Store this trigger uses; the host serves it.
-interface StoreLike {
-  get(key: string): Promise<unknown>;
-  put(key: string, value: unknown): Promise<unknown>;
-}`;
-
-const fetchRecords = (v: PieceTriggerTemplateArgs) =>
-  v.withAuth
-    ? `  const records = await clientFor(context.auth).request<{ id: string }[]>({
-    path: "records",
-    query: { ordering: "-created" },
-  });`
-    : `  // What this trigger watches, reached without credentials. Replace the
-  // call; what the cursor below needs is a stable id on each record.
-  const response = await fetch("https://example.com/records");
-  const records = (await response.json()) as { id: string }[];`;
-
-const pollingBody = (v: PieceTriggerTemplateArgs) => `
-// One cursor per workflow: the host serves ctx.store at FLOW scope, so two
-// workflows watching the same service keep their own reading of it.
-const CURSOR_KEY = "${v.kebabCaseName}:${v.triggerName}-cursor";
-
-interface Cursor {
-  seen: string[];
-}
-
-// A cursor that cannot be read is treated as absent rather than fatal: the
-// poll then reports nothing new and reseeds, losing one cycle of changes.
-function parseCursor(value: unknown): Cursor {
-  if (typeof value !== "object" || value === null) return { seen: [] };
-  const seen = (value as { seen?: unknown }).seen;
-  return {
-    seen: Array.isArray(seen) ? seen.filter((id) => typeof id === "string") : [],
-  };
-}
-
-async function poll(context: {
-  auth?: unknown;
-  store: StoreLike;
-}): Promise<unknown[]> {
-${fetchRecords(v)}
-  const cursor = parseCursor(await context.store.get(CURSOR_KEY));
-  const seen = new Set(cursor.seen);
-  const fresh = records.filter((record) => !seen.has(record.id));
-  // Rebuilt from each poll rather than accumulated, so the cursor stays
-  // bounded by what the service currently reports.
-  await context.store.put(CURSOR_KEY, { seen: records.map((r) => r.id) });
-  return fresh;
-}
-`;
-
-const pollingTrigger = () => `  type: TriggerStrategy.POLLING,
-  props: {},
-  // What the editor shows as the trigger's payload before it has ever fired.
-  sampleData: { id: "1", name: "A record" },
-  // Called when a workflow using this trigger is switched on: seed the cursor
-  // so the first real poll does not replay the whole history.
-  async onEnable(context) {
-    await poll(context);
-  },
-  async onDisable(context) {
-    await context.store.put(CURSOR_KEY, { seen: [] });
-  },
-  async run(context) {
-    return await poll(context);
-  },
-`;
-
-const webhookRegistration = (v: PieceTriggerTemplateArgs) =>
-  v.withAuth
-    ? `  async onEnable(context) {
-    const created = await clientFor(context.auth).request<{ id: string }>({
-      method: "POST",
-      path: "webhooks",
-      json: { url: context.webhookUrl, events: ["record.created"] },
-    });
-    await context.store.put(WEBHOOK_KEY, created.id);
-  },
-  async onDisable(context) {
-    const id = await context.store.get(WEBHOOK_KEY);
-    if (typeof id !== "string" || id === "") return;
-    await clientFor(context.auth).request({
-      method: "DELETE",
-      path: \`webhooks/\${encodeURIComponent(id)}\`,
-    });
-  },`
-    : `  // Nothing to register yet: replace these with the calls that tell the
-  // service to post to context.webhookUrl, and to stop.
-  async onEnable(context) {
-    await context.store.put(WEBHOOK_KEY, context.webhookUrl);
-  },
-  async onDisable(context) {
-    await context.store.put(WEBHOOK_KEY, "");
-  },`;
-
-const webhookBody = (v: PieceTriggerTemplateArgs) => `
-// What onEnable registered, so onDisable can take it down again.
-const WEBHOOK_KEY = "${v.kebabCaseName}:${v.triggerName}-webhook";
-`;
-
-const webhookTrigger = (
-  v: PieceTriggerTemplateArgs,
-) => `  type: TriggerStrategy.WEBHOOK,
-  props: {},
-  // What the editor shows as the trigger's payload before it has ever fired.
-  sampleData: { id: "1", name: "A record" },
-${webhookRegistration(v)}
-  // One delivery, one run: the host has already answered the service.
-  run(context) {
-    return Promise.resolve([context.payload.body]);
-  },
-`;
-
-export const pieceTriggerFileTemplate = (v: PieceTriggerTemplateArgs) => {
-  const polling = v.strategy === "polling";
-  const framework = ["createTrigger", "TriggerStrategy"];
+const pollingTemplate = (v: PieceTriggerTemplateArgs) => {
+  const auth = v.withAuth
+    ? `AppConnectionValueForAuthProperty<typeof ${v.camelCaseName}Auth>`
+    : "undefined";
   const imports = [
-    `import { ${framework.join(", ")} } from "${PIECES_FRAMEWORK_PACKAGE}";`,
+    `import { createTrigger, ${v.withAuth ? "" : "PieceAuth, "}TriggerStrategy${v.withAuth ? ", type AppConnectionValueForAuthProperty" : ""} } from "${PIECES_FRAMEWORK_PACKAGE}";`,
+    `import { DedupeStrategy, pollingHelper, type Polling } from "${PIECES_FRAMEWORK_PACKAGE}/common";`,
     v.withAuth
       ? `import { ${v.camelCaseName}Auth } from "../auth.js";`
       : undefined,
-    v.withAuth
-      ? `import { clientFor${polling ? ", type StoreLike" : ""} } from "../common/context.js";`
-      : undefined,
-    polling && !v.withAuth ? STORE_LIKE : undefined,
   ]
     .filter((line) => line !== undefined)
     .join("\n");
 
-  const description = polling
-    ? "Fires once for each record the service has not reported before."
-    : "Fires once for each delivery the service posts to this workflow.";
+  return ts`
+${imports}
+
+// The second type argument is the props' values: update it when adding props
+const polling: Polling<${auth}, Record<string, never>> = {
+  strategy: DedupeStrategy.TIMEBASED,
+  // Fetch items newer than lastFetchEpochMS and return each as
+  // { epochMilliSeconds, data }; each new item starts one workflow run
+  items: () => Promise.resolve([]),
+};
+
+export const ${v.exportName} = createTrigger({
+${v.withAuth ? `  auth: ${v.camelCaseName}Auth,` : "  // Types context.auth as undefined, as the Polling above expects\n  auth: PieceAuth.None(),\n  requireAuth: false,"}
+  // Saved workflows refer to the trigger by name: don't rename it once published
+  name: "${v.triggerName}",
+  displayName: "${v.triggerDisplayName}",
+  // Shown under the trigger in the editor: say what event starts a run
+  description: "",
+  // Inputs the user fills in on the trigger, read from context.propsValue
+  props: {},
+  // An example item, so later steps can be wired up before the trigger fires
+  sampleData: {},
+  type: TriggerStrategy.POLLING,
+  async test(context) {
+    return await pollingHelper.test(polling, context);
+  },
+  // Call context.setSchedule({ intervalMs }) to set the default polling interval
+  async onEnable(context) {
+    const { store, auth, propsValue, isRepublish } = context;
+    await pollingHelper.onEnable(polling, {
+      store,
+      auth,
+      propsValue,
+      isRepublish,
+    });
+  },
+  async onDisable(context) {
+    const { store, auth, propsValue } = context;
+    await pollingHelper.onDisable(polling, { store, auth, propsValue });
+  },
+  async run(context) {
+    return await pollingHelper.poll(polling, context);
+  },
+});
+`.raw;
+};
+
+const webhookTemplate = (v: PieceTriggerTemplateArgs) => {
+  const imports = [
+    `import { createTrigger, ${v.withAuth ? "" : "PieceAuth, "}TriggerStrategy } from "${PIECES_FRAMEWORK_PACKAGE}";`,
+    v.withAuth
+      ? `import { ${v.camelCaseName}Auth } from "../auth.js";`
+      : undefined,
+  ]
+    .filter((line) => line !== undefined)
+    .join("\n");
 
   return ts`
 ${imports}
-${polling ? pollingBody(v) : webhookBody(v)}
+
 export const ${v.exportName} = createTrigger({
-${v.withAuth ? `  auth: ${v.camelCaseName}Auth,` : "  requireAuth: false,"}
+${v.withAuth ? `  auth: ${v.camelCaseName}Auth,` : "  // Types context.auth as undefined\n  auth: PieceAuth.None(),\n  requireAuth: false,"}
+  // Saved workflows refer to the trigger by name: don't rename it once published
   name: "${v.triggerName}",
   displayName: "${v.triggerDisplayName}",
-  description: "${description}",
-${polling ? pollingTrigger() : webhookTrigger(v)}});
+  // Shown under the trigger in the editor: say what event starts a run
+  description: "",
+  // Inputs the user fills in on the trigger, read from context.propsValue
+  props: {},
+  // An example item, so later steps can be wired up before the trigger fires
+  sampleData: {},
+  type: TriggerStrategy.WEBHOOK,
+  async onEnable() {
+    // Called when a workflow is switched on: register context.webhookUrl
+    // with the service
+  },
+  async onDisable() {
+    // Called when the workflow is switched off: remove the registration
+  },
+  // If the service expires registrations, add renewConfiguration and onRenew
+  // Testing the trigger shows sampleData; add test() to fetch real items
+  run(context) {
+    // context.payload holds each delivery ({ body, headers, queryParams }).
+    // Also called periodically with no payload: ask the service what changed
+    const payload: { body: unknown } | undefined = context.payload;
+    return Promise.resolve(payload === undefined ? [] : [payload.body]);
+  },
+});
 `.raw;
 };
+
+export const pieceTriggerFileTemplate = (v: PieceTriggerTemplateArgs) =>
+  v.strategy === "polling" ? pollingTemplate(v) : webhookTemplate(v);

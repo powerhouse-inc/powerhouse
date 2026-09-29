@@ -11,10 +11,6 @@ import path from "path";
 import {
   pieceActionFileTemplate,
   pieceAuthFileTemplate,
-  pieceAuthValueFileTemplate,
-  pieceClientFileTemplate,
-  pieceContextFileTemplate,
-  pieceErrorsFileTemplate,
   pieceIndexFileTemplate,
   pieceLogoFileTemplate,
   pieceTriggerFileTemplate,
@@ -37,9 +33,6 @@ import type {
   PieceNames,
   PieceTriggerStrategy,
 } from "./types.js";
-
-const EXAMPLE_ACTION = "get-record";
-const EXAMPLE_TRIGGER = "new-record";
 
 export function getPieceNames(pieceName: string): PieceNames {
   return {
@@ -82,12 +75,11 @@ function getPiecesArray(sourceFile: SourceFile) {
 }
 
 // Appended to with ts-morph rather than rewritten: every other element, its
-// comments and a hand-tuned version stay exactly as they were written.
+// comments and hand edits stay exactly as they were written.
 async function addPieceToList(v: {
   project: Project;
   piecesDirPath: string;
   pieceId: string;
-  pieceVersion: string;
   kebabCaseName: string;
 }) {
   const filePath = path.join(v.piecesDirPath, "index.ts");
@@ -101,10 +93,10 @@ async function addPieceToList(v: {
   const list = getPiecesArray(sourceFile);
   if (!list) {
     // A list we cannot find the array in is the user's: say what to paste
-    // rather than guess, which is how a hand-tuned version gets clobbered.
+    // rather than guess, which is how a hand-written list gets clobbered.
     throw new Error(
       `pieces/index.ts has no "pieces" array to add to. Add this entry by hand:\n` +
-        `  { name: "${v.pieceId}", version: "${v.pieceVersion}", entry: "${entry}" }`,
+        `  { name: "${v.pieceId}", entry: "${entry}" }`,
     );
   }
 
@@ -117,9 +109,7 @@ async function addPieceToList(v: {
     );
   if (already) return;
 
-  list.addElement(
-    `{\n  name: "${v.pieceId}",\n  version: "${v.pieceVersion}",\n  entry: "${entry}",\n}`,
-  );
+  list.addElement(`{\n  name: "${v.pieceId}",\n  entry: "${entry}",\n}`);
   await formatSourceFileWithPrettier(sourceFile);
 }
 
@@ -185,7 +175,6 @@ function pieceDirPaths(project: Project, kebabCaseName: string) {
     piecesDirPath,
     pieceDirPath,
     libDirPath: path.join(pieceDirPath, "lib"),
-    commonDirPath: path.join(pieceDirPath, "lib", "common"),
     actionsDirPath: path.join(pieceDirPath, "lib", "actions"),
     triggersDirPath: path.join(pieceDirPath, "lib", "triggers"),
   };
@@ -197,12 +186,10 @@ export async function tsMorphGeneratePiece(args: {
   pieceName: string;
   /** The piece id a block type names. */
   pieceId: string;
-  /** The version the list entry declares. */
-  pieceVersion: string;
   auth: PieceAuthKind;
   description: string;
 }): Promise<void> {
-  const { project, pieceName, pieceId, pieceVersion, auth, description } = args;
+  const { project, pieceName, pieceId, auth, description } = args;
   const names = getPieceNames(pieceName);
   const withAuth = auth !== "none";
   const paths = pieceDirPaths(project, names.kebabCaseName);
@@ -224,9 +211,6 @@ export async function tsMorphGeneratePiece(args: {
     paths.piecesDirPath,
     paths.pieceDirPath,
     paths.libDirPath,
-    paths.actionsDirPath,
-    paths.triggersDirPath,
-    ...(withAuth ? [paths.commonDirPath] : []),
   );
 
   await writeUnlessExists(
@@ -235,77 +219,26 @@ export async function tsMorphGeneratePiece(args: {
     pieceLogoFileTemplate(names),
   );
   if (withAuth) {
-    const authKind = auth === "secret" ? "secret" : "custom";
-    await writeUnlessExists(
-      project,
-      path.join(paths.commonDirPath, "errors.ts"),
-      pieceErrorsFileTemplate(names),
-    );
-    await writeUnlessExists(
-      project,
-      path.join(paths.commonDirPath, "auth-value.ts"),
-      pieceAuthValueFileTemplate({ ...names, auth: authKind }),
-    );
-    await writeUnlessExists(
-      project,
-      path.join(paths.commonDirPath, "client.ts"),
-      pieceClientFileTemplate(names),
-    );
-    await writeUnlessExists(
-      project,
-      path.join(paths.commonDirPath, "context.ts"),
-      pieceContextFileTemplate(names),
-    );
     await writeUnlessExists(
       project,
       path.join(paths.libDirPath, "auth.ts"),
-      pieceAuthFileTemplate({ ...names, auth: authKind }),
+      pieceAuthFileTemplate({
+        ...names,
+        auth: auth === "secret" ? "secret" : "custom",
+      }),
     );
   }
 
   await writeUnlessExists(
     project,
-    path.join(paths.actionsDirPath, `${EXAMPLE_ACTION}.ts`),
-    pieceActionFileTemplate({
-      ...names,
-      exportName: actionExportName(names, EXAMPLE_ACTION),
-      actionName: EXAMPLE_ACTION,
-      actionDisplayName: capitalCase(EXAMPLE_ACTION),
-      withAuth,
-    }),
-  );
-  await writeUnlessExists(
-    project,
-    path.join(paths.triggersDirPath, `${EXAMPLE_TRIGGER}.ts`),
-    pieceTriggerFileTemplate({
-      ...names,
-      exportName: triggerExportName(names, EXAMPLE_TRIGGER),
-      triggerName: EXAMPLE_TRIGGER,
-      triggerDisplayName: capitalCase(EXAMPLE_TRIGGER),
-      strategy: "polling",
-      withAuth,
-    }),
-  );
-
-  await writeUnlessExists(
-    project,
     path.join(paths.pieceDirPath, "index.ts"),
-    pieceIndexFileTemplate({
-      ...names,
-      description,
-      withAuth,
-      actionExportName: actionExportName(names, EXAMPLE_ACTION),
-      actionFileName: EXAMPLE_ACTION,
-      triggerExportName: triggerExportName(names, EXAMPLE_TRIGGER),
-      triggerFileName: EXAMPLE_TRIGGER,
-    }),
+    pieceIndexFileTemplate({ ...names, description, withAuth }),
   );
 
   await addPieceToList({
     project,
     piecesDirPath: paths.piecesDirPath,
     pieceId,
-    pieceVersion,
     kebabCaseName: names.kebabCaseName,
   });
 
@@ -400,11 +333,10 @@ export async function tsMorphGeneratePieceTrigger(args: {
 export async function syncPiecesRegistration(args: {
   project: Project;
   packageName: string;
-  packageVersion: string;
   /** Limit which directories may gain a list entry; the manifest still syncs whole. */
   only?: string;
 }): Promise<{ ids: string[] }> {
-  const { project, packageName, packageVersion, only } = args;
+  const { project, packageName, only } = args;
   const { directory: piecesDir } = getOrCreateDirectory(project, PIECES_DIR);
   const piecesDirPath = piecesDir.getPath();
   const projectDir = piecesDir.getParentOrThrow().getPath();
@@ -430,7 +362,6 @@ export async function syncPiecesRegistration(args: {
       project,
       piecesDirPath,
       pieceId: id,
-      pieceVersion: id === packageName ? packageVersion : "1.0.0",
       kebabCaseName: dirName,
     });
   }

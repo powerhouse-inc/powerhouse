@@ -3,9 +3,17 @@
 // A holder, not a finder: resolving a package is the host's package manager's
 // job, and this runtime must not depend on reactor-api to have it done.
 import { childLogger } from "document-model";
-import type { LocalPiece } from "../pieces/index.js";
+import {
+  builtinLocalPieces,
+  isBuiltinPiece,
+  type LocalPiece,
+} from "../pieces/index.js";
 
 const logger = childLogger(["workflow", "piece-registry"]);
+
+function pieceLocation(piece: LocalPiece): string {
+  return piece.entryPath ?? piece.bundleDir ?? piece.entryUrl ?? "?";
+}
 
 export class PieceRegistry {
   private byName = new Map<string, LocalPiece>();
@@ -15,9 +23,18 @@ export class PieceRegistry {
   setPieces(pieces: readonly LocalPiece[]): void {
     const found = new Map<string, LocalPiece>();
     for (const piece of pieces) {
-      // The first to claim a name keeps it, so a project can override a piece
-      // one of its dependencies ships.
-      if (!found.has(piece.name)) found.set(piece.name, piece);
+      // The first claim keeps the name; the host hands pieces in package-name order.
+      const held = found.get(piece.name);
+      if (!held) {
+        found.set(piece.name, piece);
+        continue;
+      }
+      logger.warn(
+        "Piece @name is shipped twice; keeping @kept, ignoring @ignored",
+        piece.name,
+        `${held.version} (${pieceLocation(held)})`,
+        `${piece.version} (${pieceLocation(piece)})`,
+      );
     }
     this.byName = found;
     const names = [...found.keys()].join(", ");
@@ -48,8 +65,7 @@ export class PieceRegistry {
     return [...this.byName.values()];
   }
 
-  // Name -> installed version, the registry parseBlockType resolves an
-  // unversioned block type against.
+  // Name -> installed version.
   versions(): Record<string, string> {
     return Object.fromEntries(
       [...this.byName.values()].map((piece) => [piece.name, piece.version]),
@@ -64,3 +80,19 @@ export class PieceRegistry {
 
 // One registry for the runtime, the way the bundle cache is one directory.
 export const packagePieces = new PieceRegistry();
+
+// What the runtime can run as installed: its built-in pieces, which always
+// answer for their names, then the host's.
+export function installedPiece(name: string): LocalPiece | undefined {
+  return (
+    builtinLocalPieces().find((piece) => piece.name === name) ??
+    packagePieces.lookup(name)
+  );
+}
+
+export function installedPieces(): LocalPiece[] {
+  return [
+    ...builtinLocalPieces(),
+    ...packagePieces.entries().filter((piece) => !isBuiltinPiece(piece.name)),
+  ];
+}

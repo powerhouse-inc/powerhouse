@@ -81,9 +81,8 @@ export type PHConnectApp = {
   studioMode?: boolean;
   // Powerhouse workflows in Connect: the tab loads the workflow package
   // (workflow + connection document models, their editors and Workflow
-  // Studio) and the reactor worker registers its models. Connect's half of
-  // the switchboard's `workflows.enabled` / PH_WORKFLOWS_ENABLED. Off by
-  // default, and independent of studioMode in both directions.
+  // Studio) and the reactor worker registers its models. Falls back to the
+  // top-level `workflows.enabled` when unset. Independent of studioMode.
   workflowsEnabled?: boolean;
 };
 
@@ -138,6 +137,17 @@ export type PHConnectSentry = {
   env?: string;
   /** Enable Sentry performance tracing. */
   tracing?: boolean;
+};
+
+export type PHConnectOpenPanel = {
+  /** OpenPanel client id. Empty string (the default) disables OpenPanel. */
+  clientId?: string;
+  /** OpenPanel API URL, for self-hosted instances. */
+  apiUrl?: string;
+  /** Track UI events. */
+  trackUiEvents?: boolean;
+  /** Track document operations. */
+  trackOperations?: boolean;
 };
 
 export type PHConnectInstance = {
@@ -282,6 +292,7 @@ export type PHConnectRuntimeConfig = {
   drives?: PHConnectDrives;
   renown?: PHConnectRenown;
   sentry?: PHConnectSentry;
+  openPanel?: PHConnectOpenPanel;
   instance?: PHConnectInstance;
   reactor?: PHConnectReactor;
   pwa?: PHConnectPwa;
@@ -349,8 +360,8 @@ export type PowerhouseConfig = {
     driveUrl?: string;
     connectPort?: number;
   };
-  // Powerhouse workflows on this reactor. Off unless turned on here or with
-  // PH_WORKFLOWS_ENABLED, which wins over this file.
+  // Powerhouse workflows on this reactor and in Connect. PH_WORKFLOWS_ENABLED
+  // wins for the reactor, connect.app.workflowsEnabled for Connect.
   workflows?: {
     enabled?: boolean;
   };

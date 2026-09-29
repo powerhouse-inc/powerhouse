@@ -235,6 +235,12 @@ jobs:
         with:
           bun-version: 1.3.8
 
+      # The UI suite's Postgres piece test needs this image; pull it while
+      # the build runs, so the test doesn't.
+      - name: Pull the Postgres image in the background
+        if: steps.workflow-ui.outputs.run == 'true'
+        run: nohup docker pull postgres:16-alpine > /tmp/postgres-pull.log 2>&1 &
+
       # The suite publishes the workspace to a local registry and installs
       # switchboard from it, so the tarballs have to carry dist output.
       - name: Build
@@ -272,9 +278,10 @@ jobs:
         if: steps.workflow-ui.outputs.run == 'true'
         run: pnpm --filter @powerhousedao/workflow test:ui
 
+      # Also on success, so a test that passed on retry leaves its trace.
       - name: Upload workflow UI report
         uses: actions/upload-artifact@v4
-        if: failure() && steps.workflow-ui.outputs.run == 'true'
+        if: always() && steps.workflow-ui.outputs.run == 'true'
         with:
           name: workflow-ui-playwright-report
           path: |

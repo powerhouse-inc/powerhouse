@@ -3,16 +3,23 @@ import { openSeededPage, type SeededPage } from "../../scripts/ui-stack.js";
 
 export const test = base.extend<{
   theme: "light" | "dark";
+  // Off for specs that add their own documents and never read the seed.
+  seed: boolean;
   stack: SeededPage;
   app: Page;
 }>({
   theme: ["light", { option: true }],
+  seed: [true, { option: true }],
   // A fresh context on a new drive per test, so tests never share state.
-  stack: async ({ browser, theme }, use) => {
-    const stack = await openSeededPage(browser, { colorScheme: theme });
-    await use(stack);
-    await stack.context.close();
-  },
+  // Its own budget, so a slow seed doesn't spend the test's.
+  stack: [
+    async ({ browser, theme, seed }, use) => {
+      const stack = await openSeededPage(browser, { colorScheme: theme, seed });
+      await use(stack);
+      await stack.context.close();
+    },
+    { timeout: 90_000 },
+  ],
   app: async ({ stack }, use) => {
     await use(stack.page);
   },

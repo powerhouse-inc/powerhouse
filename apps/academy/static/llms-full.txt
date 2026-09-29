@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-25T12:32:33.411Z
+> Generated: 2026-09-29T13:44:35.815Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -2563,11 +2563,11 @@ A **workflow** is the third way. Something happens, and a chain of steps runs. T
 
 ## A workflow is a document
 
-This is the part worth getting straight first, because everything else follows from it.
-
 A workflow is not a config file or a row in the runtime's database. It's a Powerhouse document of type `powerhouse/workflow`, living in a drive alongside your other documents. So it inherits what every document gets: an operation log of every edit, sync across <Term>Reactor</Term>s, history you can replay, and the same permissions model.
 
 Editing a workflow in Connect dispatches operations. Two people can edit one. You can see who changed a step and when.
+
+A workflow document holds two copies of the workflow. The **draft** is what you edit. The **published** copy is a snapshot the draft takes when you publish. Triggers and runs use the published copy, so an edit reaches production only when someone publishes it, and a workflow that was never published can't be enabled.
 
 ## The parts
 
@@ -2578,26 +2578,19 @@ trigger ──▶ step ──▶ branch ──true──▶ step ──▶ step
 
 **The trigger** is the one thing that starts a run. A workflow has exactly one — a new row appearing in an external service, a webhook delivery, a schedule, or a document event on the reactor itself. A workflow with no trigger is a draft that can't do anything yet.
 
-**Steps** are the work. Each names a *block type* — one action belonging to one piece, which you'll meet in the [next lesson](../docs/docs/02-pieces-and-connections.mdx) — plus the configuration that action needs. A step's config can refer to the trigger payload and to earlier steps' output, which is how data moves down the chain.
+**Steps** are the work. Each names one action belonging to one piece, which you'll meet in the [next lesson](../docs/docs/02-pieces-and-connections.mdx), plus the configuration that action needs. A step's config can refer to the trigger payload and to earlier steps' output, which is how data moves down the chain. A step marked **skip** is passed over at run time: it records a `null` output and the run continues on its `next` port.
 
 **Edges** connect steps, and each leaves its source through a named **port**. A plain step has a `next` port; a branch has `true` and `false`; any step also has an `error` port, so you can route a failure somewhere useful instead of just failing the run.
 
 Decisions are made by a branch step rather than by clever expressions on the edges: the expression language is deliberately a lookup, not a small programming language, so `{{steps.check.output.severity}}` resolves a value but `{{a == b}}` does not compare anything. The [authoring reference](/academy/Build/WorkWithData/AuthoringWorkflows) has the syntax and the branch block.
 
-**Variables** are named values a workflow carries, with defaults the trigger payload can overwrite.
-
-**A policy** governs the whole workflow: whether firings run concurrently, queue up or drop while one is already running; how long a run may take; the default retry rule; and what happens to a run whose steps have all failed terminally.
+**Variables** are named values a workflow carries, read as `{{variables.<key>}}`. A variable can be typed (`TEXT`, `NUMBER`, `BOOLEAN` or `JSON`), and its value is coerced when a run starts. A `SECRET` variable holds a reference to a stored secret and resolves to the secret's value at run time.
 
 ## What a run is
 
-When a trigger fires, the runtime starts a **run** and walks the graph. Each run records the workflow version it executed, so a run you inspect next month tells you what the workflow looked like *then*, not now.
+When a trigger fires, the runtime starts a **run** and walks the published graph. Each run records the version of the published workflow it executed, so a run you inspect next month tells you what the workflow looked like *then*, not now.
 
-Runs end in one of a handful of states — succeeded, failed, cancelled — and two that are worth knowing about:
-
-- **Waiting** — the run is suspended at a step that's expecting something, and will pick up where it left off.
-- **Parked** — every step failed terminally and the policy said park rather than notify or ignore. A parked run is a run someone needs to look at; it holds everything it knew so you can see how far it got.
-
-Steps retry according to the policy before they fail terminally. A step can also declare an idempotency key, so a delivery that arrives twice produces one effect rather than two.
+A run ends `SUCCEEDED` or `FAILED`. Each step runs once, and a step that runs past its `timeoutSeconds` fails. A failed run can be rerun: the steps that succeeded replay from the run journal, and execution restarts at the step that failed.
 
 ## Workflow or processor?
 
@@ -2625,7 +2618,7 @@ Two halves, and they're switched on separately:
 }
 ```
 
-Both default to off. They're independent: a headless reactor can run workflows with no Connect at all, and an operator can enable the environment variable counterparts instead — see [Configure environment](/academy/Build/Launch/ConfigureEnvironment).
+Both default to off. They're independent: a headless reactor can run workflows with no Connect at all, and an operator can switch the runtime on with `PH_WORKFLOWS_ENABLED` instead — see [Configure environment](/academy/Build/Launch/ConfigureEnvironment).
 
 <Quiz
   question="A workflow has been running in production for a month. Someone edits one of its steps. What happens to the runs that already finished?"
@@ -2634,26 +2627,26 @@ Both default to off. They're independent: a headless reactor can run workflows w
       label:
         "They are re-executed against the new version, because the workflow document changed.",
       explanation:
-        "Nothing re-runs on an edit. A run executes once; editing the workflow affects future firings only.",
+        "Nothing re-runs on an edit. A run executes once, and an edit to the draft reaches future runs only once someone publishes it.",
     },
     {
       label:
         "They still report the version they executed, so what you inspect is the workflow as it was then.",
       correct: true,
       explanation:
-        "Exactly. Each run records the workflow version it ran, and the version is bumped on every structural edit — so an old run stays readable against the definition it actually used.",
+        "Exactly. Each run records the version of the published workflow it executed, so an old run stays readable against the definition it used. Edits to the draft change nothing until someone publishes them.",
     },
     {
       label:
         "They are deleted, since the definition they referred to no longer exists.",
       explanation:
-        "The workflow is a document with a full operation log — editing it adds history rather than replacing it, and past runs are retained according to the workflow's policy.",
+        "The workflow is a document with a full operation log. Editing it adds history rather than replacing it, and editing never deletes a run.",
     },
     {
       label:
         "Nothing is recorded either way; runs only exist while they are executing.",
       explanation:
-        "Runs are retained (for as long as the policy's retention says) and are visible in Workflow Studio, which is how you debug one that failed.",
+        "Runs are journaled and visible in Workflow Studio, which is how you debug one that failed.",
     },
   ]}
 />
@@ -2667,33 +2660,47 @@ Next: where the blocks in those steps actually come from.
 
 > Source: https://academy.vetra.io/academy/Learn/workflows/pieces-and-connections
 
-A workflow step doesn't contain code. It names a **block type** — one action, belonging to one **piece** — and carries the configuration that action needs.
+A workflow step doesn't contain code. It names one action, belonging to one **piece**, and carries the configuration that action needs. It names it with three fields:
 
-```
-@acme/piece-crm#get-record
-└──────┬──────┘ └────┬───┘
-    piece id       action
-```
-
-Triggers are named the same way, with a `trigger:` marker so a block type is unambiguous about which half of the piece it refers to:
-
-```
-@acme/piece-crm#trigger:new-record
+```json
+{
+  "pieceName": "@acme/piece-crm",
+  "pieceVersion": "1.4.0",
+  "actionName": "get-record"
+}
 ```
 
-A piece that arrives from a **registry** carries its version as well, because a
-reactor can hold more than one copy of it:
+A trigger is named the same way, with `triggerName` in place of `actionName`:
 
-```
-@activepieces/piece-github@0.9.0#create_branch
+```json
+{
+  "pieceName": "@acme/piece-crm",
+  "pieceVersion": "1.4.0",
+  "triggerName": "new-record"
+}
 ```
 
-A piece your own **package** ships doesn't, and deliberately: the copy the
-reactor installed is the copy that runs, so upgrading the package must not
-orphan every workflow that named its blocks. Don't assemble these strings by
-hand either way — ask the reactor for them, which the
+The version is exact, and it is the version of the package that ships the
+piece, wherever the piece comes from. It records which code a step was built
+against. It isn't part of the block's identity, though: the same action at
+`1.5.0` is the same block, so upgrading a package doesn't orphan the workflows
+that named it.
+
+A pinned version doesn't have to be present on the reactor. When no source has
+the exact version, the reactor runs the closest one it finds and records the
+match on the step: `compatible` for a higher version of the same major (the
+same minor for `0.x`), `fallback` for anything else. A mismatch never blocks a
+run. The block fails only when no source has the piece, or none has an
+action or trigger of that name.
+
+The engine's own blocks are a piece too, `@powerhousedao/piece-core`, which
+every reactor ships: the actions `branch` and `assert`, and the triggers
+`schedule`, `webhook` and `manual`. Its version is the version of the workflow
+runtime, and it always runs the copy the reactor has installed.
+
+Don't write these fields from memory. Ask the reactor for them instead, as the
 [workflow authoring reference](/academy/Build/WorkWithData/AuthoringWorkflows)
-shows how to do.
+shows.
 
 A piece is a connector: a named bundle of actions (things a step can do) and triggers (things that can start a run), each declaring the properties it takes and the shape of what it returns. Those declarations are what let Workflow Studio draw a form for a step and offer a later step the fields an earlier one produced — before anything has run.
 
@@ -2703,11 +2710,13 @@ Three sources, and a reactor reads all three the same way.
 
 **The reactor's own piece**, `@powerhousedao/piece-reactor`, ships with workflows and needs no installing. It's how a workflow reads and writes Powerhouse documents:
 
-- `#document-find`, `#document-get`, `#document-create`, `#document-dispatch`
-- `#document-schema` and `#document-types`, which report a model's shape at run time
-- `#trigger:document-event`, `#trigger:document-created`, `#trigger:document-deleted`
+- the actions `document-find`, `document-get`, `document-create`, `document-dispatch`
+- `document-schema` and `document-types`, which report a model's shape at run time
+- the triggers `document-event`, `document-created`, `document-deleted`
 
-A workflow that only moves data around inside Powerhouse needs nothing else. It's also the piece to copy conventions from: unversioned block types, kebab-case names.
+The document actions (`document-create`, `document-dispatch`, `document-get` and `document-schema`) have an advanced **Parse** option. **Exact**, the default, takes ids and JSON as given. **Extract from AI output** reads them out of a model's prose, such as a fenced JSON block or JSON after reasoning text, and reports what it read them from in `extractedFrom`. Use Extract when the input is an AI step's output.
+
+A workflow that only moves data around inside Powerhouse needs nothing else. It's also the piece to copy conventions from, such as kebab-case names.
 
 **Pieces your own package ships.** A reactor package already carries document models, editors and processors; it can carry pieces the same way. This is the route for anything specific to your domain — your internal API, your calculation, your service. It's the subject of the [Building a piece](/academy/Build/WorkWithData/BuildingAPiece) tutorial.
 
@@ -2721,15 +2730,23 @@ Most pieces talk to something outside the reactor, and that something usually wa
 
 A **connection** is its own document, of type `powerhouse/connection`: one credential, configured once, referenced by every step that needs it. A workflow step points at a connection by id rather than carrying an API key in its config.
 
-This matters for a reason that goes beyond tidiness. A workflow document syncs, has a full operation log, and is readable by anyone who can read the drive. A credential written into a step's config would inherit all of that. Keeping it in a connection means the secret itself is held by the runtime and only ever referred to by reference — what the documents carry is a pointer, not the key.
+A workflow document syncs, has a full operation log, and is readable by anyone who can read the drive. A credential written into a step's config would inherit all of that. Keeping it in a connection means the secret itself is held by the runtime and only ever referred to by reference — what the documents carry is a pointer, not the key.
 
 Some pieces offer more than one way to sign in, such as Slack's bot token or its OAuth flow. A connection picks one of them, and the piece runs with that method.
 
-A piece can also declare a **connection check**, which is what lets Connect show a connection as working or broken, with the account it's actually authenticated as, instead of leaving you to find out when a run fails at 3am. The connection editor's **Test connection** button runs it on demand.
+**Signing in with OAuth.** A piece that signs in with OAuth, such as Google Drive, uses an OAuth app that you register with the service yourself:
+
+1. In the service's developer console, create an OAuth app and add the **Redirect URL** the connection editor shows as an authorized redirect URI.
+2. Paste the app's client ID and client secret into the connection.
+3. Click **Connect**. A window opens on the service's own sign-in page; approve the access it asks for.
+
+The window closes, and the switchboard keeps the token and refreshes it before it expires. The connection holds only a reference to it. Because the app is yours, the service's consent screen names it, and may warn that it is unverified. A Google app left in **Testing** issues refresh tokens that expire after seven days, so publish it before relying on the connection.
+
+A piece can also declare a **connection check**, which is what lets Connect show a connection as working or broken, with the account it's actually authenticated as, before a run fails on it. The connection editor's **Test connection** button runs it on demand.
 
 ## What a piece is allowed to do
 
-Two limits are worth knowing about as an author, because they shape what your steps can do.
+Two limits shape what a step can do:
 
 **Reaching private addresses.** Piece code runs under an outbound address policy that refuses private and loopback space by default. A piece configuration is a place a user types a URL, which makes it a route into whatever your reactor can reach on its own network — so the default is to refuse. A deployment that genuinely needs a step to reach a service on its own network widens the policy by naming those addresses; it doesn't switch the guard off.
 
@@ -3212,7 +3229,6 @@ type PagedResults<T> = {
   options: PagingOptions;
   next?: () => Promise<PagedResults<T>>;
   nextCursor?: string;
-  totalCount?: number;
 };
 ```
 
@@ -6570,10 +6586,10 @@ await reactor.client.execute(documentId, "main", [
 ]);
 ```
 
-Later, anywhere the bytes are needed, call `service.get(ref)` and stream the body. In the browser, drain the stream into a `Blob` and hand it to `URL.createObjectURL` for an `<img>` or `<a download>`:
+Later, anywhere the bytes are needed, call `service.get(ref, { documentId })` and stream the body. `documentId` names the document whose operations reference the attachment; a remote service is authorized through it and refuses a read without one. In the browser, drain the stream into a `Blob` and hand it to `URL.createObjectURL` for an `<img>` or `<a download>`:
 
 ```typescript
-const response = await attachments.get(ref);
+const response = await attachments.get(ref, { documentId });
 
 const chunks: Uint8Array[] = [];
 const reader = response.body.getReader();
@@ -6710,8 +6726,8 @@ setAgentImageOperation(state, action) {
 | Method              | Returns                       | Description                                                                                              |
 | ------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `reserve(options)`  | `Promise<IAttachmentUpload>`  | Reserve a new attachment slot and return an upload handle.                                               |
-| `stat(ref)`         | `Promise<AttachmentHeader>`   | Look up metadata for an existing ref. Throws `AttachmentNotFound` if the ref is unknown.                 |
-| `get(ref, signal?)` | `Promise<AttachmentResponse>` | Retrieve the bytes. Re-fetches transparently if the data was evicted. Accepts an optional `AbortSignal`. |
+| `stat(ref, { documentId }?)` | `Promise<AttachmentHeader>` | Look up metadata for an existing ref. Throws `AttachmentNotFound` if the ref is unknown or, on a remote service, when no `documentId` is given. |
+| `get(ref, { documentId, signal }?)` | `Promise<AttachmentResponse>` | Retrieve the bytes. Re-fetches transparently if the data was evicted. A remote service requires `documentId`. |
 
 ### `IAttachmentUpload`
 
@@ -6747,11 +6763,11 @@ setAgentImageOperation(state, action) {
 
 | Class                     | When it is thrown                                                                                                                                         |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AttachmentNotFound`      | `stat(ref)` or `get(ref)` called with a ref the store does not know.                                                                                      |
+| `AttachmentNotFound`      | `stat(ref)` or `get(ref)` called with a ref the store does not know, or one the caller may not read through the named document (the server answers both with the same 404). |
 | `InvalidAttachmentRef`    | A string passed where a ref is expected does not match `attachment://v<N>:<hash>`.                                                                        |
 | `UploadTooLarge`          | `upload.send()` exceeded the server's configured byte cap. Maps to HTTP 413.                                                                              |
 | `ReservationNotFound`     | `upload.send()` after the reservation expired or was deleted.                                                                                             |
-| `AttachmentAlreadyExists` | Hash-first `reserve()` for content whose hash is already stored. The client's `reserve()` catches this and returns the existing ref instead of uploading. |
+| `AttachmentAlreadyExists` | Hash-first `reserve()` for content whose hash is already stored. The client's `reserve()` catches this and returns the existing ref instead of uploading, with a header built from the caller's own reserve options. |
 | `AttachmentPending`       | `get(ref)` for a hash that is reserved but whose bytes have not finished uploading. Carries `readonly hash`, `readonly expiresAtUtc: string`, and `readonly metadata?: { mimeType; fileName; sizeBytes }` so the caller can show the declared size and retry timing. Intentionally not a subclass of `AttachmentNotFound` — pending is "retry later", not "unknown". |
 | `HashMismatch`            | Hash-first `send()` whose uploaded bytes do not match the claimed `clientHash`.                                                                           |
 | `SizeMismatch`            | Hash-first `send()` whose actual byte count differs from the declared `sizeBytes`.                                                                        |
@@ -6787,18 +6803,27 @@ The client hashes the file locally (the existing hash-first flow) and reserves t
 
 ### Document-authorized download
 
-Knowing a hash or ref is not download authority. Downloads are authorized per document through one new route:
+Knowing a hash or ref is not download authority. Every read names the document that authorizes it:
 
 ```
-GET /attachments/:hash/download-target?documentId=<id-or-slug>
+GET  /attachments/:hash/download-target?documentId=<id-or-slug>[&expiresIn=<seconds>]
+GET  /attachments/:hash?documentId=<id-or-slug>
+HEAD /attachments/:hash?documentId=<id-or-slug>
+GET  /attachments/:hash?documentId=<id>&expires=<unix-seconds>&signature=<hmac>
+HEAD /attachments/:hash?documentId=<id>&expires=<unix-seconds>&signature=<hmac>
 ```
 
-It returns a validated, non-cacheable (`Cache-Control: no-store`) download target — `switchboard` (the existing authenticated byte route) for filesystem, or a short-lived `presigned-get` for S3. The decision requires both of the following, in order, before any metadata or presigner access:
+A `documentId` read is allowed only when all of the following hold, in order, before any metadata or storage access:
 
 1. The verified caller can read the document (`IAuthorizationService.canRead` — the canonical service that already handles admins, owners, unprotected documents, READ/WRITE/ADMIN and inherited grants; attachment code does not reimplement these rules).
-2. The document has historically referenced the attachment, per the reference index below.
+2. The reactor's read gate serves the document to the caller.
+3. The document's operations reference the attachment, per the reference index below, in a scope the caller may read.
 
-The caller identity comes exclusively from verified bearer authentication; identity headers or query parameters are ignored. An unreadable document and an absent relationship both return the same `404 { "error": "Attachment not found" }`. The legacy `GET /attachments/:hash` byte route is unchanged in this phase; restricting it for ordinary clients in S3 mode is deferred hardening. There is no attachment policy package, plugin mechanism, ACL, or owner table — authorization is canonical document permission plus the indexed relationship, nothing else.
+The caller identity comes exclusively from verified bearer authentication; identity headers or query parameters are ignored, and a caller with no bearer is decided as the anonymous subject. An unreadable document, an absent relationship, a request that names no document, and an unknown hash all return the same `404 { "error": "Attachment not found" }`, so a refusal never reveals that a hash exists. That includes the uploader: a blob no operation references yet is served to no one. There is no attachment policy package, plugin mechanism, ACL, or owner table — authorization is the document's read decision plus the indexed relationship, nothing else.
+
+`download-target` returns a validated, non-cacheable (`Cache-Control: no-store`) download target: a short-lived `presigned-get` for S3, or for filesystem a `switchboard` target whose URL is the byte route with `documentId`, `expires`, and `signature` parameters. The signature is an HMAC-SHA256 over the hash, the canonical document id, and the expiry; the byte route verifies it instead of re-running the decision, so the URL works without a bearer until it expires, like a presigned URL. Both kinds last at most 300 seconds by default, whether or not `expiresIn` asks for a lifetime; `ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS` raises that ceiling, up to 7 days. A tampered, expired, or unverifiable signature answers the same 404.
+
+The filesystem signing secret comes from `PH_ATTACHMENT_URL_SIGNING_SECRET` (at least 32 characters). Set it to the same value on every Switchboard instance that serves the same attachment storage. When it is unset and `NODE_ENV` is `production`, filesystem `download-target` answers `503`; any other process signs with a random per-process secret, so its URLs stop verifying on restart and on other instances. `documentId` byte reads never need the secret. With `REQUIRE_AUTHENTICATED_CALLER` on, a signed URL still needs a bearer.
 
 ### The attachment reference index
 
@@ -6808,7 +6833,7 @@ The index persists in its own `attachment_reference_read_model` SQL schema with 
 
 ### Client and hook additions
 
-`IAttachmentService.get` accepts an options form carrying the authorization anchor: `get(ref, { documentId, signal })`. Remote downloads negotiate the download target with the Switchboard JWT, then execute it — `switchboard` targets keep the authenticated byte semantics, `presigned-get` targets receive exactly the returned headers and never the JWT. `IAttachmentClient` adds `upload(input)`, document-aware `download({ documentId, ref })`, and bounded-concurrency `uploadMany` / `downloadMany` batch operations built on a reusable `runWithConcurrency` runner: concurrency bounds hashing and transfer together, results preserve input order, successes survive sibling failures, per-item signals cancel one item, and a batch signal stops unstarted work.
+`IAttachmentService.get` takes the authorization anchor in its options: `get(ref, { documentId, signal })`. Remote downloads negotiate the download target with the Switchboard JWT, then execute it — `switchboard` targets carry their signature and the JWT, `presigned-get` targets receive exactly the returned headers and never the JWT. `stat(ref, { documentId })` sends a `documentId` HEAD. A replica pulling bytes through `SwitchboardAttachmentTransport.fetch(hash, documentId)` names the document whose operation it applied and is authorized as its own JWT subject, which must be able to read a scope referencing the attachment. `IAttachmentClient` adds `upload(input)`, document-aware `download({ documentId, ref })`, and bounded-concurrency `uploadMany` / `downloadMany` batch operations built on a reusable `runWithConcurrency` runner: concurrency bounds hashing and transfer together, results preserve input order, successes survive sibling failures, per-item signals cancel one item, and a batch signal stops unstarted work.
 
 Every single-item method takes an options bag as its second argument carrying `onProgress` and `throttleMs`, and reports `AttachmentProgress` — `{ stage, loaded, total, indeterminate }` — where `stage` is one of `hashing`, `reserving`, `uploading`, `requesting-download-target`, `downloading`, `done`, `error`. `loaded`/`total` are per-stage, not per-operation: a per-operation denominator would have to weight hashing against transfer, and a dedup would shrink it mid-flight. Exactly one terminal event is emitted per operation; `done` always carries `loaded === total`. Byte events are throttled to one per 100ms by default.
 
@@ -6822,7 +6847,7 @@ If a document model previously inlined binary content, the migration is small an
 
 - **Schema** — replace `data: String` (or composite fields like `{ image, imageMediaType, imageUrl }`) with a single `attachment: AttachmentRef` field on the input and the state type.
 - **Write path** — replace the base64-encoding step with a reservation and upload. Either reserve on the service directly (`attachments.reserve({ mimeType, fileName })` then `upload.send(stream)`, dispatching with `result.ref`), or use the client (`attachments.preprocess(file)` then `client.execute(...)` with `results.ref` and `attachments.reserve(results.options, ...)`). In the browser, `useAttachmentUpload()` wraps the client flow and reports byte progress.
-- **Read path** — replace data-URI assembly with `attachments.get(ref)`. In a browser, drain the stream into a `Blob` and use `URL.createObjectURL` (remember to `revokeObjectURL` on cleanup).
+- **Read path** — replace data-URI assembly with `attachments.get(ref, { documentId })`. In a browser, drain the stream into a `Blob` and use `URL.createObjectURL` (remember to `revokeObjectURL` on cleanup).
 - **Graceful degradation** — code paths that may run without an attachment service (mock environments, tests, off-line previews) should branch on `if (!attachments)`. Writers should surface a clear error to the user; readers should skip the attachment and render a placeholder.
 
 ## Deep dive
@@ -8619,7 +8644,6 @@ query {
       documentType
       state
     }
-    totalCount
     hasNextPage
   }
 }
@@ -8648,7 +8672,8 @@ query {
           }
         }
       }
-      totalCount
+      hasNextPage
+      cursor
     }
   }
 }
@@ -8669,7 +8694,8 @@ query {
       name
       state
     }
-    totalCount
+    hasNextPage
+    cursor
   }
 }
 ```
@@ -8694,7 +8720,8 @@ query {
           }
         }
       }
-      totalCount
+      hasNextPage
+      cursor
     }
   }
 }
@@ -14298,6 +14325,8 @@ Generate a processor
 
 **Extract** - Write a powerhouse/processor spec for each existing processor into specs/processors/ - Usage: `--extract, -x`
 
+**Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -14320,6 +14349,8 @@ Generate a subgraph
 
 **Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
 
+**Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -14340,9 +14371,7 @@ Generate a piece: a connector whose actions and triggers a workflow can call
 ### Options
 **Name** - The name of the piece to generate - Usage: `--name, -n <str>`
 
-**Id** - The piece id a workflow block type names, e.g. @acme/piece-crm. Defaults to one derived from the package name. - Usage: `--id <str>`
-
-**Piece Version** - The version the pieces list declares. Defaults to the package version when the piece is named after the package, else 1.0.0. - Usage: `--piece-version <str>`
+**Id** - The piece id, the pieceName a workflow step holds, e.g. @acme/piece-crm. Defaults to one derived from the package name. - Usage: `--id <str>`
 
 **Auth** - The kind of connection the piece asks for - Usage: `--auth <value>`
 
@@ -14354,6 +14383,8 @@ Generate a piece: a connector whose actions and triggers a workflow can call
 
 ### Flags
 **All** - Re-register every piece in pieces/: refresh the pieces list and the manifest, and prune what is gone - Usage: `--all, -a`
+
+**Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -14379,6 +14410,8 @@ Generate an action inside an existing piece
 
 
 ### Flags
+**Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -14407,6 +14440,8 @@ Generate a trigger inside an existing piece
 
 
 ### Flags
+**Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -14536,8 +14571,10 @@ document models, editors, subgraphs and processors, type declarations, and its s
 
 Pieces under pieces/ are built too, each into its own self-contained module under
 dist/node/pieces/&lt;name&gt;, with a descriptor.json and package.json written beside it and
-the piece listed in dist/powerhouse.manifest.json. A package that ships only pieces is an
-ordinary package: it carries the same boilerplate, and every step above runs for it too.
+the piece listed in dist/powerhouse.manifest.json. A piece takes the package's version: an
+entry in pieces/index.ts that declares version fails the build. A package that ships only
+pieces is an ordinary package: it carries the same boilerplate, and every step above runs
+for it too.
 
 tsc runs first. If it reports type errors the build asks whether to go ahead, and stops
 where it can't ask. --ignore-type-errors builds without asking; a package built that way
@@ -14637,7 +14674,9 @@ Runtime-config overrides (all combinable — last wins on collision):
   ph connect build                                    Build with the current source config.
   ph connect build &lt;key&gt; &lt;value&gt;                      Build with a positional override applied (e.g. ph connect build connect.renown.url `https://renown.staging`).
   ph connect build --&lt;field&gt; &lt;value&gt;                  Build with a per-field flag override (e.g. --renown-url `https://renown.staging`).
-  ph connect build --json '\{"…":"…"\}'                Build with a bulk override.
+  ph connect build --json '\{"app":\{"workflowsEnabled":true\}\}'
+                                                      Build with a bulk override. The payload is the connect.* block
+                                                      without the "connect" wrapper; unknown keys are rejected.
 
 Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors out (use `ph connect config <key>` to read).
 
@@ -14646,7 +14685,7 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 **Out Dir** - Output directory - Usage: `--outDir <str>`
 
 **Default:** `.ph/connect-build/dist/`
-**Json** - Inline JSON override for the runtime connect.* block, e.g. '\{"renown":\{"url":"..."\}\}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
+**Json** - Inline JSON override for the runtime connect.* block, without the "connect" wrapper, e.g. '\{"app":\{"workflowsEnabled":true\},"renown":\{"url":"..."\}\}'. A top-level packageRegistryUrl is also accepted. Validated against the runtime schema (unknown keys fail); deep-merged on top of source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
 
 **Renown Url** - Override connect.renown.url. - Usage: `--renown-url <str>`
 
@@ -30048,7 +30087,7 @@ Endpoints are not revoked on teardown. `revoke(key)` is the only thing that reti
 
 > Source: https://academy.vetra.io/academy/Build/WorkWithData/BuildingAPiece
 
-A piece is a connector a workflow can call: a named bundle of **actions** (things a step does) and **triggers** (things that start a run). If you haven't met workflows yet, read [What are workflows?](/academy/Learn/workflows/what-are-workflows) first — this tutorial assumes you know what a step and a block type are.
+A piece is a connector a workflow can call: a named bundle of **actions** (things a step does) and **triggers** (things that start a run). If you haven't met workflows yet, read [What are workflows?](/academy/Learn/workflows/what-are-workflows) first — this tutorial assumes you know what a step and a block are.
 
 Your reactor package already ships document models, editors and processors. It can ship pieces the same way, and that's the route for anything the public connector catalogue can't cover: your internal API, your domain calculation, your service.
 
@@ -30074,10 +30113,10 @@ ph generate piece crm --id @acme/piece-crm --auth custom
 ```
 
 - **`crm`** names the directory, `pieces/crm/`.
-- **`--id`** is what a block type names. Defaults to something derived from your package name; pick it deliberately, because changing it later breaks every workflow already referring to it.
+- **`--id`** is the piece name a step's `pieceName` holds. Defaults to something derived from your package name; pick it deliberately, because changing it later breaks every workflow already referring to it.
 - **`--auth`** is the kind of connection the piece asks for: `custom` (a form you define), `secret` (a single token), or `none`.
 
-You get a working piece with one example action and one example trigger:
+You get an empty piece, as the Activepieces CLI gives you, ready for its actions and triggers:
 
 ```
 pieces/
@@ -30085,11 +30124,8 @@ pieces/
 └── crm/
     ├── index.ts                # createPiece — the piece definition
     └── lib/
-        ├── auth.ts             # what a connection to this service holds
-        ├── logo.ts
-        ├── actions/get-record.ts
-        ├── triggers/new-record.ts
-        └── common/             # client, context, errors, auth value
+        ├── auth.ts             # what a connection to this service holds (not with --auth none)
+        └── logo.ts
 ```
 
 The generator also registers the piece in `pieces/index.ts` and adds it to `powerhouse.manifest.json` — you don't have to do either by hand.
@@ -30102,19 +30138,21 @@ The generator also registers the piece in `pieces/index.ts` and adds it to `powe
 
 
 export const crm = createPiece({
-  displayName: "Acme CRM",
-  description: "Read and watch records in the Acme CRM",
-  logoUrl: CRM_LOGO,
-  authors: ["acme"],
-  categories: [PieceCategory.PRODUCTIVITY],
-  minimumSupportedRelease: "0.30.0",
+  displayName: "Crm",
+  description: "Connect to Crm.",
   auth: crmAuth,
-  actions: [crmGetRecordAction],
-  triggers: [crmNewRecordTrigger],
+  minimumSupportedRelease: "0.30.0",
+  logoUrl: CRM_LOGO,
+  authors: [],
+  actions: [],
+  triggers: [],
 });
 
 export default crm;
 ```
+
+With `--auth none`, `auth` is `PieceAuth.None()` and there is no `lib/auth.ts`. The
+`actions` and `triggers` arrays fill up as you generate them, next.
 
 ### The generator commands
 
@@ -30122,19 +30160,22 @@ export default crm;
 `document-model`, `editor`, `processor`, `subgraph`, `migration-file` — and
 three of them are the piece family:
 
-| Command                            | What it does                                                                                            |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `ph generate piece <name>`         | A new piece: directory, auth, logo, one example action and one example trigger, plus both registrations |
-| `ph generate piece-action <name>`  | An action inside an existing piece, imported into its `index.ts` for you                                |
-| `ph generate piece-trigger <name>` | A trigger, `--strategy polling` (default) or `--strategy webhook`                                       |
+| Command                            | What it does                                                                     |
+| ---------------------------------- | -------------------------------------------------------------------------------- |
+| `ph generate piece <name>`         | A new, empty piece: directory, auth, logo and `createPiece`, plus both registrations |
+| `ph generate piece-action <name>`  | An action stub inside an existing piece, added to its `actions` for you          |
+| `ph generate piece-trigger <name>` | A trigger stub, `--strategy polling` (default) or `--strategy webhook`, added to its `triggers` |
+
+For the CRM, generate the action and the trigger this tutorial fills in:
 
 ```bash
-ph generate piece-action list-records
-ph generate piece-trigger record-updated --strategy webhook
+ph generate piece-action get-record
+ph generate piece-trigger new-record
 ```
 
 Both take `--piece <dir>` to say which piece to add to, which you can omit when
-the package ships exactly one.
+the package ships exactly one. Each writes a stub, as the Activepieces CLI does:
+the shape is there, and the body is yours.
 
 Two flags on `ph generate piece` are for maintenance rather than creation:
 `--dir <dir>` re-registers an existing piece, and `--all` refreshes the
@@ -30144,7 +30185,7 @@ directory by hand, or after a merge leaves the two registrations disagreeing.
 
 ## Writing an action
 
-An action declares the properties it takes, the shape of what it returns, and a `run` function.
+An action declares the properties it takes, the shape of what it returns, and a `run` function. The generator leaves `props` empty and `run` blank; filled in, `lib/actions/get-record.ts` reads:
 
 ```typescript
 
@@ -30152,7 +30193,7 @@ An action declares the properties it takes, the shape of what it returns, and a 
 export const crmGetRecordAction = createAction({
   auth: crmAuth,
   name: "get-record",
-  displayName: "Get record",
+  displayName: "Get Record",
   description: "Reads one record by id",
   props: {
     recordId: Property.ShortText({
@@ -30168,19 +30209,28 @@ export const crmGetRecordAction = createAction({
     ],
   },
   async run(context) {
-    const { recordId } = context.propsValue;
-    return await clientForContext(context).request({
-      path: `records/${encodeURIComponent(String(recordId))}`,
+    const { baseUrl, apiKey } = context.auth.props;
+    const response = await httpClient.sendRequest<{ id: string; name: string }>({
+      method: HttpMethod.GET,
+      url: `${baseUrl}/records/${encodeURIComponent(context.propsValue.recordId)}`,
+      headers: { Authorization: `Bearer ${apiKey}` },
     });
+    return response.body;
   },
 });
 ```
 
+`httpClient` is Activepieces' HTTP client, from the framework's `/common` entry along
+with the rest of their `pieces-common` helpers. Once a second action makes the same
+call, move the request into a helper of your own under `lib/`.
+
 Three of those deserve attention, because they're what makes a step usable by someone who didn't write the piece:
 
-- **`name`** is the half after `#` in the block type. This step is `@acme/piece-crm#get-record`. Note there's no version in it: a piece your package ships is named unversioned, because the copy the reactor installed is the copy that runs. Renaming the action, though, breaks every workflow that referred to it.
-- **`props`** is the form Workflow Studio renders for the step. A property a user may reasonably leave empty must be `required: false`, or the step can't be saved half-built while someone is still assembling the workflow.
+- **`name`** is what a step's `actionName` holds. A step pins the piece version it was built against, so this step is `pieceName: "@acme/piece-crm"`, `pieceVersion: "1.4.0"`, `actionName: "get-record"` for version `1.4.0` of your package. Workflows keep working across upgrades, because the version is not part of a block's identity: the same action at another version is the same block. Renaming the action, though, breaks every workflow that referred to it.
+- **`props`** is the form Workflow Studio renders for the step. A property a user may reasonably leave empty should be `required: false`. A required property left empty marks the step incomplete, and Studio won't publish the workflow until it is filled in. When Studio adds the step, it writes each prop's `defaultValue` into the step's config, so the step keeps that default even if a later version of your piece changes it.
 - **`outputSchema`** is what a _later_ step can pick fields from. Without it, whoever builds the workflow has to run your action once and read the raw output to discover what it returns. It costs a few lines and saves every author that round trip.
+
+An action can also define **`test`**, with the same signature as `run`. Testing a single step in Studio calls `test` if it's there and `run` otherwise; workflow runs always call `run`. Use it when a step test shouldn't have real side effects, for example to preview a message rather than send it.
 
 ## Writing a trigger
 
@@ -30192,55 +30242,99 @@ Every trigger declares a strategy with `type`, which decides how the reactor cal
 | ----------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | `TriggerStrategy.POLLING`     | On an interval: every minute by default, never more often than once a second                        | The service has no webhooks, or you can't reach them |
 | `TriggerStrategy.WEBHOOK`     | For each delivery to the workflow's endpoint, and on a slow reconciliation sweep (every 15 minutes) | The service can call a URL when something changes    |
-| `TriggerStrategy.APP_WEBHOOK` | Not supported: the reactor never reads the listeners it registers                                   | —                                                    |
-| `TriggerStrategy.MANUAL`      | Not supported for piece triggers                                                                    | Use `core#manual` instead                            |
+| `TriggerStrategy.APP_WEBHOOK` | Never: Studio lists the trigger as disabled, and enabling it puts the trigger in `ERROR`             | —                                                    |
+| `TriggerStrategy.MANUAL`      | Not supported for a package piece's triggers                                                      | Use the core piece's `manual` trigger instead        |
 
 `type` is required and must be the enum member, not a string. The generator writes it for you (`--strategy polling` or `--strategy webhook`).
 
 Every trigger has the same hooks:
 
-- **`onEnable`** runs when a workflow using the trigger is switched on or republished, and **`onDisable`** when it's switched off or deleted.
+- **`onEnable`** runs when a workflow using the trigger is enabled, or republished with a changed trigger, and **`onDisable`** when it's switched off or deleted.
 - **`run`** reports what's new.
-- **`test`** is optional. Studio calls it to fetch a real sample while someone is building the workflow. It gets a scratch `context.store` that's thrown away afterwards, so it can't move a live cursor.
+- **`test`** is optional. Studio calls it to fetch a real sample while someone is building the workflow. It gets a scratch `context.store` that's thrown away afterwards, so it can't move a live cursor. Studio saves the sample as the trigger's last test, and marks it stale once the trigger is edited. Without `test`, testing the trigger returns its `sampleData`.
 - **`sampleData`** is what Studio shows as the trigger's payload before it has ever fired. It lets someone build the rest of the workflow against real-looking fields rather than waiting for the trigger to fire.
 
 ### Polling
 
-A polling trigger asks the service what's new and remembers what it has already reported:
+A polling trigger asks the service what's new and remembers what it has already reported. The generated one does the remembering with Activepieces' `pollingHelper`: you write `items`, which fetches, and the helper keeps the cursor. Filled in, `lib/triggers/new-record.ts` reads:
 
 ```typescript
 
   createTrigger,
   TriggerStrategy,
+  type AppConnectionValueForAuthProperty,
 } from "@powerhousedao/pieces-framework";
+
+  DedupeStrategy,
+  httpClient,
+  HttpMethod,
+  pollingHelper,
+  type Polling,
+} from "@powerhousedao/pieces-framework/common";
+
+
+interface CrmRecord {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+const polling: Polling<
+  AppConnectionValueForAuthProperty<typeof crmAuth>,
+  Record<string, never>
+> = {
+  strategy: DedupeStrategy.TIMEBASED,
+  items: async ({ auth, lastFetchEpochMS }) => {
+    const response = await httpClient.sendRequest<CrmRecord[]>({
+      method: HttpMethod.GET,
+      url: `${auth.props.baseUrl}/records`,
+      headers: { Authorization: `Bearer ${auth.props.apiKey}` },
+      queryParams: { createdAfter: new Date(lastFetchEpochMS).toISOString() },
+    });
+    return response.body.map((record) => ({
+      epochMilliSeconds: Date.parse(record.createdAt),
+      data: record,
+    }));
+  },
+};
 
 export const crmNewRecordTrigger = createTrigger({
   auth: crmAuth,
   name: "new-record",
-  displayName: "New record",
+  displayName: "New Record",
   description: "Fires once for each record created in the CRM",
-  type: TriggerStrategy.POLLING,
   props: {},
-  sampleData: { id: "rec_1", name: "Example record" },
+  sampleData: {
+    id: "rec_1",
+    name: "Example record",
+    createdAt: "2026-01-01T00:00:00Z",
+  },
+  type: TriggerStrategy.POLLING,
+  async test(context) {
+    return await pollingHelper.test(polling, context);
+  },
   async onEnable(context) {
-    // Seed the cursor, so enabling doesn't replay the service's history.
-    const records = await listRecords(context.auth);
-    await context.store.put(CURSOR_KEY, { seen: records.map((r) => r.id) });
+    const { store, auth, propsValue, isRepublish } = context;
+    await pollingHelper.onEnable(polling, {
+      store,
+      auth,
+      propsValue,
+      isRepublish,
+    });
   },
   async onDisable(context) {
-    await context.store.delete(CURSOR_KEY);
+    const { store, auth, propsValue } = context;
+    await pollingHelper.onDisable(polling, { store, auth, propsValue });
   },
   async run(context) {
-    const records = await listRecords(context.auth);
-    const cursor = await context.store.get<{ seen: string[] }>(CURSOR_KEY);
-    const seen = new Set(cursor?.seen ?? []);
-    await context.store.put(CURSOR_KEY, { seen: records.map((r) => r.id) });
-    return records.filter((record) => !seen.has(record.id));
+    return await pollingHelper.poll(polling, context);
   },
 });
 ```
 
-`context.store` is served by the host, scoped per workflow, so two workflows watching the same service keep their own cursors. The cursor's shape is yours to choose: a set of ids, a timestamp, the service's own page token. It's the only thing that stops a trigger reporting the same item twice.
+With `DedupeStrategy.TIMEBASED`, `onEnable` sets the cursor to the moment the workflow was switched on, so enabling doesn't replay the service's history. When the reactor re-enables an unchanged workflow, for example after a restart, it sets `isRepublish` and the helper keeps the stored cursor, so items created while the reactor was down are still reported. Each poll reports only the items whose `epochMilliSeconds` is newer than the cursor, then moves it to the newest. Passing `lastFetchEpochMS` on to the service, as here, only saves fetching what the helper would drop anyway. For a service whose items carry no timestamp, `DedupeStrategy.LAST_ITEM` does the same with ids: `items` returns `{ id, data }`, newest first.
+
+The cursor lives in `context.store`, which the host serves scoped per workflow, so two workflows watching the same service keep their own. It's the only thing that stops a trigger reporting the same item twice. The helper is a convenience, not a requirement: a trigger can read and write `context.store` itself, when the service's own page token makes a better cursor.
 
 A polling trigger can set its own cadence in `onEnable` with `context.setSchedule({ intervalMs })`. A `cronExpression` also works, but the reactor turns it into a fixed interval rather than firing at wall-clock times. A workflow author can override both with `pollEverySeconds` in the trigger's config, which the reactor reads itself and never passes to the piece.
 
@@ -30254,6 +30348,41 @@ A webhook trigger has the service call the reactor. In `onEnable`, `context.webh
 - **For the reconciliation sweep**, there's no payload. Ask the service for what changed since your cursor, as a polling trigger would. That's how the trigger recovers deliveries the service dropped.
 
 A reactor with no public webhook endpoint refuses to enable a webhook trigger, with "This trigger delivers by webhook, but no public webhook endpoint is configured for the reactor". If the service verifies an endpoint before it will deliver to it, declare `handshakeConfiguration` and answer the probe in `onHandshake`, as Activepieces documents.
+
+#### Renewing a subscription
+
+Some services expire a webhook registration: a Microsoft Graph subscription lasts days, a Gmail watch a week. Declare `renewConfiguration` with a cron, and extend the registration in `onRenew`:
+
+```typescript
+
+  createTrigger,
+  TriggerStrategy,
+  WebhookRenewStrategy,
+} from "@powerhousedao/pieces-framework";
+
+export const crmRecordUpdatedTrigger = createTrigger({
+  // ...name, props, onEnable, onDisable and run
+  type: TriggerStrategy.WEBHOOK,
+  renewConfiguration: {
+    strategy: WebhookRenewStrategy.CRON,
+    cronExpression: "0 */12 * * *",
+  },
+  async onRenew(context) {
+    const hook = await context.store.get<{ id: string }>(WEBHOOK_KEY);
+    if (hook) await extendWebhook(context.auth, hook.id);
+  },
+});
+```
+
+The reactor runs `onRenew` on that cron, in UTC:
+
+- The first renewal is the cron's next time after `onEnable` succeeds, not at enable itself.
+- `onRenew` gets the same `context` as the other hooks, including `context.webhookUrl` and the workflow's `context.store`, so it can read the registration id `onEnable` stored.
+- A failed renewal is recorded on the trigger (`renewError` and `renewFailures` in `triggerStates`) and retried after 2, 4, 8, 16 and then 30 minutes, but never later than the cron's next time. The trigger stays enabled, and a successful renewal clears the failure.
+- The next renewal time and the failure count are stored, so a restart keeps them. A renewal that fell due while the reactor was down runs on its first tick.
+- Disabling the workflow, or changing it to a trigger that doesn't renew, drops the pending renewal. A changed trigger config schedules it again from the cron.
+
+Only `WebhookRenewStrategy.CRON` and `WebhookRenewStrategy.NONE` run. Any other strategy, or a cron that doesn't parse, makes Studio list the trigger as disabled and puts it in `ERROR` when a workflow enables it. `renewConfiguration` on a polling trigger is ignored.
 
 ### Duplicate items
 
@@ -30289,14 +30418,7 @@ The auth value arrives in two shapes, depending on where your code runs. This is
 | `validate({ auth })`                    | `{ baseUrl, apiKey }`                                 | the token string                              |
 | `getConnectionIdentifier({ auth })`     | `{ baseUrl, apiKey }`                                 | the token string                              |
 
-The framework's types say which shape you have: `context.auth` is typed as the envelope in an action or trigger, and as the flat props in `validate` and `getConnectionIdentifier`, so reading the wrong one is a compile error. The generated `lib/common/auth-value.ts` also reads the auth through one helper that accepts both shapes, which lets a client take either:
-
-```typescript
-export function readAuth(auth: unknown): { baseUrl: string; apiKey: string } {
-  const source = isRecord(auth) && isRecord(auth.props) ? auth.props : auth;
-  // ...check source.baseUrl and source.apiKey, then return them
-}
-```
+The framework's types say which shape you have: `context.auth` is typed as the envelope in an action or trigger, and as the flat props in `validate` and `getConnectionIdentifier`, so reading the wrong one is a compile error. A helper of your own that both call can take the two fields it needs, rather than either shape.
 
 ### Checking a connection
 
@@ -30307,15 +30429,23 @@ export const crmAuth = PieceAuth.CustomAuth({
   // ...displayName, description, props as above
   validate: async ({ auth }) => {
     try {
-      await clientFor(auth).ping();
+      await httpClient.sendRequest({
+        method: HttpMethod.GET,
+        url: `${auth.baseUrl}/me`,
+        headers: { Authorization: `Bearer ${auth.apiKey}` },
+      });
       return { valid: true };
     } catch (error) {
       return { valid: false, error: String(error) };
     }
   },
   getConnectionIdentifier: async ({ auth }) => {
-    const me = await clientFor(auth).request<{ email: string }>({ path: "me" });
-    return me.email;
+    const me = await httpClient.sendRequest<{ email: string }>({
+      method: HttpMethod.GET,
+      url: `${auth.baseUrl}/me`,
+      headers: { Authorization: `Bearer ${auth.apiKey}` },
+    });
+    return me.body.email;
   },
 });
 ```
@@ -30327,14 +30457,19 @@ export const crmAuth = PieceAuth.CustomAuth({
 ## Reading and writing documents
 
 Your piece doesn't need to. Reading and writing Powerhouse documents is what the
-reactor's own piece is for — `#document-find`, `#document-get`,
-`#document-create` and `#document-dispatch` are steps a workflow author drops in
-beside yours, with no code from you at all.
+reactor's own piece, `@powerhousedao/piece-reactor`, is for. Its actions
+`document-find`, `document-get`, `document-create` and `document-dispatch` are
+steps a workflow author drops in beside yours, with no code from you at all.
 
 So a workflow that pulls a record from your service and records it on a document
-is two steps: your action, then `@powerhousedao/piece-reactor#document-create`
+is two steps: your action, then the reactor piece's `document-create` action
 reading the first step's output through an expression. Your piece stays a
 connector to your service, which is the thing only you can write.
+
+When the input comes from an AI step, set the document action's advanced
+**Parse** option to **Extract from AI output**. It reads ids and JSON out of the
+model's prose instead of taking them as given, and reports what it read them
+from in `extractedFrom`. **Exact**, the default, takes them as given.
 
 ## Registering it
 
@@ -30348,11 +30483,12 @@ Two declarations, both of which the generator already made.
 export const pieces: PackagePiece[] = [
   {
     name: "@acme/piece-crm",
-    version: "1.0.0",
     entry: "dist/node/pieces/crm/index.mjs",
   },
 ];
 ```
+
+There's no `version` field. **A piece's version is the version of the package that ships it**: `ph build` reads it from your `package.json` and writes it into the piece's descriptor, its `package.json` and the manifest. That way `@acme/piece-crm@1.4.0` names exactly one set of bytes wherever it's fetched from. A list entry that still declares `version` fails the build. Delete the field. To release a piece on its own schedule, give it its own package.
 
 And `powerhouse.manifest.json` names it again, so a host can see what the package offers without executing any of its code:
 
@@ -30370,34 +30506,32 @@ This bundles each `pieces/<name>/index.ts` into `dist/node/pieces/<name>/index.m
 
 The build then loads each piece once and writes a descriptor next to it — the display name, logo, auth and every action and trigger with its properties. That descriptor is how Workflow Studio can draw your step's form before anyone has installed anything.
 
-**A piece has to be built, not merely present.** A declared piece with no build output is the most common way to end up with a workflow whose block type resolves to nothing.
+**A piece has to be built, not merely present.** A declared piece with no build output is the most common way to end up with a workflow whose block resolves to nothing.
 
 ## Run it locally
 
 Three things have to be true before a workflow can name your block, and missing
 any one of them fails quietly in its own way.
 
-**1. Workflows are on, and the workflow package is installed.** The flag starts
-the runtime; it does not by itself give the reactor the workflow and connection
-document models. Those come from `@powerhousedao/workflow`, which has to be
-installed and listed like any other package — a reactor with the flag on but the
-package missing logs `Workflow runtime started` and then refuses to create a
-workflow with "Document model module not found".
-
-```bash
-pnpm add @powerhousedao/workflow
-```
-
-**2. Your own package is in the `packages` list**, which is how the reactor
-finds both its document models and its pieces. There is no separate piece
-install.
+**1. Workflows are on.** Set it in `powerhouse.config.json`:
 
 ```json
 {
-  "workflows": { "enabled": true },
-  "packages": ["@powerhousedao/workflow", "@acme/my-package"]
+  "workflows": { "enabled": true }
 }
 ```
+
+Nothing else to install or list. Switchboard ships `@powerhousedao/workflow` and
+loads it itself when the flag is on: the workflow and connection document
+models, and the reactor piece. Connect does the same for Workflow Studio, unless
+`connect.app.workflowsEnabled` turns it off. If the package can't be loaded,
+Switchboard refuses to boot with "Workflows are enabled but
+@powerhousedao/workflow could not be loaded".
+
+**2. The reactor is running from your package.** `ph vetra` and `ph switchboard`
+load the project they're started in, pieces included, unless you pass
+`--ignore-local`. There is no separate piece install. The `packages` list is for
+pieces shipped by _other_ packages, installed from a registry.
 
 **3. The piece is built.** `ph build` after every edit — see above.
 
@@ -30407,13 +30541,15 @@ server alone, which is what you want if you're driving it from a script or an
 agent. Either way the boot log tells you whether it worked:
 
 ```
-Loaded document models from package @powerhousedao/workflow: [...]
-[workflow][piece-registry] Loaded 1 package piece(s): @acme/piece-crm
+[...] Loaded document models from package @powerhousedao/workflow: [...]
+[workflow][piece-registry] Holding 1 package piece(s) on disk: @acme/piece-crm
 Workflow runtime started
 ```
 
-An empty piece list with no error almost always means the piece is declared but
-not built.
+A package loaded from a registry reports its pieces as `fetched when first run`
+instead of `on disk`. No `Holding` line at the default log level means the
+reactor found no pieces, which usually means the piece is declared but not
+built.
 
 **If your piece talks to something on localhost** — a stub service, a database,
 anything on your own machine — it will not connect until the deployment widens
@@ -30427,8 +30563,8 @@ setting that widens it is in
 
 With the reactor running, your actions and triggers are in the block catalogue
 alongside the reactor's own piece and anything from the registry. Create a
-connection for the CRM, then build a workflow whose trigger is
-`@acme/piece-crm#trigger:new-record`.
+connection for the CRM, then build a workflow whose trigger is the
+`new-record` trigger of `@acme/piece-crm` at your package's version.
 
 Authoring that workflow in Connect is Workflow Studio's job. To do it from a
 script or an agent instead — which is also how you'd seed an environment or test
@@ -30437,7 +30573,7 @@ an integration end to end — see
 
 ## Testing
 
-A piece is ordinary TypeScript, and an action's `run` is an ordinary async function — most of what you'll want to assert needs no workflow at all. Test the client and the transformations directly, the way you'd test any other module in the package.
+A piece is ordinary TypeScript, and an action's `run` is an ordinary async function — most of what you'll want to assert needs no workflow at all. Test your requests and transformations directly, the way you'd test any other module in the package.
 
 Typecheck it too. Vitest strips types without checking them, and the framework's types catch the mistakes that are easiest to make: a trigger with no `type`, `validate` returning the wrong shape, reading `context.auth` as flat props, a `Property.*` call that doesn't exist. `ph build` runs `tsc` before it bundles anything, and when `tsc` reports errors it asks whether to build anyway. Without a terminal to ask in, as in CI, it stops instead. `--ignore-type-errors` builds without asking, but it's unsafe: a piece with type errors can load and still fail at runtime, so fix the errors before you publish or deploy.
 
@@ -30458,9 +30594,9 @@ A package shipping a piece publishes like any other reactor package — see [Pub
 
 > Source: https://academy.vetra.io/academy/Build/WorkWithData/AuthoringWorkflows
 
-Workflow Studio is how a person builds a workflow. This page is how a *program*
-does it — a seed script that sets an environment up, an integration test that
-drives a workflow end to end, or an agent building one on your behalf.
+Workflow Studio is how a person builds a workflow. This page builds one from
+code: a seed script that sets up an environment, an integration test that
+drives a workflow end to end, or an agent building one for you.
 
 Everything here is the reactor's own GraphQL API. The workflow runtime adds a
 subgraph under the reactor's main endpoint (`/graphql` by default) with two
@@ -30470,16 +30606,17 @@ the fields below are the ones you'll reach for.
 
 ## 1. Find out what blocks exist
 
-Never assemble a block type by hand. Ask the reactor, and use the strings it
-gives back — that way you get the right form whether the piece came from your
-package or from a registry.
+A step names its block with three fields: `pieceName`, `pieceVersion` and
+`actionName`. A trigger has `pieceName`, `pieceVersion` and `triggerName`. The
+version is an exact semver. Don't write these from memory: ask the reactor, and
+use what it gives back, whether the piece came from your package or a registry.
 
 ```graphql
 query {
   workflowRuntime {
     # Every piece this reactor can offer
     pieceCatalog
-    # One piece's actions and triggers, each with a ready-to-use blockType
+    # One piece's actions and triggers, at the version to pin
     pieceActions(packageName: "@acme/piece-crm")
     pieceTriggers(packageName: "@acme/piece-crm")
   }
@@ -30487,7 +30624,8 @@ query {
 ```
 
 `pieceActions` and `pieceTriggers` are the two you want when you already know
-the piece. Each entry carries the exact `blockType` string to put in a step.
+the piece. Each answers with the piece's `name` and `version` and a list of
+entries; an entry's `name` is the `actionName` or `triggerName` to write.
 
 To search across everything instead:
 
@@ -30495,8 +30633,8 @@ To search across everything instead:
 query {
   workflowRuntime {
     searchBlocks(query: "invoice", limit: 20) {
-      # hits carry blockType, pieceName and the action's display name
-      ...
+      status
+      hits { pieceName pieceVersion name kind displayName }
     }
   }
 }
@@ -30505,18 +30643,23 @@ query {
 The search index builds lazily, so the first call may report a status of
 `indexing` — poll until it settles.
 
-Two more worth knowing:
+Two more queries:
 
-- **`blockDescriptor(blockType:)`** — an action's props and auth requirements,
-  so you know what config to write. Works for core blocks too.
-- **`blockOutputTree(blockType:, config:)`** — the shape a block's output will
+- **`blockDescriptor(block:)`** — an action's or trigger's props, auth
+  requirements and output ports, so you know what config to write. `block` is
+  a `BlockInput`: `{ pieceName, pieceVersion, name, kind }`, with `kind` either
+  `action` or `trigger`. Works for core blocks too.
+- **`blockOutputTree(block:, config:)`** — the shape a block's output will
   have, which is how Studio offers later steps their fields before anything has
   run. Useful for checking an expression path is real before you commit it.
 
 ## 2. The expression language
 
-Step config refers to the trigger and to earlier steps with `{{ }}`. The scope
-has three roots:
+Step config refers to the trigger and to earlier steps with `{{ }}`. Every
+string in a step's config is evaluated, nested ones included. A field's
+`propertySettings[].mode` (`MANUAL` or `EXPRESSION`) only records which control
+Studio draws for it; the runtime ignores it. Write `\{{` for a literal `{{`.
+The scope has three roots:
 
 | Path | What it reads |
 | --- | --- |
@@ -30534,7 +30677,9 @@ passes a number. An expression embedded in text interpolates into a string.
 {{steps.lookup.output.name || trigger.payload.name || 'unknown'}}
 ```
 
-The first term that isn't undefined, null or empty wins.
+The first term whose value is not `null` or `""` wins. A missing path falls
+through to the next term. If the last term is a missing path, the step fails,
+unless that term is a literal or ends in `?`.
 
 **That is the whole language.** It is path lookup, not a small programming
 language, and this is the single most common thing to get wrong:
@@ -30543,63 +30688,88 @@ language, and this is the single most common thing to get wrong:
 {{a.b == 'x'}}          ✗  comparisons do not evaluate
 {{ a.b ? x : y }}       ✗  no ternaries
 {{ eq(a, b) }}          ✗  no function calls
-{{ a['b'] }}            ✗  no bracket access — use a.b
 ```
 
-**An expression that resolves to nothing drops the property silently.** No
-warning, no failed run — the step simply runs without that input, and you find
-out from the result. When a step behaves as if you passed nothing, read the run
-journal's recorded `input` for that step (below) and check the path.
+Brackets read keys that are not plain names, and array indexes:
+`{{steps.fetch.output.headers["content.type"]}}`, `{{steps.list.output.items[0]}}`.
+
+**A reference that names nothing fails the step** with
+`Unresolved reference {{steps.x.output.y}}`. Add `?` for a value that may be
+absent: `{{steps.x.output.y?}}` resolves to `null`. A path whose value is `null`
+is not missing.
 
 ## 3. Core blocks
 
-Some blocks belong to no piece — they're the engine's own. They're listed like
-any other piece, under the name `core`:
+The engine's own blocks are the built-in piece `@powerhousedao/piece-core`.
+Every reactor ships it, at the version of its workflow runtime, and it is listed
+like any other piece:
 
 ```graphql
 query {
   workflowRuntime {
-    pieceActions(packageName: "core")
-    pieceTriggers(packageName: "core")
+    pieceActions(packageName: "@powerhousedao/piece-core")
+    pieceTriggers(packageName: "@powerhousedao/piece-core")
   }
 }
 ```
 
-`blockDescriptor("core#branch")` describes their config the same way it
-describes a piece action's props. What they are:
+`blockDescriptor` describes their config the same way it describes any other
+piece's. What they are:
 
-| Block type | What it is |
-| --- | --- |
-| `core#branch` | a decision — the `true`/`false` ports |
-| `core#assert` | fails the step when a value is blank or rejected |
-| `core#schedule` | a trigger firing on a cron or interval |
-| `core#webhook` | a trigger fired by an HTTP delivery |
-| `core#manual` | a trigger fired on demand, by the `fire` mutation |
+| Name | Kind | What it is |
+| --- | --- | --- |
+| `branch` | action | a decision — the `true`/`false` ports |
+| `assert` | action | fails the step when a value is blank or rejected |
+| `schedule` | trigger | fires on a cron schedule or at a fixed interval |
+| `webhook` | trigger | fires on an HTTP delivery |
+| `manual` | trigger | fires on demand, by the `fire` mutation |
 
-**`core#branch` does not evaluate an expression.** It compares two resolved
-values. Give it a `condition` and an `equals`, and it takes the `true` port when
-they match, trimmed and case-insensitively:
+**`branch` does not evaluate an expression.** It applies one `operator` to a
+resolved `left` and, for a comparison, `right`, and takes the `true` port when
+it holds, else `false`. Text comparisons ignore case unless `caseSensitive` is
+`true`:
 
 ```json
 {
-  "blockType": "core#branch",
+  "pieceName": "@powerhousedao/piece-core",
+  "pieceVersion": "<the core piece's version>",
+  "actionName": "branch",
   "config": {
-    "condition": "{{trigger.payload.severity}}",
-    "equals": "critical"
+    "left": "{{trigger.payload.severity}}",
+    "operator": "TEXT_EXACTLY_MATCHES",
+    "right": "critical"
   }
 }
 ```
 
-With `equals` omitted it falls back to truthiness — anything non-empty is true,
-except the strings `"false"` and `"0"`. This is the trap: a config of
-`{"condition": "{{a}} == 'critical'"}` is a *non-empty string*, so it takes the
-true port every time, whatever `a` is. If a branch always goes one way, this is
-why.
+`operator` is required. The operators are:
 
-`core#assert` takes `value` plus any of `rejectValues`, `allowValues`,
+- Text: `TEXT_EXACTLY_MATCHES`, `TEXT_DOES_NOT_EXACTLY_MATCH`, `TEXT_CONTAINS`,
+  `TEXT_DOES_NOT_CONTAIN`, `TEXT_STARTS_WITH`, `TEXT_DOES_NOT_START_WITH`,
+  `TEXT_ENDS_WITH`, `TEXT_DOES_NOT_END_WITH`.
+- Number: `NUMBER_IS_EQUAL_TO`, `NUMBER_IS_GREATER_THAN`, `NUMBER_IS_LESS_THAN`.
+- Date: `DATE_IS_EQUAL`, `DATE_IS_BEFORE`, `DATE_IS_AFTER`.
+- List: `LIST_CONTAINS`, `LIST_DOES_NOT_CONTAIN`, `LIST_IS_EMPTY`,
+  `LIST_IS_NOT_EMPTY`.
+- Other: `BOOLEAN_IS_TRUE`, `BOOLEAN_IS_FALSE`, `EXISTS`, `DOES_NOT_EXIST`.
+
+`BOOLEAN_*`, `LIST_IS_*`, `EXISTS` and `DOES_NOT_EXIST` read no `right`, and
+`caseSensitive` applies only to the text operators, `LIST_CONTAINS` and
+`LIST_DOES_NOT_CONTAIN`. An operand of the wrong type fails the step, which
+then leaves on its `error` port: a number operator on `"abc"`, a list operator
+on something that is not a list. Writing a comparison into `left`, as in
+`"{{a}} == 'critical'"`, gives a text value and compares nothing.
+
+`assert` takes `value` plus any of `rejectValues`, `allowValues`,
 `allowEmpty` and a custom `message`. It's the guard for a value you don't
-control — a model's output, a third party's field — placed before the step that
+control (a model's output, a third party's field), placed before the step that
 would act on it.
+
+`schedule` takes `{ mode: "cron", cron, timezone? }` or
+`{ mode: "interval", every, unit, timezone? }`. `cron` has exactly five fields.
+`every` is a whole number of at least 1, and `unit` is `minutes`, `hours` or
+`days`. `timezone` is an IANA name and defaults to UTC. `mode` is required: a
+config without it fails with `"mode" is required ("cron" or "interval")`.
 
 ## 4. Build the workflow document
 
@@ -30612,19 +30782,66 @@ the scope is rejected.
 What's specific to workflows is which operations to dispatch, in this order:
 
 1. **`SET_WORKFLOW_NAME`** / `SET_WORKFLOW_DESCRIPTION`.
-2. **`SET_TRIGGER`** — `blockType`, `config`, and `connectionId` when the
-   trigger's piece needs credentials. One per workflow; `CLEAR_TRIGGER` removes it.
-3. **`ADD_STEP`** — `id`, `key`, `name`, `blockType`, `config`, optionally
-   `connectionId`, `retry`, `timeoutSeconds`, `idempotencyKeyExpression` and a
-   `position` for the canvas. The `key` is what expressions refer to, so choose
-   it deliberately. `UPDATE_STEP`, `SET_STEP_CONFIG` and `REMOVE_STEP` follow.
-4. **`ADD_EDGE`** — `from` (a step id, or the trigger's id for the entry edge),
-   `to`, and `port`: `next`, `true`, `false`, `error`, or a case label.
-5. **`SET_VARIABLE`** and **`SET_POLICY`** as needed.
-6. **`SET_WORKFLOW_STATUS`** to `ENABLED`. Nothing fires until you do — only an
-   enabled workflow gets trigger instances. This is also what runs a piece
-   trigger's `onEnable`, which is when a webhook trigger registers itself with
-   its provider.
+2. **`SET_TRIGGER`**: `id` (an OID, the source of the entry edge),
+   `pieceName`, `pieceVersion`, `triggerName`, `config`, optionally
+   `propertySettings`, and `connectionId` when the trigger's piece needs
+   credentials. One per workflow; `CLEAR_TRIGGER` removes it.
+3. **`ADD_STEP`**: `id`, `key`, `name`, `pieceName`, `pieceVersion`,
+   `actionName`, `config`, optionally `connectionId`, `timeoutSeconds`, `skip`,
+   `propertySettings` and a `position` for the canvas. The `key` is what
+   expressions refer to, so choose it deliberately. `UPDATE_STEP`,
+   `SET_STEP_CONFIG` and `REMOVE_STEP` follow. A step that runs past its
+   `timeoutSeconds` fails.
+4. **`ADD_EDGE`**: `id`, `from` (a step id, or the trigger's id for the entry
+   edge), `to`, `port`, and optionally `condition`. `port` must be one the
+   source declares: `next` and `error` for a piece action, `next` for the
+   trigger, `true`, `false` and `error` for `branch`. An edge on any other port
+   is never taken, and every run reports it in `warningNotes`. A `condition` is
+   a template: the edge is taken only when it resolves truthy, where the strings
+   `"false"` and `"0"` are false, and an unresolved reference in it fails the
+   run.
+5. **`SET_VARIABLE`** as needed: `id`, `key`, `value`, optionally `description`
+   and `type`.
+6. **`PUBLISH_WORKFLOW`** with `{ publishedAt }`. It copies the draft into
+   `published`. Triggers arm from that copy and runs execute it, so later draft
+   edits change nothing until you publish again. `REVERT_TO_PUBLISHED` resets
+   the draft to the published copy.
+7. **`SET_WORKFLOW_STATUS`** to `ENABLED`. This fails with "Publish the workflow
+   before enabling it" until step 6 has run once. Only an enabled workflow gets
+   trigger instances or can `fire`. Enabling runs a piece trigger's
+   `onEnable`, which is when a webhook trigger registers itself with its
+   provider. A later publish re-arms the trigger only if the published trigger
+   changed.
+
+Every draft edit bumps the document's `version`, and
+`version !== published.version` means there are unpublished changes.
+
+**Defaults.** When Studio adds a step, it adds the block first and then, once
+the block's form loads, writes every unset prop's `defaultValue` into `config`
+in a follow-up edit. A step then keeps its defaults even if a later piece
+version changes them. A program adding steps should do the same: read each
+prop's `defaultValue` from `blockDescriptor` and write it into `config`. A prop
+left unset takes the default of whichever piece version resolves at run time.
+
+**Skipping.** `skip: true` on a step (`ADD_STEP` or `UPDATE_STEP`) passes over
+it at run time. The step records `SKIPPED` with a `null` output and continues on
+`next`, so `{{steps.<key>.output}}` is `null` downstream. A skipped `branch`
+leaves on `next`, which `branch` doesn't declare, so nothing after it runs.
+
+**Variable types.** `type` is `TEXT`, `NUMBER`, `BOOLEAN`, `JSON` or `SECRET`.
+Omitted, it keeps the variable's existing type, and `null` clears it. A run
+coerces typed values when it starts, and fails when a value doesn't coerce, as
+in `Variable "<key>" is a NUMBER, but its value "abc" is not a number`. A
+`SECRET` variable's value is a ref from `createSecret` (see below), never the
+plaintext; any other value makes `SET_VARIABLE` throw. The run resolves the ref
+and redacts the plaintext from what it journals.
+
+**Completeness is not stored.** A step with a required prop left empty, a
+dynamic prop missing a child, or an edge on an undeclared port is still a valid
+document. Studio computes those problems where it shows them and disables
+**Publish** while any remain. A program writing documents directly has to check
+them itself. At run time, a step missing a required prop fails with a
+`PropsValidationError` naming each field.
 
 ## 5. Connections and secrets
 
@@ -30635,7 +30852,7 @@ build one of those the same way — with operations, in order.
 
 | Field | What goes in it |
 | --- | --- |
-| `connectorId` | The piece id, e.g. `@acme/piece-crm`. Not a block type: no action, no `#` fragment. |
+| `connectorId` | The piece id, e.g. `@acme/piece-crm`: the piece, not one of its actions. |
 | `authType` | The `PieceAuth` kind this connection signs in with: `CUSTOM_AUTH`, `SECRET_TEXT`, `BASIC_AUTH`, `OAUTH2`, `OIDC` or `NONE`. A piece that offers several methods (its `auth` is an array) runs through the one of this type. `OAUTH2` and `OIDC` can be declared but don't run yet. |
 | `config` | The **non-secret** auth properties, keyed by property name. |
 | `secretRefs` | One entry per secret property: `{ id, name, ref }`. |
@@ -30674,7 +30891,8 @@ A `SECRET_TEXT` piece has one secret property and usually no config at all; a
 ### Minting the secret
 
 Get the `ref` from the runtime rather than writing a credential into the
-document:
+document. `createSecret`, `rotateSecret` and `deleteSecret` need a supreme admin
+caller; anyone else gets "Admin access required".
 
 ```graphql
 mutation {
@@ -30691,8 +30909,8 @@ is stored encrypted and cannot be read back over any API. `rotateSecret`
 replaces the value behind a ref without touching any document that refers to it,
 and `deleteSecret` makes it unrecoverable.
 
-Secrets are encrypted with the runtime's master key, so changing that key — or
-losing it, and letting the runtime generate a new one — makes every existing ref
+Secrets are encrypted with the runtime's master key, so changing that key (or
+losing it, and letting the runtime generate a new one) makes every existing ref
 undecryptable. That surfaces as a check failing with a message about
 unsupported state or authentication data, which reads like a broken credential
 rather than a configuration problem. Mint the secrets again and `SET_SECRET_REF`
@@ -30724,11 +30942,36 @@ query {
 
 The endpoint is minted on first ask, whether or not the workflow is enabled,
 because an author needs the URL before switching it on. `armed` carries that
-difference: a URL that exists but isn't accepting yet. `absoluteUrl: false`
-means the reactor doesn't know its own public origin and has handed you a bare
-path — fix that with `PUBLIC_URL`, per
-[Configure environment](/academy/Build/Launch/ConfigureEnvironment), before
-giving the URL to anything outside your machine.
+difference: a URL that exists but isn't accepting yet.
+
+Unless `PUBLIC_URL` is set (or `RENDER_EXTERNAL_URL`, or
+`HEROKU_APP_DEFAULT_DOMAIN_NAME`), the URL points at `http://localhost:<port>`,
+which no provider can call. Set it, per
+[Configure environment](/academy/Build/Launch/ConfigureEnvironment#configuring-workflows),
+before giving the URL to anything outside your machine. `absoluteUrl: false`
+means the host gave the webhook service no origin at all, and the URL is a bare
+path.
+
+The core `webhook` trigger requires `scheme`:
+
+- `none`: the endpoint is guarded only by the token in its URL.
+- `token`: a shared token in a header.
+- `hmac`, `hmac-prefixed` or `hmac-timestamped`: a signed body.
+
+Without `scheme` the trigger fails with `"scheme" is required; choose "none"
+for an endpoint guarded only by its URL token`. Every scheme except `none`
+needs `secretRef`, a ref from `createSecret`. `hmac-prefixed` reads a label
+before the digest, `sha256=` by default; set `prefix` to `""` (**No label** in
+Studio) when the sender sends the digest alone. The other options are `methods`
+(default `POST`), `dedupeField`, `challengeField` and `responseMode` (`async`
+answers `202` at once, `sync` waits for the run).
+
+**A workflow created on another reactor may not have synced to this one yet.**
+Pass `driveId`, the drive you opened the workflow from, to `webhookEndpoint`,
+`testTrigger` or `testStep`, and the call waits up to 10 seconds for the
+document to arrive. If it doesn't, the call fails with "Workflow is still
+syncing; try again in a moment" and the extensions
+`{ code: "WORKFLOW_SYNCING", retryable: true }`. Call it again.
 
 ## 7. Fire it, and see what happened
 
@@ -30738,34 +30981,78 @@ mutation { workflowRuntime { testTrigger(workflowId: "...") } }
 mutation { workflowRuntime { rerun(runId: "...") { runId status } } }
 ```
 
-`fire` runs a `core#manual` workflow to completion and hands back the result —
-the quickest way to exercise a graph without waiting on a poll. `testTrigger`
-runs a piece trigger's test hook, returning sample items without moving its
-cursor. `rerun` resumes a failed run: succeeded steps replay from the journal
-and execution restarts at the failure.
+`fire` starts a run of an enabled workflow with the payload you pass, the way
+the core `manual` trigger does, runs it to completion and hands back the
+result. It's the quickest way to exercise a
+graph without waiting on a poll. `rerun` resumes a failed run: succeeded steps
+replay from the journal and execution restarts at the failure.
 
-The run journal is the debugging surface, and it is a good one:
+`testTrigger(workflowId, payload?, timeoutSeconds?, driveId?)` samples the
+draft trigger and saves the sample as its last test. A piece trigger runs its
+test hook, which moves no cursor. The core `manual` trigger returns the
+`payload` you pass, and `schedule` samples one fire. `webhook` waits for the
+next delivery to the workflow's endpoint, up to `timeoutSeconds` (default and
+maximum 300), and that delivery starts no run. `cancelTriggerTest` stops a
+webhook test that is still waiting.
+
+```graphql
+mutation { workflowRuntime { testStep(workflowId: "...", stepId: "...") { runId status output error } } }
+```
+
+`testStep` runs one draft step against the latest test outputs of the blocks it
+reads. It is journaled as a `test` run and noted as the step's `lastTest`. When
+a block it reads has never been tested, nothing runs and `runId` is null. The
+trigger and every step carry `lastTest` (`{ runId, testedAt }`) and
+`updatedAt`; a test older than the block's last edit is stale, and Studio shows
+"Changed since its last test". `stepOutputTree(workflowId, stepId)` returns a
+block's latest test output as its output shape.
+
+`blockResolutions(workflowId)` shows, for every draft block, which piece
+version this reactor would run and how it matches the pin: `exact`,
+`compatible` (a higher version of the same major, the same minor for `0.x`),
+`fallback` (any other version), `installed` (the core and reactor pieces,
+which always run the installed copy) or `missing`. A mismatch never blocks a
+run; only `missing` fails.
+
+Debug from the run journal:
 
 ```graphql
 query {
   workflowRuntime {
     runs(workflowId: "...", limit: 10) {
-      id status error startedAt endedAt workflowVersion
-      steps { stepKey blockType status port input output error startedAt endedAt }
+      id status error startedAt endedAt workflowVersion warnings warningNotes
+      steps { stepKey pieceName pieceVersion versionMatch blockName status port input output error startedAt endedAt }
     }
   }
 }
 ```
 
-Per step: the config **as resolved** (`input`), what came back (`output`),
-which port it left by, and when it started and ended, which is how you find the
-step a slow run spent its time in. That resolved input is how you catch an expression that
-silently resolved to nothing — the commonest cause of a workflow that runs green
-and does nothing.
+Per step, the journal holds the config as resolved (`input`), the `output`, the
+port the step left by, and its start and end times. A slow run shows which step
+took the time. The resolved `input` also catches an expression that resolved to
+nothing, the usual cause of a run that succeeds and does nothing. A run's
+`warningNotes` lists the steps that ran a `fallback` piece version and the edges
+on ports their source never takes.
 
 `triggerStates` reports the health of every registered trigger, including poll
 schedules and the last error, which is where a trigger that isn't firing
-explains itself.
+explains itself. A webhook trigger that renews its subscription also reports
+`nextRenewAt`, the next time `onRenew` runs, and `renewError` and
+`renewFailures`, the last failed renewal and how many have failed in a row.
+They are kept apart from `lastError` and `consecutiveFailures`, which belong to
+deliveries and polls. A trigger whose renewals keep failing stays `ENABLED`,
+so check `renewError` when a webhook trigger has gone quiet.
+
+```graphql
+query {
+  workflowRuntime {
+    triggerStates {
+      workflowId status nextPollAt lastError consecutiveFailures
+      nextRenewAt renewError renewFailures
+    }
+  }
+}
+```
 
 ---
 
@@ -31768,6 +32055,12 @@ ph connect build \
 ph connect build --json '{"renown":{"url":"https://x"},"drives":{"allowAddDrive":false}}'
 ```
 
+The `--json` payload is the `connect.*` block **without** the `connect` wrapper, as nested objects. Dotted keys (`{"app.workflowsEnabled":true}`), a `{"connect":{...}}` wrapper, unknown keys, and wrong types fail the command with a validation error. For example, to enable workflows and add a default drive:
+
+```bash
+ph connect build --json '{"app":{"workflowsEnabled":true},"drives":{"defaultDrives":[{"url":"https://switchboard.example/d/my-workflows","name":"My workflows"}]}}'
+```
+
 Overrides apply at dist-emit time and are baked into the dist file — operators see the resulting values when the container boots.
 
 ### Full flag matrix
@@ -31794,7 +32087,7 @@ Every `connect.*` field has a dedicated flag. Both `ph connect config` and `ph c
 | `connect.renown.url`                         | `--renown-url`                 | string                                       |
 | `connect.renown.networkId`                   | `--renown-network-id`          | string                                       |
 | `connect.renown.chainId`                     | `--renown-chain-id`            | number                                       |
-| _(bulk, any subset of fields)_               | `--json '{...}'`               | partial `connect.*` JSON blob                |
+| _(bulk, any subset of fields)_               | `--json '{...}'`               | partial `connect.*` blob, no `connect` wrapper |
 
 Plus `ph connect config --get <connect.path>` to read a single value, `ph connect config --dist-dir <path>` to point at a non-default dist location (overrides `PH_CONNECT_OUTDIR`).
 
@@ -31877,21 +32170,31 @@ For a complete understanding of how authorization (authentication, admin access,
 
 ## Configuring workflows
 
-Workflows have two halves, switched on independently, and both live in the same
-`powerhouse.config.json`:
+One setting in `powerhouse.config.json` turns workflows on for both Switchboard
+and Connect:
 
 ```json
 {
-  "workflows": { "enabled": true },
-  "connect": { "app": { "workflowsEnabled": true } }
+  "workflows": { "enabled": true }
 }
 ```
 
-`workflows.enabled` starts the workflow runtime inside **Switchboard** — trigger
-watching, runs, step execution. `connect.app.workflowsEnabled` makes **Connect**
-load Workflow Studio and the workflow and connection editors. A headless reactor
-needs only the first; a Connect that browses workflows running elsewhere needs
-only the second. Both default to off.
+In **Switchboard** it starts the workflow runtime: trigger watching, runs, step
+execution. In **Connect** it loads Workflow Studio and the workflow and
+connection editors. It defaults to off.
+
+`ph vetra` also seeds a drive named **Workflows** (slug `workflows`) that opens
+in Workflow Studio, and adds it to Connect's default drives.
+
+To set Connect apart, give it `connect.app.workflowsEnabled`, which wins over
+`workflows.enabled` when present. For example, a Connect that browses workflows
+running on another reactor:
+
+```json
+{
+  "connect": { "app": { "workflowsEnabled": true } }
+}
+```
 
 Or via env vars:
 
@@ -31899,7 +32202,10 @@ Or via env vars:
 PH_WORKFLOWS_ENABLED=true
 ```
 
-Connect's half has no env var — set it in the config, or pass
+`PH_WORKFLOWS_ENABLED` also accepts `1` and `0`, and it overrides
+`workflows.enabled` in the config file.
+
+Connect has no env var: it follows the config file, or
 `ph connect build --workflows true`.
 
 Beyond the switch, the runtime reads a handful of `PH_WORKFLOWS_*` variables for
@@ -31912,9 +32218,10 @@ Two are worth naming, because leaving them out fails in ways that are hard to
 diagnose:
 
 ```bash
-# 32 bytes of hex encrypting stored connection secrets. Unset, the runtime
-# generates a key next to its working directory — so a host that does not keep
-# that directory comes back unable to read the secrets it stored.
+# 32 bytes of hex encrypting stored connection secrets. Required when the
+# database is Postgres. Unset on PGlite, the runtime generates a key next to its
+# working directory. A key other than the one the secrets were stored with is
+# refused, so keep it: a lost key means re-entering every secret.
 PH_WORKFLOWS_SECRETS_MASTER_KEY=<64 hex chars>
 
 # Addresses a piece may reach, widening a policy that refuses private and
@@ -31922,6 +32229,25 @@ PH_WORKFLOWS_SECRETS_MASTER_KEY=<64 hex chars>
 # machine or network fails to connect.
 PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES=127.0.0.1/32,::1/128
 ```
+
+`ph vetra` and `ph switchboard --dev` add `127.0.0.1/32,::1/128` to
+`PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES` themselves, keeping any addresses already
+in it, so pieces can reach services on your machine during development.
+
+**Webhook origin.** A webhook URL the runtime hands out uses `PUBLIC_URL`, then
+`RENDER_EXTERNAL_URL`, then `HEROKU_APP_DEFAULT_DOMAIN_NAME`, and falls back to
+`http://localhost:<port>`. Set one of them wherever a provider has to reach the
+reactor. This is not `PH_SWITCHBOARD_PUBLIC_URL`, which sets the attachment
+service URL.
+
+```bash
+PUBLIC_URL=https://switchboard.example.com
+```
+
+**Pieces from a registry.** The runtime also reads pieces from the registry
+Switchboard installs packages from (`packageRegistryUrl` in
+`powerhouse.config.json`, or `PH_REGISTRY_URL`), ahead of the Activepieces
+catalogue. There is no separate setting for it.
 
 **NOTE:**
 These names carry the `PH_WORKFLOWS_` prefix as of the release that introduced
@@ -32131,7 +32457,7 @@ For the full configuration model, precedence ladder, and the complete list of `c
 
 ### Connect container env vars
 
-Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never from env vars at runtime. The container entrypoint, however, can apply operator-supplied JSON to that file at startup (operator-wins) — equivalent to pre-running `ph connect config --json '{...}'` on the dist file. The SPA then reads the file as usual.
+Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never from env vars at runtime. The container entrypoint, however, can apply operator-supplied JSON to that file at startup (operator-wins) — similar to pre-running `ph connect config --json '{...}'` on the dist file, but the payload keeps the `connect` wrapper (see below). The SPA then reads the file as usual.
 
 #### Container shape and secrets
 
@@ -32143,7 +32469,7 @@ Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never 
 
 Connect does **not** read any database variables — it is a static frontend. Database connection strings belong on the Switchboard service (see below).
 
-Sentry (DSN, environment label, tracing flag) is no longer set via per-field env vars — those live in `connect.sentry.*` of `powerhouse.config.json` and ride through `PH_CONNECT_CONFIG_JSON` like every other runtime field. See the example below.
+Sentry (DSN, environment label, tracing flag) is no longer set via per-field env vars — those live in `connect.sentry.*` of `powerhouse.config.json` and ride through `PH_CONNECT_CONFIG_JSON` like every other runtime field. See the example below. OpenPanel analytics works the same way: set `connect.openPanel.clientId` (plus `apiUrl` for a self-hosted OpenPanel) to enable it; an empty `clientId`, the default, keeps it off.
 
 #### `PH_CONNECT_CONFIG_JSON` (operator-wins)
 
@@ -32167,13 +32493,17 @@ docker run \
         "dsn": "https://prod-key@sentry.io/1",
         "env": "prod",
         "tracing": true
+      },
+      "openPanel": {
+        "clientId": "your-openpanel-client-id",
+        "apiUrl": "https://openpanel.example/api"
       }
     }
   }' \
   connect:latest
 ```
 
-The schema for the JSON object lives at `packages/builder-tools/connect-utils/runtime-config.schema.json` (also served as the `$schema` URL of any generated file). The same shape that `ph connect config --json` accepts is what `PH_CONNECT_CONFIG_JSON` accepts here.
+The schema for the JSON object lives at `packages/builder-tools/connect-utils/runtime-config.schema.json` (also served as the `$schema` URL of any generated file). `PH_CONNECT_CONFIG_JSON` takes the whole-file shape, with the `connect` wrapper. `ph connect config --json` and `ph connect build --json` differ: they take the `connect.*` block alone.
 
 **Invalid input behaviour:** malformed JSON or a non-object payload aborts container startup with a clear stderr message rather than silently dropping the operator's intent.
 
@@ -39337,7 +39667,7 @@ yarn cache clean --force
 - **Workflow** – Automation assembled from blocks rather than written in code: one trigger and a graph of steps, stored as a `powerhouse/workflow` document so it syncs, versions and replays like any other. Run by the workflow runtime inside Switchboard and authored in Connect's Workflow Studio.
 - **Workflow Studio** – The Connect drive app for authoring workflows: the canvas, plus the list of workflows, connections and runs.
 - **Piece** – A connector a workflow calls: a named bundle of actions (what a step does) and triggers (what starts a run), each declaring the properties it takes and the shape of what it returns. Pieces come from the reactor's own built-in piece, from a reactor package that ships one, or from a registry.
-- **Block Type** – What a workflow step names: `<piece>#<action>`, or `<piece>#trigger:<name>` for a trigger. A piece from a registry carries its version too (`<piece>@<version>#<action>`); one shipped by a reactor package does not, so that upgrading the package cannot orphan the workflows naming its blocks.
+- **Block** – What a workflow step or trigger names: a piece's action or trigger, as `pieceName`, `pieceVersion` and `actionName` (or `triggerName`). The version is exact and is the version of the package that ships the piece. It isn't part of the block's identity, so the same action at another version is the same block. The engine's own blocks belong to the built-in piece `@powerhousedao/piece-core`.
 - **Connection** – A `powerhouse/connection` document holding one credential a workflow step authenticates with. Steps refer to it by id, so the secret is never written into the workflow document itself.
 - **Run** – One execution of a workflow, started by its trigger. A run records the workflow version it executed, so an old run stays readable against the definition it actually used.
 - **Preview Drive** – A local drive created in `--watch` mode during `ph vetra` development, used for testing local document models and editors without affecting the main synced drive.
@@ -39373,7 +39703,7 @@ yarn cache clean --force
 - **Reducers (Document Model Reducers)** – Functions implementing a Document Model's logic; for each operation, a reducer takes current state and an action, returning new state.
 - **Replay Events** – The process of re-applying recorded events from a document's Event History to reconstruct or restore its state, a core capability of Event Sourcing.
 - **Scope** – A partition of a document's operation history. Operations are grouped by scope (e.g., `"global"`, `"local"`), allowing independent histories on the same document. Global scope contains shared state; local scope contains user-specific state.
-- **Branch** – A named fork of a document's operation history, enabling draft/published workflows. Operations are isolated per branch. The default branch is `"main"`.
+- **Branch** – A named fork of a document's operation history. Operations are isolated per branch. The default branch is `"main"`. Unrelated to a workflow's draft and published copies, and to the `branch` action of the core workflow piece.
 - **State (Global State in Document Model)** – The primary, persisted, shared data of a document instance, managed by its reducers.
 - **State Schema** – The component of a Document Model that defines the structure of the document, including its fields, data types, and validation rules, typically using a GraphQL-like syntax. It serves as a blueprint for how data is stored and validated.
 - **Strands** – A single synchronization channel that connects exactly one unit of synchronization to another, with all four parameters (drive_url, doc_id, scope, branch) set to fixed values. This allows synchronization between two distinct points of instances of a document or document drive.

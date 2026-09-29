@@ -17,6 +17,13 @@ import { createRef } from "../../src/ref.js";
 import { streamFromString, streamToBytes } from "../factories.js";
 
 const REMOTE_URL = "https://switchboard.example.com";
+const DOC_ID = "doc/1";
+const SIGNED_TARGET = {
+  kind: "switchboard",
+  method: "GET",
+  url: `${REMOTE_URL}/attachments/hash-1?documentId=doc%2F1&expires=1&signature=s`,
+  headers: {},
+};
 
 function mockResponse(
   status: number,
@@ -609,6 +616,7 @@ describe("RemoteAttachmentUploadFactory", () => {
 describe("RemoteAttachmentStore", () => {
   let mockFetch: typeof fetch & ReturnType<typeof vi.fn>;
   let store: RemoteAttachmentStore;
+  let served: Response;
 
   beforeEach(() => {
     mockFetch = vi.fn() as unknown as typeof fetch & ReturnType<typeof vi.fn>;
@@ -659,9 +667,50 @@ describe("RemoteAttachmentStore", () => {
     expect(calledUrl).not.toContain("expiresIn");
   });
 
+  // Every remote get negotiates a target first; the byte request follows it.
+  function serveBytes(response: Response): void {
+    served = response;
+    mockFetch = vi.fn((url: string) =>
+      Promise.resolve(
+        url.includes("/download-target?")
+          ? mockResponse(200, { json: SIGNED_TARGET })
+          : served,
+      ),
+    ) as unknown as typeof fetch & ReturnType<typeof vi.fn>;
+    store = new RemoteAttachmentStore({
+      remoteUrl: REMOTE_URL,
+      fetchFn: mockFetch,
+    });
+  }
+
+  it("get and stat make no request without a documentId", async () => {
+    await expect(store.get("hash-1")).rejects.toThrow(/documentId/);
+    await expect(store.stat("hash-1")).rejects.toBeInstanceOf(
+      AttachmentNotFound,
+    );
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("get fetches the negotiated target URL, not a bare hash URL", async () => {
+    serveBytes(
+      mockResponse(200, {
+        body: streamFromString("data"),
+        headers: { "Content-Type": "text/plain", "Content-Length": "4" },
+      }),
+    );
+
+    await store.get("hash-1", undefined, DOC_ID);
+
+    const urls = mockFetch.mock.calls.map((call) => String(call[0]));
+    expect(urls).toEqual([
+      `${REMOTE_URL}/attachments/hash-1/download-target?documentId=doc%2F1`,
+      SIGNED_TARGET.url,
+    ]);
+  });
+
   it("get returns AttachmentResponse with header populated from Attachment-Metadata (incl. server-sourced timestamps)", async () => {
     const body = streamFromString("file data");
-    mockFetch.mockResolvedValue(
+    serveBytes(
       mockResponse(200, {
         body,
         headers: {
@@ -677,7 +726,7 @@ describe("RemoteAttachmentStore", () => {
       }),
     );
 
-    const result = await store.get("hash-1");
+    const result = await store.get("hash-1", undefined, DOC_ID);
     expect(result.body).toBe(body);
     expect(result.header).toEqual({
       hash: "hash-1",
@@ -694,7 +743,7 @@ describe("RemoteAttachmentStore", () => {
   });
 
   it("get falls back to Content-Type when Attachment-Metadata missing", async () => {
-    mockFetch.mockResolvedValue(
+    serveBytes(
       mockResponse(200, {
         body: streamFromString("data"),
         headers: {
@@ -704,7 +753,7 @@ describe("RemoteAttachmentStore", () => {
       }),
     );
 
-    const result = await store.get("hash-2");
+    const result = await store.get("hash-2", undefined, DOC_ID);
     expect(result.header.mimeType).toBe("image/png");
     expect(result.header.fileName).toBe("unknown");
     expect(result.header.sizeBytes).toBe(256);
@@ -712,7 +761,7 @@ describe("RemoteAttachmentStore", () => {
   });
 
   it("get throws when Attachment-Metadata absent and Content-Length missing", async () => {
-    mockFetch.mockResolvedValue(
+    serveBytes(
       mockResponse(200, {
         body: streamFromString("data"),
         headers: {
@@ -720,11 +769,13 @@ describe("RemoteAttachmentStore", () => {
         },
       }),
     );
-    await expect(store.get("hash-3")).rejects.toThrow(/Content-Length/);
+    await expect(store.get("hash-3", undefined, DOC_ID)).rejects.toThrow(
+      /Content-Length/,
+    );
   });
 
   it("get throws when Content-Length is not a number", async () => {
-    mockFetch.mockResolvedValue(
+    serveBytes(
       mockResponse(200, {
         body: streamFromString("data"),
         headers: {
@@ -733,11 +784,13 @@ describe("RemoteAttachmentStore", () => {
         },
       }),
     );
-    await expect(store.get("hash-4")).rejects.toThrow(/Content-Length/);
+    await expect(store.get("hash-4", undefined, DOC_ID)).rejects.toThrow(
+      /Content-Length/,
+    );
   });
 
   it("get throws when Content-Length is negative", async () => {
-    mockFetch.mockResolvedValue(
+    serveBytes(
       mockResponse(200, {
         body: streamFromString("data"),
         headers: {
@@ -746,11 +799,13 @@ describe("RemoteAttachmentStore", () => {
         },
       }),
     );
-    await expect(store.get("hash-5")).rejects.toThrow(/Content-Length/);
+    await expect(store.get("hash-5", undefined, DOC_ID)).rejects.toThrow(
+      /Content-Length/,
+    );
   });
 
   it("get throws when Content-Length is a non-integer float", async () => {
-    mockFetch.mockResolvedValue(
+    serveBytes(
       mockResponse(200, {
         body: streamFromString("data"),
         headers: {
@@ -759,11 +814,13 @@ describe("RemoteAttachmentStore", () => {
         },
       }),
     );
-    await expect(store.get("hash-6")).rejects.toThrow(/Content-Length/);
+    await expect(store.get("hash-6", undefined, DOC_ID)).rejects.toThrow(
+      /Content-Length/,
+    );
   });
 
   it("get falls back to Content-Type fallback when Attachment-Metadata is malformed JSON", async () => {
-    mockFetch.mockResolvedValue(
+    serveBytes(
       mockResponse(200, {
         body: streamFromString("data"),
         headers: {
@@ -773,7 +830,7 @@ describe("RemoteAttachmentStore", () => {
         },
       }),
     );
-    const result = await store.get("hash-7");
+    const result = await store.get("hash-7", undefined, DOC_ID);
     expect(result.header.mimeType).toBe("image/png");
     expect(result.header.fileName).toBe("unknown");
     expect(result.header.sizeBytes).toBe(256);
@@ -781,23 +838,21 @@ describe("RemoteAttachmentStore", () => {
   });
 
   it("get throws AttachmentNotFound on 404", async () => {
-    mockFetch.mockResolvedValue(mockResponse(404));
-    await expect(store.get("missing")).rejects.toBeInstanceOf(
-      AttachmentNotFound,
-    );
+    serveBytes(mockResponse(404));
+    await expect(
+      store.get("missing", undefined, DOC_ID),
+    ).rejects.toBeInstanceOf(AttachmentNotFound);
   });
 
   it("get throws on non-2xx other than 404", async () => {
-    mockFetch.mockResolvedValue(
-      mockResponse(500, { statusText: "Internal Server Error" }),
-    );
-    await expect(store.get("hash")).rejects.toThrow(
+    serveBytes(mockResponse(500, { statusText: "Internal Server Error" }));
+    await expect(store.get("hash", undefined, DOC_ID)).rejects.toThrow(
       /Attachment fetch failed: 500/,
     );
   });
 
   it("get passes abort signal", async () => {
-    mockFetch.mockResolvedValue(
+    serveBytes(
       mockResponse(200, {
         body: streamFromString("data"),
         headers: {
@@ -814,7 +869,7 @@ describe("RemoteAttachmentStore", () => {
     );
 
     const controller = new AbortController();
-    await store.get("hash", controller.signal);
+    await store.get("hash", controller.signal, DOC_ID);
 
     expect(mockFetch).toHaveBeenCalledWith(
       expect.any(String),
@@ -823,7 +878,7 @@ describe("RemoteAttachmentStore", () => {
   });
 
   it("uses streamToBytes consumer round-trip", async () => {
-    mockFetch.mockResolvedValue(
+    serveBytes(
       mockResponse(200, {
         body: streamFromString("payload"),
         headers: {
@@ -838,13 +893,13 @@ describe("RemoteAttachmentStore", () => {
         },
       }),
     );
-    const result = await store.get("h");
+    const result = await store.get("h", undefined, DOC_ID);
     const bytes = await streamToBytes(result.body);
     expect(new TextDecoder().decode(bytes)).toBe("payload");
   });
 
   it("stat issues HEAD and returns header from Attachment-Metadata", async () => {
-    mockFetch.mockResolvedValue(
+    serveBytes(
       mockResponse(200, {
         headers: {
           "Content-Length": "9",
@@ -860,10 +915,10 @@ describe("RemoteAttachmentStore", () => {
       }),
     );
 
-    const header = await store.stat("hash-stat");
+    const header = await store.stat("hash-stat", DOC_ID);
 
     expect(mockFetch).toHaveBeenCalledWith(
-      `${REMOTE_URL}/attachments/hash-stat`,
+      `${REMOTE_URL}/attachments/hash-stat?documentId=doc%2F1`,
       expect.objectContaining({ method: "HEAD" }),
     );
     expect(header).toEqual({
@@ -881,8 +936,8 @@ describe("RemoteAttachmentStore", () => {
   });
 
   it("stat throws AttachmentNotFound on 404", async () => {
-    mockFetch.mockResolvedValue(mockResponse(404));
-    await expect(store.stat("missing")).rejects.toBeInstanceOf(
+    serveBytes(mockResponse(404));
+    await expect(store.stat("missing", DOC_ID)).rejects.toBeInstanceOf(
       AttachmentNotFound,
     );
   });
@@ -898,7 +953,7 @@ describe("RemoteAttachmentStore", () => {
     });
 
     it("stat 202 with valid Attachment-Pending header returns pending header", async () => {
-      mockFetch.mockResolvedValue(
+      serveBytes(
         mockResponse(202, {
           headers: {
             "Attachment-Pending": PENDING_HEADER_VALUE,
@@ -907,7 +962,7 @@ describe("RemoteAttachmentStore", () => {
         }),
       );
 
-      const header = await store.stat(PENDING_HASH);
+      const header = await store.stat(PENDING_HASH, DOC_ID);
 
       expect(header.status).toBe("pending");
       expect(header.hash).toBe(PENDING_HASH);
@@ -921,40 +976,40 @@ describe("RemoteAttachmentStore", () => {
       // This is the critical pin: a 202 must NEVER produce an available
       // attachment. Verify that the pending header path does not return
       // status 'available'.
-      mockFetch.mockResolvedValue(
+      serveBytes(
         mockResponse(202, {
           headers: { "Attachment-Pending": PENDING_HEADER_VALUE },
         }),
       );
 
-      const header = await store.stat(PENDING_HASH);
+      const header = await store.stat(PENDING_HASH, DOC_ID);
 
       expect(header.status).not.toBe("available");
       expect(header.status).toBe("pending");
     });
 
     it("stat 202 with missing Attachment-Pending header throws", async () => {
-      mockFetch.mockResolvedValue(mockResponse(202));
+      serveBytes(mockResponse(202));
 
-      await expect(store.stat(PENDING_HASH)).rejects.toThrow(
+      await expect(store.stat(PENDING_HASH, DOC_ID)).rejects.toThrow(
         /Attachment-Pending/,
       );
     });
 
     it("stat 202 with malformed Attachment-Pending JSON throws", async () => {
-      mockFetch.mockResolvedValue(
+      serveBytes(
         mockResponse(202, {
           headers: { "Attachment-Pending": "not json" },
         }),
       );
 
-      await expect(store.stat(PENDING_HASH)).rejects.toThrow(
+      await expect(store.stat(PENDING_HASH, DOC_ID)).rejects.toThrow(
         /Attachment-Pending/,
       );
     });
 
     it("stat 202 with Attachment-Pending missing required field throws", async () => {
-      mockFetch.mockResolvedValue(
+      serveBytes(
         mockResponse(202, {
           headers: {
             "Attachment-Pending": JSON.stringify({
@@ -967,13 +1022,13 @@ describe("RemoteAttachmentStore", () => {
         }),
       );
 
-      await expect(store.stat(PENDING_HASH)).rejects.toThrow(
+      await expect(store.stat(PENDING_HASH, DOC_ID)).rejects.toThrow(
         /Attachment-Pending/,
       );
     });
 
     it("stat 202 with Attachment-Pending containing only expiresAtUtc throws AttachmentPending (degraded-wire case)", async () => {
-      mockFetch.mockResolvedValue(
+      serveBytes(
         mockResponse(202, {
           headers: {
             "Attachment-Pending": JSON.stringify({ expiresAtUtc: EXPIRES_AT }),
@@ -981,7 +1036,9 @@ describe("RemoteAttachmentStore", () => {
         }),
       );
 
-      const err = await store.stat(PENDING_HASH).catch((e: unknown) => e);
+      const err = await store
+        .stat(PENDING_HASH, DOC_ID)
+        .catch((e: unknown) => e);
 
       expect(err).toBeInstanceOf(AttachmentPending);
       const typed = err as AttachmentPending;
@@ -990,7 +1047,7 @@ describe("RemoteAttachmentStore", () => {
     });
 
     it("get 202 with valid Attachment-Pending header throws AttachmentPending", async () => {
-      mockFetch.mockResolvedValue(
+      serveBytes(
         mockResponse(202, {
           headers: {
             "Attachment-Pending": PENDING_HEADER_VALUE,
@@ -999,7 +1056,9 @@ describe("RemoteAttachmentStore", () => {
         }),
       );
 
-      const err = await store.get(PENDING_HASH).catch((e: unknown) => e);
+      const err = await store
+        .get(PENDING_HASH, undefined, DOC_ID)
+        .catch((e: unknown) => e);
 
       expect(err).toBeInstanceOf(AttachmentPending);
       const typed = err as AttachmentPending;
@@ -1012,13 +1071,15 @@ describe("RemoteAttachmentStore", () => {
       // would be parsed as a zero-length successful response, producing a
       // real zero-byte attachment row. This test pins that the 202 path always
       // throws, never returns a response with a body.
-      mockFetch.mockResolvedValue(
+      serveBytes(
         mockResponse(202, {
           headers: { "Attachment-Pending": PENDING_HEADER_VALUE },
         }),
       );
 
-      await expect(store.get(PENDING_HASH)).rejects.toThrow();
+      await expect(
+        store.get(PENDING_HASH, undefined, DOC_ID),
+      ).rejects.toThrow();
 
       // Confirm it's not silently succeeding with zero bytes.
       const result = await store
@@ -1029,21 +1090,23 @@ describe("RemoteAttachmentStore", () => {
     });
 
     it("get 202 with missing Attachment-Pending header throws (not data)", async () => {
-      mockFetch.mockResolvedValue(mockResponse(202));
+      serveBytes(mockResponse(202));
 
-      await expect(store.get(PENDING_HASH)).rejects.toThrow(
+      await expect(store.get(PENDING_HASH, undefined, DOC_ID)).rejects.toThrow(
         /Attachment-Pending/,
       );
     });
 
     it("get 202 with malformed Attachment-Pending JSON throws error, not data", async () => {
-      mockFetch.mockResolvedValue(
+      serveBytes(
         mockResponse(202, {
           headers: { "Attachment-Pending": "{broken json" },
         }),
       );
 
-      const err = await store.get(PENDING_HASH).catch((e: unknown) => e);
+      const err = await store
+        .get(PENDING_HASH, undefined, DOC_ID)
+        .catch((e: unknown) => e);
 
       // Must throw an error, and specifically not be a successful response.
       expect(err).toBeInstanceOf(Error);
@@ -1054,14 +1117,16 @@ describe("RemoteAttachmentStore", () => {
 
     it("get 202 response body is not consumed as attachment data", async () => {
       // Even if the server mistakenly sends a body on 202, we must not consume it.
-      mockFetch.mockResolvedValue(
+      serveBytes(
         mockResponse(202, {
           body: streamFromString("accidentally-sent-data"),
           headers: { "Attachment-Pending": PENDING_HEADER_VALUE },
         }),
       );
 
-      const err = await store.get(PENDING_HASH).catch((e: unknown) => e);
+      const err = await store
+        .get(PENDING_HASH, undefined, DOC_ID)
+        .catch((e: unknown) => e);
 
       expect(err).toBeInstanceOf(AttachmentPending);
       // Verify it is specifically not returning bytes as attachment data.
@@ -1088,5 +1153,34 @@ describe("createRemoteAttachmentService", () => {
     });
     expect(upload.reservationId).toBe("r-100");
     expect(upload).toBeInstanceOf(RemoteAttachmentUpload);
+  });
+
+  it("leaves hash-first dedup to the server's 409 without a hash-only HEAD", async () => {
+    const hash = "d".repeat(64) as AttachmentHash;
+    const mockFetch = vi.fn() as unknown as typeof fetch &
+      ReturnType<typeof vi.fn>;
+    mockFetch.mockResolvedValueOnce(
+      mockResponse(409, {
+        json: { error: "already_exists", ref: `attachment://v1:${hash}` },
+      }),
+    );
+
+    const service = createRemoteAttachmentService({
+      remoteUrl: REMOTE_URL,
+      fetchFn: mockFetch,
+    });
+    await expect(
+      service.reserve({
+        mimeType: "text/plain",
+        fileName: "x.txt",
+        clientHash: hash,
+        sizeBytes: 3,
+      }),
+    ).rejects.toBeInstanceOf(AttachmentAlreadyExists);
+    expect(mockFetch).toHaveBeenCalledOnce();
+    expect(mockFetch).toHaveBeenCalledWith(
+      `${REMOTE_URL}/attachments/reservations`,
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 });

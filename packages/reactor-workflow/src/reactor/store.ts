@@ -1,5 +1,6 @@
 // Persisted run journal in the relational "workflow_runtime" namespace.
 // Dates are ISO text columns: PGlite parses `timestamp` as local time.
+import type { BlockIdentity } from "@powerhousedao/pieces-framework/block-type";
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import {
   redact,
@@ -8,6 +9,7 @@ import {
   type WorkflowRunResult,
 } from "../pieces/index.js";
 import { childLogger } from "document-model";
+import { sql, type Kysely } from "kysely";
 import { randomUUID } from "node:crypto";
 import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";
 
@@ -20,10 +22,17 @@ export interface RunRow {
   trigger_payload: string | null;
   status: string;
   error: string | null;
+  // When the run was journaled; the listing's stable key, unlike started_at.
+  enqueued_at: string;
+  // When it began executing; a PENDING run holds its enqueue time here.
   started_at: string;
   ended_at: string | null;
   // Failed run this one resumes; null for first-hand runs.
   rerun_of: string | null;
+  // How many warning_notes there are.
+  warnings: number;
+  // JSON list: fallback piece versions, edges on ports nothing emits.
+  warning_notes: string | null;
 }
 
 export interface StepExecutionRow {
@@ -34,7 +43,9 @@ export interface StepExecutionRow {
   ordinal: number;
   step_id: string;
   step_key: string;
-  block_type: string;
+  piece_name: string;
+  // The action a step ran, or the trigger a trigger test sampled.
+  block_name: string;
   status: string;
   input: string | null;
   output: string | null;
@@ -42,6 +53,13 @@ export interface StepExecutionRow {
   error: string | null;
   started_at: string | null;
   ended_at: string | null;
+  // The piece version that ran and how it matched the pin; null when unresolved.
+  piece_version: string | null;
+  piece_source: string | null;
+  version_match: string | null;
+  version_note: string | null;
+  // Hash of the step definition it ran from; rerun replays only on a match.
+  config_hash: string | null;
 }
 
 // A document a run's steps were handed through the reactor port.
@@ -52,7 +70,8 @@ export interface RunDocumentRow {
 
 export interface TriggerStateRow {
   workflow_id: string;
-  block_type: string;
+  piece_name: string;
+  trigger_name: string;
   config_hash: string;
   status: string; // ENABLED | DISABLED | ERROR
   // Vestigial: hook state lives in piece_store now, and this is written "{}"
@@ -67,6 +86,40 @@ export interface TriggerStateRow {
   lease_owner: string | null;
   lease_expires_at: string | null;
   updated_at: string;
+  // The piece version the trigger armed with; null for a host-fed trigger.
+  piece_version: string | null;
+  piece_source: string | null;
+  version_match: string | null;
+  version_note: string | null;
+  // When onRenew is next due; null for a trigger that never renews.
+  next_renew_at: string | null;
+  // The last onRenew failure and its streak, apart from the poll's.
+  renew_error: string | null;
+  renew_failures: number;
+}
+
+type DefaultedTriggerColumn =
+  | "piece_version"
+  | "piece_source"
+  | "version_match"
+  | "version_note"
+  | "next_renew_at"
+  | "renew_error"
+  | "renew_failures";
+
+// A trigger row as written; the piece and renew columns default to null.
+export type TriggerStateInput = Omit<TriggerStateRow, DefaultedTriggerColumn> &
+  Partial<Pick<TriggerStateRow, DefaultedTriggerColumn>>;
+
+// The trigger a row was written for, and the columns that name it.
+export function triggerRowBlock(row: TriggerStateRow): BlockIdentity {
+  return { pieceName: row.piece_name, kind: "trigger", name: row.trigger_name };
+}
+
+export function triggerBlockColumns(
+  block: BlockIdentity,
+): Pick<TriggerStateRow, "piece_name" | "trigger_name"> {
+  return { piece_name: block.pieceName, trigger_name: block.name };
 }
 
 export interface TriggerDedupeRow {
@@ -126,6 +179,13 @@ function isDuplicateObject(error: unknown): boolean {
   return (error as { code?: unknown }).code === "42P07";
 }
 
+// A trigger with nothing to renew, and no renewal failure left on it.
+const RENEW_CLEARED = {
+  next_renew_at: null,
+  renew_error: null,
+  renew_failures: 0,
+} as const;
+
 async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
   await db.schema
     .createTable("run")
@@ -153,7 +213,8 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
   await db.schema
     .createTable("trigger_state")
     .addColumn("workflow_id", "text", (col) => col.primaryKey())
-    .addColumn("block_type", "text", (col) => col.notNull())
+    .addColumn("piece_name", "text", (col) => col.notNull())
+    .addColumn("trigger_name", "text", (col) => col.notNull())
     .addColumn("config_hash", "text", (col) => col.notNull())
     .addColumn("status", "text", (col) => col.notNull())
     .addColumn("store_state", "text", (col) => col.notNull())
@@ -185,7 +246,8 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     .addColumn("ordinal", "integer", (col) => col.notNull())
     .addColumn("step_id", "text", (col) => col.notNull())
     .addColumn("step_key", "text", (col) => col.notNull())
-    .addColumn("block_type", "text", (col) => col.notNull())
+    .addColumn("piece_name", "text", (col) => col.notNull())
+    .addColumn("block_name", "text", (col) => col.notNull())
     .addColumn("status", "text", (col) => col.notNull())
     .addColumn("input", "text")
     .addColumn("output", "text")
@@ -228,6 +290,71 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     }
   }
 
+  // Additive migration for block versioning: what each step and trigger ran.
+  for (const table of ["step_execution", "trigger_state"] as const) {
+    for (const column of [
+      "piece_version",
+      "piece_source",
+      "version_match",
+      "version_note",
+      ...(table === "step_execution" ? ["config_hash"] : []),
+    ]) {
+      try {
+        await db.schema.alterTable(table).addColumn(column, "text").execute();
+      } catch {
+        // column already exists
+      }
+    }
+  }
+  try {
+    await db.schema
+      .alterTable("trigger_state")
+      .addColumn("next_renew_at", "text")
+      .execute();
+  } catch {
+    // column already exists
+  }
+  try {
+    await db.schema
+      .alterTable("trigger_state")
+      .addColumn("renew_error", "text")
+      .execute();
+  } catch {
+    // column already exists
+  }
+  try {
+    await db.schema
+      .alterTable("trigger_state")
+      .addColumn("renew_failures", "integer", (col) =>
+        col.notNull().defaultTo(0),
+      )
+      .execute();
+  } catch {
+    // column already exists
+  }
+  await db.schema
+    .createIndex("trigger_state_renew_due")
+    .ifNotExists()
+    .on("trigger_state")
+    .columns(["status", "next_renew_at"])
+    .execute();
+  try {
+    await db.schema
+      .alterTable("run")
+      .addColumn("warnings", "integer", (col) => col.notNull().defaultTo(0))
+      .execute();
+  } catch {
+    // column already exists
+  }
+  try {
+    await db.schema
+      .alterTable("run")
+      .addColumn("warning_notes", "text")
+      .execute();
+  } catch {
+    // column already exists
+  }
+
   await db.schema
     .createTable("run_document")
     .addColumn("run_id", "text", (col) => col.notNull())
@@ -245,6 +372,65 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     .addColumn("updated_at", "text", (col) => col.notNull())
     .addPrimaryKeyConstraint("piece_store_pk", ["scope", "scope_key", "key"])
     .ifNotExists()
+    .execute();
+
+  // Additive migration: rows journaled before enqueued_at list by their start.
+  try {
+    await db.schema
+      .alterTable("run")
+      .addColumn("enqueued_at", "text")
+      .execute();
+  } catch {
+    // column already exists
+  }
+  await db
+    .updateTable("run")
+    .set({ enqueued_at: sql.ref("started_at") })
+    .where("enqueued_at", "is", null)
+    .execute();
+
+  // Run listings, scoped and unscoped, page newest first on (enqueued_at, id).
+  await db.schema.dropIndex("run_workflow_started").ifExists().execute();
+  await db.schema.dropIndex("run_started").ifExists().execute();
+  await db.schema
+    .createIndex("run_workflow_enqueued")
+    .ifNotExists()
+    .on("run")
+    .columns(["workflow_id", "enqueued_at desc", "id desc"])
+    .execute();
+  await db.schema
+    .createIndex("run_enqueued")
+    .ifNotExists()
+    .on("run")
+    .columns(["enqueued_at desc", "id desc"])
+    .execute();
+  // claimDedupe prunes one workflow's expired keys on every claim.
+  await db.schema
+    .createIndex("trigger_dedupe_workflow_created")
+    .ifNotExists()
+    .on("trigger_dedupe")
+    .columns(["workflow_id", "created_at"])
+    .execute();
+  // The retention sweep: finished runs by age, and dedupe keys past every TTL.
+  await db.schema
+    .createIndex("run_ended")
+    .ifNotExists()
+    .on("run")
+    .column("ended_at")
+    .execute();
+  await db.schema
+    .createIndex("trigger_dedupe_created")
+    .ifNotExists()
+    .on("trigger_dedupe")
+    .column("created_at")
+    .execute();
+  // The supervisor's due-trigger query on every tick.
+  await db.schema
+    .createIndex("trigger_state_due")
+    .ifNotExists()
+    .on("trigger_state")
+    .column("next_poll_at")
+    .where(sql.ref("status"), "=", "ENABLED")
     .execute();
 
   // The reactor's webhook service owns tokens now, in its own namespace, so
@@ -545,7 +731,8 @@ function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
     ordinal,
     step_id: step.stepId,
     step_key: step.key,
-    block_type: step.blockType,
+    piece_name: step.pieceName,
+    block_name: step.blockName,
     status: step.status,
     input: jsonOrNull(redact(step.input)),
     output: jsonOrNull(redact(step.output)),
@@ -553,7 +740,27 @@ function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
     error: step.error ? redactMessage(step.error) : null,
     started_at: step.startedAt ?? null,
     ended_at: step.endedAt ?? null,
+    piece_version: step.piece?.version ?? null,
+    piece_source: step.piece?.source ?? null,
+    version_match: step.piece?.match ?? null,
+    version_note: step.piece?.note ?? null,
+    config_hash: step.configHash ?? null,
   };
+}
+
+// What a run should not be read as a plain success for.
+export function runWarningNotes(result: WorkflowRunResult): string[] {
+  const fallbacks = result.steps
+    .filter((step) => step.piece?.match === "fallback")
+    .map(
+      (step) =>
+        `Step "${step.key}" ran ${step.piece!.version}, a fallback for the version it pins`,
+    );
+  return [...fallbacks, ...(result.warnings ?? [])];
+}
+
+export function runWarnings(result: WorkflowRunResult): number {
+  return runWarningNotes(result).length;
 }
 
 function jsonOrNull(value: unknown): string | null {
@@ -566,6 +773,73 @@ function jsonOrNull(value: unknown): string | null {
     return null;
   }
 }
+
+// The insert's own conflict outcome is the claim; a prior select can't be trusted.
+async function claimDedupeIn(
+  db: Kysely<WorkflowRuntimeDB>,
+  workflowId: string,
+  dedupeKey: string,
+  ttlMs: number,
+  nowIso: string,
+  runId: string | null,
+): Promise<boolean> {
+  const cutoff = new Date(Date.parse(nowIso) - ttlMs).toISOString();
+  await db
+    .deleteFrom("trigger_dedupe")
+    .where("workflow_id", "=", workflowId)
+    .where("created_at", "<", cutoff)
+    .execute();
+  const inserted = await db
+    .insertInto("trigger_dedupe")
+    .values({
+      workflow_id: workflowId,
+      dedupe_key: dedupeKey,
+      run_id: runId,
+      created_at: nowIso,
+    })
+    .onConflict((oc) => oc.columns(["workflow_id", "dedupe_key"]).doNothing())
+    .returning("dedupe_key")
+    .executeTakeFirst();
+  return inserted !== undefined;
+}
+
+const STEP_COLUMNS_WITHOUT_DATA = [
+  "id",
+  "run_id",
+  "ordinal",
+  "step_id",
+  "step_key",
+  "piece_name",
+  "block_name",
+  "status",
+  "port",
+  "error",
+  "started_at",
+  "ended_at",
+  "piece_version",
+  "piece_source",
+  "version_match",
+  "version_note",
+  "config_hash",
+] as const satisfies readonly Exclude<
+  keyof StepExecutionRow,
+  "input" | "output"
+>[];
+
+// A run's position in the newest-first listing; fixed once journaled.
+export interface RunKey {
+  enqueuedAt: string;
+  id: string;
+}
+
+export interface ListRunsOptions {
+  after?: RunKey;
+  excludeTriggerKinds?: string[];
+}
+
+export const MAX_LIST_RUNS = 100;
+
+const PRUNE_BATCH_SIZE = 500;
 
 export interface EnqueueRunOptions {
   workflowId: string;
@@ -637,8 +911,8 @@ export class WorkflowRunStore {
     if (this.runsInFlight.size > 0) {
       query = query.where("id", "not in", [...this.runsInFlight]);
     }
-    const result = await query.executeTakeFirst();
-    const recovered = Number(result.numUpdatedRows);
+    // Counted off RETURNING: the knex-backed dialect reports no row count.
+    const recovered = (await query.returning("id").execute()).length;
     if (recovered > 0) {
       logger.warn(
         `Recovered ${recovered} workflow run(s) left RUNNING by a stopped reactor; they are now FAILED and rerunnable`,
@@ -663,8 +937,8 @@ export class WorkflowRunStore {
     if (this.runsInFlight.size > 0) {
       query = query.where("id", "not in", [...this.runsInFlight]);
     }
-    const result = await query.executeTakeFirst();
-    const recovered = Number(result.numUpdatedRows);
+    // Counted off RETURNING: the knex-backed dialect reports no row count.
+    const recovered = (await query.returning("id").execute()).length;
     if (recovered > 0) {
       logger.warn(
         `Recovered ${recovered} workflow run(s) journaled by a stopped reactor but never started; they are now FAILED and rerunnable`,
@@ -678,7 +952,50 @@ export class WorkflowRunStore {
   // only known once fire() reads the document, so beginRun fills them in.
   async enqueueRun(options: EnqueueRunOptions): Promise<string> {
     const id = randomUUID();
-    await this.db
+    await this.insertPendingRun(this.db, id, options);
+    // In flight from here: the row is this process's to finish, and no sweep
+    // of either kind may close it out underneath the run about to start.
+    this.runsInFlight.add(id);
+    return id;
+  }
+
+  // Claims the dedupe key and journals the PENDING run in one transaction, so
+  // a crash cannot keep the claim without the run. Null when already claimed.
+  async claimAndEnqueueRun(
+    dedupeKey: string,
+    ttlMs: number,
+    nowIso: string,
+    options: EnqueueRunOptions,
+  ): Promise<string | null> {
+    const id = randomUUID();
+    const claimed = await this.db.transaction().execute(async (trx) => {
+      if (
+        !(await claimDedupeIn(
+          trx,
+          options.workflowId,
+          dedupeKey,
+          ttlMs,
+          nowIso,
+          id,
+        ))
+      ) {
+        return false;
+      }
+      await this.insertPendingRun(trx, id, options);
+      return true;
+    });
+    if (!claimed) return null;
+    this.runsInFlight.add(id);
+    return id;
+  }
+
+  private async insertPendingRun(
+    db: Kysely<WorkflowRuntimeDB>,
+    id: string,
+    options: EnqueueRunOptions,
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    await db
       .insertInto("run")
       .values({
         id,
@@ -689,15 +1006,14 @@ export class WorkflowRunStore {
         trigger_payload: jsonOrNull(redact(options.triggerPayload)),
         status: PENDING_RUN_STATUS,
         error: null,
-        started_at: new Date().toISOString(),
+        enqueued_at: now,
+        started_at: now,
         ended_at: null,
         rerun_of: null,
+        warnings: 0,
+        warning_notes: null,
       })
       .execute();
-    // In flight from here: the row is this process's to finish, and no sweep
-    // of either kind may close it out underneath the run about to start.
-    this.runsInFlight.add(id);
-    return id;
   }
 
   // Adopts an enqueued row: the run starts now, with the definition fire() read.
@@ -712,7 +1028,8 @@ export class WorkflowRunStore {
         status: "RUNNING",
         workflow_name: details.workflowName,
         workflow_version: details.workflowVersion,
-        // The wait between enqueue and start is queueing, not run time.
+        // The wait between enqueue and start is queueing, not run time;
+        // enqueued_at keeps the run's place in the listing.
         started_at: new Date().toISOString(),
       })
       .where("id", "=", runId)
@@ -721,6 +1038,7 @@ export class WorkflowRunStore {
 
   async startRun(options: StartRunOptions): Promise<string> {
     const id = randomUUID();
+    const now = new Date().toISOString();
     await this.db
       .insertInto("run")
       .values({
@@ -732,9 +1050,12 @@ export class WorkflowRunStore {
         trigger_payload: jsonOrNull(redact(options.triggerPayload)),
         status: "RUNNING",
         error: null,
-        started_at: new Date().toISOString(),
+        enqueued_at: now,
+        started_at: now,
         ended_at: null,
         rerun_of: options.rerunOf ?? null,
+        warnings: 0,
+        warning_notes: null,
       })
       .execute();
     this.runsInFlight.add(id);
@@ -783,12 +1104,15 @@ export class WorkflowRunStore {
         );
       }
     }
+    const notes = runWarningNotes(result);
     await this.db
       .updateTable("run")
       .set({
         status: result.status,
         error: result.error ? redactMessage(result.error) : null,
         ended_at: new Date().toISOString(),
+        warnings: notes.length,
+        warning_notes: notes.length > 0 ? JSON.stringify(notes) : null,
       })
       .where("id", "=", runId)
       .execute();
@@ -839,7 +1163,8 @@ export class WorkflowRunStore {
         oc.columns(["run_id", "step_id"]).doUpdateSet((eb) => ({
           ordinal: eb.ref("excluded.ordinal"),
           step_key: eb.ref("excluded.step_key"),
-          block_type: eb.ref("excluded.block_type"),
+          piece_name: eb.ref("excluded.piece_name"),
+          block_name: eb.ref("excluded.block_name"),
           status: eb.ref("excluded.status"),
           input: eb.ref("excluded.input"),
           output: eb.ref("excluded.output"),
@@ -847,6 +1172,11 @@ export class WorkflowRunStore {
           error: eb.ref("excluded.error"),
           started_at: eb.ref("excluded.started_at"),
           ended_at: eb.ref("excluded.ended_at"),
+          piece_version: eb.ref("excluded.piece_version"),
+          piece_source: eb.ref("excluded.piece_source"),
+          version_match: eb.ref("excluded.version_match"),
+          version_note: eb.ref("excluded.version_note"),
+          config_hash: eb.ref("excluded.config_hash"),
         })),
       )
       .execute();
@@ -867,20 +1197,37 @@ export class WorkflowRunStore {
 
   // Scope is one workflow id, or a set of them (a drive's workflows). An
   // empty set matches nothing, which is not the same as an unscoped listing.
+
+  // Newest first on (enqueued_at, id); `after` resumes past a row keyset-style.
   async listRuns(
     workflowId?: string | string[],
     limit = 25,
+    options: ListRunsOptions = {},
   ): Promise<RunRow[]> {
     if (Array.isArray(workflowId) && workflowId.length === 0) return [];
     let query = this.db
       .selectFrom("run")
       .selectAll()
-      .orderBy("started_at", "desc")
-      .limit(Math.min(Math.max(limit, 1), 100));
+      .orderBy("enqueued_at", "desc")
+      .orderBy("id", "desc")
+      .limit(Math.min(Math.max(limit, 1), MAX_LIST_RUNS));
     if (Array.isArray(workflowId)) {
       query = query.where("workflow_id", "in", workflowId);
     } else if (workflowId) {
       query = query.where("workflow_id", "=", workflowId);
+    }
+    const { after, excludeTriggerKinds } = options;
+    if (after) {
+      query = query.where((eb) =>
+        eb(
+          eb.refTuple("enqueued_at", "id"),
+          "<",
+          eb.tuple(after.enqueuedAt, after.id),
+        ),
+      );
+    }
+    if (excludeTriggerKinds && excludeTriggerKinds.length > 0) {
+      query = query.where("trigger_kind", "not in", excludeTriggerKinds);
     }
     return query.execute();
   }
@@ -900,6 +1247,31 @@ export class WorkflowRunStore {
       .where("run_id", "=", runId)
       .orderBy("ordinal", "asc")
       .execute();
+  }
+
+  // Steps of many runs in one query, each run's in execution order. Without
+  // `withData` the input and output blobs are left out (read as null).
+  async getStepsForRuns(
+    runIds: string[],
+    options: { withData?: boolean } = {},
+  ): Promise<Map<string, StepExecutionRow[]>> {
+    const byRun = new Map<string, StepExecutionRow[]>(
+      runIds.map((id) => [id, []]),
+    );
+    if (runIds.length === 0) return byRun;
+    const base = this.db
+      .selectFrom("step_execution")
+      .where("run_id", "in", [...new Set(runIds)])
+      .orderBy("run_id")
+      .orderBy("ordinal", "asc");
+    const rows: StepExecutionRow[] =
+      options.withData === false
+        ? (await base.select(STEP_COLUMNS_WITHOUT_DATA).execute()).map(
+            (row) => ({ ...row, input: null, output: null }),
+          )
+        : await base.selectAll().execute();
+    for (const row of rows) byRun.get(row.run_id)?.push(row);
+    return byRun;
   }
 
   async recordRunDocuments(
@@ -928,6 +1300,20 @@ export class WorkflowRunStore {
     return rows.map((row) => row.document_id);
   }
 
+  async getRunDocumentsForRuns(
+    runIds: string[],
+  ): Promise<Map<string, string[]>> {
+    const byRun = new Map<string, string[]>(runIds.map((id) => [id, []]));
+    if (runIds.length === 0) return byRun;
+    const rows = await this.db
+      .selectFrom("run_document")
+      .select(["run_id", "document_id"])
+      .where("run_id", "in", [...new Set(runIds)])
+      .execute();
+    for (const row of rows) byRun.get(row.run_id)?.push(row.document_id);
+    return byRun;
+  }
+
   async getTriggerState(
     workflowId: string,
   ): Promise<TriggerStateRow | undefined> {
@@ -940,10 +1326,17 @@ export class WorkflowRunStore {
 
   // last_error is whatever a piece's onEnable or a schedule parse threw, so it
   // goes through the same gate a poll failure does.
-  async upsertTriggerState(row: TriggerStateRow): Promise<void> {
-    const values = {
+  async upsertTriggerState(row: TriggerStateInput): Promise<void> {
+    const values: TriggerStateRow = {
+      piece_version: null,
+      piece_source: null,
+      version_match: null,
+      version_note: null,
+      next_renew_at: null,
+      renew_failures: 0,
       ...row,
       last_error: row.last_error ? redactMessage(row.last_error) : null,
+      renew_error: row.renew_error ? redactMessage(row.renew_error) : null,
     };
     await this.db
       .insertInto("trigger_state")
@@ -965,6 +1358,8 @@ export class WorkflowRunStore {
       .set({
         status,
         last_error: error ? redactMessage(error) : null,
+        // Only an ENABLED trigger holds a subscription to renew.
+        ...(status === "ENABLED" ? {} : RENEW_CLEARED),
         updated_at: new Date().toISOString(),
       })
       .where("workflow_id", "=", workflowId)
@@ -981,6 +1376,83 @@ export class WorkflowRunStore {
     // A row whose state is still trapped in the blob is not runnable: polling
     // it would advance an empty cursor and re-deliver everything it ever saw.
     return rows.filter((row) => !this.unmigrated.has(row.workflow_id));
+  }
+
+  async listDueTriggerRenewals(nowIso: string): Promise<TriggerStateRow[]> {
+    const rows = await this.db
+      .selectFrom("trigger_state")
+      .selectAll()
+      .where("status", "=", "ENABLED")
+      .where("next_renew_at", "<=", nowIso)
+      .execute();
+    return rows.filter((row) => !this.unmigrated.has(row.workflow_id));
+  }
+
+  async setTriggerRenewAt(
+    workflowId: string,
+    nextRenewAtIso: string | null,
+  ): Promise<void> {
+    await this.db
+      .updateTable("trigger_state")
+      .set(
+        nextRenewAtIso === null
+          ? RENEW_CLEARED
+          : { next_renew_at: nextRenewAtIso },
+      )
+      .where("workflow_id", "=", workflowId)
+      .execute();
+  }
+
+  async recordRenewSuccess(
+    workflowId: string,
+    nowIso: string,
+    nextRenewAtIso: string,
+  ): Promise<void> {
+    await this.db
+      .updateTable("trigger_state")
+      .set({
+        next_renew_at: nextRenewAtIso,
+        renew_error: null,
+        renew_failures: 0,
+        updated_at: nowIso,
+      })
+      .where("workflow_id", "=", workflowId)
+      .execute();
+  }
+
+  async recordRenewFailure(
+    workflowId: string,
+    error: string,
+    nowIso: string,
+    nextRenewAtIso: string,
+    renewFailures: number,
+  ): Promise<void> {
+    await this.db
+      .updateTable("trigger_state")
+      .set({
+        next_renew_at: nextRenewAtIso,
+        renew_error: redactMessage(error),
+        renew_failures: renewFailures,
+        updated_at: nowIso,
+      })
+      .where("workflow_id", "=", workflowId)
+      .execute();
+  }
+
+  // A deleted workflow's row, with the FLOW partition its trigger wrote.
+  async deleteTriggerState(workflowId: string): Promise<void> {
+    await this.db.transaction().execute(async (trx) => {
+      await trx
+        .deleteFrom("trigger_state")
+        .where("workflow_id", "=", workflowId)
+        .execute();
+      await trx
+        .deleteFrom("piece_store")
+        .where("scope", "=", "FLOW")
+        .where("scope_key", "=", workflowId)
+        .execute();
+    });
+    this.unmigrated.delete(workflowId);
   }
 
   async listTriggerStates(): Promise<TriggerStateRow[]> {
@@ -1034,44 +1506,66 @@ export class WorkflowRunStore {
   }
 
   // Claim-with-status dedupe: true when the key was free (caller fires).
-  // The insert's own conflict outcome is the claim; a prior select can't be trusted.
   async claimDedupe(
     workflowId: string,
     dedupeKey: string,
     ttlMs: number,
     nowIso: string,
   ): Promise<boolean> {
-    const cutoff = new Date(Date.parse(nowIso) - ttlMs).toISOString();
+    return claimDedupeIn(this.db, workflowId, dedupeKey, ttlMs, nowIso, null);
+  }
+
+  // A removed workflow's keys would otherwise wait for a claim that never comes.
+  async deleteDedupe(workflowId: string): Promise<void> {
     await this.db
       .deleteFrom("trigger_dedupe")
       .where("workflow_id", "=", workflowId)
-      .where("created_at", "<", cutoff)
       .execute();
-    const inserted = await this.db
-      .insertInto("trigger_dedupe")
-      .values({
-        workflow_id: workflowId,
-        dedupe_key: dedupeKey,
-        run_id: null,
-        created_at: nowIso,
-      })
-      .onConflict((oc) => oc.columns(["workflow_id", "dedupe_key"]).doNothing())
-      .returning("dedupe_key")
-      .executeTakeFirst();
-    return inserted !== undefined;
   }
 
-  async recordDedupeRun(
-    workflowId: string,
-    dedupeKey: string,
-    runId: string,
-  ): Promise<void> {
-    await this.db
-      .updateTable("trigger_dedupe")
-      .set({ run_id: runId })
-      .where("workflow_id", "=", workflowId)
-      .where("dedupe_key", "=", dedupeKey)
+  // Deletes runs that finished before `cutoffIso`, with their steps and
+  // documents, a batch per transaction. Returns how many runs went.
+  async pruneFinishedRuns(
+    cutoffIso: string,
+    batchSize = PRUNE_BATCH_SIZE,
+  ): Promise<number> {
+    let pruned = 0;
+    for (;;) {
+      const deleted = await this.db.transaction().execute(async (trx) => {
+        const ids = (
+          await trx
+            .selectFrom("run")
+            .select("id")
+            .where("ended_at", "is not", null)
+            .where("ended_at", "<", cutoffIso)
+            .limit(batchSize)
+            .execute()
+        ).map((row) => row.id);
+        if (ids.length === 0) return 0;
+        await trx
+          .deleteFrom("step_execution")
+          .where("run_id", "in", ids)
+          .execute();
+        await trx
+          .deleteFrom("run_document")
+          .where("run_id", "in", ids)
+          .execute();
+        await trx.deleteFrom("run").where("id", "in", ids).execute();
+        return ids.length;
+      });
+      pruned += deleted;
+      if (deleted < batchSize) return pruned;
+    }
+  }
+
+  // Keys older than the longest dedupe TTL can no longer suppress anything.
+  async pruneDedupe(cutoffIso: string): Promise<number> {
+    const deleted = await this.db
+      .deleteFrom("trigger_dedupe")
+      .where("created_at", "<", cutoffIso)
+      .returning("dedupe_key")
       .execute();
+    return deleted.length;
   }
 
   async getPieceStoreValue(

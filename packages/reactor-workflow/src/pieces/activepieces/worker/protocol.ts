@@ -74,6 +74,8 @@ export interface RunActionRequest extends HostScopedRequest, PieceModuleRef {
   // it the member keeps throwing, so a piece that needs it fails loudly.
   liveOutput?: boolean;
   executionType?: `${ExecutionType}`;
+  // Call the action's test method instead of run, as a single-step test does.
+  stepTest?: boolean;
   identity?: ActionContextIdentity;
   // Concrete secret values resolved for this step, so the child can strip them
   // from an error before it crosses back; they already travel inside `auth`.
@@ -119,7 +121,7 @@ export interface ResolveOptionsMessage {
 // the whole snapshot comes back in the response for the caller to persist.
 export interface TriggerHookRequest extends HostScopedRequest, PieceModuleRef {
   triggerName: string;
-  hook: "onEnable" | "onDisable" | "run" | "test" | "onHandshake";
+  hook: "onEnable" | "onDisable" | "run" | "test" | "onHandshake" | "onRenew";
   propsValue: Record<string, unknown>;
   auth?: unknown;
   storeState?: Record<string, unknown>;

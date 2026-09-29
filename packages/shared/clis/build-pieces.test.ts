@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   assertPieceVersion,
   assertPiecesOutDir,
+  bundlePackageJson,
   createJsonReplacer,
   DESCRIBE_HELPERS,
   describePieces,
@@ -298,11 +299,13 @@ describe("piecePackageJson", () => {
 });
 
 describe("pieceDescriptor", () => {
-  it("puts the list's name and version first and the metadata after", () => {
-    const descriptor = pieceDescriptor(
-      { name: "@acme/piece-hello", version: "1.2.3" },
-      { name: "wrong", version: "9.9.9", displayName: "Hello", actions: {} },
-    );
+  it("puts the list's name and the package's version first and the metadata after", () => {
+    const descriptor = pieceDescriptor({ name: "@acme/piece-hello" }, "1.2.3", {
+      name: "wrong",
+      version: "9.9.9",
+      displayName: "Hello",
+      actions: {},
+    });
     expect(Object.keys(descriptor)).toEqual([
       "name",
       "version",
@@ -320,7 +323,6 @@ describe("resolvePieceLocation", () => {
     const location = resolvePieceLocation(
       {
         name: "@acme/piece-hello",
-        version: "1.0.0",
         entry: "dist/node/pieces/hello/index.mjs",
       },
       root,
@@ -338,7 +340,6 @@ describe("resolvePieceLocation", () => {
     const location = resolvePieceLocation(
       {
         name: "@acme/piece-hello",
-        version: "1.0.0",
         bundle: "dist/node/pieces/hello",
       },
       root,
@@ -356,7 +357,7 @@ describe("resolvePieceLocation", () => {
     const root = makeProject(["vendor/hello/package.json"]);
     expect(() =>
       resolvePieceLocation(
-        { name: "@acme/piece-hello", version: "1.0.0", bundle: "vendor/hello" },
+        { name: "@acme/piece-hello", bundle: "vendor/hello" },
         root,
         "dist",
       ),
@@ -369,7 +370,6 @@ describe("resolvePieceLocation", () => {
       resolvePieceLocation(
         {
           name: "@acme/piece-hello",
-          version: "1.0.0",
           entry: "dist/node/pieces/hello/index.mjs",
         },
         root,
@@ -384,7 +384,7 @@ describe("resolvePieceLocation", () => {
     const root = makeProject(["vendor/hello/index.mjs"]);
     expect(() =>
       resolvePieceLocation(
-        { name: "@acme/piece-hello", version: "1.0.0", bundle: "vendor/hello" },
+        { name: "@acme/piece-hello", bundle: "vendor/hello" },
         root,
         "dist",
       ),
@@ -397,7 +397,6 @@ describe("resolvePieceLocation", () => {
       resolvePieceLocation(
         {
           name: "@acme/piece-hello",
-          version: "1.0.0",
           entry: "dist/node/other/index.mjs",
         },
         root,
@@ -414,7 +413,6 @@ describe("resolvePieceLocation", () => {
       resolvePieceLocation(
         {
           name: "@acme/piece-hello",
-          version: "1.0.0",
           entry: "dist/node/pieces/index.mjs",
         },
         root,
@@ -426,11 +424,7 @@ describe("resolvePieceLocation", () => {
   it("throws when neither entry nor bundle is declared", () => {
     const root = makeProject([]);
     expect(() =>
-      resolvePieceLocation(
-        { name: "@acme/piece-hello", version: "1.0.0" },
-        root,
-        "dist",
-      ),
+      resolvePieceLocation({ name: "@acme/piece-hello" }, root, "dist"),
     ).toThrow(/declares neither an entry nor a bundle/);
   });
 });
@@ -458,7 +452,7 @@ describe("assertPiecesOutDir", () => {
 // and the duck typing inside DESCRIBE_SCRIPT are what answer here.
 describe("describePieces", () => {
   const list =
-    'export const pieces = [{ name: "@acme/piece-hello", version: "1.0.0", ' +
+    'export const pieces = [{ name: "@acme/piece-hello", ' +
     'entry: "dist/node/pieces/hello/index.mjs" }];\n';
 
   const listIn = (root: string) =>
@@ -481,7 +475,6 @@ describe("describePieces", () => {
     expect(result.pieces).toEqual([
       {
         name: "@acme/piece-hello",
-        version: "1.0.0",
         metadata: {
           displayName: "Hello",
           description: "Says hello.",
@@ -525,25 +518,50 @@ describe("describePieces", () => {
 
 describe("assertPieceVersion", () => {
   const pkg = { name: "@acme/pkg", version: "1.2.3" };
+  // A list module is untyped at build time, so a stale entry can still carry one.
+  const declaring = (name: string, version: string) =>
+    ({ name, version }) as { name: string };
 
-  it("throws when a piece named after the package drifts from its version", () => {
+  it("refuses an entry that declares a version, even the package's own", () => {
     expect(() =>
-      assertPieceVersion({ name: "@acme/pkg", version: "1.0.0" }, pkg),
+      assertPieceVersion(declaring("@acme/pkg", "1.0.0"), pkg),
     ).toThrow(
-      'pieces: "@acme/pkg" declares version 1.0.0, package.json says 1.2.3',
+      'pieces: "@acme/pkg" declares version 1.0.0; a piece takes its package\'s version (1.2.3), so remove "version" from pieces/index.ts',
     );
+    expect(() =>
+      assertPieceVersion(declaring("@acme/pkg", "1.2.3"), pkg),
+    ).toThrow(/remove "version"/);
+    expect(() =>
+      assertPieceVersion(declaring("@acme/piece-x", "0.0.1"), pkg),
+    ).toThrow(/"@acme\/piece-x" declares version 0\.0\.1/);
   });
 
-  it("passes when the versions match", () => {
+  it("passes an entry without one", () => {
     expect(() =>
-      assertPieceVersion({ name: "@acme/pkg", version: "1.2.3" }, pkg),
+      assertPieceVersion(
+        { name: "@acme/piece-x", entry: "dist/node/pieces/x/index.mjs" },
+        pkg,
+      ),
     ).not.toThrow();
   });
+});
 
-  it("ignores a piece with its own name", () => {
-    expect(() =>
-      assertPieceVersion({ name: "@acme/piece-x", version: "0.0.1" }, pkg),
-    ).not.toThrow();
+describe("bundlePackageJson", () => {
+  it("restamps a bundle's package.json with the package's version", () => {
+    const root = writeProject({
+      "dist/node/pieces/hello/package.json": JSON.stringify({
+        name: "@acme/piece-hello",
+        version: "0.0.1",
+        main: "index.mjs",
+      }),
+    });
+    expect(
+      bundlePackageJson(join(root, "dist/node/pieces/hello"), "1.2.3"),
+    ).toEqual({
+      name: "@acme/piece-hello",
+      version: "1.2.3",
+      main: "index.mjs",
+    });
   });
 });
 
