@@ -19,9 +19,10 @@ export const schema: DocumentNode = gql`
       excludeTriggerKinds: [String!]
     ): [WorkflowRunRecord!]!
     """
-    The same listing a page at a time. Pass a page's cursor back in paging to
-    read the next; a page is short only when hasNextPage is false, or when
-    the caller could read none of a long stretch of runs.
+    The same listing a page at a time, newest journaled first. Pass a page's
+    cursor back in paging to read the next; a page is short only when
+    hasNextPage is false, or when the caller could read none of a long
+    stretch of runs. A run that starts between pages keeps its place.
     """
     runsPage(
       workflowId: String
@@ -281,6 +282,7 @@ export const schema: DocumentNode = gql`
     triggerPayload: Unknown
     status: String!
     error: String
+    "When the run began executing; a PENDING run's is when it was journaled."
     startedAt: String!
     endedAt: String
     rerunOf: String

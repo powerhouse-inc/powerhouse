@@ -22,6 +22,9 @@ export interface RunRow {
   trigger_payload: string | null;
   status: string;
   error: string | null;
+  // When the run was journaled; the listing's stable key, unlike started_at.
+  enqueued_at: string;
+  // When it began executing; a PENDING run holds its enqueue time here.
   started_at: string;
   ended_at: string | null;
   // Failed run this one resumes; null for first-hand runs.
@@ -371,18 +374,35 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     .ifNotExists()
     .execute();
 
-  // Run listings, scoped and unscoped, page newest first on (started_at, id).
+  // Additive migration: rows journaled before enqueued_at list by their start.
+  try {
+    await db.schema
+      .alterTable("run")
+      .addColumn("enqueued_at", "text")
+      .execute();
+  } catch {
+    // column already exists
+  }
+  await db
+    .updateTable("run")
+    .set({ enqueued_at: sql.ref("started_at") })
+    .where("enqueued_at", "is", null)
+    .execute();
+
+  // Run listings, scoped and unscoped, page newest first on (enqueued_at, id).
+  await db.schema.dropIndex("run_workflow_started").ifExists().execute();
+  await db.schema.dropIndex("run_started").ifExists().execute();
   await db.schema
-    .createIndex("run_workflow_started")
+    .createIndex("run_workflow_enqueued")
     .ifNotExists()
     .on("run")
-    .columns(["workflow_id", "started_at desc", "id desc"])
+    .columns(["workflow_id", "enqueued_at desc", "id desc"])
     .execute();
   await db.schema
-    .createIndex("run_started")
+    .createIndex("run_enqueued")
     .ifNotExists()
     .on("run")
-    .columns(["started_at desc", "id desc"])
+    .columns(["enqueued_at desc", "id desc"])
     .execute();
   // claimDedupe prunes one workflow's expired keys on every claim.
   await db.schema
@@ -806,9 +826,9 @@ const STEP_COLUMNS_WITHOUT_DATA = [
   "input" | "output"
 >[];
 
-// A run's position in the newest-first listing.
+// A run's position in the newest-first listing; fixed once journaled.
 export interface RunKey {
-  startedAt: string;
+  enqueuedAt: string;
   id: string;
 }
 
@@ -974,6 +994,7 @@ export class WorkflowRunStore {
     id: string,
     options: EnqueueRunOptions,
   ): Promise<void> {
+    const now = new Date().toISOString();
     await db
       .insertInto("run")
       .values({
@@ -985,7 +1006,8 @@ export class WorkflowRunStore {
         trigger_payload: jsonOrNull(redact(options.triggerPayload)),
         status: PENDING_RUN_STATUS,
         error: null,
-        started_at: new Date().toISOString(),
+        enqueued_at: now,
+        started_at: now,
         ended_at: null,
         rerun_of: null,
         warnings: 0,
@@ -1006,7 +1028,8 @@ export class WorkflowRunStore {
         status: "RUNNING",
         workflow_name: details.workflowName,
         workflow_version: details.workflowVersion,
-        // The wait between enqueue and start is queueing, not run time.
+        // The wait between enqueue and start is queueing, not run time;
+        // enqueued_at keeps the run's place in the listing.
         started_at: new Date().toISOString(),
       })
       .where("id", "=", runId)
@@ -1015,6 +1038,7 @@ export class WorkflowRunStore {
 
   async startRun(options: StartRunOptions): Promise<string> {
     const id = randomUUID();
+    const now = new Date().toISOString();
     await this.db
       .insertInto("run")
       .values({
@@ -1026,7 +1050,8 @@ export class WorkflowRunStore {
         trigger_payload: jsonOrNull(redact(options.triggerPayload)),
         status: "RUNNING",
         error: null,
-        started_at: new Date().toISOString(),
+        enqueued_at: now,
+        started_at: now,
         ended_at: null,
         rerun_of: options.rerunOf ?? null,
         warnings: 0,
@@ -1173,7 +1198,7 @@ export class WorkflowRunStore {
   // Scope is one workflow id, or a set of them (a drive's workflows). An
   // empty set matches nothing, which is not the same as an unscoped listing.
 
-  // Newest first on (started_at, id); `after` resumes past a row keyset-style.
+  // Newest first on (enqueued_at, id); `after` resumes past a row keyset-style.
   async listRuns(
     workflowId?: string | string[],
     limit = 25,
@@ -1183,7 +1208,7 @@ export class WorkflowRunStore {
     let query = this.db
       .selectFrom("run")
       .selectAll()
-      .orderBy("started_at", "desc")
+      .orderBy("enqueued_at", "desc")
       .orderBy("id", "desc")
       .limit(Math.min(Math.max(limit, 1), MAX_LIST_RUNS));
     if (Array.isArray(workflowId)) {
@@ -1195,9 +1220,9 @@ export class WorkflowRunStore {
     if (after) {
       query = query.where((eb) =>
         eb(
-          eb.refTuple("started_at", "id"),
+          eb.refTuple("enqueued_at", "id"),
           "<",
-          eb.tuple(after.startedAt, after.id),
+          eb.tuple(after.enqueuedAt, after.id),
         ),
       );
     }

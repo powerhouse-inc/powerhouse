@@ -2142,7 +2142,7 @@ export class WorkflowRuntimeService {
       });
       scanned += batch.length;
       const last = batch.at(-1);
-      if (last) position = { startedAt: last.started_at, id: last.id };
+      if (last) position = { enqueuedAt: last.enqueued_at, id: last.id };
       served.push(
         ...(await this.servedRuns(
           await this.readableRows(batch, (row) => row.workflow_id, ctx),
@@ -2160,7 +2160,7 @@ export class WorkflowRuntimeService {
     // Out of scan budget: resume after the last row read, served or not.
     const resumeAt =
       full || exhausted
-        ? lastRow && { startedAt: lastRow.started_at, id: lastRow.id }
+        ? lastRow && { enqueuedAt: lastRow.enqueued_at, id: lastRow.id }
         : position;
     const steps = await store.getStepsForRuns(
       rows.map((row) => row.id),

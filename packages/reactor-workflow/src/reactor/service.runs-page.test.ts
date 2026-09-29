@@ -1,4 +1,4 @@
-// Run listing pages: newest first on (started_at, id), filtered by access
+// Run listing pages: newest first on (enqueued_at, id), filtered by access
 // before the page is cut, so a page is short only at the end of the journal.
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import { afterEach, describe, expect, it } from "vitest";
@@ -53,6 +53,7 @@ function row(
     trigger_payload: null,
     status: "SUCCEEDED",
     error: null,
+    enqueued_at: startedAt,
     started_at: startedAt,
     ended_at: startedAt,
     rerun_of: null,
@@ -186,6 +187,36 @@ describe("run listing pages", () => {
       CTX,
     );
     expect(ids(second)).toEqual([`${mine}-old`]);
+    expect(second.hasNextPage).toBe(false);
+  });
+
+  it("keeps a run in place when it starts between two page fetches", async () => {
+    seq += 1;
+    const wf = `wf-starting-${seq}`;
+    const { service, db } = await setup(new Set([wf]));
+    await db
+      .insertInto("run")
+      .values([
+        { ...row(wf, `${wf}-a`, at(1)), status: "PENDING", ended_at: null },
+        row(wf, `${wf}-b`, at(2)),
+        row(wf, `${wf}-c`, at(3)),
+        row(wf, `${wf}-d`, at(4)),
+      ])
+      .execute();
+
+    const first = await service.runsPage({ workflowId: wf, limit: 2 }, CTX);
+    await (await service.store())!.beginRun(`${wf}-a`, {
+      workflowName: wf,
+      workflowVersion: 1,
+    });
+    const second = await service.runsPage(
+      { workflowId: wf, limit: 2, cursor: first.cursor },
+      CTX,
+    );
+
+    expect(ids(first)).toEqual([`${wf}-d`, `${wf}-c`]);
+    expect(ids(second)).toEqual([`${wf}-b`, `${wf}-a`]);
+    expect(second.records[1].row.status).toBe("RUNNING");
     expect(second.hasNextPage).toBe(false);
   });
 

@@ -1,4 +1,4 @@
-// Opaque keyset cursor over the run listing: base64url of [started_at, id].
+// Opaque keyset cursor over the run listing: base64url of [enqueued_at, id].
 import type { RunKey } from "./store.js";
 
 export class InvalidRunCursorError extends Error {
@@ -9,7 +9,7 @@ export class InvalidRunCursorError extends Error {
 }
 
 export function encodeRunCursor(key: RunKey): string {
-  return Buffer.from(JSON.stringify([key.startedAt, key.id])).toString(
+  return Buffer.from(JSON.stringify([key.enqueuedAt, key.id])).toString(
     "base64url",
   );
 }
@@ -29,5 +29,5 @@ export function decodeRunCursor(cursor: string): RunKey {
   ) {
     throw new InvalidRunCursorError();
   }
-  return { startedAt: parsed[0], id: parsed[1] };
+  return { enqueuedAt: parsed[0], id: parsed[1] };
 }
