@@ -78,16 +78,26 @@ export async function createHarness(): Promise<Harness> {
     getJobStatus: vi.fn(),
   };
   const sent = new Map<string, SyncEnvelope[]>();
+  // TestChannel writes cursors without awaiting; cleanup must outlast them.
+  const pending = new Set<Promise<void>>();
+  const cursors: ISyncCursorStorage = {
+    list: (name) => storage.syncCursorStorage.list(name),
+    get: (name, type) => storage.syncCursorStorage.get(name, type),
+    remove: (name) => storage.syncCursorStorage.remove(name),
+    upsert: (cursor) => {
+      const write = storage.syncCursorStorage.upsert(cursor);
+      const tracked = write
+        .catch(() => {})
+        .finally(() => pending.delete(tracked));
+      pending.add(tracked);
+      return write;
+    },
+  };
   const factory = {
-    instance: (
-      remoteId: string,
-      remoteName: string,
-      _config: unknown,
-      cursorStorage: ISyncCursorStorage,
-    ) => {
+    instance: (remoteId: string, remoteName: string, _config: unknown) => {
       const envelopes: SyncEnvelope[] = [];
       sent.set(remoteName, envelopes);
-      return new TestChannel(remoteId, remoteName, cursorStorage, (e) => {
+      return new TestChannel(remoteId, remoteName, cursors, (e) => {
         envelopes.push(e);
       });
     },
@@ -98,7 +108,7 @@ export async function createHarness(): Promise<Harness> {
   const manager = new SyncManager(
     new ConsoleLogger(["SyncManager"]),
     storage.syncRemoteStorage,
-    storage.syncCursorStorage,
+    cursors,
     storage.syncDeadLetterStorage,
     factory,
     index,
@@ -129,6 +139,7 @@ export async function createHarness(): Promise<Harness> {
     forgetDocument,
     cleanup: async () => {
       await manager.shutdown().completed;
+      await Promise.all([...pending]);
       await storage.cleanup();
     },
   };
