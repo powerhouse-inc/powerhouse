@@ -11,6 +11,7 @@ import {
 import { childLogger } from "document-model";
 import { sql, type Kysely } from "kysely";
 import { randomUUID } from "node:crypto";
+import { CORE_PIECE_NAME } from "../pieces/index.js";
 import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";
 
 export interface RunRow {
@@ -444,7 +445,92 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     // Never blocks the journal: a leftover table costs nothing.
   }
 
+  await migrateBlockType(db, "trigger_state", "trigger_name");
+  await migrateBlockType(db, "step_execution", "block_name");
+
   return migrateTriggerStoreState(db);
+}
+
+// Journals from before block identities named a block by one packed string,
+// block_type: "<pkg>[@<version>]#<action>" or "<pkg>[@<version>]#trigger:<name>".
+type LegacyBlockTable = "trigger_state" | "step_execution";
+
+interface LegacyBlockTypeDB {
+  trigger_state: LegacyBlockTypeRow;
+  step_execution: LegacyBlockTypeRow;
+}
+
+interface LegacyBlockTypeRow {
+  workflow_id: string;
+  id: string;
+  block_type: string | null;
+  piece_name: string | null;
+  trigger_name: string | null;
+  block_name: string | null;
+}
+
+// The pre-rename core piece.
+const LEGACY_CORE_PIECE = "core";
+
+function legacyBlockIdentity(blockType: string): {
+  pieceName: string;
+  name: string;
+} {
+  const separator = blockType.lastIndexOf("#");
+  if (separator <= 0) return { pieceName: blockType, name: "" };
+  const spec = blockType.slice(0, separator);
+  const fragment = blockType.slice(separator + 1);
+  const name = fragment.startsWith("trigger:")
+    ? fragment.slice("trigger:".length)
+    : fragment;
+  const versionAt = spec.indexOf("@", 1);
+  const pieceName = versionAt > 0 ? spec.slice(0, versionAt) : spec;
+  return {
+    pieceName: pieceName === LEGACY_CORE_PIECE ? CORE_PIECE_NAME : pieceName,
+    name,
+  };
+}
+
+// Adds the identity columns to a table created with block_type and fills them
+// from it. block_type stays, nullable, since nothing writes it any more.
+async function migrateBlockType(
+  db: IRelationalDb<WorkflowRuntimeDB>,
+  table: LegacyBlockTable,
+  nameColumn: "trigger_name" | "block_name",
+): Promise<void> {
+  const legacy = db as unknown as IRelationalDb<LegacyBlockTypeDB>;
+  try {
+    await legacy.schema
+      .alterTable(table)
+      .alterColumn("block_type", (col) => col.dropNotNull())
+      .execute();
+  } catch {
+    // no block_type: created with the identity columns
+    return;
+  }
+  for (const column of ["piece_name", nameColumn]) {
+    try {
+      await legacy.schema.alterTable(table).addColumn(column, "text").execute();
+    } catch {
+      // column already exists
+    }
+  }
+  const key = table === "trigger_state" ? "workflow_id" : "id";
+  const rows = await legacy
+    .selectFrom(table)
+    .select([key, "block_type"])
+    .where((eb) =>
+      eb.or([eb("piece_name", "is", null), eb(nameColumn, "is", null)]),
+    )
+    .execute();
+  for (const row of rows) {
+    const { pieceName, name } = legacyBlockIdentity(row.block_type ?? "");
+    await legacy
+      .updateTable(table)
+      .set({ piece_name: pieceName, [nameColumn]: name })
+      .where(key, "=", row[key])
+      .execute();
+  }
 }
 
 // MIGRATION: trigger store state used to round-trip through
