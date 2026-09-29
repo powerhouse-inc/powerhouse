@@ -190,10 +190,15 @@ test.describe("Postgres", () => {
   test.skip(!dockerAvailable(), "needs Docker for a throwaway Postgres");
 
   const container = `wf-pieces-pg-${process.pid}`;
-  const pgPort = 55_000 + (process.pid % 1000);
+  let pgPort = 0;
 
   test.beforeAll(async () => {
     test.setTimeout(180_000);
+    // A port the OS just handed out, so parallel workers never share one.
+    const probe = createServer();
+    await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
+    pgPort = (probe.address() as AddressInfo).port;
+    await new Promise((resolve) => probe.close(resolve));
     execFileSync("docker", [
       "run",
       "-d",

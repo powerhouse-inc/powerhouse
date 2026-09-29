@@ -1,6 +1,13 @@
 // The live stack the UI screenshots and UI tests run against: switchboard
 // (workflows on, in-memory) plus Connect's Vite dev server, seeded per drive.
-import type { Browser, BrowserContext, Page } from "@playwright/test";
+import {
+  chromium,
+  expect,
+  type Browser,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 import { blockKey } from "@powerhousedao/pieces-framework/block-type";
 import { CORE_PIECE_NAME } from "@powerhousedao/pieces-framework/workflow";
 import { spawn, type ChildProcess, execSync } from "node:child_process";
@@ -134,6 +141,77 @@ export async function buildCss(): Promise<void> {
   writeFileSync(target, css);
   // Let Vite pick up the change before any page loads.
   await new Promise((r) => setTimeout(r, 2000));
+}
+
+// ─── dynamic imports ────────────────────────────────────────────────────────
+
+const IMPORT_FAILED = /Failed to fetch dynamically imported module/;
+
+/**
+ * page.evaluate for a function that imports from Vite first: a re-optimise
+ * fails that import, and nothing has run yet, so it is safe to try again.
+ */
+export async function evaluateImporting<A, R>(
+  page: Page,
+  fn: (arg: A) => Promise<R>,
+  arg: A,
+): Promise<R> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await page.evaluate(fn as (arg: unknown) => Promise<R>, arg);
+    } catch (error) {
+      if (attempt >= 2 || !IMPORT_FAILED.test(String(error))) throw error;
+      await page.waitForLoadState("load");
+    }
+  }
+}
+
+// Modules tests import on demand; each can make Vite find a new dependency.
+const WARM_MODULES = [
+  "packages/workflow/document-models/workflow/v1/index.ts",
+  "packages/workflow/document-models/connection/v1/index.ts",
+  "packages/workflow/editors/index.ts",
+  "packages/workflow/test/ui/harness/prop-controls.tsx",
+];
+
+/**
+ * Imports everything once so Vite's dep optimiser settles before the tests:
+ * a re-optimise mid-run reloads every open page. Done once a round passes
+ * without a reload.
+ */
+export async function warmConnect(): Promise<void> {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    for (let round = 0; round < 4; round++) {
+      await page.goto(CONNECT);
+      await page.waitForLoadState("load");
+      const failed = await page
+        .evaluate(
+          async ({ root, modules }) => {
+            (window as { __warm?: boolean }).__warm = true;
+            const results = await Promise.allSettled(
+              modules.map(
+                (path) => import(/* @vite-ignore */ `/@fs${root}/${path}`),
+              ),
+            );
+            return results.filter((result) => result.status === "rejected")
+              .length;
+          },
+          { root: ROOT, modules: WARM_MODULES },
+        )
+        .catch(() => -1);
+      // A re-optimise answers with a full reload shortly after the imports.
+      await page.waitForTimeout(3000);
+      const kept = await page
+        .evaluate(() => (window as { __warm?: boolean }).__warm === true)
+        .catch(() => false);
+      if (failed === 0 && kept) return;
+    }
+    console.warn("Connect still re-optimising after warm-up");
+  } finally {
+    await browser.close();
+  }
 }
 
 // ─── seeding ────────────────────────────────────────────────────────────────
@@ -413,7 +491,8 @@ export interface PhWindow {
 
 /** Creates the documents through Connect's reactor, which syncs them up. */
 function seedInBrowser(page: Page, input: SeedInput): Promise<Seeded> {
-  return page.evaluate(
+  return evaluateImporting(
+    page,
     async ({ root, drive, blocks, botTokenRef, defaults }) => {
       const w = window as unknown as PhWindow;
       const client = w.ph!.reactorClientModule!.client;
@@ -802,7 +881,8 @@ export async function createWorkflowInBrowser(
       config: { ...defaultsOf(defaults, step), ...step.config },
     })),
   };
-  return page.evaluate(
+  return evaluateImporting(
+    page,
     async ({ root, drive, spec }) => {
       const client = (window as unknown as PhWindow).ph!.reactorClientModule!
         .client;
@@ -861,7 +941,8 @@ export function createConnectionInBrowser(
   drive: string,
   spec: ConnectionSpec,
 ): Promise<string> {
-  return page.evaluate(
+  return evaluateImporting(
+    page,
     async ({ root, drive, spec }) => {
       const client = (window as unknown as PhWindow).ph!.reactorClientModule!
         .client;
@@ -985,4 +1066,31 @@ export function canvasNode(page: Page, title: string) {
   return page
     .locator(".react-flow__node")
     .filter({ has: page.getByText(title, { exact: true }) });
+}
+
+/** Opens a canvas add button's block picker, clicking again only while shut. */
+export async function openPicker(
+  page: Page,
+  button: Locator,
+): Promise<Locator> {
+  const picker = page.locator('[data-selector-open="true"]');
+  await expect(async () => {
+    if (!(await picker.isVisible())) await button.click();
+    await expect(picker).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15_000 });
+  return picker;
+}
+
+/** Fails if `read` ever stops matching over `ms`: for "nothing was written". */
+export async function expectSteady<T>(
+  read: () => Promise<T>,
+  check: (value: T) => void,
+  ms = 1500,
+): Promise<void> {
+  const until = Date.now() + ms;
+  for (;;) {
+    check(await read());
+    if (Date.now() >= until) return;
+    await new Promise((r) => setTimeout(r, 250));
+  }
 }

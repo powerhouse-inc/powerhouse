@@ -5,6 +5,7 @@ import {
   coreAction,
   coreTrigger,
   createWorkflowInBrowser,
+  openPicker,
   openWorkflowEditor,
   shot,
   workflowState,
@@ -89,13 +90,19 @@ test.describe("Declared ports", () => {
       ],
     });
     await openWorkflowEditor(app, "Insert branch");
+    // An append button means the ports are known and the layout has settled.
+    await app.locator(".react-flow__node-apAppend").first().waitFor();
     // The edge's own add button, drawn mid-line.
-    await app.locator(".react-flow__edgelabel-renderer button").first().click();
-    await app.getByRole("button", { name: "Core", exact: true }).click();
-    await app
+    const picker = await openPicker(
+      app,
+      app.getByRole("button", { name: "Insert step", exact: true }),
+    );
+    // Presets list with no chip picked; disabled until the catalog pins them.
+    const branch = picker
       .getByRole("button")
-      .filter({ hasText: "Routes true/false" })
-      .click();
+      .filter({ hasText: "Routes true/false" });
+    await expect(branch).toBeEnabled();
+    await branch.click();
 
     await expect
       .poll(async () => {

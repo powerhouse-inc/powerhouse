@@ -3,6 +3,7 @@ import {
   canvasNode,
   coreTrigger,
   createWorkflowInBrowser,
+  expectSteady,
   openWorkflowEditor,
   pieceAction,
   type PhWindow,
@@ -100,7 +101,10 @@ test.describe("Computed validity and publishing", () => {
       app.getByRole("textbox", { name: /Connector id/ }),
     ).toBeVisible();
     // Resolving the Input fields writes nothing.
-    expect(await inputSchema(app, id)).toBeUndefined();
+    await expectSteady(
+      () => inputSchema(app, id),
+      (schema) => expect(schema).toBeUndefined(),
+    );
 
     await fillInput(app);
     await expect(incomplete(app)).toBeHidden();
@@ -133,8 +137,13 @@ test.describe("Computed validity and publishing", () => {
     await expect(incomplete(app)).toBeVisible();
     await expect(publish).toBeDisabled();
     // Loading forms and resolving fields writes nothing to the document.
-    expect(await docState(app, id)).not.toHaveProperty("valid");
-    expect((await docState(app, id)).version).toBe(seeded);
+    await expectSteady(
+      () => docState(app, id),
+      (state) => {
+        expect(state).not.toHaveProperty("valid");
+        expect(state.version).toBe(seeded);
+      },
+    );
 
     await canvasNode(app, STEP).click();
     await fillInput(app);

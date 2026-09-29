@@ -58,10 +58,12 @@ test.describe("Piece version", () => {
     const badge = canvasNode(app, "Pinned ahead").getByTestId("version-badge");
     await expect(badge).toHaveText(/^v\d+\.\d+\.\d+/);
     await expect(badge).toHaveClass(/text-wf-warn/);
-    const title = await badge.getAttribute("title");
-    expect(title).toContain(`Pinned ${major + 90}.0.0 is not available; runs`);
+    await expect(badge).toHaveAttribute(
+      "title",
+      new RegExp(`Pinned ${major + 90}\\.0\\.0 is not available; runs`),
+    );
     // The untested step's test badge is outranked, and moves to the tooltip.
-    expect(title).toContain("Not tested yet");
+    await expect(badge).toHaveAttribute("title", /Not tested yet/);
     await expect(
       canvasNode(app, "Pinned ahead").getByText("Test me", { exact: true }),
     ).toHaveCount(0);
@@ -92,7 +94,7 @@ test.describe("Piece version", () => {
     await expect(app.getByLabel("Update available")).toBeVisible();
     await app.getByRole("tab", { name: "Settings" }).click();
     const update = app.getByRole("button", { name: /^Update to v/ });
-    await expect(update).toBeVisible();
+    await expect(update).toHaveText(/^Update to v\d+\.\d+\.\d+/);
     const version = (await update.textContent())!.replace("Update to v", "");
     await shot(app, "version-update-available");
     await update.click();
