@@ -96,8 +96,8 @@ that package first. Scenes live in `SCENES` in `scripts/ui-shots.ts`.
 
 ### UI tests
 
-`test:ui` runs the Playwright specs in `test/ui/` against the same stack, one
-fresh seeded drive per test:
+`test:ui` runs the Playwright specs in `test/ui/` against the same stack. Each
+worker boots Connect once; each test gets a fresh seeded drive, alone in it:
 
 ```sh
 pnpm --filter @powerhousedao/workflow test:ui
