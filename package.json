@@ -18,6 +18,7 @@
     "test:e2e:switchboard": "pnpm --filter=@powerhousedao/test-switchboard run test",
     "test:reactor": "pnpm --filter=@powerhousedao/reactor run test",
     "test:reactor-packages": "pnpm --filter=@powerhousedao/reactor-drive --filter=@powerhousedao/reactor-attachments --no-bail run test",
+    "test:reactor-workflow-pg": "pnpm --filter=@powerhousedao/reactor-workflow run test src/reactor/workflow-triggers-read-model.purge.test.ts",
     "test:integration": "pnpm --filter=@powerhousedao/load-test-connect run test:integration && pnpm --filter=@powerhousedao/reactor-api run test:integration",
     "test:browser": "pnpm --filter=@powerhousedao/reactor-browser run test",
     "test:pg": "pnpm --filter=@powerhousedao/analytics-engine-pg run test",
