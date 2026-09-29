@@ -699,14 +699,20 @@ describe("resurrection probes [Postgres]", () => {
     await remove(node, "x");
     const { ordinal } = await purge(node, "x");
 
-    const results = await node.module.catchUp.sweepNow();
-    await node.module.catchUp.sweepNow();
+    // The cluster's shared xmin can hold the watermark below the lost ordinal.
+    const results: Awaited<ReturnType<typeof node.module.catchUp.sweepNow>> =
+      [];
+    const children = async () =>
+      (
+        await node.module.documentIndexer.getOutgoing("d", ["child"])
+      ).results.map((edge) => edge.targetId);
+    await until("a sweep indexes the lost relationship", async () => {
+      results.push(...(await node.module.catchUp.sweepNow()));
+      return (await children()).includes("y");
+    });
 
     expect(results.filter((r) => r.blockedAt !== undefined)).toEqual([]);
-    const outgoing = await node.module.documentIndexer.getOutgoing("d", [
-      "child",
-    ]);
-    expect(outgoing.results.map((edge) => edge.targetId)).toEqual(["y"]);
+    expect(await children()).toEqual(["y"]);
     await expectPurged(node.db, "x", { documentType: DOC_TYPE });
     expectNoBlockedConsumer(node);
     await expectCursorsPast(node, ordinal);
