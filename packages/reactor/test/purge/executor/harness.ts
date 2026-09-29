@@ -11,7 +11,7 @@ import { documentModelDocumentModelModule } from "document-model";
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
 import { expect, vi } from "vitest";
-import { DocumentPurgeService } from "../../../src/admin/document-purge-service.js";
+import type { DocumentPurgeService } from "../../../src/admin/document-purge-service.js";
 import { ReactorBuilder } from "../../../src/core/reactor-builder.js";
 import type {
   Database,
@@ -128,7 +128,7 @@ export async function startReactor(
     module,
     reactor: module.reactor,
     db: module.database as unknown as Kysely<StorageDatabase>,
-    service: DocumentPurgeService.fromModule(module),
+    service: module.documentPurgeService,
     async kill() {
       await module.reactor.kill().completed;
     },

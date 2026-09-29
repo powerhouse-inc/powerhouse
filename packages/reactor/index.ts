@@ -337,6 +337,7 @@ export {
   defaultReadModelIndexingConfig,
   unchunkedReadModelIndexingConfig,
   type BaseReadModelConfig,
+  type PurgeFence,
   type ReadModelIndexingConfig,
 } from "./src/read-models/base-read-model.js";
 export { ReadModelCoordinator } from "./src/read-models/coordinator.js";

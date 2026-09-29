@@ -19,6 +19,7 @@ import type {
   WorkerPoolConfig,
 } from "../executor/worker/protocol.js";
 import { WorkerPoolJobExecutorManager } from "../executor/worker-pool-job-executor-manager.js";
+import { DocumentPurgeService } from "../admin/document-purge-service.js";
 import type { WorkerFactory } from "../executor/worker-pool-job-executor-manager.js";
 import { CollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
@@ -1252,6 +1253,11 @@ export class ReactorBuilder {
       degradedComponents,
       catchUp,
       settledWatermark,
+      documentPurgeService: new DocumentPurgeService(
+        queue,
+        jobTracker,
+        eventBus,
+      ),
     };
 
     catchUp.start();

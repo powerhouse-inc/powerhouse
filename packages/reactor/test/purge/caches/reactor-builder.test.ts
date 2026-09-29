@@ -2,6 +2,7 @@ import type { OperationWithContext } from "@powerhousedao/shared/document-model"
 import { generateId } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DocumentPurgeService } from "../../../src/admin/document-purge-service.js";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import type { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import { ReactorBuilder } from "../../../src/core/reactor-builder.js";
@@ -147,4 +148,7 @@ describe("reactor builder caches for a purged id", () => {
 
     expect(writeCache.getStream(documentId, "document", "main")).toBeDefined();
   });
+});
+it("exposes the purge service on the module", () => {
+  expect(module.documentPurgeService).toBeInstanceOf(DocumentPurgeService);
 });
