@@ -1,6 +1,9 @@
 import type { IOperationIndex, IWriteCache } from "@powerhousedao/reactor";
 import {
   BaseReadModel,
+  findPurged,
+  isPurgeMarker,
+  REACTOR_SCHEMA,
   unchunkedReadModelIndexingConfig,
   type DocumentViewDatabase,
   type IConsistencyTracker,
@@ -10,6 +13,7 @@ import type {
   CreateDocumentActionInput,
   DeleteDocumentActionInput,
   OperationWithContext,
+  PurgeDocumentActionInput,
   RemoveRelationshipActionInput,
   SetNameActionInput,
   UpgradeDocumentActionInput,
@@ -57,6 +61,7 @@ export class NodeProcessor extends BaseReadModel {
   private readonly driveDb: Kysely<NodeProcessorDatabase>;
   private readonly baseDb: Kysely<unknown>;
   private readonly schema: string;
+  private readonly reactorSchema: string;
 
   constructor(
     baseDb: Kysely<unknown>,
@@ -64,6 +69,7 @@ export class NodeProcessor extends BaseReadModel {
     operationIndex: IOperationIndex,
     writeCache: IWriteCache,
     consistencyTracker: IConsistencyTracker,
+    reactorSchema: string = REACTOR_SCHEMA,
   ) {
     const scopedDb = baseDb.withSchema(
       schema,
@@ -77,11 +83,17 @@ export class NodeProcessor extends BaseReadModel {
         readModelId: "reactor-drive-node-processor",
         rebuildStateOnInit: false,
         indexing: unchunkedReadModelIndexingConfig,
+        purgeFence: "locked",
       },
     );
     this.driveDb = scopedDb;
     this.baseDb = baseDb;
     this.schema = schema;
+    this.reactorSchema = reactorSchema;
+  }
+
+  protected override purgeLookup(db: Kysely<any>): Kysely<any> {
+    return db.withSchema(this.reactorSchema);
   }
 
   override async init(): Promise<void> {
@@ -96,23 +108,95 @@ export class NodeProcessor extends BaseReadModel {
 
   protected override async commitOperations(
     items: OperationWithContext[],
+    fenceTrx?: Transaction<DocumentViewDatabase>,
   ): Promise<void> {
-    await this.driveDb.transaction().execute(async (trx) => {
-      for (const item of items) {
-        const actionType = item.operation.action.type;
-        if (NAME_ACTION_TYPES.has(actionType)) {
-          await this.applyNameOperation(trx, item);
-          continue;
-        }
-        if (STRUCTURE_ACTION_TYPES.has(actionType)) {
-          await this.applyStructureOperation(trx, item);
-          continue;
-        }
-        if (actionType === "DELETE_DOCUMENT") {
-          await this.applyDeleteDocument(trx, item);
-        }
-      }
+    if (fenceTrx) {
+      await this.applyAll(
+        items,
+        fenceTrx as unknown as Transaction<NodeProcessorDatabase>,
+      );
+      return;
+    }
+    if (!this.writesRows(items)) return;
+    await this.driveDb
+      .transaction()
+      .execute((trx) => this.applyAll(items, trx));
+  }
+
+  protected override writesRows(items: OperationWithContext[]): boolean {
+    return items.some((item) => {
+      const actionType = item.operation.action.type;
+      return (
+        NAME_ACTION_TYPES.has(actionType) ||
+        STRUCTURE_ACTION_TYPES.has(actionType) ||
+        actionType === "DELETE_DOCUMENT" ||
+        isPurgeMarker(item.operation)
+      );
     });
+  }
+
+  private async applyAll(
+    items: OperationWithContext[],
+    trx: Transaction<NodeProcessorDatabase>,
+  ): Promise<void> {
+    const purgedTargets = await this.findPurgedTargets(trx, items);
+    for (const item of items) {
+      const actionType = item.operation.action.type;
+      if (isPurgeMarker(item.operation)) {
+        const input = item.operation.action.input as PurgeDocumentActionInput;
+        await this.eraseDocument(
+          trx,
+          input.documentId || item.context.documentId,
+        );
+        continue;
+      }
+      if (NAME_ACTION_TYPES.has(actionType)) {
+        await this.applyNameOperation(trx, item);
+        continue;
+      }
+      if (STRUCTURE_ACTION_TYPES.has(actionType)) {
+        if (this.namesPurgedTarget(item, purgedTargets)) continue;
+        await this.applyStructureOperation(trx, item);
+        continue;
+      }
+      if (actionType === "DELETE_DOCUMENT") {
+        await this.applyDeleteDocument(trx, item);
+      }
+    }
+  }
+
+  /** Tombstoned targets of this batch's drive-child ADD_RELATIONSHIPs. */
+  private async findPurgedTargets(
+    trx: Transaction<NodeProcessorDatabase>,
+    items: OperationWithContext[],
+  ): Promise<Set<string>> {
+    const targets: string[] = [];
+    for (const item of items) {
+      const target = this.addedChildOf(item);
+      if (target !== undefined) targets.push(target);
+    }
+    return findPurged(this.purgeLookup(trx), targets);
+  }
+
+  private namesPurgedTarget(
+    item: OperationWithContext,
+    purgedTargets: Set<string>,
+  ): boolean {
+    const target = this.addedChildOf(item);
+    return target !== undefined && purgedTargets.has(target);
+  }
+
+  private addedChildOf(item: OperationWithContext): string | undefined {
+    const action = item.operation.action;
+    if (action.type !== "ADD_RELATIONSHIP") return undefined;
+    if (item.context.documentType !== REACTOR_DRIVE_DOCUMENT_TYPE) {
+      return undefined;
+    }
+    const input = action.input as AddRelationshipActionInput;
+    if (input.relationshipType !== DRIVE_CHILD_RELATIONSHIP_TYPE) {
+      return undefined;
+    }
+    return input.targetId;
   }
 
   private async applyNameOperation(
@@ -236,6 +320,18 @@ export class NodeProcessor extends BaseReadModel {
     const docId = input.documentId || item.context.documentId;
 
     await trx.deleteFrom("DriveNode").where("id", "=", docId).execute();
+    await trx.deleteFrom("DocumentName").where("docId", "=", docId).execute();
+  }
+
+  /** The id's nodes in every drive, a drive's own tree, and its name. */
+  private async eraseDocument(
+    trx: Transaction<NodeProcessorDatabase>,
+    docId: string,
+  ): Promise<void> {
+    await trx
+      .deleteFrom("DriveNode")
+      .where((eb) => eb.or([eb("id", "=", docId), eb("driveId", "=", docId)]))
+      .execute();
     await trx.deleteFrom("DocumentName").where("docId", "=", docId).execute();
   }
 
