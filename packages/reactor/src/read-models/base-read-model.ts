@@ -408,6 +408,11 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     trx?: Transaction<DocumentViewDatabase>,
   ): Promise<void> {}
 
+  /** The handle document_purges is read through; `db` may be the fence trx. */
+  protected purgeLookup(db: Kysely<any>): Kysely<any> {
+    return db;
+  }
+
   /** False when the batch writes no rows, so the fence opens no transaction. */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected writesRows(items: OperationWithContext[]): boolean {
@@ -428,14 +433,20 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
 
     const ids = purgeFenceIds(items);
     if (fence === "skip") {
-      const live = dropPurged(items, await findPurged(this.db, ids));
+      const live = dropPurged(
+        items,
+        await findPurged(this.purgeLookup(this.db), ids),
+      );
       if (live.length > 0) await this.commitOperations(live);
       return;
     }
 
     await this.db.transaction().execute(async (trx) => {
       await acquirePurgeLocks(trx, ids, "shared");
-      const live = dropPurged(items, await findPurged(trx, ids));
+      const live = dropPurged(
+        items,
+        await findPurged(this.purgeLookup(trx), ids),
+      );
       if (live.length > 0) await this.commitOperations(live, trx);
     });
   }
@@ -805,7 +816,9 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
   /** A failed lookup is no answer: the caller's own error stands. */
   private async isPurged(documentId: string): Promise<boolean> {
     try {
-      return (await findPurged(this.db, [documentId])).has(documentId);
+      return (await findPurged(this.purgeLookup(this.db), [documentId])).has(
+        documentId,
+      );
     } catch {
       return false;
     }
