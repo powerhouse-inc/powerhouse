@@ -4,16 +4,23 @@ import type { PieceNames } from "../../file-builders/types.js";
 
 const secretAuth = (v: PieceNames) => `
 export const ${v.camelCaseName}Auth = PieceAuth.SecretText({
+  // Label and help text on the connection form
   displayName: "API Key",
   description: "Where the user finds this key in ${v.displayName}",
   required: true,
+  // Called when the user checks the connection; auth is the key
+  // validate: async ({ auth }) => ({ valid: true }),
+  // A label telling connections apart, e.g. the account email
+  // getConnectionIdentifier: async ({ auth }) => undefined,
 });
 `;
 
 const customAuth = (v: PieceNames) => `
 export const ${v.camelCaseName}Auth = PieceAuth.CustomAuth({
+  // Help text on the connection form
   description: "Where the user finds these values in ${v.displayName}",
   required: true,
+  // The connection form's fields; SecretText values are stored as secrets
   props: {
     baseUrl: Property.ShortText({
       displayName: "Base URL",
@@ -24,6 +31,10 @@ export const ${v.camelCaseName}Auth = PieceAuth.CustomAuth({
       required: true,
     }),
   },
+  // Called when the user checks the connection; auth holds the props above
+  // validate: async ({ auth }) => ({ valid: true }),
+  // A label telling connections apart, e.g. the account email
+  // getConnectionIdentifier: async ({ auth }) => undefined,
 });
 `;
 

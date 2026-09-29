@@ -19,12 +19,15 @@ export const pieceIndexFileTemplate = (
 ${imports}
 
 export const ${v.camelCaseName} = createPiece({
+  // Name and description shown in the workflow editor's piece list
   displayName: "${v.displayName}",
   description: "${v.description}",
+  // The connection every action and trigger uses; defined in lib/auth.ts
   auth: ${v.withAuth ? `${v.camelCaseName}Auth` : "PieceAuth.None()"},
   minimumSupportedRelease: "0.30.0",
   logoUrl: ${v.constantCaseName}_LOGO,
   authors: [],
+  // ph generate piece-action and piece-trigger add entries here
   actions: [],
   triggers: [],
 });
