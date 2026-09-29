@@ -15,6 +15,11 @@ const rawSqlExecutor = {
   }),
 };
 
+/** The commit's tombstone lookup, finding none. */
+const noTombstones = () => ({
+  select: () => ({ where: () => ({ execute: () => Promise.resolve([]) }) }),
+});
+
 function createMockKysely() {
   const mockExecute = vi.fn();
   const mockExecuteTakeFirst = vi.fn();
@@ -307,6 +312,7 @@ describe("KyselyOperationIndex.commit()", () => {
       const mockTrx = {
         ...rawSqlExecutor,
         insertInto: mocks.insertInto,
+        selectFrom: noTombstones,
       };
       return await fn(mockTrx);
     });
@@ -328,6 +334,7 @@ describe("KyselyOperationIndex.commit()", () => {
       const mockTrx = {
         ...rawSqlExecutor,
         insertInto: mocks.insertInto,
+        selectFrom: noTombstones,
       };
       return await fn(mockTrx);
     });
@@ -381,6 +388,8 @@ describe("KyselyOperationIndex.commit()", () => {
         selectFrom: mocks.selectFrom,
       };
       mocks.execute.mockResolvedValue([]);
+      // The tombstone lookup reads first and finds none.
+      mocks.execute.mockResolvedValueOnce([]);
       mocks.execute.mockResolvedValueOnce([{ ordinal: 1 }]);
       return await fn(mockTrx);
     });
@@ -423,6 +432,7 @@ describe("KyselyOperationIndex.commit()", () => {
       const mockTrx = {
         ...rawSqlExecutor,
         insertInto: mocks.insertInto,
+        selectFrom: noTombstones,
       };
       mocks.execute.mockResolvedValueOnce([{ ordinal: 1 }]);
       return await fn(mockTrx);
@@ -477,6 +487,7 @@ describe("KyselyOperationIndex.commit()", () => {
       const mockTrx = {
         ...rawSqlExecutor,
         insertInto: mocks.insertInto,
+        selectFrom: noTombstones,
       };
       return await fn(mockTrx);
     });
@@ -498,6 +509,7 @@ describe("KyselyOperationIndex.commit()", () => {
       const mockTrx = {
         ...rawSqlExecutor,
         insertInto: mocks.insertInto,
+        selectFrom: noTombstones,
       };
       return await fn(mockTrx);
     });
