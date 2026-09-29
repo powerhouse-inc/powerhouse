@@ -13,6 +13,9 @@ import {
 } from "../../scripts/ui-stack.js";
 import { expect, test } from "./fixtures.js";
 
+// Every test adds the documents it needs.
+test.use({ seed: false });
+
 async function createVersionedWorkflow(page: Page, drive: string) {
   const http = await pieceAction("@activepieces/piece-http", "send_request");
   const served = http.pieceVersion;

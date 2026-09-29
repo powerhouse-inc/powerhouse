@@ -13,6 +13,9 @@ import {
 } from "../../scripts/ui-stack.js";
 import { expect, test } from "./fixtures.js";
 
+// Every test adds the documents it needs.
+test.use({ seed: false });
+
 let server: Server;
 let port = 0;
 

@@ -15,6 +15,9 @@ import {
 } from "../../scripts/ui-stack.js";
 import { expect, test } from "./fixtures.js";
 
+// Every test adds the documents it needs.
+test.use({ seed: false });
+
 const MANUAL = async () => ({
   ...(await coreTrigger("manual")),
   config: {},
@@ -123,6 +126,8 @@ test.describe("Schedule", () => {
   test("an enabled schedule is armed at its interval and can be tried", async ({
     stack,
   }) => {
+    // The supervisor may take a full minute to arm it.
+    test.setTimeout(90_000);
     const id = await createWorkflowInBrowser(stack.page, stack.drive, {
       name: "Every minute",
       trigger: {

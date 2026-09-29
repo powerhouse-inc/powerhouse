@@ -10,6 +10,9 @@ import {
 } from "../../scripts/ui-stack.js";
 import { expect, test } from "./fixtures.js";
 
+// Every test adds the documents it needs.
+test.use({ seed: false });
+
 test.describe("Canvas logos", () => {
   test("an HTTP step shows its logo after a failed first catalog load", async ({
     stack,
