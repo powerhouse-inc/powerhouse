@@ -304,6 +304,7 @@ describe("generatePieceTrigger", () => {
     // The reconciliation sweep calls run with no payload
     expect(trigger).toContain("payload === undefined ? [] : [payload.body]");
     expect(trigger).not.toContain("test() {");
+    expect(trigger).toContain("add renewConfiguration and onRenew");
     expect(trigger).not.toContain("pollingHelper");
   });
 });
