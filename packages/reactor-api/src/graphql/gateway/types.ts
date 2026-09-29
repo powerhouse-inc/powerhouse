@@ -211,9 +211,10 @@ export interface IHttpAdapter {
 
   /**
    * Start listening on the given port. Returns the underlying http.Server
-   * so callers can attach WebSocket servers.
+   * so callers can attach WebSocket servers. Without `host` it binds the
+   * wildcard address.
    */
-  listen(port: number, tls?: TlsOptions): Promise<http.Server>;
+  listen(port: number, tls?: TlsOptions, host?: string): Promise<http.Server>;
 
   /**
    * Mount a raw Connect/Express-compatible middleware function (e.g. Vite dev

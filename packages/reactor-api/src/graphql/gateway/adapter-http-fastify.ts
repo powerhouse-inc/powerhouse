@@ -178,7 +178,11 @@ export class FastifyHttpAdapter implements IHttpAdapter {
     s.setupFastifyErrorHandler(this.#instance);
   }
 
-  async listen(port: number, tls?: TlsOptions): Promise<http.Server> {
+  async listen(
+    port: number,
+    tls?: TlsOptions,
+    host?: string,
+  ): Promise<http.Server> {
     let httpServer: http.Server;
 
     if (tls === true) {
@@ -267,7 +271,7 @@ export class FastifyHttpAdapter implements IHttpAdapter {
 
     return new Promise<http.Server>((resolve, reject) => {
       httpServer.once("error", reject);
-      httpServer.listen(port, () => {
+      httpServer.listen(port, host, () => {
         httpServer.off("error", reject);
         resolve(httpServer);
       });

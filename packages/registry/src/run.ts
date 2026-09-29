@@ -3,6 +3,7 @@ import { findUp } from "find-up";
 import { randomBytes } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import type { Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { runServer } from "verdaccio";
 import type { AuthStore } from "./auth/auth-store.js";
@@ -196,6 +197,9 @@ export async function runRegistry(args: RegistryCommandArgs) {
   app.use((req, res) => verdaccioHandler(req, res));
 
   const server = app.listen(port, () => {
+    // Port 0 binds an ephemeral port; the internal fetches need the real one.
+    config.port = (server.address() as AddressInfo).port;
+    const port = config.port;
     console.log(`Powerhouse Registry running on http://localhost:${port}`);
     console.log(`  CDN:      http://localhost:${port}/-/cdn/`);
     console.log(`  Packages: http://localhost:${port}/packages`);

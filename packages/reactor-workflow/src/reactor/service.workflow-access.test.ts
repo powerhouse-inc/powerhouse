@@ -28,6 +28,7 @@ function runRow(id: string, workflowId: string) {
     trigger_payload: null,
     status: "FAILED",
     error: null,
+    enqueued_at: "2026-01-01T00:00:00.000Z",
     started_at: "2026-01-01T00:00:00.000Z",
     ended_at: null,
     rerun_of: null,
@@ -39,13 +40,22 @@ const rows = [runRow("run-mine", MINE), runRow("run-theirs", THEIRS)];
 const store = {
   listTriggerStates: () =>
     Promise.resolve([
-      { workflow_id: MINE, block_type: "core#webhook" },
-      { workflow_id: THEIRS, block_type: "core#webhook" },
+      {
+        workflow_id: MINE,
+        piece_name: "@powerhousedao/piece-core",
+        trigger_name: "webhook",
+      },
+      {
+        workflow_id: THEIRS,
+        piece_name: "@powerhousedao/piece-core",
+        trigger_name: "webhook",
+      },
     ]),
   listRuns: () => Promise.resolve(rows),
   getRun: (id: string) => Promise.resolve(rows.find((row) => row.id === id)),
   getSteps: () => Promise.resolve([]),
-  getRunDocuments: () => Promise.resolve([]),
+  getStepsForRuns: () => Promise.resolve(new Map()),
+  getRunDocumentsForRuns: () => Promise.resolve(new Map()),
 };
 
 function serviceWith(

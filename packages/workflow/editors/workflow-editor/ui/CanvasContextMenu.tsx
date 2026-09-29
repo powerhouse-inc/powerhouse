@@ -2,9 +2,10 @@
 // edge context menus; the step pickers reuse the add-button BlockSelector.
 import { useEffect, useRef, useState } from "react";
 import { BlockSelector } from "./BlockSelector.js";
-import { STEP_PRESETS, TRIGGER_PRESETS, type BlockPreset } from "./blocks.js";
+import { STEP_PRESETS, TRIGGER_PRESETS, type PickedPreset } from "./blocks.js";
 import {
   contextMenuItems,
+  type PortsOf,
   menuHeight,
   menuPosition,
   MENU_WIDTH,
@@ -31,7 +32,8 @@ const PICKER_SIZE = { width: 320, height: 400 };
 export function CanvasContextMenu(props: {
   state: CanvasMenuState;
   model: WorkflowModel;
-  onAction: (action: ContextMenuActionId, preset?: BlockPreset) => void;
+  portsOf: PortsOf;
+  onAction: (action: ContextMenuActionId, preset?: PickedPreset) => void;
   onClose: () => void;
 }) {
   const [picker, setPicker] = useState<ContextMenuActionId | null>(null);
@@ -56,7 +58,11 @@ export function CanvasContextMenu(props: {
     };
   }, [props]);
 
-  const items = contextMenuItems(props.state.target, props.model);
+  const items = contextMenuItems(
+    props.state.target,
+    props.model,
+    props.portsOf,
+  );
   const size = picker
     ? PICKER_SIZE
     : { width: MENU_WIDTH, height: menuHeight(items.length) };

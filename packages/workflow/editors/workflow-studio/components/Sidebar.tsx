@@ -8,7 +8,9 @@ import type { FileNode } from "@powerhousedao/shared/document-drive";
 import { useEffect, type ReactNode } from "react";
 import { errorMessage } from "../../shared/DocumentErrorBoundary.js";
 import { CONNECTION_TONE, toneOf, workflowHealth } from "./run-format.js";
+import type { WorkflowDocument } from "document-models/workflow";
 import { Icon, StatusDot } from "./ui.js";
+import { WorkflowMenu } from "./WorkflowMenu.js";
 
 const WORKFLOW_TYPE = "powerhouse/workflow";
 
@@ -20,11 +22,16 @@ function documentName(document: unknown, fallback: string): string {
   return state?.name || fallback || "(unnamed)";
 }
 
-function documentStatus(document: unknown): string | undefined {
+function documentStatus(document: unknown): {
+  status?: string;
+  published: boolean;
+} {
   const state = (
-    document as { state?: { global?: { status?: string } } } | null
+    document as {
+      state?: { global?: { status?: string; published?: unknown } };
+    } | null
   )?.state?.global;
-  return state?.status;
+  return { status: state?.status, published: Boolean(state?.published) };
 }
 
 function Row(props: {
@@ -115,11 +122,15 @@ function NodeRow(props: {
     );
   }
 
-  const status = documentStatus(document);
-  const { tone, label } =
-    node.documentType === WORKFLOW_TYPE
-      ? workflowHealth(status, props.lastRunStatus)
-      : { tone: toneOf(CONNECTION_TONE, status), label: status };
+  const { status, published } = documentStatus(document);
+  const isWorkflow = node.documentType === WORKFLOW_TYPE;
+  const { tone, label, hollow } = isWorkflow
+    ? workflowHealth(status, props.lastRunStatus, published)
+    : {
+        tone: toneOf(CONNECTION_TONE, status),
+        label: status,
+        hollow: undefined,
+      };
   return (
     <Row
       active={props.active}
@@ -137,12 +148,23 @@ function NodeRow(props: {
               <Icon name="pencil" className="h-3.5 w-3.5" />
             </button>
           ) : null}
-          <DeleteButton node={node} label={documentName(document, node.name)} />
+          {isWorkflow && document ? (
+            <WorkflowMenu
+              subtle
+              document={document as WorkflowDocument}
+              nodeName={node.name}
+            />
+          ) : (
+            <DeleteButton
+              node={node}
+              label={documentName(document, node.name)}
+            />
+          )}
         </span>
       }
     >
       <span title={label} className="flex">
-        <StatusDot tone={tone} />
+        <StatusDot tone={tone} hollow={hollow} />
       </span>
       <span className="min-w-0 truncate">
         {documentName(document, node.name)}

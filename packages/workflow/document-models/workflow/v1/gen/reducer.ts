@@ -6,6 +6,7 @@ import type { WorkflowPHState } from "document-models/workflow/v1";
 
 import { workflowEdgesOperations } from "../src/reducers/edges.js";
 import { workflowPolicyOperations } from "../src/reducers/policy.js";
+import { workflowPublishingOperations } from "../src/reducers/publishing.js";
 import { workflowRuntimeOperations } from "../src/reducers/runtime.js";
 import { workflowStepsOperations } from "../src/reducers/steps.js";
 import { workflowTriggerOperations } from "../src/reducers/trigger.js";
@@ -16,10 +17,13 @@ import {
   AddEdgeInputSchema,
   AddStepInputSchema,
   ClearTriggerInputSchema,
+  PublishWorkflowInputSchema,
   RemoveEdgeInputSchema,
   RemoveStepInputSchema,
   RemoveVariableInputSchema,
+  RevertToPublishedInputSchema,
   SetLastRunInputSchema,
+  SetLastTestInputSchema,
   SetPolicyInputSchema,
   SetStepConfigInputSchema,
   SetTriggerInputSchema,
@@ -29,6 +33,17 @@ import {
   SetWorkflowStatusInputSchema,
   UpdateStepInputSchema,
 } from "./schema/zod.js";
+
+const schemaMemo = new Map<() => unknown, unknown>();
+
+function memoizedSchema<T>(makeSchema: () => T): T {
+  let schema = schemaMemo.get(makeSchema) as T | undefined;
+  if (schema === undefined) {
+    schema = makeSchema();
+    schemaMemo.set(makeSchema, schema);
+  }
+  return schema;
+}
 
 const stateReducer: StateReducer<WorkflowPHState> = (
   state,
@@ -40,7 +55,7 @@ const stateReducer: StateReducer<WorkflowPHState> = (
   }
   switch (action.type) {
     case "SET_WORKFLOW_NAME": {
-      SetWorkflowNameInputSchema().parse(action.input);
+      memoizedSchema(SetWorkflowNameInputSchema).parse(action.input);
 
       workflowWorkflowOperations.setWorkflowNameOperation(
         (state as any)[action.scope],
@@ -52,7 +67,7 @@ const stateReducer: StateReducer<WorkflowPHState> = (
     }
 
     case "SET_WORKFLOW_DESCRIPTION": {
-      SetWorkflowDescriptionInputSchema().parse(action.input);
+      memoizedSchema(SetWorkflowDescriptionInputSchema).parse(action.input);
 
       workflowWorkflowOperations.setWorkflowDescriptionOperation(
         (state as any)[action.scope],
@@ -64,7 +79,7 @@ const stateReducer: StateReducer<WorkflowPHState> = (
     }
 
     case "SET_WORKFLOW_STATUS": {
-      SetWorkflowStatusInputSchema().parse(action.input);
+      memoizedSchema(SetWorkflowStatusInputSchema).parse(action.input);
 
       workflowWorkflowOperations.setWorkflowStatusOperation(
         (state as any)[action.scope],
@@ -76,7 +91,7 @@ const stateReducer: StateReducer<WorkflowPHState> = (
     }
 
     case "SET_TRIGGER": {
-      SetTriggerInputSchema().parse(action.input);
+      memoizedSchema(SetTriggerInputSchema).parse(action.input);
 
       workflowTriggerOperations.setTriggerOperation(
         (state as any)[action.scope],
@@ -88,7 +103,7 @@ const stateReducer: StateReducer<WorkflowPHState> = (
     }
 
     case "CLEAR_TRIGGER": {
-      ClearTriggerInputSchema().parse(action.input);
+      memoizedSchema(ClearTriggerInputSchema).parse(action.input);
 
       workflowTriggerOperations.clearTriggerOperation(
         (state as any)[action.scope],
@@ -100,7 +115,7 @@ const stateReducer: StateReducer<WorkflowPHState> = (
     }
 
     case "ADD_STEP": {
-      AddStepInputSchema().parse(action.input);
+      memoizedSchema(AddStepInputSchema).parse(action.input);
 
       workflowStepsOperations.addStepOperation(
         (state as any)[action.scope],
@@ -112,7 +127,7 @@ const stateReducer: StateReducer<WorkflowPHState> = (
     }
 
     case "UPDATE_STEP": {
-      UpdateStepInputSchema().parse(action.input);
+      memoizedSchema(UpdateStepInputSchema).parse(action.input);
 
       workflowStepsOperations.updateStepOperation(
         (state as any)[action.scope],
@@ -124,7 +139,7 @@ const stateReducer: StateReducer<WorkflowPHState> = (
     }
 
     case "REMOVE_STEP": {
-      RemoveStepInputSchema().parse(action.input);
+      memoizedSchema(RemoveStepInputSchema).parse(action.input);
 
       workflowStepsOperations.removeStepOperation(
         (state as any)[action.scope],
@@ -136,7 +151,7 @@ const stateReducer: StateReducer<WorkflowPHState> = (
     }
 
     case "SET_STEP_CONFIG": {
-      SetStepConfigInputSchema().parse(action.input);
+      memoizedSchema(SetStepConfigInputSchema).parse(action.input);
 
       workflowStepsOperations.setStepConfigOperation(
         (state as any)[action.scope],
@@ -148,7 +163,7 @@ const stateReducer: StateReducer<WorkflowPHState> = (
     }
 
     case "ADD_EDGE": {
-      AddEdgeInputSchema().parse(action.input);
+      memoizedSchema(AddEdgeInputSchema).parse(action.input);
 
       workflowEdgesOperations.addEdgeOperation(
         (state as any)[action.scope],
@@ -160,7 +175,7 @@ const stateReducer: StateReducer<WorkflowPHState> = (
     }
 
     case "REMOVE_EDGE": {
-      RemoveEdgeInputSchema().parse(action.input);
+      memoizedSchema(RemoveEdgeInputSchema).parse(action.input);
 
       workflowEdgesOperations.removeEdgeOperation(
         (state as any)[action.scope],
@@ -172,7 +187,7 @@ const stateReducer: StateReducer<WorkflowPHState> = (
     }
 
     case "SET_VARIABLE": {
-      SetVariableInputSchema().parse(action.input);
+      memoizedSchema(SetVariableInputSchema).parse(action.input);
 
       workflowVariablesOperations.setVariableOperation(
         (state as any)[action.scope],
@@ -184,7 +199,7 @@ const stateReducer: StateReducer<WorkflowPHState> = (
     }
 
     case "REMOVE_VARIABLE": {
-      RemoveVariableInputSchema().parse(action.input);
+      memoizedSchema(RemoveVariableInputSchema).parse(action.input);
 
       workflowVariablesOperations.removeVariableOperation(
         (state as any)[action.scope],
@@ -196,7 +211,7 @@ const stateReducer: StateReducer<WorkflowPHState> = (
     }
 
     case "SET_POLICY": {
-      SetPolicyInputSchema().parse(action.input);
+      memoizedSchema(SetPolicyInputSchema).parse(action.input);
 
       workflowPolicyOperations.setPolicyOperation(
         (state as any)[action.scope],
@@ -208,9 +223,45 @@ const stateReducer: StateReducer<WorkflowPHState> = (
     }
 
     case "SET_LAST_RUN": {
-      SetLastRunInputSchema().parse(action.input);
+      memoizedSchema(SetLastRunInputSchema).parse(action.input);
 
       workflowRuntimeOperations.setLastRunOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "SET_LAST_TEST": {
+      memoizedSchema(SetLastTestInputSchema).parse(action.input);
+
+      workflowRuntimeOperations.setLastTestOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "PUBLISH_WORKFLOW": {
+      memoizedSchema(PublishWorkflowInputSchema).parse(action.input);
+
+      workflowPublishingOperations.publishWorkflowOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "REVERT_TO_PUBLISHED": {
+      memoizedSchema(RevertToPublishedInputSchema).parse(action.input);
+
+      workflowPublishingOperations.revertToPublishedOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,

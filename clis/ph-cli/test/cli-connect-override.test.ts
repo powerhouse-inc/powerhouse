@@ -266,6 +266,45 @@ describe("buildCliConnectOverride", () => {
     );
   });
 
+  it("accepts workflowsEnabled and defaultDrives in --json", () => {
+    const result = buildCliConnectOverride(
+      mk({
+        json: '{"app":{"workflowsEnabled":true},"drives":{"defaultDrives":[{"url":"http://localhost:4101/d/w","name":"W"}]}}',
+      }),
+    );
+    expect(result.connectOverride).toEqual({
+      app: { workflowsEnabled: true },
+      drives: {
+        defaultDrives: [{ url: "http://localhost:4101/d/w", name: "W" }],
+      },
+    });
+  });
+
+  it("rejects a --json payload wrapped in a top-level connect key", () => {
+    expect(() =>
+      buildCliConnectOverride(
+        mk({ json: '{"connect":{"app":{"workflowsEnabled":true}}}' }),
+      ),
+    ).toThrow(
+      /without the "connect" wrapper[\s\S]*--json '\{"app":\{"workflowsEnabled":true\}\}'/,
+    );
+  });
+
+  it("rejects unknown --json keys, naming the key", () => {
+    expect(() =>
+      buildCliConnectOverride(mk({ json: '{"app.workflowsEnabled":true}' })),
+    ).toThrow(/"app\.workflowsEnabled"/);
+    expect(() =>
+      buildCliConnectOverride(mk({ json: '{"app":{"workflows":true}}' })),
+    ).toThrow(/\/app must NOT have additional properties \("workflows"\)/);
+  });
+
+  it("rejects --json values of the wrong type", () => {
+    expect(() =>
+      buildCliConnectOverride(mk({ json: '{"renown":{"chainId":"abc"}}' })),
+    ).toThrow(/must be number/);
+  });
+
   it("treats undefined json as no override", () => {
     const result = buildCliConnectOverride(
       mk({ json: undefined, renownUrl: "https://x" }),

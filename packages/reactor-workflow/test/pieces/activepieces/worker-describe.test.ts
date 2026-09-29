@@ -150,6 +150,7 @@ describe("PieceWorker.describePiece", () => {
           displayName: "Create Card",
           description: "Creates a card",
           requireAuth: true,
+          ports: ["next", "error"],
           props: [
             {
               name: "title",
@@ -179,6 +180,7 @@ describe("PieceWorker.describePiece", () => {
           strategy: "POLLING",
           testStrategy: "SIMULATION",
           requireAuth: true,
+          ports: ["next"],
           props: [],
           hasSampleData: true,
           // Carried, not just flagged: the expression picker reads it for the

@@ -102,7 +102,9 @@ describe("syncFeatureDependencies for a piece", () => {
   it("writes a dev entry at the document-model pin and no peer entry", async () => {
     const dir = makeProject();
     writePiece(dir, "my-piece");
-    await syncFeatureDependencies(detectFeatures(dir), dir);
+    expect(await syncFeatureDependencies(detectFeatures(dir), dir)).toEqual([
+      PIECES_FRAMEWORK_PACKAGE,
+    ]);
 
     const manifest = readManifest(dir);
     expect(manifest.devDependencies?.[PIECES_FRAMEWORK_PACKAGE]).toBe(PIN);
@@ -116,7 +118,7 @@ describe("syncFeatureDependencies for a piece", () => {
     writePiece(dir, "my-piece");
     await syncFeatureDependencies(detectFeatures(dir), dir);
     const afterFirst = readFileSync(join(dir, "package.json"), "utf-8");
-    await syncFeatureDependencies(detectFeatures(dir), dir);
+    expect(await syncFeatureDependencies(detectFeatures(dir), dir)).toEqual([]);
     expect(readFileSync(join(dir, "package.json"), "utf-8")).toBe(afterFirst);
   });
 

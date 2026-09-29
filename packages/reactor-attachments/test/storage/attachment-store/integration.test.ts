@@ -60,11 +60,11 @@ describe("KyselyAttachmentStore integration", () => {
       response: { hash, metadata, body: streamFromString(content) },
     });
 
-    const response2 = await store.get(hash);
+    const response2 = await store.get(hash, undefined, "doc-1");
     expect(response2.header.status).toBe("available");
     const refetchedBytes = await streamToBytes(response2.body);
     expect(new TextDecoder().decode(refetchedBytes)).toBe(content);
-    expect(transport.fetch).toHaveBeenCalledWith(hash, undefined);
+    expect(transport.fetch).toHaveBeenCalledWith(hash, "doc-1", undefined);
 
     // has should be true again after re-fetch
     expect(await store.has(hash)).toBe(true);

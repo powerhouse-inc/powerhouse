@@ -17,21 +17,55 @@ import {
   invalidClass,
   Segmented,
   Select,
+  type SelectAction,
   Switch,
   textAreaClass,
   textInputClass,
 } from "../../shared/controls.js";
 import { Icon } from "../../shared/icons.js";
-import { ActionListEditor } from "./ActionListEditor.js";
-import { AutocompleteInput } from "./Autocomplete.js";
 import {
   ExpressionPickerButton,
   ExpressionTokenLine,
   useExpressionField,
 } from "./ExpressionPicker.js";
 import { hasExpressions } from "./expression-tokens.js";
-import { isPropVisible } from "./validation.js";
-import type { BlockFormProp, SecretFormService, SecretStat } from "./forms.js";
+import {
+  useDynamicCache,
+  useOptionSearch,
+  useResolvedProp,
+  type LoadState,
+} from "./design-time.js";
+import type { PropertyModeValue, PropertySettingModel } from "./model.js";
+import type { BlockRef } from "./blocks.js";
+import type { ResolverKeyInput } from "./query-keys.js";
+import {
+  isPropVisible,
+  parsePropList,
+  resolverInputFor,
+  settingFor,
+  stripOptions,
+  withSetting,
+} from "./validation.js";
+import type {
+  BlockFormProp,
+  FormOption,
+  PropertyGroup,
+  SecretFormService,
+} from "./forms.js";
+import { useSecretRef } from "./secret-ref.js";
+import { lacksDefaults, withPropDefaults } from "./prop-defaults.js";
+import {
+  ColorField,
+  DateRangeField,
+  MarkdownCallout,
+  NumberStepper,
+  numberRangeError,
+  numberRangeText,
+  OptionCards,
+  optionIcon,
+  richTextMode,
+} from "./prop-controls.js";
+import { PropLayout } from "./prop-layout.js";
 import { isEmptyValue } from "./validation.js";
 
 // Splices text at the field's cursor and returns the updated value.
@@ -48,6 +82,14 @@ function insertAtCursor(
 
 const WHOLE_EXPRESSION = /^\{\{\s*[^{}]+?\s*\}\}$/;
 
+// Plain decimal notation only; Number() would take "0x10" or "1e3".
+const DECIMAL = /^-?(?:\d+(?:\.\d*)?|\.\d+)$/;
+
+export function parseDecimal(raw: string): number | undefined {
+  const trimmed = raw.trim();
+  return DECIMAL.test(trimmed) ? Number(trimmed) : undefined;
+}
+
 function stringifyValue(value: unknown): string {
   if (value === undefined || value === null) return "";
   if (typeof value === "string") return value;
@@ -59,14 +101,19 @@ function stringifyValue(value: unknown): string {
 }
 
 interface DropdownResult {
-  options: { label: string; value: unknown }[];
+  options: FormOption[];
   placeholder?: string;
   disabled?: boolean;
 }
 
 function parseDropdownResult(result: unknown): DropdownResult {
   const record = result as {
-    options?: { label?: unknown; value?: unknown }[];
+    options?: {
+      label?: unknown;
+      value?: unknown;
+      description?: unknown;
+      icon?: unknown;
+    }[];
     placeholder?: string;
     disabled?: boolean;
   } | null;
@@ -77,78 +124,17 @@ function parseDropdownResult(result: unknown): DropdownResult {
     options: record.options.map((option) => ({
       label: stringifyValue(option.label ?? option.value),
       value: option.value,
+      ...(typeof option.description === "string" && option.description
+        ? { description: option.description }
+        : {}),
+      ...(typeof option.icon === "string" ? { icon: option.icon } : {}),
     })),
     placeholder: record.placeholder,
     disabled: record.disabled,
   };
 }
 
-function parseDescriptorList(result: unknown): BlockFormProp[] {
-  if (!Array.isArray(result)) throw new Error("Unexpected properties result");
-  return result.filter(
-    (entry): entry is BlockFormProp =>
-      entry !== null &&
-      typeof entry === "object" &&
-      typeof (entry as BlockFormProp).name === "string",
-  );
-}
-
-type LoadState<T> =
-  | { kind: "idle" }
-  | { kind: "loading" }
-  | { kind: "ready"; result: T }
-  | { kind: "error"; message: string };
-
 const RELOAD_DEBOUNCE_MS = 400;
-
-// Auto-loads on mount, re-loads (debounced) whenever `key` changes; the
-// returned reload is the manual retry.
-function useResolvedProp<T>(
-  load: (() => Promise<unknown>) | undefined,
-  parse: (raw: unknown) => T,
-  key: string,
-): { state: LoadState<T>; reload: () => void } {
-  const [state, setState] = useState<LoadState<T>>({ kind: "idle" });
-  const [attempt, setAttempt] = useState(0);
-  const loadRef = useRef(load);
-  const parseRef = useRef(parse);
-  // Declared before the loading effect, so it sees this render's values.
-  useEffect(() => {
-    loadRef.current = load;
-    parseRef.current = parse;
-  });
-  const first = useRef(true);
-
-  useEffect(() => {
-    if (!loadRef.current) return;
-    let alive = true;
-    const run = () => {
-      setState({ kind: "loading" });
-      loadRef
-        .current?.()
-        .then((raw) => {
-          if (alive) setState({ kind: "ready", result: parseRef.current(raw) });
-        })
-        .catch((error: unknown) => {
-          if (alive) {
-            setState({
-              kind: "error",
-              message: error instanceof Error ? error.message : String(error),
-            });
-          }
-        });
-    };
-    const delay = first.current ? 0 : RELOAD_DEBOUNCE_MS;
-    first.current = false;
-    const timer = setTimeout(run, delay);
-    return () => {
-      alive = false;
-      clearTimeout(timer);
-    };
-  }, [key, attempt]);
-
-  return { state, reload: () => setAttempt((value) => value + 1) };
-}
 
 // Deferred: react-markdown's remark chain is a large graph, and most blocks
 // carry no markdown at all.
@@ -205,6 +191,7 @@ function FieldShell(props: {
           htmlFor={props.htmlFor}
           className="flex min-w-0 items-baseline gap-1.5 text-[13px] font-medium text-foreground"
         >
+          {optionIcon(prop.icon)}
           <span className="truncate">{prop.displayName}</span>
           {!prop.required ? (
             <span className="shrink-0 text-xs font-normal text-muted-foreground">
@@ -266,7 +253,7 @@ function OptionList(props: {
 
 // Single choice over typed option values, keyed by their serialised form.
 function OptionSelect(props: {
-  options: { label: string; value: unknown }[];
+  options: FormOption[];
   value: unknown;
   onChange: (next: unknown) => void;
   invalid: boolean;
@@ -277,6 +264,9 @@ function OptionSelect(props: {
   clearable?: boolean;
   emptyText?: string;
   id?: string;
+  searchable?: boolean;
+  actions?: SelectAction[];
+  onQueryChange?: (query: string) => void;
 }) {
   const keyOf = (value: unknown) => stringifyValue(value);
   const byKey = new Map(
@@ -288,6 +278,8 @@ function OptionSelect(props: {
       options={props.options.map((option) => ({
         value: keyOf(option.value),
         label: option.label,
+        description: option.description,
+        icon: optionIcon(option.icon),
       }))}
       value={keyOf(props.value)}
       onChange={(key) =>
@@ -300,6 +292,9 @@ function OptionSelect(props: {
       onRefresh={props.onRefresh}
       clearable={props.clearable}
       emptyText={props.emptyText}
+      searchable={props.searchable}
+      actions={props.actions}
+      onQueryChange={props.onQueryChange}
     />
   );
 }
@@ -355,7 +350,7 @@ function ArrayRows(props: {
       <Button
         size="sm"
         className="self-start"
-        onClick={() => update([...rows, {}])}
+        onClick={() => update([...rows, withPropDefaults(fields, {})])}
       >
         <Icon name="plus" className="h-3.5 w-3.5" />
         Add item
@@ -460,6 +455,21 @@ function localInputToIso(value: string): string | undefined {
   return Number.isNaN(date.getTime()) ? value : date.toISOString();
 }
 
+function isDropdownType(type: string): boolean {
+  return type === "DROPDOWN" || type === "MULTI_SELECT_DROPDOWN";
+}
+
+const SEARCH_DEBOUNCE_MS = 300;
+
+// Controls that are not text inputs, so an expression switches them to one.
+const FLIPS_TO_TEXT = new Set([
+  "DATE_TIME",
+  "OBJECT",
+  "DROPDOWN",
+  "CHECKBOX",
+  "NUMBER",
+]);
+
 const TEXT_MODE_TYPES = new Set([
   "SHORT_TEXT",
   "LONG_TEXT",
@@ -469,9 +479,9 @@ const TEXT_MODE_TYPES = new Set([
   "JSON",
   "DATE_TIME",
   "OBJECT",
+  "DROPDOWN",
+  "CHECKBOX",
 ]);
-
-const SECRET_REF_PREFIX = "secret://v1:";
 
 // Mirrors the connection editor's SecretField: the input takes the VALUE and
 // only the minted ref reaches the config. Pasting over a ref rotates it.
@@ -484,53 +494,13 @@ function SecretRefField(props: {
 }) {
   const { secrets } = props;
   const fieldId = useId();
-  const ref = typeof props.value === "string" ? props.value : "";
-  const managed = ref.startsWith(SECRET_REF_PREFIX);
-  const [draft, setDraft] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [stat, setStat] = useState<SecretStat | null>(null);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks-extra/set-state-in-effect -- clears the stale stat before the ref's own fetch
-    setStat(null);
-    if (!managed || !secrets) return;
-    let cancelled = false;
-    secrets.stat(ref).then(
-      (result) => {
-        if (!cancelled) setStat(result);
-      },
-      () => undefined,
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [ref, managed, secrets]);
-
-  const commit = () => {
-    if (draft === "" || busy || !secrets) return;
-    setBusy(true);
-    setError(null);
-    secrets
-      .save({
-        ref: managed ? ref : undefined,
-        value: draft,
-        label: props.prop.displayName,
-      })
-      .then((result) => {
-        setDraft("");
-        if (result.ref !== ref) props.onCommit(result.ref);
-        else setStat(result);
-      })
-      .catch((requestError: unknown) => {
-        setError(
-          requestError instanceof Error
-            ? requestError.message
-            : String(requestError),
-        );
-      })
-      .finally(() => setBusy(false));
-  };
+  const { ref, managed, draft, setDraft, busy, error, stat, commit } =
+    useSecretRef({
+      value: props.value,
+      secrets,
+      label: props.prop.displayName,
+      onCommit: props.onCommit,
+    });
 
   if (!secrets) {
     return (
@@ -591,21 +561,43 @@ function SecretRefField(props: {
   );
 }
 
+// A small text button in a field's label row that switches its mode.
+function ModeButton(props: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className="inline-flex h-6 shrink-0 items-center rounded-md px-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+      onClick={props.onClick}
+    >
+      {props.label}
+    </button>
+  );
+}
+
 function PropField(props: {
   prop: BlockFormProp;
   value: unknown;
-  onCommit: (value: unknown) => void;
-  loadOptions?: (propName: string) => Promise<unknown>;
+  // A mode rides along when the edit also switched it.
+  onCommit: (value: unknown, mode?: PropertyModeValue) => void;
+  // The stored mode; absent means inferred from the value.
+  mode?: PropertyModeValue;
+  // A mode switch with no value change.
+  onMode?: (mode: PropertyModeValue) => void;
+  loadOptions?: (propName: string, searchValue?: string) => Promise<unknown>;
+  // The form's other values, for a prop that reads a sibling.
+  config?: Record<string, unknown>;
   secrets?: SecretFormService;
   scopeStepId?: string;
-  // Changes whenever a refresher value or the connection changes.
-  refresherKey: string;
+  // Keys the resolver's answer: block, prop, refresher values, connection.
+  resolverInput: ResolverKeyInput;
+  // A sibling this prop's resolver reads that is still empty.
+  waitingOn?: string;
   // Inside an ARRAY item or DYNAMIC result: options cannot load yet.
   nested?: boolean;
   // Substituted into MARKDOWN props; absent until the endpoint is minted.
   webhookUrl?: string;
 }) {
-  const { prop, value, onCommit } = props;
+  const { prop, value } = props;
   const fieldId = useId();
   const optionsUnavailable = Boolean(
     props.nested && prop.hasDynamicResolver && !props.loadOptions,
@@ -622,8 +614,21 @@ function PropField(props: {
     setDraft(stringifyValue(value));
   }
   const [jsonError, setJsonError] = useState<string | null>(null);
-  // DATE_TIME / OBJECT flip to a text input when bound to an expression.
-  const [textMode, setTextMode] = useState(() => hasExpressions(value));
+  // EXPRESSION mode: the field is a text input for a {{…}} value.
+  const [textMode, setTextMode] = useState(props.mode === "EXPRESSION");
+  const [prevMode, setPrevMode] = useState(props.mode);
+  if (props.mode !== prevMode) {
+    setPrevMode(props.mode);
+    if (props.mode) setTextMode(props.mode === "EXPRESSION");
+  }
+  // Every edit records the field's mode, so it never has to be guessed.
+  const onCommit = (next: unknown, mode?: PropertyModeValue) =>
+    props.onCommit(next, mode ?? (textMode ? "EXPRESSION" : "MANUAL"));
+  const toMode = (expression: boolean) => {
+    setTextMode(expression);
+    props.onMode?.(expression ? "EXPRESSION" : "MANUAL");
+  };
+  const [numberError, setNumberError] = useState<string | null>(null);
 
   // JSON-ish fields only splice the text; their blur handler parses/commits.
   const commitsOnInsert = prop.type !== "JSON";
@@ -631,10 +636,11 @@ function PropField(props: {
     stepId: props.scopeStepId,
     label: prop.displayName,
     insert: (expression) => {
-      if ((prop.type === "DATE_TIME" || prop.type === "OBJECT") && !textMode) {
+      if (FLIPS_TO_TEXT.has(prop.type) && !textMode) {
         setTextMode(true);
         setDraft(expression);
-        onCommit(expression);
+        setNumberError(null);
+        onCommit(expression, "EXPRESSION");
         return;
       }
       if (!fieldRef.current) return;
@@ -653,16 +659,50 @@ function PropField(props: {
       : undefined;
   const isDropdown =
     prop.type === "DROPDOWN" || prop.type === "MULTI_SELECT_DROPDOWN";
-  const dropdown = useResolvedProp(
-    isDropdown ? dynamicLoad : undefined,
-    parseDropdownResult,
-    props.refresherKey,
-  );
-  const dynamic = useResolvedProp(
-    prop.type === "DYNAMIC" ? dynamicLoad : undefined,
-    parseDescriptorList,
-    props.refresherKey,
-  );
+  const dropdown = useResolvedProp({
+    kind: "options",
+    input: props.resolverInput,
+    load: isDropdown ? dynamicLoad : undefined,
+    parse: parseDropdownResult,
+    debounceMs: RELOAD_DEBOUNCE_MS,
+  });
+  const dynamic = useResolvedProp({
+    kind: "dynamic",
+    input: props.resolverInput,
+    load: prop.type === "DYNAMIC" ? dynamicLoad : undefined,
+    parse: parsePropList,
+    debounceMs: RELOAD_DEBOUNCE_MS,
+  });
+  // An unset DYNAMIC object stores its fields' defaults once they resolve.
+  const dynamicFields =
+    dynamic.state.kind === "ready" ? dynamic.state.result : null;
+  useEffect(() => {
+    if (value !== undefined || !dynamicFields) return;
+    if (lacksDefaults(dynamicFields, {})) {
+      props.onCommit(withPropDefaults(dynamicFields, {}), "MANUAL");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per schema
+  }, [dynamicFields]);
+
+  // refreshOnSearch: options() re-runs with what the author types, debounced;
+  // a stale answer to an earlier query is dropped.
+  const [searchQuery, setSearchQuery] = useState("");
+  // A choice from search results, kept so the field still shows its label
+  // once the list falls back to the unfiltered options.
+  const [picked, setPicked] = useState<FormOption | null>(null);
+  const loadOptions = props.loadOptions;
+  const searchable = Boolean(prop.refreshOnSearch && loadOptions);
+  const searchResult = useOptionSearch({
+    input: props.resolverInput,
+    query: searchQuery,
+    load:
+      searchable && loadOptions
+        ? (searchValue) => loadOptions(prop.name, searchValue)
+        : undefined,
+    parse: parseDropdownResult,
+    debounceMs: SEARCH_DEBOUNCE_MS,
+  });
+  const onSearch = searchable ? setSearchQuery : undefined;
 
   const retryButton = (state: LoadState<unknown>, reload: () => void) => (
     <IconButton
@@ -713,36 +753,6 @@ function PropField(props: {
           secrets={props.secrets}
         />
       );
-    case "PH_AUTOCOMPLETE":
-      return (
-        <FieldShell htmlFor={fieldId} prop={prop} invalid={invalid}>
-          <AutocompleteInput
-            id={fieldId}
-            className={`${textInputClass} ${invalid ? invalidClass : ""}`}
-            value={typeof value === "string" ? value : stringifyValue(value)}
-            onCommit={(next) => onCommit(next === "" ? undefined : next)}
-            loadOptions={
-              props.loadOptions
-                ? () => props.loadOptions!(prop.name)
-                : undefined
-            }
-          />
-        </FieldShell>
-      );
-    case "PH_ACTIONS":
-      return (
-        <FieldShell htmlFor={fieldId} prop={prop} invalid={invalid}>
-          <ActionListEditor
-            value={value}
-            onCommit={onCommit}
-            loadActionTypes={
-              props.loadOptions
-                ? () => props.loadOptions!("actionType")
-                : undefined
-            }
-          />
-        </FieldShell>
-      );
     case "MARKDOWN": {
       const markdown = fillPiecePlaceholders(
         stringifyValue(
@@ -753,27 +763,118 @@ function PropField(props: {
       // The fallback keeps the text readable while the chunk loads, rather
       // than collapsing the panel's height and reflowing it.
       return (
-        <Suspense
-          fallback={
-            <p className="whitespace-pre-wrap rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-              {markdown}
-            </p>
-          }
-        >
-          <PieceMarkdown text={markdown} />
-        </Suspense>
+        <MarkdownCallout variant={prop.variant}>
+          <Suspense
+            fallback={
+              <p className="whitespace-pre-wrap text-xs text-muted-foreground">
+                {markdown}
+              </p>
+            }
+          >
+            <PieceMarkdown text={markdown} />
+          </Suspense>
+        </MarkdownCallout>
       );
     }
     case "CHECKBOX":
+      if (textMode) {
+        return (
+          <FieldShell
+            htmlFor={fieldId}
+            prop={prop}
+            invalid={invalid}
+            picker={
+              <>
+                {picker}
+                <ModeButton
+                  label="Use a switch"
+                  onClick={() => {
+                    setTextMode(false);
+                    onCommit(undefined, "MANUAL");
+                  }}
+                />
+              </>
+            }
+          >
+            {textInput({
+              mono: true,
+              placeholder: "{{steps.…}} yielding true or false",
+              commit: (raw) => {
+                const trimmed = raw.trim();
+                if (trimmed === "") {
+                  setTextMode(false);
+                  return onCommit(undefined, "MANUAL");
+                }
+                onCommit(trimmed, "EXPRESSION");
+              },
+            })}
+          </FieldShell>
+        );
+      }
+      // A string here is not a choice; only true reads as on.
       return (
-        <Switch
-          checked={Boolean(value)}
-          onChange={(checked) => onCommit(checked)}
-          label={prop.displayName}
-          description={prop.description}
-        />
+        <div className="group/field flex items-start gap-1">
+          <div className="min-w-0 flex-1">
+            <Switch
+              checked={value === true}
+              onChange={(checked) => onCommit(checked, "MANUAL")}
+              label={prop.displayName}
+              description={prop.description}
+            />
+          </div>
+          {picker}
+        </div>
       );
-    case "NUMBER":
+    case "NUMBER": {
+      const rangeError = numberRangeError(value, prop.min, prop.max);
+      // Manual text is a number or nothing; {{…}} switches to an expression.
+      const commitNumber = (raw: string) => {
+        const trimmed = raw.trim();
+        if (trimmed === "") {
+          setNumberError(null);
+          if (!textMode) return onCommit(undefined);
+          setTextMode(false);
+          return onCommit(undefined, "MANUAL");
+        }
+        if (textMode || hasExpressions(trimmed)) {
+          setNumberError(null);
+          setTextMode(true);
+          return onCommit(trimmed, "EXPRESSION");
+        }
+        const parsed = parseDecimal(trimmed);
+        if (parsed === undefined) {
+          setNumberError("Not a number");
+          return;
+        }
+        setNumberError(null);
+        onCommit(parsed);
+      };
+      if (prop.display === "stepper" && !textMode) {
+        return (
+          <FieldShell
+            htmlFor={fieldId}
+            prop={prop}
+            invalid={invalid}
+            picker={picker}
+            error={numberError ?? rangeError}
+          >
+            <NumberStepper
+              id={fieldId}
+              value={value}
+              min={prop.min}
+              max={prop.max}
+              step={prop.step}
+              invalid={invalid || rangeError !== null || numberError !== null}
+              onCommit={(next) => {
+                setNumberError(null);
+                onCommit(next);
+              }}
+              onCommitText={commitNumber}
+              onFocus={field.focus}
+            />
+          </FieldShell>
+        );
+      }
       // Text input so expressions stay possible; numeric text commits a number.
       return (
         <FieldShell
@@ -781,17 +882,20 @@ function PropField(props: {
           prop={prop}
           invalid={invalid}
           picker={picker}
+          error={numberError ?? (textMode ? null : rangeError)}
         >
           {textInput({
-            commit: (raw) => {
-              const trimmed = raw.trim();
-              if (trimmed === "") return onCommit(undefined);
-              const parsed = Number(trimmed);
-              onCommit(Number.isFinite(parsed) ? parsed : trimmed);
-            },
+            mono: textMode,
+            placeholder: textMode
+              ? "{{expression}} yielding a number"
+              : (prop.placeholder ??
+                numberRangeText(prop.min, prop.max) ??
+                undefined),
+            commit: commitNumber,
           })}
         </FieldShell>
       );
+    }
     case "SECRET_TEXT":
       return (
         <FieldShell
@@ -838,7 +942,7 @@ function PropField(props: {
                 const trimmed = raw.trim();
                 if (trimmed === "") {
                   setTextMode(false);
-                  return onCommit(undefined);
+                  return onCommit(undefined, "MANUAL");
                 }
                 onCommit(
                   hasExpressions(trimmed) ? trimmed : localInputToIso(trimmed),
@@ -867,8 +971,24 @@ function PropField(props: {
       );
     case "STATIC_DROPDOWN": {
       const options = prop.staticOptions ?? [];
+      if (prop.display === "cards") {
+        return (
+          <FieldShell htmlFor={fieldId} prop={prop} invalid={invalid}>
+            <OptionCards
+              id={fieldId}
+              options={options}
+              value={value}
+              keyOf={stringifyValue}
+              onChange={onCommit}
+              invalid={invalid}
+              clearable={!prop.required}
+            />
+          </FieldShell>
+        );
+      }
       // A short either/or reads faster as buttons than as a closed list.
       if (
+        !prop.staticDisabled &&
         prop.required !== true &&
         prop.defaultValue !== undefined &&
         options.length >= 2 &&
@@ -901,7 +1021,8 @@ function PropField(props: {
             value={value}
             onChange={onCommit}
             invalid={invalid}
-            placeholder={prop.placeholder}
+            placeholder={prop.staticPlaceholder ?? prop.placeholder}
+            disabled={prop.staticDisabled && isEmptyValue(value)}
             clearable={!prop.required}
           />
         </FieldShell>
@@ -920,27 +1041,87 @@ function PropField(props: {
         </FieldShell>
       );
     case "DROPDOWN": {
+      if (textMode) {
+        return (
+          <FieldShell
+            htmlFor={fieldId}
+            prop={prop}
+            invalid={invalid}
+            picker={
+              <>
+                {picker}
+                <ModeButton
+                  label="Pick from list"
+                  onClick={() => {
+                    // An expression is not an option; keep a plain id.
+                    if (hasExpressions(value)) {
+                      setTextMode(false);
+                      onCommit(undefined, "MANUAL");
+                    } else toMode(false);
+                  }}
+                />
+              </>
+            }
+          >
+            {textInput({
+              mono: true,
+              placeholder: "{{steps.…}} or an id",
+              commit: (raw) => onCommit(raw.trim() === "" ? undefined : raw),
+            })}
+          </FieldShell>
+        );
+      }
       const result =
-        dropdown.state.kind === "ready" ? dropdown.state.result : null;
-      const current = stringifyValue(value);
+        searchResult ??
+        (dropdown.state.kind === "ready" ? dropdown.state.result : null);
+      const listed = result?.options ?? [];
+      const keepPicked =
+        picked !== null &&
+        stringifyValue(picked.value) === stringifyValue(value) &&
+        !listed.some(
+          (option) => stringifyValue(option.value) === stringifyValue(value),
+        );
+      const options = keepPicked ? [...listed, picked] : listed;
       return (
         <FieldShell
           htmlFor={fieldId}
           prop={prop}
           invalid={invalid}
           error={loadError(dropdown.state)}
-          picker={optionsUnavailable ? <AvailableSoon /> : undefined}
+          picker={optionsUnavailable ? <AvailableSoon /> : picker}
         >
           <OptionSelect
             id={fieldId}
-            options={result?.options ?? []}
+            options={options}
             value={value}
-            onChange={onCommit}
+            onChange={(next) => {
+              setPicked(
+                listed.find(
+                  (option) =>
+                    stringifyValue(option.value) === stringifyValue(next),
+                ) ?? null,
+              );
+              onCommit(next);
+            }}
             invalid={invalid}
             loading={dropdown.state.kind === "loading"}
-            disabled={(result?.disabled && !current) || optionsUnavailable}
+            disabled={
+              (result?.disabled && !stringifyValue(value)) || optionsUnavailable
+            }
             onRefresh={dynamicLoad ? dropdown.reload : undefined}
             clearable={!prop.required}
+            searchable
+            onQueryChange={onSearch}
+            actions={[
+              {
+                label: "Use data from an earlier step",
+                icon: "braces",
+                onSelect: () => {
+                  toMode(true);
+                  field.focus();
+                },
+              },
+            ]}
             emptyText={
               result?.placeholder ??
               "Nothing to choose from yet. Some lists need a connection first."
@@ -948,7 +1129,7 @@ function PropField(props: {
             placeholder={
               optionsUnavailable
                 ? "Options for nested fields are available soon"
-                : (result?.placeholder ?? prop.placeholder)
+                : (result?.placeholder ?? prop.placeholder ?? "Choose…")
             }
           />
         </FieldShell>
@@ -1039,7 +1220,9 @@ function PropField(props: {
             </div>
           ) : fields ? (
             <p className="text-xs text-muted-foreground">
-              No properties for the current selection.
+              {props.waitingOn
+                ? `Pick ${props.waitingOn} first; its fields show here.`
+                : "No properties for the current selection."}
             </p>
           ) : null}
         </FieldShell>
@@ -1059,7 +1242,43 @@ function PropField(props: {
           </FieldShell>
         );
       }
-      // Plain list: one item per line; a lone whole expression binds the list.
+      // Bound: one expression yields the whole list.
+      if (textMode) {
+        return (
+          <FieldShell
+            htmlFor={fieldId}
+            prop={prop}
+            invalid={invalid}
+            picker={
+              <>
+                <ExpressionPickerButton
+                  active={field.active}
+                  onFocusField={field.focus}
+                />
+                <ModeButton
+                  label="Enter items"
+                  onClick={() => {
+                    setTextMode(false);
+                    const bound = stringifyValue(value).trim();
+                    onCommit(bound ? [bound] : undefined, "MANUAL");
+                  }}
+                />
+              </>
+            }
+          >
+            {textInput({
+              mono: true,
+              placeholder: "{{steps.…}} yielding a list",
+              commit: (raw) =>
+                onCommit(
+                  raw.trim() === "" ? undefined : raw.trim(),
+                  "EXPRESSION",
+                ),
+            })}
+          </FieldShell>
+        );
+      }
+      // One item per line, each stored as it is.
       const lines = Array.isArray(value)
         ? value.map((item) => stringifyValue(item)).join("\n")
         : stringifyValue(value);
@@ -1069,10 +1288,19 @@ function PropField(props: {
           prop={prop}
           invalid={invalid}
           picker={
-            <ExpressionPickerButton
-              active={field.active}
-              onFocusField={field.focus}
-            />
+            <>
+              <ExpressionPickerButton
+                active={field.active}
+                onFocusField={field.focus}
+              />
+              <ModeButton
+                label="Bind the whole list"
+                onClick={() => {
+                  setTextMode(true);
+                  onCommit(undefined, "EXPRESSION");
+                }}
+              />
+            </>
           }
         >
           <textarea
@@ -1092,9 +1320,6 @@ function PropField(props: {
                 .map((line) => line.trim())
                 .filter((line) => line !== "");
               if (items.length === 0) return onCommit(undefined);
-              if (items.length === 1 && WHOLE_EXPRESSION.test(items[0])) {
-                return onCommit(items[0]);
-              }
               onCommit(items);
             }}
           />
@@ -1118,7 +1343,7 @@ function PropField(props: {
                 const trimmed = raw.trim();
                 if (trimmed === "") {
                   setTextMode(false);
-                  return onCommit(undefined);
+                  return onCommit(undefined, "MANUAL");
                 }
                 onCommit(trimmed);
               },
@@ -1141,23 +1366,77 @@ function PropField(props: {
         </FieldShell>
       );
     }
-    case "LONG_TEXT":
-    case "JSON": {
-      const isJson = prop.type === "JSON";
+    case "DATE_RANGE":
+      return (
+        <FieldShell htmlFor={fieldId} prop={prop} invalid={invalid}>
+          <DateRangeField
+            id={fieldId}
+            value={value}
+            dropdown={prop.display === "dropdown"}
+            invalid={invalid}
+            clearable={!prop.required}
+            onCommit={onCommit}
+          />
+        </FieldShell>
+      );
+    case "COLOR":
       return (
         <FieldShell
           htmlFor={fieldId}
           prop={prop}
           invalid={invalid}
           picker={picker}
+        >
+          <ColorField
+            id={fieldId}
+            value={value}
+            invalid={invalid}
+            onCommit={onCommit}
+            onFocus={field.focus}
+          />
+        </FieldShell>
+      );
+    case "RICH_TEXT":
+    case "LONG_TEXT":
+    case "CUSTOM":
+    case "JSON": {
+      // A CUSTOM prop's own renderer is DOM script; its value is edited as JSON.
+      const isJson = prop.type === "JSON" || prop.type === "CUSTOM";
+      const mode =
+        prop.type === "RICH_TEXT"
+          ? richTextMode(
+              prop.formatProperty ? props.config?.[prop.formatProperty] : "",
+            )
+          : null;
+      return (
+        <FieldShell
+          htmlFor={fieldId}
+          prop={prop}
+          invalid={invalid}
+          picker={
+            mode ? (
+              <>
+                <span className="rounded bg-muted px-1.5 text-[11px] text-muted-foreground">
+                  {mode === "html"
+                    ? "HTML"
+                    : mode === "markdown"
+                      ? "Markdown"
+                      : "Plain text"}
+                </span>
+                {picker}
+              </>
+            ) : (
+              picker
+            )
+          }
           error={jsonError}
         >
           <textarea
             id={fieldId}
             ref={fieldRef as React.RefObject<HTMLTextAreaElement>}
-            className={`${textAreaClass} ${isJson ? "font-mono text-xs" : ""} ${
-              invalid ? invalidClass : ""
-            }`}
+            className={`${textAreaClass} ${isJson || mode === "html" || prop.display === "code" ? "font-mono text-xs" : ""} ${
+              mode ? "min-h-32" : ""
+            } ${invalid ? invalidClass : ""}`}
             defaultValue={stringifyValue(value)}
             placeholder={prop.placeholder}
             spellCheck={false}
@@ -1196,36 +1475,58 @@ function PropField(props: {
           invalid={invalid}
           picker={picker}
         >
-          {textInput({
-            commit: (raw) => onCommit(raw === "" ? undefined : raw),
-          })}
+          {prop.emptyChoice && value === ""
+            ? null
+            : textInput({
+                commit: (raw) => onCommit(raw === "" ? undefined : raw),
+              })}
+          {prop.emptyChoice ? (
+            <label className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                className="h-3.5 w-3.5 accent-current"
+                checked={value === ""}
+                onChange={(event) =>
+                  onCommit(event.target.checked ? "" : undefined, "MANUAL")
+                }
+              />
+              {prop.emptyChoice}
+            </label>
+          ) : null}
         </FieldShell>
       );
   }
 }
 
-// Serialises the values a prop's resolver depends on (+ the connection).
-function refresherKeyFor(
-  prop: BlockFormProp,
-  current: Record<string, unknown>,
-  connectionId: string | undefined,
-): string {
-  const refreshers = (prop.refreshers ?? []).filter((name) => name !== "auth");
-  const values = refreshers.map((name) => current[name]);
-  try {
-    return JSON.stringify([connectionId ?? null, values]);
-  } catch {
-    return String(connectionId);
-  }
-}
+// Stands in for the block of a form with no resolvers.
+const NO_BLOCK: BlockRef = {
+  pieceName: "",
+  pieceVersion: "",
+  kind: "action",
+  name: "",
+};
 
 export function PropertyForm(props: {
   props: BlockFormProp[];
+  // Leads the resolver cache keys; absent for forms with no resolvers.
+  block?: BlockRef;
+  // The piece's property groups; props outside them render as they are.
+  groups?: PropertyGroup[];
   value: Record<string, unknown>;
-  onChange: (next: Record<string, unknown>) => void;
+  // Settings come along when the edit changed them too.
+  onChange: (
+    next: Record<string, unknown>,
+    settings?: PropertySettingModel[],
+  ) => void;
+  // Per-field mode and DYNAMIC schema; top-level forms only.
+  settings?: PropertySettingModel[] | null;
+  // Edits carry field modes and resolved DYNAMIC schemas; off when
+  // read-only or nested.
+  writesSettings?: boolean;
   loadOptions?: (
     propName: string,
     current: Record<string, unknown>,
+    searchValue?: string,
   ) => Promise<unknown>;
   // Backs PH_SECRET_REF props.
   secrets?: SecretFormService;
@@ -1247,12 +1548,89 @@ export function PropertyForm(props: {
     setCurrent(props.value);
   }
 
-  const commitField = (name: string, value: unknown) => {
+  const [settings, setSettings] = useState(props.settings ?? null);
+  const [prevSettings, setPrevSettings] = useState(props.settings);
+  if (props.settings !== prevSettings) {
+    setPrevSettings(props.settings);
+    setSettings(props.settings ?? null);
+  }
+  const tracksSettings = props.writesSettings === true;
+  const readDynamic = useDynamicCache();
+
+  // Each DYNAMIC prop's children as resolved for `config`, when cached.
+  const withResolvedSchemas = (
+    list: PropertySettingModel[] | null,
+    config: Record<string, unknown>,
+  ): PropertySettingModel[] | null => {
+    let next = list;
+    for (const prop of props.props) {
+      if (prop.type !== "DYNAMIC") continue;
+      if (settingFor(next, prop.name)?.mode === "EXPRESSION") continue;
+      const fields = readDynamic(
+        resolverInputFor(
+          props.block ?? NO_BLOCK,
+          prop,
+          config,
+          props.connectionId,
+        ),
+      );
+      if (!fields) continue;
+      const schema = stripOptions(fields);
+      const stored = settingFor(next, prop.name)?.schema ?? null;
+      if (JSON.stringify(stored) === JSON.stringify(schema)) continue;
+      next = withSetting(next, prop.name, { schema });
+    }
+    return next;
+  };
+
+  const commitField = (
+    name: string,
+    value: unknown,
+    mode?: PropertyModeValue,
+  ) => {
     const next = { ...current };
     if (value === undefined) delete next[name];
     else next[name] = value;
+    let nextSettings = settings;
+    // A touched field always has a mode; layout-driven edits are MANUAL.
+    const nextMode = mode ?? settingFor(settings, name)?.mode ?? "MANUAL";
+    if (tracksSettings && settingFor(settings, name)?.mode !== nextMode) {
+      nextSettings = withSetting(nextSettings, name, { mode: nextMode });
+    }
+    // A pick made against the old value of a refresher no longer holds.
+    if (value !== current[name]) {
+      for (const dependent of props.props) {
+        if (!dependent.refreshers?.includes(name)) continue;
+        if (isDropdownType(dependent.type)) delete next[dependent.name];
+        // Its children were resolved for the old value.
+        if (
+          tracksSettings &&
+          dependent.type === "DYNAMIC" &&
+          settingFor(nextSettings, dependent.name)?.schema != null
+        ) {
+          nextSettings = withSetting(nextSettings, dependent.name, {
+            schema: null,
+          });
+        }
+      }
+    }
+    if (tracksSettings) nextSettings = withResolvedSchemas(nextSettings, next);
     setCurrent(next);
-    props.onChange(next);
+    if (nextSettings !== settings) {
+      setSettings(nextSettings);
+      props.onChange(next, nextSettings ?? []);
+    } else props.onChange(next);
+  };
+
+  // A mode switch alone is still an edit of the config it belongs to.
+  const setMode = (name: string, mode: PropertyModeValue) => {
+    if (!tracksSettings || settingFor(settings, name)?.mode === mode) return;
+    const next = withResolvedSchemas(
+      withSetting(settings, name, { mode }),
+      current,
+    );
+    setSettings(next);
+    props.onChange(current, next ?? []);
   };
 
   // A hidden field's value is not cleared: switching scheme to None and back
@@ -1271,16 +1649,32 @@ export function PropertyForm(props: {
     <PropField
       key={prop.name}
       prop={prop}
-      value={current[prop.name] ?? prop.defaultValue}
-      onCommit={(value) => commitField(prop.name, value)}
+      value={current[prop.name]}
+      onCommit={(value, mode) => commitField(prop.name, value, mode)}
+      mode={settingFor(settings, prop.name)?.mode}
+      onMode={(mode) => setMode(prop.name, mode)}
       loadOptions={
         props.loadOptions
-          ? (propName) => props.loadOptions!(propName, current)
+          ? (propName, searchValue) =>
+              props.loadOptions!(propName, current, searchValue)
           : undefined
       }
+      config={current}
       secrets={props.secrets}
       scopeStepId={props.scopeStepId}
-      refresherKey={refresherKeyFor(prop, current, props.connectionId)}
+      resolverInput={resolverInputFor(
+        props.block ?? NO_BLOCK,
+        prop,
+        current,
+        props.connectionId,
+      )}
+      waitingOn={
+        props.props.find(
+          (sibling) =>
+            prop.refreshers?.includes(sibling.name) &&
+            isEmptyValue(current[sibling.name]),
+        )?.displayName
+      }
       nested={props.nested}
       webhookUrl={props.webhookUrl}
     />
@@ -1288,7 +1682,13 @@ export function PropertyForm(props: {
 
   return (
     <div className={`flex flex-col ${props.nested ? "gap-4" : "gap-5"}`}>
-      {essential.map(field)}
+      <PropLayout
+        props={essential}
+        groups={props.groups}
+        values={current}
+        renderField={field}
+        onCommit={commitField}
+      />
       {advanced.length > 0 ? (
         <div className="flex flex-col gap-5 border-t border-solid border-foreground/10 pt-4">
           <button
@@ -1309,7 +1709,13 @@ export function PropertyForm(props: {
             </span>
           </button>
           <div hidden={!showAdvanced} className="flex flex-col gap-5">
-            {advanced.map(field)}
+            <PropLayout
+              props={advanced}
+              groups={props.groups}
+              values={current}
+              renderField={field}
+              onCommit={commitField}
+            />
           </div>
         </div>
       ) : null}

@@ -1,18 +1,21 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
+import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { gunzipSync } from "node:zlib";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
   DEFAULT_STORAGE_DIR_NAME,
 } from "../src/constants.js";
+import { invalidatePieceIndex } from "../src/pieces.js";
 import { runRegistry } from "../src/run.js";
 import { packTarball } from "./pack.js";
 
-const REGISTRY_PORT = 8383;
-const REGISTRY_URL = `http://localhost:${REGISTRY_PORT}`;
+// Bound to an ephemeral port in beforeAll.
+let REGISTRY_URL = "";
 const POLL_TIMEOUT = 15000;
 const POLL_INTERVAL = 200;
 
@@ -43,8 +46,9 @@ interface PieceSummary {
 }
 
 interface BlockSearchHit {
-  blockType: string;
   pieceName: string;
+  pieceVersion: string;
+  name: string;
   pieceDisplayName: string;
   displayName: string;
   kind: string;
@@ -245,6 +249,51 @@ async function catalog(query = ""): Promise<CatalogEntry[]> {
   return (await res.json()) as CatalogEntry[];
 }
 
+const MULTI_PIECE = "@phtest/piece-multi";
+const MULTI_PKG = "piece-fixture-multi";
+const MULTI_DIR = "dist/node/pieces/multi";
+
+// Each package version ships its own bytes and descriptor. The manifest's
+// piece `version` is stale on purpose: the package version must win.
+function multiFiles(packageVersion: string): Record<string, string> {
+  return {
+    "dist/powerhouse.manifest.json": JSON.stringify({
+      name: MULTI_PKG,
+      pieces: [
+        {
+          id: MULTI_PIECE,
+          name: "Multi",
+          version: "0.0.1",
+          bundle: MULTI_DIR,
+        },
+      ],
+    }),
+    [`${MULTI_DIR}/index.mjs`]: `export default "multi@${packageVersion}";\n`,
+    [`${MULTI_DIR}/package.json`]: JSON.stringify({
+      name: MULTI_PIECE,
+      version: packageVersion,
+      type: "module",
+      main: "index.mjs",
+    }),
+    [`${MULTI_DIR}/descriptor.json`]: JSON.stringify({
+      name: MULTI_PIECE,
+      displayName: `Multi ${packageVersion}`,
+      actions: {},
+      triggers: {},
+    }),
+  };
+}
+
+function multiTarballUrl(version: string): string {
+  return `${REGISTRY_URL}/-/pieces/bundled/@phtest-piece-multi-${version}.tgz`;
+}
+
+async function multiBundleText(version: string): Promise<string> {
+  const res = await fetch(multiTarballUrl(version));
+  expect(res.status).toBe(200);
+  return gunzipSync(Buffer.from(await res.arrayBuffer())).toString("latin1");
+}
+
 describe("registry pieces", () => {
   const testDir = import.meta.dirname;
   // A directory of its own: tests/.test-output is wiped by e2e.test.ts's
@@ -264,7 +313,7 @@ describe("registry pieces", () => {
     });
 
     server = await runRegistry({
-      port: REGISTRY_PORT,
+      port: 0,
       storageDir: path.join(workDir, DEFAULT_STORAGE_DIR_NAME),
       cdnCacheDir: path.join(workDir, DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME),
       uplink: undefined,
@@ -281,6 +330,7 @@ describe("registry pieces", () => {
       server.once("listening", resolve);
       server.once("error", reject);
     });
+    REGISTRY_URL = `http://localhost:${(server.address() as AddressInfo).port}`;
 
     await ensureTestUser();
     await publishOrThrow(PIECE_PKG, VERSION, pieceFiles(PIECE_PKG));
@@ -488,9 +538,19 @@ describe("registry pieces", () => {
     it("buildSearchIndex finds the blocks in the suggestion variant", async () => {
       const raw = await catalogModule.fetchCatalogWithSuggestions();
       const index = searchModule.buildSearchIndex(raw);
-      const blockTypes = index.entries.map((e) => e.hit.blockType);
-      expect(blockTypes).toContain(`${PIECE_NAME}@${VERSION}#greet`);
-      expect(blockTypes).toContain(`${PIECE_NAME}@${VERSION}#trigger:greeted`);
+      const blocks = index.entries.map(({ hit }) => [
+        hit.pieceName,
+        hit.pieceVersion,
+        hit.kind,
+        hit.name,
+      ]);
+      expect(blocks).toContainEqual([PIECE_NAME, VERSION, "action", "greet"]);
+      expect(blocks).toContainEqual([
+        PIECE_NAME,
+        VERSION,
+        "trigger",
+        "greeted",
+      ]);
       const trigger = index.entries.find((e) => e.hit.kind === "trigger")?.hit;
       expect(trigger?.strategy).toBe("POLLING");
       expect(trigger?.pieceDisplayName).toBe("Greeter");
@@ -530,6 +590,164 @@ describe("registry pieces", () => {
         },
         { timeout: POLL_TIMEOUT, interval: POLL_INTERVAL },
       );
+    });
+  });
+
+  describe("every published version", () => {
+    const multiVersionDir = (version: string) =>
+      path.join(
+        workDir,
+        DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
+        MULTI_PKG,
+        version,
+      );
+
+    beforeAll(async () => {
+      await publishOrThrow(MULTI_PKG, "2.0.0", multiFiles("2.0.0"));
+      await publishOrThrow(MULTI_PKG, "2.1.0", multiFiles("2.1.0"));
+      await vi.waitFor(
+        async () => {
+          const entry = (await catalog()).find((p) => p.name === MULTI_PIECE);
+          expect(entry?.version).toBe("2.1.0");
+        },
+        { timeout: POLL_TIMEOUT, interval: POLL_INTERVAL },
+      );
+    });
+
+    it("serves each version's own bundle, cut from that package version", async () => {
+      const older = await multiBundleText("2.0.0");
+      const newer = await multiBundleText("2.1.0");
+      expect(older).toContain("multi@2.0.0");
+      expect(older).not.toContain("multi@2.1.0");
+      expect(newer).toContain("multi@2.1.0");
+      const res = await fetch(multiTarballUrl("2.0.0"));
+      expect(res.headers.get("cache-control")).toBe(
+        "public, max-age=31536000, immutable",
+      );
+    });
+
+    it("ignores the manifest's piece version", async () => {
+      const res = await fetch(multiTarballUrl("0.0.1"));
+      expect(res.status).toBe(404);
+    });
+
+    it("serves the descriptor at ?version=", async () => {
+      const res = await fetch(
+        `${REGISTRY_URL}/pieces/${encodeURIComponent(MULTI_PIECE)}?version=2.0.0`,
+      );
+      expect(res.ok).toBe(true);
+      const detail = (await res.json()) as Record<string, unknown>;
+      expect(detail).toMatchObject({
+        name: MULTI_PIECE,
+        displayName: "Multi 2.0.0",
+        version: "2.0.0",
+        package: MULTI_PKG,
+        packageVersion: "2.0.0",
+        bundleUrl: multiTarballUrl("2.0.0"),
+        descriptorUrl: `${REGISTRY_URL}/-/cdn/${MULTI_PKG}@2.0.0/${MULTI_DIR}/descriptor.json`,
+      });
+    });
+
+    it("serves the latest version without ?version=", async () => {
+      const res = await fetch(`${REGISTRY_URL}/pieces/${MULTI_PIECE}`);
+      const detail = (await res.json()) as Record<string, unknown>;
+      expect(detail.displayName).toBe("Multi 2.1.0");
+      expect(detail.version).toBe("2.1.0");
+    });
+
+    it("lists the versions newest first", async () => {
+      for (const spec of [encodeURIComponent(MULTI_PIECE), MULTI_PIECE]) {
+        const res = await fetch(`${REGISTRY_URL}/pieces/${spec}/versions`);
+        expect(res.ok).toBe(true);
+        const versions = (await res.json()) as {
+          version: string;
+          packageVersion: string;
+          publishedAt: string | null;
+        }[];
+        expect(versions.map((v) => [v.version, v.packageVersion])).toEqual([
+          ["2.1.0", "2.1.0"],
+          ["2.0.0", "2.0.0"],
+        ]);
+        for (const v of versions) {
+          expect(Number.isNaN(Date.parse(v.publishedAt ?? ""))).toBe(false);
+        }
+      }
+    });
+
+    it("404s on the versions of an unknown piece", async () => {
+      const res = await fetch(
+        `${REGISTRY_URL}/pieces/@phtest/piece-nothing/versions`,
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it("404s an unknown version with the versions it has", async () => {
+      const res = await fetch(
+        `${REGISTRY_URL}/pieces/${MULTI_PIECE}?version=9.9.9`,
+      );
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({
+        error: `Piece version not found: ${MULTI_PIECE}@9.9.9`,
+        available: ["2.1.0", "2.0.0"],
+      });
+      const bundle = await fetch(multiTarballUrl("9.9.9"));
+      expect(bundle.status).toBe(404);
+    });
+
+    it("extracts a version the cdn cache does not hold on first request", async () => {
+      await rm(multiVersionDir("2.0.0"), { recursive: true, force: true });
+      invalidatePieceIndex();
+
+      const res = await fetch(
+        `${REGISTRY_URL}/pieces/${MULTI_PIECE}?version=2.0.0`,
+      );
+      expect(res.ok).toBe(true);
+      expect(((await res.json()) as { displayName: string }).displayName).toBe(
+        "Multi 2.0.0",
+      );
+      expect(
+        existsSync(path.join(multiVersionDir("2.0.0"), "package.json")),
+      ).toBe(true);
+
+      await rm(multiVersionDir("2.0.0"), { recursive: true, force: true });
+      invalidatePieceIndex();
+      expect(await multiBundleText("2.0.0")).toContain("multi@2.0.0");
+
+      await rm(multiVersionDir("2.0.0"), { recursive: true, force: true });
+      invalidatePieceIndex();
+      const listed = await fetch(
+        `${REGISTRY_URL}/pieces/${MULTI_PIECE}/versions`,
+      );
+      expect(
+        ((await listed.json()) as { version: string }[]).map((v) => v.version),
+      ).toEqual(["2.1.0", "2.0.0"]);
+    });
+
+    it("keeps the latest in the catalog", async () => {
+      const entry = (await catalog()).find((p) => p.name === MULTI_PIECE);
+      expect(entry).toMatchObject({
+        version: "2.1.0",
+        packageVersion: "2.1.0",
+        displayName: "Multi 2.1.0",
+      });
+    });
+  });
+
+  describe("reserved names", () => {
+    it("refuses a package claiming an @activepieces/ piece", async () => {
+      const res = await publishPackage("piece-fixture-squatter", "1.0.0", {
+        "dist/powerhouse.manifest.json": JSON.stringify({
+          name: "piece-fixture-squatter",
+          pieces: [{ id: "@activepieces/piece-http", bundle: MULTI_DIR }],
+        }),
+      });
+      expect(res.status).toBe(409);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toContain("@activepieces/piece-http");
+      expect(body.error).toContain("@activepieces/ scope");
+
+      const meta = await fetch(`${REGISTRY_URL}/piece-fixture-squatter`);
+      expect(meta.status).toBe(404);
     });
   });
 });

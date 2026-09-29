@@ -5,7 +5,7 @@ import {
 import { useSelectedConnectionDocument } from "document-models/connection";
 import { DocumentErrorBoundary } from "../shared/DocumentErrorBoundary.js";
 import { BackButton, UndoRedo } from "../shared/editor-chrome.js";
-import { useSyncWorkflowRuntimeUrl } from "../workflow-editor/use-runtime-url.js";
+import { WorkflowRuntimeProvider } from "../workflow-editor/runtime-context.js";
 import { connectionCallbacks } from "./connection-callbacks.js";
 import { ConnectionForm } from "./connection-form.js";
 import { enabledDependents } from "./connection-usage.js";
@@ -13,7 +13,6 @@ import { ConnectionToolbar } from "./ConnectionToolbar.js";
 import { UsedBy, useConnectionUsage } from "./UsedBy.js";
 
 function ConnectionEditor() {
-  useSyncWorkflowRuntimeUrl();
   const [document, dispatch] = useSelectedConnectionDocument();
   const state = document.state.global;
 
@@ -36,7 +35,11 @@ function ConnectionEditor() {
             onSetStatus={callbacks.setStatus}
             onDelete={() => showDeleteNodeModal(document.header.id)}
           />
-          <ConnectionForm state={state} callbacks={callbacks} />
+          <ConnectionForm
+            state={state}
+            callbacks={callbacks}
+            connectionId={document.header.id}
+          />
           <UsedBy usage={usage} />
         </div>
       </div>
@@ -50,7 +53,9 @@ export default function Editor() {
   const documentId = useSelectedDocumentId();
   return (
     <DocumentErrorBoundary documentId={documentId}>
-      <ConnectionEditor />
+      <WorkflowRuntimeProvider>
+        <ConnectionEditor />
+      </WorkflowRuntimeProvider>
     </DocumentErrorBoundary>
   );
 }

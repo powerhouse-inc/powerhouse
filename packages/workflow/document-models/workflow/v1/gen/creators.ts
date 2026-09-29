@@ -6,6 +6,8 @@ export * from "./edges/creators.js";
 export * as workflowEdgesActions from "./edges/creators.js";
 export * from "./policy/creators.js";
 export * as workflowPolicyActions from "./policy/creators.js";
+export * from "./publishing/creators.js";
+export * as workflowPublishingActions from "./publishing/creators.js";
 export * from "./runtime/creators.js";
 export * as workflowRuntimeActions from "./runtime/creators.js";
 export * from "./steps/creators.js";

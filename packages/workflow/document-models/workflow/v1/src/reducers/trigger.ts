@@ -1,14 +1,54 @@
 import type { WorkflowTriggerOperations } from "document-models/workflow/v1";
-import { TriggerNotSetError } from "../../gen/trigger/error.js";
+import {
+  InvalidTriggerBlockError,
+  TriggerConfigNotObjectError,
+  TriggerNotSetError,
+} from "../../gen/trigger/error.js";
+import {
+  invalidBlock,
+  isConfigObject,
+  toPropertySettings,
+} from "../helpers.js";
 
 export const workflowTriggerOperations: WorkflowTriggerOperations = {
   setTriggerOperation(state, action) {
+    const { input } = action;
+    const invalid = invalidBlock("trigger", {
+      pieceName: input.pieceName,
+      pieceVersion: input.pieceVersion,
+      name: input.triggerName,
+    });
+    if (invalid) throw new InvalidTriggerBlockError(invalid);
+    if (!isConfigObject(input.config)) {
+      throw new TriggerConfigNotObjectError(
+        "The trigger config must be an object",
+      );
+    }
+    // Same binding: omitted settings and last test carry over.
+    const current = state.trigger;
+    const previous =
+      current &&
+      current.id === input.id &&
+      current.pieceName === input.pieceName &&
+      current.pieceVersion === input.pieceVersion &&
+      current.triggerName === input.triggerName
+        ? current
+        : null;
     state.trigger = {
-      id: action.input.id,
-      blockType: action.input.blockType,
-      connectionId: action.input.connectionId || null,
-      config: action.input.config,
-      filter: action.input.filter ?? null,
+      id: input.id,
+      pieceName: input.pieceName,
+      pieceVersion: input.pieceVersion,
+      triggerName: input.triggerName,
+      connectionId: input.connectionId || null,
+      config: input.config,
+      propertySettings:
+        input.propertySettings === undefined
+          ? (previous?.propertySettings ?? null)
+          : input.propertySettings
+            ? toPropertySettings(input.propertySettings)
+            : null,
+      lastTest: previous?.lastTest ?? null,
+      updatedAt: action.timestampUtcMs,
     };
     state.version += 1;
   },

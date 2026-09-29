@@ -2,24 +2,8 @@
 // an injected clock: onEnable retry/backoff, and the poll cursor guard.
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import type { PieceWorker, PieceWorkerResult } from "../pieces/index.js";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type * as ReactorConnectors from "../pieces/index.js";
-
-// No bundle ever loads: the stub worker below answers for the piece.
-vi.mock("../pieces/index.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof ReactorConnectors>();
-  return {
-    ...actual,
-    ensurePieceBundle: vi.fn(() =>
-      Promise.resolve({
-        dir: "/nonexistent",
-        source: "cache",
-      }),
-    ),
-  };
-});
-
-import { SCHEDULE_BLOCK } from "./schedule.js";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { coreTrigger } from "./core-blocks.js";
 import { WorkflowRunStore } from "./store.js";
 import {
   TriggerSupervisor,
@@ -53,7 +37,12 @@ const result = (over: Partial<PieceWorkerResult> = {}): PieceWorkerResult => ({
 function binding(workflowId: string): PieceTriggerBinding {
   return {
     workflowId,
-    blockType: "@acme/piece-x@1.0.0#trigger:new_thing",
+    block: {
+      pieceName: "@acme/piece-x",
+      pieceVersion: "1.0.0",
+      kind: "trigger" as const,
+      name: "new_thing",
+    },
     packageName: "@acme/piece-x",
     version: "1.0.0",
     triggerName: "new_thing",
@@ -107,6 +96,15 @@ describe("TriggerSupervisor robustness", () => {
         fired.push(payload);
       },
       cacheDir: "/nonexistent",
+      // No bundle ever loads: the stub worker answers for the piece.
+      resolver: {
+        resolve: (target) =>
+          Promise.resolve({
+            ...target,
+            bundleDir: "/nonexistent",
+            local: false,
+          }),
+      },
       worker,
       defaultIntervalMs: INTERVAL_MS,
       now: () => clock,
@@ -187,6 +185,29 @@ describe("TriggerSupervisor robustness", () => {
     await supervisor.tick();
     expect((await store.getTriggerState(wf))?.consecutive_failures).toBe(1);
   });
+
+  it.each([
+    ["APP_WEBHOOK", "app-level webhooks"],
+    ["STREAMING", 'Unknown trigger strategy "STREAMING"'],
+  ])(
+    "parks a %s trigger without calling onEnable",
+    async (strategy, message) => {
+      const wf = `wf-strategy-${strategy}`;
+      stub.strategy = strategy;
+      supervisor = newSupervisor({
+        webhookUrlFor: () =>
+          Promise.resolve(`https://reactor.example/v1/webhooks/${wf}`),
+      });
+      await supervisor.upsert(binding(wf));
+
+      const row = await store.getTriggerState(wf);
+      expect(row?.status).toBe("ERROR");
+      expect(row?.next_poll_at).toBeNull();
+      expect(row?.last_error).toContain(message);
+      // No hook ran, so no piece registered a URL nothing would accept.
+      expect(calls).toEqual([]);
+    },
+  );
 
   it("keeps the trigger queued when the retry itself throws", async () => {
     const wf = "wf-retry-throws";
@@ -298,7 +319,7 @@ describe("TriggerSupervisor robustness", () => {
     await supervisor.upsert({
       kind: "schedule",
       workflowId: wf,
-      blockType: SCHEDULE_BLOCK,
+      block: coreTrigger("schedule"),
       config: { mode: "interval", every: 5, unit: "minutes" },
     });
     // The piece binding it replaced is what names the registration to release.
@@ -338,13 +359,18 @@ describe("TriggerSupervisor robustness", () => {
 
   it("records a trigger it was never handed a binding for", async () => {
     const wf = "wf-unresolvable";
-    const blockType = "@powerhousedao/piece-paperless-ngx#trigger:new_document";
+    const block = {
+      pieceName: "@powerhousedao/piece-paperless-ngx",
+      kind: "trigger" as const,
+      name: "new_document",
+    };
 
-    await supervisor.reject(wf, blockType, {}, "no piece answers for it");
+    await supervisor.reject(wf, block, {}, "no piece answers for it");
 
     const row = await store.getTriggerState(wf);
     expect(row?.status).toBe("ERROR");
-    expect(row?.block_type).toBe(blockType);
+    expect(row?.piece_name).toBe(block.pieceName);
+    expect(row?.trigger_name).toBe(block.name);
     expect(row?.last_error).toBe("no piece answers for it");
     // Nothing to retry: only an install or an edit can change the answer, and
     // both come back through upsert rather than the tick.
@@ -364,7 +390,7 @@ describe("TriggerSupervisor robustness", () => {
 
     await supervisor.reject(
       wf,
-      binding(wf).blockType,
+      binding(wf).block,
       binding(wf).config,
       "catalog unreachable",
     );
@@ -380,7 +406,12 @@ describe("TriggerSupervisor robustness", () => {
     const wf = "wf-unresolvable-changed";
     await supervisor.upsert(binding(wf));
 
-    await supervisor.reject(wf, "@acme/piece-x#trigger:other", {}, "gone");
+    await supervisor.reject(
+      wf,
+      { pieceName: "@acme/piece-x", kind: "trigger" as const, name: "other" },
+      {},
+      "gone",
+    );
 
     expect((await store.getTriggerState(wf))?.status).toBe("ERROR");
   });
@@ -391,7 +422,11 @@ describe("TriggerSupervisor robustness", () => {
 
     await supervisor.reject(
       wf,
-      "@acme/piece-x#trigger:new_thing",
+      {
+        pieceName: "@acme/piece-x",
+        kind: "trigger" as const,
+        name: "new_thing",
+      },
       {},
       "down",
       retryAt,
@@ -404,7 +439,16 @@ describe("TriggerSupervisor robustness", () => {
 
   it("gives up the row it recorded once the trigger resolves", async () => {
     const wf = "wf-unresolvable-fixed";
-    await supervisor.reject(wf, "@acme/piece-x#trigger:new_thing", {}, "gone");
+    await supervisor.reject(
+      wf,
+      {
+        pieceName: "@acme/piece-x",
+        kind: "trigger" as const,
+        name: "new_thing",
+      },
+      {},
+      "gone",
+    );
 
     await supervisor.upsert(binding(wf));
 

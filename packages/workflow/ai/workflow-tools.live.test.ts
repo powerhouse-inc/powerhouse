@@ -14,13 +14,20 @@ describe.skipIf(!url)("workflow tools against a live runtime", () => {
   it("resolves the HTTP send_request block and its props", async () => {
     const blocks = (await tool("getWorkflowPieceBlocks").callback({
       packageName: "@activepieces/piece-http",
-    } as never)) as { actions: { blockType: string }[] };
-    const send = blocks.actions.find((a) =>
-      a.blockType.endsWith("#send_request"),
-    );
+    } as never)) as {
+      actions: {
+        pieceName: string;
+        pieceVersion: string;
+        actionName: string;
+      }[];
+    };
+    const send = blocks.actions.find((a) => a.actionName === "send_request");
     expect(send).toBeDefined();
     const config = (await tool("getWorkflowBlockConfig").callback({
-      blockType: send!.blockType,
+      pieceName: send!.pieceName,
+      pieceVersion: send!.pieceVersion,
+      name: send!.actionName,
+      kind: "action",
     } as never)) as {
       props: { name: string; required: boolean }[];
       requiresConnection: boolean;

@@ -18,7 +18,6 @@ export const FIND_DOCUMENT_MODELS_QUERY = `
         name
         documentType
       }
-      totalCount
     }
   }
 `;

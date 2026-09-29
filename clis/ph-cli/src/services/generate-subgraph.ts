@@ -17,6 +17,7 @@ import {
 import type { SubgraphModuleDocument } from "@powerhousedao/vetra/document-models/subgraph-module";
 import { dirname } from "node:path";
 import type { GenerateSubgraphArgs } from "../types.js";
+import { installAddedDependencies } from "../utils/install-added-dependencies.js";
 
 export async function startGenerateSubgraph(
   args: GenerateSubgraphArgs,
@@ -55,5 +56,9 @@ export async function startGenerateSubgraph(
     return;
   }
   await project.save();
-  await syncFeatureDependencies(detectFeatures(projectDir), projectDir);
+  const added = await syncFeatureDependencies(
+    detectFeatures(projectDir),
+    projectDir,
+  );
+  await installAddedDependencies(added, projectDir, args.skipInstall);
 }

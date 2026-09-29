@@ -4,7 +4,10 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ActivepiecesBlockExecutor } from "../../../src/pieces/engine/blocks.js";
-import type { BlockExecution } from "../../../src/pieces/engine/types.js";
+import {
+  stepBlock,
+  type BlockExecution,
+} from "../../../src/pieces/engine/types.js";
 import { PieceWorker } from "../../../src/pieces/activepieces/worker/host.js";
 
 // Writes however many bytes it is asked for, through the same ctx.files a real
@@ -42,12 +45,15 @@ async function writeFixture(name: string, source: string): Promise<string> {
 }
 
 function emit(size: number): BlockExecution {
-  const blockType = "@test/writer@1.0.0#emit";
-  return {
-    blockType,
+  const step = {
+    id: "s1",
+    key: "step",
+    pieceName: "@test/writer",
+    pieceVersion: "1.0.0",
+    actionName: "emit",
     config: { size },
-    step: { id: "s1", key: "step", blockType } as BlockExecution["step"],
   };
+  return { block: stepBlock(step), config: { size }, step };
 }
 
 describe("the file ceiling reaches the worker child", () => {

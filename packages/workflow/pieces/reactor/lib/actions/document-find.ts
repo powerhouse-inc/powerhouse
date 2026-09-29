@@ -15,7 +15,7 @@ export const documentFindAction = createAction({
   requireAuth: false,
   props: {
     documentType: documentTypeProp("Document type", false, "Omit for any type"),
-    parentId: driveProp("In drive/folder", "Omit for the whole reactor"),
+    parentId: driveProp("In drive", "Omit for the whole reactor"),
     name: Property.ShortText({
       displayName: "Name contains",
       description: "Case-insensitive match",

@@ -1,16 +1,12 @@
 // Identity, state and the actions for the workflow whose runs are shown:
-// enable/disable, open the editor, delete. Stats come from the shared feed.
-import {
-  showDeleteNodeModal,
-  useDispatch,
-  useDocumentSafe,
-} from "@powerhousedao/reactor-browser";
+// on/off, open the editor, and archive or delete behind the "…" menu. Stats come from the shared feed.
+import { useDispatch, useDocumentSafe } from "@powerhousedao/reactor-browser";
 import type { FileNode } from "@powerhousedao/shared/document-drive";
 import {
   actions as workflowActions,
   type WorkflowDocument,
 } from "document-models/workflow";
-import type { RunRecord } from "../../workflow-editor/runtime-api.js";
+import type { RunRecord } from "../../workflow-editor/runtime-client.js";
 import { DocumentLoadError } from "../../shared/DocumentErrorBoundary.js";
 import {
   formatAbsolute,
@@ -18,12 +14,14 @@ import {
   RUN_TONE,
   runStats,
   toneOf,
-  TONE_BADGE,
   TONE_TEXT,
-  statusLabel,
-  WORKFLOW_TONE,
 } from "./run-format.js";
 import { Button, Fact, StatusDot } from "./ui.js";
+import {
+  PublishState,
+  StatusToggle,
+} from "../../workflow-editor/ui/PublishControls.js";
+import { WorkflowMenu } from "./WorkflowMenu.js";
 import { describeTrigger } from "../../workflow-editor/ui/trigger-text.js";
 import { RunStrip } from "./chain.js";
 import { WorkflowSteps } from "./WorkflowSteps.js";
@@ -34,6 +32,7 @@ export function WorkflowHeader(props: {
   node: FileNode;
   runs: RunRecord[] | null;
   onEdit: () => void;
+  onDeleted?: () => void;
 }) {
   const workflowId = props.node.id;
   const { data: document, error, reload } = useDocumentSafe(workflowId);
@@ -55,11 +54,9 @@ export function WorkflowHeader(props: {
 
   const workflow = document as WorkflowDocument;
   const state = workflow.state.global;
-  const enabled = state.status === "ENABLED";
   const stats = runStats(props.runs ?? []);
 
   const lastTone = toneOf(RUN_TONE, stats.lastRun?.status);
-  const statusTone = toneOf(WORKFLOW_TONE, state.status);
 
   return (
     <header className="mb-8">
@@ -69,11 +66,12 @@ export function WorkflowHeader(props: {
             <h2 className="min-w-0 truncate text-xl font-semibold tracking-tight text-foreground">
               {state.name || props.node.name || "Untitled workflow"}
             </h2>
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${TONE_BADGE[statusTone]}`}
-            >
-              {statusLabel(state.status)}
-            </span>
+            <PublishState model={state} />
+            {state.status === "ARCHIVED" ? (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                Archived
+              </span>
+            ) : null}
           </div>
           {state.description ? (
             <p className="mt-1 max-w-prose text-[13px] text-muted-foreground">
@@ -82,26 +80,21 @@ export function WorkflowHeader(props: {
           ) : null}
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="danger"
-            onClick={() => showDeleteNodeModal(props.node)}
-          >
-            Delete
-          </Button>
-          <Button
-            onClick={() =>
-              dispatch(
-                workflowActions.setWorkflowStatus({
-                  status: enabled ? "DISABLED" : "ENABLED",
-                }),
-              )
+          <StatusToggle
+            published={Boolean(state.published)}
+            status={state.status}
+            onChange={(status) =>
+              dispatch(workflowActions.setWorkflowStatus({ status }))
             }
-          >
-            {enabled ? "Disable" : "Enable"}
-          </Button>
+          />
           <Button variant="primary" onClick={props.onEdit}>
             Edit workflow
           </Button>
+          <WorkflowMenu
+            document={workflow}
+            nodeName={props.node.name}
+            onDeleted={props.onDeleted}
+          />
         </div>
       </div>
       <dl className="mt-5 flex flex-wrap gap-x-10 gap-y-3">

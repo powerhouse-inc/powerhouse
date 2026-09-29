@@ -25,8 +25,6 @@ export type DocumentOperationsResult = {
   error: Error | undefined;
   /** The last page reported a further page. */
   hasNextPage: boolean;
-  /** Reported by the GraphQL client only. */
-  totalCount: number | undefined;
   /** Loads the next page and appends it. No-op while loading or when there is none. */
   fetchNextPage: () => void;
   /** Drops the document's cached operations and reloads from the first page. */
@@ -113,7 +111,6 @@ function useScopeOperations(
       entry.status === "pending" || (!!activeId && entry.status === "idle"),
     error,
     hasNextPage: entry.hasNextPage,
-    totalCount: entry.totalCount,
     fetchNextPage,
     refetch,
   };

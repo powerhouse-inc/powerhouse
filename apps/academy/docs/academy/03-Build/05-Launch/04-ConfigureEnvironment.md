@@ -119,6 +119,12 @@ ph connect build \
 ph connect build --json '{"renown":{"url":"https://x"},"drives":{"allowAddDrive":false}}'
 ```
 
+The `--json` payload is the `connect.*` block **without** the `connect` wrapper, as nested objects. Dotted keys (`{"app.workflowsEnabled":true}`), a `{"connect":{...}}` wrapper, unknown keys, and wrong types fail the command with a validation error. For example, to enable workflows and add a default drive:
+
+```bash
+ph connect build --json '{"app":{"workflowsEnabled":true},"drives":{"defaultDrives":[{"url":"https://switchboard.example/d/my-workflows","name":"My workflows"}]}}'
+```
+
 Overrides apply at dist-emit time and are baked into the dist file — operators see the resulting values when the container boots.
 
 ### Full flag matrix
@@ -145,7 +151,7 @@ Every `connect.*` field has a dedicated flag. Both `ph connect config` and `ph c
 | `connect.renown.url`                         | `--renown-url`                 | string                                       |
 | `connect.renown.networkId`                   | `--renown-network-id`          | string                                       |
 | `connect.renown.chainId`                     | `--renown-chain-id`            | number                                       |
-| _(bulk, any subset of fields)_               | `--json '{...}'`               | partial `connect.*` JSON blob                |
+| _(bulk, any subset of fields)_               | `--json '{...}'`               | partial `connect.*` blob, no `connect` wrapper |
 
 Plus `ph connect config --get <connect.path>` to read a single value, `ph connect config --dist-dir <path>` to point at a non-default dist location (overrides `PH_CONNECT_OUTDIR`).
 
@@ -228,21 +234,31 @@ For a complete understanding of how authorization (authentication, admin access,
 
 ## Configuring workflows
 
-Workflows have two halves, switched on independently, and both live in the same
-`powerhouse.config.json`:
+One setting in `powerhouse.config.json` turns workflows on for both Switchboard
+and Connect:
 
 ```json
 {
-  "workflows": { "enabled": true },
-  "connect": { "app": { "workflowsEnabled": true } }
+  "workflows": { "enabled": true }
 }
 ```
 
-`workflows.enabled` starts the workflow runtime inside **Switchboard** — trigger
-watching, runs, step execution. `connect.app.workflowsEnabled` makes **Connect**
-load Workflow Studio and the workflow and connection editors. A headless reactor
-needs only the first; a Connect that browses workflows running elsewhere needs
-only the second. Both default to off.
+In **Switchboard** it starts the workflow runtime: trigger watching, runs, step
+execution. In **Connect** it loads Workflow Studio and the workflow and
+connection editors. It defaults to off.
+
+`ph vetra` also seeds a drive named **Workflows** (slug `workflows`) that opens
+in Workflow Studio, and adds it to Connect's default drives.
+
+To set Connect apart, give it `connect.app.workflowsEnabled`, which wins over
+`workflows.enabled` when present. For example, a Connect that browses workflows
+running on another reactor:
+
+```json
+{
+  "connect": { "app": { "workflowsEnabled": true } }
+}
+```
 
 Or via env vars:
 
@@ -250,7 +266,10 @@ Or via env vars:
 PH_WORKFLOWS_ENABLED=true
 ```
 
-Connect's half has no env var — set it in the config, or pass
+`PH_WORKFLOWS_ENABLED` also accepts `1` and `0`, and it overrides
+`workflows.enabled` in the config file.
+
+Connect has no env var: it follows the config file, or
 `ph connect build --workflows true`.
 
 Beyond the switch, the runtime reads a handful of `PH_WORKFLOWS_*` variables for
@@ -263,9 +282,10 @@ Two are worth naming, because leaving them out fails in ways that are hard to
 diagnose:
 
 ```bash
-# 32 bytes of hex encrypting stored connection secrets. Unset, the runtime
-# generates a key next to its working directory — so a host that does not keep
-# that directory comes back unable to read the secrets it stored.
+# 32 bytes of hex encrypting stored connection secrets. Required when the
+# database is Postgres. Unset on PGlite, the runtime generates a key next to its
+# working directory. A key other than the one the secrets were stored with is
+# refused, so keep it: a lost key means re-entering every secret.
 PH_WORKFLOWS_SECRETS_MASTER_KEY=<64 hex chars>
 
 # Addresses a piece may reach, widening a policy that refuses private and
@@ -273,6 +293,25 @@ PH_WORKFLOWS_SECRETS_MASTER_KEY=<64 hex chars>
 # machine or network fails to connect.
 PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES=127.0.0.1/32,::1/128
 ```
+
+`ph vetra` and `ph switchboard --dev` add `127.0.0.1/32,::1/128` to
+`PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES` themselves, keeping any addresses already
+in it, so pieces can reach services on your machine during development.
+
+**Webhook origin.** A webhook URL the runtime hands out uses `PUBLIC_URL`, then
+`RENDER_EXTERNAL_URL`, then `HEROKU_APP_DEFAULT_DOMAIN_NAME`, and falls back to
+`http://localhost:<port>`. Set one of them wherever a provider has to reach the
+reactor. This is not `PH_SWITCHBOARD_PUBLIC_URL`, which sets the attachment
+service URL.
+
+```bash
+PUBLIC_URL=https://switchboard.example.com
+```
+
+**Pieces from a registry.** The runtime also reads pieces from the registry
+Switchboard installs packages from (`packageRegistryUrl` in
+`powerhouse.config.json`, or `PH_REGISTRY_URL`), ahead of the Activepieces
+catalogue. There is no separate setting for it.
 
 :::note Variable names changed
 These names carry the `PH_WORKFLOWS_` prefix as of the release that introduced

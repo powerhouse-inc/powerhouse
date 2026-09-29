@@ -1,5 +1,6 @@
 import { debugArgs } from "@powerhousedao/shared/clis/args";
 import { command, oneOf, option, optional, positional, string } from "cmd-ts";
+import { skipInstallArgs } from "../utils/install-added-dependencies.js";
 
 export const generatePieceTriggerCmd = command({
   name: "piece-trigger",
@@ -31,6 +32,7 @@ export const generatePieceTriggerCmd = command({
       defaultValue: () => "polling" as const,
       defaultValueIsSerializable: true,
     }),
+    ...skipInstallArgs,
     ...debugArgs,
   },
   handler: async (args) => {

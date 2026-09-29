@@ -62,6 +62,26 @@ type RetryPolicy {
   retryOn: [String!]!
 }
 
+enum PropertyMode {
+  "The field's own control."
+  MANUAL
+  "The author switched the field to a free {{…}} expression."
+  EXPRESSION
+}
+
+type PropertySetting {
+  prop: String!
+  mode: PropertyMode!
+  "Resolved DynamicProperties children, options stripped."
+  schema: Unknown
+}
+
+"Reference to the latest test run in the run store."
+type StepTestRecord {
+  runId: String!
+  testedAt: DateTime!
+}
+
 "Layout only. The runtime ignores it."
 type Point {
   x: Float!
@@ -70,14 +90,20 @@ type Point {
 
 type TriggerBinding {
   id: OID!
-  "Fully-qualified block type, e.g. 'core#schedule' or '@acme/connector-imap#imap.newMessage'."
-  blockType: String!
+  "Package name of the trigger's piece, e.g. '@powerhousedao/piece-core' or '@acme/piece-imap'."
+  pieceName: String!
+  "Exact semver of the piece, e.g. '1.2.0'."
+  pieceVersion: String!
+  "Trigger name within the piece, e.g. 'schedule' or 'new_message'."
+  triggerName: String!
   "Connection document id, when the trigger's connector requires one."
   connectionId: PHID
   "Validated against the trigger's configSchema."
   config: Unknown!
-  "Optional server-side filter applied before a run is started."
-  filter: Unknown
+  propertySettings: [PropertySetting!]
+  lastTest: StepTestRecord
+  "Timestamp of the last real edit; a lastTest before it is stale."
+  updatedAt: DateTime
 }
 
 type WorkflowStep {
@@ -85,7 +111,12 @@ type WorkflowStep {
   "Author-visible label; unique within the workflow; used in expressions."
   key: String!
   name: String!
-  blockType: String!
+  "Package name of the step's piece, e.g. '@powerhousedao/piece-core' or '@activepieces/piece-http'."
+  pieceName: String!
+  "Exact semver of the piece, e.g. '0.11.19'."
+  pieceVersion: String!
+  "Action name within the piece, e.g. 'branch' or 'send_request'."
+  actionName: String!
   connectionId: PHID
   config: Unknown!
   "Per-step override of the workflow default retry policy."
@@ -94,6 +125,12 @@ type WorkflowStep {
   "Expression yielding a stable key; two executions with the same key are one side effect."
   idempotencyKeyExpression: String
   position: Point
+  propertySettings: [PropertySetting!]
+  lastTest: StepTestRecord
+  "Skipped steps are passed over at run time."
+  skip: Boolean
+  "Timestamp of the last real edit; a lastTest before it is stale."
+  updatedAt: DateTime
 }
 
 type WorkflowEdge {
@@ -101,19 +138,30 @@ type WorkflowEdge {
   "Source step id, or the trigger id for the entry edge."
   from: OID!
   to: OID!
-  "Named output port of the source step: 'next', 'true', 'false', 'error', or a case label."
+  "Output port of the source, one it declares: 'next' and 'error' for a piece action, 'next' for the trigger, 'true', 'false' and 'error' for a branch."
   port: String!
   "Optional guard expression; the edge is taken only when it evaluates truthy."
   condition: String
+}
+
+enum VariableType {
+  TEXT
+  NUMBER
+  BOOLEAN
+  JSON
+  "value is a secret-provider handle (the format of a connection SecretRef.ref), never the plaintext."
+  SECRET
 }
 
 type WorkflowVariable {
   id: OID!
   "Name used in expressions."
   key: String!
-  "Default value; the trigger payload can be mapped onto it."
+  "The value a run reads as variables.<key>."
   value: Unknown
   description: String
+  "Null means untyped; consumers infer the kind of value it holds."
+  type: VariableType
 }
 
 type WorkflowPolicy {
@@ -130,18 +178,32 @@ type WorkflowPolicy {
   journalAsDocument: Boolean!
 }
 
+"Snapshot of the draft taken by PUBLISH_WORKFLOW."
+type PublishedWorkflow {
+  "Draft version the snapshot was taken at."
+  version: Int!
+  publishedAt: DateTime!
+  trigger: TriggerBinding
+  steps: [WorkflowStep!]!
+  edges: [WorkflowEdge!]!
+  variables: [WorkflowVariable!]!
+  policy: WorkflowPolicy!
+}
+
 type WorkflowState {
   name: String!
   description: String
   "Only ENABLED workflows get trigger instances."
   status: WorkflowStatus!
-  "Monotonic; bumped on every structural edit. A run records the version it executed."
+  "Bumped on every draft edit; REVERT_TO_PUBLISHED resets it to published.version. A run records the version it executed."
   version: Int!
   trigger: TriggerBinding
   steps: [WorkflowStep!]!
   edges: [WorkflowEdge!]!
   variables: [WorkflowVariable!]!
   policy: WorkflowPolicy!
+  "Last published snapshot; version !== published.version means unpublished changes."
+  published: PublishedWorkflow
   "Denormalised for inspectors; written by the runtime."
   lastRunAt: DateTime
   lastRunStatus: RunStatus
@@ -163,12 +225,20 @@ input SetWorkflowStatusInput {
 
 # trigger
 
+input SetTriggerPropertySettingInput {
+    prop: String!
+    mode: PropertyMode!
+    schema: Unknown
+}
+
 input SetTriggerInput {
     id: OID!
-    blockType: String!
+    pieceName: String!
+    pieceVersion: String!
+    triggerName: String!
     connectionId: PHID
     config: Unknown!
-    filter: Unknown
+    propertySettings: [SetTriggerPropertySettingInput!]
 }
 
 input ClearTriggerInput {
@@ -190,17 +260,27 @@ input AddStepPositionInput {
     y: Float!
 }
 
+input AddStepPropertySettingInput {
+    prop: String!
+    mode: PropertyMode!
+    schema: Unknown
+}
+
 input AddStepInput {
     id: OID!
     key: String!
     name: String!
-    blockType: String!
+    pieceName: String!
+    pieceVersion: String!
+    actionName: String!
     connectionId: PHID
     config: Unknown!
     retry: AddStepRetryPolicyInput
     timeoutSeconds: Int
     idempotencyKeyExpression: String
     position: AddStepPositionInput
+    skip: Boolean
+    propertySettings: [AddStepPropertySettingInput!]
 }
 
 input UpdateStepRetryPolicyInput {
@@ -220,22 +300,32 @@ input UpdateStepInput {
     id: OID!
     key: String
     name: String
-    blockType: String
+    pieceName: String
+    pieceVersion: String
+    actionName: String
     connectionId: PHID
     config: Unknown
     retry: UpdateStepRetryPolicyInput
     timeoutSeconds: Int
     idempotencyKeyExpression: String
     position: UpdateStepPositionInput
+    skip: Boolean
 }
 
 input RemoveStepInput {
     id: OID!
 }
 
+input SetStepConfigPropertySettingInput {
+    prop: String!
+    mode: PropertyMode!
+    schema: Unknown
+}
+
 input SetStepConfigInput {
     id: OID!
     config: Unknown!
+    propertySettings: [SetStepConfigPropertySettingInput!]
 }
 
 # edges
@@ -259,6 +349,8 @@ input SetVariableInput {
     key: String!
     value: Unknown
     description: String
+    "Undefined leaves an existing variable's type unchanged; null clears it."
+    type: VariableType
 }
 
 input RemoveVariableInput {
@@ -291,4 +383,21 @@ input SetPolicyInput {
 input SetLastRunInput {
     lastRunAt: DateTime!
     lastRunStatus: RunStatus!
+}
+
+input SetLastTestInput {
+    "Step id or trigger id."
+    id: OID!
+    runId: String!
+    testedAt: DateTime!
+}
+
+# publishing
+
+input PublishWorkflowInput {
+    publishedAt: DateTime!
+}
+
+input RevertToPublishedInput {
+    _: Boolean
 }

@@ -155,9 +155,16 @@ describe("props validation in the worker", () => {
     expect(props).toEqual({ title: "t", ocr: false, format: "markdown" });
   });
 
-  it("keeps a JSON prop's unparseable text for the piece to parse", async () => {
-    const props = await runEcho({ title: "t", payload: 'Sure: {"a":1}' });
-    expect(props.payload).toBe('Sure: {"a":1}');
+  it("refuses a JSON prop's unparseable text, naming the prop", async () => {
+    const error = await failure(
+      runEcho({ title: "t", payload: 'Sure: {"a":1}' }),
+    );
+    expect(error.message).toContain(
+      'Payload (payload): is not valid JSON, received: Sure: {"a":1}',
+    );
+    expect(error.serialized.invalidProps).toEqual({
+      payload: ['is not valid JSON, received: Sure: {"a":1}'],
+    });
   });
 
   it("validates a trigger's props before its hooks", async () => {

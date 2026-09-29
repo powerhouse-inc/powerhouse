@@ -85,10 +85,7 @@ export function createConnectionResolver({ pieceName }: ResolverParams) {
       const { auth } = await resolveConnectionWithSecrets(
         document,
         new InMemorySecretProvider(secrets),
-        {
-          blockType: `${connection.pieceName}#action`,
-          piecePackage: pieceName ?? connection.pieceName,
-        },
+        { piecePackage: pieceName ?? connection.pieceName },
       );
       return buildActionContext({ propsValue: {}, auth }).context.auth;
     },

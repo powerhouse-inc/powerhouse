@@ -4,7 +4,8 @@
 // piece itself runs in a forked worker, handed the path this reports.
 import { packageJsonExports } from "@powerhousedao/shared/clis/constants";
 import type { ILogger } from "document-model";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { PackagePiece, PackagePieceEntry } from "./types.js";
@@ -37,17 +38,32 @@ export interface PieceListLocation {
   listPath: string;
 }
 
+// Resolved from this module first, then from the host's own dependencies,
+// which is where document models are found too; the first error is the one kept.
+function resolvePieceList(specifier: string, hostDir: string): string {
+  try {
+    return fileURLToPath(import.meta.resolve(specifier));
+  } catch (error) {
+    try {
+      return createRequire(join(hostDir, "package.json")).resolve(specifier);
+    } catch {
+      throw error;
+    }
+  }
+}
+
 // Where a package's piece list sits and what its entries are relative to. A
 // path identifier is its own root; a name resolves as a host would import it.
-export function pieceListLocation(identifier: string): PieceListLocation {
+export function pieceListLocation(
+  identifier: string,
+  hostDir = process.cwd(),
+): PieceListLocation {
   if (isAbsolute(identifier)) {
     return { root: identifier, listPath: join(identifier, BUILT_PIECE_LIST) };
   }
-  // Left to throw, and through the ESM resolver rather than require's: its
-  // error codes are the ones the package manager reads a miss from.
-  const listPath = fileURLToPath(
-    import.meta.resolve(`${identifier}/${PIECES_SUBPATH}`),
-  );
+  // Left to throw, with the ESM resolver's error codes: they're what the
+  // package manager reads a miss from.
+  const listPath = resolvePieceList(`${identifier}/${PIECES_SUBPATH}`, hostDir);
   const root = packageRootOf(dirname(listPath));
   if (!root) {
     throw new Error(`No package.json above ${listPath}`);
@@ -55,13 +71,32 @@ export function pieceListLocation(identifier: string): PieceListLocation {
   return { root, listPath };
 }
 
+// A piece's version is its package's, so it is read from the package root.
+export function packageVersionAt(root: string): string | undefined {
+  try {
+    const pkg = JSON.parse(
+      readFileSync(join(root, "package.json"), "utf8"),
+    ) as { version?: unknown };
+    return typeof pkg.version === "string" && pkg.version !== ""
+      ? pkg.version
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // A declared piece counts only once its code is on disk: one nobody built is
 // reported rather than dropped, because a block type names it either way.
 export function locatePieces(
   declared: readonly PackagePiece[],
-  context: { root: string; identifier: string; logger: ILogger },
+  context: {
+    root: string;
+    identifier: string;
+    logger: ILogger;
+    version: string;
+  },
 ): PackagePieceEntry[] {
-  const { root, identifier, logger } = context;
+  const { root, identifier, logger, version } = context;
   const located: PackagePieceEntry[] = [];
   for (const piece of declared) {
     const where = piece.entry ?? piece.bundle;
@@ -90,7 +125,7 @@ export function locatePieces(
     }
     located.push({
       name: piece.name,
-      version: piece.version,
+      version,
       ...(piece.entry ? { entryPath: path } : { bundleDir: path }),
     });
   }
@@ -125,6 +160,7 @@ export function piecesFromCdnList(
   baseUrl: string,
   identifier: string,
   logger: ILogger,
+  version: string,
 ): PackagePieceEntry[] {
   const declared = declaredPieces(module, identifier, logger);
   if (!declared) return [];
@@ -141,7 +177,7 @@ export function piecesFromCdnList(
     }
     located.push({
       name: piece.name,
-      version: piece.version,
+      version,
       entryUrl: `${baseUrl}${where.replace(/^dist\/node\/pieces\//, "")}`,
     });
   }
@@ -163,5 +199,14 @@ export function piecesFromListModule(
     );
     return [];
   }
-  return locatePieces(declared as PackagePiece[], context);
+  const version = packageVersionAt(context.root);
+  if (!version) {
+    context.logger.warn(
+      "@pkg has no version in @root/package.json, and a piece takes its package's version; its pieces contribute none",
+      context.identifier,
+      context.root,
+    );
+    return [];
+  }
+  return locatePieces(declared as PackagePiece[], { ...context, version });
 }

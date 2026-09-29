@@ -55,8 +55,9 @@ export interface PieceCatalogEntry {
 }
 
 export interface BlockSearchHit {
-  blockType: string;
   pieceName: string;
+  pieceVersion: string;
+  name: string;
   displayName: string;
   kind: string;
 }
@@ -70,7 +71,8 @@ export interface BlockSearchResult {
 
 export interface StepRunRecord {
   stepKey: string;
-  blockType: string;
+  pieceName: string;
+  blockName: string;
   status: string;
   output: unknown;
   error: string | null;
@@ -119,7 +121,7 @@ export async function searchBlocks(
           status
           indexedPieces
           error
-          hits { blockType pieceName displayName kind }
+          hits { pieceName pieceVersion name displayName kind }
         }
       }
     }`,
@@ -151,13 +153,21 @@ export interface WorkflowStepInput {
   id: string;
   key: string;
   name: string;
-  blockType: string;
+  pieceName: string;
+  pieceVersion: string;
+  actionName: string;
   config: Record<string, unknown>;
 }
 
 export interface WorkflowInput {
   name: string;
-  trigger: { id: string; blockType: string; config: Record<string, unknown> };
+  trigger: {
+    id: string;
+    pieceName: string;
+    pieceVersion: string;
+    triggerName: string;
+    config: Record<string, unknown>;
+  };
   steps: WorkflowStepInput[];
   edges: { id: string; from: string; to: string; port: string }[];
 }
@@ -215,6 +225,15 @@ export async function createWorkflow(
     );
   }
 
+  // Enabling requires a published snapshot.
+  await client.request(
+    WORKFLOW_PATH,
+    `mutation Publish($docId: PHID!, $input: Workflow_PublishWorkflowInput!) {
+      Workflow { publishWorkflow(docId: $docId, input: $input) { id } }
+    }`,
+    { docId: id, input: { publishedAt: new Date().toISOString() } },
+  );
+
   await client.request(
     WORKFLOW_PATH,
     `mutation Status($docId: PHID!, $input: Workflow_SetWorkflowStatusInput!) {
@@ -265,7 +284,7 @@ export async function getRun(
           id
           status
           error
-          steps { stepKey blockType status output error }
+          steps { stepKey pieceName blockName status output error }
         }
       }
     }`,

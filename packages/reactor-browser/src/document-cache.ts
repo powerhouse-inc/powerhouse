@@ -76,7 +76,6 @@ export const IDLE_OPERATIONS_ENTRY: OperationsCacheEntry = Object.freeze({
   operations: Object.freeze([]) as readonly Operation[],
   error: undefined,
   hasNextPage: false,
-  totalCount: undefined,
 });
 
 /** Whether a document cache also serves operation history. `GraphQLClientDocumentCache` does not. */
@@ -556,7 +555,6 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
           operations: [...current.operations, ...result.results],
           error: undefined,
           hasNextPage: !!result.nextCursor,
-          totalCount: result.totalCount,
         });
       },
       (reason: unknown) => {

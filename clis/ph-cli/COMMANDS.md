@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.3-dev.25)<br>
+# Powerhouse CLI Commands (6.2.3-dev.32)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -189,6 +189,10 @@ Re-generate all existing processors in the current project<br><br>
 Write a powerhouse/processor spec for each existing processor into specs/processors/<br><br>
 **usage:** `--extract, -x`<br>
 
+#### Skip Install <br>
+Don't install the dependencies the command adds to package.json<br><br>
+**usage:** `--skip-install`<br>
+
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
@@ -223,6 +227,10 @@ Re-generate all existing subgraphs in the current project<br><br>
 Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/<br><br>
 **usage:** `--extract, -x`<br>
 
+#### Skip Install <br>
+Don't install the dependencies the command adds to package.json<br><br>
+**usage:** `--skip-install`<br>
+
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
@@ -246,12 +254,8 @@ The name of the piece to generate<br><br>
 **usage:** `--name, -n <str>`<br>
 
 #### Id <br>
-The piece id a workflow block type names, e.g. @acme/piece-crm. Defaults to one derived from the package name.<br><br>
+The piece id, the pieceName a workflow step holds, e.g. @acme/piece-crm. Defaults to one derived from the package name.<br><br>
 **usage:** `--id <str>`<br>
-
-#### Piece Version <br>
-The version the pieces list declares. Defaults to the package version when the piece is named after the package, else 1.0.0.<br><br>
-**usage:** `--piece-version <str>`<br>
 
 #### Auth <br>
 The kind of connection the piece asks for<br><br>
@@ -270,6 +274,10 @@ Name of the directory of an existing piece to re-register<br><br>
 #### All <br>
 Re-register every piece in pieces/: refresh the pieces list and the manifest, and prune what is gone<br><br>
 **usage:** `--all, -a`<br>
+
+#### Skip Install <br>
+Don't install the dependencies the command adds to package.json<br><br>
+**usage:** `--skip-install`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>
@@ -299,6 +307,10 @@ The piece directory under pieces/ to add the action to. Optional when the projec
 
 
 ### flags
+#### Skip Install <br>
+Don't install the dependencies the command adds to package.json<br><br>
+**usage:** `--skip-install`<br>
+
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
@@ -331,6 +343,10 @@ How the trigger fires: polled on a schedule, or delivered to a webhook<br><br>
 **default**: `polling`
 
 ### flags
+#### Skip Install <br>
+Don't install the dependencies the command adds to package.json<br><br>
+**usage:** `--skip-install`<br>
+
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
@@ -521,8 +537,10 @@ document models, editors, subgraphs and processors, type declarations, and its s
 
 Pieces under pieces/ are built too, each into its own self-contained module under
 dist/node/pieces/<name>, with a descriptor.json and package.json written beside it and
-the piece listed in dist/powerhouse.manifest.json. A package that ships only pieces is an
-ordinary package: it carries the same boilerplate, and every step above runs for it too.
+the piece listed in dist/powerhouse.manifest.json. A piece takes the package's version: an
+entry in pieces/index.ts that declares version fails the build. A package that ships only
+pieces is an ordinary package: it carries the same boilerplate, and every step above runs
+for it too.
 
 tsc runs first. If it reports type errors the build asks whether to go ahead, and stops
 where it can't ask. --ignore-type-errors builds without asking; a package built that way
@@ -652,7 +670,9 @@ Runtime-config overrides (all combinable — last wins on collision):
   ph connect build                                    Build with the current source config.
   ph connect build <key> <value>                      Build with a positional override applied (e.g. ph connect build connect.renown.url https://renown.staging).
   ph connect build --<field> <value>                  Build with a per-field flag override (e.g. --renown-url https://renown.staging).
-  ph connect build --json '{"…":"…"}'                Build with a bulk override.
+  ph connect build --json '{"app":{"workflowsEnabled":true}}'
+                                                      Build with a bulk override. The payload is the connect.* block
+                                                      without the "connect" wrapper; unknown keys are rejected.
 
 Build has no read mode; passing only <key> without <value> errors out (use `ph connect config <key>` to read).
 
@@ -662,7 +682,7 @@ Output directory<br><br>
 **usage:** `--outDir <str>`<br>
 **default**: `.ph/connect-build/dist/`
 #### Json <br>
-Inline JSON override for the runtime connect.* block, e.g. '{"renown":{"url":"..."}}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision.<br><br>
+Inline JSON override for the runtime connect.* block, without the "connect" wrapper, e.g. '{"app":{"workflowsEnabled":true},"renown":{"url":"..."}}'. A top-level packageRegistryUrl is also accepted. Validated against the runtime schema (unknown keys fail); deep-merged on top of source powerhouse.config.json. Individual --flag values beat --json on collision.<br><br>
 **usage:** `--json <str>`<br>
 
 #### Renown Url <br>

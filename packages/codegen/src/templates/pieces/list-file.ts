@@ -3,8 +3,8 @@ import { ts } from "@tmpl/core";
 
 export const piecesListFileTemplate = () =>
   ts`
-// The pieces this package ships: what each is called, the version this package
-// installs, and where the node build emits its module.
+// The pieces this package ships: what each is called and where the node build
+// emits its module. A piece's version is this package's.
 import type { PackagePiece } from "${PIECES_FRAMEWORK_PACKAGE}";
 
 export const pieces: PackagePiece[] = [];

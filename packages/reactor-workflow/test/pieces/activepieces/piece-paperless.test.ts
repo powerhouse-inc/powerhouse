@@ -147,7 +147,7 @@ describe.skipIf(!baseUrl)("paperless piece through the worker (E2E)", () => {
     });
     const { promise: listening, resolve: resolveListening } =
       Promise.withResolvers<void>();
-    listener.listen(0, "0.0.0.0", resolveListening);
+    listener.listen(0, "127.0.0.1", resolveListening);
     await listening;
     const port = (listener.address() as AddressInfo).port;
     listenerUrl = `http://127.0.0.1:${port}/graphql/workflow-runtime`;

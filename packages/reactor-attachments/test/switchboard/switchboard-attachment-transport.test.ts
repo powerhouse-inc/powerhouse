@@ -4,6 +4,7 @@ import { streamFromString } from "../factories.js";
 
 const REMOTE_URL = "https://switchboard.example.com";
 const TEST_HASH = "abc123def456";
+const DOC_ID = "doc/1";
 const anyString = (): string => expect.any(String) as unknown as string;
 const TEST_METADATA = {
   mimeType: "application/pdf",
@@ -55,7 +56,7 @@ describe("SwitchboardAttachmentTransport", () => {
         }),
       );
 
-      const result = await transport.fetch(TEST_HASH);
+      const result = await transport.fetch(TEST_HASH, DOC_ID);
 
       expect(result.kind).toBe("data");
       if (result.kind !== "data") throw new Error("expected data");
@@ -66,7 +67,7 @@ describe("SwitchboardAttachmentTransport", () => {
 
     it("returns not-found on 404", async () => {
       mockFetch.mockResolvedValue(mockResponse(404));
-      const result = await transport.fetch(TEST_HASH);
+      const result = await transport.fetch(TEST_HASH, DOC_ID);
       expect(result).toEqual({ kind: "not-found" });
     });
 
@@ -86,7 +87,7 @@ describe("SwitchboardAttachmentTransport", () => {
         }),
       );
 
-      const result = await transport.fetch(TEST_HASH);
+      const result = await transport.fetch(TEST_HASH, DOC_ID);
 
       expect(result.kind).toBe("pending");
       if (result.kind !== "pending") throw new Error("expected pending");
@@ -98,7 +99,7 @@ describe("SwitchboardAttachmentTransport", () => {
     it("throws on 202 with missing Attachment-Pending header", async () => {
       mockFetch.mockResolvedValue(mockResponse(202));
 
-      await expect(transport.fetch(TEST_HASH)).rejects.toThrow(
+      await expect(transport.fetch(TEST_HASH, DOC_ID)).rejects.toThrow(
         /Attachment-Pending/,
       );
     });
@@ -107,16 +108,16 @@ describe("SwitchboardAttachmentTransport", () => {
       mockFetch.mockResolvedValue(
         mockResponse(500, { statusText: "Internal Server Error" }),
       );
-      await expect(transport.fetch(TEST_HASH)).rejects.toThrow(
+      await expect(transport.fetch(TEST_HASH, DOC_ID)).rejects.toThrow(
         "Attachment fetch failed: 500 Internal Server Error",
       );
     });
 
     it("builds correct URL", async () => {
       mockFetch.mockResolvedValue(mockResponse(404));
-      await transport.fetch(TEST_HASH);
+      await transport.fetch(TEST_HASH, DOC_ID);
       expect(mockFetch).toHaveBeenCalledWith(
-        `${REMOTE_URL}/attachments/${TEST_HASH}`,
+        `${REMOTE_URL}/attachments/${TEST_HASH}?documentId=doc%2F1`,
         expect.any(Object),
       );
     });
@@ -125,7 +126,7 @@ describe("SwitchboardAttachmentTransport", () => {
       mockFetch.mockResolvedValue(mockResponse(404));
       const controller = new AbortController();
 
-      await transport.fetch(TEST_HASH, controller.signal);
+      await transport.fetch(TEST_HASH, DOC_ID, controller.signal);
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -142,7 +143,7 @@ describe("SwitchboardAttachmentTransport", () => {
       });
 
       mockFetch.mockResolvedValue(mockResponse(404));
-      await transport.fetch(TEST_HASH);
+      await transport.fetch(TEST_HASH, DOC_ID);
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -161,7 +162,7 @@ describe("SwitchboardAttachmentTransport", () => {
       });
 
       mockFetch.mockResolvedValue(mockResponse(404));
-      await transport.fetch(TEST_HASH);
+      await transport.fetch(TEST_HASH, DOC_ID);
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -171,7 +172,7 @@ describe("SwitchboardAttachmentTransport", () => {
 
     it("works without jwtHandler", async () => {
       mockFetch.mockResolvedValue(mockResponse(404));
-      await transport.fetch(TEST_HASH);
+      await transport.fetch(TEST_HASH, DOC_ID);
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -190,7 +191,7 @@ describe("SwitchboardAttachmentTransport", () => {
         }),
       );
 
-      const result = await transport.fetch(TEST_HASH);
+      const result = await transport.fetch(TEST_HASH, DOC_ID);
 
       expect(result.kind).toBe("data");
       if (result.kind !== "data") throw new Error("expected data");
@@ -216,7 +217,7 @@ describe("SwitchboardAttachmentTransport", () => {
         }),
       );
 
-      const result = await transport.fetch(TEST_HASH);
+      const result = await transport.fetch(TEST_HASH, DOC_ID);
 
       expect(result.kind).toBe("data");
       if (result.kind !== "data") throw new Error("expected data");
@@ -246,7 +247,7 @@ describe("SwitchboardAttachmentTransport", () => {
         }),
       );
 
-      const result = await transport.fetch(TEST_HASH);
+      const result = await transport.fetch(TEST_HASH, DOC_ID);
 
       expect(result.kind).toBe("data");
       if (result.kind !== "data") throw new Error("expected data");
@@ -278,7 +279,7 @@ describe("SwitchboardAttachmentTransport", () => {
         }),
       );
 
-      const result = await transport.fetch(TEST_HASH);
+      const result = await transport.fetch(TEST_HASH, DOC_ID);
 
       expect(result.kind).toBe("data");
       if (result.kind !== "data") throw new Error("expected data");
@@ -308,7 +309,7 @@ describe("SwitchboardAttachmentTransport", () => {
         }),
       );
 
-      const result = await transport.fetch(TEST_HASH);
+      const result = await transport.fetch(TEST_HASH, DOC_ID);
 
       expect(result.kind).toBe("data");
       if (result.kind !== "data") throw new Error("expected data");
@@ -339,7 +340,7 @@ describe("SwitchboardAttachmentTransport", () => {
         }),
       );
 
-      const result = await transport.fetch(TEST_HASH);
+      const result = await transport.fetch(TEST_HASH, DOC_ID);
 
       expect(result.kind).toBe("data");
       if (result.kind !== "data") throw new Error("expected data");
@@ -363,7 +364,7 @@ describe("SwitchboardAttachmentTransport", () => {
         }),
       );
 
-      await expect(transport.fetch(TEST_HASH)).rejects.toThrow(
+      await expect(transport.fetch(TEST_HASH, DOC_ID)).rejects.toThrow(
         /Content-Length/,
       );
     });
@@ -379,7 +380,7 @@ describe("SwitchboardAttachmentTransport", () => {
         }),
       );
 
-      await expect(transport.fetch(TEST_HASH)).rejects.toThrow(
+      await expect(transport.fetch(TEST_HASH, DOC_ID)).rejects.toThrow(
         /Content-Length/,
       );
     });
@@ -395,7 +396,7 @@ describe("SwitchboardAttachmentTransport", () => {
         }),
       );
 
-      await expect(transport.fetch(TEST_HASH)).rejects.toThrow(
+      await expect(transport.fetch(TEST_HASH, DOC_ID)).rejects.toThrow(
         /Content-Length/,
       );
     });
@@ -411,7 +412,7 @@ describe("SwitchboardAttachmentTransport", () => {
         }),
       );
 
-      await expect(transport.fetch(TEST_HASH)).rejects.toThrow(
+      await expect(transport.fetch(TEST_HASH, DOC_ID)).rejects.toThrow(
         /Content-Length/,
       );
     });

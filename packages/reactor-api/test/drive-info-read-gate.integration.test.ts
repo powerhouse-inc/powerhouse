@@ -85,7 +85,11 @@ describe("GET /d/:drive reads the drive as the caller", () => {
     await police(module.client, drive);
 
     const httpAdapter = new ExpressHttpAdapter();
-    server = (await httpAdapter.listen(0)) as http.Server;
+    server = (await httpAdapter.listen(
+      0,
+      undefined,
+      "127.0.0.1",
+    )) as http.Server;
     const { port } = server.address() as { port: number };
     const manager = new GraphQLManager(
       "/",

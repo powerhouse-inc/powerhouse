@@ -36,5 +36,10 @@ export interface WorkflowRuntimeHostDeps {
   canReadAttachmentRef?(documentId: string, ref: string): Promise<boolean>;
   // Defaults to the relational store encrypted with the host's master key.
   secrets?: SecretStore;
+  // Where that store generates a key when none is set; false requires one,
+  // for a database that outlives the working directory.
+  secretsKeyFile?: string | false;
   logger?: ILogger;
+  // How long a design-time call waits for a workflow still syncing here.
+  syncWaitMs?: number;
 }

@@ -1,4 +1,4 @@
-// The unverified and token halves of core#webhook, over a real socket. Only
+// The unverified and token halves of the core webhook trigger, over a real socket. Only
 // the status code a provider actually receives proves these gates are wired.
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -35,7 +35,7 @@ afterEach(async () => {
   host = undefined;
 });
 
-describe("core#webhook over HTTP: unverified", () => {
+describe("the core webhook trigger over HTTP: unverified", () => {
   it("starts one run carrying the request the provider sent", async () => {
     const webhook = await start();
     const { token } = await webhook.arm({ methods: "POST", scheme: "none" });
@@ -74,7 +74,7 @@ describe("core#webhook over HTTP: unverified", () => {
   });
 });
 
-describe("core#webhook over HTTP: method restriction", () => {
+describe("the core webhook trigger over HTTP: method restriction", () => {
   it("refuses every method the author did not allow", async () => {
     // A provider's verification round often probes with GET; the author asked
     // for POST only, so the probe must be refused rather than run anything.
@@ -123,7 +123,7 @@ describe("core#webhook over HTTP: method restriction", () => {
   });
 });
 
-describe("core#webhook over HTTP: token scheme", () => {
+describe("the core webhook trigger over HTTP: token scheme", () => {
   const tokenConfig = { scheme: "token", secretRef: SECRET_REF };
 
   it("accepts a delivery presenting the shared secret", async () => {
@@ -191,7 +191,7 @@ describe("core#webhook over HTTP: token scheme", () => {
   });
 });
 
-describe("core#webhook over HTTP: response modes", () => {
+describe("the core webhook trigger over HTTP: response modes", () => {
   it("answers async before the run has finished", async () => {
     // The point of async mode: the provider's socket is never held for as long
     // as the workflow takes, even for a run that never settles.
@@ -291,7 +291,7 @@ describe("core#webhook over HTTP: response modes", () => {
   });
 });
 
-describe("core#webhook over HTTP: endpoints that are not armed", () => {
+describe("the core webhook trigger over HTTP: endpoints that are not armed", () => {
   it("answers a disarmed endpoint exactly as an unknown one", async () => {
     // The endpoint row outlives disabling so re-enabling keeps the URL, which
     // is why the answer must not betray that the token is a real one.
@@ -308,6 +308,19 @@ describe("core#webhook over HTTP: endpoints that are not armed", () => {
     expect(disarmed.status).toBe(404);
     expect(unknown.status).toBe(disarmed.status);
     expect(await disarmed.text()).toBe(await unknown.text());
+    await expectNoRuns(webhook);
+  });
+
+  it("revokes a deleted workflow's token and answers it as unknown", async () => {
+    const webhook = await start();
+    const { token } = await webhook.arm({ scheme: "none" });
+    expect(await webhook.hasToken(token)).toBe(true);
+    await webhook.remove();
+
+    // Revoked off the ingestion path, once the supervisor has released it.
+    await expect.poll(() => webhook.hasToken(token)).toBe(false);
+    const res = await webhook.deliver(token, { ...JSON_BODY, body: "{}" });
+    expect(res.status).toBe(404);
     await expectNoRuns(webhook);
   });
 

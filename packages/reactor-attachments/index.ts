@@ -64,6 +64,7 @@ export {
   type AttachmentMetadata,
   type AttachmentResponse,
   type AttachmentSendOptions,
+  type AttachmentStatOptions,
   type AttachmentStatus,
   type AttachmentTransportConfig,
   type AttachmentUploadResult,

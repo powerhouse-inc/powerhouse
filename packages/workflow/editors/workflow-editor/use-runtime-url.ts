@@ -12,8 +12,7 @@ import {
   useSelectedDriveSafe,
   useSyncList,
 } from "@powerhousedao/reactor-browser";
-import { useEffect, useMemo } from "react";
-import { setRuntimeUrl } from "./runtime-api.js";
+import { useMemo } from "react";
 
 const SUBGRAPH_NAME = "workflow-runtime";
 
@@ -66,12 +65,4 @@ export function useWorkflowRuntimeUrl(): string {
       SUBGRAPH_NAME,
     );
   }, [driveId, remotes, defaultDrivesUrl]);
-}
-
-// Publishes the resolved URL to the module-level client used outside React.
-export function useSyncWorkflowRuntimeUrl(): void {
-  const url = useWorkflowRuntimeUrl();
-  useEffect(() => {
-    setRuntimeUrl(url);
-  }, [url]);
 }

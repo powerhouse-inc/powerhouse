@@ -1,5 +1,6 @@
 // One driver per way a trigger gets its input: a cron slot, a poll of the
 // piece, or an inbound request. The supervisor owns the row; these own the fire.
+import { blockKey } from "@powerhousedao/pieces-framework/block-type";
 import { extractDedupeKey } from "../pieces/index.js";
 import { childLogger } from "document-model";
 import {
@@ -8,13 +9,18 @@ import {
   parseScheduleConfig,
   rescheduleAfterFire,
   schedulePayload,
-  SCHEDULE_BLOCK,
 } from "./schedule.js";
-import type { TriggerStateRow, WorkflowRunStore } from "./store.js";
+import { SCHEDULE_BLOCK } from "./core-blocks.js";
+import {
+  triggerRowBlock,
+  type TriggerStateRow,
+  type WorkflowRunStore,
+} from "./store.js";
 import {
   asPiece,
   asSchedule,
   parseStoreState,
+  pieceTriggerKind,
   pollIntervalFor,
   SCHEDULE_TRIGGER_KIND,
   type PieceTriggerBinding,
@@ -51,7 +57,7 @@ async function firePieceItem(
     );
     if (!claimed) return;
   }
-  ctx.fire(binding.workflowId, item, `piece:${binding.blockType}`);
+  ctx.fire(binding.workflowId, item, pieceTriggerKind(binding.block));
 }
 
 // onEnable, with the cursor carried over only for an unchanged re-register.
@@ -94,14 +100,14 @@ function pieceFailedState(
   };
 }
 
-// A row whose block_type belongs to another kind is stale: the workflow was
+// A row whose trigger belongs to another kind is stale: the workflow was
 // retyped, and the piece hook would be given a config it never saw.
 async function releasePiece(
   binding: TriggerBinding,
   row: TriggerStateRow,
   ctx: TriggerDriverContext,
 ): Promise<void> {
-  if (row.block_type === SCHEDULE_BLOCK) return;
+  if (blockKey(triggerRowBlock(row)) === SCHEDULE_BLOCK) return;
   await ctx.runHook(asPiece(binding), "onDisable", parseStoreState(row));
 }
 
@@ -137,7 +143,7 @@ async function runAndFire(
   return result.output.length;
 }
 
-// core#schedule: a cron slot or a fixed interval, with no piece involved.
+// The core schedule trigger: a cron slot or a fixed interval, with no piece involved.
 export const scheduleDriver: TriggerDriver = {
   kind: "schedule",
   scheduled: true,

@@ -251,7 +251,11 @@ export class ExpressHttpAdapter implements IHttpAdapter {
     }
   }
 
-  async listen(port: number, tls?: TlsOptions): Promise<http.Server> {
+  async listen(
+    port: number,
+    tls?: TlsOptions,
+    host?: string,
+  ): Promise<http.Server> {
     let server: http.Server;
 
     if (tls === true) {
@@ -280,7 +284,7 @@ export class ExpressHttpAdapter implements IHttpAdapter {
 
     return new Promise<http.Server>((resolve, reject) => {
       server.once("error", reject);
-      server.listen(port, () => {
+      server.listen(port, host, () => {
         server.off("error", reject);
         resolve(server);
       });

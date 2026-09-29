@@ -14,13 +14,13 @@ import {
   stopRegistry,
   WORKSPACE_PUBLISH_PACKAGES,
 } from "@powerhousedao/e2e-utils";
+import { CORE_PIECE_NAME } from "@powerhousedao/pieces-framework/workflow";
 import { Checks } from "./lib/checks.js";
 import {
   buildAndPublishFixture,
-  FIXTURE_BLOCK_TYPE,
+  FIXTURE_ACTION,
   FIXTURE_PACKAGE,
   FIXTURE_PIECE_DIR,
-  FIXTURE_PUBLISHED_BLOCK_TYPE,
   FIXTURE_VERSION,
   waitForRegistryPiece,
 } from "./lib/fixture.js";
@@ -82,17 +82,26 @@ async function runTheGreeter(
   client: SwitchboardClient,
   checks: Checks,
   label: string,
-  blockType: string = FIXTURE_BLOCK_TYPE,
 ): Promise<string> {
+  // Pinned the way the editor pins it: to the version the catalog lists.
+  const core = (await pieceCatalog(client)).find(
+    (entry) => entry.name === CORE_PIECE_NAME,
+  );
   const workflowId = await createWorkflow(client, {
     name: `Greeter e2e (${label})`,
-    trigger: { id: "trigger-1", blockType: "core#manual", config: {} },
+    trigger: {
+      id: "trigger-1",
+      pieceName: CORE_PIECE_NAME,
+      pieceVersion: core?.version ?? "",
+      triggerName: "manual",
+      config: {},
+    },
     steps: [
       {
         id: "step-1",
         key: "greet",
         name: "Greet",
-        blockType,
+        ...FIXTURE_ACTION,
         config: { who: WHO },
       },
     ],
@@ -116,8 +125,13 @@ async function runTheGreeter(
   const stepRun = run.steps[0];
   checks.equal(
     `${label}: the step names the piece's block and succeeded`,
-    stepRun && [stepRun.stepKey, stepRun.blockType, stepRun.status],
-    ["greet", blockType, "SUCCEEDED"],
+    stepRun && [
+      stepRun.stepKey,
+      stepRun.pieceName,
+      stepRun.blockName,
+      stepRun.status,
+    ],
+    ["greet", FIXTURE_PACKAGE, FIXTURE_ACTION.actionName, "SUCCEEDED"],
   );
   const output = isRecord(stepRun?.output) ? stepRun.output : {};
   checks.equal(
@@ -302,12 +316,14 @@ async function main(): Promise<void> {
     );
 
     const search = await searchBlocksWhenReady(client, "greet");
-    const hit = search.hits.find((h) => h.blockType === FIXTURE_BLOCK_TYPE);
+    const hit = search.hits.find(
+      (h) => h.pieceName === FIXTURE_PACKAGE && h.name === "greet",
+    );
     checks.ok(
       "searchBlocks finds the piece's action",
       hit !== undefined,
       () =>
-        `status=${search.status}, hits=${JSON.stringify(search.hits.map((h) => h.blockType))}`,
+        `status=${search.status}, hits=${JSON.stringify(search.hits.map((h) => [h.pieceName, h.name]))}`,
     );
     checks.equal(
       "the hit is an action of this piece",
@@ -447,18 +463,19 @@ async function main(): Promise<void> {
       "searchBlocks finds the piece's action",
       fetchedHit !== undefined,
       () =>
-        `status=${fetchedSearch.status}, hits=${JSON.stringify(fetchedSearch.hits.map((h) => h.blockType))}`,
+        `status=${fetchedSearch.status}, hits=${JSON.stringify(fetchedSearch.hits.map((h) => [h.pieceName, h.name]))}`,
     );
-    // A piece nobody installed is pinned by the version the block type names,
-    // the way every published piece is.
+    // A piece nobody installed is offered at its published version, the
+    // version a step picked from the listing pins.
     checks.equal(
       "and offers it at the published version",
       fetchedHit && [
         fetchedHit.kind,
-        fetchedHit.blockType,
+        fetchedHit.pieceVersion,
+        fetchedHit.name,
         fetchedHit.displayName,
       ],
-      ["action", FIXTURE_PUBLISHED_BLOCK_TYPE, "Greet"],
+      ["action", FIXTURE_VERSION, "greet", "Greet"],
     );
 
     console.log("\nthe run");
@@ -466,12 +483,13 @@ async function main(): Promise<void> {
       registryClient,
       checks,
       "registry",
-      FIXTURE_PUBLISHED_BLOCK_TYPE,
     );
     const cachedBundle = path.join(
       fs.realpathSync(REGISTRY_PROJECT_DIR),
       ".ph",
       "ap-bundles",
+      // Downloads are cached per source.
+      "registry",
       `${FIXTURE_PACKAGE}-${FIXTURE_VERSION}`,
     );
     checks.ok(

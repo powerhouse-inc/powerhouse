@@ -15,6 +15,7 @@ import { basename } from "node:path";
 import { readPackage } from "read-pkg";
 import type { Project } from "ts-morph";
 import type { GeneratePieceArgs } from "../types.js";
+import { installAddedDependencies } from "../utils/install-added-dependencies.js";
 
 // The id a block type will name, asked for only where deriving one would claim
 // a namespace nobody owns; CI, with no TTY, takes the derived value.
@@ -37,7 +38,8 @@ async function resolvePieceId(v: {
     {
       type: "input",
       name: "pieceId",
-      message: "What id should this piece have? A block type names it.",
+      message:
+        "What id should this piece have? A workflow step names it as its pieceName.",
       initial: id,
       required: true,
     },
@@ -53,7 +55,6 @@ export async function startGeneratePiece(
     namePositional,
     name: nameOption,
     id,
-    pieceVersion,
     auth,
     description,
     dir,
@@ -77,7 +78,7 @@ export async function startGeneratePiece(
       id,
     });
     await generatePiece(
-      { pieceName: name, pieceId, pieceVersion, auth, description },
+      { pieceName: name, pieceId, auth, description },
       project,
     );
   } else {
@@ -85,5 +86,9 @@ export async function startGeneratePiece(
     return;
   }
   await project.save();
-  await syncFeatureDependencies(detectFeatures(projectDir), projectDir);
+  const added = await syncFeatureDependencies(
+    detectFeatures(projectDir),
+    projectDir,
+  );
+  await installAddedDependencies(added, projectDir, args.skipInstall);
 }

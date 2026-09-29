@@ -9,14 +9,17 @@ import {
 import { describe, expect, it } from "vitest";
 import {
   authMethodFor,
+  triggerRenew,
   unsupportedAuth,
   unsupportedTrigger,
 } from "./unsupported.js";
 
+const ISSUES = "https://github.com/powerhouse-inc/powerhouse/issues/";
 const feature = (value: { feature: string } | undefined) => value?.feature;
 
 describe("unsupportedAuth", () => {
-  it("names OAuth2, OIDC and CustomAuth refresh", () => {
+  it("names OIDC, client-credentials OAuth2 and CustomAuth refresh", () => {
+    const oidc = PieceAuth.OIDC({ required: true, props: {} });
     const oauth = PieceAuth.OAuth2({
       authUrl: "https://example.com/auth",
       tokenUrl: "https://example.com/token",
@@ -36,13 +39,14 @@ describe("unsupportedAuth", () => {
         generate: () => Promise.resolve({ access_token: "t" }),
       },
     });
-    expect(feature(unsupportedAuth(oauth))).toBe("OAuth2 auth");
+    expect(unsupportedAuth(oauth)).toBeUndefined();
     expect(
-      feature(unsupportedAuth(PieceAuth.OIDC({ required: true, props: {} }))),
-    ).toBe("OIDC auth");
+      feature(unsupportedAuth({ ...oauth, grantType: "client_credentials" })),
+    ).toBe("OAuth2 client credentials");
+    expect(feature(unsupportedAuth(oidc))).toBe("OIDC auth");
     // Several methods run if any one does; otherwise the first says why.
-    expect(unsupportedAuth([custom, oauth])).toBeUndefined();
-    expect(feature(unsupportedAuth([oauth, refreshing]))).toBe("OAuth2 auth");
+    expect(unsupportedAuth([custom, oidc])).toBeUndefined();
+    expect(feature(unsupportedAuth([oidc, refreshing]))).toBe("OIDC auth");
     expect(feature(unsupportedAuth(refreshing))).toBe("CustomAuth refresh");
   });
 
@@ -95,11 +99,31 @@ describe("unsupportedTrigger", () => {
       run: () => Promise.resolve([]),
     });
 
-  it("names a trigger that renews, not one createTrigger defaulted", () => {
+  it("runs a CRON renewal, and refuses one that cannot run", () => {
     expect(unsupportedTrigger(webhook())).toBeUndefined();
     expect(
-      feature(unsupportedTrigger(webhook({ cronExpression: "0 */12 * * *" }))),
-    ).toBe("renewConfiguration");
+      unsupportedTrigger(webhook({ cronExpression: "0 */12 * * *" })),
+    ).toBeUndefined();
+    expect(
+      unsupportedTrigger(webhook({ cronExpression: "not a cron" }))?.reason,
+    ).toBe(`renewConfiguration cron "not a cron" is invalid (${ISSUES}3090)`);
+    expect(
+      unsupportedTrigger({
+        type: "WEBHOOK",
+        renewConfiguration: { strategy: "INTERVAL" },
+      })?.reason,
+    ).toBe(
+      `renewConfiguration strategy INTERVAL is not supported (${ISSUES}3090)`,
+    );
+  });
+
+  it("reads the renewal a trigger declares", () => {
+    expect(triggerRenew(webhook())).toBeUndefined();
+    expect(triggerRenew(webhook({ cronExpression: "0 */12 * * *" }))).toEqual({
+      strategy: "CRON",
+      cronExpression: "0 */12 * * *",
+    });
+    expect(triggerRenew(webhook({ cronExpression: "nope" }))).toBeUndefined();
   });
 
   it("names a MANUAL trigger", () => {
@@ -115,5 +139,29 @@ describe("unsupportedTrigger", () => {
       run: () => Promise.resolve([]),
     });
     expect(feature(unsupportedTrigger(manual))).toBe("TriggerStrategy.MANUAL");
+  });
+
+  it("names an APP_WEBHOOK trigger, which nothing here can deliver", () => {
+    const app = createTrigger({
+      name: "a",
+      displayName: "A",
+      description: "",
+      props: {},
+      sampleData: {},
+      type: TriggerStrategy.APP_WEBHOOK,
+      onEnable: () => Promise.resolve(),
+      onDisable: () => Promise.resolve(),
+      run: () => Promise.resolve([]),
+    });
+    const refused = unsupportedTrigger(app);
+    expect(feature(refused)).toBe("TriggerStrategy APP_WEBHOOK");
+    expect(refused?.reason).toContain("app-level webhooks");
+  });
+
+  it("names a strategy it has never heard of, or none at all", () => {
+    expect(unsupportedTrigger({ type: "STREAMING" })?.reason).toContain(
+      'Unknown trigger strategy "STREAMING"',
+    );
+    expect(unsupportedTrigger({})?.reason).toContain("declares no strategy");
   });
 });

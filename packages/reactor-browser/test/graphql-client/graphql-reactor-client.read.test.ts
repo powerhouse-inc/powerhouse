@@ -34,7 +34,6 @@ const documentPayload: GetDocumentQuery = {
 
 const emptyOperationsPage: OperationsPage = {
   items: [],
-  totalCount: 0,
   hasNextPage: false,
   hasPreviousPage: false,
   cursor: null,
@@ -213,7 +212,6 @@ describe("GraphQLReactorClient.getOperations", () => {
         },
       },
     ],
-    totalCount: 5,
     hasNextPage: true,
     hasPreviousPage: false,
     cursor: "cursor-2",
@@ -256,7 +254,6 @@ describe("GraphQLReactorClient.getOperations", () => {
       { cursor: "cursor-1", limit: 2 },
     );
 
-    expect(results.totalCount).toBe(5);
     expect(results.nextCursor).toBe("cursor-2");
     expect(results.options).toEqual({ cursor: "cursor-1", limit: 2 });
     expect(sdk.GetDocumentOperations).toHaveBeenCalledWith(

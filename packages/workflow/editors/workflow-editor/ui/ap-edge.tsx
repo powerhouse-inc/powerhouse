@@ -9,16 +9,19 @@ import {
 } from "@xyflow/react";
 import {
   AddButton,
-  getCanvasHandlers,
   PORT_LABEL_CLASSES,
+  useCanvasHandlers,
 } from "./ap-nodes.js";
 import { STEP_PRESETS } from "./blocks.js";
 
 export function ApEdge(props: EdgeProps) {
+  const handlers = useCanvasHandlers();
   const data = props.data as {
     edgeId: string;
     port: string;
     condition: string | null;
+    fromSkipped?: boolean;
+    dead?: boolean;
   };
   const [path, labelX, labelY] = getSmoothStepPath({
     sourceX: props.sourceX,
@@ -29,14 +32,25 @@ export function ApEdge(props: EdgeProps) {
     targetPosition: Position.Top,
     borderRadius: 15,
   });
-  const portLabel = data.port !== "next" ? data.port : null;
+  const portLabel = data.dead
+    ? `${data.port} · never taken`
+    : data.port !== "next"
+      ? data.port
+      : null;
 
   return (
     <>
       <BaseEdge
         id={props.id}
         path={path}
-        style={{ stroke: "var(--wf-edge)", strokeWidth: 1.5 }}
+        style={{
+          stroke: data.dead ? "var(--wf-fail)" : "var(--wf-edge)",
+          strokeWidth: 1.5,
+          ...(data.dead ? { strokeDasharray: "5 4" } : {}),
+          ...(data.fromSkipped
+            ? { opacity: 0.45, strokeDasharray: "2 3" }
+            : {}),
+        }}
       />
       <EdgeLabelRenderer>
         <div
@@ -48,9 +62,16 @@ export function ApEdge(props: EdgeProps) {
           {portLabel ? (
             <span
               className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-                PORT_LABEL_CLASSES[portLabel] ??
-                "bg-muted text-muted-foreground"
+                data.dead
+                  ? "border border-solid border-wf-fail/40 bg-card text-wf-fail"
+                  : (PORT_LABEL_CLASSES[portLabel] ??
+                    "bg-muted text-muted-foreground")
               }`}
+              title={
+                data.dead
+                  ? `The source never leaves on "${data.port}", so no run takes this edge`
+                  : undefined
+              }
             >
               {portLabel}
               {data.condition ? " ?" : ""}
@@ -60,9 +81,7 @@ export function ApEdge(props: EdgeProps) {
             title="Insert step"
             presets={STEP_PRESETS}
             showPieces
-            onPick={(preset) =>
-              getCanvasHandlers()?.insertOnEdge(data.edgeId, preset)
-            }
+            onPick={(preset) => handlers?.insertOnEdge(data.edgeId, preset)}
           />
         </div>
       </EdgeLabelRenderer>

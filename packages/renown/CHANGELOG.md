@@ -1,3 +1,58 @@
+## 6.2.3-dev.32 (2026-09-29)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.31 (2026-09-29)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.30 (2026-09-29)
+
+### 🩹 Fixes
+
+- **deps:** load cmd-ts's ESM build under bun, which fails to require chalk from its CJS build ([749528c71](https://github.com/powerhouse-inc/powerhouse/commit/749528c71))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.29 (2026-09-28)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.28 (2026-09-28)
+
+### 🚀 Features
+
+- ⚠️  **renown:** write profiles and revocations via the renown-auth mutations ([ca8bf5d39](https://github.com/powerhouse-inc/powerhouse/commit/ca8bf5d39))
+- **renown:** export the canonical revoke and profile signed messages ([f77b9b052](https://github.com/powerhouse-inc/powerhouse/commit/f77b9b052))
+- **renown:** issue credentials via renown_issueCredential + authenticated profile writes ([#2881](https://github.com/powerhouse-inc/powerhouse/issues/2881))
+
+### 🩹 Fixes
+
+- **renown:** do not hold sign-in on the profile write ([f5b33911d](https://github.com/powerhouse-inc/powerhouse/commit/f5b33911d))
+- **renown:** fall back only when the switchboard lacks the renown mutation ([1e7539c42](https://github.com/powerhouse-inc/powerhouse/commit/1e7539c42))
+
+### ⚠️  Breaking Changes
+
+- **renown:** write profiles and revocations via the renown-auth mutations  ([ca8bf5d39](https://github.com/powerhouse-inc/powerhouse/commit/ca8bf5d39))
+  revokeCredential takes the credential's VC id and a
+  RenownWriteAuth instead of a document id and reason; upsertUserProfile
+  requires a RenownWriteAuth.
+
+### ❤️ Thank You
+
+- acaldas
+- Frank Pfeift
+
+## 6.2.3-dev.27 (2026-09-28)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.26 (2026-09-26)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features

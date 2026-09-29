@@ -30,7 +30,9 @@ function buildGraph(): WorkflowDocument {
     document,
     setTrigger({
       id: TRIGGER,
-      blockType: "core#schedule",
+      pieceName: "@powerhousedao/piece-core",
+      pieceVersion: "1.0.0",
+      triggerName: "schedule",
       config: { cron: "0 * * * *" },
     }),
   );
@@ -40,7 +42,9 @@ function buildGraph(): WorkflowDocument {
       id: STEP_A,
       key: "fetch",
       name: "Fetch",
-      blockType: "@acme/connector-http#http.sendRequest",
+      pieceName: "@acme/connector-http",
+      pieceVersion: "1.0.0",
+      actionName: "http.sendRequest",
       config: { url: "https://example.com" },
     }),
   );
@@ -50,7 +54,9 @@ function buildGraph(): WorkflowDocument {
       id: STEP_B,
       key: "notify",
       name: "Notify",
-      blockType: "@acme/connector-slack#slack.postMessage",
+      pieceName: "@acme/connector-slack",
+      pieceVersion: "1.0.0",
+      actionName: "slack.postMessage",
       connectionId: "phd:connection-1",
       config: { channel: "#ops" },
       retry: {
@@ -87,9 +93,9 @@ describe("workflow scenarios", () => {
     const document = buildGraph();
     const state = document.state.global;
 
-    expect(state.trigger?.blockType).toBe("core#schedule");
+    expect(state.trigger?.pieceName).toBe("@powerhousedao/piece-core");
+    expect(state.trigger?.triggerName).toBe("schedule");
     expect(state.trigger?.connectionId).toBeNull();
-    expect(state.trigger?.filter).toBeNull();
     expect(state.steps).toHaveLength(2);
     expect(state.steps[0].retry).toBeNull();
     expect(state.steps[0].timeoutSeconds).toBeNull();
@@ -110,7 +116,7 @@ describe("workflow scenarios", () => {
       document,
       setWorkflowDescription({ description: "Syncs things" }),
     );
-    document = reducer(document, setWorkflowStatus({ status: "ENABLED" }));
+    document = reducer(document, setWorkflowStatus({ status: "DISABLED" }));
     document = reducer(
       document,
       setLastRun({
@@ -122,7 +128,7 @@ describe("workflow scenarios", () => {
     const state = document.state.global;
     expect(state.name).toBe("Nightly sync");
     expect(state.description).toBe("Syncs things");
-    expect(state.status).toBe("ENABLED");
+    expect(state.status).toBe("DISABLED");
     expect(state.lastRunAt).toBe("2026-09-01T00:00:00.000Z");
     expect(state.lastRunStatus).toBe("SUCCEEDED");
     expect(state.version).toBe(0);
@@ -137,15 +143,16 @@ describe("workflow scenarios", () => {
       document,
       setTrigger({
         id: "trigger-2",
-        blockType: "@acme/connector-imap#imap.newMessage",
+        pieceName: "@acme/connector-imap",
+        pieceVersion: "1.0.0",
+        triggerName: "imap.newMessage",
         connectionId: "phd:connection-2",
         config: { folder: "INBOX" },
-        filter: { subjectContains: "invoice" },
       }),
     );
     let state = document.state.global;
     expect(state.trigger?.connectionId).toBe("phd:connection-2");
-    expect(state.trigger?.filter).toEqual({ subjectContains: "invoice" });
+    expect(state.trigger).not.toHaveProperty("filter");
 
     document = reducer(document, clearTrigger({}));
     state = document.state.global;
@@ -187,7 +194,9 @@ describe("workflow scenarios", () => {
         id: STEP_A,
         key: "other",
         name: "Other",
-        blockType: "core#branch",
+        pieceName: "@powerhousedao/piece-core",
+        pieceVersion: "1.0.0",
+        actionName: "branch",
         config: {},
       }),
     );
@@ -200,7 +209,9 @@ describe("workflow scenarios", () => {
         id: "step-c",
         key: "fetch",
         name: "Other",
-        blockType: "core#branch",
+        pieceName: "@powerhousedao/piece-core",
+        pieceVersion: "1.0.0",
+        actionName: "branch",
         config: {},
       }),
     );
@@ -219,7 +230,9 @@ describe("workflow scenarios", () => {
         id: STEP_A,
         key: "fetch2",
         name: "Fetch v2",
-        blockType: "@acme/connector-http#http.sendRequestV2",
+        pieceName: "@acme/connector-http",
+        pieceVersion: "1.0.0",
+        actionName: "http.sendRequestV2",
         connectionId: "phd:connection-3",
         config: { url: "https://example.org" },
         retry: {
@@ -368,7 +381,7 @@ describe("workflow scenarios", () => {
     expect(document.operations.global[6].error).toBe("Edge not found");
   });
 
-  it("upserts variables by key and removes them by id", () => {
+  it("upserts variables by id and removes them by id", () => {
     let document = utils.createDocument();
     document = reducer(
       document,
@@ -387,7 +400,7 @@ describe("workflow scenarios", () => {
 
     document = reducer(
       document,
-      setVariable({ id: "var-3", key: "region", value: "us-east-1" }),
+      setVariable({ id: "var-1", key: "region", value: "us-east-1" }),
     );
     state = document.state.global;
     expect(state.variables).toHaveLength(2);
@@ -397,7 +410,7 @@ describe("workflow scenarios", () => {
 
     document = reducer(
       document,
-      setVariable({ id: "var-4", key: "region", description: "Primary" }),
+      setVariable({ id: "var-1", key: "region", description: "Primary" }),
     );
     expect(document.state.global.variables[0].description).toBe("Primary");
 
@@ -426,7 +439,7 @@ describe("workflow scenarios", () => {
     // Omitted: leaves the stored description alone.
     document = reducer(
       document,
-      setVariable({ id: "var-2", key: "region", value: "us-east-1" }),
+      setVariable({ id: "var-1", key: "region", value: "us-east-1" }),
     );
     expect(document.state.global.variables[0].description).toBe(
       "Deployment region",
@@ -435,18 +448,18 @@ describe("workflow scenarios", () => {
     // Explicit null: clears it.
     document = reducer(
       document,
-      setVariable({ id: "var-3", key: "region", description: null }),
+      setVariable({ id: "var-1", key: "region", description: null }),
     );
     expect(document.state.global.variables[0].description).toBeNull();
 
     document = reducer(
       document,
-      setVariable({ id: "var-4", key: "region", description: "Restored" }),
+      setVariable({ id: "var-1", key: "region", description: "Restored" }),
     );
     // Explicit "": also clears it.
     document = reducer(
       document,
-      setVariable({ id: "var-5", key: "region", description: "" }),
+      setVariable({ id: "var-1", key: "region", description: "" }),
     );
     expect(document.state.global.variables[0].description).toBeNull();
   });
@@ -501,7 +514,9 @@ describe("workflow scenarios", () => {
         id: "s1",
         key: "s1",
         name: "Step",
-        blockType: "@powerhousedao/piece-reactor#document-get",
+        pieceName: "@powerhousedao/piece-reactor",
+        pieceVersion: "1.0.0",
+        actionName: "document-get",
         config: {},
         retry: {
           maxAttempts: 2,

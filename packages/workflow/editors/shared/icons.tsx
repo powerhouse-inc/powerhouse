@@ -3,6 +3,7 @@ const ICON_PATHS = {
   pencil: "M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4",
   trash: "M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3",
   plus: "M12 5v14M5 12h14",
+  minus: "M5 12h14",
   list: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01",
   play: "M7 5v14l12-7z",
   chevron: "M9 6l6 6-6 6",
@@ -30,9 +31,16 @@ const ICON_PATHS = {
   branch:
     "M6 4v10M6 14a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM18 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM18 10c0 4-6 3-11 6",
   lock: "M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3M12 15v2",
+  more: "M5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM19 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z",
+  archive: "M4 5h16v4H4zM6 9v10h12V9M10 13h4",
 };
 
 export type IconName = keyof typeof ICON_PATHS;
+
+// A piece names icons by string; only the ones this set draws are shown.
+export function isIconName(name: unknown): name is IconName {
+  return typeof name === "string" && name in ICON_PATHS;
+}
 
 export function Icon(props: {
   name: IconName;

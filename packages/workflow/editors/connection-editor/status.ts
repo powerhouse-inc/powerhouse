@@ -4,6 +4,7 @@ import type {
   ConnectionAuthType,
   ConnectionStatus,
 } from "document-models/connection";
+import { UNKNOWN_AUTH } from "./piece-auth.js";
 
 export const CONNECTION_STATUS_STYLES: Record<ConnectionStatus, string> = {
   OK: "bg-wf-ok/12 text-wf-ok",
@@ -19,7 +20,11 @@ export const CONNECTION_STATUS_LABEL: Record<ConnectionStatus, string> = {
   UNCONFIGURED: "Not set up",
 };
 
-export const AUTH_TYPE_LABEL: Record<ConnectionAuthType, string> = {
+export const AUTH_TYPE_LABEL: Record<
+  ConnectionAuthType | typeof UNKNOWN_AUTH,
+  string
+> = {
+  [UNKNOWN_AUTH]: "Not supported by this runtime",
   NONE: "None",
   SECRET_TEXT: "API key",
   BASIC_AUTH: "Username and password",

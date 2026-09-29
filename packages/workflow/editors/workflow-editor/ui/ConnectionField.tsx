@@ -13,15 +13,13 @@ import {
   compatibleConnections,
   connectionDraftFor,
   looksLikeDocumentId,
-  packageOf,
   type ConnectionDraft,
 } from "./connection-create.js";
+import { packageFromConnectorId } from "../../connection-editor/piece-auth.js";
+import type { BlockRef } from "./blocks.js";
 import { CreateConnectionModal } from "./CreateConnectionModal.js";
-import type {
-  BlockForm,
-  ConnectionSummary,
-  DesignTimeService,
-} from "./forms.js";
+import { useBlockForm, useConnectionList } from "./design-time.js";
+import type { ConnectionSummary } from "./forms.js";
 
 const STATUS_DOT: Record<string, string> = {
   OK: "bg-wf-ok",
@@ -34,7 +32,7 @@ const STATUS_DOT: Record<string, string> = {
 function ConnectorIcon(props: { connectorId: string }) {
   usePieceLogos();
   const [broken, setBroken] = useState(false);
-  const piecePackage = packageOf(props.connectorId);
+  const piecePackage = packageFromConnectorId(props.connectorId);
   const src = broken ? undefined : pieceLogo(piecePackage);
   if (!src) {
     const short =
@@ -120,15 +118,12 @@ const LINK_ATTEMPTS = 30;
 const LINK_INTERVAL_MS = 500;
 
 export function ConnectionField(props: {
-  blockType: string;
+  block: BlockRef;
   value: string;
   onChange: (connectionId: string | null) => void;
-  designTime?: DesignTimeService;
 }) {
-  const [form, setForm] = useState<BlockForm | null | "loading">(
-    props.designTime ? "loading" : null,
-  );
-  const [connections, setConnections] = useState<ConnectionSummary[]>([]);
+  const { form } = useBlockForm(props.block);
+  const { connections, refetch, invalidate, fetchNow } = useConnectionList();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
@@ -138,34 +133,11 @@ export function ConnectionField(props: {
   const containerRef = useRef<HTMLDivElement>(null);
   const driveId = useSelectedDriveId();
 
-  useEffect(() => {
-    let alive = true;
-    props.designTime?.getBlockForm(props.blockType).then(
-      (result) => {
-        if (alive) setForm(result);
-      },
-      () => {
-        if (alive) setForm(null);
-      },
-    );
-    return () => {
-      alive = false;
-    };
-  }, [props.blockType, props.designTime]);
-
   // Loaded up front so a bound connection shows by name, and again on open.
-  useEffect(() => {
-    let alive = true;
-    props.designTime?.listConnections?.().then(
-      (result) => {
-        if (alive) setConnections(result);
-      },
-      () => undefined,
-    );
-    return () => {
-      alive = false;
-    };
-  }, [open, props.designTime]);
+  const openField = () => {
+    refetch();
+    setOpen(true);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -185,10 +157,13 @@ export function ConnectionField(props: {
   );
 
   const authMode = form === "loading" ? "loading" : (form?.auth ?? "optional");
-  // Blocks that take no connection only show the field to clear a stale one.
-  if (authMode === "none" && !props.value) return null;
+  // Blocks that take no connection only show the field to clear a stale one;
+  // until the form says which it is, an empty field stays hidden.
+  if ((authMode === "none" || authMode === "loading") && !props.value) {
+    return null;
+  }
 
-  const compatible = compatibleConnections(connections, props.blockType);
+  const compatible = compatibleConnections(connections, props.block);
   const needle = query.trim().toLowerCase();
   const visible = needle
     ? compatible.filter((connection) =>
@@ -199,7 +174,7 @@ export function ConnectionField(props: {
     : compatible;
   const draft = driveId
     ? connectionDraftFor({
-        blockType: props.blockType,
+        block: props.block,
         authMode,
         // The unfiltered set, so typing cannot summon the create entry for a
         // piece that already has a connection.
@@ -212,7 +187,10 @@ export function ConnectionField(props: {
     setCreating(true);
     setCreateError(null);
     addDocument(driveId, pending.name, CONNECTION_TYPE)
-      .then((node) => setDraftId(node.id))
+      .then((node) => {
+        invalidate();
+        setDraftId(node.id);
+      })
       .catch((error: unknown) => {
         setCreateError(error instanceof Error ? error.message : String(error));
       })
@@ -236,27 +214,22 @@ export function ConnectionField(props: {
   const finishCreate = (connectionId: string) => {
     setDraftId(null);
     setLinking(true);
-    props.designTime?.refreshConnections?.();
     const poll = (attempt: number) => {
-      const done = (result?: ConnectionSummary[]) => {
-        if (result) setConnections(result);
+      const done = () => {
         setLinking(false);
         pick(connectionId);
       };
-      const list = props.designTime?.listConnections;
-      if (!list) return done();
-      list().then(
+      fetchNow().then(
         (result) => {
           // Ready once the synced document names this block's piece.
           const ready = result.some(
             (connection) =>
               connection.id === connectionId &&
-              packageOf(connection.connectorId) === packageOf(props.blockType),
+              packageFromConnectorId(connection.connectorId) ===
+                props.block.pieceName,
           );
-          if (ready) {
-            done(result);
-          } else if (attempt >= LINK_ATTEMPTS) {
-            done(result);
+          if (ready || attempt >= LINK_ATTEMPTS) {
+            done();
           } else {
             setTimeout(() => poll(attempt + 1), LINK_INTERVAL_MS);
           }
@@ -309,7 +282,7 @@ export function ConnectionField(props: {
               ? "border-wf-warn/70 hover:border-wf-warn"
               : ""
           }`}
-          onClick={() => setOpen(true)}
+          onClick={openField}
         >
           {selected ? (
             <>
@@ -342,7 +315,7 @@ export function ConnectionField(props: {
         <Hint>Not a known connection document.</Hint>
       ) : null}
       {selected &&
-      packageOf(selected.connectorId) !== packageOf(props.blockType) ? (
+      packageFromConnectorId(selected.connectorId) !== props.block.pieceName ? (
         <p className="mt-1.5 text-xs text-wf-warn">
           Configures {selected.connectorId}, not this block&apos;s piece.
         </p>

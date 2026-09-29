@@ -1,13 +1,17 @@
 // A PENDING run is durable but not started. Orphan recovery must leave it
 // alone — that sweep closes out runs a dead process was executing — and the
 // pass that does own it has to leave it rerunnable.
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
-import { createTestRelationalDb } from "../../test/helpers/pglite.js";
+import {
+  createFreshRelationalDb,
+  createTestRelationalDb,
+} from "../../test/helpers/pglite.js";
 import {
   ABANDONED_PENDING_RUN_ERROR,
   ORPHANED_RUN_ERROR,
   WorkflowRunStore,
+  type WorkflowRuntimeDB,
 } from "./store.js";
 
 describe("pending runs in the journal", () => {
@@ -88,5 +92,64 @@ describe("pending runs in the journal", () => {
     expect(run?.status).toBe("RUNNING");
     expect(run?.workflow_name).toBe("Named late");
     expect(run?.workflow_version).toBe(7);
+  });
+
+  it("claims the dedupe key and journals the run together", async () => {
+    const now = new Date().toISOString();
+    const options = { workflowId: "wf-claim", triggerKind: "document-event" };
+    const insert = vi
+      .spyOn(
+        store as unknown as { insertPendingRun: () => Promise<void> },
+        "insertPendingRun",
+      )
+      .mockRejectedValueOnce(new Error("crash between claim and enqueue"));
+
+    await expect(
+      store.claimAndEnqueueRun("op:1", 60_000, now, options),
+    ).rejects.toThrow("crash between claim and enqueue");
+    // The claim rolled back with the run, so the replay still enqueues it.
+    const runId = await store.claimAndEnqueueRun("op:1", 60_000, now, options);
+    expect(runId).not.toBeNull();
+    expect(
+      await store.claimAndEnqueueRun("op:1", 60_000, now, options),
+    ).toBeNull();
+    expect(insert).toHaveBeenCalledTimes(2);
+
+    const runs = await store.listRuns("wf-claim");
+    expect(runs.map((run) => run.id)).toEqual([runId]);
+    const db =
+      await relationalDb.createNamespace<WorkflowRuntimeDB>("workflow_runtime");
+    const claim = await db
+      .selectFrom("trigger_dedupe")
+      .selectAll()
+      .where("workflow_id", "=", "wf-claim")
+      .executeTakeFirstOrThrow();
+    expect(claim.run_id).toBe(runId);
+  });
+});
+
+// The counts are what the recovery warning reports, so they must be real
+// on the knex-backed database Switchboard runs, which reports no row counts.
+describe("recovery counts", () => {
+  it("counts the runs another process left behind", async () => {
+    const db = createFreshRelationalDb();
+    const survivor = await WorkflowRunStore.create(db);
+    const dead = await WorkflowRunStore.create(db);
+    const pending = [
+      await dead.enqueueRun({ workflowId: "wf-a", triggerKind: "manual" }),
+      await dead.enqueueRun({ workflowId: "wf-b", triggerKind: "manual" }),
+    ];
+    const running = await dead.enqueueRun({
+      workflowId: "wf-c",
+      triggerKind: "manual",
+    });
+    await dead.beginRun(running, { workflowName: "C", workflowVersion: 1 });
+
+    await expect(survivor.recoverAbandonedRuns()).resolves.toBe(2);
+    await expect(survivor.recoverOrphanedRuns()).resolves.toBe(1);
+    await expect(survivor.recoverAbandonedRuns()).resolves.toBe(0);
+    for (const runId of [...pending, running]) {
+      expect((await survivor.getRun(runId))?.status).toBe("FAILED");
+    }
   });
 });
