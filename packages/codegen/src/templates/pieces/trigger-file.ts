@@ -106,6 +106,7 @@ ${v.withAuth ? `  auth: ${v.camelCaseName}Auth,` : "  // Types context.auth as u
   async onDisable() {
     // Called when the workflow is switched off: remove the registration
   },
+  // If the service expires registrations, add renewConfiguration and onRenew
   // Testing the trigger shows sampleData; add test() to fetch real items
   run(context) {
     // context.payload holds each delivery ({ body, headers, queryParams }).
