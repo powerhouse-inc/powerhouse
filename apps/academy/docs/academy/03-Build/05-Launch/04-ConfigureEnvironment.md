@@ -234,21 +234,28 @@ For a complete understanding of how authorization (authentication, admin access,
 
 ## Configuring workflows
 
-Workflows have two halves, switched on independently, and both live in the same
-`powerhouse.config.json`:
+One setting in `powerhouse.config.json` turns workflows on for both Switchboard
+and Connect:
 
 ```json
 {
-  "workflows": { "enabled": true },
-  "connect": { "app": { "workflowsEnabled": true } }
+  "workflows": { "enabled": true }
 }
 ```
 
-`workflows.enabled` starts the workflow runtime inside **Switchboard** — trigger
-watching, runs, step execution. `connect.app.workflowsEnabled` makes **Connect**
-load Workflow Studio and the workflow and connection editors. A headless reactor
-needs only the first; a Connect that browses workflows running elsewhere needs
-only the second. Both default to off.
+In **Switchboard** it starts the workflow runtime: trigger watching, runs, step
+execution. In **Connect** it loads Workflow Studio and the workflow and
+connection editors. It defaults to off.
+
+To set Connect apart, give it `connect.app.workflowsEnabled`, which wins over
+`workflows.enabled` when present. For example, a Connect that browses workflows
+running on another reactor:
+
+```json
+{
+  "connect": { "app": { "workflowsEnabled": true } }
+}
+```
 
 Or via env vars:
 
@@ -259,7 +266,7 @@ PH_WORKFLOWS_ENABLED=true
 `PH_WORKFLOWS_ENABLED` also accepts `1` and `0`, and it overrides
 `workflows.enabled` in the config file.
 
-Connect's half has no env var — set it in the config, or pass
+Connect has no env var: it follows the config file, or
 `ph connect build --workflows true`.
 
 Beyond the switch, the runtime reads a handful of `PH_WORKFLOWS_*` variables for

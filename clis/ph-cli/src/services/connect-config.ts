@@ -29,12 +29,15 @@
 // for the same reason `buildCliConnectOverride` does — to avoid leaking
 // default values into a write the user didn't request.
 
-import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
+import type {
+  PHConnectRuntimeConfig,
+  PowerhouseConfig,
+} from "@powerhousedao/shared/clis";
 import {
   ConfigLoader,
-  DEFAULT_CONNECT_CONFIG,
   JsonConfigAdapter,
   deepMerge,
+  resolveSourceConnect,
 } from "@powerhousedao/shared/connect";
 import { existsSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
@@ -99,9 +102,9 @@ async function writeSourceRaw(
 
 /**
  * Build the merged "effective" connect block for list/get mode: defaults <
- * source.connect. Doesn't go through env or dist — list mode shows what the
- * source declares + defaults, which is what the next build will produce as a
- * baseline (before env seeds + CLI overrides).
+ * source.workflows < source.connect. Doesn't go through env or dist — list
+ * mode shows what the source declares + defaults, which is what the next
+ * build will produce as a baseline (before env seeds + CLI overrides).
  */
 function effectiveConnect(
   source: Record<string, unknown>,
@@ -112,7 +115,10 @@ function effectiveConnect(
     !Array.isArray(source.connect)
       ? (source.connect as ConnectPartial)
       : {};
-  return deepMerge(DEFAULT_CONNECT_CONFIG, sourceConnect);
+  return resolveSourceConnect({
+    connect: sourceConnect,
+    workflows: source.workflows as PowerhouseConfig["workflows"],
+  });
 }
 
 function printJson(value: unknown): void {

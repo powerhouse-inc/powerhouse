@@ -151,8 +151,7 @@ export const phConnectRuntimeConfigSchema = {
         workflowsEnabled: {
           type: "boolean",
           description:
-            "Powerhouse workflows in Connect. When true the tab loads the @powerhousedao/workflow package (workflow + connection documents, their editors and Workflow Studio) and the reactor worker registers its document models. Connect's counterpart to the reactor-side `workflows.enabled` / PH_WORKFLOWS_ENABLED; independent of studioMode. False by default.",
-          default: false,
+            "Powerhouse workflows in Connect. When true the tab loads the @powerhousedao/workflow package (workflow + connection documents, their editors and Workflow Studio) and the reactor worker registers its document models. Falls back to the top-level `workflows.enabled`; set it to override that for Connect. Independent of studioMode. False when neither is set.",
         },
       },
     },

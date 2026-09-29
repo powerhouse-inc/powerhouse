@@ -456,6 +456,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         packages: phPackages,
         projectRoot: options.dirname,
         connect: phConfig.connect,
+        workflows: phConfig.workflows,
         packageRegistryUrl: phPackageRegistryUrl ?? undefined,
         cliConnectOverride: options.cliConnectOverride,
       }),
