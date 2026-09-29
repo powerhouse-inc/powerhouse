@@ -1,4 +1,7 @@
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  driveDocumentModelModule,
+  type DocumentDriveDocument,
+} from "@powerhousedao/shared/document-drive";
 import { withSignaturePolicy } from "@powerhousedao/shared/document-model";
 import {
   ConsoleLogger,
@@ -467,6 +470,44 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
 
   it("deletes a depth-2 tree of plain documents under document decisions", async () => {
     await plainTree(ENFORCING);
+  }, 60_000);
+
+  async function removedFile(
+    flags?: Partial<ReactorFeatureFlags>,
+  ): Promise<void> {
+    const {
+      module: clientModule,
+      reactorModule,
+      sentTo,
+    } = await build("in-process", flags);
+    const { client } = clientModule;
+    const drive = driveDocumentModelModule.utils.createDocument();
+    const driveId = drive.header.id;
+    await client.create(drive);
+    await client.drives.addFile(
+      driveId,
+      createDocModelDocument({ id: "removed-file" }),
+    );
+    await addRemote(reactorModule, "remote-d", driveId, sentTo);
+
+    await client.drives.removeNode(driveId, "removed-file");
+
+    const opId = await expectServedBeforeLeaving("removed-file", driveId);
+    await vi.waitUntil(() => sentOpIds(sentTo("remote-d")).has(opId), {
+      timeout: 10_000,
+    });
+    const reloaded = await client.get<DocumentDriveDocument>(driveId);
+    expect(
+      reloaded.state.global.nodes.find((node) => node.id === "removed-file"),
+    ).toBeUndefined();
+  }
+
+  it("serves a removed file's delete to its drive's remote", async () => {
+    await removedFile();
+  }, 60_000);
+
+  it("serves a removed file's delete under document decisions", async () => {
+    await removedFile(ENFORCING);
   }, 60_000);
 
   it("serves every child's delete to the remote, in process", async () => {
