@@ -670,6 +670,10 @@ export class SyncManager implements ISyncManager {
           !carriesMarker(item),
       );
       if (unsent.length > 0) remote.channel.outbox.remove(...unsent);
+      const dead = remote.channel.deadLetter.items.filter(
+        (item) => item.documentId === documentId,
+      );
+      if (dead.length > 0) remote.channel.deadLetter.remove(...dead);
     }
   }
 
@@ -1312,6 +1316,7 @@ export class SyncManager implements ISyncManager {
           } satisfies SyncPurgeRefusedEvent)
           .catch(() => {});
       }
+      if (purged.length > 0) remote.channel.deadLetter.remove(...purged);
       const syncOps = remaining.filter((syncOp) => !purged.includes(syncOp));
 
       for (const syncOp of syncOps) {
