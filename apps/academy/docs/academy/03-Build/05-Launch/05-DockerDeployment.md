@@ -190,7 +190,7 @@ Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never 
 
 Connect does **not** read any database variables — it is a static frontend. Database connection strings belong on the Switchboard service (see below).
 
-Sentry (DSN, environment label, tracing flag) is no longer set via per-field env vars — those live in `connect.sentry.*` of `powerhouse.config.json` and ride through `PH_CONNECT_CONFIG_JSON` like every other runtime field. See the example below.
+Sentry (DSN, environment label, tracing flag) is no longer set via per-field env vars — those live in `connect.sentry.*` of `powerhouse.config.json` and ride through `PH_CONNECT_CONFIG_JSON` like every other runtime field. See the example below. OpenPanel analytics works the same way: set `connect.openPanel.clientId` (plus `apiUrl` for a self-hosted OpenPanel) to enable it; an empty `clientId`, the default, keeps it off.
 
 #### `PH_CONNECT_CONFIG_JSON` (operator-wins)
 
@@ -214,6 +214,10 @@ docker run \
         "dsn": "https://prod-key@sentry.io/1",
         "env": "prod",
         "tracing": true
+      },
+      "openPanel": {
+        "clientId": "your-openpanel-client-id",
+        "apiUrl": "https://openpanel.example/api"
       }
     }
   }' \

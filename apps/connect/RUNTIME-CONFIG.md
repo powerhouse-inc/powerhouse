@@ -55,6 +55,7 @@ Schema lives in `packages/builder-tools/connect-utils/runtime-config-schema.ts`.
     "drives":    { "allowAddDrive": true, "defaultDrives": [...], "preserveStrategy": "...", "sections": {...} },
     "packages":  { "externalEnabled": true },
     "sentry":    { "dsn": null, "env": "dev", "tracing": false },
+    "openPanel": { "clientId": "", "apiUrl": "..." | undefined, "trackUiEvents": true, "trackOperations": true },
     "reactor":   { "featureFlags": { "documentDecisions": false, "authEnforcement": false, "authGroups": false, "authConditions": false }, "createSignaturePolicy": "v2-required" },
     "pwa":       { ... } // build-time only, see below
   }
@@ -313,6 +314,19 @@ docker run -e PH_CONNECT_CONFIG_JSON='{
 ```
 
 `dsn: null` (the default) disables Sentry — the SPA never loads the Sentry SDK chunk. The Sentry **release** tag, in contrast, stays build-time (stamped via Vite's `define` from `WORKSPACE_VERSION`) so it always matches the sourcemap upload tag CI used.
+
+**"I want OpenPanel analytics on this deployment."**
+Set `connect.openPanel.clientId` (and `apiUrl` for a self-hosted OpenPanel):
+
+```bash
+docker run -e PH_CONNECT_CONFIG_JSON='{
+  "connect": {
+    "openPanel": { "clientId": "<client-id>", "apiUrl": "https://openpanel.example/api" }
+  }
+}' connect:latest
+```
+
+An empty `clientId` (the default) keeps OpenPanel off, and events are only sent after the user accepts analytics cookies. The runtime values take precedence over the build-time `PH_CONNECT_OPENPANEL_*` env vars, which remain a fallback for builds that bake them.
 
 **"I'm turning auth enforcement on for this fleet."**
 Set the whole flag set on the container, matching the switchboard's `REACTOR_*` env vars exactly:
