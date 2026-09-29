@@ -151,6 +151,53 @@ describe("phConfigPlugin", () => {
     );
   });
 
+  describe("connect.app.workflowsEnabled", () => {
+    const emittedWorkflowsEnabled = (
+      options: Omit<Parameters<typeof phConfigPlugin>[0], "packages">,
+    ) => {
+      const plugin = phConfigPlugin({ packages: [], projectRoot, ...options });
+      const emitted: string[] = [];
+      const generateBundle = plugin.generateBundle as (
+        this: unknown,
+        ...args: unknown[]
+      ) => void;
+      generateBundle.call({
+        emitFile(file: { type: string; source: string }) {
+          if (file.type === "asset") emitted.push(file.source);
+        },
+      });
+      const parsed = JSON.parse(emitted[0]) as {
+        connect: { app: { workflowsEnabled?: boolean } };
+      };
+      return parsed.connect.app.workflowsEnabled;
+    };
+
+    it("falls back to the top-level workflows.enabled", () => {
+      expect(emittedWorkflowsEnabled({ workflows: { enabled: true } })).toBe(
+        true,
+      );
+    });
+
+    it("wins over workflows.enabled when set", () => {
+      expect(
+        emittedWorkflowsEnabled({
+          workflows: { enabled: true },
+          connect: { app: { workflowsEnabled: false } },
+        }),
+      ).toBe(false);
+      expect(
+        emittedWorkflowsEnabled({
+          workflows: { enabled: false },
+          connect: { app: { workflowsEnabled: true } },
+        }),
+      ).toBe(true);
+    });
+
+    it("is left unset, which Connect reads as off, when neither is set", () => {
+      expect(emittedWorkflowsEnabled({})).toBeUndefined();
+    });
+  });
+
   it("dev middleware intercepts /powerhouse.config.json with the filtered content", () => {
     const plugin = phConfigPlugin({
       packages: [

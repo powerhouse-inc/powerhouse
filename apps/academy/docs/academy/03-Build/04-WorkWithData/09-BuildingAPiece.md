@@ -440,8 +440,8 @@ any one of them fails quietly in its own way.
 
 Nothing else to install or list. Switchboard ships `@powerhousedao/workflow` and
 loads it itself when the flag is on: the workflow and connection document
-models, and the reactor piece. Connect does the same for Workflow Studio when
-`connect.app.workflowsEnabled` is on. If the package can't be loaded,
+models, and the reactor piece. Connect does the same for Workflow Studio, unless
+`connect.app.workflowsEnabled` turns it off. If the package can't be loaded,
 Switchboard refuses to boot with "Workflows are enabled but
 @powerhousedao/workflow could not be loaded".
 
