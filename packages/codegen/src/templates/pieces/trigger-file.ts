@@ -106,11 +106,7 @@ ${v.withAuth ? `  auth: ${v.camelCaseName}Auth,` : "  // Types context.auth as u
   async onDisable() {
     // Called when the workflow is switched off: remove the registration
   },
-  test() {
-    // Called when the user tests the trigger: fetch a recent item from the
-    // service, so they see real output
-    return Promise.resolve([]);
-  },
+  // Testing the trigger shows sampleData; add test() to fetch real items
   run(context) {
     // context.payload holds each delivery ({ body, headers, queryParams }).
     // Also called periodically with no payload: ask the service what changed

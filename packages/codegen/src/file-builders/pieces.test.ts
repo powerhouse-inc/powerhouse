@@ -303,7 +303,7 @@ describe("generatePieceTrigger", () => {
     expect(trigger).toContain("type: TriggerStrategy.WEBHOOK");
     // The reconciliation sweep calls run with no payload
     expect(trigger).toContain("payload === undefined ? [] : [payload.body]");
-    expect(trigger).toContain("test() {");
+    expect(trigger).not.toContain("test() {");
     expect(trigger).not.toContain("pollingHelper");
   });
 });
