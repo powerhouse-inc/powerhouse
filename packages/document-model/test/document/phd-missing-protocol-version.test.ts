@@ -28,7 +28,7 @@ describe("phd without base-reducer protocol version", () => {
     });
 
     // Same order as reactor-browser loadFile: legacy replay, then versioned.
-    await baseLoadFromInput(zip, (s: never) => s, { checkHashes: true });
+    await baseLoadFromInput(zip, reducer, { checkHashes: true });
     const doc = await baseLoadFromInputVersioned(zip, {
       reducers: { 1: reducer },
     });
