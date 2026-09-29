@@ -212,6 +212,14 @@ function recordingProcessor(): IProcessor & {
   return processor;
 }
 
+/** Probes the watermark, as the catch-up interval would, so sync derives. */
+function probed(node: Node, predicate: () => boolean) {
+  return async () => {
+    await node.module.settledWatermark.refresh();
+    return predicate();
+  };
+}
+
 function expectNoBlockedConsumer(node: Node): void {
   const blocked = node.module.catchUp
     .status()
@@ -590,8 +598,9 @@ describe("resurrection probes [Postgres]", () => {
     );
     expectNoBlockedConsumer(node);
     await expectCursorsPast(node, ordinal);
-    await until("the outbox serves the marker", () =>
-      capture.sentOpIds(REMOTE).has(marker.id),
+    await until(
+      "the outbox serves the marker",
+      probed(node, () => capture.sentOpIds(REMOTE).has(marker.id)),
     );
     await until("the processor receives the marker", () =>
       processor.received.some(
@@ -735,14 +744,17 @@ describe("resurrection probes [Postgres]", () => {
     await adopt(node, "d", "z");
     await capture.add(node, REMOTE, "d");
     await remove(node, "x");
-    await until("the remote has x's delete", () =>
-      capture
-        .operations(REMOTE)
-        .some(
-          (op) =>
-            op.context.documentId === "x" &&
-            op.operation.action.type === "DELETE_DOCUMENT",
-        ),
+    await until(
+      "the remote has x's delete",
+      probed(node, () =>
+        capture
+          .operations(REMOTE)
+          .some(
+            (op) =>
+              op.context.documentId === "x" &&
+              op.operation.action.type === "DELETE_DOCUMENT",
+          ),
+      ),
     );
 
     const hold = await holdIndexCommitOn(node, "x");
@@ -791,11 +803,13 @@ describe("resurrection probes [Postgres]", () => {
     } = await expectPurged(node.db, "x", {
       documentType: DOC_TYPE,
     }));
-    await until("the outbox serves z's write", () =>
-      capture.sentOpIds(REMOTE).has(zOpId),
+    await until(
+      "the outbox serves z's write",
+      probed(node, () => capture.sentOpIds(REMOTE).has(zOpId)),
     );
-    await until("the outbox serves x's marker", () =>
-      capture.sentOpIds(REMOTE).has(markerId),
+    await until(
+      "the outbox serves x's marker",
+      probed(node, () => capture.sentOpIds(REMOTE).has(markerId)),
     );
   });
 });

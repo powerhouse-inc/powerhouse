@@ -27,7 +27,11 @@ import type {
   InProcessReactorModule,
   IReactor,
 } from "../../../src/core/types.js";
-import { BareReadGate } from "../../../src/decision/read-gate.js";
+import {
+  BareReadGate,
+  ModelReadGate,
+  readDecisionModel,
+} from "../../../src/decision/read-gate.js";
 import { SyncScopeGate } from "../../../src/decision/sync-scope-gate.js";
 import { ReactorEventTypes } from "../../../src/events/types.js";
 import type { ReactorFeatureFlags } from "../../../src/executor/types.js";
@@ -147,6 +151,8 @@ export type NodeOptions = {
   featureFlags?: Partial<ReactorFeatureFlags>;
   peerCapabilities?: PeerCapability[];
   channelFactory?: IChannelFactory;
+  /** Sweeps and watermark probes; sync derivation waits on the probe. */
+  catchUpIntervalMs?: number;
   /** Default legacy: tests write unsigned through the reactor. */
   createSignaturePolicy?: "legacy" | "v2-required";
 };
@@ -178,7 +184,7 @@ export async function buildNode(options: NodeOptions): Promise<Node> {
     .withLogger(createMockLogger())
     .withKysely(options.db.base)
     .withEventBus(bus)
-    .withCatchUp({ intervalMs: 3_600_000 })
+    .withCatchUp({ intervalMs: options.catchUpIntervalMs ?? 3_600_000 })
     .withDocumentModelSources([
       documentModelDocumentModelModule as unknown as DocumentModelModule,
       driveDocumentModelModule as unknown as DocumentModelModule,
@@ -692,6 +698,7 @@ type Wire = {
   delivered: SyncEnvelope[];
   withheld: SyncEnvelope[];
   gateErrors: unknown[];
+  deliveryErrors: unknown[];
   chain: Promise<void>;
   serving?: ServingGate;
 };
@@ -773,6 +780,7 @@ export class Mesh {
         delivered: [],
         withheld: [],
         gateErrors: [],
+        deliveryErrors: [],
         chain: Promise.resolve(),
       };
       this.wires.set(remoteName, wire);
@@ -879,11 +887,27 @@ export class Mesh {
         wire.withheld.push(envelope);
         return;
       }
-      const peer = this.channels.get(peerName);
-      if (!peer) throw new Error(`no channel ${peerName}`);
+      const peer = await this.channelNamed(peerName);
+      if (!peer) {
+        wire.deliveryErrors.push(new Error(`no channel ${peerName}`));
+        return;
+      }
+      try {
+        peer.receive(served);
+      } catch (error) {
+        wire.deliveryErrors.push(error);
+        return;
+      }
       wire.delivered.push(served);
-      peer.receive(served);
     });
+  }
+
+  /** The peer's channel is created by its own add, which may not have run yet. */
+  private async channelNamed(name: string): Promise<TestChannel | undefined> {
+    for (let i = 0; i < 250 && !this.channels.has(name); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    return this.channels.get(name);
   }
 
   /** reactor-api's collectHeldSyncOperations, per operation scope. */
@@ -920,6 +944,30 @@ export class Mesh {
 export function bareServingGate(node: Node, subject: AuthSubject): ServingGate {
   return {
     gate: new SyncScopeGate(new BareReadGate(), node.module.documentView),
+    subject,
+  };
+}
+
+/** reactor-api's buildSyncServingGate, open by default. */
+export function servingGate(node: Node, subject: AuthSubject): ServingGate {
+  const { module } = node;
+  const model = readDecisionModel(
+    module.featureFlags,
+    module.documentModelRegistry,
+  );
+  if (!model) return bareServingGate(node, subject);
+  return {
+    gate: new SyncScopeGate(
+      new ModelReadGate(
+        model,
+        module.documentView,
+        module.featureFlags.authGroups,
+        module.operationIndex,
+        undefined,
+        { withholdUninitialized: false },
+      ),
+      module.documentView,
+    ),
     subject,
   };
 }
