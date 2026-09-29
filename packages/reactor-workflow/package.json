@@ -47,8 +47,10 @@
   "devDependencies": {
     "@electric-sql/pglite": "catalog:",
     "@types/node": "catalog:",
+    "knex": "catalog:",
+    "knex-pglite": "catalog:",
     "kysely": "catalog:",
-    "kysely-pglite-dialect": "catalog:",
+    "kysely-knex": "catalog:",
     "tsdown": "catalog:",
     "vitest": "catalog:"
   },

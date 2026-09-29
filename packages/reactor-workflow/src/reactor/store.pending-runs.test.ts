@@ -3,7 +3,10 @@
 // pass that does own it has to leave it rerunnable.
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
-import { createTestRelationalDb } from "../../test/helpers/pglite.js";
+import {
+  createFreshRelationalDb,
+  createTestRelationalDb,
+} from "../../test/helpers/pglite.js";
 import {
   ABANDONED_PENDING_RUN_ERROR,
   ORPHANED_RUN_ERROR,
@@ -122,5 +125,31 @@ describe("pending runs in the journal", () => {
       .where("workflow_id", "=", "wf-claim")
       .executeTakeFirstOrThrow();
     expect(claim.run_id).toBe(runId);
+  });
+});
+
+// The counts are what the recovery warning reports, so they must be real
+// on the knex-backed database Switchboard runs, which reports no row counts.
+describe("recovery counts", () => {
+  it("counts the runs another process left behind", async () => {
+    const db = createFreshRelationalDb();
+    const survivor = await WorkflowRunStore.create(db);
+    const dead = await WorkflowRunStore.create(db);
+    const pending = [
+      await dead.enqueueRun({ workflowId: "wf-a", triggerKind: "manual" }),
+      await dead.enqueueRun({ workflowId: "wf-b", triggerKind: "manual" }),
+    ];
+    const running = await dead.enqueueRun({
+      workflowId: "wf-c",
+      triggerKind: "manual",
+    });
+    await dead.beginRun(running, { workflowName: "C", workflowVersion: 1 });
+
+    await expect(survivor.recoverAbandonedRuns()).resolves.toBe(2);
+    await expect(survivor.recoverOrphanedRuns()).resolves.toBe(1);
+    await expect(survivor.recoverAbandonedRuns()).resolves.toBe(0);
+    for (const runId of [...pending, running]) {
+      expect((await survivor.getRun(runId))?.status).toBe("FAILED");
+    }
   });
 });

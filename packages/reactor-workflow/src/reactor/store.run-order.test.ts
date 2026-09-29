@@ -1,19 +1,13 @@
 // A run's place in the listing is its enqueue time, which starting it leaves
 // alone; rows journaled before the column list by their start time.
-import { PGlite } from "@electric-sql/pglite";
-import {
-  createRelationalDb,
-  type IRelationalDb,
-} from "@powerhousedao/shared/processors";
-import { Kysely, sql } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
+import type { IRelationalDb } from "@powerhousedao/shared/processors";
+import { sql } from "kysely";
 import { describe, expect, it } from "vitest";
+import { createFreshRelationalDb } from "../../test/helpers/pglite.js";
 import { WorkflowRunStore } from "./store.js";
 
 function freshDb(): IRelationalDb {
-  return createRelationalDb(
-    new Kysely<unknown>({ dialect: new PGliteDialect(new PGlite()) }),
-  );
+  return createFreshRelationalDb();
 }
 
 describe("run listing order", () => {
