@@ -1,4 +1,8 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import {
+  purgeDocumentAction,
+  purgeMarkerOperation,
+  type OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import type {
   IProcessor,
   ProcessorFilter,
@@ -32,6 +36,26 @@ function op(ordinal: number, documentId = "doc"): OperationWithContext {
       documentId,
       documentType: "test/doc",
       scope: "global",
+      branch: "main",
+      ordinal,
+    },
+  };
+}
+
+function markerOp(ordinal: number, documentId: string): OperationWithContext {
+  const operation = purgeMarkerOperation(
+    purgeDocumentAction({
+      documentId,
+      documentType: "test/doc",
+      requestId: "r",
+    }),
+  );
+  return {
+    operation,
+    context: {
+      documentId,
+      documentType: "test/doc",
+      scope: "document",
       branch: "main",
       ordinal,
     },
@@ -84,6 +108,7 @@ function harness(
     onDisconnect?: () => Promise<void>;
     routedThrough?: () => number;
     confirmedThrough?: () => number;
+    purged?: (ids: string[]) => Promise<ReadonlySet<string>>;
   } = {},
 ): Harness {
   const delivered: number[][] = [];
@@ -115,6 +140,7 @@ function harness(
       persisted.push({ ...state });
       return Promise.resolve();
     },
+    purged: options.purged ?? (() => Promise.resolve(new Set())),
     logger: createMockLogger(),
   });
   return { queue, cursor, delivered, persisted, processor };
@@ -326,6 +352,7 @@ describe("ProcessorQueue", () => {
         routedThrough: () => Number.MAX_SAFE_INTEGER,
         confirmedThrough: () => Number.MAX_SAFE_INTEGER,
         persist: () => Promise.reject(new Error("db down")),
+        purged: () => Promise.resolve(new Set()),
         logger: createMockLogger(),
       });
 
@@ -618,6 +645,101 @@ describe("ProcessorQueue", () => {
       await queue.retry();
 
       expect(processor.onOperations).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("tombstones", () => {
+    const tombstoned = (...ids: string[]) =>
+      Promise.resolve<ReadonlySet<string>>(new Set(ids));
+
+    it("drops a routed batch's operations of a purged id but not its marker", async () => {
+      const { queue, cursor, delivered } = harness();
+
+      await queue.live(
+        [op(1, "gone"), op(2, "kept"), op(3, "gone"), markerOp(4, "gone")],
+        { purged: tombstoned("gone") },
+      );
+
+      expect(delivered).toEqual([[2, 4]]);
+      expect(cursor.lastOrdinal).toBe(4);
+    });
+
+    it("raises the cursor past a routed batch whose every operation is purged", async () => {
+      const { queue, cursor, processor } = harness();
+
+      await queue.live([op(1, "gone"), op(2, "gone")], {
+        purged: tombstoned("gone"),
+      });
+
+      expect(processor.onOperations).not.toHaveBeenCalled();
+      expect(cursor.lastOrdinal).toBe(2);
+    });
+
+    it("delivers a kept ordinal of a purged id", async () => {
+      const { queue, delivered } = harness();
+
+      await queue.live([op(1, "gone"), op(2, "gone")], {
+        purged: tombstoned("gone"),
+        keep: new Set([2]),
+      });
+
+      expect(delivered).toEqual([[2]]);
+    });
+
+    it("parks and errors when the routed lookup fails", async () => {
+      const { queue, cursor, processor } = harness({ lastOrdinal: 4 });
+      const purged = Promise.reject<ReadonlySet<string>>(new Error("down"));
+      purged.catch(() => undefined);
+
+      await queue.live([op(5), op(6)], { purged });
+
+      expect(processor.onOperations).not.toHaveBeenCalled();
+      expect(cursor).toMatchObject({ status: "errored", lastOrdinal: 4 });
+      expect(cursor.lastError).toBe("down");
+    });
+
+    it("checks a backfill page after reading it", async () => {
+      const index = [
+        op(1, "gone"),
+        op(2, "kept"),
+        op(3, "gone"),
+        markerOp(4, "gone"),
+      ];
+      const tombstones = new Set<string>();
+      const read = pagedIndex(index);
+      const lookups: string[][] = [];
+      const { queue, cursor, delivered } = harness({
+        readSince: async (ordinal) => {
+          const page = await read(ordinal);
+          // The purge commits between the read and the delivery.
+          tombstones.add("gone");
+          return page;
+        },
+        purged: (ids) => {
+          lookups.push([...ids].sort());
+          return Promise.resolve(
+            new Set(ids.filter((id) => tombstones.has(id))),
+          );
+        },
+      });
+
+      await queue.backfill();
+
+      expect(delivered).toEqual([[2, 4]]);
+      expect(lookups).toEqual([["gone", "kept"]]);
+      expect(cursor.lastOrdinal).toBe(4);
+    });
+
+    it("errors a backfill whose lookup fails without delivering the page", async () => {
+      const { queue, cursor, processor } = harness({
+        index: [op(1), op(2)],
+        purged: () => Promise.reject(new Error("down")),
+      });
+
+      await queue.backfill();
+
+      expect(processor.onOperations).not.toHaveBeenCalled();
+      expect(cursor).toMatchObject({ status: "errored", lastOrdinal: 0 });
     });
   });
 });

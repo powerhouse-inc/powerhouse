@@ -21,8 +21,11 @@ import type {
   ProcessorCursorRow,
 } from "../read-models/types.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
+import { findPurged } from "../storage/kysely/document-purges.js";
 import {
   ProcessorQueue,
+  purgeCandidates,
+  type LiveCheck,
   type ProcessorCursorState,
 } from "./processor-queue.js";
 import {
@@ -48,6 +51,9 @@ type PendingSlot = {
 type Bound = { tracked: TrackedProcessor; queue: ProcessorQueue };
 
 type FactoryRun = () => Promise<void>;
+
+/** Drives a batch deletes, each with its first deletion in the batch. */
+type DriveDeletions = ReadonlyMap<string, OperationWithContext>;
 
 export type ProcessorManagerOptions = {
   // Key cursors by array position (default). Off derives stable keys from
@@ -107,8 +113,9 @@ export class ProcessorManager
     items: OperationWithContext[],
   ): Promise<void> {
     const { runs, reserved } = this.detectNewDrives(items);
+    const deletions = this.findDriveDeletions(items);
+    const deliveries = this.enqueueRouted(items, reserved, deletions);
     const disconnects = this.detectDeletedDrives(items);
-    const deliveries = this.enqueueRouted(items, reserved);
 
     await Promise.all([
       ...runs.map((run) => run()),
@@ -226,10 +233,26 @@ export class ProcessorManager
     return pending;
   }
 
+  /** Synchronous: the known drives this batch deletes. */
+  protected findDriveDeletions(items: OperationWithContext[]): DriveDeletions {
+    const deletions = new Map<string, OperationWithContext>();
+    for (const op of items) {
+      if (!isDriveDeletion(op)) continue;
+      const driveId = extractDeletedDocumentId(op);
+      if (!driveId || !this.knownDrives.has(driveId)) continue;
+      const first = deletions.get(driveId);
+      if (!first || op.context.ordinal < first.context.ordinal) {
+        deletions.set(driveId, op);
+      }
+    }
+    return deletions;
+  }
+
   /** Synchronous: puts each processor's share of the batch on its queue. */
   protected enqueueRouted(
     items: OperationWithContext[],
     reserved: ReadonlySet<PendingSlot>,
+    deletions: DriveDeletions = new Map(),
   ): Promise<void>[] {
     if (items.length === 0) return [];
 
@@ -249,19 +272,61 @@ export class ProcessorManager
       );
     }
 
+    let check: LiveCheck | undefined;
+    const checkOf = () => (check ??= this.checkPurged(items));
+
     const deliveries: Promise<void>[] = [];
     for (const { tracked, queue } of this.allBound()) {
+      const deletion = deletions.get(tracked.driveId);
+      if (deletion) {
+        // Not awaited: the pass must not wait out the drive's queues.
+        void this.deliverDeletion(tracked, queue, items, deletion, checkOf());
+        continue;
+      }
       const matching = items.filter((op) =>
         matchesFilter(op, tracked.record.filter),
       );
       if (matching.length > 0) {
-        deliveries.push(queue.live(matching));
+        deliveries.push(queue.live(matching, checkOf()));
       } else {
         // Not awaited: the pass waits only on processors it delivers to.
         void queue.advance(highest);
       }
     }
     return deliveries;
+  }
+
+  // The batch through the deletion, then the deletion whatever the filter.
+  private deliverDeletion(
+    tracked: TrackedProcessor,
+    queue: ProcessorQueue,
+    items: OperationWithContext[],
+    deletion: OperationWithContext,
+    check: LiveCheck,
+  ): Promise<void> {
+    const through = deletion.context.ordinal;
+    const share = items.filter(
+      (op) =>
+        op.context.ordinal < through &&
+        matchesFilter(op, tracked.record.filter),
+    );
+    share.push(deletion);
+    return queue.live(share, {
+      purged: check.purged,
+      keep: new Set([through]),
+    });
+  }
+
+  /** Started at routing; takes no purge lock, since processors hold none. */
+  private checkPurged(items: OperationWithContext[]): LiveCheck {
+    const ids = purgeCandidates(items);
+    const purged =
+      ids.length === 0
+        ? Promise.resolve<ReadonlySet<string>>(new Set())
+        : findPurged(this.db, ids);
+    // Observed here: a closed queue drops the task that would await it.
+    purged.catch(() => undefined);
+    return { purged };
   }
 
   /** Synchronous: binds records, or discards them if the slot was cancelled. */
@@ -328,7 +393,7 @@ export class ProcessorManager
         matchesFilter(op, tracked.record.filter),
       );
       if (matching && matching.length > 0) {
-        deliveries.push(queue.live(matching));
+        deliveries.push(queue.live(matching, this.checkPurged(matching)));
       }
     }
 
@@ -486,6 +551,7 @@ export class ProcessorManager
       routedThrough: () => this.highWater(),
       confirmedThrough: () => this.lastOrdinal,
       persist: (state) => this.writeCursor(tracked, state),
+      purged: (ids) => findPurged(this.db, ids),
       logger: this.logger,
     });
     return { tracked, queue };
