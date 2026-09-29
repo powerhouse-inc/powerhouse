@@ -186,6 +186,11 @@ export type LocalPeer = {
   forgetDocument?: (documentId: string) => void;
 };
 
+/** The tombstone index, as the sync manager reads it at startup. */
+export type PurgeLookup = {
+  listPurged(): Promise<string[]>;
+};
+
 /** What the peer announced, and when; a null manifest is a silent peer. */
 export type RemotePeer = {
   manifest: PeerManifest | null;
