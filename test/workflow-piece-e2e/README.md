@@ -92,7 +92,7 @@ Runs in CI as the `Run Workflow Piece E2E Tests` job in
 
 | Variable                         | Default                      | Meaning                                                                          |
 | -------------------------------- | ---------------------------- | -------------------------------------------------------------------------------- |
-| `PH_WORKFLOW_E2E_WORKDIR`        | `/tmp/ph-workflow-piece-e2e` | Where the generated fixture package and the two projects are built.              |
+| `PH_WORKFLOW_E2E_WORKDIR`        | `/tmp/ph-workflow-piece-e2e` | Where the fixture package, the projects and the run's pnpm cache live.           |
 | `PH_WORKFLOW_E2E_PORT`           | `4021`                       | Switchboard's port; the other two reactors take the next two.                    |
 | `PH_WORKFLOW_E2E_REUSE_REGISTRY` | unset                        | `1` skips starting and seeding the registry, for re-runs against one already up. |
 | `PH_TAG`                         | `dev`                        | Dist-tag the workspace packages are published under.                             |
