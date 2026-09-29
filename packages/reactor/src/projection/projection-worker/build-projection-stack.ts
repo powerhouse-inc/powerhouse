@@ -12,7 +12,10 @@
  * READMODEL_* events back to the host bus via the IPC bridge.
  */
 
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import {
+  isPurgeMarker,
+  type DocumentModelModule,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
 import { CollectionMembershipCache } from "../../cache/collection-membership-cache.js";
@@ -65,6 +68,7 @@ import {
   KyselyDocumentIndexer,
   type IndexerDatabase,
 } from "../../storage/kysely/document-indexer.js";
+import { findPurged } from "../../storage/kysely/document-purges.js";
 import { KyselyKeyframeStore } from "../../storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../../storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../../storage/kysely/types.js";
@@ -89,6 +93,7 @@ export type ProjectionStack = {
   registry: DocumentModelRegistry;
   coordinator: ReadModelCoordinator;
   eventBus: EventBus;
+  writeCache: KyselyWriteCache;
   relayWriteReady(event: JobWriteReadyEvent): Promise<void>;
   getChainDepth(): number;
   catchUpStatus(): CatchUpStatus;
@@ -201,6 +206,7 @@ async function initReadModels(
 function relaySweeps(
   model: BaseReadModel,
   events: ProjectionStackEvents,
+  onSwept: (coordinates: ConsistencyCoordinate[]) => Promise<void>,
 ): ICatchUpConsumer {
   return {
     get consumerId() {
@@ -225,6 +231,7 @@ function relaySweeps(
         ) {
           events.onReadModelSwept(model.name, coordinates, result);
         }
+        await onSwept(coordinates);
         return result;
       } finally {
         unsubscribe();
@@ -276,7 +283,32 @@ export async function buildProjectionStack(
     operationIndex,
   );
   void collectionMembershipCache;
-  void documentMetaCache;
+
+  // This thread's caches are its own; a marker it applies evicts the id here.
+  const evict = (documentIds: Iterable<string>): void => {
+    for (const documentId of documentIds) {
+      writeCache.invalidate(documentId);
+      documentMetaCache.invalidate(documentId);
+    }
+  };
+
+  // A sweep reports coordinates only; a marker is index 0 of document scope.
+  const evictSweptMarkers = async (
+    coordinates: ConsistencyCoordinate[],
+  ): Promise<void> => {
+    const candidates = coordinates
+      .filter((c) => c.scope === "document" && c.operationIndex === 0)
+      .map((c) => c.documentId);
+    if (candidates.length === 0) return;
+    let purged: Set<string>;
+    try {
+      purged = await findPurged(database, candidates);
+    } catch (error) {
+      logger.error("projection worker purge lookup failed: @error", error);
+      return;
+    }
+    evict(purged);
+  };
 
   const preReady = init.preReadyKinds.map((kind) =>
     instantiateReadModel(
@@ -320,7 +352,10 @@ export async function buildProjectionStack(
 
   for (const model of models) {
     if (model instanceof BaseReadModel) {
-      catchUp.addConsumer(relaySweeps(model, events), "projection");
+      catchUp.addConsumer(
+        relaySweeps(model, events, evictSweptMarkers),
+        "projection",
+      );
     }
   }
   catchUp.start();
@@ -360,7 +395,13 @@ export async function buildProjectionStack(
     registry,
     coordinator,
     eventBus,
+    writeCache,
     async relayWriteReady(event: JobWriteReadyEvent): Promise<void> {
+      evict(
+        event.operations
+          .filter((item) => isPurgeMarker(item))
+          .map((item) => item.context.documentId),
+      );
       await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, event);
     },
     getChainDepth(): number {
