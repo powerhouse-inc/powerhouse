@@ -26,7 +26,7 @@ import {
   runsQuery,
   stepOutputTreeQuery,
 } from "./runtime-queries.js";
-import { realRuns } from "./run-kinds.js";
+import { realRuns, TEST_TRIGGER_KIND } from "./run-kinds.js";
 import type { QueryClient } from "@tanstack/react-query";
 import { BackButton, UndoRedo } from "../shared/editor-chrome.js";
 import {
@@ -157,7 +157,11 @@ function WorkflowEditor() {
         }),
       latestRun: () =>
         client
-          .fetchRuns({ workflowId, limit: LATEST_RUN_WINDOW })
+          .fetchRuns({
+            workflowId,
+            limit: LATEST_RUN_WINDOW,
+            excludeTriggerKinds: [TEST_TRIGGER_KIND],
+          })
           .then((runs) => realRuns(runs).at(0) ?? null),
       fetchRun: (runId) => client.fetchRun(runId),
       blockResolutions: () => client.blockResolutions(workflowId),

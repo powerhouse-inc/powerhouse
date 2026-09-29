@@ -4,26 +4,31 @@ import type {
   RunRecord,
   RunsScope,
 } from "../../workflow-editor/runtime-client.js";
-import { useRunsQuery } from "../../workflow-editor/runtime-context.js";
+import { useRunPagesQuery } from "../../workflow-editor/runtime-context.js";
+import { runsOfPages } from "../../workflow-editor/runtime-queries.js";
 
 const POLL_MS = 5000;
 
 export interface RunsFeed {
+  // Every page loaded so far, newest first.
   runs: RunRecord[] | null;
   error: string | null;
   reload: () => void;
+  hasMore: boolean;
+  loadingMore: boolean;
+  loadMore: () => void;
 }
 
 // Inactive feeds hold no subscription, so a pane can borrow another's rows.
 export function useRuns(scope: RunsScope, active = true): RunsFeed {
   const { workflowId, driveId, limit } = scope;
-  const query = useRunsQuery(
+  const query = useRunPagesQuery(
     { workflowId, driveId, limit },
     { active, pollMs: POLL_MS },
   );
-  const { refetch } = query;
+  const { refetch, fetchNextPage } = query;
   return {
-    runs: query.data ?? null,
+    runs: query.data ? runsOfPages(query.data.pages) : null,
     error:
       query.status === "error"
         ? query.error instanceof Error
@@ -31,5 +36,8 @@ export function useRuns(scope: RunsScope, active = true): RunsFeed {
           : String(query.error)
         : null,
     reload: () => void refetch(),
+    hasMore: query.hasNextPage,
+    loadingMore: query.isFetchingNextPage,
+    loadMore: () => void fetchNextPage(),
   };
 }

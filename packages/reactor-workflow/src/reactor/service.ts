@@ -166,11 +166,13 @@ import {
   type TestSample,
 } from "./step-test.js";
 import {
+  MAX_LIST_RUNS,
   WorkflowRunStore,
   type RunRow,
   type StepExecutionRow,
   type TriggerStateRow,
 } from "./store.js";
+import { decodeRunCursor, encodeRunCursor } from "./run-cursor.js";
 import {
   TriggerSupervisor,
   type PieceTriggerBinding,
@@ -243,6 +245,31 @@ export interface RunRecord {
   row: RunRow;
   steps: StepExecutionRow[];
 }
+
+export interface RunsArgs {
+  workflowId?: string;
+  driveId?: string;
+  limit?: number;
+  // Left out in SQL, so they never cost a page its rows.
+  excludeTriggerKinds?: string[];
+  // False leaves each step's input and output out (null).
+  withStepData?: boolean;
+}
+
+export interface RunsPageArgs extends RunsArgs {
+  // From a previous page; resumes after its last run.
+  cursor?: string | null;
+}
+
+export interface RunPage {
+  records: RunRecord[];
+  hasNextPage: boolean;
+  // Pass back as `cursor` for the next page; null when the page is empty.
+  cursor: string | null;
+}
+
+// Rows one page request may read past unreadable ones before it returns short.
+const RUNS_SCAN_LIMIT = 1000;
 
 /** One draft block as this reactor resolves it. */
 export interface BlockResolutionRecord {
@@ -1995,18 +2022,17 @@ export class WorkflowRuntimeService {
 
   // The run journal, scoped to what this caller may read: a run carries its
   // trigger payload and every step's input and output.
-  // `withStepData: false` leaves each step's input and output out (null).
-  async runs(
-    args: {
-      workflowId?: string;
-      driveId?: string;
-      limit?: number;
-      withStepData?: boolean;
-    },
-    ctx?: WorkflowCaller,
-  ): Promise<RunRecord[]> {
+  async runs(args: RunsArgs, ctx?: WorkflowCaller): Promise<RunRecord[]> {
+    return (await this.runsPage(args, ctx)).records;
+  }
+
+  // One page, newest first. Access is the host's per-document call, so it
+  // can't go into SQL: batches are read and filtered until the page is full.
+  async runsPage(args: RunsPageArgs, ctx?: WorkflowCaller): Promise<RunPage> {
+    const empty: RunPage = { records: [], hasNextPage: false, cursor: null };
+    const after = args.cursor ? decodeRunCursor(args.cursor) : undefined;
     const store = await this.store();
-    if (!store) return [];
+    if (!store) return empty;
     // A drive scopes runs to the workflows it holds; an explicit workflowId is
     // narrower still, so it wins.
     let scope: string | string[] | undefined;
@@ -2015,22 +2041,54 @@ export class WorkflowRuntimeService {
       scope = args.workflowId;
     } else if (args.driveId) {
       scope = await this.driveWorkflowIds(args.driveId, ctx);
-      if (scope.length === 0) return [];
-    } else if (!ctx) {
-      // An unscoped listing is every workflow in the reactor, so it needs a
-      // caller to filter by.
-      return [];
+      if (scope.length === 0) return empty;
     }
-    const rows = await store.listRuns(scope, args.limit ?? 25);
-    const readable = await this.servedRuns(
-      await this.readableRows(rows, (row) => row.workflow_id, ctx),
-      ctx,
-    );
+    // An unscoped listing is every workflow in the reactor, so it needs a
+    // caller to filter by; no caller is served no run either way.
+    if (!ctx) return empty;
+    const pageSize = Math.min(Math.max(args.limit ?? 25, 1), MAX_LIST_RUNS);
+    const batchSize = Math.min(pageSize + 1, MAX_LIST_RUNS);
+    const served: RunRow[] = [];
+    let position = after;
+    let scanned = 0;
+    let exhausted = false;
+    // One past the page tells whether another follows.
+    while (served.length <= pageSize && scanned < RUNS_SCAN_LIMIT) {
+      const batch = await store.listRuns(scope, batchSize, {
+        after: position,
+        excludeTriggerKinds: args.excludeTriggerKinds,
+      });
+      scanned += batch.length;
+      const last = batch.at(-1);
+      if (last) position = { startedAt: last.started_at, id: last.id };
+      served.push(
+        ...(await this.servedRuns(
+          await this.readableRows(batch, (row) => row.workflow_id, ctx),
+          ctx,
+        )),
+      );
+      if (batch.length < batchSize) {
+        exhausted = true;
+        break;
+      }
+    }
+    const rows = served.slice(0, pageSize);
+    const full = served.length > pageSize;
+    const lastRow = rows.at(-1);
+    // Out of scan budget: resume after the last row read, served or not.
+    const resumeAt =
+      full || exhausted
+        ? lastRow && { startedAt: lastRow.started_at, id: lastRow.id }
+        : position;
     const steps = await store.getStepsForRuns(
-      readable.map((row) => row.id),
+      rows.map((row) => row.id),
       { withData: args.withStepData ?? true },
     );
-    return readable.map((row) => ({ row, steps: steps.get(row.id) ?? [] }));
+    return {
+      records: rows.map((row) => ({ row, steps: steps.get(row.id) ?? [] })),
+      hasNextPage: full || !exhausted,
+      cursor: resumeAt ? encodeRunCursor(resumeAt) : null,
+    };
   }
 
   // One run, or null when the caller may not read its workflow: "not yours"

@@ -793,6 +793,19 @@ const STEP_COLUMNS_WITHOUT_DATA = [
   "input" | "output"
 >[];
 
+// A run's position in the newest-first listing.
+export interface RunKey {
+  startedAt: string;
+  id: string;
+}
+
+export interface ListRunsOptions {
+  after?: RunKey;
+  excludeTriggerKinds?: string[];
+}
+
+export const MAX_LIST_RUNS = 100;
+
 export interface EnqueueRunOptions {
   workflowId: string;
   triggerKind: string;
@@ -1144,20 +1157,37 @@ export class WorkflowRunStore {
 
   // Scope is one workflow id, or a set of them (a drive's workflows). An
   // empty set matches nothing, which is not the same as an unscoped listing.
+
+  // Newest first on (started_at, id); `after` resumes past a row keyset-style.
   async listRuns(
     workflowId?: string | string[],
     limit = 25,
+    options: ListRunsOptions = {},
   ): Promise<RunRow[]> {
     if (Array.isArray(workflowId) && workflowId.length === 0) return [];
     let query = this.db
       .selectFrom("run")
       .selectAll()
       .orderBy("started_at", "desc")
-      .limit(Math.min(Math.max(limit, 1), 100));
+      .orderBy("id", "desc")
+      .limit(Math.min(Math.max(limit, 1), MAX_LIST_RUNS));
     if (Array.isArray(workflowId)) {
       query = query.where("workflow_id", "in", workflowId);
     } else if (workflowId) {
       query = query.where("workflow_id", "=", workflowId);
+    }
+    const { after, excludeTriggerKinds } = options;
+    if (after) {
+      query = query.where((eb) =>
+        eb(
+          eb.refTuple("started_at", "id"),
+          "<",
+          eb.tuple(after.startedAt, after.id),
+        ),
+      );
+    }
+    if (excludeTriggerKinds && excludeTriggerKinds.length > 0) {
+      query = query.where("trigger_kind", "not in", excludeTriggerKinds);
     }
     return query.execute();
   }

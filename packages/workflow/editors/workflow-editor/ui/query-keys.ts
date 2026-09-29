@@ -102,6 +102,21 @@ export const runtimeKeys = {
         limit: runsScope.limit ?? null,
       },
     ] as const,
+  // Under allRuns, so every invalidation of the listing reaches the pages.
+  runPages: (
+    scope: string,
+    runsScope: { workflowId?: string; driveId?: string; limit?: number },
+  ) =>
+    [
+      scope,
+      "runs",
+      "pages",
+      {
+        workflowId: runsScope.workflowId ?? null,
+        driveId: runsScope.driveId ?? null,
+        limit: runsScope.limit ?? null,
+      },
+    ] as const,
   run: (scope: string, runId: string) => [scope, "run", runId] as const,
   secret: (scope: string, ref: string) => [scope, "secret", ref] as const,
   allBlockResolutions: (scope: string, workflowId: string) =>

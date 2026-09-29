@@ -26,18 +26,22 @@ type Resolver = (
   info?: unknown,
 ) => Promise<unknown>;
 
-// The resolve info for the `runs` field of a real query document.
+// The resolve info for the first runtime field of a real query document.
 function runsInfo(query: string) {
   const operation = parse(query).definitions[0] as OperationDefinitionNode;
   const root = operation.selectionSet.selections[0] as FieldNode;
   return { fieldNodes: [root.selectionSet!.selections[0] as FieldNode] };
 }
 
+const emptyPage = (): Promise<unknown> =>
+  Promise.resolve({ records: [], hasNextPage: false, cursor: null });
+
 function fakeRuntime() {
   return {
     webhookEndpoint: vi.fn(() => Promise.resolve(null)),
     triggerStates: vi.fn(() => Promise.resolve([])),
     runs: vi.fn(() => Promise.resolve([])),
+    runsPage: vi.fn(emptyPage),
     run: vi.fn(() => Promise.resolve(null)),
     fire: vi.fn(() => Promise.resolve({})),
     rerun: vi.fn(() => Promise.resolve({})),
@@ -233,5 +237,60 @@ describe("the runs listing and step data", () => {
         )
       ).withStepData,
     ).toBe(true);
+  });
+});
+
+describe("the runs page", () => {
+  it("passes paging through and serves the page", async () => {
+    const { runtime, queries } = build(false);
+    runtime.runsPage.mockResolvedValueOnce({
+      records: [],
+      hasNextPage: true,
+      cursor: "next",
+    });
+
+    const page = await queries.runsPage(
+      {},
+      {
+        driveId: "drive-1",
+        excludeTriggerKinds: ["test"],
+        paging: { limit: 10, cursor: "prev" },
+      },
+      CTX,
+      runsInfo(
+        "{ workflowRuntime { runsPage { items { id steps { status } } cursor } } }",
+      ),
+    );
+
+    expect(runtime.runsPage).toHaveBeenCalledWith(
+      {
+        driveId: "drive-1",
+        excludeTriggerKinds: ["test"],
+        limit: 10,
+        cursor: "prev",
+        withStepData: false,
+      },
+      CTX,
+    );
+    expect(page).toEqual({
+      items: [],
+      hasNextPage: true,
+      hasPreviousPage: true,
+      cursor: "next",
+    });
+  });
+
+  it("reports a cursor it did not issue as bad input", async () => {
+    const { runtime, queries } = build(false);
+    const invalid = new Error("Invalid runs cursor");
+    invalid.name = "InvalidRunCursorError";
+    runtime.runsPage.mockRejectedValueOnce(invalid);
+
+    const error = (await queries
+      .runsPage({}, { paging: { cursor: "junk" } }, CTX)
+      .catch((thrown: unknown) => thrown)) as {
+      extensions?: { code?: string };
+    };
+    expect(error.extensions?.code).toBe("BAD_USER_INPUT");
   });
 });

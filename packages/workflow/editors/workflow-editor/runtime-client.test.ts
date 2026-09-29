@@ -1,9 +1,11 @@
-import { MutationObserver } from "@tanstack/react-query";
+import { InfiniteQueryObserver, MutationObserver } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as RuntimeClientModule from "./runtime-client.js";
 import {
   catalogQuery,
   createRuntimeQueryClient,
+  runPagesQuery,
+  runsOfPages,
   testStepMutation,
 } from "./runtime-queries.js";
 import { runtimeKeys } from "./ui/query-keys.js";
@@ -212,7 +214,7 @@ describe("testStep", () => {
       durationMs: 12,
     };
     const fetchFn = (_input: RequestInfo | URL, init?: RequestInit) => {
-      bodies.push(JSON.parse(init!.body as string));
+      bodies.push(JSON.parse(init!.body as string) as (typeof bodies)[number]);
       return Promise.resolve(
         jsonResponse({ workflowRuntime: { testStep: answer } }),
       );
@@ -283,5 +285,73 @@ describe("a workflow still syncing", () => {
     ]);
     expect(runtimeClient.isSyncingError(error)).toBe(true);
     expect(runtimeClient.isSyncingError(new Error("Forbidden"))).toBe(false);
+  });
+});
+
+describe("the paged runs listing", () => {
+  const run = (id: string) => ({
+    id,
+    workflowId: "wf-1",
+    workflowName: "wf",
+    workflowVersion: 1,
+    triggerKind: "manual",
+    triggerPayload: null,
+    status: "SUCCEEDED",
+    error: null,
+    startedAt: "2026-01-01T00:00:00.000Z",
+    endedAt: null,
+    rerunOf: null,
+    warningNotes: [],
+    steps: [],
+  });
+
+  it("pages on the cursor, leaves tests and step blobs out, and drops repeats", async () => {
+    const bodies: { query: string; variables: Record<string, unknown> }[] = [];
+    const pages = [
+      { items: [run("r3"), run("r2")], hasNextPage: true, cursor: "c1" },
+      { items: [run("r2"), run("r1")], hasNextPage: false, cursor: "c2" },
+    ];
+    const fetchFn = (_input: RequestInfo | URL, init?: RequestInit) => {
+      bodies.push(JSON.parse(init!.body as string) as (typeof bodies)[number]);
+      return Promise.resolve(
+        jsonResponse({
+          workflowRuntime: { runsPage: pages[bodies.length - 1] },
+        }),
+      );
+    };
+    const client = runtimeClient.createRuntimeClient("http://a/rt", {
+      fetch: fetchFn as typeof fetch,
+      token: () => Promise.resolve(null),
+    });
+    const queryClient = createRuntimeQueryClient();
+    const observer = new InfiniteQueryObserver(
+      queryClient,
+      runPagesQuery(client, { driveId: "d1", limit: 2 }),
+    );
+
+    await observer.refetch();
+    const result = await observer.fetchNextPage();
+
+    expect(bodies.map((body) => body.variables)).toEqual([
+      {
+        workflowId: null,
+        driveId: "d1",
+        excludeTriggerKinds: ["test"],
+        paging: { limit: 2, cursor: null },
+      },
+      {
+        workflowId: null,
+        driveId: "d1",
+        excludeTriggerKinds: ["test"],
+        paging: { limit: 2, cursor: "c1" },
+      },
+    ]);
+    expect(bodies[0].query).not.toMatch(/\binput\b|\boutput\b/);
+    expect(result.hasNextPage).toBe(false);
+    expect(runsOfPages(result.data!.pages).map((r) => r.id)).toEqual([
+      "r3",
+      "r2",
+      "r1",
+    ]);
   });
 });

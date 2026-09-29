@@ -5,7 +5,10 @@ import type {
   RunRecord,
   RunStepRecord,
 } from "../../workflow-editor/runtime-client.js";
-import { useRuntimeActions } from "../../workflow-editor/runtime-context.js";
+import {
+  useRunQuery,
+  useRuntimeActions,
+} from "../../workflow-editor/runtime-context.js";
 import {
   blockMeta,
   usePieceLogos,
@@ -38,6 +41,8 @@ import { Button, Icon, StatusText } from "./ui.js";
 
 type StatusFilter = "ALL" | (typeof RUN_STATUSES)[number];
 type SortKey = "startedAt" | "duration";
+
+const DETAIL_POLL_MS = 5000;
 
 const CONTROL =
   "h-8 rounded-md border border-solid border-border bg-card px-2.5 text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -80,6 +85,9 @@ function StepRow(props: {
   step: RunStepRecord;
   name?: string;
   span?: TimelineSpan;
+  // The listing row has no input or output; the run's own fetch brings them.
+  dataPending?: boolean;
+  dataError?: string | null;
 }) {
   const { step } = props;
   const meta = blockMeta({
@@ -144,6 +152,13 @@ function StepRow(props: {
             <p className="text-xs text-muted-foreground">
               The run never reached this step.
             </p>
+          ) : props.dataError ? (
+            <p className="text-xs text-wf-warn">
+              Couldn't load what this step received and produced.
+              <span className="mt-0.5 block opacity-80">{props.dataError}</span>
+            </p>
+          ) : props.dataPending ? (
+            <p className="text-xs text-muted-foreground">Loading step data…</p>
           ) : (
             <div className="grid items-start gap-2 md:grid-cols-2">
               <DataViewer label="Received" value={step.input} />
@@ -260,8 +275,18 @@ function RunDetail(props: {
   names: Map<string, string>;
   onChanged: () => void;
 }) {
-  const { run, names } = props;
+  const { names } = props;
   const { rerunRun } = useRuntimeActions();
+  // The listing leaves step input and output out; the open run reads them.
+  const full = useRunQuery(props.run.id, { pollMs: DETAIL_POLL_MS });
+  const run = full.data ?? props.run;
+  const dataPending = full.data === undefined && full.status === "pending";
+  const dataError =
+    full.status === "error"
+      ? full.error instanceof Error
+        ? full.error.message
+        : String(full.error)
+      : null;
   const timeline = runTimeline(run);
   const [rerunning, setRerunning] = useState(false);
   const [rerunError, setRerunError] = useState<string | null>(null);
@@ -330,6 +355,8 @@ function RunDetail(props: {
             step={step}
             name={names.get(step.stepKey)}
             span={timeline.get(step.stepId)}
+            dataPending={dataPending}
+            dataError={dataError}
           />
         ))}
         {run.steps.length === 0 ? (
