@@ -20,10 +20,10 @@ pnpm spec:trace spec/out/<file>.itf.json   # print a counterexample, one line pe
 - `scripts/expect-hold.sh <main> <inv>...` and `scripts/expect-violation.sh <main> <inv>...`
   run one simulator check. `MAX_STEPS`, `MAX_SAMPLES` and `SEED` override the defaults.
 - `scripts/verify.sh <holds|violated> <main> <inv[,inv]> <steps>` runs one bounded check.
-  `VERIFY_TIMEOUT` (seconds, default 900) is a hard cap.
+  `VERIFY_TIMEOUT` (seconds, default 900) is a hard cap, enforced by `scripts/with-timeout.pl`.
 - Logs and ITF traces go to `spec/out/`, which is ignored.
-- `quint verify` downloads Apalache into `~/.quint` on first use and starts a JVM server.
-  If a run is killed, check `pgrep -fl apalache.jar` and kill the leftover server.
+- `quint verify` downloads Apalache into `~/.quint` on first use. Each check starts its own
+  JVM server on a free port and stops it afterwards, including on timeout.
 
 ## Builds
 
