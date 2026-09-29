@@ -3,7 +3,7 @@ import { ts } from "@tmpl/core";
 
 export const analyticsProcessorTemplate = (v: { pascalCaseName: string }) =>
   ts`
-import type { AnalyticsSeriesInput, AnalyticsPath, IAnalyticsStore } from "${ANALYTICS_ENGINE_CORE_PACKAGE}";
+import { AnalyticsPath, type AnalyticsSeriesInput, type IAnalyticsStore } from "${ANALYTICS_ENGINE_CORE_PACKAGE}";
 import type { OperationWithContext, IProcessor } from "@powerhousedao/reactor-browser";
 
 export class ${v.pascalCaseName} implements IProcessor {
@@ -15,8 +15,20 @@ export class ${v.pascalCaseName} implements IProcessor {
     //
   }
 
-  onOperations(operations: OperationWithContext[]): Promise<void> {
-    return Promise.resolve();
+  async onOperations(operations: OperationWithContext[]): Promise<void> {
+    for (const { operation, context } of operations) {
+      // DELETE_DOCUMENT and PURGE_DOCUMENT alike: clear the document's series.
+      if (
+        operation.action.type === "DELETE_DOCUMENT" ||
+        operation.action.type === "PURGE_DOCUMENT"
+      ) {
+        const input = operation.action.input as { documentId?: string };
+        const documentId = input.documentId ?? context.documentId;
+        await this.clearSource(AnalyticsPath.fromString(\`ph/doc/\${documentId}\`));
+        continue;
+      }
+      // Record series under ph/doc/<documentId>/... so a deletion clears them.
+    }
   }
 
   onDisconnect(): Promise<void> {
@@ -24,11 +36,7 @@ export class ${v.pascalCaseName} implements IProcessor {
   }
 
   private async clearSource(source: AnalyticsPath) {
-    try {
-      await this.analyticsStore.clearSeriesBySource(source, true);
-    } catch (e) {
-      console.error(e);
-    }
+    await this.analyticsStore.clearSeriesBySource(source, true);
   }
 }
 `.raw;
