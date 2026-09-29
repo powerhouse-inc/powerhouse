@@ -130,6 +130,7 @@ export async function createMinimalZip(
     branch: data.branch,
     revision: {},
     lastModifiedAtUtcIso: now,
+    ...(data.protocolVersions && { protocolVersions: data.protocolVersions }),
   };
 
   return zipAsync({

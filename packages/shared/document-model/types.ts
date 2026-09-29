@@ -1633,6 +1633,7 @@ export type MinimalBackupData = {
   branch: string;
   state: PHBaseState;
   name: string;
+  protocolVersions?: { [key: string]: number };
 };
 
 export type DocumentModelUtils<TState extends PHBaseState = PHBaseState> = {

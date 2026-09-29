@@ -1,6 +1,8 @@
 import type {
   MinimalBackupData,
+  PHBaseState,
   PHDocument,
+  PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
 import { baseMinimalSaveToFile, baseSaveToFile } from "document-model/node";
 import { mkdir } from "node:fs/promises";
@@ -55,12 +57,22 @@ export async function minimalBackupDocument(
   workingDir: string,
   extension?: string,
 ): Promise<string | undefined> {
+  // The reactor's resultingState carries the document header alongside the
+  // state scopes; lift its protocol versions into the backup header.
+  const { header, ...state } = data.state as PHBaseState & {
+    header?: PHDocumentHeader;
+  };
+
   try {
     const backupPath = join(workingDir, BACKUP_FOLDER);
     await mkdir(backupPath, { recursive: true });
 
     const filePath = await baseMinimalSaveToFile(
-      data,
+      {
+        ...data,
+        state,
+        protocolVersions: data.protocolVersions ?? header?.protocolVersions,
+      },
       backupPath,
       extension ?? "",
     );
