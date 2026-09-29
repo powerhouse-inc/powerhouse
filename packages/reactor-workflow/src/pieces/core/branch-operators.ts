@@ -211,6 +211,11 @@ export const BRANCH_OPERATORS = {
 
 export type BranchOperator = keyof typeof BRANCH_OPERATORS;
 
+// Operators whose operand may name nothing: missing is what they test for.
+export const EXISTENCE_OPERATORS: ReadonlySet<string> = new Set<BranchOperator>(
+  ["EXISTS", "DOES_NOT_EXIST"],
+);
+
 const OPERATORS: Record<string, BranchOperatorSpec> = BRANCH_OPERATORS;
 
 export const DEFAULT_BRANCH_OPERATOR: BranchOperator = "TEXT_EXACTLY_MATCHES";
