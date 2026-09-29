@@ -8,7 +8,10 @@ import {
 import { setModelName } from "document-model";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { addRelationshipAction } from "../../../src/actions/index.js";
+import {
+  addRelationshipAction,
+  removeRelationshipAction,
+} from "../../../src/actions/index.js";
 import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import { ReactorEventTypes } from "../../../src/events/types.js";
 import { PURGE_NS } from "../../../src/storage/kysely/document-purges.js";
@@ -442,6 +445,81 @@ describe("purge job [Postgres]", () => {
       .where("documentId", "=", childId)
       .execute();
     expect(memberships).toEqual([]);
+    await expectPurged(host.db, childId);
+  });
+
+  async function memberships(documentId: string) {
+    return host.db
+      .selectFrom("document_collections")
+      .select(["collectionId", "leftOrdinal"])
+      .where("documentId", "=", documentId)
+      .execute();
+  }
+
+  it("refuses a submitted relationship removal naming a purged target", async () => {
+    const childId = await createDocument();
+    await remove(childId);
+    await succeeded(host.reactor, await purgeOne(childId));
+    const driveId = await createDocument(legacyDrive());
+
+    await failedWith(
+      host.reactor,
+      (
+        await host.reactor.execute(driveId, "main", [
+          removeRelationshipAction(driveId, childId, "child"),
+        ])
+      ).id,
+      "DocumentPurgedError",
+    );
+    await expectPurged(host.db, childId);
+  });
+
+  it("loads a relationship removal without closing the reopened membership", async () => {
+    const drive = legacyDrive();
+    const driveId = await createDocument(drive);
+    const childId = await createDocument();
+    await succeeded(
+      host.reactor,
+      (
+        await host.reactor.execute(driveId, "main", [
+          addRelationshipAction(driveId, childId, "child"),
+        ])
+      ).id,
+    );
+    await succeeded(
+      host.reactor,
+      (await host.reactor.removeRelationship(driveId, childId, "child")).id,
+    );
+    await remove(childId);
+    const [closed] = await memberships(childId);
+    expect(closed.leftOrdinal).not.toBeNull();
+    await succeeded(host.reactor, await purgeOne(childId));
+    expect(await memberships(childId)).toEqual([
+      { collectionId: closed.collectionId, leftOrdinal: null },
+    ]);
+
+    const revisions = await host.module.operationStore.getRevisions(
+      driveId,
+      "main",
+    );
+    const action = removeRelationshipAction(driveId, childId, "child");
+    const operation: Operation = {
+      id: deriveOperationId(driveId, "document", "main", action.id),
+      index: revisions.revision.document,
+      skip: 0,
+      hash: "",
+      timestampUtcMs: action.timestampUtcMs,
+      action,
+    };
+    await succeeded(
+      host.reactor,
+      (await host.reactor.load(driveId, "main", [operation])).id,
+    );
+
+    expect(await rowCount(host.db, "Operation", "opId", operation.id)).toBe(1);
+    expect(await memberships(childId)).toEqual([
+      { collectionId: closed.collectionId, leftOrdinal: null },
+    ]);
     await expectPurged(host.db, childId);
   });
 

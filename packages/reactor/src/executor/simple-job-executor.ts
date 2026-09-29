@@ -737,7 +737,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         if (target !== undefined && purged.has(target)) {
           return new DocumentPurgedError(
             target,
-            `ADD_RELATIONSHIP target ${target} was purged`,
+            `${action.type} target ${target} was purged`,
           );
         }
       }

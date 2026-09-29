@@ -398,12 +398,15 @@ export class PurgeFence {
 
 type RelationshipInput = { sourceId?: unknown; targetId?: unknown };
 
-/** An ADD_RELATIONSHIP's target, or undefined for any other action. */
+/** The target whose membership an ADD or REMOVE_RELATIONSHIP writes. */
 export function relationshipTarget(action: {
   type: string;
   input: unknown;
 }): string | undefined {
-  if (action.type !== "ADD_RELATIONSHIP") {
+  if (
+    action.type !== "ADD_RELATIONSHIP" &&
+    action.type !== "REMOVE_RELATIONSHIP"
+  ) {
     return undefined;
   }
   const target = (action.input as RelationshipInput | undefined)?.targetId;
