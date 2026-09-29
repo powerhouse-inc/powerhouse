@@ -28,6 +28,7 @@ function runRow(id: string, workflowId: string) {
     trigger_payload: null,
     status: "FAILED",
     error: null,
+    enqueued_at: "2026-01-01T00:00:00.000Z",
     started_at: "2026-01-01T00:00:00.000Z",
     ended_at: null,
     rerun_of: null,

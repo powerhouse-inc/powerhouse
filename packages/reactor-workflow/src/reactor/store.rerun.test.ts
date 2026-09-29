@@ -264,6 +264,7 @@ describe("WorkflowRunStore per-step journaling", () => {
         trigger_payload: null,
         status: "RUNNING",
         error: null,
+        enqueued_at: new Date().toISOString(),
         started_at: new Date().toISOString(),
         ended_at: null,
         rerun_of: null,

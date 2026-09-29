@@ -39,6 +39,7 @@ function run(id: string, workflowId: string, endedAt: string | null): RunRow {
     trigger_payload: null,
     status: endedAt ? "SUCCEEDED" : "RUNNING",
     error: null,
+    enqueued_at: endedAt ?? daysAgo(40),
     started_at: endedAt ?? daysAgo(40),
     ended_at: endedAt,
     rerun_of: null,
