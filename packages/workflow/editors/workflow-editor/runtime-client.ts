@@ -657,6 +657,7 @@ export interface RunStepRecord {
   // The action the step ran, or the trigger a trigger test sampled.
   blockName: string;
   status: string;
+  // Undefined on a listing row (fetchRunsPage); fetchRun reads them.
   input: unknown;
   output: unknown;
   port: string | null;
@@ -683,15 +684,30 @@ export interface RunRecord {
   steps: RunStepRecord[];
 }
 
-const RUN_FIELDS = `id workflowId workflowName workflowVersion triggerKind
-  triggerPayload status error startedAt endedAt rerunOf warningNotes
-  steps { stepId stepKey pieceName blockName status input output port error startedAt endedAt }`;
+const RUN_ROW_FIELDS = `id workflowId workflowName workflowVersion triggerKind
+  triggerPayload status error startedAt endedAt rerunOf warningNotes`;
+const STEP_ROW_FIELDS =
+  "stepId stepKey pieceName blockName status port error startedAt endedAt";
+const RUN_FIELDS = `${RUN_ROW_FIELDS} steps { ${STEP_ROW_FIELDS} input output }`;
+// A listing row: the steps without their input and output.
+const RUN_LIST_FIELDS = `${RUN_ROW_FIELDS} steps { ${STEP_ROW_FIELDS} }`;
 
 export interface RunsScope {
   workflowId?: string;
   // Scopes runs to the workflows the drive holds; ignored alongside workflowId.
   driveId?: string;
   limit?: number;
+  // Left out by the runtime, so they never cost a page its rows.
+  excludeTriggerKinds?: string[];
+}
+
+function scopeVariables(scope: RunsScope, limit: number) {
+  return {
+    workflowId: scope.workflowId ?? null,
+    driveId: scope.driveId ?? null,
+    excludeTriggerKinds: scope.excludeTriggerKinds ?? null,
+    limit: scope.limit ?? limit,
+  };
 }
 
 export async function fetchRuns(
@@ -699,16 +715,38 @@ export async function fetchRuns(
   scope: RunsScope = {},
 ): Promise<RunRecord[]> {
   const data = await t.gql<{ workflowRuntime: { runs: RunRecord[] } }>(
-    `query Runs($workflowId: String, $driveId: String, $limit: Int) {
-      workflowRuntime { runs(workflowId: $workflowId, driveId: $driveId, limit: $limit) { ${RUN_FIELDS} } }
+    `query Runs($workflowId: String, $driveId: String, $limit: Int, $excludeTriggerKinds: [String!]) {
+      workflowRuntime { runs(workflowId: $workflowId, driveId: $driveId, limit: $limit, excludeTriggerKinds: $excludeTriggerKinds) { ${RUN_FIELDS} } }
     }`,
-    {
-      workflowId: scope.workflowId ?? null,
-      driveId: scope.driveId ?? null,
-      limit: scope.limit ?? 30,
-    },
+    scopeVariables(scope, 30),
   );
   return data.workflowRuntime.runs;
+}
+
+// Steps come without input and output; fetchRun has them.
+export interface RunPage {
+  items: RunRecord[];
+  hasNextPage: boolean;
+  cursor: string | null;
+}
+
+export async function fetchRunsPage(
+  t: Transport,
+  scope: RunsScope = {},
+  cursor: string | null = null,
+): Promise<RunPage> {
+  const { limit, ...rest } = scopeVariables(scope, 30);
+  const data = await t.gql<{ workflowRuntime: { runsPage: RunPage } }>(
+    `query RunsPage($workflowId: String, $driveId: String, $excludeTriggerKinds: [String!], $paging: WorkflowRunsPagingInput) {
+      workflowRuntime {
+        runsPage(workflowId: $workflowId, driveId: $driveId, excludeTriggerKinds: $excludeTriggerKinds, paging: $paging) {
+          items { ${RUN_LIST_FIELDS} } hasNextPage cursor
+        }
+      }
+    }`,
+    { ...rest, paging: { limit, cursor } },
+  );
+  return data.workflowRuntime.runsPage;
 }
 
 export async function fetchRun(
@@ -804,6 +842,7 @@ const operations = {
   testStep,
   blockResolutions,
   fetchRuns,
+  fetchRunsPage,
   fetchRun,
   fireWorkflow,
   rerunRun,

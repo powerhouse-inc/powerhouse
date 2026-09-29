@@ -11,7 +11,24 @@ export const schema: DocumentNode = gql`
     Persisted runs, newest first. Scope them to one workflow, or to every
     workflow a drive holds; workflowId wins when both are given.
     """
-    runs(workflowId: String, driveId: String, limit: Int): [WorkflowRunRecord!]!
+    runs(
+      workflowId: String
+      driveId: String
+      limit: Int
+      "Trigger kinds to leave out, e.g. test."
+      excludeTriggerKinds: [String!]
+    ): [WorkflowRunRecord!]!
+    """
+    The same listing a page at a time. Pass a page's cursor back in paging to
+    read the next; a page is short only when hasNextPage is false, or when
+    the caller could read none of a long stretch of runs.
+    """
+    runsPage(
+      workflowId: String
+      driveId: String
+      excludeTriggerKinds: [String!]
+      paging: WorkflowRunsPagingInput
+    ): WorkflowRunResultPage!
     run(id: String!): WorkflowRunRecord
     """
     The descriptor (props, auth, ports) of one action or trigger, as the
@@ -272,6 +289,22 @@ export const schema: DocumentNode = gql`
     "Steps that ran a fallback piece version, edges on ports nothing emits."
     warningNotes: [String!]!
     steps: [WorkflowStepRunRecord!]!
+  }
+
+  input WorkflowRunsPagingInput {
+    "Page size; default 25, at most 100."
+    limit: Int
+    "The cursor of the previous page."
+    cursor: String
+  }
+
+  type WorkflowRunResultPage {
+    items: [WorkflowRunRecord!]!
+    hasNextPage: Boolean!
+    "True when the page was read after a cursor."
+    hasPreviousPage: Boolean!
+    "Resumes after this page's last run; null for an empty page."
+    cursor: String
   }
 
   type WorkflowStepRun {

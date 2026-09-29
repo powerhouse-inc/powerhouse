@@ -73,6 +73,8 @@ describe("shouldPersistQuery", () => {
       runtimeKeys.dynamic(URL_A, input),
       runtimeKeys.connections(URL_A),
       runtimeKeys.runs(URL_A, { workflowId: "w1" }),
+      runtimeKeys.runPages(URL_A, { driveId: "d1" }),
+      runtimeKeys.run(URL_A, "run-1"),
       runtimeKeys.secret(URL_A, "secret://v1:x"),
       runtimeKeys.webhook(URL_A, "w1"),
       runtimeKeys.latestRun(URL_A, "w1"),

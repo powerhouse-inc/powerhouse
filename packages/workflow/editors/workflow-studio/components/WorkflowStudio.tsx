@@ -111,11 +111,8 @@ function Studio(props: { children?: ReactNode }) {
     { workflowId: focusedWorkflow?.id },
     Boolean(focusedWorkflow),
   );
-  const {
-    runs,
-    error: runsError,
-    reload: reloadRuns,
-  } = focusedWorkflow ? workflowFeed : driveFeed;
+  const feed = focusedWorkflow ? workflowFeed : driveFeed;
+  const { runs, error: runsError, reload: reloadRuns } = feed;
   const lastRuns = new Map<string, string>();
   for (const run of driveFeed.runs ?? []) {
     if (!lastRuns.has(run.workflowId)) lastRuns.set(run.workflowId, run.status);
@@ -198,6 +195,9 @@ function Studio(props: { children?: ReactNode }) {
               error={runsError}
               reload={reloadRuns}
               showWorkflow={liveTarget === null}
+              hasMore={feed.hasMore}
+              loadingMore={feed.loadingMore}
+              onLoadMore={feed.loadMore}
               onFire={
                 liveTarget && manualTrigger
                   ? () =>

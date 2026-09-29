@@ -51,6 +51,28 @@ interface RunsArgs {
   workflowId?: string;
   driveId?: string;
   limit?: number;
+  excludeTriggerKinds?: string[];
+}
+
+interface RunsPageArgs {
+  workflowId?: string;
+  driveId?: string;
+  excludeTriggerKinds?: string[];
+  paging?: { limit?: number | null; cursor?: string | null } | null;
+}
+
+// A cursor the runtime did not issue is the caller's error, not ours.
+async function cursorAware<T>(call: () => Promise<T>): Promise<T> {
+  try {
+    return await call();
+  } catch (error) {
+    if (error instanceof Error && error.name === "InvalidRunCursorError") {
+      throw new GraphQLError(error.message, {
+        extensions: { code: "BAD_USER_INPUT" },
+      });
+    }
+    throw error;
+  }
 }
 
 // Whether a runs query reads any step's input or output, so a listing that
@@ -276,6 +298,33 @@ export const getResolvers = (
             ctx,
           )
         ).map((record) => toRunRecord(record.row, record.steps)),
+      runsPage: async (
+        _parent: unknown,
+        args: RunsPageArgs,
+        ctx: Context,
+        info?: GraphQLResolveInfo,
+      ) => {
+        const { paging, ...scope } = args;
+        const page = await cursorAware(() =>
+          runtime.runsPage(
+            {
+              ...scope,
+              limit: paging?.limit ?? undefined,
+              cursor: paging?.cursor ?? null,
+              withStepData: readsStepData(info, ["items"]),
+            },
+            ctx,
+          ),
+        );
+        return {
+          items: page.records.map((record) =>
+            toRunRecord(record.row, record.steps),
+          ),
+          hasNextPage: page.hasNextPage,
+          hasPreviousPage: Boolean(paging?.cursor),
+          cursor: page.cursor,
+        };
+      },
       run: async (_parent: unknown, args: { id: string }, ctx: Context) => {
         const record = await runtime.run(args.id, ctx);
         return record ? toRunRecord(record.row, record.steps) : null;

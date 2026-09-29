@@ -1,6 +1,10 @@
 // One runtime client and query cache per editor instance. Hooks pass the
 // client explicitly, leaving the host's QueryClientProvider alone.
-import { useQuery, type QueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  type QueryClient,
+} from "@tanstack/react-query";
 import {
   createContext,
   useContext,
@@ -25,6 +29,8 @@ import {
   createRuntimeQueryClient,
   pieceActionsQuery,
   pieceTriggersQuery,
+  runPagesQuery,
+  runQuery,
   runsQuery,
   secretStatQuery,
 } from "./runtime-queries.js";
@@ -120,6 +126,37 @@ export function useRunsQuery(
       ...runsQuery(client, scope),
       enabled: options.active ?? true,
       refetchInterval: options.pollMs ?? false,
+    },
+    queryClient,
+  );
+}
+
+// The paged listing; polling refetches every loaded page.
+export function useRunPagesQuery(
+  scope: RunsScope,
+  options: { active?: boolean; pollMs?: number } = {},
+) {
+  const { client, queryClient } = useRuntime();
+  return useInfiniteQuery(
+    {
+      ...runPagesQuery(client, scope),
+      enabled: options.active ?? true,
+      refetchInterval: options.pollMs ?? false,
+    },
+    queryClient,
+  );
+}
+
+// One run with its steps' input and output; polled until it finishes.
+export function useRunQuery(runId: string, options: { pollMs?: number } = {}) {
+  const { client, queryClient } = useRuntime();
+  return useQuery(
+    {
+      ...runQuery(client, runId),
+      refetchInterval: (query) =>
+        options.pollMs && query.state.data?.endedAt == null
+          ? options.pollMs
+          : false,
     },
     queryClient,
   );

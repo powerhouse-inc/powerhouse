@@ -19,7 +19,12 @@ export {
   type ConnectionCheckResult,
   type ConnectionSummary,
   type PersistedRunResult,
+  type RunPage,
+  type RunRecord,
+  type RunsArgs,
+  type RunsPageArgs,
 } from "./reactor/service.js";
+export { InvalidRunCursorError } from "./reactor/run-cursor.js";
 export {
   WorkflowTriggersReadModel,
   WORKFLOW_TRIGGERS_READ_MODEL,

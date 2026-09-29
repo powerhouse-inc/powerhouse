@@ -1,6 +1,7 @@
 // Query options over a RuntimeClient. Keys come from ui/query-keys, so the
 // editor's hooks and these factories address the same cache entries.
 import {
+  infiniteQueryOptions,
   mutationOptions,
   QueryClient,
   queryOptions,
@@ -8,11 +9,13 @@ import {
 } from "@tanstack/react-query";
 import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
 import type {
+  RunPage,
+  RunRecord,
   RunsScope,
   RuntimeClient,
   StepTestResult,
 } from "./runtime-client.js";
-import { realRuns } from "./run-kinds.js";
+import { realRuns, TEST_TRIGGER_KIND } from "./run-kinds.js";
 import { runtimeKeys, SHARED_STALE_MS } from "./ui/query-keys.js";
 
 export function createRuntimeQueryClient(): QueryClient {
@@ -87,22 +90,55 @@ export const stepOutputTreeQuery = (
   });
 
 // Test runs are left out: they belong to the trigger's test, not the history.
+const REAL_RUNS = [TEST_TRIGGER_KIND];
+
 export const runsQuery = (client: RuntimeClient, scope: RunsScope) =>
   queryOptions({
     queryKey: runtimeKeys.runs(client.url, scope),
-    queryFn: () => client.fetchRuns(scope).then(realRuns),
+    queryFn: () =>
+      client
+        .fetchRuns({ ...scope, excludeTriggerKinds: REAL_RUNS })
+        .then(realRuns),
     staleTime: 0,
   });
 
-// Enough rows that a burst of tests can't hide the latest real run.
-export const LATEST_RUN_WINDOW = 10;
+// Tests are left out by the runtime, so the newest row is the latest real run.
+export const LATEST_RUN_WINDOW = 1;
+
+// The runs views' listing, a page at a time, without step input and output.
+export const runPagesQuery = (client: RuntimeClient, scope: RunsScope) =>
+  infiniteQueryOptions({
+    queryKey: runtimeKeys.runPages(client.url, scope),
+    queryFn: ({ pageParam }) =>
+      client.fetchRunsPage(
+        { ...scope, excludeTriggerKinds: REAL_RUNS },
+        pageParam,
+      ),
+    initialPageParam: null as string | null,
+    getNextPageParam: (page: RunPage) =>
+      page.hasNextPage && page.cursor ? page.cursor : undefined,
+    staleTime: 0,
+  });
+
+// Pages flattened, once each: a run that starts moves up past a page break.
+export function runsOfPages(pages: readonly RunPage[]): RunRecord[] {
+  const seen = new Set<string>();
+  return realRuns(pages.flatMap((page) => page.items)).filter((run) => {
+    if (seen.has(run.id)) return false;
+    seen.add(run.id);
+    return true;
+  });
+}
+
+const FINISHED = new Set(["SUCCEEDED", "FAILED"]);
 
 export const runQuery = (client: RuntimeClient, runId: string) =>
   queryOptions({
     queryKey: runtimeKeys.run(client.url, runId),
     queryFn: () => client.fetchRun(runId),
     // A finished run never changes.
-    staleTime: Infinity,
+    staleTime: (query) =>
+      query.state.data && FINISHED.has(query.state.data.status) ? Infinity : 0,
   });
 
 export const connectionsQuery = (client: RuntimeClient) =>
