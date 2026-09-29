@@ -18,6 +18,7 @@ import { CORE_PIECE_NAME } from "@powerhousedao/pieces-framework/workflow";
 import { Checks } from "./lib/checks.js";
 import {
   buildAndPublishFixture,
+  clearDir,
   FIXTURE_ACTION,
   FIXTURE_PACKAGE,
   FIXTURE_PIECE_DIR,
@@ -57,6 +58,9 @@ const PROJECT_DIR = path.join(WORK_DIR, "project");
 // A sibling of the project above, so nothing of the install reaches it by
 // walking up the tree.
 const REGISTRY_PROJECT_DIR = path.join(WORK_DIR, "registry-project");
+// Package manager metadata, fresh each run: pnpm trusts a cached exact version,
+// so the republished fixture would otherwise keep last run's dependencies.
+const PM_CACHE_DIR = path.join(WORK_DIR, "pm-cache");
 const PORT = Number(process.env.PH_WORKFLOW_E2E_PORT ?? 4021);
 // The second reactor, run against the fixture package itself.
 const FIXTURE_PORT = PORT + 1;
@@ -166,6 +170,11 @@ async function main(): Promise<void> {
   };
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
+
+  clearDir(PM_CACHE_DIR);
+  // Inherited by every install this flow spawns, ph-cli's included.
+  process.env.PNPM_CONFIG_CACHE_DIR = PM_CACHE_DIR;
+  process.env.npm_config_cache = PM_CACHE_DIR;
 
   try {
     step("1/8 Start the local registry");
