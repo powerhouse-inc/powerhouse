@@ -115,6 +115,12 @@ export type SyncOperationErrorType =
   | "PEER_PROTOCOL_UNSUPPORTED"
   /** An arriving operation carried a timestamp that is not an ISO-8601 instant. */
   | "INVALID_TIMESTAMP"
+  /** The document was purged here; its operations are dropped, not kept. */
+  | "DOCUMENT_PURGED"
+  /** A purge's precondition failed; the document itself is unaffected. */
+  | "PURGE_PRECONDITION"
+  /** A peer sent a reserved action type as a regular write. */
+  | "RESERVED_ACTION"
   /** No classification applies, including rows written before the field. */
   | "UNCLASSIFIED";
 
@@ -211,6 +217,7 @@ export const SyncEventTypes = {
   CONNECTION_STATE_CHANGED: 20005,
   SYNC_HELD: 20006,
   SYNC_RELEASED: 20007,
+  PURGE_REFUSED: 20008,
 } as const;
 
 /** A document held back from one remote because its peer cannot run it. */
@@ -227,6 +234,14 @@ export type SyncHeldEvent = {
   documentId: string;
   branch: string;
   reason: HoldReason;
+};
+
+/** A remote reported it could not apply a purged document's marker. */
+export type SyncPurgeRefusedEvent = {
+  remoteName: string;
+  documentId: string;
+  branch: string;
+  errorMessage: string;
 };
 
 export type SyncReleasedEvent = {
