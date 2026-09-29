@@ -148,7 +148,8 @@ describe("reactor builder caches for a purged id", () => {
 
     expect(writeCache.getStream(documentId, "document", "main")).toBeDefined();
   });
-});
-it("exposes the purge service on the module", () => {
-  expect(module.documentPurgeService).toBeInstanceOf(DocumentPurgeService);
+
+  it("exposes the purge service on the module", () => {
+    expect(module.documentPurgeService).toBeInstanceOf(DocumentPurgeService);
+  });
 });
