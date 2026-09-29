@@ -983,7 +983,8 @@ export interface ISyncDeadLetterStorage {
   ): Promise<PagedResults<DeadLetterRecord>>;
 
   /**
-   * Adds a dead letter. Duplicate ids are silently ignored.
+   * Adds a dead letter. Duplicate ids are silently ignored. Throws
+   * DocumentPurgedError, persisting nothing, when the document is purged.
    *
    * @param deadLetter - The dead letter record to persist
    * @param signal - Optional abort signal to cancel the request
