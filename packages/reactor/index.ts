@@ -150,6 +150,7 @@ export {
   type ReadModelBatchCompletedEvent,
   type ReadModelIndexedEvent,
   type CatchUpSweptEvent,
+  type PurgeMarkerContext,
   type ReadModelStage,
   type ReadModelIndexingStage,
   type SignatureRefusedEvent,
