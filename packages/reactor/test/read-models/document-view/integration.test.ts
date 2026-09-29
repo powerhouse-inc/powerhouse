@@ -3000,11 +3000,11 @@ describe("KyselyDocumentView", () => {
       let fired = false;
       let inBetween = false;
       const target = chunkedView as unknown as {
-        commitOperations: (items: OperationWithContext[]) => Promise<void>;
+        commitFenced: (items: OperationWithContext[]) => Promise<void>;
       };
-      const commit = target.commitOperations.bind(chunkedView);
+      const commit = target.commitFenced.bind(chunkedView);
 
-      target.commitOperations = async (items: OperationWithContext[]) => {
+      target.commitFenced = async (items: OperationWithContext[]) => {
         await commit(items);
         if (inBetween) return;
 

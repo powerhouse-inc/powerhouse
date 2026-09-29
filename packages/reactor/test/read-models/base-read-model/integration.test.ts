@@ -577,14 +577,14 @@ describe("BaseReadModel chunked indexing", () => {
     const seen: number[][] = [];
     const commit = (
       view as unknown as {
-        commitOperations: (i: OperationWithContext[]) => Promise<void>;
+        commitFenced: (i: OperationWithContext[]) => Promise<void>;
       }
-    ).commitOperations.bind(view);
+    ).commitFenced.bind(view);
     (
       view as unknown as {
-        commitOperations: (i: OperationWithContext[]) => Promise<void>;
+        commitFenced: (i: OperationWithContext[]) => Promise<void>;
       }
-    ).commitOperations = async (items: OperationWithContext[]) => {
+    ).commitFenced = async (items: OperationWithContext[]) => {
       seen.push(items.map((i) => i.operation.index));
       await commit(items);
     };
@@ -716,14 +716,14 @@ describe("BaseReadModel chunked indexing", () => {
     const ordinalsSeenMidPass: (number | undefined)[] = [];
     const commit = (
       view as unknown as {
-        commitOperations: (i: OperationWithContext[]) => Promise<void>;
+        commitFenced: (i: OperationWithContext[]) => Promise<void>;
       }
-    ).commitOperations.bind(view);
+    ).commitFenced.bind(view);
     (
       view as unknown as {
-        commitOperations: (i: OperationWithContext[]) => Promise<void>;
+        commitFenced: (i: OperationWithContext[]) => Promise<void>;
       }
-    ).commitOperations = async (items: OperationWithContext[]) => {
+    ).commitFenced = async (items: OperationWithContext[]) => {
       await commit(items);
       const row = await db
         .selectFrom("ViewState")
