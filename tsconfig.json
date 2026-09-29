@@ -26,6 +26,9 @@
       "path": "packages/reactor-hypercore"
     },
     {
+      "path": "packages/reactor-privacy"
+    },
+    {
       "path": "packages/shared"
     },
     {

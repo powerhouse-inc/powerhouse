@@ -1,0 +1,52 @@
+{
+  "name": "@powerhousedao/reactor-privacy",
+  "version": "6.2.3-dev.32",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/reactor-privacy"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "source": "./index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "cd ../.. && oxlint packages/reactor-privacy",
+    "build": "tsdown",
+    "test": "vitest --run"
+  },
+  "dependencies": {
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "kysely": "catalog:"
+  },
+  "devDependencies": {
+    "@types/pg": "catalog:",
+    "pg": "catalog:",
+    "tsdown": "catalog:",
+    "vitest": "catalog:"
+  },
+  "description": "GDPR add-on for the Powerhouse reactor: the subject index, disclosure, and the erasure request ledger.",
+  "keywords": [
+    "powerhouse",
+    "reactor",
+    "privacy",
+    "gdpr",
+    "erasure",
+    "disclosure"
+  ],
+  "homepage": "https://academy.vetra.io/academy/Reference/Reactor/WorkingWithTheReactor"
+}

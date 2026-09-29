@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./.tsbuild"
+  },
+  "include": ["**/*"],
+  "references": [
+    {
+      "path": "../reactor"
+    },
+    {
+      "path": "../shared"
+    }
+  ]
+}
