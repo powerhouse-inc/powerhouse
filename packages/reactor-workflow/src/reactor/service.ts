@@ -183,6 +183,9 @@ import {
 import {
   MAX_LIST_RUNS,
   WorkflowRunStore,
+  journaledTriggerDocumentIds,
+  triggerDocumentIds,
+  type ErasedRuns,
   type RunRow,
   type StepExecutionRow,
   type TriggerStateRow,
@@ -383,29 +386,6 @@ function stringField(
 ): string | undefined {
   const value = record[key];
   return typeof value === "string" && value !== "" ? value : undefined;
-}
-
-// The documents a run's trigger names: the one whose operation fired it, and
-// the drive it sits in.
-function journaledTriggerDocumentIds(payload: string | null): string[] {
-  if (payload === null) return [];
-  try {
-    return triggerDocumentIds(JSON.parse(payload));
-  } catch {
-    return [];
-  }
-}
-
-function triggerDocumentIds(payload: unknown): string[] {
-  const record = inputRecord(payload);
-  return [
-    ...new Set(
-      [
-        stringField(record, "documentId"),
-        stringField(record, "driveId"),
-      ].filter((id): id is string => id !== undefined),
-    ),
-  ];
 }
 
 const ABSENT_ERROR_NAMES = new Set([
@@ -1293,6 +1273,27 @@ export class WorkflowRuntimeService {
       if (evicted) this.seenOps.delete(evicted);
     }
     return false;
+  }
+
+  // Throws on a failed delete, so the read model's cursor holds and retries.
+  async onDocumentsPurged(documentIds: string[]): Promise<ErasedRuns | null> {
+    const store = await this.store();
+    if (!store) {
+      this.logger.error(
+        "Run journal unavailable; runs of purged documents @ids were not erased",
+        documentIds,
+      );
+      return null;
+    }
+    const erased = await store.eraseRunsForDocuments(documentIds);
+    if (erased.runs > 0) {
+      this.logger.info(
+        "Erased @runs workflow run(s) of purged documents @ids",
+        erased.runs,
+        documentIds,
+      );
+    }
+    return erased;
   }
 
   // Called by the workflow-triggers read model. Registry updates and the
