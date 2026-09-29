@@ -294,6 +294,10 @@ PH_WORKFLOWS_SECRETS_MASTER_KEY=<64 hex chars>
 PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES=127.0.0.1/32,::1/128
 ```
 
+`ph vetra` and `ph switchboard --dev` add `127.0.0.1/32,::1/128` to
+`PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES` themselves, keeping any addresses already
+in it, so pieces can reach services on your machine during development.
+
 **Webhook origin.** A webhook URL the runtime hands out uses `PUBLIC_URL`, then
 `RENDER_EXTERNAL_URL`, then `HEROKU_APP_DEFAULT_DOMAIN_NAME`, and falls back to
 `http://localhost:<port>`. Set one of them wherever a provider has to reach the

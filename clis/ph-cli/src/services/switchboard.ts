@@ -7,6 +7,22 @@ import type { ILogger } from "document-model";
 import path from "node:path";
 import type { SwitchboardArgs } from "../types.js";
 
+const EGRESS_ALLOW_ENV = "PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES";
+const LOCALHOST_ADDRESSES = ["127.0.0.1/32", "::1/128"];
+
+// Lets pieces reach services on this machine, keeping any addresses already set
+export function allowLocalhostEgress(env: NodeJS.ProcessEnv = process.env) {
+  const current = (env[EGRESS_ALLOW_ENV] ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== "");
+  const missing = LOCALHOST_ADDRESSES.filter(
+    (address) => !current.includes(address),
+  );
+  if (missing.length > 0)
+    env[EGRESS_ALLOW_ENV] = [...current, ...missing].join(",");
+}
+
 export const defaultSwitchboardOptions = {
   port: 4001,
   dbPath: path.join(process.cwd(), ".ph/read-model.db"),
@@ -68,6 +84,9 @@ export async function startSwitchboard(
     requireIdentity,
     ...serverOptions
   } = options;
+
+  // Vetra and dev mode run against local services
+  if (useVetraDrive || serverOptions.dev) allowLocalhostEgress();
 
   // Choose the appropriate default configuration
   const defaultOptions = useVetraDrive
