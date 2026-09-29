@@ -34,6 +34,13 @@ export {
   mentionsOf,
   type SubjectMention,
 } from "./read-model/subjects.js";
+export type {
+  ErasureItem,
+  ErasurePlan,
+  ErasurePlanItem,
+  ErasureRequest,
+  IErasureService,
+} from "./erasure/types.js";
 export {
   DISCLOSURE_NOT_COVERED,
   DisclosureService,
