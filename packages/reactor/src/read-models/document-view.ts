@@ -13,6 +13,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
+import { DocumentNotFoundError } from "../shared/errors.js";
 import { DOCUMENT_VIEW_READ_MODEL } from "./names.js";
 import type {
   ConsistencyToken,
@@ -428,7 +429,10 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     const snapshots = await query.execute();
 
     if (snapshots.length === 0) {
-      throw new Error(`Document not found: ${documentId}`);
+      throw new DocumentNotFoundError(
+        documentId,
+        `Document not found: ${documentId}`,
+      );
     }
 
     if (signal?.aborted) {
@@ -810,7 +814,10 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     const resolvedDocumentId = idMatchDocId || slugMatchDocId;
 
     if (!resolvedDocumentId) {
-      throw new Error(`Document not found: ${identifier}`);
+      throw new DocumentNotFoundError(
+        identifier,
+        `Document not found: ${identifier}`,
+      );
     }
 
     return resolvedDocumentId;

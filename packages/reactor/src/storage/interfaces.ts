@@ -517,6 +517,7 @@ export interface IDocumentView extends IReadModel {
    * @param view - Optional filter containing branch and scopes information
    * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
+   * @throws {DocumentNotFoundError} If the view does not hold the document
    */
   get<TDocument extends PHDocument>(
     documentId: string,
@@ -548,6 +549,7 @@ export interface IDocumentView extends IReadModel {
    * @param view - Optional filter containing branch and scopes information
    * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
+   * @throws {DocumentNotFoundError} If neither an id nor a slug matches
    * @throws {Error} If identifier matches both an ID and slug referring to different documents
    */
   getByIdOrSlug<TDocument extends PHDocument>(
@@ -616,7 +618,8 @@ export interface IDocumentView extends IReadModel {
    * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    * @returns The document ID
-   * @throws {Error} If document not found or identifier matches both an ID and slug referring to different documents
+   * @throws {DocumentNotFoundError} If neither an id nor a slug matches
+   * @throws {Error} If identifier matches both an ID and slug referring to different documents
    */
   resolveIdOrSlug(
     identifier: string,
