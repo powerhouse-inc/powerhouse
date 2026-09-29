@@ -54,6 +54,7 @@ import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   DocumentDeletedError,
   DocumentNotFoundError,
+  ReservedActionError,
   UnsupportedProtocolVersionError,
   UpgradePreconditionFailedError,
 } from "../shared/errors.js";
@@ -78,6 +79,7 @@ import {
   GATED_DOCUMENT_ACTIONS,
   getNextIndexForScope,
   refusalError,
+  relationshipTarget,
   targetDocumentId,
   updateDocumentRevision,
 } from "./util.js";
@@ -163,6 +165,12 @@ export class DocumentActionHandler {
         return this.executeRemoveRelationship(write, executing);
       case "UPDATE_RELATIONSHIP":
         return this.executeUpdateRelationship(write, executing);
+      case "PURGE_DOCUMENT":
+        return buildErrorResult(
+          executing.job,
+          new ReservedActionError(executing.job.documentId, action.type),
+          executing.startTime,
+        );
       default:
         return buildErrorResult(
           executing.job,
@@ -924,10 +932,24 @@ export class DocumentActionHandler {
     );
   }
 
-  private executeAddRelationship(
+  private async executeAddRelationship(
     write: PendingWrite,
     executing: ExecutingJob,
   ): Promise<RelationshipJobResult> {
+    // A submitted write naming a purged target was refused at job start.
+    const target = relationshipTarget(write.action);
+    let targetPurged = false;
+    if (target !== undefined && executing.purgeFence) {
+      try {
+        targetPurged = await executing.purgeFence.isPurged(target);
+      } catch (error) {
+        return buildErrorResult(
+          executing.job,
+          error instanceof Error ? error : new Error(String(error)),
+          executing.startTime,
+        );
+      }
+    }
     return this.withRelationshipAction(
       "ADD_RELATIONSHIP",
       write,
@@ -939,7 +961,10 @@ export class DocumentActionHandler {
             )
           : null,
       ({ indexTxn: txn, stores: s, sourceDoc, input, job: j }) => {
-        if (this.driveContainerTypes.has(sourceDoc.header.documentType)) {
+        if (
+          !targetPurged &&
+          this.driveContainerTypes.has(sourceDoc.header.documentType)
+        ) {
           const collectionId = DriveCollectionId.forDrive(
             input.sourceId,
             j.branch,

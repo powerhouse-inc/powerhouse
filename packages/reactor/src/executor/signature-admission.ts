@@ -223,6 +223,32 @@ export class SignatureAdmission {
     return dropped;
   }
 
+  /** A marker is held to v2 whatever the policy; unsigned never passes. */
+  async admitMarker(
+    job: Job,
+    marker: Operation,
+    signal?: AbortSignal,
+  ): Promise<InvalidSignatureError | undefined> {
+    const entry: Candidate = {
+      ...candidate(marker.action, {
+        documentId: job.documentId,
+        scope: "document",
+        branch: job.branch,
+      }),
+      operation: marker,
+      policy: "v2-required",
+    };
+    const verdict = await this.verdict(entry, new Set(), undefined, "load", signal);
+    if (verdict.ok) {
+      return undefined;
+    }
+    const refusal = this.record(job, entry, verdict, "load");
+    if (refusal || verdict.scheme !== "unsigned") {
+      return refusal;
+    }
+    return new InvalidSignatureError(job.documentId, verdict.code, verdict.reason);
+  }
+
   private async verdict(
     entry: Candidate,
     live: Set<string>,
