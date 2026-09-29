@@ -855,5 +855,16 @@ describe("NodeProcessor", () => {
       const ids = (await nodesOf("drive-a")).map((row) => row.id).sort();
       expect(ids).toEqual(["fa", "file-2"]);
     });
+
+    it("clears a deleted drive's folders on DELETE_DOCUMENT", async () => {
+      await seedTwoDrives();
+
+      await processor.indexOperations([
+        wrap(deleteDocumentAction("drive-a"), "drive-a"),
+      ]);
+
+      expect(await nodesOf("drive-a")).toHaveLength(0);
+      expect(await nodesOf("drive-b")).toHaveLength(2);
+    });
   });
 });

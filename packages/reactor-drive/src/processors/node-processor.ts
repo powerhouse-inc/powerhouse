@@ -317,10 +317,7 @@ export class NodeProcessor extends BaseReadModel {
     item: OperationWithContext,
   ): Promise<void> {
     const input = item.operation.action.input as DeleteDocumentActionInput;
-    const docId = input.documentId || item.context.documentId;
-
-    await trx.deleteFrom("DriveNode").where("id", "=", docId).execute();
-    await trx.deleteFrom("DocumentName").where("docId", "=", docId).execute();
+    await this.eraseDocument(trx, input.documentId || item.context.documentId);
   }
 
   /** The id's nodes in every drive, a drive's own tree, and its name. */
