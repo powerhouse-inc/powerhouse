@@ -35,7 +35,7 @@ import {
   PieceWorkerPool,
   PieceWorkerTimeoutError,
   rememberSecrets,
-  resolveExpressions,
+  resolveStepInput,
   runWorkflow,
   UnsupportedPieceFeatureError,
   authMethodFor,
@@ -3654,7 +3654,7 @@ export class WorkflowRuntimeService {
     // them to the step as if they were values.
     let input: unknown;
     try {
-      input = resolveExpressions(step.config, {
+      input = resolveStepInput(definition.steps[0], {
         trigger: { payload: upstream.triggerPayload },
         steps: upstream.priorSteps,
         variables: Object.fromEntries(variables.map((v) => [v.key, v.value])),

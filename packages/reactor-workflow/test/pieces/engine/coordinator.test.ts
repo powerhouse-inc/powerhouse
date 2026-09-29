@@ -407,6 +407,52 @@ describe("runWorkflow", () => {
     });
   });
 
+  describe("existence operators", () => {
+    const branchOn = (operator: string, left: string) =>
+      runWorkflow({
+        definition: {
+          trigger: TRIGGER,
+          steps: [
+            {
+              id: "br",
+              key: "check",
+              pieceName: CORE_PIECE_NAME,
+              pieceVersion: CORE_PIECE_VERSION,
+              actionName: "branch",
+              config: { operator, left },
+              propertySettings: expressions("left"),
+            },
+          ],
+          edges: [edge("e1", "t", "br")],
+        },
+        executor: new ActivepiecesBlockExecutor({ cacheDir: "/tmp/na" }),
+        triggerPayload: { body: { coupon: "SAVE10" } },
+      });
+
+    it.each([
+      ["EXISTS", "{{trigger.payload.body.coupon}}", "true"],
+      ["EXISTS", "{{trigger.payload.body.discount}}", "false"],
+      ["DOES_NOT_EXIST", "{{trigger.payload.body.coupon}}", "false"],
+      ["DOES_NOT_EXIST", "{{trigger.payload.body.discount}}", "true"],
+      ["DOES_NOT_EXIST", "{{trigger.payload.cart.items}}", "true"],
+    ])("%s on %s takes %s", async (operator, left, port) => {
+      const run = await branchOn(operator, left);
+      expect(run.status).toBe("SUCCEEDED");
+      expect(run.steps[0]).toMatchObject({ status: "SUCCEEDED", port });
+    });
+
+    it("still fails another operator on a missing reference", async () => {
+      const run = await branchOn(
+        "TEXT_EXACTLY_MATCHES",
+        "{{trigger.payload.body.discount}}",
+      );
+      expect(run.status).toBe("FAILED");
+      expect(run.steps[0]?.error).toContain(
+        "Unresolved reference {{trigger.payload.body.discount}}",
+      );
+    });
+  });
+
   it("honors edge conditions", async () => {
     const executor = new FakeExecutor();
     const definition: WorkflowDefinition = {
