@@ -2,8 +2,11 @@ import { sql, type Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
-import type { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
-import { createTestOperationStorePostgres } from "../../factories.js";
+import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
+import {
+  REACTOR_SCHEMA,
+  runMigrations,
+} from "../../../src/storage/migrations/migrator.js";
 import { TestP256Signer } from "../../utils/p256-signer.js";
 import {
   PURGE_TEST_DOCUMENT_TYPE,
@@ -16,6 +19,7 @@ import {
   expectNoRowsFor,
   expectPurged,
   KEPT_TABLES,
+  PgDatabase,
   type ReactorDb,
 } from "./harness.js";
 
@@ -96,11 +100,14 @@ describe("the e2e delete list [Postgres]", () => {
   let cleanup: () => Promise<void>;
 
   beforeEach(async () => {
-    const setup = await createTestOperationStorePostgres();
-    db = setup.db as unknown as ReactorDb;
-    schema = setup.schema;
-    store = setup.store;
-    cleanup = setup.cleanup;
+    // Its own database: factory schema names can collide across workers.
+    const pg = await PgDatabase.create("reactor_e2e_delete_list");
+    const migrated = await runMigrations(pg.base, REACTOR_SCHEMA);
+    if (!migrated.success && migrated.error) throw migrated.error;
+    db = pg.reactor;
+    schema = REACTOR_SCHEMA;
+    store = new KyselyOperationStore(db as unknown as Kysely<StorageDatabase>);
+    cleanup = () => pg.destroy();
     await sql`insert into ${sql.id(schema, "sync_remotes")}
       (name, collection_id, channel_type) values ('r', 'c', 'internal')`.execute(
       db,

@@ -22,7 +22,7 @@ import { buildSingleJobMeta } from "../../../src/core/utils.js";
 import type { JobWriteReadyEvent } from "../../../src/events/types.js";
 import type { Job } from "../../../src/queue/types.js";
 import { DocumentNotFoundError } from "../../../src/shared/errors.js";
-import { JobStatus } from "../../../src/shared/types.js";
+import { JobStatus, type JobInfo } from "../../../src/shared/types.js";
 import { DocumentExistence } from "../../../src/storage/interfaces.js";
 
 import { createDocModelDocument } from "../../factories.js";
@@ -293,9 +293,10 @@ describe("resurrection probes [Postgres]", () => {
 
     const rowLock = await holdRowLock(node.db, "y", "header");
     let purgeJobId: string | undefined;
+    let applying: Promise<void> | undefined;
     try {
       // y first: the transaction stalls on y's row before it touches x.
-      const applying = node.module.documentView.indexOperations([
+      applying = node.module.documentView.indexOperations([
         ...yEdit.operations,
         ...xEdit.operations,
       ]);
@@ -316,6 +317,7 @@ describe("resurrection probes [Postgres]", () => {
       await applying;
     } finally {
       await rowLock.release().catch(() => undefined);
+      await applying?.catch(() => undefined);
     }
 
     await waitForTombstone(node.db, "x");
@@ -369,8 +371,9 @@ describe("resurrection probes [Postgres]", () => {
     expect(adoption.action.type).toBe("ADD_RELATIONSHIP");
 
     const hold = await holdIndexCommitOn(node, "d");
+    let loading: Promise<unknown> | undefined;
     try {
-      const loading = node.reactor.load("d", "main", [adoption]);
+      loading = node.reactor.load("d", "main", [adoption]);
       await hold.waitUntilHeld();
 
       const purgeJob = await enqueuePurge(node, "x");
@@ -382,10 +385,11 @@ describe("resurrection probes [Postgres]", () => {
       );
       await hold.release();
 
-      await succeeded(node.reactor, loading);
+      await succeeded(node.reactor, loading as Promise<JobInfo>);
       await waitForJob(node.reactor, purgeJob.id);
     } finally {
       await hold.remove();
+      await loading?.catch(() => undefined);
     }
     await node.module.readModelCoordinator.drain();
 
@@ -551,6 +555,11 @@ describe("resurrection probes [Postgres]", () => {
     const earlier = (await documentOps(peer, "d")).at(-1)!;
     await quiesce(5);
     await adopt(node, "d", "x");
+    const local = (await documentOps(node.reactor, "d")).at(-1)!;
+    expect(
+      Date.parse(local.timestampUtcMs),
+      "the local adoption is later",
+    ).toBeGreaterThan(Date.parse(earlier.timestampUtcMs));
     await remove(node, "x");
     const { ordinal } = await purge(node, "x");
     const reopened = await memberships(node.db, "x");
@@ -636,10 +645,24 @@ describe("resurrection probes [Postgres]", () => {
       "getByOrdinals",
       namesDocument("x"),
     );
-    const sweeping = node.module.catchUp.sweepNow();
+    // A sweep claims the ordinal only once the shared cluster lets it settle.
+    let entered = false;
+    void byOrdinals.entered.then(() => {
+      entered = true;
+    });
+    let sweeping: Promise<unknown> = Promise.resolve();
     let ordinal: number;
     try {
-      await byOrdinals.entered;
+      await until(
+        "a sweep fetches x's operations",
+        async () => {
+          if (entered) return true;
+          sweeping = node.module.catchUp.sweepNow();
+          await Promise.race([sweeping, byOrdinals.entered]);
+          return entered;
+        },
+        15_000,
+      );
       ({ ordinal } = await purge(node, "x"));
     } finally {
       byOrdinals.open();
