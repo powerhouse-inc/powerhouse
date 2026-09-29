@@ -555,6 +555,14 @@ export function classifyJobFailure(errorName: string): SyncOperationErrorType {
       return "HASH_MISMATCH";
     case "UnsupportedProtocolVersionError":
       return "UNSUPPORTED_PROTOCOL";
+    case "DocumentPurgedError":
+      return "DOCUMENT_PURGED";
+    case "DocumentNotDeletedError":
+    case "GroupInUseError":
+    case "PurgeTooLargeError":
+      return "PURGE_PRECONDITION";
+    case "ReservedActionError":
+      return "RESERVED_ACTION";
     default:
       return "UNCLASSIFIED";
   }
@@ -573,6 +581,8 @@ const NON_QUARANTINING_ERROR_TYPES: ReadonlySet<SyncOperationErrorType> =
     "AUTH_TIMESTAMP_NOT_MONOTONIC",
     "UNSUPPORTED_PROTOCOL",
     "PEER_PROTOCOL_UNSUPPORTED",
+    "DOCUMENT_PURGED",
+    "PURGE_PRECONDITION",
   ]);
 
 /**

@@ -10,12 +10,14 @@ import {
   coversLocal,
   DOCUMENT_PURGE_PROTOCOL,
   isOlderManifest,
+  isPurgeMarker,
   holdReason,
   legacySupports,
   localPeerManifest,
   localSupports,
   PEER_CAPABILITIES,
   peerSupports,
+  purgedProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type {
@@ -35,6 +37,7 @@ import {
   type JobWriteReadyEvent,
 } from "../events/types.js";
 import { JobAwaiter } from "../shared/awaiter.js";
+import { DocumentPurgedError } from "../shared/errors.js";
 import {
   JobStatus,
   type ErrorInfo,
@@ -74,12 +77,14 @@ import type {
   ConnectionStateChangedEvent,
   DeadLetterAddedEvent,
   LocalPeer,
+  PurgeLookup,
   RemoteFilter,
   RemoteOptions,
   RemoteRecord,
   SyncHeldEvent,
   SyncHold,
   SyncOperationErrorType,
+  SyncPurgeRefusedEvent,
   SyncReleasedEvent,
   SyncResult,
 } from "./types.js";
@@ -178,6 +183,15 @@ function createdVersions(
   return undefined;
 }
 
+/** The load was refused because the id is purged here: a drop. */
+function isPurgedFailure(error: ErrorInfo | undefined): boolean {
+  return error?.name === "DocumentPurgedError";
+}
+
+function carriesMarker(syncOp: SyncOperation): boolean {
+  return syncOp.operations.some((op) => isPurgeMarker(op));
+}
+
 /** A job's dependency chain through one derivation's emitted batches. */
 type EmitChain = {
   lastJobByDoc: Map<string, string>;
@@ -213,6 +227,9 @@ export class SyncManager implements ISyncManager {
   private readonly connectionStateUnsubscribes: Map<string, () => void> =
     new Map();
   private readonly quarantinedDocumentIds = new Set<string>();
+  private readonly purgedDocumentIds = new Set<string>();
+  private readonly purges?: PurgeLookup;
+  private readonly forgetDocument?: (documentId: string) => void;
   private readonly backfillAbortControllers = new Map<
     string,
     AbortController
@@ -260,8 +277,11 @@ export class SyncManager implements ISyncManager {
     config: Partial<SyncManagerConfig> = {},
     localPeer: LocalPeer = { capabilities: PEER_CAPABILITIES, flags: {} },
     holds: ISyncHoldStorage = new InMemorySyncHoldStorage(),
+    purges?: PurgeLookup,
   ) {
     this.watermark = watermark;
+    this.purges = purges;
+    this.forgetDocument = localPeer.forgetDocument;
     this.capabilities = localPeer.capabilities;
     // A restart always moves the start time forward, which is all ordering needs.
     this.manifest = localPeerManifest(
@@ -324,6 +344,17 @@ export class SyncManager implements ISyncManager {
     } catch (error) {
       this.logger.error(
         "Failed to load quarantined document IDs (@error)",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+
+    try {
+      for (const id of (await this.purges?.listPurged()) ?? []) {
+        this.purgedDocumentIds.add(id);
+      }
+    } catch (error) {
+      this.logger.error(
+        "Failed to load purged document IDs (@error)",
         error instanceof Error ? error.message : String(error),
       );
     }
@@ -615,6 +646,37 @@ export class SyncManager implements ISyncManager {
     return held;
   }
 
+  /** Once per id: a second pass would drop the holds its marker earned. */
+  private tombstone(documentId: string): void {
+    if (this.purgedDocumentIds.has(documentId)) return;
+    this.purgedDocumentIds.add(documentId);
+    this.quarantinedDocumentIds.delete(documentId);
+    const prefix = holdKey(documentId, "");
+    for (const key of [...this.versionCache.keys()]) {
+      if (key.startsWith(prefix)) this.versionCache.delete(key);
+    }
+    this.forgetDocument?.(documentId);
+    for (const held of this.heldKeys.values()) {
+      for (const [key, record] of [...held]) {
+        if (record.documentId === documentId) held.delete(key);
+      }
+    }
+    for (const remote of this.remotes.values()) {
+      const unsent = remote.channel.outbox.items.filter(
+        (item) =>
+          item.documentId === documentId &&
+          item.status === SyncOperationStatus.Unknown &&
+          item.emittedCount === 0 &&
+          !carriesMarker(item),
+      );
+      if (unsent.length > 0) remote.channel.outbox.remove(...unsent);
+      const dead = remote.channel.deadLetter.items.filter(
+        (item) => item.documentId === documentId,
+      );
+      if (dead.length > 0) remote.channel.deadLetter.remove(...dead);
+    }
+  }
+
   private async forgetRemote(name: string): Promise<void> {
     this.records.delete(name);
     this.heldKeys.delete(name);
@@ -625,11 +687,14 @@ export class SyncManager implements ISyncManager {
     return peerSupports(remote.meta.peer?.manifest ?? null, this.capabilities);
   }
 
-  /** Cached once found: a document's versions never change. */
+  /** Cached once found: a document's versions change only by a purge. */
   private async versionsOf(
     documentId: string,
     branch: string,
   ): Promise<ProtocolVersions | undefined> {
+    if (this.purgedDocumentIds.has(documentId)) {
+      return purgedProtocolVersions();
+    }
     const key = holdKey(documentId, branch);
     const cached = this.versionCache.get(key);
     if (cached) return cached;
@@ -847,6 +912,8 @@ export class SyncManager implements ISyncManager {
     const peer = this.peerSupportsOf(remote);
     const refused = new Set<SyncOperation>();
     for (const syncOp of syncOps) {
+      // A marker runs no reducer, so neither side's versions bear on it.
+      if (carriesMarker(syncOp)) continue;
       const versions =
         createdVersions(syncOp.operations, syncOp.documentId) ??
         (await this.versionsOf(syncOp.documentId, syncOp.branch));
@@ -1227,7 +1294,30 @@ export class SyncManager implements ISyncManager {
           void this.holdRefused(remote, syncOp).catch(() => {});
         }
       }
-      const syncOps = added.filter((syncOp) => !refusals.includes(syncOp));
+      const remaining = added.filter((syncOp) => !refusals.includes(syncOp));
+      // Quarantine would withhold the marker; persisting would keep a payload.
+      const purged = remaining.filter((syncOp) =>
+        this.purgedDocumentIds.has(syncOp.documentId),
+      );
+      for (const syncOp of purged) {
+        this.logger.warn(
+          "Dead letter for purged document (@remote, @documentId, @error)",
+          remote.meta.name,
+          syncOp.documentId,
+          syncOp.error?.message ?? "unknown",
+        );
+        if (syncOp.error?.source !== ChannelErrorSource.Outbox) continue;
+        void this.eventBus
+          .emit(SyncEventTypes.PURGE_REFUSED, {
+            remoteName: remote.meta.name,
+            documentId: syncOp.documentId,
+            branch: syncOp.branch,
+            errorMessage: syncOp.error.error.message,
+          } satisfies SyncPurgeRefusedEvent)
+          .catch(() => {});
+      }
+      if (purged.length > 0) remote.channel.deadLetter.remove(...purged);
+      const syncOps = remaining.filter((syncOp) => !purged.includes(syncOp));
 
       for (const syncOp of syncOps) {
         this.logger.error(
@@ -1262,6 +1352,10 @@ export class SyncManager implements ISyncManager {
         };
 
         void this.deadLetterStorage.add(record).catch((err) => {
+          if (DocumentPurgedError.isError(err)) {
+            this.tombstone(record.documentId);
+            return;
+          }
           this.logger.error(
             "Failed to persist dead letter (@id, @error)",
             record.id,
@@ -1361,6 +1455,12 @@ export class SyncManager implements ISyncManager {
 
   private async processCompleteBatch(batch: PreparedBatch): Promise<void> {
     if (this.isShutdown) return;
+
+    for (const { event } of batch.entries) {
+      for (const op of event.operations) {
+        if (isPurgeMarker(op)) this.tombstone(op.context.documentId);
+      }
+    }
 
     // get the unique set of collection ids
     const collectionIds = [
@@ -1462,9 +1562,27 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
-    const eligible = syncOps.filter(
-      (op) => !this.quarantinedDocumentIds.has(op.documentId),
-    );
+    const eligible: SyncOperation[] = [];
+    const dropped: SyncOperation[] = [];
+    for (const syncOp of syncOps) {
+      if (carriesMarker(syncOp)) {
+        eligible.push(syncOp);
+      } else if (this.purgedDocumentIds.has(syncOp.documentId)) {
+        dropped.push(syncOp);
+      } else if (!this.quarantinedDocumentIds.has(syncOp.documentId)) {
+        eligible.push(syncOp);
+      }
+    }
+    // A purged id's history is gone here; a job or a dead letter would restore it.
+    for (const syncOp of dropped) {
+      this.logger.debug(
+        "Dropping received operations of purged document (@remote, @documentId)",
+        remote.meta.name,
+        syncOp.documentId,
+      );
+      syncOp.executed();
+    }
+    if (dropped.length > 0) remote.channel.inbox.remove(...dropped);
     if (eligible.length === 0) return;
 
     const keyed: SyncOperation[] = [];
@@ -1571,7 +1689,13 @@ export class SyncManager implements ISyncManager {
 
     if (this.isShutdown) return;
 
-    if (completedJobInfo.status === JobStatus.FAILED) {
+    if (completedJobInfo.status !== JobStatus.FAILED) {
+      syncOp.executed();
+      if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
+    } else if (isPurgedFailure(completedJobInfo.error)) {
+      this.tombstone(syncOp.documentId);
+      syncOp.executed();
+    } else {
       const errorMessage = completedJobInfo.error?.message || "Unknown error";
       this.logger.error(
         "Failed to apply operations from inbox (@remote, @documentId, @jobId, @error)",
@@ -1582,8 +1706,6 @@ export class SyncManager implements ISyncManager {
       );
       syncOp.failed(this.inboxFailure(completedJobInfo.error));
       remote.channel.deadLetter.add(syncOp);
-    } else {
-      syncOp.executed();
     }
 
     remote.channel.inbox.remove(syncOp);
@@ -1698,11 +1820,15 @@ export class SyncManager implements ISyncManager {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
       if (this.isShutdown) return;
 
-      if (completedJobInfo.status === JobStatus.FAILED) {
+      if (completedJobInfo.status !== JobStatus.FAILED) {
+        syncOp.executed();
+        if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
+      } else if (isPurgedFailure(completedJobInfo.error)) {
+        this.tombstone(syncOp.documentId);
+        syncOp.executed();
+      } else {
         syncOp.failed(this.inboxFailure(completedJobInfo.error));
         remote.channel.deadLetter.add(syncOp);
-      } else {
-        syncOp.executed();
       }
 
       remote.channel.inbox.remove(syncOp);
@@ -2029,14 +2155,27 @@ export class SyncManager implements ISyncManager {
         carry = [];
       }
 
+      // Before any filter judges it, so each judges the id as purged.
+      for (const op of operations) {
+        if (isPurgeMarker(op)) this.tombstone(op.context.documentId);
+      }
+      operations = operations.filter(
+        (op) =>
+          isPurgeMarker(op) ||
+          !this.purgedDocumentIds.has(op.context.documentId),
+      );
+
       if (sinceTimestamp && sinceTimestamp !== "0") {
         operations = operations.filter(
-          (op) => op.operation.timestampUtcMs >= sinceTimestamp,
+          (op) =>
+            isPurgeMarker(op) || op.operation.timestampUtcMs >= sinceTimestamp,
         );
       }
       operations = filterOperations(operations, remote.meta.filter);
       operations = operations.filter(
-        (op) => !this.quarantinedDocumentIds.has(op.context.documentId),
+        (op) =>
+          isPurgeMarker(op) ||
+          !this.quarantinedDocumentIds.has(op.context.documentId),
       );
       if (this.gates(remote)) {
         operations = await this.gateOutbound(remote, operations);
