@@ -4,16 +4,20 @@ import {
   mergePeerCapabilities,
   PEER_CAPABILITIES,
   withSignaturePolicy,
+  type OperationWithContext,
   type PeerCapability,
   type PeerManifest,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
+import { Kysely, PostgresDialect } from "kysely";
+import { Pool } from "pg";
 import { vi } from "vitest";
 import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import type { ReactorClient } from "../../../src/client/reactor-client.js";
 import { ReactorBuilder } from "../../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../../src/core/reactor-client-builder.js";
 import type {
+  Database,
   InProcessReactorModule,
   IReactor,
 } from "../../../src/core/types.js";
@@ -87,11 +91,44 @@ export type Node = {
 
 const FILTER = { documentId: [], scope: [], branch: "main" };
 
+const PG_TEST_URL =
+  process.env.REACTOR_TEST_PG_URL ??
+  "postgres://postgres:postgres@localhost:5433/reactor";
+let databaseCounter = 0;
+
 /** Reactors joined pairwise over TestChannels; a remote is named `from->to`. */
 export class Fleet {
   readonly channels = new Map<string, TestChannel>();
+  /** Every operation handed to a channel's inbox, by channel name. */
+  readonly delivered = new Map<string, OperationWithContext[]>();
   private readonly options = new Map<string, LinkOptions>();
   private readonly nodes: Node[] = [];
+  private readonly databases: Array<{ name: string; db: Kysely<Database> }> =
+    [];
+
+  /** `postgres`: each node gets its own database; release with dispose(). */
+  constructor(private readonly config: { postgres?: boolean } = {}) {}
+
+  private async database(): Promise<Kysely<Database>> {
+    const name = `fleet_${process.pid}_${databaseCounter++}`;
+    const admin = new Pool({ connectionString: PG_TEST_URL });
+    try {
+      await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
+      await admin.query(`CREATE DATABASE "${name}"`);
+    } finally {
+      await admin.end();
+    }
+    const url = new URL(PG_TEST_URL);
+    url.pathname = `/${name}`;
+    const pool = new Pool({ connectionString: url.toString(), max: 8 });
+    // Dropping the database terminates whatever is still connected to it.
+    pool.on("error", (error: Error & { code?: string }) => {
+      if (error.code !== "57P01") throw error;
+    });
+    const db = new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
+    this.databases.push({ name, db });
+    return db;
+  }
 
   async node(name: string, versions: number[]): Promise<Node> {
     const factory: IChannelFactory = {
@@ -121,6 +158,9 @@ export class Fleet {
             const peer = this.channels.get(peerName);
             if (!peer) throw new Error(`no channel ${peerName}`);
             peer.receive(envelope);
+            const delivered = this.delivered.get(peerName) ?? [];
+            delivered.push(...(envelope.operations ?? []));
+            this.delivered.set(peerName, delivered);
           },
           {
             ...options,
@@ -132,18 +172,19 @@ export class Fleet {
       },
     } as IChannelFactory;
 
+    const builder = new ReactorBuilder()
+      .withLogger(createMockLogger())
+      .withEventBus(new EventBus())
+      .withDocumentModelSources([
+        driveDocumentModelModule as never,
+        documentModelDocumentModelModule,
+      ])
+      .withPeerCapabilities([testProtocol(versions)])
+      .withSync(new SyncBuilder().withChannelFactory(factory));
+    if (this.config.postgres) builder.withKysely(await this.database());
+
     const built = await new ReactorClientBuilder()
-      .withReactorBuilder(
-        new ReactorBuilder()
-          .withLogger(createMockLogger())
-          .withEventBus(new EventBus())
-          .withDocumentModelSources([
-            driveDocumentModelModule as never,
-            documentModelDocumentModelModule,
-          ])
-          .withPeerCapabilities([testProtocol(versions)])
-          .withSync(new SyncBuilder().withChannelFactory(factory)),
-      )
+      .withReactorBuilder(builder)
       // Unsigned test writes: legacy documents.
       .withCreateSignaturePolicy("legacy")
       .buildModule();
@@ -190,6 +231,27 @@ export class Fleet {
     // A later test's channel must not handshake with this one's.
     this.channels.clear();
     this.options.clear();
+    this.delivered.clear();
+  }
+
+  /** kill(), then waits for every node to stop and drops its database. */
+  async dispose(): Promise<void> {
+    for (const node of this.nodes.splice(0)) {
+      await node.reactor.kill().completed;
+      await node.sync.shutdown().completed;
+    }
+    this.channels.clear();
+    this.options.clear();
+    this.delivered.clear();
+    const admin = new Pool({ connectionString: PG_TEST_URL });
+    try {
+      for (const { name, db } of this.databases.splice(0)) {
+        await db.destroy();
+        await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
+      }
+    } finally {
+      await admin.end();
+    }
   }
 }
 
