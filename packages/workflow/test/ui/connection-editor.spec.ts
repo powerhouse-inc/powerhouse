@@ -114,7 +114,7 @@ test.describe("Connection editor", () => {
     // Slack's own check runs against the demo token; the answer depends on
     // the network, so assert the outcome is reported and the status follows it.
     const result = app.getByRole("status");
-    await expect(result).toBeVisible();
+    await expect(result).toHaveText(/\S/);
     const works = (await result.textContent())?.startsWith("It works");
     await expect(
       app.getByText(works ? "Connected" : "Error", { exact: true }),

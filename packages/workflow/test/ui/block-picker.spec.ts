@@ -1,7 +1,9 @@
+import type { Page } from "@playwright/test";
 import {
   canvasNode,
   coreTrigger,
   createWorkflowInBrowser,
+  openPicker,
   openWorkflowEditor,
   pieceAction,
   shot,
@@ -22,6 +24,10 @@ interface Steps {
 
 const VERSION = /^v\d+\.\d+\.\d+/;
 
+// The append button under the workflow's last step.
+const addStep = (app: Page) =>
+  app.getByRole("button", { name: /^Add step/ }).last();
+
 test.describe("Block picker", () => {
   test("shows a block's version on hover and pins what it adds", async ({
     stack,
@@ -30,7 +36,7 @@ test.describe("Block picker", () => {
     // Tall enough for the picker to open below the last step.
     await app.setViewportSize({ width: 1440, height: 1400 });
     await openWorkflowEditor(app);
-    await app.locator(".react-flow__node-apAppend button").last().click();
+    await openPicker(app, addStep(app));
     await app.getByRole("button", { name: "Powerhouse", exact: true }).click();
     const row = app
       .getByRole("button")
@@ -69,23 +75,22 @@ test.describe("Block picker", () => {
   }) => {
     await app.setViewportSize({ width: 1440, height: 1400 });
     await openWorkflowEditor(app);
-    // Forms answer slowly: the step must not wait for one.
+    // Forms are held back until the step shows: it must not wait for one.
+    let release = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
     await app.route("**/graphql/workflow-runtime", async (route) => {
-      if (route.request().postData()?.includes("blockDescriptor")) {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-      }
+      if (route.request().postData()?.includes("blockDescriptor")) await held;
       await route.continue();
     });
-    await app.locator(".react-flow__node-apAppend button").last().click();
+    await openPicker(app, addStep(app));
     await app.getByRole("button", { name: "Powerhouse", exact: true }).click();
     const row = app
       .getByRole("button")
       .filter({ hasText: "Lists documents by type and name" });
     await row.hover();
-    const started = Date.now();
     await row.click();
-    await canvasNode(app, "Find documents").waitFor({ timeout: 2000 });
-    expect(Date.now() - started).toBeLessThan(300);
+    await expect(canvasNode(app, "Find documents")).toBeVisible();
+    release();
 
     const step = async () =>
       (await workflowState<Steps>(app, stack.seeded.digest)).steps.find(
@@ -134,7 +139,7 @@ test.describe("Block picker", () => {
       await waitServed(id, "old");
       await openWorkflowEditor(app, "Mixed versions");
       await canvasNode(app, "Old call").waitFor();
-      await app.locator(".react-flow__node-apAppend button").last().click();
+      await openPicker(app, addStep(app));
       await app
         .getByPlaceholder("Search pieces, actions, triggers…")
         .fill("HTTP");

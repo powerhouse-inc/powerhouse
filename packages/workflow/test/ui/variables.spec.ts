@@ -1,5 +1,9 @@
 import type { Page } from "@playwright/test";
-import { openWorkflowEditor, type PhWindow } from "../../scripts/ui-stack.js";
+import {
+  expectSteady,
+  openWorkflowEditor,
+  type PhWindow,
+} from "../../scripts/ui-stack.js";
 import { expect, test } from "./fixtures.js";
 
 interface Variable {
@@ -58,11 +62,13 @@ test.describe("Typed variables", () => {
     await row.fill("twenty");
     await row.blur();
     await expect(app.getByText("Not a number")).toBeVisible();
-    expect(
-      (await digestState(app, stack.seeded.digest)).variables.find(
-        (variable) => variable.key === "limit",
-      )?.value,
-    ).toBe(25);
+    await expectSteady(
+      async () =>
+        (await digestState(app, stack.seeded.digest)).variables.find(
+          (variable) => variable.key === "limit",
+        )?.value,
+      (stored) => expect(stored).toBe(25),
+    );
 
     // A secret variable keeps only its reference.
     await app
