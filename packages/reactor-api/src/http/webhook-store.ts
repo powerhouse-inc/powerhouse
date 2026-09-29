@@ -54,6 +54,8 @@ type Schema = {
     token: string;
     dedupe_key: string;
     seen_at: string;
+    /** When the key ages out, from the TTL it was seen with; null on legacy rows. */
+    expires_at: string | null;
     /** Who won the insert; see the comment in seen(). */
     claim_id: string;
   };
@@ -98,6 +100,16 @@ export class RelationalWebhookStore implements IWebhookStore {
       .addColumn("claim_id", "text", (col) => col.notNull())
       .execute();
 
+    // Additive migration for tables created before per-row expiry.
+    try {
+      await db.schema
+        .alterTable("webhook_deliveries")
+        .addColumn("expires_at", "text")
+        .execute();
+    } catch {
+      // column already exists
+    }
+
     await db.schema
       .createIndex("webhook_deliveries_key")
       .ifNotExists()
@@ -106,8 +118,14 @@ export class RelationalWebhookStore implements IWebhookStore {
       .unique()
       .execute();
 
-    // Every delivery prunes by `seen_at`; unindexed that is a scan of the
-    // whole table, growing with it.
+    // Every delivery prunes by expiry; unindexed that is a scan of the whole
+    // table. `seen_at` still serves the prune of legacy rows with no expiry.
+    await db.schema
+      .createIndex("webhook_deliveries_expires_at")
+      .ifNotExists()
+      .on("webhook_deliveries")
+      .columns(["expires_at"])
+      .execute();
     await db.schema
       .createIndex("webhook_deliveries_seen_at")
       .ifNotExists()
@@ -202,12 +220,25 @@ export class RelationalWebhookStore implements IWebhookStore {
 
   async seen(token: string, key: string, ttlSeconds: number): Promise<boolean> {
     const now = Date.now();
+    const nowIso = new Date(now).toISOString();
     const cutoff = new Date(now - ttlSeconds * 1000).toISOString();
 
     // Prune first, so a key that has aged out is redeliverable rather than
-    // rejected forever.
+    // rejected forever. Each row expires on the TTL it was seen with.
     await this.#handle
       .deleteFrom("webhook_deliveries")
+      .where((eb) =>
+        eb.or([
+          eb("expires_at", "<", nowIso),
+          eb.and([eb("expires_at", "is", null), eb("seen_at", "<", cutoff)]),
+        ]),
+      )
+      .execute();
+    // This token's own key also ages out under its current TTL, if shorter.
+    await this.#handle
+      .deleteFrom("webhook_deliveries")
+      .where("token", "=", token)
+      .where("dedupe_key", "=", key)
       .where("seen_at", "<", cutoff)
       .execute();
 
@@ -222,7 +253,8 @@ export class RelationalWebhookStore implements IWebhookStore {
       .values({
         token,
         dedupe_key: key,
-        seen_at: new Date(now).toISOString(),
+        seen_at: nowIso,
+        expires_at: new Date(now + ttlSeconds * 1000).toISOString(),
         claim_id: claimId,
       })
       .onConflict((oc) => oc.columns(["token", "dedupe_key"]).doNothing())
@@ -253,7 +285,10 @@ function toRow(row: Schema["webhook_endpoints"]): WebhookEndpointRow {
 /** In-memory store, for hosts with no relational database and for tests. */
 export class MemoryWebhookStore implements IWebhookStore {
   readonly #byToken = new Map<string, WebhookEndpointRow>();
-  readonly #deliveries = new Map<string, number>();
+  readonly #deliveries = new Map<
+    string,
+    { seenAt: number; expiresAt: number }
+  >();
 
   init(): Promise<void> {
     return Promise.resolve();
@@ -313,12 +348,18 @@ export class MemoryWebhookStore implements IWebhookStore {
 
   seen(token: string, key: string, ttlSeconds: number): Promise<boolean> {
     const now = Date.now();
-    for (const [k, at] of this.#deliveries) {
-      if (at < now - ttlSeconds * 1000) this.#deliveries.delete(k);
+    for (const [k, entry] of this.#deliveries) {
+      if (entry.expiresAt < now) this.#deliveries.delete(k);
     }
     const composite = `${token}|${key}`;
-    if (this.#deliveries.has(composite)) return Promise.resolve(true);
-    this.#deliveries.set(composite, now);
+    const existing = this.#deliveries.get(composite);
+    if (existing && existing.seenAt >= now - ttlSeconds * 1000) {
+      return Promise.resolve(true);
+    }
+    this.#deliveries.set(composite, {
+      seenAt: now,
+      expiresAt: now + ttlSeconds * 1000,
+    });
     return Promise.resolve(false);
   }
 }
