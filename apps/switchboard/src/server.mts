@@ -821,7 +821,11 @@ async function initServer(
     const { VitePackageLoader, createViteLogger, startViteServer } =
       await import("@powerhousedao/reactor-api/vite");
     vite = await startViteServer(process.cwd(), createViteLogger(logger));
-    viteLoader = VitePackageLoader.build(vite);
+    // Packages switchboard brings, like the workflow package, resolve from
+    // here when the project does not install them itself.
+    viteLoader = VitePackageLoader.build(vite, {
+      resolveFrom: [import.meta.url],
+    });
   }
 
   // Vetra is builder-only and bundled (not CDN-loadable); lazy-load its
