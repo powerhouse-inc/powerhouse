@@ -57,6 +57,26 @@ export const manifestFor = (versions: number[]): PeerManifest =>
     {},
   );
 
+/** `bare`: the sync manager gets the channel without either manifest method. */
+export type LinkOptions = TestChannelOptions & { bare?: boolean };
+
+/** A third-party IChannel from before manifests. */
+function bare(channel: TestChannel): IChannel {
+  return {
+    inbox: channel.inbox,
+    outbox: channel.outbox,
+    deadLetter: channel.deadLetter,
+    init: () => channel.init(),
+    shutdown: () => channel.shutdown(),
+    getConnectionState: () => channel.getConnectionState(),
+    onConnectionStateChange: (callback) =>
+      channel.onConnectionStateChange(callback),
+    triggerPull: () => channel.triggerPull(),
+    notePoll: () => channel.notePoll(),
+    lastHolderPollUtcMs: () => channel.lastHolderPollUtcMs(),
+  };
+}
+
 export type Node = {
   name: string;
   client: ReactorClient;
@@ -70,7 +90,7 @@ const FILTER = { documentId: [], scope: [], branch: "main" };
 /** Reactors joined pairwise over TestChannels; a remote is named `from->to`. */
 export class Fleet {
   readonly channels = new Map<string, TestChannel>();
-  private readonly options = new Map<string, TestChannelOptions>();
+  private readonly options = new Map<string, LinkOptions>();
   private readonly nodes: Node[] = [];
 
   async node(name: string, versions: number[]): Promise<Node> {
@@ -92,6 +112,7 @@ export class Fleet {
         const [pair, tag] = remoteName.split("#");
         const peerName =
           pair.split("->").reverse().join("->") + (tag ? `#${tag}` : "");
+        const options = this.options.get(remoteName);
         const channel = new TestChannel(
           remoteId,
           remoteName,
@@ -102,12 +123,12 @@ export class Fleet {
             peer.receive(envelope);
           },
           {
-            ...this.options.get(remoteName),
+            ...options,
             peer: () => this.channels.get(peerName),
           },
         );
         this.channels.set(remoteName, channel);
-        return channel;
+        return options?.bare ? bare(channel) : channel;
       },
     } as IChannelFactory;
 
@@ -144,8 +165,8 @@ export class Fleet {
     b: Node,
     driveId: string,
     options: {
-      a?: TestChannelOptions;
-      b?: TestChannelOptions;
+      a?: LinkOptions;
+      b?: LinkOptions;
       tag?: string;
       /** Remote options for `a`'s side. */
       remote?: RemoteOptions;
