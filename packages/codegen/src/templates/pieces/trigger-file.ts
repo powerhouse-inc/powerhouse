@@ -52,8 +52,7 @@ ${v.withAuth ? `  auth: ${v.camelCaseName}Auth,` : "  // Types context.auth as u
   async test(context) {
     return await pollingHelper.test(polling, context);
   },
-  // Polls every minute by default; call context.setSchedule({ intervalMs })
-  // here to change that
+  // Call context.setSchedule({ intervalMs }) to set the default polling interval
   async onEnable(context) {
     const { store, auth, propsValue, isRepublish } = context;
     await pollingHelper.onEnable(polling, {
