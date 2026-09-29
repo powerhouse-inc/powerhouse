@@ -7,7 +7,12 @@ import type {
   StepExecutionRow,
   WorkflowRuntimeService,
 } from "@powerhousedao/reactor-workflow";
-import { GraphQLError } from "graphql";
+import {
+  GraphQLError,
+  Kind,
+  type GraphQLResolveInfo,
+  type SelectionSetNode,
+} from "graphql";
 
 interface FireArgs {
   workflowId: string;
@@ -46,6 +51,48 @@ interface RunsArgs {
   workflowId?: string;
   driveId?: string;
   limit?: number;
+}
+
+// Whether a runs query reads any step's input or output, so a listing that
+// doesn't can skip those blobs. Fragments count as asking for them.
+function selectsStepData(
+  selections: readonly SelectionSetNode[],
+  path: string[],
+): boolean {
+  let level = selections;
+  for (const name of [...path, "steps"]) {
+    const next: SelectionSetNode[] = [];
+    for (const set of level) {
+      for (const selection of set.selections) {
+        if (selection.kind !== Kind.FIELD) return true;
+        if (selection.name.value === name && selection.selectionSet) {
+          next.push(selection.selectionSet);
+        }
+      }
+    }
+    if (next.length === 0) return false;
+    level = next;
+  }
+  return level.some((set) =>
+    set.selections.some(
+      (selection) =>
+        selection.kind !== Kind.FIELD ||
+        selection.name.value === "input" ||
+        selection.name.value === "output",
+    ),
+  );
+}
+
+// With no resolve info (a direct call) the full shape is served.
+function readsStepData(
+  info: GraphQLResolveInfo | undefined,
+  path: string[],
+): boolean {
+  if (!info) return true;
+  const selections = info.fieldNodes.flatMap((node) =>
+    node.selectionSet ? [node.selectionSet] : [],
+  );
+  return selectsStepData(selections, path);
 }
 
 // A secret belongs to the reactor, not to any one document, so writing one is
@@ -217,10 +264,18 @@ export const getResolvers = (
           versionMatch: row.version_match,
           versionNote: row.version_note,
         })),
-      runs: async (_parent: unknown, args: RunsArgs, ctx: Context) =>
-        (await runtime.runs(args, ctx)).map((record) =>
-          toRunRecord(record.row, record.steps),
-        ),
+      runs: async (
+        _parent: unknown,
+        args: RunsArgs,
+        ctx: Context,
+        info?: GraphQLResolveInfo,
+      ) =>
+        (
+          await runtime.runs(
+            { ...args, withStepData: readsStepData(info, []) },
+            ctx,
+          )
+        ).map((record) => toRunRecord(record.row, record.steps)),
       run: async (_parent: unknown, args: { id: string }, ctx: Context) => {
         const record = await runtime.run(args.id, ctx);
         return record ? toRunRecord(record.row, record.steps) : null;

@@ -770,6 +770,29 @@ async function claimDedupeIn(
   return inserted !== undefined;
 }
 
+const STEP_COLUMNS_WITHOUT_DATA = [
+  "id",
+  "run_id",
+  "ordinal",
+  "step_id",
+  "step_key",
+  "piece_name",
+  "block_name",
+  "status",
+  "port",
+  "error",
+  "started_at",
+  "ended_at",
+  "piece_version",
+  "piece_source",
+  "version_match",
+  "version_note",
+  "config_hash",
+] as const satisfies readonly Exclude<
+  keyof StepExecutionRow,
+  "input" | "output"
+>[];
+
 export interface EnqueueRunOptions {
   workflowId: string;
   triggerKind: string;
@@ -1156,6 +1179,31 @@ export class WorkflowRunStore {
       .execute();
   }
 
+  // Steps of many runs in one query, each run's in execution order. Without
+  // `withData` the input and output blobs are left out (read as null).
+  async getStepsForRuns(
+    runIds: string[],
+    options: { withData?: boolean } = {},
+  ): Promise<Map<string, StepExecutionRow[]>> {
+    const byRun = new Map<string, StepExecutionRow[]>(
+      runIds.map((id) => [id, []]),
+    );
+    if (runIds.length === 0) return byRun;
+    const base = this.db
+      .selectFrom("step_execution")
+      .where("run_id", "in", [...new Set(runIds)])
+      .orderBy("run_id")
+      .orderBy("ordinal", "asc");
+    const rows: StepExecutionRow[] =
+      options.withData === false
+        ? (await base.select(STEP_COLUMNS_WITHOUT_DATA).execute()).map(
+            (row) => ({ ...row, input: null, output: null }),
+          )
+        : await base.selectAll().execute();
+    for (const row of rows) byRun.get(row.run_id)?.push(row);
+    return byRun;
+  }
+
   async recordRunDocuments(
     runId: string,
     documentIds: string[],
@@ -1180,6 +1228,20 @@ export class WorkflowRunStore {
       .where("run_id", "=", runId)
       .execute();
     return rows.map((row) => row.document_id);
+  }
+
+  async getRunDocumentsForRuns(
+    runIds: string[],
+  ): Promise<Map<string, string[]>> {
+    const byRun = new Map<string, string[]>(runIds.map((id) => [id, []]));
+    if (runIds.length === 0) return byRun;
+    const rows = await this.db
+      .selectFrom("run_document")
+      .select(["run_id", "document_id"])
+      .where("run_id", "in", [...new Set(runIds)])
+      .execute();
+    for (const row of rows) byRun.get(row.run_id)?.push(row.document_id);
+    return byRun;
   }
 
   async getTriggerState(
