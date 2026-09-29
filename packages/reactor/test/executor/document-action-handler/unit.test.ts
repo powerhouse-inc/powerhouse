@@ -10,7 +10,10 @@ import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
 import { DocumentActionHandler } from "../../../src/executor/document-action-handler.js";
 import { selectDecisionModel } from "../../../src/decision/registered-model.js";
-import type { ExecutionStores } from "../../../src/executor/execution-scope.js";
+import {
+  NOOP_DOCUMENT_LOCKS,
+  type ExecutionStores,
+} from "../../../src/executor/execution-scope.js";
 import {
   targetDocumentId,
   TouchedStreams,
@@ -88,6 +91,7 @@ function createHarness(
     writeCache: writeCache as unknown as IWriteCache,
     documentMetaCache,
     collectionMembershipCache,
+    documentLocks: NOOP_DOCUMENT_LOCKS,
   };
   const flags = {
     documentDecisions: false,
