@@ -385,6 +385,8 @@ Generate a processor
 
 **Extract** - Write a powerhouse/processor spec for each existing processor into specs/processors/ - Usage: `--extract, -x`
 
+**Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -409,6 +411,8 @@ Generate a subgraph
 **All** - Re-generate all existing subgraphs in the current project - Usage: `--all, -a`
 
 **Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
+
+**Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -448,6 +452,8 @@ Generate a piece: a connector whose actions and triggers a workflow can call
 ### Flags
 **All** - Re-register every piece in pieces/: refresh the pieces list and the manifest, and prune what is gone - Usage: `--all, -a`
 
+**Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -477,6 +483,8 @@ Generate an action inside an existing piece
 
 
 ### Flags
+**Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -510,6 +518,8 @@ Generate a trigger inside an existing piece
 
 
 ### Flags
+**Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`

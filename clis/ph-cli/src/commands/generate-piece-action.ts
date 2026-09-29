@@ -1,5 +1,6 @@
 import { debugArgs } from "@powerhousedao/shared/clis/args";
 import { command, option, optional, positional, string } from "cmd-ts";
+import { skipInstallArgs } from "../utils/install-added-dependencies.js";
 
 export const generatePieceActionCmd = command({
   name: "piece-action",
@@ -23,6 +24,7 @@ export const generatePieceActionCmd = command({
       description:
         "The piece directory under pieces/ to add the action to. Optional when the project ships exactly one piece.",
     }),
+    ...skipInstallArgs,
     ...debugArgs,
   },
   handler: async (args) => {

@@ -1,6 +1,7 @@
 import { debugArgs } from "@powerhousedao/shared/clis/args";
 import { command, flag, option, optional, string } from "cmd-ts";
 import { Directory, File } from "cmd-ts/dist/cjs/batteries/fs.js";
+import { skipInstallArgs } from "../utils/install-added-dependencies.js";
 
 export const generateSubgraphCmd = command({
   name: "subgraph",
@@ -36,6 +37,7 @@ export const generateSubgraphCmd = command({
       description:
         "Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/",
     }),
+    ...skipInstallArgs,
     ...debugArgs,
   },
   handler: async (args) => {

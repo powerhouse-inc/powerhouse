@@ -189,6 +189,10 @@ Re-generate all existing processors in the current project<br><br>
 Write a powerhouse/processor spec for each existing processor into specs/processors/<br><br>
 **usage:** `--extract, -x`<br>
 
+#### Skip Install <br>
+Don't install the dependencies the command adds to package.json<br><br>
+**usage:** `--skip-install`<br>
+
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
@@ -222,6 +226,10 @@ Re-generate all existing subgraphs in the current project<br><br>
 #### Extract <br>
 Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/<br><br>
 **usage:** `--extract, -x`<br>
+
+#### Skip Install <br>
+Don't install the dependencies the command adds to package.json<br><br>
+**usage:** `--skip-install`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>
@@ -267,6 +275,10 @@ Name of the directory of an existing piece to re-register<br><br>
 Re-register every piece in pieces/: refresh the pieces list and the manifest, and prune what is gone<br><br>
 **usage:** `--all, -a`<br>
 
+#### Skip Install <br>
+Don't install the dependencies the command adds to package.json<br><br>
+**usage:** `--skip-install`<br>
+
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
@@ -295,6 +307,10 @@ The piece directory under pieces/ to add the action to. Optional when the projec
 
 
 ### flags
+#### Skip Install <br>
+Don't install the dependencies the command adds to package.json<br><br>
+**usage:** `--skip-install`<br>
+
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
@@ -327,6 +343,10 @@ How the trigger fires: polled on a schedule, or delivered to a webhook<br><br>
 **default**: `polling`
 
 ### flags
+#### Skip Install <br>
+Don't install the dependencies the command adds to package.json<br><br>
+**usage:** `--skip-install`<br>
+
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
