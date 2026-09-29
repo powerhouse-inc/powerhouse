@@ -357,6 +357,16 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let pendingEvent: JobWriteReadyEvent | undefined;
 
+    if (job.kind === "purge") {
+      return {
+        result: buildErrorResult(
+          job,
+          new Error("Purge jobs are not implemented"),
+          startTime,
+        ),
+      };
+    }
+
     const unsupported = await this.unsupportedStoredProtocol(
       job,
       stores,

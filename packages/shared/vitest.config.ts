@@ -43,6 +43,7 @@ export default defineConfig({
       "document-model/files.test.ts",
       "document-model/mock.test.ts",
       "document-model/peer-agreement.test.ts",
+      "document-model/purge.test.ts",
       "document-model/signature-policy.test.ts",
       "document-model/signature-transport.test.ts",
       "document-model/utils.test.ts",

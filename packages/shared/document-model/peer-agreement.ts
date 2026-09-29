@@ -30,6 +30,9 @@ export type FeatureCapability = {
 
 export type PeerCapability = ProtocolCapability | FeatureCapability;
 
+/** A purged document's protocol; never preferred, so creation never selects it. */
+export const DOCUMENT_PURGE_PROTOCOL = "document-purge";
+
 // Baselines are frozen at what the last release without peer agreement runs.
 export const PEER_CAPABILITIES: readonly PeerCapability[] = [
   {
@@ -45,6 +48,13 @@ export const PEER_CAPABILITIES: readonly PeerCapability[] = [
     name: "signature",
     baseline: [2],
     supported: () => [2],
+    optional: true,
+  },
+  {
+    kind: "protocol",
+    name: DOCUMENT_PURGE_PROTOCOL,
+    baseline: [],
+    supported: () => [1],
     optional: true,
   },
 ];

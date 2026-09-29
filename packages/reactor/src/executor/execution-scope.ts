@@ -10,7 +10,20 @@ import type { ICollectionMembershipCache } from "../cache/collection-membership-
 import type { IOperationStore } from "../storage/interfaces.js";
 import type { KyselyOperationStore } from "../storage/kysely/store.js";
 import type { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
+import { acquirePurgeLocks } from "../storage/kysely/document-purges.js";
 import type { Database } from "../storage/kysely/types.js";
+
+/** Per-document purge locks, held until the job's transaction ends. */
+export interface DocumentLocks {
+  shared(ids: Iterable<string>): Promise<void>;
+  exclusive(id: string): Promise<void>;
+}
+
+/** For scopes without a transaction to hold a lock in. */
+export const NOOP_DOCUMENT_LOCKS: DocumentLocks = {
+  shared: () => Promise.resolve(),
+  exclusive: () => Promise.resolve(),
+};
 
 export interface ExecutionStores {
   operationStore: IOperationStore;
@@ -18,6 +31,7 @@ export interface ExecutionStores {
   writeCache: IWriteCache;
   documentMetaCache: IDocumentMetaCache;
   collectionMembershipCache: ICollectionMembershipCache;
+  documentLocks: DocumentLocks;
 }
 
 export interface IExecutionScope {
@@ -47,6 +61,7 @@ export class DefaultExecutionScope implements IExecutionScope {
       writeCache: this.writeCache,
       documentMetaCache: this.documentMetaCache,
       collectionMembershipCache: this.collectionMembershipCache,
+      documentLocks: NOOP_DOCUMENT_LOCKS,
     });
   }
 }
@@ -82,6 +97,10 @@ export class KyselyExecutionScope implements IExecutionScope {
           this.documentMetaCache.withScopedStore(scopedOperationStore),
         collectionMembershipCache:
           this.collectionMembershipCache.withScopedIndex(scopedOperationIndex),
+        documentLocks: {
+          shared: (ids) => acquirePurgeLocks(trx, ids, "shared"),
+          exclusive: (id) => acquirePurgeLocks(trx, [id], "exclusive"),
+        },
       });
     });
   }

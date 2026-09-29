@@ -135,6 +135,19 @@ export interface GroupReferenceTable {
   groupId: string;
 }
 
+/** Rows a purge removed, per table. */
+export type PurgeRemovedRows = { [table: string]: number };
+
+/** The tombstone of a purged document (migration 024). */
+export interface DocumentPurgeTable {
+  documentId: string;
+  // bigint: pg returns a string, PGlite may return a number.
+  ordinal: ColumnType<string | number, number, number>;
+  removedRows: ColumnType<PurgeRemovedRows, string, string>;
+  purgedAtUtc: ColumnType<Date, Date | string, Date | string>;
+  requestId: string;
+}
+
 export interface Database {
   Operation: OperationTable;
   Keyframe: KeyframeTable;
@@ -145,6 +158,7 @@ export interface Database {
   sync_cursors: SyncCursorTable;
   sync_dead_letters: SyncDeadLetterTable;
   sync_holds: SyncHoldTable;
+  document_purges: DocumentPurgeTable;
 }
 
 export type OperationRow = Selectable<OperationTable>;
@@ -215,6 +229,9 @@ export type UpdateableSyncRemote = Updateable<SyncRemoteTable>;
 export type SyncCursorRow = Selectable<SyncCursorTable>;
 export type InsertableSyncCursor = Insertable<SyncCursorTable>;
 export type UpdateableSyncCursor = Updateable<SyncCursorTable>;
+
+export type DocumentPurgeRow = Selectable<DocumentPurgeTable>;
+export type InsertableDocumentPurge = Insertable<DocumentPurgeTable>;
 
 export type SyncDeadLetterRow = Selectable<SyncDeadLetterTable>;
 export type InsertableSyncDeadLetter = Insertable<SyncDeadLetterTable>;

@@ -1222,6 +1222,14 @@ export type DeleteDocumentActionInput = {
   propagate?: "none" | "cascade"; // Deletion propagation mode
 };
 
+export type PurgeDocumentActionInput = {
+  documentId: string;
+  documentType: string;
+  /** The same instant as the action's timestampUtcMs. */
+  purgedAtUtcIso: string;
+  requestId: string;
+};
+
 export type AddRelationshipActionInput = {
   sourceId: string;
   targetId: string;
@@ -1255,6 +1263,13 @@ export type UpgradeDocumentAction = Action & {
 export type DeleteDocumentAction = Action & {
   type: "DELETE_DOCUMENT";
   input: DeleteDocumentActionInput;
+};
+
+/** Reserved document-scope marker; a purged document's only operation. */
+export type PurgeDocumentAction = Action & {
+  type: "PURGE_DOCUMENT";
+  scope: "document";
+  input: PurgeDocumentActionInput;
 };
 
 export type AddRelationshipAction = Action & {

@@ -176,6 +176,8 @@ export type LocalPeer = {
     documentId: string,
     branch: string,
   ) => Promise<{ [protocol: string]: number } | undefined>;
+  /** Drops a purged document from the host cache behind protocolVersionsOf. */
+  forgetDocument?: (documentId: string) => void;
 };
 
 /** What the peer announced, and when; a null manifest is a silent peer. */
