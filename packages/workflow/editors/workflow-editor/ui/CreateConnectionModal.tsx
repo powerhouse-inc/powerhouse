@@ -108,7 +108,11 @@ export function CreateConnectionModal(props: {
           </button>
         </div>
         {state && callbacks ? (
-          <ConnectionForm state={state} callbacks={callbacks} />
+          <ConnectionForm
+            state={state}
+            callbacks={callbacks}
+            connectionId={props.connectionId}
+          />
         ) : (
           <p className="text-xs text-muted-foreground/80">
             Loading the new connection document…

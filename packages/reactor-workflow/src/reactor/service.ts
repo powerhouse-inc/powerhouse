@@ -38,6 +38,8 @@ import {
   resolveExpressions,
   runWorkflow,
   UnsupportedPieceFeatureError,
+  authMethodFor,
+  type PieceAuthDescriptor,
   type BlockExecutor,
   type BlockResolution,
   type LocalPiece,
@@ -56,6 +58,7 @@ import {
 } from "../pieces/index.js";
 import {
   childLogger,
+  generateId,
   type Action,
   type ILogger,
   type OperationWithContext,
@@ -64,6 +67,18 @@ import {
   actions as connectionActions,
   type ConnectionDocument,
 } from "@powerhousedao/workflow/document-models/connection";
+import {
+  exchangeCode,
+  OAUTH_CLIENT_ID,
+  OAUTH_CLIENT_SECRET,
+  OAUTH_TOKEN,
+  OAuthAttemptStore,
+  OAuthError,
+  StoreTokenRefresher,
+  type OAuthAttemptView,
+  type OAuthStart,
+  type OAuthTokenRefresher,
+} from "./oauth.js";
 import {
   actions as workflowActions,
   type WorkflowDocument,
@@ -631,6 +646,8 @@ export class WorkflowRuntimeService {
   private pieceWorkers?: PieceWorkerPool;
   private readonly storePromise: Promise<WorkflowRunStore>;
   private secretsPromise?: Promise<SecretStore>;
+  private oauthAttemptsPromise?: Promise<OAuthAttemptStore>;
+  private tokenRefresher?: OAuthTokenRefresher;
   private readonly registry = new Map<string, TriggerRegistration>();
   // Awaited before an endpoint answers: a delivery reaching an unseeded
   // registry is refused exactly as an unknown token is, so it looks like one.
@@ -716,6 +733,20 @@ export class WorkflowRuntimeService {
 
   private secretProvider(): SecretProvider {
     return { get: (ref) => this.secrets().then((store) => store.get(ref)) };
+  }
+
+  private oauthAttempts(): Promise<OAuthAttemptStore> {
+    this.oauthAttemptsPromise ??= OAuthAttemptStore.create(
+      this.host.relationalDb,
+    );
+    return this.oauthAttemptsPromise;
+  }
+
+  private oauthRefresher(): OAuthTokenRefresher {
+    return (this.tokenRefresher ??= new StoreTokenRefresher(
+      () => this.secrets(),
+      this.designEgress,
+    ));
   }
 
   /** The seeding failure a restart is needed to clear, or undefined while the
@@ -1625,6 +1656,7 @@ export class WorkflowRuntimeService {
         const resolved = await new DocumentConnectionResolver(
           this.host,
           this.secretProvider(),
+          this.oauthRefresher(),
         ).resolveWithSecrets(connectionId, request);
         // The supervisor reads these back off the auth value to redact what a
         // trigger hook throws; nothing else travels with it.
@@ -2233,6 +2265,14 @@ export class WorkflowRuntimeService {
     // A check records its outcome on the connection, so this is a write: a
     // read-only caller is refused before anything is fetched or resolved.
     await this.assertCanWriteDocument(connectionId, ctx);
+    return this.checkConnectionDocument(
+      await this.connectionDocument(connectionId),
+    );
+  }
+
+  private async connectionDocument(
+    connectionId: string,
+  ): Promise<ConnectionDocument> {
     const document =
       await this.host.reactorClient.get<ConnectionDocument>(connectionId);
     if (document.header.documentType !== "powerhouse/connection") {
@@ -2240,6 +2280,14 @@ export class WorkflowRuntimeService {
         `Document "${connectionId}" is not a powerhouse/connection`,
       );
     }
+    return document;
+  }
+
+  // The check itself; the caller has already been authorized.
+  private async checkConnectionDocument(
+    document: ConnectionDocument,
+  ): Promise<ConnectionCheckResult> {
+    const connectionId = document.header.id;
     const state = document.state.global;
     const accountLabel = state.accountLabel ?? null;
 
@@ -2260,7 +2308,7 @@ export class WorkflowRuntimeService {
       });
     }
     // No bundle work for auth kinds the runtime cannot execute yet.
-    if (state.authType === "OAUTH2" || state.authType === "OIDC") {
+    if (state.authType === "OIDC") {
       return this.recordCheckResult(document, {
         ok: false,
         detail: `${state.authType} connections are not supported by the runtime yet`,
@@ -2307,6 +2355,7 @@ export class WorkflowRuntimeService {
         document,
         this.secretProvider(),
         { piecePackage: packageName },
+        this.oauthRefresher(),
       );
     } catch (error) {
       // A missing or deleted secret names its ref in the message.
@@ -2363,6 +2412,175 @@ export class WorkflowRuntimeService {
         : "piece declares no auth.validate; credentials resolved",
       accountLabel: outcome.accountLabel ?? accountLabel,
     });
+  }
+
+  // Opens an OAuth2 sign-in for a connection that brings its own app. The
+  // host serves redirectUri and passes what it receives to completeOAuth.
+  async startOAuth(
+    connectionId: string,
+    ctx: WorkflowCaller | undefined,
+    options: { redirectUri: string; returnUrl?: string },
+  ): Promise<OAuthStart> {
+    await this.assertCanReadDocument(connectionId, ctx);
+    // Signing in stores a token on the connection.
+    await this.assertCanWriteDocument(connectionId, ctx);
+    const state = (await this.connectionDocument(connectionId)).state.global;
+    if (state.authType !== "OAUTH2") {
+      throw new OAuthError("This connection does not sign in with OAuth2");
+    }
+    const { [OAUTH_CLIENT_ID]: clientId, ...props } = (state.config ??
+      {}) as Record<string, unknown>;
+    if (typeof clientId !== "string" || clientId === "") {
+      throw new OAuthError("Set the client ID before connecting");
+    }
+    const clientSecretRef = state.secretRefs.find(
+      (entry) => entry.name === OAUTH_CLIENT_SECRET,
+    )?.ref;
+    if (!clientSecretRef) {
+      throw new OAuthError("Save the client secret before connecting");
+    }
+
+    const packageName = packageFromConnectorId(state.connectorId);
+    const found = await this.blockResolver.latest(packageName);
+    if (found.version === undefined) {
+      throw new OAuthError(
+        `Could not resolve a version for piece "${packageName}"` +
+          (found.unreachable ? `: ${found.unreachable}` : ""),
+      );
+    }
+    const descriptor = await this.pieceDescriptor({
+      name: packageName,
+      version: found.version,
+      source: found.source,
+    });
+    const method = authMethodFor(descriptor.auth, "OAUTH2") as
+      | PieceAuthDescriptor
+      | undefined;
+    if (!method?.oauth2) {
+      throw new OAuthError(`"${packageName}" does not sign in with OAuth2`);
+    }
+    if (method.unsupported) {
+      throw new UnsupportedPieceFeatureError(
+        `Piece "${packageName}"`,
+        method.unsupported,
+      );
+    }
+    return (await this.oauthAttempts()).start({
+      connectionId,
+      method: method.oauth2,
+      props,
+      clientId,
+      clientSecretRef,
+      redirectUri: options.redirectUri,
+      ...(options.returnUrl ? { returnUrl: options.returnUrl } : {}),
+    });
+  }
+
+  // How a sign-in stands, for the editor that opened it.
+  async oauthAttempt(
+    state: string,
+    ctx: WorkflowCaller | undefined,
+  ): Promise<OAuthAttemptView | null> {
+    const view = await (await this.oauthAttempts()).view(state);
+    if (!view) return null;
+    await this.assertCanReadDocument(view.connectionId, ctx);
+    return view;
+  }
+
+  // The provider's redirect. No caller: the state, minted for an authorized
+  // caller and good for one exchange, is what vouches for it.
+  async completeOAuth(callback: {
+    state: string;
+    code?: string;
+    error?: string;
+    errorDescription?: string;
+  }): Promise<{
+    ok: boolean;
+    detail: string | null;
+    returnUrl: string | null;
+  }> {
+    const attempts = await this.oauthAttempts();
+    const attempt = await attempts.claim(callback.state);
+    if (!attempt) {
+      return {
+        ok: false,
+        detail: "This sign-in link has expired or was already used",
+        returnUrl: null,
+      };
+    }
+    const fail = async (detail: string) => {
+      await attempts.finish(attempt.state, detail);
+      return { ok: false, detail, returnUrl: attempt.return_url };
+    };
+    if (callback.error || !callback.code) {
+      return fail(
+        callback.errorDescription ??
+          (callback.error
+            ? `The provider refused the sign-in (${callback.error})`
+            : "The provider sent no authorization code"),
+      );
+    }
+
+    try {
+      const document = await this.connectionDocument(attempt.connection_id);
+      const state = document.state.global;
+      const config = (state.config ?? {}) as Record<string, unknown>;
+      // Changed while the user was signing in: the token would belong to
+      // another app than the one the connection now names.
+      if (
+        state.authType !== "OAUTH2" ||
+        config[OAUTH_CLIENT_ID] !== attempt.client_id
+      ) {
+        return await fail("The connection changed during sign-in; try again");
+      }
+      const secrets = await this.secrets();
+      const tokens = await exchangeCode(
+        attempt,
+        callback.code,
+        await secrets.get(attempt.client_secret_ref),
+        this.designEgress,
+      );
+      const value = JSON.stringify(tokens);
+      const existing = state.secretRefs.find(
+        (entry) => entry.name === OAUTH_TOKEN,
+      );
+      let ref = existing?.ref;
+      try {
+        if (ref) await secrets.rotate(ref, value);
+      } catch {
+        ref = undefined;
+      }
+      if (!ref) {
+        ref = (
+          await secrets.create({
+            value,
+            label: `${state.name || "connection"} · OAuth2 token`,
+          })
+        ).ref;
+        await this.host.reactorClient.execute(document.header.id, "main", [
+          connectionActions.setSecretRef({
+            id: existing?.id ?? generateId(),
+            name: OAUTH_TOKEN,
+            ref,
+          }),
+        ]);
+      }
+      const result = await this.checkConnectionDocument(
+        await this.connectionDocument(attempt.connection_id),
+      );
+      if (!result.ok) {
+        return await fail(result.detail ?? "Connection check failed");
+      }
+      await attempts.finish(attempt.state, null);
+      return { ok: true, detail: null, returnUrl: attempt.return_url };
+    } catch (error) {
+      this.logger.warn(
+        "OAuth2 sign-in for connection @id failed: @error",
+        attempt.connection_id,
+        error,
+      );
+      return fail(error instanceof Error ? error.message : String(error));
+    }
   }
 
   private async recordCheckResult(
@@ -2729,6 +2947,7 @@ export class WorkflowRuntimeService {
       auth = await new DocumentConnectionResolver(
         this.host,
         this.secretProvider(),
+        this.oauthRefresher(),
       ).resolve(connectionId, { piecePackage: parsed.packageName });
     }
     const piece = await pieceResolver().resolve(targetOf(parsed));
@@ -3114,6 +3333,7 @@ export class WorkflowRuntimeService {
       // A step resolves its block the way every other caller does, so a
       // trigger that arms cannot be followed by a step that cannot start.
       (block) => this.resolveBlock(block),
+      this.oauthRefresher(),
     ));
   }
 

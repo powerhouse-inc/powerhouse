@@ -506,8 +506,8 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     expect(input.error).toBe(`No secret found for ref "${MISSING_SECRET_REF}"`);
   });
 
-  it("refuses OAUTH2 without fetching a bundle", async () => {
-    const document = makeDocument({ authType: "OAUTH2" });
+  it("refuses OIDC without fetching a bundle", async () => {
+    const document = makeDocument({ authType: "OIDC" });
     get.mockResolvedValueOnce(document);
     const before = bundleRequests().length;
     execute.mockClear();
@@ -516,13 +516,13 @@ describe("WorkflowRuntimeService.checkConnection", () => {
 
     expect(result).toEqual({
       ok: false,
-      detail: "OAUTH2 connections are not supported by the runtime yet",
+      detail: "OIDC connections are not supported by the runtime yet",
       accountLabel: null,
     });
     expect(bundleRequests()).toHaveLength(before);
     expect(lastRecordInput()).toMatchObject({
       status: "ERROR",
-      error: "OAUTH2 connections are not supported by the runtime yet",
+      error: "OIDC connections are not supported by the runtime yet",
     });
   });
 

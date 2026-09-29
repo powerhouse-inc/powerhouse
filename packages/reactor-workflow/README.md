@@ -319,6 +319,23 @@ only. There is no second setting: a package installed from that registry
 already ships pieces that run in the worker, so a bundle fetched from it is no
 more trusted than one that arrived inside a package.
 
+## OAuth2 connections
+
+An OAUTH2 connection brings its own app. `startOAuth` (`reactor/oauth.ts`)
+builds the provider's authorize URL from the piece's `PieceAuth.OAuth2`
+(`{prop}` placeholders filled from the connection's config, PKCE when the
+piece asks for it) and records a pending attempt in the `oauth` namespace,
+good for one exchange within 10 minutes. The host serves the redirect —
+Switchboard at `<workflow package base>/oauth/callback` — and passes what the
+provider sent to `completeOAuth`, which exchanges the code, stores the token
+set as a managed secret named `token` on the connection and runs the
+connection check. Resolution refreshes the token 15 minutes before it
+expires and rotates that secret in place.
+
+Token requests leave from the reactor process, so they are held to the egress
+policy pieces run under: `https` to a public address, or an address named in
+`PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES`, over `http` too.
+
 ## Known missing features
 
 This is what a piece can declare or call that this engine does not run. It is tracked in
@@ -373,8 +390,17 @@ releases what an earlier enable registered. The reason reads
 - `auth` as an array runs through the method whose type matches the
   connection's. The piece is refused only when none of its methods can run,
   with the first method's reason.
-- OAuth2 and OIDC: rejected, as `OAuth2 auth` and `OIDC auth` (#3091). Their
-  connections are refused at check and run too.
+- OAuth2 runs with the connection's own app only: the authorization-code
+  grant, with the `client_id` in the connection's config and the
+  `client_secret` in its secret refs. The `client_credentials` grant is
+  rejected, as `OAuth2 client credentials` (#3091). There are no
+  operator-configured or Powerhouse-hosted apps, and no Activepieces
+  `CLOUD_OAUTH2` / `PLATFORM_OAUTH2` connections.
+- A token is refreshed at most once at a time per process. Replicas are not
+  coordinated, so two can refresh one token at once; a provider that rotates
+  refresh tokens may then revoke one of them.
+- OIDC: rejected, as `OIDC auth` (#3091). Its connections are refused at
+  check and run too.
 - `server` in `validate` and `getConnectionIdentifier` is a throwing stub.
 - A CUSTOM_AUTH value's props reach the piece as stored, not coerced: a
   `Property.Number` prop arrives as the string it was entered as.

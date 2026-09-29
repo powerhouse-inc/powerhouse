@@ -133,8 +133,62 @@ export interface PieceAuthDescriptor {
   // ask for, which is what a piece read from a package rather than a published
   // listing would otherwise leave the editor with.
   props?: PiecePropDescriptor[];
-  // Set when this engine can't sign in this way (OAuth2, for one).
+  // OAUTH2 only: where and how the provider signs a user in.
+  oauth2?: OAuth2MethodDescriptor;
+  // Set when this engine can't sign in this way (OIDC, for one).
   unsupported?: UnsupportedFeature;
+}
+
+export interface OAuth2MethodDescriptor {
+  // May hold `{prop}` placeholders, filled from the connection's props.
+  authUrl: string;
+  tokenUrl: string;
+  scope: string[];
+  prompt?: "none" | "consent" | "login" | "omit";
+  pkce?: boolean;
+  pkceMethod?: "plain" | "S256";
+  authorizationMethod?: "HEADER" | "BODY";
+  grantType?: string;
+  // Extra authorize-URL parameters, e.g. access_type=offline.
+  extra?: Record<string, string>;
+}
+
+function describeOAuth2(
+  raw: Record<string, unknown>,
+): OAuth2MethodDescriptor | undefined {
+  if (typeof raw.authUrl !== "string" || typeof raw.tokenUrl !== "string") {
+    return undefined;
+  }
+  const strings = (value: unknown) =>
+    Array.isArray(value)
+      ? value.filter((entry): entry is string => typeof entry === "string")
+      : [];
+  const extra =
+    raw.extra && typeof raw.extra === "object"
+      ? Object.fromEntries(
+          Object.entries(raw.extra).filter(
+            (entry): entry is [string, string] => typeof entry[1] === "string",
+          ),
+        )
+      : undefined;
+  return {
+    authUrl: raw.authUrl,
+    tokenUrl: raw.tokenUrl,
+    scope: strings(raw.scope),
+    ...(typeof raw.prompt === "string"
+      ? { prompt: raw.prompt as OAuth2MethodDescriptor["prompt"] }
+      : {}),
+    ...(typeof raw.pkce === "boolean" ? { pkce: raw.pkce } : {}),
+    ...(raw.pkceMethod === "plain" || raw.pkceMethod === "S256"
+      ? { pkceMethod: raw.pkceMethod }
+      : {}),
+    ...(raw.authorizationMethod === "HEADER" ||
+    raw.authorizationMethod === "BODY"
+      ? { authorizationMethod: raw.authorizationMethod }
+      : {}),
+    ...(typeof raw.grantType === "string" ? { grantType: raw.grantType } : {}),
+    ...(extra && Object.keys(extra).length > 0 ? { extra } : {}),
+  };
 }
 
 // NONE is how the framework spells "no handshake", so it is not carried:
@@ -336,12 +390,17 @@ function describeAuthMethod(auth: unknown): PieceAuthDescriptor | undefined {
     method.props && typeof method.props === "object"
       ? describeProperties(method.props)
       : [];
+  const oauth2 =
+    method.type === "OAUTH2"
+      ? describeOAuth2(auth as Record<string, unknown>)
+      : undefined;
   return {
     type: method.type ?? "UNKNOWN",
     displayName: method.displayName,
     description: method.description,
     required: method.required,
     ...(props.length > 0 ? { props } : {}),
+    ...(oauth2 ? { oauth2 } : {}),
     ...withUnsupported(unsupportedAuth(method)),
   };
 }

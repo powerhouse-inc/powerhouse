@@ -38,6 +38,7 @@ import { packagePieces } from "./piece-registry.js";
 import { SubgraphReactorPort } from "./reactor-port.js";
 import { packageFromConnectorId } from "./connector-id.js";
 import { runnableDefinition, type RunnableDefinition } from "./runnable.js";
+import type { OAuthTokenRefresher } from "./oauth.js";
 
 const pieceLogger = childLogger(["workflow", "piece"]);
 const connectionLogger = childLogger(["workflow", "connection"]);
@@ -75,6 +76,7 @@ export class DocumentConnectionResolver implements EngineConnectionResolver {
   constructor(
     private readonly host: WorkflowRuntimeHostDeps,
     private readonly secrets: SecretProvider,
+    private readonly oauth?: OAuthTokenRefresher,
   ) {}
 
   async resolve(
@@ -92,7 +94,12 @@ export class DocumentConnectionResolver implements EngineConnectionResolver {
   ): Promise<ResolvedConnection> {
     const document =
       await this.host.reactorClient.get<ConnectionDocument>(connectionId);
-    return resolveConnectionWithSecrets(document, this.secrets, request);
+    return resolveConnectionWithSecrets(
+      document,
+      this.secrets,
+      request,
+      this.oauth,
+    );
   }
 }
 
@@ -102,8 +109,10 @@ export async function resolveConnectionAuth(
   document: ConnectionDocument,
   secrets: SecretProvider,
   request?: ConnectionRequest,
+  oauth?: OAuthTokenRefresher,
 ): Promise<unknown> {
-  return (await resolveConnectionWithSecrets(document, secrets, request)).auth;
+  return (await resolveConnectionWithSecrets(document, secrets, request, oauth))
+    .auth;
 }
 
 // The same resolution, with the concrete secret strings the journal redacts
@@ -113,6 +122,7 @@ export async function resolveConnectionWithSecrets(
   document: ConnectionDocument,
   secrets: SecretProvider,
   request?: ConnectionRequest,
+  oauth?: OAuthTokenRefresher,
 ): Promise<ResolvedConnection> {
   // Nothing before the connector check describes what was found: a document
   // of the wrong type answers exactly as a foreign connection does.
@@ -128,14 +138,13 @@ export async function resolveConnectionWithSecrets(
       `Connection "${state.name || document.header.id}" is revoked`,
     );
   }
-  return shapeConnection(
-    {
-      authType: state.authType as ConnectionAuthType,
-      config: (state.config ?? {}) as Record<string, unknown>,
-      secretRefs: state.secretRefs,
-    },
-    secrets,
-  );
+  const source = {
+    authType: state.authType as ConnectionAuthType,
+    config: (state.config ?? {}) as Record<string, unknown>,
+    secretRefs: state.secretRefs,
+  };
+  if (source.authType === "OAUTH2") await oauth?.refreshIfDue(source);
+  return shapeConnection(source, secrets);
 }
 
 // Piece code runs under an egress policy that denies private address space —
@@ -233,6 +242,7 @@ export function createBlockExecutor(
   pieceStore?: PieceStorePort,
   // The runtime's resolution policy, shared with triggers and design time.
   resolveBlock?: (block: BlockRef) => Promise<BlockResolution>,
+  oauth?: OAuthTokenRefresher,
 ): BlockExecutor {
   // No handler map: the document blocks are a piece now, and they reach the
   // reactor through the port below like any other package piece would.
@@ -258,7 +268,7 @@ export function createBlockExecutor(
       // withholds it from everything the resolver fetched.
       reactor: new SubgraphReactorPort(host),
       connections: boundConnections(
-        new DocumentConnectionResolver(host, secrets),
+        new DocumentConnectionResolver(host, secrets, oauth),
       ),
       // Without it an action's ctx.store lives only in the worker's heap.
       ...(pieceStore ? { pieceStore } : {}),

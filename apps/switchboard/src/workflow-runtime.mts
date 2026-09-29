@@ -35,9 +35,17 @@ import type {
   WorkflowRuntimeHostDeps,
 } from "@powerhousedao/reactor-workflow";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import type { IWebhookScope } from "@powerhousedao/shared/processors";
+import type {
+  IHttpScope,
+  IWebhookScope,
+  ScopedRouteHandle,
+} from "@powerhousedao/shared/processors";
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
+import {
+  callbackUrlOf,
+  registerOAuthCallback,
+} from "./workflow/oauth-callback.js";
 import { createWorkflowRuntimeSubgraph } from "./workflow/subgraph.js";
 
 type WorkflowEngineModule = typeof WorkflowEngine;
@@ -128,6 +136,9 @@ export interface ComposeWorkflowRuntimeDeps {
   attachmentReferences?: IAttachmentReferenceReader;
   attachmentReferenceProjection?: AttachmentReferenceProjectionCapability;
   webhooks?: IWebhookScope;
+  /** The workflow package's HTTP namespace; the OAuth2 callback lives on it.
+   * Absent leaves OAuth2 connections unable to sign in. */
+  http?: IHttpScope;
   authorizationService: IAuthorizationService;
   /** Where the pieces installed packages ship come from; absent leaves the
    * runtime with none and only published bundles resolvable. */
@@ -375,9 +386,15 @@ export async function composeWorkflowRuntime(
   }
 
   let stopped = false;
+  const oauthCallback: ScopedRouteHandle | undefined = deps.http
+    ? registerOAuthCallback(deps.http, runtime)
+    : undefined;
 
   return {
-    subgraph: createWorkflowRuntimeSubgraph(runtime),
+    subgraph: createWorkflowRuntimeSubgraph(
+      runtime,
+      deps.http ? { callbackUrl: callbackUrlOf(deps.http) } : undefined,
+    ),
     triggers,
 
     async start() {
@@ -390,6 +407,7 @@ export async function composeWorkflowRuntime(
     stop() {
       if (stopped) return Promise.resolve();
       stopped = true;
+      oauthCallback?.dispose();
       runtime.shutdown();
       return Promise.resolve();
     },

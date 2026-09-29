@@ -7,10 +7,11 @@ import {
   AppConnectionType,
   type AppConnectionValue,
   type BasicAuthConnectionValue,
+  type OAuth2ConnectionValueWithApp,
 } from "@powerhousedao/pieces-framework";
 
 // The powerhouse/connection document model's own enum: the framework's
-// AppConnectionType, minus its OAuth2 variants, with NO_AUTH persisted as NONE.
+// AppConnectionType, minus its hosted OAuth2 variants, with NO_AUTH as NONE.
 export type ConnectionAuthType =
   | `${AppConnectionType.SECRET_TEXT}`
   | `${AppConnectionType.BASIC_AUTH}`
@@ -104,10 +105,77 @@ export async function shapeConnection(
   secrets: SecretProvider,
 ): Promise<ResolvedConnection> {
   const resolved = await resolveSecrets(source, secrets);
+  if (source.authType === "OAUTH2") return shapeOAuth2(source, resolved);
   return {
     auth: shapeAuth(source, resolved),
     secretValues: Object.values(resolved),
   };
+}
+
+// OAUTH2 keeps client_id in config and client_secret plus the host-written
+// token set (JSON) in secretRefs; the rest are the method's own props.
+function shapeOAuth2(
+  source: ConnectionSource,
+  resolved: Record<string, string>,
+): ResolvedConnection {
+  const { client_secret: clientSecret, token, ...secretProps } = resolved;
+  const { client_id: clientId, ...configProps } = source.config ?? {};
+  if (!token) {
+    throw new Error(
+      "This OAuth2 connection is not signed in; connect it first",
+    );
+  }
+  let tokens: Record<string, unknown>;
+  try {
+    tokens = JSON.parse(token) as Record<string, unknown>;
+  } catch {
+    throw new Error("Stored OAuth2 token is malformed; reconnect");
+  }
+  const text = (value: unknown, fallback = "") =>
+    typeof value === "string" ? value : fallback;
+  const auth: OAuth2ConnectionValueWithApp = {
+    type: AppConnectionType.OAUTH2,
+    client_id: text(clientId),
+    client_secret: text(clientSecret),
+    redirect_url: text(tokens.redirect_url),
+    access_token: text(tokens.access_token),
+    refresh_token: text(tokens.refresh_token),
+    token_type: text(tokens.token_type, "Bearer"),
+    claimed_at: Number(tokens.claimed_at ?? 0),
+    scope: text(tokens.scope),
+    token_url: text(tokens.token_url),
+    ...(typeof tokens.expires_in === "number"
+      ? { expires_in: tokens.expires_in }
+      : {}),
+    data: (tokens.data ?? {}) as Record<string, unknown>,
+    props: { ...configProps, ...secretProps },
+  };
+  // The token blob itself is never what a piece prints; its parts are.
+  const secretValues = [
+    clientSecret,
+    auth.access_token,
+    auth.refresh_token,
+    ...Object.values(secretProps),
+    ...tokenLikeValues(auth.data),
+  ].filter((value): value is string => Boolean(value));
+  return { auth, secretValues: [...new Set(secretValues)] };
+}
+
+// Keys naming a credential: id_token, authed_user.access_token, clientSecret.
+// Not every string: a scope or a team name would be blanked all over a log.
+const TOKEN_KEY = /(token|secret)$/i;
+
+function tokenLikeValues(value: unknown, key = ""): string[] {
+  if (typeof value === "string") return TOKEN_KEY.test(key) ? [value] : [];
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => tokenLikeValues(item, key));
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.entries(value).flatMap(([name, item]) =>
+      tokenLikeValues(item, name),
+    );
+  }
+  return [];
 }
 
 // NONE is the persisted value; the framework's NO_AUTH case carries no value a

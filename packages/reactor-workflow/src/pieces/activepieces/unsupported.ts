@@ -45,7 +45,9 @@ export function authMethodFor(auth: unknown, type: unknown): unknown {
 
 function unsupportedMethod(auth: unknown): UnsupportedFeature | undefined {
   if (!isRecord(auth)) return undefined;
-  if (auth.type === "OAUTH2") return unsupported("OAuth2 auth", 3091);
+  if (auth.type === "OAUTH2" && auth.grantType === "client_credentials") {
+    return unsupported("OAuth2 client credentials", 3091);
+  }
   if (auth.type === "OIDC") return unsupported("OIDC auth", 3091);
   if (auth.type === "CUSTOM_AUTH" && auth.refresh != null) {
     return unsupported("CustomAuth refresh", 3091);

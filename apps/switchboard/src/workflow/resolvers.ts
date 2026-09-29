@@ -190,9 +190,70 @@ function toRunRecord(row: RunRow, steps: StepExecutionRow[]) {
   };
 }
 
+export interface OAuthRouting {
+  // Absolute, or a bare path when the host's public origin is unknown.
+  callbackUrl: string;
+}
+
+function isAbsolute(url: string): boolean {
+  return /^https?:\/\//i.test(url);
+}
+
+// The redirect a sign-in uses: the host's own when it knows its origin,
+// otherwise the caller's, provided it names this host's callback path.
+function redirectUriFor(
+  routing: OAuthRouting | undefined,
+  requested: string | null | undefined,
+): string {
+  if (!routing) throw new GraphQLError("This host serves no OAuth2 callback");
+  if (isAbsolute(routing.callbackUrl)) return routing.callbackUrl;
+  if (!requested) {
+    throw new GraphQLError(
+      "This host does not know its public URL; pass redirectUri",
+    );
+  }
+  let url: URL;
+  try {
+    url = new URL(requested);
+  } catch {
+    throw new GraphQLError(`"${requested}" is not a URL`);
+  }
+  if (
+    (url.protocol !== "https:" && url.protocol !== "http:") ||
+    url.pathname !== routing.callbackUrl ||
+    url.search !== "" ||
+    url.hash !== ""
+  ) {
+    throw new GraphQLError(
+      `redirectUri must be this host's ${routing.callbackUrl}`,
+    );
+  }
+  return url.href;
+}
+
+// Only back to the page that asked: its Origin header is the browser's.
+function returnUrlFor(
+  requested: string | null | undefined,
+  ctx: Context,
+): string | undefined {
+  if (!requested) return undefined;
+  const origin = ctx.headers.origin;
+  let url: URL | undefined;
+  try {
+    url = new URL(requested);
+  } catch {
+    url = undefined;
+  }
+  if (!url || !origin || url.origin !== origin) {
+    throw new GraphQLError("returnUrl must be on the requesting page's origin");
+  }
+  return url.href;
+}
+
 export const getResolvers = (
   runtime: WorkflowRuntimeService,
   authorizationService: IAuthorizationService,
+  oauth?: OAuthRouting,
 ): Record<string, unknown> => {
   return {
     Query: {
@@ -267,6 +328,9 @@ export const getResolvers = (
         }
       },
       secrets: async () => (await runtime.secrets()).list(),
+      oauthRedirectUri: () => oauth?.callbackUrl ?? null,
+      oauthAttempt: (_parent: unknown, args: { state: string }, ctx: Context) =>
+        runtime.oauthAttempt(args.state, ctx),
       triggerStates: async (_parent: unknown, _args: unknown, ctx: Context) =>
         (await runtime.triggerStates(ctx)).map((row) => ({
           workflowId: row.workflow_id,
@@ -405,6 +469,23 @@ export const getResolvers = (
         args: { connectionId: string },
         ctx: Context,
       ) => runtime.checkConnection(args.connectionId, ctx),
+      // Signing in mints a secret, so it takes what createSecret takes.
+      startOAuth: (
+        _parent: unknown,
+        args: {
+          connectionId: string;
+          redirectUri?: string | null;
+          returnUrl?: string | null;
+        },
+        ctx: Context,
+      ) => {
+        requireAdmin(authorizationService, ctx);
+        const returnUrl = returnUrlFor(args.returnUrl, ctx);
+        return runtime.startOAuth(args.connectionId, ctx, {
+          redirectUri: redirectUriFor(oauth, args.redirectUri),
+          ...(returnUrl ? { returnUrl } : {}),
+        });
+      },
     },
   };
 };
