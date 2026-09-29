@@ -101,6 +101,17 @@ describe("SettledWatermark [Postgres]", () => {
     await open.finish("commit");
   });
 
+  it.fails("holds below an open ordinal when no later transaction has ended", async () => {
+    const open = openIndexWrite("doc-open-newest");
+    const held = await open.ordinal;
+    try {
+      expect(await watermark.refresh()).toBeLessThan(held);
+      expect(watermark.status().waitingOn.length).toBeGreaterThan(0);
+    } finally {
+      await open.finish("commit");
+    }
+  });
+
   it("passes it once that transaction rolls back", async () => {
     const open = openIndexWrite("doc-rolled-back");
     const held = await open.ordinal;

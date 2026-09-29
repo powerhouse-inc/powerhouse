@@ -84,6 +84,36 @@ describe("BaseReadModel catch-up [Postgres]", () => {
     };
   }
 
+  it.fails("applies an open newest write that commits after a sweep", async () => {
+    const model = new RecordingModel(
+      db as unknown as Kysely<DocumentViewDatabase>,
+      operationIndex,
+      {} as IWriteCache,
+      new ConsistencyTracker(),
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: false },
+    );
+    await model.init();
+
+    const open = openIndexWrite("doc-open-newest");
+    const held = await open.ordinal;
+    try {
+      const settled = await watermark.refresh();
+      await model.sweep(
+        settled,
+        await operationIndex.getOrdinalsInRange(
+          model.appliedThrough,
+          settled,
+          1000,
+        ),
+      );
+    } finally {
+      await open.finish();
+    }
+
+    await model.indexOperations(await operationIndex.getByOrdinals([held]));
+    expect(model.applied).toEqual([held]);
+  });
+
   it("replays no history for a head registration made while a write is open", async () => {
     await commit("doc-a", "doc-b", "doc-c");
     const open = openIndexWrite("doc-open");
