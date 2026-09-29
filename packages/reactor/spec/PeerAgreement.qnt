@@ -199,7 +199,8 @@ module PeerAgreement {
   /** A restart into another build. The unsent outbox is lost and re-derived; a client re-handshakes. */
   action changeBuild(r: str, nb: str): bool = all {
     nb != build.get(r),
-    // Decision 19: no downgrade below the feature while storing documents above the baselines.
+    // Decision 19, as the rule states it. The code is stricter: a legacy build's migrator refuses
+    // any store this build migrated, and a narrower build refuses to start unless read-only.
     nb != "legacy" or stored.get(r).forall(d => BASELINE.contains(docVersion.get(d))),
     build' = build.set(r, nb),
     seq' = seq.set(r, seq.get(r) + 1),

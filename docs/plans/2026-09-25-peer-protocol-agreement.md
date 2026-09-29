@@ -486,6 +486,30 @@ NON_QUARANTINING_ERROR_TYPES = new Set([
 // server becomes a SyncHold for that remote, not a local dead letter.
 ```
 
+### Startup
+
+A reactor does not start below a version its store holds.
+
+```ts
+// migration 023: one entry per document created with protocolVersions
+CREATE INDEX idx_operation_created_protocol_versions ON "Operation"
+  (md5((action->'input'->'protocolVersions')::text))
+  WHERE scope = 'document' AND "index" = 0 AND action->'input'->'protocolVersions' IS NOT NULL;
+
+// ReactorBuilder.buildModule, after migrations, before the executors start (PGlite, Postgres,
+// the Connect SharedWorker and REACTOR_WORKERS all build here)
+storedProtocolVersions(db)   // recursive CTE: one index probe per distinct value
+unsupported = registered keys whose stored version the local set lacks
+if (unsupported) {
+  "refuse" (default): throw new UnsupportedStoredProtocolError(versions, documents)
+  "read-only":        warn; the run check keeps those documents read-only
+}
+ReactorBuilder.withUnsupportedStoredDocuments(mode: "refuse" | "read-only")
+
+// A pre-feature build: its migrator finds 021_add_sync_remote_peer executed and missing
+// ("corrupted migrations"), and buildModule throws "Database migration failed".
+```
+
 ### Observability
 
 ```ts
@@ -575,15 +599,17 @@ peer narrowed      documents created at the wider set are held for that peer, re
 peer narrows                 re-touch with the smaller manifest (or none); unsent items become holds;
                              later writes are gated; its writes into those documents are refused
                              (PEER_PROTOCOL_UNSUPPORTED)
-peer drops below a version   what it already stores stays there, read-only: every job into it and
-it stores                    every received row is refused (UnsupportedProtocolVersionError,
-                             UNSUPPORTED_PROTOCOL) from the release that registers the version
+peer drops below a version   refuses to start (UnsupportedStoredProtocolError, naming the versions
+it stores                    and document count), e.g. undoV3 turned off over base-reducer 3
+                             documents; with withUnsupportedStoredDocuments("read-only") it starts and
+                             what it stores stays read-only: every job into it and every received row
+                             is refused (UnsupportedProtocolVersionError, UNSUPPORTED_PROTOCOL)
 refused by a peer that       push: the server's dead letter becomes a hold; poll: the client reports
 announced the version        the refusal on its next poll and the server holds; released when the
                              peer's next manifest (a new start sequence) supports it
-peer drops below this        not supported once it stores documents above the baselines: it is silent
-feature                      to its peers, which gate correctly, but it runs its stored documents under
-                             its old rules
+peer drops below this        refuses to start over a store this build migrated, whatever it stores:
+feature                      its migrator finds migrations it does not know. Over a fresh store it is
+                             silent to its peers, which gate correctly
 restart, either side         the start sequence changes the revision, so the other side re-touches
                              without waiting for a handshake; a delayed older manifest is ignored
 new peer joins a collection  initial backfill holds documents it cannot run; new documents created
@@ -617,8 +643,12 @@ in use is in every baseline.
    `UnsupportedProtocolVersionError` on CREATE_DOCUMENT execute and load, and
    on every job into a stored document, for registered keys;
    `classifyJobFailure` maps it to `UNSUPPORTED_PROTOCOL`, non-quarantining.
-   Tests: base-reducer 7 refused on execute and on load; writes and loads into
-   a stored document refused after the registry narrows, with and without
+   `UnsupportedStoredProtocolError` at startup, migration 023,
+   `withUnsupportedStoredDocuments`.
+   Tests: base-reducer 7 refused on execute and on load; startup refused over
+   a store above the local set, normal within it, read-only when told; a
+   pre-feature migrator refuses the store; writes and loads into a stored
+   document refused after the registry narrows, with and without
    `documentDecisions`; unregistered key admitted and logged; the error name
    survives the queue to `JobInfo.error` and the dead letter's `errorType`;
    worker-pool parity for the refusal; manifest revision stable for the same
@@ -786,10 +816,18 @@ if (agreement.peer(remote.meta.name).features["sync.anti-entropy"]?.includes(1))
 18. **A document with no parent takes the local preference.** It has no
     collection to agree with, and the gate holds it from any peer that cannot
     run it once it joins one.
-19. **Downgrading below this feature is unsupported once newer versions are
-    in use.** Such a peer is silent, so its peers gate correctly towards it,
-    but it runs the documents it already stores under its old rules. We
-    document this rather than enforce a minimum build.
+19. **A reactor does not start below a version it stores.** A build with the
+    feature but a narrower set refuses at startup, naming the versions and
+    document count. The run check alone would make those documents read-only
+    without anyone choosing it; an operator who accepts that passes
+    `withUnsupportedStoredDocuments("read-only")`. The check is one index
+    probe per distinct creation set, not a pass over documents. A pre-feature
+    build cannot run new code, so enforcement comes from its migrator, which
+    refuses a store with migrations it does not know. That refuses the
+    rollback even with nothing above the baselines stored, which the rule
+    allows; every schema migration already does the same to a rollback, so
+    we accept it. A host that runs migrations itself (`"manual"`, `"none"`)
+    must stop on their error; that stays an operator rule.
 20. **The run check covers every job and every received row.** Refusing only
     creations let a reactor whose registry narrowed keep writing into a
     stored document it reads as an older version; the model found misread
