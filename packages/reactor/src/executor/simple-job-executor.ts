@@ -210,6 +210,46 @@ function purgeRequestDocumentIds(job: Job): string[] {
     : [];
 }
 
+const MARKER_INPUT_KEYS: ReadonlySet<string> = new Set([
+  "documentId",
+  "documentType",
+  "purgedAtUtcIso",
+  "requestId",
+]);
+
+/** A peer's marker must name this job's id on main and carry nothing else. */
+function malformedMarker(job: Job): InvalidSignatureError | undefined {
+  const marker = job.operations.find((operation) => isPurgeMarker(operation));
+  const action = marker?.action;
+  const input = action?.input as Record<string, unknown> | null | undefined;
+  const refuse = (reason: string) =>
+    new InvalidSignatureError(
+      job.documentId,
+      "ID_MISMATCH",
+      `marker ${action?.id ?? "?"} ${reason}`,
+    );
+  if (typeof input !== "object" || input === null) {
+    return refuse("carries no input");
+  }
+  const extra = Object.keys(input).filter((key) => !MARKER_INPUT_KEYS.has(key));
+  if (extra.length > 0) {
+    return refuse(`carries unexpected input ${extra.join(", ")}`);
+  }
+  for (const key of MARKER_INPUT_KEYS) {
+    if (typeof input[key] !== "string" || input[key] === "") {
+      return refuse(`input.${key} is not a non-empty string`);
+    }
+  }
+  if (
+    input.documentId !== job.documentId ||
+    job.branch !== "main" ||
+    action?.scope !== "document"
+  ) {
+    return refuse(`does not purge ${job.documentId} on document/main`);
+  }
+  return undefined;
+}
+
 class JobRollbackSignal extends Error {
   constructor(readonly result: JobResult) {
     super("job rolled back");
@@ -720,6 +760,13 @@ export class SimpleJobExecutor implements IJobExecutor {
       ),
     });
 
+    if (job.kind === "load") {
+      const malformed = malformedMarker(job);
+      if (malformed) {
+        return fail(malformed);
+      }
+    }
+
     const purger = stores.purger;
     if (!purger) {
       return fail(
@@ -888,17 +935,6 @@ export class SimpleJobExecutor implements IJobExecutor {
     const marker = job.operations.find((operation) =>
       isPurgeMarker(operation),
     ) as PurgeMarkerOperation;
-
-    if (
-      marker.action.input?.documentId !== documentId ||
-      job.branch !== "main"
-    ) {
-      return new InvalidSignatureError(
-        documentId,
-        "ID_MISMATCH",
-        `marker ${marker.action.id} does not purge ${documentId} on main`,
-      );
-    }
 
     const refusal = await this.signatureAdmission.admitMarker(
       job,

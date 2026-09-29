@@ -1,4 +1,5 @@
 import {
+  actionSignerIdentity,
   generateId,
   type ISigner,
   type Operation,
@@ -245,6 +246,39 @@ describe.each([
     await failedWith(
       receiver.reactor,
       (await load(documentId, [purgeMarker(documentId)])).id,
+      "InvalidSignatureError",
+    );
+    await expectUntouched(receiver.db, documentId, before);
+  });
+
+  it("refuses a validly signed marker whose input carries more than it may", async () => {
+    const documentId = generateId();
+    const unsigned = purgeMarker(documentId);
+    const action = {
+      ...unsigned.action,
+      input: {
+        ...unsigned.action.input,
+        protocolVersions: { "base-reducer": 2 },
+      },
+    };
+    const signature = await origin.signAction(action, {
+      documentId,
+      branch: "main",
+    });
+    const forged: Operation = {
+      ...unsigned,
+      action: {
+        ...action,
+        context: {
+          signer: { ...actionSignerIdentity(origin), signatures: [signature] },
+        },
+      },
+    };
+    const before = await deleteListCounts(receiver.db, documentId);
+
+    await failedWith(
+      receiver.reactor,
+      (await load(documentId, [forged])).id,
       "InvalidSignatureError",
     );
     await expectUntouched(receiver.db, documentId, before);
