@@ -311,6 +311,19 @@ describe("the core webhook trigger over HTTP: endpoints that are not armed", () 
     await expectNoRuns(webhook);
   });
 
+  it("revokes a deleted workflow's token and answers it as unknown", async () => {
+    const webhook = await start();
+    const { token } = await webhook.arm({ scheme: "none" });
+    expect(await webhook.hasToken(token)).toBe(true);
+    await webhook.remove();
+
+    // Revoked off the ingestion path, once the supervisor has released it.
+    await expect.poll(() => webhook.hasToken(token)).toBe(false);
+    const res = await webhook.deliver(token, { ...JSON_BODY, body: "{}" });
+    expect(res.status).toBe(404);
+    await expectNoRuns(webhook);
+  });
+
   it("refuses deliveries to an endpoint whose config does not parse", async () => {
     // A token scheme with no secretRef cannot be honoured; firing anyway would
     // run the workflow with no verification at all.

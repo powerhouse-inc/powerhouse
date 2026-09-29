@@ -63,6 +63,10 @@ export interface WebhookHost {
   ): Promise<{ token: string; url: string }>;
   /** Publishes the same workflow as DISABLED, keeping its endpoint row. */
   disarm(workflowId?: string): Promise<void>;
+  /** Deletes the workflow document, as the reactor reports it. */
+  remove(workflowId?: string): Promise<void>;
+  /** Whether the reactor's webhook store still holds this token. */
+  hasToken(token: string): Promise<boolean>;
   /** The policy the service hands the reactor for one endpoint. */
   policyFor(workflowId?: string): Promise<unknown>;
   deliver(
@@ -122,7 +126,8 @@ export async function startWebhookHost(
   const { port } = server.address() as { port: number };
   const url = `http://127.0.0.1:${port}`;
 
-  const webhooks = new WebhookService({ store: new MemoryWebhookStore() });
+  const webhookStore = new MemoryWebhookStore();
+  const webhooks = new WebhookService({ store: webhookStore });
   const routes = new HttpRouteService({
     httpAdapter: adapter,
     webhooks,
@@ -217,6 +222,31 @@ export async function startWebhookHost(
     },
     async disarm(workflowId = DEFAULT_WORKFLOW) {
       await publish({}, "DISABLED", WEBHOOK_TRIGGER, workflowId);
+    },
+    async remove(workflowId = DEFAULT_WORKFLOW) {
+      ordinal += 1;
+      await service.onOperations([
+        {
+          operation: {
+            index: ordinal,
+            timestampUtcMs: `${ordinal}`,
+            action: {
+              type: "DELETE_DOCUMENT",
+              input: { documentId: workflowId },
+            },
+          },
+          context: {
+            documentId: workflowId,
+            documentType: WORKFLOW_TYPE,
+            scope: "document",
+            branch: "main",
+            ordinal,
+          },
+        } as unknown as OperationWithContext,
+      ]);
+    },
+    async hasToken(token) {
+      return (await webhookStore.find(token)) !== undefined;
     },
     policyFor(workflowId = DEFAULT_WORKFLOW) {
       return service.webhookPolicy(workflowId);

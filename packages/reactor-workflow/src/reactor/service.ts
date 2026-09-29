@@ -1483,7 +1483,8 @@ export class WorkflowRuntimeService {
     }
   }
 
-  // A deleted workflow claims no more keys, so its dedupe rows go with it.
+  // A deleted workflow is disarmed as a disabled one is, and its trigger row,
+  // webhook token and dedupe keys go with it.
   private async forgetDeletedWorkflow(
     operation: OperationWithContext["operation"],
     context: OperationWithContext["context"],
@@ -1494,6 +1495,7 @@ export class WorkflowRuntimeService {
     const workflowId =
       stringField(inputRecord(operation.action.input), "documentId") ??
       context.documentId;
+    this.disarmDeleted(workflowId);
     try {
       await (await this.store())?.deleteDedupe(workflowId);
     } catch (error) {
@@ -1502,6 +1504,25 @@ export class WorkflowRuntimeService {
         error,
       );
     }
+  }
+
+  // The registry goes now, so deliveries stop at once. onDisable and the
+  // token revoke queue behind any enable in flight, off the ingestion path.
+  private disarmDeleted(workflowId: string): void {
+    this.registry.delete(workflowId);
+    this.registeredAs.delete(workflowId);
+    this.unarmed.delete(workflowId);
+    this.cancelResolutionRetry(workflowId);
+    this.cancelTriggerTest(workflowId, "stopped: the workflow was deleted");
+    this.supervisor()
+      .forget(workflowId)
+      .then(async () => (await this.endpoints())?.revoke(workflowId))
+      .catch((error: unknown) => {
+        this.logger.error(
+          `Could not disarm deleted workflow ${workflowId}`,
+          error,
+        );
+      });
   }
 
   // The document's own CREATE_DOCUMENT / DELETE_DOCUMENT, the source of truth: it covers

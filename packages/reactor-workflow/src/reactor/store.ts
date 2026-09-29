@@ -1414,6 +1414,22 @@ export class WorkflowRunStore {
       .execute();
   }
 
+  // A deleted workflow's row, with the FLOW partition its trigger wrote.
+  async deleteTriggerState(workflowId: string): Promise<void> {
+    await this.db.transaction().execute(async (trx) => {
+      await trx
+        .deleteFrom("trigger_state")
+        .where("workflow_id", "=", workflowId)
+        .execute();
+      await trx
+        .deleteFrom("piece_store")
+        .where("scope", "=", "FLOW")
+        .where("scope_key", "=", workflowId)
+        .execute();
+    });
+    this.unmigrated.delete(workflowId);
+  }
+
   async listTriggerStates(): Promise<TriggerStateRow[]> {
     return this.db
       .selectFrom("trigger_state")
