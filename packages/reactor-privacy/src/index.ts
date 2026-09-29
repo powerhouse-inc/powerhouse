@@ -34,3 +34,13 @@ export {
   mentionsOf,
   type SubjectMention,
 } from "./read-model/subjects.js";
+export {
+  DISCLOSURE_NOT_COVERED,
+  DisclosureService,
+  type BoundSyncRemote,
+  type Disclosure,
+  type IPermissionRowsLookup,
+  type PeerManifestAppKey,
+  type PermissionRow,
+  type SubjectDocument,
+} from "./disclosure/disclosure-service.js";
