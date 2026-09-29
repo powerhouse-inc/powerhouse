@@ -11,11 +11,13 @@ import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
 import { vi, type Mock } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
+import type { ISettledWatermark } from "../../../src/catch-up/types.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
 import type { IReactor } from "../../../src/core/types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import { ReactorEventTypes } from "../../../src/events/types.js";
 import type { ISyncCursorStorage } from "../../../src/storage/interfaces.js";
+import { deliveryAt } from "../../../src/storage/kysely/delivery-lookup.js";
 import { listPurged } from "../../../src/storage/kysely/document-purges.js";
 import { KyselySyncHoldStorage } from "../../../src/storage/kysely/sync-hold-storage.js";
 import type { Database } from "../../../src/storage/kysely/types.js";
@@ -67,7 +69,9 @@ export type Harness = {
 };
 
 /** A SyncManager over real Postgres storage and index, with a mocked reactor. */
-export async function createHarness(): Promise<Harness> {
+export async function createHarness(
+  options: { watermark?: ISettledWatermark } = {},
+): Promise<Harness> {
   const storage = await createTestSyncStoragePostgres();
   const db = storage.db as unknown as Kysely<Database>;
   const index = new KyselyOperationIndex(db);
@@ -115,7 +119,7 @@ export async function createHarness(): Promise<Harness> {
     reactor as unknown as IReactor,
     eventBus,
     DEFAULT_DRIVE_CONTAINER_TYPES,
-    settledAtHead(),
+    options.watermark ?? settledAtHead(),
     {},
     {
       capabilities: PEER_CAPABILITIES,
@@ -125,6 +129,7 @@ export async function createHarness(): Promise<Harness> {
     },
     new KyselySyncHoldStorage(storage.db),
     { listPurged: () => listPurged(db) },
+    { at: (documentId, ordinal) => deliveryAt(db, documentId, ordinal) },
   );
 
   return {
