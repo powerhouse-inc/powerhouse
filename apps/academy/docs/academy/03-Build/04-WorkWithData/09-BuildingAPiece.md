@@ -147,6 +147,8 @@ Three of those deserve attention, because they're what makes a step usable by so
 - **`props`** is the form Workflow Studio renders for the step. A property a user may reasonably leave empty should be `required: false`. A required property left empty marks the step incomplete, and Studio won't publish the workflow until it is filled in. When Studio adds the step, it writes each prop's `defaultValue` into the step's config, so the step keeps that default even if a later version of your piece changes it.
 - **`outputSchema`** is what a _later_ step can pick fields from. Without it, whoever builds the workflow has to run your action once and read the raw output to discover what it returns. It costs a few lines and saves every author that round trip.
 
+An action can also define **`test`**, with the same signature as `run`. Testing a single step in Studio calls `test` if it's there and `run` otherwise; workflow runs always call `run`. Use it when a step test shouldn't have real side effects, for example to preview a message rather than send it.
+
 ## Writing a trigger
 
 A trigger starts a run. Its `run` hook returns an array, and **each item starts one workflow run** with that item as the trigger's output. Returning an empty array means nothing happened.
@@ -166,7 +168,7 @@ Every trigger has the same hooks:
 
 - **`onEnable`** runs when a workflow using the trigger is enabled, or republished with a changed trigger, and **`onDisable`** when it's switched off or deleted.
 - **`run`** reports what's new.
-- **`test`** is optional. Studio calls it to fetch a real sample while someone is building the workflow. It gets a scratch `context.store` that's thrown away afterwards, so it can't move a live cursor. Studio saves the sample as the trigger's last test, and marks it stale once the trigger is edited.
+- **`test`** is optional. Studio calls it to fetch a real sample while someone is building the workflow. It gets a scratch `context.store` that's thrown away afterwards, so it can't move a live cursor. Studio saves the sample as the trigger's last test, and marks it stale once the trigger is edited. Without `test`, testing the trigger returns its `sampleData`.
 - **`sampleData`** is what Studio shows as the trigger's payload before it has ever fired. It lets someone build the rest of the workflow against real-looking fields rather than waiting for the trigger to fire.
 
 ### Polling
