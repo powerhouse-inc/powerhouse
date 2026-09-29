@@ -2168,12 +2168,18 @@ export class WorkflowRuntimeService {
   // read as the caller and then held to the host's own check.
   async connections(ctx?: WorkflowCaller): Promise<ConnectionSummary[]> {
     const subject = ctx && this.host.subjectOf?.(ctx);
-    const page = await this.host.reactorClient.find(
+    let page = await this.host.reactorClient.find(
       { type: "powerhouse/connection" },
       subject ? { subject } : undefined,
     );
+    const found = [...page.results];
+    // Every page, then the check: filtering one page would hide the rest.
+    while (page.next) {
+      page = await page.next();
+      found.push(...page.results);
+    }
     const readable = await this.readableDocuments(
-      page.results as ConnectionDocument[],
+      found as ConnectionDocument[],
       ctx,
     );
     // A listing serves a document any domain scope of which is readable, so

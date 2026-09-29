@@ -117,6 +117,27 @@ describe("design-time connection access", () => {
     expect(listed.map((entry) => entry.id)).toEqual(["conn-mine"]);
   });
 
+  it("lists connections past the reactor's first page", async () => {
+    const paged = testRuntime({
+      reactorClient: {
+        get,
+        execute: vi.fn(),
+        find: vi.fn(() => ({
+          results: [connectionSummaryDocument("conn-theirs")],
+          next: () =>
+            Promise.resolve({
+              results: [connectionSummaryDocument("conn-mine")],
+            }),
+        })),
+      },
+      assertCanRead,
+    } as unknown as WorkflowRuntimeHostDeps);
+
+    const listed = await paged.connections(CTX);
+
+    expect(listed.map((entry) => entry.id)).toEqual(["conn-mine"]);
+  });
+
   it("lists nothing to a caller it cannot identify", async () => {
     expect(await runtime.connections()).toEqual([]);
   });
