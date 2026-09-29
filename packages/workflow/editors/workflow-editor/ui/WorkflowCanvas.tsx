@@ -96,7 +96,8 @@ export function WorkflowCanvas({
     [model, portsKey],
   );
   // Local-first: a block is added at once, with its piece's defaults when
-  // the form is cached; otherwise they follow once it loads.
+  // the form is cached; otherwise they follow once it loads. Adding selects
+  // the block, which opens its panel.
   const add = useCallback(
     (
       preset: PickedPreset,
@@ -108,12 +109,14 @@ export function WorkflowCanvas({
           ? withPropDefaults(cached.props, preset.defaultConfig)
           : preset.defaultConfig,
       );
-      if (!added || cached) return;
+      if (!added) return;
+      onSelect(added.id);
+      if (cached) return;
       void loadForm(preset.block).then((form) => {
         if (form) callbacks.completeBlock(added, form);
       });
     },
-    [cachedForm, loadForm, callbacks],
+    [cachedForm, loadForm, callbacks, onSelect],
   );
   // The inserted block continues on its first flow port, known from its kind
   // until the form loads; the follow-up corrects it if the form disagrees.

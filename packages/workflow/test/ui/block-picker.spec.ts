@@ -111,6 +111,48 @@ test.describe("Block picker", () => {
     await expect(canvasNode(app, "Find documents")).toHaveCount(0);
   });
 
+  test("a picked step opens its panel, with no connection field before its form says so", async ({
+    app,
+  }) => {
+    await openWorkflowEditor(app);
+    let release = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    await app.route("**/graphql/workflow-runtime", async (route) => {
+      if (route.request().postData()?.includes("blockDescriptor")) await held;
+      await route.continue();
+    });
+    await openPicker(app, addStep(app));
+    await app.getByRole("button", { name: "Powerhouse", exact: true }).click();
+    await app
+      .getByRole("button")
+      .filter({ hasText: "Lists documents by type and name" })
+      .click();
+
+    const closePanel = app.getByRole("button", { name: "Close panel" });
+    const connection = app.getByRole("button", { name: "Choose a connection" });
+    await expect(closePanel).toBeVisible();
+    await expect(connection).toHaveCount(0);
+    release();
+    await expect(app.getByLabel("Include state")).toBeVisible();
+    await expect(connection).toHaveCount(0);
+  });
+
+  test("a changed trigger opens its panel", async ({ app }) => {
+    await openWorkflowEditor(app);
+    await app
+      .locator(".react-flow__node-apStep")
+      .first()
+      .click({ button: "right" });
+    await app.getByRole("button", { name: "Change trigger" }).click();
+    await app
+      .getByRole("button", { name: /^Manual/ })
+      .first()
+      .click();
+    await expect(
+      app.getByRole("button", { name: "Close panel" }),
+    ).toBeVisible();
+  });
+
   test.describe("on a workflow of its own", () => {
     test.use({ seed: false });
 

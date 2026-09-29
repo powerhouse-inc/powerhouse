@@ -157,8 +157,11 @@ export function ConnectionField(props: {
   );
 
   const authMode = form === "loading" ? "loading" : (form?.auth ?? "optional");
-  // Blocks that take no connection only show the field to clear a stale one.
-  if (authMode === "none" && !props.value) return null;
+  // Blocks that take no connection only show the field to clear a stale one;
+  // until the form says which it is, an empty field stays hidden.
+  if ((authMode === "none" || authMode === "loading") && !props.value) {
+    return null;
+  }
 
   const compatible = compatibleConnections(connections, props.block);
   const needle = query.trim().toLowerCase();
