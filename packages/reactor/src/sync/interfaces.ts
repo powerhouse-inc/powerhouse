@@ -102,14 +102,18 @@ export interface IChannel {
    */
   lastHolderPollUtcMs(): number | undefined;
 
-  /** Read on every handshake, so the peer always hears the current manifest. */
-  setLocalManifest(provider: () => PeerManifest): void;
+  /**
+   * Read on every handshake, so the peer always hears the current manifest.
+   * A channel without it never announces, and its peer sees a silent peer.
+   */
+  setLocalManifest?(provider: () => PeerManifest): void;
 
   /**
    * Fires when the peer's manifest changes; null for a silent peer. A channel
-   * whose peer announces through the sync manager instead never fires.
+   * whose peer announces through the sync manager, or that omits this, never
+   * fires.
    */
-  onPeerManifest(callback: PeerManifestListener): () => void;
+  onPeerManifest?(callback: PeerManifestListener): () => void;
 }
 
 /**

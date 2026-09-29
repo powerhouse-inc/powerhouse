@@ -1167,13 +1167,14 @@ export class SyncManager implements ISyncManager {
       this.handleInboxAdded(remote, syncOps),
     );
 
-    remote.channel.setLocalManifest(() => this.manifest);
-    this.peerUnsubscribes.set(
-      remote.meta.name,
-      remote.channel.onPeerManifest((manifest, undelivered) =>
+    remote.channel.setLocalManifest?.(() => this.manifest);
+    const unsubscribePeer = remote.channel.onPeerManifest?.(
+      (manifest, undelivered) =>
         this.queuePeerManifest(remote, manifest, undelivered).catch(() => {}),
-      ),
     );
+    if (unsubscribePeer) {
+      this.peerUnsubscribes.set(remote.meta.name, unsubscribePeer);
+    }
 
     this.syncStatusTracker.trackRemote(remote.meta.name, remote.channel);
 
