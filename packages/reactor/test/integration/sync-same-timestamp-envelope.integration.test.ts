@@ -78,6 +78,10 @@ class SmallPageOperationIndex implements IOperationIndex {
     return this.inner.get(documentId, view, paging, signal);
   }
 
+  getCollectionsInRange(after: number, through: number, signal?: AbortSignal) {
+    return this.inner.getCollectionsInRange(after, through, signal);
+  }
+
   getOrdinalsInRange(
     after: number,
     through: number,

@@ -245,6 +245,10 @@ export class SyncManager implements ISyncManager {
   private readonly watermark: ISettledWatermark;
   // remote name -> ordinal its outbox is owed through
   private readonly owed = new Map<string, number>();
+  // remote name -> settled ordinal its last complete derivation read through
+  private readonly derivedThrough = new Map<string, number>();
+  // settled ordinals at or below this have owed their collections' remotes
+  private sweptThrough = 0;
   private settledUnsubscribe?: () => void;
   private inboxChunkChain: Promise<void> = Promise.resolve();
   private readonly capabilities: readonly PeerCapability[];
@@ -375,6 +379,7 @@ export class SyncManager implements ISyncManager {
 
     const remoteRecords = await this.remoteStorage.list();
     const head = await this.watermarkHead();
+    this.sweptThrough = Math.max(this.sweptThrough, head);
 
     for (const record of remoteRecords) {
       const channel = this.channelFactory.instance(
@@ -1141,6 +1146,7 @@ export class SyncManager implements ISyncManager {
     // remote up and derive into mailboxes that are already being torn down.
     this.removing.add(name);
     this.owed.delete(name);
+    this.derivedThrough.delete(name);
     try {
       await this.teardownRemoteResources(remote);
 
@@ -1216,6 +1222,7 @@ export class SyncManager implements ISyncManager {
         this.connectionStateUnsubscribes.delete(name);
       }
       this.evictedOutboxFloors.delete(name);
+      this.derivedThrough.delete(name);
       this.prunePending.delete(name);
       this.peerUnsubscribes.get(name)?.();
       this.peerUnsubscribes.delete(name);
@@ -1527,6 +1534,7 @@ export class SyncManager implements ISyncManager {
   private async deriveSettled(): Promise<void> {
     if (this.isShutdown) return;
     const through = this.watermark.settledThrough;
+    await this.oweSettledRange(through);
     for (const [name, upTo] of [...this.owed]) {
       const remote = this.remotes.get(name);
       if (!remote || this.removing.has(name)) {
@@ -1541,6 +1549,34 @@ export class SyncManager implements ISyncManager {
       if (through >= upTo) this.owed.delete(name);
     }
     await this.drainPrunes();
+  }
+
+  /** Owes the remotes of every collection that moved, event or not. */
+  private async oweSettledRange(through: number): Promise<void> {
+    if (through <= this.sweptThrough) return;
+    let collectionIds: string[];
+    try {
+      collectionIds = await this.operationIndex.getCollectionsInRange(
+        this.sweptThrough,
+        through,
+        this.abortController.signal,
+      );
+    } catch (error) {
+      this.logger.warn(
+        "Settled range sweep failed; the next advance retries it: @error",
+        error,
+      );
+      return;
+    }
+    for (const collectionId of collectionIds) {
+      for (const remote of this.getRemotesForCollection(collectionId)) {
+        const name = remote.meta.name;
+        if ((this.derivedThrough.get(name) ?? -1) < through) {
+          this.owe(name, through);
+        }
+      }
+    }
+    this.sweptThrough = through;
   }
 
   private owe(name: string, upTo: number): void {
@@ -2120,6 +2156,7 @@ export class SyncManager implements ISyncManager {
       : this.abortController.signal;
 
     const startOrdinal = this.refillOrdinal(remote, ackOrdinal);
+    const throughOrdinal = this.watermark.settledThrough;
     let maxOrdinal = startOrdinal;
     const chain: EmitChain = { lastJobByDoc: new Map() };
     const sinceTimestamp = remote.meta.options.sinceTimestampUtcMs;
@@ -2132,7 +2169,7 @@ export class SyncManager implements ISyncManager {
       startOrdinal,
       {
         excludeSourceRemote: remote.meta.name,
-        throughOrdinal: this.watermark.settledThrough,
+        throughOrdinal,
       },
       undefined,
       composedSignal,
@@ -2244,5 +2281,14 @@ export class SyncManager implements ISyncManager {
     }
 
     remote.channel.outbox.advanceOrdinal(maxOrdinal);
+    const name = remote.meta.name;
+    if (this.evictedOutboxFloors.has(name)) {
+      this.derivedThrough.delete(name);
+    } else {
+      this.derivedThrough.set(
+        name,
+        Math.max(this.derivedThrough.get(name) ?? -1, throughOrdinal),
+      );
+    }
   }
 }

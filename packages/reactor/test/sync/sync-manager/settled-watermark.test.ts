@@ -158,6 +158,39 @@ describe("SyncManager on the settled watermark", () => {
     expect(channel().outbox.latestOrdinal).toBe(op.context.ordinal);
   });
 
+  it("derives a collection's settled write whose write-ready was lost", async () => {
+    await syncManager.startup();
+    const first = await commitDriveOperation(0);
+    await addRemote();
+    watermark.advance(first.context.ordinal);
+    await vi.waitFor(() =>
+      expect(sentOrdinals()).toContain(first.context.ordinal),
+    );
+
+    const lost = await commitDriveOperation(1);
+    watermark.advance(lost.context.ordinal);
+
+    await vi.waitFor(() =>
+      expect(sentOrdinals()).toContain(lost.context.ordinal),
+    );
+  });
+
+  it("does not derive a remote again for a batch it already derived", async () => {
+    watermark.settleOnRefresh = true;
+    await syncManager.startup();
+    await addRemote();
+    watermark.advance(0);
+    const op = await commitDriveOperation(0);
+    await writeReady([op]);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const find = vi.spyOn(operationIndex, "find");
+
+    watermark.advance(op.context.ordinal);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(find).not.toHaveBeenCalled();
+  });
+
   it("derives a remote whose stored ack is 0 after the first settle", async () => {
     await remoteStorage.upsert({
       id: "channel-1",

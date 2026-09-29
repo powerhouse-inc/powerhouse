@@ -393,6 +393,28 @@ export class KyselyOperationIndex implements IOperationIndex {
     return operationOrdinals;
   }
 
+  async getCollectionsInRange(
+    after: number,
+    through: number,
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    signal?.throwIfAborted();
+    if (through <= after) {
+      return [];
+    }
+
+    const rows = await this.queryExecutor
+      .selectFrom("operation_index_operations as oi")
+      .innerJoin("document_collections as dc", "oi.documentId", "dc.documentId")
+      .select("dc.collectionId")
+      .distinct()
+      .where("oi.ordinal", ">", after)
+      .where("oi.ordinal", "<=", through)
+      .execute();
+
+    return rows.map((row) => row.collectionId);
+  }
+
   async getOrdinalsInRange(
     after: number,
     through: number,
