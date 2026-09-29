@@ -33,7 +33,8 @@ function getActionErrors(result: PHDocument, actions: Action[]) {
  * Dispatches actions to a document.
  * @param actionOrActions - The action or actions to dispatch.
  * @param document - The document to dispatch actions to.
- * @param onErrors - Callback invoked with any errors that occurred during action execution.
+ * @param onErrors - Callback invoked with any errors that occurred during action execution,
+ * or with why nothing was dispatched.
  * @returns The updated document, or undefined if the dispatch failed.
  */
 export async function dispatchActions<TDocument = PHDocument, TAction = Action>(
@@ -67,9 +68,9 @@ export async function dispatchActions(
       : documentOrDocumentId;
 
   if (!document) {
-    logger.error(
-      `Document with id ${JSON.stringify(documentOrDocumentId)} not found`,
-    );
+    const message = `Document with id ${JSON.stringify(documentOrDocumentId)} not found`;
+    logger.error(message);
+    onErrors?.([new Error(message)]);
     return;
   }
 
@@ -78,7 +79,9 @@ export async function dispatchActions(
     document,
   );
   if (!signedActionsWithContext) {
-    logger.error("No signed actions with context found");
+    const message = "No signed actions with context found";
+    logger.error(message);
+    onErrors?.([new Error(message)]);
     return;
   }
   const result = await queueActions(document, signedActionsWithContext);
