@@ -6,7 +6,8 @@ export default defineConfig({
   testDir: "./test/ui",
   timeout: 60_000,
   expect: { timeout: 15_000 },
-  workers: 2,
+  // The runner has 4 vCPUs; the stack itself takes one.
+  workers: process.env.CI ? 3 : 2,
   retries: process.env.CI ? 1 : 0,
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI
