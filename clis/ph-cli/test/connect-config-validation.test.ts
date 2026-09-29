@@ -243,6 +243,25 @@ describe("validateConnectPatch (--json path)", () => {
     ).toEqual({ packageRegistryUrl: "https://reg.example" });
   });
 
+  it("accepts a connect.openPanel block (runtime OpenPanel analytics)", () => {
+    const raw =
+      '{"openPanel":{"clientId":"abc","apiUrl":"https://op.example/api","trackUiEvents":false,"trackOperations":true}}';
+    expect(validateConnectPatch(raw)).toEqual({
+      openPanel: {
+        clientId: "abc",
+        apiUrl: "https://op.example/api",
+        trackUiEvents: false,
+        trackOperations: true,
+      },
+    });
+  });
+
+  it("rejects an unknown field inside connect.openPanel", () => {
+    expect(() =>
+      validateConnectPatch('{"openPanel":{"clientId":"abc","bogus":1}}'),
+    ).toThrow(/\/openPanel must NOT have additional properties \("bogus"\)/);
+  });
+
   it("still rejects unknown top-level keys other than packageRegistryUrl", () => {
     expect(() =>
       validateConnectPatch('{"unrelatedKey":"x","renown":{"url":"y"}}'),

@@ -11,6 +11,7 @@ import {
 } from "@powerhousedao/shared/connect";
 import { logger } from "document-model";
 import { getRuntimeConfig } from "./runtime-config.js";
+import { resolveOpenPanelConfig } from "./utils/openpanel-config.js";
 
 // Env vars are reserved for version stamps and analytics processor toggles.
 // Everything in the Connect runtime schema (PHConnectRuntimeConfig) is read
@@ -226,13 +227,10 @@ export const connectConfig = {
     enabled: true,
     externalProcessorsEnabled: true,
   },
-  openPanel: {
-    clientId: env.PH_CONNECT_OPENPANEL_CLIENT_ID ?? "",
-    apiUrl: env.PH_CONNECT_OPENPANEL_API_URL,
-    // Intentionally dormant — no call sites gate on this yet; UI-event tracking is future work.
-    trackUiEvents: env.PH_CONNECT_OPENPANEL_TRACK_UI_EVENTS,
-    trackOperations: env.PH_CONNECT_OPENPANEL_TRACK_OPERATIONS,
-  },
+  // Runtime `connect.openPanel` wins; the build-time PH_CONNECT_OPENPANEL_*
+  // env is the fallback. An empty clientId (the default) keeps it disabled.
+  // `trackUiEvents` is intentionally dormant — no call sites gate on it yet.
+  openPanel: resolveOpenPanelConfig(runtime.openPanel, env),
   renown: {
     url: runtime.renown?.url,
     networkId: runtime.renown?.networkId,

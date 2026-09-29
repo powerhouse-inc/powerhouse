@@ -139,6 +139,17 @@ export type PHConnectSentry = {
   tracing?: boolean;
 };
 
+export type PHConnectOpenPanel = {
+  /** OpenPanel client id. Empty string (the default) disables OpenPanel. */
+  clientId?: string;
+  /** OpenPanel API URL, for self-hosted instances. */
+  apiUrl?: string;
+  /** Track UI events. */
+  trackUiEvents?: boolean;
+  /** Track document operations. */
+  trackOperations?: boolean;
+};
+
 export type PHConnectInstance = {
   namespace: string | null;
   reactorWorker: boolean;
@@ -281,6 +292,7 @@ export type PHConnectRuntimeConfig = {
   drives?: PHConnectDrives;
   renown?: PHConnectRenown;
   sentry?: PHConnectSentry;
+  openPanel?: PHConnectOpenPanel;
   instance?: PHConnectInstance;
   reactor?: PHConnectReactor;
   pwa?: PHConnectPwa;

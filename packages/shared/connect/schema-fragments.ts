@@ -365,6 +365,35 @@ export const phConnectRuntimeConfigSchema = {
         },
       },
     },
+    openPanel: {
+      type: "object",
+      additionalProperties: false,
+      description:
+        "OpenPanel product analytics. Set `clientId` to enable; an empty `clientId` disables it. Events are only sent after the user accepts analytics cookies. Takes precedence over the build-time PH_CONNECT_OPENPANEL_* env vars.",
+      properties: {
+        clientId: {
+          type: "string",
+          description:
+            "OpenPanel client id. Empty string disables OpenPanel entirely.",
+          default: "",
+        },
+        apiUrl: {
+          type: "string",
+          description:
+            "OpenPanel API URL for self-hosted instances (e.g. 'https://openpanel.example/api'). Omit to use OpenPanel's hosted API.",
+        },
+        trackUiEvents: {
+          type: "boolean",
+          description: "Track UI events.",
+          default: true,
+        },
+        trackOperations: {
+          type: "boolean",
+          description: "Track document operations.",
+          default: true,
+        },
+      },
+    },
     instance: {
       type: "object",
       additionalProperties: false,
