@@ -41,14 +41,18 @@ test.describe("Prop controls", () => {
   });
 
   test("half-width fields share a row", async ({ page }) => {
-    const first = await page
-      .getByRole("textbox", { name: /First name/ })
-      .boundingBox();
-    const last = await page
-      .getByRole("textbox", { name: /Last name/ })
-      .boundingBox();
-    expect(first && last && Math.abs(first.y - last.y) < 2).toBe(true);
-    expect(first!.x).toBeLessThan(last!.x);
+    const first = page.getByRole("textbox", { name: /First name/ });
+    const last = page.getByRole("textbox", { name: /Last name/ });
+    // Polled: the stylesheet can land after the fields render.
+    await expect
+      .poll(async () => {
+        const [a, b] = await Promise.all([
+          first.boundingBox(),
+          last.boundingBox(),
+        ]);
+        return !!a && !!b && Math.abs(a.y - b.y) < 2 && a.x < b.x;
+      })
+      .toBe(true);
   });
 
   test("a checkbox reveals its fields while checked", async ({ page }) => {
