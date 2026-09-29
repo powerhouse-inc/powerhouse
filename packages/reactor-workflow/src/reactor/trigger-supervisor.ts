@@ -360,11 +360,28 @@ export class TriggerSupervisor {
   }
 
   remove(workflowId: string): Promise<void> {
+    const binding = this.unbind(workflowId);
+    return this.enqueue(() => this.disable(workflowId, binding));
+  }
+
+  // A deleted workflow: disabled as remove() does, then its row and FLOW
+  // store go too, so nothing is left to poll, renew or re-arm.
+  forget(workflowId: string): Promise<void> {
+    const binding = this.unbind(workflowId);
+    return this.enqueue(async () => {
+      const store = await this.options.store();
+      if (!store) return;
+      await this.disable(workflowId, binding);
+      await store.deleteTriggerState(workflowId);
+    });
+  }
+
+  private unbind(workflowId: string): TriggerBinding | undefined {
     const binding = this.bindings.get(workflowId);
     this.bindings.delete(workflowId);
     this.enabledOk.delete(workflowId);
     this.enableRetries.delete(workflowId);
-    return this.enqueue(() => this.disable(workflowId, binding));
+    return binding;
   }
 
   // A trigger the runtime could not turn into a binding at all: an unknown
@@ -379,9 +396,7 @@ export class TriggerSupervisor {
     message: string,
     retryAt?: Date,
   ): Promise<void> {
-    this.bindings.delete(workflowId);
-    this.enabledOk.delete(workflowId);
-    this.enableRetries.delete(workflowId);
+    this.unbind(workflowId);
     return this.enqueue(() =>
       this.recordRejection(workflowId, block, config, message, retryAt),
     );
