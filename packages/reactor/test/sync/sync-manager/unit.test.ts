@@ -34,6 +34,19 @@ import {
 } from "../../../src/sync/utils.js";
 
 describe("SyncManager - Unit Tests", () => {
+  // A silent peer lacks document-purge, so gating reads creation versions.
+  function backfillReads(): unknown[][] {
+    const get = mockOperationIndex.get as unknown as {
+      mock: { calls: unknown[][] };
+    };
+    return get.mock.calls.filter(
+      ([, view, paging]) =>
+        JSON.stringify(view) !==
+          JSON.stringify({ branch: "main", scopes: ["document"] }) ||
+        JSON.stringify(paging) !== JSON.stringify({ cursor: "0", limit: 10 }),
+    );
+  }
+
   let syncManager: SyncManager;
   let mockRemoteStorage: ISyncRemoteStorage;
   let mockCursorStorage: ISyncCursorStorage;
@@ -1987,7 +2000,7 @@ describe("SyncManager - Unit Tests", () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
 
       // No backfill should occur
-      expect(mockOperationIndex.get).not.toHaveBeenCalled();
+      expect(backfillReads()).toEqual([]);
 
       // Both events should be routed (membership derived from ADD_RELATIONSHIP in pre-pass)
       expect(mockChannel.outbox.add).toHaveBeenCalled();
@@ -2631,7 +2644,7 @@ describe("SyncManager - Unit Tests", () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
 
       // operationIndex.get should NOT be called because backfill is skipped
-      expect(mockOperationIndex.get).not.toHaveBeenCalled();
+      expect(backfillReads()).toEqual([]);
 
       // Both events' operations should be in the outbox
       expect(mockChannel.outbox.add).toHaveBeenCalled();
