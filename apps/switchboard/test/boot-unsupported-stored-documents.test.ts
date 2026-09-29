@@ -12,10 +12,19 @@ import {
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { Kysely } from "kysely";
-import { mkdtemp, rm } from "node:fs/promises";
+import { cp, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { ClosablePGliteDialect } from "../src/pglite-dialect.js";
 import { startSwitchboard } from "../src/server.mjs";
 import { StoredDocumentsRefusedError } from "../src/unsupported-stored-documents.mjs";
@@ -89,9 +98,22 @@ async function seedStore(dir: string): Promise<void> {
   await db.destroy();
 }
 
+// PGlite boots are several times slower on Windows runners.
+const BOOT_TIMEOUT = 120_000;
+
 describe("booting over documents this build does not run", () => {
+  let seeded: string;
   let tempRoot: string;
   let previous: Partial<Record<(typeof ENV_KEYS)[number], string>>;
+
+  beforeAll(async () => {
+    seeded = await mkdtemp(join(tmpdir(), "switchboard-stored-protocol-seed-"));
+    await seedStore(join(seeded, "reactor-storage"));
+  }, BOOT_TIMEOUT);
+
+  afterAll(async () => {
+    await rm(seeded, { recursive: true, force: true });
+  });
 
   beforeEach(async () => {
     tempRoot = await mkdtemp(join(tmpdir(), "switchboard-stored-protocol-"));
@@ -99,8 +121,12 @@ describe("booting over documents this build does not run", () => {
     process.env.PH_REACTOR_DATABASE_URL = join(tempRoot, "reactor-storage");
     process.env.DATABASE_URL = join(tempRoot, "read-model");
     delete process.env.REACTOR_UNSUPPORTED_STORED_DOCUMENTS;
-    await seedStore(process.env.PH_REACTOR_DATABASE_URL);
-  }, 60_000);
+    await cp(
+      join(seeded, "reactor-storage"),
+      process.env.PH_REACTOR_DATABASE_URL,
+      { recursive: true },
+    );
+  });
 
   afterEach(async () => {
     for (const key of ENV_KEYS) {
@@ -124,51 +150,61 @@ describe("booting over documents this build does not run", () => {
     });
   }
 
-  it("refuses by default and tells the operator both ways forward", async () => {
-    const logger = stubLogger();
+  it(
+    "refuses by default and tells the operator both ways forward",
+    async () => {
+      const logger = stubLogger();
 
-    const booted = boot(logger);
+      const booted = boot(logger);
 
-    await expect(booted).rejects.toSatisfy(
-      (error) =>
-        StoredDocumentsRefusedError.isError(error) &&
-        error.documents === 1 &&
-        error.versions.some(
-          ({ protocol, version }) =>
-            protocol === "base-reducer" && version === 7,
-        ),
-    );
-    const message = (await booted.catch((error: Error) => error)) as Error;
-    expect(message.message).toMatch(
-      /1 stored document\(s\) require base-reducer 7/,
-    );
-    expect(message.message).toMatch(
-      /switchboard build that runs base-reducer 7/,
-    );
-    expect(message.message).toMatch(
-      /REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only/,
-    );
-    expect(logger.error).toHaveBeenCalledWith(message.message);
-    expect(logger.error).not.toHaveBeenCalledWith(
-      "App crashed: @error",
-      expect.anything(),
-    );
-  }, 60_000);
-
-  it("starts read-only when REACTOR_UNSUPPORTED_STORED_DOCUMENTS says so", async () => {
-    process.env.REACTOR_UNSUPPORTED_STORED_DOCUMENTS = "read-only";
-    const logger = stubLogger();
-
-    const switchboard = await boot(logger);
-    try {
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining("read-only"),
-        expect.stringContaining("1 stored document(s) require base-reducer 7"),
+      await expect(booted).rejects.toSatisfy(
+        (error) =>
+          StoredDocumentsRefusedError.isError(error) &&
+          error.documents === 1 &&
+          error.versions.some(
+            ({ protocol, version }) =>
+              protocol === "base-reducer" && version === 7,
+          ),
       );
-      const stored = await switchboard.reactor.get("br7-stored");
-      expect(stored.header.id).toBe("br7-stored");
-    } finally {
-      await switchboard.shutdown();
-    }
-  }, 60_000);
+      const message = (await booted.catch((error: Error) => error)) as Error;
+      expect(message.message).toMatch(
+        /1 stored document\(s\) require base-reducer 7/,
+      );
+      expect(message.message).toMatch(
+        /switchboard build that runs base-reducer 7/,
+      );
+      expect(message.message).toMatch(
+        /REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only/,
+      );
+      expect(logger.error).toHaveBeenCalledWith(message.message);
+      expect(logger.error).not.toHaveBeenCalledWith(
+        "App crashed: @error",
+        expect.anything(),
+      );
+    },
+    BOOT_TIMEOUT,
+  );
+
+  it(
+    "starts read-only when REACTOR_UNSUPPORTED_STORED_DOCUMENTS says so",
+    async () => {
+      process.env.REACTOR_UNSUPPORTED_STORED_DOCUMENTS = "read-only";
+      const logger = stubLogger();
+
+      const switchboard = await boot(logger);
+      try {
+        expect(logger.warn).toHaveBeenCalledWith(
+          expect.stringContaining("read-only"),
+          expect.stringContaining(
+            "1 stored document(s) require base-reducer 7",
+          ),
+        );
+        const stored = await switchboard.reactor.get("br7-stored");
+        expect(stored.header.id).toBe("br7-stored");
+      } finally {
+        await switchboard.shutdown();
+      }
+    },
+    BOOT_TIMEOUT,
+  );
 });
