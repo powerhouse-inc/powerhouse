@@ -1,4 +1,7 @@
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  driveDocumentModelModule,
+  type DocumentDriveDocument,
+} from "@powerhousedao/shared/document-drive";
 import { withSignaturePolicy } from "@powerhousedao/shared/document-model";
 import {
   ConsoleLogger,
@@ -26,9 +29,11 @@ import type { ISyncCursorStorage } from "../../src/storage/interfaces.js";
 import type { IChannelFactory } from "../../src/sync/interfaces.js";
 import { SyncBuilder } from "../../src/sync/sync-builder.js";
 import type { ChannelConfig, SyncEnvelope } from "../../src/sync/types.js";
+import type { ReactorFeatureFlags } from "../../src/executor/types.js";
 import { createDocModelDocument } from "../factories.js";
 import { TestChannel } from "../sync/channels/test-channel.js";
 import { TestP256Signer } from "../utils/p256-signer.js";
+import { TRUST_ANY_SIGNER } from "../utils/signed-as.js";
 
 const PG_TEST_URL =
   process.env.REACTOR_TEST_PG_URL ??
@@ -41,6 +46,10 @@ const BOOTSTRAP_PATH = fileURLToPath(
 const REMOTE = "cascade-remote";
 const NUM_WORKERS = 2;
 const NUM_CHILDREN = 6;
+const ENFORCING: Partial<ReactorFeatureFlags> = {
+  documentDecisions: true,
+  authEnforcement: true,
+};
 
 function dbConfigFor(url: string, database: string): DbConfig {
   const parsed = new URL(url);
@@ -75,6 +84,7 @@ type Harness = {
   module: InProcessReactorClientModule;
   reactorModule: InProcessReactorModule;
   sent: SyncEnvelope[];
+  sentTo: (remoteName: string) => SyncEnvelope[];
   channel: () => TestChannel;
 };
 
@@ -121,8 +131,12 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
     }
   });
 
-  async function build(mode: "workers" | "in-process"): Promise<Harness> {
+  async function build(
+    mode: "workers" | "in-process",
+    flags?: Partial<ReactorFeatureFlags>,
+  ): Promise<Harness> {
     const sent: SyncEnvelope[] = [];
+    const sentByRemote = new Map<string, SyncEnvelope[]>();
     let testChannel: TestChannel | undefined;
     const channelFactory: IChannelFactory = {
       instance(
@@ -137,6 +151,9 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
           cursorStorage,
           (envelope) => {
             sent.push(envelope);
+            const own = sentByRemote.get(remoteName) ?? [];
+            own.push(envelope);
+            sentByRemote.set(remoteName, own);
           },
         );
         return testChannel;
@@ -188,7 +205,8 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
           documentModelDocumentModelModule as never,
           driveDocumentModelModule as never,
         ])
-        .withExecutorConfig({ maxConcurrency: 2 });
+        .withExecutorConfig({ maxConcurrency: 2, featureFlags: flags });
+      if (flags) builder.withTrustPolicy(TRUST_ANY_SIGNER);
     }
 
     module = await new ReactorClientBuilder()
@@ -200,6 +218,7 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
       module,
       reactorModule: module.reactorModule,
       sent,
+      sentTo: (remoteName) => sentByRemote.get(remoteName) ?? [],
       channel: () => {
         if (!testChannel) throw new Error("remote channel not created");
         return testChannel;
@@ -316,6 +335,180 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
       timeout: 10_000,
     });
   }
+
+  /** The document scope's action types in commit order, removals with target. */
+  async function documentStream(documentId: string): Promise<string[]> {
+    const { rows } = await sql<{ type: string; targetId: string | null }>`
+      SELECT action->>'type' AS type, action->'input'->>'targetId' AS "targetId"
+      FROM reactor.operation_index_operations
+      WHERE "documentId" = ${documentId} AND scope = 'document'
+      ORDER BY ordinal`.execute(baseDb);
+    return rows.map((row) =>
+      row.type === "REMOVE_RELATIONSHIP"
+        ? `${row.type}:${row.targetId}`
+        : row.type,
+    );
+  }
+
+  async function addRemote(
+    reactorModule: InProcessReactorModule,
+    name: string,
+    driveId: string,
+    sentTo: Harness["sentTo"],
+  ): Promise<void> {
+    await reactorModule.syncModule!.syncManager.add(
+      name,
+      DriveCollectionId.forDrive(driveId),
+      { type: "internal", parameters: {} },
+      { documentId: [], scope: [], branch: "main" },
+    );
+    await vi.waitUntil(() => sentTo(name).length > 0, { timeout: 10_000 });
+  }
+
+  async function expectServedBeforeLeaving(
+    childId: string,
+    driveId: string,
+  ): Promise<string> {
+    const collectionId = DriveCollectionId.forDrive(driveId, "main").key;
+    const { opId, ordinal } = await deleteRow(childId);
+    const left = await leftOrdinal(childId, collectionId);
+    expect(left, `${childId} membership closed`).not.toBeNull();
+    expect(ordinal, `${childId} delete before it leaves`).toBeLessThan(left!);
+    return opId;
+  }
+
+  /** R holds drive N and doc k; N holds doc m; each drive has a remote. */
+  async function nestedDrives(
+    flags?: Partial<ReactorFeatureFlags>,
+  ): Promise<void> {
+    const {
+      module: clientModule,
+      reactorModule,
+      sentTo,
+    } = await build("in-process", flags);
+    const { client } = clientModule;
+    const r = driveDocumentModelModule.utils.createDocument();
+    const n = driveDocumentModelModule.utils.createDocument();
+    const R = r.header.id;
+    const N = n.header.id;
+    await client.create(r);
+    await client.create(n, R);
+    await client.create(createDocModelDocument({ id: "nested-k" }), R);
+    await client.create(createDocModelDocument({ id: "nested-m" }), N);
+    await addRemote(reactorModule, "remote-r", R, sentTo);
+    await addRemote(reactorModule, "remote-n", N, sentTo);
+
+    const outcome = await client
+      .deleteDocument(R, PropagationMode.Cascade)
+      .then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+
+    const toR = [
+      (await deleteRow(R)).opId,
+      (await deleteRow(N)).opId,
+      (await deleteRow("nested-k")).opId,
+    ];
+    const toN = [(await deleteRow("nested-m")).opId];
+    await vi.waitUntil(
+      () =>
+        toR.every((id) => sentOpIds(sentTo("remote-r")).has(id)) &&
+        toN.every((id) => sentOpIds(sentTo("remote-n")).has(id)),
+      { timeout: 10_000 },
+    );
+
+    expect(outcome).toBeUndefined();
+    await expectServedBeforeLeaving(N, R);
+    await expectServedBeforeLeaving("nested-k", R);
+    await expectServedBeforeLeaving("nested-m", N);
+    const stream = await documentStream(N);
+    expect(stream.at(-1)).toBe("DELETE_DOCUMENT");
+    expect(stream).toContain("REMOVE_RELATIONSHIP:nested-m");
+  }
+
+  it("deletes nested drives, each delete served to its drive's remote", async () => {
+    await nestedDrives();
+  }, 60_000);
+
+  it("deletes nested drives under document decisions", async () => {
+    await nestedDrives(ENFORCING);
+  }, 60_000);
+
+  /** a -> b -> c, plain documents: no removal lands on a deleted source. */
+  async function plainTree(
+    flags?: Partial<ReactorFeatureFlags>,
+  ): Promise<void> {
+    const { module: clientModule, reactorModule } = await build(
+      "in-process",
+      flags,
+    );
+    const { client } = clientModule;
+    await client.create(createDocModelDocument({ id: "plain-a" }));
+    await client.create(createDocModelDocument({ id: "plain-b" }), "plain-a");
+    await client.create(createDocModelDocument({ id: "plain-c" }), "plain-b");
+
+    await client.deleteDocument("plain-a", PropagationMode.Cascade);
+
+    for (const [source, target] of [
+      ["plain-a", "plain-b"],
+      ["plain-b", "plain-c"],
+    ]) {
+      const stream = await documentStream(source);
+      expect(stream.at(-1), `${source} ends at its delete`).toBe(
+        "DELETE_DOCUMENT",
+      );
+      expect(stream).toContain(`REMOVE_RELATIONSHIP:${target}`);
+      const incoming = await reactorModule.documentIndexer.getIncoming(target);
+      expect(incoming.results).toEqual([]);
+    }
+  }
+
+  it("deletes a depth-2 tree of plain documents", async () => {
+    await plainTree();
+  }, 60_000);
+
+  it("deletes a depth-2 tree of plain documents under document decisions", async () => {
+    await plainTree(ENFORCING);
+  }, 60_000);
+
+  async function removedFile(
+    flags?: Partial<ReactorFeatureFlags>,
+  ): Promise<void> {
+    const {
+      module: clientModule,
+      reactorModule,
+      sentTo,
+    } = await build("in-process", flags);
+    const { client } = clientModule;
+    const drive = driveDocumentModelModule.utils.createDocument();
+    const driveId = drive.header.id;
+    await client.create(drive);
+    await client.drives.addFile(
+      driveId,
+      createDocModelDocument({ id: "removed-file" }),
+    );
+    await addRemote(reactorModule, "remote-d", driveId, sentTo);
+
+    await client.drives.removeNode(driveId, "removed-file");
+
+    const opId = await expectServedBeforeLeaving("removed-file", driveId);
+    await vi.waitUntil(() => sentOpIds(sentTo("remote-d")).has(opId), {
+      timeout: 10_000,
+    });
+    const reloaded = await client.get<DocumentDriveDocument>(driveId);
+    expect(
+      reloaded.state.global.nodes.find((node) => node.id === "removed-file"),
+    ).toBeUndefined();
+  }
+
+  it("serves a removed file's delete to its drive's remote", async () => {
+    await removedFile();
+  }, 60_000);
+
+  it("serves a removed file's delete under document decisions", async () => {
+    await removedFile(ENFORCING);
+  }, 60_000);
 
   it("serves every child's delete to the remote, in process", async () => {
     await runScenario("in-process");
