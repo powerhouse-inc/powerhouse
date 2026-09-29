@@ -202,7 +202,7 @@ type ScopeOutcome = {
  * returned JobResult there, which is what the queue, the worker protocol and
  * every test expect a failed job to look like.
  */
-/** Ids of the request a purge job belongs to, which a drive purge may precede. */
+/** The ids of a purge job's request, which a drive purge may precede. */
 function purgeRequestDocumentIds(job: Job): string[] {
   const ids = job.meta.purgeRequestDocumentIds;
   return Array.isArray(ids)
@@ -673,11 +673,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     );
   }
 
-  /**
-   * The error a job meets for writing to a tombstoned id, before any read.
-   * Only a submitted action refuses a purged relationship target; a replayed
-   * one is accepted and writes no membership for it.
-   */
+  /** Only a submitted ADD_RELATIONSHIP refuses a purged target. */
   private purgedRefusal(job: Job, purged: Set<string>): Error | undefined {
     if (purged.size === 0) {
       return undefined;
@@ -711,10 +707,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     return undefined;
   }
 
-  /**
-   * A purge job, or a load carrying a marker: one transaction under the
-   * exclusive lock, which no other lock of this job precedes.
-   */
+  /** A purge job or a marker load: the exclusive lock is the job's only lock. */
   private async executePurge(
     params: ExecuteInScopeParams,
   ): Promise<ScopeOutcome> {
@@ -885,11 +878,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     };
   }
 
-  /**
-   * A marker from a peer: admitted alone, every other operation of the job
-   * dropped, and applied whatever the document's state, since a receiver
-   * cannot refuse an erasure the purging peer already checked.
-   */
+  /** A peer's marker, admitted alone; a receiver cannot refuse an erasure. */
   private async preparePurgeLoad(
     params: ExecuteInScopeParams,
     purger: KyselyDocumentPurger,
@@ -1069,10 +1058,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     return { streams, branches };
   }
 
-  /**
-   * Members that block a drive purge unless purged or requested, and those
-   * that live on in another collection; both keep a cached list naming it.
-   */
+  /** Members a drive purge needs gone, and those living on elsewhere. */
   private async driveMembers(
     purger: KyselyDocumentPurger,
     stores: ExecutionStores,
@@ -1101,10 +1087,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     return { required: [...required], survivors: [...survivors] };
   }
 
-  /**
-   * Surviving documents whose accepted auth history names the group, which
-   * the positional walk would read it for. A refused grant names nothing.
-   */
+  /** Survivors whose accepted auth history names the group; refusals do not. */
   private async groupReferencersInHistory(
     purger: KyselyDocumentPurger,
     groupId: string,
