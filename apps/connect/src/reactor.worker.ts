@@ -13,6 +13,7 @@ import {
   type Remote,
   type RemoteFilter,
   type RemoteOptions,
+  type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import { baseDocumentModels } from "@powerhousedao/reactor-browser/base-document-models";
 import {
@@ -45,6 +46,7 @@ import {
 } from "@renown/sdk/crypto";
 import { createWorkerSignerConfig } from "./reactor-worker-signer.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
+import { toStoredDocumentsRefused } from "./utils/stored-documents-refused.js";
 import type * as PgLiveModuleNs from "@electric-sql/pglite/live";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -94,6 +96,8 @@ type WorkerConstruct = {
   featureFlags?: Partial<ReactorFeatureFlags>;
   // What new documents are created as; absent means the reactor's default.
   createSignaturePolicy?: SignaturePolicy;
+  // Absent means the reactor's default, refuse.
+  unsupportedStoredDocuments?: UnsupportedStoredDocuments;
   // Where the trust policy verifies signers under authEnforcement.
   renownEndpoints?: RenownTrustEndpoints;
 };
@@ -239,6 +243,20 @@ const inMemoryBackup: BackupStrategy = {
   commit: () => Promise.resolve(),
 };
 
+async function releaseStores(): Promise<void> {
+  const stores = [relational.pg, owned.reactorPg];
+  relational.pg = undefined;
+  relational.db = undefined;
+  owned.reactorPg = undefined;
+  for (const store of stores) {
+    try {
+      await store?.close();
+    } catch (error) {
+      console.error("[reactor.worker] closing a store failed:", error);
+    }
+  }
+}
+
 const workerName = (self as { name?: string }).name ?? "";
 
 const host = new ReactorHost({
@@ -352,18 +370,20 @@ const host = new ReactorHost({
           : undefined;
       phase = "building reactor module";
       console.info(`[reactor.worker] boot: ${phase}`);
+      const reactorBuilder = new ReactorBuilder()
+        .withDocumentModelSources(models)
+        .withChannelScheme(ChannelScheme.CONNECT)
+        .withExecutorConfig({ featureFlags: construct.featureFlags ?? {} })
+        .withJwtHandler(jwtHandler)
+        .withKysely(new Kysely<Database>({ dialect: new PGliteDialect(pg) }));
+      if (construct.unsupportedStoredDocuments) {
+        reactorBuilder.withUnsupportedStoredDocuments(
+          construct.unsupportedStoredDocuments,
+        );
+      }
       const builder = new ReactorClientBuilder()
         .withSigner(built.signerConfig)
-        .withReactorBuilder(
-          new ReactorBuilder()
-            .withDocumentModelSources(models)
-            .withChannelScheme(ChannelScheme.CONNECT)
-            .withExecutorConfig({ featureFlags: construct.featureFlags ?? {} })
-            .withJwtHandler(jwtHandler)
-            .withKysely(
-              new Kysely<Database>({ dialect: new PGliteDialect(pg) }),
-            ),
-        );
+        .withReactorBuilder(reactorBuilder);
       builder.withDocumentModelLoader(loader);
       if (construct.createSignaturePolicy) {
         builder.withCreateSignaturePolicy(construct.createSignaturePolicy);
@@ -402,7 +422,9 @@ const host = new ReactorHost({
       return module.client;
     } catch (error) {
       console.error(`[reactor.worker] boot failed at phase "${phase}":`, error);
-      throw error;
+      // The next hello rebuilds, which reopens both stores.
+      await releaseStores();
+      throw toStoredDocumentsRefused(error);
     }
   },
   registerPackages: async (specs) => {

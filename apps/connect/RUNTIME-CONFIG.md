@@ -56,7 +56,7 @@ Schema lives in `packages/builder-tools/connect-utils/runtime-config-schema.ts`.
     "packages":  { "externalEnabled": true },
     "sentry":    { "dsn": null, "env": "dev", "tracing": false },
     "openPanel": { "clientId": "", "apiUrl": "..." | undefined, "trackUiEvents": true, "trackOperations": true },
-    "reactor":   { "featureFlags": { "documentDecisions": false, "authEnforcement": false, "authGroups": false, "authConditions": false }, "createSignaturePolicy": "v2-required" },
+    "reactor":   { "featureFlags": { "documentDecisions": false, "authEnforcement": false, "authGroups": false, "authConditions": false }, "createSignaturePolicy": "v2-required", "unsupportedStoredDocuments": "refuse" },
     "pwa":       { ... } // build-time only, see below
   }
 }
@@ -152,6 +152,28 @@ their policy either way, and the setting does not change what Connect accepts.
 The main-thread reactor reads it from this file; the SharedWorker gets it in its
 construct message and keeps the value the first tab booted it with. It is not
 part of the worker's version fingerprint.
+
+### Stored documents this build does not run (`connect.reactor.unsupportedStoredDocuments`)
+
+A reactor refuses to boot when the browser's store holds documents created at a
+protocol version the build does not run, for example after rolling Connect back
+to a release that predates one. Connect then shows "Connect cannot open this
+browser's documents" with the versions and document count, instead of the app.
+There are two ways forward: serve a Connect build that runs those versions, or
+accept them read-only:
+
+```jsonc
+"reactor": { "unsupportedStoredDocuments": "read-only" }
+```
+
+`"refuse"` is the default. With `"read-only"` the reactor boots, logs a warning,
+and refuses every write into those documents and every operation received for
+them; the rest of the store works as usual. Connect has no in-app button for it:
+the setting is the operator's choice, so it goes in this file (or
+`PH_CONNECT_CONFIG_JSON`), and the boot screen's Reload picks up the change.
+Both reactor hosts read it; the SharedWorker gets it in its construct message.
+A worker that refused retries the build on the next tab's connect, so the new
+value takes effect without closing other tabs.
 
 ## Setting values — the precedence ladder
 
@@ -266,7 +288,7 @@ Downstream consumers inside the SPA:
 | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `apps/connect/src/connect.config.ts`            | Re-exports the cached config behind getters (`getConnectConfig()`) so the rest of the SPA reads typed accessors instead of dotted paths         |
 | `apps/connect/src/hooks/useRegistryPackages.ts` | `getRuntimeConfig().packageRegistryUrl`                                                                                                         |
-| `apps/connect/src/store/reactor.ts`             | Passes `packageRegistryUrl` to `BrowserPackageManager`; reads `connect.reactor.featureFlags` and `createSignaturePolicy` for both reactor hosts |
+| `apps/connect/src/store/reactor.ts`             | Passes `packageRegistryUrl` to `BrowserPackageManager`; reads `connect.reactor.featureFlags`, `createSignaturePolicy` and `unsupportedStoredDocuments` for both reactor hosts |
 | Renown auth flow                                | Reads `connect.renown.*`                                                                                                                        |
 | Drives sidebar                                  | Reads `connect.drives.*`                                                                                                                        |
 | Router                                          | Reads `connect.app.basePath`                                                                                                                    |
