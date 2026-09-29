@@ -200,6 +200,26 @@ switchboard accepts. Without a Renown identity the switchboard has no signer,
 so it creates legacy documents and logs a warning. A default drive configured
 with a fixed `id` is always created legacy.
 
+### Stored Documents This Build Does Not Run
+
+| Variable                               | Description                                                                         | Default  |
+| -------------------------------------- | ----------------------------------------------------------------------------------- | -------- |
+| `REACTOR_UNSUPPORTED_STORED_DOCUMENTS` | Stored documents at protocol versions this build does not run: `refuse` or `read-only` | `refuse` |
+
+Before it starts, the reactor reads the protocol versions its stored documents
+were created with. If this build does not run one of them, for example after a
+rollback, switchboard logs this and exits with code 1:
+
+```
+Refusing to start: 12 stored document(s) require base-reducer 3, which this switchboard does not run. Either start a switchboard build that runs base-reducer 3, or set REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only to start with those documents read-only.
+```
+
+With `read-only` it starts and logs a warning. Every write into those documents
+and every operation received for them is refused; the rest of the store works
+as usual. The check runs once on the host, so it covers the executor worker
+pool too. Any other value fails the boot. Programmatically:
+`startSwitchboard({ unsupportedStoredDocuments: "read-only" })`.
+
 ### Reactor Enforcement Flags
 
 | Variable                       | Description                                                        | Default |
