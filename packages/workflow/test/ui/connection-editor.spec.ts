@@ -136,6 +136,8 @@ test.describe("Connection editor", () => {
     await oauth.click();
     await expect(app.getByText("Redirect URL", { exact: true })).toBeVisible();
     // Nothing to sign in with until the app's own credentials are filled in.
-    await expect(app.getByRole("button", { name: "Connect" })).toBeDisabled();
+    await expect(
+      app.getByRole("button", { name: "Connect", exact: true }),
+    ).toBeDisabled();
   });
 });
