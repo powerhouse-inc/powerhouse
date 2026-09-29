@@ -322,6 +322,25 @@ to be ignored. The `config` block of the installed package's manifest is
 authoritative for the version you actually have.
 :::
 
+## Stored documents a build does not run
+
+Switchboard and Connect refuse to start when their store holds documents created at a protocol version the running build does not run, which can happen after a rollback. The refusal names the versions and the number of documents. Either run a build that supports those versions, or start with those documents read-only:
+
+```bash
+# Switchboard: refuse (default) or read-only
+REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only
+```
+
+```json
+{
+  "connect": {
+    "reactor": { "unsupportedStoredDocuments": "read-only" }
+  }
+}
+```
+
+Read-only documents stay readable, but the reactor refuses every write into them and every operation it receives for them. A refused Switchboard exits with code 1. A refused Connect shows the refusal in place of the app, with a Reload button that picks up a changed `powerhouse.config.json`. Connect has no in-app way to continue read-only; the setting is the operator's.
+
 ## Applying your changes
 
 Regardless of which method you use to update your configuration, the changes will not be applied until the service that consumes them restarts (or, in the case of the running SPA, the page is refreshed and re-fetches `/powerhouse.config.json`).

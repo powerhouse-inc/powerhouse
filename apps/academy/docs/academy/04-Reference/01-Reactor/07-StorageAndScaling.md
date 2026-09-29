@@ -101,6 +101,24 @@ if (!result.success && result.error) {
 
 `runMigrations` returns `{ success, migrationsExecuted, error? }` and never throws on a migration error — it reports the error in the result. Use `getMigrationStatus(db, REACTOR_SCHEMA)` to inspect applied versus pending migrations without running them.
 
+### Stored protocol versions
+
+After migrations, `buildModule()` reads the protocol versions (`header.protocolVersions`, such as `base-reducer` or `signature`) that stored documents were created with. If the reactor does not run one of them, for example after a rollback to an older build, it throws `UnsupportedStoredProtocolError` before any executor starts. The error's `versions` lists the unsupported `{ protocol, version }` pairs, and `documents` is how many stored documents need them.
+
+```typescript
+withUnsupportedStoredDocuments(mode: "refuse" | "read-only"): this
+```
+
+`"refuse"` is the default. `"read-only"` builds anyway and logs a warning. Every job into those documents, and every operation received for them, is then refused. The check probes an index once per distinct set of creation versions rather than reading every document.
+
+| Host        | Setting                                                                       |
+| ----------- | ----------------------------------------------------------------------------- |
+| Switchboard | `REACTOR_UNSUPPORTED_STORED_DOCUMENTS=refuse` (default) or `read-only`        |
+| Connect     | `connect.reactor.unsupportedStoredDocuments` in `powerhouse.config.json`      |
+| Library     | `ReactorBuilder.withUnsupportedStoredDocuments()`                             |
+
+A refused switchboard logs the versions, the document count and both ways forward, then exits with code 1. A refused Connect shows the same on its boot screen in place of the app.
+
 ## Scaling with a worker pool
 
 The executor worker pool moves job execution out of the main thread into N `node:worker_threads` workers. Each worker opens its own Postgres pool and runs document models in isolation. Jobs route to a worker stickily by document id, so all work for one document lands on the same worker.
