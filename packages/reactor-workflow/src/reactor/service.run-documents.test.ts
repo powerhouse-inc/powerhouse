@@ -65,9 +65,11 @@ const handed: Record<string, string[]> = { "run-read-secret": [SECRET] };
 
 const store = {
   listRuns: () => Promise.resolve(rows),
-  getRunDocuments: (runId: string) => Promise.resolve(handed[runId] ?? []),
+  getRunDocumentsForRuns: (runIds: string[]) =>
+    Promise.resolve(new Map(runIds.map((id) => [id, handed[id] ?? []]))),
   getRun: (id: string) => Promise.resolve(rows.find((row) => row.id === id)),
   getSteps: () => Promise.resolve([]),
+  getStepsForRuns: () => Promise.resolve(new Map()),
 };
 
 function serviceWith(

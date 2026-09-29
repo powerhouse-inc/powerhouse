@@ -9,6 +9,7 @@ import {
   WorkflowSyncingError,
   type WorkflowRuntimeService,
 } from "@powerhousedao/reactor-workflow";
+import { parse, type FieldNode, type OperationDefinitionNode } from "graphql";
 import { describe, expect, it, vi } from "vitest";
 import { getResolvers } from "../../src/workflow/resolvers.js";
 
@@ -22,7 +23,15 @@ type Resolver = (
   parent: unknown,
   args: unknown,
   ctx: Context,
+  info?: unknown,
 ) => Promise<unknown>;
+
+// The resolve info for the `runs` field of a real query document.
+function runsInfo(query: string) {
+  const operation = parse(query).definitions[0] as OperationDefinitionNode;
+  const root = operation.selectionSet.selections[0] as FieldNode;
+  return { fieldNodes: [root.selectionSet!.selections[0] as FieldNode] };
+}
 
 function fakeRuntime() {
   return {
@@ -85,7 +94,10 @@ describe("the workflow resolvers and the caller", () => {
 
     expect(runtime.webhookEndpoint).toHaveBeenCalledWith("wf-1", CTX, {});
     expect(runtime.triggerStates).toHaveBeenCalledWith(CTX);
-    expect(runtime.runs).toHaveBeenCalledWith({ driveId: "drive-1" }, CTX);
+    expect(runtime.runs).toHaveBeenCalledWith(
+      { driveId: "drive-1", withStepData: true },
+      CTX,
+    );
     expect(runtime.run).toHaveBeenCalledWith("run-1", CTX);
     expect(runtime.fire).toHaveBeenCalledWith(
       "wf-1",
@@ -181,5 +193,45 @@ describe("the workflow resolvers and the caller", () => {
       versionMatch: "fallback",
       versionNote: "Pinned 3.0.0 is not available; runs 2.1.0 from registry",
     });
+  });
+});
+
+describe("the runs listing and step data", () => {
+  it("reads step blobs only when the query selects them", async () => {
+    const { runtime, queries } = build(false);
+    const withData = (query: string) =>
+      queries.runs({}, {}, CTX, runsInfo(query)).then(
+        () =>
+          (runtime.runs.mock.calls.at(-1) as unknown[])[0] as {
+            withStepData: boolean;
+          },
+      );
+
+    expect(
+      (await withData("{ workflowRuntime { runs { id status } } }"))
+        .withStepData,
+    ).toBe(false);
+    expect(
+      (
+        await withData(
+          "{ workflowRuntime { runs { id steps { stepId status } } } }",
+        )
+      ).withStepData,
+    ).toBe(false);
+    expect(
+      (
+        await withData(
+          "{ workflowRuntime { runs { id steps { stepId output } } } }",
+        )
+      ).withStepData,
+    ).toBe(true);
+    // A fragment can select anything, so it reads as asking for the blobs.
+    expect(
+      (
+        await withData(
+          "{ workflowRuntime { runs { id steps { ...S } } } } fragment S on WorkflowStepRunRecord { input }",
+        )
+      ).withStepData,
+    ).toBe(true);
   });
 });

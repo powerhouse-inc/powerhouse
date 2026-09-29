@@ -1995,8 +1995,14 @@ export class WorkflowRuntimeService {
 
   // The run journal, scoped to what this caller may read: a run carries its
   // trigger payload and every step's input and output.
+  // `withStepData: false` leaves each step's input and output out (null).
   async runs(
-    args: { workflowId?: string; driveId?: string; limit?: number },
+    args: {
+      workflowId?: string;
+      driveId?: string;
+      limit?: number;
+      withStepData?: boolean;
+    },
     ctx?: WorkflowCaller,
   ): Promise<RunRecord[]> {
     const store = await this.store();
@@ -2020,12 +2026,11 @@ export class WorkflowRuntimeService {
       await this.readableRows(rows, (row) => row.workflow_id, ctx),
       ctx,
     );
-    return Promise.all(
-      readable.map(async (row) => ({
-        row,
-        steps: await store.getSteps(row.id),
-      })),
+    const steps = await store.getStepsForRuns(
+      readable.map((row) => row.id),
+      { withData: args.withStepData ?? true },
     );
+    return readable.map((row) => ({ row, steps: steps.get(row.id) ?? [] }));
   }
 
   // One run, or null when the caller may not read its workflow: "not yours"
@@ -2460,12 +2465,15 @@ export class WorkflowRuntimeService {
     if (!ctx) return [];
     const decisions = new Map<string, Promise<boolean>>();
     const store = await this.store();
+    const documents = await store?.getRunDocumentsForRuns(
+      rows.map((row) => row.id),
+    );
     const served = await Promise.all(
-      rows.map(async (row) =>
+      rows.map((row) =>
         this.servesDocuments(
           [
             ...journaledTriggerDocumentIds(row.trigger_payload),
-            ...((await store?.getRunDocuments(row.id)) ?? []),
+            ...(documents?.get(row.id) ?? []),
           ],
           ctx,
           decisions,
