@@ -408,13 +408,15 @@ function triggerDocumentIds(payload: unknown): string[] {
   ];
 }
 
+const ABSENT_ERROR_NAMES = new Set([
+  "DocumentNotFoundError",
+  "DocumentPurgedError",
+  "DocumentDeletedError",
+]);
+
 // Absence is reported by name: the error may cross an RPC boundary.
 function isAbsent(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    (error.name === "DocumentNotFoundError" ||
-      error.name === "DocumentDeletedError")
-  );
+  return error instanceof Error && ABSENT_ERROR_NAMES.has(error.name);
 }
 
 function inputRecord(input: unknown): Record<string, unknown> {
