@@ -101,6 +101,15 @@ next boot instead of vanishing; a fresh registration starts at head, so history
 is never replayed. `onOperations` journals a matched fire before it returns, so
 the cursor never passes an event that is not yet durable.
 
+A workflow document's `DELETE_DOCUMENT` disarms it as disabling does: its
+deliveries stop once the operation is indexed, a piece trigger's `onDisable`
+runs, and then its trigger row, its FLOW `ctx.store` partition, its webhook
+token and its dedupe keys are deleted. A restart finds nothing to re-arm.
+
+`runsPage` pages newest first on when a run was journaled (`enqueued_at`),
+which starting a PENDING run leaves alone, so a run keeps its place between
+pages. `startedAt` is when it began executing.
+
 The webhook endpoints are registered under the `@powerhousedao/workflow`
 namespace, which this package exports as `WORKFLOW_PACKAGE_NAME`.
 
