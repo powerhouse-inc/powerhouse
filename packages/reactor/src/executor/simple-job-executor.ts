@@ -7,9 +7,15 @@ import type {
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
+  actionSignerIdentity,
   baseReducerVersion,
   decide,
   garbageCollect,
+  groupDocumentType,
+  isPurgeMarker,
+  purgeDocumentAction,
+  purgeMarkerOperation,
+  type PurgeMarkerOperation,
   hashDocumentStateForScope,
   isUndoRedo,
   mentionedGroupIds,
@@ -21,6 +27,7 @@ import {
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
+import { DriveCollectionId } from "../cache/operation-index-types.js";
 import { resolveFeatureFlags } from "../core/feature-flags.js";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type {
@@ -36,9 +43,16 @@ import {
   AuthorizationDeniedError,
   AuthTimestampNotMonotonicError,
   DocumentDeletedError,
+  DocumentNotDeletedError,
+  DocumentPurgedError,
   ExcessiveReshuffleError,
+  GroupInUseError,
   InvalidOperationTimestampError,
+  InvalidSignatureError,
+  PurgeTooLargeError,
+  ReservedActionError,
 } from "../shared/errors.js";
+import type { KyselyDocumentPurger } from "../storage/kysely/document-purger.js";
 import { yieldToMain } from "../shared/utils.js";
 import {
   AppendConditionFailedError,
@@ -67,7 +81,10 @@ import {
 import { isSynthesized, signSynthesized } from "./synthesized-signing.js";
 import { PassthroughSigner } from "../signer/passthrough-signer.js";
 import type { SignatureTrustPolicy } from "../signer/types.js";
-import { DEFAULT_DEFERRED_JOB_TTL_MS } from "./types.js";
+import {
+  DEFAULT_DEFERRED_JOB_TTL_MS,
+  DEFAULT_MAX_PURGE_OPERATIONS,
+} from "./types.js";
 import type {
   ExecutingJob,
   JobExecutorConfig,
@@ -83,8 +100,12 @@ import {
   DOCUMENT_SCOPE_ACTIONS,
   getNextIndexForScope,
   isGenesisOperation,
+  jobWriteIds,
+  PurgeFence,
   refusalError,
+  relationshipTarget,
   submittedActionIds,
+  targetDocumentId,
   TouchedStreams,
 } from "./util.js";
 
@@ -98,6 +119,35 @@ function isValidISOTimestamp(value: string): boolean {
   }
   return !isNaN(new Date(value).getTime());
 }
+
+type MetaEntry = { documentId: string; branch: string };
+
+type ExecuteInScopeParams = {
+  job: Job;
+  startTime: number;
+  stores: ExecutionStores;
+  signal?: AbortSignal;
+  touchedStreams: TouchedStreams;
+  postCommitInvalidations: TouchedStream[];
+  postCommitMembershipInvalidations: string[];
+  postCommitMetaInvalidations: MetaEntry[];
+};
+
+/** What a purge transaction needs once its path has decided to purge. */
+type PurgeCommit = {
+  purger: KyselyDocumentPurger;
+  marker: PurgeMarkerOperation;
+  documentType: string;
+  held: PurgeHeld;
+  sourceRemote: string;
+  collectionIds: string[];
+  survivors: string[];
+};
+
+type PurgeHeld = {
+  streams: { scope: string; branch: string }[];
+  branches: string[];
+};
 
 type ProcessActionsResult = {
   success: boolean;
@@ -152,6 +202,54 @@ type ScopeOutcome = {
  * returned JobResult there, which is what the queue, the worker protocol and
  * every test expect a failed job to look like.
  */
+/** The ids of a purge job's request, which a drive purge may precede. */
+function purgeRequestDocumentIds(job: Job): string[] {
+  const ids = job.meta.purgeRequestDocumentIds;
+  return Array.isArray(ids)
+    ? ids.filter((id): id is string => typeof id === "string")
+    : [];
+}
+
+const MARKER_INPUT_KEYS: ReadonlySet<string> = new Set([
+  "documentId",
+  "documentType",
+  "purgedAtUtcIso",
+  "requestId",
+]);
+
+/** A peer's marker must name this job's id on main and carry nothing else. */
+function malformedMarker(job: Job): InvalidSignatureError | undefined {
+  const marker = job.operations.find((operation) => isPurgeMarker(operation));
+  const action = marker?.action;
+  const input = action?.input as Record<string, unknown> | null | undefined;
+  const refuse = (reason: string) =>
+    new InvalidSignatureError(
+      job.documentId,
+      "ID_MISMATCH",
+      `marker ${action?.id ?? "?"} ${reason}`,
+    );
+  if (typeof input !== "object" || input === null) {
+    return refuse("carries no input");
+  }
+  const extra = Object.keys(input).filter((key) => !MARKER_INPUT_KEYS.has(key));
+  if (extra.length > 0) {
+    return refuse(`carries unexpected input ${extra.join(", ")}`);
+  }
+  for (const key of MARKER_INPUT_KEYS) {
+    if (typeof input[key] !== "string" || input[key] === "") {
+      return refuse(`input.${key} is not a non-empty string`);
+    }
+  }
+  if (
+    input.documentId !== job.documentId ||
+    job.branch !== "main" ||
+    action?.scope !== "document"
+  ) {
+    return refuse(`does not purge ${job.documentId} on document/main`);
+  }
+  return undefined;
+}
+
 class JobRollbackSignal extends Error {
   constructor(readonly result: JobResult) {
     super("job rolled back");
@@ -209,6 +307,8 @@ export class SimpleJobExecutor implements IJobExecutor {
       protocolSupport:
         config.protocolSupport ??
         localSupports(PEER_CAPABILITIES, this.featureFlags).protocols,
+      maxPurgeOperations:
+        config.maxPurgeOperations ?? DEFAULT_MAX_PURGE_OPERATIONS,
     };
 
     this.decisionModel = selectDecisionModel(this.featureFlags, registry);
@@ -274,6 +374,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     // Entries handlers request invalidated only after the transaction commits
     const postCommitInvalidations: TouchedStream[] = [];
     const postCommitMembershipInvalidations: string[] = [];
+    const postCommitMetaInvalidations: MetaEntry[] = [];
 
     let outcome: ScopeOutcome;
     try {
@@ -286,6 +387,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           touchedStreams,
           postCommitInvalidations,
           postCommitMembershipInvalidations,
+          postCommitMetaInvalidations,
         });
 
         if (!scoped.result.success) {
@@ -312,6 +414,10 @@ export class SimpleJobExecutor implements IJobExecutor {
       this.collectionMembershipCache.invalidate(documentId);
     }
 
+    for (const entry of postCommitMetaInvalidations) {
+      this.documentMetaCache.invalidate(entry.documentId, entry.branch);
+    }
+
     const { pendingEvent } = outcome;
     if (pendingEvent) {
       this.eventBus
@@ -336,15 +442,9 @@ export class SimpleJobExecutor implements IJobExecutor {
    * write-ready event is handed back rather than emitted, because a job that
    * has not committed yet has nothing to announce.
    */
-  private async executeInScope(params: {
-    job: Job;
-    startTime: number;
-    stores: ExecutionStores;
-    signal?: AbortSignal;
-    touchedStreams: TouchedStreams;
-    postCommitInvalidations: TouchedStream[];
-    postCommitMembershipInvalidations: string[];
-  }): Promise<ScopeOutcome> {
+  private async executeInScope(
+    params: ExecuteInScopeParams,
+  ): Promise<ScopeOutcome> {
     const {
       job,
       startTime,
@@ -357,15 +457,49 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let pendingEvent: JobWriteReadyEvent | undefined;
 
-    if (job.kind === "purge") {
+    if (job.kind === "mutation") {
+      const reserved = job.actions.find((action) => isPurgeMarker(action));
+      if (reserved) {
+        return {
+          result: buildErrorResult(
+            job,
+            new ReservedActionError(job.documentId, reserved.type),
+            startTime,
+          ),
+        };
+      }
+    }
+
+    if (
+      job.kind === "purge" ||
+      (job.kind === "load" && job.operations.some((op) => isPurgeMarker(op)))
+    ) {
+      return this.executePurge(params);
+    }
+
+    const lockedIds = jobWriteIds(job);
+    let purged: Set<string>;
+    try {
+      await stores.documentLocks.shared(lockedIds);
+      purged = await stores.documentLocks.purged(lockedIds);
+    } catch (error) {
       return {
         result: buildErrorResult(
           job,
-          new Error("Purge jobs are not implemented"),
+          error instanceof Error ? error : new Error(String(error)),
           startTime,
         ),
       };
     }
+    const purgedRefusal = this.purgedRefusal(job, purged);
+    if (purgedRefusal) {
+      return { result: buildErrorResult(job, purgedRefusal, startTime) };
+    }
+    const purgeFence = new PurgeFence(
+      stores.documentLocks,
+      new Set(lockedIds),
+      purged,
+    );
 
     const unsupported = await this.unsupportedStoredProtocol(
       job,
@@ -390,6 +524,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         postCommitInvalidations,
         postCommitMembershipInvalidations,
         touchedStreams,
+        purgeFence,
       });
       if (loadResult.success && loadResult.operationsWithContext) {
         const ordinals = await stores.operationIndex.commit(indexTxn, signal);
@@ -429,6 +564,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         postCommitInvalidations,
         postCommitMembershipInvalidations,
         touchedStreams,
+        purgeFence,
       });
       if (reevalResult.success && reevalResult.operationsWithContext) {
         const ordinals = await stores.operationIndex.commit(indexTxn, signal);
@@ -524,6 +660,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       postCommitInvalidations,
       postCommitMembershipInvalidations,
       touchedStreams,
+      purgeFence,
     };
 
     const actionResult = await this.processActions(
@@ -574,6 +711,463 @@ export class SimpleJobExecutor implements IJobExecutor {
       stores,
       startTime,
     );
+  }
+
+  /** Only a submitted ADD_RELATIONSHIP refuses a purged target. */
+  private purgedRefusal(job: Job, purged: Set<string>): Error | undefined {
+    if (purged.size === 0) {
+      return undefined;
+    }
+    if (purged.has(job.documentId)) {
+      return new DocumentPurgedError(job.documentId);
+    }
+    const actions = [
+      ...job.actions,
+      ...job.operations.map((operation) => operation.action),
+    ];
+    for (const action of actions) {
+      if (DOCUMENT_SCOPE_ACTIONS.has(action.type)) {
+        const target = targetDocumentId(action, job.documentId);
+        if (purged.has(target)) {
+          return new DocumentPurgedError(target);
+        }
+      }
+    }
+    if (job.kind === "mutation") {
+      for (const action of job.actions) {
+        const target = relationshipTarget(action);
+        if (target !== undefined && purged.has(target)) {
+          return new DocumentPurgedError(
+            target,
+            `ADD_RELATIONSHIP target ${target} was purged`,
+          );
+        }
+      }
+    }
+    return undefined;
+  }
+
+  /** A purge job or a marker load: the exclusive lock is the job's only lock. */
+  private async executePurge(
+    params: ExecuteInScopeParams,
+  ): Promise<ScopeOutcome> {
+    const { job, startTime, stores } = params;
+    const fail = (error: unknown): ScopeOutcome => ({
+      result: buildErrorResult(
+        job,
+        error instanceof Error ? error : new Error(String(error)),
+        startTime,
+      ),
+    });
+
+    if (job.kind === "load") {
+      const malformed = malformedMarker(job);
+      if (malformed) {
+        return fail(malformed);
+      }
+    }
+
+    const purger = stores.purger;
+    if (!purger) {
+      return fail(
+        new Error(`Purge of ${job.documentId} needs a transactional scope`),
+      );
+    }
+
+    let alreadyPurged: boolean;
+    try {
+      await stores.documentLocks.exclusive(job.documentId);
+      const purged = await stores.documentLocks.purged([job.documentId]);
+      alreadyPurged = purged.has(job.documentId);
+    } catch (error) {
+      return fail(error);
+    }
+    // Nothing written; the empty event is what moves the job to READ_READY.
+    if (alreadyPurged) {
+      return {
+        result: {
+          job,
+          success: true,
+          operations: [],
+          operationsWithContext: [],
+          duration: Date.now() - startTime,
+        },
+        pendingEvent: {
+          jobId: job.id,
+          operations: [],
+          jobMeta: job.meta,
+          collectionMemberships: {},
+        },
+      };
+    }
+
+    let commit: PurgeCommit | Error;
+    try {
+      commit =
+        job.kind === "purge"
+          ? await this.preparePurgeJob(params, purger)
+          : await this.preparePurgeLoad(params, purger);
+    } catch (error) {
+      return fail(error);
+    }
+    if (commit instanceof Error) {
+      return fail(commit);
+    }
+
+    try {
+      return await this.commitPurge(params, commit);
+    } catch (error) {
+      return fail(error);
+    }
+  }
+
+  /** Preconditions 1-5, then the marker this host signs. */
+  private async preparePurgeJob(
+    params: ExecuteInScopeParams,
+    purger: KyselyDocumentPurger,
+  ): Promise<PurgeCommit | Error> {
+    const { job, stores, signal } = params;
+    const documentId = job.documentId;
+    if (!job.purge) {
+      return new Error(`Purge job ${job.id} carries no purge options`);
+    }
+
+    const held = await this.heldStreams(purger, documentId);
+    if (held.branches.length === 0) {
+      return new DocumentNotDeletedError(
+        documentId,
+        `Document ${documentId} is not held here`,
+      );
+    }
+
+    let documentType: string | undefined;
+    for (const branch of held.branches) {
+      let meta;
+      try {
+        meta = await stores.documentMetaCache.getDocumentMeta(
+          documentId,
+          branch,
+          signal,
+        );
+      } catch (error) {
+        return new DocumentNotDeletedError(
+          documentId,
+          `Document ${documentId} has no readable state on ${branch}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+      if (!meta.state.isDeleted) {
+        return new DocumentNotDeletedError(
+          documentId,
+          `Document ${documentId} is not deleted on branch ${branch}`,
+        );
+      }
+      documentType ??= meta.documentType;
+    }
+    if (documentType === undefined) {
+      return new DocumentNotDeletedError(documentId);
+    }
+
+    if (documentType === groupDocumentType) {
+      const referencers = await this.groupReferencersInHistory(
+        purger,
+        documentId,
+      );
+      if (referencers.length > 0) {
+        return new GroupInUseError(documentId, referencers);
+      }
+    }
+
+    let survivors: string[] = [];
+    if (this.driveContainerTypes.has(documentType)) {
+      const requested = new Set(purgeRequestDocumentIds(job));
+      const members = await this.driveMembers(
+        purger,
+        stores,
+        documentId,
+        held.branches,
+      );
+      const blocking = members.required.filter((id) => !requested.has(id));
+      if (blocking.length > 0) {
+        return new DocumentNotDeletedError(
+          documentId,
+          `Drive ${documentId} cannot be purged: ${blocking.join(", ")} neither purged nor in the request`,
+        );
+      }
+      survivors = members.survivors;
+    }
+
+    const operationCount = await purger.operationCount(documentId);
+    if (
+      operationCount > this.config.maxPurgeOperations &&
+      !job.purge.allowLarge
+    ) {
+      return new PurgeTooLargeError(
+        documentId,
+        operationCount,
+        this.config.maxPurgeOperations,
+      );
+    }
+
+    const marker = await this.signMarker(
+      documentId,
+      documentType,
+      job.purge.requestId,
+      signal,
+    );
+    return {
+      purger,
+      marker,
+      documentType,
+      held,
+      sourceRemote: "",
+      collectionIds: [],
+      survivors,
+    };
+  }
+
+  /** A peer's marker, admitted alone; a receiver cannot refuse an erasure. */
+  private async preparePurgeLoad(
+    params: ExecuteInScopeParams,
+    purger: KyselyDocumentPurger,
+  ): Promise<PurgeCommit | Error> {
+    const { job, stores, signal } = params;
+    const documentId = job.documentId;
+    const marker = job.operations.find((operation) =>
+      isPurgeMarker(operation),
+    ) as PurgeMarkerOperation;
+
+    const refusal = await this.signatureAdmission.admitMarker(
+      job,
+      marker,
+      signal,
+    );
+    if (refusal) {
+      return refusal;
+    }
+
+    const held = await this.heldStreams(purger, documentId);
+    let documentType = marker.action.input.documentType;
+    if (held.branches.length > 0) {
+      try {
+        const meta = await stores.documentMetaCache.getDocumentMeta(
+          documentId,
+          held.branches.includes("main") ? "main" : held.branches[0],
+          signal,
+        );
+        documentType = meta.documentType;
+      } catch {
+        // Unreadable state is still erased; the marker names the type.
+      }
+    }
+
+    let survivors: string[] = [];
+    if (this.driveContainerTypes.has(documentType)) {
+      const members = await this.driveMembers(
+        purger,
+        stores,
+        documentId,
+        held.branches,
+      );
+      survivors = [...members.required, ...members.survivors];
+    }
+
+    const sourceRemote =
+      typeof job.meta.sourceRemote === "string" ? job.meta.sourceRemote : "";
+    const collectionId = sourceRemote
+      ? await purger.remoteCollection(sourceRemote)
+      : undefined;
+
+    return {
+      purger,
+      marker,
+      documentType,
+      held,
+      sourceRemote,
+      collectionIds: collectionId === undefined ? [] : [collectionId],
+      survivors,
+    };
+  }
+
+  /** Execution: delete, write the marker and its twin, tombstone, reopen. */
+  private async commitPurge(
+    params: ExecuteInScopeParams,
+    commit: PurgeCommit,
+  ): Promise<ScopeOutcome> {
+    const { job, startTime, stores, signal, touchedStreams } = params;
+    const { purger, marker, documentType, held, sourceRemote } = commit;
+    const documentId = job.documentId;
+
+    const streams = [...held.streams, { scope: "document", branch: "main" }];
+    for (const stream of streams) {
+      touchedStreams.add(documentId, stream.scope, stream.branch);
+      params.postCommitInvalidations.push({ documentId, ...stream });
+    }
+    for (const branch of new Set([...held.branches, "main"])) {
+      params.postCommitMetaInvalidations.push({ documentId, branch });
+    }
+
+    const removedRows = await purger.deleteRows(documentId);
+
+    const [stored] = await stores.operationStore.apply(
+      documentId,
+      documentType,
+      "document",
+      "main",
+      0,
+      (txn) => {
+        txn.addOperations(marker);
+      },
+      signal,
+    );
+
+    const indexTxn = stores.operationIndex.start();
+    indexTxn.write([
+      {
+        ...stored,
+        documentId,
+        documentType,
+        scope: "document",
+        branch: "main",
+        sourceRemote,
+      },
+    ]);
+    const [ordinal] = await stores.operationIndex.commit(indexTxn, signal);
+
+    await purger.writeTombstone({
+      documentId,
+      ordinal,
+      removedRows,
+      purgedAtUtc: marker.action.input.purgedAtUtcIso,
+      requestId: marker.action.input.requestId,
+    });
+    const collections = await purger.reopenMemberships(
+      documentId,
+      ordinal,
+      commit.collectionIds,
+    );
+
+    params.postCommitMembershipInvalidations.push(
+      documentId,
+      ...commit.survivors,
+      ...indexTxn.getMembershipInvalidations(),
+    );
+
+    const operationWithContext: OperationWithContext = {
+      operation: stored,
+      context: {
+        documentId,
+        scope: "document",
+        branch: "main",
+        documentType,
+        ordinal,
+      },
+    };
+    return {
+      result: {
+        job,
+        success: true,
+        operations: [stored],
+        operationsWithContext: [operationWithContext],
+        duration: Date.now() - startTime,
+      },
+      pendingEvent: {
+        jobId: job.id,
+        operations: [operationWithContext],
+        jobMeta: job.meta,
+        collectionMemberships: { [documentId]: collections },
+      },
+    };
+  }
+
+  private async heldStreams(
+    purger: KyselyDocumentPurger,
+    documentId: string,
+  ): Promise<PurgeHeld> {
+    const streams = await purger.streams(documentId);
+    const branches = [
+      ...new Set(
+        streams
+          .filter((stream) => stream.scope === "document")
+          .map((stream) => stream.branch),
+      ),
+    ];
+    return { streams, branches };
+  }
+
+  /** Members a drive purge needs gone, and those living on elsewhere. */
+  private async driveMembers(
+    purger: KyselyDocumentPurger,
+    stores: ExecutionStores,
+    driveId: string,
+    branches: string[],
+  ): Promise<{ required: string[]; survivors: string[] }> {
+    const required = new Set<string>();
+    const survivors = new Set<string>();
+    for (const branch of branches.length > 0 ? branches : ["main"]) {
+      const collectionId = DriveCollectionId.forDrive(driveId, branch).key;
+      const members = await purger.collectionMembers(collectionId, driveId);
+      const purged = await stores.documentLocks.purged(
+        members.map((member) => member.documentId),
+      );
+      for (const member of members) {
+        if (purged.has(member.documentId)) {
+          continue;
+        }
+        if (member.openElsewhere) {
+          survivors.add(member.documentId);
+        } else {
+          required.add(member.documentId);
+        }
+      }
+    }
+    return { required: [...required], survivors: [...survivors] };
+  }
+
+  /** Survivors whose accepted auth history names the group; refusals do not. */
+  private async groupReferencersInHistory(
+    purger: KyselyDocumentPurger,
+    groupId: string,
+  ): Promise<string[]> {
+    const referencing: string[] = [];
+    for (const documentId of await purger.groupReferencers(groupId)) {
+      const byBranch = await purger.authOperations(documentId);
+      const names = [...byBranch.values()].some((operations) =>
+        garbageCollect(sortOperations(operations)).some(
+          (operation) =>
+            operation.deniedReason === undefined &&
+            operation.error === undefined &&
+            mentionedGroupIds(operation.action).includes(groupId),
+        ),
+      );
+      if (names) {
+        referencing.push(documentId);
+      }
+    }
+    return referencing;
+  }
+
+  /** The marker, signed by this executor's signer as any peer admits it. */
+  private async signMarker(
+    documentId: string,
+    documentType: string,
+    requestId: string,
+    signal?: AbortSignal,
+  ): Promise<PurgeMarkerOperation> {
+    const action = purgeDocumentAction({ documentId, documentType, requestId });
+    const signature = await this.signer.signAction(
+      action,
+      { documentId, branch: "main" },
+      signal,
+    );
+    return purgeMarkerOperation({
+      ...action,
+      context: {
+        signer: {
+          ...actionSignerIdentity(this.signer),
+          signatures: [signature],
+        },
+      },
+    });
   }
 
   /** A stored document at a version this reactor does not run is read-only here. */

@@ -28,6 +28,7 @@ import type {
   JobResultSummary,
   SubmittedActionResult,
 } from "../shared/types.js";
+import type { DocumentLocks } from "./execution-scope.js";
 import type { JobResult, TouchedStream } from "./types.js";
 
 export { applyDeleteDocumentAction, applyUpgradeDocumentAction };
@@ -371,4 +372,59 @@ export function summarizeSubmittedActions(
     actions,
     allApplied: actions.every((action) => action.kind === "applied"),
   };
+}
+
+/** Tombstones a job has read, each under the shared lock it took first. */
+export class PurgeFence {
+  constructor(
+    private readonly locks: DocumentLocks,
+    private readonly checked: Set<string>,
+    private readonly purged: Set<string>,
+  ) {}
+
+  /** Locks and reads an id the job start did not resolve. */
+  async isPurged(documentId: string): Promise<boolean> {
+    if (!this.checked.has(documentId)) {
+      await this.locks.shared([documentId]);
+      const found = await this.locks.purged([documentId]);
+      this.checked.add(documentId);
+      if (found.has(documentId)) {
+        this.purged.add(documentId);
+      }
+    }
+    return this.purged.has(documentId);
+  }
+}
+
+type RelationshipInput = { sourceId?: unknown; targetId?: unknown };
+
+/** An ADD_RELATIONSHIP's target, or undefined for any other action. */
+export function relationshipTarget(action: {
+  type: string;
+  input: unknown;
+}): string | undefined {
+  if (action.type !== "ADD_RELATIONSHIP") {
+    return undefined;
+  }
+  const target = (action.input as RelationshipInput | undefined)?.targetId;
+  return typeof target === "string" && target.length > 0 ? target : undefined;
+}
+
+/** The ids a job can write rows for, sorted: the ids its locks cover. */
+export function jobWriteIds(job: Job): string[] {
+  const ids = new Set<string>([job.documentId]);
+  const actions = [
+    ...job.actions,
+    ...job.operations.map((operation) => operation.action),
+  ];
+  for (const action of actions) {
+    if (DOCUMENT_SCOPE_ACTIONS.has(action.type)) {
+      ids.add(targetDocumentId(action, job.documentId));
+    }
+    const target = relationshipTarget(action);
+    if (target !== undefined) {
+      ids.add(target);
+    }
+  }
+  return [...ids].sort();
 }
