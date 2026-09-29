@@ -527,3 +527,14 @@ export type {
   DocumentPurgeRow,
   PurgeRemovedRows,
 } from "./src/storage/kysely/types.js";
+export {
+  DEFAULT_PURGE_DELETE_BATCH,
+  KyselyDocumentPurger,
+  type CollectionMember,
+  type PurgeStream,
+} from "./src/storage/kysely/document-purger.js";
+export {
+  DEFAULT_MAX_PURGE_OPERATIONS,
+  DocumentPurgeService,
+  type EnqueuePurgeOptions,
+} from "./src/admin/document-purge-service.js";
