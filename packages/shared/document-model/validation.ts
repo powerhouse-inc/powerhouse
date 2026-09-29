@@ -19,6 +19,7 @@ export const RESERVED_OPERATION_NAMES = [
   "SET_NAME",
   "SET_PREFERRED_EDITOR",
   "NOOP",
+  "PURGE_DOCUMENT",
 ] as const;
 
 export type ReservedOperationName = (typeof RESERVED_OPERATION_NAMES)[number];

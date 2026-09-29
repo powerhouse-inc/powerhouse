@@ -64,6 +64,7 @@ export const DOCUMENT_SCOPE_ACTION_TYPES: ReadonlySet<string> = new Set([
   "ADD_RELATIONSHIP",
   "REMOVE_RELATIONSHIP",
   "UPDATE_RELATIONSHIP",
+  "PURGE_DOCUMENT",
 ]);
 
 /** Where a document-scope action writes: `sourceId` or `documentId`. */

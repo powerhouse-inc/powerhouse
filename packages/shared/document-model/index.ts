@@ -14,6 +14,7 @@ export * from "./files.js";
 export * from "./header.js";
 export * from "./operations.js";
 export * from "./peer-agreement.js";
+export * from "./purge.js";
 export * from "./reducer.js";
 export * from "./reducers.js";
 export * from "./schemas.js";
