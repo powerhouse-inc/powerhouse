@@ -28,9 +28,15 @@ import type { IWriteCache } from "../../src/cache/write/interfaces.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../src/core/drive-container-types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { Database, InProcessReactorModule } from "../../src/core/types.js";
-import type { ReadModelIndexedEvent } from "../../src/events/types.js";
+import { EventBus } from "../../src/events/event-bus.js";
+import type {
+  JobWriteReadyEvent,
+  ReadModelIndexedEvent,
+} from "../../src/events/types.js";
 import { ReactorEventTypes } from "../../src/events/types.js";
 import { ProcessorManager } from "../../src/processors/processor-manager.js";
+import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
+import type { IReadModel } from "../../src/read-models/interfaces.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import type { PagedResults } from "../../src/shared/types.js";
@@ -1899,6 +1905,59 @@ describe("ProcessorManager Standalone Tests", () => {
       const tracked = processorManager.get(`f:${driveId}:0`);
       expect(tracked).toBeDefined();
       expect(tracked!.lastOrdinal).toBe(3);
+    });
+
+    it("should deliver batches queued behind a slower model once when a sweep runs", async () => {
+      const driveId = generateId();
+      const { factory, processor } = createMockProcessorFactory({
+        documentId: ["*"],
+      });
+      await processorManager.registerFactory("f", factory);
+
+      const ops = driveCreationOps(driveId);
+      await writeToOperationIndex(operationIndex, ops);
+      await processorManager.indexOperations(ops);
+      await confirm(3);
+
+      const first = makeOp(driveId, 4, { index: 1 });
+      const second = makeOp(driveId, 5, { index: 2 });
+      await writeToOperationIndex(operationIndex, [first]);
+      await writeToOperationIndex(operationIndex, [second]);
+
+      const opened = deferred();
+      let held = false;
+      const gate: IReadModel = {
+        name: "gate",
+        indexOperations: () => {
+          if (held) return Promise.resolve();
+          held = true;
+          return opened.promise;
+        },
+      };
+      const eventBus = new EventBus();
+      const coordinator = new ReadModelCoordinator(
+        eventBus,
+        [gate],
+        [processorManager],
+      );
+      coordinator.start();
+      for (const op of [first, second]) {
+        const event: JobWriteReadyEvent = {
+          jobId: generateId(),
+          operations: [op],
+          jobMeta: { batchId: generateId(), batchJobIds: [] },
+        };
+        await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, event);
+      }
+
+      // The watermark settles the first batch while the second is still open.
+      await processorManager.sweep(4, [4]);
+      opened.resolve();
+      await coordinator.drain();
+      await confirm(5);
+
+      expect(ordinalsOf(processor)).toEqual([1, 2, 3, 4, 5]);
+      expect(processorManager.get(`f:${driveId}:0`)!.lastOrdinal).toBe(5);
     });
 
     it("should start a 'current' processor at its drive's creation when the edit arrived first", async () => {
