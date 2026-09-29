@@ -92,6 +92,7 @@ export {
   RelationshipNotFoundError,
   UnsupportedStoredProtocolError,
 } from "./src/shared/errors.js";
+export type { UnsupportedStoredDocuments } from "./src/core/stored-protocol-check.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
 export { parsePagingOptions, type ParsedPaging } from "./src/shared/utils.js";
 export {
