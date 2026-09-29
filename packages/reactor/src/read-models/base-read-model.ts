@@ -209,7 +209,10 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
 
     if (stored === undefined) {
       if (this.config.startFrom === "head") {
-        const head = await this.settledWatermark().refresh();
+        const watermark = this.settledWatermark();
+        const settled = await watermark.refresh();
+        // The head, not settledThrough: any open write elsewhere holds that at 0.
+        const head = Math.max(settled, watermark.status().head);
         await this.initializeState(head);
         this.resetCursor(head);
         this.initialized = true;

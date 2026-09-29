@@ -279,7 +279,8 @@ export type SweepResult = {
 the park and `recordCommittedPrefix` are removed: a failed chunk releases its
 claims and the next sweep retries it. `lastOrdinal` stays as a protected getter
 for `appliedThrough`. A `startFrom: "head"` registration with no row inserts
-one at `await watermark.refresh()` and replays nothing.
+one at the probed sequence head, `max(await watermark.refresh(), status().head)`,
+and replays nothing; an ordinal at or below it that commits later is not applied.
 
 | Model | `replayStreamSuffix` | Why |
 |---|---|---|
