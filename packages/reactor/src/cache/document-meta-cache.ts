@@ -1,7 +1,14 @@
 import type {
   CreateDocumentAction,
   DeleteDocumentAction,
+  PurgeDocumentAction,
   UpgradeDocumentAction,
+} from "@powerhousedao/shared/document-model";
+import {
+  createDocumentState,
+  isPurgeMarker,
+  PURGE_DOCUMENT,
+  purgedProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import {
   applyDeleteDocumentAction,
@@ -179,6 +186,9 @@ export class DocumentMetaCache implements IDocumentMetaCache {
     }
 
     const createOp = docScopeOps.results[0];
+    if (isPurgeMarker(createOp)) {
+      return purgedMeta(createOp.action);
+    }
     if (createOp.action.type !== "CREATE_DOCUMENT") {
       throw new Error(
         `Invalid document: first operation must be CREATE_DOCUMENT, found ${createOp.action.type}`,
@@ -190,6 +200,7 @@ export class DocumentMetaCache implements IDocumentMetaCache {
 
     let document = createDocumentFromAction(createAction);
     let documentScopeRevision = 0;
+    let purged = false;
 
     for (const op of docScopeOps.results) {
       if (targetRevision !== undefined && op.index > targetRevision) {
@@ -201,11 +212,15 @@ export class DocumentMetaCache implements IDocumentMetaCache {
       if (op.action.type === "UPGRADE_DOCUMENT") {
         const upgradeAction = op.action as UpgradeDocumentAction;
         document = applyUpgradeDocumentAction(document, upgradeAction);
-      } else if (op.action.type === "DELETE_DOCUMENT") {
+      } else if (
+        op.action.type === "DELETE_DOCUMENT" ||
+        op.action.type === PURGE_DOCUMENT
+      ) {
         document = applyDeleteDocumentAction(
           document,
-          op.action as DeleteDocumentAction,
+          op.action as DeleteDocumentAction | PurgeDocumentAction,
         );
+        purged ||= op.action.type === PURGE_DOCUMENT;
       }
 
       // for now, we are skipping relationship operations
@@ -214,8 +229,23 @@ export class DocumentMetaCache implements IDocumentMetaCache {
     return {
       state: document.state.document,
       documentType,
-      protocolVersions: createAction.input.protocolVersions,
+      protocolVersions: purged
+        ? purgedProtocolVersions()
+        : createAction.input.protocolVersions,
       documentScopeRevision: documentScopeRevision + 1,
     };
   }
+}
+
+/** A lone marker has no CREATE_DOCUMENT; the marker describes the stream. */
+function purgedMeta(action: PurgeDocumentAction): CachedDocumentMeta {
+  return {
+    state: createDocumentState({
+      isDeleted: true,
+      deletedAtUtcIso: action.input.purgedAtUtcIso,
+    }),
+    documentType: action.input.documentType,
+    protocolVersions: purgedProtocolVersions(),
+    documentScopeRevision: 1,
+  };
 }

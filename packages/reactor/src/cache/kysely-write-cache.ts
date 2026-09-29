@@ -3,6 +3,7 @@ import type {
   DeleteDocumentAction,
   Operation,
   PHDocument,
+  PurgeDocumentAction,
   UpgradeDocumentAction,
   UpgradeTransition,
 } from "@powerhousedao/shared/document-model";
@@ -12,12 +13,17 @@ import {
   applyUpgradeDocumentAction,
   baseReducerVersion,
   isDenied,
+  isPurgeMarker,
   normalizeDocumentModelVersion,
+  PURGE_DOCUMENT,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import { createDocumentFromAction } from "../executor/util.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
-import { DocumentNotFoundError } from "../shared/errors.js";
+import {
+  DocumentNotFoundError,
+  DocumentPurgedError,
+} from "../shared/errors.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
 import { RingBuffer } from "./buffer/ring-buffer.js";
 import { LRUTracker } from "./lru/lru-tracker.js";
@@ -53,13 +59,14 @@ type PendingUpgrade = {
   /** The upgrade operation's index in the document scope. */
   index: number;
   /**
-   * DELETE_DOCUMENT actions the document scope recorded after this upgrade.
+   * DELETE_DOCUMENT and PURGE_DOCUMENT actions the document scope recorded
+   * after this upgrade.
    * The document-scope pass applies deletes inline while the upgrade is held
    * back, inverting log order; re-applying them after the upgrade restores it
    * — without this, an upgrade seeded from an initialState snapshot replaces
    * the state wholesale and a rebuilt deleted document comes back live.
    */
-  subsequentDeletes: DeleteDocumentAction[];
+  subsequentDeletes: (DeleteDocumentAction | PurgeDocumentAction)[];
 };
 
 /**
@@ -226,6 +233,7 @@ export class KyselyWriteCache implements IWriteCache {
    * @returns The document at the target revision
    * @throws {Error} "Operation aborted" if signal is aborted
    * @throws {ModuleNotFoundError} If document type not registered in registry
+   * @throws {DocumentPurgedError} If the stream's only row is a purge marker
    * @throws {Error} "Failed to rebuild document" if operation store fails
    * @throws {Error} If reducer throws during operation application
    * @throws {Error} If document serialization fails
@@ -702,11 +710,14 @@ export class KyselyWriteCache implements IWriteCache {
               subsequentDeletes: [],
             });
           }
-        } else if (operation.action.type === "DELETE_DOCUMENT") {
+        } else if (
+          operation.action.type === "DELETE_DOCUMENT" ||
+          operation.action.type === PURGE_DOCUMENT
+        ) {
           applyDeleteDocumentAction(document, operation.action as never);
           for (const pending of pendingUpgrades) {
             pending.subsequentDeletes.push(
-              operation.action as DeleteDocumentAction,
+              operation.action as DeleteDocumentAction | PurgeDocumentAction,
             );
           }
         }
@@ -729,6 +740,9 @@ export class KyselyWriteCache implements IWriteCache {
       }
 
       const createOp = createOpResult.results[0];
+      if (isPurgeMarker(createOp)) {
+        throw new DocumentPurgedError(documentId);
+      }
       if (createOp.action.type !== "CREATE_DOCUMENT") {
         throw new Error(
           `Failed to rebuild document ${documentId}: first operation in document scope must be CREATE_DOCUMENT, found ${createOp.action.type}`,
@@ -829,11 +843,14 @@ export class KyselyWriteCache implements IWriteCache {
             documentType,
             normalizeDocumentModelVersion(toVersion),
           );
-        } else if (operation.action.type === "DELETE_DOCUMENT") {
+        } else if (
+          operation.action.type === "DELETE_DOCUMENT" ||
+          operation.action.type === PURGE_DOCUMENT
+        ) {
           applyDeleteDocumentAction(document, operation.action as never);
           for (const pending of pendingUpgrades) {
             pending.subsequentDeletes.push(
-              operation.action as DeleteDocumentAction,
+              operation.action as DeleteDocumentAction | PurgeDocumentAction,
             );
           }
         } else {
