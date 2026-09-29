@@ -7,8 +7,7 @@ export type StoredProtocolVersions = {
   versions: ProtocolVersions;
 };
 
-// Implies idx_operation_created_protocol_versions, so both queries read the index.
-// A purge marker sits at index 0 too; it never counts as a creation.
+// Reads idx_operation_created_protocol_versions; a marker at index 0 never counts.
 const created = sql.raw(
   `scope = 'document' and "index" = 0 and (action->'input'->'protocolVersions') is not null and action->>'type' <> 'PURGE_DOCUMENT'`,
 );
