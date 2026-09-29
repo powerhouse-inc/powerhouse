@@ -19,5 +19,7 @@ export default defineConfig({
     actionTimeout: 15_000,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
+    // The Connect build's service worker precaches the whole app.
+    serviceWorkers: "block",
   },
 });
