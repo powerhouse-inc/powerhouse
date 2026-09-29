@@ -166,6 +166,31 @@ export async function evaluateImporting<A, R>(
   }
 }
 
+// Thrown before any write: the app is booting, or reloaded under the call.
+const REACTOR_GONE =
+  /Failed to fetch dynamically imported module|reading '(?:client|reactorClientModule)'|Execution context was destroyed/;
+
+/** evaluateImporting for a function that needs Connect's reactor client. */
+export async function evaluateWithReactor<A, R>(
+  page: Page,
+  fn: (arg: A) => Promise<R>,
+  arg: A,
+): Promise<R> {
+  for (let attempt = 0; ; attempt++) {
+    await page.waitForLoadState("load");
+    await page.waitForFunction(
+      () => !!(window as unknown as PhWindow).ph?.reactorClientModule?.client,
+      undefined,
+      { timeout: 30_000, polling: 250 },
+    );
+    try {
+      return await page.evaluate(fn as (arg: unknown) => Promise<R>, arg);
+    } catch (error) {
+      if (attempt >= 3 || !REACTOR_GONE.test(String(error))) throw error;
+    }
+  }
+}
+
 // Modules tests import on demand; each can make Vite find a new dependency.
 const WARM_MODULES = [
   "packages/workflow/document-models/workflow/v1/index.ts",
@@ -491,7 +516,7 @@ export interface PhWindow {
 
 /** Creates the documents through Connect's reactor, which syncs them up. */
 function seedInBrowser(page: Page, input: SeedInput): Promise<Seeded> {
-  return evaluateImporting(
+  return evaluateWithReactor(
     page,
     async ({ root, drive, blocks, botTokenRef, defaults }) => {
       const w = window as unknown as PhWindow;
@@ -881,7 +906,7 @@ export async function createWorkflowInBrowser(
       config: { ...defaultsOf(defaults, step), ...step.config },
     })),
   };
-  return evaluateImporting(
+  return evaluateWithReactor(
     page,
     async ({ root, drive, spec }) => {
       const client = (window as unknown as PhWindow).ph!.reactorClientModule!
@@ -941,7 +966,7 @@ export function createConnectionInBrowser(
   drive: string,
   spec: ConnectionSpec,
 ): Promise<string> {
-  return evaluateImporting(
+  return evaluateWithReactor(
     page,
     async ({ root, drive, spec }) => {
       const client = (window as unknown as PhWindow).ph!.reactorClientModule!
