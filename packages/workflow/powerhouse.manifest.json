@@ -89,6 +89,11 @@
       "type": "var",
       "description": "File-size ceiling for both directions: a FILE property hydrated from a URL, data URI or attachment ref, and ctx.files.write.",
       "default": "8388608"
+    },
+    {
+      "name": "PH_WORKFLOWS_RUN_RETENTION_DAYS",
+      "type": "var",
+      "description": "Deletes finished workflow runs older than this many days, with their step executions, in an hourly sweep. Unset or 0 keeps every run."
     }
   ]
 }

@@ -174,6 +174,11 @@ import {
 } from "./store.js";
 import { decodeRunCursor, encodeRunCursor } from "./run-cursor.js";
 import {
+  RETENTION_SWEEP_INTERVAL_MS,
+  runRetentionMs,
+  sweepRetention,
+} from "./run-retention.js";
+import {
   TriggerSupervisor,
   type PieceTriggerBinding,
   type TriggerBinding,
@@ -654,6 +659,39 @@ export class WorkflowRuntimeService {
       this.logger.error("Failed to open the workflow run store: @error", error);
     });
     this.seedPromise = this.seedWithRetries();
+    this.startRetention();
+  }
+
+  private retentionTimer?: ReturnType<typeof setInterval>;
+
+  private startRetention(): void {
+    const retentionMs = runRetentionMs();
+    if (retentionMs === undefined) return;
+    const sweep = () => {
+      void this.sweepRetention(retentionMs);
+    };
+    this.retentionTimer = setInterval(sweep, RETENTION_SWEEP_INTERVAL_MS);
+    this.retentionTimer.unref();
+    // After the store opens, not on the next hour.
+    void this.storePromise.then(sweep, () => undefined);
+  }
+
+  private async sweepRetention(retentionMs: number): Promise<void> {
+    const store = await this.store();
+    if (!store) return;
+    try {
+      const swept = await sweepRetention(store, {
+        retentionMs,
+        dedupeTtlMs: OPERATION_DEDUPE_TTL_MS,
+      });
+      if (swept.runs > 0) {
+        this.logger.info(
+          `Pruned ${swept.runs} workflow run(s) past the retention window`,
+        );
+      }
+    } catch (error) {
+      this.logger.warn("Workflow run retention sweep failed: @error", error);
+    }
   }
 
   // The journal is best-effort: a broken store never blocks runs.
@@ -1236,6 +1274,7 @@ export class WorkflowRuntimeService {
       if (this.alreadySeen(opKey)) continue;
       if (context.scope === DOCUMENT_SCOPE) {
         await this.matchDocumentLifecycle(operation, context, hints, opKey);
+        await this.forgetDeletedWorkflow(operation, context);
         continue;
       }
       // A workflow edit updates the registry, then falls through: workflow docs are
@@ -1444,6 +1483,27 @@ export class WorkflowRuntimeService {
     }
   }
 
+  // A deleted workflow claims no more keys, so its dedupe rows go with it.
+  private async forgetDeletedWorkflow(
+    operation: OperationWithContext["operation"],
+    context: OperationWithContext["context"],
+  ): Promise<void> {
+    if (operation.action.type !== "DELETE_DOCUMENT") return;
+    if (operation.error !== undefined) return;
+    if (context.documentType !== WORKFLOW_DOCUMENT_TYPE) return;
+    const workflowId =
+      stringField(inputRecord(operation.action.input), "documentId") ??
+      context.documentId;
+    try {
+      await (await this.store())?.deleteDedupe(workflowId);
+    } catch (error) {
+      this.logger.warn(
+        `Could not drop the dedupe keys of deleted workflow ${workflowId}`,
+        error,
+      );
+    }
+  }
+
   // The document's own CREATE_DOCUMENT / DELETE_DOCUMENT, the source of truth: it covers
   // documents outside any drive, carries the real type and name, and alone proves deletion.
   private async matchDocumentLifecycle(
@@ -1579,6 +1639,7 @@ export class WorkflowRuntimeService {
   // outlive the reactor otherwise — they are forked, not
   // spawned by it — and a run holding one is over the moment we stop.
   shutdown(): void {
+    clearInterval(this.retentionTimer);
     for (const { timer } of this.resolutionRetries.values())
       clearTimeout(timer);
     this.resolutionRetries.clear();
