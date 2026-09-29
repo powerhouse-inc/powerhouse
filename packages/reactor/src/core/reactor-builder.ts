@@ -28,6 +28,10 @@ import type { WriteCacheConfig } from "../cache/write-cache-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import { EventBus } from "../events/event-bus.js";
 import { resolveFeatureFlags } from "./feature-flags.js";
+import {
+  checkStoredProtocols,
+  type UnsupportedStoredDocuments,
+} from "./stored-protocol-check.js";
 import type { IEventBus } from "../events/interfaces.js";
 import { ReactorEventTypes } from "../events/types.js";
 import {
@@ -296,6 +300,7 @@ export class ReactorBuilder {
   private executorConfig: JobExecutorConfig = {};
   private writeCacheConfig?: Partial<WriteCacheConfig>;
   private migrationStrategy: MigrationStrategy = "auto";
+  private unsupportedStoredDocuments: UnsupportedStoredDocuments = "refuse";
   private syncBuilder?: SyncBuilder;
   private eventBus?: IEventBus;
   private readModelCoordinator?: IReadModelCoordinator;
@@ -416,6 +421,16 @@ export class ReactorBuilder {
 
   withMigrationStrategy(strategy: MigrationStrategy): this {
     this.migrationStrategy = strategy;
+    return this;
+  }
+
+  /**
+   * Stored documents at protocol versions this build does not run: "refuse"
+   * (the default) fails buildModule; "read-only" starts with a warning, and
+   * every job and received row into them is refused.
+   */
+  withUnsupportedStoredDocuments(mode: UnsupportedStoredDocuments): this {
+    this.unsupportedStoredDocuments = mode;
     return this;
   }
 
@@ -709,6 +724,14 @@ export class ReactorBuilder {
         throw new Error(`Database migration failed: ${result.error.message}`);
       }
     }
+
+    await checkStoredProtocols(
+      baseDatabase,
+      REACTOR_SCHEMA,
+      this.executorConfig.protocolSupport ?? {},
+      this.unsupportedStoredDocuments,
+      this.logger,
+    );
 
     const database = baseDatabase.withSchema(REACTOR_SCHEMA);
 

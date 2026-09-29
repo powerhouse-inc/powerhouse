@@ -15,6 +15,7 @@ import { createDefaultDatabase } from "../../src/core/create-default-database.js
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule, IReactor } from "../../src/core/types.js";
 import { EventBus } from "../../src/events/event-bus.js";
+import { UnsupportedStoredProtocolError } from "../../src/shared/errors.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import type { ISyncCursorStorage } from "../../src/storage/interfaces.js";
 import type { IChannelFactory } from "../../src/sync/interfaces.js";
@@ -148,7 +149,9 @@ describe("protocol admission", () => {
       );
       await wide.reactor.kill().completed;
 
-      const narrow = await build(flags);
+      const narrow = await build((b) =>
+        flags(b).withUnsupportedStoredDocuments("read-only"),
+      );
 
       const write = await narrow.reactor.execute("br7-stored", "main", [
         addFolder({ id: generateId(), name: "narrowed", parentFolder: null }),
@@ -169,6 +172,71 @@ describe("protocol admission", () => {
       expect(loadJob.error?.name).toBe("UnsupportedProtocolVersionError");
     },
   );
+
+  describe("starting over a store above the local set", () => {
+    async function storeAt(protocolVersions: Record<string, number>[]) {
+      const db = await createDefaultDatabase();
+      const wide = await build((b) =>
+        b.withKysely(db).withPeerCapabilities([BASE_REDUCER_7]),
+      );
+      for (const [index, versions] of protocolVersions.entries()) {
+        const created = await wide.reactor.create(
+          driveAt(versions, `stored-${index}`),
+        );
+        expect((await settled(wide.reactor, created.id)).status).toBe(
+          JobStatus.READ_READY,
+        );
+      }
+      await wide.reactor.kill().completed;
+      return db;
+    }
+
+    it("refuses to build, naming the versions and document count", async () => {
+      const db = await storeAt([
+        { "base-reducer": 7 },
+        { "base-reducer": 7 },
+        { "base-reducer": 2 },
+      ]);
+
+      const built = new ReactorBuilder()
+        .withDocumentModelSources([driveDocumentModelModule as never])
+        .withKysely(db)
+        .buildModule();
+
+      await expect(built).rejects.toSatisfy(
+        (error) =>
+          UnsupportedStoredProtocolError.isError(error) &&
+          error.documents === 2 &&
+          error.message.includes("base-reducer 7"),
+      );
+    });
+
+    it("builds when every stored document is within the local set", async () => {
+      const db = await storeAt([{ "base-reducer": 2 }, { "base-reducer": 1 }]);
+
+      const narrow = await build((b) => b.withKysely(db));
+
+      expect(await narrow.reactor.get("stored-0")).toBeDefined();
+    });
+
+    it("builds read-only when told to, and warns", async () => {
+      const db = await storeAt([{ "base-reducer": 7 }]);
+      const logger = spyLogger();
+      const warn = vi.spyOn(logger, "warn");
+
+      await build((b) =>
+        b
+          .withKysely(db)
+          .withLogger(logger)
+          .withUnsupportedStoredDocuments("read-only"),
+      );
+
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("read-only"),
+        expect.stringContaining("1 stored document(s) require base-reducer 7"),
+      );
+    });
+  });
 
   it("admits and logs a key no capability registers", async () => {
     const logger = spyLogger();

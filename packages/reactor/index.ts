@@ -90,6 +90,7 @@ export {
   AuthEnforcementDisabledError,
   InvalidSignatureError,
   RelationshipNotFoundError,
+  UnsupportedStoredProtocolError,
 } from "./src/shared/errors.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
 export { parsePagingOptions, type ParsedPaging } from "./src/shared/utils.js";

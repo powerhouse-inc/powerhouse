@@ -368,3 +368,32 @@ export class RelationshipNotFoundError extends Error {
     return Error.isError(error) && error.name === "RelationshipNotFoundError";
   }
 }
+
+/** The store holds documents at protocol versions this reactor does not run. */
+export class UnsupportedStoredProtocolError extends Error {
+  public readonly versions: readonly { protocol: string; version: number }[];
+  public readonly documents: number;
+
+  constructor(
+    versions: readonly { protocol: string; version: number }[],
+    documents: number,
+  ) {
+    const named = versions
+      .map(({ protocol, version }) => `${protocol} ${version}`)
+      .join(", ");
+    super(
+      `${documents} stored document(s) require ${named}, which this reactor does not run. Start a build that runs them, or accept them read-only with withUnsupportedStoredDocuments("read-only")`,
+    );
+    this.name = "UnsupportedStoredProtocolError";
+    this.versions = versions;
+    this.documents = documents;
+
+    Error.captureStackTrace(this, UnsupportedStoredProtocolError);
+  }
+
+  static isError(error: unknown): error is UnsupportedStoredProtocolError {
+    return (
+      Error.isError(error) && error.name === "UnsupportedStoredProtocolError"
+    );
+  }
+}
