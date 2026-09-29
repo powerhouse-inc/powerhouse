@@ -27,6 +27,7 @@ import {
 import {
   createConsumerProject,
   createEmptyProject,
+  installFixture,
   startSwitchboard,
   stopSwitchboard,
   waitForSwitchboard,
@@ -191,6 +192,15 @@ async function main(): Promise<void> {
     }
 
     step("3/8 Generate, build and publish the fixture reactor package");
+    // Switchboard installs into the consumer project meanwhile; its output
+    // prints in step 4.
+    const consumer = createConsumerProject({
+      dir: PROJECT_DIR,
+      token,
+      tag: TAG,
+    });
+    // Handled when awaited below; a failure here must not go unhandled first.
+    consumer.catch(() => {});
     const fixture = buildAndPublishFixture({
       source: path.join(ROOT, "fixture-piece"),
       parent: FIXTURE_DIR,
@@ -200,13 +210,12 @@ async function main(): Promise<void> {
     });
 
     step("4/8 Install switchboard and the fixture into a consumer project");
-    createConsumerProject({
-      dir: PROJECT_DIR,
-      phCli: PH_CLI,
-      token,
-      fixtureSpec: `${FIXTURE_PACKAGE}@${FIXTURE_VERSION}`,
-      tag: TAG,
-    });
+    await consumer;
+    installFixture(
+      PROJECT_DIR,
+      PH_CLI,
+      `${FIXTURE_PACKAGE}@${FIXTURE_VERSION}`,
+    );
     // And a project that installs nothing, for the reactor that has to fetch
     // the piece from the registry to run it.
     createEmptyProject(REGISTRY_PROJECT_DIR, REGISTRY_URL);
