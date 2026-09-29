@@ -53,6 +53,9 @@ describe.each<SignaturePolicy>(["v2-required", "legacy"])(
 
       const empty = await reactor.createEmpty(DOCUMENT_MODEL);
       expect(empty.header.protocolVersions).toEqual(before);
+      expect(empty.header.protocolVersions).not.toHaveProperty(
+        "document-purge",
+      );
 
       const child = await reactor.createEmpty(DOCUMENT_MODEL, {
         parentIdentifier: drive.header.id,

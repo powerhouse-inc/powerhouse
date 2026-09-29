@@ -5,8 +5,10 @@ import type {
 } from "@powerhousedao/shared/processors";
 import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 
+// The marker counts: a peer can receive a drive's marker without its delete.
 export function isDriveDeletion(op: OperationWithContext): boolean {
-  return op.operation.action.type === "DELETE_DOCUMENT";
+  const type = op.operation.action.type;
+  return type === "DELETE_DOCUMENT" || type === "PURGE_DOCUMENT";
 }
 
 export function extractDriveHeader(
