@@ -1,3 +1,13 @@
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- **registry:** serve every published version of a piece ([b62993fd5](https://github.com/powerhouse-inc/powerhouse/commit/b62993fd5))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.30 (2026-09-29)
 
 ### 🩹 Fixes

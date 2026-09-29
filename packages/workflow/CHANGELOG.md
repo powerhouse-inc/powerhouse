@@ -1,3 +1,30 @@
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- **workflow:** sign connections in with OAuth2 using their own app ([b03b33bf0](https://github.com/powerhouse-inc/powerhouse/commit/b03b33bf0))
+- **reactor-workflow:** opt-in run retention sweep and dedupe cleanup for deleted workflows ([e2b6484aa](https://github.com/powerhouse-inc/powerhouse/commit/e2b6484aa))
+- **reactor-workflow:** keyset-paginate the run listing through the subgraph and runs views ([d22a4eea5](https://github.com/powerhouse-inc/powerhouse/commit/d22a4eea5))
+- **workflow:** publishing, step testing, versions, computed validity, ports and typed variables in the editors ([e2be02d2d](https://github.com/powerhouse-inc/powerhouse/commit/e2be02d2d))
+- ⚠️  **workflow:** piece fields, publishing, skip, tests and typed variables in the workflow model ([60fb3777f](https://github.com/powerhouse-inc/powerhouse/commit/60fb3777f))
+
+### 🩹 Fixes
+
+- **workflow:** keep the field focused and the tree up while picking data ([5e93b1a38](https://github.com/powerhouse-inc/powerhouse/commit/5e93b1a38))
+- **workflow:** open the panel for an added block and keep the connection field hidden until its form loads ([7edc28408](https://github.com/powerhouse-inc/powerhouse/commit/7edc28408))
+- **workflow:** name canvas add buttons and retry a failed catalog load ([2d43667fc](https://github.com/powerhouse-inc/powerhouse/commit/2d43667fc))
+- **workflow:** reword the variable type description so the subgraph doesn't read it as a type declaration ([030bad026](https://github.com/powerhouse-inc/powerhouse/commit/030bad026))
+- ⚠️  **workflow:** read reactor piece ids, JSON and action input strictly ([1282ff102](https://github.com/powerhouse-inc/powerhouse/commit/1282ff102))
+
+### ⚠️  Breaking Changes
+
+- **workflow:** read reactor piece ids, JSON and action input strictly  ([1282ff102](https://github.com/powerhouse-inc/powerhouse/commit/1282ff102))
+- **workflow:** piece fields, publishing, skip, tests and typed variables in the workflow model  ([60fb3777f](https://github.com/powerhouse-inc/powerhouse/commit/60fb3777f))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.30 (2026-09-29)
 
 ### 🩹 Fixes

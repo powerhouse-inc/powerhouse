@@ -1,3 +1,30 @@
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- **ph-cli:** seed a Workflows drive in vetra when workflows are on ([6e855808e](https://github.com/powerhouse-inc/powerhouse/commit/6e855808e))
+- **workflow:** sign connections in with OAuth2 using their own app ([b03b33bf0](https://github.com/powerhouse-inc/powerhouse/commit/b03b33bf0))
+- **reactor-workflow:** keyset-paginate the run listing through the subgraph and runs views ([d22a4eea5](https://github.com/powerhouse-inc/powerhouse/commit/d22a4eea5))
+- **reactor-workflow:** renew webhook trigger subscriptions ([4fc6bfea6](https://github.com/powerhouse-inc/powerhouse/commit/4fc6bfea6))
+- ⚠️  **switchboard:** block inputs, step and trigger tests, and version resolutions in the workflow API ([58b43b249](https://github.com/powerhouse-inc/powerhouse/commit/58b43b249))
+
+### 🩹 Fixes
+
+- **reactor-workflow:** order runs by a key that doesn't change when they start ([f15425dd8](https://github.com/powerhouse-inc/powerhouse/commit/f15425dd8))
+- **reactor-workflow:** disarm a workflow's trigger when its document is deleted ([866427bc6](https://github.com/powerhouse-inc/powerhouse/commit/866427bc6))
+
+### 🔥 Performance
+
+- **reactor-workflow:** batch run listing step and document reads ([c33a42f7d](https://github.com/powerhouse-inc/powerhouse/commit/c33a42f7d))
+
+### ⚠️  Breaking Changes
+
+- **switchboard:** block inputs, step and trigger tests, and version resolutions in the workflow API  ([58b43b249](https://github.com/powerhouse-inc/powerhouse/commit/58b43b249))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.30 (2026-09-29)
 
 ### 🩹 Fixes

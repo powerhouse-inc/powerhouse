@@ -1,3 +1,24 @@
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- **ph-cli:** install the dependencies generate commands add ([04bfa515f](https://github.com/powerhouse-inc/powerhouse/commit/04bfa515f))
+- ⚠️  **codegen:** minimal Activepieces-style piece scaffolds ([fc67bee2d](https://github.com/powerhouse-inc/powerhouse/commit/fc67bee2d))
+- ⚠️  take a piece's version from its package, and validate ph connect build --json ([9100973ca](https://github.com/powerhouse-inc/powerhouse/commit/9100973ca))
+
+### 🩹 Fixes
+
+- **codegen:** scaffold every hook a piece needs, with field comments ([b63fe72cf](https://github.com/powerhouse-inc/powerhouse/commit/b63fe72cf))
+
+### ⚠️  Breaking Changes
+
+- **codegen:** minimal Activepieces-style piece scaffolds  ([fc67bee2d](https://github.com/powerhouse-inc/powerhouse/commit/fc67bee2d))
+- take a piece's version from its package, and validate ph connect build --json  ([9100973ca](https://github.com/powerhouse-inc/powerhouse/commit/9100973ca))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.30 (2026-09-29)
 
 ### 🩹 Fixes

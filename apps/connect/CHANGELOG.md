@@ -1,3 +1,13 @@
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- workflows.enabled turns on workflows in Connect too ([5e8292472](https://github.com/powerhouse-inc/powerhouse/commit/5e8292472))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.30 (2026-09-29)
 
 ### 🩹 Fixes

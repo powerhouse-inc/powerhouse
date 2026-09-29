@@ -1,3 +1,35 @@
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- **reactor-workflow:** run an action's test method in a single-step test ([42886840b](https://github.com/powerhouse-inc/powerhouse/commit/42886840b))
+- **workflow:** sign connections in with OAuth2 using their own app ([b03b33bf0](https://github.com/powerhouse-inc/powerhouse/commit/b03b33bf0))
+- **reactor-workflow:** opt-in run retention sweep and dedupe cleanup for deleted workflows ([e2b6484aa](https://github.com/powerhouse-inc/powerhouse/commit/e2b6484aa))
+- **reactor-workflow:** keyset-paginate the run listing through the subgraph and runs views ([d22a4eea5](https://github.com/powerhouse-inc/powerhouse/commit/d22a4eea5))
+- **reactor-workflow:** renew webhook trigger subscriptions ([4fc6bfea6](https://github.com/powerhouse-inc/powerhouse/commit/4fc6bfea6))
+- ⚠️  **reactor-workflow:** run published workflows through versioned pieces, the built-in core piece and step tests ([6b848bc0c](https://github.com/powerhouse-inc/powerhouse/commit/6b848bc0c))
+
+### 🩹 Fixes
+
+- **reactor-workflow:** count recovered runs and pruned dedupe keys off RETURNING ([0ba67ffa4](https://github.com/powerhouse-inc/powerhouse/commit/0ba67ffa4))
+- **reactor-workflow:** order runs by a key that doesn't change when they start ([f15425dd8](https://github.com/powerhouse-inc/powerhouse/commit/f15425dd8))
+- **reactor-workflow:** disarm a workflow's trigger when its document is deleted ([866427bc6](https://github.com/powerhouse-inc/powerhouse/commit/866427bc6))
+- **reactor-workflow:** list connections past the first page ([9b611b7ff](https://github.com/powerhouse-inc/powerhouse/commit/9b611b7ff))
+- **reactor-workflow:** claim dedupe and enqueue the run in one transaction ([1718ae86f](https://github.com/powerhouse-inc/powerhouse/commit/1718ae86f))
+
+### 🔥 Performance
+
+- **reactor-workflow:** batch run listing step and document reads ([c33a42f7d](https://github.com/powerhouse-inc/powerhouse/commit/c33a42f7d))
+- **reactor-workflow:** index run listings, dedupe prunes and due triggers ([588945432](https://github.com/powerhouse-inc/powerhouse/commit/588945432))
+
+### ⚠️  Breaking Changes
+
+- **reactor-workflow:** run published workflows through versioned pieces, the built-in core piece and step tests  ([6b848bc0c](https://github.com/powerhouse-inc/powerhouse/commit/6b848bc0c))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.30 (2026-09-29)
 
 ### 🩹 Fixes

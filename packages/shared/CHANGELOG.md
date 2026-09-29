@@ -1,3 +1,18 @@
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- workflows.enabled turns on workflows in Connect too ([5e8292472](https://github.com/powerhouse-inc/powerhouse/commit/5e8292472))
+- ⚠️  take a piece's version from its package, and validate ph connect build --json ([9100973ca](https://github.com/powerhouse-inc/powerhouse/commit/9100973ca))
+
+### ⚠️  Breaking Changes
+
+- take a piece's version from its package, and validate ph connect build --json  ([9100973ca](https://github.com/powerhouse-inc/powerhouse/commit/9100973ca))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.30 (2026-09-29)
 
 ### 🩹 Fixes

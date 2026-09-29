@@ -1,3 +1,22 @@
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- ⚠️  take a piece's version from its package, and validate ph connect build --json ([9100973ca](https://github.com/powerhouse-inc/powerhouse/commit/9100973ca))
+
+### 🩹 Fixes
+
+- **reactor-api:** expire webhook delivery dedupe keys on their own TTL ([f022e81b9](https://github.com/powerhouse-inc/powerhouse/commit/f022e81b9))
+- **reactor-api:** prefix subgraph types from the parsed SDL, not its text ([f75ee3fcd](https://github.com/powerhouse-inc/powerhouse/commit/f75ee3fcd))
+
+### ⚠️  Breaking Changes
+
+- take a piece's version from its package, and validate ph connect build --json  ([9100973ca](https://github.com/powerhouse-inc/powerhouse/commit/9100973ca))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.30 (2026-09-29)
 
 ### 🩹 Fixes

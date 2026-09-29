@@ -1,3 +1,18 @@
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- **workflow:** sign connections in with OAuth2 using their own app ([b03b33bf0](https://github.com/powerhouse-inc/powerhouse/commit/b03b33bf0))
+- ⚠️  **pieces-framework:** version matching, trigger strategy, schedule parsing and declared ports for workflows ([97a15b968](https://github.com/powerhouse-inc/powerhouse/commit/97a15b968))
+
+### ⚠️  Breaking Changes
+
+- **pieces-framework:** version matching, trigger strategy, schedule parsing and declared ports for workflows  ([97a15b968](https://github.com/powerhouse-inc/powerhouse/commit/97a15b968))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.30 (2026-09-29)
 
 ### 🩹 Fixes

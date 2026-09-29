@@ -1,3 +1,22 @@
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- **ph-cli:** install the dependencies generate commands add ([04bfa515f](https://github.com/powerhouse-inc/powerhouse/commit/04bfa515f))
+- **ph-cli:** let pieces reach localhost in vetra and dev mode ([8fdc048e6](https://github.com/powerhouse-inc/powerhouse/commit/8fdc048e6))
+- **ph-cli:** seed a Workflows drive in vetra when workflows are on ([6e855808e](https://github.com/powerhouse-inc/powerhouse/commit/6e855808e))
+- workflows.enabled turns on workflows in Connect too ([5e8292472](https://github.com/powerhouse-inc/powerhouse/commit/5e8292472))
+- **workflow:** sign connections in with OAuth2 using their own app ([b03b33bf0](https://github.com/powerhouse-inc/powerhouse/commit/b03b33bf0))
+- **reactor-workflow:** renew webhook trigger subscriptions ([4fc6bfea6](https://github.com/powerhouse-inc/powerhouse/commit/4fc6bfea6))
+
+### 🩹 Fixes
+
+- **codegen:** scaffold every hook a piece needs, with field comments ([b63fe72cf](https://github.com/powerhouse-inc/powerhouse/commit/b63fe72cf))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.30 (2026-09-29)
 
 ### 🩹 Fixes

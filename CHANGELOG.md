@@ -1,3 +1,60 @@
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- ⚠️  take a piece's version from its package, and validate ph connect build --json ([9100973ca](https://github.com/powerhouse-inc/powerhouse/commit/9100973ca))
+- workflows.enabled turns on workflows in Connect too ([5e8292472](https://github.com/powerhouse-inc/powerhouse/commit/5e8292472))
+- ⚠️  **codegen:** minimal Activepieces-style piece scaffolds ([fc67bee2d](https://github.com/powerhouse-inc/powerhouse/commit/fc67bee2d))
+- **ph-cli:** seed a Workflows drive in vetra when workflows are on ([6e855808e](https://github.com/powerhouse-inc/powerhouse/commit/6e855808e))
+- **ph-cli:** let pieces reach localhost in vetra and dev mode ([8fdc048e6](https://github.com/powerhouse-inc/powerhouse/commit/8fdc048e6))
+- **ph-cli:** install the dependencies generate commands add ([04bfa515f](https://github.com/powerhouse-inc/powerhouse/commit/04bfa515f))
+- ⚠️  **pieces-framework:** version matching, trigger strategy, schedule parsing and declared ports for workflows ([97a15b968](https://github.com/powerhouse-inc/powerhouse/commit/97a15b968))
+- ⚠️  **reactor-workflow:** run published workflows through versioned pieces, the built-in core piece and step tests ([6b848bc0c](https://github.com/powerhouse-inc/powerhouse/commit/6b848bc0c))
+- **reactor-workflow:** renew webhook trigger subscriptions ([4fc6bfea6](https://github.com/powerhouse-inc/powerhouse/commit/4fc6bfea6))
+- **reactor-workflow:** keyset-paginate the run listing through the subgraph and runs views ([d22a4eea5](https://github.com/powerhouse-inc/powerhouse/commit/d22a4eea5))
+- **reactor-workflow:** opt-in run retention sweep and dedupe cleanup for deleted workflows ([e2b6484aa](https://github.com/powerhouse-inc/powerhouse/commit/e2b6484aa))
+- **reactor-workflow:** run an action's test method in a single-step test ([42886840b](https://github.com/powerhouse-inc/powerhouse/commit/42886840b))
+- **registry:** serve every published version of a piece ([b62993fd5](https://github.com/powerhouse-inc/powerhouse/commit/b62993fd5))
+- ⚠️  **switchboard:** block inputs, step and trigger tests, and version resolutions in the workflow API ([58b43b249](https://github.com/powerhouse-inc/powerhouse/commit/58b43b249))
+- ⚠️  **workflow:** piece fields, publishing, skip, tests and typed variables in the workflow model ([60fb3777f](https://github.com/powerhouse-inc/powerhouse/commit/60fb3777f))
+- **workflow:** publishing, step testing, versions, computed validity, ports and typed variables in the editors ([e2be02d2d](https://github.com/powerhouse-inc/powerhouse/commit/e2be02d2d))
+- **workflow:** sign connections in with OAuth2 using their own app ([b03b33bf0](https://github.com/powerhouse-inc/powerhouse/commit/b03b33bf0))
+
+### 🩹 Fixes
+
+- **codegen:** scaffold every hook a piece needs, with field comments ([b63fe72cf](https://github.com/powerhouse-inc/powerhouse/commit/b63fe72cf))
+- **reactor-api:** prefix subgraph types from the parsed SDL, not its text ([f75ee3fcd](https://github.com/powerhouse-inc/powerhouse/commit/f75ee3fcd))
+- **reactor-api:** expire webhook delivery dedupe keys on their own TTL ([f022e81b9](https://github.com/powerhouse-inc/powerhouse/commit/f022e81b9))
+- **reactor-workflow:** claim dedupe and enqueue the run in one transaction ([1718ae86f](https://github.com/powerhouse-inc/powerhouse/commit/1718ae86f))
+- **reactor-workflow:** list connections past the first page ([9b611b7ff](https://github.com/powerhouse-inc/powerhouse/commit/9b611b7ff))
+- **reactor-workflow:** disarm a workflow's trigger when its document is deleted ([866427bc6](https://github.com/powerhouse-inc/powerhouse/commit/866427bc6))
+- **reactor-workflow:** order runs by a key that doesn't change when they start ([f15425dd8](https://github.com/powerhouse-inc/powerhouse/commit/f15425dd8))
+- **reactor-workflow:** count recovered runs and pruned dedupe keys off RETURNING ([0ba67ffa4](https://github.com/powerhouse-inc/powerhouse/commit/0ba67ffa4))
+- ⚠️  **workflow:** read reactor piece ids, JSON and action input strictly ([1282ff102](https://github.com/powerhouse-inc/powerhouse/commit/1282ff102))
+- **workflow:** reword the variable type description so the subgraph doesn't read it as a type declaration ([030bad026](https://github.com/powerhouse-inc/powerhouse/commit/030bad026))
+- **workflow:** name canvas add buttons and retry a failed catalog load ([2d43667fc](https://github.com/powerhouse-inc/powerhouse/commit/2d43667fc))
+- **workflow:** open the panel for an added block and keep the connection field hidden until its form loads ([7edc28408](https://github.com/powerhouse-inc/powerhouse/commit/7edc28408))
+- **workflow:** keep the field focused and the tree up while picking data ([5e93b1a38](https://github.com/powerhouse-inc/powerhouse/commit/5e93b1a38))
+
+### 🔥 Performance
+
+- **reactor-workflow:** index run listings, dedupe prunes and due triggers ([588945432](https://github.com/powerhouse-inc/powerhouse/commit/588945432))
+- **reactor-workflow:** batch run listing step and document reads ([c33a42f7d](https://github.com/powerhouse-inc/powerhouse/commit/c33a42f7d))
+
+### ⚠️  Breaking Changes
+
+- **codegen:** minimal Activepieces-style piece scaffolds  ([fc67bee2d](https://github.com/powerhouse-inc/powerhouse/commit/fc67bee2d))
+- **workflow:** read reactor piece ids, JSON and action input strictly  ([1282ff102](https://github.com/powerhouse-inc/powerhouse/commit/1282ff102))
+- **switchboard:** block inputs, step and trigger tests, and version resolutions in the workflow API  ([58b43b249](https://github.com/powerhouse-inc/powerhouse/commit/58b43b249))
+- **reactor-workflow:** run published workflows through versioned pieces, the built-in core piece and step tests  ([6b848bc0c](https://github.com/powerhouse-inc/powerhouse/commit/6b848bc0c))
+- **workflow:** piece fields, publishing, skip, tests and typed variables in the workflow model  ([60fb3777f](https://github.com/powerhouse-inc/powerhouse/commit/60fb3777f))
+- take a piece's version from its package, and validate ph connect build --json  ([9100973ca](https://github.com/powerhouse-inc/powerhouse/commit/9100973ca))
+- **pieces-framework:** version matching, trigger strategy, schedule parsing and declared ports for workflows  ([97a15b968](https://github.com/powerhouse-inc/powerhouse/commit/97a15b968))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.30 (2026-09-29)
 
 ### 🩹 Fixes
