@@ -3693,6 +3693,7 @@ export class WorkflowRuntimeService {
           runId,
           connections: declaredConnectionIds(definition),
           pieceWorker: session,
+          stepTest: true,
           recordDocuments: async (documentIds: string[]) => {
             for (const documentId of documentIds) handed.add(documentId);
             if (store && journaledRunId) {

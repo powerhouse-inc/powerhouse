@@ -40,6 +40,13 @@ export const stepTest = {
       },
       run: async (ctx) => ({ text: ctx.propsValue.text ?? null }),
     },
+    sample: {
+      name: "sample",
+      displayName: "Sample",
+      props: {},
+      run: async () => ({ via: "run" }),
+      test: async () => ({ via: "test" }),
+    },
     fail: {
       name: "fail",
       displayName: "Fail",
@@ -197,6 +204,48 @@ describe("testStep", () => {
     expect(rows[0]).toMatchObject({ step_id: "s2", status: "SUCCEEDED" });
     expect(JSON.parse(rows[0].input!)).toEqual({ text: "Ada owes 42" });
     expect(stepOf("wf-chain", "s2").lastTest?.runId).toBe(result.runId);
+  }, 60_000);
+
+  it("calls the action's test method, where a run calls run", async () => {
+    documents.apply(
+      "wf-sample",
+      actions.setWorkflowName({ name: "Sample" }),
+      actions.setTrigger({
+        id: "t1",
+        pieceName: "@powerhousedao/piece-core",
+        pieceVersion: CORE_PIECE_VERSION,
+        triggerName: "manual",
+        config: {},
+      }),
+      actions.addStep({
+        id: "s1",
+        key: "sample",
+        name: "Sample",
+        pieceName: PIECE,
+        pieceVersion: "1.0.0",
+        actionName: "sample",
+        config: {},
+      }),
+      actions.addEdge({ id: "e1", from: "t1", to: "s1", port: "next" }),
+    );
+    expect(await service.testStep("wf-sample", "s1", CTX)).toMatchObject({
+      status: "SUCCEEDED",
+      output: { via: "test" },
+    });
+
+    documents.apply(
+      "wf-sample",
+      actions.publishWorkflow({ publishedAt: "2026-01-01T00:00:00.000Z" }),
+      actions.setWorkflowStatus({ status: "ENABLED" }),
+    );
+    const run = await service.fire(
+      "wf-sample",
+      undefined,
+      "manual",
+      undefined,
+      CTX,
+    );
+    expect(run.steps[0]?.output).toEqual({ via: "run" });
   }, 60_000);
 
   it("names the upstream step that was never tested", async () => {

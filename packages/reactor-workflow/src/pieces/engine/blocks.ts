@@ -336,6 +336,8 @@ export interface ActivepiecesBlockExecutorOptions {
   // The run, workflow and project a step belongs to, asked per step: the
   // executor is shared across runs. The step name is the step's key.
   identity?: () => Omit<ActionContextIdentity, "stepName"> | undefined;
+  // Whether this step runs as a single-step test, asked per step likewise.
+  stepTest?: () => boolean;
 }
 
 // The notify handlers served to one step. Unlike a store call, nothing here
@@ -539,6 +541,7 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
             stepName: execution.step.key,
           },
           ...(redactValues.length > 0 ? { redactValues } : {}),
+          ...(this.options.stepTest?.() ? { stepTest: true } : {}),
           ...(stagingDir ? { stagingDir } : {}),
           ...(stagedInputs ? { stagedInputs } : {}),
           ...(pieceStore ? { durableStore: true } : {}),

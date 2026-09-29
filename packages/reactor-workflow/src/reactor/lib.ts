@@ -31,6 +31,7 @@ import {
   currentBoundConnections,
   currentPieceWorker,
   currentRunId,
+  currentStepTest,
   currentWorkflowId,
 } from "./run-scope.js";
 import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";
@@ -255,6 +256,7 @@ export function createBlockExecutor(
       // Asked per step, for the same reason the binding is: one executor,
       // many runs, and each run has a child of its own.
       worker: currentPieceWorker,
+      stepTest: currentStepTest,
       // A workflow is a flow; the reactor is the project, as it is for
       // ctx.store's PROJECT scope.
       identity: () => ({

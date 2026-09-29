@@ -301,7 +301,12 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   });
   let output: unknown;
   try {
-    output = await action.run(context);
+    // createAction defaults test to run; a plain-object action may have none.
+    const method =
+      request.stepTest && typeof action.test === "function"
+        ? action.test
+        : action.run;
+    output = await method.call(action, context);
   } finally {
     restoreConsole?.();
     liveOutput?.close();

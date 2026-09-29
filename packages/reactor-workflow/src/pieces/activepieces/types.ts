@@ -97,6 +97,8 @@ export type ApAction = Partial<
   // Output ports, read only off a piece the host runs in process.
   ports?: unknown;
   run: (ctx: unknown) => Promise<unknown>;
+  // Called instead of run by a single-step test.
+  test?: (ctx: unknown) => Promise<unknown>;
 };
 
 // Widened from TriggerStrategy for the same reason as ApPropertyType:
