@@ -6,6 +6,7 @@ import {
   ExpressionTargetProvider,
 } from "./ExpressionPicker.js";
 import {
+  hasDraftChanges,
   VARIABLES_VIEW,
   type WorkflowEditorCallbacks,
   type WorkflowModel,
@@ -121,6 +122,16 @@ export function WorkflowEditorApp(props: {
             status={model.status}
             onChange={callbacks.setStatus}
           />
+          {/* The draft banner shows it, unless the snapshot landed and enabling failed. */}
+          {publishError && !hasDraftChanges(model) ? (
+            <span
+              role="alert"
+              className="max-w-64 truncate text-xs text-wf-fail"
+              title={publishError}
+            >
+              {publishError}
+            </span>
+          ) : null}
           <PublishButton
             model={model}
             readiness={readiness}
