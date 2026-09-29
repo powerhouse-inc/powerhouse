@@ -1,4 +1,8 @@
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
+import {
+  localSupports,
+  PEER_CAPABILITIES,
+} from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndexTxn } from "../../../src/cache/operation-index-types.js";
 import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
@@ -98,6 +102,7 @@ function createHarness(
     DEFAULT_DRIVE_CONTAINER_TYPES,
     flags,
     selectDecisionModel(flags, registry),
+    localSupports(PEER_CAPABILITIES, flags).protocols,
   );
   return {
     handler,
@@ -548,6 +553,7 @@ describe("DocumentActionHandler", () => {
           DEFAULT_DRIVE_CONTAINER_TYPES,
           flags,
           selectDecisionModel(flags, registry),
+          localSupports(PEER_CAPABILITIES, flags).protocols,
         ),
       };
     }

@@ -351,6 +351,7 @@ export type MutationMutateDocumentAsyncArgs = {
 
 export type MutationPushSyncEnvelopesArgs = {
   envelopes: ReadonlyArray<SyncEnvelopeInput>;
+  peerManifestRevision?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationRemoveRelationshipArgs = {
@@ -462,11 +463,32 @@ export type PagingInput = {
   readonly offset?: InputMaybe<Scalars["Int"]["input"]>;
 };
 
+export type PeerAgreement = {
+  readonly collectionId: Scalars["String"]["output"];
+  readonly limitedBy: ReadonlyArray<PeerAgreementLimit>;
+  readonly local: Scalars["JSONObject"]["output"];
+  readonly members: ReadonlyArray<PeerAgreementMember>;
+};
+
+export type PeerAgreementLimit = {
+  readonly protocol: Scalars["String"]["output"];
+  readonly remoteNames: ReadonlyArray<Scalars["String"]["output"]>;
+};
+
+export type PeerAgreementMember = {
+  readonly announced: Scalars["Boolean"]["output"];
+  readonly features: Scalars["JSONObject"]["output"];
+  readonly protocols: Scalars["JSONObject"]["output"];
+  readonly remoteName: Scalars["String"]["output"];
+};
+
 export type PollSyncEnvelopesResult = {
   readonly ackOrdinal: Scalars["Int"]["output"];
   readonly deadLetters: ReadonlyArray<DeadLetterInfo>;
   readonly envelopes: ReadonlyArray<SyncEnvelope>;
   readonly hasMore: Scalars["Boolean"]["output"];
+  readonly manifestRevision?: Maybe<Scalars["String"]["output"]>;
+  readonly peerManifestRevision?: Maybe<Scalars["String"]["output"]>;
 };
 
 export enum PropagationMode {
@@ -512,6 +534,7 @@ export type Query = {
   readonly evaluateActions: ActionEvaluations;
   readonly findDocuments: PhDocumentResultPage;
   readonly jobStatus?: Maybe<JobInfo>;
+  readonly peerAgreement: PeerAgreement;
   /**
    * Polls for sync envelopes from a channel.
    *
@@ -524,6 +547,7 @@ export type Query = {
    * would stop receiving those too.
    */
   readonly pollSyncEnvelopes: PollSyncEnvelopesResult;
+  readonly syncHolds: ReadonlyArray<SyncHold>;
 };
 
 export type QueryDocumentArgs = {
@@ -585,10 +609,21 @@ export type QueryJobStatusArgs = {
   jobId: Scalars["String"]["input"];
 };
 
+export type QueryPeerAgreementArgs = {
+  collectionId: Scalars["String"]["input"];
+};
+
 export type QueryPollSyncEnvelopesArgs = {
   channelId: Scalars["String"]["input"];
+  manifestRevision?: InputMaybe<Scalars["String"]["input"]>;
   outboxAck: Scalars["Int"]["input"];
   outboxLatest: Scalars["Int"]["input"];
+  refusals?: InputMaybe<ReadonlyArray<SyncRefusalInput>>;
+};
+
+export type QuerySyncHoldsArgs = {
+  documentId?: InputMaybe<Scalars["String"]["input"]>;
+  remoteName?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type ReactorOperation = {
@@ -709,16 +744,37 @@ export enum SyncEnvelopeType {
   Operations = "OPERATIONS",
 }
 
+export type SyncHold = {
+  readonly branch: Scalars["String"]["output"];
+  readonly documentId: Scalars["String"]["output"];
+  readonly heldAtUtcMs: Scalars["String"]["output"];
+  readonly reason: SyncHoldReason;
+  readonly remoteName: Scalars["String"]["output"];
+};
+
+export type SyncHoldReason = {
+  readonly peerSupports: ReadonlyArray<Scalars["Int"]["output"]>;
+  readonly protocol: Scalars["String"]["output"];
+  readonly version: Scalars["Int"]["output"];
+};
+
+export type SyncRefusalInput = {
+  readonly branch: Scalars["String"]["input"];
+  readonly documentId: Scalars["String"]["input"];
+};
+
 export type TouchChannelInput = {
   readonly collectionId: Scalars["String"]["input"];
   readonly filter: RemoteFilterInput;
   readonly id: Scalars["String"]["input"];
+  readonly manifest?: InputMaybe<Scalars["JSONObject"]["input"]>;
   readonly name: Scalars["String"]["input"];
   readonly sinceTimestampUtcMs: Scalars["String"]["input"];
 };
 
 export type TouchChannelResult = {
   readonly ackOrdinal: Scalars["Int"]["output"];
+  readonly manifest?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly success: Scalars["Boolean"]["output"];
 };
 
@@ -1391,12 +1447,16 @@ export type PollSyncEnvelopesQueryVariables = Exact<{
   channelId: Scalars["String"]["input"];
   outboxAck: Scalars["Int"]["input"];
   outboxLatest: Scalars["Int"]["input"];
+  manifestRevision?: InputMaybe<Scalars["String"]["input"]>;
+  refusals?: InputMaybe<ReadonlyArray<SyncRefusalInput>>;
 }>;
 
 export type PollSyncEnvelopesQuery = {
   readonly pollSyncEnvelopes: {
     readonly ackOrdinal: number;
     readonly hasMore: boolean;
+    readonly manifestRevision?: string | null | undefined;
+    readonly peerManifestRevision?: string | null | undefined;
     readonly envelopes: ReadonlyArray<{
       readonly type: SyncEnvelopeType;
       readonly key?: string | null | undefined;
@@ -1477,11 +1537,13 @@ export type TouchChannelMutation = {
   readonly touchChannel: {
     readonly success: boolean;
     readonly ackOrdinal: number;
+    readonly manifest?: NonNullable<unknown> | null | undefined;
   };
 };
 
 export type PushSyncEnvelopesMutationVariables = Exact<{
   envelopes: ReadonlyArray<SyncEnvelopeInput>;
+  peerManifestRevision?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type PushSyncEnvelopesMutation = { readonly pushSyncEnvelopes: boolean };
@@ -1645,6 +1707,9 @@ export type ResolversTypes = ResolversObject<{
   PHDocument: ResolverTypeWrapper<PhDocument>;
   PHDocumentResultPage: ResolverTypeWrapper<PhDocumentResultPage>;
   PagingInput: PagingInput;
+  PeerAgreement: ResolverTypeWrapper<PeerAgreement>;
+  PeerAgreementLimit: ResolverTypeWrapper<PeerAgreementLimit>;
+  PeerAgreementMember: ResolverTypeWrapper<PeerAgreementMember>;
   PollSyncEnvelopesResult: ResolverTypeWrapper<PollSyncEnvelopesResult>;
   PropagationMode: PropagationMode;
   Query: ResolverTypeWrapper<Record<PropertyKey, never>>;
@@ -1666,6 +1731,9 @@ export type ResolversTypes = ResolversObject<{
   SyncEnvelope: ResolverTypeWrapper<SyncEnvelope>;
   SyncEnvelopeInput: SyncEnvelopeInput;
   SyncEnvelopeType: SyncEnvelopeType;
+  SyncHold: ResolverTypeWrapper<SyncHold>;
+  SyncHoldReason: ResolverTypeWrapper<SyncHoldReason>;
+  SyncRefusalInput: SyncRefusalInput;
   TouchChannelInput: TouchChannelInput;
   TouchChannelResult: ResolverTypeWrapper<TouchChannelResult>;
   ViewFilterInput: ViewFilterInput;
@@ -1708,6 +1776,9 @@ export type ResolversParentTypes = ResolversObject<{
   PHDocument: PhDocument;
   PHDocumentResultPage: PhDocumentResultPage;
   PagingInput: PagingInput;
+  PeerAgreement: PeerAgreement;
+  PeerAgreementLimit: PeerAgreementLimit;
+  PeerAgreementMember: PeerAgreementMember;
   PollSyncEnvelopesResult: PollSyncEnvelopesResult;
   Query: Record<PropertyKey, never>;
   ReactorOperation: ReactorOperation;
@@ -1727,6 +1798,9 @@ export type ResolversParentTypes = ResolversObject<{
   Subscription: Record<PropertyKey, never>;
   SyncEnvelope: SyncEnvelope;
   SyncEnvelopeInput: SyncEnvelopeInput;
+  SyncHold: SyncHold;
+  SyncHoldReason: SyncHoldReason;
+  SyncRefusalInput: SyncRefusalInput;
   TouchChannelInput: TouchChannelInput;
   TouchChannelResult: TouchChannelResult;
   ViewFilterInput: ViewFilterInput;
@@ -2205,6 +2279,49 @@ export type PhDocumentResultPageResolvers<
   >;
 }>;
 
+export type PeerAgreementResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["PeerAgreement"] =
+    ResolversParentTypes["PeerAgreement"],
+> = ResolversObject<{
+  collectionId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  limitedBy?: Resolver<
+    ReadonlyArray<ResolversTypes["PeerAgreementLimit"]>,
+    ParentType,
+    ContextType
+  >;
+  local?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
+  members?: Resolver<
+    ReadonlyArray<ResolversTypes["PeerAgreementMember"]>,
+    ParentType,
+    ContextType
+  >;
+}>;
+
+export type PeerAgreementLimitResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["PeerAgreementLimit"] =
+    ResolversParentTypes["PeerAgreementLimit"],
+> = ResolversObject<{
+  protocol?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  remoteNames?: Resolver<
+    ReadonlyArray<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
+}>;
+
+export type PeerAgreementMemberResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["PeerAgreementMember"] =
+    ResolversParentTypes["PeerAgreementMember"],
+> = ResolversObject<{
+  announced?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
+  features?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
+  protocols?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
+  remoteName?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+}>;
+
 export type PollSyncEnvelopesResultResolvers<
   ContextType = Context,
   ParentType extends ResolversParentTypes["PollSyncEnvelopesResult"] =
@@ -2222,6 +2339,16 @@ export type PollSyncEnvelopesResultResolvers<
     ContextType
   >;
   hasMore?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
+  manifestRevision?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
+  peerManifestRevision?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
 }>;
 
 export type QueryResolvers<
@@ -2301,6 +2428,12 @@ export type QueryResolvers<
     ContextType,
     RequireFields<QueryJobStatusArgs, "jobId">
   >;
+  peerAgreement?: Resolver<
+    ResolversTypes["PeerAgreement"],
+    ParentType,
+    ContextType,
+    RequireFields<QueryPeerAgreementArgs, "collectionId">
+  >;
   pollSyncEnvelopes?: Resolver<
     ResolversTypes["PollSyncEnvelopesResult"],
     ParentType,
@@ -2309,6 +2442,12 @@ export type QueryResolvers<
       QueryPollSyncEnvelopesArgs,
       "channelId" | "outboxAck" | "outboxLatest"
     >
+  >;
+  syncHolds?: Resolver<
+    ReadonlyArray<ResolversTypes["SyncHold"]>,
+    ParentType,
+    ContextType,
+    Partial<QuerySyncHoldsArgs>
   >;
 }>;
 
@@ -2464,12 +2603,43 @@ export type SyncEnvelopeResolvers<
   type?: Resolver<ResolversTypes["SyncEnvelopeType"], ParentType, ContextType>;
 }>;
 
+export type SyncHoldResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["SyncHold"] =
+    ResolversParentTypes["SyncHold"],
+> = ResolversObject<{
+  branch?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  documentId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  heldAtUtcMs?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  reason?: Resolver<ResolversTypes["SyncHoldReason"], ParentType, ContextType>;
+  remoteName?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+}>;
+
+export type SyncHoldReasonResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["SyncHoldReason"] =
+    ResolversParentTypes["SyncHoldReason"],
+> = ResolversObject<{
+  peerSupports?: Resolver<
+    ReadonlyArray<ResolversTypes["Int"]>,
+    ParentType,
+    ContextType
+  >;
+  protocol?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  version?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+}>;
+
 export type TouchChannelResultResolvers<
   ContextType = Context,
   ParentType extends ResolversParentTypes["TouchChannelResult"] =
     ResolversParentTypes["TouchChannelResult"],
 > = ResolversObject<{
   ackOrdinal?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  manifest?: Resolver<
+    Maybe<ResolversTypes["JSONObject"]>,
+    ParentType,
+    ContextType
+  >;
   success?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
 }>;
 
@@ -2497,6 +2667,9 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   OperationWithContext?: OperationWithContextResolvers<ContextType>;
   PHDocument?: PhDocumentResolvers<ContextType>;
   PHDocumentResultPage?: PhDocumentResultPageResolvers<ContextType>;
+  PeerAgreement?: PeerAgreementResolvers<ContextType>;
+  PeerAgreementLimit?: PeerAgreementLimitResolvers<ContextType>;
+  PeerAgreementMember?: PeerAgreementMemberResolvers<ContextType>;
   PollSyncEnvelopesResult?: PollSyncEnvelopesResultResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   ReactorOperation?: ReactorOperationResolvers<ContextType>;
@@ -2508,6 +2681,8 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   Revision?: RevisionResolvers<ContextType>;
   Subscription?: SubscriptionResolvers<ContextType>;
   SyncEnvelope?: SyncEnvelopeResolvers<ContextType>;
+  SyncHold?: SyncHoldResolvers<ContextType>;
+  SyncHoldReason?: SyncHoldReasonResolvers<ContextType>;
   TouchChannelResult?: TouchChannelResultResolvers<ContextType>;
 }>;
 
@@ -2717,6 +2892,15 @@ export function SyncEnvelopeInputSchema(): z.ZodObject<
   });
 }
 
+export function SyncRefusalInputSchema(): z.ZodObject<
+  Properties<SyncRefusalInput>
+> {
+  return z.object({
+    branch: z.string(),
+    documentId: z.string(),
+  });
+}
+
 export function TouchChannelInputSchema(): z.ZodObject<
   Properties<TouchChannelInput>
 > {
@@ -2724,6 +2908,7 @@ export function TouchChannelInputSchema(): z.ZodObject<
     collectionId: z.string(),
     filter: z.lazy(() => RemoteFilterInputSchema()),
     id: z.string(),
+    manifest: z.custom<NonNullable<unknown>>((v) => v != null).nullish(),
     name: z.string(),
     sinceTimestampUtcMs: z.string(),
   });
@@ -3245,11 +3430,15 @@ export const PollSyncEnvelopesDocument = gql`
     $channelId: String!
     $outboxAck: Int!
     $outboxLatest: Int!
+    $manifestRevision: String
+    $refusals: [SyncRefusalInput!]
   ) {
     pollSyncEnvelopes(
       channelId: $channelId
       outboxAck: $outboxAck
       outboxLatest: $outboxLatest
+      manifestRevision: $manifestRevision
+      refusals: $refusals
     ) {
       envelopes {
         type
@@ -3309,6 +3498,8 @@ export const PollSyncEnvelopesDocument = gql`
         errorType
       }
       hasMore
+      manifestRevision
+      peerManifestRevision
     }
   }
 `;
@@ -3317,12 +3508,19 @@ export const TouchChannelDocument = gql`
     touchChannel(input: $input) {
       success
       ackOrdinal
+      manifest
     }
   }
 `;
 export const PushSyncEnvelopesDocument = gql`
-  mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!) {
-    pushSyncEnvelopes(envelopes: $envelopes)
+  mutation PushSyncEnvelopes(
+    $envelopes: [SyncEnvelopeInput!]!
+    $peerManifestRevision: String
+  ) {
+    pushSyncEnvelopes(
+      envelopes: $envelopes
+      peerManifestRevision: $peerManifestRevision
+    )
   }
 `;
 export type Requester<C = {}> = <R, V>(

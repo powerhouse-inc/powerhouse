@@ -9,6 +9,7 @@ import { childLogger } from "document-model";
 import { config } from "./config.js";
 import { initProfilerFromEnv } from "./profiler.js";
 import { startSwitchboard } from "./server.mjs";
+import { StoredDocumentsRefusedError } from "./unsupported-stored-documents.mjs";
 
 const logger = childLogger(["switchboard"]);
 
@@ -54,8 +55,11 @@ try {
     fatalErrorShutdown: true,
   });
 } catch (e) {
-  Sentry.captureException(e);
-  logger.error("Switchboard failed to start: @error", e);
+  // startSwitchboard already reported a refusal to the operator.
+  if (!StoredDocumentsRefusedError.isError(e)) {
+    Sentry.captureException(e);
+    logger.error("Switchboard failed to start: @error", e);
+  }
   await Sentry.flush(2000).catch(() => undefined);
   process.exit(1);
 }

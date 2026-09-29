@@ -40,4 +40,17 @@ violated fixed noLostRows
 # Trust: a peer that claims more spreads misread rows.
 violated liar noMisreadRowsSpread
 
+# Before the fixes. Refusing only creations breaks safety without any rollback; the run check restores it.
+violated preFix $SAFE noStuckHold noManifestRegress noLostRows noDroppedRefusal
+violated preFixNoRollback $SAFE noDroppedRefusal
+holds preFixNoRollbackPlusRunCheck $SAFE outboxGated
+violated preFixPlusRunCheck noUnsupportedStore noMisreadAdmitted
+holds preFixMinimal $SAFE outboxGated
+violated preFixMinimal noStuckHold noManifestRegress noDroppedRefusal
+
+# As built: every fix. All but noLostRows hold, with or without the handshake-first assumption.
+holds asBuilt $SAFE outboxGated noStuckHold noManifestRegress noDroppedRefusal
+holds asBuiltNoHandshake $SAFE
+violated asBuilt noLostRows
+
 exit $status

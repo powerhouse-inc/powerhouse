@@ -1,12 +1,36 @@
+import {
+  canonicalJson,
+  readPeerManifest,
+} from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import { DriveCollectionId } from "../../cache/operation-index-types.js";
-import type { RemoteRecord } from "../../sync/types.js";
+import type { RemotePeer, RemoteRecord } from "../../sync/types.js";
 import type { ISyncRemoteStorage } from "../interfaces.js";
 import type { Database, InsertableSyncRemote, SyncRemoteRow } from "./types.js";
 
-function rowToRemoteRecord(row: SyncRemoteRow): RemoteRecord {
+function rowToPeer(row: SyncRemoteRow): RemotePeer | undefined {
+  if (row.peer_manifest_at_utc_ms === null) {
+    return undefined;
+  }
+  let manifest = null;
+  if (row.peer_manifest !== null) {
+    try {
+      manifest = readPeerManifest(JSON.parse(row.peer_manifest));
+    } catch {
+      // unreadable: treated as silent
+    }
+  }
   return {
+    manifest,
+    receivedAtUtcMs: Number(row.peer_manifest_at_utc_ms),
+  };
+}
+
+function rowToRemoteRecord(row: SyncRemoteRow): RemoteRecord {
+  const peer = rowToPeer(row);
+  return {
+    ...(peer ? { peer } : {}),
     id: row.channel_id,
     name: row.name,
     collectionId: DriveCollectionId.fromKey(row.collection_id),
@@ -87,6 +111,10 @@ function remoteRecordToRow(remote: RemoteRecord): InsertableSyncRemote {
       : null,
     pull_failure_count: remote.status.pull.failureCount,
     bound_address: remote.options.boundAddress ?? null,
+    peer_manifest: remote.peer?.manifest
+      ? canonicalJson(remote.peer.manifest, "peer manifest")
+      : null,
+    peer_manifest_at_utc_ms: remote.peer?.receivedAtUtcMs ?? null,
   };
 }
 

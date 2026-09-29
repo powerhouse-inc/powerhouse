@@ -30,6 +30,9 @@ vi.mock("kysely-pglite-dialect", () => ({ PGliteDialect: class {} }));
 vi.mock("../../src/pglite.db.js", () => ({
   getReactorPGlite: vi.fn(),
 }));
+vi.mock("../../src/utils/stored-documents-refused.js", () => ({
+  toStoredDocumentsRefused: (error: unknown) => error,
+}));
 import {
   addDrive,
   addRemoteDrive,

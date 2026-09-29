@@ -1,3 +1,8 @@
+import {
+  isOlderManifest,
+  readPeerManifest,
+  type PeerManifest,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type {
   DriveCollectionId,
@@ -11,7 +16,11 @@ import {
   isDriveAuthError,
   isRecoverableGraphQLError,
 } from "../errors.js";
-import type { ConnectionStateChangeCallback, IChannel } from "../interfaces.js";
+import type {
+  ConnectionStateChangeCallback,
+  IChannel,
+  PeerManifestListener,
+} from "../interfaces.js";
 import { type IMailbox, Mailbox } from "../mailbox.js";
 import { SyncOperation } from "../sync-operation.js";
 import type {
@@ -25,6 +34,7 @@ import type {
 import { ChannelErrorSource } from "../types.js";
 import {
   consolidateSyncOperations,
+  syncOperationErrorType,
   trimMailboxFromAckOrdinal,
 } from "../utils.js";
 import { calculateBackoffDelay } from "./interval-poll-timer.js";
@@ -62,20 +72,52 @@ export type GqlChannelConfig = {
  */
 const DECISION_FIELDS = ["deniedReason", "errorType"] as const;
 
+/** Fields peer agreement added; a remote without them is a silent peer. */
+const AGREEMENT_FIELDS = [
+  "manifest",
+  "manifestRevision",
+  "peerManifestRevision",
+  "refusals",
+  "SyncRefusalInput",
+] as const;
+
+type RefusalWire = { documentId: string; branch: string };
+
+/** How often a channel whose remote went silent asks again whether it serves agreement. */
+const AGREEMENT_PROBE_INTERVAL_MS = 5 * 60_000;
+
+function pushMutation(withGatedUnder: boolean): string {
+  return withGatedUnder
+    ? `
+      mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!, $peerManifestRevision: String) {
+        pushSyncEnvelopes(envelopes: $envelopes, peerManifestRevision: $peerManifestRevision)
+      }
+    `
+    : `
+      mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!) {
+        pushSyncEnvelopes(envelopes: $envelopes)
+      }
+    `;
+}
+
+type DeadLetterWire = {
+  documentId: string;
+  error: string;
+  errorType?: string | null;
+  jobId: string;
+  branch: string;
+  scopes: string[];
+  operationCount: number;
+};
+
 type PollSyncEnvelopesResult = {
   pollSyncEnvelopes: {
     envelopes: SyncEnvelope[];
     ackOrdinal: number;
-    deadLetters?: Array<{
-      documentId: string;
-      error: string;
-      errorType?: string | null;
-      jobId: string;
-      branch: string;
-      scopes: string[];
-      operationCount: number;
-    }>;
+    deadLetters?: DeadLetterWire[];
     hasMore: boolean;
+    manifestRevision?: string | null;
+    peerManifestRevision?: string | null;
   };
 };
 
@@ -109,6 +151,16 @@ export class GqlRequestChannel implements IChannel {
   private receivingPages: boolean = false;
   /** Cleared for good the first time the remote rejects {@link DECISION_FIELDS}. */
   private peerServesDecisionFields: boolean = true;
+  /** Cleared when the remote rejects {@link AGREEMENT_FIELDS}; set again by a touch that carries them. */
+  private peerServesAgreement: boolean = true;
+  private agreementStoppedUtcMs = 0;
+  private localManifestProvider?: () => PeerManifest;
+  /** Undefined until the first handshake; null for a silent peer. */
+  private peerManifest: PeerManifest | null | undefined = undefined;
+  private readonly peerManifestCallbacks = new Set<PeerManifestListener>();
+  private manifestRefresh: Promise<void> | undefined;
+  /** Polled rows this reactor could not run, reported on the next poll. */
+  private readonly pendingRefusals = new Map<string, RefusalWire>();
   private isRecovering: boolean = false;
   private connectionState: ConnectionState = "connecting";
   /** Latest unrecoverable error was an auth rejection; cleared on connect. */
@@ -154,6 +206,15 @@ export class GqlRequestChannel implements IChannel {
           syncOp.documentId,
           this.channelId,
         );
+        if (
+          syncOp.error?.source === ChannelErrorSource.Inbox &&
+          syncOperationErrorType(syncOp.error) === "UNSUPPORTED_PROTOCOL"
+        ) {
+          this.pendingRefusals.set(`${syncOp.documentId}:${syncOp.branch}`, {
+            documentId: syncOp.documentId,
+            branch: syncOp.branch,
+          });
+        }
       }
     });
 
@@ -270,6 +331,101 @@ export class GqlRequestChannel implements IChannel {
     return undefined;
   }
 
+  setLocalManifest(provider: () => PeerManifest): void {
+    this.localManifestProvider = provider;
+  }
+
+  onPeerManifest(callback: PeerManifestListener): () => void {
+    this.peerManifestCallbacks.add(callback);
+    return () => {
+      this.peerManifestCallbacks.delete(callback);
+    };
+  }
+
+  private async hearPeer(
+    manifest: PeerManifest | null,
+    undelivered?: readonly SyncOperation[],
+  ): Promise<void> {
+    if (
+      (this.peerManifest !== undefined &&
+        (this.peerManifest?.revision ?? null) ===
+          (manifest?.revision ?? null)) ||
+      isOlderManifest(manifest, this.peerManifest)
+    ) {
+      return;
+    }
+    this.peerManifest = manifest;
+    await Promise.all(
+      [...this.peerManifestCallbacks].map(async (callback) => {
+        try {
+          await callback(manifest, undelivered);
+        } catch (error) {
+          this.logger.error("Peer manifest callback error: @Error", error);
+        }
+      }),
+    );
+  }
+
+  /**
+   * Re-touches once when either side's manifest moved; touching is idempotent.
+   * False when the refresh failed, so polled rows must not be judged yet.
+   */
+  private async refreshManifestsIfStale(
+    manifestRevision: string | null | undefined,
+    peerManifestRevision: string | null | undefined,
+  ): Promise<boolean> {
+    if (!this.peerServesAgreement || typeof manifestRevision !== "string") {
+      return true;
+    }
+    const local = this.localManifestProvider?.().revision ?? null;
+    if (
+      manifestRevision === (this.peerManifest?.revision ?? null) &&
+      (peerManifestRevision ?? null) === local
+    ) {
+      return true;
+    }
+    if (this.isShutdown) {
+      return false;
+    }
+    this.manifestRefresh ??= this.touchRemoteChannel()
+      .then(({ ackOrdinal }) => {
+        if (ackOrdinal > 0) {
+          trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
+        }
+      })
+      .finally(() => {
+        this.manifestRefresh = undefined;
+      });
+    try {
+      await this.manifestRefresh;
+      return true;
+    } catch (error) {
+      this.logger.error(
+        "GqlChannel @ChannelId manifest refresh failed: @Error",
+        this.channelId,
+        error,
+      );
+      return false;
+    }
+  }
+
+  /** Re-touches a silent remote in case it was upgraded. */
+  private async probeAgreement(): Promise<void> {
+    this.agreementStoppedUtcMs = Date.now();
+    try {
+      const { ackOrdinal } = await this.touchRemoteChannel();
+      if (ackOrdinal > 0) {
+        trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
+      }
+    } catch (error) {
+      this.logger.error(
+        "GqlChannel @ChannelId agreement probe failed: @Error",
+        this.channelId,
+        error,
+      );
+    }
+  }
+
   /**
    * Initializes the channel by registering it on the remote server and starting polling.
    */
@@ -321,6 +477,13 @@ export class GqlRequestChannel implements IChannel {
       return;
     }
 
+    if (
+      !this.peerServesAgreement &&
+      Date.now() - this.agreementStoppedUtcMs >= AGREEMENT_PROBE_INTERVAL_MS
+    ) {
+      await this.probeAgreement();
+    }
+
     let response;
     try {
       response = await this.pollSyncEnvelopes(
@@ -334,11 +497,29 @@ export class GqlRequestChannel implements IChannel {
       return;
     }
 
-    const { envelopes, ackOrdinal, deadLetters, hasMore } = response;
+    const {
+      envelopes,
+      ackOrdinal,
+      deadLetters,
+      hasMore,
+      manifestRevision,
+      peerManifestRevision,
+    } = response;
 
     // first: trim outbox
     if (ackOrdinal > 0) {
       trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
+    }
+
+    // Rows are judged against the sender's record, so a stale one is refreshed
+    // first. Unadmitted rows stay unacked and are served again.
+    if (
+      !(await this.refreshManifestsIfStale(
+        manifestRevision,
+        peerManifestRevision,
+      ))
+    ) {
+      return;
     }
 
     // convert the envelopes to sync operations
@@ -385,17 +566,7 @@ export class GqlRequestChannel implements IChannel {
    * Handles dead letters reported by the remote server.
    * Creates local dead letter SyncOperations so the channel quiesces.
    */
-  private handleRemoteDeadLetters(
-    deadLetters: Array<{
-      documentId: string;
-      error: string;
-      errorType?: string | null;
-      jobId: string;
-      branch: string;
-      scopes: string[];
-      operationCount: number;
-    }>,
-  ): void {
+  private handleRemoteDeadLetters(deadLetters: DeadLetterWire[]): void {
     for (const dl of deadLetters) {
       this.logger.error(
         "Remote dead letter on @ChannelId: document @DocumentId failed with: @Error",
@@ -578,16 +749,10 @@ export class GqlRequestChannel implements IChannel {
   ): Promise<{
     envelopes: SyncEnvelope[];
     ackOrdinal: number;
-    deadLetters: Array<{
-      documentId: string;
-      error: string;
-      errorType?: string | null;
-      jobId: string;
-      branch: string;
-      scopes: string[];
-      operationCount: number;
-    }>;
+    deadLetters: DeadLetterWire[];
     hasMore: boolean;
+    manifestRevision?: string | null;
+    peerManifestRevision?: string | null;
   }> {
     const variables = {
       channelId: this.channelId,
@@ -595,25 +760,46 @@ export class GqlRequestChannel implements IChannel {
       outboxLatest: latestOrdinal,
     };
 
+    // Each flag only ever clears, so this settles within three attempts.
     let response: PollSyncEnvelopesResult;
-    try {
-      response = await this.executeGraphQL<PollSyncEnvelopesResult>(
-        this.pollQuery(this.peerServesDecisionFields),
-        variables,
-      );
-    } catch (error) {
-      if (!this.rejectsDecisionFields(error)) {
-        throw error;
+    let refusals: RefusalWire[] = [];
+    for (;;) {
+      const revision = this.peerServesAgreement
+        ? this.localManifestProvider?.().revision
+        : undefined;
+      refusals = this.peerServesAgreement
+        ? [...this.pendingRefusals.values()]
+        : [];
+      try {
+        response = await this.executeGraphQL<PollSyncEnvelopesResult>(
+          this.pollQuery(
+            this.peerServesDecisionFields,
+            this.peerServesAgreement,
+          ),
+          this.peerServesAgreement
+            ? { ...variables, manifestRevision: revision, refusals }
+            : variables,
+        );
+        break;
+      } catch (error) {
+        if (this.rejectsAgreementFields(error)) {
+          await this.stopAgreement();
+          continue;
+        }
+        if (!this.rejectsDecisionFields(error)) {
+          throw error;
+        }
+        this.logger.warn(
+          "Remote @channelId does not serve deniedReason/errorType; polling without them. The remote is on an older schema, so it has neither to report.",
+          this.channelId,
+        );
+        this.peerServesDecisionFields = false;
       }
-      this.logger.warn(
-        "Remote @channelId does not serve deniedReason/errorType; polling without them. The remote is on an older schema, so it has neither to report.",
-        this.channelId,
-      );
-      this.peerServesDecisionFields = false;
-      response = await this.executeGraphQL<PollSyncEnvelopesResult>(
-        this.pollQuery(false),
-        variables,
-      );
+    }
+
+    // The server holds what was reported; a silent one keeps them pending.
+    for (const refusal of refusals) {
+      this.pendingRefusals.delete(`${refusal.documentId}:${refusal.branch}`);
     }
 
     return {
@@ -621,7 +807,36 @@ export class GqlRequestChannel implements IChannel {
       ackOrdinal: response.pollSyncEnvelopes.ackOrdinal,
       deadLetters: response.pollSyncEnvelopes.deadLetters ?? [],
       hasMore: response.pollSyncEnvelopes.hasMore,
+      manifestRevision: response.pollSyncEnvelopes.manifestRevision,
+      peerManifestRevision: response.pollSyncEnvelopes.peerManifestRevision,
     };
+  }
+
+  private rejectsAgreementFields(error: unknown): boolean {
+    return this.peerServesAgreement && this.isAgreementRejection(error);
+  }
+
+  private isAgreementRejection(error: unknown): boolean {
+    if (
+      !(error instanceof GraphQLRequestError) ||
+      error.category !== "graphql"
+    ) {
+      return false;
+    }
+    return AGREEMENT_FIELDS.some((field) => error.message.includes(field));
+  }
+
+  /** Resolves once what the silent peer cannot run is held. */
+  private async stopAgreement(
+    undelivered?: readonly SyncOperation[],
+  ): Promise<void> {
+    this.logger.warn(
+      "Remote @channelId does not serve peer manifests; treating it as a silent peer.",
+      this.channelId,
+    );
+    this.peerServesAgreement = false;
+    this.agreementStoppedUtcMs = Date.now();
+    await this.hearPeer(null, undelivered);
   }
 
   /**
@@ -647,13 +862,26 @@ export class GqlRequestChannel implements IChannel {
    * The poll query. `withDecisionFields` selects the two fields added with the
    * auth projection; a remote on the previous schema is polled without them.
    */
-  private pollQuery(withDecisionFields: boolean): string {
+  private pollQuery(
+    withDecisionFields: boolean,
+    withAgreementFields: boolean,
+  ): string {
     const deniedReason = withDecisionFields ? "deniedReason" : "";
     const errorType = withDecisionFields ? "errorType" : "";
+    const revisions = withAgreementFields
+      ? "manifestRevision\n          peerManifestRevision"
+      : "";
+
+    const revisionVariable = withAgreementFields
+      ? ", $manifestRevision: String, $refusals: [SyncRefusalInput!]"
+      : "";
+    const revisionArgument = withAgreementFields
+      ? ", manifestRevision: $manifestRevision, refusals: $refusals"
+      : "";
 
     return `
-      query PollSyncEnvelopes($channelId: String!, $outboxAck: Int!, $outboxLatest: Int!) {
-        pollSyncEnvelopes(channelId: $channelId, outboxAck: $outboxAck, outboxLatest: $outboxLatest) {
+      query PollSyncEnvelopes($channelId: String!, $outboxAck: Int!, $outboxLatest: Int!${revisionVariable}) {
+        pollSyncEnvelopes(channelId: $channelId, outboxAck: $outboxAck, outboxLatest: $outboxLatest${revisionArgument}) {
           envelopes {
             type
             channelMeta {
@@ -717,6 +945,7 @@ export class GqlRequestChannel implements IChannel {
             operationCount
           }
           hasMore
+          ${revisions}
         }
       }
     `;
@@ -739,32 +968,55 @@ export class GqlRequestChannel implements IChannel {
       // If query fails, use default "0" (sends all operations)
     }
 
-    const mutation = `
+    const touch = (withAgreement: boolean) => {
+      const manifest = withAgreement
+        ? this.localManifestProvider?.()
+        : undefined;
+      return this.executeGraphQL<{
+        touchChannel: {
+          success: boolean;
+          ackOrdinal: number;
+          manifest?: unknown;
+        };
+      }>(
+        `
       mutation TouchChannel($input: TouchChannelInput!) {
         touchChannel(input: $input) {
           success
           ackOrdinal
+          ${withAgreement ? "manifest" : ""}
         }
       }
-    `;
-
-    const variables = {
-      input: {
-        id: this.channelId,
-        name: this.channelId,
-        collectionId: this.config.collectionId.key,
-        filter: {
-          documentId: this.config.filter.documentId,
-          scope: this.config.filter.scope,
-          branch: this.config.filter.branch,
+    `,
+        {
+          input: {
+            id: this.channelId,
+            name: this.channelId,
+            collectionId: this.config.collectionId.key,
+            filter: {
+              documentId: this.config.filter.documentId,
+              scope: this.config.filter.scope,
+              branch: this.config.filter.branch,
+            },
+            sinceTimestampUtcMs,
+            ...(manifest ? { manifest } : {}),
+          },
         },
-        sinceTimestampUtcMs,
-      },
+      );
     };
 
-    const data = await this.executeGraphQL<{
-      touchChannel: { success: boolean; ackOrdinal: number };
-    }>(mutation, variables);
+    // Every touch asks for agreement, so an upgraded remote is heard again.
+    let data;
+    try {
+      data = await touch(true);
+      this.peerServesAgreement = true;
+    } catch (error) {
+      if (!this.isAgreementRejection(error)) {
+        throw error;
+      }
+      await this.stopAgreement();
+      data = await touch(false);
+    }
 
     if (!data.touchChannel.success) {
       throw new GraphQLRequestError(
@@ -772,6 +1024,12 @@ export class GqlRequestChannel implements IChannel {
         "graphql",
       );
     }
+
+    await this.hearPeer(
+      this.peerServesAgreement
+        ? readPeerManifest(data.touchChannel.manifest)
+        : null,
+    );
 
     return { ackOrdinal: data.touchChannel.ackOrdinal };
   }
@@ -920,6 +1178,42 @@ export class GqlRequestChannel implements IChannel {
       syncOp.started();
     }
 
+    // The server revision this push was gated under; a pre-feature server
+    // rejects it, which is how a rollback of the server is noticed.
+    const gatedUnder = this.peerServesAgreement
+      ? this.peerManifest?.revision
+      : undefined;
+    try {
+      await this.executeGraphQL<{ pushSyncEnvelopes: boolean }>(
+        pushMutation(gatedUnder !== undefined),
+        {
+          envelopes: this.envelopesFor(syncOps),
+          ...(gatedUnder !== undefined
+            ? { peerManifestRevision: gatedUnder }
+            : {}),
+        },
+      );
+      return;
+    } catch (error) {
+      if (gatedUnder === undefined || !this.rejectsAgreementFields(error)) {
+        throw error;
+      }
+    }
+
+    // Resending the same envelopes would deliver what the silent peer cannot
+    // run, so those are held first.
+    await this.stopAgreement(syncOps);
+    const unsent = new Set(this.outbox.items);
+    const remaining = syncOps.filter((syncOp) => unsent.has(syncOp));
+    if (remaining.length === 0) return;
+    await this.executeGraphQL<{ pushSyncEnvelopes: boolean }>(
+      pushMutation(false),
+      { envelopes: this.envelopesFor(remaining) },
+    );
+  }
+
+  /** One envelope per SyncOperation, with key/dependsOn for batch ordering. */
+  private envelopesFor(syncOps: SyncOperation[]): unknown[] {
     const jobIdToKeys = new Map<string, string[]>();
     const envelopes: SyncEnvelope[] = [];
 
@@ -959,20 +1253,7 @@ export class GqlRequestChannel implements IChannel {
       });
     }
 
-    const mutation = `
-      mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!) {
-        pushSyncEnvelopes(envelopes: $envelopes)
-      }
-    `;
-
-    const variables = {
-      envelopes: envelopes.map((e) => serializeEnvelope(e)),
-    };
-
-    await this.executeGraphQL<{ pushSyncEnvelopes: boolean }>(
-      mutation,
-      variables,
-    );
+    return envelopes.map((e) => serializeEnvelope(e));
   }
 
   /**

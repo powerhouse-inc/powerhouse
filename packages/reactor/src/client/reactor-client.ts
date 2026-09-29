@@ -6,11 +6,15 @@ import type {
   ISigner,
   Operation,
   PHDocument,
+  ProtocolVersions,
   SignaturePolicy,
+  Supports,
 } from "@powerhousedao/shared/document-model";
 import {
   actions,
   DEFAULT_SIGNATURE_POLICY,
+  PEER_CAPABILITIES,
+  selectProtocolVersions,
   DowngradeNotSupportedError,
   normalizeDocumentModelVersion,
   requestedSignaturePolicy,
@@ -70,8 +74,10 @@ import {
   type DocumentChangeEvent,
   type IDriveClient,
   type IReactorClient,
+  type ProtocolSelection,
   type UpgradeDocumentOptions,
 } from "./types.js";
+import { DriveCollectionId } from "../cache/operation-index-types.js";
 import { buildDecisionModel } from "../decision/build-decision-model.js";
 import type { IReadGate } from "../decision/read-gate.js";
 import {
@@ -187,6 +193,7 @@ export class ReactorClient implements IReactorClient {
   private eventReads: EventReadsSource;
   private actionEvaluation: ActionEvaluationConfig | undefined;
   private readonly createSignaturePolicy: SignaturePolicy;
+  private readonly protocolSelection: ProtocolSelection;
 
   readonly drives: IDriveClient;
 
@@ -201,7 +208,13 @@ export class ReactorClient implements IReactorClient {
     readGate: IReadGate = new BareReadGate(),
     actionEvaluation?: ActionEvaluationConfig,
     createSignaturePolicy: SignaturePolicy = DEFAULT_SIGNATURE_POLICY,
+    protocolSelection: ProtocolSelection = {
+      capabilities: PEER_CAPABILITIES,
+      flags: {},
+      collectionsOf: () => Promise.resolve({}),
+    },
   ) {
+    this.protocolSelection = protocolSelection;
     this.logger = logger;
     this.reactor = reactor;
     this.signer = signer;
@@ -741,6 +754,36 @@ export class ReactorClient implements IReactorClient {
     return Promise.resolve(this.createSignaturePolicy);
   }
 
+  async getCreateProtocolVersions(
+    parentIdentifier?: string,
+    signal?: AbortSignal,
+  ): Promise<ProtocolVersions> {
+    const { capabilities, flags, agreement, collectionsOf } =
+      this.protocolSelection;
+    let members: Supports[] = [];
+    if (parentIdentifier !== undefined && agreement) {
+      let parentId: string | undefined;
+      try {
+        parentId = await this.resolveIdOrSlug(
+          parentIdentifier,
+          undefined,
+          signal,
+        );
+      } catch {
+        parentId = undefined;
+      }
+      if (parentId !== undefined) {
+        const memberships = await collectionsOf([parentId]);
+        const collectionIds = [
+          ...(memberships[parentId] ?? []),
+          DriveCollectionId.forDrive(parentId).key,
+        ];
+        members = [...agreement().members(collectionIds).values()];
+      }
+    }
+    return selectProtocolVersions({ capabilities, flags, members });
+  }
+
   /**
    * Creates a document and waits for completion
    */
@@ -897,10 +940,14 @@ export class ReactorClient implements IReactorClient {
       }
     }
 
+    const base = await this.getCreateProtocolVersions(
+      options?.parentIdentifier,
+      signal,
+    );
     const document = withSignaturePolicy(
       module.utils.createDocument(),
       requestedSignaturePolicy(options, this.createSignaturePolicy),
-      { protocolVersions: options?.protocolVersions },
+      { protocolVersions: { ...base, ...options?.protocolVersions } },
     );
     document.state.document.version = normalizeDocumentModelVersion(
       module.version,

@@ -1,3 +1,4 @@
+import type { PeerManifest } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { ConnectionStateChangeCallback, IChannel } from "../interfaces.js";
@@ -125,6 +126,15 @@ export class GqlResponseChannel implements IChannel {
   /** This channel is served: its holder's polls are the liveness it reports. */
   lastHolderPollUtcMs(): number | undefined {
     return this.lastPollUtcMs;
+  }
+
+  /** The client announces through touchChannel, which the sync manager serves. */
+  setLocalManifest(_provider: () => PeerManifest): void {}
+
+  onPeerManifest(
+    _callback: (manifest: PeerManifest | null) => void,
+  ): () => void {
+    return () => {};
   }
 
   async init(): Promise<void> {

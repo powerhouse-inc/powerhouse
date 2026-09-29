@@ -1106,6 +1106,7 @@ async function _duplicateDocument(
   reactor: IReactorClient,
   document: PHDocument,
   newId = generateId(),
+  driveId?: string,
 ) {
   const documentType = document.header.documentType;
   const { results: allModules } = await reactor.getDocumentModelModules();
@@ -1136,8 +1137,15 @@ async function _duplicateDocument(
   }
 
   const config: VersionedReplayConfig = { reducers, upgradeManifest };
+  // A copy keeps its source's versions; selection fills the keys it lacks.
+  const selected = await reactor.getCreateProtocolVersions(driveId);
   const header = createCopyHeader(
-    document.header,
+    {
+      documentType: document.header.documentType,
+      protocolVersions: document.header.protocolVersions
+        ? { ...selected, ...document.header.protocolVersions }
+        : undefined,
+    },
     newId,
     await reactor.getCreateSignaturePolicy(),
   );
@@ -1217,6 +1225,7 @@ export async function copyNode(
         reactor,
         document,
         fileNodeToCopy.targetId,
+        driveId,
       );
 
       // Set the header name to match the collision-resolved node name

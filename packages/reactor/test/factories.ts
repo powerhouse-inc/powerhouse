@@ -192,6 +192,8 @@ export async function createTestOperationStore(
   backend: TestFsBackend = memoryFsBackend,
 ): Promise<{
   db: Kysely<DatabaseSchema>;
+  baseDb: Kysely<DatabaseSchema>;
+  schema: string;
   store: KyselyOperationStore;
   keyframeStore: KyselyKeyframeStore;
   cleanup: () => Promise<void>;
@@ -210,7 +212,7 @@ export async function createTestOperationStore(
   const store = new KyselyOperationStore(db);
   const keyframeStore = new KyselyKeyframeStore(db);
 
-  return { db, store, keyframeStore, cleanup };
+  return { db, baseDb, schema: REACTOR_SCHEMA, store, keyframeStore, cleanup };
 }
 
 /**
@@ -220,6 +222,8 @@ export async function createTestOperationStore(
  */
 export async function createTestOperationStorePostgres(): Promise<{
   db: Kysely<DatabaseSchema>;
+  baseDb: Kysely<DatabaseSchema>;
+  schema: string;
   store: KyselyOperationStore;
   keyframeStore: KyselyKeyframeStore;
   cleanup: () => Promise<void>;
@@ -242,6 +246,8 @@ export async function createTestOperationStorePostgres(): Promise<{
 
   return {
     db,
+    baseDb,
+    schema,
     store,
     keyframeStore,
     cleanup: async () => {

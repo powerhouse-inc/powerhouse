@@ -16,6 +16,7 @@ import {
   type InProcessReactorClientModule,
   type JwtHandler,
   type PoolInstrumentation,
+  UnsupportedStoredProtocolError,
 } from "@powerhousedao/reactor";
 import {
   HttpPackageLoader,
@@ -104,6 +105,10 @@ import {
   initRenown,
 } from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
+import {
+  StoredDocumentsRefusedError,
+  resolveUnsupportedStoredDocuments,
+} from "./unsupported-stored-documents.mjs";
 import {
   addDefaultDrive,
   addDefaultReactorDrive,
@@ -432,6 +437,11 @@ async function initServer(
     }
   }
 
+  const unsupportedStoredDocuments = resolveUnsupportedStoredDocuments(
+    options.unsupportedStoredDocuments,
+    process.env,
+  );
+
   let projectionWorker = resolveProjectionWorkerOptions(
     options.projectionWorker,
     process.env,
@@ -579,7 +589,8 @@ async function initServer(
       .withFeatures({
         legacyProcessorIds:
           process.env.REACTOR_LEGACY_PROCESSOR_IDS !== "false",
-      });
+      })
+      .withUnsupportedStoredDocuments(unsupportedStoredDocuments);
 
     // Feeds `module.pools`, which ReactorInstrumentation reads to emit
     // reactor.db.pool.{acquire.wait_duration,size,idle,waiting}. Without this
@@ -742,7 +753,23 @@ async function initServer(
       if (apiRef.current) await apiRef.current.dispose();
     });
 
-    const module = await clientBuilder.buildModule();
+    let module: InProcessReactorClientModule;
+    try {
+      module = await clientBuilder.buildModule();
+    } catch (error) {
+      try {
+        await baseKysely.destroy();
+      } catch (destroyError) {
+        logger.error(
+          "Aborting boot: reactor database destroy failed: @error",
+          destroyError,
+        );
+      }
+      if (UnsupportedStoredProtocolError.isError(error)) {
+        throw new StoredDocumentsRefusedError(error);
+      }
+      throw error;
+    }
 
     if (module.reactorModule) {
       const instrumentation = new ReactorInstrumentation(module.reactorModule);
@@ -1272,7 +1299,11 @@ export const startSwitchboard = async (
     return await initServer(serverPort, options, renown, renownConfig);
   } catch (e) {
     Sentry.captureException(e);
-    logger.error("App crashed: @error", e);
+    if (StoredDocumentsRefusedError.isError(e)) {
+      logger.error(e.message);
+    } else {
+      logger.error("App crashed: @error", e);
+    }
     throw e;
   }
 };
@@ -1282,6 +1313,10 @@ export {
   type SwitchboardReactorDefaultsOptions,
 } from "./builder-defaults.mjs";
 export * from "./types.js";
+export {
+  StoredDocumentsRefusedError,
+  resolveUnsupportedStoredDocuments,
+} from "./unsupported-stored-documents.mjs";
 
 if (import.meta.main) {
   await startSwitchboard({ fatalErrorShutdown: true });

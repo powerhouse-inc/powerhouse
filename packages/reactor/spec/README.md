@@ -11,7 +11,7 @@ From `packages/reactor`:
 ```sh
 pnpm spec:typecheck   # both files
 pnpm spec:test        # scenario runs in PeerAgreementTest.qnt
-pnpm spec:sim         # scripts/sim.sh: simulator suite, about 2.5 minutes
+pnpm spec:sim         # scripts/sim.sh: simulator suite, about 4.5 minutes
 pnpm spec:verify      # scripts/verify-all.sh: Apalache suite, needs Java 17+
 pnpm spec:check       # all four
 pnpm spec:trace spec/out/<file>.itf.json   # print a counterexample, one line per step
@@ -20,10 +20,10 @@ pnpm spec:trace spec/out/<file>.itf.json   # print a counterexample, one line pe
 - `scripts/expect-hold.sh <main> <inv>...` and `scripts/expect-violation.sh <main> <inv>...`
   run one simulator check. `MAX_STEPS`, `MAX_SAMPLES` and `SEED` override the defaults.
 - `scripts/verify.sh <holds|violated> <main> <inv[,inv]> <steps>` runs one bounded check.
-  `VERIFY_TIMEOUT` (seconds, default 900) is a hard cap.
+  `VERIFY_TIMEOUT` (seconds, default 900) is a hard cap, enforced by `scripts/with-timeout.pl`.
 - Logs and ITF traces go to `spec/out/`, which is ignored.
-- `quint verify` downloads Apalache into `~/.quint` on first use and starts a JVM server.
-  If a run is killed, check `pgrep -fl apalache.jar` and kill the leftover server.
+- `quint verify` downloads Apalache into `~/.quint` on first use. Each check starts its own
+  JVM server on a free port and stops it afterwards, including on timeout.
 
 ## Builds
 
@@ -46,6 +46,7 @@ pnpm spec:trace spec/out/<file>.itf.json   # print a counterexample, one line pe
 - `noStuckHold`: no hold whose release condition is met while nothing is left to trigger it.
 - `noManifestRegress`: no delayed manifest overwrites a newer record.
 - `noLostRows`: no PEER_PROTOCOL_UNSUPPORTED refusal drops a legitimate row the receiver lacks.
+- `noDroppedRefusal`: every UNSUPPORTED_PROTOCOL refusal at a feature sender becomes a hold (decision 11).
 - `witnessNo*`: reachability checks, expected to be violated.
 
 ## Switches and instances
@@ -53,6 +54,14 @@ pnpm spec:trace spec/out/<file>.itf.json   # print a counterexample, one line pe
 Constants: `GATE`, `RECEIPT_CHECK`, `PEER_CHECK`, the transport assumption `HANDSHAKE_FIRST`
 (after a client restart no data flows on its channel until both manifests are exchanged), and
 the candidate fixes `PUSH_FIELD`, `SEND_GATE`, `RECHECK_HOLDS`, `MANIFEST_SEQ` and `POLL_REVISION`.
+Three more describe the implementation. The plan instances set `RUN_CHECK` and `POLL_REFUSAL_HOLD`
+on and `UNPARENTED` off:
+
+- `RUN_CHECK`: a build refuses writes into a stored document at a version it does not run, not
+  only the document's creation.
+- `POLL_REFUSAL_HOLD`: a client's refusal of a poll response becomes a hold at the server.
+- `UNPARENTED`: a document with no parent takes the local preference.
+
 The `*One` instances have one document and are the ones `verify-all.sh` checks; that one
 document suffices is an argument (see the comment above them), not a check.
 
@@ -71,6 +80,37 @@ document suffices is an argument (see the comment above them), not a check.
 | `fixed`                  | push field + sequences + poll revisions: all but `noLostRows` hold                        |
 | `fixedNoPollRevisionOne` | `fixed` without `POLL_REVISION`: `noUnsupportedStore` violated                            |
 | `fixedNoHandshake`       | `fixed` without `HANDSHAKE_FIRST`: safety still holds                                     |
+
+### As built
+
+`feat/peer-protocol-agreement` with the model's fixes, as of 50611d8c1b. The switches match
+the code: a build refuses every write and every received row into a stored document it does not
+run (`RUN_CHECK`); pushes name the server revision they were gated under (`PUSH_FIELD`); polls
+name the client's revision and a server silences a client that names none (`POLL_REVISION`);
+manifests carry the start time as a sequence and older ones are ignored (`MANIFEST_SEQ`); a
+client reports its refusals of polled rows (`POLL_REFUSAL_HOLD`); a server re-checks holds on
+every touch it receives (`RECHECK_HOLDS`); the gate runs at derivation only. `UNPARENTED` is on.
+`misconfigured` is left out: the executor refuses by the host's registry, which is also what the
+host announces, so a build that runs less than it announces behaves as `liar`.
+
+| instance             | expected                                                      |
+| -------------------- | ------------------------------------------------------------- |
+| `asBuilt`            | all but `noLostRows` hold                                     |
+| `asBuiltNoHandshake` | safety holds without the handshake-first transport assumption |
+| `asBuiltOne`         | verified: safety and the liveness invariants hold to 10 steps |
+
+### Before the fixes
+
+The branch as of 034dabf1cf, and the change sets considered from there.
+
+| instance                       | expected                                                                          |
+| ------------------------------ | --------------------------------------------------------------------------------- |
+| `preFix`                       | every invariant violated                                                          |
+| `preFixNoRollback`             | safety violated without any rollback: a narrowed build writes into a v3 document  |
+| `preFixNoRollbackPlusRunCheck` | safety holds                                                                      |
+| `preFixPlusRunCheck`           | the rollback leak remains                                                         |
+| `preFixMinimal`                | run check + push field + poll revisions: safety holds; liveness invariants do not |
+| `preFixMinimalNo*One`          | each of the three changes removed: safety violated                                |
 
 ## CI sketch
 

@@ -832,6 +832,27 @@ export interface IDocumentIndexer extends IReadModel {
   ): Promise<string[]>;
 }
 
+/** A hold as stored; the peer's supported set is read from its manifest. */
+export type SyncHoldRecord = {
+  remoteName: string;
+  documentId: string;
+  branch: string;
+  protocol: string;
+  version: number;
+  heldAtUtcMs: number;
+};
+
+/** Documents held back from a remote until its peer can run them. */
+export interface ISyncHoldStorage {
+  list(filter?: {
+    remoteName?: string;
+    documentId?: string;
+  }): Promise<SyncHoldRecord[]>;
+  upsert(hold: SyncHoldRecord): Promise<void>;
+  remove(remoteName: string, documentId: string, branch: string): Promise<void>;
+  removeRemote(remoteName: string): Promise<void>;
+}
+
 /**
  * Persistent storage for sync remote configurations. Each remote represents
  * a connection to an external system that operations can be synced with.
