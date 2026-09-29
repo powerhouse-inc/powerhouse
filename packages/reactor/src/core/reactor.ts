@@ -23,6 +23,7 @@ import {
   ReactorEventTypes,
   type JobFailedEvent,
   type JobPendingEvent,
+  type Unsubscribe,
 } from "../events/types.js";
 import type { IJobExecutorManager } from "../executor/interfaces.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
@@ -108,6 +109,7 @@ export class Reactor implements IReactor {
     eventBus: IEventBus,
     executorManager: IJobExecutorManager,
     catchUp?: CatchUpScheduler,
+    private readonly disposers: Unsubscribe[] = [],
   ) {
     this.catchUp = catchUp;
     this.logger = logger;
@@ -154,6 +156,7 @@ export class Reactor implements IReactor {
 
     const shutdownAsync = async () => {
       await this.executorManager.stop(true);
+      for (const dispose of this.disposers) dispose();
 
       await this.catchUp?.stop();
       this.readModelCoordinator.stop();

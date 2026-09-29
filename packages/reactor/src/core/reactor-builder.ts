@@ -844,7 +844,7 @@ export class ReactorBuilder {
     await documentMetaCache.startup();
 
     // Worker executors evict only their own caches; these are the host's.
-    eventBus.subscribe<JobWriteReadyEvent>(
+    const unsubscribeMarkerEviction = eventBus.subscribe<JobWriteReadyEvent>(
       ReactorEventTypes.JOB_WRITE_READY,
       (_type, event) => {
         for (const item of event.operations) {
@@ -1153,6 +1153,7 @@ export class ReactorBuilder {
       eventBus,
       executorManager,
       catchUp,
+      [unsubscribeMarkerEviction],
     );
 
     const localPeer: LocalPeer = {

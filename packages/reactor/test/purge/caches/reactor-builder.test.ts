@@ -111,4 +111,40 @@ describe("reactor builder caches for a purged id", () => {
       "document-purge": 1,
     });
   });
+
+  it("stops evicting the host caches once the reactor is killed", async () => {
+    const document = createDocModelDocument({ id: generateId() });
+    const documentId = document.header.id;
+    const job = await module.reactor.create(document);
+    await vi.waitUntil(
+      async () =>
+        (await module.reactor.getJobStatus(job.id)).status ===
+        JobStatus.READ_READY,
+      { timeout: 10_000 },
+    );
+    const writeCache = module.writeCache as KyselyWriteCache;
+    await writeCache.getState(documentId, "document", "main");
+    await module.reactor.kill().completed;
+
+    await module.eventBus
+      .emit(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId: generateId(),
+        operations: [
+          {
+            operation: purgeMarker(documentId),
+            context: {
+              documentId,
+              documentType: DOCUMENT_TYPE,
+              scope: "document",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+        jobMeta: { batchId: generateId(), batchJobIds: [] },
+      })
+      .catch(() => {});
+
+    expect(writeCache.getStream(documentId, "document", "main")).toBeDefined();
+  });
 });
