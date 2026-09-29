@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-29T10:46:37.463Z
+> Generated: 2026-09-29T11:20:51.425Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -2733,6 +2733,14 @@ A **connection** is its own document, of type `powerhouse/connection`: one crede
 A workflow document syncs, has a full operation log, and is readable by anyone who can read the drive. A credential written into a step's config would inherit all of that. Keeping it in a connection means the secret itself is held by the runtime and only ever referred to by reference — what the documents carry is a pointer, not the key.
 
 Some pieces offer more than one way to sign in, such as Slack's bot token or its OAuth flow. A connection picks one of them, and the piece runs with that method.
+
+**Signing in with OAuth.** A piece that signs in with OAuth, such as Google Drive, uses an OAuth app that you register with the service yourself:
+
+1. In the service's developer console, create an OAuth app and add the **Redirect URL** the connection editor shows as an authorized redirect URI.
+2. Paste the app's client ID and client secret into the connection.
+3. Click **Connect**. A window opens on the service's own sign-in page; approve the access it asks for.
+
+The window closes, and the switchboard keeps the token and refreshes it before it expires. The connection holds only a reference to it. Because the app is yours, the service's consent screen names it, and may warn that it is unverified. A Google app left in **Testing** issues refresh tokens that expire after seven days, so publish it before relying on the connection.
 
 A piece can also declare a **connection check**, which is what lets Connect show a connection as working or broken, with the account it's actually authenticated as, before a run fails on it. The connection editor's **Test connection** button runs it on demand.
 
