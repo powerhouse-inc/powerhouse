@@ -1,6 +1,7 @@
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type { Kysely, Transaction } from "kysely";
 import type { IKeyframeStore } from "../interfaces.js";
+import { acquirePurgeLocks, findPurged } from "./document-purges.js";
 import type { Database } from "./types.js";
 
 export class KyselyKeyframeStore implements IKeyframeStore {
@@ -30,22 +31,36 @@ export class KyselyKeyframeStore implements IKeyframeStore {
       throw new Error("Operation aborted");
     }
 
-    await this.queryExecutor
-      .insertInto("Keyframe")
-      .values({
-        documentId,
-        documentType: document.header.documentType,
-        scope,
-        branch,
-        revision,
-        document,
-      })
-      .onConflict((oc) =>
-        oc
-          .columns(["documentId", "scope", "branch", "revision"])
-          .doUpdateSet({ document }),
-      )
-      .execute();
+    const write = async (trx: Transaction<Database>): Promise<void> => {
+      // Behind the purge lock, so a purge cannot miss a keyframe written here.
+      await acquirePurgeLocks(trx, [documentId], "shared");
+      const purged = await findPurged(trx, [documentId]);
+      if (purged.has(documentId)) {
+        return;
+      }
+      await trx
+        .insertInto("Keyframe")
+        .values({
+          documentId,
+          documentType: document.header.documentType,
+          scope,
+          branch,
+          revision,
+          document,
+        })
+        .onConflict((oc) =>
+          oc
+            .columns(["documentId", "scope", "branch", "revision"])
+            .doUpdateSet({ document }),
+        )
+        .execute();
+    };
+
+    if (this.trx) {
+      await write(this.trx);
+      return;
+    }
+    await this.db.transaction().execute(write);
   }
 
   async findNearestKeyframe(
