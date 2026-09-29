@@ -53,6 +53,12 @@ import type {
 } from "../storage/interfaces.js";
 import { BatchAggregator, type PreparedBatch } from "./batch-aggregator.js";
 import {
+  pendingDelivery,
+  type DeliveryLookup,
+  type IDeliveryTracking,
+  type PendingDelivery,
+} from "./delivery-tracking.js";
+import {
   ChannelError,
   GraphQLRequestError,
   isDriveAuthError,
@@ -205,7 +211,7 @@ function firstOrdinalOf(syncOp: SyncOperation): number {
     : 0;
 }
 
-export class SyncManager implements ISyncManager {
+export class SyncManager implements ISyncManager, IDeliveryTracking {
   private readonly logger: ILogger;
   private readonly remoteStorage: ISyncRemoteStorage;
   private readonly cursorStorage: ISyncCursorStorage;
@@ -229,6 +235,7 @@ export class SyncManager implements ISyncManager {
   private readonly quarantinedDocumentIds = new Set<string>();
   private readonly purgedDocumentIds = new Set<string>();
   private readonly purges?: PurgeLookup;
+  private readonly delivery?: DeliveryLookup;
   private readonly forgetDocument?: (documentId: string) => void;
   private readonly backfillAbortControllers = new Map<
     string,
@@ -282,9 +289,11 @@ export class SyncManager implements ISyncManager {
     localPeer: LocalPeer = { capabilities: PEER_CAPABILITIES, flags: {} },
     holds: ISyncHoldStorage = new InMemorySyncHoldStorage(),
     purges?: PurgeLookup,
+    delivery?: DeliveryLookup,
   ) {
     this.watermark = watermark;
     this.purges = purges;
+    this.delivery = delivery;
     this.forgetDocument = localPeer.forgetDocument;
     this.capabilities = localPeer.capabilities;
     // A restart always moves the start time forward, which is all ordering needs.
@@ -633,6 +642,27 @@ export class SyncManager implements ISyncManager {
       },
       heldAtUtcMs: record.heldAtUtcMs,
     }));
+  }
+
+  async pendingDelivery(
+    documentId: string,
+    ordinal: number,
+  ): Promise<PendingDelivery[]> {
+    if (!this.delivery) {
+      throw new Error("Delivery tracking needs a delivery lookup");
+    }
+    return pendingDelivery(
+      {
+        remotes: [...this.remotes.values()].filter(
+          (remote) => !this.removing.has(remote.meta.name),
+        ),
+        cursors: this.cursorStorage,
+        holds: this.holds,
+        lookup: this.delivery,
+      },
+      documentId,
+      ordinal,
+    );
   }
 
   agreement(): IPeerAgreement {

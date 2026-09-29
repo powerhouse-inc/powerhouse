@@ -10,6 +10,7 @@ import type {
   ISyncHoldStorage,
   ISyncRemoteStorage,
 } from "../storage/interfaces.js";
+import { deliveryAt } from "../storage/kysely/delivery-lookup.js";
 import { listPurged } from "../storage/kysely/document-purges.js";
 import { KyselySyncCursorStorage } from "../storage/kysely/sync-cursor-storage.js";
 import { KyselySyncDeadLetterStorage } from "../storage/kysely/sync-dead-letter-storage.js";
@@ -131,6 +132,7 @@ export class SyncBuilder {
       localPeer,
       holdStorage,
       { listPurged: () => listPurged(db) },
+      { at: (documentId, ordinal) => deliveryAt(db, documentId, ordinal) },
     );
 
     return {
