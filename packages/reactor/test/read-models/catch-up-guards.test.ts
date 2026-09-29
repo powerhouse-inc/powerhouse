@@ -11,11 +11,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js";
 import type { OperationIndexEntry } from "../../src/cache/operation-index-types.js";
 import type { IWriteCache } from "../../src/cache/write/interfaces.js";
+import { CatchUpScheduler } from "../../src/catch-up/scheduler.js";
 import {
   createKyselyWatermarkProbe,
   SettledWatermark,
 } from "../../src/catch-up/settled-watermark.js";
+import { defaultCatchUpConfig } from "../../src/catch-up/types.js";
 import type { Database } from "../../src/core/types.js";
+import { EventBus } from "../../src/events/event-bus.js";
+import {
+  ReactorEventTypes,
+  type JobWriteReadyEvent,
+} from "../../src/events/types.js";
+import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import {
   DeletedDocumentRead,
   KyselyDocumentView,
@@ -26,6 +34,7 @@ import {
   type IndexerDatabase,
 } from "../../src/storage/kysely/document-indexer.js";
 import { KyselyOperationStore } from "../../src/storage/kysely/store.js";
+import { deferred } from "../factories.js";
 import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
 import {
   REACTOR_SCHEMA,
@@ -66,6 +75,56 @@ function item(
       resultingState: JSON.stringify(resultingState),
     },
   };
+}
+
+function relationship(type: string, index: number): OperationIndexEntry {
+  const actionId = generateId();
+  return {
+    id: generateId(),
+    documentId: "parent",
+    documentType: "powerhouse/document-model",
+    scope: "document",
+    branch: BRANCH,
+    sourceRemote: "",
+    index,
+    timestampUtcMs: "1700000000000",
+    hash: `hash-${index}`,
+    skip: 0,
+    action: {
+      id: actionId,
+      type,
+      scope: "document",
+      timestampUtcMs: "1700000000000",
+      input: {
+        sourceId: "parent",
+        targetId: "child",
+        relationshipType: "child",
+      },
+    },
+  };
+}
+
+/** Holds a chunk carrying one action type before its transaction opens. */
+class HeldIndexer extends KyselyDocumentIndexer {
+  readonly commits: number[][] = [];
+  hold: { type: string; reached: () => void; until: Promise<void> } | undefined;
+
+  protected override async commitOperations(
+    items: OperationWithContext[],
+  ): Promise<void> {
+    const ordinals = items.map((item) => item.context.ordinal);
+    const hold = this.hold;
+    if (
+      hold &&
+      items.some((item) => item.operation.action.type === hold.type)
+    ) {
+      this.hold = undefined;
+      hold.reached();
+      await hold.until;
+    }
+    await super.commitOperations(items);
+    this.commits.push(ordinals);
+  }
 }
 
 describe("catch-up duplicate guards", () => {
@@ -259,32 +318,6 @@ describe("catch-up duplicate guards", () => {
     indexer.attachCatchUp(watermark, 100_000);
     await indexer.init();
 
-    const relationship = (type: string, index: number): OperationIndexEntry => {
-      const actionId = generateId();
-      return {
-        id: generateId(),
-        documentId: "parent",
-        documentType: "powerhouse/document-model",
-        scope: "document",
-        branch: BRANCH,
-        sourceRemote: "",
-        index,
-        timestampUtcMs: "1700000000000",
-        hash: `hash-${index}`,
-        skip: 0,
-        action: {
-          id: actionId,
-          type,
-          scope: "document",
-          timestampUtcMs: "1700000000000",
-          input: {
-            sourceId: "parent",
-            targetId: "child",
-            relationshipType: "child",
-          },
-        },
-      };
-    };
     const txn = operationIndex.start();
     txn.write([
       relationship("ADD_RELATIONSHIP", 0),
@@ -301,5 +334,67 @@ describe("catch-up duplicate guards", () => {
     expect(result).toMatchObject({ replayed: 1, reapplied: 1 });
     const outgoing = await indexer.getOutgoing("parent", ["child"]);
     expect(outgoing.results).toEqual([]);
+  });
+
+  it("does not sweep a batch queued behind its stream's live batch", async () => {
+    const indexer = new HeldIndexer(
+      db as unknown as Kysely<IndexerDatabase>,
+      operationIndex,
+      writeCache,
+      new ConsistencyTracker(),
+    );
+    const watermark = new SettledWatermark(
+      createKyselyWatermarkProbe(db as unknown as Kysely<StorageDatabase>),
+      new ConsoleLogger(["test"]),
+    );
+    indexer.attachCatchUp(watermark, 100_000);
+    await indexer.init();
+
+    const eventBus = new EventBus();
+    const coordinator = new ReadModelCoordinator(eventBus, [indexer], []);
+    coordinator.start();
+    const scheduler = new CatchUpScheduler(
+      watermark,
+      operationIndex,
+      defaultCatchUpConfig,
+      new ConsoleLogger(["test"]),
+    );
+    scheduler.addConsumer(indexer, "host");
+
+    const writeBatch = async (entry: OperationIndexEntry) => {
+      const txn = operationIndex.start();
+      txn.write([entry]);
+      const ordinals = await operationIndex.commit(txn);
+      const operations = await operationIndex.getByOrdinals(ordinals);
+      const event: JobWriteReadyEvent = {
+        jobId: generateId(),
+        operations,
+        jobMeta: { batchId: generateId(), batchJobIds: [] },
+      };
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, event);
+      return ordinals[0]!;
+    };
+
+    const reached = deferred<void>();
+    const release = deferred<void>();
+    indexer.hold = {
+      type: "ADD_RELATIONSHIP",
+      reached: () => reached.resolve(),
+      until: release.promise,
+    };
+    const add = await writeBatch(relationship("ADD_RELATIONSHIP", 0));
+    await reached.promise;
+    const remove = await writeBatch(relationship("REMOVE_RELATIONSHIP", 1));
+
+    await scheduler.sweepNow();
+    release.resolve();
+    await coordinator.drain();
+    await scheduler.sweepNow();
+    await scheduler.stop();
+
+    expect(indexer.commits).toEqual([[add], [remove]]);
+    const outgoing = await indexer.getOutgoing("parent", ["child"]);
+    expect(outgoing.results).toEqual([]);
+    expect(indexer.appliedThrough).toBe(remove);
   });
 });
