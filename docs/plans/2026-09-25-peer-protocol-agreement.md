@@ -505,6 +505,9 @@ if (unsupported) {
   "read-only":        warn; the run check keeps those documents read-only
 }
 ReactorBuilder.withUnsupportedStoredDocuments(mode: "refuse" | "read-only")
+// Hosts: switchboard REACTOR_UNSUPPORTED_STORED_DOCUMENTS; Connect
+// connect.reactor.unsupportedStoredDocuments (the worker gets it in its construct). A refusal
+// names the versions, the count and both ways forward; neither host offers read-only unasked.
 
 // A pre-feature build: its migrator finds 021_add_sync_remote_peer executed and missing
 // ("corrupted migrations"), and buildModule throws "Database migration failed".
