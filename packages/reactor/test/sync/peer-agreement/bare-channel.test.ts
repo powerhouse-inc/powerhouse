@@ -52,6 +52,20 @@ describe("a channel without setLocalManifest and onPeerManifest", () => {
     ]);
   });
 
+  it("never counts document-purge against new documents", async () => {
+    const a = await fleet.node("a", WIDE);
+    const b = await fleet.node("b", WIDE);
+    await fleet.link(a, b, "drive", { a: { bare: true } });
+    const collection = DriveCollectionId.forDrive("drive").key;
+    const agreement = a.sync.agreement();
+
+    expect(
+      agreement.members([collection]).get("a->b")?.protocols["document-purge"],
+    ).toEqual([]);
+    expect(agreement.basis().wanted).not.toHaveProperty("document-purge");
+    expect(agreement.limitedBy(collection, "document-purge")).toEqual([]);
+  });
+
   it("selects the baselines for a child of its collection", async () => {
     const a = await fleet.node("a", WIDE);
     const b = await fleet.node("b", WIDE);

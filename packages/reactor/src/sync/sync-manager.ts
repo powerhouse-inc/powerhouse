@@ -8,6 +8,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   coversLocal,
+  DOCUMENT_PURGE_PROTOCOL,
   isOlderManifest,
   holdReason,
   legacySupports,
@@ -273,6 +274,8 @@ export class SyncManager implements ISyncManager {
     this.legacy = legacySupports(localPeer.capabilities);
     for (const capability of localPeer.capabilities) {
       if (capability.kind !== "protocol") continue;
+      // Only purged documents carry it; no new document takes it.
+      if (capability.name === DOCUMENT_PURGE_PROTOCOL) continue;
       const supported = capability.supported(localPeer.flags);
       const wanted =
         capability.preferred?.(localPeer.flags) ??
