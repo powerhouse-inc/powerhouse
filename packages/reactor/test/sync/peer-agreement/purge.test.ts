@@ -246,6 +246,10 @@ describe("a purged document's marker across peers [Postgres]", () => {
     expect(
       deliveredFor(fleet, "c->a", CHILD).filter((op) => isPurgeMarker(op)),
     ).toHaveLength(1);
-    expect(deliveredFor(fleet, "c->a", DRIVE).length).toBeGreaterThan(0);
+    await vi.waitFor(
+      () =>
+        expect(deliveredFor(fleet, "c->a", DRIVE).length).toBeGreaterThan(0),
+      WAIT,
+    );
   });
 });
