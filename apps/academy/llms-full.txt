@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-29T21:59:42.170Z
+> Generated: 2026-09-29T22:10:49.958Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -5330,7 +5330,7 @@ interface IProcessor {
 
 `onOperations` is called post-ready with the operations that matched this processor's filter, during both live routing and backfill. Each `OperationWithContext` is `{ operation, context }`; `context` carries `documentId`, `documentType`, `scope`, `branch`, the global `ordinal`, and optionally `resultingState`.
 
-`onDisconnect` runs when the factory is unregistered or its drive is deleted. The manager wraps this call: a throw is caught and logged, never propagated.
+`onDisconnect` runs when the factory is unregistered or its drive is deleted. The manager wraps this call: a throw is caught and logged, never propagated. It is not a deletion signal; see [Deletion and erasure](#deletion-and-erasure).
 
 Most processors subclass `RelationalDbProcessor` rather than implementing `IProcessor` by hand. Its constructor takes `(namespace, filter, relationalDb)`, and you implement `onOperations`, `initAndUpgrade`, and `onDisconnect`. See [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling) for the relational DB surface.
 
@@ -5479,6 +5479,16 @@ type TrackedProcessor = {
 **Failure isolation.** Processors run in parallel, each on its own queue. If `onOperations` throws, or a backfill page cannot be read, that processor goes to `status: "errored"`, its `lastError` and `lastErrorTimestamp` are recorded, and its cursor is set below the lowest ordinal of the batch that failed. Other processors are unaffected. There is no automatic retry: an errored processor stays errored, and later batches that match it are skipped and pull its cursor below them likewise, until you call `tracked.retry()` (which re-activates it and replays from the cursor) or re-register its factory. See [Error handling](/academy/Reference/Reactor/ErrorHandling).
 
 To inspect state, use the manager: `get(processorId)` for one processor or `getAll()` for every tracked processor across all drives.
+
+## Deletion and erasure
+
+A processor owns the rows it writes, and it must erase a document's rows when the document is deleted. The reactor removes its own records of a deleted or purged document; nothing else removes a processor's. A processor that ignores deletions keeps a purged document's rows. There is no purge callback, and `IProcessor` has no other hook for it.
+
+- `DELETE_DOCUMENT` and `PURGE_DOCUMENT` both name the document in `operation.action.input.documentId`. Treat them alike. `PURGE_DOCUMENT` is the marker a purge leaves in the log; a reactor that missed the deletion receives only the marker.
+- Both are `document`-scope operations. A filter whose `scope` omits `"document"` never receives them.
+- The marker can arrive without `resultingState`, after the document's `DELETE_DOCUMENT`, and more than once. Handle deletions before parsing `resultingState`, and make the handler idempotent.
+- Operations of a purged document other than its marker are not delivered, whether routed live or read by a backfill. The check takes no lock, so a delivery racing the purge can still land; the marker that follows erases it.
+- When a drive is deleted, its processors receive the batch up to and including the drive's `DELETE_DOCUMENT` (or its marker), then `onDisconnect`. The drive's own deletion reaches them whatever their filter, so a processor can drop the storage it keeps for that drive. `RelationalDbProcessor` has `deleteDocumentRows`, `isNamespaceDrive` and `dropNamespace` for this.
 
 For how processors relate to sync and remote drives, see [Synchronization](/academy/Reference/Reactor/Synchronization). For the document types a filter can target, see the [Document model registry](/academy/Reference/Reactor/DocumentModelRegistry).
 
