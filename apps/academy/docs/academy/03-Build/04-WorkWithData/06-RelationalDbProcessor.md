@@ -64,6 +64,7 @@ export async function up(db: IRelationalDb<any>): Promise<void> {
   // Create table - this runs when the processor starts
   await db.schema
     .createTable("todo") // Creates a new table named "todo"
+    .addColumn("document_id", "varchar(255)", (col) => col.notNull()) // The document the row came from
     .addColumn("task", "varchar(255)") // Text column for the task description (max 255 characters)
     .addColumn("status", "boolean") // Boolean column for completion status (true/false)
     .addPrimaryKeyConstraint("todo_pkey", ["task"]) // Makes "task" the primary key (unique identifier)
@@ -80,6 +81,7 @@ export async function down(db: IRelationalDb<any>): Promise<void> {
 **Design Considerations:**
 
 - We're using `task` as the primary key, which means each task description must be unique
+- `document_id` records which document each row came from, so the processor can delete a document's rows when the document is deleted (see [Erase a deleted document](#erase-a-deleted-document))
 - The `varchar(255)` limit ensures reasonable memory usage
 - The `boolean` status makes it easy to filter completed vs. incomplete tasks
 - Consider adding timestamps (`created_at`, `updated_at`) for audit trails in production applications
@@ -109,6 +111,7 @@ Check your `processors/todo-indexer/schema.ts` file after generation - it will c
 // This is what gets auto-generated based on your migration
 export interface Database {
   todo: {
+    document_id: string;
     task: string;
     status: boolean;
   };
@@ -160,7 +163,7 @@ export const todoIndexerProcessorFactory =
       branch: ["main"], // Only process changes from the "main" branch
       documentId: ["*"], // Process changes from any document ID (* = wildcard)
       documentType: ["powerhouse/todo-list"], // Only process todo-list documents
-      scope: ["global"], // Process global changes (not user-specific)
+      scope: ["global", "document"], // Global changes, plus deletions
     };
 
     // Create the processor instance
@@ -179,7 +182,7 @@ export const todoIndexerProcessorFactory =
 - **`branch`**: Which document branches to monitor (usually "main" for production data)
 - **`documentId`**: Specific document IDs to watch ("\*" means all documents)
 - **`documentType`**: Document types to process (ensures type safety)
-- **`scope`**: Whether to process global changes or user-specific ones
+- **`scope`**: Which scopes to process. `"global"` carries shared state changes; `"document"` carries `DELETE_DOCUMENT` and `PURGE_DOCUMENT`, which the processor needs to erase a document's rows
 
 ## Implement the Processor Logic
 
@@ -233,11 +236,27 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
 
     // Process each operation
     for (const { operation, context } of operations) {
+      // A deleted or purged document: remove its rows, or the drive's namespace
+      const type = operation.action.type;
+      if (type === "DELETE_DOCUMENT" || type === "PURGE_DOCUMENT") {
+        const input = operation.action.input as { documentId?: string };
+        const documentId = input.documentId ?? context.documentId;
+        if (this.isNamespaceDrive(documentId)) {
+          await this.dropNamespace();
+          return;
+        }
+        await this.deleteDocumentRows(documentId);
+        continue;
+      }
+      // The rest of the document scope carries nothing to index
+      if (context.scope !== "global") continue;
+
       // Insert a record for each operation into the database
       // This is a simple example - you might want more sophisticated logic
       await this.relationalDb
         .insertInto("todo")
         .values({
+          document_id: context.documentId,
           // Create a unique task identifier combining document ID, operation index, and type
           task: `${context.documentId}-${operation.index}: ${operation.action.type}`,
           status: true, // Default to completed status
@@ -256,6 +275,24 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
   }
 }
 ```
+
+### Erase a deleted document
+
+A processor's rows are its own: when a document is deleted or purged, the reactor removes its own records of the document, but only the processor removes the rows it wrote. A processor that ignores deletions keeps a deleted document's rows, including a purged one's. There is no separate purge callback, and `onDisconnect()` is not a deletion signal: it also runs when the processor's factory is unregistered or reloaded.
+
+Handle `DELETE_DOCUMENT` and `PURGE_DOCUMENT` the same way, before anything that parses `context.resultingState`. `PURGE_DOCUMENT` is the marker a purge leaves in the operation log. A reactor that missed the `DELETE_DOCUMENT` receives only the marker, and the marker can arrive with no `resultingState` and more than once, so keep the handler idempotent. After a purge, the reactor delivers the purged document's marker and none of its earlier operations.
+
+`RelationalDbProcessor` has three helpers for this:
+
+| Method                           | What it does                                                                                                           |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `deleteDocumentRows(documentId)` | Deletes the document's rows from every table in the processor's namespace with a `document_id` or `documentId` column |
+| `isNamespaceDrive(driveId)`      | `true` when `driveId` is the drive the processor's namespace was created for                                           |
+| `dropNamespace()`                | Drops the processor's namespace with every table in it                                                                 |
+
+A table without a `document_id` or `documentId` column is not touched by `deleteDocumentRows`. Delete its rows yourself in the same branch.
+
+When a drive is deleted, its processors receive the batch up to and including the drive's `DELETE_DOCUMENT` (or `PURGE_DOCUMENT`), then `onDisconnect()`. The drive's own deletion reaches them whatever their filter, so the processor above drops its namespace even though its `documentType` filter names only `powerhouse/todo-list`. The generated processor includes this handling.
 
 ## Expose Data Through a Subgraph
 

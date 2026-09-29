@@ -28,11 +28,12 @@ export const ${v.camelCaseName}FactoryBuilder: ProcessorFactoryBuilder = (module
 
   // Create a filter for the processor. An omitted field matches every value.
   // Only \`documentId\` honours "*", so "*" elsewhere would match nothing.
+  // Scope "document" carries DELETE_DOCUMENT and PURGE_DOCUMENT.
   const filter: ProcessorFilter = ${renderProcessorFilter({
     branch: ["main"],
     documentId: ["*"],
     documentType: v.documentTypes,
-    scope: ["global"],
+    scope: ["global", "document"],
   })};
 
   // Create the processor

@@ -71,12 +71,18 @@ export interface IProcessor {
    * Across documents there is no ordering guarantee. A processor receives one
    * `onOperations` call at a time; the next call begins after the previous
    * resolves.
+   *
+   * A drive's processors also receive the drive's own DELETE_DOCUMENT or
+   * PURGE_DOCUMENT, whatever the filter, as the last delivery before
+   * `onDisconnect`. A purged document's operations other than its marker are
+   * not delivered. Erase a document's data on either deletion action.
    */
   onOperations(operations: OperationWithContext[]): Promise<void>;
 
   /**
    * Called when the processor is disconnected.
    * Used to clean up any resources allocated during processor creation.
+   * Also runs when the factory is unregistered, so it is not a deletion signal.
    */
   onDisconnect(): Promise<void>;
 }

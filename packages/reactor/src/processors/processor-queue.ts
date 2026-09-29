@@ -1,4 +1,7 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import {
+  isPurgeMarker,
+  type OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import type {
   IProcessor,
   ProcessorFilter,
@@ -27,11 +30,27 @@ export type ProcessorQueueOptions = {
   /** The manager's appliedThrough; the cursor never passes it. */
   confirmedThrough: () => number;
   persist: (cursor: ProcessorCursorState) => Promise<void>;
+  /** Tombstoned ids among `ids`; takes no purge lock. */
+  purged: (ids: string[]) => Promise<ReadonlySet<string>>;
   logger: ILogger;
 };
 
+/** Tombstoned ids a live batch was checked against, as routing started it. */
+export type LiveCheck = {
+  purged: Promise<ReadonlySet<string>>;
+  /** Ordinals delivered even when tombstoned. */
+  keep?: ReadonlySet<number>;
+};
+
+type LiveDelivery = {
+  kind: "live";
+  ops: OperationWithContext[];
+  check: LiveCheck | undefined;
+  done: () => void;
+};
+
 type Delivery =
-  | { kind: "live"; ops: OperationWithContext[]; done: () => void }
+  | LiveDelivery
   | { kind: "advance"; through: number; done: () => void };
 
 type Task =
@@ -54,6 +73,30 @@ function lowestOf(ops: OperationWithContext[]): number {
   let lowest = ops[0]!.context.ordinal;
   for (const op of ops) lowest = Math.min(lowest, op.context.ordinal);
   return lowest;
+}
+
+/** Drops operations of tombstoned ids; the marker always passes. */
+export function withoutPurged(
+  ops: OperationWithContext[],
+  purged: ReadonlySet<string>,
+  keep?: ReadonlySet<number>,
+): OperationWithContext[] {
+  if (purged.size === 0) return ops;
+  return ops.filter(
+    (op) =>
+      isPurgeMarker(op.operation) ||
+      !purged.has(op.context.documentId) ||
+      keep?.has(op.context.ordinal) === true,
+  );
+}
+
+/** The ids whose tombstone would drop an operation of `ops`. */
+export function purgeCandidates(ops: OperationWithContext[]): string[] {
+  const ids = new Set<string>();
+  for (const op of ops) {
+    if (!isPurgeMarker(op.operation)) ids.add(op.context.documentId);
+  }
+  return [...ids];
 }
 
 function highestOf(ops: OperationWithContext[]): number {
@@ -81,8 +124,8 @@ export class ProcessorQueue {
   }
 
   /** Resolves at once behind a replay, so a pass never waits out a backfill. */
-  live(ops: OperationWithContext[]): Promise<void> {
-    const delivered = this.push((done) => ({ kind: "live", ops, done }));
+  live(ops: OperationWithContext[], check?: LiveCheck): Promise<void> {
+    const delivered = this.push((done) => ({ kind: "live", ops, check, done }));
     return this.replaysAhead > 0 ? Promise.resolve() : delivered;
   }
 
@@ -222,12 +265,40 @@ export class ProcessorQueue {
       return;
     }
 
-    if (!(await this.deliver(fresh))) {
+    let live: OperationWithContext[];
+    try {
+      live = await this.dropPurgedLive(batch, fresh);
+    } catch (error) {
+      this.markErrored(error);
+      this.options.logger.error(
+        "Processor '@ProcessorId' failed checking tombstones: @Error",
+        this.options.processorId,
+        error,
+      );
+      await this.parkBelow(fresh);
+      return;
+    }
+
+    if (live.length > 0 && !(await this.deliver(live))) {
       await this.parkBelow(fresh);
       return;
     }
 
     await this.raiseCursor(Math.max(highestOf(fresh), through));
+  }
+
+  private async dropPurgedLive(
+    batch: Delivery[],
+    fresh: OperationWithContext[],
+  ): Promise<OperationWithContext[]> {
+    const purged = new Set<string>();
+    const keep = new Set<number>();
+    for (const task of batch) {
+      if (task.kind !== "live" || !task.check) continue;
+      for (const id of await task.check.purged) purged.add(id);
+      for (const ordinal of task.check.keep ?? []) keep.add(ordinal);
+    }
+    return withoutPurged(fresh, purged, keep);
   }
 
   private async runBackfill(): Promise<void> {
@@ -248,13 +319,25 @@ export class ProcessorQueue {
       const matching = page.results.filter(
         (op) => op.context.ordinal > floor && matchesFilter(op, filter),
       );
+      let live: OperationWithContext[] = matching;
       if (matching.length > 0) {
-        if (!(await this.deliver(matching))) {
+        try {
+          live = withoutPurged(
+            matching,
+            await this.options.purged(purgeCandidates(matching)),
+          );
+        } catch (error) {
+          await this.fail(error, "checking tombstones");
+          return;
+        }
+      }
+      if (live.length > 0) {
+        if (!(await this.deliver(live))) {
           await this.persist();
           return;
         }
-        this.dedupeQueued(matching);
       }
+      if (matching.length > 0) this.dedupeQueued(matching);
 
       await this.raiseCursor(highestOf(page.results));
 

@@ -5,6 +5,8 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 
 import { createAnalyticsStore } from "@powerhousedao/reactor-browser";
 import {
+  purgeDocumentAction,
+  purgeMarkerOperation,
   type DocumentModelModule,
   type OperationWithContext,
   type PHDocumentHeader,
@@ -28,7 +30,10 @@ import { cpForce, mkdirRecursive, rmForce, runTsc } from "../utils.js";
 import { PGlite } from "@electric-sql/pglite";
 import { live } from "@electric-sql/pglite/live";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
-import { createRelationalDb } from "@powerhousedao/shared/processors";
+import {
+  createRelationalDb,
+  hashNamespace,
+} from "@powerhousedao/shared/processors";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 
@@ -473,6 +478,193 @@ describe("generate processor", () => {
     }>;
     const rows = await processor.query.selectFrom("todo").selectAll().execute();
     expect(rows).toEqual([]);
+  });
+
+  describe("erasure at deletion", () => {
+    function deletionOp(
+      documentId: string,
+      documentType: string,
+    ): OperationWithContext {
+      return {
+        operation: {
+          id: `delete-${documentId}`,
+          index: 1,
+          skip: 0,
+          hash: "",
+          timestampUtcMs: new Date().toISOString(),
+          action: {
+            id: `delete-action-${documentId}`,
+            type: "DELETE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: new Date().toISOString(),
+            input: { documentId },
+          },
+        },
+        context: {
+          documentId,
+          documentType,
+          scope: "document",
+          branch: "main",
+          ordinal: 1,
+        },
+      };
+    }
+
+    // Sweeps and boot replay deliver the marker with no resultingState.
+    function markerOp(
+      documentId: string,
+      documentType: string,
+    ): OperationWithContext {
+      const operation = purgeMarkerOperation(
+        purgeDocumentAction({ documentId, documentType, requestId: "r" }),
+      );
+      return {
+        operation,
+        context: {
+          documentId,
+          documentType,
+          scope: "document",
+          branch: "main",
+          ordinal: 2,
+        },
+      };
+    }
+
+    async function generateInto(
+      outDirName: string,
+      processorName: string,
+      processorType: "analytics" | "relationalDb",
+    ) {
+      const outDir = join(parentOutDir, outDirName);
+      await cpForce(NEW_PROJECT, outDir);
+      const project = buildTsMorphProject(outDir);
+      await generateProcessor(
+        {
+          processorName,
+          processorType,
+          documentTypes: ["billing-statement"],
+          processorApps: ["switchboard"],
+        },
+        project,
+      );
+      await project.save();
+      await runTsc(outDir);
+      return join(outDir, "processors", processorName);
+    }
+
+    function hostModule(
+      relationalDb: IProcessorHostModuleBase["relationalDb"],
+      analyticsStore: IProcessorHostModuleBase["analyticsStore"],
+    ): IProcessorHostModuleBase {
+      return {
+        processorApp: "switchboard",
+        analyticsStore,
+        relationalDb,
+        dispatch: {
+          execute: () => Promise.resolve({ id: "mock", status: "mock" }),
+        },
+        getReadModel: () => {
+          throw new Error("No read models in test");
+        },
+      };
+    }
+
+    it("should delete a document's rows on its deletion and drop the namespace on its drive's", async () => {
+      const dir = await generateInto(
+        "relational-db-erasure",
+        "relational-erasure",
+        "relationalDb",
+      );
+      const factorySource = await readFile(join(dir, "factory.ts"), "utf-8");
+      expect(factorySource).toContain(`scope: ["global", "document"],`);
+
+      const { pgLite, relationalDb } = await getDb();
+      const { store } = await createAnalyticsStore({ pgLite });
+      const { relationalErasureFactoryBuilder: factoryBuilder } = (await import(
+        join(dir, "factory.ts")
+      )) as {
+        relationalErasureFactoryBuilder: ProcessorFactoryBuilder;
+      };
+      const factory = await factoryBuilder(hostModule(relationalDb, store));
+      const driveId = "erasure-drive";
+      const [record] = await factory(
+        { id: driveId } as PHDocumentHeader,
+        "switchboard",
+      );
+      const processor = record!.processor as IRelationalDbProcessor<{
+        todo: { document_id: string; task: string; status: boolean | null };
+      }>;
+      const schema = hashNamespace(processor.namespace);
+      const todo = () =>
+        pgLite.query<{ document_id: string; task: string }>(
+          `select document_id, task from "${schema}".todo order by task`,
+        );
+      await pgLite.query(
+        `insert into "${schema}".todo (document_id, task, status)
+         values ('doc-a', 'a1', null), ('doc-a', 'a2', null),
+                ('doc-b', 'b1', null), ('doc-c', 'c1', null)`,
+      );
+
+      await processor.onOperations([deletionOp("doc-a", "billing-statement")]);
+      expect((await todo()).rows.map((row) => row.task)).toEqual(["b1", "c1"]);
+
+      await processor.onOperations([markerOp("doc-b", "billing-statement")]);
+      expect((await todo()).rows.map((row) => row.task)).toEqual(["c1"]);
+
+      await processor.onOperations([
+        deletionOp(driveId, "powerhouse/document-drive"),
+      ]);
+      const schemas = await pgLite.query<{ schema_name: string }>(
+        `select schema_name from information_schema.schemata
+         where schema_name = $1`,
+        [schema],
+      );
+      expect(schemas.rows).toEqual([]);
+      await pgLite.close();
+    });
+
+    it("should clear a document's analytics series on its deletion", async () => {
+      const dir = await generateInto(
+        "analytics-erasure",
+        "analytics-erasure",
+        "analytics",
+      );
+      const { pgLite, relationalDb } = await getDb();
+      const { store } = await createAnalyticsStore({ pgLite });
+      const { analyticsErasureFactoryBuilder: factoryBuilder } = (await import(
+        join(dir, "factory.ts")
+      )) as {
+        analyticsErasureFactoryBuilder: ProcessorFactoryBuilder;
+      };
+      const factory = await factoryBuilder(hostModule(relationalDb, store));
+      const [record] = await factory(
+        { id: "analytics-drive" } as PHDocumentHeader,
+        "switchboard",
+      );
+      const processor = record!.processor;
+      await pgLite.query(
+        `insert into "AnalyticsSeries" (source, start, metric, value, fn)
+         values ('ph/doc/doc-a/main/global', now(), 'Ops', 1, 'Single'),
+                ('ph/doc/doc-b/main/global', now(), 'Ops', 1, 'Single'),
+                ('ph/doc/doc-c/main/global', now(), 'Ops', 1, 'Single')`,
+      );
+      const sources = async () =>
+        (
+          await pgLite.query<{ source: string }>(
+            `select source from "AnalyticsSeries" order by source`,
+          )
+        ).rows.map((row) => row.source);
+
+      await processor.onOperations([deletionOp("doc-a", "billing-statement")]);
+      expect(await sources()).toEqual([
+        "ph/doc/doc-b/main/global",
+        "ph/doc/doc-c/main/global",
+      ]);
+
+      await processor.onOperations([markerOp("doc-b", "billing-statement")]);
+      expect(await sources()).toEqual(["ph/doc/doc-c/main/global"]);
+      await pgLite.close();
+    });
   });
 
   // A customized processor's files are only on disk on a fresh project — the
