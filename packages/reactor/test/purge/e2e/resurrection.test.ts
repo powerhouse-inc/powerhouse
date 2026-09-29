@@ -227,14 +227,28 @@ function expectNoBlockedConsumer(node: Node): void {
   expect(blocked, "no consumer cursor is blocked").toEqual([]);
 }
 
+/** Sweeps until every read-model cursor passes `ordinal`; the cluster shares xmin. */
 async function expectCursorsPast(node: Node, ordinal: number): Promise<void> {
-  const status = await readCatchUpStatus(
-    node.db as unknown as Kysely<CatchUpAdminDatabase>,
-  );
-  const behind = status.cursors.filter(
-    (cursor) => cursor.kind === "read-model" && cursor.lastOrdinal < ordinal,
-  );
-  expect(behind, `every read-model cursor at or past ${ordinal}`).toEqual([]);
+  const behind = async () => {
+    const status = await readCatchUpStatus(
+      node.db as unknown as Kysely<CatchUpAdminDatabase>,
+    );
+    return status.cursors.filter(
+      (cursor) => cursor.kind === "read-model" && cursor.lastOrdinal < ordinal,
+    );
+  };
+  await until(
+    `every read-model cursor passes ${ordinal}`,
+    async () => {
+      await node.module.catchUp.sweepNow();
+      return (await behind()).length === 0;
+    },
+    15_000,
+  ).catch(() => undefined);
+  expect(
+    await behind(),
+    `every read-model cursor at or past ${ordinal}`,
+  ).toEqual([]);
 }
 
 describe("resurrection probes [Postgres]", () => {
@@ -688,18 +702,10 @@ describe("resurrection probes [Postgres]", () => {
 
     await expectPurged(node.db, "x", { documentType: DOC_TYPE });
     expectNoBlockedConsumer(node);
-    const status = await readCatchUpStatus(
+    const { head } = await readCatchUpStatus(
       node.db as unknown as Kysely<CatchUpAdminDatabase>,
     );
-    expect(
-      status.cursors
-        .filter((cursor) => cursor.kind === "read-model")
-        .map((cursor) => [cursor.id, cursor.lag]),
-    ).toEqual(
-      status.cursors
-        .filter((cursor) => cursor.kind === "read-model")
-        .map((cursor) => [cursor.id, 0]),
-    );
+    await expectCursorsPast(node, head);
   });
 
   it("a restart with the marker above a model's cursor: boot replay applies it without error or rows", async () => {

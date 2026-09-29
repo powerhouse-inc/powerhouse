@@ -103,6 +103,7 @@ describe("peers without erasure [Postgres]", () => {
     }
 
     const { ordinal } = await purge(host, "x");
+    await expectPurged(host.db, "x", { signerKey: host.key.did });
     for (const remoteName of ["a->s", "a->n"]) {
       await until(
         `the host holds x for ${remoteName}`,

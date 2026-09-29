@@ -40,6 +40,7 @@ describe("marker receipt bypasses reshuffle [Postgres]", () => {
       name: "b",
       db: dbB,
       channelFactory: capture.factory(),
+      catchUpIntervalMs: 50,
     });
   });
 

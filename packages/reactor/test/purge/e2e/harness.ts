@@ -665,6 +665,7 @@ export async function purgeLockWaiters(db: ReactorDb): Promise<number> {
     select count(*) as n from pg_locks
     where locktype = 'advisory' and not granted
       and classid = ${PURGE_NS} and objsubid = 2
+      and database = (select oid from pg_database where datname = current_database())
   `.execute(db);
   return Number(result.rows[0]!.n);
 }

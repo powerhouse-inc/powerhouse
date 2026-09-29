@@ -92,8 +92,10 @@ describe("two reactors on Postgres under authEnforcement", () => {
   let b: Node;
   let extra: Node | undefined;
 
+  // B holds the child before anything else happens to it.
   async function child(id: string): Promise<void> {
     await a.client.create(createDocModelDocument({ id }), DRIVE);
+    await receivedOn(b, id, "CREATE_DOCUMENT");
   }
 
   async function edit(id: string): Promise<void> {
@@ -253,6 +255,7 @@ describe("two reactors on Postgres under authEnforcement", () => {
       .filter((op) => op.context.documentId === "x")
       .map((op) => op.operation.action.type);
     expect(servedForX).toEqual(["PURGE_DOCUMENT"]);
+    await expectPurged(a.db, "x");
     expectNoGateErrors();
   });
 
@@ -283,6 +286,7 @@ describe("two reactors on Postgres under authEnforcement", () => {
           op.operation.action.type === "DELETE_DOCUMENT",
       );
     expect(deletesServed, "B never received w's delete").toEqual([]);
+    await expectPurged(a.db, "w");
     expect(mesh.deliveredOperations(toB).length).toBeGreaterThan(0);
     await expect(b.module.documentView.get("w")).rejects.toThrow();
   });
@@ -312,6 +316,7 @@ describe("two reactors on Postgres under authEnforcement", () => {
     await a.client.deleteDocument("q");
     await purge(a, "q");
 
+    await expectPurged(a.db, "q");
     await waitForTombstone(b.db, "q");
     await expectPurged(b.db, "q", {
       documentType: DOC_TYPE,
