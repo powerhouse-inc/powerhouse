@@ -11,6 +11,9 @@ import {
 } from "../../scripts/ui-stack.js";
 import { expect, test } from "./fixtures.js";
 
+// Every test adds the documents it needs.
+test.use({ seed: false });
+
 interface Graph {
   steps: { id: string; key: string; pieceName: string; actionName: string }[];
   edges: { id: string; from: string; to: string; port: string }[];

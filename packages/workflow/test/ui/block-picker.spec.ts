@@ -106,41 +106,48 @@ test.describe("Block picker", () => {
     await expect(canvasNode(app, "Find documents")).toHaveCount(0);
   });
 
-  test("shows the version unasked when other steps use another one", async ({
-    stack,
-    app,
-  }) => {
-    const http = await pieceAction("@activepieces/piece-http", "send_request");
-    const id = await createWorkflowInBrowser(app, stack.drive, {
-      name: "Mixed versions",
-      enabled: false,
-      trigger: { ...(await coreTrigger("manual")), config: {} },
-      steps: [
-        {
-          key: "old",
-          name: "Old call",
-          ...http,
-          pieceVersion: "90.0.0",
-          config: { method: "GET", url: "http://127.0.0.1:1/x" },
-        },
-      ],
+  test.describe("on a workflow of its own", () => {
+    test.use({ seed: false });
+
+    test("shows the version unasked when other steps use another one", async ({
+      stack,
+      app,
+    }) => {
+      const http = await pieceAction(
+        "@activepieces/piece-http",
+        "send_request",
+      );
+      const id = await createWorkflowInBrowser(app, stack.drive, {
+        name: "Mixed versions",
+        enabled: false,
+        trigger: { ...(await coreTrigger("manual")), config: {} },
+        steps: [
+          {
+            key: "old",
+            name: "Old call",
+            ...http,
+            pieceVersion: "90.0.0",
+            config: { method: "GET", url: "http://127.0.0.1:1/x" },
+          },
+        ],
+      });
+      await waitServed(id, "old");
+      await openWorkflowEditor(app, "Mixed versions");
+      await canvasNode(app, "Old call").waitFor();
+      await app.locator(".react-flow__node-apAppend button").last().click();
+      await app
+        .getByPlaceholder("Search pieces, actions, triggers…")
+        .fill("HTTP");
+      const row = app
+        .getByRole("button")
+        .filter({ hasText: "Send HTTP request" })
+        .first();
+      const version = row.getByText(VERSION);
+      await expect(version).toBeVisible();
+      await expect(version).toHaveAttribute(
+        "title",
+        "Other steps of this workflow use v90.0.0",
+      );
     });
-    await waitServed(id, "old");
-    await openWorkflowEditor(app, "Mixed versions");
-    await canvasNode(app, "Old call").waitFor();
-    await app.locator(".react-flow__node-apAppend button").last().click();
-    await app
-      .getByPlaceholder("Search pieces, actions, triggers…")
-      .fill("HTTP");
-    const row = app
-      .getByRole("button")
-      .filter({ hasText: "Send HTTP request" })
-      .first();
-    const version = row.getByText(VERSION);
-    await expect(version).toBeVisible();
-    await expect(version).toHaveAttribute(
-      "title",
-      "Other steps of this workflow use v90.0.0",
-    );
   });
 });

@@ -180,40 +180,65 @@ export function defaultsOf(
 }
 
 // Each block's piece defaults, which the editor writes when a step is added.
+// Descriptors don't change during a run: one answer per block, per process.
+const descriptorProps = new Map<string, Promise<Record<string, unknown>>>();
+
+function blockPropDefaults(
+  ref: ReturnType<typeof refOf>,
+): Promise<Record<string, unknown>> {
+  const cacheKey = JSON.stringify(ref);
+  let pending = descriptorProps.get(cacheKey);
+  if (!pending) {
+    pending = fetchPropDefaults(ref);
+    pending.catch(() => descriptorProps.delete(cacheKey));
+    descriptorProps.set(cacheKey, pending);
+  }
+  return pending;
+}
+
+async function fetchPropDefaults(
+  ref: ReturnType<typeof refOf>,
+): Promise<Record<string, unknown>> {
+  const data = await gql<{
+    workflowRuntime: {
+      blockDescriptor: {
+        action?: {
+          props?: { name: string; type: string; defaultValue?: unknown }[];
+        };
+        trigger?: {
+          props?: { name: string; type: string; defaultValue?: unknown }[];
+        };
+      } | null;
+    };
+  }>(
+    "/graphql/workflow-runtime",
+    `query($block: BlockInput!) { workflowRuntime { blockDescriptor(block: $block) } }`,
+    { block: ref },
+  );
+  const entry =
+    data.workflowRuntime.blockDescriptor?.action ??
+    data.workflowRuntime.blockDescriptor?.trigger;
+  return Object.fromEntries(
+    (entry?.props ?? [])
+      .filter(
+        (prop) => prop.type !== "MARKDOWN" && prop.defaultValue !== undefined,
+      )
+      .map((prop) => [prop.name, prop.defaultValue]),
+  );
+}
+
 export async function blockDefaults(blocks: AnyBlock[]): Promise<Defaults> {
-  const out: Defaults = {};
+  const refs = new Map<string, ReturnType<typeof refOf>>();
   for (const block of blocks) {
     const ref = refOf(block);
-    const key = blockKey(ref);
-    if (key in out) continue;
-    const data = await gql<{
-      workflowRuntime: {
-        blockDescriptor: {
-          action?: {
-            props?: { name: string; type: string; defaultValue?: unknown }[];
-          };
-          trigger?: {
-            props?: { name: string; type: string; defaultValue?: unknown }[];
-          };
-        } | null;
-      };
-    }>(
-      "/graphql/workflow-runtime",
-      `query($block: BlockInput!) { workflowRuntime { blockDescriptor(block: $block) } }`,
-      { block: ref },
-    );
-    const entry =
-      data.workflowRuntime.blockDescriptor?.action ??
-      data.workflowRuntime.blockDescriptor?.trigger;
-    out[key] = Object.fromEntries(
-      (entry?.props ?? [])
-        .filter(
-          (prop) => prop.type !== "MARKDOWN" && prop.defaultValue !== undefined,
-        )
-        .map((prop) => [prop.name, prop.defaultValue]),
-    );
+    if (!refs.has(blockKey(ref))) refs.set(blockKey(ref), ref);
   }
-  return out;
+  const entries = await Promise.all(
+    [...refs].map(
+      async ([key, ref]) => [key, await blockPropDefaults(ref)] as const,
+    ),
+  );
+  return Object.fromEntries(entries);
 }
 
 export async function gql<T>(path: string, query: string, variables = {}) {
@@ -253,13 +278,32 @@ export async function createSecret(
   return data.workflowRuntime.createSecret.ref;
 }
 
-async function pieceListing<K extends "pieceActions" | "pieceTriggers">(
-  kind: K,
-  pkg: string,
-): Promise<{
+interface PieceListing {
   version: string;
   entries: { name: string }[];
-}> {
+}
+
+// Cached per process, like the descriptors.
+const listings = new Map<string, Promise<PieceListing>>();
+
+function pieceListing(
+  kind: "pieceActions" | "pieceTriggers",
+  pkg: string,
+): Promise<PieceListing> {
+  const key = `${kind} ${pkg}`;
+  let pending = listings.get(key);
+  if (!pending) {
+    pending = fetchPieceListing(kind, pkg);
+    pending.catch(() => listings.delete(key));
+    listings.set(key, pending);
+  }
+  return pending;
+}
+
+async function fetchPieceListing<K extends "pieceActions" | "pieceTriggers">(
+  kind: K,
+  pkg: string,
+): Promise<PieceListing> {
   const data = await gql<{
     workflowRuntime: Record<
       K,
@@ -619,22 +663,12 @@ export async function openSeededPage(
   options: {
     colorScheme?: "light" | "dark";
     viewport?: { width: number; height: number };
+    // False leaves the drive empty, for tests that add their own documents.
+    seed?: boolean;
   } = {},
 ): Promise<SeededPage> {
   const driveSlug = `ui-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const drive = await createRemoteDrive(driveSlug);
-  const blocks = {
-    http: await pieceAction("@activepieces/piece-http", "send_request"),
-    parseUrl: await pieceAction("@activepieces/piece-http", "parse_url"),
-    openai: await pieceAction("@activepieces/piece-openai", "ask_chatgpt"),
-    slack: await pieceAction(
-      "@activepieces/piece-slack",
-      "send_channel_message",
-    ),
-    schedule: await coreTrigger("schedule"),
-    manual: await coreTrigger("manual"),
-  };
-
   const context = await browser.newContext({
     viewport: options.viewport ?? { width: 1440, height: 900 },
     colorScheme: options.colorScheme ?? "light",
@@ -669,7 +703,19 @@ export async function openSeededPage(
       { timeout: 60_000, polling: 500 },
     );
   await driveReady();
+  if (options.seed === false) {
+    return { context, page, seeded: unseeded(), drive };
+  }
 
+  const [http, parseUrl, openai, slack, schedule, manual] = await Promise.all([
+    pieceAction("@activepieces/piece-http", "send_request"),
+    pieceAction("@activepieces/piece-http", "parse_url"),
+    pieceAction("@activepieces/piece-openai", "ask_chatgpt"),
+    pieceAction("@activepieces/piece-slack", "send_channel_message"),
+    coreTrigger("schedule"),
+    coreTrigger("manual"),
+  ]);
+  const blocks = { http, parseUrl, openai, slack, schedule, manual };
   const botTokenRef = await createSecret(
     "xoxb-demo-token",
     "Ops Slack · Bot Token",
@@ -702,9 +748,21 @@ export async function openSeededPage(
     }
   }
   // One succeeded and one failed run, for the runs views.
-  await fireWhenSynced(seeded.smoke);
-  await fireWhenSynced(seeded.ping, { url: "https://status.acme.dev/health" });
+  await Promise.all([
+    fireWhenSynced(seeded.smoke),
+    fireWhenSynced(seeded.ping, { url: "https://status.acme.dev/health" }),
+  ]);
   return { context, page, seeded, drive };
+}
+
+// Stands in for the seed on an unseeded drive; reading it is a test bug.
+function unseeded(): Seeded {
+  return new Proxy({} as Seeded, {
+    get(_target, key) {
+      if (typeof key === "symbol" || key === "then") return undefined;
+      throw new Error(`No seeded ${String(key)}: this test runs with seed off`);
+    },
+  });
 }
 
 // ─── extra documents, for tests that need their own ────────────────────────
@@ -751,7 +809,16 @@ export async function createWorkflowInBrowser(
       const wf = (await import(
         `/@fs${root}/packages/workflow/document-models/workflow/v1/index.ts`
       )) as typeof WorkflowModel;
-      const doc = await client.drives.addFile(drive, wf.utils.createDocument());
+      // An unseeded drive may not accept files yet; as in the seed, retry.
+      let doc: { header: { id: string } } | undefined;
+      for (let attempt = 0; !doc; attempt++) {
+        try {
+          doc = await client.drives.addFile(drive, wf.utils.createDocument());
+        } catch (error) {
+          if (attempt >= 30) throw error;
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
       const id = doc.header.id;
       const actions: unknown[] = [
         wf.setWorkflowName({ name: spec.name }),
@@ -801,7 +868,16 @@ export function createConnectionInBrowser(
       const cn = (await import(
         `/@fs${root}/packages/workflow/document-models/connection/v1/index.ts`
       )) as typeof ConnectionModel;
-      const doc = await client.drives.addFile(drive, cn.utils.createDocument());
+      // An unseeded drive may not accept files yet; as in the seed, retry.
+      let doc: { header: { id: string } } | undefined;
+      for (let attempt = 0; !doc; attempt++) {
+        try {
+          doc = await client.drives.addFile(drive, cn.utils.createDocument());
+        } catch (error) {
+          if (attempt >= 30) throw error;
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
       const id = doc.header.id;
       const actions: unknown[] = [
         cn.setConnectionName({ name: spec.name }),
@@ -881,9 +957,10 @@ export async function openWorkflowEditor(page: Page, name = "Daily digest") {
   await page.locator(".react-flow__node").first().waitFor();
 }
 
-// Review screenshots; UI_SHOTS_DIR points them somewhere else.
+// Review screenshots, taken only when UI_SHOTS_DIR says where they go.
 export async function shot(page: Page, name: string): Promise<void> {
-  const dir = process.env.UI_SHOTS_DIR ?? join(PKG, "test-results/shots");
+  const dir = process.env.UI_SHOTS_DIR;
+  if (!dir) return;
   mkdirSync(dir, { recursive: true });
   await page.screenshot({ path: join(dir, `${name}.png`) });
 }
