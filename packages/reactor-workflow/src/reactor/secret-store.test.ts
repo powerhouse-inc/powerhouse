@@ -1,13 +1,10 @@
 // LocalEncryptedSecretStore over a real PGlite-backed relational namespace:
 // lifecycle, encryption at rest, tombstones, and key handling.
-import { createTestRelationalDb } from "../../test/helpers/pglite.js";
-import { PGlite } from "@electric-sql/pglite";
 import {
-  createRelationalDb,
-  type IRelationalDb,
-} from "@powerhousedao/shared/processors";
-import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
+  createFreshRelationalDb,
+  createTestRelationalDb,
+} from "../../test/helpers/pglite.js";
+import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -29,9 +26,7 @@ const KEY_B = randomBytes(32).toString("hex");
 
 // A database of its own, for tests that pin a different master key.
 function freshDb(): IRelationalDb {
-  return createRelationalDb(
-    new Kysely<unknown>({ dialect: new PGliteDialect(new PGlite()) }),
-  );
+  return createFreshRelationalDb();
 }
 
 function tempKeyFile(): string {

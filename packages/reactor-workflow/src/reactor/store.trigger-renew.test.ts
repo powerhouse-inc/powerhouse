@@ -1,14 +1,11 @@
 // trigger_state's renewal columns: when a webhook trigger's onRenew is next
 // due, and its failure streak, kept apart from the poll's.
-import { PGlite } from "@electric-sql/pglite";
-import {
-  createRelationalDb,
-  type IRelationalDb,
-} from "@powerhousedao/shared/processors";
-import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
+import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import { beforeAll, describe, expect, it } from "vitest";
-import { createTestRelationalDb } from "../../test/helpers/pglite.js";
+import {
+  createFreshRelationalDb,
+  createTestRelationalDb,
+} from "../../test/helpers/pglite.js";
 import { WorkflowRunStore, type TriggerStateInput } from "./store.js";
 
 const NOW = "2026-09-29T12:00:00.000Z";
@@ -114,9 +111,7 @@ describe("trigger renewal columns", () => {
 
 describe("the renewal columns migration", () => {
   function freshDb(): IRelationalDb {
-    return createRelationalDb(
-      new Kysely<unknown>({ dialect: new PGliteDialect(new PGlite()) }),
-    );
+    return createFreshRelationalDb();
   }
 
   it("adds the columns to a journal written before them, and re-runs cleanly", async () => {
