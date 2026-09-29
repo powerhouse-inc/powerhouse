@@ -1,3 +1,4 @@
+import { settledAtHead } from "../../catch-up/helpers.js";
 import {
   deriveOperationId,
   mergePeerCapabilities,
@@ -69,6 +70,7 @@ describe.each(testSyncStorageBackends)(
         } as unknown as IReactor,
         new EventBus(),
         DEFAULT_DRIVE_CONTAINER_TYPES,
+        settledAtHead(),
         {},
         {
           capabilities: mergePeerCapabilities(PEER_CAPABILITIES, [

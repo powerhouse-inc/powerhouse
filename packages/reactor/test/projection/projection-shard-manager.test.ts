@@ -1,4 +1,5 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import { defaultCatchUpConfig } from "../../src/catch-up/types.js";
 import { ConsoleLogger } from "document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
@@ -131,6 +132,7 @@ describe("ProjectionShardManager", () => {
       ],
       postReadyKinds: [],
       indexing: defaultReadModelIndexingConfig,
+      catchUp: defaultCatchUpConfig,
       factory,
       logger: new ConsoleLogger(["test"]),
       hostBus: bus,
@@ -282,6 +284,7 @@ describe("ProjectionShardManager", () => {
         preReadyKinds: ["document-view", "document-indexer"],
         postReadyKinds: [],
         indexing: defaultReadModelIndexingConfig,
+        catchUp: defaultCatchUpConfig,
         factory,
         logger: new ConsoleLogger(["test"]),
         hostBus: new EventBus(),

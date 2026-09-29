@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-29T15:45:57.558Z
+> Generated: 2026-09-29T16:44:00.871Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 

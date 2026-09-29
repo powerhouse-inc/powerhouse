@@ -1,3 +1,4 @@
+import { settledAtHead } from "../../catch-up/helpers.js";
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -236,6 +237,9 @@ describe("SyncManager - Unit Tests", () => {
       getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
       getGroupReferencers: vi.fn().mockResolvedValue([]),
       getOrdinalsByOpIds: vi.fn().mockResolvedValue(new Map()),
+      getOrdinalsInRange: vi.fn().mockResolvedValue([]),
+      getByOrdinals: vi.fn().mockResolvedValue([]),
+      getStreamAfter: vi.fn().mockResolvedValue([]),
     };
 
     mockReactor = {
@@ -287,6 +291,7 @@ describe("SyncManager - Unit Tests", () => {
       mockReactor,
       mockEventBus,
       DEFAULT_DRIVE_CONTAINER_TYPES,
+      settledAtHead(),
     );
   });
 
@@ -512,7 +517,7 @@ describe("SyncManager - Unit Tests", () => {
       expect(mockOperationIndex.find).toHaveBeenCalledWith(
         "drive.main.collection1",
         5,
-        { excludeSourceRemote: "remote1" },
+        { excludeSourceRemote: "remote1", throughOrdinal: 2_147_483_647 },
         undefined,
         expect.any(AbortSignal),
       );
@@ -1262,7 +1267,7 @@ describe("SyncManager - Unit Tests", () => {
       expect(mockOperationIndex.find).toHaveBeenCalledWith(
         "drive.main.collection1",
         0,
-        { excludeSourceRemote: "remote1" },
+        { excludeSourceRemote: "remote1", throughOrdinal: 2_147_483_647 },
         undefined,
         expect.any(AbortSignal),
       );
@@ -1392,7 +1397,7 @@ describe("SyncManager - Unit Tests", () => {
       expect(mockOperationIndex.find).toHaveBeenCalledWith(
         "drive.main.collection1",
         9,
-        { excludeSourceRemote: "remote1" },
+        { excludeSourceRemote: "remote1", throughOrdinal: 2_147_483_647 },
         undefined,
         expect.any(AbortSignal),
       );
@@ -1565,7 +1570,7 @@ describe("SyncManager - Unit Tests", () => {
       expect(mockOperationIndex.find).toHaveBeenCalledWith(
         "drive.main.collection1",
         0,
-        { excludeSourceRemote: "my-remote" },
+        { excludeSourceRemote: "my-remote", throughOrdinal: 2_147_483_647 },
         undefined,
         expect.any(AbortSignal),
       );
@@ -1753,7 +1758,7 @@ describe("SyncManager - Unit Tests", () => {
       expect(mockOperationIndex.find).toHaveBeenCalledWith(
         "drive.main.collection1",
         5,
-        { excludeSourceRemote: "remote1" },
+        { excludeSourceRemote: "remote1", throughOrdinal: 2_147_483_647 },
         undefined,
         expect.any(AbortSignal),
       );
@@ -1848,14 +1853,14 @@ describe("SyncManager - Unit Tests", () => {
       expect(mockOperationIndex.find).toHaveBeenCalledWith(
         "drive.main.shared-col",
         0,
-        { excludeSourceRemote: "remote-a" },
+        { excludeSourceRemote: "remote-a", throughOrdinal: 2_147_483_647 },
         undefined,
         expect.any(AbortSignal),
       );
       expect(mockOperationIndex.find).toHaveBeenCalledWith(
         "drive.main.shared-col",
         0,
-        { excludeSourceRemote: "remote-b" },
+        { excludeSourceRemote: "remote-b", throughOrdinal: 2_147_483_647 },
         undefined,
         expect.any(AbortSignal),
       );
@@ -4599,6 +4604,7 @@ describe("SyncManager - Unit Tests", () => {
         mockReactor,
         mockEventBus,
         DEFAULT_DRIVE_CONTAINER_TYPES,
+        settledAtHead(),
         { maxDeadLettersPerRemote: maxLimit },
       );
 
@@ -4666,6 +4672,7 @@ describe("SyncManager - Unit Tests", () => {
         mockReactor,
         mockEventBus,
         DEFAULT_DRIVE_CONTAINER_TYPES,
+        settledAtHead(),
         { maxDeadLettersPerRemote: maxLimit },
       );
 
@@ -4733,6 +4740,7 @@ describe("SyncManager - Unit Tests", () => {
         mockReactor,
         mockEventBus,
         DEFAULT_DRIVE_CONTAINER_TYPES,
+        settledAtHead(),
         { maxDeadLettersPerRemote: maxLimit },
       );
 

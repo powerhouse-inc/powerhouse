@@ -3,6 +3,7 @@ import type { OperationWithContext } from "@powerhousedao/shared/document-model"
 import { generateId } from "@powerhousedao/shared/document-model";
 import { Kysely, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
+import { ConsoleLogger } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -10,6 +11,10 @@ import {
 } from "../../../src/cache/kysely-operation-index.js";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
+import {
+  createKyselyWatermarkProbe,
+  SettledWatermark,
+} from "../../../src/catch-up/settled-watermark.js";
 import {
   BaseReadModel,
   type BaseReadModelConfig,
@@ -45,13 +50,15 @@ type IndexedCoordinate = {
 };
 
 /**
- * SpyReadModel tracks all calls to indexOperations with their operation coordinates.
- * Used to verify operations are indexed exactly once per (documentId, branch, scope, index).
+ * SpyReadModel tracks every committed operation with its coordinates, from the
+ * live path, boot replay and sweeps alike.
  */
 class SpyReadModel extends BaseReadModel {
   public indexedCoordinates: IndexedCoordinate[] = [];
 
-  async indexOperations(items: OperationWithContext[]): Promise<void> {
+  protected override commitOperations(
+    items: OperationWithContext[],
+  ): Promise<void> {
     for (const item of items) {
       this.indexedCoordinates.push({
         documentId: item.context.documentId,
@@ -60,8 +67,38 @@ class SpyReadModel extends BaseReadModel {
         index: item.operation.index,
       });
     }
-    await super.indexOperations(items);
+    return Promise.resolve();
   }
+}
+
+/** One sweep up to everything the index holds. */
+async function sweepToHead(
+  model: BaseReadModel,
+  db: Kysely<Database>,
+  operationIndex: IOperationIndex,
+) {
+  const watermark = new SettledWatermark(
+    createKyselyWatermarkProbe(db as unknown as Kysely<StorageDatabase>),
+    new ConsoleLogger(["test"]),
+  );
+  const settled = await watermark.refresh();
+  const present = await operationIndex.getOrdinalsInRange(
+    model.appliedThrough,
+    settled,
+    100_000,
+  );
+  return model.sweep(settled, present);
+}
+
+function indexEntries(items: OperationWithContext[]) {
+  return items.map((item) => ({
+    ...item.operation,
+    documentId: item.context.documentId,
+    documentType: "test/document",
+    scope: item.context.scope,
+    branch: item.context.branch,
+    sourceRemote: "",
+  }));
 }
 
 function createOperation(
@@ -191,9 +228,13 @@ describe("BaseReadModel idempotency", () => {
       createOperation(documentId, "global", "main", 1, 2),
       createOperation(documentId, "global", "main", 2, 3),
     ];
+    const txn = operationIndex.start();
+    txn.write(indexEntries(operations));
+    await operationIndex.commit(txn);
 
     await spyModel1.indexOperations(operations);
     expect(spyModel1.indexedCoordinates).toHaveLength(3);
+    await sweepToHead(spyModel1, db, operationIndex);
 
     const viewState = await db
       .selectFrom("ViewState")
@@ -234,60 +275,18 @@ describe("BaseReadModel idempotency", () => {
       createOperation(documentId, "global", "main", 1, 2),
       createOperation(documentId, "global", "main", 2, 3),
     ];
+    const initialTxn = operationIndex.start();
+    initialTxn.write(indexEntries(initialOperations));
+    await operationIndex.commit(initialTxn);
 
     await spyModel1.indexOperations(initialOperations);
     expect(spyModel1.indexedCoordinates).toHaveLength(3);
-
-    const txn = operationIndex.start();
-    txn.write([
-      {
-        ...initialOperations[0]!.operation,
-        documentId,
-        documentType: "test/document",
-        scope: "global",
-        branch: "main",
-        sourceRemote: "",
-      },
-      {
-        ...initialOperations[1]!.operation,
-        documentId,
-        documentType: "test/document",
-        scope: "global",
-        branch: "main",
-        sourceRemote: "",
-      },
-      {
-        ...initialOperations[2]!.operation,
-        documentId,
-        documentType: "test/document",
-        scope: "global",
-        branch: "main",
-        sourceRemote: "",
-      },
-    ]);
+    await sweepToHead(spyModel1, db, operationIndex);
 
     const newOp1 = createOperation(documentId, "global", "main", 3, 4);
     const newOp2 = createOperation(documentId, "global", "main", 4, 5);
-
-    txn.write([
-      {
-        ...newOp1.operation,
-        documentId,
-        documentType: "test/document",
-        scope: "global",
-        branch: "main",
-        sourceRemote: "",
-      },
-      {
-        ...newOp2.operation,
-        documentId,
-        documentType: "test/document",
-        scope: "global",
-        branch: "main",
-        sourceRemote: "",
-      },
-    ]);
-
+    const txn = operationIndex.start();
+    txn.write(indexEntries([newOp1, newOp2]));
     await operationIndex.commit(txn);
 
     const consistencyTracker2 = new ConsistencyTracker();
@@ -336,42 +335,20 @@ describe("BaseReadModel idempotency", () => {
       createOperation(doc2Id, "global", "main", 0, 3),
       createOperation(doc2Id, "global", "main", 1, 4),
     ];
+    const initialTxn = operationIndex.start();
+    initialTxn.write(indexEntries(initialOperations));
+    await operationIndex.commit(initialTxn);
 
     await spyModel1.indexOperations(initialOperations);
     expect(spyModel1.indexedCoordinates).toHaveLength(4);
-
-    const txn = operationIndex.start();
-    for (const op of initialOperations) {
-      txn.write([
-        {
-          ...op.operation,
-          documentId: op.context.documentId,
-          documentType: "test/document",
-          scope: "global",
-          branch: "main",
-          sourceRemote: "",
-        },
-      ]);
-    }
+    await sweepToHead(spyModel1, db, operationIndex);
 
     const newOps = [
       createOperation(doc1Id, "global", "main", 2, 5),
       createOperation(doc2Id, "global", "main", 2, 6),
     ];
-
-    for (const op of newOps) {
-      txn.write([
-        {
-          ...op.operation,
-          documentId: op.context.documentId,
-          documentType: "test/document",
-          scope: "global",
-          branch: "main",
-          sourceRemote: "",
-        },
-      ]);
-    }
-
+    const txn = operationIndex.start();
+    txn.write(indexEntries(newOps));
     await operationIndex.commit(txn);
 
     const consistencyTracker2 = new ConsistencyTracker();
@@ -433,12 +410,12 @@ describe("BaseReadModel idempotency", () => {
       new ConsistencyTracker(),
       { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
     );
-    const indexSpy = vi.spyOn(spyModel, "indexOperations");
+    const pageSpy = vi.spyOn(operationIndex, "getSinceOrdinal");
 
     await spyModel.init();
 
     expect(spyModel.indexedCoordinates).toHaveLength(total);
-    expect(indexSpy.mock.calls.length).toBeGreaterThan(1);
+    expect(pageSpy.mock.calls.length).toBeGreaterThan(1);
 
     const viewState = await db
       .selectFrom("ViewState")
@@ -729,7 +706,7 @@ describe("BaseReadModel chunked indexing", () => {
     );
   });
 
-  it("advances the stored ordinal only once the whole batch is committed", async () => {
+  it("advances the stored ordinal only in a sweep", async () => {
     const documentId = generateId();
     const batch = makeBatch(documentId, BATCH_SIZE);
 
@@ -760,6 +737,27 @@ describe("BaseReadModel chunked indexing", () => {
 
     expect(ordinalsSeenMidPass.length).toBeGreaterThan(1);
     expect(ordinalsSeenMidPass.every((o) => o === 0)).toBe(true);
+
+    const live = await db
+      .selectFrom("ViewState")
+      .select("lastOrdinal")
+      .where("readModelId", "=", "document-view")
+      .executeTakeFirst();
+    expect(live?.lastOrdinal).toBe(0);
+
+    const txn = operationIndex.start();
+    txn.write(
+      batch.map((item) => ({
+        ...item.operation,
+        documentId: item.context.documentId,
+        documentType: item.context.documentType,
+        scope: item.context.scope,
+        branch: item.context.branch,
+        sourceRemote: "",
+      })),
+    );
+    await operationIndex.commit(txn);
+    await sweepToHead(view, db, operationIndex);
 
     const after = await db
       .selectFrom("ViewState")
@@ -850,7 +848,7 @@ describe("BaseReadModel chunked indexing", () => {
     );
     await indexer.indexOperations(makeBatch(generateId(), BATCH_SIZE));
 
-    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).not.toHaveBeenCalled();
   });
 });
 
@@ -992,28 +990,25 @@ describe("BaseReadModel failure boundaries", () => {
     );
   }
 
-  it("parks the cursor at the last committed operation when a chunk fails", async () => {
+  it("holds the cursor below a boot chunk that fails, and a sweep retries it", async () => {
     await appendOperations(generateId(), 0, 40);
 
     const failing = makeModel(FAILING_ORDINAL, CHUNKED);
-    await expect(failing.init()).rejects.toThrow(
-      `commit refused ordinal ${FAILING_ORDINAL}`,
-    );
+    await failing.init();
 
     expect(failing.committed).toEqual(
       Array.from({ length: FAILING_ORDINAL - 1 }, (_, i) => i + 1),
     );
     expect(await readCursor()).toBe(FAILING_ORDINAL - 1);
 
-    const recovering = makeModel(0, CHUNKED);
-    await recovering.init();
+    failing.stopFailing();
+    const result = await sweepToHead(failing, db, operationIndex);
 
-    expect(recovering.committed).toEqual(
-      Array.from(
-        { length: 41 - FAILING_ORDINAL },
-        (_, i) => i + FAILING_ORDINAL,
-      ),
+    expect(result.blockedAt).toBeUndefined();
+    expect(failing.committed).toEqual(
+      Array.from({ length: 40 }, (_, i) => i + 1),
     );
+    expect(await readCursor()).toBe(40);
   });
 
   it("never advances the cursor past an operation it failed to commit", async () => {
@@ -1021,23 +1016,24 @@ describe("BaseReadModel failure boundaries", () => {
     await appendOperations(documentId, 0, 40);
 
     const failing = makeModel(FAILING_ORDINAL, CHUNKED);
-    await expect(failing.init()).rejects.toThrow();
+    await failing.init();
 
     await appendOperations(documentId, 40, 10);
     const later = await readOperationsSince(40);
     expect(later.map((item) => item.context.ordinal)).toEqual(
       Array.from({ length: 10 }, (_, i) => i + 41),
     );
-
-    failing.stopFailing();
     await failing.indexOperations(later);
 
-    expect(await readCursor()).toBeLessThan(FAILING_ORDINAL);
+    const held = await sweepToHead(failing, db, operationIndex);
+    expect(held.blockedAt).toMatchObject({ ordinal: FAILING_ORDINAL });
+    expect(await readCursor()).toBe(FAILING_ORDINAL - 1);
 
-    const recovering = makeModel(0, CHUNKED);
-    await recovering.init();
+    failing.stopFailing();
+    await sweepToHead(failing, db, operationIndex);
 
-    const seen = new Set([...failing.committed, ...recovering.committed]);
+    expect(await readCursor()).toBe(50);
+    const seen = new Set(failing.committed);
     for (let ordinal = 1; ordinal <= 50; ordinal++) {
       expect(seen.has(ordinal)).toBe(true);
     }

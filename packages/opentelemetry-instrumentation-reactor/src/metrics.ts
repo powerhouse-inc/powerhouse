@@ -154,6 +154,58 @@ export function createMetrics() {
       },
     ),
 
+    // Read-side catch-up metrics
+    catchupSequenceHead: meter.createObservableGauge(
+      "reactor.catchup.sequence_head",
+      {
+        description: "Highest ordinal the index sequence has handed out",
+        unit: "{ordinal}",
+      },
+    ),
+    catchupSettledThrough: meter.createObservableGauge(
+      "reactor.catchup.settled_through",
+      {
+        description:
+          "Every ordinal at or below this is visible or will never exist",
+        unit: "{ordinal}",
+      },
+    ),
+    catchupSettleLag: meter.createObservableGauge(
+      "reactor.catchup.settle_lag",
+      {
+        description: "Sequence head minus the settled watermark",
+        unit: "{ordinal}",
+      },
+    ),
+    catchupConsumerLag: meter.createObservableGauge(
+      "reactor.catchup.consumer_lag",
+      {
+        description: "Settled watermark minus a consumer's applied cursor",
+        unit: "{ordinal}",
+      },
+    ),
+    catchupSweepDuration: meter.createHistogram(
+      "reactor.catchup.sweep.duration",
+      {
+        description: "Wall time of a catch-up sweep that moved or replayed",
+        unit: "ms",
+      },
+    ),
+    catchupSweepReplayed: meter.createCounter(
+      "reactor.catchup.sweep.replayed",
+      {
+        description: "Operations a sweep applied that the live path never did",
+        unit: "{operation}",
+      },
+    ),
+    catchupSweepFailures: meter.createCounter(
+      "reactor.catchup.sweep.failures",
+      {
+        description: "Sweeps that could not apply an operation",
+        unit: "{sweep}",
+      },
+    ),
+
     // Signature metrics
     signatureRefusals: meter.createCounter("reactor.signature.refusals", {
       description:

@@ -1,3 +1,4 @@
+import { settledAtHead } from "../../catch-up/helpers.js";
 import {
   mergePeerCapabilities,
   PEER_CAPABILITIES,
@@ -76,6 +77,7 @@ describe("receipt into a stored document this reactor no longer runs", () => {
       reactor as unknown as IReactor,
       new EventBus(),
       DEFAULT_DRIVE_CONTAINER_TYPES,
+      settledAtHead(),
       {},
       {
         capabilities: mergePeerCapabilities(PEER_CAPABILITIES, [NARROWED]),

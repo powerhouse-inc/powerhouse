@@ -63,6 +63,11 @@ const N_PROJECTION_SHARDS = parseInt(
   process.env.N_PROJECTION_SHARDS ?? "0",
   10,
 );
+if (N_PROJECTION_SHARDS !== 0 && N_PROJECTION_SHARDS !== 1) {
+  throw new Error(
+    `N_PROJECTION_SHARDS must be 0 or 1 (got ${N_PROJECTION_SHARDS}): read-side catch-up runs projection in one worker`,
+  );
+}
 
 type State = {
   module: InProcessReactorModule;

@@ -4,6 +4,7 @@ import {
   REACTOR_SCHEMA,
   usePHModal,
 } from "@powerhousedao/reactor-browser";
+import { useCatchUpInspector } from "./useCatchUpInspector.js";
 import { useDbExplorer } from "./useDbExplorer.js";
 import { useDebugInspector } from "./useDebugInspector.js";
 import { useIntegrityInspector } from "./useIntegrityInspector.js";
@@ -32,6 +33,7 @@ export const InspectorModal: React.FC = () => {
   const queueInspectorProps = useQueueInspector();
   const processorsInspectorProps = useProcessorsInspector();
   const integrityInspectorProps = useIntegrityInspector();
+  const catchUpInspectorProps = useCatchUpInspector();
   const workerInspectorProps = useWorkerInspector();
   const { currentPgVersion, supportedPgVersions, onResetToPgVersion } =
     useDebugInspector();
@@ -68,6 +70,7 @@ export const InspectorModal: React.FC = () => {
       queueInspectorProps={queueInspectorProps}
       processorsInspectorProps={processorsInspectorProps}
       integrityInspectorProps={integrityInspectorProps}
+      catchUpInspectorProps={catchUpInspectorProps}
       workerInspectorProps={workerInspectorProps}
     />
   );

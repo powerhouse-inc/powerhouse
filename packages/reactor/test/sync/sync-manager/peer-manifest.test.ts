@@ -1,3 +1,4 @@
+import { settledAtHead } from "../../catch-up/helpers.js";
 import {
   localPeerManifest,
   PEER_CAPABILITIES,
@@ -113,6 +114,7 @@ describe.each(testSyncStorageBackends)(
         } as unknown as IReactor,
         new EventBus(),
         DEFAULT_DRIVE_CONTAINER_TYPES,
+        settledAtHead(),
       );
       managers.push(manager);
       await manager.startup();

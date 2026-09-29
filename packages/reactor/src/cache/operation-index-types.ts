@@ -5,6 +5,7 @@ import type {
 import type { Generated, Insertable, Selectable, Updateable } from "kysely";
 import type { PagedResults, PagingOptions } from "../shared/types.js";
 import type { ViewFilter } from "../storage/interfaces.js";
+import type { DocumentStreamKey } from "./write-cache-types.js";
 
 export type OperationIndexEntry = Operation & {
   ordinal?: number;
@@ -89,6 +90,24 @@ export interface IOperationIndex {
    * reference other groups.
    */
   getGroupReferencers(groupId: string, signal?: AbortSignal): Promise<string[]>;
+  /** Ordinals in (after, through], ascending, at most `limit`. */
+  getOrdinalsInRange(
+    after: number,
+    through: number,
+    limit: number,
+    signal?: AbortSignal,
+  ): Promise<number[]>;
+  /** Rows for these ordinals, ascending; a missing row is left out. */
+  getByOrdinals(
+    ordinals: readonly number[],
+    signal?: AbortSignal,
+  ): Promise<OperationWithContext[]>;
+  /** A stream's rows above an ordinal, ascending. */
+  getStreamAfter(
+    stream: DocumentStreamKey,
+    after: number,
+    signal?: AbortSignal,
+  ): Promise<OperationWithContext[]>;
   /** The latest ordinal of each of `opIds` indexed in one stream. */
   getOrdinalsByOpIds(
     documentId: string,

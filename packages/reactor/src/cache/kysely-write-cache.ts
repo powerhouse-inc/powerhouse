@@ -599,16 +599,19 @@ export class KyselyWriteCache implements IWriteCache {
     branch: string,
     targetRevision: number | undefined,
     signal?: AbortSignal,
+    fromKeyframe = true,
   ): Promise<PHDocument> {
     const effectiveTargetRevision = targetRevision || Number.MAX_SAFE_INTEGER;
 
-    const keyframe = await this.findNearestKeyframe(
-      documentId,
-      scope,
-      branch,
-      effectiveTargetRevision,
-      signal,
-    );
+    const keyframe = fromKeyframe
+      ? await this.findNearestKeyframe(
+          documentId,
+          scope,
+          branch,
+          effectiveTargetRevision,
+          signal,
+        )
+      : undefined;
 
     // all scope rebuilds need the document scope for type, upgrades and deletion,
     // but we need to special case for document scope rebuilds
@@ -919,6 +922,7 @@ export class KyselyWriteCache implements IWriteCache {
     let cursor: string | undefined = undefined;
     const pageSize = 100;
     let hasMorePages: boolean;
+    let needsFullReplay = false;
 
     do {
       if (signal?.aborted) {
@@ -943,6 +947,12 @@ export class KyselyWriteCache implements IWriteCache {
             targetRevision !== undefined &&
             operation.index > targetRevision
           ) {
+            break;
+          }
+
+          // A keyframe carries no operations; a skip replays them all.
+          if (keyframe && operation.skip > 0) {
+            needsFullReplay = true;
             break;
           }
 
@@ -987,7 +997,8 @@ export class KyselyWriteCache implements IWriteCache {
         const reachedTarget =
           targetRevision !== undefined &&
           result.results.some((op) => op.index >= targetRevision);
-        hasMorePages = Boolean(result.nextCursor) && !reachedTarget;
+        hasMorePages =
+          Boolean(result.nextCursor) && !reachedTarget && !needsFullReplay;
 
         if (hasMorePages) {
           cursor = result.nextCursor;
@@ -1000,6 +1011,17 @@ export class KyselyWriteCache implements IWriteCache {
         );
       }
     } while (hasMorePages);
+
+    if (needsFullReplay) {
+      return this.coldMissRebuild(
+        documentId,
+        scope,
+        branch,
+        targetRevision,
+        signal,
+        false,
+      );
+    }
 
     document = this.applyTailPendingUpgrades(
       document,
@@ -1255,6 +1277,8 @@ export class KyselyWriteCache implements IWriteCache {
     // The base is a cached snapshot and the revisions below are written in
     // place, so copy it first or a rebuild that applies nothing rewrites it.
     let document = copyDocument(baseDocument);
+    // The base holds one operation per scope; a skip needs them all.
+    let needsFullReplay = false;
 
     try {
       const pagedResults = await this.operationStore.getSince(
@@ -1273,6 +1297,11 @@ export class KyselyWriteCache implements IWriteCache {
         }
 
         if (targetRevision !== undefined && operation.index > targetRevision) {
+          break;
+        }
+
+        if (operation.skip > 0) {
+          needsFullReplay = true;
           break;
         }
 
@@ -1306,6 +1335,17 @@ export class KyselyWriteCache implements IWriteCache {
       throw new Error(
         `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
         { cause: err },
+      );
+    }
+
+    if (needsFullReplay) {
+      return this.coldMissRebuild(
+        documentId,
+        scope,
+        branch,
+        targetRevision,
+        signal,
+        false,
       );
     }
 

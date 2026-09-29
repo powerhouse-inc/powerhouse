@@ -1,16 +1,42 @@
 import {
   groupDocumentType,
   groupMembershipActionTypes,
+  type OperationWithContext,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
+import { sql, type Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
+import type { IWriteCache } from "../cache/write/interfaces.js";
+import type { SweepResult } from "../catch-up/types.js";
 import type { IEventBus } from "../events/interfaces.js";
 import type { JobWriteReadyEvent, Unsubscribe } from "../events/types.js";
 import { ReactorEventTypes } from "../events/types.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { Job } from "../queue/types.js";
+import {
+  BaseReadModel,
+  unchunkedReadModelIndexingConfig,
+} from "../read-models/base-read-model.js";
+import type { DocumentViewDatabase } from "../read-models/types.js";
+import { ConsistencyTracker } from "../shared/consistency-tracker.js";
+import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import { buildSingleJobMeta } from "./utils.js";
+
+export const GROUP_REEVALUATION_TRIGGER = "group-reevaluation-trigger";
+
+function isMembershipChange({
+  operation,
+  context,
+}: OperationWithContext): boolean {
+  return (
+    context.documentType === groupDocumentType &&
+    context.scope === "global" &&
+    (groupMembershipActionTypes as readonly string[]).includes(
+      operation.action.type,
+    )
+  );
+}
 
 /**
  * Watches committed writes for group membership changes and enqueues a
@@ -23,17 +49,28 @@ import { buildSingleJobMeta } from "./utils.js";
  * skips the pass when everything the document holds sorts before it, which
  * keeps the common case (a membership write later than all history) free.
  */
-export class GroupReevaluationTrigger {
+export class GroupReevaluationTrigger extends BaseReadModel {
   private unsubscribe?: Unsubscribe;
 
   constructor(
-    private logger: ILogger,
-    private eventBus: IEventBus,
-    private queue: IQueue,
-    private operationIndex: IOperationIndex,
-  ) {}
+    private readonly logger: ILogger,
+    private readonly eventBus: IEventBus,
+    private readonly queue: IQueue,
+    operationIndex: IOperationIndex,
+    db: Kysely<DocumentViewDatabase>,
+  ) {
+    super(db, operationIndex, {} as IWriteCache, new ConsistencyTracker(), {
+      readModelId: GROUP_REEVALUATION_TRIGGER,
+      rebuildStateOnInit: false,
+      indexing: unchunkedReadModelIndexingConfig,
+      startFrom: "head",
+      replayStreamSuffix: false,
+    });
+  }
 
-  startup(): void {
+  /** A first start begins at the watermark: it has no history to trust. */
+  async startup(): Promise<void> {
+    await this.init();
     this.unsubscribe = this.eventBus.subscribe<JobWriteReadyEvent>(
       ReactorEventTypes.JOB_WRITE_READY,
       async (_type, event) => this.onWriteReady(event),
@@ -45,19 +82,41 @@ export class GroupReevaluationTrigger {
     this.unsubscribe = undefined;
   }
 
-  private async onWriteReady(event: JobWriteReadyEvent): Promise<void> {
-    // groupId -> earliest membership-change timestamp in this event
+  /** Sweeps membership changes only; other operations never hold the cursor. */
+  override async sweep(
+    settledThrough: number,
+    _present: readonly number[],
+    signal?: AbortSignal,
+  ): Promise<SweepResult> {
+    signal?.throwIfAborted();
+    const rows = await (this.db as unknown as Kysely<StorageDatabase>)
+      .selectFrom("operation_index_operations")
+      .select("ordinal")
+      .where("ordinal", ">", this.appliedThrough)
+      .where("ordinal", "<=", settledThrough)
+      .where("documentType", "=", groupDocumentType)
+      .where("scope", "=", "global")
+      .where(sql<string>`action->>'type'`, "in", [
+        ...groupMembershipActionTypes,
+      ])
+      .orderBy("ordinal", "asc")
+      .execute();
+    return super.sweep(
+      settledThrough,
+      rows.map((row) => Number(row.ordinal)),
+      signal,
+    );
+  }
+
+  /** Throws when any lookup or enqueue failed, so the batch is retried. */
+  protected override async commitOperations(
+    items: OperationWithContext[],
+  ): Promise<void> {
+    // groupId -> earliest membership-change timestamp in this batch
     const changed = new Map<string, string>();
-    for (const { operation, context } of event.operations) {
-      if (
-        context.documentType !== groupDocumentType ||
-        context.scope !== "global" ||
-        !(groupMembershipActionTypes as readonly string[]).includes(
-          operation.action.type,
-        )
-      ) {
-        continue;
-      }
+    for (const item of items) {
+      if (!isMembershipChange(item)) continue;
+      const { operation, context } = item;
       const existing = changed.get(context.documentId);
       if (
         existing === undefined ||
@@ -69,6 +128,8 @@ export class GroupReevaluationTrigger {
     if (changed.size === 0) {
       return;
     }
+
+    const failures: unknown[] = [];
 
     // One job per affected document, at the earliest trigger among its groups.
     const affected = new Map<string, string>();
@@ -82,6 +143,7 @@ export class GroupReevaluationTrigger {
           groupId,
           error,
         );
+        failures.push(error);
         continue;
       }
       for (const documentId of referencers) {
@@ -122,7 +184,27 @@ export class GroupReevaluationTrigger {
           documentId,
           error,
         );
+        failures.push(error);
       }
+    }
+
+    if (failures.length > 0) {
+      throw new AggregateError(
+        failures,
+        "group re-evaluation was not enqueued for every affected document",
+      );
+    }
+  }
+
+  private async onWriteReady(event: JobWriteReadyEvent): Promise<void> {
+    const changes = event.operations.filter(isMembershipChange);
+    if (changes.length === 0) {
+      return;
+    }
+    try {
+      await this.indexOperations(changes);
+    } catch {
+      // Logged per failure above; the claims are released for the next sweep.
     }
   }
 }

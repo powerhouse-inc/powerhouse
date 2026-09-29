@@ -1,3 +1,4 @@
+import type { CatchUpThread, SweepResult } from "../catch-up/types.js";
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Job } from "../queue/types.js";
 import type { JobMeta } from "../shared/types.js";
@@ -60,6 +61,7 @@ export const ReactorEventTypes = {
   READMODEL_INDEXED: 10007,
   MODEL_LOADED: 10008,
   SIGNATURE_REFUSED: 10009,
+  CATCHUP_SWEPT: 10010,
 } as const;
 
 /**
@@ -190,3 +192,6 @@ export type SignatureRefusedEvent = {
   enforced: boolean;
   reason: string;
 };
+
+/** A catch-up sweep that moved a cursor, replayed operations, or failed. */
+export type CatchUpSweptEvent = SweepResult & { thread: CatchUpThread };

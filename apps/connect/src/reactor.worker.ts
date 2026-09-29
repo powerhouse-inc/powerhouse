@@ -7,6 +7,7 @@ import {
   ReactorClientBuilder,
   type ChannelConfig,
   type Database,
+  type ICatchUp,
   type ISyncManager,
   type JwtHandler,
   type ReactorFeatureFlags,
@@ -127,6 +128,7 @@ const owned: OwnedStorage = {};
 let inspectorQueue: InMemoryQueue | undefined;
 let inspectorProcessors: IProcessorManager | undefined;
 let inspectorIntegrity: DocumentIntegrityService | undefined;
+let inspectorCatchUp: ICatchUp | undefined;
 let currentIdentity: ReactorIdentity | null = null;
 const registeredKeys = new Set<string>();
 
@@ -396,6 +398,7 @@ const host = new ReactorHost({
         inspectorQueue =
           rm.queue instanceof InMemoryQueue ? rm.queue : undefined;
         inspectorProcessors = rm.processorManager;
+        inspectorCatchUp = rm.catchUp;
         inspectorIntegrity = new DocumentIntegrityService(
           rm.keyframeStore,
           rm.operationStore,
@@ -567,6 +570,16 @@ const host = new ReactorHost({
         await inspectorProcessors?.get(processorId)?.retry();
         return undefined;
       }
+      case "catchUp.status":
+        if (!inspectorCatchUp) {
+          throw new Error("Catch-up not available");
+        }
+        return inspectorCatchUp.status();
+      case "catchUp.sweepNow":
+        if (!inspectorCatchUp) {
+          throw new Error("Catch-up not available");
+        }
+        return inspectorCatchUp.sweepNow();
       case "integrity.validate": {
         if (!inspectorIntegrity) {
           throw new Error("Integrity service not available");

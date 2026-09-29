@@ -78,6 +78,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
         readModelId: DOCUMENT_VIEW_READ_MODEL,
         rebuildStateOnInit: true,
         indexing,
+        replayStreamSuffix: false,
       },
     );
     this._db = db;
@@ -93,10 +94,9 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
    * echoes may be stale. All other action types index only header and their
    * own scope.
    *
-   * The header row is the one row every scope's chain writes, so it accepts a
-   * write only from an operation whose global ordinal is at least the one the
-   * row already carries. Without that, a chunked pass that started earlier
-   * reverts a concurrent rename with the stale echo its later chunks carry.
+   * Every row accepts a write only from an operation whose global ordinal is
+   * at least the one the row already carries, so an older duplicate from a
+   * sweep, boot replay or chunk interleave never rolls a scope back.
    */
   protected override async commitOperations(
     items: OperationWithContext[],
@@ -163,6 +163,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             })
             .where("documentId", "=", documentId)
             .where("branch", "=", branch)
+            .where("lastOperationOrdinal", "<=", ordinal)
             .execute();
 
           // The content has to say so too, or a caller served the boundary state
@@ -177,6 +178,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               .where("documentId", "=", documentId)
               .where("branch", "=", branch)
               .where("scope", "=", "document")
+              .where("lastOperationOrdinal", "<=", ordinal)
               .execute();
           }
 
@@ -254,11 +256,8 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             .where("branch", "=", branch)
             .executeTakeFirst();
 
-          // Every scope's chain writes the header row, and since the chains
-          // interleave at chunk boundaries an older one can arrive last. Its
-          // header echo is stale, so it must not claim the row.
+          // An older operation carries stale state for the whole scope.
           if (
-            scopeName === "header" &&
             existingSnapshot !== undefined &&
             existingSnapshot.lastOperationOrdinal > ordinal
           ) {
@@ -336,9 +335,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               .where("scope", "=", scopeName)
               .where("branch", "=", branch)
               // Repeats the guard where the database can enforce it.
-              .$if(scopeName === "header", (qb) =>
-                qb.where("lastOperationOrdinal", "<=", ordinal),
-              )
+              .where("lastOperationOrdinal", "<=", ordinal)
               .execute();
           } else {
             const snapshot: InsertableDocumentSnapshot = {

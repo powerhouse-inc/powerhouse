@@ -45,6 +45,7 @@
     "migrate": "tsx src/storage/migrations/run-migrations.ts",
     "migrate:status": "tsx src/storage/migrations/run-migrations.ts status",
     "preflight:auth": "tsx src/admin/run-stream-order-check.ts",
+    "catchup": "tsx src/admin/run-catchup.ts",
     "bench:records": "tsx bench/records/run-records.ts",
     "bench:records:verify": "tsx bench/records/run-records.ts verify",
     "bench:records:from-vitest": "tsx bench/records/run-from-vitest.ts",

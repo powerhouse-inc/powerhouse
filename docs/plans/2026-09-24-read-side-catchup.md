@@ -1,7 +1,7 @@
 # Plan: Read-side catch-up for committed operations
 
 Date: 2026-09-24
-Status: proposal, questions resolved, not started
+Status: implemented on feat/read-side-catchup (stages 1 to 7); bench records before and after not taken
 Runs alongside: [Peer protocol agreement](2026-09-25-peer-protocol-agreement.md)
 Lands before: [Document erasure](2026-09-24-document-erasure.md)
 
@@ -122,8 +122,10 @@ if (operations.length > 0) await sql`select pg_current_xact_id()`.execute(trx);
 ```
 
 ```sql
--- A probe: two statements through the reactor's own Kysely instance, in this order.
-select coalesce(pg_sequence_last_value($1::regclass), 0) as head;
+-- A probe: three autocommit statements through the reactor's own Kysely instance, in order.
+select coalesce(pg_sequence_last_value($1::regclass), 0) as head,
+       pg_current_xact_id_if_assigned() is null as outside_write;
+select pg_current_xact_id()::text as xid;   -- only when head > probedHead and outside_write
 select pg_current_snapshot()::text as snapshot,
        pg_current_xact_id_if_assigned() is null as outside_write;
 -- $1 = pg_get_serial_sequence('reactor.operation_index_operations', 'ordinal'), resolved at start
@@ -132,25 +134,31 @@ select pg_current_snapshot()::text as snapshot,
 ```
 T takes ordinal g        xid(T) assigned before nextval returns g
 probe reads head >= g    nextval(g) happened before statement 1
-statement 2 after 1      xid(T) < snapshot.xmax: T has ended, or T is in snapshot.xip
-=> once no xid in that xip is open, T committed (g visible to any later read) or aborted
-   (g never exists), for every g <= head
+statement 2 after 1      the probe's xid Y is assigned later, so xid(T) < Y
+snapshot.xmin > Y        no xid below xmin is open, so T has ended
+=> T committed (g visible to any later read) or aborted (g never exists), for every g <= head
 ```
 
 ```ts
-type Probe = { head: number; openMax: bigint | null };   // highest xid in xip; null when empty
+type Probe = { head: number; xid: bigint };   // Y, taken after reading head
 
-// After each probe, with its snapshot's xmin: every pending probe P with
-//   P.openMax === null || xmin > P.openMax
-// settles, and settledThrough = max(settledThrough, P.head). A probe with an empty xip settles
-// itself. At most 64 probes pend; dropping one only delays settlement.
+// After each probe, with its snapshot's xmin: every pending probe P with xmin > P.xid
+// settles, and settledThrough = max(settledThrough, P.head). A head at or below probedHead,
+// the highest head a settled or pending probe covers, takes no xid: the snapshot alone
+// settles what pends. At most 64 probes pend; dropping one only delays settlement.
 ```
 
-`xmin > openMax` holds exactly when no transaction listed at the probe is still
-open: an open xid below the probe's `xmax` was open at the probe, so it is
-listed. Only transactions holding an xid, those that have written, hold the
-watermark. A probe with `outside_write` false ran inside another session's
-write transaction on a shared connection; it is discarded and logged once.
+A snapshot's `xmax` is the latest completed xid plus one, not the next xid to
+be assigned, and `xip` lists only open xids below it. The newest open writer is
+missing from `xip` until a later transaction ends, so an empty `xip` proves
+nothing about it; the probe's own xid is what bounds the writers. Statement 2
+commits before statement 3 runs, so statement 3's `xmax` passes Y and its `xip`
+names every open xid below Y; `waitingOn` is that list. Only transactions
+holding an xid, those that have written, hold the watermark. A probe with
+`outside_write` false in statement 1 or 3 ran inside another session's
+transaction on a shared connection; it takes no xid after statement 1 says so,
+and is discarded and logged once. Statement 2 needs a primary: a hot standby
+cannot assign xids, and its sequence head runs ahead of allocation.
 
 ```
 server_version_num >= 130000   pg_current_snapshot, pg_current_xact_id, pg_current_xact_id_if_assigned
@@ -160,11 +168,11 @@ pinned                         postgres 16.1 (docker-compose*.yml), 16-alpine an
                                PGlite 0.3.15 is PostgreSQL 17.5 (server_version_num 170005)
 ```
 
-There is no PGlite branch. The probe goes through the reactor's Kysely
-instance, whose PGlite driver serialises connections, so it never runs while an
-executor transaction is open; its `xip` is empty and it settles its own head.
-A rolled-back ordinal passes on the next probe. The watermark is not persisted;
-it reaches the head on the first probe that settles.
+There is no PGlite branch. The probe goes through the reactor's Kysely instance,
+whose PGlite driver serialises connections, so it never runs while an executor
+transaction is open; its xmin passes its own xid and it settles its own head. A
+rolled-back ordinal passes on the next probe. The watermark is not persisted; it
+reaches the head on the first probe that settles.
 
 ### Contiguous cursors
 
@@ -188,11 +196,13 @@ export interface ContiguousCursor {
 }
 ```
 
-- **Live.** A batch is claimed, applied, settled. The live path never writes
-  the cursor.
+- **Live.** A batch is claimed when the coordinator queues it on its chain,
+  then applied and settled; a run that ends without applying it releases the
+  claims. The live path never writes the cursor.
 - **Sweep.** Each tick, the present ordinals in `(appliedThrough,
-  settledThrough]` that no path applied are late; they are fetched and applied,
-  and the cursor moves to `target`.
+  settledThrough]` that no path claimed or applied are late; they are fetched
+  and applied, and the cursor moves to `target`. A stream whose live path
+  holds an earlier ordinal, queued or applying, is left to the next tick.
 - **Boot.** `init` replays `getSinceOrdinal(appliedThrough)` in order, as
   today. After each page the cursor moves to `min(settledAtBoot, page max)`,
   with `settledAtBoot` refreshed before the first page: the replay saw every
@@ -279,7 +289,8 @@ export type SweepResult = {
 the park and `recordCommittedPrefix` are removed: a failed chunk releases its
 claims and the next sweep retries it. `lastOrdinal` stays as a protected getter
 for `appliedThrough`. A `startFrom: "head"` registration with no row inserts
-one at `await watermark.refresh()` and replays nothing.
+one at the probed sequence head, `max(await watermark.refresh(), status().head)`,
+and replays nothing; an ordinal at or below it that commits later is not applied.
 
 | Model | `replayStreamSuffix` | Why |
 |---|---|---|
@@ -625,13 +636,16 @@ a job stops after taking its ordinal and before committing.
    `CatchUpScheduler` with no consumers; `withCatchUp`; `module.catchUp`.
    Tests, `test/catch-up/`: `settled-watermark.unit.test.ts` "settles a probe
    with no open transaction at its own head", "holds a probe until xmin passes
-   its highest open xid", "discards a probe taken inside a write transaction",
-   "uses txid functions below server version 13";
-   `settled-watermark.pglite.test.ts` "passes a rolled-back ordinal on the next
-   probe"; `settled-watermark-postgres.test.ts` "holds below an ordinal whose
-   transaction is open", "passes it once that transaction rolls back", "shows
-   the row to the next read once it commits", "is held by an open write to
-   another table, not by an open read-only transaction". Operation index:
+   its own xid", "an empty xip whose xmin is below its own xid holds it",
+   "discards a probe taken inside a write transaction", "uses txid functions
+   below server version 13"; `settled-watermark.pglite.test.ts` "passes a
+   rolled-back ordinal on the next probe"; `settled-watermark-postgres.test.ts`
+   "holds below an ordinal whose transaction is open", "holds below an open
+   ordinal when no later transaction has ended", "holds below an open ordinal
+   when a later one commits from an older xid", "passes it once that
+   transaction rolls back", "shows the row to the next read once it commits",
+   "is held by an open write to another table, not by an open read-only
+   transaction". Operation index:
    "assigns the xid before the first ordinal" (statement order through a
    recording Kysely plugin), and the new reads.
    Pins in `lost-write-ready.test.ts` (PGlite), each with one dropped
@@ -743,14 +757,15 @@ Stage 7 is last; its command can start after stage 2.
   worker's sweep and token relay.
 - **Neutrality.** Every existing suite green at every stage, except the tests
   a stage names as rewritten.
-- **Bench.** Record `events` and `sync` before and after stages 2 and 6.
-  Steady state adds, per thread and tick, one probe (two statements) and one
-  index-only primary key range scan returning the ordinals committed since the
-  last tick; per consumer and tick, one cursor update where today each batch
-  writes one; per index commit, one `pg_current_xact_id()`; per sync batch,
-  one probe. Rebuilding `resultingState` costs one write-cache `getState` per
-  late or re-applied operation: a cache hit at the head, otherwise the nearest
-  keyframe plus at most `keyframeInterval` reducer steps.
+- **Bench.** Record `events` and `sync` before and after stages 2 and 6. Steady
+  state adds, per thread and tick, one probe (two statements; a third that
+  commits an xid when the head moved) and one index-only primary key range scan
+  returning the ordinals committed since the last tick; per consumer and tick,
+  one cursor update where today each batch writes one; per index commit, one
+  `pg_current_xact_id()`; per sync batch, one probe. Rebuilding `resultingState`
+  costs one write-cache `getState` per late or re-applied operation: a cache hit
+  at the head, otherwise the nearest keyframe plus at most `keyframeInterval`
+  reducer steps.
 
 ## Decisions
 
@@ -761,14 +776,16 @@ Stage 7 is last; its command can start after stage 2.
 2. **Relate ordinals to transactions by allocation order, not a recorded
    xid.** A gap has no row, and a row the allocating transaction writes rolls
    back with it, so a recorded xid cannot describe the gap it leaves. Taking
-   the xid before the first `nextval` makes every ordinal at or below a probe's
-   head belong to a transaction that its snapshot lists or that has ended.
-   Without the explicit statement, a transaction whose first write is the index
-   insert evaluates `nextval` before it has an xid. The cost is one statement
-   per index commit and two per probe.
-3. **No PGlite branch.** PGlite's probe snapshot is always empty, so the same
-   rule settles every gap at once. A second rule would be a second thing to
-   keep correct.
+   the xid before the first `nextval`, and the probe's own xid after reading
+   the head, makes every ordinal at or below that head belong to a transaction
+   with a lower xid than the probe's. Without the explicit statement, a
+   transaction whose first write is the index insert evaluates `nextval` before
+   it has an xid. The cost is one statement per index commit, two per probe,
+   and a third that consumes an xid and writes a commit record when the head
+   moved.
+3. **No PGlite branch.** PGlite's probe snapshot never lists another
+   transaction, so the same rule settles every gap at once. A second rule would
+   be a second thing to keep correct.
 4. **Boot trusts existing high-water cursors.** A safe starting point would
    otherwise need a full rescan of every consumer on upgrade. Gaps already
    buried stay lost unless an operator rescans.

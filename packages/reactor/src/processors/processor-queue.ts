@@ -24,6 +24,8 @@ export type ProcessorQueueOptions = {
   readSince: (ordinal: number) => Promise<PagedResults<OperationWithContext>>;
   /** Highest ordinal routed so far; anything above it has yet to arrive live. */
   routedThrough: () => number;
+  /** The manager's appliedThrough; the cursor never passes it. */
+  confirmedThrough: () => number;
   persist: (cursor: ProcessorCursorState) => Promise<void>;
   logger: ILogger;
 };
@@ -318,9 +320,9 @@ export class ProcessorQueue {
 
   private async raiseCursor(through: number): Promise<void> {
     const { cursor } = this.options;
-    if (cursor.status !== "active") return;
-    if (through <= cursor.lastOrdinal) return;
-    cursor.lastOrdinal = through;
+    const capped = Math.min(through, this.options.confirmedThrough());
+    if (cursor.status !== "active" || capped <= cursor.lastOrdinal) return;
+    cursor.lastOrdinal = capped;
     await this.persist();
   }
 

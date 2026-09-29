@@ -3,6 +3,7 @@ export * from "./account-popover/account-popover-login.js";
 export * from "./renown-login/renown-login-methods.js";
 export * from "./animated-loader/animated-loader.js";
 export * from "./breadcrumbs/breadcrumbs.js";
+export * from "./catch-up-inspector/index.js";
 export * from "./combobox/combobox.js";
 export * from "./consent-banner/consent-banner.js";
 export * from "./db-explorer/index.js";

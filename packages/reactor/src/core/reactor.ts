@@ -9,6 +9,7 @@ import type {
 import { normalizeDocumentModelVersion } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
+import type { CatchUpScheduler } from "../catch-up/scheduler.js";
 import {
   addRelationshipAction,
   createDocumentAction,
@@ -92,6 +93,7 @@ export class Reactor implements IReactor {
   private operationStore: IOperationStore;
   private eventBus: IEventBus;
   private executorManager: IJobExecutorManager;
+  private catchUp: CatchUpScheduler | undefined;
 
   constructor(
     logger: ILogger,
@@ -105,7 +107,9 @@ export class Reactor implements IReactor {
     operationStore: IOperationStore,
     eventBus: IEventBus,
     executorManager: IJobExecutorManager,
+    catchUp?: CatchUpScheduler,
   ) {
+    this.catchUp = catchUp;
     this.logger = logger;
     this.documentModelRegistry = documentModelRegistry;
     this.queue = queue;
@@ -151,6 +155,7 @@ export class Reactor implements IReactor {
     const shutdownAsync = async () => {
       await this.executorManager.stop(true);
 
+      await this.catchUp?.stop();
       this.readModelCoordinator.stop();
       this.jobTracker.shutdown();
     };

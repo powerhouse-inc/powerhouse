@@ -17,6 +17,17 @@ export interface IReadModel {
    * @param operations - The operations with their context to index
    */
   indexOperations(operations: OperationWithContext[]): Promise<void>;
+
+  /** Claims a batch as it queues; a sweep then leaves it to the live path. */
+  reserveOperations?(operations: OperationWithContext[]): IReadModelReservation;
+}
+
+/** A batch a read model claimed while it waits on the coordinator's chain. */
+export interface IReadModelReservation {
+  /** Indexes the batch; at most once. */
+  apply(): Promise<void>;
+  /** Frees the claims of a batch that will not be applied. */
+  release(): void;
 }
 
 /**
@@ -50,6 +61,9 @@ export interface IReadModelCoordinator {
    * Used as a backpressure signal by observability gauges.
    */
   getChainDepth(): number;
+
+  /** The models indexed on this thread; catch-up sweeps them. */
+  indexedReadModels?(): readonly IReadModel[];
 }
 
 export type ReadModelRegistrationStage = "pre_ready" | "post_ready";

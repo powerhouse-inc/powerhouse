@@ -16,6 +16,16 @@ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
 import { CollectionMembershipCache } from "../../cache/collection-membership-cache.js";
+import { CatchUpScheduler } from "../../catch-up/scheduler.js";
+import {
+  createKyselyWatermarkProbe,
+  SettledWatermark,
+} from "../../catch-up/settled-watermark.js";
+import type {
+  CatchUpStatus,
+  ICatchUpConsumer,
+  SweepResult,
+} from "../../catch-up/types.js";
 import { DocumentMetaCache } from "../../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../../cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../../cache/kysely-write-cache.js";
@@ -38,7 +48,10 @@ import type {
   FactorySpec,
   ModelManifestEntry,
 } from "../../executor/worker/protocol.js";
-import type { ReadModelIndexingConfig } from "../../read-models/base-read-model.js";
+import {
+  BaseReadModel,
+  type ReadModelIndexingConfig,
+} from "../../read-models/base-read-model.js";
 import { ReadModelCoordinator } from "../../read-models/coordinator.js";
 import {
   DeletedDocumentRead,
@@ -47,6 +60,7 @@ import {
 import type { IReadModel } from "../../read-models/interfaces.js";
 import { DocumentModelRegistry } from "../../registry/implementation.js";
 import { ConsistencyTracker } from "../../shared/consistency-tracker.js";
+import type { ConsistencyCoordinate } from "../../shared/types.js";
 import {
   KyselyDocumentIndexer,
   type IndexerDatabase,
@@ -64,6 +78,11 @@ export type ProjectionStackEvents = {
   onReadReady: (event: JobReadReadyEvent) => void;
   onReadModelIndexed: (event: ReadModelIndexedEvent) => void;
   onBatchCompleted: (event: ReadModelBatchCompletedEvent) => void;
+  onReadModelSwept: (
+    readModelName: string,
+    coordinates: ConsistencyCoordinate[],
+    result: SweepResult,
+  ) => void;
 };
 
 export type ProjectionStack = {
@@ -72,6 +91,7 @@ export type ProjectionStack = {
   eventBus: EventBus;
   relayWriteReady(event: JobWriteReadyEvent): Promise<void>;
   getChainDepth(): number;
+  catchUpStatus(): CatchUpStatus;
   drain(): Promise<void>;
   shutdown(): Promise<void>;
 };
@@ -177,6 +197,42 @@ async function initReadModels(
   }
 }
 
+/** Posts what each sweep applied, so the host's tracker for the model advances. */
+function relaySweeps(
+  model: BaseReadModel,
+  events: ProjectionStackEvents,
+): ICatchUpConsumer {
+  return {
+    get consumerId() {
+      return model.consumerId;
+    },
+    get appliedThrough() {
+      return model.appliedThrough;
+    },
+    get trackedAbove() {
+      return model.trackedAbove;
+    },
+    async sweep(settledThrough, present, signal) {
+      const coordinates: ConsistencyCoordinate[] = [];
+      const unsubscribe = model.onSwept((swept) => coordinates.push(...swept));
+      try {
+        const result = await model.sweep(settledThrough, present, signal);
+        if (
+          coordinates.length > 0 ||
+          result.to > result.from ||
+          result.replayed > 0 ||
+          result.blockedAt !== undefined
+        ) {
+          events.onReadModelSwept(model.name, coordinates, result);
+        }
+        return result;
+      } finally {
+        unsubscribe();
+      }
+    },
+  };
+}
+
 export async function buildProjectionStack(
   options: BuildProjectionStackOptions,
 ): Promise<ProjectionStack> {
@@ -243,7 +299,31 @@ export async function buildProjectionStack(
     ),
   );
 
-  await initReadModels([...preReady, ...postReady], logger);
+  const watermark = new SettledWatermark(
+    createKyselyWatermarkProbe(database as unknown as Kysely<StorageDatabase>),
+    logger,
+  );
+  const catchUp = new CatchUpScheduler(
+    watermark,
+    operationIndex,
+    init.catchUp,
+    logger,
+  );
+  const models = [...preReady, ...postReady];
+  for (const model of models) {
+    if (model instanceof BaseReadModel) {
+      model.attachCatchUp(watermark, init.catchUp.maxTrackedAboveCursor);
+    }
+  }
+
+  await initReadModels(models, logger);
+
+  for (const model of models) {
+    if (model instanceof BaseReadModel) {
+      catchUp.addConsumer(relaySweeps(model, events), "projection");
+    }
+  }
+  catchUp.start();
 
   const eventBus = new EventBus();
   const subscriptions: Unsubscribe[] = [];
@@ -286,15 +366,18 @@ export async function buildProjectionStack(
     getChainDepth(): number {
       return coordinator.getChainDepth();
     },
+    catchUpStatus(): CatchUpStatus {
+      return catchUp.status();
+    },
     async drain(): Promise<void> {
       await coordinator.drain();
     },
-    shutdown(): Promise<void> {
+    async shutdown(): Promise<void> {
+      await catchUp.stop();
       coordinator.stop();
       for (const unsub of subscriptions) {
         unsub();
       }
-      return Promise.resolve();
     },
   };
 }
