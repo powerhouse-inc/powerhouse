@@ -192,7 +192,8 @@ export interface ContiguousCursor {
   the cursor.
 - **Sweep.** Each tick, the present ordinals in `(appliedThrough,
   settledThrough]` that no path applied are late; they are fetched and applied,
-  and the cursor moves to `target`.
+  and the cursor moves to `target`. A stream whose live pass still applies an
+  earlier ordinal is left to the next tick.
 - **Boot.** `init` replays `getSinceOrdinal(appliedThrough)` in order, as
   today. After each page the cursor moves to `min(settledAtBoot, page max)`,
   with `settledAtBoot` refreshed before the first page: the replay saw every

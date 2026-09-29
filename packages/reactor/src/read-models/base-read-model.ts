@@ -100,11 +100,19 @@ function isTracked(ordinal: number): boolean {
   return Number.isFinite(ordinal) && ordinal > 0;
 }
 
+function streamKeyOf(stream: {
+  documentId: string;
+  scope: string;
+  branch: string;
+}): string {
+  return `${stream.documentId}\u0000${stream.scope}\u0000${stream.branch}`;
+}
+
 function groupByStream(items: OperationWithContext[]): StreamGroup[] {
   const groups = new Map<string, StreamGroup>();
   for (const item of items) {
     const { documentId, scope, branch } = item.context;
-    const key = `${documentId}\u0000${scope}\u0000${branch}`;
+    const key = streamKeyOf(item.context);
     let group = groups.get(key);
     if (group === undefined) {
       group = { documentId, scope, branch, lowest: ordinalOf(item), late: [] };
@@ -143,6 +151,7 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
   private loggedFailure: number | undefined;
   private failedItem: OperationWithContext | undefined;
   private initialized = false;
+  private readonly liveInFlight = new Map<string, Set<number>>();
   private readonly sweptListeners = new Set<
     (coordinates: ConsistencyCoordinate[]) => void
   >();
@@ -440,37 +449,79 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     });
   }
 
+  /** Marks items in flight on their streams; returns the release. */
+  private markLive(items: OperationWithContext[]): () => void {
+    const keys = new Set<string>();
+    for (const item of items) {
+      if (!isTracked(ordinalOf(item))) continue;
+      const key = streamKeyOf(item.context);
+      let ordinals = this.liveInFlight.get(key);
+      if (ordinals === undefined) {
+        ordinals = new Set();
+        this.liveInFlight.set(key, ordinals);
+      }
+      ordinals.add(ordinalOf(item));
+      keys.add(key);
+    }
+    return () => {
+      for (const item of items) {
+        this.liveInFlight
+          .get(streamKeyOf(item.context))
+          ?.delete(ordinalOf(item));
+      }
+      for (const key of keys) {
+        if (this.liveInFlight.get(key)?.size === 0)
+          this.liveInFlight.delete(key);
+      }
+    };
+  }
+
+  /** True while a live pass applies an earlier operation of the stream. */
+  private liveBelow(group: StreamGroup): boolean {
+    const ordinals = this.liveInFlight.get(streamKeyOf(group));
+    if (ordinals === undefined) return false;
+    for (const ordinal of ordinals) {
+      if (ordinal < group.lowest) return true;
+    }
+    return false;
+  }
+
   /** Commits in chunks, yielding with no transaction open. */
   private async applyChunked(items: OperationWithContext[]): Promise<void> {
-    const { commitChunkSize, yieldDeadlineMs } = this.indexing;
-    let lastYield = performance.now();
-    let committed = 0;
+    const release = this.markLive(items);
+    try {
+      const { commitChunkSize, yieldDeadlineMs } = this.indexing;
+      let lastYield = performance.now();
+      let committed = 0;
 
-    for (let start = 0; start < items.length; start += commitChunkSize) {
-      if (start > 0 && performance.now() - lastYield > yieldDeadlineMs) {
-        await yieldToMain();
-        lastYield = performance.now();
+      for (let start = 0; start < items.length; start += commitChunkSize) {
+        if (start > 0 && performance.now() - lastYield > yieldDeadlineMs) {
+          await yieldToMain();
+          lastYield = performance.now();
+        }
+
+        const chunk = items.slice(start, start + commitChunkSize);
+
+        try {
+          await this.commitOperations(chunk);
+        } catch (error) {
+          this.failedItem = chunk[0];
+          const prefix = items.slice(0, committed);
+          this.cursor.settle(prefix.map(ordinalOf), true);
+          this.cursor.settle(items.slice(committed).map(ordinalOf), false);
+          if (prefix.length > 0) this.updateConsistencyTracker(prefix);
+          throw error;
+        }
+
+        committed += chunk.length;
       }
 
-      const chunk = items.slice(start, start + commitChunkSize);
-
-      try {
-        await this.commitOperations(chunk);
-      } catch (error) {
-        this.failedItem = chunk[0];
-        const prefix = items.slice(0, committed);
-        this.cursor.settle(prefix.map(ordinalOf), true);
-        this.cursor.settle(items.slice(committed).map(ordinalOf), false);
-        if (prefix.length > 0) this.updateConsistencyTracker(prefix);
-        throw error;
-      }
-
-      committed += chunk.length;
+      this.cursor.settle(items.map(ordinalOf), true);
+      this.cursor.enforceLimit();
+      this.updateConsistencyTracker(items);
+    } finally {
+      release();
     }
-
-    this.cursor.settle(items.map(ordinalOf), true);
-    this.cursor.enforceLimit();
-    this.updateConsistencyTracker(items);
   }
 
   private async replayFromCursor(): Promise<void> {
@@ -512,7 +563,15 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
   private async replayPage(results: OperationWithContext[]): Promise<boolean> {
     const owned = this.claimLive(results);
     if (owned.length === 0) return false;
+    const release = this.markLive(owned);
+    try {
+      return await this.replayOwned(owned);
+    } finally {
+      release();
+    }
+  }
 
+  private async replayOwned(owned: OperationWithContext[]): Promise<boolean> {
     let rebuilt: { items: OperationWithContext[]; absent: number[] };
     try {
       rebuilt = await this.rebuildIfConfigured(owned);
@@ -542,6 +601,10 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     blockedAt?: SweepBlockedAt;
   }> {
     const owned = group.late.map(ordinalOf);
+    if (this.liveBelow(group)) {
+      this.cursor.settle(owned, false);
+      return { replayed: 0, reapplied: 0 };
+    }
     const ownedSet = new Set(owned);
 
     let items = group.late;
