@@ -1,3 +1,13 @@
+## 6.2.3-dev.32 (2026-09-29)
+
+### 🚀 Features
+
+- **connect:** configure OpenPanel via the runtime config ([#3140](https://github.com/powerhouse-inc/powerhouse/pull/3140))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
 ## 6.2.3-dev.31 (2026-09-29)
 
 ### 🚀 Features
