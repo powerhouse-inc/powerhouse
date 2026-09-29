@@ -483,6 +483,63 @@ describe("createAuthorizationService", () => {
     });
   });
 
+  describe("canMutate for PURGE_DOCUMENT", () => {
+    const purge = (userAddress?: string) =>
+      service.canMutate(
+        "doc-1" as CanonicalDocumentId,
+        "PURGE_DOCUMENT",
+        userAddress,
+      );
+
+    it("refuses a non-admin whose operation rows grant PURGE_DOCUMENT", async () => {
+      vi.mocked(mockPermissionService.isOperationRestricted!).mockResolvedValue(
+        true,
+      );
+      vi.mocked(mockPermissionService.hasOperationGrant!).mockResolvedValue(
+        true,
+      );
+      directGrants["doc-1"] = "WRITE";
+
+      expect(await purge("0xgrantee")).toBe(false);
+      expect(
+        mockPermissionService.isOperationRestricted,
+      ).not.toHaveBeenCalled();
+      expect(mockPermissionService.hasOperationGrant).not.toHaveBeenCalled();
+    });
+
+    it("refuses a WRITE grantee and anonymous on an unprotected document", async () => {
+      directGrants["doc-1"] = "WRITE";
+
+      expect(await purge("0xwriter")).toBe(false);
+      expect(await purge(undefined)).toBe(false);
+    });
+
+    it("refuses an ADMIN grant held only on a parent", async () => {
+      parents["doc-1"] = ["drive-1"];
+      directGrants["drive-1"] = "ADMIN";
+
+      expect(await purge("0xparentadmin")).toBe(false);
+    });
+
+    it("accepts a supreme admin", async () => {
+      expect(await purge("0xadmin")).toBe(true);
+    });
+
+    it("accepts the document owner", async () => {
+      vi.mocked(mockPermissionService.getDocumentOwner!).mockResolvedValue(
+        "0xowner",
+      );
+
+      expect(await purge("0xOwner")).toBe(true);
+    });
+
+    it("accepts a direct ADMIN grantee", async () => {
+      directGrants["doc-1"] = "ADMIN";
+
+      expect(await purge("0xdocadmin")).toBe(true);
+    });
+  });
+
   describe("OPEN policy", () => {
     let open: IAuthorizationService;
 
@@ -512,6 +569,13 @@ describe("createAuthorizationService", () => {
       ).toBe(true);
       expect(
         await open.canMutate("doc-1" as CanonicalDocumentId, "OP", undefined),
+      ).toBe(true);
+      expect(
+        await open.canMutate(
+          "doc-1" as CanonicalDocumentId,
+          "PURGE_DOCUMENT",
+          undefined,
+        ),
       ).toBe(true);
     });
   });
@@ -545,6 +609,13 @@ describe("createAuthorizationService", () => {
           "0xadmin",
         ),
       ).toBe(true);
+      expect(
+        await adminOnly.canMutate(
+          "doc-1" as CanonicalDocumentId,
+          "PURGE_DOCUMENT",
+          "0xadmin",
+        ),
+      ).toBe(true);
     });
 
     it("denies non-admins and anonymous everything", async () => {
@@ -563,6 +634,13 @@ describe("createAuthorizationService", () => {
         await adminOnly.canMutate(
           "doc-1" as CanonicalDocumentId,
           "OP",
+          "0xuser",
+        ),
+      ).toBe(false);
+      expect(
+        await adminOnly.canMutate(
+          "doc-1" as CanonicalDocumentId,
+          "PURGE_DOCUMENT",
           "0xuser",
         ),
       ).toBe(false);
