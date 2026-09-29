@@ -903,7 +903,7 @@ export async function waitServed(workflowId: string, stepId: string) {
       return;
     } catch (error) {
       if (Date.now() > deadline) throw error;
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 100));
     }
   }
 }
@@ -920,7 +920,7 @@ export async function fireWhenSynced(workflowId: string, payload?: unknown) {
       );
     } catch (error) {
       if (Date.now() > deadline) throw error;
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 100));
     }
   }
 }
@@ -1311,7 +1311,7 @@ export async function fireAndWait(
     const run = data.workflowRuntime.run;
     if (run && run.status !== "RUNNING") return run;
     if (Date.now() > deadline) throw new Error(`Run ${runId} never finished`);
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 100));
   }
 }
 
