@@ -1281,20 +1281,14 @@ export class WorkflowRuntimeService {
     }
     // The durable half of the dedupe: a crash can leave the cursor behind the
     // run it already wrote, so the replay delivers this operation a second time.
-    const claimed = await store.claimDedupe(
-      workflowId,
-      `op:${opKey}`,
-      OPERATION_DEDUPE_TTL_MS,
-      new Date().toISOString(),
-    );
-    if (!claimed) return;
-    let runId: string;
+    let runId: string | null;
     try {
-      runId = await store.enqueueRun({
-        workflowId,
-        triggerKind: kind,
-        triggerPayload: payload,
-      });
+      runId = await store.claimAndEnqueueRun(
+        `op:${opKey}`,
+        OPERATION_DEDUPE_TTL_MS,
+        new Date().toISOString(),
+        { workflowId, triggerKind: kind, triggerPayload: payload },
+      );
     } catch (error) {
       this.logger.error(
         `Could not journal the ${kind} fire for workflow ${workflowId}; running it without a durable record`,
@@ -1303,6 +1297,7 @@ export class WorkflowRuntimeService {
       this.fireFromTrigger(workflowId, payload, kind);
       return;
     }
+    if (runId === null) return;
     this.fireFromTrigger(workflowId, payload, kind, runId);
   }
 
