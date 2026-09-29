@@ -14,12 +14,16 @@ export type ParsedSnapshot = { xmin: bigint; xmax: bigint; xip: bigint[] };
 
 export type ProbeReading = {
   head: number;
+  /** Assigned after the head was read; null when the head was already probed. */
+  xid: bigint | null;
+  /** Taken after the xid's transaction committed. */
   snapshot: ParsedSnapshot;
   /** False when the probe ran inside another session's write transaction. */
   outsideWrite: boolean;
 };
 
-export type WatermarkProbe = () => Promise<ProbeReading>;
+/** Takes an xid only for a head above `probedHead`. */
+export type WatermarkProbe = (probedHead: number) => Promise<ProbeReading>;
 
 const MAX_PENDING_PROBES = 64;
 
@@ -71,16 +75,16 @@ export async function readSnapshotFunctions<DB>(
 
 type PendingProbe = {
   head: number;
-  openMax: bigint | null;
-  xip: bigint[];
+  xid: bigint;
   takenAtUtcMs: number;
 };
 
-/** A probe settles once a later xmin passes the highest xid open at it. */
+/** A probe settles once an xmin passes the xid it took after its head. */
 export class ProbeSettler {
   private settled = 0;
   private lastHead = 0;
-  private lastXmin = 0n;
+  private covered = 0;
+  private lastXip: bigint[] = [];
   private pending: PendingProbe[] = [];
 
   get settledThrough(): number {
@@ -91,27 +95,31 @@ export class ProbeSettler {
     return this.lastHead;
   }
 
-  observe(head: number, snapshot: ParsedSnapshot, nowUtcMs: number): number {
-    this.lastHead = Math.max(this.lastHead, head);
-    this.lastXmin = snapshot.xmin;
+  /** The highest head a settled or pending probe covers. */
+  get probedHead(): number {
+    return this.covered;
+  }
 
-    let openMax: bigint | null = null;
-    for (const xid of snapshot.xip) {
-      if (openMax === null || xid > openMax) openMax = xid;
-    }
-    this.pending.push({
-      head,
-      openMax,
-      xip: snapshot.xip,
-      takenAtUtcMs: nowUtcMs,
-    });
-    if (this.pending.length > MAX_PENDING_PROBES) {
-      this.pending.shift();
+  observe(
+    head: number,
+    xid: bigint | null,
+    snapshot: ParsedSnapshot,
+    nowUtcMs: number,
+  ): number {
+    this.lastHead = Math.max(this.lastHead, head);
+    this.lastXip = snapshot.xip;
+
+    if (xid !== null && head > this.covered) {
+      this.covered = head;
+      this.pending.push({ head, xid, takenAtUtcMs: nowUtcMs });
+      if (this.pending.length > MAX_PENDING_PROBES) {
+        this.pending.shift();
+      }
     }
 
     const stillPending: PendingProbe[] = [];
     for (const probe of this.pending) {
-      if (probe.openMax === null || snapshot.xmin > probe.openMax) {
+      if (snapshot.xmin > probe.xid) {
         this.settled = Math.max(this.settled, probe.head);
       } else {
         stillPending.push(probe);
@@ -124,9 +132,10 @@ export class ProbeSettler {
   /** Xids an unsettled probe still waits on. */
   waitingOn(): string[] {
     if (this.pending.length === 0) return [];
-    return this.pending[0]!.xip.filter((xid) => xid >= this.lastXmin).map(
-      (xid) => xid.toString(),
-    );
+    const xid = this.pending[0]!.xid;
+    return this.lastXip
+      .filter((open) => open < xid)
+      .map((open) => open.toString());
   }
 
   stalledSinceUtcMs(): number | undefined {
@@ -150,7 +159,7 @@ function operationIndexTableName(db: Kysely<Database>): string {
     : `${quote(schema)}.${quote("operation_index_operations")}`;
 }
 
-/** Reads the sequence head, then a snapshot, in that order. */
+/** Reads the head, takes and commits an xid, then reads a snapshot, in order. */
 export function createKyselyWatermarkProbe(
   db: Kysely<Database>,
 ): WatermarkProbe {
@@ -172,7 +181,7 @@ export function createKyselyWatermarkProbe(
     return { fns, sequence };
   };
 
-  return async () => {
+  return async (probedHead) => {
     resolved ??= resolve().catch((error: unknown) => {
       resolved = null;
       throw error;
@@ -181,9 +190,21 @@ export function createKyselyWatermarkProbe(
 
     const headResult = await sql<{
       head: string | number;
-    }>`select coalesce(pg_sequence_last_value(${sequence}::regclass), 0) as head`.execute(
+      outside_write: boolean;
+    }>`select coalesce(pg_sequence_last_value(${sequence}::regclass), 0) as head, ${sql.raw(fns.xidIfAssigned)}() is null as outside_write`.execute(
       db,
     );
+    const headRow = headResult.rows[0]!;
+    const head = Number(headRow.head);
+
+    let xid: bigint | null = null;
+    if (headRow.outside_write && head > probedHead) {
+      const xidResult = await sql<{
+        xid: string;
+      }>`select ${sql.raw(fns.currentXid)}()::text as xid`.execute(db);
+      xid = BigInt(xidResult.rows[0]!.xid);
+    }
+
     const snapshotResult = await sql<{
       snapshot: string;
       outside_write: boolean;
@@ -192,9 +213,10 @@ export function createKyselyWatermarkProbe(
     );
     const row = snapshotResult.rows[0]!;
     return {
-      head: Number(headResult.rows[0]!.head),
+      head,
+      xid,
       snapshot: parseSnapshot(row.snapshot),
-      outsideWrite: row.outside_write,
+      outsideWrite: headRow.outside_write && row.outside_write,
     };
   };
 }
@@ -261,7 +283,7 @@ export class SettledWatermark implements ISettledWatermark {
   }
 
   private async probeOnce(): Promise<number> {
-    const reading = await this.probe();
+    const reading = await this.probe(this.settler.probedHead);
     if (!reading.outsideWrite) {
       if (!this.warnedInsideWrite) {
         this.warnedInsideWrite = true;
@@ -275,6 +297,7 @@ export class SettledWatermark implements ISettledWatermark {
     const before = this.settledThrough;
     const after = this.settler.observe(
       reading.head,
+      reading.xid,
       reading.snapshot,
       this.now(),
     );

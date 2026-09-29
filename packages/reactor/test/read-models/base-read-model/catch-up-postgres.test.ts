@@ -84,7 +84,7 @@ describe("BaseReadModel catch-up [Postgres]", () => {
     };
   }
 
-  it.fails("applies an open newest write that commits after a sweep", async () => {
+  it("applies an open newest write that commits after a sweep", async () => {
     const model = new RecordingModel(
       db as unknown as Kysely<DocumentViewDatabase>,
       operationIndex,

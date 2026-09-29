@@ -1,5 +1,5 @@
 import { ConsoleLogger } from "document-model";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js";
 import {
@@ -101,12 +101,43 @@ describe("SettledWatermark [Postgres]", () => {
     await open.finish("commit");
   });
 
-  it.fails("holds below an open ordinal when no later transaction has ended", async () => {
+  it("holds below an open ordinal when no later transaction has ended", async () => {
     const open = openIndexWrite("doc-open-newest");
     const held = await open.ordinal;
     try {
       expect(await watermark.refresh()).toBeLessThan(held);
       expect(watermark.status().waitingOn.length).toBeGreaterThan(0);
+    } finally {
+      await open.finish("commit");
+    }
+  });
+
+  it("holds below an open ordinal when a later one commits from an older xid", async () => {
+    let tookXid!: () => void;
+    const xidTaken = new Promise<void>((resolve) => {
+      tookXid = resolve;
+    });
+    let proceed!: () => void;
+    const proceeding = new Promise<void>((resolve) => {
+      proceed = resolve;
+    });
+    const older = db.transaction().execute(async (trx) => {
+      await sql`select pg_current_xact_id()`.execute(trx);
+      tookXid();
+      await proceeding;
+      const txn = operationIndex.start();
+      txn.write([indexEntry("doc-older-xid", 0)]);
+      const [taken] = await operationIndex.withTransaction(trx).commit(txn);
+      return taken!;
+    });
+    await xidTaken;
+
+    const open = openIndexWrite("doc-newer-xid");
+    const held = await open.ordinal;
+    try {
+      proceed();
+      expect(await older).toBeGreaterThan(held);
+      expect(await watermark.refresh()).toBeLessThan(held);
     } finally {
       await open.finish("commit");
     }
