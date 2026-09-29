@@ -311,6 +311,40 @@ describe("receiving operations of a purged document [Postgres]", () => {
       expect(await allDeadLetters(harness)).toEqual([DOC]),
     );
   });
+
+  it("dead-letters only the marker of a refused marker load", async () => {
+    await harness.manager.startup();
+    await harness.manager.add("remote", COL_A, CONFIG, FILTER, {}, "r");
+    const channel = harness.manager.getByName("remote").channel;
+    harness.reactor.load.mockResolvedValue({ id: "job-1" });
+    harness.reactor.getJobStatus.mockResolvedValue({
+      id: "job-1",
+      status: JobStatus.FAILED,
+      error: {
+        name: "InvalidSignatureError",
+        message: "unsigned marker",
+        stack: "",
+      },
+    });
+    const marker = withContext(purgeMarker(DOC), DOC, 2, "document");
+    channel.inbox.add(
+      inboxSyncOp(DOC, "", [
+        withContext(createTestOperation(DOC), DOC, 1),
+        marker,
+      ]),
+    );
+
+    let rows: Array<{ operations: unknown }> = [];
+    await vi.waitFor(async () => {
+      rows = await harness.db
+        .selectFrom("sync_dead_letters")
+        .select("operations")
+        .where("document_id", "=", DOC)
+        .execute();
+      expect(rows).toHaveLength(1);
+    });
+    expect(rows[0].operations).toEqual([marker]);
+  });
 });
 
 describe("dead letters for a purged document [Postgres]", () => {

@@ -1345,7 +1345,10 @@ export class SyncManager implements ISyncManager {
           documentId: syncOp.documentId,
           scopes: syncOp.scopes,
           branch: syncOp.branch,
-          operations: syncOp.operations,
+          // A refused marker's job dropped the rest; they are not the record.
+          operations: carriesMarker(syncOp)
+            ? syncOp.operations.filter((op) => isPurgeMarker(op))
+            : syncOp.operations,
           errorSource: syncOp.error?.source ?? ChannelErrorSource.None,
           errorMessage: syncOp.error?.error.message ?? "unknown",
           errorType,
