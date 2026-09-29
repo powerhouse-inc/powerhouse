@@ -5,14 +5,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { BOILERPLATE_ALLOWED_BUILDS } from "@powerhousedao/shared/clis/constants";
 import { REGISTRY_URL, writeNpmrc } from "@powerhousedao/e2e-utils";
-import { run } from "./fixture.js";
+import { clearDir, run, runAsync } from "./fixture.js";
 
 export interface CreateProjectOptions {
   dir: string;
-  phCli: string;
   token: string;
-  /** Package spec installed into the project, e.g. `pkg@1.0.0`. */
-  fixtureSpec: string;
   /** Dist-tag the workspace packages were published under. */
   tag: string;
 }
@@ -24,8 +21,7 @@ function scaffoldProject(
   name: string,
   packageRegistryUrl?: string,
 ): void {
-  fs.rmSync(dir, { recursive: true, force: true });
-  fs.mkdirSync(dir, { recursive: true });
+  clearDir(dir);
   fs.writeFileSync(
     path.join(dir, "package.json"),
     JSON.stringify(
@@ -53,8 +49,14 @@ export function createEmptyProject(dir: string, registryUrl: string): void {
   scaffoldProject(dir, "test-workflow-piece-registry-project", registryUrl);
 }
 
-export function createConsumerProject(options: CreateProjectOptions): void {
-  const { dir, phCli, token, fixtureSpec, tag } = options;
+/**
+ * A project with switchboard installed from the registry. Needs only the
+ * workspace packages published, so it runs while the fixture builds.
+ */
+export async function createConsumerProject(
+  options: CreateProjectOptions,
+): Promise<void> {
+  const { dir, token, tag } = options;
 
   scaffoldProject(dir, "test-workflow-piece-project");
 
@@ -70,7 +72,20 @@ export function createConsumerProject(options: CreateProjectOptions): void {
 
   // Switchboard from the registry, not the workspace: the piece registry
   // resolves package pieces from wherever this copy of the runtime sits.
-  run("pnpm", ["add", `@powerhousedao/switchboard@${tag}`], dir);
+  await runAsync(
+    "pnpm",
+    ["add", `@powerhousedao/switchboard@${tag}`],
+    dir,
+    `${dir}.install.log`,
+  );
+}
+
+/** Installs the published fixture into the consumer project. */
+export function installFixture(
+  dir: string,
+  phCli: string,
+  fixtureSpec: string,
+): void {
   run(
     phCli,
     ["install", fixtureSpec, "--local", "--registry", REGISTRY_URL],
