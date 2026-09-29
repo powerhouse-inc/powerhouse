@@ -120,8 +120,6 @@ function isValidISOTimestamp(value: string): boolean {
   return !isNaN(new Date(value).getTime());
 }
 
-type MetaEntry = { documentId: string; branch: string };
-
 type ExecuteInScopeParams = {
   job: Job;
   startTime: number;
@@ -130,7 +128,7 @@ type ExecuteInScopeParams = {
   touchedStreams: TouchedStreams;
   postCommitInvalidations: TouchedStream[];
   postCommitMembershipInvalidations: string[];
-  postCommitMetaInvalidations: MetaEntry[];
+  postCommitMetaInvalidations: string[];
 };
 
 /** What a purge transaction needs once its path has decided to purge. */
@@ -374,7 +372,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     // Entries handlers request invalidated only after the transaction commits
     const postCommitInvalidations: TouchedStream[] = [];
     const postCommitMembershipInvalidations: string[] = [];
-    const postCommitMetaInvalidations: MetaEntry[] = [];
+    const postCommitMetaInvalidations: string[] = [];
 
     let outcome: ScopeOutcome;
     try {
@@ -414,8 +412,8 @@ export class SimpleJobExecutor implements IJobExecutor {
       this.collectionMembershipCache.invalidate(documentId);
     }
 
-    for (const entry of postCommitMetaInvalidations) {
-      this.documentMetaCache.invalidate(entry.documentId, entry.branch);
+    for (const documentId of postCommitMetaInvalidations) {
+      this.documentMetaCache.invalidate(documentId);
     }
 
     const { pendingEvent } = outcome;
@@ -1002,9 +1000,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       touchedStreams.add(documentId, stream.scope, stream.branch);
       params.postCommitInvalidations.push({ documentId, ...stream });
     }
-    for (const branch of new Set([...held.branches, "main"])) {
-      params.postCommitMetaInvalidations.push({ documentId, branch });
-    }
+    params.postCommitMetaInvalidations.push(documentId);
 
     const removedRows = await purger.deleteRows(documentId);
 
