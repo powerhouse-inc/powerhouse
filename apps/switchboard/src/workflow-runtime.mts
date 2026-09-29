@@ -34,7 +34,6 @@ import type {
   WorkflowCaller,
   WorkflowRuntimeHostDeps,
 } from "@powerhousedao/reactor-workflow";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type {
   IHttpScope,
   IWebhookScope,
