@@ -34,6 +34,7 @@ import type { ILogger } from "document-model";
 import {
   addRelationshipAction,
   createDocumentAction,
+  deleteDocumentAction,
   removeRelationshipAction,
   upgradeDocumentAction,
 } from "../actions/index.js";
@@ -582,62 +583,60 @@ export class DriveClient implements IDriveClient {
     fileId: string,
     signal?: AbortSignal,
   ): Promise<void> {
-    const relationshipActions: Action[] = await signActions(
-      [removeRelationshipAction(driveId, fileId, "child")],
-      this.signer,
-      { documentId: driveId, branch: "main" },
-      signal,
-    );
     const driveActions: Action[] = await signActions(
       [deleteNodeAction({ id: fileId })],
       this.signer,
       { documentId: driveId, branch: "main" },
       signal,
     );
-
-    const batchResult = await this.reactor.executeBatch(
-      {
-        jobs: [
-          {
-            key: "relationship",
-            documentId: driveId,
-            scope: getSharedActionScope(relationshipActions),
-            branch: "main",
-            actions: relationshipActions,
-            dependsOn: [],
-          },
-          {
-            key: "drive",
-            documentId: driveId,
-            scope: getSharedActionScope(driveActions),
-            branch: "main",
-            actions: driveActions,
-            dependsOn: ["relationship"],
-          },
-        ],
-      },
+    // Alone, so a drive that refuses the removal leaves the file untouched.
+    await this.runJobs(
+      [
+        {
+          key: "drive",
+          documentId: driveId,
+          scope: getSharedActionScope(driveActions),
+          branch: "main",
+          actions: driveActions,
+          dependsOn: [],
+        },
+      ],
       signal,
     );
 
-    const completedJobs = await Promise.all(
-      Object.values(batchResult.jobs).map((job) =>
-        this.client.waitForJob(job, signal),
-      ),
-    );
-    for (const job of completedJobs) {
-      if (job.status === JobStatus.FAILED) {
-        throw new Error(job.error?.message);
-      }
-    }
-
-    const deleteJob = await this.reactor.deleteDocument(
-      fileId,
+    const deleteActions: Action[] = await signActions(
+      [deleteDocumentAction(fileId)],
       this.signer,
+      { documentId: fileId, branch: "main" },
       signal,
     );
-    const deleteCompleted = await this.client.waitForJob(deleteJob, signal);
-    if (deleteCompleted.status === JobStatus.FAILED) {
-      throw new Error(deleteCompleted.error?.message);
-    }
+    const relationshipActions: Action[] = await signActions(
+      [removeRelationshipAction(driveId, fileId, "child")],
+      this.signer,
+      { documentId: driveId, branch: "main" },
+      signal,
+    );
+    // The drive's remotes are served the delete while the file is a member.
+    await this.runJobs(
+      [
+        {
+          key: "delete",
+          documentId: fileId,
+          scope: getSharedActionScope(deleteActions),
+          branch: "main",
+          actions: deleteActions,
+          dependsOn: [],
+        },
+        {
+          key: "relationship",
+          documentId: driveId,
+          scope: getSharedActionScope(relationshipActions),
+          branch: "main",
+          actions: relationshipActions,
+          dependsOn: ["delete"],
+        },
+      ],
+      signal,
+    );
   }
 }

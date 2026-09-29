@@ -1561,20 +1561,48 @@ export class ReactorClient implements IReactorClient {
       }
     }
 
-    // The root goes last so its delete queues behind its own outgoing removals.
-    const order = [...toDelete].filter((id) => id !== identifier);
-    order.push(identifier);
+    // Discovery puts sources before targets; reversed, children go first.
+    const order = [...toDelete].reverse();
+    const position = new Map(order.map((id, index) => [id, index]));
+    const incoming = new Map<string, DocumentRelationship[]>();
+    for (const documentId of order) {
+      const page = await this.documentIndexer.getIncoming(
+        documentId,
+        undefined,
+        undefined,
+        undefined,
+        signal,
+      );
+      incoming.set(documentId, page.results);
+    }
+    // An edge whose source is deleted no later than its target cannot wait.
+    const waitsForTarget = (rel: DocumentRelationship): boolean => {
+      const source = position.get(rel.sourceId);
+      return source === undefined || source > position.get(rel.targetId)!;
+    };
 
     const plans: ExecutionJobPlan[] = [];
     for (const documentId of order) {
-      plans.push(
-        ...(await this.planIncomingRelationshipRemovals(
-          documentId,
-          plans.length,
-          signal,
-        )),
-      );
+      for (const rels of incoming.values()) {
+        for (const rel of rels) {
+          if (rel.sourceId === documentId && !waitsForTarget(rel)) {
+            plans.push(await this.planRemoval(rel, [], plans.length, signal));
+          }
+        }
+      }
       plans.push(await this.planDelete(documentId, signal));
+      for (const rel of incoming.get(documentId)!) {
+        if (waitsForTarget(rel)) {
+          plans.push(
+            await this.planRemoval(
+              rel,
+              [deletePlanKey(documentId)],
+              plans.length,
+              signal,
+            ),
+          );
+        }
+      }
     }
 
     const batchResult = await this.reactor.executeBatch(
@@ -2225,43 +2253,31 @@ export class ReactorClient implements IReactorClient {
     };
   }
 
-  // The removal closes the target's membership, so it waits for that delete.
-  private async planIncomingRelationshipRemovals(
-    documentId: string,
-    keyOffset: number,
+  private async planRemoval(
+    rel: DocumentRelationship,
+    dependsOn: string[],
+    index: number,
     signal?: AbortSignal,
-  ): Promise<ExecutionJobPlan[]> {
-    const incoming = await this.documentIndexer.getIncoming(
-      documentId,
-      undefined,
-      undefined,
-      undefined,
+  ): Promise<ExecutionJobPlan> {
+    const signed = await signActions(
+      [
+        removeRelationshipAction(
+          rel.sourceId,
+          rel.targetId,
+          rel.relationshipType,
+        ),
+      ],
+      this.signer,
+      { documentId: rel.sourceId, branch: "main" },
       signal,
     );
-
-    const plans: ExecutionJobPlan[] = [];
-    for (const rel of incoming.results) {
-      const signed = await signActions(
-        [
-          removeRelationshipAction(
-            rel.sourceId,
-            documentId,
-            rel.relationshipType,
-          ),
-        ],
-        this.signer,
-        { documentId: rel.sourceId, branch: "main" },
-        signal,
-      );
-      plans.push({
-        key: `remove:${keyOffset + plans.length}`,
-        documentId: rel.sourceId,
-        scope: "document",
-        branch: "main",
-        actions: signed,
-        dependsOn: [deletePlanKey(documentId)],
-      });
-    }
-    return plans;
+    return {
+      key: `remove:${index}`,
+      documentId: rel.sourceId,
+      scope: "document",
+      branch: "main",
+      actions: signed,
+      dependsOn,
+    };
   }
 }

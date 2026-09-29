@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeCompositeCursor } from "../../src/client/cursor.js";
 import { ReactorClient } from "../../src/client/reactor-client.js";
 import { resolveFeatureFlags } from "../../src/core/feature-flags.js";
+import { topologicalSort } from "../../src/core/utils.js";
 import type { IReadGate } from "../../src/decision/read-gate.js";
 import {
   BareReadGate,
@@ -44,6 +45,7 @@ import type {
   IDocumentView,
 } from "../../src/storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../../src/subs/types.js";
+import type { Job } from "../../src/queue/types.js";
 import {
   createEmptyConsistencyToken,
   createMockDocumentIndexer,
@@ -52,6 +54,7 @@ import {
   createMockLogger,
   createMockSigner,
   createMockSubscriptionManager,
+  createTestQueue,
 } from "../factories.js";
 
 function mockOperation(index: number): Operation {
@@ -1625,6 +1628,32 @@ describe("ReactorClient Unit Tests", () => {
       return vi.mocked(mockReactor.executeBatch).mock.calls[0][0].jobs;
     }
 
+    function label(plan: ExecutionJobPlan): string {
+      if (plan.key.startsWith("delete:")) return plan.key;
+      const input = plan.actions[0].input as {
+        sourceId: string;
+        targetId: string;
+      };
+      return `${input.sourceId}->${input.targetId}`;
+    }
+
+    /** Each document's queue in the order executeBatch enqueues it. */
+    function queues(plans: ExecutionJobPlan[]): Record<string, string[]> {
+      const byKey = new Map(plans.map((plan) => [plan.key, plan]));
+      const result: Record<string, string[]> = {};
+      for (const key of topologicalSort(plans)) {
+        const plan = byKey.get(key)!;
+        (result[plan.documentId] ??= []).push(label(plan));
+      }
+      return result;
+    }
+
+    function dependencies(plans: ExecutionJobPlan[]): Record<string, string[]> {
+      return Object.fromEntries(
+        plans.map((plan) => [label(plan), plan.dependsOn]),
+      );
+    }
+
     it("submits a signed delete as a batch and waits for it", async () => {
       batchJobsEcho();
 
@@ -1673,19 +1702,19 @@ describe("ReactorClient Unit Tests", () => {
 
       const plans = submittedPlans();
       expect(plans.map((plan) => [plan.documentId, plan.dependsOn])).toEqual([
-        ["drive-1", ["delete:doc-1"]],
         ["doc-1", []],
+        ["drive-1", ["delete:doc-1"]],
       ]);
-      expect(plans[0].scope).toBe("document");
-      expect(plans[0].actions[0].type).toBe("REMOVE_RELATIONSHIP");
-      expect(plans[0].actions[0].input).toMatchObject({
+      expect(plans[1].scope).toBe("document");
+      expect(plans[1].actions[0].type).toBe("REMOVE_RELATIONSHIP");
+      expect(plans[1].actions[0].input).toMatchObject({
         sourceId: "drive-1",
         targetId: "doc-1",
         relationshipType: "child",
       });
     });
 
-    it("cascades with every removal after its target's delete, root last", async () => {
+    it("cascades children first, each removal after its target's delete", async () => {
       batchJobsEcho();
       const signal = new AbortController().signal;
       givenIncoming({
@@ -1707,28 +1736,137 @@ describe("ReactorClient Unit Tests", () => {
         signal,
       );
       const plans = submittedPlans();
-      const removals = plans.filter((plan) => plan.key.startsWith("remove:"));
-      expect(
-        removals.map((plan) => [
-          (plan.actions[0].input as { sourceId: string }).sourceId,
-          (plan.actions[0].input as { targetId: string }).targetId,
-          plan.dependsOn,
-        ]),
-      ).toEqual([
-        ["drive-1", "child-1", ["delete:child-1"]],
-        ["drive-1", "child-2", ["delete:child-2"]],
-        ["child-1", "grandchild-1", ["delete:grandchild-1"]],
-        ["outside", "drive-1", ["delete:drive-1"]],
-      ]);
-      expect(
-        plans
-          .filter((plan) => plan.key.startsWith("delete:"))
-          .map((plan) => plan.documentId),
-      ).toEqual(["child-1", "child-2", "grandchild-1", "drive-1"]);
-      expect(plans.at(-1)!.key).toBe("delete:drive-1");
+      expect(queues(plans)).toEqual({
+        "grandchild-1": ["delete:grandchild-1"],
+        "child-1": ["child-1->grandchild-1", "delete:child-1"],
+        "child-2": ["delete:child-2"],
+        "drive-1": ["drive-1->child-2", "drive-1->child-1", "delete:drive-1"],
+        outside: ["outside->drive-1"],
+      });
+      expect(dependencies(plans)).toMatchObject({
+        "child-1->grandchild-1": ["delete:grandchild-1"],
+        "drive-1->child-1": ["delete:child-1"],
+        "drive-1->child-2": ["delete:child-2"],
+        "outside->drive-1": ["delete:drive-1"],
+      });
       expect(mockReactor.deleteDocument).not.toHaveBeenCalled();
       expect(mockReactor.removeRelationship).not.toHaveBeenCalled();
       expect(mockJobAwaiter.waitForJob).toHaveBeenCalledTimes(plans.length);
+    });
+
+    it("runs a nested drive's own removals before its delete", async () => {
+      batchJobsEcho();
+      givenIncoming({
+        "drive-n": ["drive-r"],
+        "doc-k": ["drive-r"],
+        "doc-m": ["drive-n"],
+      });
+      vi.mocked(mockDocumentIndexer.getOrphanedChildren)
+        .mockResolvedValueOnce(["drive-n", "doc-k"])
+        .mockResolvedValueOnce(["drive-n", "doc-k", "doc-m"])
+        .mockResolvedValueOnce(["drive-n", "doc-k", "doc-m"]);
+
+      await client.deleteDocument("drive-r", PropagationMode.Cascade);
+
+      const plans = submittedPlans();
+      expect(queues(plans)).toEqual({
+        "doc-m": ["delete:doc-m"],
+        "drive-n": ["drive-n->doc-m", "delete:drive-n"],
+        "doc-k": ["delete:doc-k"],
+        "drive-r": ["drive-r->doc-k", "drive-r->drive-n", "delete:drive-r"],
+      });
+      expect(dependencies(plans)).toMatchObject({
+        "drive-n->doc-m": ["delete:doc-m"],
+        "drive-r->doc-k": ["delete:doc-k"],
+        "drive-r->drive-n": ["delete:drive-n"],
+      });
+    });
+
+    /** Drains plans through the real queue, retrying the named job once. */
+    async function drainRetrying(
+      plans: ExecutionJobPlan[],
+      retryOnce: string,
+    ): Promise<string[]> {
+      const queue = createTestQueue();
+      const byKey = new Map(plans.map((plan) => [plan.key, plan]));
+      for (const key of topologicalSort(plans)) {
+        const plan = byKey.get(key)!;
+        const job: Job = {
+          id: plan.key,
+          kind: "mutation",
+          documentId: plan.documentId,
+          scope: plan.scope,
+          branch: plan.branch,
+          actions: plan.actions,
+          operations: [],
+          createdAt: new Date().toISOString(),
+          queueHint: plan.dependsOn,
+          maxRetries: 3,
+          errorHistory: [],
+          meta: { batchId: "batch", batchJobIds: [] },
+        };
+        await queue.enqueue(job);
+      }
+      const ran: string[] = [];
+      let retried = false;
+      for (;;) {
+        const handle = await queue.dequeueNext();
+        if (!handle) break;
+        handle.start();
+        if (handle.job.id === retryOnce && !retried) {
+          retried = true;
+          await queue.retryJob(handle.job.id);
+          continue;
+        }
+        ran.push(label(byKey.get(handle.job.id)!));
+        handle.complete();
+      }
+      expect(await queue.hasJobs(), "queue drained").toBe(false);
+      return ran;
+    }
+
+    it("cannot deadlock when a delete in a cycle is retried", async () => {
+      batchJobsEcho();
+      givenIncoming({ root: ["child"], child: ["root"] });
+      vi.mocked(mockDocumentIndexer.getOrphanedChildren)
+        .mockResolvedValueOnce(["child"])
+        .mockResolvedValueOnce(["child"]);
+
+      await client.deleteDocument("root", PropagationMode.Cascade);
+
+      const ran = await drainRetrying(submittedPlans(), "delete:child");
+      expect(ran).toHaveLength(4);
+      expect(ran.indexOf("child->root")).toBeLessThan(
+        ran.indexOf("delete:child"),
+      );
+      expect(ran.indexOf("delete:child")).toBeLessThan(
+        ran.indexOf("root->child"),
+      );
+      expect(ran.indexOf("root->child")).toBeLessThan(
+        ran.indexOf("delete:root"),
+      );
+    });
+
+    it("gives an edge back into the root no dependency", async () => {
+      batchJobsEcho();
+      givenIncoming({ root: ["child"], child: ["root"] });
+      vi.mocked(mockDocumentIndexer.getOrphanedChildren)
+        .mockResolvedValueOnce(["child"])
+        .mockResolvedValueOnce(["child"]);
+
+      await client.deleteDocument("root", PropagationMode.Cascade);
+
+      const plans = submittedPlans();
+      expect(queues(plans)).toEqual({
+        child: ["child->root", "delete:child"],
+        root: ["root->child", "delete:root"],
+      });
+      expect(dependencies(plans)).toEqual({
+        "child->root": [],
+        "delete:child": [],
+        "root->child": ["delete:child"],
+        "delete:root": [],
+      });
     });
   });
 
