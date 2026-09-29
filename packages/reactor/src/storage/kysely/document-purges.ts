@@ -26,7 +26,7 @@ export async function acquirePurgeLocks(
       from unnest(${unique}::text[]) as t(id)
       order by key
     )
-    select ${lock}(${sql.lit(PURGE_NS)}, key) from keys
+    select ${lock}(${sql.lit(PURGE_NS)}, key) from keys order by key
   `.execute(trx);
 }
 
