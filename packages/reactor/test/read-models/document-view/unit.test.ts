@@ -1001,7 +1001,10 @@ describe("KyselyDocumentView Unit Tests", () => {
         },
       ];
 
-      await expect(view.indexOperations(items)).rejects.toThrow(
+      const target = view as unknown as {
+        commitOperations: (i: typeof items) => Promise<void>;
+      };
+      await expect(target.commitOperations(items)).rejects.toThrow(
         "Failed to parse resultingState",
       );
     });

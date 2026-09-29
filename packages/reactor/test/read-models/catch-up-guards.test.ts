@@ -128,7 +128,7 @@ class HeldIndexer extends KyselyDocumentIndexer {
   hold: { type: string; reached: () => void; until: Promise<void> } | undefined;
   failType: string | undefined;
 
-  protected override async commitOperations(
+  protected override async commitFenced(
     items: OperationWithContext[],
   ): Promise<void> {
     const ordinals = items.map((item) => item.context.ordinal);
@@ -146,7 +146,7 @@ class HeldIndexer extends KyselyDocumentIndexer {
       hold.reached();
       await hold.until;
     }
-    await super.commitOperations(items);
+    await super.commitFenced(items);
     this.commits.push(ordinals);
   }
 }
