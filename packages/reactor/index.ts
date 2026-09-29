@@ -164,6 +164,8 @@ export {
   RetryAccounting,
   type Job,
   type JobAvailableEvent,
+  type JobKind,
+  type PurgeJobOptions,
 } from "./src/queue/types.js";
 
 // Job Tracker
@@ -498,3 +500,30 @@ export type {
 } from "./src/admin/types.js";
 export { ProcessorManager } from "./src/processors/index.js";
 export * from "./src/catch-up/index.js";
+
+// Document erasure
+export {
+  isPurgeMarker,
+  PURGE_DOCUMENT,
+  type PurgeDocumentAction,
+  type PurgeDocumentActionInput,
+  type PurgeMarkerOperation,
+} from "@powerhousedao/shared/document-model";
+export {
+  DocumentNotDeletedError,
+  DocumentPurgedError,
+  GroupInUseError,
+  PurgeTooLargeError,
+  ReservedActionError,
+} from "./src/shared/errors.js";
+export {
+  acquirePurgeLocks,
+  findPurged,
+  listPurged,
+  PURGE_NS,
+  type PurgeLockMode,
+} from "./src/storage/kysely/document-purges.js";
+export type {
+  DocumentPurgeRow,
+  PurgeRemovedRows,
+} from "./src/storage/kysely/types.js";
