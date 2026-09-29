@@ -319,7 +319,7 @@ export function ExpressionPickerPopup() {
   const [state, setState] = useState<
     | { kind: "idle" }
     | { kind: "loading" }
-    | { kind: "ready"; scope: ExpressionScope }
+    | { kind: "ready"; scope: ExpressionScope; stepId?: string }
     | { kind: "error"; message: string }
   >({ kind: "idle" });
   const scopeSource = useScopeSource();
@@ -330,11 +330,17 @@ export function ExpressionPickerPopup() {
   useEffect(() => {
     if (!hasTarget || !scopeSource) return;
     let alive = true;
+    // A reload for the same step keeps its tree up, so an edit elsewhere in
+    // the workflow doesn't blank it under the cursor.
     // eslint-disable-next-line react-hooks-extra/set-state-in-effect -- marks the load that starts on this very line
-    setState({ kind: "loading" });
+    setState((current) =>
+      current.kind === "ready" && current.stepId === stepId
+        ? current
+        : { kind: "loading" },
+    );
     scopeSource.load({ stepId }).then(
       (scope) => {
-        if (alive) setState({ kind: "ready", scope });
+        if (alive) setState({ kind: "ready", scope, stepId });
       },
       (error: unknown) => {
         if (alive) {
@@ -387,7 +393,10 @@ export function ExpressionPickerPopup() {
     target.insert(`{{${path}}}`);
     context.setTarget(null);
   };
-  const scope = state.kind === "ready" ? state.scope : EMPTY_SCOPE;
+  const scope =
+    state.kind === "ready" && state.stepId === stepId
+      ? state.scope
+      : EMPTY_SCOPE;
   const empty = entriesOf(scope.value).length === 0;
   const position = anchorLeftPosition(target.anchor, POPUP_SIZE, {
     width: window.innerWidth,
@@ -398,6 +407,11 @@ export function ExpressionPickerPopup() {
     <div
       ref={containerRef}
       className="workflow-expression-popup fixed flex flex-col rounded-md border border-solid border-foreground/10 bg-card shadow-lg"
+      // Picking keeps the field focused, so it neither commits nor loses its
+      // cursor; the search box still takes focus.
+      onMouseDown={(event) => {
+        if (!(event.target instanceof HTMLInputElement)) event.preventDefault();
+      }}
       style={{
         left: position.x,
         top: position.y,
