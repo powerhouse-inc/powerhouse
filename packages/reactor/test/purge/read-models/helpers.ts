@@ -5,7 +5,6 @@ import {
   type OperationWithContext,
   type PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { ConsoleLogger } from "document-model";
 import { sql, type Kysely, type Transaction } from "kysely";
 import { expect, vi } from "vitest";
 import type {
@@ -13,10 +12,6 @@ import type {
   OperationIndexEntry,
 } from "../../../src/cache/operation-index-types.js";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
-import {
-  createKyselyWatermarkProbe,
-  SettledWatermark,
-} from "../../../src/catch-up/settled-watermark.js";
 import type { BaseReadModel } from "../../../src/read-models/base-read-model.js";
 import { DocumentPurgedError } from "../../../src/shared/errors.js";
 import {
@@ -135,22 +130,17 @@ export function stubWriteCache(purged: Set<string> = new Set()): IWriteCache {
   } as unknown as IWriteCache;
 }
 
+/** Sweeps to the index head: other suites' open writes hold the real watermark. */
 export async function sweepToHead(
   model: BaseReadModel,
-  db: Kysely<Database>,
   index: IOperationIndex,
 ) {
-  const watermark = new SettledWatermark(
-    createKyselyWatermarkProbe(db),
-    new ConsoleLogger(["test"]),
+  const present = await index.getOrdinalsInRange(0, 2 ** 31 - 1, 100_000);
+  const head = present.length > 0 ? Math.max(...present) : 0;
+  return model.sweep(
+    head,
+    present.filter((ordinal) => ordinal > model.appliedThrough),
   );
-  const settled = await watermark.refresh();
-  const present = await index.getOrdinalsInRange(
-    model.appliedThrough,
-    settled,
-    100_000,
-  );
-  return model.sweep(settled, present);
 }
 
 /** The purge's deletes, for the tables this test can have written. */

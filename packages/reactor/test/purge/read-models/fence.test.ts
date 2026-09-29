@@ -29,6 +29,7 @@ import {
   createTestRegistry,
   deferred,
 } from "../../factories.js";
+import { settledAtHead } from "../../catch-up/helpers.js";
 import {
   purgeMarker,
   seedPurgedDocument,
@@ -70,23 +71,33 @@ describe("read models under the purge fence [Postgres]", () => {
     await cleanup();
   });
 
+  // Boot replay reads through the page head, not a database-wide watermark.
+  function settled<T extends BaseReadModel>(model: T): T {
+    model.attachCatchUp(settledAtHead(), 100_000);
+    return model;
+  }
+
   function makeView(writeCache: IWriteCache = stubWriteCache()) {
-    return new KyselyDocumentView(
-      db as never,
-      store,
-      index,
-      writeCache,
-      new ConsistencyTracker(),
-      DeletedDocumentRead.NotFound,
+    return settled(
+      new KyselyDocumentView(
+        db as never,
+        store,
+        index,
+        writeCache,
+        new ConsistencyTracker(),
+        DeletedDocumentRead.NotFound,
+      ),
     );
   }
 
   function makeIndexer(writeCache: IWriteCache = stubWriteCache()) {
-    return new KyselyDocumentIndexer(
-      db as never,
-      index,
-      writeCache,
-      new ConsistencyTracker(),
+    return settled(
+      new KyselyDocumentIndexer(
+        db as never,
+        index,
+        writeCache,
+        new ConsistencyTracker(),
+      ),
     );
   }
 
@@ -253,7 +264,7 @@ describe("read models under the purge fence [Postgres]", () => {
         },
       );
 
-      const result = await sweepToHead(model, db, index);
+      const result = await sweepToHead(model, index);
 
       expect(result.blockedAt).toBeUndefined();
       expect(model.appliedThrough).toBeGreaterThanOrEqual(
@@ -279,7 +290,7 @@ describe("read models under the purge fence [Postgres]", () => {
     await purge(purgedChild);
     await indexer.indexOperations(await index.getByOrdinals(rest));
 
-    const result = await sweepToHead(indexer, db, index);
+    const result = await sweepToHead(indexer, index);
 
     expect(first).toBeDefined();
     expect(result.blockedAt).toBeUndefined();
@@ -310,7 +321,7 @@ describe("read models under the purge fence [Postgres]", () => {
     ]);
     for (const model of [view, indexer]) {
       await model.indexOperations(await writeReadyItems(index, ordinals));
-      await sweepToHead(model, db, index);
+      await sweepToHead(model, index);
     }
     expect(await snapshotCount(id)).toBeGreaterThan(0);
     expect(await indexer.hasRelationship(drive, id)).toBe(true);
@@ -326,8 +337,8 @@ describe("read models under the purge fence [Postgres]", () => {
     vi.mocked(writeCache.getState).mockClear();
 
     for (const model of [view, indexer]) {
-      await sweepToHead(model, db, index);
-      const result = await sweepToHead(model, db, index);
+      await sweepToHead(model, index);
+      const result = await sweepToHead(model, index);
       expect(result.blockedAt).toBeUndefined();
       expect(result.from).toBe(0);
       const head = await index.getOrdinalsInRange(0, 2 ** 31 - 1, 1000);
@@ -348,7 +359,7 @@ describe("read models under the purge fence [Postgres]", () => {
     await commitEntries(index, [createEntry(live)]);
     for (const model of [makeView(), makeIndexer()]) {
       await model.init();
-      await sweepToHead(model, db, index);
+      await sweepToHead(model, index);
     }
 
     const markerOrdinal = await purge(id);
@@ -373,7 +384,7 @@ describe("read models under the purge fence [Postgres]", () => {
       await model.init();
       await model.indexOperations([marker!]);
       await model.indexOperations([marker!]);
-      const result = await sweepToHead(model, db, index);
+      const result = await sweepToHead(model, index);
       expect(result.blockedAt).toBeUndefined();
       expect(model.appliedThrough).toBe(markerOrdinal);
     }
@@ -396,7 +407,7 @@ describe("read models under the purge fence [Postgres]", () => {
     const view = makeView();
     await view.init();
     await purge(id);
-    await sweepToHead(view, db, index);
+    await sweepToHead(view, index);
 
     await expect(view.get(id)).rejects.toSatisfy(DocumentNotFoundError.isError);
     await expect(view.resolveIdOrSlug(id)).rejects.toSatisfy(
@@ -419,7 +430,7 @@ describe("read models under the purge fence [Postgres]", () => {
     await commitEntries(index, [createEntry(id), createEntry(live)]);
     await seedTombstone(db, id, 0);
 
-    const result = await sweepToHead(view, db, index);
+    const result = await sweepToHead(view, index);
 
     expect(result.blockedAt).toBeUndefined();
     expect(getStateCallsFor(writeCache, id).length).toBeGreaterThan(0);
@@ -445,7 +456,7 @@ describe("read models under the purge fence [Postgres]", () => {
     await writeMarkerOperation(store, purgeMarker(id));
     await seedTombstone(db, id, 0);
 
-    const result = await sweepToHead(view, db, index);
+    const result = await sweepToHead(view, index);
 
     expect(result.blockedAt).toBeUndefined();
     expect(view.appliedThrough).toBeGreaterThanOrEqual(stale!);
