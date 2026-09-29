@@ -177,6 +177,7 @@ describe("serving a purged document's marker [Postgres]", () => {
       ),
     );
     expect(quarantined(harness).has(DOC)).toBe(false);
+    expect(manager.getByName("a").channel.deadLetter.items).toEqual([]);
     expect(
       await harness.storage.syncDeadLetterStorage.listQuarantinedDocumentIds(),
     ).not.toContain(DOC);
@@ -340,6 +341,9 @@ describe("dead letters for a purged document [Postgres]", () => {
 
     expect(quarantined(harness).has(DOC)).toBe(false);
     expect(quarantined(harness).has(OTHER)).toBe(true);
+    expect(channel.deadLetter.items.map((item) => item.documentId)).toEqual([
+      OTHER,
+    ]);
     await vi.waitFor(async () =>
       expect(await allDeadLetters(harness)).toEqual([OTHER]),
     );
@@ -479,7 +483,9 @@ describe("a purged document for peers without erasure [Postgres]", () => {
             .map((op) => op.operation.id),
         ).toEqual([entry.operation.id]),
       );
-      expect(await manager.listHolds()).toEqual([]);
+      await vi.waitFor(async () =>
+        expect(await manager.listHolds()).toEqual([]),
+      );
       expect(released).toHaveBeenCalledWith({
         remoteName: "peer",
         documentId: DOC,

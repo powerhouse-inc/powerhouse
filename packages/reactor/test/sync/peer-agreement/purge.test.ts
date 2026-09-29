@@ -191,7 +191,11 @@ describe("a purged document's marker across peers [Postgres]", () => {
           ).toEqual([markerId]),
         WAIT,
       );
-      expect(await a.sync.listHolds()).toEqual([]);
+      // The hold row goes after the resend, not before.
+      await vi.waitFor(
+        async () => expect(await a.sync.listHolds()).toEqual([]),
+        WAIT,
+      );
       // Applying it on b is the executor's receipt path (Track A).
     },
   );
