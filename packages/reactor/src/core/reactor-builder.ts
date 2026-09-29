@@ -4,6 +4,7 @@ import type {
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import {
+  isPurgeMarker,
   localSupports,
   mergePeerCapabilities,
   PEER_CAPABILITIES,
@@ -45,7 +46,7 @@ import {
   type UnsupportedStoredDocuments,
 } from "./stored-protocol-check.js";
 import type { IEventBus } from "../events/interfaces.js";
-import { ReactorEventTypes } from "../events/types.js";
+import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
 import {
   KyselyExecutionScope,
   type IExecutionScope,
@@ -841,6 +842,18 @@ export class ReactorBuilder {
       maxDocuments: 1000,
     });
     await documentMetaCache.startup();
+
+    // Worker executors evict only their own caches; these are the host's.
+    eventBus.subscribe<JobWriteReadyEvent>(
+      ReactorEventTypes.JOB_WRITE_READY,
+      (_type, event) => {
+        for (const item of event.operations) {
+          if (!isPurgeMarker(item)) continue;
+          writeCache.invalidate(item.context.documentId);
+          documentMetaCache.invalidate(item.context.documentId);
+        }
+      },
+    );
 
     const collectionMembershipCache = new CollectionMembershipCache(
       operationIndex,
