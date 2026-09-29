@@ -31,6 +31,8 @@ export function testRuntime(
     relationalDb: createTestRelationalDb(),
     assertCanRead: () => Promise.resolve(undefined),
     assertCanWrite: () => Promise.resolve(undefined),
+    // A loaded runner can take seconds to answer a local listing.
+    pieceVersionLookupMs: 15_000,
     ...deps,
     reactorClient: withSweep(deps.reactorClient ?? emptyClient),
   });

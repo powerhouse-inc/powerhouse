@@ -42,4 +42,6 @@ export interface WorkflowRuntimeHostDeps {
   logger?: ILogger;
   // How long a design-time call waits for a workflow still syncing here.
   syncWaitMs?: number;
+  // How long one source's version listing may take before it counts as absent.
+  pieceVersionLookupMs?: number;
 }
