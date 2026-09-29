@@ -1,6 +1,8 @@
 import { MemoryFS, PGlite } from "@electric-sql/pglite";
 import {
   ConsistencyTracker,
+  REACTOR_SCHEMA,
+  runMigrations,
   type IOperationIndex,
   type IReactorClient,
   type IWriteCache,
@@ -190,6 +192,7 @@ describe("migrateLegacyDriveState", () => {
 
   it("preserves FileNode.documentType end-to-end through the NodeProcessor projection", async () => {
     const processorDb = db as unknown as Kysely<NodeProcessorDatabase>;
+    await runMigrations(processorDb, REACTOR_SCHEMA);
     await processorDb.schema
       .createTable("ViewState")
       .addColumn("readModelId", "text", (col) => col.primaryKey())
