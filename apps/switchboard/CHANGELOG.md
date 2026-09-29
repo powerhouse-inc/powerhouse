@@ -1,3 +1,110 @@
+## 6.2.3-dev.32 (2026-09-29)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- **ph-cli:** seed a Workflows drive in vetra when workflows are on ([6e855808e](https://github.com/powerhouse-inc/powerhouse/commit/6e855808e))
+- **workflow:** sign connections in with OAuth2 using their own app ([b03b33bf0](https://github.com/powerhouse-inc/powerhouse/commit/b03b33bf0))
+- **reactor-workflow:** keyset-paginate the run listing through the subgraph and runs views ([d22a4eea5](https://github.com/powerhouse-inc/powerhouse/commit/d22a4eea5))
+- **reactor-workflow:** renew webhook trigger subscriptions ([4fc6bfea6](https://github.com/powerhouse-inc/powerhouse/commit/4fc6bfea6))
+- ⚠️  **switchboard:** block inputs, step and trigger tests, and version resolutions in the workflow API ([58b43b249](https://github.com/powerhouse-inc/powerhouse/commit/58b43b249))
+
+### 🩹 Fixes
+
+- **reactor-workflow:** order runs by a key that doesn't change when they start ([f15425dd8](https://github.com/powerhouse-inc/powerhouse/commit/f15425dd8))
+- **reactor-workflow:** disarm a workflow's trigger when its document is deleted ([866427bc6](https://github.com/powerhouse-inc/powerhouse/commit/866427bc6))
+
+### 🔥 Performance
+
+- **reactor-workflow:** batch run listing step and document reads ([c33a42f7d](https://github.com/powerhouse-inc/powerhouse/commit/c33a42f7d))
+
+### ⚠️  Breaking Changes
+
+- **switchboard:** block inputs, step and trigger tests, and version resolutions in the workflow API  ([58b43b249](https://github.com/powerhouse-inc/powerhouse/commit/58b43b249))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.30 (2026-09-29)
+
+### 🩹 Fixes
+
+- **deps:** load cmd-ts's ESM build under bun, which fails to require chalk from its CJS build ([749528c71](https://github.com/powerhouse-inc/powerhouse/commit/749528c71))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.29 (2026-09-28)
+
+### 🩹 Fixes
+
+- **reactor-workflow:** refuse a secrets master key other than the one secrets were stored with ([87cfde0f5](https://github.com/powerhouse-inc/powerhouse/commit/87cfde0f5))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.28 (2026-09-28)
+
+### 🚀 Features
+
+- **reactor-workflow:** carry Activepieces layout hints, property groups and search to the editor ([4eca1e1bd](https://github.com/powerhouse-inc/powerhouse/commit/4eca1e1bd))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.27 (2026-09-28)
+
+### 🚀 Features
+
+- ⚠️  **switchboard:** serve attachment bytes only under a document grant ([275e88da0](https://github.com/powerhouse-inc/powerhouse/commit/275e88da0))
+- **switchboard:** sign short-lived attachment byte-route URLs ([18e09cdb5](https://github.com/powerhouse-inc/powerhouse/commit/18e09cdb5))
+
+### 🩹 Fixes
+
+- **switchboard:** sign byte-route URLs under main's download-target TTL cap ([d503b4f67](https://github.com/powerhouse-inc/powerhouse/commit/d503b4f67))
+- **reactor-workflow:** serve workflow reads and runs as the caller ([b2ddd126a](https://github.com/powerhouse-inc/powerhouse/commit/b2ddd126a))
+- **reactor-drive:** gate the reactor-drive subgraph as the caller ([7041635f4](https://github.com/powerhouse-inc/powerhouse/commit/7041635f4))
+- **reactor-api:** gate attachment reads through the reactor's read gate ([d6c3b4df1](https://github.com/powerhouse-inc/powerhouse/commit/d6c3b4df1))
+
+### ⚠️  Breaking Changes
+
+- **switchboard:** serve attachment bytes only under a document grant  ([275e88da0](https://github.com/powerhouse-inc/powerhouse/commit/275e88da0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.26 (2026-09-26)
+
+### 🚀 Features
+
+- ⚠️  **switchboard:** serve attachment bytes only under a document grant ([275e88da0](https://github.com/powerhouse-inc/powerhouse/commit/275e88da0))
+- **switchboard:** sign short-lived attachment byte-route URLs ([18e09cdb5](https://github.com/powerhouse-inc/powerhouse/commit/18e09cdb5))
+
+### 🩹 Fixes
+
+- **switchboard:** sign byte-route URLs under main's download-target TTL cap ([d503b4f67](https://github.com/powerhouse-inc/powerhouse/commit/d503b4f67))
+- **reactor-workflow:** serve workflow reads and runs as the caller ([b2ddd126a](https://github.com/powerhouse-inc/powerhouse/commit/b2ddd126a))
+- **reactor-drive:** gate the reactor-drive subgraph as the caller ([7041635f4](https://github.com/powerhouse-inc/powerhouse/commit/7041635f4))
+- **reactor-api:** gate attachment reads through the reactor's read gate ([d6c3b4df1](https://github.com/powerhouse-inc/powerhouse/commit/d6c3b4df1))
+
+### ⚠️  Breaking Changes
+
+- **switchboard:** serve attachment bytes only under a document grant  ([275e88da0](https://github.com/powerhouse-inc/powerhouse/commit/275e88da0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features

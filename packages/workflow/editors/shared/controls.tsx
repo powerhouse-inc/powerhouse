@@ -10,6 +10,7 @@ import {
   type ButtonHTMLAttributes,
   type KeyboardEvent,
   type ReactNode,
+  type Ref,
 } from "react";
 import { createPortal } from "react-dom";
 import { Icon, type IconName } from "./icons.js";
@@ -30,10 +31,12 @@ const BUTTON_VARIANT = {
     "border border-solid border-foreground/15 bg-card text-foreground hover:bg-accent",
   ghost: "text-muted-foreground hover:bg-accent hover:text-foreground",
   danger: "text-wf-fail hover:bg-wf-fail/10",
+  destructive: "bg-wf-fail text-white hover:opacity-90",
 };
 
 export function Button(
   props: ButtonHTMLAttributes<HTMLButtonElement> & {
+    ref?: Ref<HTMLButtonElement>;
     variant?: keyof typeof BUTTON_VARIANT;
     size?: keyof typeof BUTTON_SIZE;
   },
@@ -195,6 +198,70 @@ export function Switch(props: {
   );
 }
 
+// A bare switch for toolbars; the label is for assistive tech and the title.
+export function Toggle(props: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={props.checked}
+      aria-label={props.label}
+      disabled={props.disabled}
+      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING} ${
+        props.checked ? "bg-wf-ok" : "bg-foreground/20"
+      }`}
+      onClick={(event) => {
+        event.stopPropagation();
+        props.onChange(!props.checked);
+      }}
+    >
+      <span
+        className={`inline-block h-4 w-4 rounded-full bg-card shadow-sm transition-transform ${
+          props.checked ? "translate-x-[18px]" : "translate-x-0.5"
+        }`}
+      />
+    </button>
+  );
+}
+
+// Shows `content` on hover or focus; it stays open while the pointer is on it,
+// so it can hold a link. Disabled controls inside still trigger it.
+export function Tooltip(props: {
+  content: ReactNode;
+  children: ReactNode;
+  // Off renders the children alone.
+  enabled?: boolean;
+  align?: "start" | "end";
+  // Left of the control, for rows inside a clipping container.
+  side?: "below" | "left";
+}) {
+  if (props.enabled === false) return <>{props.children}</>;
+  const place =
+    props.side === "left"
+      ? "right-full top-1/2 -translate-y-1/2 pr-1.5"
+      : `top-full pt-1.5 ${props.align === "start" ? "left-0" : "right-0"}`;
+  return (
+    <span className="group/tip relative inline-flex">
+      {props.children}
+      <span
+        className={`invisible absolute z-50 opacity-0 transition-opacity group-focus-within/tip:visible group-focus-within/tip:opacity-100 group-hover/tip:visible group-hover/tip:opacity-100 ${place}`}
+      >
+        <span
+          role="tooltip"
+          className="block w-max max-w-64 rounded-md border border-solid border-foreground/10 bg-card px-2.5 py-1.5 text-xs text-foreground shadow-lg"
+        >
+          {props.content}
+        </span>
+      </span>
+    </span>
+  );
+}
+
 // ─── tabs ───────────────────────────────────────────────────────────────────
 
 export function Tabs<T extends string>(props: {
@@ -287,9 +354,24 @@ interface SelectProps {
   disabled?: boolean;
   invalid?: boolean;
   id?: string;
+  // Names the control when no <label> points at it.
+  ariaLabel?: string;
   // Reloads options from their source; shown in the list header.
   onRefresh?: () => void;
   emptyText?: string;
+  // Always show the search box, not only once the list is long.
+  searchable?: boolean;
+  // Search happens at the source: every keystroke is reported, and the list
+  // shown is the options given, unfiltered.
+  onQueryChange?: (query: string) => void;
+  // Extra actions at the foot of the list; each closes it when chosen.
+  actions?: SelectAction[];
+}
+
+export interface SelectAction {
+  label: string;
+  icon?: IconName;
+  onSelect: () => void;
 }
 
 type SingleSelectProps = SelectProps & {
@@ -329,23 +411,34 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
       ? [props.value]
       : [];
   const selectedSet = new Set(selected);
-  const searchable = props.options.length > SEARCH_THRESHOLD;
+  const searchable =
+    props.searchable ||
+    Boolean(props.onQueryChange) ||
+    props.options.length > SEARCH_THRESHOLD;
   const needle = query.trim().toLowerCase();
+  const serverSide = Boolean(props.onQueryChange);
   const visible = useMemo(
     () =>
-      needle
+      needle && !serverSide
         ? props.options.filter((option) =>
             `${option.label} ${option.description ?? ""}`
               .toLowerCase()
               .includes(needle),
           )
         : props.options,
-    [needle, props.options],
+    [needle, props.options, serverSide],
   );
 
-  const close = () => {
+  const onQueryChange = props.onQueryChange;
+  // Closing also ends a source search, so the next opening starts unfiltered.
+  const dismiss = () => {
     setOpen(false);
     setQuery("");
+    onQueryChange?.("");
+  };
+
+  const close = () => {
+    dismiss();
     triggerRef.current?.focus();
   };
 
@@ -395,6 +488,7 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
       ) {
         setOpen(false);
         setQuery("");
+        onQueryChange?.("");
       }
     };
     window.addEventListener("mousedown", onPointer);
@@ -405,7 +499,7 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
-  }, [open, searchable]);
+  }, [open, searchable, onQueryChange]);
 
   useEffect(() => {
     popoverRef.current
@@ -443,8 +537,7 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
       close();
     } else if (event.key === "Tab") {
       // Let focus move on as usual.
-      setOpen(false);
-      setQuery("");
+      dismiss();
     }
   };
 
@@ -465,6 +558,7 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
       <button
         ref={triggerRef}
         id={props.id}
+        aria-label={props.ariaLabel}
         type="button"
         role="combobox"
         aria-expanded={open}
@@ -544,6 +638,7 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
                         onChange={(event) => {
                           setQuery(event.target.value);
                           setActive(0);
+                          props.onQueryChange?.(event.target.value);
                         }}
                       />
                     </>
@@ -629,6 +724,27 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
                   })
                 )}
               </div>
+              {props.actions?.length ? (
+                <div className="border-t border-solid border-foreground/10 p-1">
+                  {props.actions.map((action) => (
+                    <button
+                      key={action.label}
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        dismiss();
+                        action.onSelect();
+                      }}
+                    >
+                      {action.icon ? (
+                        <Icon name={action.icon} className="h-3.5 w-3.5" />
+                      ) : null}
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               {!props.multiple && props.clearable && props.value ? (
                 <div className="border-t border-solid border-foreground/10 p-1">
                   {

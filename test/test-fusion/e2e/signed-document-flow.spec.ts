@@ -31,7 +31,6 @@ const OPERATIONS_QUERY = `
           }
         }
       }
-      totalCount
     }
   }
 `;

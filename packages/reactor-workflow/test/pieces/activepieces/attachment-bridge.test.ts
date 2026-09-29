@@ -17,7 +17,10 @@ import {
   ActivepiecesBlockExecutor,
   type AttachmentPort,
 } from "../../../src/pieces/engine/blocks.js";
-import type { BlockExecution } from "../../../src/pieces/engine/types.js";
+import {
+  stepBlock,
+  type BlockExecution,
+} from "../../../src/pieces/engine/types.js";
 import { PieceWorker } from "../../../src/pieces/activepieces/worker/host.js";
 import {
   DataUriFilesService,
@@ -154,12 +157,20 @@ function attachmentPort(): AttachmentPort & {
   };
 }
 
-function execution(blockType: string, config: unknown): BlockExecution {
-  return {
-    blockType,
+function execution(
+  pieceName: string,
+  actionName: string,
+  config: unknown,
+): BlockExecution {
+  const step = {
+    id: "s1",
+    key: "step",
+    pieceName,
+    pieceVersion: "1.0.0",
+    actionName,
     config,
-    step: { id: "s1", key: "step", blockType } as BlockExecution["step"],
   };
+  return { block: stepBlock(step), config, step };
 }
 
 describe("AttachmentBridge", () => {
@@ -187,7 +198,7 @@ describe("AttachmentBridge", () => {
       attachments: port,
     });
     const result = await executor.execute(
-      execution("@test/writer@1.0.0#emit", {}),
+      execution("@test/writer", "emit", {}),
     );
 
     const output = result.output as {
@@ -219,7 +230,7 @@ describe("AttachmentBridge", () => {
     });
 
     const result = await executor.execute(
-      execution("@test/reader@1.0.0#consume", {
+      execution("@test/reader", "consume", {
         attachment: "attachment://v1:abc",
       }),
     );
@@ -246,7 +257,7 @@ describe("AttachmentBridge", () => {
     });
 
     const result = await executor.execute(
-      execution("@test/carrier@1.0.0#carry", {
+      execution("@test/carrier", "carry", {
         sourceDocument: "attachment://v1:unreadable",
       }),
     );
@@ -269,7 +280,7 @@ describe("AttachmentBridge", () => {
 
     await expect(
       executor.execute(
-        execution("@test/reader@1.0.0#consume", {
+        execution("@test/reader", "consume", {
           attachment: "attachment://v1:missing",
         }),
       ),
@@ -288,7 +299,7 @@ describe("AttachmentBridge", () => {
     });
 
     await expect(
-      executor.execute(execution("@test/nostore@1.0.0#emit", {})),
+      executor.execute(execution("@test/nostore", "emit", {})),
     ).rejects.toThrow(/no attachment store is configured/);
   });
 
@@ -297,7 +308,7 @@ describe("AttachmentBridge", () => {
     const executor = new ActivepiecesBlockExecutor({ cacheDir, worker });
 
     const result = await executor.execute(
-      execution("@test/inline@1.0.0#emit", {}),
+      execution("@test/inline", "emit", {}),
     );
 
     expect((result.output as { ref: string }).ref).toMatch(

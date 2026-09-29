@@ -30,6 +30,7 @@ function wouldCycle(edges: WorkflowEdge[], from: string, to: string): boolean {
 
 export const workflowEdgesOperations: WorkflowEdgesOperations = {
   addEdgeOperation(state, action) {
+    // Ports go unchecked: they are declared in descriptors, and a reducer has none.
     if (state.edges.some((edge) => edge.id === action.input.id)) {
       throw new DuplicateEdgeIdError("An edge with this id already exists");
     }

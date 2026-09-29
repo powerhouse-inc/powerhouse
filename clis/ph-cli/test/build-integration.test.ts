@@ -16,7 +16,11 @@ import {
 import { tmpdir } from "node:os";
 import { isBuiltin } from "node:module";
 import { delimiter, join } from "node:path";
-import { generatePiece } from "@powerhousedao/codegen";
+import {
+  generatePiece,
+  generatePieceAction,
+  generatePieceTrigger,
+} from "@powerhousedao/codegen";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import type { Manifest } from "@powerhousedao/shared/document-model";
 import {
@@ -46,7 +50,9 @@ const readJson = <T>(file: string): T =>
 
 // Every specifier the built module still imports; a self-contained piece has
 // none but node built-ins.
-function bareImports(source: string): string[] {
+function bareImports(bundle: string): string[] {
+  // Inlined dependencies keep JSDoc like `@type {import('./eval')}`
+  const source = bundle.replace(/\/\*[\s\S]*?\*\//g, "");
   const found: string[] = [];
   for (const match of source.matchAll(/from\s+["']([^"']+)["']/g)) {
     found.push(match[1]);
@@ -177,7 +183,7 @@ describe("runBuild on a piece-only package", () => {
       ),
     ).toEqual(["index.mjs"]);
 
-    // The descriptor: the list's name and version, the piece's metadata,
+    // The descriptor: the list's name, the package's version, the piece's metadata,
     // and none of the functions a prop or an action carries.
     type Descriptor = {
       name: string;
@@ -213,7 +219,7 @@ describe("runBuild on a piece-only package", () => {
       join(dist, "node", "pieces", "goodbye", "descriptor.json"),
     );
     expect(goodbyeDescriptor.name).toBe("@fixture/piece-goodbye");
-    expect(goodbyeDescriptor.version).toBe("0.1.0");
+    expect(goodbyeDescriptor.version).toBe("1.2.3");
     expect(goodbyeDescriptor.displayName).toBe("Goodbye");
     expect(goodbyeDescriptor.deprecated).toBe(false);
     expect(goodbyeDescriptor.actions.say_hello.displayName).toBe("Say goodbye");
@@ -247,7 +253,7 @@ describe("runBuild on a piece-only package", () => {
       {
         id: "@fixture/piece-goodbye",
         name: "Goodbye",
-        version: "0.1.0",
+        version: "1.2.3",
         description: "Says goodbye.",
         bundle: "dist/node/pieces/goodbye",
         descriptor: "dist/node/pieces/goodbye/descriptor.json",
@@ -423,9 +429,56 @@ describe("runBuild on a generated piece", () => {
       "dir",
     );
 
+    // One piece per auth kind, each with the parts `ph generate` adds to it.
     const project = buildTsMorphProject(generated);
     await generatePiece(
       { pieceName: "acme-crm", description: "Connect to Acme CRM." },
+      project,
+    );
+    await generatePieceAction(
+      { pieceDir: "acme-crm", actionName: "get-record" },
+      project,
+    );
+    await generatePieceTrigger(
+      { pieceDir: "acme-crm", triggerName: "new-record" },
+      project,
+    );
+    await generatePieceTrigger(
+      {
+        pieceDir: "acme-crm",
+        triggerName: "record-updated",
+        strategy: "webhook",
+      },
+      project,
+    );
+    await generatePiece({ pieceName: "status-page", auth: "secret" }, project);
+    await generatePieceAction(
+      { pieceDir: "status-page", actionName: "create-incident" },
+      project,
+    );
+    await generatePieceTrigger(
+      {
+        pieceDir: "status-page",
+        triggerName: "incident-opened",
+        strategy: "webhook",
+      },
+      project,
+    );
+    await generatePiece({ pieceName: "open-data", auth: "none" }, project);
+    await generatePieceAction(
+      { pieceDir: "open-data", actionName: "list-datasets" },
+      project,
+    );
+    await generatePieceTrigger(
+      { pieceDir: "open-data", triggerName: "new-dataset" },
+      project,
+    );
+    await generatePieceTrigger(
+      {
+        pieceDir: "open-data",
+        triggerName: "dataset-published",
+        strategy: "webhook",
+      },
       project,
     );
     await project.save();
@@ -436,23 +489,34 @@ describe("runBuild on a generated piece", () => {
     rmSync(generated, { recursive: true, force: true });
   });
 
-  it("bundles it self-contained, describes it and lists it in the dist manifest", async () => {
+  const pieces = [
+    {
+      slug: "acme-crm",
+      displayName: "Acme Crm",
+      description: "Connect to Acme CRM.",
+      actions: ["get-record"],
+      triggers: ["new-record", "record-updated"],
+    },
+    {
+      slug: "status-page",
+      displayName: "Status Page",
+      description: "Connect to Status Page.",
+      actions: ["create-incident"],
+      triggers: ["incident-opened"],
+    },
+    {
+      slug: "open-data",
+      displayName: "Open Data",
+      description: "Connect to Open Data.",
+      actions: ["list-datasets"],
+      triggers: ["dataset-published", "new-dataset"],
+    },
+  ];
+
+  it("bundles each self-contained, describes it and lists it in the dist manifest", async () => {
     process.chdir(generated);
 
     await runBuild(args);
-
-    const pieceDir = join(dist, "node", "pieces", "acme-crm");
-    expect(readdirSync(pieceDir).sort()).toEqual([
-      "descriptor.json",
-      "index.mjs",
-      "index.mjs.map",
-      "package.json",
-    ]);
-    // The framework and everything under it was inlined, as a piece running in
-    // a worker with no node_modules beside it needs.
-    expect(
-      bareImports(readFileSync(join(pieceDir, "index.mjs"), "utf8")),
-    ).toEqual([]);
 
     type Descriptor = {
       name: string;
@@ -462,44 +526,62 @@ describe("runBuild on a generated piece", () => {
       actions: Record<string, { displayName: string }>;
       triggers: Record<string, { displayName: string }>;
     };
-    const descriptor = readJson<Descriptor>(join(pieceDir, "descriptor.json"));
-    expect(descriptor.name).toBe("@fixture/piece-acme-crm");
-    expect(descriptor.version).toBe("1.0.0");
-    expect(descriptor.displayName).toBe("Acme Crm");
-    expect(Object.keys(descriptor.actions)).toEqual(["get-record"]);
-    expect(Object.keys(descriptor.triggers)).toEqual(["new-record"]);
+    for (const piece of pieces) {
+      const id = `@fixture/piece-${piece.slug}`;
+      const pieceDir = join(dist, "node", "pieces", piece.slug);
+      expect(readdirSync(pieceDir).sort()).toEqual([
+        "descriptor.json",
+        "index.mjs",
+        "index.mjs.map",
+        "package.json",
+      ]);
+      // The framework and everything under it was inlined, as a piece running
+      // in a worker with no node_modules beside it needs.
+      expect(
+        bareImports(readFileSync(join(pieceDir, "index.mjs"), "utf8")),
+      ).toEqual([]);
 
-    expect(
-      readJson<Record<string, unknown>>(join(pieceDir, "package.json")),
-    ).toEqual({
-      name: "@fixture/piece-acme-crm",
-      version: "1.0.0",
-      description: "Connect to Acme CRM.",
-      type: "module",
-      main: "index.mjs",
-      license: "MIT",
-      dependencies: {},
-    });
+      const descriptor = readJson<Descriptor>(
+        join(pieceDir, "descriptor.json"),
+      );
+      expect(descriptor.name).toBe(id);
+      expect(descriptor.version).toBe("2.0.0");
+      expect(descriptor.displayName).toBe(piece.displayName);
+      expect(Object.keys(descriptor.actions).sort()).toEqual(piece.actions);
+      expect(Object.keys(descriptor.triggers).sort()).toEqual(piece.triggers);
+
+      expect(
+        readJson<Record<string, unknown>>(join(pieceDir, "package.json")),
+      ).toEqual({
+        name: id,
+        version: "2.0.0",
+        description: piece.description,
+        type: "module",
+        main: "index.mjs",
+        license: "MIT",
+        dependencies: {},
+      });
+      expect(
+        existsSync(join(dist, "types", "pieces", piece.slug, "index.d.ts")),
+      ).toBe(true);
+    }
 
     // The source manifest carries the id and the display name codegen wrote;
-    // the rest of this entry is what the build learned by loading the piece.
+    // the rest of each entry is what the build learned by loading the piece.
     const manifest = readJson<Manifest>(join(dist, "powerhouse.manifest.json"));
-    expect(manifest.pieces).toEqual([
-      {
-        id: "@fixture/piece-acme-crm",
-        name: "Acme Crm",
-        version: "1.0.0",
-        description: "Connect to Acme CRM.",
-        bundle: "dist/node/pieces/acme-crm",
-        descriptor: "dist/node/pieces/acme-crm/descriptor.json",
-      },
-    ]);
+    expect(manifest.pieces).toEqual(
+      pieces.map((piece) => ({
+        id: `@fixture/piece-${piece.slug}`,
+        name: piece.displayName,
+        version: "2.0.0",
+        description: piece.description,
+        bundle: `dist/node/pieces/${piece.slug}`,
+        descriptor: `dist/node/pieces/${piece.slug}/descriptor.json`,
+      })),
+    );
 
     // No warning means tsc had nothing to say about the generated sources,
     // and every listed piece was built.
     expect(warnings).toEqual([]);
-    expect(
-      existsSync(join(dist, "types", "pieces", "acme-crm", "index.d.ts")),
-    ).toBe(true);
   }, 180_000);
 });

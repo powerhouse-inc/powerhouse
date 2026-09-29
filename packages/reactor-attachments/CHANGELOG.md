@@ -1,3 +1,69 @@
+## 6.2.3-dev.32 (2026-09-29)
+
+This was a version bump only for @powerhousedao/reactor-attachments to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.31 (2026-09-29)
+
+This was a version bump only for @powerhousedao/reactor-attachments to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.30 (2026-09-29)
+
+### 🩹 Fixes
+
+- **deps:** load cmd-ts's ESM build under bun, which fails to require chalk from its CJS build ([749528c71](https://github.com/powerhouse-inc/powerhouse/commit/749528c71))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.29 (2026-09-28)
+
+This was a version bump only for @powerhousedao/reactor-attachments to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.28 (2026-09-28)
+
+This was a version bump only for @powerhousedao/reactor-attachments to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.27 (2026-09-28)
+
+### 🚀 Features
+
+- ⚠️  **reactor-attachments:** carry the documentId on every remote attachment read ([e5af0558b](https://github.com/powerhouse-inc/powerhouse/commit/e5af0558b))
+- **reactor-attachments:** answer which scopes reference an attachment ([fc4670bd9](https://github.com/powerhouse-inc/powerhouse/commit/fc4670bd9))
+
+### 🩹 Fixes
+
+- **reactor-attachments:** leave remote hash-first dedup to the server's 409 ([f33b4c467](https://github.com/powerhouse-inc/powerhouse/commit/f33b4c467))
+
+### ⚠️  Breaking Changes
+
+- **reactor-attachments:** carry the documentId on every remote attachment read  ([e5af0558b](https://github.com/powerhouse-inc/powerhouse/commit/e5af0558b))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.26 (2026-09-26)
+
+### 🚀 Features
+
+- ⚠️  **reactor-attachments:** carry the documentId on every remote attachment read ([e5af0558b](https://github.com/powerhouse-inc/powerhouse/commit/e5af0558b))
+- **reactor-attachments:** answer which scopes reference an attachment ([fc4670bd9](https://github.com/powerhouse-inc/powerhouse/commit/fc4670bd9))
+
+### 🩹 Fixes
+
+- **reactor-attachments:** leave remote hash-first dedup to the server's 409 ([f33b4c467](https://github.com/powerhouse-inc/powerhouse/commit/f33b4c467))
+
+### ⚠️  Breaking Changes
+
+- **reactor-attachments:** carry the documentId on every remote attachment read  ([e5af0558b](https://github.com/powerhouse-inc/powerhouse/commit/e5af0558b))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features

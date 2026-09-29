@@ -1,5 +1,7 @@
 // Form descriptors driving property panels; pure data, mirrors the
 // ConnectorPropDescriptor shape from the workflow runtime.
+import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
+import type { TriggerDelivery } from "@powerhousedao/pieces-framework/workflow";
 
 export interface BlockFormProp {
   name: string;
@@ -7,7 +9,10 @@ export interface BlockFormProp {
   type: string;
   required: boolean;
   defaultValue?: unknown;
-  staticOptions?: { label: string; value: unknown }[];
+  staticOptions?: FormOption[];
+  // A STATIC_DROPDOWN's own state, beside its options.
+  staticDisabled?: boolean;
+  staticPlaceholder?: string;
   hasDynamicResolver?: boolean;
   description?: string;
   placeholder?: string;
@@ -19,9 +24,49 @@ export interface BlockFormProp {
   // case is short. Opens expanded when set, else live config would be hidden.
   advanced?: boolean;
   // Shown only while a sibling prop holds one of these values; data, not a
-  // predicate, so a piece form arriving as JSON can express it too.
-  // Hidden also when `unlessSet` has a value (a mode the runtime infers).
-  showWhen?: { prop: string; oneOf: unknown[]; unlessSet?: string };
+  // predicate, so a form arriving as JSON can express it.
+  showWhen?: { prop: string; oneOf: unknown[] };
+  // Activepieces layout and control hints, as the piece declared them.
+  width?: "half" | "full";
+  icon?: string;
+  // CHECKBOX: sibling props shown only while it is checked.
+  reveals?: string[];
+  // MARKDOWN: BORDERLESS | INFO | WARNING | TIP.
+  variant?: string;
+  // STATIC_DROPDOWN "cards", NUMBER "stepper", DATE_RANGE "dropdown",
+  // LONG_TEXT "code" (monospace).
+  display?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  // DROPDOWN: options() is re-run with what the author types.
+  refreshOnSearch?: boolean;
+  // RICH_TEXT: the sibling whose value picks plain, markdown or html.
+  formatProperty?: string;
+  // SHORT_TEXT: a checkbox with this label that stores "" on purpose.
+  emptyChoice?: string;
+}
+
+export interface FormOption {
+  label: string;
+  value: unknown;
+  description?: string;
+  icon?: string;
+}
+
+export interface PropertyGroup {
+  key: string;
+  // tabs | section | summary | builder | footer
+  display: string;
+  label?: string;
+  description?: string;
+  icon?: string;
+  props: string[];
+}
+
+export interface ErrorHandlingDefaults {
+  retryOnFailure?: { defaultValue?: boolean; hide?: boolean };
+  continueOnFailure?: { defaultValue?: boolean; hide?: boolean };
 }
 
 export interface BlockForm {
@@ -30,9 +75,19 @@ export interface BlockForm {
   // Whether the block takes a connection: none hides the field entirely.
   auth?: "none" | "optional" | "required";
   props: BlockFormProp[];
-  // Piece triggers only: POLLING | WEBHOOK | APP_WEBHOOK. WEBHOOK triggers
-  // are fed by a request, so the panel shows their endpoint URL.
-  triggerStrategy?: string;
+  // Output ports the block declares; edges on any other are never taken.
+  ports?: readonly string[];
+  // A form drawn instead of the props, e.g. "schedule" for the builder.
+  display?: string;
+  // Triggers only, from checkTriggerStrategy. A webhook trigger is fed by a
+  // request, so the panel shows its endpoint URL.
+  triggerDelivery?: TriggerDelivery;
+  // What the step does, as the piece describes it.
+  description?: string;
+  propertyGroups?: PropertyGroup[];
+  // READ | SEARCH | WRITE | DESTRUCTIVE
+  classification?: string;
+  errorHandling?: ErrorHandlingDefaults;
 }
 
 export interface ConnectionSummary {
@@ -74,29 +129,71 @@ export interface WebhookEndpoint {
 }
 
 export interface DesignTimeService {
-  getBlockForm: (blockType: string) => Promise<BlockForm | null>;
+  getBlockForm: (block: BlockRef) => Promise<BlockForm | null>;
   loadOptions: (
-    blockType: string,
+    block: BlockRef,
     propName: string,
     input: Record<string, unknown>,
     connectionId?: string,
+    searchValue?: string,
   ) => Promise<unknown>;
   // Runs the current workflow's piece trigger test hook; sample items back.
   testTrigger?: () => Promise<unknown>;
-  // The current workflow's webhook endpoint, for core#webhook triggers.
+  // Runs one draft step against the last tests of the blocks it reads.
+  testStep?: (stepId: string) => Promise<StepTestOutcome>;
+  // The current workflow's webhook endpoint, for the core webhook trigger.
   webhookEndpoint?: () => Promise<WebhookEndpoint | null>;
   // Backs PH_SECRET_REF props; absent when the runtime refuses secret writes.
   secrets?: SecretFormService;
   // powerhouse/connection documents for the connection picker.
   listConnections?: () => Promise<ConnectionSummary[]>;
-  // Drops the cached listing after the picker creates a connection.
-  refreshConnections?: () => void;
+  // Tells apart listings narrowed differently, e.g. per drive; part of the key.
+  connectionScope?: string;
+  // The workflow being edited; keys its run and endpoint queries.
+  workflowId?: string;
   // The current workflow's most recent run, for a step's "Last run" preview.
   latestRun?: () => Promise<LatestRun | null>;
+  // One journaled run by id, e.g. the trigger's last test.
+  fetchRun?: (runId: string) => Promise<LatestRun | null>;
+  // The piece version each draft block runs, trigger first.
+  blockResolutions?: () => Promise<BlockResolutionView[]>;
+}
+
+export type BlockMatchView =
+  | "exact"
+  | "compatible"
+  | "fallback"
+  | "installed"
+  | "missing";
+
+// A draft block as the runtime would run it; host-bound pieces are "installed".
+export interface BlockResolutionView {
+  stepId: string;
+  pieceName: string;
+  // The version the block pins.
+  pieceVersion: string;
+  name: string;
+  kind: "action" | "trigger";
+  resolvedVersion: string | null;
+  source: string | null;
+  match: BlockMatchView;
+  note: string | null;
+  latestVersion: string | null;
+}
+
+export interface StepTestOutcome {
+  // Null when nothing ran, e.g. `Test "fetch" first`.
+  runId: string | null;
+  status: "SUCCEEDED" | "FAILED";
+  output?: unknown;
+  error: string | null;
+  durationMs: number;
 }
 
 export interface LatestRun {
+  id?: string;
   status: string;
+  error?: string | null;
   startedAt: string;
   triggerPayload: unknown;
   steps: {
@@ -117,354 +214,4 @@ export const POLL_INTERVAL_PROP: BlockFormProp = {
   required: false,
   description:
     "How often the reactor checks this trigger; 60 at the least. Omit to follow the piece's own cadence.",
-};
-
-const text = (
-  name: string,
-  displayName: string,
-  required = false,
-  description?: string,
-): BlockFormProp => ({
-  name,
-  displayName,
-  type: "SHORT_TEXT",
-  required,
-  description,
-});
-
-// Takes a secret VALUE and commits only the minted ref, the way the
-// connection editor's SecretField does; the document never holds the value.
-const secretRef = (
-  name: string,
-  displayName: string,
-  required = false,
-  description?: string,
-): BlockFormProp => ({
-  name,
-  displayName,
-  type: "PH_SECRET_REF",
-  required,
-  description,
-});
-
-const number = (
-  name: string,
-  displayName: string,
-  required = false,
-  description?: string,
-): BlockFormProp => ({
-  name,
-  displayName,
-  type: "NUMBER",
-  required,
-  description,
-});
-
-// Marks a prop for the "Advanced" section without repeating the builders.
-const advanced = (prop: BlockFormProp): BlockFormProp => ({
-  ...prop,
-  advanced: true,
-});
-
-// Hides a prop until a sibling holds one of `oneOf`.
-const shownWhen = (
-  prop: BlockFormProp,
-  sibling: string,
-  oneOf: unknown[],
-): BlockFormProp => ({ ...prop, showWhen: { prop: sibling, oneOf } });
-
-const dropdown = (
-  name: string,
-  displayName: string,
-  options: { label: string; value: unknown }[],
-  required = false,
-  description?: string,
-): BlockFormProp => ({
-  name,
-  displayName,
-  type: "STATIC_DROPDOWN",
-  required,
-  description,
-  staticOptions: options,
-});
-
-// Every scheme that verifies a signature, and so needs a secret.
-const SIGNED_SCHEMES = ["token", "hmac", "hmac-prefixed", "hmac-timestamped"];
-
-// Schemes that compute a digest, and so take a hash and an encoding. `token`
-// presents the secret verbatim, so none of that applies to it.
-const HMAC_SCHEMES = ["hmac", "hmac-prefixed", "hmac-timestamped"];
-
-// Hand-written forms for core blocks and triggers.
-export const CORE_FORMS: Record<string, BlockForm> = {
-  "core#manual": {
-    title: "Manual trigger",
-    requireAuth: false,
-    auth: "none",
-    props: [],
-  },
-  "core#schedule": {
-    title: "Schedule",
-    requireAuth: false,
-    auth: "none",
-    props: [
-      // Optional at run time: an omitted mode follows whichever of cron or
-      // every is set, so the form defaults to cron rather than demanding one.
-      {
-        ...dropdown("mode", "Runs", [
-          { label: "On a cron schedule", value: "cron" },
-          { label: "At a fixed interval", value: "interval" },
-        ]),
-        defaultValue: "cron",
-      },
-      // No mode but an `every` is interval mode to the runtime, so no cron.
-      {
-        ...text(
-          "cron",
-          "Cron expression",
-          true,
-          "Five fields, e.g. 0 9 * * 1-5 runs at 09:00 on weekdays.",
-        ),
-        showWhen: {
-          prop: "mode",
-          oneOf: ["cron", undefined],
-          unlessSet: "every",
-        },
-      },
-      shownWhen(
-        number("every", "Every", true, "At least one minute."),
-        "mode",
-        ["interval"],
-      ),
-      shownWhen(
-        {
-          ...dropdown("unit", "Unit", [
-            { label: "Minutes", value: "minutes" },
-            { label: "Hours", value: "hours" },
-            { label: "Days", value: "days" },
-          ]),
-          defaultValue: "minutes",
-        },
-        "mode",
-        ["interval"],
-      ),
-      text(
-        "timezone",
-        "Timezone",
-        false,
-        "An IANA name such as Europe/Lisbon. Defaults to UTC.",
-      ),
-    ],
-  },
-  "core#webhook": {
-    title: "Webhook",
-    requireAuth: false,
-    auth: "none",
-    props: [
-      dropdown(
-        "methods",
-        "Method",
-        [
-          { label: "POST", value: "POST" },
-          { label: "Any", value: "ANY" },
-          { label: "GET", value: "GET" },
-          { label: "PUT", value: "PUT" },
-          { label: "PATCH", value: "PATCH" },
-          { label: "DELETE", value: "DELETE" },
-        ],
-        true,
-      ),
-      // Named by wire format, not by sender: authors match these against their
-      // sender's docs, and one brand name would mislead about every other.
-      dropdown(
-        "scheme",
-        "Verification",
-        [
-          { label: "None — the URL's token only", value: "none" },
-          { label: "Shared token in a header", value: "token" },
-          { label: "HMAC digest", value: "hmac" },
-          {
-            label: "HMAC digest with a label (sha256=…)",
-            value: "hmac-prefixed",
-          },
-          {
-            label: "HMAC digest, timestamped (t=…,v1=…)",
-            value: "hmac-timestamped",
-          },
-        ],
-        true,
-      ),
-      // Hidden while the scheme is None: a visible secret field on an
-      // unverified endpoint invites a secret that is never checked.
-      shownWhen(
-        secretRef(
-          "secretRef",
-          "Secret",
-          true,
-          "The shared secret: the value the header must equal, or the key the sender signs with",
-        ),
-        "scheme",
-        SIGNED_SCHEMES,
-      ),
-      advanced(
-        shownWhen(
-          text(
-            "header",
-            "Header",
-            false,
-            "Where the token or signature is read from. Defaults to the header the chosen scheme conventionally uses; set it only if the sender differs",
-          ),
-          "scheme",
-          SIGNED_SCHEMES,
-        ),
-      ),
-      advanced(
-        shownWhen(
-          number(
-            "toleranceSeconds",
-            "Replay window (seconds)",
-            false,
-            "Rejects a delivery signed longer ago than this, so a captured request expires. Default 300",
-          ),
-          "scheme",
-          ["hmac-timestamped"],
-        ),
-      ),
-      // The layout frames the signature; these say how its digest was computed.
-      // Senders pick them independently, so they are fields, not scheme names.
-      advanced(
-        shownWhen(
-          dropdown("algorithm", "Hash", [
-            { label: "SHA-256 (default)", value: "sha256" },
-            { label: "SHA-1", value: "sha1" },
-            { label: "SHA-512", value: "sha512" },
-          ]),
-          "scheme",
-          HMAC_SCHEMES,
-        ),
-      ),
-      advanced(
-        shownWhen(
-          dropdown("encoding", "Digest encoding", [
-            { label: "Hexadecimal (default)", value: "hex" },
-            { label: "Base64", value: "base64" },
-          ]),
-          "scheme",
-          HMAC_SCHEMES,
-        ),
-      ),
-      advanced(
-        shownWhen(
-          text(
-            "prefix",
-            "Signature label",
-            false,
-            "The literal before the digest. Defaults to the hash and an equals sign, e.g. sha256=. Leave blank for a sender that sends the digest with no label",
-          ),
-          "scheme",
-          ["hmac-prefixed"],
-        ),
-      ),
-      advanced(
-        text(
-          "dedupeField",
-          "Event id field",
-          false,
-          "Where the sender puts its own event id, so a redelivery is accepted without a second run. A bare name reads a query param or a top-level body field; prefix with header: or body: to read a header or a nested path (header:x-delivery-id, body:data.object.id)",
-        ),
-      ),
-      advanced(
-        number(
-          "dedupeTtlSeconds",
-          "Dedupe window (seconds)",
-          false,
-          "How long an event id is remembered. Default 300",
-        ),
-      ),
-      advanced(
-        text(
-          "challengeField",
-          "Challenge field",
-          false,
-          "Echo this field back instead of running, for senders that verify the endpoint before registering it. Same header:/body: prefixes as the event id field",
-        ),
-      ),
-      advanced(
-        dropdown(
-          "responseMode",
-          "Response",
-          [
-            { label: "Answer immediately (202)", value: "async" },
-            { label: "Wait for the run (200)", value: "sync" },
-          ],
-          false,
-          "Waiting holds the sender's socket open for the whole run",
-        ),
-      ),
-      advanced(
-        number(
-          "responseStatus",
-          "Success status",
-          false,
-          "Status returned on acceptance. Default 202 async, 200 sync",
-        ),
-      ),
-    ],
-  },
-  "core#branch": {
-    title: "Branch",
-    requireAuth: false,
-    auth: "none",
-    props: [
-      text(
-        "condition",
-        "Condition",
-        true,
-        "e.g. {{steps.fetch.output.body.ok}}",
-      ),
-      text(
-        "equals",
-        "Equals",
-        false,
-        "Take the true port only when the condition matches this; omit for truthiness",
-      ),
-    ],
-  },
-  "core#assert": {
-    title: "Assert",
-    requireAuth: false,
-    auth: "none",
-    props: [
-      text(
-        "value",
-        "Value",
-        true,
-        "e.g. {{steps.describe.output}} - the run fails when it is blank",
-      ),
-      {
-        name: "rejectValues",
-        displayName: "Rejected values",
-        type: "ARRAY",
-        required: false,
-        description:
-          "One per line; the run fails when the value matches any of them",
-      },
-      {
-        name: "allowValues",
-        displayName: "Allowed values",
-        type: "ARRAY",
-        required: false,
-        description:
-          "One per line; when set, anything else fails. Safer than a reject list for model output",
-      },
-      {
-        name: "allowEmpty",
-        displayName: "Allow empty",
-        type: "CHECKBOX",
-        required: false,
-        description: "Accept a blank value instead of failing",
-      },
-      text("message", "Failure message", false, "Replaces the default error"),
-    ],
-  },
 };

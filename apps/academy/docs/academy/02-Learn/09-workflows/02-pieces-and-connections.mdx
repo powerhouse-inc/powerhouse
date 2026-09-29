@@ -3,33 +3,47 @@ title: Pieces and connections
 description: Every step in a workflow names an action belonging to a piece, and every piece that talks to a service outside the reactor authenticates through a connection document.
 ---
 
-A workflow step doesn't contain code. It names a **block type** — one action, belonging to one **piece** — and carries the configuration that action needs.
+A workflow step doesn't contain code. It names one action, belonging to one **piece**, and carries the configuration that action needs. It names it with three fields:
 
-```
-@acme/piece-crm#get-record
-└──────┬──────┘ └────┬───┘
-    piece id       action
-```
-
-Triggers are named the same way, with a `trigger:` marker so a block type is unambiguous about which half of the piece it refers to:
-
-```
-@acme/piece-crm#trigger:new-record
+```json
+{
+  "pieceName": "@acme/piece-crm",
+  "pieceVersion": "1.4.0",
+  "actionName": "get-record"
+}
 ```
 
-A piece that arrives from a **registry** carries its version as well, because a
-reactor can hold more than one copy of it:
+A trigger is named the same way, with `triggerName` in place of `actionName`:
 
-```
-@activepieces/piece-github@0.9.0#create_branch
+```json
+{
+  "pieceName": "@acme/piece-crm",
+  "pieceVersion": "1.4.0",
+  "triggerName": "new-record"
+}
 ```
 
-A piece your own **package** ships doesn't, and deliberately: the copy the
-reactor installed is the copy that runs, so upgrading the package must not
-orphan every workflow that named its blocks. Don't assemble these strings by
-hand either way — ask the reactor for them, which the
+The version is exact, and it is the version of the package that ships the
+piece, wherever the piece comes from. It records which code a step was built
+against. It isn't part of the block's identity, though: the same action at
+`1.5.0` is the same block, so upgrading a package doesn't orphan the workflows
+that named it.
+
+A pinned version doesn't have to be present on the reactor. When no source has
+the exact version, the reactor runs the closest one it finds and records the
+match on the step: `compatible` for a higher version of the same major (the
+same minor for `0.x`), `fallback` for anything else. A mismatch never blocks a
+run. The block fails only when no source has the piece, or none has an
+action or trigger of that name.
+
+The engine's own blocks are a piece too, `@powerhousedao/piece-core`, which
+every reactor ships: the actions `branch` and `assert`, and the triggers
+`schedule`, `webhook` and `manual`. Its version is the version of the workflow
+runtime, and it always runs the copy the reactor has installed.
+
+Don't write these fields from memory. Ask the reactor for them instead, as the
 [workflow authoring reference](/academy/Build/WorkWithData/AuthoringWorkflows)
-shows how to do.
+shows.
 
 A piece is a connector: a named bundle of actions (things a step can do) and triggers (things that can start a run), each declaring the properties it takes and the shape of what it returns. Those declarations are what let Workflow Studio draw a form for a step and offer a later step the fields an earlier one produced — before anything has run.
 
@@ -39,11 +53,13 @@ Three sources, and a reactor reads all three the same way.
 
 **The reactor's own piece**, `@powerhousedao/piece-reactor`, ships with workflows and needs no installing. It's how a workflow reads and writes Powerhouse documents:
 
-- `#document-find`, `#document-get`, `#document-create`, `#document-dispatch`
-- `#document-schema` and `#document-types`, which report a model's shape at run time
-- `#trigger:document-event`, `#trigger:document-created`, `#trigger:document-deleted`
+- the actions `document-find`, `document-get`, `document-create`, `document-dispatch`
+- `document-schema` and `document-types`, which report a model's shape at run time
+- the triggers `document-event`, `document-created`, `document-deleted`
 
-A workflow that only moves data around inside Powerhouse needs nothing else. It's also the piece to copy conventions from: unversioned block types, kebab-case names.
+The document actions (`document-create`, `document-dispatch`, `document-get` and `document-schema`) have an advanced **Parse** option. **Exact**, the default, takes ids and JSON as given. **Extract from AI output** reads them out of a model's prose, such as a fenced JSON block or JSON after reasoning text, and reports what it read them from in `extractedFrom`. Use Extract when the input is an AI step's output.
+
+A workflow that only moves data around inside Powerhouse needs nothing else. It's also the piece to copy conventions from, such as kebab-case names.
 
 **Pieces your own package ships.** A reactor package already carries document models, editors and processors; it can carry pieces the same way. This is the route for anything specific to your domain — your internal API, your calculation, your service. It's the subject of the [Building a piece](/academy/Build/WorkWithData/BuildingAPiece) tutorial.
 
@@ -57,15 +73,23 @@ Most pieces talk to something outside the reactor, and that something usually wa
 
 A **connection** is its own document, of type `powerhouse/connection`: one credential, configured once, referenced by every step that needs it. A workflow step points at a connection by id rather than carrying an API key in its config.
 
-This matters for a reason that goes beyond tidiness. A workflow document syncs, has a full operation log, and is readable by anyone who can read the drive. A credential written into a step's config would inherit all of that. Keeping it in a connection means the secret itself is held by the runtime and only ever referred to by reference — what the documents carry is a pointer, not the key.
+A workflow document syncs, has a full operation log, and is readable by anyone who can read the drive. A credential written into a step's config would inherit all of that. Keeping it in a connection means the secret itself is held by the runtime and only ever referred to by reference — what the documents carry is a pointer, not the key.
 
 Some pieces offer more than one way to sign in, such as Slack's bot token or its OAuth flow. A connection picks one of them, and the piece runs with that method.
 
-A piece can also declare a **connection check**, which is what lets Connect show a connection as working or broken, with the account it's actually authenticated as, instead of leaving you to find out when a run fails at 3am. The connection editor's **Test connection** button runs it on demand.
+**Signing in with OAuth.** A piece that signs in with OAuth, such as Google Drive, uses an OAuth app that you register with the service yourself:
+
+1. In the service's developer console, create an OAuth app and add the **Redirect URL** the connection editor shows as an authorized redirect URI.
+2. Paste the app's client ID and client secret into the connection.
+3. Click **Connect**. A window opens on the service's own sign-in page; approve the access it asks for.
+
+The window closes, and the switchboard keeps the token and refreshes it before it expires. The connection holds only a reference to it. Because the app is yours, the service's consent screen names it, and may warn that it is unverified. A Google app left in **Testing** issues refresh tokens that expire after seven days, so publish it before relying on the connection.
+
+A piece can also declare a **connection check**, which is what lets Connect show a connection as working or broken, with the account it's actually authenticated as, before a run fails on it. The connection editor's **Test connection** button runs it on demand.
 
 ## What a piece is allowed to do
 
-Two limits are worth knowing about as an author, because they shape what your steps can do.
+Two limits shape what a step can do:
 
 **Reaching private addresses.** Piece code runs under an outbound address policy that refuses private and loopback space by default. A piece configuration is a place a user types a URL, which makes it a route into whatever your reactor can reach on its own network — so the default is to refuse. A deployment that genuinely needs a step to reach a service on its own network widens the policy by naming those addresses; it doesn't switch the guard off.
 

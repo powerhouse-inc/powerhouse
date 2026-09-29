@@ -125,6 +125,7 @@ export class KyselyAttachmentStore implements IAttachmentStore {
   async get(
     hash: AttachmentHash,
     signal?: AbortSignal,
+    documentId?: string,
   ): Promise<AttachmentResponse> {
     const row = await this.db
       .selectFrom("attachment")
@@ -134,15 +135,7 @@ export class KyselyAttachmentStore implements IAttachmentStore {
 
     if (row) {
       if (row.status === "evicted") {
-        const remote = await this.transport.fetch(hash, signal);
-        if (remote.kind === "data") {
-          await this.put(hash, remote.response.metadata, remote.response.body);
-          return this.get(hash, signal);
-        }
-        if (remote.kind === "pending") {
-          throw new AttachmentPending(hash, remote.expiresAtUtc);
-        }
-        throw new AttachmentNotFound(hash);
+        return this.fetchRemote(hash, signal, documentId);
       }
 
       const now = new Date().toISOString();
@@ -177,15 +170,7 @@ export class KyselyAttachmentStore implements IAttachmentStore {
       });
     }
 
-    const remote = await this.transport.fetch(hash, signal);
-    if (remote.kind === "data") {
-      await this.put(hash, remote.response.metadata, remote.response.body);
-      return this.get(hash, signal);
-    }
-    if (remote.kind === "pending") {
-      throw new AttachmentPending(hash, remote.expiresAtUtc);
-    }
-    throw new AttachmentNotFound(hash);
+    return this.fetchRemote(hash, signal, documentId);
   }
 
   async put(
@@ -276,7 +261,26 @@ export class KyselyAttachmentStore implements IAttachmentStore {
     return Number(result?.total ?? 0);
   }
 
-  // Private: pending reservation lookup and active reader tracking
+  // Private: remote re-fetch, pending reservation lookup and active reader tracking
+
+  private async fetchRemote(
+    hash: AttachmentHash,
+    signal: AbortSignal | undefined,
+    documentId: string | undefined,
+  ): Promise<AttachmentResponse> {
+    if (documentId === undefined) {
+      throw new AttachmentNotFound(hash);
+    }
+    const remote = await this.transport.fetch(hash, documentId, signal);
+    if (remote.kind === "data") {
+      await this.put(hash, remote.response.metadata, remote.response.body);
+      return this.get(hash, signal);
+    }
+    if (remote.kind === "pending") {
+      throw new AttachmentPending(hash, remote.expiresAtUtc);
+    }
+    throw new AttachmentNotFound(hash);
+  }
 
   private async findPendingReservation(
     hash: AttachmentHash,

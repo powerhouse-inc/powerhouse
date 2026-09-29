@@ -17,6 +17,7 @@ const SB = "http://sb.test/graphql";
 interface ReactorCall {
   query: string;
   variables: Record<string, unknown>;
+  authorization?: string;
 }
 
 // Route reactor writes and the user existence-check; record request bodies.
@@ -26,10 +27,15 @@ function mockReactor() {
     const body = JSON.parse(
       (init?.body as string | undefined) ?? "{}",
     ) as ReactorCall;
-    calls.push(body);
+    const headers = (init?.headers ?? {}) as Record<string, string>;
+    calls.push({ ...body, authorization: headers.Authorization });
     let data: unknown = {};
-    if (body.query.includes("renownUsers")) {
+    if (body.query.includes("renown_upsertProfile")) {
+      data = { renown_upsertProfile: "user-doc" };
+    } else if (body.query.includes("renownUsers")) {
       data = { renownUsers: [] };
+    } else if (body.query.includes("renown_issueCredential")) {
+      data = { renown_issueCredential: "cred-doc" };
     } else if (body.query.includes("createEmptyDocument")) {
       data = { createEmptyDocument: { id: "doc-new" } };
     } else if (body.query.includes("mutateDocument")) {
@@ -58,15 +64,6 @@ async function makeRenown(withSwitchboard = true, chainId?: number) {
   );
 }
 
-function actionTypes(calls: ReactorCall[]): string[] {
-  return calls.flatMap(
-    (c) =>
-      (c.variables.actions as { type: string }[] | undefined)?.map(
-        (a) => a.type,
-      ) ?? [],
-  );
-}
-
 describe("Renown.signIn", () => {
   afterEach(() => vi.restoreAllMocks());
 
@@ -78,6 +75,7 @@ describe("Renown.signIn", () => {
       address: ACCOUNT.address,
       chainId: 1,
       signTypedData: sign,
+      username: "alice",
     });
 
     expect(user.address).toBe(ACCOUNT.address);
@@ -86,10 +84,64 @@ describe("Renown.signIn", () => {
     expect(renown.status).toBe("authorized");
     expect(renown.user?.address).toBe(ACCOUNT.address);
 
-    // Credential was issued (INIT) and the user document created.
-    const types = actionTypes(calls);
-    expect(types).toContain("INIT");
-    expect(types).toContain("SET_ETH_ADDRESS");
+    // Credential issued via the self-authenticating mutation; the profile is
+    // then written through renown_upsertProfile with the login token.
+    expect(calls.some((c) => c.query.includes("renown_issueCredential"))).toBe(
+      true,
+    );
+    // The profile write runs in the background after sign-in resolves.
+    const profileWrite = await vi.waitFor(() => {
+      const call = calls.find((c) => c.query.includes("renown_upsertProfile"));
+      if (!call) throw new Error("profile write not sent yet");
+      return call;
+    });
+    expect(profileWrite.variables).toEqual({
+      address: ACCOUNT.address,
+      username: "alice",
+    });
+    expect(profileWrite.authorization).toMatch(/^Bearer /);
+    // Nothing is written through the generic document mutations.
+    expect(
+      calls.some(
+        (c) =>
+          c.query.includes("createEmptyDocument") ||
+          c.query.includes("mutateDocument"),
+      ),
+    ).toBe(false);
+  });
+
+  it("resolves without waiting for the profile write", async () => {
+    mockReactor();
+    const fetchMock = vi.mocked(globalThis.fetch);
+    const route = fetchMock.getMockImplementation()!;
+    // The profile write never settles; sign-in must not hang on it.
+    fetchMock.mockImplementation((input, init) =>
+      ((init?.body as string | undefined) ?? "").includes(
+        "renown_upsertProfile",
+      )
+        ? new Promise<Response>(() => undefined)
+        : route(input, init),
+    );
+    const renown = await makeRenown();
+
+    const user = await renown.signIn({
+      address: ACCOUNT.address,
+      chainId: 1,
+      signTypedData: sign,
+      username: "alice",
+    });
+
+    expect(user.address).toBe(ACCOUNT.address);
+    expect(renown.status).toBe("authorized");
+    await vi.waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([, init]) =>
+          ((init?.body as string | undefined) ?? "").includes(
+            "renown_upsertProfile",
+          ),
+        ),
+      ).toBe(true),
+    );
   });
 
   it("throws when no switchboard endpoint is configured", async () => {

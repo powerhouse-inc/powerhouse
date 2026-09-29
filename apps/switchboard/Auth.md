@@ -275,8 +275,10 @@ including authenticated ones.
 It also covers the attachment routes, which are mounted on the HTTP adapter and
 never pass the GraphQL fetch chain. Their own 401 keys on `AUTH_ENABLED`, so
 without this switch a deployment running `OPEN` serves them to anyone; with it,
-every attachment route refuses a caller it cannot name — `download-target`
-included, even though that route decides per document on its own.
+every attachment route refuses a caller it cannot name — `download-target` and
+the `GET`/`HEAD /attachments/:hash` byte routes included, even though they
+decide per document (or by a signed URL) on their own. A filesystem signed
+download URL therefore needs a bearer too while this switch is on.
 
 ##### Serving one path anonymously
 

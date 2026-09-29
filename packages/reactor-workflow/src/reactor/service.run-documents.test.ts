@@ -6,6 +6,7 @@ import { currentDocumentRecorder, withRunScope } from "./run-scope.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import { describe, expect, it, vi } from "vitest";
 import { testRuntime } from "../../test/helpers/runtime.js";
+import { CORE_PIECE_VERSION } from "../pieces/index.js";
 
 const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
 const WORKFLOW = "wf-mine";
@@ -44,6 +45,7 @@ function runRow(id: string, payload: unknown) {
     trigger_payload: payload === null ? null : JSON.stringify(payload),
     status: "FAILED",
     error: null,
+    enqueued_at: "2026-01-01T00:00:00.000Z",
     started_at: "2026-01-01T00:00:00.000Z",
     ended_at: null,
     rerun_of: null,
@@ -64,9 +66,11 @@ const handed: Record<string, string[]> = { "run-read-secret": [SECRET] };
 
 const store = {
   listRuns: () => Promise.resolve(rows),
-  getRunDocuments: (runId: string) => Promise.resolve(handed[runId] ?? []),
+  getRunDocumentsForRuns: (runIds: string[]) =>
+    Promise.resolve(new Map(runIds.map((id) => [id, handed[id] ?? []]))),
   getRun: (id: string) => Promise.resolve(rows.find((row) => row.id === id)),
   getSteps: () => Promise.resolve([]),
+  getStepsForRuns: () => Promise.resolve(new Map()),
 };
 
 function serviceWith(
@@ -230,8 +234,23 @@ describe("a fired run's result", () => {
         name: "Fired",
         status: "ENABLED",
         version: 1,
-        trigger: { id: "t1", blockType: "core#manual", config: {} },
-        steps: [{ id: "s", key: "read", blockType: "fake#ok", config: {} }],
+        trigger: {
+          id: "t1",
+          pieceName: "@powerhousedao/piece-core",
+          pieceVersion: CORE_PIECE_VERSION,
+          triggerName: "manual",
+          config: {},
+        },
+        steps: [
+          {
+            id: "s",
+            key: "read",
+            pieceName: "fake",
+            pieceVersion: "",
+            actionName: "ok",
+            config: {},
+          },
+        ],
         edges: [{ id: "e1", from: "t1", to: "s", port: "next" }],
         variables: [],
       },

@@ -195,3 +195,5 @@ overrides:
   qr@>=0.6: "0.5.5"
   # tsdown peers on `unrun: *`; 0.3 shares vite's stable rolldown instead of an rc.
   unrun: "^0.3.1"
+patchedDependencies:
+  cmd-ts@0.15.0: patches/cmd-ts@0.15.0.patch

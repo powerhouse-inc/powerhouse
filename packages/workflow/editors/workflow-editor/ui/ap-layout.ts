@@ -1,6 +1,8 @@
 // Vertical tree layout, a port of the Activepieces builder flow-canvas
 // layout behavior (MIT, activepieces packages/web) onto our flat graph.
+import { flowPorts } from "@powerhousedao/pieces-framework/workflow";
 import type { Edge, Node } from "@xyflow/react";
+import { stepBlock, triggerBlock, type BlockRef } from "./blocks.js";
 import type { EdgeModel, StepModel, WorkflowModel } from "./model.js";
 
 export function reachableFrom(start: string, edges: EdgeModel[]): Set<string> {
@@ -70,8 +72,11 @@ export interface ApLayout {
 }
 
 // Builds react-flow nodes/edges: steps laid out as a centered vertical tree,
-// append buttons under leaves, and one add button per edge.
-export function layoutWorkflow(model: WorkflowModel): ApLayout {
+// append buttons under a block's free declared ports, one add button per edge.
+export function layoutWorkflow(
+  model: WorkflowModel,
+  portsOf: (block: BlockRef) => readonly string[] | undefined = () => undefined,
+): ApLayout {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
@@ -102,8 +107,26 @@ export function layoutWorkflow(model: WorkflowModel): ApLayout {
   const placed = new Set<string>();
   const stepById = new Map(model.steps.map((step) => [step.id, step]));
 
-  const branchPorts = (id: string): string[] =>
-    stepById.get(id)?.blockType === "core#branch" ? ["true", "false"] : [];
+  // Declared ports of a block, undefined until its form is known.
+  const declared = (id: string): readonly string[] | undefined => {
+    const step = stepById.get(id);
+    const block =
+      id === model.trigger?.id
+        ? triggerBlock(model.trigger)
+        : step
+          ? stepBlock(step)
+          : undefined;
+    return block ? portsOf(block) : undefined;
+  };
+  const outPorts = (id: string): string[] => {
+    const ports = declared(id);
+    return ports ? flowPorts(ports) : [];
+  };
+  // A block with several flow ports keeps a column for each, wired or not.
+  const branchPorts = (id: string): string[] => {
+    const ports = outPorts(id);
+    return ports.length > 1 ? ports : [];
+  };
 
   // An unwired branch port still occupies a column: it gets a placeholder card
   // where its step would go, so both branches read as branches.
@@ -148,9 +171,14 @@ export function layoutWorkflow(model: WorkflowModel): ApLayout {
       id,
       type: "apStep",
       position: { x: centerX - STEP_WIDTH / 2, y },
-      data: isTrigger
-        ? { kind: "trigger", trigger: model.trigger }
-        : { kind: "step", step },
+      data: {
+        ...(isTrigger
+          ? { kind: "trigger", trigger: model.trigger }
+          : { kind: "step", step }),
+        outgoingPorts: model.edges
+          .filter((edge) => edge.from === id)
+          .map((edge) => edge.port),
+      },
       draggable: false,
     });
 
@@ -194,19 +222,21 @@ export function layoutWorkflow(model: WorkflowModel): ApLayout {
       type: "apEdge",
       source: edge.from,
       target: edge.to,
-      data: { edgeId: edge.id, port: edge.port, condition: edge.condition },
+      data: {
+        edgeId: edge.id,
+        port: edge.port,
+        condition: edge.condition,
+        // A skipped step passes the run straight through this edge.
+        fromSkipped: stepById.get(edge.from)?.skip === true,
+        // On a port its source never takes: drawn, but as an error.
+        dead: declared(edge.from)?.includes(edge.port) === false,
+      },
       selectable: true,
     });
   }
 
-  // Append buttons under every step with no outgoing edges (branches get
-  // one per untaken port).
-  const candidatePorts = (id: string): string[] => {
-    if (id === model.trigger?.id) return ["next"];
-    const step = stepById.get(id);
-    if (!step) return [];
-    return step.blockType === "core#branch" ? ["true", "false"] : ["next"];
-  };
+  // Append buttons under every free flow port the block declares.
+  const candidatePorts = outPorts;
 
   const appendPorts = (id: string): string[] => {
     const used = new Set((outgoing.get(id) ?? []).map((edge) => edge.port));
@@ -231,7 +261,13 @@ export function layoutWorkflow(model: WorkflowModel): ApLayout {
                 VSPACE / 2 -
                 ADD_BUTTON_SIZE / 2,
             },
-        data: { parentId: node.id, port, card: Boolean(slot) },
+        data: {
+          parentId: node.id,
+          port,
+          card: Boolean(slot),
+          // An empty workflow says where its first step goes.
+          ...(model.steps.length === 0 ? { hint: true } : {}),
+        },
         draggable: false,
         selectable: false,
       });

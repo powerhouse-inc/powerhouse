@@ -256,7 +256,6 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       results: page.items.map((item) => remoteOperationToLocal(item)),
       options: effectivePaging,
       nextCursor,
-      totalCount: page.totalCount,
       next: nextCursor
         ? () =>
             this.getOperations(

@@ -1,49 +1,75 @@
 // Timer-driven trigger supervisor: owns piece-trigger lifecycle (enable/
-// disable, poll cursors) and core#schedule fires.
+// disable, poll cursors) and the core schedule trigger's fires.
 
 // Scheduling state lives in trigger_state; whatever a hook writes through
 // ctx.store lives in piece_store, beside what actions write.
 import {
+  blockKey,
+  type BlockIdentity,
+  type BlockRef,
+} from "@powerhousedao/pieces-framework/block-type";
+import {
+  checkTriggerStrategy,
+  type TriggerDelivery,
+} from "@powerhousedao/pieces-framework/workflow";
+import {
+  blockLabel,
+  bundleResolver,
+  canonicalJson,
+  checkDynamicProperties,
   DEFAULT_EGRESS_POLICY,
+  hashOf,
+  DynamicPropertiesError,
   extractDedupeKey,
   pieceModuleRef,
   PieceWorker,
   PieceWorkerError,
   secretsFor,
   storeHandlers,
+  type BlockMatch,
   type ConnectionRequest,
   type PieceDescriptor,
+  type PieceOrigin,
+  type PieceTarget,
   type EgressPolicy,
   type PieceResolver,
   type PieceWorkerResult,
+  type PropertySettingDef,
   type RecordedSchedule,
   type TriggerHookRequest,
+  type TriggerRenew,
 } from "../pieces/index.js";
 import { childLogger } from "document-model";
-import { createHash } from "node:crypto";
-import { fetchingResolver } from "./lib.js";
 import {
   cronIntervalMs,
+  DEFAULT_TIMEZONE,
   MIN_SCHEDULE_INTERVAL_MS,
   nextFireAt,
   parseScheduleConfig,
   rescheduleAfterFire,
   schedulePayload,
-  SCHEDULE_BLOCK,
 } from "./schedule.js";
+import { SCHEDULE_BLOCK } from "./core-blocks.js";
+import { pieceTriggerKind } from "./trigger-binding.js";
 import {
   createPieceStorePort,
   PROJECT_SCOPE_KEY,
   testPartitionKey,
 } from "./piece-store-port.js";
-import type { TriggerStateRow, WorkflowRunStore } from "./store.js";
+import {
+  triggerBlockColumns,
+  triggerRowBlock,
+  type TriggerStateRow,
+  type WorkflowRunStore,
+} from "./store.js";
 
 const logger = childLogger(["workflow", "trigger-supervisor"]);
 
 export interface PieceTriggerBinding {
   kind?: "piece";
   workflowId: string;
-  blockType: string;
+  // The trigger as the workflow pins it.
+  block: BlockRef;
   packageName: string;
   version: string;
   triggerName: string;
@@ -52,13 +78,41 @@ export interface PieceTriggerBinding {
   // Author's poll cadence, from the trigger's pollEverySeconds. Overrides both
   // the piece's own setSchedule and the runtime default; the 60s floor holds.
   pollIntervalMs?: number;
+  // DYNAMIC props' resolved children, checked before any hook but onDisable.
+  propertySettings?: PropertySettingDef[];
+  // Where `version` comes from and how it matched the pin.
+  source?: PieceOrigin;
+  match?: BlockMatch;
+  note?: string;
 }
 
-// core#schedule: no piece hooks; next_poll_at is the next fire time.
+function targetOf(binding: PieceTriggerBinding): PieceTarget {
+  return {
+    name: binding.packageName,
+    version: binding.version,
+    ...(binding.source ? { source: binding.source } : {}),
+  };
+}
+
+function pieceColumns(
+  binding?: PieceTriggerBinding,
+): Pick<
+  TriggerStateRow,
+  "piece_version" | "piece_source" | "version_match" | "version_note"
+> {
+  return {
+    piece_version: binding?.version ?? null,
+    piece_source: binding?.source ?? null,
+    version_match: binding?.match ?? null,
+    version_note: binding?.note ?? null,
+  };
+}
+
+// The core schedule trigger: no piece hooks; next_poll_at is the next fire time.
 export interface ScheduleTriggerBinding {
   kind: "schedule";
   workflowId: string;
-  blockType: typeof SCHEDULE_BLOCK;
+  block: BlockRef;
   config: Record<string, unknown>;
 }
 
@@ -102,6 +156,8 @@ export const DEFAULT_POLL_INTERVAL_MS = 60_000;
 const MAX_BACKOFF_MS = 30 * 60_000;
 const DEDUPE_TTL_MS = 30_000;
 const DEFAULT_RECONCILE_INTERVAL_MS = 15 * 60_000;
+// What a failed onRenew backs off from; the next cron slot caps the wait.
+const RENEW_RETRY_BASE_MS = 60_000;
 
 function isSchedule(
   binding: TriggerBinding,
@@ -109,12 +165,10 @@ function isSchedule(
   return binding.kind === "schedule";
 }
 
-export function configHash(blockType: string, config: unknown): string {
-  return createHash("sha256")
-    .update(blockType)
-    .update(JSON.stringify(config ?? {}))
-    .digest("hex")
-    .slice(0, 16);
+// Keyed on the version-free block and canonical config: re-pinning or a
+// reordered config is the same trigger, and keeps its cursor.
+export function configHash(block: BlockIdentity, config: unknown): string {
+  return hashOf(blockKey(block), canonicalJson(config ?? {}));
 }
 
 // The poll cadence setSchedule asked for: the named interval, or the gap between
@@ -178,6 +232,7 @@ export class TriggerConfigError extends Error {
 // So only failures we can name structurally park; the rest retry.
 function isPermanentFailure(error: unknown): boolean {
   if (error instanceof TriggerConfigError) return true;
+  if (error instanceof DynamicPropertiesError) return true;
   return (
     error instanceof PieceWorkerError &&
     (error.serialized.unsupportedMember !== undefined ||
@@ -199,6 +254,20 @@ interface EnableRetry {
 // one that cannot poll retreat at the same rate and to the same ceiling.
 function backoffMs(intervalMs: number, failures: number): number {
   return Math.min(intervalMs * 2 ** failures, MAX_BACKOFF_MS);
+}
+
+// Renewal crons run in UTC, as upstream schedules them.
+function nextRenewAt(renew: TriggerRenew, from: Date): Date {
+  return nextFireAt(
+    { mode: "cron", cron: renew.cronExpression, timezone: DEFAULT_TIMEZONE },
+    from,
+  );
+}
+
+interface TriggerRuntime {
+  delivery: TriggerDelivery;
+  // Set for a WEBHOOK trigger whose subscription the provider expires.
+  renew?: TriggerRenew;
 }
 
 export class TriggerSupervisor {
@@ -267,7 +336,7 @@ export class TriggerSupervisor {
   private resolver(): PieceResolver {
     return (
       this.options.resolver ??
-      (this.own ??= fetchingResolver(this.options.cacheDir))
+      (this.own ??= bundleResolver({ cacheDir: this.options.cacheDir }))
     );
   }
 
@@ -291,11 +360,28 @@ export class TriggerSupervisor {
   }
 
   remove(workflowId: string): Promise<void> {
+    const binding = this.unbind(workflowId);
+    return this.enqueue(() => this.disable(workflowId, binding));
+  }
+
+  // A deleted workflow: disabled as remove() does, then its row and FLOW
+  // store go too, so nothing is left to poll, renew or re-arm.
+  forget(workflowId: string): Promise<void> {
+    const binding = this.unbind(workflowId);
+    return this.enqueue(async () => {
+      const store = await this.options.store();
+      if (!store) return;
+      await this.disable(workflowId, binding);
+      await store.deleteTriggerState(workflowId);
+    });
+  }
+
+  private unbind(workflowId: string): TriggerBinding | undefined {
     const binding = this.bindings.get(workflowId);
     this.bindings.delete(workflowId);
     this.enabledOk.delete(workflowId);
     this.enableRetries.delete(workflowId);
-    return this.enqueue(() => this.disable(workflowId, binding));
+    return binding;
   }
 
   // A trigger the runtime could not turn into a binding at all: an unknown
@@ -305,29 +391,27 @@ export class TriggerSupervisor {
   // it, and without one the workflow reads as absent rather than as broken.
   reject(
     workflowId: string,
-    blockType: string,
+    block: BlockIdentity,
     config: unknown,
     message: string,
     retryAt?: Date,
   ): Promise<void> {
-    this.bindings.delete(workflowId);
-    this.enabledOk.delete(workflowId);
-    this.enableRetries.delete(workflowId);
+    this.unbind(workflowId);
     return this.enqueue(() =>
-      this.recordRejection(workflowId, blockType, config, message, retryAt),
+      this.recordRejection(workflowId, block, config, message, retryAt),
     );
   }
 
   private async recordRejection(
     workflowId: string,
-    blockType: string,
+    block: BlockIdentity,
     config: unknown,
     message: string,
     retryAt?: Date,
   ): Promise<void> {
     const store = await this.options.store();
     if (!store) return;
-    const hash = configHash(blockType, config);
+    const hash = configHash(block, config);
     const existing = await store.getTriggerState(workflowId);
     // An ENABLED row for this very config is a registration a previous process
     // made and this one cannot see: the binding it would take to call
@@ -345,7 +429,7 @@ export class TriggerSupervisor {
     }
     await store.upsertTriggerState({
       workflow_id: workflowId,
-      block_type: blockType,
+      ...triggerBlockColumns(block),
       config_hash: hash,
       status: "ERROR",
       store_state: VESTIGIAL_STORE_STATE,
@@ -360,6 +444,7 @@ export class TriggerSupervisor {
       lease_owner: null,
       lease_expires_at: null,
       updated_at: this.now().toISOString(),
+      ...pieceColumns(),
     });
   }
 
@@ -497,6 +582,10 @@ export class TriggerSupervisor {
       webhookUrl?: string;
     } = {},
   ): Promise<PieceWorkerResult> {
+    // onDisable still has to release what an earlier enable registered.
+    if (hook !== "onDisable") {
+      checkDynamicProperties(binding.config, binding.propertySettings);
+    }
     const store = await this.options.store();
     // A cursor on the heap resets on restart and re-delivers everything the
     // trigger ever saw, so only a design-time sample may run without a journal.
@@ -506,14 +595,10 @@ export class TriggerSupervisor {
     const pieceStore = store
       ? createPieceStorePort(store, () => binding.workflowId, hook === "test")
       : undefined;
-    const piece = await this.resolver().resolve(
-      binding.packageName,
-      binding.version,
-    );
+    const piece = await this.resolver().resolve(targetOf(binding));
     // A trigger's connection is the workflow's own, declared beside it, so it
     // needs no run binding — but it is still bound to its connector.
     const auth = await this.options.resolveAuth(binding.connectionId, {
-      blockType: binding.blockType,
       piecePackage: binding.packageName,
     });
     // Redacted in the child, so a hook's error crosses back without the
@@ -547,14 +632,13 @@ export class TriggerSupervisor {
 
   // A trigger's strategy, and whether the engine can run it, live in the piece
   // descriptor. Enables are rare and the descriptor is cached per version.
-  private async strategyFor(binding: PieceTriggerBinding): Promise<string> {
-    const key = `${binding.packageName}@${binding.version}`;
+  private async deliveryFor(
+    binding: PieceTriggerBinding,
+  ): Promise<TriggerRuntime> {
+    const key = `${binding.source ?? ""}:${binding.packageName}@${binding.version}`;
     let descriptor = this.descriptors.get(key);
     if (!descriptor) {
-      const piece = await this.resolver().resolve(
-        binding.packageName,
-        binding.version,
-      );
+      const piece = await this.resolver().resolve(targetOf(binding));
       const result = await this.worker.describePiece(
         {
           ...pieceModuleRef(piece),
@@ -570,14 +654,25 @@ export class TriggerSupervisor {
     const trigger = descriptor.triggers.find(
       (candidate) => candidate.name === binding.triggerName,
     );
-    // Parked, not retried: no attempt can make the feature run.
-    const unsupported = descriptor.unsupported ?? trigger?.unsupported;
-    if (unsupported) {
-      throw new TriggerConfigError(
-        `Trigger "${binding.triggerName}" of "${binding.packageName}": ${unsupported.reason}`,
-      );
+    const subject = `Trigger "${binding.triggerName}" of "${binding.packageName}"`;
+    if (!trigger) {
+      throw new TriggerConfigError(`${subject}: not in ${binding.version}`);
     }
-    return trigger?.strategy ?? "POLLING";
+    // Parked, not retried: no attempt can make the feature run.
+    const unsupported = descriptor.unsupported ?? trigger.unsupported;
+    if (unsupported) {
+      throw new TriggerConfigError(`${subject}: ${unsupported.reason}`);
+    }
+    const check = checkTriggerStrategy(trigger.strategy);
+    if ("issue" in check) {
+      throw new TriggerConfigError(`${subject}: ${check.issue}`);
+    }
+    return {
+      delivery: check.delivery,
+      ...(check.delivery === "webhook" && trigger.renew
+        ? { renew: trigger.renew }
+        : {}),
+    };
   }
 
   private async enable(
@@ -588,7 +683,7 @@ export class TriggerSupervisor {
     // enableSupervised logs this; returning quietly would leave a workflow
     // that looks registered and never fires.
     if (!store) throw new MissingJournalError("Enabling a trigger");
-    const hash = configHash(binding.blockType, binding.config);
+    const hash = configHash(binding.block, binding.config);
     const existing = await store.getTriggerState(binding.workflowId);
     const now = this.now();
     // Only a completed enable is a republish: a retry after a failed one must
@@ -606,7 +701,7 @@ export class TriggerSupervisor {
     }
     const pending = this.enableRetries.get(binding.workflowId);
     if (isSchedule(binding)) {
-      // A piece trigger replaced by core#schedule takes its retry with it;
+      // A piece trigger replaced by the schedule trigger takes its retry with it;
       // left behind, the entry wins a slot on every tick and never resolves.
       this.enableRetries.delete(binding.workflowId);
       if (
@@ -633,8 +728,8 @@ export class TriggerSupervisor {
     }
     let reachedProvider = false;
     try {
-      const strategy = await this.strategyFor(binding);
-      const webhook = strategy === "WEBHOOK" || strategy === "APP_WEBHOOK";
+      const runtime = await this.deliveryFor(binding);
+      const webhook = runtime.delivery === "webhook";
       // The reactor's webhook service owns the token and the URL it lives in,
       // so the piece is handed an address rather than a credential to place.
       const webhookUrl = webhook
@@ -655,9 +750,14 @@ export class TriggerSupervisor {
       const intervalMs = webhook
         ? (this.options.reconcileIntervalMs ?? DEFAULT_RECONCILE_INTERVAL_MS)
         : pollIntervalFor(binding, result.schedules, this.defaultIntervalMs);
+      const renewAt = runtime.renew
+        ? this.renewAtAfterEnable(runtime.renew, existing, isRepublish, now)
+        : null;
+      // A republish keeps a failing renewal's streak, so its backoff holds.
+      const renewCarried = renewAt !== null && isRepublish && existing;
       await store.upsertTriggerState({
         workflow_id: binding.workflowId,
-        block_type: binding.blockType,
+        ...triggerBlockColumns(binding.block),
         config_hash: hash,
         status: "ENABLED",
         store_state: VESTIGIAL_STORE_STATE,
@@ -669,12 +769,16 @@ export class TriggerSupervisor {
         lease_owner: null,
         lease_expires_at: null,
         updated_at: now.toISOString(),
+        ...pieceColumns(binding),
+        next_renew_at: renewAt?.toISOString() ?? null,
+        renew_error: renewCarried ? existing.renew_error : null,
+        renew_failures: renewCarried ? existing.renew_failures : 0,
       });
       this.enabledOk.add(binding.workflowId);
       this.enableRetries.delete(binding.workflowId);
       store.clearUnmigratedTriggerState(binding.workflowId);
       logger.info(
-        `Enabled ${binding.blockType} for workflow ${binding.workflowId} (every ${intervalMs}ms)`,
+        `Enabled ${blockLabel(binding.block)} for workflow ${binding.workflowId} (every ${intervalMs}ms)`,
       );
     } catch (error) {
       this.enabledOk.delete(binding.workflowId);
@@ -699,7 +803,7 @@ export class TriggerSupervisor {
       } else this.enableRetries.delete(binding.workflowId);
       await store.upsertTriggerState({
         workflow_id: binding.workflowId,
-        block_type: binding.blockType,
+        ...triggerBlockColumns(binding.block),
         config_hash: hash,
         status: "ERROR",
         store_state: VESTIGIAL_STORE_STATE,
@@ -711,6 +815,7 @@ export class TriggerSupervisor {
         lease_owner: null,
         lease_expires_at: null,
         updated_at: now.toISOString(),
+        ...pieceColumns(binding),
       });
       logger.error(
         `onEnable failed for workflow ${binding.workflowId} (${failures}x): ${message}` +
@@ -719,6 +824,24 @@ export class TriggerSupervisor {
             : "; not retrying"),
       );
     }
+  }
+
+  // A republish keeps an earlier pending renewal: a piece that skips
+  // re-registering on one still holds the old, expiring subscription.
+  private renewAtAfterEnable(
+    renew: TriggerRenew,
+    existing: TriggerStateRow | undefined,
+    isRepublish: boolean,
+    now: Date,
+  ): Date {
+    const next = nextRenewAt(renew, now);
+    const carried =
+      isRepublish && existing?.next_renew_at
+        ? Date.parse(existing.next_renew_at)
+        : NaN;
+    return Number.isFinite(carried) && carried < next.getTime()
+      ? new Date(carried)
+      : next;
   }
 
   // A reactor with no webhook service will never mint a URL; one that has not
@@ -802,13 +925,14 @@ export class TriggerSupervisor {
     const now = this.now();
     const base = {
       workflow_id: binding.workflowId,
-      block_type: binding.blockType,
+      ...triggerBlockColumns(binding.block),
       config_hash: hash,
       store_state: VESTIGIAL_STORE_STATE,
       last_poll_at: existing?.last_poll_at ?? null,
       lease_owner: null,
       lease_expires_at: null,
       updated_at: now.toISOString(),
+      ...pieceColumns(),
     };
     try {
       const schedule = parseScheduleConfig(binding.config);
@@ -871,7 +995,11 @@ export class TriggerSupervisor {
     const store = await this.options.store();
     if (!store) return;
     const target = binding ?? this.bindingFromRow(row);
-    if (target && !isSchedule(target) && row.block_type !== SCHEDULE_BLOCK) {
+    if (
+      target &&
+      !isSchedule(target) &&
+      blockKey(triggerRowBlock(row)) !== SCHEDULE_BLOCK
+    ) {
       try {
         await this.hook(target, "onDisable");
       } catch (error) {
@@ -961,7 +1089,69 @@ export class TriggerSupervisor {
         await this.poll(store, row, binding);
       }
     }
+    await this.renewDue(store);
     await this.retryOneEnable();
+  }
+
+  private async renewDue(store: WorkflowRunStore): Promise<void> {
+    const due = await store.listDueTriggerRenewals(this.now().toISOString());
+    for (const row of due) {
+      const binding = this.bindings.get(row.workflow_id);
+      if (!binding) {
+        await store.setTriggerStatus(row.workflow_id, "DISABLED");
+        continue;
+      }
+      if (isSchedule(binding)) {
+        await store.setTriggerRenewAt(row.workflow_id, null);
+        continue;
+      }
+      await this.renew(store, row, binding);
+    }
+  }
+
+  // A failure backs off but never disables: the subscription may still be
+  // live, and the next cron slot tries again regardless.
+  private async renew(
+    store: WorkflowRunStore,
+    row: TriggerStateRow,
+    binding: PieceTriggerBinding,
+  ): Promise<void> {
+    const now = this.now();
+    let renew: TriggerRenew | undefined;
+    try {
+      renew = (await this.deliveryFor(binding)).renew;
+      if (!renew) {
+        await store.setTriggerRenewAt(row.workflow_id, null);
+        return;
+      }
+      const webhookUrl = await this.webhookUrlOrThrow(binding.workflowId);
+      await this.hook(binding, "onRenew", { webhookUrl });
+      const nextAt = nextRenewAt(renew, now);
+      await store.recordRenewSuccess(
+        row.workflow_id,
+        now.toISOString(),
+        nextAt.toISOString(),
+      );
+      logger.info(
+        `Renewed trigger of workflow ${row.workflow_id}; next ${nextAt.toISOString()}`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const failures = row.renew_failures + 1;
+      const backoff = now.getTime() + backoffMs(RENEW_RETRY_BASE_MS, failures);
+      const slot = renew ? nextRenewAt(renew, now).getTime() : backoff;
+      const retryAt = new Date(Math.min(backoff, slot));
+      await store.recordRenewFailure(
+        row.workflow_id,
+        message,
+        now.toISOString(),
+        retryAt.toISOString(),
+        failures,
+      );
+      logger.warn(
+        `onRenew failed for workflow ${row.workflow_id} (${failures}x): ${message}; retrying at ${retryAt.toISOString()}`,
+      );
+    }
   }
 
   // One fire per due row, however overdue; the next slot is computed from
@@ -1056,6 +1246,10 @@ export class TriggerSupervisor {
       );
       if (!claimed) return;
     }
-    this.options.fire(binding.workflowId, item, `piece:${binding.blockType}`);
+    this.options.fire(
+      binding.workflowId,
+      item,
+      pieceTriggerKind(binding.block),
+    );
   }
 }

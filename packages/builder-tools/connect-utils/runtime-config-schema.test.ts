@@ -149,6 +149,12 @@ describe("runtime-config schema", () => {
           networkId: "eip155",
           chainId: 1,
         },
+        openPanel: {
+          clientId: "op-client",
+          apiUrl: "https://openpanel.example/api",
+          trackUiEvents: false,
+          trackOperations: false,
+        },
         pwa: {
           manifest: {
             theme_color: "#123456",
@@ -213,6 +219,15 @@ describe("runtime-config schema", () => {
     });
 
     expect(config.connect).toEqual(DEFAULT_CONNECT_CONFIG);
+  });
+
+  it("defaults connect.openPanel to disabled (empty clientId) with tracking on", () => {
+    const config = emitPluginOutput({ packages: [], projectRoot });
+    expect((config.connect as Record<string, unknown>).openPanel).toEqual({
+      clientId: "",
+      trackUiEvents: true,
+      trackOperations: true,
+    });
   });
 
   it("preserves user overrides while filling in defaults for unspecified leaves", () => {

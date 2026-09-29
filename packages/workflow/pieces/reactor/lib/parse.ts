@@ -1,7 +1,6 @@
-// Config parsing shared by the document actions.
+// Config parsing shared by the document actions. "exact" takes an id or JSON as
+// given; "extract" digs them out of model output and says what it read from.
 
-// Every one of these accepts what a model step produces as readily as what an
-// author typed: fenced JSON, a bare object, a quoted id inside a sentence.
 export interface ActionInputConfig {
   type: string;
   input?: unknown;
@@ -20,6 +19,22 @@ export interface CreatePayload {
   actions?: unknown;
 }
 
+export type ParseMode = "exact" | "extract";
+
+export const PARSE_MODES: { label: string; value: ParseMode }[] = [
+  { label: "Exact", value: "exact" },
+  { label: "Extract from AI output", value: "extract" },
+];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function preview(value: unknown): string {
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  return text.length > 60 ? `${text.slice(0, 57)}...` : text;
+}
+
 function unfence(text: string): string {
   return text
     .trim()
@@ -28,11 +43,8 @@ function unfence(text: string): string {
     .trim();
 }
 
-// Every top-level {...} or [...] in a string, in the order they appear.
-//
-// Scanned rather than matched with a regular expression because a brace inside
-// a string literal is not a brace: `{"note": "a } here"}` is one value, and a
-// regex that does not track quoting splits it.
+// Every top-level {...} or [...] in a string, in order; scanned so a brace
+// inside a string literal is not read as one.
 function jsonSpans(text: string): string[] {
   const spans: string[] = [];
   let depth = 0;
@@ -68,17 +80,8 @@ function jsonSpans(text: string): string[] {
   return spans;
 }
 
-// JSON out of whatever a model actually said.
-//
-// The prompt asks for JSON alone and a model may still reason out loud first:
-// a reasoning model answered this piece with two pages of deliberation and the
-// object on the last line, behind a leaked channel marker. Fences were already
-// tolerated here for the same reason — this is the same accommodation, one step
-// further.
-//
-// The LAST top-level value wins, because the pattern is deliberation first and
-// answer last; an example the model quoted from the prompt would otherwise be
-// preferred over the answer it worked out.
+// JSON out of model prose: fenced, or the LAST top-level value, since models
+// deliberate first and answer last.
 export function parseModelJson(text: string): unknown {
   const cleaned = unfence(text);
   try {
@@ -97,69 +100,195 @@ export function parseModelJson(text: string): unknown {
   throw new SyntaxError("no JSON value found");
 }
 
-export function parseActions(
-  value: unknown,
-  blockName: string,
-): ActionInputConfig[] {
-  return parseDispatchPayload(value, blockName).actions;
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+// The first uuid in the text, else the text without quotes.
+function extractDocumentId(text: string): string | undefined {
+  const uuid = UUID.exec(text);
+  if (uuid) return uuid[0];
+  return (
+    text
+      .trim()
+      .replace(/^["'`]+|["'`]+$/g, "")
+      .trim() || undefined
+  );
 }
 
-// Accepts an array, a single action object, or JSON text (typically an LLM's
-// output, possibly fenced); an object may also carry the target documentId.
-export function parseDispatchPayload(
-  value: unknown,
-  blockName: string,
-): DispatchPayload {
-  let documentId: string | undefined;
-  if (typeof value === "string") {
+const EXTRACT_HINT =
+  'set "Parse" to "Extract from AI output" to read one out of text';
+
+// Reads config values in one mode, recording what "extract" read from.
+export class ConfigReader {
+  readonly extractedFrom: Record<string, string> = {};
+
+  constructor(
+    readonly block: string,
+    readonly mode: ParseMode,
+  ) {}
+
+  static of(block: string, value: unknown): ConfigReader {
+    if (value === undefined || value === null || value === "") {
+      return new ConfigReader(block, "exact");
+    }
+    if (value !== "exact" && value !== "extract") {
+      throw new Error(`${block}: "parse" must be "exact" or "extract"`);
+    }
+    return new ConfigReader(block, value);
+  }
+
+  get extract(): boolean {
+    return this.mode === "extract";
+  }
+
+  // Undefined when unset.
+  documentId(value: unknown, field: string): string | undefined {
+    if (value === undefined || value === null || value === "") return undefined;
+    if (typeof value !== "string") {
+      throw new Error(
+        `${this.block}: "${field}" must be a document id; got ${preview(value)}`,
+      );
+    }
+    if (this.extract) {
+      const id = extractDocumentId(value);
+      if (id !== undefined && id !== value) this.extractedFrom[field] = value;
+      return id;
+    }
+    if (!/^[^\s"'`]+$/.test(value)) {
+      throw new Error(
+        `${this.block}: "${field}" is not a document id: ${preview(value)}; ${EXTRACT_HINT}`,
+      );
+    }
+    return value;
+  }
+
+  // JSON text as a value; anything not text is already one.
+  json(value: unknown, field: string): unknown {
+    if (typeof value !== "string") return value;
     try {
-      value = parseModelJson(value);
+      return JSON.parse(value);
+    } catch (error) {
+      if (!this.extract) {
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new Error(
+          `${this.block}: "${field}" is not valid JSON (${reason}); ${EXTRACT_HINT}`,
+          { cause: error },
+        );
+      }
+    }
+    try {
+      const parsed = parseModelJson(value);
+      this.extractedFrom[field] = value;
+      return parsed;
     } catch {
-      throw new Error(`${blockName}: "actions" is a string but not valid JSON`);
+      throw new Error(`${this.block}: "${field}" holds no JSON value`);
     }
   }
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    const record = value as Record<string, unknown>;
-    if (typeof record.documentId === "string") documentId = record.documentId;
-    value = Array.isArray(record.actions) ? record.actions : [value];
+
+  // The output's `extractedFrom`, present only when something was extracted.
+  output(): { extractedFrom?: Record<string, string> } {
+    return Object.keys(this.extractedFrom).length
+      ? { extractedFrom: this.extractedFrom }
+      : {};
   }
-  if (!Array.isArray(value)) return { documentId, actions: [] };
-  const actions = value.map((entry, index) => {
-    const record = entry as Record<string, unknown> | null;
-    if (!record || typeof record.type !== "string") {
-      throw new Error(`${blockName}: actions[${index}] needs a string "type"`);
+}
+
+function actionEntries(
+  list: unknown[],
+  reader: ConfigReader,
+  field: string,
+): ActionInputConfig[] {
+  return list.map((entry, index) => {
+    if (!isRecord(entry) || typeof entry.type !== "string") {
+      throw new Error(
+        `${reader.block}: ${field}[${index}] needs a string "type"`,
+      );
+    }
+    if (entry.scope !== undefined && typeof entry.scope !== "string") {
+      throw new Error(
+        `${reader.block}: ${field}[${index}].scope must be a string`,
+      );
     }
     return {
-      type: record.type,
-      input: record.input,
-      scope: typeof record.scope === "string" ? record.scope : undefined,
+      type: entry.type,
+      input: entry.input,
+      scope: entry.scope,
     };
   });
-  return { documentId, actions };
 }
 
-// {documentType, name, actions?} as an object or as JSON text, possibly fenced.
-export function parseCreatePayload(
-  value: unknown,
-  blockName: string,
-): CreatePayload {
-  let record = value;
-  if (typeof record === "string") {
-    if (unfence(record) === "") return {};
-    try {
-      record = parseModelJson(record);
-    } catch {
-      throw new Error(`${blockName}: "payload" is a string but not valid JSON`);
+// A list of actions, or {documentId?, actions: [...]}; "extract" also reads a
+// lone action object as a list of one.
+export function parseDispatchPayload(
+  raw: unknown,
+  reader: ConfigReader,
+  field = "actions",
+): DispatchPayload {
+  if (raw === undefined || raw === null || raw === "") return { actions: [] };
+  const value = reader.json(raw, field);
+  if (Array.isArray(value)) {
+    return { actions: actionEntries(value, reader, field) };
+  }
+  if (isRecord(value)) {
+    if (Array.isArray(value.actions)) {
+      return {
+        documentId: reader.documentId(value.documentId, `${field}.documentId`),
+        actions: actionEntries(value.actions, reader, field),
+      };
+    }
+    if (reader.extract && typeof value.type === "string") {
+      return { actions: actionEntries([value], reader, field) };
     }
   }
-  if (!record || typeof record !== "object" || Array.isArray(record)) return {};
-  const entry = record as Record<string, unknown>;
+  throw new Error(
+    `${reader.block}: "${field}" must be a list of actions or an object with an "actions" list; got ${preview(value)}`,
+  );
+}
+
+export function parseActions(
+  raw: unknown,
+  reader: ConfigReader,
+  field = "actions",
+): ActionInputConfig[] {
+  return parseDispatchPayload(raw, reader, field).actions;
+}
+
+// {documentType?, name?, actions?} as an object or JSON text.
+export function parseCreatePayload(
+  raw: unknown,
+  reader: ConfigReader,
+): CreatePayload {
+  if (raw === undefined || raw === null || raw === "") return {};
+  const value = reader.json(raw, "payload");
+  if (!isRecord(value)) {
+    throw new Error(
+      `${reader.block}: "payload" must be an object; got ${preview(value)}`,
+    );
+  }
+  for (const key of ["documentType", "name"] as const) {
+    if (value[key] !== undefined && typeof value[key] !== "string") {
+      throw new Error(`${reader.block}: "payload.${key}" must be a string`);
+    }
+  }
   return {
-    documentType:
-      typeof entry.documentType === "string" ? entry.documentType : undefined,
-    name: typeof entry.name === "string" ? entry.name : undefined,
-    actions: entry.actions,
+    documentType: value.documentType as string | undefined,
+    name: value.name as string | undefined,
+    actions: value.actions,
   };
+}
+
+// An action's input: an object, or JSON text of one.
+export function parseActionInput(
+  raw: unknown,
+  reader: ConfigReader,
+): Record<string, unknown> {
+  if (raw === undefined || raw === null || raw === "") return {};
+  const value = reader.json(raw, "input");
+  if (!isRecord(value)) {
+    throw new Error(
+      `${reader.block}: "input" must be an object; got ${preview(value)}`,
+    );
+  }
+  return value;
 }
 
 // Whitelist for the dispatch action: a comma-separated string, a list of
@@ -175,20 +304,6 @@ export function allowedActionTypes(value: unknown): string[] {
     })
     .map((entry) => entry.trim())
     .filter(Boolean);
-}
-
-const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-
-// Ids fed by an AI step arrive quoted, fenced or wrapped in prose; documents
-// are addressed by uuid, so prefer one when the text contains it.
-export function resolveDocumentId(value: unknown): string | undefined {
-  if (typeof value !== "string") return undefined;
-  const text = value.trim();
-  if (!text) return undefined;
-  const uuid = UUID.exec(text);
-  if (uuid) return uuid[0];
-  // Slugs are valid identifiers too, so fall back to the bare text.
-  return text.replace(/^["'`]+|["'`]+$/g, "").trim() || undefined;
 }
 
 // A design-time value that can actually be resolved: an expression cannot.

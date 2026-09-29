@@ -1,7 +1,7 @@
 // Step card + add buttons, ported from the Activepieces builder step-node
 // and add-button components (MIT, activepieces packages/web).
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useState } from "react";
 import {
   ADD_BUTTON_SIZE,
   BIG_ADD_BUTTON_SIZE,
@@ -10,8 +10,15 @@ import {
 } from "./ap-layout.js";
 import { useBlockMeta } from "./block-meta.js";
 import { BlockLogo, BlockSelector } from "./BlockSelector.js";
-import { STEP_PRESETS, TRIGGER_PRESETS, type BlockPreset } from "./blocks.js";
-import type { BlockForm } from "./forms.js";
+import {
+  STEP_PRESETS,
+  stepBlock,
+  TRIGGER_PRESETS,
+  triggerBlock,
+  type BlockPreset,
+  type PickedPreset,
+} from "./blocks.js";
+import { useDesignTime, useRunById } from "./design-time.js";
 import type { StepModel, TriggerModel } from "./model.js";
 import {
   MOVE_REJECTION_TEXT,
@@ -20,60 +27,191 @@ import {
   type MoveRejection,
   type StepMove,
 } from "./step-drag.js";
-import { missingForBlock } from "./validation.js";
+import { isTestableTrigger, testState } from "./test-state.js";
+import { useBlockCheck } from "./use-validity.js";
+import {
+  useResolution,
+  versionBadge,
+  type VersionBadgeView,
+  type VersionTone,
+} from "./version-badge.js";
 
 const hiddenHandle = { opacity: 0, pointerEvents: "none" as const };
 
-// Required fields still empty on this block; a loading form counts as none.
-function useMissingRequired(
-  blockType: string,
-  config: unknown,
-  connectionId: string | null,
-): string[] {
-  const [form, setForm] = useState<BlockForm | null | "loading">("loading");
-  useEffect(() => {
-    const getBlockForm = getCanvasHandlers()?.getBlockForm;
-    if (!getBlockForm) {
-      // eslint-disable-next-line react-hooks-extra/set-state-in-effect -- no source yet, so there is no form to render
-      setForm(null);
-      return;
-    }
-    let alive = true;
-    setForm("loading");
-    getBlockForm(blockType).then(
-      (result) => {
-        if (alive) setForm(result);
-      },
-      () => {
-        if (alive) setForm(null);
-      },
+type NodeBadge =
+  | { kind: "invalid"; issues: string[] }
+  | { kind: "incomplete"; missing: string[] }
+  | { kind: "test"; stale: boolean }
+  | { kind: "failed" }
+  | { kind: "passed" }
+  | null;
+
+// Inline beside the title, so no zoom level clips it against the card edge.
+const BADGE_CLASS =
+  "inline-flex shrink-0 items-center rounded-full px-1.5 text-[10px] font-medium leading-4";
+
+function badgeTitle(badge: NonNullable<NodeBadge>): string {
+  switch (badge.kind) {
+    case "invalid":
+      return badge.issues.join("\n");
+    case "incomplete":
+      return `Needs a value: ${badge.missing.join(", ")}`;
+    case "test":
+      return badge.stale ? "Changed since its last test" : "Not tested yet";
+    case "failed":
+      return "The last test failed";
+    case "passed":
+      return "Tested";
+  }
+}
+
+// Which one badge a crowded title keeps; the other goes in its tooltip.
+const TEST_SEVERITY = {
+  passed: 0,
+  test: 2,
+  incomplete: 3,
+  failed: 4,
+  invalid: 6,
+};
+const VERSION_SEVERITY: Record<VersionTone, number> = {
+  neutral: 1,
+  warn: 3,
+  fail: 5,
+};
+
+const VERSION_CLASS: Record<VersionTone, string> = {
+  neutral: "bg-muted text-muted-foreground",
+  warn: "bg-wf-warn/15 text-wf-warn",
+  fail: "bg-wf-fail/10 text-wf-fail",
+};
+
+// Activepieces' order: incomplete first, then the test. A version badge
+// shows instead only when it is the more severe.
+function Badge(props: { badge: NodeBadge; version: VersionBadgeView | null }) {
+  const { badge, version } = props;
+  if (
+    version &&
+    (!badge || VERSION_SEVERITY[version.tone] > TEST_SEVERITY[badge.kind])
+  ) {
+    return (
+      <span
+        data-testid="version-badge"
+        className={`${BADGE_CLASS} ${VERSION_CLASS[version.tone]}`}
+        title={badge ? `${version.title}\n${badgeTitle(badge)}` : version.title}
+      >
+        {version.label}
+      </span>
     );
-    return () => {
-      alive = false;
-    };
-  }, [blockType]);
-  return missingForBlock(form, config, connectionId);
+  }
+  if (!badge) return null;
+  const title = version
+    ? `${badgeTitle(badge)}\n${version.title}`
+    : badgeTitle(badge);
+  switch (badge.kind) {
+    case "invalid":
+      return (
+        <span
+          className={`${BADGE_CLASS} bg-wf-fail/10 text-wf-fail`}
+          title={title}
+        >
+          Miswired
+        </span>
+      );
+    case "incomplete":
+      return (
+        <span
+          className={`${BADGE_CLASS} bg-wf-warn/15 text-wf-warn`}
+          title={title}
+        >
+          Incomplete
+        </span>
+      );
+    case "test":
+      return (
+        <span
+          className={`${BADGE_CLASS} bg-muted text-muted-foreground`}
+          title={title}
+        >
+          Test me
+        </span>
+      );
+    case "failed":
+      return (
+        <span
+          className={`${BADGE_CLASS} bg-wf-fail/10 text-wf-fail`}
+          title={title}
+        >
+          Failed
+        </span>
+      );
+    case "passed":
+      return (
+        <span
+          className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-wf-ok/15 text-wf-ok"
+          title={title}
+          aria-label="Tested"
+        >
+          <svg viewBox="0 0 24 24" className="h-2.5 w-2.5">
+            <path
+              d="M5 12l5 5 9-10"
+              stroke="currentColor"
+              strokeWidth={3}
+              fill="none"
+              strokeLinecap="round"
+            />
+          </svg>
+        </span>
+      );
+  }
 }
 
 export function ApStepNode(props: NodeProps) {
-  const data = props.data as
+  const data = props.data as (
     | { kind: "trigger"; trigger: TriggerModel }
-    | { kind: "step"; step: StepModel };
-  const blockType =
-    data.kind === "trigger" ? data.trigger.blockType : data.step.blockType;
+    | { kind: "step"; step: StepModel }
+  ) & { outgoingPorts?: string[] };
+  const ref =
+    data.kind === "trigger" ? triggerBlock(data.trigger) : stepBlock(data.step);
   // Subscribed, so the piece name replaces the fallback once the catalog lands.
-  const meta = useBlockMeta(blockType);
+  const meta = useBlockMeta(ref);
   const title =
     data.kind === "trigger"
       ? meta.displayName
       : data.step.name || data.step.key;
-  const missing = useMissingRequired(
-    blockType,
-    data.kind === "trigger" ? data.trigger.config : data.step.config,
+  const block = data.kind === "trigger" ? data.trigger : data.step;
+  const skipped = data.kind === "step" && data.step.skip === true;
+  const check = useBlockCheck({
+    ...block,
+    block: ref,
+    skip: skipped,
+    outgoingPorts: data.outgoingPorts,
+  });
+
+  const designTime = useDesignTime();
+  const testable =
     data.kind === "trigger"
-      ? data.trigger.connectionId
-      : data.step.connectionId,
-  );
+      ? isTestableTrigger(ref) && Boolean(designTime?.testTrigger)
+      : Boolean(designTime?.testStep);
+  const testRun = useRunById(testable ? block.lastTest?.runId : null);
+  const tested = testable ? testState(block, testRun?.status) : null;
+  // No tick until the run says it didn't fail.
+  const test = tested === "passed" && testRun === undefined ? null : tested;
+  const badge: NodeBadge = skipped
+    ? null
+    : check.issues.length > 0
+      ? { kind: "invalid", issues: check.issues }
+      : check.missing && check.missing.length > 0
+        ? { kind: "incomplete", missing: check.missing }
+        : test === "never" || test === "stale"
+          ? { kind: "test", stale: test === "stale" }
+          : test === "failed"
+            ? { kind: "failed" }
+            : test === "passed"
+              ? { kind: "passed" }
+              : null;
+
+  const resolution = useResolution(block.id, ref);
+  const version = skipped ? null : versionBadge(resolution);
 
   const dragging = useDraggingStep();
   const isDragged = data.kind === "step" && dragging === data.step.id;
@@ -83,7 +221,7 @@ export function ApStepNode(props: NodeProps) {
       style={{ width: STEP_WIDTH, height: STEP_HEIGHT }}
       className={`border-box group relative overflow-visible rounded-md border border-solid bg-card shadow-sm transition-all ${
         props.selected ? "border-wf-run" : "border-foreground/10"
-      } ${isDragged ? "opacity-40" : ""} ${
+      } ${isDragged ? "opacity-40" : ""} ${skipped ? "border-dashed" : ""} ${
         data.kind === "step"
           ? // nodrag/nopan hand the gesture over: without them React Flow's
             // pane claims the mousedown and the canvas pans instead.
@@ -101,11 +239,21 @@ export function ApStepNode(props: NodeProps) {
       onDragEnd={() => setDraggingStep(undefined)}
     >
       <Handle type="target" position={Position.Top} style={hiddenHandle} />
-      <div className="flex h-full items-center gap-3 px-3">
-        <BlockLogo blockType={blockType} size={36} />
+      <div
+        className={`flex h-full items-center gap-3 px-3 ${skipped ? "opacity-50 grayscale" : ""}`}
+      >
+        <BlockLogo block={ref} size={36} />
         <div className="min-w-0 grow">
-          <div className="truncate text-sm font-medium text-foreground">
-            {title}
+          <div className="flex items-center gap-1.5">
+            <span className="truncate text-sm font-medium text-foreground">
+              {title}
+            </span>
+            {skipped ? (
+              <span className="shrink-0 rounded bg-muted px-1 text-[10px] font-medium text-muted-foreground">
+                Skipped
+              </span>
+            ) : null}
+            <Badge badge={badge} version={version} />
           </div>
           <div className="truncate text-xs text-muted-foreground/80">
             {data.kind === "trigger"
@@ -116,12 +264,6 @@ export function ApStepNode(props: NodeProps) {
           </div>
         </div>
       </div>
-      {missing.length > 0 ? (
-        <span
-          className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-solid border-card bg-wf-warn"
-          title={`Needs a value: ${missing.join(", ")}`}
-        />
-      ) : null}
       <Handle type="source" position={Position.Bottom} style={hiddenHandle} />
     </div>
   );
@@ -138,7 +280,7 @@ function AddButton(props: {
   size?: number;
   title: string;
   presets: BlockPreset[];
-  onPick: (preset: BlockPreset) => void;
+  onPick: (preset: PickedPreset) => void;
   showPieces?: boolean;
   pieceMode?: "actions" | "triggers";
   attachSteps?: StepModel[];
@@ -153,6 +295,8 @@ function AddButton(props: {
     <div className="relative" style={{ width: size, height: size }}>
       <button
         type="button"
+        aria-label={props.title}
+        aria-expanded={open}
         style={label ? { height: size } : { width: size, height: size }}
         // Labelled buttons keep the node's own footprint and overflow it
         // evenly, so the layout still positions them by their centre.
@@ -218,29 +362,27 @@ function AddButton(props: {
 }
 
 export interface ApCanvasHandlers {
-  appendStep: (fromId: string, port: string, preset: BlockPreset) => void;
-  insertOnEdge: (edgeId: string, preset: BlockPreset) => void;
-  pickTrigger: (preset: BlockPreset) => void;
+  appendStep: (fromId: string, port: string, preset: PickedPreset) => void;
+  insertOnEdge: (edgeId: string, preset: PickedPreset) => void;
+  pickTrigger: (preset: PickedPreset) => void;
   // Re-attaching steps that are unreachable from the trigger.
   attachableSteps: (fromId: string) => StepModel[];
   attachStep: (fromId: string, port: string, stepId: string) => void;
   // Dragging a step card onto a slot.
   moveStep: (move: StepMove) => void;
   moveRejection: (move: StepMove) => MoveRejection | null;
-  // Form descriptor lookup for the required-fields badge.
-  getBlockForm?: (blockType: string) => Promise<BlockForm | null>;
 }
-
-let canvasHandlers: ApCanvasHandlers | undefined;
 
 // Node/edge components can't receive functions through the layout data
-// cleanly, so the canvas registers its handlers module-side before render.
-export function registerCanvasHandlers(handlers: ApCanvasHandlers): void {
-  canvasHandlers = handlers;
-}
+// cleanly; they render inside ReactFlow, under the canvas's provider.
+const CanvasHandlersContext = createContext<ApCanvasHandlers | undefined>(
+  undefined,
+);
 
-export function getCanvasHandlers(): ApCanvasHandlers | undefined {
-  return canvasHandlers;
+export const CanvasHandlersProvider = CanvasHandlersContext.Provider;
+
+export function useCanvasHandlers(): ApCanvasHandlers | undefined {
+  return useContext(CanvasHandlersContext);
 }
 
 export function ApAppendNode(props: NodeProps) {
@@ -248,8 +390,9 @@ export function ApAppendNode(props: NodeProps) {
     parentId: string;
     port: string;
     card?: boolean;
+    hint?: boolean;
   };
-  const handlers = getCanvasHandlers();
+  const handlers = useCanvasHandlers();
   const attachSteps = handlers?.attachableSteps(data.parentId);
   const dragging = useDraggingStep();
   const move = dragging
@@ -321,10 +464,10 @@ export function ApAppendNode(props: NodeProps) {
           showPieces
           attachSteps={attachSteps}
           onAttach={(stepId) =>
-            getCanvasHandlers()?.attachStep(data.parentId, data.port, stepId)
+            handlers?.attachStep(data.parentId, data.port, stepId)
           }
           onPick={(preset) =>
-            getCanvasHandlers()?.appendStep(data.parentId, data.port, preset)
+            handlers?.appendStep(data.parentId, data.port, preset)
           }
         />
       </div>
@@ -334,6 +477,11 @@ export function ApAppendNode(props: NodeProps) {
   return (
     <>
       <Handle type="target" position={Position.Top} style={hiddenHandle} />
+      {data.hint ? (
+        <span className="pointer-events-none absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap text-xs text-muted-foreground">
+          Add your first step with +
+        </span>
+      ) : null}
       <AddButton
         title={data.port === "next" ? "Add step" : `Add step (${data.port})`}
         label={data.port === "next" ? undefined : data.port}
@@ -341,10 +489,10 @@ export function ApAppendNode(props: NodeProps) {
         showPieces
         attachSteps={attachSteps}
         onAttach={(stepId) =>
-          getCanvasHandlers()?.attachStep(data.parentId, data.port, stepId)
+          handlers?.attachStep(data.parentId, data.port, stepId)
         }
         onPick={(preset) =>
-          getCanvasHandlers()?.appendStep(data.parentId, data.port, preset)
+          handlers?.appendStep(data.parentId, data.port, preset)
         }
       />
     </>
@@ -352,6 +500,7 @@ export function ApAppendNode(props: NodeProps) {
 }
 
 export function ApBigButtonNode(_props: NodeProps) {
+  const handlers = useCanvasHandlers();
   return (
     <div className="flex flex-col items-center gap-2">
       <AddButton
@@ -360,7 +509,7 @@ export function ApBigButtonNode(_props: NodeProps) {
         presets={TRIGGER_PRESETS}
         showPieces
         pieceMode="triggers"
-        onPick={(preset) => getCanvasHandlers()?.pickTrigger(preset)}
+        onPick={(preset) => handlers?.pickTrigger(preset)}
       />
       <span className="text-xs text-muted-foreground/80">Select a trigger</span>
     </div>

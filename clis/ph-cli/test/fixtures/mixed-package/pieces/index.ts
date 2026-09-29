@@ -1,15 +1,13 @@
 export type PackagePiece = {
   name: string;
-  version: string;
   entry?: string;
   bundle?: string;
 };
 
-// Named after the package, so the build checks its version against package.json.
+// Named after the package; its version is the package.json version.
 export const pieces: PackagePiece[] = [
   {
     name: "@fixture/mixed-package",
-    version: "2.0.0",
     entry: "dist/node/pieces/wave/index.mjs",
   },
 ];

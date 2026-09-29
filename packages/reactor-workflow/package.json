@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-workflow",
-  "version": "6.2.3-dev.25",
+  "version": "6.2.3-dev.32",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": false,
@@ -47,8 +47,10 @@
   "devDependencies": {
     "@electric-sql/pglite": "catalog:",
     "@types/node": "catalog:",
+    "knex": "catalog:",
+    "knex-pglite": "catalog:",
     "kysely": "catalog:",
-    "kysely-pglite-dialect": "catalog:",
+    "kysely-knex": "catalog:",
     "tsdown": "catalog:",
     "vitest": "catalog:"
   },

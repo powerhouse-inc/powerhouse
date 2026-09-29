@@ -17,7 +17,11 @@ export { DEDUPE_KEY_PROPERTY } from "@powerhousedao/pieces-framework";
 // the enum, so a value read off one is compared as a string, never by identity.
 export type ApPropertyType = string;
 
-export type ApDropdownOption = Pick<DropdownOption<unknown>, "label" | "value">;
+export type ApDropdownOption = Pick<
+  DropdownOption<unknown>,
+  "label" | "value"
+> &
+  Partial<Pick<DropdownOption<unknown>, "description" | "icon">>;
 
 // STATIC_DROPDOWN options are plain data; DROPDOWN options is a resolver function.
 export type ApStaticDropdownState = Pick<
@@ -28,7 +32,10 @@ export type ApStaticDropdownState = Pick<
 // Every field optional: an unknown bundle version may omit any of them, and a
 // missing field must read as absent rather than fail the descriptor.
 export type ApProperty = Partial<
-  Pick<BasePropertySchema, "displayName" | "description" | "placeholder">
+  Pick<
+    BasePropertySchema,
+    "displayName" | "description" | "placeholder" | "advanced"
+  >
 > &
   Partial<Pick<DropdownProperty<unknown, boolean>, "refreshers">> & {
     type?: ApPropertyType;
@@ -39,7 +46,36 @@ export type ApProperty = Partial<
     props?: (...args: unknown[]) => unknown;
     // ARRAY: schema of each item's fields; absent for plain value arrays.
     properties?: Record<string, ApProperty>;
+    // Layout and control hints, each read off only the types that declare it.
+    width?: string;
+    icon?: string;
+    reveals?: string[];
+    variant?: string;
+    display?: string;
+    min?: number;
+    max?: number;
+    step?: number;
+    refreshOnSearch?: boolean;
+    formatProperty?: string;
+    // The core piece's form hints; see PiecePropDescriptor.
+    showWhen?: unknown;
+    emptyChoice?: unknown;
   };
+
+// Widened from PropertyGroupDisplay: tabs | section | summary | builder | footer.
+export interface ApPropertyGroup {
+  key?: string;
+  display?: string;
+  label?: string;
+  description?: string;
+  icon?: string;
+  props?: string[];
+}
+
+export interface ApErrorHandlingOption {
+  defaultValue?: boolean;
+  hide?: boolean;
+}
 
 // requireAuth is UI metadata only — pieces run without auth despite it (spike finding).
 export type ApAction = Partial<
@@ -51,7 +87,18 @@ export type ApAction = Partial<
   outputSchema?: unknown;
   // "human" | "ai" | "both"; absent counts as human-visible.
   audience?: string;
+  propertyGroups?: ApPropertyGroup[];
+  // READ | SEARCH | WRITE | DESTRUCTIVE, widened for the cross-bundle reason.
+  classification?: string;
+  errorHandlingOptions?: {
+    retryOnFailure?: ApErrorHandlingOption;
+    continueOnFailure?: ApErrorHandlingOption;
+  };
+  // Output ports, read only off a piece the host runs in process.
+  ports?: unknown;
   run: (ctx: unknown) => Promise<unknown>;
+  // Called instead of run by a single-step test.
+  test?: (ctx: unknown) => Promise<unknown>;
 };
 
 // Widened from TriggerStrategy for the same reason as ApPropertyType:
@@ -73,7 +120,10 @@ export type ApTrigger = Partial<
   type?: ApTriggerStrategy;
   // Widened from TriggerTestStrategy: SIMULATION | TEST_FUNCTION.
   testStrategy?: string;
+  // A form the editor draws instead of the props, e.g. "schedule".
+  display?: unknown;
   props?: Record<string, ApProperty>;
+  propertyGroups?: ApPropertyGroup[];
   outputSchema?: unknown;
   handshakeConfiguration?: ApHandshakeConfiguration;
   // Widened from WebhookRenewConfiguration: CRON | NONE.
@@ -101,6 +151,7 @@ export type ApPiece = Pick<PieceBase, "displayName"> &
     >
   > & {
     categories?: string[];
+    deprecated?: boolean;
     // An array when the piece offers several auth methods.
     auth?: ApProperty | ApProperty[];
     // A bundle exposes these as the built record or as a zero-arg method; the

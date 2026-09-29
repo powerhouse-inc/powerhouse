@@ -10,7 +10,10 @@ import {
   ActivepiecesBlockExecutor,
   type PieceStorePort,
 } from "../../../src/pieces/engine/blocks.js";
-import type { BlockExecution } from "../../../src/pieces/engine/types.js";
+import {
+  stepBlock,
+  type BlockExecution,
+} from "../../../src/pieces/engine/types.js";
 import { PieceWorker } from "../../../src/pieces/activepieces/worker/host.js";
 
 // Reads a cursor and advances it item by item; each put is the checkpoint a
@@ -137,12 +140,20 @@ function memoryStore(options: { rejectPut?: string } = {}): PieceStorePort & {
   };
 }
 
-function execution(blockType: string, config: unknown): BlockExecution {
-  return {
-    blockType,
+function execution(
+  pieceName: string,
+  actionName: string,
+  config: unknown,
+): BlockExecution {
+  const step = {
+    id: "s1",
+    key: "step",
+    pieceName,
+    pieceVersion: "1.0.0",
+    actionName,
     config,
-    step: { id: "s1", key: "step", blockType } as BlockExecution["step"],
   };
+  return { block: stepBlock(step), config, step };
 }
 
 describe("ctx.store over the host call channel", () => {
@@ -166,7 +177,7 @@ describe("ctx.store over the host call channel", () => {
     });
 
     const result = await executor.execute(
-      execution("@test/cursor@1.0.0#advance", {}),
+      execution("@test/cursor", "advance", {}),
     );
 
     expect(result.output).toEqual({ before: null, after: 3 });
@@ -191,7 +202,7 @@ describe("ctx.store over the host call channel", () => {
     });
 
     const result = await executor.execute(
-      execution("@test/cursor@1.0.0#advance", {}),
+      execution("@test/cursor", "advance", {}),
     );
 
     expect(result.output).toEqual({ before: 10, after: 13 });
@@ -206,7 +217,7 @@ describe("ctx.store over the host call channel", () => {
     });
 
     const result = await executor.execute(
-      execution("@test/cursor@1.0.0#forget", {}),
+      execution("@test/cursor", "forget", {}),
     );
 
     expect(result.output).toEqual({ scratch: null });
@@ -222,7 +233,7 @@ describe("ctx.store over the host call channel", () => {
       pieceStore: store,
     });
 
-    await executor.execute(execution("@test/cursor@1.0.0#scoped", {}));
+    await executor.execute(execution("@test/cursor", "scoped", {}));
 
     // The scope reaches the host as a name, so the host decides the partition.
     // Nothing about it is encoded in the key the piece chose.
@@ -238,7 +249,7 @@ describe("ctx.store over the host call channel", () => {
     });
 
     const result = await executor.execute(
-      execution("@test/cursor@1.0.0#flowScoped", {}),
+      execution("@test/cursor", "flowScoped", {}),
     );
 
     // A piece that names FLOW and one that omits the scope mean the same key.
@@ -255,7 +266,7 @@ describe("ctx.store over the host call channel", () => {
     });
 
     const result = await executor.execute(
-      execution("@test/cursor@1.0.0#typed", {}),
+      execution("@test/cursor", "typed", {}),
     );
 
     // The durable store round-trips through JSON, so a Date must not appear to
@@ -273,7 +284,7 @@ describe("ctx.store over the host call channel", () => {
     });
 
     const result = await executor.execute(
-      execution("@test/cursor@1.0.0#refused", {}),
+      execution("@test/cursor", "refused", {}),
     );
 
     const output = result.output as { threw: boolean; message: string };
@@ -286,7 +297,7 @@ describe("ctx.store over the host call channel", () => {
     const executor = new ActivepiecesBlockExecutor({ cacheDir, worker });
 
     const result = await executor.execute(
-      execution("@test/cursor@1.0.0#typed", {}),
+      execution("@test/cursor", "typed", {}),
     );
 
     // The divergence this guards against: a Date surviving only when no
@@ -298,7 +309,7 @@ describe("ctx.store over the host call channel", () => {
     const executor = new ActivepiecesBlockExecutor({ cacheDir, worker });
 
     const result = await executor.execute(
-      execution("@test/cursor@1.0.0#advance", {}),
+      execution("@test/cursor", "advance", {}),
     );
 
     // No port means no durability contract; the value lives only as long as

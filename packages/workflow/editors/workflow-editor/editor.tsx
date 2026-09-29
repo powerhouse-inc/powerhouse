@@ -3,26 +3,31 @@ import "./ui/canvas.css";
 import {
   useFileNodesInSelectedDrive,
   useSelectedDocumentId,
+  useSelectedDriveId,
 } from "@powerhousedao/reactor-browser";
-import { useSelectedWorkflowDocument } from "document-models/workflow";
-import { useEffect, useMemo, useState } from "react";
-import { useWorkflowModel } from "./document/useWorkflowModel.js";
-import "./runtime-piece-source.js";
 import {
-  createSecret,
-  fetchBlockOutputTree,
-  fetchConnections,
-  fetchRuns,
-  fetchSecretStat,
-  fetchWebhookEndpoint,
-  getBlockForm,
-  invalidateConnections,
-  loadBlockOptions,
-  rotateSecret,
-  testTrigger,
-  type OutputTreeNode,
-  type RunRecord,
-} from "./runtime-api.js";
+  actions as workflowActions,
+  useSelectedWorkflowDocument,
+} from "document-models/workflow";
+import type { UndoPolicy } from "../shared/undo-plan.js";
+import { useMemo } from "react";
+import { useWorkflowModel } from "./document/useWorkflowModel.js";
+import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
+import type { OutputTreeNode, RuntimeClient } from "./runtime-client.js";
+import {
+  useRunsQuery,
+  useRuntime,
+  useRuntimeActions,
+  WorkflowRuntimeProvider,
+} from "./runtime-context.js";
+import {
+  LATEST_RUN_WINDOW,
+  outputTreeQuery,
+  runsQuery,
+  stepOutputTreeQuery,
+} from "./runtime-queries.js";
+import { realRuns, TEST_TRIGGER_KIND } from "./run-kinds.js";
+import type { QueryClient } from "@tanstack/react-query";
 import { BackButton, UndoRedo } from "../shared/editor-chrome.js";
 import {
   formatAbsolute,
@@ -34,10 +39,13 @@ import {
   TONE_TEXT,
 } from "../workflow-studio/components/run-format.js";
 import { buildExpressionScope, EMPTY_SCOPE } from "./ui/expression-scope.js";
-import { registerExpressionScopeSource } from "./ui/ExpressionPicker.js";
+import { DesignTimeProvider } from "./ui/design-time.js";
+import {
+  ExpressionScopeSourceProvider,
+  type ExpressionScopeSource,
+} from "./ui/ExpressionPicker.js";
 import type { DesignTimeService } from "./ui/forms.js";
 import { DocumentErrorBoundary } from "../shared/DocumentErrorBoundary.js";
-import { useSyncWorkflowRuntimeUrl } from "./use-runtime-url.js";
 import { WorkflowEditorApp } from "./ui/WorkflowEditorApp.js";
 
 function treeValue(nodes: OutputTreeNode[]): Record<string, unknown> {
@@ -49,9 +57,15 @@ function treeValue(nodes: OutputTreeNode[]): Record<string, unknown> {
   );
 }
 
-async function authoredOutput(blockType: string, config: unknown) {
+async function authoredOutput(
+  runtime: { client: RuntimeClient; queryClient: QueryClient },
+  block: BlockRef,
+  config: unknown,
+) {
   try {
-    const tree = await fetchBlockOutputTree(blockType, config);
+    const tree = await runtime.queryClient.fetchQuery(
+      outputTreeQuery(runtime.client, block, config),
+    );
     if (tree.nodes.length > 0) return treeValue(tree.nodes);
     // Schema with no sub-paths = the output itself is the value.
     return tree.source === "none" ? "no declared schema" : "value";
@@ -62,27 +76,32 @@ async function authoredOutput(blockType: string, config: unknown) {
 
 const LAST_RUN_POLL_MS = 10_000;
 
-function LastRunFact(props: { workflowId: string }) {
-  const [run, setRun] = useState<RunRecord | null | undefined>(undefined);
-  useEffect(() => {
-    let alive = true;
-    const load = () =>
-      fetchRuns({ workflowId: props.workflowId, limit: 1 }).then(
-        (runs) => {
-          if (alive) setRun(runs.at(0) ?? null);
-        },
-        () => {
-          if (alive) setRun(null);
-        },
+// Undo passes over the runtime's facts and writes them again, so undoing an
+// edit never loses a test or a run.
+const WORKFLOW_UNDO: UndoPolicy = {
+  skip: new Set(["SET_LAST_TEST", "SET_LAST_RUN"]),
+  replay: (action) => {
+    if (action.type === "SET_LAST_TEST") {
+      return workflowActions.setLastTest(
+        action.input as Parameters<typeof workflowActions.setLastTest>[0],
       );
-    void load();
-    const timer = setInterval(() => void load(), LAST_RUN_POLL_MS);
-    return () => {
-      alive = false;
-      clearInterval(timer);
-    };
-  }, [props.workflowId]);
-  if (run === undefined) return null;
+    }
+    if (action.type === "SET_LAST_RUN") {
+      return workflowActions.setLastRun(
+        action.input as Parameters<typeof workflowActions.setLastRun>[0],
+      );
+    }
+    return undefined;
+  },
+};
+
+function LastRunFact(props: { workflowId: string }) {
+  const runs = useRunsQuery(
+    { workflowId: props.workflowId, limit: LATEST_RUN_WINDOW },
+    { pollMs: LAST_RUN_POLL_MS },
+  );
+  if (runs.status === "pending") return null;
+  const run = runs.data?.at(0) ?? null;
   if (run === null) {
     return <span className="text-xs text-muted-foreground">Not run yet</span>;
   }
@@ -103,7 +122,8 @@ function LastRunFact(props: { workflowId: string }) {
 }
 
 function WorkflowEditor() {
-  useSyncWorkflowRuntimeUrl();
+  const { client, queryClient } = useRuntime();
+  const actions = useRuntimeActions();
   const { model, callbacks } = useWorkflowModel();
   const [document] = useSelectedWorkflowDocument();
   const workflowId = document.header.id;
@@ -111,6 +131,8 @@ function WorkflowEditor() {
   // The runtime lists every connection it holds; offer only this drive's.
   // Null outside a drive, where there's nothing to scope to.
   const driveNodes = useFileNodesInSelectedDrive();
+  // Lets the runtime wait for a workflow that hasn't synced to it yet.
+  const driveId = useSelectedDriveId() ?? undefined;
   const driveConnections = driveNodes
     ? driveNodes
         .filter((node) => node.documentType === "powerhouse/connection")
@@ -120,64 +142,106 @@ function WorkflowEditor() {
 
   const designTime = useMemo<DesignTimeService>(
     () => ({
-      getBlockForm,
-      loadOptions: loadBlockOptions,
-      testTrigger: () => testTrigger(workflowId),
-      webhookEndpoint: () => fetchWebhookEndpoint(workflowId),
+      workflowId,
+      getBlockForm: (block) => client.getBlockForm(block),
+      loadOptions: (...args) => client.loadBlockOptions(...args),
+      testTrigger: () => client.testTrigger(workflowId, driveId),
+      testStep: (stepId) => client.testStep(workflowId, stepId, driveId),
+      webhookEndpoint: () => client.fetchWebhookEndpoint(workflowId, driveId),
+      connectionScope: driveConnections ?? undefined,
       listConnections: () =>
-        fetchConnections().then((connections) => {
+        client.fetchConnections().then((connections) => {
           if (driveConnections === null) return connections;
           const inDrive = new Set(driveConnections.split(",").filter(Boolean));
           return connections.filter((connection) => inDrive.has(connection.id));
         }),
-      refreshConnections: invalidateConnections,
       latestRun: () =>
-        fetchRuns({ workflowId, limit: 1 }).then((runs) => runs.at(0) ?? null),
+        client
+          .fetchRuns({
+            workflowId,
+            limit: LATEST_RUN_WINDOW,
+            excludeTriggerKinds: [TEST_TRIGGER_KIND],
+          })
+          .then((runs) => realRuns(runs).at(0) ?? null),
+      fetchRun: (runId) => client.fetchRun(runId),
+      blockResolutions: () => client.blockResolutions(workflowId),
       secrets: {
         save: ({ ref, value, label }) =>
-          ref ? rotateSecret(ref, value) : createSecret(value, label),
-        stat: fetchSecretStat,
+          ref
+            ? actions.rotateSecret(ref, value)
+            : actions.createSecret(value, label),
+        stat: (ref) => client.fetchSecretStat(ref),
       },
     }),
-    [workflowId, driveConnections],
+    [client, actions, workflowId, driveId, driveConnections],
   );
 
-  // Scope for the {} picker: journaled outputs from the latest run where
-  // available, authored shapes (declared types as leaves) otherwise.
-  useEffect(() => {
-    registerExpressionScopeSource({
+  // Scope for the {} picker: last test samples first, then journaled outputs
+  // from the latest run, then authored shapes (declared types as leaves).
+  const scopeSource = useMemo<ExpressionScopeSource>(
+    () => ({
       load: async ({ stepId }) => {
         // Trigger config fields run before any step; nothing to reference.
         if (!stepId) return EMPTY_SCOPE;
-        const latestRun = await fetchRuns({ workflowId, limit: 1 }).then(
-          (runs) => runs[0],
-          () => undefined,
-        );
+        const latestRun = await queryClient
+          .fetchQuery(
+            runsQuery(client, { workflowId, limit: LATEST_RUN_WINDOW }),
+          )
+          .then(
+            (runs) => runs[0],
+            () => undefined,
+          );
         return buildExpressionScope({
           model,
           stepId,
           latestRun,
-          authoredOutput,
+          authoredOutput: (block, config) =>
+            authoredOutput({ client, queryClient }, block, config),
+          testOutput: async (blockId) => {
+            const block =
+              model.trigger?.id === blockId
+                ? model.trigger
+                : model.steps.find((step) => step.id === blockId);
+            const tree = await queryClient.fetchQuery(
+              stepOutputTreeQuery(
+                client,
+                workflowId,
+                blockId,
+                block?.lastTest?.testedAt ?? null,
+              ),
+            );
+            return tree.source === "test" && tree.testedAt
+              ? { value: tree.sample, testedAt: tree.testedAt }
+              : undefined;
+          },
         });
       },
-    });
-  }, [model, workflowId]);
+    }),
+    [client, queryClient, model, workflowId],
+  );
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background">
-      <WorkflowEditorApp
-        model={model}
-        callbacks={callbacks}
-        designTime={designTime}
-        leading={<BackButton />}
-        trailing={
-          <>
-            <LastRunFact workflowId={workflowId} />
-            <UndoRedo documentId={workflowId} />
-          </>
-        }
-      />
-    </div>
+    <DesignTimeProvider
+      service={designTime}
+      queryClient={queryClient}
+      scope={client.url}
+    >
+      <ExpressionScopeSourceProvider value={scopeSource}>
+        <div className="flex h-full min-h-0 flex-col bg-background">
+          <WorkflowEditorApp
+            model={model}
+            callbacks={callbacks}
+            leading={<BackButton />}
+            trailing={
+              <>
+                <LastRunFact workflowId={workflowId} />
+                <UndoRedo documentId={workflowId} policy={WORKFLOW_UNDO} />
+              </>
+            }
+          />
+        </div>
+      </ExpressionScopeSourceProvider>
+    </DesignTimeProvider>
   );
 }
 
@@ -187,7 +251,9 @@ export default function Editor() {
   const documentId = useSelectedDocumentId();
   return (
     <DocumentErrorBoundary documentId={documentId}>
-      <WorkflowEditor />
+      <WorkflowRuntimeProvider>
+        <WorkflowEditor />
+      </WorkflowRuntimeProvider>
     </DocumentErrorBoundary>
   );
 }

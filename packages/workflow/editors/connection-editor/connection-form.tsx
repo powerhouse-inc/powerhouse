@@ -1,19 +1,22 @@
 // Presentation for the connection editor: connector picker driven by the
 // piece catalog, auth form driven by the piece's PieceAuth descriptor.
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type {
   ConnectionAuthType,
   ConnectionState,
   ConnectionStatus,
 } from "document-models/connection";
+import type {
+  PieceSummary,
+  SecretStat,
+} from "../workflow-editor/runtime-client.js";
 import {
-  createSecret,
-  fetchPieceCatalog,
-  fetchSecretStat,
-  rotateSecret,
-  type PieceSummary,
-  type SecretStat,
-} from "../workflow-editor/runtime-api.js";
+  useOAuthAttempt,
+  useOAuthRedirectUri,
+  usePieceCatalog,
+  useRuntimeActions,
+  useSecretStat,
+} from "../workflow-editor/runtime-context.js";
 import { formatWhen } from "../workflow-studio/components/run-format.js";
 import { Icon } from "../shared/icons.js";
 import { AUTH_TYPE_LABEL } from "./status.js";
@@ -29,9 +32,12 @@ import {
 } from "../shared/controls.js";
 import {
   isAuthComplete,
+  OAUTH_TOKEN,
   packageFromConnectorId,
   planForConnection,
+  planFromAuth,
   plansFromAuth,
+  UNKNOWN_AUTH,
   type AuthField,
   type AuthPlan,
 } from "./piece-auth.js";
@@ -126,29 +132,6 @@ function isManagedRef(ref: string): boolean {
   return ref.startsWith(SECRET_REF_PREFIX);
 }
 
-// Undefined while the stat loads; null when the ref doesn't resolve.
-function useSecretStat(refValue: string) {
-  const [stat, setStat] = useState<SecretStat | null | undefined>(undefined);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks-extra/set-state-in-effect -- clears the stale stat before the ref's own fetch
-    setStat(isManagedRef(refValue) ? undefined : null);
-    if (!isManagedRef(refValue)) return;
-    let cancelled = false;
-    fetchSecretStat(refValue).then(
-      (result) => {
-        if (!cancelled) setStat(result);
-      },
-      () => {
-        if (!cancelled) setStat(null);
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [refValue]);
-  return [stat, setStat] as const;
-}
-
 function SavedSecret(props: {
   stat: SecretStat | undefined;
   fresh: boolean;
@@ -211,7 +194,8 @@ function SecretField(props: {
   const { field, refValue } = props;
   const inputId = useId();
   const managed = isManagedRef(refValue);
-  const [stat, setStat] = useSecretStat(refValue);
+  const stat = useSecretStat(refValue, managed);
+  const actions = useRuntimeActions();
   const [value, setValue] = useState("");
   const [reveal, setReveal] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -246,14 +230,13 @@ function SecretField(props: {
     const label = `${props.connectionName || "connection"} · ${field.displayName}`;
     const request =
       stored && !separate
-        ? rotateSecret(refValue, value)
-        : createSecret(value, label);
+        ? actions.rotateSecret(refValue, value)
+        : actions.createSecret(value, label);
     request
       .then((result) => {
         cancel();
         setJustSaved(true);
         if (result.ref !== refValue) props.onCommit(result.ref);
-        else setStat(result);
       })
       .catch((requestError: unknown) => {
         setError(
@@ -395,6 +378,190 @@ function SecretField(props: {
   );
 }
 
+// Set on the page a full-page sign-in returns to.
+const RETURN_PARAM = "ph_oauth";
+
+function returnedState(): string | null {
+  if (typeof window === "undefined") return null;
+  return new URL(window.location.href).searchParams.get(RETURN_PARAM);
+}
+
+function clearReturnedState(): void {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has(RETURN_PARAM)) return;
+  url.searchParams.delete(RETURN_PARAM);
+  window.history.replaceState(window.history.state, "", url.href);
+}
+
+function CopyField(props: { label: string; value: string; hint: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div>
+      <LabelRow label={props.label} />
+      <div className="flex items-center gap-2">
+        <input
+          className={`${inputClass} font-mono text-xs`}
+          readOnly
+          value={props.value}
+          onFocus={(event) => event.target.select()}
+        />
+        <IconButton
+          icon={copied ? "check" : "copy"}
+          label={`Copy ${props.label.toLowerCase()}`}
+          onClick={() => {
+            void navigator.clipboard.writeText(props.value).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            });
+          }}
+        />
+      </div>
+      <HintText text={props.hint} />
+    </div>
+  );
+}
+
+// Signs in through the provider in a popup; the switchboard exchanges the
+// code and stores the token, and this polls until it has.
+function OAuthConnect(props: {
+  connectionId: string | undefined;
+  state: ConnectionState;
+  ready: boolean;
+}) {
+  const { connectionId, state } = props;
+  const actions = useRuntimeActions();
+  const redirect = useOAuthRedirectUri();
+  const [attemptState, setAttemptState] = useState<string | null>(
+    returnedState,
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
+  const popup = useRef<Window | null>(null);
+  const polled = useOAuthAttempt(attemptState);
+  // A returned sign-in may be another connection's; that one's editor takes it.
+  const ours = polled != null && polled.connectionId === connectionId;
+  const attempt = ours ? polled : null;
+  const dropped = polled === null || (polled !== undefined && !ours);
+  const finished =
+    dropped || attempt?.status === "OK" || attempt?.status === "ERROR";
+
+  useEffect(() => {
+    if (ours || polled === null) clearReturnedState();
+  }, [ours, polled]);
+
+  useEffect(() => {
+    if (!finished) return;
+    popup.current?.close();
+    popup.current = null;
+  }, [finished]);
+
+  const signedIn = state.secretRefs.some((ref) => ref.name === OAUTH_TOKEN);
+  const redirectUri = redirect.data ?? undefined;
+  const waiting = attemptState !== null && !finished;
+
+  const connect = () => {
+    if (!connectionId || starting) return;
+    setError(null);
+    setStarting(true);
+    // Opened on the click itself, or a popup blocker refuses it.
+    const opened = window.open(
+      "about:blank",
+      "ph-oauth",
+      "popup,width=520,height=700",
+    );
+    popup.current = opened;
+    actions
+      .startOAuth(connectionId, {
+        redirectUri,
+        // Blocked: the whole page goes, and comes back here afterwards.
+        ...(opened ? {} : { returnUrl: window.location.href }),
+      })
+      .then((started) => {
+        if (opened) {
+          opened.location.href = started.authorizationUrl;
+          setAttemptState(started.state);
+        } else {
+          window.location.assign(started.authorizationUrl);
+        }
+      })
+      .catch((startError: unknown) => {
+        opened?.close();
+        popup.current = null;
+        setError(
+          startError instanceof Error ? startError.message : String(startError),
+        );
+      })
+      .finally(() => setStarting(false));
+  };
+
+  const cancel = () => {
+    popup.current?.close();
+    popup.current = null;
+    setAttemptState(null);
+  };
+
+  return (
+    <div className="flex flex-col gap-5 border-t border-solid border-foreground/10 pt-5">
+      <div>
+        <h3 className="text-[13px] font-semibold text-foreground">Sign in</h3>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Uses your own OAuth app. Register the redirect URL below with it, fill
+          in its client ID and secret, then connect.
+        </p>
+      </div>
+      {redirect.data ? (
+        <CopyField
+          label="Redirect URL"
+          value={redirect.data}
+          hint="Add this as an authorized redirect URI in the service's developer console."
+        />
+      ) : redirect.data === null ? (
+        <p className="rounded-md bg-wf-warn/10 px-3 py-2 text-xs text-wf-warn">
+          This switchboard serves no OAuth callback, so it cannot sign in.
+        </p>
+      ) : null}
+      <div className="flex items-center gap-3">
+        <Button
+          variant={signedIn ? "secondary" : "primary"}
+          disabled={
+            !connectionId || !props.ready || starting || waiting || !redirectUri
+          }
+          onClick={connect}
+        >
+          {starting
+            ? "Opening…"
+            : waiting
+              ? "Waiting for sign-in…"
+              : signedIn
+                ? "Reconnect"
+                : "Connect"}
+        </Button>
+        {waiting ? (
+          <Button variant="ghost" onClick={cancel}>
+            Cancel
+          </Button>
+        ) : null}
+        <span className="text-xs text-muted-foreground">
+          {attempt?.status === "OK"
+            ? `Signed in${state.accountLabel ? ` as ${state.accountLabel}` : ""}`
+            : signedIn && !waiting
+              ? state.accountLabel
+                ? `Signed in as ${state.accountLabel}`
+                : "Signed in"
+              : !connectionId
+                ? "Open the connection to sign in."
+                : !props.ready
+                  ? "Fill in the client ID and secret first."
+                  : ""}
+        </span>
+      </div>
+      <FieldError>
+        {error ?? (attempt?.status === "ERROR" ? attempt.error : null)}
+      </FieldError>
+    </div>
+  );
+}
+
 // A method's own name, unless it's the generic "Connection" OAuth2 uses.
 function methodLabel(plan: AuthPlan): string {
   return plan.displayName && plan.displayName !== "Connection"
@@ -405,23 +572,12 @@ function methodLabel(plan: AuthPlan): string {
 export function ConnectionForm(props: {
   state: ConnectionState;
   callbacks: ConnectionCallbacks;
+  // Needed to sign an OAuth2 connection in.
+  connectionId?: string;
 }) {
   const { state, callbacks } = props;
-  const [catalog, setCatalog] = useState<PieceSummary[] | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchPieceCatalog()
-      .then((pieces) => {
-        if (!cancelled) setCatalog(pieces);
-      })
-      .catch(() => {
-        if (!cancelled) setCatalog([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const catalogQuery = usePieceCatalog();
+  const catalog = catalogQuery.data ?? (catalogQuery.isError ? [] : null);
 
   const packageName = packageFromConnectorId(state.connectorId);
   const piece = catalog?.find((entry) => entry.name === packageName);
@@ -438,7 +594,7 @@ export function ConnectionForm(props: {
           displayName: ref.name,
           required: false,
         })),
-        supported: state.authType !== "OAUTH2" && state.authType !== "OIDC",
+        supported: state.authType !== "OIDC",
       };
 
   const config = (state.config ?? {}) as Record<string, unknown>;
@@ -450,7 +606,8 @@ export function ConnectionForm(props: {
     nextConfig: Record<string, unknown>,
     nextRefs: Map<string, string>,
   ) => {
-    if (!plan.supported) return;
+    // An OAuth2 connection is ready once signed in, which the switchboard records.
+    if (!plan.supported || plan.oauth2) return;
     const complete = isAuthComplete(plan, nextConfig, nextRefs);
     if (complete && state.status === "UNCONFIGURED") {
       callbacks.setStatus("OK");
@@ -470,7 +627,10 @@ export function ConnectionForm(props: {
           options={(catalog ?? []).map((entry) => ({
             value: entry.name,
             label: entry.displayName,
-            description: entry.description,
+            // Its only sign-in method is one this runtime can't store.
+            ...(planFromAuth(entry.auth).authType === UNKNOWN_AUTH
+              ? { disabled: true, description: AUTH_TYPE_LABEL[UNKNOWN_AUTH] }
+              : { description: entry.description }),
             icon: entry.logoUrl ? (
               <img
                 src={entry.logoUrl}
@@ -496,9 +656,10 @@ export function ConnectionForm(props: {
             options={plans.map((option) => ({
               value: option.authType,
               label: methodLabel(option),
-              description: option.supported
-                ? AUTH_TYPE_LABEL[option.authType]
-                : "Not supported yet",
+              description:
+                option.supported || option.authType === UNKNOWN_AUTH
+                  ? AUTH_TYPE_LABEL[option.authType]
+                  : "Not supported yet",
               disabled: !option.supported,
             }))}
             onChange={(value) => {
@@ -521,8 +682,9 @@ export function ConnectionForm(props: {
 
       {plan.supported ? null : (
         <p className="rounded-md bg-wf-warn/10 px-3 py-2 text-xs text-wf-warn">
-          {plan.authType} connections are not executable by the workflow runtime
-          yet.
+          {plan.authType === UNKNOWN_AUTH
+            ? `${plan.declaredType ?? "This sign-in method"}: not supported by this runtime.`
+            : `${plan.authType} connections are not executable by the workflow runtime yet.`}
         </p>
       )}
 
@@ -580,6 +742,14 @@ export function ConnectionForm(props: {
             />
           ))}
         </div>
+      ) : null}
+
+      {plan.oauth2 && plan.supported ? (
+        <OAuthConnect
+          connectionId={props.connectionId}
+          state={state}
+          ready={isAuthComplete(plan, config, refByName)}
+        />
       ) : null}
 
       {state.lastError ? (

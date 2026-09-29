@@ -1,11 +1,10 @@
 {
   "name": "@powerhousedao/workflow",
-  "version": "6.2.3-dev.25",
+  "version": "6.2.3-dev.32",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": [
-    "**/*.css",
-    "**/runtime-piece-source.*"
+    "**/*.css"
   ],
   "repository": {
     "type": "git",
@@ -78,9 +77,11 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "@tanstack/react-query": "^5.49.2",
     "@uiw/react-json-view": "2.0.0-alpha.42",
     "@xyflow/react": "12.11.6",
     "document-model": "workspace:*",
+    "graphql": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-markdown": "10.1.0",

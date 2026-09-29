@@ -43,13 +43,11 @@ function createFakeOperation(index: number, scope = "global"): Operation {
 function makePage(
   results: Operation[],
   nextCursor?: string,
-  totalCount?: number,
 ): PagedResults<Operation> {
   return {
     results,
     options: { cursor: "", limit: results.length },
     nextCursor,
-    totalCount,
   };
 }
 
@@ -91,7 +89,6 @@ function Probe(props: {
         {result.operations.map((op) => op.index).join(",")}
       </span>
       <span data-testid="has-next">{String(result.hasNextPage)}</span>
-      <span data-testid="total">{result.totalCount ?? ""}</span>
       <span data-testid="error">{result.error?.message ?? ""}</span>
       <button data-testid="next" onClick={result.fetchNextPage} />
       <button data-testid="refetch" onClick={result.refetch} />
@@ -297,18 +294,6 @@ describe("useDocumentOperations", () => {
       expect(textOf(screen, "error")).toBe("nope");
     });
     expect(textOf(screen, "loading")).toBe("false");
-  });
-
-  it("passes totalCount through from the page", async () => {
-    const getOperations = vi.fn(() =>
-      Promise.resolve(makePage([createFakeOperation(0)], undefined, 42)),
-    );
-    setDocumentCache(makeCache(getOperations));
-
-    const screen = render(<Probe id="doc-1" />);
-    await vi.waitFor(() => {
-      expect(textOf(screen, "total")).toBe("42");
-    });
   });
 
   it("returns the same operations array across an identical rerender", async () => {

@@ -20,6 +20,7 @@ import {
   type ScheduleKind,
 } from "./schedule-draft.js";
 import { describeCron, describeSchedule } from "./trigger-text.js";
+import { scheduleConfigIssue } from "@powerhousedao/pieces-framework/workflow";
 
 const KINDS: { value: ScheduleKind; label: string }[] = [
   { value: "daily", label: "Daily" },
@@ -130,8 +131,8 @@ export function ScheduleBuilder(props: {
       : parsed;
   const commit = (next: ScheduleDraft, zone = timezone) =>
     props.onChange(configFromDraft(next, zone));
-  const cronInvalid =
-    draft.kind === "custom" && draft.cron.trim().split(/\s+/).length !== 5;
+  // The runtime's own parser: what it would refuse, said before it is armed.
+  const issue = scheduleConfigIssue(props.config);
 
   return (
     <div className="flex flex-col gap-5">
@@ -238,10 +239,8 @@ export function ScheduleBuilder(props: {
               commit({ kind: "custom", cron: event.target.value })
             }
           />
-          {cronInvalid ? (
-            <FieldError>
-              Five fields: minute, hour, day of month, month, weekday.
-            </FieldError>
+          {issue ? (
+            <FieldError>{issue.replace(/^Schedule: /, "")}</FieldError>
           ) : (
             <Hint
               text={

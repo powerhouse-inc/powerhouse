@@ -39,6 +39,20 @@ describe("splitExpressionTokens", () => {
   });
 });
 
+describe("escaped braces", () => {
+  it("keeps \\{{…}} as literal text", () => {
+    expect(splitExpressionTokens("a \\{{x}} {{steps.b.output}}")).toEqual([
+      { kind: "text", text: "a \\{{x}} " },
+      {
+        kind: "expression",
+        text: "{{steps.b.output}}",
+        expression: "steps.b.output",
+      },
+    ]);
+    expect(hasExpressions("\\{{steps.b.output}}")).toBe(false);
+  });
+});
+
 describe("describeExpression", () => {
   it("splits step references into key and path", () => {
     expect(describeExpression("steps.fetch.output.body.id")).toEqual({

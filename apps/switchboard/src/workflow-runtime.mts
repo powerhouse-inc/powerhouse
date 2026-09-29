@@ -34,10 +34,17 @@ import type {
   WorkflowCaller,
   WorkflowRuntimeHostDeps,
 } from "@powerhousedao/reactor-workflow";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import type { IWebhookScope } from "@powerhousedao/shared/processors";
+import type {
+  IHttpScope,
+  IWebhookScope,
+  ScopedRouteHandle,
+} from "@powerhousedao/shared/processors";
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
+import {
+  callbackUrlOf,
+  registerOAuthCallback,
+} from "./workflow/oauth-callback.js";
 import { createWorkflowRuntimeSubgraph } from "./workflow/subgraph.js";
 
 type WorkflowEngineModule = typeof WorkflowEngine;
@@ -119,12 +126,18 @@ export interface ComposeWorkflowRuntimeDeps {
    * unavailable rather than quietly dropping every document trigger. */
   clientModule?: InProcessReactorClientModule;
   relationalDb: IRelationalDb;
+  /** False when relationalDb outlives the working directory, so the secret
+   * store needs PH_WORKFLOWS_SECRETS_MASTER_KEY rather than a generated key. */
+  secretsKeyFile?: false;
   attachments: AttachmentClientLike;
   /** The projected document/ref relationships a step's attachment read is
    * checked against; without them, or without the projection, nothing reads. */
   attachmentReferences?: IAttachmentReferenceReader;
   attachmentReferenceProjection?: AttachmentReferenceProjectionCapability;
   webhooks?: IWebhookScope;
+  /** The workflow package's HTTP namespace; the OAuth2 callback lives on it.
+   * Absent leaves OAuth2 connections unable to sign in. */
+  http?: IHttpScope;
   authorizationService: IAuthorizationService;
   /** Where the pieces installed packages ship come from; absent leaves the
    * runtime with none and only published bundles resolvable. */
@@ -295,8 +308,13 @@ export function bindPackagePieces(
   registry: { setPieces(pieces: readonly PackagePieceEntry[]): void },
   source: IPackagePieceSource,
 ): void {
+  // Sorted by package name, so which package keeps a contested piece is stable.
   const apply = (byPackage: Map<string, PackagePieceEntry[]>) => {
-    registry.setPieces([...byPackage.values()].flat());
+    registry.setPieces(
+      [...byPackage.entries()]
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+        .flatMap(([, pieces]) => pieces),
+    );
   };
   // The initial load already happened inside startAPI, so what it reported is
   // read here rather than waited for.
@@ -331,6 +349,7 @@ export async function composeWorkflowRuntime(
 
   const runtime = engine.createWorkflowRuntime({
     relationalDb: deps.relationalDb,
+    secretsKeyFile: deps.secretsKeyFile,
     reactorClient: deps.reactorClient,
     assertCanRead: readAssertion(deps.authorizationService, deps.reactorClient),
     subjectOf: (caller) => callerSubject((caller as Context).user),
@@ -366,9 +385,15 @@ export async function composeWorkflowRuntime(
   }
 
   let stopped = false;
+  const oauthCallback: ScopedRouteHandle | undefined = deps.http
+    ? registerOAuthCallback(deps.http, runtime)
+    : undefined;
 
   return {
-    subgraph: createWorkflowRuntimeSubgraph(runtime),
+    subgraph: createWorkflowRuntimeSubgraph(
+      runtime,
+      deps.http ? { callbackUrl: callbackUrlOf(deps.http) } : undefined,
+    ),
     triggers,
 
     async start() {
@@ -381,6 +406,7 @@ export async function composeWorkflowRuntime(
     stop() {
       if (stopped) return Promise.resolve();
       stopped = true;
+      oauthCallback?.dispose();
       runtime.shutdown();
       return Promise.resolve();
     },

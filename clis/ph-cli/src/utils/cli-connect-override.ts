@@ -25,6 +25,7 @@ import {
   normalizeKey,
   parseCliValue,
   validateConnectKeyValue,
+  validateConnectPatch,
 } from "./connect-config-validation.js";
 import { parseDefaultDrivesUrl } from "./parse-default-drives.js";
 
@@ -74,36 +75,11 @@ export type ConnectFlagInput = {
   drivesPreserveStrategy?: string | undefined;
 };
 
-/**
- * Parse the `--json` payload (if any). Throws on malformed JSON or on a
- * non-object root with a clear, command-line-visible error.
- */
+// Schema-validates `--json` so unknown keys, a `connect` wrapper or wrong
+// types fail instead of being dropped from the dist config.
 function parseJsonOverride(raw: string | undefined): PlainObject {
   if (raw === undefined || raw === "") return {};
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    throw new Error(
-      `--json: invalid JSON (${msg}). Expected a partial 'connect.*' blob, e.g. --json '{"renown":{"url":"..."}}'.`,
-      { cause: e },
-    );
-  }
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error(
-      `--json: payload must be a JSON object, got ${typeof parsed}.`,
-    );
-  }
-  return parsed as PlainObject;
-}
-
-/**
- * Re-exported for `runConnectConfig` so the same JSON validation runs for
- * both `build --json` and `config --json`.
- */
-export function parseConnectJsonArg(raw: string | undefined): PlainObject {
-  return parseJsonOverride(raw);
+  return validateConnectPatch(raw, "ph connect build") as PlainObject;
 }
 
 function setIfDefined<V>(

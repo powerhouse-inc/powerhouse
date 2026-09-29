@@ -1,5 +1,9 @@
 import type { Page } from "@playwright/test";
-import { canvasNode, openWorkflowEditor } from "../../scripts/ui-stack.js";
+import {
+  canvasNode,
+  openWorkflowEditor,
+  shot,
+} from "../../scripts/ui-stack.js";
 import { expect, test } from "./fixtures.js";
 
 // Binds Summarise to a new OpenAI connection through the create modal.
@@ -112,15 +116,18 @@ test.describe("Step panel", () => {
   });
 
   test("Escape closes a list without changing the value", async ({ app }) => {
-    await app.getByRole("combobox").filter({ hasText: "Enabled" }).click();
+    await canvasNode(app, "Fetch metrics").click();
+    await app.getByRole("tab", { name: "Settings" }).click();
+    const onError = app
+      .getByRole("combobox")
+      .filter({ hasText: "Fail the run" });
+    await onError.click();
     const listbox = app.getByRole("listbox");
-    await expect(listbox.getByRole("option")).toHaveCount(4);
+    await expect(listbox.getByRole("option")).toHaveCount(2);
     await app.keyboard.press("ArrowDown");
     await app.keyboard.press("Escape");
     await expect(listbox).toBeHidden();
-    await expect(
-      app.getByRole("combobox").filter({ hasText: "Enabled" }),
-    ).toBeVisible();
+    await expect(onError).toBeVisible();
   });
 
   test("steps page through in run order", async ({ app }) => {
@@ -163,6 +170,7 @@ test.describe("Step panel", () => {
     await expect(
       app.getByText("Every 30 minutes", { exact: true }),
     ).toBeVisible();
+    await shot(app, "schedule-form");
 
     await app.getByRole("radio", { name: "Custom" }).click();
     const cron = app.getByLabel("Cron expression");

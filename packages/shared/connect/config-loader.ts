@@ -12,7 +12,10 @@
 // them so editing tools don't accidentally drop them.
 
 import { isPlainObject } from "remeda";
-import type { PHConnectRuntimeConfig } from "../clis/types.js";
+import type {
+  PHConnectRuntimeConfig,
+  PowerhouseConfig,
+} from "../clis/types.js";
 import { DEFAULT_CONNECT_CONFIG } from "./runtime-config.js";
 
 /** Recursive Partial. Arrays are leaves — `write({ packages: [...] })`
@@ -79,6 +82,22 @@ export function deepMerge<T>(base: T, patch: DeepPartial<T>): T {
     }
   }
   return result as T;
+}
+
+/**
+ * The effective `connect.*` block of a source `powerhouse.config.json`:
+ * defaults < project-wide settings Connect follows < `connect.*`. So
+ * `connect.app.workflowsEnabled` falls back to `workflows.enabled`, and
+ * wins when set.
+ */
+export function resolveSourceConnect(
+  source: Pick<PowerhouseConfig, "connect" | "workflows">,
+  defaults: PHConnectRuntimeConfig = DEFAULT_CONNECT_CONFIG,
+): PHConnectRuntimeConfig {
+  const projectWide = deepMerge(defaults, {
+    app: { workflowsEnabled: source.workflows?.enabled },
+  });
+  return deepMerge(projectWide, source.connect ?? {});
 }
 
 /**

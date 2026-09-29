@@ -25,6 +25,7 @@ vi.mock("./piece-catalog.js", async (importOriginal) => {
 import { resetBlockSearchIndex } from "./block-search.js";
 import { packagePieces } from "./piece-registry.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
+import { CORE_PIECE_NAME } from "../pieces/index.js";
 
 const runtime = testRuntime();
 
@@ -112,7 +113,7 @@ describe("a package piece in the catalog", () => {
     const catalog = await runtime.pieceCatalog();
 
     // The engine's own blocks are listed too, and always.
-    expect(catalog.map((entry) => entry.name)).toContain("core");
+    expect(catalog.map((entry) => entry.name)).toContain(CORE_PIECE_NAME);
     expect(catalog.filter((entry) => entry.name === PIECE)).toEqual([
       expect.objectContaining({
         name: PIECE,
@@ -124,6 +125,28 @@ describe("a package piece in the catalog", () => {
         triggerCount: 1,
         categories: ["CONTENT_AND_FILES"],
       }),
+    ]);
+  });
+
+  it("names the published version a package piece shadows", async () => {
+    const { fetchPieceCatalog } = await import("./piece-catalog.js");
+    vi.mocked(fetchPieceCatalog).mockResolvedValueOnce([
+      {
+        name: PIECE,
+        displayName: "Fixture",
+        description: "",
+        logoUrl: "",
+        version: "1.4.0",
+        actionCount: 1,
+        triggerCount: 0,
+        categories: [],
+        auth: null,
+      },
+    ]);
+    const catalog = await runtime.pieceCatalog();
+
+    expect(catalog.filter((entry) => entry.name === PIECE)).toEqual([
+      expect.objectContaining({ version: "2.0.0", publishedVersion: "1.4.0" }),
     ]);
   });
 
@@ -141,32 +164,28 @@ describe("a package piece in the catalog", () => {
     );
   });
 
-  it("gives block types no version, so an upgrade keeps workflows valid", async () => {
+  it("lists the blocks at the installed version", async () => {
     const actions = await runtime.pieceActions(PIECE);
     const triggers = await runtime.pieceTriggers(PIECE);
 
+    expect(actions.version).toBe("2.0.0");
     expect(actions.actions).toEqual([
-      expect.objectContaining({
-        name: "do_thing",
-        displayName: "Do Thing",
-        blockType: `${PIECE}#do_thing`,
-      }),
-      expect.objectContaining({
-        name: "summarise",
-        blockType: `${PIECE}#summarise`,
-      }),
+      expect.objectContaining({ name: "do_thing", displayName: "Do Thing" }),
+      expect.objectContaining({ name: "summarise" }),
     ]);
+    expect(triggers.version).toBe("2.0.0");
     expect(triggers.triggers).toEqual([
-      expect.objectContaining({
-        name: "thing_happened",
-        strategy: "POLLING",
-        blockType: `${PIECE}#trigger:thing_happened`,
-      }),
+      expect.objectContaining({ name: "thing_happened", strategy: "POLLING" }),
     ]);
   });
 
-  it("answers a descriptor for an unversioned block type", async () => {
-    const descriptor = (await runtime.blockDescriptor(`${PIECE}#do_thing`)) as {
+  it("answers a descriptor for a block pinned to the installed version", async () => {
+    const descriptor = (await runtime.blockDescriptor({
+      pieceName: PIECE,
+      pieceVersion: "2.0.0",
+      kind: "action" as const,
+      name: "do_thing",
+    })) as {
       displayName: string;
       action: { name: string };
     } | null;
@@ -184,15 +203,38 @@ describe("a package piece in the catalog", () => {
     // Ranked as any hit is: a name the query prefixes comes first.
     expect(
       result.hits
-        .map((hit) => hit.blockType)
-        .filter((blockType) => blockType.startsWith(PIECE)),
-    ).toEqual([`${PIECE}#trigger:thing_happened`, `${PIECE}#do_thing`]);
+        .filter((hit) => hit.pieceName === PIECE)
+        .map(({ pieceName, pieceVersion, kind, name }) => ({
+          pieceName,
+          pieceVersion,
+          kind,
+          name,
+        })),
+    ).toEqual([
+      {
+        pieceName: PIECE,
+        pieceVersion: "2.0.0",
+        kind: "trigger",
+        name: "thing_happened",
+      },
+      {
+        pieceName: PIECE,
+        pieceVersion: "2.0.0",
+        kind: "action",
+        name: "do_thing",
+      },
+    ]);
   });
 
   it("builds an output tree without asking the published catalog", async () => {
     // Every fetch of the published listing rejects in this suite, so a tree
     // that needed one would throw rather than answer.
-    const tree = (await runtime.blockOutputTree(`${PIECE}#do_thing`)) as {
+    const tree = (await runtime.blockOutputTree({
+      pieceName: PIECE,
+      pieceVersion: "2.0.0",
+      kind: "action" as const,
+      name: "do_thing",
+    })) as {
       source: string;
       nodes: unknown[];
     };
@@ -205,7 +247,12 @@ describe("a package piece in the catalog", () => {
   // A package piece has no published listing to read the shape back from, so
   // what its author declared has to survive the descriptor or it is lost.
   it("builds the tree an action's outputSchema declares", async () => {
-    const tree = (await runtime.blockOutputTree(`${PIECE}#summarise`)) as {
+    const tree = (await runtime.blockOutputTree({
+      pieceName: PIECE,
+      pieceVersion: "2.0.0",
+      kind: "action" as const,
+      name: "summarise",
+    })) as {
       source: string;
       nodes: { name: string }[];
     };
@@ -215,9 +262,12 @@ describe("a package piece in the catalog", () => {
   });
 
   it("falls back to a trigger's sampleData for its shape", async () => {
-    const tree = (await runtime.blockOutputTree(
-      `${PIECE}#trigger:thing_happened`,
-    )) as { source: string; nodes: { name: string }[] };
+    const tree = (await runtime.blockOutputTree({
+      pieceName: PIECE,
+      pieceVersion: "2.0.0",
+      kind: "trigger" as const,
+      name: "thing_happened",
+    })) as { source: string; nodes: { name: string }[] };
 
     expect(tree.source).toBe("sample");
     expect(tree.nodes.map((node) => node.name)).toEqual(["id", "at"]);

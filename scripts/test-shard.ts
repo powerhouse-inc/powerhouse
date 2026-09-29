@@ -1,4 +1,4 @@
-// Split the `test:ci` package list into balanced shards and run one.
+// Split a script's package list (`test:ci`, or TEST_SHARD_SCRIPT) into balanced shards; run one.
 // Usage: tsx scripts/test-shard.ts <shard> <total> | --print <total> | --selectors <shard> <total>
 
 import { spawnSync } from "node:child_process";
@@ -7,22 +7,26 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const SCRIPT = process.env.TEST_SHARD_SCRIPT || "test:ci";
 
 // Balance hints only: a stale or missing entry costs balance, never coverage.
 const WEIGHTS = JSON.parse(
-  readFileSync(join(root, "scripts/test-weights.json"), "utf8"),
+  readFileSync(
+    join(root, process.env.TEST_SHARD_WEIGHTS || "scripts/test-weights.json"),
+    "utf8",
+  ),
 ) as Record<string, number>;
 const DEFAULT_WEIGHT = 5;
 
-// Read from test:ci so a package added there lands in a shard automatically.
+// Read from the script so a package added there lands in a shard automatically.
 function packages(): string[] {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
     scripts: Record<string, string>;
   };
-  const names = [...pkg.scripts["test:ci"].matchAll(/--filter=(\S+)/g)].map(
-    (m) => m[1],
-  );
-  if (names.length === 0) throw new Error("no --filter entries in test:ci");
+  const names = [
+    ...(pkg.scripts[SCRIPT] ?? "").matchAll(/--filter=(\S+)/g),
+  ].map((m) => m[1]);
+  if (names.length === 0) throw new Error(`no --filter entries in ${SCRIPT}`);
   return names;
 }
 
@@ -86,7 +90,13 @@ console.log(`shard ${index}/${total}: ${mine.names.join(" ")}`);
 const result = spawnSync(
   "pnpm",
   [...mine.names.map((n) => `--filter=${n}`), "--no-bail", "run", "test"],
-  { cwd: root, stdio: "inherit", env: { ...process.env, CI: "true" } },
+  {
+    cwd: root,
+    stdio: "inherit",
+    env: { ...process.env, CI: "true" },
+    // pnpm is a .cmd shim on Windows, which Node only spawns through a shell.
+    shell: process.platform === "win32",
+  },
 );
 if (result.error) throw result.error;
 process.exit(result.status ?? 1);

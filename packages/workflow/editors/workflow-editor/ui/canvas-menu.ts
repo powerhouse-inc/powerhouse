@@ -1,6 +1,11 @@
 // Right-click menu contents and placement; pure so the canvas only has to
 // map an action id onto the editor callbacks.
+import { NEXT_PORT } from "@powerhousedao/pieces-framework/workflow";
+import { stepBlock, type BlockRef } from "./blocks.js";
 import type { PointModel, WorkflowModel } from "./model.js";
+
+// A block's declared ports; undefined while its form is unknown.
+export type PortsOf = (block: BlockRef) => readonly string[] | undefined;
 
 export type ContextMenuTarget =
   | { kind: "step"; id: string }
@@ -12,6 +17,7 @@ export type ContextMenuActionId =
   | "open"
   | "addBelow"
   | "duplicate"
+  | "toggleSkip"
   | "removeStep"
   | "changeTrigger"
   | "removeTrigger"
@@ -27,31 +33,40 @@ export interface ContextMenuItem {
   disabled?: boolean;
 }
 
-// Branches route through true/false, so they have no "next" port to add to.
-// A port that already has an edge is fine: the engine fans out to every
-// successor on a taken port.
-function hasNextPort(model: WorkflowModel, id: string): boolean {
+// Only a block that declares "next" can have a step added below it. A port
+// that already has an edge is fine: the engine fans out on a taken port.
+function hasNextPort(model: WorkflowModel, id: string, portsOf: PortsOf) {
   if (model.trigger?.id === id) return true;
   const step = model.steps.find((entry) => entry.id === id);
-  return step ? step.blockType !== "core#branch" : false;
+  return step
+    ? (portsOf(stepBlock(step))?.includes(NEXT_PORT) ?? false)
+    : false;
 }
 
 export function contextMenuItems(
   target: ContextMenuTarget,
   model: WorkflowModel,
+  portsOf: PortsOf,
 ): ContextMenuItem[] {
   switch (target.kind) {
-    case "step":
+    case "step": {
+      const skipped =
+        model.steps.find((entry) => entry.id === target.id)?.skip === true;
       return [
         { id: "open", label: "Open settings" },
         {
           id: "addBelow",
           label: "Add step below",
-          disabled: !hasNextPort(model, target.id),
+          disabled: !hasNextPort(model, target.id, portsOf),
         },
         { id: "duplicate", label: "Duplicate step" },
+        {
+          id: "toggleSkip",
+          label: skipped ? "Stop skipping this step" : "Skip this step",
+        },
         { id: "removeStep", label: "Remove step" },
       ];
+    }
     case "trigger":
       return [
         { id: "open", label: "Open settings" },

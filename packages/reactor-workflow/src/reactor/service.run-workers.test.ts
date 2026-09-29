@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { currentPieceWorker } from "./run-scope.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
+import { CORE_PIECE_VERSION } from "../pieces/index.js";
 
 const WORKFLOW_ID = "wf-workers";
 
@@ -20,10 +21,30 @@ function workflowDocument() {
         name: "Two steps",
         status: "ENABLED",
         version: 1,
-        trigger: { id: "t1", blockType: "core#manual", config: {} },
+        trigger: {
+          id: "t1",
+          pieceName: "@powerhousedao/piece-core",
+          pieceVersion: CORE_PIECE_VERSION,
+          triggerName: "manual",
+          config: {},
+        },
         steps: [
-          { id: "a", key: "first", blockType: "fake#ok", config: {} },
-          { id: "b", key: "second", blockType: "fake#ok", config: {} },
+          {
+            id: "a",
+            key: "first",
+            pieceName: "fake",
+            pieceVersion: "",
+            actionName: "ok",
+            config: {},
+          },
+          {
+            id: "b",
+            key: "second",
+            pieceName: "fake",
+            pieceVersion: "",
+            actionName: "ok",
+            config: {},
+          },
         ],
         edges: [
           { id: "e1", from: "t1", to: "a", port: "next" },

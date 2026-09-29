@@ -1,7 +1,7 @@
 // The runs pane: what scope is being shown, how to fire it, and the journal.
 // The run feed is owned by the studio so the header shares these rows.
 import { useState } from "react";
-import type { RunRecord } from "../../workflow-editor/runtime-api.js";
+import type { RunRecord } from "../../workflow-editor/runtime-client.js";
 import { RunsTable } from "./RunsTable.js";
 import { Button, Icon } from "./ui.js";
 
@@ -11,6 +11,10 @@ export function RunsView(props: {
   error: string | null;
   reload: () => void;
   showWorkflow: boolean;
+  // Older runs past the loaded pages.
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
   // Present only for manual-trigger workflows.
   onFire?: () => Promise<string | null>;
 }) {
@@ -74,11 +78,23 @@ export function RunsView(props: {
           </p>
         </div>
       ) : (
-        <RunsTable
-          runs={runs}
-          showWorkflow={props.showWorkflow}
-          onChanged={props.reload}
-        />
+        <>
+          <RunsTable
+            runs={runs}
+            showWorkflow={props.showWorkflow}
+            onChanged={props.reload}
+          />
+          {props.hasMore && props.onLoadMore ? (
+            <div className="mt-3 flex justify-center">
+              <Button
+                disabled={props.loadingMore}
+                onClick={() => props.onLoadMore!()}
+              >
+                {props.loadingMore ? "Loading…" : "Load older runs"}
+              </Button>
+            </div>
+          ) : null}
+        </>
       )}
     </div>
   );

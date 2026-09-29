@@ -1,7 +1,13 @@
 // The schedule trigger's config as the builder edits it: daily, weekly, a
 // fixed interval, or a raw cron for anything the presets can't say.
 
-export type IntervalUnit = "minutes" | "hours" | "days";
+import {
+  DEFAULT_TIMEZONE,
+  parseScheduleConfig,
+  type ScheduleUnit,
+} from "@powerhousedao/pieces-framework/workflow";
+
+export type IntervalUnit = ScheduleUnit;
 
 export type ScheduleDraft =
   | { kind: "daily"; time: string; weekdaysOnly: boolean }
@@ -12,7 +18,7 @@ export type ScheduleDraft =
 export type ScheduleKind = ScheduleDraft["kind"];
 
 export const DEFAULT_TIME = "09:00";
-export const DEFAULT_TIMEZONE = "UTC";
+export { DEFAULT_TIMEZONE };
 
 function isInt(field: string): boolean {
   return /^\d+$/.test(field);
@@ -27,49 +33,7 @@ function fromTime(time: string): { hour: number; minute: number } {
   return { hour: Number(hour), minute: Number(minute) };
 }
 
-const UNIT_MS: [IntervalUnit, number][] = [
-  ["days", 86_400_000],
-  ["hours", 3_600_000],
-  ["minutes", 60_000],
-];
-
-/** An interval config's cadence, from `every` + `unit` or a bare `everyMs`. */
-export function intervalOf(
-  record: Record<string, unknown>,
-): { every: number; unit: IntervalUnit } | undefined {
-  const every = Number(record.every);
-  if (record.every !== undefined && Number.isFinite(every) && every > 0) {
-    const unit =
-      record.unit === "hours" || record.unit === "days"
-        ? record.unit
-        : "minutes";
-    return { every, unit };
-  }
-  const ms = Number(record.everyMs);
-  if (record.everyMs === undefined || !Number.isFinite(ms) || ms <= 0) {
-    return undefined;
-  }
-  // The largest unit it divides into evenly; sub-minute rounds up to a minute.
-  for (const [unit, size] of UNIT_MS) {
-    if (ms % size === 0) return { every: ms / size, unit };
-  }
-  return { every: Math.max(1, Math.round(ms / 60_000)), unit: "minutes" };
-}
-
-/** Reads a stored config back into the builder's terms. */
-export function draftFromConfig(config: unknown): ScheduleDraft {
-  const record = (config ?? {}) as Record<string, unknown>;
-  const interval =
-    record.mode === "interval" ||
-    (!record.cron &&
-      (record.every !== undefined || record.everyMs !== undefined));
-  if (interval) {
-    return {
-      kind: "interval",
-      ...(intervalOf(record) ?? { every: 15, unit: "minutes" }),
-    };
-  }
-  const cron = typeof record.cron === "string" ? record.cron.trim() : "";
+function cronDraft(cron: string): ScheduleDraft {
   if (!cron) return { kind: "daily", time: DEFAULT_TIME, weekdaysOnly: false };
   const fields = cron.split(/\s+/);
   if (fields.length !== 5) return { kind: "custom", cron };
@@ -86,6 +50,23 @@ export function draftFromConfig(config: unknown): ScheduleDraft {
     return { kind: "weekly", time, days: unique.sort((a, b) => a - b) };
   }
   return { kind: "custom", cron };
+}
+
+// Reads a stored config back into the builder's terms, by its `mode`.
+export function draftFromConfig(config: unknown): ScheduleDraft {
+  try {
+    const schedule = parseScheduleConfig(config);
+    return schedule.mode === "interval"
+      ? { kind: "interval", every: schedule.every, unit: schedule.unit }
+      : cronDraft(schedule.cron);
+  } catch {
+    // Not valid yet: the builder still opens on the mode it names.
+  }
+  const record = (config ?? {}) as Record<string, unknown>;
+  if (record.mode === "interval") {
+    return { kind: "interval", every: 15, unit: "minutes" };
+  }
+  return cronDraft(typeof record.cron === "string" ? record.cron.trim() : "");
 }
 
 /** The cron a draft stands for; undefined for an interval. */

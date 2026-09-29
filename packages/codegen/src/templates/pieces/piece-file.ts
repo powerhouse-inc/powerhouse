@@ -3,23 +3,14 @@ import { ts } from "@tmpl/core";
 import type { PieceNames } from "../../file-builders/types.js";
 
 export const pieceIndexFileTemplate = (
-  v: PieceNames & {
-    description: string;
-    withAuth: boolean;
-    actionExportName: string;
-    actionFileName: string;
-    triggerExportName: string;
-    triggerFileName: string;
-  },
+  v: PieceNames & { description: string; withAuth: boolean },
 ) => {
   const imports = [
-    `import { createPiece, PieceCategory } from "${PIECES_FRAMEWORK_PACKAGE}";`,
-    `import { ${v.actionExportName} } from "./lib/actions/${v.actionFileName}.js";`,
+    `import { createPiece${v.withAuth ? "" : ", PieceAuth"} } from "${PIECES_FRAMEWORK_PACKAGE}";`,
     v.withAuth
       ? `import { ${v.camelCaseName}Auth } from "./lib/auth.js";`
       : undefined,
     `import { ${v.constantCaseName}_LOGO } from "./lib/logo.js";`,
-    `import { ${v.triggerExportName} } from "./lib/triggers/${v.triggerFileName}.js";`,
   ]
     .filter((line) => line !== undefined)
     .join("\n");
@@ -28,17 +19,19 @@ export const pieceIndexFileTemplate = (
 ${imports}
 
 export const ${v.camelCaseName} = createPiece({
+  // Name and description shown in the workflow editor's piece list
   displayName: "${v.displayName}",
   description: "${v.description}",
+  // The connection every action and trigger uses; defined in lib/auth.ts
+  auth: ${v.withAuth ? `${v.camelCaseName}Auth` : "PieceAuth.None()"},
+  minimumSupportedRelease: "0.30.0",
   logoUrl: ${v.constantCaseName}_LOGO,
   authors: [],
-  categories: [PieceCategory.PRODUCTIVITY],
-  minimumSupportedRelease: "0.30.0",
-  auth: ${v.withAuth ? `${v.camelCaseName}Auth` : "undefined"},
-  actions: [${v.actionExportName}],
-  triggers: [${v.triggerExportName}],
+  // ph generate piece-action and piece-trigger add entries here
+  actions: [],
+  triggers: [],
 });
-${v.withAuth ? `\nexport { ${v.camelCaseName}Auth };\n` : ""}
+
 export default ${v.camelCaseName};
 `.raw;
 };

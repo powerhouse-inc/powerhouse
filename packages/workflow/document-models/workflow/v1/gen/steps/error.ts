@@ -1,10 +1,15 @@
 export type ErrorCode =
   | "DuplicateStepIdError"
   | "DuplicateStepKeyError"
+  | "InvalidStepBlockError"
+  | "StepConfigNotObjectError"
   | "StepNotFoundError"
   | "StepKeyConflictError"
+  | "InvalidUpdateBlockError"
+  | "UpdateConfigNotObjectError"
   | "RemoveStepNotFoundError"
-  | "ConfigStepNotFoundError";
+  | "ConfigStepNotFoundError"
+  | "SetConfigNotObjectError";
 
 export interface ReducerError {
   errorCode: ErrorCode;
@@ -24,6 +29,20 @@ export class DuplicateStepKeyError extends Error implements ReducerError {
   }
 }
 
+export class InvalidStepBlockError extends Error implements ReducerError {
+  errorCode = "InvalidStepBlockError" as ErrorCode;
+  constructor(message = "InvalidStepBlockError") {
+    super(message);
+  }
+}
+
+export class StepConfigNotObjectError extends Error implements ReducerError {
+  errorCode = "StepConfigNotObjectError" as ErrorCode;
+  constructor(message = "StepConfigNotObjectError") {
+    super(message);
+  }
+}
+
 export class StepNotFoundError extends Error implements ReducerError {
   errorCode = "StepNotFoundError" as ErrorCode;
   constructor(message = "StepNotFoundError") {
@@ -34,6 +53,20 @@ export class StepNotFoundError extends Error implements ReducerError {
 export class StepKeyConflictError extends Error implements ReducerError {
   errorCode = "StepKeyConflictError" as ErrorCode;
   constructor(message = "StepKeyConflictError") {
+    super(message);
+  }
+}
+
+export class InvalidUpdateBlockError extends Error implements ReducerError {
+  errorCode = "InvalidUpdateBlockError" as ErrorCode;
+  constructor(message = "InvalidUpdateBlockError") {
+    super(message);
+  }
+}
+
+export class UpdateConfigNotObjectError extends Error implements ReducerError {
+  errorCode = "UpdateConfigNotObjectError" as ErrorCode;
+  constructor(message = "UpdateConfigNotObjectError") {
     super(message);
   }
 }
@@ -52,12 +85,29 @@ export class ConfigStepNotFoundError extends Error implements ReducerError {
   }
 }
 
-export const errors = {
-  AddStep: { DuplicateStepIdError, DuplicateStepKeyError },
+export class SetConfigNotObjectError extends Error implements ReducerError {
+  errorCode = "SetConfigNotObjectError" as ErrorCode;
+  constructor(message = "SetConfigNotObjectError") {
+    super(message);
+  }
+}
 
-  UpdateStep: { StepNotFoundError, StepKeyConflictError },
+export const errors = {
+  AddStep: {
+    DuplicateStepIdError,
+    DuplicateStepKeyError,
+    InvalidStepBlockError,
+    StepConfigNotObjectError,
+  },
+
+  UpdateStep: {
+    StepNotFoundError,
+    StepKeyConflictError,
+    InvalidUpdateBlockError,
+    UpdateConfigNotObjectError,
+  },
 
   RemoveStep: { RemoveStepNotFoundError },
 
-  SetStepConfig: { ConfigStepNotFoundError },
+  SetStepConfig: { ConfigStepNotFoundError, SetConfigNotObjectError },
 };

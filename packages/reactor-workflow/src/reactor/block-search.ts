@@ -14,8 +14,11 @@ import { SERVER_ONLY_PIECES } from "./unsupported-pieces.js";
 export type BlockSearchKind = "action" | "trigger";
 
 export interface BlockSearchHit {
-  blockType: string;
   pieceName: string;
+  // The piece version the hit was listed at, to pin when it is picked.
+  pieceVersion: string;
+  // Action or trigger name within the piece.
+  name: string;
   pieceDisplayName: string;
   logoUrl: string;
   displayName: string;
@@ -68,6 +71,7 @@ export function buildSearchIndex(
       continue;
     }
     const pieceName = entry.name;
+    const pieceVersion = entry.version;
     const pieceDisplayName = entry.displayName ?? pieceName;
     const logoUrl = entry.logoUrl ?? "";
     const pieceUnsupported = unsupportedAuth(entry.auth);
@@ -86,11 +90,9 @@ export function buildSearchIndex(
       const description = item.description ?? "";
       entries.push({
         hit: {
-          blockType:
-            kind === "trigger"
-              ? `${pieceName}@${entry.version}#trigger:${item.name}`
-              : `${pieceName}@${entry.version}#${item.name}`,
           pieceName,
+          pieceVersion,
+          name: item.name,
           pieceDisplayName,
           logoUrl,
           displayName,
@@ -123,7 +125,7 @@ export function indexFromHits(hits: BlockSearchHit[]): BlockSearchIndex {
     pieces.add(hit.pieceName);
     return {
       hit,
-      name: `${hit.displayName} ${hit.blockType.split("#").pop() ?? ""}`.toLowerCase(),
+      name: `${hit.displayName} ${hit.name}`.toLowerCase(),
       description: hit.description.toLowerCase(),
       piece: hit.pieceDisplayName.toLowerCase(),
     };

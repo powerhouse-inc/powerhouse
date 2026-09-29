@@ -7,6 +7,8 @@ export default defineConfig({
     index: "./src/index.ts",
     common: "./src/common.ts",
     host: "./src/host.ts",
+    "block-type": "./src/block-type.ts",
+    workflow: "./src/workflow.ts",
   },
   platform: "node",
   outDir: "dist",

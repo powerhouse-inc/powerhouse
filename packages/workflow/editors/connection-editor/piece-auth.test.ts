@@ -7,6 +7,7 @@ import {
   planForConnection,
   planFromAuth,
   plansFromAuth,
+  UNKNOWN_AUTH,
   type AuthPlan,
 } from "./piece-auth.js";
 
@@ -55,15 +56,53 @@ describe("planFromAuth", () => {
     expect(plan.secretFields.map((field) => field.name)).toEqual(["password"]);
   });
 
-  it("marks OAUTH2 unsupported", () => {
-    const plan = planFromAuth({ type: "OAUTH2" });
-    expect(plan.authType).toBe("OAUTH2");
+  it("asks an OAUTH2 method for its app and props", () => {
+    const plan = planFromAuth({
+      type: "OAUTH2",
+      props: {
+        subdomain: {
+          type: "SHORT_TEXT",
+          displayName: "Subdomain",
+          required: true,
+        },
+      },
+    });
+    expect(plan).toMatchObject({
+      authType: "OAUTH2",
+      supported: true,
+      oauth2: true,
+    });
+    expect(plan.configFields.map((field) => field.name)).toEqual([
+      "client_id",
+      "subdomain",
+    ]);
+    expect(plan.secretFields.map((field) => field.name)).toEqual([
+      "client_secret",
+    ]);
+  });
+
+  it("reads a loaded piece's props list as well as a listing's record", () => {
+    const plan = planFromAuth({
+      type: "OAUTH2",
+      props: [
+        { name: "region", type: "STATIC_DROPDOWN", displayName: "Region" },
+      ],
+    });
+    expect(plan.configFields.map((field) => field.name)).toEqual([
+      "client_id",
+      "region",
+    ]);
+  });
+
+  it("marks OIDC unsupported", () => {
+    const plan = planFromAuth({ type: "OIDC" });
+    expect(plan.authType).toBe("OIDC");
     expect(plan.supported).toBe(false);
   });
 
   it("prefers a supported method from a multi-auth array", () => {
     const plan = planFromAuth([
-      { type: "OAUTH2" },
+      { type: "OIDC" },
       { type: "SECRET_TEXT", displayName: "Bot Token" },
     ]);
     expect(plan.authType).toBe("SECRET_TEXT");
@@ -73,6 +112,24 @@ describe("planFromAuth", () => {
   it("defaults to NONE when authless", () => {
     expect(planFromAuth(null).authType).toBe("NONE");
     expect(planFromAuth(undefined).supported).toBe(true);
+    expect(planFromAuth({ type: "NONE" }).supported).toBe(true);
+  });
+
+  it("marks an auth type it doesn't know as unsupported, never as NONE", () => {
+    const plan = planFromAuth({ type: "SAML", displayName: "Single sign-on" });
+    expect(plan).toMatchObject({
+      authType: UNKNOWN_AUTH,
+      declaredType: "SAML",
+      supported: false,
+      configFields: [],
+      secretFields: [],
+    });
+  });
+
+  it("still prefers a known method over an unknown one", () => {
+    expect(
+      planFromAuth([{ type: "SAML" }, { type: "SECRET_TEXT" }]).authType,
+    ).toBe("SECRET_TEXT");
   });
 });
 
@@ -186,7 +243,7 @@ describe("sign-in methods", () => {
     expect(
       plansFromAuth(slack).map((plan) => [plan.authType, plan.supported]),
     ).toEqual([
-      ["OAUTH2", false],
+      ["OAUTH2", true],
       ["CUSTOM_AUTH", true],
     ]);
   });
@@ -195,8 +252,10 @@ describe("sign-in methods", () => {
     expect(planForConnection(slack, "CUSTOM_AUTH").secretFields).toMatchObject([
       { name: "botToken" },
     ]);
-    // OAuth2 can't run, so a connection still on it falls back.
-    expect(planForConnection(slack, "OAUTH2").authType).toBe("CUSTOM_AUTH");
+    expect(planForConnection(slack, "OAUTH2").authType).toBe("OAUTH2");
+    // OIDC can't run, so a connection still on it falls back.
+    const aws = [{ type: "OIDC" }, ...slack.slice(1)];
+    expect(planForConnection(aws, "OIDC").authType).toBe("CUSTOM_AUTH");
   });
 
   it("takes the runtime's refusal of a method at its word", () => {

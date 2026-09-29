@@ -1,7 +1,11 @@
 // A workflow drawn as its chain of piece logos joined by a rail coloured by a
 // run: the studio's signature, used by the overview, the header and each run.
-import type { RunRecord } from "../../workflow-editor/runtime-api.js";
+import type { RunRecord } from "../../workflow-editor/runtime-client.js";
 import { BlockLogo } from "../../workflow-editor/ui/BlockSelector.js";
+import {
+  CORE_PIECE,
+  type BlockIdentity,
+} from "../../workflow-editor/ui/blocks.js";
 import {
   formatAbsolute,
   RUN_TONE,
@@ -13,7 +17,7 @@ import {
 
 export interface ChainLink {
   id: string;
-  blockType: string;
+  block: BlockIdentity;
   label: string;
   // How the run fared here; undefined when it never got this far.
   status?: string;
@@ -75,7 +79,7 @@ export function MiniChain(props: { links: ChainLink[]; size?: "sm" | "md" }) {
               md ? "h-8 w-8" : "h-6 w-6"
             } ${RING[tones[index]]} ${link.status === "SKIPPED" ? "opacity-50" : ""}`}
           >
-            <BlockLogo bare blockType={link.blockType} size={md ? 16 : 14} />
+            <BlockLogo bare block={link.block} size={md ? 16 : 14} />
           </span>
         </li>
       ))}
@@ -99,21 +103,39 @@ export function MiniChain(props: { links: ChainLink[]; size?: "sm" | "md" }) {
   );
 }
 
+// The trigger a run's kind names: "piece:<pieceName>:<triggerName>" for a
+// piece trigger, else one of the core piece's.
+export function triggerOfKind(kind: string): BlockIdentity {
+  if (kind.startsWith("piece:")) {
+    const rest = kind.slice("piece:".length);
+    const colon = rest.indexOf(":");
+    if (colon > 0) {
+      return {
+        pieceName: rest.slice(0, colon),
+        kind: "trigger",
+        name: rest.slice(colon + 1),
+      };
+    }
+  }
+  return { pieceName: CORE_PIECE, kind: "trigger", name: kind };
+}
+
 /** A run's own chain: the trigger, then every step it recorded. */
-export function runLinks(
-  run: RunRecord,
-  triggerBlockType?: string,
-): ChainLink[] {
+export function runLinks(run: RunRecord, trigger?: BlockIdentity): ChainLink[] {
   return [
     {
       id: "trigger",
-      blockType: triggerBlockType ?? `core#${run.triggerKind}`,
+      block: trigger ?? triggerOfKind(run.triggerKind),
       label: "Trigger",
       status: "SUCCEEDED",
     },
     ...run.steps.map((step) => ({
       id: step.stepId + step.stepKey,
-      blockType: step.blockType,
+      block: {
+        pieceName: step.pieceName,
+        kind: "action" as const,
+        name: step.blockName,
+      },
       label: step.stepKey,
       status: step.status,
     })),

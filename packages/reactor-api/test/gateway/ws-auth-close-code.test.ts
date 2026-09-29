@@ -136,7 +136,9 @@ async function createHarness(
   const logger = makeLogger();
   const adapter = ADAPTERS[adapterName]() as IGatewayAdapter<Context>;
   const httpServer: Server = createServer();
-  await new Promise<void>((resolve) => httpServer.listen(0, resolve));
+  await new Promise<void>((resolve) =>
+    httpServer.listen(0, "127.0.0.1", resolve),
+  );
   const port = (httpServer.address() as { port: number }).port;
   await adapter.start(httpServer);
 
@@ -173,7 +175,7 @@ async function createHarness(
   }
 
   return {
-    url: `ws://localhost:${port}${WS_PATH}`,
+    url: `ws://127.0.0.1:${port}${WS_PATH}`,
     seen,
     logger,
     close: async () => {

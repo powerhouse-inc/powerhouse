@@ -1,6 +1,15 @@
 // The live stack the UI screenshots and UI tests run against: switchboard
 // (workflows on, in-memory) plus Connect's Vite dev server, seeded per drive.
-import type { Browser, BrowserContext, Page } from "@playwright/test";
+import {
+  chromium,
+  expect,
+  type Browser,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from "@playwright/test";
+import { blockKey } from "@powerhousedao/pieces-framework/block-type";
+import { CORE_PIECE_NAME } from "@powerhousedao/pieces-framework/workflow";
 import { spawn, type ChildProcess, execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -9,7 +18,7 @@ import type * as ConnectionModel from "../document-models/connection/v1/index.js
 import type * as WorkflowModel from "../document-models/workflow/v1/index.js";
 
 export const PKG = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const ROOT = resolve(PKG, "../..");
+export const ROOT = resolve(PKG, "../..");
 const SWITCHBOARD_PORT = 4001;
 const CONNECT_PORT = Number(process.env.UI_SHOTS_CONNECT_PORT ?? 3100);
 export const SWITCHBOARD = `http://localhost:${SWITCHBOARD_PORT}`;
@@ -134,7 +143,206 @@ export async function buildCss(): Promise<void> {
   await new Promise((r) => setTimeout(r, 2000));
 }
 
+// ─── dynamic imports ────────────────────────────────────────────────────────
+
+const IMPORT_FAILED = /Failed to fetch dynamically imported module/;
+
+/**
+ * page.evaluate for a function that imports from Vite first: a re-optimise
+ * fails that import, and nothing has run yet, so it is safe to try again.
+ */
+export async function evaluateImporting<A, R>(
+  page: Page,
+  fn: (arg: A) => Promise<R>,
+  arg: A,
+): Promise<R> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await page.evaluate(fn as (arg: unknown) => Promise<R>, arg);
+    } catch (error) {
+      if (attempt >= 2 || !IMPORT_FAILED.test(String(error))) throw error;
+      await page.waitForLoadState("load");
+    }
+  }
+}
+
+// Thrown before any write: the app is booting, or reloaded under the call.
+const REACTOR_GONE =
+  /Failed to fetch dynamically imported module|reading '(?:client|reactorClientModule)'|Execution context was destroyed/;
+
+/** evaluateImporting for a function that needs Connect's reactor client. */
+export async function evaluateWithReactor<A, R>(
+  page: Page,
+  fn: (arg: A) => Promise<R>,
+  arg: A,
+): Promise<R> {
+  for (let attempt = 0; ; attempt++) {
+    await page.waitForLoadState("load");
+    await page.waitForFunction(
+      () => !!(window as unknown as PhWindow).ph?.reactorClientModule?.client,
+      undefined,
+      { timeout: 30_000, polling: 250 },
+    );
+    try {
+      return await page.evaluate(fn as (arg: unknown) => Promise<R>, arg);
+    } catch (error) {
+      if (attempt >= 3 || !REACTOR_GONE.test(String(error))) throw error;
+    }
+  }
+}
+
+// Modules tests import on demand; each can make Vite find a new dependency.
+const WARM_MODULES = [
+  "packages/workflow/document-models/workflow/v1/index.ts",
+  "packages/workflow/document-models/connection/v1/index.ts",
+  "packages/workflow/editors/index.ts",
+  "packages/workflow/test/ui/harness/prop-controls.tsx",
+];
+
+/**
+ * Imports everything once so Vite's dep optimiser settles before the tests:
+ * a re-optimise mid-run reloads every open page. Done once a round passes
+ * without a reload.
+ */
+export async function warmConnect(): Promise<void> {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    for (let round = 0; round < 4; round++) {
+      await page.goto(CONNECT);
+      await page.waitForLoadState("load");
+      const failed = await page
+        .evaluate(
+          async ({ root, modules }) => {
+            (window as { __warm?: boolean }).__warm = true;
+            const results = await Promise.allSettled(
+              modules.map(
+                (path) => import(/* @vite-ignore */ `/@fs${root}/${path}`),
+              ),
+            );
+            return results.filter((result) => result.status === "rejected")
+              .length;
+          },
+          { root: ROOT, modules: WARM_MODULES },
+        )
+        .catch(() => -1);
+      // A re-optimise answers with a full reload shortly after the imports.
+      await page.waitForTimeout(3000);
+      const kept = await page
+        .evaluate(() => (window as { __warm?: boolean }).__warm === true)
+        .catch(() => false);
+      if (failed === 0 && kept) return;
+    }
+    console.warn("Connect still re-optimising after warm-up");
+  } finally {
+    await browser.close();
+  }
+}
+
 // ─── seeding ────────────────────────────────────────────────────────────────
+
+// A block as a step or the trigger stores it.
+export interface StepBlock {
+  pieceName: string;
+  pieceVersion: string;
+  actionName: string;
+}
+
+export interface TriggerBlock {
+  pieceName: string;
+  pieceVersion: string;
+  triggerName: string;
+}
+
+type AnyBlock = StepBlock | TriggerBlock;
+
+function refOf(block: AnyBlock) {
+  return "triggerName" in block
+    ? {
+        pieceName: block.pieceName,
+        pieceVersion: block.pieceVersion,
+        kind: "trigger" as const,
+        name: block.triggerName,
+      }
+    : {
+        pieceName: block.pieceName,
+        pieceVersion: block.pieceVersion,
+        kind: "action" as const,
+        name: block.actionName,
+      };
+}
+
+// Keyed by blockKey: one entry per block, whatever version it pins.
+type Defaults = Record<string, Record<string, unknown>>;
+
+export function defaultsOf(
+  defaults: Defaults,
+  block: AnyBlock,
+): Record<string, unknown> {
+  return defaults[blockKey(refOf(block))] ?? {};
+}
+
+// Each block's piece defaults, which the editor writes when a step is added.
+// Descriptors don't change during a run: one answer per block, per process.
+const descriptorProps = new Map<string, Promise<Record<string, unknown>>>();
+
+function blockPropDefaults(
+  ref: ReturnType<typeof refOf>,
+): Promise<Record<string, unknown>> {
+  const cacheKey = JSON.stringify(ref);
+  let pending = descriptorProps.get(cacheKey);
+  if (!pending) {
+    pending = fetchPropDefaults(ref);
+    pending.catch(() => descriptorProps.delete(cacheKey));
+    descriptorProps.set(cacheKey, pending);
+  }
+  return pending;
+}
+
+async function fetchPropDefaults(
+  ref: ReturnType<typeof refOf>,
+): Promise<Record<string, unknown>> {
+  const data = await gql<{
+    workflowRuntime: {
+      blockDescriptor: {
+        action?: {
+          props?: { name: string; type: string; defaultValue?: unknown }[];
+        };
+        trigger?: {
+          props?: { name: string; type: string; defaultValue?: unknown }[];
+        };
+      } | null;
+    };
+  }>(
+    "/graphql/workflow-runtime",
+    `query($block: BlockInput!) { workflowRuntime { blockDescriptor(block: $block) } }`,
+    { block: ref },
+  );
+  const entry =
+    data.workflowRuntime.blockDescriptor?.action ??
+    data.workflowRuntime.blockDescriptor?.trigger;
+  return Object.fromEntries(
+    (entry?.props ?? [])
+      .filter(
+        (prop) => prop.type !== "MARKDOWN" && prop.defaultValue !== undefined,
+      )
+      .map((prop) => [prop.name, prop.defaultValue]),
+  );
+}
+
+export async function blockDefaults(blocks: AnyBlock[]): Promise<Defaults> {
+  const refs = new Map<string, ReturnType<typeof refOf>>();
+  for (const block of blocks) {
+    const ref = refOf(block);
+    if (!refs.has(blockKey(ref))) refs.set(blockKey(ref), ref);
+  }
+  const entries = await Promise.all(
+    [...refs].map(
+      async ([key, ref]) => [key, await blockPropDefaults(ref)] as const,
+    ),
+  );
+  return Object.fromEntries(entries);
+}
 
 export async function gql<T>(path: string, query: string, variables = {}) {
   const res = await fetch(`${SWITCHBOARD}${path}`, {
@@ -173,51 +381,103 @@ export async function createSecret(
   return data.workflowRuntime.createSecret.ref;
 }
 
-export async function pieceBlockType(
-  pkg: string,
-  action: string,
-): Promise<string> {
-  const data = await gql<{
-    workflowRuntime: {
-      pieceActions: { actions: { name: string; blockType: string }[] };
-    };
-  }>(
-    "/graphql/workflow-runtime",
-    `query($p: String!) { workflowRuntime { pieceActions(packageName: $p) } }`,
-    { p: pkg },
-  );
-  const hit = data.workflowRuntime.pieceActions.actions.find(
-    (a) => a.name === action,
-  );
-  if (!hit) throw new Error(`No action ${action} in ${pkg}`);
-  return hit.blockType;
+interface PieceListing {
+  version: string;
+  entries: { name: string }[];
 }
 
-export async function pieceTriggerBlockType(
+// Cached per process, like the descriptors.
+const listings = new Map<string, Promise<PieceListing>>();
+
+function pieceListing(
+  kind: "pieceActions" | "pieceTriggers",
   pkg: string,
-  trigger: string,
-): Promise<string> {
+): Promise<PieceListing> {
+  const key = `${kind} ${pkg}`;
+  let pending = listings.get(key);
+  if (!pending) {
+    pending = fetchPieceListing(kind, pkg);
+    pending.catch(() => listings.delete(key));
+    listings.set(key, pending);
+  }
+  return pending;
+}
+
+async function fetchPieceListing<K extends "pieceActions" | "pieceTriggers">(
+  kind: K,
+  pkg: string,
+): Promise<PieceListing> {
   const data = await gql<{
-    workflowRuntime: {
-      pieceTriggers: { triggers: { name: string; blockType: string }[] };
-    };
+    workflowRuntime: Record<
+      K,
+      {
+        version: string;
+        actions?: { name: string }[];
+        triggers?: { name: string }[];
+      }
+    >;
   }>(
     "/graphql/workflow-runtime",
-    `query($p: String!) { workflowRuntime { pieceTriggers(packageName: $p) } }`,
+    `query($p: String!) { workflowRuntime { ${kind}(packageName: $p) } }`,
     { p: pkg },
   );
-  const hit = data.workflowRuntime.pieceTriggers.triggers.find(
-    (t) => t.name === trigger,
-  );
-  if (!hit) throw new Error(`No trigger ${trigger} in ${pkg}`);
-  return hit.blockType;
+  const listing = data.workflowRuntime[kind];
+  return {
+    version: listing.version,
+    entries: listing.actions ?? listing.triggers ?? [],
+  };
 }
+
+/** A piece action pinned to the version the runtime lists. */
+export async function pieceAction(
+  pkg: string,
+  action: string,
+): Promise<StepBlock> {
+  const listing = await pieceListing("pieceActions", pkg);
+  if (!listing.entries.some((entry) => entry.name === action)) {
+    throw new Error(`No action ${action} in ${pkg}`);
+  }
+  return { pieceName: pkg, pieceVersion: listing.version, actionName: action };
+}
+
+/** A piece trigger pinned to the version the runtime lists. */
+export async function pieceTrigger(
+  pkg: string,
+  trigger: string,
+): Promise<TriggerBlock> {
+  const listing = await pieceListing("pieceTriggers", pkg);
+  if (!listing.entries.some((entry) => entry.name === trigger)) {
+    throw new Error(`No trigger ${trigger} in ${pkg}`);
+  }
+  return {
+    pieceName: pkg,
+    pieceVersion: listing.version,
+    triggerName: trigger,
+  };
+}
+
+/** A core piece action (branch, assert), pinned to the installed core piece. */
+export function coreAction(name: string): Promise<StepBlock> {
+  return pieceAction(CORE_PIECE_NAME, name);
+}
+
+/** A core piece trigger (manual, schedule, webhook). */
+export function coreTrigger(name: string): Promise<TriggerBlock> {
+  return pieceTrigger(CORE_PIECE_NAME, name);
+}
+
+type SeedRole = "http" | "parseUrl" | "openai" | "slack";
 
 interface SeedInput {
   root: string;
   drive: string;
-  blocks: { http: string; parseUrl: string; openai: string; slack: string };
+  blocks: Record<SeedRole, StepBlock> & {
+    schedule: TriggerBlock;
+    manual: TriggerBlock;
+  };
   botTokenRef: string;
+  // Each block's piece defaults, by the role it plays in the seed.
+  defaults: Record<SeedRole | "schedule" | "manual", Record<string, unknown>>;
 }
 
 export interface Seeded {
@@ -227,7 +487,7 @@ export interface Seeded {
   connection: string;
 }
 
-interface PhWindow {
+export interface PhWindow {
   ph?: {
     reactorClientModule?: {
       client: {
@@ -236,6 +496,11 @@ interface PhWindow {
             drive: string,
             doc: unknown,
           ): Promise<{ header: { id: string } }>;
+          addFolder(
+            drive: string,
+            name: string,
+            parentFolder?: string,
+          ): Promise<{ state: unknown }>;
         };
         execute(
           id: string,
@@ -251,159 +516,223 @@ interface PhWindow {
 
 /** Creates the documents through Connect's reactor, which syncs them up. */
 function seedInBrowser(page: Page, input: SeedInput): Promise<Seeded> {
-  return page.evaluate(async ({ root, drive, blocks, botTokenRef }) => {
-    const w = window as unknown as PhWindow;
-    const client = w.ph!.reactorClientModule!.client;
-    // Served by Connect's Vite dev server straight from source.
-    const wf = (await import(
-      `/@fs${root}/packages/workflow/document-models/workflow/v1/index.ts`
-    )) as typeof WorkflowModel;
-    const cn = (await import(
-      `/@fs${root}/packages/workflow/document-models/connection/v1/index.ts`
-    )) as typeof ConnectionModel;
+  return evaluateWithReactor(
+    page,
+    async ({ root, drive, blocks, botTokenRef, defaults }) => {
+      const w = window as unknown as PhWindow;
+      const client = w.ph!.reactorClientModule!.client;
+      // Served by Connect's Vite dev server straight from source.
+      const wf = (await import(
+        `/@fs${root}/packages/workflow/document-models/workflow/v1/index.ts`
+      )) as typeof WorkflowModel;
+      const cn = (await import(
+        `/@fs${root}/packages/workflow/document-models/connection/v1/index.ts`
+      )) as typeof ConnectionModel;
 
-    // The drive can be readable before it accepts files, so the first add
-    // retries; inline because tsx wraps named functions in a missing __name.
-    let conn: { header: { id: string } } | undefined;
-    for (let attempt = 0; !conn; attempt++) {
-      try {
-        conn = await client.drives.addFile(drive, cn.utils.createDocument());
-      } catch (error) {
-        if (attempt >= 30) throw error;
-        await new Promise((r) => setTimeout(r, 500));
+      // The drive can be readable before it accepts files, so the first add
+      // retries; inline because tsx wraps named functions in a missing __name.
+      let conn: { header: { id: string } } | undefined;
+      for (let attempt = 0; !conn; attempt++) {
+        try {
+          conn = await client.drives.addFile(drive, cn.utils.createDocument());
+        } catch (error) {
+          if (attempt >= 30) throw error;
+          await new Promise((r) => setTimeout(r, 500));
+        }
       }
+      const connection = conn.header.id;
+      await client.execute(connection, "main", [
+        cn.setConnectionName({ name: "Ops Slack" }),
+        cn.setConnector({
+          connectorId: "@activepieces/piece-slack",
+          authType: "CUSTOM_AUTH",
+        }),
+        cn.setSecretRef({
+          id: "bot-token",
+          name: "botToken",
+          ref: botTokenRef,
+        }),
+        cn.setAccountLabel({ accountLabel: "ops@acme.dev" }),
+        cn.recordCheckResult({
+          status: "OK",
+          checkedAt: new Date().toISOString(),
+        }),
+      ]);
+      await client.rename(connection, "Ops Slack");
+
+      const digestDoc = await client.drives.addFile(
+        drive,
+        wf.utils.createDocument(),
+      );
+      const digest = digestDoc.header.id;
+      await client.execute(digest, "main", [
+        wf.setWorkflowName({ name: "Daily digest" }),
+        wf.setWorkflowDescription({
+          description:
+            "Fetch overnight metrics, summarise them and post to #ops.",
+        }),
+        wf.setTrigger({
+          id: "trigger",
+          ...blocks.schedule,
+          config: {
+            ...defaults.schedule,
+            mode: "cron",
+            cron: "0 8 * * *",
+          },
+        }),
+        wf.addStep({
+          id: "fetch",
+          key: "fetch",
+          name: "Fetch metrics",
+          ...blocks.http,
+          config: {
+            ...defaults.http,
+            method: "GET",
+            url: "https://metrics.acme.dev/overnight",
+          },
+        }),
+        wf.addStep({
+          id: "summarise",
+          key: "summarise",
+          name: "Summarise",
+          ...blocks.openai,
+          config: {
+            ...defaults.openai,
+            prompt: "Summarise {{steps.fetch.output.body}} in three bullets.",
+          },
+        }),
+        wf.addStep({
+          id: "post",
+          key: "post",
+          name: "Post to #ops",
+          ...blocks.slack,
+          connectionId: connection,
+          config: {
+            ...defaults.slack,
+            channel: "#ops",
+            text: "{{steps.summarise.output}}",
+          },
+        }),
+        wf.addEdge({ id: "e1", from: "trigger", to: "fetch", port: "next" }),
+        wf.addEdge({ id: "e2", from: "fetch", to: "summarise", port: "next" }),
+        wf.addEdge({ id: "e3", from: "summarise", to: "post", port: "next" }),
+        wf.setVariable({
+          id: "v1",
+          key: "channel",
+          value: "#ops",
+          description: "Where the digest goes",
+        }),
+        // Publishing is what turns a workflow on, as in the editor.
+        wf.publishWorkflow({ publishedAt: new Date().toISOString() }),
+        wf.setWorkflowStatus({ status: "ENABLED" }),
+      ]);
+      await client.rename(digest, "Daily digest");
+
+      const smokeDoc = await client.drives.addFile(
+        drive,
+        wf.utils.createDocument(),
+      );
+      const smoke = smokeDoc.header.id;
+      await client.execute(smoke, "main", [
+        wf.setWorkflowName({ name: "Link checker" }),
+        wf.setTrigger({
+          id: "trigger",
+          ...blocks.manual,
+          config: { ...defaults.manual },
+        }),
+        wf.addStep({
+          id: "parse",
+          key: "parse",
+          name: "Parse URL",
+          ...blocks.parseUrl,
+          config: {
+            ...defaults.parseUrl,
+            url: "https://acme.dev/docs?page=2",
+          },
+        }),
+        wf.addEdge({ id: "e1", from: "trigger", to: "parse", port: "next" }),
+        // Publishing is what turns a workflow on, as in the editor.
+        wf.publishWorkflow({ publishedAt: new Date().toISOString() }),
+        wf.setWorkflowStatus({ status: "ENABLED" }),
+      ]);
+      await client.rename(smoke, "Link checker");
+
+      const pingDoc = await client.drives.addFile(
+        drive,
+        wf.utils.createDocument(),
+      );
+      const ping = pingDoc.header.id;
+      await client.execute(ping, "main", [
+        wf.setWorkflowName({ name: "Uptime ping" }),
+        wf.setTrigger({
+          id: "trigger",
+          ...blocks.manual,
+          config: { ...defaults.manual },
+        }),
+        wf.addStep({
+          id: "parse",
+          key: "parse",
+          name: "Parse URL",
+          ...blocks.parseUrl,
+          config: {
+            ...defaults.parseUrl,
+            url: "https://status.acme.dev/health",
+          },
+        }),
+        wf.addStep({
+          id: "ping",
+          key: "ping",
+          name: "Ping host",
+          ...blocks.http,
+          config: {
+            ...defaults.http,
+            method: "GET",
+            url: "http://127.0.0.1:9/health",
+          },
+        }),
+        wf.addStep({
+          id: "alert",
+          key: "alert",
+          name: "Alert #ops",
+          ...blocks.slack,
+          connectionId: connection,
+          config: {
+            ...defaults.slack,
+            channel: "#ops",
+            text: "Host down: {{steps.parse.output.hostname}}",
+          },
+        }),
+        wf.addEdge({ id: "e1", from: "trigger", to: "parse", port: "next" }),
+        wf.addEdge({ id: "e2", from: "parse", to: "ping", port: "next" }),
+        wf.addEdge({ id: "e3", from: "ping", to: "alert", port: "next" }),
+        // Publishing is what turns a workflow on, as in the editor.
+        wf.publishWorkflow({ publishedAt: new Date().toISOString() }),
+        wf.setWorkflowStatus({ status: "ENABLED" }),
+      ]);
+      await client.rename(ping, "Uptime ping");
+
+      return { digest, smoke, ping, connection };
+    },
+    input,
+  );
+}
+
+/** Resolves once the switchboard serves the workflow for design-time calls. */
+export async function waitServed(workflowId: string, stepId: string) {
+  const deadline = Date.now() + 30_000;
+  for (;;) {
+    try {
+      await gql(
+        "/graphql/workflow-runtime",
+        `query($w: String!, $s: String!) { workflowRuntime { stepOutputTree(workflowId: $w, stepId: $s) } }`,
+        { w: workflowId, s: stepId },
+      );
+      return;
+    } catch (error) {
+      if (Date.now() > deadline) throw error;
+      await new Promise((r) => setTimeout(r, 500));
     }
-    const connection = conn.header.id;
-    await client.execute(connection, "main", [
-      cn.setConnectionName({ name: "Ops Slack" }),
-      cn.setConnector({
-        connectorId: "@activepieces/piece-slack",
-        authType: "CUSTOM_AUTH",
-      }),
-      cn.setSecretRef({ id: "bot-token", name: "botToken", ref: botTokenRef }),
-      cn.setAccountLabel({ accountLabel: "ops@acme.dev" }),
-      cn.recordCheckResult({
-        status: "OK",
-        checkedAt: new Date().toISOString(),
-      }),
-    ]);
-    await client.rename(connection, "Ops Slack");
-
-    const digestDoc = await client.drives.addFile(
-      drive,
-      wf.utils.createDocument(),
-    );
-    const digest = digestDoc.header.id;
-    await client.execute(digest, "main", [
-      wf.setWorkflowName({ name: "Daily digest" }),
-      wf.setWorkflowDescription({
-        description:
-          "Fetch overnight metrics, summarise them and post to #ops.",
-      }),
-      wf.setTrigger({
-        id: "trigger",
-        blockType: "core#schedule",
-        config: { cron: "0 8 * * *" },
-      }),
-      wf.addStep({
-        id: "fetch",
-        key: "fetch",
-        name: "Fetch metrics",
-        blockType: blocks.http,
-        config: { method: "GET", url: "https://metrics.acme.dev/overnight" },
-      }),
-      wf.addStep({
-        id: "summarise",
-        key: "summarise",
-        name: "Summarise",
-        blockType: blocks.openai,
-        config: {
-          prompt: "Summarise {{steps.fetch.output.body}} in three bullets.",
-        },
-      }),
-      wf.addStep({
-        id: "post",
-        key: "post",
-        name: "Post to #ops",
-        blockType: blocks.slack,
-        connectionId: connection,
-        config: { channel: "#ops", text: "{{steps.summarise.output}}" },
-      }),
-      wf.addEdge({ id: "e1", from: "trigger", to: "fetch", port: "next" }),
-      wf.addEdge({ id: "e2", from: "fetch", to: "summarise", port: "next" }),
-      wf.addEdge({ id: "e3", from: "summarise", to: "post", port: "next" }),
-      wf.setVariable({
-        id: "v1",
-        key: "channel",
-        value: "#ops",
-        description: "Where the digest goes",
-      }),
-      wf.setWorkflowStatus({ status: "ENABLED" }),
-    ]);
-    await client.rename(digest, "Daily digest");
-
-    const smokeDoc = await client.drives.addFile(
-      drive,
-      wf.utils.createDocument(),
-    );
-    const smoke = smokeDoc.header.id;
-    await client.execute(smoke, "main", [
-      wf.setWorkflowName({ name: "Link checker" }),
-      wf.setTrigger({ id: "trigger", blockType: "core#manual", config: {} }),
-      wf.addStep({
-        id: "parse",
-        key: "parse",
-        name: "Parse URL",
-        blockType: blocks.parseUrl,
-        config: { url: "https://acme.dev/docs?page=2" },
-      }),
-      wf.addEdge({ id: "e1", from: "trigger", to: "parse", port: "next" }),
-      wf.setWorkflowStatus({ status: "ENABLED" }),
-    ]);
-    await client.rename(smoke, "Link checker");
-
-    const pingDoc = await client.drives.addFile(
-      drive,
-      wf.utils.createDocument(),
-    );
-    const ping = pingDoc.header.id;
-    await client.execute(ping, "main", [
-      wf.setWorkflowName({ name: "Uptime ping" }),
-      wf.setTrigger({ id: "trigger", blockType: "core#manual", config: {} }),
-      wf.addStep({
-        id: "parse",
-        key: "parse",
-        name: "Parse URL",
-        blockType: blocks.parseUrl,
-        config: { url: "https://status.acme.dev/health" },
-      }),
-      wf.addStep({
-        id: "ping",
-        key: "ping",
-        name: "Ping host",
-        blockType: blocks.http,
-        config: { method: "GET", url: "http://127.0.0.1:9/health" },
-      }),
-      wf.addStep({
-        id: "alert",
-        key: "alert",
-        name: "Alert #ops",
-        blockType: blocks.slack,
-        connectionId: connection,
-        config: {
-          channel: "#ops",
-          text: "Host down: {{steps.parse.output.hostname}}",
-        },
-      }),
-      wf.addEdge({ id: "e1", from: "trigger", to: "parse", port: "next" }),
-      wf.addEdge({ id: "e2", from: "parse", to: "ping", port: "next" }),
-      wf.addEdge({ id: "e3", from: "ping", to: "alert", port: "next" }),
-      wf.setWorkflowStatus({ status: "ENABLED" }),
-    ]);
-    await client.rename(ping, "Uptime ping");
-
-    return { digest, smoke, ping, connection };
-  }, input);
+  }
 }
 
 /** Fires a manual workflow once it has synced to the switchboard. */
@@ -438,20 +767,12 @@ export async function openSeededPage(
   options: {
     colorScheme?: "light" | "dark";
     viewport?: { width: number; height: number };
+    // False leaves the drive empty, for tests that add their own documents.
+    seed?: boolean;
   } = {},
 ): Promise<SeededPage> {
   const driveSlug = `ui-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const drive = await createRemoteDrive(driveSlug);
-  const blocks = {
-    http: await pieceBlockType("@activepieces/piece-http", "send_request"),
-    parseUrl: await pieceBlockType("@activepieces/piece-http", "parse_url"),
-    openai: await pieceBlockType("@activepieces/piece-openai", "ask_chatgpt"),
-    slack: await pieceBlockType(
-      "@activepieces/piece-slack",
-      "send_channel_message",
-    ),
-  };
-
   const context = await browser.newContext({
     viewport: options.viewport ?? { width: 1440, height: 900 },
     colorScheme: options.colorScheme ?? "light",
@@ -486,11 +807,30 @@ export async function openSeededPage(
       { timeout: 60_000, polling: 500 },
     );
   await driveReady();
+  if (options.seed === false) {
+    return { context, page, seeded: unseeded(), drive };
+  }
 
+  const [http, parseUrl, openai, slack, schedule, manual] = await Promise.all([
+    pieceAction("@activepieces/piece-http", "send_request"),
+    pieceAction("@activepieces/piece-http", "parse_url"),
+    pieceAction("@activepieces/piece-openai", "ask_chatgpt"),
+    pieceAction("@activepieces/piece-slack", "send_channel_message"),
+    coreTrigger("schedule"),
+    coreTrigger("manual"),
+  ]);
+  const blocks = { http, parseUrl, openai, slack, schedule, manual };
   const botTokenRef = await createSecret(
     "xoxb-demo-token",
     "Ops Slack · Bot Token",
   );
+  const known = await blockDefaults(Object.values(blocks));
+  const defaults = Object.fromEntries(
+    Object.entries(blocks).map(([role, block]) => [
+      role,
+      defaultsOf(known, block),
+    ]),
+  ) as SeedInput["defaults"];
   // A cold Vite server re-optimises deps and reloads the page once, which
   // can land mid-seed; wait for the reactor again and start over.
   let seeded: Seeded | undefined;
@@ -501,6 +841,7 @@ export async function openSeededPage(
         drive,
         blocks,
         botTokenRef,
+        defaults,
       });
     } catch (error) {
       if (attempt >= 2) throw error;
@@ -511,40 +852,78 @@ export async function openSeededPage(
     }
   }
   // One succeeded and one failed run, for the runs views.
-  await fireWhenSynced(seeded.smoke);
-  await fireWhenSynced(seeded.ping, { url: "https://status.acme.dev/health" });
+  await Promise.all([
+    fireWhenSynced(seeded.smoke),
+    fireWhenSynced(seeded.ping, { url: "https://status.acme.dev/health" }),
+  ]);
   return { context, page, seeded, drive };
+}
+
+// Stands in for the seed on an unseeded drive; reading it is a test bug.
+function unseeded(): Seeded {
+  return new Proxy({} as Seeded, {
+    get(_target, key) {
+      if (typeof key === "symbol" || key === "then") return undefined;
+      throw new Error(`No seeded ${String(key)}: this test runs with seed off`);
+    },
+  });
 }
 
 // ─── extra documents, for tests that need their own ────────────────────────
 
 export interface WorkflowSpec {
   name: string;
-  trigger: { blockType: string; config: Record<string, unknown> };
+  trigger: TriggerBlock & { config: Record<string, unknown> };
   // Run in order after the trigger.
-  steps: {
+  steps: (StepBlock & {
     key: string;
     name: string;
-    blockType: string;
     config: Record<string, unknown>;
     connectionId?: string;
-  }[];
+  })[];
+  // False leaves it a draft that has never been turned on.
+  enabled?: boolean;
 }
 
-/** Adds an enabled workflow to the drive through Connect's reactor. */
-export function createWorkflowInBrowser(
+/** Adds a workflow, enabled unless told otherwise, through Connect's reactor. */
+export async function createWorkflowInBrowser(
   page: Page,
   drive: string,
-  spec: WorkflowSpec,
+  input: WorkflowSpec,
 ): Promise<string> {
-  return page.evaluate(
+  const defaults = await blockDefaults([input.trigger, ...input.steps]);
+  const spec: WorkflowSpec = {
+    ...input,
+    trigger: {
+      ...input.trigger,
+      config: {
+        ...defaultsOf(defaults, input.trigger),
+        ...input.trigger.config,
+      },
+    },
+    steps: input.steps.map((step) => ({
+      ...step,
+      config: { ...defaultsOf(defaults, step), ...step.config },
+    })),
+  };
+  return evaluateWithReactor(
+    page,
     async ({ root, drive, spec }) => {
       const client = (window as unknown as PhWindow).ph!.reactorClientModule!
         .client;
       const wf = (await import(
         `/@fs${root}/packages/workflow/document-models/workflow/v1/index.ts`
       )) as typeof WorkflowModel;
-      const doc = await client.drives.addFile(drive, wf.utils.createDocument());
+      // An unseeded drive may not accept files yet; as in the seed, retry.
+      let doc: { header: { id: string } } | undefined;
+      for (let attempt = 0; !doc; attempt++) {
+        try {
+          doc = await client.drives.addFile(drive, wf.utils.createDocument());
+        } catch (error) {
+          if (attempt >= 30) throw error;
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
       const id = doc.header.id;
       const actions: unknown[] = [
         wf.setWorkflowName({ name: spec.name }),
@@ -558,7 +937,12 @@ export function createWorkflowInBrowser(
         );
         from = step.key;
       }
-      actions.push(wf.setWorkflowStatus({ status: "ENABLED" }));
+      if (spec.enabled !== false) {
+        actions.push(
+          wf.publishWorkflow({ publishedAt: new Date().toISOString() }),
+          wf.setWorkflowStatus({ status: "ENABLED" }),
+        );
+      }
       await client.execute(id, "main", actions);
       await client.rename(id, spec.name);
       return id;
@@ -582,14 +966,24 @@ export function createConnectionInBrowser(
   drive: string,
   spec: ConnectionSpec,
 ): Promise<string> {
-  return page.evaluate(
+  return evaluateWithReactor(
+    page,
     async ({ root, drive, spec }) => {
       const client = (window as unknown as PhWindow).ph!.reactorClientModule!
         .client;
       const cn = (await import(
         `/@fs${root}/packages/workflow/document-models/connection/v1/index.ts`
       )) as typeof ConnectionModel;
-      const doc = await client.drives.addFile(drive, cn.utils.createDocument());
+      // An unseeded drive may not accept files yet; as in the seed, retry.
+      let doc: { header: { id: string } } | undefined;
+      for (let attempt = 0; !doc; attempt++) {
+        try {
+          doc = await client.drives.addFile(drive, cn.utils.createDocument());
+        } catch (error) {
+          if (attempt >= 30) throw error;
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
       const id = doc.header.id;
       const actions: unknown[] = [
         cn.setConnectionName({ name: spec.name }),
@@ -669,9 +1063,59 @@ export async function openWorkflowEditor(page: Page, name = "Daily digest") {
   await page.locator(".react-flow__node").first().waitFor();
 }
 
+// Review screenshots, taken only when UI_SHOTS_DIR says where they go.
+export async function shot(page: Page, name: string): Promise<void> {
+  const dir = process.env.UI_SHOTS_DIR;
+  if (!dir) return;
+  mkdirSync(dir, { recursive: true });
+  await page.screenshot({ path: join(dir, `${name}.png`) });
+}
+
+// A workflow document's global state, read from Connect's reactor.
+export function workflowState<T = Record<string, unknown>>(
+  page: Page,
+  id: string,
+): Promise<T> {
+  return page.evaluate(async (workflowId) => {
+    const client = (window as unknown as PhWindow).ph!.reactorClientModule!
+      .client;
+    const document = (await client.get(workflowId)) as {
+      state: { global: unknown };
+    };
+    return document.state.global;
+  }, id) as Promise<T>;
+}
+
 // Matches the node's title exactly: "Summarise" never finds "Summarise metrics".
 export function canvasNode(page: Page, title: string) {
   return page
     .locator(".react-flow__node")
     .filter({ has: page.getByText(title, { exact: true }) });
+}
+
+/** Opens a canvas add button's block picker, clicking again only while shut. */
+export async function openPicker(
+  page: Page,
+  button: Locator,
+): Promise<Locator> {
+  const picker = page.locator('[data-selector-open="true"]');
+  await expect(async () => {
+    if (!(await picker.isVisible())) await button.click();
+    await expect(picker).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15_000 });
+  return picker;
+}
+
+/** Fails if `read` ever stops matching over `ms`: for "nothing was written". */
+export async function expectSteady<T>(
+  read: () => Promise<T>,
+  check: (value: T) => void,
+  ms = 1500,
+): Promise<void> {
+  const until = Date.now() + ms;
+  for (;;) {
+    check(await read());
+    if (Date.now() >= until) return;
+    await new Promise((r) => setTimeout(r, 250));
+  }
 }

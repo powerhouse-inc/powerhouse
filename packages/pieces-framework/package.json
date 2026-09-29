@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/pieces-framework",
-  "version": "6.2.3-dev.25",
+  "version": "6.2.3-dev.32",
   "description": "Powerhouse's published copy of the Activepieces piece framework, widened with the reactor context.",
   "license": "MIT",
   "type": "module",
@@ -33,6 +33,16 @@
       "source": "./src/host.ts",
       "types": "./dist/host.d.ts",
       "import": "./dist/host.js"
+    },
+    "./block-type": {
+      "source": "./src/block-type.ts",
+      "types": "./dist/block-type.d.ts",
+      "import": "./dist/block-type.js"
+    },
+    "./workflow": {
+      "source": "./src/workflow.ts",
+      "types": "./dist/workflow.d.ts",
+      "import": "./dist/workflow.js"
     },
     "./package.json": "./package.json"
   },

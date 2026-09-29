@@ -4,17 +4,24 @@ import { execFileSync } from "node:child_process";
 import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import {
+  coreTrigger,
   createConnectionInBrowser,
   createSecret,
   createWorkflowInBrowser,
   fireAndWait,
   gql,
-  pieceBlockType,
-  pieceTriggerBlockType,
+  pieceAction,
+  pieceTrigger,
 } from "../../scripts/ui-stack.js";
 import { expect, test } from "./fixtures.js";
 
-const MANUAL = { blockType: "core#manual", config: {} };
+// Every test adds the documents it needs.
+test.use({ seed: false });
+
+const MANUAL = async () => ({
+  ...(await coreTrigger("manual")),
+  config: {},
+});
 
 test.describe("HTTP", () => {
   let server: Server;
@@ -40,15 +47,12 @@ test.describe("HTTP", () => {
   }) => {
     const id = await createWorkflowInBrowser(stack.page, stack.drive, {
       name: "HTTP echo",
-      trigger: MANUAL,
+      trigger: await MANUAL(),
       steps: [
         {
           key: "call",
           name: "Call echo",
-          blockType: await pieceBlockType(
-            "@activepieces/piece-http",
-            "send_request",
-          ),
+          ...(await pieceAction("@activepieces/piece-http", "send_request")),
           config: {
             method: "GET",
             url: `http://127.0.0.1:${port}/echo?from=workflow`,
@@ -58,10 +62,7 @@ test.describe("HTTP", () => {
         {
           key: "parse",
           name: "Parse the echoed path",
-          blockType: await pieceBlockType(
-            "@activepieces/piece-http",
-            "parse_url",
-          ),
+          ...(await pieceAction("@activepieces/piece-http", "parse_url")),
           // A later step reads an earlier one's output by its full reference.
           config: {
             url: `http://127.0.0.1:${port}{{steps.call.output.body.path}}`,
@@ -87,16 +88,16 @@ test.describe("Store", () => {
   test("a value put in one step is read back by the next, run after run", async ({
     stack,
   }) => {
-    const put = await pieceBlockType("@activepieces/piece-store", "put");
-    const get = await pieceBlockType("@activepieces/piece-store", "get");
+    const put = await pieceAction("@activepieces/piece-store", "put");
+    const get = await pieceAction("@activepieces/piece-store", "get");
     const id = await createWorkflowInBrowser(stack.page, stack.drive, {
       name: "Store round trip",
-      trigger: MANUAL,
+      trigger: await MANUAL(),
       steps: [
         {
           key: "put",
           name: "Remember",
-          blockType: put,
+          ...put,
           config: {
             key: "greeting",
             value: "{{trigger.payload.value}}",
@@ -106,7 +107,7 @@ test.describe("Store", () => {
         {
           key: "get",
           name: "Recall",
-          blockType: get,
+          ...get,
           config: { key: "greeting", store_scope: "COLLECTION" },
         },
       ],
@@ -125,13 +126,15 @@ test.describe("Schedule", () => {
   test("an enabled schedule is armed at its interval and can be tried", async ({
     stack,
   }) => {
+    // The supervisor may take a full minute to arm it.
+    test.setTimeout(90_000);
     const id = await createWorkflowInBrowser(stack.page, stack.drive, {
       name: "Every minute",
       trigger: {
-        blockType: await pieceTriggerBlockType(
+        ...(await pieceTrigger(
           "@activepieces/piece-schedule",
           "every_x_minutes",
-        ),
+        )),
         config: { minutes: 1 },
       },
       steps: [],
@@ -187,10 +190,15 @@ test.describe("Postgres", () => {
   test.skip(!dockerAvailable(), "needs Docker for a throwaway Postgres");
 
   const container = `wf-pieces-pg-${process.pid}`;
-  const pgPort = 55_000 + (process.pid % 1000);
+  let pgPort = 0;
 
   test.beforeAll(async () => {
     test.setTimeout(180_000);
+    // A port the OS just handed out, so parallel workers never share one.
+    const probe = createServer();
+    await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
+    pgPort = (probe.address() as AddressInfo).port;
+    await new Promise((resolve) => probe.close(resolve));
     execFileSync("docker", [
       "run",
       "-d",
@@ -281,18 +289,18 @@ test.describe("Postgres", () => {
       )
       .toMatchObject({ ok: true });
 
-    const query = await pieceBlockType(
+    const query = await pieceAction(
       "@activepieces/piece-postgres",
       "run-query",
     );
     const id = await createWorkflowInBrowser(stack.page, stack.drive, {
       name: "Postgres notes",
-      trigger: MANUAL,
+      trigger: await MANUAL(),
       steps: [
         {
           key: "create",
           name: "Create table",
-          blockType: query,
+          ...query,
           connectionId,
           config: {
             query:
@@ -302,7 +310,7 @@ test.describe("Postgres", () => {
         {
           key: "insert",
           name: "Insert note",
-          blockType: query,
+          ...query,
           connectionId,
           config: {
             query: "INSERT INTO notes (body) VALUES ($1) RETURNING body",

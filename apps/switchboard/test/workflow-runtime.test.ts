@@ -469,4 +469,18 @@ describe("bindPackagePieces", () => {
     source.emit(new Map());
     expect(registry.entries()).toEqual([]);
   });
+
+  it("gives a piece two packages ship to the first by package name, whatever the load order", () => {
+    const registry = new PieceRegistry();
+    const source = stubSource(
+      new Map([
+        ["@zeta/pack", [entry("@acme/piece-a", "9.0.0")]],
+        ["@alpha/pack", [entry("@acme/piece-a", "1.0.0")]],
+      ]),
+    );
+
+    bindPackagePieces(registry, source);
+
+    expect(registry.versions()).toEqual({ "@acme/piece-a": "1.0.0" });
+  });
 });

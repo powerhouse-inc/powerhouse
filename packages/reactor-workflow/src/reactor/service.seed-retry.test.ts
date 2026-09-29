@@ -2,6 +2,7 @@
 // retried leaves every poll and webhook trigger inert with nothing to say so.
 import { describe, expect, it, vi } from "vitest";
 import { testRuntime } from "../../test/helpers/runtime.js";
+import { CORE_PIECE_VERSION } from "../pieces/index.js";
 
 const WORKFLOW = "wf-seeded";
 
@@ -13,7 +14,13 @@ function workflowDocument() {
         name: "Polled",
         status: "ENABLED",
         version: 1,
-        trigger: { id: "t1", blockType: "core#schedule", config: {} },
+        trigger: {
+          id: "t1",
+          pieceName: "@powerhousedao/piece-core",
+          pieceVersion: CORE_PIECE_VERSION,
+          triggerName: "schedule",
+          config: {},
+        },
         steps: [],
         edges: [],
         variables: [],

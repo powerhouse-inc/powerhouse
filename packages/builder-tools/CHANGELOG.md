@@ -1,3 +1,55 @@
+## 6.2.3-dev.32 (2026-09-29)
+
+### 🚀 Features
+
+- **connect:** configure OpenPanel via the runtime config ([#3140](https://github.com/powerhouse-inc/powerhouse/pull/3140))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
+## 6.2.3-dev.31 (2026-09-29)
+
+### 🚀 Features
+
+- workflows.enabled turns on workflows in Connect too ([5e8292472](https://github.com/powerhouse-inc/powerhouse/commit/5e8292472))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.30 (2026-09-29)
+
+### 🩹 Fixes
+
+- **deps:** load cmd-ts's ESM build under bun, which fails to require chalk from its CJS build ([749528c71](https://github.com/powerhouse-inc/powerhouse/commit/749528c71))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.29 (2026-09-28)
+
+### 🩹 Fixes
+
+- **builder-tools:** shim missing exports from optional peers in the connect build ([999566051](https://github.com/powerhouse-inc/powerhouse/commit/999566051))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.28 (2026-09-28)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.27 (2026-09-28)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.26 (2026-09-26)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
 ## 6.2.3-dev.25 (2026-09-25)
 
 ### 🚀 Features

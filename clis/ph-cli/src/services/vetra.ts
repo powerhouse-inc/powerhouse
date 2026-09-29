@@ -105,6 +105,33 @@ async function startVetraPreviewDrive(
   }
   return driveUrl;
 }
+
+// Opens in Workflow Studio; only seeded when the switchboard runs workflows.
+async function startVetraWorkflowsDrive(
+  reactor: IReactorClient,
+  port: number,
+  verbose?: boolean,
+): Promise<string> {
+  const workflowsDrive = {
+    id: generateProjectDriveId("workflows"),
+    slug: "workflows",
+    global: { name: "Workflows" },
+    preferredEditor: "workflow-studio",
+    local: {
+      availableOffline: true,
+      listeners: [],
+      sharingType: "public" as const,
+      triggers: [],
+    },
+  };
+
+  const driveUrl = await addDefaultDrive(reactor, workflowsDrive, port);
+
+  if (verbose) {
+    console.log(blue(`Vetra Switchboard: Workflows drive: ${driveUrl}`));
+  }
+  return driveUrl;
+}
 async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
   const {
     connectPort,
@@ -192,6 +219,19 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
       }
     }
 
+    let workflowsDriveUrl: string | null = null;
+    if (switchboard.workflowsEnabled) {
+      try {
+        workflowsDriveUrl = await startVetraWorkflowsDrive(
+          switchboard.reactor,
+          actualSwitchboardPort,
+          verbose,
+        );
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
     if (verbose) {
       console.log(blue(`Vetra Switchboard: Started successfully`));
       if (remoteDrive) {
@@ -210,10 +250,14 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
       if (previewDriveUrl) {
         console.log(blue(`   ➜ Preview Drive URL: ${previewDriveUrl}`));
       }
+      if (workflowsDriveUrl) {
+        console.log(blue(`   ➜ Workflows Drive URL: ${workflowsDriveUrl}`));
+      }
     }
     return {
       driveUrl: switchboard.defaultDriveUrl || "",
       previewDriveUrl: previewDriveUrl,
+      workflowsDriveUrl,
       switchboardPort: actualSwitchboardPort,
     };
   } catch (error) {
@@ -311,6 +355,7 @@ export async function startVetra(args: VetraArgs) {
     );
     const driveUrl: string = switchboardResult.driveUrl || remoteDrive || "";
     const previewDriveUrl = switchboardResult.previewDriveUrl;
+    const workflowsDriveUrl = switchboardResult.workflowsDriveUrl;
     const actualSwitchboardPort = switchboardResult.switchboardPort;
 
     // Record what we actually bound, so a second `ph vetra` can tell a live
@@ -380,9 +425,14 @@ export async function startVetra(args: VetraArgs) {
         previewDriveUrl && publicBase
           ? rebaseDriveUrl(previewDriveUrl, publicBase)
           : previewDriveUrl;
+      const browserWorkflowsDriveUrl =
+        workflowsDriveUrl && publicBase
+          ? rebaseDriveUrl(workflowsDriveUrl, publicBase)
+          : workflowsDriveUrl;
 
       // The resolved default-drive list: vetra's own drives first (the
-      // Vetra drive and, in watch mode, the preview drive), then the
+      // Vetra drive, the preview drive in watch mode, and the Workflows
+      // drive when workflows are on), then the
       // project's configured `connect.drives.defaultDrives` from
       // powerhouse.config.json (issue #3023). A drive vetra also starts is
       // listed only once. An explicit `--default-drives-url` is appended on
@@ -394,6 +444,9 @@ export async function startVetra(args: VetraArgs) {
           : []),
         ...(browserPreviewDriveUrl
           ? [{ url: browserPreviewDriveUrl, name: null, icon: null }]
+          : []),
+        ...(browserWorkflowsDriveUrl
+          ? [{ url: browserWorkflowsDriveUrl, name: null, icon: null }]
           : []),
       ];
       const configuredDefaultDrives =

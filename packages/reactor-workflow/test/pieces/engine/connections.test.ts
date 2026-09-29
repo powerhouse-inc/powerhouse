@@ -13,6 +13,7 @@ import {
   SecretNotFoundError,
 } from "../../../src/pieces/engine/secrets.js";
 import type { WorkflowDefinition } from "../../../src/pieces/engine/types.js";
+import { CORE_PIECE_VERSION } from "../../../src/pieces/index.js";
 
 describe("connection resolution", () => {
   const secrets = new InMemorySecretProvider({
@@ -77,7 +78,7 @@ describe("connection resolution", () => {
     const resolver = new StaticConnectionResolver(
       {
         open: { authType: "NONE" },
-        oauth: { authType: "OAUTH2" },
+        oidc: { authType: "OIDC" },
         broken: {
           authType: "SECRET_TEXT",
           secretRefs: [{ name: "token", ref: "vault://missing" }],
@@ -89,7 +90,7 @@ describe("connection resolution", () => {
     await expect(resolver.resolve("nope")).rejects.toBeInstanceOf(
       ConnectionNotFoundError,
     );
-    await expect(resolver.resolve("oauth")).rejects.toBeInstanceOf(
+    await expect(resolver.resolve("oidc")).rejects.toBeInstanceOf(
       UnsupportedAuthTypeError,
     );
     await expect(resolver.resolve("broken")).rejects.toBeInstanceOf(
@@ -102,25 +103,38 @@ describe("connection binding", () => {
   const definition: WorkflowDefinition = {
     trigger: {
       id: "t",
-      blockType: "@acme/piece-imap@1.0.0#trigger:new_email",
+      pieceName: "@acme/piece-imap",
+      pieceVersion: "1.0.0",
+      triggerName: "new_email",
       connectionId: "conn-imap",
     },
     steps: [
       {
         id: "s1",
         key: "notify",
-        blockType: "@acme/piece-slack@1.0.0#send",
+        pieceName: "@acme/piece-slack",
+        pieceVersion: "1.0.0",
+        actionName: "send",
         connectionId: "conn-slack",
         config: {},
       },
       {
         id: "s2",
         key: "picked",
-        blockType: "@acme/piece-slack@1.0.0#send",
+        pieceName: "@acme/piece-slack",
+        pieceVersion: "1.0.0",
+        actionName: "send",
         connectionId: "{{trigger.payload.connectionId}}",
         config: {},
       },
-      { id: "s3", key: "plain", blockType: "core#branch", config: {} },
+      {
+        id: "s3",
+        key: "plain",
+        pieceName: "@powerhousedao/piece-core",
+        pieceVersion: CORE_PIECE_VERSION,
+        actionName: "branch",
+        config: {},
+      },
     ],
     edges: [],
   };
@@ -162,7 +176,7 @@ describe("connection binding", () => {
     const bound = new BoundConnectionResolver(inner, bindingOf);
     await expect(
       bound.resolve("conn-slack", {
-        blockType: "@acme/piece-slack@1.0.0#send",
+        piecePackage: "@acme/piece-slack",
         stepId: "s1",
         stepKey: "notify",
       }),
@@ -175,7 +189,7 @@ describe("connection binding", () => {
     const bound = new BoundConnectionResolver(inner, bindingOf);
     await expect(
       bound.resolve("conn-imap", {
-        blockType: "@acme/piece-imap@1.0.0#trigger:new_email",
+        piecePackage: "@acme/piece-imap",
       }),
     ).resolves.toBeDefined();
   });
@@ -188,7 +202,7 @@ describe("connection binding", () => {
     );
     await expect(
       bound.resolve("conn-someone-elses", {
-        blockType: "@acme/piece-slack@1.0.0#send",
+        piecePackage: "@acme/piece-slack",
       }),
     ).rejects.toBeInstanceOf(ConnectionNotBoundError);
     expect(inner.calls).toEqual([]);
@@ -200,7 +214,7 @@ describe("connection binding", () => {
     const bound = new BoundConnectionResolver(inner, bindingOf);
     await expect(
       bound.resolve("{{trigger.payload.connectionId}}", {
-        blockType: "@acme/piece-slack@1.0.0#send",
+        piecePackage: "@acme/piece-slack",
       }),
     ).rejects.toBeInstanceOf(ConnectionNotBoundError);
   });
@@ -222,7 +236,7 @@ describe("connection binding", () => {
 
     await expect(
       bound.resolveWithSecrets?.("conn-slack", {
-        blockType: "@acme/piece-slack@1.0.0#send",
+        piecePackage: "@acme/piece-slack",
       }),
     ).resolves.toEqual({
       auth: { type: "SECRET_TEXT", secret_text: "s3cret" },
@@ -239,7 +253,7 @@ describe("connection binding", () => {
 
     await expect(
       bound.resolveWithSecrets?.("conn-someone-elses", {
-        blockType: "@acme/piece-slack@1.0.0#send",
+        piecePackage: "@acme/piece-slack",
       }),
     ).rejects.toBeInstanceOf(ConnectionNotBoundError);
     expect(inner.calls).toEqual([]);

@@ -22,7 +22,7 @@ describe("explorer route registration", () => {
   it("matches a single-slash GET /explorer and its endpoint variant", async () => {
     const adapter = new ExpressHttpAdapter();
     adapter.setupMiddleware({});
-    const server = await adapter.listen(0);
+    const server = await adapter.listen(0, undefined, "127.0.0.1");
     const { port } = server.address() as { port: number };
     try {
       adapter.getRoute(

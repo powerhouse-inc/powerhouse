@@ -114,7 +114,7 @@ test.describe("Connection editor", () => {
     // Slack's own check runs against the demo token; the answer depends on
     // the network, so assert the outcome is reported and the status follows it.
     const result = app.getByRole("status");
-    await expect(result).toBeVisible();
+    await expect(result).toHaveText(/\S/);
     const works = (await result.textContent())?.startsWith("It works");
     await expect(
       app.getByText(works ? "Connected" : "Error", { exact: true }),
@@ -122,20 +122,20 @@ test.describe("Connection editor", () => {
     await expect(app.getByText("Last checked just now")).toBeVisible();
   });
 
-  test("a piece with several sign-in methods offers the ones that run", async ({
+  test("a piece with several sign-in methods offers each, OAuth 2 included", async ({
     app,
   }) => {
     const method = app.getByRole("combobox").filter({ hasText: "Bot Token" });
     await expect(method).toBeVisible();
     await method.click();
     const options = app.getByRole("listbox").getByRole("option");
-    await expect(options).toHaveText([
-      /OAuth 2.*Not supported yet/,
-      /Bot Token/,
-    ]);
-    await expect(options.filter({ hasText: "OAuth 2" })).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
+    await expect(options).toHaveText([/OAuth 2/, /Bot Token/]);
+    const oauth = options.filter({ hasText: "OAuth 2" });
+    await expect(oauth).not.toHaveAttribute("aria-disabled", "true");
+
+    await oauth.click();
+    await expect(app.getByText("Redirect URL", { exact: true })).toBeVisible();
+    // Nothing to sign in with until the app's own credentials are filled in.
+    await expect(app.getByRole("button", { name: "Connect" })).toBeDisabled();
   });
 });

@@ -39,8 +39,10 @@ export interface ConnectorDetail {
   description: string;
   version: string;
   authType: string;
-  /** False for auth kinds the runtime cannot execute yet (OAUTH2, OIDC). */
+  /** False for auth kinds the runtime cannot execute yet (OIDC). */
   supported: boolean;
+  /** OAUTH2: a person finishes it by signing in from the connection editor. */
+  signIn?: "oauth2";
   fields: ConnectorField[];
   actions: string[];
   triggers: string[];
@@ -70,6 +72,7 @@ async function connectorDetail(piece: PieceSummary): Promise<ConnectorDetail> {
     version: piece.version,
     authType: plan.authType,
     supported: plan.supported,
+    ...(plan.oauth2 ? { signIn: "oauth2" as const } : {}),
     fields: [
       ...plan.configFields.map((field) => toField(field, false)),
       ...plan.secretFields.map((field) => toField(field, true)),

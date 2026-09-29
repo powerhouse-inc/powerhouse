@@ -21,7 +21,8 @@ const LEGACY_BLOB = JSON.stringify({
 function legacyRow(storeState: string) {
   return {
     workflow_id: WF,
-    block_type: "@activepieces/piece-paperless-ngx@1.0.0#trigger:document",
+    piece_name: "@activepieces/piece-paperless-ngx",
+    trigger_name: "document",
     config_hash: "abc123",
     status: "ENABLED",
     store_state: storeState,

@@ -11,7 +11,10 @@ import type { PieceLogEntry } from "../../../src/pieces/activepieces/worker/prot
 import { ActivepiecesBlockExecutor } from "../../../src/pieces/engine/blocks.js";
 import { StaticConnectionResolver } from "../../../src/pieces/engine/connections.js";
 import { InMemorySecretProvider } from "../../../src/pieces/engine/secrets.js";
-import type { BlockExecution } from "../../../src/pieces/engine/types.js";
+import {
+  stepBlock,
+  type BlockExecution,
+} from "../../../src/pieces/engine/types.js";
 
 const TOKEN = "ghp_9fA3kQ2xZ7rT1nP0bV6mL4sD8wJ5cH";
 
@@ -88,12 +91,19 @@ let cacheDir = "";
 let worker: PieceWorker;
 
 function execution(actionName: string): BlockExecution {
-  const blockType = `@test/leaky@1.0.0#${actionName}`;
+  const step = {
+    id: "s1",
+    key: "step",
+    pieceName: "@test/leaky",
+    pieceVersion: "1.0.0",
+    actionName,
+    config: {},
+  };
   return {
-    blockType,
+    block: stepBlock(step),
     config: {},
     connectionId: "leaky",
-    step: { id: "s1", key: "step", blockType } as BlockExecution["step"],
+    step,
   };
 }
 

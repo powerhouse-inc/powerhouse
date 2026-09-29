@@ -1,5 +1,8 @@
 import { fileURLToPath } from "node:url";
-import { fetchPieceBundle } from "../../../src/pieces/activepieces/fetch.js";
+import {
+  fetchPieceBundle,
+  setPublicPieceSources,
+} from "../../../src/pieces/activepieces/fetch.js";
 
 // Under node_modules/.cache so lint/tsc/git all ignore it for free.
 export const bundleCacheDir = fileURLToPath(
@@ -11,6 +14,8 @@ export async function fetchBundleForTest(
   name: string,
   version: string,
 ): Promise<string> {
+  // The real CDN and npm, which the test setup points elsewhere.
+  setPublicPieceSources({});
   try {
     const { dir } = await fetchPieceBundle({
       name,
