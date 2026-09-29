@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-29T16:44:00.871Z
+> Generated: 2026-09-29T21:59:42.170Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -28310,7 +28310,7 @@ In this tutorial you'll build a **logging processor** that prints a structured s
 A processor implements two methods:
 
 - **`onOperations(operations)`** — called when document operations match the processor's filter
-- **`onDisconnect()`** — called when the processor is disconnected (for cleanup)
+- **`onDisconnect()`** — called when the processor is disconnected (for cleanup), including when its factory is unregistered
 
 The reactor calls your processor's `onOperations` method with a list of `OperationWithContext` items. Each item pairs an `Operation` (what happened) with an `OperationContext` (where it happened).
 
@@ -28453,8 +28453,12 @@ export const operationLoggerProcessorFactory =
 | -------------- | ------------------------------------------------------------------ |
 | `branch`       | Which branches to monitor — usually `["main"]` for production data |
 | `documentId`   | Specific document IDs, or `["*"]` for all documents                |
-| `scope`        | `["global"]` for shared state, `["local"]` for user-specific state |
+| `scope`        | `["global"]` for shared state, `["local"]` for user-specific state, `["document"]` for document lifecycle operations such as `DELETE_DOCUMENT` |
 | `documentType` | Document types to process — omit to match all types                |
+
+**WARNING:**
+The logging processor stores nothing. A processor that stores data must delete a document's data when it receives `DELETE_DOCUMENT` or `PURGE_DOCUMENT`, which needs `"document"` in its `scope`. See [Erasing deleted documents](/academy/Build/WorkWithData/ProcessorBestPractices#erasing-deleted-documents).
+
 
 ### Starting position
 
@@ -28533,6 +28537,35 @@ This design keeps processors predictable, avoids circular dependencies, and prev
 ## Ordering across documents
 
 Operations for one document's scope and branch arrive in ordinal order, but operations for different documents do not: document B's creation can reach your processor after document A's operation that refers to B. If you need operations in ordinal order within one call, sort the batch by `context.ordinal` at the top of `onOperations`. No ordering is available across calls. If a processor must resolve a reference to another document, look it up in the read model or relational store it already writes to, and handle the case where it is not there yet, rather than relying on the order of arrival.
+
+## Erasing deleted documents
+
+A processor that stores data must erase a document's data when the document is deleted. The reactor removes its own records of a deleted or purged document; the rows, series or files your processor wrote stay until your processor removes them. A processor that ignores deletions keeps a purged document's data, and there is no purge callback to catch up later.
+
+- **Handle `DELETE_DOCUMENT` and `PURGE_DOCUMENT` alike.** Both name the document in `operation.action.input.documentId`. `PURGE_DOCUMENT` is the marker a purge leaves in the operation log; a reactor that missed the deletion receives only the marker.
+- **Include `"document"` in the filter's `scope`.** Both are `document`-scope operations, so a processor filtered to `["global"]` never sees them. Skip the other `document`-scope operations yourself.
+- **Handle deletions before reading `resultingState`.** The marker can arrive with no `resultingState`.
+- **Make the handler idempotent.** A document's marker can arrive after its `DELETE_DOCUMENT`, and more than once.
+- **Don't use `onDisconnect` for erasure.** It also runs when the factory is unregistered or reloaded.
+
+After a purge, the reactor delivers the purged document's marker and none of its earlier operations. When a drive is deleted, its processors receive the batch up to and including the drive's own deletion, which reaches them whatever their filter, and then `onDisconnect`.
+
+```typescript
+async onOperations(operations: OperationWithContext[]): Promise<void> {
+  for (const { operation, context } of operations) {
+    const type = operation.action.type;
+    if (type === "DELETE_DOCUMENT" || type === "PURGE_DOCUMENT") {
+      const input = operation.action.input as { documentId?: string };
+      await this.store.deleteDocument(input.documentId ?? context.documentId);
+      continue;
+    }
+    if (context.scope !== "global") continue;
+    // ...index the operation
+  }
+}
+```
+
+For relational processors, `RelationalDbProcessor` has `deleteDocumentRows`, `isNamespaceDrive` and `dropNamespace` (see [Erase a deleted document](/academy/Build/WorkWithData/RelationalDbProcessor#erase-a-deleted-document)). An analytics processor that writes a document's series under `ph/doc/<documentId>/...` clears them with ``analyticsStore.clearSeriesBySource(AnalyticsPath.fromString(`ph/doc/${documentId}`), true)``. The generated relational and analytics processors include this handling.
 
 ## Dispatching actions with `dispatch`
 
@@ -28809,6 +28842,7 @@ interface IProcessorHostModule {
 - **Never block** on reactor operations that might circle back to the processor pipeline
 - **React asynchronously**: if you need the result of a dispatch, handle it in a future `onOperations` call
 - **Access all APIs** through `IProcessorHostModule` in your factory function
+- **Erase at deletion**: delete a document's data on `DELETE_DOCUMENT` and `PURGE_DOCUMENT`
 
 ### Related pages
 
@@ -28887,6 +28921,7 @@ export async function up(db: IRelationalDb<any>): Promise<void> {
   // Create table - this runs when the processor starts
   await db.schema
     .createTable("todo") // Creates a new table named "todo"
+    .addColumn("document_id", "varchar(255)", (col) => col.notNull()) // The document the row came from
     .addColumn("task", "varchar(255)") // Text column for the task description (max 255 characters)
     .addColumn("status", "boolean") // Boolean column for completion status (true/false)
     .addPrimaryKeyConstraint("todo_pkey", ["task"]) // Makes "task" the primary key (unique identifier)
@@ -28903,6 +28938,7 @@ export async function down(db: IRelationalDb<any>): Promise<void> {
 **Design Considerations:**
 
 - We're using `task` as the primary key, which means each task description must be unique
+- `document_id` records which document each row came from, so the processor can delete a document's rows when the document is deleted (see [Erase a deleted document](#erase-a-deleted-document))
 - The `varchar(255)` limit ensures reasonable memory usage
 - The `boolean` status makes it easy to filter completed vs. incomplete tasks
 - Consider adding timestamps (`created_at`, `updated_at`) for audit trails in production applications
@@ -28932,6 +28968,7 @@ Check your `processors/todo-indexer/schema.ts` file after generation - it will c
 // This is what gets auto-generated based on your migration
 export interface Database {
   todo: {
+    document_id: string;
     task: string;
     status: boolean;
   };
@@ -28981,7 +29018,7 @@ export const todoIndexerProcessorFactory =
       branch: ["main"], // Only process changes from the "main" branch
       documentId: ["*"], // Process changes from any document ID (* = wildcard)
       documentType: ["powerhouse/todo-list"], // Only process todo-list documents
-      scope: ["global"], // Process global changes (not user-specific)
+      scope: ["global", "document"], // Global changes, plus deletions
     };
 
     // Create the processor instance
@@ -29000,7 +29037,7 @@ export const todoIndexerProcessorFactory =
 - **`branch`**: Which document branches to monitor (usually "main" for production data)
 - **`documentId`**: Specific document IDs to watch ("\*" means all documents)
 - **`documentType`**: Document types to process (ensures type safety)
-- **`scope`**: Whether to process global changes or user-specific ones
+- **`scope`**: Which scopes to process. `"global"` carries shared state changes; `"document"` carries `DELETE_DOCUMENT` and `PURGE_DOCUMENT`, which the processor needs to erase a document's rows
 
 ## Implement the Processor Logic
 
@@ -29050,11 +29087,27 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
 
     // Process each operation
     for (const { operation, context } of operations) {
+      // A deleted or purged document: remove its rows, or the drive's namespace
+      const type = operation.action.type;
+      if (type === "DELETE_DOCUMENT" || type === "PURGE_DOCUMENT") {
+        const input = operation.action.input as { documentId?: string };
+        const documentId = input.documentId ?? context.documentId;
+        if (this.isNamespaceDrive(documentId)) {
+          await this.dropNamespace();
+          return;
+        }
+        await this.deleteDocumentRows(documentId);
+        continue;
+      }
+      // The rest of the document scope carries nothing to index
+      if (context.scope !== "global") continue;
+
       // Insert a record for each operation into the database
       // This is a simple example - you might want more sophisticated logic
       await this.relationalDb
         .insertInto("todo")
         .values({
+          document_id: context.documentId,
           // Create a unique task identifier combining document ID, operation index, and type
           task: `${context.documentId}-${operation.index}: ${operation.action.type}`,
           status: true, // Default to completed status
@@ -29073,6 +29126,24 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
   }
 }
 ```
+
+### Erase a deleted document
+
+A processor's rows are its own: when a document is deleted or purged, the reactor removes its own records of the document, but only the processor removes the rows it wrote. A processor that ignores deletions keeps a deleted document's rows, including a purged one's. There is no separate purge callback, and `onDisconnect()` is not a deletion signal: it also runs when the processor's factory is unregistered or reloaded.
+
+Handle `DELETE_DOCUMENT` and `PURGE_DOCUMENT` the same way, before anything that parses `context.resultingState`. `PURGE_DOCUMENT` is the marker a purge leaves in the operation log. A reactor that missed the `DELETE_DOCUMENT` receives only the marker, and the marker can arrive with no `resultingState` and more than once, so keep the handler idempotent. After a purge, the reactor delivers the purged document's marker and none of its earlier operations.
+
+`RelationalDbProcessor` has three helpers for this:
+
+| Method                           | What it does                                                                                                           |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `deleteDocumentRows(documentId)` | Deletes the document's rows from every table in the processor's namespace with a `document_id` or `documentId` column |
+| `isNamespaceDrive(driveId)`      | `true` when `driveId` is the drive the processor's namespace was created for                                           |
+| `dropNamespace()`                | Drops the processor's namespace with every table in it                                                                 |
+
+A table without a `document_id` or `documentId` column is not touched by `deleteDocumentRows`. Delete its rows yourself in the same branch.
+
+When a drive is deleted, its processors receive the batch up to and including the drive's `DELETE_DOCUMENT` (or `PURGE_DOCUMENT`), then `onDisconnect()`. The drive's own deletion reaches them whatever their filter, so the processor above drops its namespace even though its `documentType` filter names only `powerhouse/todo-list`. The generated processor includes this handling.
 
 ## Expose Data Through a Subgraph
 
