@@ -1,3 +1,4 @@
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { childLogger, type ILogger } from "document-model";
 import type { IEventBus } from "../events/interfaces.js";
 import {
@@ -12,8 +13,50 @@ import {
 import type {
   ILiveReadModelCoordinator,
   IReadModel,
+  IReadModelReservation,
   ReadModelRegistrationStage,
 } from "./interfaces.js";
+
+export type BatchReservations = Map<IReadModel, IReadModelReservation>;
+
+/** Claims a batch for every model that supports it, as the batch queues. */
+export function reserveBatch(
+  readModels: readonly IReadModel[],
+  operations: OperationWithContext[],
+  logger: ILogger,
+): BatchReservations {
+  const reservations: BatchReservations = new Map();
+  for (const readModel of readModels) {
+    if (readModel.reserveOperations === undefined) continue;
+    try {
+      reservations.set(readModel, readModel.reserveOperations(operations));
+    } catch (error) {
+      logger.error(
+        "Read model @name could not reserve a batch: @Error",
+        readModel.name,
+        error,
+      );
+    }
+  }
+  return reservations;
+}
+
+/** Applies the model's reservation, or indexes a model registered since. */
+export function indexReserved(
+  readModel: IReadModel,
+  operations: OperationWithContext[],
+  reservations: BatchReservations,
+): Promise<void> {
+  const reservation = reservations.get(readModel);
+  return reservation
+    ? reservation.apply()
+    : readModel.indexOperations(operations);
+}
+
+/** Frees every claim a run did not apply, so a sweep can take it. */
+export function releaseBatch(reservations: BatchReservations): void {
+  for (const reservation of reservations.values()) reservation.release();
+}
 
 /**
  * Coordinates read model synchronization by listening to operation write events
@@ -108,8 +151,14 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
 
     const enqueuedAt = performance.now();
     const key = this.queueKeyFor(event);
+    const reservations = reserveBatch(
+      this.readModels,
+      event.operations,
+      this.logger,
+    );
+    const run = () => this.runChain(event, enqueuedAt, reservations);
     const previous = this.chains.get(key) ?? Promise.resolve();
-    const current = previous.then(() => this.runChain(event, enqueuedAt));
+    const current = previous.then(run, run);
 
     this.chains.set(key, current);
     void current.finally(() => {
@@ -146,6 +195,19 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
   private async runChain(
     event: JobWriteReadyEvent,
     enqueuedAt: number,
+    reservations: BatchReservations,
+  ): Promise<void> {
+    try {
+      await this.runBatch(event, enqueuedAt, reservations);
+    } finally {
+      releaseBatch(reservations);
+    }
+  }
+
+  private async runBatch(
+    event: JobWriteReadyEvent,
+    enqueuedAt: number,
+    reservations: BatchReservations,
   ): Promise<void> {
     const chainStartedAt = performance.now();
     const chainWaitDurationMs = chainStartedAt - enqueuedAt;
@@ -154,7 +216,7 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
     try {
       await Promise.all(
         this.preReady.map((readModel) =>
-          this.indexWithTiming(readModel, "pre_ready", event),
+          this.indexWithTiming(readModel, "pre_ready", event, reservations),
         ),
       );
     } catch (error) {
@@ -186,7 +248,7 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
     try {
       await Promise.all(
         this.postReady.map((readModel) =>
-          this.indexWithTiming(readModel, "post_ready", event),
+          this.indexWithTiming(readModel, "post_ready", event, reservations),
         ),
       );
     } catch (error) {
@@ -212,11 +274,12 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
     readModel: IReadModel,
     stage: ReadModelIndexingStage,
     event: JobWriteReadyEvent,
+    reservations: BatchReservations,
   ): Promise<void> {
     const start = performance.now();
     let success = false;
     try {
-      await readModel.indexOperations(event.operations);
+      await indexReserved(readModel, event.operations, reservations);
       success = true;
     } finally {
       this.emitReadModelIndexed({

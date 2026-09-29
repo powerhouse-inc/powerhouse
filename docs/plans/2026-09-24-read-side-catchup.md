@@ -196,12 +196,13 @@ export interface ContiguousCursor {
 }
 ```
 
-- **Live.** A batch is claimed, applied, settled. The live path never writes
-  the cursor.
+- **Live.** A batch is claimed when the coordinator queues it on its chain,
+  then applied and settled; a run that ends without applying it releases the
+  claims. The live path never writes the cursor.
 - **Sweep.** Each tick, the present ordinals in `(appliedThrough,
-  settledThrough]` that no path applied are late; they are fetched and applied,
-  and the cursor moves to `target`. A stream whose live pass still applies an
-  earlier ordinal is left to the next tick.
+  settledThrough]` that no path claimed or applied are late; they are fetched
+  and applied, and the cursor moves to `target`. A stream whose live path
+  holds an earlier ordinal, queued or applying, is left to the next tick.
 - **Boot.** `init` replays `getSinceOrdinal(appliedThrough)` in order, as
   today. After each page the cursor moves to `min(settledAtBoot, page max)`,
   with `settledAtBoot` refreshed before the first page: the replay saw every

@@ -24,7 +24,7 @@ import type {
 } from "../shared/types.js";
 import { yieldToMain } from "../shared/utils.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
-import type { IReadModel } from "./interfaces.js";
+import type { IReadModel, IReadModelReservation } from "./interfaces.js";
 import type { DocumentViewDatabase } from "./types.js";
 
 /** Bounds on an indexing pass: one transaction, and the stall between yields. */
@@ -239,11 +239,34 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
   /** The live path: never moves the cursor. */
   indexOperations(items: OperationWithContext[]): Promise<void> {
     if (items.length === 0) return Promise.resolve();
+    return this.reserveOperations(items).apply();
+  }
 
+  /** Holds a queued batch as live, so a sweep neither takes nor passes it. */
+  reserveOperations(items: OperationWithContext[]): IReadModelReservation {
+    const cursor = this.cursor;
     const owned = this.claimLive(items);
-    if (owned.length === 0) return Promise.resolve();
-
-    return this.applyChunked(owned);
+    const unmark = this.markLive(owned);
+    let done = false;
+    return {
+      apply: async () => {
+        if (done) return;
+        done = true;
+        try {
+          // A cursor reset since the claim dropped it.
+          const mine = cursor === this.cursor ? owned : this.claimLive(items);
+          if (mine.length > 0) await this.applyChunked(mine);
+        } finally {
+          unmark();
+        }
+      },
+      release: () => {
+        if (done) return;
+        done = true;
+        cursor.settle(owned.map(ordinalOf), false);
+        unmark();
+      },
+    };
   }
 
   async sweep(
