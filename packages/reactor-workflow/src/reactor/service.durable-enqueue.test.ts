@@ -151,6 +151,29 @@ describe("onOperations journals a matched fire before it returns", () => {
     expect(fireArgs).toHaveLength(1);
   });
 
+  it("still journals the run on replay when the first write died after the claim", async () => {
+    const store = await service.store();
+    const insert = vi
+      .spyOn(
+        store as unknown as { insertPendingRun: () => Promise<void> },
+        "insertPendingRun",
+      )
+      .mockRejectedValueOnce(new Error("crash between claim and enqueue"));
+    const replayed = op(SUBJECT, "powerhouse/note", "SET_TITLE", {
+      title: "hi",
+    });
+    await service.onOperations([replayed]);
+    expect(await runsFor(service, WATCHER)).toHaveLength(0);
+
+    (service as unknown as { seenOps: Set<string> }).seenOps.clear();
+    await service.onOperations([replayed]);
+
+    const runs = await runsFor(service, WATCHER);
+    expect(runs).toHaveLength(1);
+    expect(insert).toHaveBeenCalledTimes(2);
+    expect(fireArgs.at(-1)?.[5]).toBe(runs[0].id);
+  });
+
   it("writes no row for an operation no trigger matches", async () => {
     await service.onOperations([
       op(SUBJECT, "powerhouse/note", "SET_BODY", { body: "x" }),

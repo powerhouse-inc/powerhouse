@@ -9,6 +9,7 @@ import {
   type WorkflowRunResult,
 } from "../pieces/index.js";
 import { childLogger } from "document-model";
+import type { Kysely } from "kysely";
 import { randomUUID } from "node:crypto";
 import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";
 
@@ -711,6 +712,35 @@ function jsonOrNull(value: unknown): string | null {
   }
 }
 
+// The insert's own conflict outcome is the claim; a prior select can't be trusted.
+async function claimDedupeIn(
+  db: Kysely<WorkflowRuntimeDB>,
+  workflowId: string,
+  dedupeKey: string,
+  ttlMs: number,
+  nowIso: string,
+  runId: string | null,
+): Promise<boolean> {
+  const cutoff = new Date(Date.parse(nowIso) - ttlMs).toISOString();
+  await db
+    .deleteFrom("trigger_dedupe")
+    .where("workflow_id", "=", workflowId)
+    .where("created_at", "<", cutoff)
+    .execute();
+  const inserted = await db
+    .insertInto("trigger_dedupe")
+    .values({
+      workflow_id: workflowId,
+      dedupe_key: dedupeKey,
+      run_id: runId,
+      created_at: nowIso,
+    })
+    .onConflict((oc) => oc.columns(["workflow_id", "dedupe_key"]).doNothing())
+    .returning("dedupe_key")
+    .executeTakeFirst();
+  return inserted !== undefined;
+}
+
 export interface EnqueueRunOptions {
   workflowId: string;
   triggerKind: string;
@@ -822,7 +852,49 @@ export class WorkflowRunStore {
   // only known once fire() reads the document, so beginRun fills them in.
   async enqueueRun(options: EnqueueRunOptions): Promise<string> {
     const id = randomUUID();
-    await this.db
+    await this.insertPendingRun(this.db, id, options);
+    // In flight from here: the row is this process's to finish, and no sweep
+    // of either kind may close it out underneath the run about to start.
+    this.runsInFlight.add(id);
+    return id;
+  }
+
+  // Claims the dedupe key and journals the PENDING run in one transaction, so
+  // a crash cannot keep the claim without the run. Null when already claimed.
+  async claimAndEnqueueRun(
+    dedupeKey: string,
+    ttlMs: number,
+    nowIso: string,
+    options: EnqueueRunOptions,
+  ): Promise<string | null> {
+    const id = randomUUID();
+    const claimed = await this.db.transaction().execute(async (trx) => {
+      if (
+        !(await claimDedupeIn(
+          trx,
+          options.workflowId,
+          dedupeKey,
+          ttlMs,
+          nowIso,
+          id,
+        ))
+      ) {
+        return false;
+      }
+      await this.insertPendingRun(trx, id, options);
+      return true;
+    });
+    if (!claimed) return null;
+    this.runsInFlight.add(id);
+    return id;
+  }
+
+  private async insertPendingRun(
+    db: Kysely<WorkflowRuntimeDB>,
+    id: string,
+    options: EnqueueRunOptions,
+  ): Promise<void> {
+    await db
       .insertInto("run")
       .values({
         id,
@@ -840,10 +912,6 @@ export class WorkflowRunStore {
         warning_notes: null,
       })
       .execute();
-    // In flight from here: the row is this process's to finish, and no sweep
-    // of either kind may close it out underneath the run about to start.
-    this.runsInFlight.add(id);
-    return id;
   }
 
   // Adopts an enqueued row: the run starts now, with the definition fire() read.
@@ -1261,44 +1329,13 @@ export class WorkflowRunStore {
   }
 
   // Claim-with-status dedupe: true when the key was free (caller fires).
-  // The insert's own conflict outcome is the claim; a prior select can't be trusted.
   async claimDedupe(
     workflowId: string,
     dedupeKey: string,
     ttlMs: number,
     nowIso: string,
   ): Promise<boolean> {
-    const cutoff = new Date(Date.parse(nowIso) - ttlMs).toISOString();
-    await this.db
-      .deleteFrom("trigger_dedupe")
-      .where("workflow_id", "=", workflowId)
-      .where("created_at", "<", cutoff)
-      .execute();
-    const inserted = await this.db
-      .insertInto("trigger_dedupe")
-      .values({
-        workflow_id: workflowId,
-        dedupe_key: dedupeKey,
-        run_id: null,
-        created_at: nowIso,
-      })
-      .onConflict((oc) => oc.columns(["workflow_id", "dedupe_key"]).doNothing())
-      .returning("dedupe_key")
-      .executeTakeFirst();
-    return inserted !== undefined;
-  }
-
-  async recordDedupeRun(
-    workflowId: string,
-    dedupeKey: string,
-    runId: string,
-  ): Promise<void> {
-    await this.db
-      .updateTable("trigger_dedupe")
-      .set({ run_id: runId })
-      .where("workflow_id", "=", workflowId)
-      .where("dedupe_key", "=", dedupeKey)
-      .execute();
+    return claimDedupeIn(this.db, workflowId, dedupeKey, ttlMs, nowIso, null);
   }
 
   async getPieceStoreValue(
