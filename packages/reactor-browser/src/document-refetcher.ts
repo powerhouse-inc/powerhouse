@@ -30,6 +30,7 @@ function rejectedPromise<T>(reason: unknown): RejectedPromise<T> {
 
 const MISSING_DOCUMENT_ERRORS = [
   "DocumentNotFoundError",
+  "DocumentPurgedError",
   "DocumentDeletedError",
 ];
 
