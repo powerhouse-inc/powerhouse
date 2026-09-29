@@ -83,7 +83,17 @@ export async function createNamespacedDb<Schema>(
   const hashValue = shouldHash ? hashNamespace(namespace) : namespace;
   await db.schema.createSchema(hashValue).ifNotExists().execute();
   const schemaRelationalDb = db.withSchema(hashValue);
+  Object.defineProperty(schemaRelationalDb, NAMESPACE_SCHEMA, {
+    value: hashValue,
+  });
   return schemaRelationalDb as IRelationalDb<Schema>;
+}
+
+const NAMESPACE_SCHEMA = Symbol.for("ph.relational.namespaceSchema");
+
+/** The schema behind a handle from `createNamespace`; undefined otherwise. */
+export function namespaceSchemaOf(db: object): string | undefined {
+  return (db as { [NAMESPACE_SCHEMA]?: string })[NAMESPACE_SCHEMA];
 }
 
 export function createNamespacedQueryBuilder<Schema>(
