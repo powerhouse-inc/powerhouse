@@ -26,12 +26,12 @@ async function chooseType(app: Page, field: string, type: string) {
 }
 
 test.describe("Typed variables", () => {
-  test.beforeEach(async ({ app }) => {
+  test("a number variable takes numbers only, and a secret keeps only its reference", async ({
+    app,
+    stack,
+  }) => {
     await openWorkflowEditor(app);
     await app.getByRole("button", { name: /Variables/ }).click();
-  });
-
-  test("a number variable takes numbers only", async ({ app, stack }) => {
     await app.getByRole("textbox", { name: "New variable name" }).fill("limit");
     await chooseType(app, "New variable type", "Number");
     const value = app.getByRole("textbox", { name: "New variable value" });
@@ -63,9 +63,8 @@ test.describe("Typed variables", () => {
         (variable) => variable.key === "limit",
       )?.value,
     ).toBe(25);
-  });
 
-  test("a secret variable keeps only its reference", async ({ app, stack }) => {
+    // A secret variable keeps only its reference.
     await app
       .getByRole("textbox", { name: "New variable name" })
       .fill("api_token");

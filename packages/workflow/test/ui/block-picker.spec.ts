@@ -63,29 +63,7 @@ test.describe("Block picker", () => {
       });
   });
 
-  test("a picked step stores its piece's defaults in its config", async ({
-    stack,
-    app,
-  }) => {
-    await app.setViewportSize({ width: 1440, height: 1400 });
-    await openWorkflowEditor(app);
-    await app.locator(".react-flow__node-apAppend button").last().click();
-    await app.getByRole("button", { name: "Powerhouse", exact: true }).click();
-    await app
-      .getByRole("button")
-      .filter({ hasText: "Lists documents by type and name" })
-      .click();
-    const config = async () =>
-      (await workflowState<Steps>(app, stack.seeded.digest)).steps.find(
-        (step) => step.actionName === "document-find",
-      )?.config;
-    // document-find declares includeState with a default of false.
-    await expect.poll(config).toMatchObject({ includeState: false });
-    await canvasNode(app, "Find documents").click();
-    await expect(app.getByLabel("Include state")).not.toBeChecked();
-  });
-
-  test("a picked step appears at once and gets its defaults once the form loads", async ({
+  test("a picked step appears at once and stores its defaults once the form loads", async ({
     stack,
     app,
   }) => {
@@ -113,11 +91,15 @@ test.describe("Block picker", () => {
       (await workflowState<Steps>(app, stack.seeded.digest)).steps.find(
         (entry) => entry.actionName === "document-find",
       );
+    // document-find declares includeState with a default of false.
     await expect
       .poll(async () => (await step())?.config)
       .toMatchObject({
         includeState: false,
       });
+    await canvasNode(app, "Find documents").click();
+    await expect(app.getByLabel("Include state")).not.toBeChecked();
+    await app.getByRole("button", { name: "Close panel" }).click();
     // The add and the defaults that followed it are one edit to undo.
     await app.keyboard.press("ControlOrMeta+z");
     await expect.poll(step).toBeUndefined();

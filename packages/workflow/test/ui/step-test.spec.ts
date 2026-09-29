@@ -70,7 +70,7 @@ const tick = (page: Page, node: string) =>
   canvasNode(page, node).getByLabel("Tested", { exact: true });
 
 test.describe("Test step", () => {
-  test("points at the step to test first, then shows the output", async ({
+  test("points at the step to test first, then shows the output and offers it to the picker", async ({
     stack,
     app,
   }) => {
@@ -110,23 +110,9 @@ test.describe("Test step", () => {
     await expect(app.getByRole("alert")).toBeVisible();
     await expect(badge(app, "Broken", "Failed")).toBeVisible();
     await shot(app, "step-test-badges");
-  });
 
-  test("the picker reads the last test and brackets a dotted key", async ({
-    stack,
-    app,
-  }) => {
-    await createTestWorkflow(app, stack.drive);
-    await openWorkflowEditor(app, "Test me");
-    await canvasNode(app, "Call").click();
-    await app.getByRole("button", { name: "Test step" }).click();
-    await expect(tick(app, "Call")).toBeVisible();
-
+    // The picker reads the last test, and brackets a dotted key.
     await canvasNode(app, "Use").click();
-    await app.getByRole("button", { name: "Test step" }).click();
-    await expect(tick(app, "Use")).toBeVisible();
-
-    // Focusing a field opens the picker beside it.
     const url = app.getByRole("textbox", { name: /URL/i });
     await url.click();
     await url.press("End");

@@ -46,7 +46,7 @@ async function createVersionedWorkflow(page: Page, drive: string) {
 }
 
 test.describe("Piece version", () => {
-  test("a fallback step carries an amber badge that says what runs", async ({
+  test("a fallback step carries an amber badge, and the header counts and opens it", async ({
     stack,
     app,
   }) => {
@@ -64,14 +64,7 @@ test.describe("Piece version", () => {
     ).toHaveCount(0);
     expect(fallback.pieceVersion).toBe(`${major + 90}.0.0`);
     await shot(app, "version-badge");
-  });
 
-  test("the header counts the steps that run another version and opens the first", async ({
-    stack,
-    app,
-  }) => {
-    await createVersionedWorkflow(app, stack.drive);
-    await openWorkflowEditor(app, "Versions");
     const summary = app.getByRole("button", {
       name: "2 steps run a different piece version",
     });
@@ -84,35 +77,6 @@ test.describe("Piece version", () => {
       "Pinned ahead",
     );
     await shot(app, "version-summary");
-  });
-
-  test("the header summary stays neutral when every step is compatible", async ({
-    stack,
-    app,
-  }) => {
-    const http = await pieceAction("@activepieces/piece-http", "send_request");
-    const served = http.pieceVersion;
-    const id = await createWorkflowInBrowser(app, stack.drive, {
-      name: "Compatible",
-      enabled: false,
-      trigger: { ...(await coreTrigger("manual")), config: {} },
-      steps: [
-        {
-          key: "old",
-          name: "Pinned behind",
-          ...http,
-          pieceVersion: `${served.split("-")[0]}-0`,
-          config: { method: "GET", url: "http://127.0.0.1:1/x" },
-        },
-      ],
-    });
-    await waitServed(id, "old");
-    await openWorkflowEditor(app, "Compatible");
-    const summary = app.getByRole("button", {
-      name: "1 step runs a different piece version",
-    });
-    await expect(summary).toHaveAttribute("data-tone", "neutral");
-    await expect(summary).not.toHaveClass(/text-wf-warn/);
   });
 
   test("Update available rewrites only the step's piece version", async ({

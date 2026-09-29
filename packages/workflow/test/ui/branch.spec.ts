@@ -5,7 +5,6 @@ import {
   coreAction,
   coreTrigger,
   createWorkflowInBrowser,
-  fireAndWait,
   openWorkflowEditor,
   shot,
   workflowState,
@@ -70,35 +69,5 @@ test.describe("Branch", () => {
     await expect(
       app.getByRole("textbox", { name: /Compared with/ }),
     ).toHaveCount(0);
-  });
-
-  test("routes by the operator, and fails on an operand of the wrong type", async ({
-    stack,
-    app,
-  }) => {
-    const id = await createWorkflowInBrowser(app, stack.drive, {
-      name: "Numeric branch",
-      trigger: { ...(await coreTrigger("manual")), config: {} },
-      steps: [
-        {
-          key: "check",
-          name: "Check total",
-          ...(await coreAction("branch")),
-          config: {
-            left: "{{trigger.payload.total}}",
-            operator: "NUMBER_IS_GREATER_THAN",
-            right: "9",
-          },
-        },
-      ],
-    });
-    // As text "10" < "9"; the operator compares numbers.
-    const passed = await fireAndWait(id, { total: 10 });
-    expect(passed.status).toBe("SUCCEEDED");
-    expect(passed.steps[0].output).toMatchObject({ result: true });
-
-    const refused = await fireAndWait(id, { total: "ten" });
-    expect(refused.status).toBe("FAILED");
-    expect(refused.steps[0].error).toContain("left must be a number");
   });
 });

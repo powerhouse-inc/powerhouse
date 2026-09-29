@@ -13,7 +13,7 @@ interface TriggerState {
 }
 
 test.describe("Webhook trigger form", () => {
-  test("stores the scheme it shows, and No label stores an empty prefix", async ({
+  test("shows the fields its scheme uses, stores the scheme, and No label stores an empty prefix", async ({
     stack,
     app,
   }) => {
@@ -28,18 +28,42 @@ test.describe("Webhook trigger form", () => {
     const config = async () =>
       (await workflowState<TriggerState>(app, id)).trigger.config;
 
+    // None shows only the fields an unverified endpoint uses.
+    const verification = app.getByRole("combobox", { name: /Verification/ });
+    await expect(verification).toContainText("None");
+    await app.getByRole("button", { name: /More options/ }).click();
+    const signedOnly = [
+      /Secret/,
+      /^Header/,
+      /Replay window/,
+      /Hash/,
+      /Digest encoding/,
+      /Signature label/,
+    ];
+    for (const name of signedOnly) {
+      await expect(app.getByText(name)).toHaveCount(0);
+    }
+    await expect(app.getByText(/Event id field/)).toBeVisible();
+    await shot(app, "webhook-none");
+
     // Any edit writes the default the Verification field shows.
     await app.getByRole("combobox", { name: /Method/ }).click();
     await app.getByRole("option", { name: "Any" }).click();
     await expect.poll(config).toMatchObject({ methods: "ANY", scheme: "none" });
 
-    await app.getByRole("combobox", { name: /Verification/ }).click();
+    await verification.click();
+    await app.getByRole("option", { name: /^HMAC digest$/ }).click();
+    await expect(app.getByRole("combobox", { name: /Hash/ })).toBeVisible();
+    await expect(
+      app.getByRole("combobox", { name: /Digest encoding/ }),
+    ).toBeVisible();
+
+    await verification.click();
     await app.getByRole("option", { name: /HMAC digest with a label/ }).click();
     await expect
       .poll(async () => (await config()).scheme)
       .toBe("hmac-prefixed");
 
-    await app.getByRole("button", { name: /More options/ }).click();
     const label = app.getByRole("textbox", { name: /Signature label/ });
     await expect(label).toBeVisible();
     await app.getByRole("checkbox", { name: "No label" }).check();
@@ -59,43 +83,5 @@ test.describe("Webhook trigger form", () => {
     await app.getByRole("combobox", { name: /Hash/ }).click();
     await app.getByRole("button", { name: "Clear selection" }).click();
     await expect.poll(async () => "algorithm" in (await config())).toBe(false);
-  });
-
-  test("None shows only the fields an unverified endpoint uses", async ({
-    stack,
-    app,
-  }) => {
-    await createWorkflowInBrowser(app, stack.drive, {
-      name: "Open hook",
-      enabled: false,
-      trigger: { ...(await coreTrigger("webhook")), config: {} },
-      steps: [],
-    });
-    await openWorkflowEditor(app, "Open hook");
-    await canvasNode(app, "Webhook").click();
-    await expect(
-      app.getByRole("combobox", { name: /Verification/ }),
-    ).toContainText("None");
-    await app.getByRole("button", { name: /More options/ }).click();
-    const signedOnly = [
-      /Secret/,
-      /^Header/,
-      /Replay window/,
-      /Hash/,
-      /Digest encoding/,
-      /Signature label/,
-    ];
-    for (const name of signedOnly) {
-      await expect(app.getByText(name)).toHaveCount(0);
-    }
-    await expect(app.getByText(/Event id field/)).toBeVisible();
-    await shot(app, "webhook-none");
-
-    await app.getByRole("combobox", { name: /Verification/ }).click();
-    await app.getByRole("option", { name: /^HMAC digest$/ }).click();
-    await expect(app.getByRole("combobox", { name: /Hash/ })).toBeVisible();
-    await expect(
-      app.getByRole("combobox", { name: /Digest encoding/ }),
-    ).toBeVisible();
   });
 });

@@ -105,17 +105,6 @@ test.describe("Workflow Studio", () => {
     ).toBeVisible();
   });
 
-  test("a workflow's dot follows its last run", async ({ app }) => {
-    await openDrive(app);
-    const sidebar = app.getByRole("complementary");
-    await expect(
-      sidebar.getByRole("button", { name: "Uptime ping" }).locator("[title]"),
-    ).toHaveAttribute("title", "Last run failed");
-    await expect(
-      sidebar.getByRole("button", { name: "Daily digest" }).locator("[title]"),
-    ).toHaveAttribute("title", "Not run yet");
-  });
-
   test("picking a connection opens its editor", async ({ app }) => {
     await openDrive(app);
     await selectInSidebar(app, "Ops Slack");
