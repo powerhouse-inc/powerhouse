@@ -659,6 +659,12 @@ export class WorkflowRuntimeService {
   // instance's lifetime, so a replaced host means a replaced runtime.
   constructor(host: WorkflowRuntimeHostDeps) {
     this.host = host;
+    this.blockResolver = new BlockResolver({
+      local: installedPiece,
+      timeoutMs: host.pieceVersionLookupMs ?? PIECE_VERSION_LOOKUP_TIMEOUT_MS,
+      hasBlock: (ref, version, source) =>
+        this.versionHasBlock(ref, version, source),
+    });
     this.logger = host.logger ?? logger;
     this.attachments = host.attachments
       ? createAttachmentPort(
@@ -1096,12 +1102,7 @@ export class WorkflowRuntimeService {
 
   // The one resolution policy (block-resolver.ts), for steps, triggers, design
   // time and step tests alike. Bounded per source: an unreachable one adds nothing.
-  private readonly blockResolver = new BlockResolver({
-    local: installedPiece,
-    timeoutMs: PIECE_VERSION_LOOKUP_TIMEOUT_MS,
-    hasBlock: (ref, version, source) =>
-      this.versionHasBlock(ref, version, source),
-  });
+  private readonly blockResolver: BlockResolver;
 
   // Descriptors are cached per version, so a candidate is described once.
   private async versionHasBlock(

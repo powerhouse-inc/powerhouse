@@ -125,8 +125,13 @@ afterAll(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-const armed = (): PieceTriggerBinding => upsert.mock.calls.at(-1)![0];
 const reason = () => String(reject.mock.calls.at(-1)?.[3]);
+// Says why when nothing was armed, rather than failing on an empty call list.
+const armed = (): PieceTriggerBinding => {
+  const call = upsert.mock.calls.at(-1);
+  if (!call) throw new Error(`Nothing was armed; refused with: ${reason()}`);
+  return call[0];
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
