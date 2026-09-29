@@ -911,8 +911,8 @@ export class WorkflowRunStore {
     if (this.runsInFlight.size > 0) {
       query = query.where("id", "not in", [...this.runsInFlight]);
     }
-    const result = await query.executeTakeFirst();
-    const recovered = Number(result.numUpdatedRows);
+    // Counted off RETURNING: the knex-backed dialect reports no row count.
+    const recovered = (await query.returning("id").execute()).length;
     if (recovered > 0) {
       logger.warn(
         `Recovered ${recovered} workflow run(s) left RUNNING by a stopped reactor; they are now FAILED and rerunnable`,
@@ -937,8 +937,8 @@ export class WorkflowRunStore {
     if (this.runsInFlight.size > 0) {
       query = query.where("id", "not in", [...this.runsInFlight]);
     }
-    const result = await query.executeTakeFirst();
-    const recovered = Number(result.numUpdatedRows);
+    // Counted off RETURNING: the knex-backed dialect reports no row count.
+    const recovered = (await query.returning("id").execute()).length;
     if (recovered > 0) {
       logger.warn(
         `Recovered ${recovered} workflow run(s) journaled by a stopped reactor but never started; they are now FAILED and rerunnable`,
@@ -1560,11 +1560,12 @@ export class WorkflowRunStore {
 
   // Keys older than the longest dedupe TTL can no longer suppress anything.
   async pruneDedupe(cutoffIso: string): Promise<number> {
-    const result = await this.db
+    const deleted = await this.db
       .deleteFrom("trigger_dedupe")
       .where("created_at", "<", cutoffIso)
-      .executeTakeFirst();
-    return Number(result.numDeletedRows);
+      .returning("dedupe_key")
+      .execute();
+    return deleted.length;
   }
 
   async getPieceStoreValue(
