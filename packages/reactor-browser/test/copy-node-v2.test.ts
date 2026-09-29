@@ -58,6 +58,7 @@ function install(
   const client = {
     get: (id: string) => Promise.resolve(id === DRIVE_ID ? drive : source),
     getCreateSignaturePolicy: () => Promise.resolve(createPolicy),
+    getCreateProtocolVersions: () => Promise.resolve({ "base-reducer": 2 }),
     getDocumentModelModules: () =>
       Promise.resolve({ results: [module], options: { cursor: "", limit: 1 } }),
     drives: {

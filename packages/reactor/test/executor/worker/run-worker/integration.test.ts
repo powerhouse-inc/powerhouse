@@ -381,6 +381,66 @@ describe("runWorker in-process execution", () => {
     ]);
   });
 
+  it("refuses an unsupported protocol version as the host does", async () => {
+    async function create(
+      protocolSupport: InitMessage["executorConfig"],
+      documentId: string,
+    ): Promise<ResultMessage> {
+      const h = await startInProcessWorker();
+      const ready = waitForMessage(
+        h.port1,
+        (m): m is ReadyMessage => m.type === "ready",
+      );
+      h.port1.postMessage(makeInit(undefined, protocolSupport));
+      await ready;
+
+      const job: Job = {
+        id: `job-${documentId}`,
+        kind: "mutation",
+        documentId,
+        scope: "document",
+        branch: "main",
+        actions: [
+          {
+            id: generateId(),
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: new Date().toISOString(),
+            input: {
+              documentId,
+              model: "powerhouse/document-drive",
+              protocolVersions: { "base-reducer": 7 },
+            },
+          },
+        ],
+        operations: [],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        retryCount: 0,
+        maxRetries: 0,
+        errorHistory: [],
+        meta: { batchId: `batch-${documentId}`, batchJobIds: [] },
+      };
+      const result = waitForMessage(
+        h.port1,
+        (m): m is ResultMessage => m.type === "result",
+      );
+      h.port1.postMessage({ type: "execute", correlationId: documentId, job });
+      return result;
+    }
+
+    const refused = await create(undefined, "br7-default");
+    expect(refused.result.success).toBe(false);
+    expect(refused.error?.name).toBe("UnsupportedProtocolVersionError");
+
+    const admitted = await create(
+      { protocolSupport: { "base-reducer": [1, 2, 7] } },
+      "br7-widened",
+    );
+    expect(admitted.error).toBeUndefined();
+    expect(admitted.result.success).toBe(true);
+  });
+
   it("builds its signer from the init's spec and signs the NOOP an UNDO becomes", async () => {
     const reactorKey = await TestP256Signer.create();
     const specs: string[] = [];

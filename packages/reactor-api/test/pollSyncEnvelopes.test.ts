@@ -93,6 +93,8 @@ function makeSyncManager(items: SyncOperation[]): ISyncManager {
     },
   };
   return {
+    localManifest: () => ({ revision: "server" }),
+
     getById: (id: string) => {
       if (id !== CHANNEL_ID) {
         throw new Error(`Unknown channel: ${id}`);
@@ -534,6 +536,8 @@ describe("holding outbox entries the caller may not read", () => {
       },
     };
     const syncManager = {
+      localManifest: () => ({ revision: "server" }),
+
       getById: (id: string) => {
         if (id !== CHANNEL_ID) throw new Error(`Unknown channel: ${id}`);
         return remote;

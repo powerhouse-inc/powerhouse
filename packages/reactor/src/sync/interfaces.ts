@@ -1,3 +1,4 @@
+import type { PeerManifest } from "@powerhousedao/shared/document-model";
 import type {
   DriveCollectionId,
   IOperationIndex,
@@ -5,6 +6,8 @@ import type {
 import type { ShutdownStatus } from "../shared/types.js";
 import type { ISyncCursorStorage } from "../storage/interfaces.js";
 import type { IMailbox } from "./mailbox.js";
+import type { SyncOperation } from "./sync-operation.js";
+import type { IPeerAgreement } from "./peer-agreement.js";
 import type {
   SyncStatus,
   SyncStatusChangeCallback,
@@ -14,6 +17,8 @@ import type {
   ConnectionStateSnapshot,
   RemoteFilter,
   RemoteOptions,
+  RemotePeer,
+  SyncHold,
   SyncResult,
 } from "./types.js";
 
@@ -96,7 +101,29 @@ export interface IChannel {
    * eligible to be removed when that holder goes silent.
    */
   lastHolderPollUtcMs(): number | undefined;
+
+  /**
+   * Read on every handshake, so the peer always hears the current manifest.
+   * A channel without it never announces, and its peer sees a silent peer.
+   */
+  setLocalManifest?(provider: () => PeerManifest): void;
+
+  /**
+   * Fires when the peer's manifest changes; null for a silent peer. A channel
+   * whose peer announces through the sync manager, or that omits this, never
+   * fires.
+   */
+  onPeerManifest?(callback: PeerManifestListener): () => void;
 }
+
+/**
+ * `undelivered`: outbox items the channel sent that the peer never received,
+ * to be judged as unsent. The channel awaits the listener before sending more.
+ */
+export type PeerManifestListener = (
+  manifest: PeerManifest | null,
+  undelivered?: readonly SyncOperation[],
+) => void | Promise<void>;
 
 /**
  * Factory for creating channel instances.
@@ -147,6 +174,8 @@ export type RemoteMeta = {
   channelConfig: ChannelConfig;
   filter: RemoteFilter;
   options: RemoteOptions;
+  /** Undefined: the peer has not been heard from. */
+  peer?: RemotePeer;
 };
 
 // A configured remote: cloneable `meta` plus the live `channel`.
@@ -209,6 +238,8 @@ export interface ISyncManager {
    * @param filter - Optional filter for operations (defaults to no filtering)
    * @param options - Optional remote configuration options
    * @param id - Optional ID for the remote (generated if not provided)
+   * @param peer - The peer's manifest when it announced one on creation;
+   *   null for a silent peer, undefined when not yet heard
    * @returns Promise that resolves with the created remote
    * @throws Error if a remote with this name already exists
    */
@@ -219,7 +250,23 @@ export interface ISyncManager {
     filter?: RemoteFilter,
     options?: RemoteOptions,
     id?: string,
+    peer?: PeerManifest | null,
   ): Promise<Remote>;
+
+  /** Records what a remote's peer announced; null for a silent peer. */
+  setPeerManifest(id: string, manifest: PeerManifest | null): Promise<void>;
+
+  /** What this reactor announces to its peers. */
+  localManifest(): PeerManifest;
+
+  /** Documents held back from remotes whose peers cannot run them. */
+  listHolds(filter?: {
+    remoteName?: string;
+    documentId?: string;
+  }): Promise<SyncHold[]>;
+
+  /** Agreement over every persisted remote, live or not. */
+  agreement(): IPeerAgreement;
 
   /**
    * Binds a remote to an address, so only that address may poll it.

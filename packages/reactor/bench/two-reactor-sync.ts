@@ -14,9 +14,9 @@
  * 2. A collection is identified by the document that belongs to it. Syncing a
  *    fixed name like "collection1" registers remotes for a collection nothing
  *    is a member of: it connects, reports healthy, and transfers nothing. The
- *    ids are deterministic, so the remotes can be registered up front - which
- *    they have to be, because the outbox is filled from JOB_WRITE_READY as
- *    writes happen. A remote added afterwards never sees them, and pulling
+ *    ids are derived before the create, so the remotes can be registered up
+ *    front - which they have to be, because the outbox is filled from
+ *    JOB_WRITE_READY as writes happen. A remote added afterwards never sees them, and pulling
  *    them later is the backfill this transport cannot do.
  * 3. Concurrent writes still have to be awaited somewhere. `void execute(...)`
  *    hides a rejection and leaves the bench waiting on convergence that can
@@ -75,6 +75,7 @@
 
 import { readFileSync } from "node:fs";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type { ISigner, PHDocument } from "@powerhousedao/shared/document-model";
 import { Bench } from "tinybench";
 import type { DerivedRatio } from "./records/benchmark-schema.js";
 import {
@@ -90,6 +91,7 @@ import {
 import { DriveCollectionId } from "../src/cache/operation-index-types.js";
 import { ReactorBuilder } from "../src/core/reactor-builder.js";
 import type { IReactor, ReactorModule } from "../src/core/types.js";
+import { signActions } from "../src/core/utils.js";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
 import { ReactorEventTypes } from "../src/events/types.js";
@@ -107,6 +109,7 @@ import type { IChannelFactory } from "../src/sync/interfaces.js";
 import { SyncBuilder } from "../src/sync/sync-builder.js";
 import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
 import { TestChannel } from "../test/sync/channels/test-channel.js";
+import { TestP256Signer } from "../test/utils/p256-signer.js";
 
 type TwoReactorSetup = {
   reactorA: IReactor;
@@ -119,6 +122,9 @@ type TwoReactorSetup = {
   /** Remote name to its peer's, filled in per document by connectDocuments. */
   peerMapping: Map<string, string>;
   tracker: SyncTracker;
+  signers: Map<IReactor, ISigner>;
+  /** The documents' derived ids, known once they are made in beforeEach. */
+  ids: string[];
 };
 
 type JobStamp = {
@@ -538,6 +544,10 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
     [moduleA.reactor, eventBusA],
     [moduleB.reactor, eventBusB],
   ]);
+  const signers = new Map<IReactor, ISigner>([
+    [moduleA.reactor, (await TestP256Signer.create()).asISigner()],
+    [moduleB.reactor, (await TestP256Signer.create()).asISigner()],
+  ]);
 
   return {
     reactorA: moduleA.reactor,
@@ -549,6 +559,8 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
     eventBusB,
     peerMapping,
     tracker,
+    signers,
+    ids: [],
   };
 }
 
@@ -559,21 +571,23 @@ async function submitWrite(
   docId: string,
   actions: Parameters<IReactor["execute"]>[2],
 ): Promise<void> {
-  const info = await reactor.execute(docId, "main", actions);
+  const signed = await signActions(actions, setup.signers.get(reactor)!, {
+    documentId: docId,
+    branch: "main",
+  });
+  const info = await reactor.execute(docId, "main", signed);
   setup.tracker.track(reactor, info.id);
 }
 
 /** Creates documents on the chosen side; the caller waits for convergence. */
 async function createDocuments(
   setup: TwoReactorSetup,
-  ids: string[],
+  documents: PHDocument[],
   sideFor: (setup: TwoReactorSetup, index: number) => IReactor,
 ): Promise<void> {
-  for (const [index, id] of ids.entries()) {
-    const document = driveDocumentModelModule.utils.createDocument();
-    document.header.id = id;
+  for (const [index, document] of documents.entries()) {
     const reactor = sideFor(setup, index);
-    const info = await reactor.create(document);
+    const info = await reactor.create(document, setup.signers.get(reactor));
     setup.tracker.track(reactor, info.id);
   }
 }
@@ -800,7 +814,7 @@ type Scenario = {
   name: string;
   /** The case's name in records before the timed window changed; "" if never renamed. */
   continues: string;
-  ids: string[];
+  documents: number;
   /** Which side creates each document. */
   creatorFor: (setup: TwoReactorSetup, index: number) => IReactor;
   /** Submits every write; the harness waits for convergence afterwards. */
@@ -820,18 +834,22 @@ function lifecycleFor(scenario: Scenario): Lifecycle {
   return {
     beforeEach: async () => {
       setup = await setupTwoReactors();
-      await connectDocuments(setup, scenario.ids);
-      await createDocuments(setup, scenario.ids, scenario.creatorFor);
+      const documents = Array.from({ length: scenario.documents }, () =>
+        driveDocumentModelModule.utils.createDocument(),
+      );
+      setup.ids = documents.map((document) => document.header.id);
+      await connectDocuments(setup, setup.ids);
+      await createDocuments(setup, documents, scenario.creatorFor);
       await setup.tracker.whenConverged(
         setup.reactorA,
         setup.reactorB,
-        scenario.ids,
+        setup.ids,
       );
     },
     afterEach: async () => {
       const current = setup!;
       try {
-        await assertConverged(current.reactorA, current.reactorB, scenario.ids);
+        await assertConverged(current.reactorA, current.reactorB, current.ids);
         addAttribution(
           attributionFor(scenario.name),
           current.tracker.attribution(),
@@ -849,11 +867,11 @@ function lifecycleFor(scenario: Scenario): Lifecycle {
 async function run(scenario: Scenario): Promise<void> {
   const current = setup!;
   current.tracker.resetStamps();
-  await Promise.all(scenario.write(current, scenario.ids));
+  await Promise.all(scenario.write(current, current.ids));
   await current.tracker.whenConverged(
     current.reactorA,
     current.reactorB,
-    scenario.ids,
+    current.ids,
   );
 }
 
@@ -865,7 +883,7 @@ const scenarios: Scenario[] = [
   {
     name: "Baseline: 10 documents, 10 operations each (writes to convergence)",
     continues: "Baseline: 10 documents, 10 operations each",
-    ids: Array.from({ length: 10 }, (_, i) => deterministicId("doc", i)),
+    documents: 10,
     creatorFor: (setup, i) => (i < 5 ? setup.reactorA : setup.reactorB),
     write: (setup, ids) => {
       const writes: Promise<void>[] = [];
@@ -887,7 +905,7 @@ const scenarios: Scenario[] = [
   {
     name: "Contention: 10 documents, 10 operations each, writer alternates per operation (writes to convergence)",
     continues: "",
-    ids: Array.from({ length: 10 }, (_, i) => deterministicId("doc", i + 400)),
+    documents: 10,
     creatorFor: (setup, i) => (i < 5 ? setup.reactorA : setup.reactorB),
     write: (setup, ids) => {
       const writes: Promise<void>[] = [];
@@ -909,7 +927,7 @@ const scenarios: Scenario[] = [
   {
     name: "Conflicts: 5 documents, 20 conflicting operations each (writes to convergence)",
     continues: "Conflicts: 5 documents, 20 conflicting operations each",
-    ids: Array.from({ length: 5 }, (_, i) => deterministicId("doc", i + 100)),
+    documents: 5,
     creatorFor: sideA,
     write: (setup, ids) => {
       const writes: Promise<void>[] = [];
@@ -931,7 +949,7 @@ const scenarios: Scenario[] = [
   {
     name: "Heavy Load: 50 documents, 100 operations each (writes to convergence)",
     continues: "Heavy Load: 50 documents, 100 operations each",
-    ids: Array.from({ length: 50 }, (_, i) => deterministicId("doc", i + 200)),
+    documents: 50,
     creatorFor: alternating,
     write: (setup, ids) => {
       const writes: Promise<void>[] = [];
@@ -954,7 +972,7 @@ const scenarios: Scenario[] = [
     name: "Deep Hierarchy: 10 documents with nested structures (writes to convergence), single writer per document",
     continues:
       "Deep Hierarchy: 10 documents with nested structures (writes to convergence)",
-    ids: Array.from({ length: 10 }, (_, i) => deterministicId("doc", i + 300)),
+    documents: 10,
     creatorFor: sideA,
     write: (setup, ids) => {
       const { reactorA } = setup;
@@ -991,7 +1009,7 @@ const scenarios: Scenario[] = [
   {
     name: "Document Count: 50 documents, 10 operations each (writes to convergence)",
     continues: "",
-    ids: Array.from({ length: 50 }, (_, i) => deterministicId("doc", i + 500)),
+    documents: 50,
     creatorFor: alternating,
     write: (setup, ids) => {
       const writes: Promise<void>[] = [];
@@ -1013,7 +1031,7 @@ const scenarios: Scenario[] = [
   {
     name: "History Depth: 10 documents, 100 operations each (writes to convergence)",
     continues: "",
-    ids: Array.from({ length: 10 }, (_, i) => deterministicId("doc", i + 600)),
+    documents: 10,
     creatorFor: alternating,
     write: (setup, ids) => {
       const writes: Promise<void>[] = [];
@@ -1126,7 +1144,14 @@ for (const scenario of scenarios) {
 
 say("Running Two-Reactor Sync Benchmarks...\n");
 
-await bench.run();
+try {
+  await bench.run();
+} catch (error) {
+  process.stderr.write(
+    `sync bench failed: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}\n`,
+  );
+  process.exit(1);
+}
 
 if (record) {
   const target = findTarget("sync");

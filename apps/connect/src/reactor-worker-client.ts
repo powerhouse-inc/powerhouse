@@ -5,6 +5,7 @@ import {
   type IDocumentModelLoader,
   type ModelLoadedEvent,
   type ReactorFeatureFlags,
+  type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import {
   setPGliteDB,
@@ -55,6 +56,8 @@ export type WorkerReactorClientArgs = {
   featureFlags: Partial<ReactorFeatureFlags>;
   /** What the worker's client creates new documents as. */
   createSignaturePolicy?: SignaturePolicy;
+  /** Whether the worker boots over stored documents this build does not run. */
+  unsupportedStoredDocuments?: UnsupportedStoredDocuments;
   /** Where the worker's trust policy verifies signers under authEnforcement. */
   renownEndpoints?: RenownTrustEndpoints;
   documentModelModules: DocumentModelModule[];
@@ -147,6 +150,7 @@ export function createWorkerReactorClientModule(
         renownChainId: args.renownChainId,
         featureFlags: args.featureFlags,
         createSignaturePolicy: args.createSignaturePolicy,
+        unsupportedStoredDocuments: args.unsupportedStoredDocuments,
         renownEndpoints: args.renownEndpoints,
       },
       packages: args.packageSpecs,

@@ -466,11 +466,15 @@ query PollSyncEnvelopes(
   $channelId: String!
   $outboxAck: Int!
   $outboxLatest: Int!
+  $manifestRevision: String
+  $refusals: [SyncRefusalInput!]
 ) {
   pollSyncEnvelopes(
     channelId: $channelId
     outboxAck: $outboxAck
     outboxLatest: $outboxLatest
+    manifestRevision: $manifestRevision
+    refusals: $refusals
   ) {
     envelopes {
       type
@@ -530,6 +534,8 @@ query PollSyncEnvelopes(
       errorType
     }
     hasMore
+    manifestRevision
+    peerManifestRevision
   }
 }
 
@@ -537,9 +543,16 @@ mutation TouchChannel($input: TouchChannelInput!) {
   touchChannel(input: $input) {
     success
     ackOrdinal
+    manifest
   }
 }
 
-mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!) {
-  pushSyncEnvelopes(envelopes: $envelopes)
+mutation PushSyncEnvelopes(
+  $envelopes: [SyncEnvelopeInput!]!
+  $peerManifestRevision: String
+) {
+  pushSyncEnvelopes(
+    envelopes: $envelopes
+    peerManifestRevision: $peerManifestRevision
+  )
 }

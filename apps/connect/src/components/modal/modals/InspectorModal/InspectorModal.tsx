@@ -27,6 +27,8 @@ export const InspectorModal: React.FC = () => {
     addRemoteManual,
     triggerPull,
     connectionStates,
+    getAgreement,
+    getHolds,
   } = useRemotesInspector();
   const queueInspectorProps = useQueueInspector();
   const processorsInspectorProps = useProcessorsInspector();
@@ -62,6 +64,8 @@ export const InspectorModal: React.FC = () => {
         addRemoteManual,
         triggerPull,
         connectionStates,
+        getAgreement,
+        getHolds,
       }}
       queueInspectorProps={queueInspectorProps}
       processorsInspectorProps={processorsInspectorProps}

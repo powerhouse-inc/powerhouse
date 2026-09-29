@@ -3,8 +3,10 @@ import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import {
   collectHeldSyncOperations,
   touchChannel,
+  holdPollRefusals,
   pollSyncEnvelopes,
   pushSyncEnvelopes,
+  silenceUnversionedPoll,
 } from "../../src/graphql/reactor/resolvers.js";
 
 /**
@@ -110,7 +112,16 @@ export function createResolverBridge(
         channelId: string;
         outboxAck: number;
         outboxLatest: number;
+        manifestRevision?: string | null;
+        refusals?: Array<{ documentId: string; branch: string }> | null;
       };
+
+      holdPollRefusals(syncManager, variables.channelId, variables.refusals);
+      await silenceUnversionedPoll(
+        syncManager,
+        variables.channelId,
+        variables.manifestRevision,
+      );
 
       // Resolved only for a gated target: an ungated poll must reach the
       // resolver's own channel lookup, whose "Channel not found" is what a
@@ -165,6 +176,8 @@ export function createResolverBridge(
           envelopes: normalizedEnvelopes,
           ackOrdinal: result.ackOrdinal,
           hasMore: result.hasMore,
+          manifestRevision: result.manifestRevision,
+          peerManifestRevision: result.peerManifestRevision,
         },
       });
     }
@@ -220,6 +233,7 @@ export function createResolverBridge(
             branch: string;
           };
           sinceTimestampUtcMs: string;
+          manifest?: unknown;
         };
       };
 

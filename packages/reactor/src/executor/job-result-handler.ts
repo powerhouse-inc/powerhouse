@@ -15,6 +15,7 @@ import {
   ExcessiveReshuffleError,
   InvalidOperationTimestampError,
   InvalidSignatureError,
+  UnsupportedProtocolVersionError,
   UpgradePreconditionFailedError,
 } from "../shared/errors.js";
 import {
@@ -156,7 +157,8 @@ export class JobResultHandler implements IJobResultHandler {
         // A refusal is a function of the write's content.
         InvalidSignatureError.isError(result.error) ||
         // The action's snapshot stays stale; the client retries with a fresh read.
-        UpgradePreconditionFailedError.isError(result.error))
+        UpgradePreconditionFailedError.isError(result.error) ||
+        UnsupportedProtocolVersionError.isError(result.error))
     ) {
       const errorInfo = toErrorInfo(result.error);
       this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);

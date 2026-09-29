@@ -13,7 +13,9 @@ import {
   hashDocumentStateForScope,
   isUndoRedo,
   mentionedGroupIds,
+  localSupports,
   normalizeDocumentModelVersion,
+  PEER_CAPABILITIES,
   sortOperations,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
@@ -186,6 +188,11 @@ export class SimpleJobExecutor implements IJobExecutor {
     trustPolicy?: SignatureTrustPolicy,
   ) {
     this.signer = signer ?? new PassthroughSigner();
+    // Resolved separately so reads are plain booleans; the config keeps what
+    // the caller passed, because that is what crosses to a pooled worker. The
+    // builder validates too, but a pooled worker is constructed directly from
+    // the flags that crossed the boundary.
+    this.featureFlags = resolveFeatureFlags(config.featureFlags);
     this.config = {
       featureFlags: config.featureFlags ?? {},
       maxSkipThreshold: config.maxSkipThreshold ?? MAX_SKIP_THRESHOLD,
@@ -199,13 +206,11 @@ export class SimpleJobExecutor implements IJobExecutor {
       yieldDeadlineMs: config.yieldDeadlineMs ?? 50,
       batchApplies: config.batchApplies ?? true,
       signatureVerification: config.signatureVerification ?? "enforce",
+      protocolSupport:
+        config.protocolSupport ??
+        localSupports(PEER_CAPABILITIES, this.featureFlags).protocols,
     };
 
-    // Resolved separately so reads are plain booleans; the config keeps what
-    // the caller passed, because that is what crosses to a pooled worker. The
-    // builder validates too, but a pooled worker is constructed directly from
-    // the flags that crossed the boundary.
-    this.featureFlags = resolveFeatureFlags(config.featureFlags);
     this.decisionModel = selectDecisionModel(this.featureFlags, registry);
     this.signatureAdmission = new SignatureAdmission(
       this.config.signatureVerification,
@@ -228,6 +233,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       driveContainerTypes,
       this.featureFlags,
       this.decisionModel,
+      this.config.protocolSupport,
     );
     this.executionScope =
       executionScope ??
@@ -350,6 +356,16 @@ export class SimpleJobExecutor implements IJobExecutor {
     } = params;
 
     let pendingEvent: JobWriteReadyEvent | undefined;
+
+    const unsupported = await this.unsupportedStoredProtocol(
+      job,
+      stores,
+      signal,
+    );
+    if (unsupported) {
+      return { result: buildErrorResult(job, unsupported, startTime) };
+    }
+
     const indexTxn = stores.operationIndex.start();
 
     if (job.kind === "load") {
@@ -547,6 +563,43 @@ export class SimpleJobExecutor implements IJobExecutor {
       actionResult.generatedOperations,
       stores,
       startTime,
+    );
+  }
+
+  /** A stored document at a version this reactor does not run is read-only here. */
+  private async unsupportedStoredProtocol(
+    job: Job,
+    stores: ExecutionStores,
+    signal?: AbortSignal,
+  ): Promise<Error | undefined> {
+    let versions;
+    try {
+      // Read the way admission reads: with decisions on, execution bypasses the meta cache.
+      versions =
+        this.featureFlags.documentDecisions && job.kind !== "load"
+          ? (
+              await stores.writeCache.getState(
+                job.documentId,
+                "document",
+                job.branch,
+                undefined,
+                signal,
+              )
+            ).header.protocolVersions
+          : (
+              await stores.documentMetaCache.getDocumentMeta(
+                job.documentId,
+                job.branch,
+                signal,
+              )
+            ).protocolVersions;
+    } catch {
+      // Not stored yet, or unreadable: the job's own reads decide.
+      return undefined;
+    }
+    return this.documentActionHandler.unsupportedProtocol(
+      job.documentId,
+      versions,
     );
   }
 

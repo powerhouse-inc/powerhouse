@@ -172,6 +172,8 @@ export type PHConnectReactor = {
   featureFlags?: PHConnectReactorFeatureFlags;
   /** What new documents are created as; `legacy` while peers predate v2-required documents. */
   createSignaturePolicy?: "legacy" | "v2-required";
+  /** Stored documents at protocol versions this build does not run: refuse to boot, or keep them read-only. */
+  unsupportedStoredDocuments?: "refuse" | "read-only";
 };
 
 /**

@@ -1,6 +1,12 @@
 import type {
   ISigner,
+  PeerCapability,
   UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
+import {
+  localSupports,
+  mergePeerCapabilities,
+  PEER_CAPABILITIES,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
@@ -34,6 +40,10 @@ import type { WriteCacheConfig } from "../cache/write-cache-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import { EventBus } from "../events/event-bus.js";
 import { resolveFeatureFlags } from "./feature-flags.js";
+import {
+  checkStoredProtocols,
+  type UnsupportedStoredDocuments,
+} from "./stored-protocol-check.js";
 import type { IEventBus } from "../events/interfaces.js";
 import { ReactorEventTypes } from "../events/types.js";
 import {
@@ -114,7 +124,7 @@ import { GroupReevaluationTrigger } from "./group-reevaluation-trigger.js";
 import { GqlRequestChannelFactory } from "../sync/channels/gql-request-channel-factory.js";
 import { GqlResponseChannelFactory } from "../sync/channels/gql-response-channel-factory.js";
 import { SyncBuilder } from "../sync/sync-builder.js";
-import type { JwtHandler } from "../sync/types.js";
+import type { JwtHandler, LocalPeer } from "../sync/types.js";
 import { ChannelScheme } from "../sync/types.js";
 import { createDefaultDatabase } from "./create-default-database.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
@@ -324,6 +334,7 @@ export class ReactorBuilder {
   private executorConfig: JobExecutorConfig = {};
   private writeCacheConfig?: Partial<WriteCacheConfig>;
   private migrationStrategy: MigrationStrategy = "auto";
+  private unsupportedStoredDocuments: UnsupportedStoredDocuments = "refuse";
   private syncBuilder?: SyncBuilder;
   private eventBus?: IEventBus;
   private readModelCoordinator?: IReadModelCoordinator;
@@ -348,6 +359,7 @@ export class ReactorBuilder {
   private projectionWorkerFactory?: ProjectionWorkerFactory;
   private instrumentedPools: PoolInstrumentation[] = [];
   private catchUpConfig: CatchUpConfig = defaultCatchUpConfig;
+  private extraPeerCapabilities: PeerCapability[] = [];
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -364,6 +376,20 @@ export class ReactorBuilder {
   withDocumentModelSources(sources: DocumentModelSource[]): this {
     this.documentModelSources.push(...sources);
     return this;
+  }
+
+  /** Capabilities beyond the registry, for tests and hosts that ship their own. */
+  withPeerCapabilities(extra: readonly PeerCapability[]): this {
+    this.extraPeerCapabilities = mergePeerCapabilities(
+      this.extraPeerCapabilities,
+      extra,
+    );
+    return this;
+  }
+
+  /** The registry plus any capabilities added with withPeerCapabilities. */
+  getPeerCapabilities(): readonly PeerCapability[] {
+    return mergePeerCapabilities(PEER_CAPABILITIES, this.extraPeerCapabilities);
   }
 
   withUpgradeManifests(manifests: UpgradeManifest<readonly number[]>[]): this {
@@ -430,6 +456,16 @@ export class ReactorBuilder {
 
   withMigrationStrategy(strategy: MigrationStrategy): this {
     this.migrationStrategy = strategy;
+    return this;
+  }
+
+  /**
+   * Stored documents at protocol versions this build does not run: "refuse"
+   * (the default) fails buildModule; "read-only" starts with a warning, and
+   * every job and received row into them is refused.
+   */
+  withUnsupportedStoredDocuments(mode: UnsupportedStoredDocuments): this {
+    this.unsupportedStoredDocuments = mode;
     return this;
   }
 
@@ -594,6 +630,13 @@ export class ReactorBuilder {
     }
 
     const featureFlags = resolveFeatureFlags(this.executorConfig.featureFlags);
+    if (this.executorConfig.protocolSupport === undefined) {
+      this.executorConfig = {
+        ...this.executorConfig,
+        protocolSupport: localSupports(this.getPeerCapabilities(), featureFlags)
+          .protocols,
+      };
+    }
 
     if (
       this.readModelCoordinator !== undefined &&
@@ -723,6 +766,14 @@ export class ReactorBuilder {
         throw new Error(`Database migration failed: ${result.error.message}`);
       }
     }
+
+    await checkStoredProtocols(
+      baseDatabase,
+      REACTOR_SCHEMA,
+      this.executorConfig.protocolSupport ?? {},
+      this.unsupportedStoredDocuments,
+      this.logger,
+    );
 
     const database = baseDatabase.withSchema(REACTOR_SCHEMA);
 
@@ -1091,6 +1142,22 @@ export class ReactorBuilder {
       catchUp,
     );
 
+    const localPeer: LocalPeer = {
+      capabilities: this.getPeerCapabilities(),
+      flags: featureFlags,
+      appKey: this.signer?.app?.key,
+      protocolVersionsOf: async (documentId, branch) => {
+        try {
+          const meta = await documentMetaCache.getDocumentMeta(
+            documentId,
+            branch,
+          );
+          return meta.protocolVersions;
+        } catch {
+          return undefined;
+        }
+      },
+    };
     let syncModule: InProcessSyncModule | undefined = undefined;
     if (this.channelScheme) {
       const factory =
@@ -1107,6 +1174,7 @@ export class ReactorBuilder {
         database as unknown as Kysely<StorageDatabase>,
         this.driveContainerTypes,
         settledWatermark,
+        localPeer,
       );
       await syncModule.syncManager.startup();
     } else if (this.syncBuilder) {
@@ -1118,6 +1186,7 @@ export class ReactorBuilder {
         database as unknown as Kysely<StorageDatabase>,
         this.driveContainerTypes,
         settledWatermark,
+        localPeer,
       );
       await syncModule.syncManager.startup();
     }

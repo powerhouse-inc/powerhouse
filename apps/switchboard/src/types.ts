@@ -1,6 +1,7 @@
 import type {
   InProcessReactorClientModule,
   IReactorClient,
+  UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import type { AttachmentReferenceProjectionCapability } from "@powerhousedao/reactor-api";
 import type { WorkflowTriggersCapability } from "./workflow-runtime.mjs";
@@ -171,6 +172,14 @@ export type StartServerOptions = {
     enabled?: boolean;
     dbPoolSize?: number;
   };
+  /**
+   * Stored documents at protocol versions this build does not run: "refuse"
+   * (the default) fails the boot with a StoredDocumentsRefusedError;
+   * "read-only" starts with a warning and keeps those documents read-only.
+   * Unset falls back to the REACTOR_UNSUPPORTED_STORED_DOCUMENTS env var.
+   * Ignored when `reactor` is passed.
+   */
+  unsupportedStoredDocuments?: UnsupportedStoredDocuments;
 };
 
 export type SwitchboardReactor = {

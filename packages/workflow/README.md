@@ -78,22 +78,26 @@ pnpm --filter @powerhousedao/workflow ui:shots --list
 ```
 
 It starts whichever of switchboard (`:4001`, in-memory, workflows on) and
-Connect's Vite dev server (`:3100`) is not already running, and stops the ones
-it started. Each run creates a new remote drive, seeds workflows and a
-connection through Connect's reactor, and fires two manual workflows (one
-succeeds, one fails) so the runs views have data. Flags: `--width`,
-`--height`, `--out`; `UI_SHOTS_VERBOSE=1` prints the server logs.
+Connect (`:3100`) is not already running, and stops the ones it started. Each
+run creates a new remote drive, seeds workflows and a connection through
+Connect's reactor, and fires two manual workflows (one succeeds, one fails) so
+the runs views have data. Flags: `--width`, `--height`, `--out`;
+`UI_SHOTS_VERBOSE=1` prints the server logs.
 
-Connect dev serves the editors from source, so every run picks up the latest
-edits. `style.css` is recompiled into `dist/style.css` before each run so new
-Tailwind classes show up too. The switchboard runs from `apps/switchboard/dist`,
-so a change to the runtime side needs a rebuild of that package first. Scenes
-live in `SCENES` in `scripts/ui-shots.ts`.
+Connect runs from its production build in `test/test-consumer-project`
+(`ph connect build --workflows true`), served by `ph connect preview`. The
+build bundles this package's `dist`, so rebuild the package after an edit; the
+stack rebuilds Connect when that `dist` is newer than the build.
+`UI_CONNECT_DEV=1` runs Connect's Vite dev server instead, which serves the
+editors from source and recompiles `style.css` into `dist/style.css` before
+each run: use it while writing tests. The switchboard runs from
+`apps/switchboard/dist`, so a change to the runtime side needs a rebuild of
+that package first. Scenes live in `SCENES` in `scripts/ui-shots.ts`.
 
 ### UI tests
 
-`test:ui` runs the Playwright specs in `test/ui/` against the same stack, one
-fresh seeded drive per test:
+`test:ui` runs the Playwright specs in `test/ui/` against the same stack. Each
+worker boots Connect once; each test gets a fresh seeded drive, alone in it:
 
 ```sh
 pnpm --filter @powerhousedao/workflow test:ui

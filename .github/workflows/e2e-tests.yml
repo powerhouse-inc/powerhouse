@@ -249,6 +249,13 @@ jobs:
       - name: Re-link workspace bins now that dist files exist
         run: pnpm rebuild --recursive
 
+      # The UI suite runs against Connect's production build, which bundles
+      # the workflow package's dist.
+      - name: Build Connect for the workflow UI tests
+        if: steps.workflow-ui.outputs.run == 'true'
+        run: node ../../clis/ph-cli/dist/cli.mjs connect build --workflows true
+        working-directory: ./test/test-consumer-project
+
       # No browser: the suite drives switchboard's GraphQL directly, and names
       # the failed assertions in its own output.
       - name: Run workflow piece E2E flow
@@ -272,8 +279,8 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./packages/workflow
 
-      # Starts switchboard from dist and Connect's dev server, then drives the
-      # workflow editors in a browser; each test seeds its own drive.
+      # Starts switchboard from dist and serves the Connect build, then drives
+      # the workflow editors in a browser; each test seeds its own drive.
       - name: Run workflow UI tests
         if: steps.workflow-ui.outputs.run == 'true'
         run: pnpm --filter @powerhousedao/workflow test:ui

@@ -1,5 +1,6 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import { canonicalJson } from "./action-signature.js";
+import { bytesToBase64Url } from "./crypto.js";
 
 /** The `protocolVersions` key that fixes a document's signature requirement. */
 export const SIGNATURE_PROTOCOL = "signature";
@@ -107,15 +108,4 @@ export function deriveDocumentId(params: DocumentIdParams): string {
 /** Whether `id` has the shape `deriveDocumentId` produces. */
 export function isDerivedDocumentId(id: string): boolean {
   return DERIVED_ID.test(id);
-}
-
-function bytesToBase64Url(bytes: Uint8Array): string {
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
 }

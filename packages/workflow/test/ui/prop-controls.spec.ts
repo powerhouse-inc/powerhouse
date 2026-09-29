@@ -1,22 +1,15 @@
-// Every prop type and layout hint PropertyForm renders, mounted over the live
-// Connect page so the form runs with Connect's real styles.
+// Every prop type and layout hint PropertyForm renders, mounted on a Connect
+// page so the form runs with Connect's real styles.
 import type { Page } from "@playwright/test";
-import { CONNECT, evaluateImporting, ROOT } from "../../scripts/ui-stack.js";
+import { openHarness } from "../../scripts/ui-stack.js";
 import { expect, test } from "./fixtures.js";
 
 async function mountHarness(page: Page, initial: Record<string, unknown> = {}) {
-  await page.goto(CONNECT);
-  await page.waitForLoadState("load");
-  await evaluateImporting(
+  const mount = await openHarness<Record<string, unknown>>(
     page,
-    async ({ root, initial }) => {
-      const harness = (await import(
-        `/@fs${root}/packages/workflow/test/ui/harness/prop-controls.tsx`
-      )) as { mount: (initial: Record<string, unknown>) => void };
-      harness.mount(initial);
-    },
-    { root: ROOT, initial },
+    "prop-controls",
   );
+  await mount(initial);
   await page.getByTestId("config").waitFor();
 }
 

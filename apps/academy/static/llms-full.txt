@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-29T12:12:49.240Z
+> Generated: 2026-09-29T16:44:00.871Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -5953,6 +5953,24 @@ if (!result.success && result.error) {
 ```
 
 `runMigrations` returns `{ success, migrationsExecuted, error? }` and never throws on a migration error — it reports the error in the result. Use `getMigrationStatus(db, REACTOR_SCHEMA)` to inspect applied versus pending migrations without running them.
+
+### Stored protocol versions
+
+After migrations, `buildModule()` reads the protocol versions (`header.protocolVersions`, such as `base-reducer` or `signature`) that stored documents were created with. If the reactor does not run one of them, for example after a rollback to an older build, it throws `UnsupportedStoredProtocolError` before any executor starts. The error's `versions` lists the unsupported `{ protocol, version }` pairs, and `documents` is how many stored documents need them.
+
+```typescript
+withUnsupportedStoredDocuments(mode: "refuse" | "read-only"): this
+```
+
+`"refuse"` is the default. `"read-only"` builds anyway and logs a warning. Every job into those documents, and every operation received for them, is then refused. The check probes an index once per distinct set of creation versions rather than reading every document.
+
+| Host        | Setting                                                                       |
+| ----------- | ----------------------------------------------------------------------------- |
+| Switchboard | `REACTOR_UNSUPPORTED_STORED_DOCUMENTS=refuse` (default) or `read-only`        |
+| Connect     | `connect.reactor.unsupportedStoredDocuments` in `powerhouse.config.json`      |
+| Library     | `ReactorBuilder.withUnsupportedStoredDocuments()`                             |
+
+A refused switchboard logs the versions, the document count and both ways forward, then exits with code 1. A refused Connect shows the same on its boot screen in place of the app.
 
 ## Scaling with a worker pool
 
@@ -32257,6 +32275,25 @@ no fallback, so check which your installed version expects if a setting appears
 to be ignored. The `config` block of the installed package's manifest is
 authoritative for the version you actually have.
 
+
+## Stored documents a build does not run
+
+Switchboard and Connect refuse to start when their store holds documents created at a protocol version the running build does not run, which can happen after a rollback. The refusal names the versions and the number of documents. Either run a build that supports those versions, or start with those documents read-only:
+
+```bash
+# Switchboard: refuse (default) or read-only
+REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only
+```
+
+```json
+{
+  "connect": {
+    "reactor": { "unsupportedStoredDocuments": "read-only" }
+  }
+}
+```
+
+Read-only documents stay readable, but the reactor refuses every write into them and every operation it receives for them. A refused Switchboard exits with code 1. A refused Connect shows the refusal in place of the app, with a Reload button that picks up a changed `powerhouse.config.json`. Connect has no in-app way to continue read-only; the setting is the operator's.
 
 ## Applying your changes
 

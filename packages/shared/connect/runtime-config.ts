@@ -73,6 +73,7 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
       authConditions: false,
     },
     createSignaturePolicy: "v2-required",
+    unsupportedStoredDocuments: "refuse",
   },
 };
 

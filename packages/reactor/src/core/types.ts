@@ -41,6 +41,7 @@ import type {
   IOperationStore,
   ISyncCursorStorage,
   ISyncDeadLetterStorage,
+  ISyncHoldStorage,
   ISyncRemoteStorage,
   OperationFilter,
 } from "../storage/interfaces.js";
@@ -518,6 +519,7 @@ export interface InProcessSyncModule extends SyncModule {
   remoteStorage: ISyncRemoteStorage;
   cursorStorage: ISyncCursorStorage;
   deadLetterStorage: ISyncDeadLetterStorage;
+  holdStorage: ISyncHoldStorage;
   channelFactory: IChannelFactory;
 }
 

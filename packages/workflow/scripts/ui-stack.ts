@@ -1,5 +1,5 @@
 // The live stack the UI screenshots and UI tests run against: switchboard
-// (workflows on, in-memory) plus Connect's Vite dev server, seeded per drive.
+// (workflows on, in-memory) plus Connect, seeded per drive.
 import {
   chromium,
   expect,
@@ -11,7 +11,14 @@ import {
 import { blockKey } from "@powerhousedao/pieces-framework/block-type";
 import { CORE_PIECE_NAME } from "@powerhousedao/pieces-framework/workflow";
 import { spawn, type ChildProcess, execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type * as ConnectionModel from "../document-models/connection/v1/index.js";
@@ -23,6 +30,17 @@ const SWITCHBOARD_PORT = 4001;
 const CONNECT_PORT = Number(process.env.UI_SHOTS_CONNECT_PORT ?? 3100);
 export const SWITCHBOARD = `http://localhost:${SWITCHBOARD_PORT}`;
 export const CONNECT = `http://localhost:${CONNECT_PORT}`;
+
+// Connect's production build by default; UI_CONNECT_DEV=1 runs Vite's dev
+// server instead, for writing tests against source with HMR.
+export function connectDev(): boolean {
+  return process.env.UI_CONNECT_DEV === "1";
+}
+
+// The Connect build bundles this package's dist, from the consumer project.
+const CONSUMER = join(ROOT, "test/test-consumer-project");
+const CONNECT_BUILD = join(CONSUMER, ".ph/connect-build/dist");
+const PH_CLI = join(ROOT, "clis/ph-cli/dist/cli.mjs");
 
 // ─── servers ────────────────────────────────────────────────────────────────
 
@@ -105,24 +123,69 @@ export async function ensureServers(): Promise<ChildProcess[]> {
     );
   }
   if (!(await isUp(CONNECT))) {
-    console.log(`▶ starting Connect (vite dev) on :${CONNECT_PORT}`);
-    started.push(
-      startServer(
-        "connect",
-        "pnpm",
-        ["exec", "vite", "dev", "--port", String(CONNECT_PORT), "--strictPort"],
-        join(ROOT, "apps/connect"),
-      ),
-    );
+    if (connectDev()) {
+      console.log(`▶ starting Connect (vite dev) on :${CONNECT_PORT}`);
+      started.push(
+        startServer(
+          "connect",
+          "pnpm",
+          [
+            "exec",
+            "vite",
+            "dev",
+            "--port",
+            String(CONNECT_PORT),
+            "--strictPort",
+          ],
+          join(ROOT, "apps/connect"),
+        ),
+      );
+    } else {
+      buildConnectIfStale();
+      console.log(`▶ starting Connect (preview) on :${CONNECT_PORT}`);
+      started.push(
+        startServer(
+          "connect",
+          "node",
+          [
+            PH_CLI,
+            "connect",
+            "preview",
+            "--port",
+            String(CONNECT_PORT),
+            "--strictPort",
+          ],
+          CONSUMER,
+        ),
+      );
+    }
   }
   await waitUp(RUNTIME_URL, "switchboard");
   await waitUp(CONNECT, "Connect");
   return started;
 }
 
-// Connect imports the package's dist stylesheet; regenerate it from source.
+/** Builds Connect when it is missing or older than this package's dist. */
+export function buildConnectIfStale(): void {
+  const built = join(CONNECT_BUILD, "index.html");
+  const dist = join(PKG, "dist/browser/index.js");
+  if (
+    existsSync(built) &&
+    (!existsSync(dist) || statSync(built).mtimeMs >= statSync(dist).mtimeMs)
+  ) {
+    return;
+  }
+  console.log("▶ building Connect");
+  execSync(`node ${PH_CLI} connect build --workflows true`, {
+    cwd: CONSUMER,
+    stdio: process.env.UI_SHOTS_VERBOSE ? "inherit" : "ignore",
+  });
+}
+
+// Connect dev imports the package's dist stylesheet; regenerate it from source.
 // Written only when it changed: every write makes Vite reload open pages.
 export async function buildCss(): Promise<void> {
+  if (!connectDev()) return;
   const target = join(PKG, "dist/style.css");
   const scratch = join(PKG, ".ui-shots/style.css");
   mkdirSync(dirname(scratch), { recursive: true });
@@ -237,6 +300,111 @@ export async function warmConnect(): Promise<void> {
   } finally {
     await browser.close();
   }
+}
+
+// ─── harness pages ──────────────────────────────────────────────────────────
+
+const HARNESS_DIR = join(PKG, ".ui-shots/harness");
+
+/** Bundles the harnesses the build can't import from source. */
+export async function buildHarnesses(): Promise<void> {
+  if (connectDev()) return;
+  const { build } = await import("rolldown");
+  rmSync(HARNESS_DIR, { recursive: true, force: true });
+  await build({
+    input: { "prop-controls": join(PKG, "test/ui/harness/prop-controls.tsx") },
+    platform: "browser",
+    transform: { define: { "process.env.NODE_ENV": '"production"' } },
+    output: { dir: HARNESS_DIR, format: "esm" },
+    // "use client" directives, which a plain bundle ignores.
+    logLevel: "silent",
+  });
+}
+
+/**
+ * Opens a harness on a page styled like Connect and returns its mount. The
+ * build's own page, minus its app, plus the harness bundle; dev imports source.
+ */
+export async function openHarness<A>(
+  page: Page,
+  name: string,
+): Promise<(arg: A) => Promise<void>> {
+  if (connectDev()) {
+    await page.goto(CONNECT);
+    await page.waitForLoadState("load");
+    return (arg) =>
+      evaluateImporting(
+        page,
+        async ({ path, arg }) => {
+          const harness = (await import(path)) as {
+            mount: (arg: unknown) => void;
+          };
+          harness.mount(arg);
+        },
+        { path: `/@fs${PKG}/test/ui/harness/${name}.tsx`, arg },
+      );
+  }
+  await page.route(`${CONNECT}/__harness/**`, async (route) => {
+    const file = new URL(route.request().url()).pathname.slice(
+      "/__harness/".length,
+    );
+    if (file) return route.fulfill({ path: join(HARNESS_DIR, file) });
+    const html = readFileSync(join(CONNECT_BUILD, "index.html"), "utf8")
+      .replace(/<script type="module"[^>]*src="[^"]*"><\/script>/g, "")
+      .replace(/<link rel="modulepreload"[^>]*>/g, "")
+      .replace(
+        "</body>",
+        `<script type="module">import { mount } from "/__harness/${name}.js"; window.__harness = mount;</script></body>`,
+      );
+    return route.fulfill({ contentType: "text/html", body: html });
+  });
+  await page.goto(`${CONNECT}/__harness/`);
+  await page.waitForFunction(() => "__harness" in window);
+  return (arg) =>
+    page.evaluate((a) => {
+      (window as unknown as { __harness: (a: unknown) => void }).__harness(a);
+    }, arg as unknown);
+}
+
+// ─── document models in the page ────────────────────────────────────────────
+
+const MODEL_SOURCES = {
+  "powerhouse/workflow": "document-models/workflow/v1/index.ts",
+  "powerhouse/connection": "document-models/connection/v1/index.ts",
+};
+
+/**
+ * Defines window.__uiModel(type), a document model's actions and utils, and
+ * window.__uiDrives(), Connect's drive actions. A string, since tsx wraps
+ * named functions in a __name helper the page lacks.
+ */
+function pageHelpersScript(): string {
+  const drives = connectDev()
+    ? `/@fs${ROOT}/packages/reactor-browser/src/actions/drive.ts`
+    : "@powerhousedao/reactor-browser";
+  const sources = connectDev()
+    ? Object.fromEntries(
+        Object.entries(MODEL_SOURCES).map(([type, path]) => [
+          type,
+          `/@fs${PKG}/${path}`,
+        ]),
+      )
+    : null;
+  return `window.__uiModel = async (type) => {
+  const sources = ${JSON.stringify(sources)};
+  if (sources) return import(sources[type]);
+  for (let attempt = 0; attempt < 40; attempt++) {
+    for (const pkg of window.ph?.vetraPackageManager?.packages ?? []) {
+      for (const model of pkg.documentModels ?? []) {
+        const id = model.documentModel?.global?.id ?? model.documentModel?.id;
+        if (id === type) return { ...model.actions, utils: model.utils };
+      }
+    }
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  throw new Error("No document model " + type + " in Connect's packages");
+};
+window.__uiDrives = () => import(${JSON.stringify(drives)});`;
 }
 
 // ─── seeding ────────────────────────────────────────────────────────────────
@@ -469,7 +637,6 @@ export function coreTrigger(name: string): Promise<TriggerBlock> {
 type SeedRole = "http" | "parseUrl" | "openai" | "slack";
 
 interface SeedInput {
-  root: string;
   drive: string;
   blocks: Record<SeedRole, StepBlock> & {
     schedule: TriggerBlock;
@@ -488,6 +655,11 @@ export interface Seeded {
 }
 
 export interface PhWindow {
+  __uiModel?: (type: keyof typeof MODEL_SOURCES) => Promise<unknown>;
+  __uiDrives?: () => Promise<{
+    addRemoteDrive(url: string): Promise<string>;
+    deleteDrive(id: string): Promise<void>;
+  }>;
   ph?: {
     reactorClientModule?: {
       client: {
@@ -510,7 +682,9 @@ export interface PhWindow {
         rename(id: string, name: string): Promise<unknown>;
         get(id: string): Promise<unknown>;
       };
+      reactorModule?: { syncModule?: { syncManager?: unknown } };
     };
+    drives?: { header: { id: string } }[];
   };
 }
 
@@ -518,15 +692,14 @@ export interface PhWindow {
 function seedInBrowser(page: Page, input: SeedInput): Promise<Seeded> {
   return evaluateWithReactor(
     page,
-    async ({ root, drive, blocks, botTokenRef, defaults }) => {
+    async ({ drive, blocks, botTokenRef, defaults }) => {
       const w = window as unknown as PhWindow;
       const client = w.ph!.reactorClientModule!.client;
-      // Served by Connect's Vite dev server straight from source.
-      const wf = (await import(
-        `/@fs${root}/packages/workflow/document-models/workflow/v1/index.ts`
+      const wf = (await w.__uiModel!(
+        "powerhouse/workflow",
       )) as typeof WorkflowModel;
-      const cn = (await import(
-        `/@fs${root}/packages/workflow/document-models/connection/v1/index.ts`
+      const cn = (await w.__uiModel!(
+        "powerhouse/connection",
       )) as typeof ConnectionModel;
 
       // The drive can be readable before it accepts files, so the first add
@@ -730,7 +903,7 @@ export async function waitServed(workflowId: string, stepId: string) {
       return;
     } catch (error) {
       if (Date.now() > deadline) throw error;
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 100));
     }
   }
 }
@@ -747,45 +920,47 @@ export async function fireWhenSynced(workflowId: string, payload?: unknown) {
       );
     } catch (error) {
       if (Date.now() > deadline) throw error;
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 100));
     }
   }
 }
 
 // ─── a seeded Connect page ───────────────────────────────────────────────────
 
-export interface SeededPage {
+const VIEWPORT = { width: 1440, height: 900 };
+
+export interface ConnectPage {
   context: BrowserContext;
   page: Page;
+}
+
+export interface SeededPage extends ConnectPage {
   seeded: Seeded;
   drive: string;
 }
 
-/** A fresh browser context on a new remote drive holding the demo documents. */
-export async function openSeededPage(
+/** A fresh browser context with Connect booted, workflows on and no drives. */
+export async function openConnect(
   browser: Browser,
   options: {
     colorScheme?: "light" | "dark";
     viewport?: { width: number; height: number };
-    // False leaves the drive empty, for tests that add their own documents.
-    seed?: boolean;
   } = {},
-): Promise<SeededPage> {
-  const driveSlug = `ui-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const drive = await createRemoteDrive(driveSlug);
+): Promise<ConnectPage> {
   const context = await browser.newContext({
-    viewport: options.viewport ?? { width: 1440, height: 900 },
+    viewport: options.viewport ?? VIEWPORT,
     colorScheme: options.colorScheme ?? "light",
+    // The build's service worker precaches the whole app.
+    serviceWorkers: "block",
   });
+  await context.addInitScript({ content: pageHelpersScript() });
   await context.route("**/powerhouse.config.json", async (route) => {
     const response = await route.fetch();
     const config = (await response.json()) as {
       connect: { app?: object; drives: { defaultDrives: unknown[] } };
     };
     config.connect.app = { ...config.connect.app, workflowsEnabled: true };
-    config.connect.drives.defaultDrives = [
-      { url: `${CONNECT}/d/${driveSlug}`, name: "Workflows" },
-    ];
+    config.connect.drives.defaultDrives = [];
     await route.fulfill({ response, json: config });
   });
 
@@ -795,21 +970,108 @@ export async function openSeededPage(
     name: "Accept configured cookies",
   });
   await accept.click({ timeout: 15_000 }).catch(() => {});
-  // The drive document has synced once the local reactor can read it.
-  const driveReady = () =>
-    page.waitForFunction(
-      async (id) => {
-        const client = (window as unknown as PhWindow).ph?.reactorClientModule
-          ?.client;
-        return !!(await client?.get(id).catch(() => null));
-      },
-      drive,
-      { timeout: 60_000, polling: 500 },
+  await waitForSync(page);
+  return { context, page };
+}
+
+// Connect can add remote drives once its sync manager is up.
+function waitForSync(page: Page) {
+  return page.waitForFunction(
+    () =>
+      !!(window as unknown as PhWindow).ph?.reactorClientModule?.reactorModule
+        ?.syncModule?.syncManager,
+    undefined,
+    { timeout: 60_000, polling: 250 },
+  );
+}
+
+/** Whether a reused page still runs Connect with its reactor. */
+export async function isHealthy(page: Page): Promise<boolean> {
+  if (page.isClosed()) return false;
+  return page
+    .evaluate(
+      () =>
+        !!(window as unknown as PhWindow).ph?.reactorClientModule?.reactorModule
+          ?.syncModule?.syncManager,
+    )
+    .catch(() => false);
+}
+
+/**
+ * Back to Connect's home page, without a reload: no test routes, the default
+ * viewport and no modal open.
+ */
+export async function resetConnect(page: Page): Promise<void> {
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+  await page.setViewportSize(VIEWPORT);
+  await page.keyboard.press("Escape").catch(() => {});
+  await page.evaluate(() => {
+    window.dispatchEvent(
+      new CustomEvent("ph:setModal", { detail: { modal: undefined } }),
     );
-  await driveReady();
-  if (options.seed === false) {
-    return { context, page, seeded: unseeded(), drive };
-  }
+    window.history.pushState(null, "", "/");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
+}
+
+// Adds the drive through Connect's own addRemoteDrive, then waits until the
+// local reactor can read it. Safe to repeat.
+async function attachDrive(page: Page, slug: string, id: string) {
+  await evaluateWithReactor(
+    page,
+    async ({ url }) => {
+      const drives = await (window as unknown as PhWindow).__uiDrives!();
+      await drives.addRemoteDrive(url);
+    },
+    { url: `${SWITCHBOARD}/d/${slug}` },
+  );
+  await page.waitForFunction(
+    async (driveId) => {
+      const client = (window as unknown as PhWindow).ph?.reactorClientModule
+        ?.client;
+      return !!(await client?.get(driveId).catch(() => null));
+    },
+    id,
+    { timeout: 60_000, polling: 250 },
+  );
+  // Alone on the home page: an earlier test's drive may still be listed.
+  await page.waitForFunction(
+    (driveId) => {
+      const drives = (window as unknown as PhWindow).ph?.drives ?? [];
+      return drives.length === 1 && drives[0].header.id === driveId;
+    },
+    id,
+    { timeout: 30_000, polling: 100 },
+  );
+}
+
+/**
+ * Removes a drive from Connect's reactor, so the next one is alone on home.
+ * From the home page, so Connect has no open document to warn about.
+ */
+export async function detachDrive(page: Page, id: string): Promise<void> {
+  await resetConnect(page);
+  await page.evaluate(async (driveId) => {
+    const drives = await (window as unknown as PhWindow).__uiDrives!();
+    await drives.deleteDrive(driveId);
+  }, id);
+}
+
+/**
+ * A new remote drive, added to an open Connect page and holding the demo
+ * documents unless `seed` is false.
+ */
+export async function addSeededDrive(
+  page: Page,
+  options: {
+    // False leaves the drive empty, for tests that add their own documents.
+    seed?: boolean;
+  } = {},
+): Promise<{ drive: string; seeded: Seeded }> {
+  const driveSlug = `ui-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const drive = await createRemoteDrive(driveSlug);
+  await attachDrive(page, driveSlug, drive);
+  if (options.seed === false) return { drive, seeded: unseeded() };
 
   const [http, parseUrl, openai, slack, schedule, manual] = await Promise.all([
     pieceAction("@activepieces/piece-http", "send_request"),
@@ -833,22 +1095,23 @@ export async function openSeededPage(
   ) as SeedInput["defaults"];
   // A cold Vite server re-optimises deps and reloads the page once, which
   // can land mid-seed; wait for the reactor again and start over.
+  const retries = connectDev() ? 2 : 0;
   let seeded: Seeded | undefined;
   for (let attempt = 0; !seeded; attempt++) {
     try {
       seeded = await seedInBrowser(page, {
-        root: ROOT,
         drive,
         blocks,
         botTokenRef,
         defaults,
       });
     } catch (error) {
-      if (attempt >= 2) throw error;
+      if (attempt >= retries) throw error;
       // The reload may not have started yet; let it land before re-checking.
       await page.waitForTimeout(2000);
       await page.waitForLoadState("load");
-      await driveReady();
+      await waitForSync(page);
+      await attachDrive(page, driveSlug, drive);
     }
   }
   // One succeeded and one failed run, for the runs views.
@@ -856,7 +1119,20 @@ export async function openSeededPage(
     fireWhenSynced(seeded.smoke),
     fireWhenSynced(seeded.ping, { url: "https://status.acme.dev/health" }),
   ]);
-  return { context, page, seeded, drive };
+  return { drive, seeded };
+}
+
+/** A fresh browser context on a new remote drive holding the demo documents. */
+export async function openSeededPage(
+  browser: Browser,
+  options: {
+    colorScheme?: "light" | "dark";
+    viewport?: { width: number; height: number };
+    seed?: boolean;
+  } = {},
+): Promise<SeededPage> {
+  const connect = await openConnect(browser, options);
+  return { ...connect, ...(await addSeededDrive(connect.page, options)) };
 }
 
 // Stands in for the seed on an unseeded drive; reading it is a test bug.
@@ -908,11 +1184,11 @@ export async function createWorkflowInBrowser(
   };
   return evaluateWithReactor(
     page,
-    async ({ root, drive, spec }) => {
-      const client = (window as unknown as PhWindow).ph!.reactorClientModule!
-        .client;
-      const wf = (await import(
-        `/@fs${root}/packages/workflow/document-models/workflow/v1/index.ts`
+    async ({ drive, spec }) => {
+      const w = window as unknown as PhWindow;
+      const client = w.ph!.reactorClientModule!.client;
+      const wf = (await w.__uiModel!(
+        "powerhouse/workflow",
       )) as typeof WorkflowModel;
       // An unseeded drive may not accept files yet; as in the seed, retry.
       let doc: { header: { id: string } } | undefined;
@@ -947,7 +1223,7 @@ export async function createWorkflowInBrowser(
       await client.rename(id, spec.name);
       return id;
     },
-    { root: ROOT, drive, spec },
+    { drive, spec },
   );
 }
 
@@ -968,11 +1244,11 @@ export function createConnectionInBrowser(
 ): Promise<string> {
   return evaluateWithReactor(
     page,
-    async ({ root, drive, spec }) => {
-      const client = (window as unknown as PhWindow).ph!.reactorClientModule!
-        .client;
-      const cn = (await import(
-        `/@fs${root}/packages/workflow/document-models/connection/v1/index.ts`
+    async ({ drive, spec }) => {
+      const w = window as unknown as PhWindow;
+      const client = w.ph!.reactorClientModule!.client;
+      const cn = (await w.__uiModel!(
+        "powerhouse/connection",
       )) as typeof ConnectionModel;
       // An unseeded drive may not accept files yet; as in the seed, retry.
       let doc: { header: { id: string } } | undefined;
@@ -1000,7 +1276,7 @@ export function createConnectionInBrowser(
       await client.rename(id, spec.name);
       return id;
     },
-    { root: ROOT, drive, spec },
+    { drive, spec },
   );
 }
 
@@ -1035,7 +1311,7 @@ export async function fireAndWait(
     const run = data.workflowRuntime.run;
     if (run && run.status !== "RUNNING") return run;
     if (Date.now() > deadline) throw new Error(`Run ${runId} never finished`);
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 100));
   }
 }
 

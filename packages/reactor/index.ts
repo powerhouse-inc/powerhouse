@@ -25,6 +25,7 @@ export {
   type DocumentChangeEvent,
   type IDriveClient,
   type IReactorClient,
+  type ProtocolSelection,
 } from "./src/client/types.js";
 export {
   ReactorBuilder,
@@ -89,7 +90,9 @@ export {
   AuthEnforcementDisabledError,
   InvalidSignatureError,
   RelationshipNotFoundError,
+  UnsupportedStoredProtocolError,
 } from "./src/shared/errors.js";
+export type { UnsupportedStoredDocuments } from "./src/core/stored-protocol-check.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
 export { parsePagingOptions, type ParsedPaging } from "./src/shared/utils.js";
 export {
@@ -381,9 +384,12 @@ export {
 // Synchronization
 export {
   KyselySyncCursorStorage,
+  KyselySyncHoldStorage,
   KyselySyncRemoteStorage,
   type ISyncCursorStorage,
+  type ISyncHoldStorage,
   type ISyncRemoteStorage,
+  type SyncHoldRecord,
 } from "./src/storage/index.js";
 export {
   batchOperationsByDocument,
@@ -437,10 +443,19 @@ export {
   quarantinesDocument,
   syncOperationErrorType,
   type RemoteFilter,
+  type LocalPeer,
   type RemoteOptions,
+  type RemotePeer,
   type RemoteRecord,
   type RemoteStatus,
   type SyncEnvelope,
+  type SyncHeldEvent,
+  type SyncHold,
+  type SyncReleasedEvent,
+  type IPeerAgreement,
+  type PeerAgreementBasis,
+  createPeerAgreement,
+  InMemorySyncHoldStorage,
   type SyncEnvelopeType,
   type SyncFailedEvent,
   type SyncOperationErrorType,
