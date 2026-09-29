@@ -3,8 +3,8 @@ import type { PieceNames } from "../../file-builders/types.js";
 
 export const pieceLogoFileTemplate = (v: PieceNames) =>
   ts`
-// A placeholder mark, inlined as a data URI because a piece nobody published
-// has no CDN entry to point the catalog at. Borrowing a brand claims the vendor published it.
+// The piece's icon in Studio. Any image URL works, e.g. "https://acme.com/logo.png";
+// this placeholder is an inline SVG of the piece's initials.
 export const ${v.constantCaseName}_LOGO =
   "data:image/svg+xml," +
   encodeURIComponent(
