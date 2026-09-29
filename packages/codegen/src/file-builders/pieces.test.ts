@@ -187,6 +187,10 @@ describe("generatePiece", () => {
       const piece = join(dir, "pieces", "acme-crm");
       const authFile = readFileSync(join(piece, "lib", "auth.ts"), "utf8");
       expect(authFile).toContain(`export const acmeCrmAuth = ${declaration}`);
+      expect(authFile).toContain("// validate: async ({ auth })");
+      expect(authFile).toContain(
+        "// getConnectionIdentifier: async ({ auth })",
+      );
       expect(readFileSync(join(piece, "index.ts"), "utf8")).toContain(
         "auth: acmeCrmAuth",
       );
@@ -223,6 +227,7 @@ describe("a scaffolded piece without auth", () => {
       expect(source).not.toContain("reactorOf");
       expect(source).not.toContain("ctx.reactor");
       expect(source).toContain("requireAuth: false");
+      expect(source).toContain("auth: PieceAuth.None()");
       expect(source).not.toContain("../auth.js");
     }
   });
@@ -273,13 +278,15 @@ describe("generatePieceTrigger", () => {
     );
     expect(trigger).toContain("strategy: DedupeStrategy.TIMEBASED");
     expect(trigger).toContain("pollingHelper.poll(polling, context)");
+    // Keeps the cursor when the reactor re-enables after a restart
+    expect(trigger).toContain("isRepublish,");
     expect(trigger).toContain("auth: acmeCrmAuth");
     expect(readFileSync(join(piece, "index.ts"), "utf8")).toContain(
       "triggers: [acmeCrmNewRecordTrigger]",
     );
   });
 
-  it("writes a webhook trigger that returns the delivery", async () => {
+  it("writes a webhook trigger that returns the delivery, or nothing without one", async () => {
     const dir = makeProject();
     const project = buildTsMorphProject(dir);
     await generatePiece({ pieceName: "acme-crm" }, project);
@@ -294,7 +301,9 @@ describe("generatePieceTrigger", () => {
       "utf8",
     );
     expect(trigger).toContain("type: TriggerStrategy.WEBHOOK");
-    expect(trigger).toContain("Promise.resolve([context.payload.body])");
+    // The reconciliation sweep calls run with no payload
+    expect(trigger).toContain("payload === undefined ? [] : [payload.body]");
+    expect(trigger).toContain("test() {");
     expect(trigger).not.toContain("pollingHelper");
   });
 });

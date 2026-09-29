@@ -229,8 +229,13 @@ export const crmNewRecordTrigger = createTrigger({
     return await pollingHelper.test(polling, context);
   },
   async onEnable(context) {
-    const { store, auth, propsValue } = context;
-    await pollingHelper.onEnable(polling, { store, auth, propsValue });
+    const { store, auth, propsValue, isRepublish } = context;
+    await pollingHelper.onEnable(polling, {
+      store,
+      auth,
+      propsValue,
+      isRepublish,
+    });
   },
   async onDisable(context) {
     const { store, auth, propsValue } = context;
@@ -242,7 +247,7 @@ export const crmNewRecordTrigger = createTrigger({
 });
 ```
 
-With `DedupeStrategy.TIMEBASED`, `onEnable` sets the cursor to the moment the workflow was switched on, so enabling doesn't replay the service's history. Each poll reports only the items whose `epochMilliSeconds` is newer than the cursor, then moves it to the newest. Passing `lastFetchEpochMS` on to the service, as here, only saves fetching what the helper would drop anyway. For a service whose items carry no timestamp, `DedupeStrategy.LAST_ITEM` does the same with ids: `items` returns `{ id, data }`, newest first.
+With `DedupeStrategy.TIMEBASED`, `onEnable` sets the cursor to the moment the workflow was switched on, so enabling doesn't replay the service's history. When the reactor re-enables an unchanged workflow, for example after a restart, it sets `isRepublish` and the helper keeps the stored cursor, so items created while the reactor was down are still reported. Each poll reports only the items whose `epochMilliSeconds` is newer than the cursor, then moves it to the newest. Passing `lastFetchEpochMS` on to the service, as here, only saves fetching what the helper would drop anyway. For a service whose items carry no timestamp, `DedupeStrategy.LAST_ITEM` does the same with ids: `items` returns `{ id, data }`, newest first.
 
 The cursor lives in `context.store`, which the host serves scoped per workflow, so two workflows watching the same service keep their own. It's the only thing that stops a trigger reporting the same item twice. The helper is a convenience, not a requirement: a trigger can read and write `context.store` itself, when the service's own page token makes a better cursor.
 

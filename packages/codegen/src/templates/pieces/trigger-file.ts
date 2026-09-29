@@ -29,27 +29,39 @@ const pollingTemplate = (v: PieceTriggerTemplateArgs) => {
   return ts`
 ${imports}
 
+// The second type argument is the props' values: update it when adding props
 const polling: Polling<${auth}, Record<string, never>> = {
   strategy: DedupeStrategy.TIMEBASED,
-  // Receives { auth, propsValue, lastFetchEpochMS }: fetch the items and
-  // return each as { epochMilliSeconds, data }
+  // Fetch items newer than lastFetchEpochMS and return each as
+  // { epochMilliSeconds, data }; each new item starts one workflow run
   items: () => Promise.resolve([]),
 };
 
 export const ${v.exportName} = createTrigger({
 ${v.withAuth ? `  auth: ${v.camelCaseName}Auth,` : "  // Types context.auth as undefined, as the Polling above expects\n  auth: PieceAuth.None(),\n  requireAuth: false,"}
+  // Saved workflows refer to the trigger by name: don't rename it once published
   name: "${v.triggerName}",
   displayName: "${v.triggerDisplayName}",
+  // Shown under the trigger in the editor: say what event starts a run
   description: "",
+  // Inputs the user fills in on the trigger, read from context.propsValue
   props: {},
+  // An example item, so later steps can be wired up before the trigger fires
   sampleData: {},
   type: TriggerStrategy.POLLING,
   async test(context) {
     return await pollingHelper.test(polling, context);
   },
+  // Polls every minute by default; call context.setSchedule({ intervalMs })
+  // here to change that
   async onEnable(context) {
-    const { store, auth, propsValue } = context;
-    await pollingHelper.onEnable(polling, { store, auth, propsValue });
+    const { store, auth, propsValue, isRepublish } = context;
+    await pollingHelper.onEnable(polling, {
+      store,
+      auth,
+      propsValue,
+      isRepublish,
+    });
   },
   async onDisable(context) {
     const { store, auth, propsValue } = context;
@@ -64,7 +76,7 @@ ${v.withAuth ? `  auth: ${v.camelCaseName}Auth,` : "  // Types context.auth as u
 
 const webhookTemplate = (v: PieceTriggerTemplateArgs) => {
   const imports = [
-    `import { createTrigger, TriggerStrategy } from "${PIECES_FRAMEWORK_PACKAGE}";`,
+    `import { createTrigger, ${v.withAuth ? "" : "PieceAuth, "}TriggerStrategy } from "${PIECES_FRAMEWORK_PACKAGE}";`,
     v.withAuth
       ? `import { ${v.camelCaseName}Auth } from "../auth.js";`
       : undefined,
@@ -76,23 +88,34 @@ const webhookTemplate = (v: PieceTriggerTemplateArgs) => {
 ${imports}
 
 export const ${v.exportName} = createTrigger({
-${v.withAuth ? `  auth: ${v.camelCaseName}Auth,` : "  requireAuth: false,"}
+${v.withAuth ? `  auth: ${v.camelCaseName}Auth,` : "  // Types context.auth as undefined\n  auth: PieceAuth.None(),\n  requireAuth: false,"}
+  // Saved workflows refer to the trigger by name: don't rename it once published
   name: "${v.triggerName}",
   displayName: "${v.triggerDisplayName}",
+  // Shown under the trigger in the editor: say what event starts a run
   description: "",
+  // Inputs the user fills in on the trigger, read from context.propsValue
   props: {},
+  // An example item, so later steps can be wired up before the trigger fires
   sampleData: {},
   type: TriggerStrategy.WEBHOOK,
   async onEnable() {
-    // Register context.webhookUrl with the service
+    // Called when a workflow is switched on: register context.webhookUrl
+    // with the service
   },
   async onDisable() {
-    // Remove the registration
+    // Called when the workflow is switched off: remove the registration
+  },
+  test() {
+    // Called when the user tests the trigger: fetch a recent item from the
+    // service, so they see real output
+    return Promise.resolve([]);
   },
   run(context) {
-    // Called for each delivery, and by the reconciliation sweep with no
-    // payload: ask the service for what changed then
-    return Promise.resolve([context.payload.body]);
+    // context.payload holds each delivery ({ body, headers, queryParams }).
+    // Also called periodically with no payload: ask the service what changed
+    const payload: { body: unknown } | undefined = context.payload;
+    return Promise.resolve(payload === undefined ? [] : [payload.body]);
   },
 });
 `.raw;
