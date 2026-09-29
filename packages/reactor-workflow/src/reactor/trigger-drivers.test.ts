@@ -67,6 +67,9 @@ const row = (overrides: Partial<TriggerStateRow> = {}): TriggerStateRow => ({
   piece_source: null,
   version_match: null,
   version_note: null,
+  next_renew_at: null,
+  renew_error: null,
+  renew_failures: 0,
   ...overrides,
 });
 

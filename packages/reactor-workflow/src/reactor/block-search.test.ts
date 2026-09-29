@@ -86,6 +86,12 @@ describe("buildSearchIndex over blocks this engine cannot run", () => {
             cronExpression: "0 */12 * * *",
           },
         },
+        {
+          name: "googlesheets_row_expiring",
+          displayName: "Row Expiring",
+          type: "WEBHOOK",
+          renewConfiguration: { strategy: "INTERVAL" },
+        },
       ],
     },
     {
@@ -104,7 +110,9 @@ describe("buildSearchIndex over blocks this engine cannot run", () => {
       ),
     ).toEqual({
       insert_row: undefined,
-      googlesheets_new_row_added: `renewConfiguration is not supported yet (${ISSUES}/3090)`,
+      // Renews on its cron.
+      googlesheets_new_row_added: undefined,
+      googlesheets_row_expiring: `renewConfiguration strategy INTERVAL is not supported (${ISSUES}/3090)`,
       // Runs through its CUSTOM_AUTH method.
       send_email: undefined,
     });

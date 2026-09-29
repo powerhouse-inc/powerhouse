@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-28T16:29:36.747Z
+> Generated: 2026-09-29T08:21:20.525Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -30276,6 +30276,41 @@ A webhook trigger has the service call the reactor. In `onEnable`, `context.webh
 
 A reactor with no public webhook endpoint refuses to enable a webhook trigger, with "This trigger delivers by webhook, but no public webhook endpoint is configured for the reactor". If the service verifies an endpoint before it will deliver to it, declare `handshakeConfiguration` and answer the probe in `onHandshake`, as Activepieces documents.
 
+#### Renewing a subscription
+
+Some services expire a webhook registration: a Microsoft Graph subscription lasts days, a Gmail watch a week. Declare `renewConfiguration` with a cron, and extend the registration in `onRenew`:
+
+```typescript
+
+  createTrigger,
+  TriggerStrategy,
+  WebhookRenewStrategy,
+} from "@powerhousedao/pieces-framework";
+
+export const crmRecordUpdatedTrigger = createTrigger({
+  // ...name, props, onEnable, onDisable and run
+  type: TriggerStrategy.WEBHOOK,
+  renewConfiguration: {
+    strategy: WebhookRenewStrategy.CRON,
+    cronExpression: "0 */12 * * *",
+  },
+  async onRenew(context) {
+    const hook = await context.store.get<{ id: string }>(WEBHOOK_KEY);
+    if (hook) await extendWebhook(context.auth, hook.id);
+  },
+});
+```
+
+The reactor runs `onRenew` on that cron, in UTC:
+
+- The first renewal is the cron's next time after `onEnable` succeeds, not at enable itself.
+- `onRenew` gets the same `context` as the other hooks, including `context.webhookUrl` and the workflow's `context.store`, so it can read the registration id `onEnable` stored.
+- A failed renewal is recorded on the trigger (`renewError` and `renewFailures` in `triggerStates`) and retried after 2, 4, 8, 16 and then 30 minutes, but never later than the cron's next time. The trigger stays enabled, and a successful renewal clears the failure.
+- The next renewal time and the failure count are stored, so a restart keeps them. A renewal that fell due while the reactor was down runs on its first tick.
+- Disabling the workflow, or changing it to a trigger that doesn't renew, drops the pending renewal. A changed trigger config schedules it again from the cron.
+
+Only `WebhookRenewStrategy.CRON` and `WebhookRenewStrategy.NONE` run. Any other strategy, or a cron that doesn't parse, makes Studio list the trigger as disabled and puts it in `ERROR` when a workflow enables it. `renewConfiguration` on a polling trigger is ignored.
+
 ### Duplicate items
 
 An item carrying a `_dedupe_key` string doesn't start a second run if another item with the same key arrived in the last 30 seconds. That covers a delivery and the sweep reporting the same change moments apart. It doesn't replace the cursor, which is what keeps an item from coming back on the next poll.
@@ -30924,7 +30959,23 @@ on ports their source never takes.
 
 `triggerStates` reports the health of every registered trigger, including poll
 schedules and the last error, which is where a trigger that isn't firing
-explains itself.
+explains itself. A webhook trigger that renews its subscription also reports
+`nextRenewAt`, the next time `onRenew` runs, and `renewError` and
+`renewFailures`, the last failed renewal and how many have failed in a row.
+They are kept apart from `lastError` and `consecutiveFailures`, which belong to
+deliveries and polls. A trigger whose renewals keep failing stays `ENABLED`,
+so check `renewError` when a webhook trigger has gone quiet.
+
+```graphql
+query {
+  workflowRuntime {
+    triggerStates {
+      workflowId status nextPollAt lastError consecutiveFailures
+      nextRenewAt renewError renewFailures
+    }
+  }
+}
+```
 
 ---
 

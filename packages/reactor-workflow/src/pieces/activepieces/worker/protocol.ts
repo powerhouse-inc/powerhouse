@@ -119,7 +119,7 @@ export interface ResolveOptionsMessage {
 // the whole snapshot comes back in the response for the caller to persist.
 export interface TriggerHookRequest extends HostScopedRequest, PieceModuleRef {
   triggerName: string;
-  hook: "onEnable" | "onDisable" | "run" | "test" | "onHandshake";
+  hook: "onEnable" | "onDisable" | "run" | "test" | "onHandshake" | "onRenew";
   propsValue: Record<string, unknown>;
   auth?: unknown;
   storeState?: Record<string, unknown>;

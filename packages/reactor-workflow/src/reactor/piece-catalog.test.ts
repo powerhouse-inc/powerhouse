@@ -82,7 +82,7 @@ it("flags the listed pieces whose auth this engine cannot run", async () => {
   });
 });
 
-it("flags a listed trigger that renews or is MANUAL", async () => {
+it("flags a listed trigger that is MANUAL or renews in a way that cannot run", async () => {
   vi.stubGlobal("fetch", (() =>
     Promise.resolve(
       Response.json({
@@ -96,6 +96,10 @@ it("flags a listed trigger that renews or is MANUAL", async () => {
               strategy: "CRON",
               cronExpression: "0 */12 * * *",
             },
+          },
+          event_started: {
+            type: "WEBHOOK",
+            renewConfiguration: { strategy: "CRON", cronExpression: "never" },
           },
           manual_trigger: {
             type: "MANUAL",
@@ -114,7 +118,8 @@ it("flags a listed trigger that renews or is MANUAL", async () => {
   expect(
     Object.fromEntries(triggers.map((t) => [t.name, t.unsupported])),
   ).toEqual({
-    new_event: `renewConfiguration is not supported yet (${ISSUES}/3090)`,
+    new_event: undefined,
+    event_started: `renewConfiguration cron "never" is invalid (${ISSUES}/3090)`,
     manual_trigger: `TriggerStrategy.MANUAL is not supported yet (${ISSUES}/3091)`,
     event_ended: undefined,
   });

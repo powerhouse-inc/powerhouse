@@ -216,6 +216,11 @@ export const schema: DocumentNode = gql`
     lastPollAt: String
     lastError: String
     consecutiveFailures: Int!
+    "When a webhook trigger next renews its subscription; null if it never does."
+    nextRenewAt: String
+    "The last failed renewal, kept apart from lastError, the poll's."
+    renewError: String
+    renewFailures: Int!
     "The piece version the trigger armed with; null for a host-fed trigger."
     pieceVersion: String
     pieceSource: String

@@ -262,3 +262,47 @@ describe("describeProperties", () => {
     expect(describeProperties(null)).toEqual([]);
   });
 });
+
+describe("trigger renewal", () => {
+  const trigger = (renewConfiguration?: unknown) => ({
+    name: "event",
+    displayName: "Event",
+    type: "WEBHOOK",
+    props: {},
+    ...(renewConfiguration !== undefined ? { renewConfiguration } : {}),
+    onEnable: noop,
+    onDisable: noop,
+    run: () => Promise.resolve([]),
+  });
+  const describeEvent = (renewConfiguration?: unknown) =>
+    buildDescriptor(
+      {
+        displayName: "Hooks",
+        triggers: { event: trigger(renewConfiguration) as never },
+      },
+      { packageName: "@acme/piece-hooks", version: "1.0.0" },
+    ).triggers[0];
+
+  it("carries a CRON renewal", () => {
+    const described = describeEvent({
+      strategy: "CRON",
+      cronExpression: "0 */12 * * *",
+    });
+    expect(described.renew).toEqual({
+      strategy: "CRON",
+      cronExpression: "0 */12 * * *",
+    });
+    expect(described.unsupported).toBeUndefined();
+  });
+
+  it("omits NONE and an absent renewal", () => {
+    expect(describeEvent({ strategy: "NONE" })).not.toHaveProperty("renew");
+    expect(describeEvent()).not.toHaveProperty("renew");
+  });
+
+  it("flags a malformed renewal instead of carrying it", () => {
+    const described = describeEvent({ strategy: "CRON", cronExpression: "x" });
+    expect(described).not.toHaveProperty("renew");
+    expect(described.unsupported?.feature).toBe("renewConfiguration");
+  });
+});

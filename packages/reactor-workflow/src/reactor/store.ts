@@ -87,19 +87,25 @@ export interface TriggerStateRow {
   piece_source: string | null;
   version_match: string | null;
   version_note: string | null;
+  // When onRenew is next due; null for a trigger that never renews.
+  next_renew_at: string | null;
+  // The last onRenew failure and its streak, apart from the poll's.
+  renew_error: string | null;
+  renew_failures: number;
 }
 
-// A trigger row as written; the piece columns default to null.
-export type TriggerStateInput = Omit<
-  TriggerStateRow,
-  "piece_version" | "piece_source" | "version_match" | "version_note"
-> &
-  Partial<
-    Pick<
-      TriggerStateRow,
-      "piece_version" | "piece_source" | "version_match" | "version_note"
-    >
-  >;
+type DefaultedTriggerColumn =
+  | "piece_version"
+  | "piece_source"
+  | "version_match"
+  | "version_note"
+  | "next_renew_at"
+  | "renew_error"
+  | "renew_failures";
+
+// A trigger row as written; the piece and renew columns default to null.
+export type TriggerStateInput = Omit<TriggerStateRow, DefaultedTriggerColumn> &
+  Partial<Pick<TriggerStateRow, DefaultedTriggerColumn>>;
 
 // The trigger a row was written for, and the columns that name it.
 export function triggerRowBlock(row: TriggerStateRow): BlockIdentity {
@@ -168,6 +174,13 @@ function isDuplicateObject(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;
   return (error as { code?: unknown }).code === "42P07";
 }
+
+// A trigger with nothing to renew, and no renewal failure left on it.
+const RENEW_CLEARED = {
+  next_renew_at: null,
+  renew_error: null,
+  renew_failures: 0,
+} as const;
 
 async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
   await db.schema
@@ -289,6 +302,38 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
       }
     }
   }
+  try {
+    await db.schema
+      .alterTable("trigger_state")
+      .addColumn("next_renew_at", "text")
+      .execute();
+  } catch {
+    // column already exists
+  }
+  try {
+    await db.schema
+      .alterTable("trigger_state")
+      .addColumn("renew_error", "text")
+      .execute();
+  } catch {
+    // column already exists
+  }
+  try {
+    await db.schema
+      .alterTable("trigger_state")
+      .addColumn("renew_failures", "integer", (col) =>
+        col.notNull().defaultTo(0),
+      )
+      .execute();
+  } catch {
+    // column already exists
+  }
+  await db.schema
+    .createIndex("trigger_state_renew_due")
+    .ifNotExists()
+    .on("trigger_state")
+    .columns(["status", "next_renew_at"])
+    .execute();
   try {
     await db.schema
       .alterTable("run")
@@ -1058,8 +1103,11 @@ export class WorkflowRunStore {
       piece_source: null,
       version_match: null,
       version_note: null,
+      next_renew_at: null,
+      renew_failures: 0,
       ...row,
       last_error: row.last_error ? redactMessage(row.last_error) : null,
+      renew_error: row.renew_error ? redactMessage(row.renew_error) : null,
     };
     await this.db
       .insertInto("trigger_state")
@@ -1081,6 +1129,8 @@ export class WorkflowRunStore {
       .set({
         status,
         last_error: error ? redactMessage(error) : null,
+        // Only an ENABLED trigger holds a subscription to renew.
+        ...(status === "ENABLED" ? {} : RENEW_CLEARED),
         updated_at: new Date().toISOString(),
       })
       .where("workflow_id", "=", workflowId)
@@ -1097,6 +1147,67 @@ export class WorkflowRunStore {
     // A row whose state is still trapped in the blob is not runnable: polling
     // it would advance an empty cursor and re-deliver everything it ever saw.
     return rows.filter((row) => !this.unmigrated.has(row.workflow_id));
+  }
+
+  async listDueTriggerRenewals(nowIso: string): Promise<TriggerStateRow[]> {
+    const rows = await this.db
+      .selectFrom("trigger_state")
+      .selectAll()
+      .where("status", "=", "ENABLED")
+      .where("next_renew_at", "<=", nowIso)
+      .execute();
+    return rows.filter((row) => !this.unmigrated.has(row.workflow_id));
+  }
+
+  async setTriggerRenewAt(
+    workflowId: string,
+    nextRenewAtIso: string | null,
+  ): Promise<void> {
+    await this.db
+      .updateTable("trigger_state")
+      .set(
+        nextRenewAtIso === null
+          ? RENEW_CLEARED
+          : { next_renew_at: nextRenewAtIso },
+      )
+      .where("workflow_id", "=", workflowId)
+      .execute();
+  }
+
+  async recordRenewSuccess(
+    workflowId: string,
+    nowIso: string,
+    nextRenewAtIso: string,
+  ): Promise<void> {
+    await this.db
+      .updateTable("trigger_state")
+      .set({
+        next_renew_at: nextRenewAtIso,
+        renew_error: null,
+        renew_failures: 0,
+        updated_at: nowIso,
+      })
+      .where("workflow_id", "=", workflowId)
+      .execute();
+  }
+
+  async recordRenewFailure(
+    workflowId: string,
+    error: string,
+    nowIso: string,
+    nextRenewAtIso: string,
+    renewFailures: number,
+  ): Promise<void> {
+    await this.db
+      .updateTable("trigger_state")
+      .set({
+        next_renew_at: nextRenewAtIso,
+        renew_error: redactMessage(error),
+        renew_failures: renewFailures,
+        updated_at: nowIso,
+      })
+      .where("workflow_id", "=", workflowId)
+      .execute();
   }
 
   async listTriggerStates(): Promise<TriggerStateRow[]> {

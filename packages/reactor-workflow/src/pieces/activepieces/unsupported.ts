@@ -1,4 +1,5 @@
 import { checkTriggerStrategy } from "@powerhousedao/pieces-framework/workflow";
+import { Cron } from "croner";
 
 // Piece features this engine cannot run. Read off a loaded piece or off its
 // published listing alike, since both carry auth and triggers as data.
@@ -69,12 +70,56 @@ export function unsupportedTrigger(trigger: {
       reason: `${strategy.issue} (${ISSUES_URL}${issue})`,
     };
   }
-  const renew = trigger.renewConfiguration;
-  // createTrigger fills in { strategy: "NONE" } for every trigger.
-  if (isRecord(renew) && renew.strategy !== "NONE") {
-    return unsupported("renewConfiguration", 3090);
+  const problem = renewProblem(trigger.renewConfiguration);
+  if (problem) {
+    return {
+      feature: "renewConfiguration",
+      issue: 3090,
+      reason: `renewConfiguration ${problem} (${ISSUES_URL}3090)`,
+    };
   }
   return undefined;
+}
+
+// A subscription the supervisor renews on a UTC cron by calling onRenew.
+export interface TriggerRenew {
+  strategy: "CRON";
+  cronExpression: string;
+}
+
+function cronFires(cron: string): boolean {
+  try {
+    return (
+      new Cron(cron, { timezone: "UTC", legacyMode: false }).nextRun() !== null
+    );
+  } catch {
+    return false;
+  }
+}
+
+// createTrigger fills in { strategy: "NONE" } for every trigger.
+function renewProblem(renew: unknown): string | undefined {
+  if (renew === undefined || renew === null) return undefined;
+  if (!isRecord(renew)) return "is not an object";
+  if (renew.strategy === "NONE") return undefined;
+  if (renew.strategy !== "CRON") {
+    return `strategy ${String(renew.strategy)} is not supported`;
+  }
+  const cron = renew.cronExpression;
+  if (typeof cron !== "string" || !cronFires(cron)) {
+    return `cron ${JSON.stringify(cron)} is invalid`;
+  }
+  return undefined;
+}
+
+// The trigger's renewal, when it declares a valid CRON one.
+export function triggerRenew(trigger: {
+  renewConfiguration?: unknown;
+}): TriggerRenew | undefined {
+  const renew = trigger.renewConfiguration;
+  if (!isRecord(renew) || renew.strategy !== "CRON") return undefined;
+  if (renewProblem(renew)) return undefined;
+  return { strategy: "CRON", cronExpression: renew.cronExpression as string };
 }
 
 export class UnsupportedPieceFeatureError extends Error {
