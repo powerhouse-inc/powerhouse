@@ -202,8 +202,8 @@ with a fixed `id` is always created legacy.
 
 ### Stored Documents This Build Does Not Run
 
-| Variable                               | Description                                                                         | Default  |
-| -------------------------------------- | ----------------------------------------------------------------------------------- | -------- |
+| Variable                               | Description                                                                            | Default  |
+| -------------------------------------- | -------------------------------------------------------------------------------------- | -------- |
 | `REACTOR_UNSUPPORTED_STORED_DOCUMENTS` | Stored documents at protocol versions this build does not run: `refuse` or `read-only` | `refuse` |
 
 Before it starts, the reactor reads the protocol versions its stored documents
