@@ -37,10 +37,12 @@ import {
   type PropertySettingDef,
   type RecordedSchedule,
   type TriggerHookRequest,
+  type TriggerRenew,
 } from "../pieces/index.js";
 import { childLogger } from "document-model";
 import {
   cronIntervalMs,
+  DEFAULT_TIMEZONE,
   MIN_SCHEDULE_INTERVAL_MS,
   nextFireAt,
   parseScheduleConfig,
@@ -154,6 +156,8 @@ export const DEFAULT_POLL_INTERVAL_MS = 60_000;
 const MAX_BACKOFF_MS = 30 * 60_000;
 const DEDUPE_TTL_MS = 30_000;
 const DEFAULT_RECONCILE_INTERVAL_MS = 15 * 60_000;
+// What a failed onRenew backs off from; the next cron slot caps the wait.
+const RENEW_RETRY_BASE_MS = 60_000;
 
 function isSchedule(
   binding: TriggerBinding,
@@ -250,6 +254,20 @@ interface EnableRetry {
 // one that cannot poll retreat at the same rate and to the same ceiling.
 function backoffMs(intervalMs: number, failures: number): number {
   return Math.min(intervalMs * 2 ** failures, MAX_BACKOFF_MS);
+}
+
+// Renewal crons run in UTC, as upstream schedules them.
+function nextRenewAt(renew: TriggerRenew, from: Date): Date {
+  return nextFireAt(
+    { mode: "cron", cron: renew.cronExpression, timezone: DEFAULT_TIMEZONE },
+    from,
+  );
+}
+
+interface TriggerRuntime {
+  delivery: TriggerDelivery;
+  // Set for a WEBHOOK trigger whose subscription the provider expires.
+  renew?: TriggerRenew;
 }
 
 export class TriggerSupervisor {
@@ -601,7 +619,7 @@ export class TriggerSupervisor {
   // descriptor. Enables are rare and the descriptor is cached per version.
   private async deliveryFor(
     binding: PieceTriggerBinding,
-  ): Promise<TriggerDelivery> {
+  ): Promise<TriggerRuntime> {
     const key = `${binding.source ?? ""}:${binding.packageName}@${binding.version}`;
     let descriptor = this.descriptors.get(key);
     if (!descriptor) {
@@ -634,7 +652,12 @@ export class TriggerSupervisor {
     if ("issue" in check) {
       throw new TriggerConfigError(`${subject}: ${check.issue}`);
     }
-    return check.delivery;
+    return {
+      delivery: check.delivery,
+      ...(check.delivery === "webhook" && trigger.renew
+        ? { renew: trigger.renew }
+        : {}),
+    };
   }
 
   private async enable(
@@ -690,7 +713,8 @@ export class TriggerSupervisor {
     }
     let reachedProvider = false;
     try {
-      const webhook = (await this.deliveryFor(binding)) === "webhook";
+      const runtime = await this.deliveryFor(binding);
+      const webhook = runtime.delivery === "webhook";
       // The reactor's webhook service owns the token and the URL it lives in,
       // so the piece is handed an address rather than a credential to place.
       const webhookUrl = webhook
@@ -711,6 +735,11 @@ export class TriggerSupervisor {
       const intervalMs = webhook
         ? (this.options.reconcileIntervalMs ?? DEFAULT_RECONCILE_INTERVAL_MS)
         : pollIntervalFor(binding, result.schedules, this.defaultIntervalMs);
+      const renewAt = runtime.renew
+        ? this.renewAtAfterEnable(runtime.renew, existing, isRepublish, now)
+        : null;
+      // A republish keeps a failing renewal's streak, so its backoff holds.
+      const renewCarried = renewAt !== null && isRepublish && existing;
       await store.upsertTriggerState({
         workflow_id: binding.workflowId,
         ...triggerBlockColumns(binding.block),
@@ -726,6 +755,9 @@ export class TriggerSupervisor {
         lease_expires_at: null,
         updated_at: now.toISOString(),
         ...pieceColumns(binding),
+        next_renew_at: renewAt?.toISOString() ?? null,
+        renew_error: renewCarried ? existing.renew_error : null,
+        renew_failures: renewCarried ? existing.renew_failures : 0,
       });
       this.enabledOk.add(binding.workflowId);
       this.enableRetries.delete(binding.workflowId);
@@ -777,6 +809,24 @@ export class TriggerSupervisor {
             : "; not retrying"),
       );
     }
+  }
+
+  // A republish keeps an earlier pending renewal: a piece that skips
+  // re-registering on one still holds the old, expiring subscription.
+  private renewAtAfterEnable(
+    renew: TriggerRenew,
+    existing: TriggerStateRow | undefined,
+    isRepublish: boolean,
+    now: Date,
+  ): Date {
+    const next = nextRenewAt(renew, now);
+    const carried =
+      isRepublish && existing?.next_renew_at
+        ? Date.parse(existing.next_renew_at)
+        : NaN;
+    return Number.isFinite(carried) && carried < next.getTime()
+      ? new Date(carried)
+      : next;
   }
 
   // A reactor with no webhook service will never mint a URL; one that has not
@@ -1024,7 +1074,69 @@ export class TriggerSupervisor {
         await this.poll(store, row, binding);
       }
     }
+    await this.renewDue(store);
     await this.retryOneEnable();
+  }
+
+  private async renewDue(store: WorkflowRunStore): Promise<void> {
+    const due = await store.listDueTriggerRenewals(this.now().toISOString());
+    for (const row of due) {
+      const binding = this.bindings.get(row.workflow_id);
+      if (!binding) {
+        await store.setTriggerStatus(row.workflow_id, "DISABLED");
+        continue;
+      }
+      if (isSchedule(binding)) {
+        await store.setTriggerRenewAt(row.workflow_id, null);
+        continue;
+      }
+      await this.renew(store, row, binding);
+    }
+  }
+
+  // A failure backs off but never disables: the subscription may still be
+  // live, and the next cron slot tries again regardless.
+  private async renew(
+    store: WorkflowRunStore,
+    row: TriggerStateRow,
+    binding: PieceTriggerBinding,
+  ): Promise<void> {
+    const now = this.now();
+    let renew: TriggerRenew | undefined;
+    try {
+      renew = (await this.deliveryFor(binding)).renew;
+      if (!renew) {
+        await store.setTriggerRenewAt(row.workflow_id, null);
+        return;
+      }
+      const webhookUrl = await this.webhookUrlOrThrow(binding.workflowId);
+      await this.hook(binding, "onRenew", { webhookUrl });
+      const nextAt = nextRenewAt(renew, now);
+      await store.recordRenewSuccess(
+        row.workflow_id,
+        now.toISOString(),
+        nextAt.toISOString(),
+      );
+      logger.info(
+        `Renewed trigger of workflow ${row.workflow_id}; next ${nextAt.toISOString()}`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const failures = row.renew_failures + 1;
+      const backoff = now.getTime() + backoffMs(RENEW_RETRY_BASE_MS, failures);
+      const slot = renew ? nextRenewAt(renew, now).getTime() : backoff;
+      const retryAt = new Date(Math.min(backoff, slot));
+      await store.recordRenewFailure(
+        row.workflow_id,
+        message,
+        now.toISOString(),
+        retryAt.toISOString(),
+        failures,
+      );
+      logger.warn(
+        `onRenew failed for workflow ${row.workflow_id} (${failures}x): ${message}; retrying at ${retryAt.toISOString()}`,
+      );
+    }
   }
 
   // One fire per due row, however overdue; the next slot is computed from

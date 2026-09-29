@@ -132,13 +132,24 @@ export const triggers = {
       onRenew: async () => undefined,
       run: async (ctx) => [ctx.payload],
     },
+    badRenew: {
+      name: "badRenew",
+      displayName: "Bad Renew",
+      type: "WEBHOOK",
+      renewConfiguration: { strategy: "CRON", cronExpression: "not a cron" },
+      props: {},
+      onEnable: async () => undefined,
+      onDisable: async () => undefined,
+      onRenew: async () => undefined,
+      run: async (ctx) => [ctx.payload],
+    },
   },
 };
 `;
 
 const OAUTH_REASON = `OAuth2 auth is not supported yet (${ISSUES}/3091)`;
 const MANUAL_REASON = `TriggerStrategy.MANUAL is not supported yet (${ISSUES}/3091)`;
-const RENEW_REASON = `renewConfiguration is not supported yet (${ISSUES}/3090)`;
+const RENEW_REASON = `renewConfiguration cron "not a cron" is invalid (${ISSUES}/3090)`;
 
 let root = "";
 const entry = (name: string) => join(root, `${name}.mjs`);
@@ -180,14 +191,15 @@ describe("unsupported piece features", () => {
       ]);
     });
 
-    it("flags a MANUAL or renewing trigger, not its siblings", async () => {
+    it("flags a MANUAL trigger or a malformed renewal, not their siblings", async () => {
       const { triggers } = await runtime.pieceTriggers(TRIGGERS);
       expect(
         Object.fromEntries(triggers.map((t) => [t.name, t.unsupported])),
       ).toEqual({
         plain: undefined,
         manual: MANUAL_REASON,
-        renewing: RENEW_REASON,
+        renewing: undefined,
+        badRenew: RENEW_REASON,
       });
     });
 
@@ -202,7 +214,8 @@ describe("unsupported piece features", () => {
         [`${TRIGGERS} ok`]: undefined,
         [`${TRIGGERS} plain`]: undefined,
         [`${TRIGGERS} manual`]: MANUAL_REASON,
-        [`${TRIGGERS} renewing`]: RENEW_REASON,
+        [`${TRIGGERS} renewing`]: undefined,
+        [`${TRIGGERS} badRenew`]: RENEW_REASON,
         [`${MULTI} whoami`]: undefined,
       });
     });
@@ -246,7 +259,7 @@ describe("unsupported piece features", () => {
       ).rejects.toThrow(`Piece "${OAUTH}": ${OAUTH_REASON}`);
     });
 
-    it("refuses a MANUAL or renewing trigger and describes the rest", async () => {
+    it("refuses a MANUAL trigger or a malformed renewal and describes the rest", async () => {
       await expect(
         runtime.blockDescriptor({
           pieceName: TRIGGERS,
@@ -260,9 +273,22 @@ describe("unsupported piece features", () => {
           pieceName: TRIGGERS,
           pieceVersion: "1.0.0",
           kind: "trigger" as const,
-          name: "renewing",
+          name: "badRenew",
         }),
       ).rejects.toThrow(RENEW_REASON);
+      await expect(
+        runtime.blockDescriptor({
+          pieceName: TRIGGERS,
+          pieceVersion: "1.0.0",
+          kind: "trigger" as const,
+          name: "renewing",
+        }),
+      ).resolves.toMatchObject({
+        trigger: {
+          name: "renewing",
+          renew: { strategy: "CRON", cronExpression: "0 */12 * * *" },
+        },
+      });
       await expect(
         runtime.blockDescriptor({
           pieceName: TRIGGERS,
@@ -303,7 +329,7 @@ describe("unsupported piece features", () => {
         webhookUrlFor: () => Promise.resolve("https://example.com/hook"),
       });
       try {
-        for (const name of ["manual", "renewing"]) {
+        for (const name of ["manual", "badRenew"]) {
           await supervisor.upsert({
             workflowId: `wf-${name}`,
             block: {
@@ -325,9 +351,10 @@ describe("unsupported piece features", () => {
           `Trigger "manual" of "${TRIGGERS}": ${MANUAL_REASON}`,
         );
         expect(manual?.next_poll_at).toBeNull();
-        const renewing = await store.getTriggerState("wf-renewing");
-        expect(renewing?.last_error).toContain(RENEW_REASON);
-        expect(renewing?.next_poll_at).toBeNull();
+        const badRenew = await store.getTriggerState("wf-badRenew");
+        expect(badRenew?.last_error).toContain(RENEW_REASON);
+        expect(badRenew?.next_poll_at).toBeNull();
+        expect(badRenew?.next_renew_at).toBeNull();
       } finally {
         supervisor.stop();
       }
@@ -386,7 +413,7 @@ describe("unsupported piece features", () => {
       });
     });
 
-    it("refuses a MANUAL trigger's hooks but still tears one down", async () => {
+    it("refuses a MANUAL or malformed-renewal trigger's hooks but still tears one down", async () => {
       const hook = (name: "run" | "onDisable", triggerName: string) =>
         worker.runTriggerHook({
           entryPath: entry("triggers"),
@@ -396,7 +423,8 @@ describe("unsupported piece features", () => {
           storeState: {},
         });
       await expect(hook("run", "manual")).rejects.toThrow(MANUAL_REASON);
-      await expect(hook("onDisable", "renewing")).resolves.toBeDefined();
+      await expect(hook("run", "badRenew")).rejects.toThrow(RENEW_REASON);
+      await expect(hook("onDisable", "badRenew")).resolves.toBeDefined();
     });
   });
 });

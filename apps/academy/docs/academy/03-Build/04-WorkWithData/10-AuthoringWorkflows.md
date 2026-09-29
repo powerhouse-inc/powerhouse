@@ -442,4 +442,20 @@ on ports their source never takes.
 
 `triggerStates` reports the health of every registered trigger, including poll
 schedules and the last error, which is where a trigger that isn't firing
-explains itself.
+explains itself. A webhook trigger that renews its subscription also reports
+`nextRenewAt`, the next time `onRenew` runs, and `renewError` and
+`renewFailures`, the last failed renewal and how many have failed in a row.
+They are kept apart from `lastError` and `consecutiveFailures`, which belong to
+deliveries and polls. A trigger whose renewals keep failing stays `ENABLED`,
+so check `renewError` when a webhook trigger has gone quiet.
+
+```graphql
+query {
+  workflowRuntime {
+    triggerStates {
+      workflowId status nextPollAt lastError consecutiveFailures
+      nextRenewAt renewError renewFailures
+    }
+  }
+}
+```

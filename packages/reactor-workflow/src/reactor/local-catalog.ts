@@ -162,6 +162,7 @@ export function detailResult(
           // Under the name the published listing uses; the descriptor
           // shortens it.
           handshakeConfiguration: trigger.handshake,
+          ...(trigger.renew ? { renewConfiguration: trigger.renew } : {}),
         },
       ]),
     ),

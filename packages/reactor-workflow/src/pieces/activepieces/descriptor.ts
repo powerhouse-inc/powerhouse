@@ -14,8 +14,10 @@ import {
   type ApTriggerStrategy,
 } from "./types.js";
 import {
+  triggerRenew,
   unsupportedAuth,
   unsupportedTrigger,
+  type TriggerRenew,
   type UnsupportedFeature,
 } from "./unsupported.js";
 
@@ -116,6 +118,8 @@ export interface PieceTriggerDescriptor {
   // How the sender proves the endpoint exists before it will register it.
   // Absent when the trigger declares no handshake, or declares NONE.
   handshake?: { strategy: string; paramName?: string };
+  // When the provider's subscription must be renewed; absent for NONE.
+  renew?: TriggerRenew;
   // A trigger feature the engine cannot run; the piece's own is on the piece.
   unsupported?: UnsupportedFeature;
 }
@@ -416,6 +420,7 @@ export function buildDescriptor(
         ? { sampleData: trigger.sampleData }
         : {}),
       handshake: describeHandshake(trigger),
+      ...optional("renew", triggerRenew(trigger)),
       ...optional("propertyGroups", describeGroups(trigger.propertyGroups)),
       ...(options.hostFed ? {} : withUnsupported(unsupportedTrigger(trigger))),
     }),

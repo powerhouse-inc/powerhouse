@@ -328,8 +328,13 @@ releases what an earlier enable registered. The reason reads
   or none at all, is rejected the same way. One helper decides the strategy
   (`triggerDelivery` in `@powerhousedao/pieces-framework/workflow`), and a
   trigger whose descriptor cannot be read is `ERROR` with a retry, never polled.
-- `renewConfiguration` / `onRenew`: rejected when the strategy is not
-  `NONE`, as `renewConfiguration` (#3090).
+- `renewConfiguration` / `onRenew`: a `WEBHOOK` trigger's `CRON` strategy
+  runs `onRenew` on that cron, in UTC. The next renewal time is stored on the
+  trigger row, so it survives a restart. A failed `onRenew` sets
+  `renew_error` (`renewError` in `triggerStates`), apart from the poll's
+  `last_error`, and retries with backoff capped at the next cron slot. The
+  trigger stays `ENABLED`. Any other strategy but `NONE`, or a cron that does not parse, is
+  rejected as `renewConfiguration` (#3090).
 - `TriggerStrategy.MANUAL` on a piece trigger: rejected, as
   `TriggerStrategy.MANUAL` (#3091). The core piece's `manual` trigger is fed by
   the host's `fire` mutation and is unaffected.

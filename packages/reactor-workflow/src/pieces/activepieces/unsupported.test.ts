@@ -9,10 +9,12 @@ import {
 import { describe, expect, it } from "vitest";
 import {
   authMethodFor,
+  triggerRenew,
   unsupportedAuth,
   unsupportedTrigger,
 } from "./unsupported.js";
 
+const ISSUES = "https://github.com/powerhouse-inc/powerhouse/issues/";
 const feature = (value: { feature: string } | undefined) => value?.feature;
 
 describe("unsupportedAuth", () => {
@@ -95,11 +97,31 @@ describe("unsupportedTrigger", () => {
       run: () => Promise.resolve([]),
     });
 
-  it("names a trigger that renews, not one createTrigger defaulted", () => {
+  it("runs a CRON renewal, and refuses one that cannot run", () => {
     expect(unsupportedTrigger(webhook())).toBeUndefined();
     expect(
-      feature(unsupportedTrigger(webhook({ cronExpression: "0 */12 * * *" }))),
-    ).toBe("renewConfiguration");
+      unsupportedTrigger(webhook({ cronExpression: "0 */12 * * *" })),
+    ).toBeUndefined();
+    expect(
+      unsupportedTrigger(webhook({ cronExpression: "not a cron" }))?.reason,
+    ).toBe(`renewConfiguration cron "not a cron" is invalid (${ISSUES}3090)`);
+    expect(
+      unsupportedTrigger({
+        type: "WEBHOOK",
+        renewConfiguration: { strategy: "INTERVAL" },
+      })?.reason,
+    ).toBe(
+      `renewConfiguration strategy INTERVAL is not supported (${ISSUES}3090)`,
+    );
+  });
+
+  it("reads the renewal a trigger declares", () => {
+    expect(triggerRenew(webhook())).toBeUndefined();
+    expect(triggerRenew(webhook({ cronExpression: "0 */12 * * *" }))).toEqual({
+      strategy: "CRON",
+      cronExpression: "0 */12 * * *",
+    });
+    expect(triggerRenew(webhook({ cronExpression: "nope" }))).toBeUndefined();
   });
 
   it("names a MANUAL trigger", () => {
