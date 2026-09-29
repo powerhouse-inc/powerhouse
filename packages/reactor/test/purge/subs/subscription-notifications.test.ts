@@ -11,7 +11,6 @@ import {
   ReactorEventTypes,
   type JobWriteReadyEvent,
   type PurgeMarkerContext,
-  type ReadModelBatchCompletedEvent,
   type ReadModelIndexedEvent,
 } from "../../../src/events/types.js";
 import { createDocModelDocument } from "../../factories.js";
@@ -38,7 +37,6 @@ describe("subscription notifications for a purge marker [Postgres]", () => {
   const writeReady: JobWriteReadyEvent[] = [];
   const notified: ReadModelIndexedEvent[] = [];
   const indexed: ReadModelIndexedEvent[] = [];
-  const completed = new Set<string>();
 
   beforeAll(async () => {
     database = await createTestDatabase("reactor_purge_subscription_notices");
@@ -74,12 +72,6 @@ describe("subscription notifications for a purge marker [Postgres]", () => {
         if (event.readModelName === "subscription-notification") {
           notified.push(event);
         }
-      },
-    );
-    receiver.module.eventBus.subscribe(
-      ReactorEventTypes.READMODEL_BATCH_COMPLETED,
-      (_type: number, event: ReadModelBatchCompletedEvent) => {
-        completed.add(event.jobId);
       },
     );
   });
@@ -130,7 +122,18 @@ describe("subscription notifications for a purge marker [Postgres]", () => {
         success: true,
       }),
     );
-    await vi.waitFor(() => expect(completed.has(jobId)).toBe(true));
+    await vi.waitFor(() =>
+      expect(
+        indexed
+          .filter((event) => event.jobId === jobId)
+          .map((event) => event.readModelName),
+      ).toEqual(
+        expect.arrayContaining([
+          "subscription-notification",
+          "processor-manager",
+        ]),
+      ),
+    );
     const failed = indexed.filter((event) => !event.success);
     expect(failed.map((event) => event.readModelName)).toEqual([]);
   }
