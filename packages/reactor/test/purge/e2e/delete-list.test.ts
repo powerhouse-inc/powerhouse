@@ -1,10 +1,20 @@
-import { sql } from "kysely";
+import { sql, type Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
+import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
+import type { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
 import { createTestOperationStorePostgres } from "../../factories.js";
-import { purgeMarker } from "../helpers.js";
+import { TestP256Signer } from "../../utils/p256-signer.js";
+import {
+  PURGE_TEST_DOCUMENT_TYPE,
+  purgeMarker,
+  seedPurgedDocument,
+  signedPurgeMarker,
+} from "../helpers.js";
 import {
   DELETE_LIST,
   expectNoRowsFor,
+  expectPurged,
   KEPT_TABLES,
   type ReactorDb,
 } from "./harness.js";
@@ -82,12 +92,14 @@ const SEEDS: Record<string, (db: ReactorDb, t: Table) => Promise<unknown>> = {
 describe("the e2e delete list [Postgres]", () => {
   let db: ReactorDb;
   let schema: string;
+  let store: KyselyOperationStore;
   let cleanup: () => Promise<void>;
 
   beforeEach(async () => {
     const setup = await createTestOperationStorePostgres();
     db = setup.db as unknown as ReactorDb;
     schema = setup.schema;
+    store = setup.store;
     cleanup = setup.cleanup;
     await sql`insert into ${sql.id(schema, "sync_remotes")}
       (name, collection_id, channel_type) values ('r', 'c', 'internal')`.execute(
@@ -150,5 +162,27 @@ describe("the e2e delete list [Postgres]", () => {
       values ('survivor', ${ID})`.execute(db);
 
     await expectNoRowsFor(db, ID);
+  });
+
+  it("reads a seeded purged stream as purged", async () => {
+    const key = await TestP256Signer.create();
+    const marker = await signedPurgeMarker(key.asISigner(), ID);
+    const storage = db as unknown as Kysely<StorageDatabase>;
+    await sql`insert into ${sql.id(schema, "document_collections")}
+      ("documentId", "collectionId", "joinedOrdinal", "leftOrdinal")
+      values (${ID}, 'drive-c', 1, 2)`.execute(db);
+    const ordinal = await seedPurgedDocument(
+      { db: storage, store, index: new KyselyOperationIndex(storage) },
+      marker,
+      { reopenMemberships: storage },
+    );
+
+    const state = await expectPurged(db, ID, {
+      documentType: PURGE_TEST_DOCUMENT_TYPE,
+      signerKey: key.did,
+      requestId: marker.action.input.requestId,
+    });
+    expect(state.ordinal).toBe(ordinal);
+    expect(state.marker.id).toBe(marker.id);
   });
 });

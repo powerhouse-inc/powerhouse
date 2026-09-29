@@ -55,7 +55,7 @@ import {
   type RemoteOptions,
   type SyncEnvelope,
 } from "../../../src/sync/types.js";
-import { DroppingEventBus } from "../../catch-up/helpers.js";
+import { DroppingEventBus, holdIndexCommit } from "../../catch-up/helpers.js";
 import { createMockLogger } from "../../factories.js";
 import {
   TestChannel,
@@ -940,3 +940,50 @@ export function fullManifest(sequence = 1): PeerManifest {
 }
 
 export const WRITE_READY = ReactorEventTypes.JOB_WRITE_READY;
+
+/** Remotes whose channel records what the outbox sends and delivers nowhere. */
+export class CaptureChannels {
+  readonly sent = new Map<string, SyncEnvelope[]>();
+
+  factory(): IChannelFactory {
+    return {
+      instance: (
+        remoteId: string,
+        remoteName: string,
+        _config: ChannelConfig,
+        cursorStorage: ISyncCursorStorage,
+      ): IChannel => {
+        const sent: SyncEnvelope[] = [];
+        this.sent.set(remoteName, sent);
+        return new TestChannel(remoteId, remoteName, cursorStorage, (e) => {
+          sent.push(e);
+        });
+      },
+    } as IChannelFactory;
+  }
+
+  async add(node: Node, remoteName: string, driveId: string): Promise<void> {
+    await node.sync!.add(
+      remoteName,
+      DriveCollectionId.forDrive(driveId),
+      { type: "internal", parameters: {} },
+      FILTER,
+    );
+  }
+
+  operations(remoteName: string): OperationWithContext[] {
+    return (this.sent.get(remoteName) ?? []).flatMap((e) => e.operations ?? []);
+  }
+
+  sentOpIds(remoteName: string): Set<string> {
+    return new Set(this.operations(remoteName).map((op) => op.operation.id));
+  }
+}
+
+/** holdIndexCommit on a node's reactor schema. */
+export function holdIndexCommitOn(node: Node, documentId: string) {
+  return holdIndexCommit(
+    node.db as unknown as Kysely<StorageDatabase>,
+    documentId,
+  );
+}
