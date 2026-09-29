@@ -1,8 +1,17 @@
 // Testing a core trigger: manual takes a sample payload, schedule samples a
-// fire now, and webhook waits for the next delivery without running anything.
+// fire now, and webhook waits for the next delivery, running it only if armed.
 import type { WebhookRequest } from "@powerhousedao/shared/processors";
 import { actions } from "@powerhousedao/workflow/document-models/workflow";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { OperationWithContext } from "document-model";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from "vitest";
 import { Documents } from "../../test/helpers/documents.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 import type { WorkflowRuntimeService } from "./service.js";
@@ -13,7 +22,7 @@ const WORKFLOW = "wf-core-test";
 
 let documents: Documents;
 let service: WorkflowRuntimeService;
-let fire: ReturnType<typeof vi.spyOn>;
+let fire: MockInstance<WorkflowRuntimeService["fire"]>;
 
 const endpoints = {
   endpointFor: vi.fn(() =>
@@ -48,6 +57,39 @@ function draftWith(triggerName: string, config: Record<string, unknown>) {
       config,
     }),
   );
+}
+
+// Publishes and enables the draft, and hands the runtime the operation.
+async function armDraft(): Promise<void> {
+  const document = documents.apply(
+    WORKFLOW,
+    actions.publishWorkflow({ publishedAt: "2026-09-29T10:00:00.000Z" }),
+    actions.setWorkflowStatus({ status: "ENABLED" }),
+  );
+  await service.onOperations([
+    {
+      operation: {
+        index: 1,
+        timestampUtcMs: "1",
+        action: { type: "SET_WORKFLOW_STATUS", input: {} },
+        resultingState: JSON.stringify(document.state.global),
+      },
+      context: {
+        documentId: WORKFLOW,
+        documentType: "powerhouse/workflow",
+        scope: "global",
+        branch: "main",
+        ordinal: 1,
+      },
+    } as unknown as OperationWithContext,
+  ]);
+}
+
+// An armed workflow always has a policy, so its test is watched for directly.
+async function testWaiting(): Promise<void> {
+  const tests = (service as unknown as { webhookTests: Map<string, unknown> })
+    .webhookTests;
+  await vi.waitFor(() => expect(tests.has(WORKFLOW)).toBe(true));
 }
 
 const lastTest = () =>
@@ -124,7 +166,7 @@ describe("a schedule trigger test", () => {
 });
 
 describe("a webhook trigger test", () => {
-  it("takes the next delivery as its sample and runs nothing", async () => {
+  it("takes the next delivery as its sample, and runs nothing unarmed", async () => {
     draftWith("webhook", {
       scheme: "none",
       responseStatus: 202,
@@ -147,6 +189,38 @@ describe("a webhook trigger test", () => {
     expect(fire).not.toHaveBeenCalled();
     // One-shot: the listener is gone, and the unarmed draft refuses again.
     expect(await service.webhookPolicy(WORKFLOW)).toBeUndefined();
+  });
+
+  it("still runs an armed workflow, and samples the same delivery", async () => {
+    draftWith("webhook", { scheme: "none" });
+    await armDraft();
+    fire.mockResolvedValue({ runId: "run-live", status: "SUCCEEDED" } as never);
+
+    const testing = service.testTrigger(WORKFLOW, CTX);
+    await testWaiting();
+    await service.deliverWebhook(delivery({ id: "evt_live" }));
+
+    expect(fire).toHaveBeenCalledTimes(1);
+    expect(fire.mock.calls[0]?.[1]).toMatchObject({ body: { id: "evt_live" } });
+    expect(await testing).toMatchObject({ body: { id: "evt_live" } });
+  });
+
+  it("verifies an armed workflow's deliveries with its live trigger", async () => {
+    draftWith("webhook", { scheme: "none" });
+    await armDraft();
+    draftWith("webhook", {
+      scheme: "hmac",
+      secretRef: "secret://v1:00112233445566778899aabbccddeeff",
+    });
+
+    const testing = service.testTrigger(WORKFLOW, CTX);
+    await testWaiting();
+
+    expect(await service.webhookPolicy(WORKFLOW)).toMatchObject({
+      verify: undefined,
+    });
+    service.cancelTriggerTest(WORKFLOW);
+    await expect(testing).rejects.toThrow("Trigger test cancelled");
   });
 
   it("verifies the delivery as the draft's trigger would", async () => {

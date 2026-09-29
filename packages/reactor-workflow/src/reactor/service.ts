@@ -1782,18 +1782,26 @@ export class WorkflowRuntimeService {
     // unseeded registry is indistinguishable from a bad token.
     await this.seedPromise;
 
-    // A waiting test verifies as the draft's trigger would once armed.
+    // An armed workflow verifies as it runs, whatever a test of its draft says.
+    const registration = this.liveWebhook(workflowId);
+    if (registration) {
+      // A piece owns its own verification and parsing: its run hook decides
+      // what the request means, or rejects it.
+      if (registration.kind === PIECE_WEBHOOK_KIND) return {};
+      return this.policyOf(registration.config, workflowId);
+    }
+
+    // Unarmed, a waiting test verifies as the draft's trigger would once armed.
     const test = this.webhookTests.get(workflowId);
-    if (test) return this.policyOf(test.config, workflowId);
+    return test ? this.policyOf(test.config, workflowId) : undefined;
+  }
 
+  private liveWebhook(workflowId: string) {
     const registration = this.registry.get(workflowId);
-    if (!registration) return undefined;
-
-    // A piece owns its own verification and parsing: its run hook decides what
-    // the request means, or rejects it.
-    if (registration.kind === PIECE_WEBHOOK_KIND) return {};
-    if (registration.kind !== WEBHOOK_TRIGGER_KIND) return undefined;
-    return this.policyOf(registration.config, workflowId);
+    return registration?.kind === PIECE_WEBHOOK_KIND ||
+      registration?.kind === WEBHOOK_TRIGGER_KIND
+      ? registration
+      : undefined;
   }
 
   private async policyOf(
@@ -1872,19 +1880,19 @@ export class WorkflowRuntimeService {
    * answered any challenge for; all that is left is deciding what it means. */
   async deliverWebhook(request: WebhookRequest): Promise<WebhookReply> {
     const workflowId = request.key;
+    const registration = this.liveWebhook(workflowId);
+    // A waiting test samples the delivery; an armed workflow still runs it.
     const test = this.webhookTests.get(workflowId);
     if (test) {
       this.webhookTests.delete(workflowId);
       clearTimeout(test.timer);
       test.resolve(webhookPayload(request));
-      return { status: test.config.responseStatus };
+      if (!registration) return { status: test.config.responseStatus };
     }
-    const registration = this.registry.get(workflowId);
     if (!registration) return UNAUTHORIZED;
     if (registration.kind === PIECE_WEBHOOK_KIND) {
       return this.deliverToPiece(registration.binding, request);
     }
-    if (registration.kind !== WEBHOOK_TRIGGER_KIND) return UNAUTHORIZED;
 
     const { config } = registration;
     const payload = webhookPayload(request);
@@ -3223,7 +3231,7 @@ export class WorkflowRuntimeService {
   }
 
   // One-shot listeners: the next delivery to the workflow's endpoint is the
-  // sample, and runs nothing.
+  // sample. It runs the workflow only if the workflow is armed.
   private readonly webhookTests = new Map<string, WebhookTest>();
 
   private awaitWebhookTest(
