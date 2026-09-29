@@ -106,6 +106,22 @@ deliveries stop once the operation is indexed, a piece trigger's `onDisable`
 runs, and then its trigger row, its FLOW `ctx.store` partition, its webhook
 token and its dedupe keys are deleted. A restart finds nothing to re-arm.
 
+A document's purge (`PURGE_DOCUMENT`) deletes every run that carried it: the
+runs `run_document` ties to it, the runs whose trigger payload names it as
+`documentId` or `driveId`, and every rerun of those, transitively. Their
+`step_execution` and `run_document` rows go with them; a `trigger_dedupe` row
+they claimed keeps its key and loses its `run_id`. A run erased while it is
+still executing journals nothing more from this process. The read model's
+fence is `"skip"`: the journal lives on the relational handle, not the
+reactor's, so a run the purge races can still be written after the marker was
+applied; a rescan from just below the marker repairs it.
+
+Not erased, because nothing ties it to a document: `trigger_state.store_state`
+(vestigial, but an unmigrated legacy blob may remain), `trigger_dedupe.dedupe_key`
+(an operation key, which can embed a document id) and `piece_store.value`
+(whatever a piece stored). Runs of a purged workflow document are keyed by
+`run.workflow_id` and are not erased either; only retention removes them.
+
 `runsPage` pages newest first on when a run was journaled (`enqueued_at`),
 which starting a PENDING run leaves alone, so a run keeps its place between
 pages. `startedAt` is when it began executing.

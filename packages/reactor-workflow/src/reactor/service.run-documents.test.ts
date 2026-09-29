@@ -118,6 +118,16 @@ describe("runs are served with the documents their trigger names", () => {
     expect(fire).not.toHaveBeenCalled();
   });
 
+  it("serves a run whose trigger document was purged", async () => {
+    const service = serviceWith({
+      reactorClient: {
+        get: () => Promise.reject(absent("DocumentPurgedError")),
+      },
+    } as never);
+
+    expect((await service.run("run-gone", CTX))?.row.id).toBe("run-gone");
+  });
+
   it("withholds a run whose trigger document cannot be checked", async () => {
     const service = serviceWith({
       reactorClient: {
