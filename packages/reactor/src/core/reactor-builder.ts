@@ -1157,6 +1157,9 @@ export class ReactorBuilder {
           return undefined;
         }
       },
+      forgetDocument: (documentId) => {
+        documentMetaCache.invalidate(documentId);
+      },
     };
     let syncModule: InProcessSyncModule | undefined = undefined;
     if (this.channelScheme) {
