@@ -18,7 +18,8 @@ const ISSUES = "https://github.com/powerhouse-inc/powerhouse/issues/";
 const feature = (value: { feature: string } | undefined) => value?.feature;
 
 describe("unsupportedAuth", () => {
-  it("names OAuth2, OIDC and CustomAuth refresh", () => {
+  it("names OIDC, client-credentials OAuth2 and CustomAuth refresh", () => {
+    const oidc = PieceAuth.OIDC({ required: true, props: {} });
     const oauth = PieceAuth.OAuth2({
       authUrl: "https://example.com/auth",
       tokenUrl: "https://example.com/token",
@@ -38,13 +39,14 @@ describe("unsupportedAuth", () => {
         generate: () => Promise.resolve({ access_token: "t" }),
       },
     });
-    expect(feature(unsupportedAuth(oauth))).toBe("OAuth2 auth");
+    expect(unsupportedAuth(oauth)).toBeUndefined();
     expect(
-      feature(unsupportedAuth(PieceAuth.OIDC({ required: true, props: {} }))),
-    ).toBe("OIDC auth");
+      feature(unsupportedAuth({ ...oauth, grantType: "client_credentials" })),
+    ).toBe("OAuth2 client credentials");
+    expect(feature(unsupportedAuth(oidc))).toBe("OIDC auth");
     // Several methods run if any one does; otherwise the first says why.
-    expect(unsupportedAuth([custom, oauth])).toBeUndefined();
-    expect(feature(unsupportedAuth([oauth, refreshing]))).toBe("OAuth2 auth");
+    expect(unsupportedAuth([custom, oidc])).toBeUndefined();
+    expect(feature(unsupportedAuth([oidc, refreshing]))).toBe("OIDC auth");
     expect(feature(unsupportedAuth(refreshing))).toBe("CustomAuth refresh");
   });
 

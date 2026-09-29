@@ -35,22 +35,20 @@ import { packagePieces } from "./piece-registry.js";
 import { WorkflowRunStore } from "./store.js";
 import { TriggerSupervisor } from "./trigger-supervisor.js";
 
-const OAUTH = "@powerhousedao/piece-oauth-fixture";
+const OIDC = "@powerhousedao/piece-oidc-fixture";
 const TRIGGERS = "@powerhousedao/piece-trigger-fixture";
 const MULTI = "@powerhousedao/piece-multi-auth-fixture";
 const ISSUES = "https://github.com/powerhouse-inc/powerhouse/issues";
 
-// The shapes PieceAuth.OAuth2 and createTrigger build, as plain data.
-const OAUTH_SOURCE = `
-export const oauth = {
-  displayName: "OAuth Fixture",
+// The shapes PieceAuth.OIDC and createTrigger build, as plain data.
+const OIDC_SOURCE = `
+export const oidc = {
+  displayName: "OIDC Fixture",
   auth: {
-    type: "OAUTH2",
+    type: "OIDC",
     displayName: "Connection",
     required: true,
-    authUrl: "https://example.com/auth",
-    tokenUrl: "https://example.com/token",
-    scope: [],
+    props: {},
   },
   actions: {
     echo: { name: "echo", displayName: "Echo", props: {}, run: async () => "ran" },
@@ -59,18 +57,16 @@ export const oauth = {
 };
 `;
 
-// OAuth2 or a token: the token runs, and it is the one validate sees.
+// OIDC or a token: the token runs, and it is the one validate sees.
 const MULTI_SOURCE = `
 export const multi = {
   displayName: "Multi Auth Fixture",
   auth: [
     {
-      type: "OAUTH2",
+      type: "OIDC",
       displayName: "Connection",
       required: true,
-      authUrl: "https://example.com/auth",
-      tokenUrl: "https://example.com/token",
-      scope: [],
+      props: {},
     },
     {
       type: "CUSTOM_AUTH",
@@ -147,7 +143,7 @@ export const triggers = {
 };
 `;
 
-const OAUTH_REASON = `OAuth2 auth is not supported yet (${ISSUES}/3091)`;
+const OIDC_REASON = `OIDC auth is not supported yet (${ISSUES}/3091)`;
 const MANUAL_REASON = `TriggerStrategy.MANUAL is not supported yet (${ISSUES}/3091)`;
 const RENEW_REASON = `renewConfiguration cron "not a cron" is invalid (${ISSUES}/3090)`;
 
@@ -159,11 +155,11 @@ describe("unsupported piece features", () => {
 
   beforeAll(async () => {
     root = await mkdtemp(join(tmpdir(), "unsupported-features-"));
-    await writeFile(entry("oauth"), OAUTH_SOURCE);
+    await writeFile(entry("oidc"), OIDC_SOURCE);
     await writeFile(entry("triggers"), TRIGGER_SOURCE);
     await writeFile(entry("multi"), MULTI_SOURCE);
     packagePieces.setPieces([
-      { name: OAUTH, version: "1.0.0", entryPath: entry("oauth") },
+      { name: OIDC, version: "1.0.0", entryPath: entry("oidc") },
       { name: TRIGGERS, version: "1.0.0", entryPath: entry("triggers") },
       { name: MULTI, version: "1.0.0", entryPath: entry("multi") },
     ]);
@@ -177,17 +173,17 @@ describe("unsupported piece features", () => {
   });
 
   describe("in the listings", () => {
-    it("lists an OAuth2 piece with the reason none of its blocks can run", async () => {
+    it("lists an OIDC piece with the reason none of its blocks can run", async () => {
       const catalog = await runtime.pieceCatalog();
-      expect(catalog.find((piece) => piece.name === OAUTH)?.unsupported).toBe(
-        `OAuth2 auth is not supported yet (${ISSUES}/3091)`,
+      expect(catalog.find((piece) => piece.name === OIDC)?.unsupported).toBe(
+        `OIDC auth is not supported yet (${ISSUES}/3091)`,
       );
       expect(
         catalog.find((piece) => piece.name === TRIGGERS)?.unsupported,
       ).toBeUndefined();
-      const { actions } = await runtime.pieceActions(OAUTH);
+      const { actions } = await runtime.pieceActions(OIDC);
       expect(actions.map((action) => action.unsupported)).toEqual([
-        OAUTH_REASON,
+        OIDC_REASON,
       ]);
     });
 
@@ -210,7 +206,7 @@ describe("unsupported piece features", () => {
           hits.map((hit) => [`${hit.pieceName} ${hit.name}`, hit.unsupported]),
         ),
       ).toEqual({
-        [`${OAUTH} echo`]: OAUTH_REASON,
+        [`${OIDC} echo`]: OIDC_REASON,
         [`${TRIGGERS} ok`]: undefined,
         [`${TRIGGERS} plain`]: undefined,
         [`${TRIGGERS} manual`]: MANUAL_REASON,
@@ -241,22 +237,22 @@ describe("unsupported piece features", () => {
       expect(
         described.auth.map((method) => [method.type, method.unsupported]),
       ).toEqual([
-        ["OAUTH2", OAUTH_REASON],
+        ["OIDC", OIDC_REASON],
         ["CUSTOM_AUTH", undefined],
       ]);
     });
   });
 
   describe("describing a block", () => {
-    it("refuses every block of an OAuth2 piece", async () => {
+    it("refuses every block of an OIDC piece", async () => {
       await expect(
         runtime.blockDescriptor({
-          pieceName: OAUTH,
+          pieceName: OIDC,
           pieceVersion: "1.0.0",
           kind: "action" as const,
           name: "echo",
         }),
-      ).rejects.toThrow(`Piece "${OAUTH}": ${OAUTH_REASON}`);
+      ).rejects.toThrow(`Piece "${OIDC}": ${OIDC_REASON}`);
     });
 
     it("refuses a MANUAL trigger or a malformed renewal and describes the rest", async () => {
@@ -365,19 +361,19 @@ describe("unsupported piece features", () => {
     const worker = new PieceWorker();
     afterAll(() => worker.dispose());
 
-    it("fails a step of an OAuth2 piece before piece code runs", async () => {
+    it("fails a step of an OIDC piece before piece code runs", async () => {
       const error = await worker
         .runAction({
-          entryPath: entry("oauth"),
+          entryPath: entry("oidc"),
           actionName: "echo",
           propsValue: {},
         })
         .catch((thrown: unknown) => thrown);
       expect(error).toBeInstanceOf(PieceWorkerError);
       expect((error as PieceWorkerError).serialized.unsupportedFeature).toBe(
-        "OAuth2 auth",
+        "OIDC auth",
       );
-      expect((error as PieceWorkerError).message).toContain(OAUTH_REASON);
+      expect((error as PieceWorkerError).message).toContain(OIDC_REASON);
     });
 
     it("runs a multi-auth piece through the connection's own method", async () => {
@@ -391,8 +387,8 @@ describe("unsupported piece features", () => {
       await expect(
         run({ type: "CUSTOM_AUTH", props: { token: "good" } }),
       ).resolves.toMatchObject({ output: "CUSTOM_AUTH:good" });
-      await expect(run({ type: "OAUTH2", access_token: "t" })).rejects.toThrow(
-        OAUTH_REASON,
+      await expect(run({ type: "OIDC", props: {} })).rejects.toThrow(
+        OIDC_REASON,
       );
       await expect(
         run({ type: "BASIC_AUTH", username: "u", password: "p" }),

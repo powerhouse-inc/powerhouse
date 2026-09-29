@@ -55,6 +55,7 @@ const LISTED_AUTH = {
     { type: "CUSTOM_AUTH", displayName: "Service account", required: true },
   ],
   slack: { type: "OAUTH2", displayName: "Connection", required: true },
+  "aws-s3": { type: "OIDC", displayName: "Workload identity", required: true },
   omnihr: { type: "CUSTOM_AUTH", required: true, refresh: {} },
   notion: { type: "SECRET_TEXT", required: true },
 };
@@ -73,10 +74,11 @@ it("flags the listed pieces whose auth this engine cannot run", async () => {
   expect(
     Object.fromEntries(catalog.map((p) => [p.displayName, p.unsupported])),
   ).toEqual({
-    // OAuth2 or a service account: the service account runs.
     gmail: undefined,
-    "google-drive": `OAuth2 auth is not supported yet (${ISSUES}/3091)`,
-    slack: `OAuth2 auth is not supported yet (${ISSUES}/3091)`,
+    // OAuth2 runs; OIDC alone would not.
+    "google-drive": undefined,
+    slack: undefined,
+    "aws-s3": `OIDC auth is not supported yet (${ISSUES}/3091)`,
     omnihr: `CustomAuth refresh is not supported yet (${ISSUES}/3091)`,
     notion: undefined,
   });

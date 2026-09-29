@@ -243,7 +243,7 @@ describe("getConnectors", () => {
     expect(result.truncated).toBe(true);
   });
 
-  it("flags auth kinds the runtime cannot execute yet", async () => {
+  it("asks for an OAuth2 app and flags the sign-in it still needs", async () => {
     vi.stubGlobal(
       "fetch",
       graphqlFetch({
@@ -260,8 +260,12 @@ describe("getConnectors", () => {
     expect(result.connectors[0]).toMatchObject({
       connectorId: "@activepieces/piece-slack#slack",
       authType: "OAUTH2",
-      supported: false,
-      fields: [],
+      supported: true,
+      signIn: "oauth2",
+      fields: [
+        expect.objectContaining({ name: "client_id", secret: false }),
+        expect.objectContaining({ name: "client_secret", secret: true }),
+      ],
     });
   });
 });

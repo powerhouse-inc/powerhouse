@@ -118,6 +118,31 @@ export const schema: DocumentNode = gql`
     """
     secret(ref: String!): SecretRecord
     secrets: [SecretRecord!]!
+    """
+    The URL an OAuth2 app must register as its redirect. A bare path when
+    this host does not know its public origin; resolve it against the URL
+    this API is reached at. Null when the host serves no HTTP routes.
+    """
+    oauthRedirectUri: String
+    """
+    How an OAuth2 sign-in opened by startOAuth stands; null when unknown.
+    """
+    oauthAttempt(state: String!): OAuthAttempt
+  }
+
+  type OAuthAttempt {
+    connectionId: String!
+    "PENDING | EXCHANGING | OK | ERROR"
+    status: String!
+    error: String
+  }
+
+  type OAuthStart {
+    state: String!
+    "Where to send the user to sign in."
+    authorizationUrl: String!
+    redirectUri: String!
+    expiresAt: String!
   }
 
   """
@@ -397,6 +422,18 @@ export const schema: DocumentNode = gql`
     outcome on the connection document.
     """
     checkConnection(connectionId: String!): ConnectionCheckResult!
+    """
+    Opens an OAuth2 sign-in with the connection's own app (client_id in its
+    config, client_secret in its secretRefs). redirectUri is needed only when
+    oauthRedirectUri is a bare path. With returnUrl, which must be on the
+    caller's origin, the callback sends the browser back there with
+    ?ph_oauth=<state> instead of closing the window.
+    """
+    startOAuth(
+      connectionId: String!
+      redirectUri: String
+      returnUrl: String
+    ): OAuthStart!
   }
 
   type Mutation {

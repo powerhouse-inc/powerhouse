@@ -35,7 +35,11 @@ function ConnectionEditor() {
             onSetStatus={callbacks.setStatus}
             onDelete={() => showDeleteNodeModal(document.header.id)}
           />
-          <ConnectionForm state={state} callbacks={callbacks} />
+          <ConnectionForm
+            state={state}
+            callbacks={callbacks}
+            connectionId={document.header.id}
+          />
           <UsedBy usage={usage} />
         </div>
       </div>

@@ -78,7 +78,7 @@ describe("connection resolution", () => {
     const resolver = new StaticConnectionResolver(
       {
         open: { authType: "NONE" },
-        oauth: { authType: "OAUTH2" },
+        oidc: { authType: "OIDC" },
         broken: {
           authType: "SECRET_TEXT",
           secretRefs: [{ name: "token", ref: "vault://missing" }],
@@ -90,7 +90,7 @@ describe("connection resolution", () => {
     await expect(resolver.resolve("nope")).rejects.toBeInstanceOf(
       ConnectionNotFoundError,
     );
-    await expect(resolver.resolve("oauth")).rejects.toBeInstanceOf(
+    await expect(resolver.resolve("oidc")).rejects.toBeInstanceOf(
       UnsupportedAuthTypeError,
     );
     await expect(resolver.resolve("broken")).rejects.toBeInstanceOf(

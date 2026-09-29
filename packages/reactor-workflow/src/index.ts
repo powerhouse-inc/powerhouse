@@ -25,6 +25,11 @@ export {
   type RunsPageArgs,
 } from "./reactor/service.js";
 export { InvalidRunCursorError } from "./reactor/run-cursor.js";
+export type {
+  OAuthAttemptStatus,
+  OAuthAttemptView,
+  OAuthStart,
+} from "./reactor/oauth.js";
 export {
   WorkflowTriggersReadModel,
   WORKFLOW_TRIGGERS_READ_MODEL,

@@ -964,6 +964,7 @@ async function initServer(
       // The workflow package's own HTTP namespace: its webhook endpoints live
       // under it, not under the reactor's.
       webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
+      http: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME),
       authorizationService: api.authorizationService,
       // The manager that already loads this reactor's packages: the project it
       // runs in is one of them, so its own pieces arrive with the rest.

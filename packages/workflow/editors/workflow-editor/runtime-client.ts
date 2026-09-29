@@ -430,6 +430,68 @@ export function checkConnection(
     .then((data) => data.workflowRuntime.checkConnection);
 }
 
+export interface OAuthStart {
+  state: string;
+  authorizationUrl: string;
+  redirectUri: string;
+  expiresAt: string;
+}
+
+export interface OAuthAttempt {
+  connectionId: string;
+  status: "PENDING" | "EXCHANGING" | "OK" | "ERROR";
+  error: string | null;
+}
+
+// The redirect an OAuth2 app registers, absolute: a bare path from a host
+// that doesn't know its origin is resolved against the URL it is reached at.
+export async function fetchOAuthRedirectUri(
+  t: Transport,
+): Promise<string | null> {
+  const data = await t.gql<{
+    workflowRuntime: { oauthRedirectUri: string | null };
+  }>(`query OAuthRedirectUri { workflowRuntime { oauthRedirectUri } }`, {});
+  const uri = data.workflowRuntime.oauthRedirectUri;
+  return uri === null ? null : new URL(uri, t.url).href;
+}
+
+export async function startOAuth(
+  t: Transport,
+  connectionId: string,
+  options: { redirectUri?: string; returnUrl?: string } = {},
+): Promise<OAuthStart> {
+  const data = await t.gql<{ workflowRuntime: { startOAuth: OAuthStart } }>(
+    `mutation StartOAuth($connectionId: String!, $redirectUri: String, $returnUrl: String) {
+      workflowRuntime {
+        startOAuth(connectionId: $connectionId, redirectUri: $redirectUri, returnUrl: $returnUrl) {
+          state authorizationUrl redirectUri expiresAt
+        }
+      }
+    }`,
+    {
+      connectionId,
+      redirectUri: options.redirectUri ?? null,
+      returnUrl: options.returnUrl ?? null,
+    },
+  );
+  return data.workflowRuntime.startOAuth;
+}
+
+export async function fetchOAuthAttempt(
+  t: Transport,
+  state: string,
+): Promise<OAuthAttempt | null> {
+  const data = await t.gql<{
+    workflowRuntime: { oauthAttempt: OAuthAttempt | null };
+  }>(
+    `query OAuthAttempt($state: String!) {
+      workflowRuntime { oauthAttempt(state: $state) { connectionId status error } }
+    }`,
+    { state },
+  );
+  return data.workflowRuntime.oauthAttempt;
+}
+
 export interface SecretStat {
   ref: string;
   label: string | null;
@@ -832,6 +894,9 @@ const operations = {
   fetchStepOutputTree,
   fetchConnections,
   checkConnection,
+  fetchOAuthRedirectUri,
+  startOAuth,
+  fetchOAuthAttempt,
   createSecret,
   rotateSecret,
   fetchSecretStat,

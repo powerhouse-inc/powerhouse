@@ -15,6 +15,7 @@ import {
 } from "react";
 import {
   createRuntimeClient,
+  type OAuthAttempt,
   type RunsScope,
   type RuntimeClient,
   type SecretStat,
@@ -177,6 +178,44 @@ export function useSecretStat(
   return query.status === "error" ? null : query.data;
 }
 
+// Absolute; null when the host serves no OAuth2 callback.
+export function useOAuthRedirectUri() {
+  const { client, queryClient } = useRuntime();
+  return useQuery(
+    {
+      queryKey: [client.url, "oauthRedirectUri"],
+      queryFn: () => client.fetchOAuthRedirectUri(),
+      staleTime: Infinity,
+    },
+    queryClient,
+  );
+}
+
+// Polled until the sign-in finishes. Undefined while loading; null for no
+// state, or one the switchboard does not know (or could not be asked about).
+export function useOAuthAttempt(
+  state: string | null,
+): OAuthAttempt | null | undefined {
+  const { client, queryClient } = useRuntime();
+  const query = useQuery(
+    {
+      queryKey: [client.url, "oauthAttempt", state],
+      queryFn: () => client.fetchOAuthAttempt(state!),
+      enabled: state !== null,
+      gcTime: 0,
+      refetchInterval: (current) => {
+        if (current.state.status === "error") return false;
+        const data = current.state.data;
+        if (data === null) return false;
+        return data?.status === "OK" || data?.status === "ERROR" ? false : 1000;
+      },
+    },
+    queryClient,
+  );
+  if (state === null || query.isError) return null;
+  return query.data;
+}
+
 // Writes that change runtime state, each dropping the queries it affects.
 export function useRuntimeActions() {
   const { client, queryClient } = useRuntime();
@@ -204,6 +243,10 @@ export function useRuntimeActions() {
           .checkConnection(connectionId)
           .finally(() => invalidate(runtimeKeys.connections(client.url))),
       connectionsChanged: () => invalidate(runtimeKeys.connections(client.url)),
+      startOAuth: (
+        connectionId: string,
+        options?: { redirectUri?: string; returnUrl?: string },
+      ) => client.startOAuth(connectionId, options),
     };
   }, [client, queryClient]);
 }
