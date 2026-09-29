@@ -65,4 +65,15 @@ export class KyselyAttachmentReferenceStore
       )
       .execute();
   }
+
+  async removeDocuments(documentIds: readonly string[]): Promise<void> {
+    if (documentIds.length === 0) {
+      return;
+    }
+
+    await this.db
+      .deleteFrom("attachment_reference")
+      .where("document_id", "in", [...documentIds])
+      .execute();
+  }
 }

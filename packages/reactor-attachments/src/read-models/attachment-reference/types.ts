@@ -17,4 +17,6 @@ export interface IAttachmentReferenceReader {
 
 export interface IAttachmentReferenceWriter {
   addReferences(references: readonly AttachmentReferenceInput[]): Promise<void>;
+  /** Deletes every reference of the documents; for a purged document. */
+  removeDocuments(documentIds: readonly string[]): Promise<void>;
 }

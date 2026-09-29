@@ -46,7 +46,9 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "catalog:",
+    "@types/pg": "catalog:",
     "kysely-pglite-dialect": "catalog:",
+    "pg": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:",
     "vitest": "catalog:"
