@@ -1,3 +1,4 @@
+import { isPurgeMarker } from "@powerhousedao/shared/document-model";
 import type { SyncOperation } from "./sync-operation.js";
 import { SyncOperationStatus } from "./types.js";
 
@@ -56,7 +57,13 @@ export class MailboxAggregateError extends Error {
   }
 }
 
+export type MailboxOptions = {
+  /** An unapplied item carrying a purge marker keeps ackOrdinal below it. */
+  holdAckBelowMarkers?: boolean;
+};
+
 export class Mailbox implements IMailbox {
+  private readonly holdAckBelowMarkers: boolean;
   private itemsMap: Map<string, SyncOperation> = new Map();
   private addedCallbacks: MailboxCallback[] = [];
   private removedCallbacks: MailboxCallback[] = [];
@@ -66,6 +73,10 @@ export class Mailbox implements IMailbox {
 
   private _ack: number = 0;
   private _latestOrdinal: number = 0;
+
+  constructor(options: MailboxOptions = {}) {
+    this.holdAckBelowMarkers = options.holdAckBelowMarkers ?? false;
+  }
 
   init(ackOrdinal: number) {
     this._ack = this._latestOrdinal = ackOrdinal;
@@ -80,7 +91,17 @@ export class Mailbox implements IMailbox {
   }
 
   get ackOrdinal(): number {
-    return this._ack;
+    if (!this.holdAckBelowMarkers) return this._ack;
+    let floor = Number.POSITIVE_INFINITY;
+    for (const item of this.itemsMap.values()) {
+      if (item.status === SyncOperationStatus.Applied) continue;
+      if (!item.operations.some((op) => isPurgeMarker(op))) continue;
+      for (const op of item.operations) {
+        const ordinal = op.context.ordinal;
+        if (ordinal > 0 && ordinal < floor) floor = ordinal;
+      }
+    }
+    return Math.min(this._ack, floor - 1);
   }
 
   get latestOrdinal(): number {

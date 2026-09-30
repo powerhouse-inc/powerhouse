@@ -194,7 +194,7 @@ export class GqlRequestChannel implements IChannel {
     this.isShutdown = false;
     this.failureCount = 0;
 
-    this.inbox = new Mailbox();
+    this.inbox = new Mailbox({ holdAckBelowMarkers: true });
     this.bufferedOutbox = new BufferedMailbox(500, 25);
     this.outbox = this.bufferedOutbox;
     this.deadLetter = new Mailbox();
@@ -265,8 +265,9 @@ export class GqlRequestChannel implements IChannel {
       }
     });
 
-    this.inbox.onRemoved((syncOps) => {
-      const maxOrdinal = getLatestAppliedOrdinal(syncOps);
+    // The inbox ack, which never passes a marker still awaiting its load.
+    this.inbox.onRemoved(() => {
+      const maxOrdinal = this.inbox.ackOrdinal;
       if (maxOrdinal > this.lastPersistedInboxOrdinal) {
         this.lastPersistedInboxOrdinal = maxOrdinal;
         this.cursorStorage

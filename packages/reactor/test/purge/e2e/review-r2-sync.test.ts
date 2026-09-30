@@ -29,7 +29,7 @@ const PROBE_MS = 50;
 const DOC_TYPE = "powerhouse/document-model";
 const DRIVE = "d";
 
-/** A trust policy that is unreachable while `down` (e.g. Renown outage). */
+/** Unreachable for x while `down`, as a Renown outage for x's signer would be. */
 class FlakyPolicy implements SignatureTrustPolicy {
   down = false;
   calls = 0;
@@ -40,8 +40,9 @@ class FlakyPolicy implements SignatureTrustPolicy {
     documentId: string,
   ): Promise<boolean> {
     this.calls++;
-    if (this.down)
+    if (this.down && documentId === "x") {
       return Promise.reject(new Error("trust service unreachable"));
+    }
     return this.inner.authorizeSigner(signer, key, documentId);
   }
 }
@@ -58,6 +59,16 @@ async function holds(node: Node, id: string, type: string): Promise<boolean> {
 
 async function quarantined(node: Node): Promise<string[]> {
   return node.module.syncModule!.deadLetterStorage.listQuarantinedDocumentIds();
+}
+
+async function outboxCursor(node: Node, remote: string): Promise<number> {
+  const row = await node.db
+    .selectFrom("sync_cursors")
+    .select("cursor_ordinal")
+    .where("remote_name", "=", remote)
+    .where("cursor_type", "=", "outbox")
+    .executeTakeFirst();
+  return Number(row?.cursor_ordinal ?? 0);
 }
 
 function envelope(
@@ -101,6 +112,56 @@ describe("r2 review: sync/peers [Postgres]", () => {
     await receivedOn(b, id, "CREATE_DOCUMENT");
   }
 
+  const buildB = () =>
+    buildNode({
+      name: "b",
+      db: dbs[1]!,
+      mesh,
+      featureFlags: FLAGS,
+      catchUpIntervalMs: PROBE_MS,
+      trustPolicy: policy,
+    });
+
+  /** x created, edited and deleted on A and B, then purged on A while B's policy is down. */
+  async function purgeDuringOutage(): Promise<number> {
+    await child("x");
+    await a.client.execute("x", "main", [setModelName({ name: "x-personal" })]);
+    await receivedOn(b, "x", "SET_MODEL_NAME");
+    await a.client.deleteDocument("x");
+    await receivedOn(b, "x", "DELETE_DOCUMENT");
+    await mesh.settle();
+
+    policy.down = true;
+    const before = policy.calls;
+    const { ordinal } = await purge(a, "x");
+    // Two failed jobs: the first load and at least one retry of it.
+    await until(
+      "B fails x's marker load twice",
+      () => policy.calls >= before + 8,
+      30_000,
+    );
+    // B applies what follows the marker; its ack must not pass the marker.
+    await child("y");
+    await quiesce(500);
+    return ordinal;
+  }
+
+  async function purgedOnB(): Promise<void> {
+    await until(
+      "B purges x",
+      async () => (await tombstone(b.db, "x")) !== undefined,
+      30_000,
+    );
+    const rows = await b.db
+      .selectFrom("Operation")
+      .select((eb) => eb.fn.countAll().as("n"))
+      .where("documentId", "=", "x")
+      .where(sql<boolean>`action->>'type' != 'PURGE_DOCUMENT'`)
+      .executeTakeFirstOrThrow();
+    expect(Number(rows.n)).toBe(0);
+    expect(await quarantined(b)).toEqual([]);
+  }
+
   beforeEach(async () => {
     dbs = [
       await PgDatabase.create("reactor_r2_a"),
@@ -116,16 +177,10 @@ describe("r2 review: sync/peers [Postgres]", () => {
     });
     const aKey = a.key.did;
     policy = new FlakyPolicy(new BindingTrustPolicy().bind(a.address, aKey));
-    b = await buildNode({
-      name: "b",
-      db: dbs[1]!,
-      mesh,
-      featureFlags: FLAGS,
-      catchUpIntervalMs: PROBE_MS,
-      trustPolicy: policy,
-    });
+    b = await buildB();
     await a.client.create(legacyDrive(DRIVE));
     await mesh.link(a, b, DRIVE, {
+      a: { acked: true },
       servingA: servingGate(a, { address: b.address }),
       servingB: servingGate(b, { address: a.address }),
     });
@@ -143,22 +198,7 @@ describe("r2 review: sync/peers [Postgres]", () => {
   });
 
   it("retries a marker whose load failed on a trust-policy outage, then purges", async () => {
-    await child("x");
-    await a.client.execute("x", "main", [setModelName({ name: "x-personal" })]);
-    await receivedOn(b, "x", "SET_MODEL_NAME");
-    await a.client.deleteDocument("x");
-    await receivedOn(b, "x", "DELETE_DOCUMENT");
-    await mesh.settle();
-
-    policy.down = true;
-    const before = policy.calls;
-    await purge(a, "x");
-    // Two failed jobs: the first load and at least one retry of it.
-    await until(
-      "B fails x's marker load twice",
-      () => policy.calls >= before + 8,
-      30_000,
-    );
+    const ordinal = await purgeDuringOutage();
 
     const inbound = mesh.channels.get("b->a")!;
     expect(inbound.deadLetter.items.map((i) => i.documentId)).not.toContain(
@@ -168,21 +208,40 @@ describe("r2 review: sync/peers [Postgres]", () => {
     expect(await quarantined(b)).not.toContain("x");
     expect(await tombstone(b.db, "x")).toBeUndefined();
 
+    expect(inbound.inbox.ackOrdinal).toBeLessThan(ordinal);
+    expect(await outboxCursor(a, "a->b")).toBeLessThan(ordinal);
+    expect(
+      mesh.channels
+        .get("a->b")!
+        .outbox.items.some((item) =>
+          item.operations.some((op) => isPurgeMarker(op)),
+        ),
+    ).toBe(true);
+
     policy.down = false;
+    await purgedOnB();
+    expect(inbound.deadLetter.items).toEqual([]);
     await until(
-      "B purges x",
-      async () => (await tombstone(b.db, "x")) !== undefined,
+      "A's cursor passes the marker",
+      async () => (await outboxCursor(a, "a->b")) >= ordinal,
+    );
+  });
+
+  it("re-receives the marker after B restarts mid-outage, then purges", async () => {
+    const ordinal = await purgeDuringOutage();
+    await stopNode(b);
+    b = await buildB();
+    const calls = policy.calls;
+    await until(
+      "the restarted B loads x's marker again",
+      () => policy.calls > calls,
       30_000,
     );
-    const rows = await b.db
-      .selectFrom("Operation")
-      .select((eb) => eb.fn.countAll().as("n"))
-      .where("documentId", "=", "x")
-      .where(sql<boolean>`action->>'type' != 'PURGE_DOCUMENT'`)
-      .executeTakeFirstOrThrow();
-    expect(Number(rows.n)).toBe(0);
-    expect(inbound.deadLetter.items).toEqual([]);
-    expect(await quarantined(b)).toEqual([]);
+    expect(await tombstone(b.db, "x")).toBeUndefined();
+    expect(await outboxCursor(a, "a->b")).toBeLessThan(ordinal);
+
+    policy.down = false;
+    await purgedOnB();
   });
 
   it("dead-letters an unsigned marker for a live document without quarantine", async () => {
