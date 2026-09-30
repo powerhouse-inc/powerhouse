@@ -1495,6 +1495,8 @@ export async function initializeAndStartAPI(
     readiness: ReadinessGate;
     attachmentReferenceProjection: AttachmentReferenceProjectionCapability;
     packageManager: PackageManager;
+    /** Set under DOCUMENT_PERMISSIONS; the privacy add-on erases through it. */
+    documentPermissionService: DocumentPermissionService | undefined;
   }
 > {
   const {
@@ -1604,6 +1606,7 @@ export async function initializeAndStartAPI(
     readiness,
     attachmentReferenceProjection,
     packageManager: packages,
+    documentPermissionService,
   };
 }
 

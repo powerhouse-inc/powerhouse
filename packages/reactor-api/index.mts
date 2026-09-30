@@ -21,6 +21,7 @@ export * from "./src/services/canonical-document-id.js";
 export * from "./src/services/renown-config.js";
 export * from "./src/services/renown-credential-verifier.js";
 export * from "./src/services/document-permission.service.js";
+export * from "./src/services/privacy-permissions.js";
 export * from "./src/services/package-management.service.js";
 export * from "./src/services/package-storage.js";
 export * from "./src/types.js";
