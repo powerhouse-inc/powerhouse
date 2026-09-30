@@ -211,6 +211,7 @@ describe("r1: precondition 3 goes stale while a purge runs [Postgres]", () => {
     const rows = await sql<{ n: number }>`
       select count(*)::int as n from pg_locks
       where not granted and locktype = ${locktype}
+        and pid in (select pid from pg_stat_activity where datname = current_database())
     `.execute(side);
     return rows.rows[0].n;
   }
