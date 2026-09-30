@@ -1,5 +1,6 @@
 import {
   isOlderManifest,
+  isPurgeMarker,
   readPeerManifest,
   type PeerManifest,
 } from "@powerhousedao/shared/document-model";
@@ -161,6 +162,8 @@ export class GqlRequestChannel implements IChannel {
   private manifestRefresh: Promise<void> | undefined;
   /** Polled rows this reactor could not run, reported on the next poll. */
   private readonly pendingRefusals = new Map<string, RefusalWire>();
+  /** When each pushed, unacknowledged marker entry was last pushed. */
+  private readonly markerPushedAt = new Map<string, number>();
   private isRecovering: boolean = false;
   private connectionState: ConnectionState = "connecting";
   /** Latest unrecoverable error was an auth rejection; cleared on connect. */
@@ -240,6 +243,7 @@ export class GqlRequestChannel implements IChannel {
     // to the mailbox. This is for efficiency: many syncops may fire on a trim,
     // but only one onRemoved callback will be fired for the batch.
     this.outbox.onRemoved((syncOps) => {
+      for (const syncOp of syncOps) this.markerPushedAt.delete(syncOp.id);
       // Items for different documents apply out of order, so the highest
       // applied ordinal can pass one still in flight; a restart would skip it.
       const ordinal = Math.min(
@@ -519,6 +523,7 @@ export class GqlRequestChannel implements IChannel {
     if (ackOrdinal > 0) {
       trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
     }
+    this.repushUnackedMarkers();
 
     // Rows are judged against the sender's record, so a stale one is refreshed
     // first. Unadmitted rows stay unacked and are served again.
@@ -1103,6 +1108,21 @@ export class GqlRequestChannel implements IChannel {
       });
   }
 
+  /** Re-pushes markers unacked for retryMaxDelayMs: a restarted remote lost them. */
+  private repushUnackedMarkers(): void {
+    if (this.isPushing || this.pushBlocked || this.receivingPages) return;
+    const due = Date.now() - this.config.retryMaxDelayMs;
+    const stale = this.outbox.items.filter((syncOp) => {
+      const pushedAt = this.markerPushedAt.get(syncOp.id);
+      return (
+        pushedAt !== undefined &&
+        pushedAt <= due &&
+        syncOp.status !== SyncOperationStatus.Applied
+      );
+    });
+    if (stale.length > 0) this.attemptPush(stale);
+  }
+
   /**
    * Schedules a retry of all current outbox items using exponential backoff.
    */
@@ -1183,8 +1203,12 @@ export class GqlRequestChannel implements IChannel {
    * Creates one SyncEnvelope per SyncOperation with key/dependsOn for batch ordering.
    */
   private async pushSyncOperations(syncOps: SyncOperation[]): Promise<void> {
+    const now = Date.now();
     for (const syncOp of syncOps) {
       syncOp.started();
+      if (syncOp.operations.some((op) => isPurgeMarker(op))) {
+        this.markerPushedAt.set(syncOp.id, now);
+      }
     }
 
     // The server revision this push was gated under; a pre-feature server

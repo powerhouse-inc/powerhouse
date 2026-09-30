@@ -1671,9 +1671,25 @@ export class SyncManager implements ISyncManager {
 
     const eligible: SyncOperation[] = [];
     const dropped: SyncOperation[] = [];
+    // A resent marker whose first copy is still loading or awaiting a retry.
+    const loadingMarkers = new Set(
+      remote.channel.inbox.items
+        .filter(
+          (item) =>
+            !syncOps.includes(item) &&
+            item.status !== SyncOperationStatus.Applied &&
+            carriesMarker(item),
+        )
+        .map((item) => item.documentId),
+    );
     for (const syncOp of syncOps) {
       if (carriesMarker(syncOp)) {
-        eligible.push(syncOp);
+        if (loadingMarkers.has(syncOp.documentId)) {
+          dropped.push(syncOp);
+        } else {
+          loadingMarkers.add(syncOp.documentId);
+          eligible.push(syncOp);
+        }
       } else if (this.purgedDocumentIds.has(syncOp.documentId)) {
         dropped.push(syncOp);
       } else if (!this.quarantinedDocumentIds.has(syncOp.documentId)) {
@@ -1683,7 +1699,7 @@ export class SyncManager implements ISyncManager {
     // A purged id's history is gone here; a job or a dead letter would restore it.
     for (const syncOp of dropped) {
       this.logger.debug(
-        "Dropping received operations of purged document (@remote, @documentId)",
+        "Dropping received operations of a purged or already-loading document (@remote, @documentId)",
         remote.meta.name,
         syncOp.documentId,
       );

@@ -181,4 +181,33 @@ describe("a received marker whose load failed [Postgres]", () => {
       ).toBe(1);
     },
   );
+
+  it("drops a resent marker while its first copy awaits a retry", async () => {
+    harness = await createHarness({
+      config: { markerRetryBaseDelayMs: 60_000, markerRetryMaxDelayMs: 60_000 },
+    });
+    await harness.manager.startup();
+    await harness.manager.add("remote", COL_A, CONFIG, FILTER, {}, "r");
+    const channel = harness.manager.getByName("remote").channel;
+    harness.reactor.load.mockResolvedValue({ id: "job-1" });
+    harness.reactor.getJobStatus.mockResolvedValue({
+      id: "job-1",
+      status: JobStatus.FAILED,
+      error: { name: "Error", message: "down", stack: "" },
+    });
+
+    const first = markerSyncOp("");
+    channel.inbox.add(first);
+    await vi.waitFor(() =>
+      expect(internals(harness).markerRetries.size).toBe(1),
+    );
+    const resent = markerSyncOp("");
+    channel.inbox.add(resent);
+    await quiesce();
+
+    expect(harness.reactor.load).toHaveBeenCalledTimes(1);
+    expect(channel.inbox.items).toEqual([first]);
+    expect(resent.status).toBe(SyncOperationStatus.Applied);
+    expect(channel.inbox.ackOrdinal).toBeLessThan(1);
+  });
 });

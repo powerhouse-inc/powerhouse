@@ -1,5 +1,5 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
-import { describe, expect, it, type Mock } from "vitest";
+import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
 import { GqlRequestChannel } from "../../../src/sync/channels/gql-req-channel.js";
 import { GqlResponseChannel } from "../../../src/sync/channels/gql-res-channel.js";
 import { Mailbox } from "../../../src/sync/mailbox.js";
@@ -174,5 +174,78 @@ describe("an inbox holding a marker that awaits its load", () => {
 
     expect(channel.inbox.ackOrdinal).toBe(4);
     expect(inboxCursors(cursors.upsert as Mock)).toEqual([4]);
+  });
+});
+
+describe("a pushing client with a marker the remote never acknowledged", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("pushes it again once retryMaxDelayMs has passed", async () => {
+    vi.useFakeTimers();
+    const pushed: string[] = [];
+    const fetch = createMockFetch((body) => {
+      if (body.query.includes("touchChannel")) {
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        };
+      }
+      if (body.query.includes("pushSyncEnvelopes")) {
+        pushed.push(JSON.stringify(body));
+        return {
+          ok: true,
+          json: () => Promise.resolve({ data: { pushSyncEnvelopes: true } }),
+        };
+      }
+      return {
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              pollSyncEnvelopes: {
+                envelopes: [],
+                ackOrdinal: 0,
+                deadLetters: [],
+                hasMore: false,
+              },
+            },
+          }),
+      };
+    });
+    const timer = new ManualPollTimer();
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig({
+        fetchFn: fetch as unknown as typeof globalThis.fetch,
+        retryMaxDelayMs: 1_000,
+      }),
+      createMockOperationIndex(),
+      timer,
+    );
+    await channel.init();
+
+    channel.outbox.add(markerItem(5), createMockSyncOperation("o", "r", 6));
+    await vi.advanceTimersByTimeAsync(600);
+    expect(pushed).toHaveLength(1);
+
+    await timer.tick();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(pushed).toHaveLength(1);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    await timer.tick();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(pushed).toHaveLength(2);
+    expect(pushed[1]).toContain("PURGE_DOCUMENT");
+    expect(pushed[1]).not.toContain("TEST_OP");
+    await channel.shutdown();
   });
 });
