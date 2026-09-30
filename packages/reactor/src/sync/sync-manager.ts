@@ -481,7 +481,9 @@ export class SyncManager
       this.owe(record.name, head);
       this.records.set(record.name, remote.meta);
       await this.loadDeadLetters(remote);
-      const restored = await this.restoreReceivedMarkers(remote);
+      await this.restoreReceivedMarkers(remote);
+      // Restored, or pushed while the remote was reachable but unwired.
+      const unheard = [...remote.channel.inbox.items];
       this.wireChannelCallbacks(remote);
 
       try {
@@ -495,7 +497,7 @@ export class SyncManager
         await this.dropRemoteAfterFailedInit(remote, false);
         continue;
       }
-      if (restored.length > 0) this.handleInboxAdded(remote, restored);
+      if (unheard.length > 0) this.handleInboxAdded(remote, unheard);
       await this.peerUpdates.get(record.name);
 
       // backfill channels asynchronously -- don't block startup
@@ -1237,7 +1239,9 @@ export class SyncManager
     this.remotes.set(name, remote);
     this.records.set(name, meta);
     await this.loadDeadLetters(remote);
-    const restored = await this.restoreReceivedMarkers(remote);
+    await this.restoreReceivedMarkers(remote);
+    // Restored, or pushed while the remote was reachable but unwired.
+    const unheard = [...remote.channel.inbox.items];
     this.wireChannelCallbacks(remote);
 
     try {
@@ -1254,7 +1258,7 @@ export class SyncManager
 
       throw error;
     }
-    if (restored.length > 0) this.handleInboxAdded(remote, restored);
+    if (unheard.length > 0) this.handleInboxAdded(remote, unheard);
     await this.peerUpdates.get(name);
 
     this.owe(name, await this.watermarkHead());
@@ -1921,9 +1925,7 @@ export class SyncManager
   }
 
   /** Queued before init resets latestOrdinal, so a puller is re-served above it. */
-  private async restoreReceivedMarkers(
-    remote: Remote,
-  ): Promise<SyncOperation[]> {
+  private async restoreReceivedMarkers(remote: Remote): Promise<void> {
     const name = remote.meta.name;
     let records;
     try {
@@ -1934,9 +1936,9 @@ export class SyncManager
         name,
         error instanceof Error ? error.message : String(error),
       );
-      return [];
+      return;
     }
-    if (records.length === 0) return [];
+    if (records.length === 0) return;
     const syncOps = records.map((record) => {
       const syncOp = new SyncOperation(
         crypto.randomUUID(),
@@ -1954,7 +1956,6 @@ export class SyncManager
     });
     // Loaded only once init has run, via handleInboxAdded.
     remote.channel.inbox.add(...syncOps);
-    return syncOps;
   }
 
   private receivedMarkersOf(name: string): Map<string, SyncOperation> {
