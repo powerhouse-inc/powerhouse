@@ -342,6 +342,7 @@ export type MutationMutateDocumentAsyncArgs = {
 
 export type MutationPushSyncEnvelopesArgs = {
   envelopes: ReadonlyArray<SyncEnvelopeInput>;
+  peerManifestRevision?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationRemoveRelationshipArgs = {
@@ -453,11 +454,32 @@ export type PagingInput = {
   readonly offset?: InputMaybe<Scalars["Int"]["input"]>;
 };
 
+export type PeerAgreement = {
+  readonly collectionId: Scalars["String"]["output"];
+  readonly limitedBy: ReadonlyArray<PeerAgreementLimit>;
+  readonly local: Scalars["JSONObject"]["output"];
+  readonly members: ReadonlyArray<PeerAgreementMember>;
+};
+
+export type PeerAgreementLimit = {
+  readonly protocol: Scalars["String"]["output"];
+  readonly remoteNames: ReadonlyArray<Scalars["String"]["output"]>;
+};
+
+export type PeerAgreementMember = {
+  readonly announced: Scalars["Boolean"]["output"];
+  readonly features: Scalars["JSONObject"]["output"];
+  readonly protocols: Scalars["JSONObject"]["output"];
+  readonly remoteName: Scalars["String"]["output"];
+};
+
 export type PollSyncEnvelopesResult = {
   readonly ackOrdinal: Scalars["Int"]["output"];
   readonly deadLetters: ReadonlyArray<DeadLetterInfo>;
   readonly envelopes: ReadonlyArray<SyncEnvelope>;
   readonly hasMore: Scalars["Boolean"]["output"];
+  readonly manifestRevision?: Maybe<Scalars["String"]["output"]>;
+  readonly peerManifestRevision?: Maybe<Scalars["String"]["output"]>;
 };
 
 export enum PropagationMode {
@@ -503,6 +525,7 @@ export type Query = {
   readonly evaluateActions: ActionEvaluations;
   readonly findDocuments: PhDocumentResultPage;
   readonly jobStatus?: Maybe<JobInfo>;
+  readonly peerAgreement: PeerAgreement;
   /**
    * Polls for sync envelopes from a channel.
    *
@@ -515,6 +538,7 @@ export type Query = {
    * would stop receiving those too.
    */
   readonly pollSyncEnvelopes: PollSyncEnvelopesResult;
+  readonly syncHolds: ReadonlyArray<SyncHold>;
 };
 
 export type QueryDocumentArgs = {
@@ -576,10 +600,21 @@ export type QueryJobStatusArgs = {
   jobId: Scalars["String"]["input"];
 };
 
+export type QueryPeerAgreementArgs = {
+  collectionId: Scalars["String"]["input"];
+};
+
 export type QueryPollSyncEnvelopesArgs = {
   channelId: Scalars["String"]["input"];
+  manifestRevision?: InputMaybe<Scalars["String"]["input"]>;
   outboxAck: Scalars["Int"]["input"];
   outboxLatest: Scalars["Int"]["input"];
+  refusals?: InputMaybe<ReadonlyArray<SyncRefusalInput>>;
+};
+
+export type QuerySyncHoldsArgs = {
+  documentId?: InputMaybe<Scalars["String"]["input"]>;
+  remoteName?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type ReactorOperation = {
@@ -700,16 +735,38 @@ export enum SyncEnvelopeType {
   Operations = "OPERATIONS",
 }
 
+export type SyncHold = {
+  readonly branch: Scalars["String"]["output"];
+  readonly documentId: Scalars["String"]["output"];
+  readonly heldAtUtcMs: Scalars["String"]["output"];
+  readonly reason: SyncHoldReason;
+  readonly remoteName: Scalars["String"]["output"];
+};
+
+export type SyncHoldReason = {
+  readonly peerSupports: ReadonlyArray<Scalars["Int"]["output"]>;
+  readonly protocol: Scalars["String"]["output"];
+  readonly version: Scalars["Int"]["output"];
+};
+
+export type SyncRefusalInput = {
+  readonly branch: Scalars["String"]["input"];
+  readonly documentId: Scalars["String"]["input"];
+  readonly kind?: InputMaybe<Scalars["String"]["input"]>;
+};
+
 export type TouchChannelInput = {
   readonly collectionId: Scalars["String"]["input"];
   readonly filter: RemoteFilterInput;
   readonly id: Scalars["String"]["input"];
+  readonly manifest?: InputMaybe<Scalars["JSONObject"]["input"]>;
   readonly name: Scalars["String"]["input"];
   readonly sinceTimestampUtcMs: Scalars["String"]["input"];
 };
 
 export type TouchChannelResult = {
   readonly ackOrdinal: Scalars["Int"]["output"];
+  readonly manifest?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly success: Scalars["Boolean"]["output"];
 };
 
@@ -1382,12 +1439,16 @@ export type PollSyncEnvelopesQueryVariables = Exact<{
   channelId: Scalars["String"]["input"];
   outboxAck: Scalars["Int"]["input"];
   outboxLatest: Scalars["Int"]["input"];
+  manifestRevision?: InputMaybe<Scalars["String"]["input"]>;
+  refusals?: InputMaybe<ReadonlyArray<SyncRefusalInput>>;
 }>;
 
 export type PollSyncEnvelopesQuery = {
   readonly pollSyncEnvelopes: {
     readonly ackOrdinal: number;
     readonly hasMore: boolean;
+    readonly manifestRevision?: string | null | undefined;
+    readonly peerManifestRevision?: string | null | undefined;
     readonly envelopes: ReadonlyArray<{
       readonly type: SyncEnvelopeType;
       readonly key?: string | null | undefined;
@@ -1468,11 +1529,13 @@ export type TouchChannelMutation = {
   readonly touchChannel: {
     readonly success: boolean;
     readonly ackOrdinal: number;
+    readonly manifest?: NonNullable<unknown> | null | undefined;
   };
 };
 
 export type PushSyncEnvelopesMutationVariables = Exact<{
   envelopes: ReadonlyArray<SyncEnvelopeInput>;
+  peerManifestRevision?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type PushSyncEnvelopesMutation = { readonly pushSyncEnvelopes: boolean };
@@ -1984,11 +2047,15 @@ export const PollSyncEnvelopesDocument = gql`
     $channelId: String!
     $outboxAck: Int!
     $outboxLatest: Int!
+    $manifestRevision: String
+    $refusals: [SyncRefusalInput!]
   ) {
     pollSyncEnvelopes(
       channelId: $channelId
       outboxAck: $outboxAck
       outboxLatest: $outboxLatest
+      manifestRevision: $manifestRevision
+      refusals: $refusals
     ) {
       envelopes {
         type
@@ -2048,6 +2115,8 @@ export const PollSyncEnvelopesDocument = gql`
         errorType
       }
       hasMore
+      manifestRevision
+      peerManifestRevision
     }
   }
 `;
@@ -2056,12 +2125,19 @@ export const TouchChannelDocument = gql`
     touchChannel(input: $input) {
       success
       ackOrdinal
+      manifest
     }
   }
 `;
 export const PushSyncEnvelopesDocument = gql`
-  mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!) {
-    pushSyncEnvelopes(envelopes: $envelopes)
+  mutation PushSyncEnvelopes(
+    $envelopes: [SyncEnvelopeInput!]!
+    $peerManifestRevision: String
+  ) {
+    pushSyncEnvelopes(
+      envelopes: $envelopes
+      peerManifestRevision: $peerManifestRevision
+    )
   }
 `;
 
