@@ -12,8 +12,8 @@ import { SWITCHBOARD_URL } from "../playwright.config";
 // re-renders `useDocument`.
 
 const MUTATE_DOCUMENT = `
-  mutation MutateDocument($identifier: String!, $actions: [ActionInput!]!) {
-    mutateDocument: execute(documentIdentifier: $identifier, actions: $actions) {
+  mutation MutateDocument($documentIdOrSlug: String!, $actions: [ActionInput!]!) {
+    mutateDocument: execute(documentIdOrSlug: $documentIdOrSlug, actions: $actions) {
       id
       revisionsList {
         scope
@@ -26,14 +26,14 @@ const MUTATE_DOCUMENT = `
 /** Pushes an ADD_TODO straight to the switchboard, as another client would. */
 async function addTodoOverHttp(
   request: APIRequestContext,
-  identifier: string,
+  documentIdOrSlug: string,
   title: string,
 ) {
   const response = await request.post(SWITCHBOARD_URL, {
     data: {
       query: MUTATE_DOCUMENT,
       variables: {
-        identifier,
+        documentIdOrSlug,
         actions: [
           {
             id: crypto.randomUUID(),
