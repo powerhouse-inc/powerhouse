@@ -109,11 +109,12 @@ export interface IOperationIndex {
     ordinals: readonly number[],
     signal?: AbortSignal,
   ): Promise<OperationWithContext[]>;
-  /** A stream's rows above an ordinal, ascending. */
+  /** A stream's rows above an ordinal, ascending, at most `limit` if given. */
   getStreamAfter(
     stream: DocumentStreamKey,
     after: number,
     signal?: AbortSignal,
+    limit?: number,
   ): Promise<OperationWithContext[]>;
   /** The latest ordinal of each of `opIds` indexed in one stream. */
   getOrdinalsByOpIds(

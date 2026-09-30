@@ -110,6 +110,8 @@ export class Reactor implements IReactor {
     executorManager: IJobExecutorManager,
     catchUp?: CatchUpScheduler,
     private readonly disposers: Unsubscribe[] = [],
+    // Run last on kill(), once nothing routes to what they close.
+    private readonly closers: Array<() => Promise<void>> = [],
   ) {
     this.catchUp = catchUp;
     this.logger = logger;
@@ -161,6 +163,13 @@ export class Reactor implements IReactor {
       await this.catchUp?.stop();
       this.readModelCoordinator.stop();
       this.jobTracker.shutdown();
+      for (const close of this.closers) {
+        try {
+          await close();
+        } catch (error) {
+          this.logger.error("Shutdown step failed: @Error", error);
+        }
+      }
     };
 
     this.setCompleted(shutdownAsync());
