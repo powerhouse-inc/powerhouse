@@ -10,7 +10,7 @@ import {
   HostCallTimeoutError,
   hostCallTimeoutMs,
 } from "../worker/host-call.js";
-import type { KeyValueStore } from "./action.js";
+import type { StoreScopeName } from "./store-scope.js";
 import type {
   ReactorCreateInput,
   ReactorDocumentSummary,
@@ -110,6 +110,19 @@ export class ReactorJobPendingError extends Error {
   }
 }
 
+// The job applied, but the document it wrote was not read back in time.
+export class ReactorStateUnreadError extends Error {
+  readonly jobId: string;
+
+  constructor(jobId: string) {
+    super(
+      `Reactor job ${jobId} applied its actions, but the document was not read back before the step deadline`,
+    );
+    this.name = "ReactorStateUnreadError";
+    this.jobId = jobId;
+  }
+}
+
 export class ReactorJobFailedError extends Error {
   readonly jobId: string;
 
@@ -150,11 +163,20 @@ export function assertActionsApplied(
   if (failed.length > 0) throw new Error(failed.join("; "));
 }
 
+export interface JobRecordStore {
+  put(
+    key: string,
+    value: unknown,
+    scope: StoreScopeName,
+    timeoutMs?: number,
+  ): Promise<unknown>;
+}
+
 export interface RemoteReactorOptions {
   // Epoch ms at which the host kills this worker.
   deadline?: number;
   // Durable ctx.store; a submitted job is recorded there under the step's name.
-  store?: KeyValueStore;
+  store?: JobRecordStore;
   stepName?: string;
 }
 
@@ -166,13 +188,31 @@ function jobKey(stepName: string | undefined): string {
 // as the operation the piece asked for. A write is several, none of them long.
 export class RemoteReactorService implements ReactorService {
   private readonly stopAt: number;
+  private readonly margin: number;
 
   constructor(private readonly options: RemoteReactorOptions = {}) {
     const { deadline } = options;
+    this.margin =
+      deadline === undefined ? 0 : deadlineMargin(deadline - Date.now());
     this.stopAt =
       deadline === undefined
         ? Number.POSITIVE_INFINITY
-        : deadline - deadlineMargin(deadline - Date.now());
+        : deadline - this.margin;
+  }
+
+  // What a call after the job landed may take: up to stopAt, and never less
+  // than half the margin, which still leaves a quarter of it to report in.
+  // A quarter of the margin for the answer to arrive once the wait ends.
+  private waitCallMs(maxWaitMs: number): number {
+    if (this.options.deadline === undefined) return hostCallTimeoutMs();
+    return Math.min(hostCallTimeoutMs(), maxWaitMs + this.margin / 4);
+  }
+
+  private afterJobMs(): number {
+    return Math.min(
+      hostCallTimeoutMs(),
+      Math.max(this.stopAt - Date.now(), this.margin / 2),
+    );
   }
 
   models(): Promise<ReactorModelSummary[]> {
@@ -200,20 +240,32 @@ export class RemoteReactorService implements ReactorService {
 
   async execute(input: ReactorExecuteInput): Promise<ReactorDocumentSummary> {
     const submission = await callHost<ReactorSubmission>(REACTOR_SUBMIT, input);
-    await this.record(submission);
+    // Alongside the wait rather than before it, so it never spends the budget.
+    void this.record(submission);
     const state = await this.settle(submission.jobId);
     assertActionsApplied(state, submission, input.actions);
-    return this.get({
-      documentId: input.documentId,
-      ...(input.branch ? { branch: input.branch } : {}),
-    });
+    try {
+      return await callHost<ReactorDocumentSummary>(
+        REACTOR_GET,
+        {
+          documentId: input.documentId,
+          ...(input.branch ? { branch: input.branch } : {}),
+        },
+        this.afterJobMs(),
+      );
+    } catch (error) {
+      if (error instanceof HostCallTimeoutError) {
+        throw new ReactorStateUnreadError(submission.jobId);
+      }
+      throw error;
+    }
   }
 
   private async record(submission: ReactorSubmission): Promise<void> {
     const { store, stepName } = this.options;
     if (!store) return;
     try {
-      await store.put(jobKey(stepName), submission, "FLOW");
+      await store.put(jobKey(stepName), submission, "FLOW", this.afterJobMs());
     } catch {
       // Bookkeeping only: the write is already submitted either way.
     }
@@ -224,16 +276,18 @@ export class RemoteReactorService implements ReactorService {
     for (;;) {
       const remaining = this.stopAt - Date.now();
       if (remaining <= 0) throw new ReactorJobPendingError(jobId, status);
+      const maxWaitMs = Math.min(
+        MAX_POLL_WAIT_MS,
+        Math.floor(hostCallTimeoutMs() / 2),
+        remaining,
+      );
       let state: ReactorJobState;
       try {
-        state = await callHost<ReactorJobState>(REACTOR_WAIT, {
-          jobId,
-          maxWaitMs: Math.min(
-            MAX_POLL_WAIT_MS,
-            Math.floor(hostCallTimeoutMs() / 2),
-            remaining,
-          ),
-        });
+        state = await callHost<ReactorJobState>(
+          REACTOR_WAIT,
+          { jobId, maxWaitMs },
+          this.waitCallMs(maxWaitMs),
+        );
       } catch (error) {
         if (error instanceof HostCallTimeoutError) {
           throw new ReactorJobPendingError(jobId, status);

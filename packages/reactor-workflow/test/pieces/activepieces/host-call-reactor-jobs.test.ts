@@ -44,7 +44,10 @@ interface JobScript {
   // How long after submit the job reaches its final state; never if omitted.
   settlesAfterMs?: number;
   final?: (submission: ReactorSubmission) => Omit<ReactorJobState, "jobId">;
+  getDelayMs?: number;
 }
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const applied = (submission: ReactorSubmission) => ({
   status: "READ_READY" as const,
@@ -93,14 +96,15 @@ function scriptedPort(script: JobScript) {
         ...(script.final ?? applied)(submission),
       };
     },
-    get(input) {
+    async get(input) {
       calls.push(`get ${input.documentId}`);
-      return Promise.resolve({
+      await sleep(script.getDelayMs ?? 0);
+      return {
         documentId: input.documentId,
         documentType: "acme/todo",
         name: "Written",
         state: { name: "Written" },
-      });
+      };
     },
   };
   return { port, waits, calls };
@@ -142,6 +146,9 @@ function oneStep(timeoutSeconds: number): WorkflowDefinition {
 let dir = "";
 let entryPath = "";
 let worker: PieceWorker;
+// A cap the step's own timeout sits under, as the default does in production.
+let roomy: PieceWorker;
+const ROOMY_CAP_MS = 5_000;
 
 const resolver: PieceResolver = {
   resolve: ({ name, version }) =>
@@ -152,10 +159,11 @@ function run(
   port: ReactorPort,
   timeoutSeconds: number,
   pieceStore?: PieceStorePort,
+  on: PieceWorker = worker,
 ) {
   const executor = new ActivepiecesBlockExecutor({
     cacheDir: dir,
-    worker,
+    worker: on,
     resolver,
     reactor: port,
     ...(pieceStore ? { pieceStore } : {}),
@@ -169,10 +177,14 @@ describe("a reactor write that outlasts one host call", () => {
     entryPath = join(dir, "piece-reactor.js");
     await writeFile(entryPath, FIXTURE);
     worker = new PieceWorker({ hostCallTimeoutMs: HOST_CALL_CAP_MS });
+    roomy = new PieceWorker({ hostCallTimeoutMs: ROOMY_CAP_MS });
+    // Spawned and loaded up front, so a short step's budget is its own.
+    await run(scriptedPort({ settlesAfterMs: 0 }).port, 10, undefined, roomy);
   });
 
   afterAll(async () => {
     worker.dispose();
+    roomy.dispose();
     await rm(dir, { recursive: true, force: true });
   });
 
@@ -264,5 +276,30 @@ describe("a reactor write that outlasts one host call", () => {
     expect(step.error).toMatch(/FIRST failed: name is required/);
     expect(step.error).toMatch(/SECOND produced no operation/);
     expect(calls).not.toContain("get doc-1");
+  });
+
+  it("reads the document back inside the step's budget, not the cap's", async () => {
+    const { port, calls } = scriptedPort({
+      settlesAfterMs: 0,
+      getDelayMs: ROOMY_CAP_MS,
+    });
+
+    const result = await run(port, 1, undefined, roomy);
+
+    const [step] = result.steps;
+    expect(step.status).toBe("FAILED");
+    expect(step.error).toMatch(
+      /^ReactorStateUnreadError: Reactor job job-1 applied its actions/,
+    );
+    expect(calls).toEqual(["submit FIRST,SECOND", "get doc-1"]);
+  });
+
+  it("succeeds when the job lands just before the step stops waiting", async () => {
+    const { port } = scriptedPort({ settlesAfterMs: 1_500 });
+
+    const result = await run(port, 2, undefined, roomy);
+
+    expect(result.steps[0].error).toBeUndefined();
+    expect(result.steps[0].status).toBe("SUCCEEDED");
   });
 });
