@@ -2555,7 +2555,7 @@ describe("ProcessorManager Standalone Tests", () => {
       ]);
     });
 
-    it("should not hold a drive deletion behind its processors' deliveries", async () => {
+    it("should hold a drive deletion's pass until its processors have it", async () => {
       const driveId = generateId();
       const held = deferred();
       const release = deferred();
@@ -2567,6 +2567,7 @@ describe("ProcessorManager Standalone Tests", () => {
             held.resolve();
             await release.promise;
           }
+          processor.receivedOperations.push(...ops);
         });
       await processorManager.registerFactory("f", () => [
         { processor, filter: { documentId: ["*"] } },
@@ -2577,15 +2578,59 @@ describe("ProcessorManager Standalone Tests", () => {
         makeOp(generateId(), 2, { documentType: CHILD }),
       ]);
       await held.promise;
-      try {
-        await processorManager.indexOperations([makeDriveDeleteOp(driveId, 3)]);
-        expect(processor.onDisconnect).not.toHaveBeenCalled();
-        expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined();
-      } finally {
-        release.resolve();
-      }
-      await child;
+      let passed = false;
+      const deletion = processorManager
+        .indexOperations([makeDriveDeleteOp(driveId, 3)])
+        .then(() => {
+          passed = true;
+        });
+      // A round trip on the idle connection: time for the pass to finish.
+      await db.selectFrom("ViewState").select("lastOrdinal").execute();
+      expect(passed).toBe(false);
+      expect(await cursorRow(`f:${driveId}:0`)).toBeDefined();
+
+      release.resolve();
+      await Promise.all([child, deletion]);
+
+      expect(ordinalsOf(processor)).toContain(3);
+      expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined();
       await vi.waitFor(() => expect(processor.onDisconnect).toHaveBeenCalled());
+    });
+
+    it("should keep a failed deletion's row errored and pay it on re-registration", async () => {
+      const driveId = generateId();
+      const first = createMockProcessor();
+      first.onOperations = vi
+        .fn()
+        .mockImplementation((ops: OperationWithContext[]) =>
+          ops.some((op) => op.operation.action.type === "DELETE_DOCUMENT")
+            ? Promise.reject(new Error("down"))
+            : Promise.resolve(),
+        );
+      await processorManager.registerFactory("f", () => [
+        { processor: first, filter: { documentType: [CHILD] } },
+      ]);
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      await processorManager.indexOperations([makeDriveDeleteOp(driveId, 2)]);
+      expect(await cursorRow(`f:${driveId}:0`)).toMatchObject({
+        status: "errored",
+        lastError: "down",
+      });
+      await vi.waitFor(() => expect(first.onDisconnect).toHaveBeenCalled());
+
+      const second = createMockProcessor();
+      const headers: string[] = [];
+      await processorManager.registerFactory("f", (header) => {
+        headers.push(header.id);
+        return [{ processor: second, filter: { documentType: [CHILD] } }];
+      });
+
+      expect(headers).toEqual([driveId]);
+      expect(ordinalsOf(second)).toEqual([2]);
+      expect(second.onDisconnect).toHaveBeenCalled();
+      expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined();
+      expect(processorManager.getAll()).toHaveLength(0);
     });
 
     it("should never overlap two onOperations calls on one processor", async () => {

@@ -55,8 +55,18 @@ type Delivery =
   | LiveDelivery
   | { kind: "advance"; through: number; done: () => void };
 
+type EraseTask = {
+  kind: "erase";
+  ops: OperationWithContext[];
+  deletion: OperationWithContext | undefined;
+  check: LiveCheck;
+  run: () => Promise<void>;
+  done: () => void;
+};
+
 type Task =
   | Delivery
+  | EraseTask
   | {
       kind: "backfill" | "retry" | "disconnect";
       run: () => Promise<void>;
@@ -128,6 +138,11 @@ export class ProcessorQueue {
     return this.closed;
   }
 
+  /** True while a backfill or retry is queued or running. */
+  get replaying(): boolean {
+    return this.replaysAhead > 0;
+  }
+
   /** Resolves at once behind a replay, so a pass never waits out a backfill. */
   live(ops: OperationWithContext[], check?: LiveCheck): Promise<void> {
     const delivered = this.push((done) => ({ kind: "live", ops, check, done }));
@@ -142,6 +157,28 @@ export class ProcessorQueue {
       return Promise.resolve();
     }
     return this.push((done) => ({ kind: "advance", through, done }));
+  }
+
+  /** `share` if active, then `deletion` whatever the status; true once delivered. */
+  erase(
+    share: OperationWithContext[],
+    deletion: OperationWithContext,
+    check: LiveCheck,
+  ): Promise<boolean> {
+    if (this.closed) return Promise.resolve(false);
+    let delivered = false;
+    const task: Omit<EraseTask, "done"> = {
+      kind: "erase",
+      ops: share,
+      deletion,
+      check,
+      run: async () => {
+        delivered = await this.runErase(task);
+      },
+    };
+    return this.push((done) => Object.assign(task, { done })).then(
+      () => delivered,
+    );
   }
 
   /** Replays from the cursor as it stands when the task runs. */
@@ -327,6 +364,34 @@ export class ProcessorQueue {
     }
   }
 
+  private async runErase(task: Omit<EraseTask, "done">): Promise<boolean> {
+    const { cursor, floor } = this.options;
+    const fresh = task.ops.filter((op) => {
+      const ordinal = op.context.ordinal;
+      if (ordinal <= floor) return false;
+      return !this.unrouted.delete(ordinal);
+    });
+    const deletion =
+      task.deletion && !this.unrouted.delete(task.deletion.context.ordinal)
+        ? task.deletion
+        : undefined;
+
+    let ops: OperationWithContext[] = [];
+    if (cursor.status === "active" && fresh.length > 0) {
+      try {
+        ops = withoutPurged(fresh, await task.check.purged);
+      } catch (error) {
+        this.options.logger.error(
+          "Processor '@ProcessorId' skipped its drive's last batch, tombstones unread: @Error",
+          this.options.processorId,
+          error,
+        );
+      }
+    }
+    if (deletion) ops.push(deletion);
+    return ops.length === 0 || (await this.deliver(ops));
+  }
+
   private async runBackfill(): Promise<void> {
     const { cursor, filter, floor } = this.options;
     if (cursor.status !== "active") return;
@@ -388,7 +453,14 @@ export class ProcessorQueue {
     }
     if (queued.size === 0) return;
     for (const task of this.tasks) {
-      if (task.kind !== "live") continue;
+      if (task.kind === "erase") {
+        const { deletion } = task;
+        if (deletion && queued.has(deletion.context.ordinal)) {
+          task.deletion = undefined;
+        }
+      } else if (task.kind !== "live") {
+        continue;
+      }
       task.ops = task.ops.filter((op) => !queued.has(op.context.ordinal));
     }
   }

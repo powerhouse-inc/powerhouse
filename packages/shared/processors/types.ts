@@ -146,7 +146,11 @@ export interface IProcessorManager {
    * Registers a processor factory.
    * Immediately creates processors for all existing drives and resolves once
    * every factory run has completed and its processors are bound. Their
-   * backfills run afterwards, on each processor's own queue. If processors
+   * backfills run afterwards, on each processor's own queue. A deleted drive
+   * whose deletion one of the factory's processors never received (it was not
+   * running, or its delivery threw) gets a processor too: it receives only the
+   * drive's `DELETE_DOCUMENT`, or its `PURGE_DOCUMENT` once purged, and is
+   * disconnected; this resolves after that delivery. If processors
    * from an earlier registration under the same identifier are still
    * draining, or a call of the previous factory is still in flight, the
    * factory runs after they have settled, so awaiting a re-registration of
