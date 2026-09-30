@@ -16,6 +16,7 @@ export interface IMailbox {
   /**
    * The latest ordinal that has been acknowledged. Because acknowledged items
    * are removed from the mailbox, this is the last ordinal that has been removed.
+   * With holdAckBelowMarkers, never at or past an unapplied marker entry.
    */
   get ackOrdinal(): number;
 
