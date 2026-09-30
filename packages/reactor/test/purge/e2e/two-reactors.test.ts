@@ -361,7 +361,8 @@ describe("two reactors on Postgres under authEnforcement", () => {
       inbound.deadLetter.items
         .filter((item) => item.documentId === "u")
         .map((item) => syncOperationErrorType(item.error)),
-    ).toEqual(forged.map(() => "SIGNATURE_INVALID"));
+    ).toEqual(forged.map(() => "MARKER_REFUSED"));
+    expect(await quarantined(b)).not.toContain("u");
     expect(await tombstone(b.db, "u"), "B did not purge").toBeUndefined();
 
     const reported = mesh.reportDeadLetters("b->a", "u");
