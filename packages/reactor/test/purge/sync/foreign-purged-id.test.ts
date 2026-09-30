@@ -43,6 +43,7 @@ describe("a failed load naming another purged id [Postgres]", () => {
         name: "DocumentPurgedError",
         message: "Document other-purged-id was purged",
         stack: "",
+        documentId: "other-purged-id",
       },
     });
 

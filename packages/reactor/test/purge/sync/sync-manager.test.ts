@@ -270,7 +270,12 @@ describe("receiving operations of a purged document [Postgres]", () => {
       harness.reactor.getJobStatus.mockResolvedValue({
         id: "job-1",
         status: JobStatus.FAILED,
-        error: { name: error.name, message: error.message, stack: "" },
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: "",
+          documentId: error.documentId,
+        },
       });
 
       const syncOp = inboxSyncOp(DOC, jobId);

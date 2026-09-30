@@ -19,6 +19,7 @@ import {
   TouchedStreams,
 } from "../../../src/executor/util.js";
 import type { Job } from "../../../src/queue/types.js";
+import { DocumentPurgedError } from "../../../src/shared/errors.js";
 import {
   createMockCollectionMembershipCache,
   createMockDocumentMetaCache,
@@ -326,6 +327,24 @@ describe("DocumentActionHandler", () => {
         /source document drive-1 not found.*doc missing/,
       );
       expect(harness.indexTxn.write).not.toHaveBeenCalled();
+    });
+
+    it("keeps a purged source's own error", async () => {
+      harness.writeCache.getState.mockRejectedValueOnce(
+        new DocumentPurgedError("drive-1"),
+      );
+      const action = buildAction("ADD_RELATIONSHIP", {
+        sourceId: "drive-1",
+        targetId: "doc-2",
+        relationshipType: "drive/child",
+      });
+      const job = buildJob({ actions: [action] });
+
+      const result = await execute(harness, job, action);
+
+      expect(result.success).toBe(false);
+      expect(DocumentPurgedError.isError(result.error)).toBe(true);
+      expect(result.error?.message).toBe("Document drive-1 was purged");
     });
   });
 

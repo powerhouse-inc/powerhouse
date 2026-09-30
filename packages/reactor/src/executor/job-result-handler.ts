@@ -48,10 +48,12 @@ export interface IJobResultHandler {
 
 export function toErrorInfo(error: Error | string): ErrorInfo {
   if (error instanceof Error) {
+    const documentId = (error as { documentId?: unknown }).documentId;
     return {
       name: error.name,
       message: error.message,
       stack: error.stack || new Error().stack || "",
+      ...(typeof documentId === "string" ? { documentId } : {}),
     };
   }
   return {

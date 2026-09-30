@@ -54,6 +54,7 @@ import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   DocumentDeletedError,
   DocumentNotFoundError,
+  DocumentPurgedError,
   ReservedActionError,
   UnsupportedProtocolVersionError,
   UpgradePreconditionFailedError,
@@ -1086,7 +1087,11 @@ export class DocumentActionHandler {
       // name JobResultHandler classifies by and leave a missing source document
       // burning the retry limit on a load that fails the same way every time.
       // The message still names the source, since a relationship tolerates a
-      // missing target but not a missing source.
+      // missing target but not a missing source. A purged source keeps its
+      // own error, which is terminal rather than deferred.
+      if (DocumentPurgedError.isError(error)) {
+        return buildErrorResult(job, error, startTime);
+      }
       if (DocumentNotFoundError.isError(error)) {
         return buildErrorResult(
           job,

@@ -56,6 +56,7 @@ export type ErrorInfo = {
   message: string;
   stack?: string;
   cause?: ErrorInfo;
+  documentId?: string;
 };
 
 // ---------------------------------------------------------------------------

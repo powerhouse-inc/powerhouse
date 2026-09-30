@@ -209,10 +209,8 @@ function isPurgedFailure(
   error: ErrorInfo | undefined,
   documentId: string,
 ): boolean {
-  // Only name and message reach JobInfo; the message names the purged id.
   return (
-    error?.name === "DocumentPurgedError" &&
-    error.message.includes(`Document ${documentId} was purged`)
+    error?.name === "DocumentPurgedError" && error.documentId === documentId
   );
 }
 

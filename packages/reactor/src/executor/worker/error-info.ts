@@ -29,6 +29,10 @@ export function toErrorInfo(err: unknown, depth = 0): ErrorInfo {
     if (err.cause !== undefined) {
       info.cause = toErrorInfo(err.cause, depth + 1);
     }
+    const documentId = (err as { documentId?: unknown }).documentId;
+    if (typeof documentId === "string") {
+      info.documentId = documentId;
+    }
     return info;
   }
   if (typeof err === "string") {
@@ -73,6 +77,13 @@ export function fromErrorInfo(info: ErrorInfo): Error {
   });
   if (info.stack !== undefined) {
     err.stack = info.stack;
+  }
+  if (info.documentId !== undefined) {
+    Object.defineProperty(err, "documentId", {
+      value: info.documentId,
+      configurable: true,
+      writable: true,
+    });
   }
   if (info.cause !== undefined) {
     Object.defineProperty(err, "cause", {
