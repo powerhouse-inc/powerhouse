@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-29T22:10:49.958Z
+> Generated: 2026-09-30T03:20:16.381Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -5369,7 +5369,7 @@ export const todoIndexerFactoryBuilder: ProcessorFactoryBuilder =
       scope: ["global"],
     };
 
-    const processor = new TodoIndexer(namespace, filter, store);
+    const processor = new TodoIndexer(namespace, filter, store, driveHeader.id);
     return [{ processor, filter }];
   };
 ```
@@ -5489,6 +5489,7 @@ A processor owns the rows it writes, and it must erase a document's rows when th
 - The marker can arrive without `resultingState`, after the document's `DELETE_DOCUMENT`, and more than once. Handle deletions before parsing `resultingState`, and make the handler idempotent.
 - Operations of a purged document other than its marker are not delivered, whether routed live or read by a backfill. The check takes no lock, so a delivery racing the purge can still land; the marker that follows erases it.
 - When a drive is deleted, its processors receive the batch up to and including the drive's `DELETE_DOCUMENT` (or its marker), then `onDisconnect`. The drive's own deletion reaches them whatever their filter, so a processor can drop the storage it keeps for that drive. `RelationalDbProcessor` has `deleteDocumentRows`, `isNamespaceDrive` and `dropNamespace` for this.
+- A processor that was not running at its drive's deletion (its factory was not registered yet after a restart, or was being reloaded), or whose `onOperations` threw on it, still receives it: the next time its factory is registered, the factory is called for the deleted drive and that processor receives only the drive's `DELETE_DOCUMENT`, or its `PURGE_DOCUMENT` if the drive has been purged since, then `onDisconnect`. An errored processor receives its drive's deletion too. A factory registered for the first time after a drive's deletion never had processors for that drive and is not called for it. Unregistering a factory keeps its cursor rows as released: a re-registration starts every processor afresh, per `startFrom`, but still owes the deletion of a drive deleted in between. The rows of a factory that is never registered again stay in `ProcessorCursor`.
 
 For how processors relate to sync and remote drives, see [Synchronization](/academy/Reference/Reactor/Synchronization). For the document types a filter can target, see the [Document model registry](/academy/Reference/Reactor/DocumentModelRegistry).
 
@@ -9539,7 +9540,12 @@ export const myRelationalProcessorFactory =
       scope: ["global"],
     };
 
-    const processor = new MyRelationalProcessor(namespace, filter, store);
+    const processor = new MyRelationalProcessor(
+      namespace,
+      filter,
+      store,
+      driveHeader.id,
+    );
     return [{ processor, filter }];
   };
 ```
@@ -29031,8 +29037,14 @@ export const todoIndexerProcessorFactory =
       scope: ["global", "document"], // Global changes, plus deletions
     };
 
-    // Create the processor instance
-    const processor = new TodoIndexerProcessor(namespace, filter, store);
+    // Create the processor instance. The drive id is what `isNamespaceDrive`
+    // compares a deleted document's id against.
+    const processor = new TodoIndexerProcessor(
+      namespace,
+      filter,
+      store,
+      driveHeader.id,
+    );
     return [
       {
         processor,
@@ -29148,10 +29160,12 @@ Handle `DELETE_DOCUMENT` and `PURGE_DOCUMENT` the same way, before anything that
 | Method                           | What it does                                                                                                           |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `deleteDocumentRows(documentId)` | Deletes the document's rows from every table in the processor's namespace with a `document_id` or `documentId` column |
-| `isNamespaceDrive(driveId)`      | `true` when `driveId` is the drive the processor's namespace was created for                                           |
+| `isNamespaceDrive(documentId)`   | `true` when `documentId` is the processor's drive and no other drive shares its namespace                             |
 | `dropNamespace()`                | Drops the processor's namespace with every table in it                                                                 |
 
 A table without a `document_id` or `documentId` column is not touched by `deleteDocumentRows`. Delete its rows yourself in the same branch.
+
+`isNamespaceDrive` needs the drive id the factory passes as the constructor's fourth argument; a processor made without it never drops its namespace. A `getNamespace` override that returns the same namespace for every drive shares it across drives, so dropping it on one drive's deletion would erase the others' rows. For such a processor `isNamespaceDrive` is `false`: the drive's deletion deletes the drive document's own rows, and each of its documents' rows go with that document's own deletion.
 
 When a drive is deleted, its processors receive the batch up to and including the drive's `DELETE_DOCUMENT` (or `PURGE_DOCUMENT`), then `onDisconnect()`. The drive's own deletion reaches them whatever their filter, so the processor above drops its namespace even though its `documentType` filter names only `powerhouse/todo-list`. The generated processor includes this handling.
 

@@ -146,7 +146,11 @@ export interface IProcessorManager {
    * Registers a processor factory.
    * Immediately creates processors for all existing drives and resolves once
    * every factory run has completed and its processors are bound. Their
-   * backfills run afterwards, on each processor's own queue. If processors
+   * backfills run afterwards, on each processor's own queue. A deleted drive
+   * whose deletion one of the factory's processors never received (it was not
+   * running, or its delivery threw) gets a processor too: it receives only the
+   * drive's `DELETE_DOCUMENT`, or its `PURGE_DOCUMENT` once purged, and is
+   * disconnected; this resolves after that delivery. If processors
    * from an earlier registration under the same identifier are still
    * draining, or a call of the previous factory is still in flight, the
    * factory runs after they have settled, so awaiting a re-registration of
@@ -157,8 +161,12 @@ export interface IProcessorManager {
 
   /**
    * Unregisters a processor factory. Resolves once its processors receive no
-   * new deliveries and their cursors are deleted; each one's in-flight
-   * delivery finishes first, then `onDisconnect` runs. Safe to call from
+   * new deliveries and their cursors are released; each one's in-flight
+   * delivery finishes first, then `onDisconnect` runs. A released cursor no
+   * longer positions a processor: a re-registration starts each one afresh,
+   * per `startFrom`. It only records that the factory held a drive's data, so
+   * that a drive deleted before the factory registers again still gets its
+   * deletion delivered then. Safe to call from
    * inside a processor's own `onOperations`.
    */
   unregisterFactory(identifier: string): Promise<void>;

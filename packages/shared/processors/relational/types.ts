@@ -67,6 +67,8 @@ export abstract class RelationalDbProcessor<
     protected _namespace: string,
     protected _filter: ProcessorFilter,
     protected relationalDb: IRelationalDb<TDatabaseSchema>,
+    /** The drive the factory created this processor for. */
+    protected _driveId?: string,
   ) {}
 
   static [IS_RELATIONAL_DB_PROCESSOR] = true;
@@ -112,10 +114,13 @@ export abstract class RelationalDbProcessor<
     return relationalDbToQueryBuilder(this.relationalDb);
   }
 
-  /** True when `driveId` is the drive this processor's namespace was made for. */
-  protected isNamespaceDrive(driveId: string): boolean {
+  /** True for this processor's drive when its namespace is that drive's alone. */
+  protected isNamespaceDrive(documentId: string): boolean {
+    const driveId = this._driveId;
+    if (driveId === undefined || documentId !== driveId) return false;
     const processorClass = this.constructor as typeof RelationalDbProcessor;
-    return processorClass.getNamespace(driveId) === this._namespace;
+    if (processorClass.getNamespace(driveId) !== this._namespace) return false;
+    return processorClass.getNamespace(`${driveId}-other`) !== this._namespace;
   }
 
   /** Deletes a document's rows from every table with a document-id column. */
