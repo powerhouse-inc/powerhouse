@@ -136,6 +136,14 @@ export interface SyncReceivedMarkerTable {
   received_at_utc_ms: ColumnType<string | number, number, number>;
 }
 
+/** A remote's refusal of a purge marker (migration 026). */
+export interface SyncPurgeRefusalTable {
+  remote_name: string;
+  document_id: string;
+  branch: string;
+  refused_at_utc_ms: ColumnType<string | number, number, number>;
+}
+
 /**
  * One (document, group) reference ever discovered from an auth operation's
  * input. Rows are never updated or deleted (see migration 017).
@@ -169,6 +177,7 @@ export interface Database {
   sync_dead_letters: SyncDeadLetterTable;
   sync_holds: SyncHoldTable;
   sync_received_markers: SyncReceivedMarkerTable;
+  sync_purge_refusals: SyncPurgeRefusalTable;
   document_purges: DocumentPurgeTable;
 }
 

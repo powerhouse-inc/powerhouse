@@ -28,6 +28,7 @@ import * as migration022 from "./022_create_sync_holds.js";
 import * as migration023 from "./023_index_created_protocol_versions.js";
 import * as migration024 from "./024_create_document_purges.js";
 import * as migration025 from "./025_create_sync_received_markers.js";
+import * as migration026 from "./026_create_sync_purge_refusals.js";
 
 const migrations = {
   "001_create_operation_table": migration001,
@@ -55,6 +56,7 @@ const migrations = {
   "023_index_created_protocol_versions": migration023,
   "024_create_document_purges": migration024,
   "025_create_sync_received_markers": migration025,
+  "026_create_sync_purge_refusals": migration026,
 };
 
 class ProgrammaticMigrationProvider implements MigrationProvider {

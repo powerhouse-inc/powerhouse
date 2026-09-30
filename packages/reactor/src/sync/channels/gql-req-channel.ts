@@ -1,6 +1,7 @@
 import {
   isOlderManifest,
   isPurgeMarker,
+  MARKER_REFUSAL_FEATURE,
   readPeerManifest,
   type PeerManifest,
 } from "@powerhousedao/shared/document-model";
@@ -82,7 +83,12 @@ const AGREEMENT_FIELDS = [
   "SyncRefusalInput",
 ] as const;
 
-type RefusalWire = { documentId: string; branch: string };
+/** `kind` only on a marker refusal, sent to a peer announcing the feature. */
+type RefusalWire = { documentId: string; branch: string; kind?: "marker" };
+
+function refusalKey(refusal: RefusalWire): string {
+  return `${refusal.documentId}\u0000${refusal.branch}\u0000${refusal.kind ?? ""}`;
+}
 
 /** How often a channel whose remote went silent asks again whether it serves agreement. */
 const AGREEMENT_PROBE_INTERVAL_MS = 5 * 60_000;
@@ -211,15 +217,19 @@ export class GqlRequestChannel implements IChannel {
           syncOp.documentId,
           this.channelId,
         );
-        if (
-          syncOp.error?.source === ChannelErrorSource.Inbox &&
-          syncOperationErrorType(syncOp.error) === "UNSUPPORTED_PROTOCOL"
-        ) {
-          this.pendingRefusals.set(`${syncOp.documentId}:${syncOp.branch}`, {
-            documentId: syncOp.documentId,
-            branch: syncOp.branch,
-          });
-        }
+        if (syncOp.error?.source !== ChannelErrorSource.Inbox) continue;
+        const errorType = syncOperationErrorType(syncOp.error);
+        const refusal: RefusalWire | undefined =
+          errorType === "UNSUPPORTED_PROTOCOL"
+            ? { documentId: syncOp.documentId, branch: syncOp.branch }
+            : errorType === "MARKER_REFUSED"
+              ? {
+                  documentId: syncOp.documentId,
+                  branch: syncOp.branch,
+                  kind: "marker",
+                }
+              : undefined;
+        if (refusal) this.pendingRefusals.set(refusalKey(refusal), refusal);
       }
     });
 
@@ -793,7 +803,10 @@ export class GqlRequestChannel implements IChannel {
         ? this.localManifestProvider?.().revision
         : undefined;
       refusals = this.peerServesAgreement
-        ? [...this.pendingRefusals.values()]
+        ? [...this.pendingRefusals.values()].filter(
+            (refusal) =>
+              refusal.kind === undefined || this.peerTakesMarkerRefusals(),
+          )
         : [];
       try {
         response = await this.executeGraphQL<PollSyncEnvelopesResult>(
@@ -824,7 +837,7 @@ export class GqlRequestChannel implements IChannel {
 
     // The server holds what was reported; a silent one keeps them pending.
     for (const refusal of refusals) {
-      this.pendingRefusals.delete(`${refusal.documentId}:${refusal.branch}`);
+      this.pendingRefusals.delete(refusalKey(refusal));
     }
 
     return {
@@ -835,6 +848,17 @@ export class GqlRequestChannel implements IChannel {
       manifestRevision: response.pollSyncEnvelopes.manifestRevision,
       peerManifestRevision: response.pollSyncEnvelopes.peerManifestRevision,
     };
+  }
+
+  /** A peer before the feature would reject the field; its refusals wait. */
+  private peerTakesMarkerRefusals(): boolean {
+    return (
+      this.peerManifest?.features[MARKER_REFUSAL_FEATURE]?.includes(1) === true
+    );
+  }
+
+  forgetMarkerRefusal(documentId: string, branch: string): void {
+    this.refusedMarkers.delete(`${documentId}\u0000${branch}`);
   }
 
   private rejectsAgreementFields(error: unknown): boolean {

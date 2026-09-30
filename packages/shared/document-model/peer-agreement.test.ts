@@ -25,15 +25,21 @@ const TEST_PROTOCOL: PeerCapability = {
 };
 
 describe("peer capabilities", () => {
-  it("registers base-reducer [1, 2], signature [2] and document-purge [1]", () => {
+  it("registers base-reducer [1, 2], signature [2], document-purge [1] and marker-refusal [1]", () => {
     expect(localSupports(PEER_CAPABILITIES, {})).toEqual({
       protocols: {
         "base-reducer": [1, 2],
         signature: [2],
         "document-purge": [1],
       },
-      features: {},
+      features: { "marker-refusal": [1] },
     });
+  });
+
+  it("gives a silent peer no marker-refusal support", () => {
+    expect(
+      legacySupports(PEER_CAPABILITIES).features["marker-refusal"],
+    ).toEqual([]);
   });
 
   it("gives a silent peer no document-purge support", () => {
@@ -59,6 +65,7 @@ describe("peer capabilities", () => {
     expect(merged.map((capability) => capability.name)).toEqual([
       "signature",
       "document-purge",
+      "marker-refusal",
       "base-reducer",
       "test-protocol",
     ]);

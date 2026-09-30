@@ -88,6 +88,11 @@ export {
   type PendingDelivery,
 } from "./delivery-tracking.js";
 export { InMemorySyncHoldStorage } from "./memory-hold-storage.js";
+export { InMemorySyncPurgeRefusalStorage } from "./memory-purge-refusal-storage.js";
+export {
+  supportsPurgeRefusals,
+  type IPurgeRefusalRecorder,
+} from "./purge-refusals.js";
 export { InMemorySyncReceivedMarkerStorage } from "./memory-received-marker-storage.js";
 export {
   createPeerAgreement,

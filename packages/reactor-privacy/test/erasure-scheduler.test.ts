@@ -1,14 +1,10 @@
-import {
-  JobStatus,
-  PURGE_NS,
-  SyncEventTypes,
-  type SyncPurgeRefusedEvent,
-} from "@powerhousedao/reactor";
+import { DriveCollectionId, JobStatus, PURGE_NS } from "@powerhousedao/reactor";
 import { setDriveName } from "@powerhousedao/shared/document-drive";
 import { sql } from "kysely";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createModuleErasure,
+  ErasureScheduler,
   ErasureSignerMissingError,
   registerSubjectDocumentsReadModel,
 } from "../index.js";
@@ -28,7 +24,9 @@ import {
   IDENTIFIER,
   item,
   MANIFEST_WITHOUT_PURGE,
+  refuseMarker,
   remove,
+  restart,
   SECRET,
   served,
   setup,
@@ -38,7 +36,7 @@ import {
   tickUntil,
 } from "./utils/erasure.js";
 import { signedBy } from "./utils/p256-signer.js";
-import { settled } from "./utils/reactor.js";
+import { failingInitChannels, settled } from "./utils/reactor.js";
 
 afterEach(teardown);
 
@@ -463,13 +461,12 @@ describe("after the purge [Postgres]", () => {
     await ackThrough(e, "refuser", await deleteOrdinal(e, drive));
     await tickUntil(e, "purged", statusIs(e, requestId, drive, "purged"));
 
-    await e.host.module.eventBus.emit(SyncEventTypes.PURGE_REFUSED, {
-      remoteName: "refuser",
-      documentId: drive,
-      branch: "main",
-      errorMessage: `signer ${ADMIN} is not trusted by ${e.signer.did}`,
-    } satisfies SyncPurgeRefusedEvent);
-    await e.scheduler.flush();
+    await refuseMarker(
+      e,
+      "refuser",
+      drive,
+      `signer ${ADMIN} is not trusted by ${e.signer.did}`,
+    );
     await ackThrough(
       e,
       "refuser",
@@ -511,3 +508,347 @@ describe("after the purge [Postgres]", () => {
     await expectNoIdentifiers(e);
   });
 });
+
+describe("remotes the sync manager has not loaded [Postgres]", () => {
+  it("does not count a stored remote whose channel failed to start as converged", async () => {
+    const e = await setup({ sync: true });
+    const doc = await createDoc(e);
+    const drive = await createDrive(e, [doc]);
+    await addRemote(e, "poller", drive);
+    await remove(e, doc);
+    await restart(e, { channelFactory: failingInitChannels() });
+    expect(sync(e).list()).toEqual([]);
+
+    const { requestId } = await e.service.request([doc], {
+      requestedBy: ADMIN,
+      deadline: new Date(e.now().getTime() + HOUR),
+    });
+    await e.scheduler.tick();
+    await e.scheduler.tick();
+    expect((await item(e, requestId, doc)).status).toBe("waiting");
+    const waiting = (await audit(e, requestId)).find(
+      (row) => row.event === "waiting",
+    );
+    expect(waiting?.detail.pending).toEqual([
+      { remote: "poller", state: "unknown" },
+    ]);
+
+    e.advance(2 * HOUR);
+    await tickUntil(e, "purged", statusIs(e, requestId, doc, "purged"));
+    for (let i = 0; i < 3; i++) await e.scheduler.tick();
+    expect((await item(e, requestId, doc)).status).toBe("purged");
+
+    e.advance(8 * 24 * HOUR);
+    await tickUntil(e, "erased", statusIs(e, requestId, doc, "erased"));
+    const trail = await events(e, requestId, doc);
+    expect(trail).not.toContain("marker-converged");
+    const outcome = (await audit(e, requestId)).find(
+      (row) => row.event === "marker-undelivered",
+    );
+    expect(outcome?.detail).toMatchObject({
+      pending: [{ remote: "poller", state: "unknown" }],
+      markerGraceExpired: true,
+    });
+  });
+
+  it("deletes a drive's stored remote that is not loaded at markerGrace, not before", async () => {
+    const e = await setup({ sync: true });
+    const drive = await createDrive(e);
+    await addRemote(e, "poller", drive);
+    await remove(e, drive);
+    await restart(e, { channelFactory: failingInitChannels() });
+    const stored = () =>
+      db(e)
+        .selectFrom("sync_remotes")
+        .select("name")
+        .execute()
+        .then((rows) => rows.map((row) => row.name));
+
+    const { requestId } = await e.service.request([drive], {
+      requestedBy: ADMIN,
+      deadline: new Date(e.now().getTime() + HOUR),
+    });
+    e.advance(2 * HOUR);
+    await tickUntil(e, "purged", statusIs(e, requestId, drive, "purged"));
+    for (let i = 0; i < 3; i++) await e.scheduler.tick();
+    expect((await item(e, requestId, drive)).status).toBe("purged");
+    expect(await stored()).toEqual(["poller"]);
+
+    e.advance(8 * 24 * HOUR);
+    await tickUntil(e, "erased", statusIs(e, requestId, drive, "erased"));
+    expect(await stored()).toEqual([]);
+    const removed = (await audit(e, requestId)).find(
+      (row) => row.event === "remotes-removed",
+    );
+    expect(removed?.detail).toEqual({
+      remotes: [],
+      deletedFromStorage: ["poller"],
+    });
+  });
+
+  it("deletes a drive's stored remote at markerGrace with no sync manager", async () => {
+    const e = await setup({ markerGraceMs: 3 * HOUR });
+    const drive = await createDrive(e);
+    await remove(e, drive);
+    await db(e)
+      .insertInto("sync_remotes")
+      .values({
+        name: "orphan",
+        collection_id: DriveCollectionId.forDrive(drive).key,
+        channel_type: "gql",
+        bound_address: ADMIN.toLowerCase(),
+      } as never)
+      .execute();
+    const { requestId } = await e.service.request([drive], {
+      requestedBy: ADMIN,
+      deadline: new Date(e.now().getTime() + HOUR),
+    });
+    e.advance(2 * HOUR);
+    await tickUntil(e, "purged", statusIs(e, requestId, drive, "purged"));
+    await e.scheduler.tick();
+    expect((await item(e, requestId, drive)).status).toBe("purged");
+    expect(
+      await db(e).selectFrom("sync_remotes").select("name").execute(),
+    ).toEqual([{ name: "orphan" }]);
+
+    e.advance(4 * HOUR);
+    await tickUntil(e, "erased", statusIs(e, requestId, drive, "erased"));
+    const rows = await db(e).selectFrom("sync_remotes").selectAll().execute();
+    expect(rows).toEqual([]);
+  });
+});
+
+describe("recovering from lost signals [Postgres]", () => {
+  it("records a refusal reported while the scheduler was stopped", async () => {
+    const e = await setup({ sync: true });
+    const drive = await createDrive(e);
+    await addRemote(e, "refuser", drive);
+    await remove(e, drive);
+    const { requestId } = await e.service.request([drive], {
+      requestedBy: ADMIN,
+    });
+    await ackThrough(e, "refuser", await deleteOrdinal(e, drive));
+    await tickUntil(e, "purged", statusIs(e, requestId, drive, "purged"));
+
+    await refuseMarker(e, "refuser", drive);
+    await ackThrough(
+      e,
+      "refuser",
+      (await item(e, requestId, drive)).markerOrdinal!,
+    );
+    await restart(e);
+    await tickUntil(e, "erased", statusIs(e, requestId, drive, "erased"));
+    expect(await events(e, requestId, drive)).not.toContain("marker-converged");
+    const outcome = (await audit(e, requestId)).find(
+      (row) =>
+        row.event === "marker-undelivered" && row.detail.kind === "outcome",
+    );
+    expect(outcome?.detail).toMatchObject({ refused: ["refuser"] });
+  });
+
+  it("moves a failed item to purged when its timed-out purge commits later", async () => {
+    const e = await setup();
+    const doc = await createDoc(e);
+    await remove(e, doc);
+    const scheduler = new ErasureScheduler({
+      db: db(e),
+      deploymentSecret: SECRET,
+      signer: e.signer,
+      purges: {
+        enqueuePurge: () => Promise.resolve([{ id: "zombie" } as never]),
+      },
+      jobs: {
+        getJobStatus: () =>
+          ({
+            id: "zombie",
+            status: JobStatus.FAILED,
+            error: { name: "Error", message: "The operation timed out." },
+          }) as never,
+      },
+      permissions: e.eraser,
+    });
+    const { requestId } = await e.service.request([doc], {
+      requestedBy: ADMIN,
+    });
+    for (let i = 0; i < 3; i++) await scheduler.tick();
+    expect((await item(e, requestId, doc)).status).toBe("failed");
+    expect((await e.service.status(requestId)).status).toBe("failed");
+
+    await e.host.module.documentPurgeService.enqueuePurge([doc], requestId);
+    await vi.waitUntil(async () => (await tombstoneOf(e, doc)) !== undefined, {
+      timeout: 20_000,
+    });
+    for (let i = 0; i < 3; i++) await scheduler.tick();
+
+    expect({
+      status: (await item(e, requestId, doc)).status,
+      erased: e.eraser.calls,
+      request: (await e.service.status(requestId)).status,
+    }).toEqual({ status: "erased", erased: [doc], request: "complete" });
+    expect(await events(e, requestId, null)).toEqual([
+      "requested",
+      "failed",
+      "reopened",
+      "complete",
+    ]);
+  });
+
+  it("waits for a failed purge's transaction to end before the next purge", async () => {
+    const e = await setup();
+    const first = await createDoc(e);
+    const second = await createDoc(e);
+    await remove(e, first);
+    await remove(e, second);
+    let failFirst = true;
+    const scheduler = new ErasureScheduler({
+      db: db(e),
+      deploymentSecret: SECRET,
+      signer: e.signer,
+      purges: {
+        enqueuePurge: (ids, requestId, options) =>
+          ids[0] === first
+            ? Promise.resolve([{ id: "zombie" } as never])
+            : e.host.module.documentPurgeService.enqueuePurge(
+                ids,
+                requestId,
+                options,
+              ),
+      },
+      jobs: {
+        getJobStatus: (id) =>
+          id === "zombie" && failFirst
+            ? ({
+                id,
+                status: JobStatus.FAILED,
+                error: { name: "Error", message: "timed out" },
+              } as never)
+            : e.host.module.jobTracker.getJobStatus(id),
+      },
+      permissions: e.eraser,
+    });
+    const r1 = await e.service.request([first], { requestedBy: ADMIN });
+    const r2 = await e.service.request([second], { requestedBy: ADMIN });
+
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let locked!: () => void;
+    const lockTaken = new Promise<void>((resolve) => {
+      locked = resolve;
+    });
+    // The timed-out purge's transaction, still holding its lock.
+    const key = sql`${sql.lit(PURGE_NS)}, hashtext(${first}) & 1023`;
+    const holder = db(e)
+      .connection()
+      .execute(async (conn) => {
+        await sql`select pg_advisory_lock(${key})`.execute(conn);
+        locked();
+        await released;
+        await sql`select pg_advisory_unlock(${key})`.execute(conn);
+      });
+    await lockTaken;
+    try {
+      for (let i = 0; i < 3; i++) await scheduler.tick();
+      expect((await item(e, r1.requestId, first)).status).toBe("failed");
+      for (let i = 0; i < 3; i++) {
+        await scheduler.tick();
+        expect((await item(e, r2.requestId, second)).status).toBe("waiting");
+      }
+    } finally {
+      release();
+      await holder;
+    }
+    failFirst = false;
+    await vi.waitUntil(
+      async () => {
+        await scheduler.tick();
+        return (await item(e, r2.requestId, second)).status === "erased";
+      },
+      { timeout: 20_000, interval: 50 },
+    );
+  });
+
+  it("enqueues a purge again when it has no tombstone past the purge timeout", async () => {
+    const e = await setup();
+    const doc = await createDoc(e);
+    await remove(e, doc);
+    const enqueued: string[] = [];
+    const scheduler = new ErasureScheduler({
+      db: db(e),
+      deploymentSecret: SECRET,
+      signer: e.signer,
+      purges: {
+        enqueuePurge: (ids, requestId, options) => {
+          enqueued.push(ids[0]!);
+          return enqueued.length === 1
+            ? Promise.resolve([{ id: "stuck" } as never])
+            : e.host.module.documentPurgeService.enqueuePurge(
+                ids,
+                requestId,
+                options,
+              );
+        },
+      },
+      jobs: {
+        getJobStatus: (id) =>
+          id === "stuck"
+            ? ({ id, status: JobStatus.RUNNING } as never)
+            : e.host.module.jobTracker.getJobStatus(id),
+      },
+      permissions: e.eraser,
+      purgeTimeoutMs: HOUR,
+      now: e.now,
+    });
+    const { requestId } = await e.service.request([doc], {
+      requestedBy: ADMIN,
+    });
+    for (let i = 0; i < 3; i++) await scheduler.tick();
+    expect(enqueued).toEqual([doc]);
+    expect((await item(e, requestId, doc)).status).toBe("purging");
+
+    e.advance(2 * HOUR);
+    await vi.waitUntil(
+      async () => {
+        await scheduler.tick();
+        return (await item(e, requestId, doc)).status === "erased";
+      },
+      { timeout: 20_000, interval: 50 },
+    );
+    expect(enqueued).toEqual([doc, doc]);
+  });
+});
+
+describe("throughput [Postgres]", () => {
+  it("runs the next purge when one completes, not on the next interval", async () => {
+    const e = await setup();
+    const ids: string[] = [];
+    for (let i = 0; i < 3; i++) ids.push(await createDoc(e));
+    for (const id of ids) await remove(e, id);
+    const { requestId } = await e.service.request(ids, {
+      requestedBy: ADMIN,
+    });
+    e.scheduler.start();
+    await e.scheduler.tick();
+    await vi.waitUntil(
+      async () =>
+        (await Promise.all(ids.map((id) => tombstoneOf(e, id)))).every(
+          (row) => row !== undefined,
+        ),
+      { timeout: 15_000, interval: 50 },
+    );
+    await tickUntil(e, "complete", async () =>
+      Promise.resolve(
+        (await e.service.status(requestId)).status === "complete",
+      ),
+    );
+  });
+});
+
+async function tombstoneOf(e: Parameters<typeof db>[0], id: string) {
+  return db(e)
+    .selectFrom("document_purges")
+    .select("documentId")
+    .where("documentId", "=", id)
+    .executeTakeFirst();
+}

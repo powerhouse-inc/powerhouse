@@ -20,6 +20,7 @@ import type { ISyncCursorStorage } from "../../../src/storage/interfaces.js";
 import { deliveryAt } from "../../../src/storage/kysely/delivery-lookup.js";
 import { listPurged } from "../../../src/storage/kysely/document-purges.js";
 import { KyselySyncHoldStorage } from "../../../src/storage/kysely/sync-hold-storage.js";
+import { KyselySyncPurgeRefusalStorage } from "../../../src/storage/kysely/sync-purge-refusal-storage.js";
 import type { Database } from "../../../src/storage/kysely/types.js";
 import type { IChannelFactory } from "../../../src/sync/interfaces.js";
 import { GqlResponseChannel } from "../../../src/sync/channels/gql-res-channel.js";
@@ -147,6 +148,7 @@ export async function createHarness(
     { listPurged: () => listPurged(db) },
     undefined,
     { at: (documentId, ordinal) => deliveryAt(db, documentId, ordinal) },
+    new KyselySyncPurgeRefusalStorage(db),
   );
 
   return {

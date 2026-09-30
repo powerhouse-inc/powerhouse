@@ -761,6 +761,7 @@ export type SyncHoldReason = {
 export type SyncRefusalInput = {
   readonly branch: Scalars["String"]["input"];
   readonly documentId: Scalars["String"]["input"];
+  readonly kind?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type TouchChannelInput = {
@@ -2898,6 +2899,7 @@ export function SyncRefusalInputSchema(): z.ZodObject<
   return z.object({
     branch: z.string(),
     documentId: z.string(),
+    kind: z.string().nullish(),
   });
 }
 

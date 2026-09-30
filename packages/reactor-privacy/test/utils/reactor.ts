@@ -4,6 +4,7 @@ import {
   ReactorBuilder,
   SyncBuilder,
   type Database,
+  type IChannelFactory,
   type IEventBus,
   type InProcessReactorModule,
   type JobInfo,
@@ -76,6 +77,8 @@ export async function startReactor(
     sweepIntervalMs?: number;
     /** Serves remotes over polling channels, as switchboard does for Connect. */
     sync?: boolean;
+    /** Replaces the polling channel factory; implies sync. */
+    channelFactory?: IChannelFactory;
     maxPurgeOperations?: number;
   },
 ): Promise<TestReactor> {
@@ -92,10 +95,11 @@ export async function startReactor(
       maxPurgeOperations: options.maxPurgeOperations,
     });
   }
-  if (options.sync) {
+  if (options.sync || options.channelFactory) {
     builder.withSync(
       new SyncBuilder().withChannelFactory(
-        new GqlResponseChannelFactory(silentLogger() as never),
+        options.channelFactory ??
+          new GqlResponseChannelFactory(silentLogger() as never),
       ),
     );
   }
@@ -110,6 +114,25 @@ export async function startReactor(
     async kill() {
       await module.reactor.kill().completed;
       await module.syncModule?.syncManager.shutdown().completed;
+    },
+  };
+}
+
+/** Polling channels whose init fails, as on a transient network error. */
+export function failingInitChannels(): IChannelFactory {
+  const inner = new GqlResponseChannelFactory(silentLogger() as never);
+  return {
+    instance(...args: Parameters<IChannelFactory["instance"]>) {
+      const [remoteId, remoteName, config, cursorStorage] = args;
+      const channel = inner.instance(
+        remoteId,
+        remoteName,
+        config,
+        cursorStorage,
+      );
+      channel.init = () =>
+        Promise.reject(new Error("connect ECONNREFUSED 10.0.0.1:5432"));
+      return channel;
     },
   };
 }

@@ -119,6 +119,26 @@ function previousSchemaServer() {
   return { fetchFn, touches, polls };
 }
 
+function inboxRefusal(
+  documentId: string,
+  errorType: "MARKER_REFUSED" | "UNSUPPORTED_PROTOCOL",
+) {
+  const syncOp = new SyncOperation(
+    crypto.randomUUID(),
+    "job-1",
+    [],
+    "remote-1",
+    documentId,
+    ["document"],
+    "main",
+    [],
+  );
+  syncOp.failed(
+    new ChannelError(ChannelErrorSource.Inbox, new Error("refused"), errorType),
+  );
+  return syncOp;
+}
+
 function respond(data: unknown, errors?: unknown[]) {
   return Promise.resolve({
     ok: true,
@@ -316,6 +336,50 @@ describe("GqlRequestChannel peer manifests", () => {
       { documentId: "doc", branch: "main" },
     ]);
     expect(state.polls[1].variables.refusals).toEqual([]);
+  });
+
+  it("reports a refused marker with its kind to a server announcing the feature", async () => {
+    const { state, fetchFn } = agreementServer(LOCAL);
+    const timer = new ManualPollTimer();
+    const { channel } = channelWith(fetchFn, timer);
+    channels.push(channel);
+    await channel.init();
+
+    channel.deadLetter.add(inboxRefusal("purged", "MARKER_REFUSED"));
+    await timer.tick();
+    await timer.tick();
+
+    expect(state.polls[0].variables.refusals).toEqual([
+      { documentId: "purged", branch: "main", kind: "marker" },
+    ]);
+    expect(state.polls[1].variables.refusals).toEqual([]);
+  });
+
+  it("keeps a refused marker from a server without the feature until it announces it", async () => {
+    const before = localPeerManifest([TEST_PROTOCOL], {}, undefined, 1);
+    const after = localPeerManifest(PEER_CAPABILITIES, {}, undefined, 2);
+    const { state, fetchFn } = agreementServer(before);
+    const timer = new ManualPollTimer();
+    const { channel, heard } = channelWith(fetchFn, timer);
+    channels.push(channel);
+    await channel.init();
+
+    channel.deadLetter.add(
+      inboxRefusal("held", "UNSUPPORTED_PROTOCOL"),
+      inboxRefusal("purged", "MARKER_REFUSED"),
+    );
+    await timer.tick();
+    expect(state.polls[0].variables.refusals).toEqual([
+      { documentId: "held", branch: "main" },
+    ]);
+
+    state.server = after;
+    await timer.tick();
+    await vi.waitFor(() => expect(heard).toEqual([before, after]));
+    await timer.tick();
+    expect(state.polls.at(-1)!.variables.refusals).toEqual([
+      { documentId: "purged", branch: "main", kind: "marker" },
+    ]);
   });
 
   it("hears a server restarted into the same build, so its holds are re-checked", async () => {

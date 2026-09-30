@@ -1,7 +1,11 @@
 import {
   addRelationshipAction,
+  ChannelError,
+  ChannelErrorSource,
   DriveCollectionId,
+  SyncOperation,
   trimMailboxFromAckOrdinal,
+  type IChannelFactory,
   type ISyncManager,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
@@ -130,6 +134,30 @@ export async function setup(
   return env;
 }
 
+/** Restarts the reactor and the erasure over the same database and clock. */
+export async function restart(
+  e: Env,
+  options: { channelFactory?: IChannelFactory; markerGraceMs?: number } = {},
+): Promise<void> {
+  await e.scheduler.stop();
+  await e.host.kill();
+  e.host = await startReactor(e.database, {
+    signer: e.signer,
+    sync: true,
+    channelFactory: options.channelFactory,
+    sweepIntervalMs: 50,
+  });
+  const { service, scheduler } = createModuleErasure(e.host.module, {
+    deploymentSecret: SECRET,
+    signer: e.signer,
+    permissions: e.eraser,
+    markerGraceMs: options.markerGraceMs,
+    now: e.now,
+  });
+  e.service = service;
+  e.scheduler = scheduler;
+}
+
 /** Tears down the env the last setup() built. */
 export async function teardown(): Promise<void> {
   const current = env;
@@ -251,6 +279,43 @@ export async function ackThrough(
     timeout: 10_000,
     interval: 20,
   });
+}
+
+/** The remote reports it refused the marker, as a pushed one's report lands. */
+export async function refuseMarker(
+  e: Env,
+  remote: string,
+  documentId: string,
+  message = "refused",
+): Promise<void> {
+  const syncOp = new SyncOperation(
+    crypto.randomUUID(),
+    crypto.randomUUID(),
+    [],
+    remote,
+    documentId,
+    ["document"],
+    "main",
+    [],
+  );
+  syncOp.failed(
+    new ChannelError(
+      ChannelErrorSource.Outbox,
+      new Error(message),
+      "MARKER_REFUSED",
+    ),
+  );
+  sync(e).getByName(remote).channel.deadLetter.add(syncOp);
+  await vi.waitUntil(
+    async () =>
+      (await db(e)
+        .selectFrom("sync_purge_refusals")
+        .select("document_id")
+        .where("remote_name", "=", remote)
+        .where("document_id", "=", documentId)
+        .executeTakeFirst()) !== undefined,
+    { timeout: 10_000, interval: 20 },
+  );
 }
 
 export async function item(e: Env, requestId: string, documentId: string) {

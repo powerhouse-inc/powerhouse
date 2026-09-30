@@ -388,12 +388,15 @@ export {
 export {
   KyselySyncCursorStorage,
   KyselySyncHoldStorage,
+  KyselySyncPurgeRefusalStorage,
   KyselySyncReceivedMarkerStorage,
   KyselySyncRemoteStorage,
   type ISyncCursorStorage,
   type ISyncHoldStorage,
+  type ISyncPurgeRefusalStorage,
   type ISyncReceivedMarkerStorage,
   type ISyncRemoteStorage,
+  type PurgeRefusalRecord,
   type ReceivedMarkerRecord,
   type SyncHoldRecord,
 } from "./src/storage/index.js";
@@ -466,6 +469,9 @@ export {
   type IDeliveryTracking,
   type PendingDelivery,
   supportsDeliveryTracking,
+  supportsPurgeRefusals,
+  type IPurgeRefusalRecorder,
+  InMemorySyncPurgeRefusalStorage,
   type IPeerAgreement,
   type PeerAgreementBasis,
   createPeerAgreement,
@@ -533,6 +539,7 @@ export {
   acquirePurgeLocks,
   findPurged,
   listPurged,
+  PURGE_LOCK_BUCKETS,
   PURGE_NS,
   type PurgeLockMode,
 } from "./src/storage/kysely/document-purges.js";

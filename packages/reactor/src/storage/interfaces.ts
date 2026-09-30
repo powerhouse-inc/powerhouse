@@ -878,6 +878,21 @@ export interface ISyncReceivedMarkerStorage {
   removeRemote(remoteName: string): Promise<void>;
 }
 
+/** A remote's refusal of a purge marker; no message, which may name a signer. */
+export type PurgeRefusalRecord = {
+  remoteName: string;
+  documentId: string;
+  branch: string;
+  refusedAtUtcMs: number;
+};
+
+/** Marker refusals, kept after the remote goes so the erasure can report them. */
+export interface ISyncPurgeRefusalStorage {
+  list(documentId: string): Promise<PurgeRefusalRecord[]>;
+  /** Keeps the first refusal's time for a remote, document and branch. */
+  record(refusal: PurgeRefusalRecord): Promise<void>;
+}
+
 /**
  * Persistent storage for sync remote configurations. Each remote represents
  * a connection to an external system that operations can be synced with.

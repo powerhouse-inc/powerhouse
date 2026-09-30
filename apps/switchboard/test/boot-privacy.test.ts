@@ -3,6 +3,7 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ILogger } from "document-model";
+import pg from "pg";
 import { describe, expect, it, vi } from "vitest";
 import { startSwitchboard } from "../src/server.mjs";
 
@@ -182,3 +183,61 @@ describe("booting Switchboard with the privacy add-on", () => {
     );
   }, 60_000);
 });
+
+const PG_URL = process.env.REACTOR_TEST_PG_URL;
+
+describe.skipIf(!PG_URL)(
+  "the privacy add-on on a Postgres reactor store",
+  () => {
+    it("erases a document end to end", async () => {
+      const name = `sb_privacy_${process.pid}`;
+      const admin = new pg.Pool({ connectionString: PG_URL });
+      await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
+      await admin.query(`CREATE DATABASE "${name}"`);
+      const url = new URL(PG_URL!);
+      url.pathname = `/${name}`;
+      try {
+        await withEnv(
+          {
+            AUTH_ENABLED: "true",
+            ADMINS: ADMIN,
+            PH_PRIVACY_ENABLED: "true",
+            PH_PRIVACY_DEPLOYMENT_SECRET: SECRET,
+            PH_PRIVACY_INTERVAL_MS: "50",
+          },
+          async (tempRoot) => {
+            process.env.PH_REACTOR_DATABASE_URL = url.toString();
+            const logger = stubLogger();
+            const switchboard = await boot(tempRoot, logger);
+            try {
+              const document = await switchboard.reactor.createEmpty(
+                "powerhouse/document-model",
+              );
+              const id = document.header.id;
+              await switchboard.reactor.deleteDocument(id);
+              const erasure = switchboard.privacy!.erasure;
+              const { requestId } = await erasure.request([id], {
+                requestedBy: ADMIN,
+              });
+              await vi.waitUntil(
+                async () =>
+                  (await erasure.status(requestId)).status === "complete",
+                { timeout: 30_000, interval: 100 },
+              );
+              expect(
+                logger.error.mock.calls.filter(([message]) =>
+                  String(message).startsWith("Erasure"),
+                ),
+              ).toEqual([]);
+            } finally {
+              await switchboard.shutdown();
+            }
+          },
+        );
+      } finally {
+        await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
+        await admin.end();
+      }
+    }, 90_000);
+  },
+);
