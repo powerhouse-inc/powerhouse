@@ -8,12 +8,14 @@ import type {
   ISyncCursorStorage,
   ISyncDeadLetterStorage,
   ISyncHoldStorage,
+  ISyncReceivedMarkerStorage,
   ISyncRemoteStorage,
 } from "../storage/interfaces.js";
 import { listPurged } from "../storage/kysely/document-purges.js";
 import { KyselySyncCursorStorage } from "../storage/kysely/sync-cursor-storage.js";
 import { KyselySyncDeadLetterStorage } from "../storage/kysely/sync-dead-letter-storage.js";
 import { KyselySyncHoldStorage } from "../storage/kysely/sync-hold-storage.js";
+import { KyselySyncReceivedMarkerStorage } from "../storage/kysely/sync-received-marker-storage.js";
 import { KyselySyncRemoteStorage } from "../storage/kysely/sync-remote-storage.js";
 import type { Database } from "../storage/kysely/types.js";
 import type { IChannelFactory, ISyncManager } from "./interfaces.js";
@@ -26,6 +28,7 @@ export class SyncBuilder {
   private cursorStorage?: ISyncCursorStorage;
   private deadLetterStorage?: ISyncDeadLetterStorage;
   private holdStorage?: ISyncHoldStorage;
+  private receivedMarkerStorage?: ISyncReceivedMarkerStorage;
   private config: Partial<SyncManagerConfig> = {};
 
   withChannelFactory(factory: IChannelFactory): this {
@@ -50,6 +53,11 @@ export class SyncBuilder {
 
   withHoldStorage(storage: ISyncHoldStorage): this {
     this.holdStorage = storage;
+    return this;
+  }
+
+  withReceivedMarkerStorage(storage: ISyncReceivedMarkerStorage): this {
+    this.receivedMarkerStorage = storage;
     return this;
   }
 
@@ -115,6 +123,8 @@ export class SyncBuilder {
     const deadLetterStorage =
       this.deadLetterStorage ?? new KyselySyncDeadLetterStorage(db);
     const holdStorage = this.holdStorage ?? new KyselySyncHoldStorage(db);
+    const receivedMarkerStorage =
+      this.receivedMarkerStorage ?? new KyselySyncReceivedMarkerStorage(db);
 
     const syncManager = new SyncManager(
       logger,
@@ -131,6 +141,7 @@ export class SyncBuilder {
       localPeer,
       holdStorage,
       { listPurged: () => listPurged(db) },
+      receivedMarkerStorage,
     );
 
     return {

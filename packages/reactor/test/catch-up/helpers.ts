@@ -91,6 +91,11 @@ export async function holdIndexCommit(
   db: Kysely<Database>,
   documentId: string,
 ): Promise<IndexCommitHold> {
+  if (!process.env.REACTOR_TEST_HOLDS_XID) {
+    throw new Error(
+      "holdIndexCommit: add this file to HOLDS_XID in vitest.config.ts",
+    );
+  }
   const classKey = 7_431_001;
   const objKey = ++holdCounter + (process.pid % 100_000) * 1000;
   const table = tableName(db);

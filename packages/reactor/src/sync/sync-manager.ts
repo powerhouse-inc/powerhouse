@@ -48,6 +48,7 @@ import type {
   ISyncCursorStorage,
   ISyncDeadLetterStorage,
   ISyncHoldStorage,
+  ISyncReceivedMarkerStorage,
   ISyncRemoteStorage,
   SyncHoldRecord,
 } from "../storage/interfaces.js";
@@ -65,6 +66,7 @@ import type {
 } from "./interfaces.js";
 import { calculateBackoffDelay } from "./channels/interval-poll-timer.js";
 import { InMemorySyncHoldStorage } from "./memory-hold-storage.js";
+import { InMemorySyncReceivedMarkerStorage } from "./memory-received-marker-storage.js";
 import { createPeerAgreement, type IPeerAgreement } from "./peer-agreement.js";
 import { SyncAwaiter } from "./sync-awaiter.js";
 import { SyncOperation } from "./sync-operation.js";
@@ -302,6 +304,16 @@ export class SyncManager implements ISyncManager {
   ) => Promise<ProtocolVersions | undefined>;
   private readonly peerUpdates = new Map<string, Promise<void>>();
   private readonly peerUnsubscribes = new Map<string, () => void>();
+  // remote name -> marker op id -> the inbox item loading it
+  private readonly receivedMarkers = new Map<
+    string,
+    Map<string, SyncOperation>
+  >();
+  private readonly markerStorage: ISyncReceivedMarkerStorage;
+  // remote name + marker id -> its storage writes, applied in order
+  private readonly markerWrites = new Map<string, Promise<void>>();
+  // reloaded from storage, so already stored
+  private readonly restoredMarkers = new WeakSet<SyncOperation>();
   // inbox sync op id -> retry of its failed marker load
   private readonly markerRetries = new Map<
     string,
@@ -327,7 +339,9 @@ export class SyncManager implements ISyncManager {
     localPeer: LocalPeer = { capabilities: PEER_CAPABILITIES, flags: {} },
     holds: ISyncHoldStorage = new InMemorySyncHoldStorage(),
     purges?: PurgeLookup,
+    receivedMarkers: ISyncReceivedMarkerStorage = new InMemorySyncReceivedMarkerStorage(),
   ) {
+    this.markerStorage = receivedMarkers;
     this.watermark = watermark;
     this.purges = purges;
     this.forgetDocument = localPeer.forgetDocument;
@@ -455,6 +469,7 @@ export class SyncManager implements ISyncManager {
       this.owe(record.name, head);
       this.records.set(record.name, remote.meta);
       await this.loadDeadLetters(remote);
+      const restored = await this.restoreReceivedMarkers(remote);
       this.wireChannelCallbacks(remote);
 
       try {
@@ -468,6 +483,7 @@ export class SyncManager implements ISyncManager {
         await this.dropRemoteAfterFailedInit(remote, false);
         continue;
       }
+      if (restored.length > 0) this.handleInboxAdded(remote, restored);
       await this.peerUpdates.get(record.name);
 
       // backfill channels asynchronously -- don't block startup
@@ -735,6 +751,8 @@ export class SyncManager implements ISyncManager {
     this.records.delete(name);
     this.heldKeys.delete(name);
     await this.holds.removeRemote(name);
+    await this.receiptsStored();
+    await this.markerStorage.removeRemote(name);
   }
 
   private peerSupportsOf(remote: Remote): Supports {
@@ -1136,6 +1154,7 @@ export class SyncManager implements ISyncManager {
     this.remotes.set(name, remote);
     this.records.set(name, meta);
     await this.loadDeadLetters(remote);
+    const restored = await this.restoreReceivedMarkers(remote);
     this.wireChannelCallbacks(remote);
 
     try {
@@ -1152,6 +1171,7 @@ export class SyncManager implements ISyncManager {
 
       throw error;
     }
+    if (restored.length > 0) this.handleInboxAdded(remote, restored);
     await this.peerUpdates.get(name);
 
     this.owe(name, await this.watermarkHead());
@@ -1278,6 +1298,7 @@ export class SyncManager implements ISyncManager {
       this.evictedOutboxFloors.delete(name);
       this.derivedThrough.delete(name);
       this.prunePending.delete(name);
+      this.receivedMarkers.delete(name);
       for (const [id, retry] of [...this.markerRetries]) {
         if (retry.remoteName !== name) continue;
         clearTimeout(retry.timer);
@@ -1321,6 +1342,9 @@ export class SyncManager implements ISyncManager {
   private wireChannelCallbacks(remote: Remote): void {
     remote.channel.inbox.onAdded((syncOps) =>
       this.handleInboxAdded(remote, syncOps),
+    );
+    remote.channel.inbox.onRemoved((syncOps) =>
+      this.handleInboxRemoved(remote, syncOps),
     );
 
     remote.channel.setLocalManifest?.(() => this.manifest);
@@ -1677,23 +1701,25 @@ export class SyncManager implements ISyncManager {
 
     const eligible: SyncOperation[] = [];
     const dropped: SyncOperation[] = [];
+    const received = this.receivedMarkersOf(remote.meta.name);
     // A resent marker whose first copy is still loading or awaiting a retry.
-    const loadingMarkers = new Set(
-      remote.channel.inbox.items
-        .filter(
-          (item) =>
-            !syncOps.includes(item) &&
-            item.status !== SyncOperationStatus.Applied,
-        )
-        .flatMap(markerIdsOf),
-    );
+    const loading = (id: string, syncOp: SyncOperation): boolean => {
+      const item = received.get(id);
+      return (
+        item !== undefined &&
+        item !== syncOp &&
+        item.status !== SyncOperationStatus.Applied &&
+        remote.channel.inbox.get(item.id) === item
+      );
+    };
     for (const syncOp of syncOps) {
       if (carriesMarker(syncOp)) {
         const ids = markerIdsOf(syncOp);
-        if (ids.every((id) => loadingMarkers.has(id))) {
+        if (ids.every((id) => loading(id, syncOp))) {
           dropped.push(syncOp);
         } else {
-          for (const id of ids) loadingMarkers.add(id);
+          for (const id of ids) received.set(id, syncOp);
+          this.storeReceivedMarker(remote, syncOp);
           eligible.push(syncOp);
         }
       } else if (this.purgedDocumentIds.has(syncOp.documentId)) {
@@ -1737,6 +1763,114 @@ export class SyncManager implements ISyncManager {
       );
       void this.processInboxChunks(chunks);
     }
+  }
+
+  /** Forgets a marker once the item loading it leaves the inbox. */
+  private handleInboxRemoved(remote: Remote, syncOps: SyncOperation[]): void {
+    const received = this.receivedMarkers.get(remote.meta.name);
+    if (received === undefined || received.size === 0) return;
+    const name = remote.meta.name;
+    for (const syncOp of syncOps) {
+      for (const id of markerIdsOf(syncOp)) {
+        if (received.get(id) !== syncOp) continue;
+        received.delete(id);
+        this.writeMarker(name, id, () => this.markerStorage.remove(name, id));
+      }
+    }
+  }
+
+  /** Settles once every received marker's pending write has landed. */
+  async receiptsStored(): Promise<void> {
+    await Promise.all(this.markerWrites.values());
+  }
+
+  /** Kept until its outcome, so a restart does not ack past it unapplied. */
+  private storeReceivedMarker(remote: Remote, syncOp: SyncOperation): void {
+    if (this.restoredMarkers.has(syncOp)) return;
+    if (this.purgedDocumentIds.has(syncOp.documentId)) return;
+    const name = remote.meta.name;
+    for (const operation of syncOp.operations) {
+      if (!isPurgeMarker(operation)) continue;
+      const markerId = operation.operation.id;
+      this.writeMarker(name, markerId, () =>
+        this.markerStorage.upsert({
+          remoteName: name,
+          markerId,
+          documentId: syncOp.documentId,
+          branch: syncOp.branch,
+          operation,
+          receivedAtUtcMs: Date.now(),
+        }),
+      );
+    }
+  }
+
+  private writeMarker(
+    remoteName: string,
+    markerId: string,
+    write: () => Promise<void>,
+  ): void {
+    const key = `${remoteName}\u0000${markerId}`;
+    const next = (this.markerWrites.get(key) ?? Promise.resolve())
+      .then(write)
+      .catch((error: unknown) => {
+        this.logger.error(
+          "Failed to store received marker (@remote, @markerId, @error)",
+          remoteName,
+          markerId,
+          error instanceof Error ? error.message : String(error),
+        );
+      });
+    this.markerWrites.set(key, next);
+    void next.then(() => {
+      if (this.markerWrites.get(key) === next) this.markerWrites.delete(key);
+    });
+  }
+
+  /** Queued before init resets latestOrdinal, so a puller is re-served above it. */
+  private async restoreReceivedMarkers(
+    remote: Remote,
+  ): Promise<SyncOperation[]> {
+    const name = remote.meta.name;
+    let records;
+    try {
+      records = await this.markerStorage.list(name);
+    } catch (error) {
+      this.logger.error(
+        "Failed to load received markers for remote (@name, @error)",
+        name,
+        error instanceof Error ? error.message : String(error),
+      );
+      return [];
+    }
+    if (records.length === 0) return [];
+    const syncOps = records.map((record) => {
+      const syncOp = new SyncOperation(
+        crypto.randomUUID(),
+        "",
+        [],
+        name,
+        record.documentId,
+        [record.operation.context.scope],
+        record.branch,
+        [record.operation],
+      );
+      syncOp.transported();
+      this.restoredMarkers.add(syncOp);
+      return syncOp;
+    });
+    // Loaded only once init has run, via handleInboxAdded.
+    remote.channel.inbox.add(...syncOps);
+    return syncOps;
+  }
+
+  private receivedMarkersOf(name: string): Map<string, SyncOperation> {
+    let received = this.receivedMarkers.get(name);
+    if (received === undefined) {
+      received = new Map();
+      this.receivedMarkers.set(name, received);
+    }
+    return received;
   }
 
   private processInboxChunks(
