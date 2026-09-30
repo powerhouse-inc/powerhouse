@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-30T03:38:18.650Z
+> Generated: 2026-09-30T03:57:32.987Z
 > Total Documents: 118
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -7328,7 +7328,7 @@ PH_PRIVACY_DEPLOYMENT_SECRET=<random string of 32+ bytes>
 Switchboard refuses to boot with the add-on on when:
 
 - the authorization policy is `OPEN`. Under `OPEN` every caller, anonymous included, is a supreme admin, so anyone could read disclosures and order erasures. `REQUIRE_AUTHENTICATED_CALLER` does not change this; turn on `AUTH_ENABLED` with `ADMINS`.
-- the reactor has no signer. Switchboard signs markers with its Renown identity (`identity.keypairPath`); without one, every receiver refuses the markers.
+- the reactor has no signer. Switchboard signs markers with its Renown identity, the keypair `ph login` created (`ph switchboard --use-identity`, or `--keypair-path <path>`); without one, every receiver refuses the markers.
 - `PH_PRIVACY_DEPLOYMENT_SECRET` is missing or shorter than 32 bytes.
 
 Keep the deployment secret. The index and the audit log store `HMAC-SHA256(secret, lower(identifier))`, never the identifier. Rotating the secret means rebuilding the index; losing it means old audit rows can no longer be matched to an address.
