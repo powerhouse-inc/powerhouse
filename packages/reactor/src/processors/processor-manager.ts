@@ -129,11 +129,10 @@ export class ProcessorManager
     await super.init();
     await this.discoverExistingDrives();
     await this.discoverDeletedDrives();
-    await Promise.all(
-      [...this.factoryRegistry].map(([identifier, factory]) =>
-        this.eraseOwed(identifier, factory),
-      ),
-    );
+    // Not awaited: a hung processor must not hold the reactor's start.
+    for (const [identifier, factory] of this.factoryRegistry) {
+      this.eraseOwed(identifier, factory);
+    }
   }
 
   protected override async commitOperations(
@@ -175,11 +174,9 @@ export class ProcessorManager
       );
     }
 
-    await Promise.all([
-      ...removals,
-      ...runs.map((run) => run()),
-      this.eraseOwed(identifier, factory, previous),
-    ]);
+    // Not awaited, like a live deletion: tracked for the next (un)registration.
+    this.eraseOwed(identifier, factory, previous);
+    await Promise.all([...removals, ...runs.map((run) => run())]);
   }
 
   async unregisterFactory(identifier: string): Promise<void> {
@@ -414,12 +411,12 @@ export class ProcessorManager
     factoryId: string,
     factory: ProcessorFactory,
     previous?: Promise<void>,
-  ): Promise<void> {
+  ): void {
     const owesAny = [...this.cursorCache.values()].some(
       (row) =>
         row.factoryId === factoryId && this.deletedDrives.has(row.driveId),
     );
-    if (!owesAny) return Promise.resolve();
+    if (!owesAny) return;
 
     const erasure = (async () => {
       // A re-registered factory starts once its previous instance is gone.
@@ -437,9 +434,14 @@ export class ProcessorManager
           this.eraseDrive(factoryId, factory, driveId, deletion),
         ),
       );
-    })();
+    })().catch((error: unknown) => {
+      this.logger.error(
+        "Owed deletions of '@FactoryId' failed: @Error",
+        factoryId,
+        error,
+      );
+    });
     this.trackErasure(factoryId, erasure);
-    return erasure;
   }
 
   /** A re-registration or unregistration of `factoryId` waits for `erasure`. */

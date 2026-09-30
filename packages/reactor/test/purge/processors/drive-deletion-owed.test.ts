@@ -122,9 +122,14 @@ describe("a drive's deletion owed to processors not live at it [Postgres]", () =
     await register("pkg", driveId, second, { documentType: [DOC_TYPE] });
     await purge(driveId);
 
+    await vi.waitFor(() =>
+      expect(second.events).toEqual([
+        `DELETE_DOCUMENT ${driveId}`,
+        "disconnect",
+      ]),
+    );
     expect(deletionsOf(first, second)).toEqual([`DELETE_DOCUMENT ${driveId}`]);
-    expect(second.events).toEqual([`DELETE_DOCUMENT ${driveId}`, "disconnect"]);
-    expect(await cursorRows(driveId)).toEqual([]);
+    await vi.waitFor(async () => expect(await cursorRows(driveId)).toEqual([]));
   });
 
   it("delivers a deletion made before the factory registers after a restart", async () => {
@@ -137,8 +142,13 @@ describe("a drive's deletion owed to processors not live at it [Postgres]", () =
     await register("pkg", driveId, second, { documentType: [DOC_TYPE] });
     await purge(driveId);
 
-    expect(second.events).toEqual([`DELETE_DOCUMENT ${driveId}`, "disconnect"]);
-    expect(await cursorRows(driveId)).toEqual([]);
+    await vi.waitFor(() =>
+      expect(second.events).toEqual([
+        `DELETE_DOCUMENT ${driveId}`,
+        "disconnect",
+      ]),
+    );
+    await vi.waitFor(async () => expect(await cursorRows(driveId)).toEqual([]));
   });
 
   it("delivers the marker as the deletion after a purge and a restart", async () => {
@@ -152,8 +162,13 @@ describe("a drive's deletion owed to processors not live at it [Postgres]", () =
     const second = recorder();
     await register("pkg", driveId, second, { documentType: [DOC_TYPE] });
 
-    expect(second.events).toEqual([`PURGE_DOCUMENT ${driveId}`, "disconnect"]);
-    expect(await cursorRows(driveId)).toEqual([]);
+    await vi.waitFor(() =>
+      expect(second.events).toEqual([
+        `PURGE_DOCUMENT ${driveId}`,
+        "disconnect",
+      ]),
+    );
+    await vi.waitFor(async () => expect(await cursorRows(driveId)).toEqual([]));
   });
 
   it("delivers the deletion to an errored processor before it closes", async () => {

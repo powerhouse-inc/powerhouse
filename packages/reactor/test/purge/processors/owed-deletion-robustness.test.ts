@@ -153,9 +153,8 @@ describe("owed drive deletions [Postgres]", () => {
       "pkg",
       wrapped(() => Promise.reject(new Error("db hiccup"))),
     );
-    const rowsAfterHiccup = await cursorRows(driveId);
-    // The next reload works again.
     await manager().unregisterFactory("pkg");
+    // The next reload works again; its erasure waits out the one before.
     const third = recorder();
     await manager().registerFactory(
       "pkg",
@@ -164,10 +163,10 @@ describe("owed drive deletions [Postgres]", () => {
       ),
     );
 
-    expect({ rowsAfterHiccup, got: deletions(first, third) }).toEqual({
-      rowsAfterHiccup: [expect.anything()],
-      got: [`DELETE_DOCUMENT ${driveId}`],
-    });
+    await vi.waitFor(() =>
+      expect(deletions(first, third)).toEqual([`DELETE_DOCUMENT ${driveId}`]),
+    );
+    await vi.waitFor(async () => expect(await cursorRows(driveId)).toEqual([]));
   });
 
   it("hands a slug-keyed factory the drive's real header for its owed deletion", async () => {
@@ -178,8 +177,10 @@ describe("owed drive deletions [Postgres]", () => {
     await deleteDrive(driveId);
     await manager().registerFactory("pkg", slugFactory("tenant-a", made));
 
-    expect(deletions(...made)).toEqual([`DELETE_DOCUMENT ${driveId}`]);
-    expect(await cursorRows(driveId)).toEqual([]);
+    await vi.waitFor(() =>
+      expect(deletions(...made)).toEqual([`DELETE_DOCUMENT ${driveId}`]),
+    );
+    await vi.waitFor(async () => expect(await cursorRows(driveId)).toEqual([]));
   });
 
   it("rebuilds the header from the drive's stream after a restart", async () => {
@@ -190,8 +191,10 @@ describe("owed drive deletions [Postgres]", () => {
     await deleteDrive(driveId);
     await manager().registerFactory("pkg", slugFactory("tenant-b", made));
 
-    expect(deletions(...made)).toEqual([`DELETE_DOCUMENT ${driveId}`]);
-    expect(await cursorRows(driveId)).toEqual([]);
+    await vi.waitFor(() =>
+      expect(deletions(...made)).toEqual([`DELETE_DOCUMENT ${driveId}`]),
+    );
+    await vi.waitFor(async () => expect(await cursorRows(driveId)).toEqual([]));
   });
 
   it("hands a late registration the header of a drive that already exists", async () => {
@@ -211,15 +214,52 @@ describe("owed drive deletions [Postgres]", () => {
     await purge(driveId);
 
     const headers: { slug?: string }[] = [];
-    await manager().registerFactory("pkg", (h) => {
+    const factory = (h: { id: string; slug?: string }) => {
       headers.push(h);
       return slugFactory("tenant-d", made)(h);
-    });
+    };
+    await manager().registerFactory("pkg", factory);
+    await vi.waitFor(() => expect(headers).toHaveLength(1));
+    // Called again only because the rows still owe the deletion.
+    await manager().unregisterFactory("pkg");
+    await manager().registerFactory("pkg", factory);
+    await vi.waitFor(() => expect(headers).toHaveLength(2));
 
-    expect(headers).toEqual([
+    expect(headers[0]).toEqual(
       expect.objectContaining({ id: driveId, slug: "" }),
-    ]);
+    );
     expect(deletions(...made)).toEqual([]);
     expect(await cursorRows(driveId)).toHaveLength(1);
   });
+
+  it("resolves registerFactory while a processor hangs on its owed deletion", async () => {
+    const driveId = await createDrive();
+    await manager().registerFactory("pkg", (h) =>
+      h.id === driveId ? [{ processor: recorder(), filter }] : [],
+    );
+    await manager().unregisterFactory("pkg");
+    await deleteDrive(driveId);
+
+    let reached = false;
+    const hung: IProcessor = {
+      onOperations: () => {
+        reached = true;
+        return new Promise(() => undefined);
+      },
+      onDisconnect: () => Promise.resolve(),
+    };
+    const registered = manager()
+      .registerFactory("pkg", (h) =>
+        h.id === driveId ? [{ processor: hung, filter }] : [],
+      )
+      .then(() => "resolved");
+    const outcome = await Promise.race([
+      registered,
+      new Promise((resolve) => setTimeout(() => resolve("pending"), 3_000)),
+    ]);
+
+    expect(outcome).toBe("resolved");
+    await vi.waitFor(() => expect(reached).toBe(true));
+    expect(await cursorRows(driveId)).toHaveLength(1);
+  }, 30_000);
 });
