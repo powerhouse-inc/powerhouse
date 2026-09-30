@@ -2631,10 +2631,12 @@ describe("ProcessorManager Standalone Tests", () => {
         return [{ processor: second, filter: { documentType: [CHILD] } }];
       });
 
+      await vi.waitFor(() => expect(second.onDisconnect).toHaveBeenCalled());
       expect(headers).toEqual([driveId]);
       expect(ordinalsOf(second)).toEqual([2]);
-      expect(second.onDisconnect).toHaveBeenCalled();
-      expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined();
+      await vi.waitFor(async () =>
+        expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined(),
+      );
       expect(processorManager.getAll()).toHaveLength(0);
     });
 
