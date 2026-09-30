@@ -39,6 +39,8 @@ function hasHeaderKey(jwk: JsonWebKey | undefined): jwk is JsonWebKey {
 
 /** Keyed hash of each identifier an operation carries, to its document. */
 export class SubjectDocumentsReadModel extends BaseReadModel {
+  static override readonly commitsInFenceTransaction = true;
+
   constructor(
     db: Kysely<DocumentViewDatabase>,
     operationIndex: IOperationIndex,
