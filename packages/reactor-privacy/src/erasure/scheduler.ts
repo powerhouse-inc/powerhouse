@@ -103,6 +103,8 @@ type StoredRemote = { name: string; collectionId: string };
 type TickReads = {
   tombstones: Map<string, Tombstone>;
   remotes: () => Promise<StoredRemote[]>;
+  /** A removal changed sync_remotes; the next read goes to the table. */
+  forgetRemotes: () => void;
 };
 
 const SILENT: ErasureLogger = { info() {}, warn() {}, error() {} };
@@ -319,6 +321,9 @@ export class ErasureScheduler {
     return {
       tombstones,
       remotes: () => (remotes ??= this.storedRemotes()),
+      forgetRemotes: () => {
+        remotes = undefined;
+      },
     };
   }
 
@@ -667,7 +672,7 @@ export class ErasureScheduler {
 
     let failed: unknown;
     try {
-      await this.removeRemotes(item, graceOver);
+      await this.removeRemotes(item, graceOver, reads);
     } catch (error) {
       failed = error;
     }
@@ -728,7 +733,11 @@ export class ErasureScheduler {
   }
 
   /** Stored rows bound to the drive; one not loaded is deleted at markerGrace. */
-  private async removeRemotes(item: Item, graceOver: boolean): Promise<void> {
+  private async removeRemotes(
+    item: Item,
+    graceOver: boolean,
+    reads: TickReads,
+  ): Promise<void> {
     const bound = (await this.storedRemotes()).filter(
       (row) => driveOf(row.collectionId) === item.documentId,
     );
@@ -736,6 +745,7 @@ export class ErasureScheduler {
     const loaded = new Set(sync?.list().map((remote) => remote.meta.name));
     const removed: string[] = [];
     const unloaded: string[] = [];
+    if (bound.length > 0) reads.forgetRemotes();
     for (const row of bound) {
       if (sync && loaded.has(row.name)) {
         await sync.remove(row.name);
