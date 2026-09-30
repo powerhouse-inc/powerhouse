@@ -5,7 +5,7 @@ import type {
   ProcessorRecord,
 } from "@powerhousedao/shared/processors";
 import type { Kysely } from "kysely";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProcessorManager } from "../../../src/processors/processor-manager.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import {
@@ -89,6 +89,38 @@ describe("owed drive deletions [Postgres]", () => {
       .execute();
   }
 
+  async function restart() {
+    await host.kill();
+    host = await startReactor(database);
+  }
+
+  async function purge(driveId: string) {
+    const [info] = await host.service.enqueuePurge([driveId], "request-1");
+    await succeeded(host.reactor, info!.id);
+  }
+
+  const filter: ProcessorFilter = { documentType: [DOC_TYPE] };
+
+  // Keyed on the slug, as vetra's codegen factory is.
+  function slugFactory(slug: string, made: Recorder[]) {
+    return (h: { slug?: string }) => {
+      if (h.slug !== slug) return Promise.resolve([]);
+      const p = recorder();
+      made.push(p);
+      return Promise.resolve([{ processor: p, filter }]);
+    };
+  }
+
+  async function registerBeforeDrive(slug: string, made: Recorder[]) {
+    await manager().registerFactory("pkg", slugFactory(slug, made));
+    const driveId = await createDrive(slug);
+    await vi.waitFor(async () =>
+      expect((await cursorRows(driveId)).length).toBe(1),
+    );
+    expect(made.length).toBe(1);
+    return driveId;
+  }
+
   // reactor-api server.ts wraps each package's factories so a throw reads as [].
   function wrapped(
     inner: (header: { id: string }) => Promise<ProcessorRecord[]>,
@@ -136,5 +168,58 @@ describe("owed drive deletions [Postgres]", () => {
       rowsAfterHiccup: [expect.anything()],
       got: [`DELETE_DOCUMENT ${driveId}`],
     });
+  });
+
+  it("hands a slug-keyed factory the drive's real header for its owed deletion", async () => {
+    const made: Recorder[] = [];
+    const driveId = await registerBeforeDrive("tenant-a", made);
+
+    await manager().unregisterFactory("pkg");
+    await deleteDrive(driveId);
+    await manager().registerFactory("pkg", slugFactory("tenant-a", made));
+
+    expect(deletions(...made)).toEqual([`DELETE_DOCUMENT ${driveId}`]);
+    expect(await cursorRows(driveId)).toEqual([]);
+  });
+
+  it("rebuilds the header from the drive's stream after a restart", async () => {
+    const made: Recorder[] = [];
+    const driveId = await registerBeforeDrive("tenant-b", made);
+    await restart();
+
+    await deleteDrive(driveId);
+    await manager().registerFactory("pkg", slugFactory("tenant-b", made));
+
+    expect(deletions(...made)).toEqual([`DELETE_DOCUMENT ${driveId}`]);
+    expect(await cursorRows(driveId)).toEqual([]);
+  });
+
+  it("hands a late registration the header of a drive that already exists", async () => {
+    const driveId = await createDrive("tenant-c");
+    const made: Recorder[] = [];
+    await manager().registerFactory("pkg", slugFactory("tenant-c", made));
+
+    expect(made.length).toBe(1);
+    expect(await cursorRows(driveId)).toHaveLength(1);
+  });
+
+  it("hands a minimal header once the drive is purged, and the rows stay owed", async () => {
+    const made: Recorder[] = [];
+    const driveId = await registerBeforeDrive("tenant-d", made);
+    await manager().unregisterFactory("pkg");
+    await deleteDrive(driveId);
+    await purge(driveId);
+
+    const headers: { slug?: string }[] = [];
+    await manager().registerFactory("pkg", (h) => {
+      headers.push(h);
+      return slugFactory("tenant-d", made)(h);
+    });
+
+    expect(headers).toEqual([
+      expect.objectContaining({ id: driveId, slug: "" }),
+    ]);
+    expect(deletions(...made)).toEqual([]);
+    expect(await cursorRows(driveId)).toHaveLength(1);
   });
 });

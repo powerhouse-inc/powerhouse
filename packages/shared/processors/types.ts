@@ -102,6 +102,10 @@ export type ProcessorRecord = {
 /**
  * A factory function that creates processor records for a given drive.
  * Called once per drive when the drive is first detected or when the factory is registered.
+ * The header is the drive's header at creation. For a purged drive it is
+ * minimal: only `id` and `documentType` are set, and `slug` and `name` are
+ * empty, so a factory that selects drives by slug or name makes no processor
+ * for it and the deletion stays owed.
  */
 export type ProcessorFactory = (
   driveHeader: PHDocumentHeader,

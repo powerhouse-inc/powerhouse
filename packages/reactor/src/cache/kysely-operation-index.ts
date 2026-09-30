@@ -479,6 +479,7 @@ export class KyselyOperationIndex implements IOperationIndex {
     stream: DocumentStreamKey,
     after: number,
     signal?: AbortSignal,
+    limit?: number,
   ): Promise<OperationWithContext[]> {
     signal?.throwIfAborted();
 
@@ -490,6 +491,7 @@ export class KyselyOperationIndex implements IOperationIndex {
       .where("scope", "=", stream.scope)
       .where("ordinal", ">", after)
       .orderBy("ordinal", "asc")
+      .$if(limit !== undefined, (qb) => qb.limit(limit!))
       .execute();
 
     return rows.map((row) => this.rowToOperationWithContext(row));

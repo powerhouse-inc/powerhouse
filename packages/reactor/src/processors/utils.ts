@@ -3,7 +3,11 @@ import type {
   ProcessorFilter,
   ProcessorRecord,
 } from "@powerhousedao/shared/processors";
-import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
+import type {
+  CreateDocumentAction,
+  PHDocumentHeader,
+} from "@powerhousedao/shared/document-model";
+import { createDocumentFromAction } from "../executor/util.js";
 
 // The marker counts: a peer can receive a drive's marker without its delete.
 export function isDriveDeletion(op: OperationWithContext): boolean {
@@ -21,6 +25,17 @@ export function extractDriveHeader(
     unknown
   >;
   return state.header as PHDocumentHeader | undefined;
+}
+
+// The index keeps no resultingState, so its rows rebuild it from the input.
+export function extractCreationHeader(
+  op: OperationWithContext,
+): PHDocumentHeader | undefined {
+  if (op.operation.action.type !== "CREATE_DOCUMENT") return undefined;
+  return (
+    extractDriveHeader(op) ??
+    createDocumentFromAction(op.operation.action as CreateDocumentAction).header
+  );
 }
 
 export function extractDeletedDocumentId(
