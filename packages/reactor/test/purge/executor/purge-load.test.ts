@@ -251,21 +251,20 @@ describe.each([
     await expectUntouched(receiver.db, documentId, before);
   });
 
-  it("refuses a validly signed marker whose input carries more than it may", async () => {
-    const documentId = generateId();
+  async function signedWithInput(
+    documentId: string,
+    input: Record<string, unknown>,
+  ): Promise<Operation> {
     const unsigned = purgeMarker(documentId);
     const action = {
       ...unsigned.action,
-      input: {
-        ...unsigned.action.input,
-        protocolVersions: { "base-reducer": 2 },
-      },
+      input: { ...unsigned.action.input, ...input },
     };
     const signature = await origin.signAction(action, {
       documentId,
       branch: "main",
     });
-    const forged: Operation = {
+    return {
       ...unsigned,
       action: {
         ...action,
@@ -274,6 +273,26 @@ describe.each([
         },
       },
     };
+  }
+
+  it("refuses a validly signed marker whose input carries more than it may", async () => {
+    const documentId = generateId();
+    const forged = await signedWithInput(documentId, {
+      protocolVersions: { "base-reducer": 2 },
+    });
+    const before = await deleteListCounts(receiver.db, documentId);
+
+    await failedWith(
+      receiver.reactor,
+      (await load(documentId, [forged])).id,
+      "InvalidSignatureError",
+    );
+    await expectUntouched(receiver.db, documentId, before);
+  });
+
+  it("refuses a validly signed marker whose purge time is not a timestamp", async () => {
+    const documentId = await createDocument();
+    const forged = await signedWithInput(documentId, { purgedAtUtcIso: "x" });
     const before = await deleteListCounts(receiver.db, documentId);
 
     await failedWith(

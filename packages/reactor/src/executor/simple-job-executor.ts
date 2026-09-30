@@ -244,6 +244,13 @@ function malformedMarker(job: Job): InvalidSignatureError | undefined {
       return refuse(`input.${key} is not a non-empty string`);
     }
   }
+  const purgedAt = Date.parse(input.purgedAtUtcIso as string);
+  if (
+    Number.isNaN(purgedAt) ||
+    new Date(purgedAt).toISOString() !== input.purgedAtUtcIso
+  ) {
+    return refuse("input.purgedAtUtcIso is not an ISO timestamp");
+  }
   if (
     input.documentId !== job.documentId ||
     job.branch !== "main" ||
