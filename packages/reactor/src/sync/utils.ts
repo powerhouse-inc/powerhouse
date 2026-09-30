@@ -1,5 +1,8 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
-import type { Operation } from "@powerhousedao/shared/document-model";
+import {
+  isPurgeMarker,
+  type Operation,
+  type OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import { type OperationIndexEntry } from "../cache/operation-index-types.js";
 import type { ChannelError } from "./errors.js";
 import type { PreparedBatch } from "./batch-aggregator.js";
@@ -112,6 +115,15 @@ export function filterOperations(
 
     return true;
   });
+}
+
+/** Markers pass every remote filter, as they pass sinceTimestamp. */
+export function filterForRemote(
+  operations: OperationWithContext[],
+  filter: RemoteFilter,
+): OperationWithContext[] {
+  const kept = new Set(filterOperations(operations, filter));
+  return operations.filter((op) => kept.has(op) || isPurgeMarker(op));
 }
 
 /**

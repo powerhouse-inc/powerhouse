@@ -107,7 +107,7 @@ import {
   chunkSyncOperations,
   classifyJobFailure,
   createIdleHealth,
-  filterOperations,
+  filterForRemote,
   quarantinesDocument,
   splitTrailingSameTimestampRun,
   syncOperationErrorType,
@@ -225,15 +225,6 @@ function isRefusedMarker(error: ErrorInfo | undefined): boolean {
     error?.name === "InvalidSignatureError" ||
     error?.name === "DocumentPurgedError"
   );
-}
-
-/** Markers pass every remote filter, as they pass sinceTimestamp. */
-function filterForRemote(
-  operations: OperationWithContext[],
-  filter: RemoteFilter,
-): OperationWithContext[] {
-  const kept = new Set(filterOperations(operations, filter));
-  return operations.filter((op) => kept.has(op) || isPurgeMarker(op));
 }
 
 /** A job's dependency chain through one derivation's emitted batches. */

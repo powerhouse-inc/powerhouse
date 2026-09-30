@@ -5,7 +5,7 @@ import type {
 } from "../storage/interfaces.js";
 import type { Remote } from "./interfaces.js";
 import type { ConnectionState } from "./types.js";
-import { filterOperations, toOperationWithContext } from "./utils.js";
+import { filterForRemote, toOperationWithContext } from "./utils.js";
 
 export type PendingDelivery = {
   remote: string;
@@ -78,7 +78,7 @@ export async function pendingDelivery(
     );
     if (!membership) continue;
     if (entry.sourceRemote === name) continue;
-    if (filterOperations([operation], remote.meta.filter).length === 0) {
+    if (filterForRemote([operation], remote.meta.filter).length === 0) {
       continue;
     }
 

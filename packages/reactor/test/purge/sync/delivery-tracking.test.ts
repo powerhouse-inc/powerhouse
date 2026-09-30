@@ -257,6 +257,21 @@ describe("pendingDelivery [Postgres]", () => {
     });
   });
 
+  it("owes the marker to a remote whose filter excludes the document", async () => {
+    await add("other-scope", COL_A, { ...ANY, scope: ["global"] });
+    await add("other-branch", COL_A, { ...ANY, branch: "draft" });
+    await add("other-doc", COL_A, { ...ANY, documentId: ["another"] });
+    await indexOp(harness.index, { joins: [COL_A] });
+
+    const { entry } = await purgeInIndex(harness.db, harness.index, DOC);
+
+    expect(await pending(entry.context.ordinal)).toEqual([
+      { remote: "other-scope", state: "connected" },
+      { remote: "other-branch", state: "connected" },
+      { remote: "other-doc", state: "connected" },
+    ]);
+  });
+
   it("refuses an ordinal holding no row of the document", async () => {
     await add("a");
     const ordinal = await indexOp(harness.index, { joins: [COL_A] });
