@@ -453,6 +453,7 @@ export class ProcessorManager
     records: ProcessorRecord[],
   ): Promise<void> {
     const ids = resolveProcessorSlots(records, this.legacyProcessorIds);
+    const delivered = new Set<string>();
     const failed = new Map<string, unknown>();
     await Promise.all(
       records.map(async (record, i) => {
@@ -460,6 +461,7 @@ export class ProcessorManager
         if (this.cursorCache.has(processorId)) {
           try {
             await record.processor.onOperations([deletion]);
+            delivered.add(processorId);
           } catch (error) {
             failed.set(processorId, error);
             this.logger.error(
@@ -478,11 +480,16 @@ export class ProcessorManager
 
     const writes: Promise<void>[] = [];
     for (const row of this.cursorCache.values()) {
-      if (
-        row.factoryId !== factoryId ||
-        row.driveId !== driveId ||
-        !failed.has(row.processorId)
-      ) {
+      if (row.factoryId !== factoryId || row.driveId !== driveId) continue;
+      if (delivered.has(row.processorId)) continue;
+      if (!failed.has(row.processorId)) {
+        // A run that threw inside a wrapper reads as no records: stay owed.
+        this.logger.warn(
+          "Factory '@FactoryId' made no processor '@ProcessorId' for deleted drive '@DriveId'; its deletion stays owed",
+          factoryId,
+          row.processorId,
+          driveId,
+        );
         continue;
       }
       const error = failed.get(row.processorId);
@@ -495,14 +502,7 @@ export class ProcessorManager
         }),
       );
     }
-    writes.push(
-      ...this.deleteCursors(
-        (row) =>
-          row.factoryId === factoryId &&
-          row.driveId === driveId &&
-          !failed.has(row.processorId),
-      ),
-    );
+    writes.push(...this.deleteCursors((row) => delivered.has(row.processorId)));
     this.pruneDeletedDrive(driveId);
     await Promise.all(writes);
   }
