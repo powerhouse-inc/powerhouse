@@ -50,6 +50,7 @@ export {
 export {
   DEFAULT_ERASURE_INTERVAL_MS,
   DEFAULT_MARKER_GRACE_MS,
+  DEFAULT_PURGE_TIMEOUT_MS,
   ErasureScheduler,
   ErasureSignerMissingError,
   type ErasureLogger,

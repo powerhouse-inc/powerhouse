@@ -22,6 +22,7 @@ export type ModuleErasureOptions = {
   deadlineMs?: number;
   intervalMs?: number;
   markerGraceMs?: number;
+  purgeTimeoutMs?: number;
   now?: () => Date;
   logger?: ErasureLogger;
 };
@@ -45,6 +46,7 @@ export function createModuleErasure(
     permissions: options.permissions,
     intervalMs: options.intervalMs,
     markerGraceMs: options.markerGraceMs,
+    purgeTimeoutMs: options.purgeTimeoutMs,
     now: options.now,
     logger: options.logger,
   });

@@ -40,6 +40,7 @@ export type ResolvedPrivacy =
       intervalMs?: number;
       deadlineMs?: number;
       markerGraceMs?: number;
+      purgeTimeoutMs?: number;
     };
 
 /** Enabling privacy on a switchboard that cannot run it safely. */
@@ -88,6 +89,7 @@ export function resolvePrivacy(
     intervalMs: positive(env, "PH_PRIVACY_INTERVAL_MS", 1),
     deadlineMs: positive(env, "PH_PRIVACY_DEADLINE_DAYS", DAY_MS),
     markerGraceMs: positive(env, "PH_PRIVACY_MARKER_GRACE_DAYS", DAY_MS),
+    purgeTimeoutMs: positive(env, "PH_PRIVACY_PURGE_TIMEOUT_MINUTES", 60_000),
   };
 }
 
@@ -135,6 +137,7 @@ export async function startPrivacy(deps: {
     intervalMs: config.intervalMs,
     deadlineMs: config.deadlineMs,
     markerGraceMs: config.markerGraceMs,
+    purgeTimeoutMs: config.purgeTimeoutMs,
     logger: deps.logger,
   });
 
