@@ -38,6 +38,7 @@ class _UniqueConstraintContext extends Error {
 
 export class KyselyOperationStore implements IOperationStore {
   private trx?: Transaction<Database>;
+  private liveIds?: ReadonlySet<string>;
 
   constructor(private db: Kysely<Database>) {}
 
@@ -45,9 +46,14 @@ export class KyselyOperationStore implements IOperationStore {
     return this.trx ?? this.db;
   }
 
-  withTransaction(trx: Transaction<Database>): KyselyOperationStore {
+  /** `liveIds`: ids the transaction read untombstoned under its shared lock. */
+  withTransaction(
+    trx: Transaction<Database>,
+    liveIds?: ReadonlySet<string>,
+  ): KyselyOperationStore {
     const instance = new KyselyOperationStore(this.db);
     instance.trx = trx;
+    instance.liveIds = liveIds;
     return instance;
   }
 
@@ -181,11 +187,9 @@ export class KyselyOperationStore implements IOperationStore {
       return [];
     }
 
-    const purgedHead = await this.refusePurgedAppend(
-      trx,
-      documentId,
-      operations,
-    );
+    const purgedHead = this.liveIds?.has(documentId)
+      ? undefined
+      : await this.refusePurgedAppend(trx, documentId, operations);
     if (purgedHead !== undefined) {
       return purgedHead;
     }
