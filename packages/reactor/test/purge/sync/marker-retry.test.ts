@@ -116,13 +116,18 @@ describe("a received marker whose load failed [Postgres]", () => {
   );
 
   it("backs off between retries while the failure lasts", async () => {
+    // Jitter keeps every delay within [base / 2, base].
     harness = await createHarness({
-      config: { markerRetryBaseDelayMs: 100, markerRetryMaxDelayMs: 100 },
+      config: { markerRetryBaseDelayMs: 200, markerRetryMaxDelayMs: 200 },
     });
     await harness.manager.startup();
     await harness.manager.add("remote", COL_A, CONFIG, FILTER, {}, "r");
     const channel = harness.manager.getByName("remote").channel;
-    harness.reactor.load.mockResolvedValue({ id: "job-1" });
+    const loadedAt: number[] = [];
+    harness.reactor.load.mockImplementation(() => {
+      loadedAt.push(performance.now());
+      return Promise.resolve({ id: "job-1" });
+    });
     harness.reactor.getJobStatus.mockResolvedValue({
       id: "job-1",
       status: JobStatus.FAILED,
@@ -130,11 +135,12 @@ describe("a received marker whose load failed [Postgres]", () => {
     });
 
     channel.inbox.add(markerSyncOp(""));
-    await vi.waitFor(() =>
-      expect(harness.reactor.load).toHaveBeenCalledTimes(2),
-    );
-    await new Promise((resolve) => setTimeout(resolve, 30));
-    expect(harness.reactor.load).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(loadedAt.length).toBeGreaterThanOrEqual(3), {
+      timeout: 5_000,
+    });
+    for (let i = 1; i < loadedAt.length; i++) {
+      expect(loadedAt[i] - loadedAt[i - 1]).toBeGreaterThanOrEqual(95);
+    }
     expect(channel.inbox.items).toHaveLength(1);
     expect(channel.deadLetter.items).toEqual([]);
     expect(internals(harness).quarantinedDocumentIds.has(DOC)).toBe(false);
