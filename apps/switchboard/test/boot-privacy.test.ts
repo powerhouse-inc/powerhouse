@@ -134,7 +134,19 @@ describe("booting Switchboard with the privacy add-on", () => {
                 ?.code === "FORBIDDEN",
             { timeout: 20_000, interval: 100 },
           );
-          await new Promise((resolve) => setTimeout(resolve, 300));
+          const document = await switchboard.reactor.createEmpty(
+            "powerhouse/document-model",
+          );
+          const id = document.header.id;
+          await switchboard.reactor.deleteDocument(id);
+          const erasure = switchboard.privacy!.erasure;
+          const { requestId } = await erasure.request([id], {
+            requestedBy: ADMIN,
+          });
+          await vi.waitUntil(
+            async () => (await erasure.status(requestId)).status === "complete",
+            { timeout: 30_000, interval: 100 },
+          );
           expect(
             logger.error.mock.calls.filter(([message]) =>
               String(message).startsWith("Erasure"),
