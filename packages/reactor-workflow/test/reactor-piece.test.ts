@@ -110,11 +110,15 @@ function stubPort(): ReactorPort & { calls: string[] } {
         summary("doc-2", "Receipt"),
       ]);
     },
-    create(input) {
+    submitCreate(input) {
       calls.push(
         `create ${input.documentType} parent=${input.parentId ?? "-"} name=${input.name ?? "-"}`,
       );
-      return Promise.resolve(summary("new-1", input.name ?? ""));
+      return Promise.resolve({
+        documentId: "new-1",
+        jobIds: ["job-create"],
+        followUps: [],
+      });
     },
     submit(input) {
       calls.push(
@@ -203,6 +207,8 @@ describe.skipIf(!workflowRoot)("the reactor piece", () => {
       // The name travels with the create — the port is what names a document,
       // whichever path it took — so only the author's actions are dispatched.
       "create powerhouse/workflow parent=drive-1 name=Invoice",
+      "wait job-create",
+      "get new-1",
       "submit new-1 ADD_STEP",
       "wait job-1",
       "get new-1",

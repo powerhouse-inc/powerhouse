@@ -21,12 +21,12 @@ import type {
   ReactorService,
 } from "@powerhousedao/pieces-framework";
 import {
-  REACTOR_CREATE,
   REACTOR_FIND,
   REACTOR_GET,
   REACTOR_MODEL,
   REACTOR_MODELS,
   REACTOR_SUBMIT,
+  REACTOR_SUBMIT_CREATE,
   REACTOR_WAIT,
 } from "../worker/protocol.js";
 
@@ -48,6 +48,13 @@ export type {
 export interface ReactorSubmission {
   jobId: string;
   actionIds: string[];
+}
+
+// The document exists once every job has landed; `followUps` then complete it.
+export interface ReactorCreateSubmission {
+  documentId: string;
+  jobIds: string[];
+  followUps: ReactorExecuteInput[];
 }
 
 export interface ReactorWaitInput {
@@ -112,18 +119,18 @@ export class ReactorJobPendingError extends Error {
 
 // The submit got no answer in time: the job may or may not exist.
 export class ReactorSubmitUnconfirmedError extends Error {
-  constructor(actionCount: number) {
+  constructor(what: string) {
     super(
-      `Submitting ${actionCount} action(s) to the reactor got no answer before the step deadline; they may have been submitted`,
+      `Submitting ${what} to the reactor got no answer before the step deadline; it may have been submitted`,
     );
     this.name = "ReactorSubmitUnconfirmedError";
   }
 }
 
 export class ReactorBudgetExhaustedError extends Error {
-  constructor(actionCount: number) {
+  constructor(what: string) {
     super(
-      `No time was left before the step deadline to submit ${actionCount} action(s); nothing was submitted`,
+      `No time was left before the step deadline to submit ${what}; nothing was submitted`,
     );
     this.name = "ReactorBudgetExhaustedError";
   }
@@ -253,57 +260,100 @@ export class RemoteReactorService implements ReactorService {
     return callHost<ReactorDocumentSummary[]>(REACTOR_FIND, input);
   }
 
-  create(input: ReactorCreateInput): Promise<ReactorDocumentSummary> {
-    return callHost<ReactorDocumentSummary>(REACTOR_CREATE, input);
-  }
-
-  async execute(input: ReactorExecuteInput): Promise<ReactorDocumentSummary> {
-    const submission = await this.submit(input);
-    // Alongside the wait rather than before it, so it never spends the budget.
-    void this.record(submission);
-    const state = await this.settle(submission.jobId);
-    assertActionsApplied(state, submission, input.actions);
+  async create(input: ReactorCreateInput): Promise<ReactorDocumentSummary> {
+    const submission = await this.submitWithin<ReactorCreateSubmission>(
+      REACTOR_SUBMIT_CREATE,
+      input,
+      `a ${input.documentType} document`,
+    );
+    const { documentId, jobIds } = submission;
+    void this.record({ documentId, jobIds });
+    let landed: string | undefined;
     try {
-      return await callHost<ReactorDocumentSummary>(
-        REACTOR_GET,
-        {
-          documentId: input.documentId,
-          ...(input.branch ? { branch: input.branch } : {}),
-        },
-        this.afterJobMs(),
-      );
+      for (const jobId of jobIds) {
+        await this.settle(jobId);
+        landed = jobId;
+      }
+      for (const followUp of submission.followUps) {
+        landed = await this.write(followUp);
+      }
+      return await this.readBack(documentId, undefined, landed ?? documentId);
     } catch (error) {
-      if (error instanceof HostCallTimeoutError) {
-        throw new ReactorStateUnreadError(submission.jobId);
+      // Once the create has landed, a later failure must still say it exists.
+      if (landed && error instanceof Error) {
+        error.message = `Document ${documentId} was created, but: ${error.message}`;
       }
       throw error;
     }
   }
 
-  private async submit(input: ReactorExecuteInput): Promise<ReactorSubmission> {
-    const remaining = this.stopAt - Date.now();
-    if (remaining <= 0) {
-      throw new ReactorBudgetExhaustedError(input.actions.length);
-    }
+  async execute(input: ReactorExecuteInput): Promise<ReactorDocumentSummary> {
+    const jobId = await this.write(input, true);
+    return this.readBack(input.documentId, input.branch, jobId);
+  }
+
+  // Submits, waits and checks each action; answers the job that carried them.
+  private async write(
+    input: ReactorExecuteInput,
+    recorded = false,
+  ): Promise<string> {
+    const submission = await this.submitWithin<ReactorSubmission>(
+      REACTOR_SUBMIT,
+      input,
+      `${input.actions.length} action(s)`,
+    );
+    // Alongside the wait rather than before it, so it never spends the budget.
+    if (recorded) void this.record(submission);
+    const state = await this.settle(submission.jobId);
+    assertActionsApplied(state, submission, input.actions);
+    return submission.jobId;
+  }
+
+  private async readBack(
+    documentId: string,
+    branch: string | undefined,
+    jobId: string,
+  ): Promise<ReactorDocumentSummary> {
     try {
-      return await callHost<ReactorSubmission>(
-        REACTOR_SUBMIT,
+      return await callHost<ReactorDocumentSummary>(
+        REACTOR_GET,
+        { documentId, ...(branch ? { branch } : {}) },
+        this.afterJobMs(),
+      );
+    } catch (error) {
+      if (error instanceof HostCallTimeoutError) {
+        throw new ReactorStateUnreadError(jobId);
+      }
+      throw error;
+    }
+  }
+
+  private async submitWithin<T>(
+    method: string,
+    input: unknown,
+    what: string,
+  ): Promise<T> {
+    const remaining = this.stopAt - Date.now();
+    if (remaining <= 0) throw new ReactorBudgetExhaustedError(what);
+    try {
+      return await callHost<T>(
+        method,
         input,
         Math.min(hostCallTimeoutMs(), remaining),
       );
     } catch (error) {
       if (error instanceof HostCallTimeoutError) {
-        throw new ReactorSubmitUnconfirmedError(input.actions.length);
+        throw new ReactorSubmitUnconfirmedError(what);
       }
       throw error;
     }
   }
 
-  private async record(submission: ReactorSubmission): Promise<void> {
+  private async record(value: unknown): Promise<void> {
     const { store, stepName } = this.options;
     if (!store) return;
     try {
-      await store.put(jobKey(stepName), submission, "FLOW", this.afterJobMs());
+      await store.put(jobKey(stepName), value, "FLOW", this.afterJobMs());
     } catch {
       // Bookkeeping only: the write is already submitted either way.
     }

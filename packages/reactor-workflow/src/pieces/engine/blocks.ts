@@ -15,6 +15,8 @@ import {
 } from "../activepieces/resolver.js";
 import type { ActionContextIdentity } from "../activepieces/context/action.js";
 import type {
+  ReactorCreateInput,
+  ReactorCreateSubmission,
   ReactorExecuteInput,
   ReactorJobState,
   ReactorService,
@@ -30,12 +32,12 @@ import { DEFAULT_EGRESS_POLICY } from "../activepieces/worker/egress.js";
 import {
   LOG_WRITE,
   OUTPUT_UPDATE,
-  REACTOR_CREATE,
   REACTOR_FIND,
   REACTOR_GET,
   REACTOR_MODEL,
   REACTOR_MODELS,
   REACTOR_SUBMIT,
+  REACTOR_SUBMIT_CREATE,
   REACTOR_WAIT,
   STORE_DELETE,
   STORE_GET,
@@ -155,9 +157,11 @@ function storeKeyOf(payload: unknown): string {
 
 // Registered per step and only for a piece the host resolved locally, so a
 // fetched bundle forging these calls finds no handler and is refused.
-export type ReactorPort = Omit<ReactorService, "execute"> & {
+export type ReactorPort = Omit<ReactorService, "execute" | "create"> & {
   // Enqueues the write and answers at once.
   submit(input: ReactorExecuteInput): Promise<ReactorSubmission>;
+  // Enqueues the create and answers at once, with what completes it.
+  submitCreate(input: ReactorCreateInput): Promise<ReactorCreateSubmission>;
   // Holds for at most `maxWaitMs`, then answers the job's state as it stands.
   wait(input: ReactorWaitInput): Promise<ReactorJobState>;
 };
@@ -285,9 +289,9 @@ export function reactorHandlers(port: ReactorPort): HostCallHandlers {
         ...(input.withState === true ? { withState: true } : {}),
       });
     },
-    [REACTOR_CREATE]: (payload) => {
+    [REACTOR_SUBMIT_CREATE]: (payload) => {
       const input = reactorInput(payload);
-      return port.create({
+      return port.submitCreate({
         documentType: requiredString(input, "documentType"),
         ...(optionalString(input, "name")
           ? { name: optionalString(input, "name") }

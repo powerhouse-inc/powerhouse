@@ -143,12 +143,12 @@ function reactorPort(): ReactorPort & { calls: string[] } {
       calls.push(`find limit=${input.limit ?? "-"}`);
       return Promise.resolve([]);
     },
-    create(input) {
+    submitCreate(input) {
       calls.push(`create ${input.documentType}`);
       return Promise.resolve({
         documentId: "new-1",
-        documentType: input.documentType,
-        name: input.name ?? "",
+        jobIds: ["job-create"],
+        followUps: [],
       });
     },
     submit(input) {

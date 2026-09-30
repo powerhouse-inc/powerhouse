@@ -31,6 +31,16 @@ function stateful(
   };
 }
 
+// What a create submits: its own job, then the parent's.
+function batch(documentId: string, parent?: string) {
+  return {
+    jobs: {
+      ...(parent ? { parent: { id: "job-parent", documentId: parent } } : {}),
+      create: { id: "job-create", documentId },
+    },
+  };
+}
+
 // A reactor that records what was asked of it, answering from the documents
 // it was seeded with.
 function fakeReactor(documents: ReturnType<typeof doc>[] = []) {
@@ -53,23 +63,23 @@ function fakeReactor(documents: ReturnType<typeof doc>[] = []) {
       if (!found) return Promise.reject(new Error(`no document ${id}`));
       return Promise.resolve(found);
     },
-    createEmpty(documentType: string, options: { parentIdentifier?: string }) {
-      calls.push(
-        `createEmpty ${documentType} parent=${options.parentIdentifier ?? "-"}`,
-      );
-      return Promise.resolve(doc("new-1", documentType));
-    },
-    execute(
-      id: string,
-      branch: string,
-      actions: { type: string; input?: unknown }[],
+    createEmptyAsync(
+      documentType: string,
+      options: { parentIdentifier?: string },
     ) {
       calls.push(
-        `execute ${id} ${actions.map((a) => a.type).join(",")} name=${
-          (actions[0]?.input as { name?: string } | undefined)?.name ?? "-"
-        }`,
+        `createEmptyAsync ${documentType} parent=${options.parentIdentifier ?? "-"}`,
       );
-      return Promise.resolve(doc(id, "acme/todo", "Named"));
+      return Promise.resolve(batch("new-1", options.parentIdentifier));
+    },
+    createAsync(
+      document: { header: { id: string; name: string } },
+      parent?: string,
+    ) {
+      calls.push(
+        `createAsync parent=${parent ?? "-"} name=${document.header.name || "-"}`,
+      );
+      return Promise.resolve(batch(document.header.id, parent));
     },
     getDocumentModelModules() {
       calls.push("models");
@@ -98,18 +108,6 @@ function fakeReactor(documents: ReturnType<typeof doc>[] = []) {
           return Promise.resolve({ kind: "folder" });
         }
         return Promise.reject(new Error("not in this drive"));
-      },
-      addFile(
-        driveId: string,
-        document: { header: { name: string } },
-        parent?: string,
-      ) {
-        calls.push(
-          `addFile ${driveId} parent=${parent ?? "-"} name=${document.header.name || "-"}`,
-        );
-        return Promise.resolve(
-          doc("filed-1", "acme/todo", document.header.name),
-        );
       },
     },
   };
@@ -150,37 +148,68 @@ describe("SubgraphReactorPort.find", () => {
   });
 });
 
-describe("SubgraphReactorPort.create", () => {
-  it("names a document that belongs to no drive", async () => {
+describe("SubgraphReactorPort.submitCreate", () => {
+  it("names a document that belongs to no drive once it lands", async () => {
     const { port, calls } = fakeReactor();
 
-    const created = await port.create({
+    const submission = await port.submitCreate({
       documentType: "acme/todo",
       name: "Invoice",
     });
 
-    // createEmpty takes no name, so the port spends one operation on it
-    // rather than leaving the caller to notice.
-    expect(calls).toEqual([
-      "createEmpty acme/todo parent=-",
-      "execute new-1 SET_NAME name=Invoice",
-    ]);
-    expect(created.name).toBe("Named");
+    // createEmpty takes no name, so naming it is the create's follow-up.
+    expect(calls).toEqual(["createEmptyAsync acme/todo parent=-"]);
+    expect(submission).toEqual({
+      documentId: "new-1",
+      jobIds: ["job-create"],
+      followUps: [
+        {
+          documentId: "new-1",
+          actions: [{ type: "SET_NAME", input: { name: "Invoice" } }],
+        },
+      ],
+    });
   });
 
-  it("carries the name on the header when it files into a drive", async () => {
+  it("waits on the create before the parent's relationship", async () => {
+    const { port } = fakeReactor([doc("parent-1", "acme/todo")]);
+
+    const submission = await port.submitCreate({
+      documentType: "acme/todo",
+      parentId: "parent-1",
+    });
+
+    expect(submission.jobIds).toEqual(["job-create", "job-parent"]);
+    expect(submission.followUps).toEqual([]);
+  });
+
+  it("files into a drive after the create, naming the node from the header", async () => {
     const { port, calls } = fakeReactor([doc("drive-1", DRIVE)]);
 
-    await port.create({
+    const submission = await port.submitCreate({
       documentType: "acme/todo",
       name: "Invoice",
       parentId: "drive-1",
     });
 
-    // The node name comes from the header, so it is set before the file
-    // lands — and no SET_NAME is dispatched afterwards.
-    expect(calls).toContain("addFile drive-1 parent=- name=Invoice");
-    expect(calls.some((call) => call.includes("SET_NAME"))).toBe(false);
+    expect(calls).toContain("createAsync parent=drive-1 name=Invoice");
+    expect(submission.jobIds).toEqual(["job-create", "job-parent"]);
+    expect(submission.followUps).toEqual([
+      {
+        documentId: "drive-1",
+        actions: [
+          {
+            type: "ADD_FILE",
+            input: {
+              id: "empty-1",
+              name: "Invoice",
+              documentType: "acme/todo",
+              parentFolder: undefined,
+            },
+          },
+        ],
+      },
+    ]);
   });
 
   it("finds a folder in every kind of drive, not just the common one", async () => {
@@ -189,7 +218,7 @@ describe("SubgraphReactorPort.create", () => {
       doc("rdrive-1", REACTOR_DRIVE),
     ]);
 
-    await port.create({
+    const submission = await port.submitCreate({
       documentType: "acme/todo",
       name: "Invoice",
       parentId: "folder-1",
@@ -198,7 +227,11 @@ describe("SubgraphReactorPort.create", () => {
     // folder-1 is not a document, so the port sweeps drives for the node —
     // and a reactor-drive is a drive.
     expect(calls).toContain(`find type=${REACTOR_DRIVE} parent=-`);
-    expect(calls).toContain("addFile rdrive-1 parent=folder-1 name=Invoice");
+    expect(calls).toContain("createAsync parent=rdrive-1 name=Invoice");
+    expect(submission.followUps[0]).toMatchObject({
+      documentId: "rdrive-1",
+      actions: [{ type: "ADD_FILE", input: { parentFolder: "folder-1" } }],
+    });
   });
 });
 
@@ -301,7 +334,7 @@ describe("ScopedDesignTimeReactorPort", () => {
           results: [doc(MINE, "acme/todo"), doc(THEIRS, "acme/todo")],
         }),
       executeAsync: () => Promise.reject(new Error("must not execute")),
-      createEmpty: () => Promise.reject(new Error("must not create")),
+      createEmptyAsync: () => Promise.reject(new Error("must not create")),
     };
     return new ScopedDesignTimeReactorPort(
       {
@@ -339,7 +372,7 @@ describe("ScopedDesignTimeReactorPort", () => {
     // Resolving options is not an occasion to mutate the reactor, and there is
     // no write check here to authorize it with.
     await expect(
-      scoped().create({ documentType: "acme/todo" }),
+      scoped().submitCreate({ documentType: "acme/todo" }),
     ).rejects.toThrow("not available");
     await expect(
       scoped().submit({ documentId: MINE, actions: [] }),

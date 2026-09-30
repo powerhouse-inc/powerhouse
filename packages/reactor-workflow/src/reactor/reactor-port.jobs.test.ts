@@ -8,7 +8,9 @@ import {
   withSignaturePolicy,
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { documentModelDocumentModelModule } from "document-model";
+import type { ReactorExecuteInput } from "../pieces/index.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { WorkflowRuntimeHostDeps } from "./host.js";
 import { SubgraphReactorPort } from "./reactor-port.js";
@@ -52,15 +54,31 @@ describe("SubgraphReactorPort.wait", () => {
 });
 
 describe("SubgraphReactorPort against a reactor", () => {
+  async function settled(jobId: string) {
+    let state = await port.wait({ jobId, maxWaitMs: 5_000 });
+    while (state.status !== "READ_READY" && state.status !== "FAILED") {
+      state = await port.wait({ jobId, maxWaitMs: 5_000 });
+    }
+    return state;
+  }
+
+  async function applied(followUp: ReactorExecuteInput) {
+    const { jobId } = await port.submit(followUp);
+    return settled(jobId);
+  }
+
   let module: InProcessReactorClientModule;
   let port: SubgraphReactorPort;
   const DOC = "doc-jobs";
 
   beforeAll(async () => {
+    // No signer here, so documents it creates stay unsigned.
     module = await new ReactorClientBuilder()
+      .withCreateSignaturePolicy("legacy")
       .withReactorBuilder(
         new ReactorBuilder().withDocumentModelSources([
           documentModelDocumentModelModule as unknown as DocumentModelModule,
+          driveDocumentModelModule as unknown as DocumentModelModule,
         ]),
       )
       .buildModule();
@@ -131,5 +149,55 @@ describe("SubgraphReactorPort against a reactor", () => {
       jobId: "no-such-job",
       status: "UNKNOWN",
     });
+  });
+
+  it("creates and names a document through its submission", async () => {
+    const submission = await port.submitCreate({
+      documentType: "powerhouse/document-model",
+      name: "Invoice",
+      parentId: DOC,
+    });
+
+    for (const jobId of submission.jobIds) {
+      expect((await settled(jobId)).status).toBe("READ_READY");
+    }
+    for (const followUp of submission.followUps) {
+      expect((await applied(followUp)).status).toBe("READ_READY");
+    }
+    const created = await port.get({ documentId: submission.documentId });
+    expect(created).toMatchObject({
+      documentType: "powerhouse/document-model",
+      name: "Invoice",
+    });
+    const children = await module.client.getOutgoingRelationships(DOC, "child");
+    expect(children.results.map((child) => child.header.id)).toContain(
+      submission.documentId,
+    );
+  });
+
+  it("files a created document into a drive once it exists", async () => {
+    const drive = await module.client.drives.create({
+      global: { name: "Drive", icon: null },
+    });
+
+    const submission = await port.submitCreate({
+      documentType: "powerhouse/document-model",
+      name: "Filed",
+      parentId: drive.header.id,
+    });
+    for (const jobId of submission.jobIds) {
+      expect((await settled(jobId)).status).toBe("READ_READY");
+    }
+    for (const followUp of submission.followUps) {
+      const state = await applied(followUp);
+      expect(state.actions?.map((action) => action.kind)).toEqual(["applied"]);
+    }
+
+    const filed = await port.get({ documentId: drive.header.id });
+    expect(
+      (filed.state as { nodes: { id: string; name: string }[] }).nodes,
+    ).toContainEqual(
+      expect.objectContaining({ id: submission.documentId, name: "Filed" }),
+    );
   });
 });

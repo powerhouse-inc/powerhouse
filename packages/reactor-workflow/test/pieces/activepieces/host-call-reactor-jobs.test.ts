@@ -32,6 +32,13 @@ module.exports = {
             actions: [{ type: "FIRST" }, { type: "SECOND" }],
           }),
       },
+      make: {
+        name: "make",
+        displayName: "Make",
+        props: {},
+        run: async (ctx) =>
+          ctx.reactor.create({ documentType: "acme/todo", name: "Invoice" }),
+      },
       twice: {
         name: "twice",
         displayName: "Twice",
@@ -57,6 +64,8 @@ interface JobScript {
   final?: (submission: ReactorSubmission) => Omit<ReactorJobState, "jobId">;
   getDelayMs?: number;
   submitDelayMs?: number;
+  // As settlesAfterMs, for the create job; never if omitted.
+  createSettlesAfterMs?: number;
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -75,12 +84,28 @@ function scriptedPort(script: JobScript) {
   const calls: string[] = [];
   let submission: ReactorSubmission | undefined;
   let submittedAt = 0;
+  let createdAt = 0;
   const refuse = () => Promise.reject(new Error("not scripted"));
   const port: ReactorPort = {
     models: refuse,
     model: refuse,
     find: refuse,
-    create: refuse,
+    submitCreate(input) {
+      calls.push(`create ${input.documentType}`);
+      createdAt = Date.now();
+      return Promise.resolve({
+        documentId: "new-1",
+        jobIds: ["job-create"],
+        followUps: input.name
+          ? [
+              {
+                documentId: "new-1",
+                actions: [{ type: "SET_NAME", input: { name: input.name } }],
+              },
+            ]
+          : [],
+      });
+    },
     async submit(input) {
       calls.push(`submit ${input.actions.map((a) => a.type).join(",")}`);
       await sleep(script.submitDelayMs ?? 0);
@@ -93,17 +118,23 @@ function scriptedPort(script: JobScript) {
     },
     async wait(input) {
       waits.push(input.maxWaitMs);
+      const creating = input.jobId === "job-create";
+      const after = creating
+        ? script.createSettlesAfterMs
+        : script.settlesAfterMs;
       const settlesAt =
-        script.settlesAfterMs === undefined
+        after === undefined
           ? Number.POSITIVE_INFINITY
-          : submittedAt + script.settlesAfterMs;
+          : (creating ? createdAt : submittedAt) + after;
       const until = Math.min(Date.now() + input.maxWaitMs, settlesAt);
       await new Promise((resolve) =>
         setTimeout(resolve, Math.max(until - Date.now(), 0)),
       );
-      if (Date.now() < settlesAt || !submission) {
+      if (Date.now() < settlesAt) {
         return { jobId: input.jobId, status: "RUNNING" };
       }
+      if (creating) return { jobId: input.jobId, status: "READ_READY" };
+      if (!submission) return { jobId: input.jobId, status: "RUNNING" };
       return {
         jobId: input.jobId,
         ...(script.final ?? applied)(submission),
@@ -348,6 +379,46 @@ describe("a reactor write that outlasts one host call", () => {
     expect(step.status).toBe("FAILED");
     expect(step.error).toMatch(
       /^ReactorSubmitUnconfirmedError: .*may have been submitted/,
+    );
+  });
+
+  it("creates a document whose create outlasts one host call", async () => {
+    const { port, waits, calls } = scriptedPort({
+      createSettlesAfterMs: 1_200,
+      settlesAfterMs: 0,
+    });
+
+    const result = await run(port, 10, undefined, worker, "make");
+
+    const [step] = result.steps;
+    expect(step.error).toBeUndefined();
+    expect(step.status).toBe("SUCCEEDED");
+    expect(step.output).toMatchObject({ documentId: "new-1" });
+    expect(calls).toEqual(["create acme/todo", "submit SET_NAME", "get new-1"]);
+    expect(waits.length).toBeGreaterThan(1);
+    for (const wait of waits) expect(wait).toBeLessThan(HOST_CALL_CAP_MS);
+  });
+
+  it("fails a create still queued at the deadline as pending, not failed", async () => {
+    const { port, calls } = scriptedPort({});
+
+    const result = await run(port, 1, undefined, roomy, "make");
+
+    const [step] = result.steps;
+    expect(step.status).toBe("FAILED");
+    expect(step.error).toMatch(
+      /^ReactorJobPendingError: Reactor job job-create was still RUNNING/,
+    );
+    expect(calls).toEqual(["create acme/todo"]);
+  });
+
+  it("says a document was created when what follows the create is pending", async () => {
+    const { port } = scriptedPort({ createSettlesAfterMs: 0 });
+
+    const result = await run(port, 1, undefined, roomy, "make");
+
+    expect(result.steps[0].error).toMatch(
+      /^ReactorJobPendingError: Document new-1 was created, but: Reactor job job-1 was still RUNNING/,
     );
   });
 });
