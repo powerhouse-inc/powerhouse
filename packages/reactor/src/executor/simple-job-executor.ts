@@ -100,6 +100,7 @@ import {
   DOCUMENT_SCOPE_ACTIONS,
   getNextIndexForScope,
   isGenesisOperation,
+  FencedWriteCache,
   jobWriteIds,
   PurgeFence,
   refusalError,
@@ -446,7 +447,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     const {
       job,
       startTime,
-      stores,
+      stores: scopeStores,
       signal,
       touchedStreams,
       postCommitInvalidations,
@@ -478,8 +479,8 @@ export class SimpleJobExecutor implements IJobExecutor {
     const lockedIds = jobWriteIds(job);
     let purged: Set<string>;
     try {
-      await stores.documentLocks.shared(lockedIds);
-      purged = await stores.documentLocks.purged(lockedIds);
+      await scopeStores.documentLocks.shared(lockedIds);
+      purged = await scopeStores.documentLocks.purged(lockedIds);
     } catch (error) {
       return {
         result: buildErrorResult(
@@ -494,10 +495,21 @@ export class SimpleJobExecutor implements IJobExecutor {
       return { result: buildErrorResult(job, purgedRefusal, startTime) };
     }
     const purgeFence = new PurgeFence(
-      stores.documentLocks,
+      scopeStores.documentLocks,
       new Set(lockedIds),
       purged,
     );
+    const stores: ExecutionStores = {
+      ...scopeStores,
+      writeCache: new FencedWriteCache(
+        scopeStores.writeCache,
+        purgeFence,
+        (documentId) => {
+          scopeStores.writeCache.invalidate(documentId);
+          scopeStores.documentMetaCache.invalidate(documentId);
+        },
+      ),
+    };
 
     const unsupported = await this.unsupportedStoredProtocol(
       job,
@@ -711,11 +723,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     );
   }
 
-  /**
-   * Refuses a job naming a purged id it would write. A load or replay refuses
-   * only its own id with DocumentPurgedError, since sync reads that error as
-   * the job's document being purged; a foreign one is an id mismatch.
-   */
+  /** A load names only its own id purged; a foreign one is ID_MISMATCH. */
   private purgedRefusal(job: Job, purged: Set<string>): Error | undefined {
     if (purged.size === 0) {
       return undefined;
@@ -757,6 +765,16 @@ export class SimpleJobExecutor implements IJobExecutor {
         return new DocumentPurgedError(
           target,
           `${action.type} target ${target} was purged`,
+        );
+      }
+      if (action.scope !== "auth") {
+        continue;
+      }
+      const group = mentionedGroupIds(action).find((id) => purged.has(id));
+      if (group !== undefined) {
+        return new DocumentPurgedError(
+          group,
+          `${action.type} names purged group ${group}`,
         );
       }
     }
