@@ -107,6 +107,18 @@ export class PgDatabase {
     return new PgDatabase(name, admin, base);
   }
 
+  /** Backends anywhere in the cluster holding an xid, oldest first. */
+  async openXids(): Promise<unknown[]> {
+    const result = await this.admin.query(
+      `select datname, application_name, backend_xid::text as xid, state,
+        round(extract(epoch from now() - xact_start)::numeric, 2) as age_s,
+        left(query, 120) as query
+      from pg_stat_activity where backend_xid is not null
+      order by xact_start`,
+    );
+    return result.rows;
+  }
+
   get reactor(): ReactorDb {
     return this.base.withSchema("reactor") as unknown as ReactorDb;
   }
@@ -650,14 +662,53 @@ export async function until(
   what: string,
   predicate: () => Promise<boolean> | boolean,
   timeout = 10_000,
+  diagnose?: () => Promise<unknown>,
 ): Promise<void> {
   try {
     await vi.waitUntil(predicate, { timeout, interval: 20 });
   } catch (error) {
-    throw new Error(`timed out waiting until ${what}: ${String(error)}`, {
-      cause: error,
-    });
+    let state = "";
+    if (diagnose) {
+      try {
+        state = `\n${JSON.stringify(await diagnose(), null, 1)}`;
+      } catch (diagnoseError) {
+        state = `\n(diagnosis failed: ${String(diagnoseError)})`;
+      }
+    }
+    throw new Error(
+      `timed out waiting until ${what}: ${String(error)}${state}`,
+      {
+        cause: error,
+      },
+    );
   }
+}
+
+/** What a stalled sync wait needs: watermarks, sweeps, wires, cluster xids. */
+export async function syncState(nodes: Node[], mesh: Mesh): Promise<unknown> {
+  return {
+    nodes: nodes.map((node) => ({
+      name: node.name,
+      watermark: node.module.settledWatermark.status(),
+      catchUp: node.module.catchUp.status().consumers,
+    })),
+    wires: [...mesh.wires].map(([name, wire]) => ({
+      name,
+      paused: wire.paused,
+      queued: wire.queued.length,
+      delivered: wire.delivered.length,
+      withheld: wire.withheld.length,
+      gateErrors: wire.gateErrors.map(String),
+      deliveryErrors: wire.deliveryErrors.map(String),
+    })),
+    channels: [...mesh.channels].map(([name, channel]) => ({
+      name,
+      inbox: channel.inbox.items.length,
+      outbox: channel.outbox.items.length,
+      deadLetter: channel.deadLetter.items.length,
+    })),
+    openXids: await nodes[0]?.pg.openXids(),
+  };
 }
 
 /** Lets in-flight work settle before asserting that something did not happen. */
@@ -698,6 +749,7 @@ export class Mesh {
   readonly wires = new Map<string, Wire>();
   private readonly options = new Map<string, TestChannelOptions>();
   private readonly nodes = new Map<string, Node>();
+  private generation = 0;
 
   factory(owner: string): IChannelFactory {
     return {
@@ -850,6 +902,7 @@ export class Mesh {
       wire.queued.push(envelope);
       return;
     }
+    const generation = this.generation;
     wire.chain = wire.chain.then(async () => {
       let served = envelope;
       if (wire.serving && envelope.operations) {
@@ -865,6 +918,8 @@ export class Mesh {
         return;
       }
       const peer = await this.channelNamed(peerName);
+      // A cleared mesh's envelope must not reach the next test's same-named peer.
+      if (generation !== this.generation) return;
       if (!peer) {
         wire.deliveryErrors.push(new Error(`no channel ${peerName}`));
         return;
@@ -910,6 +965,7 @@ export class Mesh {
   }
 
   clear(): void {
+    this.generation++;
     this.channels.clear();
     this.wires.clear();
     this.options.clear();

@@ -19,6 +19,7 @@ import {
   quiesce,
   servingGate,
   stopNode,
+  syncState,
   tombstone,
   until,
   type Node,
@@ -102,8 +103,11 @@ describe("r2 review: sync/peers [Postgres]", () => {
   let policy: FlakyPolicy;
 
   async function receivedOn(node: Node, id: string, type: string) {
-    await until(`${node.name} holds ${id}'s ${type}`, () =>
-      holds(node, id, type),
+    await until(
+      `${node.name} holds ${id}'s ${type}`,
+      () => holds(node, id, type),
+      undefined,
+      () => syncState([a, b], mesh),
     );
   }
 
