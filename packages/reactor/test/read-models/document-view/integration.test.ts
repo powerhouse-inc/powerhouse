@@ -2568,6 +2568,12 @@ describe("KyselyDocumentView", () => {
       );
     });
 
+    it("resolveIdOrSlug() should throw for an identifier that never existed", async () => {
+      await expect(view.resolveIdOrSlug(generateId())).rejects.toThrow(
+        DocumentNotFoundError,
+      );
+    });
+
     /**
      * The id resolves so a by-id read can reach the boundary state, or `get`
      * would be unreachable through the client. The slug never resolves, because
