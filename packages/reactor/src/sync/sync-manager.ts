@@ -203,6 +203,15 @@ function isRefusedMarker(error: ErrorInfo | undefined): boolean {
   return error?.name === "InvalidSignatureError";
 }
 
+/** Markers pass every remote filter, as they pass sinceTimestamp. */
+function filterForRemote(
+  operations: OperationWithContext[],
+  filter: RemoteFilter,
+): OperationWithContext[] {
+  const kept = new Set(filterOperations(operations, filter));
+  return operations.filter((op) => kept.has(op) || isPurgeMarker(op));
+}
+
 /** A job's dependency chain through one derivation's emitted batches. */
 type EmitChain = {
   lastJobByDoc: Map<string, string>;
@@ -886,7 +895,7 @@ export class SyncManager implements ISyncManager {
     let operations = entries
       .filter((entry) => entry.sourceRemote !== remote.meta.name)
       .map((entry) => toOperationWithContext(entry));
-    operations = filterOperations(operations, remote.meta.filter);
+    operations = filterForRemote(operations, remote.meta.filter);
     if (operations.length === 0) return;
     operations.sort((a, b) => {
       if (a.context.scope !== b.context.scope) {
@@ -2338,7 +2347,7 @@ export class SyncManager implements ISyncManager {
             isPurgeMarker(op) || op.operation.timestampUtcMs >= sinceTimestamp,
         );
       }
-      operations = filterOperations(operations, remote.meta.filter);
+      operations = filterForRemote(operations, remote.meta.filter);
       operations = operations.filter(
         (op) =>
           isPurgeMarker(op) ||
