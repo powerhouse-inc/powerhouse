@@ -302,7 +302,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
           const result = await documentResolver(
             this.reactorClient,
-            { identifier, view },
+            { idOrSlug: identifier, view },
             this.viewSubject(ctx),
           );
 
@@ -380,7 +380,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           const result = await documentOutgoingRelationshipsResolver(
             this.reactorClient,
             {
-              sourceIdentifier: handle.fetchIdentifier,
+              sourceIdOrSlug: handle.fetchIdentifier,
               relationshipType,
               view,
               paging,
@@ -413,7 +413,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           const result = await documentIncomingRelationshipsResolver(
             this.reactorClient,
             {
-              targetIdentifier: handle.fetchIdentifier,
+              targetIdOrSlug: handle.fetchIdentifier,
               relationshipType,
               view,
               paging,
@@ -456,7 +456,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               this.reactorClient,
               {
                 documentType,
-                parentIdentifier,
+                parentIdOrSlug: parentIdentifier,
                 name,
                 slug,
                 preferredEditor,
@@ -470,7 +470,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               this.reactorClient,
               {
                 documentType,
-                parentIdentifier,
+                parentIdOrSlug: parentIdentifier,
                 name,
               },
               this.graphqlManager.reactorDriveClient,
@@ -524,7 +524,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             this.reactorClient,
             {
               documentType,
-              parentIdentifier,
+              parentIdOrSlug: parentIdentifier,
             },
             this.graphqlManager.reactorDriveClient,
             this.viewSubject(ctx),

@@ -2266,6 +2266,8 @@ describe("ReactorSubgraph Permission Checks", () => {
         {
           sourceParentIdentifier: "source-slug",
           targetParentIdentifier: "target-slug",
+          targetIdentifier: "child-uuid",
+          relationshipType: "child",
         },
         ctx,
       );

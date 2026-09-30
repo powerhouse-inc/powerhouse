@@ -154,7 +154,7 @@ describe("reactor subgraph writes resolve slugs under OPEN", () => {
       module.client,
       {
         documentType,
-        parentIdentifier: "reactor-drive-slug",
+        parentIdOrSlug: "reactor-drive-slug",
         initialState: {},
       },
       reactorDriveClient,

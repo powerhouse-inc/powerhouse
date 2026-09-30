@@ -18,10 +18,12 @@ input SearchFilterInput {
   type: String
   parentId: String
   identifiers: [String!]
+    @deprecated(reason: "Ignored. Filter by type or parentId.")
 }
 
 input OperationsFilterInput {
-  documentId: String!
+  documentIdOrSlug: String
+  documentId: String @deprecated(reason: "Use documentIdOrSlug.")
   branch: String
   scopes: [String!]
   actionTypes: [String!]
@@ -497,11 +499,16 @@ type Query {
   ): DocumentModelResultPage!
 
   # Get a specific document by ID or slug
-  document(identifier: String!, view: ViewFilterInput): DocumentWithChildren
+  document(
+    idOrSlug: String
+    identifier: String @deprecated(reason: "Use idOrSlug.")
+    view: ViewFilterInput
+  ): DocumentWithChildren
 
   # Get outgoing relationships of a given type from a source document
   documentOutgoingRelationships(
-    sourceIdentifier: String!
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
     relationshipType: String!
     view: ViewFilterInput
     paging: PagingInput
@@ -509,7 +516,8 @@ type Query {
 
   # Get incoming relationships of a given type to a target document
   documentIncomingRelationships(
-    targetIdentifier: String!
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
     relationshipType: String!
     view: ViewFilterInput
     paging: PagingInput
@@ -520,7 +528,8 @@ type Query {
   # this returns the edges themselves, carrying their metadata and timestamps.
   # Omit relationshipType to return edges of every type.
   documentOutgoingRelationshipEdges(
-    sourceIdentifier: String!
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
     relationshipType: String
     view: ViewFilterInput
     paging: PagingInput
@@ -531,7 +540,8 @@ type Query {
   # this returns the edges themselves, carrying their metadata and timestamps.
   # Omit relationshipType to return edges of every type.
   documentIncomingRelationshipEdges(
-    targetIdentifier: String!
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
     relationshipType: String
     view: ViewFilterInput
     paging: PagingInput
@@ -581,7 +591,8 @@ type Query {
   AUTH_EVALUATION_UNSUPPORTED rather than guessing.
   """
   evaluateActions(
-    documentIdentifier: String!
+    documentIdOrSlug: String
+    documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug.")
     branch: String
     candidates: [ActionCandidateInput!]!
   ): ActionEvaluations!
@@ -616,12 +627,17 @@ type Query {
 
 type Mutation {
   # Create a new document
-  createDocument(document: JSONObject!, parentIdentifier: String): PHDocument!
+  createDocument(
+    document: JSONObject!
+    parentIdOrSlug: String
+    parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")
+  ): PHDocument!
 
   # Create an empty document of specified type
   createEmptyDocument(
     documentType: String!
-    parentIdentifier: String
+    parentIdOrSlug: String
+    parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")
   ): PHDocument!
 
   """
@@ -637,7 +653,8 @@ type Mutation {
   defaults to `main`.
   """
   execute(
-    documentIdentifier: String!
+    documentIdOrSlug: String
+    documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug.")
     actions: [ActionInput!]!
     branch: String
   ): PHDocument!
@@ -651,7 +668,8 @@ type Mutation {
   ask for; `result` is null until the job produces one.
   """
   executeAsync(
-    documentIdentifier: String!
+    documentIdOrSlug: String
+    documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug.")
     actions: [ActionInput!]!
     branch: String
   ): JobInfo!
@@ -678,7 +696,8 @@ type Mutation {
 
   # Rename a document
   renameDocument(
-    documentIdentifier: String!
+    documentIdOrSlug: String
+    documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug.")
     name: String!
     branch: String
   ): PHDocument!
@@ -686,7 +705,8 @@ type Mutation {
   # Update the preferred editor recorded in the document header meta.
   # Pass null/omit to clear it.
   setPreferredEditor(
-    documentIdentifier: String!
+    documentIdOrSlug: String
+    documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug.")
     preferredEditor: String
     branch: String
   ): PHDocument!
@@ -694,8 +714,10 @@ type Mutation {
   # Add a relationship between two documents. Adding one that already exists is
   # a no-op, metadata included -- use updateRelationship to change an edge.
   addRelationship(
-    sourceIdentifier: String!
-    targetIdentifier: String!
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
     relationshipType: String!
     metadata: JSONObject
     branch: String
@@ -704,8 +726,10 @@ type Mutation {
   # Replace the metadata of an existing relationship, preserving its createdAt.
   # Omitting metadata, or passing null, clears it.
   updateRelationship(
-    sourceIdentifier: String!
-    targetIdentifier: String!
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
     relationshipType: String!
     metadata: JSONObject
     branch: String
@@ -713,26 +737,41 @@ type Mutation {
 
   # Remove a relationship between two documents
   removeRelationship(
-    sourceIdentifier: String!
-    targetIdentifier: String!
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
     relationshipType: String!
     branch: String
   ): PHDocument!
 
   # Move a relationship from one source to another
   moveRelationship(
-    sourceParentIdentifier: String!
-    targetParentIdentifier: String!
-    targetIdentifier: String!
+    sourceParentIdOrSlug: String
+    sourceParentIdentifier: String
+      @deprecated(reason: "Use sourceParentIdOrSlug.")
+    targetParentIdOrSlug: String
+    targetParentIdentifier: String
+      @deprecated(reason: "Use targetParentIdOrSlug.")
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
     relationshipType: String!
     branch: String
   ): MoveRelationshipResult!
 
   # Delete a single document
-  deleteDocument(identifier: String!, propagate: PropagationMode): Boolean!
+  deleteDocument(
+    idOrSlug: String
+    identifier: String @deprecated(reason: "Use idOrSlug.")
+    propagate: PropagationMode
+  ): Boolean!
 
   # Delete multiple documents
-  deleteDocuments(identifiers: [String!]!, propagate: PropagationMode): Boolean!
+  deleteDocuments(
+    idsOrSlugs: [String!]
+    identifiers: [String!] @deprecated(reason: "Use idsOrSlugs.")
+    propagate: PropagationMode
+  ): Boolean!
 
   # Touch (create or update) a channel for sync
   touchChannel(input: TouchChannelInput!): TouchChannelResult!
