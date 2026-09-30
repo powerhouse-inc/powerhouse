@@ -121,6 +121,8 @@ export type SyncOperationErrorType =
   | "PURGE_PRECONDITION"
   /** A peer sent a reserved action type as a regular write. */
   | "RESERVED_ACTION"
+  /** A peer's purge marker was refused; the document keeps syncing. */
+  | "MARKER_REFUSED"
   /** No classification applies, including rows written before the field. */
   | "UNCLASSIFIED";
 

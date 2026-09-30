@@ -20,7 +20,11 @@ import { listPurged } from "../../../src/storage/kysely/document-purges.js";
 import { KyselySyncHoldStorage } from "../../../src/storage/kysely/sync-hold-storage.js";
 import type { Database } from "../../../src/storage/kysely/types.js";
 import type { IChannelFactory } from "../../../src/sync/interfaces.js";
-import { SyncManager } from "../../../src/sync/sync-manager.js";
+import { GqlResponseChannel } from "../../../src/sync/channels/gql-res-channel.js";
+import {
+  SyncManager,
+  type SyncManagerConfig,
+} from "../../../src/sync/sync-manager.js";
 import type { SyncEnvelope } from "../../../src/sync/types.js";
 import { settledAtHead } from "../../catch-up/helpers.js";
 import { TestChannel } from "../../sync/channels/test-channel.js";
@@ -67,7 +71,9 @@ export type Harness = {
 };
 
 /** A SyncManager over real Postgres storage and index, with a mocked reactor. */
-export async function createHarness(): Promise<Harness> {
+export async function createHarness(
+  options: { config?: Partial<SyncManagerConfig>; polling?: boolean } = {},
+): Promise<Harness> {
   const storage = await createTestSyncStoragePostgres();
   const db = storage.db as unknown as Kysely<Database>;
   const index = new KyselyOperationIndex(db);
@@ -95,6 +101,14 @@ export async function createHarness(): Promise<Harness> {
   };
   const factory = {
     instance: (remoteId: string, remoteName: string, _config: unknown) => {
+      if (options.polling) {
+        return new GqlResponseChannel(
+          new ConsoleLogger(["GqlResponseChannel"]),
+          remoteId,
+          remoteName,
+          cursors,
+        );
+      }
       const envelopes: SyncEnvelope[] = [];
       sent.set(remoteName, envelopes);
       return new TestChannel(remoteId, remoteName, cursors, (e) => {
@@ -116,7 +130,7 @@ export async function createHarness(): Promise<Harness> {
     eventBus,
     DEFAULT_DRIVE_CONTAINER_TYPES,
     settledAtHead(),
-    {},
+    options.config ?? {},
     {
       capabilities: PEER_CAPABILITIES,
       flags: {},
