@@ -796,6 +796,30 @@ export function journaledTriggerDocumentIds(payload: string | null): string[] {
   }
 }
 
+// The trigger kind a design-time test journals its one-step run under.
+export const TEST_TRIGGER_KIND = "test";
+
+// A payload, or a sample's list of them, naming an id where erasure looks.
+function journaledPayloadNames(
+  json: string | null,
+  ids: readonly string[],
+): boolean {
+  if (json === null) return false;
+  let value: unknown;
+  try {
+    value = JSON.parse(json);
+  } catch {
+    return false;
+  }
+  return (Array.isArray(value) ? value : [value]).some((item) => {
+    if (item === null || typeof item !== "object") return false;
+    const record = item as Record<string, unknown>;
+    return [record.documentId, record.driveId, record.parentId].some(
+      (id) => typeof id === "string" && ids.includes(id),
+    );
+  });
+}
+
 // Runs erased mid-flight; process-wide, as a run keeps its store across reloads.
 const erasedRuns = new Set<string>();
 
@@ -1632,8 +1656,24 @@ export class WorkflowRunStore {
         )
         .execute();
       for (const row of named) {
-        const carried = journaledTriggerDocumentIds(row.trigger_payload);
-        if (carried.some((id) => ids.includes(id))) runIds.add(row.id);
+        if (journaledPayloadNames(row.trigger_payload, ids)) runIds.add(row.id);
+      }
+      // A trigger test journals its sample as the step's output.
+      const sampled = await trx
+        .selectFrom("step_execution")
+        .innerJoin("run", "run.id", "step_execution.run_id")
+        .select(["step_execution.run_id as runId", "step_execution.output"])
+        .where("run.trigger_kind", "=", TEST_TRIGGER_KIND)
+        .where((eb) =>
+          eb.or(
+            ids.map((id) =>
+              eb(sql`strpos(step_execution.output, ${id})`, ">", 0),
+            ),
+          ),
+        )
+        .execute();
+      for (const row of sampled) {
+        if (journaledPayloadNames(row.output, ids)) runIds.add(row.runId);
       }
       // A rerun replays its original's step outputs.
       let frontier = [...runIds];

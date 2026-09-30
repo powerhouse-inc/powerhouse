@@ -111,8 +111,10 @@ failure holds the cursor below the marker.
 
 A document's purge (`PURGE_DOCUMENT`) deletes every run that carried it: the
 runs `run_document` ties to it, the runs whose trigger payload names it as
-`documentId` or `driveId`, a purged workflow's own runs (`run.workflow_id`,
-test runs included), and every rerun of those, transitively. Their
+`documentId`, `driveId` or `parentId`, the test runs whose sample (a step's
+`output`, a payload or a list of them) names it the same way, a purged
+workflow's own runs (`run.workflow_id`, test runs included), and every rerun
+of those, transitively. Their
 `step_execution` and `run_document` rows go with them; a `trigger_dedupe` row
 they claimed keeps its key and loses its `run_id`. A run erased while it is
 still executing journals nothing more from this process. The read model's
@@ -120,10 +122,11 @@ fence is `"skip"`: the journal lives on the relational handle, not the
 reactor's, so a run the purge races can still be written after the marker was
 applied; a rescan from just below the marker repairs it.
 
-Not erased, because nothing ties it to a document: `trigger_state.store_state`
-(vestigial, but an unmigrated legacy blob may remain), `trigger_dedupe.dedupe_key`
-(an operation key, which can embed a document id) and `piece_store.value`
-(whatever a piece stored).
+Not erased, because nothing ties it to a document: another workflow's
+`trigger_state.store_state` (vestigial, but an unmigrated legacy blob may
+remain), `trigger_dedupe.dedupe_key` (an operation key, which can embed a
+document id) and `piece_store.value` (whatever a piece stored), and a test
+run's step output that names the id anywhere but those payload fields.
 
 `runsPage` pages newest first on when a run was journaled (`enqueued_at`),
 which starting a PENDING run leaves alone, so a run keeps its place between

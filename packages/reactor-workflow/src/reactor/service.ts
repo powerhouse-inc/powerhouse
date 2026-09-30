@@ -186,6 +186,7 @@ import {
 } from "./step-test.js";
 import {
   MAX_LIST_RUNS,
+  TEST_TRIGGER_KIND,
   WorkflowRunStore,
   journaledTriggerDocumentIds,
   triggerDocumentIds,
@@ -609,9 +610,6 @@ function registrationKey(state: WorkflowState): string {
   const { lastTest: _lastTest, ...armed } = trigger ?? {};
   return JSON.stringify({ status: state.status, trigger: trigger && armed });
 }
-
-// The run kind a design-time test is journaled under.
-export const TEST_TRIGGER_KIND = "test";
 
 // The reducer refuses a config that is not an object, so none reaches here.
 function configRecord(config: unknown): Record<string, unknown> {
