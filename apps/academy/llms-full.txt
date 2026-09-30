@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-29T22:10:49.958Z
+> Generated: 2026-09-30T02:49:42.045Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -5369,7 +5369,7 @@ export const todoIndexerFactoryBuilder: ProcessorFactoryBuilder =
       scope: ["global"],
     };
 
-    const processor = new TodoIndexer(namespace, filter, store);
+    const processor = new TodoIndexer(namespace, filter, store, driveHeader.id);
     return [{ processor, filter }];
   };
 ```
@@ -29031,8 +29031,14 @@ export const todoIndexerProcessorFactory =
       scope: ["global", "document"], // Global changes, plus deletions
     };
 
-    // Create the processor instance
-    const processor = new TodoIndexerProcessor(namespace, filter, store);
+    // Create the processor instance. The drive id is what `isNamespaceDrive`
+    // compares a deleted document's id against.
+    const processor = new TodoIndexerProcessor(
+      namespace,
+      filter,
+      store,
+      driveHeader.id,
+    );
     return [
       {
         processor,
@@ -29148,10 +29154,12 @@ Handle `DELETE_DOCUMENT` and `PURGE_DOCUMENT` the same way, before anything that
 | Method                           | What it does                                                                                                           |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `deleteDocumentRows(documentId)` | Deletes the document's rows from every table in the processor's namespace with a `document_id` or `documentId` column |
-| `isNamespaceDrive(driveId)`      | `true` when `driveId` is the drive the processor's namespace was created for                                           |
+| `isNamespaceDrive(documentId)`   | `true` when `documentId` is the processor's drive and no other drive shares its namespace                             |
 | `dropNamespace()`                | Drops the processor's namespace with every table in it                                                                 |
 
 A table without a `document_id` or `documentId` column is not touched by `deleteDocumentRows`. Delete its rows yourself in the same branch.
+
+`isNamespaceDrive` needs the drive id the factory passes as the constructor's fourth argument; a processor made without it never drops its namespace. A `getNamespace` override that returns the same namespace for every drive shares it across drives, so dropping it on one drive's deletion would erase the others' rows. For such a processor `isNamespaceDrive` is `false`: the drive's deletion deletes the drive document's own rows, and each of its documents' rows go with that document's own deletion.
 
 When a drive is deleted, its processors receive the batch up to and including the drive's `DELETE_DOCUMENT` (or `PURGE_DOCUMENT`), then `onDisconnect()`. The drive's own deletion reaches them whatever their filter, so the processor above drops its namespace even though its `documentType` filter names only `powerhouse/todo-list`. The generated processor includes this handling.
 

@@ -36,8 +36,13 @@ export const ${v.camelCaseName}FactoryBuilder: ProcessorFactoryBuilder = (module
     scope: ["global", "document"],
   })};
 
-  // Create the processor
-  const processor = new ${v.pascalCaseName}(namespace, filter, store);
+  // The drive id lets the processor drop its namespace on the drive's deletion
+  const processor = new ${v.pascalCaseName}(
+    namespace,
+    filter,
+    store,
+    driveHeader.id,
+  );
 
   // Run the processor's migrations. Nothing in the runtime calls this, so
   // without it the first write hits a database with no tables.

@@ -124,7 +124,7 @@ export const todoIndexerFactoryBuilder: ProcessorFactoryBuilder =
       scope: ["global"],
     };
 
-    const processor = new TodoIndexer(namespace, filter, store);
+    const processor = new TodoIndexer(namespace, filter, store, driveHeader.id);
     return [{ processor, filter }];
   };
 ```
