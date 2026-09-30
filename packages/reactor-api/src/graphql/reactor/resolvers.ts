@@ -1768,6 +1768,16 @@ export function pollSyncEnvelopes(
     // but unconfirmed ops re-emit on the next poll.
     syncOp.deliveredCount ??= 0;
     syncOp.emittedCount ??= 0;
+    // A restarted client polls from its cursor; a forbidden drain stays put.
+    if (!forbiddenIds.has(syncOp.documentId)) {
+      while (
+        syncOp.deliveredCount > 0 &&
+        syncOp.operations[syncOp.deliveredCount - 1].context.ordinal >
+          args.outboxLatest
+      ) {
+        syncOp.deliveredCount -= 1;
+      }
+    }
     while (
       syncOp.deliveredCount < syncOp.emittedCount &&
       syncOp.operations[syncOp.deliveredCount].context.ordinal <=

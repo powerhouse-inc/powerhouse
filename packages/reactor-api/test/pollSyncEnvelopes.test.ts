@@ -782,3 +782,43 @@ describe("entries the gate never evaluated", () => {
     expect(result.envelopes.map((e) => e.key)).toEqual(["job-a", "job-b"]);
   });
 });
+
+describe("pollSyncEnvelopes after a client restart", () => {
+  it("serves again what the client confirmed before restarting and never acked", () => {
+    const syncOp = makeSyncOp("job-1", "doc-1", [5, 6, 7]);
+    const syncManager = makeSyncManager([syncOp]);
+    const poll = (outboxLatest: number) =>
+      pollSyncEnvelopes(syncManager, {
+        channelId: CHANNEL_ID,
+        outboxAck: 4,
+        outboxLatest,
+      });
+
+    expect(poll(0).envelopes).toHaveLength(1);
+    // Received through 7, not applied: no ack moves, nothing is re-served.
+    expect(poll(7).envelopes).toHaveLength(0);
+    expect(syncOp.deliveredCount).toBe(3);
+
+    // Restarted with its persisted cursor at 4.
+    const result = poll(4);
+    expect(
+      result.envelopes[0].operations.map(
+        (o: OperationWithContext) => o.context.ordinal,
+      ),
+    ).toEqual([5, 6, 7]);
+  });
+
+  it("does not serve a forbidden document again", () => {
+    const syncOp = makeSyncOp("job-1", "doc-1", [5, 6, 7]);
+    const syncManager = makeSyncManager([syncOp]);
+
+    const result = pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+      new Set(["doc-1"]),
+    );
+
+    expect(result.envelopes).toHaveLength(0);
+    expect(syncOp.deliveredCount).toBe(3);
+  });
+});
