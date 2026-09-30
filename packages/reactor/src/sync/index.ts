@@ -79,6 +79,14 @@ export {
 } from "./channels/index.js";
 
 export { SyncBuilder } from "./sync-builder.js";
+export {
+  supportsDeliveryTracking,
+  type DeliveryLookup,
+  type DeliveryMembership,
+  type DeliveryRow,
+  type IDeliveryTracking,
+  type PendingDelivery,
+} from "./delivery-tracking.js";
 export { InMemorySyncHoldStorage } from "./memory-hold-storage.js";
 export { InMemorySyncReceivedMarkerStorage } from "./memory-received-marker-storage.js";
 export {

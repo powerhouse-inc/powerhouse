@@ -11,6 +11,7 @@ import type {
   ISyncReceivedMarkerStorage,
   ISyncRemoteStorage,
 } from "../storage/interfaces.js";
+import { deliveryAt } from "../storage/kysely/delivery-lookup.js";
 import { listPurged } from "../storage/kysely/document-purges.js";
 import { KyselySyncCursorStorage } from "../storage/kysely/sync-cursor-storage.js";
 import { KyselySyncDeadLetterStorage } from "../storage/kysely/sync-dead-letter-storage.js";
@@ -142,6 +143,7 @@ export class SyncBuilder {
       holdStorage,
       { listPurged: () => listPurged(db) },
       receivedMarkerStorage,
+      { at: (documentId, ordinal) => deliveryAt(db, documentId, ordinal) },
     );
 
     return {
