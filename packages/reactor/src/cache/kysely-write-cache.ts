@@ -159,6 +159,8 @@ function copyDocument(document: PHDocument): PHDocument {
  * await cache.shutdown();
  * ```
  */
+type PendingRead = { evicted: boolean };
+
 export class KyselyWriteCache implements IWriteCache {
   private streams: Map<string, DocumentStream>;
   private lruTracker: LRUTracker<string>;
@@ -166,6 +168,7 @@ export class KyselyWriteCache implements IWriteCache {
   private operationStore: IOperationStore;
   private registry: IDocumentModelRegistry;
   private config: Required<WriteCacheConfig>;
+  private reads = new Map<string, Set<PendingRead>>();
 
   constructor(
     keyframeStore: IKeyframeStore,
@@ -197,6 +200,7 @@ export class KyselyWriteCache implements IWriteCache {
     );
     scoped.streams = this.streams;
     scoped.lruTracker = this.lruTracker;
+    scoped.reads = this.reads;
     return scoped;
   }
 
@@ -245,6 +249,39 @@ export class KyselyWriteCache implements IWriteCache {
     targetRevision?: number,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
+    const read: PendingRead = { evicted: false };
+    let pending = this.reads.get(documentId);
+    if (!pending) {
+      pending = new Set();
+      this.reads.set(documentId, pending);
+    }
+    pending.add(read);
+    try {
+      return await this.readState(
+        documentId,
+        scope,
+        branch,
+        targetRevision,
+        signal,
+        read,
+      );
+    } finally {
+      pending.delete(read);
+      if (pending.size === 0) {
+        this.reads.delete(documentId);
+      }
+    }
+  }
+
+  // A read an invalidation overtook returns its state but must not cache it.
+  private async readState(
+    documentId: string,
+    scope: string,
+    branch: string,
+    targetRevision: number | undefined,
+    signal: AbortSignal | undefined,
+    read: PendingRead,
+  ): Promise<PHDocument> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -276,7 +313,8 @@ export class KyselyWriteCache implements IWriteCache {
             signal,
           );
 
-          this.store(
+          this.storeUnlessEvicted(
+            read,
             documentId,
             scope,
             branch,
@@ -312,7 +350,8 @@ export class KyselyWriteCache implements IWriteCache {
             signal,
           );
 
-          this.store(
+          this.storeUnlessEvicted(
+            read,
             documentId,
             scope,
             branch,
@@ -339,7 +378,8 @@ export class KyselyWriteCache implements IWriteCache {
     const revision =
       targetRevision ?? (document.header.revision[scope] ?? 0) - 1;
 
-    this.store(
+    this.storeUnlessEvicted(
+      read,
       documentId,
       scope,
       branch,
@@ -418,6 +458,20 @@ export class KyselyWriteCache implements IWriteCache {
       head.document,
       SnapshotPosition.Head,
     );
+  }
+
+  private storeUnlessEvicted(
+    read: PendingRead,
+    documentId: string,
+    scope: string,
+    branch: string,
+    revision: number,
+    document: PHDocument,
+    position: SnapshotPosition,
+  ): void {
+    if (!read.evicted) {
+      this.store(documentId, scope, branch, revision, document, position);
+    }
   }
 
   private store(
@@ -499,6 +553,9 @@ export class KyselyWriteCache implements IWriteCache {
    * @returns The number of streams evicted
    */
   invalidate(documentId: string, scope?: string, branch?: string): number {
+    for (const read of this.reads.get(documentId) ?? []) {
+      read.evicted = true;
+    }
     let evicted = 0;
 
     if (scope === undefined && branch === undefined) {
@@ -534,6 +591,11 @@ export class KyselyWriteCache implements IWriteCache {
    * Resets LRU tracking state. This operation always succeeds.
    */
   clear(): void {
+    for (const pending of this.reads.values()) {
+      for (const read of pending) {
+        read.evicted = true;
+      }
+    }
     this.streams.clear();
     this.lruTracker.clear();
   }
