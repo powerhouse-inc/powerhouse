@@ -41,6 +41,7 @@ import {
   NodeProcessor,
   ReactorDriveClient,
   createReactorDriveResolvers,
+  REACTOR_DRIVE_SUBGRAPH_NAME,
   reactorDriveSubgraphTypeDefs,
   type ReactorDriveDatabase,
 } from "@powerhousedao/reactor-drive";
@@ -1087,7 +1088,7 @@ async function initServer(
 
     const authorizationService = graphqlManager.getAuthorizationService();
     const reactorDriveSubgraph = {
-      name: "reactor-drive",
+      name: REACTOR_DRIVE_SUBGRAPH_NAME,
       path: graphqlManager.getBasePath(),
       resolvers: createReactorDriveResolvers({
         reactorClient: client,
