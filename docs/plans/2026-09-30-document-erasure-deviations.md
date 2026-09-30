@@ -16,7 +16,9 @@ Line numbers are against 37de0d0795. Paths are relative to
 `packages/reactor/src` unless they start with `packages/` or `apps/`. Where a
 line moves easily the symbol is given too.
 
-Entries read `path:line (symbol) — what — why`.
+Entries read `path:line (symbol) — what — why`. Reasons come from the track
+reports and review findings; where a report gave none, the reason is read
+from the code.
 
 ## Stage 0
 
@@ -606,16 +608,17 @@ The remaining lookups are the job-start check and the read-model fence.
   without paging.
 - `client/reactor-client.ts:1629` (`deleteDocuments`) — runs each cascade as
   its own batch, concurrently, with no ordering between them.
-- `sync/batch-aggregator.ts` — a job that emits neither `JOB_WRITE_READY` nor
-  `JOB_FAILED` leaks its pending batch.
+- `sync/batch-aggregator.ts:39` (`pendingBatches`) — a job that emits
+  neither `JOB_WRITE_READY` nor `JOB_FAILED` leaks its pending batch.
 - `core/reactor.ts:135` — the Reactor's `JOB_FAILED` subscriber is never
   disposed.
-- `NodeProcessor` works only when the drive schema equals `REACTOR_SCHEMA`:
-  its view state and watermark probe use the drive-scoped handle.
+- `packages/reactor-drive/src/processors/node-processor.ts` works only when
+  the drive schema equals `REACTOR_SCHEMA`: its view state and watermark
+  probe use the drive-scoped handle.
 - Models added through `withReadModel` or `withReadModelFactory`
   (`core/reactor-builder.ts:407`, `:419`) never get `attachCatchUp`.
-- `NodeProcessor` suffix replay re-inserts the node of a deleted, unpurged
-  child.
+- `packages/reactor-drive/src/processors/node-processor.ts` suffix replay
+  re-inserts the node of a deleted, unpurged child.
 - `packages/reactor/test/factories.ts` — when a storage `create()` throws,
   `afterEach` cleans the previous test's storage again ("driver has already
   been destroyed").
