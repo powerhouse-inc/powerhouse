@@ -859,6 +859,25 @@ export interface ISyncHoldStorage {
   removeRemote(remoteName: string): Promise<void>;
 }
 
+/** A purge marker received from a remote, kept until its outcome. */
+export type ReceivedMarkerRecord = {
+  remoteName: string;
+  /** The marker operation's id. */
+  markerId: string;
+  documentId: string;
+  branch: string;
+  operation: OperationWithContext;
+  receivedAtUtcMs: number;
+};
+
+/** Received markers that survive a restart, so the inbox ack stays below them. */
+export interface ISyncReceivedMarkerStorage {
+  list(remoteName: string): Promise<ReceivedMarkerRecord[]>;
+  upsert(record: ReceivedMarkerRecord): Promise<void>;
+  remove(remoteName: string, markerId: string): Promise<void>;
+  removeRemote(remoteName: string): Promise<void>;
+}
+
 /**
  * Persistent storage for sync remote configurations. Each remote represents
  * a connection to an external system that operations can be synced with.

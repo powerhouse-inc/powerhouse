@@ -80,6 +80,7 @@ export {
 
 export { SyncBuilder } from "./sync-builder.js";
 export { InMemorySyncHoldStorage } from "./memory-hold-storage.js";
+export { InMemorySyncReceivedMarkerStorage } from "./memory-received-marker-storage.js";
 export {
   createPeerAgreement,
   type IPeerAgreement,

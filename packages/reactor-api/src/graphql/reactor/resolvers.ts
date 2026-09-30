@@ -1975,7 +1975,7 @@ export async function silenceUnversionedPoll(
  * It must be preserved because the inbox mailbox tracks applied ordinals
  * and returns the highest one as `ackOrdinal` in pollSyncEnvelopes.
  */
-export function pushSyncEnvelopes(
+export async function pushSyncEnvelopes(
   syncManager: ISyncManager,
   args: {
     envelopes: SyncEnvelopeArg[];
@@ -2030,5 +2030,7 @@ export function pushSyncEnvelopes(
     remote.channel.inbox.add(...consolidated);
   }
 
-  return Promise.resolve(true);
+  // A received marker is stored before the pusher hears it arrived.
+  await syncManager.receiptsStored?.();
+  return true;
 }
