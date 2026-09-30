@@ -49,6 +49,11 @@ export const RECOVERABLE_GRAPHQL_ERROR_CODES = {
    * those too.
    */
   malformedStoredOperation: "MALFORMED_STORED_OPERATION",
+  /**
+   * The poll's marker refusals could not be recorded, so nothing was served.
+   * The client keeps them pending and reports them on its next poll.
+   */
+  refusalNotRecorded: "REFUSAL_NOT_RECORDED",
 } as const;
 
 const RECOVERABLE_CODES: ReadonlySet<string> = new Set(

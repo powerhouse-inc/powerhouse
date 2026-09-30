@@ -4,6 +4,7 @@ import {
   GqlResponseChannelFactory,
   JobStatus,
   REACTOR_SCHEMA,
+  RECOVERABLE_GRAPHQL_ERROR_CODES,
   ReactorBuilder,
   SyncBuilder,
   SyncEventTypes,
@@ -30,6 +31,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   pollSyncEnvelopes,
   pushSyncEnvelopes,
+  recordPollMarkerRefusals,
   touchChannel,
 } from "../src/graphql/reactor/resolvers.js";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
@@ -535,6 +537,35 @@ describe("peer manifest exchange over the sync resolvers", () => {
       ]),
     );
     expect(server.getById("refusing").channel.deadLetter.items).toEqual([]);
+  });
+
+  it("fails a poll whose marker refusals were not recorded with a recoverable code", async () => {
+    const server = await reactor();
+    await touchChannel(server, {
+      input: {
+        id: "refusing",
+        name: "refusing",
+        collectionId: DriveCollectionId.forDrive("drive-1").key,
+        filter: FILTER,
+        sinceTimestampUtcMs: "0",
+        manifest: server.localManifest(),
+      },
+    });
+    vi.spyOn(
+      server as unknown as {
+        recordPolledMarkerRefusals: (...args: unknown[]) => Promise<void>;
+      },
+      "recordPolledMarkerRefusals",
+    ).mockRejectedValue(new Error("Connection terminated unexpectedly"));
+
+    const failure = recordPollMarkerRefusals(server, "refusing", [
+      { documentId: "purged-1", branch: "main", kind: "marker" },
+    ]);
+
+    await expect(failure).rejects.toMatchObject({
+      extensions: { code: RECOVERABLE_GRAPHQL_ERROR_CODES.refusalNotRecorded },
+    });
+    await expect(failure).rejects.not.toThrow(/Connection terminated/);
   });
 
   it("hands a reported marker refusal to the sync manager, and holds nothing", async () => {

@@ -871,7 +871,8 @@ export class GqlRequestChannel implements IChannel {
   private isAgreementRejection(error: unknown): boolean {
     if (
       !(error instanceof GraphQLRequestError) ||
-      error.category !== "graphql"
+      error.category !== "graphql" ||
+      isRecoverableGraphQLError(error)
     ) {
       return false;
     }

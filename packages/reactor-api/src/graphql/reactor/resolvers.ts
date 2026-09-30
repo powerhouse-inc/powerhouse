@@ -37,7 +37,10 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 
-import { AuthEvaluationUnsupportedError } from "../errors.js";
+import {
+  AuthEvaluationUnsupportedError,
+  RefusalNotRecordedError,
+} from "../errors.js";
 import { isDriveContainerType } from "./constants.js";
 
 const REACTOR_DRIVE_DOCUMENT_TYPE = "powerhouse/reactor-drive";
@@ -1973,10 +1976,14 @@ export async function recordPollMarkerRefusals(
     // The poll resolver reports the missing channel.
     return;
   }
-  await syncManager.recordPolledMarkerRefusals(
-    remote.meta.name,
-    refusals.map(({ documentId, branch }) => ({ documentId, branch })),
-  );
+  try {
+    await syncManager.recordPolledMarkerRefusals(
+      remote.meta.name,
+      refusals.map(({ documentId, branch }) => ({ documentId, branch })),
+    );
+  } catch (error) {
+    throw new RefusalNotRecordedError(error);
+  }
 }
 
 /**

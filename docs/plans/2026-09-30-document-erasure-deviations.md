@@ -420,6 +420,14 @@ Not spec deviations; recorded because they change how the suites run.
   most that many and keeps the rest pending (`sync/channels/gql-req-channel.ts:812`)
   — any bound client could record refusals of any id, unbounded, in N inserts
   per poll, and change another drive's erasure outcome.
+- `packages/reactor-api/src/graphql/reactor/resolvers.ts:1985`
+  (`recordPollMarkerRefusals`) — a failed refusal write fails the poll with
+  `RefusalNotRecordedError` (`packages/reactor-api/src/graphql/errors.ts:80`),
+  code `REFUSAL_NOT_RECORDED` in `RECOVERABLE_GRAPHQL_ERROR_CODES`
+  (`sync/errors.ts:56`); the poller keeps polling and the refusals stay
+  pending, and a recoverable error is never read as the peer rejecting the
+  agreement fields (`sync/channels/gql-req-channel.ts:875`) — an
+  `INTERNAL_SERVER_ERROR` stopped the poller's timer for the process lifetime.
 - `packages/reactor-privacy/src/erasure/scheduler.ts:702` (`refusedRemotes`)
   — counts a refusal only from a stored remote whose collection holds the
   document (open membership) — a row from a remote bound elsewhere made the

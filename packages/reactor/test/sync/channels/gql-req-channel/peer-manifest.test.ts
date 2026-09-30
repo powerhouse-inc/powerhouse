@@ -383,6 +383,44 @@ describe("GqlRequestChannel peer manifests", () => {
     expect(sent(2)).toEqual([]);
   });
 
+  it("keeps polling, and reports a refusal again, when the server did not record it", async () => {
+    const { state, fetchFn } = agreementServer(LOCAL);
+    let failed = false;
+    const failing = vi
+      .fn()
+      .mockImplementation((url: string, options: RequestInit) => {
+        const body = JSON.parse(options.body as string) as Body;
+        if (!failed && body.variables.refusals?.length) {
+          failed = true;
+          state.polls.push(body);
+          return respond(null, [
+            {
+              message: "Field refusals: marker refusals were not recorded",
+              extensions: { code: "REFUSAL_NOT_RECORDED" },
+            },
+          ]);
+        }
+        return fetchFn(url, options);
+      });
+    const timer = new ManualPollTimer();
+    const { channel } = channelWith(failing, timer);
+    channels.push(channel);
+    await channel.init();
+
+    channel.deadLetter.add(inboxRefusal("purged", "MARKER_REFUSED"));
+    await timer.tick().catch(() => {});
+    await timer.tick();
+    await timer.tick();
+
+    const marker = { documentId: "purged", branch: "main", kind: "marker" };
+    expect(timer.isRunning()).toBe(true);
+    expect(state.polls.map((poll) => poll.variables.refusals)).toEqual([
+      [marker],
+      [marker],
+      [],
+    ]);
+  });
+
   it("keeps a refused marker from a server without the feature until it announces it", async () => {
     const before = localPeerManifest([TEST_PROTOCOL], {}, undefined, 1);
     const after = localPeerManifest(PEER_CAPABILITIES, {}, undefined, 2);
