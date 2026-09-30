@@ -1580,15 +1580,20 @@ export class ReactorClient implements IReactorClient {
       const source = position.get(rel.sourceId);
       return source === undefined || source > position.get(rel.targetId)!;
     };
+    const leadingBySource = new Map<string, DocumentRelationship[]>();
+    for (const rels of incoming.values()) {
+      for (const rel of rels) {
+        if (waitsForTarget(rel)) continue;
+        const leading = leadingBySource.get(rel.sourceId) ?? [];
+        leading.push(rel);
+        leadingBySource.set(rel.sourceId, leading);
+      }
+    }
 
     const plans: ExecutionJobPlan[] = [];
     for (const documentId of order) {
-      for (const rels of incoming.values()) {
-        for (const rel of rels) {
-          if (rel.sourceId === documentId && !waitsForTarget(rel)) {
-            plans.push(await this.planRemoval(rel, [], plans.length, signal));
-          }
-        }
+      for (const rel of leadingBySource.get(documentId) ?? []) {
+        plans.push(await this.planRemoval(rel, [], plans.length, signal));
       }
       plans.push(await this.planDelete(documentId, signal));
       for (const rel of incoming.get(documentId)!) {
