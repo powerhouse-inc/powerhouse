@@ -9,7 +9,10 @@ type FatalProcess = Pick<
   exitCode?: NodeJS.Process["exitCode"];
 };
 
-const installed = new WeakSet<FatalProcess>();
+const fatalHandlers = new WeakMap<
+  FatalProcess,
+  (kind: string, err: unknown) => void
+>();
 
 /**
  * Sends an uncaught exception or unhandled rejection through the SIGTERM
@@ -26,8 +29,7 @@ export function installFatalErrorShutdown(
   logger: ILogger,
   proc: FatalProcess = process,
 ): void {
-  if (installed.has(proc)) return;
-  installed.add(proc);
+  if (fatalHandlers.has(proc)) return;
 
   // Captured before shutdown starts: the builder replaces process.exit with a
   // recording shim while it drains.
@@ -45,10 +47,27 @@ export function installFatalErrorShutdown(
     }, FORCED_EXIT_MS).unref();
     proc.kill(proc.pid, "SIGTERM");
   };
+  fatalHandlers.set(proc, onFatal);
 
   proc.on("uncaughtException", (err) => onFatal("Uncaught exception", err));
   proc.on("unhandledRejection", (reason) => {
     if (proc.listenerCount("unhandledRejection") > 1) return;
     onFatal("Unhandled rejection", reason);
   });
+}
+
+/**
+ * Routes a fatal condition the caller detected through the same shutdown as an
+ * uncaught error. Returns false, and does nothing, when
+ * `installFatalErrorShutdown` has not run for `proc`.
+ */
+export function triggerFatalShutdown(
+  kind: string,
+  err: unknown,
+  proc: FatalProcess = process,
+): boolean {
+  const onFatal = fatalHandlers.get(proc);
+  if (!onFatal) return false;
+  onFatal(kind, err);
+  return true;
 }

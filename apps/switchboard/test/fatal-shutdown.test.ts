@@ -1,6 +1,9 @@
 import { EventEmitter } from "node:events";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { installFatalErrorShutdown } from "../src/fatal-shutdown.mjs";
+import {
+  installFatalErrorShutdown,
+  triggerFatalShutdown,
+} from "../src/fatal-shutdown.mjs";
 
 function makeProc() {
   const emitter = new EventEmitter();
@@ -89,6 +92,33 @@ describe("installFatalErrorShutdown", () => {
 
     expect(originalExit).toHaveBeenCalledWith(1);
     expect(proc.exit).not.toHaveBeenCalled();
+  });
+
+  it("routes a triggered fatal error through SIGTERM with exit code 1", () => {
+    const proc = makeProc();
+    const onSigterm = vi.fn();
+    proc.on("SIGTERM", onSigterm);
+    installFatalErrorShutdown(logger, proc as never);
+
+    expect(
+      triggerFatalShutdown("Flush failed", new Error("ENOSPC"), proc as never),
+    ).toBe(true);
+    triggerFatalShutdown("Flush failed", new Error("ENOSPC"), proc as never);
+    proc.emit("uncaughtException", new Error("later"));
+
+    expect(proc.kill).toHaveBeenCalledOnce();
+    expect(onSigterm).toHaveBeenCalledOnce();
+    expect(proc.exitCode).toBe(1);
+  });
+
+  it("ignores a trigger when shutdown on fatal errors is not installed", () => {
+    const proc = makeProc();
+
+    expect(
+      triggerFatalShutdown("Flush failed", new Error("ENOSPC"), proc as never),
+    ).toBe(false);
+    expect(proc.kill).not.toHaveBeenCalled();
+    expect(proc.exitCode).toBeUndefined();
   });
 
   it("installs its listeners once per process", () => {
