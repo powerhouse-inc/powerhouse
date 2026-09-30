@@ -40,6 +40,7 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
       rebuildStateOnInit: false,
       indexing: defaultReadModelIndexingConfig,
       replayStreamSuffix: false,
+      purgeFence: "none",
     });
   }
 
