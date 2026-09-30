@@ -57,6 +57,8 @@ type ProcessorFactory = (
 ) => Promise<ProcessorRecord[]> | ProcessorRecord[];
 ```
 
+The header is the drive's header as it was created, from its `CREATE_DOCUMENT` operation. That holds for a drive created while the factory is registered and for one that already existed when `registerFactory` is called (after a restart, say): earlier releases passed such a late registration a minimal header with only `id` and `documentType` set. A factory that selects drives by `slug` or `name` therefore now makes its processors on a late registration too, and they backfill from their persisted cursor, or per `startFrom` if they have none. Only a purged drive's header is still minimal, since its header is erased with it. The manager reads a late registration's headers from the operation index, a few drives at a time.
+
 Return `[]` to create no processors for a drive. The factory may be sync or async. The `processorApp?` parameter is part of the type but the manager **never supplies it** — it calls `factory(driveHeader)` with one argument. Read the running app from `module.processorApp` instead (see [the processor host](#the-processor-host)).
 
 If the factory throws, the manager catches it, logs `Factory '<id>' failed for drive '<driveId>'`, and skips that drive. Registration does not crash.

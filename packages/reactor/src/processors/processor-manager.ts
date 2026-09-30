@@ -68,6 +68,8 @@ type CursorOwner = Pick<
 type DriveDeletions = ReadonlyMap<string, OperationWithContext>;
 
 const DRIVE_STREAM_PAGE = 500;
+/** Drive header reads the manager runs at once, as after a restart. */
+export const HEADER_READ_CONCURRENCY = 8;
 // How long shutdown waits for processors to finish and disconnect.
 const SHUTDOWN_GRACE_MS = 5_000;
 
@@ -103,6 +105,8 @@ export class ProcessorManager
   // Creation headers of known and owed drives; a purge drops a drive's.
   private driveHeaders: Map<string, PHDocumentHeader> = new Map();
   private headerReads: Map<string, HeaderRead> = new Map();
+  private headerSlots = HEADER_READ_CONCURRENCY;
+  private headerWaiters: (() => void)[] = [];
   private stopped = false;
   // Rows whose drive's deletion threw, kept visible to getAll() with a retry.
   private owedFailures: Map<string, TrackedProcessor> = new Map();
@@ -322,6 +326,7 @@ export class ProcessorManager
     read: HeaderRead,
   ): Promise<PHDocumentHeader> {
     let first: OperationWithContext | undefined;
+    await this.takeHeaderSlot();
     try {
       [first] = await this.operationIndex.getStreamAfter(
         { documentId: driveId, scope: "document", branch: "main" },
@@ -336,6 +341,7 @@ export class ProcessorManager
         error,
       );
     } finally {
+      this.releaseHeaderSlot();
       if (this.headerReads.get(driveId) === read)
         this.headerReads.delete(driveId);
     }
@@ -348,6 +354,20 @@ export class ProcessorManager
       this.driveHeaders.set(driveId, header);
     }
     return header;
+  }
+
+  private async takeHeaderSlot(): Promise<void> {
+    if (this.headerSlots > 0) {
+      this.headerSlots--;
+      return;
+    }
+    await new Promise<void>((resolve) => this.headerWaiters.push(resolve));
+  }
+
+  private releaseHeaderSlot(): void {
+    const next = this.headerWaiters.shift();
+    if (next) next();
+    else this.headerSlots++;
   }
 
   /** Synchronous: the known drives this batch deletes. */

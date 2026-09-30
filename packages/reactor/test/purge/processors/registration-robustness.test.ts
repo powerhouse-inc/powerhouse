@@ -7,7 +7,10 @@ import type {
   ProcessorFilter,
 } from "@powerhousedao/shared/processors";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ProcessorManager } from "../../../src/processors/processor-manager.js";
+import {
+  HEADER_READ_CONCURRENCY,
+  type ProcessorManager,
+} from "../../../src/processors/processor-manager.js";
 import {
   createTestDatabase,
   legacyDrive,
@@ -297,5 +300,34 @@ describe("processor registration robustness [Postgres]", () => {
       expect(headers).toEqual([expect.objectContaining({ slug: "" })]);
       expect(internals.driveHeaders.has(driveId)).toBe(false);
     }, 30_000);
+
+    it("bounds a registration's reads of uncached drive headers", async () => {
+      const drives: string[] = [];
+      for (let i = 0; i < HEADER_READ_CONCURRENCY + 4; i++) {
+        drives.push(await createDrive());
+      }
+      const index = uncachedHeaders().operationIndex;
+      const real = index.getStreamAfter.bind(index);
+      const reads = { inFlight: 0, most: 0 };
+      index.getStreamAfter = async (...args) => {
+        reads.inFlight++;
+        reads.most = Math.max(reads.most, reads.inFlight);
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          return await real(...args);
+        } finally {
+          reads.inFlight--;
+        }
+      };
+
+      const called = new Set<string>();
+      await manager().registerFactory("pkg", (h) => {
+        called.add(h.id);
+        return [];
+      });
+
+      expect([...called].sort()).toEqual([...drives].sort());
+      expect(reads.most).toBeLessThanOrEqual(HEADER_READ_CONCURRENCY);
+    }, 60_000);
   });
 });
