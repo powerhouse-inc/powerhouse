@@ -40,6 +40,9 @@ import {
   resolveProcessorSlots,
 } from "./utils.js";
 
+// A drive header read in flight; a purge marker routed meanwhile flags it.
+type HeaderRead = { purged: boolean; header?: Promise<PHDocumentHeader> };
+
 // A factory run in progress; batches routed meanwhile are left to backfill.
 type PendingSlot = {
   factoryId: string;
@@ -99,6 +102,7 @@ export class ProcessorManager
   private erasing: Map<string, Promise<void>> = new Map();
   // Creation headers of known and owed drives; a purge drops a drive's.
   private driveHeaders: Map<string, PHDocumentHeader> = new Map();
+  private headerReads: Map<string, HeaderRead> = new Map();
   private stopped = false;
   // Rows whose drive's deletion threw, kept visible to getAll() with a retry.
   private owedFailures: Map<string, TrackedProcessor> = new Map();
@@ -291,17 +295,32 @@ export class ProcessorManager
     for (const op of items) {
       if (isPurgeMarker(op.operation)) {
         this.driveHeaders.delete(op.context.documentId);
+        const read = this.headerReads.get(op.context.documentId);
+        if (read) read.purged = true;
       }
     }
   }
 
   /** A drive's creation header; minimal once the drive's stream is purged. */
-  private async headerOf(
+  private headerOf(
     driveId: string,
     documentType: string,
   ): Promise<PHDocumentHeader> {
     const cached = this.driveHeaders.get(driveId);
-    if (cached) return cached;
+    if (cached) return Promise.resolve(cached);
+    const inFlight = this.headerReads.get(driveId)?.header;
+    if (inFlight) return inFlight;
+    const read: HeaderRead = { purged: false };
+    this.headerReads.set(driveId, read);
+    read.header = this.readHeader(driveId, documentType, read);
+    return read.header;
+  }
+
+  private async readHeader(
+    driveId: string,
+    documentType: string,
+    read: HeaderRead,
+  ): Promise<PHDocumentHeader> {
     let first: OperationWithContext | undefined;
     try {
       [first] = await this.operationIndex.getStreamAfter(
@@ -316,10 +335,18 @@ export class ProcessorManager
         driveId,
         error,
       );
+    } finally {
+      if (this.headerReads.get(driveId) === read)
+        this.headerReads.delete(driveId);
     }
     const header = first && extractCreationHeader(first);
-    if (!header) return createMinimalDriveHeader(driveId, documentType);
-    this.driveHeaders.set(driveId, header);
+    // A purge routed during the read erased what it returned.
+    if (!header || read.purged) {
+      return createMinimalDriveHeader(driveId, documentType);
+    }
+    if (this.knownDrives.has(driveId) || this.deletedDrives.has(driveId)) {
+      this.driveHeaders.set(driveId, header);
+    }
     return header;
   }
 

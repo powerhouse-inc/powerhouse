@@ -1,4 +1,7 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import {
+  isPurgeMarker,
+  type OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import type {
   IProcessor,
   ProcessorFilter,
@@ -47,6 +50,17 @@ const hungProcessor = () => {
     onDisconnect: () => Promise.resolve(),
   };
   return { processor, state };
+};
+
+type StreamRead = (
+  key: { documentId: string; scope: string; branch: string },
+  ...rest: unknown[]
+) => Promise<OperationWithContext[]>;
+
+type HeaderInternals = {
+  operationIndex: { getStreamAfter: StreamRead };
+  driveHeaders: Map<string, unknown>;
+  forgetPurgedHeaders: (items: OperationWithContext[]) => void;
 };
 
 type QueueOptions = {
@@ -223,4 +237,65 @@ describe("processor registration robustness [Postgres]", () => {
     await vi.waitFor(() => expect(first.events).toContain("disconnect"));
     expect(second.events).toEqual([]);
   }, 30_000);
+
+  describe("drive header reads", () => {
+    // As after a restart whose replay starts past the drives' creation.
+    const uncachedHeaders = () => {
+      const internals = manager() as unknown as HeaderInternals;
+      internals.driveHeaders.clear();
+      return internals;
+    };
+
+    it("does not keep a header read across its drive's purge", async () => {
+      const slugged = (h: { slug?: string }) =>
+        h.slug === "tenant-p" ? [{ processor: recorder(), filter }] : [];
+      await manager().registerFactory("pkg", slugged);
+      const driveId = await createDrive("tenant-p");
+      await manager().unregisterFactory("pkg");
+      const internals = uncachedHeaders();
+      const index = internals.operationIndex;
+      const real = index.getStreamAfter.bind(index);
+      const creation = await real(
+        { documentId: driveId, scope: "document", branch: "main" },
+        0,
+        undefined,
+        1,
+      );
+
+      const read = { armed: true, started: false, release: () => {} };
+      const released = new Promise<void>((resolve) => {
+        read.release = resolve;
+      });
+      index.getStreamAfter = async (key, ...rest) => {
+        if (!read.armed || key.documentId !== driveId)
+          return real(key, ...rest);
+        read.armed = false;
+        read.started = true;
+        await released;
+        return creation;
+      };
+      const forget = internals.forgetPurgedHeaders.bind(manager());
+      const marked = { seen: false };
+      internals.forgetPurgedHeaders = (items) => {
+        forget(items);
+        if (items.some((op) => isPurgeMarker(op.operation))) marked.seen = true;
+      };
+
+      const headers: { slug?: string }[] = [];
+      const registered = manager().registerFactory("pkg", (h) => {
+        headers.push(h);
+        return slugged(h);
+      });
+      await vi.waitFor(() => expect(read.started).toBe(true));
+      await deleteDrive(driveId);
+      const [info] = await host.service.enqueuePurge([driveId], "request-1");
+      await succeeded(host.reactor, info!.id);
+      await vi.waitFor(() => expect(marked.seen).toBe(true));
+      read.release();
+      await registered;
+
+      expect(headers).toEqual([expect.objectContaining({ slug: "" })]);
+      expect(internals.driveHeaders.has(driveId)).toBe(false);
+    }, 30_000);
+  });
 });
