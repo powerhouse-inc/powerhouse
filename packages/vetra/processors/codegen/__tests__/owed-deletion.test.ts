@@ -27,6 +27,12 @@ vi.mock("../processor.js", () => ({
   }),
 }));
 
+// The factory's cold codegen import outlasts a waitFor window on a busy runner.
+vi.mock("@powerhousedao/codegen/utils", () => ({
+  buildTsMorphProject: () => ({}),
+}));
+vi.mock("@powerhousedao/config/node", () => ({ getConfig: () => ({}) }));
+
 type Module = Awaited<ReturnType<ReactorBuilder["buildModule"]>>;
 
 async function settled(module: Module, jobId: string): Promise<void> {
