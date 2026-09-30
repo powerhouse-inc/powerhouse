@@ -1,6 +1,7 @@
 import {
   isOlderManifest,
   isPurgeMarker,
+  MARKER_REFUSAL_FEATURE,
   readPeerManifest,
   type PeerManifest,
 } from "@powerhousedao/shared/document-model";
@@ -82,12 +83,8 @@ const AGREEMENT_FIELDS = [
   "SyncRefusalInput",
 ] as const;
 
-/** `kind` only on a marker refusal: a peer without it rejects the field. */
+/** `kind` only on a marker refusal, sent to a peer announcing the feature. */
 type RefusalWire = { documentId: string; branch: string; kind?: "marker" };
-
-/** The message arrives JSON-encoded, so its quotes may be escaped. */
-const REFUSAL_KIND_REJECTION =
-  /Field \\*"kind\\*" is not defined by type \\*"SyncRefusalInput/;
 
 function refusalKey(refusal: RefusalWire): string {
   return `${refusal.documentId}\u0000${refusal.branch}\u0000${refusal.kind ?? ""}`;
@@ -163,8 +160,6 @@ export class GqlRequestChannel implements IChannel {
   private peerServesDecisionFields: boolean = true;
   /** Cleared when the remote rejects {@link AGREEMENT_FIELDS}; set again by a touch that carries them. */
   private peerServesAgreement: boolean = true;
-  /** Cleared for good when the remote rejects a refusal's `kind`. */
-  private peerServesRefusalKind: boolean = true;
   private agreementStoppedUtcMs = 0;
   private localManifestProvider?: () => PeerManifest;
   /** Undefined until the first handshake; null for a silent peer. */
@@ -227,7 +222,7 @@ export class GqlRequestChannel implements IChannel {
         const refusal: RefusalWire | undefined =
           errorType === "UNSUPPORTED_PROTOCOL"
             ? { documentId: syncOp.documentId, branch: syncOp.branch }
-            : errorType === "MARKER_REFUSED" && this.peerServesRefusalKind
+            : errorType === "MARKER_REFUSED"
               ? {
                   documentId: syncOp.documentId,
                   branch: syncOp.branch,
@@ -800,7 +795,7 @@ export class GqlRequestChannel implements IChannel {
       outboxLatest: latestOrdinal,
     };
 
-    // Each flag only ever clears, so this settles within four attempts.
+    // Each flag only ever clears, so this settles within three attempts.
     let response: PollSyncEnvelopesResult;
     let refusals: RefusalWire[] = [];
     for (;;) {
@@ -808,7 +803,10 @@ export class GqlRequestChannel implements IChannel {
         ? this.localManifestProvider?.().revision
         : undefined;
       refusals = this.peerServesAgreement
-        ? [...this.pendingRefusals.values()]
+        ? [...this.pendingRefusals.values()].filter(
+            (refusal) =>
+              refusal.kind === undefined || this.peerTakesMarkerRefusals(),
+          )
         : [];
       try {
         response = await this.executeGraphQL<PollSyncEnvelopesResult>(
@@ -822,11 +820,6 @@ export class GqlRequestChannel implements IChannel {
         );
         break;
       } catch (error) {
-        // Checked first: the rejection names SyncRefusalInput too.
-        if (this.rejectsRefusalKind(error, refusals)) {
-          this.stopRefusalKind();
-          continue;
-        }
         if (this.rejectsAgreementFields(error)) {
           await this.stopAgreement();
           continue;
@@ -857,29 +850,11 @@ export class GqlRequestChannel implements IChannel {
     };
   }
 
-  private rejectsRefusalKind(
-    error: unknown,
-    sent: readonly RefusalWire[],
-  ): boolean {
+  /** A peer before the feature would reject the field; its refusals wait. */
+  private peerTakesMarkerRefusals(): boolean {
     return (
-      this.peerServesRefusalKind &&
-      sent.some((refusal) => refusal.kind !== undefined) &&
-      error instanceof GraphQLRequestError &&
-      error.category === "graphql" &&
-      REFUSAL_KIND_REJECTION.test(error.message)
+      this.peerManifest?.features[MARKER_REFUSAL_FEATURE]?.includes(1) === true
     );
-  }
-
-  /** A remote before marker refusals: what it refused goes unreported. */
-  private stopRefusalKind(): void {
-    this.logger.warn(
-      "Remote @channelId does not take marker refusals; they are not reported to it.",
-      this.channelId,
-    );
-    this.peerServesRefusalKind = false;
-    for (const [key, refusal] of this.pendingRefusals) {
-      if (refusal.kind !== undefined) this.pendingRefusals.delete(key);
-    }
   }
 
   forgetMarkerRefusal(documentId: string, branch: string): void {

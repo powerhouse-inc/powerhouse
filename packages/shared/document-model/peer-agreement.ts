@@ -33,6 +33,9 @@ export type PeerCapability = ProtocolCapability | FeatureCapability;
 /** A purged document's protocol; never preferred, so creation never selects it. */
 export const DOCUMENT_PURGE_PROTOCOL = "document-purge";
 
+/** A peer that takes refusals of polled purge markers on the poll. */
+export const MARKER_REFUSAL_FEATURE = "marker-refusal";
+
 // Baselines are frozen at what the last release without peer agreement runs.
 export const PEER_CAPABILITIES: readonly PeerCapability[] = [
   {
@@ -56,6 +59,12 @@ export const PEER_CAPABILITIES: readonly PeerCapability[] = [
     baseline: [],
     supported: () => [1],
     optional: true,
+  },
+  {
+    kind: "feature",
+    name: MARKER_REFUSAL_FEATURE,
+    baseline: [],
+    supported: () => [1],
   },
 ];
 

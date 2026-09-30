@@ -338,8 +338,8 @@ describe("GqlRequestChannel peer manifests", () => {
     expect(state.polls[1].variables.refusals).toEqual([]);
   });
 
-  it("reports a refused marker with its kind", async () => {
-    const { state, fetchFn } = agreementServer(SERVER_WIDE);
+  it("reports a refused marker with its kind to a server announcing the feature", async () => {
+    const { state, fetchFn } = agreementServer(LOCAL);
     const timer = new ManualPollTimer();
     const { channel } = channelWith(fetchFn, timer);
     channels.push(channel);
@@ -355,25 +355,12 @@ describe("GqlRequestChannel peer manifests", () => {
     expect(state.polls[1].variables.refusals).toEqual([]);
   });
 
-  it("stops reporting marker refusals, not agreement, to a server without kind", async () => {
-    const { state, fetchFn } = agreementServer(SERVER_WIDE);
-    const agreeing = fetchFn.getMockImplementation()!;
-    fetchFn.mockImplementation((url: string, options: RequestInit) => {
-      const body = JSON.parse(options.body as string) as Body;
-      const refusals = (body.variables.refusals ?? []) as { kind?: string }[];
-      if (refusals.some((refusal) => refusal.kind !== undefined)) {
-        state.polls.push(body);
-        return respond(undefined, [
-          {
-            message: `Variable "$refusals" got invalid value { documentId: "purged", branch: "main", kind: "marker" } at "refusals[1]"; Field "kind" is not defined by type "SyncRefusalInput".`,
-            extensions: { code: "BAD_USER_INPUT" },
-          },
-        ]);
-      }
-      return agreeing(url, options);
-    });
+  it("keeps a refused marker from a server without the feature until it announces it", async () => {
+    const before = localPeerManifest([TEST_PROTOCOL], {}, undefined, 1);
+    const after = localPeerManifest(PEER_CAPABILITIES, {}, undefined, 2);
+    const { state, fetchFn } = agreementServer(before);
     const timer = new ManualPollTimer();
-    const { channel } = channelWith(fetchFn, timer);
+    const { channel, heard } = channelWith(fetchFn, timer);
     channels.push(channel);
     await channel.init();
 
@@ -382,20 +369,17 @@ describe("GqlRequestChannel peer manifests", () => {
       inboxRefusal("purged", "MARKER_REFUSED"),
     );
     await timer.tick();
-    channel.deadLetter.add(inboxRefusal("later", "MARKER_REFUSED"));
-    await timer.tick();
-
-    expect(state.polls.map((poll) => poll.variables.refusals)).toEqual([
-      [
-        { documentId: "held", branch: "main" },
-        { documentId: "purged", branch: "main", kind: "marker" },
-      ],
-      [{ documentId: "held", branch: "main" }],
-      [],
+    expect(state.polls[0].variables.refusals).toEqual([
+      { documentId: "held", branch: "main" },
     ]);
-    expect(
-      state.polls.every((poll) => poll.query.includes("manifestRevision")),
-    ).toBe(true);
+
+    state.server = after;
+    await timer.tick();
+    await vi.waitFor(() => expect(heard).toEqual([before, after]));
+    await timer.tick();
+    expect(state.polls.at(-1)!.variables.refusals).toEqual([
+      { documentId: "purged", branch: "main", kind: "marker" },
+    ]);
   });
 
   it("hears a server restarted into the same build, so its holds are re-checked", async () => {
