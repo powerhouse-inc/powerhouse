@@ -1,4 +1,4 @@
-import { MemoryFS } from "@electric-sql/pglite";
+import { MemoryFS, protocol } from "@electric-sql/pglite";
 import { promises as fs } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
@@ -15,6 +15,9 @@ const HEADER_SIZE = 12;
 const ENTRY_PREFIX_SIZE = 9;
 // Node rejects a single read or write above 2^31-1 bytes.
 const DEFAULT_IO_CHUNK_SIZE = 64 * 1024 * 1024;
+const DEFAULT_MAINTENANCE_INTERVAL_MS = 5 * 60 * 1000;
+const DEFAULT_VACUUM_FULL_ABOVE_BYTES = 256 * 1024 * 1024;
+const MAINTENANCE_RETRY_MS = 1000;
 let ioChunkSize = DEFAULT_IO_CHUNK_SIZE;
 
 export function setIoChunkSizeForTests(size?: number): void {
@@ -62,7 +65,30 @@ export interface AtomicNodeFsOptions {
    * retry fails too; the first successful write clears the failure.
    */
   onFlushError?: (error: unknown) => void;
+  /**
+   * PGLite has no autovacuum and never checkpoints on WAL size, so dead
+   * tuples and WAL grow without bound. Every `maintenanceIntervalMs`, if
+   * anything was synced since the last pass and no transaction is open, run
+   * VACUUM then CHECKPOINT and flush the snapshot. Default 5 minutes; `0`
+   * disables.
+   */
+  maintenanceIntervalMs?: number;
+  /**
+   * When the snapshot loaded at startup is larger than this, the first
+   * maintenance pass runs VACUUM FULL instead of VACUUM to reclaim existing
+   * bloat. It holds the database for roughly 2s per GB and needs transient
+   * memory about the size of the live data. Default 256MB; `0` disables.
+   */
+  vacuumFullAboveBytes?: number;
 }
+
+type MaintenanceOutcome =
+  | "vacuum"
+  | "vacuum-full"
+  | "idle"
+  | "not-ready"
+  | "in-transaction"
+  | "failed";
 
 /**
  * PGLite Filesystem that holds the working data dir in Emscripten MEMFS and
@@ -79,11 +105,20 @@ export class AtomicNodeFs extends MemoryFS {
   private readonly logger?: AtomicNodeFsLogger;
   private readonly flushIntervalMs: number;
   private readonly onFlushError?: (error: unknown) => void;
+  private readonly maintenanceIntervalMs: number;
+  private readonly vacuumFullAboveBytes: number;
 
   private dirty = false;
   private failed = false;
   private flushTimer?: ReturnType<typeof setTimeout>;
   private flushInFlight?: Promise<void>;
+  private writing?: Promise<void>;
+
+  private closing = false;
+  private syncsSinceMaintenance = 0;
+  private vacuumFullPending = false;
+  private maintenanceTimer?: ReturnType<typeof setTimeout>;
+  private maintenanceInFlight?: Promise<MaintenanceOutcome>;
 
   constructor(
     hostDir: string,
@@ -95,9 +130,22 @@ export class AtomicNodeFs extends MemoryFS {
     this.logger = options.logger;
     this.flushIntervalMs = Math.max(0, options.flushIntervalMs ?? 0);
     this.onFlushError = options.onFlushError;
+    this.maintenanceIntervalMs = Math.max(
+      0,
+      options.maintenanceIntervalMs ?? DEFAULT_MAINTENANCE_INTERVAL_MS,
+    );
+    this.vacuumFullAboveBytes = Math.max(
+      0,
+      options.vacuumFullAboveBytes ?? DEFAULT_VACUUM_FULL_ABOVE_BYTES,
+    );
   }
 
   async initialSyncFs(): Promise<void> {
+    await this.loadSnapshot();
+    this.scheduleMaintenance(this.maintenanceIntervalMs);
+  }
+
+  private async loadSnapshot(): Promise<void> {
     await fs.mkdir(this.hostDir, { recursive: true });
     const snapPath = path.join(this.hostDir, SNAPSHOT_NAME);
     const tmpPath = path.join(this.hostDir, SNAPSHOT_TMP);
@@ -112,6 +160,8 @@ export class AtomicNodeFs extends MemoryFS {
       try {
         const { size } = await fh.stat();
         await restoreMemfs(memFs, PGDATA, fh, size);
+        this.vacuumFullPending =
+          this.vacuumFullAboveBytes > 0 && size > this.vacuumFullAboveBytes;
       } finally {
         await fh.close();
       }
@@ -129,23 +179,15 @@ export class AtomicNodeFs extends MemoryFS {
   }
 
   async syncToFs(relaxedDurability?: boolean): Promise<void> {
-    if (this.flushIntervalMs === 0) {
-      await this.flush(relaxedDurability ?? false);
-      return;
-    }
-    this.dirty = true;
-    if (!this.failed) {
-      this.scheduleDeferredFlush(relaxedDurability ?? false);
-      return;
-    }
-    this.cancelDeferredFlush();
-    await this.drainInFlight();
-    this.dirty = false;
-    await this.flush(relaxedDurability ?? false);
+    this.syncsSinceMaintenance++;
+    await this.persist(relaxedDurability ?? false);
   }
 
   async closeFs(): Promise<void> {
     try {
+      this.closing = true;
+      this.cancelMaintenance();
+      await this.maintenanceInFlight;
       this.cancelDeferredFlush();
       await this.drainInFlight();
       this.dirty = false;
@@ -153,6 +195,106 @@ export class AtomicNodeFs extends MemoryFS {
     } finally {
       await super.closeFs();
     }
+  }
+
+  private async persist(relaxedDurability: boolean): Promise<void> {
+    if (this.flushIntervalMs === 0) {
+      await this.flush(relaxedDurability);
+      return;
+    }
+    this.dirty = true;
+    if (!this.failed) {
+      this.scheduleDeferredFlush(relaxedDurability);
+      return;
+    }
+    this.cancelDeferredFlush();
+    await this.drainInFlight();
+    this.dirty = false;
+    await this.flush(relaxedDurability);
+  }
+
+  private scheduleMaintenance(delayMs: number): void {
+    if (this.maintenanceIntervalMs === 0 || this.closing) return;
+    this.maintenanceTimer = setTimeout(() => {
+      this.maintenanceTimer = undefined;
+      this.maintenanceInFlight = this.runMaintenance()
+        .then((outcome) => {
+          this.scheduleMaintenance(
+            outcome === "in-transaction"
+              ? Math.min(MAINTENANCE_RETRY_MS, this.maintenanceIntervalMs)
+              : this.maintenanceIntervalMs,
+          );
+          return outcome;
+        })
+        .finally(() => {
+          this.maintenanceInFlight = undefined;
+        });
+    }, delayMs);
+    this.maintenanceTimer.unref();
+  }
+
+  private cancelMaintenance(): void {
+    if (!this.maintenanceTimer) return;
+    clearTimeout(this.maintenanceTimer);
+    this.maintenanceTimer = undefined;
+  }
+
+  private async runMaintenance(): Promise<MaintenanceOutcome> {
+    const pg = this.pg;
+    if (this.closing || !pg?.ready) return "not-ready";
+    // pg.close() does not take the query mutex; recheck before each statement.
+    const isReady = (): boolean => pg.ready;
+    if (this.syncsSinceMaintenance === 0 && !this.vacuumFullPending) {
+      return "idle";
+    }
+    const full = this.vacuumFullPending;
+    let outcome: MaintenanceOutcome;
+    try {
+      outcome = await pg._runExclusiveQuery(async () => {
+        // VACUUM inside an open transaction aborts it. isInTransaction()
+        // misses START TRANSACTION; ReadyForQuery status does not.
+        if (!isReady()) return "not-ready";
+        const { messages } = await pg.execProtocol(
+          protocol.serialize.query(""),
+          {
+            syncToFs: false,
+          },
+        );
+        if (transactionStatus(messages) !== "I") return "in-transaction";
+        if (full) {
+          this.logger?.warn(
+            `AtomicNodeFs: snapshot at ${this.hostDir} exceeds ${this.vacuumFullAboveBytes} bytes; running VACUUM FULL`,
+          );
+        }
+        for (const statement of [
+          full ? "VACUUM FULL" : "VACUUM",
+          "CHECKPOINT",
+        ]) {
+          if (!isReady()) return "not-ready";
+          await pg.execProtocol(protocol.serialize.query(statement), {
+            syncToFs: false,
+          });
+        }
+        return full ? "vacuum-full" : "vacuum";
+      });
+    } catch (err) {
+      this.logger?.warn(
+        `AtomicNodeFs maintenance failed: ${errorMessage(err)}`,
+      );
+      return "failed";
+    }
+    if (outcome !== "vacuum" && outcome !== "vacuum-full") return outcome;
+    this.syncsSinceMaintenance = 0;
+    this.vacuumFullPending = false;
+    try {
+      await this.persist(false);
+    } catch (err) {
+      this.logger?.warn(
+        `AtomicNodeFs flush after maintenance failed: ${errorMessage(err)}`,
+      );
+      return "failed";
+    }
+    return outcome;
   }
 
   private cancelDeferredFlush(): void {
@@ -168,8 +310,18 @@ export class AtomicNodeFs extends MemoryFS {
   }
 
   private async flush(relaxedDurability: boolean): Promise<void> {
+    while (this.writing) await this.writing;
+    const write = this.writeSnapshot(relaxedDurability);
+    this.writing = write
+      .then(
+        () => undefined,
+        () => undefined,
+      )
+      .finally(() => {
+        this.writing = undefined;
+      });
     try {
-      await this.writeSnapshot(relaxedDurability);
+      await write;
     } catch (err) {
       this.failed = true;
       this.reportFlushError(err);
@@ -269,6 +421,14 @@ function isLogger(
   return (
     "warn" in value && typeof (value as AtomicNodeFsLogger).warn === "function"
   );
+}
+
+function transactionStatus(messages: readonly { name: string }[]): unknown {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.name === "readyForQuery") return (m as { status?: unknown }).status;
+  }
+  return undefined;
 }
 
 function errorMessage(err: unknown): string {
