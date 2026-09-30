@@ -4,9 +4,12 @@ import type { Database } from "./types.js";
 /** Class key of every purge lock; the stream locks use the single-key space. */
 export const PURGE_NS = 1_347_571_013;
 
+/** Ids share this many lock keys, so a job's lock count stays bounded. */
+export const PURGE_LOCK_BUCKETS = 1024;
+
 export type PurgeLockMode = "shared" | "exclusive";
 
-// Hash order, not id order: two ids may share a key, and lockers must agree.
+// Bucket order, not id order: two ids may share a key, and lockers must agree.
 export async function acquirePurgeLocks(
   trx: Transaction<any>,
   ids: Iterable<string>,
@@ -22,7 +25,7 @@ export async function acquirePurgeLocks(
   );
   await sql`
     with keys as materialized (
-      select distinct hashtext(id) as key
+      select distinct hashtext(id) & ${sql.lit(PURGE_LOCK_BUCKETS - 1)} as key
       from unnest(${unique}::text[]) as t(id)
       order by key
     )

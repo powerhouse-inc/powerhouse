@@ -280,7 +280,7 @@ describe("purge job [Postgres]", () => {
     try {
       await client.query("begin");
       await client.query(
-        `select pg_advisory_xact_lock(${PURGE_NS}, hashtext($1))`,
+        `select pg_advisory_xact_lock(${PURGE_NS}, hashtext($1) & 1023)`,
         [documentId],
       );
       const action = purgeDocumentAction({

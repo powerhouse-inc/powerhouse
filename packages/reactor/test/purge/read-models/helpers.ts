@@ -194,7 +194,7 @@ export async function waitForPurgeLock(
         select count(*) as n from pg_locks
         where locktype = 'advisory' and granted = ${granted} and mode = ${mode}
           and classid = ${PURGE_NS}::int::oid
-          and objid = hashtext(${documentId})::oid
+          and objid = (hashtext(${documentId}) & 1023)::oid
           and objsubid = 2
       `.execute(db);
       return Number(result.rows[0]!.n) > 0;
