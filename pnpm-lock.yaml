@@ -739,6 +739,9 @@ importers:
       '@powerhousedao/reactor-group':
         specifier: workspace:*
         version: link:../../packages/reactor-group
+      '@powerhousedao/reactor-privacy':
+        specifier: workspace:*
+        version: link:../../packages/reactor-privacy
       '@powerhousedao/reactor-workflow':
         specifier: workspace:*
         version: link:../../packages/reactor-workflow

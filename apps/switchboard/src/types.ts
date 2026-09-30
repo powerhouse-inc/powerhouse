@@ -4,6 +4,8 @@ import type {
   UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import type { AttachmentReferenceProjectionCapability } from "@powerhousedao/reactor-api";
+import type { IErasureService } from "@powerhousedao/reactor-privacy";
+import type { PrivacyOptions } from "./privacy.mjs";
 import type { WorkflowTriggersCapability } from "./workflow-runtime.mjs";
 export type { WorkflowTriggersCapability };
 import type { IAttachmentService } from "@powerhousedao/reactor-attachments";
@@ -116,6 +118,8 @@ export type StartServerOptions = {
   workflows?: {
     enabled?: boolean;
   };
+  /** The GDPR add-on; off unless this or PH_PRIVACY_ENABLED turns it on. */
+  privacy?: PrivacyOptions;
   processorConfig?: Map<string, unknown>;
   disableLocalPackages?: boolean;
   enableDocumentModelSubgraphs?: boolean;
@@ -194,6 +198,8 @@ export type SwitchboardReactor = {
   workflowTriggers?: WorkflowTriggersCapability;
   /** Whether workflows are on, after the option, PH_WORKFLOWS_ENABLED and the config file. */
   workflowsEnabled: boolean;
+  /** Present when the privacy add-on runs: its erasure service. */
+  privacy?: { erasure: IErasureService };
   /** The Renown instance if identity was initialized */
   renown: IRenown | null;
   /**
