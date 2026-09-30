@@ -1,13 +1,19 @@
 import {
+  GqlResponseChannelFactory,
   JobStatus,
   ReactorBuilder,
+  SyncBuilder,
   type Database,
   type IEventBus,
   type InProcessReactorModule,
   type JobInfo,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import type { ISigner } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  ISigner,
+} from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
 import { vi } from "vitest";
@@ -64,13 +70,35 @@ export type TestReactor = {
 
 export async function startReactor(
   database: TestDatabase,
-  options: { signer: ISigner; eventBus?: IEventBus; sweepIntervalMs?: number },
+  options: {
+    signer?: ISigner;
+    eventBus?: IEventBus;
+    sweepIntervalMs?: number;
+    /** Serves remotes over polling channels, as switchboard does for Connect. */
+    sync?: boolean;
+    maxPurgeOperations?: number;
+  },
 ): Promise<TestReactor> {
   const db = database.connect();
   const builder = new ReactorBuilder()
     .withKysely(db)
-    .withDocumentModelSources([driveDocumentModelModule as never])
-    .withSigner(options.signer);
+    .withDocumentModelSources([
+      driveDocumentModelModule as never,
+      documentModelDocumentModelModule as unknown as DocumentModelModule,
+    ]);
+  if (options.signer) builder.withSigner(options.signer);
+  if (options.maxPurgeOperations !== undefined) {
+    builder.withExecutorConfig({
+      maxPurgeOperations: options.maxPurgeOperations,
+    });
+  }
+  if (options.sync) {
+    builder.withSync(
+      new SyncBuilder().withChannelFactory(
+        new GqlResponseChannelFactory(silentLogger() as never),
+      ),
+    );
+  }
   if (options.eventBus) builder.withEventBus(options.eventBus);
   if (options.sweepIntervalMs !== undefined) {
     builder.withCatchUp({ intervalMs: options.sweepIntervalMs });
@@ -81,8 +109,21 @@ export async function startReactor(
     db,
     async kill() {
       await module.reactor.kill().completed;
+      await module.syncModule?.syncManager.shutdown().completed;
     },
   };
+}
+
+function silentLogger() {
+  const logger = {
+    verbose() {},
+    debug() {},
+    info() {},
+    warn() {},
+    error() {},
+    child: () => logger,
+  };
+  return logger;
 }
 
 export async function settled(

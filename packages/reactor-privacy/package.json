@@ -38,6 +38,7 @@
   "devDependencies": {
     "@apollo/subgraph": "2.15.0",
     "@types/pg": "catalog:",
+    "document-model": "workspace:*",
     "pg": "catalog:",
     "tsdown": "catalog:",
     "vitest": "catalog:"

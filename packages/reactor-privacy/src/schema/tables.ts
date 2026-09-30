@@ -19,7 +19,8 @@ export type ErasureAuditEvent =
   | "remotes-removed"
   | "permissions-erased"
   | "deadline-passed"
-  | "failed";
+  | "failed"
+  | "complete";
 
 export type SubjectRole =
   | "signer"

@@ -2503,6 +2503,9 @@ importers:
       '@types/pg':
         specifier: 'catalog:'
         version: 8.16.0
+      document-model:
+        specifier: workspace:*
+        version: link:../document-model
       pg:
         specifier: 'catalog:'
         version: 8.18.0

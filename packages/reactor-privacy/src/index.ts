@@ -42,6 +42,26 @@ export type {
   IErasureService,
 } from "./erasure/types.js";
 export {
+  DEFAULT_ERASURE_DEADLINE_MS,
+  ErasureRequestNotFoundError,
+  ErasureService,
+  type ErasureServiceOptions,
+} from "./erasure/erasure-service.js";
+export {
+  DEFAULT_ERASURE_INTERVAL_MS,
+  DEFAULT_MARKER_GRACE_MS,
+  ErasureScheduler,
+  ErasureSignerMissingError,
+  type ErasureLogger,
+  type ErasureSchedulerOptions,
+  type IDocumentPermissionEraser,
+} from "./erasure/scheduler.js";
+export {
+  createModuleErasure,
+  type ModuleErasureOptions,
+} from "./erasure/module.js";
+export type { ErasureDb } from "./erasure/ledger.js";
+export {
   DISCLOSURE_NOT_COVERED,
   DisclosureService,
   type BoundSyncRemote,
