@@ -888,6 +888,38 @@ describe("throughput [Postgres]", () => {
   });
 });
 
+describe("event-triggered tick cost [Postgres]", () => {
+  it("evaluates only the finished purge and the next item, not the backlog", async () => {
+    const e = await setup({ sync: true });
+    const ids: string[] = [];
+    for (let i = 0; i < 200; i++) ids.push(await createDoc(e));
+    await addRemote(e, "poller", await createDrive(e));
+    for (const id of ids) await remove(e, id);
+    await e.service.request(ids, { requestedBy: ADMIN });
+    const manager = sync(e) as unknown as {
+      pendingDelivery: (...args: unknown[]) => Promise<unknown>;
+    };
+    const delivery = vi.spyOn(manager, "pendingDelivery");
+    const purges = e.host.module.documentPurgeService;
+    const atDispatch: number[] = [];
+    const enqueue = purges.enqueuePurge.bind(purges);
+    vi.spyOn(purges, "enqueuePurge").mockImplementation((...args) => {
+      atDispatch.push(delivery.mock.calls.length);
+      return enqueue(...args);
+    });
+
+    e.scheduler.start();
+    await e.scheduler.tick();
+    await vi.waitUntil(() => atDispatch.length >= 6, {
+      timeout: 30_000,
+      interval: 20,
+    });
+
+    const perDispatch = atDispatch.slice(1).map((n, i) => n - atDispatch[i]!);
+    expect(Math.max(...perDispatch)).toBeLessThanOrEqual(4);
+  });
+});
+
 async function tombstoneOf(e: Parameters<typeof db>[0], id: string) {
   return db(e)
     .selectFrom("document_purges")

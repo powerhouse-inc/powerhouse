@@ -380,16 +380,16 @@ Not spec deviations; recorded because they change how the suites run.
   reopens its request (`reopened` event, `:400`) — a timed-out purge can
   commit after the manager marked it FAILED. Replaced "FAILED confirmed on a
   second tick".
-- `packages/reactor-privacy/src/erasure/scheduler.ts:378`
+- `packages/reactor-privacy/src/erasure/scheduler.ts:481`
   (`reopenRequests`) — each tick reopens every `failed` request with no
-  `failed` item, in one statement with its `reopened` rows — reopening only
+  `failed` item, in one transaction with its `reopened` rows — reopening only
   in the step that moved the item left the request `failed` for good when
   that step threw after the move committed.
 - `packages/reactor-privacy/src/erasure/scheduler.ts:516`
   (`purgeLockTaken`) — dispatch waits while `pg_locks` shows a purge lock on
   the previous id — a timed-out purge's transaction can still be open, and
   dispatching the next would break one purge at a time (decision 8).
-- `packages/reactor-privacy/src/erasure/scheduler.ts:511`
+- `packages/reactor-privacy/src/erasure/scheduler.ts:621`
   (`previousPurgesEnded`) — while that lock blocks dispatch the scheduler
   logs a warning naming the locked ids and sets `lastError` on the item it
   would dispatch next — a leaked transaction blocks all erasure, and an
@@ -401,6 +401,16 @@ Not spec deviations; recorded because they change how the suites run.
 - `packages/reactor-privacy/src/erasure/scheduler.ts:197` — ticks also run on
   the scheduler's own purge `JOB_WRITE_READY` and `JOB_FAILED` — one purge per
   60 s tick cannot meet a 30-day deadline past about 43 200 documents.
+- `packages/reactor-privacy/src/erasure/scheduler.ts:286` (`runDispatch`)
+  — a pass triggered by a purge job advances only the `purging` items, then
+  dispatches the head of the ready list the last full pass built
+  (`dispatchReady`, `:303`), checked again on its own; the full scan runs
+  only on the interval and on `tick()`. An item that becomes ready between
+  full passes waits up to `intervalMs`. Still one purge at a time — each
+  triggered pass scanned every waiting item (about 0.8 ms per item), so a
+  backlog cost O(N²): purge completion to next dispatch took 80–115 ms at
+  100 waiting items, 290–350 ms at 400 and 1.2–1.3 s at 1 600; after, 5–10 ms
+  at all three.
 - `packages/reactor-privacy/src/erasure/scheduler.ts:332` — convergence reads
   `sync_remotes` each check; a stored remote the sync manager has not loaded,
   whose membership covers the ordinal, is pending `unknown` (`:854`) — a remote
@@ -438,7 +448,7 @@ Not spec deviations; recorded because they change how the suites run.
   pending, and a recoverable error is never read as the peer rejecting the
   agreement fields (`sync/channels/gql-req-channel.ts:875`) — an
   `INTERNAL_SERVER_ERROR` stopped the poller's timer for the process lifetime.
-- `packages/reactor-privacy/src/erasure/scheduler.ts:702` (`refusedRemotes`)
+- `packages/reactor-privacy/src/erasure/scheduler.ts:824` (`refusedRemotes`)
   — counts a refusal only from a stored remote whose collection holds the
   document (open membership) — a row from a remote bound elsewhere made the
   outcome `marker-undelivered`. A remote removed before the outcome is read
@@ -683,7 +693,8 @@ Operations:
   terminally.
 - The privacy subgraph registers with `core = false`
   (`apps/switchboard/src/privacy.mts:165`), so a name collision is possible.
-- The scheduler scans every active item each tick, unbounded.
+- A full scheduler pass (each `intervalMs`) still scans every active item,
+  unbounded; a completing purge no longer does.
 - `enqueuePurge` with several ids can dispatch them concurrently
   (`SimpleJobExecutorManager` capacity race), and a rejected async
   `JOB_AVAILABLE` emit is swallowed. The scheduler enqueues one id at a time;

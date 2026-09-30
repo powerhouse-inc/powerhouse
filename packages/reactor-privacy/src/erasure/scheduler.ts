@@ -99,6 +99,11 @@ type Convergence = {
 
 type StoredRemote = { name: string; collectionId: string };
 
+type ItemKey = { requestId: string; documentId: string };
+
+/** A full pass scans every active item; a dispatch pass follows a purge. */
+type Pass = "full" | "dispatch";
+
 /** Reads shared by every item of one tick. */
 type TickReads = {
   tombstones: Map<string, Tombstone>;
@@ -167,7 +172,10 @@ export class ErasureScheduler {
   private timer: ReturnType<typeof setInterval> | undefined;
   private unsubscribes: (() => void)[] = [];
   private running: Promise<void> | undefined;
-  private again = false;
+  private runningPass: Pass | undefined;
+  private queued: Pass | undefined;
+  /** Items the last full pass found ready, in purge order, not yet enqueued. */
+  private ready: ItemKey[] = [];
 
   constructor(options: ErasureSchedulerOptions) {
     if (!options.signer?.app?.key) throw new ErasureSignerMissingError();
@@ -190,7 +198,9 @@ export class ErasureScheduler {
     const bus = this.options.eventBus;
     if (bus) {
       const onJob = (_type: number, event: { jobId: string }) => {
-        if ([...this.jobIds.values()].includes(event.jobId)) this.trigger();
+        if ([...this.jobIds.values()].includes(event.jobId)) {
+          this.trigger("dispatch");
+        }
       };
       this.unsubscribes = [
         bus.subscribe<JobWriteReadyEvent>(
@@ -203,7 +213,7 @@ export class ErasureScheduler {
         ),
       ];
     }
-    this.timer = setInterval(() => this.trigger(), this.intervalMs);
+    this.timer = setInterval(() => this.trigger("full"), this.intervalMs);
     this.timer.unref();
     this.logger.info(`Erasure scheduler started (tick ${this.intervalMs}ms)`);
   }
@@ -214,30 +224,41 @@ export class ErasureScheduler {
     this.timer = undefined;
     for (const unsubscribe of this.unsubscribes) unsubscribe();
     this.unsubscribes = [];
-    this.again = false;
+    this.queued = undefined;
     await this.running;
   }
 
-  /** One pass; a call while one runs joins it. */
+  /** One full pass; joins a full pass in flight, follows a dispatch pass. */
   tick(): Promise<void> {
-    this.running ??= this.runTick().finally(() => {
+    if (this.running && this.runningPass === "dispatch") {
+      const next = () => this.tick();
+      return this.running.then(next, next);
+    }
+    return this.pass("full");
+  }
+
+  private pass(kind: Pass): Promise<void> {
+    if (this.running) return this.running;
+    this.runningPass = kind;
+    const run = kind === "full" ? this.runTick() : this.runDispatch();
+    this.running = run.finally(() => {
       this.running = undefined;
-      if (this.again) {
-        this.again = false;
-        this.trigger();
-      }
+      this.runningPass = undefined;
+      const next = this.queued;
+      this.queued = undefined;
+      if (next) this.trigger(next);
     });
     return this.running;
   }
 
   /** A pass now, or right after the one running; inert unless started. */
-  private trigger(): void {
+  private trigger(kind: Pass): void {
     if (!this.timer) return;
     if (this.running) {
-      this.again = true;
+      if (this.queued !== "full") this.queued = kind;
       return;
     }
-    this.tick().catch((error: unknown) => {
+    this.pass(kind).catch((error: unknown) => {
       this.logger.error(
         "Erasure tick failed: @error",
         redactText(this.secret, messageOf(error)),
@@ -261,6 +282,71 @@ export class ErasureScheduler {
     await this.settleRequests();
   }
 
+  /** After a purge settles: that item, then the next ready one; no backlog scan. */
+  private async runDispatch(): Promise<void> {
+    const purging = await this.activeItems({ statuses: ["purging"] });
+    const reads = await this.tickReads(purging);
+    for (const item of purging) {
+      await this.guarded(item, () => this.advancePurging(item, reads));
+    }
+    for (const item of purging.filter((i) => i.status === "purged")) {
+      await this.guarded(item, () => this.advancePurged(item, reads));
+    }
+    if (!purging.some((i) => i.status === "purging")) {
+      await this.dispatchReady();
+    }
+    const requests = [...new Set(purging.map((i) => i.requestId))];
+    if (requests.length > 0) await this.settleRequests(requests);
+  }
+
+  /** The head of the last full pass's ready list, checked again on its own. */
+  private async dispatchReady(): Promise<void> {
+    while (this.ready.length > 0) {
+      const found = await this.activeItems({
+        statuses: ["waiting"],
+        ...this.ready[0]!,
+      });
+      const item = found.at(0);
+      if (!item) {
+        this.ready.shift();
+        continue;
+      }
+      const reads = await this.tickReads([item]);
+      const tombstone = reads.tombstones.get(item.documentId);
+      if (tombstone) {
+        this.ready.shift();
+        await this.guarded(item, () =>
+          this.markPurged(item, tombstone, "waiting"),
+        );
+        continue;
+      }
+      let convergence: Convergence;
+      try {
+        convergence = await this.deleteConvergence(item.documentId, reads);
+      } catch (error) {
+        this.ready.shift();
+        await this.stepFailed(item, error);
+        continue;
+      }
+      const converged =
+        convergence.pending.length === 0 && !convergence.unknown;
+      if (!converged && this.now() < item.deadline) {
+        this.ready.shift();
+        continue;
+      }
+      if (!(await this.previousPurgesEnded(item))) return;
+      this.ready.shift();
+      await this.loadDocumentTypes([item.documentId]);
+      const others = await this.activeItems({
+        statuses: ["waiting", "purging"],
+        requestId: item.requestId,
+      });
+      if (!(await this.eligible(item, others))) continue;
+      await this.enqueue(item, converged, convergence);
+      return;
+    }
+  }
+
   private async guarded(item: Item, step: () => Promise<void>): Promise<void> {
     try {
       await step();
@@ -277,7 +363,14 @@ export class ErasureScheduler {
     await this.setLastError(item, message);
   }
 
-  private async activeItems(): Promise<Item[]> {
+  private async activeItems(
+    filter: {
+      statuses?: ErasureItemStatus[];
+      requestId?: string;
+      documentId?: string;
+    } = {},
+  ): Promise<Item[]> {
+    const { requestId, documentId } = filter;
     const rows = await this.db
       .selectFrom("erasure_items as i")
       .innerJoin("erasure_requests as r", "r.requestId", "i.requestId")
@@ -290,7 +383,17 @@ export class ErasureScheduler {
         "i.updatedAt",
         "r.deadline",
       ])
-      .where("i.status", "in", ["waiting", "purging", "purged"])
+      .where(
+        "i.status",
+        "in",
+        filter.statuses ?? ["waiting", "purging", "purged"],
+      )
+      .$if(requestId !== undefined, (qb) =>
+        qb.where("i.requestId", "=", requestId!),
+      )
+      .$if(documentId !== undefined, (qb) =>
+        qb.where("i.documentId", "=", documentId!),
+      )
       .orderBy("r.requestedAt")
       .orderBy("i.requestId")
       .orderBy("i.documentId")
@@ -413,6 +516,7 @@ export class ErasureScheduler {
 
   private async advanceWaiting(items: Item[], reads: TickReads): Promise<void> {
     const waiting = items.filter((i) => i.status === "waiting");
+    this.ready = [];
     if (waiting.length === 0) return;
     await this.loadDocumentTypes(waiting.map((i) => i.documentId));
 
@@ -442,12 +546,18 @@ export class ErasureScheduler {
         await this.stepFailed(item, error);
       }
     }
+    this.ready = ready.map(({ item }) => ({
+      requestId: item.requestId,
+      documentId: item.documentId,
+    }));
 
     if (items.some((i) => i.status === "purging")) return;
     if (ready.length === 0) return;
     if (!(await this.previousPurgesEnded(ready[0]!.item))) return;
     for (const next of ready) {
       if (!(await this.eligible(next.item, items))) continue;
+      const key = keyOf(next.item);
+      this.ready = this.ready.filter((queued) => keyOf(queued) !== key);
       await this.enqueue(next.item, next.converged, next.convergence);
       return;
     }
@@ -911,12 +1021,15 @@ export class ErasureScheduler {
     await this.audit(item, "waiting", detail);
   }
 
-  private async settleRequests(): Promise<void> {
+  private async settleRequests(requestIds?: string[]): Promise<void> {
     const rows = await this.db
       .selectFrom("erasure_items as i")
       .innerJoin("erasure_requests as r", "r.requestId", "i.requestId")
       .select(["i.requestId", "i.documentId", "i.status"])
       .where("r.status", "=", "open")
+      .$if(requestIds !== undefined, (qb) =>
+        qb.where("i.requestId", "in", requestIds!),
+      )
       .execute();
     const byRequest = new Map<
       string,
