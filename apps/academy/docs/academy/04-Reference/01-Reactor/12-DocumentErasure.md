@@ -127,7 +127,7 @@ To erase a larger document, name it in `requestErasure(..., allowLarge: ["id"])`
 
 **Refused markers.** A peer whose trust policy rejects this Switchboard's key refuses the marker and keeps the document. The scheduler records that remote as `marker-undelivered` even though its cursor moves past the marker. A refusal counts whichever way the marker travelled: a marker this Switchboard pushed is reported back on the next poll, and a client that polled the marker reports its refusal on its next poll. Each refusal is stored in `reactor.sync_purge_refusals` (remote, document, branch and time, no error text), so one reported while the scheduler is stopped still counts.
 
-A client on a build before marker refusal reporting does not report its refusal, and a client of this build does not report one to a Switchboard of an older build. Such a remote reads as converged once its cursor passes the marker.
+A client on a build before marker refusal reporting does not report its refusal. Such a remote reads as converged once its cursor passes the marker. A client of this build holds its report for a Switchboard of an older build until that Switchboard announces the `marker-refusal` feature.
 
 **Pushed markers.** A marker can also arrive from a client that pushes it. Under `DOCUMENT_PERMISSIONS`, a pushed `PURGE_DOCUMENT` requires a document admin: a supreme admin, the document's owner, or an `ADMIN` grant on that document. `OperationUserPermission` rows cannot widen this. Under `OPEN` every caller passes, so an open Switchboard lets anyone who can write a document purge it, and with `REACTOR_AUTH_ENFORCEMENT` off any key that verifies is trusted. Do not run an open Switchboard that syncs documents you care about.
 
