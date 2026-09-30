@@ -37,6 +37,8 @@ export interface IStreamStateReader {
     targetRevision?: number,
     signal?: AbortSignal,
   ): Promise<PHDocument>;
+  /** Readies the purge fence for ids about to be read, in one round trip. */
+  fence?(documentIds: readonly string[]): Promise<void>;
 }
 
 /** The document and branch a decision model is built for. */

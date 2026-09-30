@@ -32,6 +32,8 @@ type ProbeDb = { rows: { documentId: string; ordinal: number } };
 
 /** Writes a row per operation through the fence's trx; misses every live batch. */
 class ProbeReadModel extends BaseReadModel {
+  static override readonly commitsInFenceTransaction = true;
+
   protected override async commitOperations(
     items: OperationWithContext[],
     trx?: Transaction<DocumentViewDatabase>,

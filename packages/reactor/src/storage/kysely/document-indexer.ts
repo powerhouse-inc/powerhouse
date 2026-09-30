@@ -67,6 +67,8 @@ export class KyselyDocumentIndexer
   extends BaseReadModel
   implements IDocumentIndexer
 {
+  static override readonly commitsInFenceTransaction = true;
+
   private _db: Kysely<IndexerDatabase>;
 
   constructor(

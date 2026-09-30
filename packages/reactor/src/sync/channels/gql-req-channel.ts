@@ -164,6 +164,8 @@ export class GqlRequestChannel implements IChannel {
   private readonly pendingRefusals = new Map<string, RefusalWire>();
   /** When each pushed, unacknowledged marker entry was last pushed. */
   private readonly markerPushedAt = new Map<string, number>();
+  /** Documents whose marker the remote refused; its report repeats per poll. */
+  private readonly refusedMarkers = new Set<string>();
   private isRecovering: boolean = false;
   private connectionState: ConnectionState = "connecting";
   /** Latest unrecoverable error was an auth rejection; cleared on connect. */
@@ -523,6 +525,7 @@ export class GqlRequestChannel implements IChannel {
     if (ackOrdinal > 0) {
       trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
     }
+    this.retireRefusedMarkers(deadLetters);
     this.repushUnackedMarkers();
 
     // Rows are judged against the sender's record, so a stale one is refreshed
@@ -580,7 +583,15 @@ export class GqlRequestChannel implements IChannel {
    * Handles dead letters reported by the remote server.
    * Creates local dead letter SyncOperations so the channel quiesces.
    */
-  private handleRemoteDeadLetters(deadLetters: DeadLetterWire[]): void {
+  private handleRemoteDeadLetters(wire: DeadLetterWire[]): void {
+    const deadLetters = wire.filter((dl) => {
+      if (dl.errorType !== "MARKER_REFUSED") return true;
+      const key = `${dl.documentId}\u0000${dl.branch}`;
+      if (this.refusedMarkers.has(key)) return false;
+      this.refusedMarkers.add(key);
+      return true;
+    });
+    if (deadLetters.length === 0) return;
     for (const dl of deadLetters) {
       this.logger.error(
         "Remote dead letter on @ChannelId: document @DocumentId failed with: @Error",
@@ -1106,6 +1117,34 @@ export class GqlRequestChannel implements IChannel {
           this.transitionConnectionState("error");
         }
       });
+  }
+
+  /** Stops pushing a marker entry the remote refused; its wire has no op id. */
+  private retireRefusedMarkers(deadLetters: DeadLetterWire[]): void {
+    const refused = deadLetters.filter(
+      (dl) => dl.errorType === "MARKER_REFUSED",
+    );
+    if (refused.length === 0) return;
+    const retired = this.outbox.items.filter(
+      (syncOp) =>
+        this.markerPushedAt.has(syncOp.id) &&
+        syncOp.status !== SyncOperationStatus.Applied &&
+        refused.some(
+          (dl) =>
+            dl.documentId === syncOp.documentId && dl.branch === syncOp.branch,
+        ),
+    );
+    if (retired.length === 0) return;
+    for (const syncOp of retired) {
+      syncOp.failed(
+        new ChannelError(
+          ChannelErrorSource.Outbox,
+          new Error(`Remote refused the purge marker of ${syncOp.documentId}`),
+          "MARKER_REFUSED",
+        ),
+      );
+    }
+    this.outbox.remove(...retired);
   }
 
   /** Re-pushes markers unacked for retryMaxDelayMs: a restarted remote lost them. */

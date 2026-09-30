@@ -388,10 +388,13 @@ export {
 export {
   KyselySyncCursorStorage,
   KyselySyncHoldStorage,
+  KyselySyncReceivedMarkerStorage,
   KyselySyncRemoteStorage,
   type ISyncCursorStorage,
   type ISyncHoldStorage,
+  type ISyncReceivedMarkerStorage,
   type ISyncRemoteStorage,
+  type ReceivedMarkerRecord,
   type SyncHoldRecord,
 } from "./src/storage/index.js";
 export {
@@ -461,6 +464,7 @@ export {
   type PeerAgreementBasis,
   createPeerAgreement,
   InMemorySyncHoldStorage,
+  InMemorySyncReceivedMarkerStorage,
   type SyncEnvelopeType,
   type SyncFailedEvent,
   type SyncOperationErrorType,

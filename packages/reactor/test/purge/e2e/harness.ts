@@ -482,6 +482,8 @@ export const KEPT_TABLES = [
   "document_purges",
   "sync_remotes",
   "ProcessorCursor",
+  // Holds only markers, each removed by its own load's outcome.
+  "sync_received_markers",
 ];
 
 /** No row about `id` in any table of the delete list, bar the marker. */

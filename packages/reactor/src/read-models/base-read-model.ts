@@ -80,7 +80,7 @@ function normalizeIndexingConfig(
 }
 
 export type PurgeFence =
-  /** Commits in a purge-locked trx; write through it, never through this.db. */
+  /** Commits in a purge-locked trx; see commitsInFenceTransaction. */
   | "locked"
   /** Drops tombstoned ids only, for rows that live on another database handle. */
   | "skip"
@@ -220,16 +220,21 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     // A locked commit through this.db deadlocks single-connection PGlite.
     if (
       (config.purgeFence ?? "locked") === "locked" &&
-      this.commitOperations.length < 2
+      this.commitOperations !== BaseReadModel.prototype.commitOperations &&
+      !(this.constructor as typeof BaseReadModel).commitsInFenceTransaction
     ) {
       throw new Error(
         `Read model ${config.readModelId}: purgeFence "locked" commits in a ` +
-          "transaction its commitOperations(items) never receives. Accept " +
-          'the trx argument, or set purgeFence "skip" (rows on another ' +
-          'handle) or "none" (no rows here, or its own transaction).',
+          "transaction its commitOperations must write through. Write " +
+          "through the trx argument and set static commitsInFenceTransaction " +
+          'to true, or set purgeFence "skip" (rows on another handle) or ' +
+          '"none" (no rows here, or its own transaction).',
       );
     }
   }
+
+  /** Set by a subclass whose commitOperations writes through its trx argument. */
+  static readonly commitsInFenceTransaction: boolean = false;
 
   get consumerId(): string {
     return this.config.readModelId;

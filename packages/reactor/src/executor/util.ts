@@ -388,15 +388,22 @@ export class PurgeFence {
 
   /** Locks and reads an id the job start did not resolve. */
   async isPurged(documentId: string): Promise<boolean> {
-    if (!this.checked.has(documentId)) {
-      await this.locks.shared([documentId]);
-      const found = await this.locks.purged([documentId]);
-      this.checked.add(documentId);
-      if (found.has(documentId)) {
-        this.purged.add(documentId);
-      }
-    }
+    await this.isPurgedMany([documentId]);
     return this.purged.has(documentId);
+  }
+
+  /** Locks and reads the unresolved ids in one lock and one lookup. */
+  async isPurgedMany(documentIds: readonly string[]): Promise<Set<string>> {
+    const unchecked = [...new Set(documentIds)].filter(
+      (id) => !this.checked.has(id),
+    );
+    if (unchecked.length > 0) {
+      await this.locks.shared(unchecked);
+      const found = await this.locks.purged(unchecked);
+      for (const id of unchecked) this.checked.add(id);
+      for (const id of found) this.purged.add(id);
+    }
+    return new Set(documentIds.filter((id) => this.purged.has(id)));
   }
 }
 
@@ -406,9 +413,14 @@ export class FencedWriteCache implements IWriteCache {
 
   constructor(
     private readonly inner: IWriteCache,
-    private readonly fence: PurgeFence,
+    private readonly purgeFence: PurgeFence,
     private readonly evict: (documentId: string) => void,
   ) {}
+
+  /** Fences ids known before their reads in one round trip. */
+  async fence(documentIds: readonly string[]): Promise<void> {
+    await this.purgeFence.isPurgedMany(documentIds);
+  }
 
   async getState(
     documentId: string,
@@ -417,7 +429,7 @@ export class FencedWriteCache implements IWriteCache {
     targetRevision?: number,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    if (await this.fence.isPurged(documentId)) {
+    if (await this.purgeFence.isPurged(documentId)) {
       if (!this.evicted.has(documentId)) {
         this.evicted.add(documentId);
         this.evict(documentId);

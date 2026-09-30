@@ -126,6 +126,16 @@ export interface SyncHoldTable {
   held_at_utc_ms: ColumnType<string | number, number, number>;
 }
 
+/** A received purge marker awaiting its outcome (migration 025). */
+export interface SyncReceivedMarkerTable {
+  remote_name: string;
+  marker_id: string;
+  document_id: string;
+  branch: string;
+  operation: ColumnType<unknown, string, string>;
+  received_at_utc_ms: ColumnType<string | number, number, number>;
+}
+
 /**
  * One (document, group) reference ever discovered from an auth operation's
  * input. Rows are never updated or deleted (see migration 017).
@@ -158,6 +168,7 @@ export interface Database {
   sync_cursors: SyncCursorTable;
   sync_dead_letters: SyncDeadLetterTable;
   sync_holds: SyncHoldTable;
+  sync_received_markers: SyncReceivedMarkerTable;
   document_purges: DocumentPurgeTable;
 }
 
