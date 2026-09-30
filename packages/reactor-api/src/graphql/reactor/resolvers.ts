@@ -1385,7 +1385,8 @@ export async function deleteDocument(
         driveParent.header.documentType,
         reactorDriveClient,
       );
-      await driveClient.removeNode(driveParent.header.id, args.identifier);
+      const documentId = await reactorClient.resolveIdOrSlug(args.identifier);
+      await driveClient.removeNode(driveParent.header.id, documentId);
     } else {
       await reactorClient.deleteDocument(args.identifier, propagate);
     }
