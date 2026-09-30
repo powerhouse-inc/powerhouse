@@ -8,6 +8,7 @@ import type {
 import type { Kysely } from "kysely";
 
 import type { IProcessorManager } from "@powerhousedao/shared/processors";
+import type { DocumentPurgeService } from "../admin/document-purge-service.js";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { ICatchUp, ISettledWatermark } from "../catch-up/types.js";
@@ -602,6 +603,8 @@ export interface InProcessReactorModule extends ReactorModule {
   catchUp: ICatchUp;
   /** The settled watermark this thread's catch-up sweeps up to. */
   settledWatermark: ISettledWatermark;
+  /** Enqueues purge jobs; the erasure scheduler is its only caller. */
+  documentPurgeService: DocumentPurgeService;
 }
 
 /**

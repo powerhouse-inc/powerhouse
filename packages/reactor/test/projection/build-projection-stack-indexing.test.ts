@@ -121,10 +121,10 @@ function makeRelationshipBatch(
 function recordChunks(model: IReadModel): number[][] {
   const seen: number[][] = [];
   const target = model as unknown as {
-    commitOperations: (items: OperationWithContext[]) => Promise<void>;
+    commitFenced: (items: OperationWithContext[]) => Promise<void>;
   };
-  const original = target.commitOperations.bind(model);
-  target.commitOperations = async (items: OperationWithContext[]) => {
+  const original = target.commitFenced.bind(model);
+  target.commitFenced = async (items: OperationWithContext[]) => {
     seen.push(items.map((item) => item.operation.index));
     await original(items);
   };

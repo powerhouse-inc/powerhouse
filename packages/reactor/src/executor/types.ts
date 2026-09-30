@@ -7,7 +7,7 @@ import type { Job } from "../queue/types.js";
 import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
 import type { ExecutionStores } from "./execution-scope.js";
 import type { SignatureVerificationMode } from "../signer/types.js";
-import type { TouchedStreams } from "./util.js";
+import type { PurgeFence, TouchedStreams } from "./util.js";
 
 /**
  * One action to write, and everything known about it before it is written.
@@ -81,6 +81,9 @@ export type ExecutingJob = {
    * while the job's own writes were still uncommitted.
    */
   touchedStreams: TouchedStreams;
+
+  /** Tombstones behind the job's shared locks; absent where no lock is held. */
+  purgeFence?: PurgeFence;
 };
 
 export type PositionedWrites = {
@@ -157,6 +160,9 @@ export type ReactorFeatureFlags = {
   authConditions: boolean;
 };
 
+/** 200k operations purge in 1.6 s on local Postgres; jobs time out at 30 s. */
+export const DEFAULT_MAX_PURGE_OPERATIONS = 200_000;
+
 /** How long a deferred job waits for its document before it fails. */
 export const DEFAULT_DEFERRED_JOB_TTL_MS = 30_000;
 
@@ -215,6 +221,9 @@ export type JobExecutorConfig = {
 
   /** Versions run per registered protocol; defaults to the registry's. */
   protocolSupport?: ProtocolSupport;
+
+  /** Index rows a purge may remove without allowLarge. */
+  maxPurgeOperations?: number;
 };
 
 /** Cloneable, so a pooled worker refuses exactly what the host refuses. */

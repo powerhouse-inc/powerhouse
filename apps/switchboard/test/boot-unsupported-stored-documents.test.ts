@@ -89,7 +89,8 @@ async function seedStore(dir: string): Promise<void> {
       const { status } = await module.reactor.getJobStatus(created.id);
       return status === JobStatus.READ_READY || status === JobStatus.FAILED;
     },
-    { timeout: 10_000, interval: 5 },
+    // One job is ~40 full snapshots; the Windows runner needs the boot budget.
+    { timeout: BOOT_TIMEOUT, interval: 5 },
   );
   expect((await module.reactor.getJobStatus(created.id)).status).toBe(
     JobStatus.READ_READY,

@@ -1,7 +1,7 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-29T16:44:00.871Z
-> Total Documents: 117
+> Generated: 2026-09-30T06:48:19.056Z
+> Total Documents: 118
 > Source: https://academy.vetra.io/llms-full.txt
 
 
@@ -5303,6 +5303,8 @@ type ProcessorFactory = (
 ) => Promise<ProcessorRecord[]> | ProcessorRecord[];
 ```
 
+The header is the drive's header as it was created, from its `CREATE_DOCUMENT` operation. That holds for a drive created while the factory is registered and for one that already existed when `registerFactory` is called (after a restart, say): earlier releases passed such a late registration a minimal header with only `id` and `documentType` set. A factory that selects drives by `slug` or `name` therefore now makes its processors on a late registration too, and they backfill from their persisted cursor, or per `startFrom` if they have none. Only a purged drive's header is still minimal, since its header is erased with it. The manager reads a late registration's headers from the operation index, a few drives at a time.
+
 Return `[]` to create no processors for a drive. The factory may be sync or async. The `processorApp?` parameter is part of the type but the manager **never supplies it** — it calls `factory(driveHeader)` with one argument. Read the running app from `module.processorApp` instead (see [the processor host](#the-processor-host)).
 
 If the factory throws, the manager catches it, logs `Factory '<id>' failed for drive '<driveId>'`, and skips that drive. Registration does not crash.
@@ -5330,7 +5332,7 @@ interface IProcessor {
 
 `onOperations` is called post-ready with the operations that matched this processor's filter, during both live routing and backfill. Each `OperationWithContext` is `{ operation, context }`; `context` carries `documentId`, `documentType`, `scope`, `branch`, the global `ordinal`, and optionally `resultingState`.
 
-`onDisconnect` runs when the factory is unregistered or its drive is deleted. The manager wraps this call: a throw is caught and logged, never propagated.
+`onDisconnect` runs when the factory is unregistered or its drive is deleted. The manager wraps this call: a throw is caught and logged, never propagated. It is not a deletion signal; see [Deletion and erasure](#deletion-and-erasure).
 
 Most processors subclass `RelationalDbProcessor` rather than implementing `IProcessor` by hand. Its constructor takes `(namespace, filter, relationalDb)`, and you implement `onOperations`, `initAndUpgrade`, and `onDisconnect`. See [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling) for the relational DB surface.
 
@@ -5369,7 +5371,7 @@ export const todoIndexerFactoryBuilder: ProcessorFactoryBuilder =
       scope: ["global"],
     };
 
-    const processor = new TodoIndexer(namespace, filter, store);
+    const processor = new TodoIndexer(namespace, filter, store, driveHeader.id);
     return [{ processor, filter }];
   };
 ```
@@ -5478,7 +5480,20 @@ type TrackedProcessor = {
 
 **Failure isolation.** Processors run in parallel, each on its own queue. If `onOperations` throws, or a backfill page cannot be read, that processor goes to `status: "errored"`, its `lastError` and `lastErrorTimestamp` are recorded, and its cursor is set below the lowest ordinal of the batch that failed. Other processors are unaffected. There is no automatic retry: an errored processor stays errored, and later batches that match it are skipped and pull its cursor below them likewise, until you call `tracked.retry()` (which re-activates it and replays from the cursor) or re-register its factory. See [Error handling](/academy/Reference/Reactor/ErrorHandling).
 
+A check for purged documents that keeps failing, as during a database failover, does not error the processor. After its retries (about 80 seconds of backoff) the processor parks: it stays `status: "active"` with the failure in `lastError` and `lastErrorTimestamp`, its cursor holds below the batch it could not check, later batches are skipped without holding other processors, and the check is retried every 30 seconds with each failure logged. Once the check answers, `lastError` clears and the processor replays from its cursor. A processor parked when the reactor stops starts active on the next start, and replays from its cursor.
+
 To inspect state, use the manager: `get(processorId)` for one processor or `getAll()` for every tracked processor across all drives.
+
+## Deletion and erasure
+
+A processor owns the rows it writes, and it must erase a document's rows when the document is deleted. The reactor removes its own records of a deleted or purged document; nothing else removes a processor's. A processor that ignores deletions keeps a purged document's rows. There is no purge callback, and `IProcessor` has no other hook for it.
+
+- `DELETE_DOCUMENT` and `PURGE_DOCUMENT` both name the document in `operation.action.input.documentId`. Treat them alike. `PURGE_DOCUMENT` is the marker a purge leaves in the log; a reactor that missed the deletion receives only the marker.
+- Both are `document`-scope operations. A filter whose `scope` omits `"document"` never receives them.
+- The marker can arrive without `resultingState`, after the document's `DELETE_DOCUMENT`, and more than once. Handle deletions before parsing `resultingState`, and make the handler idempotent.
+- Operations of a purged document other than its marker are not delivered, whether routed live or read by a backfill. The check takes no lock, so a delivery racing the purge can still land; the marker that follows erases it.
+- When a drive is deleted, its processors receive the batch up to and including the drive's `DELETE_DOCUMENT` (or its marker), then `onDisconnect`. The drive's own deletion reaches them whatever their filter, so a processor can drop the storage it keeps for that drive. `RelationalDbProcessor` has `deleteDocumentRows`, `isNamespaceDrive` and `dropNamespace` for this.
+- A processor that was not running at its drive's deletion (its factory was not registered yet after a restart, or was being reloaded), or whose `onOperations` threw on it, still receives it: the next time its factory is registered, the factory is called for the deleted drive and that processor receives only the drive's `DELETE_DOCUMENT`, or its `PURGE_DOCUMENT` if the drive has been purged since, then `onDisconnect`. Neither `registerFactory` nor a later registration or unregistration under the same identifier waits for that delivery, so a processor that hangs on it holds no reload; a re-registration delivers the deletion again only if the delivery in flight settles with the drive still owed. An errored processor receives its drive's deletion too. A processor whose `onOperations` throws on its drive's deletion stays in `getAll()` as errored, and its `retry()` calls the factory for the drive and delivers the deletion again. The factory receives the drive's header as it was at creation, except for a drive that has been purged: its header is erased with it, so the factory receives a minimal header with only `id` and `documentType` set. A factory that selects drives by `slug` or `name` then makes no processor for the drive, and the deletion stays owed; the manager logs a warning. Only the rows of processors that received the deletion are removed. A factory registered for the first time after a drive's deletion never had processors for that drive and is not called for it. Unregistering a factory keeps its cursor rows as released: a re-registration starts every processor afresh, per `startFrom`, but still owes the deletion of a drive deleted in between. The rows of a factory that is never registered again stay in `ProcessorCursor`.
 
 For how processors relate to sync and remote drives, see [Synchronization](/academy/Reference/Reactor/Synchronization). For the document types a filter can target, see the [Document model registry](/academy/Reference/Reactor/DocumentModelRegistry).
 
@@ -7299,6 +7314,161 @@ A version-1 policy holds at most 100 grants. A condition holds at most 100 nodes
 - [React Hooks](/academy/Reference/EditorsUI/ReactHooks) — `useCanExecute`.
 - [Signing](/academy/Build/BuildingUserExperiences/Authorization/Signing) — where a subject's address and app key come from.
 - [Cookbook](/academy/Lookup/Cookbook) — runnable recipes: `document-acl`, `scoped-reads`, `group-principals`, `revocation-race`.
+
+---
+
+
+## Document erasure
+
+> Source: https://academy.vetra.io/academy/Reference/Reactor/DocumentErasure
+
+A Switchboard with the privacy add-on answers GDPR access and erasure requests. Access lists every document an address or app key appears in. Erasure removes whole documents: the reactor deletes every row it holds about the document and leaves one signed `PURGE_DOCUMENT` operation, the **marker**, in its place. The marker syncs like any other operation, so every peer that held the document deletes its copy too.
+
+Erasure works on documents, not on people. An address that signed operations in a document you keep stays in that document. To erase a person, erase the documents that hold them.
+
+**INFO:**
+The add-on runs only when `PH_PRIVACY_ENABLED=true`. With it off, nothing on this page is mounted or scheduled.
+
+
+## Turning it on
+
+```bash
+AUTH_ENABLED=true
+ADMINS="0x123...,0x456..."
+PH_PRIVACY_ENABLED=true
+# At least 32 bytes. Keys the hashes in the subject index and the audit log.
+PH_PRIVACY_DEPLOYMENT_SECRET=<random string of 32+ bytes>
+```
+
+Switchboard refuses to boot with the add-on on when:
+
+- the authorization policy is `OPEN`. Under `OPEN` every caller, anonymous included, is a supreme admin, so anyone could read disclosures and order erasures. `REQUIRE_AUTHENTICATED_CALLER` does not change this; turn on `AUTH_ENABLED` with `ADMINS`.
+- the reactor has no signer. Switchboard signs markers with its Renown identity, the keypair `ph login` created (`ph switchboard --use-identity`, or `--keypair-path <path>`); without one, every receiver refuses the markers.
+- `PH_PRIVACY_DEPLOYMENT_SECRET` is missing or shorter than 32 bytes.
+
+Keep the deployment secret. The index and the audit log store `HMAC-SHA256(secret, lower(identifier))`, never the identifier. Rotating the secret means rebuilding the index; losing it means old audit rows can no longer be matched to an address.
+
+Optional tuning:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `PH_PRIVACY_DEADLINE_DAYS` | `30` | Days from the request after which a purge runs whether or not peers have caught up (GDPR Art. 12(3) allows one month) |
+| `PH_PRIVACY_MARKER_GRACE_DAYS` | `7` | Days after a purge that remotes and permission rows are kept while peers receive the marker |
+| `PH_PRIVACY_INTERVAL_MS` | `60000` | How often the scheduler runs. A finished purge also starts a run, so purges run back to back |
+| `PH_PRIVACY_PURGE_TIMEOUT_MINUTES` | `15` | Minutes a purge may run without committing before it is enqueued again |
+
+One Switchboard process per database. The scheduler, the queue and the sync mailboxes are in-process.
+
+## Signer and Renown binding
+
+A peer admits a marker through the same signature check as any operation. When the receiver runs with `REACTOR_AUTH_ENFORCEMENT`, its trust policy is Renown: it accepts the marker's key only if a Renown credential binds the signer's user address to that key. A Switchboard whose identity is not bound in Renown produces markers every enforcing peer refuses. Check the binding before the first request.
+
+Pooled executor workers (`REACTOR_WORKERS`) sign with the same identity, loaded from the same keypair file.
+
+## The admin API
+
+The add-on mounts a `privacy` subgraph on `/graphql`. Every field requires a caller whose address is in `ADMINS`; anyone else gets `FORBIDDEN`.
+
+```graphql
+query {
+  disclose(identifier: "0xabc...") {
+    subjectHash
+    documents { documentId role firstOrdinal lastOrdinal }
+    boundSyncRemotes { name collectionId channelType }
+    peerManifests { remoteName appKey }
+    permissions { table column documentId detail }
+    notCovered
+  }
+}
+```
+
+`disclose` matches addresses case-insensitively. Roles are `signer`, `app-key`, `creator`, `header-key` and `named` (a grant principal, a condition literal or a group member). `notCovered` lists what the response cannot see, such as personal data inside document-model state.
+
+To erase:
+
+```graphql
+query {
+  erasurePlan(ids: ["drive-id"]) {
+    maxPurgeOperations
+    items { documentId expandedFrom live operationCount groupReferencers }
+  }
+}
+
+mutation {
+  requestErasure(ids: ["drive-id"]) { requestId status deadline items { documentId status } }
+}
+
+query {
+  erasureRequest(requestId: "...") { status items { documentId status markerOrdinal lastError } }
+}
+```
+
+- **`erasurePlan`** is read-only. A drive expands to every document that was ever in it and has no open membership in another drive. For each document it reports the operation count against the cap and any surviving document whose auth history names it as a group. A group named that way cannot be purged; erase the referencing documents too.
+- **`requestErasure`** records the request and returns at once. It refuses the whole request, with `DocumentNotDeletedError` naming the ids, if any document is still live. Delete the documents first (a drive with cascade), then request again. `deadline` is an ISO 8601 timestamp; it defaults to now plus `PH_PRIVACY_DEADLINE_DAYS`.
+- **`erasureRequest`** reports progress.
+
+## What the scheduler does
+
+Each item moves `waiting` → `purging` → `purged` → `erased`, or to `failed`. At most one item is `purging` at a time across all requests, and a drive waits until its members are purged. When a purge finishes, the scheduler runs again at once and starts the next one, so a large request is not limited to one purge per interval.
+
+| State | Moves on when |
+| --- | --- |
+| `waiting` | every remote owed the document's `DELETE_DOCUMENT` has acknowledged it, or the deadline has passed (recorded as `deadline-passed`). The purge job is enqueued. |
+| `purging` | the `document_purges` row for the document exists. A job that fails terminally moves the item to `failed` with the error name. A purge with no row after `PH_PRIVACY_PURGE_TIMEOUT_MINUTES` is enqueued again; a document is never purged twice. |
+| `purged` | every remote owed the marker has acknowledged it (`marker-converged`), or `markerGrace` has passed (`marker-undelivered`). The scheduler then removes the sync remotes bound to a purged drive and deletes the document's `DocumentPermission`, `OperationUserPermission` and `DocumentProtection` rows. A step that fails is retried on the next run. |
+
+A request becomes `complete` when every item is `erased` and `failed` when any item fails. The other items of a failed request still run.
+
+A job can fail while its purge still commits, for example when it times out. Each run checks `failed` items against `document_purges`: one whose row has appeared moves to `purged` and continues, and its request is `reopened` once none of its items is `failed`. After a failed or abandoned purge, the next purge waits until that purge's transaction has ended.
+
+Remotes and permission rows wait for the marker because removing either stops it: a removed remote never polls again, and an erased permission row can hide the document from a poller. A remote that is still owed the marker at `markerGrace` is removed anyway. The document's memberships stay open, so a peer that reconnects later still receives the marker.
+
+A remote is judged from its stored row, not only from the remotes that are running. A remote whose channel failed to start, for example because its host was unreachable at boot, counts as pending with the state `unknown` and never as delivered. If it is bound to a purged drive, it is deleted from storage at `markerGrace`, since nothing is running that could remove it.
+
+If this Switchboard has remotes but no sync manager to ask, the check fails closed and the deadline decides. At `markerGrace` the stored remotes bound to a purged drive are deleted the same way.
+
+### The audit log
+
+`reactor.erasure_audit` is append-only (an `UPDATE` raises). Each row has the request, the document, an event and a `detail` column. Events: `requested`, `expanded`, `waiting` (the pending remotes, written each time the list changes), `deadline-passed`, `purged` (the marker ordinal and row counts), `marker-converged`, `marker-undelivered`, `remotes-removed`, `permissions-erased`, `failed`, `reopened` and `complete`. `detail` holds remote names, counts and error text. Any address or `did:key` in it, including one embedded in an error message, is replaced by its keyed hash. `requestedBy` is stored hashed.
+
+The audit log is not a document and never syncs. Give it a retention period of its own.
+
+## Large documents
+
+A purge is one database transaction, and while it runs every read model's cursor, every catch-up sweep and every outbox stops advancing: settlement waits for the oldest open transaction. The executor refuses a document with more than `maxPurgeOperations` operations (default 200,000, about 1.6 s on a local Postgres) with `PurgeTooLargeError`, which fails the item.
+
+To erase a larger document, name it in `requestErasure(..., allowLarge: ["id"])` and accept the stall. The purge must also finish inside the executor's `jobTimeoutMs` (default 30 s). Past it the job is marked failed and so is the item; if the purge commits afterwards, the next run moves the item to `purged`. Switchboard does not expose `jobTimeoutMs`; a host that builds its own reactor sets it with `ReactorBuilder.withExecutorConfig({ jobTimeoutMs })`.
+
+## Peers
+
+**Peers without erasure.** A peer on a build that does not announce the `document-purge` protocol cannot apply the marker. Its remote holds the marker instead (`waiting` reports it as `held`) and delivers it when the peer upgrades. Until then the peer keeps the document. At `markerGrace` its remote is removed; it receives the marker if it reconnects after upgrading. A relay without erasure blocks the peers behind it.
+
+**Refused markers.** A peer whose trust policy rejects this Switchboard's key refuses the marker and keeps the document. The scheduler records that remote as `marker-undelivered` even though its cursor moves past the marker. A refusal counts whichever way the marker travelled: a marker this Switchboard pushed is reported back on the next poll, and a client that polled the marker reports its refusal on its next poll. Each refusal is stored in `reactor.sync_purge_refusals` (remote, document, branch and time, no error text), so one reported while the scheduler is stopped still counts.
+
+A client on a build before marker refusal reporting does not report its refusal. Such a remote reads as converged once its cursor passes the marker. A client of this build holds its report for a Switchboard of an older build until that Switchboard announces the `marker-refusal` feature.
+
+**Pushed markers.** A marker can also arrive from a client that pushes it. Under `DOCUMENT_PERMISSIONS`, a pushed `PURGE_DOCUMENT` requires a document admin: a supreme admin, the document's owner, or an `ADMIN` grant on that document. `OperationUserPermission` rows cannot widen this. Under `OPEN` every caller passes, so an open Switchboard lets anyone who can write a document purge it, and with `REACTOR_AUTH_ENFORCEMENT` off any key that verifies is trusted. Do not run an open Switchboard that syncs documents you care about.
+
+**Groups across peers.** The purging Switchboard checks group references against the documents it holds. A peer holding a document that names the group, which this Switchboard never received, re-judges that document without the group, and its access decisions there can differ from its peers'.
+
+## Read models on another database
+
+Models on the reactor's database are fenced: a purge waits for them and they wait for a purge, so no row survives it. Models whose rows live on another database handle (the attachment reference index, third-party relational processors) skip purged ids but can still write a row from a batch fetched just before the purge committed. Repair one by rescanning it from just below the marker, from `packages/reactor` of the monorepo:
+
+```bash
+pnpm catchup rescan --pg <url> --from <markerOrdinal - 1> --consumer <read-model-id>
+```
+
+`markerOrdinal` is on the item (`erasureRequest`) and in the `purged` audit row.
+
+## Outside the reactor
+
+Erasure does not reach:
+
+- database backups, WAL archives and point-in-time recovery. Expire them on a schedule that matches your deadline.
+- Connect's IndexedDB copies and browser backups.
+- attachment bytes still referenced by another document.
+- processors that ignore deletions.
 
 ---
 
@@ -9529,7 +9699,12 @@ export const myRelationalProcessorFactory =
       scope: ["global"],
     };
 
-    const processor = new MyRelationalProcessor(namespace, filter, store);
+    const processor = new MyRelationalProcessor(
+      namespace,
+      filter,
+      store,
+      driveHeader.id,
+    );
     return [{ processor, filter }];
   };
 ```
@@ -28310,7 +28485,7 @@ In this tutorial you'll build a **logging processor** that prints a structured s
 A processor implements two methods:
 
 - **`onOperations(operations)`** — called when document operations match the processor's filter
-- **`onDisconnect()`** — called when the processor is disconnected (for cleanup)
+- **`onDisconnect()`** — called when the processor is disconnected (for cleanup), including when its factory is unregistered
 
 The reactor calls your processor's `onOperations` method with a list of `OperationWithContext` items. Each item pairs an `Operation` (what happened) with an `OperationContext` (where it happened).
 
@@ -28453,8 +28628,12 @@ export const operationLoggerProcessorFactory =
 | -------------- | ------------------------------------------------------------------ |
 | `branch`       | Which branches to monitor — usually `["main"]` for production data |
 | `documentId`   | Specific document IDs, or `["*"]` for all documents                |
-| `scope`        | `["global"]` for shared state, `["local"]` for user-specific state |
+| `scope`        | `["global"]` for shared state, `["local"]` for user-specific state, `["document"]` for document lifecycle operations such as `DELETE_DOCUMENT` |
 | `documentType` | Document types to process — omit to match all types                |
+
+**WARNING:**
+The logging processor stores nothing. A processor that stores data must delete a document's data when it receives `DELETE_DOCUMENT` or `PURGE_DOCUMENT`, which needs `"document"` in its `scope`. See [Erasing deleted documents](/academy/Build/WorkWithData/ProcessorBestPractices#erasing-deleted-documents).
+
 
 ### Starting position
 
@@ -28533,6 +28712,35 @@ This design keeps processors predictable, avoids circular dependencies, and prev
 ## Ordering across documents
 
 Operations for one document's scope and branch arrive in ordinal order, but operations for different documents do not: document B's creation can reach your processor after document A's operation that refers to B. If you need operations in ordinal order within one call, sort the batch by `context.ordinal` at the top of `onOperations`. No ordering is available across calls. If a processor must resolve a reference to another document, look it up in the read model or relational store it already writes to, and handle the case where it is not there yet, rather than relying on the order of arrival.
+
+## Erasing deleted documents
+
+A processor that stores data must erase a document's data when the document is deleted. The reactor removes its own records of a deleted or purged document; the rows, series or files your processor wrote stay until your processor removes them. A processor that ignores deletions keeps a purged document's data, and there is no purge callback to catch up later.
+
+- **Handle `DELETE_DOCUMENT` and `PURGE_DOCUMENT` alike.** Both name the document in `operation.action.input.documentId`. `PURGE_DOCUMENT` is the marker a purge leaves in the operation log; a reactor that missed the deletion receives only the marker.
+- **Include `"document"` in the filter's `scope`.** Both are `document`-scope operations, so a processor filtered to `["global"]` never sees them. Skip the other `document`-scope operations yourself.
+- **Handle deletions before reading `resultingState`.** The marker can arrive with no `resultingState`.
+- **Make the handler idempotent.** A document's marker can arrive after its `DELETE_DOCUMENT`, and more than once.
+- **Don't use `onDisconnect` for erasure.** It also runs when the factory is unregistered or reloaded.
+
+After a purge, the reactor delivers the purged document's marker and none of its earlier operations. When a drive is deleted, its processors receive the batch up to and including the drive's own deletion, which reaches them whatever their filter, and then `onDisconnect`.
+
+```typescript
+async onOperations(operations: OperationWithContext[]): Promise<void> {
+  for (const { operation, context } of operations) {
+    const type = operation.action.type;
+    if (type === "DELETE_DOCUMENT" || type === "PURGE_DOCUMENT") {
+      const input = operation.action.input as { documentId?: string };
+      await this.store.deleteDocument(input.documentId ?? context.documentId);
+      continue;
+    }
+    if (context.scope !== "global") continue;
+    // ...index the operation
+  }
+}
+```
+
+For relational processors, `RelationalDbProcessor` has `deleteDocumentRows`, `isNamespaceDrive` and `dropNamespace` (see [Erase a deleted document](/academy/Build/WorkWithData/RelationalDbProcessor#erase-a-deleted-document)). An analytics processor that writes a document's series under `ph/doc/<documentId>/...` clears them with ``analyticsStore.clearSeriesBySource(AnalyticsPath.fromString(`ph/doc/${documentId}`), true)``. The generated relational and analytics processors include this handling.
 
 ## Dispatching actions with `dispatch`
 
@@ -28809,6 +29017,7 @@ interface IProcessorHostModule {
 - **Never block** on reactor operations that might circle back to the processor pipeline
 - **React asynchronously**: if you need the result of a dispatch, handle it in a future `onOperations` call
 - **Access all APIs** through `IProcessorHostModule` in your factory function
+- **Erase at deletion**: delete a document's data on `DELETE_DOCUMENT` and `PURGE_DOCUMENT`
 
 ### Related pages
 
@@ -28887,6 +29096,7 @@ export async function up(db: IRelationalDb<any>): Promise<void> {
   // Create table - this runs when the processor starts
   await db.schema
     .createTable("todo") // Creates a new table named "todo"
+    .addColumn("document_id", "varchar(255)", (col) => col.notNull()) // The document the row came from
     .addColumn("task", "varchar(255)") // Text column for the task description (max 255 characters)
     .addColumn("status", "boolean") // Boolean column for completion status (true/false)
     .addPrimaryKeyConstraint("todo_pkey", ["task"]) // Makes "task" the primary key (unique identifier)
@@ -28903,6 +29113,7 @@ export async function down(db: IRelationalDb<any>): Promise<void> {
 **Design Considerations:**
 
 - We're using `task` as the primary key, which means each task description must be unique
+- `document_id` records which document each row came from, so the processor can delete a document's rows when the document is deleted (see [Erase a deleted document](#erase-a-deleted-document))
 - The `varchar(255)` limit ensures reasonable memory usage
 - The `boolean` status makes it easy to filter completed vs. incomplete tasks
 - Consider adding timestamps (`created_at`, `updated_at`) for audit trails in production applications
@@ -28932,6 +29143,7 @@ Check your `processors/todo-indexer/schema.ts` file after generation - it will c
 // This is what gets auto-generated based on your migration
 export interface Database {
   todo: {
+    document_id: string;
     task: string;
     status: boolean;
   };
@@ -28981,11 +29193,17 @@ export const todoIndexerProcessorFactory =
       branch: ["main"], // Only process changes from the "main" branch
       documentId: ["*"], // Process changes from any document ID (* = wildcard)
       documentType: ["powerhouse/todo-list"], // Only process todo-list documents
-      scope: ["global"], // Process global changes (not user-specific)
+      scope: ["global", "document"], // Global changes, plus deletions
     };
 
-    // Create the processor instance
-    const processor = new TodoIndexerProcessor(namespace, filter, store);
+    // Create the processor instance. The drive id is what `isNamespaceDrive`
+    // compares a deleted document's id against.
+    const processor = new TodoIndexerProcessor(
+      namespace,
+      filter,
+      store,
+      driveHeader.id,
+    );
     return [
       {
         processor,
@@ -29000,7 +29218,7 @@ export const todoIndexerProcessorFactory =
 - **`branch`**: Which document branches to monitor (usually "main" for production data)
 - **`documentId`**: Specific document IDs to watch ("\*" means all documents)
 - **`documentType`**: Document types to process (ensures type safety)
-- **`scope`**: Whether to process global changes or user-specific ones
+- **`scope`**: Which scopes to process. `"global"` carries shared state changes; `"document"` carries `DELETE_DOCUMENT` and `PURGE_DOCUMENT`, which the processor needs to erase a document's rows
 
 ## Implement the Processor Logic
 
@@ -29050,11 +29268,27 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
 
     // Process each operation
     for (const { operation, context } of operations) {
+      // A deleted or purged document: remove its rows, or the drive's namespace
+      const type = operation.action.type;
+      if (type === "DELETE_DOCUMENT" || type === "PURGE_DOCUMENT") {
+        const input = operation.action.input as { documentId?: string };
+        const documentId = input.documentId ?? context.documentId;
+        if (this.isNamespaceDrive(documentId)) {
+          await this.dropNamespace();
+          return;
+        }
+        await this.deleteDocumentRows(documentId);
+        continue;
+      }
+      // The rest of the document scope carries nothing to index
+      if (context.scope !== "global") continue;
+
       // Insert a record for each operation into the database
       // This is a simple example - you might want more sophisticated logic
       await this.relationalDb
         .insertInto("todo")
         .values({
+          document_id: context.documentId,
           // Create a unique task identifier combining document ID, operation index, and type
           task: `${context.documentId}-${operation.index}: ${operation.action.type}`,
           status: true, // Default to completed status
@@ -29073,6 +29307,26 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
   }
 }
 ```
+
+### Erase a deleted document
+
+A processor's rows are its own: when a document is deleted or purged, the reactor removes its own records of the document, but only the processor removes the rows it wrote. A processor that ignores deletions keeps a deleted document's rows, including a purged one's. There is no separate purge callback, and `onDisconnect()` is not a deletion signal: it also runs when the processor's factory is unregistered or reloaded.
+
+Handle `DELETE_DOCUMENT` and `PURGE_DOCUMENT` the same way, before anything that parses `context.resultingState`. `PURGE_DOCUMENT` is the marker a purge leaves in the operation log. A reactor that missed the `DELETE_DOCUMENT` receives only the marker, and the marker can arrive with no `resultingState` and more than once, so keep the handler idempotent. After a purge, the reactor delivers the purged document's marker and none of its earlier operations.
+
+`RelationalDbProcessor` has three helpers for this:
+
+| Method                           | What it does                                                                                                           |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `deleteDocumentRows(documentId)` | Deletes the document's rows from every table in the processor's namespace with a `document_id` or `documentId` column |
+| `isNamespaceDrive(documentId)`   | `true` when `documentId` is the processor's drive and no other drive shares its namespace                             |
+| `dropNamespace()`                | Drops the processor's namespace with every table in it                                                                 |
+
+A table without a `document_id` or `documentId` column is not touched by `deleteDocumentRows`. Delete its rows yourself in the same branch.
+
+`isNamespaceDrive` needs the drive id the factory passes as the constructor's fourth argument; a processor made without it never drops its namespace. A `getNamespace` override that returns the same namespace for every drive shares it across drives, so dropping it on one drive's deletion would erase the others' rows. For such a processor `isNamespaceDrive` is `false`: the drive's deletion deletes the drive document's own rows, and each of its documents' rows go with that document's own deletion.
+
+When a drive is deleted, its processors receive the batch up to and including the drive's `DELETE_DOCUMENT` (or `PURGE_DOCUMENT`), then `onDisconnect()`. The drive's own deletion reaches them whatever their filter, so the processor above drops its namespace even though its `documentType` filter names only `powerhouse/todo-list`. The generated processor includes this handling.
 
 ## Expose Data Through a Subgraph
 
@@ -32275,6 +32529,19 @@ no fallback, so check which your installed version expects if a setting appears
 to be ignored. The `config` block of the installed package's manifest is
 authoritative for the version you actually have.
 
+
+## Configuring privacy (Switchboard)
+
+The privacy add-on answers GDPR access and erasure requests through an admin-only `privacy` subgraph. It is off by default and needs authentication:
+
+```bash
+AUTH_ENABLED=true
+ADMINS="0x123...,0x456..."
+PH_PRIVACY_ENABLED=true
+PH_PRIVACY_DEPLOYMENT_SECRET=<random string of 32+ bytes>
+```
+
+Switchboard refuses to boot with it on under the `OPEN` policy, without a Renown identity to sign with, or without the secret. The deadline, the marker grace period and the scheduler interval have their own variables; see [Document erasure](/academy/Reference/Reactor/DocumentErasure).
 
 ## Stored documents a build does not run
 

@@ -1,11 +1,24 @@
 import { defineConfig } from "vitest/config";
 
+// Hold a cluster xid for seconds, stalling every watermark; run alone, last.
+const HOLDS_XID = [
+  "test/admin/catchup-status-postgres.test.ts",
+  "test/catch-up/settled-watermark-postgres.test.ts",
+  "test/purge/caches/keyframe-persistence.test.ts",
+  "test/purge/e2e/resurrection.test.ts",
+  "test/purge/read-models/fence.test.ts",
+  "test/purge/review/group-precondition-race.test.ts",
+  "test/purge/review/group-race.test.ts",
+  "test/purge/review/lock-limit.test.ts",
+  "test/read-models/base-read-model/catch-up-postgres.test.ts",
+  "test/sync/outbox-transient-gap-postgres.test.ts",
+];
+
 export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
   test: {
-    include: ["test/**/*.test.ts"],
     globals: true,
     // PGLite WASM cold boot + 14 migrations in beforeEach can exceed the
     // default 10s hookTimeout on CI runners under coverage instrumentation,
@@ -44,6 +57,26 @@ export default defineConfig({
       ],
     },
     maxWorkers: 4,
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "reactor",
+          include: ["test/**/*.test.ts"],
+          exclude: HOLDS_XID,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "holds-xid",
+          include: HOLDS_XID,
+          maxWorkers: 1,
+          sequence: { groupOrder: 1 },
+          env: { REACTOR_TEST_HOLDS_XID: "1" },
+        },
+      },
+    ],
   },
   plugins: [],
 });

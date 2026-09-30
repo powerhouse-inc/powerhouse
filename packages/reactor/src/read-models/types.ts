@@ -35,6 +35,9 @@ export interface SlugMappingTable {
   updatedAt: Generated<Date>;
 }
 
+/** A cursor row whose factory is unregistered; it only records a drive's data. */
+export const RELEASED_CURSOR_STATUS = "released";
+
 export interface ProcessorCursorTable {
   processorId: string;
   factoryId: string;

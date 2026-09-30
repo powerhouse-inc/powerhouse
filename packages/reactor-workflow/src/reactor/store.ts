@@ -860,6 +860,63 @@ function jsonOrNull(value: unknown): string | null {
   }
 }
 
+// The documents a trigger names: the one whose operation fired, and its drive.
+export function triggerDocumentIds(payload: unknown): string[] {
+  if (payload === null || typeof payload !== "object") return [];
+  const record = payload as Record<string, unknown>;
+  return [
+    ...new Set(
+      [record.documentId, record.driveId].filter(
+        (id): id is string => typeof id === "string" && id !== "",
+      ),
+    ),
+  ];
+}
+
+export function journaledTriggerDocumentIds(payload: string | null): string[] {
+  if (payload === null) return [];
+  try {
+    return triggerDocumentIds(JSON.parse(payload));
+  } catch {
+    return [];
+  }
+}
+
+// The trigger kind a design-time test journals its one-step run under.
+export const TEST_TRIGGER_KIND = "test";
+
+// A payload, or a sample's list of them, naming an id where erasure looks.
+function journaledPayloadNames(
+  json: string | null,
+  ids: readonly string[],
+): boolean {
+  if (json === null) return false;
+  let value: unknown;
+  try {
+    value = JSON.parse(json);
+  } catch {
+    return false;
+  }
+  return (Array.isArray(value) ? value : [value]).some((item) => {
+    if (item === null || typeof item !== "object") return false;
+    const record = item as Record<string, unknown>;
+    return [record.documentId, record.driveId, record.parentId].some(
+      (id) => typeof id === "string" && ids.includes(id),
+    );
+  });
+}
+
+// Runs erased mid-flight; process-wide, as a run keeps its store across reloads.
+const erasedRuns = new Set<string>();
+
+// What eraseRunsForDocuments removed, by table.
+export interface ErasedRuns {
+  runs: number;
+  steps: number;
+  documents: number;
+  dedupeKeysUnlinked: number;
+}
+
 // The insert's own conflict outcome is the claim; a prior select can't be trusted.
 async function claimDedupeIn(
   db: Kysely<WorkflowRuntimeDB>,
@@ -1157,6 +1214,7 @@ export class WorkflowRunStore {
     ordinal: number,
     step: StepExecutionRecord,
   ): Promise<void> {
+    if (erasedRuns.has(runId)) return;
     const values = stepValues(runId, ordinal, step);
     const { run_id: _run, step_id: _step, ...mutable } = values;
     await this.db
@@ -1178,6 +1236,7 @@ export class WorkflowRunStore {
     // Terminal from here whatever the writes below do: if we leave the run
     // RUNNING, a later sweep should be free to reach it.
     this.runsInFlight.delete(runId);
+    if (erasedRuns.delete(runId)) return;
     if (result.steps.length > 0) {
       try {
         await this.sweepSteps(runId, result, executionOrder);
@@ -1270,6 +1329,7 @@ export class WorkflowRunStore {
 
   async failRun(runId: string, error: string): Promise<void> {
     this.runsInFlight.delete(runId);
+    if (erasedRuns.delete(runId)) return;
     await this.db
       .updateTable("run")
       .set({
@@ -1364,7 +1424,7 @@ export class WorkflowRunStore {
     runId: string,
     documentIds: string[],
   ): Promise<void> {
-    if (documentIds.length === 0) return;
+    if (documentIds.length === 0 || erasedRuns.has(runId)) return;
     await this.db
       .insertInto("run_document")
       .values(
@@ -1642,6 +1702,118 @@ export class WorkflowRunStore {
       pruned += deleted;
       if (deleted < batchSize) return pruned;
     }
+  }
+
+  // Runs that carried a document, or a purged workflow's runs, go with their
+  // reruns; dedupe keys stay, unlinked.
+  async eraseRunsForDocuments(documentIds: string[]): Promise<ErasedRuns> {
+    const ids = [...new Set(documentIds)];
+    const erased: ErasedRuns = {
+      runs: 0,
+      steps: 0,
+      documents: 0,
+      dedupeKeysUnlinked: 0,
+    };
+    if (ids.length === 0) return erased;
+    return this.db.transaction().execute(async (trx) => {
+      const runIds = new Set(
+        (
+          await trx
+            .selectFrom("run_document")
+            .select("run_id")
+            .where("document_id", "in", ids)
+            .execute()
+        ).map((row) => row.run_id),
+      );
+      // A purged workflow's own runs, test runs included.
+      const own = await trx
+        .selectFrom("run")
+        .select("id")
+        .where("workflow_id", "in", ids)
+        .execute();
+      for (const row of own) runIds.add(row.id);
+      const named = await trx
+        .selectFrom("run")
+        .select(["id", "trigger_payload"])
+        .where((eb) =>
+          eb.or(
+            ids.map((id) => eb(sql`strpos(trigger_payload, ${id})`, ">", 0)),
+          ),
+        )
+        .execute();
+      for (const row of named) {
+        if (journaledPayloadNames(row.trigger_payload, ids)) runIds.add(row.id);
+      }
+      // A trigger test journals its sample as the step's output.
+      const sampled = await trx
+        .selectFrom("step_execution")
+        .innerJoin("run", "run.id", "step_execution.run_id")
+        .select(["step_execution.run_id as runId", "step_execution.output"])
+        .where("run.trigger_kind", "=", TEST_TRIGGER_KIND)
+        .where((eb) =>
+          eb.or(
+            ids.map((id) =>
+              eb(sql`strpos(step_execution.output, ${id})`, ">", 0),
+            ),
+          ),
+        )
+        .execute();
+      for (const row of sampled) {
+        if (journaledPayloadNames(row.output, ids)) runIds.add(row.runId);
+      }
+      // A rerun replays its original's step outputs.
+      let frontier = [...runIds];
+      while (frontier.length > 0) {
+        const reruns = await trx
+          .selectFrom("run")
+          .select("id")
+          .where("rerun_of", "in", frontier)
+          .execute();
+        frontier = reruns.map((row) => row.id).filter((id) => !runIds.has(id));
+        for (const id of frontier) runIds.add(id);
+      }
+      if (runIds.size === 0) return erased;
+
+      const all = [...runIds];
+      const live = await trx
+        .selectFrom("run")
+        .select("id")
+        .where("id", "in", all)
+        .where("status", "in", ["RUNNING", PENDING_RUN_STATUS])
+        .execute();
+      // Before the deletes, so a step journaled meanwhile is dropped too.
+      for (const row of live) erasedRuns.add(row.id);
+      erased.steps = (
+        await trx
+          .deleteFrom("step_execution")
+          .where("run_id", "in", all)
+          .returning("id")
+          .execute()
+      ).length;
+      erased.documents = (
+        await trx
+          .deleteFrom("run_document")
+          .where("run_id", "in", all)
+          .returning("run_id")
+          .execute()
+      ).length;
+      erased.dedupeKeysUnlinked = (
+        await trx
+          .updateTable("trigger_dedupe")
+          .set({ run_id: null })
+          .where("run_id", "in", all)
+          .returning("dedupe_key")
+          .execute()
+      ).length;
+      erased.runs = (
+        await trx
+          .deleteFrom("run")
+          .where("id", "in", all)
+          .returning("id")
+          .execute()
+      ).length;
+      return erased;
+    });
   }
 
   // Keys older than the longest dedupe TTL can no longer suppress anything.

@@ -1,3 +1,4 @@
+import { isPurgeMarker } from "@powerhousedao/shared/document-model";
 import type { SyncOperation } from "./sync-operation.js";
 import { SyncOperationStatus } from "./types.js";
 
@@ -15,6 +16,7 @@ export interface IMailbox {
   /**
    * The latest ordinal that has been acknowledged. Because acknowledged items
    * are removed from the mailbox, this is the last ordinal that has been removed.
+   * With holdAckBelowMarkers, never at or past an unapplied marker entry.
    */
   get ackOrdinal(): number;
 
@@ -56,8 +58,16 @@ export class MailboxAggregateError extends Error {
   }
 }
 
+export type MailboxOptions = {
+  /** An unapplied item carrying a purge marker keeps ackOrdinal below it. */
+  holdAckBelowMarkers?: boolean;
+};
+
 export class Mailbox implements IMailbox {
+  private readonly holdAckBelowMarkers: boolean;
   private itemsMap: Map<string, SyncOperation> = new Map();
+  /** Unapplied items carrying a marker, so the held ack reads only these. */
+  private readonly heldMarkers = new Set<SyncOperation>();
   private addedCallbacks: MailboxCallback[] = [];
   private removedCallbacks: MailboxCallback[] = [];
   private paused: boolean = false;
@@ -66,6 +76,10 @@ export class Mailbox implements IMailbox {
 
   private _ack: number = 0;
   private _latestOrdinal: number = 0;
+
+  constructor(options: MailboxOptions = {}) {
+    this.holdAckBelowMarkers = options.holdAckBelowMarkers ?? false;
+  }
 
   init(ackOrdinal: number) {
     this._ack = this._latestOrdinal = ackOrdinal;
@@ -80,7 +94,15 @@ export class Mailbox implements IMailbox {
   }
 
   get ackOrdinal(): number {
-    return this._ack;
+    if (!this.holdAckBelowMarkers) return this._ack;
+    let floor = Number.POSITIVE_INFINITY;
+    for (const item of this.heldMarkers) {
+      for (const op of item.operations) {
+        const ordinal = op.context.ordinal;
+        if (ordinal > 0 && ordinal < floor) floor = ordinal;
+      }
+    }
+    return Math.min(this._ack, floor - 1);
   }
 
   get latestOrdinal(): number {
@@ -93,15 +115,27 @@ export class Mailbox implements IMailbox {
 
   add(...items: SyncOperation[]): void {
     for (const item of items) {
+      const replaced = this.itemsMap.get(item.id);
+      if (replaced !== undefined) this.heldMarkers.delete(replaced);
       this.itemsMap.set(item.id, item);
 
+      let marker = false;
       for (const op of item.operations) {
         this._latestOrdinal = Math.max(this._latestOrdinal, op.context.ordinal);
+        if (isPurgeMarker(op)) marker = true;
+      }
+      if (
+        this.holdAckBelowMarkers &&
+        marker &&
+        item.status !== SyncOperationStatus.Applied
+      ) {
+        this.heldMarkers.add(item);
       }
 
       // listen for updates to the syncop status
       item.on((syncOp, _, next) => {
         if (next === SyncOperationStatus.Applied) {
+          this.heldMarkers.delete(syncOp);
           for (const op of syncOp.operations) {
             this._ack = Math.max(this._ack, op.context.ordinal);
           }
@@ -131,6 +165,7 @@ export class Mailbox implements IMailbox {
   remove(...items: SyncOperation[]): void {
     for (const item of items) {
       this.itemsMap.delete(item.id);
+      this.heldMarkers.delete(item);
     }
 
     if (this.paused) {

@@ -187,16 +187,86 @@ export class DocumentPermissionService {
   /**
    * Delete all permissions for a document (used when deleting a document)
    */
-  async deleteAllDocumentPermissions(documentId: string): Promise<void> {
-    await this.db
+  async deleteAllDocumentPermissions(documentId: string): Promise<{
+    DocumentPermission: number;
+    OperationUserPermission: number;
+  }> {
+    // RETURNING: PGlite reports no affected-row count.
+    const permissions = await this.db
       .deleteFrom("DocumentPermission")
       .where("documentId", "=", documentId)
+      .returning("id")
       .execute();
 
-    await this.db
+    const operations = await this.db
       .deleteFrom("OperationUserPermission")
       .where("documentId", "=", documentId)
+      .returning("id")
       .execute();
+
+    return {
+      DocumentPermission: permissions.length,
+      OperationUserPermission: operations.length,
+    };
+  }
+
+  /** Delete a document's protection row, which names its owner. */
+  async deleteDocumentProtection(documentId: string): Promise<number> {
+    const rows = await this.db
+      .deleteFrom("DocumentProtection")
+      .where("documentId", "=", documentId)
+      .returning("documentId")
+      .execute();
+    return rows.length;
+  }
+
+  /** Every row that names the address, for a subject access request. */
+  async rowsForAddress(address: string): Promise<{
+    permissions: DocumentPermissionEntry[];
+    operationPermissions: OperationUserPermissionEntry[];
+    ownedDocumentIds: string[];
+  }> {
+    const lower = address.toLowerCase();
+    const permissions = await this.db
+      .selectFrom("DocumentPermission")
+      .select([
+        "documentId",
+        "userAddress",
+        "permission",
+        "grantedBy",
+        "createdAt",
+        "updatedAt",
+      ])
+      .where((eb) =>
+        eb.or([eb("userAddress", "=", lower), eb("grantedBy", "=", lower)]),
+      )
+      .orderBy("documentId")
+      .execute();
+    const operationPermissions = await this.db
+      .selectFrom("OperationUserPermission")
+      .select([
+        "documentId",
+        "operationType",
+        "userAddress",
+        "grantedBy",
+        "createdAt",
+      ])
+      .where((eb) =>
+        eb.or([eb("userAddress", "=", lower), eb("grantedBy", "=", lower)]),
+      )
+      .orderBy("documentId")
+      .execute();
+    const owned = await this.db
+      .selectFrom("DocumentProtection")
+      .select("documentId")
+      .where("ownerAddress", "=", lower)
+      .orderBy("documentId")
+      .execute();
+    return {
+      permissions,
+      operationPermissions,
+      ownedDocumentIds: owned.map((row) => row.documentId),
+    };
   }
 
   // ============================================

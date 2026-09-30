@@ -14,13 +14,17 @@ import {
   deriveOperationId,
   DOCUMENT_DELETED_REASON,
   DOCUMENT_SCOPE_ACTION_TYPES,
+  mentionedGroupIds,
   operationOutcome,
   targetDocumentId,
 } from "@powerhousedao/shared/document-model";
+import type { SnapshotPosition } from "../cache/write-cache-types.js";
+import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { Job } from "../queue/types.js";
 import {
   AuthorizationDeniedError,
   DocumentDeletedError,
+  DocumentPurgedError,
 } from "../shared/errors.js";
 import type {
   ConsistencyCoordinate,
@@ -28,6 +32,7 @@ import type {
   JobResultSummary,
   SubmittedActionResult,
 } from "../shared/types.js";
+import type { DocumentLocks } from "./execution-scope.js";
 import type { JobResult, TouchedStream } from "./types.js";
 
 export { applyDeleteDocumentAction, applyUpgradeDocumentAction };
@@ -371,4 +376,156 @@ export function summarizeSubmittedActions(
     actions,
     allApplied: actions.every((action) => action.kind === "applied"),
   };
+}
+
+/** Tombstones a job has read, each under the shared lock it took first. */
+export class PurgeFence {
+  constructor(
+    private readonly locks: DocumentLocks,
+    private readonly checked: Set<string>,
+    private readonly purged: Set<string>,
+  ) {}
+
+  /** Locks and reads an id the job start did not resolve. */
+  async isPurged(documentId: string): Promise<boolean> {
+    await this.isPurgedMany([documentId]);
+    return this.purged.has(documentId);
+  }
+
+  /** Locks and reads the unresolved ids in one lock and one lookup. */
+  async isPurgedMany(documentIds: readonly string[]): Promise<Set<string>> {
+    const unchecked = [...new Set(documentIds)].filter(
+      (id) => !this.checked.has(id),
+    );
+    if (unchecked.length > 0) {
+      await this.locks.shared(unchecked);
+      const found = await this.locks.purged(unchecked);
+      for (const id of unchecked) this.checked.add(id);
+      for (const id of found) this.purged.add(id);
+    }
+    return new Set(documentIds.filter((id) => this.purged.has(id)));
+  }
+}
+
+/** Locks and checks an id on its first read; a purged id reads as purged. */
+export class FencedWriteCache implements IWriteCache {
+  private readonly evicted = new Set<string>();
+
+  constructor(
+    private readonly inner: IWriteCache,
+    private readonly purgeFence: PurgeFence,
+    private readonly evict: (documentId: string) => void,
+  ) {}
+
+  /** Fences ids known before their reads in one round trip. */
+  async fence(documentIds: readonly string[]): Promise<void> {
+    await this.purgeFence.isPurgedMany(documentIds);
+  }
+
+  async getState(
+    documentId: string,
+    scope: string,
+    branch: string,
+    targetRevision?: number,
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    if (await this.purgeFence.isPurged(documentId)) {
+      if (!this.evicted.has(documentId)) {
+        this.evicted.add(documentId);
+        this.evict(documentId);
+      }
+      throw new DocumentPurgedError(documentId);
+    }
+    return this.inner.getState(
+      documentId,
+      scope,
+      branch,
+      targetRevision,
+      signal,
+    );
+  }
+
+  putState(
+    documentId: string,
+    scope: string,
+    branch: string,
+    revision: number,
+    document: PHDocument,
+    position: SnapshotPosition,
+  ): void {
+    this.inner.putState(
+      documentId,
+      scope,
+      branch,
+      revision,
+      document,
+      position,
+    );
+  }
+
+  putRun(
+    documentId: string,
+    scope: string,
+    branch: string,
+    run: readonly { revision: number; document: PHDocument }[],
+  ): void {
+    this.inner.putRun(documentId, scope, branch, run);
+  }
+
+  invalidate(documentId: string, scope?: string, branch?: string): number {
+    return this.inner.invalidate(documentId, scope, branch);
+  }
+
+  clear(): void {
+    this.inner.clear();
+  }
+
+  startup(): Promise<void> {
+    return this.inner.startup();
+  }
+
+  shutdown(): Promise<void> {
+    return this.inner.shutdown();
+  }
+}
+
+type RelationshipInput = { sourceId?: unknown; targetId?: unknown };
+
+/** The target whose membership an ADD or REMOVE_RELATIONSHIP writes. */
+export function relationshipTarget(action: {
+  type: string;
+  input: unknown;
+}): string | undefined {
+  if (
+    action.type !== "ADD_RELATIONSHIP" &&
+    action.type !== "REMOVE_RELATIONSHIP"
+  ) {
+    return undefined;
+  }
+  const target = (action.input as RelationshipInput | undefined)?.targetId;
+  return typeof target === "string" && target.length > 0 ? target : undefined;
+}
+
+/** The ids a job's locks cover, sorted: its write ids and groups it names. */
+export function jobWriteIds(job: Job): string[] {
+  const ids = new Set<string>([job.documentId]);
+  const actions = [
+    ...job.actions,
+    ...job.operations.map((operation) => operation.action),
+  ];
+  for (const action of actions) {
+    if (DOCUMENT_SCOPE_ACTIONS.has(action.type)) {
+      ids.add(targetDocumentId(action, job.documentId));
+    }
+    const target = relationshipTarget(action);
+    if (target !== undefined) {
+      ids.add(target);
+    }
+    if (action.scope === "auth") {
+      for (const groupId of mentionedGroupIds(action)) {
+        ids.add(groupId);
+      }
+    }
+  }
+  return [...ids].sort();
 }

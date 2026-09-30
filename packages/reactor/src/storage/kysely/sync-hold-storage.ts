@@ -1,5 +1,8 @@
+import { DOCUMENT_PURGE_PROTOCOL } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
+import { DocumentPurgedError } from "../../shared/errors.js";
 import type { ISyncHoldStorage, SyncHoldRecord } from "../interfaces.js";
+import { acquirePurgeLocks, findPurged } from "./document-purges.js";
 import type { Database } from "./types.js";
 
 export class KyselySyncHoldStorage implements ISyncHoldStorage {
@@ -35,15 +38,23 @@ export class KyselySyncHoldStorage implements ISyncHoldStorage {
       version: hold.version,
       held_at_utc_ms: hold.heldAtUtcMs,
     };
-    await this.db
-      .insertInto("sync_holds")
-      .values(row)
-      .onConflict((oc) =>
-        oc
-          .columns(["remote_name", "document_id", "branch"])
-          .doUpdateSet({ protocol: row.protocol, version: row.version }),
-      )
-      .execute();
+    // A purge deleted the id's holds; only its marker may earn one after.
+    await this.db.transaction().execute(async (trx) => {
+      await acquirePurgeLocks(trx, [hold.documentId], "shared");
+      if (hold.protocol !== DOCUMENT_PURGE_PROTOCOL) {
+        const purged = await findPurged(trx, [hold.documentId]);
+        if (purged.size > 0) throw new DocumentPurgedError(hold.documentId);
+      }
+      await trx
+        .insertInto("sync_holds")
+        .values(row)
+        .onConflict((oc) =>
+          oc
+            .columns(["remote_name", "document_id", "branch"])
+            .doUpdateSet({ protocol: row.protocol, version: row.version }),
+        )
+        .execute();
+    });
   }
 
   async remove(

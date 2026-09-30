@@ -34,6 +34,9 @@
       "path": "../../packages/reactor-group"
     },
     {
+      "path": "../../packages/reactor-privacy"
+    },
+    {
       "path": "../../packages/reactor-workflow"
     },
     {

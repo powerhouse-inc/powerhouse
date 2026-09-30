@@ -1,3 +1,4 @@
+import { isPurgeMarker } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IEventBus } from "../events/interfaces.js";
@@ -345,6 +346,7 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
     }
 
     if (outcome.result.success && outcome.writeReady) {
+      this.evictPurged(outcome.writeReady);
       void this.emitWriteReady(handle.job, outcome.writeReady).catch(
         (error) => {
           this.logger.error(
@@ -363,6 +365,23 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
 
     this.activeJobs--;
     await this.tryDispatchFor(worker);
+  }
+
+  /** Every worker drops a committed purge's id; routing covers only its own. */
+  private evictPurged(payload: JobWriteReadyPayload): void {
+    const documentIds = [
+      ...new Set(
+        payload.operations
+          .filter((operation) => isPurgeMarker(operation))
+          .map((operation) => operation.context.documentId),
+      ),
+    ];
+    if (documentIds.length === 0) {
+      return;
+    }
+    for (const worker of this.workers) {
+      worker.evictPurged(documentIds);
+    }
   }
 
   private async emitWriteReady(

@@ -3,6 +3,7 @@
 import {
   BaseReadModel,
   defaultReadModelIndexingConfig,
+  isPurgeMarker,
   type DocumentViewDatabase,
   type IConsistencyTracker,
   type IOperationIndex,
@@ -35,6 +36,8 @@ export class WorkflowTriggersReadModel extends BaseReadModel {
       rebuildStateOnInit: false,
       indexing: defaultReadModelIndexingConfig,
       startFrom: "head",
+      // Runs live on the relational handle, and a fire must not hold a lock.
+      purgeFence: "skip",
     });
   }
 
@@ -43,6 +46,14 @@ export class WorkflowTriggersReadModel extends BaseReadModel {
   protected override async commitOperations(
     items: OperationWithContext[],
   ): Promise<void> {
-    await this.runtime.onOperations(items);
+    const markers = items.filter((item) => isPurgeMarker(item.operation));
+    if (markers.length === 0) {
+      await this.runtime.onOperations(items);
+      return;
+    }
+    await this.runtime.onOperations(
+      items.filter((item) => !isPurgeMarker(item.operation)),
+    );
+    await this.runtime.onDocumentsPurged(markers);
   }
 }

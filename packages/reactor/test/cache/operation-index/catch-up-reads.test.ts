@@ -83,6 +83,31 @@ describe("KyselyOperationIndex catch-up reads", () => {
     expect(await operationIndex.getOrdinalsInRange(5, 5, 10)).toEqual([]);
   });
 
+  it("reads the collections whose members moved in a range, left or not", async () => {
+    const joined = operationIndex.start();
+    joined.createCollection("collection-a");
+    joined.createCollection("collection-b");
+    joined.write([indexEntry("doc-a", 0)]);
+    joined.addToCollection("collection-a", "doc-a");
+    joined.write([indexEntry("doc-b", 0)]);
+    joined.addToCollection("collection-b", "doc-b");
+    const [first] = await operationIndex.commit(joined);
+    const left = operationIndex.start();
+    left.write([indexEntry("doc-a", 1)]);
+    left.removeFromCollection("collection-a", "doc-a");
+    const [second] = await operationIndex.commit(left);
+
+    expect(
+      (await operationIndex.getCollectionsInRange(0, second!)).sort(),
+    ).toEqual(["collection-a", "collection-b"]);
+    expect(
+      await operationIndex.getCollectionsInRange(first! + 1, second!),
+    ).toEqual(["collection-a"]);
+    expect(
+      await operationIndex.getCollectionsInRange(second!, second!),
+    ).toEqual([]);
+  });
+
   it("reads rows by ordinal, leaving out ordinals with no row", async () => {
     const ordinals = await commit(
       indexEntry("doc-a", 0),

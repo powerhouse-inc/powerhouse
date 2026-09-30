@@ -322,6 +322,19 @@ to be ignored. The `config` block of the installed package's manifest is
 authoritative for the version you actually have.
 :::
 
+## Configuring privacy (Switchboard)
+
+The privacy add-on answers GDPR access and erasure requests through an admin-only `privacy` subgraph. It is off by default and needs authentication:
+
+```bash
+AUTH_ENABLED=true
+ADMINS="0x123...,0x456..."
+PH_PRIVACY_ENABLED=true
+PH_PRIVACY_DEPLOYMENT_SECRET=<random string of 32+ bytes>
+```
+
+Switchboard refuses to boot with it on under the `OPEN` policy, without a Renown identity to sign with, or without the secret. The deadline, the marker grace period and the scheduler interval have their own variables; see [Document erasure](/academy/Reference/Reactor/DocumentErasure).
+
 ## Stored documents a build does not run
 
 Switchboard and Connect refuse to start when their store holds documents created at a protocol version the running build does not run, which can happen after a rollback. The refusal names the versions and the number of documents. Either run a build that supports those versions, or start with those documents read-only:

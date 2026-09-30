@@ -223,6 +223,34 @@ export class SignatureAdmission {
     return dropped;
   }
 
+  /** A marker is held to v2 and enforced whatever the policy and mode. */
+  async admitMarker(
+    job: Job,
+    marker: Operation,
+    signal?: AbortSignal,
+  ): Promise<InvalidSignatureError | undefined> {
+    const entry: Candidate = {
+      ...candidate(marker.action, {
+        documentId: job.documentId,
+        scope: "document",
+        branch: job.branch,
+      }),
+      operation: marker,
+      policy: "v2-required",
+    };
+    const verdict = await this.verdict(
+      entry,
+      new Set(),
+      undefined,
+      "load",
+      signal,
+    );
+    if (verdict.ok) {
+      return undefined;
+    }
+    return this.record(job, entry, verdict, "load", true)!;
+  }
+
   private async verdict(
     entry: Candidate,
     live: Set<string>,
@@ -457,8 +485,8 @@ export class SignatureAdmission {
     entry: Candidate,
     refusal: Refusal,
     path: AdmissionPath,
+    enforced = this.mode === "enforce",
   ): InvalidSignatureError | undefined {
-    const enforced = this.mode === "enforce";
     const event: SignatureRefusedEvent = {
       jobId: job.id,
       documentId: entry.stream.documentId,

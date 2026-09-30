@@ -7,6 +7,7 @@ import {
   KyselyDocumentView,
 } from "../../../src/read-models/document-view.js";
 import type { IConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
+import { DocumentNotFoundError } from "../../../src/shared/errors.js";
 import {
   DocumentExistence,
   type IOperationStore,
@@ -54,6 +55,7 @@ describe("KyselyDocumentView Unit Tests", () => {
       getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
       getGroupReferencers: vi.fn().mockResolvedValue([]),
       getOrdinalsByOpIds: vi.fn().mockResolvedValue(new Map()),
+      getCollectionsInRange: vi.fn().mockResolvedValue([]),
       getOrdinalsInRange: vi.fn().mockResolvedValue([]),
       getByOrdinals: vi.fn().mockResolvedValue([]),
       getStreamAfter: vi.fn().mockResolvedValue([]),
@@ -298,9 +300,9 @@ describe("KyselyDocumentView Unit Tests", () => {
     it("should throw when document not found", async () => {
       mockDb.execute.mockResolvedValue([]);
 
-      await expect(view.get("non-existent")).rejects.toThrow(
-        "Document not found: non-existent",
-      );
+      const read = view.get("non-existent");
+      await expect(read).rejects.toThrow(DocumentNotFoundError);
+      await expect(read).rejects.toThrow("Document not found: non-existent");
     });
 
     it("should query all scopes when view.scopes is not specified", async () => {
@@ -1000,7 +1002,10 @@ describe("KyselyDocumentView Unit Tests", () => {
         },
       ];
 
-      await expect(view.indexOperations(items)).rejects.toThrow(
+      const target = view as unknown as {
+        commitOperations: (i: typeof items) => Promise<void>;
+      };
+      await expect(target.commitOperations(items)).rejects.toThrow(
         "Failed to parse resultingState",
       );
     });

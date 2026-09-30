@@ -23,6 +23,35 @@ This design keeps processors predictable, avoids circular dependencies, and prev
 
 Operations for one document's scope and branch arrive in ordinal order, but operations for different documents do not: document B's creation can reach your processor after document A's operation that refers to B. If you need operations in ordinal order within one call, sort the batch by `context.ordinal` at the top of `onOperations`. No ordering is available across calls. If a processor must resolve a reference to another document, look it up in the read model or relational store it already writes to, and handle the case where it is not there yet, rather than relying on the order of arrival.
 
+## Erasing deleted documents
+
+A processor that stores data must erase a document's data when the document is deleted. The reactor removes its own records of a deleted or purged document; the rows, series or files your processor wrote stay until your processor removes them. A processor that ignores deletions keeps a purged document's data, and there is no purge callback to catch up later.
+
+- **Handle `DELETE_DOCUMENT` and `PURGE_DOCUMENT` alike.** Both name the document in `operation.action.input.documentId`. `PURGE_DOCUMENT` is the marker a purge leaves in the operation log; a reactor that missed the deletion receives only the marker.
+- **Include `"document"` in the filter's `scope`.** Both are `document`-scope operations, so a processor filtered to `["global"]` never sees them. Skip the other `document`-scope operations yourself.
+- **Handle deletions before reading `resultingState`.** The marker can arrive with no `resultingState`.
+- **Make the handler idempotent.** A document's marker can arrive after its `DELETE_DOCUMENT`, and more than once.
+- **Don't use `onDisconnect` for erasure.** It also runs when the factory is unregistered or reloaded.
+
+After a purge, the reactor delivers the purged document's marker and none of its earlier operations. When a drive is deleted, its processors receive the batch up to and including the drive's own deletion, which reaches them whatever their filter, and then `onDisconnect`.
+
+```typescript
+async onOperations(operations: OperationWithContext[]): Promise<void> {
+  for (const { operation, context } of operations) {
+    const type = operation.action.type;
+    if (type === "DELETE_DOCUMENT" || type === "PURGE_DOCUMENT") {
+      const input = operation.action.input as { documentId?: string };
+      await this.store.deleteDocument(input.documentId ?? context.documentId);
+      continue;
+    }
+    if (context.scope !== "global") continue;
+    // ...index the operation
+  }
+}
+```
+
+For relational processors, `RelationalDbProcessor` has `deleteDocumentRows`, `isNamespaceDrive` and `dropNamespace` (see [Erase a deleted document](/academy/Build/WorkWithData/RelationalDbProcessor#erase-a-deleted-document)). An analytics processor that writes a document's series under `ph/doc/<documentId>/...` clears them with ``analyticsStore.clearSeriesBySource(AnalyticsPath.fromString(`ph/doc/${documentId}`), true)``. The generated relational and analytics processors include this handling.
+
 ## Dispatching actions with `dispatch`
 
 The `dispatch` API lets a processor mutate documents by executing actions. It is available on the `IProcessorHostModule` object passed to your factory.
@@ -299,6 +328,7 @@ interface IProcessorHostModule {
 - **Never block** on reactor operations that might circle back to the processor pipeline
 - **React asynchronously**: if you need the result of a dispatch, handle it in a future `onOperations` call
 - **Access all APIs** through `IProcessorHostModule` in your factory function
+- **Erase at deletion**: delete a document's data on `DELETE_DOCUMENT` and `PURGE_DOCUMENT`
 
 ### Related pages
 

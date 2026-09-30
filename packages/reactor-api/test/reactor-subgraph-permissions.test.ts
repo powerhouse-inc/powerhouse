@@ -6,13 +6,21 @@ import {
   type SyncScopeGate,
 } from "@powerhousedao/reactor";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Kysely } from "kysely";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import type { SubgraphArgs } from "../src/graphql/types.js";
+import { runMigrations } from "../src/migrations/index.js";
 import {
   AuthorizationPolicy,
+  createAuthorizationService,
   type IAuthorizationService,
 } from "../src/services/authorization.service.js";
+import { DocumentPermissionService } from "../src/services/document-permission.service.js";
+import {
+  getDbClient,
+  type DocumentPermissionDatabase,
+} from "../src/utils/db.js";
 
 describe("ReactorSubgraph Permission Checks", () => {
   let mockAuthorizationService: Partial<IAuthorizationService>;
@@ -1915,6 +1923,90 @@ describe("ReactorSubgraph Permission Checks", () => {
         "0xpermitted",
       );
       expect(inboxAdd).not.toHaveBeenCalled();
+    });
+
+    describe("a PURGE_DOCUMENT under DOCUMENT_PERMISSIONS", () => {
+      let db: Kysely<DocumentPermissionDatabase>;
+      let permissions: DocumentPermissionService;
+      let subgraph: ReactorSubgraph;
+      let inboxAdd: ReturnType<typeof vi.fn>;
+
+      beforeEach(async () => {
+        const { db: dbClient } = getDbClient();
+        db = dbClient as Kysely<DocumentPermissionDatabase>;
+        await runMigrations(db as Kysely<unknown>);
+        permissions = new DocumentPermissionService(db);
+        await permissions.setDocumentOwner("doc-123", "0xowner");
+        await permissions.setDocumentProtection("doc-123", false);
+        await permissions.grantOperationPermission(
+          "doc-123",
+          "PURGE_DOCUMENT",
+          "0xgrantee",
+          "0xowner",
+        );
+        await permissions.grantPermission(
+          "doc-123",
+          "0xgrantee",
+          "WRITE",
+          "0xowner",
+        );
+        await permissions.grantPermission(
+          "doc-123",
+          "0xdocadmin",
+          "ADMIN",
+          "0xowner",
+        );
+        const authorization = createAuthorizationService(
+          {
+            admins: ["0xsupreme"],
+            defaultProtection: false,
+            policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+          },
+          permissions,
+          () => Promise.resolve([]),
+        );
+        const made = makeSyncManager();
+        inboxAdd = made.inboxAdd;
+        subgraph = buildSubgraph(authorization, made.syncManager);
+      });
+
+      afterEach(async () => {
+        await db.destroy();
+      });
+
+      const pushPurge = (userAddress?: string, documentId = "doc-123") =>
+        callPushSyncEnvelopes(subgraph, createContext({ userAddress }), [
+          operationFor(documentId, "PURGE_DOCUMENT"),
+        ]);
+
+      it("refuses a caller whose operation row grants PURGE_DOCUMENT", async () => {
+        expect(
+          await permissions.hasOperationGrant(
+            "doc-123",
+            "PURGE_DOCUMENT",
+            "0xgrantee",
+          ),
+        ).toBe(true);
+
+        await expect(pushPurge("0xgrantee")).rejects.toThrow("Forbidden");
+        expect(inboxAdd).not.toHaveBeenCalled();
+      });
+
+      it("refuses an anonymous caller on a document with no rows", async () => {
+        await expect(pushPurge(undefined, "doc-open")).rejects.toThrow(
+          "Forbidden",
+        );
+        expect(inboxAdd).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        ["a supreme admin", "0xsupreme"],
+        ["the owner", "0xowner"],
+        ["an ADMIN grantee", "0xdocadmin"],
+      ])("accepts %s", async (_label, address) => {
+        await expect(pushPurge(address)).resolves.toBe(true);
+        expect(inboxAdd).toHaveBeenCalledTimes(1);
+      });
     });
   });
 

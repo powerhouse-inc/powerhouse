@@ -68,6 +68,11 @@ import {
   registerAttachmentReferenceReadModelOnModule,
 } from "./attachment-reference-read-model.mjs";
 import { installFatalErrorShutdown } from "./fatal-shutdown.mjs";
+import {
+  resolvePrivacy,
+  startPrivacy,
+  type RunningPrivacy,
+} from "./privacy.mjs";
 import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
 import {
   assertProjectionWorkerSupported,
@@ -510,6 +515,8 @@ async function initServer(
   // Resolved in startSwitchboard, which owns the flag mechanism; initServer
   // only reads the answer.
   const workflowsEnabled = options.workflows?.enabled === true;
+  // Resolved before the reactor is built: a bad secret fails the boot early.
+  const privacyConfig = resolvePrivacy(options.privacy, process.env);
 
   // Through the package manager like any other, so one route carries the
   // models, the subgraphs and the piece.
@@ -1032,9 +1039,34 @@ async function initServer(
     logger.info("Workflow runtime started");
   }
 
+  let privacy: RunningPrivacy | undefined;
+  if (privacyConfig.enabled) {
+    // The caller's reactor signs with a signer only the caller knows.
+    const signer = options.reactor
+      ? options.privacy?.signer
+      : (options.privacy?.signer ?? renown?.signer);
+    try {
+      privacy = await startPrivacy({
+        config: privacyConfig,
+        reactorModule: (options.reactor ?? ownedReactorModule)?.reactorModule,
+        signer,
+        authorizationService: api.authorizationService,
+        documentPermissionService: api.documentPermissionService,
+        graphqlManager,
+        reactorClient: client,
+        logger: logger.child(["privacy"]),
+      });
+    } catch (error) {
+      await workflows?.stop();
+      await abortBoot(api);
+      throw error;
+    }
+  }
+
   // Ahead of the api: the runtime's store lives in the read-model database
   // that dispose closes, and its children outlive the reactor otherwise.
   const shutdown = async () => {
+    await privacy?.stop();
     await workflows?.stop();
     await api.dispose();
   };
@@ -1206,6 +1238,7 @@ async function initServer(
     attachmentReferenceProjection: api.attachmentReferenceProjection,
     workflowTriggers: workflows?.triggers,
     workflowsEnabled,
+    privacy: privacy ? { erasure: privacy.erasure } : undefined,
     mcpEnabled: options.mcp !== false,
     renown,
     port: serverPort,

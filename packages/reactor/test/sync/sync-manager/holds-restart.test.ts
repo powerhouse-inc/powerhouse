@@ -17,6 +17,7 @@ import { KyselySyncHoldStorage } from "../../../src/storage/kysely/sync-hold-sto
 import { GqlResponseChannel } from "../../../src/sync/channels/gql-res-channel.js";
 import type { IChannelFactory } from "../../../src/sync/interfaces.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
+import { SyncEventTypes } from "../../../src/sync/types.js";
 import {
   testSyncStorageBackends,
   type TestSyncStorage,
@@ -55,7 +56,7 @@ describe.each(testSyncStorageBackends)(
         ),
     } as unknown as IChannelFactory;
 
-    async function start(): Promise<SyncManager> {
+    async function start(bus = new EventBus()): Promise<SyncManager> {
       const manager = new SyncManager(
         new ConsoleLogger(["SyncManager"]),
         storage.syncRemoteStorage,
@@ -68,7 +69,7 @@ describe.each(testSyncStorageBackends)(
           getJobStatus: vi.fn(),
           loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
         } as unknown as IReactor,
-        new EventBus(),
+        bus,
         DEFAULT_DRIVE_CONTAINER_TYPES,
         settledAtHead(),
         {},
@@ -132,7 +133,12 @@ describe.each(testSyncStorageBackends)(
     });
 
     it("keeps the hold, and releases it when the peer widens after the restart", async () => {
-      const first = await start();
+      const bus = new EventBus();
+      // Emitted once the hold is stored; its write is several snapshots here.
+      const held = new Promise<void>((resolve) => {
+        bus.subscribe(SyncEventTypes.SYNC_HELD, () => resolve());
+      });
+      const first = await start(bus);
       await first.add(
         "client",
         COLLECTION,
@@ -142,9 +148,8 @@ describe.each(testSyncStorageBackends)(
         "c1",
         null,
       );
-      await vi.waitFor(async () =>
-        expect(await first.listHolds()).toHaveLength(1),
-      );
+      await held;
+      expect(await first.listHolds()).toHaveLength(1);
       expect(first.getByName("client").channel.outbox.items).toHaveLength(0);
       await first.shutdown().completed;
       managers.splice(0);

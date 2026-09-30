@@ -20,6 +20,8 @@ export type ErrorInfo = {
   name: string;
   message: string;
   stack: string;
+  /** The document the error names, when it carries one. */
+  documentId?: string;
 };
 
 /**

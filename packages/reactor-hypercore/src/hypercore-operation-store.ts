@@ -1,6 +1,7 @@
-import type {
-  Operation,
-  OperationWithContext,
+import {
+  isPurgeMarker,
+  type Operation,
+  type OperationWithContext,
 } from "@powerhousedao/shared/document-model";
 import type {
   AppendCondition,
@@ -14,6 +15,7 @@ import type {
 import {
   AppendConditionFailedError,
   DocumentAlreadyExistsError,
+  DocumentPurgedError,
   DuplicateOperationError,
   RevisionMismatchError,
 } from "@powerhousedao/reactor";
@@ -127,6 +129,15 @@ export class HypercoreOperationStore implements IOperationStore {
 
     const operations = atomicTxn.getOperations();
 
+    // No delete path here: a stream purged elsewhere ends in its marker.
+    const marker = await this.purgeMarkerAtHead(documentId);
+    if (marker !== undefined && operations.length > 0) {
+      if (!operations.every((op) => isPurgeMarker(op))) {
+        throw new DocumentPurgedError(documentId);
+      }
+      return [marker];
+    }
+
     if (currentRevision !== revision - 1) {
       if (revision === 0 && this.isCreate(operations)) {
         throw new DocumentAlreadyExistsError(
@@ -189,6 +200,25 @@ export class HypercoreOperationStore implements IOperationStore {
     await batch.flush();
 
     return operations.map((op) => this.toOperation(op));
+  }
+
+  /** A purge marker is written to document/main whichever branch it erases. */
+  private async purgeMarkerAtHead(
+    documentId: string,
+  ): Promise<Operation | undefined> {
+    const branch = "main";
+    const head = await this.bee.get(headKey(documentId, "document", branch));
+    if (!head) {
+      return undefined;
+    }
+    const index = (head.value as HeadEntryValue).index;
+    const entry = await this.bee.get(
+      operationKey(documentId, "document", branch, index),
+    );
+    const stored = entry?.value as StoredOperation | undefined;
+    return stored && isPurgeMarker(stored)
+      ? this.toOperation(stored)
+      : undefined;
   }
 
   private isCreate(operations: StoredOperation[]): boolean {

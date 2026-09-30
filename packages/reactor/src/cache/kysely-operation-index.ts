@@ -1,8 +1,13 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import {
+  isPurgeMarker,
+  type OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import type { Kysely, Transaction } from "kysely";
 import { sql } from "kysely";
 import { readSnapshotFunctions } from "../catch-up/settled-watermark.js";
 import type { DocumentStreamKey } from "./write-cache-types.js";
+import { DocumentPurgedError } from "../shared/errors.js";
+import { findPurged } from "../storage/kysely/document-purges.js";
 import type { PagedResults, PagingOptions } from "../shared/types.js";
 import type { ViewFilter } from "../storage/interfaces.js";
 import type { Database } from "../storage/kysely/types.js";
@@ -152,6 +157,7 @@ class KyselyOperationIndexTxn implements IOperationIndexTxn {
 
 export class KyselyOperationIndex implements IOperationIndex {
   private trx?: Transaction<Database>;
+  private liveIds?: ReadonlySet<string>;
 
   constructor(private db: Kysely<Database>) {}
 
@@ -159,9 +165,14 @@ export class KyselyOperationIndex implements IOperationIndex {
     return this.trx ?? this.db;
   }
 
-  withTransaction(trx: Transaction<Database>): KyselyOperationIndex {
+  /** `liveIds`: ids the transaction read untombstoned under its shared lock. */
+  withTransaction(
+    trx: Transaction<Database>,
+    liveIds?: ReadonlySet<string>,
+  ): KyselyOperationIndex {
     const instance = new KyselyOperationIndex(this.db);
     instance.trx = trx;
+    instance.liveIds = liveIds;
     return instance;
   }
 
@@ -255,6 +266,7 @@ export class KyselyOperationIndex implements IOperationIndex {
 
     let operationOrdinals: number[] = [];
     if (operations.length > 0) {
+      await this.refusePurgedOperations(trx, operations);
       await this.assignXid(trx);
 
       const operationRows: InsertableOperationIndexOperation[] = operations.map(
@@ -387,6 +399,32 @@ export class KyselyOperationIndex implements IOperationIndex {
     return operationOrdinals;
   }
 
+  async getCollectionsInRange(
+    after: number,
+    through: number,
+    among?: readonly string[],
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    signal?.throwIfAborted();
+    if (through <= after || among?.length === 0) {
+      return [];
+    }
+
+    let query = this.queryExecutor
+      .selectFrom("operation_index_operations as oi")
+      .innerJoin("document_collections as dc", "oi.documentId", "dc.documentId")
+      .select("dc.collectionId")
+      .distinct()
+      .where("oi.ordinal", ">", after)
+      .where("oi.ordinal", "<=", through);
+    if (among !== undefined) {
+      query = query.where("dc.collectionId", "in", [...among]);
+    }
+    const rows = await query.execute();
+
+    return rows.map((row) => row.collectionId);
+  }
+
   async getOrdinalsInRange(
     after: number,
     through: number,
@@ -441,6 +479,7 @@ export class KyselyOperationIndex implements IOperationIndex {
     stream: DocumentStreamKey,
     after: number,
     signal?: AbortSignal,
+    limit?: number,
   ): Promise<OperationWithContext[]> {
     signal?.throwIfAborted();
 
@@ -452,6 +491,7 @@ export class KyselyOperationIndex implements IOperationIndex {
       .where("scope", "=", stream.scope)
       .where("ordinal", ">", after)
       .orderBy("ordinal", "asc")
+      .$if(limit !== undefined, (qb) => qb.limit(limit!))
       .execute();
 
     return rows.map((row) => this.rowToOperationWithContext(row));
@@ -717,6 +757,25 @@ export class KyselyOperationIndex implements IOperationIndex {
             )
         : undefined,
     };
+  }
+
+  /** Backstop to the store's refusal: only a marker indexes a purged id. */
+  private async refusePurgedOperations(
+    trx: Transaction<Database>,
+    operations: OperationIndexEntry[],
+  ): Promise<void> {
+    const ids = new Set(
+      operations
+        .filter((operation) => !isPurgeMarker(operation))
+        .map((operation) => operation.documentId)
+        .filter((id) => !this.liveIds?.has(id)),
+    );
+    const purged = await findPurged(trx, ids);
+    for (const id of ids) {
+      if (purged.has(id)) {
+        throw new DocumentPurgedError(id);
+      }
+    }
   }
 
   /** Takes the xid before the first ordinal, as the settled watermark needs. */

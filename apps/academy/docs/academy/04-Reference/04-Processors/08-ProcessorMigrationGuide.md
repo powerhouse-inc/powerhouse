@@ -393,7 +393,12 @@ export const myRelationalProcessorFactory =
       scope: ["global"],
     };
 
-    const processor = new MyRelationalProcessor(namespace, filter, store);
+    const processor = new MyRelationalProcessor(
+      namespace,
+      filter,
+      store,
+      driveHeader.id,
+    );
     return [{ processor, filter }];
   };
 ```

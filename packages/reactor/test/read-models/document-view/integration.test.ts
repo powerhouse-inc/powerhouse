@@ -19,6 +19,7 @@ import {
 } from "../../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
+import { DocumentNotFoundError } from "../../../src/shared/errors.js";
 import {
   DocumentExistence,
   type IOperationStore,
@@ -1137,9 +1138,11 @@ describe("KyselyDocumentView", () => {
       const nonExistentDocId = generateId();
       const branch = "main";
 
-      await expect(
-        view.get(nonExistentDocId, { scopes: ["header"], branch }),
-      ).rejects.toThrow(`Document not found: ${nonExistentDocId}`);
+      const read = view.get(nonExistentDocId, { scopes: ["header"], branch });
+      await expect(read).rejects.toThrow(DocumentNotFoundError);
+      await expect(read).rejects.toThrow(
+        `Document not found: ${nonExistentDocId}`,
+      );
     });
 
     it("should abort when signal is aborted", async () => {
@@ -2465,9 +2468,9 @@ describe("KyselyDocumentView", () => {
       await createDocumentInView(documentId);
       await deleteDocumentInView(documentId);
 
-      await expect(view.get(documentId)).rejects.toThrow(
-        `Document not found: ${documentId}`,
-      );
+      const read = view.get(documentId);
+      await expect(read).rejects.toThrow(DocumentNotFoundError);
+      await expect(read).rejects.toThrow(`Document not found: ${documentId}`);
     });
 
     /**
@@ -2561,7 +2564,13 @@ describe("KyselyDocumentView", () => {
         `Document not found: ${documentId}`,
       );
       await expect(view.resolveIdOrSlug(slug)).rejects.toThrow(
-        `Document not found: ${slug}`,
+        DocumentNotFoundError,
+      );
+    });
+
+    it("resolveIdOrSlug() should throw for an identifier that never existed", async () => {
+      await expect(view.resolveIdOrSlug(generateId())).rejects.toThrow(
+        DocumentNotFoundError,
       );
     });
 
@@ -2997,11 +3006,11 @@ describe("KyselyDocumentView", () => {
       let fired = false;
       let inBetween = false;
       const target = chunkedView as unknown as {
-        commitOperations: (items: OperationWithContext[]) => Promise<void>;
+        commitFenced: (items: OperationWithContext[]) => Promise<void>;
       };
-      const commit = target.commitOperations.bind(chunkedView);
+      const commit = target.commitFenced.bind(chunkedView);
 
-      target.commitOperations = async (items: OperationWithContext[]) => {
+      target.commitFenced = async (items: OperationWithContext[]) => {
         await commit(items);
         if (inBetween) return;
 

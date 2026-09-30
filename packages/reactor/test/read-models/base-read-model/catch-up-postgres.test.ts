@@ -90,7 +90,11 @@ describe("BaseReadModel catch-up [Postgres]", () => {
       operationIndex,
       {} as IWriteCache,
       new ConsistencyTracker(),
-      { readModelId: READ_MODEL_ID, rebuildStateOnInit: false },
+      {
+        readModelId: READ_MODEL_ID,
+        rebuildStateOnInit: false,
+        purgeFence: "none",
+      },
     );
     await model.init();
 
@@ -129,6 +133,7 @@ describe("BaseReadModel catch-up [Postgres]", () => {
         readModelId: READ_MODEL_ID,
         rebuildStateOnInit: false,
         startFrom: "head",
+        purgeFence: "none",
       },
     );
     let startedAt: number;

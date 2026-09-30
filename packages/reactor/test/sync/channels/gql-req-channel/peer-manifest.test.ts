@@ -7,6 +7,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GqlRequestChannel } from "../../../../src/sync/channels/gql-req-channel.js";
 import { ChannelError } from "../../../../src/sync/errors.js";
+import { MAX_POLLED_REFUSALS } from "../../../../src/sync/purge-refusals.js";
 import { SyncOperation } from "../../../../src/sync/sync-operation.js";
 import { ChannelErrorSource } from "../../../../src/sync/types.js";
 import {
@@ -117,6 +118,26 @@ function previousSchemaServer() {
       });
     });
   return { fetchFn, touches, polls };
+}
+
+function inboxRefusal(
+  documentId: string,
+  errorType: "MARKER_REFUSED" | "UNSUPPORTED_PROTOCOL",
+) {
+  const syncOp = new SyncOperation(
+    crypto.randomUUID(),
+    "job-1",
+    [],
+    "remote-1",
+    documentId,
+    ["document"],
+    "main",
+    [],
+  );
+  syncOp.failed(
+    new ChannelError(ChannelErrorSource.Inbox, new Error("refused"), errorType),
+  );
+  return syncOp;
 }
 
 function respond(data: unknown, errors?: unknown[]) {
@@ -316,6 +337,115 @@ describe("GqlRequestChannel peer manifests", () => {
       { documentId: "doc", branch: "main" },
     ]);
     expect(state.polls[1].variables.refusals).toEqual([]);
+  });
+
+  it("reports a refused marker with its kind to a server announcing the feature", async () => {
+    const { state, fetchFn } = agreementServer(LOCAL);
+    const timer = new ManualPollTimer();
+    const { channel } = channelWith(fetchFn, timer);
+    channels.push(channel);
+    await channel.init();
+
+    channel.deadLetter.add(inboxRefusal("purged", "MARKER_REFUSED"));
+    await timer.tick();
+    await timer.tick();
+
+    expect(state.polls[0].variables.refusals).toEqual([
+      { documentId: "purged", branch: "main", kind: "marker" },
+    ]);
+    expect(state.polls[1].variables.refusals).toEqual([]);
+  });
+
+  it("reports at most MAX_POLLED_REFUSALS refusals per poll, the rest on the next", async () => {
+    const { state, fetchFn } = agreementServer(LOCAL);
+    const timer = new ManualPollTimer();
+    const { channel } = channelWith(fetchFn, timer);
+    channels.push(channel);
+    await channel.init();
+
+    const ids = Array.from(
+      { length: MAX_POLLED_REFUSALS + 5 },
+      (_, i) => `purged-${i}`,
+    );
+    channel.deadLetter.add(
+      ...ids.map((id) => inboxRefusal(id, "MARKER_REFUSED")),
+    );
+    await timer.tick();
+    await timer.tick();
+    await timer.tick();
+
+    const sent = (i: number) =>
+      (state.polls[i].variables.refusals as { documentId: string }[]).map(
+        (refusal) => refusal.documentId,
+      );
+    expect(sent(0)).toEqual(ids.slice(0, MAX_POLLED_REFUSALS));
+    expect(sent(1)).toEqual(ids.slice(MAX_POLLED_REFUSALS));
+    expect(sent(2)).toEqual([]);
+  });
+
+  it("keeps polling, and reports a refusal again, when the server did not record it", async () => {
+    const { state, fetchFn } = agreementServer(LOCAL);
+    let failed = false;
+    const failing = vi
+      .fn()
+      .mockImplementation((url: string, options: RequestInit) => {
+        const body = JSON.parse(options.body as string) as Body;
+        if (!failed && body.variables.refusals?.length) {
+          failed = true;
+          state.polls.push(body);
+          return respond(null, [
+            {
+              message: "Field refusals: marker refusals were not recorded",
+              extensions: { code: "REFUSAL_NOT_RECORDED" },
+            },
+          ]);
+        }
+        return fetchFn(url, options);
+      });
+    const timer = new ManualPollTimer();
+    const { channel } = channelWith(failing, timer);
+    channels.push(channel);
+    await channel.init();
+
+    channel.deadLetter.add(inboxRefusal("purged", "MARKER_REFUSED"));
+    await timer.tick().catch(() => {});
+    await timer.tick();
+    await timer.tick();
+
+    const marker = { documentId: "purged", branch: "main", kind: "marker" };
+    expect(timer.isRunning()).toBe(true);
+    expect(state.polls.map((poll) => poll.variables.refusals)).toEqual([
+      [marker],
+      [marker],
+      [],
+    ]);
+  });
+
+  it("keeps a refused marker from a server without the feature until it announces it", async () => {
+    const before = localPeerManifest([TEST_PROTOCOL], {}, undefined, 1);
+    const after = localPeerManifest(PEER_CAPABILITIES, {}, undefined, 2);
+    const { state, fetchFn } = agreementServer(before);
+    const timer = new ManualPollTimer();
+    const { channel, heard } = channelWith(fetchFn, timer);
+    channels.push(channel);
+    await channel.init();
+
+    channel.deadLetter.add(
+      inboxRefusal("held", "UNSUPPORTED_PROTOCOL"),
+      inboxRefusal("purged", "MARKER_REFUSED"),
+    );
+    await timer.tick();
+    expect(state.polls[0].variables.refusals).toEqual([
+      { documentId: "held", branch: "main" },
+    ]);
+
+    state.server = after;
+    await timer.tick();
+    await vi.waitFor(() => expect(heard).toEqual([before, after]));
+    await timer.tick();
+    expect(state.polls.at(-1)!.variables.refusals).toEqual([
+      { documentId: "purged", branch: "main", kind: "marker" },
+    ]);
   });
 
   it("hears a server restarted into the same build, so its holds are re-checked", async () => {

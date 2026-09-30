@@ -6,9 +6,18 @@ import type { ErrorInfo, JobMeta } from "../shared/types.js";
  * operations, and a reevaluation re-judges a document's stored operations
  * because a read-set stream elsewhere (a group document) changed. A
  * reevaluation job carries no actions or operations; its work is derived
- * from what is already stored.
+ * from what is already stored. A purge job erases a deleted document and
+ * writes its PURGE_DOCUMENT marker; only DocumentPurgeService enqueues one.
  */
-export type JobKind = "mutation" | "load" | "reevaluation";
+export type JobKind = "mutation" | "load" | "reevaluation" | "purge";
+
+/** What a purge job carries beyond its document id. */
+export type PurgeJobOptions = {
+  /** The erasure request that ordered the purge; the marker's requestId. */
+  requestId: string;
+  /** Lifts the maxPurgeOperations cap for this document. */
+  allowLarge: boolean;
+};
 
 /**
  * State of a job in the queue
@@ -92,6 +101,9 @@ export type Job = {
 
   /** Metadata that flows through the job lifecycle */
   meta: JobMeta;
+
+  /** Set on a purge job only. */
+  purge?: PurgeJobOptions;
 };
 
 /**

@@ -1,5 +1,6 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
+import { DocumentPurgedError } from "../../shared/errors.js";
 import type { PagingOptions, PagedResults } from "../../shared/types.js";
 import type {
   ChannelErrorSource,
@@ -8,6 +9,7 @@ import type {
 import { quarantinesDocument } from "../../sync/utils.js";
 import type { DeadLetterRecord } from "../interfaces.js";
 import type { ISyncDeadLetterStorage } from "../interfaces.js";
+import { acquirePurgeLocks, findPurged } from "./document-purges.js";
 import type {
   Database,
   InsertableSyncDeadLetter,
@@ -102,7 +104,14 @@ export class KyselySyncDeadLetterStorage implements ISyncDeadLetterStorage {
       throw new Error("Operation aborted");
     }
 
+    // A purged id's dead letter would write its operations back.
     await this.db.transaction().execute(async (trx) => {
+      await acquirePurgeLocks(trx, [deadLetter.documentId], "shared");
+      const purged = await findPurged(trx, [deadLetter.documentId]);
+      if (purged.size > 0) {
+        throw new DocumentPurgedError(deadLetter.documentId);
+      }
+
       const insertable = deadLetterRecordToRow(deadLetter);
 
       await trx

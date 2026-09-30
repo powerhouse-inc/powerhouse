@@ -275,6 +275,18 @@ describe("ReactorSubscriptionManager", () => {
 
         expect(callback).toHaveBeenCalledWith(["doc1", "doc3"]);
       });
+
+      it("passes a purge's deletion info to subscribers", () => {
+        const callback = vi.fn();
+        const search: SearchFilter = { ids: ["doc1"] };
+
+        manager.onDocumentDeleted(callback, search);
+        manager.notifyDocumentsDeleted(["doc1", "doc2"], undefined, undefined, {
+          purged: true,
+        });
+
+        expect(callback).toHaveBeenCalledWith(["doc1"], { purged: true });
+      });
     });
 
     describe("notifyDocumentsUpdated", () => {

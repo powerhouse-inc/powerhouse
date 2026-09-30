@@ -1,6 +1,9 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import {
+  isPurgeMarker,
+  type OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import { childLogger, type ILogger } from "document-model";
-import type { Kysely } from "kysely";
+import type { Kysely, Transaction } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import { ContiguousCursor } from "../catch-up/contiguous-cursor.js";
@@ -23,6 +26,10 @@ import type {
   ConsistencyToken,
 } from "../shared/types.js";
 import { yieldToMain } from "../shared/utils.js";
+import {
+  acquirePurgeLocks,
+  findPurged,
+} from "../storage/kysely/document-purges.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import type { IReadModel, IReadModelReservation } from "./interfaces.js";
 import type { DocumentViewDatabase } from "./types.js";
@@ -72,6 +79,14 @@ function normalizeIndexingConfig(
   };
 }
 
+export type PurgeFence =
+  /** Commits in a purge-locked trx; see commitsInFenceTransaction. */
+  | "locked"
+  /** Drops tombstoned ids only, for rows that live on another database handle. */
+  | "skip"
+  /** No fence: ProcessorManager, and commits that open their own trx on this.db. */
+  | "none";
+
 export type BaseReadModelConfig = {
   readModelId: string;
   /** Rebuilds resultingState for boot replay and sweeps. */
@@ -82,6 +97,8 @@ export type BaseReadModelConfig = {
   startFrom?: "beginning" | "head";
   /** Re-applies the rest of a late operation's stream; defaults to true. */
   replayStreamSuffix?: boolean;
+  /** Defaults to "locked"; see {@link PurgeFence} for the opt-outs. */
+  purgeFence?: PurgeFence;
 };
 
 type StreamGroup = {
@@ -134,6 +151,33 @@ function mergeByOrdinal(
   return [...byOrdinal.values()].sort((a, b) => ordinalOf(a) - ordinalOf(b));
 }
 
+/** The ids whose purge an operation's rows must not outlive. */
+function purgeFenceIds(items: OperationWithContext[]): string[] {
+  const ids = new Set<string>();
+  for (const { operation, context } of items) {
+    ids.add(context.documentId);
+    if (operation.action.type !== "ADD_RELATIONSHIP") continue;
+    const input = operation.action.input as {
+      sourceId?: unknown;
+      targetId?: unknown;
+    };
+    if (typeof input.sourceId === "string") ids.add(input.sourceId);
+    if (typeof input.targetId === "string") ids.add(input.targetId);
+  }
+  return [...ids].sort();
+}
+
+function dropPurged(
+  items: OperationWithContext[],
+  purged: Set<string>,
+): OperationWithContext[] {
+  if (purged.size === 0) return items;
+  return items.filter(
+    (item) =>
+      isPurgeMarker(item.operation) || !purged.has(item.context.documentId),
+  );
+}
+
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -173,7 +217,24 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
       config.indexing ?? defaultReadModelIndexingConfig,
     );
     this.cursor = new ContiguousCursor(0, this.maxTrackedAboveCursor);
+    // A locked commit through this.db deadlocks single-connection PGlite.
+    if (
+      (config.purgeFence ?? "locked") === "locked" &&
+      this.commitOperations !== BaseReadModel.prototype.commitOperations &&
+      !(this.constructor as typeof BaseReadModel).commitsInFenceTransaction
+    ) {
+      throw new Error(
+        `Read model ${config.readModelId}: purgeFence "locked" commits in a ` +
+          "transaction its commitOperations must write through. Write " +
+          "through the trx argument and set static commitsInFenceTransaction " +
+          'to true, or set purgeFence "skip" (rows on another handle) or ' +
+          '"none" (no rows here, or its own transaction).',
+      );
+    }
   }
+
+  /** Set by a subclass whose commitOperations writes through its trx argument. */
+  static readonly commitsInFenceTransaction: boolean = false;
 
   get consumerId(): string {
     return this.config.readModelId;
@@ -361,11 +422,56 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected onCursorAdvanced(appliedThrough: number): void {}
 
-  // Subclass does domain-specific work here (snapshots, relationships, processor routing, etc.).
+  /** Writes through `trx` when given: the purge fence's transaction. */
   protected async commitOperations(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     items: OperationWithContext[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    trx?: Transaction<DocumentViewDatabase>,
   ): Promise<void> {}
+
+  /** The handle document_purges is read through; `db` may be the fence trx. */
+  protected purgeLookup(db: Kysely<any>): Kysely<any> {
+    return db;
+  }
+
+  /** False when the batch writes no rows, so the fence opens no transaction. */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected writesRows(items: OperationWithContext[]): boolean {
+    return true;
+  }
+
+  /** Every delivery commits through here. */
+  protected async commitFenced(items: OperationWithContext[]): Promise<void> {
+    const fence = this.config.purgeFence ?? "locked";
+    if (fence === "none") {
+      await this.commitOperations(items);
+      return;
+    }
+    if (items.length === 0 || !this.writesRows(items)) {
+      if (items.length > 0) await this.commitOperations(items);
+      return;
+    }
+
+    const ids = purgeFenceIds(items);
+    if (fence === "skip") {
+      const live = dropPurged(
+        items,
+        await findPurged(this.purgeLookup(this.db), ids),
+      );
+      if (live.length > 0) await this.commitOperations(live);
+      return;
+    }
+
+    await this.db.transaction().execute(async (trx) => {
+      await acquirePurgeLocks(trx, ids, "shared");
+      const live = dropPurged(
+        items,
+        await findPurged(this.purgeLookup(trx), ids),
+      );
+      if (live.length > 0) await this.commitOperations(live, trx);
+    });
+  }
 
   /** Rebuilds resultingState as the executor writes it: scopes plus header. */
   protected async rebuildStateForOperations(
@@ -531,7 +637,7 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
         const chunk = items.slice(start, start + commitChunkSize);
 
         try {
-          await this.commitOperations(chunk);
+          await this.commitFenced(chunk);
         } catch (error) {
           this.failedItem = chunk[0];
           const prefix = items.slice(0, committed);
@@ -668,7 +774,7 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     }
 
     try {
-      await this.commitOperations(rebuilt.items);
+      await this.commitFenced(rebuilt.items);
     } catch (error) {
       this.cursor.settle(owned, false);
       return {
@@ -689,7 +795,7 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     return { replayed, reapplied: rebuilt.items.length - replayed };
   }
 
-  /** A document gone from the write cache is absent, not a failure. */
+  /** A document gone from the write cache, or purged, is absent. */
   private async rebuildIfConfigured(
     items: OperationWithContext[],
   ): Promise<{ items: OperationWithContext[]; absent: number[] }> {
@@ -700,11 +806,21 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     const rebuilt: OperationWithContext[] = [];
     const absent: number[] = [];
     for (const item of items) {
+      // The marker has no state to rebuild; its stream has no CREATE_DOCUMENT.
+      if (isPurgeMarker(item.operation)) {
+        rebuilt.push(item);
+        continue;
+      }
       let result: OperationWithContext[];
       try {
         result = await this.rebuildStateForOperations([item]);
       } catch (error) {
-        if (!(error instanceof DocumentNotFoundError)) throw error;
+        if (
+          !DocumentNotFoundError.isError(error) &&
+          !(await this.isPurged(item.context.documentId))
+        ) {
+          throw error;
+        }
         this.catchUpLogger.warn(
           "@consumer dropped ordinal @ordinal: document @documentId is gone",
           this.consumerId,
@@ -717,6 +833,17 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
       rebuilt.push(...result);
     }
     return { items: rebuilt, absent };
+  }
+
+  /** A failed lookup is no answer: the caller's own error stands. */
+  private async isPurged(documentId: string): Promise<boolean> {
+    try {
+      return (await findPurged(this.purgeLookup(this.db), [documentId])).has(
+        documentId,
+      );
+    } catch {
+      return false;
+    }
   }
 
   private block(item: OperationWithContext, error: unknown): SweepBlockedAt {

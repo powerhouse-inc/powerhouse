@@ -7,12 +7,14 @@ import type {
 import {
   createAuthState,
   isDenied,
+  isPurgeMarker,
 } from "@powerhousedao/shared/document-model";
-import type { Kysely } from "kysely";
+import type { Kysely, Transaction } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
+import { DocumentNotFoundError } from "../shared/errors.js";
 import { DOCUMENT_VIEW_READ_MODEL } from "./names.js";
 import type {
   ConsistencyToken,
@@ -58,6 +60,8 @@ export enum DeletedDocumentRead {
 }
 
 export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
+  static override readonly commitsInFenceTransaction = true;
+
   private _db: Kysely<Database>;
 
   constructor(
@@ -79,6 +83,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
         rebuildStateOnInit: true,
         indexing,
         replayStreamSuffix: false,
+        purgeFence: "locked",
       },
     );
     this._db = db;
@@ -100,10 +105,13 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
    */
   protected override async commitOperations(
     items: OperationWithContext[],
+    fenced?: Transaction<DocumentViewDatabase>,
   ): Promise<void> {
-    await this._db.transaction().execute(async (trx) => {
+    const write = async (trx: Transaction<Database>) => {
       for (const item of items) {
         const { operation, context } = item;
+        // Its rows went in the purge transaction; the marker writes none back.
+        if (isPurgeMarker(operation)) continue;
         const {
           documentId,
           scope,
@@ -359,7 +367,13 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
           }
         }
       }
-    });
+    };
+
+    if (fenced) {
+      await write(fenced as unknown as Transaction<Database>);
+      return;
+    }
+    await this._db.transaction().execute(write);
   }
 
   async exists(
@@ -428,7 +442,10 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     const snapshots = await query.execute();
 
     if (snapshots.length === 0) {
-      throw new Error(`Document not found: ${documentId}`);
+      throw new DocumentNotFoundError(
+        documentId,
+        `Document not found: ${documentId}`,
+      );
     }
 
     if (signal?.aborted) {
@@ -810,7 +827,10 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     const resolvedDocumentId = idMatchDocId || slugMatchDocId;
 
     if (!resolvedDocumentId) {
-      throw new Error(`Document not found: ${identifier}`);
+      throw new DocumentNotFoundError(
+        identifier,
+        `Document not found: ${identifier}`,
+      );
     }
 
     return resolvedDocumentId;

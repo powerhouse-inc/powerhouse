@@ -13,6 +13,7 @@ import {
   UnsupportedDocumentModelVersionError,
 } from "./errors.js";
 import type { DocumentOperations, Operation } from "./operations.js";
+import { PURGE_DOCUMENT } from "./purge.js";
 import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";
 import type {
@@ -286,7 +287,10 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
       if (isDenied(spineOp)) {
         continue;
       }
-      if (spineActionType === "DELETE_DOCUMENT") {
+      if (
+        spineActionType === "DELETE_DOCUMENT" ||
+        spineActionType === PURGE_DOCUMENT
+      ) {
         document = applyDeleteDocumentAction(
           document,
           spineOp.action as Parameters<typeof applyDeleteDocumentAction>[1],

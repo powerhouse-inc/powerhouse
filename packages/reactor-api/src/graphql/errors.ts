@@ -72,3 +72,18 @@ export class MalformedStoredOperationError extends GraphQLError {
     });
   }
 }
+
+/**
+ * The marker refusals a poll carried were not recorded, so the poll fails.
+ * The code is recoverable: the client keeps polling and reports them again.
+ */
+export class RefusalNotRecordedError extends GraphQLError {
+  constructor(cause: unknown) {
+    super("A reported marker refusal was not recorded; report it again", {
+      originalError: cause instanceof Error ? cause : new Error(String(cause)),
+      extensions: {
+        code: RECOVERABLE_GRAPHQL_ERROR_CODES.refusalNotRecorded,
+      },
+    });
+  }
+}

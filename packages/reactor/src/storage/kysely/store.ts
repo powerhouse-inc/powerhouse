@@ -1,8 +1,10 @@
 import {
+  PURGE_DOCUMENT,
   type Operation,
   type OperationWithContext,
 } from "@powerhousedao/shared/document-model";
 import { sql, type Kysely, type Transaction } from "kysely";
+import { DocumentPurgedError } from "../../shared/errors.js";
 import type { PagedResults, PagingOptions } from "../../shared/types.js";
 import { throwIfAborted } from "../../shared/utils.js";
 import { paginateRows } from "./pagination.js";
@@ -18,6 +20,7 @@ import {
   type OperationFilter,
 } from "../interfaces.js";
 import { AtomicTransaction } from "../txn.js";
+import { findPurged } from "./document-purges.js";
 import type { Database, InsertableOperation, OperationRow } from "./types.js";
 
 class _UniqueConstraintContext extends Error {
@@ -35,6 +38,7 @@ class _UniqueConstraintContext extends Error {
 
 export class KyselyOperationStore implements IOperationStore {
   private trx?: Transaction<Database>;
+  private liveIds?: ReadonlySet<string>;
 
   constructor(private db: Kysely<Database>) {}
 
@@ -42,9 +46,14 @@ export class KyselyOperationStore implements IOperationStore {
     return this.trx ?? this.db;
   }
 
-  withTransaction(trx: Transaction<Database>): KyselyOperationStore {
+  /** `liveIds`: ids the transaction read untombstoned under its shared lock. */
+  withTransaction(
+    trx: Transaction<Database>,
+    liveIds?: ReadonlySet<string>,
+  ): KyselyOperationStore {
     const instance = new KyselyOperationStore(this.db);
     instance.trx = trx;
+    instance.liveIds = liveIds;
     return instance;
   }
 
@@ -176,6 +185,13 @@ export class KyselyOperationStore implements IOperationStore {
 
     if (operations.length === 0) {
       return [];
+    }
+
+    const purgedHead = this.liveIds?.has(documentId)
+      ? undefined
+      : await this.refusePurgedAppend(trx, documentId, operations);
+    if (purgedHead !== undefined) {
+      return purgedHead;
     }
 
     if (condition) {
@@ -423,6 +439,53 @@ export class KyselyOperationStore implements IOperationStore {
     }
 
     return storedRows.map((row) => this.rowToOperation(row));
+  }
+
+  /** A purged stream refuses appends; a marker gets the stored one back. */
+  private async refusePurgedAppend(
+    trx: Transaction<Database>,
+    documentId: string,
+    operations: InsertableOperation[],
+  ): Promise<Operation[] | undefined> {
+    const purged = await findPurged(trx, [documentId]);
+    if (!purged.has(documentId)) {
+      return undefined;
+    }
+    if (!operations.every((operation) => this.isMarker(operation))) {
+      throw new DocumentPurgedError(documentId);
+    }
+    const rows = await trx
+      .selectFrom("Operation")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .where(sql<boolean>`action->>'type' = ${PURGE_DOCUMENT}`)
+      .orderBy("index", "asc")
+      .execute();
+    return rows.map((row) => this.rowToOperation(row));
+  }
+
+  private isMarker(operation: InsertableOperation): boolean {
+    return this.actionType(operation) === PURGE_DOCUMENT;
+  }
+
+  private actionType(operation: InsertableOperation): string | undefined {
+    let action: unknown = operation.action;
+    if (typeof action === "string") {
+      try {
+        action = JSON.parse(action);
+      } catch {
+        return undefined;
+      }
+    }
+    if (
+      typeof action === "object" &&
+      action !== null &&
+      "type" in action &&
+      typeof action.type === "string"
+    ) {
+      return action.type;
+    }
+    return undefined;
   }
 
   /** True when the staged write creates a document rather than appending to one. */

@@ -68,6 +68,8 @@ export type DocumentChangeEvent = {
   context?: {
     parentId?: string;
     childId?: string;
+    /** On a Deleted event: a purge marker applied the deletion. */
+    purged?: true;
   };
 };
 

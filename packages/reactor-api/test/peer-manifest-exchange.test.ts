@@ -3,8 +3,11 @@ import {
   GqlRequestChannelFactory,
   GqlResponseChannelFactory,
   JobStatus,
+  REACTOR_SCHEMA,
+  RECOVERABLE_GRAPHQL_ERROR_CODES,
   ReactorBuilder,
   SyncBuilder,
+  SyncEventTypes,
   type IChannel,
   type IChannelFactory,
   type IQueue,
@@ -26,8 +29,10 @@ import { buildSchema, graphql } from "graphql";
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  holdPollRefusals,
   pollSyncEnvelopes,
   pushSyncEnvelopes,
+  recordPollMarkerRefusals,
   touchChannel,
 } from "../src/graphql/reactor/resolvers.js";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
@@ -532,6 +537,119 @@ describe("peer manifest exchange over the sync resolvers", () => {
         }),
       ]),
     );
+    expect(server.getById("refusing").channel.deadLetter.items).toEqual([]);
+  });
+
+  it("ignores a polled refusal of a kind it does not know", async () => {
+    const server = await reactor();
+    await touchChannel(server, {
+      input: {
+        id: "refusing",
+        name: "refusing",
+        collectionId: DriveCollectionId.forDrive("drive-1").key,
+        filter: FILTER,
+        sinceTimestampUtcMs: "0",
+        manifest: server.localManifest(),
+      },
+    });
+    const added = vi.spyOn(
+      server.getById("refusing").channel.deadLetter,
+      "add",
+    );
+
+    holdPollRefusals(server, "refusing", [
+      { documentId: "drive-1", branch: "main", kind: "future" },
+    ]);
+
+    expect(added).not.toHaveBeenCalled();
+    expect(await server.listHolds({ remoteName: "refusing" })).toEqual([]);
+  });
+
+  it("fails a poll whose marker refusals were not recorded with a recoverable code", async () => {
+    const server = await reactor();
+    await touchChannel(server, {
+      input: {
+        id: "refusing",
+        name: "refusing",
+        collectionId: DriveCollectionId.forDrive("drive-1").key,
+        filter: FILTER,
+        sinceTimestampUtcMs: "0",
+        manifest: server.localManifest(),
+      },
+    });
+    vi.spyOn(
+      server as unknown as {
+        recordPolledMarkerRefusals: (...args: unknown[]) => Promise<void>;
+      },
+      "recordPolledMarkerRefusals",
+    ).mockRejectedValue(new Error("Connection terminated unexpectedly"));
+
+    const failure = recordPollMarkerRefusals(server, "refusing", [
+      { documentId: "purged-1", branch: "main", kind: "marker" },
+    ]);
+
+    await expect(failure).rejects.toMatchObject({
+      extensions: { code: RECOVERABLE_GRAPHQL_ERROR_CODES.refusalNotRecorded },
+    });
+    await expect(failure).rejects.not.toThrow(/Connection terminated/);
+  });
+
+  it("hands a reported marker refusal to the sync manager, and holds nothing", async () => {
+    const server = await reactor();
+    const serverModule = modules[modules.length - 1];
+    const manifest = server.localManifest();
+    await touchChannel(server, {
+      input: {
+        id: "refusing",
+        name: "refusing",
+        collectionId: DriveCollectionId.forDrive("drive-1").key,
+        filter: FILTER,
+        sinceTimestampUtcMs: "0",
+        manifest,
+      },
+    });
+    const refused: unknown[] = [];
+    serverModule.eventBus.subscribe(SyncEventTypes.PURGE_REFUSED, (_t, e) => {
+      refused.push(e);
+    });
+    const recorded = vi.spyOn(
+      server as unknown as {
+        recordPolledMarkerRefusals: (...args: unknown[]) => Promise<void>;
+      },
+      "recordPolledMarkerRefusals",
+    );
+    const bridge = createResolverBridge(new Map([["switchboard", server]]), {
+      log: false,
+    });
+
+    await bridge("http://switchboard/graphql", {
+      method: "POST",
+      body: JSON.stringify({
+        query: "query PollSyncEnvelopes { pollSyncEnvelopes { ackOrdinal } }",
+        variables: {
+          channelId: "refusing",
+          outboxAck: 0,
+          outboxLatest: 0,
+          manifestRevision: manifest.revision,
+          refusals: [
+            { documentId: "purged-1", branch: "main", kind: "marker" },
+          ],
+        },
+      }),
+    });
+
+    expect(recorded).toHaveBeenCalledWith("refusing", [
+      { documentId: "purged-1", branch: "main" },
+    ]);
+    // No document purged-1 was tombstoned here, so the marker was never owed.
+    expect(refused).toEqual([]);
+    const rows = await serverModule.database
+      .withSchema(REACTOR_SCHEMA)
+      .selectFrom("sync_purge_refusals" as never)
+      .select(["remote_name" as never, "document_id" as never])
+      .execute();
+    expect(rows).toEqual([]);
+    expect(await server.listHolds({ remoteName: "refusing" })).toEqual([]);
     expect(server.getById("refusing").channel.deadLetter.items).toEqual([]);
   });
 });

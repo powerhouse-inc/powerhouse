@@ -20,6 +20,7 @@ export type {
   DeadLetterAddedEvent,
   JwtHandler,
   LocalPeer,
+  PurgeLookup,
   RemoteCursor,
   RemoteFilter,
   RemoteOptions,
@@ -29,6 +30,7 @@ export type {
   SyncEnvelope,
   SyncHeldEvent,
   SyncHold,
+  SyncPurgeRefusedEvent,
   SyncReleasedEvent,
   SyncEnvelopeType,
   SyncFailedEvent,
@@ -77,7 +79,23 @@ export {
 } from "./channels/index.js";
 
 export { SyncBuilder } from "./sync-builder.js";
+export {
+  supportsDeliveryTracking,
+  type DeliveryLookup,
+  type DeliveryMembership,
+  type DeliveryRow,
+  type IDeliveryTracking,
+  type PendingDelivery,
+} from "./delivery-tracking.js";
 export { InMemorySyncHoldStorage } from "./memory-hold-storage.js";
+export { InMemorySyncPurgeRefusalStorage } from "./memory-purge-refusal-storage.js";
+export {
+  MAX_POLLED_REFUSALS,
+  supportsPurgeRefusals,
+  type IPurgeRefusalRecorder,
+  type PolledMarkerRefusal,
+} from "./purge-refusals.js";
+export { InMemorySyncReceivedMarkerStorage } from "./memory-received-marker-storage.js";
 export {
   createPeerAgreement,
   type IPeerAgreement,

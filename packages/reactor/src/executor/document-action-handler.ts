@@ -54,6 +54,8 @@ import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   DocumentDeletedError,
   DocumentNotFoundError,
+  DocumentPurgedError,
+  ReservedActionError,
   UnsupportedProtocolVersionError,
   UpgradePreconditionFailedError,
 } from "../shared/errors.js";
@@ -78,6 +80,7 @@ import {
   GATED_DOCUMENT_ACTIONS,
   getNextIndexForScope,
   refusalError,
+  relationshipTarget,
   targetDocumentId,
   updateDocumentRevision,
 } from "./util.js";
@@ -163,6 +166,12 @@ export class DocumentActionHandler {
         return this.executeRemoveRelationship(write, executing);
       case "UPDATE_RELATIONSHIP":
         return this.executeUpdateRelationship(write, executing);
+      case "PURGE_DOCUMENT":
+        return buildErrorResult(
+          executing.job,
+          new ReservedActionError(executing.job.documentId, action.type),
+          executing.startTime,
+        );
       default:
         return buildErrorResult(
           executing.job,
@@ -924,10 +933,32 @@ export class DocumentActionHandler {
     );
   }
 
-  private executeAddRelationship(
+  /** A submitted write naming a purged target was refused at job start. */
+  private async isTargetPurged(
+    write: PendingWrite,
+    executing: ExecutingJob,
+  ): Promise<boolean> {
+    const target = relationshipTarget(write.action);
+    if (target === undefined || !executing.purgeFence) {
+      return false;
+    }
+    return executing.purgeFence.isPurged(target);
+  }
+
+  private async executeAddRelationship(
     write: PendingWrite,
     executing: ExecutingJob,
   ): Promise<RelationshipJobResult> {
+    let targetPurged: boolean;
+    try {
+      targetPurged = await this.isTargetPurged(write, executing);
+    } catch (error) {
+      return buildErrorResult(
+        executing.job,
+        error instanceof Error ? error : new Error(String(error)),
+        executing.startTime,
+      );
+    }
     return this.withRelationshipAction(
       "ADD_RELATIONSHIP",
       write,
@@ -939,7 +970,10 @@ export class DocumentActionHandler {
             )
           : null,
       ({ indexTxn: txn, stores: s, sourceDoc, input, job: j }) => {
-        if (this.driveContainerTypes.has(sourceDoc.header.documentType)) {
+        if (
+          !targetPurged &&
+          this.driveContainerTypes.has(sourceDoc.header.documentType)
+        ) {
           const collectionId = DriveCollectionId.forDrive(
             input.sourceId,
             j.branch,
@@ -951,17 +985,31 @@ export class DocumentActionHandler {
     );
   }
 
-  private executeRemoveRelationship(
+  private async executeRemoveRelationship(
     write: PendingWrite,
     executing: ExecutingJob,
   ): Promise<RelationshipJobResult> {
+    // The purge reopened the target's memberships so they serve its marker.
+    let targetPurged: boolean;
+    try {
+      targetPurged = await this.isTargetPurged(write, executing);
+    } catch (error) {
+      return buildErrorResult(
+        executing.job,
+        error instanceof Error ? error : new Error(String(error)),
+        executing.startTime,
+      );
+    }
     return this.withRelationshipAction(
       "REMOVE_RELATIONSHIP",
       write,
       executing,
       null,
       ({ indexTxn: txn, stores: s, sourceDoc, input, job: j }) => {
-        if (this.driveContainerTypes.has(sourceDoc.header.documentType)) {
+        if (
+          !targetPurged &&
+          this.driveContainerTypes.has(sourceDoc.header.documentType)
+        ) {
           const collectionId = DriveCollectionId.forDrive(
             input.sourceId,
             j.branch,
@@ -1039,7 +1087,11 @@ export class DocumentActionHandler {
       // name JobResultHandler classifies by and leave a missing source document
       // burning the retry limit on a load that fails the same way every time.
       // The message still names the source, since a relationship tolerates a
-      // missing target but not a missing source.
+      // missing target but not a missing source. A purged source keeps its
+      // own error, which is terminal rather than deferred.
+      if (DocumentPurgedError.isError(error)) {
+        return buildErrorResult(job, error, startTime);
+      }
       if (DocumentNotFoundError.isError(error)) {
         return buildErrorResult(
           job,

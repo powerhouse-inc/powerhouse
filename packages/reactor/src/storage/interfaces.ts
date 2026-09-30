@@ -517,6 +517,7 @@ export interface IDocumentView extends IReadModel {
    * @param view - Optional filter containing branch and scopes information
    * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
+   * @throws {DocumentNotFoundError} If the view does not hold the document
    */
   get<TDocument extends PHDocument>(
     documentId: string,
@@ -548,6 +549,7 @@ export interface IDocumentView extends IReadModel {
    * @param view - Optional filter containing branch and scopes information
    * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
+   * @throws {DocumentNotFoundError} If neither an id nor a slug matches
    * @throws {Error} If identifier matches both an ID and slug referring to different documents
    */
   getByIdOrSlug<TDocument extends PHDocument>(
@@ -616,7 +618,8 @@ export interface IDocumentView extends IReadModel {
    * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    * @returns The document ID
-   * @throws {Error} If document not found or identifier matches both an ID and slug referring to different documents
+   * @throws {DocumentNotFoundError} If neither an id nor a slug matches
+   * @throws {Error} If identifier matches both an ID and slug referring to different documents
    */
   resolveIdOrSlug(
     identifier: string,
@@ -850,9 +853,44 @@ export interface ISyncHoldStorage {
     remoteName?: string;
     documentId?: string;
   }): Promise<SyncHoldRecord[]>;
+  /** Throws DocumentPurgedError for a purged id, except for its marker's hold. */
   upsert(hold: SyncHoldRecord): Promise<void>;
   remove(remoteName: string, documentId: string, branch: string): Promise<void>;
   removeRemote(remoteName: string): Promise<void>;
+}
+
+/** A purge marker received from a remote, kept until its outcome. */
+export type ReceivedMarkerRecord = {
+  remoteName: string;
+  /** The marker operation's id. */
+  markerId: string;
+  documentId: string;
+  branch: string;
+  operation: OperationWithContext;
+  receivedAtUtcMs: number;
+};
+
+/** Received markers that survive a restart, so the inbox ack stays below them. */
+export interface ISyncReceivedMarkerStorage {
+  list(remoteName: string): Promise<ReceivedMarkerRecord[]>;
+  upsert(record: ReceivedMarkerRecord): Promise<void>;
+  remove(remoteName: string, markerId: string): Promise<void>;
+  removeRemote(remoteName: string): Promise<void>;
+}
+
+/** A remote's refusal of a purge marker; no message, which may name a signer. */
+export type PurgeRefusalRecord = {
+  remoteName: string;
+  documentId: string;
+  branch: string;
+  refusedAtUtcMs: number;
+};
+
+/** Marker refusals, kept after the remote goes so the erasure can report them. */
+export interface ISyncPurgeRefusalStorage {
+  list(documentId: string): Promise<PurgeRefusalRecord[]>;
+  /** One statement; the first time per remote, document and branch is kept. */
+  record(refusals: readonly PurgeRefusalRecord[]): Promise<void>;
 }
 
 /**
@@ -980,7 +1018,8 @@ export interface ISyncDeadLetterStorage {
   ): Promise<PagedResults<DeadLetterRecord>>;
 
   /**
-   * Adds a dead letter. Duplicate ids are silently ignored.
+   * Adds a dead letter. Duplicate ids are silently ignored. Throws
+   * DocumentPurgedError, persisting nothing, when the document is purged.
    *
    * @param deadLetter - The dead letter record to persist
    * @param signal - Optional abort signal to cancel the request

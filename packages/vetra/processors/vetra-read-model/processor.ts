@@ -2,6 +2,7 @@ import type {
   IProcessor,
   OperationWithContext,
 } from "@powerhousedao/reactor-browser";
+import { deletedDocumentId } from "@powerhousedao/shared/processors";
 import type { Kysely } from "kysely";
 import type { VetraPackageState } from "../../document-models/vetra-package/v1/gen/schema/types.js";
 import { logger } from "../codegen/logger.js";
@@ -20,8 +21,19 @@ export class VetraReadModelProcessor implements IProcessor {
     logger.info(">>> VetraReadModelProcessor.onOperations()");
     if (operations.length === 0) return;
 
-    for (const { operation, context } of operations) {
+    for (const op of operations) {
+      const { operation, context } = op;
       if (context.documentType !== "powerhouse/package") continue;
+
+      const deleted = deletedDocumentId(op);
+      if (deleted !== undefined) {
+        await this.relationalDb
+          .deleteFrom("vetra_package")
+          .where("document_id", "=", deleted)
+          .execute();
+        continue;
+      }
+      if (context.scope !== "global") continue;
 
       const state = context.resultingState
         ? (JSON.parse(context.resultingState) as VetraPackageGlobalState)

@@ -130,6 +130,7 @@ export {
 export { DefaultSubscriptionErrorHandler } from "./src/subs/default-error-handler.js";
 export { ReactorSubscriptionManager } from "./src/subs/react-subscription-manager.js";
 export {
+  type DocumentDeletedInfo,
   type IReactorSubscriptionManager,
   type ISubscriptionErrorHandler,
   type SubscriptionErrorContext,
@@ -150,6 +151,7 @@ export {
   type ReadModelBatchCompletedEvent,
   type ReadModelIndexedEvent,
   type CatchUpSweptEvent,
+  type PurgeMarkerContext,
   type ReadModelStage,
   type ReadModelIndexingStage,
   type SignatureRefusedEvent,
@@ -164,6 +166,8 @@ export {
   RetryAccounting,
   type Job,
   type JobAvailableEvent,
+  type JobKind,
+  type PurgeJobOptions,
 } from "./src/queue/types.js";
 
 // Job Tracker
@@ -335,6 +339,7 @@ export {
   defaultReadModelIndexingConfig,
   unchunkedReadModelIndexingConfig,
   type BaseReadModelConfig,
+  type PurgeFence,
   type ReadModelIndexingConfig,
 } from "./src/read-models/base-read-model.js";
 export { ReadModelCoordinator } from "./src/read-models/coordinator.js";
@@ -385,10 +390,16 @@ export {
 export {
   KyselySyncCursorStorage,
   KyselySyncHoldStorage,
+  KyselySyncPurgeRefusalStorage,
+  KyselySyncReceivedMarkerStorage,
   KyselySyncRemoteStorage,
   type ISyncCursorStorage,
   type ISyncHoldStorage,
+  type ISyncPurgeRefusalStorage,
+  type ISyncReceivedMarkerStorage,
   type ISyncRemoteStorage,
+  type PurgeRefusalRecord,
+  type ReceivedMarkerRecord,
   type SyncHoldRecord,
 } from "./src/storage/index.js";
 export {
@@ -451,11 +462,25 @@ export {
   type SyncEnvelope,
   type SyncHeldEvent,
   type SyncHold,
+  type SyncPurgeRefusedEvent,
   type SyncReleasedEvent,
+  type PurgeLookup,
+  type DeliveryLookup,
+  type DeliveryMembership,
+  type DeliveryRow,
+  type IDeliveryTracking,
+  type PendingDelivery,
+  supportsDeliveryTracking,
+  supportsPurgeRefusals,
+  type IPurgeRefusalRecorder,
+  MAX_POLLED_REFUSALS,
+  type PolledMarkerRefusal,
+  InMemorySyncPurgeRefusalStorage,
   type IPeerAgreement,
   type PeerAgreementBasis,
   createPeerAgreement,
   InMemorySyncHoldStorage,
+  InMemorySyncReceivedMarkerStorage,
   type SyncEnvelopeType,
   type SyncFailedEvent,
   type SyncOperationErrorType,
@@ -498,3 +523,43 @@ export type {
 } from "./src/admin/types.js";
 export { ProcessorManager } from "./src/processors/index.js";
 export * from "./src/catch-up/index.js";
+
+// Document erasure
+export {
+  isPurgeMarker,
+  PURGE_DOCUMENT,
+  type PurgeDocumentAction,
+  type PurgeDocumentActionInput,
+  type PurgeMarkerOperation,
+} from "@powerhousedao/shared/document-model";
+export {
+  DocumentNotDeletedError,
+  DocumentPurgedError,
+  GroupInUseError,
+  PurgeTooLargeError,
+  ReservedActionError,
+} from "./src/shared/errors.js";
+export {
+  acquirePurgeLocks,
+  findPurged,
+  listPurged,
+  PURGE_LOCK_BUCKETS,
+  PURGE_NS,
+  type PurgeLockMode,
+} from "./src/storage/kysely/document-purges.js";
+export type {
+  DocumentPurgeRow,
+  PurgeRemovedRows,
+} from "./src/storage/kysely/types.js";
+export {
+  appliedDelete,
+  DEFAULT_PURGE_DELETE_BATCH,
+  KyselyDocumentPurger,
+  type CollectionMember,
+  type PurgeStream,
+} from "./src/storage/kysely/document-purger.js";
+export {
+  DEFAULT_MAX_PURGE_OPERATIONS,
+  DocumentPurgeService,
+  type EnqueuePurgeOptions,
+} from "./src/admin/document-purge-service.js";

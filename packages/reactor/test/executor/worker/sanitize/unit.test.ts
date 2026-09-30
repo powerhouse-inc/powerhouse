@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { fromErrorInfo } from "../../../../src/executor/worker/error-info.js";
 import type { ErrorInfo } from "../../../../src/executor/worker/protocol.js";
+import { DocumentPurgedError } from "../../../../src/shared/errors.js";
 import {
   errorToInfo,
   sanitizeArg,
@@ -232,5 +234,13 @@ describe("errorToInfo", () => {
     const err = new Error("test", { cause: new TypeError("inner") });
     const info = errorToInfo(err);
     expect(() => structuredClone(info)).not.toThrow();
+  });
+
+  it("carries the document an error names across the boundary", () => {
+    const revived = fromErrorInfo(
+      structuredClone(errorToInfo(new DocumentPurgedError("doc-1"))),
+    );
+    expect(DocumentPurgedError.isError(revived)).toBe(true);
+    expect((revived as DocumentPurgedError).documentId).toBe("doc-1");
   });
 });

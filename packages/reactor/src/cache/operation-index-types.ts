@@ -90,6 +90,13 @@ export interface IOperationIndex {
    * reference other groups.
    */
   getGroupReferencers(groupId: string, signal?: AbortSignal): Promise<string[]>;
+  /** Collections with a member with a row in (after, through], within `among`. */
+  getCollectionsInRange(
+    after: number,
+    through: number,
+    among?: readonly string[],
+    signal?: AbortSignal,
+  ): Promise<string[]>;
   /** Ordinals in (after, through], ascending, at most `limit`. */
   getOrdinalsInRange(
     after: number,
@@ -102,11 +109,12 @@ export interface IOperationIndex {
     ordinals: readonly number[],
     signal?: AbortSignal,
   ): Promise<OperationWithContext[]>;
-  /** A stream's rows above an ordinal, ascending. */
+  /** A stream's rows above an ordinal, ascending, at most `limit` if given. */
   getStreamAfter(
     stream: DocumentStreamKey,
     after: number,
     signal?: AbortSignal,
+    limit?: number,
   ): Promise<OperationWithContext[]>;
   /** The latest ordinal of each of `opIds` indexed in one stream. */
   getOrdinalsByOpIds(

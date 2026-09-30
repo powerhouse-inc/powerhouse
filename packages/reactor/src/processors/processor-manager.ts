@@ -1,6 +1,7 @@
-import type {
-  OperationWithContext,
-  PHDocumentHeader,
+import {
+  isPurgeMarker,
+  type OperationWithContext,
+  type PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
 import type {
   IProcessorManager,
@@ -16,23 +17,31 @@ import {
   BaseReadModel,
   unchunkedReadModelIndexingConfig,
 } from "../read-models/base-read-model.js";
-import type {
-  DocumentViewDatabase,
-  ProcessorCursorRow,
+import {
+  RELEASED_CURSOR_STATUS,
+  type DocumentViewDatabase,
+  type ProcessorCursorRow,
 } from "../read-models/types.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
+import { findPurged } from "../storage/kysely/document-purges.js";
 import {
   ProcessorQueue,
+  purgeCandidates,
+  type LiveCheck,
   type ProcessorCursorState,
 } from "./processor-queue.js";
 import {
   createMinimalDriveHeader,
+  extractCreationHeader,
   extractDeletedDocumentId,
   extractDriveHeader,
   isDriveDeletion,
   matchesFilter,
   resolveProcessorSlots,
 } from "./utils.js";
+
+// A drive header read in flight; a purge marker routed meanwhile flags it.
+type HeaderRead = { purged: boolean; header?: Promise<PHDocumentHeader> };
 
 // A factory run in progress; batches routed meanwhile are left to backfill.
 type PendingSlot = {
@@ -48,6 +57,21 @@ type PendingSlot = {
 type Bound = { tracked: TrackedProcessor; queue: ProcessorQueue };
 
 type FactoryRun = () => Promise<void>;
+
+/** What a cursor row write needs of its processor. */
+type CursorOwner = Pick<
+  TrackedProcessor,
+  "processorId" | "factoryId" | "driveId" | "processorIndex" | "lastOrdinal"
+>;
+
+/** Drives a batch deletes, each with its first deletion in the batch. */
+type DriveDeletions = ReadonlyMap<string, OperationWithContext>;
+
+const DRIVE_STREAM_PAGE = 500;
+/** Drive header reads the manager runs at once, as after a restart. */
+export const HEADER_READ_CONCURRENCY = 8;
+// How long shutdown waits for processors to finish and disconnect.
+const SHUTDOWN_GRACE_MS = 5_000;
 
 export type ProcessorManagerOptions = {
   // Key cursors by array position (default). Off derives stable keys from
@@ -74,6 +98,18 @@ export class ProcessorManager
   private cursorWrites: Map<string, Promise<void>> = new Map();
   // Removed processors per factory id, until each has disconnected.
   private draining: Map<string, Promise<void>> = new Map();
+  // Deleted drives some cursor row still owes the deletion, with that deletion.
+  private deletedDrives: Map<string, OperationWithContext> = new Map();
+  // factoryId:driveId pairs whose deletion is being delivered, until it settles.
+  private erasing: Map<string, Promise<void>> = new Map();
+  // Creation headers of known and owed drives; a purge drops a drive's.
+  private driveHeaders: Map<string, PHDocumentHeader> = new Map();
+  private headerReads: Map<string, HeaderRead> = new Map();
+  private headerSlots = HEADER_READ_CONCURRENCY;
+  private headerWaiters: (() => void)[] = [];
+  private stopped = false;
+  // Rows whose drive's deletion threw, kept visible to getAll() with a retry.
+  private owedFailures: Map<string, TrackedProcessor> = new Map();
   private logger: ILogger;
   private driveContainerTypes: ReadonlySet<string>;
   private legacyProcessorIds: boolean;
@@ -91,6 +127,8 @@ export class ProcessorManager
       readModelId: "processor-manager",
       rebuildStateOnInit: true,
       indexing: unchunkedReadModelIndexingConfig,
+      // A lock held across processor delivery would block purges behind it.
+      purgeFence: "none",
     });
     this.logger = logger;
     this.driveContainerTypes = driveContainerTypes;
@@ -101,26 +139,30 @@ export class ProcessorManager
     await this.loadAllCursors();
     await super.init();
     await this.discoverExistingDrives();
+    await this.discoverDeletedDrives();
+    // Not awaited: a hung processor must not hold the reactor's start.
+    for (const [identifier, factory] of this.factoryRegistry) {
+      this.eraseOwed(identifier, factory);
+    }
   }
 
   protected override async commitOperations(
     items: OperationWithContext[],
   ): Promise<void> {
     const { runs, reserved } = this.detectNewDrives(items);
-    const disconnects = this.detectDeletedDrives(items);
-    const deliveries = this.enqueueRouted(items, reserved);
+    const deletions = this.findDriveDeletions(items);
+    const deliveries = this.enqueueRouted(items, reserved, deletions);
+    this.detectDeletedDrives(items);
+    this.forgetPurgedHeaders(items);
 
-    await Promise.all([
-      ...runs.map((run) => run()),
-      ...disconnects,
-      ...deliveries,
-    ]);
+    await Promise.all([...runs.map((run) => run()), ...deliveries]);
   }
 
   async registerFactory(
     identifier: string,
     factory: ProcessorFactory,
   ): Promise<void> {
+    if (this.stopped) return;
     const removals = this.removeFactory(identifier);
     this.factoryRegistry.set(identifier, factory);
     const previous = this.draining.get(identifier);
@@ -135,7 +177,7 @@ export class ProcessorManager
           identifier,
           factory,
           driveId,
-          createMinimalDriveHeader(driveId, documentType),
+          this.headerOf(driveId, documentType),
           creationOrdinal,
           undefined,
           false,
@@ -144,11 +186,40 @@ export class ProcessorManager
       );
     }
 
+    // Not awaited, like a live deletion; nor does a later registration wait.
+    this.eraseOwed(identifier, factory, previous);
     await Promise.all([...removals, ...runs.map((run) => run())]);
   }
 
   async unregisterFactory(identifier: string): Promise<void> {
     await Promise.all(this.removeFactory(identifier));
+  }
+
+  /** Closes every processor queue; the reactor's kill() calls it. */
+  async shutdown(): Promise<void> {
+    if (this.stopped) return;
+    this.stopped = true;
+    this.pendingSlots.clear();
+    this.owedFailures.clear();
+    const closing = [...this.allBound()].map(({ queue }) => queue.close());
+    this.processorsByDrive.clear();
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const grace = new Promise<boolean>((resolve) => {
+      timer = setTimeout(() => resolve(false), SHUTDOWN_GRACE_MS);
+      (timer as { unref?: () => void }).unref?.();
+    });
+    const closed = await Promise.race([
+      Promise.all(closing).then(() => true),
+      grace,
+    ]);
+    clearTimeout(timer);
+    if (!closed) {
+      this.logger.warn(
+        "Processors still busy @Ms ms into shutdown; not waiting for them",
+        SHUTDOWN_GRACE_MS,
+      );
+    }
   }
 
   get(processorId: string): TrackedProcessor | undefined {
@@ -179,6 +250,7 @@ export class ProcessorManager
 
       const driveHeader = extractDriveHeader(op);
       if (!driveHeader) continue;
+      this.driveHeaders.set(driveId, driveHeader);
 
       for (const [identifier, factory] of this.factoryRegistry) {
         const { slot, run } = this.reserveSlot(
@@ -198,18 +270,16 @@ export class ProcessorManager
     return { runs, reserved };
   }
 
-  /** Synchronous: drops a deleted drive's processors from the tables. */
-  protected detectDeletedDrives(
-    items: OperationWithContext[],
-  ): Promise<void>[] {
-    const pending: Promise<void>[] = [];
-
+  /** Synchronous: drops a deleted drive's processors; their rows stay owed. */
+  protected detectDeletedDrives(items: OperationWithContext[]): void {
     for (const op of items) {
       if (!isDriveDeletion(op)) continue;
 
       const driveId = extractDeletedDocumentId(op);
       if (!driveId || !this.knownDrives.has(driveId)) continue;
       this.knownDrives.delete(driveId);
+      // Rows without a live processor are paid when their factory next runs.
+      this.deletedDrives.set(driveId, op);
 
       for (const slot of this.pendingSlots) {
         if (slot.driveId === driveId) this.pendingSlots.delete(slot);
@@ -220,16 +290,106 @@ export class ProcessorManager
         void queue.close();
       }
       this.processorsByDrive.delete(driveId);
-      pending.push(...this.deleteCursors((row) => row.driveId === driveId));
+      this.pruneDeletedDrive(driveId);
     }
+  }
 
-    return pending;
+  /** Synchronous: a purged drive's header is erased data. */
+  private forgetPurgedHeaders(items: OperationWithContext[]): void {
+    for (const op of items) {
+      if (isPurgeMarker(op.operation)) {
+        this.driveHeaders.delete(op.context.documentId);
+        const read = this.headerReads.get(op.context.documentId);
+        if (read) read.purged = true;
+      }
+    }
+  }
+
+  /** A drive's creation header; minimal once the drive's stream is purged. */
+  private headerOf(
+    driveId: string,
+    documentType: string,
+  ): Promise<PHDocumentHeader> {
+    const cached = this.driveHeaders.get(driveId);
+    if (cached) return Promise.resolve(cached);
+    const inFlight = this.headerReads.get(driveId)?.header;
+    if (inFlight) return inFlight;
+    const read: HeaderRead = { purged: false };
+    this.headerReads.set(driveId, read);
+    read.header = this.readHeader(driveId, documentType, read);
+    return read.header;
+  }
+
+  private async readHeader(
+    driveId: string,
+    documentType: string,
+    read: HeaderRead,
+  ): Promise<PHDocumentHeader> {
+    let first: OperationWithContext | undefined;
+    await this.takeHeaderSlot();
+    try {
+      [first] = await this.operationIndex.getStreamAfter(
+        { documentId: driveId, scope: "document", branch: "main" },
+        0,
+        undefined,
+        1,
+      );
+    } catch (error) {
+      this.logger.error(
+        "Failed reading drive '@DriveId' header: @Error",
+        driveId,
+        error,
+      );
+    } finally {
+      this.releaseHeaderSlot();
+      if (this.headerReads.get(driveId) === read)
+        this.headerReads.delete(driveId);
+    }
+    const header = first && extractCreationHeader(first);
+    // A purge routed during the read erased what it returned.
+    if (!header || read.purged) {
+      return createMinimalDriveHeader(driveId, documentType);
+    }
+    if (this.knownDrives.has(driveId) || this.deletedDrives.has(driveId)) {
+      this.driveHeaders.set(driveId, header);
+    }
+    return header;
+  }
+
+  private async takeHeaderSlot(): Promise<void> {
+    if (this.headerSlots > 0) {
+      this.headerSlots--;
+      return;
+    }
+    await new Promise<void>((resolve) => this.headerWaiters.push(resolve));
+  }
+
+  private releaseHeaderSlot(): void {
+    const next = this.headerWaiters.shift();
+    if (next) next();
+    else this.headerSlots++;
+  }
+
+  /** Synchronous: the known drives this batch deletes. */
+  protected findDriveDeletions(items: OperationWithContext[]): DriveDeletions {
+    const deletions = new Map<string, OperationWithContext>();
+    for (const op of items) {
+      if (!isDriveDeletion(op)) continue;
+      const driveId = extractDeletedDocumentId(op);
+      if (!driveId || !this.knownDrives.has(driveId)) continue;
+      const first = deletions.get(driveId);
+      if (!first || op.context.ordinal < first.context.ordinal) {
+        deletions.set(driveId, op);
+      }
+    }
+    return deletions;
   }
 
   /** Synchronous: puts each processor's share of the batch on its queue. */
   protected enqueueRouted(
     items: OperationWithContext[],
     reserved: ReadonlySet<PendingSlot>,
+    deletions: DriveDeletions = new Map(),
   ): Promise<void>[] {
     if (items.length === 0) return [];
 
@@ -249,19 +409,300 @@ export class ProcessorManager
       );
     }
 
+    let check: LiveCheck | undefined;
+    const checkOf = () => (check ??= this.checkPurged(items));
+
     const deliveries: Promise<void>[] = [];
     for (const { tracked, queue } of this.allBound()) {
+      const deletion = deletions.get(tracked.driveId);
+      if (deletion) {
+        deliveries.push(
+          this.deliverDeletion(tracked, queue, items, deletion, checkOf()),
+        );
+        continue;
+      }
       const matching = items.filter((op) =>
         matchesFilter(op, tracked.record.filter),
       );
       if (matching.length > 0) {
-        deliveries.push(queue.live(matching));
+        deliveries.push(queue.live(matching, checkOf()));
       } else {
         // Not awaited: the pass waits only on processors it delivers to.
         void queue.advance(highest);
       }
     }
     return deliveries;
+  }
+
+  // The batch through the deletion, then the deletion whatever the filter.
+  private deliverDeletion(
+    tracked: TrackedProcessor,
+    queue: ProcessorQueue,
+    items: OperationWithContext[],
+    deletion: OperationWithContext,
+    check: LiveCheck,
+  ): Promise<void> {
+    const through = deletion.context.ordinal;
+    const share = items.filter(
+      (op) =>
+        op.context.ordinal < through &&
+        matchesFilter(op, tracked.record.filter),
+    );
+    // Like live(): a pass never waits out a backfill; the row holds meanwhile.
+    const behindReplay = queue.replaying;
+    const settled = queue
+      .erase(share, deletion, check)
+      .then((delivered) => this.settleErased(tracked, delivered, deletion));
+    this.holdErasure(tracked.factoryId, tracked.driveId, settled);
+    return behindReplay ? Promise.resolve() : settled;
+  }
+
+  /** A delivered deletion deletes the row; a failed one keeps it, errored. */
+  private settleErased(
+    tracked: TrackedProcessor,
+    delivered: boolean,
+    deletion: OperationWithContext,
+  ): Promise<void> {
+    if (!delivered) {
+      this.deletedDrives.set(tracked.driveId, deletion);
+      this.trackOwedFailure(tracked, tracked.record, tracked);
+      return this.writeCursor(tracked, tracked);
+    }
+    const deleted = this.deleteCursors(
+      (row) => row.processorId === tracked.processorId,
+    );
+    this.pruneDeletedDrive(tracked.driveId);
+    return Promise.all(deleted).then(() => undefined);
+  }
+
+  /** Keeps a failed deletion in getAll(); retry() delivers it again. */
+  private trackOwedFailure(
+    owner: CursorOwner,
+    record: ProcessorRecord,
+    state: ProcessorCursorState,
+  ): void {
+    const { processorId, factoryId, driveId, processorIndex } = owner;
+    this.owedFailures.set(processorId, {
+      processorId,
+      factoryId,
+      driveId,
+      processorIndex,
+      record,
+      lastOrdinal: state.lastOrdinal,
+      status: "errored",
+      lastError: state.lastError,
+      lastErrorTimestamp: state.lastErrorTimestamp,
+      retry: () => this.retryOwed(factoryId, driveId),
+    });
+  }
+
+  private async retryOwed(factoryId: string, driveId: string): Promise<void> {
+    const factory = this.factoryRegistry.get(factoryId);
+    const deletion = this.deletedDrives.get(driveId);
+    if (!factory || !deletion || this.stopped) return;
+    await this.eraseDrive(factoryId, factory, driveId, deletion);
+  }
+
+  /** Forgets a deleted drive once no cursor row owes its deletion. */
+  private pruneDeletedDrive(driveId: string): void {
+    for (const row of this.cursorCache.values()) {
+      if (row.driveId === driveId) return;
+    }
+    this.deletedDrives.delete(driveId);
+    if (!this.knownDrives.has(driveId)) this.driveHeaders.delete(driveId);
+  }
+
+  /** Delivers each deleted drive's deletion its rows of `factoryId` still owe. */
+  private eraseOwed(
+    factoryId: string,
+    factory: ProcessorFactory,
+    previous?: Promise<void>,
+  ): void {
+    const owesAny = [...this.cursorCache.values()].some(
+      (row) =>
+        row.factoryId === factoryId && this.deletedDrives.has(row.driveId),
+    );
+    if (!owesAny || this.stopped) return;
+
+    void (async () => {
+      // A re-registered factory starts once its previous instance is gone.
+      await previous;
+      if (this.factoryRegistry.get(factoryId) !== factory) return;
+      const owed = new Set<string>();
+      for (const row of this.cursorCache.values()) {
+        if (
+          row.factoryId === factoryId &&
+          this.deletedDrives.has(row.driveId)
+        ) {
+          owed.add(row.driveId);
+        }
+      }
+      await Promise.all(
+        [...owed].map((driveId) =>
+          this.eraseOwedDrive(factoryId, factory, driveId),
+        ),
+      );
+    })().catch((error: unknown) => {
+      this.logger.error(
+        "Owed deletions of '@FactoryId' failed: @Error",
+        factoryId,
+        error,
+      );
+    });
+  }
+
+  /** After any delivery of the pair's deletion in flight, if still owed. */
+  private async eraseOwedDrive(
+    factoryId: string,
+    factory: ProcessorFactory,
+    driveId: string,
+  ): Promise<void> {
+    const key = `${factoryId}:${driveId}`;
+    for (let held = this.erasing.get(key); held; held = this.erasing.get(key)) {
+      await held;
+    }
+    if (this.stopped || this.factoryRegistry.get(factoryId) !== factory) return;
+    const owes = [...this.cursorCache.values()].some(
+      (row) => row.factoryId === factoryId && row.driveId === driveId,
+    );
+    const deletion = this.deletedDrives.get(driveId);
+    if (!owes || !deletion) return;
+    await this.eraseDrive(factoryId, factory, driveId, deletion);
+  }
+
+  /** Marks the pair's deletion as being delivered until `erasure` settles. */
+  private holdErasure(
+    factoryId: string,
+    driveId: string,
+    erasure: Promise<unknown>,
+  ): void {
+    const key = `${factoryId}:${driveId}`;
+    const held = Promise.allSettled([this.erasing.get(key), erasure]).then(
+      () => undefined,
+    );
+    this.erasing.set(key, held);
+    void held.then(() => {
+      if (this.erasing.get(key) === held) this.erasing.delete(key);
+    });
+  }
+
+  /** Runs `erase` unless the pair's deletion is already being delivered. */
+  private async claimErasure(
+    factoryId: string,
+    driveId: string,
+    erase: () => Promise<void>,
+  ): Promise<boolean> {
+    if (this.erasing.has(`${factoryId}:${driveId}`)) return false;
+    let release!: () => void;
+    this.holdErasure(
+      factoryId,
+      driveId,
+      new Promise<void>((resolve) => {
+        release = resolve;
+      }),
+    );
+    try {
+      await erase();
+    } finally {
+      release();
+    }
+    return true;
+  }
+
+  private async eraseDrive(
+    factoryId: string,
+    factory: ProcessorFactory,
+    driveId: string,
+    deletion: OperationWithContext,
+  ): Promise<void> {
+    await this.claimErasure(factoryId, driveId, async () => {
+      const header = await this.headerOf(
+        driveId,
+        deletion.context.documentType,
+      );
+      const slot = { factoryId, driveId };
+      const records = await this.runFactory(slot, factory, header);
+      // A failed run leaves the rows owed until the factory runs again.
+      if (!records) return;
+      await this.eraseRecords(factoryId, driveId, deletion, records);
+    });
+  }
+
+  /** The deletion to each record a row owes it to, then every disconnect. */
+  private async eraseRecords(
+    factoryId: string,
+    driveId: string,
+    deletion: OperationWithContext,
+    records: ProcessorRecord[],
+  ): Promise<void> {
+    const ids = resolveProcessorSlots(records, this.legacyProcessorIds);
+    const delivered = new Set<string>();
+    const failed = new Map<string, unknown>();
+    const recordOf = new Map<string, ProcessorRecord>();
+    await Promise.all(
+      records.map(async (record, i) => {
+        const processorId = `${factoryId}:${driveId}:${ids[i]}`;
+        if (this.cursorCache.has(processorId)) {
+          recordOf.set(processorId, record);
+          try {
+            await record.processor.onOperations([deletion]);
+            delivered.add(processorId);
+          } catch (error) {
+            failed.set(processorId, error);
+            this.logger.error(
+              "Processor '@ProcessorId' failed on its drive's deletion: @Error",
+              processorId,
+              error,
+            );
+          }
+        }
+        await this.discard(
+          { factoryId, driveId },
+          record.processor.onDisconnect.bind(record.processor),
+        );
+      }),
+    );
+
+    const writes: Promise<void>[] = [];
+    for (const row of this.cursorCache.values()) {
+      if (row.factoryId !== factoryId || row.driveId !== driveId) continue;
+      if (delivered.has(row.processorId)) continue;
+      if (!failed.has(row.processorId)) {
+        // A run that threw inside a wrapper reads as no records: stay owed.
+        this.logger.warn(
+          "Factory '@FactoryId' made no processor '@ProcessorId' for deleted drive '@DriveId'; its deletion stays owed",
+          factoryId,
+          row.processorId,
+          driveId,
+        );
+        continue;
+      }
+      const error = failed.get(row.processorId);
+      const state: ProcessorCursorState = {
+        lastOrdinal: row.lastOrdinal,
+        status: "errored",
+        lastError: error instanceof Error ? error.message : String(error),
+        lastErrorTimestamp: new Date(),
+      };
+      this.trackOwedFailure(row, recordOf.get(row.processorId)!, state);
+      writes.push(this.writeCursor(row, state));
+    }
+    for (const processorId of delivered) this.owedFailures.delete(processorId);
+    writes.push(...this.deleteCursors((row) => delivered.has(row.processorId)));
+    this.pruneDeletedDrive(driveId);
+    await Promise.all(writes);
+  }
+
+  /** Started at routing; takes no purge lock, since processors hold none. */
+  private checkPurged(items: OperationWithContext[]): LiveCheck {
+    const ids = purgeCandidates(items);
+    const purged =
+      ids.length === 0
+        ? Promise.resolve<ReadonlySet<string>>(new Set())
+        : findPurged(this.db, ids);
+    // Observed here: a closed queue drops the task that would await it.
+    purged.catch(() => undefined);
+    return { purged };
   }
 
   /** Synchronous: binds records, or discards them if the slot was cancelled. */
@@ -277,14 +718,9 @@ export class ProcessorManager
       const settled = Promise.resolve();
       return { persisted: settled, delivered: settled };
     }
-    if (!released) {
-      const discarded = records.map((record) =>
-        this.discard(
-          slot,
-          record.processor.onDisconnect.bind(record.processor),
-        ),
-      );
-      const settled = Promise.all(discarded).then(() => undefined);
+    // A run that settles after shutdown binds nothing: no queue would close.
+    if (!released || this.stopped) {
+      const settled = this.discardRecords(slot, records);
       return { persisted: settled, delivered: settled };
     }
 
@@ -328,7 +764,7 @@ export class ProcessorManager
         matchesFilter(op, tracked.record.filter),
       );
       if (matching && matching.length > 0) {
-        deliveries.push(queue.live(matching));
+        deliveries.push(queue.live(matching, this.checkPurged(matching)));
       }
     }
 
@@ -338,10 +774,38 @@ export class ProcessorManager
     };
   }
 
-  /** Synchronous: removes a factory's slots, processors and cursor rows. */
+  /** A cancelled slot's records; on a deleted drive they pay what rows owe. */
+  private async discardRecords(
+    slot: PendingSlot,
+    records: ProcessorRecord[],
+  ): Promise<void> {
+    const { factoryId, driveId } = slot;
+    const deletion = this.stopped ? undefined : this.deletedDrives.get(driveId);
+    const erased =
+      deletion !== undefined &&
+      (await this.claimErasure(factoryId, driveId, () =>
+        this.eraseRecords(factoryId, driveId, deletion, records),
+      ));
+    if (erased) return;
+    await Promise.all(
+      records.map((record) =>
+        this.discard(
+          slot,
+          record.processor.onDisconnect.bind(record.processor),
+        ),
+      ),
+    );
+  }
+
+  /** Synchronous: removes a factory's slots and processors; releases its rows. */
   protected removeFactory(identifier: string): Promise<void>[] {
     if (!this.factoryRegistry.delete(identifier)) return [];
+    for (const [processorId, failure] of this.owedFailures) {
+      if (failure.factoryId === identifier)
+        this.owedFailures.delete(processorId);
+    }
 
+    // Deletions in delivery are not waited on; their pairs stay claimed.
     const closing: Promise<void>[] = [];
     for (const slot of this.pendingSlots) {
       if (slot.factoryId !== identifier) continue;
@@ -378,14 +842,36 @@ export class ProcessorManager
       });
     }
 
-    return this.deleteCursors((row) => row.factoryId === identifier);
+    return this.releaseCursors(identifier);
+  }
+
+  // A drive deleted before the factory's next registration still owes its rows.
+  private releaseCursors(factoryId: string): Promise<void>[] {
+    const writes: Promise<void>[] = [];
+    for (const row of this.cursorCache.values()) {
+      if (row.factoryId !== factoryId) continue;
+      if (row.status === RELEASED_CURSOR_STATUS) continue;
+      if (this.deletedDrives.has(row.driveId)) continue;
+      const released = { ...row, status: RELEASED_CURSOR_STATUS };
+      this.cursorCache.set(row.processorId, released);
+      writes.push(
+        this.lane(row.processorId, () =>
+          this.db
+            .updateTable("ProcessorCursor")
+            .set({ status: RELEASED_CURSOR_STATUS, updatedAt: new Date() })
+            .where("processorId", "=", row.processorId)
+            .execute(),
+        ),
+      );
+    }
+    return writes;
   }
 
   private reserveSlot(
     factoryId: string,
     factory: ProcessorFactory,
     driveId: string,
-    driveHeader: PHDocumentHeader,
+    driveHeader: PHDocumentHeader | Promise<PHDocumentHeader>,
     creationOrdinal: number,
     creationItems: OperationWithContext[] | undefined,
     awaitDelivery: boolean,
@@ -404,7 +890,8 @@ export class ProcessorManager
       const bound = (async () => {
         // A re-registered factory starts once its previous instance is gone.
         await previous;
-        const records = await this.runFactory(slot, factory, driveHeader);
+        const header = await driveHeader;
+        const records = await this.runFactory(slot, factory, header);
         return this.bind(slot, records, creationOrdinal, creationItems);
       })();
       slot.settled = bound.then(({ persisted }) => persisted);
@@ -416,7 +903,7 @@ export class ProcessorManager
   }
 
   private async runFactory(
-    slot: PendingSlot,
+    slot: Pick<PendingSlot, "factoryId" | "driveId">,
     factory: ProcessorFactory,
     driveHeader: PHDocumentHeader,
   ): Promise<ProcessorRecord[] | undefined> {
@@ -444,12 +931,17 @@ export class ProcessorManager
     const cached = this.cursorCache.get(processorId);
     let floor = 0;
     let cursor: ProcessorCursorState;
-    if (cached) {
+    // A released row starts the processor afresh, as if it had none.
+    if (cached && cached.status !== RELEASED_CURSOR_STATUS) {
+      // An active row's error is from a lookup outage; this run starts unparked.
+      const errored = cached.status !== "active";
       cursor = {
         lastOrdinal: cached.lastOrdinal,
         status: cached.status as ProcessorCursorState["status"],
-        lastError: cached.lastError ?? undefined,
-        lastErrorTimestamp: cached.lastErrorTimestamp ?? undefined,
+        lastError: errored ? (cached.lastError ?? undefined) : undefined,
+        lastErrorTimestamp: errored
+          ? (cached.lastErrorTimestamp ?? undefined)
+          : undefined,
       };
     } else {
       if (record.startFrom === "current") floor = creationOrdinal - 1;
@@ -486,6 +978,7 @@ export class ProcessorManager
       routedThrough: () => this.highWater(),
       confirmedThrough: () => this.lastOrdinal,
       persist: (state) => this.writeCursor(tracked, state),
+      purged: (ids) => findPurged(this.db, ids),
       logger: this.logger,
     });
     return { tracked, queue };
@@ -506,7 +999,7 @@ export class ProcessorManager
   }
 
   private async discard(
-    slot: PendingSlot,
+    slot: Pick<PendingSlot, "factoryId" | "driveId">,
     disconnect: () => Promise<void>,
   ): Promise<void> {
     try {
@@ -535,6 +1028,7 @@ export class ProcessorManager
     for (const { tracked } of this.allBound()) {
       yield tracked;
     }
+    yield* this.owedFailures.values();
   }
 
   private isDriveCreation(op: OperationWithContext): boolean {
@@ -555,6 +1049,55 @@ export class ProcessorManager
     for (const drive of drives) {
       this.knownDrives.set(drive.documentId, drive.documentType);
     }
+  }
+
+  /** Cursor rows of a drive that is gone: find the deletion they still owe. */
+  private async discoverDeletedDrives(): Promise<void> {
+    const driveIds = new Set<string>();
+    for (const row of this.cursorCache.values()) {
+      if (!this.knownDrives.has(row.driveId)) driveIds.add(row.driveId);
+    }
+    for (const driveId of driveIds) {
+      try {
+        await this.discoverDeletedDrive(driveId);
+      } catch (error) {
+        this.logger.error(
+          "Failed reading deleted drive '@DriveId': @Error",
+          driveId,
+          error,
+        );
+      }
+    }
+  }
+
+  private async discoverDeletedDrive(driveId: string): Promise<void> {
+    const key = { documentId: driveId, scope: "document", branch: "main" };
+    let header: PHDocumentHeader | undefined;
+    let deletion: OperationWithContext | undefined;
+    let after = 0;
+    for (;;) {
+      const page = await this.operationIndex.getStreamAfter(
+        key,
+        after,
+        undefined,
+        DRIVE_STREAM_PAGE,
+      );
+      for (const op of page) {
+        header ??= extractCreationHeader(op);
+        if (
+          !deletion &&
+          isDriveDeletion(op) &&
+          extractDeletedDocumentId(op) === driveId
+        ) {
+          deletion = op;
+        }
+      }
+      if (page.length < DRIVE_STREAM_PAGE) break;
+      after = page.at(-1)!.context.ordinal;
+    }
+    if (!deletion) return;
+    this.deletedDrives.set(driveId, deletion);
+    if (header) this.driveHeaders.set(driveId, header);
   }
 
   private async loadAllCursors(): Promise<void> {
@@ -594,7 +1137,7 @@ export class ProcessorManager
   }
 
   private writeCursor(
-    tracked: TrackedProcessor,
+    tracked: CursorOwner,
     state: ProcessorCursorState,
   ): Promise<void> {
     const now = new Date();
@@ -670,7 +1213,7 @@ export class ProcessorManager
 
   /** A failed compare-and-set: a lowered row resets the cursor and backfills. */
   private async reconcileCursor(
-    tracked: TrackedProcessor,
+    tracked: CursorOwner,
     row: ProcessorCursorRow,
     now: Date,
   ): Promise<void> {

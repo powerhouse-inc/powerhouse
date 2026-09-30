@@ -2,8 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   AuthTimestampNotMonotonicError,
   AuthorizationDeniedError,
+  DocumentNotDeletedError,
+  DocumentPurgedError,
   ExcessiveReshuffleError,
+  GroupInUseError,
   InvalidOperationTimestampError,
+  PurgeTooLargeError,
+  ReservedActionError,
   UnsupportedProtocolVersionError,
 } from "../../src/shared/errors.js";
 import {
@@ -51,6 +56,27 @@ describe("classifyJobFailure", () => {
     expect(classifyJobFailure(error.name)).toBe("UNSUPPORTED_PROTOCOL");
   });
 
+  it("names a purged document, never falling back to UNCLASSIFIED", () => {
+    expect(classifyJobFailure(new DocumentPurgedError("doc").name)).toBe(
+      "DOCUMENT_PURGED",
+    );
+  });
+
+  it("names every purge precondition alike", () => {
+    for (const error of [
+      new DocumentNotDeletedError("doc"),
+      new GroupInUseError("group", ["doc"]),
+      new PurgeTooLargeError("doc", 10, 5),
+    ]) {
+      expect(classifyJobFailure(error.name)).toBe("PURGE_PRECONDITION");
+    }
+  });
+
+  it("names a reserved action", () => {
+    const error = new ReservedActionError("doc", "PURGE_DOCUMENT");
+    expect(classifyJobFailure(error.name)).toBe("RESERVED_ACTION");
+  });
+
   it("falls back to UNCLASSIFIED for anything it does not know", () => {
     expect(classifyJobFailure("Error")).toBe("UNCLASSIFIED");
     expect(
@@ -83,6 +109,17 @@ describe("quarantinesDocument", () => {
     expect(quarantinesDocument("UNSUPPORTED_PROTOCOL")).toBe(false);
   });
 
+  // Quarantine would withhold the marker, or a document a purge left alone.
+  it("exempts a purged document and a failed purge precondition", () => {
+    expect(quarantinesDocument("DOCUMENT_PURGED")).toBe(false);
+    expect(quarantinesDocument("PURGE_PRECONDITION")).toBe(false);
+  });
+
+  // A forged marker must not freeze the live document it names.
+  it("exempts a refused purge marker", () => {
+    expect(quarantinesDocument("MARKER_REFUSED")).toBe(false);
+  });
+
   it("quarantines every other classification", () => {
     for (const errorType of [
       "SIGNATURE_INVALID",
@@ -92,6 +129,7 @@ describe("quarantinesDocument", () => {
       "EXCESSIVE_SHUFFLE",
       "GRACEFUL_ABORT",
       "INVALID_TIMESTAMP",
+      "RESERVED_ACTION",
       "UNCLASSIFIED",
     ] as const) {
       expect(quarantinesDocument(errorType)).toBe(true);

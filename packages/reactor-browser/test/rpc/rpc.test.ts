@@ -271,6 +271,29 @@ describe("reactor RPC proxy <-> host", () => {
     expect(surface.drives.addFolder).toBe(surface.drives.addFolder);
   });
 
+  it("keeps a purged Deleted event's context across the port", async () => {
+    const { proxy, fake, close } = setup();
+    cleanup = close;
+    const received: DocumentChangeEvent[] = [];
+    proxy.subscribe({} as SearchFilter, (change) => received.push(change));
+    await tick();
+
+    fake.emit({
+      type: "deleted",
+      documents: [],
+      context: { childId: "doc-1", purged: true },
+    } as unknown as DocumentChangeEvent);
+    await tick();
+
+    expect(received).toEqual([
+      {
+        type: "deleted",
+        documents: [],
+        context: { childId: "doc-1", purged: true },
+      },
+    ]);
+  });
+
   it("does not leak an unhandled rejection when subscribe throws", async () => {
     const fake = makeFakeClient();
     fake.subscribe = () => {

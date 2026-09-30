@@ -11,10 +11,15 @@ import {
   AuthorizationDeniedError,
   AuthTimestampNotMonotonicError,
   DocumentDeletedError,
+  DocumentNotDeletedError,
   DocumentNotFoundError,
+  DocumentPurgedError,
   ExcessiveReshuffleError,
+  GroupInUseError,
   InvalidOperationTimestampError,
   InvalidSignatureError,
+  PurgeTooLargeError,
+  ReservedActionError,
   UnsupportedProtocolVersionError,
   UpgradePreconditionFailedError,
 } from "../shared/errors.js";
@@ -43,10 +48,12 @@ export interface IJobResultHandler {
 
 export function toErrorInfo(error: Error | string): ErrorInfo {
   if (error instanceof Error) {
+    const documentId = (error as { documentId?: unknown }).documentId;
     return {
       name: error.name,
       message: error.message,
       stack: error.stack || new Error().stack || "",
+      ...(typeof documentId === "string" ? { documentId } : {}),
     };
   }
   return {
@@ -134,6 +141,7 @@ export class JobResultHandler implements IJobResultHandler {
     if (
       result.error &&
       DocumentNotFoundError.isError(result.error) &&
+      !DocumentPurgedError.isError(result.error) &&
       handle.job.kind === "load"
     ) {
       handle.defer();
@@ -158,7 +166,12 @@ export class JobResultHandler implements IJobResultHandler {
         InvalidSignatureError.isError(result.error) ||
         // The action's snapshot stays stale; the client retries with a fresh read.
         UpgradePreconditionFailedError.isError(result.error) ||
-        UnsupportedProtocolVersionError.isError(result.error))
+        UnsupportedProtocolVersionError.isError(result.error) ||
+        DocumentPurgedError.isError(result.error) ||
+        DocumentNotDeletedError.isError(result.error) ||
+        GroupInUseError.isError(result.error) ||
+        PurgeTooLargeError.isError(result.error) ||
+        ReservedActionError.isError(result.error))
     ) {
       const errorInfo = toErrorInfo(result.error);
       this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);

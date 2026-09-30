@@ -1,5 +1,7 @@
 import {
   isOlderManifest,
+  isPurgeMarker,
+  MARKER_REFUSAL_FEATURE,
   readPeerManifest,
   type PeerManifest,
 } from "@powerhousedao/shared/document-model";
@@ -38,6 +40,7 @@ import {
   trimMailboxFromAckOrdinal,
 } from "../utils.js";
 import { calculateBackoffDelay } from "./interval-poll-timer.js";
+import { MAX_POLLED_REFUSALS } from "../purge-refusals.js";
 import type { IPollTimer } from "./poll-timer.js";
 import {
   envelopesToSyncOperations,
@@ -81,7 +84,12 @@ const AGREEMENT_FIELDS = [
   "SyncRefusalInput",
 ] as const;
 
-type RefusalWire = { documentId: string; branch: string };
+/** `kind` only on a marker refusal, sent to a peer announcing the feature. */
+type RefusalWire = { documentId: string; branch: string; kind?: "marker" };
+
+function refusalKey(refusal: RefusalWire): string {
+  return `${refusal.documentId}\u0000${refusal.branch}\u0000${refusal.kind ?? ""}`;
+}
 
 /** How often a channel whose remote went silent asks again whether it serves agreement. */
 const AGREEMENT_PROBE_INTERVAL_MS = 5 * 60_000;
@@ -161,6 +169,10 @@ export class GqlRequestChannel implements IChannel {
   private manifestRefresh: Promise<void> | undefined;
   /** Polled rows this reactor could not run, reported on the next poll. */
   private readonly pendingRefusals = new Map<string, RefusalWire>();
+  /** When each pushed, unacknowledged marker entry was last pushed. */
+  private readonly markerPushedAt = new Map<string, number>();
+  /** Documents whose marker the remote refused; its report repeats per poll. */
+  private readonly refusedMarkers = new Set<string>();
   private isRecovering: boolean = false;
   private connectionState: ConnectionState = "connecting";
   /** Latest unrecoverable error was an auth rejection; cleared on connect. */
@@ -194,7 +206,7 @@ export class GqlRequestChannel implements IChannel {
     this.isShutdown = false;
     this.failureCount = 0;
 
-    this.inbox = new Mailbox();
+    this.inbox = new Mailbox({ holdAckBelowMarkers: true });
     this.bufferedOutbox = new BufferedMailbox(500, 25);
     this.outbox = this.bufferedOutbox;
     this.deadLetter = new Mailbox();
@@ -206,21 +218,28 @@ export class GqlRequestChannel implements IChannel {
           syncOp.documentId,
           this.channelId,
         );
-        if (
-          syncOp.error?.source === ChannelErrorSource.Inbox &&
-          syncOperationErrorType(syncOp.error) === "UNSUPPORTED_PROTOCOL"
-        ) {
-          this.pendingRefusals.set(`${syncOp.documentId}:${syncOp.branch}`, {
-            documentId: syncOp.documentId,
-            branch: syncOp.branch,
-          });
-        }
+        if (syncOp.error?.source !== ChannelErrorSource.Inbox) continue;
+        const errorType = syncOperationErrorType(syncOp.error);
+        const refusal: RefusalWire | undefined =
+          errorType === "UNSUPPORTED_PROTOCOL"
+            ? { documentId: syncOp.documentId, branch: syncOp.branch }
+            : errorType === "MARKER_REFUSED"
+              ? {
+                  documentId: syncOp.documentId,
+                  branch: syncOp.branch,
+                  kind: "marker",
+                }
+              : undefined;
+        if (refusal) this.pendingRefusals.set(refusalKey(refusal), refusal);
       }
     });
 
     // when sync ops are added to the outbox, push them to the remote
-    this.outbox.onAdded((syncOps) => {
+    this.outbox.onAdded((added) => {
       if (this.isShutdown) return;
+      // The buffer hands over entries removed since, e.g. a purged id's.
+      const syncOps = added.filter((op) => this.outbox.get(op.id) === op);
+      if (syncOps.length === 0) return;
       if (this.isPushing) {
         this.pendingDrain = true;
         return;
@@ -237,6 +256,7 @@ export class GqlRequestChannel implements IChannel {
     // to the mailbox. This is for efficiency: many syncops may fire on a trim,
     // but only one onRemoved callback will be fired for the batch.
     this.outbox.onRemoved((syncOps) => {
+      for (const syncOp of syncOps) this.markerPushedAt.delete(syncOp.id);
       // Items for different documents apply out of order, so the highest
       // applied ordinal can pass one still in flight; a restart would skip it.
       const ordinal = Math.min(
@@ -262,8 +282,9 @@ export class GqlRequestChannel implements IChannel {
       }
     });
 
-    this.inbox.onRemoved((syncOps) => {
-      const maxOrdinal = getLatestAppliedOrdinal(syncOps);
+    // The inbox ack, which never passes a marker still awaiting its load.
+    this.inbox.onRemoved(() => {
+      const maxOrdinal = this.inbox.ackOrdinal;
       if (maxOrdinal > this.lastPersistedInboxOrdinal) {
         this.lastPersistedInboxOrdinal = maxOrdinal;
         this.cursorStorage
@@ -345,6 +366,10 @@ export class GqlRequestChannel implements IChannel {
     return () => {
       this.peerManifestCallbacks.delete(callback);
     };
+  }
+
+  forgetMarkerRefusal(documentId: string, branch: string): void {
+    this.refusedMarkers.delete(`${documentId}\u0000${branch}`);
   }
 
   private async hearPeer(
@@ -515,6 +540,8 @@ export class GqlRequestChannel implements IChannel {
     if (ackOrdinal > 0) {
       trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
     }
+    this.retireRefusedMarkers(deadLetters);
+    this.repushUnackedMarkers();
 
     // Rows are judged against the sender's record, so a stale one is refreshed
     // first. Unadmitted rows stay unacked and are served again.
@@ -571,7 +598,15 @@ export class GqlRequestChannel implements IChannel {
    * Handles dead letters reported by the remote server.
    * Creates local dead letter SyncOperations so the channel quiesces.
    */
-  private handleRemoteDeadLetters(deadLetters: DeadLetterWire[]): void {
+  private handleRemoteDeadLetters(wire: DeadLetterWire[]): void {
+    const deadLetters = wire.filter((dl) => {
+      if (dl.errorType !== "MARKER_REFUSED") return true;
+      const key = `${dl.documentId}\u0000${dl.branch}`;
+      if (this.refusedMarkers.has(key)) return false;
+      this.refusedMarkers.add(key);
+      return true;
+    });
+    if (deadLetters.length === 0) return;
     for (const dl of deadLetters) {
       this.logger.error(
         "Remote dead letter on @ChannelId: document @DocumentId failed with: @Error",
@@ -774,6 +809,11 @@ export class GqlRequestChannel implements IChannel {
         : undefined;
       refusals = this.peerServesAgreement
         ? [...this.pendingRefusals.values()]
+            .filter(
+              (refusal) =>
+                refusal.kind === undefined || this.peerTakesMarkerRefusals(),
+            )
+            .slice(0, MAX_POLLED_REFUSALS)
         : [];
       try {
         response = await this.executeGraphQL<PollSyncEnvelopesResult>(
@@ -804,7 +844,7 @@ export class GqlRequestChannel implements IChannel {
 
     // The server holds what was reported; a silent one keeps them pending.
     for (const refusal of refusals) {
-      this.pendingRefusals.delete(`${refusal.documentId}:${refusal.branch}`);
+      this.pendingRefusals.delete(refusalKey(refusal));
     }
 
     return {
@@ -817,6 +857,13 @@ export class GqlRequestChannel implements IChannel {
     };
   }
 
+  /** A peer before the feature would reject the field; its refusals wait. */
+  private peerTakesMarkerRefusals(): boolean {
+    return (
+      this.peerManifest?.features[MARKER_REFUSAL_FEATURE]?.includes(1) === true
+    );
+  }
+
   private rejectsAgreementFields(error: unknown): boolean {
     return this.peerServesAgreement && this.isAgreementRejection(error);
   }
@@ -824,7 +871,8 @@ export class GqlRequestChannel implements IChannel {
   private isAgreementRejection(error: unknown): boolean {
     if (
       !(error instanceof GraphQLRequestError) ||
-      error.category !== "graphql"
+      error.category !== "graphql" ||
+      isRecoverableGraphQLError(error)
     ) {
       return false;
     }
@@ -1099,6 +1147,49 @@ export class GqlRequestChannel implements IChannel {
       });
   }
 
+  /** Stops pushing a marker entry the remote refused; its wire has no op id. */
+  private retireRefusedMarkers(deadLetters: DeadLetterWire[]): void {
+    const refused = deadLetters.filter(
+      (dl) => dl.errorType === "MARKER_REFUSED",
+    );
+    if (refused.length === 0) return;
+    const retired = this.outbox.items.filter(
+      (syncOp) =>
+        this.markerPushedAt.has(syncOp.id) &&
+        syncOp.status !== SyncOperationStatus.Applied &&
+        refused.some(
+          (dl) =>
+            dl.documentId === syncOp.documentId && dl.branch === syncOp.branch,
+        ),
+    );
+    if (retired.length === 0) return;
+    for (const syncOp of retired) {
+      syncOp.failed(
+        new ChannelError(
+          ChannelErrorSource.Outbox,
+          new Error(`Remote refused the purge marker of ${syncOp.documentId}`),
+          "MARKER_REFUSED",
+        ),
+      );
+    }
+    this.outbox.remove(...retired);
+  }
+
+  /** Re-pushes markers unacked for retryMaxDelayMs: a restarted remote lost them. */
+  private repushUnackedMarkers(): void {
+    if (this.isPushing || this.pushBlocked || this.receivingPages) return;
+    const due = Date.now() - this.config.retryMaxDelayMs;
+    const stale = this.outbox.items.filter((syncOp) => {
+      const pushedAt = this.markerPushedAt.get(syncOp.id);
+      return (
+        pushedAt !== undefined &&
+        pushedAt <= due &&
+        syncOp.status !== SyncOperationStatus.Applied
+      );
+    });
+    if (stale.length > 0) this.attemptPush(stale);
+  }
+
   /**
    * Schedules a retry of all current outbox items using exponential backoff.
    */
@@ -1179,8 +1270,12 @@ export class GqlRequestChannel implements IChannel {
    * Creates one SyncEnvelope per SyncOperation with key/dependsOn for batch ordering.
    */
   private async pushSyncOperations(syncOps: SyncOperation[]): Promise<void> {
+    const now = Date.now();
     for (const syncOp of syncOps) {
       syncOp.started();
+      if (syncOp.operations.some((op) => isPurgeMarker(op))) {
+        this.markerPushedAt.set(syncOp.id, now);
+      }
     }
 
     // The server revision this push was gated under; a pre-feature server

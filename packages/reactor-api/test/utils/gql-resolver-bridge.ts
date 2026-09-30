@@ -4,6 +4,7 @@ import {
   collectHeldSyncOperations,
   touchChannel,
   holdPollRefusals,
+  recordPollMarkerRefusals,
   pollSyncEnvelopes,
   pushSyncEnvelopes,
   silenceUnversionedPoll,
@@ -113,10 +114,19 @@ export function createResolverBridge(
         outboxAck: number;
         outboxLatest: number;
         manifestRevision?: string | null;
-        refusals?: Array<{ documentId: string; branch: string }> | null;
+        refusals?: Array<{
+          documentId: string;
+          branch: string;
+          kind?: string | null;
+        }> | null;
       };
 
       holdPollRefusals(syncManager, variables.channelId, variables.refusals);
+      await recordPollMarkerRefusals(
+        syncManager,
+        variables.channelId,
+        variables.refusals,
+      );
       await silenceUnversionedPoll(
         syncManager,
         variables.channelId,

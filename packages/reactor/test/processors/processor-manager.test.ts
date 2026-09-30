@@ -5,6 +5,8 @@ import {
 } from "@powerhousedao/shared/document-drive";
 import {
   generateId,
+  purgeDocumentAction,
+  purgeMarkerOperation,
   withSignaturePolicy,
   type DocumentModelModule,
   type OperationWithContext,
@@ -47,6 +49,7 @@ import {
   runMigrations,
 } from "../../src/storage/migrations/migrator.js";
 import { deferred } from "../factories.js";
+import { seedTombstone } from "../purge/helpers.js";
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 
@@ -2379,7 +2382,9 @@ describe("ProcessorManager Standalone Tests", () => {
         expect(events).toEqual(["ops", "unregistered", "disconnect"]),
       );
       expect(processorManager.get(`self:${driveId}:0`)).toBeUndefined();
-      expect(await cursorRow(`self:${driveId}:0`)).toBeUndefined();
+      expect(await cursorRow(`self:${driveId}:0`)).toMatchObject({
+        status: "released",
+      });
     });
 
     it("should not resurrect a deleted drive's cursor from a delivery in flight", async () => {
@@ -2440,7 +2445,10 @@ describe("ProcessorManager Standalone Tests", () => {
       await tracked!.retry();
 
       expect(processor.onOperations).toHaveBeenCalledTimes(1);
-      expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined();
+      expect(await cursorRow(`f:${driveId}:0`)).toMatchObject({
+        status: "released",
+        lastOrdinal: 0,
+      });
     });
 
     it("should keep a factory's cursors when its run fails", async () => {
@@ -2552,7 +2560,7 @@ describe("ProcessorManager Standalone Tests", () => {
       ]);
     });
 
-    it("should not hold a drive deletion behind its processors' deliveries", async () => {
+    it("should hold a drive deletion's pass until its processors have it", async () => {
       const driveId = generateId();
       const held = deferred();
       const release = deferred();
@@ -2564,6 +2572,7 @@ describe("ProcessorManager Standalone Tests", () => {
             held.resolve();
             await release.promise;
           }
+          processor.receivedOperations.push(...ops);
         });
       await processorManager.registerFactory("f", () => [
         { processor, filter: { documentId: ["*"] } },
@@ -2574,15 +2583,123 @@ describe("ProcessorManager Standalone Tests", () => {
         makeOp(generateId(), 2, { documentType: CHILD }),
       ]);
       await held.promise;
-      try {
-        await processorManager.indexOperations([makeDriveDeleteOp(driveId, 3)]);
-        expect(processor.onDisconnect).not.toHaveBeenCalled();
-        expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined();
-      } finally {
-        release.resolve();
-      }
-      await child;
+      let passed = false;
+      const deletion = processorManager
+        .indexOperations([makeDriveDeleteOp(driveId, 3)])
+        .then(() => {
+          passed = true;
+        });
+      // A round trip on the idle connection: time for the pass to finish.
+      await db.selectFrom("ViewState").select("lastOrdinal").execute();
+      expect(passed).toBe(false);
+      expect(await cursorRow(`f:${driveId}:0`)).toBeDefined();
+
+      release.resolve();
+      await Promise.all([child, deletion]);
+
+      expect(ordinalsOf(processor)).toContain(3);
+      expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined();
       await vi.waitFor(() => expect(processor.onDisconnect).toHaveBeenCalled());
+    });
+
+    it("should keep a failed deletion's row errored and pay it on re-registration", async () => {
+      const driveId = generateId();
+      const first = createMockProcessor();
+      first.onOperations = vi
+        .fn()
+        .mockImplementation((ops: OperationWithContext[]) =>
+          ops.some((op) => op.operation.action.type === "DELETE_DOCUMENT")
+            ? Promise.reject(new Error("down"))
+            : Promise.resolve(),
+        );
+      await processorManager.registerFactory("f", () => [
+        { processor: first, filter: { documentType: [CHILD] } },
+      ]);
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      await processorManager.indexOperations([makeDriveDeleteOp(driveId, 2)]);
+      expect(await cursorRow(`f:${driveId}:0`)).toMatchObject({
+        status: "errored",
+        lastError: "down",
+      });
+      await vi.waitFor(() => expect(first.onDisconnect).toHaveBeenCalled());
+
+      const second = createMockProcessor();
+      const headers: string[] = [];
+      await processorManager.registerFactory("f", (header) => {
+        headers.push(header.id);
+        return [{ processor: second, filter: { documentType: [CHILD] } }];
+      });
+
+      await vi.waitFor(() => expect(second.onDisconnect).toHaveBeenCalled());
+      expect(headers).toEqual([driveId]);
+      expect(ordinalsOf(second)).toEqual([2]);
+      await vi.waitFor(async () =>
+        expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined(),
+      );
+      expect(processorManager.getAll()).toHaveLength(0);
+    });
+
+    it("should release a factory's rows on unregister and start afresh on re-registration", async () => {
+      const driveId = generateId();
+      const first = createMockProcessor();
+      await processorManager.registerFactory("f", () => [
+        { processor: first, filter: { documentId: ["*"] } },
+      ]);
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      await confirm(1);
+      expect(await cursorRow(`f:${driveId}:0`)).toMatchObject({
+        status: "active",
+        lastOrdinal: 1,
+      });
+
+      await processorManager.unregisterFactory("f");
+      expect(await cursorRow(`f:${driveId}:0`)).toMatchObject({
+        status: "released",
+        lastOrdinal: 1,
+      });
+
+      const second = createMockProcessor();
+      await processorManager.registerFactory("f", () => [
+        {
+          processor: second,
+          filter: { documentId: ["*"] },
+          startFrom: "current",
+        },
+      ]);
+      expect(processorManager.get(`f:${driveId}:0`)).toMatchObject({
+        status: "active",
+      });
+      expect(await cursorRow(`f:${driveId}:0`)).toMatchObject({
+        status: "active",
+      });
+    });
+
+    it("should pay a released row's deletion from a factory run the deletion cancelled", async () => {
+      const driveId = generateId();
+      await processorManager.registerFactory("f", () => [
+        { processor: createMockProcessor(), filter: { documentType: [CHILD] } },
+      ]);
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      await processorManager.unregisterFactory("f");
+
+      const entered = deferred();
+      const release = deferred();
+      const second = createMockProcessor();
+      const registered = processorManager.registerFactory("f", async () => {
+        entered.resolve();
+        await release.promise;
+        return [{ processor: second, filter: { documentType: [CHILD] } }];
+      });
+      await entered.promise;
+      await processorManager.indexOperations([makeDriveDeleteOp(driveId, 2)]);
+      release.resolve();
+      await registered;
+
+      expect(ordinalsOf(second)).toEqual([2]);
+      expect(second.onDisconnect).toHaveBeenCalled();
+      expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined();
+      expect(processorManager.getAll()).toHaveLength(0);
     });
 
     it("should never overlap two onOperations calls on one processor", async () => {
@@ -2799,6 +2916,137 @@ describe("ProcessorManager Standalone Tests", () => {
       );
     });
   });
+
+  describe("Erasure", () => {
+    const CHILD = "powerhouse/document-model";
+
+    function markerOp(
+      documentId: string,
+      documentType: string,
+      ordinal: number,
+    ): OperationWithContext {
+      const operation = purgeMarkerOperation(
+        purgeDocumentAction({ documentId, documentType, requestId: "r" }),
+      );
+      // Sweeps and boot replay deliver the marker with no resultingState.
+      return {
+        operation,
+        context: {
+          documentId,
+          documentType,
+          scope: "document",
+          branch: "main",
+          ordinal,
+        },
+      };
+    }
+
+    function recordingProcessor() {
+      const events: string[] = [];
+      const processor = createMockProcessor();
+      processor.onOperations = vi
+        .fn()
+        .mockImplementation((ops: OperationWithContext[]) => {
+          processor.receivedOperations.push(...ops);
+          events.push(`ops ${ops.map((op) => op.context.ordinal).join(",")}`);
+          return Promise.resolve();
+        });
+      processor.onDisconnect = vi.fn().mockImplementation(() => {
+        events.push("disconnect");
+        return Promise.resolve();
+      });
+      return { processor, events };
+    }
+
+    it.each([
+      ["a filter that matches the drive", { documentId: ["*"] }],
+      ["a filter that excludes the drive", { documentType: [CHILD] }],
+    ])(
+      "delivers a drive's DELETE_DOCUMENT to its processors before they close, with %s",
+      async (_, filter: ProcessorFilter) => {
+        const driveId = generateId();
+        const { processor, events } = recordingProcessor();
+        await processorManager.registerFactory("f", () => [
+          { processor, filter },
+        ]);
+        await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+        events.length = 0;
+
+        await processorManager.indexOperations([
+          makeOp(generateId(), 2, { documentType: CHILD }),
+          makeDriveDeleteOp(driveId, 3),
+          makeOp(generateId(), 4, { documentType: CHILD }),
+        ]);
+
+        await vi.waitFor(() => expect(events).toContain("disconnect"));
+        expect(events).toEqual(["ops 2,3", "disconnect"]);
+        expect(processorManager.get(`f:${driveId}:0`)).toBeUndefined();
+      },
+    );
+
+    it("closes a drive's processors at its marker, which a sweep delivers without state", async () => {
+      const driveId = generateId();
+      const { processor, events } = recordingProcessor();
+      await processorManager.registerFactory("f", () => [
+        { processor, filter: { documentId: ["*"] } },
+      ]);
+      const creation = makeDriveCreateOp(driveId, 1);
+      await writeToOperationIndex(operationIndex, [creation]);
+      await processorManager.indexOperations([creation]);
+      const marker = markerOp(driveId, DRIVE_DOCUMENT_TYPE, 2);
+      await writeToOperationIndex(operationIndex, [marker]);
+
+      const present = await operationIndex.getOrdinalsInRange(0, 2, 100);
+      await processorManager.sweep(2, present);
+
+      await vi.waitFor(() => expect(events).toContain("disconnect"));
+      expect(events).toEqual(["ops 1", "ops 2", "disconnect"]);
+      expect(processor.receivedOperations[1]!.context.resultingState).toBe(
+        undefined,
+      );
+      expect(processorManager.appliedThrough).toBe(2);
+      expect(mockWriteCache.getState).not.toHaveBeenCalled();
+    });
+
+    it("routes a purged document's marker but not its other operations", async () => {
+      const driveId = generateId();
+      const purgedId = generateId();
+      const liveId = generateId();
+      const { processor } = recordingProcessor();
+      await processorManager.registerFactory("f", () => [
+        { processor, filter: { documentId: ["*"] } },
+      ]);
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      await seedTombstone(db as never, purgedId, 5);
+
+      await processorManager.indexOperations([
+        makeOp(purgedId, 2, { documentType: CHILD }),
+        makeOp(liveId, 3, { documentType: CHILD }),
+        markerOp(purgedId, CHILD, 5),
+      ]);
+
+      expect(ordinalsOf(processor)).toEqual([1, 3, 5]);
+      expect(processorManager.get(`f:${driveId}:0`)!.lastOrdinal).toBe(0);
+    });
+
+    it("delivers a tombstoned drive's DELETE_DOCUMENT to its own processors", async () => {
+      const driveId = generateId();
+      const { processor, events } = recordingProcessor();
+      await processorManager.registerFactory("f", () => [
+        { processor, filter: { documentType: [CHILD] } },
+      ]);
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      await seedTombstone(db as never, driveId, 9);
+
+      await processorManager.indexOperations([
+        makeOp(driveId, 2, { documentType: CHILD }),
+        makeDriveDeleteOp(driveId, 3),
+      ]);
+
+      await vi.waitFor(() => expect(events).toContain("disconnect"));
+      expect(events).toEqual(["ops 3", "disconnect"]);
+    });
+  });
 });
 
 describe("ProcessorManager Backfill Paging Regression", () => {
@@ -2890,8 +3138,9 @@ describe("ProcessorManager Backfill Paging Regression", () => {
 
     const tracked = processorManager.get(`huge-backfill:${driveId}:0`);
     expect(tracked).toBeDefined();
+    // A late registration does not wait out its backfill.
+    await vi.waitFor(() => expect(tracked!.lastOrdinal).toBe(HUGE_PAGE_SIZE));
     expect(tracked!.status).toBe("active");
-    expect(tracked!.lastOrdinal).toBe(HUGE_PAGE_SIZE);
     expect(receivedCount).toBe(HUGE_PAGE_SIZE);
     expect(lastReceivedOrdinal).toBe(HUGE_PAGE_SIZE);
 

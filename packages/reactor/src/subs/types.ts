@@ -30,6 +30,9 @@ export interface SubscriptionErrorContext {
   eventData?: unknown;
 }
 
+/** Set on a deletion notice when a purge marker applied the deletion. */
+export type DocumentDeletedInfo = { purged?: true };
+
 /**
  * Interface for subscribing to document events in the reactor.
  */
@@ -55,7 +58,7 @@ export interface IReactorSubscriptionManager {
    * @returns A function that unsubscribes from the events
    */
   onDocumentDeleted(
-    callback: (documentIds: string[]) => void,
+    callback: (documentIds: string[], info?: DocumentDeletedInfo) => void,
     search?: SearchFilter,
   ): () => void;
 

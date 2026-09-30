@@ -7,9 +7,9 @@ export type StoredProtocolVersions = {
   versions: ProtocolVersions;
 };
 
-// Matches idx_operation_created_protocol_versions, so both queries read the index.
+// Reads idx_operation_created_protocol_versions; a marker at index 0 never counts.
 const created = sql.raw(
-  `scope = 'document' and "index" = 0 and (action->'input'->'protocolVersions') is not null`,
+  `scope = 'document' and "index" = 0 and (action->'input'->'protocolVersions') is not null and action->>'type' <> 'PURGE_DOCUMENT'`,
 );
 const key = sql.raw(`md5((action->'input'->'protocolVersions')::text)`);
 

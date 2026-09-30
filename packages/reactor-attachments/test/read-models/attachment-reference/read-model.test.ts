@@ -7,12 +7,14 @@ import type {
   IWriteCache,
   PagedResults,
 } from "@powerhousedao/reactor";
-import type {
-  Action,
-  DocumentModelModule,
-  DocumentSpecification,
-  OperationSpecification,
-  OperationWithContext,
+import {
+  purgeDocumentAction,
+  purgeMarkerOperation,
+  type Action,
+  type DocumentModelModule,
+  type DocumentSpecification,
+  type OperationSpecification,
+  type OperationWithContext,
 } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { describe, expect, it, vi } from "vitest";
@@ -115,13 +117,32 @@ function op(
   };
 }
 
+/** A PURGE_DOCUMENT marker for the document, at the ordinal. */
+function purgeItem(documentId: string, ordinal: number): OperationWithContext {
+  const action = purgeDocumentAction(
+    { documentId, documentType: "example/attachments", requestId: "req" },
+    { timestampUtcMs: "2026-07-22T00:00:00.000Z" },
+  );
+  return {
+    operation: purgeMarkerOperation(action),
+    context: {
+      documentId,
+      documentType: "example/attachments",
+      scope: "document",
+      branch: "main",
+      ordinal,
+    },
+  };
+}
+
 type FakeCursorDb = Kysely<DocumentViewDatabase> & {
   cursor: number | undefined;
   failNextSave: boolean;
+  purged: Set<string>;
 };
 
 function cursorDb(cursor?: number): FakeCursorDb {
-  const state = { cursor, failNextSave: false };
+  const state = { cursor, failNextSave: false, purged: new Set<string>() };
   const update = (value: { lastOrdinal: number }) => {
     const chain = {
       where: () => chain,
@@ -149,9 +170,16 @@ function cursorDb(cursor?: number): FakeCursorDb {
     set failNextSave(value: boolean) {
       state.failNextSave = value;
     },
+    get purged() {
+      return state.purged;
+    },
     selectFrom: () => ({
       select: () => ({
         where: () => ({
+          execute: () =>
+            Promise.resolve(
+              [...state.purged].map((documentId) => ({ documentId })),
+            ),
           executeTakeFirst: () =>
             Promise.resolve(
               state.cursor === undefined
@@ -252,8 +280,10 @@ function dependencies(options?: {
   };
   const compiler = options?.compiler ?? new AttachmentSchemaCompiler();
   const addReferences = vi.fn(() => Promise.resolve());
+  const removeDocuments = vi.fn(() => Promise.resolve());
   const writer =
-    options?.writer ?? ({ addReferences } as IAttachmentReferenceWriter);
+    options?.writer ??
+    ({ addReferences, removeDocuments } as IAttachmentReferenceWriter);
   const tracker = { update: vi.fn() } as unknown as IConsistencyTracker;
   const model = new AttachmentReferenceReadModel(
     db,
@@ -273,6 +303,7 @@ function dependencies(options?: {
   };
   return {
     addReferences,
+    removeDocuments,
     compiler,
     db,
     index,
@@ -339,6 +370,7 @@ describe("AttachmentReferenceReadModel", () => {
           return Promise.resolve();
         },
       ),
+      removeDocuments: vi.fn(),
     };
     const { model } = dependencies({ writer });
     await model.indexOperations([op(1)]);
@@ -388,7 +420,7 @@ describe("AttachmentReferenceReadModel", () => {
       .mockResolvedValue(undefined);
     const { db, model, store, sweep } = dependencies({
       cursor: 99,
-      writer: { addReferences },
+      writer: { addReferences, removeDocuments: vi.fn() },
     });
     await model.init();
     store.push(op(100), op(101));
@@ -440,7 +472,7 @@ describe("AttachmentReferenceReadModel", () => {
       .mockResolvedValue(undefined);
     const { db, model, sweep } = dependencies({
       cursor: 0,
-      writer: { addReferences },
+      writer: { addReferences, removeDocuments: vi.fn() },
       indexOperations: [op(1)],
     });
     await expect(model.indexOperations([op(1)])).rejects.toThrow(
@@ -519,6 +551,59 @@ describe("AttachmentReferenceReadModel", () => {
       expect.objectContaining({ ordinal: 13 }),
     ]);
     expect(db.cursor).toBe(13);
+  });
+
+  it("deletes a purged document's references on its marker, live and swept", async () => {
+    const marker = purgeItem("document-1", 3);
+    const {
+      addReferences,
+      db,
+      model,
+      registry,
+      removeDocuments,
+      store,
+      sweep,
+    } = dependencies({ cursor: 0 });
+    await model.init();
+    db.purged.add("document-1");
+
+    await model.indexOperations([
+      op(2, "ATTACH_FILES", { refs: [REF_B] }),
+      marker,
+    ]);
+    expect(removeDocuments).toHaveBeenCalledWith(["document-1"]);
+    expect(addReferences).toHaveBeenCalledWith([
+      expect.objectContaining({ documentId: "document-2" }),
+    ]);
+    expect(registry.getModule).toHaveBeenCalledTimes(1);
+
+    removeDocuments.mockClear();
+    store.push(op(2, "ATTACH_FILES", { refs: [REF_B] }), marker);
+    await sweep();
+    expect(removeDocuments).not.toHaveBeenCalled();
+    expect(db.cursor).toBe(3);
+  });
+
+  it("drops a purged document's operations and applies its marker in a sweep", async () => {
+    const { addReferences, db, model, removeDocuments, store, sweep } =
+      dependencies({ cursor: 0 });
+    await model.init();
+    db.purged.add("document-1");
+    store.push(
+      op(1, "ATTACH_FILES", { refs: [REF_A] }, "document-1"),
+      op(2, "ATTACH_FILES", { refs: [REF_B] }),
+      purgeItem("document-1", 5),
+      op(6, "ATTACH_FILES", { refs: [REF_A] }),
+    );
+
+    await sweep();
+
+    expect(addReferences.mock.calls.flat(2)).toEqual([
+      expect.objectContaining({ documentId: "document-2" }),
+      expect.objectContaining({ documentId: "document-6" }),
+    ]);
+    expect(removeDocuments).toHaveBeenCalledWith(["document-1"]);
+    expect(db.cursor).toBe(6);
   });
 
   it("P7: indexes a reference whose batch never arrived, without a later batch", async () => {

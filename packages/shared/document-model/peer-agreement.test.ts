@@ -25,11 +25,27 @@ const TEST_PROTOCOL: PeerCapability = {
 };
 
 describe("peer capabilities", () => {
-  it("registers base-reducer [1, 2] and signature [2]", () => {
+  it("registers base-reducer [1, 2], signature [2], document-purge [1] and marker-refusal [1]", () => {
     expect(localSupports(PEER_CAPABILITIES, {})).toEqual({
-      protocols: { "base-reducer": [1, 2], signature: [2] },
-      features: {},
+      protocols: {
+        "base-reducer": [1, 2],
+        signature: [2],
+        "document-purge": [1],
+      },
+      features: { "marker-refusal": [1] },
     });
+  });
+
+  it("gives a silent peer no marker-refusal support", () => {
+    expect(
+      legacySupports(PEER_CAPABILITIES).features["marker-refusal"],
+    ).toEqual([]);
+  });
+
+  it("gives a silent peer no document-purge support", () => {
+    expect(
+      legacySupports(PEER_CAPABILITIES).protocols["document-purge"],
+    ).toEqual([]);
   });
 
   it("gives a silent peer the baselines", () => {
@@ -48,6 +64,8 @@ describe("peer capabilities", () => {
     ]);
     expect(merged.map((capability) => capability.name)).toEqual([
       "signature",
+      "document-purge",
+      "marker-refusal",
       "base-reducer",
       "test-protocol",
     ]);
@@ -167,11 +185,45 @@ describe("holdReason", () => {
   });
 
   it("knows when a peer covers everything local", () => {
+    const narrow = localSupports(capabilities, {});
+    expect(coversLocal(narrow, narrow, capabilities)).toBe(true);
+    expect(coversLocal(narrow, wide, capabilities)).toBe(false);
+    expect(coversLocal(wide, wide, capabilities)).toBe(true);
+  });
+
+  it("does not let a silent peer cover a reactor that runs document-purge", () => {
     expect(
       coversLocal(silent, localSupports(capabilities, {}), capabilities),
-    ).toBe(true);
-    expect(coversLocal(silent, wide, capabilities)).toBe(false);
-    expect(coversLocal(wide, wide, capabilities)).toBe(true);
+    ).toBe(false);
+  });
+
+  describe("a purged document", () => {
+    const purged = { "document-purge": 1 };
+
+    it("is held for a silent peer", () => {
+      expect(holdReason(silent, purged, capabilities)).toEqual({
+        protocol: "document-purge",
+        version: 1,
+        peerSupports: [],
+      });
+    });
+
+    it("is held for a peer whose manifest lacks document-purge", () => {
+      const manifest = readPeerManifest({
+        format: 1,
+        protocols: { "base-reducer": [1, 2], signature: [2] },
+      })!;
+      expect(holdReason(manifest, purged, capabilities)).toEqual({
+        protocol: "document-purge",
+        version: 1,
+        peerSupports: [],
+      });
+    });
+
+    it("is not held for a peer that announces document-purge [1]", () => {
+      const manifest = localPeerManifest(PEER_CAPABILITIES, {});
+      expect(holdReason(manifest, purged, capabilities)).toBeUndefined();
+    });
   });
 });
 
@@ -215,6 +267,19 @@ describe("selectProtocolVersions", () => {
 
   it("does not negotiate a capability without a preference", () => {
     expect(select([])).not.toHaveProperty("signature");
+  });
+
+  it("never selects document-purge, even when every member runs it", () => {
+    const local = localSupports(PEER_CAPABILITIES, {});
+    for (const members of [[], [local], [local, local]]) {
+      expect(
+        selectProtocolVersions({
+          capabilities: PEER_CAPABILITIES,
+          flags: {},
+          members,
+        }),
+      ).not.toHaveProperty("document-purge");
+    }
   });
 
   it("stays at the local preference when members support more", () => {

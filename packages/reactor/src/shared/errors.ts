@@ -299,8 +299,115 @@ export class DocumentNotFoundError extends Error {
     Error.captureStackTrace(this, DocumentNotFoundError);
   }
 
+  /** Also true for DocumentPurgedError: only the name crosses the queue. */
   static isError(error: unknown): error is DocumentNotFoundError {
-    return Error.isError(error) && error.name === "DocumentNotFoundError";
+    return (
+      Error.isError(error) &&
+      (error.name === "DocumentNotFoundError" ||
+        error.name === "DocumentPurgedError")
+    );
+  }
+}
+
+/** The document was purged; readers treat it as absent. Terminal. */
+export class DocumentPurgedError extends DocumentNotFoundError {
+  public readonly purged = true;
+
+  constructor(documentId: string, message?: string) {
+    super(documentId, message ?? `Document ${documentId} was purged`);
+    this.name = "DocumentPurgedError";
+
+    Error.captureStackTrace(this, DocumentPurgedError);
+  }
+
+  static override isError(error: unknown): error is DocumentPurgedError {
+    return Error.isError(error) && error.name === "DocumentPurgedError";
+  }
+}
+
+/** A purge was asked for a document that is not deleted. Terminal. */
+export class DocumentNotDeletedError extends Error {
+  public readonly documentId: string;
+
+  constructor(documentId: string, message?: string) {
+    super(message ?? `Document ${documentId} is not deleted`);
+    this.name = "DocumentNotDeletedError";
+    this.documentId = documentId;
+
+    Error.captureStackTrace(this, DocumentNotDeletedError);
+  }
+
+  static isError(error: unknown): error is DocumentNotDeletedError {
+    return Error.isError(error) && error.name === "DocumentNotDeletedError";
+  }
+}
+
+/** A surviving document's accepted auth history names the group. Terminal. */
+export class GroupInUseError extends Error {
+  public readonly groupId: string;
+  public readonly referencingDocumentIds: readonly string[];
+
+  constructor(groupId: string, referencingDocumentIds: readonly string[]) {
+    super(
+      `Group ${groupId} cannot be purged: the auth history of ${referencingDocumentIds.join(", ")} names it`,
+    );
+    this.name = "GroupInUseError";
+    this.groupId = groupId;
+    this.referencingDocumentIds = referencingDocumentIds;
+
+    Error.captureStackTrace(this, GroupInUseError);
+  }
+
+  static isError(error: unknown): error is GroupInUseError {
+    return Error.isError(error) && error.name === "GroupInUseError";
+  }
+}
+
+/** A purge above maxPurgeOperations without allowLarge. Terminal. */
+export class PurgeTooLargeError extends Error {
+  public readonly documentId: string;
+  public readonly operationCount: number;
+  public readonly maxPurgeOperations: number;
+
+  constructor(
+    documentId: string,
+    operationCount: number,
+    maxPurgeOperations: number,
+  ) {
+    super(
+      `Document ${documentId} has ${operationCount} operations, above the purge limit of ${maxPurgeOperations}; request it with allowLarge`,
+    );
+    this.name = "PurgeTooLargeError";
+    this.documentId = documentId;
+    this.operationCount = operationCount;
+    this.maxPurgeOperations = maxPurgeOperations;
+
+    Error.captureStackTrace(this, PurgeTooLargeError);
+  }
+
+  static isError(error: unknown): error is PurgeTooLargeError {
+    return Error.isError(error) && error.name === "PurgeTooLargeError";
+  }
+}
+
+/** A regular write carried an action type only the reactor issues. Terminal. */
+export class ReservedActionError extends Error {
+  public readonly documentId: string;
+  public readonly actionType: string;
+
+  constructor(documentId: string, actionType: string) {
+    super(
+      `Action ${actionType} is reserved and cannot be submitted to document ${documentId}`,
+    );
+    this.name = "ReservedActionError";
+    this.documentId = documentId;
+    this.actionType = actionType;
+
+    Error.captureStackTrace(this, ReservedActionError);
+  }
+
+  static isError(error: unknown): error is ReservedActionError {
+    return Error.isError(error) && error.name === "ReservedActionError";
   }
 }
 

@@ -527,10 +527,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           outboxAck: number;
           outboxLatest: number;
           manifestRevision?: string | null;
-          refusals?: ReadonlyArray<{
-            documentId: string;
-            branch: string;
-          }> | null;
+          refusals?: ReadonlyArray<resolvers.PollRefusal> | null;
         },
         ctx: Context,
       ) => {
@@ -567,6 +564,11 @@ export class ReactorSubgraph extends BaseSubgraph {
           await this.#bindOrRefuseChannel(args.channelId, ctx);
 
           resolvers.holdPollRefusals(
+            this.syncManager,
+            args.channelId,
+            args.refusals,
+          );
+          await resolvers.recordPollMarkerRefusals(
             this.syncManager,
             args.channelId,
             args.refusals,

@@ -4,6 +4,7 @@ import type {
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import {
+  isPurgeMarker,
   localSupports,
   mergePeerCapabilities,
   PEER_CAPABILITIES,
@@ -18,6 +19,7 @@ import type {
   WorkerPoolConfig,
 } from "../executor/worker/protocol.js";
 import { WorkerPoolJobExecutorManager } from "../executor/worker-pool-job-executor-manager.js";
+import { DocumentPurgeService } from "../admin/document-purge-service.js";
 import type { WorkerFactory } from "../executor/worker-pool-job-executor-manager.js";
 import { CollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
@@ -45,7 +47,7 @@ import {
   type UnsupportedStoredDocuments,
 } from "./stored-protocol-check.js";
 import type { IEventBus } from "../events/interfaces.js";
-import { ReactorEventTypes } from "../events/types.js";
+import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
 import {
   KyselyExecutionScope,
   type IExecutionScope,
@@ -842,6 +844,18 @@ export class ReactorBuilder {
     });
     await documentMetaCache.startup();
 
+    // Worker executors evict only their own caches; these are the host's.
+    const unsubscribeMarkerEviction = eventBus.subscribe<JobWriteReadyEvent>(
+      ReactorEventTypes.JOB_WRITE_READY,
+      (_type, event) => {
+        for (const item of event.operations) {
+          if (!isPurgeMarker(item)) continue;
+          writeCache.invalidate(item.context.documentId);
+          documentMetaCache.invalidate(item.context.documentId);
+        }
+      },
+    );
+
     const collectionMembershipCache = new CollectionMembershipCache(
       operationIndex,
     );
@@ -1140,6 +1154,8 @@ export class ReactorBuilder {
       eventBus,
       executorManager,
       catchUp,
+      [unsubscribeMarkerEviction],
+      [() => processorManager.shutdown()],
     );
 
     const localPeer: LocalPeer = {
@@ -1156,6 +1172,9 @@ export class ReactorBuilder {
         } catch {
           return undefined;
         }
+      },
+      forgetDocument: (documentId) => {
+        documentMetaCache.invalidate(documentId);
       },
     };
     let syncModule: InProcessSyncModule | undefined = undefined;
@@ -1235,6 +1254,11 @@ export class ReactorBuilder {
       degradedComponents,
       catchUp,
       settledWatermark,
+      documentPurgeService: new DocumentPurgeService(
+        queue,
+        jobTracker,
+        eventBus,
+      ),
     };
 
     catchUp.start();

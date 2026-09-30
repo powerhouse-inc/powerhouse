@@ -606,12 +606,16 @@ describe("AttachmentClient upload/download batches", () => {
       ref: AttachmentRef;
       header: AttachmentHeader;
     }>();
+    const sending = deferred<void>();
     const reserve = vi.fn((): Promise<IAttachmentUpload> =>
       Promise.resolve({
         reservationId: "res",
         ref: null,
         expiresAtUtc: "",
-        send: vi.fn(() => sendGate.promise),
+        send: vi.fn(() => {
+          sending.resolve();
+          return sendGate.promise;
+        }),
       } as unknown as IAttachmentUpload),
     );
     const { service } = makeService({ reserve });
@@ -626,8 +630,7 @@ describe("AttachmentClient upload/download batches", () => {
         throttleMs: 0,
       },
     );
-    // Give the first item time to reach its blocked transfer.
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await sending.promise;
 
     expect(events.filter((e) => e.index === 0).map((e) => e.stage)).toEqual([
       "hashing",

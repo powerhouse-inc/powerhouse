@@ -51,12 +51,20 @@ export async function buildDecisionModel<M>(
 
   const staticModel = { ...model } as Partial<M>;
 
+  const derived: Array<[string, StreamQuery[]]> = [];
   for (const [key, projection] of projections) {
     if (typeof projection.query !== "function") {
       continue;
     }
+    derived.push([key, projection.query(staticModel)]);
+  }
+  if (derived.length > 0 && reader.fence) {
+    await reader.fence(
+      derived.flatMap(([, queries]) => queries.map((q) => q.documentId)),
+    );
+  }
 
-    const queries = projection.query(staticModel);
+  for (const [key, queries] of derived) {
     const value: Record<string, unknown> = {};
     for (const query of queries) {
       // A derived stream can name a document this replica does not hold (a

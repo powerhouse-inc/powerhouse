@@ -25,6 +25,8 @@ import type { ILogger } from "document-model";
 import {
   addRelationshipAction,
   createDocumentAction,
+  deleteDocumentAction,
+  removeRelationshipAction,
   upgradeDocumentAction,
 } from "../actions/index.js";
 import type {
@@ -111,6 +113,10 @@ type EvaluationTarget = {
   model: DocumentDecisionModel;
   scopeStates: Record<string, unknown>;
 };
+
+function deletePlanKey(documentId: string): string {
+  return `delete:${documentId}`;
+}
 
 /**
  * The document a candidate is decided against. Routed on the action type alone,
@@ -1531,10 +1537,9 @@ export class ReactorClient implements IReactorClient {
       identifier,
       propagate,
     );
-    const jobs: JobInfo[] = [];
+    const toDelete = new Set([identifier]);
 
     if (propagate === PropagationMode.Cascade) {
-      const toDelete = new Set([identifier]);
       let changed = true;
 
       while (changed) {
@@ -1554,41 +1559,66 @@ export class ReactorClient implements IReactorClient {
           }
         }
       }
+    }
 
-      for (const descendantId of toDelete) {
-        if (descendantId === identifier) {
-          continue;
-        }
-        const removalJobs = await this.removeAllIncomingRelationships(
-          descendantId,
-          signal,
-        );
-        jobs.push(...removalJobs);
-
-        const jobInfo = await this.reactor.deleteDocument(
-          descendantId,
-          this.signer,
-          signal,
-        );
-        jobs.push(jobInfo);
+    // Discovery puts sources before targets; reversed, children go first.
+    const order = [...toDelete].reverse();
+    const position = new Map(order.map((id, index) => [id, index]));
+    const incoming = new Map<string, DocumentRelationship[]>();
+    for (const documentId of order) {
+      const page = await this.documentIndexer.getIncoming(
+        documentId,
+        undefined,
+        undefined,
+        undefined,
+        signal,
+      );
+      incoming.set(documentId, page.results);
+    }
+    // An edge whose source is deleted no later than its target cannot wait.
+    const waitsForTarget = (rel: DocumentRelationship): boolean => {
+      const source = position.get(rel.sourceId);
+      return source === undefined || source > position.get(rel.targetId)!;
+    };
+    const leadingBySource = new Map<string, DocumentRelationship[]>();
+    for (const rels of incoming.values()) {
+      for (const rel of rels) {
+        if (waitsForTarget(rel)) continue;
+        const leading = leadingBySource.get(rel.sourceId) ?? [];
+        leading.push(rel);
+        leadingBySource.set(rel.sourceId, leading);
       }
     }
 
-    const removalJobs = await this.removeAllIncomingRelationships(
-      identifier,
-      signal,
-    );
-    jobs.push(...removalJobs);
+    const plans: ExecutionJobPlan[] = [];
+    for (const documentId of order) {
+      for (const rel of leadingBySource.get(documentId) ?? []) {
+        plans.push(await this.planRemoval(rel, [], plans.length, signal));
+      }
+      plans.push(await this.planDelete(documentId, signal));
+      for (const rel of incoming.get(documentId)!) {
+        if (waitsForTarget(rel)) {
+          plans.push(
+            await this.planRemoval(
+              rel,
+              [deletePlanKey(documentId)],
+              plans.length,
+              signal,
+            ),
+          );
+        }
+      }
+    }
 
-    const jobInfo = await this.reactor.deleteDocument(
-      identifier,
-      this.signer,
+    const batchResult = await this.reactor.executeBatch(
+      { jobs: plans },
       signal,
     );
-    jobs.push(jobInfo);
 
     const completedJobs = await Promise.all(
-      jobs.map((job) => this.waitForJob(job, signal)),
+      Object.values(batchResult.jobs).map((job) =>
+        this.waitForJob(job, signal),
+      ),
     );
 
     for (const completedJob of completedJobs) {
@@ -1723,8 +1753,9 @@ export class ReactorClient implements IReactorClient {
     );
 
     const unsubscribeDeleted = this.subscriptionManager.onDocumentDeleted(
-      (documentIds) => {
+      (documentIds, info) => {
         const reads = this.eventReads.forEvent();
+        const purged = info?.purged ? { purged: true as const } : {};
         for (const childId of documentIds) {
           deliver(
             (async () =>
@@ -1732,7 +1763,7 @@ export class ReactorClient implements IReactorClient {
                 ? {
                     type: DocumentChangeType.Deleted,
                     documents: [],
-                    context: { childId },
+                    context: { childId, ...purged },
                   }
                 : undefined)(),
           );
@@ -2208,30 +2239,51 @@ export class ReactorClient implements IReactorClient {
     };
   }
 
-  private async removeAllIncomingRelationships(
+  private async planDelete(
     documentId: string,
     signal?: AbortSignal,
-  ): Promise<JobInfo[]> {
-    const incoming = await this.documentIndexer.getIncoming(
-      documentId,
-      undefined,
-      undefined,
-      undefined,
+  ): Promise<ExecutionJobPlan> {
+    const signed = await signActions(
+      [deleteDocumentAction(documentId)],
+      this.signer,
+      { documentId, branch: "main" },
       signal,
     );
+    return {
+      key: deletePlanKey(documentId),
+      documentId,
+      scope: "document",
+      branch: "main",
+      actions: signed,
+      dependsOn: [],
+    };
+  }
 
-    const jobs: JobInfo[] = [];
-    for (const rel of incoming.results) {
-      const jobInfo = await this.reactor.removeRelationship(
-        rel.sourceId,
-        documentId,
-        rel.relationshipType,
-        "main",
-        this.signer,
-        signal,
-      );
-      jobs.push(jobInfo);
-    }
-    return jobs;
+  private async planRemoval(
+    rel: DocumentRelationship,
+    dependsOn: string[],
+    index: number,
+    signal?: AbortSignal,
+  ): Promise<ExecutionJobPlan> {
+    const signed = await signActions(
+      [
+        removeRelationshipAction(
+          rel.sourceId,
+          rel.targetId,
+          rel.relationshipType,
+        ),
+      ],
+      this.signer,
+      { documentId: rel.sourceId, branch: "main" },
+      signal,
+    );
+    return {
+      key: `remove:${index}`,
+      documentId: rel.sourceId,
+      scope: "document",
+      branch: "main",
+      actions: signed,
+      dependsOn,
+    };
   }
 }

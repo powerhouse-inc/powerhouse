@@ -18,6 +18,7 @@ import {
   type PagingOptions,
   type RemoteFilter,
   type SearchFilter,
+  supportsPurgeRefusals,
   syncOperationErrorType,
   SyncOperation,
   type SyncScopeGate,
@@ -36,7 +37,10 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 
-import { AuthEvaluationUnsupportedError } from "../errors.js";
+import {
+  AuthEvaluationUnsupportedError,
+  RefusalNotRecordedError,
+} from "../errors.js";
 import { isDriveContainerType } from "./constants.js";
 
 const REACTOR_DRIVE_DOCUMENT_TYPE = "powerhouse/reactor-drive";
@@ -1611,7 +1615,7 @@ export function pollSyncEnvelopes(
     outboxAck: number;
     outboxLatest: number;
     manifestRevision?: string | null;
-    refusals?: ReadonlyArray<{ documentId: string; branch: string }> | null;
+    refusals?: ReadonlyArray<PollRefusal> | null;
   },
   forbiddenIds: ReadonlySet<string> = new Set(),
   heldOpIds: ReadonlySet<string> = new Set(),
@@ -1768,6 +1772,16 @@ export function pollSyncEnvelopes(
     // but unconfirmed ops re-emit on the next poll.
     syncOp.deliveredCount ??= 0;
     syncOp.emittedCount ??= 0;
+    // A restarted client polls from its cursor; a forbidden drain stays put.
+    if (!forbiddenIds.has(syncOp.documentId)) {
+      while (
+        syncOp.deliveredCount > 0 &&
+        syncOp.operations[syncOp.deliveredCount - 1].context.ordinal >
+          args.outboxLatest
+      ) {
+        syncOp.deliveredCount -= 1;
+      }
+    }
     while (
       syncOp.deliveredCount < syncOp.emittedCount &&
       syncOp.operations[syncOp.deliveredCount].context.ordinal <=
@@ -1892,18 +1906,28 @@ type SyncEnvelopeArg = {
   dependsOn?: string[];
 };
 
+export type PollRefusal = {
+  documentId: string;
+  branch: string;
+  kind?: string | null;
+};
+
+const MARKER_REFUSAL = "marker";
+
 /**
  * The client's UNSUPPORTED_PROTOCOL refusals of polled rows. Each becomes a hold
  * for that client, as a pushed refusal does, rather than counting as delivered.
+ * A refused marker is not a hold: {@link recordPollMarkerRefusals} takes it.
+ * A kind this server does not know is ignored.
  */
 export function holdPollRefusals(
   syncManager: ISyncManager,
   channelId: string,
-  refusals:
-    | ReadonlyArray<{ documentId: string; branch: string }>
-    | null
-    | undefined,
+  all: ReadonlyArray<PollRefusal> | null | undefined,
 ): void {
+  const refusals = all?.filter(
+    (refusal) => refusal.kind === undefined || refusal.kind === null,
+  );
   if (!refusals?.length) return;
   let remote;
   try {
@@ -1936,6 +1960,36 @@ export function holdPollRefusals(
 }
 
 /**
+ * The client's refusals of purge markers it polled. Persisted before the poll is
+ * served; a failure fails the poll, and the client reports them again. The sync
+ * manager keeps only refusals of markers this remote was owed.
+ */
+export async function recordPollMarkerRefusals(
+  syncManager: ISyncManager,
+  channelId: string,
+  all: ReadonlyArray<PollRefusal> | null | undefined,
+): Promise<void> {
+  const refusals = all?.filter((refusal) => refusal.kind === MARKER_REFUSAL);
+  if (!refusals?.length) return;
+  if (!supportsPurgeRefusals(syncManager)) return;
+  let remote;
+  try {
+    remote = syncManager.getById(channelId);
+  } catch {
+    // The poll resolver reports the missing channel.
+    return;
+  }
+  try {
+    await syncManager.recordPolledMarkerRefusals(
+      remote.meta.name,
+      refusals.map(({ documentId, branch }) => ({ documentId, branch })),
+    );
+  } catch (error) {
+    throw new RefusalNotRecordedError(error);
+  }
+}
+
+/**
  * A poll naming no revision is from a client without peer agreement: it is
  * recorded silent, and what it can no longer run is held, before it is served.
  */
@@ -1965,7 +2019,7 @@ export async function silenceUnversionedPoll(
  * It must be preserved because the inbox mailbox tracks applied ordinals
  * and returns the highest one as `ackOrdinal` in pollSyncEnvelopes.
  */
-export function pushSyncEnvelopes(
+export async function pushSyncEnvelopes(
   syncManager: ISyncManager,
   args: {
     envelopes: SyncEnvelopeArg[];
@@ -2020,5 +2074,15 @@ export function pushSyncEnvelopes(
     remote.channel.inbox.add(...consolidated);
   }
 
-  return Promise.resolve(true);
+  // A received marker is stored before the pusher hears it arrived.
+  try {
+    await syncManager.receiptsStored?.(
+      [...remoteSyncOps.keys()].map((remote) => remote.meta.name),
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to store received markers: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  return true;
 }
