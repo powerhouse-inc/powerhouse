@@ -30,6 +30,7 @@ import {
 
 const DOC = "purged-doc";
 const OTHER = "other-doc";
+const CONFLICTED = "purged-conflicted-doc";
 const COL_A = DriveCollectionId.forDrive("drive-a");
 const COL_B = DriveCollectionId.forDrive("drive-b");
 const CONFIG = { type: "internal", parameters: {} };
@@ -360,6 +361,7 @@ describe("dead letters for a purged document [Postgres]", () => {
 
   it("does not quarantine or persist a remote's refusal of the marker, and reports it", async () => {
     await seedTombstone(harness.db, DOC, 1);
+    await seedTombstone(harness.db, CONFLICTED, 2);
     await harness.manager.startup();
     await harness.manager.add("remote", COL_A, CONFIG, FILTER, {}, "r");
     const refused = vi.fn();
@@ -369,11 +371,13 @@ describe("dead letters for a purged document [Postgres]", () => {
     const channel = harness.manager.getByName("remote").channel;
 
     channel.deadLetter.add(
-      failedSyncOp(DOC, ChannelErrorSource.Outbox, "UNCLASSIFIED"),
+      failedSyncOp(DOC, ChannelErrorSource.Outbox, "MARKER_REFUSED"),
+      failedSyncOp(CONFLICTED, ChannelErrorSource.Outbox, "UNCLASSIFIED"),
       failedSyncOp(OTHER, ChannelErrorSource.Outbox, "UNCLASSIFIED"),
     );
 
     expect(quarantined(harness).has(DOC)).toBe(false);
+    expect(quarantined(harness).has(CONFLICTED)).toBe(false);
     expect(quarantined(harness).has(OTHER)).toBe(true);
     expect(channel.deadLetter.items.map((item) => item.documentId)).toEqual([
       OTHER,

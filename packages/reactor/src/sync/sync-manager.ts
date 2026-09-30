@@ -1438,8 +1438,7 @@ export class SyncManager
           syncOp.error?.message ?? "unknown",
         );
         if (syncOp.error?.source !== ChannelErrorSource.Outbox) continue;
-        // A local pre-purge entry whose push failed is not a refused marker.
-        if (syncOp.operations.length > 0 && !carriesMarker(syncOp)) continue;
+        if (syncOperationErrorType(syncOp.error) !== "MARKER_REFUSED") continue;
         const refusal = {
           remoteName: remote.meta.name,
           documentId: syncOp.documentId,

@@ -12,7 +12,8 @@ Branch layout: one branch per stage, `feat/erasure-stage-0` to
 `feat/erasure-stage-3`, each merged into the next. `feat/document-erasure`
 points at the stage 3 head, so it carries all four. Stage 4 has no branch.
 
-Line numbers are against 37de0d0795. Paths are relative to
+Line numbers are against 37de0d0795, except in entries the final review
+round changed, which cite lines after that round. Paths are relative to
 `packages/reactor/src` unless they start with `packages/` or `apps/`. Where a
 line moves easily the symbol is given too.
 
@@ -411,6 +412,11 @@ Not spec deviations; recorded because they change how the suites run.
   `PURGE_REFUSED` is emitted — the event fires once per process, so a stopped
   scheduler lost it; and after `MARKER_REFUSED` the ack hold lifts and the
   cursor alone reads "delivered".
+- `sync/sync-manager.ts:1441` (`deadLetter.onAdded`) — a remote dead letter
+  of a tombstoned id is persisted as a refusal only when its `errorType` is
+  `MARKER_REFUSED`; any other type is dropped without quarantine — a conflict
+  or validation dead letter reported after the purge became a kept refusal
+  and turned the outcome into `marker-undelivered`.
 - `sync/channels/gql-req-channel.ts:856` — a poller reports refused markers
   with `kind: "marker"` only to a peer announcing the `marker-refusal`
   feature (`packages/shared/document-model/peer-agreement.ts:37`); the server
