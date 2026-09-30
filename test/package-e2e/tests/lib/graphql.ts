@@ -72,7 +72,9 @@ export async function getDocumentOperations(
     "/graphql",
     `
       query Ops($id: String!) {
-        documentOperations(filter: { documentId: $id, scopes: ["global"] }) {
+        documentOperations(
+          filter: { documentIdOrSlug: $id, scopes: ["global"] }
+        ) {
           items {
             index
             hash

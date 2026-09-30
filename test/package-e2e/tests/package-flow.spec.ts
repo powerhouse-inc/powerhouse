@@ -55,7 +55,7 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
     `
       mutation CreateTodo($name: String!, $parent: String!) {
         Todo {
-          createDocument(name: $name, parentIdentifier: $parent) {
+          createDocument(name: $name, parentIdOrSlug: $parent) {
             id
             name
           }
@@ -73,9 +73,9 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
     await graphql(
       "/graphql/todo",
       `
-        mutation Add($docId: PHID!, $input: Todo_AddTodoInput!) {
+        mutation Add($docId: String!, $input: Todo_AddTodoInput!) {
           Todo {
-            addTodo(docId: $docId, input: $input) {
+            addTodo(documentIdOrSlug: $docId, input: $input) {
               id
             }
           }
@@ -91,9 +91,9 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
   await graphql(
     "/graphql/todo",
     `
-      mutation Update($docId: PHID!, $input: Todo_UpdateTodoInput!) {
+      mutation Update($docId: String!, $input: Todo_UpdateTodoInput!) {
         Todo {
-          updateTodo(docId: $docId, input: $input) {
+          updateTodo(documentIdOrSlug: $docId, input: $input) {
             id
           }
         }
@@ -107,9 +107,9 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
   await graphql(
     "/graphql/todo",
     `
-      mutation Remove($docId: PHID!, $input: Todo_RemoveTodoInput!) {
+      mutation Remove($docId: String!, $input: Todo_RemoveTodoInput!) {
         Todo {
-          removeTodo(docId: $docId, input: $input) {
+          removeTodo(documentIdOrSlug: $docId, input: $input) {
             id
           }
         }
