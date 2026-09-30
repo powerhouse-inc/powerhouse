@@ -1,3 +1,13 @@
+## 6.2.3-dev.34 (2026-09-30)
+
+### 🩹 Fixes
+
+- **codegen:** resolve a migrate dist-tag to a version every pinned package has ([bae414aae3](https://github.com/powerhouse-inc/powerhouse/commit/bae414aae3))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.33 (2026-09-30)
 
 ### 🚀 Features

@@ -1,3 +1,13 @@
+## 6.2.3-dev.34 (2026-09-30)
+
+### 🩹 Fixes
+
+- **reactor-browser:** answer every dispatch through its callbacks, failures included ([44f02b98c3](https://github.com/powerhouse-inc/powerhouse/commit/44f02b98c3))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.33 (2026-09-30)
 
 ### 🚀 Features

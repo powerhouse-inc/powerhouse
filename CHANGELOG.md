@@ -1,3 +1,25 @@
+## 6.2.3-dev.34 (2026-09-30)
+
+### 🚀 Features
+
+- **switchboard:** let MCP_ENABLED=false keep the MCP server unmounted ([#3146](https://github.com/powerhouse-inc/powerhouse/pull/3146))
+
+### 🩹 Fixes
+
+- **codegen:** resolve a migrate dist-tag to a version every pinned package has ([bae414aae3](https://github.com/powerhouse-inc/powerhouse/commit/bae414aae3))
+- **reactor-browser:** answer every dispatch through its callbacks, failures included ([44f02b98c3](https://github.com/powerhouse-inc/powerhouse/commit/44f02b98c3))
+- **reactor-workflow:** migrate block_type journals to piece and block name columns ([236e2b00f0](https://github.com/powerhouse-inc/powerhouse/commit/236e2b00f0))
+- **reactor-workflow:** run an armed workflow's webhook deliveries while a trigger test waits ([c2db3402de](https://github.com/powerhouse-inc/powerhouse/commit/c2db3402de))
+- **reactor-workflow:** let EXISTS and DOES_NOT_EXIST test a field that is missing ([589f1e85f6](https://github.com/powerhouse-inc/powerhouse/commit/589f1e85f6))
+- **workflow:** drop the test of a block an undo removes, and settle a failed undo ([12c5073697](https://github.com/powerhouse-inc/powerhouse/commit/12c5073697))
+- **workflow:** show a failed publish's error once the draft banner is gone ([f8278642aa](https://github.com/powerhouse-inc/powerhouse/commit/f8278642aa))
+- **workflow:** tell agents that publishing does not enable a workflow ([cbed7db121](https://github.com/powerhouse-inc/powerhouse/commit/cbed7db121))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.3-dev.33 (2026-09-30)
 
 ### 🚀 Features

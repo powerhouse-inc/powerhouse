@@ -1,3 +1,15 @@
+## 6.2.3-dev.34 (2026-09-30)
+
+### 🩹 Fixes
+
+- **reactor-workflow:** let EXISTS and DOES_NOT_EXIST test a field that is missing ([589f1e85f6](https://github.com/powerhouse-inc/powerhouse/commit/589f1e85f6))
+- **reactor-workflow:** run an armed workflow's webhook deliveries while a trigger test waits ([c2db3402de](https://github.com/powerhouse-inc/powerhouse/commit/c2db3402de))
+- **reactor-workflow:** migrate block_type journals to piece and block name columns ([236e2b00f0](https://github.com/powerhouse-inc/powerhouse/commit/236e2b00f0))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.33 (2026-09-30)
 
 ### 🚀 Features

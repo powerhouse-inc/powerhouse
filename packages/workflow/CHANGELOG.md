@@ -1,3 +1,15 @@
+## 6.2.3-dev.34 (2026-09-30)
+
+### 🩹 Fixes
+
+- **workflow:** tell agents that publishing does not enable a workflow ([cbed7db121](https://github.com/powerhouse-inc/powerhouse/commit/cbed7db121))
+- **workflow:** show a failed publish's error once the draft banner is gone ([f8278642aa](https://github.com/powerhouse-inc/powerhouse/commit/f8278642aa))
+- **workflow:** drop the test of a block an undo removes, and settle a failed undo ([12c5073697](https://github.com/powerhouse-inc/powerhouse/commit/12c5073697))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.33 (2026-09-30)
 
 ### 🚀 Features

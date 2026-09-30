@@ -1,3 +1,13 @@
+## 6.2.3-dev.34 (2026-09-30)
+
+### 🚀 Features
+
+- **switchboard:** let MCP_ENABLED=false keep the MCP server unmounted ([#3146](https://github.com/powerhouse-inc/powerhouse/pull/3146))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.3-dev.33 (2026-09-30)
 
 ### 🚀 Features
