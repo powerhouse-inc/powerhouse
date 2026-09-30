@@ -1,4 +1,8 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import {
+  purgeDocumentAction,
+  purgeMarkerOperation,
+  type OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import type {
   IProcessor,
   ProcessorFilter,
@@ -32,6 +36,26 @@ function op(ordinal: number, documentId = "doc"): OperationWithContext {
       documentId,
       documentType: "test/doc",
       scope: "global",
+      branch: "main",
+      ordinal,
+    },
+  };
+}
+
+function markerOp(ordinal: number, documentId: string): OperationWithContext {
+  const operation = purgeMarkerOperation(
+    purgeDocumentAction({
+      documentId,
+      documentType: "test/doc",
+      requestId: "r",
+    }),
+  );
+  return {
+    operation,
+    context: {
+      documentId,
+      documentType: "test/doc",
+      scope: "document",
       branch: "main",
       ordinal,
     },
@@ -84,6 +108,8 @@ function harness(
     onDisconnect?: () => Promise<void>;
     routedThrough?: () => number;
     confirmedThrough?: () => number;
+    purged?: (ids: string[]) => Promise<ReadonlySet<string>>;
+    lookupRetryMs?: number;
   } = {},
 ): Harness {
   const delivered: number[][] = [];
@@ -115,6 +141,8 @@ function harness(
       persisted.push({ ...state });
       return Promise.resolve();
     },
+    purged: options.purged ?? (() => Promise.resolve(new Set())),
+    lookupRetryMs: options.lookupRetryMs ?? 1,
     logger: createMockLogger(),
   });
   return { queue, cursor, delivered, persisted, processor };
@@ -326,6 +354,7 @@ describe("ProcessorQueue", () => {
         routedThrough: () => Number.MAX_SAFE_INTEGER,
         confirmedThrough: () => Number.MAX_SAFE_INTEGER,
         persist: () => Promise.reject(new Error("db down")),
+        purged: () => Promise.resolve(new Set()),
         logger: createMockLogger(),
       });
 
@@ -618,6 +647,196 @@ describe("ProcessorQueue", () => {
       await queue.retry();
 
       expect(processor.onOperations).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("erase", () => {
+    const deletionOp = (ordinal: number) => {
+      const deletion = op(ordinal, "drive");
+      deletion.operation.action.type = "DELETE_DOCUMENT";
+      return deletion;
+    };
+
+    it("delivers the share and then the deletion", async () => {
+      const { queue, delivered } = harness();
+
+      const erased = await queue.erase([op(1), op(2)], deletionOp(3), {
+        purged: Promise.resolve(new Set()),
+      });
+
+      expect(erased).toBe(true);
+      expect(delivered).toEqual([[1, 2, 3]]);
+    });
+
+    it("delivers only the deletion to an errored cursor, below its floor", async () => {
+      const { queue, cursor, delivered } = harness({ floor: 10 });
+      cursor.status = "errored";
+
+      const erased = await queue.erase([op(11)], deletionOp(5), {
+        purged: Promise.resolve(new Set()),
+      });
+
+      expect(erased).toBe(true);
+      expect(delivered).toEqual([[5]]);
+    });
+
+    it("does not redeliver a deletion a backfill ahead of it delivered", async () => {
+      const deletion = deletionOp(2);
+      const { queue, delivered } = harness({ index: [op(1), deletion] });
+
+      void queue.backfill();
+      const erased = await queue.erase([op(1)], deletion, {
+        purged: Promise.resolve(new Set()),
+      });
+
+      expect(erased).toBe(true);
+      expect(delivered).toEqual([[1, 2]]);
+    });
+
+    it("still delivers the deletion when the share's tombstones are unread", async () => {
+      const { queue, delivered } = harness();
+      const purged = Promise.reject<ReadonlySet<string>>(new Error("down"));
+      purged.catch(() => undefined);
+
+      const erased = await queue.erase([op(1)], deletionOp(2), { purged });
+
+      expect(erased).toBe(true);
+      expect(delivered).toEqual([[2]]);
+    });
+
+    it("reports a deletion the processor threw on", async () => {
+      const { queue, cursor } = harness({
+        onOperations: () => Promise.reject(new Error("down")),
+      });
+
+      const erased = await queue.erase([], deletionOp(1), {
+        purged: Promise.resolve(new Set()),
+      });
+
+      expect(erased).toBe(false);
+      expect(cursor.status).toBe("errored");
+    });
+  });
+
+  describe("tombstones", () => {
+    const tombstoned = (...ids: string[]) =>
+      Promise.resolve<ReadonlySet<string>>(new Set(ids));
+
+    it("drops a routed batch's operations of a purged id but not its marker", async () => {
+      const { queue, cursor, delivered } = harness();
+
+      await queue.live(
+        [op(1, "gone"), op(2, "kept"), op(3, "gone"), markerOp(4, "gone")],
+        { purged: tombstoned("gone") },
+      );
+
+      expect(delivered).toEqual([[2, 4]]);
+      expect(cursor.lastOrdinal).toBe(4);
+    });
+
+    it("raises the cursor past a routed batch whose every operation is purged", async () => {
+      const { queue, cursor, processor } = harness();
+
+      await queue.live([op(1, "gone"), op(2, "gone")], {
+        purged: tombstoned("gone"),
+      });
+
+      expect(processor.onOperations).not.toHaveBeenCalled();
+      expect(cursor.lastOrdinal).toBe(2);
+    });
+
+    it("delivers a kept ordinal of a purged id", async () => {
+      const { queue, delivered } = harness();
+
+      await queue.live([op(1, "gone"), op(2, "gone")], {
+        purged: tombstoned("gone"),
+        keep: new Set([2]),
+      });
+
+      expect(delivered).toEqual([[2]]);
+    });
+
+    it("retries a failed routed lookup and delivers once it answers", async () => {
+      let failures = 2;
+      const { queue, cursor, delivered } = harness({
+        lastOrdinal: 4,
+        purged: (ids) =>
+          failures-- > 0
+            ? Promise.reject(new Error("down"))
+            : Promise.resolve(new Set(ids.filter((id) => id === "gone"))),
+      });
+      const purged = Promise.reject<ReadonlySet<string>>(new Error("down"));
+      purged.catch(() => undefined);
+
+      await queue.live([op(5), op(6, "gone")], { purged });
+
+      expect(delivered).toEqual([[5]]);
+      expect(cursor).toMatchObject({ status: "active", lastOrdinal: 6 });
+    });
+
+    it("stops retrying a failed routed lookup once closed", async () => {
+      const { queue, cursor, processor } = harness({
+        lastOrdinal: 4,
+        purged: () => Promise.reject(new Error("down")),
+      });
+      const purged = Promise.reject<ReadonlySet<string>>(new Error("down"));
+      purged.catch(() => undefined);
+
+      const live = queue.live([op(5)], { purged });
+      await queue.close();
+      await live;
+
+      expect(processor.onOperations).not.toHaveBeenCalled();
+      expect(cursor).toMatchObject({ status: "active", lastOrdinal: 4 });
+      expect(processor.onDisconnect).toHaveBeenCalled();
+    });
+
+    it("checks a backfill page after reading it", async () => {
+      const index = [
+        op(1, "gone"),
+        op(2, "kept"),
+        op(3, "gone"),
+        markerOp(4, "gone"),
+      ];
+      const tombstones = new Set<string>();
+      const read = pagedIndex(index);
+      const lookups: string[][] = [];
+      const { queue, cursor, delivered } = harness({
+        readSince: async (ordinal) => {
+          const page = await read(ordinal);
+          // The purge commits between the read and the delivery.
+          tombstones.add("gone");
+          return page;
+        },
+        purged: (ids) => {
+          lookups.push([...ids].sort());
+          return Promise.resolve(
+            new Set(ids.filter((id) => tombstones.has(id))),
+          );
+        },
+      });
+
+      await queue.backfill();
+
+      expect(delivered).toEqual([[2, 4]]);
+      expect(lookups).toEqual([["gone", "kept"]]);
+      expect(cursor.lastOrdinal).toBe(4);
+    });
+
+    it("retries a backfill's failed lookup before delivering the page", async () => {
+      let failures = 1;
+      const { queue, cursor, delivered } = harness({
+        index: [op(1), op(2)],
+        purged: () =>
+          failures-- > 0
+            ? Promise.reject(new Error("down"))
+            : Promise.resolve(new Set()),
+      });
+
+      await queue.backfill();
+
+      expect(delivered).toEqual([[1, 2]]);
+      expect(cursor).toMatchObject({ status: "active", lastOrdinal: 2 });
     });
   });
 });

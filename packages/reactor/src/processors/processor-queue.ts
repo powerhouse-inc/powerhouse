@@ -1,4 +1,7 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import {
+  isPurgeMarker,
+  type OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import type {
   IProcessor,
   ProcessorFilter,
@@ -27,15 +30,45 @@ export type ProcessorQueueOptions = {
   /** The manager's appliedThrough; the cursor never passes it. */
   confirmedThrough: () => number;
   persist: (cursor: ProcessorCursorState) => Promise<void>;
+  /** Tombstoned ids among `ids`; takes no purge lock. */
+  purged: (ids: string[]) => Promise<ReadonlySet<string>>;
+  /** First wait before retrying a failed tombstone lookup; doubles per try. */
+  lookupRetryMs?: number;
+  /** Retries of a failed tombstone lookup before the processor errors. */
+  lookupRetries?: number;
   logger: ILogger;
 };
 
+/** Tombstoned ids a live batch was checked against, as routing started it. */
+export type LiveCheck = {
+  purged: Promise<ReadonlySet<string>>;
+  /** Ordinals delivered even when tombstoned. */
+  keep?: ReadonlySet<number>;
+};
+
+type LiveDelivery = {
+  kind: "live";
+  ops: OperationWithContext[];
+  check: LiveCheck | undefined;
+  done: () => void;
+};
+
 type Delivery =
-  | { kind: "live"; ops: OperationWithContext[]; done: () => void }
+  | LiveDelivery
   | { kind: "advance"; through: number; done: () => void };
+
+type EraseTask = {
+  kind: "erase";
+  ops: OperationWithContext[];
+  deletion: OperationWithContext | undefined;
+  check: LiveCheck;
+  run: () => Promise<void>;
+  done: () => void;
+};
 
 type Task =
   | Delivery
+  | EraseTask
   | {
       kind: "backfill" | "retry" | "disconnect";
       run: () => Promise<void>;
@@ -56,6 +89,30 @@ function lowestOf(ops: OperationWithContext[]): number {
   return lowest;
 }
 
+/** Drops operations of tombstoned ids; the marker always passes. */
+export function withoutPurged(
+  ops: OperationWithContext[],
+  purged: ReadonlySet<string>,
+  keep?: ReadonlySet<number>,
+): OperationWithContext[] {
+  if (purged.size === 0) return ops;
+  return ops.filter(
+    (op) =>
+      isPurgeMarker(op.operation) ||
+      !purged.has(op.context.documentId) ||
+      keep?.has(op.context.ordinal) === true,
+  );
+}
+
+/** The ids whose tombstone would drop an operation of `ops`. */
+export function purgeCandidates(ops: OperationWithContext[]): string[] {
+  const ids = new Set<string>();
+  for (const op of ops) {
+    if (!isPurgeMarker(op.operation)) ids.add(op.context.documentId);
+  }
+  return [...ids];
+}
+
 function highestOf(ops: OperationWithContext[]): number {
   let highest = 0;
   for (const op of ops) highest = Math.max(highest, op.context.ordinal);
@@ -65,6 +122,10 @@ function highestOf(ops: OperationWithContext[]): number {
 /** Largest merged live call, matching the operation index's page size. */
 export const MAX_MERGED_OPERATIONS = 500;
 
+const LOOKUP_RETRY_MS = 100;
+const MAX_LOOKUP_RETRY_MS = 30_000;
+const LOOKUP_RETRIES = 10;
+
 // One task at a time per processor; task promises never reject.
 export class ProcessorQueue {
   private readonly tasks: Task[] = [];
@@ -73,6 +134,8 @@ export class ProcessorQueue {
   private replaysAhead = 0;
   // Delivered by backfill before routing reached them; dropped once, live.
   private readonly unrouted = new Set<number>();
+  // Ends a lookup retry's wait early; set while one waits.
+  private wake: (() => void) | undefined;
 
   constructor(private readonly options: ProcessorQueueOptions) {}
 
@@ -80,9 +143,14 @@ export class ProcessorQueue {
     return this.closed;
   }
 
+  /** True while a backfill or retry is queued or running. */
+  get replaying(): boolean {
+    return this.replaysAhead > 0;
+  }
+
   /** Resolves at once behind a replay, so a pass never waits out a backfill. */
-  live(ops: OperationWithContext[]): Promise<void> {
-    const delivered = this.push((done) => ({ kind: "live", ops, done }));
+  live(ops: OperationWithContext[], check?: LiveCheck): Promise<void> {
+    const delivered = this.push((done) => ({ kind: "live", ops, check, done }));
     return this.replaysAhead > 0 ? Promise.resolve() : delivered;
   }
 
@@ -94,6 +162,28 @@ export class ProcessorQueue {
       return Promise.resolve();
     }
     return this.push((done) => ({ kind: "advance", through, done }));
+  }
+
+  /** `share` if active, then `deletion` whatever the status; true once delivered. */
+  erase(
+    share: OperationWithContext[],
+    deletion: OperationWithContext,
+    check: LiveCheck,
+  ): Promise<boolean> {
+    if (this.closed) return Promise.resolve(false);
+    let delivered = false;
+    const task: Omit<EraseTask, "done"> = {
+      kind: "erase",
+      ops: share,
+      deletion,
+      check,
+      run: async () => {
+        delivered = await this.runErase(task);
+      },
+    };
+    return this.push((done) => Object.assign(task, { done })).then(
+      () => delivered,
+    );
   }
 
   /** Replays from the cursor as it stands when the task runs. */
@@ -129,6 +219,7 @@ export class ProcessorQueue {
       }
     });
     this.closed = true;
+    this.wake?.();
     return disconnect;
   }
 
@@ -222,12 +313,115 @@ export class ProcessorQueue {
       return;
     }
 
-    if (!(await this.deliver(fresh))) {
+    const live = await this.dropPurgedLive(batch, fresh);
+    if (live === undefined) {
+      await this.parkBelow(fresh);
+      return;
+    }
+
+    if (live.length > 0 && !(await this.deliver(live))) {
       await this.parkBelow(fresh);
       return;
     }
 
     await this.raiseCursor(Math.max(highestOf(fresh), through));
+  }
+
+  /** Undefined once closed, or errored after the lookup's last retry. */
+  private async dropPurgedLive(
+    batch: Delivery[],
+    fresh: OperationWithContext[],
+  ): Promise<OperationWithContext[] | undefined> {
+    const keep = new Set<number>();
+    const checks: Promise<ReadonlySet<string>>[] = [];
+    for (const task of batch) {
+      if (task.kind !== "live" || !task.check) continue;
+      checks.push(task.check.purged);
+      for (const ordinal of task.check.keep ?? []) keep.add(ordinal);
+    }
+    let purged: ReadonlySet<string> | undefined;
+    try {
+      const sets = await Promise.all(checks);
+      purged = new Set(sets.flatMap((set) => [...set]));
+    } catch (error) {
+      purged = await this.retryLookup(purgeCandidates(fresh), error);
+    }
+    return purged && withoutPurged(fresh, purged, keep);
+  }
+
+  // The cursor holds meanwhile: a transient failure costs a delay, not an error.
+  private async retryLookup(
+    ids: string[],
+    error: unknown,
+  ): Promise<ReadonlySet<string> | undefined> {
+    let wait = this.options.lookupRetryMs ?? LOOKUP_RETRY_MS;
+    const retries = this.options.lookupRetries ?? LOOKUP_RETRIES;
+    for (let attempt = 0; attempt < retries; attempt++) {
+      this.options.logger.error(
+        "Processor '@ProcessorId' failed checking tombstones, retrying in @Wait ms: @Error",
+        this.options.processorId,
+        wait,
+        error,
+      );
+      await this.sleep(wait);
+      if (this.closed) return undefined;
+      try {
+        return await this.options.purged(ids);
+      } catch (retryError) {
+        error = retryError;
+        wait = Math.min(wait * 2, MAX_LOOKUP_RETRY_MS);
+      }
+    }
+    this.markErrored(error);
+    this.options.logger.error(
+      "Processor '@ProcessorId' errored: tombstones unread after @Retries retries: @Error",
+      this.options.processorId,
+      retries,
+      error,
+    );
+    return undefined;
+  }
+
+  // Unref'd, and cut short by close(), so a retry never outlives the queue.
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        this.wake = undefined;
+        resolve();
+      };
+      const timer = setTimeout(done, ms);
+      (timer as { unref?: () => void }).unref?.();
+      this.wake = done;
+    });
+  }
+
+  private async runErase(task: Omit<EraseTask, "done">): Promise<boolean> {
+    const { cursor, floor } = this.options;
+    const fresh = task.ops.filter((op) => {
+      const ordinal = op.context.ordinal;
+      if (ordinal <= floor) return false;
+      return !this.unrouted.delete(ordinal);
+    });
+    const deletion =
+      task.deletion && !this.unrouted.delete(task.deletion.context.ordinal)
+        ? task.deletion
+        : undefined;
+
+    let ops: OperationWithContext[] = [];
+    if (cursor.status === "active" && fresh.length > 0) {
+      try {
+        ops = withoutPurged(fresh, await task.check.purged);
+      } catch (error) {
+        this.options.logger.error(
+          "Processor '@ProcessorId' skipped its drive's last batch, tombstones unread: @Error",
+          this.options.processorId,
+          error,
+        );
+      }
+    }
+    if (deletion) ops.push(deletion);
+    return ops.length === 0 || (await this.deliver(ops));
   }
 
   private async runBackfill(): Promise<void> {
@@ -248,13 +442,28 @@ export class ProcessorQueue {
       const matching = page.results.filter(
         (op) => op.context.ordinal > floor && matchesFilter(op, filter),
       );
+      let live: OperationWithContext[] = matching;
       if (matching.length > 0) {
-        if (!(await this.deliver(matching))) {
+        const ids = purgeCandidates(matching);
+        let purged: ReadonlySet<string> | undefined;
+        try {
+          purged = await this.options.purged(ids);
+        } catch (error) {
+          purged = await this.retryLookup(ids, error);
+        }
+        if (purged === undefined) {
           await this.persist();
           return;
         }
-        this.dedupeQueued(matching);
+        live = withoutPurged(matching, purged);
       }
+      if (live.length > 0) {
+        if (!(await this.deliver(live))) {
+          await this.persist();
+          return;
+        }
+      }
+      if (matching.length > 0) this.dedupeQueued(matching);
 
       await this.raiseCursor(highestOf(page.results));
 
@@ -279,7 +488,14 @@ export class ProcessorQueue {
     }
     if (queued.size === 0) return;
     for (const task of this.tasks) {
-      if (task.kind !== "live") continue;
+      if (task.kind === "erase") {
+        const { deletion } = task;
+        if (deletion && queued.has(deletion.context.ordinal)) {
+          task.deletion = undefined;
+        }
+      } else if (task.kind !== "live") {
+        continue;
+      }
       task.ops = task.ops.filter((op) => !queued.has(op.context.ordinal));
     }
   }

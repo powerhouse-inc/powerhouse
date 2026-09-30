@@ -1,7 +1,10 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
-import type { Kysely, QueryCreator } from "kysely";
+import { sql, type Kysely, type QueryCreator } from "kysely";
 import type { IProcessor, ProcessorFilter } from "../types.js";
-import { relationalDbToQueryBuilder } from "./utils.js";
+import { namespaceSchemaOf, relationalDbToQueryBuilder } from "./utils.js";
+
+/** Columns {@link RelationalDbProcessor.deleteDocumentRows} matches. */
+export const DOCUMENT_ID_COLUMNS = ["document_id", "documentId"] as const;
 
 export type IRelationalQueryMethods =
   | "selectFrom"
@@ -64,6 +67,8 @@ export abstract class RelationalDbProcessor<
     protected _namespace: string,
     protected _filter: ProcessorFilter,
     protected relationalDb: IRelationalDb<TDatabaseSchema>,
+    /** The drive the factory created this processor for. */
+    protected _driveId?: string,
   ) {}
 
   static [IS_RELATIONAL_DB_PROCESSOR] = true;
@@ -107,6 +112,56 @@ export abstract class RelationalDbProcessor<
 
   get query(): IRelationalQueryBuilder<TDatabaseSchema> {
     return relationalDbToQueryBuilder(this.relationalDb);
+  }
+
+  /** True for this processor's drive when its namespace is that drive's alone. */
+  protected isNamespaceDrive(documentId: string): boolean {
+    const driveId = this._driveId;
+    if (driveId === undefined || documentId !== driveId) return false;
+    const processorClass = this.constructor as typeof RelationalDbProcessor;
+    if (processorClass.getNamespace(driveId) !== this._namespace) return false;
+    return processorClass.getNamespace(`${driveId}-other`) !== this._namespace;
+  }
+
+  /** Deletes a document's rows from every table with a document-id column. */
+  protected async deleteDocumentRows(documentId: string): Promise<void> {
+    const schema = this.namespaceSchema();
+    const columns = await sql<{ table_name: string; column_name: string }>`
+      select c.table_name, c.column_name
+      from information_schema.columns c
+      join information_schema.tables t
+        on t.table_schema = c.table_schema and t.table_name = c.table_name
+      where c.table_schema = ${schema}
+        and t.table_type = 'BASE TABLE'
+        and c.column_name in (${sql.join([...DOCUMENT_ID_COLUMNS])})
+      order by c.table_name, c.column_name
+    `.execute(this.relationalDb);
+    const db = this.relationalDb as unknown as Kysely<any>;
+    for (const { table_name, column_name } of columns.rows) {
+      await db
+        .deleteFrom(table_name)
+        .where(column_name, "=", documentId)
+        .execute();
+    }
+  }
+
+  /** Drops this processor's namespace and every table in it. */
+  protected async dropNamespace(): Promise<void> {
+    await this.relationalDb.schema
+      .dropSchema(this.namespaceSchema())
+      .ifExists()
+      .cascade()
+      .execute();
+  }
+
+  private namespaceSchema(): string {
+    const schema = namespaceSchemaOf(this.relationalDb);
+    if (schema === undefined) {
+      throw new Error(
+        `Namespace '${this._namespace}' was not opened with createNamespace`,
+      );
+    }
+    return schema;
   }
 
   /**

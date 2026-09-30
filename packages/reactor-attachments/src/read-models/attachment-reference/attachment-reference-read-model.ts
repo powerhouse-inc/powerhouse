@@ -7,7 +7,10 @@ import {
   type IOperationIndex,
   type IWriteCache,
 } from "@powerhousedao/reactor";
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import {
+  isPurgeMarker,
+  type OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import type { IAttachmentSchemaCompiler } from "../../reference-index/types.js";
 import type {
@@ -24,6 +27,9 @@ export const ATTACHMENT_REFERENCE_READ_MODEL_ID =
  * Each reference row stands on its own and is written insert-or-do-nothing, so
  * a batch that commits in pieces exposes no partial structure, and re-indexing
  * the same range writes nothing new: the catch-up sweep needs no stream suffix.
+ *
+ * The rows live on another handle, so the purge fence is "skip": a tombstoned
+ * id's operations are dropped at commit and its marker deletes its rows.
  */
 export class AttachmentReferenceReadModel extends BaseReadModel {
   constructor(
@@ -40,7 +46,7 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
       rebuildStateOnInit: false,
       indexing: defaultReadModelIndexingConfig,
       replayStreamSuffix: false,
-      purgeFence: "none",
+      purgeFence: "skip",
     });
   }
 
@@ -48,8 +54,13 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
     items: OperationWithContext[],
   ): Promise<void> {
     const references: AttachmentReferenceInput[] = [];
+    const purged = new Set<string>();
 
     for (const { operation, context } of items) {
+      if (isPurgeMarker(operation)) {
+        purged.add(context.documentId);
+        continue;
+      }
       if (operation.error !== undefined) continue;
 
       const module = this.documentModelRegistry.getModule(context.documentType);
@@ -73,6 +84,9 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
 
     if (references.length > 0) {
       await this.referenceWriter.addReferences(references);
+    }
+    if (purged.size > 0) {
+      await this.referenceWriter.removeDocuments([...purged]);
     }
   }
 }

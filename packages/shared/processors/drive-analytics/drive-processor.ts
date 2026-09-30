@@ -5,6 +5,7 @@ import type {
   IAnalyticsStore,
 } from "../../analytics/types.js";
 import type { OperationWithContext } from "../../document-model/index.js";
+import { deletedDocumentId } from "../deletion.js";
 import type { IProcessor } from "../types.js";
 import type { ActionType, NodeTarget } from "./types.js";
 
@@ -53,9 +54,20 @@ export class DriveAnalyticsProcessor implements IProcessor {
     const CHUNK_SIZE = 50;
     const buffer: AnalyticsSeriesInput[] = [];
 
-    for (const { operation, context } of operations) {
+    for (const op of operations) {
+      const { operation, context } = op;
       const { documentType, documentId, branch, scope } = context;
       if (documentType !== "powerhouse/document-drive") {
+        continue;
+      }
+
+      const deleted = deletedDocumentId(op);
+      if (deleted !== undefined) {
+        await this.flush(buffer.splice(0));
+        await this.analyticsStore.clearSeriesBySource(
+          AnalyticsPath.fromString(`ph/drive/${deleted}`),
+          true,
+        );
         continue;
       }
 
@@ -110,6 +122,10 @@ export class DriveAnalyticsProcessor implements IProcessor {
       }
     }
 
+    await this.flush(buffer);
+  }
+
+  private async flush(buffer: AnalyticsSeriesInput[]): Promise<void> {
     if (buffer.length > 0) {
       await this.analyticsStore.addSeriesValues(buffer);
     }

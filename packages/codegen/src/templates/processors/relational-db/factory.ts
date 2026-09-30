@@ -28,15 +28,21 @@ export const ${v.camelCaseName}FactoryBuilder: ProcessorFactoryBuilder = (module
 
   // Create a filter for the processor. An omitted field matches every value.
   // Only \`documentId\` honours "*", so "*" elsewhere would match nothing.
+  // Scope "document" carries DELETE_DOCUMENT and PURGE_DOCUMENT.
   const filter: ProcessorFilter = ${renderProcessorFilter({
     branch: ["main"],
     documentId: ["*"],
     documentType: v.documentTypes,
-    scope: ["global"],
+    scope: ["global", "document"],
   })};
 
-  // Create the processor
-  const processor = new ${v.pascalCaseName}(namespace, filter, store);
+  // The drive id lets the processor drop its namespace on the drive's deletion
+  const processor = new ${v.pascalCaseName}(
+    namespace,
+    filter,
+    store,
+    driveHeader.id,
+  );
 
   // Run the processor's migrations. Nothing in the runtime calls this, so
   // without it the first write hits a database with no tables.

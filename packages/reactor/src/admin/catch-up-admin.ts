@@ -6,7 +6,10 @@ import {
   SettledWatermark,
   type WatermarkSession,
 } from "../catch-up/settled-watermark.js";
-import type { DocumentViewDatabase } from "../read-models/types.js";
+import {
+  RELEASED_CURSOR_STATUS,
+  type DocumentViewDatabase,
+} from "../read-models/types.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 
 export type CatchUpAdminDatabase = StorageDatabase & DocumentViewDatabase;
@@ -53,6 +56,7 @@ async function readCursors(
   const processors = await db
     .selectFrom("ProcessorCursor")
     .select(["processorId", "lastOrdinal"])
+    .where("status", "!=", RELEASED_CURSOR_STATUS)
     .orderBy("processorId")
     .execute();
   return [

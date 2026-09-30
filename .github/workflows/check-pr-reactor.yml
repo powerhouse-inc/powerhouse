@@ -10,6 +10,7 @@ on:
       - "packages/reactor-drive/**"
       - "packages/reactor-attachments/**"
       - "packages/reactor-privacy/**"
+      - "packages/reactor-workflow/**"
       - "test/test-connect/**"
       - "test/test-client/**"
       - ".github/workflows/check-pr-reactor.yml"
@@ -21,6 +22,7 @@ on:
       - "packages/reactor-drive/**"
       - "packages/reactor-attachments/**"
       - "packages/reactor-privacy/**"
+      - "packages/reactor-workflow/**"
       - "test/test-connect/**"
       - "test/test-client/**"
       - ".github/workflows/check-pr-reactor.yml"
@@ -85,6 +87,7 @@ jobs:
           @powerhousedao/reactor-drive...
           @powerhousedao/reactor-attachments...
           @powerhousedao/reactor-privacy...
+          @powerhousedao/reactor-workflow...
           @powerhousedao/reactor-bench-host...
 
       # Coverage is off: nothing in CI reads the report.
@@ -110,6 +113,12 @@ jobs:
       - name: Run reactor package tests
         if: matrix.shard == 3
         run: pnpm test:reactor-packages
+
+      # check-commit.yml runs reactor-workflow without Postgres, which skips its
+      # Postgres suites; the rest of its suite stays there.
+      - name: Run reactor-workflow Postgres tests
+        if: matrix.shard == 3
+        run: pnpm test:reactor-workflow-pg
 
       # This step's duration swings by ~50% run to run on identical code, while
       # install, build and lint stay flat — so it is the suite, not the runner.

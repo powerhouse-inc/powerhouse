@@ -71,12 +71,18 @@ export interface IProcessor {
    * Across documents there is no ordering guarantee. A processor receives one
    * `onOperations` call at a time; the next call begins after the previous
    * resolves.
+   *
+   * A drive's processors also receive the drive's own DELETE_DOCUMENT or
+   * PURGE_DOCUMENT, whatever the filter, as the last delivery before
+   * `onDisconnect`. A purged document's operations other than its marker are
+   * not delivered. Erase a document's data on either deletion action.
    */
   onOperations(operations: OperationWithContext[]): Promise<void>;
 
   /**
    * Called when the processor is disconnected.
    * Used to clean up any resources allocated during processor creation.
+   * Also runs when the factory is unregistered, so it is not a deletion signal.
    */
   onDisconnect(): Promise<void>;
 }
@@ -96,6 +102,10 @@ export type ProcessorRecord = {
 /**
  * A factory function that creates processor records for a given drive.
  * Called once per drive when the drive is first detected or when the factory is registered.
+ * The header is the drive's header at creation. For a purged drive it is
+ * minimal: only `id` and `documentType` are set, and `slug` and `name` are
+ * empty, so a factory that selects drives by slug or name makes no processor
+ * for it and the deletion stays owed.
  */
 export type ProcessorFactory = (
   driveHeader: PHDocumentHeader,
@@ -140,9 +150,15 @@ export interface IProcessorManager {
    * Registers a processor factory.
    * Immediately creates processors for all existing drives and resolves once
    * every factory run has completed and its processors are bound. Their
-   * backfills run afterwards, on each processor's own queue. If processors
-   * from an earlier registration under the same identifier are still
-   * draining, or a call of the previous factory is still in flight, the
+   * backfills run afterwards, on each processor's own queue. A deleted drive
+   * whose deletion one of the factory's processors never received (it was not
+   * running, or its delivery threw) gets a processor too: it receives only the
+   * drive's `DELETE_DOCUMENT`, or its `PURGE_DOCUMENT` once purged, and is
+   * disconnected. That delivery is not awaited: it runs after this resolves,
+   * so a processor that hangs on it does not hold the registration. If
+   * processors from an earlier registration under the same identifier are
+   * still draining, a call of the previous factory is still in flight, or an
+   * owed deletion of the previous registration is still being delivered, the
    * factory runs after they have settled, so awaiting a re-registration of
    * a factory from inside that factory or one of its processors'
    * `onOperations` waits on itself.
@@ -151,8 +167,12 @@ export interface IProcessorManager {
 
   /**
    * Unregisters a processor factory. Resolves once its processors receive no
-   * new deliveries and their cursors are deleted; each one's in-flight
-   * delivery finishes first, then `onDisconnect` runs. Safe to call from
+   * new deliveries and their cursors are released; each one's in-flight
+   * delivery finishes first, then `onDisconnect` runs. A released cursor no
+   * longer positions a processor: a re-registration starts each one afresh,
+   * per `startFrom`. It only records that the factory held a drive's data, so
+   * that a drive deleted before the factory registers again still gets its
+   * deletion delivered then. Safe to call from
    * inside a processor's own `onOperations`.
    */
   unregisterFactory(identifier: string): Promise<void>;
@@ -163,7 +183,9 @@ export interface IProcessorManager {
   get(processorId: string): TrackedProcessor | undefined;
 
   /**
-   * Gets all tracked processors.
+   * Gets all tracked processors, including an errored entry for each
+   * processor whose drive's deletion threw; its `retry()` delivers the
+   * deletion again.
    */
   getAll(): TrackedProcessor[];
 }

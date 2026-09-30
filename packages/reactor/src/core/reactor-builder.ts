@@ -1155,6 +1155,7 @@ export class ReactorBuilder {
       executorManager,
       catchUp,
       [unsubscribeMarkerEviction],
+      [() => processorManager.shutdown()],
     );
 
     const localPeer: LocalPeer = {

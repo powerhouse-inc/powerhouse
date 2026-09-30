@@ -19,7 +19,12 @@ export default defineConfig({
       },
     ],
   },
-  ssr: { resolve: { conditions } },
+  // Node gets these as --conditions; "import" there makes pg's require() load ESM.
+  ssr: {
+    resolve: {
+      conditions: conditions.filter((condition) => condition !== "import"),
+    },
+  },
   test: {
     // Includes test/upstream, generated from Activepieces' engine suites.
     include: ["src/**/*.test.ts", "test/**/*.test.ts"],

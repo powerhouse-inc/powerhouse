@@ -23,6 +23,23 @@ import {
 // what the base class reads on init and a sweep updates.
 const db = createTestRelationalDb() as unknown as Kysely<DocumentViewDatabase>;
 
+function marker(ordinal: number, documentId: string): OperationWithContext {
+  return {
+    operation: {
+      index: 0,
+      timestampUtcMs: `${ordinal}`,
+      action: { type: "PURGE_DOCUMENT", scope: "document", input: {} },
+    },
+    context: {
+      documentId,
+      documentType: "powerhouse/note",
+      scope: "document",
+      branch: "main",
+      ordinal,
+    },
+  } as unknown as OperationWithContext;
+}
+
 function op(ordinal: number): OperationWithContext {
   return {
     operation: {
@@ -83,7 +100,13 @@ function readModel(pages: OperationWithContext[][] = [], settledThrough = 0) {
     batches.push(operations);
     return Promise.resolve();
   });
-  const runtime = { onOperations } as unknown as WorkflowRuntimeService;
+  const onDocumentsPurged = vi.fn((_markers: OperationWithContext[]) =>
+    Promise.resolve(null),
+  );
+  const runtime = {
+    onOperations,
+    onDocumentsPurged,
+  } as unknown as WorkflowRuntimeService;
   const getSinceOrdinal = pagedIndex(pages);
   const stored = pages.flat();
   const getByOrdinals = vi.fn((wanted: readonly number[]) =>
@@ -104,7 +127,7 @@ function readModel(pages: OperationWithContext[][] = [], settledThrough = 0) {
     runtime,
   );
   model.attachCatchUp(settledAt(settledThrough), 100_000);
-  return { batches, getSinceOrdinal, model, onOperations };
+  return { batches, getSinceOrdinal, model, onDocumentsPurged, onOperations };
 }
 
 const ordinals = (batches: OperationWithContext[][]) =>
@@ -121,6 +144,11 @@ describe("WorkflowTriggersReadModel", () => {
       )
       .ifNotExists()
       .execute();
+    await db.schema
+      .createTable("document_purges")
+      .addColumn("documentId", "text", (col) => col.primaryKey())
+      .ifNotExists()
+      .execute();
   });
 
   beforeEach(async () => {
@@ -128,6 +156,7 @@ describe("WorkflowTriggersReadModel", () => {
       .deleteFrom("ViewState")
       .where("readModelId", "=", WORKFLOW_TRIGGERS_READ_MODEL)
       .execute();
+    await sql`delete from document_purges`.execute(db);
   });
 
   it("is named for the coordinator, and reads once the document is ready", () => {
@@ -195,5 +224,49 @@ describe("WorkflowTriggersReadModel", () => {
     // Only what the cursor had not seen, page by page.
     expect(ordinals(batches)).toEqual([[14], [15, 16]]);
     expect(await cursor()).toBe(16);
+  });
+
+  it("hands a marker's id to the runtime and the rest of the batch to onOperations", async () => {
+    const { batches, model, onDocumentsPurged } = readModel([], 10);
+    await model.init();
+    await sql`insert into document_purges ("documentId") values ('doc-gone')`.execute(
+      db,
+    );
+
+    await model.indexOperations([op(11), marker(12, "doc-gone"), op(13)]);
+
+    expect(ordinals(batches)).toEqual([[11, 13]]);
+    expect(onDocumentsPurged).toHaveBeenCalledExactlyOnceWith([
+      marker(12, "doc-gone"),
+    ]);
+  });
+
+  it("drops a tombstoned id's other operations before the runtime sees them", async () => {
+    const { batches, model, onDocumentsPurged } = readModel([], 10);
+    await model.init();
+    await sql`insert into document_purges ("documentId") values ('doc-12')`.execute(
+      db,
+    );
+
+    await model.indexOperations([op(11), op(12)]);
+
+    expect(ordinals(batches)).toEqual([[11]]);
+    expect(onDocumentsPurged).not.toHaveBeenCalled();
+  });
+
+  it("holds the cursor below a marker whose erasure threw", async () => {
+    const { model, onDocumentsPurged } = readModel(
+      [[op(11), marker(12, "doc-gone")]],
+      10,
+    );
+    await model.init();
+    onDocumentsPurged.mockRejectedValueOnce(new Error("boom"));
+
+    await model.sweep(12, [11, 12]);
+    expect(await cursor()).toBe(11);
+
+    await model.sweep(12, [11, 12]);
+    expect(onDocumentsPurged).toHaveBeenCalledTimes(2);
+    expect(await cursor()).toBe(12);
   });
 });

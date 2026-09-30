@@ -158,7 +158,11 @@ import {
   type WorkflowAccessOptions,
 } from "./sync-wait.js";
 import { createAttachmentPort } from "./attachment-port.js";
-import { createPieceStorePort, PROJECT_SCOPE_KEY } from "./piece-store-port.js";
+import {
+  createPieceStorePort,
+  PROJECT_SCOPE_KEY,
+  testPartitionKey,
+} from "./piece-store-port.js";
 import { currentWorkflowId, withRunScope } from "./run-scope.js";
 import {
   ASSERT_BLOCK,
@@ -182,7 +186,11 @@ import {
 } from "./step-test.js";
 import {
   MAX_LIST_RUNS,
+  TEST_TRIGGER_KIND,
   WorkflowRunStore,
+  journaledTriggerDocumentIds,
+  triggerDocumentIds,
+  type ErasedRuns,
   type RunRow,
   type StepExecutionRow,
   type TriggerStateRow,
@@ -377,6 +385,13 @@ function operationKey(op: OperationWithContext): string {
 // cursor that trailed the runs it had already journaled.
 const OPERATION_DEDUPE_TTL_MS = 24 * 60 * 60_000;
 
+// A journal that failed to open is tried again, no sooner than this, doubling.
+const STORE_REOPEN_MS = 1_000;
+const MAX_STORE_REOPEN_MS = 60_000;
+
+// Fires run without a journal row that this process remembers, oldest dropped.
+const UNJOURNALED_FIRES_LIMIT = 65_536;
+
 function stringField(
   record: Record<string, unknown>,
   key: string,
@@ -385,36 +400,27 @@ function stringField(
   return typeof value === "string" && value !== "" ? value : undefined;
 }
 
-// The documents a run's trigger names: the one whose operation fired it, and
-// the drive it sits in.
-function journaledTriggerDocumentIds(payload: string | null): string[] {
-  if (payload === null) return [];
-  try {
-    return triggerDocumentIds(JSON.parse(payload));
-  } catch {
-    return [];
-  }
-}
-
-function triggerDocumentIds(payload: unknown): string[] {
-  const record = inputRecord(payload);
-  return [
-    ...new Set(
-      [
-        stringField(record, "documentId"),
-        stringField(record, "driveId"),
-      ].filter((id): id is string => id !== undefined),
-    ),
-  ];
-}
+const ABSENT_ERROR_NAMES = new Set([
+  "DocumentNotFoundError",
+  "DocumentPurgedError",
+  "DocumentDeletedError",
+]);
 
 // Absence is reported by name: the error may cross an RPC boundary.
 function isAbsent(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    (error.name === "DocumentNotFoundError" ||
-      error.name === "DocumentDeletedError")
-  );
+  return error instanceof Error && ABSENT_ERROR_NAMES.has(error.name);
+}
+
+// A marker names its document's type in its input; the context agrees.
+function purgedWorkflowIds(markers: OperationWithContext[]): string[] {
+  const ids = markers
+    .filter(
+      ({ operation, context }) =>
+        (stringField(inputRecord(operation.action.input), "documentType") ??
+          context.documentType) === WORKFLOW_DOCUMENT_TYPE,
+    )
+    .map(({ context }) => context.documentId);
+  return [...new Set(ids)];
 }
 
 function inputRecord(input: unknown): Record<string, unknown> {
@@ -612,9 +618,6 @@ function registrationKey(state: WorkflowState): string {
   return JSON.stringify({ status: state.status, trigger: trigger && armed });
 }
 
-// The run kind a design-time test is journaled under.
-export const TEST_TRIGGER_KIND = "test";
-
 // The reducer refuses a config that is not an object, so none reaches here.
 function configRecord(config: unknown): Record<string, unknown> {
   if (config && typeof config === "object" && !Array.isArray(config)) {
@@ -644,7 +647,12 @@ export class WorkflowRuntimeService {
   private readonly attachments?: AttachmentPort;
   private executor?: BlockExecutor;
   private pieceWorkers?: PieceWorkerPool;
-  private readonly storePromise: Promise<WorkflowRunStore>;
+  private storePromise: Promise<WorkflowRunStore>;
+  private storeError?: unknown;
+  private storeOpening = false;
+  private storeReopenAt = 0;
+  private storeReopenMs = STORE_REOPEN_MS;
+  private retentionSweep?: () => void;
   private secretsPromise?: Promise<SecretStore>;
   private oauthAttemptsPromise?: Promise<OAuthAttemptStore>;
   private tokenRefresher?: OAuthTokenRefresher;
@@ -677,10 +685,7 @@ export class WorkflowRuntimeService {
             Promise.resolve(false),
         )
       : undefined;
-    this.storePromise = WorkflowRunStore.create(host.relationalDb);
-    this.storePromise.catch((error: unknown) => {
-      this.logger.error("Failed to open the workflow run store: @error", error);
-    });
+    this.storePromise = this.openStore();
     this.seedPromise = this.seedWithRetries();
     this.startRetention();
   }
@@ -696,7 +701,7 @@ export class WorkflowRuntimeService {
     this.retentionTimer = setInterval(sweep, RETENTION_SWEEP_INTERVAL_MS);
     this.retentionTimer.unref();
     // After the store opens, not on the next hour.
-    void this.storePromise.then(sweep, () => undefined);
+    this.retentionSweep = sweep;
   }
 
   private async sweepRetention(retentionMs: number): Promise<void> {
@@ -717,13 +722,52 @@ export class WorkflowRuntimeService {
     }
   }
 
-  // The journal is best-effort: a broken store never blocks runs.
+  // The journal is best-effort: a broken store never blocks runs. One that
+  // failed to open is opened again once its backoff has passed.
   async store(): Promise<WorkflowRunStore | undefined> {
+    if (
+      this.storeError !== undefined &&
+      !this.storeOpening &&
+      Date.now() >= this.storeReopenAt
+    ) {
+      this.storePromise = this.openStore();
+    }
     try {
       return await this.storePromise;
     } catch {
       return undefined;
     }
+  }
+
+  private openStore(): Promise<WorkflowRunStore> {
+    this.storeOpening = true;
+    const opening = WorkflowRunStore.create(this.host.relationalDb);
+    opening.then(
+      () => {
+        this.storeOpening = false;
+        if (this.storeError !== undefined) {
+          this.logger.info("Workflow run store opened after failing to");
+        }
+        this.storeError = undefined;
+        this.storeReopenMs = STORE_REOPEN_MS;
+        this.retentionSweep?.();
+      },
+      (error: unknown) => {
+        this.storeOpening = false;
+        this.storeError = error;
+        this.storeReopenAt = Date.now() + this.storeReopenMs;
+        this.logger.error(
+          "Failed to open the workflow run store, retrying in @ms ms: @error",
+          this.storeReopenMs,
+          error,
+        );
+        this.storeReopenMs = Math.min(
+          this.storeReopenMs * 2,
+          MAX_STORE_REOPEN_MS,
+        );
+      },
+    );
+    return opening;
   }
 
   // Unlike the journal, a broken secret store must fail resolution loudly.
@@ -1293,6 +1337,38 @@ export class WorkflowRuntimeService {
     return false;
   }
 
+  // Throws on any failure, so the read model's cursor holds and retries.
+  async onDocumentsPurged(
+    markers: OperationWithContext[],
+  ): Promise<ErasedRuns> {
+    const documentIds = [
+      ...new Set(markers.map((marker) => marker.context.documentId)),
+    ];
+    const store = await this.store();
+    if (!store) {
+      this.logger.error(
+        "Run journal unavailable; purged documents @ids are not erased and the triggers cursor holds until it reopens: @error",
+        documentIds,
+        this.storeError,
+      );
+      throw new Error("Erasing purged documents needs the run journal", {
+        cause: this.storeError,
+      });
+    }
+    for (const workflowId of purgedWorkflowIds(markers)) {
+      await this.erasePurgedWorkflow(store, workflowId);
+    }
+    const erased = await store.eraseRunsForDocuments(documentIds);
+    if (erased.runs > 0) {
+      this.logger.info(
+        "Erased @runs workflow run(s) of purged documents @ids",
+        erased.runs,
+        documentIds,
+      );
+    }
+    return erased;
+  }
+
   // Called by the workflow-triggers read model. Registry updates and the
   // journal write for every matched fire are awaited; execution is not, so
   // runs never block operation ingestion.
@@ -1362,19 +1438,60 @@ export class WorkflowRuntimeService {
     }
   }
 
+  // Fires this process ran with no journal row, until the journal takes one.
+  // A held triggers cursor re-sweeps them past alreadySeen's window.
+  private readonly unjournaledFires = new Set<string>();
+
+  private fireUnjournaled(
+    fireKey: string,
+    workflowId: string,
+    payload: unknown,
+    kind: string,
+  ): void {
+    this.unjournaledFires.add(fireKey);
+    if (this.unjournaledFires.size > UNJOURNALED_FIRES_LIMIT) {
+      const oldest = this.unjournaledFires.values().next().value!;
+      this.unjournaledFires.delete(oldest);
+      this.logger.warn(
+        "Too many unjournaled workflow fires held; a redelivery of the oldest fires again",
+      );
+    }
+    this.fireFromTrigger(workflowId, payload, kind);
+  }
+
   // Journals the fire, then lets it run on its own. Awaiting only the write is
   // the whole point: once this resolves the run is durable, so the read model's
   // cursor may pass the operation that matched it, but nothing here waits on a
-  // piece. A journal that cannot take the row still fires, best-effort.
+  // piece. A journal that cannot take the row still fires, best-effort, and
+  // once only in this process: a redelivery claims its dedupe key instead.
   private async enqueueFire(
     workflowId: string,
     payload: unknown,
     kind: string,
     opKey: string,
   ): Promise<void> {
+    const fireKey = JSON.stringify([workflowId, opKey]);
     const store = await this.store();
+    if (this.unjournaledFires.has(fireKey)) {
+      if (!store) return;
+      try {
+        await store.claimDedupe(
+          workflowId,
+          `op:${opKey}`,
+          OPERATION_DEDUPE_TTL_MS,
+          new Date().toISOString(),
+        );
+        this.unjournaledFires.delete(fireKey);
+      } catch (error) {
+        this.logger.warn(
+          `Could not record the unjournaled ${kind} fire for workflow ${workflowId}: @error`,
+          error,
+        );
+      }
+      return;
+    }
     if (!store) {
-      this.fireFromTrigger(workflowId, payload, kind);
+      this.fireUnjournaled(fireKey, workflowId, payload, kind);
       return;
     }
     // The durable half of the dedupe: a crash can leave the cursor behind the
@@ -1392,7 +1509,7 @@ export class WorkflowRuntimeService {
         `Could not journal the ${kind} fire for workflow ${workflowId}; running it without a durable record`,
         error,
       );
-      this.fireFromTrigger(workflowId, payload, kind);
+      this.fireUnjournaled(fireKey, workflowId, payload, kind);
       return;
     }
     if (runId === null) return;
@@ -1538,23 +1655,43 @@ export class WorkflowRuntimeService {
     }
   }
 
-  // The registry goes now, so deliveries stop at once. onDisable and the
-  // token revoke queue behind any enable in flight, off the ingestion path.
+  // Off the ingestion path: the release queues behind any enable in flight.
   private disarmDeleted(workflowId: string): void {
+    this.dropDeleted(workflowId);
+    this.releaseDeleted(workflowId).catch((error: unknown) => {
+      this.logger.error(
+        `Could not disarm deleted workflow ${workflowId}`,
+        error,
+      );
+    });
+  }
+
+  // The registry goes now, so deliveries stop at once.
+  private dropDeleted(workflowId: string): void {
     this.registry.delete(workflowId);
     this.registeredAs.delete(workflowId);
     this.unarmed.delete(workflowId);
     this.cancelResolutionRetry(workflowId);
     this.cancelTriggerTest(workflowId, "stopped: the workflow was deleted");
-    this.supervisor()
-      .forget(workflowId)
-      .then(async () => (await this.endpoints())?.revoke(workflowId))
-      .catch((error: unknown) => {
-        this.logger.error(
-          `Could not disarm deleted workflow ${workflowId}`,
-          error,
-        );
-      });
+  }
+
+  // onDisable, then the trigger row and FLOW store, then the webhook token.
+  private async releaseDeleted(workflowId: string): Promise<void> {
+    await this.supervisor().forget(workflowId);
+    await (await this.endpoints())?.revoke(workflowId);
+  }
+
+  // As a deletion disarms, but awaited: the cursor must not pass a failure.
+  private async erasePurgedWorkflow(
+    store: WorkflowRunStore,
+    workflowId: string,
+  ): Promise<void> {
+    this.dropDeleted(workflowId);
+    await this.releaseDeleted(workflowId);
+    await store.deleteDedupe(workflowId);
+    for (const scope of ["FLOW", "PROJECT"] as const) {
+      await store.deletePieceStore(scope, testPartitionKey(scope, workflowId));
+    }
   }
 
   // The document's own CREATE_DOCUMENT / DELETE_DOCUMENT, the source of truth: it covers

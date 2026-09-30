@@ -36,7 +36,11 @@ import type {
 } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IEventBus } from "../events/interfaces.js";
-import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
+import {
+  ReactorEventTypes,
+  type JobWriteReadyEvent,
+  type PurgeMarkerContext,
+} from "../events/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
@@ -141,6 +145,7 @@ type PurgeCommit = {
   sourceRemote: string;
   collectionIds: string[];
   survivors: string[];
+  appliedDeletion?: true;
 };
 
 type PurgeHeld = {
@@ -978,6 +983,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const held = await this.heldStreams(purger, documentId);
     let documentType = marker.action.input.documentType;
+    let appliedDeletion = held.branches.length > 0;
     if (held.branches.length > 0) {
       try {
         const meta = await stores.documentMetaCache.getDocumentMeta(
@@ -986,6 +992,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           signal,
         );
         documentType = meta.documentType;
+        appliedDeletion = !meta.state.isDeleted;
       } catch {
         // Unreadable state is still erased; the marker names the type.
       }
@@ -1016,6 +1023,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       sourceRemote,
       collectionIds: collectionId === undefined ? [] : [collectionId],
       survivors,
+      ...(appliedDeletion ? { appliedDeletion: true } : {}),
     };
   }
 
@@ -1081,15 +1089,17 @@ export class SimpleJobExecutor implements IJobExecutor {
       ...indexTxn.getMembershipInvalidations(),
     );
 
+    const context: PurgeMarkerContext = {
+      documentId,
+      scope: "document",
+      branch: "main",
+      documentType,
+      ordinal,
+      ...(commit.appliedDeletion ? { appliedDeletion: true } : {}),
+    };
     const operationWithContext: OperationWithContext = {
       operation: stored,
-      context: {
-        documentId,
-        scope: "document",
-        branch: "main",
-        documentType,
-        ordinal,
-      },
+      context,
     };
     return {
       result: {
