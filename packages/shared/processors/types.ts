@@ -183,7 +183,9 @@ export interface IProcessorManager {
   get(processorId: string): TrackedProcessor | undefined;
 
   /**
-   * Gets all tracked processors.
+   * Gets all tracked processors, including an errored entry for each
+   * processor whose drive's deletion threw; its `retry()` delivers the
+   * deletion again.
    */
   getAll(): TrackedProcessor[];
 }

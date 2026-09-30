@@ -336,4 +336,42 @@ describe("owed drive deletions [Postgres]", () => {
     expect(state.lookups).toBe(atKill);
     expect(processor.events).toContain("disconnect");
   }, 30_000);
+
+  it("shows a processor that throws on its owed deletion as errored, with a retry", async () => {
+    const driveId = await createDrive();
+    await manager().registerFactory("pkg", (h) =>
+      h.id === driveId ? [{ processor: recorder(), filter }] : [],
+    );
+    await manager().unregisterFactory("pkg");
+    await deleteDrive(driveId);
+
+    let failing = true;
+    const made: Recorder[] = [];
+    await manager().registerFactory("pkg", (h) => {
+      if (h.id !== driveId) return [];
+      const p = recorder();
+      const deliver = p.onOperations.bind(p);
+      p.onOperations = (ops) =>
+        failing ? Promise.reject(new Error("still down")) : deliver(ops);
+      made.push(p);
+      return [{ processor: p, filter }];
+    });
+    const tracked = () =>
+      manager()
+        .getAll()
+        .find((t) => t.driveId === driveId);
+    await vi.waitFor(() =>
+      expect(tracked()).toMatchObject({
+        status: "errored",
+        lastError: "still down",
+      }),
+    );
+
+    failing = false;
+    await tracked()!.retry();
+
+    expect(deletions(...made)).toEqual([`DELETE_DOCUMENT ${driveId}`]);
+    expect(tracked()).toBeUndefined();
+    expect(await cursorRows(driveId)).toEqual([]);
+  });
 });
