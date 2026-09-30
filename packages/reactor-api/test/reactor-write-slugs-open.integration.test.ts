@@ -5,6 +5,12 @@ import {
   type ISyncManager,
 } from "@powerhousedao/reactor";
 import {
+  ReactorDriveClient,
+  reactorDriveCreateDocument,
+  reactorDriveDocumentModelModule,
+  type IDriveReadModel,
+} from "@powerhousedao/reactor-drive";
+import {
   driveCreateDocument,
   driveDocumentModelModule,
   type DocumentDriveDocument,
@@ -12,6 +18,7 @@ import {
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createDocumentWithInitialState } from "../src/graphql/reactor/resolvers.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import {
@@ -25,6 +32,7 @@ type Resolver = (p: unknown, a: unknown, c: Context) => Promise<unknown>;
 describe("reactor subgraph writes resolve slugs under OPEN", () => {
   let module: InProcessReactorClientModule;
   let mutation: (name: string) => Resolver;
+  let reactorDriveClient: ReactorDriveClient;
   const ctx = { headers: {}, db: null } as unknown as Context;
 
   beforeEach(async () => {
@@ -34,9 +42,14 @@ describe("reactor subgraph writes resolve slugs under OPEN", () => {
         new ReactorBuilder().withDocumentModelSources([
           driveDocumentModelModule as unknown as DocumentModelModule,
           documentModelDocumentModelModule as unknown as DocumentModelModule,
+          reactorDriveDocumentModelModule as unknown as DocumentModelModule,
         ]),
       )
       .buildModule();
+    reactorDriveClient = new ReactorDriveClient({
+      reactor: module.client,
+      readModel: {} as IDriveReadModel,
+    });
     const subgraph = new ReactorSubgraph({
       reactorClient: module.client,
       syncManager: {} as ISyncManager,
@@ -47,6 +60,7 @@ describe("reactor subgraph writes resolve slugs under OPEN", () => {
       }),
       graphqlManager: {
         driveOwnershipCache: { add: () => undefined, remove: () => undefined },
+        reactorDriveClient,
       },
     } as unknown as SubgraphArgs);
     mutation = (name) =>
@@ -68,6 +82,13 @@ describe("reactor subgraph writes resolve slugs under OPEN", () => {
     const drive = driveCreateDocument({
       global: { name: "Drive", icon: null, nodes: [] },
     });
+    drive.header.slug = slug;
+    await module.client.create(drive);
+    return drive.header.id;
+  }
+
+  async function createReactorDriveWithSlug(slug: string): Promise<string> {
+    const drive = reactorDriveCreateDocument();
     drive.header.slug = slug;
     await module.client.create(drive);
     return drive.header.id;
@@ -111,6 +132,37 @@ describe("reactor subgraph writes resolve slugs under OPEN", () => {
 
     expect(await nodeIds(driveId)).toEqual([document.header.id]);
     expect(await targetIds(driveId, "child")).toEqual([document.header.id]);
+  });
+
+  it("every create path under a slug reactor-drive", async () => {
+    const driveId = await createReactorDriveWithSlug("reactor-drive-slug");
+    const document = documentModelDocumentModelModule.utils.createDocument();
+    const documentType =
+      documentModelDocumentModelModule.documentModel.global.id;
+
+    await mutation("createDocument")(
+      undefined,
+      { document, parentIdentifier: "reactor-drive-slug" },
+      ctx,
+    );
+    const empty = (await mutation("createEmptyDocument")(
+      undefined,
+      { documentType, parentIdentifier: "reactor-drive-slug" },
+      ctx,
+    )) as { id: string };
+    const initial = await createDocumentWithInitialState(
+      module.client,
+      {
+        documentType,
+        parentIdentifier: "reactor-drive-slug",
+        initialState: {},
+      },
+      reactorDriveClient,
+    );
+
+    expect((await targetIds(driveId, "drive/child")).sort()).toEqual(
+      [document.header.id, empty.id, initial.id].sort(),
+    );
   });
 
   it("createEmptyDocument under a slug parent and a slug drive", async () => {

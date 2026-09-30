@@ -747,7 +747,7 @@ export async function createDocument(
           parent.header.documentType,
           reactorDriveClient,
         );
-        result = await driveClient.addFile(parentIdentifier, document);
+        result = await driveClient.addFile(parent.header.id, document);
       } else {
         result = await reactorClient.create(document, parentIdentifier);
       }
@@ -807,7 +807,7 @@ export async function createEmptyDocument(
           parent.header.documentType,
           reactorDriveClient,
         );
-        result = await driveClient.addFile(parentIdentifier, document);
+        result = await driveClient.addFile(parent.header.id, document);
       } else {
         result = await reactorClient.createEmpty(args.documentType, {
           parentIdentifier,
@@ -908,7 +908,7 @@ export async function createDocumentWithInitialState(
         reactorDriveClient,
       );
       try {
-        result = await driveClient.addFile(parentIdentifier, document);
+        result = await driveClient.addFile(parent.header.id, document);
       } catch (error) {
         throw new GraphQLError(
           `Failed to create document in drive: ${error instanceof Error ? error.message : "Unknown error"}`,
