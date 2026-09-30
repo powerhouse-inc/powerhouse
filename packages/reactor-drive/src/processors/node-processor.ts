@@ -58,6 +58,8 @@ const STRUCTURE_ACTION_TYPES = new Set([
  * so the whole batch commits or none of it does.
  */
 export class NodeProcessor extends BaseReadModel {
+  static override readonly commitsInFenceTransaction = true;
+
   private readonly driveDb: Kysely<NodeProcessorDatabase>;
   private readonly baseDb: Kysely<unknown>;
   private readonly schema: string;
