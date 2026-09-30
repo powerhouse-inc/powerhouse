@@ -380,6 +380,11 @@ Not spec deviations; recorded because they change how the suites run.
   reopens its request (`reopened` event, `:400`) — a timed-out purge can
   commit after the manager marked it FAILED. Replaced "FAILED confirmed on a
   second tick".
+- `packages/reactor-privacy/src/erasure/scheduler.ts:378`
+  (`reopenRequests`) — each tick reopens every `failed` request with no
+  `failed` item, in one statement with its `reopened` rows — reopening only
+  in the step that moved the item left the request `failed` for good when
+  that step threw after the move committed.
 - `packages/reactor-privacy/src/erasure/scheduler.ts:516`
   (`purgeLockTaken`) — dispatch waits while `pg_locks` shows a purge lock on
   the previous id — a timed-out purge's transaction can still be open, and

@@ -693,6 +693,34 @@ describe("recovering from lost signals [Postgres]", () => {
     ]);
   });
 
+  it("reopens a failed request whose failed item moved on without it", async () => {
+    const e = await setup({ maxPurgeOperations: 1 });
+    const doc = await createDoc(e);
+    await remove(e, doc);
+    const { requestId } = await e.service.request([doc], {
+      requestedBy: ADMIN,
+    });
+    await tickUntil(e, "failed", statusIs(e, requestId, doc, "failed"));
+    await e.scheduler.tick();
+    expect((await e.service.status(requestId)).status).toBe("failed");
+
+    // The item left failed, but the step that reopens its request did not run.
+    await db(e)
+      .updateTable("erasure_items")
+      .set({ status: "erased" })
+      .where("requestId", "=", requestId)
+      .execute();
+    await e.scheduler.tick();
+
+    expect((await e.service.status(requestId)).status).toBe("complete");
+    expect(await events(e, requestId, null)).toEqual([
+      "requested",
+      "failed",
+      "reopened",
+      "complete",
+    ]);
+  });
+
   it("waits for a failed purge's transaction to end before the next purge", async () => {
     const e = await setup();
     const first = await createDoc(e);

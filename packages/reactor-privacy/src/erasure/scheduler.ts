@@ -247,6 +247,7 @@ export class ErasureScheduler {
 
   private async runTick(): Promise<void> {
     await this.recoverFailed();
+    await this.reopenRequests();
     const items = await this.activeItems();
     const reads = await this.tickReads(items);
 
@@ -367,39 +368,47 @@ export class ErasureScheduler {
         deadline: new Date(row.deadline),
         updatedAt: new Date(row.updatedAt),
       };
-      await this.guarded(item, async () => {
-        await this.markPurged(item, tombstoneOf(row), "failed");
-        await this.reopen(item.requestId);
-      });
+      await this.guarded(item, () =>
+        this.markPurged(item, tombstoneOf(row), "failed"),
+      );
     }
   }
 
-  /** A failed request with no failed item left is open again. */
-  private async reopen(requestId: string): Promise<void> {
-    const result = await this.db
-      .updateTable("erasure_requests")
-      .set({ status: "open" })
-      .where("requestId", "=", requestId)
-      .where("status", "=", "failed")
-      .where((eb) =>
-        eb.not(
-          eb.exists(
-            eb
-              .selectFrom("erasure_items")
-              .select("documentId")
-              .where("requestId", "=", requestId)
-              .where("status", "=", "failed"),
-          ),
-        ),
-      )
-      .executeTakeFirst();
-    if (Number(result.numUpdatedRows) === 0) return;
-    await appendAudit(this.db, this.secret, {
-      requestId,
-      documentId: null,
-      event: "reopened",
-      at: this.now(),
-    });
+  /** Every failed request with no failed item left is open again. */
+  private async reopenRequests(): Promise<void> {
+    try {
+      await this.db.transaction().execute(async (trx) => {
+        const reopened = await trx
+          .updateTable("erasure_requests as r")
+          .set({ status: "open" })
+          .where("r.status", "=", "failed")
+          .where((eb) =>
+            eb.not(
+              eb.exists(
+                eb
+                  .selectFrom("erasure_items as i")
+                  .select("i.documentId")
+                  .whereRef("i.requestId", "=", "r.requestId")
+                  .where("i.status", "=", "failed"),
+              ),
+            ),
+          )
+          .returning("r.requestId")
+          .execute();
+        for (const { requestId } of reopened) {
+          await appendAudit(trx, this.secret, {
+            requestId,
+            documentId: null,
+            event: "reopened",
+            at: this.now(),
+          });
+        }
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Reopening failed erasure requests failed; retried next tick: ${redactText(this.secret, messageOf(error))}`,
+      );
+    }
   }
 
   private async advanceWaiting(items: Item[], reads: TickReads): Promise<void> {
