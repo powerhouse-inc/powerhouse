@@ -1,3 +1,28 @@
+## 6.2.3-dev.33 (2026-09-30)
+
+### 🚀 Features
+
+- **reactor:** add catch-up operator tools and observability ([5722d7836](https://github.com/powerhouse-inc/powerhouse/commit/5722d7836))
+- **reactor-api:** add the syncHolds and peerAgreement queries ([9f475e2f9](https://github.com/powerhouse-inc/powerhouse/commit/9f475e2f9))
+- **reactor-api:** carry peer manifests on touchChannel and poll revisions ([5bef322a4](https://github.com/powerhouse-inc/powerhouse/commit/5bef322a4))
+
+### 🩹 Fixes
+
+- **reactor:** claim a batch for each read model as it queues ([c09b1de2a](https://github.com/powerhouse-inc/powerhouse/commit/c09b1de2a))
+- **reactor:** settle a probe on its own xid, not on an empty xip ([4e0f0dab9](https://github.com/powerhouse-inc/powerhouse/commit/4e0f0dab9))
+- **reactor:** leave a stream to the next sweep while its live pass runs ([53112bad4](https://github.com/powerhouse-inc/powerhouse/commit/53112bad4))
+- **reactor:** start a head registration at the sequence head ([e06581849](https://github.com/powerhouse-inc/powerhouse/commit/e06581849))
+- **reactor-api:** resolve dev-loader modules first and resolve host packages outside the project ([0285a3ae8](https://github.com/powerhouse-inc/powerhouse/commit/0285a3ae8))
+- **reactor:** report refusals of polled rows so the server holds them ([a970307ee](https://github.com/powerhouse-inc/powerhouse/commit/a970307ee))
+- **reactor:** name the gated-under server revision on push and hold before resending ([e5d9bd7ed](https://github.com/powerhouse-inc/powerhouse/commit/e5d9bd7ed))
+- **reactor-api:** silence a client whose poll names no revision before serving it ([74bb202ac](https://github.com/powerhouse-inc/powerhouse/commit/74bb202ac))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.32 (2026-09-29)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

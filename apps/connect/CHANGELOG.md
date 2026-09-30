@@ -1,3 +1,26 @@
+## 6.2.3-dev.33 (2026-09-30)
+
+### 🚀 Features
+
+- **connect:** carry unsupportedStoredDocuments to both reactor hosts ([31f4e9410](https://github.com/powerhouse-inc/powerhouse/commit/31f4e9410))
+- **connect:** add a catch-up inspector tab ([f940cd5a6](https://github.com/powerhouse-inc/powerhouse/commit/f940cd5a6))
+- **reactor:** add catch-up operator tools and observability ([5722d7836](https://github.com/powerhouse-inc/powerhouse/commit/5722d7836))
+- **connect:** feed peer agreement and holds to the remotes inspector ([034dabf1c](https://github.com/powerhouse-inc/powerhouse/commit/034dabf1c))
+- **reactor-browser:** serve holds and peer agreement across the worker boundary ([c2adc6d3a](https://github.com/powerhouse-inc/powerhouse/commit/c2adc6d3a))
+- **reactor-browser:** proxy peer manifests across the Connect worker boundary ([2573bbd23](https://github.com/powerhouse-inc/powerhouse/commit/2573bbd23))
+
+### 🩹 Fixes
+
+- **reactor:** claim a batch for each read model as it queues ([c09b1de2a](https://github.com/powerhouse-inc/powerhouse/commit/c09b1de2a))
+- **reactor:** settle a probe on its own xid, not on an empty xip ([4e0f0dab9](https://github.com/powerhouse-inc/powerhouse/commit/4e0f0dab9))
+- **reactor:** leave a stream to the next sweep while its live pass runs ([53112bad4](https://github.com/powerhouse-inc/powerhouse/commit/53112bad4))
+- **reactor:** start a head registration at the sequence head ([e06581849](https://github.com/powerhouse-inc/powerhouse/commit/e06581849))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.32 (2026-09-29)
 
 ### 🚀 Features

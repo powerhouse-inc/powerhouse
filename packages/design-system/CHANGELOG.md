@@ -1,3 +1,24 @@
+## 6.2.3-dev.33 (2026-09-30)
+
+### 🚀 Features
+
+- **shared:** order peer manifests by a start sequence ([76b28a0e0](https://github.com/powerhouse-inc/powerhouse/commit/76b28a0e0))
+- **connect:** add a catch-up inspector tab ([f940cd5a6](https://github.com/powerhouse-inc/powerhouse/commit/f940cd5a6))
+- **reactor:** add catch-up operator tools and observability ([5722d7836](https://github.com/powerhouse-inc/powerhouse/commit/5722d7836))
+- **design-system:** show peer agreement and holds in the remotes inspector ([54a99412f](https://github.com/powerhouse-inc/powerhouse/commit/54a99412f))
+
+### 🩹 Fixes
+
+- **reactor:** claim a batch for each read model as it queues ([c09b1de2a](https://github.com/powerhouse-inc/powerhouse/commit/c09b1de2a))
+- **reactor:** settle a probe on its own xid, not on an empty xip ([4e0f0dab9](https://github.com/powerhouse-inc/powerhouse/commit/4e0f0dab9))
+- **reactor:** leave a stream to the next sweep while its live pass runs ([53112bad4](https://github.com/powerhouse-inc/powerhouse/commit/53112bad4))
+- **reactor:** start a head registration at the sequence head ([e06581849](https://github.com/powerhouse-inc/powerhouse/commit/e06581849))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.32 (2026-09-29)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
