@@ -302,6 +302,11 @@ export class SyncManager implements ISyncManager {
   ) => Promise<ProtocolVersions | undefined>;
   private readonly peerUpdates = new Map<string, Promise<void>>();
   private readonly peerUnsubscribes = new Map<string, () => void>();
+  // remote name -> marker op id -> the inbox item loading it
+  private readonly receivedMarkers = new Map<
+    string,
+    Map<string, SyncOperation>
+  >();
   // inbox sync op id -> retry of its failed marker load
   private readonly markerRetries = new Map<
     string,
@@ -1278,6 +1283,7 @@ export class SyncManager implements ISyncManager {
       this.evictedOutboxFloors.delete(name);
       this.derivedThrough.delete(name);
       this.prunePending.delete(name);
+      this.receivedMarkers.delete(name);
       for (const [id, retry] of [...this.markerRetries]) {
         if (retry.remoteName !== name) continue;
         clearTimeout(retry.timer);
@@ -1321,6 +1327,9 @@ export class SyncManager implements ISyncManager {
   private wireChannelCallbacks(remote: Remote): void {
     remote.channel.inbox.onAdded((syncOps) =>
       this.handleInboxAdded(remote, syncOps),
+    );
+    remote.channel.inbox.onRemoved((syncOps) =>
+      this.handleInboxRemoved(remote, syncOps),
     );
 
     remote.channel.setLocalManifest?.(() => this.manifest);
@@ -1677,23 +1686,24 @@ export class SyncManager implements ISyncManager {
 
     const eligible: SyncOperation[] = [];
     const dropped: SyncOperation[] = [];
+    const received = this.receivedMarkersOf(remote.meta.name);
     // A resent marker whose first copy is still loading or awaiting a retry.
-    const loadingMarkers = new Set(
-      remote.channel.inbox.items
-        .filter(
-          (item) =>
-            !syncOps.includes(item) &&
-            item.status !== SyncOperationStatus.Applied,
-        )
-        .flatMap(markerIdsOf),
-    );
+    const loading = (id: string, syncOp: SyncOperation): boolean => {
+      const item = received.get(id);
+      return (
+        item !== undefined &&
+        item !== syncOp &&
+        item.status !== SyncOperationStatus.Applied &&
+        remote.channel.inbox.get(item.id) === item
+      );
+    };
     for (const syncOp of syncOps) {
       if (carriesMarker(syncOp)) {
         const ids = markerIdsOf(syncOp);
-        if (ids.every((id) => loadingMarkers.has(id))) {
+        if (ids.every((id) => loading(id, syncOp))) {
           dropped.push(syncOp);
         } else {
-          for (const id of ids) loadingMarkers.add(id);
+          for (const id of ids) received.set(id, syncOp);
           eligible.push(syncOp);
         }
       } else if (this.purgedDocumentIds.has(syncOp.documentId)) {
@@ -1737,6 +1747,26 @@ export class SyncManager implements ISyncManager {
       );
       void this.processInboxChunks(chunks);
     }
+  }
+
+  /** Forgets a marker once the item loading it leaves the inbox. */
+  private handleInboxRemoved(remote: Remote, syncOps: SyncOperation[]): void {
+    const received = this.receivedMarkers.get(remote.meta.name);
+    if (received === undefined || received.size === 0) return;
+    for (const syncOp of syncOps) {
+      for (const id of markerIdsOf(syncOp)) {
+        if (received.get(id) === syncOp) received.delete(id);
+      }
+    }
+  }
+
+  private receivedMarkersOf(name: string): Map<string, SyncOperation> {
+    let received = this.receivedMarkers.get(name);
+    if (received === undefined) {
+      received = new Map();
+      this.receivedMarkers.set(name, received);
+    }
+    return received;
   }
 
   private processInboxChunks(
