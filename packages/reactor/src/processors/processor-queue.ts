@@ -32,6 +32,8 @@ export type ProcessorQueueOptions = {
   persist: (cursor: ProcessorCursorState) => Promise<void>;
   /** Tombstoned ids among `ids`; takes no purge lock. */
   purged: (ids: string[]) => Promise<ReadonlySet<string>>;
+  /** First wait before retrying a failed tombstone lookup; doubles per try. */
+  lookupRetryMs?: number;
   logger: ILogger;
 };
 
@@ -107,6 +109,9 @@ function highestOf(ops: OperationWithContext[]): number {
 
 /** Largest merged live call, matching the operation index's page size. */
 export const MAX_MERGED_OPERATIONS = 500;
+
+const LOOKUP_RETRY_MS = 100;
+const MAX_LOOKUP_RETRY_MS = 30_000;
 
 // One task at a time per processor; task promises never reject.
 export class ProcessorQueue {
@@ -265,19 +270,8 @@ export class ProcessorQueue {
       return;
     }
 
-    let live: OperationWithContext[];
-    try {
-      live = await this.dropPurgedLive(batch, fresh);
-    } catch (error) {
-      this.markErrored(error);
-      this.options.logger.error(
-        "Processor '@ProcessorId' failed checking tombstones: @Error",
-        this.options.processorId,
-        error,
-      );
-      await this.parkBelow(fresh);
-      return;
-    }
+    const live = await this.dropPurgedLive(batch, fresh);
+    if (live === undefined) return;
 
     if (live.length > 0 && !(await this.deliver(live))) {
       await this.parkBelow(fresh);
@@ -287,18 +281,50 @@ export class ProcessorQueue {
     await this.raiseCursor(Math.max(highestOf(fresh), through));
   }
 
+  /** Undefined when the queue closed before a failed lookup could be retried. */
   private async dropPurgedLive(
     batch: Delivery[],
     fresh: OperationWithContext[],
-  ): Promise<OperationWithContext[]> {
-    const purged = new Set<string>();
+  ): Promise<OperationWithContext[] | undefined> {
     const keep = new Set<number>();
+    const checks: Promise<ReadonlySet<string>>[] = [];
     for (const task of batch) {
       if (task.kind !== "live" || !task.check) continue;
-      for (const id of await task.check.purged) purged.add(id);
+      checks.push(task.check.purged);
       for (const ordinal of task.check.keep ?? []) keep.add(ordinal);
     }
-    return withoutPurged(fresh, purged, keep);
+    let purged: ReadonlySet<string> | undefined;
+    try {
+      const sets = await Promise.all(checks);
+      purged = new Set(sets.flatMap((set) => [...set]));
+    } catch (error) {
+      purged = await this.retryLookup(purgeCandidates(fresh), error);
+    }
+    return purged && withoutPurged(fresh, purged, keep);
+  }
+
+  // The cursor holds meanwhile: a transient failure costs a delay, not an error.
+  private async retryLookup(
+    ids: string[],
+    error: unknown,
+  ): Promise<ReadonlySet<string> | undefined> {
+    let wait = this.options.lookupRetryMs ?? LOOKUP_RETRY_MS;
+    for (;;) {
+      this.options.logger.error(
+        "Processor '@ProcessorId' failed checking tombstones, retrying in @Wait ms: @Error",
+        this.options.processorId,
+        wait,
+        error,
+      );
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      if (this.closed) return undefined;
+      try {
+        return await this.options.purged(ids);
+      } catch (retryError) {
+        error = retryError;
+        wait = Math.min(wait * 2, MAX_LOOKUP_RETRY_MS);
+      }
+    }
   }
 
   private async runBackfill(): Promise<void> {
@@ -321,15 +347,15 @@ export class ProcessorQueue {
       );
       let live: OperationWithContext[] = matching;
       if (matching.length > 0) {
+        const ids = purgeCandidates(matching);
+        let purged: ReadonlySet<string> | undefined;
         try {
-          live = withoutPurged(
-            matching,
-            await this.options.purged(purgeCandidates(matching)),
-          );
+          purged = await this.options.purged(ids);
         } catch (error) {
-          await this.fail(error, "checking tombstones");
-          return;
+          purged = await this.retryLookup(ids, error);
         }
+        if (purged === undefined) return;
+        live = withoutPurged(matching, purged);
       }
       if (live.length > 0) {
         if (!(await this.deliver(live))) {

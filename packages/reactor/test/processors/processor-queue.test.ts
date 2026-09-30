@@ -109,6 +109,7 @@ function harness(
     routedThrough?: () => number;
     confirmedThrough?: () => number;
     purged?: (ids: string[]) => Promise<ReadonlySet<string>>;
+    lookupRetryMs?: number;
   } = {},
 ): Harness {
   const delivered: number[][] = [];
@@ -141,6 +142,7 @@ function harness(
       return Promise.resolve();
     },
     purged: options.purged ?? (() => Promise.resolve(new Set())),
+    lookupRetryMs: options.lookupRetryMs ?? 1,
     logger: createMockLogger(),
   });
   return { queue, cursor, delivered, persisted, processor };
@@ -686,16 +688,39 @@ describe("ProcessorQueue", () => {
       expect(delivered).toEqual([[2]]);
     });
 
-    it("parks and errors when the routed lookup fails", async () => {
-      const { queue, cursor, processor } = harness({ lastOrdinal: 4 });
+    it("retries a failed routed lookup and delivers once it answers", async () => {
+      let failures = 2;
+      const { queue, cursor, delivered } = harness({
+        lastOrdinal: 4,
+        purged: (ids) =>
+          failures-- > 0
+            ? Promise.reject(new Error("down"))
+            : Promise.resolve(new Set(ids.filter((id) => id === "gone"))),
+      });
       const purged = Promise.reject<ReadonlySet<string>>(new Error("down"));
       purged.catch(() => undefined);
 
-      await queue.live([op(5), op(6)], { purged });
+      await queue.live([op(5), op(6, "gone")], { purged });
+
+      expect(delivered).toEqual([[5]]);
+      expect(cursor).toMatchObject({ status: "active", lastOrdinal: 6 });
+    });
+
+    it("stops retrying a failed routed lookup once closed", async () => {
+      const { queue, cursor, processor } = harness({
+        lastOrdinal: 4,
+        purged: () => Promise.reject(new Error("down")),
+      });
+      const purged = Promise.reject<ReadonlySet<string>>(new Error("down"));
+      purged.catch(() => undefined);
+
+      const live = queue.live([op(5)], { purged });
+      await queue.close();
+      await live;
 
       expect(processor.onOperations).not.toHaveBeenCalled();
-      expect(cursor).toMatchObject({ status: "errored", lastOrdinal: 4 });
-      expect(cursor.lastError).toBe("down");
+      expect(cursor).toMatchObject({ status: "active", lastOrdinal: 4 });
+      expect(processor.onDisconnect).toHaveBeenCalled();
     });
 
     it("checks a backfill page after reading it", async () => {
@@ -730,16 +755,20 @@ describe("ProcessorQueue", () => {
       expect(cursor.lastOrdinal).toBe(4);
     });
 
-    it("errors a backfill whose lookup fails without delivering the page", async () => {
-      const { queue, cursor, processor } = harness({
+    it("retries a backfill's failed lookup before delivering the page", async () => {
+      let failures = 1;
+      const { queue, cursor, delivered } = harness({
         index: [op(1), op(2)],
-        purged: () => Promise.reject(new Error("down")),
+        purged: () =>
+          failures-- > 0
+            ? Promise.reject(new Error("down"))
+            : Promise.resolve(new Set()),
       });
 
       await queue.backfill();
 
-      expect(processor.onOperations).not.toHaveBeenCalled();
-      expect(cursor).toMatchObject({ status: "errored", lastOrdinal: 0 });
+      expect(delivered).toEqual([[1, 2]]);
+      expect(cursor).toMatchObject({ status: "active", lastOrdinal: 2 });
     });
   });
 });
