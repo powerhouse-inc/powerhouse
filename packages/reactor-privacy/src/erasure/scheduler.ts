@@ -4,12 +4,15 @@ import {
   JobStatus,
   PURGE_LOCK_BUCKETS,
   PURGE_NS,
+  ReactorEventTypes,
   supportsDeliveryTracking,
   type DocumentPurgeService,
   type IEventBus,
   type IJobTracker,
   type ISyncManager,
+  type JobWriteReadyEvent,
   type PendingDelivery,
+  type ReactorJobFailedEvent,
 } from "@powerhousedao/reactor";
 import type { ISigner } from "@powerhousedao/shared/document-model";
 import { sql } from "kysely";
@@ -60,6 +63,7 @@ export type ErasureSchedulerOptions = {
   signer: ISigner | undefined;
   purges: Pick<DocumentPurgeService, "enqueuePurge">;
   jobs: Pick<IJobTracker, "getJobStatus">;
+  /** A purge's completion starts the next tick, so purges run back to back. */
   eventBus?: IEventBus;
   syncManager?: Pick<ISyncManager, "list" | "remove">;
   permissions?: IDocumentPermissionEraser;
@@ -159,7 +163,9 @@ export class ErasureScheduler {
   private readonly unsettled = new Set<string>();
   private readonly documentTypes = new Map<string, string | null>();
   private timer: ReturnType<typeof setInterval> | undefined;
+  private unsubscribes: (() => void)[] = [];
   private running: Promise<void> | undefined;
+  private again = false;
 
   constructor(options: ErasureSchedulerOptions) {
     if (!options.signer?.app?.key) throw new ErasureSignerMissingError();
@@ -179,22 +185,34 @@ export class ErasureScheduler {
 
   start(): void {
     if (this.timer) return;
-    this.timer = setInterval(() => {
-      this.tick().catch((error: unknown) => {
-        this.logger.error(
-          "Erasure tick failed: @error",
-          redactText(this.secret, messageOf(error)),
-        );
-      });
-    }, this.intervalMs);
+    const bus = this.options.eventBus;
+    if (bus) {
+      const onJob = (_type: number, event: { jobId: string }) => {
+        if ([...this.jobIds.values()].includes(event.jobId)) this.trigger();
+      };
+      this.unsubscribes = [
+        bus.subscribe<JobWriteReadyEvent>(
+          ReactorEventTypes.JOB_WRITE_READY,
+          onJob,
+        ),
+        bus.subscribe<ReactorJobFailedEvent>(
+          ReactorEventTypes.JOB_FAILED,
+          onJob,
+        ),
+      ];
+    }
+    this.timer = setInterval(() => this.trigger(), this.intervalMs);
     this.timer.unref();
     this.logger.info(`Erasure scheduler started (tick ${this.intervalMs}ms)`);
   }
 
-  /** Stops the interval and waits for the tick in flight. */
+  /** Stops the interval and the triggers, and waits for the tick in flight. */
   async stop(): Promise<void> {
     if (this.timer) clearInterval(this.timer);
     this.timer = undefined;
+    for (const unsubscribe of this.unsubscribes) unsubscribe();
+    this.unsubscribes = [];
+    this.again = false;
     await this.running;
   }
 
@@ -202,8 +220,27 @@ export class ErasureScheduler {
   tick(): Promise<void> {
     this.running ??= this.runTick().finally(() => {
       this.running = undefined;
+      if (this.again) {
+        this.again = false;
+        this.trigger();
+      }
     });
     return this.running;
+  }
+
+  /** A pass now, or right after the one running; inert unless started. */
+  private trigger(): void {
+    if (!this.timer) return;
+    if (this.running) {
+      this.again = true;
+      return;
+    }
+    this.tick().catch((error: unknown) => {
+      this.logger.error(
+        "Erasure tick failed: @error",
+        redactText(this.secret, messageOf(error)),
+      );
+    });
   }
 
   private async runTick(): Promise<void> {

@@ -819,6 +819,32 @@ describe("recovering from lost signals [Postgres]", () => {
   });
 });
 
+describe("throughput [Postgres]", () => {
+  it("runs the next purge when one completes, not on the next interval", async () => {
+    const e = await setup();
+    const ids: string[] = [];
+    for (let i = 0; i < 3; i++) ids.push(await createDoc(e));
+    for (const id of ids) await remove(e, id);
+    const { requestId } = await e.service.request(ids, {
+      requestedBy: ADMIN,
+    });
+    e.scheduler.start();
+    await e.scheduler.tick();
+    await vi.waitUntil(
+      async () =>
+        (await Promise.all(ids.map((id) => tombstoneOf(e, id)))).every(
+          (row) => row !== undefined,
+        ),
+      { timeout: 15_000, interval: 50 },
+    );
+    await tickUntil(e, "complete", async () =>
+      Promise.resolve(
+        (await e.service.status(requestId)).status === "complete",
+      ),
+    );
+  });
+});
+
 async function tombstoneOf(e: Parameters<typeof db>[0], id: string) {
   return db(e)
     .selectFrom("document_purges")
