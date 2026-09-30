@@ -647,7 +647,8 @@ export class ProcessorManager
       const settled = Promise.resolve();
       return { persisted: settled, delivered: settled };
     }
-    if (!released) {
+    // A run that settles after shutdown binds nothing: no queue would close.
+    if (!released || this.stopped) {
       const settled = this.discardRecords(slot, records);
       return { persisted: settled, delivered: settled };
     }
@@ -708,7 +709,7 @@ export class ProcessorManager
     records: ProcessorRecord[],
   ): Promise<void> {
     const { factoryId, driveId } = slot;
-    const deletion = this.deletedDrives.get(driveId);
+    const deletion = this.stopped ? undefined : this.deletedDrives.get(driveId);
     const erased =
       deletion !== undefined &&
       (await this.claimErasure(factoryId, driveId, () =>
