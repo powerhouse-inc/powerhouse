@@ -110,6 +110,25 @@ export class ReactorJobPendingError extends Error {
   }
 }
 
+// The submit got no answer in time: the job may or may not exist.
+export class ReactorSubmitUnconfirmedError extends Error {
+  constructor(actionCount: number) {
+    super(
+      `Submitting ${actionCount} action(s) to the reactor got no answer before the step deadline; they may have been submitted`,
+    );
+    this.name = "ReactorSubmitUnconfirmedError";
+  }
+}
+
+export class ReactorBudgetExhaustedError extends Error {
+  constructor(actionCount: number) {
+    super(
+      `No time was left before the step deadline to submit ${actionCount} action(s); nothing was submitted`,
+    );
+    this.name = "ReactorBudgetExhaustedError";
+  }
+}
+
 // The job applied, but the document it wrote was not read back in time.
 export class ReactorStateUnreadError extends Error {
   readonly jobId: string;
@@ -239,7 +258,7 @@ export class RemoteReactorService implements ReactorService {
   }
 
   async execute(input: ReactorExecuteInput): Promise<ReactorDocumentSummary> {
-    const submission = await callHost<ReactorSubmission>(REACTOR_SUBMIT, input);
+    const submission = await this.submit(input);
     // Alongside the wait rather than before it, so it never spends the budget.
     void this.record(submission);
     const state = await this.settle(submission.jobId);
@@ -256,6 +275,25 @@ export class RemoteReactorService implements ReactorService {
     } catch (error) {
       if (error instanceof HostCallTimeoutError) {
         throw new ReactorStateUnreadError(submission.jobId);
+      }
+      throw error;
+    }
+  }
+
+  private async submit(input: ReactorExecuteInput): Promise<ReactorSubmission> {
+    const remaining = this.stopAt - Date.now();
+    if (remaining <= 0) {
+      throw new ReactorBudgetExhaustedError(input.actions.length);
+    }
+    try {
+      return await callHost<ReactorSubmission>(
+        REACTOR_SUBMIT,
+        input,
+        Math.min(hostCallTimeoutMs(), remaining),
+      );
+    } catch (error) {
+      if (error instanceof HostCallTimeoutError) {
+        throw new ReactorSubmitUnconfirmedError(input.actions.length);
       }
       throw error;
     }

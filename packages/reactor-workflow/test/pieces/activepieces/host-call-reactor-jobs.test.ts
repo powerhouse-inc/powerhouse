@@ -32,6 +32,17 @@ module.exports = {
             actions: [{ type: "FIRST" }, { type: "SECOND" }],
           }),
       },
+      twice: {
+        name: "twice",
+        displayName: "Twice",
+        props: {},
+        run: async (ctx) => {
+          const write = () =>
+            ctx.reactor.execute({ documentId: "doc-1", actions: [{ type: "FIRST" }] });
+          await write().catch(() => undefined);
+          return write();
+        },
+      },
     },
   },
 };
@@ -45,6 +56,7 @@ interface JobScript {
   settlesAfterMs?: number;
   final?: (submission: ReactorSubmission) => Omit<ReactorJobState, "jobId">;
   getDelayMs?: number;
+  submitDelayMs?: number;
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -69,14 +81,15 @@ function scriptedPort(script: JobScript) {
     model: refuse,
     find: refuse,
     create: refuse,
-    submit(input) {
+    async submit(input) {
       calls.push(`submit ${input.actions.map((a) => a.type).join(",")}`);
+      await sleep(script.submitDelayMs ?? 0);
       submittedAt = Date.now();
       submission = {
         jobId: "job-1",
         actionIds: input.actions.map((_, index) => `action-${index}`),
       };
-      return Promise.resolve(submission);
+      return submission;
     },
     async wait(input) {
       waits.push(input.maxWaitMs);
@@ -126,7 +139,10 @@ function memoryStore(): PieceStorePort & { values: Map<string, unknown> } {
   };
 }
 
-function oneStep(timeoutSeconds: number): WorkflowDefinition {
+function oneStep(
+  timeoutSeconds: number,
+  actionName = "dispatch",
+): WorkflowDefinition {
   return {
     steps: [
       {
@@ -134,7 +150,7 @@ function oneStep(timeoutSeconds: number): WorkflowDefinition {
         key: "store",
         pieceName: PIECE,
         pieceVersion: "1.0.0",
-        actionName: "dispatch",
+        actionName,
         config: {},
         timeoutSeconds,
       },
@@ -160,6 +176,7 @@ function run(
   timeoutSeconds: number,
   pieceStore?: PieceStorePort,
   on: PieceWorker = worker,
+  actionName?: string,
 ) {
   const executor = new ActivepiecesBlockExecutor({
     cacheDir: dir,
@@ -168,7 +185,10 @@ function run(
     reactor: port,
     ...(pieceStore ? { pieceStore } : {}),
   });
-  return runWorkflow({ definition: oneStep(timeoutSeconds), executor });
+  return runWorkflow({
+    definition: oneStep(timeoutSeconds, actionName),
+    executor,
+  });
 }
 
 describe("a reactor write that outlasts one host call", () => {
@@ -301,5 +321,33 @@ describe("a reactor write that outlasts one host call", () => {
 
     expect(result.steps[0].error).toBeUndefined();
     expect(result.steps[0].status).toBe("SUCCEEDED");
+  });
+
+  it("submits nothing once the step has stopped waiting", async () => {
+    const { port, calls } = scriptedPort({});
+
+    const result = await run(port, 1, undefined, roomy, "twice");
+
+    const [step] = result.steps;
+    expect(step.status).toBe("FAILED");
+    expect(step.error).toMatch(
+      /^ReactorBudgetExhaustedError: .*nothing was submitted/,
+    );
+    expect(calls).toEqual(["submit FIRST"]);
+  });
+
+  it("says a submit that got no answer in time may have been made", async () => {
+    const { port } = scriptedPort({
+      settlesAfterMs: 0,
+      submitDelayMs: ROOMY_CAP_MS,
+    });
+
+    const result = await run(port, 1, undefined, roomy);
+
+    const [step] = result.steps;
+    expect(step.status).toBe("FAILED");
+    expect(step.error).toMatch(
+      /^ReactorSubmitUnconfirmedError: .*may have been submitted/,
+    );
   });
 });
