@@ -263,6 +263,19 @@ describe.each([
     return { driveId, fileId };
   }
 
+  // An open xid anywhere in the cluster holds the watermark below the head.
+  async function sweepSettled(h: Harness): Promise<void> {
+    const watermark = h.module.settledWatermark;
+    await watermark.refresh();
+    const { head } = watermark.status();
+    await vi.waitFor(
+      async () =>
+        expect(await watermark.refresh()).toBeGreaterThanOrEqual(head),
+      { timeout: 10_000 },
+    );
+    await h.module.catchUp.sweepNow();
+  }
+
   async function purge(h: Harness, ids: string[]): Promise<string[]> {
     const infos = await h.module.documentPurgeService.enqueuePurge(
       ids,
@@ -294,7 +307,7 @@ describe.each([
     await Promise.all(lost);
     expect(await nodesOf(h.view, driveId)).toHaveLength(2);
 
-    await h.module.catchUp.sweepNow();
+    await sweepSettled(h);
 
     expect(await nodesOf(h.view, driveId)).toHaveLength(0);
     expect(await nodesOf(h.view, fileId)).toHaveLength(0);
@@ -332,7 +345,7 @@ describe.each([
     expect(types).toContain("ADD_RELATIONSHIP");
     expect(types).not.toContain("REMOVE_RELATIONSHIP");
 
-    await h.module.catchUp.sweepNow();
+    await sweepSettled(h);
 
     const ids = (await nodesOf(h.view, driveId)).map((row) => row.id);
     expect(ids).toEqual(["late-folder"]);
