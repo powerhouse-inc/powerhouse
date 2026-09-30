@@ -1,4 +1,9 @@
-import type { Operation } from "@powerhousedao/shared/document-model";
+import {
+  garbageCollect,
+  mentionedGroupIds,
+  sortOperations,
+  type Operation,
+} from "@powerhousedao/shared/document-model";
 import type { Kysely, Transaction } from "kysely";
 import type { DocumentViewDatabase } from "../../read-models/types.js";
 import { findPurged } from "./document-purges.js";
@@ -71,6 +76,24 @@ export class KyselyDocumentPurger {
     const ids = rows.map((row) => row.documentId);
     const purged = await findPurged(this.db, ids);
     return ids.filter((id) => !purged.has(id));
+  }
+
+  /** Survivors whose accepted auth history names the group; refusals do not. */
+  async groupReferencersInHistory(groupId: string): Promise<string[]> {
+    const referencing: string[] = [];
+    for (const documentId of await this.groupReferencers(groupId)) {
+      const byBranch = await this.authOperations(documentId);
+      const names = [...byBranch.values()].some((operations) =>
+        garbageCollect(sortOperations(operations)).some(
+          (operation) =>
+            operation.deniedReason === undefined &&
+            operation.error === undefined &&
+            mentionedGroupIds(operation.action).includes(groupId),
+        ),
+      );
+      if (names) referencing.push(documentId);
+    }
+    return referencing;
   }
 
   /** The document's auth-scope operations, per branch, in index order. */

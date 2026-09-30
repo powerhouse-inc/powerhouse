@@ -902,10 +902,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     if (documentType === groupDocumentType) {
-      const referencers = await this.groupReferencersInHistory(
-        purger,
-        documentId,
-      );
+      const referencers = await purger.groupReferencersInHistory(documentId);
       if (referencers.length > 0) {
         return new GroupInUseError(documentId, referencers);
       }
@@ -1153,29 +1150,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
     return { required: [...required], survivors: [...survivors] };
-  }
-
-  /** Survivors whose accepted auth history names the group; refusals do not. */
-  private async groupReferencersInHistory(
-    purger: KyselyDocumentPurger,
-    groupId: string,
-  ): Promise<string[]> {
-    const referencing: string[] = [];
-    for (const documentId of await purger.groupReferencers(groupId)) {
-      const byBranch = await purger.authOperations(documentId);
-      const names = [...byBranch.values()].some((operations) =>
-        garbageCollect(sortOperations(operations)).some(
-          (operation) =>
-            operation.deniedReason === undefined &&
-            operation.error === undefined &&
-            mentionedGroupIds(operation.action).includes(groupId),
-        ),
-      );
-      if (names) {
-        referencing.push(documentId);
-      }
-    }
-    return referencing;
   }
 
   /** The marker, signed by this executor's signer as any peer admits it. */
