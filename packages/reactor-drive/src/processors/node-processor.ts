@@ -77,6 +77,7 @@ export class NodeProcessor extends BaseReadModel {
         readModelId: "reactor-drive-node-processor",
         rebuildStateOnInit: false,
         indexing: unchunkedReadModelIndexingConfig,
+        purgeFence: "none",
       },
     );
     this.driveDb = scopedDb;

@@ -35,6 +35,7 @@ export class WorkflowTriggersReadModel extends BaseReadModel {
       rebuildStateOnInit: false,
       indexing: defaultReadModelIndexingConfig,
       startFrom: "head",
+      purgeFence: "none",
     });
   }
 
