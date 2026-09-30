@@ -189,18 +189,28 @@ function createdVersions(
   return undefined;
 }
 
-/** The load was refused because the id is purged here: a drop. */
-function isPurgedFailure(error: ErrorInfo | undefined): boolean {
-  return error?.name === "DocumentPurgedError";
+/** The load was refused because this very id is purged here: a drop. */
+function isPurgedFailure(
+  error: ErrorInfo | undefined,
+  documentId: string,
+): boolean {
+  // Only name and message reach JobInfo; the message names the purged id.
+  return (
+    error?.name === "DocumentPurgedError" &&
+    error.message.includes(`Document ${documentId} was purged`)
+  );
 }
 
 function carriesMarker(syncOp: SyncOperation): boolean {
   return syncOp.operations.some((op) => isPurgeMarker(op));
 }
 
-/** Admission refused the marker: final, unlike an outage while admitting it. */
+/** Refused, or purged under another id: final, unlike an outage. */
 function isRefusedMarker(error: ErrorInfo | undefined): boolean {
-  return error?.name === "InvalidSignatureError";
+  return (
+    error?.name === "InvalidSignatureError" ||
+    error?.name === "DocumentPurgedError"
+  );
 }
 
 /** Markers pass every remote filter, as they pass sinceTimestamp. */
@@ -1798,7 +1808,7 @@ export class SyncManager implements ISyncManager {
     if (completedJobInfo.status !== JobStatus.FAILED) {
       syncOp.executed();
       if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
-    } else if (isPurgedFailure(completedJobInfo.error)) {
+    } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
       this.tombstone(syncOp.documentId);
       syncOp.executed();
     } else {
@@ -2005,7 +2015,7 @@ export class SyncManager implements ISyncManager {
       if (completedJobInfo.status !== JobStatus.FAILED) {
         syncOp.executed();
         if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
-      } else if (isPurgedFailure(completedJobInfo.error)) {
+      } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
         this.tombstone(syncOp.documentId);
         syncOp.executed();
       } else if (
