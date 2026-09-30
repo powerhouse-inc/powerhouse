@@ -853,6 +853,7 @@ export interface ISyncHoldStorage {
     remoteName?: string;
     documentId?: string;
   }): Promise<SyncHoldRecord[]>;
+  /** Throws DocumentPurgedError for a purged id, except for its marker's hold. */
   upsert(hold: SyncHoldRecord): Promise<void>;
   remove(remoteName: string, documentId: string, branch: string): Promise<void>;
   removeRemote(remoteName: string): Promise<void>;

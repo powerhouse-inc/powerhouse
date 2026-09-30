@@ -789,6 +789,11 @@ export class SyncManager implements ISyncManager {
     try {
       await this.holds.upsert(record);
     } catch (error) {
+      if (DocumentPurgedError.isError(error)) {
+        held.delete(key);
+        this.tombstone(documentId);
+        return;
+      }
       this.logger.error(
         "Failed to persist a sync hold (@remote, @documentId): @error",
         remote.meta.name,
