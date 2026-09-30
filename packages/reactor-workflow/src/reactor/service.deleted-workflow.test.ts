@@ -19,6 +19,7 @@ import { memoryWebhooks } from "../../test/helpers/webhooks.js";
 import { packagePieces } from "./piece-registry.js";
 import { PROJECT_SCOPE_KEY, testPartitionKey } from "./piece-store-port.js";
 import type { WorkflowRuntimeService } from "./service.js";
+import { WorkflowRunStore } from "./store.js";
 import { WorkflowTriggersReadModel } from "./workflow-triggers-read-model.js";
 
 const PIECE = "@acme/piece-deletable";
@@ -386,6 +387,21 @@ describe("purging an enabled workflow", () => {
     expect(fire).not.toHaveBeenCalled();
     expect(await store.getTriggerState("wf-poll")).toBeUndefined();
   }, 60_000);
+
+  it("throws while the run journal is unavailable, so the cursor holds", async () => {
+    const failure = new Error("journal down");
+    const create = vi
+      .spyOn(WorkflowRunStore, "create")
+      .mockRejectedValueOnce(failure);
+    try {
+      const { service } = start();
+      await expect(commit(service, [marker("wf-any")])).rejects.toMatchObject({
+        cause: failure,
+      });
+    } finally {
+      create.mockRestore();
+    }
+  });
 
   it("leaves a document that is not a workflow alone", async () => {
     const armedHook = await armed("wf-kept", "hook");

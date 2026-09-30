@@ -643,6 +643,7 @@ export class WorkflowRuntimeService {
   private executor?: BlockExecutor;
   private pieceWorkers?: PieceWorkerPool;
   private readonly storePromise: Promise<WorkflowRunStore>;
+  private storeError?: unknown;
   private secretsPromise?: Promise<SecretStore>;
   private oauthAttemptsPromise?: Promise<OAuthAttemptStore>;
   private tokenRefresher?: OAuthTokenRefresher;
@@ -677,6 +678,7 @@ export class WorkflowRuntimeService {
       : undefined;
     this.storePromise = WorkflowRunStore.create(host.relationalDb);
     this.storePromise.catch((error: unknown) => {
+      this.storeError = error;
       this.logger.error("Failed to open the workflow run store: @error", error);
     });
     this.seedPromise = this.seedWithRetries();
@@ -1291,20 +1293,24 @@ export class WorkflowRuntimeService {
     return false;
   }
 
-  // Throws on a failed delete, so the read model's cursor holds and retries.
+  // Throws on any failure, so the read model's cursor holds and retries.
   async onDocumentsPurged(
     markers: OperationWithContext[],
-  ): Promise<ErasedRuns | null> {
+  ): Promise<ErasedRuns> {
     const documentIds = [
       ...new Set(markers.map((marker) => marker.context.documentId)),
     ];
     const store = await this.store();
     if (!store) {
+      // The store never reopens, so only a restart releases the cursor.
       this.logger.error(
-        "Run journal unavailable; runs of purged documents @ids were not erased",
+        "Run journal unavailable; purged documents @ids are not erased and the triggers cursor holds until a restart: @error",
         documentIds,
+        this.storeError,
       );
-      return null;
+      throw new Error("Erasing purged documents needs the run journal", {
+        cause: this.storeError,
+      });
     }
     for (const workflowId of purgedWorkflowIds(markers)) {
       await this.erasePurgedWorkflow(store, workflowId);
