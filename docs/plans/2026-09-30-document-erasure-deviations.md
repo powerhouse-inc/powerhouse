@@ -10,7 +10,8 @@ record. The plan itself is unchanged.
 
 Branch layout: one branch per stage, `feat/erasure-stage-0` to
 `feat/erasure-stage-3`, each merged into the next. `feat/document-erasure`
-points at the stage 3 head, so it carries all four. Stage 4 has no branch.
+points at the stage 3 head, so it carries all four. Stage 4 has no branch of
+its own: it is committed on `feat/document-erasure`.
 
 Line numbers are against 37de0d0795, except in entries the final review
 round changed, which cite lines after that round. Paths are relative to
@@ -476,8 +477,31 @@ Not spec deviations; recorded because they change how the suites run.
 
 ## Stage 4
 
-Nothing was needed for receipt. The optional editor notice ("erased" in the
-deletion notification) is not done.
+Nothing was needed for receipt. The optional editor notice is done: a Deleted
+event that a purge marker applied carries `context.purged`, and Connect closes
+the open drive or document with "has been erased" instead of "has been
+deleted".
+
+- `subs/types.ts:34` (`DocumentDeletedInfo`) — `onDocumentDeleted` callbacks
+  and `notifyDocumentsDeleted` take an optional trailing `{ purged: true }`;
+  `SubscriptionNotificationReadModel` (`subs/subscription-notification-read-model.ts:105`)
+  sends marker deletions in their own call — the plan names no carrier;
+  optional keeps every existing subscriber and mock unchanged.
+- `client/types.ts:72` (`DocumentChangeEvent.context.purged`) — additive and
+  optional; the event type stays `Deleted` — a new `DocumentChangeType`
+  member would break the reactor-browser mirror, the document cache's
+  deletion handling and the GraphQL enum.
+- `packages/reactor-api/src/graphql/reactor/schema.graphql:219`
+  (`DocumentChangeContext`) — unchanged; a client on `GraphQLReactorClient`
+  gets a plain Deleted and shows "has been deleted" — the task keeps wire
+  formats unchanged. The worker RPC carries the field (structured clone).
+- `apps/connect/src/utils/deleted-selection.ts` (`closeDeletedSelection`) —
+  the redirect moved out of `store/reactor.ts:536` so it can be tested.
+- Only a marker that applied a deletion shows the notice. A purge of a
+  document already deleted here emits no Deleted (stage 2) and there is no
+  open editor to close: the deletion closed it with "has been deleted". The
+  refetch path (`DocumentPurgedError`) is not used: the Deleted event has
+  already dropped the cache entry.
 
 ## Decisions
 
@@ -740,4 +764,5 @@ Executor:
   risk).
 - `executor/util.ts:382` has a class `PurgeFence`; the read-model config type
   exported from `index.ts` has the same name.
-- Stage 4: the optional "erased" editor notice.
+- Stage 4: the "erased" notice reaches only a reactor-client or worker-RPC
+  subscriber; the GraphQL subscription does not carry `purged`.
