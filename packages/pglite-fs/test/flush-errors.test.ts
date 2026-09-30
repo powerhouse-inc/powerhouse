@@ -5,6 +5,9 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AtomicNodeFs } from "../src/atomic-node-fs.js";
 
+// Waits span real snapshot writes and VACUUM passes, which slow under load.
+const IO_WAIT = { timeout: 30_000 };
+
 describe("AtomicNodeFs flush failures", () => {
   const tempDirs: string[] = [];
   const open: PGlite[] = [];
@@ -35,7 +38,7 @@ describe("AtomicNodeFs flush failures", () => {
     await vi.waitFor(() => {
       expect(atomicFs["flushTimer"]).toBeUndefined();
       expect(atomicFs["flushInFlight"]).toBeUndefined();
-    });
+    }, IO_WAIT);
     return { dir, pg, atomicFs, onFlushError, warn };
   }
 
@@ -70,7 +73,10 @@ describe("AtomicNodeFs flush failures", () => {
 
     await fs.rm(dir, { recursive: true });
     await pg.exec("INSERT INTO t VALUES (1)");
-    await vi.waitFor(() => expect(onFlushError).toHaveBeenCalledOnce());
+    await vi.waitFor(
+      () => expect(onFlushError).toHaveBeenCalledOnce(),
+      IO_WAIT,
+    );
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("deferred flush failed"),
     );

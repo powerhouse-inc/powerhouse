@@ -9,6 +9,9 @@ import {
   type AtomicNodeFsOptions,
 } from "../src/atomic-node-fs.js";
 
+// Waits span real snapshot writes and VACUUM passes, which slow under load.
+const IO_WAIT = { timeout: 30_000 };
+
 const DOCS = 20;
 
 describe("AtomicNodeFs maintenance", () => {
@@ -101,18 +104,22 @@ describe("AtomicNodeFs maintenance", () => {
       await pg.query(begin);
       await pg.query("INSERT INTO t VALUES (1)");
       const skipped = runMaintenance.mock.results.length;
-      await vi.waitFor(async () =>
-        expect(await outcomes(runMaintenance, skipped)).toContain(
-          "in-transaction",
-        ),
+      await vi.waitFor(
+        async () =>
+          expect(await outcomes(runMaintenance, skipped)).toContain(
+            "in-transaction",
+          ),
+        IO_WAIT,
       );
       await expect(maintain()).resolves.toBe("in-transaction");
       const committed = runMaintenance.mock.results.length;
       await pg.query("COMMIT");
 
       expect((await pg.query("SELECT v FROM t")).rows).toEqual([{ v: 1 }]);
-      await vi.waitFor(async () =>
-        expect(await outcomes(runMaintenance, committed)).toContain("vacuum"),
+      await vi.waitFor(
+        async () =>
+          expect(await outcomes(runMaintenance, committed)).toContain("vacuum"),
+        IO_WAIT,
       );
       await pg.close();
 
@@ -215,7 +222,7 @@ describe("AtomicNodeFs maintenance", () => {
       "runMaintenance",
     );
     await pg.exec("CREATE TABLE t (v int)");
-    await vi.waitFor(() => expect(runMaintenance).toHaveBeenCalled());
+    await vi.waitFor(() => expect(runMaintenance).toHaveBeenCalled(), IO_WAIT);
     await pg.close();
     expect(atomicFs["maintenanceTimer"]).toBeUndefined();
     expect(atomicFs["maintenanceInFlight"]).toBeUndefined();
