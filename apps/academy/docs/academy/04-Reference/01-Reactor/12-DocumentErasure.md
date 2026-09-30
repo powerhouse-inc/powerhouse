@@ -36,7 +36,8 @@ Optional tuning:
 | --- | --- | --- |
 | `PH_PRIVACY_DEADLINE_DAYS` | `30` | Days from the request after which a purge runs whether or not peers have caught up (GDPR Art. 12(3) allows one month) |
 | `PH_PRIVACY_MARKER_GRACE_DAYS` | `7` | Days after a purge that remotes and permission rows are kept while peers receive the marker |
-| `PH_PRIVACY_INTERVAL_MS` | `60000` | How often the scheduler runs |
+| `PH_PRIVACY_INTERVAL_MS` | `60000` | How often the scheduler runs. A finished purge also starts a run, so purges run back to back |
+| `PH_PRIVACY_PURGE_TIMEOUT_MINUTES` | `15` | Minutes a purge may run without committing before it is enqueued again |
 
 One Switchboard process per database. The scheduler, the queue and the sync mailboxes are in-process.
 
@@ -90,23 +91,27 @@ query {
 
 ## What the scheduler does
 
-Each item moves `waiting` → `purging` → `purged` → `erased`, or to `failed`. At most one item is `purging` at a time across all requests, and a drive waits until its members are purged.
+Each item moves `waiting` → `purging` → `purged` → `erased`, or to `failed`. At most one item is `purging` at a time across all requests, and a drive waits until its members are purged. When a purge finishes, the scheduler runs again at once and starts the next one, so a large request is not limited to one purge per interval.
 
 | State | Moves on when |
 | --- | --- |
 | `waiting` | every remote owed the document's `DELETE_DOCUMENT` has acknowledged it, or the deadline has passed (recorded as `deadline-passed`). The purge job is enqueued. |
-| `purging` | the `document_purges` row for the document exists. A job that fails terminally moves the item to `failed` with the error name. |
+| `purging` | the `document_purges` row for the document exists. A job that fails terminally moves the item to `failed` with the error name. A purge with no row after `PH_PRIVACY_PURGE_TIMEOUT_MINUTES` is enqueued again; a document is never purged twice. |
 | `purged` | every remote owed the marker has acknowledged it (`marker-converged`), or `markerGrace` has passed (`marker-undelivered`). The scheduler then removes the sync remotes bound to a purged drive and deletes the document's `DocumentPermission`, `OperationUserPermission` and `DocumentProtection` rows. A step that fails is retried on the next run. |
 
 A request becomes `complete` when every item is `erased` and `failed` when any item fails. The other items of a failed request still run.
 
+A job can fail while its purge still commits, for example when it times out. Each run checks `failed` items against `document_purges`: one whose row has appeared moves to `purged` and continues, and its request is `reopened` once none of its items is `failed`. After a failed or abandoned purge, the next purge waits until that purge's transaction has ended.
+
 Remotes and permission rows wait for the marker because removing either stops it: a removed remote never polls again, and an erased permission row can hide the document from a poller. A remote that is still owed the marker at `markerGrace` is removed anyway. The document's memberships stay open, so a peer that reconnects later still receives the marker.
 
-If this Switchboard has remotes but no sync manager to ask, the check fails closed and the deadline decides.
+A remote is judged from its stored row, not only from the remotes that are running. A remote whose channel failed to start, for example because its host was unreachable at boot, counts as pending with the state `unknown` and never as delivered. If it is bound to a purged drive, it is deleted from storage at `markerGrace`, since nothing is running that could remove it.
+
+If this Switchboard has remotes but no sync manager to ask, the check fails closed and the deadline decides. At `markerGrace` the stored remotes bound to a purged drive are deleted the same way.
 
 ### The audit log
 
-`reactor.erasure_audit` is append-only (an `UPDATE` raises). Each row has the request, the document, an event and a `detail` column. Events: `requested`, `expanded`, `waiting` (the pending remotes, written each time the list changes), `deadline-passed`, `purged` (the marker ordinal and row counts), `marker-converged`, `marker-undelivered`, `remotes-removed`, `permissions-erased`, `failed` and `complete`. `detail` holds remote names, counts and error text. Any address or `did:key` in it, including one embedded in an error message, is replaced by its keyed hash. `requestedBy` is stored hashed.
+`reactor.erasure_audit` is append-only (an `UPDATE` raises). Each row has the request, the document, an event and a `detail` column. Events: `requested`, `expanded`, `waiting` (the pending remotes, written each time the list changes), `deadline-passed`, `purged` (the marker ordinal and row counts), `marker-converged`, `marker-undelivered`, `remotes-removed`, `permissions-erased`, `failed`, `reopened` and `complete`. `detail` holds remote names, counts and error text. Any address or `did:key` in it, including one embedded in an error message, is replaced by its keyed hash. `requestedBy` is stored hashed.
 
 The audit log is not a document and never syncs. Give it a retention period of its own.
 
@@ -114,13 +119,15 @@ The audit log is not a document and never syncs. Give it a retention period of i
 
 A purge is one database transaction, and while it runs every read model's cursor, every catch-up sweep and every outbox stops advancing: settlement waits for the oldest open transaction. The executor refuses a document with more than `maxPurgeOperations` operations (default 200,000, about 1.6 s on a local Postgres) with `PurgeTooLargeError`, which fails the item.
 
-To erase a larger document, name it in `requestErasure(..., allowLarge: ["id"])` and accept the stall. The purge must also finish inside the executor's `jobTimeoutMs` (default 30 s). Past it the job is marked failed, and the item fails unless the purge commits before the scheduler's next run. Switchboard does not expose `jobTimeoutMs`; a host that builds its own reactor sets it with `ReactorBuilder.withExecutorConfig({ jobTimeoutMs })`.
+To erase a larger document, name it in `requestErasure(..., allowLarge: ["id"])` and accept the stall. The purge must also finish inside the executor's `jobTimeoutMs` (default 30 s). Past it the job is marked failed and so is the item; if the purge commits afterwards, the next run moves the item to `purged`. Switchboard does not expose `jobTimeoutMs`; a host that builds its own reactor sets it with `ReactorBuilder.withExecutorConfig({ jobTimeoutMs })`.
 
 ## Peers
 
 **Peers without erasure.** A peer on a build that does not announce the `document-purge` protocol cannot apply the marker. Its remote holds the marker instead (`waiting` reports it as `held`) and delivers it when the peer upgrades. Until then the peer keeps the document. At `markerGrace` its remote is removed; it receives the marker if it reconnects after upgrading. A relay without erasure blocks the peers behind it.
 
-**Refused markers.** A peer whose trust policy rejects this Switchboard's key refuses the marker and keeps the document. The scheduler records that remote as `marker-undelivered` even though its cursor moves past the marker.
+**Refused markers.** A peer whose trust policy rejects this Switchboard's key refuses the marker and keeps the document. The scheduler records that remote as `marker-undelivered` even though its cursor moves past the marker. A refusal counts whichever way the marker travelled: a marker this Switchboard pushed is reported back on the next poll, and a client that polled the marker reports its refusal on its next poll. Each refusal is stored in `reactor.sync_purge_refusals` (remote, document, branch and time, no error text), so one reported while the scheduler is stopped still counts.
+
+A client on a build before marker refusal reporting does not report its refusal, and a client of this build does not report one to a Switchboard of an older build. Such a remote reads as converged once its cursor passes the marker.
 
 **Pushed markers.** A marker can also arrive from a client that pushes it. Under `DOCUMENT_PERMISSIONS`, a pushed `PURGE_DOCUMENT` requires a document admin: a supreme admin, the document's owner, or an `ADMIN` grant on that document. `OperationUserPermission` rows cannot widen this. Under `OPEN` every caller passes, so an open Switchboard lets anyone who can write a document purge it, and with `REACTOR_AUTH_ENFORCEMENT` off any key that verifies is trusted. Do not run an open Switchboard that syncs documents you care about.
 
