@@ -60,6 +60,8 @@ export enum DeletedDocumentRead {
 }
 
 export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
+  static override readonly commitsInFenceTransaction = true;
+
   private _db: Kysely<Database>;
 
   constructor(
