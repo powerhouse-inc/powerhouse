@@ -1,9 +1,4 @@
-import {
-  JobStatus,
-  PURGE_NS,
-  SyncEventTypes,
-  type SyncPurgeRefusedEvent,
-} from "@powerhousedao/reactor";
+import { DriveCollectionId, JobStatus, PURGE_NS } from "@powerhousedao/reactor";
 import { setDriveName } from "@powerhousedao/shared/document-drive";
 import { sql } from "kysely";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -28,7 +23,9 @@ import {
   IDENTIFIER,
   item,
   MANIFEST_WITHOUT_PURGE,
+  refuseMarker,
   remove,
+  restart,
   SECRET,
   served,
   setup,
@@ -38,7 +35,7 @@ import {
   tickUntil,
 } from "./utils/erasure.js";
 import { signedBy } from "./utils/p256-signer.js";
-import { settled } from "./utils/reactor.js";
+import { failingInitChannels, settled } from "./utils/reactor.js";
 
 afterEach(teardown);
 
@@ -463,13 +460,12 @@ describe("after the purge [Postgres]", () => {
     await ackThrough(e, "refuser", await deleteOrdinal(e, drive));
     await tickUntil(e, "purged", statusIs(e, requestId, drive, "purged"));
 
-    await e.host.module.eventBus.emit(SyncEventTypes.PURGE_REFUSED, {
-      remoteName: "refuser",
-      documentId: drive,
-      branch: "main",
-      errorMessage: `signer ${ADMIN} is not trusted by ${e.signer.did}`,
-    } satisfies SyncPurgeRefusedEvent);
-    await e.scheduler.flush();
+    await refuseMarker(
+      e,
+      "refuser",
+      drive,
+      `signer ${ADMIN} is not trusted by ${e.signer.did}`,
+    );
     await ackThrough(
       e,
       "refuser",
@@ -509,5 +505,143 @@ describe("after the purge [Postgres]", () => {
       ),
     ).toHaveLength(1);
     await expectNoIdentifiers(e);
+  });
+});
+
+describe("remotes the sync manager has not loaded [Postgres]", () => {
+  it("does not count a stored remote whose channel failed to start as converged", async () => {
+    const e = await setup({ sync: true });
+    const doc = await createDoc(e);
+    const drive = await createDrive(e, [doc]);
+    await addRemote(e, "poller", drive);
+    await remove(e, doc);
+    await restart(e, { channelFactory: failingInitChannels() });
+    expect(sync(e).list()).toEqual([]);
+
+    const { requestId } = await e.service.request([doc], {
+      requestedBy: ADMIN,
+      deadline: new Date(e.now().getTime() + HOUR),
+    });
+    await e.scheduler.tick();
+    await e.scheduler.tick();
+    expect((await item(e, requestId, doc)).status).toBe("waiting");
+    const waiting = (await audit(e, requestId)).find(
+      (row) => row.event === "waiting",
+    );
+    expect(waiting?.detail.pending).toEqual([
+      { remote: "poller", state: "unknown" },
+    ]);
+
+    e.advance(2 * HOUR);
+    await tickUntil(e, "purged", statusIs(e, requestId, doc, "purged"));
+    for (let i = 0; i < 3; i++) await e.scheduler.tick();
+    expect((await item(e, requestId, doc)).status).toBe("purged");
+
+    e.advance(8 * 24 * HOUR);
+    await tickUntil(e, "erased", statusIs(e, requestId, doc, "erased"));
+    const trail = await events(e, requestId, doc);
+    expect(trail).not.toContain("marker-converged");
+    const outcome = (await audit(e, requestId)).find(
+      (row) => row.event === "marker-undelivered",
+    );
+    expect(outcome?.detail).toMatchObject({
+      pending: [{ remote: "poller", state: "unknown" }],
+      markerGraceExpired: true,
+    });
+  });
+
+  it("deletes a drive's stored remote that is not loaded at markerGrace, not before", async () => {
+    const e = await setup({ sync: true });
+    const drive = await createDrive(e);
+    await addRemote(e, "poller", drive);
+    await remove(e, drive);
+    await restart(e, { channelFactory: failingInitChannels() });
+    const stored = () =>
+      db(e)
+        .selectFrom("sync_remotes")
+        .select("name")
+        .execute()
+        .then((rows) => rows.map((row) => row.name));
+
+    const { requestId } = await e.service.request([drive], {
+      requestedBy: ADMIN,
+      deadline: new Date(e.now().getTime() + HOUR),
+    });
+    e.advance(2 * HOUR);
+    await tickUntil(e, "purged", statusIs(e, requestId, drive, "purged"));
+    for (let i = 0; i < 3; i++) await e.scheduler.tick();
+    expect((await item(e, requestId, drive)).status).toBe("purged");
+    expect(await stored()).toEqual(["poller"]);
+
+    e.advance(8 * 24 * HOUR);
+    await tickUntil(e, "erased", statusIs(e, requestId, drive, "erased"));
+    expect(await stored()).toEqual([]);
+    const removed = (await audit(e, requestId)).find(
+      (row) => row.event === "remotes-removed",
+    );
+    expect(removed?.detail).toEqual({
+      remotes: [],
+      deletedFromStorage: ["poller"],
+    });
+  });
+
+  it("deletes a drive's stored remote at markerGrace with no sync manager", async () => {
+    const e = await setup({ markerGraceMs: 3 * HOUR });
+    const drive = await createDrive(e);
+    await remove(e, drive);
+    await db(e)
+      .insertInto("sync_remotes")
+      .values({
+        name: "orphan",
+        collection_id: DriveCollectionId.forDrive(drive).key,
+        channel_type: "gql",
+        bound_address: ADMIN.toLowerCase(),
+      } as never)
+      .execute();
+    const { requestId } = await e.service.request([drive], {
+      requestedBy: ADMIN,
+      deadline: new Date(e.now().getTime() + HOUR),
+    });
+    e.advance(2 * HOUR);
+    await tickUntil(e, "purged", statusIs(e, requestId, drive, "purged"));
+    await e.scheduler.tick();
+    expect((await item(e, requestId, drive)).status).toBe("purged");
+    expect(
+      await db(e).selectFrom("sync_remotes").select("name").execute(),
+    ).toEqual([{ name: "orphan" }]);
+
+    e.advance(4 * HOUR);
+    await tickUntil(e, "erased", statusIs(e, requestId, drive, "erased"));
+    const rows = await db(e).selectFrom("sync_remotes").selectAll().execute();
+    expect(rows).toEqual([]);
+  });
+});
+
+describe("recovering from lost signals [Postgres]", () => {
+  it("records a refusal reported while the scheduler was stopped", async () => {
+    const e = await setup({ sync: true });
+    const drive = await createDrive(e);
+    await addRemote(e, "refuser", drive);
+    await remove(e, drive);
+    const { requestId } = await e.service.request([drive], {
+      requestedBy: ADMIN,
+    });
+    await ackThrough(e, "refuser", await deleteOrdinal(e, drive));
+    await tickUntil(e, "purged", statusIs(e, requestId, drive, "purged"));
+
+    await refuseMarker(e, "refuser", drive);
+    await ackThrough(
+      e,
+      "refuser",
+      (await item(e, requestId, drive)).markerOrdinal!,
+    );
+    await restart(e);
+    await tickUntil(e, "erased", statusIs(e, requestId, drive, "erased"));
+    expect(await events(e, requestId, drive)).not.toContain("marker-converged");
+    const outcome = (await audit(e, requestId)).find(
+      (row) =>
+        row.event === "marker-undelivered" && row.detail.kind === "outcome",
+    );
+    expect(outcome?.detail).toMatchObject({ refused: ["refuser"] });
   });
 });

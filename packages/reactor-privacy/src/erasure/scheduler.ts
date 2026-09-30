@@ -3,13 +3,11 @@ import {
   DriveCollectionId,
   JobStatus,
   supportsDeliveryTracking,
-  SyncEventTypes,
   type DocumentPurgeService,
   type IEventBus,
   type IJobTracker,
   type ISyncManager,
   type PendingDelivery,
-  type SyncPurgeRefusedEvent,
 } from "@powerhousedao/reactor";
 import type { ISigner } from "@powerhousedao/shared/document-model";
 import { sql } from "kysely";
@@ -90,6 +88,8 @@ type Convergence = {
   unknown?: string;
 };
 
+type StoredRemote = { name: string; collectionId: string };
+
 const SILENT: ErasureLogger = { info() {}, warn() {}, error() {} };
 
 function keyOf(item: { requestId: string; documentId: string }): string {
@@ -115,6 +115,10 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function byName<T extends { remote: string }>(a: T, b: T): number {
+  return a.remote < b.remote ? -1 : a.remote > b.remote ? 1 : 0;
+}
+
 /** One purge at a time across all requests; document_purges is the truth. */
 export class ErasureScheduler {
   private readonly db: ErasureDb;
@@ -130,9 +134,7 @@ export class ErasureScheduler {
   /** Seen FAILED once: a timed-out purge may still commit by the next tick. */
   private readonly failedOnce = new Set<string>();
   private readonly documentTypes = new Map<string, string | null>();
-  private readonly pendingWrites = new Set<Promise<void>>();
   private timer: ReturnType<typeof setInterval> | undefined;
-  private unsubscribe: (() => void) | undefined;
   private running: Promise<void> | undefined;
 
   constructor(options: ErasureSchedulerOptions) {
@@ -152,12 +154,6 @@ export class ErasureScheduler {
 
   start(): void {
     if (this.timer) return;
-    this.unsubscribe = this.options.eventBus?.subscribe<SyncPurgeRefusedEvent>(
-      SyncEventTypes.PURGE_REFUSED,
-      (_type, event) => {
-        this.track(this.recordRefusal(event));
-      },
-    );
     this.timer = setInterval(() => {
       this.tick().catch((error: unknown) => {
         this.logger.error("Erasure tick failed: @error", messageOf(error));
@@ -167,14 +163,11 @@ export class ErasureScheduler {
     this.logger.info(`Erasure scheduler started (tick ${this.intervalMs}ms)`);
   }
 
-  /** Stops the interval and waits for the tick and refusal writes in flight. */
+  /** Stops the interval and waits for the tick in flight. */
   async stop(): Promise<void> {
     if (this.timer) clearInterval(this.timer);
     this.timer = undefined;
-    this.unsubscribe?.();
-    this.unsubscribe = undefined;
     await this.running;
-    await Promise.allSettled([...this.pendingWrites]);
   }
 
   /** One pass; a call while one runs joins it. */
@@ -183,23 +176,6 @@ export class ErasureScheduler {
       this.running = undefined;
     });
     return this.running;
-  }
-
-  /** Resolves once refusals received so far are persisted. */
-  async flush(): Promise<void> {
-    await Promise.allSettled([...this.pendingWrites]);
-  }
-
-  private track(write: Promise<void>): void {
-    const tracked = write
-      .catch((error: unknown) => {
-        this.logger.error(
-          "Recording a refused marker failed: @error",
-          messageOf(error),
-        );
-      })
-      .finally(() => this.pendingWrites.delete(tracked));
-    this.pendingWrites.add(tracked);
   }
 
   private async runTick(): Promise<void> {
@@ -256,6 +232,18 @@ export class ErasureScheduler {
       markerOrdinal:
         row.markerOrdinal === null ? null : Number(row.markerOrdinal),
       deadline: new Date(row.deadline),
+    }));
+  }
+
+  private async storedRemotes(): Promise<StoredRemote[]> {
+    const rows = await this.db
+      .selectFrom("sync_remotes")
+      .select(["name", "collection_id"])
+      .orderBy("name")
+      .execute();
+    return rows.map((row) => ({
+      name: row.name,
+      collectionId: row.collection_id,
     }));
   }
 
@@ -445,13 +433,13 @@ export class ErasureScheduler {
     if (!tombstone) {
       throw new Error(`Purged document ${item.documentId} has no tombstone`);
     }
+    const graceOver =
+      this.now().getTime() - tombstone.purgedAtUtc.getTime() >=
+      this.markerGraceMs;
     if (!(await this.markerSettled(item))) {
       const ordinal = item.markerOrdinal ?? tombstone.ordinal;
       const convergence = await this.convergence(item.documentId, [ordinal]);
       const refused = await this.refusedRemotes(item);
-      const graceOver =
-        this.now().getTime() - tombstone.purgedAtUtc.getTime() >=
-        this.markerGraceMs;
       const delivered =
         convergence.pending.length === 0 && !convergence.unknown;
       if (delivered && refused.length === 0) {
@@ -476,7 +464,7 @@ export class ErasureScheduler {
 
     let failed: unknown;
     try {
-      await this.removeRemotes(item);
+      await this.removeRemotes(item, graceOver);
     } catch (error) {
       failed = error;
     }
@@ -502,78 +490,84 @@ export class ErasureScheduler {
     return rows.some((row) => kindOf(row.detail) === "outcome");
   }
 
+  /** Persisted refusals, each recorded once in the audit as it is first read. */
   private async refusedRemotes(item: Item): Promise<string[]> {
+    const refusals = await this.db
+      .selectFrom("sync_purge_refusals")
+      .select(["remote_name", "branch"])
+      .where("document_id", "=", item.documentId)
+      .orderBy("refused_at_utc_ms")
+      .orderBy("remote_name")
+      .execute();
+    if (refusals.length === 0) return [];
     const rows = await auditOf(this.db, item.requestId, item.documentId, [
       "marker-undelivered",
     ]);
-    const remotes = rows
-      .filter((row) => kindOf(row.detail) === "refusal")
-      .map((row) => (row.detail as { remote: string }).remote);
-    return [...new Set(remotes)].sort();
+    const recorded = new Set(
+      rows
+        .filter((row) => kindOf(row.detail) === "refusal")
+        .map((row) => {
+          const detail = row.detail as { remote: string; branch: string };
+          return `${detail.remote}\u0000${detail.branch}`;
+        }),
+    );
+    for (const refusal of refusals) {
+      const key = `${refusal.remote_name}\u0000${refusal.branch}`;
+      if (recorded.has(key)) continue;
+      recorded.add(key);
+      await this.audit(item, "marker-undelivered", {
+        kind: "refusal",
+        remote: refusal.remote_name,
+        branch: refusal.branch,
+      });
+    }
+    return [...new Set(refusals.map((r) => r.remote_name))].sort();
   }
 
-  private async recordRefusal(event: SyncPurgeRefusedEvent): Promise<void> {
-    const items = await this.db
-      .selectFrom("erasure_items")
-      .select(["requestId", "documentId"])
-      .where("documentId", "=", event.documentId)
-      .where("status", "in", ["purging", "purged"])
-      .execute();
-    for (const item of items) {
-      await appendAudit(this.db, this.secret, {
-        requestId: item.requestId,
-        documentId: item.documentId,
-        event: "marker-undelivered",
-        detail: {
-          kind: "refusal",
-          remote: event.remoteName,
-          branch: event.branch,
-          error: redactError(this.secret, {
-            name: "MarkerRefused",
-            message: event.errorMessage,
-          }).message,
-        },
-        at: this.now(),
+  /** Stored rows bound to the drive; one not loaded is deleted at markerGrace. */
+  private async removeRemotes(item: Item, graceOver: boolean): Promise<void> {
+    const bound = (await this.storedRemotes()).filter(
+      (row) => driveOf(row.collectionId) === item.documentId,
+    );
+    const sync = this.options.syncManager;
+    const loaded = new Set(sync?.list().map((remote) => remote.meta.name));
+    const removed: string[] = [];
+    const unloaded: string[] = [];
+    for (const row of bound) {
+      if (sync && loaded.has(row.name)) {
+        await sync.remove(row.name);
+        removed.push(row.name);
+      } else {
+        unloaded.push(row.name);
+      }
+    }
+    if (unloaded.length > 0 && !graceOver) {
+      throw new Error(
+        `Remotes bound to drive ${item.documentId} are stored but not loaded: ${unloaded.join(", ")}`,
+      );
+    }
+    if (unloaded.length > 0) await this.deleteStoredRemotes(unloaded);
+
+    const recorded = await auditOf(this.db, item.requestId, item.documentId, [
+      "remotes-removed",
+    ]);
+    if (recorded.length === 0 || bound.length > 0) {
+      await this.audit(item, "remotes-removed", {
+        remotes: removed,
+        ...(unloaded.length > 0 ? { deletedFromStorage: unloaded } : {}),
       });
     }
   }
 
-  /** Only remotes bound to the purged drive's own collection. */
-  private async removeRemotes(item: Item): Promise<void> {
-    const sync = this.options.syncManager;
-    let removed: string[] = [];
-    if (sync) {
-      const bound = sync
-        .list()
-        .filter(
-          (remote) => remote.meta.collectionId.driveId === item.documentId,
-        )
-        .map((remote) => remote.meta.name);
-      for (const name of bound) {
-        await sync.remove(name);
-        removed.push(name);
-      }
-    } else {
-      const rows = await this.db
-        .selectFrom("sync_remotes")
-        .select(["name", "collection_id"])
+  /** What SyncManager.remove deletes; cursors, holds, dead letters cascade. */
+  private async deleteStoredRemotes(names: string[]): Promise<void> {
+    await this.db.transaction().execute(async (trx) => {
+      await trx
+        .deleteFrom("sync_received_markers")
+        .where("remote_name", "in", names)
         .execute();
-      removed = [];
-      const bound = rows
-        .filter((row) => driveOf(row.collection_id) === item.documentId)
-        .map((row) => row.name);
-      if (bound.length > 0) {
-        throw new Error(
-          `No sync manager to remove the remotes bound to drive ${item.documentId}: ${bound.join(", ")}`,
-        );
-      }
-    }
-    const recorded = await auditOf(this.db, item.requestId, item.documentId, [
-      "remotes-removed",
-    ]);
-    if (recorded.length === 0 || removed.length > 0) {
-      await this.audit(item, "remotes-removed", { remotes: removed });
-    }
+      await trx.deleteFrom("sync_remotes").where("name", "in", names).execute();
+    });
   }
 
   private async erasePermissions(item: Item): Promise<void> {
@@ -614,21 +608,17 @@ export class ErasureScheduler {
     );
   }
 
-  /** Fails closed: no delivery tracking while sync_remotes has rows. */
+  /** Fails closed: a stored remote owed the ordinal but not loaded is unknown. */
   private async convergence(
     documentId: string,
     ordinals: number[],
   ): Promise<Convergence> {
+    const stored = await this.storedRemotes();
     const sync = this.options.syncManager;
     if (!sync || !supportsDeliveryTracking(sync)) {
-      const rows = await this.db
-        .selectFrom("sync_remotes")
-        .select("name")
-        .orderBy("name")
-        .execute();
-      if (rows.length === 0) return { pending: [] };
+      if (stored.length === 0) return { pending: [] };
       return {
-        pending: rows.map((row) => ({
+        pending: stored.map((row) => ({
           remote: row.name,
           state: "unknown" as const,
         })),
@@ -642,11 +632,27 @@ export class ErasureScheduler {
         if (!known || entry.state === "held") byRemote.set(entry.remote, entry);
       }
     }
-    return {
-      pending: [...byRemote.values()].sort((a, b) =>
-        a.remote < b.remote ? -1 : a.remote > b.remote ? 1 : 0,
-      ),
-    };
+    const loaded = new Set(sync.list().map((remote) => remote.meta.name));
+    const unloaded = stored.filter((row) => !loaded.has(row.name));
+    if (unloaded.length > 0) {
+      const memberships = await this.db
+        .selectFrom("document_collections")
+        .select(["collectionId", "leftOrdinal"])
+        .where("documentId", "=", documentId)
+        .execute();
+      for (const row of unloaded) {
+        const owed = ordinals.some((ordinal) =>
+          memberships.some(
+            (m) =>
+              m.collectionId === row.collectionId &&
+              (m.leftOrdinal === null || ordinal < Number(m.leftOrdinal)),
+          ),
+        );
+        if (owed)
+          byRemote.set(row.name, { remote: row.name, state: "unknown" });
+      }
+    }
+    return { pending: [...byRemote.values()].sort(byName) };
   }
 
   /** A waiting row each tick the pending list changes. */
