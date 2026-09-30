@@ -854,7 +854,7 @@ function generateNewApiSchema(
 
     input ${documentName}_SearchFilterInput {
       parentId: String
-      identifiers: [String!]
+      identifiers: [String!] @deprecated(reason: "Ignored. Filter by parentId.")
     }
   `;
 
@@ -905,7 +905,7 @@ function generateNewApiSchema(
   const queries = `
     type ${documentName}Queries {
       """Get a specific ${documentName} document by identifier"""
-      document(identifier: String!, view: ${documentName}_ViewFilterInput): ${documentName}_DocumentWithChildren
+      document(idOrSlug: String, identifier: String @deprecated(reason: "Use idOrSlug."), view: ${documentName}_ViewFilterInput): ${documentName}_DocumentWithChildren
 
       """Get all ${documentName} documents (paged)"""
       documents(paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
@@ -914,10 +914,10 @@ function generateNewApiSchema(
       findDocuments(search: ${documentName}_SearchFilterInput, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
 
       """Get outgoing relationships of a ${documentName} document"""
-      documentOutgoingRelationships(sourceIdentifier: String!, relationshipType: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+      documentOutgoingRelationships(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), relationshipType: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
 
       """Get incoming relationships to a ${documentName} document"""
-      documentIncomingRelationships(targetIdentifier: String!, relationshipType: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+      documentIncomingRelationships(targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
     }
   `;
 
@@ -972,9 +972,9 @@ function generateNewApiSchema(
 
   // Mutations nested under ${documentName} namespace
   const createDocumentMutation = initialStateInputSchema
-    ? `createDocument(name: String!, parentIdentifier: String, slug: String, preferredEditor: String, initialState: ${documentName}_InitialStateInput): ${documentName}MutationResult!`
-    : `createDocument(name: String!, parentIdentifier: String, preferredEditor: String): ${documentName}MutationResult!`;
-  const createEmptyDocumentMutation = `createEmptyDocument(parentIdentifier: String): ${documentName}MutationResult!`;
+    ? `createDocument(name: String!, parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug."), slug: String, preferredEditor: String, initialState: ${documentName}_InitialStateInput): ${documentName}MutationResult!`
+    : `createDocument(name: String!, parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug."), preferredEditor: String): ${documentName}MutationResult!`;
+  const createEmptyDocumentMutation = `createEmptyDocument(parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")): ${documentName}MutationResult!`;
 
   const operationMutations =
     specification?.modules
@@ -983,9 +983,9 @@ function generateNewApiSchema(
           .filter((op) => op.name && hasValidSchema(op.schema))
           .flatMap((op) => [
             // Sync mutation
-            `${camelCase(op.name!)}(docId: PHID!, input: ${documentName}_${pascalCase(op.name!)}Input!): ${documentName}MutationResult!`,
+            `${camelCase(op.name!)}(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ${documentName}_${pascalCase(op.name!)}Input!): ${documentName}MutationResult!`,
             // Async mutation
-            `${camelCase(op.name!)}Async(docId: PHID!, input: ${documentName}_${pascalCase(op.name!)}Input!): String!`,
+            `${camelCase(op.name!)}Async(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ${documentName}_${pascalCase(op.name!)}Input!): String!`,
           ]),
       )
       .join("\n        ") ?? "";
