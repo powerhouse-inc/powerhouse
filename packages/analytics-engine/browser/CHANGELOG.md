@@ -1,3 +1,7 @@
+## 6.2.3-staging.0 (2026-09-30)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
 ## 6.2.3-dev.34 (2026-09-30)
 
 This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
