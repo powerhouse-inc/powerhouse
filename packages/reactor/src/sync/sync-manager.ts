@@ -1411,6 +1411,11 @@ export class SyncManager
     return this.syncStatusTracker.onChange(callback);
   }
 
+  /** Settles once the remotes' received markers are stored; rejects if one failed. */
+  async receiptsStored(remoteNames?: Iterable<string>): Promise<void> {
+    await Promise.all(this.markerWritesOf(remoteNames));
+  }
+
   private recordPlanKeyMapping(planKey: string, jobId: string): void {
     if (
       !this.planKeyToJobUuid.has(planKey) &&
@@ -1879,11 +1884,6 @@ export class SyncManager
         this.writeMarker(name, id, () => this.markerStorage.remove(name, id));
       }
     }
-  }
-
-  /** Settles once the remotes' received markers are stored; rejects if one failed. */
-  async receiptsStored(remoteNames?: Iterable<string>): Promise<void> {
-    await Promise.all(this.markerWritesOf(remoteNames));
   }
 
   private markerWritesOf(remoteNames?: Iterable<string>): Promise<void>[] {

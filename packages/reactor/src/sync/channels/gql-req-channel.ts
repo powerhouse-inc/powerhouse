@@ -368,6 +368,10 @@ export class GqlRequestChannel implements IChannel {
     };
   }
 
+  forgetMarkerRefusal(documentId: string, branch: string): void {
+    this.refusedMarkers.delete(`${documentId}\u0000${branch}`);
+  }
+
   private async hearPeer(
     manifest: PeerManifest | null,
     undelivered?: readonly SyncOperation[],
@@ -858,10 +862,6 @@ export class GqlRequestChannel implements IChannel {
     return (
       this.peerManifest?.features[MARKER_REFUSAL_FEATURE]?.includes(1) === true
     );
-  }
-
-  forgetMarkerRefusal(documentId: string, branch: string): void {
-    this.refusedMarkers.delete(`${documentId}\u0000${branch}`);
   }
 
   private rejectsAgreementFields(error: unknown): boolean {
