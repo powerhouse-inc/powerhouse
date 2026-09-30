@@ -155,10 +155,11 @@ export interface IProcessorManager {
    * running, or its delivery threw) gets a processor too: it receives only the
    * drive's `DELETE_DOCUMENT`, or its `PURGE_DOCUMENT` once purged, and is
    * disconnected. That delivery is not awaited: it runs after this resolves,
-   * so a processor that hangs on it does not hold the registration. If
-   * processors from an earlier registration under the same identifier are
-   * still draining, a call of the previous factory is still in flight, or an
-   * owed deletion of the previous registration is still being delivered, the
+   * so a processor that hangs on it does not hold the registration, nor a
+   * later one: a drive whose deletion is still being delivered gets it from
+   * the new registration only if that delivery leaves it owed. If processors
+   * from an earlier registration under the same identifier are still
+   * draining, or a call of the previous factory is still in flight, the
    * factory runs after they have settled, so awaiting a re-registration of
    * a factory from inside that factory or one of its processors'
    * `onOperations` waits on itself.

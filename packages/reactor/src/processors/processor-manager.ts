@@ -95,10 +95,8 @@ export class ProcessorManager
   private draining: Map<string, Promise<void>> = new Map();
   // Deleted drives some cursor row still owes the deletion, with that deletion.
   private deletedDrives: Map<string, OperationWithContext> = new Map();
-  // Deletions in delivery per factory id, until each processor has disconnected.
-  private erasures: Map<string, Promise<void>> = new Map();
-  // factoryId:driveId pairs whose owed deletion is being delivered.
-  private erasing: Set<string> = new Set();
+  // factoryId:driveId pairs whose deletion is being delivered, until it settles.
+  private erasing: Map<string, Promise<void>> = new Map();
   // Creation headers of known and owed drives; a purge drops a drive's.
   private driveHeaders: Map<string, PHDocumentHeader> = new Map();
   private stopped = false;
@@ -180,7 +178,7 @@ export class ProcessorManager
       );
     }
 
-    // Not awaited, like a live deletion: tracked for the next (un)registration.
+    // Not awaited, like a live deletion; nor does a later registration wait.
     this.eraseOwed(identifier, factory, previous);
     await Promise.all([...removals, ...runs.map((run) => run())]);
   }
@@ -282,7 +280,7 @@ export class ProcessorManager
       for (const { tracked, queue } of this.processorsByDrive.get(driveId) ??
         []) {
         // Not awaited: the pass must not wait out the drive's queues.
-        this.trackErasure(tracked.factoryId, queue.close());
+        void queue.close();
       }
       this.processorsByDrive.delete(driveId);
       this.pruneDeletedDrive(driveId);
@@ -409,7 +407,7 @@ export class ProcessorManager
     const settled = queue
       .erase(share, deletion, check)
       .then((delivered) => this.settleErased(tracked, delivered, deletion));
-    this.trackErasure(tracked.factoryId, settled);
+    this.holdErasure(tracked.factoryId, tracked.driveId, settled);
     return behindReplay ? Promise.resolve() : settled;
   }
 
@@ -456,9 +454,7 @@ export class ProcessorManager
     const factory = this.factoryRegistry.get(factoryId);
     const deletion = this.deletedDrives.get(driveId);
     if (!factory || !deletion || this.stopped) return;
-    const erasure = this.eraseDrive(factoryId, factory, driveId, deletion);
-    this.trackErasure(factoryId, erasure);
-    await erasure;
+    await this.eraseDrive(factoryId, factory, driveId, deletion);
   }
 
   /** Forgets a deleted drive once no cursor row owes its deletion. */
@@ -482,20 +478,22 @@ export class ProcessorManager
     );
     if (!owesAny || this.stopped) return;
 
-    const erasure = (async () => {
+    void (async () => {
       // A re-registered factory starts once its previous instance is gone.
       await previous;
       if (this.factoryRegistry.get(factoryId) !== factory) return;
-      const owed = new Map<string, OperationWithContext>();
+      const owed = new Set<string>();
       for (const row of this.cursorCache.values()) {
-        const deletion = this.deletedDrives.get(row.driveId);
-        if (row.factoryId === factoryId && deletion) {
-          owed.set(row.driveId, deletion);
+        if (
+          row.factoryId === factoryId &&
+          this.deletedDrives.has(row.driveId)
+        ) {
+          owed.add(row.driveId);
         }
       }
       await Promise.all(
-        [...owed].map(([driveId, deletion]) =>
-          this.eraseDrive(factoryId, factory, driveId, deletion),
+        [...owed].map((driveId) =>
+          this.eraseOwedDrive(factoryId, factory, driveId),
         ),
       );
     })().catch((error: unknown) => {
@@ -505,19 +503,40 @@ export class ProcessorManager
         error,
       );
     });
-    this.trackErasure(factoryId, erasure);
   }
 
-  /** A re-registration or unregistration of `factoryId` waits for `erasure`. */
-  private trackErasure(factoryId: string, erasure: Promise<void>): void {
-    const tracked = Promise.all([this.erasures.get(factoryId), erasure]).then(
+  /** After any delivery of the pair's deletion in flight, if still owed. */
+  private async eraseOwedDrive(
+    factoryId: string,
+    factory: ProcessorFactory,
+    driveId: string,
+  ): Promise<void> {
+    const key = `${factoryId}:${driveId}`;
+    for (let held = this.erasing.get(key); held; held = this.erasing.get(key)) {
+      await held;
+    }
+    if (this.stopped || this.factoryRegistry.get(factoryId) !== factory) return;
+    const owes = [...this.cursorCache.values()].some(
+      (row) => row.factoryId === factoryId && row.driveId === driveId,
+    );
+    const deletion = this.deletedDrives.get(driveId);
+    if (!owes || !deletion) return;
+    await this.eraseDrive(factoryId, factory, driveId, deletion);
+  }
+
+  /** Marks the pair's deletion as being delivered until `erasure` settles. */
+  private holdErasure(
+    factoryId: string,
+    driveId: string,
+    erasure: Promise<unknown>,
+  ): void {
+    const key = `${factoryId}:${driveId}`;
+    const held = Promise.allSettled([this.erasing.get(key), erasure]).then(
       () => undefined,
     );
-    this.erasures.set(factoryId, tracked);
-    void tracked.then(() => {
-      if (this.erasures.get(factoryId) === tracked) {
-        this.erasures.delete(factoryId);
-      }
+    this.erasing.set(key, held);
+    void held.then(() => {
+      if (this.erasing.get(key) === held) this.erasing.delete(key);
     });
   }
 
@@ -527,13 +546,19 @@ export class ProcessorManager
     driveId: string,
     erase: () => Promise<void>,
   ): Promise<boolean> {
-    const key = `${factoryId}:${driveId}`;
-    if (this.erasing.has(key)) return false;
-    this.erasing.add(key);
+    if (this.erasing.has(`${factoryId}:${driveId}`)) return false;
+    let release!: () => void;
+    this.holdErasure(
+      factoryId,
+      driveId,
+      new Promise<void>((resolve) => {
+        release = resolve;
+      }),
+    );
     try {
       await erase();
     } finally {
-      this.erasing.delete(key);
+      release();
     }
     return true;
   }
@@ -734,9 +759,8 @@ export class ProcessorManager
         this.owedFailures.delete(processorId);
     }
 
+    // Deletions in delivery are not waited on; their pairs stay claimed.
     const closing: Promise<void>[] = [];
-    const erasure = this.erasures.get(identifier);
-    if (erasure) closing.push(erasure);
     for (const slot of this.pendingSlots) {
       if (slot.factoryId !== identifier) continue;
       this.pendingSlots.delete(slot);
