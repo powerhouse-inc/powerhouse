@@ -9,6 +9,7 @@ on:
       - "packages/reactor-api/**"
       - "packages/reactor-drive/**"
       - "packages/reactor-attachments/**"
+      - "packages/reactor-privacy/**"
       - "test/test-connect/**"
       - "test/test-client/**"
       - ".github/workflows/check-pr-reactor.yml"
@@ -19,6 +20,7 @@ on:
       - "packages/reactor-api/**"
       - "packages/reactor-drive/**"
       - "packages/reactor-attachments/**"
+      - "packages/reactor-privacy/**"
       - "test/test-connect/**"
       - "test/test-client/**"
       - ".github/workflows/check-pr-reactor.yml"
@@ -82,6 +84,7 @@ jobs:
           @powerhousedao/reactor...
           @powerhousedao/reactor-drive...
           @powerhousedao/reactor-attachments...
+          @powerhousedao/reactor-privacy...
           @powerhousedao/reactor-bench-host...
 
       # Coverage is off: nothing in CI reads the report.
@@ -99,7 +102,7 @@ jobs:
         run: pnpm lint
         working-directory: packages/reactor
 
-      # reactor-drive and reactor-attachments consume @powerhousedao/reactor
+      # reactor-drive, reactor-attachments and reactor-privacy consume @powerhousedao/reactor
       # through its built dist, so `test:ci -- related <changed files>` in
       # check-commit.yml never selects their suites when only packages/reactor
       # changes. Running them here, where the trigger already fires on
