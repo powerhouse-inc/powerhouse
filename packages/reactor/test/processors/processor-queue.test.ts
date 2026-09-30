@@ -110,6 +110,7 @@ function harness(
     confirmedThrough?: () => number;
     purged?: (ids: string[]) => Promise<ReadonlySet<string>>;
     lookupRetryMs?: number;
+    lookupRetries?: number;
   } = {},
 ): Harness {
   const delivered: number[][] = [];
@@ -143,6 +144,7 @@ function harness(
     },
     purged: options.purged ?? (() => Promise.resolve(new Set())),
     lookupRetryMs: options.lookupRetryMs ?? 1,
+    lookupRetries: options.lookupRetries,
     logger: createMockLogger(),
   });
   return { queue, cursor, delivered, persisted, processor };
@@ -788,6 +790,65 @@ describe("ProcessorQueue", () => {
 
       expect(processor.onOperations).not.toHaveBeenCalled();
       expect(cursor).toMatchObject({ status: "active", lastOrdinal: 4 });
+      expect(processor.onDisconnect).toHaveBeenCalled();
+    });
+
+    it("parks an active cursor once the lookup's retries run out, then resumes", async () => {
+      const state = { failing: true, lookups: 0 };
+      const { queue, cursor, delivered } = harness({
+        lastOrdinal: 4,
+        index: [op(5), op(6), op(7)],
+        lookupRetryMs: 20,
+        lookupRetries: 2,
+        purged: () => {
+          state.lookups++;
+          return state.failing
+            ? Promise.reject(new Error("down"))
+            : Promise.resolve(new Set());
+        },
+      });
+      const failed = () => {
+        const purged = Promise.reject<ReadonlySet<string>>(new Error("down"));
+        purged.catch(() => undefined);
+        return { purged };
+      };
+
+      const first = queue.live([op(5)], failed());
+      // Queued during the retries, so it runs parked.
+      await vi.waitFor(() => expect(state.lookups).toBeGreaterThan(0), {
+        interval: 1,
+      });
+      void queue.advance(7);
+      await first;
+      expect(cursor).toMatchObject({ status: "active", lastError: "down" });
+      // Later batches neither wait on it nor move its cursor.
+      await queue.live([op(6)], failed());
+      await vi.waitFor(() => expect(state.lookups).toBeGreaterThan(4));
+      expect(cursor.lastOrdinal).toBe(4);
+      expect(delivered).toEqual([]);
+
+      state.failing = false;
+      await vi.waitFor(() => expect(cursor.lastOrdinal).toBe(7));
+      expect(delivered.flat()).toEqual([5, 6, 7]);
+      expect(cursor).toMatchObject({ status: "active", lastError: undefined });
+    });
+
+    it("parks a backfill whose lookup keeps failing, and stops once closed", async () => {
+      const { queue, cursor, processor } = harness({
+        index: [op(1), op(2)],
+        lookupRetries: 1,
+        purged: () => Promise.reject(new Error("down")),
+      });
+
+      await queue.backfill();
+      expect(cursor).toMatchObject({
+        status: "active",
+        lastOrdinal: 0,
+        lastError: "down",
+      });
+      await queue.close();
+
+      expect(processor.onOperations).not.toHaveBeenCalled();
       expect(processor.onDisconnect).toHaveBeenCalled();
     });
 

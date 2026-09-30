@@ -266,6 +266,7 @@ describe("owed drive deletions [Postgres]", () => {
   type QueueOptions = {
     purged: (ids: string[]) => Promise<ReadonlySet<string>>;
     lookupRetryMs?: number;
+    lookupRetries?: number;
   };
 
   // Every tombstone lookup of the manager and of `driveId`'s processor fails.
@@ -289,7 +290,7 @@ describe("owed drive deletions [Postgres]", () => {
     return { options, state };
   }
 
-  it("errors a processor whose tombstone lookup keeps failing, and retry() resumes it", async () => {
+  it("parks a processor whose tombstone lookup keeps failing, and resumes it once the lookup answers", async () => {
     const driveId = await createDrive();
     const processor = recorder();
     await manager().registerFactory("pkg", (h) =>
@@ -297,21 +298,24 @@ describe("owed drive deletions [Postgres]", () => {
     );
     const { options, state } = failLookups(driveId);
     options.lookupRetryMs = 1;
+    options.lookupRetries = 3;
 
     const other = await createDrive();
     const tracked = () =>
       manager()
         .getAll()
         .find((t) => t.driveId === driveId);
-    await vi.waitFor(() => expect(tracked()?.status).toBe("errored"), {
+    await vi.waitFor(() => expect(tracked()?.lastError).toBe("db down"), {
       timeout: 10_000,
     });
+    expect(tracked()?.status).toBe("active");
     expect(processor.events).not.toContain(`CREATE_DOCUMENT ${other}`);
 
     state.failing = false;
-    await tracked()!.retry();
-    expect(tracked()?.status).toBe("active");
-    expect(processor.events).toContain(`CREATE_DOCUMENT ${other}`);
+    await vi.waitFor(() =>
+      expect(processor.events).toContain(`CREATE_DOCUMENT ${other}`),
+    );
+    expect(tracked()).toMatchObject({ status: "active", lastError: undefined });
   }, 30_000);
 
   it("stops retrying a failing tombstone lookup when the reactor is killed", async () => {
