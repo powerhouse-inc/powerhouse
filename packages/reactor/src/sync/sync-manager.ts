@@ -698,14 +698,16 @@ export class SyncManager implements ISyncManager {
       }
     }
     for (const remote of this.remotes.values()) {
-      const unsent = remote.channel.outbox.items.filter(
+      // Sent or in flight too: a lost response or a push retry would resend it.
+      const stale = remote.channel.outbox.items.filter(
         (item) =>
           item.documentId === documentId &&
-          item.status === SyncOperationStatus.Unknown &&
-          item.emittedCount === 0 &&
+          item.status < SyncOperationStatus.Applied &&
           !carriesMarker(item),
       );
-      if (unsent.length > 0) remote.channel.outbox.remove(...unsent);
+      // Applied, so a served cursor is not pinned below what is gone.
+      for (const item of stale) item.executed();
+      if (stale.length > 0) remote.channel.outbox.remove(...stale);
       const dead = remote.channel.deadLetter.items.filter(
         (item) => item.documentId === documentId,
       );
@@ -1350,6 +1352,8 @@ export class SyncManager implements ISyncManager {
           syncOp.error?.message ?? "unknown",
         );
         if (syncOp.error?.source !== ChannelErrorSource.Outbox) continue;
+        // A local pre-purge entry whose push failed is not a refused marker.
+        if (syncOp.operations.length > 0 && !carriesMarker(syncOp)) continue;
         void this.eventBus
           .emit(SyncEventTypes.PURGE_REFUSED, {
             remoteName: remote.meta.name,
@@ -2240,6 +2244,10 @@ export class SyncManager implements ISyncManager {
     mode: OutboxMode,
     chain: EmitChain,
   ): void {
+    operations = operations.filter(
+      (op) =>
+        isPurgeMarker(op) || !this.purgedDocumentIds.has(op.context.documentId),
+    );
     if (operations.length === 0) {
       return;
     }
