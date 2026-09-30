@@ -667,17 +667,6 @@ The remaining lookups are the job-start check and the read-model fence.
 
 ## Pre-existing bugs found, not fixed
 
-- **Load of a document's creation and deletion under `documentDecisions`.**
-  A load job carrying `CREATE_DOCUMENT`, `UPGRADE_DOCUMENT` and
-  `DELETE_DOCUMENT` of a document the receiver does not hold never applies.
-  `evaluateByPosition` reads the new stream at -1 (`decision/evaluation.ts:180`),
-  gets `DocumentNotFoundError`, and `executor/job-result-handler.ts:139`
-  defers the job on its own id; nothing else will create it. Sibling-scope
-  operations of the same document then fail and quarantine, and the inbox
-  stalls (seen in about one of three e2e runs under `authEnforcement`, when
-  the drive's relationship operations are served before the child's). Fails
-  on stage 0 too. Pinned as `it.fails` in
-  `packages/reactor/test/executor/load-create-delete.test.ts`.
 - **Agreement and decision-field fallbacks never fire.**
   `sync/channels/gql-req-channel.ts:868` (`isAgreementRejection`) and `:897`
   (`rejectsDecisionFields`) match only category `"graphql"`. Apollo Server 5
