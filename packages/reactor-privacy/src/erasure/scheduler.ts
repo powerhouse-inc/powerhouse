@@ -2,6 +2,8 @@ import {
   DEFAULT_DRIVE_CONTAINER_TYPES,
   DriveCollectionId,
   JobStatus,
+  PURGE_LOCK_BUCKETS,
+  PURGE_NS,
   supportsDeliveryTracking,
   type DocumentPurgeService,
   type IEventBus,
@@ -19,7 +21,6 @@ import {
 import {
   appendAudit,
   auditOf,
-  readTombstone,
   type ErasureDb,
   type Tombstone,
 } from "./ledger.js";
@@ -27,6 +28,7 @@ import { redactDetail, redactError, redactText } from "./redact.js";
 
 export const DEFAULT_ERASURE_INTERVAL_MS = 60_000;
 export const DEFAULT_MARKER_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
+export const DEFAULT_PURGE_TIMEOUT_MS = 15 * 60 * 1000;
 
 /** An unsigned marker is refused by every receiver. */
 export class ErasureSignerMissingError extends Error {
@@ -64,6 +66,8 @@ export type ErasureSchedulerOptions = {
   driveContainerTypes?: ReadonlySet<string>;
   intervalMs?: number;
   markerGraceMs?: number;
+  /** A purge with no tombstone after this long is enqueued again. */
+  purgeTimeoutMs?: number;
   now?: () => Date;
   logger?: ErasureLogger;
 };
@@ -75,6 +79,7 @@ type Item = {
   allowLarge: boolean;
   markerOrdinal: number | null;
   deadline: Date;
+  updatedAt: Date;
 };
 
 type PendingRemote = {
@@ -89,6 +94,12 @@ type Convergence = {
 };
 
 type StoredRemote = { name: string; collectionId: string };
+
+/** Reads shared by every item of one tick. */
+type TickReads = {
+  tombstones: Map<string, Tombstone>;
+  remotes: () => Promise<StoredRemote[]>;
+};
 
 const SILENT: ErasureLogger = { info() {}, warn() {}, error() {} };
 
@@ -119,6 +130,18 @@ function byName<T extends { remote: string }>(a: T, b: T): number {
   return a.remote < b.remote ? -1 : a.remote > b.remote ? 1 : 0;
 }
 
+function tombstoneOf(row: {
+  ordinal: string | number;
+  removedRows: Tombstone["removedRows"];
+  purgedAtUtc: Date | string;
+}): Tombstone {
+  return {
+    ordinal: Number(row.ordinal),
+    removedRows: row.removedRows,
+    purgedAtUtc: new Date(row.purgedAtUtc),
+  };
+}
+
 /** One purge at a time across all requests; document_purges is the truth. */
 export class ErasureScheduler {
   private readonly db: ErasureDb;
@@ -127,12 +150,13 @@ export class ErasureScheduler {
   private readonly driveTypes: ReadonlySet<string>;
   private readonly intervalMs: number;
   private readonly markerGraceMs: number;
+  private readonly purgeTimeoutMs: number;
   private readonly now: () => Date;
   private readonly logger: ErasureLogger;
   /** Purge job per item; lost on restart like the job tracker's own entries. */
   private readonly jobIds = new Map<string, string>();
-  /** Seen FAILED once: a timed-out purge may still commit by the next tick. */
-  private readonly failedOnce = new Set<string>();
+  /** Failed or abandoned purges whose transaction may still be open. */
+  private readonly unsettled = new Set<string>();
   private readonly documentTypes = new Map<string, string | null>();
   private timer: ReturnType<typeof setInterval> | undefined;
   private running: Promise<void> | undefined;
@@ -148,6 +172,7 @@ export class ErasureScheduler {
     );
     this.intervalMs = options.intervalMs ?? DEFAULT_ERASURE_INTERVAL_MS;
     this.markerGraceMs = options.markerGraceMs ?? DEFAULT_MARKER_GRACE_MS;
+    this.purgeTimeoutMs = options.purgeTimeoutMs ?? DEFAULT_PURGE_TIMEOUT_MS;
     this.now = options.now ?? (() => new Date());
     this.logger = options.logger ?? SILENT;
   }
@@ -156,7 +181,10 @@ export class ErasureScheduler {
     if (this.timer) return;
     this.timer = setInterval(() => {
       this.tick().catch((error: unknown) => {
-        this.logger.error("Erasure tick failed: @error", messageOf(error));
+        this.logger.error(
+          "Erasure tick failed: @error",
+          redactText(this.secret, messageOf(error)),
+        );
       });
     }, this.intervalMs);
     this.timer.unref();
@@ -179,15 +207,17 @@ export class ErasureScheduler {
   }
 
   private async runTick(): Promise<void> {
+    await this.recoverFailed();
     const items = await this.activeItems();
+    const reads = await this.tickReads(items);
 
     for (const item of items.filter((i) => i.status === "purging")) {
-      await this.guarded(item, () => this.advancePurging(item));
+      await this.guarded(item, () => this.advancePurging(item, reads));
     }
     for (const item of items.filter((i) => i.status === "purged")) {
-      await this.guarded(item, () => this.advancePurged(item));
+      await this.guarded(item, () => this.advancePurged(item, reads));
     }
-    await this.advanceWaiting(items);
+    await this.advanceWaiting(items, reads);
     await this.settleRequests();
   }
 
@@ -217,6 +247,7 @@ export class ErasureScheduler {
         "i.status",
         "i.allowLarge",
         "i.markerOrdinal",
+        "i.updatedAt",
         "r.deadline",
       ])
       .where("i.status", "in", ["waiting", "purging", "purged"])
@@ -232,7 +263,26 @@ export class ErasureScheduler {
       markerOrdinal:
         row.markerOrdinal === null ? null : Number(row.markerOrdinal),
       deadline: new Date(row.deadline),
+      updatedAt: new Date(row.updatedAt),
     }));
+  }
+
+  private async tickReads(items: Item[]): Promise<TickReads> {
+    const ids = [...new Set(items.map((item) => item.documentId))];
+    const tombstones = new Map<string, Tombstone>();
+    if (ids.length > 0) {
+      const rows = await this.db
+        .selectFrom("document_purges")
+        .select(["documentId", "ordinal", "removedRows", "purgedAtUtc"])
+        .where(sql<boolean>`"documentId" = any(${ids}::text[])`)
+        .execute();
+      for (const row of rows) tombstones.set(row.documentId, tombstoneOf(row));
+    }
+    let remotes: Promise<StoredRemote[]> | undefined;
+    return {
+      tombstones,
+      remotes: () => (remotes ??= this.storedRemotes()),
+    };
   }
 
   private async storedRemotes(): Promise<StoredRemote[]> {
@@ -247,7 +297,70 @@ export class ErasureScheduler {
     }));
   }
 
-  private async advanceWaiting(items: Item[]): Promise<void> {
+  /** A failed item whose purge committed after all, e.g. after a timeout. */
+  private async recoverFailed(): Promise<void> {
+    const rows = await this.db
+      .selectFrom("erasure_items as i")
+      .innerJoin("document_purges as p", "p.documentId", "i.documentId")
+      .innerJoin("erasure_requests as r", "r.requestId", "i.requestId")
+      .select([
+        "i.requestId",
+        "i.documentId",
+        "i.allowLarge",
+        "i.updatedAt",
+        "r.deadline",
+        "p.ordinal",
+        "p.removedRows",
+        "p.purgedAtUtc",
+      ])
+      .where("i.status", "=", "failed")
+      .execute();
+    for (const row of rows) {
+      const item: Item = {
+        requestId: row.requestId,
+        documentId: row.documentId,
+        status: "failed",
+        allowLarge: row.allowLarge,
+        markerOrdinal: null,
+        deadline: new Date(row.deadline),
+        updatedAt: new Date(row.updatedAt),
+      };
+      await this.guarded(item, async () => {
+        await this.markPurged(item, tombstoneOf(row), "failed");
+        await this.reopen(item.requestId);
+      });
+    }
+  }
+
+  /** A failed request with no failed item left is open again. */
+  private async reopen(requestId: string): Promise<void> {
+    const result = await this.db
+      .updateTable("erasure_requests")
+      .set({ status: "open" })
+      .where("requestId", "=", requestId)
+      .where("status", "=", "failed")
+      .where((eb) =>
+        eb.not(
+          eb.exists(
+            eb
+              .selectFrom("erasure_items")
+              .select("documentId")
+              .where("requestId", "=", requestId)
+              .where("status", "=", "failed"),
+          ),
+        ),
+      )
+      .executeTakeFirst();
+    if (Number(result.numUpdatedRows) === 0) return;
+    await appendAudit(this.db, this.secret, {
+      requestId,
+      documentId: null,
+      event: "reopened",
+      at: this.now(),
+    });
+  }
+
+  private async advanceWaiting(items: Item[], reads: TickReads): Promise<void> {
     const waiting = items.filter((i) => i.status === "waiting");
     if (waiting.length === 0) return;
     await this.loadDocumentTypes(waiting.map((i) => i.documentId));
@@ -259,12 +372,15 @@ export class ErasureScheduler {
     }[] = [];
     for (const item of this.inPurgeOrder(waiting)) {
       try {
-        const tombstone = await readTombstone(this.db, item.documentId);
+        const tombstone = reads.tombstones.get(item.documentId);
         if (tombstone) {
           await this.markPurged(item, tombstone, "waiting");
           continue;
         }
-        const convergence = await this.deleteConvergence(item.documentId);
+        const convergence = await this.deleteConvergence(
+          item.documentId,
+          reads,
+        );
         const converged =
           convergence.pending.length === 0 && !convergence.unknown;
         if (!converged) await this.recordWaiting(item, "delete", convergence);
@@ -277,6 +393,8 @@ export class ErasureScheduler {
     }
 
     if (items.some((i) => i.status === "purging")) return;
+    if (ready.length === 0) return;
+    if (!(await this.previousPurgesEnded())) return;
     for (const next of ready) {
       if (!(await this.eligible(next.item, items))) continue;
       await this.enqueue(next.item, next.converged, next.convergence);
@@ -338,6 +456,42 @@ export class ErasureScheduler {
     }
   }
 
+  /** A timed-out purge's transaction can outlive its job: wait for its lock. */
+  private async previousPurgesEnded(): Promise<boolean> {
+    if (this.unsettled.size === 0) return true;
+    const ids = [...this.unsettled];
+    if (await this.purgeLockTaken(ids)) {
+      this.logger.info(
+        "Erasure waits for an earlier purge transaction to end before the next purge",
+      );
+      return false;
+    }
+    for (const id of ids) this.unsettled.delete(id);
+    return true;
+  }
+
+  /** An exclusive purge lock on one of the ids' buckets, held or awaited. */
+  private async purgeLockTaken(ids: string[]): Promise<boolean> {
+    const result = await sql<{ taken: boolean }>`
+      select exists (
+        select 1 from pg_catalog.pg_locks
+        where locktype = 'advisory'
+          and objsubid = 2
+          and mode = 'ExclusiveLock'
+          and database = (
+            select oid from pg_catalog.pg_database
+            where datname = current_database()
+          )
+          and classid::bigint = ${sql.lit(PURGE_NS)}
+          and objid::bigint in (
+            select hashtext(id) & ${sql.lit(PURGE_LOCK_BUCKETS - 1)}
+            from unnest(${ids}::text[]) as t(id)
+          )
+      ) as taken
+    `.execute(this.db);
+    return result.rows[0]?.taken === true;
+  }
+
   private async enqueue(
     item: Item,
     converged: boolean,
@@ -357,7 +511,6 @@ export class ErasureScheduler {
   }
 
   private async dispatch(item: Item): Promise<void> {
-    this.failedOnce.delete(keyOf(item));
     const [job] = await this.options.purges.enqueuePurge(
       [item.documentId],
       item.requestId,
@@ -366,28 +519,41 @@ export class ErasureScheduler {
     this.jobIds.set(keyOf(item), job.id);
   }
 
-  private async advancePurging(item: Item): Promise<void> {
-    const tombstone = await readTombstone(this.db, item.documentId);
+  /** Enqueued again with the dispatch time reset; the purge lock gates it. */
+  private async redispatch(item: Item, reason: string): Promise<void> {
+    if (await this.purgeLockTaken([item.documentId])) return;
+    this.logger.warn(
+      `${reason} for ${item.documentId} (request ${item.requestId}); enqueued again`,
+    );
+    const moved = await this.transition(item, "purging", "purging");
+    if (!moved) return;
+    item.updatedAt = this.now();
+    await this.dispatch(item);
+  }
+
+  private async advancePurging(item: Item, reads: TickReads): Promise<void> {
+    const tombstone = reads.tombstones.get(item.documentId);
     if (tombstone) {
       await this.markPurged(item, tombstone, "purging");
       return;
     }
-    const key = keyOf(item);
-    const jobId = this.jobIds.get(key);
+    const jobId = this.jobIds.get(keyOf(item));
     const info = jobId ? this.options.jobs.getJobStatus(jobId) : null;
     if (!info) {
-      this.logger.warn(
-        `No purge job known for ${item.documentId} (request ${item.requestId}); enqueued again`,
-      );
-      await this.dispatch(item);
+      await this.redispatch(item, "No purge job known");
       return;
     }
-    if (info.status !== JobStatus.FAILED) return;
-    if (!this.failedOnce.has(key)) {
-      this.failedOnce.add(key);
+    if (info.status === JobStatus.FAILED) {
+      // recoverFailed moves it to purged if the transaction commits after all.
+      this.unsettled.add(item.documentId);
+      await this.markFailed(item, info.error ?? { name: "Error", message: "" });
       return;
     }
-    await this.markFailed(item, info.error ?? { name: "Error", message: "" });
+    const age = this.now().getTime() - item.updatedAt.getTime();
+    if (age >= this.purgeTimeoutMs) {
+      this.unsettled.add(item.documentId);
+      await this.redispatch(item, `No tombstone after ${age}ms`);
+    }
   }
 
   private async markPurged(
@@ -400,7 +566,8 @@ export class ErasureScheduler {
       lastError: null,
     });
     if (!moved) return;
-    this.forget(item);
+    this.jobIds.delete(keyOf(item));
+    this.unsettled.delete(item.documentId);
     item.status = "purged";
     item.markerOrdinal = tombstone.ordinal;
     await this.audit(item, "purged", {
@@ -418,18 +585,13 @@ export class ErasureScheduler {
       lastError: `${redacted.name}: ${redacted.message}`,
     });
     if (!moved) return;
-    this.forget(item);
+    this.jobIds.delete(keyOf(item));
     item.status = "failed";
     await this.audit(item, "failed", { error: redacted });
   }
 
-  private forget(item: Item): void {
-    this.jobIds.delete(keyOf(item));
-    this.failedOnce.delete(keyOf(item));
-  }
-
-  private async advancePurged(item: Item): Promise<void> {
-    const tombstone = await readTombstone(this.db, item.documentId);
+  private async advancePurged(item: Item, reads: TickReads): Promise<void> {
+    const tombstone = reads.tombstones.get(item.documentId);
     if (!tombstone) {
       throw new Error(`Purged document ${item.documentId} has no tombstone`);
     }
@@ -438,7 +600,11 @@ export class ErasureScheduler {
       this.markerGraceMs;
     if (!(await this.markerSettled(item))) {
       const ordinal = item.markerOrdinal ?? tombstone.ordinal;
-      const convergence = await this.convergence(item.documentId, [ordinal]);
+      const convergence = await this.convergence(
+        item.documentId,
+        [ordinal],
+        reads,
+      );
       const refused = await this.refusedRemotes(item);
       const delivered =
         convergence.pending.length === 0 && !convergence.unknown;
@@ -588,7 +754,10 @@ export class ErasureScheduler {
     }
   }
 
-  private async deleteConvergence(documentId: string): Promise<Convergence> {
+  private async deleteConvergence(
+    documentId: string,
+    reads: TickReads,
+  ): Promise<Convergence> {
     const rows = await this.db
       .selectFrom("operation_index_operations")
       .select(["branch", (eb) => eb.fn.max("ordinal").as("ordinal")])
@@ -605,6 +774,7 @@ export class ErasureScheduler {
     return this.convergence(
       documentId,
       rows.map((row) => Number(row.ordinal)),
+      reads,
     );
   }
 
@@ -612,8 +782,9 @@ export class ErasureScheduler {
   private async convergence(
     documentId: string,
     ordinals: number[],
+    reads: TickReads,
   ): Promise<Convergence> {
-    const stored = await this.storedRemotes();
+    const stored = await reads.remotes();
     const sync = this.options.syncManager;
     if (!sync || !supportsDeliveryTracking(sync)) {
       if (stored.length === 0) return { pending: [] };
@@ -747,7 +918,7 @@ export class ErasureScheduler {
     } catch (error) {
       this.logger.error(
         "Recording an erasure error failed: @error",
-        messageOf(error),
+        redactText(this.secret, messageOf(error)),
       );
     }
   }

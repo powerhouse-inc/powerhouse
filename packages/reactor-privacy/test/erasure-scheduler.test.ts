@@ -4,6 +4,7 @@ import { sql } from "kysely";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createModuleErasure,
+  ErasureScheduler,
   ErasureSignerMissingError,
   registerSubjectDocumentsReadModel,
 } from "../index.js";
@@ -644,4 +645,184 @@ describe("recovering from lost signals [Postgres]", () => {
     );
     expect(outcome?.detail).toMatchObject({ refused: ["refuser"] });
   });
+
+  it("moves a failed item to purged when its timed-out purge commits later", async () => {
+    const e = await setup();
+    const doc = await createDoc(e);
+    await remove(e, doc);
+    const scheduler = new ErasureScheduler({
+      db: db(e),
+      deploymentSecret: SECRET,
+      signer: e.signer,
+      purges: {
+        enqueuePurge: () => Promise.resolve([{ id: "zombie" } as never]),
+      },
+      jobs: {
+        getJobStatus: () =>
+          ({
+            id: "zombie",
+            status: JobStatus.FAILED,
+            error: { name: "Error", message: "The operation timed out." },
+          }) as never,
+      },
+      permissions: e.eraser,
+    });
+    const { requestId } = await e.service.request([doc], {
+      requestedBy: ADMIN,
+    });
+    for (let i = 0; i < 3; i++) await scheduler.tick();
+    expect((await item(e, requestId, doc)).status).toBe("failed");
+    expect((await e.service.status(requestId)).status).toBe("failed");
+
+    await e.host.module.documentPurgeService.enqueuePurge([doc], requestId);
+    await vi.waitUntil(async () => (await tombstoneOf(e, doc)) !== undefined, {
+      timeout: 20_000,
+    });
+    for (let i = 0; i < 3; i++) await scheduler.tick();
+
+    expect({
+      status: (await item(e, requestId, doc)).status,
+      erased: e.eraser.calls,
+      request: (await e.service.status(requestId)).status,
+    }).toEqual({ status: "erased", erased: [doc], request: "complete" });
+    expect(await events(e, requestId, null)).toEqual([
+      "requested",
+      "failed",
+      "reopened",
+      "complete",
+    ]);
+  });
+
+  it("waits for a failed purge's transaction to end before the next purge", async () => {
+    const e = await setup();
+    const first = await createDoc(e);
+    const second = await createDoc(e);
+    await remove(e, first);
+    await remove(e, second);
+    let failFirst = true;
+    const scheduler = new ErasureScheduler({
+      db: db(e),
+      deploymentSecret: SECRET,
+      signer: e.signer,
+      purges: {
+        enqueuePurge: (ids, requestId, options) =>
+          ids[0] === first
+            ? Promise.resolve([{ id: "zombie" } as never])
+            : e.host.module.documentPurgeService.enqueuePurge(
+                ids,
+                requestId,
+                options,
+              ),
+      },
+      jobs: {
+        getJobStatus: (id) =>
+          id === "zombie" && failFirst
+            ? ({
+                id,
+                status: JobStatus.FAILED,
+                error: { name: "Error", message: "timed out" },
+              } as never)
+            : e.host.module.jobTracker.getJobStatus(id),
+      },
+      permissions: e.eraser,
+    });
+    const r1 = await e.service.request([first], { requestedBy: ADMIN });
+    const r2 = await e.service.request([second], { requestedBy: ADMIN });
+
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let locked!: () => void;
+    const lockTaken = new Promise<void>((resolve) => {
+      locked = resolve;
+    });
+    // The timed-out purge's transaction, still holding its lock.
+    const key = sql`${sql.lit(PURGE_NS)}, hashtext(${first}) & 1023`;
+    const holder = db(e)
+      .connection()
+      .execute(async (conn) => {
+        await sql`select pg_advisory_lock(${key})`.execute(conn);
+        locked();
+        await released;
+        await sql`select pg_advisory_unlock(${key})`.execute(conn);
+      });
+    await lockTaken;
+    try {
+      for (let i = 0; i < 3; i++) await scheduler.tick();
+      expect((await item(e, r1.requestId, first)).status).toBe("failed");
+      for (let i = 0; i < 3; i++) {
+        await scheduler.tick();
+        expect((await item(e, r2.requestId, second)).status).toBe("waiting");
+      }
+    } finally {
+      release();
+      await holder;
+    }
+    failFirst = false;
+    await vi.waitUntil(
+      async () => {
+        await scheduler.tick();
+        return (await item(e, r2.requestId, second)).status === "erased";
+      },
+      { timeout: 20_000, interval: 50 },
+    );
+  });
+
+  it("enqueues a purge again when it has no tombstone past the purge timeout", async () => {
+    const e = await setup();
+    const doc = await createDoc(e);
+    await remove(e, doc);
+    const enqueued: string[] = [];
+    const scheduler = new ErasureScheduler({
+      db: db(e),
+      deploymentSecret: SECRET,
+      signer: e.signer,
+      purges: {
+        enqueuePurge: (ids, requestId, options) => {
+          enqueued.push(ids[0]!);
+          return enqueued.length === 1
+            ? Promise.resolve([{ id: "stuck" } as never])
+            : e.host.module.documentPurgeService.enqueuePurge(
+                ids,
+                requestId,
+                options,
+              );
+        },
+      },
+      jobs: {
+        getJobStatus: (id) =>
+          id === "stuck"
+            ? ({ id, status: JobStatus.RUNNING } as never)
+            : e.host.module.jobTracker.getJobStatus(id),
+      },
+      permissions: e.eraser,
+      purgeTimeoutMs: HOUR,
+      now: e.now,
+    });
+    const { requestId } = await e.service.request([doc], {
+      requestedBy: ADMIN,
+    });
+    for (let i = 0; i < 3; i++) await scheduler.tick();
+    expect(enqueued).toEqual([doc]);
+    expect((await item(e, requestId, doc)).status).toBe("purging");
+
+    e.advance(2 * HOUR);
+    await vi.waitUntil(
+      async () => {
+        await scheduler.tick();
+        return (await item(e, requestId, doc)).status === "erased";
+      },
+      { timeout: 20_000, interval: 50 },
+    );
+    expect(enqueued).toEqual([doc, doc]);
+  });
 });
+
+async function tombstoneOf(e: Parameters<typeof db>[0], id: string) {
+  return db(e)
+    .selectFrom("document_purges")
+    .select("documentId")
+    .where("documentId", "=", id)
+    .executeTakeFirst();
+}

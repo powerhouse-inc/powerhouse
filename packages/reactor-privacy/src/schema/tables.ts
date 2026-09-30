@@ -20,6 +20,7 @@ export type ErasureAuditEvent =
   | "permissions-erased"
   | "deadline-passed"
   | "failed"
+  | "reopened"
   | "complete";
 
 export type SubjectRole =

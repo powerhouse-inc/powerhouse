@@ -539,6 +539,7 @@ export {
   acquirePurgeLocks,
   findPurged,
   listPurged,
+  PURGE_LOCK_BUCKETS,
   PURGE_NS,
   type PurgeLockMode,
 } from "./src/storage/kysely/document-purges.js";
