@@ -81,6 +81,9 @@ export interface IExecutorWorker {
    */
   loadModel(entry: ModelManifestEntry, signal?: AbortSignal): Promise<void>;
 
+  /** Evicts purged ids from the worker's caches; a worker not ready skips it. */
+  evictPurged(documentIds: string[]): void;
+
   /** True when no job is currently in flight. */
   isIdle(): boolean;
 

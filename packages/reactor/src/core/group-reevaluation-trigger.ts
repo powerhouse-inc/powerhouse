@@ -65,6 +65,8 @@ export class GroupReevaluationTrigger extends BaseReadModel {
       indexing: unchunkedReadModelIndexingConfig,
       startFrom: "head",
       replayStreamSuffix: false,
+      // Writes no rows; its lookups and enqueues need the connection.
+      purgeFence: "none",
     });
   }
 

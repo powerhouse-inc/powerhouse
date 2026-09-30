@@ -17,7 +17,6 @@ import {
   create,
   Fleet,
   folders,
-  has,
   manifestFor,
   NARROW,
   quiesce,
@@ -235,17 +234,22 @@ describe("a purged document's marker across peers [Postgres]", () => {
 
     await fleet.link(a, c, DRIVE);
 
-    await vi.waitFor(
-      () =>
-        expect(
-          deliveredFor(fleet, "c->a", CHILD).map((op) => op.operation.id),
-        ).toEqual([markerId]),
-      WAIT,
-    );
+    // The seeded marker has no event: a's settled watermark alone releases it.
+    // A sweep can derive alongside add()'s backfill, so it may arrive twice.
+    await vi.waitFor(async () => {
+      await a.module.catchUp.sweepNow();
+      expect(
+        deliveredFor(fleet, "c->a", CHILD).map((op) => op.operation.id),
+      ).toContain(markerId);
+    }, WAIT);
     await quiesce();
     expect(
-      deliveredFor(fleet, "c->a", CHILD).filter((op) => isPurgeMarker(op)),
-    ).toHaveLength(1);
-    expect(deliveredFor(fleet, "c->a", DRIVE).length).toBeGreaterThan(0);
+      deliveredFor(fleet, "c->a", CHILD).every((op) => isPurgeMarker(op)),
+    ).toBe(true);
+    await vi.waitFor(
+      () =>
+        expect(deliveredFor(fleet, "c->a", DRIVE).length).toBeGreaterThan(0),
+      WAIT,
+    );
   });
 });

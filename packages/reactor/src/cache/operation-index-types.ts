@@ -90,6 +90,13 @@ export interface IOperationIndex {
    * reference other groups.
    */
   getGroupReferencers(groupId: string, signal?: AbortSignal): Promise<string[]>;
+  /** Collections with a member with a row in (after, through], within `among`. */
+  getCollectionsInRange(
+    after: number,
+    through: number,
+    among?: readonly string[],
+    signal?: AbortSignal,
+  ): Promise<string[]>;
   /** Ordinals in (after, through], ascending, at most `limit`. */
   getOrdinalsInRange(
     after: number,

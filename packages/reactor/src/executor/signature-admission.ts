@@ -223,7 +223,7 @@ export class SignatureAdmission {
     return dropped;
   }
 
-  /** A marker is held to v2 whatever the policy; unsigned never passes. */
+  /** A marker is held to v2 and enforced whatever the policy and mode. */
   async admitMarker(
     job: Job,
     marker: Operation,
@@ -248,15 +248,7 @@ export class SignatureAdmission {
     if (verdict.ok) {
       return undefined;
     }
-    const refusal = this.record(job, entry, verdict, "load");
-    if (refusal || verdict.scheme !== "unsigned") {
-      return refusal;
-    }
-    return new InvalidSignatureError(
-      job.documentId,
-      verdict.code,
-      verdict.reason,
-    );
+    return this.record(job, entry, verdict, "load", true)!;
   }
 
   private async verdict(
@@ -493,8 +485,8 @@ export class SignatureAdmission {
     entry: Candidate,
     refusal: Refusal,
     path: AdmissionPath,
+    enforced = this.mode === "enforce",
   ): InvalidSignatureError | undefined {
-    const enforced = this.mode === "enforce";
     const event: SignatureRefusedEvent = {
       jobId: job.id,
       documentId: entry.stream.documentId,

@@ -63,6 +63,7 @@ import type {
   Remote,
   RemoteMeta,
 } from "./interfaces.js";
+import { calculateBackoffDelay } from "./channels/interval-poll-timer.js";
 import { InMemorySyncHoldStorage } from "./memory-hold-storage.js";
 import { createPeerAgreement, type IPeerAgreement } from "./peer-agreement.js";
 import { SyncAwaiter } from "./sync-awaiter.js";
@@ -131,6 +132,9 @@ export type SyncManagerConfig = {
    * holder has stopped asking.
    */
   staleRemotePollWindowMs: number;
+  /** Backoff for reloading a received marker whose load failed transiently. */
+  markerRetryBaseDelayMs: number;
+  markerRetryMaxDelayMs: number;
 };
 
 enum OutboxMode {
@@ -143,6 +147,8 @@ const defaultSyncManagerConfig: SyncManagerConfig = {
   maxInboxBatchSize: 32,
   maxHeldOperationsPerRemote: 10000,
   staleRemotePollWindowMs: 5 * 60_000,
+  markerRetryBaseDelayMs: 1_000,
+  markerRetryMaxDelayMs: 60_000,
 };
 
 const PLAN_KEY_TO_JOB_UUID_CAP = 10000;
@@ -183,13 +189,43 @@ function createdVersions(
   return undefined;
 }
 
-/** The load was refused because the id is purged here: a drop. */
-function isPurgedFailure(error: ErrorInfo | undefined): boolean {
-  return error?.name === "DocumentPurgedError";
+/** The load was refused because this very id is purged here: a drop. */
+function isPurgedFailure(
+  error: ErrorInfo | undefined,
+  documentId: string,
+): boolean {
+  // Only name and message reach JobInfo; the message names the purged id.
+  return (
+    error?.name === "DocumentPurgedError" &&
+    error.message.includes(`Document ${documentId} was purged`)
+  );
 }
 
 function carriesMarker(syncOp: SyncOperation): boolean {
   return syncOp.operations.some((op) => isPurgeMarker(op));
+}
+
+function markerIdsOf(syncOp: SyncOperation): string[] {
+  return syncOp.operations
+    .filter((op) => isPurgeMarker(op))
+    .map((op) => op.operation.id);
+}
+
+/** Refused, or purged under another id: final, unlike an outage. */
+function isRefusedMarker(error: ErrorInfo | undefined): boolean {
+  return (
+    error?.name === "InvalidSignatureError" ||
+    error?.name === "DocumentPurgedError"
+  );
+}
+
+/** Markers pass every remote filter, as they pass sinceTimestamp. */
+function filterForRemote(
+  operations: OperationWithContext[],
+  filter: RemoteFilter,
+): OperationWithContext[] {
+  const kept = new Set(filterOperations(operations, filter));
+  return operations.filter((op) => kept.has(op) || isPurgeMarker(op));
 }
 
 /** A job's dependency chain through one derivation's emitted batches. */
@@ -245,6 +281,10 @@ export class SyncManager implements ISyncManager {
   private readonly watermark: ISettledWatermark;
   // remote name -> ordinal its outbox is owed through
   private readonly owed = new Map<string, number>();
+  // remote name -> settled ordinal its last complete derivation read through
+  private readonly derivedThrough = new Map<string, number>();
+  // settled ordinals at or below this have owed their collections' remotes
+  private sweptThrough = 0;
   private settledUnsubscribe?: () => void;
   private inboxChunkChain: Promise<void> = Promise.resolve();
   private readonly capabilities: readonly PeerCapability[];
@@ -262,6 +302,15 @@ export class SyncManager implements ISyncManager {
   ) => Promise<ProtocolVersions | undefined>;
   private readonly peerUpdates = new Map<string, Promise<void>>();
   private readonly peerUnsubscribes = new Map<string, () => void>();
+  // inbox sync op id -> retry of its failed marker load
+  private readonly markerRetries = new Map<
+    string,
+    {
+      remoteName: string;
+      attempt: number;
+      timer: ReturnType<typeof setTimeout>;
+    }
+  >();
 
   constructor(
     logger: ILogger,
@@ -375,6 +424,7 @@ export class SyncManager implements ISyncManager {
 
     const remoteRecords = await this.remoteStorage.list();
     const head = await this.watermarkHead();
+    this.sweptThrough = Math.max(this.sweptThrough, head);
 
     for (const record of remoteRecords) {
       const channel = this.channelFactory.instance(
@@ -474,6 +524,8 @@ export class SyncManager implements ISyncManager {
     this.pruneDrainDeferred = false;
     this.batchAggregator.clear();
     this.owed.clear();
+    for (const retry of this.markerRetries.values()) clearTimeout(retry.timer);
+    this.markerRetries.clear();
     this.settledUnsubscribe?.();
     this.settledUnsubscribe = undefined;
 
@@ -662,14 +714,16 @@ export class SyncManager implements ISyncManager {
       }
     }
     for (const remote of this.remotes.values()) {
-      const unsent = remote.channel.outbox.items.filter(
+      // Sent or in flight too: a lost response or a push retry would resend it.
+      const stale = remote.channel.outbox.items.filter(
         (item) =>
           item.documentId === documentId &&
-          item.status === SyncOperationStatus.Unknown &&
-          item.emittedCount === 0 &&
+          item.status < SyncOperationStatus.Applied &&
           !carriesMarker(item),
       );
-      if (unsent.length > 0) remote.channel.outbox.remove(...unsent);
+      // Applied, so a served cursor is not pinned below what is gone.
+      for (const item of stale) item.executed();
+      if (stale.length > 0) remote.channel.outbox.remove(...stale);
       const dead = remote.channel.deadLetter.items.filter(
         (item) => item.documentId === documentId,
       );
@@ -751,6 +805,11 @@ export class SyncManager implements ISyncManager {
     try {
       await this.holds.upsert(record);
     } catch (error) {
+      if (DocumentPurgedError.isError(error)) {
+        held.delete(key);
+        this.tombstone(documentId);
+        return;
+      }
       this.logger.error(
         "Failed to persist a sync hold (@remote, @documentId): @error",
         remote.meta.name,
@@ -859,7 +918,7 @@ export class SyncManager implements ISyncManager {
     let operations = entries
       .filter((entry) => entry.sourceRemote !== remote.meta.name)
       .map((entry) => toOperationWithContext(entry));
-    operations = filterOperations(operations, remote.meta.filter);
+    operations = filterForRemote(operations, remote.meta.filter);
     if (operations.length === 0) return;
     operations.sort((a, b) => {
       if (a.context.scope !== b.context.scope) {
@@ -1141,6 +1200,7 @@ export class SyncManager implements ISyncManager {
     // remote up and derive into mailboxes that are already being torn down.
     this.removing.add(name);
     this.owed.delete(name);
+    this.derivedThrough.delete(name);
     try {
       await this.teardownRemoteResources(remote);
 
@@ -1216,7 +1276,13 @@ export class SyncManager implements ISyncManager {
         this.connectionStateUnsubscribes.delete(name);
       }
       this.evictedOutboxFloors.delete(name);
+      this.derivedThrough.delete(name);
       this.prunePending.delete(name);
+      for (const [id, retry] of [...this.markerRetries]) {
+        if (retry.remoteName !== name) continue;
+        clearTimeout(retry.timer);
+        this.markerRetries.delete(id);
+      }
       this.peerUnsubscribes.get(name)?.();
       this.peerUnsubscribes.delete(name);
       this.peerUpdates.delete(name);
@@ -1307,6 +1373,8 @@ export class SyncManager implements ISyncManager {
           syncOp.error?.message ?? "unknown",
         );
         if (syncOp.error?.source !== ChannelErrorSource.Outbox) continue;
+        // A local pre-purge entry whose push failed is not a refused marker.
+        if (syncOp.operations.length > 0 && !carriesMarker(syncOp)) continue;
         void this.eventBus
           .emit(SyncEventTypes.PURGE_REFUSED, {
             remoteName: remote.meta.name,
@@ -1345,7 +1413,10 @@ export class SyncManager implements ISyncManager {
           documentId: syncOp.documentId,
           scopes: syncOp.scopes,
           branch: syncOp.branch,
-          operations: syncOp.operations,
+          // A refused marker's job dropped the rest; they are not the record.
+          operations: carriesMarker(syncOp)
+            ? syncOp.operations.filter((op) => isPurgeMarker(op))
+            : syncOp.operations,
           errorSource: syncOp.error?.source ?? ChannelErrorSource.None,
           errorMessage: syncOp.error?.error.message ?? "unknown",
           errorType,
@@ -1524,6 +1595,7 @@ export class SyncManager implements ISyncManager {
   private async deriveSettled(): Promise<void> {
     if (this.isShutdown) return;
     const through = this.watermark.settledThrough;
+    await this.oweSettledRange(through);
     for (const [name, upTo] of [...this.owed]) {
       const remote = this.remotes.get(name);
       if (!remote || this.removing.has(name)) {
@@ -1538,6 +1610,47 @@ export class SyncManager implements ISyncManager {
       if (through >= upTo) this.owed.delete(name);
     }
     await this.drainPrunes();
+  }
+
+  /** Owes the remotes of every collection that moved, event or not. */
+  private async oweSettledRange(through: number): Promise<void> {
+    if (through <= this.sweptThrough) return;
+    const among = [
+      ...new Set(
+        [...this.remotes.values()]
+          .filter((remote) => !this.removing.has(remote.meta.name))
+          .map((remote) => remote.meta.collectionId.key),
+      ),
+    ];
+    // A remote added later is owed the head on add().
+    if (among.length === 0) {
+      this.sweptThrough = through;
+      return;
+    }
+    let collectionIds: string[];
+    try {
+      collectionIds = await this.operationIndex.getCollectionsInRange(
+        this.sweptThrough,
+        through,
+        among,
+        this.abortController.signal,
+      );
+    } catch (error) {
+      this.logger.warn(
+        "Settled range sweep failed; the next advance retries it: @error",
+        error,
+      );
+      return;
+    }
+    for (const collectionId of collectionIds) {
+      for (const remote of this.getRemotesForCollection(collectionId)) {
+        const name = remote.meta.name;
+        if ((this.derivedThrough.get(name) ?? -1) < through) {
+          this.owe(name, through);
+        }
+      }
+    }
+    this.sweptThrough = through;
   }
 
   private owe(name: string, upTo: number): void {
@@ -1564,9 +1677,25 @@ export class SyncManager implements ISyncManager {
 
     const eligible: SyncOperation[] = [];
     const dropped: SyncOperation[] = [];
+    // A resent marker whose first copy is still loading or awaiting a retry.
+    const loadingMarkers = new Set(
+      remote.channel.inbox.items
+        .filter(
+          (item) =>
+            !syncOps.includes(item) &&
+            item.status !== SyncOperationStatus.Applied,
+        )
+        .flatMap(markerIdsOf),
+    );
     for (const syncOp of syncOps) {
       if (carriesMarker(syncOp)) {
-        eligible.push(syncOp);
+        const ids = markerIdsOf(syncOp);
+        if (ids.every((id) => loadingMarkers.has(id))) {
+          dropped.push(syncOp);
+        } else {
+          for (const id of ids) loadingMarkers.add(id);
+          eligible.push(syncOp);
+        }
       } else if (this.purgedDocumentIds.has(syncOp.documentId)) {
         dropped.push(syncOp);
       } else if (!this.quarantinedDocumentIds.has(syncOp.documentId)) {
@@ -1576,7 +1705,7 @@ export class SyncManager implements ISyncManager {
     // A purged id's history is gone here; a job or a dead letter would restore it.
     for (const syncOp of dropped) {
       this.logger.debug(
-        "Dropping received operations of purged document (@remote, @documentId)",
+        "Dropping received operations of a purged or already-loading document (@remote, @documentId)",
         remote.meta.name,
         syncOp.documentId,
       );
@@ -1657,12 +1786,17 @@ export class SyncManager implements ISyncManager {
         syncOp.documentId,
         err.message,
       );
+      if (carriesMarker(syncOp)) {
+        this.retryMarker(remote, syncOp, err.message);
+        return;
+      }
       const channelError = new ChannelError(ChannelErrorSource.Inbox, err);
       syncOp.failed(channelError);
       remote.channel.deadLetter.add(syncOp);
       remote.channel.inbox.remove(syncOp);
       return;
     }
+    if (syncOp.jobId) this.recordPlanKeyMapping(syncOp.jobId, jobInfo.id);
 
     let completedJobInfo;
     try {
@@ -1680,6 +1814,10 @@ export class SyncManager implements ISyncManager {
         jobInfo.id,
         err.message,
       );
+      if (carriesMarker(syncOp)) {
+        this.retryMarker(remote, syncOp, err.message);
+        return;
+      }
       const channelError = new ChannelError(ChannelErrorSource.Inbox, err);
       syncOp.failed(channelError);
       remote.channel.deadLetter.add(syncOp);
@@ -1692,7 +1830,7 @@ export class SyncManager implements ISyncManager {
     if (completedJobInfo.status !== JobStatus.FAILED) {
       syncOp.executed();
       if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
-    } else if (isPurgedFailure(completedJobInfo.error)) {
+    } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
       this.tombstone(syncOp.documentId);
       syncOp.executed();
     } else {
@@ -1704,11 +1842,79 @@ export class SyncManager implements ISyncManager {
         completedJobInfo.id,
         errorMessage,
       );
-      syncOp.failed(this.inboxFailure(completedJobInfo.error));
+      if (carriesMarker(syncOp) && !isRefusedMarker(completedJobInfo.error)) {
+        this.retryMarker(remote, syncOp, errorMessage);
+        return;
+      }
+      syncOp.failed(this.inboxFailure(syncOp, completedJobInfo.error));
       remote.channel.deadLetter.add(syncOp);
     }
 
+    this.markerRetries.delete(syncOp.id);
     remote.channel.inbox.remove(syncOp);
+  }
+
+  /** Reloads a marker with backoff; it stays in the inbox, not dead-lettered. */
+  private retryMarker(
+    remote: Remote,
+    syncOp: SyncOperation,
+    reason: string,
+  ): void {
+    if (this.isShutdown) return;
+    const attempt = (this.markerRetries.get(syncOp.id)?.attempt ?? 0) + 1;
+    const delay = calculateBackoffDelay(
+      attempt,
+      this.config.markerRetryBaseDelayMs,
+      this.config.markerRetryMaxDelayMs,
+      Math.random(),
+    );
+    this.logger.warn(
+      "Purge marker load failed; retrying (@remote, @documentId, @attempt, @delayMs, @error)",
+      remote.meta.name,
+      syncOp.documentId,
+      attempt,
+      Math.round(delay),
+      reason,
+    );
+    const timer = setTimeout(() => {
+      void this.redeliverMarker(remote, syncOp).catch((error: unknown) => {
+        this.logger.error(
+          "Purge marker retry failed (@remote, @documentId, @error)",
+          remote.meta.name,
+          syncOp.documentId,
+          error instanceof Error ? error.message : String(error),
+        );
+      });
+    }, delay);
+    if (typeof timer === "object" && "unref" in timer) timer.unref();
+    this.markerRetries.set(syncOp.id, {
+      remoteName: remote.meta.name,
+      attempt,
+      timer,
+    });
+  }
+
+  private async redeliverMarker(
+    remote: Remote,
+    syncOp: SyncOperation,
+  ): Promise<void> {
+    const name = remote.meta.name;
+    if (
+      this.isShutdown ||
+      this.remotes.get(name) !== remote ||
+      this.removing.has(name) ||
+      remote.channel.inbox.get(syncOp.id) !== syncOp
+    ) {
+      this.markerRetries.delete(syncOp.id);
+      return;
+    }
+    if (this.purgedDocumentIds.has(syncOp.documentId)) {
+      this.markerRetries.delete(syncOp.id);
+      syncOp.executed();
+      remote.channel.inbox.remove(syncOp);
+      return;
+    }
+    await this.applyInboxJob(remote, syncOp);
   }
 
   private async applyInboxBatch(
@@ -1765,6 +1971,10 @@ export class SyncManager implements ISyncManager {
       if (this.isShutdown) return;
       for (const { remote, syncOp } of items) {
         const err = error instanceof Error ? error : new Error(String(error));
+        if (carriesMarker(syncOp)) {
+          this.retryMarker(remote, syncOp, err.message);
+          continue;
+        }
         syncOp.failed(new ChannelError(ChannelErrorSource.Inbox, err));
         remote.channel.deadLetter.add(syncOp);
         remote.channel.inbox.remove(syncOp);
@@ -1811,6 +2021,10 @@ export class SyncManager implements ISyncManager {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
         if (this.isShutdown) continue;
         const err = error instanceof Error ? error : new Error(String(error));
+        if (carriesMarker(syncOp)) {
+          this.retryMarker(remote, syncOp, err.message);
+          continue;
+        }
         syncOp.failed(new ChannelError(ChannelErrorSource.Inbox, err));
         remote.channel.deadLetter.add(syncOp);
         remote.channel.inbox.remove(syncOp);
@@ -1823,11 +2037,21 @@ export class SyncManager implements ISyncManager {
       if (completedJobInfo.status !== JobStatus.FAILED) {
         syncOp.executed();
         if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
-      } else if (isPurgedFailure(completedJobInfo.error)) {
+      } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
         this.tombstone(syncOp.documentId);
         syncOp.executed();
+      } else if (
+        carriesMarker(syncOp) &&
+        !isRefusedMarker(completedJobInfo.error)
+      ) {
+        this.retryMarker(
+          remote,
+          syncOp,
+          completedJobInfo.error?.message || "Unknown error",
+        );
+        continue;
       } else {
-        syncOp.failed(this.inboxFailure(completedJobInfo.error));
+        syncOp.failed(this.inboxFailure(syncOp, completedJobInfo.error));
         remote.channel.deadLetter.add(syncOp);
       }
 
@@ -1845,12 +2069,17 @@ export class SyncManager implements ISyncManager {
    * keep syncing, because reconciling the two policies needs the traffic a
    * quarantine would stop.
    */
-  private inboxFailure(error: ErrorInfo | undefined): ChannelError {
+  private inboxFailure(
+    syncOp: SyncOperation,
+    error: ErrorInfo | undefined,
+  ): ChannelError {
     const message = error?.message || "Unknown error";
     return new ChannelError(
       ChannelErrorSource.Inbox,
       new Error(`Failed to apply operations: ${message}`),
-      classifyJobFailure(error?.name ?? "Error"),
+      carriesMarker(syncOp)
+        ? "MARKER_REFUSED"
+        : classifyJobFailure(error?.name ?? "Error"),
     );
   }
 
@@ -2065,6 +2294,10 @@ export class SyncManager implements ISyncManager {
     mode: OutboxMode,
     chain: EmitChain,
   ): void {
+    operations = operations.filter(
+      (op) =>
+        isPurgeMarker(op) || !this.purgedDocumentIds.has(op.context.documentId),
+    );
     if (operations.length === 0) {
       return;
     }
@@ -2117,6 +2350,7 @@ export class SyncManager implements ISyncManager {
       : this.abortController.signal;
 
     const startOrdinal = this.refillOrdinal(remote, ackOrdinal);
+    const throughOrdinal = this.watermark.settledThrough;
     let maxOrdinal = startOrdinal;
     const chain: EmitChain = { lastJobByDoc: new Map() };
     const sinceTimestamp = remote.meta.options.sinceTimestampUtcMs;
@@ -2129,7 +2363,7 @@ export class SyncManager implements ISyncManager {
       startOrdinal,
       {
         excludeSourceRemote: remote.meta.name,
-        throughOrdinal: this.watermark.settledThrough,
+        throughOrdinal,
       },
       undefined,
       composedSignal,
@@ -2171,7 +2405,7 @@ export class SyncManager implements ISyncManager {
             isPurgeMarker(op) || op.operation.timestampUtcMs >= sinceTimestamp,
         );
       }
-      operations = filterOperations(operations, remote.meta.filter);
+      operations = filterForRemote(operations, remote.meta.filter);
       operations = operations.filter(
         (op) =>
           isPurgeMarker(op) ||
@@ -2241,5 +2475,14 @@ export class SyncManager implements ISyncManager {
     }
 
     remote.channel.outbox.advanceOrdinal(maxOrdinal);
+    const name = remote.meta.name;
+    if (this.evictedOutboxFloors.has(name)) {
+      this.derivedThrough.delete(name);
+    } else {
+      this.derivedThrough.set(
+        name,
+        Math.max(this.derivedThrough.get(name) ?? -1, throughOrdinal),
+      );
+    }
   }
 }

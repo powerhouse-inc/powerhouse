@@ -92,8 +92,17 @@ export class KyselyExecutionScope implements IExecutionScope {
   ): Promise<T> {
     signal?.throwIfAborted();
     return this.db.transaction().execute(async (trx: Transaction<Database>) => {
-      const scopedOperationStore = this.operationStore.withTransaction(trx);
-      const scopedOperationIndex = this.operationIndex.withTransaction(trx);
+      // A shared lock keeps a live id live until commit; its re-checks are moot.
+      const sharedLocked = new Set<string>();
+      const liveIds = new Set<string>();
+      const scopedOperationStore = this.operationStore.withTransaction(
+        trx,
+        liveIds,
+      );
+      const scopedOperationIndex = this.operationIndex.withTransaction(
+        trx,
+        liveIds,
+      );
       const scopedKeyframeStore = this.keyframeStore.withTransaction(trx);
       return fn({
         operationStore: scopedOperationStore,
@@ -107,9 +116,20 @@ export class KyselyExecutionScope implements IExecutionScope {
         collectionMembershipCache:
           this.collectionMembershipCache.withScopedIndex(scopedOperationIndex),
         documentLocks: {
-          shared: (ids) => acquirePurgeLocks(trx, ids, "shared"),
+          shared: async (ids) => {
+            const list = [...ids];
+            await acquirePurgeLocks(trx, list, "shared");
+            for (const id of list) sharedLocked.add(id);
+          },
           exclusive: (id) => acquirePurgeLocks(trx, [id], "exclusive"),
-          purged: (ids) => findPurged(trx, ids),
+          purged: async (ids) => {
+            const list = [...ids];
+            const found = await findPurged(trx, list);
+            for (const id of list) {
+              if (sharedLocked.has(id) && !found.has(id)) liveIds.add(id);
+            }
+            return found;
+          },
         },
         purger: new KyselyDocumentPurger(trx),
       });

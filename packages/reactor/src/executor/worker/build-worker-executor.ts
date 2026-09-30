@@ -55,6 +55,8 @@ export type WorkerExecutorStack = {
   takeLastWriteReady(): WorkerWriteReadyCapture | null;
   /** Drains the refusals this worker's executor emitted since the last call. */
   takeSignatureRefusals(): SignatureRefusedEvent[];
+  /** Drops purged ids from this worker's write and meta caches. */
+  evictPurged(documentIds: string[]): void;
 };
 
 export type BuildWorkerExecutorOptions = {
@@ -258,6 +260,12 @@ export async function buildWorkerExecutor(
       const captured = signatureRefusals;
       signatureRefusals = [];
       return captured;
+    },
+    evictPurged(documentIds: string[]): void {
+      for (const documentId of documentIds) {
+        writeCache.invalidate(documentId);
+        documentMetaCache.invalidate(documentId);
+      }
     },
   };
 }

@@ -115,6 +115,11 @@ describe("quarantinesDocument", () => {
     expect(quarantinesDocument("PURGE_PRECONDITION")).toBe(false);
   });
 
+  // A forged marker must not freeze the live document it names.
+  it("exempts a refused purge marker", () => {
+    expect(quarantinesDocument("MARKER_REFUSED")).toBe(false);
+  });
+
   it("quarantines every other classification", () => {
     for (const errorType of [
       "SIGNATURE_INVALID",

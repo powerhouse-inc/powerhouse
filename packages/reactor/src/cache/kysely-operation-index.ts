@@ -157,6 +157,7 @@ class KyselyOperationIndexTxn implements IOperationIndexTxn {
 
 export class KyselyOperationIndex implements IOperationIndex {
   private trx?: Transaction<Database>;
+  private liveIds?: ReadonlySet<string>;
 
   constructor(private db: Kysely<Database>) {}
 
@@ -164,9 +165,14 @@ export class KyselyOperationIndex implements IOperationIndex {
     return this.trx ?? this.db;
   }
 
-  withTransaction(trx: Transaction<Database>): KyselyOperationIndex {
+  /** `liveIds`: ids the transaction read untombstoned under its shared lock. */
+  withTransaction(
+    trx: Transaction<Database>,
+    liveIds?: ReadonlySet<string>,
+  ): KyselyOperationIndex {
     const instance = new KyselyOperationIndex(this.db);
     instance.trx = trx;
+    instance.liveIds = liveIds;
     return instance;
   }
 
@@ -391,6 +397,32 @@ export class KyselyOperationIndex implements IOperationIndex {
     }
 
     return operationOrdinals;
+  }
+
+  async getCollectionsInRange(
+    after: number,
+    through: number,
+    among?: readonly string[],
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    signal?.throwIfAborted();
+    if (through <= after || among?.length === 0) {
+      return [];
+    }
+
+    let query = this.queryExecutor
+      .selectFrom("operation_index_operations as oi")
+      .innerJoin("document_collections as dc", "oi.documentId", "dc.documentId")
+      .select("dc.collectionId")
+      .distinct()
+      .where("oi.ordinal", ">", after)
+      .where("oi.ordinal", "<=", through);
+    if (among !== undefined) {
+      query = query.where("dc.collectionId", "in", [...among]);
+    }
+    const rows = await query.execute();
+
+    return rows.map((row) => row.collectionId);
   }
 
   async getOrdinalsInRange(
@@ -733,7 +765,8 @@ export class KyselyOperationIndex implements IOperationIndex {
     const ids = new Set(
       operations
         .filter((operation) => !isPurgeMarker(operation))
-        .map((operation) => operation.documentId),
+        .map((operation) => operation.documentId)
+        .filter((id) => !this.liveIds?.has(id)),
     );
     const purged = await findPurged(trx, ids);
     for (const id of ids) {

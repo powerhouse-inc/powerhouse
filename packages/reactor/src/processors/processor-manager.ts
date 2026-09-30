@@ -97,6 +97,8 @@ export class ProcessorManager
       readModelId: "processor-manager",
       rebuildStateOnInit: true,
       indexing: unchunkedReadModelIndexingConfig,
+      // A lock held across processor delivery would block purges behind it.
+      purgeFence: "none",
     });
     this.logger = logger;
     this.driveContainerTypes = driveContainerTypes;

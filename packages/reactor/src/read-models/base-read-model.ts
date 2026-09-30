@@ -79,8 +79,13 @@ function normalizeIndexingConfig(
   };
 }
 
-/** "locked" commits in a purge-locked trx; "skip" only drops purged ids. */
-export type PurgeFence = "locked" | "skip" | "none";
+export type PurgeFence =
+  /** Commits in a purge-locked trx; write through it, never through this.db. */
+  | "locked"
+  /** Drops tombstoned ids only, for rows that live on another database handle. */
+  | "skip"
+  /** No fence: ProcessorManager, and commits that open their own trx on this.db. */
+  | "none";
 
 export type BaseReadModelConfig = {
   readModelId: string;
@@ -92,7 +97,7 @@ export type BaseReadModelConfig = {
   startFrom?: "beginning" | "head";
   /** Re-applies the rest of a late operation's stream; defaults to true. */
   replayStreamSuffix?: boolean;
-  /** Defaults to "none"; see {@link PurgeFence}. */
+  /** Defaults to "locked"; see {@link PurgeFence} for the opt-outs. */
   purgeFence?: PurgeFence;
 };
 
@@ -212,6 +217,18 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
       config.indexing ?? defaultReadModelIndexingConfig,
     );
     this.cursor = new ContiguousCursor(0, this.maxTrackedAboveCursor);
+    // A locked commit through this.db deadlocks single-connection PGlite.
+    if (
+      (config.purgeFence ?? "locked") === "locked" &&
+      this.commitOperations.length < 2
+    ) {
+      throw new Error(
+        `Read model ${config.readModelId}: purgeFence "locked" commits in a ` +
+          "transaction its commitOperations(items) never receives. Accept " +
+          'the trx argument, or set purgeFence "skip" (rows on another ' +
+          'handle) or "none" (no rows here, or its own transaction).',
+      );
+    }
   }
 
   get consumerId(): string {
@@ -421,7 +438,7 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
 
   /** Every delivery commits through here. */
   protected async commitFenced(items: OperationWithContext[]): Promise<void> {
-    const fence = this.config.purgeFence ?? "none";
+    const fence = this.config.purgeFence ?? "locked";
     if (fence === "none") {
       await this.commitOperations(items);
       return;

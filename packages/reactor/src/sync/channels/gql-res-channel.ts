@@ -49,7 +49,7 @@ export class GqlResponseChannel implements IChannel {
     this.cursorStorage = cursorStorage;
     this.isShutdown = false;
 
-    this.inbox = new Mailbox();
+    this.inbox = new Mailbox({ holdAckBelowMarkers: true });
     this.outbox = new Mailbox();
     this.deadLetter = new Mailbox();
 
@@ -68,8 +68,9 @@ export class GqlResponseChannel implements IChannel {
       this.forgetEvictedBelow(syncOps);
     });
 
-    this.inbox.onRemoved((syncOps) => {
-      const maxOrdinal = getLatestAppliedOrdinal(syncOps);
+    // The inbox ack, which never passes a marker still awaiting its load.
+    this.inbox.onRemoved(() => {
+      const maxOrdinal = this.inbox.ackOrdinal;
       if (maxOrdinal > this.lastPersistedInboxOrdinal) {
         this.lastPersistedInboxOrdinal = maxOrdinal;
         this.cursorStorage

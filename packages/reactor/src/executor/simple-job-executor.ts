@@ -104,6 +104,7 @@ import {
   DOCUMENT_SCOPE_ACTIONS,
   getNextIndexForScope,
   isGenesisOperation,
+  FencedWriteCache,
   jobWriteIds,
   PurgeFence,
   refusalError,
@@ -451,7 +452,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     const {
       job,
       startTime,
-      stores,
+      stores: scopeStores,
       signal,
       touchedStreams,
       postCommitInvalidations,
@@ -483,8 +484,8 @@ export class SimpleJobExecutor implements IJobExecutor {
     const lockedIds = jobWriteIds(job);
     let purged: Set<string>;
     try {
-      await stores.documentLocks.shared(lockedIds);
-      purged = await stores.documentLocks.purged(lockedIds);
+      await scopeStores.documentLocks.shared(lockedIds);
+      purged = await scopeStores.documentLocks.purged(lockedIds);
     } catch (error) {
       return {
         result: buildErrorResult(
@@ -499,10 +500,21 @@ export class SimpleJobExecutor implements IJobExecutor {
       return { result: buildErrorResult(job, purgedRefusal, startTime) };
     }
     const purgeFence = new PurgeFence(
-      stores.documentLocks,
+      scopeStores.documentLocks,
       new Set(lockedIds),
       purged,
     );
+    const stores: ExecutionStores = {
+      ...scopeStores,
+      writeCache: new FencedWriteCache(
+        scopeStores.writeCache,
+        purgeFence,
+        (documentId) => {
+          scopeStores.writeCache.invalidate(documentId);
+          scopeStores.documentMetaCache.invalidate(documentId);
+        },
+      ),
+    };
 
     const unsupported = await this.unsupportedStoredProtocol(
       job,
@@ -716,7 +728,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     );
   }
 
-  /** Only a submitted ADD_RELATIONSHIP refuses a purged target. */
+  /** A load names only its own id purged; a foreign one is ID_MISMATCH. */
   private purgedRefusal(job: Job, purged: Set<string>): Error | undefined {
     if (purged.size === 0) {
       return undefined;
@@ -729,22 +741,46 @@ export class SimpleJobExecutor implements IJobExecutor {
       ...job.operations.map((operation) => operation.action),
     ];
     for (const action of actions) {
-      if (DOCUMENT_SCOPE_ACTIONS.has(action.type)) {
-        const target = targetDocumentId(action, job.documentId);
-        if (purged.has(target)) {
-          return new DocumentPurgedError(target);
-        }
+      if (!DOCUMENT_SCOPE_ACTIONS.has(action.type)) {
+        continue;
       }
+      const target = targetDocumentId(action, job.documentId);
+      if (!purged.has(target)) {
+        continue;
+      }
+      if (job.kind === "mutation") {
+        return new DocumentPurgedError(target);
+      }
+      return new InvalidSignatureError(
+        job.documentId,
+        "ID_MISMATCH",
+        `${action.type} ${action.id} in ${job.documentId} writes purged ${target}`,
+      );
     }
-    if (job.kind === "mutation") {
-      for (const action of job.actions) {
-        const target = relationshipTarget(action);
-        if (target !== undefined && purged.has(target)) {
-          return new DocumentPurgedError(
-            target,
-            `${action.type} target ${target} was purged`,
-          );
-        }
+    if (job.kind !== "mutation") {
+      return undefined;
+    }
+    for (const action of job.actions) {
+      const target = relationshipTarget(action);
+      if (
+        action.type === "ADD_RELATIONSHIP" &&
+        target !== undefined &&
+        purged.has(target)
+      ) {
+        return new DocumentPurgedError(
+          target,
+          `${action.type} target ${target} was purged`,
+        );
+      }
+      if (action.scope !== "auth") {
+        continue;
+      }
+      const group = mentionedGroupIds(action).find((id) => purged.has(id));
+      if (group !== undefined) {
+        return new DocumentPurgedError(
+          group,
+          `${action.type} names purged group ${group}`,
+        );
       }
     }
     return undefined;
@@ -984,7 +1020,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     return {
       purger,
-      marker,
+      marker: purgeMarkerOperation(marker.action),
       documentType,
       held,
       sourceRemote,

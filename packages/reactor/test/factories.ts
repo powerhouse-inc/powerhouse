@@ -229,14 +229,11 @@ export async function createTestOperationStorePostgres(): Promise<{
   cleanup: () => Promise<void>;
 }> {
   const schema = `reactor_test_${process.pid}_${pgTestSchemaCounter++}`;
-  const baseDb = new Kysely<DatabaseSchema>({
-    dialect: new PostgresDialect({
-      pool: new Pool({ connectionString: PG_TEST_URL }),
-    }),
-  });
+  const { baseDb, drop } = await createPostgresTestDatabase(schema);
 
   const result = await runMigrations(baseDb, schema);
   if (!result.success && result.error) {
+    await drop();
     throw new Error(`Test migration failed: ${result.error.message}`);
   }
 
@@ -250,15 +247,7 @@ export async function createTestOperationStorePostgres(): Promise<{
     schema,
     store,
     keyframeStore,
-    cleanup: async () => {
-      try {
-        await sql`DROP SCHEMA IF EXISTS ${sql.id(schema)} CASCADE`.execute(
-          baseDb,
-        );
-      } finally {
-        await baseDb.destroy();
-      }
-    },
+    cleanup: drop,
   };
 }
 
@@ -995,16 +984,47 @@ const PG_TEST_URL =
 
 let pgTestSchemaCounter = 0;
 
+/**
+ * A database per storage. Kysely's migrator introspects every schema in its
+ * database, so a schema another file drops mid-query fails the migration.
+ */
+async function createPostgresTestDatabase(name: string): Promise<{
+  baseDb: Kysely<DatabaseSchema>;
+  drop: () => Promise<void>;
+}> {
+  const admin = new Pool({ connectionString: PG_TEST_URL });
+  await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
+  await admin.query(`CREATE DATABASE "${name}"`);
+  const url = new URL(PG_TEST_URL);
+  url.pathname = `/${name}`;
+  const pool = new Pool({ connectionString: url.toString() });
+  // FORCE terminates what is still connected when the database is dropped.
+  pool.on("error", (error: Error & { code?: string }) => {
+    if (error.code !== "57P01") throw error;
+  });
+  const baseDb = new Kysely<DatabaseSchema>({
+    dialect: new PostgresDialect({ pool }),
+  });
+  return {
+    baseDb,
+    drop: async () => {
+      try {
+        await baseDb.destroy();
+      } finally {
+        await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
+        await admin.end();
+      }
+    },
+  };
+}
+
 export async function createTestSyncStoragePostgres(): Promise<TestSyncStorage> {
   const schema = `reactor_test_${process.pid}_${pgTestSchemaCounter++}`;
-  const baseDb = new Kysely<DatabaseSchema>({
-    dialect: new PostgresDialect({
-      pool: new Pool({ connectionString: PG_TEST_URL }),
-    }),
-  });
+  const { baseDb, drop } = await createPostgresTestDatabase(schema);
 
   const result = await runMigrations(baseDb, schema);
   if (!result.success && result.error) {
+    await drop();
     throw new Error(`Test migration failed: ${result.error.message}`);
   }
 
@@ -1018,15 +1038,7 @@ export async function createTestSyncStoragePostgres(): Promise<TestSyncStorage> 
     syncRemoteStorage,
     syncCursorStorage,
     syncDeadLetterStorage,
-    cleanup: async () => {
-      try {
-        await sql`DROP SCHEMA IF EXISTS ${sql.id(schema)} CASCADE`.execute(
-          baseDb,
-        );
-      } finally {
-        await baseDb.destroy();
-      }
-    },
+    cleanup: drop,
   };
 }
 

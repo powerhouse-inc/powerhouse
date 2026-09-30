@@ -68,6 +68,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
       getGroupReferencers: vi.fn().mockResolvedValue([]),
       getOrdinalsByOpIds: vi.fn().mockResolvedValue(new Map()),
+      getCollectionsInRange: vi.fn().mockResolvedValue([]),
       getOrdinalsInRange: vi.fn().mockResolvedValue([]),
       getByOrdinals: vi.fn().mockResolvedValue([]),
       getStreamAfter: vi.fn().mockResolvedValue([]),

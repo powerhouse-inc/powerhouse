@@ -278,6 +278,12 @@ export type LoadModelMessage = {
   model: ModelManifestEntry;
 };
 
+/** Evicts purged ids from the worker's caches; the worker does not reply. */
+export type EvictPurgedMessage = {
+  type: "evict-purged";
+  documentIds: string[];
+};
+
 /**
  * Union of all messages the parent may send to a worker.
  *
@@ -289,7 +295,8 @@ export type ParentMessage =
   | ExecuteMessage
   | AbortMessage
   | ShutdownMessage
-  | LoadModelMessage;
+  | LoadModelMessage
+  | EvictPurgedMessage;
 
 // ---------------------------------------------------------------------------
 // Worker -> parent messages

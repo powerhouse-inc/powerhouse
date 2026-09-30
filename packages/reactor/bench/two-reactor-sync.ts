@@ -75,7 +75,13 @@
 
 import { readFileSync } from "node:fs";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import type { ISigner, PHDocument } from "@powerhousedao/shared/document-model";
+import {
+  localPeerManifest,
+  PEER_CAPABILITIES,
+  type ISigner,
+  type PeerManifest,
+  type PHDocument,
+} from "@powerhousedao/shared/document-model";
 import { Bench } from "tinybench";
 import type { DerivedRatio } from "./records/benchmark-schema.js";
 import {
@@ -596,6 +602,7 @@ async function createDocuments(
 async function connectDocuments(
   setup: TwoReactorSetup,
   ids: string[],
+  peer?: PeerManifest,
 ): Promise<void> {
   const filter = { documentId: [], scope: [], branch: "main" };
   for (const id of ids) {
@@ -610,12 +617,18 @@ async function connectDocuments(
       collectionId,
       { type: "internal", parameters: {} },
       filter,
+      undefined,
+      undefined,
+      peer,
     );
     await setup.moduleB.syncModule!.syncManager.add(
       toA,
       collectionId,
       { type: "internal", parameters: {} },
       filter,
+      undefined,
+      undefined,
+      peer,
     );
   }
 }
@@ -819,6 +832,8 @@ type Scenario = {
   creatorFor: (setup: TwoReactorSetup, index: number) => IReactor;
   /** Submits every write; the harness waits for convergence afterwards. */
   write: (setup: TwoReactorSetup, ids: string[]) => Promise<void>[];
+  /** What each remote's peer announced; undefined leaves it silent. */
+  peer?: PeerManifest;
 };
 
 type Lifecycle = {
@@ -838,7 +853,7 @@ function lifecycleFor(scenario: Scenario): Lifecycle {
         driveDocumentModelModule.utils.createDocument(),
       );
       setup.ids = documents.map((document) => document.header.id);
-      await connectDocuments(setup, setup.ids);
+      await connectDocuments(setup, setup.ids, scenario.peer);
       await createDocuments(setup, documents, scenario.creatorFor);
       await setup.tracker.whenConverged(
         setup.reactorA,
@@ -879,10 +894,41 @@ const alternating = (setup: TwoReactorSetup, index: number) =>
   index % 2 === 0 ? setup.reactorA : setup.reactorB;
 const sideA = (setup: TwoReactorSetup) => setup.reactorA;
 
+/** A peer on a build without erasure: gateOutbound runs on every outbox page. */
+const WITHOUT_DOCUMENT_PURGE = localPeerManifest(
+  PEER_CAPABILITIES.filter(
+    (capability) => capability.name !== "document-purge",
+  ),
+  {},
+);
+
 const scenarios: Scenario[] = [
   {
     name: "Baseline: 10 documents, 10 operations each (writes to convergence)",
     continues: "Baseline: 10 documents, 10 operations each",
+    documents: 10,
+    creatorFor: (setup, i) => (i < 5 ? setup.reactorA : setup.reactorB),
+    write: (setup, ids) => {
+      const writes: Promise<void>[] = [];
+      for (const [i, docId] of ids.entries()) {
+        const reactor = i < 5 ? setup.reactorA : setup.reactorB;
+        for (let j = 0; j < 10; j++) {
+          writes.push(
+            submitWrite(setup, reactor, docId, [
+              driveDocumentModelModule.actions.setDriveName({
+                name: `Doc ${i} Update ${j}`,
+              }),
+            ]),
+          );
+        }
+      }
+      return writes;
+    },
+  },
+  {
+    name: "Outbound gating: Baseline, peers announce everything but document-purge (writes to convergence)",
+    continues: "",
+    peer: WITHOUT_DOCUMENT_PURGE,
     documents: 10,
     creatorFor: (setup, i) => (i < 5 ? setup.reactorA : setup.reactorB),
     write: (setup, ids) => {

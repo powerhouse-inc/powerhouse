@@ -160,8 +160,8 @@ export type ReactorFeatureFlags = {
   authConditions: boolean;
 };
 
-/** Placeholder until stage 1 measures purge duration. */
-export const DEFAULT_MAX_PURGE_OPERATIONS = 50_000;
+/** 200k operations purge in 1.6 s on local Postgres; jobs time out at 30 s. */
+export const DEFAULT_MAX_PURGE_OPERATIONS = 200_000;
 
 /** How long a deferred job waits for its document before it fails. */
 export const DEFAULT_DEFERRED_JOB_TTL_MS = 30_000;
