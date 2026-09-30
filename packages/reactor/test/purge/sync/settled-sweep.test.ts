@@ -15,6 +15,7 @@ type Internals = {
   purgedDocumentIds: Set<string>;
   markerRetries: Map<string, unknown>;
   sweptThrough: number;
+  derivedThrough: Map<string, number>;
   deriveSettled(): Promise<void>;
   hold(
     remote: unknown,
@@ -33,7 +34,7 @@ describe("the settled-range sweep [Postgres]", () => {
     await harness.cleanup();
   });
 
-  it("reads nothing without remotes and only the remotes' collections with them", async () => {
+  it("reads nothing without trailing remotes and only their collections with them", async () => {
     harness = await createHarness();
     await harness.manager.startup();
     const spy = vi.spyOn(harness.index, "getCollectionsInRange");
@@ -43,9 +44,16 @@ describe("the settled-range sweep [Postgres]", () => {
     expect(spy).not.toHaveBeenCalled();
 
     await harness.manager.add("a", COL_A, CONFIG, FILTER, {}, "a");
+    await vi.waitFor(() => expect(manager.derivedThrough.has("a")).toBe(true));
     await indexOperation(harness.index, OTHER, {
       joins: [DriveCollectionId.forDrive("drive-b").key],
     });
+    manager.derivedThrough.set("a", Number.MAX_SAFE_INTEGER);
+    manager.sweptThrough = 0;
+    await manager.deriveSettled();
+    expect(spy).not.toHaveBeenCalled();
+
+    manager.derivedThrough.delete("a");
     manager.sweptThrough = 0;
     await manager.deriveSettled();
     expect(spy).toHaveBeenCalledWith(

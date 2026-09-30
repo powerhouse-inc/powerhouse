@@ -1737,11 +1737,16 @@ export class SyncManager
     const among = [
       ...new Set(
         [...this.remotes.values()]
-          .filter((remote) => !this.removing.has(remote.meta.name))
+          .filter(
+            (remote) =>
+              !this.removing.has(remote.meta.name) &&
+              (this.derivedThrough.get(remote.meta.name) ?? -1) < through,
+          )
           .map((remote) => remote.meta.collectionId.key),
       ),
     ];
-    // A remote added later is owed the head on add().
+    // A remote added later is owed the head on add(); one derived through
+    // `through` has read the range already.
     if (among.length === 0) {
       this.sweptThrough = through;
       return;
