@@ -29,6 +29,7 @@ import { buildSchema, graphql } from "graphql";
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  holdPollRefusals,
   pollSyncEnvelopes,
   pushSyncEnvelopes,
   recordPollMarkerRefusals,
@@ -537,6 +538,31 @@ describe("peer manifest exchange over the sync resolvers", () => {
       ]),
     );
     expect(server.getById("refusing").channel.deadLetter.items).toEqual([]);
+  });
+
+  it("ignores a polled refusal of a kind it does not know", async () => {
+    const server = await reactor();
+    await touchChannel(server, {
+      input: {
+        id: "refusing",
+        name: "refusing",
+        collectionId: DriveCollectionId.forDrive("drive-1").key,
+        filter: FILTER,
+        sinceTimestampUtcMs: "0",
+        manifest: server.localManifest(),
+      },
+    });
+    const added = vi.spyOn(
+      server.getById("refusing").channel.deadLetter,
+      "add",
+    );
+
+    holdPollRefusals(server, "refusing", [
+      { documentId: "drive-1", branch: "main", kind: "future" },
+    ]);
+
+    expect(added).not.toHaveBeenCalled();
+    expect(await server.listHolds({ remoteName: "refusing" })).toEqual([]);
   });
 
   it("fails a poll whose marker refusals were not recorded with a recoverable code", async () => {

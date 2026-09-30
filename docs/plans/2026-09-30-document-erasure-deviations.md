@@ -444,6 +444,10 @@ Not spec deviations; recorded because they change how the suites run.
   records them (`packages/reactor-api/src/graphql/reactor/resolvers.ts:1961`)
   instead of turning them into holds — polled refusals never reached the
   purging host, and an older server answers an unknown field with HTTP 400.
+- `packages/reactor-api/src/graphql/reactor/resolvers.ts:1923`
+  (`holdPollRefusals`) — only a polled refusal with no `kind` becomes a hold;
+  a kind the server does not know is ignored — a future kind was held as
+  `UNSUPPORTED_PROTOCOL`.
 - `storage/kysely/document-purger.ts:82` (`groupReferencersInHistory`) —
   moved into the purger, shared by precondition 3 and `plan()`.
 - `sync/sync-manager.ts:347` — `IDeliveryTracking` backed by an optional

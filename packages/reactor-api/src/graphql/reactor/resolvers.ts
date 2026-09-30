@@ -1918,13 +1918,16 @@ const MARKER_REFUSAL = "marker";
  * The client's UNSUPPORTED_PROTOCOL refusals of polled rows. Each becomes a hold
  * for that client, as a pushed refusal does, rather than counting as delivered.
  * A refused marker is not a hold: {@link recordPollMarkerRefusals} takes it.
+ * A kind this server does not know is ignored.
  */
 export function holdPollRefusals(
   syncManager: ISyncManager,
   channelId: string,
   all: ReadonlyArray<PollRefusal> | null | undefined,
 ): void {
-  const refusals = all?.filter((refusal) => refusal.kind !== MARKER_REFUSAL);
+  const refusals = all?.filter(
+    (refusal) => refusal.kind === undefined || refusal.kind === null,
+  );
   if (!refusals?.length) return;
   let remote;
   try {
