@@ -662,21 +662,19 @@ export async function until(
   what: string,
   predicate: () => Promise<boolean> | boolean,
   timeout = 10_000,
-  diagnose?: () => Promise<unknown>,
+  diagnose: () => Promise<unknown> = Mesh.liveState,
 ): Promise<void> {
   try {
     await vi.waitUntil(predicate, { timeout, interval: 20 });
   } catch (error) {
-    let state = "";
-    if (diagnose) {
-      try {
-        state = `\n${JSON.stringify(await diagnose(), null, 1)}`;
-      } catch (diagnoseError) {
-        state = `\n(diagnosis failed: ${String(diagnoseError)})`;
-      }
+    let state: string;
+    try {
+      state = JSON.stringify(await diagnose(), null, 1);
+    } catch (diagnoseError) {
+      state = `(diagnosis failed: ${String(diagnoseError)})`;
     }
     throw new Error(
-      `timed out waiting until ${what}: ${String(error)}${state}`,
+      `timed out waiting until ${what}: ${String(error)}\n${state}`,
       {
         cause: error,
       },
@@ -687,11 +685,18 @@ export async function until(
 /** What a stalled sync wait needs: watermarks, sweeps, wires, cluster xids. */
 export async function syncState(nodes: Node[], mesh: Mesh): Promise<unknown> {
   return {
-    nodes: nodes.map((node) => ({
-      name: node.name,
-      watermark: node.module.settledWatermark.status(),
-      catchUp: node.module.catchUp.status().consumers,
-    })),
+    nodes: await Promise.all(
+      nodes.map(async (node) => ({
+        name: node.name,
+        watermark: node.module.settledWatermark.status(),
+        catchUp: node.module.catchUp.status().consumers,
+        cursors: await node.db
+          .selectFrom("sync_cursors")
+          .select(["remote_name", "cursor_type", "cursor_ordinal"])
+          .execute()
+          .catch(String),
+      })),
+    ),
     wires: [...mesh.wires].map(([name, wire]) => ({
       name,
       paused: wire.paused,
@@ -703,9 +708,12 @@ export async function syncState(nodes: Node[], mesh: Mesh): Promise<unknown> {
     })),
     channels: [...mesh.channels].map(([name, channel]) => ({
       name,
-      inbox: channel.inbox.items.length,
-      outbox: channel.outbox.items.length,
-      deadLetter: channel.deadLetter.items.length,
+      inbox: channel.inbox.items.map((i) => `${i.documentId}:${i.status}`),
+      outbox: channel.outbox.items.map((i) => `${i.documentId}:${i.status}`),
+      deadLetter: channel.deadLetter.items.map(
+        (i) =>
+          `${i.documentId}:${i.error?.errorType}:${i.error?.error.message}`,
+      ),
     })),
     openXids: await nodes[0]?.pg.openXids(),
   };
@@ -788,6 +796,18 @@ export class Mesh {
 
   register(node: Node): void {
     this.nodes.set(node.name, node);
+    Mesh.live.add(this);
+  }
+
+  private static readonly live = new Set<Mesh>();
+
+  /** syncState of every mesh with registered nodes, for a timed-out wait. */
+  static async liveState(): Promise<unknown> {
+    const states = [];
+    for (const mesh of Mesh.live) {
+      states.push(await syncState([...mesh.nodes.values()], mesh));
+    }
+    return states;
   }
 
   static reverse(remoteName: string): string {
@@ -965,6 +985,7 @@ export class Mesh {
   }
 
   clear(): void {
+    Mesh.live.delete(this);
     this.generation++;
     this.channels.clear();
     this.wires.clear();
