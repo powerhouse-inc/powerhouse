@@ -306,7 +306,7 @@ test.describe("reactor worker multi-tab", () => {
             const result = await gql<{
               document?: { document?: { id: string; name: string } };
             }>(
-              `query($id: String!) { document(identifier: $id) { document { id name } } }`,
+              `query($id: String!) { document(idOrSlug: $id) { document { id name } } }`,
               { id: createdByTabId },
             );
             return result.data?.document?.document?.name === documentName;
@@ -321,7 +321,7 @@ test.describe("reactor worker multi-tab", () => {
     // Server -> client: a document created on the switchboard fans out to
     // every tab through the same single worker.
     const created = await gql<{ createEmptyDocument?: { id: string } }>(
-      `mutation($parentId: String) { createEmptyDocument(documentType: "powerhouse/document-model", parentIdentifier: $parentId) { id } }`,
+      `mutation($parentId: String) { createEmptyDocument(documentType: "powerhouse/document-model", parentIdOrSlug: $parentId) { id } }`,
       { parentId: driveId },
     );
     const createdId = created.data?.createEmptyDocument?.id;
