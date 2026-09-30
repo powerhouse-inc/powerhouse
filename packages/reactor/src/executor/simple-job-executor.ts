@@ -734,7 +734,11 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (job.kind === "mutation") {
       for (const action of job.actions) {
         const target = relationshipTarget(action);
-        if (target !== undefined && purged.has(target)) {
+        if (
+          action.type === "ADD_RELATIONSHIP" &&
+          target !== undefined &&
+          purged.has(target)
+        ) {
           return new DocumentPurgedError(
             target,
             `${action.type} target ${target} was purged`,
