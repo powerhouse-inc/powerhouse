@@ -102,6 +102,9 @@ export class Fleet {
   /** Every operation handed to a channel's inbox, by channel name. */
   readonly delivered = new Map<string, OperationWithContext[]>();
   private readonly options = new Map<string, LinkOptions>();
+  // Channels whose sync manager has wired them; others get envelopes queued.
+  private readonly ready = new Set<string>();
+  private readonly queued = new Map<string, SyncEnvelope[]>();
   private readonly nodes: Node[] = [];
   private readonly databases: Array<{ name: string; db: Kysely<Database> }> =
     [];
@@ -155,12 +158,14 @@ export class Fleet {
           remoteName,
           cursorStorage,
           (envelope: SyncEnvelope) => {
-            const peer = this.channels.get(peerName);
-            if (!peer) throw new Error(`no channel ${peerName}`);
-            peer.receive(envelope);
-            const delivered = this.delivered.get(peerName) ?? [];
-            delivered.push(...(envelope.operations ?? []));
-            this.delivered.set(peerName, delivered);
+            // A backfill can start before the other side of its link exists.
+            if (!this.ready.has(peerName)) {
+              const queued = this.queued.get(peerName) ?? [];
+              queued.push(envelope);
+              this.queued.set(peerName, queued);
+              return;
+            }
+            this.deliver(peerName, envelope);
           },
           {
             ...options,
@@ -200,6 +205,23 @@ export class Fleet {
     return node;
   }
 
+  private deliver(name: string, envelope: SyncEnvelope): void {
+    const peer = this.channels.get(name);
+    if (!peer) throw new Error(`no channel ${name}`);
+    peer.receive(envelope);
+    const delivered = this.delivered.get(name) ?? [];
+    delivered.push(...(envelope.operations ?? []));
+    this.delivered.set(name, delivered);
+  }
+
+  /** Delivers what was sent to `name` before its sync manager wired it. */
+  private open(name: string): void {
+    this.ready.add(name);
+    for (const envelope of this.queued.get(name)?.splice(0) ?? []) {
+      this.deliver(name, envelope);
+    }
+  }
+
   /** Both directions of a channel for `driveId`'s collection; `tag` tells apart a second pair. */
   async link(
     a: Node,
@@ -221,7 +243,9 @@ export class Fleet {
     const collection = DriveCollectionId.forDrive(driveId);
     const config = { type: "internal", parameters: {} };
     await a.sync.add(toB, collection, config, FILTER, options.remote);
+    this.open(toB);
     await b.sync.add(toA, collection, config, FILTER);
+    this.open(toA);
   }
 
   kill(): void {
@@ -232,6 +256,8 @@ export class Fleet {
     this.channels.clear();
     this.options.clear();
     this.delivered.clear();
+    this.ready.clear();
+    this.queued.clear();
   }
 
   /** kill(), then waits for every node to stop and drops its database. */
@@ -243,6 +269,8 @@ export class Fleet {
     this.channels.clear();
     this.options.clear();
     this.delivered.clear();
+    this.ready.clear();
+    this.queued.clear();
     const admin = new Pool({ connectionString: PG_TEST_URL });
     try {
       for (const { name, db } of this.databases.splice(0)) {

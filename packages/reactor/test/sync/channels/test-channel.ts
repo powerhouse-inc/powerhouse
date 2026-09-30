@@ -16,7 +16,11 @@ import type {
   RemoteCursor,
   SyncEnvelope,
 } from "../../../src/sync/types.js";
-import { ChannelErrorSource } from "../../../src/sync/types.js";
+import {
+  ChannelErrorSource,
+  SyncOperationStatus,
+} from "../../../src/sync/types.js";
+import { trimMailboxFromAckOrdinal } from "../../../src/sync/utils.js";
 
 export type TestChannelOptions = {
   /** The channel at the other end, for the manifest handshake. */
@@ -25,6 +29,8 @@ export type TestChannelOptions = {
   silent?: boolean;
   /** Announced instead of the sync manager's manifest. */
   announce?: () => PeerManifest | null;
+  /** Keep sent entries until the peer acks them; resend to a replaced peer. */
+  acked?: boolean;
 };
 
 /**
@@ -52,6 +58,8 @@ export class TestChannel implements IChannel {
   private readonly peerManifestCallbacks = new Set<
     (manifest: PeerManifest | null) => void
   >();
+  private watchedInbox?: Mailbox;
+  private persistedOutboxOrdinal = 0;
 
   constructor(
     channelId: string,
@@ -67,7 +75,7 @@ export class TestChannel implements IChannel {
     this.send = send;
     this.isShutdown = false;
 
-    this.inbox = new Mailbox();
+    this.inbox = new Mailbox({ holdAckBelowMarkers: true });
     this.outbox = new Mailbox();
     this.deadLetter = new Mailbox();
 
@@ -78,7 +86,12 @@ export class TestChannel implements IChannel {
     });
 
     this.outbox.onRemoved((syncOps) => {
-      const maxOrdinal = getLatestAppliedOrdinal(syncOps);
+      let maxOrdinal = getLatestAppliedOrdinal(syncOps);
+      if (this.options.acked) {
+        maxOrdinal = Math.min(maxOrdinal, this.unackedFloor() - 1);
+        if (maxOrdinal <= this.persistedOutboxOrdinal) return;
+        this.persistedOutboxOrdinal = maxOrdinal;
+      }
       if (maxOrdinal > 0) {
         void this.cursorStorage.upsert({
           remoteName: this.remoteName,
@@ -154,6 +167,42 @@ export class TestChannel implements IChannel {
     if (!peer || peer.isShutdown) return;
     this.hear(peer.announced());
     peer.hear(this.announced());
+    this.watch(peer);
+    peer.watch(this);
+  }
+
+  /** Trims by the peer's inbox ack; resends what a replaced peer never acked. */
+  private watch(peer: TestChannel): void {
+    if (!this.options.acked || this.watchedInbox === peer.inbox) return;
+    const replaced = this.watchedInbox !== undefined;
+    const inbox = peer.inbox;
+    this.watchedInbox = inbox;
+    inbox.onRemoved(() => {
+      if (this.watchedInbox !== inbox || this.isShutdown) return;
+      if (inbox.ackOrdinal > 0) {
+        trimMailboxFromAckOrdinal(this.outbox, inbox.ackOrdinal);
+      }
+    });
+    if (!replaced) return;
+    for (const syncOp of this.outbox.items) {
+      if (syncOp.status === SyncOperationStatus.Applied) continue;
+      this.send({
+        type: "operations",
+        channelMeta: { id: this.channelId },
+        operations: syncOp.operations,
+      });
+    }
+  }
+
+  private unackedFloor(): number {
+    let floor = Number.POSITIVE_INFINITY;
+    for (const syncOp of this.outbox.items) {
+      if (syncOp.status === SyncOperationStatus.Applied) continue;
+      for (const op of syncOp.operations) {
+        if (op.context.ordinal > 0) floor = Math.min(floor, op.context.ordinal);
+      }
+    }
+    return floor;
   }
 
   triggerPull(): void {}
@@ -205,6 +254,10 @@ export class TestChannel implements IChannel {
 
       this.send(envelope);
 
+      if (this.options.acked) {
+        syncOp.transported();
+        return;
+      }
       syncOp.executed();
       this.outbox.remove(syncOp);
     } catch (error) {

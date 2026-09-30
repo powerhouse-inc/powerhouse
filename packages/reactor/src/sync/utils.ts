@@ -583,6 +583,7 @@ const NON_QUARANTINING_ERROR_TYPES: ReadonlySet<SyncOperationErrorType> =
     "PEER_PROTOCOL_UNSUPPORTED",
     "DOCUMENT_PURGED",
     "PURGE_PRECONDITION",
+    "MARKER_REFUSED",
   ]);
 
 /**
