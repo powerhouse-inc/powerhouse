@@ -153,14 +153,14 @@ function buildBatchMutation(
   asyncMutate: boolean,
 ): string {
   const varDecls = [
-    "$docId: PHID!",
+    "$docId: String!",
     ...ops.map((op, i) => `$input${i}: ${op.inputType}!`),
   ].join(", ");
   const body = ops
     .map((op, i) => {
       const name = asyncMutate ? `${op.mutationName}Async` : op.mutationName;
       const selection = asyncMutate ? "" : " { id }";
-      return `    op${i}: ${name}(docId: $docId, input: $input${i})${selection}`;
+      return `    op${i}: ${name}(documentIdOrSlug: $docId, input: $input${i})${selection}`;
     })
     .join("\n");
   return `mutation BatchOps(${varDecls}) {\n  DocumentModel {\n${body}\n  }\n}`;

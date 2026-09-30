@@ -33,8 +33,8 @@ const GET_DOCUMENT_MODELS = gql`
 `;
 
 const DELETE_DOCUMENTS = gql`
-  mutation DeleteDocuments($identifiers: [String!]!) {
-    deleteDocuments(identifiers: $identifiers)
+  mutation DeleteDocuments($idsOrSlugs: [String!]!) {
+    deleteDocuments(idsOrSlugs: $idsOrSlugs)
   }
 `;
 
@@ -89,7 +89,7 @@ async function deleteDocuments(
     const batch = ids.slice(i, i + BATCH_SIZE);
 
     try {
-      await client.request(DELETE_DOCUMENTS, { identifiers: batch });
+      await client.request(DELETE_DOCUMENTS, { idsOrSlugs: batch });
       deleted += batch.length;
     } catch {
       failed += batch.length;
