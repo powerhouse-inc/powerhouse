@@ -489,18 +489,23 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     const lockedIds = jobWriteIds(job);
-    let purged: Set<string>;
+    const lockFailure = (error: unknown) => ({
+      result: buildErrorResult(
+        job,
+        error instanceof Error ? error : new Error(String(error)),
+        startTime,
+      ),
+    });
     try {
       await scopeStores.documentLocks.shared(lockedIds);
+    } catch (error) {
+      return lockFailure(error);
+    }
+    let purged: Set<string>;
+    try {
       purged = await scopeStores.documentLocks.purged(lockedIds);
     } catch (error) {
-      return {
-        result: buildErrorResult(
-          job,
-          error instanceof Error ? error : new Error(String(error)),
-          startTime,
-        ),
-      };
+      return lockFailure(error);
     }
     const purgedRefusal = this.purgedRefusal(job, purged);
     if (purgedRefusal) {
@@ -820,9 +825,13 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    let alreadyPurged: boolean;
     try {
       await stores.documentLocks.exclusive(job.documentId);
+    } catch (error) {
+      return fail(error);
+    }
+    let alreadyPurged: boolean;
+    try {
       const purged = await stores.documentLocks.purged([job.documentId]);
       alreadyPurged = purged.has(job.documentId);
     } catch (error) {
