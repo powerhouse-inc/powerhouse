@@ -10,6 +10,7 @@ import { RemoteKeyValueStore } from "../context/remote-store.js";
 import { RemoteReactorService } from "../context/reactor.js";
 import { RemoteOutput } from "../context/remote-output.js";
 import { captureConsole } from "./logs.js";
+import { setHostCallTimeout } from "./host-call.js";
 import { jsonSafe } from "./json-safe.js";
 import { formatPieceError } from "@powerhousedao/pieces-framework/host";
 import { redactError, redactMessage } from "./redact.js";
@@ -532,6 +533,7 @@ process.on("message", (message: unknown) => {
   // rejection the handler below reports, instead of killing the child.
   const handler = Promise.resolve().then(() => {
     setMaxFileBytes(message.request.maxFileBytes);
+    setHostCallTimeout(message.request.hostCallTimeoutMs);
     return runWithEgressPolicy(message.request.egress, () => dispatch(message));
   });
   handler

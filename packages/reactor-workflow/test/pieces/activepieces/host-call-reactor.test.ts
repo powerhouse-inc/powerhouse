@@ -8,8 +8,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   ActivepiecesBlockExecutor,
+  MAX_REACTOR_WAIT_MS,
+  reactorHandlers,
   type ReactorPort,
 } from "../../../src/pieces/engine/blocks.js";
+import { REACTOR_WAIT } from "../../../src/pieces/activepieces/worker/protocol.js";
 import type { PieceResolver } from "../../../src/pieces/activepieces/resolver.js";
 import {
   stepBlock,
@@ -155,6 +158,19 @@ function reactorPort(): ReactorPort & { calls: string[] } {
         state: { name: "Renamed" },
       });
     },
+    submit(input) {
+      calls.push(
+        `submit ${input.documentId} ${input.actions.map((a) => a.type).join(",")}`,
+      );
+      return Promise.resolve({
+        jobId: "job-1",
+        actionIds: input.actions.map((_, index) => `action-${index}`),
+      });
+    },
+    wait(input) {
+      calls.push(`wait ${input.jobId}`);
+      return Promise.resolve({ jobId: input.jobId, status: "READ_READY" });
+    },
   };
 }
 
@@ -256,6 +272,23 @@ describe("ctx.reactor over the host call channel", () => {
       "find limit=1",
       "find limit=3",
     ]);
+  });
+
+  it("holds a wait no longer than the host allows", async () => {
+    const asked: number[] = [];
+    const port = reactorPort();
+    port.wait = (input) => {
+      asked.push(input.maxWaitMs);
+      return Promise.resolve({ jobId: input.jobId, status: "RUNNING" });
+    };
+    const wait = reactorHandlers(port)[REACTOR_WAIT];
+
+    await wait({ jobId: "j1", maxWaitMs: 1e9 });
+    await wait({ jobId: "j1", maxWaitMs: -5 });
+    await wait({ jobId: "j1", maxWaitMs: "soon" });
+    expect(() => wait({ maxWaitMs: 10 })).toThrow("jobId");
+
+    expect(asked).toEqual([MAX_REACTOR_WAIT_MS, 0, 0]);
   });
 
   it("refuses a fetched bundle the same piece code", async () => {

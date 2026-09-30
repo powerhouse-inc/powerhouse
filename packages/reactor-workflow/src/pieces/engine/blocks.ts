@@ -14,7 +14,13 @@ import {
   type PieceResolver,
 } from "../activepieces/resolver.js";
 import type { ActionContextIdentity } from "../activepieces/context/action.js";
-import type { ReactorService } from "../activepieces/context/reactor.js";
+import type {
+  ReactorExecuteInput,
+  ReactorJobState,
+  ReactorService,
+  ReactorSubmission,
+  ReactorWaitInput,
+} from "../activepieces/context/reactor.js";
 import {
   rewriteFileRefs,
   type StagedFile,
@@ -30,6 +36,8 @@ import {
   REACTOR_GET,
   REACTOR_MODEL,
   REACTOR_MODELS,
+  REACTOR_SUBMIT,
+  REACTOR_WAIT,
   STORE_DELETE,
   STORE_GET,
   STORE_PUT,
@@ -148,7 +156,20 @@ function storeKeyOf(payload: unknown): string {
 
 // Registered per step and only for a piece the host resolved locally, so a
 // fetched bundle forging these calls finds no handler and is refused.
-export type ReactorPort = ReactorService;
+export type ReactorPort = ReactorService & {
+  // Enqueues the write and answers at once.
+  submit(input: ReactorExecuteInput): Promise<ReactorSubmission>;
+  // Holds for at most `maxWaitMs`, then answers the job's state as it stands.
+  wait(input: ReactorWaitInput): Promise<ReactorJobState>;
+};
+
+// Held well under the worker's host-call cap, whatever the child asks for.
+export const MAX_REACTOR_WAIT_MS = 5_000;
+
+function waitMs(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 0;
+  return Math.min(Math.max(Math.floor(value), 0), MAX_REACTOR_WAIT_MS);
+}
 
 // Payloads arrive from the child, which runs piece code: a call is checked
 // here rather than trusted to have come from our own proxy.
@@ -224,6 +245,17 @@ function findMatch(
   return { path: path.trim(), value: wanted };
 }
 
+function executeInput(payload: unknown): ReactorExecuteInput {
+  const input = reactorInput(payload);
+  return {
+    documentId: requiredString(input, "documentId"),
+    ...(optionalString(input, "branch")
+      ? { branch: optionalString(input, "branch") }
+      : {}),
+    actions: reactorActions(input),
+  };
+}
+
 export function reactorHandlers(port: ReactorPort): HostCallHandlers {
   return {
     [REACTOR_MODELS]: () => port.models(),
@@ -266,14 +298,13 @@ export function reactorHandlers(port: ReactorPort): HostCallHandlers {
           : {}),
       });
     },
-    [REACTOR_EXECUTE]: (payload) => {
+    [REACTOR_EXECUTE]: (payload) => port.execute(executeInput(payload)),
+    [REACTOR_SUBMIT]: (payload) => port.submit(executeInput(payload)),
+    [REACTOR_WAIT]: (payload) => {
       const input = reactorInput(payload);
-      return port.execute({
-        documentId: requiredString(input, "documentId"),
-        ...(optionalString(input, "branch")
-          ? { branch: optionalString(input, "branch") }
-          : {}),
-        actions: reactorActions(input),
+      return port.wait({
+        jobId: requiredString(input, "jobId"),
+        maxWaitMs: waitMs(input.maxWaitMs),
       });
     },
   };

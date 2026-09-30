@@ -38,6 +38,41 @@ export type {
   ReactorService,
 } from "@powerhousedao/pieces-framework";
 
+// `actionIds` are in the order the actions were given.
+export interface ReactorSubmission {
+  jobId: string;
+  actionIds: string[];
+}
+
+export interface ReactorWaitInput {
+  jobId: string;
+  maxWaitMs: number;
+}
+
+// UNKNOWN: no record of the job (a restart); its actions may or may not be written.
+export type ReactorJobStatus =
+  | "PENDING"
+  | "RUNNING"
+  | "WRITE_READY"
+  | "READ_READY"
+  | "FAILED"
+  | "UNKNOWN";
+
+export interface ReactorActionOutcome {
+  actionId: string;
+  kind: "applied" | "reducer-error" | "denied";
+  message?: string;
+  reason?: string;
+}
+
+// `actions` appears once the job's operations are written.
+export interface ReactorJobState {
+  jobId: string;
+  status: ReactorJobStatus;
+  error?: string;
+  actions?: ReactorActionOutcome[];
+}
+
 // The worker's half: every method is one host call, named so a failure reads
 // as the operation the piece asked for.
 export class RemoteReactorService implements ReactorService {

@@ -118,6 +118,8 @@ export interface PieceWorkerOptions {
   // How to reach a worker. Defaults to a forked child on this machine; a
   // remote transport replaces it without touching the protocol above.
   transport?: PieceWorkerTransportFactory;
+  // Cap on each call the child makes of its host; the child's default if unset.
+  hostCallTimeoutMs?: number;
 }
 
 // The five requests a worker serves, plus teardown. Callers hold this rather
@@ -154,6 +156,7 @@ export interface IPieceWorker {
 export class PieceWorker implements IPieceWorker {
   private readonly connect: PieceWorkerTransportFactory;
   private readonly defaultTimeoutMs: number;
+  private readonly hostCallTimeoutMs: number | undefined;
   private worker: IPieceWorkerTransport | undefined;
   private queue: Promise<unknown> = Promise.resolve();
   private nextId = 1;
@@ -164,6 +167,7 @@ export class PieceWorker implements IPieceWorker {
       options.transport ??
       (() => createForkTransport(entryPath ?? defaultEntryPath()));
     this.defaultTimeoutMs = options.defaultTimeoutMs ?? 30_000;
+    this.hostCallTimeoutMs = options.hostCallTimeoutMs;
   }
 
   // Requests are serialized per worker; concurrency comes from holding more
@@ -250,6 +254,8 @@ export class PieceWorker implements IPieceWorker {
     const id = this.nextId++;
 
     return new Promise<PieceWorkerResult>((resolve, reject) => {
+      // The kill timer's own reading, so the child can give up in time to say why.
+      const deadline = Date.now() + timeoutMs;
       const timer = setTimeout(() => {
         cleanup();
         worker.kill();
@@ -316,7 +322,14 @@ export class PieceWorker implements IPieceWorker {
         jsonSafe({
           id,
           type,
-          request: { maxFileBytes: configuredMaxFileBytes(), ...request },
+          request: {
+            maxFileBytes: configuredMaxFileBytes(),
+            deadline,
+            ...(this.hostCallTimeoutMs
+              ? { hostCallTimeoutMs: this.hostCallTimeoutMs }
+              : {}),
+            ...request,
+          },
         }),
       );
     });

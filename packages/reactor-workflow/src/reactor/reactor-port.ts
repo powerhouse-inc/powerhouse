@@ -11,10 +11,14 @@ import type {
   ReactorDocumentSummary,
   ReactorExecuteInput,
   ReactorFindInput,
+  ReactorJobState,
   ReactorModelDetail,
   ReactorModelSummary,
   ReactorPort,
+  ReactorSubmission,
+  ReactorWaitInput,
 } from "../pieces/index.js";
+import { JobStatus, type JobInfo } from "@powerhousedao/reactor";
 import {
   createAction,
   withSignaturePolicy,
@@ -152,6 +156,44 @@ function assertOperationsApplied(
           `Action ${operation.action.type} failed: ${operation.error ?? "unknown error"}`,
       )
       .join("; "),
+  );
+}
+
+// What the reactor answers for a job it has no record of.
+const JOB_NOT_FOUND = "Job not found";
+
+function jobState(job: JobInfo): ReactorJobState {
+  if (job.status === JobStatus.FAILED && job.error?.message === JOB_NOT_FOUND) {
+    return { jobId: job.id, status: "UNKNOWN" };
+  }
+  return {
+    jobId: job.id,
+    status: job.status,
+    ...(job.error ? { error: job.error.message } : {}),
+    ...(job.result
+      ? {
+          actions: job.result.actions.map((action) => ({
+            actionId: action.actionId,
+            kind: action.kind,
+            ...(action.kind === "reducer-error"
+              ? { message: action.message }
+              : {}),
+            ...(action.kind === "denied" ? { reason: action.reason } : {}),
+          })),
+        }
+      : {}),
+  };
+}
+
+function buildActions(input: ReactorExecuteInput): Action[] {
+  return input.actions.map((entry) =>
+    createAction(
+      entry.type,
+      entry.input,
+      undefined,
+      undefined,
+      entry.scope ?? "global",
+    ),
   );
 }
 
@@ -295,16 +337,28 @@ export class SubgraphReactorPort implements ReactorPort {
     return this.handOver(documentSummary(created, true));
   }
 
-  async execute(input: ReactorExecuteInput): Promise<ReactorDocumentSummary> {
-    const actions: Action[] = input.actions.map((entry) =>
-      createAction(
-        entry.type,
-        entry.input,
-        undefined,
-        undefined,
-        entry.scope ?? "global",
-      ),
+  async submit(input: ReactorExecuteInput): Promise<ReactorSubmission> {
+    const actions = buildActions(input);
+    const job = await this.client.executeAsync(
+      input.documentId,
+      input.branch ?? "main",
+      actions,
     );
+    return { jobId: job.id, actionIds: actions.map((action) => action.id) };
+  }
+
+  async wait(input: ReactorWaitInput): Promise<ReactorJobState> {
+    const signal = AbortSignal.timeout(input.maxWaitMs);
+    try {
+      return jobState(await this.client.waitForJob(input.jobId, signal));
+    } catch (error) {
+      if (!signal.aborted) throw error;
+    }
+    return jobState(await this.client.getJobStatus(input.jobId));
+  }
+
+  async execute(input: ReactorExecuteInput): Promise<ReactorDocumentSummary> {
+    const actions = buildActions(input);
     const document = await this.client.execute<PHDocument>(
       input.documentId,
       input.branch ?? "main",
@@ -431,6 +485,14 @@ export class ScopedDesignTimeReactorPort implements ReactorPort {
   }
 
   execute(_input: ReactorExecuteInput): Promise<ReactorDocumentSummary> {
+    return Promise.reject(new Error(DESIGN_TIME_WRITES_REFUSED));
+  }
+
+  submit(_input: ReactorExecuteInput): Promise<ReactorSubmission> {
+    return Promise.reject(new Error(DESIGN_TIME_WRITES_REFUSED));
+  }
+
+  wait(_input: ReactorWaitInput): Promise<ReactorJobState> {
     return Promise.reject(new Error(DESIGN_TIME_WRITES_REFUSED));
   }
 

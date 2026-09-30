@@ -119,6 +119,19 @@ function stubPort(): ReactorPort & { calls: string[] } {
       );
       return Promise.resolve(summary(input.documentId, "Renamed"));
     },
+    submit(input) {
+      calls.push(
+        `submit ${input.documentId} ${input.actions.map((a) => a.type).join(",")}`,
+      );
+      return Promise.resolve({
+        jobId: "job-1",
+        actionIds: input.actions.map((_, index) => `action-${index}`),
+      });
+    },
+    wait(input) {
+      calls.push(`wait ${input.jobId}`);
+      return Promise.resolve({ jobId: input.jobId, status: "READ_READY" });
+    },
   };
 }
 
