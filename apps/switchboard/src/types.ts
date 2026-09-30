@@ -110,6 +110,8 @@ export type StartServerOptions = {
   identity?: IdentityOptions;
   /** Base URL for the attachment service; defaults to `PH_SWITCHBOARD_PUBLIC_URL` then `http(s)://localhost:${port}`. */
   attachmentServiceUrl?: string;
+  /** Mount the MCP server at `/mcp`. On by default; `false` wins over
+   * MCP_ENABLED, which can turn it off but never on. */
   mcp?: boolean;
   /** Powerhouse workflows: the runtime, its subgraph, its webhooks and its
    * document models. Wins over PH_WORKFLOWS_ENABLED and the config file. */
@@ -194,6 +196,8 @@ export type SwitchboardReactor = {
   workflowTriggers?: WorkflowTriggersCapability;
   /** Whether workflows are on, after the option, PH_WORKFLOWS_ENABLED and the config file. */
   workflowsEnabled: boolean;
+  /** Whether `/mcp` is mounted, after the option and MCP_ENABLED. */
+  mcpEnabled: boolean;
   /** The Renown instance if identity was initialized */
   renown: IRenown | null;
   /**

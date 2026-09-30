@@ -80,6 +80,7 @@ import {
   resolveWorkerPoolOptions,
 } from "./worker-pool.mjs";
 import { initFeatureFlags } from "./feature-flags.js";
+import { resolveMcpEnabled } from "./mcp-flag.mjs";
 import {
   WORKFLOW_PACKAGE_NAME,
   composeWorkflowRuntime,
@@ -1205,6 +1206,7 @@ async function initServer(
     attachmentReferenceProjection: api.attachmentReferenceProjection,
     workflowTriggers: workflows?.triggers,
     workflowsEnabled,
+    mcpEnabled: options.mcp !== false,
     renown,
     port: serverPort,
     shutdown,
@@ -1250,6 +1252,8 @@ export const startSwitchboard = async (
 
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
+  options.mcp = await resolveMcpEnabled({ featureFlags, option: options.mcp });
+
   const configPathForFlags = resolveConfigPath(options.configFile);
   const workflowsEnabled = await resolveWorkflowsEnabled({
     featureFlags,
@@ -1274,6 +1278,7 @@ export const startSwitchboard = async (
     JSON.stringify(
       {
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
+        MCP_ENABLED: options.mcp,
         PH_WORKFLOWS_ENABLED: workflowsEnabled,
       },
       null,
