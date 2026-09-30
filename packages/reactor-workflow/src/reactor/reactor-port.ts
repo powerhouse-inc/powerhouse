@@ -246,6 +246,7 @@ export class SubgraphReactorPort implements ReactorPort {
     documentId: string;
     branch?: string;
   }): Promise<ReactorDocumentSummary> {
+    // No consistency token: a write's read-back relies on document-view indexing before READ_READY.
     const document = await this.client.get<PHDocument>(
       input.documentId,
       input.branch ? { branch: input.branch } : undefined,
