@@ -8,6 +8,7 @@ import type {
   ISyncCursorStorage,
   ISyncDeadLetterStorage,
   ISyncHoldStorage,
+  ISyncPurgeRefusalStorage,
   ISyncReceivedMarkerStorage,
   ISyncRemoteStorage,
 } from "../storage/interfaces.js";
@@ -16,6 +17,7 @@ import { listPurged } from "../storage/kysely/document-purges.js";
 import { KyselySyncCursorStorage } from "../storage/kysely/sync-cursor-storage.js";
 import { KyselySyncDeadLetterStorage } from "../storage/kysely/sync-dead-letter-storage.js";
 import { KyselySyncHoldStorage } from "../storage/kysely/sync-hold-storage.js";
+import { KyselySyncPurgeRefusalStorage } from "../storage/kysely/sync-purge-refusal-storage.js";
 import { KyselySyncReceivedMarkerStorage } from "../storage/kysely/sync-received-marker-storage.js";
 import { KyselySyncRemoteStorage } from "../storage/kysely/sync-remote-storage.js";
 import type { Database } from "../storage/kysely/types.js";
@@ -30,6 +32,7 @@ export class SyncBuilder {
   private deadLetterStorage?: ISyncDeadLetterStorage;
   private holdStorage?: ISyncHoldStorage;
   private receivedMarkerStorage?: ISyncReceivedMarkerStorage;
+  private purgeRefusalStorage?: ISyncPurgeRefusalStorage;
   private config: Partial<SyncManagerConfig> = {};
 
   withChannelFactory(factory: IChannelFactory): this {
@@ -59,6 +62,11 @@ export class SyncBuilder {
 
   withReceivedMarkerStorage(storage: ISyncReceivedMarkerStorage): this {
     this.receivedMarkerStorage = storage;
+    return this;
+  }
+
+  withPurgeRefusalStorage(storage: ISyncPurgeRefusalStorage): this {
+    this.purgeRefusalStorage = storage;
     return this;
   }
 
@@ -126,6 +134,8 @@ export class SyncBuilder {
     const holdStorage = this.holdStorage ?? new KyselySyncHoldStorage(db);
     const receivedMarkerStorage =
       this.receivedMarkerStorage ?? new KyselySyncReceivedMarkerStorage(db);
+    const purgeRefusalStorage =
+      this.purgeRefusalStorage ?? new KyselySyncPurgeRefusalStorage(db);
 
     const syncManager = new SyncManager(
       logger,
@@ -144,6 +154,7 @@ export class SyncBuilder {
       { listPurged: () => listPurged(db) },
       receivedMarkerStorage,
       { at: (documentId, ordinal) => deliveryAt(db, documentId, ordinal) },
+      purgeRefusalStorage,
     );
 
     return {

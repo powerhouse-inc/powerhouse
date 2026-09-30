@@ -484,6 +484,8 @@ export const KEPT_TABLES = [
   "ProcessorCursor",
   // Holds only markers, each removed by its own load's outcome.
   "sync_received_markers",
+  // Payload-free: which remote refused the marker, for the erasure's report.
+  "sync_purge_refusals",
 ];
 
 /** No row about `id` in any table of the delete list, bar the marker. */

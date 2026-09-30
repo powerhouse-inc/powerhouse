@@ -82,7 +82,16 @@ const AGREEMENT_FIELDS = [
   "SyncRefusalInput",
 ] as const;
 
-type RefusalWire = { documentId: string; branch: string };
+/** `kind` only on a marker refusal: a peer without it rejects the field. */
+type RefusalWire = { documentId: string; branch: string; kind?: "marker" };
+
+/** The message arrives JSON-encoded, so its quotes may be escaped. */
+const REFUSAL_KIND_REJECTION =
+  /Field \\*"kind\\*" is not defined by type \\*"SyncRefusalInput/;
+
+function refusalKey(refusal: RefusalWire): string {
+  return `${refusal.documentId}\u0000${refusal.branch}\u0000${refusal.kind ?? ""}`;
+}
 
 /** How often a channel whose remote went silent asks again whether it serves agreement. */
 const AGREEMENT_PROBE_INTERVAL_MS = 5 * 60_000;
@@ -154,6 +163,8 @@ export class GqlRequestChannel implements IChannel {
   private peerServesDecisionFields: boolean = true;
   /** Cleared when the remote rejects {@link AGREEMENT_FIELDS}; set again by a touch that carries them. */
   private peerServesAgreement: boolean = true;
+  /** Cleared for good when the remote rejects a refusal's `kind`. */
+  private peerServesRefusalKind: boolean = true;
   private agreementStoppedUtcMs = 0;
   private localManifestProvider?: () => PeerManifest;
   /** Undefined until the first handshake; null for a silent peer. */
@@ -211,15 +222,19 @@ export class GqlRequestChannel implements IChannel {
           syncOp.documentId,
           this.channelId,
         );
-        if (
-          syncOp.error?.source === ChannelErrorSource.Inbox &&
-          syncOperationErrorType(syncOp.error) === "UNSUPPORTED_PROTOCOL"
-        ) {
-          this.pendingRefusals.set(`${syncOp.documentId}:${syncOp.branch}`, {
-            documentId: syncOp.documentId,
-            branch: syncOp.branch,
-          });
-        }
+        if (syncOp.error?.source !== ChannelErrorSource.Inbox) continue;
+        const errorType = syncOperationErrorType(syncOp.error);
+        const refusal: RefusalWire | undefined =
+          errorType === "UNSUPPORTED_PROTOCOL"
+            ? { documentId: syncOp.documentId, branch: syncOp.branch }
+            : errorType === "MARKER_REFUSED" && this.peerServesRefusalKind
+              ? {
+                  documentId: syncOp.documentId,
+                  branch: syncOp.branch,
+                  kind: "marker",
+                }
+              : undefined;
+        if (refusal) this.pendingRefusals.set(refusalKey(refusal), refusal);
       }
     });
 
@@ -785,7 +800,7 @@ export class GqlRequestChannel implements IChannel {
       outboxLatest: latestOrdinal,
     };
 
-    // Each flag only ever clears, so this settles within three attempts.
+    // Each flag only ever clears, so this settles within four attempts.
     let response: PollSyncEnvelopesResult;
     let refusals: RefusalWire[] = [];
     for (;;) {
@@ -807,6 +822,11 @@ export class GqlRequestChannel implements IChannel {
         );
         break;
       } catch (error) {
+        // Checked first: the rejection names SyncRefusalInput too.
+        if (this.rejectsRefusalKind(error, refusals)) {
+          this.stopRefusalKind();
+          continue;
+        }
         if (this.rejectsAgreementFields(error)) {
           await this.stopAgreement();
           continue;
@@ -824,7 +844,7 @@ export class GqlRequestChannel implements IChannel {
 
     // The server holds what was reported; a silent one keeps them pending.
     for (const refusal of refusals) {
-      this.pendingRefusals.delete(`${refusal.documentId}:${refusal.branch}`);
+      this.pendingRefusals.delete(refusalKey(refusal));
     }
 
     return {
@@ -835,6 +855,35 @@ export class GqlRequestChannel implements IChannel {
       manifestRevision: response.pollSyncEnvelopes.manifestRevision,
       peerManifestRevision: response.pollSyncEnvelopes.peerManifestRevision,
     };
+  }
+
+  private rejectsRefusalKind(
+    error: unknown,
+    sent: readonly RefusalWire[],
+  ): boolean {
+    return (
+      this.peerServesRefusalKind &&
+      sent.some((refusal) => refusal.kind !== undefined) &&
+      error instanceof GraphQLRequestError &&
+      error.category === "graphql" &&
+      REFUSAL_KIND_REJECTION.test(error.message)
+    );
+  }
+
+  /** A remote before marker refusals: what it refused goes unreported. */
+  private stopRefusalKind(): void {
+    this.logger.warn(
+      "Remote @channelId does not take marker refusals; they are not reported to it.",
+      this.channelId,
+    );
+    this.peerServesRefusalKind = false;
+    for (const [key, refusal] of this.pendingRefusals) {
+      if (refusal.kind !== undefined) this.pendingRefusals.delete(key);
+    }
+  }
+
+  forgetMarkerRefusal(documentId: string, branch: string): void {
+    this.refusedMarkers.delete(`${documentId}\u0000${branch}`);
   }
 
   private rejectsAgreementFields(error: unknown): boolean {

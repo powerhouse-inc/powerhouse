@@ -18,6 +18,7 @@ import {
   type PagingOptions,
   type RemoteFilter,
   type SearchFilter,
+  supportsPurgeRefusals,
   syncOperationErrorType,
   SyncOperation,
   type SyncScopeGate,
@@ -1611,7 +1612,7 @@ export function pollSyncEnvelopes(
     outboxAck: number;
     outboxLatest: number;
     manifestRevision?: string | null;
-    refusals?: ReadonlyArray<{ documentId: string; branch: string }> | null;
+    refusals?: ReadonlyArray<PollRefusal> | null;
   },
   forbiddenIds: ReadonlySet<string> = new Set(),
   heldOpIds: ReadonlySet<string> = new Set(),
@@ -1902,18 +1903,25 @@ type SyncEnvelopeArg = {
   dependsOn?: string[];
 };
 
+export type PollRefusal = {
+  documentId: string;
+  branch: string;
+  kind?: string | null;
+};
+
+const MARKER_REFUSAL = "marker";
+
 /**
  * The client's UNSUPPORTED_PROTOCOL refusals of polled rows. Each becomes a hold
  * for that client, as a pushed refusal does, rather than counting as delivered.
+ * A refused marker is not a hold: {@link recordPollMarkerRefusals} takes it.
  */
 export function holdPollRefusals(
   syncManager: ISyncManager,
   channelId: string,
-  refusals:
-    | ReadonlyArray<{ documentId: string; branch: string }>
-    | null
-    | undefined,
+  all: ReadonlyArray<PollRefusal> | null | undefined,
 ): void {
+  const refusals = all?.filter((refusal) => refusal.kind !== MARKER_REFUSAL);
   if (!refusals?.length) return;
   let remote;
   try {
@@ -1943,6 +1951,35 @@ export function holdPollRefusals(
     return syncOp;
   });
   remote.channel.deadLetter.add(...refused);
+}
+
+/**
+ * The client's refusals of purge markers it polled. Persisted before the poll is
+ * served; a failure fails the poll, and the client reports them again.
+ */
+export async function recordPollMarkerRefusals(
+  syncManager: ISyncManager,
+  channelId: string,
+  all: ReadonlyArray<PollRefusal> | null | undefined,
+): Promise<void> {
+  const refusals = all?.filter((refusal) => refusal.kind === MARKER_REFUSAL);
+  if (!refusals?.length) return;
+  if (!supportsPurgeRefusals(syncManager)) return;
+  let remote;
+  try {
+    remote = syncManager.getById(channelId);
+  } catch {
+    // The poll resolver reports the missing channel.
+    return;
+  }
+  for (const refusal of refusals) {
+    await syncManager.recordPurgeRefusal({
+      remoteName: remote.meta.name,
+      documentId: refusal.documentId,
+      branch: refusal.branch,
+      errorMessage: `Marker refused by ${remote.meta.name}`,
+    });
+  }
 }
 
 /**

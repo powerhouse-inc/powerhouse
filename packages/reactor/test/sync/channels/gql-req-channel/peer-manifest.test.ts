@@ -119,6 +119,26 @@ function previousSchemaServer() {
   return { fetchFn, touches, polls };
 }
 
+function inboxRefusal(
+  documentId: string,
+  errorType: "MARKER_REFUSED" | "UNSUPPORTED_PROTOCOL",
+) {
+  const syncOp = new SyncOperation(
+    crypto.randomUUID(),
+    "job-1",
+    [],
+    "remote-1",
+    documentId,
+    ["document"],
+    "main",
+    [],
+  );
+  syncOp.failed(
+    new ChannelError(ChannelErrorSource.Inbox, new Error("refused"), errorType),
+  );
+  return syncOp;
+}
+
 function respond(data: unknown, errors?: unknown[]) {
   return Promise.resolve({
     ok: true,
@@ -316,6 +336,66 @@ describe("GqlRequestChannel peer manifests", () => {
       { documentId: "doc", branch: "main" },
     ]);
     expect(state.polls[1].variables.refusals).toEqual([]);
+  });
+
+  it("reports a refused marker with its kind", async () => {
+    const { state, fetchFn } = agreementServer(SERVER_WIDE);
+    const timer = new ManualPollTimer();
+    const { channel } = channelWith(fetchFn, timer);
+    channels.push(channel);
+    await channel.init();
+
+    channel.deadLetter.add(inboxRefusal("purged", "MARKER_REFUSED"));
+    await timer.tick();
+    await timer.tick();
+
+    expect(state.polls[0].variables.refusals).toEqual([
+      { documentId: "purged", branch: "main", kind: "marker" },
+    ]);
+    expect(state.polls[1].variables.refusals).toEqual([]);
+  });
+
+  it("stops reporting marker refusals, not agreement, to a server without kind", async () => {
+    const { state, fetchFn } = agreementServer(SERVER_WIDE);
+    const agreeing = fetchFn.getMockImplementation()!;
+    fetchFn.mockImplementation((url: string, options: RequestInit) => {
+      const body = JSON.parse(options.body as string) as Body;
+      const refusals = (body.variables.refusals ?? []) as { kind?: string }[];
+      if (refusals.some((refusal) => refusal.kind !== undefined)) {
+        state.polls.push(body);
+        return respond(undefined, [
+          {
+            message: `Variable "$refusals" got invalid value { documentId: "purged", branch: "main", kind: "marker" } at "refusals[1]"; Field "kind" is not defined by type "SyncRefusalInput".`,
+            extensions: { code: "BAD_USER_INPUT" },
+          },
+        ]);
+      }
+      return agreeing(url, options);
+    });
+    const timer = new ManualPollTimer();
+    const { channel } = channelWith(fetchFn, timer);
+    channels.push(channel);
+    await channel.init();
+
+    channel.deadLetter.add(
+      inboxRefusal("held", "UNSUPPORTED_PROTOCOL"),
+      inboxRefusal("purged", "MARKER_REFUSED"),
+    );
+    await timer.tick();
+    channel.deadLetter.add(inboxRefusal("later", "MARKER_REFUSED"));
+    await timer.tick();
+
+    expect(state.polls.map((poll) => poll.variables.refusals)).toEqual([
+      [
+        { documentId: "held", branch: "main" },
+        { documentId: "purged", branch: "main", kind: "marker" },
+      ],
+      [{ documentId: "held", branch: "main" }],
+      [],
+    ]);
+    expect(
+      state.polls.every((poll) => poll.query.includes("manifestRevision")),
+    ).toBe(true);
   });
 
   it("hears a server restarted into the same build, so its holds are re-checked", async () => {

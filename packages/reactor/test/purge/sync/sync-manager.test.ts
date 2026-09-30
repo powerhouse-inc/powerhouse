@@ -390,6 +390,62 @@ describe("dead letters for a purged document [Postgres]", () => {
       branch: "main",
       errorMessage: "refused",
     });
+    const rows = await harness.db
+      .selectFrom("sync_purge_refusals")
+      .select(["remote_name", "document_id", "branch"])
+      .execute();
+    expect(rows).toEqual([
+      { remote_name: "remote", document_id: DOC, branch: "main" },
+    ]);
+  });
+
+  it("persists a refusal before reporting it, once per remote and branch", async () => {
+    await harness.manager.startup();
+    const heard: number[] = [];
+    harness.eventBus.subscribe(SyncEventTypes.PURGE_REFUSED, async () => {
+      const rows = await harness.db
+        .selectFrom("sync_purge_refusals")
+        .selectAll()
+        .execute();
+      heard.push(rows.length);
+    });
+    const refusal = {
+      remoteName: "poller",
+      documentId: DOC,
+      branch: "main",
+      errorMessage: "untrusted signer",
+    };
+    await harness.manager.recordPurgeRefusal(refusal);
+    await harness.manager.recordPurgeRefusal(refusal);
+    expect(heard).toEqual([1, 1]);
+    const rows = await harness.db
+      .selectFrom("sync_purge_refusals")
+      .selectAll()
+      .execute();
+    expect(rows).toHaveLength(1);
+    expect(JSON.stringify(rows)).not.toContain("untrusted");
+  });
+
+  it("hears the remote's next report when persisting a refusal fails", async () => {
+    await seedTombstone(harness.db, DOC, 1);
+    await harness.manager.startup();
+    await harness.manager.add("remote", COL_A, CONFIG, FILTER, {}, "r");
+    const channel = harness.manager.getByName("remote").channel;
+    const forget = vi.fn();
+    channel.forgetMarkerRefusal = forget;
+    const storage = (
+      harness.manager as unknown as {
+        refusalStorage: { record: (r: unknown) => Promise<void> };
+      }
+    ).refusalStorage;
+    const record = storage.record.bind(storage);
+    storage.record = () => Promise.reject(new Error("connection lost"));
+
+    channel.deadLetter.add(
+      failedSyncOp(DOC, ChannelErrorSource.Outbox, "MARKER_REFUSED"),
+    );
+    await vi.waitFor(() => expect(forget).toHaveBeenCalledWith(DOC, "main"));
+    storage.record = record;
   });
 
   it("is refused by storage for a tombstoned id", async () => {

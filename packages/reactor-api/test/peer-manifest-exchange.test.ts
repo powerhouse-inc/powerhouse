@@ -3,8 +3,10 @@ import {
   GqlRequestChannelFactory,
   GqlResponseChannelFactory,
   JobStatus,
+  REACTOR_SCHEMA,
   ReactorBuilder,
   SyncBuilder,
+  SyncEventTypes,
   type IChannel,
   type IChannelFactory,
   type IQueue,
@@ -532,6 +534,63 @@ describe("peer manifest exchange over the sync resolvers", () => {
         }),
       ]),
     );
+    expect(server.getById("refusing").channel.deadLetter.items).toEqual([]);
+  });
+
+  it("records a marker the client reports refusing, and holds nothing", async () => {
+    const server = await reactor();
+    const serverModule = modules[modules.length - 1];
+    const manifest = server.localManifest();
+    await touchChannel(server, {
+      input: {
+        id: "refusing",
+        name: "refusing",
+        collectionId: DriveCollectionId.forDrive("drive-1").key,
+        filter: FILTER,
+        sinceTimestampUtcMs: "0",
+        manifest,
+      },
+    });
+    const refused: unknown[] = [];
+    serverModule.eventBus.subscribe(SyncEventTypes.PURGE_REFUSED, (_t, e) => {
+      refused.push(e);
+    });
+    const bridge = createResolverBridge(new Map([["switchboard", server]]), {
+      log: false,
+    });
+
+    await bridge("http://switchboard/graphql", {
+      method: "POST",
+      body: JSON.stringify({
+        query: "query PollSyncEnvelopes { pollSyncEnvelopes { ackOrdinal } }",
+        variables: {
+          channelId: "refusing",
+          outboxAck: 0,
+          outboxLatest: 0,
+          manifestRevision: manifest.revision,
+          refusals: [
+            { documentId: "purged-1", branch: "main", kind: "marker" },
+          ],
+        },
+      }),
+    });
+
+    expect(refused).toEqual([
+      expect.objectContaining({
+        remoteName: "refusing",
+        documentId: "purged-1",
+        branch: "main",
+      }),
+    ]);
+    const rows = await serverModule.database
+      .withSchema(REACTOR_SCHEMA)
+      .selectFrom("sync_purge_refusals" as never)
+      .select(["remote_name" as never, "document_id" as never])
+      .execute();
+    expect(rows).toEqual([
+      { remote_name: "refusing", document_id: "purged-1" },
+    ]);
+    expect(await server.listHolds({ remoteName: "refusing" })).toEqual([]);
     expect(server.getById("refusing").channel.deadLetter.items).toEqual([]);
   });
 });

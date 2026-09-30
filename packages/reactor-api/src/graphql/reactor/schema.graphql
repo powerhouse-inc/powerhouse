@@ -468,6 +468,8 @@ input RemoteFilterInput {
 input SyncRefusalInput {
   documentId: String!
   branch: String!
+  # "marker" for a refused purge marker; absent for UNSUPPORTED_PROTOCOL
+  kind: String
 }
 
 input TouchChannelInput {
@@ -601,7 +603,7 @@ type Query {
     outboxLatest: Int!
     # The client's manifest revision; absent from a client without peer agreement
     manifestRevision: String
-    # Documents the client refused as UNSUPPORTED_PROTOCOL from earlier polls
+    # Documents the client refused from earlier polls: held, or a refused marker
     refusals: [SyncRefusalInput!]
   ): PollSyncEnvelopesResult!
 

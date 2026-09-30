@@ -114,6 +114,9 @@ export interface IChannel {
    * fires.
    */
   onPeerManifest?(callback: PeerManifestListener): () => void;
+
+  /** Hears the remote's next report of this refused marker again. */
+  forgetMarkerRefusal?(documentId: string, branch: string): void;
 }
 
 /**

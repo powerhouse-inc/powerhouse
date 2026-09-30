@@ -48,6 +48,7 @@ import type {
   ISyncCursorStorage,
   ISyncDeadLetterStorage,
   ISyncHoldStorage,
+  ISyncPurgeRefusalStorage,
   ISyncReceivedMarkerStorage,
   ISyncRemoteStorage,
   SyncHoldRecord,
@@ -72,7 +73,9 @@ import type {
 } from "./interfaces.js";
 import { calculateBackoffDelay } from "./channels/interval-poll-timer.js";
 import { InMemorySyncHoldStorage } from "./memory-hold-storage.js";
+import { InMemorySyncPurgeRefusalStorage } from "./memory-purge-refusal-storage.js";
 import { InMemorySyncReceivedMarkerStorage } from "./memory-received-marker-storage.js";
+import type { IPurgeRefusalRecorder } from "./purge-refusals.js";
 import { createPeerAgreement, type IPeerAgreement } from "./peer-agreement.js";
 import { SyncAwaiter } from "./sync-awaiter.js";
 import { SyncOperation } from "./sync-operation.js";
@@ -240,7 +243,9 @@ function firstOrdinalOf(syncOp: SyncOperation): number {
     : 0;
 }
 
-export class SyncManager implements ISyncManager, IDeliveryTracking {
+export class SyncManager
+  implements ISyncManager, IDeliveryTracking, IPurgeRefusalRecorder
+{
   private readonly logger: ILogger;
   private readonly remoteStorage: ISyncRemoteStorage;
   private readonly cursorStorage: ISyncCursorStorage;
@@ -308,6 +313,7 @@ export class SyncManager implements ISyncManager, IDeliveryTracking {
     Map<string, SyncOperation>
   >();
   private readonly markerStorage: ISyncReceivedMarkerStorage;
+  private readonly refusalStorage: ISyncPurgeRefusalStorage;
   // remote name + marker id -> its storage writes, applied in order
   private readonly markerWrites = new Map<string, Promise<void>>();
   // reloaded from storage, so already stored
@@ -339,8 +345,10 @@ export class SyncManager implements ISyncManager, IDeliveryTracking {
     purges?: PurgeLookup,
     receivedMarkers: ISyncReceivedMarkerStorage = new InMemorySyncReceivedMarkerStorage(),
     delivery?: DeliveryLookup,
+    refusals: ISyncPurgeRefusalStorage = new InMemorySyncPurgeRefusalStorage(),
   ) {
     this.markerStorage = receivedMarkers;
+    this.refusalStorage = refusals;
     this.watermark = watermark;
     this.purges = purges;
     this.delivery = delivery;
@@ -717,6 +725,18 @@ export class SyncManager implements ISyncManager, IDeliveryTracking {
       documentId,
       ordinal,
     );
+  }
+
+  async recordPurgeRefusal(refusal: SyncPurgeRefusedEvent): Promise<void> {
+    await this.refusalStorage.record({
+      remoteName: refusal.remoteName,
+      documentId: refusal.documentId,
+      branch: refusal.branch,
+      refusedAtUtcMs: Date.now(),
+    });
+    await this.eventBus
+      .emit(SyncEventTypes.PURGE_REFUSED, refusal)
+      .catch(() => {});
   }
 
   agreement(): IPeerAgreement {
@@ -1420,14 +1440,25 @@ export class SyncManager implements ISyncManager, IDeliveryTracking {
         if (syncOp.error?.source !== ChannelErrorSource.Outbox) continue;
         // A local pre-purge entry whose push failed is not a refused marker.
         if (syncOp.operations.length > 0 && !carriesMarker(syncOp)) continue;
-        void this.eventBus
-          .emit(SyncEventTypes.PURGE_REFUSED, {
-            remoteName: remote.meta.name,
-            documentId: syncOp.documentId,
-            branch: syncOp.branch,
-            errorMessage: syncOp.error.error.message,
-          } satisfies SyncPurgeRefusedEvent)
-          .catch(() => {});
+        const refusal = {
+          remoteName: remote.meta.name,
+          documentId: syncOp.documentId,
+          branch: syncOp.branch,
+          errorMessage: syncOp.error.error.message,
+        };
+        void this.recordPurgeRefusal(refusal).catch((error: unknown) => {
+          this.logger.error(
+            "Recording a refused marker failed (@remote, @documentId, @error)",
+            refusal.remoteName,
+            refusal.documentId,
+            error instanceof Error ? error.message : String(error),
+          );
+          // The remote repeats its report each poll; hear the next one.
+          remote.channel.forgetMarkerRefusal?.(
+            refusal.documentId,
+            refusal.branch,
+          );
+        });
       }
       if (purged.length > 0) remote.channel.deadLetter.remove(...purged);
       const syncOps = remaining.filter((syncOp) => !purged.includes(syncOp));
