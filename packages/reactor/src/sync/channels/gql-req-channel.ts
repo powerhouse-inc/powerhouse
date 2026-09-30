@@ -219,8 +219,11 @@ export class GqlRequestChannel implements IChannel {
     });
 
     // when sync ops are added to the outbox, push them to the remote
-    this.outbox.onAdded((syncOps) => {
+    this.outbox.onAdded((added) => {
       if (this.isShutdown) return;
+      // The buffer hands over entries removed since, e.g. a purged id's.
+      const syncOps = added.filter((op) => this.outbox.get(op.id) === op);
+      if (syncOps.length === 0) return;
       if (this.isPushing) {
         this.pendingDrain = true;
         return;
