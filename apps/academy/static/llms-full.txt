@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-30T03:02:36.602Z
+> Generated: 2026-09-30T03:19:29.195Z
 > Total Documents: 117
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -9540,7 +9540,12 @@ export const myRelationalProcessorFactory =
       scope: ["global"],
     };
 
-    const processor = new MyRelationalProcessor(namespace, filter, store);
+    const processor = new MyRelationalProcessor(
+      namespace,
+      filter,
+      store,
+      driveHeader.id,
+    );
     return [{ processor, filter }];
   };
 ```

@@ -650,6 +650,74 @@ describe("ProcessorQueue", () => {
     });
   });
 
+  describe("erase", () => {
+    const deletionOp = (ordinal: number) => {
+      const deletion = op(ordinal, "drive");
+      deletion.operation.action.type = "DELETE_DOCUMENT";
+      return deletion;
+    };
+
+    it("delivers the share and then the deletion", async () => {
+      const { queue, delivered } = harness();
+
+      const erased = await queue.erase([op(1), op(2)], deletionOp(3), {
+        purged: Promise.resolve(new Set()),
+      });
+
+      expect(erased).toBe(true);
+      expect(delivered).toEqual([[1, 2, 3]]);
+    });
+
+    it("delivers only the deletion to an errored cursor, below its floor", async () => {
+      const { queue, cursor, delivered } = harness({ floor: 10 });
+      cursor.status = "errored";
+
+      const erased = await queue.erase([op(11)], deletionOp(5), {
+        purged: Promise.resolve(new Set()),
+      });
+
+      expect(erased).toBe(true);
+      expect(delivered).toEqual([[5]]);
+    });
+
+    it("does not redeliver a deletion a backfill ahead of it delivered", async () => {
+      const deletion = deletionOp(2);
+      const { queue, delivered } = harness({ index: [op(1), deletion] });
+
+      void queue.backfill();
+      const erased = await queue.erase([op(1)], deletion, {
+        purged: Promise.resolve(new Set()),
+      });
+
+      expect(erased).toBe(true);
+      expect(delivered).toEqual([[1, 2]]);
+    });
+
+    it("still delivers the deletion when the share's tombstones are unread", async () => {
+      const { queue, delivered } = harness();
+      const purged = Promise.reject<ReadonlySet<string>>(new Error("down"));
+      purged.catch(() => undefined);
+
+      const erased = await queue.erase([op(1)], deletionOp(2), { purged });
+
+      expect(erased).toBe(true);
+      expect(delivered).toEqual([[2]]);
+    });
+
+    it("reports a deletion the processor threw on", async () => {
+      const { queue, cursor } = harness({
+        onOperations: () => Promise.reject(new Error("down")),
+      });
+
+      const erased = await queue.erase([], deletionOp(1), {
+        purged: Promise.resolve(new Set()),
+      });
+
+      expect(erased).toBe(false);
+      expect(cursor.status).toBe("errored");
+    });
+  });
+
   describe("tombstones", () => {
     const tombstoned = (...ids: string[]) =>
       Promise.resolve<ReadonlySet<string>>(new Set(ids));
