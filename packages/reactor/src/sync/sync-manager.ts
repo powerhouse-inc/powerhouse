@@ -205,6 +205,12 @@ function carriesMarker(syncOp: SyncOperation): boolean {
   return syncOp.operations.some((op) => isPurgeMarker(op));
 }
 
+function markerIdsOf(syncOp: SyncOperation): string[] {
+  return syncOp.operations
+    .filter((op) => isPurgeMarker(op))
+    .map((op) => op.operation.id);
+}
+
 /** Refused, or purged under another id: final, unlike an outage. */
 function isRefusedMarker(error: ErrorInfo | undefined): boolean {
   return (
@@ -1677,17 +1683,17 @@ export class SyncManager implements ISyncManager {
         .filter(
           (item) =>
             !syncOps.includes(item) &&
-            item.status !== SyncOperationStatus.Applied &&
-            carriesMarker(item),
+            item.status !== SyncOperationStatus.Applied,
         )
-        .map((item) => item.documentId),
+        .flatMap(markerIdsOf),
     );
     for (const syncOp of syncOps) {
       if (carriesMarker(syncOp)) {
-        if (loadingMarkers.has(syncOp.documentId)) {
+        const ids = markerIdsOf(syncOp);
+        if (ids.every((id) => loadingMarkers.has(id))) {
           dropped.push(syncOp);
         } else {
-          loadingMarkers.add(syncOp.documentId);
+          for (const id of ids) loadingMarkers.add(id);
           eligible.push(syncOp);
         }
       } else if (this.purgedDocumentIds.has(syncOp.documentId)) {

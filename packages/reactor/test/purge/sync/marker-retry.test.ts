@@ -34,8 +34,10 @@ type Internals = {
 
 const internals = (harness: Harness) => harness.manager as unknown as Internals;
 
-function markerSyncOp(jobId: string): SyncOperation {
-  const marker = withContext(purgeMarker(DOC), DOC, 1, "document");
+function markerSyncOp(
+  jobId: string,
+  marker = withContext(purgeMarker(DOC), DOC, 1, "document"),
+): SyncOperation {
   return new SyncOperation(
     crypto.randomUUID(),
     jobId,
@@ -196,12 +198,13 @@ describe("a received marker whose load failed [Postgres]", () => {
       error: { name: "Error", message: "down", stack: "" },
     });
 
-    const first = markerSyncOp("");
+    const marker = withContext(purgeMarker(DOC), DOC, 1, "document");
+    const first = markerSyncOp("", marker);
     channel.inbox.add(first);
     await vi.waitFor(() =>
       expect(internals(harness).markerRetries.size).toBe(1),
     );
-    const resent = markerSyncOp("");
+    const resent = markerSyncOp("", marker);
     channel.inbox.add(resent);
     await quiesce();
 
@@ -209,5 +212,11 @@ describe("a received marker whose load failed [Postgres]", () => {
     expect(channel.inbox.items).toEqual([first]);
     expect(resent.status).toBe(SyncOperationStatus.Applied);
     expect(channel.inbox.ackOrdinal).toBeLessThan(1);
+
+    // A different marker for the same id is not a copy: it loads.
+    channel.inbox.add(markerSyncOp(""));
+    await vi.waitFor(() =>
+      expect(harness.reactor.load).toHaveBeenCalledTimes(2),
+    );
   });
 });
