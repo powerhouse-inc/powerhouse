@@ -440,7 +440,7 @@ Not spec deviations; recorded because they change how the suites run.
   most that many and keeps the rest pending (`sync/channels/gql-req-channel.ts:812`)
   — any bound client could record refusals of any id, unbounded, in N inserts
   per poll, and change another drive's erasure outcome.
-- `packages/reactor-api/src/graphql/reactor/resolvers.ts:1985`
+- `packages/reactor-api/src/graphql/reactor/resolvers.ts:1988`
   (`recordPollMarkerRefusals`) — a failed refusal write fails the poll with
   `RefusalNotRecordedError` (`packages/reactor-api/src/graphql/errors.ts:80`),
   code `REFUSAL_NOT_RECORDED` in `RECOVERABLE_GRAPHQL_ERROR_CODES`
@@ -461,7 +461,7 @@ Not spec deviations; recorded because they change how the suites run.
 - `sync/channels/gql-req-channel.ts:856` — a poller reports refused markers
   with `kind: "marker"` only to a peer announcing the `marker-refusal`
   feature (`packages/shared/document-model/peer-agreement.ts:37`); the server
-  records them (`packages/reactor-api/src/graphql/reactor/resolvers.ts:1961`)
+  records them (`packages/reactor-api/src/graphql/reactor/resolvers.ts:1967`)
   instead of turning them into holds — polled refusals never reached the
   purging host, and an older server answers an unknown field with HTTP 400.
 - `packages/reactor-api/src/graphql/reactor/resolvers.ts:1923`
