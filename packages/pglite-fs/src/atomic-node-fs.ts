@@ -56,6 +56,12 @@ export interface AtomicNodeFsOptions {
    * Default `0` preserves the original per-call synchronous behavior.
    */
   flushIntervalMs?: number;
+  /**
+   * Called on every failed snapshot write, in either mode. While the last
+   * write has failed, each `syncToFs` retries synchronously and rejects if the
+   * retry fails too; the first successful write clears the failure.
+   */
+  onFlushError?: (error: unknown) => void;
 }
 
 /**
@@ -72,8 +78,10 @@ export class AtomicNodeFs extends MemoryFS {
   private readonly hostDir: string;
   private readonly logger?: AtomicNodeFsLogger;
   private readonly flushIntervalMs: number;
+  private readonly onFlushError?: (error: unknown) => void;
 
   private dirty = false;
+  private failed = false;
   private flushTimer?: ReturnType<typeof setTimeout>;
   private flushInFlight?: Promise<void>;
 
@@ -86,6 +94,7 @@ export class AtomicNodeFs extends MemoryFS {
     const options = normalizeOptions(optionsOrLogger);
     this.logger = options.logger;
     this.flushIntervalMs = Math.max(0, options.flushIntervalMs ?? 0);
+    this.onFlushError = options.onFlushError;
   }
 
   async initialSyncFs(): Promise<void> {
@@ -121,24 +130,63 @@ export class AtomicNodeFs extends MemoryFS {
 
   async syncToFs(relaxedDurability?: boolean): Promise<void> {
     if (this.flushIntervalMs === 0) {
-      await this.writeSnapshot(relaxedDurability ?? false);
+      await this.flush(relaxedDurability ?? false);
       return;
     }
     this.dirty = true;
-    this.scheduleDeferredFlush(relaxedDurability ?? false);
+    if (!this.failed) {
+      this.scheduleDeferredFlush(relaxedDurability ?? false);
+      return;
+    }
+    this.cancelDeferredFlush();
+    await this.drainInFlight();
+    this.dirty = false;
+    await this.flush(relaxedDurability ?? false);
   }
 
   async closeFs(): Promise<void> {
-    if (this.flushTimer) {
-      clearTimeout(this.flushTimer);
-      this.flushTimer = undefined;
+    try {
+      this.cancelDeferredFlush();
+      await this.drainInFlight();
+      this.dirty = false;
+      await this.flush(false);
+    } finally {
+      await super.closeFs();
     }
+  }
+
+  private cancelDeferredFlush(): void {
+    if (!this.flushTimer) return;
+    clearTimeout(this.flushTimer);
+    this.flushTimer = undefined;
+  }
+
+  private async drainInFlight(): Promise<void> {
     while (this.flushInFlight) {
       await this.flushInFlight;
     }
-    this.dirty = false;
-    await this.writeSnapshot(false);
-    await super.closeFs();
+  }
+
+  private async flush(relaxedDurability: boolean): Promise<void> {
+    try {
+      await this.writeSnapshot(relaxedDurability);
+    } catch (err) {
+      this.failed = true;
+      this.reportFlushError(err);
+      throw err;
+    }
+    this.failed = false;
+  }
+
+  private reportFlushError(err: unknown): void {
+    if (!this.onFlushError) return;
+    try {
+      this.onFlushError(err);
+    } catch (callbackErr) {
+      this.logger?.warn(
+        `AtomicNodeFs onFlushError callback threw: ${errorMessage(callbackErr)}`,
+      );
+    }
   }
 
   private scheduleDeferredFlush(relaxedDurability: boolean): void {
@@ -146,9 +194,9 @@ export class AtomicNodeFs extends MemoryFS {
     this.flushTimer = setTimeout(() => {
       this.flushTimer = undefined;
       this.flushInFlight = this.drainDirty(relaxedDurability)
-        .catch((err) => {
+        .catch((err: unknown) => {
           this.logger?.warn(
-            `AtomicNodeFs deferred flush failed: ${err instanceof Error ? err.message : String(err)}`,
+            `AtomicNodeFs deferred flush failed: ${errorMessage(err)}`,
           );
         })
         .finally(() => {
@@ -163,7 +211,12 @@ export class AtomicNodeFs extends MemoryFS {
   private async drainDirty(relaxedDurability: boolean): Promise<void> {
     while (this.dirty) {
       this.dirty = false;
-      await this.writeSnapshot(relaxedDurability);
+      try {
+        await this.flush(relaxedDurability);
+      } catch (err) {
+        this.dirty = true;
+        throw err;
+      }
     }
   }
 
@@ -216,6 +269,10 @@ function isLogger(
   return (
     "warn" in value && typeof (value as AtomicNodeFsLogger).warn === "function"
   );
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
 
 async function fileExists(p: string): Promise<boolean> {
