@@ -491,7 +491,11 @@ describe("the subject index as a fenced read model [Postgres]", () => {
       [later, "signer"],
     ]);
     expect(await again.disclose(ADDRESS_A)).toMatchObject({ documents: [] });
-    expect(await viewStateCursor(second.db)).toBeGreaterThan(cursorBefore);
+    // The cursor follows the settled watermark, which is cluster-wide.
+    await vi.waitUntil(
+      async () => (await viewStateCursor(second.db)) > cursorBefore,
+      { timeout: 20_000, interval: 50 },
+    );
     await second.kill();
   });
 });
