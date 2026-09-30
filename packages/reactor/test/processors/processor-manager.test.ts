@@ -2382,7 +2382,9 @@ describe("ProcessorManager Standalone Tests", () => {
         expect(events).toEqual(["ops", "unregistered", "disconnect"]),
       );
       expect(processorManager.get(`self:${driveId}:0`)).toBeUndefined();
-      expect(await cursorRow(`self:${driveId}:0`)).toBeUndefined();
+      expect(await cursorRow(`self:${driveId}:0`)).toMatchObject({
+        status: "released",
+      });
     });
 
     it("should not resurrect a deleted drive's cursor from a delivery in flight", async () => {
@@ -2443,7 +2445,10 @@ describe("ProcessorManager Standalone Tests", () => {
       await tracked!.retry();
 
       expect(processor.onOperations).toHaveBeenCalledTimes(1);
-      expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined();
+      expect(await cursorRow(`f:${driveId}:0`)).toMatchObject({
+        status: "released",
+        lastOrdinal: 0,
+      });
     });
 
     it("should keep a factory's cursors when its run fails", async () => {
@@ -2627,6 +2632,68 @@ describe("ProcessorManager Standalone Tests", () => {
       });
 
       expect(headers).toEqual([driveId]);
+      expect(ordinalsOf(second)).toEqual([2]);
+      expect(second.onDisconnect).toHaveBeenCalled();
+      expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined();
+      expect(processorManager.getAll()).toHaveLength(0);
+    });
+
+    it("should release a factory's rows on unregister and start afresh on re-registration", async () => {
+      const driveId = generateId();
+      const first = createMockProcessor();
+      await processorManager.registerFactory("f", () => [
+        { processor: first, filter: { documentId: ["*"] } },
+      ]);
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      await confirm(1);
+      expect(await cursorRow(`f:${driveId}:0`)).toMatchObject({
+        status: "active",
+        lastOrdinal: 1,
+      });
+
+      await processorManager.unregisterFactory("f");
+      expect(await cursorRow(`f:${driveId}:0`)).toMatchObject({
+        status: "released",
+        lastOrdinal: 1,
+      });
+
+      const second = createMockProcessor();
+      await processorManager.registerFactory("f", () => [
+        {
+          processor: second,
+          filter: { documentId: ["*"] },
+          startFrom: "current",
+        },
+      ]);
+      expect(processorManager.get(`f:${driveId}:0`)).toMatchObject({
+        status: "active",
+      });
+      expect(await cursorRow(`f:${driveId}:0`)).toMatchObject({
+        status: "active",
+      });
+    });
+
+    it("should pay a released row's deletion from a factory run the deletion cancelled", async () => {
+      const driveId = generateId();
+      await processorManager.registerFactory("f", () => [
+        { processor: createMockProcessor(), filter: { documentType: [CHILD] } },
+      ]);
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      await processorManager.unregisterFactory("f");
+
+      const entered = deferred();
+      const release = deferred();
+      const second = createMockProcessor();
+      const registered = processorManager.registerFactory("f", async () => {
+        entered.resolve();
+        await release.promise;
+        return [{ processor: second, filter: { documentType: [CHILD] } }];
+      });
+      await entered.promise;
+      await processorManager.indexOperations([makeDriveDeleteOp(driveId, 2)]);
+      release.resolve();
+      await registered;
+
       expect(ordinalsOf(second)).toEqual([2]);
       expect(second.onDisconnect).toHaveBeenCalled();
       expect(await cursorRow(`f:${driveId}:0`)).toBeUndefined();

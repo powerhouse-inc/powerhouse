@@ -165,6 +165,28 @@ describe("catchup on a store", () => {
     ]);
   });
 
+  it("leaves out a released processor cursor", async () => {
+    await db
+      .insertInto("ProcessorCursor")
+      .values({
+        processorId: "gone:drive:0",
+        factoryId: "gone",
+        driveId: "drive",
+        processorIndex: 0,
+        lastOrdinal: 1,
+        status: "released",
+        lastError: null,
+        lastErrorTimestamp: null,
+      })
+      .execute();
+
+    expect(await cursors()).toEqual({
+      "document-indexer": 2,
+      "document-view": 6,
+      "pkg:drive:0": 5,
+    });
+  });
+
   it("counts a dry run without writing", async () => {
     const result = await rescanCatchUp(db, {
       from: 3,

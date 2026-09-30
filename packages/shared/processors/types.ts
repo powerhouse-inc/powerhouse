@@ -161,8 +161,12 @@ export interface IProcessorManager {
 
   /**
    * Unregisters a processor factory. Resolves once its processors receive no
-   * new deliveries and their cursors are deleted; each one's in-flight
-   * delivery finishes first, then `onDisconnect` runs. Safe to call from
+   * new deliveries and their cursors are released; each one's in-flight
+   * delivery finishes first, then `onDisconnect` runs. A released cursor no
+   * longer positions a processor: a re-registration starts each one afresh,
+   * per `startFrom`. It only records that the factory held a drive's data, so
+   * that a drive deleted before the factory registers again still gets its
+   * deletion delivered then. Safe to call from
    * inside a processor's own `onOperations`.
    */
   unregisterFactory(identifier: string): Promise<void>;

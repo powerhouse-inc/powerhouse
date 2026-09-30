@@ -110,6 +110,23 @@ describe("a drive's deletion owed to processors not live at it [Postgres]", () =
     host = await startReactor(database);
   }
 
+  it("delivers a deletion made while the factory reloads, exactly once", async () => {
+    const driveId = await createDrive();
+    const first = recorder();
+    await register("pkg", driveId, first, { documentType: [DOC_TYPE] });
+    // A package reload: reactor-api's onProcessorsChange unregisters, then registers.
+    await manager().unregisterFactory("pkg");
+
+    await deleteDrive(driveId);
+    const second = recorder();
+    await register("pkg", driveId, second, { documentType: [DOC_TYPE] });
+    await purge(driveId);
+
+    expect(deletionsOf(first, second)).toEqual([`DELETE_DOCUMENT ${driveId}`]);
+    expect(second.events).toEqual([`DELETE_DOCUMENT ${driveId}`, "disconnect"]);
+    expect(await cursorRows(driveId)).toEqual([]);
+  });
+
   it("delivers a deletion made before the factory registers after a restart", async () => {
     const driveId = await createDrive();
     await register("pkg", driveId, recorder(), { documentType: [DOC_TYPE] });

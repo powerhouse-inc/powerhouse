@@ -16,9 +16,10 @@ import {
   BaseReadModel,
   unchunkedReadModelIndexingConfig,
 } from "../read-models/base-read-model.js";
-import type {
-  DocumentViewDatabase,
-  ProcessorCursorRow,
+import {
+  RELEASED_CURSOR_STATUS,
+  type DocumentViewDatabase,
+  type ProcessorCursorRow,
 } from "../read-models/types.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import { findPurged } from "../storage/kysely/document-purges.js";
@@ -609,7 +610,7 @@ export class ProcessorManager
     );
   }
 
-  /** Synchronous: removes a factory's slots, processors and cursor rows. */
+  /** Synchronous: removes a factory's slots and processors; releases its rows. */
   protected removeFactory(identifier: string): Promise<void>[] {
     if (!this.factoryRegistry.delete(identifier)) return [];
 
@@ -651,11 +652,29 @@ export class ProcessorManager
       });
     }
 
-    // Rows a deleted drive's deletion is owed to outlive the registration.
-    return this.deleteCursors(
-      (row) =>
-        row.factoryId === identifier && !this.deletedDrives.has(row.driveId),
-    );
+    return this.releaseCursors(identifier);
+  }
+
+  // A drive deleted before the factory's next registration still owes its rows.
+  private releaseCursors(factoryId: string): Promise<void>[] {
+    const writes: Promise<void>[] = [];
+    for (const row of this.cursorCache.values()) {
+      if (row.factoryId !== factoryId) continue;
+      if (row.status === RELEASED_CURSOR_STATUS) continue;
+      if (this.deletedDrives.has(row.driveId)) continue;
+      const released = { ...row, status: RELEASED_CURSOR_STATUS };
+      this.cursorCache.set(row.processorId, released);
+      writes.push(
+        this.lane(row.processorId, () =>
+          this.db
+            .updateTable("ProcessorCursor")
+            .set({ status: RELEASED_CURSOR_STATUS, updatedAt: new Date() })
+            .where("processorId", "=", row.processorId)
+            .execute(),
+        ),
+      );
+    }
+    return writes;
   }
 
   private reserveSlot(
@@ -721,7 +740,8 @@ export class ProcessorManager
     const cached = this.cursorCache.get(processorId);
     let floor = 0;
     let cursor: ProcessorCursorState;
-    if (cached) {
+    // A released row starts the processor afresh, as if it had none.
+    if (cached && cached.status !== RELEASED_CURSOR_STATUS) {
       cursor = {
         lastOrdinal: cached.lastOrdinal,
         status: cached.status as ProcessorCursorState["status"],
