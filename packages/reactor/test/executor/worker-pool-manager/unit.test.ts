@@ -107,6 +107,12 @@ class FakeWorker implements IExecutorWorker {
     }
   }
 
+  evictions: string[][] = [];
+
+  evictPurged(documentIds: string[]): void {
+    this.evictions.push(documentIds);
+  }
+
   isIdle(): boolean {
     return this.idle;
   }
@@ -364,6 +370,43 @@ describe("WorkerPoolJobExecutorManager", () => {
         "doc-1": ["coll-A", "coll-B"],
       });
       expect(operationIndex.lookups).toEqual([["doc-1"]]);
+      await manager.stop(true);
+    });
+
+    it("broadcasts a committed marker's id to every worker", async () => {
+      const marker = makeOpWithAction(
+        "doc-1",
+        "PURGE_DOCUMENT",
+        { documentId: "doc-1" },
+        "document",
+      );
+      const setNameOp = makeOpWithAction("doc-2", "SET_NAME", { name: "x" });
+      const workers: FakeWorker[] = [];
+      const manager = buildManager((i) => {
+        const worker = new FakeWorker({
+          index: i,
+          outcome: (job) => ({
+            result: { job, success: true, duration: 1 },
+            writeReady: makeWriteReady(
+              job,
+              job.documentId === "doc-1" ? [marker] : [setNameOp],
+            ),
+          }),
+        });
+        workers.push(worker);
+        return worker;
+      });
+      await manager.start(3);
+
+      await queue.enqueue(createTestJob({ id: "job-2", documentId: "doc-2" }));
+      await queue.enqueue(createTestJob({ id: "job-1", documentId: "doc-1" }));
+      await vi.waitFor(() =>
+        expect(workers.map((worker) => worker.evictions)).toEqual([
+          [["doc-1"]],
+          [["doc-1"]],
+          [["doc-1"]],
+        ]),
+      );
       await manager.stop(true);
     });
 

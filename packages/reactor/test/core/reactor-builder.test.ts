@@ -86,6 +86,8 @@ class FakeWorker implements IExecutorWorker {
     return Promise.resolve();
   }
 
+  evictPurged(): void {}
+
   isIdle(): boolean {
     return true;
   }
