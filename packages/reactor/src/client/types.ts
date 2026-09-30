@@ -524,6 +524,22 @@ export interface IReactorClient {
   ): Promise<TDocument>;
 
   /**
+   * Submits what {@link create} submits and returns without waiting. The
+   * batch holds a `create` job and, with a parent, a `parent` job that
+   * depends on it; a failed `create` still releases `parent`.
+   *
+   * @param document - Document with optional id, slug, parent, model type, and initial state
+   * @param parentIdentifier - Optional "id" or "slug" of parent document
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The submitted jobs, keyed `create` and `parent`
+   */
+  createAsync(
+    document: PHDocument,
+    parentIdentifier?: string,
+    signal?: AbortSignal,
+  ): Promise<BatchExecutionResult>;
+
+  /**
    * Creates an empty document and waits for completion
    *
    * @param documentModelType - Type of document to create
@@ -535,6 +551,21 @@ export interface IReactorClient {
     options?: CreateDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument>;
+
+  /**
+   * Submits what {@link createEmpty} submits and returns without waiting;
+   * see {@link createAsync}. The new document's id is `jobs.create.documentId`.
+   *
+   * @param documentModelType - Type of document to create
+   * @param options - Optional creation options (parentIdentifier, documentModelVersion)
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The submitted jobs, keyed `create` and `parent`
+   */
+  createEmptyAsync(
+    documentModelType: string,
+    options?: CreateDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<BatchExecutionResult>;
 
   /**
    * Retrieves the document model module matching the version a document is

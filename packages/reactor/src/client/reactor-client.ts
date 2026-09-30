@@ -804,6 +804,49 @@ export class ReactorClient implements IReactorClient {
       parentIdentifier,
     );
 
+    const batchResult = await this.submitCreate(
+      document,
+      parentIdentifier,
+      signal,
+    );
+
+    const completedJobs = await Promise.all(
+      Object.values(batchResult.jobs).map((job) =>
+        this.waitForJob(job, signal),
+      ),
+    );
+
+    for (const job of completedJobs) {
+      if (job.status === JobStatus.FAILED) {
+        throw new Error(job.error?.message);
+      }
+    }
+
+    const created = await this.reactor.get<TDocument>(document.header.id);
+    return this.gateDocument(created, undefined, signal);
+  }
+
+  /**
+   * Submits a document's create batch without waiting for it
+   */
+  async createAsync(
+    document: PHDocument,
+    parentIdentifier?: string,
+    signal?: AbortSignal,
+  ): Promise<BatchExecutionResult> {
+    this.logger.verbose(
+      "createAsync(@id, @parentIdentifier)",
+      document.header.id,
+      parentIdentifier,
+    );
+    return this.submitCreate(document, parentIdentifier, signal);
+  }
+
+  private async submitCreate(
+    document: PHDocument,
+    parentIdentifier: string | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<BatchExecutionResult> {
     const documentId = document.header.id;
     const branch = document.header.branch || "main";
 
@@ -875,22 +918,7 @@ export class ReactorClient implements IReactorClient {
       });
     }
 
-    const batchResult = await this.reactor.executeBatch({ jobs }, signal);
-
-    const completedJobs = await Promise.all(
-      Object.values(batchResult.jobs).map((job) =>
-        this.waitForJob(job, signal),
-      ),
-    );
-
-    for (const job of completedJobs) {
-      if (job.status === JobStatus.FAILED) {
-        throw new Error(job.error?.message);
-      }
-    }
-
-    const created = await this.reactor.get<TDocument>(documentId);
-    return this.gateDocument(created, undefined, signal);
+    return this.reactor.executeBatch({ jobs }, signal);
   }
 
   /**
@@ -906,6 +934,40 @@ export class ReactorClient implements IReactorClient {
       documentModelType,
       options,
     );
+    const document = await this.emptyDocument(
+      documentModelType,
+      options,
+      signal,
+    );
+    return this.create<TDocument>(document, options?.parentIdentifier, signal);
+  }
+
+  /**
+   * Submits an empty document's create batch without waiting for it
+   */
+  async createEmptyAsync(
+    documentModelType: string,
+    options?: CreateDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<BatchExecutionResult> {
+    this.logger.verbose(
+      "createEmptyAsync(@documentModelType, @options)",
+      documentModelType,
+      options,
+    );
+    const document = await this.emptyDocument(
+      documentModelType,
+      options,
+      signal,
+    );
+    return this.submitCreate(document, options?.parentIdentifier, signal);
+  }
+
+  private async emptyDocument(
+    documentModelType: string,
+    options: CreateDocumentOptions | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<PHDocument> {
     const modulesResult = await this.reactor.getDocumentModels(
       undefined,
       undefined,
@@ -958,8 +1020,7 @@ export class ReactorClient implements IReactorClient {
     document.state.document.version = normalizeDocumentModelVersion(
       module.version,
     );
-
-    return this.create<TDocument>(document, options?.parentIdentifier, signal);
+    return document;
   }
 
   /**

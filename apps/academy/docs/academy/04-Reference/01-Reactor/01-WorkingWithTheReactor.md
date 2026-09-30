@@ -155,6 +155,8 @@ All list methods support pagination via `PagingOptions` (`{ cursor, limit }`) an
 | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | `create(document, parentIdentifier?)`                                                       | Create a document from a full `PHDocument` object                  |
 | `createEmpty(documentModelType, options?)`                                                  | Create an empty document of a given type                           |
+| `createAsync(document, parentIdentifier?)`                                                  | Submit a create and return immediately with its jobs (`create`, `parent`) |
+| `createEmptyAsync(documentModelType, options?)`                                             | Submit an empty-document create and return immediately with its jobs |
 | `execute(documentIdentifier, branch, actions)`                                              | Apply actions and wait for completion                              |
 | `executeAsync(documentIdentifier, branch, actions)`                                         | Submit actions and return immediately with a `JobInfo`             |
 | `executeBatch(request)`                                                                     | Submit multiple jobs in dependency order and wait for all to settle |
