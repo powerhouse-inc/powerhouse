@@ -1,5 +1,6 @@
 import { MemoryFS } from "@electric-sql/pglite";
 import { promises as fs } from "node:fs";
+import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
 
 // PGDATA in PGLite 0.3.x's MEMFS layout. The compiled bundle uses
@@ -10,6 +11,15 @@ const SNAPSHOT_NAME = "snapshot.bin";
 const SNAPSHOT_TMP = "snapshot.bin.tmp";
 const MAGIC = new Uint8Array([0x50, 0x47, 0x4c, 0x41]); // "PGLA"
 const FORMAT_VERSION = 1;
+const HEADER_SIZE = 12;
+const ENTRY_PREFIX_SIZE = 9;
+// Node rejects a single read or write above 2^31-1 bytes.
+const DEFAULT_IO_CHUNK_SIZE = 64 * 1024 * 1024;
+let ioChunkSize = DEFAULT_IO_CHUNK_SIZE;
+
+export function setIoChunkSizeForTests(size?: number): void {
+  ioChunkSize = size ?? DEFAULT_IO_CHUNK_SIZE;
+}
 
 type EntryType = 0 | 1; // 0=dir, 1=file
 
@@ -89,8 +99,13 @@ export class AtomicNodeFs extends MemoryFS {
     const memFs = this.pg!.Module.FS as MemFs;
 
     if (await fileExists(snapPath)) {
-      const bytes = await fs.readFile(snapPath);
-      restoreMemfs(memFs, PGDATA, bytes);
+      const fh = await fs.open(snapPath, "r");
+      try {
+        const { size } = await fh.stat();
+        await restoreMemfs(memFs, PGDATA, fh, size);
+      } finally {
+        await fh.close();
+      }
       return;
     }
 
@@ -154,13 +169,13 @@ export class AtomicNodeFs extends MemoryFS {
 
   private async writeSnapshot(relaxedDurability: boolean): Promise<void> {
     const memFs = this.pg!.Module.FS as MemFs;
-    const bytes = serializeMemfs(memFs, PGDATA);
+    const entries = collectEntries(memFs, PGDATA);
     const snapPath = path.join(this.hostDir, SNAPSHOT_NAME);
     const tmpPath = path.join(this.hostDir, SNAPSHOT_TMP);
 
     const fh = await fs.open(tmpPath, "w");
     try {
-      await fh.write(bytes);
+      await writeEntries(fh, entries);
       if (!relaxedDurability) await fh.sync();
     } finally {
       await fh.close();
@@ -228,7 +243,7 @@ interface Entry {
   data?: Uint8Array;
 }
 
-function serializeMemfs(FS: MemFs, root: string): Uint8Array {
+export function collectEntries(FS: MemFs, root: string): Entry[] {
   const entries: Entry[] = [];
 
   const walk = (dir: string, rel: string) => {
@@ -255,83 +270,190 @@ function serializeMemfs(FS: MemFs, root: string): Uint8Array {
   };
   walk(root, "");
 
+  return entries;
+}
+
+type WriteHandle = Pick<FileHandle, "write">;
+type ReadHandle = Pick<FileHandle, "read">;
+
+export async function writeEntries(
+  fh: WriteHandle,
+  entries: Entry[],
+): Promise<void> {
   const encoder = new TextEncoder();
   const encodedPaths = entries.map((e) => encoder.encode(e.relPath));
 
-  let size = 4 + 4 + 4; // magic + version + count
+  let size = HEADER_SIZE;
   for (let i = 0; i < entries.length; i++) {
-    size += 1 + 4 + 4 + encodedPaths[i].byteLength + 4;
+    size += ENTRY_PREFIX_SIZE + encodedPaths[i].byteLength + 4;
     size += entries[i].data?.byteLength ?? 0;
   }
 
-  const out = new Uint8Array(size);
-  const view = new DataView(out.buffer);
-  let off = 0;
+  const writer = new ChunkedWriter(fh, Math.min(ioChunkSize, size));
 
-  out.set(MAGIC, off);
-  off += 4;
-  view.setUint32(off, FORMAT_VERSION, true);
-  off += 4;
-  view.setUint32(off, entries.length, true);
-  off += 4;
+  const header = Buffer.allocUnsafe(HEADER_SIZE);
+  header.set(MAGIC, 0);
+  header.writeUInt32LE(FORMAT_VERSION, 4);
+  header.writeUInt32LE(entries.length, 8);
+  await writer.append(header);
 
   for (let i = 0; i < entries.length; i++) {
     const e = entries[i];
     const pathBytes = encodedPaths[i];
-    view.setUint8(off, e.type);
-    off += 1;
-    view.setUint32(off, e.mode, true);
-    off += 4;
-    view.setUint32(off, pathBytes.byteLength, true);
-    off += 4;
-    out.set(pathBytes, off);
-    off += pathBytes.byteLength;
     const dataLen = e.data?.byteLength ?? 0;
-    view.setUint32(off, dataLen, true);
-    off += 4;
-    if (dataLen > 0 && e.data) {
-      out.set(e.data, off);
-      off += dataLen;
+    const prefix = Buffer.allocUnsafe(
+      ENTRY_PREFIX_SIZE + pathBytes.byteLength + 4,
+    );
+    prefix.writeUInt8(e.type, 0);
+    prefix.writeUInt32LE(e.mode, 1);
+    prefix.writeUInt32LE(pathBytes.byteLength, 5);
+    prefix.set(pathBytes, ENTRY_PREFIX_SIZE);
+    prefix.writeUInt32LE(dataLen, ENTRY_PREFIX_SIZE + pathBytes.byteLength);
+    await writer.append(prefix);
+    if (dataLen > 0 && e.data) await writer.append(e.data);
+  }
+
+  await writer.flush();
+}
+
+class ChunkedWriter {
+  private readonly buf: Buffer;
+  private used = 0;
+  private position = 0;
+
+  constructor(
+    private readonly fh: WriteHandle,
+    chunkSize: number,
+  ) {
+    this.buf = Buffer.allocUnsafe(Math.max(1, chunkSize));
+  }
+
+  async append(bytes: Uint8Array): Promise<void> {
+    const size = this.buf.byteLength;
+    let off = 0;
+    while (off < bytes.byteLength) {
+      if (this.used === 0 && bytes.byteLength - off >= size) {
+        await this.writeAll(bytes.subarray(off, off + size));
+        off += size;
+        continue;
+      }
+      const n = Math.min(size - this.used, bytes.byteLength - off);
+      this.buf.set(bytes.subarray(off, off + n), this.used);
+      this.used += n;
+      off += n;
+      if (this.used === size) await this.flush();
     }
   }
 
-  return out;
+  async flush(): Promise<void> {
+    if (this.used === 0) return;
+    await this.writeAll(this.buf.subarray(0, this.used));
+    this.used = 0;
+  }
+
+  private async writeAll(bytes: Uint8Array): Promise<void> {
+    let off = 0;
+    while (off < bytes.byteLength) {
+      const { bytesWritten } = await this.fh.write(
+        bytes,
+        off,
+        bytes.byteLength - off,
+        this.position,
+      );
+      if (bytesWritten <= 0) {
+        throw new Error("AtomicNodeFs: snapshot write made no progress");
+      }
+      off += bytesWritten;
+      this.position += bytesWritten;
+    }
+  }
 }
 
-function restoreMemfs(FS: MemFs, root: string, bytes: Uint8Array): void {
+class ChunkedReader {
+  private readonly buf: Buffer;
+  private start = 0;
+  private end = 0;
+  private position = 0;
+
+  constructor(
+    private readonly fh: ReadHandle,
+    chunkSize: number,
+  ) {
+    this.buf = Buffer.allocUnsafe(Math.max(1, chunkSize));
+  }
+
+  async take(n: number): Promise<Buffer> {
+    const out = Buffer.allocUnsafe(n);
+    let filled = 0;
+    while (filled < n) {
+      if (this.start === this.end) {
+        if (n - filled >= this.buf.byteLength) {
+          filled += await this.readInto(out, filled, n - filled);
+          continue;
+        }
+        this.start = 0;
+        this.end = await this.readInto(this.buf, 0, this.buf.byteLength);
+      }
+      const k = Math.min(this.end - this.start, n - filled);
+      this.buf.copy(out, filled, this.start, this.start + k);
+      this.start += k;
+      filled += k;
+    }
+    return out;
+  }
+
+  private async readInto(
+    target: Buffer,
+    offset: number,
+    length: number,
+  ): Promise<number> {
+    const { bytesRead } = await this.fh.read(
+      target,
+      offset,
+      Math.min(length, this.buf.byteLength),
+      this.position,
+    );
+    if (bytesRead <= 0) {
+      throw new Error("AtomicNodeFs: truncated snapshot");
+    }
+    this.position += bytesRead;
+    return bytesRead;
+  }
+}
+
+export async function restoreMemfs(
+  FS: MemFs,
+  root: string,
+  fh: ReadHandle,
+  fileSize: number,
+): Promise<void> {
   ensureDir(FS, root);
 
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  let off = 0;
+  const reader = new ChunkedReader(fh, Math.min(ioChunkSize, fileSize));
 
+  const header = await reader.take(HEADER_SIZE);
   for (let i = 0; i < 4; i++) {
-    if (bytes[off + i] !== MAGIC[i]) {
+    if (header[i] !== MAGIC[i]) {
       throw new Error("AtomicNodeFs: invalid snapshot magic");
     }
   }
-  off += 4;
 
-  const version = view.getUint32(off, true);
-  off += 4;
+  const version = header.readUInt32LE(4);
   if (version !== FORMAT_VERSION) {
     throw new Error(`AtomicNodeFs: unsupported snapshot version ${version}`);
   }
-  const count = view.getUint32(off, true);
-  off += 4;
+  const count = header.readUInt32LE(8);
 
   const decoder = new TextDecoder();
 
   for (let i = 0; i < count; i++) {
-    const type = view.getUint8(off);
-    off += 1;
-    const mode = view.getUint32(off, true);
-    off += 4;
-    const pathLen = view.getUint32(off, true);
-    off += 4;
-    const relPath = decoder.decode(bytes.subarray(off, off + pathLen));
-    off += pathLen;
-    const dataLen = view.getUint32(off, true);
-    off += 4;
+    const prefix = await reader.take(ENTRY_PREFIX_SIZE);
+    const type = prefix.readUInt8(0);
+    const mode = prefix.readUInt32LE(1);
+    const pathLen = prefix.readUInt32LE(5);
+    const relPath = decoder.decode(await reader.take(pathLen));
+    const dataLen = (await reader.take(4)).readUInt32LE(0);
+    const data = await reader.take(dataLen);
     const full = root + "/" + relPath;
 
     if (type === 0) {
@@ -340,11 +462,9 @@ function restoreMemfs(FS: MemFs, root: string, bytes: Uint8Array): void {
       if (!FS.analyzePath(full).exists) FS.mkdir(full, dirMode(mode));
       else FS.chmod(full, dirMode(mode));
     } else {
-      const data = bytes.subarray(off, off + dataLen);
       FS.writeFile(full, data);
       FS.chmod(full, mode);
     }
-    off += dataLen;
   }
 }
 
