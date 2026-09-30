@@ -47,8 +47,8 @@ function fakeReactor(documents: ReturnType<typeof doc>[] = []) {
         ),
       });
     },
-    get(id: string) {
-      calls.push(`get ${id}`);
+    get(id: string, view?: { branch?: string }) {
+      calls.push(view?.branch ? `get ${id}@${view.branch}` : `get ${id}`);
       const found = documents.find((entry) => entry.header.id === id);
       if (!found) return Promise.reject(new Error(`no document ${id}`));
       return Promise.resolve(found);
@@ -118,6 +118,17 @@ function fakeReactor(documents: ReturnType<typeof doc>[] = []) {
   } as unknown as WorkflowRuntimeHostDeps);
   return { port, calls };
 }
+
+describe("SubgraphReactorPort.get", () => {
+  it("reads the branch it was asked for", async () => {
+    const { port, calls } = fakeReactor([doc("d1", "acme/todo")]);
+
+    await port.get({ documentId: "d1" });
+    await port.get({ documentId: "d1", branch: "draft" });
+
+    expect(calls).toEqual(["get d1", "get d1@draft"]);
+  });
+});
 
 describe("SubgraphReactorPort.find", () => {
   it("asks for a type and a parent together", async () => {

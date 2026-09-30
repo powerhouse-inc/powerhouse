@@ -204,7 +204,10 @@ export class SubgraphReactorPort implements ReactorPort {
     documentId: string;
     branch?: string;
   }): Promise<ReactorDocumentSummary> {
-    const document = await this.client.get<PHDocument>(input.documentId);
+    const document = await this.client.get<PHDocument>(
+      input.documentId,
+      input.branch ? { branch: input.branch } : undefined,
+    );
     return this.handOver(documentSummary(document, true));
   }
 
