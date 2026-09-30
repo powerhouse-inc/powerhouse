@@ -834,7 +834,7 @@ export class SyncManager
     this.records.delete(name);
     this.heldKeys.delete(name);
     await this.holds.removeRemote(name);
-    await this.receiptsStored();
+    await Promise.allSettled(this.markerWritesOf([name]));
     await this.markerStorage.removeRemote(name);
   }
 
@@ -1811,6 +1811,8 @@ export class SyncManager
       if (carriesMarker(syncOp)) {
         const ids = markerIdsOf(syncOp);
         if (ids.every((id) => loading(id, syncOp))) {
+          // Stored again: the pusher resends when its earlier ack failed.
+          this.storeReceivedMarker(remote, syncOp);
           dropped.push(syncOp);
         } else {
           for (const id of ids) received.set(id, syncOp);
@@ -1874,9 +1876,17 @@ export class SyncManager
     }
   }
 
-  /** Settles once every received marker's pending write has landed. */
-  async receiptsStored(): Promise<void> {
-    await Promise.all(this.markerWrites.values());
+  /** Settles once the remotes' received markers are stored; rejects if one failed. */
+  async receiptsStored(remoteNames?: Iterable<string>): Promise<void> {
+    await Promise.all(this.markerWritesOf(remoteNames));
+  }
+
+  private markerWritesOf(remoteNames?: Iterable<string>): Promise<void>[] {
+    if (remoteNames === undefined) return [...this.markerWrites.values()];
+    const prefixes = [...remoteNames].map((name) => `${name}\u0000`);
+    return [...this.markerWrites]
+      .filter(([key]) => prefixes.some((prefix) => key.startsWith(prefix)))
+      .map(([, write]) => write);
   }
 
   /** Kept until its outcome, so a restart does not ack past it unapplied. */
@@ -1907,18 +1917,20 @@ export class SyncManager
   ): void {
     const key = `${remoteName}\u0000${markerId}`;
     const next = (this.markerWrites.get(key) ?? Promise.resolve())
-      .then(write)
-      .catch((error: unknown) => {
-        this.logger.error(
-          "Failed to store received marker (@remote, @markerId, @error)",
-          remoteName,
-          markerId,
-          error instanceof Error ? error.message : String(error),
-        );
-      });
+      .catch(() => undefined)
+      .then(write);
     this.markerWrites.set(key, next);
-    void next.then(() => {
+    const settle = () => {
       if (this.markerWrites.get(key) === next) this.markerWrites.delete(key);
+    };
+    next.then(settle, (error: unknown) => {
+      this.logger.error(
+        "Failed to store received marker (@remote, @markerId, @error)",
+        remoteName,
+        markerId,
+        error instanceof Error ? error.message : String(error),
+      );
+      settle();
     });
   }
 

@@ -2075,6 +2075,14 @@ export async function pushSyncEnvelopes(
   }
 
   // A received marker is stored before the pusher hears it arrived.
-  await syncManager.receiptsStored?.();
+  try {
+    await syncManager.receiptsStored?.(
+      [...remoteSyncOps.keys()].map((remote) => remote.meta.name),
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to store received markers: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
   return true;
 }

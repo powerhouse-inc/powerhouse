@@ -102,7 +102,10 @@ describe("a pushed marker across a served-side restart [Postgres]", () => {
       ),
   } as unknown as IChannelFactory;
 
-  async function start(failing: { marker: boolean }): Promise<SyncManager> {
+  async function start(
+    failing: { marker: boolean },
+    markerStorage = new KyselySyncReceivedMarkerStorage(db),
+  ): Promise<SyncManager> {
     const manager = new SyncManager(
       new ConsoleLogger(["SyncManager"]),
       storage.syncRemoteStorage,
@@ -118,7 +121,7 @@ describe("a pushed marker across a served-side restart [Postgres]", () => {
       { capabilities: PEER_CAPABILITIES, flags: {} },
       new KyselySyncHoldStorage(storage.db),
       { listPurged: () => listPurged(db) },
-      new KyselySyncReceivedMarkerStorage(db),
+      markerStorage,
     );
     managers.push(manager);
     await manager.startup();
@@ -202,5 +205,35 @@ describe("a pushed marker across a served-side restart [Postgres]", () => {
 
     await manager.remove("client");
     expect(await markerRows()).toEqual([]);
+  });
+
+  it("fails the receipt when the marker is not stored, and stores a resent copy", async () => {
+    const markerStorage = new KyselySyncReceivedMarkerStorage(db);
+    const upsert = markerStorage.upsert.bind(markerStorage);
+    const failOnce = vi
+      .spyOn(markerStorage, "upsert")
+      .mockRejectedValueOnce(new Error("connection lost"))
+      .mockImplementation(upsert);
+    const manager = await start({ marker: true }, markerStorage);
+    await manager.add("client", COLLECTION, CONFIG, FILTER, {}, "c1");
+    await manager.add("other", COLLECTION, CONFIG, FILTER, {}, "c2");
+    const inbox = manager.getByName("client").channel.inbox;
+    const marker = withContext(purgeMarker(DOC), DOC, 5, "document");
+
+    inbox.add(received(marker, DOC));
+    const other = manager.receiptsStored(["other"]);
+    const client = manager.receiptsStored(["client"]);
+    await expect(other).resolves.toBeUndefined();
+    await expect(client).rejects.toThrow("connection lost");
+    expect(await markerRows()).toEqual([]);
+
+    const resent = received(marker, DOC);
+    inbox.add(resent);
+    expect(inbox.get(resent.id)).toBeUndefined();
+    await manager.receiptsStored(["client"]);
+    expect(failOnce).toHaveBeenCalledTimes(2);
+    expect(await markerRows()).toEqual([
+      { remote_name: "client", document_id: DOC },
+    ]);
   });
 });

@@ -285,8 +285,12 @@ export interface ISyncManager {
    */
   bindRemote(id: string, boundAddress: string): Promise<void>;
 
-  /** Settles once received markers are stored; a push is answered after it. */
-  receiptsStored?(): Promise<void>;
+  /**
+   * Settles once the named remotes' received markers are stored, or every
+   * remote's when none are named; rejects if a write failed. A push is
+   * answered after it.
+   */
+  receiptsStored?(remoteNames?: Iterable<string>): Promise<void>;
 
   /**
    * Triggers a one-shot pull for the named remote. Useful for Manual poll-behavior
