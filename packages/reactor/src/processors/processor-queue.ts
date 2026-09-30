@@ -34,6 +34,8 @@ export type ProcessorQueueOptions = {
   purged: (ids: string[]) => Promise<ReadonlySet<string>>;
   /** First wait before retrying a failed tombstone lookup; doubles per try. */
   lookupRetryMs?: number;
+  /** Retries of a failed tombstone lookup before the processor errors. */
+  lookupRetries?: number;
   logger: ILogger;
 };
 
@@ -122,6 +124,7 @@ export const MAX_MERGED_OPERATIONS = 500;
 
 const LOOKUP_RETRY_MS = 100;
 const MAX_LOOKUP_RETRY_MS = 30_000;
+const LOOKUP_RETRIES = 10;
 
 // One task at a time per processor; task promises never reject.
 export class ProcessorQueue {
@@ -131,6 +134,8 @@ export class ProcessorQueue {
   private replaysAhead = 0;
   // Delivered by backfill before routing reached them; dropped once, live.
   private readonly unrouted = new Set<number>();
+  // Ends a lookup retry's wait early; set while one waits.
+  private wake: (() => void) | undefined;
 
   constructor(private readonly options: ProcessorQueueOptions) {}
 
@@ -214,6 +219,7 @@ export class ProcessorQueue {
       }
     });
     this.closed = true;
+    this.wake?.();
     return disconnect;
   }
 
@@ -308,7 +314,10 @@ export class ProcessorQueue {
     }
 
     const live = await this.dropPurgedLive(batch, fresh);
-    if (live === undefined) return;
+    if (live === undefined) {
+      await this.parkBelow(fresh);
+      return;
+    }
 
     if (live.length > 0 && !(await this.deliver(live))) {
       await this.parkBelow(fresh);
@@ -318,7 +327,7 @@ export class ProcessorQueue {
     await this.raiseCursor(Math.max(highestOf(fresh), through));
   }
 
-  /** Undefined when the queue closed before a failed lookup could be retried. */
+  /** Undefined once closed, or errored after the lookup's last retry. */
   private async dropPurgedLive(
     batch: Delivery[],
     fresh: OperationWithContext[],
@@ -346,14 +355,15 @@ export class ProcessorQueue {
     error: unknown,
   ): Promise<ReadonlySet<string> | undefined> {
     let wait = this.options.lookupRetryMs ?? LOOKUP_RETRY_MS;
-    for (;;) {
+    const retries = this.options.lookupRetries ?? LOOKUP_RETRIES;
+    for (let attempt = 0; attempt < retries; attempt++) {
       this.options.logger.error(
         "Processor '@ProcessorId' failed checking tombstones, retrying in @Wait ms: @Error",
         this.options.processorId,
         wait,
         error,
       );
-      await new Promise((resolve) => setTimeout(resolve, wait));
+      await this.sleep(wait);
       if (this.closed) return undefined;
       try {
         return await this.options.purged(ids);
@@ -362,6 +372,28 @@ export class ProcessorQueue {
         wait = Math.min(wait * 2, MAX_LOOKUP_RETRY_MS);
       }
     }
+    this.markErrored(error);
+    this.options.logger.error(
+      "Processor '@ProcessorId' errored: tombstones unread after @Retries retries: @Error",
+      this.options.processorId,
+      retries,
+      error,
+    );
+    return undefined;
+  }
+
+  // Unref'd, and cut short by close(), so a retry never outlives the queue.
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        this.wake = undefined;
+        resolve();
+      };
+      const timer = setTimeout(done, ms);
+      (timer as { unref?: () => void }).unref?.();
+      this.wake = done;
+    });
   }
 
   private async runErase(task: Omit<EraseTask, "done">): Promise<boolean> {
@@ -419,7 +451,10 @@ export class ProcessorQueue {
         } catch (error) {
           purged = await this.retryLookup(ids, error);
         }
-        if (purged === undefined) return;
+        if (purged === undefined) {
+          await this.persist();
+          return;
+        }
         live = withoutPurged(matching, purged);
       }
       if (live.length > 0) {

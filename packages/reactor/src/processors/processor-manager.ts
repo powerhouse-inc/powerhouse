@@ -65,6 +65,8 @@ type CursorOwner = Pick<
 type DriveDeletions = ReadonlyMap<string, OperationWithContext>;
 
 const DRIVE_STREAM_PAGE = 500;
+// How long shutdown waits for processors to finish and disconnect.
+const SHUTDOWN_GRACE_MS = 5_000;
 
 export type ProcessorManagerOptions = {
   // Key cursors by array position (default). Off derives stable keys from
@@ -99,6 +101,7 @@ export class ProcessorManager
   private erasing: Set<string> = new Set();
   // Creation headers of known and owed drives; a purge drops a drive's.
   private driveHeaders: Map<string, PHDocumentHeader> = new Map();
+  private stopped = false;
   private logger: ILogger;
   private driveContainerTypes: ReadonlySet<string>;
   private legacyProcessorIds: boolean;
@@ -151,6 +154,7 @@ export class ProcessorManager
     identifier: string,
     factory: ProcessorFactory,
   ): Promise<void> {
+    if (this.stopped) return;
     const removals = this.removeFactory(identifier);
     this.factoryRegistry.set(identifier, factory);
     const previous = this.draining.get(identifier);
@@ -181,6 +185,32 @@ export class ProcessorManager
 
   async unregisterFactory(identifier: string): Promise<void> {
     await Promise.all(this.removeFactory(identifier));
+  }
+
+  /** Closes every processor queue; the reactor's kill() calls it. */
+  async shutdown(): Promise<void> {
+    if (this.stopped) return;
+    this.stopped = true;
+    this.pendingSlots.clear();
+    const closing = [...this.allBound()].map(({ queue }) => queue.close());
+    this.processorsByDrive.clear();
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const grace = new Promise<boolean>((resolve) => {
+      timer = setTimeout(() => resolve(false), SHUTDOWN_GRACE_MS);
+      (timer as { unref?: () => void }).unref?.();
+    });
+    const closed = await Promise.race([
+      Promise.all(closing).then(() => true),
+      grace,
+    ]);
+    clearTimeout(timer);
+    if (!closed) {
+      this.logger.warn(
+        "Processors still busy @Ms ms into shutdown; not waiting for them",
+        SHUTDOWN_GRACE_MS,
+      );
+    }
   }
 
   get(processorId: string): TrackedProcessor | undefined {
@@ -416,7 +446,7 @@ export class ProcessorManager
       (row) =>
         row.factoryId === factoryId && this.deletedDrives.has(row.driveId),
     );
-    if (!owesAny) return;
+    if (!owesAny || this.stopped) return;
 
     const erasure = (async () => {
       // A re-registered factory starts once its previous instance is gone.

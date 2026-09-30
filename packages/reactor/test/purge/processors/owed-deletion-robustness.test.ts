@@ -262,4 +262,78 @@ describe("owed drive deletions [Postgres]", () => {
     await vi.waitFor(() => expect(reached).toBe(true));
     expect(await cursorRows(driveId)).toHaveLength(1);
   }, 30_000);
+
+  type QueueOptions = {
+    purged: (ids: string[]) => Promise<ReadonlySet<string>>;
+    lookupRetryMs?: number;
+  };
+
+  // Every tombstone lookup of the manager and of `driveId`'s processor fails.
+  function failLookups(driveId: string) {
+    const internals = manager() as unknown as {
+      processorsByDrive: Map<string, { queue: { options: QueueOptions } }[]>;
+      checkPurged: unknown;
+    };
+    const options = internals.processorsByDrive.get(driveId)![0]!.queue.options;
+    const state = { lookups: 0, failing: true };
+    const real = options.purged;
+    options.purged = (ids) => {
+      state.lookups++;
+      return state.failing ? Promise.reject(new Error("db down")) : real(ids);
+    };
+    internals.checkPurged = () => {
+      const purged = Promise.reject(new Error("db down"));
+      purged.catch(() => undefined);
+      return { purged };
+    };
+    return { options, state };
+  }
+
+  it("errors a processor whose tombstone lookup keeps failing, and retry() resumes it", async () => {
+    const driveId = await createDrive();
+    const processor = recorder();
+    await manager().registerFactory("pkg", (h) =>
+      h.id === driveId ? [{ processor, filter: { documentId: ["*"] } }] : [],
+    );
+    const { options, state } = failLookups(driveId);
+    options.lookupRetryMs = 1;
+
+    const other = await createDrive();
+    const tracked = () =>
+      manager()
+        .getAll()
+        .find((t) => t.driveId === driveId);
+    await vi.waitFor(() => expect(tracked()?.status).toBe("errored"), {
+      timeout: 10_000,
+    });
+    expect(processor.events).not.toContain(`CREATE_DOCUMENT ${other}`);
+
+    state.failing = false;
+    await tracked()!.retry();
+    expect(tracked()?.status).toBe("active");
+    expect(processor.events).toContain(`CREATE_DOCUMENT ${other}`);
+  }, 30_000);
+
+  it("stops retrying a failing tombstone lookup when the reactor is killed", async () => {
+    const driveId = await createDrive();
+    const processor = recorder();
+    await manager().registerFactory("pkg", (h) =>
+      h.id === driveId ? [{ processor, filter: { documentId: ["*"] } }] : [],
+    );
+    const { state } = failLookups(driveId);
+
+    await createDrive();
+    await vi.waitFor(() => expect(state.lookups).toBeGreaterThan(0), {
+      timeout: 10_000,
+    });
+    const started = Date.now();
+    await host.kill();
+    const killMs = Date.now() - started;
+    const atKill = state.lookups;
+    await new Promise((resolve) => setTimeout(resolve, 3_000));
+
+    expect(killMs).toBeLessThan(2_000);
+    expect(state.lookups).toBe(atKill);
+    expect(processor.events).toContain("disconnect");
+  }, 30_000);
 });
