@@ -4,15 +4,12 @@ import {
   baseCreateDocument,
   createReducer,
   defaultBaseState,
-  garbageCollect,
   generateId,
   groupDocumentType,
   initializeAuth,
   protocolVersionsFor,
-  sortOperations,
   type Action,
   type DocumentModelModule,
-  type Operation,
   type PHBaseState,
   type StateReducer,
 } from "@powerhousedao/shared/document-model";
@@ -24,7 +21,6 @@ import { setGrant } from "@powerhousedao/shared/document-model";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
-import { deleteDocumentAction } from "../../../src/actions/index.js";
 import { buildSingleJobMeta } from "../../../src/core/utils.js";
 import {
   buildWorkerExecutor,
@@ -112,46 +108,6 @@ function mutation(documentId: string, scope: string, actions: Action[]): Job {
     errorHistory: [],
     meta: buildSingleJobMeta(id),
   };
-}
-
-function purgeJob(documentId: string): Job {
-  const id = generateId();
-  return {
-    id,
-    kind: "purge",
-    documentId,
-    scope: "document",
-    branch: "main",
-    actions: [],
-    operations: [],
-    createdAt: new Date().toISOString(),
-    queueHint: [],
-    errorHistory: [],
-    meta: buildSingleJobMeta(id, { purgeRequestDocumentIds: [documentId] }),
-    purge: { requestId: "req-w", allowLarge: false },
-  };
-}
-
-function grants(groupId: string) {
-  return initializeAuth({
-    version: 1,
-    grants: [
-      {
-        id: "g-admin",
-        description: "admin",
-        effect: "allow",
-        principal: { address: ADMIN },
-        capability: { can: "execute", scope: "*" },
-      },
-      {
-        id: "g-group",
-        description: "group executes global",
-        effect: "allow",
-        principal: { group: groupId },
-        capability: { can: "execute", scope: "global" },
-      },
-    ],
-  });
 }
 
 function adminOnly() {
