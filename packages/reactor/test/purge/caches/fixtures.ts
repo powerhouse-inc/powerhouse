@@ -118,10 +118,13 @@ export async function createScratchDatabase(name: string): Promise<{
 
   const url = new URL(PG_TEST_URL);
   url.pathname = `/${database}`;
+  const pool = new Pool({ connectionString: url.toString() });
+  // pool.end() resolves before its sockets close; the forced drop ends them.
+  pool.on("error", (error: Error & { code?: string }) => {
+    if (error.code !== "57P01") throw error;
+  });
   const db = new Kysely<CoreDatabase>({
-    dialect: new PostgresDialect({
-      pool: new Pool({ connectionString: url.toString() }),
-    }),
+    dialect: new PostgresDialect({ pool }),
   });
   const result = await runMigrations(db, REACTOR_SCHEMA);
   if (!result.success && result.error) {
