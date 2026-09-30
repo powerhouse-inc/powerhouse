@@ -100,7 +100,9 @@ function readModel(pages: OperationWithContext[][] = [], settledThrough = 0) {
     batches.push(operations);
     return Promise.resolve();
   });
-  const onDocumentsPurged = vi.fn((_ids: string[]) => Promise.resolve(null));
+  const onDocumentsPurged = vi.fn((_markers: OperationWithContext[]) =>
+    Promise.resolve(null),
+  );
   const runtime = {
     onOperations,
     onDocumentsPurged,
@@ -234,7 +236,9 @@ describe("WorkflowTriggersReadModel", () => {
     await model.indexOperations([op(11), marker(12, "doc-gone"), op(13)]);
 
     expect(ordinals(batches)).toEqual([[11, 13]]);
-    expect(onDocumentsPurged).toHaveBeenCalledExactlyOnceWith(["doc-gone"]);
+    expect(onDocumentsPurged).toHaveBeenCalledExactlyOnceWith([
+      marker(12, "doc-gone"),
+    ]);
   });
 
   it("drops a tombstoned id's other operations before the runtime sees them", async () => {

@@ -158,7 +158,11 @@ import {
   type WorkflowAccessOptions,
 } from "./sync-wait.js";
 import { createAttachmentPort } from "./attachment-port.js";
-import { createPieceStorePort, PROJECT_SCOPE_KEY } from "./piece-store-port.js";
+import {
+  createPieceStorePort,
+  PROJECT_SCOPE_KEY,
+  testPartitionKey,
+} from "./piece-store-port.js";
 import { currentWorkflowId, withRunScope } from "./run-scope.js";
 import {
   ASSERT_BLOCK,
@@ -182,6 +186,7 @@ import {
 } from "./step-test.js";
 import {
   MAX_LIST_RUNS,
+  TEST_TRIGGER_KIND,
   WorkflowRunStore,
   journaledTriggerDocumentIds,
   triggerDocumentIds,
@@ -399,6 +404,18 @@ function isAbsent(error: unknown): boolean {
   return error instanceof Error && ABSENT_ERROR_NAMES.has(error.name);
 }
 
+// A marker names its document's type in its input; the context agrees.
+function purgedWorkflowIds(markers: OperationWithContext[]): string[] {
+  const ids = markers
+    .filter(
+      ({ operation, context }) =>
+        (stringField(inputRecord(operation.action.input), "documentType") ??
+          context.documentType) === WORKFLOW_DOCUMENT_TYPE,
+    )
+    .map(({ context }) => context.documentId);
+  return [...new Set(ids)];
+}
+
 function inputRecord(input: unknown): Record<string, unknown> {
   if (input === null || typeof input !== "object") return {};
   return input as Record<string, unknown>;
@@ -594,9 +611,6 @@ function registrationKey(state: WorkflowState): string {
   return JSON.stringify({ status: state.status, trigger: trigger && armed });
 }
 
-// The run kind a design-time test is journaled under.
-export const TEST_TRIGGER_KIND = "test";
-
 // The reducer refuses a config that is not an object, so none reaches here.
 function configRecord(config: unknown): Record<string, unknown> {
   if (config && typeof config === "object" && !Array.isArray(config)) {
@@ -627,6 +641,7 @@ export class WorkflowRuntimeService {
   private executor?: BlockExecutor;
   private pieceWorkers?: PieceWorkerPool;
   private readonly storePromise: Promise<WorkflowRunStore>;
+  private storeError?: unknown;
   private secretsPromise?: Promise<SecretStore>;
   private oauthAttemptsPromise?: Promise<OAuthAttemptStore>;
   private tokenRefresher?: OAuthTokenRefresher;
@@ -661,6 +676,7 @@ export class WorkflowRuntimeService {
       : undefined;
     this.storePromise = WorkflowRunStore.create(host.relationalDb);
     this.storePromise.catch((error: unknown) => {
+      this.storeError = error;
       this.logger.error("Failed to open the workflow run store: @error", error);
     });
     this.seedPromise = this.seedWithRetries();
@@ -1275,15 +1291,27 @@ export class WorkflowRuntimeService {
     return false;
   }
 
-  // Throws on a failed delete, so the read model's cursor holds and retries.
-  async onDocumentsPurged(documentIds: string[]): Promise<ErasedRuns | null> {
+  // Throws on any failure, so the read model's cursor holds and retries.
+  async onDocumentsPurged(
+    markers: OperationWithContext[],
+  ): Promise<ErasedRuns> {
+    const documentIds = [
+      ...new Set(markers.map((marker) => marker.context.documentId)),
+    ];
     const store = await this.store();
     if (!store) {
+      // The store never reopens, so only a restart releases the cursor.
       this.logger.error(
-        "Run journal unavailable; runs of purged documents @ids were not erased",
+        "Run journal unavailable; purged documents @ids are not erased and the triggers cursor holds until a restart: @error",
         documentIds,
+        this.storeError,
       );
-      return null;
+      throw new Error("Erasing purged documents needs the run journal", {
+        cause: this.storeError,
+      });
+    }
+    for (const workflowId of purgedWorkflowIds(markers)) {
+      await this.erasePurgedWorkflow(store, workflowId);
     }
     const erased = await store.eraseRunsForDocuments(documentIds);
     if (erased.runs > 0) {
@@ -1541,23 +1569,43 @@ export class WorkflowRuntimeService {
     }
   }
 
-  // The registry goes now, so deliveries stop at once. onDisable and the
-  // token revoke queue behind any enable in flight, off the ingestion path.
+  // Off the ingestion path: the release queues behind any enable in flight.
   private disarmDeleted(workflowId: string): void {
+    this.dropDeleted(workflowId);
+    this.releaseDeleted(workflowId).catch((error: unknown) => {
+      this.logger.error(
+        `Could not disarm deleted workflow ${workflowId}`,
+        error,
+      );
+    });
+  }
+
+  // The registry goes now, so deliveries stop at once.
+  private dropDeleted(workflowId: string): void {
     this.registry.delete(workflowId);
     this.registeredAs.delete(workflowId);
     this.unarmed.delete(workflowId);
     this.cancelResolutionRetry(workflowId);
     this.cancelTriggerTest(workflowId, "stopped: the workflow was deleted");
-    this.supervisor()
-      .forget(workflowId)
-      .then(async () => (await this.endpoints())?.revoke(workflowId))
-      .catch((error: unknown) => {
-        this.logger.error(
-          `Could not disarm deleted workflow ${workflowId}`,
-          error,
-        );
-      });
+  }
+
+  // onDisable, then the trigger row and FLOW store, then the webhook token.
+  private async releaseDeleted(workflowId: string): Promise<void> {
+    await this.supervisor().forget(workflowId);
+    await (await this.endpoints())?.revoke(workflowId);
+  }
+
+  // As a deletion disarms, but awaited: the cursor must not pass a failure.
+  private async erasePurgedWorkflow(
+    store: WorkflowRunStore,
+    workflowId: string,
+  ): Promise<void> {
+    this.dropDeleted(workflowId);
+    await this.releaseDeleted(workflowId);
+    await store.deleteDedupe(workflowId);
+    for (const scope of ["FLOW", "PROJECT"] as const) {
+      await store.deletePieceStore(scope, testPartitionKey(scope, workflowId));
+    }
   }
 
   // The document's own CREATE_DOCUMENT / DELETE_DOCUMENT, the source of truth: it covers

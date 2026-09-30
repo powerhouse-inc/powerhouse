@@ -54,8 +54,6 @@ export class WorkflowTriggersReadModel extends BaseReadModel {
     await this.runtime.onOperations(
       items.filter((item) => !isPurgeMarker(item.operation)),
     );
-    await this.runtime.onDocumentsPurged(
-      markers.map((item) => item.context.documentId),
-    );
+    await this.runtime.onDocumentsPurged(markers);
   }
 }

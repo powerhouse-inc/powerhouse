@@ -18,13 +18,18 @@ async function freshStore() {
   const db = createFreshRelationalDb();
   const store = await WorkflowRunStore.create(db);
   const start = async (
-    options: { payload?: unknown; rerunOf?: string } = {},
+    options: {
+      payload?: unknown;
+      rerunOf?: string;
+      workflowId?: string;
+      triggerKind?: string;
+    } = {},
   ) => {
     const runId = await store.startRun({
-      workflowId: "wf-erase",
+      workflowId: options.workflowId ?? "wf-erase",
       workflowName: "Erase",
       workflowVersion: 1,
-      triggerKind: "document-event",
+      triggerKind: options.triggerKind ?? "document-event",
       triggerPayload: options.payload,
       rerunOf: options.rerunOf,
     });
@@ -90,6 +95,57 @@ describe("eraseRunsForDocuments", () => {
     expect(await store.getRun(byDrive)).toBeUndefined();
     expect(await store.getRun(mentioned)).toBeDefined();
     expect(await store.getRun(prefixed)).toBeDefined();
+  });
+
+  it("deletes the runs whose lifecycle trigger named it as the parent", async () => {
+    const { store, start } = await freshStore();
+    const doomed = randomUUID();
+    const child = await start({
+      payload: { documentId: "doc-kept", driveId: null, parentId: doomed },
+    });
+
+    expect((await store.eraseRunsForDocuments([doomed])).runs).toBe(1);
+    expect(await store.getRun(child)).toBeUndefined();
+  });
+
+  it("deletes the test runs whose sample named the document", async () => {
+    const { store, start } = await freshStore();
+    const doomed = randomUUID();
+    const sample = async (output: unknown, triggerKind = "test") => {
+      const runId = await start({ workflowId: "wf-other", triggerKind });
+      await store.recordStep(runId, 2, { ...step("trigger"), output });
+      return runId;
+    };
+    const listed = await sample([
+      { documentId: "doc-kept" },
+      { documentId: doomed },
+    ]);
+    const single = await sample({ driveId: doomed });
+    const mentioned = await sample({ note: doomed });
+    const fired = await sample({ documentId: doomed }, "document-event");
+
+    expect((await store.eraseRunsForDocuments([doomed])).runs).toBe(2);
+    expect(await store.getRun(listed)).toBeUndefined();
+    expect(await store.getRun(single)).toBeUndefined();
+    expect(await store.getRun(mentioned)).toBeDefined();
+    expect(await store.getRun(fired)).toBeDefined();
+  });
+
+  it("deletes a purged workflow's own runs, its test runs included", async () => {
+    const { store, start } = await freshStore();
+    const workflowId = randomUUID();
+    const fired = await start({ workflowId });
+    const tested = await start({ workflowId, triggerKind: "test" });
+    const rerun = await start({ rerunOf: fired });
+    const other = await start();
+
+    const erased = await store.eraseRunsForDocuments([workflowId]);
+
+    expect(erased).toMatchObject({ runs: 3, steps: 6 });
+    for (const runId of [fired, tested, rerun]) {
+      expect(await store.getRun(runId)).toBeUndefined();
+    }
+    expect(await store.getRun(other)).toBeDefined();
   });
 
   it("keeps a claimed dedupe key but unlinks it from the erased run", async () => {
