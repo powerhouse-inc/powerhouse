@@ -27,17 +27,21 @@ import { settled } from "./utils/reactor.js";
 afterEach(teardown);
 
 describe("erasure plan and request [Postgres]", () => {
-  it("expands a drive to its ever-members and reports the cap and group referencers", async () => {
+  it("expands a drive to the members its purge needs and reports the cap and group referencers", async () => {
     const e = await setup();
     const kept = await createDoc(e);
     const left = await createDoc(e);
+    const gone = await createDoc(e);
     const shared = await createDoc(e);
-    const drive = await createDrive(e, [kept, left, shared]);
+    const drive = await createDrive(e, [kept, left, gone, shared]);
     await createDrive(e, [shared]);
-    const job = await e.host.module.reactor.execute(drive, "main", [
-      removeRelationshipAction(drive, left, "child"),
-    ]);
-    await settled(e.host.module, job.id);
+    await remove(e, gone);
+    for (const removed of [left, gone]) {
+      const job = await e.host.module.reactor.execute(drive, "main", [
+        removeRelationshipAction(drive, removed, "child"),
+      ]);
+      await settled(e.host.module, job.id);
+    }
 
     const referencer = await createDoc(e, e.signer.jwk);
     const grant = {
@@ -63,14 +67,14 @@ describe("erasure plan and request [Postgres]", () => {
         documentId,
         expandedFrom,
       ]),
-    ).toEqual([[drive, null], ...[kept, left].sort().map((id) => [id, drive])]);
+    ).toEqual([[drive, null], ...[kept, gone].sort().map((id) => [id, drive])]);
     for (const planned of plan.items) {
-      expect(planned.live).toBe(true);
+      expect(planned.live).toBe(planned.documentId !== gone);
       expect(planned.operationCount).toBeGreaterThan(0);
     }
     const byId = new Map(plan.items.map((i) => [i.documentId, i]));
     expect(byId.get(kept)!.groupReferencers).toEqual([referencer]);
-    expect(byId.get(left)!.groupReferencers).toEqual([]);
+    expect(byId.get(gone)!.groupReferencers).toEqual([]);
   });
 
   it("refuses a live id, and a deleted drive's live member", async () => {

@@ -252,6 +252,42 @@ describe("purge job [Postgres]", () => {
     await expectPurged(host.db, driveId);
   });
 
+  it("needs a deleted former member gone with the drive, but not a live one", async () => {
+    const driveId = await createDocument(legacyDrive());
+    const liveId = await createDocument();
+    const goneId = await createDocument();
+    for (const childId of [liveId, goneId]) {
+      await succeeded(
+        host.reactor,
+        (
+          await host.reactor.execute(driveId, "main", [
+            addRelationshipAction(driveId, childId, "child"),
+          ])
+        ).id,
+      );
+      await succeeded(
+        host.reactor,
+        (await host.reactor.removeRelationship(driveId, childId, "child")).id,
+      );
+    }
+    await remove(goneId);
+    await remove(driveId);
+
+    const refused = await failedWith(
+      host.reactor,
+      await purgeOne(driveId),
+      "DocumentNotDeletedError",
+    );
+    expect(refused.error?.message).toContain(goneId);
+    expect(refused.error?.message).not.toContain(liveId);
+
+    await succeeded(
+      host.reactor,
+      await purgeOne(driveId, { requestIds: [driveId, goneId] }),
+    );
+    await expectPurged(host.db, driveId);
+  });
+
   it("purges a drive once its members are purged", async () => {
     const drive = legacyDrive();
     const driveId = await createDocument(drive);

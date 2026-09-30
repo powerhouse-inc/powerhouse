@@ -558,6 +558,13 @@ Taken by the orchestrator after review, and applied:
   are delivered on `init` and `registerFactory`.
 - **Built-in models, `NodeProcessor`.** `DELETE_DOCUMENT` of a drive also
   clears its folder rows.
+- **API, `request`.** A drive expands to the ever-members with no open
+  membership elsewhere that are still open in its collection or deleted; a
+  live former member is not expanded, and the executor's drive precondition
+  does not require it. Relationship operations are on the drive, so its
+  purge erases them; a document unlinked and kept is no longer the drive's.
+  A cascade delete closes its children's memberships, so the deleted ones
+  are still expanded.
 - **Serving the marker.** The settled-range sweep that owes remotes on each
   watermark advance, so a lost `JOB_WRITE_READY` cannot strand the marker.
 - **Schedule.** Event-triggered ticks on the scheduler's own purge jobs;

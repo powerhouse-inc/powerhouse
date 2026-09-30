@@ -29,10 +29,12 @@ type PurgeDatabase = Database &
 
 export type PurgeStream = { scope: string; branch: string };
 
-/** A document of a drive's collection, and whether it lives on elsewhere. */
+/** A document of a drive's collection, and whether the drive's purge needs it gone. */
 export type CollectionMember = {
   documentId: string;
   openElsewhere: boolean;
+  /** Not open elsewhere, and still open here or deleted; a live former member lives on. */
+  required: boolean;
 };
 
 /** A purge transaction's statements; bound to the job's transaction. */
@@ -131,10 +133,25 @@ export class KyselyDocumentPurger {
   async collectionMembers(
     collectionId: string,
     ownerId: string,
+    branch: string,
   ): Promise<CollectionMember[]> {
     const rows = await this.db
       .selectFrom("document_collections as dc")
       .select("dc.documentId")
+      .select(sql<boolean>`dc."leftOrdinal" is null`.as("openHere"))
+      .select((eb) =>
+        eb
+          .exists(
+            eb
+              .selectFrom("Operation as op")
+              .select("op.opId")
+              .whereRef("op.documentId", "=", "dc.documentId")
+              .where("op.branch", "=", branch)
+              .where("op.scope", "=", "document")
+              .where(appliedDelete),
+          )
+          .as("deleted"),
+      )
       .select((eb) =>
         eb
           .exists(
@@ -151,10 +168,15 @@ export class KyselyDocumentPurger {
       .where("dc.documentId", "not in", [ownerId, collectionId])
       .orderBy("dc.documentId")
       .execute();
-    return rows.map((row) => ({
-      documentId: row.documentId,
-      openElsewhere: Boolean(row.openElsewhere),
-    }));
+    return rows.map((row) => {
+      const openElsewhere = Boolean(row.openElsewhere);
+      return {
+        documentId: row.documentId,
+        openElsewhere,
+        required:
+          !openElsewhere && (Boolean(row.openHere) || Boolean(row.deleted)),
+      };
+    });
   }
 
   async remoteCollection(remoteName: string): Promise<string | undefined> {

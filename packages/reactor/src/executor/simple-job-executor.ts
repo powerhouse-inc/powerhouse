@@ -1160,7 +1160,11 @@ export class SimpleJobExecutor implements IJobExecutor {
     const survivors = new Set<string>();
     for (const branch of branches.length > 0 ? branches : ["main"]) {
       const collectionId = DriveCollectionId.forDrive(driveId, branch).key;
-      const members = await purger.collectionMembers(collectionId, driveId);
+      const members = await purger.collectionMembers(
+        collectionId,
+        driveId,
+        branch,
+      );
       const purged = await stores.documentLocks.purged(
         members.map((member) => member.documentId),
       );
@@ -1168,10 +1172,10 @@ export class SimpleJobExecutor implements IJobExecutor {
         if (purged.has(member.documentId)) {
           continue;
         }
-        if (member.openElsewhere) {
-          survivors.add(member.documentId);
-        } else {
+        if (member.required) {
           required.add(member.documentId);
+        } else {
+          survivors.add(member.documentId);
         }
       }
     }

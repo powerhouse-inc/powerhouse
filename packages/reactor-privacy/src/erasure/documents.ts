@@ -48,7 +48,7 @@ export async function documentFacts(
   return facts;
 }
 
-/** A drive's ever-members with no open membership elsewhere and no tombstone. */
+/** A drive's members its purge needs gone, less those already tombstoned. */
 export async function driveMembers(
   db: ErasureDb,
   driveId: string,
@@ -63,8 +63,9 @@ export async function driveMembers(
     for (const member of await purger.collectionMembers(
       collectionId,
       driveId,
+      branch,
     )) {
-      if (!member.openElsewhere) members.add(member.documentId);
+      if (member.required) members.add(member.documentId);
     }
   }
   const purged = await findPurged(db, members);
