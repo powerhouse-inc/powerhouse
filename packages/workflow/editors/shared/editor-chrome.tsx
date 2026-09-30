@@ -104,8 +104,11 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
       head.current,
       policy,
     );
-  const settle = async () => {
+  // Moves `head` past what was sent, and says whether anything landed after
+  // `since`: a batch whose later action failed still applied the ones before.
+  const settle = async (since: number) => {
     head.current = headIndex(await globalHistory(props.documentId));
+    return head.current > since;
   };
   const run = (task: () => Promise<void>) => {
     if (!document || busy.current) return;
@@ -126,26 +129,35 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
       );
       if (!plan) return;
       const keep = !stale(history);
-      await send([
-        ...Array.from({ length: plan.undos }, () => undo()),
-        ...plan.replay,
-      ]);
-      await settle();
-      setUndone((list) => [...(keep ? list : []), plan.undone]);
+      try {
+        await send([
+          ...Array.from({ length: plan.undos }, () => undo()),
+          ...plan.replay,
+        ]);
+      } finally {
+        if (await settle(headIndex(history))) {
+          setUndone((list) => [...(keep ? list : []), plan.undone]);
+        }
+      }
     });
   const doRedo = () =>
     run(async () => {
       const last = undone.at(-1);
       if (!last) return;
-      if (stale(await globalHistory(props.documentId))) {
+      const history = await globalHistory(props.documentId);
+      if (stale(history)) {
         setUndone([]);
         return;
       }
       const again = redoActions(last);
       for (const action of again) own.current.add(action.id);
-      await send(again);
-      await settle();
-      setUndone((list) => list.slice(0, -1));
+      try {
+        await send(again);
+      } finally {
+        if (await settle(headIndex(history))) {
+          setUndone((list) => list.slice(0, -1));
+        }
+      }
     });
 
   // Read by the key handler and the effects, which don't rerun for them.

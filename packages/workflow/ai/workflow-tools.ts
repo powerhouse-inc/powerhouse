@@ -76,7 +76,8 @@ const GRAPH_RULES = [
   "A step names its block with pieceName, pieceVersion and actionName; the trigger with pieceName, pieceVersion and triggerName. pieceVersion is an exact semver: copy the fields getWorkflowPieceBlocks or listWorkflowCoreBlocks return.",
   `The built-in blocks (manual, schedule and webhook triggers, branch and assert) belong to the piece ${CORE_PIECE}.`,
   "Steps whose piece needs a connection must set connectionId to a powerhouse/connection document id (see getConnections).",
-  "Only ENABLED workflows get trigger instances and can be fired. PUBLISH_WORKFLOW snapshots the draft and enables it; SET_WORKFLOW_STATUS ENABLED is refused until the workflow has been published once.",
+  "Runs execute the published snapshot, not the draft. PUBLISH_WORKFLOW only snapshots the draft, so publish again after every edit that should run.",
+  "Only ENABLED workflows get trigger instances and can be fired. PUBLISH_WORKFLOW does not enable: to turn a workflow on, dispatch SET_WORKFLOW_STATUS ENABLED after PUBLISH_WORKFLOW (the same batch works). SET_WORKFLOW_STATUS ENABLED is refused until the workflow has been published once.",
 ];
 
 export const getWorkflowPieceBlocksTool: PhAiToolDescriptor = {
@@ -258,7 +259,7 @@ export const listWorkflowRunsTool: PhAiToolDescriptor = {
 export const fireWorkflowTool: PhAiToolDescriptor = {
   name: "fireWorkflow",
   description:
-    "Fires an ENABLED workflow whose trigger is the core manual trigger and runs it to completion. The payload becomes {{trigger.payload}}. Returns the run id and final status.",
+    "Fires an ENABLED workflow whose trigger is the core manual trigger and runs its published snapshot to completion. The payload becomes {{trigger.payload}}. Returns the run id and final status.",
   inputSchema: {
     workflowId: z.string().describe("Workflow document id."),
     payload: z

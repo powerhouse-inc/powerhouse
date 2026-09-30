@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import type { Agent } from "package-manager-detector";
 import { readPackage } from "read-pkg";
-import { clean, valid } from "semver";
+import { clean, compare, valid } from "semver";
 import { spawnAsync } from "./spawn-async.js";
 
 export async function fetchNpmVersionFromRegistryForTag(
@@ -20,6 +20,10 @@ export async function fetchNpmVersionFromRegistryForTag(
     );
   }
   return cleanedVersion;
+}
+
+export function lowestVersion(versions: readonly string[]): string | undefined {
+  return [...versions].sort(compare)[0];
 }
 
 export async function fetchPackageVersionFromNpmRegistry(

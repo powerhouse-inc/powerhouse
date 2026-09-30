@@ -1,3 +1,40 @@
+## 6.2.3-dev.34 (2026-09-30)
+
+### 🩹 Fixes
+
+- **codegen:** resolve a migrate dist-tag to a version every pinned package has ([bae414aae3](https://github.com/powerhouse-inc/powerhouse/commit/bae414aae3))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.33 (2026-09-30)
+
+### 🚀 Features
+
+- **shared:** add connect.reactor.unsupportedStoredDocuments ([216a31d92](https://github.com/powerhouse-inc/powerhouse/commit/216a31d92))
+- **shared:** order peer manifests by a start sequence ([76b28a0e0](https://github.com/powerhouse-inc/powerhouse/commit/76b28a0e0))
+- **reactor:** add catch-up operator tools and observability ([5722d7836](https://github.com/powerhouse-inc/powerhouse/commit/5722d7836))
+- **shared:** add selectProtocolVersions ([22a952348](https://github.com/powerhouse-inc/powerhouse/commit/22a952348))
+- **shared:** add holdReason and coversLocal ([e7d0b59f3](https://github.com/powerhouse-inc/powerhouse/commit/e7d0b59f3))
+- **reactor:** cap processor cursors at the manager's catch-up cursor ([ea8505be6](https://github.com/powerhouse-inc/powerhouse/commit/ea8505be6))
+- **reactor:** exchange peer manifests on the channel handshake ([514c245a2](https://github.com/powerhouse-inc/powerhouse/commit/514c245a2))
+- **shared:** add the peer capability registry and manifest ([ffb2b78dd](https://github.com/powerhouse-inc/powerhouse/commit/ffb2b78dd))
+
+### 🩹 Fixes
+
+- **vetra:** record protocol versions in minimal document backups ([5109cc576](https://github.com/powerhouse-inc/powerhouse/commit/5109cc576))
+- **document-model:** default base-reducer version when a zip has none ([91ac68376](https://github.com/powerhouse-inc/powerhouse/commit/91ac68376))
+- **reactor:** claim a batch for each read model as it queues ([c09b1de2a](https://github.com/powerhouse-inc/powerhouse/commit/c09b1de2a))
+- **reactor:** settle a probe on its own xid, not on an empty xip ([4e0f0dab9](https://github.com/powerhouse-inc/powerhouse/commit/4e0f0dab9))
+- **reactor:** leave a stream to the next sweep while its live pass runs ([53112bad4](https://github.com/powerhouse-inc/powerhouse/commit/53112bad4))
+- **reactor:** start a head registration at the sequence head ([e06581849](https://github.com/powerhouse-inc/powerhouse/commit/e06581849))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.32 (2026-09-29)
 
 ### 🚀 Features

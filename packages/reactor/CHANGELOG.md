@@ -1,3 +1,48 @@
+## 6.2.3-dev.34 (2026-09-30)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.33 (2026-09-30)
+
+### 🚀 Features
+
+- **reactor:** export the UnsupportedStoredDocuments mode type ([f17c1b074](https://github.com/powerhouse-inc/powerhouse/commit/f17c1b074))
+- **reactor:** add catch-up operator tools and observability ([5722d7836](https://github.com/powerhouse-inc/powerhouse/commit/5722d7836))
+- **reactor:** derive the sync outbox only up to the settled watermark ([98dc2f299](https://github.com/powerhouse-inc/powerhouse/commit/98dc2f299))
+- **reactor:** give the group re-evaluation trigger a catch-up cursor ([e6fa0640c](https://github.com/powerhouse-inc/powerhouse/commit/e6fa0640c))
+- **reactor:** select protocol versions for new documents from peer agreement ([f2fbcdd39](https://github.com/powerhouse-inc/powerhouse/commit/f2fbcdd39))
+- **reactor:** hold documents from peers that cannot run them ([89f932805](https://github.com/powerhouse-inc/powerhouse/commit/89f932805))
+- **reactor:** cap processor cursors at the manager's catch-up cursor ([ea8505be6](https://github.com/powerhouse-inc/powerhouse/commit/ea8505be6))
+- **reactor:** move read-model cursors to contiguous catch-up ([ae8859131](https://github.com/powerhouse-inc/powerhouse/commit/ae8859131))
+- **reactor:** exchange peer manifests on the channel handshake ([514c245a2](https://github.com/powerhouse-inc/powerhouse/commit/514c245a2))
+- **reactor:** add the settled watermark and catch-up scheduler ([885676bb5](https://github.com/powerhouse-inc/powerhouse/commit/885676bb5))
+- **reactor:** refuse documents at protocol versions this reactor does not run ([69532da36](https://github.com/powerhouse-inc/powerhouse/commit/69532da36))
+
+### 🩹 Fixes
+
+- **reactor:** resolve a live pass with its last chunk again ([4caa6fc16](https://github.com/powerhouse-inc/powerhouse/commit/4caa6fc16))
+- **reactor:** claim a batch for each read model as it queues ([c09b1de2a](https://github.com/powerhouse-inc/powerhouse/commit/c09b1de2a))
+- **reactor:** settle a probe on its own xid, not on an empty xip ([4e0f0dab9](https://github.com/powerhouse-inc/powerhouse/commit/4e0f0dab9))
+- **reactor:** leave a stream to the next sweep while its live pass runs ([53112bad4](https://github.com/powerhouse-inc/powerhouse/commit/53112bad4))
+- **reactor:** start a head registration at the sequence head ([e06581849](https://github.com/powerhouse-inc/powerhouse/commit/e06581849))
+- **reactor:** create signed, derived-id documents in the sync bench ([#3088](https://github.com/powerhouse-inc/powerhouse/issues/3088))
+- **reactor:** refuse to start below a protocol version the store holds ([78d258ee4](https://github.com/powerhouse-inc/powerhouse/commit/78d258ee4))
+- **reactor:** keep IChannel implementations without manifest support compiling ([f332d6174](https://github.com/powerhouse-inc/powerhouse/commit/f332d6174))
+- **reactor:** rebuild from the whole log when a cached rebuild meets a skip ([4da993040](https://github.com/powerhouse-inc/powerhouse/commit/4da993040))
+- **reactor:** pass the database type to readSnapshotFunctions for TS 5.9 ([826be505b](https://github.com/powerhouse-inc/powerhouse/commit/826be505b))
+- **reactor:** sequence manifests by start time and re-probe a silent server ([50611d8c1](https://github.com/powerhouse-inc/powerhouse/commit/50611d8c1))
+- **reactor:** report refusals of polled rows so the server holds them ([a970307ee](https://github.com/powerhouse-inc/powerhouse/commit/a970307ee))
+- **reactor:** name the gated-under server revision on push and hold before resending ([e5d9bd7ed](https://github.com/powerhouse-inc/powerhouse/commit/e5d9bd7ed))
+- **reactor:** name the client's revision on each poll and refresh before admitting rows ([a966599ea](https://github.com/powerhouse-inc/powerhouse/commit/a966599ea))
+- **reactor:** refuse every write into a stored document this reactor does not run ([8a97ba643](https://github.com/powerhouse-inc/powerhouse/commit/8a97ba643))
+- **reactor:** keep a read model's applied set across a repeat init ([67ca4ff72](https://github.com/powerhouse-inc/powerhouse/commit/67ca4ff72))
+- **reactor:** rebuild resultingState in the executor's shape ([ed92072b6](https://github.com/powerhouse-inc/powerhouse/commit/ed92072b6))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.32 (2026-09-29)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

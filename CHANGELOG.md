@@ -1,3 +1,90 @@
+## 6.2.3-dev.34 (2026-09-30)
+
+### 🚀 Features
+
+- **switchboard:** let MCP_ENABLED=false keep the MCP server unmounted ([#3146](https://github.com/powerhouse-inc/powerhouse/pull/3146))
+
+### 🩹 Fixes
+
+- **codegen:** resolve a migrate dist-tag to a version every pinned package has ([bae414aae3](https://github.com/powerhouse-inc/powerhouse/commit/bae414aae3))
+- **reactor-browser:** answer every dispatch through its callbacks, failures included ([44f02b98c3](https://github.com/powerhouse-inc/powerhouse/commit/44f02b98c3))
+- **reactor-workflow:** migrate block_type journals to piece and block name columns ([236e2b00f0](https://github.com/powerhouse-inc/powerhouse/commit/236e2b00f0))
+- **reactor-workflow:** run an armed workflow's webhook deliveries while a trigger test waits ([c2db3402de](https://github.com/powerhouse-inc/powerhouse/commit/c2db3402de))
+- **reactor-workflow:** let EXISTS and DOES_NOT_EXIST test a field that is missing ([589f1e85f6](https://github.com/powerhouse-inc/powerhouse/commit/589f1e85f6))
+- **workflow:** drop the test of a block an undo removes, and settle a failed undo ([12c5073697](https://github.com/powerhouse-inc/powerhouse/commit/12c5073697))
+- **workflow:** show a failed publish's error once the draft banner is gone ([f8278642aa](https://github.com/powerhouse-inc/powerhouse/commit/f8278642aa))
+- **workflow:** tell agents that publishing does not enable a workflow ([cbed7db121](https://github.com/powerhouse-inc/powerhouse/commit/cbed7db121))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.3-dev.33 (2026-09-30)
+
+### 🚀 Features
+
+- peer protocol agreement ([#3125](https://github.com/powerhouse-inc/powerhouse/pull/3125))
+- **connect:** feed peer agreement and holds to the remotes inspector ([034dabf1c](https://github.com/powerhouse-inc/powerhouse/commit/034dabf1c))
+- **connect:** add a catch-up inspector tab ([f940cd5a6](https://github.com/powerhouse-inc/powerhouse/commit/f940cd5a6))
+- **connect:** carry unsupportedStoredDocuments to both reactor hosts ([31f4e9410](https://github.com/powerhouse-inc/powerhouse/commit/31f4e9410))
+- **design-system:** show peer agreement and holds in the remotes inspector ([54a99412f](https://github.com/powerhouse-inc/powerhouse/commit/54a99412f))
+- **reactor:** refuse documents at protocol versions this reactor does not run ([69532da36](https://github.com/powerhouse-inc/powerhouse/commit/69532da36))
+- **reactor:** add the settled watermark and catch-up scheduler ([885676bb5](https://github.com/powerhouse-inc/powerhouse/commit/885676bb5))
+- **reactor:** exchange peer manifests on the channel handshake ([514c245a2](https://github.com/powerhouse-inc/powerhouse/commit/514c245a2))
+- **reactor:** move read-model cursors to contiguous catch-up ([ae8859131](https://github.com/powerhouse-inc/powerhouse/commit/ae8859131))
+- **reactor:** cap processor cursors at the manager's catch-up cursor ([ea8505be6](https://github.com/powerhouse-inc/powerhouse/commit/ea8505be6))
+- **reactor:** hold documents from peers that cannot run them ([89f932805](https://github.com/powerhouse-inc/powerhouse/commit/89f932805))
+- **reactor:** select protocol versions for new documents from peer agreement ([f2fbcdd39](https://github.com/powerhouse-inc/powerhouse/commit/f2fbcdd39))
+- **reactor:** give the group re-evaluation trigger a catch-up cursor ([e6fa0640c](https://github.com/powerhouse-inc/powerhouse/commit/e6fa0640c))
+- **reactor:** derive the sync outbox only up to the settled watermark ([98dc2f299](https://github.com/powerhouse-inc/powerhouse/commit/98dc2f299))
+- **reactor:** add catch-up operator tools and observability ([5722d7836](https://github.com/powerhouse-inc/powerhouse/commit/5722d7836))
+- **reactor:** export the UnsupportedStoredDocuments mode type ([f17c1b074](https://github.com/powerhouse-inc/powerhouse/commit/f17c1b074))
+- **reactor:** read-side catch-up for committed operations ([#3124](https://github.com/powerhouse-inc/powerhouse/pull/3124))
+- **reactor-api:** carry peer manifests on touchChannel and poll revisions ([5bef322a4](https://github.com/powerhouse-inc/powerhouse/commit/5bef322a4))
+- **reactor-api:** add the syncHolds and peerAgreement queries ([9f475e2f9](https://github.com/powerhouse-inc/powerhouse/commit/9f475e2f9))
+- **reactor-browser:** proxy peer manifests across the Connect worker boundary ([2573bbd23](https://github.com/powerhouse-inc/powerhouse/commit/2573bbd23))
+- **reactor-browser:** serve holds and peer agreement across the worker boundary ([c2adc6d3a](https://github.com/powerhouse-inc/powerhouse/commit/c2adc6d3a))
+- **reactor-browser:** select protocol versions for new drives and copies ([d7f382aa6](https://github.com/powerhouse-inc/powerhouse/commit/d7f382aa6))
+- **shared:** add the peer capability registry and manifest ([ffb2b78dd](https://github.com/powerhouse-inc/powerhouse/commit/ffb2b78dd))
+- **shared:** add holdReason and coversLocal ([e7d0b59f3](https://github.com/powerhouse-inc/powerhouse/commit/e7d0b59f3))
+- **shared:** add selectProtocolVersions ([22a952348](https://github.com/powerhouse-inc/powerhouse/commit/22a952348))
+- **shared:** order peer manifests by a start sequence ([76b28a0e0](https://github.com/powerhouse-inc/powerhouse/commit/76b28a0e0))
+- **shared:** add connect.reactor.unsupportedStoredDocuments ([216a31d92](https://github.com/powerhouse-inc/powerhouse/commit/216a31d92))
+- **switchboard:** expose the stored-protocol startup check ([de2bf4836](https://github.com/powerhouse-inc/powerhouse/commit/de2bf4836))
+
+### 🩹 Fixes
+
+- **document-model:** default base-reducer version when a zip has none ([91ac68376](https://github.com/powerhouse-inc/powerhouse/commit/91ac68376))
+- **reactor:** rebuild resultingState in the executor's shape ([ed92072b6](https://github.com/powerhouse-inc/powerhouse/commit/ed92072b6))
+- **reactor:** keep a read model's applied set across a repeat init ([67ca4ff72](https://github.com/powerhouse-inc/powerhouse/commit/67ca4ff72))
+- **reactor:** refuse every write into a stored document this reactor does not run ([8a97ba643](https://github.com/powerhouse-inc/powerhouse/commit/8a97ba643))
+- **reactor:** name the client's revision on each poll and refresh before admitting rows ([a966599ea](https://github.com/powerhouse-inc/powerhouse/commit/a966599ea))
+- **reactor:** name the gated-under server revision on push and hold before resending ([e5d9bd7ed](https://github.com/powerhouse-inc/powerhouse/commit/e5d9bd7ed))
+- **reactor:** report refusals of polled rows so the server holds them ([a970307ee](https://github.com/powerhouse-inc/powerhouse/commit/a970307ee))
+- **reactor:** sequence manifests by start time and re-probe a silent server ([50611d8c1](https://github.com/powerhouse-inc/powerhouse/commit/50611d8c1))
+- **reactor:** pass the database type to readSnapshotFunctions for TS 5.9 ([826be505b](https://github.com/powerhouse-inc/powerhouse/commit/826be505b))
+- **reactor:** rebuild from the whole log when a cached rebuild meets a skip ([4da993040](https://github.com/powerhouse-inc/powerhouse/commit/4da993040))
+- **reactor:** keep IChannel implementations without manifest support compiling ([f332d6174](https://github.com/powerhouse-inc/powerhouse/commit/f332d6174))
+- **reactor:** refuse to start below a protocol version the store holds ([78d258ee4](https://github.com/powerhouse-inc/powerhouse/commit/78d258ee4))
+- **reactor:** create signed, derived-id documents in the sync bench ([#3088](https://github.com/powerhouse-inc/powerhouse/issues/3088))
+- **reactor:** start a head registration at the sequence head ([e06581849](https://github.com/powerhouse-inc/powerhouse/commit/e06581849))
+- **reactor:** leave a stream to the next sweep while its live pass runs ([53112bad4](https://github.com/powerhouse-inc/powerhouse/commit/53112bad4))
+- **reactor:** settle a probe on its own xid, not on an empty xip ([4e0f0dab9](https://github.com/powerhouse-inc/powerhouse/commit/4e0f0dab9))
+- **reactor:** claim a batch for each read model as it queues ([c09b1de2a](https://github.com/powerhouse-inc/powerhouse/commit/c09b1de2a))
+- **reactor:** resolve a live pass with its last chunk again ([4caa6fc16](https://github.com/powerhouse-inc/powerhouse/commit/4caa6fc16))
+- **reactor-api:** silence a client whose poll names no revision before serving it ([74bb202ac](https://github.com/powerhouse-inc/powerhouse/commit/74bb202ac))
+- **reactor-api:** resolve dev-loader modules first and resolve host packages outside the project ([0285a3ae8](https://github.com/powerhouse-inc/powerhouse/commit/0285a3ae8))
+- **reactor-browser:** answer ops after a failed worker build with its error ([6ca9cc278](https://github.com/powerhouse-inc/powerhouse/commit/6ca9cc278))
+- **switchboard:** resolve packages it brings from its own dependencies in dev ([7c9c55d98](https://github.com/powerhouse-inc/powerhouse/commit/7c9c55d98))
+- **vetra:** record protocol versions in minimal document backups ([5109cc576](https://github.com/powerhouse-inc/powerhouse/commit/5109cc576))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.32 (2026-09-29)
 
 ### 🚀 Features

@@ -13,7 +13,8 @@ export interface UndoPolicy {
   // Operation types undo passes over.
   skip: ReadonlySet<string>;
   // Rebuilds a skipped action that must outlive the undo; undefined drops it.
-  replay?: (action: Action) => Action | undefined;
+  // `undone` is the edit being taken back, e.g. the step a test was of.
+  replay?: (action: Action, undone: readonly Action[]) => Action | undefined;
 }
 
 export interface UndoPlan {
@@ -84,20 +85,18 @@ export function planUndo(
     if (error || policy.skip.has(action.type)) continue;
     const start = editStart(effective, last, policy);
     const group = undoGroupOf(action);
-    const replay: Action[] = [];
-    const undone: Action[] = [];
-    for (const operation of effective.slice(start)) {
-      if (operation.error) continue;
-      const member =
-        operation.action === action ||
-        (group !== undefined && undoGroupOf(operation.action) === group);
-      if (member) {
-        undone.push(operation.action);
-        continue;
-      }
-      const kept = policy.replay?.(operation.action);
-      if (kept) replay.push(kept);
-    }
+    const isMember = (candidate: Action) =>
+      candidate === action ||
+      (group !== undefined && undoGroupOf(candidate) === group);
+    const applied = effective
+      .slice(start)
+      .filter((operation) => !operation.error)
+      .map((operation) => operation.action);
+    const undone = applied.filter(isMember);
+    const replay = applied
+      .filter((candidate) => !isMember(candidate))
+      .map((candidate) => policy.replay?.(candidate, undone))
+      .filter((kept): kept is Action => kept !== undefined);
     return { undos: effective.length - start, replay, undone };
   }
   return null;

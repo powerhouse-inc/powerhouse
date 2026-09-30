@@ -5,11 +5,8 @@ import {
   useSelectedDocumentId,
   useSelectedDriveId,
 } from "@powerhousedao/reactor-browser";
-import {
-  actions as workflowActions,
-  useSelectedWorkflowDocument,
-} from "document-models/workflow";
-import type { UndoPolicy } from "../shared/undo-plan.js";
+import { useSelectedWorkflowDocument } from "document-models/workflow";
+import { WORKFLOW_UNDO } from "./undo-policy.js";
 import { useMemo } from "react";
 import { useWorkflowModel } from "./document/useWorkflowModel.js";
 import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
@@ -75,25 +72,6 @@ async function authoredOutput(
 }
 
 const LAST_RUN_POLL_MS = 10_000;
-
-// Undo passes over the runtime's facts and writes them again, so undoing an
-// edit never loses a test or a run.
-const WORKFLOW_UNDO: UndoPolicy = {
-  skip: new Set(["SET_LAST_TEST", "SET_LAST_RUN"]),
-  replay: (action) => {
-    if (action.type === "SET_LAST_TEST") {
-      return workflowActions.setLastTest(
-        action.input as Parameters<typeof workflowActions.setLastTest>[0],
-      );
-    }
-    if (action.type === "SET_LAST_RUN") {
-      return workflowActions.setLastRun(
-        action.input as Parameters<typeof workflowActions.setLastRun>[0],
-      );
-    }
-    return undefined;
-  },
-};
 
 function LastRunFact(props: { workflowId: string }) {
   const runs = useRunsQuery(

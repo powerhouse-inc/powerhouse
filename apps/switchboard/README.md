@@ -110,6 +110,7 @@ pnpm add -g @powerhousedao/switchboard
 | `REDIS_TLS_URL`             | Redis TLS connection URL           | -                     |
 | `PYROSCOPE_SERVER_ADDRESS`  | Pyroscope server address           | -                     |
 | `FEATURE_REACTORV2_ENABLED` | Enable Reactor v2 subgraph feature | `false`               |
+| `MCP_ENABLED`               | `false` keeps `/mcp` unmounted     | `true`                |
 
 See [Observability](#observability) below for Sentry and OpenTelemetry variables.
 

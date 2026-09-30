@@ -4,11 +4,8 @@ import {
   redactMessage,
   secretsFor,
 } from "../activepieces/worker/redact.js";
-import {
-  evaluateCondition,
-  resolveExpressions,
-  type ExpressionScope,
-} from "./expressions.js";
+import { evaluateCondition, type ExpressionScope } from "./expressions.js";
+import { resolveStepInput } from "./step-input.js";
 import { checkDynamicProperties } from "./dynamic-props.js";
 import { undeclaredPortEdges } from "@powerhousedao/pieces-framework/workflow";
 import { stepConfigHash } from "./canonical.js";
@@ -229,7 +226,7 @@ export async function runWorkflow(
     const startedAt = new Date().toISOString();
     let input: unknown;
     try {
-      input = resolveExpressions(step.config, scope);
+      input = resolveStepInput(step, scope);
       checkDynamicProperties(input, step.propertySettings);
       const result = await executor.execute({
         block: stepBlock(step),
