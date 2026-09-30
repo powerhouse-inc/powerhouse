@@ -1,4 +1,5 @@
 import {
+  appliedDelete,
   DriveCollectionId,
   findPurged,
   KyselyDocumentPurger,
@@ -28,11 +29,7 @@ export async function documentFacts(
   const streams = await db
     .selectFrom("Operation")
     .select(["documentId", "branch", "documentType"])
-    .select(
-      sql<boolean>`bool_or(action->>'type' = 'DELETE_DOCUMENT' and coalesce(error, '') = '')`.as(
-        "deleted",
-      ),
-    )
+    .select(sql<boolean>`bool_or(${appliedDelete})`.as("deleted"))
     .where(sql<boolean>`"documentId" = any(${ids}::text[])`)
     .where("scope", "=", "document")
     .groupBy(["documentId", "branch", "documentType"])

@@ -7,6 +7,7 @@ import {
   initializeAuth,
   type Grant,
 } from "@powerhousedao/shared/document-model";
+import { sql } from "kysely";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   ADMIN,
@@ -93,6 +94,26 @@ describe("erasure plan and request [Postgres]", () => {
       .selectAll()
       .execute();
     expect(requests).toEqual([]);
+  });
+
+  it("refuses a document whose delete was denied", async () => {
+    const e = await setup();
+    const denied = await createDoc(e);
+    await remove(e, denied);
+    await db(e)
+      .updateTable("Operation")
+      .set({ deniedReason: "denied" })
+      .where("documentId", "=", denied)
+      .where(sql<boolean>`action->>'type' = 'DELETE_DOCUMENT'`)
+      .execute();
+
+    const plan = await e.service.plan([denied]);
+    expect(plan.items.map((i) => i.live)).toEqual([true]);
+    await expect(
+      e.service.request([denied], { requestedBy: ADMIN }),
+    ).rejects.toSatisfy((error: Error) =>
+      DocumentNotDeletedError.isError(error),
+    );
   });
 
   it("records the request with requestedBy hashed and the expansion audited", async () => {

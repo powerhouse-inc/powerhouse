@@ -4,7 +4,7 @@ import {
   sortOperations,
   type Operation,
 } from "@powerhousedao/shared/document-model";
-import type { Kysely, Transaction } from "kysely";
+import { sql, type Kysely, type Transaction } from "kysely";
 import type { DocumentViewDatabase } from "../../read-models/types.js";
 import { findPurged } from "./document-purges.js";
 import type {
@@ -14,6 +14,9 @@ import type {
   OperationRow,
   PurgeRemovedRows,
 } from "./types.js";
+
+/** An `Operation` row whose DELETE_DOCUMENT applied: not errored, not denied. */
+export const appliedDelete = sql<boolean>`action->>'type' = 'DELETE_DOCUMENT' and coalesce(error, '') = '' and coalesce("deniedReason", '') = ''`;
 
 /** Rows removed per statement from the tables a document can fill. */
 export const DEFAULT_PURGE_DELETE_BATCH = 5_000;

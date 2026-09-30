@@ -552,6 +552,7 @@ export type {
   PurgeRemovedRows,
 } from "./src/storage/kysely/types.js";
 export {
+  appliedDelete,
   DEFAULT_PURGE_DELETE_BATCH,
   KyselyDocumentPurger,
   type CollectionMember,
