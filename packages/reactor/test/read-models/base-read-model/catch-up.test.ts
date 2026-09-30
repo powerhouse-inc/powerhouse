@@ -87,7 +87,12 @@ describe("BaseReadModel catch-up", () => {
       operationIndex,
       writeCache,
       new ConsistencyTracker(),
-      { readModelId: READ_MODEL_ID, rebuildStateOnInit: false, ...config },
+      {
+        readModelId: READ_MODEL_ID,
+        rebuildStateOnInit: false,
+        purgeFence: "none",
+        ...config,
+      },
     );
     model.attachCatchUp(watermark, 100_000);
     return model;
