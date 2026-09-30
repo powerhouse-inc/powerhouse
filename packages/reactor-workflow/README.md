@@ -111,7 +111,8 @@ failure holds the cursor below the marker.
 
 A document's purge (`PURGE_DOCUMENT`) deletes every run that carried it: the
 runs `run_document` ties to it, the runs whose trigger payload names it as
-`documentId` or `driveId`, and every rerun of those, transitively. Their
+`documentId` or `driveId`, a purged workflow's own runs (`run.workflow_id`,
+test runs included), and every rerun of those, transitively. Their
 `step_execution` and `run_document` rows go with them; a `trigger_dedupe` row
 they claimed keeps its key and loses its `run_id`. A run erased while it is
 still executing journals nothing more from this process. The read model's
@@ -122,8 +123,7 @@ applied; a rescan from just below the marker repairs it.
 Not erased, because nothing ties it to a document: `trigger_state.store_state`
 (vestigial, but an unmigrated legacy blob may remain), `trigger_dedupe.dedupe_key`
 (an operation key, which can embed a document id) and `piece_store.value`
-(whatever a piece stored). Runs of a purged workflow document are keyed by
-`run.workflow_id` and are not erased either; only retention removes them.
+(whatever a piece stored).
 
 `runsPage` pages newest first on when a run was journaled (`enqueued_at`),
 which starting a PENDING run leaves alone, so a run keeps its place between

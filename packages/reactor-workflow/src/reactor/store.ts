@@ -1594,7 +1594,8 @@ export class WorkflowRunStore {
     }
   }
 
-  // Runs that carried a document go with their reruns; dedupe keys stay, unlinked.
+  // Runs that carried a document, or a purged workflow's runs, go with their
+  // reruns; dedupe keys stay, unlinked.
   async eraseRunsForDocuments(documentIds: string[]): Promise<ErasedRuns> {
     const ids = [...new Set(documentIds)];
     const erased: ErasedRuns = {
@@ -1614,6 +1615,13 @@ export class WorkflowRunStore {
             .execute()
         ).map((row) => row.run_id),
       );
+      // A purged workflow's own runs, test runs included.
+      const own = await trx
+        .selectFrom("run")
+        .select("id")
+        .where("workflow_id", "in", ids)
+        .execute();
+      for (const row of own) runIds.add(row.id);
       const named = await trx
         .selectFrom("run")
         .select(["id", "trigger_payload"])
