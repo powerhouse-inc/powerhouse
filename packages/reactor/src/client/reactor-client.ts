@@ -1748,8 +1748,9 @@ export class ReactorClient implements IReactorClient {
     );
 
     const unsubscribeDeleted = this.subscriptionManager.onDocumentDeleted(
-      (documentIds) => {
+      (documentIds, info) => {
         const reads = this.eventReads.forEvent();
+        const purged = info?.purged ? { purged: true as const } : {};
         for (const childId of documentIds) {
           deliver(
             (async () =>
@@ -1757,7 +1758,7 @@ export class ReactorClient implements IReactorClient {
                 ? {
                     type: DocumentChangeType.Deleted,
                     documents: [],
-                    context: { childId },
+                    context: { childId, ...purged },
                   }
                 : undefined)(),
           );

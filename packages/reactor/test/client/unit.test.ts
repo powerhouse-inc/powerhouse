@@ -30,6 +30,7 @@ import type {
 import type { IJobAwaiter } from "../../src/shared/awaiter.js";
 import {
   DocumentNotFoundError,
+  DocumentPurgedError,
   RelationshipNotFoundError,
 } from "../../src/shared/errors.js";
 import {
@@ -2916,6 +2917,57 @@ describe("ReactorClient Unit Tests", () => {
             type: DocumentChangeType.Deleted,
             documents: [],
             context: { childId: "d3" },
+          },
+        ]);
+      });
+
+      it("marks a Deleted event purged when a purge marker applied it", async () => {
+        const deleted = vi.fn();
+        let fire:
+          | ((ids: string[], info?: { purged?: true }) => void)
+          | undefined;
+        const manager = createMockSubscriptionManager({
+          onDocumentDeleted: vi.fn(
+            (cb: (ids: string[], info?: { purged?: true }) => void) => {
+              fire = cb;
+              return () => {};
+            },
+          ) as never,
+        });
+
+        const subscribing = new ReactorClient(
+          createMockLogger(),
+          mockReactor,
+          createMockSigner(),
+          manager,
+          mockJobAwaiter,
+          mockDocumentIndexer,
+          mockDocumentView,
+        );
+
+        vi.mocked(mockReactor.get).mockImplementation((id) =>
+          Promise.reject(new DocumentPurgedError(id)),
+        );
+        vi.mocked(mockDocumentView.exists).mockResolvedValue([false]);
+
+        subscribing.subscribe({}, deleted, {
+          subject: { address: "0xreader" },
+        });
+
+        fire?.(["d1"], { purged: true });
+        fire?.(["d2"]);
+        await vi.waitFor(() => expect(deleted).toHaveBeenCalledTimes(2));
+
+        expect(deleted.mock.calls.map((call) => call[0])).toEqual([
+          {
+            type: DocumentChangeType.Deleted,
+            documents: [],
+            context: { childId: "d1", purged: true },
+          },
+          {
+            type: DocumentChangeType.Deleted,
+            documents: [],
+            context: { childId: "d2" },
           },
         ]);
       });

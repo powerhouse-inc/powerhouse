@@ -34,6 +34,7 @@ describe("subscription notifications for a purge marker [Postgres]", () => {
   let receiver: PurgeReactor;
   let origin: ISigner;
   const deletedNotices: string[][] = [];
+  const purgedNotices: string[][] = [];
   const writeReady: JobWriteReadyEvent[] = [];
   const notified: ReadModelIndexedEvent[] = [];
   const indexed: ReadModelIndexedEvent[] = [];
@@ -58,7 +59,10 @@ describe("subscription notifications for a purge marker [Postgres]", () => {
       })
       .execute();
     const manager = receiver.module.subscriptionManager;
-    manager.onDocumentDeleted((ids) => deletedNotices.push(ids));
+    manager.onDocumentDeleted((ids, info) => {
+      deletedNotices.push(ids);
+      if (info?.purged) purgedNotices.push(ids);
+    });
     receiver.module.eventBus.subscribe(
       ReactorEventTypes.JOB_WRITE_READY,
       (_type: number, event: JobWriteReadyEvent) => {
@@ -156,6 +160,7 @@ describe("subscription notifications for a purge marker [Postgres]", () => {
 
     expect(markerContext(jobId).appliedDeletion).toBe(true);
     expect(deletedCount(documentId)).toBe(1);
+    expect(purgedNotices).toContainEqual([documentId]);
   });
 
   it("emits nothing for a marker on an already-deleted document", async () => {
@@ -165,6 +170,7 @@ describe("subscription notifications for a purge marker [Postgres]", () => {
       (await receiver.reactor.deleteDocument(documentId)).id,
     );
     await vi.waitFor(() => expect(deletedCount(documentId)).toBe(1));
+    expect(purgedNotices.flat()).not.toContain(documentId);
 
     const jobId = await loadMarker(documentId);
     expect(markerContext(jobId).appliedDeletion).toBeUndefined();

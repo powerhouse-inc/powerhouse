@@ -130,6 +130,7 @@ export {
 export { DefaultSubscriptionErrorHandler } from "./src/subs/default-error-handler.js";
 export { ReactorSubscriptionManager } from "./src/subs/react-subscription-manager.js";
 export {
+  type DocumentDeletedInfo,
   type IReactorSubscriptionManager,
   type ISubscriptionErrorHandler,
   type SubscriptionErrorContext,

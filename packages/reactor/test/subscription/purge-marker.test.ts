@@ -98,6 +98,7 @@ describe("SubscriptionNotificationReadModel on PURGE_DOCUMENT", () => {
       ["doc-a"],
       new Map([["doc-a", TYPE]]),
       new Map(),
+      { purged: true },
     );
     expect(view.get).not.toHaveBeenCalled();
     expect(manager.notifyDocumentsUpdated).not.toHaveBeenCalled();
@@ -128,6 +129,7 @@ describe("SubscriptionNotificationReadModel on PURGE_DOCUMENT", () => {
       ["doc-a"],
       expect.any(Map),
       expect.any(Map),
+      { purged: true },
     );
     expect(view.get.mock.calls.map(([id]) => id).sort()).toEqual([
       "doc-b",
@@ -140,6 +142,20 @@ describe("SubscriptionNotificationReadModel on PURGE_DOCUMENT", () => {
     expect(documents.map((document) => document.header.id).sort()).toEqual([
       "doc-b",
       "doc-c",
+    ]);
+  });
+
+  it("keeps a deletion in the same batch apart from a purge's", async () => {
+    const { manager, readModel } = model(viewOf(new Set(["doc-a"])));
+    const deletion = updateItem("doc-b", 4);
+    deletion.operation.action.type = "DELETE_DOCUMENT";
+    deletion.operation.action.input = { documentId: "doc-b" };
+
+    await readModel.indexOperations([deletion, markerItem("doc-a", 5, true)]);
+
+    expect(manager.notifyDocumentsDeleted.mock.calls).toEqual([
+      [["doc-b"], expect.any(Map), expect.any(Map)],
+      [["doc-a"], expect.any(Map), expect.any(Map), { purged: true }],
     ]);
   });
 

@@ -30,6 +30,7 @@ export class SubscriptionNotificationReadModel implements IReadModel {
 
     const created: string[] = [];
     const deleted: string[] = [];
+    const purgeDeleted: string[] = [];
     const updatedIds = new Set<string>();
     const purgedIds = new Set<string>();
     const documentTypes = new Map<string, string>();
@@ -45,7 +46,7 @@ export class SubscriptionNotificationReadModel implements IReadModel {
         purgedIds.add(context.documentId);
         // An already-deleted document had its Deleted notice at the deletion.
         if ((context as PurgeMarkerContext).appliedDeletion) {
-          deleted.push(context.documentId);
+          purgeDeleted.push(context.documentId);
         }
       } else if (actionType === "CREATE_DOCUMENT") {
         created.push(context.documentId);
@@ -97,6 +98,15 @@ export class SubscriptionNotificationReadModel implements IReadModel {
         deleted,
         documentTypes,
         parentIds,
+      );
+    }
+
+    if (purgeDeleted.length > 0) {
+      this.subscriptionManager.notifyDocumentsDeleted(
+        purgeDeleted,
+        documentTypes,
+        parentIds,
+        { purged: true },
       );
     }
 
