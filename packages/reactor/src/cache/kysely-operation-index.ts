@@ -396,21 +396,25 @@ export class KyselyOperationIndex implements IOperationIndex {
   async getCollectionsInRange(
     after: number,
     through: number,
+    among?: readonly string[],
     signal?: AbortSignal,
   ): Promise<string[]> {
     signal?.throwIfAborted();
-    if (through <= after) {
+    if (through <= after || among?.length === 0) {
       return [];
     }
 
-    const rows = await this.queryExecutor
+    let query = this.queryExecutor
       .selectFrom("operation_index_operations as oi")
       .innerJoin("document_collections as dc", "oi.documentId", "dc.documentId")
       .select("dc.collectionId")
       .distinct()
       .where("oi.ordinal", ">", after)
-      .where("oi.ordinal", "<=", through)
-      .execute();
+      .where("oi.ordinal", "<=", through);
+    if (among !== undefined) {
+      query = query.where("dc.collectionId", "in", [...among]);
+    }
+    const rows = await query.execute();
 
     return rows.map((row) => row.collectionId);
   }

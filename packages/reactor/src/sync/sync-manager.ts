@@ -1594,11 +1594,24 @@ export class SyncManager implements ISyncManager {
   /** Owes the remotes of every collection that moved, event or not. */
   private async oweSettledRange(through: number): Promise<void> {
     if (through <= this.sweptThrough) return;
+    const among = [
+      ...new Set(
+        [...this.remotes.values()]
+          .filter((remote) => !this.removing.has(remote.meta.name))
+          .map((remote) => remote.meta.collectionId.key),
+      ),
+    ];
+    // A remote added later is owed the head on add().
+    if (among.length === 0) {
+      this.sweptThrough = through;
+      return;
+    }
     let collectionIds: string[];
     try {
       collectionIds = await this.operationIndex.getCollectionsInRange(
         this.sweptThrough,
         through,
+        among,
         this.abortController.signal,
       );
     } catch (error) {
