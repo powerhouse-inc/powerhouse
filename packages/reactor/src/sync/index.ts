@@ -90,8 +90,10 @@ export {
 export { InMemorySyncHoldStorage } from "./memory-hold-storage.js";
 export { InMemorySyncPurgeRefusalStorage } from "./memory-purge-refusal-storage.js";
 export {
+  MAX_POLLED_REFUSALS,
   supportsPurgeRefusals,
   type IPurgeRefusalRecorder,
+  type PolledMarkerRefusal,
 } from "./purge-refusals.js";
 export { InMemorySyncReceivedMarkerStorage } from "./memory-received-marker-storage.js";
 export {

@@ -698,14 +698,21 @@ export class ErasureScheduler {
     return rows.some((row) => kindOf(row.detail) === "outcome");
   }
 
-  /** Persisted refusals, each recorded once in the audit as it is first read. */
+  /** Refusals by remotes bound to the document, each audited once when read. */
   private async refusedRemotes(item: Item): Promise<string[]> {
     const refusals = await this.db
-      .selectFrom("sync_purge_refusals")
-      .select(["remote_name", "branch"])
-      .where("document_id", "=", item.documentId)
-      .orderBy("refused_at_utc_ms")
-      .orderBy("remote_name")
+      .selectFrom("sync_purge_refusals as f")
+      .innerJoin("sync_remotes as s", "s.name", "f.remote_name")
+      .innerJoin("document_collections as c", (join) =>
+        join
+          .onRef("c.collectionId", "=", "s.collection_id")
+          .onRef("c.documentId", "=", "f.document_id"),
+      )
+      .select(["f.remote_name", "f.branch"])
+      .where("f.document_id", "=", item.documentId)
+      .where("c.leftOrdinal", "is", null)
+      .orderBy("f.refused_at_utc_ms")
+      .orderBy("f.remote_name")
       .execute();
     if (refusals.length === 0) return [];
     const rows = await auditOf(this.db, item.requestId, item.documentId, [

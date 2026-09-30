@@ -18,9 +18,11 @@ export class InMemorySyncPurgeRefusalStorage implements ISyncPurgeRefusalStorage
     );
   }
 
-  record(refusal: PurgeRefusalRecord): Promise<void> {
-    const key = keyOf(refusal);
-    if (!this.records.has(key)) this.records.set(key, refusal);
+  record(refusals: readonly PurgeRefusalRecord[]): Promise<void> {
+    for (const refusal of refusals) {
+      const key = keyOf(refusal);
+      if (!this.records.has(key)) this.records.set(key, refusal);
+    }
     return Promise.resolve();
   }
 }

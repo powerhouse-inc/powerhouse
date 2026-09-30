@@ -472,6 +472,8 @@ export {
   supportsDeliveryTracking,
   supportsPurgeRefusals,
   type IPurgeRefusalRecorder,
+  MAX_POLLED_REFUSALS,
+  type PolledMarkerRefusal,
   InMemorySyncPurgeRefusalStorage,
   type IPeerAgreement,
   type PeerAgreementBasis,

@@ -24,15 +24,18 @@ export class KyselySyncPurgeRefusalStorage implements ISyncPurgeRefusalStorage {
     }));
   }
 
-  async record(refusal: PurgeRefusalRecord): Promise<void> {
+  async record(refusals: readonly PurgeRefusalRecord[]): Promise<void> {
+    if (refusals.length === 0) return;
     await this.db
       .insertInto("sync_purge_refusals")
-      .values({
-        remote_name: refusal.remoteName,
-        document_id: refusal.documentId,
-        branch: refusal.branch,
-        refused_at_utc_ms: refusal.refusedAtUtcMs,
-      })
+      .values(
+        refusals.map((refusal) => ({
+          remote_name: refusal.remoteName,
+          document_id: refusal.documentId,
+          branch: refusal.branch,
+          refused_at_utc_ms: refusal.refusedAtUtcMs,
+        })),
+      )
       .onConflict((oc) =>
         oc.columns(["remote_name", "document_id", "branch"]).doNothing(),
       )

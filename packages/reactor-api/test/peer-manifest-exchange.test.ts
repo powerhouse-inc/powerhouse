@@ -537,7 +537,7 @@ describe("peer manifest exchange over the sync resolvers", () => {
     expect(server.getById("refusing").channel.deadLetter.items).toEqual([]);
   });
 
-  it("records a marker the client reports refusing, and holds nothing", async () => {
+  it("hands a reported marker refusal to the sync manager, and holds nothing", async () => {
     const server = await reactor();
     const serverModule = modules[modules.length - 1];
     const manifest = server.localManifest();
@@ -555,6 +555,12 @@ describe("peer manifest exchange over the sync resolvers", () => {
     serverModule.eventBus.subscribe(SyncEventTypes.PURGE_REFUSED, (_t, e) => {
       refused.push(e);
     });
+    const recorded = vi.spyOn(
+      server as unknown as {
+        recordPolledMarkerRefusals: (...args: unknown[]) => Promise<void>;
+      },
+      "recordPolledMarkerRefusals",
+    );
     const bridge = createResolverBridge(new Map([["switchboard", server]]), {
       log: false,
     });
@@ -575,21 +581,17 @@ describe("peer manifest exchange over the sync resolvers", () => {
       }),
     });
 
-    expect(refused).toEqual([
-      expect.objectContaining({
-        remoteName: "refusing",
-        documentId: "purged-1",
-        branch: "main",
-      }),
+    expect(recorded).toHaveBeenCalledWith("refusing", [
+      { documentId: "purged-1", branch: "main" },
     ]);
+    // No document purged-1 was tombstoned here, so the marker was never owed.
+    expect(refused).toEqual([]);
     const rows = await serverModule.database
       .withSchema(REACTOR_SCHEMA)
       .selectFrom("sync_purge_refusals" as never)
       .select(["remote_name" as never, "document_id" as never])
       .execute();
-    expect(rows).toEqual([
-      { remote_name: "refusing", document_id: "purged-1" },
-    ]);
+    expect(rows).toEqual([]);
     expect(await server.listHolds({ remoteName: "refusing" })).toEqual([]);
     expect(server.getById("refusing").channel.deadLetter.items).toEqual([]);
   });

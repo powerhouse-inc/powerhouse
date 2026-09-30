@@ -5,6 +5,7 @@ import { DocumentPurgedError } from "../../../src/shared/errors.js";
 import { JobStatus } from "../../../src/shared/types.js";
 import type { DeadLetterRecord } from "../../../src/storage/interfaces.js";
 import { ChannelError } from "../../../src/sync/errors.js";
+import { MAX_POLLED_REFUSALS } from "../../../src/sync/purge-refusals.js";
 import { SyncOperation } from "../../../src/sync/sync-operation.js";
 import {
   ChannelErrorSource,
@@ -401,6 +402,42 @@ describe("dead letters for a purged document [Postgres]", () => {
     expect(rows).toEqual([
       { remote_name: "remote", document_id: DOC, branch: "main" },
     ]);
+  });
+
+  it("keeps a polled marker refusal only for a tombstoned member of the remote's collection", async () => {
+    await indexOperation(harness.index, DOC, { joins: [COL_A.key] });
+    await indexOperation(harness.index, OTHER, { joins: [COL_A.key] });
+    await indexOperation(harness.index, CONFLICTED, { joins: [COL_B.key] });
+    await seedTombstone(harness.db, DOC, 1);
+    await seedTombstone(harness.db, CONFLICTED, 2);
+    await harness.manager.startup();
+    await harness.manager.add("remote", COL_A, CONFIG, FILTER, {}, "r");
+    const refused = vi.fn();
+    harness.eventBus.subscribe(SyncEventTypes.PURGE_REFUSED, (_t, event) => {
+      refused(event);
+    });
+    const polled = (documentId: string) => ({ documentId, branch: "main" });
+
+    await harness.manager.recordPolledMarkerRefusals("remote", [
+      ...Array.from({ length: MAX_POLLED_REFUSALS }, (_, i) =>
+        polled(`x-${i}`),
+      ),
+      polled(DOC),
+    ]);
+    await harness.manager.recordPolledMarkerRefusals("remote", [
+      polled(OTHER),
+      polled(CONFLICTED),
+      polled("unknown"),
+      polled(DOC),
+      polled(DOC),
+    ]);
+
+    const rows = await harness.db
+      .selectFrom("sync_purge_refusals")
+      .select(["remote_name", "document_id"])
+      .execute();
+    expect(rows).toEqual([{ remote_name: "remote", document_id: DOC }]);
+    expect(refused).toHaveBeenCalledTimes(1);
   });
 
   it("persists a refusal before reporting it, once per remote and branch", async () => {

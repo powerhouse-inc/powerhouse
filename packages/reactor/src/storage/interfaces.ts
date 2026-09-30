@@ -889,8 +889,8 @@ export type PurgeRefusalRecord = {
 /** Marker refusals, kept after the remote goes so the erasure can report them. */
 export interface ISyncPurgeRefusalStorage {
   list(documentId: string): Promise<PurgeRefusalRecord[]>;
-  /** Keeps the first refusal's time for a remote, document and branch. */
-  record(refusal: PurgeRefusalRecord): Promise<void>;
+  /** One statement; the first time per remote, document and branch is kept. */
+  record(refusals: readonly PurgeRefusalRecord[]): Promise<void>;
 }
 
 /**

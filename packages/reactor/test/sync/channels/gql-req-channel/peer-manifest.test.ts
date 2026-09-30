@@ -7,6 +7,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GqlRequestChannel } from "../../../../src/sync/channels/gql-req-channel.js";
 import { ChannelError } from "../../../../src/sync/errors.js";
+import { MAX_POLLED_REFUSALS } from "../../../../src/sync/purge-refusals.js";
 import { SyncOperation } from "../../../../src/sync/sync-operation.js";
 import { ChannelErrorSource } from "../../../../src/sync/types.js";
 import {
@@ -353,6 +354,33 @@ describe("GqlRequestChannel peer manifests", () => {
       { documentId: "purged", branch: "main", kind: "marker" },
     ]);
     expect(state.polls[1].variables.refusals).toEqual([]);
+  });
+
+  it("reports at most MAX_POLLED_REFUSALS refusals per poll, the rest on the next", async () => {
+    const { state, fetchFn } = agreementServer(LOCAL);
+    const timer = new ManualPollTimer();
+    const { channel } = channelWith(fetchFn, timer);
+    channels.push(channel);
+    await channel.init();
+
+    const ids = Array.from(
+      { length: MAX_POLLED_REFUSALS + 5 },
+      (_, i) => `purged-${i}`,
+    );
+    channel.deadLetter.add(
+      ...ids.map((id) => inboxRefusal(id, "MARKER_REFUSED")),
+    );
+    await timer.tick();
+    await timer.tick();
+    await timer.tick();
+
+    const sent = (i: number) =>
+      (state.polls[i].variables.refusals as { documentId: string }[]).map(
+        (refusal) => refusal.documentId,
+      );
+    expect(sent(0)).toEqual(ids.slice(0, MAX_POLLED_REFUSALS));
+    expect(sent(1)).toEqual(ids.slice(MAX_POLLED_REFUSALS));
+    expect(sent(2)).toEqual([]);
   });
 
   it("keeps a refused marker from a server without the feature until it announces it", async () => {

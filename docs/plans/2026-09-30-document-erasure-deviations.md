@@ -412,7 +412,20 @@ Not spec deviations; recorded because they change how the suites run.
   `PURGE_REFUSED` is emitted — the event fires once per process, so a stopped
   scheduler lost it; and after `MARKER_REFUSED` the ack hold lifts and the
   cursor alone reads "delivered".
-- `sync/sync-manager.ts:1441` (`deadLetter.onAdded`) — a remote dead letter
+- `sync/sync-manager.ts:738` (`recordPolledMarkerRefusals`) — a polled marker
+  refusal is kept only for a tombstoned document with an open membership in
+  the reporting remote's collection; at most `MAX_POLLED_REFUSALS` (100,
+  `sync/purge-refusals.ts:4`) per poll, written in one statement
+  (`storage/kysely/sync-purge-refusal-storage.ts:27`); the poller sends at
+  most that many and keeps the rest pending (`sync/channels/gql-req-channel.ts:812`)
+  — any bound client could record refusals of any id, unbounded, in N inserts
+  per poll, and change another drive's erasure outcome.
+- `packages/reactor-privacy/src/erasure/scheduler.ts:702` (`refusedRemotes`)
+  — counts a refusal only from a stored remote whose collection holds the
+  document (open membership) — a row from a remote bound elsewhere made the
+  outcome `marker-undelivered`. A remote removed before the outcome is read
+  no longer counts.
+- `sync/sync-manager.ts:1483` (`deadLetter.onAdded`) — a remote dead letter
   of a tombstoned id is persisted as a refusal only when its `errorType` is
   `MARKER_REFUSED`; any other type is dropped without quarantine — a conflict
   or validation dead letter reported after the purge became a kept refusal
@@ -420,7 +433,7 @@ Not spec deviations; recorded because they change how the suites run.
 - `sync/channels/gql-req-channel.ts:856` — a poller reports refused markers
   with `kind: "marker"` only to a peer announcing the `marker-refusal`
   feature (`packages/shared/document-model/peer-agreement.ts:37`); the server
-  records them (`packages/reactor-api/src/graphql/reactor/resolvers.ts:1957`)
+  records them (`packages/reactor-api/src/graphql/reactor/resolvers.ts:1961`)
   instead of turning them into holds — polled refusals never reached the
   purging host, and an older server answers an unknown field with HTTP 400.
 - `storage/kysely/document-purger.ts:82` (`groupReferencersInHistory`) —

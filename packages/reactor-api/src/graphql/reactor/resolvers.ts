@@ -1955,7 +1955,8 @@ export function holdPollRefusals(
 
 /**
  * The client's refusals of purge markers it polled. Persisted before the poll is
- * served; a failure fails the poll, and the client reports them again.
+ * served; a failure fails the poll, and the client reports them again. The sync
+ * manager keeps only refusals of markers this remote was owed.
  */
 export async function recordPollMarkerRefusals(
   syncManager: ISyncManager,
@@ -1972,14 +1973,10 @@ export async function recordPollMarkerRefusals(
     // The poll resolver reports the missing channel.
     return;
   }
-  for (const refusal of refusals) {
-    await syncManager.recordPurgeRefusal({
-      remoteName: remote.meta.name,
-      documentId: refusal.documentId,
-      branch: refusal.branch,
-      errorMessage: `Marker refused by ${remote.meta.name}`,
-    });
-  }
+  await syncManager.recordPolledMarkerRefusals(
+    remote.meta.name,
+    refusals.map(({ documentId, branch }) => ({ documentId, branch })),
+  );
 }
 
 /**

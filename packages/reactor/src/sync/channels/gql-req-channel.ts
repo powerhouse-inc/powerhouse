@@ -40,6 +40,7 @@ import {
   trimMailboxFromAckOrdinal,
 } from "../utils.js";
 import { calculateBackoffDelay } from "./interval-poll-timer.js";
+import { MAX_POLLED_REFUSALS } from "../purge-refusals.js";
 import type { IPollTimer } from "./poll-timer.js";
 import {
   envelopesToSyncOperations,
@@ -803,10 +804,12 @@ export class GqlRequestChannel implements IChannel {
         ? this.localManifestProvider?.().revision
         : undefined;
       refusals = this.peerServesAgreement
-        ? [...this.pendingRefusals.values()].filter(
-            (refusal) =>
-              refusal.kind === undefined || this.peerTakesMarkerRefusals(),
-          )
+        ? [...this.pendingRefusals.values()]
+            .filter(
+              (refusal) =>
+                refusal.kind === undefined || this.peerTakesMarkerRefusals(),
+            )
+            .slice(0, MAX_POLLED_REFUSALS)
         : [];
       try {
         response = await this.executeGraphQL<PollSyncEnvelopesResult>(

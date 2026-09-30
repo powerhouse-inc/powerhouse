@@ -75,7 +75,11 @@ import { calculateBackoffDelay } from "./channels/interval-poll-timer.js";
 import { InMemorySyncHoldStorage } from "./memory-hold-storage.js";
 import { InMemorySyncPurgeRefusalStorage } from "./memory-purge-refusal-storage.js";
 import { InMemorySyncReceivedMarkerStorage } from "./memory-received-marker-storage.js";
-import type { IPurgeRefusalRecorder } from "./purge-refusals.js";
+import {
+  MAX_POLLED_REFUSALS,
+  type IPurgeRefusalRecorder,
+  type PolledMarkerRefusal,
+} from "./purge-refusals.js";
 import { createPeerAgreement, type IPeerAgreement } from "./peer-agreement.js";
 import { SyncAwaiter } from "./sync-awaiter.js";
 import { SyncOperation } from "./sync-operation.js";
@@ -727,16 +731,54 @@ export class SyncManager
     );
   }
 
-  async recordPurgeRefusal(refusal: SyncPurgeRefusedEvent): Promise<void> {
-    await this.refusalStorage.record({
-      remoteName: refusal.remoteName,
-      documentId: refusal.documentId,
-      branch: refusal.branch,
-      refusedAtUtcMs: Date.now(),
-    });
-    await this.eventBus
-      .emit(SyncEventTypes.PURGE_REFUSED, refusal)
-      .catch(() => {});
+  recordPurgeRefusal(refusal: SyncPurgeRefusedEvent): Promise<void> {
+    return this.persistRefusals([refusal]);
+  }
+
+  async recordPolledMarkerRefusals(
+    remoteName: string,
+    refusals: readonly PolledMarkerRefusal[],
+  ): Promise<void> {
+    const remote = this.getByName(remoteName);
+    const tombstoned = refusals
+      .slice(0, MAX_POLLED_REFUSALS)
+      .filter((refusal) => this.purgedDocumentIds.has(refusal.documentId));
+    if (tombstoned.length === 0) return;
+    const collections = await this.operationIndex.getCollectionsForDocuments([
+      ...new Set(tombstoned.map((refusal) => refusal.documentId)),
+    ]);
+    const key = remote.meta.collectionId.key;
+    const owed = new Map<string, SyncPurgeRefusedEvent>();
+    for (const refusal of tombstoned) {
+      if (!collections[refusal.documentId]?.includes(key)) continue;
+      owed.set(`${refusal.documentId}\u0000${refusal.branch}`, {
+        remoteName,
+        documentId: refusal.documentId,
+        branch: refusal.branch,
+        errorMessage: `Marker refused by ${remoteName}`,
+      });
+    }
+    await this.persistRefusals([...owed.values()]);
+  }
+
+  private async persistRefusals(
+    refusals: readonly SyncPurgeRefusedEvent[],
+  ): Promise<void> {
+    if (refusals.length === 0) return;
+    const refusedAtUtcMs = Date.now();
+    await this.refusalStorage.record(
+      refusals.map((refusal) => ({
+        remoteName: refusal.remoteName,
+        documentId: refusal.documentId,
+        branch: refusal.branch,
+        refusedAtUtcMs,
+      })),
+    );
+    for (const refusal of refusals) {
+      await this.eventBus
+        .emit(SyncEventTypes.PURGE_REFUSED, refusal)
+        .catch(() => {});
+    }
   }
 
   agreement(): IPeerAgreement {
