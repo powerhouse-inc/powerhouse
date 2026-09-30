@@ -104,7 +104,10 @@ the cursor never passes an event that is not yet durable.
 A workflow document's `DELETE_DOCUMENT` disarms it as disabling does: its
 deliveries stop once the operation is indexed, a piece trigger's `onDisable`
 runs, and then its trigger row, its FLOW `ctx.store` partition, its webhook
-token and its dedupe keys are deleted. A restart finds nothing to re-arm.
+token and its dedupe keys are deleted. A restart finds nothing to re-arm. Its
+`PURGE_DOCUMENT` marker does the same whether or not the deletion was seen, and
+also drops the trigger-test store partitions; the read model awaits it, so a
+failure holds the cursor below the marker.
 
 A document's purge (`PURGE_DOCUMENT`) deletes every run that carried it: the
 runs `run_document` ties to it, the runs whose trigger payload names it as

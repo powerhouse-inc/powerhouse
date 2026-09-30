@@ -12,12 +12,30 @@ import {
   withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
-import { documentModelDocumentModelModule } from "document-model";
+import { Workflow } from "@powerhousedao/workflow/document-models/workflow";
+import {
+  documentModelDocumentModelModule,
+  type OperationWithContext,
+} from "document-model";
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { createFreshRelationalDb } from "../../test/helpers/pglite.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
+import { memoryWebhooks } from "../../test/helpers/webhooks.js";
+import { packagePieces } from "./piece-registry.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import { WorkflowRunStore } from "./store.js";
 import {
@@ -28,6 +46,59 @@ import {
 
 const PG_URL = process.env.REACTOR_TEST_PG_URL;
 const DATABASE = "reactor_workflow_purge";
+const PIECE = "@acme/piece-purgeable";
+
+const FIXTURE = `
+export const purgeable = {
+  displayName: "Purgeable",
+  actions: {},
+  triggers: {
+    hook: {
+      name: "hook",
+      displayName: "Hook",
+      type: "WEBHOOK",
+      props: {},
+      onEnable: async () => undefined,
+      onDisable: async () => undefined,
+      run: async (ctx) => (ctx.payload ? [ctx.payload] : []),
+    },
+  },
+};
+`;
+
+// The runtime arms from resultingState; the reactor's copy only has to exist.
+function published(workflowId: string): OperationWithContext {
+  const state = {
+    name: workflowId,
+    status: "ENABLED",
+    version: 1,
+    trigger: {
+      id: "t1",
+      pieceName: PIECE,
+      pieceVersion: "1.0.0",
+      triggerName: "hook",
+      config: {},
+    },
+    steps: [],
+    edges: [],
+    variables: [],
+  };
+  return {
+    operation: {
+      index: 1,
+      timestampUtcMs: "1",
+      action: { type: "SET_WORKFLOW_STATUS", input: {} },
+      resultingState: JSON.stringify(state),
+    },
+    context: {
+      documentId: workflowId,
+      documentType: "powerhouse/workflow",
+      scope: "global",
+      branch: "main",
+      ordinal: 1,
+    },
+  } as unknown as OperationWithContext;
+}
 
 const step = (stepId: string) => ({
   stepId,
@@ -77,7 +148,10 @@ describe.skipIf(!PG_URL)(
       database = await freshDatabase();
       module = await new ReactorBuilder()
         .withKysely(database.db as Parameters<ReactorBuilder["withKysely"]>[0])
-        .withDocumentModelSources([documentModelDocumentModelModule as never])
+        .withDocumentModelSources([
+          documentModelDocumentModelModule as never,
+          Workflow as never,
+        ])
         .buildModule();
       relationalDb = createFreshRelationalDb();
       runtime = testRuntime({ relationalDb });
@@ -222,6 +296,113 @@ describe.skipIf(!PG_URL)(
       return found!;
     }
 
+    describe("of a workflow document", () => {
+      let dir = "";
+
+      beforeAll(async () => {
+        dir = await mkdtemp(join(tmpdir(), "ph-purged-workflow-pg-"));
+        const entryPath = join(dir, "index.mjs");
+        await writeFile(entryPath, FIXTURE);
+        packagePieces.setPieces([{ name: PIECE, version: "1.0.0", entryPath }]);
+      });
+
+      afterAll(async () => {
+        packagePieces.reset();
+        await rm(dir, { recursive: true, force: true });
+      });
+
+      async function armedWorkflow() {
+        const document = withSignaturePolicy(
+          Workflow.utils.createDocument(),
+          "legacy",
+          { id: generateId() },
+        );
+        await settle((await module.reactor.create(document)).id);
+        const workflowId = document.header.id;
+        const webhooks = memoryWebhooks();
+        const service = testRuntime({ relationalDb, webhooks: webhooks.scope });
+        await service.onOperations([published(workflowId)]);
+        await vi.waitFor(
+          async () =>
+            expect(await store.getTriggerState(workflowId)).toMatchObject({
+              status: "ENABLED",
+            }),
+          { timeout: 30_000 },
+        );
+        const now = new Date().toISOString();
+        await store.claimDedupe(workflowId, "op-key", 60_000, now);
+        expect(await service.webhookPolicy(workflowId)).toEqual({});
+        expect(webhooks.rows.has(workflowId)).toBe(true);
+        return { service, webhooks, workflowId };
+      }
+
+      async function expectDisarmed(
+        armed: Awaited<ReturnType<typeof armedWorkflow>>,
+      ) {
+        const { service, webhooks, workflowId } = armed;
+        expect(await service.webhookPolicy(workflowId)).toBeUndefined();
+        expect(webhooks.rows.has(workflowId)).toBe(false);
+        expect(await store.getTriggerState(workflowId)).toBeUndefined();
+        const now = new Date().toISOString();
+        expect(await store.claimDedupe(workflowId, "op-key", 60_000, now)).toBe(
+          true,
+        );
+      }
+
+      function modelFor(service: WorkflowRuntimeService) {
+        return new WorkflowTriggersReadModel(
+          reactorDb(),
+          module.operationIndex,
+          module.writeCache,
+          module.processorManagerConsistencyTracker,
+          service,
+        );
+      }
+
+      it("disarms it when the marker arrives live without its deletion", async () => {
+        const armed = await armedWorkflow();
+        await settle(
+          (await module.reactor.deleteDocument(armed.workflowId)).id,
+        );
+        const model = modelFor(armed.service);
+        await model.init();
+        const coordinator = module.readModelCoordinator;
+        if (!supportsLiveReadModelRegistration(coordinator)) {
+          throw new Error("coordinator takes no live registration");
+        }
+        coordinator.addReadModel(model, WORKFLOW_TRIGGERS_READ_MODEL_STAGE);
+        const erased = vi.spyOn(armed.service, "onDocumentsPurged");
+
+        const [info] = await module.documentPurgeService.enqueuePurge(
+          [armed.workflowId],
+          "request-1",
+        );
+        await settle(info.id);
+
+        await vi.waitUntil(() => erased.mock.calls.length > 0, {
+          timeout: 10_000,
+        });
+        await erased.mock.results[0].value;
+        expect(erased.mock.calls[0][0][0].context.documentType).toBe(
+          "powerhouse/workflow",
+        );
+        await expectDisarmed(armed);
+      });
+
+      it("disarms it when the marker arrives only through a sweep", async () => {
+        const armed = await armedWorkflow();
+        const model = modelFor(armed.service);
+        await model.init();
+
+        await purge(armed.workflowId);
+        expect(await armed.service.webhookPolicy(armed.workflowId)).toEqual({});
+        const result = await sweepToHead(model);
+
+        expect(result.blockedAt).toBeUndefined();
+        await expectDisarmed(armed);
+      });
+    });
+
     it("erases the runs that carried a purged id when the marker arrives live", async () => {
       const doomed = await createDocument();
       const kept = await createDocument();
@@ -240,7 +421,10 @@ describe.skipIf(!PG_URL)(
       await vi.waitUntil(() => erased.mock.calls.length > 0, {
         timeout: 10_000,
       });
-      expect(erased).toHaveBeenCalledExactlyOnceWith([doomed]);
+      expect(erased).toHaveBeenCalledOnce();
+      expect(
+        erased.mock.calls[0][0].map((item) => item.context.documentId),
+      ).toEqual([doomed]);
       await expect(erased.mock.results[0].value).resolves.toMatchObject({
         runs: 3,
       });

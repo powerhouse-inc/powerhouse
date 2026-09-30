@@ -158,7 +158,11 @@ import {
   type WorkflowAccessOptions,
 } from "./sync-wait.js";
 import { createAttachmentPort } from "./attachment-port.js";
-import { createPieceStorePort, PROJECT_SCOPE_KEY } from "./piece-store-port.js";
+import {
+  createPieceStorePort,
+  PROJECT_SCOPE_KEY,
+  testPartitionKey,
+} from "./piece-store-port.js";
 import { currentWorkflowId, withRunScope } from "./run-scope.js";
 import {
   ASSERT_BLOCK,
@@ -397,6 +401,18 @@ const ABSENT_ERROR_NAMES = new Set([
 // Absence is reported by name: the error may cross an RPC boundary.
 function isAbsent(error: unknown): boolean {
   return error instanceof Error && ABSENT_ERROR_NAMES.has(error.name);
+}
+
+// A marker names its document's type in its input; the context agrees.
+function purgedWorkflowIds(markers: OperationWithContext[]): string[] {
+  const ids = markers
+    .filter(
+      ({ operation, context }) =>
+        (stringField(inputRecord(operation.action.input), "documentType") ??
+          context.documentType) === WORKFLOW_DOCUMENT_TYPE,
+    )
+    .map(({ context }) => context.documentId);
+  return [...new Set(ids)];
 }
 
 function inputRecord(input: unknown): Record<string, unknown> {
@@ -1276,7 +1292,12 @@ export class WorkflowRuntimeService {
   }
 
   // Throws on a failed delete, so the read model's cursor holds and retries.
-  async onDocumentsPurged(documentIds: string[]): Promise<ErasedRuns | null> {
+  async onDocumentsPurged(
+    markers: OperationWithContext[],
+  ): Promise<ErasedRuns | null> {
+    const documentIds = [
+      ...new Set(markers.map((marker) => marker.context.documentId)),
+    ];
     const store = await this.store();
     if (!store) {
       this.logger.error(
@@ -1284,6 +1305,9 @@ export class WorkflowRuntimeService {
         documentIds,
       );
       return null;
+    }
+    for (const workflowId of purgedWorkflowIds(markers)) {
+      await this.erasePurgedWorkflow(store, workflowId);
     }
     const erased = await store.eraseRunsForDocuments(documentIds);
     if (erased.runs > 0) {
@@ -1541,23 +1565,43 @@ export class WorkflowRuntimeService {
     }
   }
 
-  // The registry goes now, so deliveries stop at once. onDisable and the
-  // token revoke queue behind any enable in flight, off the ingestion path.
+  // Off the ingestion path: the release queues behind any enable in flight.
   private disarmDeleted(workflowId: string): void {
+    this.dropDeleted(workflowId);
+    this.releaseDeleted(workflowId).catch((error: unknown) => {
+      this.logger.error(
+        `Could not disarm deleted workflow ${workflowId}`,
+        error,
+      );
+    });
+  }
+
+  // The registry goes now, so deliveries stop at once.
+  private dropDeleted(workflowId: string): void {
     this.registry.delete(workflowId);
     this.registeredAs.delete(workflowId);
     this.unarmed.delete(workflowId);
     this.cancelResolutionRetry(workflowId);
     this.cancelTriggerTest(workflowId, "stopped: the workflow was deleted");
-    this.supervisor()
-      .forget(workflowId)
-      .then(async () => (await this.endpoints())?.revoke(workflowId))
-      .catch((error: unknown) => {
-        this.logger.error(
-          `Could not disarm deleted workflow ${workflowId}`,
-          error,
-        );
-      });
+  }
+
+  // onDisable, then the trigger row and FLOW store, then the webhook token.
+  private async releaseDeleted(workflowId: string): Promise<void> {
+    await this.supervisor().forget(workflowId);
+    await (await this.endpoints())?.revoke(workflowId);
+  }
+
+  // As a deletion disarms, but awaited: the cursor must not pass a failure.
+  private async erasePurgedWorkflow(
+    store: WorkflowRunStore,
+    workflowId: string,
+  ): Promise<void> {
+    this.dropDeleted(workflowId);
+    await this.releaseDeleted(workflowId);
+    await store.deleteDedupe(workflowId);
+    for (const scope of ["FLOW", "PROJECT"] as const) {
+      await store.deletePieceStore(scope, testPartitionKey(scope, workflowId));
+    }
   }
 
   // The document's own CREATE_DOCUMENT / DELETE_DOCUMENT, the source of truth: it covers
