@@ -711,7 +711,11 @@ export class SimpleJobExecutor implements IJobExecutor {
     );
   }
 
-  /** Only a submitted ADD_RELATIONSHIP refuses a purged target. */
+  /**
+   * Refuses a job naming a purged id it would write. A load or replay refuses
+   * only its own id with DocumentPurgedError, since sync reads that error as
+   * the job's document being purged; a foreign one is an id mismatch.
+   */
   private purgedRefusal(job: Job, purged: Set<string>): Error | undefined {
     if (purged.size === 0) {
       return undefined;
@@ -724,26 +728,36 @@ export class SimpleJobExecutor implements IJobExecutor {
       ...job.operations.map((operation) => operation.action),
     ];
     for (const action of actions) {
-      if (DOCUMENT_SCOPE_ACTIONS.has(action.type)) {
-        const target = targetDocumentId(action, job.documentId);
-        if (purged.has(target)) {
-          return new DocumentPurgedError(target);
-        }
+      if (!DOCUMENT_SCOPE_ACTIONS.has(action.type)) {
+        continue;
       }
+      const target = targetDocumentId(action, job.documentId);
+      if (!purged.has(target)) {
+        continue;
+      }
+      if (job.kind === "mutation") {
+        return new DocumentPurgedError(target);
+      }
+      return new InvalidSignatureError(
+        job.documentId,
+        "ID_MISMATCH",
+        `${action.type} ${action.id} in ${job.documentId} writes purged ${target}`,
+      );
     }
-    if (job.kind === "mutation") {
-      for (const action of job.actions) {
-        const target = relationshipTarget(action);
-        if (
-          action.type === "ADD_RELATIONSHIP" &&
-          target !== undefined &&
-          purged.has(target)
-        ) {
-          return new DocumentPurgedError(
-            target,
-            `${action.type} target ${target} was purged`,
-          );
-        }
+    if (job.kind !== "mutation") {
+      return undefined;
+    }
+    for (const action of job.actions) {
+      const target = relationshipTarget(action);
+      if (
+        action.type === "ADD_RELATIONSHIP" &&
+        target !== undefined &&
+        purged.has(target)
+      ) {
+        return new DocumentPurgedError(
+          target,
+          `${action.type} target ${target} was purged`,
+        );
       }
     }
     return undefined;
