@@ -728,6 +728,7 @@ describe("recovering from lost signals [Postgres]", () => {
     await remove(e, first);
     await remove(e, second);
     let failFirst = true;
+    const warnings: string[] = [];
     const scheduler = new ErasureScheduler({
       db: db(e),
       deploymentSecret: SECRET,
@@ -753,6 +754,11 @@ describe("recovering from lost signals [Postgres]", () => {
             : e.host.module.jobTracker.getJobStatus(id),
       },
       permissions: e.eraser,
+      logger: {
+        info() {},
+        warn: (message) => warnings.push(message),
+        error() {},
+      },
     });
     const r1 = await e.service.request([first], { requestedBy: ADMIN });
     const r2 = await e.service.request([second], { requestedBy: ADMIN });
@@ -783,6 +789,14 @@ describe("recovering from lost signals [Postgres]", () => {
         await scheduler.tick();
         expect((await item(e, r2.requestId, second)).status).toBe("waiting");
       }
+      expect((await item(e, r2.requestId, second)).lastError).toMatch(
+        /earlier purge transaction/,
+      );
+      expect(warnings).toContainEqual(
+        expect.stringContaining(
+          `earlier purge transaction to end before the next purge; it holds the purge lock of ${first}`,
+        ),
+      );
     } finally {
       release();
       await holder;
@@ -795,6 +809,7 @@ describe("recovering from lost signals [Postgres]", () => {
       },
       { timeout: 20_000, interval: 50 },
     );
+    expect((await item(e, r2.requestId, second)).lastError).toBeNull();
   });
 
   it("enqueues a purge again when it has no tombstone past the purge timeout", async () => {

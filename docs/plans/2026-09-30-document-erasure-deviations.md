@@ -389,6 +389,11 @@ Not spec deviations; recorded because they change how the suites run.
   (`purgeLockTaken`) — dispatch waits while `pg_locks` shows a purge lock on
   the previous id — a timed-out purge's transaction can still be open, and
   dispatching the next would break one purge at a time (decision 8).
+- `packages/reactor-privacy/src/erasure/scheduler.ts:511`
+  (`previousPurgesEnded`) — while that lock blocks dispatch the scheduler
+  logs a warning naming the locked ids and sets `lastError` on the item it
+  would dispatch next — a leaked transaction blocks all erasure, and an
+  info log alone left nothing in the request status.
 - `packages/reactor-privacy/src/erasure/scheduler.ts:595` — an item in
   `purging` with no tombstone after `purgeTimeoutMs` (default 15 min, `:34`,
   `PH_PRIVACY_PURGE_TIMEOUT_MINUTES`) is enqueued again — a purge job that

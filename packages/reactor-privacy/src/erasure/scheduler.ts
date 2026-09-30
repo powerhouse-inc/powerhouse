@@ -445,7 +445,7 @@ export class ErasureScheduler {
 
     if (items.some((i) => i.status === "purging")) return;
     if (ready.length === 0) return;
-    if (!(await this.previousPurgesEnded())) return;
+    if (!(await this.previousPurgesEnded(ready[0]!.item))) return;
     for (const next of ready) {
       if (!(await this.eligible(next.item, items))) continue;
       await this.enqueue(next.item, next.converged, next.convergence);
@@ -508,13 +508,16 @@ export class ErasureScheduler {
   }
 
   /** A timed-out purge's transaction can outlive its job: wait for its lock. */
-  private async previousPurgesEnded(): Promise<boolean> {
+  private async previousPurgesEnded(blocked: Item): Promise<boolean> {
     if (this.unsettled.size === 0) return true;
     const ids = [...this.unsettled];
     if (await this.purgeLockTaken(ids)) {
-      this.logger.info(
-        "Erasure waits for an earlier purge transaction to end before the next purge",
+      const message =
+        "Waiting for an earlier purge transaction to end before the next purge";
+      this.logger.warn(
+        `${message}; it holds the purge lock of ${ids.join(", ")}`,
       );
+      await this.setLastError(blocked, message);
       return false;
     }
     for (const id of ids) this.unsettled.delete(id);
