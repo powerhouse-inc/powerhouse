@@ -388,6 +388,11 @@ export function runWorker(
         break;
       }
 
+      case "evict-purged": {
+        executorStack?.evictPurged(msg.documentIds);
+        break;
+      }
+
       default: {
         const raw = msg as Record<string, unknown>;
         if (raw["type"] === "__test_throw") {

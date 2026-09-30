@@ -78,7 +78,12 @@ export class DocumentPurgeService {
       this.eventBus.emit(ReactorEventTypes.JOB_PENDING, pending).catch(() => {
         // Ignored, as the reactor ignores it for every other job.
       });
-      await this.queue.enqueue(job);
+      // enqueue settles only after the job runs; its synchronous part queues it.
+      const dispatched = this.queue.enqueue(job);
+      dispatched.catch(() => {
+        // A dispatch failure surfaces on the job, as for every other job.
+      });
+      await Promise.race([dispatched, Promise.resolve()]);
       infos.push(info);
     }
     return infos;

@@ -1,4 +1,3 @@
-import { generateId } from "@powerhousedao/shared/document-model";
 import { sql, type Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CollectionMembershipCache } from "../../../src/cache/collection-membership-cache.js";
@@ -15,16 +14,17 @@ import { PURGE_NS } from "../../../src/storage/kysely/document-purges.js";
 import type { Database } from "../../../src/storage/kysely/types.js";
 import { createTestOperationStorePostgres } from "../../factories.js";
 
-const [A, B, C] = [generateId(), generateId(), generateId()];
+const [A, B, C] = ["lock-a", "lock-b", "lock-c"];
 
-// Other suites share the server, so only this test's ids are counted.
+// Other suites share the server, so only this database's keys are counted.
 async function purgeLocks(db: Kysely<Database>): Promise<string[]> {
   const result = await sql<{ mode: string }>`
     select mode from pg_locks
     where locktype = 'advisory' and objsubid = 2
       and classid = ${sql.lit(PURGE_NS)}::oid
+      and database = (select oid from pg_database where datname = current_database())
       and objid::bigint in (
-        select hashtext(id)::bigint & 4294967295
+        select hashtext(id)::bigint & 1023
         from unnest(${[A, B, C]}::text[]) as t(id)
       )
     order by mode

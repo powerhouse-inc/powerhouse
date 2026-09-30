@@ -14,13 +14,17 @@ import {
   deriveOperationId,
   DOCUMENT_DELETED_REASON,
   DOCUMENT_SCOPE_ACTION_TYPES,
+  mentionedGroupIds,
   operationOutcome,
   targetDocumentId,
 } from "@powerhousedao/shared/document-model";
+import type { SnapshotPosition } from "../cache/write-cache-types.js";
+import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { Job } from "../queue/types.js";
 import {
   AuthorizationDeniedError,
   DocumentDeletedError,
+  DocumentPurgedError,
 } from "../shared/errors.js";
 import type {
   ConsistencyCoordinate,
@@ -396,6 +400,83 @@ export class PurgeFence {
   }
 }
 
+/** Locks and checks an id on its first read; a purged id reads as purged. */
+export class FencedWriteCache implements IWriteCache {
+  private readonly evicted = new Set<string>();
+
+  constructor(
+    private readonly inner: IWriteCache,
+    private readonly fence: PurgeFence,
+    private readonly evict: (documentId: string) => void,
+  ) {}
+
+  async getState(
+    documentId: string,
+    scope: string,
+    branch: string,
+    targetRevision?: number,
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    if (await this.fence.isPurged(documentId)) {
+      if (!this.evicted.has(documentId)) {
+        this.evicted.add(documentId);
+        this.evict(documentId);
+      }
+      throw new DocumentPurgedError(documentId);
+    }
+    return this.inner.getState(
+      documentId,
+      scope,
+      branch,
+      targetRevision,
+      signal,
+    );
+  }
+
+  putState(
+    documentId: string,
+    scope: string,
+    branch: string,
+    revision: number,
+    document: PHDocument,
+    position: SnapshotPosition,
+  ): void {
+    this.inner.putState(
+      documentId,
+      scope,
+      branch,
+      revision,
+      document,
+      position,
+    );
+  }
+
+  putRun(
+    documentId: string,
+    scope: string,
+    branch: string,
+    run: readonly { revision: number; document: PHDocument }[],
+  ): void {
+    this.inner.putRun(documentId, scope, branch, run);
+  }
+
+  invalidate(documentId: string, scope?: string, branch?: string): number {
+    return this.inner.invalidate(documentId, scope, branch);
+  }
+
+  clear(): void {
+    this.inner.clear();
+  }
+
+  startup(): Promise<void> {
+    return this.inner.startup();
+  }
+
+  shutdown(): Promise<void> {
+    return this.inner.shutdown();
+  }
+}
+
 type RelationshipInput = { sourceId?: unknown; targetId?: unknown };
 
 /** The target whose membership an ADD or REMOVE_RELATIONSHIP writes. */
@@ -413,7 +494,7 @@ export function relationshipTarget(action: {
   return typeof target === "string" && target.length > 0 ? target : undefined;
 }
 
-/** The ids a job can write rows for, sorted: the ids its locks cover. */
+/** The ids a job's locks cover, sorted: its write ids and groups it names. */
 export function jobWriteIds(job: Job): string[] {
   const ids = new Set<string>([job.documentId]);
   const actions = [
@@ -427,6 +508,11 @@ export function jobWriteIds(job: Job): string[] {
     const target = relationshipTarget(action);
     if (target !== undefined) {
       ids.add(target);
+    }
+    if (action.scope === "auth") {
+      for (const groupId of mentionedGroupIds(action)) {
+        ids.add(groupId);
+      }
     }
   }
   return [...ids].sort();

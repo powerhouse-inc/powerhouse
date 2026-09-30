@@ -280,7 +280,7 @@ describe("purge job [Postgres]", () => {
     try {
       await client.query("begin");
       await client.query(
-        `select pg_advisory_xact_lock(${PURGE_NS}, hashtext($1))`,
+        `select pg_advisory_xact_lock(${PURGE_NS}, hashtext($1) & 1023)`,
         [documentId],
       );
       const action = purgeDocumentAction({
@@ -456,21 +456,36 @@ describe("purge job [Postgres]", () => {
       .execute();
   }
 
-  it("refuses a submitted relationship removal naming a purged target", async () => {
-    const childId = await createDocument();
-    await remove(childId);
-    await succeeded(host.reactor, await purgeOne(childId));
+  it("writes a submitted relationship removal but keeps the reopened membership", async () => {
     const driveId = await createDocument(legacyDrive());
-
-    await failedWith(
+    const childId = await createDocument();
+    await succeeded(
       host.reactor,
       (
         await host.reactor.execute(driveId, "main", [
-          removeRelationshipAction(driveId, childId, "child"),
+          addRelationshipAction(driveId, childId, "child"),
         ])
       ).id,
-      "DocumentPurgedError",
     );
+    await succeeded(
+      host.reactor,
+      (await host.reactor.removeRelationship(driveId, childId, "child")).id,
+    );
+    await remove(childId);
+    const [closed] = await memberships(childId);
+    await succeeded(host.reactor, await purgeOne(childId));
+
+    const action = removeRelationshipAction(driveId, childId, "child");
+    await succeeded(
+      host.reactor,
+      (await host.reactor.execute(driveId, "main", [action])).id,
+    );
+
+    const opId = deriveOperationId(driveId, "document", "main", action.id);
+    expect(await rowCount(host.db, "Operation", "opId", opId)).toBe(1);
+    expect(await memberships(childId)).toEqual([
+      { collectionId: closed.collectionId, leftOrdinal: null },
+    ]);
     await expectPurged(host.db, childId);
   });
 

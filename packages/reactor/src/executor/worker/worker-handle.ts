@@ -417,6 +417,13 @@ export class WorkerHandle implements IExecutorWorker {
     return promise;
   }
 
+  public evictPurged(documentIds: string[]): void {
+    if (this.phase !== "ready" || documentIds.length === 0) {
+      return;
+    }
+    this.transport.postMessage({ type: "evict-purged", documentIds });
+  }
+
   public isIdle(): boolean {
     return this.inFlight === null && this.phase === "ready";
   }

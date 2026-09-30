@@ -157,6 +157,7 @@ class KyselyOperationIndexTxn implements IOperationIndexTxn {
 
 export class KyselyOperationIndex implements IOperationIndex {
   private trx?: Transaction<Database>;
+  private liveIds?: ReadonlySet<string>;
 
   constructor(private db: Kysely<Database>) {}
 
@@ -164,9 +165,14 @@ export class KyselyOperationIndex implements IOperationIndex {
     return this.trx ?? this.db;
   }
 
-  withTransaction(trx: Transaction<Database>): KyselyOperationIndex {
+  /** `liveIds`: ids the transaction read untombstoned under its shared lock. */
+  withTransaction(
+    trx: Transaction<Database>,
+    liveIds?: ReadonlySet<string>,
+  ): KyselyOperationIndex {
     const instance = new KyselyOperationIndex(this.db);
     instance.trx = trx;
+    instance.liveIds = liveIds;
     return instance;
   }
 
@@ -755,7 +761,8 @@ export class KyselyOperationIndex implements IOperationIndex {
     const ids = new Set(
       operations
         .filter((operation) => !isPurgeMarker(operation))
-        .map((operation) => operation.documentId),
+        .map((operation) => operation.documentId)
+        .filter((id) => !this.liveIds?.has(id)),
     );
     const purged = await findPurged(trx, ids);
     for (const id of ids) {
