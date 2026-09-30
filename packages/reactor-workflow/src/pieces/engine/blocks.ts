@@ -31,7 +31,6 @@ import {
   LOG_WRITE,
   OUTPUT_UPDATE,
   REACTOR_CREATE,
-  REACTOR_EXECUTE,
   REACTOR_FIND,
   REACTOR_GET,
   REACTOR_MODEL,
@@ -156,7 +155,7 @@ function storeKeyOf(payload: unknown): string {
 
 // Registered per step and only for a piece the host resolved locally, so a
 // fetched bundle forging these calls finds no handler and is refused.
-export type ReactorPort = ReactorService & {
+export type ReactorPort = Omit<ReactorService, "execute"> & {
   // Enqueues the write and answers at once.
   submit(input: ReactorExecuteInput): Promise<ReactorSubmission>;
   // Holds for at most `maxWaitMs`, then answers the job's state as it stands.
@@ -298,7 +297,6 @@ export function reactorHandlers(port: ReactorPort): HostCallHandlers {
           : {}),
       });
     },
-    [REACTOR_EXECUTE]: (payload) => port.execute(executeInput(payload)),
     [REACTOR_SUBMIT]: (payload) => port.submit(executeInput(payload)),
     [REACTOR_WAIT]: (payload) => {
       const input = reactorInput(payload);

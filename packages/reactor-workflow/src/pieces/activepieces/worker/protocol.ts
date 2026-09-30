@@ -305,7 +305,6 @@ export const REACTOR_MODEL = "reactor.model";
 export const REACTOR_GET = "reactor.get";
 export const REACTOR_FIND = "reactor.find";
 export const REACTOR_CREATE = "reactor.create";
-export const REACTOR_EXECUTE = "reactor.execute";
 // A write is submitted, then waited on in slices under the host-call cap.
 export const REACTOR_SUBMIT = "reactor.submit";
 export const REACTOR_WAIT = "reactor.wait";

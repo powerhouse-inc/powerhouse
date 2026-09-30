@@ -123,7 +123,7 @@ describe("SubgraphReactorPort against a reactor", () => {
       actionId: submission.actionIds[1],
       kind: "reducer-error",
     });
-    expect(rejected?.message).toBeTruthy();
+    expect(rejected.message).toBeTruthy();
   });
 
   it("calls a job the reactor has no record of unknown, not failed", async () => {

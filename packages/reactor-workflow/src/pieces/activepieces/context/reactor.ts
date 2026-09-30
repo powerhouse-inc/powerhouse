@@ -5,7 +5,12 @@
 // round trip the host answers. The host installs it only for a piece that came
 // from an installed reactor package; a bundle fetched from a registry gets the
 // throwing stub instead, and finds out by name that it has no reactor.
-import { callHost } from "../worker/host-call.js";
+import {
+  callHost,
+  HostCallTimeoutError,
+  hostCallTimeoutMs,
+} from "../worker/host-call.js";
+import type { KeyValueStore } from "./action.js";
 import type {
   ReactorCreateInput,
   ReactorDocumentSummary,
@@ -17,11 +22,12 @@ import type {
 } from "@powerhousedao/pieces-framework";
 import {
   REACTOR_CREATE,
-  REACTOR_EXECUTE,
   REACTOR_FIND,
   REACTOR_GET,
   REACTOR_MODEL,
   REACTOR_MODELS,
+  REACTOR_SUBMIT,
+  REACTOR_WAIT,
 } from "../worker/protocol.js";
 
 // The service contract and its input/output shapes live in the framework, so a
@@ -73,9 +79,102 @@ export interface ReactorJobState {
   actions?: ReactorActionOutcome[];
 }
 
+// Each wait stays well under the host-call cap, and under the host's own clamp.
+const MAX_POLL_WAIT_MS = 4_000;
+
+// Stop waiting this long before the kill, to answer the last wait and report why.
+const MIN_DEADLINE_MARGIN_MS = 250;
+const MAX_DEADLINE_MARGIN_MS = 2_000;
+
+export function deadlineMargin(budgetMs: number): number {
+  return Math.min(
+    Math.max(Math.floor(budgetMs / 10), MIN_DEADLINE_MARGIN_MS),
+    MAX_DEADLINE_MARGIN_MS,
+  );
+}
+
+// The write was submitted but its outcome was not seen: it may still land.
+export class ReactorJobPendingError extends Error {
+  readonly jobId: string;
+  readonly status: ReactorJobStatus;
+
+  constructor(jobId: string, status: ReactorJobStatus) {
+    super(
+      status === "UNKNOWN"
+        ? `Reactor job ${jobId} is unknown to the reactor, as after a restart; its actions may or may not have been written`
+        : `Reactor job ${jobId} was still ${status} at the step deadline; its actions may yet be written`,
+    );
+    this.name = "ReactorJobPendingError";
+    this.jobId = jobId;
+    this.status = status;
+  }
+}
+
+export class ReactorJobFailedError extends Error {
+  readonly jobId: string;
+
+  constructor(jobId: string, detail: string | undefined) {
+    super(`Reactor job ${jobId} failed: ${detail ?? "unknown error"}`);
+    this.name = "ReactorJobFailedError";
+    this.jobId = jobId;
+  }
+}
+
+// A reducer error or a denial does not fail the job, so each action is checked.
+export function assertActionsApplied(
+  state: ReactorJobState,
+  submission: ReactorSubmission,
+  actions: readonly { type: string }[],
+): void {
+  if (!state.actions) {
+    throw new Error(
+      `Reactor job ${state.jobId} reported no outcome for its ${submission.actionIds.length} action(s)`,
+    );
+  }
+  const outcomes = new Map(
+    state.actions.map((outcome) => [outcome.actionId, outcome]),
+  );
+  // All of them: a model-written payload tends to fail a field at a time.
+  const failed = submission.actionIds.flatMap((actionId, index) => {
+    const type = actions[index]?.type ?? actionId;
+    const outcome = outcomes.get(actionId);
+    if (!outcome) return [`Action ${type} produced no operation`];
+    if (outcome.kind === "reducer-error") {
+      return [`Action ${type} failed: ${outcome.message ?? "unknown error"}`];
+    }
+    if (outcome.kind === "denied") {
+      return [`Action ${type} was denied: ${outcome.reason ?? "no reason"}`];
+    }
+    return [];
+  });
+  if (failed.length > 0) throw new Error(failed.join("; "));
+}
+
+export interface RemoteReactorOptions {
+  // Epoch ms at which the host kills this worker.
+  deadline?: number;
+  // Durable ctx.store; a submitted job is recorded there under the step's name.
+  store?: KeyValueStore;
+  stepName?: string;
+}
+
+function jobKey(stepName: string | undefined): string {
+  return `reactor.job/${stepName ?? "step"}`;
+}
+
 // The worker's half: every method is one host call, named so a failure reads
-// as the operation the piece asked for.
+// as the operation the piece asked for. A write is several, none of them long.
 export class RemoteReactorService implements ReactorService {
+  private readonly stopAt: number;
+
+  constructor(private readonly options: RemoteReactorOptions = {}) {
+    const { deadline } = options;
+    this.stopAt =
+      deadline === undefined
+        ? Number.POSITIVE_INFINITY
+        : deadline - deadlineMargin(deadline - Date.now());
+  }
+
   models(): Promise<ReactorModelSummary[]> {
     return callHost<ReactorModelSummary[]>(REACTOR_MODELS, {});
   }
@@ -99,7 +198,56 @@ export class RemoteReactorService implements ReactorService {
     return callHost<ReactorDocumentSummary>(REACTOR_CREATE, input);
   }
 
-  execute(input: ReactorExecuteInput): Promise<ReactorDocumentSummary> {
-    return callHost<ReactorDocumentSummary>(REACTOR_EXECUTE, input);
+  async execute(input: ReactorExecuteInput): Promise<ReactorDocumentSummary> {
+    const submission = await callHost<ReactorSubmission>(REACTOR_SUBMIT, input);
+    await this.record(submission);
+    const state = await this.settle(submission.jobId);
+    assertActionsApplied(state, submission, input.actions);
+    return this.get({
+      documentId: input.documentId,
+      ...(input.branch ? { branch: input.branch } : {}),
+    });
+  }
+
+  private async record(submission: ReactorSubmission): Promise<void> {
+    const { store, stepName } = this.options;
+    if (!store) return;
+    try {
+      await store.put(jobKey(stepName), submission, "FLOW");
+    } catch {
+      // Bookkeeping only: the write is already submitted either way.
+    }
+  }
+
+  private async settle(jobId: string): Promise<ReactorJobState> {
+    let status: ReactorJobStatus = "PENDING";
+    for (;;) {
+      const remaining = this.stopAt - Date.now();
+      if (remaining <= 0) throw new ReactorJobPendingError(jobId, status);
+      let state: ReactorJobState;
+      try {
+        state = await callHost<ReactorJobState>(REACTOR_WAIT, {
+          jobId,
+          maxWaitMs: Math.min(
+            MAX_POLL_WAIT_MS,
+            Math.floor(hostCallTimeoutMs() / 2),
+            remaining,
+          ),
+        });
+      } catch (error) {
+        if (error instanceof HostCallTimeoutError) {
+          throw new ReactorJobPendingError(jobId, status);
+        }
+        throw error;
+      }
+      if (state.status === "READ_READY") return state;
+      if (state.status === "FAILED") {
+        throw new ReactorJobFailedError(jobId, state.error);
+      }
+      if (state.status === "UNKNOWN") {
+        throw new ReactorJobPendingError(jobId, "UNKNOWN");
+      }
+      status = state.status;
+    }
   }
 }

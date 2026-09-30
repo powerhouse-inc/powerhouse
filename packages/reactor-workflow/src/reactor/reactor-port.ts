@@ -357,19 +357,6 @@ export class SubgraphReactorPort implements ReactorPort {
     return jobState(await this.client.getJobStatus(input.jobId));
   }
 
-  async execute(input: ReactorExecuteInput): Promise<ReactorDocumentSummary> {
-    const actions = buildActions(input);
-    const document = await this.client.execute<PHDocument>(
-      input.documentId,
-      input.branch ?? "main",
-      actions,
-    );
-    // The inputs rather than the built actions: they carry the scope each one
-    // was asked for, which is the scope its operation was appended to.
-    assertOperationsApplied(document, input.actions);
-    return this.handOver(documentSummary(document, true));
-  }
-
   // A run is served only with what its steps read, so each document is
   // journaled against the run before its summary leaves the host.
   private async handOver<
@@ -481,10 +468,6 @@ export class ScopedDesignTimeReactorPort implements ReactorPort {
   }
 
   create(_input: ReactorCreateInput): Promise<ReactorDocumentSummary> {
-    return Promise.reject(new Error(DESIGN_TIME_WRITES_REFUSED));
-  }
-
-  execute(_input: ReactorExecuteInput): Promise<ReactorDocumentSummary> {
     return Promise.reject(new Error(DESIGN_TIME_WRITES_REFUSED));
   }
 

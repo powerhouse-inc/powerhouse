@@ -158,7 +158,9 @@ async function handleResolveOptions(
     projectId: request.projectId,
     // Design-time default: an empty flows listing instead of a throwing stub.
     flows: { list: () => Promise.resolve({ data: [] }) },
-    ...(request.reactorAccess ? { reactor: new RemoteReactorService() } : {}),
+    ...(request.reactorAccess
+      ? { reactor: new RemoteReactorService({ deadline: request.deadline }) }
+      : {}),
   });
   const refresherValues = {
     ...(request.auth !== undefined ? { auth: request.auth } : {}),
@@ -275,7 +277,11 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   const liveOutput = request.liveOutput ? new RemoteOutput() : undefined;
   // Host-served reactor access, for a piece that ships inside a reactor package.
   const reactor = request.reactorAccess
-    ? new RemoteReactorService()
+    ? new RemoteReactorService({
+        deadline: request.deadline,
+        store: durableStore,
+        stepName: request.identity?.stepName,
+      })
     : undefined;
   // Before the props are normalised, not after: a processor that cannot coerce
   // says so on console.error, and the worker's stdio goes nowhere.

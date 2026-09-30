@@ -64,6 +64,7 @@ async function builtPieces(root: string | undefined): Promise<LocalPiece[]> {
 // Every call the piece made, and what the port answered with.
 function stubPort(): ReactorPort & { calls: string[] } {
   const calls: string[] = [];
+  let submitted: string[] = [];
   const summary = (documentId: string, name = "Invoice") => ({
     documentId,
     documentType: "powerhouse/workflow",
@@ -98,7 +99,9 @@ function stubPort(): ReactorPort & { calls: string[] } {
     },
     get(input) {
       calls.push(`get ${input.documentId}`);
-      return Promise.resolve(summary(input.documentId));
+      return Promise.resolve(
+        summary(input.documentId, submitted.length ? "Renamed" : "Invoice"),
+      );
     },
     find(input) {
       calls.push(`find ${JSON.stringify(input)}`);
@@ -113,24 +116,20 @@ function stubPort(): ReactorPort & { calls: string[] } {
       );
       return Promise.resolve(summary("new-1", input.name ?? ""));
     },
-    execute(input) {
-      calls.push(
-        `execute ${input.documentId} ${input.actions.map((a) => a.type).join(",")}`,
-      );
-      return Promise.resolve(summary(input.documentId, "Renamed"));
-    },
     submit(input) {
       calls.push(
         `submit ${input.documentId} ${input.actions.map((a) => a.type).join(",")}`,
       );
-      return Promise.resolve({
-        jobId: "job-1",
-        actionIds: input.actions.map((_, index) => `action-${index}`),
-      });
+      submitted = input.actions.map((_, index) => `action-${index}`);
+      return Promise.resolve({ jobId: "job-1", actionIds: submitted });
     },
     wait(input) {
       calls.push(`wait ${input.jobId}`);
-      return Promise.resolve({ jobId: input.jobId, status: "READ_READY" });
+      return Promise.resolve({
+        jobId: input.jobId,
+        status: "READ_READY",
+        actions: submitted.map((actionId) => ({ actionId, kind: "applied" })),
+      });
     },
   };
 }
@@ -204,7 +203,9 @@ describe.skipIf(!workflowRoot)("the reactor piece", () => {
       // The name travels with the create — the port is what names a document,
       // whichever path it took — so only the author's actions are dispatched.
       "create powerhouse/workflow parent=drive-1 name=Invoice",
-      "execute new-1 ADD_STEP",
+      "submit new-1 ADD_STEP",
+      "wait job-1",
+      "get new-1",
     ]);
     expect(result.output).toEqual({
       documentId: "new-1",
@@ -266,7 +267,9 @@ describe.skipIf(!workflowRoot)("the reactor piece", () => {
     );
 
     expect(port.calls).toEqual([
-      "execute 01234567-89ab-cdef-0123-456789abcdef SET_NAME",
+      "submit 01234567-89ab-cdef-0123-456789abcdef SET_NAME",
+      "wait job-1",
+      "get 01234567-89ab-cdef-0123-456789abcdef",
     ]);
     expect(result.output).toMatchObject({ extractedFrom: { documentId } });
   });
