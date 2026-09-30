@@ -8,6 +8,7 @@ import type {
 import type * as GraphQL from "graphql";
 import type { GraphQLError, GraphQLSchema } from "graphql";
 import { beforeEach, describe, expect, it } from "vitest";
+import type { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import {
@@ -147,7 +148,7 @@ function recorder<T extends object>(calls: Call[]): T {
   });
 }
 
-function buildSubgraph(calls: Call[]): DocumentModelSubgraph {
+function buildSubgraph(calls: Call[]): BaseSubgraph {
   return new DocumentModelSubgraph(MODULE, {
     reactorClient: recorder<IReactorClient>(calls),
     syncManager: recorder<ISyncManager>(calls),
