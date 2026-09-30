@@ -34,7 +34,7 @@ export type ProcessorQueueOptions = {
   purged: (ids: string[]) => Promise<ReadonlySet<string>>;
   /** First wait before retrying a failed tombstone lookup; doubles per try. */
   lookupRetryMs?: number;
-  /** Retries of a failed tombstone lookup before the processor errors. */
+  /** Retries of a failed tombstone lookup before the processor parks. */
   lookupRetries?: number;
   logger: ILogger;
 };
@@ -136,6 +136,8 @@ export class ProcessorQueue {
   private readonly unrouted = new Set<number>();
   // Ends a lookup retry's wait early; set while one waits.
   private wake: (() => void) | undefined;
+  // Set once a lookup exhausts its retries; nothing moves until one answers.
+  private parked = false;
 
   constructor(private readonly options: ProcessorQueueOptions) {}
 
@@ -308,7 +310,7 @@ export class ProcessorQueue {
       return;
     }
 
-    if (cursor.status !== "active") {
+    if (cursor.status !== "active" || this.parked) {
       await this.parkBelow(fresh);
       return;
     }
@@ -327,7 +329,7 @@ export class ProcessorQueue {
     await this.raiseCursor(Math.max(highestOf(fresh), through));
   }
 
-  /** Undefined once closed, or errored after the lookup's last retry. */
+  /** Undefined once closed, or parked after the lookup's last retry. */
   private async dropPurgedLive(
     batch: Delivery[],
     fresh: OperationWithContext[],
@@ -344,16 +346,17 @@ export class ProcessorQueue {
       const sets = await Promise.all(checks);
       purged = new Set(sets.flatMap((set) => [...set]));
     } catch (error) {
-      purged = await this.retryLookup(purgeCandidates(fresh), error);
+      purged = await this.retryLookup(fresh, error);
     }
     return purged && withoutPurged(fresh, purged, keep);
   }
 
   // The cursor holds meanwhile: a transient failure costs a delay, not an error.
   private async retryLookup(
-    ids: string[],
+    ops: OperationWithContext[],
     error: unknown,
   ): Promise<ReadonlySet<string> | undefined> {
+    const ids = purgeCandidates(ops);
     let wait = this.options.lookupRetryMs ?? LOOKUP_RETRY_MS;
     const retries = this.options.lookupRetries ?? LOOKUP_RETRIES;
     for (let attempt = 0; attempt < retries; attempt++) {
@@ -372,14 +375,65 @@ export class ProcessorQueue {
         wait = Math.min(wait * 2, MAX_LOOKUP_RETRY_MS);
       }
     }
-    this.markErrored(error);
+    await this.park(ops, ids, wait, error);
+    return undefined;
+  }
+
+  // Active but held below `ops`; a replay retries every `wait` ms, then resumes.
+  private async park(
+    ops: OperationWithContext[],
+    ids: string[],
+    wait: number,
+    error: unknown,
+  ): Promise<void> {
+    this.parked = true;
+    this.noteLookupError(error);
     this.options.logger.error(
-      "Processor '@ProcessorId' errored: tombstones unread after @Retries retries: @Error",
+      "Processor '@ProcessorId' parked: tombstones unread after @Retries retries, retrying every @Wait ms: @Error",
       this.options.processorId,
-      retries,
+      this.options.lookupRetries ?? LOOKUP_RETRIES,
+      wait,
       error,
     );
-    return undefined;
+    void this.replay("backfill", () => this.resume(ids, wait));
+    await this.parkBelow(ops);
+  }
+
+  private async resume(ids: string[], wait: number): Promise<void> {
+    for (;;) {
+      if (this.closed) return;
+      await this.sleep(wait);
+      if (this.closed) return;
+      try {
+        await this.options.purged(ids);
+        break;
+      } catch (error) {
+        this.noteLookupError(error);
+        this.options.logger.error(
+          "Processor '@ProcessorId' still parked, tombstones unread; retrying in @Wait ms: @Error",
+          this.options.processorId,
+          wait,
+          error,
+        );
+      }
+    }
+    this.parked = false;
+    const { cursor } = this.options;
+    cursor.lastError = undefined;
+    cursor.lastErrorTimestamp = undefined;
+    await this.persist();
+    this.options.logger.info(
+      "Processor '@ProcessorId' resumed from ordinal @Ordinal",
+      this.options.processorId,
+      cursor.lastOrdinal,
+    );
+    await this.runBackfill();
+  }
+
+  private noteLookupError(error: unknown): void {
+    const { cursor } = this.options;
+    cursor.lastError = errorMessage(error);
+    cursor.lastErrorTimestamp = new Date();
   }
 
   // Unref'd, and cut short by close(), so a retry never outlives the queue.
@@ -409,7 +463,7 @@ export class ProcessorQueue {
         : undefined;
 
     let ops: OperationWithContext[] = [];
-    if (cursor.status === "active" && fresh.length > 0) {
+    if (cursor.status === "active" && !this.parked && fresh.length > 0) {
       try {
         ops = withoutPurged(fresh, await task.check.purged);
       } catch (error) {
@@ -426,7 +480,7 @@ export class ProcessorQueue {
 
   private async runBackfill(): Promise<void> {
     const { cursor, filter, floor } = this.options;
-    if (cursor.status !== "active") return;
+    if (cursor.status !== "active" || this.parked) return;
 
     let page: PagedResults<OperationWithContext>;
     try {
@@ -449,7 +503,7 @@ export class ProcessorQueue {
         try {
           purged = await this.options.purged(ids);
         } catch (error) {
-          purged = await this.retryLookup(ids, error);
+          purged = await this.retryLookup(matching, error);
         }
         if (purged === undefined) {
           await this.persist();
@@ -537,7 +591,8 @@ export class ProcessorQueue {
   private async raiseCursor(through: number): Promise<void> {
     const { cursor } = this.options;
     const capped = Math.min(through, this.options.confirmedThrough());
-    if (cursor.status !== "active" || capped <= cursor.lastOrdinal) return;
+    if (cursor.status !== "active" || this.parked) return;
+    if (capped <= cursor.lastOrdinal) return;
     cursor.lastOrdinal = capped;
     await this.persist();
   }

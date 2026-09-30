@@ -886,11 +886,15 @@ export class ProcessorManager
     let cursor: ProcessorCursorState;
     // A released row starts the processor afresh, as if it had none.
     if (cached && cached.status !== RELEASED_CURSOR_STATUS) {
+      // An active row's error is from a lookup outage; this run starts unparked.
+      const errored = cached.status !== "active";
       cursor = {
         lastOrdinal: cached.lastOrdinal,
         status: cached.status as ProcessorCursorState["status"],
-        lastError: cached.lastError ?? undefined,
-        lastErrorTimestamp: cached.lastErrorTimestamp ?? undefined,
+        lastError: errored ? (cached.lastError ?? undefined) : undefined,
+        lastErrorTimestamp: errored
+          ? (cached.lastErrorTimestamp ?? undefined)
+          : undefined,
       };
     } else {
       if (record.startFrom === "current") floor = creationOrdinal - 1;

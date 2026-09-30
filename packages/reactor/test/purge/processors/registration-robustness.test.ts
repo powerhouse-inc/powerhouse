@@ -49,6 +49,12 @@ const hungProcessor = () => {
   return { processor, state };
 };
 
+type QueueOptions = {
+  purged: (ids: string[]) => Promise<ReadonlySet<string>>;
+  lookupRetryMs?: number;
+  lookupRetries?: number;
+};
+
 const within = <T>(p: Promise<T>, ms: number) =>
   Promise.race([
     p.then(() => "resolved"),
@@ -140,6 +146,47 @@ describe("processor registration robustness [Postgres]", () => {
       ).toEqual([live]);
     }, 30_000);
   });
+
+  it("leaves a processor parked by a lookup outage active across a restart", async () => {
+    const driveId = await createDrive();
+    const factory = (processor: IProcessor) => (h: { id: string }) =>
+      Promise.resolve(
+        h.id === driveId ? [{ processor, filter: { documentId: ["*"] } }] : [],
+      );
+    await manager().registerFactory("pkg", factory(recorder()));
+    const internals = manager() as unknown as {
+      processorsByDrive: Map<string, { queue: { options: QueueOptions } }[]>;
+      checkPurged: unknown;
+    };
+    const { options } = internals.processorsByDrive.get(driveId)![0]!.queue;
+    options.lookupRetryMs = 1;
+    options.lookupRetries = 3;
+    options.purged = () => Promise.reject(new Error("db down"));
+    internals.checkPurged = () => {
+      const purged = Promise.reject(new Error("db down"));
+      purged.catch(() => undefined);
+      return { purged };
+    };
+    const tracked = () =>
+      manager()
+        .getAll()
+        .find((t) => t.driveId === driveId);
+
+    const other = await createDrive();
+    await vi.waitFor(() => expect(tracked()?.lastError).toBe("db down"), {
+      timeout: 10_000,
+    });
+    // A long failover: the reactor restarts before the lookup answers again.
+    await host.kill();
+    host = await startReactor(database);
+    const after = recorder();
+    await manager().registerFactory("pkg", factory(after));
+
+    await vi.waitFor(() =>
+      expect(after.events).toContain(`CREATE_DOCUMENT ${other}`),
+    );
+    expect(tracked()).toMatchObject({ status: "active", lastError: undefined });
+  }, 30_000);
 
   it("does not deliver a live deletion twice across a re-registration", async () => {
     const driveId = await createDrive();
