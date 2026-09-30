@@ -977,7 +977,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     return {
       purger,
-      marker,
+      marker: purgeMarkerOperation(marker.action),
       documentType,
       held,
       sourceRemote,
