@@ -385,6 +385,13 @@ function operationKey(op: OperationWithContext): string {
 // cursor that trailed the runs it had already journaled.
 const OPERATION_DEDUPE_TTL_MS = 24 * 60 * 60_000;
 
+// A journal that failed to open is tried again, no sooner than this, doubling.
+const STORE_REOPEN_MS = 1_000;
+const MAX_STORE_REOPEN_MS = 60_000;
+
+// Fires run without a journal row that this process remembers, oldest dropped.
+const UNJOURNALED_FIRES_LIMIT = 65_536;
+
 function stringField(
   record: Record<string, unknown>,
   key: string,
@@ -640,8 +647,12 @@ export class WorkflowRuntimeService {
   private readonly attachments?: AttachmentPort;
   private executor?: BlockExecutor;
   private pieceWorkers?: PieceWorkerPool;
-  private readonly storePromise: Promise<WorkflowRunStore>;
+  private storePromise: Promise<WorkflowRunStore>;
   private storeError?: unknown;
+  private storeOpening = false;
+  private storeReopenAt = 0;
+  private storeReopenMs = STORE_REOPEN_MS;
+  private retentionSweep?: () => void;
   private secretsPromise?: Promise<SecretStore>;
   private oauthAttemptsPromise?: Promise<OAuthAttemptStore>;
   private tokenRefresher?: OAuthTokenRefresher;
@@ -674,11 +685,7 @@ export class WorkflowRuntimeService {
             Promise.resolve(false),
         )
       : undefined;
-    this.storePromise = WorkflowRunStore.create(host.relationalDb);
-    this.storePromise.catch((error: unknown) => {
-      this.storeError = error;
-      this.logger.error("Failed to open the workflow run store: @error", error);
-    });
+    this.storePromise = this.openStore();
     this.seedPromise = this.seedWithRetries();
     this.startRetention();
   }
@@ -694,7 +701,7 @@ export class WorkflowRuntimeService {
     this.retentionTimer = setInterval(sweep, RETENTION_SWEEP_INTERVAL_MS);
     this.retentionTimer.unref();
     // After the store opens, not on the next hour.
-    void this.storePromise.then(sweep, () => undefined);
+    this.retentionSweep = sweep;
   }
 
   private async sweepRetention(retentionMs: number): Promise<void> {
@@ -715,13 +722,52 @@ export class WorkflowRuntimeService {
     }
   }
 
-  // The journal is best-effort: a broken store never blocks runs.
+  // The journal is best-effort: a broken store never blocks runs. One that
+  // failed to open is opened again once its backoff has passed.
   async store(): Promise<WorkflowRunStore | undefined> {
+    if (
+      this.storeError !== undefined &&
+      !this.storeOpening &&
+      Date.now() >= this.storeReopenAt
+    ) {
+      this.storePromise = this.openStore();
+    }
     try {
       return await this.storePromise;
     } catch {
       return undefined;
     }
+  }
+
+  private openStore(): Promise<WorkflowRunStore> {
+    this.storeOpening = true;
+    const opening = WorkflowRunStore.create(this.host.relationalDb);
+    opening.then(
+      () => {
+        this.storeOpening = false;
+        if (this.storeError !== undefined) {
+          this.logger.info("Workflow run store opened after failing to");
+        }
+        this.storeError = undefined;
+        this.storeReopenMs = STORE_REOPEN_MS;
+        this.retentionSweep?.();
+      },
+      (error: unknown) => {
+        this.storeOpening = false;
+        this.storeError = error;
+        this.storeReopenAt = Date.now() + this.storeReopenMs;
+        this.logger.error(
+          "Failed to open the workflow run store, retrying in @ms ms: @error",
+          this.storeReopenMs,
+          error,
+        );
+        this.storeReopenMs = Math.min(
+          this.storeReopenMs * 2,
+          MAX_STORE_REOPEN_MS,
+        );
+      },
+    );
+    return opening;
   }
 
   // Unlike the journal, a broken secret store must fail resolution loudly.
@@ -1300,9 +1346,8 @@ export class WorkflowRuntimeService {
     ];
     const store = await this.store();
     if (!store) {
-      // The store never reopens, so only a restart releases the cursor.
       this.logger.error(
-        "Run journal unavailable; purged documents @ids are not erased and the triggers cursor holds until a restart: @error",
+        "Run journal unavailable; purged documents @ids are not erased and the triggers cursor holds until it reopens: @error",
         documentIds,
         this.storeError,
       );
@@ -1393,19 +1438,60 @@ export class WorkflowRuntimeService {
     }
   }
 
+  // Fires this process ran with no journal row, until the journal takes one.
+  // A held triggers cursor re-sweeps them past alreadySeen's window.
+  private readonly unjournaledFires = new Set<string>();
+
+  private fireUnjournaled(
+    fireKey: string,
+    workflowId: string,
+    payload: unknown,
+    kind: string,
+  ): void {
+    this.unjournaledFires.add(fireKey);
+    if (this.unjournaledFires.size > UNJOURNALED_FIRES_LIMIT) {
+      const oldest = this.unjournaledFires.values().next().value!;
+      this.unjournaledFires.delete(oldest);
+      this.logger.warn(
+        "Too many unjournaled workflow fires held; a redelivery of the oldest fires again",
+      );
+    }
+    this.fireFromTrigger(workflowId, payload, kind);
+  }
+
   // Journals the fire, then lets it run on its own. Awaiting only the write is
   // the whole point: once this resolves the run is durable, so the read model's
   // cursor may pass the operation that matched it, but nothing here waits on a
-  // piece. A journal that cannot take the row still fires, best-effort.
+  // piece. A journal that cannot take the row still fires, best-effort, and
+  // once only in this process: a redelivery claims its dedupe key instead.
   private async enqueueFire(
     workflowId: string,
     payload: unknown,
     kind: string,
     opKey: string,
   ): Promise<void> {
+    const fireKey = JSON.stringify([workflowId, opKey]);
     const store = await this.store();
+    if (this.unjournaledFires.has(fireKey)) {
+      if (!store) return;
+      try {
+        await store.claimDedupe(
+          workflowId,
+          `op:${opKey}`,
+          OPERATION_DEDUPE_TTL_MS,
+          new Date().toISOString(),
+        );
+        this.unjournaledFires.delete(fireKey);
+      } catch (error) {
+        this.logger.warn(
+          `Could not record the unjournaled ${kind} fire for workflow ${workflowId}: @error`,
+          error,
+        );
+      }
+      return;
+    }
     if (!store) {
-      this.fireFromTrigger(workflowId, payload, kind);
+      this.fireUnjournaled(fireKey, workflowId, payload, kind);
       return;
     }
     // The durable half of the dedupe: a crash can leave the cursor behind the
@@ -1423,7 +1509,7 @@ export class WorkflowRuntimeService {
         `Could not journal the ${kind} fire for workflow ${workflowId}; running it without a durable record`,
         error,
       );
-      this.fireFromTrigger(workflowId, payload, kind);
+      this.fireUnjournaled(fireKey, workflowId, payload, kind);
       return;
     }
     if (runId === null) return;

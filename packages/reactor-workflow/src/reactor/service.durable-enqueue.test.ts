@@ -165,13 +165,38 @@ describe("onOperations journals a matched fire before it returns", () => {
     await service.onOperations([replayed]);
     expect(await runsFor(service, WATCHER)).toHaveLength(0);
 
-    (service as unknown as { seenOps: Set<string> }).seenOps.clear();
+    // A crash takes the process's memory of what it fired with it.
+    const memory = service as unknown as {
+      seenOps: Set<string>;
+      unjournaledFires: Set<string>;
+    };
+    memory.seenOps.clear();
+    memory.unjournaledFires.clear();
     await service.onOperations([replayed]);
 
     const runs = await runsFor(service, WATCHER);
     expect(runs).toHaveLength(1);
     expect(insert).toHaveBeenCalledTimes(2);
     expect(fireArgs.at(-1)?.[5]).toBe(runs[0].id);
+  });
+
+  it("does not fire a redelivery again in the process whose write failed", async () => {
+    const store = await service.store();
+    vi.spyOn(
+      store as unknown as { insertPendingRun: () => Promise<void> },
+      "insertPendingRun",
+    ).mockRejectedValueOnce(new Error("write failed"));
+    const replayed = op(SUBJECT, "powerhouse/note", "SET_TITLE", {
+      title: "hi",
+    });
+    await service.onOperations([replayed]);
+    expect(fireArgs).toHaveLength(1);
+
+    (service as unknown as { seenOps: Set<string> }).seenOps.clear();
+    await service.onOperations([replayed]);
+
+    expect(fireArgs).toHaveLength(1);
+    expect(await runsFor(service, WATCHER)).toHaveLength(0);
   });
 
   it("writes no row for an operation no trigger matches", async () => {
