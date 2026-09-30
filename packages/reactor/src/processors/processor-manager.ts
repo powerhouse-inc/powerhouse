@@ -277,8 +277,7 @@ export class ProcessorManager
         if (slot.driveId === driveId) this.pendingSlots.delete(slot);
       }
 
-      for (const { tracked, queue } of this.processorsByDrive.get(driveId) ??
-        []) {
+      for (const { queue } of this.processorsByDrive.get(driveId) ?? []) {
         // Not awaited: the pass must not wait out the drive's queues.
         void queue.close();
       }
