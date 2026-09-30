@@ -682,6 +682,53 @@ export async function until(
   }
 }
 
+type SyncInternals = {
+  isShutdown: boolean;
+  remotes: Map<string, { channel: unknown }>;
+  quarantinedDocumentIds: Set<string>;
+  purgedDocumentIds: Set<string>;
+  peerUpdates: Map<string, Promise<void>>;
+  inboxChunkChain: Promise<void>;
+};
+
+/** "pending" when `promise` has not settled within a few event-loop turns. */
+async function pendingOrSettled(promise: Promise<unknown>): Promise<string> {
+  const settled = promise.then(
+    () => "settled",
+    () => "rejected",
+  );
+  const late = new Promise<string>((resolve) =>
+    setTimeout(() => resolve("pending"), 50),
+  );
+  return Promise.race([settled, late]);
+}
+
+async function syncInternals(node: Node): Promise<unknown> {
+  const sync = node.sync as unknown as SyncInternals | undefined;
+  if (!sync) return undefined;
+  const peerUpdates: Record<string, string> = {};
+  for (const [name, update] of sync.peerUpdates) {
+    peerUpdates[name] = await pendingOrSettled(update);
+  }
+  return {
+    shutdown: sync.isShutdown,
+    remotes: [...sync.remotes.keys()],
+    quarantined: [...sync.quarantinedDocumentIds],
+    purged: [...sync.purgedDocumentIds],
+    peerUpdates,
+    inboxChain: await pendingOrSettled(sync.inboxChunkChain),
+  };
+}
+
+/** Which live node's sync manager owns the channel, if any. */
+function ownerOf(nodes: Node[], name: string, channel: unknown): string {
+  for (const node of nodes) {
+    const sync = node.sync as unknown as SyncInternals | undefined;
+    if (sync?.remotes.get(name)?.channel === channel) return node.name;
+  }
+  return "none";
+}
+
 /** What a stalled sync wait needs: watermarks, sweeps, wires, cluster xids. */
 export async function syncState(nodes: Node[], mesh: Mesh): Promise<unknown> {
   return {
@@ -690,6 +737,12 @@ export async function syncState(nodes: Node[], mesh: Mesh): Promise<unknown> {
         name: node.name,
         watermark: node.module.settledWatermark.status(),
         catchUp: node.module.catchUp.status().consumers,
+        sync: await syncInternals(node),
+        operations: await node.db
+          .selectFrom("Operation")
+          .select((eb) => eb.fn.countAll<number>().as("n"))
+          .executeTakeFirst()
+          .catch(String),
         cursors: await node.db
           .selectFrom("sync_cursors")
           .select(["remote_name", "cursor_type", "cursor_ordinal"])
@@ -708,6 +761,8 @@ export async function syncState(nodes: Node[], mesh: Mesh): Promise<unknown> {
     })),
     channels: [...mesh.channels].map(([name, channel]) => ({
       name,
+      owner: ownerOf(nodes, name, channel),
+      shutdown: (channel as unknown as { isShutdown: boolean }).isShutdown,
       inbox: channel.inbox.items.map((i) => `${i.documentId}:${i.status}`),
       outbox: channel.outbox.items.map((i) => `${i.documentId}:${i.status}`),
       deadLetter: channel.deadLetter.items.map(
