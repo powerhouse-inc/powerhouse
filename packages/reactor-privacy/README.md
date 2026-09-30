@@ -28,6 +28,23 @@ Identifiers match case-insensitively. A header key is indexed as the did:key
 of its P-256 JWK, the same form an app key takes. Rotating the deployment
 secret requires rebuilding the index.
 
+## Erasure
+
+`createModuleErasure(reactorModule, { deploymentSecret, signer, permissions })`
+returns an `ErasureService` (`plan`, `request`, `status`) and an
+`ErasureScheduler`; call `scheduler.start()` and, on shutdown,
+`await scheduler.stop()`. The scheduler refuses to exist without a signer
+carrying an app key, because every receiver refuses an unsigned marker.
+`permissions` is an `IDocumentPermissionEraser`; reactor-api's
+`PrivacyPermissionAdapter` implements it and `IPermissionRowsLookup`.
+
+Each tick (60 s by default) moves items `waiting -> purging -> purged ->
+erased`, one purge at a time across every request, a drive only after its
+members. `document_purges` is the only success signal. Remotes bound to a
+purged drive and the document's permission rows are removed only after the
+marker converged or `markerGrace` (7 days) passed. Operator documentation:
+academy, Reference, Reactor, Document erasure.
+
 ## Admin subgraph
 
 `createPrivacySubgraph` returns the typeDefs and resolvers of an admin-only
