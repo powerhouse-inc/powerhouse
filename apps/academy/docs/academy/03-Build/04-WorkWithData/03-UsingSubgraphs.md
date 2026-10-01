@@ -154,6 +154,10 @@ with full access to the Reactor, so guarding reads, writes, and document
 creation is **your** responsibility. See
 [Enforcing Authorization in Subgraphs](../03-BuildingUserExperiences/07-Authorization/05-EnforcingAuthorizationInSubgraphs.md)
 for the `assertCanRead` / `assertCanWrite` / `canReadDocument` patterns.
+
+To read or upload attachments, call `subgraph.attachmentsFor(ctx)`. It returns
+a client authorized as the request's caller. See
+[Attachment service](../../04-Reference/01-Reactor/09-AttachmentService.md#inside-the-switchboard).
 :::
 
 ## 3. Testing the to-do list subgraph

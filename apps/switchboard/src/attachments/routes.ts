@@ -3,15 +3,18 @@ import {
   AttachmentNotFound,
   AttachmentPending,
   HashMismatch,
+  InvalidAttachmentMetadata,
   InvalidAttachmentRef,
   ReservationNotFound,
   SizeMismatch,
   UploadTooLarge,
   createRef,
   parseAttachmentDownloadTarget,
+  validateReserveMetadata,
   type AttachmentBuildResult,
   type AttachmentDownloadTarget,
   type ReserveAttachmentOptions,
+  type ReserveMetadata,
 } from "@powerhousedao/reactor-attachments";
 import type { IAttachmentAccessService } from "@powerhousedao/reactor-api";
 import type { AttachmentHash } from "@powerhousedao/reactor";
@@ -30,13 +33,6 @@ const RETRY_AFTER_SECONDS = 5;
 // accept either case from the wire and normalise before lookup. This keeps
 // the API forgiving for hand-typed URLs without changing storage semantics.
 const HASH_PATTERN = /^[a-f0-9]{64}$/i;
-// eslint-disable-next-line no-control-regex
-const CONTROL_CHARS = /[\x00-\x1f\x7f]/;
-// RFC 6838 token chars; allows optional `; param=value` pairs (token or quoted-string).
-const MIME_TYPE_PATTERN =
-  /^[!#$%&'*+\-.^_`|~\w]+\/[!#$%&'*+\-.^_`|~\w]+(?:\s*;\s*[!#$%&'*+\-.^_`|~\w]+=(?:[!#$%&'*+\-.^_`|~\w]+|"(?:[^"\\\r\n]|\\[^\r\n])*"))*$/;
-const MAX_FILENAME_LEN = 255;
-const MAX_MIMETYPE_LEN = 255;
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.statusCode = status;
@@ -91,29 +87,20 @@ export function parseReserveOptions(
 ): ReserveAttachmentOptions | null {
   if (input === null || typeof input !== "object") return null;
   const obj = input as Record<string, unknown>;
-  if (
-    typeof obj.mimeType !== "string" ||
-    obj.mimeType.length === 0 ||
-    obj.mimeType.length > MAX_MIMETYPE_LEN ||
-    !MIME_TYPE_PATTERN.test(obj.mimeType)
-  ) {
-    return null;
+  const { mimeType, fileName } = obj;
+  const extension = obj.extension ?? null;
+  try {
+    validateReserveMetadata({
+      mimeType,
+      fileName,
+      extension,
+    } as ReserveMetadata);
+  } catch (err) {
+    if (err instanceof InvalidAttachmentMetadata) return null;
+    throw err;
   }
-  if (
-    typeof obj.fileName !== "string" ||
-    obj.fileName.length === 0 ||
-    obj.fileName.length > MAX_FILENAME_LEN ||
-    CONTROL_CHARS.test(obj.fileName)
-  ) {
-    return null;
-  }
-  let extension: string | null = null;
-  if (typeof obj.extension === "string") {
-    if (obj.extension.length === 0 || /[\\/]/.test(obj.extension)) return null;
-    extension = obj.extension;
-  } else if (obj.extension !== undefined && obj.extension !== null) {
-    return null;
-  }
+  if (typeof mimeType !== "string" || typeof fileName !== "string") return null;
+  if (extension !== null && typeof extension !== "string") return null;
 
   // Hash-first mode: clientHash triggers this path; sizeBytes is required alongside it.
   // A body with sizeBytes but no clientHash falls through to the legacy path unchanged.
@@ -133,8 +120,8 @@ export function parseReserveOptions(
       return null;
     }
     return {
-      mimeType: obj.mimeType,
-      fileName: obj.fileName,
+      mimeType,
+      fileName,
       extension,
       clientHash: obj.clientHash.toLowerCase() as AttachmentHash,
       sizeBytes: obj.sizeBytes,
@@ -142,8 +129,8 @@ export function parseReserveOptions(
   }
 
   return {
-    mimeType: obj.mimeType,
-    fileName: obj.fileName,
+    mimeType,
+    fileName,
     extension,
   };
 }

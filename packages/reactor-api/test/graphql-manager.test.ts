@@ -28,12 +28,16 @@ import {
   type AuthFetchMiddleware,
 } from "../src/graphql/gateway/auth-middleware.js";
 import type { IAuthorizationService } from "../src/services/authorization.service.js";
+import type { IAttachmentClientProvider } from "../src/services/authorized-attachment.service.js";
+import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import type {
   AdapterRouteHandle,
   FetchHandler,
   IGatewayAdapter,
   IHttpAdapter,
+  WsConnection,
   WsDisposer,
+  WsHandlers,
 } from "../src/graphql/gateway/types.js";
 import {
   createRequireAuthFetchMiddleware,
@@ -47,6 +51,7 @@ import {
 import type {
   Context,
   ISubgraph,
+  SubgraphArgs,
   SubgraphClass,
 } from "../src/graphql/types.js";
 import type { AuthContext, AuthService } from "../src/services/auth.service.js";
@@ -218,6 +223,7 @@ type HarnessOptions = {
   reactorClient?: IReactorClient;
   logger?: ILogger;
   authorizationService?: IAuthorizationService;
+  attachments?: IAttachmentClientProvider;
 };
 
 function makeHarness(options: HarnessOptions = {}) {
@@ -235,31 +241,31 @@ function makeHarness(options: HarnessOptions = {}) {
     setMaxListeners: vi.fn(),
   } as unknown as WebSocketServer;
 
-  const manager = new GraphQLManager(
-    options.path ?? "/",
+  const manager = new GraphQLManager({
+    path: options.path ?? "/",
     httpServer,
     wsServer,
     reactorClient,
-    {} as IRelationalDb,
-    {} as IAnalyticsStore,
-    {} as ISyncManager,
-    options.logger ?? silentLogger,
+    relationalDb: {} as IRelationalDb,
+    analyticsStore: {} as IAnalyticsStore,
+    syncManager: {} as ISyncManager,
+    logger: options.logger ?? silentLogger,
     httpAdapter,
     gatewayAdapter,
-    undefined, // authService
-    undefined, // documentPermissionService
-    {
+    featureFlags: {
       enableDocumentModelSubgraphs:
         options.enableDocumentModelSubgraphs ?? false,
     },
-    4001,
-    options.authorizationService ??
+    port: 4001,
+    authorizationService:
+      options.authorizationService ??
       createAuthorizationService({
         admins: [],
         defaultProtection: false,
         policy: AuthorizationPolicy.OPEN,
       }),
-  );
+    attachments: options.attachments,
+  });
 
   return {
     manager,
@@ -720,6 +726,28 @@ describe("GraphQLManager", () => {
 
       // The auth-derived user should win over the one set via setAdditionalContextFields
       expect(ctx.user).toEqual(expectedUser);
+    });
+
+    it("an additional field named user never becomes the caller of an anonymous WebSocket", async () => {
+      const { manager, gatewayAdapter } = makeHarness();
+      manager.setAdditionalContextFields({
+        user: { address: "0xinjected" },
+        customField: "custom-value",
+      });
+      await registerSubscriptionSubgraph(manager);
+      await initAndFlush(manager);
+
+      const handlers = gatewayAdapter.attachWebSocket.mock
+        .calls[0][2] as WsHandlers<Context>;
+      const connection = {} as WsConnection;
+      await expect(handlers.onConnect({}, connection)).resolves.toBe(true);
+      const ctx = (await handlers.context({}, connection)) as Record<
+        string,
+        unknown
+      >;
+
+      expect(ctx["customField"]).toBe("custom-value");
+      expect(ctx.user).toBeUndefined();
     });
   });
 
@@ -1684,6 +1712,62 @@ describe("GraphQLManager", () => {
       expect(disposed).toContain(handles.get("/graphql/beta-model"));
       expect(manager.getSubgraphByName("beta-model")).toBeUndefined();
       expect(manager.hasSubgraphHandler("alpha-model")).toBe(true);
+    });
+  });
+
+  // ── attachment client provider ───────────────────────────────────────────
+
+  describe("attachment client provider", () => {
+    function makeProvider() {
+      const client = {} as IAttachmentClient;
+      const provider = {
+        forSubject: vi.fn(() => client),
+      } satisfies IAttachmentClientProvider;
+      return { provider, client };
+    }
+
+    it("passes the provider to a registered subgraph", async () => {
+      const { provider } = makeProvider();
+      const { manager } = makeHarness({ attachments: provider });
+      await initAndFlush(manager);
+
+      let received: SubgraphArgs | undefined;
+      class CapturingSubgraph extends BaseSubgraph {
+        name = "capturing";
+        constructor(args: SubgraphArgs) {
+          super(args);
+          received = args;
+        }
+      }
+      await manager.registerSubgraph(CapturingSubgraph, "graphql");
+
+      expect(received?.attachments).toBe(provider);
+    });
+
+    it("passes the provider to a document model subgraph", async () => {
+      const { provider, client } = makeProvider();
+      const { manager } = makeHarness({
+        attachments: provider,
+        enableDocumentModelSubgraphs: true,
+        reactorClient: makeMockReactorClient({
+          getDocumentModelModules: vi.fn().mockResolvedValue({
+            results: [
+              makeDriveModule(),
+              makeModelModule("Gadget", "powerhouse/test-gadget"),
+            ],
+          }),
+        }),
+      });
+      await initAndFlush(manager);
+
+      const subgraph = manager.getSubgraphByName("gadget");
+      expect(subgraph).toBeInstanceOf(BaseSubgraph);
+      const ctx = { user: { address: "0xabc" } } as Context;
+      expect((subgraph as BaseSubgraph).attachmentsFor(ctx)).toBe(client);
+      expect(provider.forSubject).toHaveBeenCalledWith({
+        address: "0xabc",
+        key: undefined,
+      });
     });
   });
 

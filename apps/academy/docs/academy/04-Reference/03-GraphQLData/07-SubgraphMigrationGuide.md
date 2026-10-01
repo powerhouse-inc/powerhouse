@@ -582,6 +582,7 @@ ph generate --subgraph my-custom
 | Schema format        | Template literal string         | `gql` tagged template (`DocumentNode`)          |
 | Resolver export      | `export const resolvers`        | `export const getResolvers = (subgraph) => ...` |
 | Relational DB access | Not available                   | `subgraph.relationalDb`                         |
+| Attachments          | Not available                   | `subgraph.attachmentsFor(ctx)`                  |
 | File structure       | `resolvers.ts` + `type-defs.ts` | `resolvers.ts` + `schema.ts` + `index.ts`       |
 | Registration         | Manual                          | Automatic via `ph generate`                     |
 

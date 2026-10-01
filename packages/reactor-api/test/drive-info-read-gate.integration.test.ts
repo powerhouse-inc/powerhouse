@@ -91,26 +91,24 @@ describe("GET /d/:drive reads the drive as the caller", () => {
       "127.0.0.1",
     )) as http.Server;
     const { port } = server.address() as { port: number };
-    const manager = new GraphQLManager(
-      "/",
-      server,
-      {
+    const manager = new GraphQLManager({
+      path: "/",
+      httpServer: server,
+      wsServer: {
         close: vi.fn((cb?: () => void) => cb?.()),
         setMaxListeners: vi.fn(),
       } as unknown as WebSocketServer,
-      module.client,
-      {} as IRelationalDb,
-      {} as IAnalyticsStore,
-      {} as ISyncManager,
-      silentLogger,
+      reactorClient: module.client,
+      relationalDb: {} as IRelationalDb,
+      analyticsStore: {} as IAnalyticsStore,
+      syncManager: {} as ISyncManager,
+      logger: silentLogger,
       httpAdapter,
       gatewayAdapter,
-      undefined,
-      undefined,
-      { enableDocumentModelSubgraphs: false },
+      featureFlags: { enableDocumentModelSubgraphs: false },
       port,
-      openAuthorization,
-    );
+      authorizationService: openAuthorization,
+    });
     await manager.init([], createAuthFetchMiddleware(authService), undefined);
 
     return async (bearer?: string) => {

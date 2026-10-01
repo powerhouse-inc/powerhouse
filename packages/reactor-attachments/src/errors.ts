@@ -30,6 +30,22 @@ export class InvalidAttachmentRef extends Error {
   }
 }
 
+/** The reserve metadata field that failed validation. */
+export type AttachmentMetadataField = "mimeType" | "fileName" | "extension";
+
+/**
+ * Thrown when reserve metadata (MIME type, file name or extension) is not
+ * acceptable. Route handlers should map this to HTTP 400 Bad Request.
+ */
+export class InvalidAttachmentMetadata extends Error {
+  readonly field: AttachmentMetadataField;
+  constructor(field: AttachmentMetadataField) {
+    super(`Invalid attachment ${field}`);
+    this.name = "InvalidAttachmentMetadata";
+    this.field = field;
+  }
+}
+
 /**
  * Thrown when an upload exceeds the configured maximum byte cap.
  * Route handlers should map this to HTTP 413 Payload Too Large.

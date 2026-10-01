@@ -77,10 +77,31 @@ const ATTACHMENT_SCOPE = "global";
 /** The branch an attachment reference is resolved against. */
 const ATTACHMENT_BRANCH = "main";
 
+export type AttachmentCallerResult =
+  | { kind: "admitted" }
+  | { kind: "unauthenticated" };
+
+export interface AttachmentCallerRequest {
+  intent: "read" | "write";
+  userAddress?: string;
+  appKey?: string;
+}
+
 export interface IAttachmentAccessService {
   canReadAttachment(
     request: AttachmentAccessRequest,
   ): Promise<AttachmentAccessResult>;
+  /** Whether this caller may use attachments at all, before any document decides. */
+  admitCaller(
+    request: AttachmentCallerRequest,
+  ): Promise<AttachmentCallerResult>;
+}
+
+export interface AttachmentAccessServiceOptions {
+  /** Refuse writes from a caller with no address. Default `true`. */
+  refuseAnonymousWrites?: boolean;
+  /** Refuse reads from a caller with no address. Default `false`. */
+  refuseAnonymousReads?: boolean;
 }
 
 const HASH_PATTERN = /^[a-f0-9]{64}$/;
@@ -106,7 +127,8 @@ const HASH_PATTERN = /^[a-f0-9]{64}$/;
  * anyone who learns its hash, which the document's own state may well have told
  * them. Both are kept because they are the two halves of one rule: an
  * attachment is readable by whoever may read the document that references it,
- * and each composition can only express that in its own terms.
+ * and each composition can only express that in its own terms. The caller
+ * decision mirrors the routes' `requireAuth`.
  */
 export class AttachmentAccessService implements IAttachmentAccessService {
   constructor(
@@ -120,7 +142,22 @@ export class AttachmentAccessService implements IAttachmentAccessService {
      * evaluate; the host's permission tables decide alone, exactly as before.
      */
     private readonly scopeGate?: IDocumentScopeGate,
+    private readonly options: AttachmentAccessServiceOptions = {},
   ) {}
+
+  admitCaller(
+    request: AttachmentCallerRequest,
+  ): Promise<AttachmentCallerResult> {
+    // Any intent other than "read" takes the write rule, which fails closed.
+    const refuseAnonymous =
+      request.intent === "read"
+        ? (this.options.refuseAnonymousReads ?? false)
+        : (this.options.refuseAnonymousWrites ?? true);
+    if (refuseAnonymous && !request.userAddress) {
+      return Promise.resolve({ kind: "unauthenticated" });
+    }
+    return Promise.resolve({ kind: "admitted" });
+  }
 
   async canReadAttachment(
     request: AttachmentAccessRequest,

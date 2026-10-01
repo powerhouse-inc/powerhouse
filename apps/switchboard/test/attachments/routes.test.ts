@@ -39,6 +39,7 @@ const ALLOW_ALL: IAttachmentAccessService = {
       documentId: request.documentId as never,
       ref: request.attachmentRef as never,
     }),
+  admitCaller: () => Promise.resolve({ kind: "admitted" }),
 };
 const grantedDownload = (attachments: AttachmentBuildResult) =>
   makeDownloadHandler(attachments, ALLOW_ALL, null);
