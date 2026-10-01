@@ -100,6 +100,16 @@ export function resolveSourceConnect(
   return deepMerge(projectWide, source.connect ?? {});
 }
 
+// Projects scaffolded before workflows.enabled reached Connect carry an explicit
+// `false` from the old defaults, which then keeps Workflow Studio off
+export function workflowsSettingConflict(
+  source: Pick<PowerhouseConfig, "connect" | "workflows">,
+): string | undefined {
+  if (source.workflows?.enabled !== true) return undefined;
+  if (source.connect?.app?.workflowsEnabled !== false) return undefined;
+  return 'powerhouse.config.json sets workflows.enabled but also connect.app.workflowsEnabled: false, so Workflow Studio stays off in Connect. Remove "workflowsEnabled" from connect.app to follow workflows.enabled.';
+}
+
 /**
  * Pluggable loader on top of a `ConfigAdapter`.
  *

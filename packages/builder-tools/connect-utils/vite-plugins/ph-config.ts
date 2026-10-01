@@ -10,6 +10,7 @@ import {
   buildRuntimeConfig,
   deepMerge,
   resolveSourceConnect,
+  workflowsSettingConflict,
 } from "@powerhousedao/shared/connect";
 import { RUNTIME_CONFIG_SCHEMA_URL } from "../runtime-config-schema.js";
 
@@ -66,10 +67,13 @@ export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
   // Env vars are NOT a layer in this ladder. The Connect SPA's runtime
   // configuration is exclusively set via `powerhouse.config.json` or CLI
   // overrides (`ph connect build --<field>` / `ph connect config --<field>`).
-  const withDefaults = resolveSourceConnect({
+  const sourceSettings = {
     connect: options.connect,
     workflows: options.workflows,
-  });
+  };
+  const conflict = workflowsSettingConflict(sourceSettings);
+  if (conflict) console.warn(`[powerhouse] ${conflict}`);
+  const withDefaults = resolveSourceConnect(sourceSettings);
   const mergedConnect = options.cliConnectOverride
     ? deepMerge(withDefaults, options.cliConnectOverride)
     : withDefaults;
