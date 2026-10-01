@@ -204,6 +204,9 @@ describe("testStep", () => {
     expect(rows[0]).toMatchObject({ step_id: "s2", status: "SUCCEEDED" });
     expect(JSON.parse(rows[0].input!)).toEqual({ text: "Ada owes 42" });
     expect(stepOf("wf-chain", "s2").lastTest?.runId).toBe(result.runId);
+    await expect(service.rerun(result.runId!, CTX)).rejects.toThrow(
+      /tested a single step or trigger/,
+    );
   }, 60_000);
 
   it("calls the action's test method, where a run calls run", async () => {
