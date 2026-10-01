@@ -1,5 +1,6 @@
-import { MemoryFS } from "@electric-sql/pglite";
+import { MemoryFS, protocol } from "@electric-sql/pglite";
 import { promises as fs } from "node:fs";
+import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
 
 // PGDATA in PGLite 0.3.x's MEMFS layout. The compiled bundle uses
@@ -10,6 +11,18 @@ const SNAPSHOT_NAME = "snapshot.bin";
 const SNAPSHOT_TMP = "snapshot.bin.tmp";
 const MAGIC = new Uint8Array([0x50, 0x47, 0x4c, 0x41]); // "PGLA"
 const FORMAT_VERSION = 1;
+const HEADER_SIZE = 12;
+const ENTRY_PREFIX_SIZE = 9;
+// Node rejects a single read or write above 2^31-1 bytes.
+const DEFAULT_IO_CHUNK_SIZE = 64 * 1024 * 1024;
+const DEFAULT_MAINTENANCE_INTERVAL_MS = 5 * 60 * 1000;
+const DEFAULT_VACUUM_FULL_ABOVE_BYTES = 256 * 1024 * 1024;
+const MAINTENANCE_RETRY_MS = 1000;
+let ioChunkSize = DEFAULT_IO_CHUNK_SIZE;
+
+export function setIoChunkSizeForTests(size?: number): void {
+  ioChunkSize = size ?? DEFAULT_IO_CHUNK_SIZE;
+}
 
 type EntryType = 0 | 1; // 0=dir, 1=file
 
@@ -46,7 +59,36 @@ export interface AtomicNodeFsOptions {
    * Default `0` preserves the original per-call synchronous behavior.
    */
   flushIntervalMs?: number;
+  /**
+   * Called on every failed snapshot write, in either mode. While the last
+   * write has failed, each `syncToFs` retries synchronously and rejects if the
+   * retry fails too; the first successful write clears the failure.
+   */
+  onFlushError?: (error: unknown) => void;
+  /**
+   * PGLite has no autovacuum and never checkpoints on WAL size, so dead
+   * tuples and WAL grow without bound. Every `maintenanceIntervalMs`, if
+   * anything was synced since the last pass and no transaction is open, run
+   * VACUUM then CHECKPOINT and flush the snapshot. Default 5 minutes; `0`
+   * disables.
+   */
+  maintenanceIntervalMs?: number;
+  /**
+   * When the snapshot loaded at startup is larger than this, the first
+   * maintenance pass runs VACUUM FULL instead of VACUUM to reclaim existing
+   * bloat. It holds the database for roughly 2s per GB and needs transient
+   * memory about the size of the live data. Default 256MB; `0` disables.
+   */
+  vacuumFullAboveBytes?: number;
 }
+
+type MaintenanceOutcome =
+  | "vacuum"
+  | "vacuum-full"
+  | "idle"
+  | "not-ready"
+  | "in-transaction"
+  | "failed";
 
 /**
  * PGLite Filesystem that holds the working data dir in Emscripten MEMFS and
@@ -62,10 +104,21 @@ export class AtomicNodeFs extends MemoryFS {
   private readonly hostDir: string;
   private readonly logger?: AtomicNodeFsLogger;
   private readonly flushIntervalMs: number;
+  private readonly onFlushError?: (error: unknown) => void;
+  private readonly maintenanceIntervalMs: number;
+  private readonly vacuumFullAboveBytes: number;
 
   private dirty = false;
+  private failed = false;
   private flushTimer?: ReturnType<typeof setTimeout>;
   private flushInFlight?: Promise<void>;
+  private writing?: Promise<void>;
+
+  private closing = false;
+  private syncsSinceMaintenance = 0;
+  private vacuumFullPending = false;
+  private maintenanceTimer?: ReturnType<typeof setTimeout>;
+  private maintenanceInFlight?: Promise<MaintenanceOutcome>;
 
   constructor(
     hostDir: string,
@@ -76,9 +129,23 @@ export class AtomicNodeFs extends MemoryFS {
     const options = normalizeOptions(optionsOrLogger);
     this.logger = options.logger;
     this.flushIntervalMs = Math.max(0, options.flushIntervalMs ?? 0);
+    this.onFlushError = options.onFlushError;
+    this.maintenanceIntervalMs = Math.max(
+      0,
+      options.maintenanceIntervalMs ?? DEFAULT_MAINTENANCE_INTERVAL_MS,
+    );
+    this.vacuumFullAboveBytes = Math.max(
+      0,
+      options.vacuumFullAboveBytes ?? DEFAULT_VACUUM_FULL_ABOVE_BYTES,
+    );
   }
 
   async initialSyncFs(): Promise<void> {
+    await this.loadSnapshot();
+    this.scheduleMaintenance(this.maintenanceIntervalMs);
+  }
+
+  private async loadSnapshot(): Promise<void> {
     await fs.mkdir(this.hostDir, { recursive: true });
     const snapPath = path.join(this.hostDir, SNAPSHOT_NAME);
     const tmpPath = path.join(this.hostDir, SNAPSHOT_TMP);
@@ -89,8 +156,15 @@ export class AtomicNodeFs extends MemoryFS {
     const memFs = this.pg!.Module.FS as MemFs;
 
     if (await fileExists(snapPath)) {
-      const bytes = await fs.readFile(snapPath);
-      restoreMemfs(memFs, PGDATA, bytes);
+      const fh = await fs.open(snapPath, "r");
+      try {
+        const { size } = await fh.stat();
+        await restoreMemfs(memFs, PGDATA, fh, size);
+        this.vacuumFullPending =
+          this.vacuumFullAboveBytes > 0 && size > this.vacuumFullAboveBytes;
+      } finally {
+        await fh.close();
+      }
       return;
     }
 
@@ -105,25 +179,166 @@ export class AtomicNodeFs extends MemoryFS {
   }
 
   async syncToFs(relaxedDurability?: boolean): Promise<void> {
-    if (this.flushIntervalMs === 0) {
-      await this.writeSnapshot(relaxedDurability ?? false);
-      return;
-    }
-    this.dirty = true;
-    this.scheduleDeferredFlush(relaxedDurability ?? false);
+    this.syncsSinceMaintenance++;
+    await this.persist(relaxedDurability ?? false);
   }
 
   async closeFs(): Promise<void> {
-    if (this.flushTimer) {
-      clearTimeout(this.flushTimer);
-      this.flushTimer = undefined;
+    try {
+      this.closing = true;
+      this.cancelMaintenance();
+      await this.maintenanceInFlight;
+      this.cancelDeferredFlush();
+      await this.drainInFlight();
+      this.dirty = false;
+      await this.flush(false);
+    } finally {
+      await super.closeFs();
     }
+  }
+
+  private async persist(relaxedDurability: boolean): Promise<void> {
+    if (this.flushIntervalMs === 0) {
+      await this.flush(relaxedDurability);
+      return;
+    }
+    this.dirty = true;
+    if (!this.failed) {
+      this.scheduleDeferredFlush(relaxedDurability);
+      return;
+    }
+    this.cancelDeferredFlush();
+    await this.drainInFlight();
+    this.dirty = false;
+    await this.flush(relaxedDurability);
+  }
+
+  private scheduleMaintenance(delayMs: number): void {
+    if (this.maintenanceIntervalMs === 0 || this.closing) return;
+    this.maintenanceTimer = setTimeout(() => {
+      this.maintenanceTimer = undefined;
+      this.maintenanceInFlight = this.runMaintenance()
+        .then((outcome) => {
+          this.scheduleMaintenance(
+            outcome === "in-transaction"
+              ? Math.min(MAINTENANCE_RETRY_MS, this.maintenanceIntervalMs)
+              : this.maintenanceIntervalMs,
+          );
+          return outcome;
+        })
+        .finally(() => {
+          this.maintenanceInFlight = undefined;
+        });
+    }, delayMs);
+    this.maintenanceTimer.unref();
+  }
+
+  private cancelMaintenance(): void {
+    if (!this.maintenanceTimer) return;
+    clearTimeout(this.maintenanceTimer);
+    this.maintenanceTimer = undefined;
+  }
+
+  private async runMaintenance(): Promise<MaintenanceOutcome> {
+    const pg = this.pg;
+    if (this.closing || !pg?.ready) return "not-ready";
+    // pg.close() does not take the query mutex; recheck before each statement.
+    const isReady = (): boolean => pg.ready;
+    if (this.syncsSinceMaintenance === 0 && !this.vacuumFullPending) {
+      return "idle";
+    }
+    const full = this.vacuumFullPending;
+    let outcome: MaintenanceOutcome;
+    try {
+      outcome = await pg._runExclusiveQuery(async () => {
+        // VACUUM inside an open transaction aborts it. isInTransaction()
+        // misses START TRANSACTION; ReadyForQuery status does not.
+        if (!isReady()) return "not-ready";
+        const { messages } = await pg.execProtocol(
+          protocol.serialize.query(""),
+          {
+            syncToFs: false,
+          },
+        );
+        if (transactionStatus(messages) !== "I") return "in-transaction";
+        if (full) {
+          this.logger?.warn(
+            `AtomicNodeFs: snapshot at ${this.hostDir} exceeds ${this.vacuumFullAboveBytes} bytes; running VACUUM FULL`,
+          );
+        }
+        for (const statement of [
+          full ? "VACUUM FULL" : "VACUUM",
+          "CHECKPOINT",
+        ]) {
+          if (!isReady()) return "not-ready";
+          await pg.execProtocol(protocol.serialize.query(statement), {
+            syncToFs: false,
+          });
+        }
+        return full ? "vacuum-full" : "vacuum";
+      });
+    } catch (err) {
+      this.logger?.warn(
+        `AtomicNodeFs maintenance failed: ${errorMessage(err)}`,
+      );
+      return "failed";
+    }
+    if (outcome !== "vacuum" && outcome !== "vacuum-full") return outcome;
+    this.syncsSinceMaintenance = 0;
+    this.vacuumFullPending = false;
+    try {
+      await this.persist(false);
+    } catch (err) {
+      this.logger?.warn(
+        `AtomicNodeFs flush after maintenance failed: ${errorMessage(err)}`,
+      );
+      return "failed";
+    }
+    return outcome;
+  }
+
+  private cancelDeferredFlush(): void {
+    if (!this.flushTimer) return;
+    clearTimeout(this.flushTimer);
+    this.flushTimer = undefined;
+  }
+
+  private async drainInFlight(): Promise<void> {
     while (this.flushInFlight) {
       await this.flushInFlight;
     }
-    this.dirty = false;
-    await this.writeSnapshot(false);
-    await super.closeFs();
+  }
+
+  private async flush(relaxedDurability: boolean): Promise<void> {
+    while (this.writing) await this.writing;
+    const write = this.writeSnapshot(relaxedDurability);
+    this.writing = write
+      .then(
+        () => undefined,
+        () => undefined,
+      )
+      .finally(() => {
+        this.writing = undefined;
+      });
+    try {
+      await write;
+    } catch (err) {
+      this.failed = true;
+      this.reportFlushError(err);
+      throw err;
+    }
+    this.failed = false;
+  }
+
+  private reportFlushError(err: unknown): void {
+    if (!this.onFlushError) return;
+    try {
+      this.onFlushError(err);
+    } catch (callbackErr) {
+      this.logger?.warn(
+        `AtomicNodeFs onFlushError callback threw: ${errorMessage(callbackErr)}`,
+      );
+    }
   }
 
   private scheduleDeferredFlush(relaxedDurability: boolean): void {
@@ -131,9 +346,9 @@ export class AtomicNodeFs extends MemoryFS {
     this.flushTimer = setTimeout(() => {
       this.flushTimer = undefined;
       this.flushInFlight = this.drainDirty(relaxedDurability)
-        .catch((err) => {
+        .catch((err: unknown) => {
           this.logger?.warn(
-            `AtomicNodeFs deferred flush failed: ${err instanceof Error ? err.message : String(err)}`,
+            `AtomicNodeFs deferred flush failed: ${errorMessage(err)}`,
           );
         })
         .finally(() => {
@@ -148,19 +363,24 @@ export class AtomicNodeFs extends MemoryFS {
   private async drainDirty(relaxedDurability: boolean): Promise<void> {
     while (this.dirty) {
       this.dirty = false;
-      await this.writeSnapshot(relaxedDurability);
+      try {
+        await this.flush(relaxedDurability);
+      } catch (err) {
+        this.dirty = true;
+        throw err;
+      }
     }
   }
 
   private async writeSnapshot(relaxedDurability: boolean): Promise<void> {
     const memFs = this.pg!.Module.FS as MemFs;
-    const bytes = serializeMemfs(memFs, PGDATA);
+    const entries = collectEntries(memFs, PGDATA);
     const snapPath = path.join(this.hostDir, SNAPSHOT_NAME);
     const tmpPath = path.join(this.hostDir, SNAPSHOT_TMP);
 
     const fh = await fs.open(tmpPath, "w");
     try {
-      await fh.write(bytes);
+      await writeEntries(fh, entries);
       if (!relaxedDurability) await fh.sync();
     } finally {
       await fh.close();
@@ -203,6 +423,18 @@ function isLogger(
   );
 }
 
+function transactionStatus(messages: readonly { name: string }[]): unknown {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.name === "readyForQuery") return (m as { status?: unknown }).status;
+  }
+  return undefined;
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
 async function fileExists(p: string): Promise<boolean> {
   try {
     await fs.stat(p);
@@ -228,7 +460,7 @@ interface Entry {
   data?: Uint8Array;
 }
 
-function serializeMemfs(FS: MemFs, root: string): Uint8Array {
+export function collectEntries(FS: MemFs, root: string): Entry[] {
   const entries: Entry[] = [];
 
   const walk = (dir: string, rel: string) => {
@@ -255,83 +487,190 @@ function serializeMemfs(FS: MemFs, root: string): Uint8Array {
   };
   walk(root, "");
 
+  return entries;
+}
+
+type WriteHandle = Pick<FileHandle, "write">;
+type ReadHandle = Pick<FileHandle, "read">;
+
+export async function writeEntries(
+  fh: WriteHandle,
+  entries: Entry[],
+): Promise<void> {
   const encoder = new TextEncoder();
   const encodedPaths = entries.map((e) => encoder.encode(e.relPath));
 
-  let size = 4 + 4 + 4; // magic + version + count
+  let size = HEADER_SIZE;
   for (let i = 0; i < entries.length; i++) {
-    size += 1 + 4 + 4 + encodedPaths[i].byteLength + 4;
+    size += ENTRY_PREFIX_SIZE + encodedPaths[i].byteLength + 4;
     size += entries[i].data?.byteLength ?? 0;
   }
 
-  const out = new Uint8Array(size);
-  const view = new DataView(out.buffer);
-  let off = 0;
+  const writer = new ChunkedWriter(fh, Math.min(ioChunkSize, size));
 
-  out.set(MAGIC, off);
-  off += 4;
-  view.setUint32(off, FORMAT_VERSION, true);
-  off += 4;
-  view.setUint32(off, entries.length, true);
-  off += 4;
+  const header = Buffer.allocUnsafe(HEADER_SIZE);
+  header.set(MAGIC, 0);
+  header.writeUInt32LE(FORMAT_VERSION, 4);
+  header.writeUInt32LE(entries.length, 8);
+  await writer.append(header);
 
   for (let i = 0; i < entries.length; i++) {
     const e = entries[i];
     const pathBytes = encodedPaths[i];
-    view.setUint8(off, e.type);
-    off += 1;
-    view.setUint32(off, e.mode, true);
-    off += 4;
-    view.setUint32(off, pathBytes.byteLength, true);
-    off += 4;
-    out.set(pathBytes, off);
-    off += pathBytes.byteLength;
     const dataLen = e.data?.byteLength ?? 0;
-    view.setUint32(off, dataLen, true);
-    off += 4;
-    if (dataLen > 0 && e.data) {
-      out.set(e.data, off);
-      off += dataLen;
+    const prefix = Buffer.allocUnsafe(
+      ENTRY_PREFIX_SIZE + pathBytes.byteLength + 4,
+    );
+    prefix.writeUInt8(e.type, 0);
+    prefix.writeUInt32LE(e.mode, 1);
+    prefix.writeUInt32LE(pathBytes.byteLength, 5);
+    prefix.set(pathBytes, ENTRY_PREFIX_SIZE);
+    prefix.writeUInt32LE(dataLen, ENTRY_PREFIX_SIZE + pathBytes.byteLength);
+    await writer.append(prefix);
+    if (dataLen > 0 && e.data) await writer.append(e.data);
+  }
+
+  await writer.flush();
+}
+
+class ChunkedWriter {
+  private readonly buf: Buffer;
+  private used = 0;
+  private position = 0;
+
+  constructor(
+    private readonly fh: WriteHandle,
+    chunkSize: number,
+  ) {
+    this.buf = Buffer.allocUnsafe(Math.max(1, chunkSize));
+  }
+
+  async append(bytes: Uint8Array): Promise<void> {
+    const size = this.buf.byteLength;
+    let off = 0;
+    while (off < bytes.byteLength) {
+      if (this.used === 0 && bytes.byteLength - off >= size) {
+        await this.writeAll(bytes.subarray(off, off + size));
+        off += size;
+        continue;
+      }
+      const n = Math.min(size - this.used, bytes.byteLength - off);
+      this.buf.set(bytes.subarray(off, off + n), this.used);
+      this.used += n;
+      off += n;
+      if (this.used === size) await this.flush();
     }
   }
 
-  return out;
+  async flush(): Promise<void> {
+    if (this.used === 0) return;
+    await this.writeAll(this.buf.subarray(0, this.used));
+    this.used = 0;
+  }
+
+  private async writeAll(bytes: Uint8Array): Promise<void> {
+    let off = 0;
+    while (off < bytes.byteLength) {
+      const { bytesWritten } = await this.fh.write(
+        bytes,
+        off,
+        bytes.byteLength - off,
+        this.position,
+      );
+      if (bytesWritten <= 0) {
+        throw new Error("AtomicNodeFs: snapshot write made no progress");
+      }
+      off += bytesWritten;
+      this.position += bytesWritten;
+    }
+  }
 }
 
-function restoreMemfs(FS: MemFs, root: string, bytes: Uint8Array): void {
+class ChunkedReader {
+  private readonly buf: Buffer;
+  private start = 0;
+  private end = 0;
+  private position = 0;
+
+  constructor(
+    private readonly fh: ReadHandle,
+    chunkSize: number,
+  ) {
+    this.buf = Buffer.allocUnsafe(Math.max(1, chunkSize));
+  }
+
+  async take(n: number): Promise<Buffer> {
+    const out = Buffer.allocUnsafe(n);
+    let filled = 0;
+    while (filled < n) {
+      if (this.start === this.end) {
+        if (n - filled >= this.buf.byteLength) {
+          filled += await this.readInto(out, filled, n - filled);
+          continue;
+        }
+        this.start = 0;
+        this.end = await this.readInto(this.buf, 0, this.buf.byteLength);
+      }
+      const k = Math.min(this.end - this.start, n - filled);
+      this.buf.copy(out, filled, this.start, this.start + k);
+      this.start += k;
+      filled += k;
+    }
+    return out;
+  }
+
+  private async readInto(
+    target: Buffer,
+    offset: number,
+    length: number,
+  ): Promise<number> {
+    const { bytesRead } = await this.fh.read(
+      target,
+      offset,
+      Math.min(length, this.buf.byteLength),
+      this.position,
+    );
+    if (bytesRead <= 0) {
+      throw new Error("AtomicNodeFs: truncated snapshot");
+    }
+    this.position += bytesRead;
+    return bytesRead;
+  }
+}
+
+export async function restoreMemfs(
+  FS: MemFs,
+  root: string,
+  fh: ReadHandle,
+  fileSize: number,
+): Promise<void> {
   ensureDir(FS, root);
 
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  let off = 0;
+  const reader = new ChunkedReader(fh, Math.min(ioChunkSize, fileSize));
 
+  const header = await reader.take(HEADER_SIZE);
   for (let i = 0; i < 4; i++) {
-    if (bytes[off + i] !== MAGIC[i]) {
+    if (header[i] !== MAGIC[i]) {
       throw new Error("AtomicNodeFs: invalid snapshot magic");
     }
   }
-  off += 4;
 
-  const version = view.getUint32(off, true);
-  off += 4;
+  const version = header.readUInt32LE(4);
   if (version !== FORMAT_VERSION) {
     throw new Error(`AtomicNodeFs: unsupported snapshot version ${version}`);
   }
-  const count = view.getUint32(off, true);
-  off += 4;
+  const count = header.readUInt32LE(8);
 
   const decoder = new TextDecoder();
 
   for (let i = 0; i < count; i++) {
-    const type = view.getUint8(off);
-    off += 1;
-    const mode = view.getUint32(off, true);
-    off += 4;
-    const pathLen = view.getUint32(off, true);
-    off += 4;
-    const relPath = decoder.decode(bytes.subarray(off, off + pathLen));
-    off += pathLen;
-    const dataLen = view.getUint32(off, true);
-    off += 4;
+    const prefix = await reader.take(ENTRY_PREFIX_SIZE);
+    const type = prefix.readUInt8(0);
+    const mode = prefix.readUInt32LE(1);
+    const pathLen = prefix.readUInt32LE(5);
+    const relPath = decoder.decode(await reader.take(pathLen));
+    const dataLen = (await reader.take(4)).readUInt32LE(0);
+    const data = await reader.take(dataLen);
     const full = root + "/" + relPath;
 
     if (type === 0) {
@@ -340,11 +679,9 @@ function restoreMemfs(FS: MemFs, root: string, bytes: Uint8Array): void {
       if (!FS.analyzePath(full).exists) FS.mkdir(full, dirMode(mode));
       else FS.chmod(full, dirMode(mode));
     } else {
-      const data = bytes.subarray(off, off + dataLen);
       FS.writeFile(full, data);
       FS.chmod(full, mode);
     }
-    off += dataLen;
   }
 }
 

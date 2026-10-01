@@ -101,6 +101,8 @@ async function seedStore(dir: string): Promise<void> {
 
 // PGlite boots are several times slower on Windows runners.
 const BOOT_TIMEOUT = 120_000;
+// Windows can briefly keep just-closed store files locked (EBUSY/EPERM).
+const RM_OPTIONS = { recursive: true, force: true, maxRetries: 10 };
 
 describe("booting over documents this build does not run", () => {
   let seeded: string;
@@ -113,8 +115,8 @@ describe("booting over documents this build does not run", () => {
   }, BOOT_TIMEOUT);
 
   afterAll(async () => {
-    await rm(seeded, { recursive: true, force: true });
-  });
+    await rm(seeded, RM_OPTIONS);
+  }, BOOT_TIMEOUT);
 
   beforeEach(async () => {
     tempRoot = await mkdtemp(join(tmpdir(), "switchboard-stored-protocol-"));
@@ -127,7 +129,7 @@ describe("booting over documents this build does not run", () => {
       process.env.PH_REACTOR_DATABASE_URL,
       { recursive: true },
     );
-  });
+  }, BOOT_TIMEOUT);
 
   afterEach(async () => {
     for (const key of ENV_KEYS) {
@@ -137,8 +139,8 @@ describe("booting over documents this build does not run", () => {
         process.env[key] = previous[key];
       }
     }
-    await rm(tempRoot, { recursive: true, force: true });
-  });
+    await rm(tempRoot, RM_OPTIONS);
+  }, BOOT_TIMEOUT);
 
   function boot(logger: ILogger) {
     return startSwitchboard({
