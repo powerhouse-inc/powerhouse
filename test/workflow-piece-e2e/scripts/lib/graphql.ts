@@ -191,16 +191,16 @@ export async function createWorkflow(
 
   await client.request(
     WORKFLOW_PATH,
-    `mutation Name($docId: PHID!, $input: Workflow_SetWorkflowNameInput!) {
-      Workflow { setWorkflowName(docId: $docId, input: $input) { id } }
+    `mutation Name($docId: String!, $input: Workflow_SetWorkflowNameInput!) {
+      Workflow { setWorkflowName(documentIdOrSlug: $docId, input: $input) { id } }
     }`,
     { docId: id, input: { name: input.name } },
   );
 
   await client.request(
     WORKFLOW_PATH,
-    `mutation Trigger($docId: PHID!, $input: Workflow_SetTriggerInput!) {
-      Workflow { setTrigger(docId: $docId, input: $input) { id } }
+    `mutation Trigger($docId: String!, $input: Workflow_SetTriggerInput!) {
+      Workflow { setTrigger(documentIdOrSlug: $docId, input: $input) { id } }
     }`,
     { docId: id, input: input.trigger },
   );
@@ -208,8 +208,8 @@ export async function createWorkflow(
   for (const step of input.steps) {
     await client.request(
       WORKFLOW_PATH,
-      `mutation Step($docId: PHID!, $input: Workflow_AddStepInput!) {
-        Workflow { addStep(docId: $docId, input: $input) { id } }
+      `mutation Step($docId: String!, $input: Workflow_AddStepInput!) {
+        Workflow { addStep(documentIdOrSlug: $docId, input: $input) { id } }
       }`,
       { docId: id, input: step },
     );
@@ -218,8 +218,8 @@ export async function createWorkflow(
   for (const edge of input.edges) {
     await client.request(
       WORKFLOW_PATH,
-      `mutation Edge($docId: PHID!, $input: Workflow_AddEdgeInput!) {
-        Workflow { addEdge(docId: $docId, input: $input) { id } }
+      `mutation Edge($docId: String!, $input: Workflow_AddEdgeInput!) {
+        Workflow { addEdge(documentIdOrSlug: $docId, input: $input) { id } }
       }`,
       { docId: id, input: edge },
     );
@@ -228,16 +228,16 @@ export async function createWorkflow(
   // Enabling requires a published snapshot.
   await client.request(
     WORKFLOW_PATH,
-    `mutation Publish($docId: PHID!, $input: Workflow_PublishWorkflowInput!) {
-      Workflow { publishWorkflow(docId: $docId, input: $input) { id } }
+    `mutation Publish($docId: String!, $input: Workflow_PublishWorkflowInput!) {
+      Workflow { publishWorkflow(documentIdOrSlug: $docId, input: $input) { id } }
     }`,
     { docId: id, input: { publishedAt: new Date().toISOString() } },
   );
 
   await client.request(
     WORKFLOW_PATH,
-    `mutation Status($docId: PHID!, $input: Workflow_SetWorkflowStatusInput!) {
-      Workflow { setWorkflowStatus(docId: $docId, input: $input) { id } }
+    `mutation Status($docId: String!, $input: Workflow_SetWorkflowStatusInput!) {
+      Workflow { setWorkflowStatus(documentIdOrSlug: $docId, input: $input) { id } }
     }`,
     { docId: id, input: { status: "ENABLED" } },
   );

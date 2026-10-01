@@ -8,7 +8,7 @@
  * not a core/baseline model), it hits that model's own generated GraphQL
  * subgraph endpoint and:
  *   1. creates an empty document of that type (createEmptyDocument), then
- *   2. queries it back by id (document(identifier:)).
+ *   2. queries it back by id (document(idOrSlug:)).
  *
  * The baseline core model ids arrive via PH_BASELINE_MODEL_IDS (JSON array) so we
  * only exercise the package's own models. The worker prints exactly one
@@ -166,7 +166,7 @@ async function exerciseModel(
 
   const queryRes = await gqlFetch(
     endpoint,
-    `query($id: String!) { ${namespace} { document(identifier: $id) { document { id documentType } childIds } } }`,
+    `query($id: String!) { ${namespace} { document(idOrSlug: $id) { document { id documentType } childIds } } }`,
     { id: docId },
   );
   const fetched = (

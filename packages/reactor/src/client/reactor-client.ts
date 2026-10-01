@@ -232,7 +232,9 @@ export class ReactorClient implements IReactorClient {
     this.eventReads = new EventReadsSource(reactor, documentView, readGate);
     this.actionEvaluation = actionEvaluation;
     this.createSignaturePolicy = createSignaturePolicy;
-    this.drives = new DriveClient(this, logger, reactor, signer);
+    this.drives = new DriveClient(this, logger, reactor, signer, (id, signal) =>
+      this.resolveReference(id, "main", signal),
+    );
     this.logger.verbose("ReactorClient initialized");
   }
 
@@ -849,6 +851,9 @@ export class ReactorClient implements IReactorClient {
   ): Promise<BatchExecutionResult> {
     const documentId = document.header.id;
     const branch = document.header.branch || "main";
+    const parentId = parentIdentifier
+      ? await this.resolveReference(parentIdentifier, "main", signal)
+      : undefined;
 
     const createInput: CreateDocumentActionInput = {
       model: document.header.documentType,
@@ -900,17 +905,17 @@ export class ReactorClient implements IReactorClient {
       },
     ];
 
-    if (parentIdentifier) {
+    if (parentId) {
       const parentActions: Action[] = await signActions(
-        [addRelationshipAction(parentIdentifier, documentId, "child")],
+        [addRelationshipAction(parentId, documentId, "child")],
         this.signer,
-        { documentId: parentIdentifier, branch: "main" },
+        { documentId: parentId, branch: "main" },
         signal,
       );
 
       jobs.push({
         key: "parent",
-        documentId: parentIdentifier,
+        documentId: parentId,
         scope: getSharedActionScope(parentActions),
         branch: "main",
         actions: parentActions,
@@ -1345,9 +1350,19 @@ export class ReactorClient implements IReactorClient {
       metadata,
       branch,
     );
-    const jobInfo = await this.reactor.addRelationship(
+    const sourceId = await this.resolveReference(
       sourceIdentifier,
+      branch,
+      signal,
+    );
+    const targetId = await this.resolveReference(
       targetIdentifier,
+      branch,
+      signal,
+    );
+    const jobInfo = await this.reactor.addRelationship(
+      sourceId,
+      targetId,
       relationshipType,
       metadata,
       branch,
@@ -1362,7 +1377,7 @@ export class ReactorClient implements IReactorClient {
     }
 
     const result = await this.reactor.getByIdOrSlug<PHDocument>(
-      sourceIdentifier,
+      sourceId,
       { branch },
       completedJob.consistencyToken,
       signal,
@@ -1389,12 +1404,22 @@ export class ReactorClient implements IReactorClient {
       metadata,
       branch,
     );
+    const sourceId = await this.resolveReference(
+      sourceIdentifier,
+      branch,
+      signal,
+    );
+    const targetId = await this.resolveReference(
+      targetIdentifier,
+      branch,
+      signal,
+    );
 
     // The write matches the edge in SQL and reports no row count, so an update
     // of an edge that is not there reaches READ_READY having stored nothing.
     const existing = await this.readRelationshipEdge(
-      sourceIdentifier,
-      targetIdentifier,
+      sourceId,
+      targetId,
       relationshipType,
       { branch },
       signal,
@@ -1408,8 +1433,8 @@ export class ReactorClient implements IReactorClient {
     }
 
     const jobInfo = await this.reactor.updateRelationship(
-      sourceIdentifier,
-      targetIdentifier,
+      sourceId,
+      targetId,
       relationshipType,
       metadata,
       branch,
@@ -1424,7 +1449,7 @@ export class ReactorClient implements IReactorClient {
     }
 
     const result = await this.reactor.getByIdOrSlug<PHDocument>(
-      sourceIdentifier,
+      sourceId,
       { branch },
       completedJob.consistencyToken,
       signal,
@@ -1449,9 +1474,19 @@ export class ReactorClient implements IReactorClient {
       relationshipType,
       branch,
     );
-    const jobInfo = await this.reactor.removeRelationship(
+    const sourceId = await this.resolveReference(
       sourceIdentifier,
+      branch,
+      signal,
+    );
+    const targetId = await this.resolveReference(
       targetIdentifier,
+      branch,
+      signal,
+    );
+    const jobInfo = await this.reactor.removeRelationship(
+      sourceId,
+      targetId,
       relationshipType,
       branch,
       this.signer,
@@ -1465,7 +1500,7 @@ export class ReactorClient implements IReactorClient {
     }
 
     const result = await this.reactor.getByIdOrSlug<PHDocument>(
-      sourceIdentifier,
+      sourceId,
       { branch },
       completedJob.consistencyToken,
       signal,
@@ -1495,6 +1530,21 @@ export class ReactorClient implements IReactorClient {
       relationshipType,
       branch,
     );
+    const sourceParentId = await this.resolveReference(
+      sourceParentIdentifier,
+      branch,
+      signal,
+    );
+    const targetParentId = await this.resolveReference(
+      targetParentIdentifier,
+      branch,
+      signal,
+    );
+    const targetId = await this.resolveReference(
+      targetIdentifier,
+      branch,
+      signal,
+    );
 
     // A move is a remove followed by an add, and the add would otherwise write a
     // fresh edge with no metadata. Read the edge first so the move carries it.
@@ -1503,8 +1553,8 @@ export class ReactorClient implements IReactorClient {
     // treating the second as the first rewrites the edge with no metadata for
     // good.
     const edge = await this.readRelationshipEdge(
-      sourceParentIdentifier,
-      targetIdentifier,
+      sourceParentId,
+      targetId,
       relationshipType,
       { branch },
       signal,
@@ -1512,8 +1562,8 @@ export class ReactorClient implements IReactorClient {
     const metadata = edge?.metadata;
 
     const removeJobInfo = await this.reactor.removeRelationship(
-      sourceParentIdentifier,
-      targetIdentifier,
+      sourceParentId,
+      targetId,
       relationshipType,
       branch,
       this.signer,
@@ -1527,8 +1577,8 @@ export class ReactorClient implements IReactorClient {
     }
 
     const addJobInfo = await this.reactor.addRelationship(
-      targetParentIdentifier,
-      targetIdentifier,
+      targetParentId,
+      targetId,
       relationshipType,
       metadata,
       branch,
@@ -1543,14 +1593,14 @@ export class ReactorClient implements IReactorClient {
     }
 
     const sourceResult = await this.reactor.getByIdOrSlug<PHDocument>(
-      sourceParentIdentifier,
+      sourceParentId,
       { branch },
       removeCompletedJob.consistencyToken,
       signal,
     );
 
     const targetResult = await this.reactor.getByIdOrSlug<PHDocument>(
-      targetParentIdentifier,
+      targetParentId,
       { branch },
       addCompletedJob.consistencyToken,
       signal,
@@ -1598,7 +1648,8 @@ export class ReactorClient implements IReactorClient {
       identifier,
       propagate,
     );
-    const toDelete = new Set([identifier]);
+    const rootId = await this.resolveReference(identifier, "main", signal);
+    const toDelete = new Set([rootId]);
 
     if (propagate === PropagationMode.Cascade) {
       let changed = true;
@@ -2221,8 +2272,7 @@ export class ReactorClient implements IReactorClient {
 
   /**
    * The id a write on `identifier` is stored under, which its signatures bind.
-   * A create names its own id, and an id no slug maps to is taken as given, so
-   * a document still in flight resolves to itself.
+   * A create names its own id.
    */
   private async resolveWriteTarget(
     identifier: string,
@@ -2233,7 +2283,19 @@ export class ReactorClient implements IReactorClient {
     if (actions.some((action) => action.type === "CREATE_DOCUMENT")) {
       return identifier;
     }
+    return this.resolveReference(identifier, branch, signal);
+  }
 
+  /**
+   * The id a document reference names. An id no slug maps to is taken as
+   * given, so a document still in flight resolves to itself; an id that is
+   * another document's slug is refused as ambiguous.
+   */
+  private async resolveReference(
+    identifier: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<string> {
     const view = { branch };
     const bySlug = await this.documentView.resolveSlug(
       identifier,

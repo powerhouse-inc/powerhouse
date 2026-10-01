@@ -161,7 +161,7 @@ export async function documentModels(
 export async function document(
   reactorClient: IReactorClient,
   args: {
-    identifier: string;
+    idOrSlug: string;
     view?: {
       branch?: string | null;
       scopes?: readonly string[] | null;
@@ -183,7 +183,7 @@ export async function document(
 
   let result: PHDocument;
   try {
-    result = await reactorClient.get(args.identifier, view);
+    result = await reactorClient.get(args.idOrSlug, view);
   } catch (error) {
     throw new GraphQLError(
       `Failed to fetch document: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -193,7 +193,7 @@ export async function document(
   let children: PagedResults<PHDocument>;
   try {
     children = await reactorClient.getOutgoingRelationships(
-      args.identifier,
+      args.idOrSlug,
       "child",
       view,
     );
@@ -218,7 +218,7 @@ export async function document(
 export async function documentOutgoingRelationships(
   reactorClient: IReactorClient,
   args: {
-    sourceIdentifier: string;
+    sourceIdOrSlug: string;
     relationshipType: string;
     view?: {
       branch?: string | null;
@@ -255,7 +255,7 @@ export async function documentOutgoingRelationships(
   let result: PagedResults<PHDocument>;
   try {
     result = await reactorClient.getOutgoingRelationships(
-      args.sourceIdentifier,
+      args.sourceIdOrSlug,
       args.relationshipType,
       view,
       paging,
@@ -278,7 +278,7 @@ export async function documentOutgoingRelationships(
 export async function documentIncomingRelationships(
   reactorClient: IReactorClient,
   args: {
-    targetIdentifier: string;
+    targetIdOrSlug: string;
     relationshipType: string;
     view?: {
       branch?: string | null;
@@ -315,7 +315,7 @@ export async function documentIncomingRelationships(
   let result: PagedResults<PHDocument>;
   try {
     result = await reactorClient.getIncomingRelationships(
-      args.targetIdentifier,
+      args.targetIdOrSlug,
       args.relationshipType,
       view,
       paging,
@@ -338,7 +338,7 @@ export async function documentIncomingRelationships(
 export async function documentOutgoingRelationshipEdges(
   reactorClient: IReactorClient,
   args: {
-    sourceIdentifier: string;
+    sourceIdOrSlug: string;
     relationshipType?: string | null;
     view?: {
       branch?: string | null;
@@ -357,7 +357,7 @@ export async function documentOutgoingRelationshipEdges(
   let result: PagedResults<DocumentRelationship>;
   try {
     result = await reactorClient.getOutgoingRelationshipEdges(
-      args.sourceIdentifier,
+      args.sourceIdOrSlug,
       fromInputMaybe(args.relationshipType),
       view,
       paging,
@@ -380,7 +380,7 @@ export async function documentOutgoingRelationshipEdges(
 export async function documentIncomingRelationshipEdges(
   reactorClient: IReactorClient,
   args: {
-    targetIdentifier: string;
+    targetIdOrSlug: string;
     relationshipType?: string | null;
     view?: {
       branch?: string | null;
@@ -399,7 +399,7 @@ export async function documentIncomingRelationshipEdges(
   let result: PagedResults<DocumentRelationship>;
   try {
     result = await reactorClient.getIncomingRelationshipEdges(
-      args.targetIdentifier,
+      args.targetIdOrSlug,
       fromInputMaybe(args.relationshipType),
       view,
       paging,
@@ -574,7 +574,7 @@ export async function documentOperations(
   reactorClient: IReactorClient,
   args: {
     filter: {
-      documentId: string;
+      documentIdOrSlug: string;
       branch?: string | null;
       scopes?: readonly string[] | null;
       actionTypes?: readonly string[] | null;
@@ -632,7 +632,7 @@ export async function documentOperations(
   let result: PagedResults<Operation>;
   try {
     result = await reactorClient.getOperations(
-      args.filter.documentId,
+      args.filter.documentIdOrSlug,
       view,
       operationFilter,
       paging,
@@ -668,7 +668,7 @@ export async function documentOperations(
 export async function evaluateActions(
   reactorClient: IReactorClient,
   args: {
-    documentIdentifier: string;
+    documentIdOrSlug: string;
     branch?: string | null;
     candidates: ReadonlyArray<{
       scope: string;
@@ -688,7 +688,7 @@ export async function evaluateActions(
   let result: ActionEvaluations;
   try {
     result = await reactorClient.evaluateActions(
-      args.documentIdentifier,
+      args.documentIdOrSlug,
       branch,
       candidates,
       subject,
@@ -715,7 +715,7 @@ export async function createDocument(
   reactorClient: IReactorClient,
   args: {
     document: unknown;
-    parentIdentifier?: string | null;
+    parentIdOrSlug?: string | null;
   },
   reactorDriveClient?: IDriveClient,
   subject?: AuthSubject,
@@ -732,13 +732,13 @@ export async function createDocument(
     throw new GraphQLError("Invalid document: missing or invalid header");
   }
 
-  const parentIdentifier = fromInputMaybe(args.parentIdentifier);
+  const parentIdOrSlug = fromInputMaybe(args.parentIdOrSlug);
 
   let result: PHDocument;
   try {
-    if (parentIdentifier) {
+    if (parentIdOrSlug) {
       const parent = await reactorClient.get(
-        parentIdentifier,
+        parentIdOrSlug,
         subject && { subject },
       );
       if (isDriveContainerType(parent.header.documentType)) {
@@ -747,9 +747,9 @@ export async function createDocument(
           parent.header.documentType,
           reactorDriveClient,
         );
-        result = await driveClient.addFile(parentIdentifier, document);
+        result = await driveClient.addFile(parent.header.id, document);
       } else {
-        result = await reactorClient.create(document, parentIdentifier);
+        result = await reactorClient.create(document, parentIdOrSlug);
       }
     } else {
       result = await reactorClient.create(document);
@@ -775,20 +775,20 @@ export async function createEmptyDocument(
   reactorClient: IReactorClient,
   args: {
     documentType: string;
-    parentIdentifier?: string | null;
+    parentIdOrSlug?: string | null;
     name?: string | null;
   },
   reactorDriveClient?: IDriveClient,
   subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
-  const parentIdentifier = fromInputMaybe(args.parentIdentifier);
+  const parentIdOrSlug = fromInputMaybe(args.parentIdOrSlug);
   const name = fromInputMaybe(args.name);
 
   let result: PHDocument;
   try {
-    if (parentIdentifier) {
+    if (parentIdOrSlug) {
       const parent = await reactorClient.get(
-        parentIdentifier,
+        parentIdOrSlug,
         subject && { subject },
       );
       if (isDriveContainerType(parent.header.documentType)) {
@@ -807,10 +807,10 @@ export async function createEmptyDocument(
           parent.header.documentType,
           reactorDriveClient,
         );
-        result = await driveClient.addFile(parentIdentifier, document);
+        result = await driveClient.addFile(parent.header.id, document);
       } else {
         result = await reactorClient.createEmpty(args.documentType, {
-          parentIdentifier,
+          parentIdentifier: parentIdOrSlug,
         });
       }
     } else {
@@ -837,7 +837,7 @@ export async function createDocumentWithInitialState(
   reactorClient: IReactorClient,
   args: {
     documentType: string;
-    parentIdentifier?: string | null;
+    parentIdOrSlug?: string | null;
     name?: string | null;
     slug?: string | null;
     preferredEditor?: string | null;
@@ -846,7 +846,7 @@ export async function createDocumentWithInitialState(
   reactorDriveClient?: IDriveClient,
   subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
-  const parentIdentifier = fromInputMaybe(args.parentIdentifier);
+  const parentIdOrSlug = fromInputMaybe(args.parentIdOrSlug);
   const name = fromInputMaybe(args.name);
   const slug = fromInputMaybe(args.slug);
   const preferredEditor = fromInputMaybe(args.preferredEditor);
@@ -888,13 +888,10 @@ export async function createDocumentWithInitialState(
   }
 
   let result: PHDocument;
-  if (parentIdentifier) {
+  if (parentIdOrSlug) {
     let parent: PHDocument;
     try {
-      parent = await reactorClient.get(
-        parentIdentifier,
-        subject && { subject },
-      );
+      parent = await reactorClient.get(parentIdOrSlug, subject && { subject });
     } catch (error) {
       throw new GraphQLError(
         `Parent document not found: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -908,7 +905,7 @@ export async function createDocumentWithInitialState(
         reactorDriveClient,
       );
       try {
-        result = await driveClient.addFile(parentIdentifier, document);
+        result = await driveClient.addFile(parent.header.id, document);
       } catch (error) {
         throw new GraphQLError(
           `Failed to create document in drive: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -916,7 +913,7 @@ export async function createDocumentWithInitialState(
       }
     } else {
       try {
-        result = await reactorClient.create(document, parentIdentifier);
+        result = await reactorClient.create(document, parentIdOrSlug);
       } catch (error) {
         throw new GraphQLError(
           `Failed to create document with parent: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -958,7 +955,7 @@ const DEFAULT_BRANCH = "main";
 export async function execute(
   reactorClient: IReactorClient,
   args: {
-    documentIdentifier: string;
+    documentIdOrSlug: string;
     actions: readonly ActionInput[];
     branch?: string | null;
   },
@@ -970,7 +967,7 @@ export async function execute(
   let result: PHDocument;
   try {
     result = await reactorClient.execute(
-      args.documentIdentifier,
+      args.documentIdOrSlug,
       branch,
       actions,
       undefined,
@@ -1001,7 +998,7 @@ export async function execute(
 export async function executeAsync(
   reactorClient: IReactorClient,
   args: {
-    documentIdentifier: string;
+    documentIdOrSlug: string;
     actions: readonly ActionInput[];
     branch?: string | null;
   },
@@ -1012,7 +1009,7 @@ export async function executeAsync(
   let job: JobInfo;
   try {
     job = await reactorClient.executeAsync(
-      args.documentIdentifier,
+      args.documentIdOrSlug,
       branch,
       actions,
     );
@@ -1123,7 +1120,7 @@ export async function mutateDocumentAsync(
 export async function renameDocument(
   reactorClient: IReactorClient,
   args: {
-    documentIdentifier: string;
+    documentIdOrSlug: string;
     name: string;
     branch?: string | null;
   },
@@ -1135,7 +1132,7 @@ export async function renameDocument(
   let result: PHDocument;
   try {
     result = await reactorClient.rename(
-      args.documentIdentifier,
+      args.documentIdOrSlug,
       args.name,
       branch,
       signal,
@@ -1160,7 +1157,7 @@ export async function renameDocument(
 export async function setPreferredEditor(
   reactorClient: IReactorClient,
   args: {
-    documentIdentifier: string;
+    documentIdOrSlug: string;
     preferredEditor?: string | null;
     branch?: string | null;
   },
@@ -1173,7 +1170,7 @@ export async function setPreferredEditor(
   let result: PHDocument;
   try {
     result = await reactorClient.setPreferredEditor(
-      args.documentIdentifier,
+      args.documentIdOrSlug,
       preferredEditor,
       branch,
       signal,
@@ -1198,8 +1195,8 @@ export async function setPreferredEditor(
 export async function addRelationship(
   reactorClient: IReactorClient,
   args: {
-    sourceIdentifier: string;
-    targetIdentifier: string;
+    sourceIdOrSlug: string;
+    targetIdOrSlug: string;
     relationshipType: string;
     metadata?: Record<string, unknown> | null;
     branch?: string | null;
@@ -1212,8 +1209,8 @@ export async function addRelationship(
   let result: PHDocument;
   try {
     result = await reactorClient.addRelationship(
-      args.sourceIdentifier,
-      args.targetIdentifier,
+      args.sourceIdOrSlug,
+      args.targetIdOrSlug,
       args.relationshipType,
       metadata,
       branch,
@@ -1238,8 +1235,8 @@ export async function addRelationship(
 export async function updateRelationship(
   reactorClient: IReactorClient,
   args: {
-    sourceIdentifier: string;
-    targetIdentifier: string;
+    sourceIdOrSlug: string;
+    targetIdOrSlug: string;
     relationshipType: string;
     metadata?: Record<string, unknown> | null;
     branch?: string | null;
@@ -1253,8 +1250,8 @@ export async function updateRelationship(
   let result: PHDocument;
   try {
     result = await reactorClient.updateRelationship(
-      args.sourceIdentifier,
-      args.targetIdentifier,
+      args.sourceIdOrSlug,
+      args.targetIdOrSlug,
       args.relationshipType,
       metadata,
       branch,
@@ -1279,8 +1276,8 @@ export async function updateRelationship(
 export async function removeRelationship(
   reactorClient: IReactorClient,
   args: {
-    sourceIdentifier: string;
-    targetIdentifier: string;
+    sourceIdOrSlug: string;
+    targetIdOrSlug: string;
     relationshipType: string;
     branch?: string | null;
   },
@@ -1291,8 +1288,8 @@ export async function removeRelationship(
   let result: PHDocument;
   try {
     result = await reactorClient.removeRelationship(
-      args.sourceIdentifier,
-      args.targetIdentifier,
+      args.sourceIdOrSlug,
+      args.targetIdOrSlug,
       args.relationshipType,
       branch,
     );
@@ -1316,9 +1313,9 @@ export async function removeRelationship(
 export async function moveRelationship(
   reactorClient: IReactorClient,
   args: {
-    sourceParentIdentifier: string;
-    targetParentIdentifier: string;
-    targetIdentifier: string;
+    sourceParentIdOrSlug: string;
+    targetParentIdOrSlug: string;
+    targetIdOrSlug: string;
     relationshipType: string;
     branch?: string | null;
   },
@@ -1332,9 +1329,9 @@ export async function moveRelationship(
   let result: { source: PHDocument; target: PHDocument };
   try {
     result = await reactorClient.moveRelationship(
-      args.sourceParentIdentifier,
-      args.targetParentIdentifier,
-      args.targetIdentifier,
+      args.sourceParentIdOrSlug,
+      args.targetParentIdOrSlug,
+      args.targetIdOrSlug,
       args.relationshipType,
       branch,
     );
@@ -1364,7 +1361,7 @@ export async function moveRelationship(
 export async function deleteDocument(
   reactorClient: IReactorClient,
   args: {
-    identifier: string;
+    idOrSlug: string;
     propagate?: GqlPropagationMode | null;
   },
   reactorDriveClient?: IDriveClient,
@@ -1373,7 +1370,7 @@ export async function deleteDocument(
 
   try {
     const incoming = await reactorClient.getIncomingRelationships(
-      args.identifier,
+      args.idOrSlug,
       "child",
     );
     const driveParent = incoming.results.find((p) =>
@@ -1385,9 +1382,10 @@ export async function deleteDocument(
         driveParent.header.documentType,
         reactorDriveClient,
       );
-      await driveClient.removeNode(driveParent.header.id, args.identifier);
+      const documentId = await reactorClient.resolveIdOrSlug(args.idOrSlug);
+      await driveClient.removeNode(driveParent.header.id, documentId);
     } else {
-      await reactorClient.deleteDocument(args.identifier, propagate);
+      await reactorClient.deleteDocument(args.idOrSlug, propagate);
     }
     return true;
   } catch (error) {
@@ -1400,15 +1398,15 @@ export async function deleteDocument(
 export async function deleteDocuments(
   reactorClient: IReactorClient,
   args: {
-    identifiers: readonly string[];
+    idsOrSlugs: readonly string[];
     propagate?: GqlPropagationMode | null;
   },
 ): Promise<boolean> {
   const propagate = toReactorPropagationMode(args.propagate);
-  const identifiers = [...args.identifiers];
+  const idsOrSlugs = [...args.idsOrSlugs];
 
   try {
-    await reactorClient.deleteDocuments(identifiers, propagate);
+    await reactorClient.deleteDocuments(idsOrSlugs, propagate);
     return true;
   } catch (error) {
     throw new GraphQLError(

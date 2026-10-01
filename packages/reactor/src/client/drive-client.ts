@@ -72,6 +72,10 @@ export class DriveClient implements IDriveClient {
     private readonly logger: ILogger,
     private readonly reactor: IReactor,
     private readonly signer: ISigner,
+    private readonly resolveReference: (
+      identifier: string,
+      signal?: AbortSignal,
+    ) => Promise<string>,
   ) {}
 
   async create(
@@ -125,6 +129,7 @@ export class DriveClient implements IDriveClient {
     );
 
     const documentId = document.header.id;
+    const driveId = await this.resolveReference(driveIdentifier, signal);
 
     const createInput: CreateDocumentActionInput = {
       model: document.header.documentType,
@@ -160,7 +165,7 @@ export class DriveClient implements IDriveClient {
           ),
           initialState: document.state,
         }),
-        addRelationshipAction(driveIdentifier, documentId, "child"),
+        addRelationshipAction(driveId, documentId, "child"),
       ],
       this.signer,
       { documentId, branch: "main" },
@@ -177,7 +182,7 @@ export class DriveClient implements IDriveClient {
         }),
       ],
       this.signer,
-      { documentId: driveIdentifier, branch: "main" },
+      { documentId: driveId, branch: "main" },
       signal,
     );
 
@@ -204,7 +209,7 @@ export class DriveClient implements IDriveClient {
       [
         {
           key: "drive",
-          documentId: driveIdentifier,
+          documentId: driveId,
           scope: getSharedActionScope(driveActions),
           branch: "main",
           actions: driveActions,
@@ -251,16 +256,18 @@ export class DriveClient implements IDriveClient {
 
   async removeNode(
     driveIdentifier: string,
-    nodeId: string,
+    nodeIdentifier: string,
     signal?: AbortSignal,
   ): Promise<void> {
     this.logger.verbose(
-      "drives.removeNode(@driveIdentifier, @nodeId)",
+      "drives.removeNode(@driveIdentifier, @nodeIdentifier)",
       driveIdentifier,
-      nodeId,
+      nodeIdentifier,
     );
+    const driveId = await this.resolveReference(driveIdentifier, signal);
+    const nodeId = await this.resolveReference(nodeIdentifier, signal);
     const drive = await this.client.get<DocumentDriveDocument>(
-      driveIdentifier,
+      driveId,
       undefined,
       signal,
     );
@@ -274,7 +281,7 @@ export class DriveClient implements IDriveClient {
       if (!exists) {
         throw new Error(`Node ${nodeId} not found in drive ${driveIdentifier}`);
       }
-      await this.removeFileNode(driveIdentifier, nodeId, signal);
+      await this.removeFileNode(driveId, nodeId, signal);
       return;
     }
 
@@ -284,10 +291,10 @@ export class DriveClient implements IDriveClient {
         drive.state.global.nodes,
       ).filter(isFileNode);
       for (const file of fileDescendants) {
-        await this.removeFileNode(driveIdentifier, file.id, signal);
+        await this.removeFileNode(driveId, file.id, signal);
       }
       await this.client.execute(
-        driveIdentifier,
+        driveId,
         "main",
         [deleteNodeAction({ id: nodeId })],
         signal,
@@ -295,7 +302,7 @@ export class DriveClient implements IDriveClient {
       return;
     }
 
-    await this.removeFileNode(driveIdentifier, nodeId, signal);
+    await this.removeFileNode(driveId, nodeId, signal);
   }
 
   async renameNode(

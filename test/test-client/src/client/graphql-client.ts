@@ -66,18 +66,18 @@ export class GraphQLClient {
 
   async createEmptyDocument(
     documentType: string,
-    parentIdentifier?: string,
+    parentIdOrSlug?: string,
   ): Promise<PhDocument> {
     const data = await this.request<{
       createEmptyDocument: PhDocument;
     }>(CREATE_EMPTY_DOCUMENT_MUTATION, {
       documentType,
-      parentIdentifier,
+      parentIdOrSlug,
     });
 
     console.log(`${data.createEmptyDocument.id} -> CREATE_DOCUMENT`);
     console.log(`${data.createEmptyDocument.id} -> UPGRADE_DOCUMENT`);
-    if (parentIdentifier) {
+    if (parentIdOrSlug) {
       console.log(`${data.createEmptyDocument.id} -> ADD_RELATIONSHIP`);
     }
 
@@ -85,17 +85,17 @@ export class GraphQLClient {
   }
 
   async mutateDocument(
-    documentIdentifier: string,
+    documentIdOrSlug: string,
     actions: Action[],
   ): Promise<PhDocument> {
     for (const action of actions) {
-      console.log(`${documentIdentifier} -> ${action.type}`);
+      console.log(`${documentIdOrSlug} -> ${action.type}`);
     }
 
     const data = await this.request<{
       mutateDocument: PhDocument;
     }>(MUTATE_DOCUMENT_MUTATION, {
-      documentIdentifier,
+      documentIdOrSlug,
       actions,
     });
 

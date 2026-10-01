@@ -284,48 +284,59 @@ export type MutationAddRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   metadata?: InputMaybe<Scalars["JSONObject"]["input"]>;
   relationshipType: Scalars["String"]["input"];
-  sourceIdentifier: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationCreateDocumentArgs = {
   document: Scalars["JSONObject"]["input"];
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   parentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationCreateEmptyDocumentArgs = {
   documentType: Scalars["String"]["input"];
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   parentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationDeleteDocumentArgs = {
-  identifier: Scalars["String"]["input"];
+  idOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  identifier?: InputMaybe<Scalars["String"]["input"]>;
   propagate?: InputMaybe<PropagationMode>;
 };
 
 export type MutationDeleteDocumentsArgs = {
-  identifiers: ReadonlyArray<Scalars["String"]["input"]>;
+  identifiers?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
+  idsOrSlugs?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   propagate?: InputMaybe<PropagationMode>;
 };
 
 export type MutationExecuteArgs = {
   actions: ReadonlyArray<ActionInput>;
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationExecuteAsyncArgs = {
   actions: ReadonlyArray<ActionInput>;
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationMoveRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   relationshipType: Scalars["String"]["input"];
-  sourceParentIdentifier: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
-  targetParentIdentifier: Scalars["String"]["input"];
+  sourceParentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceParentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  targetParentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetParentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationMutateDocumentArgs = {
@@ -342,24 +353,29 @@ export type MutationMutateDocumentAsyncArgs = {
 
 export type MutationPushSyncEnvelopesArgs = {
   envelopes: ReadonlyArray<SyncEnvelopeInput>;
+  peerManifestRevision?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationRemoveRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   relationshipType: Scalars["String"]["input"];
-  sourceIdentifier: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationRenameDocumentArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   name: Scalars["String"]["input"];
 };
 
 export type MutationSetPreferredEditorArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   preferredEditor?: InputMaybe<Scalars["String"]["input"]>;
 };
 
@@ -371,8 +387,10 @@ export type MutationUpdateRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   metadata?: InputMaybe<Scalars["JSONObject"]["input"]>;
   relationshipType: Scalars["String"]["input"];
-  sourceIdentifier: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type OperationContext = {
@@ -415,7 +433,9 @@ export type OperationWithContextInput = {
 export type OperationsFilterInput = {
   readonly actionTypes?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   readonly branch?: InputMaybe<Scalars["String"]["input"]>;
-  readonly documentId: Scalars["String"]["input"];
+  /** @deprecated Use documentIdOrSlug. */
+  readonly documentId?: InputMaybe<Scalars["String"]["input"]>;
+  readonly documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   readonly scopes?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   readonly sinceRevision?: InputMaybe<Scalars["Int"]["input"]>;
   readonly timestampFrom?: InputMaybe<Scalars["String"]["input"]>;
@@ -453,11 +473,32 @@ export type PagingInput = {
   readonly offset?: InputMaybe<Scalars["Int"]["input"]>;
 };
 
+export type PeerAgreement = {
+  readonly collectionId: Scalars["String"]["output"];
+  readonly limitedBy: ReadonlyArray<PeerAgreementLimit>;
+  readonly local: Scalars["JSONObject"]["output"];
+  readonly members: ReadonlyArray<PeerAgreementMember>;
+};
+
+export type PeerAgreementLimit = {
+  readonly protocol: Scalars["String"]["output"];
+  readonly remoteNames: ReadonlyArray<Scalars["String"]["output"]>;
+};
+
+export type PeerAgreementMember = {
+  readonly announced: Scalars["Boolean"]["output"];
+  readonly features: Scalars["JSONObject"]["output"];
+  readonly protocols: Scalars["JSONObject"]["output"];
+  readonly remoteName: Scalars["String"]["output"];
+};
+
 export type PollSyncEnvelopesResult = {
   readonly ackOrdinal: Scalars["Int"]["output"];
   readonly deadLetters: ReadonlyArray<DeadLetterInfo>;
   readonly envelopes: ReadonlyArray<SyncEnvelope>;
   readonly hasMore: Scalars["Boolean"]["output"];
+  readonly manifestRevision?: Maybe<Scalars["String"]["output"]>;
+  readonly peerManifestRevision?: Maybe<Scalars["String"]["output"]>;
 };
 
 export enum PropagationMode {
@@ -503,6 +544,7 @@ export type Query = {
   readonly evaluateActions: ActionEvaluations;
   readonly findDocuments: PhDocumentResultPage;
   readonly jobStatus?: Maybe<JobInfo>;
+  readonly peerAgreement: PeerAgreement;
   /**
    * Polls for sync envelopes from a channel.
    *
@@ -515,24 +557,28 @@ export type Query = {
    * would stop receiving those too.
    */
   readonly pollSyncEnvelopes: PollSyncEnvelopesResult;
+  readonly syncHolds: ReadonlyArray<SyncHold>;
 };
 
 export type QueryDocumentArgs = {
-  identifier: Scalars["String"]["input"];
+  idOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  identifier?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
 export type QueryDocumentIncomingRelationshipEdgesArgs = {
   paging?: InputMaybe<PagingInput>;
   relationshipType?: InputMaybe<Scalars["String"]["input"]>;
-  targetIdentifier: Scalars["String"]["input"];
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
 export type QueryDocumentIncomingRelationshipsArgs = {
   paging?: InputMaybe<PagingInput>;
   relationshipType: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
@@ -549,21 +595,24 @@ export type QueryDocumentOperationsArgs = {
 export type QueryDocumentOutgoingRelationshipEdgesArgs = {
   paging?: InputMaybe<PagingInput>;
   relationshipType?: InputMaybe<Scalars["String"]["input"]>;
-  sourceIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
 export type QueryDocumentOutgoingRelationshipsArgs = {
   paging?: InputMaybe<PagingInput>;
   relationshipType: Scalars["String"]["input"];
-  sourceIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
 export type QueryEvaluateActionsArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   candidates: ReadonlyArray<ActionCandidateInput>;
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type QueryFindDocumentsArgs = {
@@ -576,10 +625,21 @@ export type QueryJobStatusArgs = {
   jobId: Scalars["String"]["input"];
 };
 
+export type QueryPeerAgreementArgs = {
+  collectionId: Scalars["String"]["input"];
+};
+
 export type QueryPollSyncEnvelopesArgs = {
   channelId: Scalars["String"]["input"];
+  manifestRevision?: InputMaybe<Scalars["String"]["input"]>;
   outboxAck: Scalars["Int"]["input"];
   outboxLatest: Scalars["Int"]["input"];
+  refusals?: InputMaybe<ReadonlyArray<SyncRefusalInput>>;
+};
+
+export type QuerySyncHoldsArgs = {
+  documentId?: InputMaybe<Scalars["String"]["input"]>;
+  remoteName?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type ReactorOperation = {
@@ -658,6 +718,7 @@ export type Revision = {
 };
 
 export type SearchFilterInput = {
+  /** @deprecated Ignored. Filter by type or parentId. */
   readonly identifiers?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   readonly parentId?: InputMaybe<Scalars["String"]["input"]>;
   readonly type?: InputMaybe<Scalars["String"]["input"]>;
@@ -700,16 +761,38 @@ export enum SyncEnvelopeType {
   Operations = "OPERATIONS",
 }
 
+export type SyncHold = {
+  readonly branch: Scalars["String"]["output"];
+  readonly documentId: Scalars["String"]["output"];
+  readonly heldAtUtcMs: Scalars["String"]["output"];
+  readonly reason: SyncHoldReason;
+  readonly remoteName: Scalars["String"]["output"];
+};
+
+export type SyncHoldReason = {
+  readonly peerSupports: ReadonlyArray<Scalars["Int"]["output"]>;
+  readonly protocol: Scalars["String"]["output"];
+  readonly version: Scalars["Int"]["output"];
+};
+
+export type SyncRefusalInput = {
+  readonly branch: Scalars["String"]["input"];
+  readonly documentId: Scalars["String"]["input"];
+  readonly kind?: InputMaybe<Scalars["String"]["input"]>;
+};
+
 export type TouchChannelInput = {
   readonly collectionId: Scalars["String"]["input"];
   readonly filter: RemoteFilterInput;
   readonly id: Scalars["String"]["input"];
+  readonly manifest?: InputMaybe<Scalars["JSONObject"]["input"]>;
   readonly name: Scalars["String"]["input"];
   readonly sinceTimestampUtcMs: Scalars["String"]["input"];
 };
 
 export type TouchChannelResult = {
   readonly ackOrdinal: Scalars["Int"]["output"];
+  readonly manifest?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly success: Scalars["Boolean"]["output"];
 };
 
@@ -1382,12 +1465,16 @@ export type PollSyncEnvelopesQueryVariables = Exact<{
   channelId: Scalars["String"]["input"];
   outboxAck: Scalars["Int"]["input"];
   outboxLatest: Scalars["Int"]["input"];
+  manifestRevision?: InputMaybe<Scalars["String"]["input"]>;
+  refusals?: InputMaybe<ReadonlyArray<SyncRefusalInput>>;
 }>;
 
 export type PollSyncEnvelopesQuery = {
   readonly pollSyncEnvelopes: {
     readonly ackOrdinal: number;
     readonly hasMore: boolean;
+    readonly manifestRevision?: string | null | undefined;
+    readonly peerManifestRevision?: string | null | undefined;
     readonly envelopes: ReadonlyArray<{
       readonly type: SyncEnvelopeType;
       readonly key?: string | null | undefined;
@@ -1468,11 +1555,13 @@ export type TouchChannelMutation = {
   readonly touchChannel: {
     readonly success: boolean;
     readonly ackOrdinal: number;
+    readonly manifest?: NonNullable<unknown> | null | undefined;
   };
 };
 
 export type PushSyncEnvelopesMutationVariables = Exact<{
   envelopes: ReadonlyArray<SyncEnvelopeInput>;
+  peerManifestRevision?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type PushSyncEnvelopesMutation = { readonly pushSyncEnvelopes: boolean };
@@ -1984,11 +2073,15 @@ export const PollSyncEnvelopesDocument = gql`
     $channelId: String!
     $outboxAck: Int!
     $outboxLatest: Int!
+    $manifestRevision: String
+    $refusals: [SyncRefusalInput!]
   ) {
     pollSyncEnvelopes(
       channelId: $channelId
       outboxAck: $outboxAck
       outboxLatest: $outboxLatest
+      manifestRevision: $manifestRevision
+      refusals: $refusals
     ) {
       envelopes {
         type
@@ -2048,6 +2141,8 @@ export const PollSyncEnvelopesDocument = gql`
         errorType
       }
       hasMore
+      manifestRevision
+      peerManifestRevision
     }
   }
 `;
@@ -2056,12 +2151,19 @@ export const TouchChannelDocument = gql`
     touchChannel(input: $input) {
       success
       ackOrdinal
+      manifest
     }
   }
 `;
 export const PushSyncEnvelopesDocument = gql`
-  mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!) {
-    pushSyncEnvelopes(envelopes: $envelopes)
+  mutation PushSyncEnvelopes(
+    $envelopes: [SyncEnvelopeInput!]!
+    $peerManifestRevision: String
+  ) {
+    pushSyncEnvelopes(
+      envelopes: $envelopes
+      peerManifestRevision: $peerManifestRevision
+    )
   }
 `;
 

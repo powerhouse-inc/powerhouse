@@ -54,10 +54,16 @@ type DocumentProtectionInfo {
 
 type Query {
   # Get permissions for a document (requires ADMIN permission or global admin)
-  documentAccess(documentId: String!): DocumentAccessInfo!
+  documentAccess(
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+  ): DocumentAccessInfo!
 
   # Get protection status for a document (requires ADMIN permission or global admin)
-  documentProtection(documentId: String!): DocumentProtectionInfo!
+  documentProtection(
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+  ): DocumentProtectionInfo!
 
   # Get all documents the current user has explicit access to
   userDocumentPermissions: [DocumentPermissionEntry!]!
@@ -65,49 +71,63 @@ type Query {
   # Get operation permissions for a document and operation type
   # (requires ADMIN permission or global admin)
   operationPermissions(
-    documentId: String!
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
     operationType: String!
   ): OperationPermissionsInfo!
 
   # Check if the current user can execute a specific operation on a document
-  canExecuteOperation(documentId: String!, operationType: String!): Boolean!
+  canExecuteOperation(
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+    operationType: String!
+  ): Boolean!
 }
 
 type Mutation {
   # Set document protection status (requires ADMIN permission or global admin)
   setDocumentProtection(
-    documentId: String!
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
     protected: Boolean!
   ): DocumentProtectionInfo!
 
   # Transfer document ownership (requires ADMIN permission or global admin)
   transferDocumentOwnership(
-    documentId: String!
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
     newOwnerAddress: String!
   ): DocumentProtectionInfo!
 
   # Grant a user permission on a document (requires ADMIN permission or global admin)
   grantDocumentPermission(
-    documentId: String!
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
     userAddress: String!
     permission: DocumentPermissionLevel!
   ): DocumentPermissionEntry!
 
   # Revoke a user's permission on a document (requires ADMIN permission or global admin)
-  revokeDocumentPermission(documentId: String!, userAddress: String!): Boolean!
+  revokeDocumentPermission(
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+    userAddress: String!
+  ): Boolean!
 
   # --- Operation Permissions ---
 
   # Grant a user permission to execute an operation on a document
   grantOperationPermission(
-    documentId: String!
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
     operationType: String!
     userAddress: String!
   ): OperationUserPermission!
 
   # Revoke a user's permission to execute an operation
   revokeOperationPermission(
-    documentId: String!
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
     operationType: String!
     userAddress: String!
   ): Boolean!

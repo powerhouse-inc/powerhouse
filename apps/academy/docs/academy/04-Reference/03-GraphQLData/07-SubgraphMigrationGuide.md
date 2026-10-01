@@ -28,14 +28,14 @@ In v6, every operation can be done through the **reactor subgraph** (`/graphql/r
 
 Document-model subgraphs are auto-generated for each registered document model and provide:
 
-- `document(identifier)` — get a single document
+- `document(idOrSlug)` — get a single document
 - `documents(paging)` — list all documents of this type
 - `findDocuments(search, view, paging)` — search within this type
-- `documentOutgoingRelationships(sourceIdentifier, relationshipType)` — filtered to this type
-- `documentIncomingRelationships(targetIdentifier, relationshipType)`
-- `createDocument(name, parentIdentifier)` mutation
-- Per-operation mutations (e.g. `addTodoItem(docId, input)`)
-- Async variants of each mutation (e.g. `addTodoItemAsync(docId, input)`)
+- `documentOutgoingRelationships(sourceIdOrSlug, relationshipType)` — filtered to this type
+- `documentIncomingRelationships(targetIdOrSlug, relationshipType)`
+- `createDocument(name, parentIdOrSlug)` mutation
+- Per-operation mutations (e.g. `addTodoItem(documentIdOrSlug, input)`)
+- Async variants of each mutation (e.g. `addTodoItemAsync(documentIdOrSlug, input)`)
 
 ### Getting a drive and its contents
 
@@ -67,7 +67,7 @@ query {
 ```graphql
 # v6 — /graphql/r
 query {
-  document(identifier: "my-drive-slug") {
+  document(idOrSlug: "my-drive-slug") {
     document {
       id
       name
@@ -85,7 +85,7 @@ query {
 # v6 — /graphql/document-drive (or via supergraph)
 query {
   DocumentDrive {
-    document(identifier: "my-drive-slug") {
+    document(idOrSlug: "my-drive-slug") {
       document {
         id
         name
@@ -110,7 +110,7 @@ query {
 # v6 — /graphql/r
 query {
   documentOutgoingRelationships(
-    sourceIdentifier: "my-drive-slug"
+    sourceIdOrSlug: "my-drive-slug"
     relationshipType: "child"
   ) {
     items {
@@ -131,7 +131,7 @@ query {
 query {
   ToDoList {
     documentOutgoingRelationships(
-      sourceIdentifier: "my-drive-slug"
+      sourceIdOrSlug: "my-drive-slug"
       relationshipType: "child"
     ) {
       items {
@@ -222,7 +222,7 @@ query {
 ```graphql
 # v6 — /graphql/r
 query {
-  document(identifier: "abc123") {
+  document(idOrSlug: "abc123") {
     document {
       id
       name
@@ -240,7 +240,7 @@ query {
 # v6 — /graphql/to-do-list (or via supergraph)
 query {
   ToDoList {
-    document(identifier: "abc123") {
+    document(idOrSlug: "abc123") {
       document {
         id
         name
@@ -312,7 +312,7 @@ In the legacy system, documents were created indirectly through drive operations
 mutation {
   createDocument(
     document: { documentType: "powerhouse/todo-list", name: "My List" }
-    parentIdentifier: "my-drive-slug"
+    parentIdOrSlug: "my-drive-slug"
   ) {
     id
     name
@@ -326,7 +326,7 @@ mutation {
 # v6 — /graphql/to-do-list (or via supergraph)
 mutation {
   ToDoList {
-    createDocument(name: "My List", parentIdentifier: "my-drive-slug") {
+    createDocument(name: "My List", parentIdOrSlug: "my-drive-slug") {
       id
       name
     }
@@ -343,8 +343,8 @@ In the legacy system, document operations were applied through strand-based push
 ```graphql
 # v6 — /graphql/r
 mutation {
-  mutateDocument(
-    documentIdentifier: "abc123"
+  execute(
+    documentIdOrSlug: "abc123"
     actions: [
       {
         type: "ADD_TODO_ITEM"
@@ -368,7 +368,7 @@ mutation {
 # v6 — /graphql/to-do-list (or via supergraph)
 mutation {
   ToDoList {
-    addTodoItem(docId: "abc123", input: { text: "Buy milk" }) {
+    addTodoItem(documentIdOrSlug: "abc123", input: { text: "Buy milk" }) {
       id
       state {
         global {
@@ -490,9 +490,9 @@ subscription {
 
 | Legacy query/mutation           | v6 equivalent                                                                  | Subgraph               |
 | ------------------------------- | ------------------------------------------------------------------------------ | ---------------------- |
-| `drive`                         | `document(identifier: driveSlug)`                                              | reactor (`/graphql/r`) |
+| `drive`                         | `document(idOrSlug: driveSlug)`                                                | reactor (`/graphql/r`) |
 | `drives`                        | `findDocuments(search: { type: "powerhouse/document-drive" })`                 | reactor                |
-| `document(id)`                  | `document(identifier)`                                                         | reactor                |
+| `document(id)`                  | `document(idOrSlug)`                                                           | reactor                |
 | `documents`                     | `findDocuments()`                                                              | reactor                |
 | `addDrive(name)`                | `createDocument(document: { documentType: "powerhouse/document-drive", ... })` | reactor                |
 | `system { sync { strands } }`   | `pollSyncEnvelopes(channelId, ...)`                                            | reactor                |
@@ -500,7 +500,7 @@ subscription {
 | `pushUpdates`                   | `pushSyncEnvelopes(envelopes: [...])`                                          | reactor                |
 | N/A (new)                       | `<ModelName> { document(...) }`                                                | document-model         |
 | N/A (new)                       | `<ModelName> { createDocument(...) }`                                          | document-model         |
-| N/A (new)                       | `<ModelName> { <operationName>(docId, input) }`                                | document-model         |
+| N/A (new)                       | `<ModelName> { <operationName>(documentIdOrSlug, input) }`                     | document-model         |
 
 ## Migrating custom subgraphs
 
@@ -588,7 +588,7 @@ ph generate --subgraph my-custom
 ## Migration checklist
 
 - [ ] Update all GraphQL client queries that target `/graphql/document-drive` to use `/graphql/r` or the appropriate document-model subgraph
-- [ ] Replace `drive` queries with `document(identifier)` or `findDocuments`
+- [ ] Replace `drive` queries with `document(idOrSlug)` or `findDocuments`
 - [ ] Replace strand-based sync (`registerPullResponderListener`, `system.sync.strands`) with `touchChannel` + `pollSyncEnvelopes`
 - [ ] For real-time updates, use `documentChanges` subscription instead of polling strands
 - [ ] Migrate custom subgraphs to `getResolvers(subgraph: BaseSubgraph)` pattern

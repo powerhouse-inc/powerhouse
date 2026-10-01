@@ -69,7 +69,7 @@ describe("ReactorSubgraph Query Resolvers", () => {
       await module.client.create(testDoc);
 
       const result = await resolvers.document(module.client, {
-        identifier: testDoc.header.id,
+        idOrSlug: testDoc.header.id,
       });
 
       expect(result.document).toBeDefined();
@@ -96,7 +96,7 @@ describe("ReactorSubgraph Query Resolvers", () => {
       const result = await resolvers.documentOutgoingRelationships(
         module.client,
         {
-          sourceIdentifier: parent.header.id,
+          sourceIdOrSlug: parent.header.id,
           relationshipType: "child",
           paging: null,
           view: null,
@@ -124,7 +124,7 @@ describe("ReactorSubgraph Query Resolvers", () => {
       const result = await resolvers.documentIncomingRelationships(
         module.client,
         {
-          targetIdentifier: child.header.id,
+          targetIdOrSlug: child.header.id,
           relationshipType: "child",
           paging: null,
           view: null,
@@ -153,7 +153,7 @@ describe("ReactorSubgraph Query Resolvers", () => {
       const outgoing = await resolvers.documentOutgoingRelationshipEdges(
         module.client,
         {
-          sourceIdentifier: parent.header.id,
+          sourceIdOrSlug: parent.header.id,
           relationshipType: "child",
           paging: null,
           view: null,
@@ -174,7 +174,7 @@ describe("ReactorSubgraph Query Resolvers", () => {
       const incoming = await resolvers.documentIncomingRelationshipEdges(
         module.client,
         {
-          targetIdentifier: child.header.id,
+          targetIdOrSlug: child.header.id,
           relationshipType: null,
           paging: null,
           view: null,
@@ -202,7 +202,7 @@ describe("ReactorSubgraph Query Resolvers", () => {
       const outgoing = await resolvers.documentOutgoingRelationshipEdges(
         module.client,
         {
-          sourceIdentifier: parent.header.id,
+          sourceIdOrSlug: parent.header.id,
           relationshipType: "child",
           paging: null,
           view: null,
@@ -236,7 +236,7 @@ describe("ReactorSubgraph Query Resolvers", () => {
   describe("Error Handling", () => {
     it("should throw error for non-existent document", async () => {
       await expect(
-        resolvers.document(module.client, { identifier: "non-existent-id" }),
+        resolvers.document(module.client, { idOrSlug: "non-existent-id" }),
       ).rejects.toThrow();
     });
   });
@@ -266,7 +266,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
 
       const result = await resolvers.createDocument(module.client, {
         document: inputDocument,
-        parentIdentifier: null,
+        parentIdOrSlug: null,
       });
 
       expect(result.id).toBe(inputDocument.header.id);
@@ -277,7 +277,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       await expect(
         resolvers.createDocument(module.client, {
           document: null,
-          parentIdentifier: null,
+          parentIdOrSlug: null,
         }),
       ).rejects.toThrow("Invalid document: must be an object");
     });
@@ -286,7 +286,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       await expect(
         resolvers.createDocument(module.client, {
           document: { state: {} },
-          parentIdentifier: null,
+          parentIdOrSlug: null,
         }),
       ).rejects.toThrow("Invalid document: missing or invalid header");
     });
@@ -296,7 +296,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
     it("should create an empty document of specified type", async () => {
       const result = await resolvers.createEmptyDocument(module.client, {
         documentType: "powerhouse/document-model",
-        parentIdentifier: null,
+        parentIdOrSlug: null,
       });
 
       expect(result.id).toBeDefined();
@@ -310,7 +310,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       await module.client.create(testDoc);
 
       const result = await resolvers.renameDocument(module.client, {
-        documentIdentifier: testDoc.header.id,
+        documentIdOrSlug: testDoc.header.id,
         name: "New Name",
         branch: null,
       });
@@ -325,7 +325,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       await module.client.create(testDoc);
 
       const result = await resolvers.setPreferredEditor(module.client, {
-        documentIdentifier: testDoc.header.id,
+        documentIdOrSlug: testDoc.header.id,
         preferredEditor: "custom-editor",
         branch: null,
       });
@@ -338,13 +338,13 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       await module.client.create(testDoc);
 
       await resolvers.setPreferredEditor(module.client, {
-        documentIdentifier: testDoc.header.id,
+        documentIdOrSlug: testDoc.header.id,
         preferredEditor: "custom-editor",
         branch: null,
       });
 
       const cleared = await resolvers.setPreferredEditor(module.client, {
-        documentIdentifier: testDoc.header.id,
+        documentIdOrSlug: testDoc.header.id,
         preferredEditor: null,
         branch: null,
       });
@@ -362,8 +362,8 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       await module.client.create(child);
 
       const result = await resolvers.addRelationship(module.client, {
-        sourceIdentifier: parent.header.id,
-        targetIdentifier: child.header.id,
+        sourceIdOrSlug: parent.header.id,
+        targetIdOrSlug: child.header.id,
         relationshipType: "child",
         branch: null,
       });
@@ -381,8 +381,8 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       await module.client.create(child);
 
       await resolvers.addRelationship(module.client, {
-        sourceIdentifier: parent.header.id,
-        targetIdentifier: child.header.id,
+        sourceIdOrSlug: parent.header.id,
+        targetIdOrSlug: child.header.id,
         relationshipType: "child",
         metadata: { order: 1 },
         branch: null,
@@ -391,7 +391,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       let edges = await resolvers.documentOutgoingRelationshipEdges(
         module.client,
         {
-          sourceIdentifier: parent.header.id,
+          sourceIdOrSlug: parent.header.id,
           relationshipType: "child",
           paging: null,
           view: null,
@@ -400,8 +400,8 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       expect(edges.items[0].metadata).toEqual({ order: 1 });
 
       const result = await resolvers.updateRelationship(module.client, {
-        sourceIdentifier: parent.header.id,
-        targetIdentifier: child.header.id,
+        sourceIdOrSlug: parent.header.id,
+        targetIdOrSlug: child.header.id,
         relationshipType: "child",
         metadata: { order: 2, label: "second" },
         branch: null,
@@ -409,7 +409,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       expect(result.id).toBe(parent.header.id);
 
       edges = await resolvers.documentOutgoingRelationshipEdges(module.client, {
-        sourceIdentifier: parent.header.id,
+        sourceIdOrSlug: parent.header.id,
         relationshipType: "child",
         paging: null,
         view: null,
@@ -425,16 +425,16 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       await module.client.create(child);
 
       await resolvers.addRelationship(module.client, {
-        sourceIdentifier: parent.header.id,
-        targetIdentifier: child.header.id,
+        sourceIdOrSlug: parent.header.id,
+        targetIdOrSlug: child.header.id,
         relationshipType: "child",
         metadata: { order: 1 },
         branch: null,
       });
 
       await resolvers.updateRelationship(module.client, {
-        sourceIdentifier: parent.header.id,
-        targetIdentifier: child.header.id,
+        sourceIdOrSlug: parent.header.id,
+        targetIdOrSlug: child.header.id,
         relationshipType: "child",
         metadata: null,
         branch: null,
@@ -443,7 +443,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       const edges = await resolvers.documentOutgoingRelationshipEdges(
         module.client,
         {
-          sourceIdentifier: parent.header.id,
+          sourceIdOrSlug: parent.header.id,
           relationshipType: "child",
           paging: null,
           view: null,
@@ -467,8 +467,8 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       );
 
       const result = await resolvers.removeRelationship(module.client, {
-        sourceIdentifier: parent.header.id,
-        targetIdentifier: child.header.id,
+        sourceIdOrSlug: parent.header.id,
+        targetIdOrSlug: child.header.id,
         relationshipType: "child",
         branch: null,
       });
@@ -483,7 +483,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       await module.client.create(testDoc);
 
       const result = await resolvers.deleteDocument(module.client, {
-        identifier: testDoc.header.id,
+        idOrSlug: testDoc.header.id,
         propagate: null,
       });
 
@@ -500,7 +500,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       await module.client.create(doc2);
 
       const result = await resolvers.deleteDocuments(module.client, {
-        identifiers: [doc1.header.id, doc2.header.id],
+        idsOrSlugs: [doc1.header.id, doc2.header.id],
         propagate: null,
       });
 
@@ -536,7 +536,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
         resolvers.renameDocument(
           module.client,
           {
-            documentIdentifier: "non-existent-id",
+            documentIdOrSlug: "non-existent-id",
             name: "New Name",
             branch: null,
           },
@@ -548,7 +548,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
     it("should handle delete errors", async () => {
       await expect(
         resolvers.deleteDocument(module.client, {
-          identifier: "non-existent-id",
+          idOrSlug: "non-existent-id",
           propagate: null,
         }),
       ).rejects.toThrow();
@@ -594,7 +594,7 @@ describe("execute", () => {
       });
 
       await resolvers.execute(module.client, {
-        documentIdentifier: document.header.id,
+        documentIdOrSlug: document.header.id,
         actions: [
           {
             ...action,
@@ -628,7 +628,7 @@ describe("execute", () => {
     );
 
     await resolvers.execute(module.client, {
-      documentIdentifier: document.header.id,
+      documentIdOrSlug: document.header.id,
       actions: [
         {
           ...signed,
@@ -686,7 +686,7 @@ describe("create mutations under the client's creation default", () => {
 
       const inDrive = await resolvers.createEmptyDocument(client, {
         documentType: "powerhouse/document-model",
-        parentIdentifier: drive.header.id,
+        parentIdOrSlug: drive.header.id,
       });
       const withState = await resolvers.createDocumentWithInitialState(client, {
         documentType: "powerhouse/document-model",

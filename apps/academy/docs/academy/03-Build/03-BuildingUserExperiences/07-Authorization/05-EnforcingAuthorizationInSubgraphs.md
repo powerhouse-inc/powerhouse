@@ -198,11 +198,11 @@ access on that parent, so resolve and assert against it. Only use
 ```typescript
 createTodoList: async (
   _parent,
-  args: { parentIdentifier?: string; name: string },
+  args: { parentIdOrSlug?: string; name: string },
   ctx: Context,
 ) => {
-  if (args.parentIdentifier) {
-    const handle = await subgraph.assertCanWrite(args.parentIdentifier, ctx);
+  if (args.parentIdOrSlug) {
+    const handle = await subgraph.assertCanWrite(args.parentIdOrSlug, ctx);
     return createUnder(handle.fetchIdentifier, args.name);
   }
   subgraph.assertCanCreate(ctx); // throws if the caller may not create documents

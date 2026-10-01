@@ -352,9 +352,9 @@ Once you've found your document via any of the three options above, you'll be ab
 The previous step queried for document metadata. Now query for the actual content of the document state.
 
 ```graphql title="Get the Document state"
-query getDocument($identifier: String!) {
+query getDocument($idOrSlug: String!) {
   ToDoList {
-    document(identifier: $identifier) {
+    document(idOrSlug: $idOrSlug) {
       document {
         id
         name
@@ -386,7 +386,7 @@ query getDocument($identifier: String!) {
 
 ```json title="Example variables"
 {
-  "identifier": "03eb6780-f1d7-438c-84a0-6d93dfb8f6af"
+  "idOrSlug": "03eb6780-f1d7-438c-84a0-6d93dfb8f6af"
 }
 ```
 
@@ -412,14 +412,14 @@ To perform write operations, we use **GraphQL Mutations**. Mutations are similar
 ### Adding a new to-do item
 
 Add a new item to the list. The document model for the to-do list has an `ADD_TODO_ITEM` operation, which translates to an `addTodoItem` mutation in GraphQL.
-To use this mutation, you need to provide the `docId` of the to-do list you want to modify, and the `text` and `id` for the new to-do item. We'll specify these via variables.
+To use this mutation, you need to provide the `documentIdOrSlug` of the to-do list you want to modify, and the `text` and `id` for the new to-do item. We'll specify these via variables.
 
 Here is an example of how to structure the mutation:
 
 ```graphql title="example-add-mutation"
-mutation AddTodoItem($docId: PHID!, $input: ToDoList_AddTodoItemInput!) {
+mutation AddTodoItem($documentIdOrSlug: String!, $input: ToDoList_AddTodoItemInput!) {
   ToDoList {
-    addTodoItem(docId: $docId, input: $input) {
+    addTodoItem(documentIdOrSlug: $documentIdOrSlug, input: $input) {
       id
       name
       revisionsList {
@@ -433,7 +433,7 @@ mutation AddTodoItem($docId: PHID!, $input: ToDoList_AddTodoItemInput!) {
 
 ```json title="example-variables"
 {
-  "docId": "03eb6780-f1d7-438c-84a0-6d93dfb8f6af",
+  "documentIdOrSlug": "03eb6780-f1d7-438c-84a0-6d93dfb8f6af",
   "input": {
     "text": "My new to-do from GraphQL",
     "id": "1"
@@ -441,7 +441,7 @@ mutation AddTodoItem($docId: PHID!, $input: ToDoList_AddTodoItemInput!) {
 }
 ```
 
-Replace the example `docId` with the actual ID of your document. You can get this ID by querying as we did before.
+Replace the example `documentIdOrSlug` with the actual ID of your document. You can get this ID by querying as we did before.
 
 When you execute this mutation in Apollo Studio, it will add the new item to your to-do list. The response will return the updated document with its new revision.
 
@@ -454,9 +454,9 @@ The document model provides a `DELETE_TODO_ITEM` operation, which corresponds to
 Here's how you can use it:
 
 ```graphql title="example-delete-mutation"
-mutation DeleteTodoItem($docId: PHID!, $input: ToDoList_DeleteTodoItemInput!) {
+mutation DeleteTodoItem($documentIdOrSlug: String!, $input: ToDoList_DeleteTodoItemInput!) {
   ToDoList {
-    deleteTodoItem(docId: $docId, input: $input) {
+    deleteTodoItem(documentIdOrSlug: $documentIdOrSlug, input: $input) {
       id
       name
       revisionsList {
@@ -470,14 +470,14 @@ mutation DeleteTodoItem($docId: PHID!, $input: ToDoList_DeleteTodoItemInput!) {
 
 ```json title="example-variables"
 {
-  "docId": "03eb6780-f1d7-438c-84a0-6d93dfb8f6af",
+  "documentIdOrSlug": "03eb6780-f1d7-438c-84a0-6d93dfb8f6af",
   "input": {
     "id": "0.6325811781889789"
   }
 }
 ```
 
-Make sure to replace the `docId` and `id` with the appropriate values for your document and the item you wish to delete.
+Make sure to replace the `documentIdOrSlug` and `id` with the appropriate values for your document and the item you wish to delete.
 
 After executing this mutation, the specified to-do item will be removed from your list.
 
