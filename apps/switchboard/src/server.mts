@@ -67,7 +67,10 @@ import {
   registerAttachmentReferenceReadModel,
   registerAttachmentReferenceReadModelOnModule,
 } from "./attachment-reference-read-model.mjs";
-import { installFatalErrorShutdown } from "./fatal-shutdown.mjs";
+import {
+  installFatalErrorShutdown,
+  triggerFatalShutdown,
+} from "./fatal-shutdown.mjs";
 import {
   resolvePrivacy,
   startPrivacy,
@@ -144,6 +147,11 @@ const PGLITE_FLUSH_INTERVAL_MS = (() => {
   const parsed = Number(raw);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 100;
 })();
+
+// A store that cannot persist must not keep accepting writes.
+function onPgliteFlushError(err: unknown): void {
+  triggerFatalShutdown("PGlite snapshot flush failed", err);
+}
 
 // When set, runs both reactor and read-model PGLite instances purely in-memory.
 const PGLITE_IN_MEMORY = process.env.PH_PGLITE_IN_MEMORY === "1";
@@ -269,7 +277,11 @@ async function createReactorKysely(opts: {
   const pglite = inMemory
     ? new PGlite()
     : new PGlite({
-        fs: new AtomicNodeFs(reactorPgliteDir, { logger, flushIntervalMs }),
+        fs: new AtomicNodeFs(reactorPgliteDir, {
+          logger,
+          flushIntervalMs,
+          onFlushError: onPgliteFlushError,
+        }),
       });
   logger.info(
     inMemory
@@ -908,7 +920,11 @@ async function initServer(
           new ReadModelPGlite({
             fs: new AtomicNodeFs(
               connectionString ?? (readModelPgliteDir as string),
-              { logger, flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS },
+              {
+                logger,
+                flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS,
+                onFlushError: onPgliteFlushError,
+              },
             ),
             parsers: PGLITE_UTC_PARSERS,
           });
