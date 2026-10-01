@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-01T15:08:39.981Z
+> Generated: 2026-10-01T15:15:17.672Z
 > Total Documents: 118
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -6578,7 +6578,7 @@ The client is the authorization check, so the resolver needs no `assertCanRead` 
 - **Reads** are decided as the caller, through the document named by `documentId` (an id or a slug). The caller must be able to read that document, and the document's operations must reference the ref. This is the decision the HTTP download route makes. A refusal, an unknown ref, and a missing `documentId` all throw `AttachmentNotFound`, so a refusal does not reveal that a hash exists. There is no supreme-admin bypass: an admin also needs a document that references the ref.
 - **Anonymous reads** are decided by the document, unless the host sets `REQUIRE_AUTHENTICATED_CALLER`. Then they throw `AuthenticationRequiredError`.
 - **Uploads** need an authenticated caller when `AUTH_ENABLED` or `REQUIRE_AUTHENTICATED_CALLER` is on. An anonymous upload then throws `AuthenticationRequiredError`. An upload touches no document. Writing the ref into a document is a separate action, authorized when it is dispatched.
-- Uploads are hash-first only, through `upload`, `uploadMany`, or `preprocess` plus `reserve`. `mimeType`, `fileName`, and `extension` are validated with the rules the HTTP reserve route applies.
+- Uploads are hash-first only, through `upload`, `uploadMany`, or `preprocess` plus `reserve`. `mimeType`, `fileName`, and `extension` are validated with the rules the HTTP reserve route applies; a value that fails throws `InvalidAttachmentMetadata` from `@powerhousedao/reactor-attachments`, whose `field` names it.
 - `getShareLink` fails on this client. Only the remote service can mint a download target. Use `download` or `downloadBlob`.
 
 Two more errors come from `@powerhousedao/reactor-api`. `AttachmentAccessUnavailable` means the host does not maintain the [reference index](#the-attachment-reference-index), so no read can be decided. `AttachmentAccessFailed` means the access decision itself threw. The cause is logged on the server and kept as the error's `cause`; its message does not reach the GraphQL client.
