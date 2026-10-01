@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import type { Action, Operation } from "@powerhousedao/shared/document-model";
 import {
   deriveOperationId,
@@ -38,7 +39,7 @@ const backends: [string, () => Promise<Setup>][] = [
 ];
 
 const documentType = "powerhouse/document-model";
-const chunkSize = 32_767 - 3;
+const chunkSize = Math.floor((32_767 - 3) / 2);
 
 describe.each(backends)("findRetractionsOf on %s", (_name, create) => {
   let setup: Setup;
@@ -162,6 +163,31 @@ describe.each(backends)("findRetractionsOf on %s", (_name, create) => {
     ]);
 
     expect(found.size).toBe(0);
+  });
+
+  it("ignores a RETRACT whose target is not a string", async () => {
+    const documentId = generateId();
+    const malformed: Action = { ...retract("5"), input: { target: 5 } };
+    await append(documentId, [content(), malformed]);
+
+    const found = await store.findRetractionsOf(documentId, "global", "main", [
+      "5",
+    ]);
+
+    expect(found.size).toBe(0);
+  });
+
+  it("finds a target longer than a btree entry", async () => {
+    const documentId = generateId();
+    // Random, so compression cannot bring it under the btree limit.
+    const long = randomBytes(8_000).toString("hex");
+    await append(documentId, [content(), retract(long)]);
+
+    const found = await store.findRetractionsOf(documentId, "global", "main", [
+      long,
+    ]);
+
+    expect(found).toEqual(new Set([long]));
   });
 
   it("returns an id named by two RETRACTs once", async () => {

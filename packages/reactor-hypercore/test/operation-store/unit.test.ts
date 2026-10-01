@@ -468,6 +468,23 @@ describe("HypercoreOperationStore", () => {
       expect(found.size).toBe(0);
     });
 
+    it("ignores a RETRACT whose target is not a string", async () => {
+      const documentId = generateId();
+      await append(documentId, [
+        makeAction("TEST_ACTION"),
+        makeAction("RETRACT", { target: 5 }),
+      ]);
+
+      const found = await store.findRetractionsOf(
+        documentId,
+        "global",
+        "main",
+        ["5"],
+      );
+
+      expect(found.size).toBe(0);
+    });
+
     it("returns an id named by two RETRACTs once", async () => {
       const documentId = generateId();
       const a = makeAction("TEST_ACTION");
