@@ -226,6 +226,8 @@ function groupsProjection(
     apply: (document, operation) =>
       applyGroupOperation(registry, document, operation),
 
+    scopeReducer: (document) => modelStateReducers(registry, document),
+
     query: (model) =>
       referencedGroupIds(model.auth?.grants ?? []).map((id) => ({
         documentId: id,
