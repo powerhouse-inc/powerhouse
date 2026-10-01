@@ -118,6 +118,8 @@ export async function ensureServers(): Promise<ChildProcess[]> {
           PH_WORKFLOWS_ENABLED: "true",
           // Loopback only, so tests can reach the services they start.
           PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES: "127.0.0.1/32",
+          // Overrides the .env registry, so a release cannot change the catalog.
+          PH_REGISTRY_URL: "",
         },
       ),
     );
