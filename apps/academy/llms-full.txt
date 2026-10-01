@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-01T22:48:32.442Z
+> Generated: 2026-10-01T22:48:54.764Z
 > Total Documents: 119
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -7333,7 +7333,9 @@ Four actions write the `auth` scope:
 | `REMOVE_GRANT`     | Removes a grant by `id`                           |
 | `MOVE_GRANT`       | Reorders a grant, which can change the outcome    |
 
-`UNDO` and `REDO` are refused on the `auth` scope.
+`UNDO`, `REDO` and `RETRACT` are refused on the `auth` scope.
+
+A policy grants or refuses `RETRACT` like any other operation type. It cannot condition on who wrote the retracted operation. A denied `RETRACT` retracts nothing; see [Undo and redo](/academy/Reference/Reactor/UndoRedo).
 
 The creators are exported from `document-model` (and `@powerhousedao/shared/document-model`) alongside `Grant`:
 
@@ -20865,6 +20867,8 @@ Clear and consistent naming makes your operations understandable. A common conve
 
 The name you provide in Vetra Studio (or Connect) (e.g., `ADD_TODO_ITEM`) directly corresponds to the operation type that will be recorded and that your reducers will handle.
 
+The base actions reserve seven names: `UNDO`, `REDO`, `SET_NAME`, `SET_PREFERRED_EDITOR`, `NOOP`, `PURGE_DOCUMENT` and `RETRACT`. The check runs on the name in `CONSTANT_CASE`, so `retract` is reserved too. The document model editor refuses a reserved name, and `ph generate` and Vetra's codegen refuse a specification that contains one.
+
 ### 3. Input types (payloads)
 
 The input type for an operation (its payload) should contain all the necessary information to perform that operation, and nothing more.
@@ -26879,7 +26883,7 @@ Under `v2-required` a given `id` is ignored and the id is derived, so code that 
 
 A `CREATE_DOCUMENT` whose id does not recompute from its own input is refused as `ID_MISMATCH`, and so is a legacy `CREATE_DOCUMENT` that takes an id of that shape. A copy of a v2-required document is v2-required, under a new derived id. A copy of a legacy document is created under the creation default below. An imported `.phd` keeps the policy it was exported with.
 
-The NOOP an `UNDO` becomes and the action a `REDO` rebuilds are signed by the reactor's own signer. A reactor with no signer stores them unsigned, and every peer refuses them on a v2-required document, so a host that writes to v2-required documents must be given a signer. A client with no signer cannot create a v2-required document at all: its `CREATE_DOCUMENT` is unsigned.
+A submitted `UNDO` or `REDO` is resolved by the reactor, which signs the result with its own signer: the NOOP or rebuilt action on base-reducer 1 and 2, the `RETRACT` on base-reducer 3. A reactor with no signer stores them unsigned, and every peer refuses them on a v2-required document, so a host that writes to v2-required documents must be given a signer. On base-reducer 3, `IReactorClient.undo` and `redo` submit a `RETRACT` the client signs instead; see [Undo and redo](/academy/Reference/Reactor/UndoRedo). A client with no signer cannot create a v2-required document at all: its `CREATE_DOCUMENT` is unsigned.
 
 ### The creation default
 
