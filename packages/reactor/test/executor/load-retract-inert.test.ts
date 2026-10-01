@@ -19,12 +19,12 @@ import type { ReactorFeatureFlags } from "../../src/executor/types.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import { createDocModelDocument } from "../factories.js";
 
-const GLOBAL_GRANT: Grant = {
-  id: "g-global",
-  description: "anyone may write the global scope",
+const AUTH_ADMIN_GRANT: Grant = {
+  id: "g-auth-admin",
+  description: "anyone may administer the policy",
   effect: "allow",
   principal: { anyone: true },
-  capability: { can: "execute", scope: "global" },
+  capability: { can: "execute", scope: "auth" },
 };
 
 type Row = Pick<Operation, "index" | "skip" | "error"> & {
@@ -227,11 +227,13 @@ describe("a RETRACT loaded outside the retraction rule", () => {
     it("stores it as an ordinary row on every replica and applies nothing", async () => {
       const [a, b] = await replicas(featureFlags);
       await execute(a, [
-        initializeAuth({ version: 1, grants: [GLOBAL_GRANT] }),
+        initializeAuth({ version: 1, grants: [AUTH_ADMIN_GRANT] }),
       ]);
       await load(b, await stored(a, "auth"));
       const [initialized] = await stored(a, "auth");
       const before = (await served(a)).state.auth;
+      expect(initialized.error).toBeUndefined();
+      expect(JSON.stringify(before)).toContain(AUTH_ADMIN_GRANT.id);
 
       const after = new Date(initialized.timestampUtcMs).getTime() + 1_000;
       await load(a, [
