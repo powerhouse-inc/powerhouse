@@ -390,7 +390,6 @@ export class PurgeTooLargeError extends Error {
   }
 }
 
-/** A regular write carried an action type only the reactor issues. Terminal. */
 export type RetractionRefusalReason = "target-missing" | "target-retracted";
 
 /** A submitted RETRACT whose target is absent or already retracted; terminal. */
@@ -418,6 +417,7 @@ export class RetractionRefusedError extends Error {
   }
 }
 
+/** A regular write carried an action type only the reactor issues. Terminal. */
 export class ReservedActionError extends Error {
   public readonly documentId: string;
   public readonly actionType: string;
