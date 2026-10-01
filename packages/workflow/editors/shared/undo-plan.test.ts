@@ -181,6 +181,12 @@ describe("effectiveOperations", () => {
     // So the next undo reaches the step itself.
     expect(planUndo(effectiveOperations(ops, 2), policy)?.undos).toBe(1);
   });
+
+  it("refuses base-reducer 3", () => {
+    expect(() => effectiveOperations([op(0, "ADD_STEP")], 3)).toThrow(
+      "Undo is not implemented for base-reducer 3",
+    );
+  });
 });
 
 describe("redo", () => {

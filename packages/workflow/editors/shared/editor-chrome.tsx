@@ -9,7 +9,6 @@ import {
   undo,
   type Action,
   type Operation,
-  type PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { useEffect, useRef, useState } from "react";
 import { Button, IconButton } from "./controls.js";
@@ -38,14 +37,6 @@ export function BackButton(props: { label?: string }) {
 }
 
 const NO_SKIP: UndoPolicy = { skip: new Set() };
-
-function protocolVersion(document: PHDocument): number {
-  try {
-    return baseReducerVersion(document.header);
-  } catch {
-    return 1;
-  }
-}
 
 const PAGE = 500;
 
@@ -124,7 +115,7 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
     run(async () => {
       const history = await globalHistory(props.documentId);
       const plan = planUndo(
-        effectiveOperations(history, protocolVersion(document!)),
+        effectiveOperations(history, baseReducerVersion(document!.header)),
         policy,
       );
       if (!plan) return;

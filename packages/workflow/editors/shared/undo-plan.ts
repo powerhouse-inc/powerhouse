@@ -6,6 +6,7 @@ import {
   generateId,
   sortOperations,
   type Action,
+  type BaseReducerVersion,
   type Operation,
 } from "@powerhousedao/shared/document-model";
 
@@ -48,12 +49,30 @@ export function undoGroupOf(action: Action): string | undefined {
 // The operations still in effect: undone ones and the NOOPs removed.
 export function effectiveOperations(
   operations: readonly Operation[],
-  protocolVersion: number,
+  protocolVersion: BaseReducerVersion,
 ): Operation[] {
   const sorted = sortOperations([...operations]);
-  const kept =
-    protocolVersion >= 2 ? garbageCollectV2(sorted) : garbageCollect(sorted);
-  return kept.filter((operation) => operation.action.type !== "NOOP");
+  return keptOperations(sorted, protocolVersion).filter(
+    (operation) => operation.action.type !== "NOOP",
+  );
+}
+
+function keptOperations(
+  sorted: Operation[],
+  protocolVersion: BaseReducerVersion,
+): Operation[] {
+  switch (protocolVersion) {
+    case 1:
+      return garbageCollect(sorted);
+    case 2:
+      return garbageCollectV2(sorted);
+    case 3:
+      throw new Error("Undo is not implemented for base-reducer 3");
+    default: {
+      const unknown: never = protocolVersion;
+      throw new Error(`Unknown base-reducer version ${String(unknown)}`);
+    }
+  }
 }
 
 // Where the edit ending at `last` starts: back through its group's actions,
