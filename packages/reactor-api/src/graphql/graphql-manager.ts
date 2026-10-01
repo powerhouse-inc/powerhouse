@@ -120,6 +120,31 @@ export type GraphqlManagerFeatureFlags = {
   enableDocumentModelSubgraphs?: boolean;
 };
 
+/** Dependencies and settings for a {@link GraphQLManager}. */
+export type GraphQLManagerOptions = {
+  path: string;
+  httpServer: http.Server;
+  wsServer: WebSocketServer;
+  reactorClient: IReactorClient;
+  relationalDb: IRelationalDb;
+  analyticsStore: IAnalyticsStore;
+  syncManager: ISyncManager;
+  logger: ILogger;
+  httpAdapter: IHttpAdapter;
+  gatewayAdapter: IGatewayAdapter<Context>;
+  authService?: AuthService;
+  documentPermissionService?: DocumentPermissionService;
+  /** Defaults to every flag on. */
+  featureFlags?: GraphqlManagerFeatureFlags;
+  /** Defaults to 4001. */
+  port?: number;
+  authorizationService: IAuthorizationService;
+  /** Resolvers dispatch to it for reactor-drive parents. */
+  reactorDriveClient?: IDriveClient;
+  syncServingGate?: SyncScopeGate;
+  httpRoutes?: HttpRouteService;
+};
+
 /**
  * The registration-source label for document-model-generated subgraphs, so
  * they can be pruned like package-contributed ones (see
@@ -260,31 +285,42 @@ export class GraphQLManager {
   /** Route service in use: the injected one, or one built on first need. */
   #fallbackRoutes: HttpRouteService | undefined;
 
-  constructor(
-    private readonly path: string,
-    private readonly httpServer: http.Server,
-    private readonly wsServer: WebSocketServer,
-    private readonly reactorClient: IReactorClient,
-    private readonly relationalDb: IRelationalDb,
-    private readonly analyticsStore: IAnalyticsStore,
-    private readonly syncManager: ISyncManager,
-    private readonly logger: ILogger,
-    private readonly httpAdapter: IHttpAdapter,
-    private readonly gatewayAdapter: IGatewayAdapter<Context>,
-    private readonly authService?: AuthService,
-    private readonly documentPermissionService?: DocumentPermissionService,
-    private readonly featureFlags: GraphqlManagerFeatureFlags = DefaultFeatureFlags,
-    private readonly port: number = 4001,
-    authorizationService?: IAuthorizationService,
-    reactorDriveClient?: IDriveClient,
-    private readonly syncServingGate?: SyncScopeGate,
-    private readonly httpRoutes?: HttpRouteService,
-  ) {
-    if (!authorizationService) {
-      throw new Error("GraphQLManager requires an authorizationService");
-    }
-    this.authorizationService = authorizationService;
-    this.reactorDriveClient = reactorDriveClient;
+  private readonly path: string;
+  private readonly httpServer: http.Server;
+  private readonly wsServer: WebSocketServer;
+  private readonly reactorClient: IReactorClient;
+  private readonly relationalDb: IRelationalDb;
+  private readonly analyticsStore: IAnalyticsStore;
+  private readonly syncManager: ISyncManager;
+  private readonly logger: ILogger;
+  private readonly httpAdapter: IHttpAdapter;
+  private readonly gatewayAdapter: IGatewayAdapter<Context>;
+  private readonly authService?: AuthService;
+  private readonly documentPermissionService?: DocumentPermissionService;
+  private readonly featureFlags: GraphqlManagerFeatureFlags;
+  private readonly port: number;
+  private readonly syncServingGate?: SyncScopeGate;
+  private readonly httpRoutes?: HttpRouteService;
+
+  constructor(options: GraphQLManagerOptions) {
+    this.path = options.path;
+    this.httpServer = options.httpServer;
+    this.wsServer = options.wsServer;
+    this.reactorClient = options.reactorClient;
+    this.relationalDb = options.relationalDb;
+    this.analyticsStore = options.analyticsStore;
+    this.syncManager = options.syncManager;
+    this.logger = options.logger;
+    this.httpAdapter = options.httpAdapter;
+    this.gatewayAdapter = options.gatewayAdapter;
+    this.authService = options.authService;
+    this.documentPermissionService = options.documentPermissionService;
+    this.featureFlags = options.featureFlags ?? DefaultFeatureFlags;
+    this.port = options.port ?? 4001;
+    this.authorizationService = options.authorizationService;
+    this.reactorDriveClient = options.reactorDriveClient;
+    this.syncServingGate = options.syncServingGate;
+    this.httpRoutes = options.httpRoutes;
 
     this.driveOwnershipCache = new DriveOwnershipCache(this.reactorClient);
 

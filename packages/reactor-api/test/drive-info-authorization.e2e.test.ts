@@ -169,26 +169,24 @@ async function startServer(
   const server = await httpAdapter.listen(0, undefined, "127.0.0.1");
   const { port } = server.address() as { port: number };
 
-  const manager = new GraphQLManager(
-    "/",
-    server,
-    {
+  const manager = new GraphQLManager({
+    path: "/",
+    httpServer: server,
+    wsServer: {
       close: vi.fn((cb?: () => void) => cb?.()),
       setMaxListeners: vi.fn(),
     } as unknown as WebSocketServer,
-    makeReactorClient(),
-    {} as IRelationalDb,
-    {} as IAnalyticsStore,
-    {} as ISyncManager,
-    silentLogger,
+    reactorClient: makeReactorClient(),
+    relationalDb: {} as IRelationalDb,
+    analyticsStore: {} as IAnalyticsStore,
+    syncManager: {} as ISyncManager,
+    logger: silentLogger,
     httpAdapter,
-    makeGatewayAdapter(),
-    undefined,
-    undefined,
-    { enableDocumentModelSubgraphs: false },
+    gatewayAdapter: makeGatewayAdapter(),
+    featureFlags: { enableDocumentModelSubgraphs: false },
     port,
     authorizationService,
-  );
+  });
 
   await manager.init(
     [],

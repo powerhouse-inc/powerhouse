@@ -433,47 +433,72 @@ function resolveGatewayAdapterType(logger: ILogger): GatewayAdapterType {
   return "apollo";
 }
 
-/**
- * Sets up the subgraph manager and registers subgraphs
- */
-async function setupGraphQLManager(
-  httpAdapter: IHttpAdapter,
-  authFetchMiddleware: AuthFetchMiddleware | undefined,
-  requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined,
-  httpServer: http.Server,
-  wsServer: WebSocketServer,
-  client: IReactorClient,
-  relationalDb: IRelationalDb,
-  analyticsStore: IAnalyticsStore,
-  syncManager: ISyncManager,
+type SetupGraphQLManagerOptions = {
+  httpAdapter: IHttpAdapter;
+  authFetchMiddleware: AuthFetchMiddleware | undefined;
+  requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined;
+  httpServer: http.Server;
+  wsServer: WebSocketServer;
+  client: IReactorClient;
+  relationalDb: IRelationalDb;
+  analyticsStore: IAnalyticsStore;
+  syncManager: ISyncManager;
   subgraphs: {
     extended: Map<string, SubgraphClass[]>;
     core: SubgraphClass[];
-  },
-  logger: ILogger,
-  authorizationService: IAuthorizationService,
-  authService?: AuthService,
-  documentPermissionService?: DocumentPermissionService,
-  enableDocumentModelSubgraphs?: boolean,
-  port?: number,
-  reactorDriveClient?: IDriveClient,
-  syncServingGate?: SyncScopeGate,
-  httpRoutes?: HttpRouteService,
-): Promise<GraphQLManager> {
-  const graphqlManager = new GraphQLManager(
-    config.basePath,
+  };
+  logger: ILogger;
+  authorizationService: IAuthorizationService;
+  authService?: AuthService;
+  documentPermissionService?: DocumentPermissionService;
+  enableDocumentModelSubgraphs?: boolean;
+  port?: number;
+  reactorDriveClient?: IDriveClient;
+  syncServingGate?: SyncScopeGate;
+  httpRoutes?: HttpRouteService;
+};
+
+/**
+ * Sets up the subgraph manager and registers subgraphs
+ */
+async function setupGraphQLManager({
+  httpAdapter,
+  authFetchMiddleware,
+  requireAuthFetchMiddleware,
+  httpServer,
+  wsServer,
+  client,
+  relationalDb,
+  analyticsStore,
+  syncManager,
+  subgraphs,
+  logger,
+  authorizationService,
+  authService,
+  documentPermissionService,
+  enableDocumentModelSubgraphs,
+  port,
+  reactorDriveClient,
+  syncServingGate,
+  httpRoutes,
+}: SetupGraphQLManagerOptions): Promise<GraphQLManager> {
+  const graphqlManager = new GraphQLManager({
+    path: config.basePath,
     httpServer,
     wsServer,
-    client,
+    reactorClient: client,
     relationalDb,
     analyticsStore,
     syncManager,
     logger,
     httpAdapter,
-    await createGatewayAdapter(resolveGatewayAdapterType(logger), logger),
+    gatewayAdapter: await createGatewayAdapter(
+      resolveGatewayAdapterType(logger),
+      logger,
+    ),
     authService,
     documentPermissionService,
-    {
+    featureFlags: {
       enableDocumentModelSubgraphs,
     },
     port,
@@ -481,7 +506,7 @@ async function setupGraphQLManager(
     reactorDriveClient,
     syncServingGate,
     httpRoutes,
-  );
+  });
 
   await graphqlManager.init(
     subgraphs.core,
@@ -1292,30 +1317,30 @@ async function _setupAPI(
     logger.info("Auth subgraph registered (document permissions enabled)");
   }
 
-  const graphqlManager = await setupGraphQLManager(
+  const graphqlManager = await setupGraphQLManager({
     httpAdapter,
     authFetchMiddleware,
     requireAuthFetchMiddleware,
     httpServer,
     wsServer,
-    reactorClient,
+    client: reactorClient,
     relationalDb,
     analyticsStore,
     syncManager,
-    {
+    subgraphs: {
       extended: subgraphs,
       core: coreSubgraphs,
     },
-    logger.child(["graphql-manager"]),
+    logger: logger.child(["graphql-manager"]),
     authorizationService,
     authService,
     documentPermissionService,
-    options.enableDocumentModelSubgraphs,
+    enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
     port,
     reactorDriveClient,
     syncServingGate,
     httpRoutes,
-  );
+  });
 
   // Set up event listeners
   setupEventListeners(

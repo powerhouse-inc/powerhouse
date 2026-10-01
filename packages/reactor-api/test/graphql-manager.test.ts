@@ -235,31 +235,30 @@ function makeHarness(options: HarnessOptions = {}) {
     setMaxListeners: vi.fn(),
   } as unknown as WebSocketServer;
 
-  const manager = new GraphQLManager(
-    options.path ?? "/",
+  const manager = new GraphQLManager({
+    path: options.path ?? "/",
     httpServer,
     wsServer,
     reactorClient,
-    {} as IRelationalDb,
-    {} as IAnalyticsStore,
-    {} as ISyncManager,
-    options.logger ?? silentLogger,
+    relationalDb: {} as IRelationalDb,
+    analyticsStore: {} as IAnalyticsStore,
+    syncManager: {} as ISyncManager,
+    logger: options.logger ?? silentLogger,
     httpAdapter,
     gatewayAdapter,
-    undefined, // authService
-    undefined, // documentPermissionService
-    {
+    featureFlags: {
       enableDocumentModelSubgraphs:
         options.enableDocumentModelSubgraphs ?? false,
     },
-    4001,
-    options.authorizationService ??
+    port: 4001,
+    authorizationService:
+      options.authorizationService ??
       createAuthorizationService({
         admins: [],
         defaultProtection: false,
         policy: AuthorizationPolicy.OPEN,
       }),
-  );
+  });
 
   return {
     manager,
