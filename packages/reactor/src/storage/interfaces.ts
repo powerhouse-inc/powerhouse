@@ -302,6 +302,15 @@ export interface IOperationStore {
     signal?: AbortSignal,
   ): Promise<Set<string>>;
 
+  /** The ids among `actionIds` that a stored RETRACT in the stream names. */
+  findRetractionsOf(
+    documentId: string,
+    scope: string,
+    branch: string,
+    actionIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Set<string>>;
+
   /** The latest row of each of `opIds` stored in one stream. */
   getOperationsByIds(
     documentId: string,

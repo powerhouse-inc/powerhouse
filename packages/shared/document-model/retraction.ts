@@ -30,14 +30,15 @@ export function retractionTarget(operation: Operation): string | undefined {
 
 /** Ids a live retraction names; a retraction is live iff no live retraction names it. */
 export function retractedActionIds(rows: readonly Operation[]): Set<string> {
-  const present = new Set<string>();
+  const present = new Map<string, Operation>();
   const duplicated = new Set<string>();
   for (const operation of rows) {
     const id = operation.action.id;
     if (present.has(id)) duplicated.add(id);
-    present.add(id);
+    present.set(id, operation);
   }
-  // A denied retraction, or one whose id is not unique, retracts nothing.
+  // A denied retraction, one whose id is not unique, or one naming a base
+  // action (whose header effect no derivation resets) retracts nothing.
   const targetOf = new Map<string, string>();
   for (const operation of rows) {
     if (isDenied(operation) || duplicated.has(operation.action.id)) continue;
@@ -45,7 +46,8 @@ export function retractedActionIds(rows: readonly Operation[]): Set<string> {
     if (
       target !== undefined &&
       target !== operation.action.id &&
-      present.has(target)
+      present.has(target) &&
+      !isDocumentAction(present.get(target)!.action)
     ) {
       targetOf.set(operation.action.id, target);
     }
@@ -59,7 +61,7 @@ export function retractedActionIds(rows: readonly Operation[]): Set<string> {
     pending.set(target, (pending.get(target) ?? 0) + 1);
   }
   const retracted = new Set<string>();
-  const ready = [...present].filter((id) => !pending.has(id));
+  const ready = [...present.keys()].filter((id) => !pending.has(id));
   while (ready.length > 0) {
     const id = ready.pop()!;
     const target = targetOf.get(id);
@@ -202,8 +204,7 @@ function isContent(operation: Operation | undefined): boolean {
     operation !== undefined &&
     operation.action.type !== "RETRACT" &&
     operation.action.type !== "NOOP" &&
-    operation.action.type !== "UNDO" &&
-    operation.action.type !== "REDO" &&
+    !isDocumentAction(operation.action) &&
     !isDenied(operation)
   );
 }

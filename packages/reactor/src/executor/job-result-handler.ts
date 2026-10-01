@@ -20,6 +20,7 @@ import {
   InvalidSignatureError,
   PurgeTooLargeError,
   ReservedActionError,
+  RetractionRefusedError,
   UnsupportedProtocolVersionError,
   UpgradePreconditionFailedError,
 } from "../shared/errors.js";
@@ -171,7 +172,8 @@ export class JobResultHandler implements IJobResultHandler {
         DocumentNotDeletedError.isError(result.error) ||
         GroupInUseError.isError(result.error) ||
         PurgeTooLargeError.isError(result.error) ||
-        ReservedActionError.isError(result.error))
+        ReservedActionError.isError(result.error) ||
+        RetractionRefusedError.isError(result.error))
     ) {
       const errorInfo = toErrorInfo(result.error);
       this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
