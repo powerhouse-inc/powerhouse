@@ -404,6 +404,7 @@ describe("prepareSignedActions", () => {
     "UNDO",
     "REDO",
     "NOOP",
+    "RETRACT",
     "CREATE_DOCUMENT",
     "DELETE_DOCUMENT",
     "UPGRADE_DOCUMENT",

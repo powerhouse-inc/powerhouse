@@ -2,7 +2,10 @@ import { EditorLoader } from "@powerhousedao/connect/components";
 import { useUndoRedoShortcuts } from "@powerhousedao/connect/hooks";
 import { dismissToast, toast } from "@powerhousedao/connect/services";
 import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
-import { RevisionHistory } from "@powerhousedao/design-system/connect";
+import {
+  RevisionHistory,
+  useBaseReducer3UndoRedo,
+} from "@powerhousedao/design-system/connect";
 import {
   getRevisionFromDate,
   setRevisionHistoryVisible,
@@ -183,10 +186,14 @@ export const DocumentEditor: React.FC<Props> = (props) => {
     !editorModule.documentTypes.includes(documentType) &&
     !editorModule.documentTypes.includes("*");
 
-  const canUndo = globalRevisionNumber > 0 || localRevisionNumber > 0;
-  const canRedo = !!document?.clipboard.length;
-  const addUndoAction = () => dispatch(undo());
-  const addRedoAction = () => dispatch(redo());
+  // Base-reducer 3 undoes through the client so the author signs the RETRACT.
+  const clientUndoRedo = useBaseReducer3UndoRedo(document);
+  const canUndo =
+    clientUndoRedo?.canUndo ??
+    (globalRevisionNumber > 0 || localRevisionNumber > 0);
+  const canRedo = clientUndoRedo?.canRedo ?? !!document?.clipboard.length;
+  const addUndoAction = clientUndoRedo?.undo ?? (() => dispatch(undo()));
+  const addRedoAction = clientUndoRedo?.redo ?? (() => dispatch(redo()));
   useUndoRedoShortcuts({
     undo: addUndoAction,
     redo: addRedoAction,
