@@ -3,22 +3,17 @@
 import {
   setSelectedNode,
   useDocumentById,
-  useDocumentModelModuleById,
 } from "@powerhousedao/reactor-browser";
 import {
   isBaseReducer3,
-  normalizeDocumentModelVersion,
-  stateReducerOf,
   undo,
   type Action,
   type Operation,
-  type PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { useEffect, useRef, useState } from "react";
 import { Button, IconButton } from "./controls.js";
 import { Icon } from "./icons.js";
 import {
-  appliedForUndo,
   canUndoOn3,
   editedSince,
   effectiveOperations,
@@ -79,14 +74,6 @@ function isEditable(target: EventTarget | null): boolean {
 export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
   const [document, dispatch] = useDocumentById(props.documentId);
   const policy = props.policy ?? NO_SKIP;
-  const module = useDocumentModelModuleById(
-    document?.header.documentType,
-    normalizeDocumentModelVersion(
-      (document?.state as Partial<PHDocument["state"]> | undefined)?.document
-        ?.version,
-    ),
-  );
-  const reducer = module && stateReducerOf(module.reducer);
   const v3 = document !== undefined && isBaseReducer3(document.header);
   // Base-reducer 3 reads it from the history, which the cache doesn't hold.
   const [canUndoV3, setCanUndoV3] = useState(false);
@@ -131,21 +118,13 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
       });
   };
 
-  const effective = (history: Operation[]) => {
-    const version = undoProtocolVersion(document!.header);
-    return effectiveOperations(
-      history,
-      version,
-      version === 3 ? appliedForUndo(document!, history, reducer) : undefined,
-    );
-  };
-  const undoable = (history: Operation[]) =>
-    canUndoOn3(document!, history, reducer);
-
   const doUndo = () =>
     run(async () => {
       const history = await globalHistory(props.documentId);
-      const plan = planUndo(effective(history), policy);
+      const plan = planUndo(
+        effectiveOperations(history, undoProtocolVersion(document!.header)),
+        policy,
+      );
       if (!plan) return;
       const keep = !stale(history);
       try {
@@ -180,9 +159,9 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
     });
 
   // Read by the key handler and the effects, which don't rerun for them.
-  const latest = useRef({ doUndo, doRedo, stale, undoable });
+  const latest = useRef({ doUndo, doRedo, stale });
   useEffect(() => {
-    latest.current = { doUndo, doRedo, stale, undoable };
+    latest.current = { doUndo, doRedo, stale };
   });
 
   // An edit made elsewhere voids what is left to redo.
@@ -205,13 +184,13 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
     let active = true;
     void globalHistory(props.documentId)
       .then((history) => {
-        if (active) setCanUndoV3(latest.current.undoable(history));
+        if (active) setCanUndoV3(canUndoOn3(history));
       })
       .catch(() => undefined);
     return () => {
       active = false;
     };
-  }, [revision, v3, reducer, props.documentId]);
+  }, [revision, v3, props.documentId]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.altKey) return;

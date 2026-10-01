@@ -9,7 +9,6 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import {
-  appliedForUndo,
   canUndoOn3,
   editedSince,
   effectiveOperations,
@@ -356,23 +355,12 @@ describe("effectiveOperations on base-reducer 3", () => {
     }
   });
 
-  it("derives `applied` with the state reducer, else from stored errors", () => {
-    const ops = [
-      row(0, "ADD_STEP"),
-      row(1, "FAIL"),
-      row(2, "SET_STEP_CONFIG", { error: "stale" }),
-      retraction(3, "action-0"),
-    ];
-    expect([...appliedForUndo(document, ops, reducer)]).toEqual(["action-2"]);
-    expect([...appliedForUndo(document, ops, undefined)]).toEqual(["action-1"]);
-  });
-
   it("can undo while an UNDO has applied content to retract", () => {
-    const ops = [row(0, "ADD_STEP"), row(1, "FAIL"), row(2, "NOOP")];
-    expect(canUndoOn3(document, ops, reducer)).toBe(true);
-    const all = [...ops, retraction(3, "action-0")];
-    expect(canUndoOn3(document, all, reducer)).toBe(false);
-    expect(canUndoOn3(document, [], undefined)).toBe(false);
+    const failed = { error: "Step not found" };
+    const ops = [row(0, "ADD_STEP"), row(1, "UPDATE_STEP", failed)];
+    expect(canUndoOn3([...ops, row(2, "NOOP")])).toBe(true);
+    expect(canUndoOn3([...ops, retraction(2, "action-0")])).toBe(false);
+    expect(canUndoOn3([])).toBe(false);
   });
 });
 
