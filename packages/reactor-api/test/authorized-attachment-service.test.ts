@@ -322,6 +322,29 @@ describe("AuthorizedAttachmentService.reserve", () => {
     expect(inner.reserve).toHaveBeenCalledWith(HASH_FIRST);
   });
 
+  it("reads each option once, so the checks and the delegate see the same values", async () => {
+    const { service, inner } = setup();
+    let reads = 0;
+    const options = {
+      mimeType: "text/plain",
+      fileName: "a.txt",
+      extension: "txt",
+      sizeBytes: 1,
+      get clientHash() {
+        reads++;
+        return reads === 1 ? HASH : null;
+      },
+    } as unknown as ReserveAttachmentOptions;
+
+    await service.reserve(options);
+    const readsByService = reads;
+
+    const delegated = inner.reserve.mock.calls[0][0] as Record<string, unknown>;
+    expect(delegated.clientHash).toBe(HASH);
+    expect(delegated).toEqual(HASH_FIRST);
+    expect(readsByService).toBe(1);
+  });
+
   it("refuses an upload-first reservation without calling access", async () => {
     const { service, inner, access } = setup();
 

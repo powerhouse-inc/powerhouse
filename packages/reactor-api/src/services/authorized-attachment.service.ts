@@ -8,6 +8,7 @@ import {
   type AttachmentHeader,
   type AttachmentResponse,
   type AttachmentStatOptions,
+  type HashFirstReserveAttachmentOptions,
   type IAttachmentService,
   type IAttachmentUpload,
   type ReserveAttachmentOptions,
@@ -58,16 +59,21 @@ export class AuthorizedAttachmentService implements IAttachmentService {
 
   /** Hash-first only: an upload-first handle can send after it expires. */
   async reserve(options: ReserveAttachmentOptions): Promise<IAttachmentUpload> {
-    if (options.clientHash === undefined) {
+    // One read per field: the checks and the delegate see the same values.
+    const { mimeType, fileName, extension, clientHash, sizeBytes } = options;
+    if (clientHash === undefined) {
       throw new Error("Attachment reservations require a client hash");
     }
+    const copy: HashFirstReserveAttachmentOptions = {
+      mimeType,
+      fileName,
+      extension,
+      clientHash,
+      sizeBytes,
+    };
     await this.admit("write");
-    validateReserveMetadata({
-      mimeType: options.mimeType,
-      fileName: options.fileName,
-      extension: options.extension,
-    });
-    return this.inner.reserve(options);
+    validateReserveMetadata(copy);
+    return this.inner.reserve(copy);
   }
 
   async stat(
