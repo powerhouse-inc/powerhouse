@@ -1,6 +1,7 @@
 import type {
   Action,
   BaseReducerVersion,
+  DeriveScope,
   DocumentModelModule,
   ISigner,
   Operation,
@@ -30,6 +31,7 @@ import {
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
+import { scopeDerivation } from "../cache/kysely-write-cache.js";
 import { DriveCollectionId } from "../cache/operation-index-types.js";
 import { resolveFeatureFlags } from "../core/feature-flags.js";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
@@ -1918,11 +1920,37 @@ export class SimpleJobExecutor implements IJobExecutor {
         },
       };
     } else {
+      // A base-reducer 3 write that re-derives the scope does so as a cold
+      // rebuild would: each row with its own module version's reducer.
+      let deriveScope: DeriveScope | undefined;
+      if (
+        derivesByRule(document, job.scope) &&
+        needsFullHistory(write, targeted ?? new Set())
+      ) {
+        try {
+          deriveScope = await scopeDerivation(
+            stores.operationStore,
+            this.registry,
+            job.documentId,
+            job.branch,
+            signal,
+          );
+        } catch (error) {
+          return buildErrorResult(
+            job,
+            error instanceof Error ? error : new Error(String(error)),
+            startTime,
+          );
+        }
+      }
       try {
         const protocolVersion: BaseReducerVersion = baseReducerVersion(
           document.header,
         );
-        const ruleOptions = targeted === undefined ? {} : { targeted };
+        const ruleOptions = {
+          ...(targeted === undefined ? {} : { targeted }),
+          ...(deriveScope === undefined ? {} : { deriveScope }),
+        };
         const reducerOptions = sourceOperation
           ? {
               skip,
