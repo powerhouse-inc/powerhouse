@@ -7,6 +7,7 @@ import type {
   PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
 import type * as DocumentModel from "@powerhousedao/shared/document-model";
+import type { ProcessorFactory } from "@powerhousedao/shared/processors";
 import {
   generateId,
   withSignaturePolicy,
@@ -19,6 +20,7 @@ import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule, IReactor } from "../../src/core/types.js";
 import { SnapshotPosition } from "../../src/cache/write-cache-types.js";
 import { UnsupportedProtocolVersionError } from "../../src/shared/errors.js";
+import { SKIPPED_DOCUMENT_MARKER } from "../../src/read-models/types.js";
 import { REACTOR_SCHEMA } from "../../src/storage/migrations/migrator.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 
@@ -74,6 +76,15 @@ async function succeeded(reactor: IReactor, info: JobInfo): Promise<JobInfo> {
   return job;
 }
 
+function skipped(db: Kysely<any>) {
+  return db
+    .withSchema(REACTOR_SCHEMA)
+    .selectFrom("ViewState")
+    .select(["readModelId", "lastOrdinal"])
+    .where("readModelId", "like", `%${SKIPPED_DOCUMENT_MARKER}%`)
+    .execute();
+}
+
 function appliedThrough(model: unknown): number {
   return (model as { appliedThrough: number }).appliedThrough;
 }
@@ -111,7 +122,7 @@ describe("read-only over documents at an unsupported base-reducer version", () =
     clearSnapshots?: boolean;
   } = {}): Promise<{
     db: Kysely<any>;
-    ordinals: { unsupported: number[]; last: number };
+    ordinals: { created: number; unsupported: number[]; last: number };
     head: DocumentModel.PHDocument;
   }> {
     const db = await createDefaultDatabase();
@@ -166,6 +177,11 @@ describe("read-only over documents at an unsupported base-reducer version", () =
       db,
       head,
       ordinals: {
+        created: Number(
+          rows.find(
+            (r) => r.documentId === UNSUPPORTED && r.scope === "document",
+          )!.ordinal,
+        ),
         unsupported: rows
           .filter((r) => r.documentId === UNSUPPORTED && r.scope === "global")
           .map((r) => Number(r.ordinal)),
@@ -321,6 +337,83 @@ describe("read-only over documents at an unsupported base-reducer version", () =
       protocol: "base-reducer",
       version: 7,
     });
+  });
+
+  it("serves the document once support covers it, delivering each operation once", async () => {
+    const { db, ordinals } = await storeWithUnsupported({
+      clearSnapshots: true,
+    });
+    const deliveries: { drive: string; documentId: string; ordinal: number }[] =
+      [];
+    const factory: ProcessorFactory = (header) => [
+      {
+        filter: { documentId: ["*"] },
+        processor: {
+          onOperations: (operations) => {
+            for (const { context } of operations) {
+              deliveries.push({
+                drive: header.id,
+                documentId: context.documentId,
+                ordinal: context.ordinal,
+              });
+            }
+            return Promise.resolve();
+          },
+          onDisconnect: () => Promise.resolve(),
+        },
+      },
+    ];
+    async function caughtUp(module: InProcessReactorModule, drives: string[]) {
+      await module.processorManager.registerFactory("probe", factory);
+      await vi.waitUntil(
+        () => {
+          const tracked = module.processorManager.getAll();
+          return drives.every((drive) =>
+            tracked.some(
+              (p) => p.driveId === drive && p.lastOrdinal >= ordinals.last,
+            ),
+          );
+        },
+        { timeout: 10_000, interval: 5 },
+      );
+    }
+
+    const narrow = await build((b) =>
+      b.withKysely(db).withUnsupportedStoredDocuments("read-only"),
+    );
+    await narrow.catchUp.sweepNow();
+    await expect(narrow.reactor.get(UNSUPPORTED)).rejects.toThrow(/not found/i);
+    await caughtUp(narrow, [AFTER]);
+    expect(await skipped(db)).toEqual([
+      {
+        readModelId: `document-view${SKIPPED_DOCUMENT_MARKER}${UNSUPPORTED}`,
+        lastOrdinal: ordinals.created,
+      },
+    ]);
+    await narrow.reactor.kill().completed;
+    reactors.splice(reactors.indexOf(narrow.reactor), 1);
+
+    lenient.on = true;
+    const wide = await build((b) =>
+      b.withKysely(db).withPeerCapabilities([BASE_REDUCER_7]),
+    );
+    const document =
+      await wide.reactor.get<
+        ReturnType<typeof driveDocumentModelModule.utils.createDocument>
+      >(UNSUPPORTED);
+    expect(document.state.global.nodes).toHaveLength(12);
+    expect(document.header.revision.global).toBe(12);
+    await caughtUp(wide, [AFTER, UNSUPPORTED]);
+    expect(await skipped(db)).toEqual([]);
+
+    for (const drive of [AFTER, UNSUPPORTED]) {
+      const received = deliveries
+        .filter((d) => d.drive === drive && d.documentId === UNSUPPORTED)
+        .map((d) => d.ordinal)
+        .filter((ordinal) => ordinals.unsupported.includes(ordinal))
+        .sort((a, b) => a - b);
+      expect(received, drive).toEqual(ordinals.unsupported);
+    }
   });
 
   it("still blocks on a document it registers but cannot build", async () => {
