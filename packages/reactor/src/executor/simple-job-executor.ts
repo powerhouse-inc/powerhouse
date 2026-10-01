@@ -1955,7 +1955,13 @@ export class SimpleJobExecutor implements IJobExecutor {
           ? {
               skip,
               branch: job.branch,
-              replayOptions: { operation: sourceOperation },
+              // Base-reducer 3 hashes the receiver's own derived state.
+              replayOptions: {
+                operation:
+                  protocolVersion === 3
+                    ? { ...sourceOperation, hash: "", skip: 0 }
+                    : sourceOperation,
+              },
               protocolVersion,
               ...ruleOptions,
             }
