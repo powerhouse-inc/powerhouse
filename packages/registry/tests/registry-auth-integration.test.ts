@@ -2,11 +2,10 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
-import type { Pool } from "pg";
-import { newDb, type IMemoryDb } from "pg-mem";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { AuthStore } from "../src/auth/auth-store.js";
 import { createPgStore } from "../src/auth/pg-store.js";
+import { createPGliteDatabase, type Database } from "../src/db/database.js";
 import {
   DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
   DEFAULT_STORAGE_DIR_NAME,
@@ -23,13 +22,9 @@ if (!existsSync(path.join(BUILT_PLUGINS_DIR, "verdaccio-registry-auth.js"))) {
   );
 }
 
-/** A store over a shared pg-mem database — two stores over the same db model
- *  two registry pods sharing one Postgres. */
-function storeFromDb(db: IMemoryDb): AuthStore {
-  const { Pool: PgMemPool } = db.adapters.createPg() as {
-    Pool: new () => unknown;
-  };
-  return createPgStore(new PgMemPool() as unknown as Pool);
+// Two stores over one database model two registry pods sharing one Postgres
+function storeFromDb(db: Database): AuthStore {
+  return createPgStore(db);
 }
 
 async function bootRegistry(port: number, workDir: string, store: AuthStore) {
@@ -62,16 +57,11 @@ async function bootRegistry(port: number, workDir: string, store: AuthStore) {
   return server;
 }
 
-/** npm login/adduser with Basic auth so verdaccio takes its login branch for
- *  an existing user (returns a token) instead of always routing to add_user. */
+/** npm login/adduser: registers a new user, or logs an existing one in. */
 async function putUser(url: string, name: string, password: string) {
-  const basic = Buffer.from(`${name}:${password}`).toString("base64");
   const res = await fetch(`${url}/-/user/org.couchdb.user:${name}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Basic ${basic}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, password }),
   });
   let token: string | undefined;
@@ -134,7 +124,7 @@ async function publish(
   return res.status;
 }
 
-describe("registry auth plugin — accounts (integration, verdaccio + pg-mem)", () => {
+describe("registry auth plugin — accounts (integration, verdaccio + PGlite)", () => {
   const PORT = 8293;
   const URL = `http://localhost:${PORT}`;
   const workDir = path.join(import.meta.dirname, "./.test-output-pgauth");
@@ -142,7 +132,11 @@ describe("registry auth plugin — accounts (integration, verdaccio + pg-mem)", 
 
   beforeAll(async () => {
     await rm(workDir, { recursive: true, force: true });
-    server = await bootRegistry(PORT, workDir, storeFromDb(newDb()));
+    server = await bootRegistry(
+      PORT,
+      workDir,
+      storeFromDb(await createPGliteDatabase()),
+    );
   }, 30000);
 
   afterAll(async () => {
@@ -164,16 +158,16 @@ describe("registry auth plugin — accounts (integration, verdaccio + pg-mem)", 
   });
 });
 
-describe("registry auth plugin — ownership + persistence (integration, verdaccio + pg-mem)", () => {
+describe("registry auth plugin — ownership + persistence (integration, verdaccio + PGlite)", () => {
   const PORT = 8294;
   const URL = `http://localhost:${PORT}`;
   const workDir = path.join(import.meta.dirname, "./.test-output-pgown");
-  const db = newDb(); // shared Postgres for both "pods"
-  const sharedStore = storeFromDb(db); // one pool over the shared db
+  let sharedStore: AuthStore; // one store over the shared db
   let server: Awaited<ReturnType<typeof runRegistry>>;
 
   beforeAll(async () => {
     await rm(workDir, { recursive: true, force: true });
+    sharedStore = storeFromDb(await createPGliteDatabase());
     server = await bootRegistry(PORT, workDir, sharedStore);
   }, 30000);
 
@@ -203,13 +197,15 @@ describe("registry auth plugin — ownership + persistence (integration, verdacc
       await publish(URL, carol.token!, "carol-pkg", "1.0.0", true),
     ).toBeLessThan(300);
 
-    // Poll the listing until the publish hook has warmed it into the cache.
+    // Poll the listing until the version is processed
     let listed: { name: string; owners?: string[] } | undefined;
     await vi.waitFor(
       async () => {
-        const res = await fetch(`${URL}/packages`);
-        const arr = (await res.json()) as { name: string; owners?: string[] }[];
-        listed = arr.find((p) => p.name === "carol-pkg");
+        const res = await fetch(`${URL}/packages?name=carol-pkg&detail=full`);
+        const page = (await res.json()) as {
+          items: { name: string; owners?: string[] }[];
+        };
+        listed = page.items[0];
         expect(listed).toBeTruthy();
       },
       { timeout: 15000, interval: 200 },
@@ -227,9 +223,7 @@ describe("registry auth plugin — ownership + persistence (integration, verdacc
     const URL2 = `http://localhost:${PORT2}`;
     const workDir2 = path.join(import.meta.dirname, "./.test-output-pgown2");
     await rm(workDir2, { recursive: true, force: true });
-    // A brand-new registry process over the SAME Postgres (second pod). Reuse
-    // the shared store: init() is memoized so tables aren't re-created (pg-mem
-    // can't re-run CREATE TABLE IF NOT EXISTS; real Postgres no-ops it fine).
+    // A brand-new registry process over the same database (a second pod)
     const server2 = await bootRegistry(PORT2, workDir2, sharedStore);
     try {
       const relogin = await putUser(URL2, "alice", "pw-a");

@@ -1,0 +1,3 @@
+.tsbuild
+results/logs/
+results/*.json

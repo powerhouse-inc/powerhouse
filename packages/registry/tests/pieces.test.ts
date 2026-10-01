@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
 import path from "node:path";
@@ -10,7 +10,6 @@ import {
   DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
   DEFAULT_STORAGE_DIR_NAME,
 } from "../src/constants.js";
-import { invalidatePieceIndex } from "../src/pieces.js";
 import { runRegistry } from "../src/run.js";
 import { packTarball } from "./pack.js";
 
@@ -244,9 +243,10 @@ interface CatalogEntry {
 }
 
 async function catalog(query = ""): Promise<CatalogEntry[]> {
-  const res = await fetch(`${REGISTRY_URL}/pieces${query}`);
+  const sep = query ? "&" : "?";
+  const res = await fetch(`${REGISTRY_URL}/pieces${query}${sep}limit=50`);
   expect(res.ok).toBe(true);
-  return (await res.json()) as CatalogEntry[];
+  return ((await res.json()) as { items: CatalogEntry[] }).items;
 }
 
 const MULTI_PIECE = "@phtest/piece-multi";
@@ -285,7 +285,7 @@ function multiFiles(packageVersion: string): Record<string, string> {
 }
 
 function multiTarballUrl(version: string): string {
-  return `${REGISTRY_URL}/-/pieces/bundled/@phtest-piece-multi-${version}.tgz`;
+  return `${REGISTRY_URL}/-/pieces/bundled/@phtest/piece-multi/${version}.tgz`;
 }
 
 async function multiBundleText(version: string): Promise<string> {
@@ -387,6 +387,30 @@ describe("registry pieces", () => {
   });
 
   describe("GET /pieces", () => {
+    it("pages and searches with limit, offset and search", async () => {
+      const all = await catalog();
+      const res = await fetch(`${REGISTRY_URL}/pieces?limit=1&offset=0`);
+      const first = (await res.json()) as {
+        items: CatalogEntry[];
+        total: number;
+        hasMore: boolean;
+      };
+      expect(first.total).toBe(all.length);
+      expect(first.items.map((p) => p.name)).toEqual([all[0].name]);
+      expect(first.hasMore).toBe(all.length > 1);
+
+      const found = (await (
+        await fetch(
+          `${REGISTRY_URL}/pieces?search=says%20hello&suggestionType=ACTION_AND_TRIGGER`,
+        )
+      ).json()) as { items: CatalogEntry[] };
+      expect(found.items.map((p) => p.name)).toEqual([PIECE_NAME]);
+      expect((await catalog("?search=greter")).map((p) => p.name)).toEqual([
+        PIECE_NAME,
+      ]);
+      expect(found.items[0].suggestedActions).toHaveLength(1);
+    });
+
     it("indexes a package that ships pieces and skips one that does not", async () => {
       const entries = await catalog();
       expect(entries.map((p) => p.name)).toContain(PIECE_NAME);
@@ -445,7 +469,7 @@ describe("registry pieces", () => {
           `${REGISTRY_URL}/-/cdn/${PIECE_PKG}@${VERSION}/${PIECE_DIR}/descriptor.json`,
         );
         expect(detail.bundleUrl).toBe(
-          `${REGISTRY_URL}/-/pieces/bundled/@phtest-piece-greeter-${VERSION}.tgz`,
+          `${REGISTRY_URL}/-/pieces/bundled/@phtest/piece-greeter/${VERSION}.tgz`,
         );
       }
     });
@@ -468,7 +492,7 @@ describe("registry pieces", () => {
 
     it("404s cleanly for a bundle nobody published", async () => {
       const res = await fetch(
-        `${REGISTRY_URL}/-/pieces/bundled/@phtest-piece-nothing-9.9.9.tgz`,
+        `${REGISTRY_URL}/-/pieces/bundled/@phtest/piece-nothing/9.9.9.tgz`,
       );
       expect(res.status).toBe(404);
     });
@@ -477,7 +501,7 @@ describe("registry pieces", () => {
   describe("piece tarball", () => {
     it("serves a gzipped bundle, cacheable forever", async () => {
       const res = await fetch(
-        `${REGISTRY_URL}/-/pieces/bundled/@phtest-piece-greeter-${VERSION}.tgz`,
+        `${REGISTRY_URL}/-/pieces/bundled/@phtest/piece-greeter/${VERSION}.tgz`,
       );
       expect(res.ok).toBe(true);
       expect(res.headers.get("content-type")).toBe("application/gzip");
@@ -594,14 +618,6 @@ describe("registry pieces", () => {
   });
 
   describe("every published version", () => {
-    const multiVersionDir = (version: string) =>
-      path.join(
-        workDir,
-        DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
-        MULTI_PKG,
-        version,
-      );
-
     beforeAll(async () => {
       await publishOrThrow(MULTI_PKG, "2.0.0", multiFiles("2.0.0"));
       await publishOrThrow(MULTI_PKG, "2.1.0", multiFiles("2.1.0"));
@@ -692,35 +708,6 @@ describe("registry pieces", () => {
       });
       const bundle = await fetch(multiTarballUrl("9.9.9"));
       expect(bundle.status).toBe(404);
-    });
-
-    it("extracts a version the cdn cache does not hold on first request", async () => {
-      await rm(multiVersionDir("2.0.0"), { recursive: true, force: true });
-      invalidatePieceIndex();
-
-      const res = await fetch(
-        `${REGISTRY_URL}/pieces/${MULTI_PIECE}?version=2.0.0`,
-      );
-      expect(res.ok).toBe(true);
-      expect(((await res.json()) as { displayName: string }).displayName).toBe(
-        "Multi 2.0.0",
-      );
-      expect(
-        existsSync(path.join(multiVersionDir("2.0.0"), "package.json")),
-      ).toBe(true);
-
-      await rm(multiVersionDir("2.0.0"), { recursive: true, force: true });
-      invalidatePieceIndex();
-      expect(await multiBundleText("2.0.0")).toContain("multi@2.0.0");
-
-      await rm(multiVersionDir("2.0.0"), { recursive: true, force: true });
-      invalidatePieceIndex();
-      const listed = await fetch(
-        `${REGISTRY_URL}/pieces/${MULTI_PIECE}/versions`,
-      );
-      expect(
-        ((await listed.json()) as { version: string }[]).map((v) => v.version),
-      ).toEqual(["2.1.0", "2.0.0"]);
     });
 
     it("keeps the latest in the catalog", async () => {

@@ -1,0 +1,10 @@
+{
+  "name": "@fixture/piece-only-package",
+  "version": "1.2.3",
+  "description": "Throwaway registry-e2e probe package. Safe to delete.",
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "dist"
+  ]
+}

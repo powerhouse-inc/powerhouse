@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "tsdown";
 import { dtsExportList } from "../../tsdown.dts.mjs";
 
@@ -22,5 +23,22 @@ export default defineConfig([
     dts: false,
     sourcemap: false,
     outExtensions: () => ({ js: ".js" }),
+  },
+  {
+    // The S3 storage fork, self-contained so the published registry needs no
+    // separate package; Verdaccio loads it from dist/plugins by package name
+    entry: {
+      index: fileURLToPath(
+        import.meta.resolve("@powerhousedao/verdaccio-s3-storage"),
+      ),
+    },
+    outDir: "dist/plugins/@powerhousedao/verdaccio-s3-storage",
+    format: "cjs",
+    platform: "node",
+    clean: false,
+    dts: false,
+    sourcemap: false,
+    outExtensions: () => ({ js: ".js" }),
+    deps: { alwaysBundle: [/.*/], neverBundle: ["pg-native"] },
   },
 ]);

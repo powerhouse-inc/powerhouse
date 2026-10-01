@@ -1,0 +1,134 @@
+# The dev deployment of the verdaccio registry under load: replicas that each
+# keep their own /data and serve publishes themselves, shared MinIO, Postgres
+# behind a transaction pooler (dev's CNPG pooler), and the NGINX cache.
+#   REGISTRY_IMAGE        registry image built from a git ref
+#   REGISTRY_AUTH_RENOWN  "true" verifies Renown bearer tokens
+#   REGISTRY_CPUS/MEM     per-replica limits; the defaults match the new stack
+name: registry-stress
+
+x-registry: &registry
+  image: ${REGISTRY_IMAGE:?set REGISTRY_IMAGE}
+  restart: on-failure
+  depends_on:
+    minio-init:
+      condition: service_completed_successfully
+    pgbouncer:
+      condition: service_started
+    uplink:
+      condition: service_started
+  environment:
+    PORT: "4873"
+    NODE_ENV: ${REGISTRY_NODE_ENV:-production}
+    NODE_OPTIONS: --max-old-space-size=${REGISTRY_HEAP_MB:-768}
+    REGISTRY_STORAGE: /data/storage
+    REGISTRY_CDN_CACHE: /data/cdn-cache
+    # A local stub, so misses don't load npmjs
+    REGISTRY_UPLINK: http://uplink/
+    S3_BUCKET: powerhouse-registry
+    S3_ENDPOINT: http://minio:9000
+    S3_REGION: nbg1
+    S3_FORCE_PATH_STYLE: "true"
+    S3_KEY_PREFIX: stress/
+    S3_ACCESS_KEY_ID: minioadmin
+    S3_SECRET_ACCESS_KEY: minioadmin
+    PH_REGISTRY_DATABASE_URL: postgres://registry:registry@pgbouncer:5432/registry_db
+    PH_REGISTRY_PUBLIC_URL: https://registry.dev.vetra.io
+    PH_REGISTRY_AUTH_RENOWN: ${REGISTRY_AUTH_RENOWN:-true}
+    PH_REGISTRY_VERDACCIO_SECRET: registry-stress-shared-secret-0123456789abcdef
+  cpus: ${REGISTRY_CPUS:-1}
+  mem_limit: ${REGISTRY_MEM:-1g}
+  # emptyDir: each replica's /data is its own and dies with the container
+  tmpfs:
+    - /data
+
+services:
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    cpus: 2
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint:
+      - sh
+      - -c
+      - mc alias set local http://minio:9000 minioadmin minioadmin && mc mb --ignore-existing local/powerhouse-registry
+
+  postgres:
+    image: postgres:16-alpine
+    command:
+      ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=128MB"]
+    environment:
+      POSTGRES_USER: registry
+      POSTGRES_PASSWORD: registry
+      POSTGRES_DB: registry_db
+    cpus: 2
+    mem_limit: 2g
+    ports:
+      - "4940:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U registry -d registry_db"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://registry:registry@postgres:5432/registry_db
+      POOL_MODE: transaction
+      AUTH_TYPE: scram-sha-256
+      DEFAULT_POOL_SIZE: "25"
+      MAX_CLIENT_CONN: "200"
+    cpus: 0.5
+    mem_limit: 256m
+
+  # npmjs stand-in: every uplink lookup is a fast 404
+  uplink:
+    image: nginx:alpine
+    command:
+      - sh
+      - -c
+      - printf 'events {}\nhttp { access_log off; server { listen 80; location / { return 404 "{\\"error\\":\\"not found\\"}"; } } }\n' > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'
+    cpus: 0.5
+    mem_limit: 128m
+
+  registry-1:
+    <<: *registry
+    ports:
+      - "4931:4873"
+  registry-2:
+    <<: *registry
+    ports:
+      - "4932:4873"
+
+  nginx:
+    image: nginx:alpine
+    depends_on:
+      - registry-1
+      - registry-2
+    volumes:
+      - ./nginx.stress.conf:/etc/nginx/nginx.conf:ro
+      - nginx-cache:/cache/data
+    cpus: 1
+    mem_limit: 1g
+    ports:
+      - "4930:80"
+
+volumes:
+  nginx-cache:

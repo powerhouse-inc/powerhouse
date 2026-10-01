@@ -1,0 +1,9 @@
+{
+  "name": "@fixture/piece-hello",
+  "version": "1.2.3",
+  "description": "Says hello.",
+  "type": "module",
+  "main": "index.mjs",
+  "license": "MIT",
+  "dependencies": {}
+}

@@ -5,8 +5,14 @@ import type {
   UnpublishEvent,
 } from "./types.js";
 
+// Proxies drop connections idle for a minute or so; a comment keeps them open
+const HEARTBEAT_MS = 25_000;
+// A client this far behind is dropped rather than buffered without bound
+const MAX_BUFFERED_BYTES = 1024 * 1024;
+
 export class SSEChannel implements NotificationChannel {
   #clients = new Set<Response>();
+  #heartbeat: ReturnType<typeof setInterval> | undefined;
 
   addClient(res: Response): void {
     res.writeHead(200, {
@@ -14,12 +20,23 @@ export class SSEChannel implements NotificationChannel {
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
       "Access-Control-Allow-Origin": "*",
+      // NGINX would otherwise buffer the stream
+      "X-Accel-Buffering": "no",
     });
     res.write("event: connected\ndata: {}\n\n");
 
     this.#clients.add(res);
+    this.#heartbeat ??= setInterval(
+      () => this.#send(": ping\n\n"),
+      HEARTBEAT_MS,
+    );
+    this.#heartbeat.unref();
     res.on("close", () => {
       this.#clients.delete(res);
+      if (this.#clients.size === 0) {
+        clearInterval(this.#heartbeat);
+        this.#heartbeat = undefined;
+      }
     });
   }
 
@@ -32,8 +49,16 @@ export class SSEChannel implements NotificationChannel {
   }
 
   #broadcast(eventName: string, event: PublishEvent | UnpublishEvent): void {
-    const payload = `event: ${eventName}\ndata: ${JSON.stringify(event)}\n\n`;
+    this.#send(`event: ${eventName}\ndata: ${JSON.stringify(event)}\n\n`);
+  }
+
+  #send(payload: string): void {
     for (const client of this.#clients) {
+      if (client.writableLength > MAX_BUFFERED_BYTES) {
+        client.destroy();
+        this.#clients.delete(client);
+        continue;
+      }
       try {
         client.write(payload);
       } catch (err) {

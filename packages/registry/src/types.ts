@@ -49,7 +49,7 @@ export interface RegistryConfig {
   s3?: S3Config;
   notify?: NotifyConfig;
   maxBodySize?: string;
-  /** Top-level verdaccio JWT signing secret. If unset, randomized per pod. */
+  /** Seeds Verdaccio's stored signing secret when none is stored yet. */
   verdaccioSecret?: string;
   /** Enable Renown JWT auth in front of verdaccio. */
   renown?: RenownAuthConfig;
@@ -57,6 +57,9 @@ export interface RegistryConfig {
    *  re-publish a workspace package whose version already exists on npmjs
    *  without bumping (verdaccio would otherwise reject with 409). */
   localPackagePatterns?: string[];
+  /** Sizes of the storage plugin's Postgres pools; unset keeps its defaults */
+  storagePoolMax?: number;
+  storageLockPoolMax?: number;
   /** Postgres connection string. When set, the registry uses the DB-backed
    *  auth plugin (persistent accounts + package ownership) instead of the
    *  built-in htpasswd. */
@@ -104,4 +107,39 @@ export interface RegistryCommandArgs {
   pluginsDir?: string;
   /** Injected AuthStore (tests only). */
   authStore?: unknown;
+  /** Workers run inside the server process; 0 leaves jobs to `ph-registry worker`. */
+  workers?: number;
+  /** Memory held for small published files, in MiB; 0 turns it off. */
+  artifactCacheMb?: number;
+  /** A direct connection for LISTEN when databaseUrl goes through a pooler */
+  listenDatabaseUrl?: string;
+  /** Apply migrations at boot; unset, only without databaseUrl (PGlite) */
+  migrateOnBoot?: boolean;
+  /** Connections in this process's own Postgres pool */
+  dbPoolMax?: number;
+  /** The storage plugin's pools: reads, and package-lock writes */
+  storagePoolMax?: number;
+  storageLockPoolMax?: number;
+}
+
+export interface WorkerCommandArgs {
+  storageDir: string;
+  cdnCacheDir: string;
+  s3Bucket?: string;
+  s3Endpoint?: string;
+  s3Region?: string;
+  s3AccessKeyId?: string;
+  s3SecretAccessKey?: string;
+  s3KeyPrefix?: string;
+  s3ForcePathStyle: boolean;
+  databaseUrl?: string;
+  listenDatabaseUrl?: string;
+  migrateOnBoot?: boolean;
+  dbPoolMax?: number;
+  webhooks?: string;
+  /** npm endpoint of a registry replica the worker fetches packages from */
+  registryUrl: string;
+  concurrency: number;
+  /** Serves GET /-/metrics on this port when set */
+  metricsPort?: number;
 }

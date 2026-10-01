@@ -22,6 +22,8 @@ minimumReleaseAgeExclude:
   - "mastra"
   # Our own package, published from powerhouse-inc/renown-package.
   - "@powerhousedao/renown-package"
+  # Our own package, published from powerhouse-inc/verdaccio-aws-s3-postgres-storage.
+  - "@powerhousedao/verdaccio-s3-storage"
 dedupePeerDependents: false
 
 # pnpm 12 dropped built-in @jsr scope resolution.

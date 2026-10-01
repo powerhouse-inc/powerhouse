@@ -1,24 +1,18 @@
-import type { Pool } from "pg";
-import { newDb } from "pg-mem";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { AuthStore } from "../src/auth/auth-store.js";
 import { createPgStore } from "../src/auth/pg-store.js";
+import { createPGliteDatabase } from "../src/db/database.js";
 
-/** Fresh in-memory Postgres per test, wired to createPgStore via pg-mem's
- *  node-postgres adapter (no real database needed). */
-function pgMemStore(): AuthStore {
-  const db = newDb();
-  const { Pool: PgMemPool } = db.adapters.createPg() as {
-    Pool: new () => unknown;
-  };
-  return createPgStore(new PgMemPool() as unknown as Pool);
+/** A fresh in-memory Postgres (PGlite) per test. */
+async function pgliteStore(): Promise<AuthStore> {
+  return createPgStore(await createPGliteDatabase());
 }
 
-describe("PgStore (pg-mem)", () => {
+describe("PgStore (PGlite)", () => {
   let store: AuthStore;
 
   beforeEach(async () => {
-    store = pgMemStore();
+    store = await pgliteStore();
     await store.init();
   });
 

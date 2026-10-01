@@ -178,12 +178,14 @@ describe("registry npm uplink fallback", () => {
     expect(stats.tarballRequests).toBeGreaterThanOrEqual(1);
   });
 
-  it("extracts the tarball into the CDN cache", () => {
+  it("stores the unpacked tarball in the artifact store", () => {
     const cachedFile = path.join(
       workDir,
       DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
+      "artifacts",
       UPSTREAM_ONLY_PKG,
       UPSTREAM_ONLY_VERSION,
+      "files",
       "browser",
       "index.js",
     );

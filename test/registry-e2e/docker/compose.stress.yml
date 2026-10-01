@@ -1,0 +1,167 @@
+# The alpha deployment under load: two registry replicas that only record
+# jobs, one worker, Postgres behind a transaction pooler, MinIO and the NGINX
+# cache. Limits follow tenants/alpha and the npm-cache-proxy.
+#   REGISTRY_IMAGE        registry image built from a git ref
+#   REGISTRY_AUTH_RENOWN  "true" verifies Renown bearer tokens
+name: registry-stress
+
+x-registry-env: &registry-env
+  NODE_ENV: production
+  REGISTRY_STORAGE: /data/storage
+  REGISTRY_CDN_CACHE: /data/cdn-cache
+  S3_BUCKET: powerhouse-registry
+  S3_ENDPOINT: http://minio:9000
+  S3_REGION: nbg1
+  S3_FORCE_PATH_STYLE: "true"
+  S3_KEY_PREFIX: stress/
+  S3_ACCESS_KEY_ID: minioadmin
+  S3_SECRET_ACCESS_KEY: minioadmin
+  PH_REGISTRY_DATABASE_URL: postgres://registry:registry@pgbouncer:5432/registry_db
+  PH_REGISTRY_LISTEN_DATABASE_URL: postgres://registry:registry@postgres:5432/registry_db
+  PH_REGISTRY_PUBLIC_URL: https://registry.dev.vetra.io
+  PH_REGISTRY_AUTH_RENOWN: ${REGISTRY_AUTH_RENOWN:-true}
+  PH_REGISTRY_VERDACCIO_SECRET: registry-stress-shared-secret-0123456789abcdef
+
+x-registry: &registry
+  image: ${REGISTRY_IMAGE:?set REGISTRY_IMAGE}
+  restart: on-failure
+  depends_on:
+    minio-init:
+      condition: service_completed_successfully
+    migrate:
+      condition: service_completed_successfully
+  environment:
+    <<: *registry-env
+    PORT: "4873"
+    PH_REGISTRY_WORKERS: "0"
+    NODE_OPTIONS: --max-old-space-size=768
+  # One core: Node runs its JavaScript on one thread
+  cpus: 1
+  mem_limit: 1g
+  tmpfs:
+    - /data
+
+services:
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    cpus: 2
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint:
+      - sh
+      - -c
+      - mc alias set local http://minio:9000 minioadmin minioadmin && mc mb --ignore-existing local/powerhouse-registry
+
+  postgres:
+    image: postgres:16-alpine
+    command:
+      ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=128MB"]
+    environment:
+      POSTGRES_USER: registry
+      POSTGRES_PASSWORD: registry
+      POSTGRES_DB: registry_db
+    cpus: 2
+    mem_limit: 2g
+    ports:
+      - "4940:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U registry -d registry_db"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://registry:registry@postgres:5432/registry_db
+      POOL_MODE: transaction
+      AUTH_TYPE: scram-sha-256
+      DEFAULT_POOL_SIZE: "20"
+      MAX_CLIENT_CONN: "200"
+    cpus: 0.5
+    mem_limit: 256m
+
+  # Like the alpha chart's migration Job: once, before any replica starts
+  migrate:
+    image: ${REGISTRY_IMAGE:?set REGISTRY_IMAGE}
+    command: ["migrate"]
+    restart: on-failure
+    depends_on:
+      pgbouncer:
+        condition: service_started
+    environment:
+      <<: *registry-env
+
+  registry-1:
+    <<: *registry
+    ports:
+      - "4931:4873"
+  registry-2:
+    <<: *registry
+    ports:
+      - "4932:4873"
+
+  worker:
+    image: ${REGISTRY_IMAGE:?set REGISTRY_IMAGE}
+    command: ["worker"]
+    restart: on-failure
+    depends_on:
+      registry-1:
+        condition: service_started
+      registry-2:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *registry-env
+      PH_REGISTRY_INTERNAL_URL: http://nginx-internal:80
+      PH_REGISTRY_WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-8}
+    cpus: 1
+    mem_limit: 1g
+    tmpfs:
+      - /data
+
+  # The Service the worker fetches through: both replicas, no cache
+  nginx-internal:
+    image: nginx:alpine
+    depends_on:
+      - registry-1
+      - registry-2
+    volumes:
+      - ./nginx.internal.conf:/etc/nginx/nginx.conf:ro
+    cpus: 0.5
+    mem_limit: 128m
+
+  nginx:
+    image: nginx:alpine
+    depends_on:
+      - registry-1
+      - registry-2
+    # On disk like the proxy's PVC; tmpfs would count against its memory
+    volumes:
+      - ./nginx.stress.conf:/etc/nginx/nginx.conf:ro
+      - nginx-cache:/cache/data
+    cpus: 1
+    mem_limit: 1g
+    ports:
+      - "4930:80"
+
+volumes:
+  nginx-cache:

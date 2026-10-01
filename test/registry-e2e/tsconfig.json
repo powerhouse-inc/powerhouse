@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./.tsbuild",
+    "resolveJsonModule": true,
+    "types": ["node"]
+  },
+  "include": ["scripts/**/*.ts"],
+  "references": [{ "path": "../../packages/renown" }]
+}

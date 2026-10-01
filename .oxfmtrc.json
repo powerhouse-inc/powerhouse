@@ -18,6 +18,8 @@
     "**/powerhouse.manifest.json",
     "tools/doc-harness/catalog/",
     "packages/reactor-workflow/test/upstream/",
-    "tools/doc-harness/prompts/schemas/"
+    "tools/doc-harness/prompts/schemas/",
+    "test/registry-e2e/fixture/package/build/",
+    "test/registry-e2e/results/"
   ]
 }

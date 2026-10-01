@@ -1,0 +1,103 @@
+# The dev tenant in miniature: shared S3 (MinIO) and Postgres, three registry
+# replicas with their own throwaway /data, and the npm-cache-proxy NGINX.
+#   REGISTRY_IMAGE        registry image built from a git ref (scripts/lib/refs.ts)
+#   REGISTRY_AUTH_RENOWN  "true" verifies Renown bearer tokens like dev does
+name: registry-e2e
+
+x-registry: &registry
+  image: ${REGISTRY_IMAGE:?set REGISTRY_IMAGE}
+  # Like a pod restart: concurrent schema init on an empty database can crash one.
+  restart: on-failure
+  depends_on:
+    minio-init:
+      condition: service_completed_successfully
+    postgres:
+      condition: service_healthy
+  environment:
+    PORT: "4873"
+    NODE_ENV: development
+    REGISTRY_STORAGE: /data/storage
+    REGISTRY_CDN_CACHE: /data/cdn-cache
+    S3_BUCKET: powerhouse-registry
+    S3_ENDPOINT: http://minio:9000
+    S3_REGION: nbg1
+    S3_FORCE_PATH_STYLE: "true"
+    S3_KEY_PREFIX: dev/
+    S3_ACCESS_KEY_ID: minioadmin
+    S3_SECRET_ACCESS_KEY: minioadmin
+    PH_REGISTRY_DATABASE_URL: postgres://registry:registry@postgres:5432/registry_db
+    PH_REGISTRY_PUBLIC_URL: ${REGISTRY_PUBLIC_URL:-https://registry.dev.vetra.io}
+    PH_REGISTRY_AUTH_RENOWN: ${REGISTRY_AUTH_RENOWN:-true}
+    PH_REGISTRY_VERDACCIO_SECRET: registry-e2e-shared-secret-0123456789abcdef
+    # The replicas race on an empty database, as pods migrating on boot would
+    PH_REGISTRY_MIGRATE_ON_BOOT: "true"
+  # emptyDir: each replica's /data is its own and dies with the container.
+  tmpfs:
+    - /data
+
+services:
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "4910:9000"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint:
+      - sh
+      - -c
+      - mc alias set local http://minio:9000 minioadmin minioadmin && mc mb --ignore-existing local/powerhouse-registry
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: registry
+      POSTGRES_PASSWORD: registry
+      POSTGRES_DB: registry_db
+    ports:
+      - "4920:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U registry -d registry_db"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  registry-1:
+    <<: *registry
+    ports:
+      - "4901:4873"
+  registry-2:
+    <<: *registry
+    ports:
+      - "4902:4873"
+  registry-3:
+    <<: *registry
+    ports:
+      - "4903:4873"
+
+  nginx:
+    image: nginx:alpine
+    depends_on:
+      - registry-1
+      - registry-2
+      - registry-3
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - type: tmpfs
+        target: /cache/data
+        tmpfs:
+          mode: 01777
+    ports:
+      - "4900:80"
