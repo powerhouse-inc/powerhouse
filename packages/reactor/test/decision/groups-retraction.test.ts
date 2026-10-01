@@ -487,4 +487,40 @@ describe("group membership under RETRACT, through a reactor", () => {
       open.kill();
     }
   });
+
+  it("re-evaluates a referencing document on a RETRACT, and again on its redo", async () => {
+    const { groupId, targetId, addId } = await setUp();
+
+    setTime(3);
+    await execute(targetId, await memberWrite(targetId, "m1"));
+    expect(await appliedGlobal(targetId)).toEqual([
+      { type: "ADD_MODULE", denied: false },
+    ]);
+
+    // A retraction timestamped before the member's write.
+    vi.setSystemTime(new Date("2026-01-01T00:00:02.500Z"));
+    const undo = retract(addId);
+    await execute(groupId, undo);
+
+    await vi.waitUntil(
+      async () =>
+        (await appliedGlobal(targetId)).some((operation) => operation.denied),
+      { timeout: 10_000 },
+    );
+    expect(await appliedGlobal(targetId)).toEqual([
+      { type: "ADD_MODULE", denied: true },
+    ]);
+
+    vi.setSystemTime(new Date("2026-01-01T00:00:02.700Z"));
+    await execute(groupId, retract(undo.id));
+
+    await vi.waitUntil(
+      async () =>
+        (await appliedGlobal(targetId)).every((operation) => !operation.denied),
+      { timeout: 10_000 },
+    );
+    expect(await appliedGlobal(targetId)).toEqual([
+      { type: "ADD_MODULE", denied: false },
+    ]);
+  });
 });
