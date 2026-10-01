@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import {
   AttachmentAccessService,
+  type AttachmentAccessServiceOptions,
   type AttachmentReadGate,
   type AttachmentReferenceProjectionCapability,
   type IDocumentScopeGate,
@@ -736,6 +737,128 @@ describe("AttachmentAccessService", () => {
       ).resolves.toEqual({ kind: "projection-unavailable" });
       expect(recorded.calls).toEqual([]);
     });
+  });
+});
+
+describe("AttachmentAccessService.admitCaller", () => {
+  function untouchable<T>(name: string, touched: string[]): T {
+    return new Proxy(
+      {},
+      {
+        get: (_, property) => {
+          touched.push(`${name}.${String(property)}`);
+          return undefined;
+        },
+      },
+    ) as T;
+  }
+
+  function admitting(options?: AttachmentAccessServiceOptions) {
+    const touched: string[] = [];
+    const access = new AttachmentAccessService(
+      (identifier: string) => {
+        touched.push(`resolve:${identifier}`);
+        return Promise.resolve(identifier as CanonicalDocumentId);
+      },
+      untouchable<IAuthorizationService>("authorization", touched),
+      untouchable<IAttachmentReferenceReader>("references", touched),
+      AVAILABLE,
+      untouchable<AttachmentReadGate>("readGate", touched),
+      untouchable<IDocumentScopeGate>("scopeGate", touched),
+      options,
+    );
+    return { access, touched };
+  }
+
+  const intents = ["read", "write"] as const;
+  const addresses = [undefined, "", USER] as const;
+
+  const optionCases = intents.flatMap((intent) =>
+    [true, false].flatMap((refuse) =>
+      addresses.map((userAddress) => ({
+        intent,
+        refuse,
+        userAddress,
+        expected:
+          refuse && !userAddress
+            ? ("unauthenticated" as const)
+            : ("admitted" as const),
+      })),
+    ),
+  );
+
+  it.each(optionCases)(
+    "$intent with its option $refuse and address $userAddress is $expected",
+    async ({ intent, refuse, userAddress, expected }) => {
+      const { access, touched } = admitting(
+        intent === "read"
+          ? { refuseAnonymousReads: refuse }
+          : { refuseAnonymousWrites: refuse },
+      );
+
+      await expect(
+        access.admitCaller({ intent, userAddress }),
+      ).resolves.toEqual({ kind: expected });
+      expect(touched).toEqual([]);
+    },
+  );
+
+  it.each([
+    ["no options", undefined],
+    ["empty options", {}],
+    [
+      "undefined fields",
+      { refuseAnonymousReads: undefined, refuseAnonymousWrites: undefined },
+    ],
+  ] as const)(
+    "with %s refuses anonymous writes and admits anonymous reads",
+    async (_, options) => {
+      const { access, touched } = admitting(options);
+
+      for (const userAddress of [undefined, ""]) {
+        await expect(
+          access.admitCaller({ intent: "write", userAddress }),
+        ).resolves.toEqual({ kind: "unauthenticated" });
+        await expect(
+          access.admitCaller({ intent: "read", userAddress }),
+        ).resolves.toEqual({ kind: "admitted" });
+      }
+      for (const intent of intents) {
+        await expect(
+          access.admitCaller({ intent, userAddress: USER }),
+        ).resolves.toEqual({ kind: "admitted" });
+      }
+      expect(touched).toEqual([]);
+    },
+  );
+
+  it("applies each intent's option only to that intent", async () => {
+    const { access, touched } = admitting({
+      refuseAnonymousReads: true,
+      refuseAnonymousWrites: false,
+    });
+
+    await expect(access.admitCaller({ intent: "read" })).resolves.toEqual({
+      kind: "unauthenticated",
+    });
+    await expect(access.admitCaller({ intent: "write" })).resolves.toEqual({
+      kind: "admitted",
+    });
+    expect(touched).toEqual([]);
+  });
+
+  it("does not take an app key alone as an authenticated caller", async () => {
+    const { access, touched } = admitting({
+      refuseAnonymousReads: true,
+      refuseAnonymousWrites: true,
+    });
+
+    for (const intent of intents) {
+      await expect(
+        access.admitCaller({ intent, appKey: "did:key:app" }),
+      ).resolves.toEqual({ kind: "unauthenticated" });
+    }
+    expect(touched).toEqual([]);
   });
 });
 

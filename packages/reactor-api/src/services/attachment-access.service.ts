@@ -127,7 +127,8 @@ const HASH_PATTERN = /^[a-f0-9]{64}$/;
  * anyone who learns its hash, which the document's own state may well have told
  * them. Both are kept because they are the two halves of one rule: an
  * attachment is readable by whoever may read the document that references it,
- * and each composition can only express that in its own terms.
+ * and each composition can only express that in its own terms. The caller
+ * decision mirrors the routes' `requireAuth`.
  */
 export class AttachmentAccessService implements IAttachmentAccessService {
   constructor(
@@ -145,9 +146,17 @@ export class AttachmentAccessService implements IAttachmentAccessService {
   ) {}
 
   admitCaller(
-    _request: AttachmentCallerRequest,
+    request: AttachmentCallerRequest,
   ): Promise<AttachmentCallerResult> {
-    return Promise.reject(new Error("not implemented"));
+    // Any intent other than "read" takes the write rule, which fails closed.
+    const refuseAnonymous =
+      request.intent === "read"
+        ? (this.options.refuseAnonymousReads ?? false)
+        : (this.options.refuseAnonymousWrites ?? true);
+    if (refuseAnonymous && !request.userAddress) {
+      return Promise.resolve({ kind: "unauthenticated" });
+    }
+    return Promise.resolve({ kind: "admitted" });
   }
 
   async canReadAttachment(
