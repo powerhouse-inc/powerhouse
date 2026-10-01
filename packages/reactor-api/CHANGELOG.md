@@ -1,3 +1,23 @@
+## 6.2.3-dev.36 (2026-10-01)
+
+### 🚀 Features
+
+- **reactor-api:** gate attachment service calls for one subject ([2f8e6bdc4b](https://github.com/powerhouse-inc/powerhouse/commit/2f8e6bdc4b))
+- **reactor-api:** give subgraphs a caller-bound attachment client ([4c299b1197](https://github.com/powerhouse-inc/powerhouse/commit/4c299b1197))
+- **reactor-api:** admit attachment callers by the routes' rule ([7df80f2167](https://github.com/powerhouse-inc/powerhouse/commit/7df80f2167))
+- **reactor-api:** declare caller-bound attachment types ([d6748866bc](https://github.com/powerhouse-inc/powerhouse/commit/d6748866bc))
+
+### 🩹 Fixes
+
+- **reactor-api:** accept any non-signal options object when reading documentId ([8ae4f7dbe0](https://github.com/powerhouse-inc/powerhouse/commit/8ae4f7dbe0))
+- **reactor-api:** read reserve options once before checking and delegating ([af9aa43838](https://github.com/powerhouse-inc/powerhouse/commit/af9aa43838))
+- **reactor-api:** never let an extra context field become the WebSocket caller ([96bcd61eb7](https://github.com/powerhouse-inc/powerhouse/commit/96bcd61eb7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.35 (2026-10-01)
 
 ### 🚀 Features

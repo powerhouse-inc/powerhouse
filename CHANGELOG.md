@@ -1,3 +1,30 @@
+## 6.2.3-dev.36 (2026-10-01)
+
+### 🚀 Features
+
+- **reactor-api:** declare caller-bound attachment types ([d6748866bc](https://github.com/powerhouse-inc/powerhouse/commit/d6748866bc))
+- **reactor-api:** admit attachment callers by the routes' rule ([7df80f2167](https://github.com/powerhouse-inc/powerhouse/commit/7df80f2167))
+- **reactor-api:** merge attachment caller-admission track ([dd38682336](https://github.com/powerhouse-inc/powerhouse/commit/dd38682336))
+- **reactor-api:** give subgraphs a caller-bound attachment client ([4c299b1197](https://github.com/powerhouse-inc/powerhouse/commit/4c299b1197))
+- **reactor-api:** gate attachment service calls for one subject ([2f8e6bdc4b](https://github.com/powerhouse-inc/powerhouse/commit/2f8e6bdc4b))
+- **reactor-api:** merge caller-bound attachment wiring track ([d4267f7799](https://github.com/powerhouse-inc/powerhouse/commit/d4267f7799))
+- **reactor-api:** merge authorized attachment service track ([22e5fb61e8](https://github.com/powerhouse-inc/powerhouse/commit/22e5fb61e8))
+- **reactor-api:** give subgraphs a caller-bound attachment client ([#3156](https://github.com/powerhouse-inc/powerhouse/pull/3156))
+- **reactor-attachments:** validate reserve metadata ([647d499025](https://github.com/powerhouse-inc/powerhouse/commit/647d499025))
+- **switchboard:** pass the attachment provider to host-built subgraphs ([9264687cf6](https://github.com/powerhouse-inc/powerhouse/commit/9264687cf6))
+
+### 🩹 Fixes
+
+- **reactor-api:** never let an extra context field become the WebSocket caller ([96bcd61eb7](https://github.com/powerhouse-inc/powerhouse/commit/96bcd61eb7))
+- **reactor-api:** read reserve options once before checking and delegating ([af9aa43838](https://github.com/powerhouse-inc/powerhouse/commit/af9aa43838))
+- **reactor-api:** accept any non-signal options object when reading documentId ([8ae4f7dbe0](https://github.com/powerhouse-inc/powerhouse/commit/8ae4f7dbe0))
+- **reactor-attachments:** reject mimeTypes a Content-Type header cannot carry ([2301dbe466](https://github.com/powerhouse-inc/powerhouse/commit/2301dbe466))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.35 (2026-10-01)
 
 ### 🚀 Features

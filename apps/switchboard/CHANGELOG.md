@@ -1,3 +1,19 @@
+## 6.2.3-dev.36 (2026-10-01)
+
+### 🚀 Features
+
+- **switchboard:** pass the attachment provider to host-built subgraphs ([9264687cf6](https://github.com/powerhouse-inc/powerhouse/commit/9264687cf6))
+- **reactor-api:** declare caller-bound attachment types ([d6748866bc](https://github.com/powerhouse-inc/powerhouse/commit/d6748866bc))
+
+### 🩹 Fixes
+
+- **reactor-attachments:** reject mimeTypes a Content-Type header cannot carry ([2301dbe466](https://github.com/powerhouse-inc/powerhouse/commit/2301dbe466))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.35 (2026-10-01)
 
 ### 🚀 Features
