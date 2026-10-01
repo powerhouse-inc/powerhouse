@@ -71,7 +71,7 @@ jobs:
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.8
+          bun-version: 1.4.2
 
       - name: Build
         run: pnpm build
@@ -143,7 +143,7 @@ jobs:
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.8
+          bun-version: 1.4.2
 
       - name: Build
         run: pnpm build
@@ -233,7 +233,7 @@ jobs:
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.8
+          bun-version: 1.4.2
 
       # The UI suite's Postgres piece test needs this image; pull it while
       # the build runs, so the test doesn't.
@@ -318,7 +318,7 @@ jobs:
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.8
+          bun-version: 1.4.2
 
       # Only the analytics browser package and the workspace packages it depends on.
       - name: Install and build
@@ -396,7 +396,7 @@ jobs:
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.8
+          bun-version: 1.4.2
 
       # The recipes resolve the Powerhouse packages through `link:` paths into
       # this checkout, and every package's exports point at dist/, so a full

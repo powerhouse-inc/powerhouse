@@ -76,7 +76,7 @@ jobs:
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.8
+          bun-version: 1.4.2
 
       # Only the reactor packages this job tests and lints (bench/host sits
       # under packages/reactor, so its lint needs it too).
@@ -194,7 +194,7 @@ jobs:
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.8
+          bun-version: 1.4.2
 
       - name: Install postgresql-client-17 from PGDG (matches dump format 1.15)
         run: |

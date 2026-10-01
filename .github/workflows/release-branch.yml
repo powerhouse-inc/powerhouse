@@ -124,6 +124,8 @@ jobs:
           # nx.json configures none of its own, so there is nothing to transpile.
           # Inert where the runtime lacks process.features.typescript.
           NX_PREFER_NODE_STRIP_TYPES: "true"
+          # Nx's isolated plugin workers run under bun (process.execPath) and segfault intermittently.
+          NX_ISOLATE_PLUGINS: "false"
         run: |
           pnpm run run-release -- \
           --release-mode="${{ inputs.release_mode || 'prerelease' }}" \
