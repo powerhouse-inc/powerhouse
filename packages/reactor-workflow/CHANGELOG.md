@@ -1,3 +1,58 @@
+## 6.2.3-dev.35 (2026-10-01)
+
+### 🚀 Features
+
+- ⚠️  **registry:** serve every replica from Postgres and S3, processing publishes in a worker ([0d25d5fe35](https://github.com/powerhouse-inc/powerhouse/commit/0d25d5fe35))
+- **reactor-workflow:** submit a reactor write and wait on it in slices ([5b9d3e327b](https://github.com/powerhouse-inc/powerhouse/commit/5b9d3e327b))
+- **switchboard:** run the privacy add-on behind PH_PRIVACY_ENABLED ([38c9a43856](https://github.com/powerhouse-inc/powerhouse/commit/38c9a43856))
+- **reactor-privacy:** erase requested documents on a serial schedule ([f4f31289a1](https://github.com/powerhouse-inc/powerhouse/commit/f4f31289a1))
+- **reactor-privacy:** serve disclosure and erasure to supreme admins only ([7a6b5232cb](https://github.com/powerhouse-inc/powerhouse/commit/7a6b5232cb))
+- **reactor-privacy:** scaffold the package and its migration ledger ([152ecff77b](https://github.com/powerhouse-inc/powerhouse/commit/152ecff77b))
+- **reactor-drive:** erase a purged document's nodes in NodeProcessor ([5a608e73bf](https://github.com/powerhouse-inc/powerhouse/commit/5a608e73bf))
+- **reactor-workflow:** erase the runs of a purged document ([eddbb70899](https://github.com/powerhouse-inc/powerhouse/commit/eddbb70899))
+- **reactor-attachments:** delete a purged document's attachment references ([4121c83347](https://github.com/powerhouse-inc/powerhouse/commit/4121c83347))
+
+### 🩹 Fixes
+
+- **reactor-workflow:** page the registry piece catalog and fetch bundles from a folder per piece ([bc7439e3ee](https://github.com/powerhouse-inc/powerhouse/commit/bc7439e3ee))
+- **reactor-workflow:** refuse to rerun a step or trigger test as a whole run ([6ff63f9042](https://github.com/powerhouse-inc/powerhouse/commit/6ff63f9042))
+- **switchboard:** let workflow steps read attachments as they read documents ([b8c861360b](https://github.com/powerhouse-inc/powerhouse/commit/b8c861360b))
+- **reactor-workflow:** fall back to the cloud catalog when the piece registry is down ([a72f4b53b3](https://github.com/powerhouse-inc/powerhouse/commit/a72f4b53b3))
+- **reactor-workflow:** submit a reactor create and wait on it in slices ([2c1224f3e5](https://github.com/powerhouse-inc/powerhouse/commit/2c1224f3e5))
+- **reactor-workflow:** refuse a late reactor submit and name one left unanswered ([bae14d56f5](https://github.com/powerhouse-inc/powerhouse/commit/bae14d56f5))
+- **reactor-workflow:** bound the calls after a reactor job lands by the step deadline ([9d2456c385](https://github.com/powerhouse-inc/powerhouse/commit/9d2456c385))
+- **reactor-workflow:** poll a reactor write to its outcome, not the host-call cap ([23ac79f2a6](https://github.com/powerhouse-inc/powerhouse/commit/23ac79f2a6))
+- **reactor-workflow:** read the branch a reactor get names ([addd898de9](https://github.com/powerhouse-inc/powerhouse/commit/addd898de9))
+- **reactor:** a drive's purge does not require a live former member ([e8266b1035](https://github.com/powerhouse-inc/powerhouse/commit/e8266b1035))
+- **reactor-privacy:** warn and record lastError while a leaked purge blocks dispatch ([cd6fe4f022](https://github.com/powerhouse-inc/powerhouse/commit/cd6fe4f022))
+- **reactor-privacy:** reopen every failed request with no failed item each tick ([d9c19c3837](https://github.com/powerhouse-inc/powerhouse/commit/d9c19c3837))
+- **reactor-api:** ignore polled refusals of an unknown kind ([aac4a3e752](https://github.com/powerhouse-inc/powerhouse/commit/aac4a3e752))
+- **reactor-api:** fail a poll with a recoverable code when a refusal is not recorded ([3ab1c92f7b](https://github.com/powerhouse-inc/powerhouse/commit/3ab1c92f7b))
+- **reactor:** keep a polled marker refusal only when the marker was owed ([07cae595da](https://github.com/powerhouse-inc/powerhouse/commit/07cae595da))
+- **reactor:** persist a purge refusal only from a MARKER_REFUSED dead letter ([ef2c3f4729](https://github.com/powerhouse-inc/powerhouse/commit/ef2c3f4729))
+- **reactor-workflow:** reopen the run journal and fire unjournaled once ([5054629e2b](https://github.com/powerhouse-inc/powerhouse/commit/5054629e2b))
+- **reactor-workflow:** erase test runs and lifecycle runs naming a purged id ([07426d1799](https://github.com/powerhouse-inc/powerhouse/commit/07426d1799))
+- **reactor-workflow:** erase a purged workflow's own runs ([ece827ab5a](https://github.com/powerhouse-inc/powerhouse/commit/ece827ab5a))
+- **reactor-workflow:** hold the triggers cursor while the journal is down ([7314c6c87c](https://github.com/powerhouse-inc/powerhouse/commit/7314c6c87c))
+- **reactor-workflow:** disarm a workflow on its purge marker ([642617dccf](https://github.com/powerhouse-inc/powerhouse/commit/642617dccf))
+- **reactor:** keep unfenced downstream read models outside the default fence ([9d38a1928a](https://github.com/powerhouse-inc/powerhouse/commit/9d38a1928a))
+- **reactor-workflow:** read a purged trigger document as absent ([9202aefdf8](https://github.com/powerhouse-inc/powerhouse/commit/9202aefdf8))
+
+### 🔥 Performance
+
+- **reactor-privacy:** dispatch the next purge without rescanning the backlog ([5de3703ebf](https://github.com/powerhouse-inc/powerhouse/commit/5de3703ebf))
+
+### ⚠️  Breaking Changes
+
+- **registry:** serve every replica from Postgres and S3, processing publishes in a worker  ([0d25d5fe35](https://github.com/powerhouse-inc/powerhouse/commit/0d25d5fe35))
+  /packages and /pieces return pages ({items,total,limit,offset,hasMore}) instead of full arrays, and piece bundles move to /-/pieces/bundled/<name>/<version>.tgz.
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.34 (2026-09-30)
 
 ### 🩹 Fixes
