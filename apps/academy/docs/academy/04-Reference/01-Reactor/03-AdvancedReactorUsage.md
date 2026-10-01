@@ -60,7 +60,7 @@ const reactor = await new ReactorBuilder()
 | `withDocumentModelSources(sources)` | Register document-model sources: live modules, importable `{ filePath }` files, or importable `{ packageName }` packages |
 | `withUpgradeManifests(manifests)` | Register [upgrade manifests](/academy/Reference/Reactor/DocumentModelRegistry) for document model versioning |
 | `withLogger(logger)`              | Set the logger (defaults to `ConsoleLogger`)                             |
-| `withExecutorConfig(config)`      | Configure `maxConcurrency`, `jobTimeoutMs`, `signatureVerification` (see [Signing](/academy/Build/BuildingUserExperiences/Authorization/Signing#signature-verification)), and the reactor `featureFlags` (see [Authorization](/academy/Reference/Reactor/Authorization)) |
+| `withExecutorConfig(config)`      | Configure `maxConcurrency`, `jobTimeoutMs`, `signatureVerification` (see [Signing](/academy/Build/BuildingUserExperiences/Authorization/Signing#signature-verification)), and the reactor `featureFlags` (see [Authorization](/academy/Reference/Reactor/Authorization) and [Undo and redo](/academy/Reference/Reactor/UndoRedo)) |
 | `withWriteCacheConfig(config)`    | Configure `maxDocuments` and `ringBufferSize` for the write cache        |
 | `withMigrationStrategy(strategy)` | Set to `"auto"` to run database migrations on build                      |
 | `withKysely(kysely)`              | Provide a custom Kysely database instance (defaults to in-memory PGlite) |
