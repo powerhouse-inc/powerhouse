@@ -572,6 +572,35 @@ describe("ReactorClient Integration Tests", () => {
         expect(children.results[0].header.id).toBe(result.header.id);
       });
     });
+
+    describe("createEmptyAsync", () => {
+      it("submits a create whose jobs can be waited on", async () => {
+        const parent = createDocModelDocument({ id: "async-parent" });
+        await client.create(parent);
+
+        const { jobs } = await client.createEmptyAsync(
+          "powerhouse/document-model",
+          { parentIdentifier: "async-parent" },
+        );
+
+        expect(Object.keys(jobs).sort()).toEqual(["create", "parent"]);
+        for (const job of Object.values(jobs)) {
+          expect((await client.waitForJob(job)).status).toBe(
+            JobStatus.READ_READY,
+          );
+        }
+        const documentId = jobs.create.documentId;
+        const created = await client.get(documentId);
+        expect(created.header.documentType).toBe("powerhouse/document-model");
+        const children = await client.getOutgoingRelationships(
+          "async-parent",
+          "child",
+        );
+        expect(children.results.map((child) => child.header.id)).toEqual([
+          documentId,
+        ]);
+      });
+    });
   });
 
   describe("Document Mutation", () => {

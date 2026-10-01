@@ -9,6 +9,17 @@ import type { HostCallResponse } from "./protocol.js";
 // the step's own timeout is the outer bound and kills the worker outright.
 const DEFAULT_HOST_CALL_TIMEOUT_MS = 10_000;
 
+// Set per request from the wire; requests are serialized per worker.
+let fromWire: number | undefined;
+
+export function setHostCallTimeout(timeoutMs: number | undefined): void {
+  fromWire = timeoutMs;
+}
+
+export function hostCallTimeoutMs(): number {
+  return fromWire ?? DEFAULT_HOST_CALL_TIMEOUT_MS;
+}
+
 interface Pending {
   method: string;
   resolve: (value: unknown) => void;
@@ -64,7 +75,7 @@ function ensureListening(): void {
 export function callHost<T = unknown>(
   method: string,
   payload: unknown,
-  timeoutMs: number = DEFAULT_HOST_CALL_TIMEOUT_MS,
+  timeoutMs: number = hostCallTimeoutMs(),
 ): Promise<T> {
   if (!process.send) {
     return Promise.reject(

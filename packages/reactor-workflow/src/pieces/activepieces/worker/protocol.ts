@@ -40,6 +40,10 @@ export interface HostScopedRequest {
   // Ceiling for FILE-prop hydration and ctx.files.write, from the host's
   // PH_WORKFLOWS_PIECE_MAX_FILE_BYTES. Absent leaves the built-in default.
   maxFileBytes?: number;
+  // Epoch ms at which the host kills the worker for this request.
+  deadline?: number;
+  // Cap on each host call. Absent leaves the built-in default.
+  hostCallTimeoutMs?: number;
 }
 
 // Where the worker finds the piece module: a bundle directory in npm shape, as
@@ -300,5 +304,7 @@ export const REACTOR_MODELS = "reactor.models";
 export const REACTOR_MODEL = "reactor.model";
 export const REACTOR_GET = "reactor.get";
 export const REACTOR_FIND = "reactor.find";
-export const REACTOR_CREATE = "reactor.create";
-export const REACTOR_EXECUTE = "reactor.execute";
+// A write is submitted, then waited on in slices under the host-call cap.
+export const REACTOR_SUBMIT = "reactor.submit";
+export const REACTOR_WAIT = "reactor.wait";
+export const REACTOR_SUBMIT_CREATE = "reactor.submitCreate";

@@ -8,13 +8,19 @@ import type { WorkflowCaller, WorkflowRuntimeHostDeps } from "./host.js";
 import { currentDocumentRecorder } from "./run-scope.js";
 import type {
   ReactorCreateInput,
+  ReactorCreateSubmission,
   ReactorDocumentSummary,
   ReactorExecuteInput,
   ReactorFindInput,
+  ReactorJobState,
   ReactorModelDetail,
   ReactorModelSummary,
   ReactorPort,
+  ReactorSubmission,
+  ReactorWaitInput,
 } from "../pieces/index.js";
+import { JobStatus, type JobInfo } from "@powerhousedao/reactor";
+import { addFile } from "@powerhousedao/shared/document-drive";
 import {
   createAction,
   withSignaturePolicy,
@@ -114,44 +120,48 @@ export function documentSummary(
   };
 }
 
-// Reducer failures don't reject execute(): the operation is still recorded,
-// with the reason on operation.error and the state left exactly as it was.
+// What the reactor answers for a job it has no record of.
+const JOB_NOT_FOUND = "Job not found";
 
-// So a dispatch that wrote nothing at all comes back looking like any other,
-// and the only thing standing between that and a step reporting success is
-// this. It fails the call instead, which is what the block needs: its payload
-// may be model output, and a silent no-op is the worst way to learn that.
-
-// Per scope, because an operation's index counts within its own scope. A tail
-// taken across all of them sorts one scope's indexes against another's, and a
-// document-scope CREATE_DOCUMENT at index 0 displaces the failed global
-// operation at index 0 that a fresh document's first dispatch leaves.
-function assertOperationsApplied(
-  document: PHDocument,
-  dispatched: readonly { scope?: string }[],
-): void {
-  const perScope = new Map<string, number>();
-  for (const action of dispatched) {
-    const scope = action.scope ?? "global";
-    perScope.set(scope, (perScope.get(scope) ?? 0) + 1);
+function jobState(job: JobInfo): ReactorJobState {
+  if (job.status === JobStatus.FAILED && job.error?.message === JOB_NOT_FOUND) {
+    return { jobId: job.id, status: "UNKNOWN" };
   }
-  const failed = [...perScope].flatMap(([scope, count]) =>
-    [...(document.operations[scope] ?? [])]
-      .sort((a, b) => a.index - b.index)
-      .slice(-count)
-      .filter((operation) => operation.error !== undefined),
-  );
-  if (failed.length === 0) return;
-  // All of them: a payload a model wrote tends to fail a field at a time, and
-  // naming only the first sends the author back for another run to find the
-  // next. The reducer's own message carries the field and what it wanted.
-  throw new Error(
-    failed
-      .map(
-        (operation) =>
-          `Action ${operation.action.type} failed: ${operation.error ?? "unknown error"}`,
-      )
-      .join("; "),
+  return {
+    jobId: job.id,
+    status: job.status,
+    ...(job.error ? { error: job.error.message } : {}),
+    ...(job.result
+      ? {
+          actions: job.result.actions.map((action) => ({
+            actionId: action.actionId,
+            kind: action.kind,
+            ...(action.kind === "reducer-error"
+              ? { message: action.message }
+              : {}),
+            ...(action.kind === "denied" ? { reason: action.reason } : {}),
+          })),
+        }
+      : {}),
+  };
+}
+
+// Create first, so a caller waiting in order learns of a failed create first.
+function jobIds(jobs: Record<string, JobInfo>): string[] {
+  return Object.entries(jobs)
+    .sort(([a], [b]) => Number(b === "create") - Number(a === "create"))
+    .map(([, job]) => job.id);
+}
+
+function buildActions(input: ReactorExecuteInput): Action[] {
+  return input.actions.map((entry) =>
+    createAction(
+      entry.type,
+      entry.input,
+      undefined,
+      undefined,
+      entry.scope ?? "global",
+    ),
   );
 }
 
@@ -204,7 +214,11 @@ export class SubgraphReactorPort implements ReactorPort {
     documentId: string;
     branch?: string;
   }): Promise<ReactorDocumentSummary> {
-    const document = await this.client.get<PHDocument>(input.documentId);
+    // No consistency token: a write's read-back relies on document-view indexing before READ_READY.
+    const document = await this.client.get<PHDocument>(
+      input.documentId,
+      input.branch ? { branch: input.branch } : undefined,
+    );
     return this.handOver(documentSummary(document, true));
   }
 
@@ -254,29 +268,32 @@ export class SubgraphReactorPort implements ReactorPort {
     );
   }
 
-  async create(input: ReactorCreateInput): Promise<ReactorDocumentSummary> {
+  async submitCreate(
+    input: ReactorCreateInput,
+  ): Promise<ReactorCreateSubmission> {
     const target = input.parentId
       ? await this.resolveDriveTarget(input.parentId)
       : null;
     if (!target) {
-      const created = await this.client.createEmpty<PHDocument>(
-        input.documentType,
-        { parentIdentifier: input.parentId },
-      );
+      const { jobs } = await this.client.createEmptyAsync(input.documentType, {
+        parentIdentifier: input.parentId,
+      });
+      const documentId = jobs.create.documentId;
       // createEmpty takes no name, so naming it is a first operation. The
       // drive path below sets the header instead, before the file lands.
-      if (!input.name) return this.handOver(documentSummary(created, true));
-      const naming = createAction("SET_NAME", { name: input.name });
-      const named = await this.client.execute<PHDocument>(
-        created.header.id,
-        "main",
-        [naming],
-      );
-      assertOperationsApplied(named, [naming]);
-      return this.handOver(documentSummary(named, true));
+      return {
+        documentId,
+        jobIds: jobIds(jobs),
+        followUps: input.name
+          ? [
+              {
+                documentId,
+                actions: [{ type: "SET_NAME", input: { name: input.name } }],
+              },
+            ]
+          : [],
+      };
     }
-    // createEmpty only records the parent relationship; a drive also needs an
-    // ADD_FILE node, or the document is created but invisible in the drive.
     const module = await this.client.getDocumentModelModule(input.documentType);
     const empty = withSignaturePolicy(
       module.utils.createDocument() as PHDocument,
@@ -284,33 +301,45 @@ export class SubgraphReactorPort implements ReactorPort {
     );
     // The node name comes from the header, so set it before the file lands.
     if (input.name) empty.header.name = input.name;
-    const created = await this.client.drives.addFile<PHDocument>(
-      target.driveId,
-      empty,
-      target.parentFolder,
-    );
-    return this.handOver(documentSummary(created, true));
+    const documentId = empty.header.id;
+    const { jobs } = await this.client.createAsync(empty, target.driveId);
+    // A drive also needs an ADD_FILE node, or the document is created but
+    // invisible in it. It follows the create rather than sharing its batch: a
+    // failed job still releases its dependents, and the node must not point at
+    // a document that never landed.
+    const { type, input: node } = addFile({
+      id: documentId,
+      name: empty.header.name || documentId,
+      documentType: input.documentType,
+      parentFolder: target.parentFolder,
+    });
+    return {
+      documentId,
+      jobIds: jobIds(jobs),
+      followUps: [
+        { documentId: target.driveId, actions: [{ type, input: node }] },
+      ],
+    };
   }
 
-  async execute(input: ReactorExecuteInput): Promise<ReactorDocumentSummary> {
-    const actions: Action[] = input.actions.map((entry) =>
-      createAction(
-        entry.type,
-        entry.input,
-        undefined,
-        undefined,
-        entry.scope ?? "global",
-      ),
-    );
-    const document = await this.client.execute<PHDocument>(
+  async submit(input: ReactorExecuteInput): Promise<ReactorSubmission> {
+    const actions = buildActions(input);
+    const job = await this.client.executeAsync(
       input.documentId,
       input.branch ?? "main",
       actions,
     );
-    // The inputs rather than the built actions: they carry the scope each one
-    // was asked for, which is the scope its operation was appended to.
-    assertOperationsApplied(document, input.actions);
-    return this.handOver(documentSummary(document, true));
+    return { jobId: job.id, actionIds: actions.map((action) => action.id) };
+  }
+
+  async wait(input: ReactorWaitInput): Promise<ReactorJobState> {
+    const signal = AbortSignal.timeout(input.maxWaitMs);
+    try {
+      return jobState(await this.client.waitForJob(input.jobId, signal));
+    } catch (error) {
+      if (!signal.aborted) throw error;
+    }
+    return jobState(await this.client.getJobStatus(input.jobId));
   }
 
   // A run is served only with what its steps read, so each document is
@@ -423,11 +452,15 @@ export class ScopedDesignTimeReactorPort implements ReactorPort {
     return found.filter((_, index) => allowed[index]);
   }
 
-  create(_input: ReactorCreateInput): Promise<ReactorDocumentSummary> {
+  submit(_input: ReactorExecuteInput): Promise<ReactorSubmission> {
     return Promise.reject(new Error(DESIGN_TIME_WRITES_REFUSED));
   }
 
-  execute(_input: ReactorExecuteInput): Promise<ReactorDocumentSummary> {
+  submitCreate(_input: ReactorCreateInput): Promise<ReactorCreateSubmission> {
+    return Promise.reject(new Error(DESIGN_TIME_WRITES_REFUSED));
+  }
+
+  wait(_input: ReactorWaitInput): Promise<ReactorJobState> {
     return Promise.reject(new Error(DESIGN_TIME_WRITES_REFUSED));
   }
 

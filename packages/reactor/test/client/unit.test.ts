@@ -880,6 +880,56 @@ describe("ReactorClient Unit Tests", () => {
     });
   });
 
+  describe("createAsync", () => {
+    it("submits the create batch and returns it without waiting", async () => {
+      const document = createMockPHDocument("doc-1");
+      const batchResult: BatchExecutionResult = {
+        jobs: {
+          create: {
+            id: "job-1",
+            documentId: "doc-1",
+            status: JobStatus.PENDING,
+            createdAtUtcIso: new Date().toISOString(),
+            consistencyToken: createEmptyConsistencyToken(),
+            meta: { batchId: "test", batchJobIds: ["job-1", "job-2"] },
+          },
+          parent: {
+            id: "job-2",
+            documentId: "parent-1",
+            status: JobStatus.PENDING,
+            createdAtUtcIso: new Date().toISOString(),
+            consistencyToken: createEmptyConsistencyToken(),
+            meta: { batchId: "test", batchJobIds: ["job-1", "job-2"] },
+          },
+        },
+      };
+      vi.mocked(mockReactor.executeBatch).mockResolvedValue(batchResult);
+
+      const result = await client.createAsync(document, "parent-1");
+
+      expect(result).toBe(batchResult);
+      expect(mockReactor.executeBatch).toHaveBeenCalledWith(
+        {
+          jobs: [
+            expect.objectContaining({
+              key: "create",
+              documentId: "doc-1",
+              dependsOn: [],
+            }),
+            expect.objectContaining({
+              key: "parent",
+              documentId: "parent-1",
+              dependsOn: ["create"],
+            }),
+          ],
+        },
+        undefined,
+      );
+      expect(mockJobAwaiter.waitForJob).not.toHaveBeenCalled();
+      expect(mockReactor.get).not.toHaveBeenCalled();
+    });
+  });
+
   describe("execute", () => {
     it("should sign actions and call reactor.execute, wait for job, and return document", async () => {
       const documentId = "doc-1";

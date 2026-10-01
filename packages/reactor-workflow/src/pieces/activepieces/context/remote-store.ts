@@ -17,9 +17,10 @@ export class RemoteKeyValueStore implements KeyValueStore {
     key: string,
     value: unknown,
     scope?: StoreScopeName,
+    timeoutMs?: number,
   ): Promise<unknown> {
     const stored = jsonSafe(value);
-    await callHost(STORE_PUT, { key, value: stored, scope });
+    await callHost(STORE_PUT, { key, value: stored, scope }, timeoutMs);
     return stored;
   }
 
