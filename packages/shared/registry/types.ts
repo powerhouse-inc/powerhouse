@@ -27,11 +27,8 @@ export interface PackageInfo {
 }
 
 /**
- * Trimmed per-item shape returned by the paginated `GET /packages?limit=…`
- * mode. Carries only the fields the package-listing card renders; version
- * metadata (distTags/versions) and documentTypes are fetched on demand via
- * the single-package endpoint. The legacy no-param and `?documentType=` modes
- * still return full {@link PackageInfo} objects.
+ * Item shape of `GET /packages` pages: only what a listing card renders. Pass
+ * `detail=full` for {@link PackageInfo} items.
  */
 export interface PackageListItem {
   name: string;
@@ -42,14 +39,35 @@ export interface PackageListItem {
   publisher?: { name?: string; url?: string };
 }
 
-/** Envelope returned by the paginated `GET /packages?limit=…` mode. */
-export interface PackagePage {
-  items: PackageListItem[];
+/** Envelope of `GET /packages` and `GET /pieces`. */
+export interface Page<T> {
+  items: T[];
   total: number;
   limit: number;
   offset: number;
   hasMore: boolean;
 }
+
+/** Filter options over the `name`-restricted set, sent with `facets=true`. */
+export interface PackageFacets {
+  categories: string[];
+  publishers: string[];
+}
+
+/** `GET /packages`; items are {@link PackageInfo} with `detail=full`. */
+export interface PackagePage<T = PackageListItem> extends Page<T> {
+  facets?: PackageFacets;
+}
+
+/** Manifest module lists accepted by the `moduleType` filter. */
+export const PACKAGE_MODULE_TYPES = [
+  "documentModels",
+  "editors",
+  "apps",
+  "subgraphs",
+  "processors",
+] as const;
+export type PackageModuleType = (typeof PACKAGE_MODULE_TYPES)[number];
 
 export type RegistryPackageStatus =
   | "available"

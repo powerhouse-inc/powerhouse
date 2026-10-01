@@ -1,0 +1,26 @@
+{
+  "name": "@fixture/piece-hello",
+  "version": "1.2.3",
+  "displayName": "Hello",
+  "logoUrl": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E",
+  "description": "Says hello.",
+  "authors": ["fixture"],
+  "categories": ["CORE"],
+  "minimumSupportedRelease": "0.30.0",
+  "actions": {
+    "say_hello": {
+      "name": "say_hello",
+      "displayName": "Say hello",
+      "description": "",
+      "requireAuth": false,
+      "props": {
+        "who": {
+          "type": "SHORT_TEXT",
+          "displayName": "Who",
+          "required": true
+        }
+      }
+    }
+  },
+  "triggers": {}
+}

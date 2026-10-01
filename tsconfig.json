@@ -50,6 +50,9 @@
       "path": "test/recipes-e2e"
     },
     {
+      "path": "test/registry-e2e"
+    },
+    {
       "path": "test/switchboard"
     },
     {

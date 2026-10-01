@@ -1,86 +1,75 @@
-import fs from "node:fs";
-import path from "node:path";
-import type { NotifyConfig, WebhookConfig } from "../types.js";
-import type {
-  NotificationChannel,
-  PublishEvent,
-  UnpublishEvent,
-} from "./types.js";
+import type { Database } from "../db/database.js";
+import type { WebhookConfig } from "../types.js";
+import type { PublishEvent, UnpublishEvent } from "./types.js";
 
-const WEBHOOKS_FILE = "webhooks.json";
-
-export class WebhookChannel implements NotificationChannel {
+// Webhooks registered through the API live in the database, shared by every
+// replica; the ones from configuration are added to them.
+export class WebhookStore {
+  #db: Database;
   #predefined: WebhookConfig[];
-  #dynamic: WebhookConfig[];
-  #storagePath: string;
 
-  constructor(storagePath: string, config?: NotifyConfig) {
-    this.#storagePath = storagePath;
-    this.#predefined = config?.webhooks ?? [];
-    this.#dynamic = this.#load();
+  constructor(db: Database, predefined: WebhookConfig[] = []) {
+    this.#db = db;
+    this.#predefined = predefined;
   }
 
-  getWebhooks(): WebhookConfig[] {
-    return [...this.#predefined, ...this.#dynamic];
+  async getWebhooks(): Promise<WebhookConfig[]> {
+    const rows = await this.#db.query<{
+      endpoint: string;
+      headers: Record<string, string>;
+    }>("SELECT endpoint, headers FROM registry_webhooks ORDER BY created_at");
+    const stored = rows.rows.map((row) => ({
+      endpoint: row.endpoint,
+      ...(Object.keys(row.headers).length > 0 ? { headers: row.headers } : {}),
+    }));
+    return [
+      ...this.#predefined,
+      ...stored.filter(
+        (w) => !this.#predefined.some((p) => p.endpoint === w.endpoint),
+      ),
+    ];
   }
 
-  addWebhook(webhook: WebhookConfig): void {
-    const exists = this.getWebhooks().some(
-      (w) => w.endpoint === webhook.endpoint,
+  async addWebhook(webhook: WebhookConfig): Promise<void> {
+    if (this.#predefined.some((w) => w.endpoint === webhook.endpoint)) return;
+    await this.#db.query(
+      `INSERT INTO registry_webhooks (endpoint, headers) VALUES ($1, $2)
+       ON CONFLICT (endpoint) DO NOTHING`,
+      [webhook.endpoint, JSON.stringify(webhook.headers ?? {})],
     );
-    if (exists) return;
-    this.#dynamic.push(webhook);
-    this.#save();
   }
 
-  removeWebhook(endpoint: string): boolean {
-    const before = this.#dynamic.length;
-    this.#dynamic = this.#dynamic.filter((w) => w.endpoint !== endpoint);
-    if (this.#dynamic.length === before) return false;
-    this.#save();
-    return true;
+  async removeWebhook(endpoint: string): Promise<boolean> {
+    const result = await this.#db.query<{ endpoint: string }>(
+      "DELETE FROM registry_webhooks WHERE endpoint = $1 RETURNING endpoint",
+      [endpoint],
+    );
+    return result.rows.length > 0;
   }
 
-  notifyPublish(event: PublishEvent): void {
-    this.#post({ type: "publish", ...event });
+  async notifyPublish(event: PublishEvent): Promise<void> {
+    await this.#post({ type: "publish", ...event });
   }
 
-  notifyUnpublish(event: UnpublishEvent): void {
-    this.#post({ type: "unpublish", ...event });
+  async notifyUnpublish(event: UnpublishEvent): Promise<void> {
+    await this.#post({ type: "unpublish", ...event });
   }
 
-  #post(body: Record<string, unknown>): void {
-    for (const webhook of this.getWebhooks()) {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        ...webhook.headers,
-      };
-
-      fetch(webhook.endpoint, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-      }).catch((err: unknown) => {
-        console.error(`[registry] Webhook to ${webhook.endpoint} failed:`, err);
-      });
-    }
-  }
-
-  #filePath(): string {
-    return path.join(this.#storagePath, WEBHOOKS_FILE);
-  }
-
-  #load(): WebhookConfig[] {
-    try {
-      const raw = fs.readFileSync(this.#filePath(), "utf-8");
-      return JSON.parse(raw) as WebhookConfig[];
-    } catch {
-      return [];
-    }
-  }
-
-  #save(): void {
-    fs.mkdirSync(this.#storagePath, { recursive: true });
-    fs.writeFileSync(this.#filePath(), JSON.stringify(this.#dynamic, null, 2));
+  async #post(body: Record<string, unknown>): Promise<void> {
+    const webhooks = await this.getWebhooks();
+    await Promise.all(
+      webhooks.map((webhook) =>
+        fetch(webhook.endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...webhook.headers },
+          body: JSON.stringify(body),
+        }).catch((err: unknown) => {
+          console.error(
+            `[registry] Webhook to ${webhook.endpoint} failed:`,
+            err,
+          );
+        }),
+      ),
+    );
   }
 }

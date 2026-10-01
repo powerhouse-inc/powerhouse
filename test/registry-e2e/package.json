@@ -1,0 +1,22 @@
+{
+  "name": "test-registry-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "test": "tsx scripts/run.ts",
+    "test:dev": "tsx scripts/dev.ts",
+    "report": "tsx scripts/report.ts",
+    "bench": "tsx scripts/bench.ts",
+    "stress": "tsx scripts/stress.ts"
+  },
+  "devDependencies": {
+    "@renown/sdk": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "pg": "catalog:",
+    "tar": "^7.5.11",
+    "tsx": "catalog:"
+  }
+}

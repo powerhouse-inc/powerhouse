@@ -87,7 +87,11 @@ describe("auth store handoff (S3 config-merge safety)", () => {
 
   it("marks the token loaded once the plugin constructs (fail-fast signal)", () => {
     const cfg = buildVerdaccioConfig(
-      baseConfig({ authStore: createMemoryAuthStore(), s3 }),
+      baseConfig({
+        authStore: createMemoryAuthStore(),
+        databaseUrl: "postgresql://x",
+        s3,
+      }),
     ) as unknown as { auth: Record<string, Record<string, unknown>> };
     const token = cfg.auth["registry-auth"].storeToken as string;
 

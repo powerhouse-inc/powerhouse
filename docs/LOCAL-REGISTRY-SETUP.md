@@ -300,8 +300,14 @@ Open `http://localhost:4173` in the browser, go to **Settings > Package Manager*
 ### Package discovery
 
 ```bash
-# List all packages
-curl http://localhost:8080/packages
+# List packages, a page at a time (up to 50; follow `hasMore` with `offset`)
+curl "http://localhost:8080/packages?limit=50&offset=0"
+
+# Search name, description, publisher and module names
+curl "http://localhost:8080/packages?search=your-package"
+
+# Full package info for packages that define a document type
+curl "http://localhost:8080/packages?documentType=your/document-type&detail=full"
 
 # Single package info
 curl http://localhost:8080/packages/@your-scope/your-package
