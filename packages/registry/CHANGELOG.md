@@ -1,3 +1,14 @@
+## 6.2.3-dev.38 (2026-10-01)
+
+### 🩹 Fixes
+
+- **registry:** run the worker's first full reconcile a tick after it starts ([53c9087bf7](https://github.com/powerhouse-inc/powerhouse/commit/53c9087bf7))
+- **registry:** backfill only tagged versions of packages published here ([86d78be13a](https://github.com/powerhouse-inc/powerhouse/commit/86d78be13a))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.37 (2026-10-01)
 
 ### 🚀 Features
