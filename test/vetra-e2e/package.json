@@ -87,6 +87,8 @@
     "monocart-coverage-reports": "^2.12.8",
     "@playwright/test": "^1.60.0",
     "@powerhousedao/registry": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/switchboard": "workspace:*",
     "@electric-sql/pglite": "catalog:",
     "@electric-sql/pglite-tools": "catalog:"
   },

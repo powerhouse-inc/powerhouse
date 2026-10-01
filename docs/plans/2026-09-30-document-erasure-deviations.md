@@ -584,7 +584,7 @@ Taken by the orchestrator after review, and applied:
 ## Measurements
 
 Machine: Apple M4 Max, 14 cores, Node 24.13.0. Numbers predate the review
-fixes unless stated; no bench run after them is recorded.
+fixes unless stated; the post-merge sync bench is after them.
 
 ### Sync bench
 
@@ -607,6 +607,28 @@ The outbound-gating case is new. On stage 0 its manifest is full and runs
 ungated; on stage 1 it fails `coversLocal` and `gateOutbound` runs on every
 page. Other cases use silent remotes, gated on both builds, so the gate adds
 nothing measurable (731.0 against 732.1).
+
+Post-merge, after the review fixes. Before: main at c7cb51e650 (the merge
+base) with main's bench file copied over. After: main at 4d4f2a3b9b (the
+merge). Same machine, no other process running during either run.
+
+| Case | Before ms (±%) | After ms (±%) | After / before |
+|---|---|---|---|
+| Baseline: 10 docs × 10 ops | 584.2 (2.2) | 622.8 (1.0) | 1.07 |
+| Outbound gating: peers without document-purge | 560.8 (0.9) | 626.3 (0.8) | 1.12 |
+| Conflicts: 5 docs × 20 conflicting ops | 868.6 (3.4) | 881.3 (1.6) | 1.01 |
+| Contention: 10 × 10, alternating writer | 823.1 (4.3) | 882.1 (1.0) | 1.07 |
+| Deep Hierarchy | 649.9 (4.6) | 635.6 (0.6) | 0.98 |
+| Document Count: 50 × 10 | 4054.6 (34.4), median 2993.5 | 3014.4 (0.6) | 1.01 by median |
+| History Depth: 10 × 100 | 5562.9 (3.2) | 5589.8 (0.5) | 1.00 |
+| Heavy Load: 50 × 100 | 31096.5 (4.8) | 27522.9 (0.5) | 0.89 |
+
+The review fixes (the `liveIds` skip, `isPurgedMany`, the settled sweep gated
+on trailing remotes) took the stage 1 cost from about 30% to about 7% on the
+small cases. The outbound-gating case now carries the gate (1.12 against 1.07
+for Baseline). Per job, Baseline, mean ms before → after: local apply 14.6 →
+15.8, local index 5.8 → 7.0, local index chain wait 86.3 → 92.1, load apply
+24.2 → 22.7, load index 8.1 → 14.9.
 
 Per job, Baseline, mean ms: local apply 13.8 to 19.2, local index 5.5 to 8.5,
 load index 7.9 to 17.0. Queue wait and index chain wait grow with them, since
@@ -667,17 +689,6 @@ The remaining lookups are the job-start check and the read-model fence.
 
 ## Pre-existing bugs found, not fixed
 
-- **Load of a document's creation and deletion under `documentDecisions`.**
-  A load job carrying `CREATE_DOCUMENT`, `UPGRADE_DOCUMENT` and
-  `DELETE_DOCUMENT` of a document the receiver does not hold never applies.
-  `evaluateByPosition` reads the new stream at -1 (`decision/evaluation.ts:180`),
-  gets `DocumentNotFoundError`, and `executor/job-result-handler.ts:139`
-  defers the job on its own id; nothing else will create it. Sibling-scope
-  operations of the same document then fail and quarantine, and the inbox
-  stalls (seen in about one of three e2e runs under `authEnforcement`, when
-  the drive's relationship operations are served before the child's). Fails
-  on stage 0 too. Pinned as `it.fails` in
-  `packages/reactor/test/executor/load-create-delete.test.ts`.
 - **Agreement and decision-field fallbacks never fire.**
   `sync/channels/gql-req-channel.ts:868` (`isAgreementRejection`) and `:897`
   (`rejectsDecisionFields`) match only category `"graphql"`. Apollo Server 5
@@ -715,7 +726,6 @@ Release and CI:
 - The reactor-workflow Postgres exit suite
   (`workflow-triggers-read-model.purge.test.ts:138`, `describe.skipIf`) does
   not run in `check-commit.yml`, which has no Postgres for that package.
-- No bench run after the review fixes is recorded.
 
 Operations:
 - No environment variable raises the executor's `jobTimeoutMs`, which an

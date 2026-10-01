@@ -26,6 +26,7 @@ import { startSwitchboard } from "../src/server.mjs";
 import {
   PH_WORKFLOWS_ENABLED,
   bindPackagePieces,
+  canReadAttachmentRef,
   composeWorkflowRuntime,
   assertWorkflowPackageLoadable,
   resolveWorkflowsEnabled,
@@ -245,7 +246,19 @@ describe("composeWorkflowRuntime", () => {
     expect(deps.webhooks).toEqual({ id: "webhooks" });
     expect(typeof deps.assertCanRead).toBe("function");
     expect(typeof deps.assertCanWrite).toBe("function");
-    expect(typeof deps.canReadAttachmentRef).toBe("function");
+    expect(deps.canReadAttachmentRef).toBe(canReadAttachmentRef);
+  });
+
+  it("lets a step read any well-formed attachment ref", async () => {
+    const hash = "a".repeat(64);
+    // No document references it: runs read attachments as they read documents.
+    expect(await canReadAttachmentRef("wf-1", `attachment://v1:${hash}`)).toBe(
+      true,
+    );
+    expect(await canReadAttachmentRef("wf-1", `attachment://v2:${hash}`)).toBe(
+      false,
+    );
+    expect(await canReadAttachmentRef("wf-1", "not-a-ref")).toBe(false);
   });
 
   it("serves a subgraph the GraphQL manager can construct", async () => {

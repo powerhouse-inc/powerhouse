@@ -28,6 +28,8 @@ Switchboard refuses to boot with the add-on on when:
 - the reactor has no signer. Switchboard signs markers with its Renown identity, the keypair `ph login` created (`ph switchboard --use-identity`, or `--keypair-path <path>`); without one, every receiver refuses the markers.
 - `PH_PRIVACY_DEPLOYMENT_SECRET` is missing or shorter than 32 bytes.
 
+`AUTH_ENABLED` with `ADMINS` alone selects the `ADMIN_ONLY` policy, under which only admins read documents: an anonymous Connect gets `404` from the drive URL and never syncs, so it never receives a marker. A Switchboard that serves Connect users needs `DOCUMENT_PERMISSIONS_ENABLED=true` as well, which lets anyone read and write unprotected documents while the `privacy` subgraph stays admin-only. See [Authorization](/academy/Build/BuildingUserExperiences/Authorization/Authorization).
+
 Keep the deployment secret. The index and the audit log store `HMAC-SHA256(secret, lower(identifier))`, never the identifier. Rotating the secret means rebuilding the index; losing it means old audit rows can no longer be matched to an address.
 
 Optional tuning:

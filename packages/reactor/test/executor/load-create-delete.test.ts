@@ -33,7 +33,7 @@ describe("loading a document's creation and deletion in one job", () => {
     return reactor.getJobStatus(jobId);
   }
 
-  async function loadCreatedAndDeleted(documentDecisions: boolean) {
+  async function createdAndDeleted(documentDecisions: boolean) {
     const source = await new ReactorBuilder()
       .withDocumentModelSources(MODELS)
       .build();
@@ -56,7 +56,11 @@ describe("loading a document's creation and deletion in one job", () => {
       "UPGRADE_DOCUMENT",
       "DELETE_DOCUMENT",
     ]);
+    return { target, id, ops };
+  }
 
+  async function loadCreatedAndDeleted(documentDecisions: boolean) {
+    const { target, id, ops } = await createdAndDeleted(documentDecisions);
     const info = await settled(target, (await target.load(id, "main", ops)).id);
     expect(info.status, info.error?.message).toBe(JobStatus.READ_READY);
   }
@@ -65,8 +69,25 @@ describe("loading a document's creation and deletion in one job", () => {
     await loadCreatedAndDeleted(false);
   });
 
-  // evaluateByPosition reads getState(-1) of the new id and defers on itself.
-  it.fails("applies under documentDecisions", async () => {
+  it("applies under documentDecisions", async () => {
     await loadCreatedAndDeleted(true);
+  });
+
+  it("defers a load without the creation until the creation lands", async () => {
+    const { target, id, ops } = await createdAndDeleted(true);
+    const [creation, ...rest] = ops;
+
+    const deferred = (await target.load(id, "main", rest)).id;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const { status } = await target.getJobStatus(deferred);
+    expect([JobStatus.READ_READY, JobStatus.FAILED]).not.toContain(status);
+
+    const created = await settled(
+      target,
+      (await target.load(id, "main", [creation])).id,
+    );
+    expect(created.status, created.error?.message).toBe(JobStatus.READ_READY);
+    const info = await settled(target, deferred);
+    expect(info.status, info.error?.message).toBe(JobStatus.READ_READY);
   });
 });
