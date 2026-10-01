@@ -163,17 +163,28 @@ function inside(root: string, relative: string): string | null {
   return resolved;
 }
 
-async function inBatches<T>(
+export async function inBatches<T>(
   items: T[],
   size: number,
   fn: (item: T) => Promise<void>,
 ): Promise<void> {
   let cursor = 0;
-  await Promise.all(
+  let failed = false;
+  // Every lane settles before the caller removes the files they read
+  const lanes = await Promise.allSettled(
     Array.from({ length: Math.min(size, items.length) }, async () => {
-      while (cursor < items.length) await fn(items[cursor++]);
+      while (!failed && cursor < items.length) {
+        try {
+          await fn(items[cursor++]);
+        } catch (err) {
+          failed = true;
+          throw err;
+        }
+      }
     }),
   );
+  const rejected = lanes.find((lane) => lane.status === "rejected");
+  if (rejected) throw rejected.reason;
 }
 
 // The npm-bundle layout the reactor's extractor strips a root segment from
