@@ -17,18 +17,21 @@ import { DocumentIntegrityService } from "../../src/admin/document-integrity-ser
 import { createDefaultDatabase } from "../../src/core/create-default-database.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule, IReactor } from "../../src/core/types.js";
+import { SnapshotPosition } from "../../src/cache/write-cache-types.js";
+import { UnsupportedProtocolVersionError } from "../../src/shared/errors.js";
 import { REACTOR_SCHEMA } from "../../src/storage/migrations/migrator.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 
 const lenient = vi.hoisted(() => ({ on: false }));
 
-// While on, stands in for a reactor that runs base-reducer 7.
+// While on, stands in for a reactor that runs base-reducer 3 and 7.
 vi.mock("@powerhousedao/shared/document-model", async (importOriginal) => {
   const actual = await importOriginal<typeof DocumentModel>();
   return {
     ...actual,
     baseReducerVersion: (header: PHDocumentHeader) =>
-      lenient.on && header.protocolVersions?.["base-reducer"] === 7
+      lenient.on &&
+      [3, 7].includes(header.protocolVersions?.["base-reducer"] ?? 0)
         ? 2
         : actual.baseReducerVersion(header),
   };
@@ -98,18 +101,34 @@ describe("read-only over documents at an unsupported base-reducer version", () =
   }
 
   /** Read model cursors reset, so the next boot rebuilds the whole store. */
-  async function storeWithUnsupported(): Promise<{
+  async function storeWithUnsupported({
+    version = 7,
+    folders = 12,
+    clearSnapshots = false,
+  }: {
+    version?: 3 | 7;
+    folders?: number;
+    clearSnapshots?: boolean;
+  } = {}): Promise<{
     db: Kysely<any>;
     ordinals: { unsupported: number[]; last: number };
+    head: DocumentModel.PHDocument;
   }> {
     const db = await createDefaultDatabase();
     lenient.on = true;
     const wide = await build((b) =>
-      b.withKysely(db).withPeerCapabilities([BASE_REDUCER_7]),
+      version === 7
+        ? b.withKysely(db).withPeerCapabilities([BASE_REDUCER_7])
+        : b
+            .withKysely(db)
+            .withExecutorConfig({ featureFlags: { undoV3: true } as never }),
     );
     const { reactor } = wide;
-    await succeeded(reactor, await reactor.create(driveAt(UNSUPPORTED, 7)));
-    for (let i = 0; i < 12; i++) {
+    await succeeded(
+      reactor,
+      await reactor.create(driveAt(UNSUPPORTED, version)),
+    );
+    for (let i = 0; i < folders; i++) {
       await succeeded(
         reactor,
         await reactor.execute(UNSUPPORTED, "main", [
@@ -127,6 +146,7 @@ describe("read-only over documents at an unsupported base-reducer version", () =
     expect(
       (await wide.keyframeStore.listKeyframes(UNSUPPORTED)).length,
     ).toBeGreaterThan(0);
+    const head = await wide.writeCache.getState(UNSUPPORTED, "global", "main");
     await reactor.kill().completed;
     reactors.splice(reactors.indexOf(reactor), 1);
     lenient.on = false;
@@ -138,9 +158,13 @@ describe("read-only over documents at an unsupported base-reducer version", () =
       .orderBy("ordinal")
       .execute();
     await schema.updateTable("ViewState").set({ lastOrdinal: 0 }).execute();
+    if (clearSnapshots) {
+      await schema.deleteFrom("DocumentSnapshot").execute();
+    }
 
     return {
       db,
+      head,
       ordinals: {
         unsupported: rows
           .filter((r) => r.documentId === UNSUPPORTED && r.scope === "global")
@@ -199,6 +223,104 @@ describe("read-only over documents at an unsupported base-reducer version", () =
       });
       expect(result.keyframeIssues).toEqual([]);
     }
+  });
+
+  async function expectRefusedWithoutSnapshot(version: 3 | 7): Promise<void> {
+    const { db, ordinals } = await storeWithUnsupported({
+      version,
+      clearSnapshots: true,
+    });
+
+    const narrow = await build((b) =>
+      b.withKysely(db).withUnsupportedStoredDocuments("read-only"),
+    );
+    const { reactor } = narrow;
+    const sweeps = await narrow.catchUp.sweepNow();
+
+    expect(appliedThrough(narrow.documentView)).toBe(ordinals.last);
+    expect(appliedThrough(narrow.processorManager)).toBe(ordinals.last);
+    expect(sweeps.filter((sweep) => sweep.blockedAt)).toEqual([]);
+
+    await expect(reactor.get(UNSUPPORTED)).rejects.toThrow(/not found/i);
+    const after =
+      await reactor.get<
+        ReturnType<typeof driveDocumentModelModule.utils.createDocument>
+      >(AFTER);
+    expect(after.state.global.nodes.map((node) => node.name)).toEqual([
+      "after",
+    ]);
+
+    const integrity = new DocumentIntegrityService(
+      narrow.keyframeStore,
+      narrow.operationStore,
+      narrow.writeCache,
+      narrow.documentView,
+      narrow.documentModelRegistry,
+      { "base-reducer": [1, 2] },
+    );
+    const result = await integrity.validateDocument(UNSUPPORTED);
+    expect(result.unsupported).toEqual({ protocol: "base-reducer", version });
+  }
+
+  it("serves no state for the document when no snapshot was stored", async () => {
+    await expectRefusedWithoutSnapshot(7);
+  });
+
+  it("skips a base-reducer 3 document with undoV3 off like any unsupported version", async () => {
+    await expectRefusedWithoutSnapshot(3);
+  });
+
+  it("refuses the document from a warm cache", async () => {
+    const { db, head } = await storeWithUnsupported();
+    const narrow = await build((b) =>
+      b.withKysely(db).withUnsupportedStoredDocuments("read-only"),
+    );
+    const revision = head.header.revision.global - 1;
+    narrow.writeCache.putState(
+      UNSUPPORTED,
+      "global",
+      "main",
+      revision,
+      head,
+      SnapshotPosition.Head,
+    );
+
+    for (const target of [undefined, revision]) {
+      await expect(
+        narrow.writeCache.getState(UNSUPPORTED, "global", "main", target),
+      ).rejects.toSatisfy(UnsupportedProtocolVersionError.isError);
+    }
+  });
+
+  it("reports the document unsupported when its head is the latest keyframe", async () => {
+    const { db } = await storeWithUnsupported({ folders: 11 });
+    const narrow = await build((b) =>
+      b.withKysely(db).withUnsupportedStoredDocuments("read-only"),
+    );
+    const keyframes = await narrow.keyframeStore.listKeyframes(UNSUPPORTED);
+    const { revision } = await narrow.operationStore.getRevisions(
+      UNSUPPORTED,
+      "main",
+    );
+    expect(Math.max(...keyframes.map((k) => k.revision))).toBe(
+      revision.global - 1,
+    );
+
+    // A reducer that accepts the version must not hide that support refuses it.
+    lenient.on = true;
+    const integrity = new DocumentIntegrityService(
+      narrow.keyframeStore,
+      narrow.operationStore,
+      narrow.writeCache,
+      narrow.documentView,
+      narrow.documentModelRegistry,
+      { "base-reducer": [1, 2] },
+    );
+    const result = await integrity.validateDocument(UNSUPPORTED);
+    expect(result.unsupported).toEqual({
+      protocol: "base-reducer",
+      version: 7,
+    });
   });
 
   it("still blocks on a document it registers but cannot build", async () => {

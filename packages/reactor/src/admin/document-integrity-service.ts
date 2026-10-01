@@ -90,6 +90,22 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
       unsupported: { protocol: error.protocol, version: error.version },
     });
 
+    // Every later read runs this check too; a document with no keyframes and
+    // no snapshot would otherwise reach none of them.
+    try {
+      await replayCache.getState(
+        documentId,
+        "document",
+        branch,
+        undefined,
+        signal,
+      );
+    } catch (error) {
+      if (UnsupportedProtocolVersionError.isError(error)) {
+        return unsupported(error);
+      }
+    }
+
     const keyframes = await this.keyframeStore.listKeyframes(
       documentId,
       undefined,

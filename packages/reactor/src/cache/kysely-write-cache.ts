@@ -1,5 +1,4 @@
 import type {
-  BaseReducerVersion,
   CreateDocumentAction,
   DeleteDocumentAction,
   Operation,
@@ -195,31 +194,23 @@ export class KyselyWriteCache implements IWriteCache {
   }
 
   /**
-   * The document's base-reducer version. A document this reactor cannot read
-   * because it was stored at a protocol version outside `protocolSupport` is
-   * refused by name, so read paths can tell it from a rebuild that failed.
+   * Refuses a document stored at a protocol version outside `protocolSupport`
+   * by name, so read paths can tell it from a rebuild that failed. Runs before
+   * any reducer or cached state, since neither checks support.
    */
-  private reducerVersion(
-    documentId: string,
-    document: PHDocument,
-  ): BaseReducerVersion {
-    try {
-      return baseReducerVersion(document.header);
-    } catch (error) {
-      const unsupported =
-        this.protocolSupport &&
-        firstUnsupportedProtocol(
-          document.header.protocolVersions,
-          this.protocolSupport,
-        );
-      if (unsupported) {
-        throw new UnsupportedProtocolVersionError(
-          documentId,
-          unsupported.protocol,
-          unsupported.version,
-        );
-      }
-      throw error;
+  private assertSupported(documentId: string, document: PHDocument): void {
+    const unsupported =
+      this.protocolSupport &&
+      firstUnsupportedProtocol(
+        document.header.protocolVersions,
+        this.protocolSupport,
+      );
+    if (unsupported) {
+      throw new UnsupportedProtocolVersionError(
+        documentId,
+        unsupported.protocol,
+        unsupported.version,
+      );
     }
   }
 
@@ -333,6 +324,7 @@ export class KyselyWriteCache implements IWriteCache {
         // Only the topmost snapshot can be the head, and only if it was stored
         // as one: anything above it proves the stream has grown since.
         if (newest?.position === SnapshotPosition.Head) {
+          this.assertSupported(documentId, newest.document);
           this.lruTracker.touch(streamKey);
           return copyDocument(newest.document);
         }
@@ -366,6 +358,7 @@ export class KyselyWriteCache implements IWriteCache {
           (s) => s.revision === targetRevision,
         );
         if (exactMatch) {
+          this.assertSupported(documentId, exactMatch.document);
           this.lruTracker.touch(streamKey);
           return copyDocument(exactMatch.document);
         }
@@ -733,6 +726,7 @@ export class KyselyWriteCache implements IWriteCache {
     let lastDocumentScopeOperation: Operation | undefined;
 
     if (keyframe) {
+      this.assertSupported(documentId, keyframe.document);
       document = keyframe.document;
       startRevision = keyframe.revision;
       documentType = keyframe.document.header.documentType;
@@ -855,6 +849,7 @@ export class KyselyWriteCache implements IWriteCache {
       }
 
       document = createDocumentFromAction(documentCreateAction);
+      this.assertSupported(documentId, document);
       lastDocumentScopeOperation = createOp;
 
       let docModule = this.registry.getModule(
@@ -951,7 +946,7 @@ export class KyselyWriteCache implements IWriteCache {
             );
           }
         } else {
-          const protocolVersion = this.reducerVersion(documentId, document);
+          const protocolVersion = baseReducerVersion(document.header);
           document = withProtocolVersions(
             docModule.reducer(document, operation.action, undefined, {
               skip: operation.skip,
@@ -1090,7 +1085,7 @@ export class KyselyWriteCache implements IWriteCache {
             document = appendWithoutApplying(document, operation, scope);
           } else {
             // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-            const protocolVersion = this.reducerVersion(documentId, document);
+            const protocolVersion = baseReducerVersion(document.header);
             document = withProtocolVersions(
               getModuleCached(moduleVersion).reducer(
                 document,
@@ -1118,7 +1113,6 @@ export class KyselyWriteCache implements IWriteCache {
           cursor = result.nextCursor;
         }
       } catch (err) {
-        if (UnsupportedProtocolVersionError.isError(err)) throw err;
         // Wrap errors with context to include document ID for debugging
         throw new Error(
           `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
@@ -1359,6 +1353,7 @@ export class KyselyWriteCache implements IWriteCache {
     targetRevision: number | undefined,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
+    this.assertSupported(documentId, baseDocument);
     const documentType = baseDocument.header.documentType;
     const docScopeNextIndex = baseDocument.header.revision["document"] ?? 0;
 
@@ -1426,7 +1421,7 @@ export class KyselyWriteCache implements IWriteCache {
           document = appendWithoutApplying(document, operation, scope);
         } else {
           // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-          const protocolVersion = this.reducerVersion(documentId, document);
+          const protocolVersion = baseReducerVersion(document.header);
           document = withProtocolVersions(
             module.reducer(document, operation.action, undefined, {
               skip: operation.skip,
@@ -1446,7 +1441,6 @@ export class KyselyWriteCache implements IWriteCache {
         }
       }
     } catch (err) {
-      if (UnsupportedProtocolVersionError.isError(err)) throw err;
       // Wrap errors with context to include document ID for debugging
       throw new Error(
         `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
