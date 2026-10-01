@@ -158,6 +158,12 @@ export type ReactorFeatureFlags = {
    * scope's state, the subject, and the action input. Requires authGroups.
    */
   authConditions: boolean;
+
+  /**
+   * Support base-reducer 3, in which UNDO and REDO are stored as a RETRACT
+   * naming its target by action id.
+   */
+  undoV3: boolean;
 };
 
 /** 200k operations purge in 1.6 s on local Postgres; jobs time out at 30 s. */

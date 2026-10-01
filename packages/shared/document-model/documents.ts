@@ -438,12 +438,22 @@ export function mapSkippedOperationsV2(
  * replay the document through a reducer it was not written for, so it is an
  * error rather than a default.
  */
-export function baseReducerVersion(header: PHDocumentHeader): number {
+export type BaseReducerVersion = 1 | 2 | 3;
+
+export function baseReducerVersion(
+  header: PHDocumentHeader,
+): BaseReducerVersion {
   const version = header.protocolVersions?.["base-reducer"];
 
   if (typeof version !== "number") {
     throw new Error(
       `Document ${header.id} carries no base-reducer protocol version`,
+    );
+  }
+
+  if (version !== 1 && version !== 2) {
+    throw new Error(
+      `Document ${header.id} carries unknown base-reducer protocol version ${version}`,
     );
   }
 

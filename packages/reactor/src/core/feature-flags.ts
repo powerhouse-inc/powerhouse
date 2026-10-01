@@ -16,6 +16,7 @@ export const FLAG_PREREQUISITES: Record<
   authEnforcement: ["documentDecisions"],
   authGroups: ["authEnforcement"],
   authConditions: ["authGroups"],
+  undoV3: [],
 };
 
 /**
@@ -31,6 +32,7 @@ export function resolveFeatureFlags(
     authEnforcement: flags.authEnforcement ?? false,
     authGroups: flags.authGroups ?? false,
     authConditions: flags.authConditions ?? false,
+    undoV3: flags.undoV3 ?? false,
   };
 
   // Against what the caller passed, so an unrecognized name is still reported.

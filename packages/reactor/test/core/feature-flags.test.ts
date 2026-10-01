@@ -74,6 +74,7 @@ describe("feature flag validation", () => {
       "authEnforcement",
       "authGroups",
       "authConditions",
+      "undoV3",
     ]);
   });
 
@@ -177,6 +178,7 @@ describe("resolveFeatureFlags", () => {
       authEnforcement: false,
       authGroups: false,
       authConditions: false,
+      undoV3: false,
     });
     expect(resolveFeatureFlags({})).toEqual(resolveFeatureFlags());
   });
@@ -187,6 +189,7 @@ describe("resolveFeatureFlags", () => {
       authEnforcement: false,
       authGroups: false,
       authConditions: false,
+      undoV3: false,
     });
   });
 
@@ -215,6 +218,7 @@ describe("resolveFeatureFlags", () => {
       authEnforcement: true,
       authGroups: false,
       authConditions: false,
+      undoV3: false,
     });
 
     module.reactor.kill();
