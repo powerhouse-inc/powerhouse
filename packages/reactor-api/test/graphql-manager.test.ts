@@ -35,7 +35,9 @@ import type {
   FetchHandler,
   IGatewayAdapter,
   IHttpAdapter,
+  WsConnection,
   WsDisposer,
+  WsHandlers,
 } from "../src/graphql/gateway/types.js";
 import {
   createRequireAuthFetchMiddleware,
@@ -724,6 +726,28 @@ describe("GraphQLManager", () => {
 
       // The auth-derived user should win over the one set via setAdditionalContextFields
       expect(ctx.user).toEqual(expectedUser);
+    });
+
+    it("an additional field named user never becomes the caller of an anonymous WebSocket", async () => {
+      const { manager, gatewayAdapter } = makeHarness();
+      manager.setAdditionalContextFields({
+        user: { address: "0xinjected" },
+        customField: "custom-value",
+      });
+      await registerSubscriptionSubgraph(manager);
+      await initAndFlush(manager);
+
+      const handlers = gatewayAdapter.attachWebSocket.mock
+        .calls[0][2] as WsHandlers<Context>;
+      const connection = {} as WsConnection;
+      await expect(handlers.onConnect({}, connection)).resolves.toBe(true);
+      const ctx = (await handlers.context({}, connection)) as Record<
+        string,
+        unknown
+      >;
+
+      expect(ctx["customField"]).toBe("custom-value");
+      expect(ctx.user).toBeUndefined();
     });
   });
 

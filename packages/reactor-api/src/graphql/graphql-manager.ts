@@ -1010,16 +1010,14 @@ export class GraphQLManager {
       requireAuthenticatedCaller: () =>
         this.#requireAuthMiddleware !== undefined,
       logger: this.logger,
-      buildContext: (connectionParams, user) => {
-        const context: Context = {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          headers: connectionParams as any,
-          db: this.relationalDb,
-          ...this.getAdditionalContextFields(),
-        };
-        if (user) context.user = user;
-        return context;
-      },
+      // `user` comes last, as in the HTTP context: no extra field supplies it.
+      buildContext: (connectionParams, user) => ({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        headers: connectionParams as any,
+        db: this.relationalDb,
+        ...this.getAdditionalContextFields(),
+        user,
+      }),
     });
   }
 
