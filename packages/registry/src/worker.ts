@@ -319,7 +319,8 @@ export async function startWorker(
     loop(),
   );
   let sweeper: ReturnType<typeof setTimeout> | undefined;
-  let lastFull = 0;
+  // The first full pass waits a tick: rows a deploy's import just wrote are still too new
+  let lastFull = Date.now() - SWEEP_INTERVAL_MS + RECONCILE_INTERVAL_MS;
   const sweep = async () => {
     try {
       const full = Date.now() - lastFull >= SWEEP_INTERVAL_MS;
