@@ -1,9 +1,14 @@
 import type {
   AuthSubject,
+  CreateDocumentAction,
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { DocumentNotFoundError } from "../shared/errors.js";
+import { createDocumentFromAction } from "../executor/util.js";
+import {
+  DocumentNotFoundError,
+  DocumentPurgedError,
+} from "../shared/errors.js";
 import { derivedReadSet, staticReadSet } from "./build-decision-model.js";
 import { streamKey } from "./merged-order.js";
 import type {
@@ -122,6 +127,37 @@ export async function evaluateByPosition<M>(
   // below exclude them and no operation is refused by its own stored copy.
   const evaluating = new Set(operations.map((operation) => operation.id));
 
+  // A self-creating load has no stored stream; deferring it would wait on itself.
+  const creation = operations.find(
+    (operation) =>
+      operation.action.type === "CREATE_DOCUMENT" &&
+      (operation.action as CreateDocumentAction).input.documentId ===
+        target.documentId,
+  );
+  async function stateBefore(query: StreamQuery): Promise<PHDocument> {
+    try {
+      return await writeCache.getState(
+        query.documentId,
+        query.scope,
+        query.branch,
+        -1,
+        signal,
+      );
+    } catch (error) {
+      if (
+        creation !== undefined &&
+        query.documentId === target.documentId &&
+        error instanceof DocumentNotFoundError &&
+        !(error instanceof DocumentPurgedError)
+      ) {
+        return createDocumentFromAction(
+          creation.action as CreateDocumentAction,
+        );
+      }
+      throw error;
+    }
+  }
+
   // One indexed query per read stream, narrowed to the actions that can change
   // an evaluation. A document holding none of them returns just below.
   const readStreams = await Promise.all(
@@ -177,13 +213,7 @@ export async function evaluateByPosition<M>(
 
     // Walked from before any of its operations. On the auth stream index 0 is the
     // genesis policy, which a bound of 0 would pre-apply without ever visiting.
-    const before = await writeCache.getState(
-      read.stream.query.documentId,
-      read.stream.query.scope,
-      read.stream.query.branch,
-      -1,
-      signal,
-    );
+    const before = await stateBefore(read.stream.query);
     walked.push({
       streamKey: streamKey(read.stream.query),
       scope: read.stream.query.scope,
@@ -224,13 +254,7 @@ export async function evaluateByPosition<M>(
       )
     ).results.filter((operation) => !evaluating.has(operation.id));
 
-    const before = await writeCache.getState(
-      query.documentId,
-      query.scope,
-      query.branch,
-      -1,
-      signal,
-    );
+    const before = await stateBefore(query);
 
     evaluatedStateKey = streamKey(query);
     walked.push({
