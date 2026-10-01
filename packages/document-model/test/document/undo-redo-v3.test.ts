@@ -74,6 +74,16 @@ describe("base-reducer 3", () => {
       expect(document.clipboard).toEqual([]);
     });
 
+    it("carries a reshuffle's rewind onto the RETRACT", () => {
+      const a = increment();
+      const document = dispatch(createV3Document(), a);
+
+      const result = processUndoRedo(document, undo(), 2, 3, baseCountReducer);
+
+      expect(result.action.type).toBe("RETRACT");
+      expect(result.skip).toBe(2);
+    });
+
     it("resolves through processUndoRedo given the state reducer", () => {
       const a = increment();
       const document = dispatch(createV3Document(), a);

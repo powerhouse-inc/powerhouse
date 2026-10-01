@@ -242,7 +242,7 @@ export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
         case 2:
           return undoOperationV2(document, action, skip);
         case 3:
-          return resolveRetraction(document, action, customReducer);
+          return resolveRetraction(document, action, skip, customReducer);
         default:
           return unknownBaseReducer(protocolVersion);
       }
@@ -252,7 +252,7 @@ export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
         case 2:
           return redoOperation(document, action, skip);
         case 3:
-          return resolveRetraction(document, action, customReducer);
+          return resolveRetraction(document, action, skip, customReducer);
         default:
           return unknownBaseReducer(protocolVersion);
       }
@@ -264,6 +264,7 @@ export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
 function resolveRetraction<TState extends PHBaseState>(
   document: PHDocument<TState>,
   action: Action,
+  skip: number,
   customReducer: StateReducer<TState> | undefined,
 ): {
   document: PHDocument<TState>;
@@ -297,7 +298,8 @@ function resolveRetraction<TState extends PHBaseState>(
   return {
     document,
     action: retract(target, action.scope),
-    skip: 0,
+    // A reshuffle's rewind, carried over; never an undo.
+    skip,
     reuseLastOperationIndex: false,
   };
 }
