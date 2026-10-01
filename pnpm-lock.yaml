@@ -3760,6 +3760,12 @@ importers:
       '@powerhousedao/registry':
         specifier: workspace:*
         version: link:../../packages/registry
+      '@powerhousedao/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@powerhousedao/switchboard':
+        specifier: workspace:*
+        version: link:../../apps/switchboard
       '@tailwindcss/cli':
         specifier: 'catalog:'
         version: 4.2.2
