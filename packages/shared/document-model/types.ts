@@ -5,7 +5,7 @@ import type { z } from "zod";
 import type { ZodRawShape } from "zod";
 import type { ActionSigningTarget } from "./action-signature.js";
 import type { Action } from "./actions.js";
-import type { PHDocument } from "./documents.js";
+import type { BaseReducerVersion, PHDocument } from "./documents.js";
 import type { Operation } from "./operations.js";
 import type {
   ConfigEntrySchema,
@@ -1405,7 +1405,7 @@ export type ReducerOptions = {
    * - Version 1 (default): Legacy behavior with index reuse
    * - Version 2: Reactor behavior with monotonic indices
    */
-  protocolVersion?: number;
+  protocolVersion?: BaseReducerVersion;
 
   /**
    * When true, skip index contiguity validation during replay.
