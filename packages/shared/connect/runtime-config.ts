@@ -71,6 +71,7 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
       authEnforcement: false,
       authGroups: false,
       authConditions: false,
+      undoV3: false,
     },
     createSignaturePolicy: "v2-required",
     unsupportedStoredDocuments: "refuse",
