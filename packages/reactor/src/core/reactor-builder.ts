@@ -1232,6 +1232,7 @@ export class ReactorBuilder {
       eventBus,
       documentModelRegistry,
       featureFlags,
+      protocolSupport: this.executorConfig.protocolSupport ?? {},
       queue,
       jobTracker,
       executorManager,

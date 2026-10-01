@@ -56,6 +56,7 @@ import {
   InvalidSignatureError,
   PurgeTooLargeError,
   ReservedActionError,
+  UnsupportedProtocolVersionError,
 } from "../shared/errors.js";
 import type { KyselyDocumentPurger } from "../storage/kysely/document-purger.js";
 import { yieldToMain } from "../shared/utils.js";
@@ -1244,7 +1245,8 @@ export class SimpleJobExecutor implements IJobExecutor {
                 signal,
               )
             ).protocolVersions;
-    } catch {
+    } catch (error) {
+      if (UnsupportedProtocolVersionError.isError(error)) return error;
       // Not stored yet, or unreadable: the job's own reads decide.
       return undefined;
     }

@@ -1,4 +1,8 @@
-import type { Action, Operation } from "@powerhousedao/shared/document-model";
+import type {
+  Action,
+  Operation,
+  PHDocumentHeader,
+} from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import {
   editedSince,
@@ -10,6 +14,7 @@ import {
   redoAction,
   redoActions,
   undoGroupOf,
+  undoProtocolVersion,
   type UndoPolicy,
 } from "./undo-plan.js";
 
@@ -211,5 +216,25 @@ describe("redo", () => {
       input: undone.input,
     });
     expect(again.id).not.toBe(undone.id);
+  });
+});
+
+describe("undoProtocolVersion", () => {
+  const header = (protocolVersions?: Record<string, number>) =>
+    ({ id: "doc", protocolVersions }) as PHDocumentHeader;
+
+  it("reads a header without a base-reducer version as 1", () => {
+    expect(undoProtocolVersion(header())).toBe(1);
+    expect(undoProtocolVersion(header({}))).toBe(1);
+  });
+
+  it("reads a known version", () => {
+    expect(undoProtocolVersion(header({ "base-reducer": 2 }))).toBe(2);
+  });
+
+  it("refuses an unknown version", () => {
+    expect(() => undoProtocolVersion(header({ "base-reducer": 7 }))).toThrow(
+      "unknown base-reducer protocol version 7",
+    );
   });
 });
