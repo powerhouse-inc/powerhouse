@@ -48,6 +48,7 @@ import {
 } from "./operations.js";
 import type { PHBaseState } from "./state.js";
 import type {
+  DeriveScope,
   Reducer,
   ReducerOptions,
   ReplayDocumentOptions,
@@ -220,6 +221,7 @@ export function updateDocument<TDocument extends PHDocument>(
  * @param skip The number of operations to skip before applying the action.
  * @param protocolVersion The document's base-reducer version.
  * @param customReducer The model's state reducer; required on base-reducer 3.
+ * @param derive Base-reducer 3: the version-aware derivation, when the caller has one.
  * @returns The updated document, calculated skip value and transformed action (if applied).
  */
 export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
@@ -228,6 +230,7 @@ export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
   skip: number,
   protocolVersion: BaseReducerVersion = 1,
   customReducer?: StateReducer<TState>,
+  derive?: DeriveScope,
 ): {
   document: PHDocument<TState>;
   action: Action;
@@ -242,7 +245,13 @@ export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
         case 2:
           return undoOperationV2(document, action, skip);
         case 3:
-          return resolveRetraction(document, action, skip, customReducer);
+          return resolveRetraction(
+            document,
+            action,
+            skip,
+            customReducer,
+            derive,
+          );
         default:
           return unknownBaseReducer(protocolVersion);
       }
@@ -252,7 +261,13 @@ export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
         case 2:
           return redoOperation(document, action, skip);
         case 3:
-          return resolveRetraction(document, action, skip, customReducer);
+          return resolveRetraction(
+            document,
+            action,
+            skip,
+            customReducer,
+            derive,
+          );
         default:
           return unknownBaseReducer(protocolVersion);
       }
@@ -266,6 +281,7 @@ function resolveRetraction<TState extends PHBaseState>(
   action: Action,
   skip: number,
   customReducer: StateReducer<TState> | undefined,
+  derive: DeriveScope | undefined,
 ): {
   document: PHDocument<TState>;
   action: Action;
@@ -279,14 +295,15 @@ function resolveRetraction<TState extends PHBaseState>(
   if (!customReducer) {
     throw new Error(`${action.type} on base-reducer 3 needs the state reducer`);
   }
-  const reducerFor: ReducerFor = () => customReducer as StateReducer;
   const operations = document.operations[action.scope] ?? [];
-  const { applied } = deriveScope(
-    document,
-    operations,
-    reducerFor,
-    action.scope,
-  );
+  const { applied } = derive
+    ? derive(document, operations, action.scope)
+    : deriveScope(
+        document,
+        operations,
+        () => customReducer as StateReducer,
+        action.scope,
+      );
   const target =
     action.type === "UNDO"
       ? undoTarget(operations, applied)
@@ -485,6 +502,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
       skipValue,
       protocolVersion,
       customReducer,
+      options.deriveScope,
     );
 
     _action = transformedAction;
@@ -746,15 +764,8 @@ function applyByRule<TState extends PHBaseState>(
   }
   const appendedId = appended.action.id;
 
-  let thrown: unknown;
-  const appendedReducer: StateReducer<TState> = (state, action) => {
-    try {
-      return customReducer(state, action, dispatch);
-    } catch (error) {
-      thrown = error;
-      throw error;
-    }
-  };
+  const appendedReducer: StateReducer<TState> = (state, action) =>
+    customReducer(state, action, dispatch);
   const reducerFor: ReducerFor = (operation) =>
     (operation.action.id === appendedId
       ? appendedReducer
@@ -768,7 +779,13 @@ function applyByRule<TState extends PHBaseState>(
   let next = document;
   let error: string | undefined;
   if (rebuild) {
-    const derived = deriveScope(document, operations, reducerFor, scope);
+    let thrown: unknown;
+    const onThrow = (operation: Operation, caught: unknown) => {
+      if (operation.action.id === appendedId) thrown = caught;
+    };
+    const derived = options.deriveScope
+      ? options.deriveScope(document, operations, scope, onThrow)
+      : deriveScope(document, operations, reducerFor, scope, onThrow);
     next = derived.document;
     const threw =
       !derived.applied.has(appendedId) &&
