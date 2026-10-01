@@ -1034,6 +1034,7 @@ async function initServer(
       syncManager: api.syncManager,
       authorizationService: graphqlManager.getAuthorizationService(),
       path: graphqlManager.getBasePath(),
+      attachments: api.attachmentClientProvider,
     });
 
     lateSubgraphs.push(
@@ -1114,6 +1115,7 @@ async function initServer(
       authorizationService: graphqlManager.getAuthorizationService(),
       packageManagementService,
       http: graphqlManager.scopeForPackage("@powerhousedao/switchboard"),
+      attachments: api.attachmentClientProvider,
     });
 
     lateSubgraphs.push(
