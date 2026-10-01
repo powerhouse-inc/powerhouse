@@ -438,8 +438,6 @@ export function mapSkippedOperationsV2(
  * replay the document through a reducer it was not written for, so it is an
  * error rather than a default.
  */
-export type BaseReducerVersion = 1 | 2 | 3;
-
 export function baseReducerVersion(
   header: PHDocumentHeader,
 ): BaseReducerVersion {
@@ -459,6 +457,8 @@ export function baseReducerVersion(
 
   return version;
 }
+
+export type BaseReducerVersion = 1 | 2 | 3;
 
 export function garbageCollectV2<TOpIndex extends OperationIndex>(
   sortedOperations: TOpIndex[],

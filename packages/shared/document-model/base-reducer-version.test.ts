@@ -19,6 +19,12 @@ describe("baseReducerVersion", () => {
     );
   });
 
+  it("throws on base-reducer 3", () => {
+    expect(() => baseReducerVersion(header({ "base-reducer": 3 }))).toThrow(
+      "Document doc-1 carries unknown base-reducer protocol version 3",
+    );
+  });
+
   it("throws on an unknown version", () => {
     expect(() => baseReducerVersion(header({ "base-reducer": 7 }))).toThrow(
       "Document doc-1 carries unknown base-reducer protocol version 7",
