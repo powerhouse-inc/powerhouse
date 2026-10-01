@@ -164,9 +164,11 @@ the full reactor client implement:
 | `execute(identifier, branch, actions, signal?)`   | Fetches the document, stamps and signs a single action, pushes, emits `Updated`.  |
 | `deleteDocument(identifier, propagate?, signal?)` | Emits `Deleted`.                                                                  |
 | `subscribe(search, callback, view?)`              | Local emissions plus, lazily, the server's.                                       |
+| `undo` / `redo(identifier, scope?, branch?, ...)` | Submits UNDO or REDO; on base-reducer 3 the Switchboard signs the RETRACT.        |
+| `undoRedoAvailability(identifier, scope?, ...)`   | Base-reducer 3 treats a row stored with an error as one that threw.               |
 
 The interface is declared as a `Pick` of the reactor's own `IReactorClient`, so
-the signatures cannot drift. Everything outside those six members - `drives`,
+the signatures cannot drift. Everything outside those members - `drives`,
 `find`, `resolveIdOrSlug`, relationships, jobs, `rename`, `executeBatch`, the
 document-model module getters - is not on it and not implemented here.
 

@@ -6,15 +6,22 @@ import type {
   PagingOptions,
   PropagationMode,
   SearchFilter,
+  UndoRedoAvailability,
   ViewFilter,
 } from "@powerhousedao/reactor";
 import type {
+  CreateDocumentActionInput,
   ISigner,
   PHDocumentState,
 } from "@powerhousedao/shared/document-model";
 import {
+  appliedOperations,
   normalizeDocumentModelVersion,
+  redo,
+  redoTarget,
   toTransportAction,
+  undo,
+  undoTarget,
 } from "@powerhousedao/shared/document-model";
 import type {
   Action,
@@ -349,6 +356,104 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       documents: [updated],
     });
     return updated;
+  }
+
+  /**
+   * Submits UNDO. The Switchboard resolves it; on base-reducer 3 it stores the
+   * RETRACT under its own signature, not this client's.
+   */
+  async undo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope: string = "global",
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.execute<TDocument>(
+      documentIdentifier,
+      branch,
+      [undo(1, scope)],
+      signal,
+    );
+  }
+
+  /** Submits REDO; see {@link undo}. */
+  async redo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope: string = "global",
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.execute<TDocument>(
+      documentIdentifier,
+      branch,
+      [redo(1, scope)],
+      signal,
+    );
+  }
+
+  /**
+   * On base-reducer 3, a row stored with an error stands in for one that
+   * throws, since this client does not rebuild the initial state.
+   */
+  async undoRedoAvailability(
+    documentIdentifier: string,
+    scope: string = "global",
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability> {
+    // The read API serves no protocolVersions; CREATE_DOCUMENT carries them.
+    const spine = await this.allOperations(
+      documentIdentifier,
+      "document",
+      branch,
+      signal,
+      { cursor: "0", limit: 1 },
+    );
+    const input = spine.at(0)?.action.input as
+      | Partial<CreateDocumentActionInput>
+      | undefined;
+    if (input?.protocolVersions?.["base-reducer"] !== 3) {
+      const { header } = await this.get(documentIdentifier, { branch }, signal);
+      return { canUndo: (header.revision[scope] ?? 0) > 0, canRedo: false };
+    }
+    const rows = await this.allOperations(
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+    const applied = new Set(
+      appliedOperations(rows)
+        .filter((operation) => !operation.error)
+        .map((operation) => operation.action.id),
+    );
+    return {
+      canUndo: undoTarget(rows, applied) !== undefined,
+      canRedo: redoTarget(rows, applied) !== undefined,
+    };
+  }
+
+  /** Every page of one scope, or only the first `paging` page when given. */
+  private async allOperations(
+    documentIdentifier: string,
+    scope: string,
+    branch: string,
+    signal: AbortSignal | undefined,
+    paging?: PagingOptions,
+  ): Promise<Operation[]> {
+    const rows: Operation[] = [];
+    let page: PagedResults<Operation> | undefined = await this.getOperations(
+      documentIdentifier,
+      { branch, scopes: [scope] },
+      undefined,
+      paging,
+      signal,
+    );
+    while (page) {
+      rows.push(...page.results);
+      page = !paging && page.next ? await page.next() : undefined;
+    }
+    return rows;
   }
 
   /**

@@ -8,7 +8,7 @@ describe("IReactorBrowserClient", () => {
     expect(true).toBe(true);
   });
 
-  it("exposes exactly the six agreed members", () => {
+  it("exposes exactly the agreed members", () => {
     expectTypeOf<keyof IReactorBrowserClient>().toEqualTypeOf<
       | "get"
       | "subscribe"
@@ -16,6 +16,9 @@ describe("IReactorBrowserClient", () => {
       | "getOperations"
       | "create"
       | "deleteDocument"
+      | "undo"
+      | "redo"
+      | "undoRedoAvailability"
     >();
     expect(true).toBe(true);
   });
