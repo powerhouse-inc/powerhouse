@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Action } from "./actions.js";
+import { AUTH_NO_GRANT_REASON } from "./denied.js";
 import type { PHDocument, PHDocumentHeader } from "./documents.js";
 import { hashDocumentStateForScope, replayDocument } from "./documents.js";
 import { HashMismatchError } from "./errors.js";
@@ -82,7 +83,7 @@ const add = (index: number, id: string, skip = 0) =>
 const retract = (index: number, id: string, target: string) =>
   row(index, 0, { id, type: "RETRACT", input: { target } });
 
-/** A rewind, a RETRACT chain, an absent target and a throwing row. */
+/** A rewind, a RETRACT chain, an absent target, a throwing row, a denied RETRACT. */
 function stream(): Operation[] {
   return [
     add(0, "a"),
@@ -96,6 +97,7 @@ function stream(): Operation[] {
     retract(8, "rz", "absent"),
     row(9, 0, { id: "boom", type: "BOOM" }),
     add(10, "d"),
+    { ...retract(11, "rd", "a"), deniedReason: AUTH_NO_GRANT_REASON },
   ];
 }
 
@@ -134,7 +136,7 @@ describe("replayDocument on base-reducer 3", () => {
     expect(result.state.global).toEqual(oracle(rows).state.global);
     expect(result.state.global.items).toEqual(["a", "x", "c", "d"]);
     expect(result.operations.global).toMatchObject(rows);
-    expect(result.header.revision.global).toBe(11);
+    expect(result.header.revision.global).toBe(12);
   });
 
   it("compares the derived state with the last row's hash without checkHashes", () => {
@@ -174,6 +176,14 @@ describe("replayDocument on base-reducer 3", () => {
 
     expect(result.state.global.items).toEqual(["a", "x", "c", "d"]);
     expect(result.operations.global.at(-1)?.hash).toBe("stale");
+  });
+
+  it("refuses a reducer that wraps no state reducer", () => {
+    const opaque: typeof reducer = (document) => document;
+
+    expect(() =>
+      replayDocument(initialState(), { global: stream() }, opaque, header(3)),
+    ).toThrow("its reducer was not built by createReducer");
   });
 
   it("refuses an index gap unless skipIndexValidation", () => {
@@ -219,7 +229,7 @@ describe(".phd round trip on base-reducer 3", () => {
     expect(loaded.header.protocolVersions?.["base-reducer"]).toBe(3);
     expect(loaded.state.global).toEqual(derived.state.global);
     expect(loaded.operations.global).toEqual(positionalOperations(stored));
-    expect(loaded.operations.global).toHaveLength(10);
+    expect(loaded.operations.global).toHaveLength(11);
   });
 });
 
@@ -267,25 +277,26 @@ describe("replayDocumentVersioned on base-reducer 3", () => {
     ];
   }
 
+  const upgrade = row(
+    2,
+    0,
+    {
+      id: "upgrade",
+      type: "UPGRADE_DOCUMENT",
+      input: { fromVersion: 1, toVersion: 2, revision: { global: 3 } },
+    },
+    "document",
+  );
+  const global = [
+    add(0, "a"),
+    add(1, "b"),
+    add(2, "c"),
+    add(3, "d"),
+    retract(4, "r", "b"),
+    add(5, "e"),
+  ];
+
   it("applies each row through its segment's reducer, the rule across segments", () => {
-    const upgrade = row(
-      2,
-      0,
-      {
-        id: "upgrade",
-        type: "UPGRADE_DOCUMENT",
-        input: { fromVersion: 1, toVersion: 2, revision: { global: 3 } },
-      },
-      "document",
-    );
-    const global = [
-      add(0, "a"),
-      add(1, "b"),
-      add(2, "c"),
-      add(3, "d"),
-      retract(4, "r", "b"),
-      add(5, "e"),
-    ];
     const expected = ["a!", "c!", "D", "E"];
     const hash = hashDocumentStateForScope(
       { state: { global: { items: expected } } },
@@ -305,6 +316,19 @@ describe("replayDocumentVersioned on base-reducer 3", () => {
     expect(result.state.document.version).toBe(2);
     expect(result.operations.global).toMatchObject(withLastHash(global, hash));
     expect(result.header.revision.global).toBe(6);
+  });
+
+  it("refuses a version whose reducer wraps no state reducer", () => {
+    const opaque: Reducer = (document) => document;
+
+    expect(() =>
+      replayDocumentVersioned(
+        initialState(),
+        { document: spine([upgrade]), global },
+        { reducers: { 1: v1, 2: opaque }, upgradeManifest: manifest },
+        header(3),
+      ),
+    ).toThrow("Cannot replay test/retraction v2 on base-reducer 3");
   });
 
   it("applies PURGE_DOCUMENT as a deletion, as on base-reducer 2", () => {

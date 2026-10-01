@@ -6,7 +6,7 @@ import {
   baseReducerVersion,
   hashDocumentStateForScope,
   replayDocument,
-  stateReducerFromReducer,
+  requireStateReducer,
   updateHeaderRevision,
   type PHDocument,
   type PHDocumentHeader,
@@ -263,8 +263,12 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
       const applied = appliedPerScope.get(s);
       if (applied) {
         if (segOps.length === 0) continue;
-        const stateReducer = stateReducerFromReducer(reducer, header, dispatch);
-        const reducerFor = () => stateReducer as StateReducer;
+        const stateReducer = requireStateReducer(
+          reducer,
+          header.documentType,
+          currentVersion,
+        ) as StateReducer;
+        const reducerFor = () => stateReducer;
         document = updateHeaderRevision(
           appendRows(document, s, segOps),
           s,
@@ -272,10 +276,16 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
         ) as PHDocument<TState>;
         for (const op of segOps) {
           if (!applied.has(op)) continue;
+          const actionScope = op.action.scope;
+          if (actionScope === "auth" || actionScope === "document") {
+            throw new Error(
+              `Base-reducer 3 does not derive the ${actionScope} scope`,
+            );
+          }
           try {
             document = reduceOne(document, op, reducerFor);
           } catch {
-            // A row that throws applies nothing.
+            // Only the row's action can throw here; it applies nothing.
           }
         }
         segmentEndHashPerScope.set(s, hashDocumentStateForScope(document, s));

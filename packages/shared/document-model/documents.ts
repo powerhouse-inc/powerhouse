@@ -1,4 +1,3 @@
-import { current, isDraft } from "mutative";
 import { stringify } from "safe-stable-stringify";
 import type { Action } from "./actions.js";
 import { hashBrowser } from "./crypto.js";
@@ -6,7 +5,12 @@ import { isDenied } from "./denied.js";
 import { HashMismatchError } from "./errors.js";
 import { createPresignedHeader } from "./header.js";
 import type { DocumentOperations, Operation } from "./operations.js";
-import { deriveScope, positionalOperations } from "./retraction.js";
+import { stateReducerOf } from "./reducer.js";
+import {
+  deriveScope,
+  positionalOperations,
+  type ReducerFor,
+} from "./retraction.js";
 import {
   protocolVersionsFor,
   signaturePolicyOf,
@@ -538,48 +542,21 @@ export function isBaseReducer3(header: PHDocumentHeader): boolean {
   return header.protocolVersions?.["base-reducer"] === 3;
 }
 
-/** Runs as base-reducer 2 to avoid 3's rebuild; throws the error it records. */
-export function stateReducerFromReducer<
-  TState extends PHBaseState = PHBaseState,
->(
+/** The state reducer base-reducer 3 derives with; throws when `reducer` wraps none. */
+export function requireStateReducer<TState extends PHBaseState = PHBaseState>(
   reducer: Reducer<TState>,
-  header: PHDocumentHeader,
-  dispatch?: SignalDispatch,
+  documentType: string,
+  version?: number,
 ): StateReducer<TState> {
-  return (state, action, rowDispatch) => {
-    const snapshot = (isDraft(state) ? current(state) : state) as TState;
-    const operation: Operation = {
-      id: "",
-      index: 0,
-      skip: 0,
-      hash: "-",
-      timestampUtcMs: action.timestampUtcMs,
-      action,
-    };
-    const next = reducer(
-      {
-        header,
-        state: snapshot,
-        initialState: snapshot,
-        operations: {},
-        clipboard: [],
-      },
-      action,
-      rowDispatch ?? dispatch,
-      {
-        protocolVersion: 2,
-        ignoreSkipOperations: true,
-        skip: 0,
-        skipIndexValidation: true,
-        replayOptions: { operation },
-      },
+  const stateReducer = stateReducerOf(reducer);
+  if (stateReducer === undefined) {
+    const model =
+      version === undefined ? documentType : `${documentType} v${version}`;
+    throw new Error(
+      `Cannot replay ${model} on base-reducer 3: its reducer was not built by createReducer`,
     );
-    const error = next.operations[action.scope]?.at(-1)?.error;
-    if (error !== undefined) {
-      throw new Error(error);
-    }
-    return next.state;
-  };
+  }
+  return stateReducer;
 }
 
 function replayOperation<TState extends PHBaseState>(
@@ -631,12 +608,7 @@ function replayRetractionScopes<TState extends PHBaseState>(
   checkHashes: boolean,
   skipIndexValidation: boolean | undefined,
 ): PHDocument<TState> {
-  const stateReducer = stateReducerFromReducer(
-    reducer,
-    document.header,
-    dispatch,
-  );
-  const reducerFor = () => stateReducer as StateReducer;
+  let reducerFor: ReducerFor | undefined;
   let result = document;
   for (const [scope, rows = []] of Object.entries(operations)) {
     if (rows.length === 0) {
@@ -663,7 +635,14 @@ function replayRetractionScopes<TState extends PHBaseState>(
       scope,
       rows.at(-1)!.timestampUtcMs,
     ) as PHDocument<TState>;
-    result = deriveScope(result, rows, reducerFor).document;
+    if (reducerFor === undefined) {
+      const stateReducer = requireStateReducer(
+        reducer,
+        document.header.documentType,
+      ) as StateReducer;
+      reducerFor = () => stateReducer;
+    }
+    result = deriveScope(result, rows, reducerFor, scope).document;
   }
   return result;
 }
