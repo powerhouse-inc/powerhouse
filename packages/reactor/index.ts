@@ -538,6 +538,8 @@ export {
   GroupInUseError,
   PurgeTooLargeError,
   ReservedActionError,
+  RetractionRefusedError,
+  type RetractionRefusalReason,
 } from "./src/shared/errors.js";
 export {
   acquirePurgeLocks,
