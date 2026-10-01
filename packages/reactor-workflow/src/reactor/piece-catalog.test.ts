@@ -225,16 +225,17 @@ it("indexes the registry's blocks for block search", async () => {
   ]);
 });
 
-// A registry the deployment configured is the source for the names it serves.
-// Falling through to the public cloud because it answered 503 hands one of
-// those names to whoever registered it there instead.
-function stubPieceDetail(registryStatus: number) {
+// The registry answers with `registry`: a status, or "down" for a refused
+// connection.
+function stubPieceDetail(registry: number | "down") {
   const seen: string[] = [];
   vi.stubGlobal("fetch", ((input: unknown) => {
     const url = String(input);
     seen.push(url);
     if (url.startsWith(REGISTRY)) {
-      return Promise.resolve(new Response("no", { status: registryStatus }));
+      return registry === "down"
+        ? Promise.reject(new TypeError("fetch failed"))
+        : Promise.resolve(new Response("no", { status: registry }));
     }
     return Promise.resolve(
       new Response(JSON.stringify({ name: "p", version: "9.9.9" }), {
@@ -246,23 +247,28 @@ function stubPieceDetail(registryStatus: number) {
   return seen;
 }
 
-it("asks the cloud only when the registry says it has no such piece", async () => {
+it.each([
+  ["says it has no such piece", 404],
+  ["answers 503", 503],
+  ["refuses the connection", "down"],
+] as const)("asks the cloud when the registry %s", async (_, registry) => {
   setPieceRegistryUrl(REGISTRY);
-  const seen = stubPieceDetail(404);
+  const seen = stubPieceDetail(registry);
 
-  expect(await fetchPieceDetail("@acme/piece-x")).toEqual({
+  // A name per case: piece details are cached across tests.
+  expect(await fetchPieceDetail(`@acme/piece-${registry}`)).toEqual({
     name: "p",
     version: "9.9.9",
   });
   expect(seen.some((url) => url.includes("cloud.activepieces.com"))).toBe(true);
 });
 
-it("does not hand a name to the cloud because the registry was down", async () => {
+it("reads a piece's triggers while the registry is down", async () => {
   setPieceRegistryUrl(REGISTRY);
-  const seen = stubPieceDetail(503);
+  stubPieceDetail("down");
 
-  await expect(fetchPieceDetail("@acme/piece-y")).rejects.toThrow(/503/);
-  expect(seen.some((url) => url.includes("cloud.activepieces.com"))).toBe(
-    false,
-  );
+  expect(await fetchPieceTriggers("@acme/piece-z")).toMatchObject({
+    name: "@acme/piece-z",
+    version: "9.9.9",
+  });
 });
