@@ -679,7 +679,7 @@ export class WorkflowRuntimeService {
           host.attachments,
           () => currentWorkflowId(),
           // A host that serves attachments without answering for them reads
-          // nothing: an unanswerable relationship is not a permitted one.
+          // nothing: an unanswered read is not a permitted one.
           (documentId, ref) =>
             host.canReadAttachmentRef?.(documentId, ref) ??
             Promise.resolve(false),

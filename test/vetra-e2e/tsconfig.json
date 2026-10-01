@@ -20,6 +20,9 @@
       "path": "../../apps/connect"
     },
     {
+      "path": "../../apps/switchboard"
+    },
+    {
       "path": "../../clis/ph-cli"
     },
     {
@@ -33,6 +36,9 @@
     },
     {
       "path": "../../packages/registry"
+    },
+    {
+      "path": "../../packages/shared"
     },
     {
       "path": "../e2e-utils"

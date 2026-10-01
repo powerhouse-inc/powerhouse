@@ -1012,10 +1012,6 @@ async function initServer(
       // A Postgres read model outlives the pod; a key file beside it would not.
       secretsKeyFile: readModelPgliteDir === null ? false : undefined,
       attachments: createAttachmentClient(api.attachments.service),
-      // A step reads attachments with no caller behind it, so the projected
-      // document/ref relationship is what authorizes the read.
-      attachmentReferences: api.attachmentReferenceIndex.store,
-      attachmentReferenceProjection: api.attachmentReferenceProjection,
       // The workflow package's own HTTP namespace: its webhook endpoints live
       // under it, not under the reactor's.
       webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,

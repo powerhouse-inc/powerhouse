@@ -64,11 +64,9 @@ async function writeCapped(
 
 export function createAttachmentPort(
   client: AttachmentClientLike,
-  // Attachment reads are authorized against a document, and a step's refs come
-  // from its own run journal: the workflow document is what vouches for them.
+  // The workflow document a download is made under.
   documentIdFor: () => string | undefined,
-  // Whether that document really references the ref. A step carries no caller,
-  // so this relationship is all that stands between it and any known blob.
+  // The host's answer to whether a run of that workflow may read the ref.
   canReadRef: (documentId: string, ref: string) => Promise<boolean>,
 ): AttachmentPort {
   return {
@@ -81,7 +79,7 @@ export function createAttachmentPort(
       }
       if (!(await canReadRef(documentId, ref))) {
         throw new Error(
-          `Cannot resolve ${ref}: workflow document "${documentId}" does not reference it`,
+          `Cannot resolve ${ref}: workflow "${documentId}" may not read it`,
         );
       }
       const limit = maxFileBytes();
