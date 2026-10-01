@@ -198,6 +198,14 @@ export const registryCommand = command({
       defaultValue: () => process.env.PH_REGISTRY_UPLINK_MAXAGE,
       defaultValueIsSerializable: true,
     }),
+    trustProxy: option({
+      long: "trust-proxy",
+      type: optional(string),
+      description:
+        "Express `trust proxy` (e.g. 2 proxy hops), so rate limits key on client IPs; env PH_REGISTRY_TRUST_PROXY",
+      defaultValue: () => process.env.PH_REGISTRY_TRUST_PROXY,
+      defaultValueIsSerializable: true,
+    }),
     webEnabled: flag({
       long: "web-enabled",
       defaultValue: () => process.env.REGISTRY_WEB !== "false",

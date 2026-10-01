@@ -35,6 +35,14 @@ describe("buildVerdaccioConfig", () => {
     expect(cfg.uplinks.npmjs.url).toBe("https://custom.example/registry/");
   });
 
+  it("passes trustProxy to verdaccio's server only when set", () => {
+    const set = buildVerdaccioConfig(baseConfig({ trustProxy: 2 }));
+    const unset = buildVerdaccioConfig(baseConfig());
+
+    expect(set.server).toEqual({ keepAliveTimeout: 60, trustProxy: 2 });
+    expect(unset.server).toEqual({ keepAliveTimeout: 60 });
+  });
+
   it("proxies the catch-all '**' pattern through the npmjs uplink", () => {
     const cfg = buildVerdaccioConfig(baseConfig()) as VerdaccioConfig;
 

@@ -211,6 +211,11 @@ const DRAIN_DELAY_MS = 5_000;
 // Within the pod's default 30 s termination grace period
 const DRAIN_TIMEOUT_MS = 20_000;
 
+// A hop count, or a value Express parses itself (`loopback`, CIDRs)
+function parseTrustProxy(value: string): number | string {
+  return /^\d+$/.test(value) ? Number(value) : value;
+}
+
 export async function runRegistry(args: RegistryCommandArgs) {
   const {
     port,
@@ -218,6 +223,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
     cdnCacheDir,
     uplink,
     uplinkMaxage,
+    trustProxy,
     webEnabled,
     webhooks,
     publicUrl,
@@ -286,6 +292,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
     uplink,
     uplinkMaxage,
     webEnabled,
+    ...(trustProxy ? { trustProxy: parseTrustProxy(trustProxy) } : {}),
     ...(localPackagePatterns?.length ? { localPackagePatterns } : {}),
     ...(renownEnabled && publicUrl
       ? { renown: { publicUrl, ...(renownUrl ? { renownUrl } : {}) } }
