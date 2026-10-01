@@ -139,7 +139,7 @@ export function deriveScope<TState extends PHBaseState = PHBaseState>(
   reducerFor: ReducerFor,
 ): { document: PHDocument<TState>; applied: ReadonlySet<string> } {
   const applied = new Set<string>();
-  const scope = stream[0]?.action.scope;
+  const scope = stream.at(0)?.action.scope;
   if (scope === undefined) {
     return { document, applied };
   }
