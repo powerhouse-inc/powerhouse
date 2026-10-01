@@ -526,6 +526,10 @@ export async function processVersion(
   const local = published ?? job.payload.local === true;
   const manifestRev = await indexedRevision(ctx.db, pkg);
   const packument = await fetchPackument(ctx.registryUrl, pkg);
+  // Unpublishing a whole package drops it from Verdaccio's list first
+  if (!packument && published) {
+    throw new Error(`metadata for published ${pkg} returned 404`);
+  }
   if (!packument?.versions?.[version]) {
     // Unpublished before it was processed
     await ctx.db.transaction(async (tx) => {
@@ -609,13 +613,15 @@ export async function failVersion(
   ctx: ProcessorContext,
   job: Job,
   error: string,
+  permanent = false,
 ): Promise<void> {
   await ctx.db.query(
-    `INSERT INTO registry_versions (package, version, status, error)
-     VALUES ($1, $2, 'failed', $3)
+    `INSERT INTO registry_versions (package, version, status, error, permanent)
+     VALUES ($1, $2, 'failed', $3, $4)
      ON CONFLICT (package, version) DO UPDATE SET
-       status = 'failed', error = EXCLUDED.error, updated_at = now()`,
-    [job.package, job.version, error],
+       status = 'failed', error = EXCLUDED.error,
+       permanent = EXCLUDED.permanent, updated_at = now()`,
+    [job.package, job.version, error, permanent],
   );
   await ctx.events.publish({
     type: "version-failed",
