@@ -207,9 +207,8 @@ export function useRegistryPackages() {
   }
 
   /**
-   * Fetch full package info for a document type (via the legacy
-   * `?documentType=` filter) and merge into the map. Lets MissingPackageModal
-   * offer installs without loading the whole paginated listing.
+   * Fetch full package info for a document type and merge into the map. Lets
+   * MissingPackageModal offer installs without loading the whole listing.
    */
   const fetchPackagesByDocumentType = useCallback(
     async (documentType: string): Promise<RegistryPackage[]> => {

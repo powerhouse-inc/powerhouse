@@ -10,11 +10,11 @@ const client = new RegistryClient("http://localhost:8080/-/cdn/");
 
 ## `getPackages`
 
-Returns all packages from the registry.
+Returns every package from the registry in full detail, paged through `GET /packages?detail=full` 50 at a time.
 
 ```ts
 const packages = await client.getPackages();
-// [{ name, description, version, category, publisher, publisherUrl }, ...]
+// [{ name, path, manifest, documentTypes, version, distTags, versions }, ...]
 ```
 
 ## `getPackagesByDocumentType`
@@ -29,7 +29,7 @@ const names = await client.getPackagesByDocumentType(
 
 ## `searchPackages`
 
-Client-side search through all packages by name or description.
+Server-side search over package name, description, publisher and module names, returning full detail. An empty query returns every package.
 
 ```ts
 const results = await client.searchPackages("vetra");
