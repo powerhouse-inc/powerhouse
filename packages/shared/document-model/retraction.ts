@@ -125,34 +125,121 @@ export function reduceOne<TState extends PHBaseState = PHBaseState>(
   return applyRow(document, operation, rowReducer(operation, reducerFor));
 }
 
+/** Receives a row whose action threw while deriving a scope. */
+export type OnThrow = (operation: Operation, error: unknown) => void;
+
+/** Which reducer each row of a scope takes, and the upgrades between model versions. */
+export type ScopeVersions = {
+  /** The model version a row applies under. */
+  versionOf: (operation: Operation) => number;
+  /** The state reducer of a model version. */
+  reducerOf: (version: number) => StateReducer;
+  /** Applies the held-back upgrades through `version`; called before every row. */
+  upgradeTo: <TState extends PHBaseState>(
+    document: PHDocument<TState>,
+    version: number,
+  ) => PHDocument<TState>;
+};
+
+/**
+ * Base-reducer 3 derivation of one scope, advanced a run of rows at a time.
+ * Which rows apply is decided once, over the whole stream; `applied` collects
+ * the ids whose action did not throw.
+ */
+export function scopeDeriver(
+  stream: readonly Operation[],
+  onThrow?: OnThrow,
+): {
+  applied: ReadonlySet<string>;
+  advance<TState extends PHBaseState>(
+    document: PHDocument<TState>,
+    rows: readonly Operation[],
+    reducerFor: ReducerFor,
+  ): PHDocument<TState>;
+} {
+  // By reference: a rewound row and its re-appended copy share an id.
+  const live = new Set(appliedOperations(stream));
+  const applied = new Set<string>();
+  return {
+    applied,
+    advance(document, rows, reducerFor) {
+      let next = document;
+      for (const operation of rows) {
+        if (!live.has(operation)) continue;
+        assertDerivedScope(operation.action.scope);
+        // Resolved outside the try: a model without a state reducer must fail.
+        const reducer = rowReducer(operation, reducerFor);
+        try {
+          next = applyRow(next, operation, reducer);
+          applied.add(operation.action.id);
+        } catch (error) {
+          // A row that throws applies nothing.
+          onThrow?.(operation, error);
+        }
+      }
+      return next;
+    },
+  };
+}
+
+function resetScope<TState extends PHBaseState>(
+  document: PHDocument<TState>,
+  scope: string,
+): PHDocument<TState> {
+  assertDerivedScope(scope);
+  const initial = (document.initialState as Record<string, unknown>)[scope];
+  return {
+    ...document,
+    state: { ...document.state, [scope]: initial } as TState,
+  };
+}
+
 /** Derives `scope` from initial state; `applied` holds the ids whose action did not throw. */
 export function deriveScope<TState extends PHBaseState = PHBaseState>(
   document: PHDocument<TState>,
   stream: readonly Operation[],
   reducerFor: ReducerFor,
   scope: string | undefined = stream.at(0)?.action.scope,
+  onThrow?: OnThrow,
 ): { document: PHDocument<TState>; applied: ReadonlySet<string> } {
-  const applied = new Set<string>();
   if (scope === undefined) {
-    return { document, applied };
+    return { document, applied: new Set() };
   }
-  assertDerivedScope(scope);
+  const deriver = scopeDeriver(stream, onThrow);
+  const next = deriver.advance(
+    resetScope(document, scope),
+    positionalOperations(stream),
+    reducerFor,
+  );
+  return { document: next, applied: deriver.applied };
+}
 
-  const initial = (document.initialState as Record<string, unknown>)[scope];
-  let next: PHDocument<TState> = {
-    ...document,
-    state: { ...document.state, [scope]: initial } as TState,
-  };
-  for (const operation of appliedOperations(stream)) {
-    const reducer = rowReducer(operation, reducerFor);
-    try {
-      next = applyRow(next, operation, reducer);
-      applied.add(operation.action.id);
-    } catch {
-      // A row that throws applies nothing.
-    }
+/**
+ * Derives `scope` from initial state across model versions: each row applies
+ * with its own version's reducer, and each upgrade applies where its boundary
+ * falls. Every row is visited, applied or not, so an upgrade a skipped row
+ * crosses still applies there.
+ */
+export function deriveScopeVersioned<TState extends PHBaseState = PHBaseState>(
+  document: PHDocument<TState>,
+  stream: readonly Operation[],
+  versions: ScopeVersions,
+  scope: string | undefined = stream.at(0)?.action.scope,
+  onThrow?: OnThrow,
+): { document: PHDocument<TState>; applied: ReadonlySet<string> } {
+  if (scope === undefined) {
+    return { document, applied: new Set() };
   }
-  return { document: next, applied };
+  const deriver = scopeDeriver(stream, onThrow);
+  let next = resetScope(document, scope);
+  for (const operation of sortOperations([...stream])) {
+    const version = versions.versionOf(operation);
+    next = versions.upgradeTo(next, version);
+    next = deriver.advance(next, [operation], () =>
+      versions.reducerOf(version),
+    );
+  }
+  return { document: next, applied: deriver.applied };
 }
 
 function assertDerivedScope(scope: string): void {

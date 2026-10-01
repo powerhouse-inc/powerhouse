@@ -1426,7 +1426,25 @@ export type ReducerOptions = {
    * Computed from the document's operations when absent.
    */
   targeted?: ReadonlySet<string>;
+
+  /**
+   * Base-reducer 3: derives a scope from every row, each with its own model
+   * version's reducer and the upgrades applied at their boundaries. Without
+   * it, every row takes the reducer this one wraps.
+   */
+  deriveScope?: DeriveScope;
 };
+
+/**
+ * Derives `scope` from every row of `operations`, returning `document` with
+ * that scope's state replaced and the ids whose action applied.
+ */
+export type DeriveScope = <TState extends PHBaseState>(
+  document: PHDocument<TState>,
+  operations: readonly Operation[],
+  scope: string,
+  onThrow?: (operation: Operation, error: unknown) => void,
+) => { document: PHDocument<TState>; applied: ReadonlySet<string> };
 
 /**
  * A pure function that takes an action and the previous state

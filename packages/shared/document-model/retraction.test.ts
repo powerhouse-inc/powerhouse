@@ -6,12 +6,14 @@ import type { Operation } from "./operations.js";
 import {
   appliedOperations,
   deriveScope,
+  deriveScopeVersioned,
   positionalOperations,
   redoTarget,
   reduceOne,
   retractedActionIds,
   undoTarget,
   type ReducerFor,
+  type ScopeVersions,
 } from "./retraction.js";
 import { createReducer, stateReducerOf } from "./reducer.js";
 import { defaultBaseState, type PHBaseState } from "./state.js";
@@ -460,6 +462,101 @@ describe("deriveScope", () => {
     expect(applied.size).toBe(calls());
     expect(document.state.global.count).toBe(calls());
     expect(elapsed).toBeLessThan(5_000);
+  });
+});
+
+describe("deriveScopeVersioned", () => {
+  // Version 1 adds items as given, version 2 upper-cases them; the upgrade
+  // marks the boundary in the state it migrates.
+  const byVersion: Record<number, StateReducer<ListState>> = {
+    1: listReducer,
+    2: (state, act) =>
+      act.type === "ADD"
+        ? listReducer(state, {
+            ...act,
+            input: { item: (act.input as { item: string }).item.toUpperCase() },
+          })
+        : listReducer(state, act),
+  };
+
+  function versions(boundary: number): {
+    versions: ScopeVersions;
+    upgrades: () => number;
+  } {
+    let held = [2];
+    let upgrades = 0;
+    return {
+      versions: {
+        versionOf: (operation) => (operation.index < boundary ? 1 : 2),
+        reducerOf: (version) => byVersion[version] as unknown as StateReducer,
+        upgradeTo: (document, version) => {
+          if (held.length === 0 || version < held[0]) return document;
+          held = [];
+          upgrades++;
+          const state = document.state as unknown as ListState;
+          return {
+            ...document,
+            state: {
+              ...document.state,
+              global: {
+                ...state.global,
+                items: [...state.global.items, "upgraded"],
+              },
+            },
+          };
+        },
+      },
+      upgrades: () => upgrades,
+    };
+  }
+
+  it("applies each row with its version's reducer and upgrades at the boundary", () => {
+    const rows = stream(add("a"), add("b"), add("c"), R("a"));
+    const { document, applied } = deriveScopeVersioned(
+      createDoc({
+        global: { count: 0, items: ["stale"] },
+        local: { note: "" },
+      }),
+      rows,
+      versions(2).versions,
+    );
+    expect(document.state.global.items).toEqual(["b", "upgraded", "C"]);
+    expect(sorted(applied)).toEqual(["b", "c"]);
+  });
+
+  it("upgrades where a row it does not apply crosses the boundary", () => {
+    const rows = stream(add("a"), add("b"), R("b"));
+    const { versions: hooks, upgrades } = versions(1);
+    const { document } = deriveScopeVersioned(createDoc(), rows, hooks);
+    expect(upgrades()).toBe(1);
+    expect(document.state.global.items).toEqual(["a", "upgraded"]);
+  });
+
+  it("agrees with deriveScope when every row has one version", () => {
+    const rows = stream(add("a"), inc("i"), fail("f"), R("i"), add("b"));
+    const single: ScopeVersions = {
+      versionOf: () => 1,
+      reducerOf: () => listReducer as unknown as StateReducer,
+      upgradeTo: (document) => document,
+    };
+    const versioned = deriveScopeVersioned(createDoc(), rows, single);
+    const plain = derive(rows);
+    expect(versioned.document.state).toEqual(plain.document.state);
+    expect(sorted(versioned.applied)).toEqual(sorted(plain.applied));
+  });
+
+  it("reports a row that throws", () => {
+    const rows = stream(add("a"), fail("f"), add("b"));
+    const thrown: string[] = [];
+    deriveScopeVersioned(
+      createDoc(),
+      rows,
+      versions(1).versions,
+      "global",
+      (operation, error) =>
+        thrown.push(`${operation.action.id}: ${(error as Error).message}`),
+    );
+    expect(thrown).toEqual(["f: fails"]);
   });
 });
 
