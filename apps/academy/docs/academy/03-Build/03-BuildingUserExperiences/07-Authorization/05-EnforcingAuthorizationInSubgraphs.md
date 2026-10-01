@@ -134,6 +134,13 @@ All of the following are public methods on `BaseSubgraph`, called on the
 | `assertCanCreate(ctx)`                             | Creating a new top-level document (no parent to check write against).      | throws `Forbidden` |
 | `canReadDocument(canonicalId, ctx)`                | Filtering a list — a non-throwing read check on an id from the data layer. | returns `boolean`  |
 | `authorizationService.isSupremeAdmin(address)`     | Short-circuiting per-item filtering for policy-wide callers.               | returns `boolean`  |
+| `attachmentsFor(ctx)`                              | Reading or uploading attachments as the caller; returns an `IAttachmentClient`. | its reads throw `AttachmentNotFound` |
+
+`attachmentsFor(ctx)` checks every call itself. A read must name a document the
+caller can read and whose operations reference the attachment. Unlike the
+document helpers it has no supreme-admin bypass, so do not skip it for admins.
+See [Attachment service](/academy/Reference/Reactor/AttachmentService#inside-the-switchboard)
+for the upload rule and the other errors.
 
 Each `assertCan*` that takes an `identifier` returns an `AuthorizedDocumentHandle`;
 use its `fetchIdentifier` for the subsequent fetch. There are also lower-level

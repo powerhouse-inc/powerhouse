@@ -195,7 +195,7 @@ interface IProcessorHostModuleBase {
 - **`getReadModel(name)`** — looks up a registered read model by its `name`. Reactor-registered names are typed: `getReadModel("document-view")` returns `IDocumentView` and `"document-indexer"` returns `IDocumentIndexer`; other names take an explicit type argument. Connect's implementation throws `Read model "<name>" not found` when there is no match.
 - **`config?`** — optional `Map<string, unknown>` of host config.
 - **`client`** — the `IReactorClient` for reading documents and drives. See [IReactorClient](/academy/Reference/Reactor/ReactorClient).
-- **`attachments`** — the `IAttachmentClient` for uploading and downloading attachments. See the [Attachment service](/academy/Reference/Reactor/AttachmentService).
+- **`attachments`** — the `IAttachmentClient` for uploading and downloading attachments. In Switchboard it makes no caller check, because a processor acts for no caller. See the [Attachment service](/academy/Reference/Reactor/AttachmentService).
 
 These six core fields are `IProcessorHostModuleBase` in `@powerhousedao/shared`. `@powerhousedao/reactor` adds `client` and the typed `getReadModel` as `IReactorProcessorHostModuleBase`; `@powerhousedao/reactor-browser` and `@powerhousedao/reactor-api` add `attachments` as `IProcessorHostModule`, since neither shared nor reactor can depend on reactor-attachments. Connect sets `processorApp: "connect"`.
 
