@@ -26,7 +26,12 @@ import {
   syncPackage,
   type ProcessorContext,
 } from "../src/processor.js";
-import { reconcile, startWorker, type RunningWorker } from "../src/worker.js";
+import {
+  pruneCachedPackages,
+  reconcile,
+  startWorker,
+  type RunningWorker,
+} from "../src/worker.js";
 import { packTarball } from "./pack.js";
 
 // Set to also run against a real server, e.g. postgres://postgres:postgres@localhost:5432/registry
@@ -34,6 +39,7 @@ const PG_URL = process.env.REGISTRY_TEST_PG_URL;
 
 const TABLES = [
   "verdaccio_manifests",
+  "verdaccio_packages",
   "registry_jobs",
   "registry_unpublished",
   "registry_pieces",
@@ -360,16 +366,27 @@ describe.each(backends)("registry worker (%s)", (_, createDb) => {
     expect((await db.query("SELECT id FROM registry_jobs")).rows).toEqual([]);
   });
 
-  // The storage plugin's index, as it writes it, saved a minute ago
+  // The storage plugin's index, as it writes it, saved a minute ago; a
+  // package cached from the uplink is indexed without being listed
   const indexManifest = async (
     name: string,
     versions: string[],
     distTags: Record<string, string>,
     rev: string | null = null,
+    { cached = false } = {},
   ) => {
     await db.query(`CREATE TABLE IF NOT EXISTS verdaccio_manifests (
       name text PRIMARY KEY, versions jsonb NOT NULL, dist_tags jsonb NOT NULL,
       rev text, updated_at timestamptz NOT NULL DEFAULT now())`);
+    await db.query(
+      "CREATE TABLE IF NOT EXISTS verdaccio_packages (name text PRIMARY KEY)",
+    );
+    if (!cached) {
+      await db.query(
+        "INSERT INTO verdaccio_packages (name) VALUES ($1) ON CONFLICT DO NOTHING",
+        [name],
+      );
+    }
     await db.query(
       `INSERT INTO verdaccio_manifests (name, versions, dist_tags, rev, updated_at)
        VALUES ($1, $2, $3, $4, now() - interval '1 minute')
@@ -500,6 +517,46 @@ describe.each(backends)("registry worker (%s)", (_, createDb) => {
     );
     expect(await reconcile(db)).toBe(0);
     expect(await reconcile(db, { full: true })).toBe(1);
+  });
+
+  it("leaves packages cached from the uplink alone", async () => {
+    await indexManifest(
+      "left-pad",
+      ["1.0.0", "1.1.0"],
+      { latest: "1.1.0" },
+      "1-a",
+      {
+        cached: true,
+      },
+    );
+    expect(await reconcile(db)).toBe(0);
+    expect(await reconcile(db, { full: true })).toBe(0);
+    expect(await queued()).toEqual([]);
+  });
+
+  it("prunes packages an import listed from the uplink cache", async () => {
+    // As the import once did: every stored package listed as published
+    for (const name of ["@me/pkg", "@me/owned", "left-pad"]) {
+      await indexManifest(name, ["1.0.0"], { latest: "1.0.0" }, "1-a");
+    }
+    await db.query(
+      `INSERT INTO registry_package_owners (package_name, owners)
+       VALUES ('@me/owned', ARRAY['did:me']) ON CONFLICT DO NOTHING`,
+    );
+    expect(await reconcile(db, { full: true })).toBe(6);
+
+    expect(await pruneCachedPackages(db, ["@me/pkg"])).toEqual(["left-pad"]);
+    const listed = await db.query<{ name: string }>(
+      "SELECT name FROM verdaccio_packages ORDER BY name",
+    );
+    expect(listed.rows.map((row) => row.name)).toEqual([
+      "@me/owned",
+      "@me/pkg",
+    ]);
+    expect((await queued()).map((job) => job.package)).not.toContain(
+      "left-pad",
+    );
+    expect(await pruneCachedPackages(db, ["@me/pkg"])).toEqual([]);
   });
 
   it("requeues a version left pending with no job", async () => {

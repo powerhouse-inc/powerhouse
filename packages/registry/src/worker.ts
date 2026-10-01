@@ -2,7 +2,7 @@
 // number of processes, can share the queue.
 import os from "node:os";
 import { JOBS_CHANNEL } from "./events.js";
-import type { Database } from "./db/database.js";
+import type { Database, Queryable } from "./db/database.js";
 import {
   BACKGROUND_PRIORITY,
   claim,
@@ -57,10 +57,15 @@ export async function enqueueSweep(db: Database): Promise<number> {
 
 async function hasManifestIndex(db: Database): Promise<boolean> {
   const res = await db.query<{ exists: boolean }>(
-    "SELECT to_regclass('verdaccio_manifests') IS NOT NULL AS exists",
+    `SELECT to_regclass('verdaccio_manifests') IS NOT NULL
+        AND to_regclass('verdaccio_packages') IS NOT NULL AS exists`,
   );
   return res.rows[0]?.exists === true;
 }
+
+// The index also holds packages cached from the uplink; only published ones are processed
+const PUBLISHED =
+  "EXISTS (SELECT 1 FROM verdaccio_packages l WHERE l.name = m.name)";
 
 // Local packages whose manifest index row is gone: unpublished
 const UNPUBLISHED = `
@@ -73,7 +78,7 @@ const QUICK_CHANGED = `
   SELECT m.name
     FROM verdaccio_manifests m
     LEFT JOIN registry_packages p ON p.name = m.name
-   WHERE m.updated_at < now() - interval '30 seconds'
+   WHERE m.updated_at < now() - interval '30 seconds' AND ${PUBLISHED}
      AND (p.name IS NULL OR p.manifest_rev IS DISTINCT FROM m.rev)
   UNION ${UNPUBLISHED}
    LIMIT 1000`;
@@ -95,7 +100,7 @@ const FULL_MISSING = `
     FROM verdaccio_manifests m
     CROSS JOIN LATERAL jsonb_array_elements_text(m.versions) AS v(version)
     LEFT JOIN registry_versions r ON r.package = m.name AND r.version = v.version
-   WHERE m.updated_at < now() - interval '30 seconds'
+   WHERE m.updated_at < now() - interval '30 seconds' AND ${PUBLISHED}
      AND (r.package IS NULL
        OR (r.status = 'pending' AND r.updated_at < now() - interval '5 minutes'
            AND NOT EXISTS (SELECT 1 FROM registry_jobs j
@@ -108,7 +113,7 @@ const FULL_CHANGED = `
   SELECT m.name
     FROM verdaccio_manifests m
     LEFT JOIN registry_packages p ON p.name = m.name
-   WHERE m.updated_at < now() - interval '30 seconds'
+   WHERE m.updated_at < now() - interval '30 seconds' AND ${PUBLISHED}
      AND (p.name IS NULL OR p.dist_tags <> m.dist_tags
        OR EXISTS (SELECT 1 FROM registry_versions r
                    WHERE r.package = m.name AND NOT m.versions ? r.version))
@@ -144,6 +149,42 @@ export async function reconcile(
   const queued = missing.rows.length + changed.rows.length;
   if (queued > 0) await wakeWorkers(db);
   return queued;
+}
+
+// Drops names an earlier import took from the uplink cache, with their queued and
+// processed rows; one with an owner or a listing was published here and stays
+export async function pruneCachedPackages(
+  q: Queryable,
+  published: string[],
+): Promise<string[]> {
+  const migrated = await q.query<{ exists: boolean }>(
+    "SELECT to_regclass('registry_jobs') IS NOT NULL AS exists",
+  );
+  if (!migrated.rows[0]?.exists) return [];
+  const res = await q.query<{ name: string }>(
+    `DELETE FROM verdaccio_packages p
+      WHERE p.name <> ALL($1::text[])
+        AND NOT EXISTS (SELECT 1 FROM registry_package_owners o
+                         WHERE o.package_name = p.name)
+        AND NOT EXISTS (SELECT 1 FROM registry_packages r
+                         WHERE r.name = p.name AND r.listed_manifest IS NOT NULL)
+      RETURNING p.name`,
+    [published],
+  );
+  const pruned = res.rows.map((row) => row.name);
+  if (pruned.length) {
+    await q.query(
+      "DELETE FROM registry_jobs WHERE package = ANY($1) AND locked_by IS NULL",
+      [pruned],
+    );
+    await q.query("DELETE FROM registry_versions WHERE package = ANY($1)", [
+      pruned,
+    ]);
+    await q.query("DELETE FROM registry_packages WHERE name = ANY($1)", [
+      pruned,
+    ]);
+  }
+  return pruned;
 }
 
 export interface RunningWorker {
