@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-30T22:44:39.338Z
+> Generated: 2026-10-01T13:14:32.938Z
 > Total Documents: 118
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -8743,14 +8743,14 @@ In v6, every operation can be done through the **reactor subgraph** (`/graphql/r
 
 Document-model subgraphs are auto-generated for each registered document model and provide:
 
-- `document(identifier)` — get a single document
+- `document(idOrSlug)` — get a single document
 - `documents(paging)` — list all documents of this type
 - `findDocuments(search, view, paging)` — search within this type
-- `documentOutgoingRelationships(sourceIdentifier, relationshipType)` — filtered to this type
-- `documentIncomingRelationships(targetIdentifier, relationshipType)`
-- `createDocument(name, parentIdentifier)` mutation
-- Per-operation mutations (e.g. `addTodoItem(docId, input)`)
-- Async variants of each mutation (e.g. `addTodoItemAsync(docId, input)`)
+- `documentOutgoingRelationships(sourceIdOrSlug, relationshipType)` — filtered to this type
+- `documentIncomingRelationships(targetIdOrSlug, relationshipType)`
+- `createDocument(name, parentIdOrSlug)` mutation
+- Per-operation mutations (e.g. `addTodoItem(documentIdOrSlug, input)`)
+- Async variants of each mutation (e.g. `addTodoItemAsync(documentIdOrSlug, input)`)
 
 ### Getting a drive and its contents
 
@@ -8782,7 +8782,7 @@ query {
 ```graphql
 # v6 — /graphql/r
 query {
-  document(identifier: "my-drive-slug") {
+  document(idOrSlug: "my-drive-slug") {
     document {
       id
       name
@@ -8800,7 +8800,7 @@ query {
 # v6 — /graphql/document-drive (or via supergraph)
 query {
   DocumentDrive {
-    document(identifier: "my-drive-slug") {
+    document(idOrSlug: "my-drive-slug") {
       document {
         id
         name
@@ -8825,7 +8825,7 @@ query {
 # v6 — /graphql/r
 query {
   documentOutgoingRelationships(
-    sourceIdentifier: "my-drive-slug"
+    sourceIdOrSlug: "my-drive-slug"
     relationshipType: "child"
   ) {
     items {
@@ -8846,7 +8846,7 @@ query {
 query {
   ToDoList {
     documentOutgoingRelationships(
-      sourceIdentifier: "my-drive-slug"
+      sourceIdOrSlug: "my-drive-slug"
       relationshipType: "child"
     ) {
       items {
@@ -8937,7 +8937,7 @@ query {
 ```graphql
 # v6 — /graphql/r
 query {
-  document(identifier: "abc123") {
+  document(idOrSlug: "abc123") {
     document {
       id
       name
@@ -8955,7 +8955,7 @@ query {
 # v6 — /graphql/to-do-list (or via supergraph)
 query {
   ToDoList {
-    document(identifier: "abc123") {
+    document(idOrSlug: "abc123") {
       document {
         id
         name
@@ -9027,7 +9027,7 @@ In the legacy system, documents were created indirectly through drive operations
 mutation {
   createDocument(
     document: { documentType: "powerhouse/todo-list", name: "My List" }
-    parentIdentifier: "my-drive-slug"
+    parentIdOrSlug: "my-drive-slug"
   ) {
     id
     name
@@ -9041,7 +9041,7 @@ mutation {
 # v6 — /graphql/to-do-list (or via supergraph)
 mutation {
   ToDoList {
-    createDocument(name: "My List", parentIdentifier: "my-drive-slug") {
+    createDocument(name: "My List", parentIdOrSlug: "my-drive-slug") {
       id
       name
     }
@@ -9058,8 +9058,8 @@ In the legacy system, document operations were applied through strand-based push
 ```graphql
 # v6 — /graphql/r
 mutation {
-  mutateDocument(
-    documentIdentifier: "abc123"
+  execute(
+    documentIdOrSlug: "abc123"
     actions: [
       {
         type: "ADD_TODO_ITEM"
@@ -9083,7 +9083,7 @@ mutation {
 # v6 — /graphql/to-do-list (or via supergraph)
 mutation {
   ToDoList {
-    addTodoItem(docId: "abc123", input: { text: "Buy milk" }) {
+    addTodoItem(documentIdOrSlug: "abc123", input: { text: "Buy milk" }) {
       id
       state {
         global {
@@ -9205,9 +9205,9 @@ subscription {
 
 | Legacy query/mutation           | v6 equivalent                                                                  | Subgraph               |
 | ------------------------------- | ------------------------------------------------------------------------------ | ---------------------- |
-| `drive`                         | `document(identifier: driveSlug)`                                              | reactor (`/graphql/r`) |
+| `drive`                         | `document(idOrSlug: driveSlug)`                                                | reactor (`/graphql/r`) |
 | `drives`                        | `findDocuments(search: { type: "powerhouse/document-drive" })`                 | reactor                |
-| `document(id)`                  | `document(identifier)`                                                         | reactor                |
+| `document(id)`                  | `document(idOrSlug)`                                                           | reactor                |
 | `documents`                     | `findDocuments()`                                                              | reactor                |
 | `addDrive(name)`                | `createDocument(document: { documentType: "powerhouse/document-drive", ... })` | reactor                |
 | `system { sync { strands } }`   | `pollSyncEnvelopes(channelId, ...)`                                            | reactor                |
@@ -9215,7 +9215,7 @@ subscription {
 | `pushUpdates`                   | `pushSyncEnvelopes(envelopes: [...])`                                          | reactor                |
 | N/A (new)                       | `<ModelName> { document(...) }`                                                | document-model         |
 | N/A (new)                       | `<ModelName> { createDocument(...) }`                                          | document-model         |
-| N/A (new)                       | `<ModelName> { <operationName>(docId, input) }`                                | document-model         |
+| N/A (new)                       | `<ModelName> { <operationName>(documentIdOrSlug, input) }`                     | document-model         |
 
 ## Migrating custom subgraphs
 
@@ -9301,7 +9301,7 @@ ph generate --subgraph my-custom
 ## Migration checklist
 
 - [ ] Update all GraphQL client queries that target `/graphql/document-drive` to use `/graphql/r` or the appropriate document-model subgraph
-- [ ] Replace `drive` queries with `document(identifier)` or `findDocuments`
+- [ ] Replace `drive` queries with `document(idOrSlug)` or `findDocuments`
 - [ ] Replace strand-based sync (`registerPullResponderListener`, `system.sync.strands`) with `touchChannel` + `pollSyncEnvelopes`
 - [ ] For real-time updates, use `documentChanges` subscription instead of polling strands
 - [ ] Migrate custom subgraphs to `getResolvers(subgraph: BaseSubgraph)` pattern
@@ -24981,21 +24981,9 @@ These tables are automatically created by database migrations when you enable `D
 #### Get document access info
 
 ```graphql
-query GetDocumentAccess($documentId: String!) {
-  documentAccess(documentId: $documentId) {
+query GetDocumentAccess($documentIdOrSlug: String!) {
+  documentAccess(documentIdOrSlug: $documentIdOrSlug) {
     documentId
-    groupPermissions {
-      documentId
-      groupId
-      group {
-        id
-        name
-        description
-        members
-      }
-      permission
-      grantedBy
-    }
     permissions {
       documentId
       userAddress
@@ -25034,8 +25022,8 @@ query ListGroups {
 #### Check operation permission
 
 ```graphql
-query CanExecute($documentId: String!, $operation: String!) {
-  canExecuteOperation(documentId: $documentId, operationType: $operation)
+query CanExecute($documentIdOrSlug: String!, $operation: String!) {
+  canExecuteOperation(documentIdOrSlug: $documentIdOrSlug, operationType: $operation)
 }
 ```
 
@@ -25070,25 +25058,14 @@ query GetUserGroups($userAddress: String!) {
 #### Get operation permissions
 
 ```graphql
-query GetOperationPermissions($documentId: String!, $operationType: String!) {
-  operationPermissions(documentId: $documentId, operationType: $operationType) {
+query GetOperationPermissions($documentIdOrSlug: String!, $operationType: String!) {
+  operationPermissions(documentIdOrSlug: $documentIdOrSlug, operationType: $operationType) {
     documentId
     operationType
     userPermissions {
       documentId
       operationType
       userAddress
-      grantedBy
-      createdAt
-    }
-    groupPermissions {
-      documentId
-      operationType
-      groupId
-      group {
-        id
-        name
-      }
       grantedBy
       createdAt
     }
@@ -25123,12 +25100,12 @@ These operation permissions provide fine-grained control over specific actions w
 
 ```graphql
 mutation GrantDocumentPermission(
-  $documentId: String!
+  $documentIdOrSlug: String!
   $userAddress: String!
   $permission: DocumentPermissionLevel!
 ) {
   grantDocumentPermission(
-    documentId: $documentId
+    documentIdOrSlug: $documentIdOrSlug
     userAddress: $userAddress
     permission: $permission
   ) {
@@ -25145,8 +25122,8 @@ mutation GrantDocumentPermission(
 #### Revoke document permission from user
 
 ```graphql
-mutation RevokeDocumentPermission($documentId: String!, $userAddress: String!) {
-  revokeDocumentPermission(documentId: $documentId, userAddress: $userAddress)
+mutation RevokeDocumentPermission($documentIdOrSlug: String!, $userAddress: String!) {
+  revokeDocumentPermission(documentIdOrSlug: $documentIdOrSlug, userAddress: $userAddress)
 }
 ```
 
@@ -25234,12 +25211,12 @@ mutation RevokeGroupPermission($documentId: String!, $groupId: Int!) {
 
 ```graphql
 mutation GrantOperationPermission(
-  $documentId: String!
+  $documentIdOrSlug: String!
   $operationType: String!
   $userAddress: String!
 ) {
   grantOperationPermission(
-    documentId: $documentId
+    documentIdOrSlug: $documentIdOrSlug
     operationType: $operationType
     userAddress: $userAddress
   ) {
@@ -25256,12 +25233,12 @@ mutation GrantOperationPermission(
 
 ```graphql
 mutation RevokeOperationPermission(
-  $documentId: String!
+  $documentIdOrSlug: String!
   $operationType: String!
   $userAddress: String!
 ) {
   revokeOperationPermission(
-    documentId: $documentId
+    documentIdOrSlug: $documentIdOrSlug
     operationType: $operationType
     userAddress: $userAddress
   )
@@ -25316,15 +25293,14 @@ mutation RevokeGroupOperationPermission(
 #### Create document
 
 ```graphql
-mutation CreateDocument($document: JSONObject!, $parentIdentifier: String) {
-  createDocument(document: $document, parentIdentifier: $parentIdentifier) {
+mutation CreateDocument($document: JSONObject!, $parentIdOrSlug: String) {
+  createDocument(document: $document, parentIdOrSlug: $parentIdOrSlug) {
     id
     name
     documentType
     state
     createdAtUtcIso
     lastModifiedAtUtcIso
-    parentId
   }
 }
 ```
@@ -25332,13 +25308,10 @@ mutation CreateDocument($document: JSONObject!, $parentIdentifier: String) {
 #### Create empty document
 
 ```graphql
-mutation CreateEmptyDocument(
-  $documentType: String!
-  $parentIdentifier: String
-) {
+mutation CreateEmptyDocument($documentType: String!, $parentIdOrSlug: String) {
   createEmptyDocument(
     documentType: $documentType
-    parentIdentifier: $parentIdentifier
+    parentIdOrSlug: $parentIdOrSlug
   ) {
     id
     name
@@ -25346,23 +25319,22 @@ mutation CreateEmptyDocument(
     state
     createdAtUtcIso
     lastModifiedAtUtcIso
-    parentId
   }
 }
 ```
 
-#### Mutate document
+#### Execute actions on a document
 
 ```graphql
-mutation MutateDocument(
-  $documentIdentifier: String!
-  $actions: [JSONObject!]!
-  $view: ViewFilterInput
+mutation Execute(
+  $documentIdOrSlug: String!
+  $actions: [ActionInput!]!
+  $branch: String
 ) {
-  mutateDocument(
-    documentIdentifier: $documentIdentifier
+  execute(
+    documentIdOrSlug: $documentIdOrSlug
     actions: $actions
-    view: $view
+    branch: $branch
   ) {
     id
     name
@@ -25381,12 +25353,12 @@ mutation MutateDocument(
 
 ```graphql
 mutation RenameDocument(
-  $documentIdentifier: String!
+  $documentIdOrSlug: String!
   $name: String!
   $branch: String
 ) {
   renameDocument(
-    documentIdentifier: $documentIdentifier
+    documentIdOrSlug: $documentIdOrSlug
     name: $name
     branch: $branch
   ) {
@@ -25394,7 +25366,6 @@ mutation RenameDocument(
     name
     documentType
     lastModifiedAtUtcIso
-    parentId
   }
 }
 ```
@@ -25402,8 +25373,8 @@ mutation RenameDocument(
 #### Delete document
 
 ```graphql
-mutation DeleteDocument($identifier: String!, $propagate: PropagationMode) {
-  deleteDocument(identifier: $identifier, propagate: $propagate)
+mutation DeleteDocument($idOrSlug: String!, $propagate: PropagationMode) {
+  deleteDocument(idOrSlug: $idOrSlug, propagate: $propagate)
 }
 ```
 
@@ -25806,12 +25777,12 @@ Give Finance Manager permission to execute the `ADD_FILE` operation for creating
 
 ```graphql
 mutation GrantOperationPermission(
-  $documentId: String!
+  $documentIdOrSlug: String!
   $operationType: String!
   $userAddress: String!
 ) {
   grantOperationPermission(
-    documentId: $documentId
+    documentIdOrSlug: $documentIdOrSlug
     operationType: $operationType
     userAddress: $userAddress
   ) {
@@ -25826,7 +25797,7 @@ mutation GrantOperationPermission(
 
 ```json
 {
-  "documentId": "drive-uuid-1234-5678-abcd",
+  "documentIdOrSlug": "drive-uuid-1234-5678-abcd",
   "operationType": "ADD_FILE",
   "userAddress": "0xalice...finance"
 }
@@ -26284,18 +26255,10 @@ query MyPermissions {
 **Audit all access to sensitive document:**
 
 ```graphql
-query AuditDocumentAccess($docId: String!) {
-  documentAccess(documentId: $docId) {
+query AuditDocumentAccess($documentIdOrSlug: String!) {
+  documentAccess(documentIdOrSlug: $documentIdOrSlug) {
     permissions {
       userAddress
-      permission
-      grantedBy
-    }
-    groupPermissions {
-      group {
-        name
-        members
-      }
       permission
       grantedBy
     }
@@ -26306,8 +26269,8 @@ query AuditDocumentAccess($docId: String!) {
 **Verify if user can perform specific operation:**
 
 ```graphql
-query CheckOperationAccess($docId: String!, $operation: String!) {
-  canExecuteOperation(documentId: $docId, operationType: $operation)
+query CheckOperationAccess($documentIdOrSlug: String!, $operation: String!) {
+  canExecuteOperation(documentIdOrSlug: $documentIdOrSlug, operationType: $operation)
 }
 ```
 
@@ -27297,11 +27260,11 @@ access on that parent, so resolve and assert against it. Only use
 ```typescript
 createTodoList: async (
   _parent,
-  args: { parentIdentifier?: string; name: string },
+  args: { parentIdOrSlug?: string; name: string },
   ctx: Context,
 ) => {
-  if (args.parentIdentifier) {
-    const handle = await subgraph.assertCanWrite(args.parentIdentifier, ctx);
+  if (args.parentIdOrSlug) {
+    const handle = await subgraph.assertCanWrite(args.parentIdOrSlug, ctx);
     return createUnder(handle.fetchIdentifier, args.name);
   }
   subgraph.assertCanCreate(ctx); // throws if the caller may not create documents
@@ -27912,9 +27875,9 @@ Once you've found your document via any of the three options above, you'll be ab
 The previous step queried for document metadata. Now query for the actual content of the document state.
 
 ```graphql title="Get the Document state"
-query getDocument($identifier: String!) {
+query getDocument($idOrSlug: String!) {
   ToDoList {
-    document(identifier: $identifier) {
+    document(idOrSlug: $idOrSlug) {
       document {
         id
         name
@@ -27946,7 +27909,7 @@ query getDocument($identifier: String!) {
 
 ```json title="Example variables"
 {
-  "identifier": "03eb6780-f1d7-438c-84a0-6d93dfb8f6af"
+  "idOrSlug": "03eb6780-f1d7-438c-84a0-6d93dfb8f6af"
 }
 ```
 
@@ -27972,14 +27935,14 @@ To perform write operations, we use **GraphQL Mutations**. Mutations are similar
 ### Adding a new to-do item
 
 Add a new item to the list. The document model for the to-do list has an `ADD_TODO_ITEM` operation, which translates to an `addTodoItem` mutation in GraphQL.
-To use this mutation, you need to provide the `docId` of the to-do list you want to modify, and the `text` and `id` for the new to-do item. We'll specify these via variables.
+To use this mutation, you need to provide the `documentIdOrSlug` of the to-do list you want to modify, and the `text` and `id` for the new to-do item. We'll specify these via variables.
 
 Here is an example of how to structure the mutation:
 
 ```graphql title="example-add-mutation"
-mutation AddTodoItem($docId: PHID!, $input: ToDoList_AddTodoItemInput!) {
+mutation AddTodoItem($documentIdOrSlug: String!, $input: ToDoList_AddTodoItemInput!) {
   ToDoList {
-    addTodoItem(docId: $docId, input: $input) {
+    addTodoItem(documentIdOrSlug: $documentIdOrSlug, input: $input) {
       id
       name
       revisionsList {
@@ -27993,7 +27956,7 @@ mutation AddTodoItem($docId: PHID!, $input: ToDoList_AddTodoItemInput!) {
 
 ```json title="example-variables"
 {
-  "docId": "03eb6780-f1d7-438c-84a0-6d93dfb8f6af",
+  "documentIdOrSlug": "03eb6780-f1d7-438c-84a0-6d93dfb8f6af",
   "input": {
     "text": "My new to-do from GraphQL",
     "id": "1"
@@ -28001,7 +27964,7 @@ mutation AddTodoItem($docId: PHID!, $input: ToDoList_AddTodoItemInput!) {
 }
 ```
 
-Replace the example `docId` with the actual ID of your document. You can get this ID by querying as we did before.
+Replace the example `documentIdOrSlug` with the actual ID of your document. You can get this ID by querying as we did before.
 
 When you execute this mutation in Apollo Studio, it will add the new item to your to-do list. The response will return the updated document with its new revision.
 
@@ -28014,9 +27977,9 @@ The document model provides a `DELETE_TODO_ITEM` operation, which corresponds to
 Here's how you can use it:
 
 ```graphql title="example-delete-mutation"
-mutation DeleteTodoItem($docId: PHID!, $input: ToDoList_DeleteTodoItemInput!) {
+mutation DeleteTodoItem($documentIdOrSlug: String!, $input: ToDoList_DeleteTodoItemInput!) {
   ToDoList {
-    deleteTodoItem(docId: $docId, input: $input) {
+    deleteTodoItem(documentIdOrSlug: $documentIdOrSlug, input: $input) {
       id
       name
       revisionsList {
@@ -28030,14 +27993,14 @@ mutation DeleteTodoItem($docId: PHID!, $input: ToDoList_DeleteTodoItemInput!) {
 
 ```json title="example-variables"
 {
-  "docId": "03eb6780-f1d7-438c-84a0-6d93dfb8f6af",
+  "documentIdOrSlug": "03eb6780-f1d7-438c-84a0-6d93dfb8f6af",
   "input": {
     "id": "0.6325811781889789"
   }
 }
 ```
 
-Make sure to replace the `docId` and `id` with the appropriate values for your document and the item you wish to delete.
+Make sure to replace the `documentIdOrSlug` and `id` with the appropriate values for your document and the item you wish to delete.
 
 After executing this mutation, the specified to-do item will be removed from your list.
 
@@ -28270,9 +28233,9 @@ You should get a list of the document Ids which contain the search term "Test".
 If you want to see the full state of your document use this query.
 
 ```graphql
-query GetDocument($identifier: String!) {
+query GetDocument($idOrSlug: String!) {
   ToDoList {
-    document(identifier: $identifier) {
+    document(idOrSlug: $idOrSlug) {
       document {
         state {
           global {
@@ -28345,9 +28308,9 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 1. Create a todo document in the `powerhouse` drive using the `ToDoList` `createDocument` mutation:
 
    ```graphql
-   mutation CreateTodoList($name: String!, $parentIdentifier: String) {
+   mutation CreateTodoList($name: String!, $parentIdOrSlug: String) {
      ToDoList {
-       createDocument(name: $name, parentIdentifier: $parentIdentifier) {
+       createDocument(name: $name, parentIdOrSlug: $parentIdOrSlug) {
          id
          name
        }
@@ -28360,7 +28323,7 @@ The supergraph allows you to both query & mutate data from the same endpoint.
    ```json
    {
      "name": "My Test To-do List",
-     "parentIdentifier": "powerhouse"
+     "parentIdOrSlug": "powerhouse"
    }
    ```
 
@@ -28369,9 +28332,9 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 2. Add some items to your to-do list using the `addTodoItem` mutation:
 
    ```graphql
-   mutation AddTodoItem($docId: PHID!, $input: ToDoList_AddTodoItemInput!) {
+   mutation AddTodoItem($documentIdOrSlug: String!, $input: ToDoList_AddTodoItemInput!) {
      ToDoList {
-       addTodoItem(docId: $docId, input: $input) {
+       addTodoItem(documentIdOrSlug: $documentIdOrSlug, input: $input) {
          id
          name
          revisionsList {
@@ -28387,7 +28350,7 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 
    ```json
    {
-     "docId": "abc123",
+     "documentIdOrSlug": "abc123",
      "input": {
        "text": "Learn about supergraphs"
      }
@@ -28399,9 +28362,9 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 3. Query the document state using the `document` query:
 
    ```graphql
-   query GetTodoList($identifier: String!) {
+   query GetTodoList($idOrSlug: String!) {
      ToDoList {
-       document(identifier: $identifier) {
+       document(idOrSlug: $idOrSlug) {
          document {
            id
            name
@@ -28424,7 +28387,7 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 
    ```json
    {
-     "identifier": "abc123"
+     "idOrSlug": "abc123"
    }
    ```
 

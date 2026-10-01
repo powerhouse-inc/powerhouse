@@ -293,48 +293,59 @@ export type MutationAddRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   metadata?: InputMaybe<Scalars["JSONObject"]["input"]>;
   relationshipType: Scalars["String"]["input"];
-  sourceIdentifier: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationCreateDocumentArgs = {
   document: Scalars["JSONObject"]["input"];
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   parentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationCreateEmptyDocumentArgs = {
   documentType: Scalars["String"]["input"];
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   parentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationDeleteDocumentArgs = {
-  identifier: Scalars["String"]["input"];
+  idOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  identifier?: InputMaybe<Scalars["String"]["input"]>;
   propagate?: InputMaybe<PropagationMode>;
 };
 
 export type MutationDeleteDocumentsArgs = {
-  identifiers: ReadonlyArray<Scalars["String"]["input"]>;
+  identifiers?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
+  idsOrSlugs?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   propagate?: InputMaybe<PropagationMode>;
 };
 
 export type MutationExecuteArgs = {
   actions: ReadonlyArray<ActionInput>;
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationExecuteAsyncArgs = {
   actions: ReadonlyArray<ActionInput>;
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationMoveRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   relationshipType: Scalars["String"]["input"];
-  sourceParentIdentifier: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
-  targetParentIdentifier: Scalars["String"]["input"];
+  sourceParentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceParentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  targetParentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetParentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationMutateDocumentArgs = {
@@ -357,19 +368,23 @@ export type MutationPushSyncEnvelopesArgs = {
 export type MutationRemoveRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   relationshipType: Scalars["String"]["input"];
-  sourceIdentifier: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationRenameDocumentArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   name: Scalars["String"]["input"];
 };
 
 export type MutationSetPreferredEditorArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   preferredEditor?: InputMaybe<Scalars["String"]["input"]>;
 };
 
@@ -381,8 +396,10 @@ export type MutationUpdateRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   metadata?: InputMaybe<Scalars["JSONObject"]["input"]>;
   relationshipType: Scalars["String"]["input"];
-  sourceIdentifier: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type OperationContext = {
@@ -425,7 +442,9 @@ export type OperationWithContextInput = {
 export type OperationsFilterInput = {
   readonly actionTypes?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   readonly branch?: InputMaybe<Scalars["String"]["input"]>;
-  readonly documentId: Scalars["String"]["input"];
+  /** @deprecated Use documentIdOrSlug. */
+  readonly documentId?: InputMaybe<Scalars["String"]["input"]>;
+  readonly documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   readonly scopes?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   readonly sinceRevision?: InputMaybe<Scalars["Int"]["input"]>;
   readonly timestampFrom?: InputMaybe<Scalars["String"]["input"]>;
@@ -551,21 +570,24 @@ export type Query = {
 };
 
 export type QueryDocumentArgs = {
-  identifier: Scalars["String"]["input"];
+  idOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  identifier?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
 export type QueryDocumentIncomingRelationshipEdgesArgs = {
   paging?: InputMaybe<PagingInput>;
   relationshipType?: InputMaybe<Scalars["String"]["input"]>;
-  targetIdentifier: Scalars["String"]["input"];
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
 export type QueryDocumentIncomingRelationshipsArgs = {
   paging?: InputMaybe<PagingInput>;
   relationshipType: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
+  targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  targetIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
@@ -582,21 +604,24 @@ export type QueryDocumentOperationsArgs = {
 export type QueryDocumentOutgoingRelationshipEdgesArgs = {
   paging?: InputMaybe<PagingInput>;
   relationshipType?: InputMaybe<Scalars["String"]["input"]>;
-  sourceIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
 export type QueryDocumentOutgoingRelationshipsArgs = {
   paging?: InputMaybe<PagingInput>;
   relationshipType: Scalars["String"]["input"];
-  sourceIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
 export type QueryEvaluateActionsArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   candidates: ReadonlyArray<ActionCandidateInput>;
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type QueryFindDocumentsArgs = {
@@ -702,6 +727,7 @@ export type Revision = {
 };
 
 export type SearchFilterInput = {
+  /** @deprecated Ignored. Filter by type or parentId. */
   readonly identifiers?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   readonly parentId?: InputMaybe<Scalars["String"]["input"]>;
   readonly type?: InputMaybe<Scalars["String"]["input"]>;
@@ -2082,10 +2108,7 @@ export type MutationResolvers<
     ResolversTypes["PHDocument"],
     ParentType,
     ContextType,
-    RequireFields<
-      MutationAddRelationshipArgs,
-      "relationshipType" | "sourceIdentifier" | "targetIdentifier"
-    >
+    RequireFields<MutationAddRelationshipArgs, "relationshipType">
   >;
   createDocument?: Resolver<
     ResolversTypes["PHDocument"],
@@ -2103,37 +2126,31 @@ export type MutationResolvers<
     ResolversTypes["Boolean"],
     ParentType,
     ContextType,
-    RequireFields<MutationDeleteDocumentArgs, "identifier">
+    Partial<MutationDeleteDocumentArgs>
   >;
   deleteDocuments?: Resolver<
     ResolversTypes["Boolean"],
     ParentType,
     ContextType,
-    RequireFields<MutationDeleteDocumentsArgs, "identifiers">
+    Partial<MutationDeleteDocumentsArgs>
   >;
   execute?: Resolver<
     ResolversTypes["PHDocument"],
     ParentType,
     ContextType,
-    RequireFields<MutationExecuteArgs, "actions" | "documentIdentifier">
+    RequireFields<MutationExecuteArgs, "actions">
   >;
   executeAsync?: Resolver<
     ResolversTypes["JobInfo"],
     ParentType,
     ContextType,
-    RequireFields<MutationExecuteAsyncArgs, "actions" | "documentIdentifier">
+    RequireFields<MutationExecuteAsyncArgs, "actions">
   >;
   moveRelationship?: Resolver<
     ResolversTypes["MoveRelationshipResult"],
     ParentType,
     ContextType,
-    RequireFields<
-      MutationMoveRelationshipArgs,
-      | "relationshipType"
-      | "sourceParentIdentifier"
-      | "targetIdentifier"
-      | "targetParentIdentifier"
-    >
+    RequireFields<MutationMoveRelationshipArgs, "relationshipType">
   >;
   mutateDocument?: Resolver<
     ResolversTypes["PHDocument"],
@@ -2160,22 +2177,19 @@ export type MutationResolvers<
     ResolversTypes["PHDocument"],
     ParentType,
     ContextType,
-    RequireFields<
-      MutationRemoveRelationshipArgs,
-      "relationshipType" | "sourceIdentifier" | "targetIdentifier"
-    >
+    RequireFields<MutationRemoveRelationshipArgs, "relationshipType">
   >;
   renameDocument?: Resolver<
     ResolversTypes["PHDocument"],
     ParentType,
     ContextType,
-    RequireFields<MutationRenameDocumentArgs, "documentIdentifier" | "name">
+    RequireFields<MutationRenameDocumentArgs, "name">
   >;
   setPreferredEditor?: Resolver<
     ResolversTypes["PHDocument"],
     ParentType,
     ContextType,
-    RequireFields<MutationSetPreferredEditorArgs, "documentIdentifier">
+    Partial<MutationSetPreferredEditorArgs>
   >;
   touchChannel?: Resolver<
     ResolversTypes["TouchChannelResult"],
@@ -2187,10 +2201,7 @@ export type MutationResolvers<
     ResolversTypes["PHDocument"],
     ParentType,
     ContextType,
-    RequireFields<
-      MutationUpdateRelationshipArgs,
-      "relationshipType" | "sourceIdentifier" | "targetIdentifier"
-    >
+    RequireFields<MutationUpdateRelationshipArgs, "relationshipType">
   >;
 }>;
 
@@ -2361,25 +2372,19 @@ export type QueryResolvers<
     Maybe<ResolversTypes["DocumentWithChildren"]>,
     ParentType,
     ContextType,
-    RequireFields<QueryDocumentArgs, "identifier">
+    Partial<QueryDocumentArgs>
   >;
   documentIncomingRelationshipEdges?: Resolver<
     ResolversTypes["DocumentRelationshipResultPage"],
     ParentType,
     ContextType,
-    RequireFields<
-      QueryDocumentIncomingRelationshipEdgesArgs,
-      "targetIdentifier"
-    >
+    Partial<QueryDocumentIncomingRelationshipEdgesArgs>
   >;
   documentIncomingRelationships?: Resolver<
     ResolversTypes["PHDocumentResultPage"],
     ParentType,
     ContextType,
-    RequireFields<
-      QueryDocumentIncomingRelationshipsArgs,
-      "relationshipType" | "targetIdentifier"
-    >
+    RequireFields<QueryDocumentIncomingRelationshipsArgs, "relationshipType">
   >;
   documentModels?: Resolver<
     ResolversTypes["DocumentModelResultPage"],
@@ -2397,25 +2402,19 @@ export type QueryResolvers<
     ResolversTypes["DocumentRelationshipResultPage"],
     ParentType,
     ContextType,
-    RequireFields<
-      QueryDocumentOutgoingRelationshipEdgesArgs,
-      "sourceIdentifier"
-    >
+    Partial<QueryDocumentOutgoingRelationshipEdgesArgs>
   >;
   documentOutgoingRelationships?: Resolver<
     ResolversTypes["PHDocumentResultPage"],
     ParentType,
     ContextType,
-    RequireFields<
-      QueryDocumentOutgoingRelationshipsArgs,
-      "relationshipType" | "sourceIdentifier"
-    >
+    RequireFields<QueryDocumentOutgoingRelationshipsArgs, "relationshipType">
   >;
   evaluateActions?: Resolver<
     ResolversTypes["ActionEvaluations"],
     ParentType,
     ContextType,
-    RequireFields<QueryEvaluateActionsArgs, "candidates" | "documentIdentifier">
+    RequireFields<QueryEvaluateActionsArgs, "candidates">
   >;
   findDocuments?: Resolver<
     ResolversTypes["PHDocumentResultPage"],
@@ -2803,7 +2802,8 @@ export function OperationsFilterInputSchema(): z.ZodObject<
   return z.object({
     actionTypes: z.array(z.string()).nullish(),
     branch: z.string().nullish(),
-    documentId: z.string(),
+    documentId: z.string().nullish(),
+    documentIdOrSlug: z.string().nullish(),
     scopes: z.array(z.string()).nullish(),
     sinceRevision: z.number().nullish(),
     timestampFrom: z.string().nullish(),

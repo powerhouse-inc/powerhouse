@@ -23,8 +23,8 @@ export const FIND_DOCUMENT_MODELS_QUERY = `
 `;
 
 export const CREATE_EMPTY_DOCUMENT_MUTATION = `
-  mutation CreateEmptyDocument($documentType: String!, $parentIdentifier: String) {
-    createEmptyDocument(documentType: $documentType, parentIdentifier: $parentIdentifier) {
+  mutation CreateEmptyDocument($documentType: String!, $parentIdOrSlug: String) {
+    createEmptyDocument(documentType: $documentType, parentIdOrSlug: $parentIdOrSlug) {
       id
       name
       documentType
@@ -33,9 +33,9 @@ export const CREATE_EMPTY_DOCUMENT_MUTATION = `
 `;
 
 export const MUTATE_DOCUMENT_MUTATION = `
-  mutation MutateDocument($documentIdentifier: String!, $actions: [ActionInput!]!) {
+  mutation MutateDocument($documentIdOrSlug: String!, $actions: [ActionInput!]!) {
     mutateDocument: execute(
-      documentIdentifier: $documentIdentifier
+      documentIdOrSlug: $documentIdOrSlug
       actions: $actions
     ) {
       id

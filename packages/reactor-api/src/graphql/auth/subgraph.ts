@@ -2,9 +2,15 @@ import { ConsoleLogger } from "document-model";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import schemaSource from "./schema.graphql";
+import { requireOneOf } from "../argument-aliases.js";
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { SubgraphArgs } from "../types.js";
 import * as resolvers from "./resolvers.js";
+
+type DocumentArgs = {
+  documentIdOrSlug?: string | null;
+  documentId?: string | null;
+};
 
 /**
  * Auth Subgraph - handles all document permission and authorization operations
@@ -32,7 +38,7 @@ export class AuthSubgraph extends BaseSubgraph {
     Query: {
       documentAccess: async (
         _parent: unknown,
-        args: { documentId: string },
+        args: DocumentArgs,
         ctx: { user?: { address: string } },
       ) => {
         this.logger.debug("documentAccess(@args)", args);
@@ -43,7 +49,7 @@ export class AuthSubgraph extends BaseSubgraph {
           return await resolvers.documentAccess(
             this.documentPermissionService,
             this.authorizationService,
-            await this.withCanonicalDocumentId(args, ctx),
+            await this.#withCanonicalDocumentArgs(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -79,7 +85,7 @@ export class AuthSubgraph extends BaseSubgraph {
 
       operationPermissions: async (
         _parent: unknown,
-        args: { documentId: string; operationType: string },
+        args: DocumentArgs & { operationType: string },
         ctx: { user?: { address: string } },
       ) => {
         this.logger.debug("operationPermissions(@args)", args);
@@ -90,7 +96,7 @@ export class AuthSubgraph extends BaseSubgraph {
           return await resolvers.operationPermissions(
             this.documentPermissionService,
             this.authorizationService,
-            await this.withCanonicalDocumentId(args, ctx),
+            await this.#withCanonicalDocumentArgs(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -101,14 +107,14 @@ export class AuthSubgraph extends BaseSubgraph {
 
       canExecuteOperation: async (
         _parent: unknown,
-        args: { documentId: string; operationType: string },
+        args: DocumentArgs & { operationType: string },
         ctx: { user?: { address: string } },
       ) => {
         this.logger.debug("canExecuteOperation(@args)", args);
         try {
           return await resolvers.canExecuteOperation(
             this.authorizationService,
-            await this.withCanonicalDocumentId(args, ctx),
+            await this.#withCanonicalDocumentArgs(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -119,7 +125,7 @@ export class AuthSubgraph extends BaseSubgraph {
 
       documentProtection: async (
         _parent: unknown,
-        args: { documentId: string },
+        args: DocumentArgs,
         ctx: {
           user?: { address: string };
         },
@@ -132,7 +138,7 @@ export class AuthSubgraph extends BaseSubgraph {
           return await resolvers.documentProtection(
             this.documentPermissionService,
             this.authorizationService,
-            await this.withCanonicalDocumentId(args, ctx),
+            await this.#withCanonicalDocumentArgs(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -145,7 +151,7 @@ export class AuthSubgraph extends BaseSubgraph {
     Mutation: {
       setDocumentProtection: async (
         _parent: unknown,
-        args: { documentId: string; protected: boolean },
+        args: DocumentArgs & { protected: boolean },
         ctx: {
           user?: { address: string };
         },
@@ -158,7 +164,7 @@ export class AuthSubgraph extends BaseSubgraph {
           return await resolvers.setDocumentProtection(
             this.documentPermissionService,
             this.authorizationService,
-            await this.withCanonicalDocumentId(args, ctx),
+            await this.#withCanonicalDocumentArgs(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -169,7 +175,7 @@ export class AuthSubgraph extends BaseSubgraph {
 
       transferDocumentOwnership: async (
         _parent: unknown,
-        args: { documentId: string; newOwnerAddress: string },
+        args: DocumentArgs & { newOwnerAddress: string },
         ctx: {
           user?: { address: string };
         },
@@ -182,7 +188,7 @@ export class AuthSubgraph extends BaseSubgraph {
           return await resolvers.transferDocumentOwnership(
             this.documentPermissionService,
             this.authorizationService,
-            await this.withCanonicalDocumentId(args, ctx),
+            await this.#withCanonicalDocumentArgs(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -196,7 +202,7 @@ export class AuthSubgraph extends BaseSubgraph {
 
       grantDocumentPermission: async (
         _parent: unknown,
-        args: { documentId: string; userAddress: string; permission: string },
+        args: DocumentArgs & { userAddress: string; permission: string },
         ctx: {
           user?: { address: string };
         },
@@ -206,7 +212,7 @@ export class AuthSubgraph extends BaseSubgraph {
           throw new GraphQLError("DocumentPermissionService not available");
         }
         try {
-          const resolved = await this.withCanonicalDocumentId(args, ctx);
+          const resolved = await this.#withCanonicalDocumentArgs(args, ctx);
           return await resolvers.grantDocumentPermission(
             this.documentPermissionService,
             this.authorizationService,
@@ -224,7 +230,7 @@ export class AuthSubgraph extends BaseSubgraph {
 
       revokeDocumentPermission: async (
         _parent: unknown,
-        args: { documentId: string; userAddress: string },
+        args: DocumentArgs & { userAddress: string },
         ctx: {
           user?: { address: string };
         },
@@ -237,7 +243,7 @@ export class AuthSubgraph extends BaseSubgraph {
           return await resolvers.revokeDocumentPermission(
             this.documentPermissionService,
             this.authorizationService,
-            await this.withCanonicalDocumentId(args, ctx),
+            await this.#withCanonicalDocumentArgs(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -249,11 +255,7 @@ export class AuthSubgraph extends BaseSubgraph {
       // Operation Permission Mutations
       grantOperationPermission: async (
         _parent: unknown,
-        args: {
-          documentId: string;
-          operationType: string;
-          userAddress: string;
-        },
+        args: DocumentArgs & { operationType: string; userAddress: string },
         ctx: {
           user?: { address: string };
         },
@@ -266,7 +268,7 @@ export class AuthSubgraph extends BaseSubgraph {
           return await resolvers.grantOperationPermission(
             this.documentPermissionService,
             this.authorizationService,
-            await this.withCanonicalDocumentId(args, ctx),
+            await this.#withCanonicalDocumentArgs(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -277,11 +279,7 @@ export class AuthSubgraph extends BaseSubgraph {
 
       revokeOperationPermission: async (
         _parent: unknown,
-        args: {
-          documentId: string;
-          operationType: string;
-          userAddress: string;
-        },
+        args: DocumentArgs & { operationType: string; userAddress: string },
         ctx: {
           user?: { address: string };
         },
@@ -294,7 +292,7 @@ export class AuthSubgraph extends BaseSubgraph {
           return await resolvers.revokeOperationPermission(
             this.documentPermissionService,
             this.authorizationService,
-            await this.withCanonicalDocumentId(args, ctx),
+            await this.#withCanonicalDocumentArgs(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -307,6 +305,21 @@ export class AuthSubgraph extends BaseSubgraph {
       },
     },
   };
+
+  #withCanonicalDocumentArgs<T extends DocumentArgs>(args: T, ctx: object) {
+    const { documentIdOrSlug, documentId, ...rest } = args;
+    return this.withCanonicalDocumentId(
+      {
+        ...rest,
+        documentId: requireOneOf<string>(
+          { documentIdOrSlug, documentId },
+          "documentIdOrSlug",
+          "documentId",
+        ),
+      },
+      ctx,
+    );
+  }
 
   onSetup(): Promise<void> {
     this.logger.debug("Setting up AuthSubgraph");

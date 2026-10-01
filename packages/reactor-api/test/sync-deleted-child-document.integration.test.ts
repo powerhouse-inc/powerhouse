@@ -267,7 +267,7 @@ describe("syncing a drive after one of its documents is deleted", () => {
     // What the createEmptyDocument(parentIdentifier) mutation does.
     const child = await createEmptyDocument(fx.origin.client, {
       documentType: documentModelDocumentModelModule.documentModel.global.id,
-      parentIdentifier: driveId,
+      parentIdOrSlug: driveId,
       name: "child",
     });
     return child.id;
@@ -305,7 +305,7 @@ describe("syncing a drive after one of its documents is deleted", () => {
     const driveId = drive.header.id;
     const childId = await childUnderDrive(fx, driveId);
     // What the deleteDocument mutation does: removeNode through the drive client.
-    await deleteDocument(fx.origin.client, { identifier: childId });
+    await deleteDocument(fx.origin.client, { idOrSlug: childId });
 
     await pullFrom(fx, driveId);
     await settle();
@@ -336,7 +336,7 @@ describe("syncing a drive after one of its documents is deleted", () => {
     await fx.origin.client.execute(childId, "main", [
       documentModelDocumentModelModule.actions.setModelName({ name: "named" }),
     ]);
-    await deleteDocument(fx.origin.client, { identifier: childId });
+    await deleteDocument(fx.origin.client, { idOrSlug: childId });
 
     await pullFrom(fx, driveId);
     await renameReachesPeer(fx, driveId);
@@ -365,7 +365,7 @@ describe("syncing a drive after one of its documents is deleted", () => {
 
     const childId = await childUnderDrive(fx, driveId);
     await waitFor(() => peerHas(fx, childId), "the child to reach the peer");
-    await deleteDocument(fx.origin.client, { identifier: childId });
+    await deleteDocument(fx.origin.client, { idOrSlug: childId });
     await settle();
 
     // (a)
@@ -391,7 +391,7 @@ describe("syncing a drive after one of its documents is deleted", () => {
     const childId = await childUnderDrive(fx, driveId);
     await waitFor(() => peerHas(fx, childId), "the child to reach the peer");
 
-    await deleteDocument(fx.origin.client, { identifier: childId });
+    await deleteDocument(fx.origin.client, { idOrSlug: childId });
     await renameReachesPeer(fx, driveId);
 
     await waitFor(

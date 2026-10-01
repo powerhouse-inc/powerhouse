@@ -90,7 +90,7 @@ describe("the evaluateActions resolver", () => {
 
     const error: unknown = await resolvers
       .evaluateActions(built.client, {
-        documentIdentifier: document.header.id,
+        documentIdOrSlug: document.header.id,
         candidates: [{ scope: "global", type: "SET_MODEL_NAME" }],
       })
       .then(
@@ -108,7 +108,7 @@ describe("the evaluateActions resolver", () => {
 
     const error: unknown = await resolvers
       .evaluateActions(built.client, {
-        documentIdentifier: document.header.id,
+        documentIdOrSlug: document.header.id,
         candidates: [{ scope: "global", type: "SET_MODEL_NAME" }],
       })
       .then(
@@ -127,7 +127,7 @@ describe("the evaluateActions resolver", () => {
     const answer = await resolvers.evaluateActions(
       built.client,
       {
-        documentIdentifier: document.header.id,
+        documentIdOrSlug: document.header.id,
         candidates: [
           { scope: "global", type: "SET_MODEL_NAME" },
           { scope: "local", type: "SET_MODEL_NAME" },
@@ -179,7 +179,7 @@ describe("the evaluateActions resolver", () => {
       const asWriter = await resolvers.evaluateActions(
         built.client,
         {
-          documentIdentifier: documentId,
+          documentIdOrSlug: documentId,
           candidates: [{ scope: "global", type: "SET_MODEL_NAME" }],
         },
         { address: WRITER },
@@ -187,7 +187,7 @@ describe("the evaluateActions resolver", () => {
       const asOutsider = await resolvers.evaluateActions(
         built.client,
         {
-          documentIdentifier: documentId,
+          documentIdOrSlug: documentId,
           candidates: [{ scope: "global", type: "SET_MODEL_NAME" }],
         },
         { address: OUTSIDER },
@@ -208,7 +208,7 @@ describe("the evaluateActions resolver", () => {
       const answer = await resolvers.evaluateActions(
         built.client,
         {
-          documentIdentifier: documentId,
+          documentIdOrSlug: documentId,
           candidates: [
             { scope: "global", type: "SET_MODEL_NAME" },
             { scope: "local", type: "SET_MODEL_NAME" },
@@ -234,7 +234,7 @@ describe("the evaluateActions resolver", () => {
       const answer = await resolvers.evaluateActions(
         built.client,
         {
-          documentIdentifier: documentId,
+          documentIdOrSlug: documentId,
           branch: null,
           candidates: [{ scope: "global", type: "SET_MODEL_NAME" }],
         },
@@ -256,7 +256,7 @@ describe("the evaluateActions resolver", () => {
       const answer = await resolvers.evaluateActions(
         built.client,
         {
-          documentIdentifier: documentId,
+          documentIdOrSlug: documentId,
           candidates: [
             { scope: "global", type: "SET_MODEL_NAME", input: { name: "x" } },
           ],

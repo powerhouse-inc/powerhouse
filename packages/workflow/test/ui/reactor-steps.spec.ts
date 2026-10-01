@@ -77,8 +77,8 @@ test.describe("Reactor steps", () => {
       { name: driveName },
     );
     const drive = created.DocumentDrive.createDocument.id;
-    const addFolder = `mutation($doc: PHID!, $input: DocumentDrive_AddFolderInput!) {
-      DocumentDrive { addFolder(docId: $doc, input: $input) { id } } }`;
+    const addFolder = `mutation($doc: String!, $input: DocumentDrive_AddFolderInput!) {
+      DocumentDrive { addFolder(documentIdOrSlug: $doc, input: $input) { id } } }`;
     await gql("/graphql/document-drive", addFolder, {
       doc: drive,
       input: { id: `${drive}-invoices`, name: "Invoices" },

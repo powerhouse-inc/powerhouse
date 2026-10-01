@@ -37,7 +37,7 @@ async function createDocument(graphqlUrl: string): Promise<string> {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      query: `mutation($parentId: String) { createEmptyDocument(documentType: "powerhouse/document-model", parentIdentifier: $parentId) { id } }`,
+      query: `mutation($parentId: String) { createEmptyDocument(documentType: "powerhouse/document-model", parentIdOrSlug: $parentId) { id } }`,
       variables: { parentId: ERASURE_DRIVE_ID },
     }),
   });

@@ -213,9 +213,9 @@ You should get a list of the document Ids which contain the search term "Test".
 If you want to see the full state of your document use this query.
 
 ```graphql
-query GetDocument($identifier: String!) {
+query GetDocument($idOrSlug: String!) {
   ToDoList {
-    document(identifier: $identifier) {
+    document(idOrSlug: $idOrSlug) {
       document {
         state {
           global {
@@ -288,9 +288,9 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 1. Create a todo document in the `powerhouse` drive using the `ToDoList` `createDocument` mutation:
 
    ```graphql
-   mutation CreateTodoList($name: String!, $parentIdentifier: String) {
+   mutation CreateTodoList($name: String!, $parentIdOrSlug: String) {
      ToDoList {
-       createDocument(name: $name, parentIdentifier: $parentIdentifier) {
+       createDocument(name: $name, parentIdOrSlug: $parentIdOrSlug) {
          id
          name
        }
@@ -303,7 +303,7 @@ The supergraph allows you to both query & mutate data from the same endpoint.
    ```json
    {
      "name": "My Test To-do List",
-     "parentIdentifier": "powerhouse"
+     "parentIdOrSlug": "powerhouse"
    }
    ```
 
@@ -312,9 +312,9 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 2. Add some items to your to-do list using the `addTodoItem` mutation:
 
    ```graphql
-   mutation AddTodoItem($docId: PHID!, $input: ToDoList_AddTodoItemInput!) {
+   mutation AddTodoItem($documentIdOrSlug: String!, $input: ToDoList_AddTodoItemInput!) {
      ToDoList {
-       addTodoItem(docId: $docId, input: $input) {
+       addTodoItem(documentIdOrSlug: $documentIdOrSlug, input: $input) {
          id
          name
          revisionsList {
@@ -330,7 +330,7 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 
    ```json
    {
-     "docId": "abc123",
+     "documentIdOrSlug": "abc123",
      "input": {
        "text": "Learn about supergraphs"
      }
@@ -342,9 +342,9 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 3. Query the document state using the `document` query:
 
    ```graphql
-   query GetTodoList($identifier: String!) {
+   query GetTodoList($idOrSlug: String!) {
      ToDoList {
-       document(identifier: $identifier) {
+       document(idOrSlug: $idOrSlug) {
          document {
            id
            name
@@ -367,7 +367,7 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 
    ```json
    {
-     "identifier": "abc123"
+     "idOrSlug": "abc123"
    }
    ```
 
