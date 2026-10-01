@@ -8,6 +8,7 @@ import {
 } from "../catch-up/settled-watermark.js";
 import {
   RELEASED_CURSOR_STATUS,
+  SKIPPED_DOCUMENT_MARKER,
   type DocumentViewDatabase,
 } from "../read-models/types.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
@@ -51,6 +52,7 @@ async function readCursors(
   const views = await db
     .selectFrom("ViewState")
     .select(["readModelId", "lastOrdinal"])
+    .where("readModelId", "not like", `%${SKIPPED_DOCUMENT_MARKER}%`)
     .orderBy("readModelId")
     .execute();
   const processors = await db

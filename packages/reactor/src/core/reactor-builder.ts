@@ -805,6 +805,7 @@ export class ReactorBuilder {
       maxDocuments: this.writeCacheConfig?.maxDocuments ?? 100,
       ringBufferSize: this.writeCacheConfig?.ringBufferSize ?? 10,
       keyframeInterval: this.writeCacheConfig?.keyframeInterval ?? 10,
+      protocolSupport: this.executorConfig.protocolSupport,
     };
 
     const writeCache = new KyselyWriteCache(
@@ -1231,6 +1232,7 @@ export class ReactorBuilder {
       eventBus,
       documentModelRegistry,
       featureFlags,
+      protocolSupport: this.executorConfig.protocolSupport ?? {},
       queue,
       jobTracker,
       executorManager,
@@ -1404,6 +1406,7 @@ export class ReactorBuilder {
       postReadyKinds: config.postReadyKinds,
       indexing,
       catchUp: this.catchUpConfig,
+      protocolSupport: this.executorConfig.protocolSupport,
       factory,
       logger: this.logger!,
       hostBus: eventBus,

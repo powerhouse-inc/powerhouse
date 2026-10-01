@@ -37,11 +37,12 @@ export function isValidOperationNameFormat(name: string): boolean {
 }
 
 /**
- * Check if name conflicts with base reducer actions (case-insensitive).
+ * Check if name conflicts with base reducer actions once constant-cased, the
+ * action type codegen emits for it.
  */
 export function isReservedOperationName(name: string): boolean {
   return RESERVED_OPERATION_NAMES.includes(
-    name.toUpperCase() as ReservedOperationName,
+    constantCase(name) as ReservedOperationName,
   );
 }
 

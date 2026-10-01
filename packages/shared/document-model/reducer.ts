@@ -4,9 +4,11 @@ import {
   actionFromAction,
   operationFromAction,
   operationFromOperation,
+  retract,
 } from "./actions.js";
 import { applyAuthAction, assertAuthScopeActionAllowed } from "./auth.js";
 import { baseActionReducer } from "./base-action-reducer.js";
+import { isDenied } from "./denied.js";
 import {
   baseReducerVersion,
   diffOperations,
@@ -26,6 +28,16 @@ import {
   type PHDocument,
   type PHDocumentHeader,
 } from "./documents.js";
+import {
+  appliedOperations,
+  deriveScope,
+  positionalOperations,
+  reduceOne,
+  redoTarget,
+  retractedActionIds,
+  undoTarget,
+  type ReducerFor,
+} from "./retraction.js";
 import {
   redoOperation,
   undoOperation,
@@ -206,6 +218,8 @@ export function updateDocument<TDocument extends PHDocument>(
  * @param document The current state of the document.
  * @param action The action being applied to the document.
  * @param skip The number of operations to skip before applying the action.
+ * @param protocolVersion The document's base-reducer version.
+ * @param customReducer The model's state reducer; required on base-reducer 3.
  * @returns The updated document, calculated skip value and transformed action (if applied).
  */
 export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
@@ -213,6 +227,7 @@ export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
   action: Action,
   skip: number,
   protocolVersion: BaseReducerVersion = 1,
+  customReducer?: StateReducer<TState>,
 ): {
   document: PHDocument<TState>;
   action: Action;
@@ -227,7 +242,7 @@ export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
         case 2:
           return undoOperationV2(document, action, skip);
         case 3:
-          throw baseReducerNotImplemented(protocolVersion);
+          return resolveRetraction(document, action, customReducer);
         default:
           return unknownBaseReducer(protocolVersion);
       }
@@ -237,7 +252,7 @@ export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
         case 2:
           return redoOperation(document, action, skip);
         case 3:
-          throw baseReducerNotImplemented(protocolVersion);
+          return resolveRetraction(document, action, customReducer);
         default:
           return unknownBaseReducer(protocolVersion);
       }
@@ -246,8 +261,45 @@ export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
   }
 }
 
-function baseReducerNotImplemented(version: BaseReducerVersion): Error {
-  return new Error(`base-reducer ${version} is not implemented`);
+function resolveRetraction<TState extends PHBaseState>(
+  document: PHDocument<TState>,
+  action: Action,
+  customReducer: StateReducer<TState> | undefined,
+): {
+  document: PHDocument<TState>;
+  action: Action;
+  skip: number;
+  reuseLastOperationIndex: boolean;
+} {
+  const count = (action.input as { count?: unknown } | undefined)?.count;
+  if (count !== 1) {
+    throw new Error(`${action.type} on base-reducer 3 takes count 1`);
+  }
+  if (!customReducer) {
+    throw new Error(`${action.type} on base-reducer 3 needs the state reducer`);
+  }
+  const reducerFor: ReducerFor = () => customReducer as StateReducer;
+  const operations = document.operations[action.scope] ?? [];
+  const { applied } = deriveScope(
+    document,
+    operations,
+    reducerFor,
+    action.scope,
+  );
+  const target =
+    action.type === "UNDO"
+      ? undoTarget(operations, applied)
+      : redoTarget(operations, applied);
+  if (target === undefined) {
+    const verb = action.type === "UNDO" ? "undo" : "redo";
+    throw new Error(`Cannot ${verb}: nothing to ${verb} in scope history`);
+  }
+  return {
+    document,
+    action: retract(target, action.scope),
+    skip: 0,
+    reuseLastOperationIndex: false,
+  };
 }
 
 function unknownBaseReducer(version: never): never {
@@ -402,13 +454,22 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
   // UNDO/REDO are rejected on the auth scope.
   assertAuthScopeActionAllowed(_action);
 
+  const protocolVersion: BaseReducerVersion =
+    options.protocolVersion ?? baseReducerVersion(document.header);
+  // Base-reducer 3 derives every scope but auth and document by the rule.
+  const derivesByRule =
+    protocolVersion === 3 &&
+    _action.scope !== "auth" &&
+    _action.scope !== "document";
+
   let skipValue = skip ?? options.replayOptions?.operation.skip ?? 0;
   let newDocument = {
     ...document,
   };
   let reuseLastOperationIndex = false;
 
-  const shouldProcessSkipOperation = !ignoreSkipOperations && skipValue > 0;
+  const shouldProcessSkipOperation =
+    protocolVersion !== 3 && !ignoreSkipOperations && skipValue > 0;
 
   if (isUndoRedo(_action)) {
     const {
@@ -420,7 +481,8 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
       document,
       _action,
       skipValue,
-      options.protocolVersion ?? baseReducerVersion(document.header),
+      protocolVersion,
+      customReducer,
     );
 
     _action = transformedAction;
@@ -436,7 +498,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
 
   // if the action is one the base document actions (SET_NAME, UNDO, REDO)
   // then runs the base reducer first
-  if (isDocumentAction(_action)) {
+  if (!derivesByRule && isDocumentAction(_action)) {
     newDocument = baseActionReducer(newDocument, _action);
   }
 
@@ -461,8 +523,6 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
   // Only process undo for actual UNDO actions in protocol v1
   // For v2, NOOPs always have skip=1 and indices increment
   // NOOP operations with skip > 0 will have their clipboard populated server-side
-  const protocolVersion: BaseReducerVersion =
-    options.protocolVersion ?? baseReducerVersion(document.header);
   const isNoopWithSkip = _action.type === "NOOP" && skipValue > 0;
   switch (protocolVersion) {
     case 1:
@@ -519,7 +579,17 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
       }
       break;
     case 3:
-      throw baseReducerNotImplemented(protocolVersion);
+      if (derivesByRule) {
+        return applyByRule(
+          newDocument,
+          _action.scope,
+          customReducer,
+          dispatch,
+          skipValue,
+          options,
+        );
+      }
+      break;
     default:
       unknownBaseReducer(protocolVersion);
   }
@@ -652,6 +722,95 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
   return newDocument;
 }
 
+const STATE_REDUCER = Symbol.for("powerhouse.stateReducer");
+
+/**
+ * Base-reducer 3: applies the appended row, or re-derives the scope when the
+ * row rewinds, retracts, or is named by a retraction. A stored `error` is
+ * diagnostic: it is written only on the appended row.
+ */
+function applyByRule<TState extends PHBaseState>(
+  document: PHDocument<TState>,
+  scope: string,
+  customReducer: StateReducer<TState>,
+  dispatch: SignalDispatch | undefined,
+  skip: number,
+  options: ReducerOptions,
+): PHDocument<TState> {
+  const operations = document.operations[scope] ?? [];
+  const appended = operations.at(-1);
+  if (!appended) {
+    throw new Error(`No operations found for scope: ${scope}`);
+  }
+  const appendedId = appended.action.id;
+
+  let thrown: unknown;
+  const appendedReducer: StateReducer<TState> = (state, action) => {
+    try {
+      return customReducer(state, action, dispatch);
+    } catch (error) {
+      thrown = error;
+      throw error;
+    }
+  };
+  const reducerFor: ReducerFor = (operation) =>
+    (operation.action.id === appendedId
+      ? appendedReducer
+      : customReducer) as StateReducer;
+
+  const targeted =
+    options.targeted ?? retractedActionIds(positionalOperations(operations));
+  const rebuild =
+    skip > 0 || appended.action.type === "RETRACT" || targeted.has(appendedId);
+
+  let next = document;
+  let error: string | undefined;
+  if (rebuild) {
+    const derived = deriveScope(document, operations, reducerFor, scope);
+    next = derived.document;
+    const threw =
+      !derived.applied.has(appendedId) &&
+      appliedOperations(operations).some(
+        (operation) => operation.action.id === appendedId,
+      );
+    if (threw) {
+      error = errorMessage(thrown);
+    }
+  } else if (!isDenied(appended)) {
+    try {
+      next = reduceOne(document, appended, reducerFor);
+    } catch (caught) {
+      error = errorMessage(caught);
+    }
+  }
+
+  const replayHash = options.replayOptions?.operation.hash;
+  const row: Operation = {
+    ...appended,
+    hash: replayHash ? replayHash : hashDocumentStateForScope(next, scope),
+    ...(error === undefined ? {} : { error }),
+    ...(options.reuseOperationResultingState
+      ? {
+          resultingState: JSON.stringify(
+            (next.state as Record<string, unknown>)[scope],
+          ),
+        }
+      : {}),
+  };
+  return {
+    ...next,
+    operations: {
+      ...next.operations,
+      [scope]: [...operations.slice(0, -1), row],
+    },
+  };
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return typeof error === "string" ? error : "Action failed";
+}
+
 /**
  * Helper function to create a document model reducer.
  *
@@ -681,5 +840,12 @@ export function createReducer<TState extends PHBaseState = PHBaseState>(
   ) => {
     return documentReducer(document, action, stateReducer, dispatch, options);
   };
-  return reducer;
+  return Object.assign(reducer, { [STATE_REDUCER]: stateReducer });
+}
+
+/** The state reducer a `createReducer` reducer wraps, for base-reducer 3 derivation. */
+export function stateReducerOf<TState extends PHBaseState = PHBaseState>(
+  reducer: Reducer<TState>,
+): StateReducer<TState> | undefined {
+  return (reducer as { [STATE_REDUCER]?: StateReducer<TState> })[STATE_REDUCER];
 }

@@ -1,4 +1,5 @@
 import type { PHDocument } from "@powerhousedao/shared/document-model";
+import type { ProtocolSupport } from "../executor/types.js";
 
 /**
  * Configuration options for the write cache
@@ -12,6 +13,12 @@ export type WriteCacheConfig = {
 
   /** Persist a keyframe snapshot every N revisions. Default: 10 */
   keyframeInterval: number;
+
+  /**
+   * The protocol versions this reactor runs. A rebuild that cannot read a
+   * document stored outside them throws UnsupportedProtocolVersionError.
+   */
+  protocolSupport?: ProtocolSupport;
 };
 
 /**
