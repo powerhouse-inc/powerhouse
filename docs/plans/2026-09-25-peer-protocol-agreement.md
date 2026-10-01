@@ -379,8 +379,13 @@ const document = withSignaturePolicy(module.utils.createDocument(), policy, {
 
 - Explicit `protocolVersions` from the caller win. An import keeps its header.
 - `signature` has no `preferred`; the signature policy alone decides it.
+  Selection covers only protocols with a `preferred`, today `base-reducer`.
 - A document with no parent takes the local preference. The gate holds it
   from any peer that cannot run it.
+- From undo v3 stage 7, a create under a parent also takes the local
+  preference: members do not narrow it, and the gate holds the document from
+  any member that lacks the version until it upgrades (undo v3, stage 7 and
+  decision 24).
 - `create` never refuses for lack of agreement. The gate holds instead.
 - With today's registry every path selects `{ "base-reducer": 2 }`, as now.
 
@@ -576,12 +581,12 @@ cannot run it, however long the chain. A creator sees only its direct peers.
 
 ```
 Star: A(1,2,3) -> S(1,2,3) <- B(1,2)
-  A selects 3 from its direct peer S
+  A selects 3
   S holds the document for B: SyncHold { protocol: "base-reducer", version: 3, peerSupports: [1, 2] }
   B upgrades: S's next touch from B carries [1,2,3]; S releases and backfills the document to B
 
 Hub behind: A(1,2,3) -> S(1,2)
-  A selects 2
+  A selects 3 and holds the document from S until S announces 3
 ```
 
 A document created at a version a downstream peer lacks stays held at the
@@ -590,7 +595,7 @@ relay until that peer upgrades. The relay's `syncHolds` shows it.
 ### Offline and local-first
 
 ```
-create offline     members from the persisted manifests of the parent's remotes
+create offline     the local preference; no peer is consulted
 never-heard peer   remote added but never reached: silent, baselines
 reconnect          touch refreshes both manifests before the backfill
 peer narrowed      documents created at the wider set are held for that peer, reason recorded
@@ -615,8 +620,8 @@ feature                      its migrator finds migrations it does not know. Ove
                              silent to its peers, which gate correctly
 restart, either side         the start sequence changes the revision, so the other side re-touches
                              without waiting for a handshake; a delayed older manifest is ignored
-new peer joins a collection  initial backfill holds documents it cannot run; new documents created
-                             at that reactor take the narrower set
+new peer joins a collection  initial backfill holds documents it cannot run; new documents in the
+                             collection take the local preference and are held from it
 widening                     holds released and backfilled whole
 ```
 
@@ -630,7 +635,7 @@ Manifests are unsigned in this plan and bound to the authenticated channel
 that carries them.
 
 ```
-claims less      its collections select lower versions; documents are held from it. No corruption.
+claims less      documents are held from it. No corruption.
 claims more      it receives documents it cannot run; damage is limited to its own replica, and
                  its rows reach others through the same admission as any peer's.
 ```
@@ -720,7 +725,8 @@ its sync capability     the base-reducer capability above; selection, gate and r
 its version-gate stage  depends on stage 1 here; adds undoV3 to the capability's inputs;
                         UnsupportedProtocolVersionError comes from stage 1
 its default-on stage    depends on stages 1-4 here; undoV3 on makes the capability announce 3 and
-                        prefer 3; selectProtocolVersions picks 3 where every member supports it
+                        prefer 3; every create takes 3 with or without a parent, and the gate holds
+                        it from members without 3
 its mixed-fleet cases   a peer without 3 is held from base-reducer 3 documents; a peer that
                         announces 3 but refuses one returns UNSUPPORTED_PROTOCOL, a hold at the sender
 ```
@@ -816,9 +822,12 @@ if (agreement.peer(remote.meta.name).features["sync.anti-entropy"]?.includes(1))
 17. **Unregistered keys are admitted and logged.** Apps or stored documents
     may carry custom `protocolVersions` keys, and refusing them would stop
     those documents syncing.
-18. **A document with no parent takes the local preference.** It has no
-    collection to agree with, and the gate holds it from any peer that cannot
-    run it once it joins one.
+18. **A create takes the local preference.** A document with no parent has
+    no collection to agree with, and the gate holds it from any peer that
+    cannot run it once it joins one. From undo v3 stage 7 the same holds under
+    a parent: narrowing to what every member shares would keep every new
+    document in a drive on its oldest member's version, so the gate holds the
+    document from that member until it upgrades instead (undo v3 decision 24).
 19. **A reactor does not start below a version it stores.** A build with the
     feature but a narrower set refuses at startup, naming the versions and
     document count. The run check alone would make those documents read-only
