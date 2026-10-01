@@ -70,11 +70,11 @@ function derivesByRule(stream: WalkStream): boolean {
   );
 }
 
-/** A rule stream's walked rows, and the ids any of its RETRACTs name. */
+/** A rule stream's walked rows, and the ids the walked RETRACTs name. */
 type RuleState = {
   reducerFor: ReducerFor;
   prefix: Operation[];
-  targeted: Set<string>;
+  named: Set<string>;
 };
 
 /** Applies one operation to the stream it belongs to. */
@@ -102,7 +102,7 @@ export type WalkPosition = {
  * error, is visited but not applied (this matches the write cache's rebuild).
  *
  * On base-reducer 3 a rule scope ignores stored errors, and a RETRACT or a row
- * a RETRACT names re-derives the stream from the rows walked so far.
+ * an earlier RETRACT names re-derives the stream from the rows walked so far.
  *
  * The consumer sends back whether it refused the operation it was handed: a
  * refusal this pass produced must suppress it the same way a stored one does.
@@ -116,19 +116,10 @@ export function* walkByPosition(
       let operations: Operation[];
       if (derivesByRule(stream)) {
         operations = positionalOperations(stream.operations);
-        // Every name, live or not: liveness at a position depends on the
-        // rows before it, so the whole stream's retracted set is too narrow.
-        const targeted = new Set<string>();
-        for (const operation of operations) {
-          const target = retractionTarget(operation);
-          if (target !== undefined) {
-            targeted.add(target);
-          }
-        }
         rules.set(stream.streamKey, {
           reducerFor: stream.reducerFor!,
           prefix: [],
-          targeted,
+          named: new Set(),
         });
       } else {
         operations = garbageCollect(sortOperations([...stream.operations]));
@@ -158,6 +149,10 @@ export function* walkByPosition(
           ? { ...operation, deniedReason: DENIED_IN_WALK }
           : operation,
       );
+      const target = retractionTarget(operation);
+      if (target !== undefined) {
+        rule.named.add(target);
+      }
       if (!denied) {
         states.set(streamKey, applyByRule(byKey, states, streamKey, rule));
       }
@@ -179,9 +174,9 @@ export function* walkByPosition(
 }
 
 /**
- * Applies the last walked row of a rule stream. A RETRACT, or a row a RETRACT
- * names, re-derives from the stream's starting state; a row that throws
- * applies nothing.
+ * Applies the last walked row of a rule stream. A RETRACT, or a row an earlier
+ * RETRACT names, re-derives from the stream's starting state; a row that
+ * throws applies nothing.
  */
 function applyByRule(
   byKey: Map<string, WalkStream>,
@@ -198,7 +193,7 @@ function applyByRule(
   const operation = rule.prefix.at(-1)!;
   if (
     operation.action.type === "RETRACT" ||
-    rule.targeted.has(operation.action.id)
+    rule.named.has(operation.action.id)
   ) {
     return deriveScope(
       stream.document,
