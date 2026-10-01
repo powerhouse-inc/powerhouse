@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-01T22:51:47.822Z
+> Generated: 2026-10-01T23:08:14.874Z
 > Total Documents: 119
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -4484,6 +4484,8 @@ const models = await reactor.getDocumentModels(); // PagedResults<DocumentModelM
 
 `getDocumentModels(namespace?, paging?, signal?)` returns `Promise<PagedResults<DocumentModelModule>>`. `getOperations` accepts optional `view`, `OperationFilter`, and paging, and returns `Promise<Record<string, PagedResults<Operation>>>` — index it by scope.
 
+`resolveUndoRedo(documentId, scope, branch?, signal?)` returns `{ undoTarget?, redoTarget? }`: the action ids a base-reducer 3 `UNDO` and `REDO` on that scope would retract, derived as the reactor derives a submitted one. Like the other `IReactor` reads it is not read-gated.
+
 ### Writing documents
 
 All write methods return `JobInfo` immediately — they do not wait for the job to complete.
@@ -7627,7 +7629,7 @@ An existing document keeps its version.
 
 Call [`undo`, `redo` and `undoRedoAvailability`](/academy/Reference/Reactor/ReactorClient#undo) on `IReactorClient`. They work on every version.
 
-On version 3 the client finds the target itself and submits a `RETRACT` signed by the client's signer. On versions 1 and 2 it submits `UNDO` or `REDO`.
+On version 3 the client asks the reactor for the target, through `IReactor.resolveUndoRedo`, and submits a `RETRACT` signed by the client's signer. On versions 1 and 2 it submits `UNDO` or `REDO`.
 
 The GraphQL light client always submits `UNDO` or `REDO`, so on version 3 the Switchboard signs the `RETRACT`; see [the light client's methods](/academy/Reference/ReactorBrowserClient/ApiReference#methods).
 

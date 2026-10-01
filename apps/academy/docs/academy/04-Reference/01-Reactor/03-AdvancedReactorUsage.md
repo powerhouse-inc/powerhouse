@@ -140,6 +140,8 @@ const models = await reactor.getDocumentModels(); // PagedResults<DocumentModelM
 
 `getDocumentModels(namespace?, paging?, signal?)` returns `Promise<PagedResults<DocumentModelModule>>`. `getOperations` accepts optional `view`, `OperationFilter`, and paging, and returns `Promise<Record<string, PagedResults<Operation>>>` — index it by scope.
 
+`resolveUndoRedo(documentId, scope, branch?, signal?)` returns `{ undoTarget?, redoTarget? }`: the action ids a base-reducer 3 `UNDO` and `REDO` on that scope would retract, derived as the reactor derives a submitted one. Like the other `IReactor` reads it is not read-gated.
+
 ### Writing documents
 
 All write methods return `JobInfo` immediately — they do not wait for the job to complete.
