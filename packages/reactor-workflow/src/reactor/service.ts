@@ -3688,6 +3688,13 @@ export class WorkflowRuntimeService {
     if (!ctx || (await this.servedRuns([run], ctx)).length === 0) {
       throw new Error(`Run "${runId}" not found`);
     }
+    // A test ran one block on sample data; replaying it as a run would fire
+    // the whole published workflow, side effects included
+    if (run.trigger_kind === "test") {
+      throw new Error(
+        `Run "${runId}" tested a single step or trigger; test it again instead of rerunning it`,
+      );
+    }
     if (run.status !== "FAILED") {
       throw new Error(`Only FAILED runs can be rerun; run is ${run.status}`);
     }
