@@ -20,6 +20,7 @@ import {
   type OperationFilter,
 } from "../interfaces.js";
 import { AtomicTransaction } from "../txn.js";
+import { MAX_BIND_PARAMETERS } from "./bind-parameters.js";
 import { findPurged } from "./document-purges.js";
 import type { Database, InsertableOperation, OperationRow } from "./types.js";
 
@@ -761,14 +762,39 @@ export class KyselyOperationStore implements IOperationStore {
       : undefined;
   }
 
-  findRetractionsOf(
-    _documentId: string,
-    _scope: string,
-    _branch: string,
-    _actionIds: string[],
-    _signal?: AbortSignal,
+  async findRetractionsOf(
+    documentId: string,
+    scope: string,
+    branch: string,
+    actionIds: string[],
+    signal?: AbortSignal,
   ): Promise<Set<string>> {
-    return Promise.reject(new Error("findRetractionsOf is not implemented"));
+    throwIfAborted(signal);
+
+    const found = new Set<string>();
+    // The stream key binds three slots beside each chunk.
+    const chunkSize = MAX_BIND_PARAMETERS - 3;
+    for (let i = 0; i < actionIds.length; i += chunkSize) {
+      throwIfAborted(signal);
+      // Matches idx_operation_retracts; the type stays a literal so a generic
+      // plan can use the partial index.
+      const target = sql<string>`action->'input'->>'target'`;
+      const rows = await this.queryExecutor
+        .selectFrom("Operation")
+        .select(target.as("target"))
+        .distinct()
+        .where("documentId", "=", documentId)
+        .where("scope", "=", scope)
+        .where("branch", "=", branch)
+        .where(sql<boolean>`action->>'type' = 'RETRACT'`)
+        .where(target, "in", actionIds.slice(i, i + chunkSize))
+        .execute();
+      for (const row of rows) {
+        found.add(row.target);
+      }
+    }
+
+    return found;
   }
 
   async findOperationIds(
