@@ -42,7 +42,7 @@ If the field is small, fixed-length, and not really binary (a short string, a nu
 
 ## Getting an `IAttachmentService` instance
 
-The recommended client today is the switchboard-backed remote service. It targets a running switchboard's REST endpoints for reservations, uploads, and downloads:
+Code that runs outside the switchboard (a browser app, a script, another service) uses the switchboard-backed remote service. It targets a running switchboard's REST endpoints for reservations, uploads, and downloads:
 
 ```typescript
 import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
@@ -60,12 +60,52 @@ const attachments = createRemoteAttachmentService({
 `JwtHandler` is `(url: string) => Promise<string | undefined>`, defined in `@powerhousedao/reactor`.
 
 :::tip
-The switchboard remote service is the supported client implementation right now. Other transports (S3, peer-to-peer) are designed but not yet stable — prefer `createRemoteAttachmentService` until these docs call out a replacement.
+The switchboard remote service is the supported client implementation for code outside the switchboard. Other transports (S3, peer-to-peer) are designed but not yet stable.
 :::
 
-On the server side (inside a subgraph, processor, or trigger), an `IAttachmentClient` is already wired into the host context by `@powerhousedao/reactor-api` and is available as `context.attachments`. There is no need to construct one yourself — the server builds the service and wraps it with `createAttachmentClient(...)`; see `packages/reactor-api/src/server.ts` for the wiring.
+The package root also exports the pieces for a local, embedded service: `AttachmentBuilder` (fluent), `KyselyAttachmentStore`, `KyselyReservationStore`, `runAttachmentMigrations`, `ATTACHMENT_SCHEMA`, `DEFAULT_RESERVATION_TTL_MS`, `DirectAttachmentUpload`/`DirectAttachmentUploadFactory`, and `NullAttachmentTransport`. These are on the root entrypoint only, not `/client`. Assemble one with `AttachmentBuilder` if you need an in-process store of your own.
 
-The package root also exports the pieces for a local, embedded service: `AttachmentBuilder` (fluent), `KyselyAttachmentStore`, `KyselyReservationStore`, `runAttachmentMigrations`, `ATTACHMENT_SCHEMA`, `DEFAULT_RESERVATION_TTL_MS`, `DirectAttachmentUpload`/`DirectAttachmentUploadFactory`, and `NullAttachmentTransport`. These are on the root entrypoint only, not `/client`. Assemble one with `AttachmentBuilder` if you need an in-process store; the switchboard remote service remains the supported client today.
+### Inside the switchboard
+
+Processors and subgraphs do not build a client. `@powerhousedao/reactor-api` builds one in-process attachment service per host and hands out [attachment clients](#the-attachment-client) over it.
+
+**Processors** get a client on the host module as `module.attachments`. It is trusted and makes no caller check, because a processor acts for no caller.
+
+**Subgraphs** call `attachmentsFor(ctx)` in a resolver: `subgraph.attachmentsFor(ctx)` in the generated `getResolvers(subgraph)`, `this.attachmentsFor(ctx)` in a class-field resolver. It returns an `IAttachmentClient` bound to the request's caller, `ctx.user`. Calls within one request get the same client.
+
+```typescript
+import type { AttachmentRef } from "@powerhousedao/reactor";
+import type { BaseSubgraph, Context } from "@powerhousedao/reactor-api";
+
+export const getResolvers = (subgraph: BaseSubgraph) => ({
+  Query: {
+    attachmentText: async (
+      _parent: unknown,
+      args: { documentId: string; ref: AttachmentRef },
+      ctx: Context,
+    ) => {
+      const attachments = subgraph.attachmentsFor(ctx);
+      const { body } = await attachments.download({
+        documentId: args.documentId,
+        ref: args.ref,
+      });
+      return new Response(body).text();
+    },
+  },
+});
+```
+
+The client is the authorization check, so the resolver needs no `assertCanRead` before it:
+
+- **Reads** are decided as the caller, through the document named by `documentId` (an id or a slug). The caller must be able to read that document, and the document's operations must reference the ref. This is the decision the HTTP download route makes. A refusal, an unknown ref, and a missing `documentId` all throw `AttachmentNotFound`, so a refusal does not reveal that a hash exists. There is no supreme-admin bypass: an admin also needs a document that references the ref.
+- **Anonymous reads** are decided by the document, unless the host sets `REQUIRE_AUTHENTICATED_CALLER`. Then they throw `AuthenticationRequiredError`.
+- **Uploads** need an authenticated caller when `AUTH_ENABLED` or `REQUIRE_AUTHENTICATED_CALLER` is on. An anonymous upload then throws `AuthenticationRequiredError`. An upload touches no document. Writing the ref into a document is a separate action, authorized when it is dispatched.
+- Uploads are hash-first only, through `upload`, `uploadMany`, or `preprocess` plus `reserve`. `mimeType`, `fileName`, and `extension` are validated with the rules the HTTP reserve route applies.
+- `getShareLink` fails on this client. Only the remote service can mint a download target. Use `download` or `downloadBlob`.
+
+Two more errors come from `@powerhousedao/reactor-api`. `AttachmentAccessUnavailable` means the host does not maintain the [reference index](#the-attachment-reference-index), so no read can be decided. `AttachmentAccessFailed` means the access decision itself threw. The cause is logged on the server and kept as the error's `cause`; its message does not reach the GraphQL client.
+
+`attachmentsFor` throws when the host gave the subgraph no attachments. The `GraphQLManager` passes them to every subgraph it registers. A host that constructs a subgraph itself passes `api.attachmentClientProvider` as `attachments` in its `SubgraphArgs`.
 
 ## The general flow
 
@@ -166,7 +206,7 @@ const objectUrl = URL.createObjectURL(blob);
 
 ## The attachment client
 
-`IAttachmentClient` wraps an `IAttachmentService` with the hash-first flow. Build one with `createAttachmentClient(service)` (server code already receives one as `context.attachments`).
+`IAttachmentClient` wraps an `IAttachmentService` with the hash-first flow. Build one with `createAttachmentClient(service)`. Processors and subgraphs receive one from the host; see [Inside the switchboard](#inside-the-switchboard).
 
 `preprocess(file)` reads the whole file, computes its SHA-256, and returns everything you need to both reference and upload it:
 
@@ -329,6 +369,8 @@ setAgentImageOperation(state, action) {
 | `AttachmentPending`       | `get(ref)` for a hash that is reserved but whose bytes have not finished uploading. Carries `readonly hash`, `readonly expiresAtUtc: string`, and `readonly metadata?: { mimeType; fileName; sizeBytes }` so the caller can show the declared size and retry timing. Intentionally not a subclass of `AttachmentNotFound` — pending is "retry later", not "unknown". |
 | `HashMismatch`            | Hash-first `send()` whose uploaded bytes do not match the claimed `clientHash`.                                                                           |
 | `SizeMismatch`            | Hash-first `send()` whose actual byte count differs from the declared `sizeBytes`.                                                                        |
+
+A subgraph's client can also throw `AttachmentAccessUnavailable`, `AttachmentAccessFailed`, and `AuthenticationRequiredError`, all from `@powerhousedao/reactor-api`. See [Inside the switchboard](#inside-the-switchboard).
 
 ### Helpers
 
