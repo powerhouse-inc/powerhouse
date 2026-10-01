@@ -6,12 +6,19 @@ import type {
   ISigner,
   Operation,
   PHDocument,
+  PHDocumentHeader,
   ProtocolVersions,
   SignaturePolicy,
+  StateReducer,
   Supports,
 } from "@powerhousedao/shared/document-model";
 import {
   actions,
+  baseReducerVersion,
+  redo,
+  requireStateReducer,
+  retract,
+  undo,
   DEFAULT_SIGNATURE_POLICY,
   PEER_CAPABILITIES,
   selectProtocolVersions,
@@ -77,8 +84,14 @@ import {
   type IDriveClient,
   type IReactorClient,
   type ProtocolSelection,
+  type UndoRedoAvailability,
   type UpgradeDocumentOptions,
 } from "./types.js";
+import {
+  initialDocumentFromSpine,
+  undoRedoTargets,
+  type UndoRedoTargets,
+} from "./undo-redo.js";
 import { DriveCollectionId } from "../cache/operation-index-types.js";
 import { buildDecisionModel } from "../decision/build-decision-model.js";
 import type { IReadGate } from "../decision/read-gate.js";
@@ -1331,6 +1344,67 @@ export class ReactorClient implements IReactorClient {
     );
   }
 
+  async undo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope: string = "global",
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.undoOrRedo<TDocument>(
+      "UNDO",
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+  }
+
+  async redo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope: string = "global",
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.undoOrRedo<TDocument>(
+      "REDO",
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+  }
+
+  async undoRedoAvailability(
+    documentIdentifier: string,
+    scope: string = "global",
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability> {
+    const documentId = await this.resolveReference(
+      documentIdentifier,
+      branch,
+      signal,
+    );
+    const header = await this.headerOf(documentId, scope, branch, signal);
+    switch (baseReducerVersion(header)) {
+      case 1:
+      case 2:
+        return { canUndo: (header.revision[scope] ?? 0) > 0, canRedo: false };
+      case 3: {
+        const targets = await this.undoRedoTargets(
+          documentId,
+          scope,
+          branch,
+          signal,
+        );
+        return {
+          canUndo: targets.undo !== undefined,
+          canRedo: targets.redo !== undefined,
+        };
+      }
+    }
+  }
+
   /**
    * Adds multiple documents as children to another and waits for completion
    */
@@ -2274,6 +2348,124 @@ export class ReactorClient implements IReactorClient {
    * The id a write on `identifier` is stored under, which its signatures bind.
    * A create names its own id.
    */
+  private async undoOrRedo<TDocument extends PHDocument>(
+    type: "UNDO" | "REDO",
+    documentIdentifier: string,
+    scope: string,
+    branch: string,
+    signal: AbortSignal | undefined,
+  ): Promise<TDocument> {
+    this.logger.verbose(
+      "undoOrRedo(@type, @documentIdentifier, @scope, @branch)",
+      type,
+      documentIdentifier,
+      scope,
+      branch,
+    );
+    const documentId = await this.resolveReference(
+      documentIdentifier,
+      branch,
+      signal,
+    );
+    const header = await this.headerOf(documentId, scope, branch, signal);
+    switch (baseReducerVersion(header)) {
+      case 1:
+      case 2:
+        return this.execute<TDocument>(
+          documentId,
+          branch,
+          [type === "UNDO" ? undo(1, scope) : redo(1, scope)],
+          signal,
+        );
+      case 3: {
+        const targets = await this.undoRedoTargets(
+          documentId,
+          scope,
+          branch,
+          signal,
+        );
+        const target = type === "UNDO" ? targets.undo : targets.redo;
+        if (target === undefined) {
+          const verb = type === "UNDO" ? "undo" : "redo";
+          throw new Error(
+            `Cannot ${verb}: nothing to ${verb} in scope history`,
+          );
+        }
+        // Submitted as RETRACT so the client's signature covers the target.
+        return this.execute<TDocument>(
+          documentId,
+          branch,
+          [retract(target, scope)],
+          signal,
+        );
+      }
+    }
+  }
+
+  private async headerOf(
+    documentId: string,
+    scope: string,
+    branch: string,
+    signal: AbortSignal | undefined,
+  ): Promise<PHDocumentHeader> {
+    const document = await this.reactor.getByIdOrSlug<PHDocument>(
+      documentId,
+      { branch, scopes: [scope] },
+      undefined,
+      signal,
+    );
+    return document.header;
+  }
+
+  /** Resolved as the reactor resolves a submitted UNDO or REDO. */
+  private async undoRedoTargets(
+    documentId: string,
+    scope: string,
+    branch: string,
+    signal: AbortSignal | undefined,
+  ): Promise<UndoRedoTargets> {
+    const [spine, rows] = await Promise.all([
+      this.scopeOperations(documentId, "document", branch, signal),
+      this.scopeOperations(documentId, scope, branch, signal),
+    ]);
+    const initial = initialDocumentFromSpine(spine);
+    const module = await this.getDocumentModelModuleForDocument(initial);
+    const stateReducer = requireStateReducer(
+      module.reducer,
+      initial.header.documentType,
+      module.version,
+    ) as StateReducer;
+    return undoRedoTargets(initial, rows, stateReducer, scope);
+  }
+
+  private async scopeOperations(
+    documentId: string,
+    scope: string,
+    branch: string,
+    signal: AbortSignal | undefined,
+  ): Promise<Operation[]> {
+    const view: ViewFilter = { branch, scopes: [scope] };
+    let page = await this.getOperations(
+      documentId,
+      view,
+      undefined,
+      undefined,
+      signal,
+    );
+    const rows = [...page.results];
+    while (page.nextCursor) {
+      page = await this.getOperations(
+        documentId,
+        view,
+        undefined,
+        { cursor: page.nextCursor, limit: page.options.limit },
+        signal,
+      );
+      rows.push(...page.results);
+    }
+    return rows;
+  }
+
   private async resolveWriteTarget(
     identifier: string,
     branch: string,

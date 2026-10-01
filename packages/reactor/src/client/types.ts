@@ -102,6 +102,12 @@ export type UpgradeDocumentOptions = {
   maxConflictRetries?: number;
 };
 
+/** Whether an UNDO or a REDO of one scope would succeed now. */
+export type UndoRedoAvailability = {
+  canUndo: boolean;
+  canRedo: boolean;
+};
+
 /**
  * Drive-aware operations grouped under `client.drives`.
  *
@@ -717,6 +723,65 @@ export interface IReactorClient {
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument>;
+
+  /**
+   * Undoes the last applied operation of a scope and waits for completion.
+   *
+   * On base-reducer 3 the client resolves the target and submits a RETRACT
+   * signed by its own signer; on 1 and 2 it submits UNDO.
+   *
+   * @param documentIdentifier - Target document id or slug
+   * @param scope - Optional scope, defaults to "global"
+   * @param branch - Optional branch, defaults to "main"
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The updated document
+   * @throws Error when there is nothing to undo, or the write fails
+   */
+  undo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+
+  /**
+   * Redoes the last undo of a scope and waits for completion.
+   *
+   * On base-reducer 3 the client submits a signed RETRACT of the last live
+   * retraction; on 1 and 2 it submits REDO. Applied content after the undo
+   * leaves nothing to redo.
+   *
+   * @param documentIdentifier - Target document id or slug
+   * @param scope - Optional scope, defaults to "global"
+   * @param branch - Optional branch, defaults to "main"
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The updated document
+   * @throws Error when there is nothing to redo, or the write fails
+   */
+  redo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+
+  /**
+   * Whether {@link undo} and {@link redo} would find a target in a scope now.
+   *
+   * Exact on base-reducer 3. On 1 and 2, `canUndo` is whether the scope holds
+   * any operation and `canRedo` is false, since reads serve no clipboard.
+   *
+   * @param documentIdentifier - Target document id or slug
+   * @param scope - Optional scope, defaults to "global"
+   * @param branch - Optional branch, defaults to "main"
+   * @param signal - Optional abort signal to cancel the request
+   */
+  undoRedoAvailability(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability>;
 
   /**
    * Adds a relationship between two documents and waits for completion.

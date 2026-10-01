@@ -26,6 +26,7 @@ export {
   type IDriveClient,
   type IReactorClient,
   type ProtocolSelection,
+  type UndoRedoAvailability,
 } from "./src/client/types.js";
 export {
   ReactorBuilder,
