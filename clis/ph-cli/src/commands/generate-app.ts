@@ -8,7 +8,7 @@ import {
   optional,
   string,
 } from "cmd-ts";
-import { Directory, File } from "cmd-ts/dist/cjs/batteries/fs.js";
+import { Directory, File } from "../utils/fs-args.js";
 import { CommaSeparatedStrings } from "../utils/comma-separated.js";
 
 export const generateAppCmd = command({

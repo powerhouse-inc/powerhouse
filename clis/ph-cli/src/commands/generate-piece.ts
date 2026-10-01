@@ -8,7 +8,7 @@ import {
   positional,
   string,
 } from "cmd-ts";
-import { Directory } from "cmd-ts/dist/cjs/batteries/fs.js";
+import { Directory } from "../utils/fs-args.js";
 import { skipInstallArgs } from "../utils/install-added-dependencies.js";
 
 export const generatePieceCmd = command({
