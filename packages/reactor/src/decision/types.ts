@@ -108,6 +108,13 @@ export type Projection<M> = {
 
   /** Applies one of this stream's operations while deciding. */
   apply: (document: PHDocument, operation: Operation) => PHDocument;
+
+  /**
+   * Base-reducer 3: the state reducers a derived stream's rule scope derives
+   * with in the walk, resolved for the stream's starting document. With them
+   * the walk also reads the stream's RETRACTs.
+   */
+  scopeReducer?: (document: PHDocument) => ReducerFor;
 };
 
 /**
