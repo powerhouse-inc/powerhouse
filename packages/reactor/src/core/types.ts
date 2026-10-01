@@ -126,6 +126,12 @@ export type BatchLoadResult = {
   jobs: Record<string, JobInfo>;
 };
 
+/** The action ids a base-reducer 3 UNDO and REDO on a scope would retract. */
+export type UndoRedoTargets = {
+  undoTarget?: string;
+  redoTarget?: string;
+};
+
 /**
  * The main Reactor interface that serves as a facade for document operations.
  * This interface provides a unified API for document management, including
@@ -290,6 +296,24 @@ export interface IReactor {
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<Record<string, PagedResults<Operation>>>;
+
+  /**
+   * Resolves what a base-reducer 3 UNDO and REDO on a scope would retract, as
+   * the reactor resolves a submitted one: from every stored row, each derived
+   * with its own model version and every upgrade applied at its boundary.
+   *
+   * @param documentId - The document id
+   * @param scope - The scope to undo or redo in
+   * @param branch - Optional branch, defaults to "main"
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The undo and redo targets, each absent when there is none
+   */
+  resolveUndoRedo(
+    documentId: string,
+    scope: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets>;
 
   /**
    * Filters documents by criteria and returns a list of them
