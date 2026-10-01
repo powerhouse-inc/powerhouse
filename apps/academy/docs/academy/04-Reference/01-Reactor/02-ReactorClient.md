@@ -681,6 +681,68 @@ setPreferredEditor(
 
 ---
 
+### `undo`
+
+Undo the last applied operation of a scope and wait for completion.
+
+```typescript
+undo<TDocument extends PHDocument = PHDocument>(
+  documentIdentifier: string,
+  scope?: string,
+  branch?: string,
+  signal?: AbortSignal,
+): Promise<TDocument>
+```
+
+**Parameters:**
+
+| Name                 | Type          | Required | Description            |
+| -------------------- | ------------- | -------- | ---------------------- |
+| `documentIdentifier` | `string`      | Yes      | Document id or slug    |
+| `scope`              | `string`      | No       | Defaults to `"global"` |
+| `branch`             | `string`      | No       | Defaults to `"main"`   |
+| `signal`             | `AbortSignal` | No       | Cancel the request     |
+
+On a base-reducer 3 document the client resolves the target and submits a `RETRACT` signed by its own signer; with nothing to undo it throws before submitting. On base-reducer 1 and 2 it submits `UNDO`. See [Undo and redo](/academy/Reference/Reactor/UndoRedo).
+
+---
+
+### `redo`
+
+Redo the last undo of a scope and wait for completion. Same parameters as [`undo`](#undo).
+
+```typescript
+redo<TDocument extends PHDocument = PHDocument>(
+  documentIdentifier: string,
+  scope?: string,
+  branch?: string,
+  signal?: AbortSignal,
+): Promise<TDocument>
+```
+
+On base-reducer 3 the client submits a signed `RETRACT` of the last live retraction. Content applied after the undo leaves nothing to redo. On base-reducer 1 and 2 it submits `REDO`.
+
+---
+
+### `undoRedoAvailability`
+
+Report whether `undo` and `redo` would find a target in a scope now. Same parameters as [`undo`](#undo).
+
+```typescript
+undoRedoAvailability(
+  documentIdentifier: string,
+  scope?: string,
+  branch?: string,
+  signal?: AbortSignal,
+): Promise<UndoRedoAvailability>
+
+type UndoRedoAvailability = { canUndo: boolean; canRedo: boolean };
+```
+
+Exact on base-reducer 3. On base-reducer 1 and 2, `canUndo` is whether the scope has any operation and `canRedo` is always `false`.
+
+---
+
 ### `addRelationship`
 
 Add a typed relationship from a source document to a target document. To add a child, pass `"child"` as the `relationshipType`.

@@ -23,7 +23,7 @@ For the quickstart and how the entry stays browser-bundlable, see
 ## `IReactorBrowserClient`
 
 The contract the reactor-browser hooks depend on. It is declared as a `Pick` of
-the reactor's own `IReactorClient`, so the six member signatures cannot drift
+the reactor's own `IReactorClient`, so the member signatures cannot drift
 from the reactor's:
 
 ```typescript
@@ -35,13 +35,16 @@ export interface IReactorBrowserClient extends Pick<
   | "getOperations"
   | "create"
   | "deleteDocument"
+  | "undo"
+  | "redo"
+  | "undoRedoAvailability"
 > {}
 ```
 
 Two implementations satisfy it: the full in-browser reactor client, which gets it
 for free by implementing `IReactorClient`, and `GraphQLReactorClient`.
 
-Everything outside those six members is deliberately excluded and not
+Everything outside those members is deliberately excluded and not
 implemented here: `drives`, `find`, `resolveIdOrSlug`, relationships,
 `executeAsync`, `executeBatch`, jobs, `createEmpty`, `rename`,
 `evaluateActions`, and the document-model module getters. For the
@@ -58,6 +61,9 @@ full-reactor versions of those, see
 | `execute(identifier, branch, actions, signal?)`               | Reads the document, stamps and signs a single action, pushes it, emits `Updated`. Two round trips.  |
 | `deleteDocument(identifier, propagate?, signal?)`             | Deletes and emits `Deleted` carrying the identifier it was called with.                             |
 | `subscribe(search, callback, view?)`                          | Registers a change subscriber and returns its unsubscribe function. `view` is accepted and ignored. |
+| `undo(identifier, scope?, branch?, signal?)`                  | Submits `UNDO`. On base-reducer 3 the Switchboard resolves it and signs the `RETRACT`, not this client. |
+| `redo(identifier, scope?, branch?, signal?)`                  | Submits `REDO`, resolved and signed the same way.                                                   |
+| `undoRedoAvailability(identifier, scope?, branch?, signal?)`  | Reads the scope's operations. On base-reducer 3 an operation stored with an `error` counts as one that threw. |
 
 `execute` returns the updated document with the operations this call appended,
 which is how `useDispatch` reports per-action errors: `dispatchActions` scans the
