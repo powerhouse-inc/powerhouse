@@ -18,6 +18,7 @@ import type { PublisherIdentity } from "./notifications/types.js";
 import type { WebhookStore } from "./notifications/webhook.js";
 import {
   failVersion,
+  publishedHere,
   PermanentError,
   processVersion,
   syncPackage,
@@ -93,12 +94,12 @@ const QUICK_MISSING = `
                         AND j.version = r.version)
    LIMIT 1000`;
 
-// Every version of every manifest: published versions with no row, or
-// pending with no job for a while
+// Every tagged version of every manifest: no row, or pending with no job for
+// a while; untagged versions are processed when first requested
 const FULL_MISSING = `
-  SELECT m.name, v.version
+  SELECT DISTINCT m.name, v.version
     FROM verdaccio_manifests m
-    CROSS JOIN LATERAL jsonb_array_elements_text(m.versions) AS v(version)
+    CROSS JOIN LATERAL jsonb_each_text(m.dist_tags) AS v(tag, version)
     LEFT JOIN registry_versions r ON r.package = m.name AND r.version = v.version
    WHERE m.updated_at < now() - interval '30 seconds' AND ${PUBLISHED}
      AND (r.package IS NULL
@@ -114,7 +115,7 @@ const FULL_CHANGED = `
     FROM verdaccio_manifests m
     LEFT JOIN registry_packages p ON p.name = m.name
    WHERE m.updated_at < now() - interval '30 seconds' AND ${PUBLISHED}
-     AND (p.name IS NULL OR p.dist_tags <> m.dist_tags
+     AND (p.name IS NULL OR NOT p.local OR p.dist_tags <> m.dist_tags
        OR EXISTS (SELECT 1 FROM registry_versions r
                    WHERE r.package = m.name AND NOT m.versions ? r.version))
   UNION ${UNPUBLISHED}
@@ -202,6 +203,14 @@ async function runJob(
   options: WorkerOptions,
 ): Promise<void> {
   const finish = (tx: Parameters<typeof complete>[0]) => complete(tx, job);
+  // Backfill is for packages published here; the uplink cache is processed on request
+  if (
+    job.priority === BACKGROUND_PRIORITY &&
+    (await publishedHere(ctx.db, job.package)) === false
+  ) {
+    await ctx.db.transaction(finish);
+    return;
+  }
   if (job.kind === "process") {
     const processed = await processVersion(ctx, job, finish);
     if (processed && job.payload.notify === true) {

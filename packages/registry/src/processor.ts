@@ -350,6 +350,25 @@ async function indexedRevision(
   return row.rows[0]?.rev ?? null;
 }
 
+// Whether Verdaccio lists the package or a publisher owns it; null without
+// Verdaccio's table, when no storage plugin keeps one
+export async function publishedHere(
+  db: Queryable,
+  pkg: string,
+): Promise<boolean | null> {
+  const table = await db.query<{ exists: boolean }>(
+    "SELECT to_regclass('verdaccio_packages') IS NOT NULL AS exists",
+  );
+  if (!table.rows[0]?.exists) return null;
+  const row = await db.query<{ published: boolean }>(
+    `SELECT EXISTS (SELECT 1 FROM verdaccio_packages WHERE name = $1)
+         OR EXISTS (SELECT 1 FROM registry_package_owners WHERE package_name = $1)
+         AS published`,
+    [pkg],
+  );
+  return row.rows[0]?.published === true;
+}
+
 async function upsertPackage(
   tx: Queryable,
   pkg: string,
@@ -503,7 +522,8 @@ export async function processVersion(
 ): Promise<boolean> {
   const pkg = job.package;
   const version = job.version;
-  const local = job.payload.local === true;
+  const published = await publishedHere(ctx.db, pkg);
+  const local = published ?? job.payload.local === true;
   const manifestRev = await indexedRevision(ctx.db, pkg);
   const packument = await fetchPackument(ctx.registryUrl, pkg);
   if (!packument?.versions?.[version]) {
@@ -624,26 +644,25 @@ export async function syncPackage(
     .map((r) => r.version)
     .filter((v) => !listed.has(v));
 
+  const published = await publishedHere(ctx.db, pkg);
+  const local = published ?? job.payload.local === true;
+  // Unpublishing a whole package drops it from Verdaccio's list first
+  if (!packument && published) {
+    throw new Error(`metadata for published ${pkg} returned 404`);
+  }
   await ctx.db.transaction(async (tx) => {
     await removeVersionRows(tx, pkg, removed);
     if (!packument) {
       await tx.query("DELETE FROM registry_packages WHERE name = $1", [pkg]);
     } else {
-      await upsertPackage(
-        tx,
-        pkg,
-        packument,
-        job.payload.local === true,
-        manifestRev,
-      );
+      await upsertPackage(tx, pkg, packument, local, manifestRev);
       await recomputeLatest(tx, pkg);
-      const local = await tx.query<{ local: boolean }>(
-        "SELECT local FROM registry_packages WHERE name = $1",
-        [pkg],
-      );
-      if (local.rows[0]?.local) {
+      if (local) {
+        // Tagged versions only; the rest are processed when first requested
         const have = new Set(known.rows.map((r) => r.version));
-        for (const version of listed) {
+        const tagged = new Set(Object.values(packument["dist-tags"] ?? {}));
+        for (const version of tagged) {
+          if (!listed.has(version)) continue;
           if (!have.has(version)) {
             // A sweep's backfill keeps its place behind real publishes
             await enqueue(

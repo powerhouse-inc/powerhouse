@@ -313,6 +313,92 @@ describe.each(backends)("registry worker (%s)", (_, createDb) => {
     ).toBeNull();
   });
 
+  it("queues only tagged versions when syncing", async () => {
+    packages.set("pkg-a", {
+      distTags: { latest: "2.0.0", dev: "2.1.0-dev.1" },
+      versions: {
+        "1.0.0": pieceTarball("pkg-a", "1.0.0", "@t/piece"),
+        "2.0.0": pieceTarball("pkg-a", "2.0.0", "@t/piece"),
+        "2.1.0-dev.1": pieceTarball("pkg-a", "2.1.0-dev.1", "@t/piece"),
+      },
+    });
+    await syncPackage(ctx, job("sync", "pkg-a"), noFinish);
+    const queued = await db.query<{ version: string }>(
+      "SELECT version FROM registry_jobs WHERE kind = 'process' ORDER BY version",
+    );
+    expect(queued.rows.map((r) => r.version)).toEqual(["2.0.0", "2.1.0-dev.1"]);
+  });
+
+  it("keeps a published package's rows when its metadata 404s", async () => {
+    packages.set("pkg-a", {
+      distTags: { latest: "1.0.0" },
+      versions: { "1.0.0": pieceTarball("pkg-a", "1.0.0", "@t/piece") },
+    });
+    await db.query(
+      "CREATE TABLE IF NOT EXISTS verdaccio_packages (name text PRIMARY KEY)",
+    );
+    await db.query("INSERT INTO verdaccio_packages (name) VALUES ('pkg-a')");
+    await processVersion(ctx, job("process", "pkg-a", "1.0.0"), noFinish);
+    packages.delete("pkg-a");
+    await expect(
+      syncPackage(ctx, job("sync", "pkg-a"), noFinish),
+    ).rejects.toThrow("returned 404");
+    expect((await versionRow("pkg-a", "1.0.0"))?.status).toBe("ready");
+
+    // Unpublished: Verdaccio dropped it from its list
+    await db.query("DELETE FROM verdaccio_packages");
+    expect(await syncPackage(ctx, job("sync", "pkg-a"), noFinish)).toBeNull();
+    expect(await versionRow("pkg-a", "1.0.0")).toBeUndefined();
+  });
+
+  it("marks a published package local whatever the job says", async () => {
+    packages.set("pkg-a", {
+      distTags: { latest: "1.0.0" },
+      versions: { "1.0.0": pieceTarball("pkg-a", "1.0.0", "@t/piece") },
+    });
+    await db.query(
+      "CREATE TABLE IF NOT EXISTS verdaccio_packages (name text PRIMARY KEY)",
+    );
+    await db.query("INSERT INTO verdaccio_packages (name) VALUES ('pkg-a')");
+    // As an on-demand request queues it
+    await processVersion(
+      ctx,
+      { ...job("process", "pkg-a", "1.0.0"), payload: {} },
+      noFinish,
+    );
+    const row = await db.query<{ local: boolean }>(
+      "SELECT local FROM registry_packages WHERE name = 'pkg-a'",
+    );
+    expect(row.rows[0]?.local).toBe(true);
+  });
+
+  it("skips background jobs for packages not published here", async () => {
+    packages.set("left-pad", {
+      distTags: { latest: "1.0.0" },
+      versions: { "1.0.0": pieceTarball("left-pad", "1.0.0", "@l/piece") },
+    });
+    await db.query(
+      "CREATE TABLE IF NOT EXISTS verdaccio_packages (name text PRIMARY KEY)",
+    );
+    workers.push(await startWorker(ctx, { concurrency: 1 }));
+    await enqueue(
+      db,
+      "process",
+      "left-pad",
+      "1.0.0",
+      { local: true },
+      BACKGROUND_PRIORITY,
+    );
+    await vi.waitFor(
+      async () =>
+        expect((await db.query("SELECT id FROM registry_jobs")).rows).toEqual(
+          [],
+        ),
+      { timeout: 10_000, interval: 100 },
+    );
+    expect(await versionRow("left-pad", "1.0.0")).toBeUndefined();
+  });
+
   it("serves an unprocessed version on demand", async () => {
     packages.set("pkg-u", {
       distTags: { latest: "3.0.0" },
@@ -517,6 +603,48 @@ describe.each(backends)("registry worker (%s)", (_, createDb) => {
     );
     expect(await reconcile(db)).toBe(0);
     expect(await reconcile(db, { full: true })).toBe(1);
+  });
+
+  it("backfills only tagged versions and relists a package that lost local", async () => {
+    await indexManifest(
+      "pkg-a",
+      ["1.0.0", "2.0.0"],
+      { latest: "2.0.0" },
+      "1-a",
+    );
+    expect(await reconcile(db, { full: true })).toBe(2);
+    expect(await queued()).toEqual([
+      {
+        kind: "process",
+        package: "pkg-a",
+        version: "2.0.0",
+        priority: BACKGROUND_PRIORITY,
+      },
+      {
+        kind: "sync",
+        package: "pkg-a",
+        version: "",
+        priority: BACKGROUND_PRIORITY,
+      },
+    ]);
+
+    // A row an on-demand request recreated without the local flag
+    await db.query("DELETE FROM registry_jobs");
+    await db.query(
+      `INSERT INTO registry_packages (name, local, dist_tags, versions, manifest_rev, updated_at)
+       VALUES ('pkg-a', false, '{"latest":"2.0.0"}', '["1.0.0","2.0.0"]', '1-a',
+               now() - interval '1 minute')`,
+    );
+    await db.query(
+      `INSERT INTO registry_versions (package, version, status)
+       VALUES ('pkg-a', '2.0.0', 'ready')`,
+    );
+    expect(await reconcile(db)).toBe(0);
+    expect(await reconcile(db, { full: true })).toBe(1);
+    expect((await queued())[0]).toMatchObject({
+      kind: "sync",
+      package: "pkg-a",
+    });
   });
 
   it("leaves packages cached from the uplink alone", async () => {
