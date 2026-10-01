@@ -166,14 +166,23 @@ export class AuthorizedAttachmentService implements IAttachmentService {
 /** The options' `documentId` when it is one the routes would accept, else null. */
 function readDocumentId(options: unknown): string | null {
   if (typeof options !== "object" || options === null) return null;
-  const proto: unknown = Object.getPrototypeOf(options);
-  if (proto !== Object.prototype && proto !== null) return null;
+  if (isAbortSignal(options)) return null;
   const value = (options as { documentId?: unknown }).documentId;
   if (typeof value !== "string") return null;
   if (value.trim().length === 0 || value.length > MAX_DOCUMENT_ID_LEN) {
     return null;
   }
   return value;
+}
+
+/** Duck-checked too, so a signal from another realm is still a signal. */
+function isAbortSignal(value: object): boolean {
+  if (value instanceof AbortSignal) return true;
+  const candidate = value as { aborted?: unknown; addEventListener?: unknown };
+  return (
+    typeof candidate.aborted === "boolean" &&
+    typeof candidate.addEventListener === "function"
+  );
 }
 
 export interface IAttachmentClientProvider {

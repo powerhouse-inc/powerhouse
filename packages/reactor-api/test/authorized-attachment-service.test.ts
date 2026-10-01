@@ -256,16 +256,51 @@ describe("AuthorizedAttachmentService reads", () => {
     noInnerCalls(inner);
   });
 
-  it("an options object that is not a plain object refuses", async () => {
-    const { service, access } = setup();
+  it("a class instance or foreign-prototype options object is accepted", async () => {
     class Options {
       documentId = CALLER_DOC;
     }
+    const nullProto = Object.assign(Object.create(null) as object, {
+      documentId: CALLER_DOC,
+    });
+    const foreignProto = Object.assign(Object.create({ other: 1 }) as object, {
+      documentId: CALLER_DOC,
+    });
 
-    await expect(service.get(CALLER_REF, new Options())).rejects.toBeInstanceOf(
-      AttachmentNotFound,
-    );
-    expect(access.canReadAttachment).not.toHaveBeenCalled();
+    for (const options of [new Options(), nullProto, foreignProto]) {
+      const { service, inner, access, response } = setup();
+
+      await expect(
+        service.get(CALLER_REF, options as { documentId: string }),
+      ).resolves.toBe(response);
+      expect(access.canReadAttachment).toHaveBeenCalledWith(
+        expect.objectContaining({ documentId: CALLER_DOC }),
+      );
+      expect(inner.get).toHaveBeenCalledWith(
+        CANONICAL_REF,
+        expect.objectContaining({ documentId: CANONICAL_DOC }),
+      );
+    }
+  });
+
+  it("an AbortSignal-like object carrying a documentId refuses", async () => {
+    const realSignal = Object.assign(new AbortController().signal, {
+      documentId: CALLER_DOC,
+    });
+    const foreignSignal = {
+      aborted: false,
+      addEventListener: () => {},
+      documentId: CALLER_DOC,
+    };
+
+    for (const options of [realSignal, foreignSignal]) {
+      const { service, access } = setup();
+
+      await expect(
+        service.get(CALLER_REF, options as unknown as AbortSignal),
+      ).rejects.toBeInstanceOf(AttachmentNotFound);
+      expect(access.canReadAttachment).not.toHaveBeenCalled();
+    }
   });
 
   it("a canReadAttachment exception is logged and becomes AttachmentAccessFailed", async () => {
