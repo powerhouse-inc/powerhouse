@@ -2121,7 +2121,8 @@ export class SimpleJobExecutor implements IJobExecutor {
    *   whose indices are not a simple ascending run from the head.
    * - UNDO, REDO and NOOP-with-skip each invalidate the write cache to
    *   force a full-history rebuild, so they cannot be reduced against state
-   *   threaded from the write before them.
+   *   threaded from the write before them. A RETRACT re-derives the scope
+   *   from every row for the same reason.
    * - The auth scope decides later writes against the policy earlier ones
    *   install, so a batch would decide them all against the policy as it stood
    *   before the batch.
@@ -2149,7 +2150,8 @@ export class SimpleJobExecutor implements IJobExecutor {
         write.sourceOperation === undefined &&
         !DOCUMENT_SCOPE_ACTIONS.has(type) &&
         !isUndoRedo(write.action) &&
-        type !== "NOOP"
+        type !== "NOOP" &&
+        type !== "RETRACT"
       );
     });
   }
