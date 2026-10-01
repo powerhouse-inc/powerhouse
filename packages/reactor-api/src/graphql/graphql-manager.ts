@@ -27,6 +27,7 @@ import {
 } from "../http/index.js";
 import { debounce } from "../packages/util.js";
 import type { AuthService, User } from "../services/auth.service.js";
+import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
 import type {
   CanonicalDocumentId,
   IAuthorizationService,
@@ -143,6 +144,7 @@ export type GraphQLManagerOptions = {
   reactorDriveClient?: IDriveClient;
   syncServingGate?: SyncScopeGate;
   httpRoutes?: HttpRouteService;
+  attachments?: IAttachmentClientProvider;
 };
 
 /**
@@ -301,6 +303,7 @@ export class GraphQLManager {
   private readonly port: number;
   private readonly syncServingGate?: SyncScopeGate;
   private readonly httpRoutes?: HttpRouteService;
+  private readonly attachments?: IAttachmentClientProvider;
 
   constructor(options: GraphQLManagerOptions) {
     this.path = options.path;
@@ -321,6 +324,7 @@ export class GraphQLManager {
     this.reactorDriveClient = options.reactorDriveClient;
     this.syncServingGate = options.syncServingGate;
     this.httpRoutes = options.httpRoutes;
+    this.attachments = options.attachments;
 
     this.driveOwnershipCache = new DriveOwnershipCache(this.reactorClient);
 
@@ -561,6 +565,7 @@ export class GraphQLManager {
           documentPermissionService: this.documentPermissionService,
           authorizationService: this.authorizationService,
           syncServingGate: this.syncServingGate,
+          attachments: this.attachments,
         });
 
         await this.#addSubgraphInstance(
@@ -802,6 +807,7 @@ export class GraphQLManager {
       documentPermissionService: this.documentPermissionService,
       authorizationService: this.authorizationService,
       syncServingGate: this.syncServingGate,
+      attachments: this.attachments,
     });
 
     return this.#addSubgraphInstance(
