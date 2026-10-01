@@ -1,7 +1,7 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-01T15:15:17.672Z
-> Total Documents: 118
+> Generated: 2026-10-01T22:48:32.442Z
+> Total Documents: 119
 > Source: https://academy.vetra.io/llms-full.txt
 
 
@@ -3838,6 +3838,68 @@ setPreferredEditor(
 
 ---
 
+### `undo`
+
+Undo the last applied operation of a scope and wait for completion.
+
+```typescript
+undo<TDocument extends PHDocument = PHDocument>(
+  documentIdentifier: string,
+  scope?: string,
+  branch?: string,
+  signal?: AbortSignal,
+): Promise<TDocument>
+```
+
+**Parameters:**
+
+| Name                 | Type          | Required | Description            |
+| -------------------- | ------------- | -------- | ---------------------- |
+| `documentIdentifier` | `string`      | Yes      | Document id or slug    |
+| `scope`              | `string`      | No       | Defaults to `"global"` |
+| `branch`             | `string`      | No       | Defaults to `"main"`   |
+| `signal`             | `AbortSignal` | No       | Cancel the request     |
+
+On a base-reducer 3 document the client resolves the target and submits a `RETRACT` signed by its own signer; with nothing to undo it throws before submitting. On base-reducer 1 and 2 it submits `UNDO`. See [Undo and redo](/academy/Reference/Reactor/UndoRedo).
+
+---
+
+### `redo`
+
+Redo the last undo of a scope and wait for completion. Same parameters as [`undo`](#undo).
+
+```typescript
+redo<TDocument extends PHDocument = PHDocument>(
+  documentIdentifier: string,
+  scope?: string,
+  branch?: string,
+  signal?: AbortSignal,
+): Promise<TDocument>
+```
+
+On base-reducer 3 the client submits a signed `RETRACT` of the last live retraction. Content applied after the undo leaves nothing to redo. On base-reducer 1 and 2 it submits `REDO`.
+
+---
+
+### `undoRedoAvailability`
+
+Report whether `undo` and `redo` would find a target in a scope now. Same parameters as [`undo`](#undo).
+
+```typescript
+undoRedoAvailability(
+  documentIdentifier: string,
+  scope?: string,
+  branch?: string,
+  signal?: AbortSignal,
+): Promise<UndoRedoAvailability>
+
+type UndoRedoAvailability = { canUndo: boolean; canRedo: boolean };
+```
+
+Exact on base-reducer 3. On base-reducer 1 and 2, `canUndo` is whether the scope has any operation and `canRedo` is always `false`.
+
+---
+
 ### `addRelationship`
 
 Add a typed relationship from a source document to a target document. To add a child, pass `"child"` as the `relationshipType`.
@@ -6232,7 +6294,7 @@ Errors reach your code from the reactor through three channels:
 This page is the consolidated error reference for the reactor. For attachment errors see [Attachment service](/academy/Reference/Reactor/AttachmentService); for sync-channel behavior see [Synchronization](/academy/Reference/Reactor/Synchronization).
 
 **INFO:**
-Importable error values come from `@powerhousedao/reactor`: `EventBusAggregateError`, `ModuleNotFoundError`, `DuplicateModuleError`, `InvalidModuleError`, `DuplicateManifestError`, `ChannelError`, `ChannelErrorSource`, `SyncOperationAggregateError`, `PollingChannelError`, `isDriveAuthError`, and `DRIVE_AUTH_ERROR_MESSAGES`. `@powerhousedao/reactor-browser` re-exports only `isDriveAuthError`. Attachment errors come from `@powerhousedao/reactor-attachments`. Several errors are internal and cannot be imported; this page marks each one.
+Importable error values come from `@powerhousedao/reactor`: `EventBusAggregateError`, `ModuleNotFoundError`, `DuplicateModuleError`, `InvalidModuleError`, `DuplicateManifestError`, `ChannelError`, `ChannelErrorSource`, `SyncOperationAggregateError`, `PollingChannelError`, `RetractionRefusedError`, `ReservedActionError`, `isDriveAuthError`, and `DRIVE_AUTH_ERROR_MESSAGES`. `@powerhousedao/reactor-browser` re-exports only `isDriveAuthError`. Attachment errors come from `@powerhousedao/reactor-attachments`. Several errors are internal and cannot be imported; this page marks each one.
 
 
 ## Job failures
@@ -6294,6 +6356,8 @@ try {
 ```
 
 Several internal write-path errors surface only as the `.message` string here and lose their typed identity at this edge: `DocumentDeletedError`, `DocumentNotFoundError`, `CreateDocumentRequiredError`, `InvalidSignatureError`, and `UpgradeManifestNotFoundError`. None are exported. Match on `err.message` if you need to branch on them, and expect that to be brittle.
+
+`RetractionRefusedError` and `ReservedActionError` are exported, but reach you here the same way, as a plain `Error` carrying the message. Both are terminal, so the job fails without a retry. See [Undo and redo](/academy/Reference/Reactor/UndoRedo#errors).
 
 ## Cancellation
 
@@ -6468,7 +6532,7 @@ try {
 | Mechanism | Applies to | Cross-boundary safe |
 | --- | --- | --- |
 | `err.name === "AbortError"` | aborted reactor calls (DOM-compatible name) | Yes |
-| `X.isError(err)` (static) | `ModuleNotFoundError`, `DuplicateModuleError`, `DuplicateManifestError` | Yes (name-based) |
+| `X.isError(err)` (static) | `ModuleNotFoundError`, `DuplicateModuleError`, `DuplicateManifestError`, `RetractionRefusedError`, `ReservedActionError` | Yes (name-based) |
 | `err instanceof X` | `EventBusAggregateError`, `ChannelError`, `SyncOperationAggregateError`, attachment errors | No |
 | `err.name === "X"` | any class above (all set `this.name`) | Yes |
 | `isDriveAuthError(err)` | un-rewrapped GraphQL-channel errors only | only in-channel |
@@ -7516,6 +7580,87 @@ Erasure does not reach:
 - Connect's IndexedDB copies and browser backups.
 - attachment bytes still referenced by another document.
 - processors that ignore deletions.
+
+---
+
+
+## Undo and redo
+
+> Source: https://academy.vetra.io/academy/Reference/Reactor/UndoRedo
+
+How a document stores an undo depends on its base-reducer version, `header.protocolVersions["base-reducer"]`. The version is fixed by `CREATE_DOCUMENT` and is part of the derived document id, so a document never changes version.
+
+| Version | `UNDO` is stored as                                   | `REDO`                                                                          |
+| ------- | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
+| 1, 2    | a `NOOP` whose `skip` removes the operation before it | replays the undone action from the document's clipboard; version 2 refuses it once the stream holds an undo |
+| 3       | `RETRACT { target }`, naming the undone action by id  | a `RETRACT` of the retraction                                                   |
+
+On version 3 a retraction names its target, so where it lands in the stream does not change what it undoes. Replicas that hold the same operations derive the same state, whatever order the operations arrived in.
+
+**INFO:**
+Base-reducer 3 needs the `undoV3` reactor flag, which defaults to off. A reactor without it refuses to create a version 3 document and never receives one from a peer.
+
+
+## Turning it on
+
+| Host        | Setting                                                                  |
+| ----------- | ------------------------------------------------------------------------ |
+| Switchboard | `REACTOR_UNDO_V3=true`                                                   |
+| Connect     | `connect.reactor.featureFlags.undoV3` in `powerhouse.config.json`        |
+| Library     | `ReactorBuilder.withExecutorConfig({ featureFlags: { undoV3: true } })` |
+
+`undoV3` has no prerequisites. Leave it off until every peer that syncs with the host runs a release that has it.
+
+A document is version 3 only if it was created that way:
+
+```typescript
+const document = await client.createEmpty("powerhouse/todo-list", {
+  protocolVersions: { "base-reducer": 3 },
+});
+```
+
+An existing document keeps its version.
+
+## Undoing from a client
+
+Call [`undo`, `redo` and `undoRedoAvailability`](/academy/Reference/Reactor/ReactorClient#undo) on `IReactorClient`. They work on every version.
+
+On version 3 the client finds the target itself and submits a `RETRACT` signed by the client's signer. On versions 1 and 2 it submits `UNDO` or `REDO`.
+
+To retract a specific action, submit `retract` yourself. It is exported from `document-model` and `@powerhousedao/shared/document-model`:
+
+```typescript
+
+
+await client.execute(documentId, "main", [retract(actionId, "global")]);
+```
+
+A submitted `UNDO` or `REDO` still works on version 3. The reactor resolves it to a `RETRACT` and signs that with its own signer, as it signs the `NOOP` on versions 1 and 2. Both take a `count` of 1 on version 3.
+
+## Rules on version 3
+
+- An action is live if no live `RETRACT` names it. Liveness depends on which operations are present, not on their order.
+- `UNDO` retracts the last applied content operation in the scope, by any author.
+- `REDO` retracts the last live retraction of content. Content applied after the undo leaves nothing to redo.
+- `SET_NAME` and `SET_PREFERRED_EDITOR` cannot be undone. `UNDO` passes over them, and a `RETRACT` naming one is stored but retracts nothing.
+- A denied `RETRACT` retracts nothing.
+- An operation that throws applies nothing. `UNDO` passes over it.
+- `skip` is only the rewind a reshuffle writes. It never undoes anything.
+
+On execute, a `RETRACT` whose target is not in the scope's stream, or is already retracted, is refused. On sync it is admitted: a `RETRACT` that arrives before its target does nothing until the target arrives.
+
+The rules do not run in the `auth` and `document` scopes, or in version 1 and 2 documents. A `RETRACT` submitted there is refused; one received from a peer is stored and does nothing.
+
+## Errors
+
+| Error                    | Fields                           | Thrown when                                                                 |
+| ------------------------ | -------------------------------- | --------------------------------------------------------------------------- |
+| `RetractionRefusedError` | `documentId`, `target`, `reason` | A submitted `RETRACT` names an absent target (`"target-missing"`) or one already retracted (`"target-retracted"`) |
+| `ReservedActionError`    | `documentId`, `actionType`       | A write carries an action type the client may not submit, such as a `RETRACT` to a version 1 or 2 document or to the `auth` or `document` scope |
+
+Both are exported from `@powerhousedao/reactor` and are terminal: the job fails without a retry. Through `IReactorClient` they reach you as a plain `Error` carrying the message; see [Error handling](/academy/Reference/Reactor/ErrorHandling).
+
+`undo` and `redo` on version 3 throw `Cannot undo: nothing to undo in scope history` (or `redo`) before submitting anything when there is no target.
 
 ---
 
