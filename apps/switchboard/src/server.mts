@@ -389,9 +389,9 @@ async function initServer(
   const readModelPgliteDir =
     !dbPath || !isPostgresUrl(dbPath) ? readModelPath : null;
 
-  // PGLite pre-flight: convert AtomicNodeFs snapshots, clear stale lock and
-  // WAL temp files, then detect PG_VERSION and migrate or warn. Under
-  // PH_FORCE_PG_VERSION the dirs are wiped instead.
+  // PGLite pre-flight: convert legacy single-file snapshot stores, clear
+  // stale lock and WAL temp files, then detect PG_VERSION and migrate or
+  // warn. Under PH_FORCE_PG_VERSION the dirs are wiped instead.
   const pgliteDirs = [reactorPgliteDir, readModelPgliteDir].filter(
     (d): d is string => d !== null,
   );

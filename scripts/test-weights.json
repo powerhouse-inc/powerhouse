@@ -6,7 +6,6 @@
   "@powerhousedao/connect": 3,
   "@powerhousedao/design-system": 4,
   "@powerhousedao/load-test-connect": 1,
-  "@powerhousedao/pglite-fs": 4,
   "@powerhousedao/ph-cli": 5,
   "@powerhousedao/pieces-framework": 1,
   "@powerhousedao/powerhouse-vetra-packages": 1,

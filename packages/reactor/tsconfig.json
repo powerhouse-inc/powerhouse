@@ -11,9 +11,6 @@
       "path": "../document-model"
     },
     {
-      "path": "../pglite-fs"
-    },
-    {
       "path": "../shared"
     }
   ]
