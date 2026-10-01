@@ -2,11 +2,14 @@ import type {
   Action,
   DocumentModelDocument,
   Operation,
+  PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
   addModule,
   deriveOperationId,
   garbageCollect,
+  retract,
+  retractionTarget,
   sortOperations,
   undo,
 } from "@powerhousedao/shared/document-model";
@@ -16,7 +19,31 @@ import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule } from "../../src/core/types.js";
 import type { ReactorFeatureFlags } from "../../src/executor/types.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
-import { createDocModelDocument } from "../factories.js";
+import {
+  createBaseReducer3Document,
+  createDocModelDocument,
+  createUndoV3ReactorBuilder,
+} from "../factories.js";
+import { assertOneRuleAgreement, storedRows } from "./one-rule-agreement.js";
+
+/** A RETRACT is labelled by what it names, so `RETRACT(x)` retracts module x. */
+function shape(stream: Operation[]): string {
+  const byId = new Map(
+    stream.map((operation) => [operation.action.id, operation]),
+  );
+  const label = (operation: Operation | undefined): string => {
+    if (operation === undefined) return "?";
+    const target = retractionTarget(operation);
+    if (target !== undefined) return `RETRACT(${label(byId.get(target))})`;
+    if (operation.action.type === "NOOP") return "NOOP";
+    return (operation.action.input as { id: string }).id;
+  };
+  return stream
+    .map(
+      (operation) => `${operation.index}:${label(operation)}/${operation.skip}`,
+    )
+    .join(" ");
+}
 
 describe("base-reducer 2", () => {
   // Asserted straight after the load: no re-delivery restores what it rewinds.
@@ -185,6 +212,100 @@ describe("base-reducer 2", () => {
       await load([asOperation(noop, 1, 1)]);
 
       expect(await modules()).toEqual(["w"]);
+    });
+  });
+});
+
+describe("base-reducer 3", () => {
+  describe("a load reshuffle", () => {
+    let module: InProcessReactorModule | undefined;
+    let document: PHDocument;
+    let docId: string;
+    let base: number;
+
+    afterEach(() => {
+      module?.reactor.kill();
+      module = undefined;
+    });
+
+    async function build(): Promise<void> {
+      module = await createUndoV3ReactorBuilder()
+        .withWriteCacheConfig({ keyframeInterval: 2 })
+        .buildModule();
+      document = createBaseReducer3Document({ signaturePolicy: "legacy" });
+      docId = document.header.id;
+      const created = await settle(await module.reactor.create(document));
+      expect(created.error?.message ?? created.status).toBe(
+        JobStatus.READ_READY,
+      );
+      base = Date.now() + 60_000;
+    }
+
+    async function settle(job: JobInfo): Promise<JobInfo> {
+      let status = await module!.reactor.getJobStatus(job.id);
+      while (
+        status.status !== JobStatus.READ_READY &&
+        status.status !== JobStatus.FAILED
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        status = await module!.reactor.getJobStatus(job.id);
+      }
+      return status;
+    }
+
+    function at(action: Action, offsetMs: number): Action {
+      return {
+        ...action,
+        timestampUtcMs: new Date(base + offsetMs).toISOString(),
+      };
+    }
+
+    function asOperation(action: Action, index: number, skip = 0): Operation {
+      return {
+        id: deriveOperationId(docId, action.scope, "main", action.id),
+        index,
+        skip,
+        hash: "",
+        timestampUtcMs: action.timestampUtcMs,
+        action,
+      };
+    }
+
+    async function execute(actions: Action[]): Promise<void> {
+      const job = await settle(
+        await module!.reactor.execute(docId, "main", actions),
+      );
+      expect(job.error?.message ?? job.status).toBe(JobStatus.READ_READY);
+    }
+
+    async function load(operations: Operation[]): Promise<void> {
+      const job = await settle(
+        await module!.reactor.load(docId, "main", operations),
+      );
+      expect(job.error?.message ?? job.status).toBe(JobStatus.READ_READY);
+    }
+
+    async function modules(): Promise<string[]> {
+      const served = await module!.reactor.get<DocumentModelDocument>(docId);
+      return served.state.global.specifications[0].modules.map(
+        (entry) => entry.id,
+      );
+    }
+
+    // The RETRACT names x, so the rewind it heads retracts nothing.
+    it("keeps a peer's undo on the operation it undid", async () => {
+      await build();
+      const x = at(addModule({ id: "x", name: "x" }), 0);
+      await load([asOperation(x, 0)]);
+      await execute([at(addModule({ id: "w", name: "w" }), 20)]);
+
+      await load([asOperation(at(retract(x.id), 10), 1)]);
+
+      expect(shape(await storedRows(module!, docId))).toBe(
+        "0:x/0 1:w/0 2:RETRACT(x)/1 3:w/0",
+      );
+      expect(await modules()).toEqual(["w"]);
+      await assertOneRuleAgreement({ module: module!, document });
     });
   });
 });
