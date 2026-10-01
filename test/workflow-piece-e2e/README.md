@@ -44,7 +44,7 @@ itself, which is how a package's author runs their own piece.
    any project uses for the registry it installs from — and switchboard runs
    there with nothing else set.
 7. The registry indexes the piece out of the published package and serves it on
-   its own: `GET /pieces` (the catalog, in cloud.activepieces.com's list shape)
+   its own: `GET /pieces` (the catalog, a page of cloud.activepieces.com's list shape)
    and `GET /-/pieces/bundled/<piece>-<version>.tgz` (the piece directory as a
    tarball, named the way their CDN names one).
 8. The runtime merges that listing into `pieceCatalog` and into the block-search

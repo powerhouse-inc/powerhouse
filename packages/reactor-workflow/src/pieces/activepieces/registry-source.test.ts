@@ -25,7 +25,7 @@ it("addresses the three endpoints the registry serves", () => {
   );
   // Not encoded, and the slash becomes a dash: the filename their CDN serves.
   expect(source?.tarballUrl("@acme/piece-a", "1.2.3")).toBe(
-    "https://registry.example.com/-/pieces/bundled/@acme-piece-a-1.2.3.tgz",
+    "https://registry.example.com/-/pieces/bundled/@acme/piece-a/1.2.3.tgz",
   );
 });
 

@@ -137,12 +137,22 @@ function stubSources(sources: {
 }) {
   vi.stubGlobal("fetch", ((input: unknown) => {
     const url = String(input);
-    const answer = url.startsWith(REGISTRY) ? sources.registry : sources.cloud;
+    const fromRegistry = url.startsWith(REGISTRY);
+    const answer = fromRegistry ? sources.registry : sources.cloud;
     if (answer === undefined || answer === "unreachable") {
       return Promise.resolve(new Response("down", { status: 503 }));
     }
+    const body = fromRegistry
+      ? {
+          items: answer,
+          total: answer.length,
+          limit: 50,
+          offset: 0,
+          hasMore: false,
+        }
+      : answer;
     return Promise.resolve(
-      new Response(JSON.stringify(answer), {
+      new Response(JSON.stringify(body), {
         status: 200,
         headers: { "content-type": "application/json" },
       }),
@@ -225,6 +235,82 @@ it("indexes the registry's blocks for block search", async () => {
   ]);
 });
 
+// A registry serving the catalog across several pages.
+function stubPagedRegistry(entries: unknown[]) {
+  const seen: URL[] = [];
+  vi.stubGlobal("fetch", ((input: unknown) => {
+    const url = new URL(String(input));
+    if (!url.href.startsWith(REGISTRY)) {
+      return Promise.resolve(new Response("down", { status: 503 }));
+    }
+    seen.push(url);
+    const limit = Number(url.searchParams.get("limit"));
+    const offset = Number(url.searchParams.get("offset"));
+    return Promise.resolve(
+      Response.json({
+        items: entries.slice(offset, offset + limit),
+        total: entries.length,
+        limit,
+        offset,
+        hasMore: offset + limit < entries.length,
+      }),
+    );
+  }) as never);
+  return seen;
+}
+
+it("pages through a registry catalog larger than one page", async () => {
+  setPieceRegistryUrl(REGISTRY);
+  const entries = Array.from({ length: 120 }, (_, i) =>
+    entry(`@acme/piece-${String(i).padStart(3, "0")}`, `Piece ${i}`),
+  );
+  const seen = stubPagedRegistry(entries);
+  const catalog = await fetchPieceCatalog();
+  expect(catalog).toHaveLength(120);
+  expect(
+    seen.map((u) => [
+      u.searchParams.get("limit"),
+      u.searchParams.get("offset"),
+    ]),
+  ).toEqual([
+    ["50", "0"],
+    ["50", "50"],
+    ["50", "100"],
+  ]);
+});
+
+it("keeps asking for suggestions on every registry page", async () => {
+  setPieceRegistryUrl(REGISTRY);
+  const entries = Array.from({ length: 60 }, (_, i) => ({
+    name: `@acme/piece-${i}`,
+    displayName: `Piece ${i}`,
+    version: "1.0.0",
+    suggestedActions: [{ name: "send", displayName: "Send" }],
+    suggestedTriggers: [],
+  }));
+  const seen = stubPagedRegistry(entries);
+  expect(await fetchCatalogWithSuggestions()).toHaveLength(60);
+  expect(seen).toHaveLength(2);
+  for (const url of seen) {
+    expect(url.searchParams.get("suggestionType")).toBe("ACTION_AND_TRIGGER");
+  }
+});
+
+it("skips a registry that answers without a page", async () => {
+  setPieceRegistryUrl(REGISTRY);
+  vi.stubGlobal("fetch", ((input: unknown) =>
+    Promise.resolve(
+      Response.json(
+        String(input).startsWith(REGISTRY)
+          ? [entry("@acme/piece-invoices", "Invoices")]
+          : [entry("@activepieces/piece-slack", "Slack")],
+      ),
+    )) as never);
+  expect((await fetchPieceCatalog()).map((p) => p.name)).toEqual([
+    "@activepieces/piece-slack",
+  ]);
+});
+
 // The registry answers with `registry`: a status, or "down" for a refused
 // connection.
 function stubPieceDetail(registry: number | "down") {
@@ -271,4 +357,49 @@ it("reads a piece's triggers while the registry is down", async () => {
     name: "@acme/piece-z",
     version: "9.9.9",
   });
+});
+
+it("lists a new publish within five minutes", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  try {
+    let calls = 0;
+    vi.stubGlobal("fetch", (() => {
+      calls++;
+      return Promise.resolve(Response.json([]));
+    }) as never);
+    await fetchPieceCatalog();
+    vi.advanceTimersByTime(4 * 60_000);
+    await fetchPieceCatalog();
+    expect(calls).toBe(1);
+    vi.advanceTimersByTime(2 * 60_000);
+    await fetchPieceCatalog();
+    expect(calls).toBe(2);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("keeps an exact version's detail for an hour and a moving one for minutes", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  try {
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", ((input: unknown) => {
+      asked.push(String(input));
+      return Promise.resolve(
+        Response.json({ name: "@acme/piece-ttl", version: "1.0.0" }),
+      );
+    }) as never);
+    await fetchPieceDetail("@acme/piece-ttl", "1.0.0");
+    await fetchPieceDetail("@acme/piece-ttl");
+    vi.advanceTimersByTime(6 * 60_000);
+    await fetchPieceDetail("@acme/piece-ttl", "1.0.0");
+    await fetchPieceDetail("@acme/piece-ttl");
+    // Only the moving one was asked again
+    expect(asked).toHaveLength(3);
+    vi.advanceTimersByTime(60 * 60_000);
+    await fetchPieceDetail("@acme/piece-ttl", "1.0.0");
+    expect(asked).toHaveLength(4);
+  } finally {
+    vi.useRealTimers();
+  }
 });

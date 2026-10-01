@@ -180,8 +180,11 @@ export async function waitForRegistryPiece(
   let last = "nothing yet";
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(`${REGISTRY_URL}/pieces`);
-      const entries = (await res.json()) as RegistryPieceEntry[];
+      const query = new URLSearchParams({ search: name, limit: "50" });
+      const res = await fetch(`${REGISTRY_URL}/pieces?${query.toString()}`);
+      const { items: entries } = (await res.json()) as {
+        items: RegistryPieceEntry[];
+      };
       const hit = entries.find((entry) => entry.name === name);
       if (hit) return hit;
       last = JSON.stringify(entries.map((entry) => entry.name));

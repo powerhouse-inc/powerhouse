@@ -13,9 +13,10 @@ interface Cached {
   expiresAt: number;
 }
 
-// Short: a publish should show up without a restart.
+// Short: a publish should show up without a restart, and an absent piece is
+// asked for again soon, since a retried trigger may be waiting on its publish
 const LISTED_TTL_MS = 5 * 60_000;
-const ABSENT_TTL_MS = 5 * 60_000;
+const ABSENT_TTL_MS = 30_000;
 const DEFAULT_TIMEOUT_MS = 5_000;
 
 const cache = new Map<string, Cached>();

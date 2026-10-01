@@ -150,11 +150,9 @@ export async function startPieceSources(pieces: {
     }
     match = /^\/registry\/-\/pieces\/bundled\/(.+)\.tgz$/.exec(path);
     if (match) {
-      const file = match[1];
+      const file = decodeURIComponent(match[1]);
       return tarball(
-        registry.find(
-          (piece) => `${dashed(piece.name)}-${piece.version}` === file,
-        ),
+        registry.find((piece) => `${piece.name}/${piece.version}` === file),
       );
     }
     match = /^\/cdn\/(.+)\.tgz$/.exec(path);
