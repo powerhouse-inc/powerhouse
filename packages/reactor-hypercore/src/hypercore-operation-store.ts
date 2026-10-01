@@ -569,14 +569,44 @@ export class HypercoreOperationStore implements IOperationStore {
     return latest;
   }
 
-  findRetractionsOf(
-    _documentId: string,
-    _scope: string,
-    _branch: string,
-    _actionIds: string[],
-    _signal?: AbortSignal,
+  async findRetractionsOf(
+    documentId: string,
+    scope: string,
+    branch: string,
+    actionIds: string[],
+    signal?: AbortSignal,
   ): Promise<Set<string>> {
-    return Promise.reject(new Error("findRetractionsOf is not implemented"));
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const found = new Set<string>();
+    if (actionIds.length === 0) {
+      return found;
+    }
+
+    const wanted = new Set(actionIds);
+    const stored = await this.getSince(
+      documentId,
+      scope,
+      branch,
+      -1,
+      undefined,
+      undefined,
+      signal,
+    );
+    for (const operation of stored.results) {
+      if (operation.action.type !== "RETRACT") {
+        continue;
+      }
+      const target = (operation.action.input as { target?: unknown } | null)
+        ?.target;
+      if (typeof target === "string" && wanted.has(target)) {
+        found.add(target);
+      }
+    }
+
+    return found;
   }
 
   async findOperationIds(
