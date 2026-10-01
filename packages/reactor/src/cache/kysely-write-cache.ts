@@ -1,4 +1,5 @@
 import type {
+  BaseReducerVersion,
   CreateDocumentAction,
   DeleteDocumentAction,
   Operation,
@@ -916,7 +917,9 @@ export class KyselyWriteCache implements IWriteCache {
             );
           }
         } else {
-          const protocolVersion = baseReducerVersion(document.header);
+          const protocolVersion: BaseReducerVersion = baseReducerVersion(
+            document.header,
+          );
           document = withProtocolVersions(
             docModule.reducer(document, operation.action, undefined, {
               skip: operation.skip,
@@ -1055,7 +1058,9 @@ export class KyselyWriteCache implements IWriteCache {
             document = appendWithoutApplying(document, operation, scope);
           } else {
             // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-            const protocolVersion = baseReducerVersion(document.header);
+            const protocolVersion: BaseReducerVersion = baseReducerVersion(
+              document.header,
+            );
             document = withProtocolVersions(
               getModuleCached(moduleVersion).reducer(
                 document,
@@ -1390,7 +1395,9 @@ export class KyselyWriteCache implements IWriteCache {
           document = appendWithoutApplying(document, operation, scope);
         } else {
           // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-          const protocolVersion = baseReducerVersion(document.header);
+          const protocolVersion: BaseReducerVersion = baseReducerVersion(
+            document.header,
+          );
           document = withProtocolVersions(
             module.reducer(document, operation.action, undefined, {
               skip: operation.skip,

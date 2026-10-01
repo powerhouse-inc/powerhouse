@@ -1,5 +1,6 @@
 import type {
   Action,
+  BaseReducerVersion,
   DocumentModelModule,
   ISigner,
   Operation,
@@ -1734,7 +1735,9 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     } else {
       try {
-        const protocolVersion = baseReducerVersion(document.header);
+        const protocolVersion: BaseReducerVersion = baseReducerVersion(
+          document.header,
+        );
         const reducerOptions = sourceOperation
           ? {
               skip,
