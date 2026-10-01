@@ -1,9 +1,12 @@
 import { isDenied } from "./denied.js";
 import {
+  appendRows,
   appendWithoutApplying,
+  assertReplayIndices,
   baseReducerVersion,
   hashDocumentStateForScope,
   replayDocument,
+  stateReducerFromReducer,
   updateHeaderRevision,
   type PHDocument,
   type PHDocumentHeader,
@@ -14,12 +17,14 @@ import {
 } from "./errors.js";
 import type { DocumentOperations, Operation } from "./operations.js";
 import { PURGE_DOCUMENT } from "./purge.js";
+import { appliedOperations, reduceOne } from "./retraction.js";
 import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";
 import type {
   Reducer,
   ReplayDocumentOptions,
   SignalDispatch,
+  StateReducer,
   UpgradeDocumentAction,
 } from "./types.js";
 import {
@@ -219,6 +224,19 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
 
   const segmentEndHashPerScope = new Map<string, string>();
 
+  // Base-reducer 3, across segments; by reference, as a rewound copy shares its id.
+  const appliedPerScope = new Map<string, Set<Operation>>();
+  if (protocolVersion === 3) {
+    for (const s of replayScopes) {
+      if (s === "auth") continue;
+      const ops = scopeOps[s] ?? [];
+      if (!skipIndexValidation) {
+        assertReplayIndices(ops);
+      }
+      appliedPerScope.set(s, new Set(appliedOperations(ops)));
+    }
+  }
+
   for (let k = 0; k <= validatedUpgrades.length; k++) {
     const reducer = config.reducers[currentVersion] as unknown as
       | Reducer<TState>
@@ -241,6 +259,28 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
           ? (boundaries[k]?.[s] ?? ops.length)
           : ops.length;
       const segOps = ops.slice(segStart, segEnd);
+
+      const applied = appliedPerScope.get(s);
+      if (applied) {
+        if (segOps.length === 0) continue;
+        const stateReducer = stateReducerFromReducer(reducer, header, dispatch);
+        const reducerFor = () => stateReducer as StateReducer;
+        document = updateHeaderRevision(
+          appendRows(document, s, segOps),
+          s,
+          segOps.at(-1)!.timestampUtcMs,
+        ) as PHDocument<TState>;
+        for (const op of segOps) {
+          if (!applied.has(op)) continue;
+          try {
+            document = reduceOne(document, op, reducerFor);
+          } catch {
+            // A row that throws applies nothing.
+          }
+        }
+        segmentEndHashPerScope.set(s, hashDocumentStateForScope(document, s));
+        continue;
+      }
 
       for (const op of segOps) {
         // A denied operation holds its position without contributing state, the
