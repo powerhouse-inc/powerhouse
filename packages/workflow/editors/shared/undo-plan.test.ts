@@ -9,6 +9,8 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import {
+  appliedForUndo,
+  canUndoOn3,
   editedSince,
   effectiveOperations,
   groupedAction,
@@ -208,19 +210,15 @@ describe("effectiveOperations on base-reducer 3", () => {
     if (action.type === "FAIL") throw new Error("fails");
     return state;
   };
+  const document = {
+    header: { id: "doc", protocolVersions: { "base-reducer": 3 } },
+    state: { global: {} },
+    initialState: { global: {} },
+    operations: {},
+    clipboard: [],
+  } as unknown as PHDocument;
   const appliedOf = (stream: readonly Operation[]) =>
-    deriveScope(
-      {
-        header: { id: "doc" },
-        state: { global: {} },
-        initialState: { global: {} },
-        operations: {},
-        clipboard: [],
-      } as unknown as PHDocument,
-      stream,
-      () => reducer,
-      "global",
-    ).applied;
+    deriveScope(document, stream, () => reducer, "global").applied;
   const effective = (stream: readonly Operation[]) =>
     effectiveOperations(stream, 3, appliedOf(stream));
 
@@ -357,6 +355,25 @@ describe("effectiveOperations on base-reducer 3", () => {
       );
     }
   });
+
+  it("derives `applied` with the state reducer, else from stored errors", () => {
+    const ops = [
+      row(0, "ADD_STEP"),
+      row(1, "FAIL"),
+      row(2, "SET_STEP_CONFIG", { error: "stale" }),
+      retraction(3, "action-0"),
+    ];
+    expect([...appliedForUndo(document, ops, reducer)]).toEqual(["action-2"]);
+    expect([...appliedForUndo(document, ops, undefined)]).toEqual(["action-1"]);
+  });
+
+  it("can undo while an UNDO has applied content to retract", () => {
+    const ops = [row(0, "ADD_STEP"), row(1, "FAIL"), row(2, "NOOP")];
+    expect(canUndoOn3(document, ops, reducer)).toBe(true);
+    const all = [...ops, retraction(3, "action-0")];
+    expect(canUndoOn3(document, all, reducer)).toBe(false);
+    expect(canUndoOn3(document, [], undefined)).toBe(false);
+  });
 });
 
 describe("redo", () => {
@@ -395,6 +412,7 @@ describe("undoProtocolVersion", () => {
 
   it("reads a known version", () => {
     expect(undoProtocolVersion(header({ "base-reducer": 2 }))).toBe(2);
+    expect(undoProtocolVersion(header({ "base-reducer": 3 }))).toBe(3);
   });
 
   it("refuses an unknown version", () => {

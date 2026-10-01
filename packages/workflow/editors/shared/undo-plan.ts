@@ -3,14 +3,18 @@
 import {
   appliedOperations,
   baseReducerVersion,
+  deriveScope,
   garbageCollect,
   garbageCollectV2,
   generateId,
   sortOperations,
+  undoTarget,
   type Action,
   type BaseReducerVersion,
   type Operation,
+  type PHDocument,
   type PHDocumentHeader,
+  type StateReducer,
 } from "@powerhousedao/shared/document-model";
 
 export interface UndoPolicy {
@@ -108,6 +112,34 @@ function retractableOperations(
     .map((operation) =>
       operation.error ? { ...operation, error: undefined } : operation,
     );
+}
+
+// Base-reducer 3: the ids that apply in the global scope, derived with the
+// model's state reducer as the reactor does when it resolves UNDO. Without the
+// reducer, the rows not retracted, denied or marked with a stored error.
+export function appliedForUndo(
+  document: PHDocument,
+  operations: readonly Operation[],
+  reducer: StateReducer | undefined,
+): ReadonlySet<string> {
+  if (reducer) {
+    return deriveScope(document, operations, () => reducer, "global").applied;
+  }
+  return new Set(
+    effectiveOperations(operations, 3).map((operation) => operation.action.id),
+  );
+}
+
+// Base-reducer 3: whether an UNDO has a row to retract.
+export function canUndoOn3(
+  document: PHDocument,
+  operations: readonly Operation[],
+  reducer: StateReducer | undefined,
+): boolean {
+  return (
+    undoTarget(operations, appliedForUndo(document, operations, reducer)) !==
+    undefined
+  );
 }
 
 // Where the edit ending at `last` starts: back through its group's actions,
