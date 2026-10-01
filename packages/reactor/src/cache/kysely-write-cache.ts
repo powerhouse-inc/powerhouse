@@ -4,18 +4,26 @@ import type {
   Operation,
   PHDocument,
   PurgeDocumentAction,
+  ReducerFor,
+  StateReducer,
   UpgradeDocumentAction,
   UpgradeTransition,
 } from "@powerhousedao/shared/document-model";
 import {
+  appendRows,
   appendWithoutApplying,
+  appliedOperations,
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
   baseReducerVersion,
+  deriveScope,
+  isBaseReducer3,
   isDenied,
   isPurgeMarker,
   normalizeDocumentModelVersion,
   PURGE_DOCUMENT,
+  reduceOne,
+  requireStateReducer,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import { createDocumentFromAction } from "../executor/util.js";
@@ -124,6 +132,40 @@ function copyDocument(document: PHDocument): PHDocument {
     state: { ...document.state },
     operations: { ...document.operations },
   };
+}
+
+/** Base-reducer 3 derives every scope but auth and document by the rule. */
+function derivesByRule(document: PHDocument, scope: string): boolean {
+  return (
+    scope !== "auth" && scope !== "document" && isBaseReducer3(document.header)
+  );
+}
+
+/**
+ * Base-reducer 3: applies each row `applies` admits to the scope state, in
+ * order. A row that throws applies nothing.
+ */
+function applyRowsByRule(
+  document: PHDocument,
+  rows: readonly Operation[],
+  applies: (operation: Operation) => boolean,
+  reducerFor: ReducerFor,
+  beforeRow: (document: PHDocument, operation: Operation) => PHDocument,
+): PHDocument {
+  for (const operation of rows) {
+    document = beforeRow(document, operation);
+    if (!applies(operation)) {
+      continue;
+    }
+    // Resolved outside the try: a model without a state reducer must fail.
+    const reducer = reducerFor(operation);
+    try {
+      document = reduceOne(document, operation, () => reducer);
+    } catch {
+      // A row that throws applies nothing.
+    }
+  }
+  return document;
 }
 
 /**
@@ -1028,98 +1070,184 @@ export class KyselyWriteCache implements IWriteCache {
     const finalVersion =
       validatedUpgrades.at(-1)?.toVersion ?? extractModuleVersion(document);
 
-    let cursor: string | undefined = undefined;
-    const pageSize = 100;
-    let hasMorePages: boolean;
     let needsFullReplay = false;
 
-    do {
-      if (signal?.aborted) {
-        throw new Error("Operation aborted");
-      }
-
-      const paging = { cursor: cursor || "0", limit: pageSize };
+    if (derivesByRule(document, scope)) {
+      const versionOf = (operation: Operation) =>
+        this.resolveModuleVersionForOp(
+          operation.index,
+          operation.timestampUtcMs,
+          scope,
+          validatedUpgrades,
+          finalVersion,
+        );
+      const reducerFor: ReducerFor = (operation) => {
+        const version = versionOf(operation);
+        return requireStateReducer(
+          getModuleCached(version).reducer,
+          documentType,
+          version,
+        ) as StateReducer;
+      };
+      const beforeRow = (current: PHDocument, operation: Operation) =>
+        this.applyPendingUpgrades(
+          current,
+          pendingUpgrades,
+          versionOf(operation) ?? Number.MAX_SAFE_INTEGER,
+        );
 
       try {
-        const result = await this.operationStore.getSince(
+        const rows = await this.readRows(
           documentId,
           scope,
           branch,
           startRevision,
-          undefined,
-          paging,
+          targetRevision,
           signal,
         );
 
-        for (const operation of result.results) {
-          if (
-            targetRevision !== undefined &&
-            operation.index > targetRevision
-          ) {
-            break;
-          }
-
-          // A keyframe carries no operations; a skip replays them all.
-          if (keyframe && operation.skip > 0) {
-            needsFullReplay = true;
-            break;
-          }
-
-          const moduleVersion = this.resolveModuleVersionForOp(
-            operation.index,
-            operation.timestampUtcMs,
+        if (keyframe) {
+          needsFullReplay = await this.tailNeedsWholeLog(
+            documentId,
             scope,
-            validatedUpgrades,
-            finalVersion,
+            branch,
+            rows,
+            signal,
           );
-
-          document = this.applyPendingUpgrades(
-            document,
-            pendingUpgrades,
-            moduleVersion ?? Number.MAX_SAFE_INTEGER,
-          );
-
-          // A denied operation still carries a potentially valid action, so
-          // we must specifically skip without applying.
-          if (isDenied(operation)) {
-            document = appendWithoutApplying(document, operation, scope);
-          } else {
-            // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-            const protocolVersion = baseReducerVersion(document.header);
-            document = withProtocolVersions(
-              getModuleCached(moduleVersion).reducer(
+          if (!needsFullReplay) {
+            document = appendRows(
+              applyRowsByRule(
                 document,
-                operation.action,
-                undefined,
-                {
-                  skip: operation.skip,
-                  protocolVersion,
-                  replayOptions: { operation },
-                  skipIndexValidation: true,
-                },
+                rows,
+                (operation) => !isDenied(operation),
+                reducerFor,
+                beforeRow,
               ),
-              document.header.protocolVersions,
+              scope,
+              rows,
             );
           }
-        }
-
-        const reachedTarget =
-          targetRevision !== undefined &&
-          result.results.some((op) => op.index >= targetRevision);
-        hasMorePages =
-          Boolean(result.nextCursor) && !reachedTarget && !needsFullReplay;
-
-        if (hasMorePages) {
-          cursor = result.nextCursor;
+        } else if (pendingUpgrades.length === 0) {
+          document = appendRows(
+            deriveScope(document, rows, reducerFor, scope).document,
+            scope,
+            rows,
+          );
+        } else {
+          // Upgrades apply at their boundaries, so rows apply one at a time.
+          // By reference: a rewound row and its re-appended copy share an id.
+          const applied = new Set(appliedOperations(rows));
+          document = appendRows(
+            applyRowsByRule(
+              document,
+              rows,
+              (operation) => applied.has(operation),
+              reducerFor,
+              beforeRow,
+            ),
+            scope,
+            rows,
+          );
         }
       } catch (err) {
-        // Wrap errors with context to include document ID for debugging
         throw new Error(
           `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
           { cause: err },
         );
       }
-    } while (hasMorePages);
+    } else {
+      let cursor: string | undefined = undefined;
+      const pageSize = 100;
+      let hasMorePages: boolean;
+
+      do {
+        if (signal?.aborted) {
+          throw new Error("Operation aborted");
+        }
+
+        const paging = { cursor: cursor || "0", limit: pageSize };
+
+        try {
+          const result = await this.operationStore.getSince(
+            documentId,
+            scope,
+            branch,
+            startRevision,
+            undefined,
+            paging,
+            signal,
+          );
+
+          for (const operation of result.results) {
+            if (
+              targetRevision !== undefined &&
+              operation.index > targetRevision
+            ) {
+              break;
+            }
+
+            // A keyframe carries no operations; a skip replays them all.
+            if (keyframe && operation.skip > 0) {
+              needsFullReplay = true;
+              break;
+            }
+
+            const moduleVersion = this.resolveModuleVersionForOp(
+              operation.index,
+              operation.timestampUtcMs,
+              scope,
+              validatedUpgrades,
+              finalVersion,
+            );
+
+            document = this.applyPendingUpgrades(
+              document,
+              pendingUpgrades,
+              moduleVersion ?? Number.MAX_SAFE_INTEGER,
+            );
+
+            // A denied operation still carries a potentially valid action, so
+            // we must specifically skip without applying.
+            if (isDenied(operation)) {
+              document = appendWithoutApplying(document, operation, scope);
+            } else {
+              // Fail-fast: if reducer throws, error propagates immediately without caching partial state
+              const protocolVersion = baseReducerVersion(document.header);
+              document = withProtocolVersions(
+                getModuleCached(moduleVersion).reducer(
+                  document,
+                  operation.action,
+                  undefined,
+                  {
+                    skip: operation.skip,
+                    protocolVersion,
+                    replayOptions: { operation },
+                    skipIndexValidation: true,
+                  },
+                ),
+                document.header.protocolVersions,
+              );
+            }
+          }
+
+          const reachedTarget =
+            targetRevision !== undefined &&
+            result.results.some((op) => op.index >= targetRevision);
+          hasMorePages =
+            Boolean(result.nextCursor) && !reachedTarget && !needsFullReplay;
+
+          if (hasMorePages) {
+            cursor = result.nextCursor;
+          }
+        } catch (err) {
+          // Wrap errors with context to include document ID for debugging
+          throw new Error(
+            `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
+            { cause: err },
+          );
+        }
+      } while (hasMorePages);
+    }
 
     if (needsFullReplay) {
       return this.coldMissRebuild(
@@ -1277,6 +1405,78 @@ export class KyselyWriteCache implements IWriteCache {
     return document;
   }
 
+  /** The stored rows after index `after`, through `targetRevision` if given. */
+  private async readRows(
+    documentId: string,
+    scope: string,
+    branch: string,
+    after: number,
+    targetRevision: number | undefined,
+    signal?: AbortSignal,
+  ): Promise<Operation[]> {
+    const rows: Operation[] = [];
+    let cursor = "0";
+    for (;;) {
+      if (signal?.aborted) {
+        throw new Error("Operation aborted");
+      }
+      const result = await this.operationStore.getSince(
+        documentId,
+        scope,
+        branch,
+        after,
+        undefined,
+        { cursor, limit: 100 },
+        signal,
+      );
+      for (const operation of result.results) {
+        if (targetRevision !== undefined && operation.index > targetRevision) {
+          return rows;
+        }
+        rows.push(operation);
+      }
+      const reachedTarget =
+        targetRevision !== undefined &&
+        (rows.at(-1)?.index ?? -1) >= targetRevision;
+      if (!result.nextCursor || reachedTarget) {
+        return rows;
+      }
+      cursor = result.nextCursor;
+    }
+  }
+
+  /**
+   * Base-reducer 3: rows after a base derive from it unless one rewinds,
+   * retracts, or is named by a retraction, which may reach below the base.
+   */
+  private async tailNeedsWholeLog(
+    documentId: string,
+    scope: string,
+    branch: string,
+    rows: readonly Operation[],
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    if (
+      rows.some(
+        (operation) =>
+          operation.skip > 0 || operation.action.type === "RETRACT",
+      )
+    ) {
+      return true;
+    }
+    if (rows.length === 0) {
+      return false;
+    }
+    const named = await this.operationStore.findRetractionsOf(
+      documentId,
+      scope,
+      branch,
+      rows.map((operation) => operation.action.id),
+      signal,
+    );
+    return named.size > 0;
+  }
+
   /** The stored operation at `index`, or undefined if it is no longer there. */
   private async operationAt(
     documentId: string,
@@ -1391,53 +1591,92 @@ export class KyselyWriteCache implements IWriteCache {
     let needsFullReplay = false;
 
     try {
-      const pagedResults = await this.operationStore.getSince(
-        documentId,
-        scope,
-        branch,
-        baseRevision,
-        undefined,
-        undefined,
-        signal,
-      );
-
-      for (const operation of pagedResults.results) {
-        if (signal?.aborted) {
-          throw new Error("Operation aborted");
-        }
-
-        if (targetRevision !== undefined && operation.index > targetRevision) {
-          break;
-        }
-
-        if (operation.skip > 0) {
-          needsFullReplay = true;
-          break;
-        }
-
-        // A denied operation still carries a potentially valid action, so
-        // we must specifically skip without applying.
-        if (isDenied(operation)) {
-          document = appendWithoutApplying(document, operation, scope);
-        } else {
-          // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-          const protocolVersion = baseReducerVersion(document.header);
-          document = withProtocolVersions(
-            module.reducer(document, operation.action, undefined, {
-              skip: operation.skip,
-              protocolVersion,
-              replayOptions: { operation },
-              skipIndexValidation: true,
-            }),
-            document.header.protocolVersions,
+      if (derivesByRule(document, scope)) {
+        const stateReducer = requireStateReducer(
+          module.reducer,
+          documentType,
+          extractModuleVersion(baseDocument),
+        ) as StateReducer;
+        const rows = await this.readRows(
+          documentId,
+          scope,
+          branch,
+          baseRevision,
+          targetRevision,
+          signal,
+        );
+        needsFullReplay = await this.tailNeedsWholeLog(
+          documentId,
+          scope,
+          branch,
+          rows,
+          signal,
+        );
+        if (!needsFullReplay) {
+          document = appendRows(
+            applyRowsByRule(
+              document,
+              rows,
+              (operation) => !isDenied(operation),
+              () => stateReducer,
+              (current) => current,
+            ),
+            scope,
+            rows,
           );
         }
+      } else {
+        const pagedResults = await this.operationStore.getSince(
+          documentId,
+          scope,
+          branch,
+          baseRevision,
+          undefined,
+          undefined,
+          signal,
+        );
 
-        if (
-          targetRevision !== undefined &&
-          operation.index === targetRevision
-        ) {
-          break;
+        for (const operation of pagedResults.results) {
+          if (signal?.aborted) {
+            throw new Error("Operation aborted");
+          }
+
+          if (
+            targetRevision !== undefined &&
+            operation.index > targetRevision
+          ) {
+            break;
+          }
+
+          if (operation.skip > 0) {
+            needsFullReplay = true;
+            break;
+          }
+
+          // A denied operation still carries a potentially valid action, so
+          // we must specifically skip without applying.
+          if (isDenied(operation)) {
+            document = appendWithoutApplying(document, operation, scope);
+          } else {
+            // Fail-fast: if reducer throws, error propagates immediately without caching partial state
+            const protocolVersion = baseReducerVersion(document.header);
+            document = withProtocolVersions(
+              module.reducer(document, operation.action, undefined, {
+                skip: operation.skip,
+                protocolVersion,
+                replayOptions: { operation },
+                skipIndexValidation: true,
+              }),
+              document.header.protocolVersions,
+            );
+          }
+
+          if (
+            targetRevision !== undefined &&
+            operation.index === targetRevision
+          ) {
+            break;
+          }
         }
       }
     } catch (err) {
