@@ -1,11 +1,13 @@
 // Undo that steps over operations that are not the author's edits, such as
 // the runtime's test and run facts, and redo of what it took back.
 import {
+  appliedOperations,
   baseReducerVersion,
   garbageCollect,
   garbageCollectV2,
   generateId,
   sortOperations,
+  undoTarget,
   type Action,
   type BaseReducerVersion,
   type Operation,
@@ -57,13 +59,17 @@ export function undoProtocolVersion(
   return baseReducerVersion(header);
 }
 
-// The operations still in effect: undone ones and the NOOPs removed.
+// The operations still in effect: undone ones and the NOOPs removed. On
+// base-reducer 3 these are the rows an UNDO can retract, one per UNDO;
+// `applied` (from `deriveScope`) says which rows apply, and without it a row
+// with a stored error counts as not applied.
 export function effectiveOperations(
   operations: readonly Operation[],
   protocolVersion: BaseReducerVersion,
+  applied?: ReadonlySet<string>,
 ): Operation[] {
   const sorted = sortOperations([...operations]);
-  return keptOperations(sorted, protocolVersion).filter(
+  return keptOperations(sorted, protocolVersion, applied).filter(
     (operation) => operation.action.type !== "NOOP",
   );
 }
@@ -71,6 +77,7 @@ export function effectiveOperations(
 function keptOperations(
   sorted: Operation[],
   protocolVersion: BaseReducerVersion,
+  applied: ReadonlySet<string> | undefined,
 ): Operation[] {
   switch (protocolVersion) {
     case 1:
@@ -78,12 +85,39 @@ function keptOperations(
     case 2:
       return garbageCollectV2(sorted);
     case 3:
-      throw new Error("Undo is not implemented for base-reducer 3");
+      return retractableOperations(sorted, applied);
     default: {
       const unknown: never = protocolVersion;
       throw new Error(`Unknown base-reducer version ${String(unknown)}`);
     }
   }
+}
+
+// What UNDO retracts on base-reducer 3: applied content. A stored error is
+// diagnostic there, so `applied` overrides it.
+function retractableOperations(
+  sorted: Operation[],
+  applied: ReadonlySet<string> | undefined,
+): Operation[] {
+  const rows = appliedOperations(sorted).filter(
+    (operation) =>
+      operation.action.type !== "UNDO" && operation.action.type !== "REDO",
+  );
+  if (!applied) return rows.filter((operation) => !operation.error);
+  return rows
+    .filter((operation) => applied.has(operation.action.id))
+    .map((operation) =>
+      operation.error ? { ...operation, error: undefined } : operation,
+    );
+}
+
+// Base-reducer 3: whether an UNDO has a row to retract. The cached document's
+// initial state is its current state, so `applied` can't be derived here.
+export function canUndoOn3(operations: readonly Operation[]): boolean {
+  const applied = new Set(
+    effectiveOperations(operations, 3).map((operation) => operation.action.id),
+  );
+  return undoTarget(operations, applied) !== undefined;
 }
 
 // Where the edit ending at `last` starts: back through its group's actions,

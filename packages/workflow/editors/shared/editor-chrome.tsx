@@ -5,6 +5,7 @@ import {
   useDocumentById,
 } from "@powerhousedao/reactor-browser";
 import {
+  isBaseReducer3,
   undo,
   type Action,
   type Operation,
@@ -13,6 +14,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button, IconButton } from "./controls.js";
 import { Icon } from "./icons.js";
 import {
+  canUndoOn3,
   editedSince,
   effectiveOperations,
   headIndex,
@@ -72,7 +74,12 @@ function isEditable(target: EventTarget | null): boolean {
 export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
   const [document, dispatch] = useDocumentById(props.documentId);
   const policy = props.policy ?? NO_SKIP;
-  const canUndo = Object.values(document?.header.revision ?? {}).some(Boolean);
+  const v3 = document !== undefined && isBaseReducer3(document.header);
+  // Base-reducer 3 reads it from the history, which the cache doesn't hold.
+  const [canUndoV3, setCanUndoV3] = useState(false);
+  const canUndo = v3
+    ? canUndoV3
+    : Object.values(document?.header.revision ?? {}).some(Boolean);
   // Edits undone here, newest last: the reactor keeps no clipboard to redo
   // from. Any other edit after `head` voids them.
   const [undone, setUndone] = useState<Action[][]>([]);
@@ -172,6 +179,18 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
       active = false;
     };
   }, [revision, pending, props.documentId]);
+  useEffect(() => {
+    if (!v3) return;
+    let active = true;
+    void globalHistory(props.documentId)
+      .then((history) => {
+        if (active) setCanUndoV3(canUndoOn3(history));
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [revision, v3, props.documentId]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
