@@ -1,10 +1,16 @@
 import type {
   Operation,
   PHDocument,
+  ReducerFor,
 } from "@powerhousedao/shared/document-model";
 import {
+  deriveScope,
   garbageCollect,
+  isBaseReducer3,
   isDenied,
+  positionalOperations,
+  reduceOne,
+  retractionTarget,
   sortOperations,
 } from "@powerhousedao/shared/document-model";
 import { comparePositions, mergeByPosition } from "./merged-order.js";
@@ -44,6 +50,31 @@ export type WalkStream = {
   apply: ApplyOperation;
   /** The stream's stored operations. Order and skips are resolved internally. */
   operations: Operation[];
+  /**
+   * Base-reducer 3: the stream's state reducers. With them a rule scope
+   * derives by the rule instead of through `apply`.
+   */
+  reducerFor?: ReducerFor;
+};
+
+/** Marks a row this pass refused, so a derivation leaves it out. */
+const DENIED_IN_WALK = "denied in walk";
+
+/** Base-reducer 3 derives every scope but auth and document by the rule. */
+function derivesByRule(stream: WalkStream): boolean {
+  return (
+    stream.reducerFor !== undefined &&
+    stream.scope !== "auth" &&
+    stream.scope !== "document" &&
+    isBaseReducer3(stream.document.header)
+  );
+}
+
+/** A rule stream's walked rows, and the ids any of its RETRACTs name. */
+type RuleState = {
+  reducerFor: ReducerFor;
+  prefix: Operation[];
+  targeted: Set<string>;
 };
 
 /** Applies one operation to the stream it belongs to. */
@@ -70,15 +101,38 @@ export type WalkPosition = {
  * An operation that contributes no state, whether denied or holding a reducer
  * error, is visited but not applied (this matches the write cache's rebuild).
  *
+ * On base-reducer 3 a rule scope ignores stored errors, and a RETRACT or a row
+ * a RETRACT names re-derives the stream from the rows walked so far.
+ *
  * The consumer sends back whether it refused the operation it was handed: a
  * refusal this pass produced must suppress it the same way a stored one does.
  */
 export function* walkByPosition(
   streams: WalkStream[],
 ): Generator<WalkPosition, void, boolean> {
+  const rules = new Map<string, RuleState>();
   const merged = mergeByPosition(
     streams.map((stream) => {
-      const operations = garbageCollect(sortOperations([...stream.operations]));
+      let operations: Operation[];
+      if (derivesByRule(stream)) {
+        operations = positionalOperations(stream.operations);
+        // Every name, live or not: liveness at a position depends on the
+        // rows before it, so the whole stream's retracted set is too narrow.
+        const targeted = new Set<string>();
+        for (const operation of operations) {
+          const target = retractionTarget(operation);
+          if (target !== undefined) {
+            targeted.add(target);
+          }
+        }
+        rules.set(stream.streamKey, {
+          reducerFor: stream.reducerFor!,
+          prefix: [],
+          targeted,
+        });
+      } else {
+        operations = garbageCollect(sortOperations([...stream.operations]));
+      }
       assertPositionOrder(stream.streamKey, stream.scope, operations);
       return {
         streamKey: stream.streamKey,
@@ -96,6 +150,20 @@ export function* walkByPosition(
   for (const { streamKey, operation } of merged) {
     const deniedNow = yield { streamKey, operation, states: new Map(states) };
 
+    const rule = rules.get(streamKey);
+    if (rule !== undefined) {
+      const denied = deniedNow || isDenied(operation);
+      rule.prefix.push(
+        denied && !isDenied(operation)
+          ? { ...operation, deniedReason: DENIED_IN_WALK }
+          : operation,
+      );
+      if (!denied) {
+        states.set(streamKey, applyByRule(byKey, states, streamKey, rule));
+      }
+      continue;
+    }
+
     if (deniedNow || operation.error !== undefined || isDenied(operation)) {
       continue;
     }
@@ -107,5 +175,42 @@ export function* walkByPosition(
     }
 
     states.set(streamKey, stream.apply(before, operation));
+  }
+}
+
+/**
+ * Applies the last walked row of a rule stream. A RETRACT, or a row a RETRACT
+ * names, re-derives from the stream's starting state; a row that throws
+ * applies nothing.
+ */
+function applyByRule(
+  byKey: Map<string, WalkStream>,
+  states: Map<string, PHDocument>,
+  streamKey: string,
+  rule: RuleState,
+): PHDocument {
+  const stream = byKey.get(streamKey);
+  const before = states.get(streamKey);
+  if (before === undefined || stream === undefined) {
+    throw new Error(`No state for stream ${streamKey}`);
+  }
+
+  const operation = rule.prefix.at(-1)!;
+  if (
+    operation.action.type === "RETRACT" ||
+    rule.targeted.has(operation.action.id)
+  ) {
+    return deriveScope(
+      stream.document,
+      rule.prefix,
+      rule.reducerFor,
+      stream.scope,
+    ).document;
+  }
+
+  try {
+    return reduceOne(before, operation, rule.reducerFor);
+  } catch {
+    return before;
   }
 }
