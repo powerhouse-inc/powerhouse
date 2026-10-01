@@ -1,8 +1,14 @@
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import type { ISigner, Operation } from "@powerhousedao/shared/document-model";
+import type {
+  ISigner,
+  Operation,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import {
+  appliedOperations,
   garbageCollect,
   sortOperations,
+  stateReducerOf,
   undo,
   withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
@@ -21,6 +27,8 @@ import type {
   RemoteOptions,
   SyncEnvelope,
 } from "../../src/sync/types.js";
+import { assertOneRuleAgreement } from "../executor/one-rule-agreement.js";
+import { BASE_REDUCER_3_VERSIONS, undoV3Flags } from "../factories.js";
 import { TestP256Signer } from "../utils/p256-signer.js";
 import { TestChannel } from "./channels/test-channel.js";
 
@@ -46,8 +54,10 @@ type Harness = {
   channels: Map<string, TestChannel>;
 };
 
+/** `v3`: undoV3 on, manifests exchanged so base-reducer 3 is not held. */
 async function buildHarness(
   featureFlags: Partial<ReactorFeatureFlags> = {},
+  options: { v3?: boolean } = {},
 ): Promise<Harness> {
   const channels = new Map<string, TestChannel>();
   const peerMapping = new Map<string, string>();
@@ -78,6 +88,14 @@ async function buildHarness(
         remoteName,
         cursorStorage,
         send,
+        options.v3
+          ? {
+              peer: () => {
+                const peerName = peerMapping.get(remoteName);
+                return peerName ? channels.get(peerName) : undefined;
+              },
+            }
+          : {},
       );
       channels.set(remoteName, channel);
       return channel;
@@ -86,13 +104,17 @@ async function buildHarness(
 
   const build = async (): Promise<Peer> => {
     const signer = (await TestP256Signer.create()).asISigner();
+    const reactorBuilder = new ReactorBuilder()
+      .withDocumentModelSources([driveDocumentModelModule as never])
+      .withExecutorConfig({
+        featureFlags: options.v3 ? undoV3Flags(featureFlags) : featureFlags,
+      })
+      .withSync(new SyncBuilder().withChannelFactory(channelFactory()));
+    if (options.v3) {
+      reactorBuilder.withWriteCacheConfig({ keyframeInterval: 2 });
+    }
     const built = await new ReactorClientBuilder()
-      .withReactorBuilder(
-        new ReactorBuilder()
-          .withDocumentModelSources([driveDocumentModelModule as never])
-          .withExecutorConfig({ featureFlags })
-          .withSync(new SyncBuilder().withChannelFactory(channelFactory())),
-      )
+      .withReactorBuilder(reactorBuilder)
       .withSigner(signer)
       .buildModule();
     return {
@@ -117,6 +139,14 @@ function baseReducer2Drive() {
     driveDocumentModelModule.utils.createDocument(),
     "v2-required",
     { protocolVersions: { "base-reducer": 2, signature: 2 } },
+  );
+}
+
+function baseReducer3Drive() {
+  return withSignaturePolicy(
+    driveDocumentModelModule.utils.createDocument(),
+    "v2-required",
+    { protocolVersions: BASE_REDUCER_3_VERSIONS },
   );
 }
 
@@ -250,8 +280,11 @@ type Damaged = {
 };
 
 /** A as the pre-fix load of y left it; `pendingEcho` leaves its echo unsent. */
-async function damaged(h: Harness, pendingEcho = false): Promise<Damaged> {
-  const drive = baseReducer2Drive();
+async function damaged(
+  h: Harness,
+  pendingEcho = false,
+  drive: PHDocument = baseReducer2Drive(),
+): Promise<Damaged> {
   const id = drive.header.id;
   const collectionId = DriveCollectionId.forDrive(id);
   await connect(h, id);
@@ -551,6 +584,96 @@ describe("base-reducer 2", () => {
 
       expect(await live(h.a, id)).toContain(a1);
       expect(await live(h.a, id)).toEqual(await live(h.b, id));
+    }, 30_000);
+  });
+});
+
+/** The action ids the stored global stream applies, in order. */
+async function applied(peer: Peer, id: string): Promise<string[]> {
+  return appliedOperations(await stored(peer, id)).map(
+    (operation) => operation.action.id,
+  );
+}
+
+async function agree(peer: Peer, document: PHDocument): Promise<void> {
+  await assertOneRuleAgreement({
+    module: peer.module,
+    document,
+    reducer: driveDocumentModelModule.reducer as never,
+    reducerFor: () => stateReducerOf(driveDocumentModelModule.reducer) as never,
+  });
+}
+
+describe("base-reducer 3", () => {
+  describe("a replica that lost a live operation of its own (#6)", () => {
+    let h: Harness | undefined;
+
+    afterEach(() => {
+      h?.a.reactor.kill();
+      h?.b.reactor.kill();
+      h = undefined;
+    });
+
+    // A trivial append writes skip 0, so B's rewind skip on z retracts nothing on A.
+    it("converges after B's own backdated write re-sends x (documentDecisions)", async () => {
+      h = await buildHarness({ documentDecisions: true }, { v3: true });
+      const drive = baseReducer3Drive();
+      const { id, base, y } = await damaged(h, false, drive);
+
+      await executeOn(h.b, id, "z", new Date(base - 5_000).toISOString());
+      await quiesce(h, id);
+
+      expect(await applied(h.a, id)).toContain(y);
+      expect(await applied(h.a, id)).toEqual(await applied(h.b, id));
+      await agree(h.a, drive);
+      await agree(h.b, drive);
+    }, 30_000);
+  });
+
+  describe("losing a live row on current main (#6b)", () => {
+    let h: Harness | undefined;
+
+    afterEach(() => {
+      h?.a.reactor.kill();
+      h?.b.reactor.kill();
+      h = undefined;
+    });
+
+    async function connected(harness: Harness, drive: PHDocument) {
+      const id = drive.header.id;
+      await connect(harness, id);
+      await harness.a.client.create(drive);
+      await eventually(() =>
+        harness.b.reactor.get(id, { branch: "main" }).then(
+          () => true,
+          () => false,
+        ),
+      );
+      await quiesce(harness, id);
+      return id;
+    }
+
+    // B's UNDO is a RETRACT naming b1, whatever row it lands after on A.
+    it("keeps A's own op live when B undoes an op concurrently", async () => {
+      h = await buildHarness({}, { v3: true });
+      const drive = baseReducer3Drive();
+      const id = await connected(h, drive);
+      const b1 = await executeOn(h.b, id, "b1", new Date().toISOString());
+      await eventually(async () => (await applied(h!.a, id)).length === 1);
+
+      hold(h, toB(id));
+      const a1 = await executeOn(h.a, id, "a1", new Date().toISOString());
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      await h.b.client.execute(id, "main", [undo()]);
+      await quiesce(h, id);
+      release(h, toB(id));
+      await quiesce(h, id);
+
+      expect(await applied(h.a, id)).toContain(a1);
+      expect(await applied(h.a, id)).not.toContain(b1);
+      expect(await applied(h.a, id)).toEqual(await applied(h.b, id));
+      await agree(h.a, drive);
+      await agree(h.b, drive);
     }, 30_000);
   });
 });
