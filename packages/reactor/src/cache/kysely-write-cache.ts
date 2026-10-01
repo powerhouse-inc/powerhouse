@@ -1,4 +1,5 @@
 import type {
+  BaseReducerVersion,
   CreateDocumentAction,
   DeleteDocumentAction,
   Operation,
@@ -20,9 +21,12 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { createDocumentFromAction } from "../executor/util.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
+import { firstUnsupportedProtocol } from "../core/stored-protocol-check.js";
+import type { ProtocolSupport } from "../executor/types.js";
 import {
   DocumentNotFoundError,
   DocumentPurgedError,
+  UnsupportedProtocolVersionError,
 } from "../shared/errors.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
 import { RingBuffer } from "./buffer/ring-buffer.js";
@@ -167,7 +171,8 @@ export class KyselyWriteCache implements IWriteCache {
   private keyframeStore: IKeyframeStore;
   private operationStore: IOperationStore;
   private registry: IDocumentModelRegistry;
-  private config: Required<WriteCacheConfig>;
+  private config: Required<Omit<WriteCacheConfig, "protocolSupport">>;
+  private protocolSupport: ProtocolSupport | undefined;
   private reads = new Map<string, Set<PendingRead>>();
 
   constructor(
@@ -184,8 +189,38 @@ export class KyselyWriteCache implements IWriteCache {
       ringBufferSize: config.ringBufferSize,
       keyframeInterval: config.keyframeInterval,
     };
+    this.protocolSupport = config.protocolSupport;
     this.streams = new Map();
     this.lruTracker = new LRUTracker<string>();
+  }
+
+  /**
+   * The document's base-reducer version. A document this reactor cannot read
+   * because it was stored at a protocol version outside `protocolSupport` is
+   * refused by name, so read paths can tell it from a rebuild that failed.
+   */
+  private reducerVersion(
+    documentId: string,
+    document: PHDocument,
+  ): BaseReducerVersion {
+    try {
+      return baseReducerVersion(document.header);
+    } catch (error) {
+      const unsupported =
+        this.protocolSupport &&
+        firstUnsupportedProtocol(
+          document.header.protocolVersions,
+          this.protocolSupport,
+        );
+      if (unsupported) {
+        throw new UnsupportedProtocolVersionError(
+          documentId,
+          unsupported.protocol,
+          unsupported.version,
+        );
+      }
+      throw error;
+    }
   }
 
   withScopedStores(
@@ -196,7 +231,7 @@ export class KyselyWriteCache implements IWriteCache {
       keyframeStore,
       operationStore,
       this.registry,
-      this.config,
+      { ...this.config, protocolSupport: this.protocolSupport },
     );
     scoped.streams = this.streams;
     scoped.lruTracker = this.lruTracker;
@@ -916,7 +951,7 @@ export class KyselyWriteCache implements IWriteCache {
             );
           }
         } else {
-          const protocolVersion = baseReducerVersion(document.header);
+          const protocolVersion = this.reducerVersion(documentId, document);
           document = withProtocolVersions(
             docModule.reducer(document, operation.action, undefined, {
               skip: operation.skip,
@@ -1055,7 +1090,7 @@ export class KyselyWriteCache implements IWriteCache {
             document = appendWithoutApplying(document, operation, scope);
           } else {
             // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-            const protocolVersion = baseReducerVersion(document.header);
+            const protocolVersion = this.reducerVersion(documentId, document);
             document = withProtocolVersions(
               getModuleCached(moduleVersion).reducer(
                 document,
@@ -1083,6 +1118,7 @@ export class KyselyWriteCache implements IWriteCache {
           cursor = result.nextCursor;
         }
       } catch (err) {
+        if (UnsupportedProtocolVersionError.isError(err)) throw err;
         // Wrap errors with context to include document ID for debugging
         throw new Error(
           `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
@@ -1390,7 +1426,7 @@ export class KyselyWriteCache implements IWriteCache {
           document = appendWithoutApplying(document, operation, scope);
         } else {
           // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-          const protocolVersion = baseReducerVersion(document.header);
+          const protocolVersion = this.reducerVersion(documentId, document);
           document = withProtocolVersions(
             module.reducer(document, operation.action, undefined, {
               skip: operation.skip,
@@ -1410,6 +1446,7 @@ export class KyselyWriteCache implements IWriteCache {
         }
       }
     } catch (err) {
+      if (UnsupportedProtocolVersionError.isError(err)) throw err;
       // Wrap errors with context to include document ID for debugging
       throw new Error(
         `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,

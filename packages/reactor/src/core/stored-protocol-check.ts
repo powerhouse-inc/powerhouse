@@ -9,6 +9,19 @@ import {
 
 export type UnsupportedStoredDocuments = "refuse" | "read-only";
 
+/** The first stored version `support` registers its protocol without. */
+export function firstUnsupportedProtocol(
+  versions: { readonly [protocol: string]: number } | undefined,
+  support: ProtocolSupport,
+): { protocol: string; version: number } | undefined {
+  for (const [protocol, version] of Object.entries(versions ?? {})) {
+    const supported = support[protocol] as readonly number[] | undefined;
+    if (supported === undefined || supported.includes(version)) continue;
+    return { protocol, version };
+  }
+  return undefined;
+}
+
 /** Refuses to run below a version the store holds, unless told read-only. */
 export async function checkStoredProtocols(
   db: Kysely<any>,
@@ -22,8 +35,7 @@ export async function checkStoredProtocols(
   for (const { hash, versions } of await storedProtocolVersions(db, schema)) {
     let refused = false;
     for (const [protocol, version] of Object.entries(versions)) {
-      const supported = support[protocol] as readonly number[] | undefined;
-      if (supported === undefined || supported.includes(version)) continue;
+      if (!firstUnsupportedProtocol({ [protocol]: version }, support)) continue;
       unsupported.set(`${protocol}:${version}`, { protocol, version });
       refused = true;
     }

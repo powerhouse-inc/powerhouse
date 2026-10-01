@@ -20,7 +20,10 @@ import {
 } from "../catch-up/types.js";
 import type { Unsubscribe } from "../events/types.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
-import { DocumentNotFoundError } from "../shared/errors.js";
+import {
+  DocumentNotFoundError,
+  UnsupportedProtocolVersionError,
+} from "../shared/errors.js";
 import type {
   ConsistencyCoordinate,
   ConsistencyToken,
@@ -194,6 +197,7 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
   private maxTrackedAboveCursor = defaultCatchUpConfig.maxTrackedAboveCursor;
   private loggedFailure: number | undefined;
   private failedItem: OperationWithContext | undefined;
+  private readonly loggedUnsupported = new Set<string>();
   private initialized = false;
   private readonly liveInFlight = new Map<string, Set<number>>();
   private readonly sweptListeners = new Set<
@@ -795,7 +799,11 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     return { replayed, reapplied: rebuilt.items.length - replayed };
   }
 
-  /** A document gone from the write cache, or purged, is absent. */
+  /**
+   * A document gone from the write cache, or purged, is absent; so is one
+   * stored at a protocol version this reactor does not run, which it cannot
+   * build.
+   */
   private async rebuildIfConfigured(
     items: OperationWithContext[],
   ): Promise<{ items: OperationWithContext[]; absent: number[] }> {
@@ -815,6 +823,11 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
       try {
         result = await this.rebuildStateForOperations([item]);
       } catch (error) {
+        if (UnsupportedProtocolVersionError.isError(error)) {
+          this.skipUnsupported(error);
+          absent.push(ordinalOf(item));
+          continue;
+        }
         if (
           !DocumentNotFoundError.isError(error) &&
           !(await this.isPurged(item.context.documentId))
@@ -833,6 +846,18 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
       rebuilt.push(...result);
     }
     return { items: rebuilt, absent };
+  }
+
+  private skipUnsupported(error: UnsupportedProtocolVersionError): void {
+    if (this.loggedUnsupported.has(error.documentId)) return;
+    this.loggedUnsupported.add(error.documentId);
+    this.catchUpLogger.warn(
+      "@consumer skips document @documentId: stored at @protocol @version, which this reactor does not run",
+      this.consumerId,
+      error.documentId,
+      error.protocol,
+      error.version,
+    );
   }
 
   /** A failed lookup is no answer: the caller's own error stands. */
