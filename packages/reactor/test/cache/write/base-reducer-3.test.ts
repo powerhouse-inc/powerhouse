@@ -2,9 +2,13 @@ import type {
   Action,
   Operation,
   PHDocument,
+  Reducer,
+  StateReducer,
+  UpgradeTransition,
 } from "@powerhousedao/shared/document-model";
 import {
   addModule,
+  createReducer,
   deriveOperationId,
   deriveScope,
   documentModelStateReducer,
@@ -24,6 +28,7 @@ import type { Database as DatabaseSchema } from "../../../src/storage/kysely/typ
 import {
   createCreateDocumentOperation,
   createTestOperationStore,
+  createUpgradeDocumentOperation,
 } from "../../factories.js";
 
 const DOC_TYPE = "powerhouse/document-model";
@@ -367,6 +372,115 @@ describe("write cache on base-reducer 3", () => {
       expect(globalOf(document)).toEqual(derived());
       expect(moduleIds(document)).toEqual(["b"]);
       expect(readsWholeLog(getSince)).toBe(true);
+    });
+  });
+
+  describe("across a model upgrade", () => {
+    const LOG_TYPE = "test/log";
+    type LogState = { global: { log: string[] } };
+    const logReducer =
+      (version: number): StateReducer<any> =>
+      (state: LogState, action) => {
+        if (action.type === "LOG") {
+          state.global.log.push(
+            `v${version}:${(action.input as { entry: string }).entry}`,
+          );
+        }
+      };
+    const reducers: Record<number, Reducer<any>> = {
+      1: createReducer(logReducer(1)),
+      2: createReducer(logReducer(2)),
+    };
+    const upgradeToV2: UpgradeTransition = {
+      toVersion: 2,
+      upgradeReducer: (document: PHDocument) => ({
+        ...document,
+        state: {
+          ...document.state,
+          global: {
+            log: [
+              ...(document.state as unknown as LogState).global.log,
+              "upgraded",
+            ],
+          },
+        },
+      }),
+    };
+
+    function logAction(entry: string): Action {
+      return {
+        id: generateId(),
+        type: "LOG",
+        scope: "global",
+        timestampUtcMs: "",
+        input: { entry },
+      };
+    }
+
+    it("applies the upgrade at its boundary to the derived state", async () => {
+      const registry = new DocumentModelRegistry();
+      vi.spyOn(registry, "getModule").mockImplementation(
+        (_type, version) => ({ reducer: reducers[version ?? 2] }) as never,
+      );
+      vi.spyOn(registry, "computeUpgradePath").mockReturnValue([upgradeToV2]);
+      const logCache = new KyselyWriteCache(keyframeStore, store, registry, {
+        maxDocuments: 10,
+        ringBufferSize: 30,
+        keyframeInterval: KEYFRAME_INTERVAL,
+      });
+
+      docId = generateId();
+      const toV2 = createUpgradeDocumentOperation(docId, 1, 2, undefined, {
+        index: 2,
+      });
+      const spine = [
+        createCreateDocumentOperation(
+          docId,
+          LOG_TYPE,
+          {},
+          { protocolVersions: { "base-reducer": 3 } },
+        ),
+        createUpgradeDocumentOperation(docId, 0, 1, {
+          global: { log: [] },
+          local: {},
+        }),
+        {
+          ...toV2,
+          action: {
+            ...toV2.action,
+            input: {
+              documentId: docId,
+              fromVersion: 1,
+              toVersion: 2,
+              revision: { global: 2 },
+            },
+          },
+        },
+      ];
+      for (const operation of spine) {
+        await store.apply(
+          docId,
+          LOG_TYPE,
+          "document",
+          BRANCH,
+          operation.index,
+          (txn) => {
+            txn.addOperations(operation);
+          },
+        );
+      }
+      const a = await append(logAction("a"));
+      await append(logAction("b"));
+      await append(retract(a));
+      await append(logAction("c"));
+
+      const document = await logCache.getState(docId, "global", BRANCH);
+
+      expect((document.state as unknown as LogState).global.log).toEqual([
+        "v1:b",
+        "upgraded",
+        "v2:c",
+      ]);
     });
   });
 });
