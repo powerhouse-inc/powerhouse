@@ -280,7 +280,12 @@ function resolveRetraction<TState extends PHBaseState>(
   }
   const reducerFor: ReducerFor = () => customReducer as StateReducer;
   const operations = document.operations[action.scope] ?? [];
-  const { applied } = deriveScope(document, operations, reducerFor);
+  const { applied } = deriveScope(
+    document,
+    operations,
+    reducerFor,
+    action.scope,
+  );
   const target =
     action.type === "UNDO"
       ? undoTarget(operations, applied)
@@ -761,7 +766,7 @@ function applyByRule<TState extends PHBaseState>(
   let next = document;
   let error: string | undefined;
   if (rebuild) {
-    const derived = deriveScope(document, operations, reducerFor);
+    const derived = deriveScope(document, operations, reducerFor, scope);
     next = derived.document;
     const threw =
       !derived.applied.has(appendedId) &&
