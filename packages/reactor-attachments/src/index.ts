@@ -4,12 +4,20 @@ export {
   AttachmentPending,
   AttachmentTransferError,
   HashMismatch,
+  InvalidAttachmentMetadata,
   InvalidAttachmentRef,
   ReservationNotFound,
   SizeMismatch,
   UploadTooLarge,
 } from "./errors.js";
-export type { AttachmentTransferStage } from "./errors.js";
+export type {
+  AttachmentMetadataField,
+  AttachmentTransferStage,
+} from "./errors.js";
+export {
+  validateReserveMetadata,
+  type ReserveMetadata,
+} from "./reserve-metadata.js";
 export type {
   IAttachmentReader,
   IAttachmentBackend,
@@ -27,6 +35,7 @@ export type {
   AttachmentBackendKind,
   AttachmentDownloadOptions,
   AttachmentDownloadTarget,
+  AttachmentDownloadTargetOptions,
   AttachmentTargetHeaders,
   AttachmentUploadTarget,
   AttachmentMetadata,

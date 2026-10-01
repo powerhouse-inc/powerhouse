@@ -31,6 +31,7 @@ const ALLOW_ALL: IAttachmentAccessService = {
       documentId: request.documentId as never,
       ref: request.attachmentRef as never,
     }),
+  admitCaller: () => Promise.resolve({ kind: "admitted" }),
 };
 
 describe("attachment routes through the real Express middleware stack", () => {

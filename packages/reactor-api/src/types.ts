@@ -17,6 +17,7 @@ import type { HttpRouteService, IHttpScope } from "./http/index.js";
 import type { IHttpAdapter } from "./graphql/gateway/types.js";
 import type { IPackageManager } from "./packages/types.js";
 import type { IAttachmentAccessService } from "./services/attachment-access.service.js";
+import type { IAttachmentClientProvider } from "./services/authorized-attachment.service.js";
 import type { IAuthorizationService } from "./services/authorization.service.js";
 import type { AuthService } from "./services/auth.service.js";
 export type {
@@ -57,6 +58,8 @@ export type API = {
   attachmentReferenceIndex: AttachmentReferenceIndexBuildResult;
   /** Document-authorized attachment read decisions; see AttachmentAccessService. */
   attachmentAccess: IAttachmentAccessService;
+  /** Caller-bound attachment clients for subgraphs the host constructs itself. */
+  attachmentClientProvider?: IAttachmentClientProvider;
   authService: AuthService | undefined;
   /**
    * Whether this deployment refuses anonymous callers

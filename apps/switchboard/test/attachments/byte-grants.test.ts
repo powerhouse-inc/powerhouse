@@ -94,7 +94,10 @@ function makeAccess(result: AttachmentAccessResult | Error) {
     result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
   );
   return {
-    access: { canReadAttachment } as IAttachmentAccessService,
+    access: {
+      canReadAttachment,
+      admitCaller: () => Promise.resolve({ kind: "admitted" }),
+    } as IAttachmentAccessService,
     canReadAttachment,
   };
 }
