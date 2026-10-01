@@ -179,6 +179,7 @@ export async function buildWorkerExecutor(
     maxDocuments: 100,
     ringBufferSize: 10,
     keyframeInterval: 10,
+    protocolSupport: options.executorConfig?.protocolSupport,
   };
   const writeCache = new KyselyWriteCache(
     keyframeStore,
