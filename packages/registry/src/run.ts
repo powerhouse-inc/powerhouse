@@ -92,6 +92,7 @@ interface StorageArgs {
   s3SecretAccessKey?: string;
   s3KeyPrefix?: string;
   s3ForcePathStyle: boolean;
+  s3MaxWritesPerSecond?: number;
 }
 
 function s3From(args: StorageArgs): S3Config | undefined {
@@ -104,6 +105,7 @@ function s3From(args: StorageArgs): S3Config | undefined {
     secretAccessKey: args.s3SecretAccessKey,
     keyPrefix: args.s3KeyPrefix,
     s3ForcePathStyle: args.s3ForcePathStyle,
+    maxWritesPerSecond: args.s3MaxWritesPerSecond,
   };
 }
 
@@ -661,7 +663,8 @@ export async function runImportVerdaccioState(
         [name],
       );
     }
-    pruned = await pruneCachedPackages(pool, [...names]);
+    // Without Verdaccio's state file there's no list to prune against
+    if (legacy.list) pruned = await pruneCachedPackages(pool, [...names]);
     for (const token of legacy.tokens ?? []) {
       await pool.query(
         `INSERT INTO verdaccio_tokens ("user", key, token) VALUES ($1, $2, $3)
