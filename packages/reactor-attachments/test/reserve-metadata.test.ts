@@ -1,3 +1,4 @@
+import { validateHeaderValue } from "node:http";
 import { describe, expect, it } from "vitest";
 import { InvalidAttachmentMetadata } from "../src/errors.js";
 import {
@@ -13,6 +14,25 @@ const VALID: ReserveMetadata = {
 
 function check(overrides: Record<string, unknown>): void {
   validateReserveMetadata({ ...VALID, ...overrides } as ReserveMetadata);
+}
+
+function accepts(mimeType: string): boolean {
+  try {
+    check({ mimeType });
+    return true;
+  } catch (err) {
+    if (err instanceof InvalidAttachmentMetadata) return false;
+    throw err;
+  }
+}
+
+function isValidHeader(value: string): boolean {
+  try {
+    validateHeaderValue("Content-Type", value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function rejects(
@@ -67,6 +87,44 @@ describe("validateReserveMetadata", () => {
     it("rejects CR and LF", () => {
       rejects({ mimeType: "text/plain\r\nX-Injected: 1" }, "mimeType");
       rejects({ mimeType: 'text/plain; a="b\nc"' }, "mimeType");
+    });
+
+    it("rejects values a Content-Type header cannot carry", () => {
+      rejects({ mimeType: "text/plain\r\n;a=b" }, "mimeType");
+      rejects({ mimeType: "text/plain;\na=b" }, "mimeType");
+      rejects({ mimeType: 'text/plain; a="\x01"' }, "mimeType");
+      rejects({ mimeType: 'text/plain; a="\x7f"' }, "mimeType");
+      rejects({ mimeType: 'text/plain;a="\u0100"' }, "mimeType");
+    });
+
+    it("accepts only values that are valid header content", () => {
+      for (let code = 0; code <= 0x1ff; code++) {
+        const c = String.fromCharCode(code);
+        for (const value of [
+          `text/plain; a="${c}"`,
+          `text/plain; a=${c}`,
+          `text/plain${c};a=b`,
+          `text/plain;${c}a=b`,
+          `text/pl${c}ain`,
+        ]) {
+          if (accepts(value)) expect(isValidHeader(value), value).toBe(true);
+        }
+      }
+    });
+
+    it("accepts typical values, each a valid header", () => {
+      for (const value of [
+        "text/plain",
+        "text/plain; charset=utf-8",
+        "text/plain;\tcharset=utf-8",
+        'text/plain; a="b c"',
+        'text/plain;name="a \\" b"',
+        'text/plain; a="\u00e9"',
+        "application/vnd.api+json",
+      ]) {
+        expect(accepts(value), value).toBe(true);
+        expect(isValidHeader(value), value).toBe(true);
+      }
     });
 
     it("rejects a malformed parameter", () => {

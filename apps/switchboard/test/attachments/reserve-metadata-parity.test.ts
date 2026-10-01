@@ -10,6 +10,15 @@ type Case = [name: string, meta: Record<string, unknown>];
 
 const base = { mimeType: "text/plain", fileName: "note.txt" };
 
+// The download route's setHeader throws on each of these.
+const headerBreaking: Case[] = [
+  ["CRLF before a parameter", { ...base, mimeType: "text/plain\r\n;a=b" }],
+  ["LF after a ;", { ...base, mimeType: "text/plain;\na=b" }],
+  ["a control char quoted", { ...base, mimeType: 'text/plain; a="\x01"' }],
+  ["a DEL quoted", { ...base, mimeType: 'text/plain; a="\x7f"' }],
+  ["a char above 0xFF quoted", { ...base, mimeType: 'text/plain;a="\u0100"' }],
+];
+
 const cases: Case[] = [
   ["plain metadata", base],
   ["an extension", { ...base, extension: "txt" }],
@@ -37,11 +46,7 @@ const cases: Case[] = [
     { ...base, mimeType: "text/plain\nX-Injected: 1" },
   ],
   ["a NUL in mimeType", { ...base, mimeType: "text/pl\x00ain" }],
-  // Both accept these four, and the download route's setHeader throws on each.
-  ["CRLF before a parameter", { ...base, mimeType: "text/plain\r\n;a=b" }],
-  ["LF after a ;", { ...base, mimeType: "text/plain;\na=b" }],
-  ["a control char quoted", { ...base, mimeType: 'text/plain; a="\x01"' }],
-  ["a DEL quoted", { ...base, mimeType: 'text/plain; a="\x7f"' }],
+  ...headerBreaking,
   ["a NUL in fileName", { ...base, fileName: "a\x00b" }],
   ["a LF in fileName", { ...base, fileName: "a\nb" }],
   ["a CR in fileName", { ...base, fileName: "a\rb" }],
@@ -77,5 +82,15 @@ describe("reserve metadata parity between the route and validateReserveMetadata"
 
   it.each(cases)("agrees on %s", (_name, meta) => {
     expect(validatorAccepts(meta)).toBe(routeAccepts(meta));
+  });
+});
+
+describe("header-breaking mimeType values", () => {
+  it.each(headerBreaking)("the route rejects %s", (_name, meta) => {
+    expect(routeAccepts(meta)).toBe(false);
+  });
+
+  it.each(headerBreaking)("the validator rejects %s", (_name, meta) => {
+    expect(validatorAccepts(meta)).toBe(false);
   });
 });

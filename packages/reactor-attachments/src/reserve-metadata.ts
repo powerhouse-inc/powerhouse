@@ -2,9 +2,13 @@ import { InvalidAttachmentMetadata } from "./errors.js";
 
 // eslint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\x00-\x1f\x7f]/;
+// Characters a header value cannot carry: CTLs other than HTAB, DEL, and
+// anything above 0xFF.
+// eslint-disable-next-line no-control-regex
+const NON_HEADER_CHARS = /[^\t\x20-\x7e\x80-\xff]/;
 // RFC 6838 tokens, with optional `; param=value` (token or quoted-string).
 const MIME_TYPE_PATTERN =
-  /^[!#$%&'*+\-.^_`|~\w]+\/[!#$%&'*+\-.^_`|~\w]+(?:\s*;\s*[!#$%&'*+\-.^_`|~\w]+=(?:[!#$%&'*+\-.^_`|~\w]+|"(?:[^"\\\r\n]|\\[^\r\n])*"))*$/;
+  /^[!#$%&'*+\-.^_`|~\w]+\/[!#$%&'*+\-.^_`|~\w]+(?:[ \t]*;[ \t]*[!#$%&'*+\-.^_`|~\w]+=(?:[!#$%&'*+\-.^_`|~\w]+|"(?:[^"\\\r\n]|\\[^\r\n])*"))*$/;
 const MAX_FILENAME_LEN = 255;
 const MAX_MIMETYPE_LEN = 255;
 
@@ -27,6 +31,7 @@ export function validateReserveMetadata(meta: ReserveMetadata): void {
     typeof mimeType !== "string" ||
     mimeType.length === 0 ||
     mimeType.length > MAX_MIMETYPE_LEN ||
+    NON_HEADER_CHARS.test(mimeType) ||
     !MIME_TYPE_PATTERN.test(mimeType)
   ) {
     throw new InvalidAttachmentMetadata("mimeType");
