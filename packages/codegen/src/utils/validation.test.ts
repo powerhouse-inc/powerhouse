@@ -62,18 +62,23 @@ describe("validateDocumentModelState", () => {
     ).toEqual({ isValid: true, errors: [] });
   });
 
-  it.each(["RETRACT", "UNDO", "retract"])(
-    "refuses an operation named %s",
-    (name) => {
-      const result = validateDocumentModelState(
-        documentModelState(specification(1, ["ADD_ITEM", name])),
-      );
-      expect(result.isValid).toBe(false);
-      expect(result.errors).toEqual([
-        `Operation "${name}" in module "items" has a reserved name`,
-      ]);
-    },
-  );
+  it.each([
+    "RETRACT",
+    "UNDO",
+    "retract",
+    "setName",
+    "purgeDocument",
+    "retract ",
+    "set-preferred-editor",
+  ])("refuses an operation named %s", (name) => {
+    const result = validateDocumentModelState(
+      documentModelState(specification(1, ["ADD_ITEM", name])),
+    );
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toEqual([
+      `Operation "${name}" in module "items" has a reserved name`,
+    ]);
+  });
 });
 
 describe("assertNoReservedOperationNames", () => {

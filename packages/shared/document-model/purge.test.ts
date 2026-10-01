@@ -26,6 +26,7 @@ describe("PURGE_DOCUMENT", () => {
   it("is a reserved operation name", () => {
     expect(RESERVED_OPERATION_NAMES).toContain(PURGE_DOCUMENT);
     expect(isReservedOperationName("purge_document")).toBe(true);
+    expect(isReservedOperationName("purgeDocument")).toBe(true);
   });
 
   it("is a document-scope action signed against its input's documentId", () => {
