@@ -207,6 +207,14 @@ type ScopeOutcome = {
  * returned JobResult there, which is what the queue, the worker protocol and
  * every test expect a failed job to look like.
  */
+/** No base reducer applies a retraction in these scopes. */
+function isRetractOutsideRule(action: Action): boolean {
+  return (
+    action.type === "RETRACT" &&
+    (action.scope === "auth" || action.scope === "document")
+  );
+}
+
 /** The ids of a purge job's request, which a drive purge may precede. */
 function purgeRequestDocumentIds(job: Job): string[] {
   const ids = job.meta.purgeRequestDocumentIds;
@@ -470,7 +478,9 @@ export class SimpleJobExecutor implements IJobExecutor {
     let pendingEvent: JobWriteReadyEvent | undefined;
 
     if (job.kind === "mutation") {
-      const reserved = job.actions.find((action) => isPurgeMarker(action));
+      const reserved = job.actions.find(
+        (action) => isPurgeMarker(action) || isRetractOutsideRule(action),
+      );
       if (reserved) {
         return {
           result: buildErrorResult(
@@ -1506,6 +1516,49 @@ export class SimpleJobExecutor implements IJobExecutor {
   }
 
   /**
+   * A submitted RETRACT into a document whose base reducer has no retraction
+   * rule. Stored rows a backdated write re-appends, loads and re-evaluations
+   * are not submitted, and stay inert rows.
+   */
+  private refuseSubmittedRetract(
+    action: Action,
+    executing: ExecutingJob,
+    document: PHDocument,
+  ): JobResult | undefined {
+    const { job, startTime } = executing;
+    if (
+      action.type !== "RETRACT" ||
+      job.kind !== "mutation" ||
+      !job.actions.some((submitted) => submitted.id === action.id)
+    ) {
+      return undefined;
+    }
+
+    let version: BaseReducerVersion;
+    try {
+      version = baseReducerVersion(document.header);
+    } catch (error) {
+      return buildErrorResult(
+        job,
+        error instanceof Error ? error : new Error(String(error)),
+        startTime,
+      );
+    }
+
+    switch (version) {
+      case 1:
+      case 2:
+        return buildErrorResult(
+          job,
+          new ReservedActionError(job.documentId, action.type),
+          startTime,
+        );
+      case 3:
+        return undefined;
+    }
+  }
+
+  /**
    * Decides a write and reduces it, without persisting anything.
    *
    * Split from the commit so one write and a batch of them share this logic
@@ -1646,6 +1699,15 @@ export class SimpleJobExecutor implements IJobExecutor {
           startTime,
         );
       }
+    }
+
+    const retractRefusal = this.refuseSubmittedRetract(
+      action,
+      executing,
+      document,
+    );
+    if (retractRefusal) {
+      return retractRefusal;
     }
 
     // The interim gate, superseded by the auth projection. Re-evaluating already
