@@ -767,9 +767,8 @@ if (agreement.peer(remote.meta.name).features["sync.anti-entropy"]?.includes(1))
 ## Decisions
 
 1. **Agreement is pairwise.** A manifest describes a reactor and travels
-   between the two reactors a channel connects. Creation reads the direct
-   peers of a document's collections and gating reads one peer, both from the
-   same per-remote records.
+   between the two reactors a channel connects. Gating reads one peer from
+   the per-remote records.
 2. **The handshake carries manifests; polls carry revisions.** A separate
    endpoint would need its own auth and binding. Envelope fields on every
    poll would resend the manifest constantly. Revisions on the poll result
