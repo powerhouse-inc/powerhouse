@@ -11,17 +11,12 @@ describe("baseReducerVersion", () => {
   it("returns a known version", () => {
     expect(baseReducerVersion(header({ "base-reducer": 1 }))).toBe(1);
     expect(baseReducerVersion(header({ "base-reducer": 2 }))).toBe(2);
+    expect(baseReducerVersion(header({ "base-reducer": 3 }))).toBe(3);
   });
 
   it("throws on a missing version", () => {
     expect(() => baseReducerVersion(header(undefined))).toThrow(
       "Document doc-1 carries no base-reducer protocol version",
-    );
-  });
-
-  it("throws on base-reducer 3", () => {
-    expect(() => baseReducerVersion(header({ "base-reducer": 3 }))).toThrow(
-      "Document doc-1 carries unknown base-reducer protocol version 3",
     );
   });
 

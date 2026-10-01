@@ -6,6 +6,7 @@ import {
   operationFromOperation,
 } from "./actions.js";
 import { applyAuthAction, assertAuthScopeActionAllowed } from "./auth.js";
+import { baseActionReducer } from "./base-action-reducer.js";
 import {
   baseReducerVersion,
   diffOperations,
@@ -27,15 +28,12 @@ import {
 } from "./documents.js";
 import {
   redoOperation,
-  setNameOperation,
-  setPreferredEditorOperation,
   undoOperation,
   undoOperationV2,
   type DocumentOperations,
   type Operation,
   type OperationContext,
 } from "./operations.js";
-import { DocumentActionSchema } from "./schemas.js";
 import type { PHBaseState } from "./state.js";
 import type {
   Reducer,
@@ -200,31 +198,6 @@ export function updateDocument<TDocument extends PHDocument>(
     action.timestampUtcMs,
   ) as TDocument;
   return newDocument;
-}
-
-/**
- * The base document reducer function.
- *
- * @param state The current state of the document.
- * @param action The action being applied to the document.
- * @returns The updated document state.
- */
-function _baseReducer<TState extends PHBaseState = PHBaseState>(
-  document: PHDocument<TState>,
-  action: Action,
-): PHDocument<TState> {
-  // throws if action is not valid base action
-  const parsedAction = DocumentActionSchema().parse(action);
-
-  switch (parsedAction.type) {
-    // TODO: This needs to be changed to a HEADER scope action if it's changing the header.
-    case "SET_NAME":
-      return setNameOperation(document, parsedAction.input);
-    case "SET_PREFERRED_EDITOR":
-      return setPreferredEditorOperation(document, parsedAction.input);
-    default:
-      return document;
-  }
 }
 
 /**
@@ -464,7 +437,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
   // if the action is one the base document actions (SET_NAME, UNDO, REDO)
   // then runs the base reducer first
   if (isDocumentAction(_action)) {
-    newDocument = _baseReducer(newDocument, _action);
+    newDocument = baseActionReducer(newDocument, _action);
   }
 
   // updates the document revision number, last modified date

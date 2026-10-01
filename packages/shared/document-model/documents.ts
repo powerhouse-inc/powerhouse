@@ -449,7 +449,7 @@ export function baseReducerVersion(
     );
   }
 
-  if (version !== 1 && version !== 2) {
+  if (version !== 1 && version !== 2 && version !== 3) {
     throw new Error(
       `Document ${header.id} carries unknown base-reducer protocol version ${version}`,
     );

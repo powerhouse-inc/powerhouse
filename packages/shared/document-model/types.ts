@@ -1184,6 +1184,14 @@ export type NOOPAction = Action & {
   input: SchemaNOOPAction["input"];
 };
 
+export type RetractActionInput = { target: string };
+
+/** Retracts the action named by `target` in the same document, scope and branch. */
+export type RetractAction = Action & {
+  type: "RETRACT";
+  input: RetractActionInput;
+};
+
 export type CreateDocumentActionInput = {
   model: string; // e.g., 'ph/todo'
   version: 0;
@@ -1412,6 +1420,12 @@ export type ReducerOptions = {
    * Used for V2 state rebuild where gapped indices are expected.
    */
   skipIndexValidation?: boolean;
+
+  /**
+   * Base-reducer 3: the action ids in the scope that a stored RETRACT names.
+   * Computed from the document's operations when absent.
+   */
+  targeted?: ReadonlySet<string>;
 };
 
 /**
