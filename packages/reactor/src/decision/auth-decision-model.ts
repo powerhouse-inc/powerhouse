@@ -8,6 +8,8 @@ import type {
   PHAuthState,
   PHDocument,
   PHDocumentState,
+  ReducerFor,
+  StateReducer,
 } from "@powerhousedao/shared/document-model";
 import {
   applyAuthAction,
@@ -23,6 +25,7 @@ import {
   mentionedGroupIds,
   normalizeDocumentModelVersion,
   referencedGroupIds,
+  stateReducerOf,
 } from "@powerhousedao/shared/document-model";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type {
@@ -181,6 +184,32 @@ function applyModelOperation(
   return reducer(document, operation.action);
 }
 
+/** Applies nothing, which is what an unresolvable model reducer derives. */
+const applyNothing: StateReducer = () => undefined;
+
+/**
+ * Base-reducer 3: the state reducer registered for the document's own type, at
+ * its stamped version. Unresolvable, it applies nothing, so conditions read the
+ * base state and never widen access.
+ */
+function modelStateReducers(
+  registry: IDocumentModelRegistry,
+  document: PHDocument,
+): ReducerFor {
+  let stateReducer: StateReducer | undefined;
+  try {
+    const version = normalizeDocumentModelVersion(
+      (document.state as { document?: { version?: number } }).document?.version,
+    );
+    const module = registry.getModule(document.header.documentType, version);
+    stateReducer = stateReducerOf(module.reducer) as StateReducer | undefined;
+  } catch {
+    stateReducer = undefined;
+  }
+  const reducer = stateReducer ?? applyNothing;
+  return () => reducer;
+}
+
 /**
  * The auth model extended with a derived groups projection: the streams it
  * reads are the group documents the folded grant list names, so adding a
@@ -269,6 +298,8 @@ export function authConditionsDecisionModel(
 
     foldEvaluatedScope: (document, operation) =>
       applyModelOperation(registry, document, operation),
+
+    evaluatedScopeReducer: (document) => modelStateReducers(registry, document),
 
     evaluatesScope() {
       return true;

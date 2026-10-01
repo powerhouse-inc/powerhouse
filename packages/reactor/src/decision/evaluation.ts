@@ -263,6 +263,7 @@ export async function evaluateByPosition<M>(
       document: before,
       operations: [...storedOperations, ...operations],
       apply: definition.foldEvaluatedScope,
+      reducerFor: definition.evaluatedScopeReducer?.(before),
     });
   } else {
     walked.push({
