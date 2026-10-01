@@ -43,6 +43,8 @@ Call [`undo`, `redo` and `undoRedoAvailability`](/academy/Reference/Reactor/Reac
 
 On version 3 the client finds the target itself and submits a `RETRACT` signed by the client's signer. On versions 1 and 2 it submits `UNDO` or `REDO`.
 
+The GraphQL light client always submits `UNDO` or `REDO`, so on version 3 the Switchboard signs the `RETRACT`; see [the light client's methods](/academy/Reference/ReactorBrowserClient/ApiReference#methods).
+
 To retract a specific action, submit `retract` yourself. It is exported from `document-model` and `@powerhousedao/shared/document-model`:
 
 ```typescript
