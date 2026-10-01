@@ -47,7 +47,8 @@ async function countRows(dataDir: string): Promise<number> {
   }
 }
 
-describe("preparePgliteDataDir", () => {
+// Extraction fsyncs every file it writes; under suite load that takes tens of seconds.
+describe("preparePgliteDataDir", { timeout: 90_000 }, () => {
   let templateDir: string;
   let root: string;
   let dir: string;

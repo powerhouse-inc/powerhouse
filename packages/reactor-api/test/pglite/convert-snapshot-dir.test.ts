@@ -77,7 +77,7 @@ async function dbState(dataDir: string): Promise<number> {
   return ctl.readUInt32LE(DB_STATE_OFFSET);
 }
 
-describe("convertSnapshotDir", () => {
+describe("convertSnapshotDir", { timeout: 90_000 }, () => {
   let templateDir: string;
   let root: string;
   let dir: string;
