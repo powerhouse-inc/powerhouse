@@ -9,6 +9,7 @@ import type {
   PieceMetadataModel,
   TriggerBase,
 } from "@powerhousedao/pieces-framework";
+import type { Page } from "@powerhousedao/shared/registry";
 import { childLogger } from "document-model";
 import type { PieceAuthDescriptor } from "../pieces/activepieces/descriptor.js";
 import { pieceRegistrySource } from "../pieces/activepieces/registry-source.js";
@@ -20,7 +21,12 @@ import {
 import { SERVER_ONLY_PIECES } from "./unsupported-pieces.js";
 
 const CATALOG_URL = "https://cloud.activepieces.com/api/v1/pieces";
-const CACHE_TTL_MS = 60 * 60 * 1000;
+// A publish reaches the catalog within minutes; one exact version never changes
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const PINNED_TTL_MS = 60 * 60 * 1000;
+// The registry's largest page; the cap bounds a registry that never ends
+const REGISTRY_PAGE_SIZE = 50;
+const REGISTRY_MAX_PAGES = 200;
 
 const logger = childLogger(["workflow", "piece-catalog"]);
 
@@ -181,6 +187,30 @@ async function fetchJson(url: string, timeoutMs = 30_000): Promise<unknown> {
   return response.json();
 }
 
+// A registry that ignores page params answers with the whole list, bare.
+async function fetchRegistryCatalog(
+  url: string,
+  timeoutMs: number,
+): Promise<unknown[]> {
+  const items: unknown[] = [];
+  for (let n = 0; n < REGISTRY_MAX_PAGES; n++) {
+    const pageUrl = new URL(url);
+    pageUrl.searchParams.set("limit", String(REGISTRY_PAGE_SIZE));
+    pageUrl.searchParams.set("offset", String(items.length));
+    const page = (await fetchJson(
+      pageUrl.toString(),
+      timeoutMs,
+    )) as Page<unknown>;
+    if (!Array.isArray(page.items)) {
+      throw new Error(`${url} did not answer with a page`);
+    }
+    items.push(...page.items);
+    if (!page.hasMore || page.items.length === 0) return items;
+  }
+  logger.warn(`${url} still had more pieces after ${REGISTRY_MAX_PAGES} pages`);
+  return items;
+}
+
 function asList(value: unknown): { name?: unknown }[] {
   return Array.isArray(value) ? (value as { name?: unknown }[]) : [];
 }
@@ -201,7 +231,7 @@ async function publishedLists(
     : CATALOG_URL;
   const [fromRegistry, fromCloud] = await Promise.allSettled([
     source
-      ? fetchJson(source.catalogUrl(suggestions), timeoutMs)
+      ? fetchRegistryCatalog(source.catalogUrl(suggestions), timeoutMs)
       : Promise.resolve([]),
     fetchJson(cloudUrl, timeoutMs),
   ]);
@@ -329,6 +359,10 @@ async function fetchPieceJson(
   return fetchJson(pieceUrl(packageName, version));
 }
 
+function ttlFor(version: string | undefined): number {
+  return version ? PINNED_TTL_MS : CACHE_TTL_MS;
+}
+
 const detailCache = new Map<string, Cached<unknown>>();
 
 // Full piece detail, verbatim from whichever source answered for it
@@ -341,7 +375,7 @@ export async function fetchPieceDetail(
   const cached = detailCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
   const value = await fetchPieceJson(packageName, version);
-  detailCache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
+  detailCache.set(key, { value, expiresAt: Date.now() + ttlFor(version) });
   return value;
 }
 
@@ -377,7 +411,7 @@ export async function fetchPieceTriggers(
   };
   triggersCache.set(key, {
     value,
-    expiresAt: Date.now() + CACHE_TTL_MS,
+    expiresAt: Date.now() + ttlFor(requested),
   });
   return value;
 }
@@ -417,7 +451,7 @@ export async function fetchPieceActions(
   };
   actionsCache.set(key, {
     value,
-    expiresAt: Date.now() + CACHE_TTL_MS,
+    expiresAt: Date.now() + ttlFor(requested),
   });
   return value;
 }

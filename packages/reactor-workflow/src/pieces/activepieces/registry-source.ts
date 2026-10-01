@@ -2,7 +2,7 @@
 // metadata and fetches piece code.
 
 // It serves the same three shapes cloud.activepieces.com and its CDN do — a
-// list, one piece's detail, a bundle tarball — so only the base URL differs.
+// list, one piece's detail, a bundle tarball — at its own paths.
 
 // The registry is the one the host already installs packages from. A package
 // installed from it ships pieces that run in the worker with the same reach, so
@@ -19,7 +19,7 @@ export interface PieceRegistrySource {
   catalogUrl(suggestions?: boolean): string;
   /** One piece's detail, in the shape their piece endpoint answers with. */
   pieceUrl(name: string): string;
-  /** The bundle, under the filename their CDN would serve it as. */
+  /** The bundle; a folder per piece name keeps scoped names distinct. */
   tarballUrl(name: string, version: string): string;
 }
 
@@ -34,7 +34,7 @@ function source(baseUrl: string): PieceRegistrySource {
     // registry's route, not two.
     pieceUrl: (name) => `${baseUrl}/pieces/${encodeURIComponent(name)}`,
     tarballUrl: (name, version) =>
-      `${baseUrl}/-/pieces/bundled/${name.replace("/", "-")}-${version}.tgz`,
+      `${baseUrl}/-/pieces/bundled/${name}/${version}.tgz`,
   };
 }
 

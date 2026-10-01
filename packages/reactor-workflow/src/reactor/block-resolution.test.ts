@@ -197,7 +197,7 @@ describe("exact versions", () => {
       version_match: "exact",
     });
     expect(sources.requests).toContain(
-      `/registry/-/pieces/bundled/${REGISTRY.replace("/", "-")}-2.1.0.tgz`,
+      `/registry/-/pieces/bundled/${REGISTRY}/2.1.0.tgz`,
     );
   });
 

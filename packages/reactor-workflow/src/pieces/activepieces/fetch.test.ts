@@ -43,7 +43,7 @@ it("asks the host's registry first, at the pinned version", async () => {
     ensurePieceBundle({ name: "piece-a", version: "1.0.0", cacheDir }),
   ).rejects.toThrow(/Failed to fetch piece bundle/);
   expect(urls[0]).toBe(
-    "https://registry.example.com/-/pieces/bundled/piece-a-1.0.0.tgz",
+    "https://registry.example.com/-/pieces/bundled/piece-a/1.0.0.tgz",
   );
   expect(urls).toHaveLength(3);
 });
@@ -56,7 +56,7 @@ it("falls through to the public sources when the registry does not have it", asy
   ).rejects.toThrow(/Failed to fetch piece bundle/);
   // Registry, then their CDN, then npm — a 404 from ours is not the end.
   expect(urls).toEqual([
-    "https://registry.example.com/-/pieces/bundled/piece-a-1.0.0.tgz",
+    "https://registry.example.com/-/pieces/bundled/piece-a/1.0.0.tgz",
     "https://cdn.activepieces.com/pieces/bundled/piece-a-1.0.0.tgz",
     "https://registry.npmjs.org/piece-a/-/piece-a-1.0.0.tgz",
   ]);
@@ -76,6 +76,6 @@ it("asks only the sources a resolution chose", async () => {
   ).rejects.toThrow(/Failed to fetch piece bundle/);
   // A registry-owned name never falls through to npm.
   expect(urls).toEqual([
-    "https://registry.example.com/-/pieces/bundled/piece-a-1.0.0.tgz",
+    "https://registry.example.com/-/pieces/bundled/piece-a/1.0.0.tgz",
   ]);
 });
