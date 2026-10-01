@@ -181,6 +181,13 @@ type EvaluationCriteria = {
  * decide-and-reduce logic while differing only in how many operations reach
  * the store per transaction.
  */
+/** The previous write's result a batch reduces the next write against. */
+type CarriedState = {
+  document: PHDocument;
+  /** The write's id when a stored RETRACT names it; undefined outside the rule. */
+  targeted?: ReadonlySet<string>;
+};
+
 type PreparedWrite = {
   action: Action;
   sourceRemote: string;
@@ -213,6 +220,28 @@ function isRetractOutsideRule(action: Action): boolean {
   return (
     action.type === "RETRACT" &&
     (action.scope === "auth" || action.scope === "document")
+  );
+}
+
+/** Whether base-reducer 3's retraction rule derives `scope` of `document`. */
+function derivesByRule(document: PHDocument, scope: string): boolean {
+  return (
+    document.header.protocolVersions?.["base-reducer"] === 3 &&
+    scope !== "auth" &&
+    scope !== "document"
+  );
+}
+
+/** A base-reducer 3 write whose scope the reducer re-derives from every row. */
+function needsFullHistory(
+  write: PendingWrite,
+  targeted: ReadonlySet<string>,
+): boolean {
+  return (
+    write.skip > 0 ||
+    isUndoRedo(write.action) ||
+    write.action.type === "RETRACT" ||
+    targeted.has(write.action.id)
   );
 }
 
@@ -1564,14 +1593,14 @@ export class SimpleJobExecutor implements IJobExecutor {
    * Decides a write and reduces it, without persisting anything.
    *
    * Split from the commit so one write and a batch of them share this logic
-   * rather than keeping two copies of it. `baseDocument` lets a batch thread
-   * the previous action's result forward instead of reading its own write back
+   * rather than keeping two copies of it. `carried` lets a batch thread the
+   * previous action's result forward instead of reading its own write back
    * out of the cache, which is the only reason the reduce has to be sequential.
    */
   private async prepareRegularWrite(
     write: PendingWrite,
     executing: ExecutingJob,
-    baseDocument?: PHDocument,
+    carried?: CarriedState,
   ): Promise<PreparedWrite | JobResult> {
     const { action, skip, sourceOperation, sourceRemote, deniedReason } = write;
     const { job, startTime, indexTxn, stores, signal } = executing;
@@ -1600,7 +1629,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           { verb: "execute", scope: action.scope, operation: action.type },
           signal,
           this.featureFlags.authConditions
-            ? { actionInput: action.input, carriedDocument: baseDocument }
+            ? { actionInput: action.input, carriedDocument: carried?.document }
             : undefined,
         );
       } catch (error) {
@@ -1678,16 +1707,14 @@ export class SimpleJobExecutor implements IJobExecutor {
     // left the resulting state derived from the superseded lineage, which is
     // what the document view stores and serves; the write cache recovered on
     // its next cold read and the read model never did.
-    if (isUndoRedo(action) || skip > 0) {
+    const invalidated = isUndoRedo(action) || skip > 0;
+    if (invalidated) {
       stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
     }
 
-    let document: PHDocument;
-    if (baseDocument !== undefined) {
-      document = baseDocument;
-    } else {
+    const readHead = async (): Promise<PHDocument | JobResult> => {
       try {
-        document = await stores.writeCache.getState(
+        return await stores.writeCache.getState(
           job.documentId,
           job.scope,
           job.branch,
@@ -1700,6 +1727,51 @@ export class SimpleJobExecutor implements IJobExecutor {
           error instanceof Error ? error : new Error(String(error)),
           startTime,
         );
+      }
+    };
+
+    let document: PHDocument;
+    if (carried !== undefined) {
+      document = carried.document;
+    } else {
+      const head = await readHead();
+      if ("success" in head) {
+        return head;
+      }
+      document = head;
+    }
+
+    // Base-reducer 3 re-derives the scope from every row for a write that
+    // retracts or that a stored RETRACT names. Only the version says whether
+    // the rule runs, so such a write reads again once the slice is dropped.
+    let targeted = carried?.targeted;
+    if (
+      carried === undefined &&
+      deniedReason === undefined &&
+      derivesByRule(document, job.scope)
+    ) {
+      try {
+        targeted = await stores.operationStore.findRetractionsOf(
+          job.documentId,
+          job.scope,
+          job.branch,
+          [action.id],
+          signal,
+        );
+      } catch (error) {
+        return buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        );
+      }
+      if (!invalidated && needsFullHistory(write, targeted)) {
+        stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
+        const head = await readHead();
+        if ("success" in head) {
+          return head;
+        }
+        document = head;
       }
     }
 
@@ -1802,14 +1874,16 @@ export class SimpleJobExecutor implements IJobExecutor {
         const protocolVersion: BaseReducerVersion = baseReducerVersion(
           document.header,
         );
+        const ruleOptions = targeted === undefined ? {} : { targeted };
         const reducerOptions = sourceOperation
           ? {
               skip,
               branch: job.branch,
               replayOptions: { operation: sourceOperation },
               protocolVersion,
+              ...ruleOptions,
             }
-          : { skip, branch: job.branch, protocolVersion };
+          : { skip, branch: job.branch, protocolVersion, ...ruleOptions };
         updatedDocument = withProtocolVersions(
           module.reducer(
             document as PHDocument,
@@ -2098,8 +2172,10 @@ export class SimpleJobExecutor implements IJobExecutor {
     writes: PendingWrite[],
     executing: ExecutingJob,
   ): Promise<JobResult> {
+    const { job } = executing;
     const prepared: PreparedWrite[] = [];
-    let carried: PHDocument | undefined;
+    let carried: CarriedState | undefined;
+    let targeted: ReadonlySet<string> | undefined;
     let lastYield = performance.now();
 
     for (const write of writes) {
@@ -2110,8 +2186,32 @@ export class SimpleJobExecutor implements IJobExecutor {
       if (outcome.denied) {
         return this.executeRegularActionsSequentially(writes, executing);
       }
+
+      // A later write a stored RETRACT names is re-derived from every row,
+      // which the carried slice does not hold.
+      if (prepared.length === 0 && derivesByRule(outcome.document, job.scope)) {
+        try {
+          targeted = await executing.stores.operationStore.findRetractionsOf(
+            job.documentId,
+            job.scope,
+            job.branch,
+            writes.slice(1).map((later) => later.action.id),
+            executing.signal,
+          );
+        } catch (error) {
+          return buildErrorResult(
+            job,
+            error instanceof Error ? error : new Error(String(error)),
+            executing.startTime,
+          );
+        }
+        if (targeted.size > 0) {
+          return this.executeRegularActionsSequentially(writes, executing);
+        }
+      }
+
       prepared.push(outcome);
-      carried = outcome.updatedDocument;
+      carried = { document: outcome.updatedDocument, targeted };
 
       if (performance.now() - lastYield > this.config.yieldDeadlineMs) {
         await yieldToMain();
