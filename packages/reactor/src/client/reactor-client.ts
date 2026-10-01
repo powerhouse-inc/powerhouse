@@ -6,17 +6,14 @@ import type {
   ISigner,
   Operation,
   PHDocument,
-  PHDocumentHeader,
   ProtocolVersions,
   SignaturePolicy,
-  StateReducer,
   Supports,
 } from "@powerhousedao/shared/document-model";
 import {
   actions,
   baseReducerVersion,
   redo,
-  requireStateReducer,
   retract,
   undo,
   DEFAULT_SIGNATURE_POLICY,
@@ -43,6 +40,7 @@ import type {
   BatchLoadResult,
   ExecutionJobPlan,
   IReactor,
+  UndoRedoTargets,
 } from "../core/types.js";
 import { getSharedActionScope, signActions } from "../core/utils.js";
 import { type IJobAwaiter } from "../shared/awaiter.js";
@@ -87,11 +85,6 @@ import {
   type UndoRedoAvailability,
   type UpgradeDocumentOptions,
 } from "./types.js";
-import {
-  initialDocumentFromSpine,
-  undoRedoTargets,
-  type UndoRedoTargets,
-} from "./undo-redo.js";
 import { DriveCollectionId } from "../cache/operation-index-types.js";
 import { buildDecisionModel } from "../decision/build-decision-model.js";
 import type { IReadGate } from "../decision/read-gate.js";
@@ -1385,21 +1378,30 @@ export class ReactorClient implements IReactorClient {
       branch,
       signal,
     );
-    const header = await this.headerOf(documentId, scope, branch, signal);
-    switch (baseReducerVersion(header)) {
+    const document = await this.undoRedoDocument(
+      documentId,
+      scope,
+      branch,
+      signal,
+    );
+    switch (baseReducerVersion(document.header)) {
       case 1:
       case 2:
-        return { canUndo: (header.revision[scope] ?? 0) > 0, canRedo: false };
+        return {
+          canUndo: (document.header.revision[scope] ?? 0) > 0,
+          canRedo: false,
+        };
       case 3: {
         const targets = await this.undoRedoTargets(
+          document,
           documentId,
           scope,
           branch,
           signal,
         );
         return {
-          canUndo: targets.undo !== undefined,
-          canRedo: targets.redo !== undefined,
+          canUndo: targets.undoTarget !== undefined,
+          canRedo: targets.redoTarget !== undefined,
         };
       }
     }
@@ -2367,8 +2369,13 @@ export class ReactorClient implements IReactorClient {
       branch,
       signal,
     );
-    const header = await this.headerOf(documentId, scope, branch, signal);
-    switch (baseReducerVersion(header)) {
+    const document = await this.undoRedoDocument(
+      documentId,
+      scope,
+      branch,
+      signal,
+    );
+    switch (baseReducerVersion(document.header)) {
       case 1:
       case 2:
         return this.execute<TDocument>(
@@ -2379,12 +2386,14 @@ export class ReactorClient implements IReactorClient {
         );
       case 3: {
         const targets = await this.undoRedoTargets(
+          document,
           documentId,
           scope,
           branch,
           signal,
         );
-        const target = type === "UNDO" ? targets.undo : targets.redo;
+        const target =
+          type === "UNDO" ? targets.undoTarget : targets.redoTarget;
         if (target === undefined) {
           const verb = type === "UNDO" ? "undo" : "redo";
           throw new Error(
@@ -2402,68 +2411,33 @@ export class ReactorClient implements IReactorClient {
     }
   }
 
-  private async headerOf(
+  private async undoRedoDocument(
     documentId: string,
     scope: string,
     branch: string,
     signal: AbortSignal | undefined,
-  ): Promise<PHDocumentHeader> {
-    const document = await this.reactor.getByIdOrSlug<PHDocument>(
+  ): Promise<PHDocument> {
+    return this.reactor.getByIdOrSlug<PHDocument>(
       documentId,
-      { branch, scopes: [scope] },
+      withAuthScope({ branch, scopes: [scope] }),
       undefined,
       signal,
     );
-    return document.header;
   }
 
-  /** Resolved as the reactor resolves a submitted UNDO or REDO. */
+  /** Resolved by the reactor; a scope the subject may not read has none. */
   private async undoRedoTargets(
+    document: PHDocument,
     documentId: string,
     scope: string,
     branch: string,
     signal: AbortSignal | undefined,
   ): Promise<UndoRedoTargets> {
-    const [spine, rows] = await Promise.all([
-      this.scopeOperations(documentId, "document", branch, signal),
-      this.scopeOperations(documentId, scope, branch, signal),
-    ]);
-    const initial = initialDocumentFromSpine(spine);
-    const module = await this.getDocumentModelModuleForDocument(initial);
-    const stateReducer = requireStateReducer(
-      module.reducer,
-      initial.header.documentType,
-      module.version,
-    ) as StateReducer;
-    return undoRedoTargets(initial, rows, stateReducer, scope);
-  }
-
-  private async scopeOperations(
-    documentId: string,
-    scope: string,
-    branch: string,
-    signal: AbortSignal | undefined,
-  ): Promise<Operation[]> {
-    const view: ViewFilter = { branch, scopes: [scope] };
-    let page = await this.getOperations(
-      documentId,
-      view,
-      undefined,
-      undefined,
-      signal,
-    );
-    const rows = [...page.results];
-    while (page.nextCursor) {
-      page = await this.getOperations(
-        documentId,
-        view,
-        undefined,
-        { cursor: page.nextCursor, limit: page.options.limit },
-        signal,
-      );
-      rows.push(...page.results);
+    const readable = await this.readableScopes(document, { branch }, signal);
+    if (!readable(scope)) {
+      return {};
     }
-    return rows;
+    return this.reactor.resolveUndoRedo(documentId, scope, branch, signal);
   }
 
   private async resolveWriteTarget(

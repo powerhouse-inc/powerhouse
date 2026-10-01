@@ -75,6 +75,7 @@ export {
   type ReactorFeatures,
   type ReactorModule,
   type SyncModule,
+  type UndoRedoTargets,
 } from "./src/core/types.js";
 export { JobAwaiter, type IJobAwaiter } from "./src/shared/awaiter.js";
 export {

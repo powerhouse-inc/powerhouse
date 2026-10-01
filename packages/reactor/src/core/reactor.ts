@@ -6,9 +6,14 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { normalizeDocumentModelVersion } from "@powerhousedao/shared/document-model";
+import {
+  normalizeDocumentModelVersion,
+  redoTarget,
+  undoTarget,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
+import { scopeDerivation } from "../cache/kysely-write-cache.js";
 import type { CatchUpScheduler } from "../catch-up/scheduler.js";
 import {
   addRelationshipAction,
@@ -59,6 +64,7 @@ import {
   type BatchLoadResult,
   type IReactor,
   type ReactorFeatures,
+  type UndoRedoTargets,
 } from "./types.js";
 import {
   buildSingleJobMeta,
@@ -425,6 +431,70 @@ export class Reactor implements IReactor {
     }
 
     return result;
+  }
+
+  async resolveUndoRedo(
+    documentId: string,
+    scope: string,
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets> {
+    this.logger.verbose(
+      "resolveUndoRedo(@documentId, @scope, @branch)",
+      documentId,
+      scope,
+      branch,
+    );
+
+    const [derive, document, rows] = await Promise.all([
+      scopeDerivation(
+        this.operationStore,
+        this.documentModelRegistry,
+        documentId,
+        branch,
+        signal,
+      ),
+      this.documentView.get(
+        documentId,
+        { branch, scopes: [scope] },
+        undefined,
+        signal,
+      ),
+      this.scopeRows(documentId, scope, branch, signal),
+    ]);
+    throwIfAborted(signal, () => new AbortError());
+
+    const { applied } = derive(document, rows, scope);
+    return {
+      undoTarget: undoTarget(rows, applied),
+      redoTarget: redoTarget(rows, applied),
+    };
+  }
+
+  /** Every stored row of a scope, as a cold rebuild reads them. */
+  private async scopeRows(
+    documentId: string,
+    scope: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<Operation[]> {
+    const rows: Operation[] = [];
+    let cursor: string | undefined = "0";
+    while (cursor !== undefined) {
+      throwIfAborted(signal, () => new AbortError());
+      const page = await this.operationStore.getSince(
+        documentId,
+        scope,
+        branch,
+        -1,
+        undefined,
+        { cursor, limit: 100 },
+        signal,
+      );
+      rows.push(...page.results);
+      cursor = page.nextCursor || undefined;
+    }
+    return rows;
   }
 
   async find(

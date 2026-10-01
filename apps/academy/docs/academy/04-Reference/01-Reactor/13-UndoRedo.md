@@ -41,7 +41,7 @@ An existing document keeps its version.
 
 Call [`undo`, `redo` and `undoRedoAvailability`](/academy/Reference/Reactor/ReactorClient#undo) on `IReactorClient`. They work on every version.
 
-On version 3 the client finds the target itself and submits a `RETRACT` signed by the client's signer. On versions 1 and 2 it submits `UNDO` or `REDO`.
+On version 3 the client asks the reactor for the target, through `IReactor.resolveUndoRedo`, and submits a `RETRACT` signed by the client's signer. On versions 1 and 2 it submits `UNDO` or `REDO`.
 
 The GraphQL light client always submits `UNDO` or `REDO`, so on version 3 the Switchboard signs the `RETRACT`; see [the light client's methods](/academy/Reference/ReactorBrowserClient/ApiReference#methods).
 

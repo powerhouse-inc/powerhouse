@@ -19,6 +19,7 @@ import { upgradeDocumentAction } from "../../src/actions/index.js";
 import type { IReactorClient } from "../../src/client/types.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { IReactor } from "../../src/core/types.js";
+import type { IReadGate } from "../../src/decision/read-gate.js";
 import { synthesizedActionId } from "../../src/executor/synthesized-signing.js";
 import { verifyActionSignature } from "../../src/signer/verify-action-signature.js";
 import {
@@ -44,19 +45,26 @@ afterEach(() => {
   reactor.kill();
 });
 
-async function build(modules: DocumentModelModule<any>[] = []): Promise<void> {
+async function build(
+  modules: DocumentModelModule<any>[] = [],
+  manifests: UpgradeManifest<readonly number[]>[] = [itemsManifest],
+  readGate?: IReadGate,
+): Promise<void> {
   author = await TestP256Signer.create();
   reactorKey = await TestP256Signer.create();
   const builder = createUndoV3ReactorBuilder({ modules })
     .withExecutorConfig({ signatureVerification: "enforce" })
     .withSigner(reactorKey.asISigner([], REACTOR_USER));
   if (modules.length > 0) {
-    builder.withUpgradeManifests([itemsManifest]);
+    builder.withUpgradeManifests(manifests);
   }
-  client = await new ReactorClientBuilder()
+  const clientBuilder = new ReactorClientBuilder()
     .withReactorBuilder(builder)
-    .withSigner(author.asISigner([]))
-    .build();
+    .withSigner(author.asISigner([]));
+  if (readGate) {
+    clientBuilder.withReadGate(readGate);
+  }
+  client = await clientBuilder.build();
   reactor = (client as unknown as { reactor: IReactor }).reactor;
 }
 
@@ -146,6 +154,31 @@ describe("ReactorClient undo and redo on base-reducer 3", () => {
     expect(await stream(id)).toEqual([]);
   });
 
+  it("resolves nothing in a scope the subject may not read", async () => {
+    const gate: IReadGate = {
+      scopePredicate: () => Promise.resolve((scope) => scope !== "global"),
+    };
+    await build([], [], gate);
+    const id = await createDocument(createBaseReducer3Document());
+    await add(id, "a");
+    let resolved = 0;
+    const resolve = reactor.resolveUndoRedo.bind(reactor);
+    reactor.resolveUndoRedo = (...args) => {
+      resolved++;
+      return resolve(...args);
+    };
+
+    expect(await client.undoRedoAvailability(id)).toEqual({
+      canUndo: false,
+      canRedo: false,
+    });
+    await expect(client.undo(id)).rejects.toThrow(
+      "Cannot undo: nothing to undo in scope history",
+    );
+    expect(resolved).toBe(0);
+    expect(await stream(id)).toHaveLength(1);
+  });
+
   it("refuses a redo once new content follows the undo", async () => {
     await build();
     const id = await createDocument(createBaseReducer3Document());
@@ -204,6 +237,43 @@ describe("ReactorClient undo and redo on base-reducer 3", () => {
     expect((await stream(id)).at(-1)!.action.input).toEqual({
       target: b.action.id,
     });
+    expect(await items(id)).toEqual([]);
+  });
+
+  it("derives across an upgrade transition that carries no snapshot", async () => {
+    const migratingV1 = itemsModule(1, MIGRATING_TYPE);
+    const migratingV2 = itemsModule(2, MIGRATING_TYPE);
+    await build([migratingV1, migratingV2], [migratingManifest]);
+    const id = await createDocument(
+      withBaseReducer3(createItemsDocument([], MIGRATING_TYPE), "legacy"),
+    );
+    await client.execute(id, "main", [addItem("a")]);
+    const a = (await stream(id)).at(-1)!;
+    const { header } = await client.get(id);
+    await client.execute(id, "main", [
+      upgradeDocumentAction({
+        documentId: id,
+        model: MIGRATING_TYPE,
+        fromVersion: 1,
+        toVersion: 2,
+        revision: { ...header.revision },
+      }),
+    ]);
+    // The transition installed "b", so this row throws.
+    await client.execute(id, "main", [addItem("b")]);
+    expect((await stream(id)).at(-1)!.error).toContain("already exists");
+    expect(await items(id)).toEqual(["a", "b"]);
+
+    expect(await client.undoRedoAvailability(id)).toEqual({
+      canUndo: true,
+      canRedo: false,
+    });
+    await client.undo(id);
+
+    expect((await stream(id)).at(-1)!.action.input).toEqual({
+      target: a.action.id,
+    });
+    expect(await items(id)).toEqual(["b"]);
   });
 });
 
@@ -272,8 +342,11 @@ function itemsState(items: string[], version: number): ItemsState {
   } as unknown as ItemsState;
 }
 
-function createItemsDocument(items: string[] = []): PHDocument {
-  const header = createPresignedHeader(generateId(), ITEMS_TYPE);
+function createItemsDocument(
+  items: string[] = [],
+  documentType = ITEMS_TYPE,
+): PHDocument {
+  const header = createPresignedHeader(generateId(), documentType);
   return {
     header,
     state: itemsState(items, 1),
@@ -283,18 +356,21 @@ function createItemsDocument(items: string[] = []): PHDocument {
   } as unknown as PHDocument;
 }
 
-function itemsModule(version: number): DocumentModelModule {
+function itemsModule(
+  version: number,
+  documentType = ITEMS_TYPE,
+): DocumentModelModule {
   return {
     version,
     reducer: createReducer(itemsStateReducer),
     actions: {},
     utils: {
-      createDocument: () => createItemsDocument(),
+      createDocument: () => createItemsDocument([], documentType),
       createState: () => itemsState([], version),
     },
     documentModel: {
       global: {
-        id: ITEMS_TYPE,
+        id: documentType,
         name: "Undo items",
         description: "",
         extension: "uit",
@@ -315,6 +391,30 @@ const itemsManifest = {
   supportedVersions: [1, 2],
   upgrades: {
     v2: { toVersion: 2, upgradeReducer: (document: PHDocument) => document },
+  },
+} as unknown as UpgradeManifest<readonly number[]>;
+
+const MIGRATING_TYPE = "test/undo-items-migrating";
+
+// Its v1 to v2 transition adds "b" to the items.
+const migratingManifest = {
+  documentType: MIGRATING_TYPE,
+  latestVersion: 2,
+  supportedVersions: [1, 2],
+  upgrades: {
+    v2: {
+      toVersion: 2,
+      upgradeReducer: (document: PHDocument) => {
+        const state = document.state as unknown as ItemsState;
+        return {
+          ...document,
+          state: {
+            ...state,
+            global: { items: [...state.global.items, "b"] },
+          },
+        } as unknown as PHDocument;
+      },
+    },
   },
 } as unknown as UpgradeManifest<readonly number[]>;
 
