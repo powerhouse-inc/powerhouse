@@ -14,12 +14,14 @@ export default defineConfig({
     // folding them in is a separate effort from this change.
     include: [
       "src/codegen/features.test.ts",
+      "src/codegen/generate.test.ts",
       "src/codegen/migrate-tsconfig.test.ts",
       "src/file-builders/pieces.test.ts",
       "src/name-builders/derive-piece-id.test.ts",
       "src/file-builders/boilerplate/package.json.test.ts",
       "src/file-builders/boilerplate/project-ports.test.ts",
       "src/file-builders/boilerplate/generated-project-files.test.ts",
+      "src/utils/validation.test.ts",
     ],
     exclude: ["**/node_modules/**", "**/dist/**"],
   },

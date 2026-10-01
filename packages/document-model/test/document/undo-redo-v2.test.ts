@@ -1,6 +1,7 @@
 import {
   baseCreateDocument,
   processUndoRedo,
+  redo,
   undo,
 } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -258,5 +259,30 @@ describe("UNDO/REDO with protocolVersion: 2", () => {
         "NOOP",
       ]);
     });
+  });
+});
+
+describe("protocolVersion: 3", () => {
+  let document: CountDocument;
+
+  beforeEach(() => {
+    const initialState = testCreateBaseState({ count: 0 }, { name: "" });
+    document = baseCreateDocument(createCountDocumentState, initialState);
+    document = countReducer(document, increment());
+  });
+
+  it("refuses UNDO and REDO", () => {
+    expect(() => processUndoRedo(document, undo(), 0, 3)).toThrow(
+      "base-reducer 3 is not implemented",
+    );
+    expect(() => processUndoRedo(document, redo(), 0, 3)).toThrow(
+      "base-reducer 3 is not implemented",
+    );
+  });
+
+  it("refuses an ordinary action in the reducer", () => {
+    expect(() =>
+      countReducer(document, increment(), undefined, { protocolVersion: 3 }),
+    ).toThrow("base-reducer 3 is not implemented");
   });
 });

@@ -4,6 +4,7 @@ import { bytesToBase64Url } from "./crypto.js";
 
 /** The reactor feature flags a capability's support is a function of. */
 export type PeerCapabilityFlags = {
+  readonly undoV3?: boolean;
   readonly [flag: string]: boolean | undefined;
 };
 
@@ -42,8 +43,9 @@ export const PEER_CAPABILITIES: readonly PeerCapability[] = [
     kind: "protocol",
     name: "base-reducer",
     baseline: [1, 2],
-    supported: () => [1, 2],
-    preferred: () => 2,
+    supported: (flags: PeerCapabilityFlags) =>
+      flags.undoV3 ? [1, 2, 3] : [1, 2],
+    preferred: (flags: PeerCapabilityFlags) => (flags.undoV3 ? 3 : 2),
     optional: false,
   },
   {

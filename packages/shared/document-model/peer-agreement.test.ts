@@ -12,6 +12,7 @@ import {
   readPeerManifest,
   selectProtocolVersions,
   type PeerCapability,
+  type PeerCapabilityFlags,
   type Supports,
 } from "./peer-agreement.js";
 
@@ -33,6 +34,59 @@ describe("peer capabilities", () => {
         "document-purge": [1],
       },
       features: { "marker-refusal": [1] },
+    });
+  });
+
+  describe("base-reducer under undoV3", () => {
+    const undoV3 = { undoV3: true };
+
+    it("supports [1, 2, 3] with the flag on and [1, 2] with it off", () => {
+      expect(
+        localSupports(PEER_CAPABILITIES, undoV3).protocols["base-reducer"],
+      ).toEqual([1, 2, 3]);
+      expect(
+        localSupports(PEER_CAPABILITIES, { undoV3: false }).protocols[
+          "base-reducer"
+        ],
+      ).toEqual([1, 2]);
+    });
+
+    it("keeps the baseline at [1, 2] for a silent peer", () => {
+      expect(
+        legacySupports(PEER_CAPABILITIES).protocols["base-reducer"],
+      ).toEqual([1, 2]);
+    });
+
+    it("selects 3 alone and 2 beside a silent or flag-off member", () => {
+      const select = (
+        members: Supports[],
+        flags: PeerCapabilityFlags = undoV3,
+      ) =>
+        selectProtocolVersions({
+          capabilities: PEER_CAPABILITIES,
+          flags,
+          members,
+        })["base-reducer"];
+      const on = localSupports(PEER_CAPABILITIES, undoV3);
+      const off = localSupports(PEER_CAPABILITIES, {});
+      expect(select([])).toBe(3);
+      expect(select([on])).toBe(3);
+      expect(select([legacySupports(PEER_CAPABILITIES)])).toBe(2);
+      expect(select([on, off])).toBe(2);
+      expect(select([on], {})).toBe(2);
+    });
+
+    it("holds a base-reducer 3 document from a peer without the flag", () => {
+      const on = localSupports(PEER_CAPABILITIES, undoV3);
+      const off = localSupports(PEER_CAPABILITIES, {});
+      expect(coversLocal(off, on, PEER_CAPABILITIES)).toBe(false);
+      expect(coversLocal(on, off, PEER_CAPABILITIES)).toBe(true);
+      expect(holdReason(off, { "base-reducer": 3 }, PEER_CAPABILITIES)).toEqual(
+        { protocol: "base-reducer", version: 3, peerSupports: [1, 2] },
+      );
+      expect(
+        holdReason(on, { "base-reducer": 3 }, PEER_CAPABILITIES),
+      ).toBeUndefined();
     });
   });
 
