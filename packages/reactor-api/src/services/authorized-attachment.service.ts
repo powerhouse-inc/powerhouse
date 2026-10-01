@@ -1,19 +1,33 @@
 import type { AttachmentRef } from "@powerhousedao/reactor";
-import type {
-  AttachmentDownloadOptions,
-  AttachmentDownloadTarget,
-  AttachmentDownloadTargetOptions,
-  AttachmentHeader,
-  AttachmentResponse,
-  AttachmentStatOptions,
-  IAttachmentService,
-  IAttachmentUpload,
-  ReserveAttachmentOptions,
+import {
+  AttachmentNotFound,
+  validateReserveMetadata,
+  type AttachmentDownloadOptions,
+  type AttachmentDownloadTarget,
+  type AttachmentDownloadTargetOptions,
+  type AttachmentHeader,
+  type AttachmentResponse,
+  type AttachmentStatOptions,
+  type IAttachmentService,
+  type IAttachmentUpload,
+  type ReserveAttachmentOptions,
 } from "@powerhousedao/reactor-attachments";
-import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
+import {
+  createAttachmentClient,
+  type IAttachmentClient,
+} from "@powerhousedao/reactor-attachments/client";
 import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
-import type { IAttachmentAccessService } from "./attachment-access.service.js";
+import { AuthenticationRequiredError } from "../graphql/errors.js";
+import type {
+  AttachmentAccessResult,
+  AttachmentCallerResult,
+  IAttachmentAccessService,
+} from "./attachment-access.service.js";
+import type { CanonicalDocumentId } from "./authorization.service.js";
+
+/** Matches the attachment routes' `documentId` bound. */
+const MAX_DOCUMENT_ID_LEN = 512;
 
 /** The reference index is not maintained in this composition. */
 export class AttachmentAccessUnavailable extends Error {
@@ -31,6 +45,8 @@ export class AttachmentAccessFailed extends Error {
   }
 }
 
+type ReadDecision = { documentId: CanonicalDocumentId; ref: AttachmentRef };
+
 /** An `IAttachmentService` whose reads and writes are decided for one subject. */
 export class AuthorizedAttachmentService implements IAttachmentService {
   constructor(
@@ -40,30 +56,118 @@ export class AuthorizedAttachmentService implements IAttachmentService {
     private readonly logger: ILogger,
   ) {}
 
-  reserve(_options: ReserveAttachmentOptions): Promise<IAttachmentUpload> {
-    return Promise.reject(new Error("not implemented"));
+  /** Hash-first only: an upload-first handle can send after it expires. */
+  async reserve(options: ReserveAttachmentOptions): Promise<IAttachmentUpload> {
+    if (options.clientHash === undefined) {
+      throw new Error("Attachment reservations require a client hash");
+    }
+    await this.admit("write");
+    validateReserveMetadata({
+      mimeType: options.mimeType,
+      fileName: options.fileName,
+      extension: options.extension,
+    });
+    return this.inner.reserve(options);
   }
 
-  stat(
-    _ref: AttachmentRef,
-    _options?: AttachmentStatOptions,
+  async stat(
+    ref: AttachmentRef,
+    options?: AttachmentStatOptions,
   ): Promise<AttachmentHeader> {
-    return Promise.reject(new Error("not implemented"));
+    const decision = await this.decideRead(ref, options);
+    return this.inner.stat(decision.ref, {
+      ...options,
+      documentId: decision.documentId,
+    });
   }
 
-  get(
-    _ref: AttachmentRef,
-    _options?: AbortSignal | AttachmentDownloadOptions,
+  async get(
+    ref: AttachmentRef,
+    options?: AbortSignal | AttachmentDownloadOptions,
   ): Promise<AttachmentResponse> {
-    return Promise.reject(new Error("not implemented"));
+    const decision = await this.decideRead(ref, options);
+    return this.inner.get(decision.ref, {
+      ...(options as AttachmentDownloadOptions),
+      documentId: decision.documentId,
+    });
   }
 
-  getDownloadTarget(
-    _ref: AttachmentRef,
-    _options: AttachmentDownloadTargetOptions,
+  async getDownloadTarget(
+    ref: AttachmentRef,
+    options: AttachmentDownloadTargetOptions,
   ): Promise<AttachmentDownloadTarget> {
-    return Promise.reject(new Error("not implemented"));
+    const decision = await this.decideRead(ref, options);
+    return this.inner.getDownloadTarget(decision.ref, {
+      ...options,
+      documentId: decision.documentId,
+    });
   }
+
+  private async decideRead(
+    ref: AttachmentRef,
+    options: unknown,
+  ): Promise<ReadDecision> {
+    const documentId = readDocumentId(options);
+    if (documentId === null) {
+      throw new AttachmentNotFound(ref);
+    }
+
+    await this.admit("read");
+
+    let decision: AttachmentAccessResult;
+    try {
+      decision = await this.access.canReadAttachment({
+        documentId,
+        attachmentRef: ref,
+        userAddress: this.subject.address,
+        appKey: this.subject.key,
+      });
+    } catch (err) {
+      throw this.accessFailed(err);
+    }
+
+    if (decision.kind === "allowed") {
+      return { documentId: decision.documentId, ref: decision.ref };
+    }
+    if (decision.kind === "projection-unavailable") {
+      throw new AttachmentAccessUnavailable();
+    }
+    throw new AttachmentNotFound(ref);
+  }
+
+  private async admit(intent: "read" | "write"): Promise<void> {
+    let result: AttachmentCallerResult;
+    try {
+      result = await this.access.admitCaller({
+        intent,
+        userAddress: this.subject.address,
+        appKey: this.subject.key,
+      });
+    } catch (err) {
+      throw this.accessFailed(err);
+    }
+    if (result.kind !== "admitted") {
+      throw new AuthenticationRequiredError();
+    }
+  }
+
+  private accessFailed(err: unknown): AttachmentAccessFailed {
+    this.logger.error("Attachment access decision failed: @error", err);
+    return new AttachmentAccessFailed(err);
+  }
+}
+
+/** The options' `documentId` when it is one the routes would accept, else null. */
+function readDocumentId(options: unknown): string | null {
+  if (typeof options !== "object" || options === null) return null;
+  const proto: unknown = Object.getPrototypeOf(options);
+  if (proto !== Object.prototype && proto !== null) return null;
+  const value = (options as { documentId?: unknown }).documentId;
+  if (typeof value !== "string") return null;
+  if (value.trim().length === 0 || value.length > MAX_DOCUMENT_ID_LEN) {
+    return null;
+  }
+  return value;
 }
 
 export interface IAttachmentClientProvider {
@@ -77,7 +181,14 @@ export class AttachmentClientProvider implements IAttachmentClientProvider {
     private readonly logger: ILogger,
   ) {}
 
-  forSubject(_subject: AuthSubject): IAttachmentClient {
-    throw new Error("not implemented");
+  forSubject(subject: AuthSubject): IAttachmentClient {
+    return createAttachmentClient(
+      new AuthorizedAttachmentService(
+        this.service,
+        this.access,
+        subject,
+        this.logger,
+      ),
+    );
   }
 }
