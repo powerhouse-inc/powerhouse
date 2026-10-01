@@ -4,21 +4,26 @@ import type {
   PHDocument,
   Reducer,
   ReducerFor,
+  VersionedReplayConfig,
 } from "@powerhousedao/shared/document-model";
 import {
   baseLoadFromInput,
+  baseLoadFromInputVersioned,
   baseReducerVersion,
   createZip,
   deriveOperationId,
   deriveScope,
   documentModelStateReducer,
   replayDocument,
+  replayDocumentVersioned,
   retract,
   setModelName,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { expect, vi } from "vitest";
+import { scopeDerivation } from "../../src/cache/kysely-write-cache.js";
 import type { InProcessReactorModule } from "../../src/core/types.js";
+import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 
 export type AgreementTarget = {
   module: InProcessReactorModule;
@@ -36,6 +41,15 @@ export type AgreementTarget = {
   revisions?: readonly number[];
   /** Whether a keyframe must exist; build with a small `keyframeInterval`. */
   expectKeyframe?: boolean;
+  /**
+   * A document with model upgrades: derived by version, replayed and loaded
+   * through the versioned paths, and without the single-reducer sequential
+   * path. Pass `revisions` at or after the last upgrade's boundary.
+   */
+  versioned?: {
+    registry: IDocumentModelRegistry;
+    config: VersionedReplayConfig;
+  };
 };
 
 export type AgreementResult = {
@@ -130,8 +144,20 @@ export async function assertOneRuleAgreement(
   );
   const stateOf = (document: PHDocument) =>
     (document.state as Record<string, unknown>)[scope];
+  const versioned = target.versioned;
+  const deriveByVersion =
+    versioned &&
+    (await scopeDerivation(
+      module.operationStore,
+      versioned.registry,
+      documentId,
+      branch,
+    ));
   const derive = (stream: readonly Operation[]) =>
-    deriveScope(initial, stream, reducerFor);
+    deriveByVersion
+      ? deriveByVersion(initial, stream, scope)
+      : deriveScope(initial, stream, reducerFor);
+  const documentRows = await storedRows(module, documentId, "document", branch);
 
   const derived = derive(rows);
   const expected = stateOf(derived.document);
@@ -180,37 +206,49 @@ export async function assertOneRuleAgreement(
 
   const cold = await attempt(() => rebuildAt());
 
+  const replayOptions = { checkHashes: false, skipIndexValidation: true };
   const replay = await attempt(() =>
     stateOf(
-      replayDocument(
-        document.initialState,
-        { [scope]: rows },
-        reducer,
-        header,
-        undefined,
-        {},
-        { checkHashes: false, skipIndexValidation: true },
-      ),
+      versioned
+        ? replayDocumentVersioned(
+            document.initialState,
+            { document: documentRows, [scope]: rows },
+            versioned.config,
+            header,
+            undefined,
+            replayOptions,
+          )
+        : replayDocument(
+            document.initialState,
+            { [scope]: rows },
+            reducer,
+            header,
+            undefined,
+            {},
+            replayOptions,
+          ),
     ),
   );
 
   const phd = await attempt(async () => {
-    const documentRows = await storedRows(
-      module,
-      documentId,
-      "document",
-      branch,
-    );
     const exported: PHDocument = {
       ...served,
       initialState: document.initialState,
       operations: { document: documentRows, [scope]: rows },
       clipboard: [],
     };
-    return stateOf(await baseLoadFromInput(await createZip(exported), reducer));
+    const zip = await createZip(exported);
+    return stateOf(
+      versioned
+        ? await baseLoadFromInputVersioned(zip, versioned.config)
+        : await baseLoadFromInput(zip, reducer),
+    );
   });
 
   const sequential = await attempt(() => {
+    if (versioned) {
+      return expected;
+    }
     const protocolVersion = baseReducerVersion(header);
     let current = initial;
     for (const operation of rows) {
