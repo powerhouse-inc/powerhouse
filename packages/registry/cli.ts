@@ -250,6 +250,7 @@ export const registryCommand = command({
       databaseUrl: redact(args.databaseUrl),
       listenDatabaseUrl: redact(args.listenDatabaseUrl),
       verdaccioSecret: redact(args.verdaccioSecret),
+      s3AccessKeyId: redact(args.s3AccessKeyId),
       s3SecretAccessKey: redact(args.s3SecretAccessKey),
     });
 
