@@ -405,6 +405,7 @@ const host = new ReactorHost({
           rm.writeCache,
           rm.documentView,
           rm.documentModelRegistry,
+          rm.protocolSupport,
         );
       }
       for (const m of models) {
