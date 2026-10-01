@@ -31,8 +31,8 @@ export interface WorkflowRuntimeHostDeps {
   webhooks?: IWebhookScope;
   // Absent leaves ctx.files inline rather than turning it into an attachment.
   attachments?: AttachmentClientLike;
-  // Whether this document is the one that vouches for the ref. A step runs
-  // with no caller, so the relationship is the whole check; absent denies.
+  // Whether a run of this workflow may read the ref. A step runs with no
+  // caller, so the host decides; absent denies.
   canReadAttachmentRef?(documentId: string, ref: string): Promise<boolean>;
   // Defaults to the relational store encrypted with the host's master key.
   secrets?: SecretStore;
