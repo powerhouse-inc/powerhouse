@@ -5,6 +5,12 @@ import { isDenied } from "./denied.js";
 import { HashMismatchError } from "./errors.js";
 import { createPresignedHeader } from "./header.js";
 import type { DocumentOperations, Operation } from "./operations.js";
+import { stateReducerOf } from "./reducer.js";
+import {
+  deriveScope,
+  positionalOperations,
+  type ReducerFor,
+} from "./retraction.js";
 import {
   protocolVersionsFor,
   signaturePolicyOf,
@@ -27,6 +33,7 @@ import type {
   SignalDispatch,
   SkipHeaderOperationIndex,
   SkipHeaderOperations,
+  StateReducer,
   UndoAction,
   UndoRedoAction,
   UpgradeDocumentActionInput,
@@ -530,6 +537,130 @@ export function appendWithoutApplying<TState extends PHBaseState>(
   };
 }
 
+/** Unlike `baseReducerVersion`, never throws on a header without a version. */
+export function isBaseReducer3(header: PHDocumentHeader): boolean {
+  return header.protocolVersions?.["base-reducer"] === 3;
+}
+
+/** The state reducer base-reducer 3 derives with; throws when `reducer` wraps none. */
+export function requireStateReducer<TState extends PHBaseState = PHBaseState>(
+  reducer: Reducer<TState>,
+  documentType: string,
+  version?: number,
+): StateReducer<TState> {
+  const stateReducer = stateReducerOf(reducer);
+  if (stateReducer === undefined) {
+    const model =
+      version === undefined ? documentType : `${documentType} v${version}`;
+    throw new Error(
+      `Cannot replay ${model} on base-reducer 3: its reducer was not built by createReducer`,
+    );
+  }
+  return stateReducer;
+}
+
+function replayOperation<TState extends PHBaseState>(
+  document: PHDocument<TState>,
+  operation: Operation,
+  reducer: Reducer<TState>,
+  dispatch: SignalDispatch | undefined,
+  checkHashes: boolean,
+  skipIndexValidation: boolean | undefined,
+): PHDocument<TState> {
+  // Denied: holds its index and applies nothing, as on the reactor's rebuilds.
+  if (isDenied(operation)) {
+    return updateHeaderRevision(
+      appendWithoutApplying(document, operation),
+      operation.action.scope,
+      operation.timestampUtcMs,
+    ) as PHDocument<TState>;
+  }
+
+  return reducer(document, operation.action, dispatch, {
+    ignoreSkipOperations: true,
+    checkHashes,
+    skipIndexValidation,
+    replayOptions: {
+      operation,
+    },
+  });
+}
+
+/** Rejects the index gaps the reducer rejects when it appends a replayed row. */
+export function assertReplayIndices(operations: readonly Operation[]): void {
+  let lastIndex = -1;
+  for (const operation of operations) {
+    if (operation.index - operation.skip > lastIndex + 1) {
+      throw new Error(
+        `Missing operations: expected ${lastIndex + 1} with skip 0 or equivalent, got index ${operation.index} with skip ${operation.skip}`,
+      );
+    }
+    lastIndex = operation.index;
+  }
+}
+
+/** Base-reducer 3: rows stored as given, one derivation per ruled scope. */
+function replayRetractionScopes<TState extends PHBaseState>(
+  document: PHDocument<TState>,
+  operations: DocumentOperations,
+  reducer: Reducer<TState>,
+  dispatch: SignalDispatch | undefined,
+  checkHashes: boolean,
+  skipIndexValidation: boolean | undefined,
+): PHDocument<TState> {
+  let reducerFor: ReducerFor | undefined;
+  let result = document;
+  for (const [scope, rows = []] of Object.entries(operations)) {
+    if (rows.length === 0) {
+      continue;
+    }
+    if (scope === "auth" || scope === "document") {
+      for (const operation of rows) {
+        result = replayOperation(
+          result,
+          operation,
+          reducer,
+          dispatch,
+          checkHashes,
+          skipIndexValidation,
+        );
+      }
+      continue;
+    }
+    if (!skipIndexValidation) {
+      assertReplayIndices(rows);
+    }
+    result = updateHeaderRevision(
+      appendRows(result, scope, rows),
+      scope,
+      rows.at(-1)!.timestampUtcMs,
+    ) as PHDocument<TState>;
+    if (reducerFor === undefined) {
+      const stateReducer = requireStateReducer(
+        reducer,
+        document.header.documentType,
+      ) as StateReducer;
+      reducerFor = () => stateReducer;
+    }
+    result = deriveScope(result, rows, reducerFor, scope).document;
+  }
+  return result;
+}
+
+export function appendRows<TState extends PHBaseState>(
+  document: PHDocument<TState>,
+  scope: string,
+  rows: readonly Operation[],
+): PHDocument<TState> {
+  return {
+    ...document,
+    operations: {
+      ...document.operations,
+      [scope]: [...(document.operations[scope] ?? []), ...rows],
+    },
+  };
+}
+
 // Runs the operations on the initial data using the
 // provided document reducer.
 // This rebuilds the document according to the provided actions.
@@ -548,6 +679,7 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
     operationResultingStateParser = parseResultingState,
     skipIndexValidation,
   } = options || {};
+  const retraction = isBaseReducer3(header);
 
   const backfilledInitialState = backfillAuthState(initialState);
   let documentState = backfilledInitialState;
@@ -563,7 +695,7 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
   // looks for the last operation with state of each
   // scope to use it as the starting point and only
   // replay operations that follow it
-  if (reuseOperationResultingState) {
+  if (reuseOperationResultingState && !retraction) {
     for (const [scope, scopeOperations] of Object.entries(operations)) {
       if (!scopeOperations) {
         continue;
@@ -613,31 +745,28 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
 
   // if there are operations left without resulting state
   // then replays them
-  if (operationsToReplay.length) {
-    result = operationsToReplay.reduce((document, operation) => {
-      // A denied operation holds its position without contributing state. The
-      // reactor skips it on every rebuild, so a replay that applied it would
-      // produce different state from the reactor that served the history. It
-      // still occupies its index, so the scope's revision counts it.
-      if (isDenied(operation)) {
-        return updateHeaderRevision(
-          appendWithoutApplying(document, operation),
-          operation.action.scope,
-          operation.timestampUtcMs,
-        ) as PHDocument<TState>;
-      }
-
-      const doc = reducer(document, operation.action, dispatch, {
-        ignoreSkipOperations: true,
-        checkHashes,
-        skipIndexValidation,
-        replayOptions: {
+  if (operationsToReplay.length && retraction) {
+    result = replayRetractionScopes(
+      document,
+      operations,
+      reducer,
+      dispatch,
+      checkHashes,
+      skipIndexValidation,
+    );
+  } else if (operationsToReplay.length) {
+    result = operationsToReplay.reduce(
+      (document, operation) =>
+        replayOperation(
+          document,
           operation,
-        },
-      });
-
-      return doc;
-    }, document);
+          reducer,
+          dispatch,
+          checkHashes,
+          skipIndexValidation,
+        ),
+      document,
+    );
   }
   // if not then updates the document header according
   // to the latest operation of each scope
@@ -659,7 +788,17 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
 
   // if hash generation was skipped then checks if the hash
   // of each scope matches the hash of last operation
-  if (!checkHashes) {
+  if (!checkHashes && retraction) {
+    for (const scope of Object.keys(result.state)) {
+      const operation = positionalOperations(operations[scope] ?? []).at(-1);
+      if (
+        operation &&
+        operation.hash !== hashDocumentStateForScope(result, scope)
+      ) {
+        throw new HashMismatchError(scope, result, operation);
+      }
+    }
+  } else if (!checkHashes) {
     for (const scope of Object.keys(result.state)) {
       for (let i = operationsToReplay.length - 1; i >= 0; i--) {
         const operation = operationsToReplay[i];
