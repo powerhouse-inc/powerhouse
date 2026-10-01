@@ -293,7 +293,7 @@ describe("base-reducer 3", () => {
     // version, whose INCREMENT adds 10.
     const older: StateReducer = (state, action) => {
       if (action.type === "INCREMENT") {
-        (state as { global: { count: number } }).global.count += 10;
+        (state as unknown as { global: { count: number } }).global.count += 10;
         return;
       }
       return baseCountReducer(state as never, action) as never;
