@@ -23,6 +23,8 @@ import {
   localSupports,
   normalizeDocumentModelVersion,
   PEER_CAPABILITIES,
+  positionalOperations,
+  retractedActionIds,
   sortOperations,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
@@ -56,6 +58,8 @@ import {
   InvalidSignatureError,
   PurgeTooLargeError,
   ReservedActionError,
+  RetractionRefusedError,
+  type RetractionRefusalReason,
   UnsupportedProtocolVersionError,
 } from "../shared/errors.js";
 import type { KyselyDocumentPurger } from "../storage/kysely/document-purger.js";
@@ -221,6 +225,25 @@ function isRetractOutsideRule(action: Action): boolean {
     action.type === "RETRACT" &&
     (action.scope === "auth" || action.scope === "document")
   );
+}
+
+/**
+ * Why a submitted RETRACT of `target` cannot apply to `stream`. Decided by
+ * liveness over the rows, not by whether a stored RETRACT names the target:
+ * a retraction that was itself retracted leaves its target live.
+ */
+function retractionRefusal(
+  target: unknown,
+  stream: readonly Operation[],
+): RetractionRefusalReason | undefined {
+  const rows = positionalOperations(stream);
+  if (
+    typeof target !== "string" ||
+    !rows.some((operation) => operation.action.id === target)
+  ) {
+    return "target-missing";
+  }
+  return retractedActionIds(rows).has(target) ? "target-retracted" : undefined;
 }
 
 /** Whether base-reducer 3's retraction rule derives `scope` of `document`. */
@@ -1548,14 +1571,17 @@ export class SimpleJobExecutor implements IJobExecutor {
 
   /**
    * A submitted RETRACT into a document whose base reducer has no retraction
-   * rule. Stored rows a backdated write re-appends, loads and re-evaluations
-   * are not submitted, and stay inert rows.
+   * rule, or on base-reducer 3 one whose target is absent or already
+   * retracted. Stored rows a backdated write re-appends, loads and
+   * re-evaluations are not submitted, and are never refused here. A denied
+   * RETRACT is inert, so only the version refuses it.
    */
   private refuseSubmittedRetract(
-    action: Action,
+    write: PendingWrite,
     executing: ExecutingJob,
     document: PHDocument,
   ): JobResult | undefined {
+    const { action } = write;
     const { job, startTime } = executing;
     if (
       action.type !== "RETRACT" ||
@@ -1584,8 +1610,30 @@ export class SimpleJobExecutor implements IJobExecutor {
           new ReservedActionError(job.documentId, action.type),
           startTime,
         );
-      case 3:
-        return undefined;
+      case 3: {
+        if (
+          write.deniedReason !== undefined ||
+          !derivesByRule(document, job.scope)
+        ) {
+          return undefined;
+        }
+        const target = (action.input as { target?: unknown } | null)?.target;
+        const reason = retractionRefusal(
+          target,
+          document.operations[job.scope] ?? [],
+        );
+        return reason === undefined
+          ? undefined
+          : buildErrorResult(
+              job,
+              new RetractionRefusedError(
+                job.documentId,
+                String(target),
+                reason,
+              ),
+              startTime,
+            );
+      }
     }
   }
 
@@ -1776,7 +1824,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     const retractRefusal = this.refuseSubmittedRetract(
-      action,
+      write,
       executing,
       document,
     );
