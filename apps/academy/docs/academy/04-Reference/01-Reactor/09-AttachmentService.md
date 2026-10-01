@@ -105,7 +105,7 @@ The client is the authorization check, so the resolver needs no `assertCanRead` 
 
 Two more errors come from `@powerhousedao/reactor-api`. `AttachmentAccessUnavailable` means the host does not maintain the [reference index](#the-attachment-reference-index), so no read can be decided. `AttachmentAccessFailed` means the access decision itself threw. The cause is logged on the server and kept as the error's `cause`; its message does not reach the GraphQL client.
 
-`attachmentsFor` throws when the host gave the subgraph no attachments. The `GraphQLManager` passes them to every subgraph it registers. A host that constructs a subgraph itself passes `api.attachmentClientProvider` as `attachments` in its `SubgraphArgs`.
+`attachmentsFor` throws when the host gave the subgraph no attachments. The `GraphQLManager` passes them to every subgraph it registers. A host that constructs a subgraph itself passes `api.attachmentClientProvider`, an `IAttachmentClientProvider`, as `attachments` in its `SubgraphArgs`.
 
 ## The general flow
 
