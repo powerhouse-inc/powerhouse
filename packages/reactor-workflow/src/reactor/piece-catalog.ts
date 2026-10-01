@@ -298,17 +298,8 @@ export async function fetchPieceCatalog(): Promise<PieceSummary[]> {
   return value;
 }
 
-// One piece's detail: the configured registry answers for its own pieces, and
-// anything it does not have comes from the cloud.
-// Only a 404 is the configured registry saying it does not serve that name.
-
-// Anything else -- a 500, a timeout, a refused connection -- is the registry
-// failing to answer, and falling through on that would quietly hand a name the
-// deployment reserved for its own registry to the public cloud instead.
-function registrySilentOn(error: unknown): boolean {
-  return error instanceof CatalogStatusError && error.status === 404;
-}
-
+// One piece's detail: the registry first, then the cloud. A registry that is
+// down counts as not serving the piece, as it does for the catalog listing.
 async function fetchPieceJson(
   packageName: string,
   version?: string,
@@ -318,10 +309,21 @@ async function fetchPieceJson(
     try {
       return await fetchJson(atVersion(source.pieceUrl(packageName), version));
     } catch (error) {
-      if (!registrySilentOn(error)) throw error;
-      logger.debug(
-        `${source.baseUrl} does not serve "${packageName}": ${String(error)}`,
-      );
+      // Passed as values: a scoped name's "@scope" would read as a token.
+      if (error instanceof CatalogStatusError && error.status === 404) {
+        logger.debug(
+          "@registry does not serve @piece",
+          source.baseUrl,
+          packageName,
+        );
+      } else {
+        logger.warn(
+          "Piece registry @registry did not answer for @piece: @error",
+          source.baseUrl,
+          packageName,
+          String(error),
+        );
+      }
     }
   }
   return fetchJson(pieceUrl(packageName, version));
