@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ConfigLoader,
   deepMerge,
+  workflowsSettingConflict,
   type ConfigAdapter,
   type ConfigShape,
 } from "./config-loader.js";
@@ -26,6 +27,29 @@ class InMemoryAdapter implements ConfigAdapter {
     return Promise.resolve();
   }
 }
+
+describe("workflowsSettingConflict", () => {
+  it("names an explicit Connect false that overrides workflows.enabled", () => {
+    expect(
+      workflowsSettingConflict({
+        workflows: { enabled: true },
+        connect: { app: { workflowsEnabled: false } },
+      }),
+    ).toContain('Remove "workflowsEnabled"');
+  });
+
+  it("is quiet when the settings agree or Connect doesn't say", () => {
+    expect(
+      workflowsSettingConflict({ workflows: { enabled: true } }),
+    ).toBeUndefined();
+    expect(
+      workflowsSettingConflict({
+        workflows: { enabled: false },
+        connect: { app: { workflowsEnabled: false } },
+      }),
+    ).toBeUndefined();
+  });
+});
 
 describe("deepMerge", () => {
   it("recursively merges nested objects", () => {
