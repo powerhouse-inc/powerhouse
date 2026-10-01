@@ -46,6 +46,8 @@ export interface RegistryConfig {
    *  that want to reduce npmjs load. */
   uplinkMaxage?: string;
   webEnabled?: boolean;
+  /** Express `trust proxy`: hops in front of the registry, so rate limits key on client IPs */
+  trustProxy?: number | string;
   s3?: S3Config;
   notify?: NotifyConfig;
   maxBodySize?: string;
@@ -84,6 +86,8 @@ export interface RegistryCommandArgs {
   /** How long verdaccio caches npmjs uplink metadata before refetching.
    *  See RegistryConfig.uplinkMaxage. */
   uplinkMaxage?: string;
+  /** See RegistryConfig.trustProxy */
+  trustProxy?: string;
   s3Bucket?: string;
   s3Endpoint?: string;
   s3Region?: string;

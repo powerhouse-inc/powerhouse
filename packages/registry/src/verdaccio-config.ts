@@ -120,6 +120,7 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
     },
     server: {
       keepAliveTimeout: 60,
+      ...(config.trustProxy !== undefined && { trustProxy: config.trustProxy }),
     },
     log: {
       type: "stdout",
