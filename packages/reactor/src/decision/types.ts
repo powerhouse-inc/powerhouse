@@ -1,6 +1,7 @@
 import type {
   Operation,
   PHDocument,
+  ReducerFor,
 } from "@powerhousedao/shared/document-model";
 import type {
   AuthRequest,
@@ -142,6 +143,13 @@ export type DecisionModel<M> = {
     document: PHDocument,
     operation: Operation,
   ) => PHDocument;
+
+  /**
+   * Base-reducer 3: the state reducers the walk derives the evaluated scope
+   * with in place of `foldEvaluatedScope`, resolved for the walk's starting
+   * document.
+   */
+  evaluatedScopeReducer?: (document: PHDocument) => ReducerFor;
 
   /**
    * Whether or not this model decides about operations in a given scope. That
