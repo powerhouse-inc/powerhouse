@@ -20,7 +20,10 @@ import {
 } from "../catch-up/types.js";
 import type { Unsubscribe } from "../events/types.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
-import { DocumentNotFoundError } from "../shared/errors.js";
+import {
+  DocumentNotFoundError,
+  UnsupportedProtocolVersionError,
+} from "../shared/errors.js";
 import type {
   ConsistencyCoordinate,
   ConsistencyToken,
@@ -32,7 +35,7 @@ import {
 } from "../storage/kysely/document-purges.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import type { IReadModel, IReadModelReservation } from "./interfaces.js";
-import type { DocumentViewDatabase } from "./types.js";
+import { SKIPPED_DOCUMENT_MARKER, type DocumentViewDatabase } from "./types.js";
 
 /** Bounds on an indexing pass: one transaction, and the stall between yields. */
 export type ReadModelIndexingConfig = {
@@ -99,6 +102,12 @@ export type BaseReadModelConfig = {
   replayStreamSuffix?: boolean;
   /** Defaults to "locked"; see {@link PurgeFence} for the opt-outs. */
   purgeFence?: PurgeFence;
+  /**
+   * Records each document skipped for its stored protocol versions, and
+   * applies it at the next boot whose support covers it. Off by default: a
+   * consumer that re-delivers must not, since others may have delivered it.
+   */
+  applySkippedWhenSupported?: boolean;
 };
 
 type StreamGroup = {
@@ -194,6 +203,9 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
   private maxTrackedAboveCursor = defaultCatchUpConfig.maxTrackedAboveCursor;
   private loggedFailure: number | undefined;
   private failedItem: OperationWithContext | undefined;
+  private readonly loggedUnsupported = new Set<string>();
+  // First skipped ordinal per document, as its ViewState row holds it.
+  private readonly skippedFrom = new Map<string, number>();
   private initialized = false;
   private readonly liveInFlight = new Map<string, Set<number>>();
   private readonly sweptListeners = new Set<
@@ -294,6 +306,9 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
 
     this.resetCursor(stored);
     this.initialized = true;
+    if (this.config.applySkippedWhenSupported) {
+      await this.applySkippedDocuments();
+    }
     await this.replayFromCursor();
   }
 
@@ -795,7 +810,11 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     return { replayed, reapplied: rebuilt.items.length - replayed };
   }
 
-  /** A document gone from the write cache, or purged, is absent. */
+  /**
+   * A document gone from the write cache, or purged, is absent; so is one
+   * stored at a protocol version this reactor does not run, which it cannot
+   * build.
+   */
   private async rebuildIfConfigured(
     items: OperationWithContext[],
   ): Promise<{ items: OperationWithContext[]; absent: number[] }> {
@@ -815,6 +834,14 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
       try {
         result = await this.rebuildStateForOperations([item]);
       } catch (error) {
+        if (UnsupportedProtocolVersionError.isError(error)) {
+          this.skipUnsupported(error);
+          if (this.config.applySkippedWhenSupported) {
+            await this.recordSkipped(item.context.documentId, ordinalOf(item));
+          }
+          absent.push(ordinalOf(item));
+          continue;
+        }
         if (
           !DocumentNotFoundError.isError(error) &&
           !(await this.isPurged(item.context.documentId))
@@ -833,6 +860,129 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
       rebuilt.push(...result);
     }
     return { items: rebuilt, absent };
+  }
+
+  private skipUnsupported(error: UnsupportedProtocolVersionError): void {
+    if (this.loggedUnsupported.has(error.documentId)) return;
+    this.loggedUnsupported.add(error.documentId);
+    this.catchUpLogger.warn(
+      "@consumer skips document @documentId: stored at @protocol @version, which this reactor does not run",
+      this.consumerId,
+      error.documentId,
+      error.protocol,
+      error.version,
+    );
+  }
+
+  private skippedKey(documentId: string): string {
+    return `${this.config.readModelId}${SKIPPED_DOCUMENT_MARKER}${documentId}`;
+  }
+
+  /** Persisted before the cursor can pass the ordinal, or the skip is lost. */
+  private async recordSkipped(
+    documentId: string,
+    ordinal: number,
+  ): Promise<void> {
+    const from = this.skippedFrom.get(documentId);
+    if (from !== undefined && from <= ordinal) return;
+    await this.db
+      .insertInto("ViewState")
+      .values({
+        readModelId: this.skippedKey(documentId),
+        lastOrdinal: ordinal,
+      })
+      .onConflict((oc) =>
+        oc.column("readModelId").doUpdateSet((eb) => ({
+          lastOrdinal: eb.fn<number>("least", [
+            eb.ref("ViewState.lastOrdinal"),
+            eb.ref("excluded.lastOrdinal"),
+          ]),
+        })),
+      )
+      .execute();
+    this.skippedFrom.set(documentId, ordinal);
+  }
+
+  /**
+   * Applies every recorded document this reactor can now build, from its
+   * first skipped ordinal through the cursor; the replay covers the rest.
+   */
+  private async applySkippedDocuments(): Promise<void> {
+    const prefix = this.skippedKey("");
+    const rows = await this.db
+      .selectFrom("ViewState")
+      .select(["readModelId", "lastOrdinal"])
+      .where("readModelId", "like", `${prefix}%`)
+      .execute();
+
+    for (const row of rows) {
+      if (!row.readModelId.startsWith(prefix)) continue;
+      const documentId = row.readModelId.slice(prefix.length);
+      try {
+        if (!(await this.applySkippedDocument(documentId, row.lastOrdinal))) {
+          this.skippedFrom.set(documentId, row.lastOrdinal);
+          continue;
+        }
+        await this.db
+          .deleteFrom("ViewState")
+          .where("readModelId", "=", row.readModelId)
+          .execute();
+        this.catchUpLogger.info(
+          "@consumer applied skipped document @documentId from ordinal @ordinal",
+          this.consumerId,
+          documentId,
+          row.lastOrdinal,
+        );
+      } catch (error) {
+        this.skippedFrom.set(documentId, row.lastOrdinal);
+        this.catchUpLogger.error(
+          "@consumer could not apply skipped document @documentId: @error",
+          this.consumerId,
+          documentId,
+          error,
+        );
+      }
+    }
+  }
+
+  /** False while the document's protocol versions are still unsupported. */
+  private async applySkippedDocument(
+    documentId: string,
+    from: number,
+  ): Promise<boolean> {
+    try {
+      await this.writeCache.getState(documentId, "document", "main");
+    } catch (error) {
+      if (UnsupportedProtocolVersionError.isError(error)) return false;
+      if (
+        !DocumentNotFoundError.isError(error) &&
+        !(await this.isPurged(documentId))
+      ) {
+        throw error;
+      }
+    }
+
+    const through = this.cursor.appliedThrough;
+    let cursor = String(from - 1);
+    for (;;) {
+      const page = await this.operationIndex.get(documentId, undefined, {
+        cursor,
+        limit: Math.min(this.indexing.commitChunkSize, 500),
+      });
+      const ordinals = page.results
+        .map((entry) => entry.ordinal ?? Number.POSITIVE_INFINITY)
+        .filter((ordinal) => ordinal <= through);
+      if (ordinals.length > 0) {
+        const items = await this.operationIndex.getByOrdinals(ordinals);
+        const rebuilt = await this.rebuildIfConfigured(items);
+        await this.commitFenced(rebuilt.items);
+        this.updateConsistencyTracker(rebuilt.items);
+      }
+      if (!page.nextCursor || ordinals.length < page.results.length) {
+        return true;
+      }
+      cursor = page.nextCursor;
+    }
   }
 
   /** A failed lookup is no answer: the caller's own error stands. */

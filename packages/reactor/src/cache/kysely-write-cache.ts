@@ -20,9 +20,12 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { createDocumentFromAction } from "../executor/util.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
+import { firstUnsupportedProtocol } from "../core/stored-protocol-check.js";
+import type { ProtocolSupport } from "../executor/types.js";
 import {
   DocumentNotFoundError,
   DocumentPurgedError,
+  UnsupportedProtocolVersionError,
 } from "../shared/errors.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
 import { RingBuffer } from "./buffer/ring-buffer.js";
@@ -167,7 +170,8 @@ export class KyselyWriteCache implements IWriteCache {
   private keyframeStore: IKeyframeStore;
   private operationStore: IOperationStore;
   private registry: IDocumentModelRegistry;
-  private config: Required<WriteCacheConfig>;
+  private config: Required<Omit<WriteCacheConfig, "protocolSupport">>;
+  private protocolSupport: ProtocolSupport | undefined;
   private reads = new Map<string, Set<PendingRead>>();
 
   constructor(
@@ -184,8 +188,30 @@ export class KyselyWriteCache implements IWriteCache {
       ringBufferSize: config.ringBufferSize,
       keyframeInterval: config.keyframeInterval,
     };
+    this.protocolSupport = config.protocolSupport;
     this.streams = new Map();
     this.lruTracker = new LRUTracker<string>();
+  }
+
+  /**
+   * Refuses a document stored at a protocol version outside `protocolSupport`
+   * by name, so read paths can tell it from a rebuild that failed. Runs before
+   * any reducer or cached state, since neither checks support.
+   */
+  private assertSupported(documentId: string, document: PHDocument): void {
+    const unsupported =
+      this.protocolSupport &&
+      firstUnsupportedProtocol(
+        document.header.protocolVersions,
+        this.protocolSupport,
+      );
+    if (unsupported) {
+      throw new UnsupportedProtocolVersionError(
+        documentId,
+        unsupported.protocol,
+        unsupported.version,
+      );
+    }
   }
 
   withScopedStores(
@@ -196,7 +222,7 @@ export class KyselyWriteCache implements IWriteCache {
       keyframeStore,
       operationStore,
       this.registry,
-      this.config,
+      { ...this.config, protocolSupport: this.protocolSupport },
     );
     scoped.streams = this.streams;
     scoped.lruTracker = this.lruTracker;
@@ -298,6 +324,7 @@ export class KyselyWriteCache implements IWriteCache {
         // Only the topmost snapshot can be the head, and only if it was stored
         // as one: anything above it proves the stream has grown since.
         if (newest?.position === SnapshotPosition.Head) {
+          this.assertSupported(documentId, newest.document);
           this.lruTracker.touch(streamKey);
           return copyDocument(newest.document);
         }
@@ -331,6 +358,7 @@ export class KyselyWriteCache implements IWriteCache {
           (s) => s.revision === targetRevision,
         );
         if (exactMatch) {
+          this.assertSupported(documentId, exactMatch.document);
           this.lruTracker.touch(streamKey);
           return copyDocument(exactMatch.document);
         }
@@ -698,6 +726,7 @@ export class KyselyWriteCache implements IWriteCache {
     let lastDocumentScopeOperation: Operation | undefined;
 
     if (keyframe) {
+      this.assertSupported(documentId, keyframe.document);
       document = keyframe.document;
       startRevision = keyframe.revision;
       documentType = keyframe.document.header.documentType;
@@ -820,6 +849,7 @@ export class KyselyWriteCache implements IWriteCache {
       }
 
       document = createDocumentFromAction(documentCreateAction);
+      this.assertSupported(documentId, document);
       lastDocumentScopeOperation = createOp;
 
       let docModule = this.registry.getModule(
@@ -1323,6 +1353,7 @@ export class KyselyWriteCache implements IWriteCache {
     targetRevision: number | undefined,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
+    this.assertSupported(documentId, baseDocument);
     const documentType = baseDocument.header.documentType;
     const docScopeNextIndex = baseDocument.header.revision["document"] ?? 0;
 

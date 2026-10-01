@@ -1,6 +1,7 @@
 // Undo that steps over operations that are not the author's edits, such as
 // the runtime's test and run facts, and redo of what it took back.
 import {
+  baseReducerVersion,
   garbageCollect,
   garbageCollectV2,
   generateId,
@@ -8,6 +9,7 @@ import {
   type Action,
   type BaseReducerVersion,
   type Operation,
+  type PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
 
 export interface UndoPolicy {
@@ -44,6 +46,15 @@ export function undoGroupOf(action: Action): string | undefined {
   return end > GROUP_PREFIX.length
     ? action.id.slice(GROUP_PREFIX.length, end)
     : undefined;
+}
+
+// A header without a version, as the GraphQL light client builds it, reads as
+// 1; an unknown version throws.
+export function undoProtocolVersion(
+  header: PHDocumentHeader,
+): BaseReducerVersion {
+  if (header.protocolVersions?.["base-reducer"] === undefined) return 1;
+  return baseReducerVersion(header);
 }
 
 // The operations still in effect: undone ones and the NOOPs removed.

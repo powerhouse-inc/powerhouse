@@ -5,7 +5,6 @@ import {
   useDocumentById,
 } from "@powerhousedao/reactor-browser";
 import {
-  baseReducerVersion,
   undo,
   type Action,
   type Operation,
@@ -19,6 +18,7 @@ import {
   headIndex,
   planUndo,
   redoActions,
+  undoProtocolVersion,
   type UndoPolicy,
 } from "./undo-plan.js";
 
@@ -115,7 +115,7 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
     run(async () => {
       const history = await globalHistory(props.documentId);
       const plan = planUndo(
-        effectiveOperations(history, baseReducerVersion(document!.header)),
+        effectiveOperations(history, undoProtocolVersion(document!.header)),
         policy,
       );
       if (!plan) return;
