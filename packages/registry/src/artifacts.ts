@@ -69,15 +69,22 @@ export function createS3ArtifactStore(config: S3Config): ArtifactStore {
     },
     async putFile(key, file, contentType) {
       const { size } = await fs.promises.stat(file);
-      await s3.send(
-        new PutObjectCommand({
-          Bucket: config.bucket,
-          Key: root + key,
-          Body: fs.createReadStream(file),
-          ContentLength: size,
-          ContentType: contentType,
-        }),
-      );
+      const body = fs.createReadStream(file);
+      // A send that fails before reading leaves the stream's errors unheard
+      body.on("error", () => undefined);
+      try {
+        await s3.send(
+          new PutObjectCommand({
+            Bucket: config.bucket,
+            Key: root + key,
+            Body: body,
+            ContentLength: size,
+            ContentType: contentType,
+          }),
+        );
+      } finally {
+        body.destroy();
+      }
     },
     async get(key) {
       try {
