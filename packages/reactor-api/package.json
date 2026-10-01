@@ -24,6 +24,11 @@
       "types": "./dist/https-hooks.d.mts",
       "import": "./dist/src/packages/https-hooks.mjs"
     },
+    "./pglite-node": {
+      "source": "./src/pglite/pglite-node.ts",
+      "types": "./dist/src/pglite/pglite-node.d.mts",
+      "import": "./dist/src/pglite/pglite-node.mjs"
+    },
     "./test": {
       "import": "./test/index.ts"
     }
