@@ -1,3 +1,7 @@
+## 6.2.3-dev.38 (2026-10-01)
+
+This was a version bump only for @powerhousedao/powerhouse-vetra-packages to align it with other projects, there were no code changes.
+
 ## 6.2.3-dev.37 (2026-10-01)
 
 This was a version bump only for @powerhousedao/powerhouse-vetra-packages to align it with other projects, there were no code changes.
