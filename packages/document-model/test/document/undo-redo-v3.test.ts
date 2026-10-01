@@ -1,5 +1,6 @@
 import type {
   Action,
+  DeriveScope,
   Operation,
   StateReducer,
 } from "@powerhousedao/shared/document-model";
@@ -285,6 +286,102 @@ describe("base-reducer 3", () => {
 
     expect(last(document).skip).toBe(1);
     expect(document.state.global.count).toBe(3);
+  });
+
+  describe("given a version-aware derivation", () => {
+    // Stands in for an upgraded model: the first row applies under an older
+    // version, whose INCREMENT adds 10.
+    const older: StateReducer = (state, action) => {
+      if (action.type === "INCREMENT") {
+        (state as { global: { count: number } }).global.count += 10;
+        return;
+      }
+      return baseCountReducer(state as never, action) as never;
+    };
+    function versioned(): { derive: DeriveScope; calls: () => number } {
+      let calls = 0;
+      const derive: DeriveScope = (document, operations, scope, onThrow) => {
+        calls++;
+        return deriveScope(
+          document,
+          operations,
+          (operation) =>
+            operation.index === 0
+              ? older
+              : (baseCountReducer as unknown as StateReducer),
+          scope,
+          onThrow,
+        );
+      };
+      return { derive, calls: () => calls };
+    }
+
+    it("re-derives a RETRACT through it and hashes the result", () => {
+      const a = increment();
+      const b = increment();
+      const c = increment();
+      const { derive } = versioned();
+      let document = dispatch(createV3Document(), a, b, c);
+
+      document = countReducer(document, retract(b.id), undefined, {
+        deriveScope: derive,
+      });
+
+      expect(document.state.global.count).toBe(11);
+      expect(last(document).hash).toBe(
+        hashDocumentStateForScope(document, "global"),
+      );
+    });
+
+    it("resolves UNDO from the rows it applied", () => {
+      const a = increment();
+      const derive: DeriveScope = (document, operations, scope, onThrow) =>
+        deriveScope(
+          document,
+          operations,
+          (operation) =>
+            operation.index === 1
+              ? ((() => {
+                  throw new Error("older version refuses");
+                }) as StateReducer)
+              : (baseCountReducer as unknown as StateReducer),
+          scope,
+          onThrow,
+        );
+      const document = dispatch(createV3Document(), a, increment());
+
+      const undone = countReducer(document, undo(), undefined, {
+        deriveScope: derive,
+      });
+
+      expect(targetOf(last(undone))).toBe(a.id);
+      expect(undone.state.global.count).toBe(0);
+    });
+
+    it("records the error of a rewinding row from it", () => {
+      const { derive } = versioned();
+      let document = dispatch(createV3Document(), increment(), increment());
+
+      document = countReducer(document, error(), undefined, {
+        skip: 1,
+        deriveScope: derive,
+      });
+
+      expect(last(document).error).toBe("Error action");
+      expect(document.state.global.count).toBe(10);
+    });
+
+    it("is not used for a row that only appends", () => {
+      const { derive, calls } = versioned();
+      const document = dispatch(createV3Document(), increment());
+
+      const next = countReducer(document, increment(), undefined, {
+        deriveScope: derive,
+      });
+
+      expect(calls()).toBe(0);
+      expect(next.state.global.count).toBe(2);
+    });
   });
 
   it("applies a base action once", () => {
