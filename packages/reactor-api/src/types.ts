@@ -59,7 +59,7 @@ export type API = {
   /** Document-authorized attachment read decisions; see AttachmentAccessService. */
   attachmentAccess: IAttachmentAccessService;
   /** Caller-bound attachment clients for subgraphs the host constructs itself. */
-  attachmentClientProvider?: IAttachmentClientProvider;
+  attachmentClientProvider: IAttachmentClientProvider;
   authService: AuthService | undefined;
   /**
    * Whether this deployment refuses anonymous callers

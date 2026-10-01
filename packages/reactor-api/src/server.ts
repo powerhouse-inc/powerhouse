@@ -52,6 +52,10 @@ import {
   type AttachmentReferenceProjectionCapability,
   type IAttachmentAccessService,
 } from "./services/attachment-access.service.js";
+import {
+  AttachmentClientProvider,
+  type IAttachmentClientProvider,
+} from "./services/authorized-attachment.service.js";
 import { createCanonicalDocumentIdResolver } from "./services/canonical-document-id.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import {
@@ -456,6 +460,7 @@ type SetupGraphQLManagerOptions = {
   reactorDriveClient?: IDriveClient;
   syncServingGate?: SyncScopeGate;
   httpRoutes?: HttpRouteService;
+  attachments?: IAttachmentClientProvider;
 };
 
 /**
@@ -481,6 +486,7 @@ async function setupGraphQLManager({
   reactorDriveClient,
   syncServingGate,
   httpRoutes,
+  attachments,
 }: SetupGraphQLManagerOptions): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager({
     path: config.basePath,
@@ -506,6 +512,7 @@ async function setupGraphQLManager({
     reactorDriveClient,
     syncServingGate,
     httpRoutes,
+    attachments,
   });
 
   await graphqlManager.init(
@@ -717,6 +724,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   httpAdapter: IHttpAdapter;
   authFetchMiddleware: AuthFetchMiddleware | undefined;
   requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined;
+  authEnabled: boolean;
   authService: AuthService | undefined;
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
@@ -1129,6 +1137,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     httpRoutes,
     authFetchMiddleware,
     requireAuthFetchMiddleware,
+    authEnabled,
     authService,
     relationalDb,
     analyticsStore,
@@ -1153,6 +1162,7 @@ async function _setupAPI(
   httpAdapter: IHttpAdapter,
   authFetchMiddleware: AuthFetchMiddleware | undefined,
   requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined,
+  authEnabled: boolean,
   authService: AuthService | undefined,
   port: number,
   packages: PackageManager,
@@ -1297,6 +1307,9 @@ async function _setupAPI(
     attachmentReadsFollowDocumentPolicy,
     syncServingGate !== undefined,
   );
+  // The floor the attachment routes' requireAuth applies, so an in-process
+  // caller is refused exactly where the HTTP route would refuse it.
+  const floor = requireAuthFetchMiddleware !== undefined;
   const attachmentAccess: IAttachmentAccessService =
     new AttachmentAccessService(
       createCanonicalDocumentIdResolver(reactorClient),
@@ -1305,7 +1318,16 @@ async function _setupAPI(
       attachmentReferenceProjection,
       reactorClient,
       attachmentReadsFollowDocumentPolicy ? syncServingGate : undefined,
+      {
+        refuseAnonymousWrites: authEnabled || floor,
+        refuseAnonymousReads: floor,
+      },
     );
+  const attachmentClientProvider = new AttachmentClientProvider(
+    attachments.service,
+    attachmentAccess,
+    logger,
+  );
 
   // set up subgraph manager
   const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
@@ -1340,6 +1362,7 @@ async function _setupAPI(
     reactorDriveClient,
     syncServingGate,
     httpRoutes,
+    attachments: attachmentClientProvider,
   });
 
   // Set up event listeners
@@ -1383,13 +1406,14 @@ async function _setupAPI(
     attachments,
     attachmentReferenceIndex,
     attachmentAccess,
+    attachmentClientProvider,
     authService,
     // Read from the composed middleware rather than from a second pass over
     // the environment, and the same way `#makeWsContextFactory` reads it: the
     // middleware exists exactly when the floor is on, so one value cannot
     // disagree with another about whether this deployment serves anonymous
     // callers.
-    requireAuthenticatedCaller: requireAuthFetchMiddleware !== undefined,
+    requireAuthenticatedCaller: floor,
     // Handed back rather than kept private: a component the host composes
     // after boot (the workflow runtime) authorizes with this service and
     // stores in this database.
@@ -1530,6 +1554,7 @@ export async function initializeAndStartAPI(
     httpRoutes,
     authFetchMiddleware,
     requireAuthFetchMiddleware,
+    authEnabled,
     authService,
     relationalDb,
     analyticsStore,
@@ -1596,6 +1621,7 @@ export async function initializeAndStartAPI(
     httpAdapter,
     authFetchMiddleware,
     requireAuthFetchMiddleware,
+    authEnabled,
     authService,
     port,
     packages,

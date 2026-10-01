@@ -4,6 +4,7 @@ import type {
   ISyncManager,
   SyncScopeGate,
 } from "@powerhousedao/reactor";
+import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import type {
   GraphQLManager,
@@ -23,6 +24,7 @@ import {
   createCanonicalDocumentIdResolver,
   type CanonicalDocumentIdResolver,
 } from "../services/canonical-document-id.js";
+import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import type { Context } from "./types.js";
 
@@ -71,6 +73,10 @@ export class BaseSubgraph implements ISubgraph {
 
   readonly #resolveCanonical: CanonicalDocumentIdResolver;
 
+  readonly #attachments?: IAttachmentClientProvider;
+
+  readonly #attachmentClientMemo = new WeakMap<object, IAttachmentClient>();
+
   constructor(args: SubgraphArgs) {
     this.#resolveCanonical = createCanonicalDocumentIdResolver(
       args.reactorClient,
@@ -84,6 +90,24 @@ export class BaseSubgraph implements ISubgraph {
     this.authorizationService = args.authorizationService;
     this.syncServingGate = args.syncServingGate;
     this.path = args.path ?? "";
+    this.#attachments = args.attachments;
+  }
+
+  /**
+   * An attachment client bound to this request's caller, memoized per request.
+   *
+   * @throws Error when the host provides no attachment client to subgraphs.
+   */
+  attachmentsFor(ctx: Context): IAttachmentClient {
+    if (!this.#attachments) {
+      throw new Error("This host provides no attachment client to subgraphs");
+    }
+    let client = this.#attachmentClientMemo.get(ctx);
+    if (!client) {
+      client = this.#attachments.forSubject(callerSubject(ctx.user));
+      this.#attachmentClientMemo.set(ctx, client);
+    }
+    return client;
   }
 
   async onSetup() {
