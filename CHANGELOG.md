@@ -1,3 +1,19 @@
+## 6.2.3-dev.37 (2026-10-01)
+
+### 🚀 Features
+
+- **registry:** trust a configured number of proxy hops for client IPs ([61c9aed49a](https://github.com/powerhouse-inc/powerhouse/commit/61c9aed49a))
+
+### 🩹 Fixes
+
+- **registry:** redact the S3 access key id in the startup log ([0983239022](https://github.com/powerhouse-inc/powerhouse/commit/0983239022))
+- **registry:** settle every upload before removing an extracted tarball ([9e3744bf9f](https://github.com/powerhouse-inc/powerhouse/commit/9e3744bf9f))
+- **registry:** process only packages published to the registry, not its uplink cache ([5fc581be62](https://github.com/powerhouse-inc/powerhouse/commit/5fc581be62))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.36 (2026-10-01)
 
 ### 🚀 Features
