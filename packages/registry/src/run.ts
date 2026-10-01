@@ -1,8 +1,4 @@
-import {
-  GetObjectCommand,
-  ListObjectsV2Command,
-  S3Client,
-} from "@aws-sdk/client-s3";
+import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import S3DatabasePostgres from "@powerhousedao/verdaccio-s3-storage/postgres";
 import express from "express";
 import { findUp } from "find-up";
@@ -56,7 +52,12 @@ import type {
 import { ignoreLateContentLength } from "./late-header-guard.js";
 import { installUplinkMissCache } from "./uplink-miss-cache.js";
 import { buildVerdaccioConfig } from "./verdaccio-config.js";
-import { enqueueSweep, startWorker, type RunningWorker } from "./worker.js";
+import {
+  enqueueSweep,
+  pruneCachedPackages,
+  startWorker,
+  type RunningWorker,
+} from "./worker.js";
 
 // Verdaccio's signing secrets are exactly this long
 const VERDACCIO_SECRET_LENGTH = 32;
@@ -576,33 +577,6 @@ interface LegacyVerdaccioState {
   }[];
 }
 
-// Package names from the stored manifests: <prefix><name>/package.json
-async function storedPackageNames(s3: S3Client, config: S3Config) {
-  const prefix = config.keyPrefix ?? "";
-  const names = new Set<string>();
-  let token: string | undefined;
-  do {
-    const page = await s3.send(
-      new ListObjectsV2Command({
-        Bucket: config.bucket,
-        Prefix: prefix,
-        ContinuationToken: token,
-      }),
-    );
-    for (const { Key } of page.Contents ?? []) {
-      const rel = Key?.slice(prefix.length) ?? "";
-      if (!rel.endsWith("/package.json") || rel.startsWith("artifacts/")) {
-        continue;
-      }
-      const name = rel.slice(0, -"/package.json".length);
-      const depth = name.split("/").length;
-      if (name.startsWith("@") ? depth === 2 : depth === 1) names.add(name);
-    }
-    token = page.IsTruncated ? page.NextContinuationToken : undefined;
-  } while (token);
-  return names;
-}
-
 async function readStoredManifest(
   s3: S3Client,
   config: S3Config,
@@ -661,10 +635,11 @@ export async function runImportVerdaccioState(
     const name = (err as { name?: string }).name;
     if (name !== "NoSuchKey" && name !== "NotFound") throw err;
   }
-  const names = await storedPackageNames(s3, s3Config);
-  for (const name of legacy.list ?? []) names.add(name);
+  // Verdaccio's list holds what was published here; the bucket also holds its uplink cache
+  const names = new Set(legacy.list ?? []);
 
   const pool = new pg.Pool({ connectionString: args.databaseUrl });
+  let pruned: string[] = [];
   try {
     const store = new S3DatabasePostgres(pool, pluginLogger);
     await store.init();
@@ -679,6 +654,7 @@ export async function runImportVerdaccioState(
         [name],
       );
     }
+    pruned = await pruneCachedPackages(pool, [...names]);
     for (const token of legacy.tokens ?? []) {
       await pool.query(
         `INSERT INTO verdaccio_tokens ("user", key, token) VALUES ($1, $2, $3)
@@ -697,6 +673,6 @@ export async function runImportVerdaccioState(
     await pool.end();
   }
   console.log(
-    `[registry] imported ${names.size} package name(s), ${legacy.tokens?.length ?? 0} token(s)${legacy.secret ? " and the secret" : ""}`,
+    `[registry] imported ${names.size} package name(s), ${legacy.tokens?.length ?? 0} token(s)${legacy.secret ? " and the secret" : ""}; pruned ${pruned.length} cached package(s)`,
   );
 }
