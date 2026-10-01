@@ -45,7 +45,7 @@ function clientOver(
 }
 
 describe("the attachment port's read", () => {
-  it("refuses a ref the workflow document does not reference", async () => {
+  it("refuses a ref the host does not let the workflow read", async () => {
     const client = clientOver([new Uint8Array([1, 2, 3, 4])]);
     const port = createAttachmentPort(
       client as never,
@@ -54,7 +54,7 @@ describe("the attachment port's read", () => {
     );
 
     await expect(port.read(REF, await destPath())).rejects.toThrow(
-      "does not reference it",
+      "may not read it",
     );
     // Refused before the store is ever asked for the bytes.
     expect(client.download).not.toHaveBeenCalled();

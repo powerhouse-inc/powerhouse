@@ -3,7 +3,6 @@
 import {
   REACTOR_SCHEMA,
   supportsLiveReadModelRegistration,
-  type AttachmentHash,
   type AttachmentRef,
   type DocumentViewDatabase,
   type InProcessReactorClientModule,
@@ -15,7 +14,6 @@ import {
   ForbiddenError,
   callerSubject,
   createCanonicalDocumentIdResolver,
-  type AttachmentReferenceProjectionCapability,
   type CanonicalDocumentId,
   type Context,
   type IAuthorizationService,
@@ -23,11 +21,7 @@ import {
   type PackagePieceEntry,
   type SubgraphClass,
 } from "@powerhousedao/reactor-api";
-import {
-  createRef,
-  parseRef,
-  type IAttachmentReferenceReader,
-} from "@powerhousedao/reactor-attachments";
+import { parseRef } from "@powerhousedao/reactor-attachments";
 import type * as WorkflowEngine from "@powerhousedao/reactor-workflow";
 import type {
   AttachmentClientLike,
@@ -130,10 +124,6 @@ export interface ComposeWorkflowRuntimeDeps {
    * store needs PH_WORKFLOWS_SECRETS_MASTER_KEY rather than a generated key. */
   secretsKeyFile?: false;
   attachments: AttachmentClientLike;
-  /** The projected document/ref relationships a step's attachment read is
-   * checked against; without them, or without the projection, nothing reads. */
-  attachmentReferences?: IAttachmentReferenceReader;
-  attachmentReferenceProjection?: AttachmentReferenceProjectionCapability;
   webhooks?: IWebhookScope;
   /** The workflow package's HTTP namespace; the OAuth2 callback lives on it.
    * Absent leaves OAuth2 connections unable to sign in. */
@@ -227,37 +217,17 @@ function writeAssertion(
   };
 }
 
-/** Whether the workflow document really references the attachment. A step
- * carries no caller, so the relationship is the whole check. */
-function attachmentRefCheck(
-  deps: ComposeWorkflowRuntimeDeps,
-): WorkflowRuntimeHostDeps["canReadAttachmentRef"] {
-  const resolveCanonical = createCanonicalDocumentIdResolver(
-    deps.reactorClient,
-  );
-  const references = deps.attachmentReferences;
-  const projection = deps.attachmentReferenceProjection;
-  return async (documentId: string, ref: string) => {
-    // An index nobody maintains is evidence of nothing, so it denies rather
-    // than waves the read through.
-    if (!references || projection?.status !== "available") return false;
-    let parsed: { version: number; hash: string };
-    try {
-      parsed = parseRef(ref as AttachmentRef);
-    } catch {
-      return false;
-    }
-    if (parsed.version !== 1) return false;
-    const canonicalRef = createRef(parsed.hash.toLowerCase() as AttachmentHash);
-    try {
-      return await references.hasReference(
-        await resolveCanonical(documentId),
-        canonicalRef,
-      );
-    } catch {
-      return false;
-    }
-  };
+/** A step reads any well-formed attachment, as it reads any document: a run
+ * carries no caller to check against. */
+export function canReadAttachmentRef(
+  _documentId: string,
+  ref: string,
+): Promise<boolean> {
+  try {
+    return Promise.resolve(parseRef(ref as AttachmentRef).version === 1);
+  } catch {
+    return Promise.resolve(false);
+  }
 }
 
 // Live registration is the capability the attachment reference index needs
@@ -359,7 +329,7 @@ export async function composeWorkflowRuntime(
     ),
     webhooks: deps.webhooks,
     attachments: deps.attachments,
-    canReadAttachmentRef: attachmentRefCheck(deps),
+    canReadAttachmentRef,
     logger: deps.logger,
   });
 
