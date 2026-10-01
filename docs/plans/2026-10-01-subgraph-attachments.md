@@ -40,7 +40,7 @@ reach bytes without naming the caller.
 2. **Uploads require an authenticated caller, nothing more.** Document
    mutation is checked separately when the document action is dispatched.
    The rule matches the HTTP write routes exactly, including their behaviour
-   when auth is off (see [Write rule](#write-rule)).
+   when auth is off (see [Caller rule](#caller-rule)).
 3. **A denied read is `AttachmentNotFound`.** The HTTP routes answer 404,
    never 403, so a denial does not confirm that a hash exists.
 4. **The class lives in `reactor-api`.** `reactor-api` already depends on
@@ -164,11 +164,17 @@ export class AttachmentClientProvider implements IAttachmentClientProvider {
   constructor(
     private readonly service: IAttachmentService,
     private readonly access: IAttachmentAccessService,
+    private readonly logger: ILogger,
   ) {}
 
   forSubject(subject: AuthSubject): IAttachmentClient {
     return createAttachmentClient(
-      new AuthorizedAttachmentService(this.service, this.access, subject),
+      new AuthorizedAttachmentService(
+        this.service,
+        this.access,
+        subject,
+        this.logger,
+      ),
     );
   }
 }
@@ -271,7 +277,7 @@ One commit, no behaviour change.
 ### Stage 1: caller-bound attachments
 
 - *1a, serial: foundation.* One commit every track imports. It must compile
-  with tests included (`tsconfig.json` includes `**/*`):
+  with tests included (`packages/reactor-api/tsconfig.json` includes `**/*`):
   - `AttachmentCallerRequest`, `AttachmentCallerResult` and `admitCaller` on
     `IAttachmentAccessService`; `AttachmentAccessServiceOptions` and the
     optional trailing constructor parameter; a stub `admitCaller` on
@@ -285,7 +291,9 @@ One commit, no behaviour change.
     Constructors do not throw, so `server.ts` still boots in track C's tests;
   - the `validateReserveMetadata` signature in `reactor-attachments`, its
     body throwing `not implemented`, exported from the package root;
-  - `SubgraphArgs.attachments?` and `API.attachmentClientProvider`;
+  - `SubgraphArgs.attachments?`, and `API.attachmentClientProvider?` as
+    optional, so the `API` literal in `server.ts` still compiles (every test
+    `API` is cast);
   - exports from `packages/reactor-api/index.mts`.
 
   It passes `pnpm tsc --build` in `reactor-attachments`, `reactor-api` and
@@ -306,7 +314,8 @@ One commit, no behaviour change.
   Track C threads `authEnabled` from `_setupCommonInfrastructure` into
   `_setupAPI`, passes both options where `attachmentAccess` is built
   (`server.ts:1276`), builds the provider after it from
-  `attachments.service`, and sets `API.attachmentClientProvider`. The
+  `attachments.service`, and sets `API.attachmentClientProvider`, making the
+  field required. The
   switchboard subgraphs read it from `api`. The reactor-drive object literal
   in `server.mts` (`~:1122`) is not a `BaseSubgraph` and is left alone.
 - *1c, serial: integration.*
