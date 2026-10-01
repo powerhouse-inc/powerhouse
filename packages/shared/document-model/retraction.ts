@@ -23,16 +23,24 @@ export function positionalOperations<T extends OperationIndex>(
 }
 
 export function retractionTarget(operation: Operation): string | undefined {
-  return operation.action.type === "RETRACT"
-    ? (operation.action.input as RetractActionInput).target
-    : undefined;
+  if (operation.action.type !== "RETRACT") return undefined;
+  const input = operation.action.input as Partial<RetractActionInput> | null;
+  return typeof input?.target === "string" ? input.target : undefined;
 }
 
 /** Ids a live retraction names; a retraction is live iff no live retraction names it. */
 export function retractedActionIds(rows: readonly Operation[]): Set<string> {
-  const present = new Set(rows.map((operation) => operation.action.id));
+  const present = new Set<string>();
+  const duplicated = new Set<string>();
+  for (const operation of rows) {
+    const id = operation.action.id;
+    if (present.has(id)) duplicated.add(id);
+    present.add(id);
+  }
+  // A denied retraction, or one whose id is not unique, retracts nothing.
   const targetOf = new Map<string, string>();
   for (const operation of rows) {
+    if (isDenied(operation) || duplicated.has(operation.action.id)) continue;
     const target = retractionTarget(operation);
     if (
       target !== undefined &&
@@ -111,38 +119,22 @@ export function reduceOne<TState extends PHBaseState = PHBaseState>(
   operation: Operation,
   reducerFor: ReducerFor,
 ): PHDocument<TState> {
-  const action = operation.action;
-  if (action.scope === "auth" || action.scope === "document") {
-    throw new Error(`Base-reducer 3 does not derive the ${action.scope} scope`);
-  }
-  if (action.type === "NOOP" || action.type === "RETRACT") {
-    return document;
-  }
-  if (isDocumentAction(action)) {
-    return baseActionReducer(document, action);
-  }
-  const reducer = reducerFor(operation) as unknown as StateReducer<TState>;
-  return create(document, (draft) => {
-    const next = reducer(draft.state, action);
-    if (next) {
-      unsafe(() => {
-        draft.state = castDraft(next);
-      });
-    }
-  });
+  assertDerivedScope(operation.action.scope);
+  return applyRow(document, operation, rowReducer(operation, reducerFor));
 }
 
-/** `applied` holds the ids whose action did not throw; a row that throws applies nothing. */
+/** Derives `scope` from initial state; `applied` holds the ids whose action did not throw. */
 export function deriveScope<TState extends PHBaseState = PHBaseState>(
   document: PHDocument<TState>,
   stream: readonly Operation[],
   reducerFor: ReducerFor,
+  scope: string | undefined = stream.at(0)?.action.scope,
 ): { document: PHDocument<TState>; applied: ReadonlySet<string> } {
   const applied = new Set<string>();
-  const scope = stream.at(0)?.action.scope;
   if (scope === undefined) {
     return { document, applied };
   }
+  assertDerivedScope(scope);
 
   const initial = (document.initialState as Record<string, unknown>)[scope];
   let next: PHDocument<TState> = {
@@ -150,8 +142,9 @@ export function deriveScope<TState extends PHBaseState = PHBaseState>(
     state: { ...document.state, [scope]: initial } as TState,
   };
   for (const operation of appliedOperations(stream)) {
+    const reducer = rowReducer(operation, reducerFor);
     try {
-      next = reduceOne(next, operation, reducerFor);
+      next = applyRow(next, operation, reducer);
       applied.add(operation.action.id);
     } catch {
       // A row that throws applies nothing.
@@ -160,11 +153,57 @@ export function deriveScope<TState extends PHBaseState = PHBaseState>(
   return { document: next, applied };
 }
 
+function assertDerivedScope(scope: string): void {
+  if (scope === "auth" || scope === "document") {
+    throw new Error(`Base-reducer 3 does not derive the ${scope} scope`);
+  }
+}
+
+function rowReducer(
+  operation: Operation,
+  reducerFor: ReducerFor,
+): StateReducer | undefined {
+  const action = operation.action;
+  if (
+    action.type === "NOOP" ||
+    action.type === "RETRACT" ||
+    isDocumentAction(action)
+  ) {
+    return undefined;
+  }
+  return reducerFor(operation);
+}
+
+function applyRow<TState extends PHBaseState>(
+  document: PHDocument<TState>,
+  operation: Operation,
+  reducer: StateReducer | undefined,
+): PHDocument<TState> {
+  const action = operation.action;
+  if (isDocumentAction(action)) {
+    return baseActionReducer(document, action);
+  }
+  if (reducer === undefined) {
+    return document;
+  }
+  const stateReducer = reducer as unknown as StateReducer<TState>;
+  return create(document, (draft) => {
+    const next = stateReducer(draft.state, action);
+    if (next) {
+      unsafe(() => {
+        draft.state = castDraft(next);
+      });
+    }
+  });
+}
+
 function isContent(operation: Operation | undefined): boolean {
   return (
     operation !== undefined &&
     operation.action.type !== "RETRACT" &&
     operation.action.type !== "NOOP" &&
+    operation.action.type !== "UNDO" &&
+    operation.action.type !== "REDO" &&
     !isDenied(operation)
   );
 }
@@ -196,7 +235,7 @@ export function redoTarget(
   );
   for (let i = rows.length - 1; i >= 0; i--) {
     const operation = rows[i];
-    if (retracted.has(operation.action.id)) continue;
+    if (retracted.has(operation.action.id) || isDenied(operation)) continue;
     const target = retractionTarget(operation);
     if (target === undefined) {
       if (applied.has(operation.action.id) && isContent(operation)) {

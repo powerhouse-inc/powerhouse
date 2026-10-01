@@ -13,6 +13,7 @@ import {
   undoTarget,
   type ReducerFor,
 } from "./retraction.js";
+import { createReducer, stateReducerOf } from "./reducer.js";
 import { defaultBaseState, type PHBaseState } from "./state.js";
 import type { StateReducer } from "./types.js";
 
@@ -583,5 +584,58 @@ describe("undoTarget and redoTarget", () => {
       undo: undefined,
       redo: "R(a)",
     });
+  });
+});
+
+describe("review fixes", () => {
+  it("a denied RETRACT retracts nothing and is no redo candidate", () => {
+    const rows = [op(add("a"), 0), denied(op(R("a"), 1))];
+    expect([...retractedActionIds(rows)]).toEqual([]);
+    expect(ids(appliedOperations(rows))).toEqual(["a"]);
+    const { applied } = derive(rows);
+    expect(redoTarget(rows, applied)).toBeUndefined();
+  });
+
+  it("RETRACTs sharing an action id retract nothing", () => {
+    const rows = stream(add("a"), add("b"), R("a", "x"), R("b", "x"));
+    expect([...retractedActionIds(rows)]).toEqual([]);
+  });
+
+  it("a RETRACT with malformed input names no target", () => {
+    const rows = stream(add("a"), action("x", "RETRACT", null));
+    expect([...retractedActionIds(rows)]).toEqual([]);
+  });
+
+  it("UNDO and REDO rows are not content", () => {
+    const rows = stream(add("a"), action("u", "UNDO", { count: 1 }));
+    const { applied } = derive(rows);
+    expect(undoTarget(rows, applied)).toBe("a");
+  });
+
+  it("throws on an auth or document stream instead of resetting it", () => {
+    const document = createDoc();
+    expect(() =>
+      deriveScope(document, stream(action("g", "X", {}, "auth")), reducerFor),
+    ).toThrow(/does not derive the auth scope/);
+  });
+
+  it("propagates a reducerFor failure", () => {
+    const document = createDoc();
+    const missing: ReducerFor = () => {
+      throw new Error("no reducer for module version");
+    };
+    expect(() => deriveScope(document, stream(add("a")), missing)).toThrow(
+      /no reducer for module version/,
+    );
+  });
+
+  it("resets the named scope for an empty stream", () => {
+    const document = derive(stream(add("stale"))).document;
+    const { document: reset } = deriveScope(document, [], reducerFor, "global");
+    expect((reset.state as ListState).global.items).toEqual([]);
+  });
+
+  it("stateReducerOf returns the state reducer createReducer wraps", () => {
+    expect(stateReducerOf(createReducer(listReducer))).toBe(listReducer);
   });
 });
