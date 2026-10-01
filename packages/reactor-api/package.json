@@ -82,7 +82,6 @@
     "@powerhousedao/analytics-engine-pg": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
-    "@powerhousedao/pglite-fs": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-attachments": "workspace:*",
     "@powerhousedao/reactor-drive": "workspace:*",

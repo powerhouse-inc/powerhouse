@@ -121,32 +121,36 @@ describe("createDurableNodeFs", () => {
     BOOT,
   );
 
-  it("routes a failing fdatasync to onAbort and leaves the instance closed", async () => {
-    const spy = spyHostFs();
-    const onAbort = vi.fn();
-    const warn = vi.fn();
-    const { pg } = await start({
-      hostFs: spy.hostFs,
-      onAbort,
-      logger: { warn },
-    });
-    await pg.exec("CREATE TABLE t (v int)");
-    spy.failFdatasync.current = true;
+  it(
+    "routes a failing fdatasync to onAbort and leaves the instance closed",
+    async () => {
+      const spy = spyHostFs();
+      const onAbort = vi.fn();
+      const warn = vi.fn();
+      const { pg } = await start({
+        hostFs: spy.hostFs,
+        onAbort,
+        logger: { warn },
+      });
+      await pg.exec("CREATE TABLE t (v int)");
+      spy.failFdatasync.current = true;
 
-    await expect(pg.exec("INSERT INTO t VALUES (1)")).rejects.toThrow(
-      /PGlite aborted/,
-    );
-    expect(onAbort).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("fdatasync failed"),
-    );
+      await expect(pg.exec("INSERT INTO t VALUES (1)")).rejects.toThrow(
+        /PGlite aborted/,
+      );
+      expect(onAbort).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("fdatasync failed"),
+      );
 
-    // close() rejects on the dead runtime; it must settle, not hang.
-    await expect(pg.close()).rejects.toThrow(/PGlite aborted/);
-    console.info(`pg.closed after abort: ${pg.closed}`);
-    expect(pg.ready).toBe(false);
-    await expect(pg.query("SELECT 1")).rejects.toThrow();
-  }, 20_000);
+      // close() rejects on the dead runtime; it must settle, not hang.
+      await expect(pg.close()).rejects.toThrow(/PGlite aborted/);
+      console.info(`pg.closed after abort: ${pg.closed}`);
+      expect(pg.ready).toBe(false);
+      await expect(pg.query("SELECT 1")).rejects.toThrow();
+    },
+    BOOT,
+  );
 
   it("throws when the base options carry no instantiateWasm", async () => {
     class Bare extends NodeFS {

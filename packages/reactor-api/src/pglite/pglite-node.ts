@@ -26,3 +26,9 @@ export {
   type ConversionStep,
   type VerifyHandle,
 } from "./convert-snapshot-dir.js";
+export {
+  CURRENT_PGLITE_MAJOR,
+  openCurrentPgliteForVerify,
+  preparePgliteDataDir,
+  removeStalePgliteFiles,
+} from "./preflight.js";
