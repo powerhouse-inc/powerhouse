@@ -638,4 +638,15 @@ describe("review fixes", () => {
   it("stateReducerOf returns the state reducer createReducer wraps", () => {
     expect(stateReducerOf(createReducer(listReducer))).toBe(listReducer);
   });
+
+  it("a RETRACT naming a base action is inert and base actions are not content", () => {
+    const rows = stream(
+      add("a"),
+      action("sn", "SET_NAME", { name: "renamed" }),
+      R("sn"),
+    );
+    expect([...retractedActionIds(rows)]).toEqual([]);
+    const { applied } = derive(rows);
+    expect(undoTarget(rows, applied)).toBe("a");
+  });
 });
