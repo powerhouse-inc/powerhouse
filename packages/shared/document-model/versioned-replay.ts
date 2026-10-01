@@ -17,7 +17,7 @@ import {
 } from "./errors.js";
 import type { DocumentOperations, Operation } from "./operations.js";
 import { PURGE_DOCUMENT } from "./purge.js";
-import { appliedOperations, reduceOne } from "./retraction.js";
+import { scopeDeriver } from "./retraction.js";
 import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";
 import type {
@@ -224,8 +224,8 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
 
   const segmentEndHashPerScope = new Map<string, string>();
 
-  // Base-reducer 3, across segments; by reference, as a rewound copy shares its id.
-  const appliedPerScope = new Map<string, Set<Operation>>();
+  // Base-reducer 3: each scope is derived across the segments.
+  const derivers = new Map<string, ReturnType<typeof scopeDeriver>>();
   if (protocolVersion === 3) {
     for (const s of replayScopes) {
       if (s === "auth") continue;
@@ -233,7 +233,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
       if (!skipIndexValidation) {
         assertReplayIndices(ops);
       }
-      appliedPerScope.set(s, new Set(appliedOperations(ops)));
+      derivers.set(s, scopeDeriver(ops));
     }
   }
 
@@ -260,8 +260,8 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
           : ops.length;
       const segOps = ops.slice(segStart, segEnd);
 
-      const applied = appliedPerScope.get(s);
-      if (applied) {
+      const deriver = derivers.get(s);
+      if (deriver) {
         if (segOps.length === 0) continue;
         const stateReducer = requireStateReducer(
           reducer,
@@ -274,20 +274,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
           s,
           segOps.at(-1)!.timestampUtcMs,
         ) as PHDocument<TState>;
-        for (const op of segOps) {
-          if (!applied.has(op)) continue;
-          const actionScope = op.action.scope;
-          if (actionScope === "auth" || actionScope === "document") {
-            throw new Error(
-              `Base-reducer 3 does not derive the ${actionScope} scope`,
-            );
-          }
-          try {
-            document = reduceOne(document, op, reducerFor);
-          } catch {
-            // Only the row's action can throw here; it applies nothing.
-          }
-        }
+        document = deriver.advance(document, segOps, reducerFor);
         segmentEndHashPerScope.set(s, hashDocumentStateForScope(document, s));
         continue;
       }
