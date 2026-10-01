@@ -155,8 +155,9 @@ export type PHConnectInstance = {
   reactorWorker: boolean;
 };
 
-/** Each flag implies its predecessors, and must match the fleet Connect syncs
- * with or the two compute different replay outcomes. */
+/** The four enforcement flags each imply their predecessors, and must match
+ * the fleet Connect syncs with or the two compute different replay outcomes.
+ * `undoV3` has no prerequisites and is negotiated with peers. */
 export type PHConnectReactorFeatureFlags = {
   /** Decide writes from the document stream instead of the meta cache. */
   documentDecisions?: boolean;
@@ -166,6 +167,8 @@ export type PHConnectReactorFeatureFlags = {
   authGroups?: boolean;
   /** Evaluate `where` / `match` conditions on grants. */
   authConditions?: boolean;
+  /** Support base-reducer 3 (id-targeted undo). */
+  undoV3?: boolean;
 };
 
 export type PHConnectReactor = {

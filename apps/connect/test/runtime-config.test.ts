@@ -271,6 +271,7 @@ describe("runtime-config loader", () => {
       authEnforcement: true,
       authGroups: false,
       authConditions: false,
+      undoV3: false,
     });
   });
 

@@ -56,7 +56,7 @@ Schema lives in `packages/builder-tools/connect-utils/runtime-config-schema.ts`.
     "packages":  { "externalEnabled": true },
     "sentry":    { "dsn": null, "env": "dev", "tracing": false },
     "openPanel": { "clientId": "", "apiUrl": "..." | undefined, "trackUiEvents": true, "trackOperations": true },
-    "reactor":   { "featureFlags": { "documentDecisions": false, "authEnforcement": false, "authGroups": false, "authConditions": false }, "createSignaturePolicy": "v2-required", "unsupportedStoredDocuments": "refuse" },
+    "reactor":   { "featureFlags": { "documentDecisions": false, "authEnforcement": false, "authGroups": false, "authConditions": false, "undoV3": false }, "createSignaturePolicy": "v2-required", "unsupportedStoredDocuments": "refuse" },
     "pwa":       { ... } // build-time only, see below
   }
 }
@@ -89,12 +89,14 @@ Only **public** identifiers belong here (`walletConnectProjectId`, Privy `appId`
 
 Only chains Connect bundles can be offered (`1`, `11155111`, `137`, `10`, `42161`, `8453`); any other id logs an error and leaves in-page sign-in unusable. `networkId` remains unread — `did:pkh` identities here are always `eip155`.
 
-### Reactor enforcement flags (`connect.reactor.featureFlags`)
+### Reactor feature flags (`connect.reactor.featureFlags`)
 
-The reactor Connect runs in the browser takes the same four enforcement flags a
-switchboard does: `documentDecisions`, `authEnforcement`, `authGroups`,
-`authConditions`. Each requires the one before it, and the reactor refuses to
-build a set that skips one. All default `false`.
+The reactor Connect runs in the browser takes the same five flags a switchboard
+does. The four enforcement flags, `documentDecisions`, `authEnforcement`,
+`authGroups` and `authConditions`, each require the one before it, and the
+reactor refuses to build a set that skips one. `undoV3` supports base-reducer 3
+(id-targeted undo) and has no prerequisites; leave it off until every syncing
+peer runs a release with it. All default `false`.
 
 ```jsonc
 "reactor": {
@@ -107,9 +109,10 @@ build a set that skips one. All default `false`.
 }
 ```
 
-These are the one part of `connect.*` that is not a local preference. A flag
-changes how stored history is replayed, and a replay verdict is a consensus
-outcome, so **a Connect must carry the same flags as the fleet it syncs with**.
+The enforcement flags are the one part of `connect.*` that is not a local
+preference. A flag changes how stored history is replayed, and a replay verdict
+is a consensus outcome, so **a Connect must carry the same flags as the fleet it
+syncs with**.
 A flags-off Connect syncing an enforcing switchboard applies operations that
 switchboard denied and the two diverge. Set them per fleet, alongside the
 switchboard's `REACTOR_*` env vars (see `apps/switchboard/README.md`).
