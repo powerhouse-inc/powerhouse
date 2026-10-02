@@ -2,6 +2,9 @@ import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+// Run through `bash` rather than executing the script directly: Windows has
+// no shebang, so `execFileSync(GUARD, ...)` fails EFTYPE there. bash exits
+// with the script's status, so `status` and `stderr` still carry the verdict.
 const GUARD = join(
   import.meta.dirname,
   "..",
@@ -22,7 +25,7 @@ function guard(role: string, command: string): GuardResult {
     tool_input: { command },
   });
   try {
-    execFileSync(GUARD, [role], {
+    execFileSync("bash", [GUARD, role], {
       input: payload,
       encoding: "utf8",
       stdio: ["pipe", "pipe", "pipe"],
@@ -115,7 +118,10 @@ describe("every role", () => {
   it("blocks a Bash call whose command it cannot read", () => {
     const payload = JSON.stringify({ tool_name: "Bash", tool_input: {} });
     try {
-      execFileSync(GUARD, ["none"], { input: payload, encoding: "utf8" });
+      execFileSync("bash", [GUARD, "none"], {
+        input: payload,
+        encoding: "utf8",
+      });
       throw new Error("Expected the guard to block");
     } catch (error) {
       expect((error as { status: number }).status).toBe(2);
