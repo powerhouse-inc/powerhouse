@@ -2,7 +2,9 @@
 
 Date: 2026-10-02 (against `main` at 141abde841, 6.2.3-dev.38)
 Status: Tracks A and B done on `windows-fixes` (acf2bb02b8, 9cc40d56bf,
-50ce21313f). Track C empty against this baseline. Track D not started.
+50ce21313f) and verified. Track C needs no code change, but the second run
+found the memory ceiling that Track D has to budget for. Track D not
+started.
 Paths are relative to the repo root unless they start with `packages/reactor`.
 
 ## Motivation
@@ -78,19 +80,41 @@ Not a factor, checked and ruled out:
   and the `AtomicNodeFs` permutation of `testFsBackends`
   (`packages/reactor/test/factories.ts:158-178`) produced no failures.
 
-## What the run rules out
+## The suite is not source-flaky, but it is memory-bound
 
-The full run finished: 298 of 302 files pass. There is no timing or flake
-category, which was the open risk — the repo has absorbed Windows-timing
-fixes before (c3922e3fdc, 33ef9b1d87, 6ccb722dd5), so it was a real
-possibility rather than a hypothetical. It did not materialize here, at
-`maxWorkers: 4` under coverage on a loaded desktop.
+The 35 failures are deterministic: 4 files, 3 root causes, no reactor runtime
+change. The first run showed no timing category at all, and on that evidence
+an earlier revision of this plan called Track C empty. The verification run
+after Tracks A and B landed showed why that was premature. It fixed the
+original 4 files and failed 18 other tests across 11 files, every one of
+them at the 30s `testTimeout` or a 60s multiple of it:
 
-That makes this a closed, fully-diagnosed piece of work: 35 deterministic
-failures, 4 files, 3 root causes, no reactor runtime changes. It does not
-make the suite flake-free on a CI runner, which has different core counts
-and I/O; Track C stays as the procedure for triaging anything the first
-green CI run turns up.
+| | Run 1 | Run 2 | Those 11 files, alone |
+|---|---|---|---|
+| Files | 4 failed / 302 | 11 failed / 303 | 0 failed / 10 |
+| Tests | 35 failed | 18 failed, 16 skipped | 77 passed |
+| Duration | 795s | 865s | 26s + 57s |
+
+Tests that take ~2s in a quiet run took 30s+ and timed out. The same 10
+files, run serially with `--no-coverage`, pass in 26s and 57s. That is a
+15-30x swing with no code between the runs, so it is contention, not a
+source defect and not flaky tests.
+
+The cause was host memory, measured during run 2: 31.7 GB total with 5-7 GB
+free, commit 40-45 GB against a ~51 GB limit, `Memory Compression` at 767
+MB, and 24 idle cores. CPU was never the constraint. The largest single
+consumer was Docker Desktop's WSL2 VM (`vmmemWSL`) at a 15.5 GB working set
+for a Postgres container using 120 MB. Four vitest workers at ~2.5 GB each,
+against what was left, paged.
+
+Two things follow, and the second is the one that matters:
+
+- Locally, cap the WSL2 VM (`%UserProfile%\.wslconfig`, `[wsl2]
+  memory=4GB`). A reactor Postgres needs 1-2 GB, not 15.5.
+- `maxWorkers: 4` plus v8 coverage needs roughly 10 GB of headroom for the
+  workers alone. GitHub's `windows-latest` is 4 cores and 16 GB, and Track D
+  puts Postgres on that same box. Budget for it there rather than discover
+  it as an 18-test flake.
 
 ## Decisions
 
@@ -226,30 +250,33 @@ const rel = relative(directory, path).split(sep).join("/");
 `fix-ci.ts:126` needs no change: it only tests `rel.startsWith("..")`, which
 is separator-agnostic.
 
-## Track C — triage procedure, nothing to do yet
+## Track C — triage procedure, no code change
 
-Empty against this baseline: after Tracks A and B, the local run is green.
-Keep this section as the classification to apply to anything the first
-Windows CI run surfaces, since a runner is not this desktop. For each
+No source change is owed: every failure outside Tracks A and B traced to
+host memory, and the 10 affected files pass alone. Keep this section as the
+classification for whatever the first Windows CI run surfaces. For each
 failure, classify before fixing:
 
+- **Contention.** Check this *first*, not last. A test that fails exactly at
+  `testTimeout`, or at a multiple of it, and passes alone is a resource
+  verdict, not a test defect — and the whole of run 2 was this. Measure free
+  memory and commit during the run before touching a test.
 - **A real Windows defect** in `src/` — fix the source. This is the only
-  category that matters for shipped behaviour, and the run so far suggests
-  it is empty.
+  category that matters for shipped behaviour, and it is so far empty across
+  two full runs.
 - **A native path asserted as a POSIX string** — match either separator, per
   7b3de3b4fd.
-- **A timeout.** `packages/reactor/vitest.config.ts:26-28` already sets
-  `hookTimeout: 120_000` and `testTimeout: 30_000`. Raise a specific test's
-  budget, as c3922e3fdc and 6ccb722dd5 did; do not raise the global
-  `testTimeout` to hide one slow suite.
-- **Contention.** `maxWorkers: 4` (`:62`) with a fresh PGlite per test is
-  heavier on Windows. Lower it for the Windows job only if a failure is
-  actually traced to it — do not pre-emptively slow every platform.
+- **A timeout that survives isolation.** Only then is it the test's budget.
+  `packages/reactor/vitest.config.ts:26-28` already sets
+  `hookTimeout: 120_000` and `testTimeout: 30_000`. Raise the specific
+  test's, as c3922e3fdc and 6ccb722dd5 did; never the global `testTimeout`,
+  which would hide the contention signal that makes this triage work.
 
-The baseline to compare against is in Evidence above: 4 failed / 298 passed
-files, 35 failed / 3992 passed / 19 expected-fail tests, 795s. A later run
-that fails anything else has found something new, not something this plan
-already knew about.
+The baseline to compare against: run 1 was 4 failed / 298 passed files and
+35 failed / 3992 passed / 19 expected-fail tests in 795s. After Tracks A and
+B, a quiet machine should be 0 failed. A run that fails something else has
+either found something new or run out of memory; the 10-file isolation
+command above distinguishes the two in under two minutes.
 
 ## Track D — the CI gate
 
@@ -272,7 +299,15 @@ Do this last: a gate added before Tracks A-C land is a red main.
    `postgres://postgres:postgres@localhost:5433/reactor`, so either match
    that port or set `REACTOR_TEST_PG_URL` to the port actually used.
    `check-pr-reactor.yml:63` is the precedent for setting it.
-4. Extend the comment at the head of `check-windows.yml` to say why reactor
+4. Give the reactor job a memory budget, for the reason measured above. A
+   `windows-latest` runner is 4 cores and 16 GB, and step 3 puts Postgres on
+   it. Four workers at ~2.5 GB plus coverage is roughly 10 GB for the
+   workers alone, so run the Windows job with `--no-coverage` and an
+   explicit `maxWorkers` (start at 2) rather than inheriting
+   `vitest.config.ts`'s 4. Coverage is not what this job is for. Do not
+   raise `testTimeout` to absorb the difference: that converts a resource
+   problem into a slow green and then a mysterious red.
+5. Extend the comment at the head of `check-windows.yml` to say why reactor
    is in the job, matching how the existing comment justifies each package.
 
 ## Risks
@@ -286,10 +321,12 @@ Do this last: a gate added before Tracks A-C land is a red main.
 - **Job time.** 795s wall clock locally at `maxWorkers: 4`, of which 124s is
   import and 2548s is test time across the workers. That is larger than any
   package currently in the Windows job, so reactor alone probably forces a
-  third shard and roughly doubles the job's cost. Measure on the runner
-  before choosing the shard count. Dropping `--coverage` for the Windows job
-  is worth trying first: the job exists for portability, not coverage
-  numbers, and the v8 provider instruments every one of those 302 files.
+  third shard and roughly doubles the job's cost. Dropping `--coverage` cuts
+  both the time and the memory, which is why step 4 does it.
+- **Lowering `maxWorkers` to 2 trades time for reliability**, and on a
+  4-core runner it may not cost what it looks like: run 2 spent its time
+  paging, not computing, with 24 cores idle. Measure, do not assume. If two
+  workers are too slow, the lever is a third shard, not a fourth worker.
 - **Track A3 and B3 are uncovered by construction.** They were fixed with
   their tracks, and `pnpm-command.ts` carries unit tests, but no test
   exercises `fix-ci`'s spawn loop or `run-record-all` end to end — those run
