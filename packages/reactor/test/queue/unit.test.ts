@@ -1256,6 +1256,31 @@ describe("InMemoryQueue", () => {
       expect(failedEvents[0].error.message).toContain("unknown/type");
     });
 
+    it("should not emit JOB_FAILED for a job a deferral already dropped", async () => {
+      // deferJob removes the job from the index, so a later failJob has no
+      // job to put on the event. The deferred-expiry path emits its own
+      // JOB_FAILED carrying the job; a second, job-less event from the queue
+      // delivered every expiry to subscribers twice.
+      const job = createTestJob({ id: "deferred-job" });
+      await queue.enqueue(job);
+
+      const handle = await queue.dequeueNext();
+      expect(handle?.job.id).toBe("deferred-job");
+      handle?.start();
+      handle?.defer();
+
+      await queue.failJob("deferred-job", {
+        name: "DocumentNotFoundError",
+        message: "Document not found",
+        stack: "",
+      });
+
+      const jobFailedEmits = mockEventBusEmit.mock.calls.filter(
+        ([type]) => type === ReactorEventTypes.JOB_FAILED,
+      );
+      expect(jobFailedEmits).toHaveLength(0);
+    });
+
     it("should unblock dependent jobs when a job fails during enqueue", async () => {
       const realEventBus = new EventBus();
       const registry = new DocumentModelRegistry();
