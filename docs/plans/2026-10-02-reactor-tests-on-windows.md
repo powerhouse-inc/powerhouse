@@ -2,9 +2,13 @@
 
 Date: 2026-10-02 (against `main` at 141abde841, 6.2.3-dev.38)
 Status: Tracks A and B done on `windows-fixes` (acf2bb02b8, 9cc40d56bf,
-50ce21313f, 85827187e2) and verified. Track C needs no code change, but the
-second run found the memory ceiling Track D has to budget for. Track D not
-started.
+50ce21313f, 85827187e2, 0d70428d87) and verified: the suite is fully green
+on this machine — 302/302 files, 4,027 passed and 19 expected-fail in 502s,
+coverage written. A2 needed a second pass (see the amendment there): the
+bare `bash` fix resolves to WSL's launcher under PowerShell, and Git Bash
+spawned directly lacks its own `usr/bin` on PATH. Track C needs no code
+change, but the second run found the memory ceiling Track D has to budget
+for. Track D not started.
 Paths are relative to the repo root unless they start with `packages/reactor`.
 
 ## Motivation
@@ -178,6 +182,25 @@ bash to run its hooks at all.
 Keep the error shape the helper depends on. The `catch` at `:30-32` reads
 `status` and `stderr` off the thrown error; going through `bash` preserves
 both, because bash exits with the script's status.
+
+**A2 amendment (0d70428d87).** "`bash` is on PATH" was true and still
+insufficient, twice over, and the second failure mode is the dangerous one:
+
+- From PowerShell (and any Node spawned from it), a bare `bash` lookup
+  resolves to `C:\Windows\System32\bash.exe` — the WSL launcher, which
+  cannot run a script given as a Windows path. All 32 tests exited 1.
+- With the right `bash.exe` named explicitly, the spawned shell still
+  inherits a PATH without Git's `usr\bin`, so the hook's `cat` and `grep`
+  resolve to nothing. The payload read as empty and the guard **allowed
+  everything** — 21 should-block tests failed open, silently.
+
+The fix: `records-guard.test.ts` now resolves an MSYS2-family bash
+deliberately (from `git --exec-path`, then the conventional install
+locations, refusing System32) and prepends the bash directory to the child
+PATH; and `records-guard.sh` fails closed, denying with a named missing
+tool before reading the payload, instead of failing open. The general rule
+for Track D and any future spawner: on Windows, name the bash and give it
+its toolbox — PATH luck provides neither.
 
 **A3. Same class, no failing test.** Not exercised by the suite, so they
 never turned CI red, but each was broken on Windows. Fixed in 85827187e2
