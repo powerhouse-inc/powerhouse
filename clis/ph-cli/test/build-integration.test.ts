@@ -164,7 +164,6 @@ describe("runBuild on a piece-only package", () => {
       expect(readdirSync(pieceDir).sort()).toEqual([
         "descriptor.json",
         "index.mjs",
-        "index.mjs.map",
         "package.json",
       ]);
       const module = readFileSync(join(pieceDir, "index.mjs"), "utf8");
@@ -314,7 +313,6 @@ describe("runBuild on a mixed package", () => {
     expect(readdirSync(pieceDir).sort()).toEqual([
       "descriptor.json",
       "index.mjs",
-      "index.mjs.map",
       "package.json",
     ]);
     expect(
@@ -532,7 +530,6 @@ describe("runBuild on a generated piece", () => {
       expect(readdirSync(pieceDir).sort()).toEqual([
         "descriptor.json",
         "index.mjs",
-        "index.mjs.map",
         "package.json",
       ]);
       // The framework and everything under it was inlined, as a piece running
