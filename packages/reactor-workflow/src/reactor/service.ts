@@ -3722,6 +3722,15 @@ export class WorkflowRuntimeService {
       run.trigger_payload === null
         ? undefined
         : (JSON.parse(run.trigger_payload) as unknown);
+    // The journal capped an oversized payload to a marker (store.ts,
+    // STEP_PAYLOAD_MAX_BYTES); replaying it would hand the marker to the
+    // workflow as trigger data. Refuse before anything runs.
+    if (isTruncatedStepPayload(triggerPayload)) {
+      throw new Error(
+        `Trigger payload of run "${runId}" was truncated by the journal and ` +
+          "cannot be replayed; fire the workflow again instead of rerunning it",
+      );
+    }
     // The journal holds a redacted copy of the payload, so replaying it would
     // hand a marker to whatever the trigger fed. Refuse before anything runs.
     if (containsRedactedMarker(triggerPayload)) {

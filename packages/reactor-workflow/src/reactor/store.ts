@@ -804,11 +804,11 @@ function assertPieceStoreEntry(key: string, value: unknown): void {
   }
 }
 
-// The journal's ceiling per step payload: input and output are each capped
-// at serialization time. Over the cap, the row keeps a marker — the original
-// byte count and a prefix of the serialized JSON — rather than refusing the
-// write, because the journal is diagnostic and a refused write loses the
-// evidence. Half the piece-store ceiling: the piece store holds working state
+// The journal's ceiling per payload: a step's input and output, and a run's
+// trigger payload, are each capped at serialization time. Over the cap, the
+// row keeps a marker — the original byte count and a prefix of the
+// serialized JSON — rather than refusing the write, because the journal is
+// diagnostic and a refused write loses the evidence. Half the piece-store ceiling: the piece store holds working state
 // a trigger needs back intact, while the journal only needs enough of a
 // payload to diagnose a run (the case that forced the cap was document-get
 // journaling whole multi-megabyte documents, where the first kilobytes carry
@@ -830,8 +830,9 @@ export interface TruncatedStepPayload {
   prefix: string;
 }
 
-// True for a journaled value this store truncated. Rerun uses it to re-execute
-// a step instead of replaying a marker as the step's output.
+// True for a journaled value this store truncated. Rerun uses it to
+// re-execute a step instead of replaying a marker as the step's output, and
+// to refuse a rerun whose trigger payload survives only as a marker.
 export function isTruncatedStepPayload(
   value: unknown,
 ): value is TruncatedStepPayload {
@@ -1201,7 +1202,9 @@ export class WorkflowRunStore {
         workflow_name: "",
         workflow_version: 0,
         trigger_kind: options.triggerKind,
-        trigger_payload: jsonOrNull(redact(options.triggerPayload)),
+        trigger_payload: cappedPayload(
+          jsonOrNull(redact(options.triggerPayload)),
+        ),
         status: PENDING_RUN_STATUS,
         error: null,
         enqueued_at: now,
@@ -1245,7 +1248,9 @@ export class WorkflowRunStore {
         workflow_name: options.workflowName,
         workflow_version: options.workflowVersion,
         trigger_kind: options.triggerKind,
-        trigger_payload: jsonOrNull(redact(options.triggerPayload)),
+        trigger_payload: cappedPayload(
+          jsonOrNull(redact(options.triggerPayload)),
+        ),
         status: "RUNNING",
         error: null,
         enqueued_at: now,

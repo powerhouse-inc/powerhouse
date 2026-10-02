@@ -31,8 +31,8 @@ describe("WorkflowRunStore payload cap", () => {
     });
   }
 
-  // Word-broken filler: redact()'s text pass backtracks on long unbroken
-  // alphanumeric runs, which is a property of redact, not of this cap.
+  // Word-broken filler, so this suite stays independent of how redact()'s
+  // text pass performs over long unbroken runs (pinned in redact.test.ts).
   const filler = (word: string, bytes: number) =>
     `${word} `.repeat(Math.ceil(bytes / (word.length + 1))).slice(0, bytes);
 
@@ -133,6 +133,68 @@ describe("WorkflowRunStore payload cap", () => {
       Buffer.byteLength(JSON.stringify(output), "utf8"),
     );
     expect(journaled.prefix.length).toBe(STEP_PAYLOAD_PREFIX_CHARS);
+  });
+
+  it("caps an over-cap trigger payload to the same marker", async () => {
+    // R2 (testing policy): run.trigger_payload is journal storage like a
+    // step payload, and was the one uncapped writer left.
+    const payload = { document: filler("trig", STEP_PAYLOAD_MAX_BYTES) };
+    const serialized = JSON.stringify(payload);
+    const runId = await store.startRun({
+      workflowId: "wf-payload-cap",
+      workflowName: "Cap me",
+      workflowVersion: 1,
+      triggerKind: "webhook",
+      triggerPayload: payload,
+    });
+
+    const run = await store.getRun(runId);
+    expect(
+      Buffer.byteLength(run?.trigger_payload ?? "", "utf8"),
+    ).toBeLessThanOrEqual(STEP_PAYLOAD_MAX_BYTES);
+    const journaled = JSON.parse(run?.trigger_payload ?? "") as unknown;
+    if (!isTruncatedStepPayload(journaled)) {
+      throw new Error("expected the trigger payload to carry the marker");
+    }
+    expect(journaled.truncated).toBe(true);
+    expect(journaled.bytes).toBe(Buffer.byteLength(serialized, "utf8"));
+    expect(journaled.prefix).toBe(
+      serialized.slice(0, STEP_PAYLOAD_PREFIX_CHARS),
+    );
+  });
+
+  it("journals a below-cap trigger payload intact", async () => {
+    const payload = { documentId: "doc-1", note: filler("small", 1024) };
+    const runId = await store.startRun({
+      workflowId: "wf-payload-cap",
+      workflowName: "Cap me",
+      workflowVersion: 1,
+      triggerKind: "webhook",
+      triggerPayload: payload,
+    });
+
+    const run = await store.getRun(runId);
+    expect(JSON.parse(run?.trigger_payload ?? "")).toEqual(payload);
+  });
+
+  it("caps the pending-run writer's trigger payload the same way", async () => {
+    const payload = { document: filler("queued", STEP_PAYLOAD_MAX_BYTES) };
+    const serialized = JSON.stringify(payload);
+    const runId = await store.enqueueRun({
+      workflowId: "wf-payload-cap",
+      triggerKind: "document-event",
+      triggerPayload: payload,
+    });
+
+    const run = await store.getRun(runId);
+    const journaled = JSON.parse(run?.trigger_payload ?? "") as unknown;
+    if (!isTruncatedStepPayload(journaled)) {
+      throw new Error("expected the enqueued payload to carry the marker");
+    }
+    expect(journaled.bytes).toBe(Buffer.byteLength(serialized, "utf8"));
+    expect(journaled.prefix).toBe(
+      serialized.slice(0, STEP_PAYLOAD_PREFIX_CHARS),
+    );
   });
 
   it("recognizes only its own marker, so rerun replays real outputs", () => {
