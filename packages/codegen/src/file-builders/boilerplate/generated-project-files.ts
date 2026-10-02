@@ -1,6 +1,6 @@
 import { writeFileEnsuringDir } from "@powerhousedao/shared/clis";
 import { deriveProjectPorts } from "@powerhousedao/shared/clis/project-ports";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import {
   buildBoilerplatePackageJson,
   createOrUpdateManifest,
@@ -87,33 +87,64 @@ export async function writeGeneratedProjectRootFiles(projectDir: string) {
   );
 }
 
+/** True when a file carries nothing beyond comments and whitespace — i.e. it
+ * is still the bare "auto-generated" banner a module aggregate is seeded with,
+ * before codegen (or a hand) added any export to it. */
+function hasOnlyComments(filePath: string): boolean {
+  const contents = readFileSync(filePath, "utf-8");
+  return (
+    contents
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "")
+      .trim() === ""
+  );
+}
+
+/** Seeds a module aggregate file ("auto-generated and updated by codegen").
+ *
+ * These files accumulate content after scaffolding — the ts-morph generators
+ * append module exports to them, and users occasionally add entries by hand.
+ * Writing the pristine template over an existing one therefore destroys
+ * registrations: `ph migrate` used to reset `subgraphs/index.ts` to the bare
+ * banner, which silently unregistered every subgraph until (and unless) the
+ * `generateAll` later in the migration happened to rediscover them, and
+ * dropped hand-written entries outright. So the template is written only when
+ * the file is missing or still contains nothing but the banner.
+ */
+async function seedModuleAggregateFile(filePath: string, contents: string) {
+  if (existsSync(filePath) && !hasOnlyComments(filePath)) return;
+  await writeFileEnsuringDir(filePath, contents);
+}
+
 export async function writeGeneratedDocumentModelsFiles(projectDir: string) {
-  await writeFileEnsuringDir(
+  await seedModuleAggregateFile(
     join(projectDir, "document-models/document-models.ts"),
     await formatSafe(documentModelsTemplate),
   );
-  await writeFileEnsuringDir(
+  await seedModuleAggregateFile(
     join(projectDir, "document-models/index.ts"),
     await formatSafe(documentModelsIndexTemplate),
   );
-  await writeFileEnsuringDir(
+  await seedModuleAggregateFile(
     join(projectDir, "document-models/upgrade-manifests.ts"),
     await formatSafe(upgradeManifestsTemplate),
   );
 }
 
 export async function writeGeneratedEditorsFiles(projectDir: string) {
-  await writeFileEnsuringDir(
+  await seedModuleAggregateFile(
     join(projectDir, "editors/editors.ts"),
     await formatSafe(editorsTemplate),
   );
-  await writeFileEnsuringDir(
+  await seedModuleAggregateFile(
     join(projectDir, "editors/index.ts"),
     await formatSafe(editorsIndexTemplate),
   );
 }
 
 export async function writeGeneratedProcessorsFiles(projectDir: string) {
+  // factory.ts and index.ts are static, fully codegen-owned templates: they
+  // accumulate nothing, so overwriting refreshes them to the current shape.
   await writeFileEnsuringDir(
     join(projectDir, "processors/factory.ts"),
     await formatSafe(processorsFactoryTemplate),
@@ -122,22 +153,19 @@ export async function writeGeneratedProcessorsFiles(projectDir: string) {
     join(projectDir, "processors/index.ts"),
     await formatSafe(processorsIndexTemplate),
   );
-  await writeFileEnsuringDir(
+  // connect.ts and switchboard.ts accumulate processor factory builders.
+  await seedModuleAggregateFile(
     join(projectDir, "processors/connect.ts"),
     await formatSafe(factoryBuildersTemplate),
   );
-  await writeFileEnsuringDir(
+  await seedModuleAggregateFile(
     join(projectDir, "processors/switchboard.ts"),
     await formatSafe(factoryBuildersTemplate),
-  );
-  await writeFileEnsuringDir(
-    join(projectDir, "processors/index.ts"),
-    await formatSafe(processorsIndexTemplate),
   );
 }
 
 export async function writeGeneratedSubgraphsFiles(projectDir: string) {
-  await writeFileEnsuringDir(
+  await seedModuleAggregateFile(
     join(projectDir, "subgraphs/index.ts"),
     await formatSafe(subgraphsIndexTemplate),
   );
