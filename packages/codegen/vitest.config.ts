@@ -16,6 +16,7 @@ export default defineConfig({
       "src/codegen/features.test.ts",
       "src/codegen/migrate-tsconfig.test.ts",
       "src/file-builders/pieces.test.ts",
+      "src/file-builders/subgraphs.test.ts",
       "src/name-builders/derive-piece-id.test.ts",
       "src/file-builders/boilerplate/package.json.test.ts",
       "src/file-builders/boilerplate/project-ports.test.ts",
