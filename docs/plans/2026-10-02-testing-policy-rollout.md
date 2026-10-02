@@ -270,18 +270,20 @@ itself, beyond the twelve external reports that motivated the policy.
 | `AnalyticsDiscretizer.ts` (pre-fix :290) | DssVest `cliff` parsed without UTC — shifted on non-UTC hosts | low |
 | `AnalyticsDiscretizer._getPeriodString` | monthly label mixed local-zone year with UTC month | low |
 | `codegen` `writeGeneratedProcessorsFiles` | wrote `processors/index.ts` twice | trivial |
+| `apps/switchboard/src/observability.mts` (pre-fix :239-244) | signal handlers ended in a literal `process.exit(0)` — after a fatal, exit code 1 became supervisor-visible success and the ~5s forced exit could truncate the 15s drain. Now flushes and exits `exitCode ?? 0` only when no module claimed a non-zero code; on a fatal it abstains. The live window was every path without the builder's exit shim | medium-high |
+| `reactor/src/executor/deferred-jobs.ts` + `queue/queue.ts` | deferred expiry emitted `JOB_FAILED` twice, the second without the job; the queue now emits only when it still holds the job, changing exactly the one caller that produced the job-less duplicate | low-medium |
+| `reactor-workflow/src/reactor/store.ts` | `run.trigger_payload` now flows through the same `cappedPayload` seam as steps; rerun refuses a truncated trigger payload by name, since nothing can reproduce it | low-medium |
+| `reactor-workflow` `redact.ts` | both quadratic patterns rewritten to anchor on their literals: `URL_USERINFO` was the measured ~50s case on unbroken runs (the appendix had attributed it to `TEXT_FIELD`), `TEXT_FIELD` the quadratic case on hyphen-separated runs. Output byte-identical over a 40-case table and 60k fuzz strings; 300 KiB inputs bounded at 2s by timed regression tests | medium |
 
 ### Open — need a decision or their own track
 
 | Site | Mechanism | Severity |
 |---|---|---|
-| `apps/switchboard/src/observability.mts:239-244` | observability's own SIGTERM handler races a 5s timer then calls `process.exit(0)` — after a fatal it overrides exit code 1 (supervisors see success) and can cut off the PGlite snapshot flush the 15s drain protects | medium-high |
 | `analytics-engine/knex/src/KnexAnalyticsStore.ts:149,207` | the pg store persists host-local wall clock into a naive column: zone-dependent database content, and a different convention than the (now fixed) pglite store. Changing it reinterprets existing rows — needs a migration decision | medium-high |
-| `reactor-workflow/src/pieces/activepieces/worker/redact.ts:72-75` | catastrophic backtracking in `redactText`: a 256 KiB unbroken alphanumeric string costs ~50s of CPU per `redact()` (measured), paid twice per journaled step | medium |
 | `reactor/src/executor/job-result-handler.ts:179,207,230` | three more `JOB_FAILED` double-emits (direct + via `handle.fail`); payloads differ (typed error vs plain), so removing either changes what subscribers receive | medium |
 | `codegen` `writeAiConfigFiles` via `migrate.ts:298` | every `ph migrate` unconditionally overwrites `CLAUDE.md`, `AGENTS.md`, `.mcp.json`, editor configs — user-authored files | medium |
-| `reactor/src/executor/deferred-jobs.ts:133-164` | deferred-expiry double emit; the second event carries no job | low-medium |
-| `reactor-workflow/src/reactor/store.ts:1203,1247` | `run.trigger_payload` uncapped — same class the step cap just closed | low-medium |
+| `reactor-workflow` `runsForDocuments` / `journaledTriggerDocumentIds` | document-scoped run lookups search `trigger_payload` text, so a capped payload can hide a run whose document id sits past the 32 KiB prefix. Inherent to capping; unpinned | low |
+| `reactor-workflow` `redact.ts` | residual, pre-existing: thousands of repeated `signature-` tokens with no separator stay super-linear in `TEXT_FIELD` (the old pattern was strictly worse); unreachable via the capped journal paths | low |
 | `analytics-engine/compat` suite | compares pg vs pglite stores with `toEqual`; zone-dependent until the knex finding is resolved | low-medium |
 | `reactor-workflow` `redact.ts:280-331` | `containsRedactedMarker` misses the `[truncated]` depth markers, so rerun could replay one as data | low |
 | `reactor-workflow/src/reactor/service.ts:4033` | a truncated test-step output is served as an expression sample | low |
