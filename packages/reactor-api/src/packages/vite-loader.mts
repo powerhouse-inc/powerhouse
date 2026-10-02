@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
 import type { Logger, PluginOption, ViteDevServer } from "vite";
 import { createLogger, createServer } from "vite";
-import { isSubgraphClass } from "../graphql/utils.js";
+import { extractSubgraphs } from "./subgraph-extraction.js";
 import {
   BUILT_PIECE_LIST,
   PIECES_SUBPATH,
@@ -237,15 +237,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     const loaded = await this.#load(identifier, "subgraphs");
     if (!loaded) return [];
 
-    const subgraphs: SubgraphClass[] = [];
-    for (const [name, subgraph] of Object.entries(
-      loaded.namespace as Record<string, Record<string, SubgraphClass>>,
-    )) {
-      const SubgraphClass = subgraph[name];
-      if (isSubgraphClass(SubgraphClass)) {
-        subgraphs.push(SubgraphClass);
-      }
-    }
+    const subgraphs = extractSubgraphs(loaded.namespace);
 
     this.logger.debug(
       `  ➜  Loaded ${subgraphs.length} Subgraphs from: ${identifier}`,

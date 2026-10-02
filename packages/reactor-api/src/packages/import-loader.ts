@@ -13,6 +13,7 @@ import {
   pieceListLocation,
   piecesFromListModule,
 } from "./pieces.js";
+import { extractSubgraphs } from "./subgraph-extraction.js";
 import type { PackagePieceEntry } from "./types.js";
 import {
   extractUpgradeManifests,
@@ -84,13 +85,13 @@ export class ImportPackageLoader implements IPackageLoader {
       return [];
     }
 
-    const subgraphs = Object.values(pkgModule).map((subgraph) => {
-      return Object.values(subgraph);
-    });
+    const subgraphs = extractSubgraphs(pkgModule);
 
-    this.logger.verbose(`  ➜  Loaded Subgraphs from: ${identifier}`);
+    this.logger.verbose(
+      `  ➜  Loaded ${subgraphs.length} Subgraphs from: ${identifier}`,
+    );
 
-    return subgraphs.flat();
+    return subgraphs;
   }
 
   async loadProcessors(
