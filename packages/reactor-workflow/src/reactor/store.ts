@@ -804,6 +804,60 @@ function assertPieceStoreEntry(key: string, value: unknown): void {
   }
 }
 
+// The journal's ceiling per step payload: input and output are each capped
+// at serialization time. Over the cap, the row keeps a marker — the original
+// byte count and a prefix of the serialized JSON — rather than refusing the
+// write, because the journal is diagnostic and a refused write loses the
+// evidence. Half the piece-store ceiling: the piece store holds working state
+// a trigger needs back intact, while the journal only needs enough of a
+// payload to diagnose a run (the case that forced the cap was document-get
+// journaling whole multi-megabyte documents, where the first kilobytes carry
+// everything a reader uses).
+//
+// This bounds row width only. Row count is bounded by the retention sweep
+// (run-retention.ts), which is off unless PH_WORKFLOWS_RUN_RETENTION_DAYS is
+// set — change either bound with the other in view.
+export const STEP_PAYLOAD_MAX_BYTES = 256 * 1024;
+
+// What survives of an over-cap payload: the head of its serialized JSON.
+export const STEP_PAYLOAD_PREFIX_CHARS = 32 * 1024;
+
+// The shape journaled in place of an over-cap payload.
+export interface TruncatedStepPayload {
+  truncated: true;
+  // Byte length of the serialized payload the prefix was cut from.
+  bytes: number;
+  prefix: string;
+}
+
+// True for a journaled value this store truncated. Rerun uses it to re-execute
+// a step instead of replaying a marker as the step's output.
+export function isTruncatedStepPayload(
+  value: unknown,
+): value is TruncatedStepPayload {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  return (
+    record.truncated === true &&
+    typeof record.bytes === "number" &&
+    typeof record.prefix === "string"
+  );
+}
+
+function cappedPayload(json: string | null): string | null {
+  if (json === null) return null;
+  const bytes = Buffer.byteLength(json, "utf8");
+  if (bytes <= STEP_PAYLOAD_MAX_BYTES) return json;
+  let prefix = json.slice(0, STEP_PAYLOAD_PREFIX_CHARS);
+  // Never cut through a surrogate pair; the prefix must stay serializable.
+  const last = prefix.charCodeAt(prefix.length - 1);
+  if (last >= 0xd800 && last <= 0xdbff) prefix = prefix.slice(0, -1);
+  const marker: TruncatedStepPayload = { truncated: true, bytes, prefix };
+  return JSON.stringify(marker);
+}
+
 // Every column of a step_execution row but its surrogate id, shared by the
 // per-step write and the closing sweep so the two cannot drift.
 
@@ -821,8 +875,8 @@ function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
     piece_name: step.pieceName,
     block_name: step.blockName,
     status: step.status,
-    input: jsonOrNull(redact(step.input)),
-    output: jsonOrNull(redact(step.output)),
+    input: cappedPayload(jsonOrNull(redact(step.input))),
+    output: cappedPayload(jsonOrNull(redact(step.output))),
     port: step.port ?? null,
     error: step.error ? redactMessage(step.error) : null,
     started_at: step.startedAt ?? null,

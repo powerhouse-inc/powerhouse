@@ -137,7 +137,10 @@ import {
 } from "./block-search.js";
 import { installedPiece, installedPieces } from "./piece-registry.js";
 import { BlockResolver } from "./block-resolver.js";
-import { ScopedDesignTimeReactorPort } from "./reactor-port.js";
+import {
+  ScopedDesignTimeReactorPort,
+  SubgraphReactorPort,
+} from "./reactor-port.js";
 import {
   bundleCacheDir,
   configuredEgress,
@@ -188,6 +191,7 @@ import {
   MAX_LIST_RUNS,
   TEST_TRIGGER_KIND,
   WorkflowRunStore,
+  isTruncatedStepPayload,
   journaledTriggerDocumentIds,
   triggerDocumentIds,
   type ErasedRuns,
@@ -1810,6 +1814,9 @@ export class WorkflowRuntimeService {
       resolver: pieceResolver(),
       // Trigger hooks reach the same services steps do.
       egress: configuredEgress(),
+      // And the same reactor, behind the same gate: a reactor-piece trigger
+      // reads documents on the terms its actions already do.
+      reactor: new SubgraphReactorPort(this.host),
       // Overrides the 60s default; the 1s floor still applies.
       defaultIntervalMs:
         Number(process.env.PH_WORKFLOWS_POLL_INTERVAL_MS) || undefined,
@@ -3749,11 +3756,13 @@ export class WorkflowRuntimeService {
       ) {
         continue;
       }
-      completedSteps.set(row.step_id, {
-        output:
-          row.output === null ? undefined : (JSON.parse(row.output) as unknown),
-        port: row.port,
-      });
+      const output =
+        row.output === null ? undefined : (JSON.parse(row.output) as unknown);
+      // The journal capped this output to a marker (store.ts,
+      // STEP_PAYLOAD_MAX_BYTES); replaying it would hand the marker to the
+      // steps downstream. Re-executing the step reproduces the real value.
+      if (isTruncatedStepPayload(output)) continue;
+      completedSteps.set(row.step_id, { output, port: row.port });
     }
     return this.fire(
       run.workflow_id,

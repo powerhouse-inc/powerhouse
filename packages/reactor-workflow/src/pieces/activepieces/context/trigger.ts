@@ -14,6 +14,7 @@ import type { ApFilesService } from "./files.js";
 import type {
   TriggerStrategy,
   InputPropertyMap,
+  ReactorService,
   ServerContext,
   SetScheduleRequest,
   TestOrRunHookContext,
@@ -103,14 +104,20 @@ export interface TriggerContextOptions {
   server?: ServerContext;
   // run/test hooks only per the AP contract; omitted members throw, named.
   files?: ApFilesService;
+  // ctx.reactor. Served only to a piece the host loaded from an installed
+  // reactor package; for every other piece the member throws by name, the
+  // same typed refusal an action gets.
+  reactor?: ReactorService;
   onTouch?: (member: string) => void;
 }
 
 // One shape for every strategy: the framework splits TriggerHookContext by
 // TriggerStrategy, but a bundle's declared strategy is not known at build time.
+// `reactor` is the Powerhouse member PowerhouseTriggerHookContext promises;
+// it is always present, real or throwing.
 export type BuiltApTriggerContext = HookContextFor<TriggerStrategy.POLLING> &
   HookContextFor<TriggerStrategy.WEBHOOK> &
-  HookContextFor<TriggerStrategy.APP_WEBHOOK>;
+  HookContextFor<TriggerStrategy.APP_WEBHOOK> & { reactor: ReactorService };
 
 export interface TriggerContextHandle {
   context: BuiltApTriggerContext;
@@ -198,6 +205,7 @@ export function buildTriggerContext(
       },
     },
     files: options.files ?? throwingStub("files"),
+    reactor: options.reactor ?? throwingStub("reactor"),
   };
 
   const context = withTouchTracking(base, touched, options.onTouch);
