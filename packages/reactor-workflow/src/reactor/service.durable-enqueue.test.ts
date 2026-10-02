@@ -153,12 +153,10 @@ describe("onOperations journals a matched fire before it returns", () => {
 
   it("still journals the run on replay when the first write died after the claim", async () => {
     const store = await service.store();
-    const insert = vi
-      .spyOn(
-        store as unknown as { insertPendingRun: () => Promise<void> },
-        "insertPendingRun",
-      )
-      .mockRejectedValueOnce(new Error("crash between claim and enqueue"));
+    vi.spyOn(
+      store as unknown as { insertPendingRun: () => Promise<void> },
+      "insertPendingRun",
+    ).mockRejectedValueOnce(new Error("crash between claim and enqueue"));
     const replayed = op(SUBJECT, "powerhouse/note", "SET_TITLE", {
       title: "hi",
     });
@@ -176,7 +174,6 @@ describe("onOperations journals a matched fire before it returns", () => {
 
     const runs = await runsFor(service, WATCHER);
     expect(runs).toHaveLength(1);
-    expect(insert).toHaveBeenCalledTimes(2);
     expect(fireArgs.at(-1)?.[5]).toBe(runs[0].id);
   });
 

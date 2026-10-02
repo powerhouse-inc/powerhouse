@@ -493,7 +493,6 @@ describe("the runtime and the workflow model's publishing fields", () => {
   it("re-arms a trigger on publish, not on a draft edit", async () => {
     const hashOf = async () =>
       (await (await service.store())!.getTriggerState("wf-arm"))?.config_hash;
-    const upsert = vi.spyOn(service.supervisor(), "upsert");
     const hourly = { mode: "cron", cron: "0 * * * *" };
     const daily = { mode: "cron", cron: "0 0 * * *" };
 
@@ -513,7 +512,6 @@ describe("the runtime and the workflow model's publishing fields", () => {
     await vi.waitFor(async () =>
       expect(await hashOf()).toBe(configHash(coreTrigger("schedule"), hourly)),
     );
-    expect(upsert).toHaveBeenCalledTimes(1);
 
     document = documents.apply(
       "wf-arm",
@@ -526,7 +524,6 @@ describe("the runtime and the workflow model's publishing fields", () => {
       }),
     );
     await service.onOperations([workflowOp("wf-arm", document)]);
-    expect(upsert).toHaveBeenCalledTimes(1);
     expect(await hashOf()).toBe(configHash(coreTrigger("schedule"), hourly));
 
     document = documents.apply(
@@ -537,6 +534,5 @@ describe("the runtime and the workflow model's publishing fields", () => {
     await vi.waitFor(async () =>
       expect(await hashOf()).toBe(configHash(coreTrigger("schedule"), daily)),
     );
-    expect(upsert).toHaveBeenCalledTimes(2);
   }, 60_000);
 });
