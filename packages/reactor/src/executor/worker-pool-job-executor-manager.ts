@@ -292,16 +292,12 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
         await this.handleWorkerTransportFailure(worker, handle.job, errorInfo);
         return;
       }
+      // handle.fail resolves the job through queue.failJob, which emits the
+      // one ReactorEventTypes.JOB_FAILED for this failure; emitting here too
+      // delivered every timeout to subscribers twice.
       handle.fail(errorInfo);
       this.activeJobs--;
       this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
-      this.eventBus
-        .emit(ReactorEventTypes.JOB_FAILED, {
-          jobId: handle.job.id,
-          error: new Error(errorInfo.message),
-          job: handle.job,
-        })
-        .catch(() => {});
       const failedEvent: JobFailedEvent = {
         job: handle.job,
         error: errorInfo.message,
