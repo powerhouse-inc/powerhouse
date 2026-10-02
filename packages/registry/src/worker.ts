@@ -13,7 +13,7 @@ import {
   wakeWorkers,
   type Job,
 } from "./jobs.js";
-import type { WorkerMetrics } from "./metrics.js";
+import { errorReason, type WorkerMetrics } from "./metrics.js";
 import type { PublisherIdentity } from "./notifications/types.js";
 import type { WebhookStore } from "./notifications/webhook.js";
 import {
@@ -309,6 +309,10 @@ export async function startWorker(
         const finalAttempt =
           err instanceof PermanentError || job.attempts >= MAX_ATTEMPTS;
         observe(finalAttempt ? "failed" : "retry");
+        options.metrics?.jobErrors.inc({
+          kind: job.kind,
+          reason: errorReason(err, err instanceof PermanentError),
+        });
         try {
           if (!finalAttempt) {
             await retry(ctx.db, job, message);

@@ -164,11 +164,15 @@ export class Metrics {
 export const CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8";
 
 const SECONDS_BUCKETS = [
-  0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10,
+  0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60,
 ];
-const JOB_BUCKETS = [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60, 120, 300];
+const JOB_BUCKETS = [
+  0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60, 120, 300, 600, 1800,
+];
 // Queue gauges query Postgres; a burst of scrapes shares one result
 const QUEUE_CACHE_MS = 5_000;
+// Catalog counts move slowly and scan more rows
+const CATALOG_CACHE_MS = 30_000;
 
 /** Event-loop delay, memory and CPU of this process. */
 export function processMetrics(metrics: Metrics): void {
@@ -300,11 +304,77 @@ export function databaseMetrics(
     "1 while the LISTEN connection is up",
     () => [{ value: db.listening() ? 1 : 0 }],
   );
+
+  let catalogCached: { at: number; row: Promise<CatalogCounts> } | undefined;
+  const catalog = () => {
+    if (!catalogCached || Date.now() - catalogCached.at > CATALOG_CACHE_MS) {
+      const row = db
+        .query<CatalogCounts>(
+          `SELECT
+             (SELECT count(*) FROM registry_packages WHERE local)::int AS local,
+             (SELECT count(*) FROM registry_packages
+               WHERE local AND listed_manifest IS NOT NULL)::int AS listed,
+             count(*) FILTER (WHERE status = 'ready')::int AS ready,
+             count(*) FILTER (WHERE status = 'pending')::int AS pending,
+             count(*) FILTER (WHERE status = 'failed' AND NOT permanent)::int AS failed,
+             count(*) FILTER (WHERE status = 'failed' AND permanent)::int AS failed_permanent
+             FROM registry_versions`,
+        )
+        .then((r) => r.rows[0]);
+      catalogCached = { at: Date.now(), row };
+      row.catch(() => (catalogCached = undefined));
+    }
+    return catalogCached.row;
+  };
+  metrics.gauge(
+    "registry_packages",
+    "Packages published here (local), and those /packages lists (listed)",
+    async () => {
+      const row = await catalog();
+      return (["local", "listed"] as const).map((state) => ({
+        labels: { state },
+        value: row[state],
+      }));
+    },
+  );
+  metrics.gauge(
+    "registry_versions",
+    "Processed versions, by status; failed_permanent is never retried",
+    async () => {
+      const row = await catalog();
+      return (["ready", "pending", "failed", "failed_permanent"] as const).map(
+        (status) => ({ labels: { status }, value: row[status] }),
+      );
+    },
+  );
+}
+
+interface CatalogCounts {
+  local: number;
+  listed: number;
+  ready: number;
+  pending: number;
+  failed: number;
+  failed_permanent: number;
+}
+
+/** A bounded label for why a job failed. */
+export function errorReason(err: unknown, permanent = false): string {
+  const name = (err as { name?: string }).name ?? "";
+  const message = err instanceof Error ? err.message : String(err);
+  if (name === "SlowDown" || /reduce your request rate/i.test(message)) {
+    return "s3_throttled";
+  }
+  if (permanent) return "permanent";
+  if (/returned 404/.test(message)) return "not_found";
+  if (name === "TimeoutError" || /timed? ?out/i.test(message)) return "timeout";
+  return "other";
 }
 
 /** What a worker records about the jobs it runs. */
 export interface WorkerMetrics {
   jobDuration: Histogram;
+  jobErrors: Counter;
   reconcileQueued: Counter;
   reconcileRuns: Counter;
 }
@@ -315,6 +385,10 @@ export function workerMetrics(metrics: Metrics): WorkerMetrics {
       "registry_job_duration_seconds",
       "Time to run a job, by kind and outcome (done, retry, failed)",
       JOB_BUCKETS,
+    ),
+    jobErrors: metrics.counter(
+      "registry_job_errors_total",
+      "Job failures, by kind and reason (s3_throttled, not_found, timeout, permanent, other)",
     ),
     reconcileQueued: metrics.counter(
       "registry_reconcile_queued_total",
