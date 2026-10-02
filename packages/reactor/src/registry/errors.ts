@@ -20,6 +20,26 @@ export class ModuleNotFoundError extends Error {
   }
 }
 
+/** The host has the model only as a live module, which workers cannot import. */
+export class ModelNotWorkerImportableError extends Error {
+  readonly documentType: string;
+
+  constructor(documentType: string, version?: number) {
+    const versionSuffix = version !== undefined ? ` version ${version}` : "";
+    super(
+      `Document model ${documentType}${versionSuffix} is registered on the host only as a live module, so executor workers cannot load it. Register it from a { filePath } or { packageName } source.`,
+    );
+    this.name = "ModelNotWorkerImportableError";
+    this.documentType = documentType;
+  }
+
+  static isError(error: unknown): error is ModelNotWorkerImportableError {
+    return (
+      Error.isError(error) && error.name === "ModelNotWorkerImportableError"
+    );
+  }
+}
+
 /**
  * Error thrown when attempting to register a module that already exists.
  */

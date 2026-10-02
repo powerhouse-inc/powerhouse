@@ -57,6 +57,9 @@ export type ErrorInfo = {
   stack?: string;
   cause?: ErrorInfo;
   documentId?: string;
+  /** Carried for ModuleNotFoundError, so the parent can recover the model. */
+  documentType?: string;
+  requestedVersion?: number;
 };
 
 // ---------------------------------------------------------------------------

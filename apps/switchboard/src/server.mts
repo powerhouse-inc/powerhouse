@@ -509,6 +509,21 @@ async function initServer(
     });
   }
 
+  // Registry packages import from the on-disk cache, which workers can read.
+  const registryPackageNames = new Set(
+    (registryPackages ?? "")
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean),
+  );
+  const resolveRegistryModels = async (
+    identifier: string,
+  ): Promise<string | null> =>
+    httpLoader && registryPackageNames.has(identifier)
+      ? ((await httpLoader.cachePackage(identifier)).entries.documentModels ??
+        null)
+      : null;
+
   const reactorLogger = logger.child(["reactor"]);
   // Latched: dropWriteReady reports the fatal once per dropped job.
   let projectionWorkerFatalFired = false;
@@ -700,6 +715,7 @@ async function initServer(
       const workerSources = await resolveWorkerModelSources(
         packages,
         reactorLogger,
+        { resolveRemote: resolveRegistryModels },
       );
       reactorBuilder.withDocumentModelSources(workerSources).withWorkerPool({
         numWorkers: workerPool.numWorkers,
@@ -746,6 +762,7 @@ async function initServer(
         const workerSources = await resolveWorkerModelSources(
           packages,
           reactorLogger,
+          { resolveRemote: resolveRegistryModels },
         );
         reactorBuilder.withDocumentModelSources(workerSources);
       }

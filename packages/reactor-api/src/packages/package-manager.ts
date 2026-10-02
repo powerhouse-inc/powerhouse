@@ -24,6 +24,7 @@ import type {
   PackagePieceEntry,
 } from "./types.js";
 import { debounce } from "./util.js";
+import { REGISTRY_ENTRY_ABSENT } from "./registry-cache.js";
 
 /**
  * A loader throwing "this package isn't mine to load" is normal — loaders are
@@ -47,6 +48,7 @@ export function isExpectedLoaderMiss(
   if (!(error instanceof Error)) return false;
   const code = (error as NodeJS.ErrnoException).code;
   if (code === "ERR_UNSUPPORTED_DIR_IMPORT") return true; // empty subgraphs/ etc.
+  if (code === REGISTRY_ENTRY_ABSENT) return true;
   // An `exports` map without this subpath is the package saying it ships none
   // — the same answer as a missing directory, in a package that declares one.
   if (

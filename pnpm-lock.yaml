@@ -2012,6 +2012,9 @@ importers:
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
+      es-module-lexer:
+        specifier: ^2.0.0
+        version: 2.0.0
       express:
         specifier: ^4.22.1
         version: 4.22.1(supports-color@8.1.1)
