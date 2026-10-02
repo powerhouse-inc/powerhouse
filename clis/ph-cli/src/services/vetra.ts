@@ -15,7 +15,7 @@ import {
   configureVetraGithubUrl,
   sleep,
 } from "../utils/configure-vetra-github-url.js";
-import { VETRA_PREVIEW_DRIVE_ICON } from "../utils/drive-icons.js";
+import { POWERHOUSE_DRIVE_ICON } from "../utils/drive-icons.js";
 import { mergeDefaultDrives } from "../utils/merge-default-drives.js";
 import { parseDefaultDrivesUrl } from "../utils/parse-default-drives.js";
 import { resolveSwitchboardPort } from "../utils/resolve-switchboard-port.js";
@@ -88,7 +88,7 @@ async function startVetraPreviewDrive(
     slug: previewDriveId,
     global: {
       name: "Vetra Preview",
-      icon: VETRA_PREVIEW_DRIVE_ICON,
+      icon: POWERHOUSE_DRIVE_ICON,
       nodes: [],
     },
     local: {

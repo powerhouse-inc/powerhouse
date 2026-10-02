@@ -6,7 +6,7 @@ import { startSwitchboard as startSwitchboardServer } from "@powerhousedao/switc
 import type { ILogger } from "document-model";
 import path from "node:path";
 import type { SwitchboardArgs } from "../types.js";
-import { VETRA_DRIVE_ICON } from "../utils/drive-icons.js";
+import { POWERHOUSE_DRIVE_ICON } from "../utils/drive-icons.js";
 
 const EGRESS_ALLOW_ENV = "PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES";
 const LOCALHOST_ADDRESSES = ["127.0.0.1/32", "::1/128"];
@@ -55,7 +55,7 @@ function getDefaultVetraSwitchboardOptions(
       slug: vetraDriveId,
       global: {
         name: "Vetra",
-        icon: VETRA_DRIVE_ICON,
+        icon: POWERHOUSE_DRIVE_ICON,
       },
       preferredEditor: "vetra-drive-app",
       local: {
