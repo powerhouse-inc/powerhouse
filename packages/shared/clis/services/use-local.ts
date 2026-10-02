@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { readPackage } from "read-pkg";
 import { writePackage } from "write-package";
@@ -92,7 +93,43 @@ export async function runUseLocal(monorepoPath: string, skipInstall?: boolean) {
   }
 }
 
-function buildPnpmLink(packageName: string, monorepoPath: string) {
+// The monorepo's release globs; a package's directory needn't match its name
+const WORKSPACE_DIRS = [
+  "packages",
+  "packages/analytics-engine",
+  "clis",
+  "apps",
+];
+
+const workspaces = new Map<string, Map<string, string>>();
+
+function workspacePackages(monorepoPath: string): Map<string, string> {
+  let dirs = workspaces.get(monorepoPath);
+  if (dirs) return dirs;
+  dirs = new Map();
+  for (const parent of WORKSPACE_DIRS) {
+    const root = path.join(monorepoPath, parent);
+    if (!existsSync(root)) continue;
+    for (const entry of readdirSync(root, { withFileTypes: true })) {
+      const manifest = path.join(root, entry.name, "package.json");
+      if (!entry.isDirectory() || !existsSync(manifest)) continue;
+      try {
+        const { name } = JSON.parse(readFileSync(manifest, "utf8")) as {
+          name?: string;
+        };
+        if (name) dirs.set(name, path.join(root, entry.name));
+      } catch {
+        // An unreadable package.json names nothing
+      }
+    }
+  }
+  workspaces.set(monorepoPath, dirs);
+  return dirs;
+}
+
+export function buildPnpmLink(packageName: string, monorepoPath: string) {
+  const dir = workspacePackages(monorepoPath).get(packageName);
+  if (dir) return `link:${dir}`;
   const isCli = CLIS_DEPENDENCIES.includes(packageName);
   const isApp = APPS_DEPENDENCIES.includes(packageName);
   const packageDir = isCli ? "clis" : isApp ? "apps" : "packages";
