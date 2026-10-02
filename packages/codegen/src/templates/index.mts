@@ -23,7 +23,7 @@ export * from "./boilerplate/editors/editors.js";
 export * from "./boilerplate/editors/index.js";
 export * from "./boilerplate/oxlintrc.json.js";
 export * from "./boilerplate/gemini/settings.json.js";
-export * from "./boilerplate/github/sync-and-publish.yml.js";
+export * from "./boilerplate/github/vetra.yml.js";
 export * from "./boilerplate/gitignore.js";
 export * from "./boilerplate/index.html.js";
 export * from "./boilerplate/index.html.legacy.js";
