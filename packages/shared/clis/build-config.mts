@@ -236,9 +236,11 @@ export function buildPieceBuildConfig(
       onlyBundle: false,
     },
     outputOptions: { codeSplitting: false },
+    // The worker runs without source maps, so a map would only be shipped twice
+    minify: true,
     config,
     clean,
     dts,
-    sourcemap,
+    sourcemap: false,
   };
 }
