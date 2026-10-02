@@ -27,6 +27,7 @@ import {
   setAttachmentService,
   setDefaultPHGlobalConfig,
   setDocumentCache,
+  onVetraPackageManager,
   setDrives,
   setFeatures,
   setPackageDiscoveryService,
@@ -65,6 +66,10 @@ import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
 import { resolvePackagedReactorWorkerUrl } from "../utils/reactor-worker-url.js";
+import {
+  resolveDevProjectSource,
+  resolveLocalPackageSources,
+} from "../utils/worker-package-sources.js";
 import {
   REACTOR_INSTANCE_NAMESPACE,
   RELATIONAL_PGLITE_NAME,
@@ -403,8 +408,14 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     // (the dist worker itself is a library artifact no worker can load);
     // null means this is the monorepo app, where Vite bundles the worker.
     const packagedWorkerUrl = await resolvePackagedReactorWorkerUrl();
+    // Local project models the registry cannot serve: prebuilt bundles in
+    // production, the dev server's live project models entry in dev.
+    const packageSources = await resolveLocalPackageSources(
+      import.meta.env.BASE_URL,
+    );
     const workerClient = createWorkerReactorClientModule({
       workerUrl: packagedWorkerUrl ?? undefined,
+      packageSources,
       namespace: REACTOR_INSTANCE_NAMESPACE,
       relationalNamespace: RELATIONAL_PGLITE_NAME,
       cdnUrl: packageManager.cdnUrl ?? "",
@@ -430,6 +441,28 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       },
     });
     reactorClientModule = workerClient.reactorClientModule;
+    // A vetra watch rebuild updates the tab-side registry through the package
+    // manager; in worker mode the reactor lives in the worker, so forward
+    // each update as a replace of the project's models source.
+    const { registerPackages } = workerClient.reactorClientModule;
+    onVetraPackageManager((vetraPackageManager) => {
+      vetraPackageManager.subscribe(() => {
+        void (async () => {
+          const source = await resolveDevProjectSource(
+            import.meta.env.BASE_URL,
+          );
+          if (!source) return;
+          try {
+            await registerPackages([source]);
+          } catch (error) {
+            logger.error(
+              "Failed to re-register project models in the reactor worker: @error",
+              error,
+            );
+          }
+        })();
+      });
+    });
     // Block boot until the sync manager seeds remotes from the worker, so
     // list()/connection state are warm before consumers first read them.
     try {

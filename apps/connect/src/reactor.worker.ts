@@ -8,6 +8,7 @@ import {
   type ChannelConfig,
   type Database,
   type ICatchUp,
+  type IDocumentModelRegistry,
   type ISyncManager,
   type JwtHandler,
   type ReactorFeatureFlags,
@@ -24,6 +25,7 @@ import {
   WorkerPackageLoader,
   type ReactorIdentity,
   type WorkerMigrationState,
+  type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
 import type {
   DocumentModelModule,
@@ -101,11 +103,17 @@ type WorkerConstruct = {
   unsupportedStoredDocuments?: UnsupportedStoredDocuments;
   // Where the trust policy verifies signers under authEnforcement.
   renownEndpoints?: RenownTrustEndpoints;
+  // URL-addressed packages (local project models the registry cannot serve).
+  packageSources?: WorkerPackageSource[];
 };
 
-type ModelRegistry = {
-  registerModules: (...modules: DocumentModelModule[]) => void;
-};
+type ModelRegistry = Pick<
+  IDocumentModelRegistry,
+  | "registerModules"
+  | "unregisterModules"
+  | "registerUpgradeManifests"
+  | "unregisterUpgradeManifests"
+>;
 
 let loader: WorkerPackageLoader | undefined;
 let registry: ModelRegistry | undefined;
@@ -156,6 +164,47 @@ function registerNewModules(): void {
   registry.registerModules(...fresh);
   for (const m of fresh) {
     registeredKeys.add(modelKey(m));
+  }
+}
+
+// A reloaded source replaced modules under the same (type, version) keys, so
+// the delta registration above would skip them. Drop the whole version family
+// from the registry and the bookkeeping - the tab hook does the same - and
+// let registerNewModules re-add the loader's fresh modules.
+function replaceRegistryFamilies(types: string[]): void {
+  if (!registry || types.length === 0) {
+    return;
+  }
+  registry.unregisterModules(...types);
+  const typeSet = new Set(types);
+  for (const key of [...registeredKeys]) {
+    const type = key.slice(0, key.lastIndexOf("@"));
+    if (typeSet.has(type)) {
+      registeredKeys.delete(key);
+    }
+  }
+}
+
+// Models entries ship upgrade manifests beside their modules; replace per
+// type so a watch rebuild's manifest wins over the boot-time one.
+function registerLoaderManifests(): void {
+  if (!loader || !registry) {
+    return;
+  }
+  const manifests = loader.upgradeManifests;
+  if (manifests.length === 0) {
+    return;
+  }
+  registry.unregisterUpgradeManifests(
+    ...manifests.map((manifest) => manifest.documentType),
+  );
+  for (const result of registry.registerUpgradeManifests(...manifests)) {
+    if (result.status === "error") {
+      console.error(
+        "[reactor.worker] failed to register upgrade manifest:",
+        result.error,
+      );
+    }
   }
 }
 
@@ -325,7 +374,10 @@ const host = new ReactorHost({
             )
           ) as Promise<Record<string, unknown>>,
       });
-      const loaded = await loader.loadPackages(construct.packageSpecs);
+      await loader.loadPackages(construct.packageSpecs);
+      // URL-addressed packages: the project's own models in dev, prebuilt
+      // bundles under __reactor_worker__/packages/ in production.
+      await loader.loadSources(construct.packageSources ?? []);
       const flaggedModels = await loadFlaggedDocumentModels({
         studioMode: construct.studioMode,
         workflowsEnabled: construct.workflowsEnabled,
@@ -333,7 +385,7 @@ const host = new ReactorHost({
       const models = baseDocumentModels.concat(
         commonBundledModels,
         flaggedModels,
-        loaded,
+        loader.models,
       );
       phase = "opening pglite stores";
       console.info(`[reactor.worker] boot: ${phase}`);
@@ -410,6 +462,9 @@ const host = new ReactorHost({
       for (const m of models) {
         registeredKeys.add(modelKey(m));
       }
+      // Manifests ride along in the models entries the loader imported; the
+      // builder only saw the modules.
+      registerLoaderManifests();
       for (const type of FORWARDED_EVENT_TYPES) {
         module.eventBus.subscribe(type, (forwardedType, event) =>
           host.broadcastBusEvent(forwardedType, event),
@@ -430,12 +485,17 @@ const host = new ReactorHost({
       throw toStoredDocumentsRefused(error);
     }
   },
-  registerPackages: async (specs) => {
+  registerPackages: async (specs, sources) => {
     if (!loader) {
       return;
     }
     await loader.loadPackages(specs);
+    if (sources && sources.length > 0) {
+      const { types } = await loader.reloadSources(sources);
+      replaceRegistryFamilies(types);
+    }
     registerNewModules();
+    registerLoaderManifests();
   },
   onIdentity: (user) => {
     currentIdentity = user;

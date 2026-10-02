@@ -23,6 +23,7 @@ import {
   RPC_PROTOCOL_VERSION,
   SyncManagerProxy,
   type ReactorIdentity,
+  type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
 import type {
   DocumentModelModule,
@@ -74,6 +75,11 @@ export type WorkerReactorClientArgs = {
    * Vite bundles the worker from source (the monorepo app).
    */
   workerUrl?: string;
+  /**
+   * URL-addressed packages the worker loads at boot: local project models
+   * the registry cannot serve. See resolveLocalPackageSources.
+   */
+  packageSources?: WorkerPackageSource[];
 };
 
 export type WorkerReactorClient = {
@@ -166,6 +172,7 @@ export function createWorkerReactorClientModule(
         createSignaturePolicy: args.createSignaturePolicy,
         unsupportedStoredDocuments: args.unsupportedStoredDocuments,
         renownEndpoints: args.renownEndpoints,
+        packageSources: args.packageSources,
       },
       packages: args.packageSpecs,
     },
@@ -208,6 +215,14 @@ export function createWorkerReactorClientModule(
     client: clientProxy,
     adminClient: createWorkerAdminClient(router),
     inspector: createInspectorProxy(router),
+    registerPackages: async (sources: WorkerPackageSource[]) => {
+      await router.request((id) => ({
+        k: "register-packages",
+        id,
+        specs: [],
+        sources,
+      }));
+    },
     reactorModule: {
       documentModelRegistry,
       syncModule: { syncManager: syncManagerProxy },

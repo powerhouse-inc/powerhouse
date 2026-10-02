@@ -4,7 +4,9 @@ import {
   getConnectBaseViteConfig,
   missingVendorEntries,
   prebuildConnectVendor,
+  ownProjectPackage,
   prebuildReactorWorker,
+  prebuildWorkerPackages,
   resolveReactorWorkerSource,
   type PrebuiltReactorWorker,
   type PrebuiltVendor,
@@ -115,6 +117,12 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
     vendor,
     connectOverride,
   );
+
+  // Local project models the worker cannot get from the registry, built into
+  // the worker bundle's own directory so they share its vendor.
+  if (reactorWorker) {
+    await prebuildLocalWorkerPackages(dirname, outDirAbs, vendor);
+  }
 
   const keepDirs = [
     ...(vendor ? ["__vendor__"] : []),
@@ -300,6 +308,48 @@ async function prebuildReactorWorkerBundle(
     `${message}\nThe reactorWorker feature will be unavailable in this build.`,
   );
   return null;
+}
+
+/**
+ * Build the project's `provider: "local"` packages into worker-loadable model
+ * bundles beside the worker. A failure is a warning, not a build failure: the
+ * worker still runs, and documents of registry types still work - only the
+ * project's own types would be unavailable in worker mode.
+ */
+async function prebuildLocalWorkerPackages(
+  dirname: string,
+  outDirAbs: string,
+  vendor: PrebuiltVendor | null,
+): Promise<void> {
+  const config = getConfig(join(dirname, "powerhouse.config.json"));
+  const configured = (config.packages ?? [])
+    .filter((p) => p.provider === "local")
+    .map((p) => p.packageName);
+  // The project itself is a local package in all but name: a vetra project
+  // declares no entry for itself, and its models are the ones the worker
+  // cannot otherwise get.
+  const own = ownProjectPackage(dirname);
+  const localPackages = [...new Set([...configured, ...(own ? [own] : [])])];
+  if (localPackages.length === 0) return;
+
+  const errorRef: { message?: string } = {};
+  const built = await prebuildWorkerPackages({
+    dirname,
+    packages: localPackages,
+    outDir: join(outDirAbs, "__reactor_worker__", "packages"),
+    vendor: vendor
+      ? { imports: vendor.imports, dir: join(outDirAbs, "__vendor__") }
+      : undefined,
+    nodeEnv: "production",
+    errorRef,
+  });
+  if (!built) {
+    console.warn(
+      `ph connect build: the reactor worker's local package bundles failed to build${
+        errorRef.message ? `:\n${errorRef.message}` : ""
+      }\nDocuments of this project's own types will not load in worker mode.`,
+    );
+  }
 }
 
 /**

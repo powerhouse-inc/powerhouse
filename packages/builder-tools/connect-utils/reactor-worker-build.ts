@@ -357,7 +357,7 @@ async function buildWorkerAtomic(
     const { ok, stderr } = await runWorkerBuild(
       dirname,
       tmpDir,
-      entryPath,
+      { "reactor.worker": entryPath },
       vendorImports,
       nodeEnv,
     );
@@ -493,12 +493,36 @@ export function workerSafeVendorImports(
   return safe;
 }
 
+/**
+ * Builds arbitrary worker-loadable entries with the worker build config.
+ * Exported for the local-package bundles, which need the same self-contained
+ * output and vendor externalization at a different depth.
+ */
+export function runWorkerBuildEntries(
+  dirname: string,
+  outDir: string,
+  entries: Record<string, string>,
+  vendorImports: Record<string, string>,
+  nodeEnv: "development" | "production",
+  vendorPrefix = "../__vendor__/",
+): Promise<{ ok: boolean; stderr: string }> {
+  return runWorkerBuild(
+    dirname,
+    outDir,
+    entries,
+    vendorImports,
+    nodeEnv,
+    vendorPrefix,
+  );
+}
+
 function runWorkerBuild(
   dirname: string,
   outDir: string,
-  entryPath: string,
+  entries: Record<string, string>,
   vendorImports: Record<string, string>,
   nodeEnv: "development" | "production",
+  vendorPrefix = "../__vendor__/",
 ): Promise<{ ok: boolean; stderr: string }> {
   const workerPath = join(outDir, "build-worker.mjs");
   writeFileSync(workerPath, WORKER_BUILD_WORKER);
@@ -509,10 +533,11 @@ function runWorkerBuild(
         workerPath,
         dirname,
         outDir,
-        entryPath,
+        JSON.stringify(entries),
         JSON.stringify(vendorImports),
         nodeEnv,
         resolveBuilderVite() ?? "",
+        vendorPrefix,
       ],
       { cwd: dirname, stdio: ["ignore", "pipe", "pipe"] },
     );
@@ -549,22 +574,25 @@ function resolveBuilderVite(): string | null {
 
 /**
  * The build subprocess (same pattern as the vendor's). Loads builder-tools'
- * own vite (argv; project fallback) and builds the worker entry with relative
- * base, so chunk/asset URLs resolve against the worker script's own URL under
- * any deploy base. argv: dirname, outDir, entryPath, vendorImportsJSON,
- * nodeEnv, vitePath.
+ * own vite (argv; project fallback) and builds the given entries with
+ * relative base, so chunk/asset URLs resolve against each script's own URL
+ * under any deploy base. argv: dirname, outDir, entriesJSON (name ->
+ * absolute entry path), vendorImportsJSON, nodeEnv, vitePath, vendorPrefix
+ * (relative path from the out dir to __vendor__/, e.g. "../__vendor__/").
  */
 const WORKER_BUILD_WORKER = `
 import { createRequire } from 'node:module';
 import { isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-const [dirname, outDir, entryPath, vendorImportsJSON, nodeEnvArg, vitePathArg] = process.argv.slice(2);
+const [dirname, outDir, entriesJSON, vendorImportsJSON, nodeEnvArg, vitePathArg, vendorPrefixArg] = process.argv.slice(2);
 const nodeEnv = nodeEnvArg ?? 'development';
+const entries = JSON.parse(entriesJSON);
 const vendorImports = JSON.parse(vendorImportsJSON ?? '{}');
+const vendorPrefix = vendorPrefixArg || '../__vendor__/';
 const externalSet = new Set(Object.keys(vendorImports));
 const vendorPath = (spec) => {
   const url = vendorImports[spec];
-  return '../__vendor__/' + url.slice(url.lastIndexOf('/') + 1);
+  return vendorPrefix + url.slice(url.lastIndexOf('/') + 1);
 };
 const reqProj = createRequire(dirname + '/noop.js');
 // pathToFileURL: on Windows import('D:\\\\...') parses "D:" as a URL scheme.
@@ -614,7 +642,11 @@ await build({
     // touch the DOM, so dynamic imports must stay plain import().
     modulePreload: false,
     rollupOptions: {
-      input: { 'reactor.worker': entryPath },
+      input: entries,
+      // A models entry is pure re-exports; without this the bundler treats
+      // its exports as unused and tree-shakes the whole file to nothing.
+      // Harmless for the worker entry, which exports nothing to preserve.
+      preserveEntrySignatures: 'strict',
       external: (id) => externalSet.has(id),
       output: {
         format: 'es', entryFileNames: '[name].js',

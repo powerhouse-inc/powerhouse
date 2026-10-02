@@ -46,7 +46,20 @@ export type RpcNextPage = { k: "page"; id: CorrelationId; token: string };
 
 // Bumped when the tab<->owner wire protocol changes incompatibly; a tab whose
 // version differs from the owner's baseline is told to reload.
-export const RPC_PROTOCOL_VERSION = 2;
+export const RPC_PROTOCOL_VERSION = 3;
+
+/**
+ * A package the worker loads by URL rather than by registry spec: local
+ * project packages, whose models the registry does not serve. The URL must be
+ * a worker-importable models entry - the dev server's transformed
+ * `document-models/index.js` in dev, a prebuilt bundle under
+ * `__reactor_worker__/packages/` in production.
+ */
+export type WorkerPackageSource = {
+  name: string;
+  version?: string;
+  url: string;
+};
 
 export type VersionFingerprint = {
   appBuildId: string;
@@ -69,6 +82,8 @@ export type RpcRegisterPackages = {
   k: "register-packages";
   id: CorrelationId;
   specs: string[];
+  /** URL-addressed packages; the worker REPLACES a source it already loaded. */
+  sources?: WorkerPackageSource[];
 };
 
 export type RpcUnregisterPackages = {

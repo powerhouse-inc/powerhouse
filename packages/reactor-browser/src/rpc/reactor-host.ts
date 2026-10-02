@@ -17,6 +17,7 @@ import type {
   VersionFingerprint,
   WorkerInspectorInfo,
   WorkerMigrationState,
+  WorkerPackageSource,
 } from "./protocol.js";
 import { RPC_PROTOCOL_VERSION } from "./protocol.js";
 import { createPortTransport, type IRpcTransport } from "./transport.js";
@@ -38,7 +39,10 @@ function isDataMessage(
 export type ReactorHostOptions = {
   client?: IReactorClient;
   build?: (construct: unknown) => Promise<IReactorClient>;
-  registerPackages?: (specs: string[]) => Promise<void>;
+  registerPackages?: (
+    specs: string[],
+    sources?: WorkerPackageSource[],
+  ) => Promise<void>;
   unregisterPackages?: (names: string[]) => Promise<void>;
   onIdentity?: (user: ReactorIdentity | null) => void;
   onSyncOp?: (method: string, args: unknown[]) => Promise<unknown>;
@@ -384,7 +388,7 @@ export class ReactorHost {
     reply: IHostResponder,
   ): Promise<void> {
     await reply.run(message.id, async () => {
-      await this.options.registerPackages?.(message.specs);
+      await this.options.registerPackages?.(message.specs, message.sources);
     });
   }
 
