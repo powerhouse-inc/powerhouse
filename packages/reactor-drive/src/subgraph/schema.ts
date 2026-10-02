@@ -38,7 +38,14 @@ export const typeDefs = gql`
     hasMore: Boolean!
   }
 
-  type ReactorDrive {
+  """
+  A reactor-drive with its paged listing. Deliberately not named
+  "ReactorDrive": every subgraph schema also carries the GraphQL types of all
+  document models, and the reactor-drive document model's own type is
+  "ReactorDrive" — a same-named type here was dropped in its favour, taking
+  rootNodes with it.
+  """
+  type ReactorDriveInfo {
     id: ID!
     name: String!
     icon: String
@@ -53,7 +60,7 @@ export const typeDefs = gql`
   }
 
   type Query {
-    reactorDrive(id: ID!): ReactorDrive
+    reactorDrive(id: ID!): ReactorDriveInfo
     reactorDriveNode(driveId: ID!, id: ID!): ReactorDriveNode
     reactorDriveDescendants(driveId: ID!, root: ID!): [ReactorDriveNode!]!
   }
