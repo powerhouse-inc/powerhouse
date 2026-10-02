@@ -304,7 +304,13 @@ export function databaseMetrics(
     "1 while the LISTEN connection is up",
     () => [{ value: db.listening() ? 1 : 0 }],
   );
+}
 
+/**
+ * Package and version counts. They're the same from every process, so only
+ * one that runs jobs registers them.
+ */
+export function catalogMetrics(metrics: Metrics, db: Queryable): void {
   let catalogCached: { at: number; row: Promise<CatalogCounts> } | undefined;
   const catalog = () => {
     if (!catalogCached || Date.now() - catalogCached.at > CATALOG_CACHE_MS) {

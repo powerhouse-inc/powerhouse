@@ -27,6 +27,7 @@ import { migrate, migrateOnBoot, prepareSchema } from "./db/migrations.js";
 import { EventBus } from "./events.js";
 import {
   CONTENT_TYPE as METRICS_CONTENT_TYPE,
+  catalogMetrics,
   databaseMetrics,
   httpMetrics,
   Metrics,
@@ -464,6 +465,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
       console.log(`  Renown auth: ${config.renown.publicUrl}`);
     }
     if (workers > 0) {
+      catalogMetrics(metrics, runtime.db);
       worker = startWorker(processorContext(runtime, localUrl), {
         concurrency: workers,
         webhooks: runtime.webhooks,
@@ -527,6 +529,7 @@ export async function runWorker(args: WorkerCommandArgs) {
   if (args.metricsPort !== undefined) {
     processMetrics(metrics);
     databaseMetrics(metrics, runtime.db);
+    catalogMetrics(metrics, runtime.db);
     metricsServer = await serveMetrics(metrics, args.metricsPort);
   }
   const worker = await startWorker(
