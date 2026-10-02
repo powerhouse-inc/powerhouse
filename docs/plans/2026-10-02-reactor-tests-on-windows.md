@@ -310,6 +310,15 @@ failure, classify before fixing:
   two full runs.
 - **A native path asserted as a POSIX string** — match either separator, per
   7b3de3b4fd.
+- **A POSIX property asserted on win32.** libuv synthesizes modes on
+  Windows: directories never carry execute bits and `chmod` beyond the
+  read-only attribute is inert (probed on this machine: a fresh directory
+  stats 666 and `chmod 755` is a no-op). An assertion like
+  `mode & 0o055` is therefore unsatisfiable, and would be vacuous even if
+  it passed. Guard just that assertion behind a platform check or a
+  capability probe with a comment, keeping it live where the property
+  exists — the precedents are `externalize-vendor.test.ts` (mode check)
+  and `loader.test.ts` in reactor-workflow (symlink probe).
 - **A timeout that survives isolation.** Only then is it the test's budget.
   `packages/reactor/vitest.config.ts:26-28` already sets
   `hookTimeout: 120_000` and `testTimeout: 30_000`. Raise the specific
