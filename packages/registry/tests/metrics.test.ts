@@ -4,6 +4,7 @@ import { createPGliteDatabase } from "../src/db/database.js";
 import { migrate } from "../src/db/migrations.js";
 import { enqueue } from "../src/jobs.js";
 import {
+  catalogMetrics,
   databaseMetrics,
   errorReason,
   Metrics,
@@ -103,7 +104,7 @@ describe("metrics", () => {
          ('unlisted', '1.0.0', 'failed', false), ('unlisted', '0.9.0', 'failed', true)`,
     );
     const metrics = new Metrics();
-    databaseMetrics(metrics, db);
+    catalogMetrics(metrics, db);
     try {
       const body = await metrics.render();
       expect(body).toContain('registry_packages{state="local"} 2');
@@ -132,6 +133,21 @@ describe("metrics", () => {
       errorReason(Object.assign(new Error("x"), { name: "TimeoutError" })),
     ).toBe("timeout");
     expect(errorReason("boom")).toBe("other");
+  });
+
+  it("leaves catalog counts to the process that runs jobs", async () => {
+    const db = await createPGliteDatabase();
+    await migrate(db);
+    const metrics = new Metrics();
+    databaseMetrics(metrics, db);
+    try {
+      const body = await metrics.render();
+      expect(body).toContain("registry_jobs{");
+      expect(body).not.toContain("registry_packages{");
+      expect(body).not.toContain("registry_versions{");
+    } finally {
+      await db.close();
+    }
   });
 
   it("reports every priority at 0 while the queue is empty", async () => {
