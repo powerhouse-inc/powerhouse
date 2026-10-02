@@ -115,7 +115,6 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
     this.resultHandler = new JobResultHandler(
       queue,
       jobTracker,
-      eventBus,
       resolver,
       logger,
     );

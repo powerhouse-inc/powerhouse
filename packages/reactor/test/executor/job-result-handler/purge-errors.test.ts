@@ -81,7 +81,6 @@ describe("purge errors are terminal", () => {
     handler = new JobResultHandler(
       queue,
       tracker,
-      eventBus,
       new NullDocumentModelResolver(),
       logger(),
     );

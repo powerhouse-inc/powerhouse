@@ -1,6 +1,4 @@
 import type { ILogger } from "document-model";
-import type { IEventBus } from "../events/interfaces.js";
-import { ReactorEventTypes } from "../events/types.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
 import { RetryAccounting } from "../queue/types.js";
@@ -49,6 +47,11 @@ export interface IJobResultHandler {
   ): Promise<void>;
 }
 
+/**
+ * Flattens an error into the ErrorInfo record the queue and tracker store.
+ * An Error input also rides along as `source`, so queue.failJob can emit a
+ * JOB_FAILED carrying the typed instance instead of a reconstruction.
+ */
 export function toErrorInfo(error: Error | string): ErrorInfo {
   if (error instanceof Error) {
     const documentId = (error as { documentId?: unknown }).documentId;
@@ -56,6 +59,7 @@ export function toErrorInfo(error: Error | string): ErrorInfo {
       name: error.name,
       message: error.message,
       stack: error.stack || new Error().stack || "",
+      source: error,
       ...(typeof documentId === "string" ? { documentId } : {}),
     };
   }
@@ -70,7 +74,6 @@ export class JobResultHandler implements IJobResultHandler {
   constructor(
     private queue: IQueue,
     private jobTracker: IJobTracker,
-    private eventBus: IEventBus,
     private resolver: IDocumentModelResolver,
     private logger: ILogger,
   ) {}
@@ -202,21 +205,19 @@ export class JobResultHandler implements IJobResultHandler {
       try {
         await this.queue.retryJob(handle.job.id, currentErrorInfo);
       } catch (error) {
+        // The record names the retry-infrastructure failure, but the event
+        // carries the job's own typed error when there is one - the same
+        // split the two events used to deliver.
         const retryErrorInfo = toErrorInfo(
           error instanceof Error ? error : "Failed to retry job",
         );
+        const failureInfo: ErrorInfo = result.error
+          ? { ...retryErrorInfo, source: result.error }
+          : retryErrorInfo;
 
-        this.jobTracker.markFailed(handle.job.id, retryErrorInfo, handle.job);
+        this.jobTracker.markFailed(handle.job.id, failureInfo, handle.job);
 
-        this.eventBus
-          .emit(ReactorEventTypes.JOB_FAILED, {
-            jobId: handle.job.id,
-            error: result.error ?? new Error(retryErrorInfo.message),
-            job: handle.job,
-          })
-          .catch(() => {});
-
-        handle.fail(retryErrorInfo);
+        handle.fail(failureInfo);
       }
     } else {
       const currentErrorInfo = result.error
@@ -231,28 +232,17 @@ export class JobResultHandler implements IJobResultHandler {
 
       this.jobTracker.markFailed(handle.job.id, fullErrorInfo, handle.job);
 
-      this.eventBus
-        .emit(ReactorEventTypes.JOB_FAILED, {
-          jobId: handle.job.id,
-          error: result.error ?? new Error(fullErrorInfo.message),
-          job: handle.job,
-        })
-        .catch(() => {});
-
       handle.fail(fullErrorInfo);
     }
   }
 
+  // handle.fail resolves the job through queue.failJob, which emits the one
+  // ReactorEventTypes.JOB_FAILED for this failure - carrying the typed error
+  // through errorInfo.source. Emitting here too delivered every terminal
+  // failure to subscribers twice.
   private failNow(handle: IJobExecutionHandle, error: Error): void {
     const errorInfo = toErrorInfo(error);
     this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
-    this.eventBus
-      .emit(ReactorEventTypes.JOB_FAILED, {
-        jobId: handle.job.id,
-        error,
-        job: handle.job,
-      })
-      .catch(() => {});
     handle.fail(errorInfo);
   }
 
@@ -301,10 +291,12 @@ export class JobResultHandler implements IJobResultHandler {
     });
 
     return {
-      // The attempt that ended the job is the one a consumer classifies by.
+      // The attempt that ended the job is the one a consumer classifies by,
+      // so its name and typed instance carry over to the aggregate record.
       name: currentError.name,
       message: messageLines.join("\n"),
       stack: stackLines.join("\n\n"),
+      ...(currentError.source ? { source: currentError.source } : {}),
     };
   }
 }
