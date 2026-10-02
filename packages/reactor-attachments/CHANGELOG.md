@@ -1,3 +1,7 @@
+## 6.2.3-dev.39 (2026-10-02)
+
+This was a version bump only for @powerhousedao/reactor-attachments to align it with other projects, there were no code changes.
+
 ## 6.2.3-dev.38 (2026-10-01)
 
 This was a version bump only for @powerhousedao/reactor-attachments to align it with other projects, there were no code changes.
