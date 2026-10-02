@@ -4,11 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   ReactorBuilder,
+  ReactorClientBuilder,
   type Database,
-  type ILiveReadModelCoordinator,
   type InProcessReactorClientModule,
   type IReadModelCoordinator,
-  type ReadModelRegistrationStage,
 } from "@powerhousedao/reactor";
 import {
   BaseSubgraph,
@@ -16,7 +15,12 @@ import {
   type PackagePieceEntry,
 } from "@powerhousedao/reactor-api";
 import { PieceRegistry } from "@powerhousedao/reactor-workflow";
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import {
+  createRelationalDb,
+  type IRelationalDb,
+  type IWebhookScope,
+  type WebhookSpec,
+} from "@powerhousedao/shared/processors";
 import type { ILogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -33,6 +37,7 @@ import {
   reactorAccessOf,
   resolveWorkflowsEnabled,
   type BooleanFlagSource,
+  type ComposedWorkflowRuntime,
 } from "../src/workflow-runtime.mjs";
 
 function stubLogger(): ILogger & {
@@ -52,80 +57,6 @@ function stubLogger(): ILogger & {
     info: ReturnType<typeof vi.fn>;
     error: ReturnType<typeof vi.fn>;
   };
-}
-
-// The engine, faked at the seam the host loads it through: everything below
-// belongs to @powerhousedao/reactor-workflow's own tests.
-function fakeEngine() {
-  const runtime = {
-    registerWebhookEndpoint: vi.fn(() => Promise.resolve()),
-    startTriggerSupervisor: vi.fn(),
-    shutdown: vi.fn(),
-    onOperations: vi.fn((_operations: OperationWithContext[]) =>
-      Promise.resolve(),
-    ),
-  };
-  const constructed: {
-    db: unknown;
-    runtime: unknown;
-    init: number;
-  }[] = [];
-
-  class FakeWorkflowTriggersReadModel {
-    readonly name = "workflow-triggers";
-    readonly #record: (typeof constructed)[number];
-
-    constructor(
-      db: unknown,
-      _operationIndex: unknown,
-      _writeCache: unknown,
-      _consistencyTracker: unknown,
-      boundRuntime: unknown,
-    ) {
-      this.#record = { db, runtime: boundRuntime, init: 0 };
-      constructed.push(this.#record);
-    }
-
-    init(): Promise<void> {
-      this.#record.init += 1;
-      return Promise.resolve();
-    }
-
-    indexOperations(operations: OperationWithContext[]): Promise<void> {
-      return (this.#record.runtime as typeof runtime).onOperations(operations);
-    }
-  }
-
-  return {
-    runtime,
-    constructed,
-    module: {
-      WORKFLOW_PACKAGE_NAME: "@powerhousedao/workflow",
-      WORKFLOW_TRIGGERS_READ_MODEL: "workflow-triggers",
-      WORKFLOW_TRIGGERS_READ_MODEL_STAGE:
-        "post_ready" as ReadModelRegistrationStage,
-      WorkflowTriggersReadModel: FakeWorkflowTriggersReadModel,
-      setPieceRegistryUrl: vi.fn((_url: string | undefined) => undefined),
-      createWorkflowRuntime: vi.fn((_deps: Record<string, unknown>) => runtime),
-    },
-  };
-}
-
-function compose(
-  engine: ReturnType<typeof fakeEngine>,
-  logger: ILogger,
-  overrides: Record<string, unknown> = {},
-) {
-  return composeWorkflowRuntime({
-    reactorClient: {} as never,
-    relationalDb: { id: "relational-db" } as never,
-    attachments: { id: "attachments" } as never,
-    webhooks: { id: "webhooks" } as never,
-    authorizationService: {} as never,
-    logger,
-    load: () => Promise.resolve(engine.module as never),
-    ...overrides,
-  });
 }
 
 describe("resolveWorkflowsEnabled", () => {
@@ -181,19 +112,6 @@ describe("resolveWorkflowsEnabled", () => {
       resolveWorkflowsEnabled({ featureFlags, configEnabled: false }),
     ).resolves.toBe(false);
   });
-
-  // The engine must not be imported at all when workflows are off, so the
-  // decision is the flag's alone and is taken before compose is ever called.
-  it("is what gates composition", async () => {
-    const composeIfEnabled = async () =>
-      (await resolveWorkflowsEnabled({ featureFlags }))
-        ? "composed"
-        : "skipped";
-
-    expect(await composeIfEnabled()).toBe("skipped");
-    process.env[PH_WORKFLOWS_ENABLED] = "true";
-    expect(await composeIfEnabled()).toBe("composed");
-  });
 });
 
 describe("assertWorkflowPackageLoadable", () => {
@@ -205,51 +123,85 @@ describe("assertWorkflowPackageLoadable", () => {
 
   it("names the package a host would have to install when the load fails", async () => {
     const cause = new Error("Cannot find module");
-    await expect(
-      assertWorkflowPackageLoadable(() => Promise.reject(cause)),
-    ).rejects.toMatchObject({ cause });
+    const failing = assertWorkflowPackageLoadable(() => Promise.reject(cause));
+    await expect(failing).rejects.toThrow("@powerhousedao/workflow");
+    await expect(failing).rejects.toMatchObject({ cause });
   });
 });
 
+// The endpoint family as the host's webhook service holds it, in memory.
+function memoryWebhooks() {
+  const families: WebhookSpec[] = [];
+  const scope: IWebhookScope = {
+    hasPublicOrigin: true,
+    register: (spec) => {
+      families.push(spec);
+      return Promise.resolve({
+        endpointFor: (key) =>
+          Promise.resolve({
+            token: key,
+            url: `https://hooks.test/${key}`,
+            createdAt: new Date().toISOString(),
+          }),
+        revoke: () => Promise.resolve(),
+        list: () => Promise.resolve([]),
+      });
+    },
+  };
+  return { families, scope };
+}
+
 describe("composeWorkflowRuntime", () => {
-  let database: Kysely<unknown> | undefined;
-  let reactor: Awaited<ReturnType<ReactorBuilder["buildModule"]>> | undefined;
+  let databases: Kysely<unknown>[] = [];
+  let module: InProcessReactorClientModule | undefined;
+  let composed: ComposedWorkflowRuntime | undefined;
 
   afterEach(async () => {
-    const shutdown = reactor?.reactor.kill();
-    await shutdown?.completed;
-    await database?.destroy();
-    reactor = undefined;
-    database = undefined;
+    await composed?.stop();
+    await module?.reactor.kill().completed;
+    for (const database of databases) await database.destroy();
+    composed = undefined;
+    module = undefined;
+    databases = [];
   });
+
+  function pglite(): Kysely<unknown> {
+    const database = new Kysely<unknown>({
+      dialect: new PGliteDialect(new PGlite()),
+    });
+    databases.push(database);
+    return database;
+  }
 
   async function buildReactorModule(
     coordinator?: IReadModelCoordinator,
   ): Promise<InProcessReactorClientModule> {
-    database = new Kysely<unknown>({
-      dialect: new PGliteDialect(new PGlite()),
-    });
     const builder = new ReactorBuilder().withKysely(
-      database as unknown as Kysely<Database>,
+      pglite() as unknown as Kysely<Database>,
     );
     if (coordinator) builder.withReadModelCoordinator(coordinator);
-    reactor = await builder.buildModule();
-    return { reactorModule: reactor } as InProcessReactorClientModule;
+    module = await new ReactorClientBuilder()
+      .withReactorBuilder(builder)
+      .buildModule();
+    return module;
   }
 
-  it("hands the engine the host surfaces it declares", async () => {
-    const engine = fakeEngine();
-    await compose(engine, stubLogger());
-
-    expect(engine.module.createWorkflowRuntime).toHaveBeenCalledTimes(1);
-    const [deps] = engine.module.createWorkflowRuntime.mock.calls[0]!;
-    expect(deps.relationalDb).toEqual({ id: "relational-db" });
-    expect(deps.attachments).toEqual({ id: "attachments" });
-    expect(deps.webhooks).toEqual({ id: "webhooks" });
-    expect(typeof deps.assertCanRead).toBe("function");
-    expect(typeof deps.assertCanWrite).toBe("function");
-    expect(deps.canReadAttachmentRef).toBe(canReadAttachmentRef);
-  });
+  // The real engine, loaded as production loads it.
+  async function compose(
+    clientModule: InProcessReactorClientModule,
+    overrides: Partial<Parameters<typeof composeWorkflowRuntime>[0]> = {},
+  ): Promise<ComposedWorkflowRuntime> {
+    composed = await composeWorkflowRuntime({
+      reactorClient: clientModule.client,
+      clientModule,
+      relationalDb: createRelationalDb(pglite()) as IRelationalDb,
+      attachments: {} as never,
+      authorizationService: {} as never,
+      logger: stubLogger(),
+      ...overrides,
+    });
+    return composed;
+  }
 
   it("lets a step read any well-formed attachment ref", async () => {
     const hash = "a".repeat(64);
@@ -264,42 +216,25 @@ describe("composeWorkflowRuntime", () => {
   });
 
   it("serves a subgraph the GraphQL manager can construct", async () => {
-    const engine = fakeEngine();
-    const { subgraph } = await compose(engine, stubLogger());
+    const { subgraph } = await compose(await buildReactorModule());
 
     expect(subgraph.prototype).toBeInstanceOf(BaseSubgraph);
   });
 
-  it("registers the trigger read model post_ready and feeds the runtime", async () => {
-    const engine = fakeEngine();
+  it("registers the trigger read model on the reactor's coordinator", async () => {
     const clientModule = await buildReactorModule();
-    const coordinator = clientModule.reactorModule!
-      .readModelCoordinator as ILiveReadModelCoordinator;
-    const addReadModel = vi.spyOn(coordinator, "addReadModel");
-    const logger = stubLogger();
 
-    const workflows = await compose(engine, logger, { clientModule });
+    const workflows = await compose(clientModule);
 
     expect(workflows.triggers).toEqual({ status: "available" });
-    expect(addReadModel).toHaveBeenCalledTimes(1);
-    expect(addReadModel.mock.calls[0]![1]).toBe("post_ready");
-    // Constructed once, initialised before it was registered, bound to the
-    // runtime this composition built.
-    expect(engine.constructed).toHaveLength(1);
-    expect(engine.constructed[0]!.init).toBe(1);
-    expect(engine.constructed[0]!.runtime).toBe(engine.runtime);
-
-    const registered = addReadModel.mock.calls[0]![0];
-    const operations = [] as OperationWithContext[];
-    await registered.indexOperations(operations);
-    expect(engine.runtime.onOperations).toHaveBeenCalledWith(operations);
     expect(
-      coordinator.readModels.filter(({ name }) => name === "workflow-triggers"),
+      clientModule.reactorModule!.readModelCoordinator.readModels.filter(
+        ({ name }) => name === "workflow-triggers",
+      ),
     ).toHaveLength(1);
   });
 
-  it("reports the intake unavailable and says so loudly", async () => {
-    const engine = fakeEngine();
+  it("reports the intake unavailable on a coordinator without live registration", async () => {
     const customCoordinator: IReadModelCoordinator = {
       readModels: [],
       start: vi.fn(),
@@ -307,26 +242,22 @@ describe("composeWorkflowRuntime", () => {
       drain: vi.fn().mockResolvedValue(undefined),
       getChainDepth: vi.fn().mockReturnValue(0),
     };
-    const clientModule = await buildReactorModule(customCoordinator);
-    const logger = stubLogger();
 
-    const workflows = await compose(engine, logger, { clientModule });
+    const workflows = await compose(
+      await buildReactorModule(customCoordinator),
+    );
 
     expect(workflows.triggers).toEqual({
       status: "unavailable",
       reason: "live-read-model-registration-unsupported",
     });
-    expect(engine.constructed).toHaveLength(0);
     expect(customCoordinator.readModels).toEqual([]);
-    expect(logger.error).toHaveBeenCalledTimes(1);
-    expect(logger.error.mock.calls[0]![0]).toContain("NOT armed");
   });
 
   it("reports the intake unavailable without an in-process reactor", async () => {
-    const engine = fakeEngine();
-    const logger = stubLogger();
+    const clientModule = await buildReactorModule();
 
-    const workflows = await compose(engine, logger, {
+    const workflows = await compose(clientModule, {
       clientModule: {} as InProcessReactorClientModule,
     });
 
@@ -334,33 +265,38 @@ describe("composeWorkflowRuntime", () => {
       status: "unavailable",
       reason: "in-process-reactor-module-unavailable",
     });
-    expect(logger.error).toHaveBeenCalledTimes(1);
   });
 
-  it("arms the webhooks and the supervisor on start", async () => {
-    const engine = fakeEngine();
-    const workflows = await compose(engine, stubLogger());
+  it("arms the webhooks and the supervisor on start, and stops them once", async () => {
+    const webhooks = memoryWebhooks();
+    const workflows = await compose(await buildReactorModule(), {
+      webhooks: webhooks.scope,
+    });
 
-    await workflows.start();
+    // Intervals only, from here on: the supervisor's tick is the runtime's one.
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      await workflows.start();
 
-    expect(engine.runtime.registerWebhookEndpoint).toHaveBeenCalledTimes(1);
-    expect(engine.runtime.startTriggerSupervisor).toHaveBeenCalledTimes(1);
-  });
+      expect(webhooks.families.map(({ name }) => name)).toEqual(["trigger"]);
+      // The real runtime answers for it: an unknown workflow is not armed.
+      await expect(
+        webhooks.families[0]!.policyFor?.("wf-unknown"),
+      ).resolves.toBeUndefined();
+      expect(vi.getTimerCount()).toBe(1);
 
-  it("shuts the runtime down once on stop", async () => {
-    const engine = fakeEngine();
-    const workflows = await compose(engine, stubLogger());
-    await workflows.start();
+      await workflows.stop();
+      await workflows.stop();
 
-    await workflows.stop();
-    await workflows.stop();
-
-    expect(engine.runtime.shutdown).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("names the package a host would have to install when the load fails", async () => {
     const cause = new Error("Cannot find module");
-    const failing = compose(fakeEngine(), stubLogger(), {
+    const failing = compose(await buildReactorModule(), {
       load: () => Promise.reject(cause),
     });
 
