@@ -4059,6 +4059,10 @@ export class WorkflowRuntimeService {
     }
     const output =
       row.output === null ? null : (JSON.parse(row.output) as unknown);
+    // The journal capped this output to a marker (store.ts,
+    // STEP_PAYLOAD_MAX_BYTES); serving it would hand the marker to a draft
+    // step, or to the expression picker, as if it were the block's data.
+    if (isTruncatedStepPayload(output)) return { kind: "truncated" };
     return { kind: "succeeded", runId, testedAt, output };
   }
 

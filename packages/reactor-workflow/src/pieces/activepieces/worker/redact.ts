@@ -340,8 +340,14 @@ export function redactError(value: unknown, options?: RedactOptions): unknown {
 
 // True when a value carries a marker this module wrote. Rerun uses it to
 // refuse a journaled output it cannot faithfully replay.
+
+// TRUNCATED_MARKER is matched whole, not as a substring: walk() only ever
+// writes it in place of an entire capped node, so prose that merely mentions
+// the word keeps replaying.
 export function containsRedactedMarker(value: unknown, depth = 0): boolean {
-  if (typeof value === "string") return value.includes(REDACTED_PREFIX);
+  if (typeof value === "string") {
+    return value.includes(REDACTED_PREFIX) || value === TRUNCATED_MARKER;
+  }
   if (typeof value !== "object" || value === null) return false;
   if (depth >= STACK_GUARD_DEPTH) return false;
   return Object.values(value).some((entry) =>

@@ -341,4 +341,18 @@ describe("what survives redaction", () => {
     );
     expect(containsRedactedMarker({ a: [{ b: "fine" }] })).toBe(false);
   });
+
+  it("counts a depth-truncation marker as unreplayable, matched whole", () => {
+    // The depth/node caps write "[truncated]" in place of an entire node;
+    // replaying that as data would be as unfaithful as replaying a redaction.
+    const bounded = redactError({
+      items: Array.from({ length: 2000 }, (_, i) => ({ i })),
+    });
+    expect(containsRedactedMarker(bounded)).toBe(true);
+    // Only the whole-value form is the marker: walk() never writes it into
+    // the middle of a string, so prose that mentions the word still replays.
+    expect(
+      containsRedactedMarker({ note: "the log was [truncated] by the shell" }),
+    ).toBe(false);
+  });
 });

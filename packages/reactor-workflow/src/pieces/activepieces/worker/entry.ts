@@ -303,6 +303,7 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
       : undefined,
     output: liveOutput,
     reactor,
+    resumePayload: request.resumePayload,
     executionType: request.executionType,
     identity: request.identity,
   });
