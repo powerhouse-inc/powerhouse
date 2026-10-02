@@ -42,6 +42,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname as pathDirname, join } from "node:path";
 import {
   acquireLock,
@@ -139,6 +140,10 @@ const SPECIFIER_PATTERNS = [
  * root-relative, or an http(s)/data/blob URL. Used as a post-build guard so a
  * leftover bare (or `node:`) import fails the build with a name instead of
  * shipping a worker that dies on its first import statement.
+ *
+ * Expects minified (comment-free) output: a raw-text scan cannot tell a real
+ * import from a JSDoc code sample, and unminified kysely/viem are full of the
+ * latter. The build below always minifies for exactly this reason.
  */
 export function findDisallowedSpecifiers(code: string): string[] {
   const found = new Set<string>();
@@ -507,6 +512,7 @@ function runWorkerBuild(
         entryPath,
         JSON.stringify(vendorImports),
         nodeEnv,
+        resolveBuilderVite() ?? "",
       ],
       { cwd: dirname, stdio: ["ignore", "pipe", "pipe"] },
     );
@@ -526,16 +532,33 @@ function runWorkerBuild(
 }
 
 /**
- * The build subprocess (same pattern as the vendor's). Loads `vite` from the
- * project and builds the worker entry with relative base, so chunk/asset URLs
- * resolve against the worker script's own URL under any deploy base. argv:
- * dirname, outDir, entryPath, vendorImportsJSON, nodeEnv.
+ * The vite installed next to this module. The subprocess must run the vite
+ * this build config was written against: a consumer project can pin an older
+ * vite/rolldown (overrides) whose bundler leaves unresolvable specifiers bare
+ * instead of erroring and shims node builtins differently — the output guard
+ * then correctly rejects the bundle. builder-tools declares vite as a direct
+ * dependency, so this resolution works wherever builder-tools is installed.
+ */
+function resolveBuilderVite(): string | null {
+  try {
+    return createRequire(import.meta.url).resolve("vite");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The build subprocess (same pattern as the vendor's). Loads builder-tools'
+ * own vite (argv; project fallback) and builds the worker entry with relative
+ * base, so chunk/asset URLs resolve against the worker script's own URL under
+ * any deploy base. argv: dirname, outDir, entryPath, vendorImportsJSON,
+ * nodeEnv, vitePath.
  */
 const WORKER_BUILD_WORKER = `
 import { createRequire } from 'node:module';
 import { isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-const [dirname, outDir, entryPath, vendorImportsJSON, nodeEnvArg] = process.argv.slice(2);
+const [dirname, outDir, entryPath, vendorImportsJSON, nodeEnvArg, vitePathArg] = process.argv.slice(2);
 const nodeEnv = nodeEnvArg ?? 'development';
 const vendorImports = JSON.parse(vendorImportsJSON ?? '{}');
 const externalSet = new Set(Object.keys(vendorImports));
@@ -545,7 +568,8 @@ const vendorPath = (spec) => {
 };
 const reqProj = createRequire(dirname + '/noop.js');
 // pathToFileURL: on Windows import('D:\\\\...') parses "D:" as a URL scheme.
-const { build } = await import(pathToFileURL(reqProj.resolve('vite')).href);
+const vitePath = vitePathArg || reqProj.resolve('vite');
+const { build } = await import(pathToFileURL(vitePath).href);
 // Resolve bare specifiers from the project (same plugin as the vendor build):
 // prefer the bundler's browser-condition-aware resolution, fall back to the
 // worker's own resolution for Rolldown's realpath-anchoring bug.
@@ -581,7 +605,11 @@ await build({
   // pglite ships nested web workers as ES-module chunks.
   worker: { format: 'es' },
   build: {
-    outDir, emptyOutDir: false, minify: nodeEnv === 'production', target: 'esnext', sourcemap: true,
+    // Always minified, dev included: the bundle is browser-served output
+    // (sourcemaps carry the debugging story), and minification strips the
+    // JSDoc comments whose embedded code samples (kysely's, viem's) would
+    // otherwise trip the bare-specifier guard below.
+    outDir, emptyOutDir: false, minify: true, target: 'esnext', sourcemap: true,
     // No document in a worker: the module-preload polyfill and preload helper
     // touch the DOM, so dynamic imports must stay plain import().
     modulePreload: false,

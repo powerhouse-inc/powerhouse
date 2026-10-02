@@ -347,7 +347,18 @@ builds (ph-cli's `connect-build`) consume Connect's prebuilt dist, where the
    cache-sharing network assertion and reload-convergence integration check)
    is the natural follow-up once the packages are linkable.
 
-7. **Pre-existing environment failures observed, not caused here:**
+7. **First consumer run (distyra-test, linked via `link:`) surfaced two
+   hardening fixes.** The bare-specifier guard scanned raw text, and the dev
+   bundle was unminified — so JSDoc code samples in kysely/viem (`import { sql }
+   from 'kysely'` inside comments) read as bare imports and failed every dev
+   build. The bundle is now always minified (comments stripped; sourcemaps
+   carry debugging), and the guard documents that expectation. Separately, the
+   build subprocess now runs builder-tools' own vite (argv-passed, project
+   fallback) instead of the project's: a consumer can pin an older
+   vite/rolldown via overrides (distyra-test pins 8.0.14/1.0.2) whose bundler
+   semantics the build config was not written against.
+
+8. **Pre-existing environment failures observed, not caused here:**
    builder-tools `externalize-vendor.test.ts` asserts unix execute bits after
    `chmodSync`, which Windows cannot report; ph-cli's
    `build-integration.test.ts` / `switchboard-egress.test.ts` import
