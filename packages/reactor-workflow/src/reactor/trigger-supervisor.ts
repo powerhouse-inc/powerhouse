@@ -24,7 +24,9 @@ import {
   pieceModuleRef,
   PieceWorker,
   PieceWorkerError,
+  reactorHandlers,
   secretsFor,
+  servesReactorPort,
   storeHandlers,
   type BlockMatch,
   type ConnectionRequest,
@@ -33,6 +35,7 @@ import {
   type PieceTarget,
   type EgressPolicy,
   type PieceResolver,
+  type ReactorPort,
   type PieceWorkerResult,
   type PropertySettingDef,
   type RecordedSchedule,
@@ -135,6 +138,10 @@ export interface TriggerSupervisorOptions {
   // Where a trigger's piece may connect to. Left unset it is the default
   // policy, which refuses private address space; `null` lifts it entirely.
   egress?: EgressPolicy | null;
+  // ctx.reactor for trigger hooks, behind the same servesReactorPort gate the
+  // action executor applies. Left unset, even the reactor piece's triggers
+  // get the throwing stub.
+  reactor?: ReactorPort;
   tickMs?: number;
   defaultIntervalMs?: number;
   hookTimeoutMs?: number;
@@ -608,6 +615,11 @@ export class TriggerSupervisor {
     // Redacted in the child, so a hook's error crosses back without the
     // credential the connection resolved to.
     const redactValues = secretsFor(auth);
+    // The same gate, the same predicate, as the action executor: one piece
+    // reaches the reactor, and its triggers reach it on the terms its steps do.
+    const reactor = servesReactorPort(binding.packageName)
+      ? this.options.reactor
+      : undefined;
     return this.worker.runTriggerHook(
       {
         ...pieceModuleRef(piece),
@@ -617,6 +629,7 @@ export class TriggerSupervisor {
         auth,
         ...(redactValues.length > 0 ? { redactValues } : {}),
         ...(pieceStore ? { durableStore: true } : {}),
+        ...(reactor ? { reactorAccess: true } : {}),
         identity: { flowId: binding.workflowId, projectId: PROJECT_SCOPE_KEY },
         isRepublish: options.isRepublish,
         payload: options.payload,
@@ -629,7 +642,14 @@ export class TriggerSupervisor {
       },
       {
         timeoutMs: this.hookTimeoutMs,
-        ...(pieceStore ? { hostCalls: storeHandlers(pieceStore) } : {}),
+        ...(pieceStore || reactor
+          ? {
+              hostCalls: {
+                ...(pieceStore ? storeHandlers(pieceStore) : {}),
+                ...(reactor ? reactorHandlers(reactor) : {}),
+              },
+            }
+          : {}),
       },
     );
   }

@@ -272,7 +272,13 @@ describe("a reactor write that outlasts one host call", () => {
 
     const [step] = result.steps;
     expect(step.status).toBe("FAILED");
-    expect(step.error).toMatch(/^ReactorJobPendingError: .*job-1.*RUNNING/);
+    // The status word is the race's incidental half: under load the 1s
+    // deadline can pass before the first wait slice runs, so the job is
+    // reported at its initial PENDING rather than RUNNING. Both are
+    // correct; the error name and the job id are the contract.
+    expect(step.error).toMatch(
+      /^ReactorJobPendingError: .*job-1.*(PENDING|RUNNING)/,
+    );
     expect(calls).toEqual(["submit FIRST,SECOND"]);
   });
 
