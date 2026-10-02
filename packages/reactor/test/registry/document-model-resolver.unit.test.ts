@@ -2,6 +2,7 @@ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DocumentModelResolver } from "../../src/registry/document-model-resolver.js";
+import { ModelNotWorkerImportableError } from "../../src/registry/errors.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type {
   IDocumentModelLoader,
@@ -216,5 +217,44 @@ describe("DocumentModelResolver", () => {
     );
 
     expect(loader.load).not.toHaveBeenCalled();
+  });
+
+  describe("recoverMissingModel", () => {
+    it("re-sends boot manifest entries it was told about", async () => {
+      registry.registerModules(createMockModule("test/boot"));
+      const entry = {
+        documentType: "test/boot",
+        version: "1",
+        spec: { module: { filePath: "/x.mjs", exportName: "boot" } },
+      };
+      resolver.rememberManifest([entry]);
+      const sent: unknown[] = [];
+      resolver.setBroadcastHook((e) => {
+        sent.push(e);
+        return Promise.resolve();
+      });
+
+      await resolver.recoverMissingModel("test/boot");
+
+      expect(sent).toEqual([entry]);
+    });
+
+    it("refuses a live-only model when workers are in play", async () => {
+      vi.mocked(loader.load).mockResolvedValue(createMockModule("test/live"));
+      resolver.setBroadcastHook(() => Promise.resolve());
+
+      await expect(resolver.recoverMissingModel("test/live")).rejects.toThrow(
+        ModelNotWorkerImportableError,
+      );
+      expect(registry.getModule("test/live")).toBeDefined();
+    });
+
+    it("only loads host-side without workers", async () => {
+      vi.mocked(loader.load).mockResolvedValue(createMockModule("test/live"));
+
+      await resolver.recoverMissingModel("test/live");
+
+      expect(registry.getModule("test/live")).toBeDefined();
+    });
   });
 });

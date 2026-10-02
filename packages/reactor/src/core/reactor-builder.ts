@@ -797,6 +797,7 @@ export class ReactorBuilder {
       resolver.setModelLoadedHook((documentType) =>
         eventBus.emit(ReactorEventTypes.MODEL_LOADED, { documentType }),
       );
+      resolver.rememberManifest(this.resolvedModelManifest ?? []);
     }
     const queue = this.queueInstance ?? new InMemoryQueue(eventBus, resolver);
     const jobTracker = new InMemoryJobTracker(eventBus);
