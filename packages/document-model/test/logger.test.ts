@@ -141,13 +141,36 @@ describe("ConsoleLogger error formatting", () => {
     expect(out).toContain("EXTRA");
   });
 
-  it("renders 'null' for an unmatched @token", () => {
+  it("leaves an unmatched @token as written", () => {
     const logger = new ConsoleLogger();
-    // Intentionally under-provisioned to assert the "null" fallback —
-    // the lint rule would otherwise flag this as a missing replacement.
     // eslint-disable-next-line logger/missing-token-args
     logger.error("missing: @thing");
-    expect(lastErr()).toContain("missing: null");
+    expect(lastErr()).toContain("missing: @thing");
+  });
+
+  it("leaves a scoped package name intact with no args", () => {
+    const logger = new ConsoleLogger();
+    // eslint-disable-next-line logger/missing-token-args
+    logger.error("Enabled @meteo/piece-meteo@1.0.0 for workflow wf-1");
+    expect(lastErr()).toContain(
+      "Enabled @meteo/piece-meteo@1.0.0 for workflow wf-1",
+    );
+  });
+
+  it("does not re-scan a substituted value containing @", () => {
+    const logger = new ConsoleLogger();
+    logger.error("Enabled @block for @workflow", "@scope/name@1.0.0", "wf-1");
+    expect(lastErr()).toContain("Enabled @scope/name@1.0.0 for wf-1");
+
+    logger.error("piece @piece: @error", "@a/b", "failed at @piece");
+    expect(lastErr()).toContain("piece @a/b: failed at @piece");
+  });
+
+  it("binds arguments to tokens in order and leaves the rest as written", () => {
+    const logger = new ConsoleLogger();
+    // eslint-disable-next-line logger/missing-token-args
+    logger.error("@a @b @a @c", "A", "B");
+    expect(lastErr()).toContain("A B A @c");
   });
 
   it("appends multiple trailing Error replacements", () => {
