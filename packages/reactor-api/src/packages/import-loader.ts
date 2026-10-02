@@ -13,6 +13,7 @@ import {
   pieceListLocation,
   piecesFromListModule,
 } from "./pieces.js";
+import { extractDocumentModels } from "./document-model-detection.js";
 import { extractSubgraphs } from "./subgraph-extraction.js";
 import type { PackagePieceEntry } from "./types.js";
 import {
@@ -43,12 +44,9 @@ export class ImportPackageLoader implements IPackageLoader {
     const pkgModule = await loadDocumentModelsUtil(identifier);
 
     if (pkgModule) {
-      // duck type: the namespace also carries non-module exports such as the
-      // upgradeManifests aggregate
-      const models = Object.values(pkgModule).filter(
-        (m: unknown): m is DocumentModelModule =>
-          m !== null && typeof m === "object" && "documentModel" in m,
-      );
+      // The namespace also carries non-module exports such as the
+      // upgradeManifests aggregate; the shared predicate drops those.
+      const models = extractDocumentModels(pkgModule);
       this.logger.verbose(
         `  ➜  Loaded ${models.length} Document Models from: ${identifier}`,
       );

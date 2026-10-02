@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
 import type { Logger, PluginOption, ViteDevServer } from "vite";
 import { createLogger, createServer } from "vite";
+import { extractDocumentModels } from "./document-model-detection.js";
 import { extractSubgraphs } from "./subgraph-extraction.js";
 import {
   BUILT_PIECE_LIST,
@@ -196,11 +197,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     const loaded = await this.#load(identifier, "document-models");
     if (!loaded) return [];
 
-    // duck type
-    const documentModels = Object.values(loaded.namespace).filter(
-      (dm): dm is DocumentModelModule =>
-        dm !== null && typeof dm === "object" && "documentModel" in dm,
-    );
+    const documentModels = extractDocumentModels(loaded.namespace);
     this.logger.verbose(
       `  ➜  Loaded ${documentModels.length} Document Models from: ${identifier}`,
     );
