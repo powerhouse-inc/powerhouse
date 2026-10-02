@@ -10,6 +10,7 @@ import type {
 import { childLogger } from "document-model";
 import { pathToFileURL } from "node:url";
 import type { IPackageLoader, ProcessorFactoryBuilder } from "../types.js";
+import { extractDocumentModels } from "./document-model-detection.js";
 import { piecesFromCdnList } from "./pieces.js";
 import {
   EXACT_VERSION,
@@ -43,19 +44,6 @@ export function piecesBaseUrl(
 ): string {
   const root = registryUrl.endsWith("/") ? registryUrl : `${registryUrl}/`;
   return `${root}-/cdn/${packageName}@${version}/node/pieces/`;
-}
-
-// Expected shape of the document-models bundle export
-type DocumentModelsExport = Record<string, DocumentModelModule>;
-
-function documentModelsOf(module: DocumentModelsExport): DocumentModelModule[] {
-  return Object.values(module).filter(
-    (m: unknown): m is DocumentModelModule =>
-      m !== null &&
-      typeof m === "object" &&
-      "documentModel" in m &&
-      m.documentModel !== null,
-  );
 }
 
 // Expected shape of the subgraphs bundle export
@@ -250,7 +238,7 @@ export class HttpPackageLoader implements IPackageLoader {
   ): Promise<DocumentModelModule[]> {
     const { name: packageName } = this.parsePackageSpec(packageSpec);
     const { module } = await this.importDocumentModels(packageSpec);
-    const models = documentModelsOf(module as DocumentModelsExport);
+    const models = extractDocumentModels(module);
 
     this.logger.verbose(
       `Loaded ${models.length} document models from ${packageName}`,
@@ -446,7 +434,7 @@ export class HttpDocumentModelLoader implements IDocumentModelLoader {
     if (!models) {
       const { module, filePath } =
         await this.loader.importDocumentModels(packageName);
-      models = documentModelsOf(module as DocumentModelsExport);
+      models = extractDocumentModels(module);
       this.packageModulesCache.set(packageName, models);
       if (filePath) this.packageFileCache.set(packageName, filePath);
     }
