@@ -2,8 +2,8 @@
 
 Date: 2026-10-02 (against `main` at 141abde841, 6.2.3-dev.38)
 Status: Tracks A and B done on `windows-fixes` (acf2bb02b8, 9cc40d56bf,
-50ce21313f) and verified. Track C needs no code change, but the second run
-found the memory ceiling that Track D has to budget for. Track D not
+50ce21313f, 85827187e2) and verified. Track C needs no code change, but the
+second run found the memory ceiling Track D has to budget for. Track D not
 started.
 Paths are relative to the repo root unless they start with `packages/reactor`.
 
@@ -55,6 +55,7 @@ Node 24 on this machine, not inferred from the test name:
 | `spawnSync("pnpm.cmd", ["--version"])` | `status=null`, `error.code=EINVAL` |
 | `spawnSync("pnpm", […], {shell:true})` | `status=0`, but Node emits `DEP0190` |
 | `spawnSync(process.execPath, ["--import","tsx", …])` | works |
+| `crossSpawn.sync("pnpm", ["--version"])` | works, and `error` is `null` not `undefined` |
 | `execFileSync(".../records-guard.sh", ["none"])` | `error.code=EFTYPE` |
 | `execFileSync("bash", [".../records-guard.sh", "none"])` | works |
 | `relative("/repo/packages/reactor", "/repo/packages/reactor/bench/auth-scope.bench.ts")` | `"bench\\auth-scope.bench.ts"` |
@@ -118,11 +119,14 @@ Two things follow, and the second is the one that matters:
 
 ## Decisions
 
-1. **Fix the launcher, not the test's expectation.** All 33
-   child-process failures are a test reaching for a shell-resolved name
-   (`pnpm`) or an interpreter-less script (`.sh`). The fix is to name the
-   interpreter. Do not add `shell: true`, and do not skip these tests on
-   Windows: both lose the coverage that `check-windows.yml` exists to buy.
+1. **Fix the launcher, not the test's expectation.** All 33 child-process
+   failures are a caller reaching for a shell-resolved name (`pnpm`) or an
+   interpreter-less script (`.sh`). Name the interpreter for the script
+   (`bash <file>`), and use `cross-spawn` for the package manager, as
+   `packages/shared/clis/file-system/spawn-async.ts` already does. Do not add
+   `shell: true` — it hands arguments to `cmd.exe`, which strips quotes — and
+   do not skip these tests on Windows: both lose the coverage that
+   `check-windows.yml` exists to buy.
 2. **Normalize separators where the path is data, at the producer.** A
    relative path that is written to a record, matched against git output, or
    compared as a string is POSIX data, not a native path. Convert it where
@@ -135,7 +139,7 @@ Two things follow, and the second is the one that matters:
    `windows-latest` does not support `services:` containers, so Postgres has
    to be started on the runner.
 
-## Track A — child processes (33 tests) — done, acf2bb02b8 and 50ce21313f
+## Track A — child processes (33 tests) — done, acf2bb02b8 and 85827187e2
 
 **A1. `packages/reactor/test/admin/catchup.test.ts:35-39`** (1 test: "exits
 64 on bad arguments and 68 when the store cannot be read").
@@ -176,14 +180,23 @@ Keep the error shape the helper depends on. The `catch` at `:30-32` reads
 both, because bash exits with the script's status.
 
 **A3. Same class, no failing test.** Not exercised by the suite, so they
-never turned CI red, but each is broken on Windows. Fixed in 50ce21313f via
-`bench/pnpm-command.ts`: pnpm exports `npm_execpath` for every script it
-runs, so that is the name to spawn — native entry directly, JS entry through
-node, since corepack ships `pnpm.cjs`. Unit-tested over all three shapes in
-`test/bench/pnpm-command.test.ts`, and only the spawn is translated, so
-`commandLine` still reports `pnpm typecheck`. `pnpm bench:fix dist-check`
-now enumerates the workspace on Windows, which is the end-to-end check that
-this path works.
+never turned CI red, but each was broken on Windows. Fixed in 85827187e2
+with `cross-spawn`, which `packages/shared/clis/file-system/spawn-async.ts`
+already reaches for on this exact rationale and which is already in the
+catalog. It resolves the `.cmd` shim and escapes arguments itself, so the
+call keeps shell-less semantics on every platform and the call sites keep
+naming `pnpm`.
+
+Prefer it over reading `npm_execpath`, which 50ce21313f did first: that only
+works under a pnpm script, so running a bench file directly under tsx still
+failed. `node --import tsx bench/fix/run-fix.ts dist-check` now completes
+with `npm_execpath` unset.
+
+One trap when converting: cross-spawn reports success as `error: null`,
+where `node:child_process.spawnSync` leaves the field undefined. Every
+inherited `result.error !== undefined` check is therefore always true. Test
+truthiness, or key on `status`, which covers a failure to spawn too since
+that leaves `status` null.
 
 - `packages/reactor/bench/fix/fix-ci.ts:287` — `spawnSync(step.command[0], …)`
   where every `command` is `["pnpm", …]` (`:143-262`). Breaks `pnpm bench:fix`.
@@ -327,9 +340,12 @@ Do this last: a gate added before Tracks A-C land is a red main.
   4-core runner it may not cost what it looks like: run 2 spent its time
   paging, not computing, with 24 cores idle. Measure, do not assume. If two
   workers are too slow, the lever is a third shard, not a fourth worker.
-- **Track A3 and B3 are uncovered by construction.** They were fixed with
-  their tracks, and `pnpm-command.ts` carries unit tests, but no test
-  exercises `fix-ci`'s spawn loop or `run-record-all` end to end — those run
-  the whole CI pipeline and a full benchmark set respectively. `pnpm bench:fix
-  dist-check` is the one real command cheap enough to have been run. Treat
-  `pnpm bench:fix ci` and `pnpm bench:record` on Windows as untested.
+- **Track A3 and B3 are uncovered by construction.** No test exercises
+  `fix-ci`'s spawn loop or `run-record-all` end to end: those run the whole
+  CI pipeline and a full benchmark set respectively. `pnpm bench:fix
+  dist-check` is the one real command cheap enough to run, and it was run
+  both ways — through pnpm and directly under tsx. That is also what caught
+  the `error: null` trap above, which type-checked and linted clean while
+  turning two functions into unconditional throws. Treat `pnpm bench:fix ci`
+  and `pnpm bench:record` on Windows as untested, and run them once before
+  trusting them.
