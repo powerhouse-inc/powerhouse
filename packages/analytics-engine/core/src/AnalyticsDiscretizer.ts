@@ -127,33 +127,37 @@ export class AnalyticsDiscretizer {
   }
 
   static _getPeriodString(p: AnalyticsPeriod) {
+    // Period boundaries are anchored to the UTC calendar (see
+    // AnalyticsTimeSlicer), so labels are derived from the UTC view of the
+    // period start, never from a zoned start's local calendar fields.
+    const startUtc = p.start.toUTC();
     switch (p.period) {
       case "annual":
-        return p.start.year.toString();
+        return startUtc.year.toString();
       case "semiAnnual":
-        return `${p.start.year}/${p.start.month < 7 ? "H1" : "H2"}`;
+        return `${startUtc.year}/${startUtc.month < 7 ? "H1" : "H2"}`;
       case "quarterly":
-        return `${p.start.year}/Q${getQuarter(p.start)}`;
+        return `${startUtc.year}/Q${getQuarter(startUtc)}`;
       case "monthly":
-        const month = p.start.toUTC().month;
+        const month = startUtc.month;
         const formattedMonth = month < 10 ? `0${month}` : `${month}`;
-        return `${p.start.year}/${formattedMonth}`;
+        return `${startUtc.year}/${formattedMonth}`;
       case "weekly":
-        return `${p.start.weekYear}/W${p.start.weekNumber}`;
+        return `${startUtc.weekYear}/W${startUtc.weekNumber}`;
       case "daily":
-        const monthD = p.start.month;
-        const day = p.start.day;
+        const monthD = startUtc.month;
+        const day = startUtc.day;
         const formattedMonthD = monthD < 10 ? `0${monthD}` : `${monthD}`;
         const formattedDay = day < 10 ? `0${day}` : `${day}`;
-        return `${p.start.year}/${formattedMonthD}/${formattedDay}`;
+        return `${startUtc.year}/${formattedMonthD}/${formattedDay}`;
       case "hourly":
-        const monthH = p.start.month;
-        const dayH = p.start.day;
-        const hourH = p.start.hour;
+        const monthH = startUtc.month;
+        const dayH = startUtc.day;
+        const hourH = startUtc.hour;
         const formattedMonthH = monthH < 10 ? `0${monthH}` : `${monthH}`;
         const formattedDayH = dayH < 10 ? `0${dayH}` : `${dayH}`;
         const formattedHourH = hourH < 10 ? `0${hourH}` : `${hourH}`;
-        return `${p.start.year}/${formattedMonthH}/${formattedDayH}/${formattedHourH}`;
+        return `${startUtc.year}/${formattedMonthH}/${formattedDayH}/${formattedHourH}`;
       default:
         return p.period;
     }
@@ -231,9 +235,19 @@ export class AnalyticsDiscretizer {
   ): Series {
     const result: Series = {};
 
+    // An empty range (start equal to end) produces no periods; there is
+    // nothing to attribute values to.
+    if (periods.length === 0) {
+      return result;
+    }
+
     for (const s of series) {
       let oldSum = this._getValue(s, periods[0].start);
       for (const p of periods) {
+        // Periods are half-open [start, end): the cumulative value "as of"
+        // a boundary excludes values stamped exactly on it, so a value at
+        // an exact period start is attributed to the period that starts
+        // there, not the one that ends there.
         const newSum = this._getValue(s, p.end);
         const id = `${p.start.toISO()}-${p.period}`;
 
@@ -275,7 +289,10 @@ export class AnalyticsDiscretizer {
     series: AnalyticsSeries<string>,
     when: DateTime,
   ): number {
-    return when >= series.start ? series.value : 0.0;
+    // Strictly greater than: the cumulative value at instant t covers values
+    // stamped before t only. Periods are half-open [start, end), so a value
+    // stamped exactly at a boundary belongs to the period that starts there.
+    return when > series.start ? series.value : 0.0;
   }
 
   public static _getVestValue(
@@ -287,7 +304,7 @@ export class AnalyticsDiscretizer {
     const end = series.end;
 
     const cliff = series.params?.cliff
-      ? DateTime.fromISO(series.params.cliff! as string)
+      ? DateTime.fromISO(series.params.cliff! as string, { zone: "utc" })
       : null;
     if (now < start || (cliff && now < cliff)) {
       return 0.0;

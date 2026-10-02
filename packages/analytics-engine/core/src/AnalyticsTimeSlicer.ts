@@ -1,6 +1,15 @@
 import { DateTime } from "luxon";
 import { AnalyticsGranularity } from "./AnalyticsQuery.js";
 
+// Boundary convention: periods are half-open intervals [start, end), where
+// each period's end is exactly the next period's start. Calendar-aligned
+// granularities anchor to the UTC calendar (ISO 8601): a period boundary sits
+// at T00:00:00.000Z of the first day of the calendar year / half-year /
+// quarter / month / ISO week / day / hour. The first period of a series may
+// be partial (it starts at the query start); subsequent periods start on the
+// calendar boundary. An instant exactly at a boundary belongs to the period
+// that starts there (see AnalyticsDiscretizer._getSingleValue).
+
 export type AnalyticsRange = {
   start: DateTime;
   end: DateTime;
@@ -79,11 +88,12 @@ const _createFactoryFn = (range: AnalyticsRange) => {
         result = _nextHourlyPeriod(current, range.end);
     }
 
-    // Update current to start of next period
+    // Update current to start of next period. Periods are half-open
+    // [start, end), so the next period starts exactly at this period's end.
     if (result === null) {
       current = null;
     } else {
-      current = result.end.plus({ milliseconds: 1 });
+      current = result.end;
     }
 
     return result;
@@ -113,17 +123,16 @@ export const _nextAnnualPeriod = (
     return null;
   }
 
+  // Anchor to the UTC calendar year, like the other granularities: the
+  // period ends at January 1st of the following year, so the first period
+  // may be partial and every later period spans a full calendar year.
   const inputUtc = nextStart.toUTC();
-  const oneYearLater = DateTime.utc(
-    inputUtc.year,
-    inputUtc.month,
-    inputUtc.day,
-  ).plus({ years: 1 });
+  const endDate = DateTime.utc(inputUtc.year + 1, 1, 1);
 
   return {
     period: "annual",
     start: nextStart,
-    end: oneYearLater,
+    end: endDate,
   };
 };
 
@@ -135,8 +144,9 @@ export const _nextSemiAnnualPeriod = (
     return null;
   }
 
-  const midYear = DateTime.utc(nextStart.year, 7, 1);
-  const endYear = DateTime.utc(nextStart.year, 12, 31, 23, 59, 59, 999);
+  const inputUtc = nextStart.toUTC();
+  const midYear = DateTime.utc(inputUtc.year, 7, 1);
+  const endYear = DateTime.utc(inputUtc.year + 1, 1, 1);
 
   let endDate: DateTime;
   if (midYear > nextStart) {
@@ -175,7 +185,7 @@ export const _nextQuarterlyPeriod = (
   } else if (startMonth < 9) {
     endDate = DateTime.utc(nextStartUtc.year, 10, 1);
   } else {
-    endDate = DateTime.utc(nextStartUtc.year, 12, 31, 23, 59, 59, 999);
+    endDate = DateTime.utc(nextStartUtc.year + 1, 1, 1);
   }
 
   if (endDate > seriesEnd) {
@@ -286,8 +296,10 @@ export const _nextHourlyPeriod = (
     return null;
   }
 
+  // Anchor to the top of the hour: the first period may be partial, every
+  // later period covers a full clock hour.
   const startDate = nextStart.toUTC();
-  let endDate = startDate.plus({ hours: 1 });
+  let endDate = startDate.plus({ hours: 1 }).startOf("hour");
 
   if (endDate > seriesEnd) {
     if (nextStart.hour !== seriesEnd.hour) {
