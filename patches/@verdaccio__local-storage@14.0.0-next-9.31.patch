@@ -1,0 +1,52 @@
+diff --git a/build/local-fs.js b/build/local-fs.js
+index 2ae41b3c1e37d4f2b0da5ff081189baac7de0c3f..72f3456ae9bbbf4403fe9dff4aea8ec9444f0bfa 100644
+--- a/build/local-fs.js
++++ b/build/local-fs.js
+@@ -252,12 +252,17 @@ var LocalFS = class {
+ 		const pathName = this._getStorage(tarballName);
+ 		debug$1("read a tarball %o", pathName);
+ 		const readStream = (0, node_stream.addAbortSignal)(signal, node_fs.default.createReadStream(pathName));
+-		readStream.on("open", async function(fileDescriptorId) {
++		readStream.on("open", function(fileDescriptorId) {
+ 			debug$1("file descriptor id %o", fileDescriptorId);
+ 			if (fileDescriptorId) {
+-				const stats = await require_fs.fstatPromise(fileDescriptorId);
+-				debug$1("file size %o", stats.size);
+-				readStream.emit("content-length", stats.size);
++				let size;
++				try {
++					size = node_fs.default.fstatSync(fileDescriptorId).size;
++				} catch {}
++				if (size !== void 0) {
++					debug$1("file size %o", size);
++					readStream.emit("content-length", size);
++				}
+ 			}
+ 		});
+ 		readStream.on("error", (error) => {
+diff --git a/build/local-fs.mjs b/build/local-fs.mjs
+index 573e6fae8d57011eb40ffacb422f37bf8475c996..9c849ea324bc9334fadcb5a4863c73c95b2f78a9 100644
+--- a/build/local-fs.mjs
++++ b/build/local-fs.mjs
+@@ -247,12 +247,17 @@ var LocalFS = class {
+ 		const pathName = this._getStorage(tarballName);
+ 		debug("read a tarball %o", pathName);
+ 		const readStream = addAbortSignal(signal, fsCallback.createReadStream(pathName));
+-		readStream.on("open", async function(fileDescriptorId) {
++		readStream.on("open", function(fileDescriptorId) {
+ 			debug("file descriptor id %o", fileDescriptorId);
+ 			if (fileDescriptorId) {
+-				const stats = await fstatPromise(fileDescriptorId);
+-				debug("file size %o", stats.size);
+-				readStream.emit("content-length", stats.size);
++				let size;
++				try {
++					size = fsCallback.fstatSync(fileDescriptorId).size;
++				} catch {}
++				if (size !== void 0) {
++					debug("file size %o", size);
++					readStream.emit("content-length", size);
++				}
+ 			}
+ 		});
+ 		readStream.on("error", (error) => {
