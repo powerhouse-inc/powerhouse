@@ -216,9 +216,13 @@ describe("totals of different granularities", () => {
       end,
     );
 
+    // The total window is half-open [2022-01-01, 2023-06-01): the value
+    // stamped exactly at the window start (10000 on 2022-01-01) counts
+    // into the window, so the increase is 10000 + 15000. The sum covers
+    // everything from the beginning of the series: all 35000.
     expect(result.length).toBe(1);
     expect(result[0].rows[0].sum).toBe(35000);
-    expect(result[0].rows[0].value).toBe(15000);
+    expect(result[0].rows[0].value).toBe(25000);
     expect(result[0].period).toBe("total");
   });
 
@@ -231,17 +235,20 @@ describe("totals of different granularities", () => {
 
     expect(result.length).toBe(3);
 
+    // Periods are half-open calendar years [Jan 1, next Jan 1) in UTC, so
+    // each value stamped on January 1st belongs to the year it names:
+    // 10000 on 2021-01-01, 10000 on 2022-01-01, 15000 on 2023-01-01.
     const result2021 = result.find((r) => r.period === "2021");
     expect(result2021).toBeDefined();
     expect(result2021?.rows[0].value).toBe(10000);
 
     const result2022 = result.find((r) => r.period === "2022");
     expect(result2022).toBeDefined();
-    expect(result2022?.rows[0].value).toBe(15000);
+    expect(result2022?.rows[0].value).toBe(10000);
 
     const result2023 = result.find((r) => r.period === "2023");
     expect(result2023).toBeDefined();
-    expect(result2023?.rows[0].value).toBe(0);
+    expect(result2023?.rows[0].value).toBe(15000);
   });
   /*
   it("should correct sum up on semi annual granularity", async () => {
