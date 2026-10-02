@@ -175,114 +175,103 @@ builds (ph-cli's `connect-build`) consume Connect's prebuilt dist, where the
 
 ### Phase 0 - Repro and diagnosis
 
-- [ ] Add a failing repro: scaffold fixture project (or reuse an existing
-      ph-cli e2e fixture) with `connect.instance.reactorWorker: true`; assert
-      via Playwright that `window.ph.reactorClientModule.kind === "worker"`
-      and that a document `get` round-trips (which requires a live worker).
-      Run against both `ph connect` dev serve and `ph connect build` +
-      preview.
-- [ ] Confirm the exact dev-server failure mode for the worker fetch (403
-      from `server.fs` outside the allow list built in
-      `packages/builder-tools/connect-utils/vite-config.ts:386-428`, 404, or
-      MIME). Record it in this plan's Deviations section; it decides whether
-      the dev middleware in Phase 3 needs an fs-allow change as well.
+- [x] Repro covered by a live browser e2e against the built bundle (see
+      Deviations: playwright-cli against a static serve of the bundle, ping ->
+      hello -> reactor boot -> RPC query), run for both the self-contained
+      and the vendor-sharing bundle. A scaffolded ph-cli fixture project
+      remains follow-up work for CI.
+- [x] The exact dev-server failure mode became moot: the tab no longer
+      derives a node_modules URL at all (see Deviations). The dev middleware
+      serves the prebuilt bundle at the stable path instead.
 
 ### Phase 1 - Connect package build (apps/connect)
 
-- [ ] Keep `reactor.worker` as a tsdown entry but make its output
-      deterministic for consumers: stable entry filename (already
-      `reactor.worker.js`) and document in the package README/CHANGELOG that
-      `dist/reactor.worker.js` + its relative chunk closure is a consumer
-      input, not a browser-loadable file.
-- [ ] Enumerate the worker closure's bare-specifier set in a unit test
-      (es-module-lexer over dist output in a build-check script), so a new
-      worker dependency that is missing from the vendor include fails CI here
-      rather than in ph-cli.
-- [ ] `src/reactor-worker-client.ts`: construct the worker from a stable
-      app-origin URL. Resolution order: explicit runtime-config value if we
-      add one (follow `apps/connect/RUNTIME-CONFIG.md` lockstep steps) ->
-      `<base>/reactor.worker.js`. Keep the current `import.meta.url` form
-      only as the monorepo-dev fallback (Vite rewrites it there), gated so
-      packaged builds never use it.
-- [ ] Wire the SharedWorker `error` event to connection state (Decision 7)
-      and split the banner copy in
-      `apps/connect/src/components/connection-banner.tsx`.
+- [x] `reactor.worker` stays a tsdown entry with its stable filename; it is
+      now a build input for `prebuildReactorWorker`, never fetched directly.
+- [x] Closure enumeration is enforced at bundle time instead of in CI here:
+      `prebuildReactorWorker` fails with the offending file + specifier when
+      anything unresolvable survives in the emitted graph.
+- [x] `src/reactor-worker-client.ts` takes a `workerUrl`;
+      `src/store/reactor.ts` resolves it by probing
+      `<base>__reactor_worker__/reactor.worker.js` (HEAD + content-type, so
+      an SPA fallback's index.html does not count) via
+      `src/utils/reactor-worker-url.ts`, falling back to the
+      `import.meta.url` form for the monorepo app.
+- [x] SharedWorker `error` -> `setWorkerConnectionStatus("failed")`
+      immediately (not downgraded by the ping deadline), with its own banner
+      copy in `connection-banner.tsx`.
 
-### Phase 2 - Worker-closure rewrite (packages/builder-tools)
+### Phase 2 - Worker bundle prebuild (packages/builder-tools)
 
-- [ ] New module `connect-utils/worker-rewrite.ts`:
-      `rewriteReactorWorker({ connectDistDir, outDir, imports, base })`.
-      Walk relative imports from `reactor.worker.js` (es-module-lexer; both
-      static and dynamic import forms), copy each file to `outDir`, rewrite
-      bare specifiers via `imports`, leave relative specifiers intact, apply
-      base/dynamic-base per Decision 5. Return the emitted file list and the
-      unmapped-specifier list.
-- [ ] Hard-fail on unmapped specifiers with the same error shape as the
-      vendor `missingVendorEntries` check in
-      `packages/ph-cli` connect-build.
-- [ ] Extend the production vendor include
-      (`productionVendorInclude` in ph-cli connect-build + 
-      `DEFAULT_VENDOR_INCLUDE` as appropriate) with the worker-only deps from
-      Decision 4; respect the existing exclusions rationale (no
-      `@powerhousedao/connect`, no bare `@powerhousedao/shared`).
-- [ ] Fold the rewrite implementation into the vendor cache fingerprint the
-      same way the vendor build worker already is
-      (`externalize-vendor.ts:323-328`), so a rewrite-logic change busts
-      stale outputs.
-- [ ] PGlite wasm/data assets: the worker closure reaches
-      `loadPGliteModule` (`pglite-major-*.js` chunk). Verify how its
-      `new URL(...)` wasm/data references resolve post-copy and copy those
-      assets alongside, or route them through the vendor (the vendor build
-      already handles `new URL(..., import.meta.url)` carrying the
-      placeholder, `externalize-vendor.ts:17`).
-- [ ] Unit tests beside `externalize-vendor.test.ts`: closure walk, rewrite
-      correctness (bare -> URL, relative untouched, dynamic imports), 
-      unmapped-specifier failure, dynamic-base output.
+- [x] New module `connect-utils/reactor-worker-build.ts`:
+      `prebuildReactorWorker` builds the worker graph with a second
+      `vite build` in a throwaway subprocess (same pattern as the vendor
+      prebuild) instead of a hand-rolled text rewrite - see Deviations.
+      Vendor-mapped specifiers are externalized onto `../__vendor__/<entry>.js`
+      via rollup `external` + `output.paths`; everything else is bundled.
+- [x] Post-build guard: `findBundleSpecifierOffenders` walks the emitted
+      import graph from the entry and fails the build naming any specifier a
+      worker cannot resolve.
+- [x] Vendor include extension dropped: unnecessary under the build approach
+      (unmapped deps are bundled, not failed) - see Deviations.
+- [x] Cache fingerprint folds in the build-worker source, the connect dist
+      identity, the vendor's import-map.json, and the (filtered) external
+      set; concurrent builders share the vendor's lock mechanism.
+- [x] PGlite wasm/data assets are handled by the vite build itself under
+      relative base (`new URL("./assets/...", import.meta.url)`); its nested
+      workers are inline blob workers. Verified on the real graph.
+- [x] Unit tests in `connect-utils/reactor-worker-build.test.ts`: specifier
+      scan (minified, member-call false positives, URL forms), graph-walk
+      exemption of stray node-worker assets, vendor path mapping,
+      worker-safety filtering, real subprocess build + cache reuse +
+      missing-entry reporting.
 
-### Phase 3 - Consumers (packages/ph-cli)
+### Phase 3 - Consumers (clis/ph-cli, builder-tools dev server)
 
-- [ ] `connect-build` (`src/services/connect-build.ts` equivalent in this
-      repo): after the vite build, run `rewriteReactorWorker` into the app
-      outDir; include its outputs in the post-build vendor-backing
-      validation.
-- [ ] Dev server (`connect-studio` / vetra serve path): middleware that
-      serves `<base>/reactor.worker.js` and its closure by running the same
-      rewrite against the dev import-map URLs (the dev equivalents used by
-      `devReactImportmapPlugin`), cached in memory and invalidated with the
-      vendor. Apply the Phase 0 finding if an fs-allow fix is also needed.
-- [ ] `connect-preview`: confirm it serves the built output (static files
-      only, nothing worker-specific should be needed once build emits them) 
-      and sends `Cache-Control: immutable` for hashed assets
-      (`__vendor__/*`, worker chunk closure) and revalidation for
-      `reactor.worker.js` itself if it is emitted unhashed.
+- [x] `connect-build` runs `prebuildReactorWorker` into
+      `<dist>/__reactor_worker__` after the vendor prebuild, keeps both dirs
+      across the stale-output clean and the app build (`emptyOutDir: false`),
+      and fails the build only when `connect.instance.reactorWorker` is
+      explicitly on (otherwise warns and degrades). `PH_CONNECT_REACTOR_WORKER=0`
+      disables the prebuild, mirroring `PH_CONNECT_VENDOR`.
+- [x] Dev server: `reactorWorkerDevPlugin` (registered in
+      `getConnectBaseViteConfig`, serve-only) answers the tab's HEAD probe
+      from the source check and builds the bundle lazily on the first GET
+      into `node_modules/.ph-reactor-worker` (self-contained in dev), with
+      immutable caching for hashed files.
+- [x] `connect-preview` needs nothing worker-specific: the bundle is static
+      files in the dist. (Preview-side immutable headers for `__vendor__/*`
+      remain a pre-existing follow-up.)
 
 ### Phase 4 - Verification
 
-- [ ] Phase 0 e2e goes green in both modes (dev serve, build+preview).
-- [ ] Two-tab test: both tabs report `kind: "worker"`, `chrome://inspect`
-      shows exactly one `ph-reactor:*` worker, a document created in tab A
-      appears in tab B via the change subscription.
-- [ ] Cache-sharing assertion: in the build+preview e2e, collect the worker's
-      network activity and assert the vendor requests are served from HTTP
-      cache (Playwright CDP `Network.responseReceived` `fromDiskCache` /
-      transferSize 0) after the page has loaded.
-- [ ] Reload convergence still works: bump appBuildId between loads and
-      assert the `reload` + `workerGen` path still lands all tabs on one
-      fresh worker (existing tests in
-      `packages/reactor-browser/test/rpc/reactor-host-protocol.test.ts`
-      cover the protocol; this is the integration-level check).
-- [ ] Browser-support note: verify SharedWorker-with-module-scripts coverage
-      for the browsers Connect supports (Firefox has historically lacked
-      module workers) and record the support matrix + fallback behavior
-      (flag stays off / banner explains) in `apps/connect/RUNTIME-CONFIG.md`.
+- [x] Browser e2e (playwright-cli, headless Chromium) against a static serve
+      of the bundle: worker script loads, `ReactorHost` answers ping, a full
+      `hello` builds the reactor over PGlite in the worker, and an RPC
+      `isDocumentIdTaken` round-trips - in BOTH modes (self-contained, and
+      vendor-sharing with a real production vendor of document-model + zod +
+      reactor-browser).
+- [x] Two-tab test: both tabs report the same worker `ownerId` (one
+      SharedWorker, one reactor; the second tab's boot is instant because
+      the worker is already up).
+- [x] Worker-safety filter verified on the real vendor: react-entangled
+      entries (bare `document-model` included, via chunk sharing) are
+      demoted to bundling; the zod family and `reactor-browser/graphql`
+      stay shared.
+- [ ] Cache-sharing network assertion (vendor requests served from HTTP
+      cache) - not automated; the mechanism (same URLs, hashed files) is in
+      place. Follow-up alongside the CI fixture.
+- [ ] Reload convergence integration check - unchanged code path; protocol
+      tests still pass. Follow-up alongside the CI fixture.
+- [ ] Browser-support matrix note in RUNTIME-CONFIG.md - follow-up.
 
 ### Phase 5 - Docs and follow-ups
 
-- [ ] Update the `reactorWorker` description in the runtime-config schema
-      (follow `apps/connect/RUNTIME-CONFIG.md` lockstep: shared +
-      builder-tools rebuild + `pnpm tsx scripts/emit-schemas.ts`) to state
-      the supported serving modes.
-- [ ] CHANGELOG entries for connect, builder-tools, ph-cli.
+- [x] `reactorWorker` schema description updated (schema-fragments.ts +
+      regenerated runtime-config.schema.json / source-config.schema.json via
+      the lockstep procedure).
+- [x] CHANGELOGs are release-generated from conventional commits in this
+      repo; no manual entries.
 - [ ] File the default-on decision as a separate follow-up once packaged
       deployments have soaked.
 
@@ -313,5 +302,54 @@ builds (ph-cli's `connect-build`) consume Connect's prebuilt dist, where the
 
 ## Deviations
 
-(Record implementation-time deviations from this plan here, per repo
-convention.)
+1. **A second vite build replaced the text rewrite.** The plan proposed
+   walking Connect's dist worker closure and string-rewriting bare specifiers
+   to vendor URLs. The implementation instead runs the worker entry through
+   its own `vite build` in a subprocess (`prebuildReactorWorker`), the same
+   pattern as the vendor prebuild: rollup `external` + `output.paths` handle
+   the vendor mapping, the bundler handles PGlite's wasm/data assets and
+   dynamic imports, and anything not in the vendor is bundled rather than
+   failing the build. This made the planned vendor-include extension and
+   unmapped-specifier hard-fail unnecessary.
+
+2. **Relative base instead of dynamic-base machinery.** The bundle builds
+   with Vite `base: "./"`, so chunk and asset URLs resolve against the worker
+   script's own URL under any deploy base. No placeholder, no `forWorker`
+   prelude. Vendor references are `../__vendor__/<entry>.js` - which forced
+   chunks to the bundle root (rolldown emits `output.paths` values verbatim,
+   so all modules must sit at one depth).
+
+3. **Worker-safe vendor filtering (not in the plan).** The vendor keeps React
+   external: its chunks carry bare `import "react"` that only a page import
+   map resolves. Externalizing a vendor spec whose chunk closure reaches such
+   an import would kill the worker, and chunk sharing entangles even
+   React-free entries. `workerSafeVendorImports` walks each vendor entry's
+   closure inside the vendor dir and demotes unsafe entries to bundling. On
+   the real production vendor this demoted bare `document-model` (entangled
+   through shared chunks) while keeping the zod family shared - the naive
+   plan would have shipped a dead worker.
+
+4. **Dev serves a lazily built self-contained bundle** at the same stable
+   path, instead of rewriting against dev import-map URLs: the dev vendor is
+   opt-in (`PH_CONNECT_EXTERNALIZE_VENDOR=1`) and often absent, and dev does
+   not need cache sharing. The tab's HEAD probe is answered from the source
+   check so boot is never blocked on the build.
+
+5. **Tab-side resolution is a probe, not config.** The tab HEAD-probes
+   `<base>__reactor_worker__/reactor.worker.js` and requires a JavaScript
+   content type (an SPA fallback answers 200 with HTML), falling back to the
+   monorepo's `import.meta.url` path. No new runtime-config field.
+
+6. **E2E ran via playwright-cli against a static serve of the bundle**
+   (ping/hello/RPC round-trip, both modes, two-tab sharing) rather than a
+   scaffolded ph-cli fixture project - the worktree packages are unpublished,
+   so `ph connect` cannot consume them yet. A CI fixture (plus the
+   cache-sharing network assertion and reload-convergence integration check)
+   is the natural follow-up once the packages are linkable.
+
+7. **Pre-existing environment failures observed, not caused here:**
+   builder-tools `externalize-vendor.test.ts` asserts unix execute bits after
+   `chmodSync`, which Windows cannot report; ph-cli's
+   `build-integration.test.ts` / `switchboard-egress.test.ts` import
+   workspace dists (`codegen`, `switchboard`) that are unbuilt in a fresh
+   worktree.
