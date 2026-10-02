@@ -206,3 +206,10 @@ Review-time, not hook-time, at first:
 
 Escalation to a lint rule or guard hook is deliberately deferred until the
 rules have survived a quarter of review-time use.
+
+Verified during rollout phase 4: `@powerhousedao/analytics-engine-graphql`
+and `@powerhousedao/analytics-engine-knex` declare a `test` script, sit in
+the `test:ci` filter list, and ship zero test files (`graphql/test/` holds
+only `vitest.setup.ts`). Their green check is an empty suite — a standing
+R2 violation at package scale. Either give them tests or remove them from
+the filter list so the check stops claiming what it does not verify.

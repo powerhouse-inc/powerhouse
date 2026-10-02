@@ -27,163 +27,188 @@ gets amended before Phase 2.
 
 ### 1a. Switchboard EPIPE kill loop (R7: failing infrastructure call)
 
-- [ ] Guard the `logger.error` call that opens `onFatal`
-      (`apps/switchboard/src/fatal-shutdown.mts:40`) so a throwing logger
-      cannot re-enter the handler.
-- [ ] Stop passing the whole job as a log argument in the `JOB_FAILED`
-      subscriber (`packages/reactor/src/core/reactor.ts:135-145`); log the
-      job id, document id, and error only.
-- [ ] Remove the duplicate `JOB_FAILED` emit on the timeout path
-      (`packages/reactor/src/executor/simple-job-executor-manager.ts:210-215`
-      emits once via `handle.fail` → `queue.ts:514-524` and once directly).
-- [ ] Test: `fatal-shutdown.test.ts` gains a case where the injected
-      logger throws an error with `code: "EPIPE"` from inside `onFatal`,
-      asserting the process still reaches `exit` without re-entering. The
-      existing `vi.fn()` logger stays for the other cases.
-- [ ] Test: a reactor test subscribes a stdout-shaped logger whose write
-      fails and asserts the `JOB_FAILED` subscriber survives it.
+- [x] Guard the `logger.error` call that opens `onFatal`
+      (`apps/switchboard/src/fatal-shutdown.mts`): both fatal-path log
+      calls now go through a wrapped helper, so a throwing logger cannot
+      re-enter the handler or abort the shutdown before exit(1).
+- [x] Stop passing the whole job as a log argument in the `JOB_FAILED`
+      subscriber (`packages/reactor/src/core/reactor.ts`); it logs job id,
+      document id, and error message only.
+- [x] Remove the duplicate `JOB_FAILED` emit on the timeout path — in both
+      `simple-job-executor-manager.ts` and (same duplication, confirmed)
+      `worker-pool-job-executor-manager.ts`; `handle.fail` already emits
+      once through `queue.failJob`.
+- [x] Test: `fatal-shutdown.test.ts` gained the EPIPE-throwing-logger case
+      (exit reached, no re-entry, forced exit exactly once).
+- [x] Test: `test/core/job-failed-logging.test.ts` (new) asserts the exact
+      logged arguments against a real Reactor (R2), the placeholder when
+      the event carries no job, and the failing-logger case written to the
+      real event-bus aggregate-error contract. Exactly-once emission is
+      asserted on both manager paths.
 
 ### 1b. Analytics period boundaries (R4: cite the authority; R2)
 
-- [ ] Parse filter dates as UTC
-      (`packages/analytics-engine/graphql/src/AnalyticsModel.ts:43-44`,
-      add `{ zone: "utc" }`).
-- [ ] Re-anchor annual periods to the calendar year in `_nextAnnualPeriod`
-      (`packages/analytics-engine/core/src/AnalyticsTimeSlicer.ts:116-121`),
-      matching what monthly/quarterly/daily already do.
-- [ ] Decide the boundary convention for the 1 ms stepping
-      (`AnalyticsTimeSlicer.ts:86`) and the `>=` attribution
-      (`AnalyticsDiscretizer.ts:237,278`): either half-open calendar
-      periods `[start, nextStart)` or the current convention stated
-      explicitly. Write the chosen rule down in the test file per R4.
-- [ ] Rewrite the annual slicer test so it asserts calendar years, with a
-      comment citing the convention; replace the New York timezone case
-      with (or add) a positive-offset zone (`Europe/Brussels`) and an
-      exact-midnight instant.
-- [ ] Correct the pg/browser integration fixtures that currently encode
-      the one-bucket-early shift
-      (`packages/analytics-engine/pg/test/Integration.test.ts:225-245`,
-      `browser/test/Integration.test.ts:212-232`).
-- [ ] Add a test over `getPeriodSeries` itself — the stepping loop at
-      `AnalyticsTimeSlicer.ts:86` currently has zero coverage.
+- [x] Filter dates parsed as UTC at all four `DateTime.fromISO` sites in
+      `AnalyticsModel.ts`; the DssVest `cliff` parse had the same disease
+      and got the same fix.
+- [x] `_nextAnnualPeriod` re-anchored to the calendar year. Hourly turned
+      out to carry the same anchoring defect (a 07:30 start produced
+      :30-to-:30 buckets labelled by hour) and was fixed alongside.
+- [x] Convention decided and documented: half-open calendar periods
+      `[start, nextStart)` — the full change, since the store SQL already
+      filters `start < until` and the ripple was small. The 1 ms stepping
+      and the `.999` period ends are gone; boundary-instant attribution
+      flipped so an exact-midnight value lands in the period that starts
+      there.
+- [x] Annual slicer tests rewritten against the calendar with the
+      convention cited (R4), including Europe/Brussels (positive offset,
+      the arm the old New York case could never reach) and exact-midnight
+      instants; the bug report's 2020-2030 case is a regression test.
+- [x] pg and browser integration fixtures corrected — the value dated
+      2023-01-01 now lands in the 2023 bucket, and the window-start value
+      counts into the total.
+- [x] `getPeriodSeriesArray` tiling tests added across 8 granularities
+      (no gaps, no overlaps, awkward starts) — the stepping loop had zero
+      coverage before.
 
 ### 1c. Workflow step journal (R5: bound or measure)
 
-- [ ] Add a per-payload cap in `stepValues()`
-      (`packages/reactor-workflow/src/reactor/store.ts:823-824`), the same
-      shape as `PIECE_STORE_MAX_VALUE_BYTES` (`store.ts:778,798-803`):
-      truncate with an explicit `truncated: true` marker rather than
-      refuse, since the journal is diagnostic.
-- [ ] Test: a step whose output exceeds the cap journals the prefix and
-      the marker (R2: assert the written value).
-- [ ] Decide whether `document-get` should journal the whole document
-      (`packages/workflow/pieces/reactor/lib/actions/document-get.ts:36-39`);
-      if not, journal the header and a byte count.
-- [ ] Leave retention off by default (that is a product decision the
-      existing `run-retention.test.ts` already pins), but have the sweep's
-      absence show up in the journal cap test's comment per R4, so the two
-      bounds are considered together next time either changes.
+- [x] Per-payload cap landed in `stepValues()`: 256 KiB with a 32 KiB
+      prefix, written as a self-describing `{truncated, bytes, prefix}`
+      marker; both writers (`recordStep`, `sweepSteps`) flow through the
+      one seam. Rerun refuses to replay a truncated output as data, the
+      same way it already refuses redacted markers.
+- [x] Test: `store.payload-cap.test.ts` asserts the written row content
+      at, one byte over, and far over the cap, for both writers (R2).
+- [x] `document-get` left alone, deliberately: the return value feeds the
+      next step as live data and must stay whole; the journaled copy is a
+      separate value that the `stepValues()` cap already bounds. There is
+      no seam inside the action that shrinks one without the other.
+- [x] Retention stays off by default; the cap's comment and the test
+      header cite `run-retention.ts` so the two bounds travel together.
 
 ### 1d. Pieces/reactor contract (R6: one contract, one fixture table)
 
-- [ ] Align the type with the runtime: either supply `reactor` to trigger
-      contexts (`packages/reactor-workflow/src/pieces/activepieces/context/trigger.ts:160-201`,
-      `worker/entry.ts:369-382`) or remove `WithReactor` from
-      `PowerhouseTriggerHookContext`
-      (`packages/pieces-framework/src/powerhouse/context.ts:24-28`). The
-      type must stop promising what the runtime refuses.
-- [ ] Decide the access mechanism for non-first-party pieces (manifest
-      capability vs. the hardcoded `@powerhousedao/piece-reactor` equality
-      at `packages/reactor-workflow/src/pieces/engine/blocks.ts:423-427`).
-      This is a design decision; the policy only requires that whatever is
-      decided gets the composed test below.
-- [ ] Test: run the `author.test.ts` piece shapes through the real host
-      gate and worker context construction — not a fabricated ctx — and
-      assert which packages receive `reactor` and that a denied piece gets
-      the typed refusal, not `UnsupportedContextMemberError` at call time.
+- [x] Type and runtime aligned, in the type's favor: trigger contexts now
+      carry `reactor` — the real `RemoteReactorService` when the gate
+      grants access (threaded symmetrically with actions through
+      `TriggerHookRequest.reactorAccess` and the trigger supervisor's
+      single `hook()` call site), the named throwing stub otherwise, so a
+      denied piece gets the typed `UnsupportedContextMemberError` instead
+      of a property-access `TypeError`.
+- [x] The access mechanism decision was deliberately deferred (no
+      manifest capability invented); what exists is now honest and in one
+      place — `servesReactorPort` was verified by grep to be the only
+      gate predicate, now used by all three gate sites including the new
+      trigger path.
+- [x] Test: `test/pieces/activepieces/reactor-gate-contract.test.ts` runs
+      the author-shaped action and polling trigger through the real block
+      executor, real trigger supervisor, and real forked worker under
+      privileged and third-party package names — working reactor for
+      both privileged shapes (content asserted), typed refusal for both
+      denied shapes, predicate pinned directly.
 
 ### 1e. Document-view fallback (R3: asserted or removed)
 
-- [ ] Convert `scopesToIndex.push([scope, {}])`
+- [x] Convert `scopesToIndex.push([scope, {}])`
       (`packages/reactor/src/read-models/document-view.ts:239`) to
       skip-and-warn, per the field amendment: never write `{}` over a row
       when the operation's own scope is missing from `resultingState`;
       leave the snapshot intact and log. A throw is wrong here — it parks
       the cursor for every document behind the bad one.
-- [ ] Test: an operation whose `resultingState` lacks its own scope leaves
+- [x] Test: an operation whose `resultingState` lacks its own scope leaves
       the existing snapshot untouched and advances past it with a warning
       (assert both the surviving content and the skip).
+- [x] Found during implementation: the second `{}` guard (the ternary the
+      bug report cleared as "reads like the culprit and is not") silently
+      converted a null or primitive scope state to `{}` — same class, next
+      entry point. Converted to the same skip-and-warn, with its own test.
+- [x] Found during implementation: the one pre-existing test that depended
+      on the old `{}` write ("should catch up with missed operations on
+      init", document-view/integration.test.ts) had been asserting row
+      count and index over an empty snapshot since it was written — the
+      exact weak-oracle shape of R2. It now feeds the executor-shaped
+      document through the mocked cache and asserts content.
 
 ### 1f. Codegen subgraph index (R2, R6)
 
-- [ ] Content-assert the boilerplate template test: replace the
-      `existsSync` check
-      (`packages/codegen/src/file-builders/boilerplate/generated-project-files.test.ts:33`)
-      with an assertion on what `subgraphs/index.ts` exports.
-- [ ] Make `ph migrate` preserve an existing `subgraphs/index.ts` instead
-      of rewriting it to the banner
-      (`packages/codegen/src/codegen/migrate.ts:298` →
-      `writeGeneratedSubgraphsFiles`).
-- [ ] Unify the three loader acceptance rules
-      (`packages/reactor-api/src/packages/vite-loader.mts:241-248`,
-      `http-loader.ts:52-58`, `import-loader.ts:87-93`) behind one
-      predicate, with one shared fixture table of accept/reject module
-      shapes that all three run against.
-- [ ] Test: feed `makeSubgraphsIndexFile` output
-      (`packages/codegen/src/file-builders/subgraphs.ts:110-155`) through
-      the unified predicate — generator output meets real consumer once.
+- [x] Content-assert the boilerplate template test: `existsSync` replaced
+      with content assertions, plus a new describe pinning that
+      `writeModuleFiles` over an existing project preserves populated
+      aggregates and re-seeds banner-only ones.
+- [x] `ph migrate` preserves populated module aggregates. The clobber was
+      a shared mechanism, so it is fixed at the shared level
+      (`seedModuleAggregateFile`): subgraphs, document-models, editors,
+      and accumulating processor files are seeded only when missing or
+      banner-only; the fully codegen-owned static files keep overwrite
+      semantics so migrate still refreshes them.
+- [x] All three loader acceptance rules unified behind one predicate
+      (`src/packages/subgraph-extraction.ts`), with a 10-row shared
+      fixture table run against all four surfaces plus one composed test
+      booting a real vite server over a real project tree. Fixing this
+      required fixing `isSubgraphClass` first — see the findings appendix:
+      the old check accepted any function.
+- [x] Generator-meets-consumer: the generated export line is content-
+      pinned in codegen, appears verbatim as the first fixture row in the
+      reactor-api table, and the composed vite test loads that exact
+      shape; the two files cite each other. A central warning now fires
+      when a manifest declares subgraphs the loaders did not deliver.
 
 ## Phase 2 — seam inventory and real-pair backfill (R1)
 
-- [ ] Inventory: list the interface seams in `packages/reactor`,
-      `packages/reactor-api` and `packages/reactor-workflow` where unit
-      tests substitute a double for a collaborator that has a real in-repo
-      implementation. Mechanical starting points: `as unknown as I` casts
-      and `vi.fn()`-built objects assigned to interface-typed parameters in
-      test files. Expected yield: 15–25 seams.
-- [ ] Classify each seam: already has a real-pair test (done — e.g. the
-      view/gate seam since `sync-scope-gate-postgres.test.ts`), seam
-      carries logic on both sides (needs one composed test), or double is
-      inert (logger, clock — no obligation).
-- [ ] Backfill one composed test per seam in the second class, reusing the
-      harness in `catch-up-guards.test.ts` (PGlite, real migrations, real
-      stores) rather than new per-file boots. Priority order: seams on the
-      write path and sync path first, since that is where the two
-      data-loss reports lived.
-- [ ] Record the inventory and its classifications as an appendix to this
-      file when done, so the next seam added to the code base has a list
-      to join.
+- [x] Inventory: 22 seams found in `packages/reactor` (the `as unknown
+      as I*` and `vi.fn()`-literal sweep). Scope note: reactor-api and
+      reactor-workflow seams were covered by their Phase 1 tracks' new
+      composed tests rather than a separate inventory pass.
+- [x] Classified: 14 already real-paired, 5 with logic on both sides
+      (3 backfilled, 2 deferred — the two-reactor purge harness and the
+      cross-package GqlRequestChannel/reactor-api subgraph pair), 5 inert.
+- [x] Backfilled, write path and sync path first: the write-cache/view
+      rebuild seam (the September data-loss seam — `targetRevision`
+      semantics now pinned on snapshot content), the SyncManager/real
+      GqlRequestChannel pair (inbound and outbound, doubled only at
+      fetch), and the queue/resolver/registry admit path. All reuse the
+      catch-up-guards PGlite harness. The composed tests passed without
+      source changes: the real pairs agree on the contracts the mocks
+      assumed — now guarded instead of presumed.
+- [x] Inventory recorded with file:line citations in
+      `docs/plans/2026-10-02-seam-inventory.md`.
 
 ## Phase 3 — degraded-branch audit (R3) and tooling
 
-- [ ] Script: a small coverage-report reader (the JSON reporter is already
-      on in `packages/reactor/vitest.config.ts`) that lists branches
-      executed fewer than N times across a full run, with file:line.
-      Advisory output for reviewers; not a CI gate. Home:
-      `packages/reactor/scripts/` or the bench tooling directory,
-      whichever review prefers.
-- [ ] Sweep the reactor's fallback branches the script surfaces (the
-      `{}`-substitution class: default-on-missing in read models, caches,
-      sync). For each: add the intent assertion, or convert to
-      refuse/skip-and-warn, or delete dead protection (the redundant guard
-      noted in the catch-up report,
-      `document-view.ts` second `{}` normalization, is a candidate).
-- [ ] Apply R4 retroactively only where a convention test is already
-      known wrong (the analytics suite, Phase 1b) — no blanket rewrite of
-      passing convention tests.
+- [x] Script: `packages/reactor/scripts/rare-branches.ts` reads
+      `coverage/coverage-final.json` and lists branch arms executed at or
+      below a threshold while a sibling arm ran, sorted so a near-zero arm
+      beside a high-traffic sibling tops the list. Advisory; not a gate.
+      Its first run found the second `{}` guard above (0 hits against
+      48,272 sibling executions) and the never-exercised mixed-scope
+      refusal in `core/utils.ts` (now tested).
+- [x] First sweep done over the script's output: the two document-view
+      substitution sites converted (1e), the never-exercised mixed-scope
+      refusal in `core/utils.ts` tested, and the remaining
+      fallback-shaped candidates triaged — two flagged for a decision
+      (see the appendix: `document-action-handler.ts:1147`,
+      `sync/utils.ts:283`), the rest judged benign defensive defaults.
+      The base-read-model's store-absent sweep drop (skip-and-warn by
+      design, warn branch untested with a real cache) is the named
+      candidate for the next pass.
+- [x] R4 applied retroactively only to the analytics suite (Phase 1b),
+      as planned.
 
 ## Phase 4 — CI topology
 
 The policy is only as good as what CI runs.
 
-- [ ] Add the analytics integration suites to a CI lane:
-      `analytics-engine-pg` and `analytics-engine-browser` are in neither
-      `test:ci` nor `test:ci:platform` (root `package.json:7`), so
-      Phase 1b's corrected tests would otherwise gate nothing.
-- [ ] Note which packages declare a `test` script but ship zero test
-      files (`analytics-engine-graphql`, `analytics-engine-knex`) in the
-      policy's enforcement section once verified — a green check from an
-      empty suite is a standing R2 violation at package scale.
+- [x] Add the analytics integration suites to a CI lane. Verified first:
+      the browser suite already runs in `e2e-tests.yml`
+      (`analytics-engine-integration-tests`), so only the pg suite gated
+      nothing. That job now carries a `postgres:16-alpine` service on port
+      5555 matching the package's hardcoded connection string, installs
+      `analytics-engine-pg...`, and runs `pnpm test:pg`.
+- [x] Noted in the policy's enforcement section, after verifying:
+      `analytics-engine-graphql` and `analytics-engine-knex` declare a
+      `test` script, sit in `test:ci`, and ship zero test files — a green
+      check from an empty suite.
 - [ ] Reactor-on-Windows remains tracked by
       `2026-10-02-reactor-tests-on-windows.md` Track D; this plan does not
       duplicate it.
@@ -224,3 +249,99 @@ bounded by the inventory count. Phase 3's script is small and its sweep is
 bounded by what the script surfaces in `packages/reactor` alone. Phase 4 is
 configuration. Total new tests across all phases: roughly 25–40, against a
 current count of ~4,050 in the reactor package alone.
+
+## Appendix — defects the rollout found (2026-10-02)
+
+The policy predicted that applying it would surface defects the suite
+could not see. It did. Everything below was found during the rollout
+itself, beyond the twelve external reports that motivated the policy.
+
+### Fixed on this branch
+
+| Site | Mechanism | Severity |
+|---|---|---|
+| `reactor-api/src/graphql/utils.ts` (pre-fix :14-27) | `isSubgraphClass` called `isPrototypeOf` backwards and accepted any function — it was the only junk gate any subgraph loader had | high |
+| `analytics-engine/browser/src/BrowserAnalyticsStore.ts` (pre-fix :407-415) | PGlite serializes a Date param as UTC text but parses the naive column back in host-local time: every stored instant shifted on a non-UTC host (verified by probe on a UTC+2 machine) | high |
+| `reactor/src/read-models/document-view.ts` (pre-fix :289) | the second `{}` guard — the one the field report cleared as "reads like the culprit and is not" — silently converted a null or primitive scope state to `{}`; 0 suite executions against 48,272 sibling runs | medium |
+| `reactor/test/read-models/document-view/integration.test.ts` | "should catch up with missed operations on init" asserted row count and index over a snapshot whose content had been `{}` since the test was written — it was the suite's only execution of the fallback branch | test defect |
+| `reactor/src/executor/worker-pool-job-executor-manager.ts` (pre-fix :299) | same duplicate `JOB_FAILED` emit as the simple manager, found while fixing it | medium |
+| `analytics-engine/core/src/AnalyticsTimeSlicer.ts` (pre-fix :290) | hourly had annual's anchoring defect: a 07:30 start produced :30-to-:30 buckets labelled by hour | medium |
+| `analytics-engine/core/src/AnalyticsDiscretizer.ts` (pre-fix :235) | start == end threw `TypeError` on `periods[0].start` instead of returning empty results | low |
+| `AnalyticsDiscretizer.ts` (pre-fix :290) | DssVest `cliff` parsed without UTC — shifted on non-UTC hosts | low |
+| `AnalyticsDiscretizer._getPeriodString` | monthly label mixed local-zone year with UTC month | low |
+| `codegen` `writeGeneratedProcessorsFiles` | wrote `processors/index.ts` twice | trivial |
+
+### Open — need a decision or their own track
+
+| Site | Mechanism | Severity |
+|---|---|---|
+| `apps/switchboard/src/observability.mts:239-244` | observability's own SIGTERM handler races a 5s timer then calls `process.exit(0)` — after a fatal it overrides exit code 1 (supervisors see success) and can cut off the PGlite snapshot flush the 15s drain protects | medium-high |
+| `analytics-engine/knex/src/KnexAnalyticsStore.ts:149,207` | the pg store persists host-local wall clock into a naive column: zone-dependent database content, and a different convention than the (now fixed) pglite store. Changing it reinterprets existing rows — needs a migration decision | medium-high |
+| `reactor-workflow/src/pieces/activepieces/worker/redact.ts:72-75` | catastrophic backtracking in `redactText`: a 256 KiB unbroken alphanumeric string costs ~50s of CPU per `redact()` (measured), paid twice per journaled step | medium |
+| `reactor/src/executor/job-result-handler.ts:179,207,230` | three more `JOB_FAILED` double-emits (direct + via `handle.fail`); payloads differ (typed error vs plain), so removing either changes what subscribers receive | medium |
+| `codegen` `writeAiConfigFiles` via `migrate.ts:298` | every `ph migrate` unconditionally overwrites `CLAUDE.md`, `AGENTS.md`, `.mcp.json`, editor configs — user-authored files | medium |
+| `reactor/src/executor/deferred-jobs.ts:133-164` | deferred-expiry double emit; the second event carries no job | low-medium |
+| `reactor-workflow/src/reactor/store.ts:1203,1247` | `run.trigger_payload` uncapped — same class the step cap just closed | low-medium |
+| `analytics-engine/compat` suite | compares pg vs pglite stores with `toEqual`; zone-dependent until the knex finding is resolved | low-medium |
+| `reactor-workflow` `redact.ts:280-331` | `containsRedactedMarker` misses the `[truncated]` depth markers, so rerun could replay one as data | low |
+| `reactor-workflow/src/reactor/service.ts:4033` | a truncated test-step output is served as an expression sample | low |
+| `reactor-workflow/src/reactor/store.ts:1826` | truncated samples lose the fields one erasure route matches on | low |
+| `reactor-workflow` worker protocol | `executionType: "RESUME"` contexts promise `resumePayload` the builder never supplies — latent, no production caller sends RESUME | low |
+| `reactor-api` loaders | residual divergence: http-loader requires `documentModel !== null`, the other two accept null | low |
+| `apps/switchboard` | an EPIPE `uncaughtException` outside `onFatal` still triggers full shutdown; the field fix ignored stream-gone codes outright — decision recorded, not taken | low |
+
+### Flagged, not yet confirmed as defects
+
+- `reactor/src/executor/document-action-handler.ts:1147` — the executor's
+  own `{}` substitution when building `resultingState` for relationship
+  operations. Plausibly legitimate (relationships live in the operation
+  index, not scope state) but it is the write-side twin of the
+  document-view shape; worth one deliberate look.
+- `reactor/src/sync/utils.ts:283` — `ordinal ?? 0` stamped onto an
+  operation context; ordinal 0 downstream of cursor logic deserves the
+  same suspicion as any silent coordinate default.
+- `analytics-engine` trailing-partial-period conventions (monthly/annual
+  final buckets extend past the query end; daily merges a trailing
+  partial day) — no misattribution, but the reported `end` can exceed the
+  query window; needs a convention decision.
+
+### Found in the wild while this rolled out
+
+PR 3163's `check-windows` failures (both shards) were reviewed during this
+rollout and both turned out to be the contention category the Windows plan's
+Track C triage predicts — not the branch's changes:
+
+- shard 2 failed `host-call-reactor-jobs.test.ts` "fails by name, carrying
+  the job, when the deadline comes first": the oracle pinned the `RUNNING`
+  status word, but under load the 1s deadline passes before the first wait
+  slice, so the job is correctly reported `PENDING`. A race's incidental
+  half, pinned by a regression test upstream shipped five days ago — the
+  exact over-specified-oracle shape R2 warns about, in a brand-new test.
+  Fixed on this branch (accept `PENDING|RUNNING`); the file passes 13/13
+  in isolation locally.
+- a third, machine-local failure surfaced during verification:
+  `loader.test.ts`'s symlink-containment case fails `EPERM` on a stock
+  Windows dev machine (symlink creation needs Developer Mode or
+  elevation; CI runners have the privilege). Fixed with a one-time
+  capability probe and `it.skipIf`, so the case still runs everywhere
+  symlinks exist and skips with a reason where they cannot.
+- shard 1 failed the switchboard boot suite's `beforeAll` at the 120s
+  `hookTimeout`; it passes locally and on main. Contention on the runner —
+  the Track D memory-budget work (`--no-coverage`, explicit `maxWorkers`)
+  is the remedy, not a test change.
+- the PR branch's `pnpm-lock.yaml` carries collateral from a local
+  non-frozen install (semver, ws, @types/node downgraded; snapshot
+  variants dropped). Not the cause of these failures, but worth reverting
+  to main's resolutions before merge.
+
+### A negative result that is also evidence
+
+The Phase 2 composed tests — the write-cache/view rebuild seam, the
+SyncManager/GqlRequestChannel pair, the queue admit path — all passed
+against current sources without a single source change. The real pairs
+agree on the contracts the mocks had been assuming. That is the healthy
+outcome R1 is designed to produce cheaply: where the seam is sound, one
+test converts an assumption into a guarantee (`targetRevision` semantics
+and the envelope's `resultingState` strip are now pinned); where it is
+not, the same test shape is what found the September data loss. Both
+outcomes justify the test.
