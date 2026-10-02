@@ -17,8 +17,8 @@ type DimensionsMap = Record<string, Record<string, number[]>>;
 export type AnalyticsSeriesRecord = {
   id: number;
   source: string;
-  start: Date;
-  end: Date | null;
+  start: Date | string;
+  end: Date | string | null;
   metric: string;
   value: number;
   unit: string | null;
@@ -45,6 +45,21 @@ export type KnexAnalyticsStoreOptions = {
   knex: Knex;
 };
 
+/**
+ * Timestamp convention: the naive `timestamp` columns (`start`, `end`) hold
+ * UTC wall-clock values. Every DateTime crossing into SQL is rendered as an
+ * explicit UTC ISO string (never bound as a JS Date, which node-postgres
+ * serializes as host-local wall clock), and the columns are read back as text
+ * and parsed as UTC. This mirrors BrowserAnalyticsStore, so both stores agree
+ * on the same logical data regardless of host timezone.
+ *
+ * Migration consideration: earlier versions bound JS Dates, so rows written
+ * on a non-UTC host were stored shifted by that host's UTC offset and, under
+ * this convention, read back shifted by the same amount. Deployments that
+ * always ran on UTC hosts are unaffected. Others need a one-time UPDATE
+ * shifting the affected rows by the known historical offset, which only the
+ * operator can decide. See MIGRATION.md in this package.
+ */
 export class KnexAnalyticsStore implements IAnalyticsStore {
   protected readonly _executor: IKnexQueryExecutor;
   protected readonly _knex: Knex;
@@ -146,8 +161,11 @@ export class KnexAnalyticsStore implements IAnalyticsStore {
       const input = inputs[i];
       const query = this._knex<AnalyticsSeriesRecord>("AnalyticsSeries").insert(
         {
-          start: input.start.toJSDate(),
-          end: input.end ? input.end.toJSDate() : null,
+          // Render the UTC wall clock explicitly: a JS Date binding would be
+          // serialized by node-postgres as host-local wall clock, storing a
+          // zone-dependent value in the naive column.
+          start: this._toUtcIso(input.start),
+          end: input.end ? this._toUtcIso(input.end) : null,
           source: input.source.toString("/"),
           metric: pascalCase(input.metric),
           value: input.value,
@@ -196,16 +214,46 @@ export class KnexAnalyticsStore implements IAnalyticsStore {
     this._subscriptionManager.notifySubscribers(sourcePaths);
   }
 
+  /**
+   * Renders the UTC wall clock of a DateTime for binding into SQL against
+   * the naive timestamp columns. See the timestamp convention on the class.
+   */
+  private _toUtcIso(value: DateTime): string {
+    const iso = value.toUTC().toISO();
+    if (iso === null) {
+      throw new Error(`Cannot bind invalid DateTime: ${value.invalidReason}`);
+    }
+    return iso;
+  }
+
   private _formatQueryRecords(
     records: AnalyticsSeriesRecord[],
     dimensions: string[],
   ): AnalyticsSeries[] {
+    // The timestamp columns hold naive UTC wall-clock values. Strings come
+    // from the ::text casts in _buildViewQuery and are parsed as UTC. A
+    // Date can only come from node-postgres's default parser, which
+    // interpreted the naive value in host-local time; rebuild the UTC
+    // instant from the local wall-clock fields it produced.
+    const toUtcDateTime = (value: Date | string): DateTime =>
+      value instanceof Date
+        ? DateTime.utc(
+            value.getFullYear(),
+            value.getMonth() + 1,
+            value.getDate(),
+            value.getHours(),
+            value.getMinutes(),
+            value.getSeconds(),
+            value.getMilliseconds(),
+          )
+        : DateTime.fromSQL(value, { zone: "utc" });
+
     const formatted = records.map((r: AnalyticsSeriesRecord) => {
       const result = {
         id: r.id,
         source: AnalyticsPath.fromString(r.source.slice(0, -1)),
-        start: DateTime.fromJSDate(r.start),
-        end: r.end ? DateTime.fromJSDate(r.end) : null,
+        start: toUtcDateTime(r.start),
+        end: r.end == null ? null : toUtcDateTime(r.end),
         metric: r.metric,
         value: r.value,
         unit: r.unit,
@@ -240,7 +288,21 @@ export class KnexAnalyticsStore implements IAnalyticsStore {
     until: DateTime | null,
   ) {
     const baseQuery = this._knex("AnalyticsSeries as AS_inner")
-      .select("*")
+      .select(
+        "AS_inner.id",
+        "AS_inner.source",
+        // The timestamp columns hold naive UTC wall-clock values, but
+        // node-postgres's default parser interprets them in host-local
+        // time, which shifts every instant on a non-UTC host. Select them
+        // as text and parse them as UTC in _formatQueryRecords instead.
+        this._knex.raw(`"AS_inner"."start"::text as "start"`),
+        this._knex.raw(`"AS_inner"."end"::text as "end"`),
+        "AS_inner.metric",
+        "AS_inner.value",
+        "AS_inner.unit",
+        "AS_inner.fn",
+        "AS_inner.params",
+      )
       .whereIn("metric", metrics);
 
     for (const dimension of dimensions) {
@@ -252,7 +314,10 @@ export class KnexAnalyticsStore implements IAnalyticsStore {
     }
 
     if (until) {
-      baseQuery.where("start", "<", until.toISO());
+      // The column holds naive UTC wall-clock values; compare against the
+      // UTC rendering of the bound, not a zoned ISO string whose offset a
+      // timestamp comparison would drop.
+      baseQuery.where("start", "<", this._toUtcIso(until));
     }
 
     return `(${baseQuery.toString()}) AS "${name}"`;
