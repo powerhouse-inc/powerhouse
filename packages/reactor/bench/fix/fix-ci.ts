@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
+import { pnpmCommand } from "../pnpm-command.js";
 import type { CommandResult } from "../records/records-commands.js";
 import { checkPackage, listWorkspacePackages } from "./fix-dist.js";
 import type { WorkspacePackage } from "./fix-dist.js";
@@ -284,7 +285,10 @@ export function runStep(step: CiStep, root: string, log: string): StepOutcome {
   const started = Date.now();
   let result: ReturnType<typeof spawnSync>;
   try {
-    result = spawnSync(step.command[0], step.command.slice(1), {
+    // commandLine keeps showing `pnpm <script>`; only the spawn is translated.
+    const [file, lead] =
+      step.command[0] === "pnpm" ? pnpmCommand() : [step.command[0], []];
+    result = spawnSync(file, [...lead, ...step.command.slice(1)], {
       cwd: root,
       stdio: ["ignore", fd, fd],
       env: { ...process.env, CI: "true", FORCE_COLOR: "0", ...step.env },

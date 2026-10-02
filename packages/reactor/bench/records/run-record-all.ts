@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
+import { pnpmCommand } from "../pnpm-command.js";
 import {
   buildMicroEntry,
   stampReadings,
@@ -41,7 +42,8 @@ const RECORD_FILES = ["bench/BENCHMARKS.jsonl", "bench/TASKS.jsonl"];
  * output anyway.
  */
 function runBenchmark(target: BenchTarget, capture: boolean): string {
-  const result = spawnSync("pnpm", ["run", target.recordScript], {
+  const [file, lead] = pnpmCommand();
+  const result = spawnSync(file, [...lead, "run", target.recordScript], {
     stdio: capture ? ["inherit", "pipe", "inherit"] : "inherit",
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
