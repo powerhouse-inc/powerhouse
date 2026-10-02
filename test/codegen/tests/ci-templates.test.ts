@@ -3,47 +3,56 @@ import {
   dockerfileTemplate,
   nginxConfTemplate,
   switchboardEntrypointTemplate,
-  syncAndPublishWorkflowTemplate,
+  vetraWorkflowTemplate,
 } from "@powerhousedao/codegen/templates";
 import { describe, expect, test } from "bun:test";
 
 describe("CI/CD Templates", () => {
-  describe("sync-and-publish.yml", () => {
+  describe("vetra.yml", () => {
     test("should be a non-empty string", () => {
-      expect(typeof syncAndPublishWorkflowTemplate).toBe("string");
-      expect(syncAndPublishWorkflowTemplate.length).toBeGreaterThan(0);
+      expect(typeof vetraWorkflowTemplate).toBe("string");
+      expect(vetraWorkflowTemplate.length).toBeGreaterThan(0);
     });
 
     test("should have correct workflow name", () => {
-      expect(syncAndPublishWorkflowTemplate).toContain(
-        "name: Sync and Publish",
+      expect(vetraWorkflowTemplate).toContain("name: Vetra");
+    });
+
+    test("should document how to set up the App and the guide link", () => {
+      expect(vetraWorkflowTemplate).toContain("https://vetra.io/user/apps/new");
+      expect(vetraWorkflowTemplate).toContain("VETRA_APP_ID");
+      expect(vetraWorkflowTemplate).toContain("https://vetra.io/docs/deploy");
+    });
+
+    test("should run on push to main, version tags, and pull requests", () => {
+      expect(vetraWorkflowTemplate).toContain("branches: [main]");
+      expect(vetraWorkflowTemplate).toContain('tags: ["v*"]');
+      expect(vetraWorkflowTemplate).toContain(
+        "types: [opened, synchronize, reopened]",
       );
     });
 
-    test("should contain required jobs", () => {
-      expect(syncAndPublishWorkflowTemplate).toContain("prepare:");
-      expect(syncAndPublishWorkflowTemplate).toContain("update-and-publish:");
-      expect(syncAndPublishWorkflowTemplate).toContain("build-docker:");
-      expect(syncAndPublishWorkflowTemplate).toContain("summary:");
+    test("should request an OIDC token and skip forked PRs", () => {
+      expect(vetraWorkflowTemplate).toContain("id-token: write");
+      expect(vetraWorkflowTemplate).toContain(
+        "if: github.event.pull_request.head.repo.fork != true",
+      );
     });
 
-    test("should have workflow_dispatch trigger with channel options", () => {
-      expect(syncAndPublishWorkflowTemplate).toContain("workflow_dispatch:");
-      expect(syncAndPublishWorkflowTemplate).toContain("- dev");
-      expect(syncAndPublishWorkflowTemplate).toContain("- staging");
-      expect(syncAndPublishWorkflowTemplate).toContain("- latest");
+    test("should deploy via the vetra-deploy-action with the app-id variable", () => {
+      expect(vetraWorkflowTemplate).toContain(
+        "uses: powerhouse-inc/vetra-deploy-action@v1",
+      );
+      expect(vetraWorkflowTemplate).toContain(
+        "app-id: ${{ vars.VETRA_APP_ID }}",
+      );
     });
 
-    test("should have repository_dispatch trigger", () => {
-      expect(syncAndPublishWorkflowTemplate).toContain("repository_dispatch:");
-      expect(syncAndPublishWorkflowTemplate).toContain("powerhouse-release");
-    });
-
-    test("should configure Docker and GHCR registries", () => {
-      expect(syncAndPublishWorkflowTemplate).toContain("DOCKER_REGISTRY:");
-      expect(syncAndPublishWorkflowTemplate).toContain("GHCR_REGISTRY:");
-      expect(syncAndPublishWorkflowTemplate).toContain("cr.vetra.io");
-      expect(syncAndPublishWorkflowTemplate).toContain("ghcr.io");
+    test("should keep the literal GitHub Actions expression syntax intact", () => {
+      expect(vetraWorkflowTemplate).toContain(
+        "group: vetra-${{ github.event.pull_request.number || github.ref }}",
+      );
+      expect(vetraWorkflowTemplate).not.toContain("\\${{");
     });
   });
 
