@@ -353,6 +353,7 @@ overrides:
   unrun: ^0.3.1
 
 patchedDependencies:
+  '@verdaccio/local-storage@14.0.0-next-9.31': 3c2fcd0454766c55ee55a88c71bf522838949149daed5491ed4f016f9a5bc96a
   cmd-ts@0.15.0: cf9842246eadd42e5eed711768b5cf97d9a90dc6b22f74c3f0d0b16f9ad199ea
 
 importers:
@@ -2692,6 +2693,9 @@ importers:
       '@types/pg':
         specifier: 'catalog:'
         version: 8.16.0
+      '@verdaccio/local-storage':
+        specifier: 14.0.0-next-9.31
+        version: 14.0.0-next-9.31(patch_hash=3c2fcd0454766c55ee55a88c71bf522838949149daed5491ed4f016f9a5bc96a)(supports-color@8.1.1)
       tsdown:
         specifier: 'catalog:'
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
@@ -30090,7 +30094,7 @@ snapshots:
       - supports-color
     optional: true
 
-  '@verdaccio/local-storage@14.0.0-next-9.31(supports-color@8.1.1)':
+  '@verdaccio/local-storage@14.0.0-next-9.31(patch_hash=3c2fcd0454766c55ee55a88c71bf522838949149daed5491ed4f016f9a5bc96a)(supports-color@8.1.1)':
     dependencies:
       '@verdaccio/core': 9.0.0-next-9.31
       '@verdaccio/file-locking': 14.0.0-next-9.4
@@ -30260,7 +30264,7 @@ snapshots:
       '@verdaccio/config': 9.0.0-next-9.31(supports-color@8.1.1)
       '@verdaccio/core': 9.0.0-next-9.31
       '@verdaccio/loaders': 9.0.0-next-9.31(supports-color@8.1.1)
-      '@verdaccio/local-storage': 14.0.0-next-9.31(supports-color@8.1.1)
+      '@verdaccio/local-storage': 14.0.0-next-9.31(patch_hash=3c2fcd0454766c55ee55a88c71bf522838949149daed5491ed4f016f9a5bc96a)(supports-color@8.1.1)
       '@verdaccio/logger': 9.0.0-next-9.31(supports-color@8.1.1)
       '@verdaccio/proxy': 9.0.0-next-9.31(supports-color@8.1.1)
       '@verdaccio/search': 9.0.0-next-9.31(supports-color@8.1.1)
@@ -42045,7 +42049,7 @@ snapshots:
       '@verdaccio/config': 9.0.0-next-9.31(supports-color@8.1.1)
       '@verdaccio/core': 9.0.0-next-9.31
       '@verdaccio/loaders': 9.0.0-next-9.31(supports-color@8.1.1)
-      '@verdaccio/local-storage': 14.0.0-next-9.31(supports-color@8.1.1)
+      '@verdaccio/local-storage': 14.0.0-next-9.31(patch_hash=3c2fcd0454766c55ee55a88c71bf522838949149daed5491ed4f016f9a5bc96a)(supports-color@8.1.1)
       '@verdaccio/logger': 9.0.0-next-9.31(supports-color@8.1.1)
       '@verdaccio/middleware': 9.0.0-next-9.31(supports-color@8.1.1)
       '@verdaccio/node-api': 9.0.0-next-9.31(supports-color@8.1.1)
