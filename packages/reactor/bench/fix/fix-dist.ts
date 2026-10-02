@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import type { Dirent } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import { RecordsError } from "../records/jsonl-store.js";
 import type { CommandResult } from "../records/records-commands.js";
 import { FIX_EXIT } from "./fix-options.js";
@@ -87,7 +87,10 @@ export function newestFile(
       if (!entry.isFile()) {
         continue;
       }
-      const rel = relative(directory, path);
+      // POSIX-separated: `include` anchors path segments with "/", so a
+      // native separator would let a nested package.json through isSourceFile
+      // and flip the staleness verdict.
+      const rel = relative(directory, path).split(sep).join("/");
       if (!include(rel)) {
         continue;
       }
@@ -191,7 +194,7 @@ export function findMarker(pkg: WorkspacePackage, marker: string): MarkerHit {
         visit(path);
         continue;
       }
-      const rel = relative(pkg.path, path);
+      const rel = relative(pkg.path, path).split(sep).join("/");
       if (!isRuntimeDistFile(rel)) {
         continue;
       }
