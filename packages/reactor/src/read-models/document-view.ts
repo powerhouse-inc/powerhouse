@@ -9,6 +9,7 @@ import {
   isDenied,
   isPurgeMarker,
 } from "@powerhousedao/shared/document-model";
+import { childLogger, type ILogger } from "document-model";
 import type { Kysely, Transaction } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
@@ -63,6 +64,11 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
   static override readonly commitsInFenceTransaction = true;
 
   private _db: Kysely<Database>;
+  private readonly logger: ILogger = childLogger([
+    "reactor",
+    "read-model",
+    DOCUMENT_VIEW_READ_MODEL,
+  ]);
 
   constructor(
     db: Kysely<Database>,
@@ -236,11 +242,30 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
           if (fullState[scope] !== undefined) {
             scopesToIndex.push([scope, fullState[scope]]);
           } else {
-            scopesToIndex.push([scope, {}]);
+            // An operation whose resultingState lacks its own scope is never
+            // legitimate, and writing {} over the row turns the upstream shape
+            // bug into silent data loss that passes every consistency check.
+            // Keep the existing snapshot and move past the operation; a throw
+            // here would park the cursor for every document behind this one.
+            this.logger.warn(
+              `refusing to index ${documentId} scope "${scope}" at operation ${index}: ` +
+                `resultingState carries no "${scope}" key; leaving the existing snapshot intact`,
+            );
           }
         }
 
         for (const [scopeName, scopeState] of scopesToIndex) {
+          // Same rule as the missing-key case above: a scope state that is
+          // not an object is malformed input, and substituting {} would write
+          // a well-formed empty row that passes every consistency check.
+          if (typeof scopeState !== "object" || scopeState === null) {
+            this.logger.warn(
+              `refusing to index ${documentId} scope "${scopeName}" at operation ${index}: ` +
+                `resultingState carries a non-object "${scopeName}" value; leaving the existing snapshot intact`,
+            );
+            continue;
+          }
+
           // The previous `content` is the whole prior scope state - hundreds of
           // kilobytes of jsonb on a large drive - and only the header-meta
           // carry-over below reads it. Selecting it unconditionally made every
@@ -272,10 +297,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             continue;
           }
 
-          const newState =
-            typeof scopeState === "object" && scopeState !== null
-              ? (scopeState as Record<string, unknown>)
-              : {};
+          const newState = scopeState as Record<string, unknown>;
 
           let slug: string | null = existingSnapshot?.slug ?? null;
           let name: string | null = existingSnapshot?.name ?? null;
