@@ -17,10 +17,15 @@ deny() {
   exit 2
 }
 
-PAYLOAD="$(cat)"
+# Fail closed when the toolbox is missing. A bash reached from outside an
+# MSYS2 session can lack usr/bin on PATH, and then cat reads the payload as
+# empty and every grep check silently allows instead of blocking.
+for NEEDED in cat grep node; do
+  command -v "$NEEDED" >/dev/null 2>&1 ||
+    deny "records-guard needs $NEEDED to inspect the call, and refuses to pass commands through without it."
+done
 
-command -v node >/dev/null 2>&1 ||
-  deny "records-guard needs node to read the tool payload, and refuses to pass commands through without it."
+PAYLOAD="$(cat)"
 
 # node rather than jq. This script is also the project-wide hook, so anything
 # it needs, it needs on every machine that opens the repo - and jq is not that.

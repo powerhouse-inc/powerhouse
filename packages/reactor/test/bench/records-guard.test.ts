@@ -1,8 +1,9 @@
 import { execFileSync } from "node:child_process";
-import { join } from "node:path";
+import { existsSync } from "node:fs";
+import { delimiter, dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-// Run through `bash` rather than executing the script directly: Windows has
+// Run through bash rather than executing the script directly: Windows has
 // no shebang, so `execFileSync(GUARD, ...)` fails EFTYPE there. bash exits
 // with the script's status, so `status` and `stderr` still carry the verdict.
 const GUARD = join(
@@ -18,6 +19,79 @@ const GUARD = join(
 
 type GuardResult = { exit: number; message: string };
 
+/**
+ * On win32 a bare `bash` lookup can resolve to C:\Windows\System32\bash.exe,
+ * the WSL launcher, which cannot run a script given as a Windows path. The
+ * guard needs an MSYS2-family bash that shares the Windows filesystem and
+ * process world, so resolve one deliberately: derive it from git's own
+ * install, fall back to the conventional Git for Windows locations, and fail
+ * loudly rather than let PATH hand us WSL.
+ */
+function resolveBash(): string {
+  if (process.platform !== "win32") {
+    return "bash";
+  }
+
+  const candidates = [gitBashFromGitExecPath(), ...conventionalGitBashPaths()];
+  for (const candidate of candidates) {
+    if (candidate !== "" && existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    "records-guard tests need an MSYS2-family bash (Git Bash) on Windows; " +
+      "none was found. System32's bash.exe is the WSL launcher and cannot " +
+      "run this repo's hook scripts.",
+  );
+}
+
+/** git --exec-path returns <install>/mingw64/libexec/git-core. */
+function gitBashFromGitExecPath(): string {
+  let execPath = "";
+  try {
+    execPath = execFileSync("git", ["--exec-path"], {
+      encoding: "utf8",
+    }).trim();
+  } catch {
+    return "";
+  }
+  return join(execPath, "..", "..", "..", "usr", "bin", "bash.exe");
+}
+
+function conventionalGitBashPaths(): string[] {
+  const roots = [
+    process.env.ProgramFiles ?? "C:\\Program Files",
+    process.env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)",
+    join(process.env.LOCALAPPDATA ?? "", "Programs"),
+  ];
+  return roots.flatMap((root) => [
+    join(root, "Git", "usr", "bin", "bash.exe"),
+    join(root, "Git", "bin", "bash.exe"),
+  ]);
+}
+
+const BASH = resolveBash();
+const GUARD_ENV = guardEnvironment();
+
+/**
+ * The guard script needs cat and grep, which live next to bash in usr/bin.
+ * A shell launched from PowerShell does not have that directory on PATH, so
+ * the script would read an empty payload and allow everything. Prepend it.
+ * The env block on Windows is case-insensitive, so reuse the existing key
+ * rather than risking a duplicate PATH entry.
+ */
+function guardEnvironment(): NodeJS.ProcessEnv {
+  if (process.platform !== "win32") {
+    return process.env;
+  }
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  const pathKey =
+    Object.keys(env).find((key) => key.toUpperCase() === "PATH") ?? "PATH";
+  env[pathKey] = dirname(BASH) + delimiter + (env[pathKey] ?? "");
+  return env;
+}
+
 /** Exit 2 blocks the call and hands stderr back to the agent as feedback. */
 function guard(role: string, command: string): GuardResult {
   const payload = JSON.stringify({
@@ -25,10 +99,11 @@ function guard(role: string, command: string): GuardResult {
     tool_input: { command },
   });
   try {
-    execFileSync("bash", [GUARD, role], {
+    execFileSync(BASH, [GUARD, role], {
       input: payload,
       encoding: "utf8",
       stdio: ["pipe", "pipe", "pipe"],
+      env: GUARD_ENV,
     });
   } catch (error) {
     const failure = error as { status: number; stderr: string };
@@ -118,9 +193,10 @@ describe("every role", () => {
   it("blocks a Bash call whose command it cannot read", () => {
     const payload = JSON.stringify({ tool_name: "Bash", tool_input: {} });
     try {
-      execFileSync("bash", [GUARD, "none"], {
+      execFileSync(BASH, [GUARD, "none"], {
         input: payload,
         encoding: "utf8",
+        env: GUARD_ENV,
       });
       throw new Error("Expected the guard to block");
     } catch (error) {
