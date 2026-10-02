@@ -300,6 +300,21 @@ jobs:
     name: Run Analytics Engine Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The pg suite expects postgresql://postgres:password@localhost:5555/analytics
+    # (packages/analytics-engine/pg/package.json); nothing else gated it before.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: analytics
+        ports:
+          - 5555:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -320,9 +335,9 @@ jobs:
         with:
           bun-version: 1.4.2
 
-      # Only the analytics browser package and the workspace packages it depends on.
+      # Only the analytics browser and pg packages and what they depend on.
       - name: Install and build
-        run: bash .github/actions/setup/install-and-build.sh "@powerhousedao/analytics-engine-browser..."
+        run: bash .github/actions/setup/install-and-build.sh "@powerhousedao/analytics-engine-browser..." "@powerhousedao/analytics-engine-pg..."
 
       - name: Resolve Playwright version
         id: playwright-version
@@ -343,6 +358,9 @@ jobs:
 
       - name: Run integration tests
         run: pnpm test:integration:analytics
+
+      - name: Run Postgres integration tests
+        run: pnpm test:pg
 
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4
