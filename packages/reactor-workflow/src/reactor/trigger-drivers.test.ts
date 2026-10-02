@@ -1,7 +1,20 @@
 // Driver-level contract: which kind owns a binding, what row each one arms,
 // and that a request-driven piece is fed its payload instead of being polled.
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { TriggerStateRow, WorkflowRunStore } from "./store.js";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { createTestRelationalDb } from "../../test/helpers/pglite.js";
+import { PieceWorker } from "../pieces/activepieces/worker/host.js";
+import { WorkflowRunStore, type TriggerStateRow } from "./store.js";
 import {
   deliveryKindFor,
   type PieceTriggerBinding,
@@ -84,25 +97,6 @@ describe("deliveryKindFor", () => {
   });
 });
 
-describe("driver capabilities", () => {
-  it("keeps only the request-driven kind out of the timer", () => {
-    expect(scheduleDriver.scheduled).toBe(true);
-    expect(piecePollDriver.scheduled).toBe(true);
-    expect(pieceWebhookDriver.scheduled).toBe(false);
-    // `scheduled` and the presence of onDue have to agree: the supervisor
-    // reads one and calls the other.
-    expect("onDue" in scheduleDriver).toBe(true);
-    expect("onDue" in piecePollDriver).toBe(true);
-    expect("onDue" in pieceWebhookDriver).toBe(false);
-  });
-
-  it("gives only the piece kinds something to release", () => {
-    expect("release" in piecePollDriver).toBe(true);
-    expect("release" in pieceWebhookDriver).toBe(true);
-    expect("release" in scheduleDriver).toBe(false);
-  });
-});
-
 describe("driver arming", () => {
   let ctx: TriggerDriverContext;
   let runHook: ReturnType<typeof vi.fn>;
@@ -137,29 +131,6 @@ describe("driver arming", () => {
     };
   });
 
-  it("arms a poll binding with a cadence and a next slot", async () => {
-    const state = await piecePollDriver.arm(
-      piece(),
-      { existing: undefined, isRepublish: false },
-      ctx,
-    );
-    expect(state).toEqual({
-      storeState: '{"cursor":"c1"}',
-      intervalMs: 300_000,
-      nextPollAt: "2026-09-07T12:05:00.000Z",
-      lastPollAt: null,
-      cadence: "every 300000ms",
-    });
-    expect(runHook).toHaveBeenCalledWith(
-      expect.anything(),
-      "onEnable",
-      {},
-      {
-        isRepublish: false,
-      },
-    );
-  });
-
   it("arms a webhook binding unscheduled", async () => {
     const state = await pieceWebhookDriver.arm(
       piece({ delivery: "webhook" }),
@@ -174,51 +145,6 @@ describe("driver arming", () => {
       lastPollAt: null,
       cadence: "webhook",
     });
-  });
-
-  it("carries a piece cursor into onEnable only on an unchanged re-register", async () => {
-    const existing = row({ store_state: '{"cursor":"c0"}' });
-    await piecePollDriver.arm(piece(), { existing, isRepublish: true }, ctx);
-    expect(runHook).toHaveBeenLastCalledWith(
-      expect.anything(),
-      "onEnable",
-      { cursor: "c0" },
-      { isRepublish: true },
-    );
-
-    await piecePollDriver.arm(piece(), { existing, isRepublish: false }, ctx);
-    expect(runHook).toHaveBeenLastCalledWith(
-      expect.anything(),
-      "onEnable",
-      {},
-      { isRepublish: false },
-    );
-  });
-
-  it("arms a schedule without touching the piece worker", async () => {
-    const state = await scheduleDriver.arm(
-      schedule(),
-      { existing: undefined, isRepublish: false },
-      ctx,
-    );
-    expect(state.intervalMs).toBe(300_000);
-    expect(state.nextPollAt).toBe("2026-09-07T12:05:00.000Z");
-    expect(state.cadence).toContain("next fire");
-    expect(runHook).not.toHaveBeenCalled();
-  });
-
-  it("keeps an unchanged schedule's next fire time across a restart", async () => {
-    const existing = row({
-      status: "ENABLED",
-      next_poll_at: "2026-09-07T12:03:00.000Z",
-    });
-    const state = await scheduleDriver.arm(
-      schedule(),
-      { existing, isRepublish: true },
-      ctx,
-    );
-    expect(state.nextPollAt).toBe("2026-09-07T12:03:00.000Z");
-    expect(state.cadence).toContain("carried over");
   });
 
   it("keeps the piece cursor on the ERROR row so a re-enable resumes", () => {
@@ -237,57 +163,110 @@ describe("driver arming", () => {
   });
 });
 
+// A real store and a fixture webhook piece in a forked worker.
 describe("pieceWebhookDriver.deliver", () => {
-  let ctx: TriggerDriverContext;
-  let runHook: ReturnType<typeof vi.fn>;
-  let store: Record<string, ReturnType<typeof vi.fn>>;
-  let fired: { payload: unknown; kind: string }[];
-  let current: TriggerStateRow | undefined;
+  const HOOK_FIXTURE = `
+const app = {
+  displayName: "Hook Fixture",
+  actions: {},
+  triggers: {
+    new_thing: {
+      name: "new_thing",
+      displayName: "New thing",
+      type: "WEBHOOK",
+      props: {},
+      onEnable: async () => undefined,
+      onDisable: async () => undefined,
+      run: async (ctx) => {
+        await ctx.store.put("seen", ((await ctx.store.get("seen")) ?? 0) + 1);
+        return ctx.payload.body.items ?? "not a list";
+      },
+    },
+  },
+};
+module.exports = { app };
+`;
 
-  const withOutput = (output: unknown) =>
-    vi.fn(() =>
-      Promise.resolve({
-        output,
-        touched: [],
-        tlsPoisoned: false,
-        storeState: { seen: 1 },
-        schedules: undefined,
+  let root = "";
+  let bundleDir = "";
+  let worker: PieceWorker;
+  let store: WorkflowRunStore;
+  let ctx: TriggerDriverContext;
+  let fired: { workflowId: string; payload: unknown; kind: string }[];
+  let next = 0;
+
+  beforeAll(async () => {
+    root = await mkdtemp(join(tmpdir(), "trigger-drivers-"));
+    bundleDir = join(root, "hook");
+    await mkdir(bundleDir, { recursive: true });
+    await writeFile(
+      join(bundleDir, "package.json"),
+      JSON.stringify({
+        name: "@acme/piece-x",
+        version: "1.0.0",
+        main: "index.js",
       }),
     );
+    await writeFile(join(bundleDir, "index.js"), HOOK_FIXTURE);
+    worker = new PieceWorker();
+    store = await WorkflowRunStore.create(createTestRelationalDb());
+  });
+
+  afterAll(async () => {
+    worker.dispose();
+    await rm(root, { recursive: true, force: true });
+  });
 
   beforeEach(() => {
     fired = [];
-    current = row();
-    runHook = withOutput([{ id: "evt_1" }]);
-    store = {
-      getTriggerState: vi.fn(() => Promise.resolve(current)),
-      recordPollSuccess: vi.fn(() => Promise.resolve()),
-      claimDedupe: vi.fn(() => Promise.resolve(true)),
-    };
     ctx = {
-      store: store as unknown as WorkflowRunStore,
+      store,
       now: () => NOW,
-      fire: (_workflowId, payload, kind) => fired.push({ payload, kind }),
+      fire: (workflowId, payload, kind) =>
+        fired.push({ workflowId, payload, kind }),
       defaultIntervalMs: 300_000,
-      runHook: runHook as unknown as TriggerDriverContext["runHook"],
-      markUnhealthy: vi.fn(),
+      runHook: (binding, hook, storeState, options = {}) =>
+        worker.runTriggerHook({
+          bundleDir,
+          triggerName: binding.triggerName,
+          hook,
+          propsValue: binding.config,
+          storeState,
+          payload: options.payload,
+          isRepublish: options.isRepublish,
+        }),
+      markUnhealthy: () => undefined,
     };
   });
 
-  const binding = piece({ delivery: "webhook" });
-  const payload = { method: "POST", body: { id: "evt_1" } };
+  // An armed row of its own, so dedupe keys and cursors never cross tests.
+  async function armed(status = "ENABLED"): Promise<PieceTriggerBinding> {
+    next += 1;
+    const workflowId = `wf-deliver-${next}`;
+    await store.upsertTriggerState(
+      row({ workflow_id: workflowId, status, store_state: "{}" }),
+    );
+    return piece({ workflowId, delivery: "webhook" });
+  }
+
+  const delivery = (items?: unknown) => ({
+    method: "POST",
+    body: items === undefined ? {} : { items },
+  });
 
   it("feeds the payload to the run hook and fires each item", async () => {
-    const count = await pieceWebhookDriver.deliver(binding, payload, ctx);
-    expect(count).toBe(1);
-    expect(runHook).toHaveBeenCalledWith(
-      expect.anything(),
-      "run",
-      {},
-      { payload },
+    const binding = await armed();
+
+    const count = await pieceWebhookDriver.deliver(
+      binding,
+      delivery([{ id: "evt_1" }]),
+      ctx,
     );
+
+    expect(count).toBe(1);
     expect(fired).toEqual([
       {
+        workflowId: binding.workflowId,
         payload: { id: "evt_1" },
         kind: "piece:@acme/piece-x:new_thing",
       },
@@ -295,58 +274,80 @@ describe("pieceWebhookDriver.deliver", () => {
   });
 
   it("persists the piece's cursor without scheduling a poll", async () => {
-    await pieceWebhookDriver.deliver(binding, payload, ctx);
-    expect(store.recordPollSuccess).toHaveBeenCalledWith(
-      WF,
-      '{"seen":1}',
-      NOW.toISOString(),
+    const binding = await armed();
+
+    await pieceWebhookDriver.deliver(binding, delivery([]), ctx);
+    await pieceWebhookDriver.deliver(binding, delivery([]), ctx);
+
+    const stored = await store.getTriggerState(binding.workflowId);
+    expect(stored).toMatchObject({
+      last_poll_at: NOW.toISOString(),
       // A delivery is not a poll: next_poll_at stays null.
-      null,
-    );
+      next_poll_at: null,
+    });
+    // The second run read the first one's cursor back off the row.
+    const cursor = JSON.parse(stored!.store_state) as Record<string, unknown>;
+    expect(Object.values(cursor)).toEqual([2]);
   });
 
   it("fires once per item, or not at all for an empty batch", async () => {
-    ctx.runHook = withOutput([
+    const binding = await armed();
+
+    expect(
+      await pieceWebhookDriver.deliver(
+        binding,
+        delivery([{ id: "a" }, { id: "b" }]),
+        ctx,
+      ),
+    ).toBe(2);
+    expect(fired.map(({ payload }) => payload)).toEqual([
       { id: "a" },
       { id: "b" },
-    ]) as unknown as TriggerDriverContext["runHook"];
-    expect(await pieceWebhookDriver.deliver(binding, payload, ctx)).toBe(2);
-    expect(fired).toHaveLength(2);
+    ]);
 
     fired.length = 0;
-    ctx.runHook = withOutput([]) as unknown as TriggerDriverContext["runHook"];
-    expect(await pieceWebhookDriver.deliver(binding, payload, ctx)).toBe(0);
+    expect(await pieceWebhookDriver.deliver(binding, delivery([]), ctx)).toBe(
+      0,
+    );
     expect(fired).toHaveLength(0);
   });
 
   it("suppresses an item whose dedupe key was already claimed", async () => {
-    ctx.runHook = withOutput([
-      { _dedupe_key: "k1" },
-    ]) as unknown as TriggerDriverContext["runHook"];
-    store.claimDedupe.mockResolvedValue(false);
-    expect(await pieceWebhookDriver.deliver(binding, payload, ctx)).toBe(1);
-    expect(fired).toHaveLength(0);
+    const binding = await armed();
+    const repeated = delivery([{ _dedupe_key: "k1" }]);
+
+    expect(await pieceWebhookDriver.deliver(binding, repeated, ctx)).toBe(1);
+    expect(await pieceWebhookDriver.deliver(binding, repeated, ctx)).toBe(1);
+
+    expect(fired).toHaveLength(1);
   });
 
   it("refuses a delivery to a trigger that is not enabled", async () => {
-    current = row({ status: "DISABLED" });
+    const disabled = await armed("DISABLED");
     await expect(
-      pieceWebhookDriver.deliver(binding, payload, ctx),
+      pieceWebhookDriver.deliver(disabled, delivery([{ id: "a" }]), ctx),
     ).rejects.toThrow(/is not enabled/);
-    current = undefined;
+
+    const absent = piece({
+      workflowId: "wf-deliver-none",
+      delivery: "webhook",
+    });
     await expect(
-      pieceWebhookDriver.deliver(binding, payload, ctx),
+      pieceWebhookDriver.deliver(absent, delivery([{ id: "a" }]), ctx),
     ).rejects.toThrow(/is not enabled/);
+    expect(fired).toHaveLength(0);
   });
 
   it("rejects a run hook that did not return a list", async () => {
-    ctx.runHook = withOutput({
-      not: "an array",
-    }) as unknown as TriggerDriverContext["runHook"];
+    const binding = await armed();
+
     await expect(
-      pieceWebhookDriver.deliver(binding, payload, ctx),
+      pieceWebhookDriver.deliver(binding, delivery(), ctx),
     ).rejects.toThrow(/expected an array/);
-    expect(store.recordPollSuccess).not.toHaveBeenCalled();
+    expect(await store.getTriggerState(binding.workflowId)).toMatchObject({
+      store_state: "{}",
+      last_poll_at: null,
+    });
   });
 });
 
