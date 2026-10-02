@@ -1,6 +1,10 @@
 import type { Action, Signature } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
-import { signAction, signActions } from "../../src/core/utils.js";
+import {
+  getSharedActionScope,
+  signAction,
+  signActions,
+} from "../../src/core/utils.js";
 
 const TARGET = { documentId: "doc-1", branch: "main" };
 import { createMockSigner, createTestAction } from "../factories.js";
@@ -319,6 +323,34 @@ describe("signActions", () => {
       action,
       TARGET,
       abortController.signal,
+    );
+  });
+});
+
+// R7 in docs/plans/2026-10-02-testing-policy.md (unreadable input): the
+// mixed-scope refusal had never been exercised by any test.
+describe("getSharedActionScope", () => {
+  it("returns the scope every action shares", () => {
+    const actions = [
+      createTestAction({ scope: "global" }),
+      createTestAction({ scope: "global" }),
+    ];
+
+    expect(getSharedActionScope(actions)).toBe("global");
+  });
+
+  it("refuses an empty batch", () => {
+    expect(() => getSharedActionScope([])).toThrow("No actions provided");
+  });
+
+  it("refuses a batch that mixes scopes", () => {
+    const actions = [
+      createTestAction({ scope: "global" }),
+      createTestAction({ scope: "local" }),
+    ];
+
+    expect(() => getSharedActionScope(actions)).toThrow(
+      /must share the same scope/,
     );
   });
 });
