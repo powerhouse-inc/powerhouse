@@ -601,8 +601,11 @@ async function readStoredManifest(
     return JSON.parse(
       (await res.Body?.transformToString()) ?? "null",
     ) as object;
-  } catch {
-    return null;
+  } catch (err) {
+    // Only a missing manifest is an answer; a throttled read must not look like one
+    const name = (err as { name?: string }).name;
+    if (name === "NoSuchKey" || name === "NotFound") return null;
+    throw err;
   }
 }
 
@@ -649,14 +652,23 @@ export async function runImportVerdaccioState(
 
   const pool = new pg.Pool({ connectionString: args.databaseUrl });
   let pruned: string[] = [];
+  let gone = 0;
   try {
     const store = new S3DatabasePostgres(pool, pluginLogger);
     await store.init();
     // The manifest index lets the worker reconcile without fetching metadata
+    const missing: string[] = [];
     for (const name of names) {
       const manifest = await readStoredManifest(s3, s3Config, name);
       if (manifest) await store.record(name, manifest);
+      else missing.push(name);
     }
+    // Listed with no stored manifest: Verdaccio's package list fails on one
+    for (const name of missing) names.delete(name);
+    await pool.query("DELETE FROM verdaccio_packages WHERE name = ANY($1)", [
+      missing,
+    ]);
+    gone = missing.length;
     for (const name of names) {
       await pool.query(
         "INSERT INTO verdaccio_packages (name) VALUES ($1) ON CONFLICT (name) DO NOTHING",
@@ -683,6 +695,6 @@ export async function runImportVerdaccioState(
     await pool.end();
   }
   console.log(
-    `[registry] imported ${names.size} package name(s), ${legacy.tokens?.length ?? 0} token(s)${legacy.secret ? " and the secret" : ""}; pruned ${pruned.length} cached package(s)`,
+    `[registry] imported ${names.size} package name(s), ${legacy.tokens?.length ?? 0} token(s)${legacy.secret ? " and the secret" : ""}; pruned ${pruned.length} cached package(s), dropped ${gone} with no stored manifest`,
   );
 }
