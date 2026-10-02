@@ -178,28 +178,58 @@ export async function writeModuleFiles(projectDir = process.cwd()) {
   await writeGeneratedSubgraphsFiles(projectDir);
 }
 
+/** Seeds an AI-assistant / editor config file only when it does not exist.
+ *
+ * Deliberately stricter than {@link seedModuleAggregateFile}: a module
+ * aggregate's content is codegen-owned and a pristine one is detectably
+ * banner-only, but an AI config is the user's the moment it exists — there is
+ * no content that marks it "still ours". So no content sniffing: existence
+ * alone preserves the file. `ph init` writes into a directory it just created
+ * (createProject refuses an existing one), so on a fresh scaffold this seeds
+ * every file; on `ph migrate` it writes only the ones the project lacks.
+ */
+async function seedUserOwnedFile(filePath: string, contents: string) {
+  if (existsSync(filePath)) return;
+  await writeFileEnsuringDir(filePath, contents);
+}
+
 export async function writeAiConfigFiles(projectDir = process.cwd()) {
-  await writeFileEnsuringDir(
+  // All six files are preserve-on-migrate; none is refresh. Per-file rationale:
+  //
+  // CLAUDE.md / AGENTS.md: project instructions for coding agents — prose the
+  // user extends by hand; nothing in the toolchain regenerates them.
+  await seedUserOwnedFile(
     join(projectDir, "CLAUDE.md"),
     claudeTemplate.trimStart(),
   );
-  await writeFileEnsuringDir(
+  await seedUserOwnedFile(
     join(projectDir, "AGENTS.md"),
     agentsTemplate.trimStart(),
   );
-  await writeFileEnsuringDir(
+  // .mcp.json / .cursor/mcp.json: committed files carrying the project's
+  // name-derived switchboard port as a literal (applyProjectCustomizations
+  // bakes it in at init; the static templates here carry only the default
+  // port, so overwriting on migrate also reset that port). The one tool that
+  // does manage them afterwards — `ph vetra` via syncMcpPort — patches the
+  // port in place precisely so hand-added servers and keys survive.
+  await seedUserOwnedFile(
     join(projectDir, ".mcp.json"),
     mcpTemplate.trimStart(),
   );
-  await writeFileEnsuringDir(
-    join(projectDir, ".gemini/settings.json"),
-    geminiSettingsTemplate.trimStart(),
-  );
-  await writeFileEnsuringDir(
+  await seedUserOwnedFile(
     join(projectDir, ".cursor/mcp.json"),
     cursorMcpTemplate.trimStart(),
   );
-  await writeFileEnsuringDir(
+  // .gemini/settings.json: the user's Gemini CLI settings; nothing in the
+  // toolchain writes it after scaffolding.
+  await seedUserOwnedFile(
+    join(projectDir, ".gemini/settings.json"),
+    geminiSettingsTemplate.trimStart(),
+  );
+  // .claude/settings.local.json: per-machine state — Claude Code itself
+  // appends the permission grants the user approves during sessions, so an
+  // existing one holds accumulated approvals no template can reproduce.
+  await seedUserOwnedFile(
     join(projectDir, ".claude/settings.local.json"),
     claudeSettingsLocalTemplate.trimStart(),
   );
