@@ -64,6 +64,7 @@ import { bumpWorkerGen } from "../reactor-worker-name.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
+import { resolvePackagedReactorWorkerUrl } from "../utils/reactor-worker-url.js";
 import {
   REACTOR_INSTANCE_NAMESPACE,
   RELATIONAL_PGLITE_NAME,
@@ -398,7 +399,12 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     // builds): the worker rewrites shared imports in package sources to
     // these absolute URLs and blob-imports the result.
     const sharedImports = (await getSharedDeps())?.imports;
+    // Packaged deployments serve a prebuilt worker bundle at a stable path
+    // (the dist worker itself is a library artifact no worker can load);
+    // null means this is the monorepo app, where Vite bundles the worker.
+    const packagedWorkerUrl = await resolvePackagedReactorWorkerUrl();
     const workerClient = createWorkerReactorClientModule({
+      workerUrl: packagedWorkerUrl ?? undefined,
       namespace: REACTOR_INSTANCE_NAMESPACE,
       relationalNamespace: RELATIONAL_PGLITE_NAME,
       cdnUrl: packageManager.cdnUrl ?? "",

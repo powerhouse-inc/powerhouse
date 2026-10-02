@@ -14,18 +14,25 @@ export const ConnectionBanner: React.FC = () => {
     () => CONNECTED,
   );
 
-  if (status !== "lost") {
+  if (status === "connected") {
     return null;
   }
+
+  const title =
+    status === "failed"
+      ? "Reactor worker failed to load"
+      : "Lost connection to the reactor";
+  const detail =
+    status === "failed"
+      ? "The background worker script could not be loaded. Reload to retry."
+      : "The background worker stopped responding. Reload to reconnect.";
 
   return (
     <div className="absolute inset-x-0 top-0 z-30 flex justify-center p-3">
       <div className="flex max-w-3xl items-center gap-3 rounded-lg border border-destructive bg-warning px-4 py-3 text-sm text-warning-foreground shadow-lg">
         <div className="flex-1">
-          <div className="font-semibold">Lost connection to the reactor</div>
-          <div className="text-foreground">
-            The background worker stopped responding. Reload to reconnect.
-          </div>
+          <div className="font-semibold">{title}</div>
+          <div className="text-foreground">{detail}</div>
         </div>
         <button
           type="button"
