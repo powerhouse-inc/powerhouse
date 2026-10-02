@@ -42,9 +42,9 @@ import {
   styleTemplate,
   subgraphsIndexTemplate,
   switchboardEntrypointTemplate,
-  syncAndPublishWorkflowTemplate,
   tsConfigTemplate,
   upgradeManifestsTemplate,
+  vetraWorkflowTemplate,
   vitestConfigTemplate,
 } from "templates";
 import { formatSafe } from "utils";
@@ -402,8 +402,8 @@ export async function applyProjectCustomizations(args: {
 
 export async function writeCIFiles(projectDir = process.cwd()) {
   await writeFileEnsuringDir(
-    join(projectDir, ".github/workflows/sync-and-publish.yml"),
-    syncAndPublishWorkflowTemplate,
+    join(projectDir, ".github/workflows/vetra.yml"),
+    vetraWorkflowTemplate,
   );
   await writeFileEnsuringDir(
     join(projectDir, "Dockerfile"),
