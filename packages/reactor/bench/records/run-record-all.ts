@@ -1,8 +1,7 @@
-import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import spawn from "cross-spawn";
 import { z } from "zod";
-import { pnpmCommand } from "../pnpm-command.js";
 import {
   buildMicroEntry,
   stampReadings,
@@ -42,14 +41,14 @@ const RECORD_FILES = ["bench/BENCHMARKS.jsonl", "bench/TASKS.jsonl"];
  * output anyway.
  */
 function runBenchmark(target: BenchTarget, capture: boolean): string {
-  const [file, lead] = pnpmCommand();
-  const result = spawnSync(file, [...lead, "run", target.recordScript], {
+  const result = spawn.sync("pnpm", ["run", target.recordScript], {
     stdio: capture ? ["inherit", "pipe", "inherit"] : "inherit",
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
   });
 
-  if (result.error !== undefined) {
+  // cross-spawn reports success as `error: null`, not undefined.
+  if (result.error) {
     throw new Error(
       `Could not start ${target.recordScript}: ${result.error.message}`,
     );
