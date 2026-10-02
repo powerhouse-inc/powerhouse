@@ -16,9 +16,22 @@ export function isSubgraphClass(
 ): candidate is SubgraphClass {
   if (typeof candidate !== "function") return false;
 
+  // Walk the candidate's constructor chain. Identity first: package builds
+  // keep `@powerhousedao/reactor-api` external precisely so every subgraph
+  // extends this very BaseSubgraph (see nodeNeverBundle in
+  // packages/shared/clis/build-config.mts). The name check is the fallback
+  // for a module graph that carries its own copy — a project served by the
+  // vite dev server resolves reactor-api from its own node_modules, which
+  // need not be the host's instance.
+  //
+  // The previous version asked `isPrototypeOf` in the wrong direction
+  // (whether the candidate's proto was in BaseSubgraph's chain), which
+  // `Function.prototype` always satisfies — so every function passed, and
+  // junk exports registered as subgraphs.
   let proto: unknown = Object.getPrototypeOf(candidate);
-  while (proto) {
-    if (Object.prototype.isPrototypeOf.call(proto, BaseSubgraph)) return true;
+  while (typeof proto === "function") {
+    if (proto === BaseSubgraph) return true;
+    if (proto.name === "BaseSubgraph") return true;
 
     proto = Object.getPrototypeOf(proto);
   }
