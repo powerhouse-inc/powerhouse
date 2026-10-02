@@ -1,3 +1,13 @@
+## 6.2.3-dev.40 (2026-10-02)
+
+### 🩹 Fixes
+
+- **document-model:** leave unmatched @tokens in log messages as written ([0538ea019c](https://github.com/powerhouse-inc/powerhouse/commit/0538ea019c))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.39 (2026-10-02)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

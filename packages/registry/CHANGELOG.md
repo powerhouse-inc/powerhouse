@@ -1,3 +1,23 @@
+## 6.2.3-dev.40 (2026-10-02)
+
+### 🚀 Features
+
+- **registry:** report package and version counts, job error reasons, and longer latencies ([3c3f772ca2](https://github.com/powerhouse-inc/powerhouse/commit/3c3f772ca2))
+
+### 🩹 Fixes
+
+- **document-model:** leave unmatched @tokens in log messages as written ([0538ea019c](https://github.com/powerhouse-inc/powerhouse/commit/0538ea019c))
+- **registry:** drop listed packages with no stored manifest on import ([7cc87d9df1](https://github.com/powerhouse-inc/powerhouse/commit/7cc87d9df1))
+- **registry:** pace and retry artifact uploads, and retry failed versions ([2704910ee5](https://github.com/powerhouse-inc/powerhouse/commit/2704910ee5))
+
+### 🔥 Performance
+
+- **registry:** report catalog counts only from the process that runs jobs ([20cdaf77b9](https://github.com/powerhouse-inc/powerhouse/commit/20cdaf77b9))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.39 (2026-10-02)
 
 ### 🩹 Fixes

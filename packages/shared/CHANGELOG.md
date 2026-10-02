@@ -1,3 +1,16 @@
+## 6.2.3-dev.40 (2026-10-02)
+
+### 🩹 Fixes
+
+- **document-model:** leave unmatched @tokens in log messages as written ([0538ea019c](https://github.com/powerhouse-inc/powerhouse/commit/0538ea019c))
+- **shared:** minify piece bundles and stop emitting their source maps ([65ece1d90e](https://github.com/powerhouse-inc/powerhouse/commit/65ece1d90e))
+- **shared:** link use-local packages to the directory that declares their name ([9141440d4d](https://github.com/powerhouse-inc/powerhouse/commit/9141440d4d))
+- **shared:** update pieces-framework and workflow with ph update and ph use ([5305ebea35](https://github.com/powerhouse-inc/powerhouse/commit/5305ebea35))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.39 (2026-10-02)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
