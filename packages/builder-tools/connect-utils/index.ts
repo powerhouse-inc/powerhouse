@@ -1,6 +1,7 @@
 export * from "./constants.js";
 export * from "./vite-plugins/build-hash.js";
 export * from "./externalize-vendor.js";
+export * from "./reactor-worker-build.js";
 export * from "./helpers.js";
 export * from "./runtime-config-schema.js";
 export * from "./types.js";
