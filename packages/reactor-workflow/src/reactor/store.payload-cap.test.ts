@@ -13,6 +13,7 @@ import {
   STEP_PAYLOAD_PREFIX_CHARS,
   WorkflowRunStore,
   isTruncatedStepPayload,
+  journaledTriggerDocumentIds,
 } from "./store.js";
 
 describe("WorkflowRunStore payload cap", () => {
@@ -195,6 +196,60 @@ describe("WorkflowRunStore payload cap", () => {
     expect(journaled.prefix).toBe(
       serialized.slice(0, STEP_PAYLOAD_PREFIX_CHARS),
     );
+  });
+
+  it("keeps the payload's top-level document ids on the marker", async () => {
+    // Erasure (journaledPayloadNames) and run serving (triggerDocumentIds)
+    // both read these two ids off the journaled row; capping the payload
+    // must not uncouple the row from its documents.
+    const payload = {
+      documentId: "doc-ids",
+      driveId: "drive-ids",
+      document: filler("idful", STEP_PAYLOAD_MAX_BYTES),
+    };
+    const runId = await store.startRun({
+      workflowId: "wf-payload-cap",
+      workflowName: "Cap me",
+      workflowVersion: 1,
+      triggerKind: "document-event",
+      triggerPayload: payload,
+    });
+
+    const run = await store.getRun(runId);
+    const journaled = JSON.parse(run?.trigger_payload ?? "") as unknown;
+    if (!isTruncatedStepPayload(journaled)) {
+      throw new Error("expected the trigger payload to carry the marker");
+    }
+    expect(journaled.documentId).toBe("doc-ids");
+    expect(journaled.driveId).toBe("drive-ids");
+    expect(journaledTriggerDocumentIds(run?.trigger_payload ?? null)).toEqual([
+      "doc-ids",
+      "drive-ids",
+    ]);
+  });
+
+  it("carries no ids for a payload without string ids at its top level", async () => {
+    // Ids live per item in a list sample, and a non-string id is not an id:
+    // neither grows the marker (the cap is the point).
+    const payload = [
+      { documentId: "doc-listed", document: filler("item", 8 * 1024) },
+    ];
+    const list = Array.from({ length: 40 }, () => payload[0]);
+    const runId = await store.startRun({
+      workflowId: "wf-payload-cap",
+      workflowName: "Cap me",
+      workflowVersion: 1,
+      triggerKind: "document-event",
+      triggerPayload: list,
+    });
+
+    const run = await store.getRun(runId);
+    const journaled = JSON.parse(run?.trigger_payload ?? "") as unknown;
+    if (!isTruncatedStepPayload(journaled)) {
+      throw new Error("expected the list payload to carry the marker");
+    }
+    expect(journaled.documentId).toBeUndefined();
+    expect(journaled.driveId).toBeUndefined();
   });
 
   it("recognizes only its own marker, so rerun replays real outputs", () => {

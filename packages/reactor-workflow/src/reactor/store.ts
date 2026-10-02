@@ -828,6 +828,12 @@ export interface TruncatedStepPayload {
   // Byte length of the serialized payload the prefix was cut from.
   bytes: number;
   prefix: string;
+  // The payload's own top-level ids, carried past the cap: erasure
+  // (journaledPayloadNames) and run serving (triggerDocumentIds) both read
+  // them off the journaled row, and would otherwise lose the row the moment
+  // it is capped. Ids, not bulk.
+  documentId?: string;
+  driveId?: string;
 }
 
 // True for a journaled value this store truncated. Rerun uses it to
@@ -847,7 +853,28 @@ export function isTruncatedStepPayload(
   );
 }
 
-function cappedPayload(json: string | null): string | null {
+// The two top-level ids a journaled payload is matched by after the fact.
+// Top level only, and strings only: a list sample carries its ids per item,
+// and collecting those would grow with the payload — the one thing the cap
+// exists to prevent (store.erase-runs.test.ts pins that accepted gap).
+function topLevelDocumentIds(
+  value: unknown,
+): Pick<TruncatedStepPayload, "documentId" | "driveId"> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return {};
+  }
+  const { documentId, driveId } = value as Record<string, unknown>;
+  return {
+    ...(typeof documentId === "string" ? { documentId } : {}),
+    ...(typeof driveId === "string" ? { driveId } : {}),
+  };
+}
+
+// Takes the already-redacted payload value, not its JSON: the marker keeps
+// the value's top-level document ids, which a serialized string cannot give
+// back without a second parse.
+function cappedPayload(value: unknown): string | null {
+  const json = jsonOrNull(value);
   if (json === null) return null;
   const bytes = Buffer.byteLength(json, "utf8");
   if (bytes <= STEP_PAYLOAD_MAX_BYTES) return json;
@@ -855,7 +882,12 @@ function cappedPayload(json: string | null): string | null {
   // Never cut through a surrogate pair; the prefix must stay serializable.
   const last = prefix.charCodeAt(prefix.length - 1);
   if (last >= 0xd800 && last <= 0xdbff) prefix = prefix.slice(0, -1);
-  const marker: TruncatedStepPayload = { truncated: true, bytes, prefix };
+  const marker: TruncatedStepPayload = {
+    truncated: true,
+    bytes,
+    prefix,
+    ...topLevelDocumentIds(value),
+  };
   return JSON.stringify(marker);
 }
 
@@ -876,8 +908,8 @@ function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
     piece_name: step.pieceName,
     block_name: step.blockName,
     status: step.status,
-    input: cappedPayload(jsonOrNull(redact(step.input))),
-    output: cappedPayload(jsonOrNull(redact(step.output))),
+    input: cappedPayload(redact(step.input)),
+    output: cappedPayload(redact(step.output)),
     port: step.port ?? null,
     error: step.error ? redactMessage(step.error) : null,
     started_at: step.startedAt ?? null,
@@ -1202,9 +1234,7 @@ export class WorkflowRunStore {
         workflow_name: "",
         workflow_version: 0,
         trigger_kind: options.triggerKind,
-        trigger_payload: cappedPayload(
-          jsonOrNull(redact(options.triggerPayload)),
-        ),
+        trigger_payload: cappedPayload(redact(options.triggerPayload)),
         status: PENDING_RUN_STATUS,
         error: null,
         enqueued_at: now,
@@ -1248,9 +1278,7 @@ export class WorkflowRunStore {
         workflow_name: options.workflowName,
         workflow_version: options.workflowVersion,
         trigger_kind: options.triggerKind,
-        trigger_payload: cappedPayload(
-          jsonOrNull(redact(options.triggerPayload)),
-        ),
+        trigger_payload: cappedPayload(redact(options.triggerPayload)),
         status: "RUNNING",
         error: null,
         enqueued_at: now,
