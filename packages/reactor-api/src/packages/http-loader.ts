@@ -226,7 +226,11 @@ export class HttpPackageLoader implements IPackageLoader {
     } catch (error) {
       // A package shipping none has no list to serve, which is the common
       // case rather than a fault.
-      this.logger.verbose(`No pieces found for: ${packageName}`, error);
+      this.logger.verbose(
+        "No pieces found for @package: @error",
+        packageName,
+        error,
+      );
       return [];
     }
     const pieces = piecesFromCdnList(
@@ -261,9 +265,13 @@ export class HttpPackageLoader implements IPackageLoader {
         logger?.info(logMsg);
         this.logger.info(logMsg);
       } catch (error) {
-        const errMsg = `Failed to load package ${trimmedName}`;
-        logger?.error(errMsg, error);
-        this.logger.error(errMsg, error);
+        // A caller's logger may not read @placeholders
+        logger?.error(`Failed to load package ${trimmedName}`, error);
+        this.logger.error(
+          "Failed to load package @package: @error",
+          trimmedName,
+          error,
+        );
         // Continue with other packages - don't fail startup
       }
     }
@@ -284,7 +292,8 @@ export class HttpPackageLoader implements IPackageLoader {
         : undefined;
     } catch (error) {
       this.logger.verbose(
-        `Could not read the version of ${packageSpec}`,
+        "Could not read the version of @package: @error",
+        packageSpec,
         error,
       );
       return undefined;

@@ -130,7 +130,11 @@ export class DocumentModelResolver implements IDocumentModelResolver {
     try {
       await this.modelLoadedHook(documentType);
     } catch (error) {
-      this.logger.warn(`MODEL_LOADED hook failed: ${documentType}`, error);
+      this.logger.warn(
+        "MODEL_LOADED hook failed: @documentType: @error",
+        documentType,
+        error,
+      );
     }
   }
 }

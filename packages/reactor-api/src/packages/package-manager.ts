@@ -314,7 +314,9 @@ export class PackageManager implements IPackageManager {
         } catch (error) {
           failures.push({ loader: loader.name, error });
           this.logger.debug(
-            `[${loader.name}] Failed to load subgraphs from package ${pkg}`,
+            "[@loader] Failed to load subgraphs from package @package: @error",
+            loader.name,
+            pkg,
             error,
           );
         }
@@ -354,7 +356,9 @@ export class PackageManager implements IPackageManager {
         } catch (error) {
           failures.push({ loader: loader.name, error });
           this.logger.debug(
-            `[${loader.name}] Failed to load processors from package ${pkg}`,
+            "[@loader] Failed to load processors from package @package: @error",
+            loader.name,
+            pkg,
             error,
           );
         }
@@ -390,7 +394,9 @@ export class PackageManager implements IPackageManager {
         } catch (error) {
           failures.push({ loader: loader.name, error });
           this.logger.debug(
-            `[${loader.name}] Failed to load pieces from package ${pkg}`,
+            "[@loader] Failed to load pieces from package @package: @error",
+            loader.name,
+            pkg,
             error,
           );
         }

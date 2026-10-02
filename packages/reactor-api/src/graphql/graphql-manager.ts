@@ -443,7 +443,11 @@ export class GraphQLManager {
           ...(graphqlEndpoint && { graphqlEndpoint }),
         });
       } catch (error: unknown) {
-        this.logger.debug(`Drive not found: ${driveIdOrSlug}`, error);
+        this.logger.debug(
+          "Drive not found: @drive (@error)",
+          driveIdOrSlug,
+          error,
+        );
         return Response.json({ error: "Drive not found" }, { status: 404 });
       }
     };
@@ -525,7 +529,8 @@ export class GraphQLManager {
         await this.registerSubgraph(subgraph, supergraph, true);
       } catch (error) {
         this.logger.error(
-          `Failed to setup core subgraph ${subgraph.name}`,
+          "Failed to setup core subgraph @subgraph: @error",
+          subgraph.name,
           error,
         );
       }
@@ -577,7 +582,8 @@ export class GraphQLManager {
         registeredNames.add(subgraphInstance.name);
       } catch (error) {
         this.logger.error(
-          `Failed to setup document model subgraph for ${documentModel.documentModel.global.id}`,
+          "Failed to setup document model subgraph for @documentType: @error",
+          documentModel.documentModel.global.id,
           error instanceof Error ? error.message : error,
         );
         this.logger.debug("@error", error);
@@ -852,7 +858,8 @@ export class GraphQLManager {
       // Teardown must not be the thing that fails: a package whose name never
       // resolved to a namespace has nothing mounted to release anyway.
       this.logger.warn(
-        `Failed to release HTTP routes for "${packageName}": @error`,
+        `Failed to release HTTP routes for "@package": @error`,
+        packageName,
         error,
       );
     }
