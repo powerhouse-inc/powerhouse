@@ -677,7 +677,9 @@ describe("WorkerPoolJobExecutorManager", () => {
       );
       await flush(100);
 
-      expect(failed.some((e) => e.jobId === "throw-job")).toBe(true);
+      // Exactly one: handle.fail emits through queue.failJob, and the
+      // manager must not emit the same failure a second time itself.
+      expect(failed.filter((e) => e.jobId === "throw-job")).toHaveLength(1);
       expect(failed.find((e) => e.jobId === "throw-job")?.error.message).toBe(
         "explosion",
       );
