@@ -1,14 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { installDriveWindow } from "../test/drive-window.js";
+import { schemaFetch, type RuntimeRoot } from "../test/runtime-schema.js";
 import type * as ToolsModule from "./tools.js";
-
-const SWITCHBOARD = {
-  switchboardUrl: "http://localhost:4001",
-  graphqlUrl: "http://localhost:4001/graphql",
-};
-
-vi.mock("@powerhousedao/reactor-browser/ai", () => ({
-  resolveDriveSwitchboard: vi.fn(() => SWITCHBOARD),
-}));
 
 const IMAP_PIECE = {
   name: "@activepieces/piece-imap",
@@ -45,46 +38,52 @@ const SLACK_PIECE = {
   auth: { type: "OAUTH2", displayName: "Slack OAuth" },
 };
 
-type Handler = (variables: Record<string, unknown>) => unknown;
+const entry = (name: string, displayName: string) => ({
+  name,
+  displayName,
+  description: "",
+});
 
-interface Routes {
-  catalog?: unknown;
-  actions?: Handler;
-  triggers?: Handler;
-  connections?: unknown;
-  check?: Handler;
+// A piece's listings; only IMAP has actions and triggers.
+const LISTINGS: RuntimeRoot = {
+  pieceActions: ({ packageName }: { packageName: string }) => ({
+    name: packageName,
+    version: "1.0.0",
+    actions:
+      packageName === IMAP_PIECE.name
+        ? [
+            entry("fetchMailbox", "Fetch mailbox"),
+            entry("fetchMessages", "Fetch messages"),
+          ]
+        : [],
+  }),
+  pieceTriggers: ({ packageName }: { packageName: string }) => ({
+    name: packageName,
+    version: "1.0.0",
+    triggers:
+      packageName === IMAP_PIECE.name
+        ? [{ ...entry("newMessage", "New message"), strategy: "" }]
+        : [],
+  }),
+};
+
+// The tools' requests, executed against the real workflow-runtime schema.
+function serve(root: RuntimeRoot) {
+  const server = schemaFetch(root);
+  vi.stubGlobal("fetch", server.fetch);
+  return server;
 }
 
-function graphqlFetch(routes: Routes) {
-  return vi.fn((_url: string, init?: { body?: string }): Response => {
-    const body = JSON.parse(String(init?.body)) as {
-      query: string;
-      variables: Record<string, unknown>;
-    };
-    const kind = body.query.includes("pieceCatalog")
-      ? "catalog"
-      : body.query.includes("pieceActions")
-        ? "actions"
-        : body.query.includes("pieceTriggers")
-          ? "triggers"
-          : body.query.includes("connections")
-            ? "connections"
-            : "check";
-    const route = routes[kind];
-    const data =
-      typeof route === "function" ? (route as Handler)(body.variables) : route;
-    return new Response(JSON.stringify({ data }), {
-      status: 200,
-      headers: { "content-type": "application/json" },
-    });
-  });
-}
-
-function installWindow(client?: {
-  get: (id: string) => Promise<{ state: { global?: unknown } }>;
-}): void {
-  vi.stubGlobal("window", {
-    ph: { selectedDriveId: "drive-1", reactorClient: client },
+function installWindow(
+  client?: {
+    get: (id: string) => Promise<{ state: { global?: unknown } }>;
+  },
+  remotes?: Record<string, string>,
+): void {
+  installDriveWindow({
+    selectedDriveId: "drive-1",
+    reactorClient: client,
+    remotes,
   });
 }
 
@@ -92,7 +91,6 @@ let tools: typeof ToolsModule;
 
 beforeEach(async () => {
   vi.resetModules();
-  vi.clearAllMocks();
   tools = await import("./tools.js");
 });
 
@@ -102,48 +100,7 @@ afterEach(() => {
 
 describe("getConnectors", () => {
   it("returns the full plan for each catalog entry", async () => {
-    const fetch = graphqlFetch({
-      catalog: { workflowRuntime: { pieceCatalog: [IMAP_PIECE] } },
-      actions: (vars) => ({
-        workflowRuntime: {
-          pieceActions: {
-            actions:
-              vars.packageName === IMAP_PIECE.name
-                ? [
-                    {
-                      name: "fetchMailbox",
-                      displayName: "Fetch mailbox",
-                      description: "",
-                    },
-                    {
-                      name: "fetchMessages",
-                      displayName: "Fetch messages",
-                      description: "",
-                    },
-                  ]
-                : [],
-          },
-        },
-      }),
-      triggers: (vars) => ({
-        workflowRuntime: {
-          pieceTriggers: {
-            triggers:
-              vars.packageName === IMAP_PIECE.name
-                ? [
-                    {
-                      name: "newMessage",
-                      displayName: "New message",
-                      description: "",
-                      strategy: "",
-                    },
-                  ]
-                : [],
-          },
-        },
-      }),
-    });
-    vi.stubGlobal("fetch", fetch);
+    serve({ pieceCatalog: [IMAP_PIECE], ...LISTINGS });
 
     const result = await tools.getConnectors();
 
@@ -196,18 +153,7 @@ describe("getConnectors", () => {
   });
 
   it("narrows the catalog with a case-insensitive query", async () => {
-    vi.stubGlobal(
-      "fetch",
-      graphqlFetch({
-        catalog: {
-          workflowRuntime: { pieceCatalog: [IMAP_PIECE, SLACK_PIECE] },
-        },
-        actions: () => ({ workflowRuntime: { pieceActions: { actions: [] } } }),
-        triggers: () => ({
-          workflowRuntime: { pieceTriggers: { triggers: [] } },
-        }),
-      }),
-    );
+    serve({ pieceCatalog: [IMAP_PIECE, SLACK_PIECE], ...LISTINGS });
 
     const match = await tools.getConnectors("Emails");
     expect(match.matches).toBe(1);
@@ -225,16 +171,7 @@ describe("getConnectors", () => {
       displayName: `Piece ${index}`,
       description: "",
     }));
-    vi.stubGlobal(
-      "fetch",
-      graphqlFetch({
-        catalog: { workflowRuntime: { pieceCatalog: catalog } },
-        actions: () => ({ workflowRuntime: { pieceActions: { actions: [] } } }),
-        triggers: () => ({
-          workflowRuntime: { pieceTriggers: { triggers: [] } },
-        }),
-      }),
-    );
+    serve({ pieceCatalog: catalog, ...LISTINGS });
 
     const result = await tools.getConnectors();
 
@@ -244,16 +181,7 @@ describe("getConnectors", () => {
   });
 
   it("asks for an OAuth2 app and flags the sign-in it still needs", async () => {
-    vi.stubGlobal(
-      "fetch",
-      graphqlFetch({
-        catalog: { workflowRuntime: { pieceCatalog: [SLACK_PIECE] } },
-        actions: () => ({ workflowRuntime: { pieceActions: { actions: [] } } }),
-        triggers: () => ({
-          workflowRuntime: { pieceTriggers: { triggers: [] } },
-        }),
-      }),
-    );
+    serve({ pieceCatalog: [SLACK_PIECE], ...LISTINGS });
 
     const result = await tools.getConnectors();
 
@@ -271,32 +199,28 @@ describe("getConnectors", () => {
 });
 
 describe("getConnections", () => {
-  const CONNECTIONS = {
-    workflowRuntime: {
-      connections: [
-        {
-          id: "conn-1",
-          name: "Work mail",
-          connectorId: "@activepieces/piece-imap#imap",
-          authType: "CUSTOM_AUTH",
-          status: "ERROR",
-          accountLabel: null,
-        },
-        {
-          id: "conn-2",
-          name: "Personal mail",
-          connectorId: "@activepieces/piece-imap#imap",
-          authType: "CUSTOM_AUTH",
-          status: "OK",
-          accountLabel: "user@example.com",
-        },
-      ],
+  const CONNECTIONS = [
+    {
+      id: "conn-1",
+      name: "Work mail",
+      connectorId: "@activepieces/piece-imap#imap",
+      authType: "CUSTOM_AUTH",
+      status: "ERROR",
+      accountLabel: null,
     },
-  };
+    {
+      id: "conn-2",
+      name: "Personal mail",
+      connectorId: "@activepieces/piece-imap#imap",
+      authType: "CUSTOM_AUTH",
+      status: "OK",
+      accountLabel: "user@example.com",
+    },
+  ];
 
   it("reports missing required secrets and config per connection", async () => {
     const client = {
-      get: vi.fn((id: string) =>
+      get: (id: string) =>
         Promise.resolve(
           id === "conn-1"
             ? {
@@ -322,16 +246,9 @@ describe("getConnections", () => {
                 },
               },
         ),
-      ),
     };
     installWindow(client);
-    vi.stubGlobal(
-      "fetch",
-      graphqlFetch({
-        catalog: { workflowRuntime: { pieceCatalog: [IMAP_PIECE] } },
-        connections: CONNECTIONS,
-      }),
-    );
+    serve({ pieceCatalog: [IMAP_PIECE], connections: CONNECTIONS });
 
     const result = await tools.getConnections();
 
@@ -360,8 +277,8 @@ describe("getConnections", () => {
   });
 
   it("treats null and empty-string config values as missing, not false/0", async () => {
-    const client = {
-      get: vi.fn(() =>
+    installWindow({
+      get: () =>
         Promise.resolve({
           state: {
             global: {
@@ -377,20 +294,8 @@ describe("getConnections", () => {
             },
           },
         }),
-      ),
-    };
-    installWindow(client);
-    vi.stubGlobal(
-      "fetch",
-      graphqlFetch({
-        catalog: { workflowRuntime: { pieceCatalog: [IMAP_PIECE] } },
-        connections: {
-          workflowRuntime: {
-            connections: [CONNECTIONS.workflowRuntime.connections[1]],
-          },
-        },
-      }),
-    );
+    });
+    serve({ pieceCatalog: [IMAP_PIECE], connections: [CONNECTIONS[1]] });
 
     const result = await tools.getConnections();
 
@@ -403,28 +308,21 @@ describe("getConnections", () => {
 
   it("treats an unknown connector as authless", async () => {
     installWindow({
-      get: vi.fn(() => Promise.resolve({ state: { global: {} } })),
+      get: () => Promise.resolve({ state: { global: {} } }),
     });
-    vi.stubGlobal(
-      "fetch",
-      graphqlFetch({
-        catalog: { workflowRuntime: { pieceCatalog: [IMAP_PIECE] } },
-        connections: {
-          workflowRuntime: {
-            connections: [
-              {
-                id: "conn-3",
-                name: "Mystery",
-                connectorId: "@acme/piece-unknown#unknown",
-                authType: "NONE",
-                status: "OK",
-                accountLabel: null,
-              },
-            ],
-          },
+    serve({
+      pieceCatalog: [IMAP_PIECE],
+      connections: [
+        {
+          id: "conn-3",
+          name: "Mystery",
+          connectorId: "@acme/piece-unknown#unknown",
+          authType: "NONE",
+          status: "OK",
+          accountLabel: null,
         },
-      }),
-    );
+      ],
+    });
 
     const result = await tools.getConnections();
 
@@ -436,23 +334,14 @@ describe("getConnections", () => {
 });
 
 describe("checkConnection", () => {
-  it("passes the mutation result through and targets the subgraph", async () => {
-    const fetch = graphqlFetch({
-      check: (vars) => ({
-        workflowRuntime: {
-          checkConnection:
-            vars.connectionId === "conn-1"
-              ? {
-                  ok: true,
-                  detail: "Connected",
-                  accountLabel: "user@example.com",
-                }
-              : { ok: false, detail: "Unknown connection", accountLabel: null },
-        },
-      }),
+  it("passes the mutation result through and targets the drive's subgraph", async () => {
+    const server = serve({
+      checkConnection: ({ connectionId }: { connectionId: string }) =>
+        connectionId === "conn-1"
+          ? { ok: true, detail: "Connected", accountLabel: "user@example.com" }
+          : { ok: false, detail: "Unknown connection", accountLabel: null },
     });
-    vi.stubGlobal("fetch", fetch);
-    installWindow();
+    installWindow(undefined, { "drive-1": "http://remote:4001/graphql/r" });
 
     const check = tools.checkConnectionTool.callback as (args: {
       connectionId: string;
@@ -471,18 +360,10 @@ describe("checkConnection", () => {
       accountLabel: null,
     });
 
-    const [url, init] = fetch.mock.calls[0] as [string, { body: string }];
-    expect(url).toBe("http://localhost:4001/graphql/workflow-runtime");
-    const sent = JSON.parse(init.body) as {
-      query: string;
-      variables: { connectionId: string };
-    };
-    expect(sent.variables).toEqual({ connectionId: "conn-1" });
-    // The supergraph rejects a ConnectionCheckResult without a selection set.
-    expect(sent.query.replaceAll(/\s+/g, " ")).toBe(
-      "mutation CheckConnection($connectionId: String!) { workflowRuntime { " +
-        "checkConnection(connectionId: $connectionId) { ok detail accountLabel } } }",
-    );
+    expect(server.sent.map((request) => request.url)).toEqual([
+      "http://remote:4001/graphql/workflow-runtime",
+      "http://remote:4001/graphql/workflow-runtime",
+    ]);
   });
 });
 
