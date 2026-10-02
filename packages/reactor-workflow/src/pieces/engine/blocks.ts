@@ -649,7 +649,9 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
         // FILE prop that did need it still fails, in the worker, naming the
         // reference it could not resolve.
         logger.debug(
-          `Left ${ref} unstaged: ${error instanceof Error ? error.message : String(error)}`,
+          "Left @ref unstaged: @error",
+          ref,
+          error instanceof Error ? error.message : String(error),
         );
       }
     }
