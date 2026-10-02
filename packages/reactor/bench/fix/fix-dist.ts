@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import type { Dirent } from "node:fs";
 import { join, relative, sep } from "node:path";
+import { pnpmCommand } from "../pnpm-command.js";
 import { RecordsError } from "../records/jsonl-store.js";
 import type { CommandResult } from "../records/records-commands.js";
 import { FIX_EXIT } from "./fix-options.js";
@@ -124,7 +125,8 @@ export function distVerdict(
 export function listWorkspacePackages(root: string): WorkspacePackage[] {
   let raw: string;
   try {
-    raw = execFileSync("pnpm", ["ls", "-r", "--depth", "-1", "--json"], {
+    const [file, lead] = pnpmCommand();
+    raw = execFileSync(file, [...lead, "ls", "-r", "--depth", "-1", "--json"], {
       cwd: root,
       encoding: "utf8",
       maxBuffer: 16 * 1024 * 1024,
