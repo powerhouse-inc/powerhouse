@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import type { CommandResult } from "../records/records-commands.js";
 import { checkPackage, listWorkspacePackages } from "./fix-dist.js";
 import type { WorkspacePackage } from "./fix-dist.js";
@@ -402,7 +402,10 @@ export async function runCi(options: CiOptions): Promise<CommandResult> {
 
   const changed =
     options.changed.length > 0
-      ? options.changed.map((path) => relative(root, resolve(root, path)))
+      ? options.changed.map((path) =>
+          // POSIX-separated to match collectChanged, which comes from git.
+          relative(root, resolve(root, path)).split(sep).join("/"),
+        )
       : collectChanged(root);
   if (changed.length === 0) {
     const lines = [
