@@ -1,5 +1,9 @@
 import { Icon } from "@powerhousedao/design-system";
-import { DriveCollectionId, useSyncList } from "@powerhousedao/reactor-browser";
+import {
+  DriveCollectionId,
+  useSyncList,
+  useTheme,
+} from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { useMemo, useState } from "react";
 
@@ -9,6 +13,7 @@ export function DriveIcon({
   drive: DocumentDriveDocument | undefined;
 }) {
   const remotes = useSyncList();
+  const { theme } = useTheme();
   const isRemoteDrive = useMemo(() => {
     if (!drive) return false;
 
@@ -32,12 +37,18 @@ export function DriveIcon({
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
   if (driveIconSrc && driveIconSrc !== failedSrc) {
+    // An icon is its own document once the browser renders it, so it cannot
+    // see the `.dark` class the theme toggles on the host page. Propagating
+    // the resolved theme as a color scheme is what lets an icon drawn against
+    // `prefers-color-scheme` follow an explicit in-app choice rather than only
+    // the OS preference.
     return (
       <img
         src={driveIconSrc}
         alt={drive.header.name}
         height={32}
         width={32}
+        style={{ colorScheme: theme }}
         onError={() => setFailedSrc(driveIconSrc)}
       />
     );
