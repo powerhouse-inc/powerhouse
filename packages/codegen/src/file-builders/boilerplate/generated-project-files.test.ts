@@ -12,7 +12,10 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { packageJsonTemplate } from "templates";
 import { detectFeatures } from "../../codegen/features.js";
-import { writeModuleFiles } from "./generated-project-files.js";
+import {
+  writeAiConfigFiles,
+  writeModuleFiles,
+} from "./generated-project-files.js";
 
 const temporary: string[] = [];
 
@@ -122,5 +125,70 @@ describe("writeModuleFiles over an existing project", () => {
     expect(
       readFileSync(join(dir, "processors", "index.ts"), "utf-8"),
     ).toContain("export { processorFactory }");
+  });
+});
+
+// `ph init` scaffolds the AI configs into a directory it just created, while
+// `ph migrate` runs the same writer over a live project (src/codegen/
+// migrate.ts → writeAllGeneratedProjectFiles). An AI config is user-owned the
+// moment it exists — the bug this pins: a migrate reset CLAUDE.md, AGENTS.md,
+// the MCP configs and the editor settings to the pristine templates,
+// discarding user instructions, hand-added MCP servers, accumulated Claude
+// Code permission grants, and the project's name-derived switchboard port.
+describe("writeAiConfigFiles", () => {
+  const aiConfigFiles = [
+    "CLAUDE.md",
+    "AGENTS.md",
+    ".mcp.json",
+    join(".cursor", "mcp.json"),
+    join(".gemini", "settings.json"),
+    join(".claude", "settings.local.json"),
+  ];
+
+  it("writes the full set into a fresh scaffold", async () => {
+    const dir = makeTempProject("ph-init-ai-configs-");
+
+    await writeAiConfigFiles(dir);
+
+    for (const rel of aiConfigFiles) {
+      expect(readFileSync(join(dir, rel), "utf-8")).not.toBe("");
+    }
+    // Spot-check content, not just existence: the scaffold's .mcp.json
+    // registers the reactor MCP server.
+    const mcp = JSON.parse(readFileSync(join(dir, ".mcp.json"), "utf-8")) as {
+      mcpServers: Record<string, unknown>;
+    };
+    expect(mcp.mcpServers["reactor-mcp"]).toBeDefined();
+  });
+
+  it("leaves every existing config byte-identical", async () => {
+    const dir = makeTempProject("ph-migrate-ai-configs-");
+    const customized: [string, string][] = aiConfigFiles.map((rel) => [
+      rel,
+      `user-customized content of ${rel}\n`,
+    ]);
+    for (const [rel, contents] of customized) {
+      mkdirSync(join(dir, rel, ".."), { recursive: true });
+      writeFileSync(join(dir, rel), contents);
+    }
+
+    await writeAiConfigFiles(dir);
+
+    for (const [rel, contents] of customized) {
+      expect(readFileSync(join(dir, rel), "utf-8")).toBe(contents);
+    }
+  });
+
+  it("supplies a missing config without touching the rest", async () => {
+    const dir = makeTempProject("ph-migrate-ai-missing-");
+    const claude = "# My project instructions\n\nNever touch prod.\n";
+    writeFileSync(join(dir, "CLAUDE.md"), claude);
+
+    await writeAiConfigFiles(dir);
+
+    expect(readFileSync(join(dir, "CLAUDE.md"), "utf-8")).toBe(claude);
+    // The absent files arrive from the templates.
+    expect(readFileSync(join(dir, "AGENTS.md"), "utf-8")).toContain("ph vetra");
+    expect(existsSync(join(dir, ".claude", "settings.local.json"))).toBe(true);
   });
 });
