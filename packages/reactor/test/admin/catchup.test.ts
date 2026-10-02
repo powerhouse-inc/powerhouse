@@ -32,8 +32,11 @@ const CLI = fileURLToPath(
   new URL("../../src/admin/run-catchup.ts", import.meta.url),
 );
 
+// `pnpm` is a shell-resolved name, so spawning it without a shell fails
+// ENOENT on Windows, and `pnpm.cmd` fails EINVAL since Node's fix for
+// CVE-2024-27980. Naming the interpreter avoids both without `shell: true`.
 function runCli(args: string[]) {
-  return spawnSync("pnpm", ["exec", "tsx", CLI, ...args], {
+  return spawnSync(process.execPath, ["--import", "tsx", CLI, ...args], {
     cwd: fileURLToPath(new URL("../..", import.meta.url)),
     encoding: "utf8",
   });
