@@ -198,6 +198,14 @@ inherited `result.error !== undefined` check is therefore always true. Test
 truthiness, or key on `status`, which covers a failure to spawn too since
 that leaves `status` null.
 
+All six cross-spawn consumers in the repo were audited for that trap and are
+correct: the three converted here, `clis/ph-cmd/src/ph-cli.ts:65` (which
+already tested truthiness, and is the precedent), and the two async callers
+(`spawn-async.ts:38`, `self-update.ts:112`), which take errors off the
+`error` event and never read the field. Remaining `.error !== undefined`
+matches elsewhere are operations, tinybench `TaskResult`s and React state,
+none of them spawn results.
+
 - `packages/reactor/bench/fix/fix-ci.ts:287` — `spawnSync(step.command[0], …)`
   where every `command` is `["pnpm", …]` (`:143-262`). Breaks `pnpm bench:fix`.
 - `packages/reactor/bench/fix/fix-dist.ts:124` — `execFileSync("pnpm", ["ls", …])`.
