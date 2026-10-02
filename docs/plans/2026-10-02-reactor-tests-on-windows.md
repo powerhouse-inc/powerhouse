@@ -1,7 +1,8 @@
 # Plan: Make the reactor suite pass on Windows
 
 Date: 2026-10-02 (against `main` at 141abde841, 6.2.3-dev.38)
-Status: proposal, not started. Written for agents implementing from `main`.
+Status: Tracks A and B done on `windows-fixes` (acf2bb02b8, 9cc40d56bf,
+50ce21313f). Track C empty against this baseline. Track D not started.
 Paths are relative to the repo root unless they start with `packages/reactor`.
 
 ## Motivation
@@ -110,7 +111,7 @@ green CI run turns up.
    `windows-latest` does not support `services:` containers, so Postgres has
    to be started on the runner.
 
-## Track A — child processes (33 tests)
+## Track A — child processes (33 tests) — done, acf2bb02b8 and 50ce21313f
 
 **A1. `packages/reactor/test/admin/catchup.test.ts:35-39`** (1 test: "exits
 64 on bad arguments and 68 when the store cannot be read").
@@ -150,10 +151,15 @@ Keep the error shape the helper depends on. The `catch` at `:30-32` reads
 `status` and `stderr` off the thrown error; going through `bash` preserves
 both, because bash exits with the script's status.
 
-**A3. Same class, no failing test.** These are not exercised by the suite,
-so they will not turn CI red, but each is broken on Windows and will be hit
-by anyone running the bench tooling there. Fix with A1/A2 or file them —
-do not report Track A as done while implying these are covered.
+**A3. Same class, no failing test.** Not exercised by the suite, so they
+never turned CI red, but each is broken on Windows. Fixed in 50ce21313f via
+`bench/pnpm-command.ts`: pnpm exports `npm_execpath` for every script it
+runs, so that is the name to spawn — native entry directly, JS entry through
+node, since corepack ships `pnpm.cjs`. Unit-tested over all three shapes in
+`test/bench/pnpm-command.test.ts`, and only the spawn is translated, so
+`commandLine` still reports `pnpm typecheck`. `pnpm bench:fix dist-check`
+now enumerates the workspace on Windows, which is the end-to-end check that
+this path works.
 
 - `packages/reactor/bench/fix/fix-ci.ts:287` — `spawnSync(step.command[0], …)`
   where every `command` is `["pnpm", …]` (`:143-262`). Breaks `pnpm bench:fix`.
@@ -163,7 +169,7 @@ do not report Track A as done while implying these are covered.
 `execFileSync("git", …)` at `bench/records/machine-environment.ts:36,61`
 and `bench/fix/repo.ts:8,25` is fine: `git` is a real `.exe`.
 
-## Track B — path separators (2 tests)
+## Track B — path separators (2 tests) — done, 9cc40d56bf
 
 **B1. `packages/reactor/bench/records/from-vitest.ts:861-866`** (1 test,
 `records-adapter.test.ts:118-122`, "makes the source path relative to where
@@ -207,7 +213,8 @@ assertion together:
 const rel = relative(directory, path).split(sep).join("/");
 ```
 
-**B3. Same class, no failing test.** Normalize alongside B1/B2 or file them.
+**B3. Same class, no failing test.** Normalized alongside B1/B2 in
+9cc40d56bf.
 
 - `packages/reactor/bench/fix/fix-ci.ts:405` — `options.changed.map(… relative(root, …))`.
   These paths are compared against `collectChanged(root)`, which comes from
@@ -283,7 +290,9 @@ Do this last: a gate added before Tracks A-C land is a red main.
   before choosing the shard count. Dropping `--coverage` for the Windows job
   is worth trying first: the job exists for portability, not coverage
   numbers, and the v8 provider instruments every one of those 302 files.
-- **Track A3 and B3 widen the diff** beyond what the suite checks. They are
-  the same defects in uncovered code. Either fix them with their tracks or
-  file them; leaving them silently unfixed means Windows bench tooling stays
-  broken while CI reports green.
+- **Track A3 and B3 are uncovered by construction.** They were fixed with
+  their tracks, and `pnpm-command.ts` carries unit tests, but no test
+  exercises `fix-ci`'s spawn loop or `run-record-all` end to end — those run
+  the whole CI pipeline and a full benchmark set respectively. `pnpm bench:fix
+  dist-check` is the one real command cheap enough to have been run. Treat
+  `pnpm bench:fix ci` and `pnpm bench:record` on Windows as untested.
