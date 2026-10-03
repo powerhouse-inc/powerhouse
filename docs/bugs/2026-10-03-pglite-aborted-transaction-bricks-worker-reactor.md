@@ -370,3 +370,42 @@ bulk Accounts catch-up well above 2 ops/sec; after a hard tab kill mid-catch-up,
 the inbox cursor at or behind the last durable operation and the gap re-pulled;
 a hung statement surfacing as STORAGE_SESSION_RECREATED rather than a silent
 wedge.
+
+## Regression run 4 (2026-10-04, epoch-redesigned stack, persistent profile) — MAJOR PASS, final layer exposed
+
+Setup: full dist chain (incl. switchboard) on HEAD abab297737; persistent browser
+profile; foreground-only orchestration.
+
+PASSED (everything the storage/sync hardening promised):
+- Throughput: early-pull applied ~36 ops/s vs run 3's ~2 (≈18x observed; W0.8
+  batched flush working live). UI stayed responsive enough to browse and screenshot.
+- Kill-recover drill (unplanned, real): browser + playwright daemon hard-killed
+  mid-sync → clean reboot from idb at durable rev 340, storage healthy, zero
+  corruption, THEN SYNC RESUMED PAST 340 and re-pulled the gap — the original
+  permanent-gap bug is conclusively dead end-to-end.
+- Full convergence: drive doc-scope rev 375/375 for the first time in any run.
+  Ledgers/statements/nodes all present; Dropbox files OSC doc renders 1607 sources.
+- Storage health: healthy entire run, zero recreates needed.
+- Dead-letter classification works live: 13 x MISSING_OPERATIONS correctly
+  classified (not UNCLASSIFIED, no quarantine) + 1 x EXCESSIVE_SHUFFLE.
+- Two background-task reaps occurred (memory dipped to 3.8-4.9GB during apply
+  peaks); foreground orchestration rode through both; orphan trees cleaned per
+  discipline. The browser+vetra+dataset combination remains memory-tight on 32GB.
+
+REMAINING — the final layer (executor/apply), now precisely scoped:
+1. EXCESSIVE_SHUFFLE on giant automation documents: the OSC doc (distyra/
+   original-source-collection, "Dropbox files", MIO3lncw…) dead-letters one op
+   demanding a 1612-operation reshuffle — the executor's reshuffle limiter refuses
+   legitimate (if pathological) automation histories. This is THE recurring
+   rev-~340 wall across all four runs. The OSQ doc (vq9tPkwHc…, "Dropbox — folder
+   walk") then accrues 13 missing-ancestor dead letters behind it.
+2. Head-of-line blocking in the inbox apply path: with the OSQ/OSC cluster failing,
+   the channel's apply loop froze at cursor 16599 with 81 inbox ops — including the
+   run-4 rename ops for UNRELATED healthy documents (KBC ledger), which never
+   applied. Bidirectional rename propagation therefore FAILED in run 4, caused by
+   apply-ordering, not by sync. Ops for independent documents must not stall behind
+   a dead-lettered document's ops.
+=> New work package W0.9: (a) root-cause the 1612-op reshuffle demand (why does a
+   late OSC op reorder 1612 operations? skip-chain shape from the automation's
+   queue mechanics?) and decide threshold vs smarter reshuffle vs doc-model fix;
+   (b) eliminate head-of-line blocking for unrelated documents in the inbox apply.

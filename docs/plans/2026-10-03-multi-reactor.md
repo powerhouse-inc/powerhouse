@@ -192,6 +192,14 @@ rather than point-patched:
   by sync's own call sites, because `load`/`loadBatch` are public APIs and a
   direct caller has no cursor protecting it.
 
+### W0.9 — executor-layer: giant-history reshuffle + inbox head-of-line (run 4)
+Run 4 on the epoch stack was a MAJOR PASS (18x throughput, kill-recover clean, gap
+re-pulled, full 375 convergence, correct dead-letter classification). The final
+remaining layer is the executor/apply: (a) EXCESSIVE_SHUFFLE limiter refuses a
+legitimate 1612-op reorder on the distyra OSC doc (the recurring rev-340 wall);
+(b) the inbox apply loop head-of-line blocks unrelated healthy documents behind a
+dead-lettered doc's ops (run-4 renames never applied). See bug doc run-4 section.
+
 ### Stage 1 — two workers, one drive, synced + load-tested
 - **W1.1 `LocalChannel`** (core track): symmetric MessagePort channel + handshake
   (touch analog + peer manifests) + `LocalChannelFactory` + cursor persistence.
