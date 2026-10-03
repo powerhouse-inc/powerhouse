@@ -227,7 +227,7 @@ type ReactorStorage = {
   poolInstrumentation: PoolInstrumentation | undefined;
 };
 
-async function createReactorKysely(opts: {
+export async function createReactorKysely(opts: {
   reactorDbUrl: string | undefined;
   reactorPgliteDir: string | null;
   reactorPgliteMajor: SupportedPgMajor | null;
@@ -290,7 +290,13 @@ async function createReactorKysely(opts: {
   );
   return {
     kysely: new Kysely<Database>({
-      dialect: new ClosablePGliteDialect(pglite),
+      // Hardened as well as closable: a COMMIT that would be answered with a
+      // ROLLBACK tag must reject rather than resolve, or a job reports success
+      // for a transaction that wrote nothing.
+      dialect: new ClosablePGliteDialect(pglite, {
+        onDiagnostic: (message, error) =>
+          logger.error(`[pglite-dialect] ${message}`, error),
+      }),
     }),
     poolInstrumentation: undefined,
   };
