@@ -130,6 +130,20 @@ export class KyselyOperationStore implements IOperationStore {
     }
   }
 
+  /**
+   * The replay lookup must run on the executor the caller is already inside.
+   * Querying `this.db` while an ambient `trx` is open deadlocks on
+   * single-connection PGlite: the base handle's `acquireConnection` parks
+   * behind the lease the transaction holds, and the transaction is awaiting
+   * the parked call, so Kysely issues neither COMMIT nor ROLLBACK and the
+   * session is left in an open, aborted transaction forever. See
+   * docs/bugs/2026-10-03-sync-defect-analysis.md, mechanism A-1.
+   *
+   * Inside a transaction the unique-constraint violation has already aborted
+   * it, so the lookup itself fails and the original DuplicateOperationError is
+   * what propagates -- the job then rolls back and is retried, which is the
+   * correct outcome and, unlike the deadlock, a recoverable one.
+   */
   private async resolveUniqueConstraint(
     ctx: _UniqueConstraintContext,
   ): Promise<Operation[]> {
@@ -137,7 +151,7 @@ export class KyselyOperationStore implements IOperationStore {
 
     try {
       replayOps = await this.findIdempotentReplay(
-        this.db,
+        this.queryExecutor,
         ctx.documentId,
         ctx.scope,
         ctx.branch,

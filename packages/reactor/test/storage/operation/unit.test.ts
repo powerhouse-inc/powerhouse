@@ -569,6 +569,84 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
         }),
       ).rejects.toThrow(DuplicateOperationError);
     });
+
+    /**
+     * Regression for mechanism A-1 of
+     * docs/bugs/2026-10-03-sync-defect-analysis.md: the unique-constraint
+     * recovery path used to run its replay lookup against the base handle
+     * while the job's transaction held single-connection PGlite's only lease.
+     * The lookup parked on the driver queue forever and the transaction
+     * awaited it, so Kysely issued neither COMMIT nor ROLLBACK -- leaving the
+     * shared session in an open, aborted transaction that only a worker
+     * restart could clear. A deadlock does not throw, so the surrounding
+     * `catch {}` could not help.
+     */
+    it("(e) resolves a unique-constraint violation inside a job transaction without deadlocking", async () => {
+      const doc1Id = generateId();
+      const doc2Id = generateId();
+      const scope = "global";
+      const branch = "main";
+      const documentType = "powerhouse/document-drive";
+      const sharedAction = addFolder({
+        id: generateId(),
+        name: "Folder E",
+        parentFolder: null,
+      });
+      const sharedOpId = deriveOperationId(
+        doc1Id,
+        scope,
+        branch,
+        sharedAction.id,
+      );
+      const op: Operation = {
+        index: 0,
+        timestampUtcMs: new Date().toISOString(),
+        hash: "hash-e",
+        skip: 0,
+        id: sharedOpId,
+        action: sharedAction,
+      };
+
+      await store.apply(doc1Id, documentType, scope, branch, 0, (txn) => {
+        txn.addOperations(op);
+      });
+
+      // Exactly the shape KyselyExecutionScope.run gives a load job: the store
+      // is scoped to the job's transaction, so the recovery path has an
+      // ambient trx and must not reach for the base handle.
+      const outcome = await Promise.race([
+        db
+          .transaction()
+          .execute(async (trx) => {
+            const scoped = store.withTransaction(trx);
+            await scoped.apply(
+              doc2Id,
+              documentType,
+              scope,
+              branch,
+              0,
+              (txn) => {
+                txn.addOperations({ ...op, hash: "hash-e2" });
+              },
+            );
+            return "resolved" as const;
+          })
+          .catch((error: unknown) =>
+            error instanceof DuplicateOperationError
+              ? ("duplicate" as const)
+              : ("other" as const),
+          ),
+        new Promise<"hung">((resolve) =>
+          setTimeout(() => resolve("hung"), 5_000),
+        ),
+      ]);
+
+      expect(outcome).toBe("duplicate");
+
+      // And the session is usable again: the transaction ended, not parked.
+      const stored = await store.getSince(doc1Id, scope, branch, -1);
+      expect(stored.results).toHaveLength(1);
+    });
   });
 
   describe("getSince", () => {
