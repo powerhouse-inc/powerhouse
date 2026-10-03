@@ -175,10 +175,6 @@ export class IntervalPollTimer implements IPollTimer {
         this.settle(token, "stopped");
         return;
       }
-      if (size === "unmeasured") {
-        this.settle(token, "success");
-        return;
-      }
       if (size === "unknown") {
         // Depth unknown rather than low: polling risks adding work, while not
         // polling risks a channel that never ingests again. Poll.
@@ -201,11 +197,18 @@ export class IntervalPollTimer implements IPollTimer {
   }
 
   /**
-   * `"unknown"` when the probe did not answer in time - poll anyway;
-   * `"unmeasured"` when it rejected - keep the historical fail-open, which
-   * skips the delegate and retries at the normal interval.
+   * `"unknown"` when the depth could not be established, whether the probe
+   * timed out or rejected. Both fail open the same way: the delegate runs.
+   *
+   * A rejection used to settle the tick as a SUCCESS instead, which skipped the
+   * delegate, reset `consecutiveFailures` and rescheduled at the normal
+   * interval - so a probe that throws persistently (a wedged shared session
+   * does exactly that to anything reading the queue) meant the channel never
+   * polled again while its failure counters read clean. The outcome a tick
+   * never ran cannot be "success"; and whatever the probe does, not polling is
+   * the one choice that can strand a channel forever.
    */
-  private async measureQueue(): Promise<number | "unknown" | "unmeasured"> {
+  private async measureQueue(): Promise<number | "unknown"> {
     const timeoutMs = this.config.queueProbeTimeoutMs;
     let handle: NodeJS.Timeout | undefined;
     const expiry = new Promise<"unknown">((resolve) => {
@@ -217,7 +220,7 @@ export class IntervalPollTimer implements IPollTimer {
     try {
       return await Promise.race([this.queue.totalSize(), expiry]);
     } catch {
-      return "unmeasured";
+      return "unknown";
     } finally {
       if (handle !== undefined) {
         clearTimeout(handle);

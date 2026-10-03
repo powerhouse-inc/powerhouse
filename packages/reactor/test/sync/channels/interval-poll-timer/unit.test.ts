@@ -680,7 +680,12 @@ describe("IntervalPollTimer", () => {
       timer.stop();
     });
 
-    it("should fail-open and schedule next at normal interval when totalSize() throws", async () => {
+    /**
+     * A probe that rejects fails open exactly as one that times out: the depth
+     * is unknown, and the delegate runs. Skipping it instead left a channel
+     * whose probe throws persistently never polling again.
+     */
+    it("should fail-open by running the delegate when totalSize() throws", async () => {
       const mockQueue = createMockQueue();
       vi.mocked(mockQueue.totalSize).mockRejectedValue(
         new Error("queue error"),
@@ -696,12 +701,49 @@ describe("IntervalPollTimer", () => {
       timer.start();
 
       await vi.advanceTimersByTimeAsync(0);
-      expect(delegate).not.toHaveBeenCalled();
-
-      vi.mocked(mockQueue.totalSize).mockResolvedValue(0);
-
-      await vi.advanceTimersByTimeAsync(1000);
       expect(delegate).toHaveBeenCalledTimes(1);
+
+      // And it keeps polling at the normal interval while the probe stays bad.
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(delegate).toHaveBeenCalledTimes(2);
+
+      timer.stop();
+    });
+
+    /**
+     * The rejected probe must not be reported as a tick that succeeded: a
+     * delegate that keeps failing has to keep backing off, and a reset counter
+     * would retry it at the normal interval forever.
+     */
+    it("should not reset the failure counter when totalSize() throws", async () => {
+      const mockQueue = createMockQueue();
+      vi.mocked(mockQueue.totalSize).mockRejectedValue(
+        new Error("queue error"),
+      );
+      vi.spyOn(Math, "random").mockReturnValue(0.5);
+      const timer = new IntervalPollTimer(mockQueue, {
+        intervalMs: 1000,
+        retryBaseDelayMs: 1000,
+        retryMaxDelayMs: 300000,
+      });
+      const delegate = vi.fn().mockRejectedValue(new Error("poll failed"));
+
+      timer.setDelegate(delegate);
+      timer.start();
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(delegate).toHaveBeenCalledTimes(1);
+
+      // First failure backs off to 750ms; a counter reset by the probe would
+      // have rescheduled at the 1000ms interval instead.
+      await vi.advanceTimersByTimeAsync(750);
+      expect(delegate).toHaveBeenCalledTimes(2);
+
+      // Second failure backs off to 1500ms, so the count survived the probe.
+      await vi.advanceTimersByTimeAsync(749);
+      expect(delegate).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(751);
+      expect(delegate).toHaveBeenCalledTimes(3);
 
       timer.stop();
     });
