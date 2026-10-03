@@ -1569,11 +1569,10 @@ export class GqlRequestChannel implements IChannel {
         `${operationName} request`,
       );
     } catch (error) {
+      deadline.dispose();
       if (error instanceof GraphQLRequestError) {
-        deadline.dispose();
         throw error;
       }
-      deadline.dispose();
       throw new GraphQLRequestError(
         `GraphQL request failed: ${error instanceof Error ? error.message : String(error)}`,
         "network",
