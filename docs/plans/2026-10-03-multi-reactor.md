@@ -133,6 +133,17 @@ Live-browser-pass items: pg.close() on a real poisoned instance; relational relo
 fallback; durability throughput under bulk catch-up. Run it with scratchpad/verdict.sh
 (bounded FOREGROUND — never a background task; see [[vetra-runtime-resource-discipline]]).
 
+### W0.8 — bulk-apply throughput + silent-hang deadline (from regression run 3)
+Run 3 (hardened both ends, healthy RAM): NO poison, NO data loss, storage stayed
+healthy — but (A) durable flush-per-op caps bulk catch-up at ~2 ops/sec (~2h for
+Accounts' ~16.6k ops), saturating the single-threaded worker and freezing the tab;
+and (B) a silently-hung PGlite statement (wasm died mid-call, no error) wedges the
+entire worker: lease never released, bounded-acquire bounds only waiters, self-heal
+needs an error. Work: (1) statement-level deadline in HardenedPGliteDialect routing a
+hung statement into the poison/self-heal path; (2) batched flush / group commit for
+bulk ingestion with the invariant that sync cursors only advance past FLUSHED data.
+Also: run 3 empirically demonstrates the browser local-first ceiling (motivation 1).
+
 ### Stage 1 — two workers, one drive, synced + load-tested
 - **W1.1 `LocalChannel`** (core track): symmetric MessagePort channel + handshake
   (touch analog + peer manifests) + `LocalChannelFactory` + cursor persistence.
