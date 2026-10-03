@@ -172,6 +172,9 @@ export class GqlRequestChannel implements IChannel {
   private lastFailureUtcMs?: number;
   private lastPersistedInboxOrdinal: number = 0;
   private lastPersistedOutboxOrdinal: number = 0;
+  /** Ordinal of the cursor write in flight, or 0; keeps writes ordered. */
+  private inFlightInboxOrdinal: number = 0;
+  private inFlightOutboxOrdinal: number = 0;
   private pushFailureCount: number = 0;
   private pushRetryTimer: ReturnType<typeof setTimeout> | null = null;
   private pushBlocked: boolean = false;
@@ -285,46 +288,84 @@ export class GqlRequestChannel implements IChannel {
         getLatestAppliedOrdinal(syncOps),
         this.unappliedFloor() - 1,
       );
-      if (ordinal > this.lastPersistedOutboxOrdinal) {
-        this.lastPersistedOutboxOrdinal = ordinal;
-        this.cursorStorage
-          .upsert({
-            remoteName: this.remoteName,
-            cursorType: "outbox",
-            cursorOrdinal: ordinal,
-            lastSyncedAtUtcMs: Date.now(),
-          })
-          .catch((error) => {
-            this.logger.error(
-              "Failed to update outbox cursor for @ChannelId! This means that future application runs may resend duplicate operations. This is recoverable (with deduplication protection), but not-optimal: @Error",
-              this.channelId,
-              error,
-            );
-          });
-      }
+      this.persistCursor("outbox", ordinal);
     });
 
     // The inbox ack, which never passes a marker still awaiting its load.
     this.inbox.onRemoved(() => {
-      const maxOrdinal = this.inbox.ackOrdinal;
-      if (maxOrdinal > this.lastPersistedInboxOrdinal) {
-        this.lastPersistedInboxOrdinal = maxOrdinal;
-        this.cursorStorage
-          .upsert({
-            remoteName: this.remoteName,
-            cursorType: "inbox",
-            cursorOrdinal: maxOrdinal,
-            lastSyncedAtUtcMs: Date.now(),
-          })
-          .catch((error) => {
-            this.logger.error(
-              "Failed to update inbox cursor for @ChannelId! This is unlikely to cause a problem, but not-optimal: @Error",
-              this.channelId,
-              error,
-            );
-          });
-      }
+      this.persistCursor("inbox", this.inbox.ackOrdinal);
     });
+  }
+
+  /**
+   * Advances a persisted cursor, and the watermark that guards it, only once
+   * the write has landed.
+   *
+   * The watermark used to be raised before the fire-and-forget upsert was
+   * awaited and was never restored on rejection, so a lost write was never
+   * retried: `ordinal > lastPersisted` skipped every later removal at or below
+   * it. For the inbox that stranded the cursor behind the data, which a
+   * re-pull repairs; for the outbox it resends duplicates, as its own log
+   * message admits. An in-flight ordinal is tracked too, so concurrent
+   * removals do not queue redundant writes or land out of order.
+   */
+  private persistCursor(cursorType: "inbox" | "outbox", ordinal: number): void {
+    const persisted =
+      cursorType === "inbox"
+        ? this.lastPersistedInboxOrdinal
+        : this.lastPersistedOutboxOrdinal;
+    const inFlight =
+      cursorType === "inbox"
+        ? this.inFlightInboxOrdinal
+        : this.inFlightOutboxOrdinal;
+    if (ordinal <= Math.max(persisted, inFlight)) {
+      return;
+    }
+
+    if (cursorType === "inbox") {
+      this.inFlightInboxOrdinal = ordinal;
+    } else {
+      this.inFlightOutboxOrdinal = ordinal;
+    }
+
+    this.cursorStorage
+      .upsert({
+        remoteName: this.remoteName,
+        cursorType,
+        cursorOrdinal: ordinal,
+        lastSyncedAtUtcMs: Date.now(),
+      })
+      .then(() => {
+        if (cursorType === "inbox") {
+          this.lastPersistedInboxOrdinal = Math.max(
+            this.lastPersistedInboxOrdinal,
+            ordinal,
+          );
+        } else {
+          this.lastPersistedOutboxOrdinal = Math.max(
+            this.lastPersistedOutboxOrdinal,
+            ordinal,
+          );
+        }
+      })
+      .catch((error: unknown) => {
+        this.logger.error(
+          "Failed to update @CursorType cursor for @ChannelId at ordinal @Ordinal; the watermark stays put so the next advance retries it: @Error",
+          cursorType,
+          this.channelId,
+          ordinal,
+          error,
+        );
+      })
+      .finally(() => {
+        if (cursorType === "inbox") {
+          if (this.inFlightInboxOrdinal === ordinal) {
+            this.inFlightInboxOrdinal = 0;
+          }
+        } else if (this.inFlightOutboxOrdinal === ordinal) {
+          this.inFlightOutboxOrdinal = 0;
+        }
+      });
   }
 
   /**

@@ -67,7 +67,7 @@ function makeChannel(storage: unknown, timer = new ManualPollTimer()) {
   return { channel, timer };
 }
 
-describe.skip("mechanism B: inbox cursor persistence is not tied to op durability", () => {
+describe("mechanism B: inbox cursor persistence is not tied to op durability", () => {
   /**
    * The ordering that produced the permanent gap, in the code:
    *
@@ -94,8 +94,20 @@ describe.skip("mechanism B: inbox cursor persistence is not tied to op durabilit
    * are not durable. The fix may take either shape -- write the cursor inside
    * the job's own transaction, or gate the advance on a durability
    * confirmation -- but an undurable batch must leave the stored cursor alone.
+   *
+   * STAYS SKIPPED, deliberately: this is B-fix 1's sync-side gate, which
+   * touches the hot ingestion path (the executor reporting durability, and
+   * SyncManager withholding `syncOp.executed()` / `inbox.remove` until it
+   * does) and needs load testing of its own. What closed the LIVE instance
+   * instead is the dialect's commit guard: a transaction that committed
+   * nothing can no longer resolve successfully, so a job the executor reports
+   * COMPLETED did commit. See
+   * test/storage/kysely/pglite-dialect.test.ts and the mechanism A repro's
+   * "fails the transaction when its COMMIT silently degraded to a ROLLBACK".
+   * The remaining hole is a cursor advance for a job that failed for some
+   * other reason between the COMMIT and the removal.
    */
-  it("does not persist an inbox cursor for operations that never committed", async () => {
+  it.skip("does not persist an inbox cursor for operations that never committed", async () => {
     global.fetch = successFetch() as unknown as typeof global.fetch;
     const { writes, storage } = recordingCursorStorage();
     const { channel } = makeChannel(storage);
@@ -183,8 +195,14 @@ describe.skip("mechanism B: inbox cursor persistence is not tied to op durabilit
    * Correct behaviour: a cursor rewound in storage must be picked up at
    * runtime (whether by re-reading, or through an explicit rewind lever that
    * the inspector can call -- see defect (e) in the bug doc).
+   *
+   * STAYS SKIPPED, deliberately: this is B-fix 4, a new API surface
+   * (`IChannel.rewindInboxCursor`) plus the inspector op that drives it, which
+   * is the W0.5 repair-lever work rather than a defect fix. Nothing here
+   * covers it yet; the operator playbook is still SQL rewind +
+   * `adminClient.restart()`.
    */
-  it("honours a cursor rewound in storage without a restart", async () => {
+  it.skip("honours a cursor rewound in storage without a restart", async () => {
     const { rows, storage } = recordingCursorStorage([
       {
         remoteName: "remote-1",
