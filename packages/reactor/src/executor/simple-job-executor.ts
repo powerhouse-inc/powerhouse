@@ -58,8 +58,12 @@ import {
 } from "../shared/errors.js";
 import type { KyselyDocumentPurger } from "../storage/kysely/document-purger.js";
 import type { IStorageFlusher } from "../storage/storage-flush.js";
-import { NoopStorageFlusher } from "../storage/storage-flush.js";
-import { yieldToMain } from "../shared/utils.js";
+import {
+  NoopStorageFlusher,
+  StorageEpochSupersededError,
+} from "../storage/storage-flush.js";
+import { delay, yieldToMain } from "../shared/utils.js";
+import { isCursorProtectedLoad } from "../shared/types.js";
 import {
   AppendConditionFailedError,
   type AppendCondition,
@@ -117,6 +121,14 @@ import {
 } from "./util.js";
 
 const MAX_SKIP_THRESHOLD = 1000;
+
+/**
+ * How many times the write-ready announcement retries its covering flush
+ * before giving up and withholding the announcement. Bounded because the job
+ * holds its executor slot while it retries; generous enough that a transient
+ * filesystem failure does not cost an announcement.
+ */
+const MAX_ANNOUNCE_FLUSH_ATTEMPTS = 5;
 
 const ISO_TIMESTAMP_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 
@@ -283,6 +295,10 @@ export class SimpleJobExecutor implements IJobExecutor {
   /**
    * `signer` signs the operations the reducer synthesizes; unsigned if omitted.
    * `trustPolicy` decides which keys may sign as which users at admission.
+   * `flusher` is durability boundary 2 of {@link IStorageFlusher}: the default
+   * no-op is correct for any store whose statements already flush themselves,
+   * and a deferring store MUST pass its barrier or every job reports durable
+   * success over unflushed data.
    */
   constructor(
     private logger: ILogger,
@@ -298,9 +314,9 @@ export class SimpleJobExecutor implements IJobExecutor {
     executionScope?: IExecutionScope,
     signer?: ISigner,
     trustPolicy?: SignatureTrustPolicy,
-    flusher?: IStorageFlusher,
+    flusher: IStorageFlusher = new NoopStorageFlusher(),
   ) {
-    this.flusher = flusher ?? new NoopStorageFlusher();
+    this.flusher = flusher;
     this.signer = signer ?? new PassthroughSigner();
     // Resolved separately so reads are plain booleans; the config keeps what
     // the caller passed, because that is what crosses to a pooled worker. The
@@ -436,16 +452,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const { pendingEvent } = outcome;
     if (pendingEvent) {
-      await this.flushBeforeAnnouncing(job);
-      this.eventBus
-        .emit(ReactorEventTypes.JOB_WRITE_READY, pendingEvent)
-        .catch((error) => {
-          this.logger.error(
-            "Failed to emit JOB_WRITE_READY event: @Event : @Error",
-            pendingEvent,
-            error,
-          );
-        });
+      await this.announceWhenDurable(job, pendingEvent);
     }
 
     return outcome.result;
@@ -459,24 +466,102 @@ export class SimpleJobExecutor implements IJobExecutor {
    * statements no longer flush themselves, that announcement must therefore
    * wait for a flush covering the job's commit.
    *
-   * A `load` job is exempt. Its operations came from a remote and its
-   * durability is established by boundary 1 instead: the inbox cursor does not
-   * advance past them until a flush covers them, so a crash loses only work the
-   * next poll re-pulls. That exemption is the whole of the throughput fix -
-   * bulk catch-up is nothing but load jobs, and gating each of them on its own
-   * filesystem sync would reintroduce the cliff one level up. The flushes it
-   * does take then come from the cursor writes, which coalesce: a burst of
-   * applied operations removes a burst of inbox entries, the serialised cursor
-   * chain collapses them into one write, and that write takes one flush.
+   * A sync-originated load is exempt - see {@link isCursorProtectedLoad}: its
+   * operations came from a remote and their durability is established by
+   * boundary 1 instead, because the inbox cursor does not advance past them
+   * until a flush covers them, so a crash loses only work the next poll
+   * re-pulls. That exemption is the whole of the throughput fix - bulk catch-up
+   * is nothing but load jobs, and gating each of them on its own filesystem
+   * sync would reintroduce the cliff one level up. The flushes it does take
+   * then come from the cursor writes, which coalesce: a burst of applied
+   * operations removes a burst of inbox entries, the serialised cursor chain
+   * collapses them into one write, and that write takes one flush.
    *
-   * A failing flush fails the job rather than announcing it, because the
-   * alternative is reporting durable success for data that is not durable.
+   * The job's transaction has ALREADY COMMITTED by the time this runs, which
+   * decides what a failing flush may do:
+   *
+   *  - A flush that fails while the data is still there (the filesystem sync
+   *    errored - idb unavailable, quota) is retried with bounded backoff,
+   *    because the group commit means any later flush by anyone covers this
+   *    job's writes too. Failing the job would report FAILED for operations
+   *    that are applied and will become durable at the next flush, which is a
+   *    lie in the direction that makes callers redo committed work.
+   *  - If every attempt fails, the announcement is WITHHELD rather than made:
+   *    the job stays RUNNING, so `waitForJob` neither succeeds nor fails and
+   *    its caller times out. That is the honest answer - the write happened but
+   *    is not durable - and the store is in trouble the self-heal path is
+   *    already handling. The job result returned to the executor manager is
+   *    still a success, so the job is never reported terminally FAILED.
+   *  - A {@link StorageEpochSupersededError} is the opposite case and is NOT
+   *    retried: the session was replaced, so the commit itself fell back to the
+   *    last durable snapshot and the operations are gone. There is nothing to
+   *    announce and FAILED is the truth, so it propagates.
    */
-  private async flushBeforeAnnouncing(job: Job): Promise<void> {
-    if (job.kind === "load" || !this.flusher.deferringStatementFlush) {
+  private async announceWhenDurable(
+    job: Job,
+    event: JobWriteReadyEvent,
+  ): Promise<void> {
+    if (!this.flushRequired(job)) {
+      this.emitWriteReady(event);
       return;
     }
-    await this.flusher.flush();
+
+    for (let attempt = 1; attempt <= MAX_ANNOUNCE_FLUSH_ATTEMPTS; attempt++) {
+      let failure: unknown;
+      try {
+        await this.flusher.flush();
+      } catch (error) {
+        failure = error;
+      }
+      if (failure === undefined) {
+        this.emitWriteReady(event);
+        return;
+      }
+      if (failure instanceof StorageEpochSupersededError) {
+        throw failure;
+      }
+      this.logger.error(
+        "Flush before announcing job @JobId failed (attempt @Attempt of @Attempts): @Error",
+        job.id,
+        attempt,
+        MAX_ANNOUNCE_FLUSH_ATTEMPTS,
+        failure,
+      );
+      if (attempt === MAX_ANNOUNCE_FLUSH_ATTEMPTS) {
+        break;
+      }
+      await delay(
+        Math.min(
+          this.config.retryMaxDelayMs,
+          this.config.retryBaseDelayMs * 2 ** (attempt - 1),
+        ),
+      );
+    }
+
+    this.logger.error(
+      "Job @JobId committed but could not be made durable, so its write-ready announcement is withheld; the job stays RUNNING and its operations become durable at the next successful flush",
+      job.id,
+    );
+  }
+
+  /** Whether this job's announcement has to wait for a flush. */
+  private flushRequired(job: Job): boolean {
+    if (!this.flusher.deferringStatementFlush) {
+      return false;
+    }
+    return !isCursorProtectedLoad(job);
+  }
+
+  private emitWriteReady(event: JobWriteReadyEvent): void {
+    this.eventBus
+      .emit(ReactorEventTypes.JOB_WRITE_READY, event)
+      .catch((error) => {
+        this.logger.error(
+          "Failed to emit JOB_WRITE_READY event: @Event : @Error",
+          event,
+          error,
+        );
+      });
   }
 
   /**

@@ -35,10 +35,12 @@ import {
   ReactorEventTypes,
   type JobFailedEvent,
   type JobWriteReadyEvent,
+  type StorageSessionRecreatedEvent,
 } from "../events/types.js";
 import { JobAwaiter } from "../shared/awaiter.js";
 import { DocumentPurgedError } from "../shared/errors.js";
 import {
+  cursorProtectedLoadMeta,
   JobStatus,
   type ErrorInfo,
   type ShutdownStatus,
@@ -279,6 +281,9 @@ export class SyncManager
   private isShutdown: boolean;
   private eventUnsubscribe?: () => void;
   private failedEventUnsubscribe?: () => void;
+  private storageRecreatedUnsubscribe?: () => void;
+  /** Serialises the channel resets a storage recreate triggers. */
+  private storageRecreatedChain: Promise<void> = Promise.resolve();
   private readonly batchAggregator: BatchAggregator;
   private readonly syncStatusTracker: SyncStatusTracker;
   private readonly config: SyncManagerConfig;
@@ -557,6 +562,12 @@ export class SyncManager
       ReactorEventTypes.JOB_FAILED,
       async (_type, event) => this.batchAggregator.handleJobFailed(event),
     );
+
+    this.storageRecreatedUnsubscribe =
+      this.eventBus.subscribe<StorageSessionRecreatedEvent>(
+        ReactorEventTypes.STORAGE_SESSION_RECREATED,
+        (_type, event) => this.handleStorageSessionRecreated(event),
+      );
   }
 
   shutdown(): ShutdownStatus {
@@ -585,6 +596,11 @@ export class SyncManager
     if (this.failedEventUnsubscribe) {
       this.failedEventUnsubscribe();
       this.failedEventUnsubscribe = undefined;
+    }
+
+    if (this.storageRecreatedUnsubscribe) {
+      this.storageRecreatedUnsubscribe();
+      this.storageRecreatedUnsubscribe = undefined;
     }
 
     this.awaiter.shutdown();
@@ -1593,6 +1609,76 @@ export class SyncManager
   }
 
   /**
+   * Re-initialises every channel after the storage session was recreated.
+   *
+   * A recreate falls the store back to its last FLUSHED snapshot, which makes
+   * every in-memory channel cursor stale-HIGH: the channel remembers acking
+   * operations that have just ceased to exist, so its next poll asks for the
+   * tail after them, the remote answers "caught up", and the gap is permanent -
+   * with every later operation on those documents dead-lettering on a missing
+   * ancestor. That is the live incident's mechanism, and nothing used to rewind
+   * sync state when the storage healed.
+   *
+   * The persisted cursors are the safe ones: durability boundary 1 means no
+   * cursor row was ever written before a flush covering its operations, so what
+   * survives the fallback is at or behind durable data. {@link resetChannel}
+   * rebuilds each channel, which re-initialises it from exactly those rows, and
+   * the re-pull closes the gap on its own - the same repair that previously
+   * needed a SQL rewind plus an operator restart.
+   *
+   * It subscribes to the event rather than being wired by each host because the
+   * channels are the sync manager's own state: every host that emits
+   * STORAGE_SESSION_RECREATED - Connect's two reactors and the monitor's - gets
+   * the rewind with no wiring of its own, and cannot forget it.
+   *
+   * Resets run serially and per remote: one remote whose channel cannot
+   * re-initialise (expired credentials, a server that is down) must not stop
+   * the others from recovering, and {@link resetChannel} already leaves the
+   * registry in the state `add` would.
+   */
+  private handleStorageSessionRecreated(
+    event: StorageSessionRecreatedEvent,
+  ): Promise<void> {
+    if (this.isShutdown) {
+      return Promise.resolve();
+    }
+    const names = [...this.remotes.keys()];
+    if (names.length === 0) {
+      return Promise.resolve();
+    }
+    this.logger.warn(
+      "Storage session was recreated (@Reason, attempt @Attempt); resetting @Count channel(s) so their cursors come back from durable storage",
+      event.reason,
+      event.attempt,
+      names.length,
+    );
+    this.storageRecreatedChain = this.storageRecreatedChain.then(() =>
+      this.resetChannelsAfterRecovery(names),
+    );
+    return this.storageRecreatedChain;
+  }
+
+  private async resetChannelsAfterRecovery(names: string[]): Promise<void> {
+    for (const name of names) {
+      if (this.isShutdown) {
+        return;
+      }
+      if (!this.remotes.has(name)) {
+        continue;
+      }
+      try {
+        await this.resetChannel(name);
+      } catch (error) {
+        this.logger.error(
+          "Resetting channel @RemoteName after a storage recreate failed: @Error",
+          name,
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      }
+    }
+  }
+
+  /**
    * Re-enqueues a dead letter for another apply attempt.
    *
    * The durable dead-letter row is deliberately NOT removed here. The inbox is
@@ -2332,7 +2418,7 @@ export class SyncManager
         syncOp.branch,
         operations,
         this.abortController.signal,
-        { sourceRemote: remote.meta.name },
+        cursorProtectedLoadMeta(remote.meta.name),
       );
     } catch (error) {
       if (this.isShutdown) return;
@@ -2529,7 +2615,7 @@ export class SyncManager
       result = await this.reactor.loadBatch(
         request,
         this.abortController.signal,
-        { sourceRemote },
+        cursorProtectedLoadMeta(sourceRemote),
       );
     } catch (error) {
       if (this.isShutdown) return;
