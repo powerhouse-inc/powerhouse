@@ -286,6 +286,10 @@ export class SyncManager
     new Map();
   private readonly quarantinedDocumentIds = new Set<string>();
   private readonly purgedDocumentIds = new Set<string>();
+  // Dead letters re-enqueued by requeueDeadLetter whose durable row is kept
+  // until the retry is durably accepted by the reactor; the apply path removes
+  // it once reactor.load/loadBatch accepts the op.
+  private readonly requeuedDeadLetterIds = new Set<string>();
   private readonly purges?: PurgeLookup;
   private readonly delivery?: DeliveryLookup;
   private readonly forgetDocument?: (documentId: string) => void;
@@ -1464,24 +1468,61 @@ export class SyncManager
     };
   }
 
+  /**
+   * Lowers the inbox cursor so the next poll re-pulls from `toOrdinal`.
+   *
+   * A target above the current cursor is REFUSED, not clamped: a lever named
+   * "rewind" must never move the cursor forward, and silently advancing it would
+   * permanently skip every unpulled inbox op between the old cursor and the
+   * target. Refusing with the current cursor in the message (rather than
+   * clamping to a no-op) tells the operator their value was out of range so they
+   * can pick a correct lower one, consistent with surfacing repair failures
+   * instead of swallowing them.
+   */
   async rewindInboxCursor(
     remoteName: string,
     toOrdinal: number,
   ): Promise<void> {
     const remote = this.getByName(remoteName);
+    const target = Math.max(0, Math.floor(toOrdinal));
+    const current = await this.currentInboxCursor(remote);
+    if (target > current) {
+      throw new Error(
+        `Cannot rewind inbox cursor for '${remoteName}' to ${target}: it is above the current cursor ${current}. Rewind only moves the cursor backward.`,
+      );
+    }
     if (remote.channel.rewindInboxCursor) {
-      await remote.channel.rewindInboxCursor(toOrdinal);
+      await remote.channel.rewindInboxCursor(target);
       return;
     }
     await this.cursorStorage.upsert({
       remoteName,
       cursorType: "inbox",
-      cursorOrdinal: Math.max(0, Math.floor(toOrdinal)),
+      cursorOrdinal: target,
       lastSyncedAtUtcMs: Date.now(),
     });
     await this.resetChannel(remoteName);
   }
 
+  /** The highest inbox position a rewind may target: the persisted cursor or
+   * the live in-memory watermark, whichever is further ahead. */
+  private async currentInboxCursor(remote: Remote): Promise<number> {
+    const cursors = await this.cursorStorage.list(remote.meta.name);
+    const stored =
+      cursors.find((c) => c.cursorType === "inbox")?.cursorOrdinal ?? 0;
+    return Math.max(stored, remote.channel.inbox.ackOrdinal);
+  }
+
+  /**
+   * Rebuilds a remote's channel in place, re-adding the same remote with a fresh
+   * channel. Its init-failure handling mirrors add() deliberately: an operator
+   * resetting a channel expects the same registry state add() would leave.
+   * A credential or network failure keeps the stored record (so a retry after
+   * sign-in re-adds it) but drops the broken channel from the registry; any
+   * other failure drops the record too. Leaving a half-wired remote registered
+   * would hand inspectRemote/triggerPull/listDeadLetters a channel whose init
+   * never ran, which none of them is written to tolerate.
+   */
   async resetChannel(remoteName: string): Promise<void> {
     const remote = this.getByName(remoteName);
     const meta = remote.meta;
@@ -1510,9 +1551,19 @@ export class SyncManager
       await this.restoreReceivedMarkers(fresh);
       unheard = [...fresh.channel.inbox.items];
       this.wireChannelCallbacks(fresh);
-      await channel.init();
     } finally {
       this.removing.delete(meta.name);
+    }
+
+    try {
+      await fresh.channel.init();
+    } catch (error) {
+      await this.dropRemoteAfterFailedInit(
+        fresh,
+        !isCredentialOrNetworkError(error),
+      );
+
+      throw error;
     }
 
     if (unheard.length > 0) this.handleInboxAdded(fresh, unheard);
@@ -1541,6 +1592,20 @@ export class SyncManager
       });
   }
 
+  /**
+   * Re-enqueues a dead letter for another apply attempt.
+   *
+   * The durable dead-letter row is deliberately NOT removed here. The inbox is
+   * in-memory and its cursor has already advanced past this op's ordinal (that
+   * is why it dead-lettered), so the op will never be re-pulled. Removing the
+   * row before the retry is durable would lose the op outright on a crash
+   * between the remove and the durable re-enqueue. Instead the op is re-added to
+   * the inbox, which drives it back through handleInboxAdded -> reactor.load,
+   * and the row is removed only once that load/loadBatch has durably accepted it
+   * ({@link dropRequeuedDeadLetter}). A crash before then leaves the row for
+   * loadDeadLetters to restore on restart; a later duplicate apply is
+   * idempotent, a lost op is not.
+   */
   async requeueDeadLetter(remoteName: string, id: string): Promise<void> {
     const remote = this.getByName(remoteName);
     const source = await this.findDeadLetter(remote, id);
@@ -1552,7 +1617,6 @@ export class SyncManager
     if (item) {
       remote.channel.deadLetter.remove(item);
     }
-    await this.deadLetterStorage.remove(id);
     this.quarantinedDocumentIds.delete(source.documentId);
 
     const requeued = new SyncOperation(
@@ -1565,7 +1629,29 @@ export class SyncManager
       source.branch,
       source.operations,
     );
+    this.requeuedDeadLetterIds.add(source.id);
     remote.channel.inbox.add(requeued);
+  }
+
+  /**
+   * Removes a requeued dead letter's durable row, called only once the retry
+   * has been durably enqueued by the reactor. A failed remove keeps the row,
+   * which is safe: the op is already durable, and a lingering row only costs a
+   * later manual clear, never a lost op.
+   */
+  private async dropRequeuedDeadLetter(id: string): Promise<void> {
+    if (!this.requeuedDeadLetterIds.delete(id)) {
+      return;
+    }
+    try {
+      await this.deadLetterStorage.remove(id);
+    } catch (error) {
+      this.logger.error(
+        "Failed to remove a requeued dead letter after durable enqueue (@id, @error)",
+        id,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   }
 
   async clearDeadLetter(remoteName: string, id: string): Promise<void> {
@@ -2266,6 +2352,9 @@ export class SyncManager
       return;
     }
     if (syncOp.jobId) this.recordPlanKeyMapping(syncOp.jobId, jobInfo.id);
+    if (this.requeuedDeadLetterIds.has(syncOp.id)) {
+      await this.dropRequeuedDeadLetter(syncOp.id);
+    }
 
     let completedJobInfo;
     try {
@@ -2479,6 +2568,9 @@ export class SyncManager
         continue;
       }
       const jobInfo = result.jobs[syncOp.jobId];
+      if (this.requeuedDeadLetterIds.has(syncOp.id)) {
+        await this.dropRequeuedDeadLetter(syncOp.id);
+      }
 
       let completedJobInfo;
       try {

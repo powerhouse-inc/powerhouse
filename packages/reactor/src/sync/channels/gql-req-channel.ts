@@ -428,9 +428,17 @@ export class GqlRequestChannel implements IChannel {
    * The in-memory watermark is the only thing the poll request is built from
    * ({@link pollOnce} reads `this.inbox.ackOrdinal`/`latestOrdinal`), so a
    * rewind that only lowered the stored cursor did nothing until a restart.
-   * This resets that watermark AND persists the lowered cursor below the
-   * serialised writer's monotonic guard, then triggers a pull - so the rewind
-   * takes effect without re-initializing the channel.
+   *
+   * The lowered write must NOT be a bare `upsert`: {@link persistCursor} serialises
+   * every (remote, inbox) cursor write through one chain precisely because two
+   * concurrent writers for that row are last-writer-wins, and an in-flight
+   * poll's `persistCursor` could otherwise land a higher ordinal after the
+   * rewind and defeat it. So the watermark is reset up front - which also makes
+   * any poll-persist fired from here on read the lowered ack and skip its own
+   * write - and the lowered persist is appended to the SAME serialised chain,
+   * strictly ordered after any write already queued and never concurrent with
+   * one. A failure surfaces to the caller while leaving the chain alive so the
+   * next advance still runs.
    */
   async rewindInboxCursor(toOrdinal: number): Promise<void> {
     if (this.isShutdown) {
@@ -438,17 +446,36 @@ export class GqlRequestChannel implements IChannel {
     }
     const target = Math.max(0, Math.floor(toOrdinal));
     const writer = this.cursorWriters.inbox;
-    await writer.tail.catch(() => undefined);
     this.inbox.init(target);
-    writer.persisted = target;
-    writer.requested = 0;
+    const rewind = writer.tail.then(() => this.writeRewind("inbox", target));
+    writer.tail = rewind.then(
+      () => undefined,
+      () => undefined,
+    );
+    await rewind;
+    this.triggerPull();
+  }
+
+  /**
+   * A serialised chain link that LOWERS a cursor to a rewind target, the one
+   * write that moves a cursor backward. Unlike {@link writeCursor} it rejects on
+   * failure so {@link rewindInboxCursor} can surface it, and leaves `persisted`
+   * and `requested` untouched on failure so nothing partially rewound is left
+   * behind.
+   */
+  private async writeRewind(
+    cursorType: CursorType,
+    target: number,
+  ): Promise<void> {
+    const writer = this.cursorWriters[cursorType];
     await this.cursorStorage.upsert({
       remoteName: this.remoteName,
-      cursorType: "inbox",
+      cursorType,
       cursorOrdinal: target,
       lastSyncedAtUtcMs: Date.now(),
     });
-    this.triggerPull();
+    writer.persisted = target;
+    writer.requested = 0;
   }
 
   /** This channel polls a remote itself; it has no holder to hear from. */

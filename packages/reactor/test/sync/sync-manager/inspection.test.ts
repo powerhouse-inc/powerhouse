@@ -16,6 +16,7 @@ import type {
   IChannel,
   IChannelFactory,
 } from "../../../src/sync/interfaces.js";
+import { GraphQLRequestError } from "../../../src/sync/errors.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import { SyncOperation } from "../../../src/sync/sync-operation.js";
 import {
@@ -297,10 +298,35 @@ describe("SyncManager - sync inspection + repair (W0.5)", () => {
   });
 
   it("rewinds the inbox cursor through the channel", async () => {
+    vi.mocked(mockCursorStorage.list).mockResolvedValue([
+      {
+        remoteName: "accounts",
+        cursorType: "inbox",
+        cursorOrdinal: 9770,
+        lastSyncedAtUtcMs: 1,
+      },
+    ]);
     await addAccounts();
     await syncManager.rewindInboxCursor("accounts", 100);
 
     expect(channels[0].rewindInboxCursor).toHaveBeenCalledWith(100);
+  });
+
+  it("refuses to rewind the inbox cursor above the current cursor", async () => {
+    vi.mocked(mockCursorStorage.list).mockResolvedValue([
+      {
+        remoteName: "accounts",
+        cursorType: "inbox",
+        cursorOrdinal: 50,
+        lastSyncedAtUtcMs: 1,
+      },
+    ]);
+    await addAccounts();
+
+    await expect(
+      syncManager.rewindInboxCursor("accounts", 100),
+    ).rejects.toThrow(/above the current cursor 50/);
+    expect(channels[0].rewindInboxCursor).not.toHaveBeenCalled();
   });
 
   it("requeues a dead letter back into the inbox and clears quarantine", async () => {
@@ -310,8 +336,9 @@ describe("SyncManager - sync inspection + repair (W0.5)", () => {
 
     await syncManager.requeueDeadLetter("accounts", "d1");
 
-    // Dropped from dead-letter storage + live mailbox, re-added to the inbox.
-    expect(mockDeadLetterStorage.remove).toHaveBeenCalledWith("d1");
+    // The durable row is kept until the retry is durably enqueued, so it is NOT
+    // removed synchronously here (the mock channel never drives the apply path).
+    expect(mockDeadLetterStorage.remove).not.toHaveBeenCalled();
     expect(channels[0].deadLetter.remove).toHaveBeenCalled();
     const added = channels[0].inbox.add.mock.calls.at(-1)?.[0] as SyncOperation;
     expect(added.id).toBe("d1");
@@ -346,5 +373,44 @@ describe("SyncManager - sync inspection + repair (W0.5)", () => {
     expect(syncManager.getByName("accounts").channel).toBe(
       channels[1] as unknown,
     );
+  });
+
+  it("drops a half-wired remote when reset's re-init fails (non-credential)", async () => {
+    await addAccounts();
+    vi.mocked(mockChannelFactory.instance).mockImplementationOnce(() => {
+      const channel = createChannel();
+      channel.init = vi.fn().mockRejectedValue(new Error("config broken"));
+      channels.push(channel);
+      return channel as unknown as IChannel;
+    });
+
+    await expect(syncManager.resetChannel("accounts")).rejects.toThrow(
+      "config broken",
+    );
+
+    // No half-wired remote is left serving inspect/triggerPull, and a
+    // non-credential failure drops the stored record too, exactly as add() does.
+    expect(() => syncManager.getByName("accounts")).toThrow(/does not exist/);
+    expect(mockRemoteStorage.remove).toHaveBeenCalledWith("accounts");
+  });
+
+  it("keeps the stored record when reset's re-init fails on a network error", async () => {
+    await addAccounts();
+    vi.mocked(mockRemoteStorage.remove).mockClear();
+    vi.mocked(mockChannelFactory.instance).mockImplementationOnce(() => {
+      const channel = createChannel();
+      channel.init = vi
+        .fn()
+        .mockRejectedValue(new GraphQLRequestError("down", "network"));
+      channels.push(channel);
+      return channel as unknown as IChannel;
+    });
+
+    await expect(syncManager.resetChannel("accounts")).rejects.toThrow("down");
+
+    // The broken channel is dropped from the registry, but the record stays so a
+    // retry after the network recovers can re-add it (add()'s classification).
+    expect(() => syncManager.getByName("accounts")).toThrow(/does not exist/);
+    expect(mockRemoteStorage.remove).not.toHaveBeenCalled();
   });
 });
