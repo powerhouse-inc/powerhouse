@@ -57,6 +57,8 @@ import {
   ReservedActionError,
 } from "../shared/errors.js";
 import type { KyselyDocumentPurger } from "../storage/kysely/document-purger.js";
+import type { IStorageFlusher } from "../storage/storage-flush.js";
+import { NoopStorageFlusher } from "../storage/storage-flush.js";
 import { yieldToMain } from "../shared/utils.js";
 import {
   AppendConditionFailedError,
@@ -276,6 +278,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private documentActionHandler: DocumentActionHandler;
   private executionScope: IExecutionScope;
   private signer: ISigner;
+  private readonly flusher: IStorageFlusher;
 
   /**
    * `signer` signs the operations the reducer synthesizes; unsigned if omitted.
@@ -295,7 +298,9 @@ export class SimpleJobExecutor implements IJobExecutor {
     executionScope?: IExecutionScope,
     signer?: ISigner,
     trustPolicy?: SignatureTrustPolicy,
+    flusher?: IStorageFlusher,
   ) {
+    this.flusher = flusher ?? new NoopStorageFlusher();
     this.signer = signer ?? new PassthroughSigner();
     // Resolved separately so reads are plain booleans; the config keeps what
     // the caller passed, because that is what crosses to a pooled worker. The
@@ -431,6 +436,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const { pendingEvent } = outcome;
     if (pendingEvent) {
+      await this.flushBeforeAnnouncing(job);
       this.eventBus
         .emit(ReactorEventTypes.JOB_WRITE_READY, pendingEvent)
         .catch((error) => {
@@ -443,6 +449,34 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     return outcome.result;
+  }
+
+  /**
+   * Durability boundary 2 of {@link IStorageFlusher}: a job's write-ready
+   * announcement is what `waitForJob` turns into terminal success, which is
+   * what the client's consistency token and W0.5's "drop the dead-letter row
+   * only once the retry is durably written" are built on. On a store whose
+   * statements no longer flush themselves, that announcement must therefore
+   * wait for a flush covering the job's commit.
+   *
+   * A `load` job is exempt. Its operations came from a remote and its
+   * durability is established by boundary 1 instead: the inbox cursor does not
+   * advance past them until a flush covers them, so a crash loses only work the
+   * next poll re-pulls. That exemption is the whole of the throughput fix -
+   * bulk catch-up is nothing but load jobs, and gating each of them on its own
+   * filesystem sync would reintroduce the cliff one level up. The flushes it
+   * does take then come from the cursor writes, which coalesce: a burst of
+   * applied operations removes a burst of inbox entries, the serialised cursor
+   * chain collapses them into one write, and that write takes one flush.
+   *
+   * A failing flush fails the job rather than announcing it, because the
+   * alternative is reporting durable success for data that is not durable.
+   */
+  private async flushBeforeAnnouncing(job: Job): Promise<void> {
+    if (job.kind === "load" || !this.flusher.deferringStatementFlush) {
+      return;
+    }
+    await this.flusher.flush();
   }
 
   /**

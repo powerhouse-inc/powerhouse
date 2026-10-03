@@ -114,6 +114,8 @@ import {
   type ForwardingPoolInstrumentation,
   type PoolInstrumentation,
 } from "../storage/pool-instrumentation.js";
+import type { IStorageFlusher } from "../storage/storage-flush.js";
+import { NoopStorageFlusher } from "../storage/storage-flush.js";
 import {
   REACTOR_SCHEMA,
   runMigrations,
@@ -342,6 +344,7 @@ export class ReactorBuilder {
   private readModelCoordinator?: IReadModelCoordinator;
   private readModelCoordinatorFactory?: ReadModelCoordinatorFactory;
   private kyselyInstance?: Kysely<Database>;
+  private storageFlusher: IStorageFlusher = new NoopStorageFlusher();
   private signer?: ISigner;
   private workerSigner?: FactorySpec;
   private trustPolicy?: SignatureTrustPolicy;
@@ -524,6 +527,26 @@ export class ReactorBuilder {
 
   withKysely(kysely: Kysely<Database>): this {
     this.kyselyInstance = kysely;
+    return this;
+  }
+
+  /**
+   * The durability barrier for a store whose statements no longer flush
+   * themselves, and the only sanctioned way to run one.
+   *
+   * An embedded store opened so that every statement flushes makes committed
+   * mean flushed at a cost that measured ~2 operations per second during bulk
+   * sync catch-up. A holder may instead take the per-statement flush away -
+   * `SelfHealingPGliteClient.setDeferredFlush` - and register the same object
+   * here, which puts the flush back at the two places the reactor makes a
+   * promise it cannot take back: a sync cursor write, and a non-load job's
+   * write-ready announcement. See {@link IStorageFlusher} for the full
+   * argument. Without this the default barrier is a no-op, which is correct for
+   * any store that is already durable per statement - server Postgres, or
+   * PGlite without `relaxedDurability` and without deferral.
+   */
+  withStorageFlusher(flusher: IStorageFlusher): this {
+    this.storageFlusher = flusher;
     return this;
   }
 
@@ -767,6 +790,11 @@ export class ReactorBuilder {
       if (!result.success && result.error) {
         throw new Error(`Database migration failed: ${result.error.message}`);
       }
+      // Schema is not an acknowledgment, but it is the one thing that is both
+      // expensive to re-apply and not re-pullable, so it gets a flush of its
+      // own rather than waiting for the first job or cursor boundary. A no-op
+      // on a store that is already durable per statement.
+      await this.storageFlusher.flush();
     }
 
     await checkStoredProtocols(
@@ -931,6 +959,7 @@ export class ReactorBuilder {
               executionScope,
               this.signer,
               this.trustPolicy,
+              this.storageFlusher,
             ),
           eventBus,
           queue,
@@ -1185,7 +1214,9 @@ export class ReactorBuilder {
           ? new GqlRequestChannelFactory(this.logger, this.jwtHandler, queue)
           : new GqlResponseChannelFactory(this.logger);
 
-      const syncBuilder = new SyncBuilder().withChannelFactory(factory);
+      const syncBuilder = new SyncBuilder()
+        .withChannelFactory(factory)
+        .withStorageFlusher(this.storageFlusher);
       syncModule = syncBuilder.buildModule(
         reactor,
         this.logger,
@@ -1198,16 +1229,18 @@ export class ReactorBuilder {
       );
       await syncModule.syncManager.startup();
     } else if (this.syncBuilder) {
-      syncModule = this.syncBuilder.buildModule(
-        reactor,
-        this.logger,
-        operationIndex,
-        eventBus,
-        database as unknown as Kysely<StorageDatabase>,
-        this.driveContainerTypes,
-        settledWatermark,
-        localPeer,
-      );
+      syncModule = this.syncBuilder
+        .withStorageFlusher(this.storageFlusher)
+        .buildModule(
+          reactor,
+          this.logger,
+          operationIndex,
+          eventBus,
+          database as unknown as Kysely<StorageDatabase>,
+          this.driveContainerTypes,
+          settledWatermark,
+          localPeer,
+        );
       await syncModule.syncManager.startup();
     }
 

@@ -173,3 +173,105 @@ wasm call becomes a recreate instead of a permanent silent wedge.
 
 Data point for the durability fix working: the ~340 revisions applied before the wedge
 are durably in idb and survive restart (verified by fresh boot reading rev 340).
+
+## W0.8 fixes for run 3's two findings (implemented 2026-10-03)
+
+### Finding B — statement-level deadline (`HardenedPGliteDialect`)
+
+Every statement the dialect runs is now bounded, and an expiry is routed into
+the existing poison path (`onPoisoned` -> `SelfHealingPGliteClient.recreate`,
+or the loud `PGliteSessionPoisonedError` refusal when no replacement opens).
+
+- **Covered paths:** `executeQuery`, each pull of a streaming read, the
+  transaction-control statements (BEGIN / the guarded COMMIT / ROLLBACK, which
+  bypass the connection wrapper and go straight at the client), and the
+  release-time recovery `exec`. The last one matters because Kysely awaits
+  `releaseConnection`: an unbounded probe would hold the lease forever and move
+  the silent wedge rather than cure it.
+- **Defaults:** `statementTimeoutMs` 120s, `longStatementTimeoutMs` 900s for
+  statements `isLongRunningStatement` recognises (vacuum / analyze / reindex /
+  cluster / checkpoint / copy / truncate / refresh / DDL), `recoveryTimeoutMs`
+  15s. 0 disables. The bound is per STATEMENT, not per transaction, so bulk
+  ingestion holding the lease for an hour is unaffected as long as its
+  individual statements settle - that, plus the long bound for the data-sized
+  statements, is why the deadline cannot false-positive on legitimate work.
+- **Generation guard:** a wasm call cannot be aborted, so a timed-out call is
+  abandoned rather than cancelled. The driver bumps a generation on escalation;
+  a late settlement whose generation no longer matches writes nothing, so it
+  cannot mark the FRESH connection suspect or make release-time recovery roll
+  back a transaction belonging to the replacement session. Escalation is
+  single-flight, so one hung statement produces exactly one poison report.
+- **Self-heal exemption:** the recreate runs outside the dialect (close + open
+  on the instance, under `closeTimeoutMs`), so it is not subject to the
+  statement deadline and cannot recurse into it.
+
+### Finding A — group commit, and where the durability boundary now sits
+
+`SelfHealingPGliteClient` is also the reactor's durability barrier
+(`IStorageFlusher`), because the two jobs are the same job: a recreate falls
+back to the last flushed snapshot, so the instance-lifecycle owner is the only
+thing that can say what durable means.
+
+- **Mechanism.** The store still opens WITHOUT `relaxedDurability`, so
+  `pg.syncToFs()` is a real awaitable flush. `setDeferredFlush(true)` shadows
+  the instance's `syncToFs` with a no-op for the duration, so PGlite's
+  automatic post-statement sync stops costing anything, while the captured
+  original stays reachable for the explicit `flush()`. The failure direction is
+  safe by construction: if a future PGlite stops routing its automatic sync
+  through the instance method, the suppression silently stops working and the
+  store is slow again - never unflushed. Deferral is re-applied after a
+  recreate, and `close()` flushes and lifts it (PGlite's own `close` relies on
+  the per-statement sync of its final protocol message).
+- **Group commit.** Concurrent `flush()` callers share one filesystem sync. The
+  covered watermark is captured at the moment the snapshot starts, after the
+  statement in flight has finished, so the group is as wide as it can safely
+  be. A flush with nothing run since the last completed one is free. Statements
+  are held back while a snapshot is taken, reproducing the property PGlite gets
+  from holding its query mutex across the per-statement sync - without it the
+  sync would read a filesystem something is writing to.
+- **Boundary 1, sync cursors.** `KyselySyncCursorStorage.upsert` flushes before
+  it writes a cursor row, and a failing flush takes the cursor write with it.
+  This is the single choke point for every cursor write (inbox, outbox, the
+  rewind lever, and `GqlResponseChannel` too), and it is downstream of
+  `GqlRequestChannel.writeCursor`'s existing serialisation, so a burst of
+  applied operations coalesces into one cursor write and therefore one flush -
+  the batching is structural rather than a tuned timer. The cursor row itself
+  is deliberately not flushed afterwards: a crash between the two loses the
+  advance but keeps the data, and a re-pull of already-applied operations is
+  idempotent. The reverse - the permanent-gap mechanism of addendum 2 - is now
+  impossible.
+- **Boundary 2, job terminal success.** `SimpleJobExecutor` flushes before
+  emitting `JOB_WRITE_READY`, which is what `waitForJob` turns into terminal
+  success and what the consistency token and W0.5's requeue-drop rest on.
+  `load` jobs are EXEMPT: their operations came from a remote and boundary 1
+  already keeps the inbox cursor from advancing past them, so a crash loses only
+  work the next poll re-pulls. That exemption is the throughput fix - bulk
+  catch-up is nothing but load jobs.
+- **Also flushed:** the schema, once, after auto-migrations - not an
+  acknowledgment, but the one thing that is both expensive to re-apply and not
+  re-pullable.
+- **Default posture unchanged.** The barrier defaults to `NoopStorageFlusher`,
+  correct for any store already durable per statement (server Postgres, or
+  PGlite without deferral), and deferral only engages where a holder asks for
+  it AND the session really exposes a filesystem sync. Connect's worker reactor
+  store and reactor-monitor's owned durable store enable it; the relational /
+  read-model store, memory stores and caller-owned instances do not.
+- **Measured.** 500 synthetic operations, real fsync standing in for the
+  browser's IDBFS `syncfs`
+  (`test/storage/kysely/group-commit-throughput.test.ts`): 500 flushes /
+  1162ms flush-per-statement versus 10 flushes / 123ms batched at 50 - a
+  **9.5x** wall-clock speedup and a 50x reduction in flushes. The live gap is
+  larger on both counts: an IDBFS `syncfs` over a whole Postgres data directory
+  costs far more than a single-file fsync, and one operation costs several
+  statements.
+
+**The invariant that survives all of it:** no cursor and no durable-success
+acknowledgment ever points past data that is not flushed. A crash can lose only
+work that will be re-pulled by sync or re-run by its caller.
+
+**Still browser-pending (gate for regression run 4):** deferral is wired into
+the live worker but has not been exercised in a browser. What run 4 must show:
+bulk Accounts catch-up well above 2 ops/sec; after a hard tab kill mid-catch-up,
+the inbox cursor at or behind the last durable operation and the gap re-pulled;
+a hung statement surfacing as STORAGE_SESSION_RECREATED rather than a silent
+wedge.

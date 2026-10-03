@@ -470,6 +470,16 @@ const host = new ReactorHost({
         },
       );
       owned.reactorPg = reactorSelfHeal;
+      // Group commit (W0.8, regression run 3 finding A): the store still opens
+      // without relaxedDurability, so its syncToFs is a real awaitable flush -
+      // but statements stop doing one each. Flushing per statement measured ~2
+      // ops/sec during bulk sync catch-up, which made the ~16,600-op Accounts
+      // collection a two-hour grind that froze the tab. Durability moves to the
+      // two acknowledgment boundaries the flusher owns: a sync cursor write and
+      // a non-load job's write-ready announcement. Deferring without registering
+      // the flusher below would be a data-safety regression, so the two lines
+      // belong together.
+      reactorSelfHeal.setDeferredFlush(true);
       // Storage-health dimension for the inspector: a poisoned session flips it
       // unhealthy, a successful recreate flips it back. See W0.5 / W0.7.
       const storageHealth = new StorageHealthTracker(
@@ -526,7 +536,8 @@ const host = new ReactorHost({
         .withChannelScheme(ChannelScheme.CONNECT)
         .withExecutorConfig({ featureFlags: construct.featureFlags ?? {} })
         .withJwtHandler(jwtHandler)
-        .withKysely(owned.reactorDb);
+        .withKysely(owned.reactorDb)
+        .withStorageFlusher(reactorSelfHeal);
       if (construct.unsupportedStoredDocuments) {
         reactorBuilder.withUnsupportedStoredDocuments(
           construct.unsupportedStoredDocuments,

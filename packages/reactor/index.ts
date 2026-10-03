@@ -339,10 +339,16 @@ export {
 } from "./src/storage/kysely/pglite-dialect.js";
 export {
   DEFAULT_CLOSE_TIMEOUT_MS,
+  DEFAULT_FLUSH_QUIESCE_TIMEOUT_MS,
+  PGliteFlushQuiesceTimeoutError,
   SelfHealingPGliteClient,
   type RecreatablePGliteInstance,
   type SelfHealingPGliteClientOptions,
 } from "./src/storage/kysely/self-healing-pglite-client.js";
+export {
+  NoopStorageFlusher,
+  type IStorageFlusher,
+} from "./src/storage/storage-flush.js";
 export { KyselyOperationStore } from "./src/storage/kysely/store.js";
 export {
   instrumentPgPool,

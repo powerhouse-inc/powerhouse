@@ -133,7 +133,7 @@ Live-browser-pass items: pg.close() on a real poisoned instance; relational relo
 fallback; durability throughput under bulk catch-up. Run it with scratchpad/verdict.sh
 (bounded FOREGROUND — never a background task; see [[vetra-runtime-resource-discipline]]).
 
-### W0.8 — bulk-apply throughput + silent-hang deadline (from regression run 3)
+### W0.8 — bulk-apply throughput + silent-hang deadline (DONE 2026-10-03, pending run 4)
 Run 3 (hardened both ends, healthy RAM): NO poison, NO data loss, storage stayed
 healthy — but (A) durable flush-per-op caps bulk catch-up at ~2 ops/sec (~2h for
 Accounts' ~16.6k ops), saturating the single-threaded worker and freezing the tab;
@@ -143,6 +143,20 @@ needs an error. Work: (1) statement-level deadline in HardenedPGliteDialect rout
 hung statement into the poison/self-heal path; (2) batched flush / group commit for
 bulk ingestion with the invariant that sync cursors only advance past FLUSHED data.
 Also: run 3 empirically demonstrates the browser local-first ceiling (motivation 1).
+
+CODE-COMPLETE. (1) Every dialect statement, transaction-control statement and
+recovery exec is now bounded (120s default, 900s for data-sized DDL/maintenance,
+per statement so a long transaction is unaffected); an expiry escalates once into
+the poison/self-heal path, and a generation token discards the abandoned call's
+late settlement. (2) Group commit: the store keeps relaxedDurability off, but
+`SelfHealingPGliteClient.setDeferredFlush` takes PGlite's automatic
+per-statement sync away and `IStorageFlusher.flush()` puts it back at the two
+acknowledgment boundaries - a sync cursor write (`KyselySyncCursorStorage`, the
+choke point for every cursor row) and a non-load job's `JOB_WRITE_READY`
+(`SimpleJobExecutor`; load jobs exempt, their durability being the cursor's).
+Measured 9.5x wall-clock / 50x fewer flushes on 500 synthetic ops. Full design,
+the exact boundary, and what run 4 must demonstrate: the W0.8 addendum in
+docs/bugs/2026-10-03-pglite-aborted-transaction-bricks-worker-reactor.md.
 
 ### Stage 1 — two workers, one drive, synced + load-tested
 - **W1.1 `LocalChannel`** (core track): symmetric MessagePort channel + handshake

@@ -20,8 +20,22 @@ const ACQUIRE_TIMEOUT_MS = 250;
 class FakeInstance implements RecreatablePGliteInstance {
   closed = false;
   readonly queries: string[] = [];
+  /** How many real filesystem syncs this instance was asked for. */
+  syncCount = 0;
+  /** Delay applied to each sync, so group commit has something to coalesce. */
+  syncDelayMs = 0;
 
   constructor(readonly label: string) {}
+
+  syncToFs(): Promise<void> {
+    this.syncCount += 1;
+    if (this.syncDelayMs === 0) {
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) =>
+      setTimeout(resolve, this.syncDelayMs),
+    );
+  }
 
   query(
     sql: string,
@@ -230,6 +244,7 @@ async function openPoisonable(): Promise<Poisonable> {
   let blocked = false;
   return {
     pg,
+    syncToFs: () => pg.syncToFs(),
     query: (text: string, params?: unknown[]) => {
       if (blocked && /^\s*rollback/i.test(text)) {
         return Promise.reject(new Error('cannot drop active portal ""'));
@@ -455,6 +470,7 @@ describe("SelfHealingPGliteClient against durable storage", () => {
       exec: (text) => pg.exec(text),
       isInTransaction: () => pg.isInTransaction(),
       close: () => pg.close(),
+      syncToFs: () => pg.syncToFs(),
     };
   }
 

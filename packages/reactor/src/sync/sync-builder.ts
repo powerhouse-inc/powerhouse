@@ -21,6 +21,8 @@ import { KyselySyncPurgeRefusalStorage } from "../storage/kysely/sync-purge-refu
 import { KyselySyncReceivedMarkerStorage } from "../storage/kysely/sync-received-marker-storage.js";
 import { KyselySyncRemoteStorage } from "../storage/kysely/sync-remote-storage.js";
 import type { Database } from "../storage/kysely/types.js";
+import type { IStorageFlusher } from "../storage/storage-flush.js";
+import { NoopStorageFlusher } from "../storage/storage-flush.js";
 import type { IChannelFactory, ISyncManager } from "./interfaces.js";
 import type { LocalPeer } from "./types.js";
 import { SyncManager, type SyncManagerConfig } from "./sync-manager.js";
@@ -33,6 +35,7 @@ export class SyncBuilder {
   private holdStorage?: ISyncHoldStorage;
   private receivedMarkerStorage?: ISyncReceivedMarkerStorage;
   private purgeRefusalStorage?: ISyncPurgeRefusalStorage;
+  private storageFlusher: IStorageFlusher = new NoopStorageFlusher();
   private config: Partial<SyncManagerConfig> = {};
 
   withChannelFactory(factory: IChannelFactory): this {
@@ -67,6 +70,17 @@ export class SyncBuilder {
 
   withPurgeRefusalStorage(storage: ISyncPurgeRefusalStorage): this {
     this.purgeRefusalStorage = storage;
+    return this;
+  }
+
+  /**
+   * The durability barrier the default cursor storage writes behind, so no
+   * cursor row is ever durable ahead of the operations it covers. Ignored when
+   * {@link withCursorStorage} supplies its own storage, which is then
+   * responsible for the same invariant.
+   */
+  withStorageFlusher(flusher: IStorageFlusher): this {
+    this.storageFlusher = flusher;
     return this;
   }
 
@@ -128,7 +142,9 @@ export class SyncBuilder {
     }
 
     const remoteStorage = this.remoteStorage ?? new KyselySyncRemoteStorage(db);
-    const cursorStorage = this.cursorStorage ?? new KyselySyncCursorStorage(db);
+    const cursorStorage =
+      this.cursorStorage ??
+      new KyselySyncCursorStorage(db, this.storageFlusher);
     const deadLetterStorage =
       this.deadLetterStorage ?? new KyselySyncDeadLetterStorage(db);
     const holdStorage = this.holdStorage ?? new KyselySyncHoldStorage(db);

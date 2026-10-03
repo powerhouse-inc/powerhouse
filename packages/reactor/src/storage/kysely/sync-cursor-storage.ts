@@ -2,6 +2,8 @@ import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import type { RemoteCursor } from "../../sync/types.js";
 import type { ISyncCursorStorage } from "../interfaces.js";
+import type { IStorageFlusher } from "../storage-flush.js";
+import { NoopStorageFlusher } from "../storage-flush.js";
 import type { Database, InsertableSyncCursor, SyncCursorRow } from "./types.js";
 
 function rowToRemoteCursor(row: SyncCursorRow): RemoteCursor {
@@ -27,7 +29,14 @@ function remoteCursorToRow(cursor: RemoteCursor): InsertableSyncCursor {
 }
 
 export class KyselySyncCursorStorage implements ISyncCursorStorage {
-  constructor(private readonly db: Kysely<Database>) {}
+  private readonly flusher: IStorageFlusher;
+
+  constructor(
+    private readonly db: Kysely<Database>,
+    flusher: IStorageFlusher = new NoopStorageFlusher(),
+  ) {
+    this.flusher = flusher;
+  }
 
   async list(
     remoteName: string,
@@ -81,7 +90,31 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
     return rowToRemoteCursor(row);
   }
 
+  /**
+   * Writes a cursor row, but never before the data it covers is durable.
+   *
+   * This is durability boundary 1 of {@link IStorageFlusher}. A persisted
+   * cursor is a promise that everything up to it has been applied and need
+   * never be sent again; a cursor durable ahead of its data is the
+   * permanent-gap mechanism of the live incident - the rolled-back tail is
+   * never re-pulled, and every later operation touching those documents
+   * dead-letters with a missing ancestor. So the flush comes first, and a
+   * flush that fails takes the cursor write with it, leaving the caller's
+   * watermark where it was so the next advance retries.
+   *
+   * The cursor row itself is deliberately NOT flushed afterwards: a crash
+   * between the two loses the advance but keeps the data, and a re-pull of
+   * already-applied operations is idempotent. The next flush - which covers
+   * strictly more data - makes the row durable. The one direction that is never
+   * allowed is the reverse.
+   */
   async upsert(cursor: RemoteCursor, signal?: AbortSignal): Promise<void> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    await this.flusher.flush();
+
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }

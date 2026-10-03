@@ -108,6 +108,16 @@ export async function buildMonitorReactor(
       })
     : undefined;
 
+  // Group commit (W0.8): with a durable store that can be reopened, statements
+  // stop flushing themselves and durability moves to the two acknowledgment
+  // boundaries the flusher owns - a sync cursor write and a non-load job's
+  // write-ready announcement. Only available where self-heal is, because the
+  // same object is both; a memory store or a caller-owned pg keeps the
+  // per-statement flush and the no-op barrier.
+  if (selfHeal) {
+    selfHeal.setDeferredFlush(true);
+  }
+
   // Storage-health dimension for the inspector, fed by the self-heal path so
   // "connected" can never read green while the session is dead (W0.5 / W0.7).
   const storageHealth = new StorageHealthTracker(
@@ -136,6 +146,10 @@ export async function buildMonitorReactor(
     .withDocumentModelSources(models)
     .withExecutorConfig({ featureFlags: options.featureFlags ?? {} })
     .withKysely(db);
+
+  if (selfHeal) {
+    reactorBuilder.withStorageFlusher(selfHeal);
+  }
 
   if (options.upgradeManifests && options.upgradeManifests.length > 0) {
     reactorBuilder.withUpgradeManifests(options.upgradeManifests);
