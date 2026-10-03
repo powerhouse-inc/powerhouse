@@ -51,3 +51,40 @@ export async function resolvePackagedReactorWorkerUrl(): Promise<
     return null;
   }
 }
+
+/**
+ * Metadata file `prebuildReactorWorker` writes alongside the bundle (see
+ * builder-tools' `reactor-worker-build.ts`): `{sourceDigest, vendorKey,
+ * nodeEnv}`, a digest of everything that shapes the bundle's output —
+ * connect's dist entry, the installed builder-tools version, and the
+ * monorepo `@powerhousedao/reactor`/`reactor-browser` dist state. Served
+ * no-cache, sibling of the entry.
+ */
+const REACTOR_WORKER_META_FILE = "worker-meta.json";
+
+/**
+ * Fetches the resolved worker bundle's build digest from its sibling
+ * metadata file, or null when there is nothing to fetch (`workerUrl` is
+ * absent — the monorepo-source-resolution case, which has no staleness
+ * problem to begin with) or the fetch/parse fails for any reason (offline,
+ * a server predating this file, a malformed body). Callers fold a non-null
+ * result into `appBuildId` (see `getAppBuildId` in `./build-info.js`) so a
+ * rebuilt dev worker bundle changes the tab's version fingerprint even when
+ * the static package version alone would not.
+ */
+export async function fetchReactorWorkerBuildDigest(
+  workerUrl: string | null | undefined,
+): Promise<string | null> {
+  if (!workerUrl) return null;
+  try {
+    const metaUrl = new URL(REACTOR_WORKER_META_FILE, workerUrl);
+    const res = await fetch(metaUrl, { cache: "no-cache" });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { sourceDigest?: unknown };
+    return typeof data.sourceDigest === "string" && data.sourceDigest
+      ? data.sourceDigest
+      : null;
+  } catch {
+    return null;
+  }
+}

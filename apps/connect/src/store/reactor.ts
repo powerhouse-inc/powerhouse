@@ -65,7 +65,10 @@ import { bumpWorkerGen } from "../reactor-worker-name.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
-import { resolvePackagedReactorWorkerUrl } from "../utils/reactor-worker-url.js";
+import {
+  fetchReactorWorkerBuildDigest,
+  resolvePackagedReactorWorkerUrl,
+} from "../utils/reactor-worker-url.js";
 import {
   resolveDevProjectSource,
   resolveLocalPackageSources,
@@ -408,6 +411,12 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     // (the dist worker itself is a library artifact no worker can load);
     // null means this is the monorepo app, where Vite bundles the worker.
     const packagedWorkerUrl = await resolvePackagedReactorWorkerUrl();
+    // Dev-only content token for the resolved bundle (null in production,
+    // where a real git sha already identifies the build — see
+    // getAppBuildId); folds the actual built worker code into the version
+    // fingerprint so a rebuilt dev bundle reloads stale tabs/workers (W0.6).
+    const workerBuildDigest =
+      await fetchReactorWorkerBuildDigest(packagedWorkerUrl);
     // Local project models the registry cannot serve: prebuilt bundles in
     // production, the dev server's live project models entry in dev.
     const packageSources = await resolveLocalPackageSources(
@@ -415,6 +424,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     );
     const workerClient = createWorkerReactorClientModule({
       workerUrl: packagedWorkerUrl ?? undefined,
+      workerBuildDigest,
       packageSources,
       namespace: REACTOR_INSTANCE_NAMESPACE,
       relationalNamespace: RELATIONAL_PGLITE_NAME,

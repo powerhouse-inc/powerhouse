@@ -36,7 +36,7 @@ import {
   setWorkerConnectionStatus,
 } from "./connection-state.js";
 import { reactorWorkerName } from "./reactor-worker-name.js";
-import { getGitSha, getVersion } from "./utils/build-info.js";
+import { getAppBuildId } from "./utils/build-info.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
 
 const PING_INTERVAL_MS = 2000;
@@ -80,6 +80,14 @@ export type WorkerReactorClientArgs = {
    * the registry cannot serve. See resolveLocalPackageSources.
    */
   packageSources?: WorkerPackageSource[];
+  /**
+   * The resolved worker bundle's build digest (see
+   * `fetchReactorWorkerBuildDigest` in `./utils/reactor-worker-url.js`),
+   * folded into `appBuildId` in dev so a rebuilt worker bundle changes the
+   * tab's version fingerprint. Ignored in production (a real git sha takes
+   * precedence) — see `getAppBuildId`.
+   */
+  workerBuildDigest?: string | null;
 };
 
 export type WorkerReactorClient = {
@@ -146,12 +154,11 @@ export function createWorkerReactorClientModule(
   documentModelRegistry.registerModules(...args.documentModelModules);
   documentModelRegistry.registerUpgradeManifests(...args.upgradeManifests);
 
-  const gitSha = getGitSha();
   const clientProxy = connectReactorClient(
     router,
     {
       version: {
-        appBuildId: gitSha !== "unknown" ? gitSha : getVersion(),
+        appBuildId: getAppBuildId(args.workerBuildDigest),
         rpcProtocolVersion: RPC_PROTOCOL_VERSION,
         models: args.documentModelModules.map((m) => ({
           id: m.documentModel.global.id,
