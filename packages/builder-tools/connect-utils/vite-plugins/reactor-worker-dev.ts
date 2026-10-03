@@ -31,7 +31,16 @@ function withBase(base: string, p: string): string {
  * The build is lazy because it is a full `vite build` of the reactor + PGlite
  * graph: sessions that never enable `reactorWorker` never pay for it. The
  * result is cached in node_modules/.ph-reactor-worker and reused across
- * server restarts until the installed Connect changes.
+ * server restarts until the installed Connect (or the upstream workspace
+ * dists it bundles, or builder-tools itself) changes — see
+ * `computeSourceDigest` in `../reactor-worker-build.ts`.
+ *
+ * No special-casing is needed to serve that digest: `worker-meta.json`
+ * (written into the bundle dir by `prebuildReactorWorker`) falls through the
+ * generic streaming branch below like any other bundle file, picks up
+ * `application/json` from `REACTOR_WORKER_MIME` and `no-cache` (it ends in
+ * `.json`), and `apps/connect/src/utils/reactor-worker-url.ts` fetches it to
+ * fold the digest into the tab's version fingerprint in dev (W0.6).
  */
 export function reactorWorkerDevPlugin(projectRoot: string): Plugin {
   let base = "/";

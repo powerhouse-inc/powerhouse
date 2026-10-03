@@ -35,6 +35,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   renameSync,
@@ -44,6 +45,7 @@ import {
 } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname as pathDirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   acquireLock,
   LOCK_STALE_MS,
@@ -100,6 +102,15 @@ export interface PrebuiltReactorWorker {
   outDir: string;
   /** Entry filename inside outDir ({@link REACTOR_WORKER_ENTRY}). */
   entry: string;
+  /**
+   * Digest of everything that shaped this bundle's output (see
+   * {@link computeSourceDigest}); identical for a cache hit and a fresh
+   * build. The dev plugin serves it in `worker-meta.json` next to the
+   * bundle; `apps/connect/src/utils/reactor-worker-url.ts` fetches it to
+   * fold the actual built worker code into the tab's version fingerprint
+   * (W0.6 — see docs/bugs/2026-10-03-pglite-aborted-transaction-bricks-worker-reactor.md).
+   */
+  sourceDigest: string;
 }
 
 /**
@@ -169,22 +180,129 @@ interface WorkerBundleMeta {
   nodeEnv?: string;
 }
 
+/**
+ * Workspace packages whose BUILT dist shapes the worker bundle's output even
+ * when connect's own dist/reactor.worker.js entry file did not change: that
+ * entry is a library artifact whose bare imports (`@powerhousedao/reactor`,
+ * `@powerhousedao/reactor-browser`) this build resolves through
+ * node_modules at BUILD time, so a rebuilt reactor/reactor-browser dist
+ * changes the bundle output without touching the entry file's own
+ * size/mtime.
+ */
+const UPSTREAM_WORKER_PACKAGES = [
+  "@powerhousedao/reactor",
+  "@powerhousedao/reactor-browser",
+] as const;
+
+/**
+ * This module's own installed version, read by walking up from its file to
+ * the nearest `package.json` named "@powerhousedao/builder-tools" (same
+ * technique as `build-hash.ts`'s `readConnectVersion`: builder-tools'
+ * `exports` map has no `./package.json` subpath, so node resolution can't
+ * get there). Works whether this runs from source (tests, this monorepo) or
+ * the built dist.
+ */
+export function resolveOwnPackageVersion(): string {
+  try {
+    let dir = pathDirname(fileURLToPath(import.meta.url));
+    for (;;) {
+      try {
+        const pkg = JSON.parse(
+          readFileSync(join(dir, "package.json"), "utf8"),
+        ) as { name?: string; version?: string };
+        if (pkg.name === "@powerhousedao/builder-tools") {
+          return pkg.version ?? "unknown";
+        }
+      } catch {
+        // no readable package.json at this level; keep walking up
+      }
+      const parent = pathDirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
+  } catch {
+    // fall through to "unknown" below
+  }
+  return "unknown";
+}
+
+/**
+ * This package's own version, computed once. Folded into the worker bundle
+ * cache key so a builder-tools release — which can change how the bundle is
+ * built (anything in this module beyond {@link WORKER_BUILD_WORKER} itself,
+ * e.g. `workerSafeVendorImports`, the resolve plugin) — invalidates bundles
+ * a prior builder-tools version cached.
+ */
+export const BUILDER_TOOLS_VERSION = resolveOwnPackageVersion();
+
+/**
+ * A workspace package's real directory, resolved the way Node's resolver
+ * would (through `node_modules`), or null when it is not installed (e.g. a
+ * non-monorepo consumer project — graceful, not an error). pnpm's
+ * node_modules symlinks resolve to the real package directory, so this
+ * reflects the monorepo's actual dist state, not a stale symlink target.
+ */
+export function resolveWorkspacePackageDir(
+  dirname: string,
+  pkgName: string,
+): string | null {
+  try {
+    return realpathSync(join(dirname, "node_modules", ...pkgName.split("/")));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cheap content fingerprint of a directory's immediate files: no file bytes
+ * are read, just each entry's name/size/mtime, so it stays fast even for a
+ * large dist. Sensitive to a rebuild in the common cases: Vite's
+ * content-hashed chunk filenames change the name itself; a stable-named file
+ * (an entry point) changes size or mtime. Bounded (`maxFiles`) so a
+ * pathological directory cannot make this slow — deliberately not a
+ * full-tree hash.
+ */
+export function distDirFingerprint(dir: string, maxFiles = 1000): string {
+  try {
+    const entries = readdirSync(dir, { withFileTypes: true })
+      .filter((e) => e.isFile())
+      .slice(0, maxFiles);
+    return entries
+      .map((e) => {
+        const stat = statSync(join(dir, e.name));
+        return `${e.name}:${stat.size}:${Math.round(stat.mtimeMs)}`;
+      })
+      .sort()
+      .join("|");
+  } catch {
+    return "unreadable";
+  }
+}
+
 // Digest of everything that shapes the output: the connect dist the entry
 // comes from (version + entry mtime/size cover a rebuild in place), the
-// vendor the externals point at (its import-map.json changes whenever the
-// vendor is rebuilt), NODE_ENV, and the build-worker source so a logic
-// change busts stale bundles.
-function computeSourceDigest(
+// upstream workspace packages the entry's bare imports resolve into at build
+// time (dist fingerprint — covers a reactor/reactor-browser rebuild that
+// never touched connect's own dist), the vendor the externals point at (its
+// import-map.json changes whenever the vendor is rebuilt), NODE_ENV, the
+// build-worker source, and the builder-tools version, so a logic change
+// (in either the inline build-worker script or this module more broadly)
+// busts stale bundles.
+export function computeSourceDigest(
   dirname: string,
   entryPath: string,
   vendorDir?: string,
+  builderToolsVersion: string = BUILDER_TOOLS_VERSION,
 ): string {
   const h = createHash("sha256");
   h.update(`builder:${WORKER_BUILD_WORKER_HASH}\n`);
+  h.update(`builder-tools:${builderToolsVersion}\n`);
   try {
-    const pkgRoot = realpathSync(
-      join(dirname, "node_modules", "@powerhousedao/connect"),
+    const pkgRoot = resolveWorkspacePackageDir(
+      dirname,
+      "@powerhousedao/connect",
     );
+    if (!pkgRoot) throw new Error("unresolved");
     const meta = JSON.parse(
       readFileSync(join(pkgRoot, "package.json"), "utf8"),
     ) as { version?: string };
@@ -197,6 +315,12 @@ function computeSourceDigest(
     h.update(`entry:${stat.size}:${Math.round(stat.mtimeMs)}\n`);
   } catch {
     h.update("entry:unstatable\n");
+  }
+  for (const pkg of UPSTREAM_WORKER_PACKAGES) {
+    const pkgDir = resolveWorkspacePackageDir(dirname, pkg);
+    h.update(
+      `${pkg}:${pkgDir ? distDirFingerprint(join(pkgDir, "dist")) : "unresolved"}\n`,
+    );
   }
   if (vendorDir) {
     try {
@@ -297,6 +421,7 @@ export async function prebuildReactorWorker(
   const result: PrebuiltReactorWorker = {
     outDir,
     entry: REACTOR_WORKER_ENTRY,
+    sourceDigest,
   };
 
   try {
