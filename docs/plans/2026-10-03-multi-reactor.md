@@ -153,7 +153,9 @@ invariant. Sync is the expected bug nest and gets the deepest instrumentation.
 1. Dev fingerprint staleness (W0.6). 2. Worker-path processors unsupported/silent.
 3. `/__vendor__/shared-deps.js` 404 in dev. 4. Workflow policy knobs unenforced.
 5. Workflow EPIPE crash → boot-loop. 6. Host-call 10s timeout false-failure.
-7. Unbounded workflow step journal. 8. Sync mailbox state invisible over RPC (W0.5).
+7. Unbounded workflow step journal. 8. Sync mailbox state invisible over RPC (W0.5). 9. **PGlite aborted transaction +
+   active portal bricks worker reactor** — root cause of Accounts sync death; see
+   docs/bugs/2026-10-03-pglite-aborted-transaction-bricks-worker-reactor.md.
 
 ## Coordination
 
