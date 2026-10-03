@@ -45,6 +45,17 @@ export type HardenedPGliteDialectOptions = {
   acquireTimeoutMs: number;
   /** Where unrecoverable session faults and swallowed rollbacks are reported. */
   onDiagnostic: (message: string, error?: unknown) => void;
+  /**
+   * Invoked when a session is found unrecoverable - the point at which this
+   * dialect would otherwise throw {@link PGliteSessionPoisonedError}. A holder
+   * that can recreate the PGlite instance (see `SelfHealingPGliteClient`) wires
+   * this to do so and returns whether the session is now usable. Returning
+   * `true` makes the current acquisition re-probe and proceed against the fresh
+   * session instead of throwing, so the operation that hit the poison completes
+   * once the instance is swapped. The default returns `false`, preserving the
+   * loud refusal for holders that cannot self-heal.
+   */
+  onPoisoned: (cause: unknown) => Promise<boolean>;
 };
 
 export const DEFAULT_ACQUIRE_TIMEOUT_MS = 120_000;
@@ -171,6 +182,7 @@ export class HardenedPGliteDialect implements Dialect {
         ((message, error) => {
           console.error(`[pglite-dialect] ${message}`, error);
         }),
+      onPoisoned: options.onPoisoned ?? (() => Promise.resolve(false)),
     };
   }
 
@@ -272,7 +284,16 @@ class HardenedPGliteDriver implements Driver {
 
     if (this.sessionFault !== undefined) {
       const fault = this.sessionFault;
-      const recovered = await this.recoverSession(false);
+      let recovered = await this.recoverSession(false);
+      if (!recovered) {
+        // Last resort: ask the holder to recreate the PGlite instance (the one
+        // thing that clears a stuck portal). If it does, the swapped-in session
+        // is healthy, so re-probe and proceed instead of throwing.
+        const healed = await this.options.onPoisoned(fault);
+        if (healed) {
+          recovered = await this.recoverSession(false);
+        }
+      }
       if (!recovered) {
         await this.inner.releaseConnection(innerConnection);
         throw new PGliteSessionPoisonedError(fault);

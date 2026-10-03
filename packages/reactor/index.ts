@@ -155,6 +155,7 @@ export {
   type ReadModelStage,
   type ReadModelIndexingStage,
   type SignatureRefusedEvent,
+  type StorageSessionRecreatedEvent,
   type Unsubscribe,
 } from "./src/events/types.js";
 
@@ -331,6 +332,12 @@ export {
   type HardenedPGliteDialectOptions,
   type PGliteSession,
 } from "./src/storage/kysely/pglite-dialect.js";
+export {
+  DEFAULT_CLOSE_TIMEOUT_MS,
+  SelfHealingPGliteClient,
+  type RecreatablePGliteInstance,
+  type SelfHealingPGliteClientOptions,
+} from "./src/storage/kysely/self-healing-pglite-client.js";
 export { KyselyOperationStore } from "./src/storage/kysely/store.js";
 export {
   instrumentPgPool,
