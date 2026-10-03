@@ -461,14 +461,14 @@ export class SelfHealingPGliteClient implements PGliteSession, IStorageFlusher {
       }
       const running = epoch.running;
       if (running === undefined) {
-        await this.startFlush(epoch);
+        await this.awaitFlush(epoch, this.startFlush(epoch));
         continue;
       }
       // A snapshot that has not started yet will capture a sequence at or
       // above this caller's, so it covers these writes; one that started
       // before them does not, and the loop waits for the next.
       if (running.covers === 0 || running.covers >= target) {
-        await running.promise;
+        await this.awaitFlush(epoch, running.promise);
         continue;
       }
       await running.promise.catch(() => undefined);
@@ -684,6 +684,32 @@ export class SelfHealingPGliteClient implements PGliteSession, IStorageFlusher {
   }
 
   /**
+   * Awaits a group commit on `epoch` and answers for the epoch, not for the
+   * sync.
+   *
+   * A flush is only ever a question about one incarnation's writes, so a
+   * failure reported while that incarnation is already retired has to be
+   * {@link PGliteEpochSupersededError} - terminal, the writes are gone - rather
+   * than whatever the sync itself said on its way down, which a caller would
+   * read as retriable. That is also what keeps the coalescer honest: the
+   * running promise's rejection is SHARED by every joiner, so the translation
+   * cannot live in it. Each caller re-checks its own epoch here instead, and a
+   * retirement that lands between two joiners' awaits is answered correctly for
+   * both.
+   */
+  private async awaitFlush(
+    epoch: PGliteEpoch,
+    flushing: Promise<void>,
+  ): Promise<void> {
+    try {
+      await flushing;
+    } catch (error) {
+      epoch.assertCurrent(this.epoch.id);
+      throw error;
+    }
+  }
+
+  /**
    * Runs the filesystem sync under {@link
    * SelfHealingPGliteClientOptions.flushSyncTimeoutMs} and routes an expiry
    * into the poison path, because a sync that never settles is a dead wasm call
@@ -691,6 +717,24 @@ export class SelfHealingPGliteClient implements PGliteSession, IStorageFlusher {
    * raced against the epoch's retirement, so a recreate triggered from
    * anywhere frees this flush rather than leaving it holding the statement gate
    * of an instance that no longer exists.
+   *
+   * What the expiry then REPORTS depends on what the escalation did. Recreating
+   * the session retires this epoch, which means the writes this flush was to
+   * cover have fallen back to the last durable snapshot: that is a superseded
+   * epoch, not a sync that may yet succeed, and the difference decides whether
+   * `announceWhenDurable` retries. It used to always report the timeout, so a
+   * retry flushed the FRESH epoch - trivially, with nothing of this job's in it
+   * - and announced write-ready for operations that no longer existed. The
+   * timeout is now reported only when the escalation left this epoch standing
+   * (the recreate failed, or no escalation is wired), where the data is still
+   * there and a later flush can make it durable.
+   *
+   * An escalation that throws is reported rather than propagated: the expiry is
+   * the real diagnosis, and a failed escalation is exactly the case where the
+   * epoch still stands.
+   *
+   * The abandoned race is given a sink because the deadline leaves it pending:
+   * retiring the epoch later rejects it with nobody waiting.
    */
   private async boundedSync(epoch: PGliteEpoch): Promise<void> {
     const timeoutMs = this.options.flushSyncTimeoutMs;
@@ -704,13 +748,22 @@ export class SelfHealingPGliteClient implements PGliteSession, IStorageFlusher {
     if (outcome !== TIMED_OUT) {
       return;
     }
+    syncing.catch(() => undefined);
 
     const expiry = new PGliteFlushSyncTimeoutError(timeoutMs);
     this.options.onDiagnostic(
       "the PGlite filesystem sync never settled within its deadline; treating the session as poisoned",
       expiry,
     );
-    await this.options.onSyncStuck(expiry.message);
+    try {
+      await this.options.onSyncStuck(expiry.message);
+    } catch (error) {
+      this.options.onDiagnostic(
+        "the stuck-sync escalation itself failed; the session stays poisoned",
+        error,
+      );
+    }
+    epoch.assertCurrent(this.epoch.id);
     throw expiry;
   }
 

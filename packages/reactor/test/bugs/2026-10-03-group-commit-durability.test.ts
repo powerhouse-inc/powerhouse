@@ -295,9 +295,9 @@ describe("epoch: a replaced instance's state cannot reach the live one", () => {
     const flushing = client.flush();
     const joined = client.flush();
 
-    await expect(flushing).rejects.toBeInstanceOf(PGliteFlushSyncTimeoutError);
-    // Every caller parked on the dead sync is told, retriably.
-    await expect(joined).rejects.toThrow();
+    await expect(flushing).rejects.toBeInstanceOf(PGliteEpochSupersededError);
+    // Every caller parked on the dead sync is told, and told the same thing.
+    await expect(joined).rejects.toBeInstanceOf(PGliteEpochSupersededError);
     expect(diagnostics.join(" ")).toContain("filesystem sync");
     expect(client.recreateCount).toBe(1);
 
@@ -305,6 +305,78 @@ describe("epoch: a replaced instance's state cannot reach the live one", () => {
     await client.query("b");
     await client.flush();
     expect(second?.durable).toEqual(["b"]);
+  });
+
+  /**
+   * Finding 1 of the adversarial review. The sync-deadline path escalated
+   * correctly and then reported the WRONG error: a recreate that succeeded
+   * retired the captured epoch and took the flush's writes down with it, but
+   * the flush rejected with {@link PGliteFlushSyncTimeoutError}, which
+   * `announceWhenDurable` treats as retriable. The retry then flushed the FRESH
+   * epoch - trivially, since nothing of the job's ran on it - and announced
+   * JOB_WRITE_READY for operations that no longer existed. The statement-
+   * deadline path never had the bug, because retiring the epoch rejects its
+   * waiters with the superseded error directly.
+   */
+  it("reports a superseded epoch, not a retriable timeout, when the stuck-sync recreate succeeded", async () => {
+    const first = new FakeFilesystemInstance();
+    first.hangSync = true;
+    const client = new SelfHealingPGliteClient(first, {
+      openInstance: () => Promise.resolve(new FakeFilesystemInstance()),
+      onDiagnostic: () => undefined,
+      flushSyncTimeoutMs: 20,
+    });
+    client.setDeferredFlush(true);
+
+    await client.query("lost-to-the-fallback");
+    const failure = await client.flush().catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(PGliteEpochSupersededError);
+    expect(failure).not.toBeInstanceOf(PGliteFlushSyncTimeoutError);
+    expect(client.recreateCount).toBe(1);
+  });
+
+  /**
+   * The other half of the same distinction: when the escalation could NOT
+   * retire the epoch - no replacement opened, or no escalation is wired at all
+   * - the writes are still in the live session and a later flush can make them
+   * durable. That is the retriable case, and it keeps the timeout error.
+   */
+  it("keeps the timeout error when the stuck-sync escalation left the epoch standing", async () => {
+    const instance = new FakeFilesystemInstance();
+    instance.hangSync = true;
+    const client = new SelfHealingPGliteClient(instance, {
+      openInstance: () => Promise.reject(new Error("no replacement")),
+      onDiagnostic: () => undefined,
+      flushSyncTimeoutMs: 20,
+    });
+    client.setDeferredFlush(true);
+
+    await client.query("still-there");
+    const failure = await client.flush().catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(PGliteFlushSyncTimeoutError);
+    expect(failure).not.toBeInstanceOf(StorageEpochSupersededError);
+    expect(client.recreateCount).toBe(0);
+  });
+
+  /** An escalation that throws is the same case: the epoch still stands. */
+  it("keeps the timeout error when the stuck-sync escalation itself throws", async () => {
+    const instance = new FakeFilesystemInstance();
+    instance.hangSync = true;
+    const client = new SelfHealingPGliteClient(instance, {
+      openInstance: () => Promise.reject(new Error("no replacement")),
+      onDiagnostic: () => undefined,
+      onSyncStuck: () => Promise.reject(new Error("reload broadcast failed")),
+      flushSyncTimeoutMs: 20,
+    });
+    client.setDeferredFlush(true);
+
+    await client.query("still-there");
+
+    await expect(client.flush()).rejects.toBeInstanceOf(
+      PGliteFlushSyncTimeoutError,
+    );
   });
 
   /**
@@ -952,6 +1024,47 @@ describe("durability boundary 2: a job's durable success waits for the flush", (
     // nothing of this job's to flush, and announce data that is gone.
     expect(flusher.trace).toEqual(["flush"]);
     expect(emitted).not.toContain(ReactorEventTypes.JOB_WRITE_READY);
+  });
+
+  /**
+   * Finding 1 of the adversarial review, at the boundary it actually damages.
+   * A hung filesystem sync whose escalation recreated the session used to hand
+   * this path the retriable timeout error, so it retried; the retry's flush saw
+   * the FRESH epoch with nothing of this job's in it and returned trivially,
+   * and JOB_WRITE_READY went out for operations that had fallen back to the
+   * last durable snapshot - acknowledged data loss. The flush now answers
+   * "superseded", which this path treats as terminal, so nothing is announced.
+   *
+   * The statement standing in for the job's commit is issued straight at the
+   * client because the executor's store is mocked here; what matters is that
+   * the epoch has unflushed work, so the flush is not free.
+   */
+  it("does not announce write-ready when the stuck-sync recreate took the job's writes with it", async () => {
+    const first = new FakeFilesystemInstance();
+    first.hangSync = true;
+    let second: FakeFilesystemInstance | undefined;
+    const client = new SelfHealingPGliteClient(first, {
+      openInstance: () => {
+        second = new FakeFilesystemInstance(first.durable);
+        return Promise.resolve(second);
+      },
+      onDiagnostic: () => undefined,
+      flushSyncTimeoutMs: 20,
+    });
+    client.setDeferredFlush(true);
+    const { executor, emitted } = buildExecutor(client);
+
+    await client.query("the job's commit");
+
+    await expect(
+      executor.executeJob(jobFor("job-hung-sync", "mutation")),
+    ).rejects.toBeInstanceOf(StorageEpochSupersededError);
+
+    expect(emitted).not.toContain(ReactorEventTypes.JOB_WRITE_READY);
+    expect(client.recreateCount).toBe(1);
+    // Nothing of the job's survived the fallback, so a retry had nothing to
+    // make durable - which is why announcing on its "success" was the bug.
+    expect(second?.durable).toEqual([]);
   });
 
   /** A store that is already durable per statement must behave as before. */
