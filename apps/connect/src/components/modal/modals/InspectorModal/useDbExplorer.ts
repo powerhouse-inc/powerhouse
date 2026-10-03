@@ -25,11 +25,13 @@ async function quiesceQueue(queue: IQueue): Promise<void> {
   await new Promise<void>((resolve) => queue.block(() => resolve()));
 }
 
-// The reactor runs with `relaxedDurability: true`, which makes PGlite's
-// `syncToFs()` fire the IDBFS→IndexedDB write and return without awaiting
-// Emscripten's syncfs callback. `close()` also doesn't flush. Calling
-// `FS.syncfs(false, cb)` directly gives us a callback that fires from the
-// IDBFS transaction's `oncomplete` — i.e. after IDB has actually committed.
+// The reactor store opens without relaxedDurability so committed writes are
+// flushed, but PGlite's `syncToFs()` fires the IDBFS→IndexedDB write and returns
+// without awaiting Emscripten's syncfs callback, and `close()` does not flush
+// either. Before the reload below we need a hard barrier that the restored dump
+// has reached IndexedDB; calling `FS.syncfs(false, cb)` directly gives us a
+// callback that fires from the IDBFS transaction's `oncomplete` — i.e. after IDB
+// has actually committed.
 async function syncPgliteToIdb(pglite: {
   readonly Module: {
     readonly FS: {

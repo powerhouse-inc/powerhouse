@@ -26,6 +26,7 @@ export const PGLITE_USE_WORKER: boolean = false;
 async function createMainThreadPGlite(
   major: SupportedPgMajor,
   dbName: string,
+  relaxedDurability: boolean,
 ): Promise<PGlite> {
   const { PGlite } = await loadPGliteModule(major);
   const { live } =
@@ -33,7 +34,7 @@ async function createMainThreadPGlite(
       ? await import("pglite-legacy-02/live")
       : await import("@electric-sql/pglite/live");
   return new PGlite(`idb://${dbName}`, {
-    relaxedDurability: true,
+    relaxedDurability,
     extensions: { live },
   }) as unknown as PGlite;
 }
@@ -89,8 +90,10 @@ type PGliteSingleton = {
    * Opens a FRESH instance against the same idb store and replaces the cache,
    * so later `get` callers see the replacement. Used by the self-heal
    * coordinator to clear a poisoned session: tearing the wasm instance down and
-   * reopening is the only thing that clears a stuck portal, and the durably
-   * committed data is read back from idb.
+   * reopening is the only thing that clears a stuck portal. Only the reactor's
+   * authoritative store is self-healed this way, and it opens without
+   * relaxedDurability, so committed data has been flushed to idb and is read
+   * back - the reopen loses nothing that was acknowledged.
    */
   recreate: () => Promise<PGlite>;
 };
@@ -99,6 +102,14 @@ function pgliteSingleton(opts: {
   dbName: string;
   detectMajor: () => Promise<DetectedMajor>;
   label: string;
+  /**
+   * False for the reactor's authoritative operation store: a COMMIT must be
+   * flushed to IndexedDB before it is reported durable, so a self-heal recreate
+   * (which reads back only the last flushed snapshot) never loses an
+   * acknowledged write. True for the relational/read-model store, whose rows are
+   * derived and can be re-processed from the durable operation log.
+   */
+  relaxedDurability: boolean;
 }): PGliteSingleton {
   let cached: Promise<PGlite> | undefined;
   const open = (): Promise<PGlite> =>
@@ -111,7 +122,7 @@ function pgliteSingleton(opts: {
       }
       return PGLITE_USE_WORKER
         ? createWorkerPGlite(major, opts.dbName)
-        : createMainThreadPGlite(major, opts.dbName);
+        : createMainThreadPGlite(major, opts.dbName, opts.relaxedDurability);
     });
   const get = (): Promise<PGlite> => {
     if (cached) return cached;
@@ -138,6 +149,7 @@ const reactorPGlite = pgliteSingleton({
   dbName: REACTOR_PGLITE_NAME,
   detectMajor: detectReactorPgMajor,
   label: "reactor",
+  relaxedDurability: false,
 });
 
 export const getReactorPGlite = reactorPGlite.get;
@@ -147,6 +159,7 @@ const relationalPGlite = pgliteSingleton({
   dbName: RELATIONAL_PGLITE_NAME,
   detectMajor: detectRelationalPgMajor,
   label: "relational",
+  relaxedDurability: true,
 });
 const getRelationalPGlite = relationalPGlite.get;
 

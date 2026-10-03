@@ -251,6 +251,16 @@ async function buildWorkerCrypto(chainId: number | undefined) {
 }
 
 // Open against the major already on disk so a legacy PG16 dir isn't read by PG17.
+//
+// This is the reactor's authoritative operation store, so it opens WITHOUT
+// relaxedDurability: a COMMIT must be flushed to IndexedDB before it is reported
+// durable. relaxedDurability lets COMMIT resolve before the idb flush, so a
+// self-heal recreate - which reads back only the last flushed snapshot - would
+// permanently lose operations that were acknowledged but not yet flushed and not
+// yet synced to a remote. The latency cost is accepted here so that "committed"
+// means "flushed" and the W0.7 self-heal never drops acknowledged writes. The
+// relational/read-model store keeps relaxedDurability (see openRelational): its
+// rows are derived and can be re-processed from the durable operation log.
 async function openReactorPglite(namespace: string) {
   const detected = coerceMajor(await readPgVersionFile(`/pglite/${namespace}`));
   const major = resolvePgMajorForRuntime(detected);
@@ -260,7 +270,7 @@ async function openReactorPglite(namespace: string) {
     );
   }
   const { PGlite } = await loadPGliteModule(major);
-  const pg = new PGlite(`idb://${namespace}`, { relaxedDurability: true });
+  const pg = new PGlite(`idb://${namespace}`, { relaxedDurability: false });
   await pg.waitReady;
   return { pg, detected };
 }
@@ -295,8 +305,28 @@ async function openRelational(namespace: string): Promise<DetectedMajor> {
     });
     await pg.waitReady;
     relational.pg = pg as unknown as PgLiveModuleNs.PGliteWithLive;
+    // Self-heal the relational session by host reload rather than in-place
+    // recreate. The relational store hands out `live` query subscriptions
+    // (onLiveQuery, bound to this exact pg.live instance) that an instance swap
+    // cannot transparently rewire the way the reactor store's Kysely holders
+    // are, so a clean worker reload is the recovery here. Without this hook a
+    // poisoned relational session - now that relational-processor and inspector
+    // SQL both route through this dialect's queue - would brick forever with the
+    // dialect's loud refusal and no path back. See docs/bugs/2026-10-03-*, W0.7.
     const relationalKysely = new Kysely<unknown>({
-      dialect: new HardenedPGliteDialect(pg),
+      dialect: new HardenedPGliteDialect(pg, {
+        onPoisoned: (cause) => {
+          console.error(
+            "[reactor.worker] relational PGlite session unrecoverable; requesting reload",
+            cause,
+          );
+          host.broadcastReload(
+            "relational pglite session unrecoverable",
+            globalThis.crypto.randomUUID(),
+          );
+          return Promise.resolve(false);
+        },
+      }),
     });
     relational.kysely = relationalKysely;
     relational.db = createRelationalDb(relationalKysely);
