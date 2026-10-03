@@ -81,15 +81,28 @@ function chainedCreate(create: () => Promise<PGlite>): Promise<PGlite> {
   return pending;
 }
 
+/** A memoized PGlite opener plus a `recreate` that reopens the same store. */
+type PGliteSingleton = {
+  /** The cached instance, opened on first call. */
+  get: () => Promise<PGlite>;
+  /**
+   * Opens a FRESH instance against the same idb store and replaces the cache,
+   * so later `get` callers see the replacement. Used by the self-heal
+   * coordinator to clear a poisoned session: tearing the wasm instance down and
+   * reopening is the only thing that clears a stuck portal, and the durably
+   * committed data is read back from idb.
+   */
+  recreate: () => Promise<PGlite>;
+};
+
 function pgliteSingleton(opts: {
   dbName: string;
   detectMajor: () => Promise<DetectedMajor>;
   label: string;
-}): () => Promise<PGlite> {
+}): PGliteSingleton {
   let cached: Promise<PGlite> | undefined;
-  return function getPGlite(): Promise<PGlite> {
-    if (cached) return cached;
-    const pending = chainedCreate(async () => {
+  const open = (): Promise<PGlite> =>
+    chainedCreate(async () => {
       const major = resolvePgMajorForRuntime(await opts.detectMajor());
       if (major !== 17) {
         console.warn(
@@ -100,6 +113,9 @@ function pgliteSingleton(opts: {
         ? createWorkerPGlite(major, opts.dbName)
         : createMainThreadPGlite(major, opts.dbName);
     });
+  const get = (): Promise<PGlite> => {
+    if (cached) return cached;
+    const pending = open();
     // Don't cache a rejection: let a later call retry a transient IDB/wasm failure.
     cached = pending;
     pending.catch(() => {
@@ -107,19 +123,32 @@ function pgliteSingleton(opts: {
     });
     return pending;
   };
+  const recreate = (): Promise<PGlite> => {
+    const pending = open();
+    cached = pending;
+    pending.catch(() => {
+      if (cached === pending) cached = undefined;
+    });
+    return pending;
+  };
+  return { get, recreate };
 }
 
-export const getReactorPGlite = pgliteSingleton({
+const reactorPGlite = pgliteSingleton({
   dbName: REACTOR_PGLITE_NAME,
   detectMajor: detectReactorPgMajor,
   label: "reactor",
 });
 
-const getRelationalPGlite = pgliteSingleton({
+export const getReactorPGlite = reactorPGlite.get;
+export const recreateReactorPGlite = reactorPGlite.recreate;
+
+const relationalPGlite = pgliteSingleton({
   dbName: RELATIONAL_PGLITE_NAME,
   detectMajor: detectRelationalPgMajor,
   label: "relational",
 });
+const getRelationalPGlite = relationalPGlite.get;
 
 export async function getDb() {
   const pgLite = await getRelationalPGlite();

@@ -6,6 +6,8 @@ import {
   isDriveAuthError,
   ReactorBuilder,
   ReactorClientBuilder,
+  ReactorEventTypes,
+  SelfHealingPGliteClient,
   setDriveMetadata,
   waitForDocumentReady,
   type BrowserReactorClientModule,
@@ -13,6 +15,7 @@ import {
   type IDocumentModelLoader,
   type JwtHandler,
   type ReactorFeatureFlags,
+  type RecreatablePGliteInstance,
 } from "@powerhousedao/reactor-browser";
 import type { UnsupportedStoredDocuments } from "@powerhousedao/reactor";
 import type {
@@ -29,7 +32,7 @@ import type {
 import type { IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
-import { getReactorPGlite } from "../pglite.db.js";
+import { getReactorPGlite, recreateReactorPGlite } from "../pglite.db.js";
 import { toStoredDocumentsRefused } from "./stored-documents-refused.js";
 import {
   createConnectSignerConfig,
@@ -67,6 +70,19 @@ export async function createBrowserReactor(
 
   const pg = await getReactorPGlite();
   const logger = new ConsoleLogger(["reactor-client"]);
+  // Self-heal: on an unrecoverable session, recreate the PGlite instance
+  // against the same idb store. The one Kysely is shared by every reactor
+  // component, so swapping the instance under this client rewires all of them.
+  // See docs/bugs/2026-10-03-*, W0.7.
+  const selfHeal = new SelfHealingPGliteClient(
+    pg as RecreatablePGliteInstance,
+    {
+      openInstance: async () =>
+        (await recreateReactorPGlite()) as RecreatablePGliteInstance,
+      onDiagnostic: (message, error) =>
+        console.error(`[reactor] self-heal: ${message}`, error),
+    },
+  );
   const reactorBuilder = new ReactorBuilder()
     .withDocumentModelSources(documentModelModules)
     .withUpgradeManifests(upgradeManifests)
@@ -75,7 +91,12 @@ export async function createBrowserReactor(
     .withJwtHandler(jwtHandler)
     .withKysely(
       new Kysely<Database>({
-        dialect: new HardenedPGliteDialect(pg),
+        dialect: new HardenedPGliteDialect(selfHeal, {
+          onPoisoned: (cause) =>
+            selfHeal.recreate(
+              cause instanceof Error ? cause.message : String(cause),
+            ),
+        }),
       }),
     );
   const builder = new ReactorClientBuilder()
@@ -99,6 +120,15 @@ export async function createBrowserReactor(
   } catch (error) {
     throw toStoredDocumentsRefused(error);
   }
+  // The event bus exists only now; emit the recovery event on it so observers
+  // of this reactor can see a session recreate rather than a silent recovery.
+  selfHeal.setRecreatedListener((event) => {
+    void module.eventBus
+      .emit(ReactorEventTypes.STORAGE_SESSION_RECREATED, event)
+      .catch((error) =>
+        console.error("[reactor] emitting recovery event failed", error),
+      );
+  });
   return {
     ...module,
     kind: "browser",

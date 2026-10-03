@@ -7,7 +7,9 @@ import {
   queryThroughDialect,
   ReactorBuilder,
   ReactorClientBuilder,
+  ReactorEventTypes,
   ReactorInspector,
+  SelfHealingPGliteClient,
   type ChannelConfig,
   type Database,
   type IDocumentModelRegistry,
@@ -15,6 +17,7 @@ import {
   type ISyncManager,
   type JwtHandler,
   type ReactorFeatureFlags,
+  type RecreatablePGliteInstance,
   type Remote,
   type RemoteFilter,
   type RemoteOptions,
@@ -430,9 +433,42 @@ const host = new ReactorHost({
         construct.relationalNamespace,
       );
       const pg = reactor.pg;
-      owned.reactorPg = pg;
+      // Self-heal: on an unrecoverable session (a stuck PORTAL_ACTIVE the
+      // dialect refuses), recreate the PGlite instance against the same idb
+      // store. Every reactor component reaches the database through this one
+      // Kysely, so swapping the instance under the client rewires all of them
+      // without rebuilding the reactor. Durably committed data survives; the
+      // rolled-back tail is re-pulled by sync. If a replacement cannot be
+      // opened, fall back to a worker reload. See docs/bugs/2026-10-03-*, W0.7.
+      const reactorSelfHeal = new SelfHealingPGliteClient(
+        pg as RecreatablePGliteInstance,
+        {
+          openInstance: async () =>
+            (await openReactorPglite(construct.namespace))
+              .pg as RecreatablePGliteInstance,
+          onDiagnostic: (message, error) =>
+            console.error(`[reactor.worker] self-heal: ${message}`, error),
+        },
+      );
+      owned.reactorPg = reactorSelfHeal;
       owned.reactorDb = new Kysely<Database>({
-        dialect: new HardenedPGliteDialect(pg),
+        dialect: new HardenedPGliteDialect(reactorSelfHeal, {
+          onPoisoned: async (cause) => {
+            const reason =
+              cause instanceof Error ? cause.message : String(cause);
+            const healed = await reactorSelfHeal.recreate(reason);
+            if (!healed) {
+              console.error(
+                "[reactor.worker] PGlite session unrecoverable and no replacement opened; requesting reload",
+              );
+              host.broadcastReload(
+                "pglite session unrecoverable",
+                globalThis.crypto.randomUUID(),
+              );
+            }
+            return healed;
+          },
+        }),
       });
       owned.reactorIdb = `/pglite/${construct.namespace}`;
       owned.relationalIdb = `/pglite/${construct.relationalNamespace}`;
@@ -507,6 +543,18 @@ const host = new ReactorHost({
           host.broadcastBusEvent(forwardedType, event),
         );
       }
+      // The event bus exists only now; emit the recovery event on it so the
+      // forwarding subscription above relays it to the tab/inspector.
+      reactorSelfHeal.setRecreatedListener((event) => {
+        void module.eventBus
+          .emit(ReactorEventTypes.STORAGE_SESSION_RECREATED, event)
+          .catch((error) =>
+            console.error(
+              "[reactor.worker] emitting recovery event failed",
+              error,
+            ),
+          );
+      });
       syncManager?.onSyncStatusChange((documentId, status) =>
         host.broadcastBusEvent(SYNC_STATUS_CHANGED_EVENT, {
           documentId,
