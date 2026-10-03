@@ -672,6 +672,29 @@ export class ReactorBuilder {
       );
     }
 
+    // A deferring barrier is only safe because the builder puts the flush at
+    // durability boundary 2 - the executor it constructs flushes before it
+    // announces a job write-ready. An executor the builder does not construct
+    // never gets the barrier: a pooled worker is a separate thread that cannot
+    // be handed a live flusher object at all (each worker opens its own
+    // connection, and a Postgres one is durable per statement anyway), and a
+    // caller-supplied manager builds its executors itself. Either way the
+    // boundary would be SILENTLY absent, with every job reporting durable
+    // success over unflushed data - so the combination is refused here rather
+    // than discovered after a crash.
+    if (this.storageFlusher.deferringStatementFlush) {
+      if (this.workerPool !== undefined) {
+        throw new Error(
+          "withWorkerPool cannot be combined with a deferring withStorageFlusher: durability boundary 2 (the executor flushes before announcing a job write-ready) cannot be enforced in a pooled worker, because the live flusher object does not cross the worker boundary. Give the pooled workers a store that is durable per statement, or run the in-process executor.",
+        );
+      }
+      if (this.executorManager !== undefined) {
+        throw new Error(
+          "withExecutor cannot be combined with a deferring withStorageFlusher: durability boundary 2 is enforced by the SimpleJobExecutor this builder constructs, and a caller-supplied executor manager builds its own executors. Pass the flusher to those executors and register a non-deferring barrier here, or drop the custom manager.",
+        );
+      }
+    }
+
     if (
       this.projectionShardConfig !== undefined &&
       this.readModelCoordinatorFactory !== undefined
@@ -1230,7 +1253,7 @@ export class ReactorBuilder {
       await syncModule.syncManager.startup();
     } else if (this.syncBuilder) {
       syncModule = this.syncBuilder
-        .withStorageFlusher(this.storageFlusher)
+        .withDefaultStorageFlusher(this.storageFlusher)
         .buildModule(
           reactor,
           this.logger,

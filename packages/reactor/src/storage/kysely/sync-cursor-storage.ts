@@ -1,9 +1,8 @@
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
+import { throwIfAborted } from "../../shared/utils.js";
 import type { RemoteCursor } from "../../sync/types.js";
 import type { ISyncCursorStorage } from "../interfaces.js";
-import type { IStorageFlusher } from "../storage-flush.js";
-import { NoopStorageFlusher } from "../storage-flush.js";
 import type { Database, InsertableSyncCursor, SyncCursorRow } from "./types.js";
 
 function rowToRemoteCursor(row: SyncCursorRow): RemoteCursor {
@@ -28,23 +27,23 @@ function remoteCursorToRow(cursor: RemoteCursor): InsertableSyncCursor {
   };
 }
 
+/**
+ * Cursor rows in the reactor's own store.
+ *
+ * It persists cursors and nothing else. Durability boundary 1 - no cursor row
+ * durable ahead of the operations it covers - is enforced one seam out by
+ * {@link FlushGuardedSyncCursorStorage}, which wraps whatever cursor storage
+ * the sync module ends up with. Putting the barrier in the decorator rather
+ * than here is what makes it hold for a caller-supplied storage too.
+ */
 export class KyselySyncCursorStorage implements ISyncCursorStorage {
-  private readonly flusher: IStorageFlusher;
-
-  constructor(
-    private readonly db: Kysely<Database>,
-    flusher: IStorageFlusher = new NoopStorageFlusher(),
-  ) {
-    this.flusher = flusher;
-  }
+  constructor(private readonly db: Kysely<Database>) {}
 
   async list(
     remoteName: string,
     signal?: AbortSignal,
   ): Promise<RemoteCursor[]> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     const rows = await this.db
       .selectFrom("sync_cursors")
@@ -52,9 +51,7 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
       .where("remote_name", "=", remoteName)
       .execute();
 
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     return rows.map(rowToRemoteCursor);
   }
@@ -64,9 +61,7 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
     cursorType: "inbox" | "outbox",
     signal?: AbortSignal,
   ): Promise<RemoteCursor> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     const row = await this.db
       .selectFrom("sync_cursors")
@@ -75,9 +70,7 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
       .where("cursor_type", "=", cursorType)
       .executeTakeFirst();
 
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     if (!row) {
       return {
@@ -90,34 +83,8 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
     return rowToRemoteCursor(row);
   }
 
-  /**
-   * Writes a cursor row, but never before the data it covers is durable.
-   *
-   * This is durability boundary 1 of {@link IStorageFlusher}. A persisted
-   * cursor is a promise that everything up to it has been applied and need
-   * never be sent again; a cursor durable ahead of its data is the
-   * permanent-gap mechanism of the live incident - the rolled-back tail is
-   * never re-pulled, and every later operation touching those documents
-   * dead-letters with a missing ancestor. So the flush comes first, and a
-   * flush that fails takes the cursor write with it, leaving the caller's
-   * watermark where it was so the next advance retries.
-   *
-   * The cursor row itself is deliberately NOT flushed afterwards: a crash
-   * between the two loses the advance but keeps the data, and a re-pull of
-   * already-applied operations is idempotent. The next flush - which covers
-   * strictly more data - makes the row durable. The one direction that is never
-   * allowed is the reverse.
-   */
   async upsert(cursor: RemoteCursor, signal?: AbortSignal): Promise<void> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
-
-    await this.flusher.flush();
-
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     await this.db.transaction().execute(async (trx) => {
       const insertable = remoteCursorToRow(cursor);
@@ -134,15 +101,11 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
         .execute();
     });
 
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
   }
 
   async remove(remoteName: string, signal?: AbortSignal): Promise<void> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     await this.db.transaction().execute(async (trx) => {
       await trx
@@ -151,8 +114,6 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
         .execute();
     });
 
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
   }
 }

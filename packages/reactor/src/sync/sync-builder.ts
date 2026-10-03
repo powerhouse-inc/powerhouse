@@ -20,6 +20,7 @@ import { KyselySyncHoldStorage } from "../storage/kysely/sync-hold-storage.js";
 import { KyselySyncPurgeRefusalStorage } from "../storage/kysely/sync-purge-refusal-storage.js";
 import { KyselySyncReceivedMarkerStorage } from "../storage/kysely/sync-received-marker-storage.js";
 import { KyselySyncRemoteStorage } from "../storage/kysely/sync-remote-storage.js";
+import { FlushGuardedSyncCursorStorage } from "../storage/flush-guarded-sync-cursor-storage.js";
 import type { Database } from "../storage/kysely/types.js";
 import type { IStorageFlusher } from "../storage/storage-flush.js";
 import { NoopStorageFlusher } from "../storage/storage-flush.js";
@@ -36,6 +37,8 @@ export class SyncBuilder {
   private receivedMarkerStorage?: ISyncReceivedMarkerStorage;
   private purgeRefusalStorage?: ISyncPurgeRefusalStorage;
   private storageFlusher: IStorageFlusher = new NoopStorageFlusher();
+  /** Whether the caller chose the barrier, so a default cannot overwrite it. */
+  private storageFlusherChosen = false;
   private config: Partial<SyncManagerConfig> = {};
 
   withChannelFactory(factory: IChannelFactory): this {
@@ -74,13 +77,34 @@ export class SyncBuilder {
   }
 
   /**
-   * The durability barrier the default cursor storage writes behind, so no
-   * cursor row is ever durable ahead of the operations it covers. Ignored when
-   * {@link withCursorStorage} supplies its own storage, which is then
-   * responsible for the same invariant.
+   * The durability barrier every cursor write goes behind, so no cursor row is
+   * ever durable ahead of the operations it covers.
+   *
+   * It applies to a {@link withCursorStorage} storage too: the barrier is a
+   * decorator around whatever storage this builder ends up with, not a
+   * parameter of one implementation, so a caller-supplied storage - the stage-1
+   * LocalChannel's among them - inherits the invariant instead of having to
+   * remember it.
    */
   withStorageFlusher(flusher: IStorageFlusher): this {
     this.storageFlusher = flusher;
+    this.storageFlusherChosen = true;
+    return this;
+  }
+
+  /**
+   * Supplies the barrier only if the caller has not chosen one.
+   *
+   * This is what a host that owns the store (ReactorBuilder) uses on a
+   * caller-supplied SyncBuilder: the caller's own barrier is a deliberate
+   * configuration and overwriting it - which an unconditional setter did, with
+   * the default no-op - silently removed boundary 1 from a reactor that had
+   * asked for it.
+   */
+  withDefaultStorageFlusher(flusher: IStorageFlusher): this {
+    if (!this.storageFlusherChosen) {
+      this.storageFlusher = flusher;
+    }
     return this;
   }
 
@@ -142,9 +166,10 @@ export class SyncBuilder {
     }
 
     const remoteStorage = this.remoteStorage ?? new KyselySyncRemoteStorage(db);
-    const cursorStorage =
-      this.cursorStorage ??
-      new KyselySyncCursorStorage(db, this.storageFlusher);
+    const cursorStorage = new FlushGuardedSyncCursorStorage(
+      this.cursorStorage ?? new KyselySyncCursorStorage(db),
+      this.storageFlusher,
+    );
     const deadLetterStorage =
       this.deadLetterStorage ?? new KyselySyncDeadLetterStorage(db);
     const holdStorage = this.holdStorage ?? new KyselySyncHoldStorage(db);
