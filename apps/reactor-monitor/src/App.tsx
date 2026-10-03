@@ -80,7 +80,12 @@ function renderPanel(
     case "DB":
       return <DbTab dbQuery={reactor.dbQuery} />;
     case "Sync":
-      return <SyncTab syncManager={reactor.syncManager} />;
+      return (
+        <SyncTab
+          inspector={reactor.inspector}
+          syncManager={reactor.syncManager}
+        />
+      );
     case "Events":
       return <EventsTab events={reactor.events} />;
   }

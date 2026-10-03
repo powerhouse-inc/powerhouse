@@ -1,32 +1,129 @@
 import {
   DriveCollectionId,
-  type ISyncManager,
+  type DeadLetterRecord,
+  type IInspector,
+  type InspectableSyncManager,
   type Remote,
+  type RemoteSyncInspection,
+  type StorageHealth,
 } from "@powerhousedao/reactor";
 import { useCallback, useEffect, useState } from "react";
 import { isConnectionLying } from "../lib/sync-health.js";
 import { timeSince } from "../lib/time.js";
 
 export type SyncTabProps = {
-  readonly syncManager: ISyncManager | undefined;
+  readonly syncManager: InspectableSyncManager | undefined;
+  readonly inspector?: IInspector;
 };
 
 const POLL_INTERVAL_MS = 2000;
+const DEAD_LETTER_PAGE_SIZE = 25;
 
 function channelUrl(remote: Remote): string | undefined {
   const url = remote.meta.channelConfig.parameters.url;
   return typeof url === "string" ? url : undefined;
 }
 
+function StorageHealthPanel({ health }: { health: StorageHealth | undefined }) {
+  if (!health) {
+    return null;
+  }
+  const className = health.healthy
+    ? "rm-kv rm-kv-compact"
+    : "rm-kv rm-kv-compact rm-remote-warning";
+  return (
+    <section className="rm-storage-health">
+      <h3>Storage health</h3>
+      {!health.healthy ? (
+        <p className="rm-warning-banner" role="alert">
+          The reactor&apos;s PGlite session was reported poisoned and has not
+          recovered. Reads and sync ingestion are dead until it recreates.
+        </p>
+      ) : null}
+      <dl className={className}>
+        <dt>Session</dt>
+        <dd>{health.healthy ? "healthy" : "unhealthy"}</dd>
+        <dt>Ever recreated</dt>
+        <dd>
+          {health.everRecreated ? `yes (${health.recreateCount}x)` : "no"}
+        </dd>
+        {health.lastRecreated ? (
+          <>
+            <dt>Last recreate</dt>
+            <dd>
+              {timeSince(health.lastRecreated.timestampUtcMs)} — attempt{" "}
+              {health.lastRecreated.attempt}: {health.lastRecreated.reason}
+            </dd>
+          </>
+        ) : null}
+      </dl>
+    </section>
+  );
+}
+
+function DeadLetterRow({
+  remoteName,
+  record,
+  onRequeue,
+  onClear,
+}: {
+  remoteName: string;
+  record: DeadLetterRecord;
+  onRequeue: (remoteName: string, id: string) => void;
+  onClear: (remoteName: string, id: string) => void;
+}) {
+  return (
+    <li className="rm-dead-letter" data-testid="sync-dead-letter">
+      <div className="rm-dead-letter-header">
+        <span className="rm-badge rm-badge-error">{record.errorType}</span>
+        <span className="rm-badge">{record.errorSource}</span>
+        <code>{record.documentId}</code>
+        <button
+          className="rm-btn"
+          onClick={() => onRequeue(remoteName, record.id)}
+          type="button"
+        >
+          Requeue
+        </button>
+        <button
+          className="rm-btn"
+          onClick={() => onClear(remoteName, record.id)}
+          type="button"
+        >
+          Clear
+        </button>
+      </div>
+      <p className="rm-dead-letter-error">{record.errorMessage}</p>
+    </li>
+  );
+}
+
 function RemoteRow({
   remote,
+  inspection,
+  deadLetters,
   onTriggerPull,
+  onResetChannel,
+  onRewindInbox,
+  onRequeue,
+  onClear,
 }: {
   remote: Remote;
+  inspection: RemoteSyncInspection | undefined;
+  deadLetters: DeadLetterRecord[];
   onTriggerPull: (name: string) => void;
+  onResetChannel: (name: string) => void;
+  onRewindInbox: (name: string, toOrdinal: number) => void;
+  onRequeue: (name: string, id: string) => void;
+  onClear: (name: string, id: string) => void;
 }) {
-  const snapshot = remote.channel.getConnectionState();
-  const lying = isConnectionLying(snapshot);
+  const snapshot =
+    inspection?.connection.snapshot ?? remote.channel.getConnectionState();
+  // The never-succeeded warning is driven by the first-class inspection flag;
+  // staleness still comes from the shared helper on the raw snapshot.
+  const neverSucceeded = inspection?.connection.neverSucceeded ?? false;
+  const lying = neverSucceeded || isConnectionLying(snapshot);
+  const [rewindTo, setRewindTo] = useState("0");
 
   return (
     <li className={lying ? "rm-remote rm-remote-warning" : "rm-remote"}>
@@ -51,12 +148,19 @@ function RemoteRow({
         >
           Trigger pull
         </button>
+        <button
+          className="rm-btn"
+          onClick={() => onResetChannel(remote.meta.name)}
+          type="button"
+        >
+          Reset channel
+        </button>
       </div>
 
       {lying ? (
         <p className="rm-warning-banner" role="alert">
           Reporting &quot;connected&quot; but{" "}
-          {snapshot.lastSuccessUtcMs === 0
+          {neverSucceeded
             ? "has never completed a successful poll since boot"
             : `its last success was ${timeSince(snapshot.lastSuccessUtcMs)} — this looks like a dead poll loop`}
           .
@@ -88,29 +192,122 @@ function RemoteRow({
         </dd>
         <dt>Requires auth</dt>
         <dd>{snapshot.requiresAuth ? "yes" : "no"}</dd>
+        {inspection ? (
+          <>
+            <dt>Inbox cursor</dt>
+            <dd data-testid="sync-inbox-cursor">
+              stored {inspection.inboxCursor.cursorOrdinal} / live ack{" "}
+              {inspection.inboxCursor.liveAckOrdinal} / latest{" "}
+              {inspection.inboxCursor.liveLatestOrdinal}
+            </dd>
+            <dt>Outbox cursor</dt>
+            <dd data-testid="sync-outbox-cursor">
+              stored {inspection.outboxCursor.cursorOrdinal} / live ack{" "}
+              {inspection.outboxCursor.liveAckOrdinal}
+            </dd>
+            <dt>Mailbox depths</dt>
+            <dd data-testid="sync-mailbox-depths">
+              inbox {inspection.mailboxDepths.inbox} · outbox{" "}
+              {inspection.mailboxDepths.outbox} · dead-letter{" "}
+              {inspection.mailboxDepths.deadLetter}
+            </dd>
+          </>
+        ) : null}
       </dl>
+
+      <div className="rm-repair rm-form-inline">
+        <label>
+          Rewind inbox to ordinal
+          <input
+            onChange={(e) => setRewindTo(e.target.value)}
+            type="number"
+            value={rewindTo}
+          />
+        </label>
+        <button
+          className="rm-btn"
+          onClick={() =>
+            onRewindInbox(remote.meta.name, Number.parseInt(rewindTo, 10) || 0)
+          }
+          type="button"
+        >
+          Rewind + re-pull
+        </button>
+      </div>
+
+      {deadLetters.length > 0 ? (
+        <div className="rm-dead-letters">
+          <h4>Dead letters ({deadLetters.length})</h4>
+          <ul className="rm-dead-letter-list">
+            {deadLetters.map((record) => (
+              <DeadLetterRow
+                key={record.id}
+                onClear={onClear}
+                onRequeue={onRequeue}
+                record={record}
+                remoteName={remote.meta.name}
+              />
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </li>
   );
 }
 
-export function SyncTab({ syncManager }: SyncTabProps) {
+export function SyncTab({ syncManager, inspector }: SyncTabProps) {
   const [remotes, setRemotes] = useState<Remote[]>([]);
+  const [inspections, setInspections] = useState<
+    Map<string, RemoteSyncInspection>
+  >(new Map());
+  const [deadLetters, setDeadLetters] = useState<
+    Map<string, DeadLetterRecord[]>
+  >(new Map());
+  const [storageHealth, setStorageHealth] = useState<StorageHealth | undefined>(
+    undefined,
+  );
   const [name, setName] = useState("");
   const [driveId, setDriveId] = useState("");
   const [url, setUrl] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
 
-  const refresh = useCallback(() => {
-    if (syncManager) {
-      setRemotes(syncManager.list());
+  const refresh = useCallback(async () => {
+    if (!syncManager) {
+      return;
     }
-  }, [syncManager]);
+    setRemotes(syncManager.list());
+
+    try {
+      const inspected = await syncManager.inspectRemotes();
+      setInspections(new Map(inspected.map((i) => [i.remoteName, i])));
+      const nextDeadLetters = new Map<string, DeadLetterRecord[]>();
+      for (const i of inspected) {
+        const page = await syncManager.listDeadLetters(
+          i.remoteName,
+          undefined,
+          DEAD_LETTER_PAGE_SIZE,
+        );
+        nextDeadLetters.set(i.remoteName, page.results);
+      }
+      setDeadLetters(nextDeadLetters);
+    } catch (e) {
+      console.error("[reactor-monitor] sync inspection failed:", e);
+    }
+
+    if (inspector) {
+      try {
+        setStorageHealth(await inspector.getStorageHealth());
+      } catch (e) {
+        console.error("[reactor-monitor] storage health read failed:", e);
+      }
+    }
+  }, [syncManager, inspector]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks-extra/set-state-in-effect
-    refresh();
-    const interval = setInterval(refresh, POLL_INTERVAL_MS);
+    void refresh();
+    const interval = setInterval(() => void refresh(), POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [refresh]);
 
@@ -138,7 +335,7 @@ export function SyncTab({ syncManager }: SyncTabProps) {
       setName("");
       setDriveId("");
       setUrl("");
-      refresh();
+      void refresh();
     } catch (e) {
       setAddError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -151,6 +348,40 @@ export function SyncTab({ syncManager }: SyncTabProps) {
       syncManager?.triggerPull(remoteName);
     },
     [syncManager],
+  );
+
+  const handleResetChannel = useCallback(
+    (remoteName: string) => {
+      void syncManager?.resetChannel(remoteName).then(() => void refresh());
+    },
+    [syncManager, refresh],
+  );
+
+  const handleRewindInbox = useCallback(
+    (remoteName: string, toOrdinal: number) => {
+      void syncManager
+        ?.rewindInboxCursor(remoteName, toOrdinal)
+        .then(() => void refresh());
+    },
+    [syncManager, refresh],
+  );
+
+  const handleRequeue = useCallback(
+    (remoteName: string, id: string) => {
+      void syncManager
+        ?.requeueDeadLetter(remoteName, id)
+        .then(() => void refresh());
+    },
+    [syncManager, refresh],
+  );
+
+  const handleClear = useCallback(
+    (remoteName: string, id: string) => {
+      void syncManager
+        ?.clearDeadLetter(remoteName, id)
+        .then(() => void refresh());
+    },
+    [syncManager, refresh],
   );
 
   if (!syncManager) {
@@ -167,6 +398,8 @@ export function SyncTab({ syncManager }: SyncTabProps) {
   return (
     <div className="rm-tab">
       <h2>Sync / Remotes</h2>
+
+      <StorageHealthPanel health={storageHealth} />
 
       <form
         className="rm-form rm-form-inline"
@@ -218,7 +451,13 @@ export function SyncTab({ syncManager }: SyncTabProps) {
         <ul className="rm-remote-list">
           {remotes.map((remote) => (
             <RemoteRow
+              deadLetters={deadLetters.get(remote.meta.name) ?? []}
+              inspection={inspections.get(remote.meta.name)}
               key={remote.meta.id}
+              onClear={handleClear}
+              onRequeue={handleRequeue}
+              onResetChannel={handleResetChannel}
+              onRewindInbox={handleRewindInbox}
               onTriggerPull={handleTriggerPull}
               remote={remote}
             />
