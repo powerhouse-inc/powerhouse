@@ -5,16 +5,22 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  BUILDER_TOOLS_VERSION,
+  computeSourceDigest,
+  distDirFingerprint,
   findBundleSpecifierOffenders,
   findDisallowedSpecifiers,
   prebuildReactorWorker,
   REACTOR_WORKER_ENTRY,
+  resolveOwnPackageVersion,
+  resolveWorkspacePackageDir,
   vendorRelativePath,
   workerSafeVendorImports,
 } from "./reactor-worker-build.js";
@@ -122,6 +128,126 @@ describe("workerSafeVendorImports", () => {
   });
 });
 
+describe("resolveOwnPackageVersion / BUILDER_TOOLS_VERSION", () => {
+  it("resolves builder-tools' own installed version, not 'unknown'", () => {
+    // Regression guard for the walk-up-from-this-file resolution: if it
+    // breaks, the cache key silently stops varying with builder-tools
+    // releases instead of throwing.
+    expect(resolveOwnPackageVersion()).not.toBe("unknown");
+    expect(BUILDER_TOOLS_VERSION).toBe(resolveOwnPackageVersion());
+  });
+});
+
+describe("resolveWorkspacePackageDir", () => {
+  it("resolves a real workspace package through node_modules", () => {
+    const dir = resolveWorkspacePackageDir(DIRNAME, "@powerhousedao/reactor");
+    expect(dir).not.toBeNull();
+    expect(existsSync(join(dir!, "package.json"))).toBe(true);
+  });
+
+  it("returns null for a package that isn't installed there", () => {
+    expect(
+      resolveWorkspacePackageDir(DIRNAME, "@powerhousedao/does-not-exist"),
+    ).toBeNull();
+  });
+});
+
+describe("distDirFingerprint", () => {
+  let dir: string;
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), "ph-dist-fingerprint-test-"));
+  });
+
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("changes when a file's content/mtime changes", () => {
+    writeFileSync(join(dir, "index.js"), "export const a = 1;\n");
+    const before = distDirFingerprint(dir);
+
+    writeFileSync(join(dir, "index.js"), "export const a = 2;\n");
+    utimesSync(
+      join(dir, "index.js"),
+      new Date(Date.now() + 5000),
+      new Date(Date.now() + 5000),
+    );
+    const after = distDirFingerprint(dir);
+
+    expect(after).not.toBe(before);
+  });
+
+  it("changes when a content-hashed chunk is added (name itself differs)", () => {
+    const before = distDirFingerprint(dir);
+    writeFileSync(join(dir, "chunk-newhash123.js"), "export const b = 1;\n");
+    const after = distDirFingerprint(dir);
+    expect(after).not.toBe(before);
+  });
+
+  it("is a stable non-crashing string for a missing directory", () => {
+    expect(distDirFingerprint(join(dir, "does-not-exist"))).toBe("unreadable");
+  });
+});
+
+describe("computeSourceDigest", () => {
+  let fixtureDir: string;
+  let entryPath: string;
+
+  beforeAll(() => {
+    fixtureDir = mkdtempSync(join(tmpdir(), "ph-source-digest-test-"));
+    entryPath = join(fixtureDir, "entry.js");
+    writeFileSync(entryPath, "self.onconnect = () => {};\n");
+    mkdirSync(join(fixtureDir, "node_modules/@powerhousedao/reactor/dist"), {
+      recursive: true,
+    });
+    writeFileSync(
+      join(fixtureDir, "node_modules/@powerhousedao/reactor/dist/index.js"),
+      "export const r = 1;\n",
+    );
+  });
+
+  afterAll(() => {
+    rmSync(fixtureDir, { recursive: true, force: true });
+  });
+
+  it("is deterministic for identical inputs", () => {
+    expect(computeSourceDigest(fixtureDir, entryPath)).toBe(
+      computeSourceDigest(fixtureDir, entryPath),
+    );
+  });
+
+  it("changes when the injected builder-tools version changes", () => {
+    const a = computeSourceDigest(fixtureDir, entryPath, undefined, "1.0.0");
+    const b = computeSourceDigest(fixtureDir, entryPath, undefined, "2.0.0");
+    expect(a).not.toBe(b);
+  });
+
+  it("changes when an upstream workspace package's dist changes", () => {
+    const before = computeSourceDigest(fixtureDir, entryPath);
+    writeFileSync(
+      join(fixtureDir, "node_modules/@powerhousedao/reactor/dist/index.js"),
+      "export const r = 2;\n",
+    );
+    utimesSync(
+      join(fixtureDir, "node_modules/@powerhousedao/reactor/dist/index.js"),
+      new Date(Date.now() + 5000),
+      new Date(Date.now() + 5000),
+    );
+    const after = computeSourceDigest(fixtureDir, entryPath);
+    expect(after).not.toBe(before);
+  });
+
+  it("does not crash when upstream packages aren't installed", () => {
+    const bareDir = mkdtempSync(join(tmpdir(), "ph-source-digest-bare-"));
+    try {
+      expect(() => computeSourceDigest(bareDir, entryPath)).not.toThrow();
+    } finally {
+      rmSync(bareDir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("prebuildReactorWorker", () => {
   let fixtureDir: string;
   let outDir: string;
@@ -168,6 +294,7 @@ describe("prebuildReactorWorker", () => {
 
       expect(errorRef.message).toBeUndefined();
       expect(built).not.toBeNull();
+      expect(built?.sourceDigest).toBeTruthy();
       const emitted = join(outDir, REACTOR_WORKER_ENTRY);
       expect(existsSync(emitted)).toBe(true);
       const code = readFileSync(emitted, "utf8");
@@ -193,6 +320,76 @@ describe("prebuildReactorWorker", () => {
       });
       expect(built).not.toBeNull();
       expect(statSync(emitted).mtimeMs).toBe(before);
+    },
+  );
+
+  it(
+    "busts the cache when an upstream workspace package's dist changes, even though the entry file itself did not",
+    { timeout: 120_000 },
+    async () => {
+      // An isolated project root (not DIRNAME/outDir above) so this test's
+      // upstream mutation can't race the shared fixture's other tests.
+      const projectDir = mkdtempSync(
+        join(tmpdir(), "ph-reactor-worker-upstream-test-"),
+      );
+      const upstreamDistDir = join(
+        projectDir,
+        "node_modules/@powerhousedao/reactor/dist",
+      );
+      mkdirSync(upstreamDistDir, { recursive: true });
+      writeFileSync(join(upstreamDistDir, "index.js"), "export const r = 1;\n");
+      const entryPath = join(projectDir, "entry.js");
+      writeFileSync(entryPath, "self.onconnect = () => {};\n");
+      const outDir = join(projectDir, "__reactor_worker__");
+
+      try {
+        const first = await prebuildReactorWorker({
+          dirname: projectDir,
+          outDir,
+          entryPath,
+          nodeEnv: "development",
+        });
+        expect(first).not.toBeNull();
+        const mtimeAfterFirstBuild = statSync(
+          join(outDir, REACTOR_WORKER_ENTRY),
+        ).mtimeMs;
+
+        // Unchanged inputs: cache hit, no rebuild.
+        const second = await prebuildReactorWorker({
+          dirname: projectDir,
+          outDir,
+          entryPath,
+          nodeEnv: "development",
+        });
+        expect(second?.sourceDigest).toBe(first?.sourceDigest);
+        expect(statSync(join(outDir, REACTOR_WORKER_ENTRY)).mtimeMs).toBe(
+          mtimeAfterFirstBuild,
+        );
+
+        // The upstream reactor dist changes; connect's own entry file does not.
+        writeFileSync(
+          join(upstreamDistDir, "index.js"),
+          "export const r = 2;\n",
+        );
+        const future = new Date(Date.now() + 5000);
+        utimesSync(join(upstreamDistDir, "index.js"), future, future);
+
+        const third = await prebuildReactorWorker({
+          dirname: projectDir,
+          outDir,
+          entryPath,
+          nodeEnv: "development",
+        });
+        expect(third).not.toBeNull();
+        expect(third?.sourceDigest).not.toBe(first?.sourceDigest);
+        // A real rebuild happened (cache was busted), not just a different
+        // reported digest.
+        expect(statSync(join(outDir, REACTOR_WORKER_ENTRY)).mtimeMs).not.toBe(
+          mtimeAfterFirstBuild,
+        );
+      } finally {
+        rmSync(projectDir, { recursive: true, force: true });
+      }
     },
   );
 
