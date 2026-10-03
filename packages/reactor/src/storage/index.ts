@@ -1,5 +1,7 @@
 export type {
+  DeadLetterRecord,
   ISyncCursorStorage,
+  ISyncDeadLetterStorage,
   ISyncHoldStorage,
   ISyncPurgeRefusalStorage,
   ISyncReceivedMarkerStorage,

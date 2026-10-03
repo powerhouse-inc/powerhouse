@@ -14,7 +14,9 @@ import type {
   IInspectableQueue,
   IInspector,
   InspectorProcessorInfo,
+  IStorageHealthProvider,
   QueueStateSnapshot,
+  StorageHealth,
 } from "./types.js";
 
 /**
@@ -29,6 +31,13 @@ export type ReactorInspectorComponents = {
   processorManager?: IProcessorManager;
   catchUp?: ICatchUp;
   integrity?: IDocumentIntegrityService;
+  storageHealth?: IStorageHealthProvider;
+};
+
+const healthyStorageDefault: StorageHealth = {
+  healthy: true,
+  everRecreated: false,
+  recreateCount: 0,
 };
 
 const emptyQueueState: QueueStateSnapshot = {
@@ -53,12 +62,14 @@ export class ReactorInspector implements IInspector {
   private readonly processorManager: IProcessorManager | undefined;
   private readonly catchUp: ICatchUp | undefined;
   private readonly integrity: IDocumentIntegrityService | undefined;
+  private readonly storageHealth: IStorageHealthProvider | undefined;
 
   constructor(components: ReactorInspectorComponents) {
     this.queue = components.queue;
     this.processorManager = components.processorManager;
     this.catchUp = components.catchUp;
     this.integrity = components.integrity;
+    this.storageHealth = components.storageHealth;
   }
 
   getQueueState(): Promise<QueueStateSnapshot> {
@@ -161,5 +172,13 @@ export class ReactorInspector implements IInspector {
       return Promise.reject(integrityUnavailable());
     }
     return integrity.rebuildSnapshots(documentId, branch);
+  }
+
+  getStorageHealth(): Promise<StorageHealth> {
+    const provider = this.storageHealth;
+    if (!provider) {
+      return Promise.resolve({ ...healthyStorageDefault });
+    }
+    return Promise.resolve(provider.getStorageHealth());
   }
 }

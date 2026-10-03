@@ -422,6 +422,35 @@ export class GqlRequestChannel implements IChannel {
     this.pollTimer.triggerNow();
   }
 
+  /**
+   * Rewinds the inbox so the next poll re-pulls from `toOrdinal`.
+   *
+   * The in-memory watermark is the only thing the poll request is built from
+   * ({@link pollOnce} reads `this.inbox.ackOrdinal`/`latestOrdinal`), so a
+   * rewind that only lowered the stored cursor did nothing until a restart.
+   * This resets that watermark AND persists the lowered cursor below the
+   * serialised writer's monotonic guard, then triggers a pull - so the rewind
+   * takes effect without re-initializing the channel.
+   */
+  async rewindInboxCursor(toOrdinal: number): Promise<void> {
+    if (this.isShutdown) {
+      throw new Error(`Channel ${this.channelId} is shut down`);
+    }
+    const target = Math.max(0, Math.floor(toOrdinal));
+    const writer = this.cursorWriters.inbox;
+    await writer.tail.catch(() => undefined);
+    this.inbox.init(target);
+    writer.persisted = target;
+    writer.requested = 0;
+    await this.cursorStorage.upsert({
+      remoteName: this.remoteName,
+      cursorType: "inbox",
+      cursorOrdinal: target,
+      lastSyncedAtUtcMs: Date.now(),
+    });
+    this.triggerPull();
+  }
+
   /** This channel polls a remote itself; it has no holder to hear from. */
   notePoll(): void {}
 

@@ -103,6 +103,16 @@ export {
   type PeerAgreementBasis,
 } from "./peer-agreement.js";
 export { SyncManager, type SyncManagerConfig } from "./sync-manager.js";
+export {
+  deriveConnectionHealth,
+  type DeadLetterPage,
+  type InspectableSyncManager,
+  type ISyncInspector,
+  type MailboxDepths,
+  type RemoteConnectionHealth,
+  type RemoteCursorInfo,
+  type RemoteSyncInspection,
+} from "./sync-inspection.js";
 export { SyncStatus, SyncStatusTracker } from "./sync-status-tracker.js";
 export type {
   ISyncStatusTracker,

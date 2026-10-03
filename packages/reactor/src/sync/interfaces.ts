@@ -84,6 +84,17 @@ export interface IChannel {
   triggerPull(): void;
 
   /**
+   * Resets the in-memory inbox watermark to `toOrdinal`, persists the lowered
+   * cursor, and triggers a pull so the channel re-pulls from there in place.
+   *
+   * Only a polling channel can rewind: a push-only response channel has no
+   * cursor of its own to move, so it omits this and the sync manager falls back
+   * to a full channel reset. See
+   * docs/bugs/2026-10-03-pglite-aborted-transaction-bricks-worker-reactor.md.
+   */
+  rewindInboxCursor?(toOrdinal: number): Promise<void>;
+
+  /**
    * Records that this channel's holder just interacted with it.
    *
    * Only a served channel has a holder to hear from; a channel that polls a

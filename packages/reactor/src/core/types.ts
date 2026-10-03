@@ -53,6 +53,7 @@ import type {
 import type { PoolInstrumentation } from "../storage/pool-instrumentation.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import type { IChannelFactory, ISyncManager } from "../sync/interfaces.js";
+import type { ISyncInspector } from "../sync/sync-inspection.js";
 
 export class AbortError extends Error {
   constructor(message?: string) {
@@ -510,7 +511,7 @@ export type Database = StorageDatabase &
  * proxied over a worker boundary): just the sync manager.
  */
 export interface SyncModule {
-  syncManager: ISyncManager;
+  syncManager: ISyncManager & ISyncInspector;
 }
 
 /**

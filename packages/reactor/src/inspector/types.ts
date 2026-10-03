@@ -1,7 +1,31 @@
 import type { ProcessorStatus } from "@powerhousedao/shared/processors";
 import type { RebuildResult, ValidationResult } from "../admin/types.js";
 import type { CatchUpStatus, SweepResult } from "../catch-up/types.js";
+import type { StorageSessionRecreatedEvent } from "../events/types.js";
 import type { Job } from "../queue/types.js";
+
+/**
+ * The reactor's storage-health dimension, distinct from a channel's connection
+ * state so "connected" can never read green while the single PGlite session is
+ * dead (see
+ * docs/bugs/2026-10-03-pglite-aborted-transaction-bricks-worker-reactor.md).
+ *
+ * `healthy` is false while a poisoned session has been reported and not yet
+ * recovered; a successful recreate flips it back. `everRecreated`/`recreateCount`
+ * and `lastRecreated` expose the self-heal history (W0.7's
+ * STORAGE_SESSION_RECREATED signal).
+ */
+export type StorageHealth = {
+  healthy: boolean;
+  everRecreated: boolean;
+  recreateCount: number;
+  lastRecreated?: StorageSessionRecreatedEvent;
+};
+
+/** The storage-health source a `ReactorInspector` reads, when one is wired. */
+export interface IStorageHealthProvider {
+  getStorageHealth(): StorageHealth;
+}
 
 /**
  * Point-in-time view of the job queue, as the inspector surfaces it.
@@ -71,6 +95,11 @@ export interface IInspector {
   ): Promise<ValidationResult>;
   rebuildKeyframes(documentId: string, branch?: string): Promise<RebuildResult>;
   rebuildSnapshots(documentId: string, branch?: string): Promise<RebuildResult>;
+  /**
+   * The reactor's storage-health dimension. A reactor with no storage-health
+   * source reports a healthy, never-recreated default.
+   */
+  getStorageHealth(): Promise<StorageHealth>;
 }
 
 /**

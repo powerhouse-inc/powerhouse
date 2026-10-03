@@ -71,6 +71,14 @@ import type {
   Remote,
   RemoteMeta,
 } from "./interfaces.js";
+import {
+  deriveConnectionHealth,
+  type DeadLetterPage,
+  type ISyncInspector,
+  type MailboxDepths,
+  type RemoteCursorInfo,
+  type RemoteSyncInspection,
+} from "./sync-inspection.js";
 import { calculateBackoffDelay } from "./channels/interval-poll-timer.js";
 import { InMemorySyncHoldStorage } from "./memory-hold-storage.js";
 import { InMemorySyncPurgeRefusalStorage } from "./memory-purge-refusal-storage.js";
@@ -94,6 +102,7 @@ import type {
   DeadLetterAddedEvent,
   LocalPeer,
   PurgeLookup,
+  RemoteCursor,
   RemoteFilter,
   RemoteOptions,
   RemoteRecord,
@@ -249,7 +258,11 @@ function firstOrdinalOf(syncOp: SyncOperation): number {
 }
 
 export class SyncManager
-  implements ISyncManager, IDeliveryTracking, IPurgeRefusalRecorder
+  implements
+    ISyncManager,
+    ISyncInspector,
+    IDeliveryTracking,
+    IPurgeRefusalRecorder
 {
   private readonly logger: ILogger;
   private readonly remoteStorage: ISyncRemoteStorage;
@@ -1417,6 +1430,216 @@ export class SyncManager
   /** Settles once the remotes' received markers are stored; rejects if one failed. */
   async receiptsStored(remoteNames?: Iterable<string>): Promise<void> {
     await Promise.all(this.markerWritesOf(remoteNames));
+  }
+
+  async inspectRemote(remoteName: string): Promise<RemoteSyncInspection> {
+    const remote = this.getByName(remoteName);
+    const cursors = await this.cursorStorage.list(remoteName);
+    return this.inspectionOf(remote, cursors);
+  }
+
+  async inspectRemotes(): Promise<RemoteSyncInspection[]> {
+    const out: RemoteSyncInspection[] = [];
+    for (const remote of this.remotes.values()) {
+      const cursors = await this.cursorStorage.list(remote.meta.name);
+      out.push(this.inspectionOf(remote, cursors));
+    }
+    return out;
+  }
+
+  async listDeadLetters(
+    remoteName: string,
+    cursor?: string,
+    limit?: number,
+  ): Promise<DeadLetterPage> {
+    this.getByName(remoteName);
+    const page = await this.deadLetterStorage.list(remoteName, {
+      cursor: cursor ?? "0",
+      limit: limit ?? this.config.maxDeadLettersPerRemote,
+    });
+    return {
+      remoteName,
+      results: page.results,
+      nextCursor: page.nextCursor,
+    };
+  }
+
+  async rewindInboxCursor(
+    remoteName: string,
+    toOrdinal: number,
+  ): Promise<void> {
+    const remote = this.getByName(remoteName);
+    if (remote.channel.rewindInboxCursor) {
+      await remote.channel.rewindInboxCursor(toOrdinal);
+      return;
+    }
+    await this.cursorStorage.upsert({
+      remoteName,
+      cursorType: "inbox",
+      cursorOrdinal: Math.max(0, Math.floor(toOrdinal)),
+      lastSyncedAtUtcMs: Date.now(),
+    });
+    await this.resetChannel(remoteName);
+  }
+
+  async resetChannel(remoteName: string): Promise<void> {
+    const remote = this.getByName(remoteName);
+    const meta = remote.meta;
+
+    let fresh: Remote;
+    let unheard: SyncOperation[];
+    this.removing.add(meta.name);
+    try {
+      await this.teardownRemoteResources(remote);
+
+      const channel = this.channelFactory.instance(
+        meta.id,
+        meta.name,
+        meta.channelConfig,
+        this.cursorStorage,
+        meta.collectionId,
+        meta.filter,
+        this.operationIndex,
+        meta.options,
+      );
+      fresh = { meta, channel };
+      this.remotes.set(meta.name, fresh);
+      this.records.set(meta.name, meta);
+
+      await this.loadDeadLetters(fresh);
+      await this.restoreReceivedMarkers(fresh);
+      unheard = [...fresh.channel.inbox.items];
+      this.wireChannelCallbacks(fresh);
+      await channel.init();
+    } finally {
+      this.removing.delete(meta.name);
+    }
+
+    if (unheard.length > 0) this.handleInboxAdded(fresh, unheard);
+    await this.peerUpdates.get(meta.name);
+
+    this.owe(meta.name, await this.watermarkHead());
+    const backfillController = new AbortController();
+    this.backfillAbortControllers.set(meta.name, backfillController);
+    void this.updateOutbox(
+      fresh,
+      0,
+      OutboxMode.Backfill,
+      backfillController.signal,
+    )
+      .catch((error) => {
+        if (backfillController.signal.aborted) return;
+        this.logger.error(
+          "Backfill failed for remote @RemoteName after reset: @Error",
+          meta.name,
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      })
+      .finally(() => {
+        this.backfillAbortControllers.delete(meta.name);
+        void this.drainPrunes();
+      });
+  }
+
+  async requeueDeadLetter(remoteName: string, id: string): Promise<void> {
+    const remote = this.getByName(remoteName);
+    const source = await this.findDeadLetter(remote, id);
+    if (!source) {
+      return;
+    }
+
+    const item = remote.channel.deadLetter.get(id);
+    if (item) {
+      remote.channel.deadLetter.remove(item);
+    }
+    await this.deadLetterStorage.remove(id);
+    this.quarantinedDocumentIds.delete(source.documentId);
+
+    const requeued = new SyncOperation(
+      source.id,
+      source.jobId,
+      source.jobDependencies,
+      source.remoteName,
+      source.documentId,
+      source.scopes,
+      source.branch,
+      source.operations,
+    );
+    remote.channel.inbox.add(requeued);
+  }
+
+  async clearDeadLetter(remoteName: string, id: string): Promise<void> {
+    const remote = this.getByName(remoteName);
+    const item = remote.channel.deadLetter.get(id);
+    if (item) {
+      remote.channel.deadLetter.remove(item);
+    }
+    await this.deadLetterStorage.remove(id);
+  }
+
+  private inspectionOf(
+    remote: Remote,
+    cursors: RemoteCursor[],
+  ): RemoteSyncInspection {
+    const inboxStored = cursors.find((c) => c.cursorType === "inbox");
+    const outboxStored = cursors.find((c) => c.cursorType === "outbox");
+    const inboxCursor: RemoteCursorInfo = {
+      cursorType: "inbox",
+      cursorOrdinal: inboxStored?.cursorOrdinal ?? 0,
+      lastSyncedAtUtcMs: inboxStored?.lastSyncedAtUtcMs,
+      liveAckOrdinal: remote.channel.inbox.ackOrdinal,
+      liveLatestOrdinal: remote.channel.inbox.latestOrdinal,
+    };
+    const outboxCursor: RemoteCursorInfo = {
+      cursorType: "outbox",
+      cursorOrdinal: outboxStored?.cursorOrdinal ?? 0,
+      lastSyncedAtUtcMs: outboxStored?.lastSyncedAtUtcMs,
+      liveAckOrdinal: remote.channel.outbox.ackOrdinal,
+      liveLatestOrdinal: remote.channel.outbox.latestOrdinal,
+    };
+    const mailboxDepths: MailboxDepths = {
+      inbox: remote.channel.inbox.items.length,
+      outbox: remote.channel.outbox.items.length,
+      deadLetter: remote.channel.deadLetter.items.length,
+    };
+    return {
+      remoteName: remote.meta.name,
+      remoteId: remote.meta.id,
+      inboxCursor,
+      outboxCursor,
+      mailboxDepths,
+      connection: deriveConnectionHealth(remote.channel.getConnectionState()),
+    };
+  }
+
+  /**
+   * The dead letter under `id`, preferring the live mailbox item (which carries
+   * the operations) and falling back to a storage scan for one evicted from the
+   * capped mailbox.
+   */
+  private async findDeadLetter(
+    remote: Remote,
+    id: string,
+  ): Promise<SyncOperation | DeadLetterRecord | undefined> {
+    const item = remote.channel.deadLetter.get(id);
+    if (item) {
+      return item;
+    }
+    let cursor = "0";
+    for (;;) {
+      const page = await this.deadLetterStorage.list(remote.meta.name, {
+        cursor,
+        limit: this.config.maxDeadLettersPerRemote,
+      });
+      const match = page.results.find((record) => record.id === id);
+      if (match) {
+        return match;
+      }
+      if (!page.nextCursor) {
+        return undefined;
+      }
+      cursor = page.nextCursor;
+    }
   }
 
   private recordPlanKeyMapping(planKey: string, jobId: string): void {

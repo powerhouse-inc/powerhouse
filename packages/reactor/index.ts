@@ -412,7 +412,9 @@ export {
   KyselySyncPurgeRefusalStorage,
   KyselySyncReceivedMarkerStorage,
   KyselySyncRemoteStorage,
+  type DeadLetterRecord,
   type ISyncCursorStorage,
+  type ISyncDeadLetterStorage,
   type ISyncHoldStorage,
   type ISyncPurgeRefusalStorage,
   type ISyncReceivedMarkerStorage,
@@ -427,6 +429,7 @@ export {
   ChannelErrorSource,
   ChannelScheme,
   consolidateSyncOperations,
+  deriveConnectionHealth,
   envelopesToSyncOperations,
   GqlRequestChannel,
   GqlRequestChannelFactory,
@@ -507,6 +510,13 @@ export {
   type SyncPendingEvent,
   type SyncStatusChangeCallback,
   type SyncSucceededEvent,
+  type DeadLetterPage,
+  type InspectableSyncManager,
+  type ISyncInspector,
+  type MailboxDepths,
+  type RemoteConnectionHealth,
+  type RemoteCursorInfo,
+  type RemoteSyncInspection,
 } from "./src/sync/index.js";
 
 // Processors
@@ -547,12 +557,15 @@ export * from "./src/catch-up/index.js";
 // Inspection
 export {
   ReactorInspector,
+  StorageHealthTracker,
   type IInspectableQueue,
   type IInspector,
   type InspectorProcessorInfo,
   type IReactorDbQuery,
+  type IStorageHealthProvider,
   type QueueStateSnapshot,
   type ReactorInspectorComponents,
+  type StorageHealth,
 } from "./src/inspector/index.js";
 
 // Document erasure

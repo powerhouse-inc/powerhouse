@@ -14,6 +14,7 @@ import type {
   SweepResult,
 } from "../../src/catch-up/types.js";
 import { ReactorInspector } from "../../src/inspector/reactor-inspector.js";
+import { StorageHealthTracker } from "../../src/inspector/storage-health.js";
 import type { IInspectableQueue } from "../../src/inspector/types.js";
 import type { Job } from "../../src/queue/types.js";
 
@@ -286,6 +287,42 @@ describe("ReactorInspector", () => {
       await expect(inspector.rebuildSnapshots("doc-1")).rejects.toThrow(
         "Integrity service not available",
       );
+    });
+  });
+});
+
+describe("ReactorInspector - storage health", () => {
+  it("reports a healthy, never-recreated default with no provider", async () => {
+    const inspector = new ReactorInspector({});
+    await expect(inspector.getStorageHealth()).resolves.toEqual({
+      healthy: true,
+      everRecreated: false,
+      recreateCount: 0,
+    });
+  });
+
+  it("tracks poison and recovery through a StorageHealthTracker", async () => {
+    let count = 0;
+    const tracker = new StorageHealthTracker(() => count);
+    const inspector = new ReactorInspector({ storageHealth: tracker });
+
+    tracker.markPoisoned();
+    await expect(inspector.getStorageHealth()).resolves.toMatchObject({
+      healthy: false,
+      everRecreated: false,
+    });
+
+    count = 1;
+    tracker.recordRecreated({
+      reason: "portal",
+      timestampUtcMs: 123,
+      attempt: 1,
+    });
+    await expect(inspector.getStorageHealth()).resolves.toEqual({
+      healthy: true,
+      everRecreated: true,
+      recreateCount: 1,
+      lastRecreated: { reason: "portal", timestampUtcMs: 123, attempt: 1 },
     });
   });
 });
