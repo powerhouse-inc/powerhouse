@@ -247,6 +247,10 @@ export class IntervalPollTimer implements IPollTimer {
    * polled again while its failure counters read clean. The outcome a tick
    * never ran cannot be "success"; and whatever the probe does, not polling is
    * the one choice that can strand a channel forever.
+   *
+   * The `cancelled` leg exists because a probe with no bound of its own - or one
+   * outlasting the tick's - must still end when the tick is cancelled, or
+   * nothing is left pending.
    */
   private async measureQueue(
     signal: AbortSignal,
@@ -258,8 +262,6 @@ export class IntervalPollTimer implements IPollTimer {
         handle = setTimeout(() => resolve("unknown"), timeoutMs);
       }
     });
-    // A probe with no bound of its own - or one outlasting the tick's - must
-    // still end when the tick is cancelled, or nothing is left pending.
     const cancelled = new Promise<"cancelled">((resolve) => {
       if (signal.aborted) {
         resolve("cancelled");

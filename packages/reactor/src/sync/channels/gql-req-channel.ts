@@ -622,9 +622,6 @@ export class GqlRequestChannel implements IChannel {
       signal,
     );
 
-    // The timer cancelled this tick: it is already counting the poll as failed
-    // and will schedule the next one from here. Touching the mailboxes or the
-    // cursors now would interleave this poll's writes with the next poll's.
     this.throwIfPollCancelled(signal);
 
     const {
@@ -1377,7 +1374,10 @@ export class GqlRequestChannel implements IChannel {
 
   /**
    * Pushes multiple sync operations to the remote via a single GraphQL mutation.
-   * Creates one SyncEnvelope per SyncOperation with key/dependsOn for batch ordering.
+   * Creates one SyncEnvelope per SyncOperation with key/dependsOn for batch
+   * ordering. The push passes no abort signal to `executeGraphQL`: a push is not
+   * part of a poll tick, so the timer's bound is not its bound - the channel's
+   * own request deadline and shutdown signal are.
    */
   private async pushSyncOperations(syncOps: SyncOperation[]): Promise<void> {
     const now = Date.now();
@@ -1402,8 +1402,6 @@ export class GqlRequestChannel implements IChannel {
             ? { peerManifestRevision: gatedUnder }
             : {}),
         },
-        // A push is not part of a poll tick, so the timer's bound is not its
-        // bound; the channel's own request deadline and shutdown signal are.
         undefined,
       );
       return;

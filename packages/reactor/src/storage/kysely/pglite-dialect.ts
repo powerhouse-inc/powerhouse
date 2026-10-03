@@ -279,6 +279,14 @@ class HardenedPGliteDriver implements Driver {
     await this.inner.init();
   }
 
+  /**
+   * Hands out the single lease, recovering a faulted session first. When
+   * release-time recovery could not clear the fault, the last resort is to ask
+   * the holder to recreate the PGlite instance - the one thing that clears a
+   * stuck portal. If it does, the swapped-in session is healthy, so re-probe and
+   * proceed against it instead of throwing; otherwise the session is refused
+   * with {@link PGliteSessionPoisonedError}.
+   */
   async acquireConnection(): Promise<DatabaseConnection> {
     const innerConnection = await this.acquireWithTimeout();
 
@@ -286,9 +294,6 @@ class HardenedPGliteDriver implements Driver {
       const fault = this.sessionFault;
       let recovered = await this.recoverSession(false);
       if (!recovered) {
-        // Last resort: ask the holder to recreate the PGlite instance (the one
-        // thing that clears a stuck portal). If it does, the swapped-in session
-        // is healthy, so re-probe and proceed instead of throwing.
         const healed = await this.options.onPoisoned(fault);
         if (healed) {
           recovered = await this.recoverSession(false);
