@@ -179,7 +179,11 @@ invariant. Sync is the expected bug nest and gets the deepest instrumentation.
 15. reactor-workflow: rerun re-executes side-effectful steps whose journaled output
    was truncated by the 256KB cap; truncation marker is duck-typed (service.ts:3774,
    store.ts:842) — fold into W3.3 workflow hardening.
-16. Unverified finder-only candidates (reactor-api/builder-tools verifiers never
+16. GqlResponseChannel (server side) still has the pre-fix cursor pattern:
+   watermark raised before the write, no retry on rejection, concurrent upserts
+   possible (gql-res-channel.ts:74, persistOutboxCursor) — same class as the
+   fixed finding 4; align it with CursorWriter.
+17. Unverified finder-only candidates (reactor-api/builder-tools verifiers never
    ran): http-loader versions pin not invalidated (http-loader.ts:508), ensureLink
    rename-over-junction on Windows (registry-cache.ts:650), non-restoring directory
    swaps (reactor-worker-build.ts:379, worker-packages-build.ts:223),
