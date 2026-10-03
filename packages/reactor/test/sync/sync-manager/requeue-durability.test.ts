@@ -1,10 +1,11 @@
 /**
  * requeueDeadLetter must not remove the durable dead-letter row before the retry
- * is durably enqueued. The inbox is in-memory and its cursor has already
- * advanced past the op's ordinal (that is why it dead-lettered), so a crash
- * between the storage remove and the durable re-enqueue would lose the op
- * forever. This proves the row is kept until reactor.load accepts the op, and
- * dropped only then. See
+ * is durably written. The inbox is in-memory and its cursor has already advanced
+ * past the op's ordinal (that is why it dead-lettered), and the retry enqueues a
+ * PENDING job on an in-memory queue, so a crash before that job reaches terminal
+ * success would lose the op forever. This proves the row is kept while the retry
+ * is only pending, dropped only once its load job reaches terminal success, and
+ * never dropped when the retry fails terminally. See
  * docs/bugs/2026-10-03-pglite-aborted-transaction-bricks-worker-reactor.md.
  */
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
@@ -13,8 +14,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
-import type { IReactor } from "../../../src/core/types.js";
+import type { BatchLoadRequest, IReactor } from "../../../src/core/types.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
+import { JobStatus } from "../../../src/shared/types.js";
 import type {
   ISyncCursorStorage,
   ISyncDeadLetterStorage,
@@ -45,6 +47,24 @@ function nonKeyedOp(id: string, documentId: string): SyncOperation {
   return new SyncOperation(
     id,
     "",
+    [],
+    "accounts",
+    documentId,
+    ["global"],
+    "main",
+    [] as OperationWithContext[],
+  );
+}
+
+/** A keyed sync op, so handleInboxAdded drives it through reactor.loadBatch. */
+function keyedOp(
+  id: string,
+  jobKey: string,
+  documentId: string,
+): SyncOperation {
+  return new SyncOperation(
+    id,
+    jobKey,
     [],
     "accounts",
     documentId,
@@ -228,14 +248,17 @@ describe("SyncManager.requeueDeadLetter durable ordering", () => {
     );
   }
 
-  it("keeps the durable row until reactor.load accepts the op, then drops it", async () => {
-    let releaseLoad: (() => void) | undefined;
-    const loadGate = new Promise<void>((resolve) => {
-      releaseLoad = resolve;
-    });
+  it("keeps the durable row while the retry is only pending, before terminal success", async () => {
+    // reactor.load resolves a PENDING job on the in-memory queue, but the job
+    // never reaches terminal success (getJobStatus stays PENDING and no event
+    // fires): the crash window the fix must survive without losing the op.
     mockReactor = {
-      load: vi.fn(() => loadGate.then(() => ({ id: "job-x", status: 2 }))),
-      getJobStatus: vi.fn().mockResolvedValue({ id: "job-x", status: 2 }),
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      getJobStatus: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
       loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
     } as unknown as IReactor;
     syncManager = makeManager(mockReactor);
@@ -245,34 +268,112 @@ describe("SyncManager.requeueDeadLetter durable ordering", () => {
 
     await syncManager.requeueDeadLetter("accounts", "d1");
 
-    // The op is re-enqueued and reactor.load is reached, but while that load has
-    // not resolved (the crash window), the durable row must survive.
     await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(1));
-    expect(channels[0].inbox.add).toHaveBeenCalled();
-    expect(mockDeadLetterStorage.remove).not.toHaveBeenCalled();
+    await new Promise((resolve) => setTimeout(resolve, 20));
 
-    // The load resolves: the op is now durably enqueued, so the row is dropped.
-    releaseLoad?.();
-    await vi.waitFor(() =>
-      expect(mockDeadLetterStorage.remove).toHaveBeenCalledWith("d1"),
-    );
+    expect(mockDeadLetterStorage.remove).not.toHaveBeenCalled();
   });
 
-  it("never drops the row if reactor.load never resolves (crash)", async () => {
+  it("drops the durable row only after the retry reaches terminal success, not at the pending enqueue", async () => {
+    let releaseTerminal: (() => void) | undefined;
+    const terminalGate = new Promise<void>((resolve) => {
+      releaseTerminal = resolve;
+    });
+    // The job is enqueued PENDING; terminal success is withheld until the gate
+    // opens, so the drop cannot happen at the PENDING enqueue boundary.
     mockReactor = {
-      load: vi.fn(() => new Promise(() => {})),
-      getJobStatus: vi.fn().mockResolvedValue({ id: "job-x", status: 2 }),
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      getJobStatus: vi.fn(() =>
+        terminalGate.then(() => ({
+          id: "job-x",
+          status: JobStatus.READ_READY,
+        })),
+      ),
       loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
     } as unknown as IReactor;
     syncManager = makeManager(mockReactor);
 
     await addAccounts();
-    channels[0].deadLetter.add(nonKeyedOp("d2", "doc-c"));
+    channels[0].deadLetter.add(nonKeyedOp("d1", "doc-b"));
 
-    await syncManager.requeueDeadLetter("accounts", "d2");
+    await syncManager.requeueDeadLetter("accounts", "d1");
+
     await vi.waitFor(() => expect(mockReactor.load).toHaveBeenCalledTimes(1));
     await new Promise((resolve) => setTimeout(resolve, 20));
-
     expect(mockDeadLetterStorage.remove).not.toHaveBeenCalled();
+
+    releaseTerminal?.();
+    await vi.waitFor(() =>
+      expect(mockDeadLetterStorage.remove).toHaveBeenCalledWith("d1"),
+    );
+  });
+
+  it("keeps the durable row when the retry fails terminally, so loadDeadLetters can restore it", async () => {
+    mockReactor = {
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      getJobStatus: vi.fn().mockResolvedValue({
+        id: "job-x",
+        status: JobStatus.FAILED,
+        error: { name: "Error", message: "boom" },
+      }),
+      loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
+    } as unknown as IReactor;
+    syncManager = makeManager(mockReactor);
+
+    await addAccounts();
+    channels[0].deadLetter.add(nonKeyedOp("d1", "doc-b"));
+
+    await syncManager.requeueDeadLetter("accounts", "d1");
+
+    // The op is re-dead-lettered (deadLetter.add fires a second time); the
+    // durable row must survive so a restart can restore it.
+    await vi.waitFor(() =>
+      expect(channels[0].deadLetter.add).toHaveBeenCalledTimes(2),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mockDeadLetterStorage.remove).not.toHaveBeenCalled();
+  });
+
+  it("drops only the successful op's row when a requeued op succeeds and another fails", async () => {
+    mockReactor = {
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "job-x", status: JobStatus.PENDING }),
+      getJobStatus: vi.fn((jobId: string) =>
+        jobId === "job-kA"
+          ? Promise.resolve({ id: jobId, status: JobStatus.READ_READY })
+          : Promise.resolve({
+              id: jobId,
+              status: JobStatus.FAILED,
+              error: { name: "Error", message: "boom" },
+            }),
+      ),
+      loadBatch: vi.fn((request: BatchLoadRequest) => {
+        const jobs: Record<string, { id: string; status: JobStatus }> = {};
+        for (const job of request.jobs) {
+          jobs[job.key] = { id: `job-${job.key}`, status: JobStatus.PENDING };
+        }
+        return Promise.resolve({ jobs });
+      }),
+    } as unknown as IReactor;
+    syncManager = makeManager(mockReactor);
+
+    await addAccounts();
+    channels[0].deadLetter.add(keyedOp("dA", "kA", "doc-a"));
+    channels[0].deadLetter.add(keyedOp("dB", "kB", "doc-b"));
+
+    await syncManager.requeueDeadLetter("accounts", "dA");
+    await syncManager.requeueDeadLetter("accounts", "dB");
+
+    // The successful op's row is dropped; the failed op's row is kept.
+    await vi.waitFor(() =>
+      expect(mockDeadLetterStorage.remove).toHaveBeenCalledWith("dA"),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mockDeadLetterStorage.remove).not.toHaveBeenCalledWith("dB");
   });
 });

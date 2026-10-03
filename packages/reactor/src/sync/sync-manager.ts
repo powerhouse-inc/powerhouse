@@ -287,8 +287,8 @@ export class SyncManager
   private readonly quarantinedDocumentIds = new Set<string>();
   private readonly purgedDocumentIds = new Set<string>();
   // Dead letters re-enqueued by requeueDeadLetter whose durable row is kept
-  // until the retry is durably accepted by the reactor; the apply path removes
-  // it once reactor.load/loadBatch accepts the op.
+  // until the retry is durably written; the apply path removes it only once the
+  // retry's load job reaches terminal success, not when the load is enqueued.
   private readonly requeuedDeadLetterIds = new Set<string>();
   private readonly purges?: PurgeLookup;
   private readonly delivery?: DeliveryLookup;
@@ -1599,12 +1599,13 @@ export class SyncManager
    * in-memory and its cursor has already advanced past this op's ordinal (that
    * is why it dead-lettered), so the op will never be re-pulled. Removing the
    * row before the retry is durable would lose the op outright on a crash
-   * between the remove and the durable re-enqueue. Instead the op is re-added to
-   * the inbox, which drives it back through handleInboxAdded -> reactor.load,
-   * and the row is removed only once that load/loadBatch has durably accepted it
-   * ({@link dropRequeuedDeadLetter}). A crash before then leaves the row for
-   * loadDeadLetters to restore on restart; a later duplicate apply is
-   * idempotent, a lost op is not.
+   * before its operations are written. Instead the op is re-added to the inbox,
+   * which drives it back through handleInboxAdded -> reactor.load, and the row
+   * is removed only once the retry's load job reaches terminal success, its
+   * operations durably written ({@link dropRequeuedDeadLetter}). The enqueued
+   * job is PENDING on an in-memory queue, so a crash between the enqueue and
+   * that terminal success leaves the row for loadDeadLetters to restore on
+   * restart; a later duplicate apply is idempotent, a lost op is not.
    */
   async requeueDeadLetter(remoteName: string, id: string): Promise<void> {
     const remote = this.getByName(remoteName);
@@ -1634,10 +1635,11 @@ export class SyncManager
   }
 
   /**
-   * Removes a requeued dead letter's durable row, called only once the retry
-   * has been durably enqueued by the reactor. A failed remove keeps the row,
-   * which is safe: the op is already durable, and a lingering row only costs a
-   * later manual clear, never a lost op.
+   * Removes a requeued dead letter's durable row, called only once the retry's
+   * load job has reached terminal success and its operations are durably
+   * written. A failed remove keeps the row, which is safe: the op is already
+   * durable, and a lingering row only costs a later manual clear, never a lost
+   * op.
    */
   private async dropRequeuedDeadLetter(id: string): Promise<void> {
     if (!this.requeuedDeadLetterIds.delete(id)) {
@@ -2352,9 +2354,6 @@ export class SyncManager
       return;
     }
     if (syncOp.jobId) this.recordPlanKeyMapping(syncOp.jobId, jobInfo.id);
-    if (this.requeuedDeadLetterIds.has(syncOp.id)) {
-      await this.dropRequeuedDeadLetter(syncOp.id);
-    }
 
     let completedJobInfo;
     try {
@@ -2385,12 +2384,15 @@ export class SyncManager
 
     if (this.isShutdown) return;
 
+    let syncOpResolved = false;
     if (completedJobInfo.status !== JobStatus.FAILED) {
       syncOp.executed();
       if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
+      syncOpResolved = true;
     } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
       this.tombstone(syncOp.documentId);
       syncOp.executed();
+      syncOpResolved = true;
     } else {
       const errorMessage = completedJobInfo.error?.message || "Unknown error";
       this.logger.error(
@@ -2410,6 +2412,10 @@ export class SyncManager
 
     this.markerRetries.delete(syncOp.id);
     remote.channel.inbox.remove(syncOp);
+
+    if (syncOpResolved && this.requeuedDeadLetterIds.has(syncOp.id)) {
+      await this.dropRequeuedDeadLetter(syncOp.id);
+    }
   }
 
   /** Reloads a marker with backoff; it stays in the inbox, not dead-lettered. */
@@ -2568,9 +2574,6 @@ export class SyncManager
         continue;
       }
       const jobInfo = result.jobs[syncOp.jobId];
-      if (this.requeuedDeadLetterIds.has(syncOp.id)) {
-        await this.dropRequeuedDeadLetter(syncOp.id);
-      }
 
       let completedJobInfo;
       try {
@@ -2595,12 +2598,15 @@ export class SyncManager
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
       if (this.isShutdown) return;
 
+      let syncOpResolved = false;
       if (completedJobInfo.status !== JobStatus.FAILED) {
         syncOp.executed();
         if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
+        syncOpResolved = true;
       } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
         this.tombstone(syncOp.documentId);
         syncOp.executed();
+        syncOpResolved = true;
       } else if (
         carriesMarker(syncOp) &&
         !isRefusedMarker(completedJobInfo.error)
@@ -2617,6 +2623,10 @@ export class SyncManager
       }
 
       remote.channel.inbox.remove(syncOp);
+
+      if (syncOpResolved && this.requeuedDeadLetterIds.has(syncOp.id)) {
+        await this.dropRequeuedDeadLetter(syncOp.id);
+      }
     }
   }
 
