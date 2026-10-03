@@ -140,3 +140,36 @@ NEXT (new work package — liveness/recovery, W0.7 candidate):
    A-2 persists absent OOM-level pressure.
 3. Investigate the ~18 GB footprint for 375 revs / 100 statements (PGlite-wasm bloat)
    — reducing it would both ease the test and shrink the A-2 trigger window.
+
+## Regression run 3 (post-W0.5/W0.7, hardened both ends, healthy RAM) — two new findings
+
+Setup: full dist chain rebuilt (incl. switchboard), fresh caches, 18.5 GB free at start,
+memory stayed 3.5-8.7 GB free throughout (no reap, no OOM at the OS level).
+
+FINDING A — THROUGHPUT CLIFF (durability cost): no poison, no brick; storage stayed
+healthy (getStorageHealth: healthy, never recreated — the W0.5 op worked live over RPC).
+But bulk catch-up ran at ~2 ops/sec: the Accounts collection is ~16,600 ops
+(liveLatestOrdinal 16599) and the durable store now flushes per op
+(relaxedDurability:false). W0.5 inspection showed the truth in one query: inbox depth
+277 draining slowly, cursor 3464→3623 over 20s, queue steady at 1 executing. The
+single-threaded worker saturates; the tab UI freezes (render storm + starved RPC).
+Verdict script's 4-min window said STALLED on what was actually SLOW — the exact
+slow-vs-stuck distinction, now measurable. Full catch-up would take ~2h.
+=> The durable-flush-per-op design needs a batched-flush/group-commit with cursor
+checkpointing; AND this empirically demonstrates the browser local-first ceiling that
+motivates the multi-reactor remote routing (motivation 1 of the plan).
+
+FINDING B — SILENT STATEMENT HANG WEDGES EVERYTHING (new defect class): ~15 min into
+the grind the SharedWorker wedged completely: 0% CPU over 6s, heap collapsed to
+~700 MB, all RPC (including pauseQueue) hung, a fresh tab attached to the worker and
+hung at hello. No error surfaced anywhere. Mechanism: an in-flight PGlite statement
+that never settles (wasm internals died mid-call) produces NO error — the connection
+lease is never released, bounded-acquire only bounds WAITERS not the holder, the
+self-heal triggers only on PGliteSessionPoisonedError (an error), so nothing heals.
+All of today's hardening covers stuck-LOUD; this is stuck-SILENT one layer down.
+=> Fix: statement-level deadline in HardenedPGliteDialect (configurable; generous
+default) that converts a hung statement into the poison/self-heal path, so a dead
+wasm call becomes a recreate instead of a permanent silent wedge.
+
+Data point for the durability fix working: the ~340 revisions applied before the wedge
+are durably in idb and survive restart (verified by fresh boot reading rev 340).
