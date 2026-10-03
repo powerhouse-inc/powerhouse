@@ -267,6 +267,36 @@ describe("SyncTab", () => {
     );
   });
 
+  it("surfaces a repair failure instead of swallowing it", async () => {
+    const manager = fakeSyncManager(
+      [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
+      [inspectionFor("accounts")],
+    );
+    manager.resetChannel.mockRejectedValue(new Error("reset exploded"));
+    const view = render(<SyncTab syncManager={manager} />);
+
+    await view.findByTestId("sync-mailbox-depths");
+    fireEvent.click(view.getByText("Reset channel"));
+
+    const error = await view.findByTestId("sync-repair-error");
+    expect(error.textContent).toMatch(/reset exploded/);
+  });
+
+  it("skips the dead-letter fetch when the mailbox depth is zero", async () => {
+    const manager = fakeSyncManager(
+      [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
+      [
+        inspectionFor("accounts", {
+          mailboxDepths: { inbox: 0, outbox: 0, deadLetter: 0 },
+        }),
+      ],
+    );
+    const view = render(<SyncTab syncManager={manager} />);
+
+    await view.findByTestId("sync-mailbox-depths");
+    expect(manager.listDeadLetters).not.toHaveBeenCalled();
+  });
+
   it("renders a placeholder when the reactor has no sync module", () => {
     const view = render(<SyncTab syncManager={undefined} />);
     expect(view.getByText(/no sync module/)).toBeTruthy();

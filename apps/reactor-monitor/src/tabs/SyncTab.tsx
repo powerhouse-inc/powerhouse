@@ -102,6 +102,7 @@ function RemoteRow({
   remote,
   inspection,
   deadLetters,
+  repairError,
   onTriggerPull,
   onResetChannel,
   onRewindInbox,
@@ -111,6 +112,7 @@ function RemoteRow({
   remote: Remote;
   inspection: RemoteSyncInspection | undefined;
   deadLetters: DeadLetterRecord[];
+  repairError: string | undefined;
   onTriggerPull: (name: string) => void;
   onResetChannel: (name: string) => void;
   onRewindInbox: (name: string, toOrdinal: number) => void;
@@ -124,6 +126,14 @@ function RemoteRow({
   const neverSucceeded = inspection?.connection.neverSucceeded ?? false;
   const lying = neverSucceeded || isConnectionLying(snapshot);
   const [rewindTo, setRewindTo] = useState("0");
+  // A rewind only ever moves the cursor backward, so the input is capped at the
+  // furthest-ahead inbox position the manager will accept.
+  const maxRewind = inspection
+    ? Math.max(
+        inspection.inboxCursor.cursorOrdinal,
+        inspection.inboxCursor.liveAckOrdinal,
+      )
+    : undefined;
 
   return (
     <li className={lying ? "rm-remote rm-remote-warning" : "rm-remote"}>
@@ -219,6 +229,8 @@ function RemoteRow({
         <label>
           Rewind inbox to ordinal
           <input
+            max={maxRewind}
+            min={0}
             onChange={(e) => setRewindTo(e.target.value)}
             type="number"
             value={rewindTo}
@@ -234,6 +246,12 @@ function RemoteRow({
           Rewind + re-pull
         </button>
       </div>
+
+      {repairError ? (
+        <p className="rm-error" data-testid="sync-repair-error" role="alert">
+          Repair failed: {repairError}
+        </p>
+      ) : null}
 
       {deadLetters.length > 0 ? (
         <div className="rm-dead-letters">
@@ -271,6 +289,28 @@ export function SyncTab({ syncManager, inspector }: SyncTabProps) {
   const [url, setUrl] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [repairErrors, setRepairErrors] = useState<Map<string, string>>(
+    new Map(),
+  );
+
+  const setRepairError = useCallback((remoteName: string, message: string) => {
+    setRepairErrors((prev) => {
+      const next = new Map(prev);
+      next.set(remoteName, message);
+      return next;
+    });
+  }, []);
+
+  const clearRepairError = useCallback((remoteName: string) => {
+    setRepairErrors((prev) => {
+      if (!prev.has(remoteName)) {
+        return prev;
+      }
+      const next = new Map(prev);
+      next.delete(remoteName);
+      return next;
+    });
+  }, []);
 
   const refresh = useCallback(async () => {
     if (!syncManager) {
@@ -282,14 +322,23 @@ export function SyncTab({ syncManager, inspector }: SyncTabProps) {
       const inspected = await syncManager.inspectRemotes();
       setInspections(new Map(inspected.map((i) => [i.remoteName, i])));
       const nextDeadLetters = new Map<string, DeadLetterRecord[]>();
-      for (const i of inspected) {
-        const page = await syncManager.listDeadLetters(
-          i.remoteName,
-          undefined,
-          DEAD_LETTER_PAGE_SIZE,
-        );
-        nextDeadLetters.set(i.remoteName, page.results);
-      }
+      // Skip the per-remote dead-letter fetch when the inspection already
+      // reports an empty dead-letter mailbox, and run the rest concurrently
+      // rather than awaiting each in series every poll.
+      await Promise.all(
+        inspected.map(async (i) => {
+          if (i.mailboxDepths.deadLetter === 0) {
+            nextDeadLetters.set(i.remoteName, []);
+            return;
+          }
+          const page = await syncManager.listDeadLetters(
+            i.remoteName,
+            undefined,
+            DEAD_LETTER_PAGE_SIZE,
+          );
+          nextDeadLetters.set(i.remoteName, page.results);
+        }),
+      );
       setDeadLetters(nextDeadLetters);
     } catch (e) {
       console.error("[reactor-monitor] sync inspection failed:", e);
@@ -350,38 +399,54 @@ export function SyncTab({ syncManager, inspector }: SyncTabProps) {
     [syncManager],
   );
 
+  // Every repair lever surfaces its failure per remote rather than dropping it
+  // into an invisible unhandled rejection, and refreshes either way.
+  const runRepair = useCallback(
+    async (remoteName: string, action: () => Promise<void> | undefined) => {
+      try {
+        await action();
+        clearRepairError(remoteName);
+      } catch (e) {
+        setRepairError(remoteName, e instanceof Error ? e.message : String(e));
+      } finally {
+        void refresh();
+      }
+    },
+    [refresh, clearRepairError, setRepairError],
+  );
+
   const handleResetChannel = useCallback(
     (remoteName: string) => {
-      void syncManager?.resetChannel(remoteName).then(() => void refresh());
+      void runRepair(remoteName, () => syncManager?.resetChannel(remoteName));
     },
-    [syncManager, refresh],
+    [syncManager, runRepair],
   );
 
   const handleRewindInbox = useCallback(
     (remoteName: string, toOrdinal: number) => {
-      void syncManager
-        ?.rewindInboxCursor(remoteName, toOrdinal)
-        .then(() => void refresh());
+      void runRepair(remoteName, () =>
+        syncManager?.rewindInboxCursor(remoteName, toOrdinal),
+      );
     },
-    [syncManager, refresh],
+    [syncManager, runRepair],
   );
 
   const handleRequeue = useCallback(
     (remoteName: string, id: string) => {
-      void syncManager
-        ?.requeueDeadLetter(remoteName, id)
-        .then(() => void refresh());
+      void runRepair(remoteName, () =>
+        syncManager?.requeueDeadLetter(remoteName, id),
+      );
     },
-    [syncManager, refresh],
+    [syncManager, runRepair],
   );
 
   const handleClear = useCallback(
     (remoteName: string, id: string) => {
-      void syncManager
-        ?.clearDeadLetter(remoteName, id)
-        .then(() => void refresh());
+      void runRepair(remoteName, () =>
+        syncManager?.clearDeadLetter(remoteName, id),
+      );
     },
-    [syncManager, refresh],
+    [syncManager, runRepair],
   );
 
   if (!syncManager) {
@@ -460,6 +525,7 @@ export function SyncTab({ syncManager, inspector }: SyncTabProps) {
               onRewindInbox={handleRewindInbox}
               onTriggerPull={handleTriggerPull}
               remote={remote}
+              repairError={repairErrors.get(remote.meta.name)}
             />
           ))}
         </ul>
