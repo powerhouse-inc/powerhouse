@@ -10,6 +10,7 @@ import {
   ReactorEventTypes,
   ReactorInspector,
   SelfHealingPGliteClient,
+  StorageHealthTracker,
   type Database,
   type IDocumentModelLoader,
   type InProcessReactorClientModule,
@@ -107,18 +108,27 @@ export async function buildMonitorReactor(
       })
     : undefined;
 
+  // Storage-health dimension for the inspector, fed by the self-heal path so
+  // "connected" can never read green while the session is dead (W0.5 / W0.7).
+  const storageHealth = new StorageHealthTracker(
+    selfHeal ? () => selfHeal.recreateCount : undefined,
+  );
+
   // The one Kysely over this reactor's PGlite. Inspector SQL goes through it
   // too, so it enters the dialect's serialising queue instead of landing
   // inside whatever job transaction is open on the shared session. See
   // docs/bugs/2026-10-03-sync-defect-analysis.md, mechanism A-3.
   const db = new Kysely<Database>({
     dialect: new HardenedPGliteDialect(selfHeal ?? pg, {
-      onPoisoned: (cause) =>
-        selfHeal
-          ? selfHeal.recreate(
-              cause instanceof Error ? cause.message : String(cause),
-            )
-          : Promise.resolve(false),
+      onPoisoned: (cause) => {
+        if (!selfHeal) {
+          return Promise.resolve(false);
+        }
+        storageHealth.markPoisoned();
+        return selfHeal.recreate(
+          cause instanceof Error ? cause.message : String(cause),
+        );
+      },
     }),
   });
 
@@ -157,6 +167,7 @@ export async function buildMonitorReactor(
   // The event bus exists only now, so bind the recovery-event sink here; the
   // event is observable on this reactor's bus like any other lifecycle event.
   selfHeal?.setRecreatedListener((event) => {
+    storageHealth.recordRecreated(event);
     void module.eventBus
       .emit(ReactorEventTypes.STORAGE_SESSION_RECREATED, event)
       .catch((error) =>
@@ -183,6 +194,7 @@ export async function buildMonitorReactor(
             rm.documentView,
             rm.documentModelRegistry,
           ),
+          storageHealth,
         }
       : {},
   );

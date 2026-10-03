@@ -1,7 +1,6 @@
 import {
   ChannelScheme,
   DocumentIntegrityService,
-  DriveCollectionId,
   HardenedPGliteDialect,
   InMemoryQueue,
   queryThroughDialect,
@@ -10,22 +9,21 @@ import {
   ReactorEventTypes,
   ReactorInspector,
   SelfHealingPGliteClient,
-  type ChannelConfig,
+  StorageHealthTracker,
   type Database,
   type IDocumentModelRegistry,
   type IReactorDbQuery,
+  type ISyncInspector,
   type ISyncManager,
   type JwtHandler,
   type ReactorFeatureFlags,
   type RecreatablePGliteInstance,
-  type Remote,
-  type RemoteFilter,
-  type RemoteOptions,
   type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import { baseDocumentModels } from "@powerhousedao/reactor-browser/base-document-models";
 import {
   dispatchInspectorOp,
+  dispatchSyncOp,
   FORWARDED_EVENT_TYPES,
   ReactorHost,
   SYNC_STATUS_CHANGED_EVENT,
@@ -36,7 +34,6 @@ import {
 } from "@powerhousedao/reactor-browser/rpc";
 import type {
   DocumentModelModule,
-  PeerManifest,
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -123,7 +120,7 @@ type ModelRegistry = Pick<
 let loader: WorkerPackageLoader | undefined;
 let registry: ModelRegistry | undefined;
 let signer: RenownCryptoSigner | undefined;
-let syncManager: ISyncManager | undefined;
+let syncManager: (ISyncManager & ISyncInspector) | undefined;
 type RelationalState = {
   pg?: PgLiveModuleNs.PGliteWithLive;
   db?: IRelationalDb;
@@ -174,14 +171,6 @@ const registeredKeys = new Set<string>();
 
 function modelKey(module: DocumentModelModule): string {
   return `${module.documentModel.global.id}@${module.version ?? 1}`;
-}
-
-// Cloneable projection of a Remote: meta (carries channelConfig) + connection snapshot.
-function toWireRemote(remote: Remote) {
-  return {
-    meta: remote.meta,
-    connectionState: remote.channel.getConnectionState(),
-  };
 }
 
 // Register only the delta; the registry rejects duplicate (type, version) pairs.
@@ -481,11 +470,17 @@ const host = new ReactorHost({
         },
       );
       owned.reactorPg = reactorSelfHeal;
+      // Storage-health dimension for the inspector: a poisoned session flips it
+      // unhealthy, a successful recreate flips it back. See W0.5 / W0.7.
+      const storageHealth = new StorageHealthTracker(
+        () => reactorSelfHeal.recreateCount,
+      );
       owned.reactorDb = new Kysely<Database>({
         dialect: new HardenedPGliteDialect(reactorSelfHeal, {
           onPoisoned: async (cause) => {
             const reason =
               cause instanceof Error ? cause.message : String(cause);
+            storageHealth.markPoisoned();
             const healed = await reactorSelfHeal.recreate(reason);
             if (!healed) {
               console.error(
@@ -560,6 +555,7 @@ const host = new ReactorHost({
             rm.documentView,
             rm.documentModelRegistry,
           ),
+          storageHealth,
         });
       }
       for (const m of models) {
@@ -576,6 +572,7 @@ const host = new ReactorHost({
       // The event bus exists only now; emit the recovery event on it so the
       // forwarding subscription above relays it to the tab/inspector.
       reactorSelfHeal.setRecreatedListener((event) => {
+        storageHealth.recordRecreated(event);
         void module.eventBus
           .emit(ReactorEventTypes.STORAGE_SESSION_RECREATED, event)
           .catch((error) =>
@@ -618,55 +615,11 @@ const host = new ReactorHost({
       signer.user = user ?? undefined;
     }
   },
-  onSyncOp: async (method, args) => {
+  onSyncOp: (method, args) => {
     if (!syncManager) {
       throw new Error("SyncManager not available");
     }
-    switch (method) {
-      case "list":
-        return syncManager.list().map(toWireRemote);
-      case "add": {
-        const [name, collectionIdKey, channelConfig, filter, options] =
-          args as [
-            string,
-            string,
-            ChannelConfig,
-            RemoteFilter | undefined,
-            RemoteOptions | undefined,
-          ];
-        const remote = await syncManager.add(
-          name,
-          DriveCollectionId.fromKey(collectionIdKey),
-          channelConfig,
-          filter,
-          options,
-        );
-        return toWireRemote(remote);
-      }
-      case "bindRemote":
-        await syncManager.bindRemote(args[0] as string, args[1] as string);
-        return undefined;
-      case "setPeerManifest":
-        await syncManager.setPeerManifest(
-          args[0] as string,
-          args[1] as PeerManifest | null,
-        );
-        return undefined;
-      case "peerAgreementBasis":
-        return syncManager.agreement().basis();
-      case "listHolds":
-        return syncManager.listHolds(
-          args[0] as { remoteName?: string; documentId?: string } | undefined,
-        );
-      case "remove":
-        await syncManager.remove(args[0] as string);
-        return undefined;
-      case "triggerPull":
-        syncManager.triggerPull(args[0] as string);
-        return undefined;
-      default:
-        throw new Error(`Unknown sync op: ${method}`);
-    }
+    return dispatchSyncOp(syncManager, method, args);
   },
   onDbOp: async (method, args) => {
     if (!relational.kysely) {

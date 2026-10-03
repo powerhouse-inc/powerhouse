@@ -7,12 +7,12 @@ import type {
   InProcessReactorModule,
   IReactorClient,
   IReactorDbQuery,
-  ISyncManager,
   JwtHandler,
   ReactorFeatureFlags,
 } from "@powerhousedao/reactor";
 import type {
   IInspectorProxy,
+  InspectableSyncManager,
   IWorkerAdminClient,
   WorkerInspectorInfo,
   WorkerPackageSource,
@@ -143,7 +143,7 @@ export interface MonitorWorkerClientModule {
   inspector: IInspectorProxy;
   reactorModule: {
     documentModelRegistry: IDocumentModelRegistry;
-    syncModule: { syncManager: ISyncManager };
+    syncModule: { syncManager: InspectableSyncManager };
     eventBus: IEventBus;
   };
   /** Loads (or replaces) URL-addressed packages in the worker's registry. */
@@ -160,8 +160,8 @@ export interface ManagedReactorBase {
   readonly inspector: IInspector;
   /** Raw SQL against the reactor's own store; a capability, not inspection. */
   readonly dbQuery: IReactorDbQuery;
-  /** The reactor's sync manager, or a proxy to it. */
-  readonly syncManager: ISyncManager | undefined;
+  /** The reactor's sync manager (with its W0.5 inspection surface), or a proxy to it. */
+  readonly syncManager: InspectableSyncManager | undefined;
   /**
    * The reactor's event bus: direct in-process, a forwarding proxy in a
    * worker. A worker-hosted bus only relays the types in
@@ -195,7 +195,7 @@ export interface ManagedWorkerReactor extends ManagedReactorBase {
   readonly kind: "worker";
   readonly module: MonitorWorkerClientModule;
   /** Always present: the proxy exists whether or not the worker built sync. */
-  readonly syncManager: ISyncManager;
+  readonly syncManager: InspectableSyncManager;
   adminInfo: () => Promise<WorkerInspectorInfo>;
   restart: () => Promise<void>;
 }
