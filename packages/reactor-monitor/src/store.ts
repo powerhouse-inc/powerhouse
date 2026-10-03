@@ -42,11 +42,16 @@ export function openReactorStore(
   storage: ReactorStorageConfig = { kind: "idb" },
 ): Promise<PGlite> {
   return chained(async () => {
+    // This is the monitor reactor's authoritative operation store, and it
+    // self-heals by recreating the instance against this same store
+    // (build-reactor.ts). It therefore opens WITHOUT relaxedDurability: a COMMIT
+    // must be flushed before it is reported durable, so a recreate - which reads
+    // back only the last flushed snapshot - never loses an acknowledged write.
     const pg =
       storage.kind === "memory"
         ? new PGlite()
         : new PGlite(storageLocation(namespace, storage), {
-            relaxedDurability: true,
+            relaxedDurability: false,
           });
     await pg.waitReady;
     return pg;
