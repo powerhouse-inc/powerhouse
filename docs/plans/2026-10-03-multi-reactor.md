@@ -107,6 +107,14 @@ invariant. Sync is the expected bug nest and gets the deepest instrumentation.
 - **W0.5 sync observability**: new `sync.*` inspector ops (mailbox depths, cursors,
   dead letters paged, connection snapshots, holds/agreement) crossing the RPC
   boundary; event-stream panel over forwarded bus events.
+- **W0.7 storage self-heal** (core track, DONE 2026-10-03, commits d099df6c03,
+  4ffad229c9, 010506700b, ce67caaf14): on PGliteSessionPoisonedError the reactor
+  recreates its PGlite instance in-place against the same durable storage (stable
+  proxy client swaps the inner instance; all holders rewire; single-flight), emits
+  STORAGE_SESSION_RECREATED, falls back to host reload only if no replacement opens.
+  In-process self-heal confirmed feasible. Needs live-browser pass: pg.close() on a
+  real OOM-poisoned instance; soak showing self-heal recovers without operator restart;
+  optional inspector UI for the event. Relational-store self-heal intentionally deferred.
 - **W0.6 dev-fingerprint fix**: make `appBuildId` vary per dev build (content-hash
   the worker bundle); consider hashing builder-tools content into the bundle cache key.
 - Exit demo: monitor app provisions one worker reactor, inspector shows queue/
