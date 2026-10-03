@@ -120,6 +120,19 @@ invariant. Sync is the expected bug nest and gets the deepest instrumentation.
 - Exit demo: monitor app provisions one worker reactor, inspector shows queue/
   processors/sync/events live; library API consumed by a vitest integration test.
 
+### Status note (2026-10-03, end of day-1 autonomous run)
+Sync/storage hardening is CODE-COMPLETE and twice through the review gate:
+original fix series + 6 blocking fixes + W0.7 self-heal + 5 self-heal review fixes
+(HEAD 2e27679e28). Authoritative operation store is now DURABLE (relaxedDurability
+off → committed=flushed), self-heal recreates in-place close-then-open, relational
+store falls back to host-reload. Regression run 2 was a PARTIAL PASS (drive converges
+to 375; silent death → loud refusal). PENDING GATE, held for a memory-headroom window
+/ user presence: final Accounts soak on the fully-fixed+reviewed+durable stack to
+confirm full pass and isolate whether the residual A-2 poison is logic or OOM-induced.
+Live-browser-pass items: pg.close() on a real poisoned instance; relational reload
+fallback; durability throughput under bulk catch-up. Run it with scratchpad/verdict.sh
+(bounded FOREGROUND — never a background task; see [[vetra-runtime-resource-discipline]]).
+
 ### Stage 1 — two workers, one drive, synced + load-tested
 - **W1.1 `LocalChannel`** (core track): symmetric MessagePort channel + handshake
   (touch analog + peer manifests) + `LocalChannelFactory` + cursor persistence.
