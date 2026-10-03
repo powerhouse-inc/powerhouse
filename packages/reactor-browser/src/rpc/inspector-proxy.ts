@@ -4,6 +4,7 @@ import type {
   InspectorProcessorInfo,
   QueueStateSnapshot,
   RebuildResult,
+  StorageHealth,
   SweepResult,
   ValidationResult,
 } from "@powerhousedao/reactor";
@@ -53,6 +54,8 @@ export function createInspectorProxy(router: MessageRouter): IInspectorProxy {
         documentId,
         branch,
       ]) as Promise<RebuildResult>,
+    getStorageHealth: () =>
+      ops.call(INSPECTOR_OPS.getStorageHealth) as Promise<StorageHealth>,
     queryReactorDb: (sql, params) =>
       ops.call(INSPECTOR_OPS.queryReactorDb, [sql, params ?? []]) as Promise<
         unknown[]

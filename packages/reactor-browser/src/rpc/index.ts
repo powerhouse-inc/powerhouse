@@ -13,6 +13,14 @@ export {
   type InspectorOp,
 } from "./inspector-ops.js";
 export {
+  dispatchSyncOp,
+  SYNC_OPS,
+  toWireRemote,
+  type InspectableSyncManager,
+  type SyncOp,
+  type WireRemote,
+} from "./sync-ops.js";
+export {
   opChannel,
   toVoid,
   RPC_DEFAULT_TIMEOUT_MS,

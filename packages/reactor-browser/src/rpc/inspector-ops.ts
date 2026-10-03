@@ -17,6 +17,7 @@ export const INSPECTOR_OPS = {
   validateDocument: "integrity.validate",
   rebuildKeyframes: "integrity.rebuildKeyframes",
   rebuildSnapshots: "integrity.rebuildSnapshots",
+  getStorageHealth: "storage.health",
   queryReactorDb: "db.query",
 } as const;
 
@@ -66,6 +67,8 @@ export async function dispatchInspectorOp(
       const [documentId, branch] = args as [string, string?];
       return inspector.rebuildSnapshots(documentId, branch);
     }
+    case INSPECTOR_OPS.getStorageHealth:
+      return inspector.getStorageHealth();
     case INSPECTOR_OPS.queryReactorDb: {
       if (!dbQuery) {
         throw new Error("Reactor store not available");

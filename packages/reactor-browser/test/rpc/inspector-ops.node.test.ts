@@ -5,6 +5,7 @@ import type {
   IReactorDbQuery,
   QueueStateSnapshot,
   RebuildResult,
+  StorageHealth,
   SweepResult,
   ValidationResult,
 } from "@powerhousedao/reactor";
@@ -54,6 +55,12 @@ const rebuild: RebuildResult = {
   keyframesDeleted: 0,
   scopesInvalidated: 0,
 };
+const storageHealth: StorageHealth = {
+  healthy: true,
+  everRecreated: true,
+  recreateCount: 2,
+  lastRecreated: { reason: "portal", timestampUtcMs: 42, attempt: 2 },
+};
 
 type FakeInspector = {
   [K in keyof IInspector]: ReturnType<typeof vi.fn>;
@@ -71,6 +78,7 @@ function fakeInspector(): FakeInspector {
     validateDocument: vi.fn(() => Promise.resolve(validation)),
     rebuildKeyframes: vi.fn(() => Promise.resolve(rebuild)),
     rebuildSnapshots: vi.fn(() => Promise.resolve(rebuild)),
+    getStorageHealth: vi.fn(() => Promise.resolve(storageHealth)),
   };
 }
 
@@ -141,6 +149,9 @@ describe("dispatchInspectorOp", () => {
     await expect(
       call(INSPECTOR_OPS.rebuildSnapshots, ["doc-1", "draft"]),
     ).resolves.toBe(rebuild);
+    await expect(call(INSPECTOR_OPS.getStorageHealth)).resolves.toBe(
+      storageHealth,
+    );
     await expect(
       call(INSPECTOR_OPS.queryReactorDb, ["select 1", []]),
     ).resolves.toEqual([{ n: 1 }]);
@@ -155,6 +166,7 @@ describe("dispatchInspectorOp", () => {
     expect(inspector.validateDocument).toHaveBeenCalledWith("doc-1", "main");
     expect(inspector.rebuildKeyframes).toHaveBeenCalledWith("doc-1", undefined);
     expect(inspector.rebuildSnapshots).toHaveBeenCalledWith("doc-1", "draft");
+    expect(inspector.getStorageHealth).toHaveBeenCalledTimes(1);
     expect(db.queryDb).toHaveBeenCalledWith("select 1", []);
   });
 
@@ -170,6 +182,7 @@ describe("dispatchInspectorOp", () => {
       validateDocument: "integrity.validate",
       rebuildKeyframes: "integrity.rebuildKeyframes",
       rebuildSnapshots: "integrity.rebuildSnapshots",
+      getStorageHealth: "storage.health",
       queryReactorDb: "db.query",
     });
   });
@@ -235,6 +248,7 @@ describe("createInspectorProxy", () => {
     await proxy.validateDocument("doc-1", "main");
     await proxy.rebuildKeyframes("doc-1");
     await proxy.rebuildSnapshots("doc-1", "draft");
+    await proxy.getStorageHealth();
     await proxy.queryReactorDb("select 1");
 
     expect(sent).toEqual([
@@ -248,6 +262,7 @@ describe("createInspectorProxy", () => {
       { method: "integrity.validate", args: ["doc-1", "main"] },
       { method: "integrity.rebuildKeyframes", args: ["doc-1", undefined] },
       { method: "integrity.rebuildSnapshots", args: ["doc-1", "draft"] },
+      { method: "storage.health", args: [] },
       { method: "db.query", args: ["select 1", []] },
     ]);
   });
