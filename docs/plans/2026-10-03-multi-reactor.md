@@ -156,6 +156,16 @@ invariant. Sync is the expected bug nest and gets the deepest instrumentation.
 7. Unbounded workflow step journal. 8. Sync mailbox state invisible over RPC (W0.5). 9. **PGlite aborted transaction +
    active portal bricks worker reactor** — root cause of Accounts sync death; see
    docs/bugs/2026-10-03-pglite-aborted-transaction-bricks-worker-reactor.md.
+10. externalDeps/queueHint unvalidated — dangling hint wedges a sub-queue silently
+   (queue.ts areDependenciesMet vs completedJobs eviction; core/utils.ts
+   validateBatchStructure skips externalDeps). Same silent-death shape as item 9.
+11. Re-evaluation writes discarded (simple-job-executor.ts ~2536 returns
+   outcome.error, drops operationsWithContext) — revocations may not reach reads.
+12. replayDocument replays scopes by Object.keys order, no cross-scope rank
+   (shared/document-model documents.ts ~588). Awareness; separate subsystem.
+   (Unverified: projection races across scopes / saveState set-vs-max — re-check
+   before acting. Historical note: upstream-bugs-6.2.2-dev.85 investigation and
+   updateoutbox-scope-ordering primary defects are ALL fixed pre-branch.)
 
 ## Coordination
 
