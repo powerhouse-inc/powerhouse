@@ -26,10 +26,14 @@ export type SelfHealingPGliteClientOptions = {
   /** Where open/close failures during a recreate are reported. */
   onDiagnostic: (message: string, error?: unknown) => void;
   /**
-   * How long to wait for the poisoned instance to close before proceeding with
-   * the replacement anyway. A wasm instance whose last Execute threw is idle,
-   * so close should return promptly, but the bound keeps a wedged teardown from
-   * blocking recovery.
+   * How long to wait for the poisoned instance to close before giving up on the
+   * recreate. Recovery closes the poisoned instance FIRST and only then opens
+   * the replacement (see {@link SelfHealingPGliteClient.recreate}), so this
+   * bound sits on the critical path. A wasm instance whose last Execute threw is
+   * idle, so close should return promptly; when it does not, the teardown is
+   * wedged and may still hold the store, so the recreate is abandoned and the
+   * holder escalates (e.g. a worker reload) rather than opening a second
+   * instance against a store the poisoned one has not released.
    */
   closeTimeoutMs: number;
 };
@@ -122,10 +126,24 @@ export class SelfHealingPGliteClient implements PGliteSession {
   /**
    * Replaces the poisoned instance with a fresh one against the same storage,
    * swaps it in so every holder follows, and emits the recovery event.
+   *
+   * The ordering is close-then-open: the poisoned instance is closed first
+   * (bounded by {@link SelfHealingPGliteClientOptions.closeTimeoutMs}), and only
+   * once it has let go of the store is the replacement opened and swapped in.
+   * This guarantees at most one instance ever touches the durable store, because
+   * PGlite's idb VFS is not safe for two live instances on one store: an open
+   * replacement and a still-closing poisoned instance would race, and the old
+   * instance's close-time flush could clobber writes the new one already made.
+   * The database is briefly fully down between close and open, which is the
+   * correct trade for recovering a session that was already bricked. Because the
+   * close is on the critical path rather than after the swap, the recreate
+   * resolves as soon as the replacement is live - callers waiting on the single
+   * lease are not held for an extra close afterwards.
+   *
    * Single-flight: concurrent callers share one recreation and its result.
-   * Resolves `true` when the instance was replaced, `false` when a replacement
-   * could not be opened - the host then decides whether to escalate (e.g. a
-   * worker reload).
+   * Resolves `true` when the instance was replaced, `false` when the poisoned
+   * instance could not be closed within the bound or a replacement could not be
+   * opened - the host then decides whether to escalate (e.g. a worker reload).
    */
   recreate(reason: string): Promise<boolean> {
     this.healing ??= this.runRecreate(reason).finally(() => {
@@ -136,6 +154,12 @@ export class SelfHealingPGliteClient implements PGliteSession {
 
   private async runRecreate(reason: string): Promise<boolean> {
     const old = this.instance;
+
+    const closed = await this.closeQuietly(old);
+    if (!closed) {
+      return false;
+    }
+
     let next: RecreatablePGliteInstance;
     try {
       next = await this.options.openInstance();
@@ -149,7 +173,6 @@ export class SelfHealingPGliteClient implements PGliteSession {
 
     this.instance = next;
     this.attempt += 1;
-    await this.closeQuietly(old);
 
     const event: StorageSessionRecreatedEvent = {
       reason,
@@ -164,28 +187,39 @@ export class SelfHealingPGliteClient implements PGliteSession {
     return true;
   }
 
+  /**
+   * Closes the poisoned instance, bounded by
+   * {@link SelfHealingPGliteClientOptions.closeTimeoutMs}, and answers whether
+   * the close completed. Resolving `true` means the teardown call returned -
+   * cleanly, or with an error, which still hands the store back - so a
+   * replacement may be opened. Resolving `false` means the close did not settle
+   * within the bound: the wasm teardown is wedged and may still hold the store,
+   * so the caller must escalate instead of opening a second instance against it.
+   */
   private async closeQuietly(
     instance: RecreatablePGliteInstance,
-  ): Promise<void> {
+  ): Promise<boolean> {
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const bounded = new Promise<void>((resolve) => {
+    const bounded = new Promise<boolean>((resolve) => {
       timer = setTimeout(() => {
         this.options.onDiagnostic(
-          "closing the poisoned PGlite instance timed out; proceeding with the replacement",
+          "closing the poisoned PGlite instance timed out; it may still hold the store, so not opening a replacement - escalating",
         );
-        resolve();
+        resolve(false);
       }, this.options.closeTimeoutMs);
     });
+    const closing = instance
+      .close()
+      .then(() => true)
+      .catch((error) => {
+        this.options.onDiagnostic(
+          "closing the poisoned PGlite instance failed; the teardown returned, so proceeding with the replacement",
+          error,
+        );
+        return true;
+      });
     try {
-      await Promise.race([
-        instance.close().catch((error) => {
-          this.options.onDiagnostic(
-            "closing the poisoned PGlite instance failed; proceeding with the replacement",
-            error,
-          );
-        }),
-        bounded,
-      ]);
+      return await Promise.race([closing, bounded]);
     } finally {
       clearTimeout(timer);
     }

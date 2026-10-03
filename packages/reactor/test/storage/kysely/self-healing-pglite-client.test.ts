@@ -1,4 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Kysely, sql } from "kysely";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StorageSessionRecreatedEvent } from "../../../src/events/types.js";
@@ -111,7 +114,7 @@ describe("SelfHealingPGliteClient", () => {
     expect(events[0].timestampUtcMs).toBeGreaterThanOrEqual(before);
   });
 
-  it("keeps the old instance and reports failure when a replacement cannot open", async () => {
+  it("reports failure when a replacement cannot open, having already closed the poisoned instance", async () => {
     const first = new FakeInstance("first");
     const diagnostics: string[] = [];
     const client = new SelfHealingPGliteClient(first, {
@@ -122,10 +125,92 @@ describe("SelfHealingPGliteClient", () => {
     const recreated = await client.recreate("portal stuck");
 
     expect(recreated).toBe(false);
+    // close-then-open: the poisoned instance is closed before the replacement is
+    // attempted, so a failed open leaves the DB down and the host escalates. The
+    // client keeps pointing at the old (now closed) instance; it is not swapped.
     expect(client.current).toBe(first);
-    expect(first.closed).toBe(false);
+    expect(first.closed).toBe(true);
     expect(client.recreateCount).toBe(0);
     expect(diagnostics.join(" ")).toContain("replacement");
+  });
+
+  it("closes the poisoned instance before opening the replacement (never two instances on one store)", async () => {
+    const order: string[] = [];
+    const first = new FakeInstance("first");
+    const originalClose = first.close.bind(first);
+    first.close = () => {
+      order.push("close-first");
+      return originalClose();
+    };
+    const second = new FakeInstance("second");
+    const client = new SelfHealingPGliteClient(first, {
+      openInstance: () => {
+        order.push("open-second");
+        // The poisoned instance must already be gone: a second live instance on
+        // the same idb store would race its close-time flush against this one.
+        expect(first.closed).toBe(true);
+        return Promise.resolve(second);
+      },
+      onDiagnostic: () => undefined,
+    });
+
+    const recreated = await client.recreate("portal stuck");
+
+    expect(recreated).toBe(true);
+    expect(order).toEqual(["close-first", "open-second"]);
+    expect(client.current).toBe(second);
+    expect(second.closed).toBe(false);
+  });
+
+  it("resolves as soon as the replacement is live, with no extra close afterwards", async () => {
+    const first = new FakeInstance("first");
+    let closeResolved = false;
+    first.close = () =>
+      new Promise<void>((resolve) =>
+        setTimeout(() => {
+          first.closed = true;
+          closeResolved = true;
+          resolve();
+        }, 20),
+      );
+    const second = new FakeInstance("second");
+    const client = new SelfHealingPGliteClient(first, {
+      openInstance: () => Promise.resolve(second),
+      onDiagnostic: () => undefined,
+    });
+
+    const recreated = await client.recreate("portal stuck");
+
+    // The only close is the pre-open one; by the time recreate resolves it has
+    // completed and nothing is deferred, so a waiter on the lease is not held for
+    // a close after the fresh instance is already live.
+    expect(recreated).toBe(true);
+    expect(closeResolved).toBe(true);
+    expect(client.current).toBe(second);
+    expect(second.closed).toBe(false);
+  });
+
+  it("escalates instead of opening a second instance when the poisoned close hangs", async () => {
+    const first = new FakeInstance("first");
+    first.close = () => new Promise<void>(() => undefined);
+    const openInstance = vi.fn(() =>
+      Promise.resolve(new FakeInstance("second")),
+    );
+    const diagnostics: string[] = [];
+    const client = new SelfHealingPGliteClient(first, {
+      openInstance,
+      onDiagnostic: (message) => diagnostics.push(message),
+      closeTimeoutMs: 20,
+    });
+
+    const recreated = await client.recreate("portal stuck");
+
+    expect(recreated).toBe(false);
+    // A wedged teardown may still hold the store, so no replacement is opened.
+    expect(openInstance).not.toHaveBeenCalled();
+    expect(client.current).toBe(first);
+    expect(client.recreateCount).toBe(0);
+    expect(diagnostics.join(" ")).toContain("timed out");
   });
 });
 
@@ -306,5 +391,93 @@ describe("SelfHealingPGliteClient wired into HardenedPGliteDialect", () => {
       (error: unknown) => error,
     );
     expect(refused).toBeInstanceOf(PGliteSessionPoisonedError);
+  });
+
+  it("fires a reload signal and refuses loudly when the holder self-heals by reload, not in-place recreate", async () => {
+    // Mirrors the relational store's onPoisoned (reactor.worker.ts): its `live`
+    // query handles rule out an in-place instance swap, so instead of recreating
+    // it requests a host reload and returns false. The dialect then throws the
+    // loud poisoned error for the current caller while the reload recovers the
+    // process, rather than bricking forever with no recovery path.
+    const initial = await trackOpen();
+    const reload = vi.fn();
+    const client = new SelfHealingPGliteClient(initial, {
+      openInstance: () => trackOpen(),
+      onDiagnostic: () => undefined,
+    });
+    const db = new Kysely<Schema>({
+      dialect: new HardenedPGliteDialect(client, {
+        acquireTimeoutMs: ACQUIRE_TIMEOUT_MS,
+        onDiagnostic: () => undefined,
+        onPoisoned: () => {
+          reload();
+          return Promise.resolve(false);
+        },
+      }),
+    });
+
+    await client.exec("__poison__");
+    await db
+      .transaction()
+      .execute(async (trx) => {
+        await sql`insert into t (id) values (1)`.execute(trx);
+        throw new Error("JOB-FAILED");
+      })
+      .catch(() => undefined);
+
+    const refused = await sql`select 1 as x`.execute(db).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+    expect(refused).toBeInstanceOf(PGliteSessionPoisonedError);
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(client.recreateCount).toBe(0);
+  });
+});
+
+describe("SelfHealingPGliteClient against durable storage", () => {
+  const dirs: string[] = [];
+
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  async function openDurable(dir: string): Promise<RecreatablePGliteInstance> {
+    // File-backed, not relaxedDurability: a commit is flushed before it resolves,
+    // which is the durability mode the reactor's authoritative store now opens in
+    // so a recreate (close + reopen) reads back everything that was acknowledged.
+    const pg = new PGlite(dir, { relaxedDurability: false });
+    await pg.waitReady;
+    return {
+      query: (text, params) => pg.query(text, params),
+      exec: (text) => pg.exec(text),
+      isInTransaction: () => pg.isInTransaction(),
+      close: () => pg.close(),
+    };
+  }
+
+  it("reads back a committed op after a recreate (no acknowledged write is lost)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "self-heal-durable-"));
+    dirs.push(dir);
+    const initial = await openDurable(dir);
+    const client = new SelfHealingPGliteClient(initial, {
+      openInstance: () => openDurable(dir),
+      onDiagnostic: () => undefined,
+    });
+
+    await client.exec("create table ops (id int primary key)");
+    await client.exec("insert into ops (id) values (42)");
+
+    const recreated = await client.recreate("portal stuck");
+    expect(recreated).toBe(true);
+
+    // The replacement opened against the same durable store after the poisoned
+    // instance was closed, so the committed-and-flushed row is read back.
+    const after = await client.query("select id from ops order by id");
+    expect(after.rows).toEqual([{ id: 42 }]);
+
+    await client.close();
   });
 });
