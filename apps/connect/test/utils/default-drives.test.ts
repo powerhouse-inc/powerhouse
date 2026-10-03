@@ -17,6 +17,7 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   addDrive: vi.fn(),
   addRemoteDrive: vi.fn(),
   ChannelScheme: class {},
+  HardenedPGliteDialect: class {},
   isDriveAuthError: vi.fn(() => false),
   ReactorBuilder: class {},
   ReactorClientBuilder: class {},
@@ -26,7 +27,6 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
 vi.mock("@renown/sdk", () => ({ createSignatureVerifier: vi.fn() }));
 vi.mock("document-model", () => ({ ConsoleLogger: class {} }));
 vi.mock("kysely", () => ({ Kysely: class {} }));
-vi.mock("kysely-pglite-dialect", () => ({ PGliteDialect: class {} }));
 vi.mock("../../src/pglite.db.js", () => ({
   getReactorPGlite: vi.fn(),
 }));

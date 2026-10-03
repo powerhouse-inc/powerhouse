@@ -2,7 +2,9 @@ import {
   ChannelScheme,
   DocumentIntegrityService,
   DriveCollectionId,
+  HardenedPGliteDialect,
   InMemoryQueue,
+  queryThroughDialect,
   ReactorBuilder,
   ReactorClientBuilder,
   ReactorInspector,
@@ -53,7 +55,6 @@ import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
 import { toStoredDocumentsRefused } from "./utils/stored-documents-refused.js";
 import type * as PgLiveModuleNs from "@electric-sql/pglite/live";
 import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
 import { readPgVersionFile } from "./utils/pglite-idb.js";
 import {
   coerceMajor,
@@ -130,6 +131,15 @@ type OwnedStorage = {
     close: () => Promise<void>;
     query: (sql: string, params?: unknown[]) => Promise<{ rows: unknown[] }>;
   };
+  /**
+   * The one Kysely over the reactor's PGlite. Inspector SQL goes through it
+   * rather than at the client, so it enters the dialect's serialising queue
+   * instead of landing inside whatever job transaction is open on the shared
+   * session - which is how a statement typed into the DB explorer could read
+   * uncommitted rows, or abort a job's transaction outright. See
+   * docs/bugs/2026-10-03-sync-defect-analysis.md, mechanism A-3.
+   */
+  reactorDb?: Kysely<Database>;
   reactorIdb?: string;
   relationalIdb?: string;
 };
@@ -140,11 +150,10 @@ let inspector = new ReactorInspector({});
 // Resolved per call: the store is reopened across boots and migrations.
 const inspectorDb: IReactorDbQuery = {
   queryDb: async (sql, params) => {
-    if (!owned.reactorPg) {
+    if (!owned.reactorDb) {
       throw new Error("Reactor store not available");
     }
-    const result = await owned.reactorPg.query(sql, params);
-    return result.rows;
+    return queryThroughDialect(owned.reactorDb, sql, params);
   },
 };
 let currentIdentity: ReactorIdentity | null = null;
@@ -274,7 +283,7 @@ async function openRelational(namespace: string): Promise<DetectedMajor> {
     await pg.waitReady;
     relational.pg = pg as unknown as PgLiveModuleNs.PGliteWithLive;
     relational.db = createRelationalDb(
-      new Kysely({ dialect: new PGliteDialect(pg) }),
+      new Kysely({ dialect: new HardenedPGliteDialect(pg) }),
     );
     console.info(
       `[reactor.worker] Relational store opened: idb://${namespace} (Postgres ${major}).`,
@@ -309,6 +318,7 @@ async function releaseStores(): Promise<void> {
   relational.pg = undefined;
   relational.db = undefined;
   owned.reactorPg = undefined;
+  owned.reactorDb = undefined;
   for (const store of stores) {
     try {
       await store?.close();
@@ -408,6 +418,9 @@ const host = new ReactorHost({
       );
       const pg = reactor.pg;
       owned.reactorPg = pg;
+      owned.reactorDb = new Kysely<Database>({
+        dialect: new HardenedPGliteDialect(pg),
+      });
       owned.reactorIdb = `/pglite/${construct.namespace}`;
       owned.relationalIdb = `/pglite/${construct.relationalNamespace}`;
       // A store is migratable when coerceMajor kept it (a supported legacy
@@ -439,7 +452,7 @@ const host = new ReactorHost({
         .withChannelScheme(ChannelScheme.CONNECT)
         .withExecutorConfig({ featureFlags: construct.featureFlags ?? {} })
         .withJwtHandler(jwtHandler)
-        .withKysely(new Kysely<Database>({ dialect: new PGliteDialect(pg) }));
+        .withKysely(owned.reactorDb);
       if (construct.unsupportedStoredDocuments) {
         reactorBuilder.withUnsupportedStoredDocuments(
           construct.unsupportedStoredDocuments,

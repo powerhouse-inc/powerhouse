@@ -2,7 +2,9 @@ import type { PGlite } from "@electric-sql/pglite";
 import {
   ChannelScheme,
   DocumentIntegrityService,
+  HardenedPGliteDialect,
   InMemoryQueue,
+  queryThroughDialect,
   ReactorBuilder,
   ReactorClientBuilder,
   ReactorInspector,
@@ -20,7 +22,6 @@ import type {
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
 import { createLocalSigner } from "./signer.js";
 import { openReactorStore } from "./store.js";
 import type { ReactorStorageConfig } from "./types.js";
@@ -85,10 +86,16 @@ export async function buildMonitorReactor(
       ? ChannelScheme.CONNECT
       : options.channelScheme;
 
+  // The one Kysely over this reactor's PGlite. Inspector SQL goes through it
+  // too, so it enters the dialect's serialising queue instead of landing
+  // inside whatever job transaction is open on the shared session. See
+  // docs/bugs/2026-10-03-sync-defect-analysis.md, mechanism A-3.
+  const db = new Kysely<Database>({ dialect: new HardenedPGliteDialect(pg) });
+
   const reactorBuilder = new ReactorBuilder()
     .withDocumentModelSources(models)
     .withExecutorConfig({ featureFlags: options.featureFlags ?? {} })
-    .withKysely(new Kysely<Database>({ dialect: new PGliteDialect(pg) }));
+    .withKysely(db);
 
   if (options.upgradeManifests && options.upgradeManifests.length > 0) {
     reactorBuilder.withUpgradeManifests(options.upgradeManifests);
@@ -138,10 +145,7 @@ export async function buildMonitorReactor(
   );
 
   const dbQuery: IReactorDbQuery = {
-    queryDb: async (sql, params) => {
-      const result = await pg.query(sql, params);
-      return result.rows;
-    },
+    queryDb: (sql, params) => queryThroughDialect(db, sql, params),
   };
 
   let shuttingDown: Promise<void> | undefined;
