@@ -186,6 +186,16 @@ describe("mechanism A: the shared PGlite session is poisonable and unrecoverable
    *
    * Correct behaviour: the storage layer must recover a session it finds in an
    * aborted transaction rather than returning that error forever.
+   *
+   * It recovers it; it does not pretend the statement that found it never
+   * failed. The failing statement is reported to its caller and the session is
+   * reset on release, so the NEXT caller succeeds. Replaying the statement
+   * itself would be unsound: the dialect cannot tell whether the transaction it
+   * just rolled back belonged to a live consumer of the shared session, so a
+   * replay can commit a write standalone that was meant to be atomic with that
+   * transaction. See the mechanism A-3 review note and
+   * test/storage/kysely/pglite-dialect.test.ts ("never replays a failed
+   * statement as its own autocommit statement").
    */
   it("recovers a session left in an aborted transaction", async () => {
     const { pg, db } = await freshDb();
@@ -195,6 +205,14 @@ describe("mechanism A: the shared PGlite session is poisonable and unrecoverable
     await pg.query("BEGIN");
     await pg.query("select 1 / 0").catch(() => undefined);
     expect(pg.isInTransaction()).toBe(true);
+
+    const first = await sql<{ x: number }>`select 1 as x`
+      .execute(db)
+      .then((r) => r.rows)
+      .catch((error: Error) => ({ err: error.message }));
+    expect(first).toEqual({
+      err: expect.stringContaining("current transaction is aborted") as string,
+    });
 
     const read = await sql<{ x: number }>`select 1 as x`
       .execute(db)

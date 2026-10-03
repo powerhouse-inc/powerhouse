@@ -204,35 +204,32 @@ class HardenedPGliteConnection implements DatabaseConnection {
   /** True between a successful BEGIN and its COMMIT or ROLLBACK. */
   transactionOpen = false;
 
-  constructor(
-    readonly inner: DatabaseConnection,
-    private readonly recoverSession: () => Promise<boolean>,
-  ) {}
+  constructor(readonly inner: DatabaseConnection) {}
 
   /**
-   * A statement that failed only because the session was found in an aborted
-   * transaction nobody was going to end never reached the backend, so once the
-   * session is reset it can be run exactly once more. Without this the
-   * poisoned state is self-perpetuating: every later caller gets the same
-   * error, and a transaction never starts, so Kysely never even attempts the
-   * rollback that would clear it.
+   * A failed statement is never re-run, only recorded: the failure marks the
+   * connection suspect, and `releaseConnection` resets the session so the next
+   * caller gets a usable one instead of the same error forever. That is what
+   * clears the self-perpetuating poison - not a retry.
+   *
+   * It used to retry a statement that failed with `25P02` once the session had
+   * been reset, gated on `this.transactionOpen`. That gate is not knowledge:
+   * it is only set by this driver's own `beginTransaction`, while arbitrary SQL
+   * reaches the same session through the dialect queue and can open a
+   * transaction with a raw `BEGIN`. A statement failing inside such a
+   * transaction therefore passed the gate, the recovery rolled the transaction
+   * back, and the statement was replayed STANDALONE in autocommit - a write
+   * meant to be atomic with its transaction committing alone, which is worse
+   * than the error it was papering over. PGlite offers no way to learn whose
+   * transaction the session is in, so the only sound answer is not to retry.
    */
   async executeQuery<R>(compiledQuery: CompiledQuery): Promise<QueryResult<R>> {
     try {
       return await this.inner.executeQuery<R>(compiledQuery);
     } catch (error) {
       this.failure = errorOf(error);
-      if (this.transactionOpen || !isAbortedTransactionError(error)) {
-        throw error;
-      }
-      if (!(await this.recoverSession())) {
-        throw error;
-      }
+      throw error;
     }
-
-    const retried = await this.inner.executeQuery<R>(compiledQuery);
-    this.failure = undefined;
-    return retried;
   }
 
   streamQuery<R>(
@@ -283,9 +280,7 @@ class HardenedPGliteDriver implements Driver {
       this.sessionFault = undefined;
     }
 
-    return new HardenedPGliteConnection(innerConnection, () =>
-      this.recoverSession(false),
-    );
+    return new HardenedPGliteConnection(innerConnection);
   }
 
   async beginTransaction(

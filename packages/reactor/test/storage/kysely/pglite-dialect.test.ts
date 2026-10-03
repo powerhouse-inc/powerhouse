@@ -185,6 +185,36 @@ describe("HardenedPGliteDialect", () => {
     await pg.close();
   });
 
+  /**
+   * The dialect cannot know whose transaction the shared session is in: its
+   * own `transactionOpen` flag is set only by `beginTransaction`, while any
+   * statement reaching the queue - the inspector's `queryThroughDialect`, a
+   * migration, a processor - may have opened one with a raw `BEGIN`. So a
+   * statement that failed with `25P02` is never replayed after the session is
+   * reset: replaying it would run a write meant to be atomic with that
+   * transaction on its own autocommit statement, committing it alone.
+   */
+  it("never replays a failed statement as its own autocommit statement", async () => {
+    const { pg, db } = await freshDb();
+
+    // A transaction opened outside this driver, then aborted - exactly what an
+    // inspector session or any other consumer of the shared session can do.
+    await pg.query("BEGIN");
+    await pg.query("select 1 / 0").catch(() => undefined);
+    expect(pg.isInTransaction()).toBe(true);
+
+    const write = await sql`insert into t (id) values (42)`.execute(db).then(
+      () => "committed",
+      (error: Error) => error.message,
+    );
+    expect(write).toContain("current transaction is aborted");
+
+    // The statement must not have landed standalone, and the session must be
+    // usable again for the next caller.
+    const rows = await sql<Row>`select id from t`.execute(db);
+    expect(rows.rows).toEqual([]);
+  });
+
   /** The happy path must stay a real commit, and cost no extra statements. */
   it("commits a healthy transaction", async () => {
     const { db } = await freshDb();
