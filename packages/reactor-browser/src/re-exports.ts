@@ -12,13 +12,17 @@ export {
   REACTOR_SCHEMA,
   ReactorBuilder,
   ReactorClientBuilder,
+  ReactorEventTypes,
   RelationalDbProcessor,
+  SelfHealingPGliteClient,
   SyncOperationStatus,
 } from "@powerhousedao/reactor";
 export type {
   ConnectionState,
   ConnectionStateSnapshot,
   Database,
+  RecreatablePGliteInstance,
+  StorageSessionRecreatedEvent,
   IChannel,
   IDocumentModelLoader,
   IPeerAgreement,

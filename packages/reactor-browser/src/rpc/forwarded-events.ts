@@ -8,6 +8,7 @@ export const FORWARDED_EVENT_TYPES = [
   SyncEventTypes.DEAD_LETTER_ADDED,
   SyncEventTypes.CONNECTION_STATE_CHANGED,
   ReactorEventTypes.MODEL_LOADED,
+  ReactorEventTypes.STORAGE_SESSION_RECREATED,
 ];
 
 export const FORWARDED_BUS_EVENT_TYPES: number[] = [
