@@ -9,10 +9,8 @@
  * which on restart resends operations the remote has already acknowledged.
  */
 import { describe, expect, it, vi } from "vitest";
-import type {
-  ISyncCursorStorage,
-  RemoteCursor,
-} from "../../../../src/storage/interfaces.js";
+import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
+import type { RemoteCursor } from "../../../../src/sync/types.js";
 import { GqlRequestChannel } from "../../../../src/sync/channels/gql-req-channel.js";
 import {
   ManualPollTimer,
