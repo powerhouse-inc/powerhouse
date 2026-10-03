@@ -23,6 +23,7 @@ import {
   RPC_PROTOCOL_VERSION,
   SyncManagerProxy,
   type ReactorIdentity,
+  type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
 import type {
   DocumentModelModule,
@@ -30,7 +31,10 @@ import type {
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import type { IRenown, User } from "@renown/sdk";
-import { setWorkerConnectionStatus } from "./connection-state.js";
+import {
+  getWorkerConnectionStatus,
+  setWorkerConnectionStatus,
+} from "./connection-state.js";
 import { reactorWorkerName } from "./reactor-worker-name.js";
 import { getGitSha, getVersion } from "./utils/build-info.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
@@ -65,6 +69,17 @@ export type WorkerReactorClientArgs = {
   documentModelLoader: IDocumentModelLoader;
   renown: IRenown;
   onReload: (reason: string, workerGen?: string) => void;
+  /**
+   * URL of the prebuilt worker bundle (packaged deployments). Absent, the
+   * worker script resolves relative to this module, which only works where
+   * Vite bundles the worker from source (the monorepo app).
+   */
+  workerUrl?: string;
+  /**
+   * URL-addressed packages the worker loads at boot: local project models
+   * the registry cannot serve. See resolveLocalPackageSources.
+   */
+  packageSources?: WorkerPackageSource[];
 };
 
 export type WorkerReactorClient = {
@@ -96,7 +111,9 @@ function toReactorIdentity(user: User | undefined): ReactorIdentity | null {
 export function createWorkerReactorClientModule(
   args: WorkerReactorClientArgs,
 ): WorkerReactorClient {
-  const workerUrl = new URL("./reactor.worker.js", import.meta.url);
+  const workerUrl = args.workerUrl
+    ? new URL(args.workerUrl)
+    : new URL("./reactor.worker.js", import.meta.url);
   console.info(
     `[reactor-worker] constructing SharedWorker ${reactorWorkerName(
       args.namespace,
@@ -111,6 +128,9 @@ export function createWorkerReactorClientModule(
       `[reactor-worker] SharedWorker failed to load from ${workerUrl.href}`,
       event.message || event,
     );
+    // A load failure never pongs; report it now instead of making the user
+    // wait out the ping deadline for a generic "stopped responding".
+    setWorkerConnectionStatus("failed");
   });
   worker.port.onmessageerror = (event) => {
     console.error(
@@ -152,6 +172,7 @@ export function createWorkerReactorClientModule(
         createSignaturePolicy: args.createSignaturePolicy,
         unsupportedStoredDocuments: args.unsupportedStoredDocuments,
         renownEndpoints: args.renownEndpoints,
+        packageSources: args.packageSources,
       },
       packages: args.packageSpecs,
     },
@@ -194,6 +215,14 @@ export function createWorkerReactorClientModule(
     client: clientProxy,
     adminClient: createWorkerAdminClient(router),
     inspector: createInspectorProxy(router),
+    registerPackages: async (sources: WorkerPackageSource[]) => {
+      await router.request((id) => ({
+        k: "register-packages",
+        id,
+        specs: [],
+        sources,
+      }));
+    },
     reactorModule: {
       documentModelRegistry,
       syncModule: { syncManager: syncManagerProxy },
@@ -221,7 +250,12 @@ export function createWorkerReactorClientModule(
     const timer = setTimeout(() => {
       pingDeadlines.delete(id);
       missedPings += 1;
-      if (missedPings >= MAX_MISSED_PINGS) {
+      // "failed" (the worker script never loaded) is more specific than
+      // "lost" and must not be downgraded by the ping deadline.
+      if (
+        missedPings >= MAX_MISSED_PINGS &&
+        getWorkerConnectionStatus() !== "failed"
+      ) {
         setWorkerConnectionStatus("lost");
       }
     }, PING_DEADLINE_MS);

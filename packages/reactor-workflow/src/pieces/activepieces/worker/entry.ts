@@ -303,6 +303,7 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
       : undefined,
     output: liveOutput,
     reactor,
+    resumePayload: request.resumePayload,
     executionType: request.executionType,
     identity: request.identity,
   });
@@ -355,6 +356,16 @@ async function handleTriggerHook(
   const snapshot = request.durableStore
     ? undefined
     : new InMemoryKeyValueStore(request.storeState);
+  const durableStore = snapshot ? undefined : new RemoteKeyValueStore();
+  // Host-served reactor access, on the same terms as handleRun: the gate is
+  // the host's, and absence leaves the context's throwing stub in place.
+  const reactor = request.reactorAccess
+    ? new RemoteReactorService({
+        deadline: request.deadline,
+        store: durableStore,
+        stepName: request.identity?.stepName,
+      })
+    : undefined;
   const runsPiece = request.hook === "run" || request.hook === "test";
   // Teardown is never refused: a config that no longer validates must still
   // release what onEnable registered.
@@ -369,7 +380,7 @@ async function handleTriggerHook(
   const handle = buildTriggerContext({
     propsValue,
     auth: request.auth,
-    store: snapshot ?? new RemoteKeyValueStore(),
+    store: snapshot ?? durableStore,
     hostPartitionedStore: request.durableStore,
     // Test hooks write under a separate prefix, never the live cursor.
     storePrefix: request.hook === "test" ? "test" : "",
@@ -379,6 +390,7 @@ async function handleTriggerHook(
     webhookUrl: request.webhookUrl,
     server: request.server,
     files: runsPiece ? new DataUriFilesService() : undefined,
+    reactor,
   });
   const output = await runTriggerHook(trigger, request.hook, handle);
   return {

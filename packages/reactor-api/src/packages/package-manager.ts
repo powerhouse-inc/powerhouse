@@ -23,7 +23,7 @@ import type {
   PackageManagerResult,
   PackagePieceEntry,
 } from "./types.js";
-import { debounce } from "./util.js";
+import { debounce, manifestDeclaredSubgraphs } from "./util.js";
 import { REGISTRY_ENTRY_ABSENT } from "./registry-cache.js";
 
 /**
@@ -325,6 +325,21 @@ export class PackageManager implements IPackageManager {
       }
 
       this.maybeWarnAllLoadersFailed("subgraphs", pkg, succeeded, failures);
+
+      // A loader answering "none" is indistinguishable from a package that
+      // ships none — loadSubgraphs cannot throw for a bad export shape. The
+      // package's own manifest is the one place that says subgraphs were
+      // meant to exist, so a mismatch gets one warning instead of silence.
+      if (allSubgraphs.length === 0) {
+        const declared = manifestDeclaredSubgraphs(pkg);
+        if (declared.length > 0) {
+          this.logger.warn(
+            "Package @pkg declares subgraphs in powerhouse.manifest.json (@declared) but none was loaded; check the exports of subgraphs/index.ts",
+            pkg,
+            declared.join(", "),
+          );
+        }
+      }
 
       subgraphsMap.set(pkg, allSubgraphs);
     }

@@ -39,6 +39,27 @@ export const useVetraPackages = () => {
 export const addVetraPackageManagerEventHandler =
   vetraPackageManagerFunctions.addEventHandler;
 
+/**
+ * Non-react access to the Vetra package manager: calls `callback` once a
+ * manager is available - immediately when already set, otherwise when
+ * `setVetraPackageManager` publishes one. Returns an unsubscribe. The worker
+ * wiring uses this to forward package updates from plain boot code.
+ */
+export function onVetraPackageManager(
+  callback: (packageManager: IPackageManager) => void,
+): () => void {
+  let delivered: IPackageManager | undefined;
+  const deliver = () => {
+    const packageManager = vetraPackageManagerFunctions.getSnapshot();
+    if (!packageManager || packageManager === delivered) return;
+    delivered = packageManager;
+    callback(packageManager);
+  };
+  const unsubscribe = vetraPackageManagerFunctions.subscribeToValue(deliver);
+  deliver();
+  return unsubscribe;
+}
+
 /** Sets the Vetra package manager and registers its packages */
 export function setVetraPackageManager(packageManager: IPackageManager) {
   vetraPackageManagerFunctions.setValue(packageManager);

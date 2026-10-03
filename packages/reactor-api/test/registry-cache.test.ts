@@ -63,7 +63,11 @@ function tree(version: string): Record<string, string> {
     "node/subgraphs/index.mjs": `export * as Todo from "./todo/index.mjs";`,
     "node/subgraphs/todo/index.mjs": [
       `import { TodoV1 } from "../../module-abc.mjs";`,
-      `export class Subgraph { static model = TodoV1; static version = "${version}"; }`,
+      // The unified acceptance rule (extractSubgraphs) only takes classes
+      // extending a BaseSubgraph; the name fallback lets this fixture carry
+      // its own instead of importing the host's over the fake registry.
+      `class BaseSubgraph {}`,
+      `export class Subgraph extends BaseSubgraph { static model = TodoV1; static version = "${version}"; }`,
     ].join("\n"),
   };
 }

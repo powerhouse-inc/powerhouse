@@ -19,6 +19,7 @@ import {
 } from "../../src/registry/document-model-resolver.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelLoader } from "../../src/registry/interfaces.js";
+import { DocumentNotFoundError } from "../../src/shared/errors.js";
 import {
   createJobDependencyChain,
   createJobWithDependencies,
@@ -1254,6 +1255,76 @@ describe("InMemoryQueue", () => {
       expect(failedEvents).toHaveLength(1);
       expect(failedEvents[0].jobId).toBe("job-1");
       expect(failedEvents[0].error.message).toContain("unknown/type");
+    });
+
+    it("should not emit JOB_FAILED for a job a deferral already dropped", async () => {
+      // deferJob removes the job from the index, so a later failJob has no
+      // job to put on the event. The deferred-expiry path emits its own
+      // JOB_FAILED carrying the job; a second, job-less event from the queue
+      // delivered every expiry to subscribers twice.
+      const job = createTestJob({ id: "deferred-job" });
+      await queue.enqueue(job);
+
+      const handle = await queue.dequeueNext();
+      expect(handle?.job.id).toBe("deferred-job");
+      handle?.start();
+      handle?.defer();
+
+      await queue.failJob("deferred-job", {
+        name: "DocumentNotFoundError",
+        message: "Document not found",
+        stack: "",
+      });
+
+      const jobFailedEmits = mockEventBusEmit.mock.calls.filter(
+        ([type]) => type === ReactorEventTypes.JOB_FAILED,
+      );
+      expect(jobFailedEmits).toHaveLength(0);
+    });
+
+    it("should emit the typed error instance a failer carried on errorInfo.source", async () => {
+      // The result handler flattens its typed error into ErrorInfo for the
+      // record, and rides the instance along as source so subscribers can
+      // still classify by instanceof.
+      const typedError = new DocumentNotFoundError("missing-doc");
+      const job = createTestJob({ id: "typed-source-job" });
+      await queue.enqueue(job);
+
+      await queue.failJob("typed-source-job", {
+        name: typedError.name,
+        message: typedError.message,
+        stack: typedError.stack || "",
+        source: typedError,
+      });
+
+      const jobFailedEmits = mockEventBusEmit.mock.calls.filter(
+        ([type]) => type === ReactorEventTypes.JOB_FAILED,
+      );
+      expect(jobFailedEmits).toHaveLength(1);
+      const event = jobFailedEmits[0][1] as JobFailedEvent;
+      expect(event.jobId).toBe("typed-source-job");
+      expect(event.error).toBe(typedError);
+      expect(event.error).toBeInstanceOf(DocumentNotFoundError);
+      expect(event.job?.id).toBe("typed-source-job");
+    });
+
+    it("should reconstruct the error, name preserved, when errorInfo has no source", async () => {
+      const job = createTestJob({ id: "no-source-job" });
+      await queue.enqueue(job);
+
+      await queue.failJob("no-source-job", {
+        name: "InvalidSignatureError",
+        message: "signature did not verify",
+        stack: "",
+      });
+
+      const jobFailedEmits = mockEventBusEmit.mock.calls.filter(
+        ([type]) => type === ReactorEventTypes.JOB_FAILED,
+      );
+      expect(jobFailedEmits).toHaveLength(1);
+      const event = jobFailedEmits[0][1] as JobFailedEvent;
+      expect(event.error.name).toBe("InvalidSignatureError");
+      expect(event.error.message).toBe("signature did not verify");
     });
 
     it("should unblock dependent jobs when a job fails during enqueue", async () => {
