@@ -11,6 +11,7 @@ import type {
 } from "kysely";
 import { CompiledQuery } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
+import { TIMED_OUT, withDeadline } from "../../shared/utils.js";
 
 /**
  * The PGlite surface this dialect needs. Declared structurally so a consumer
@@ -233,32 +234,6 @@ function errorOf(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
 
-/** Resolved by {@link withDeadline} when the bound won the race. */
-const TIMED_OUT = Symbol("pglite-deadline-expired");
-
-/**
- * Races a promise that cannot be cancelled against a bound.
- *
- * A wasm call has no abort, so the loser is abandoned rather than cancelled:
- * a {@link TIMED_OUT} answer means the caller will never hear about that call
- * again and must assume it may still settle later, against an instance that by
- * then may have been replaced.
- */
-async function withDeadline<T>(
-  pending: Promise<T>,
-  timeoutMs: number,
-): Promise<T | typeof TIMED_OUT> {
-  let handle: ReturnType<typeof setTimeout> | undefined;
-  const expiry = new Promise<typeof TIMED_OUT>((resolve) => {
-    handle = setTimeout(() => resolve(TIMED_OUT), timeoutMs);
-  });
-  try {
-    return await Promise.race([pending, expiry]);
-  } finally {
-    clearTimeout(handle);
-  }
-}
-
 /**
  * The statement-deadline surface a {@link HardenedPGliteConnection} needs from
  * its driver. Declared separately so the connection cannot reach the rest of
@@ -268,6 +243,25 @@ type StatementGuard = {
   /** Bumped every time a hung statement is escalated; see the generation guard. */
   readonly generation: number;
   runStatement<T>(statement: string, execute: () => Promise<T>): Promise<T>;
+  /**
+   * Records a statement failure against a connection, unless the session
+   * incarnation it was issued against has since been escalated and replaced.
+   * Every failure-recording path goes through this one, so no path can forget
+   * the guard - which is how a timed-out COMMIT used to mark the FRESH session
+   * suspect and make release-time recovery roll a replacement session's
+   * transaction back.
+   */
+  recordFailure(
+    connection: HardenedPGliteConnection,
+    generation: number,
+    error: unknown,
+  ): void;
+  /** {@link recordFailure}, for the failure of a ROLLBACK itself. */
+  recordRollbackFailure(
+    connection: HardenedPGliteConnection,
+    generation: number,
+    error: unknown,
+  ): void;
 };
 
 function isAbortedTransactionError(error: unknown): boolean {
@@ -359,11 +353,30 @@ class HardenedPGliteConnection implements DatabaseConnection {
   rollbackFailure: Error | undefined = undefined;
   /** True between a successful BEGIN and its COMMIT or ROLLBACK. */
   transactionOpen = false;
+  /** True once the session incarnation this connection describes was replaced. */
+  superseded = false;
 
   constructor(
     readonly inner: DatabaseConnection,
     private readonly guard: StatementGuard,
   ) {}
+
+  /**
+   * Drops everything this connection was carrying, because the session
+   * incarnation it describes has been replaced.
+   *
+   * Its failure is stale news, and - the part a failure flag alone does not
+   * cover - so is its open transaction: there is nothing on the replacement
+   * session to roll back, so neither the rollback nor the release-time recovery
+   * may issue one. That would be a cross-incarnation rollback, ending someone
+   * else's transaction on a healthy session.
+   */
+  retire(): void {
+    this.superseded = true;
+    this.failure = undefined;
+    this.rollbackFailure = undefined;
+    this.transactionOpen = false;
+  }
 
   /**
    * A failed statement is never re-run, only recorded: the failure marks the
@@ -389,15 +402,7 @@ class HardenedPGliteConnection implements DatabaseConnection {
         this.inner.executeQuery<R>(compiledQuery),
       );
     } catch (error) {
-      // The generation guard: a statement whose deadline expired was escalated
-      // into the poison path, which bumps the generation and may already have
-      // replaced the instance. Recording a failure against this connection
-      // would then make release-time recovery roll back a transaction
-      // belonging to the FRESH session, so a bumped generation means the
-      // failure is no longer this connection's to carry.
-      if (generation === this.guard.generation) {
-        this.failure = errorOf(error);
-      }
+      this.guard.recordFailure(this, generation, error);
       throw error;
     }
   }
@@ -427,9 +432,7 @@ class HardenedPGliteConnection implements DatabaseConnection {
           inner.next(),
         );
       } catch (error) {
-        if (generation === this.guard.generation) {
-          this.failure = errorOf(error);
-        }
+        this.guard.recordFailure(this, generation, error);
         throw error;
       }
       if (next.done === true) {
@@ -441,6 +444,9 @@ class HardenedPGliteConnection implements DatabaseConnection {
 
   /** The session is suspect and must be probed before it is handed on. */
   get suspect(): boolean {
+    if (this.superseded) {
+      return false;
+    }
     return (
       this.failure !== undefined ||
       this.rollbackFailure !== undefined ||
@@ -548,38 +554,73 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
     return new HardenedPGliteConnection(innerConnection, this);
   }
 
+  /**
+   * Opens the transaction, retrying once through the session recovery when the
+   * BEGIN itself landed in an aborted transaction left behind by someone else.
+   *
+   * Both attempts go through {@link runStatement}, so both are bounded: the
+   * retry is issued at the session that just failed, which makes it exactly the
+   * kind of call that can die mid-flight, and an unbounded one would hold the
+   * single lease forever - the silent wedge the deadline exists to break, left
+   * standing in the one statement path that bypassed it.
+   */
   async beginTransaction(
     connection: DatabaseConnection,
     settings: TransactionSettings,
   ): Promise<void> {
     const wrapper = asWrapper(connection);
+    const generation = this.statementGeneration;
+    let failure: unknown;
     try {
       await this.runStatement("begin", () =>
         this.inner.beginTransaction(wrapper.inner, settings),
       );
     } catch (error) {
-      wrapper.failure = errorOf(error);
-      if (!isAbortedTransactionError(error)) {
-        throw error;
-      }
-      if (!(await this.recoverSession(false))) {
-        this.sessionFault = errorOf(error);
-        throw error;
-      }
-      await this.inner.beginTransaction(wrapper.inner, settings);
-      wrapper.failure = undefined;
+      failure = error;
     }
-    wrapper.transactionOpen = true;
+    if (failure === undefined) {
+      wrapper.transactionOpen = true;
+      return;
+    }
+
+    this.recordFailure(wrapper, generation, failure);
+    // The original value answers isAbortedTransactionError (which reads the
+    // driver's `code`); what propagates is always an Error.
+    const thrown = errorOf(failure);
+    if (!isAbortedTransactionError(failure)) {
+      throw thrown;
+    }
+
+    const recovered = await this.recoverSession(false);
+    if (!recovered) {
+      this.sessionFault = thrown;
+      throw thrown;
+    }
+
+    const retryGeneration = this.statementGeneration;
+    try {
+      await this.runStatement("begin", () =>
+        this.inner.beginTransaction(wrapper.inner, settings),
+      );
+    } catch (error) {
+      this.recordFailure(wrapper, retryGeneration, error);
+      throw error;
+    }
+    if (retryGeneration === this.statementGeneration) {
+      wrapper.failure = undefined;
+      wrapper.transactionOpen = true;
+    }
   }
 
   async commitTransaction(connection: DatabaseConnection): Promise<void> {
     const wrapper = asWrapper(connection);
+    const generation = this.statementGeneration;
     try {
       await this.runStatement(COMMIT_WITH_GUARD, () =>
         this.client.exec(COMMIT_WITH_GUARD),
       );
     } catch (error) {
-      wrapper.failure = errorOf(error);
+      this.recordFailure(wrapper, generation, error);
       if (isAbortedTransactionError(error)) {
         throw new PGliteAbortedTransactionError(error);
       }
@@ -589,25 +630,63 @@ class HardenedPGliteDriver implements Driver, StatementGuard {
     wrapper.failure = undefined;
   }
 
+  /**
+   * Rolls the transaction back, and keeps the failure that caused the rollback
+   * when the rollback itself fails.
+   *
+   * Kysely rethrows whatever `rollbackTransaction` raises, which replaces the
+   * original cause - the real error then never reaches the logs, which is why
+   * the live worker was silent. The rollback failure is recorded and swallowed:
+   * `releaseConnection` recovers the session, and the original error is what
+   * propagates to the caller.
+   */
   async rollbackTransaction(connection: DatabaseConnection): Promise<void> {
     const wrapper = asWrapper(connection);
+    if (wrapper.superseded) {
+      // The transaction went down with the session incarnation it belonged to,
+      // so there is nothing to roll back and a ROLLBACK here would land on the
+      // replacement session instead.
+      return;
+    }
+    const generation = this.statementGeneration;
     try {
       await this.runStatement("rollback", () =>
         this.inner.rollbackTransaction(wrapper.inner),
       );
       wrapper.transactionOpen = false;
     } catch (error) {
-      // Kysely rethrows whatever rollbackTransaction raises, which replaces
-      // the failure that caused the rollback - the real cause then never
-      // reaches the logs, which is why the live worker was silent. Record it
-      // and return: releaseConnection recovers the session, and the original
-      // error is what propagates to the caller.
-      wrapper.rollbackFailure = errorOf(error);
+      this.recordRollbackFailure(wrapper, generation, error);
       this.options.onDiagnostic(
         "rollback failed; preserving the original failure and recovering the session on release",
         error,
       );
     }
+  }
+
+  /** @see StatementGuard.recordFailure */
+  recordFailure(
+    connection: HardenedPGliteConnection,
+    generation: number,
+    error: unknown,
+  ): void {
+    if (generation !== this.statementGeneration) {
+      connection.retire();
+      return;
+    }
+    connection.failure = errorOf(error);
+  }
+
+  /** @see StatementGuard.recordRollbackFailure */
+  recordRollbackFailure(
+    connection: HardenedPGliteConnection,
+    generation: number,
+    error: unknown,
+  ): void {
+    if (generation !== this.statementGeneration) {
+      connection.retire();
+      return;
+    }
+    connection.rollbackFailure = errorOf(error);
   }
 
   async releaseConnection(connection: DatabaseConnection): Promise<void> {

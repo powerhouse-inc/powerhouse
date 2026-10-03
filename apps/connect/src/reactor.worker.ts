@@ -459,6 +459,12 @@ const host = new ReactorHost({
       // without rebuilding the reactor. Durably committed data survives; the
       // rolled-back tail is re-pulled by sync. If a replacement cannot be
       // opened, fall back to a worker reload. See docs/bugs/2026-10-03-*, W0.7.
+      // Declared before the client so both poison paths - the dialect's hung
+      // statement and the client's own hung filesystem sync - escalate
+      // identically: recreate in place, and request a worker reload when no
+      // replacement opens.
+      let poisonSession: (reason: string) => Promise<boolean> = () =>
+        Promise.resolve(false);
       const reactorSelfHeal = new SelfHealingPGliteClient(
         pg as RecreatablePGliteInstance,
         {
@@ -467,6 +473,7 @@ const host = new ReactorHost({
               .pg as RecreatablePGliteInstance,
           onDiagnostic: (message, error) =>
             console.error(`[reactor.worker] self-heal: ${message}`, error),
+          onSyncStuck: (reason) => poisonSession(reason),
         },
       );
       owned.reactorPg = reactorSelfHeal;
@@ -485,24 +492,26 @@ const host = new ReactorHost({
       const storageHealth = new StorageHealthTracker(
         () => reactorSelfHeal.recreateCount,
       );
+      poisonSession = async (reason: string) => {
+        storageHealth.markPoisoned();
+        const healed = await reactorSelfHeal.recreate(reason);
+        if (!healed) {
+          console.error(
+            "[reactor.worker] PGlite session unrecoverable and no replacement opened; requesting reload",
+          );
+          host.broadcastReload(
+            "pglite session unrecoverable",
+            globalThis.crypto.randomUUID(),
+          );
+        }
+        return healed;
+      };
       owned.reactorDb = new Kysely<Database>({
         dialect: new HardenedPGliteDialect(reactorSelfHeal, {
-          onPoisoned: async (cause) => {
-            const reason =
-              cause instanceof Error ? cause.message : String(cause);
-            storageHealth.markPoisoned();
-            const healed = await reactorSelfHeal.recreate(reason);
-            if (!healed) {
-              console.error(
-                "[reactor.worker] PGlite session unrecoverable and no replacement opened; requesting reload",
-              );
-              host.broadcastReload(
-                "pglite session unrecoverable",
-                globalThis.crypto.randomUUID(),
-              );
-            }
-            return healed;
-          },
+          onPoisoned: (cause) =>
+            poisonSession(
+              cause instanceof Error ? cause.message : String(cause),
+            ),
         }),
       });
       owned.reactorIdb = `/pglite/${construct.namespace}`;

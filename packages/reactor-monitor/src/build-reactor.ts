@@ -96,6 +96,11 @@ export async function buildMonitorReactor(
   // dialect's loud refusal. See docs/bugs/2026-10-03-*, W0.7.
   const canSelfHeal =
     ownsStore && (options.storage?.kind ?? "idb") !== "memory";
+  // Declared before the client so both poison paths escalate identically: the
+  // dialect's hung statement and the client's own hung filesystem sync (W0.8)
+  // end in one in-place recreate.
+  let poisonSession: (reason: string) => Promise<boolean> = () =>
+    Promise.resolve(false);
   const selfHeal = canSelfHeal
     ? new SelfHealingPGliteClient(pg as RecreatablePGliteInstance, {
         openInstance: () =>
@@ -105,6 +110,7 @@ export async function buildMonitorReactor(
           ) as Promise<RecreatablePGliteInstance>,
         onDiagnostic: (message, error) =>
           console.error(`[reactor-monitor] self-heal: ${message}`, error),
+        onSyncStuck: (reason) => poisonSession(reason),
       })
     : undefined;
 
@@ -123,6 +129,12 @@ export async function buildMonitorReactor(
   const storageHealth = new StorageHealthTracker(
     selfHeal ? () => selfHeal.recreateCount : undefined,
   );
+  if (selfHeal) {
+    poisonSession = (reason: string) => {
+      storageHealth.markPoisoned();
+      return selfHeal.recreate(reason);
+    };
+  }
 
   // The one Kysely over this reactor's PGlite. Inspector SQL goes through it
   // too, so it enters the dialect's serialising queue instead of landing
@@ -130,15 +142,8 @@ export async function buildMonitorReactor(
   // docs/bugs/2026-10-03-sync-defect-analysis.md, mechanism A-3.
   const db = new Kysely<Database>({
     dialect: new HardenedPGliteDialect(selfHeal ?? pg, {
-      onPoisoned: (cause) => {
-        if (!selfHeal) {
-          return Promise.resolve(false);
-        }
-        storageHealth.markPoisoned();
-        return selfHeal.recreate(
-          cause instanceof Error ? cause.message : String(cause),
-        );
-      },
+      onPoisoned: (cause) =>
+        poisonSession(cause instanceof Error ? cause.message : String(cause)),
     }),
   });
 
