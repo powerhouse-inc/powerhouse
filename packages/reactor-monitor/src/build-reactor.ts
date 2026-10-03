@@ -7,13 +7,16 @@ import {
   queryThroughDialect,
   ReactorBuilder,
   ReactorClientBuilder,
+  ReactorEventTypes,
   ReactorInspector,
+  SelfHealingPGliteClient,
   type Database,
   type IDocumentModelLoader,
   type InProcessReactorClientModule,
   type IReactorDbQuery,
   type JwtHandler,
   type ReactorFeatureFlags,
+  type RecreatablePGliteInstance,
 } from "@powerhousedao/reactor";
 import { baseDocumentModels } from "@powerhousedao/reactor-browser/base-document-models";
 import type {
@@ -86,11 +89,38 @@ export async function buildMonitorReactor(
       ? ChannelScheme.CONNECT
       : options.channelScheme;
 
+  // Self-heal only when this reactor owns a durable store it knows how to
+  // reopen. A caller-supplied `pg` is owned (and reopened) by the caller, and a
+  // memory store has nothing to reopen without data loss, so both keep the
+  // dialect's loud refusal. See docs/bugs/2026-10-03-*, W0.7.
+  const canSelfHeal =
+    ownsStore && (options.storage?.kind ?? "idb") !== "memory";
+  const selfHeal = canSelfHeal
+    ? new SelfHealingPGliteClient(pg as RecreatablePGliteInstance, {
+        openInstance: () =>
+          openReactorStore(
+            options.namespace,
+            options.storage,
+          ) as Promise<RecreatablePGliteInstance>,
+        onDiagnostic: (message, error) =>
+          console.error(`[reactor-monitor] self-heal: ${message}`, error),
+      })
+    : undefined;
+
   // The one Kysely over this reactor's PGlite. Inspector SQL goes through it
   // too, so it enters the dialect's serialising queue instead of landing
   // inside whatever job transaction is open on the shared session. See
   // docs/bugs/2026-10-03-sync-defect-analysis.md, mechanism A-3.
-  const db = new Kysely<Database>({ dialect: new HardenedPGliteDialect(pg) });
+  const db = new Kysely<Database>({
+    dialect: new HardenedPGliteDialect(selfHeal ?? pg, {
+      onPoisoned: (cause) =>
+        selfHeal
+          ? selfHeal.recreate(
+              cause instanceof Error ? cause.message : String(cause),
+            )
+          : Promise.resolve(false),
+    }),
+  });
 
   const reactorBuilder = new ReactorBuilder()
     .withDocumentModelSources(models)
@@ -123,6 +153,19 @@ export async function buildMonitorReactor(
     }
     throw error;
   }
+
+  // The event bus exists only now, so bind the recovery-event sink here; the
+  // event is observable on this reactor's bus like any other lifecycle event.
+  selfHeal?.setRecreatedListener((event) => {
+    void module.eventBus
+      .emit(ReactorEventTypes.STORAGE_SESSION_RECREATED, event)
+      .catch((error) =>
+        console.error(
+          "[reactor-monitor] emitting recovery event failed",
+          error,
+        ),
+      );
+  });
 
   const rm = module.reactorModule;
   const inspector = new ReactorInspector(
@@ -173,7 +216,8 @@ export async function buildMonitorReactor(
       }
       if (ownsStore) {
         try {
-          await pg.close();
+          // Close the live instance: a self-heal may have swapped `pg` out.
+          await (selfHeal ? selfHeal.close() : pg.close());
         } catch (error) {
           console.error("[reactor-monitor] store close failed:", error);
         }
