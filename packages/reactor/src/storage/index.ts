@@ -1,5 +1,7 @@
+export { fencesOnStorageEpoch } from "./interfaces.js";
 export type {
   DeadLetterRecord,
+  ISyncCursorEpochFence,
   ISyncCursorStorage,
   ISyncDeadLetterStorage,
   ISyncHoldStorage,

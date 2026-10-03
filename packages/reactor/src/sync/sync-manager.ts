@@ -55,6 +55,7 @@ import type {
   ISyncRemoteStorage,
   SyncHoldRecord,
 } from "../storage/interfaces.js";
+import { fencesOnStorageEpoch } from "../storage/interfaces.js";
 import { BatchAggregator, type PreparedBatch } from "./batch-aggregator.js";
 import {
   pendingDelivery,
@@ -1635,6 +1636,11 @@ export class SyncManager
    * re-initialise (expired credentials, a server that is down) must not stop
    * the others from recovering, and {@link resetChannel} already leaves the
    * registry in the state `add` would.
+   *
+   * The round runs even with no remote registered, because its other half is
+   * acknowledging the new storage epoch - see
+   * {@link acknowledgeStorageEpoch} - and a fence nobody opens refuses every
+   * cursor write a later `add` would make.
    */
   private handleStorageSessionRecreated(
     event: StorageSessionRecreatedEvent,
@@ -1643,9 +1649,6 @@ export class SyncManager
       return Promise.resolve();
     }
     const names = [...this.remotes.keys()];
-    if (names.length === 0) {
-      return Promise.resolve();
-    }
     this.logger.warn(
       "Storage session was recreated (@Reason, attempt @Attempt); resetting @Count channel(s) so their cursors come back from durable storage",
       event.reason,
@@ -1653,12 +1656,15 @@ export class SyncManager
       names.length,
     );
     this.storageRecreatedChain = this.storageRecreatedChain.then(() =>
-      this.resetChannelsAfterRecovery(names),
+      this.resetChannelsAfterRecovery(names, event.attempt),
     );
     return this.storageRecreatedChain;
   }
 
-  private async resetChannelsAfterRecovery(names: string[]): Promise<void> {
+  private async resetChannelsAfterRecovery(
+    names: string[],
+    epoch: number,
+  ): Promise<void> {
     for (const name of names) {
       if (this.isShutdown) {
         return;
@@ -1676,6 +1682,34 @@ export class SyncManager
         );
       }
     }
+    this.acknowledgeStorageEpoch(epoch);
+  }
+
+  /**
+   * Lets cursor writes resume, now that every channel has been rebuilt from the
+   * durable rows.
+   *
+   * The sync manager owns this because it owns the recovery: the cursor storage
+   * can see that its session was replaced but not when the in-memory cursors
+   * that feed it have been re-initialised, and only
+   * {@link resetChannelsAfterRecovery} knows that. Until this runs, a write
+   * carrying a pre-fallback ordinal is refused rather than durably stored and
+   * then read back by the very reset meant to repair it.
+   *
+   * The epoch is the recreate's own attempt number, not whatever is current:
+   * acknowledging a round that a second recreate has already overtaken would
+   * open the fence before that recreate's resets had run, so the storage
+   * discards an acknowledgment for a superseded epoch.
+   *
+   * A cursor storage without the fence - a caller-supplied one, or the no-op
+   * barrier of a per-statement-durable store, which has no fallback and so no
+   * window - needs nothing.
+   */
+  private acknowledgeStorageEpoch(epoch: number): void {
+    if (!fencesOnStorageEpoch(this.cursorStorage)) {
+      return;
+    }
+    this.cursorStorage.acknowledgeEpoch(epoch);
   }
 
   /**

@@ -32,6 +32,9 @@ import type {
   ISyncDeadLetterStorage,
   ISyncRemoteStorage,
 } from "../../../src/storage/interfaces.js";
+import { FlushGuardedSyncCursorStorage } from "../../../src/storage/flush-guarded-sync-cursor-storage.js";
+import type { IStorageFlusher } from "../../../src/storage/storage-flush.js";
+import { StorageEpochSupersededError } from "../../../src/storage/storage-flush.js";
 import type {
   IChannel,
   IChannelFactory,
@@ -96,13 +99,26 @@ function mailbox(items: SyncOperation[] = []) {
   };
 }
 
+/** A barrier whose epoch the test advances to model a completed recreate. */
+class TestFlusher implements IStorageFlusher {
+  readonly deferringStatementFlush = true;
+  storageEpoch = 0;
+
+  flush(): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
 describe("SyncManager - rewinding sync state after a storage recreate", () => {
   let syncManager: SyncManager;
-  let cursorStorage: ISyncCursorStorage;
+  let cursorStorage: FlushGuardedSyncCursorStorage;
+  let flusher: TestFlusher;
   let channels: ReturnType<typeof createChannel>[];
   let eventBus: IEventBus;
   /** The cursor rows that survived the fallback, keyed by remote and type. */
   let persisted: RemoteCursor[];
+  /** Fired inside the next channel `init`, to write from inside the reset. */
+  let duringReset: (() => Promise<void>) | undefined;
 
   /**
    * A channel that models the one property this test is about: `init` reads the
@@ -116,6 +132,11 @@ describe("SyncManager - rewinding sync state after a storage recreate", () => {
       outbox: mailbox(),
       deadLetter: mailbox(),
       init: vi.fn(async () => {
+        const hook = duringReset;
+        duringReset = undefined;
+        if (hook) {
+          await hook();
+        }
         const cursor = await cursorStorage.get(remoteName, "inbox");
         channel.inbox.init(cursor.cursorOrdinal);
       }),
@@ -133,6 +154,7 @@ describe("SyncManager - rewinding sync state after a storage recreate", () => {
 
   beforeEach(async () => {
     channels = [];
+    duringReset = undefined;
     persisted = [
       { remoteName: "accounts", cursorType: "inbox", cursorOrdinal: 9770 },
       { remoteName: "accounts", cursorType: "outbox", cursorOrdinal: 10 },
@@ -145,8 +167,9 @@ describe("SyncManager - rewinding sync state after a storage recreate", () => {
       remove: vi.fn().mockResolvedValue(undefined),
     };
 
-    cursorStorage = {
-      list: vi.fn(() => Promise.resolve(persisted)),
+    // The durable rows, which only an upsert that is allowed to stand changes.
+    const innerCursorStorage: ISyncCursorStorage = {
+      list: vi.fn(() => Promise.resolve(persisted.map((c) => ({ ...c })))),
       get: vi.fn((remoteName: string, cursorType: "inbox" | "outbox") =>
         Promise.resolve(
           persisted.find(
@@ -154,9 +177,26 @@ describe("SyncManager - rewinding sync state after a storage recreate", () => {
           ) ?? { remoteName, cursorType, cursorOrdinal: 0 },
         ),
       ),
-      upsert: vi.fn().mockResolvedValue(undefined),
+      upsert: vi.fn((cursor: RemoteCursor) => {
+        const row = persisted.find(
+          (c) =>
+            c.remoteName === cursor.remoteName &&
+            c.cursorType === cursor.cursorType,
+        );
+        if (row) {
+          row.cursorOrdinal = cursor.cursorOrdinal;
+        } else {
+          persisted.push({ ...cursor });
+        }
+        return Promise.resolve();
+      }),
       remove: vi.fn().mockResolvedValue(undefined),
     };
+    flusher = new TestFlusher();
+    cursorStorage = new FlushGuardedSyncCursorStorage(
+      innerCursorStorage,
+      flusher,
+    );
 
     const deadLetterStorage: ISyncDeadLetterStorage = {
       list: vi.fn().mockResolvedValue({
@@ -285,6 +325,93 @@ describe("SyncManager - rewinding sync state after a storage recreate", () => {
     // re-pulls the tail instead of reporting itself caught up.
     expect(after.inbox.ackOrdinal).toBe(9770);
     expect(syncManager.getByName("accounts").channel).toBe(after as unknown);
+  });
+
+  /**
+   * Finding 2 of the adversarial review. The reset is not instantaneous, and a
+   * cursor write landing inside it brackets entirely within the fresh epoch -
+   * flush trivially satisfied, pre/post epoch reads equal - so it used to be
+   * durably stored. What it stores is the pre-fallback in-memory ordinal, and
+   * the reset that follows seeds the rebuilt channel from exactly that row: the
+   * lost tail is then never re-pulled, which is the permanent gap the whole
+   * boundary exists to prevent. Both halves of the window are closed - after
+   * the epoch advanced, and from inside the reset itself - and writes resume
+   * only once the sync manager acknowledges the new epoch.
+   */
+  it("refuses a stale-high cursor write racing the reset, and lets writes through once the resets are acknowledged", async () => {
+    await addAccounts();
+    const before = channels[0];
+    before.inbox.ackTo(16796);
+
+    const staleHigh = {
+      remoteName: "accounts",
+      cursorType: "inbox" as const,
+      cursorOrdinal: 16796,
+      lastSyncedAtUtcMs: Date.now(),
+    };
+
+    // The recreate has completed: the store fell back to its last flushed
+    // snapshot and the epoch advanced before the event reached the manager.
+    flusher.storageEpoch = 1;
+
+    await expect(cursorStorage.upsert(staleHigh)).rejects.toBeInstanceOf(
+      StorageEpochSupersededError,
+    );
+
+    let fromInsideTheReset: unknown;
+    duringReset = async () => {
+      fromInsideTheReset = await cursorStorage
+        .upsert(staleHigh)
+        .then(() => undefined)
+        .catch((error: unknown) => error);
+    };
+
+    await eventBus.emit(
+      ReactorEventTypes.STORAGE_SESSION_RECREATED,
+      recreated(),
+    );
+
+    expect(fromInsideTheReset).toBeInstanceOf(StorageEpochSupersededError);
+    // Nothing poisoned the row, so the rebuilt channel came back to the cursor
+    // that is at or behind durable data and re-pulls the tail.
+    expect(persisted.find((c) => c.cursorType === "inbox")?.cursorOrdinal).toBe(
+      9770,
+    );
+    expect(channels[1].inbox.ackOrdinal).toBe(9770);
+
+    // The resets are done and acknowledged, so the rebuilt channel's own
+    // advances - which start from 9770 - are written again.
+    await cursorStorage.upsert({
+      remoteName: "accounts",
+      cursorType: "inbox",
+      cursorOrdinal: 9800,
+      lastSyncedAtUtcMs: Date.now(),
+    });
+    expect(persisted.find((c) => c.cursorType === "inbox")?.cursorOrdinal).toBe(
+      9800,
+    );
+  });
+
+  /**
+   * The fence is opened by the recovery round, so a round with nothing to reset
+   * still has to run it: otherwise a reactor whose remotes are added after the
+   * recreate would have every cursor write refused forever.
+   */
+  it("acknowledges the new epoch even when no channel needed resetting", async () => {
+    flusher.storageEpoch = 1;
+
+    await eventBus.emit(
+      ReactorEventTypes.STORAGE_SESSION_RECREATED,
+      recreated(),
+    );
+
+    expect(channels).toHaveLength(0);
+    await cursorStorage.upsert({
+      remoteName: "accounts",
+      cursorType: "inbox",
+      cursorOrdinal: 9770,
+      lastSyncedAtUtcMs: Date.now(),
+    });
   });
 
   it("resets every remote, and one failure does not stop the others", async () => {

@@ -683,6 +683,81 @@ describe("durability boundary 1: a sync cursor never outruns its data", () => {
     ).rejects.toBeInstanceOf(StorageEpochSupersededError);
   });
 
+  /**
+   * Finding 2 of the adversarial review: the window the per-write bracket
+   * cannot cover. A write issued AFTER the recreate completed but BEFORE the
+   * sync layer has rebuilt its channels brackets entirely within the fresh
+   * epoch - the flush is trivially satisfied over an epoch with nothing in it
+   * and the pre/post epoch reads match - so the bracket let it durably store
+   * the channel's stale-HIGH in-memory ordinal, which the reset then seeded the
+   * rebuilt channel from. The fence refuses the write for the whole recovery,
+   * and nothing is flushed on its behalf either.
+   */
+  it("refuses a cursor write issued after the recreate but before the resets are acknowledged", async () => {
+    const db = await cursorDb();
+    const flusher = new TestFlusher();
+    const storage = new FlushGuardedSyncCursorStorage(
+      new KyselySyncCursorStorage(db),
+      flusher,
+    );
+
+    flusher.storageEpoch = 1;
+
+    await expect(
+      storage.upsert({
+        remoteName: "remote-1",
+        cursorType: "inbox",
+        cursorOrdinal: 16796,
+        lastSyncedAtUtcMs: Date.now(),
+      }),
+    ).rejects.toBeInstanceOf(StorageEpochSupersededError);
+
+    expect(flusher.trace).toEqual([]);
+    expect((await storage.get("remote-1", "inbox")).cursorOrdinal).toBe(0);
+
+    storage.acknowledgeEpoch(1);
+    await storage.upsert({
+      remoteName: "remote-1",
+      cursorType: "inbox",
+      cursorOrdinal: 9770,
+      lastSyncedAtUtcMs: Date.now(),
+    });
+
+    expect((await storage.get("remote-1", "inbox")).cursorOrdinal).toBe(9770);
+  });
+
+  /**
+   * A recovery overtaken by a second recreate may not open the fence: its
+   * resets re-initialised channels from rows the newer fallback has since
+   * invalidated again.
+   */
+  it("keeps the fence shut when a second recreate overtakes the first recovery", async () => {
+    const db = await cursorDb();
+    const flusher = new TestFlusher();
+    const storage = new FlushGuardedSyncCursorStorage(
+      new KyselySyncCursorStorage(db),
+      flusher,
+    );
+    const cursor = {
+      remoteName: "remote-1",
+      cursorType: "inbox" as const,
+      cursorOrdinal: 9770,
+      lastSyncedAtUtcMs: Date.now(),
+    };
+
+    flusher.storageEpoch = 2;
+    storage.acknowledgeEpoch(1);
+
+    await expect(storage.upsert(cursor)).rejects.toBeInstanceOf(
+      StorageEpochSupersededError,
+    );
+
+    storage.acknowledgeEpoch(2);
+    await storage.upsert(cursor);
+
+    expect((await storage.get("remote-1", "inbox")).cursorOrdinal).toBe(9770);
+  });
+
   /** Forgetting an advance is the safe direction, so it needs no barrier. */
   it("does not flush to remove a cursor", async () => {
     const db = await cursorDb();

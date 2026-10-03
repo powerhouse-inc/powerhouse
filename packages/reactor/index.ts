@@ -423,12 +423,14 @@ export {
 
 // Synchronization
 export {
+  fencesOnStorageEpoch,
   KyselySyncCursorStorage,
   KyselySyncHoldStorage,
   KyselySyncPurgeRefusalStorage,
   KyselySyncReceivedMarkerStorage,
   KyselySyncRemoteStorage,
   type DeadLetterRecord,
+  type ISyncCursorEpochFence,
   type ISyncCursorStorage,
   type ISyncDeadLetterStorage,
   type ISyncHoldStorage,
