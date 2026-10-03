@@ -70,3 +70,38 @@ yet reads served them as current state. Two extra defects implied:
 presumably advanced past durability), and (b) restart silently rolls back to the last
 durable state and relies on sync to re-pull the gap. Watch the post-restart soak cycles
 for whether catch-up closes the gap without manual intervention.
+
+## Addendum 2: cursor-ahead-of-durable-data, dead-letter burial, and a silently dead poll loop
+
+Post-restart forensics (same session, via inspector RPC and direct SQL):
+
+1. **Permanent gap mechanism confirmed.** After the rollback-on-restart, the Accounts
+   channel's inbox cursor in `reactor.sync_cursors` stood at 16796 with fresh
+   `last_synced_at` — ahead of the rolled-back data. Polls returned empty ("caught
+   up"), the local drive froze at 340/230 vs server 375/267, indefinitely, with all
+   channels green.
+2. **Dead-letter burial.** 40s after restart, a new inbound op for
+   `distyra/original-source-queue` doc `vq9tPk…` dead-lettered as
+   `error_type: UNCLASSIFIED`, "Document not found" — its ancestor state was in the
+   rolled-back batch. Every future op touching a rolled-back document will follow.
+   A missing-ancestor inbox failure is repair-signal, not garbage.
+3. **No live cursor-rewind lever.** Setting `cursor_ordinal = 0` via SQL did nothing:
+   channels hold cursor state in memory and persist on advance. Rewind only takes
+   effect at channel init (worker restart). Manual repair playbook that worked
+   partially: SQL rewind + `adminClient.restart()` → channel re-pulled 0→9770 and the
+   dead letter was cleared (re-applied once its ancestor existed again).
+4. **Then the re-pull stalled with a silently dead poll loop.** Cursor frozen at 9770,
+   drive still 340/230, queue empty/unpaused, storage healthy — and the Accounts
+   channel's ConnectionStateSnapshot read `state: "connected", lastSuccessUtcMs: 0,
+   lastFailureUtcMs: 0`: not one completed poll since boot, reported as connected.
+   (The three healthy channels showed fresh lastSuccessUtcMs.) Either the poll timer
+   died to an escaped exception, or the first poll request hangs without timeout
+   (plausible: a cursor-0 re-pull asks the server for ~16k envelopes in one go).
+
+Defects to fix (causal order): (a) transaction/portal left open on error —
+root brick; (b) cursor persistence not atomic with applied-op durability; (c)
+poll-loop death is unreported — connection state must distinguish "never succeeded"
+from "connected", and the loop needs an un-killable supervisor + request timeout;
+(d) `UNCLASSIFIED` missing-ancestor dead letters should be classified and feed a
+repair/backfill path; (e) inspector needs repair levers: rewind cursor, reset
+channel, requeue dead letter.
