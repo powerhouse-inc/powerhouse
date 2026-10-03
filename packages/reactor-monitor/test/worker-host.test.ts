@@ -1,3 +1,4 @@
+import { ReactorEventTypes } from "@powerhousedao/reactor";
 import { createPortTransport } from "@powerhousedao/reactor-browser/rpc";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -100,6 +101,21 @@ describe("monitor worker host over a MessageChannel", () => {
     // reply is what matters, not the timing.
     expect(tab.syncManager.agreement().basis()).toBeDefined();
     expect(tab.syncManager.list()).toEqual([]);
+  });
+
+  it("exposes the event bus, forwarding only the whitelisted types", async () => {
+    await tab.client.createEmpty(DRIVE_TYPE);
+
+    expect(() =>
+      tab.events.subscribe(ReactorEventTypes.JOB_WRITE_READY, () => {}),
+    ).toThrow(/forwards only/);
+
+    const unsubscribe = tab.events.subscribe(
+      ReactorEventTypes.MODEL_LOADED,
+      () => {},
+    );
+    expect(typeof unsubscribe).toBe("function");
+    unsubscribe();
   });
 
   it("answers adminInfo with the worker's identity", async () => {

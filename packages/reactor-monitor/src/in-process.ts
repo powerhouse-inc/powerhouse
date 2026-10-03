@@ -48,6 +48,7 @@ export async function provisionInProcess(
     inspector: built.inspector,
     dbQuery: built.dbQuery,
     syncManager: reactorModule?.syncModule?.syncManager,
+    events: built.module.eventBus,
     module,
     kill: built.shutdown,
     isShutdown: built.isShutdown,

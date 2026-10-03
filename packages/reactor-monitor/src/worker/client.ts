@@ -158,6 +158,7 @@ export function connectManagedWorkerReactor(
       queryDb: (sql, params) => inspector.queryReactorDb(sql, params),
     },
     syncManager,
+    events: eventBus,
     module,
     adminInfo: () => adminClient.info(),
     restart: () => adminClient.restart(),

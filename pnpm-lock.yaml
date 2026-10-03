@@ -662,6 +662,12 @@ importers:
 
   apps/reactor-monitor:
     dependencies:
+      '@powerhousedao/reactor':
+        specifier: workspace:*
+        version: link:../../packages/reactor
+      '@powerhousedao/reactor-browser':
+        specifier: workspace:*
+        version: link:../../packages/reactor-browser
       '@powerhousedao/reactor-monitor':
         specifier: workspace:*
         version: link:../../packages/reactor-monitor

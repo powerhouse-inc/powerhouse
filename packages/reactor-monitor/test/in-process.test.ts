@@ -1,4 +1,4 @@
-import { ChannelScheme } from "@powerhousedao/reactor";
+import { ChannelScheme, ReactorEventTypes } from "@powerhousedao/reactor";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   provision,
@@ -66,6 +66,23 @@ describe("provisionInProcess", () => {
     expect((await reactor.inspector.getQueueState()).isPaused).toBe(true);
     await reactor.inspector.resumeQueue();
     expect((await reactor.inspector.getQueueState()).isPaused).toBe(false);
+  });
+
+  it("exposes the live event bus", async () => {
+    const reactor = await host("events");
+
+    const seen: unknown[] = [];
+    const unsubscribe = reactor.events.subscribe(
+      ReactorEventTypes.JOB_WRITE_READY,
+      (_type, event) => {
+        seen.push(event);
+      },
+    );
+
+    await reactor.client.createEmpty(DRIVE_TYPE);
+
+    expect(seen.length).toBeGreaterThan(0);
+    unsubscribe();
   });
 
   it("answers raw SQL against the reactor's own store", async () => {

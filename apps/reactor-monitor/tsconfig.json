@@ -9,6 +9,12 @@
   "exclude": ["dist", "node_modules"],
   "references": [
     {
+      "path": "../../packages/reactor"
+    },
+    {
+      "path": "../../packages/reactor-browser"
+    },
+    {
       "path": "../../packages/reactor-monitor"
     }
   ]

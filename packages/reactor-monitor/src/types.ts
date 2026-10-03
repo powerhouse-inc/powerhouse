@@ -162,6 +162,15 @@ export interface ManagedReactorBase {
   readonly dbQuery: IReactorDbQuery;
   /** The reactor's sync manager, or a proxy to it. */
   readonly syncManager: ISyncManager | undefined;
+  /**
+   * The reactor's event bus: direct in-process, a forwarding proxy in a
+   * worker. A worker-hosted bus only relays the types in
+   * `FORWARDED_BUS_EVENT_TYPES` (`@powerhousedao/reactor-browser/rpc`) and
+   * throws synchronously on a `subscribe` for anything else; an in-process
+   * bus accepts any type. A consumer that wants the same code to work
+   * against both kinds should subscribe only to the forwarded set.
+   */
+  readonly events: IEventBus;
   /** Worker lifecycle info; worker-hosted reactors only. */
   adminInfo?: () => Promise<WorkerInspectorInfo>;
   /** Restarts the host; worker-hosted reactors only. */
