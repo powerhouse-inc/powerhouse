@@ -8,6 +8,11 @@ export {
   type IInspectorProxy,
 } from "./inspector-proxy.js";
 export {
+  dispatchInspectorOp,
+  INSPECTOR_OPS,
+  type InspectorOp,
+} from "./inspector-ops.js";
+export {
   opChannel,
   toVoid,
   RPC_DEFAULT_TIMEOUT_MS,

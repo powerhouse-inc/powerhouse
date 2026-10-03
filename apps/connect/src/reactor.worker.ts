@@ -5,10 +5,11 @@ import {
   InMemoryQueue,
   ReactorBuilder,
   ReactorClientBuilder,
+  ReactorInspector,
   type ChannelConfig,
   type Database,
-  type ICatchUp,
   type IDocumentModelRegistry,
+  type IReactorDbQuery,
   type ISyncManager,
   type JwtHandler,
   type ReactorFeatureFlags,
@@ -19,6 +20,7 @@ import {
 } from "@powerhousedao/reactor";
 import { baseDocumentModels } from "@powerhousedao/reactor-browser/base-document-models";
 import {
+  dispatchInspectorOp,
   FORWARDED_EVENT_TYPES,
   ReactorHost,
   SYNC_STATUS_CHANGED_EVENT,
@@ -34,7 +36,6 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   createRelationalDb,
-  type IProcessorManager,
   type IRelationalDb,
 } from "@powerhousedao/shared/processors";
 import * as commonDocumentModels from "@powerhousedao/powerhouse-vetra-packages/document-models";
@@ -133,10 +134,19 @@ type OwnedStorage = {
   relationalIdb?: string;
 };
 const owned: OwnedStorage = {};
-let inspectorQueue: InMemoryQueue | undefined;
-let inspectorProcessors: IProcessorManager | undefined;
-let inspectorIntegrity: DocumentIntegrityService | undefined;
-let inspectorCatchUp: ICatchUp | undefined;
+// Replaced on every boot with one over the live reactor module. Until then
+// every component is absent, which is what the inspector degrades to.
+let inspector = new ReactorInspector({});
+// Resolved per call: the store is reopened across boots and migrations.
+const inspectorDb: IReactorDbQuery = {
+  queryDb: async (sql, params) => {
+    if (!owned.reactorPg) {
+      throw new Error("Reactor store not available");
+    }
+    const result = await owned.reactorPg.query(sql, params);
+    return result.rows;
+  },
+};
 let currentIdentity: ReactorIdentity | null = null;
 const registeredKeys = new Set<string>();
 
@@ -447,17 +457,18 @@ const host = new ReactorHost({
       syncManager = module.reactorModule?.syncModule?.syncManager;
       const rm = module.reactorModule;
       if (rm) {
-        inspectorQueue =
-          rm.queue instanceof InMemoryQueue ? rm.queue : undefined;
-        inspectorProcessors = rm.processorManager;
-        inspectorCatchUp = rm.catchUp;
-        inspectorIntegrity = new DocumentIntegrityService(
-          rm.keyframeStore,
-          rm.operationStore,
-          rm.writeCache,
-          rm.documentView,
-          rm.documentModelRegistry,
-        );
+        inspector = new ReactorInspector({
+          queue: rm.queue instanceof InMemoryQueue ? rm.queue : undefined,
+          processorManager: rm.processorManager,
+          catchUp: rm.catchUp,
+          integrity: new DocumentIntegrityService(
+            rm.keyframeStore,
+            rm.operationStore,
+            rm.writeCache,
+            rm.documentView,
+            rm.documentModelRegistry,
+          ),
+        });
       }
       for (const m of models) {
         registeredKeys.add(modelKey(m));
@@ -578,101 +589,8 @@ const host = new ReactorHost({
       void live.unsubscribe();
     };
   },
-  onInspectorOp: async (method, args) => {
-    switch (method) {
-      case "queue.getState": {
-        if (!inspectorQueue) {
-          return {
-            isPaused: false,
-            pendingJobs: [],
-            executingJobs: [],
-            totalPending: 0,
-            totalExecuting: 0,
-          };
-        }
-        const pendingJobs = inspectorQueue.getPendingJobs();
-        const executingJobs = [];
-        for (const jobIds of inspectorQueue.getExecutingJobIds().values()) {
-          for (const jobId of jobIds) {
-            const job = inspectorQueue.getJob(jobId);
-            if (job) {
-              executingJobs.push(job);
-            }
-          }
-        }
-        return {
-          isPaused: inspectorQueue.paused,
-          pendingJobs,
-          executingJobs,
-          totalPending: pendingJobs.length,
-          totalExecuting: executingJobs.length,
-        };
-      }
-      case "queue.pause":
-        inspectorQueue?.pause();
-        return undefined;
-      case "queue.resume":
-        await inspectorQueue?.resume();
-        return undefined;
-      case "processors.getAll":
-        return (inspectorProcessors?.getAll() ?? []).map((tracked) => ({
-          processorId: tracked.processorId,
-          factoryId: tracked.factoryId,
-          driveId: tracked.driveId,
-          processorIndex: tracked.processorIndex,
-          lastOrdinal: tracked.lastOrdinal,
-          status: tracked.status,
-          lastError: tracked.lastError,
-          lastErrorTimestamp: tracked.lastErrorTimestamp,
-        }));
-      case "processors.retry": {
-        const [processorId] = args as [string];
-        await inspectorProcessors?.get(processorId)?.retry();
-        return undefined;
-      }
-      case "catchUp.status":
-        if (!inspectorCatchUp) {
-          throw new Error("Catch-up not available");
-        }
-        return inspectorCatchUp.status();
-      case "catchUp.sweepNow":
-        if (!inspectorCatchUp) {
-          throw new Error("Catch-up not available");
-        }
-        return inspectorCatchUp.sweepNow();
-      case "integrity.validate": {
-        if (!inspectorIntegrity) {
-          throw new Error("Integrity service not available");
-        }
-        const [documentId, branch] = args as [string, string?];
-        return inspectorIntegrity.validateDocument(documentId, branch);
-      }
-      case "integrity.rebuildKeyframes": {
-        if (!inspectorIntegrity) {
-          throw new Error("Integrity service not available");
-        }
-        const [documentId, branch] = args as [string, string?];
-        return inspectorIntegrity.rebuildKeyframes(documentId, branch);
-      }
-      case "integrity.rebuildSnapshots": {
-        if (!inspectorIntegrity) {
-          throw new Error("Integrity service not available");
-        }
-        const [documentId, branch] = args as [string, string?];
-        return inspectorIntegrity.rebuildSnapshots(documentId, branch);
-      }
-      case "db.query": {
-        if (!owned.reactorPg) {
-          throw new Error("Reactor store not available");
-        }
-        const [sql, params] = args as [string, unknown[]];
-        const result = await owned.reactorPg.query(sql, params);
-        return result.rows;
-      }
-      default:
-        throw new Error(`Unknown inspector op: ${method}`);
-    }
-  },
+  onInspectorOp: (method, args) =>
+    dispatchInspectorOp(inspector, inspectorDb, method, args),
 });
 
 type WorkerGlobalErrorEvent = {

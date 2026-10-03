@@ -525,6 +525,17 @@ export type {
 export { ProcessorManager } from "./src/processors/index.js";
 export * from "./src/catch-up/index.js";
 
+// Inspection
+export {
+  ReactorInspector,
+  type IInspectableQueue,
+  type IInspector,
+  type InspectorProcessorInfo,
+  type IReactorDbQuery,
+  type QueueStateSnapshot,
+  type ReactorInspectorComponents,
+} from "./src/inspector/index.js";
+
 // Document erasure
 export {
   isPurgeMarker,
