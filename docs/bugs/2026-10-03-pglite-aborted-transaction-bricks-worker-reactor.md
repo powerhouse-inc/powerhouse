@@ -105,3 +105,38 @@ from "connected", and the loop needs an un-killable supervisor + request timeout
 (d) `UNCLASSIFIED` missing-ancestor dead letters should be classified and feed a
 repair/backfill path; (e) inspector needs repair levers: rewind cursor, reset
 channel, requeue dead letter.
+
+## Regression run 2 (post-fix, 2026-10-03) — PARTIAL PASS
+
+Fresh worker on the rebuilt fixed dist (commits 7beab676d1..91f8d495b8), Accounts
+drive, bounded foreground verdict (scratchpad/verdict.sh). Machine at ~90% RAM.
+
+FIXED (proven):
+- Bulk-pull transaction deadlock (A-1): drive CONVERGED to server rev 375 (run 1
+  bricked ~340 and never converged). The pull completes under the same load.
+- Silent death → loud refusal: recurring poisoning now surfaces as
+  `The PGlite session is unrecoverable` (HardenedPGliteDialect's
+  PGliteSessionPoisonedError) instead of a green-stated hang. No silent divergence;
+  the dialect refuses rather than committing corrupt data.
+
+STILL OPEN:
+- Under concurrent rename load AFTER convergence, the session is poisoned again
+  (verdict cycles 2-3). This is the A-2 path: a wasm-level failure mid-Execute
+  leaves the portal PORTAL_ACTIVE; the dialect detects and refuses but cannot clear
+  it without a worker restart. Liveness defect remains; recovery still = restart.
+
+KEY CORRELATION: the recurrence happened at 2-3 GB free RAM (full 375-rev dataset on
+a 32 GB machine at ~90% use). A-2's named root cause is an IDBFS/OOM error mid-Execute
+— which severe memory pressure makes far more likely. The remaining brick may be
+substantially memory-pressure-induced rather than a pure logic defect; needs re-test
+in a memory-healthy environment to separate the two.
+
+NEXT (new work package — liveness/recovery, W0.7 candidate):
+1. Auto-recovery: on PGliteSessionPoisonedError, the reactor should restart its own
+   PGlite session/worker automatically (today an operator must restart), and sync
+   must re-pull the gap — with cursor-vs-durability already fixed, this should be safe.
+2. Separate the memory variable: re-run the verdict with the browser worker given
+   headroom (close other consumers / smaller dataset / more RAM) to confirm whether
+   A-2 persists absent OOM-level pressure.
+3. Investigate the ~18 GB footprint for 375 revs / 100 statements (PGlite-wasm bloat)
+   — reducing it would both ease the test and shrink the A-2 trigger window.
