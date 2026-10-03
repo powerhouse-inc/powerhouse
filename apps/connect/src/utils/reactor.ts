@@ -2,6 +2,7 @@ import {
   addDrive,
   addRemoteDrive,
   ChannelScheme,
+  HardenedPGliteDialect,
   isDriveAuthError,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -28,7 +29,6 @@ import type {
 import type { IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
 import { getReactorPGlite } from "../pglite.db.js";
 import { toStoredDocumentsRefused } from "./stored-documents-refused.js";
 import {
@@ -75,7 +75,7 @@ export async function createBrowserReactor(
     .withJwtHandler(jwtHandler)
     .withKysely(
       new Kysely<Database>({
-        dialect: new PGliteDialect(pg),
+        dialect: new HardenedPGliteDialect(pg),
       }),
     );
   const builder = new ReactorClientBuilder()

@@ -4,6 +4,7 @@ export {
   DocumentIntegrityService,
   DriveCollectionId,
   GqlRequestChannel,
+  HardenedPGliteDialect,
   InMemoryQueue,
   IntervalPollTimer,
   isDriveAuthError,

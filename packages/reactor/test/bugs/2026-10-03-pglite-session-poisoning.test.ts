@@ -21,21 +21,29 @@
  */
 import { PGlite } from "@electric-sql/pglite";
 import { Kysely, sql } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
 import { describe, expect, it } from "vitest";
+import { HardenedPGliteDialect } from "../../src/storage/kysely/pglite-dialect.js";
 
 type Row = { id: number };
 type Schema = { t: Row };
 
+/** Short acquire bound so a parked waiter is observable inside a test. */
+const ACQUIRE_TIMEOUT_MS = 250;
+
 async function freshDb(): Promise<{ pg: PGlite; db: Kysely<Schema> }> {
   const pg = new PGlite();
   await pg.waitReady;
-  const db = new Kysely<Schema>({ dialect: new PGliteDialect(pg) });
+  const db = new Kysely<Schema>({
+    dialect: new HardenedPGliteDialect(pg, {
+      acquireTimeoutMs: ACQUIRE_TIMEOUT_MS,
+      onDiagnostic: () => undefined,
+    }),
+  });
   await sql`create table t (id int primary key)`.execute(db);
   return { pg, db };
 }
 
-describe.skip("mechanism A: the shared PGlite session is poisonable and unrecoverable", () => {
+describe("mechanism A: the shared PGlite session is poisonable and unrecoverable", () => {
   /**
    * The driver's mutex (kysely-pglite-dialect PGliteDriver.acquireConnection)
    * only serialises *Kysely's own* callers. PGlite's `#transactionMutex` is
@@ -50,8 +58,19 @@ describe.skip("mechanism A: the shared PGlite session is poisonable and unrecove
    *
    * Correct behaviour: a statement issued outside the reactor's Kysely instance
    * must not land inside the reactor's open write transaction.
+   *
+   * STAYS SKIPPED, and will: no dialect can give this guarantee. PGlite has
+   * one session, so a statement issued straight at the client is inside
+   * whatever transaction is open on it, by construction. The fix is to remove
+   * the bypassing caller rather than to defend against it: mechanism A-3
+   * routes every inspector `queryDb` through the reactor's own Kysely (and so
+   * through the dialect's serialising queue). What now covers that:
+   * `queryThroughDialect` plus its test in
+   * test/storage/kysely/pglite-dialect.test.ts ("serialises a raw inspector
+   * query behind an open transaction"), and the two tests below, which pin the
+   * consequence this bypass used to have.
    */
-  it("does not let a non-Kysely statement execute inside a Kysely transaction", async () => {
+  it.skip("does not let a non-Kysely statement execute inside a Kysely transaction", async () => {
     const { pg, db } = await freshDb();
 
     const tx = db.transaction().execute(async (trx) => {
@@ -233,7 +252,10 @@ describe.skip("mechanism A: the shared PGlite session is poisonable and unrecove
       },
     });
     const db = new Kysely<Schema>({
-      dialect: new PGliteDialect(client as unknown as PGlite),
+      dialect: new HardenedPGliteDialect(client as unknown as PGlite, {
+        acquireTimeoutMs: ACQUIRE_TIMEOUT_MS,
+        onDiagnostic: () => undefined,
+      }),
     });
 
     portalStuck.value = true;
@@ -324,8 +346,19 @@ describe.skip("mechanism A: the shared PGlite session is poisonable and unrecove
    * precisely why the live repro -- where statements *errored* -- was not this.
    *
    * Correct behaviour: an abandoned stream must not wedge the connection pool.
+   *
+   * STAYS SKIPPED: the leak is in Kysely's `stream()`, whose generator holds
+   * the driver connection and releases it in a `finally` that a dropped
+   * iterator never runs. A driver cannot observe that, so it cannot release on
+   * the consumer's behalf. What the dialect wrapper does do is bound the wait,
+   * turning the silent permanent hang into a loud
+   * `PGliteAcquireTimeoutError` that names the cause - covered by
+   * test/storage/kysely/pglite-dialect.test.ts ("fails loudly instead of
+   * hanging when the lease is never returned"). A real fix is the lint ban on
+   * `.stream()` from the analysis's hygiene item A-4; `packages/reactor/src`
+   * has no `.stream()` call today.
    */
-  it("does not deadlock the driver when a stream iterator is abandoned", async () => {
+  it.skip("does not deadlock the driver when a stream iterator is abandoned", async () => {
     const { pg, db } = await freshDb();
     await sql`insert into t select generate_series(1, 100)`.execute(db);
 
