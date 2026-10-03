@@ -51,6 +51,13 @@ export interface IStorageFlusher {
    * call, because an earlier sync may have begun before the writes the caller
    * cares about. Rejects when the sync failed, which must stop the caller from
    * advancing whatever acknowledgment it was about to make.
+   *
+   * Rejects with {@link StorageEpochSupersededError} when the store's session
+   * was replaced under the caller: the writes the flush was to cover fell back
+   * to an earlier snapshot and no longer exist, which is a different answer
+   * from "the sync failed and the data is still there". A caller that was
+   * about to acknowledge must treat the first as lost work to be redone and
+   * the second as work that will be durable at the next successful flush.
    */
   flush(): Promise<void>;
 
@@ -60,6 +67,39 @@ export interface IStorageFlusher {
    * per statement, where `flush` is a no-op that is already satisfied.
    */
   readonly deferringStatementFlush: boolean;
+
+  /**
+   * Identifies the store's current session incarnation.
+   *
+   * It changes when the session is replaced - the self-heal recreate - which
+   * is the moment everything not yet flushed falls back to the last durable
+   * snapshot. A caller that flushes and then writes an acknowledgment (a sync
+   * cursor row) compares the token across the two: an unchanged token means the
+   * flush it relied on still describes the live store, and a changed one means
+   * the data under its acknowledgment is gone and the write must not stand.
+   * Constant for a store that is durable per statement, where no fallback
+   * exists.
+   */
+  readonly storageEpoch: number;
+}
+
+/**
+ * The store's session was replaced, so the writes a flush was to cover fell
+ * back to the last durable snapshot and are gone.
+ *
+ * It is retriable in the sense that the work can be redone against the fresh
+ * session - the operations were never acknowledged - and it is NOT the same as
+ * a failed sync, where the writes are still in the live session and the next
+ * successful flush makes them durable. Callers that distinguish the two are
+ * the two acknowledgment boundaries: a cursor write refuses outright, and a
+ * committed job reports failure (its commit was undone) rather than withholding
+ * an announcement for data that still exists.
+ */
+export class StorageEpochSupersededError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "StorageEpochSupersededError";
+  }
 }
 
 /**
@@ -70,6 +110,9 @@ export interface IStorageFlusher {
  */
 export class NoopStorageFlusher implements IStorageFlusher {
   readonly deferringStatementFlush = false;
+
+  /** Constant: a store durable per statement has no snapshot to fall back to. */
+  readonly storageEpoch = 0;
 
   flush(): Promise<void> {
     return Promise.resolve();

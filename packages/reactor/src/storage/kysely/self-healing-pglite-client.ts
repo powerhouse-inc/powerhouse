@@ -1,5 +1,7 @@
 import type { StorageSessionRecreatedEvent } from "../../events/types.js";
+import { TIMED_OUT, withDeadline } from "../../shared/utils.js";
 import type { IStorageFlusher } from "../storage-flush.js";
+import { StorageEpochSupersededError } from "../storage-flush.js";
 import type { PGliteSession } from "./pglite-dialect.js";
 
 /**
@@ -34,6 +36,20 @@ export type SelfHealingPGliteClientOptions = {
   /** Where open/close failures during a recreate are reported. */
   onDiagnostic: (message: string, error?: unknown) => void;
   /**
+   * Escalation for the one poison this client detects itself: a filesystem sync
+   * that neither resolves nor rejects within
+   * {@link SelfHealingPGliteClientOptions.flushSyncTimeoutMs}.
+   *
+   * A hung `syncToFs` is a poisoned session by the same argument a hung
+   * statement is - the wasm call is presumed dead, cannot be cancelled, and no
+   * error will ever arrive - so it has to reach the same recovery the dialect's
+   * `onPoisoned` reaches rather than parking the flush forever. The default
+   * recreates in place; a holder that also wants a reload fallback when no
+   * replacement opens (Connect's worker) overrides this to do both, exactly as
+   * it does for the dialect.
+   */
+  onSyncStuck: (reason: string) => Promise<boolean>;
+  /**
    * How long to wait for the poisoned instance to close before giving up on the
    * recreate. Recovery closes the poisoned instance FIRST and only then opens
    * the replacement (see {@link SelfHealingPGliteClient.recreate}), so this
@@ -45,27 +61,56 @@ export type SelfHealingPGliteClientOptions = {
    */
   closeTimeoutMs: number;
   /**
-   * How long {@link SelfHealingPGliteClient.flush} waits for the statement in
-   * flight to finish before giving up on the group commit.
+   * An optional independent bound on how long a flush waits for the statements
+   * in flight to finish before refusing the group commit. Zero - the default -
+   * means no second clock.
    *
-   * A filesystem sync reads the wasm filesystem asynchronously, so a statement
-   * running concurrently would be captured half-written - which is why PGlite
-   * holds its own query mutex across the per-statement sync it does for us. The
-   * explicit flush reproduces that by letting the statement in flight finish
-   * and holding the next one back, and the single PGlite lease means there is
-   * at most one to wait for. The bound exists because a statement that never
-   * settles would otherwise park the flush forever and with it every cursor
-   * advance; the statement deadline in the dialect settles such a statement
-   * first, so passing this bound means something stranger happened and the
-   * honest answer is a rejected flush, which simply stops the acknowledgment
-   * the caller was about to make.
+   * A flush has to let the statement in flight finish and hold the next one
+   * back, because a filesystem sync reads the wasm filesystem asynchronously
+   * and would otherwise capture a half-written one; PGlite gets that property
+   * from holding its query mutex across the per-statement sync it does for us.
+   * The question is only what to do when a statement never settles, and an
+   * independent clock here is the wrong answer: every statement reaching this
+   * client through {@link HardenedPGliteDialect} is already bounded by its own
+   * deadline, and that deadline's expiry escalates into the poison path, which
+   * recreates the instance and retires this epoch - releasing every flush
+   * waiting on it with {@link PGliteEpochSupersededError}. A shorter clock here
+   * could therefore only ever fire FIRST, which is how a sanctioned long
+   * statement (a vacuum, an index build, with a 15-minute bound of its own)
+   * used to make every concurrent flush stall and then fail. Waiting for the
+   * statement means waiting exactly as long as that statement is allowed to
+   * run, and no longer.
+   *
+   * Set it above zero only for a holder whose statements do NOT all go through
+   * the hardened dialect - one issuing `query`/`exec` straight at this client -
+   * because those carry no deadline and nothing else would ever free the flush.
    */
   flushQuiesceTimeoutMs: number;
+  /**
+   * How long the filesystem sync itself may take before the session is presumed
+   * dead and handed to {@link SelfHealingPGliteClientOptions.onSyncStuck}.
+   *
+   * This is the bound the flush path was missing: the sync is a wasm call like
+   * any other, so it can die mid-flight and never settle, and because the flush
+   * holds the statement gate across it a hung sync parked every cursor advance
+   * AND every statement - the silent wedge rebuilt one layer above the one the
+   * statement deadline cures. Generous, because a real `syncfs` over a whole
+   * Postgres data directory under load is slow but finite. Zero disables.
+   */
+  flushSyncTimeoutMs: number;
 };
 
 export const DEFAULT_CLOSE_TIMEOUT_MS = 30_000;
 
-export const DEFAULT_FLUSH_QUIESCE_TIMEOUT_MS = 180_000;
+/**
+ * Zero: no clock independent of the statement deadlines. See
+ * {@link SelfHealingPGliteClientOptions.flushQuiesceTimeoutMs} for why a second
+ * bound here can only fire too early.
+ */
+export const DEFAULT_FLUSH_QUIESCE_TIMEOUT_MS = 0;
+
+/** Two minutes, matching the dialect's bound for an ordinary statement. */
+export const DEFAULT_FLUSH_SYNC_TIMEOUT_MS = 120_000;
 
 /** A statement in flight did not finish, so no safe snapshot could be taken. */
 export class PGliteFlushQuiesceTimeoutError extends Error {
@@ -74,6 +119,179 @@ export class PGliteFlushQuiesceTimeoutError extends Error {
       `Timed out after ${timeoutMs}ms waiting for the statement in flight to finish before flushing the PGlite filesystem; no durability barrier was established.`,
     );
     this.name = "PGliteFlushQuiesceTimeoutError";
+  }
+}
+
+/** The filesystem sync never settled, so the session is presumed dead. */
+export class PGliteFlushSyncTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(
+      `The PGlite filesystem sync neither resolved nor rejected within ${timeoutMs}ms, so its wasm call is presumed dead and the session poisoned; no durability barrier was established.`,
+    );
+    this.name = "PGliteFlushSyncTimeoutError";
+  }
+}
+
+/**
+ * The operation belongs to a PGlite session incarnation that has been replaced.
+ *
+ * Everything the retired incarnation had not flushed fell back to the last
+ * durable snapshot, so an answer derived from its state would describe data
+ * that no longer exists - a flush "covering" statements that went down with the
+ * old instance, a cursor advance over a rolled-back tail. The operation is
+ * retriable against the fresh session; nothing about it may touch the fresh
+ * session's bookkeeping.
+ */
+export class PGliteEpochSupersededError extends StorageEpochSupersededError {
+  constructor(
+    readonly epochId: number,
+    readonly currentEpochId: number,
+  ) {
+    super(
+      `The PGlite session incarnation ${epochId} was replaced by incarnation ${currentEpochId}. Everything it had not flushed fell back to the last durable snapshot, so this operation cannot be answered from its state and must be retried against the fresh session.`,
+    );
+    this.name = "PGliteEpochSupersededError";
+  }
+}
+
+/**
+ * One PGlite incarnation, and every piece of state whose meaning is tied to it.
+ *
+ * The defect class this type exists to make impossible: the flush and
+ * quiescence machinery was correct in isolation but its state was GLOBAL while
+ * the instance it described was REPLACEABLE. A statement counter that leaked
+ * when a hung call was abandoned leaked forever, so every later flush waited on
+ * a statement that no longer existed and then failed - a permanent wedge AFTER
+ * a successful self-heal. A flush watermark that survived the swap let a
+ * post-recreate flush claim to cover statements that went down with the old
+ * instance, which is a sync cursor advancing past data that does not exist: the
+ * permanent-gap mechanism of the live incident.
+ *
+ * Bundling the instance with its sync binding, its statement accounting, its
+ * gate and its flush watermark means a recreate replaces all of them in one
+ * assignment, and an operation that captured the old epoch can only ever write
+ * into the old epoch's fields - which nothing reads again. Every wait is raced
+ * against {@link superseded}, so retiring an epoch frees everything parked on it
+ * instead of leaving it holding a gate no one will ever release.
+ */
+class PGliteEpoch {
+  /** Statements started on this incarnation. */
+  sequence = 0;
+  /** The highest {@link sequence} a completed flush here made durable. */
+  flushed = 0;
+  /**
+   * The flush taking a snapshot right now. `covers` is the {@link sequence} the
+   * snapshot captured, and is 0 until the snapshot actually starts - a flush
+   * requested before then is covered by it, which is what makes the group as
+   * wide as it can safely be.
+   */
+  running: { promise: Promise<void>; covers: number } | undefined = undefined;
+  /** Rejects once this incarnation is retired; raced by every wait on it. */
+  readonly superseded: Promise<never>;
+  /** The instance's real `syncToFs`, captured before any suppression. */
+  readonly instanceSync: () => Promise<void>;
+  /**
+   * Whether the instance offers a filesystem sync at all. A stub session (or a
+   * worker proxy that does not surface one) has nothing to flush, so the
+   * barrier is trivially satisfied and deferral must stay off.
+   */
+  readonly hasInstanceSync: boolean;
+
+  private inFlight = 0;
+  private idleWaiters: Array<() => void> = [];
+  private gatePromise: Promise<void> | undefined = undefined;
+  private gateRelease: () => void = () => undefined;
+  private retired = false;
+  private supersede: (error: Error) => void = () => undefined;
+
+  constructor(
+    readonly id: number,
+    readonly instance: RecreatablePGliteInstance,
+  ) {
+    const candidate = (instance as { syncToFs?: unknown }).syncToFs;
+    this.hasInstanceSync = typeof candidate === "function";
+    this.instanceSync = this.hasInstanceSync
+      ? (candidate as () => Promise<void>).bind(instance)
+      : () => Promise.resolve();
+    this.superseded = new Promise<never>((_resolve, reject) => {
+      this.supersede = reject;
+    });
+    // Consumers reach the rejection through a race, so the promise itself must
+    // not look unhandled while no flush happens to be waiting on it.
+    this.superseded.catch(() => undefined);
+  }
+
+  /** Set while a flush holds statements back; statements wait on it. */
+  get gate(): Promise<void> | undefined {
+    return this.gatePromise;
+  }
+
+  /** Whether a statement is running on this incarnation right now. */
+  get busy(): boolean {
+    return this.inFlight > 0;
+  }
+
+  /** Throws when this incarnation has been replaced by `currentId`. */
+  assertCurrent(currentId: number): void {
+    if (this.retired) {
+      throw new PGliteEpochSupersededError(this.id, currentId);
+    }
+  }
+
+  begin(): void {
+    this.inFlight += 1;
+    this.sequence += 1;
+  }
+
+  end(): void {
+    this.inFlight -= 1;
+    if (this.inFlight > 0) {
+      return;
+    }
+    const waiters = this.idleWaiters;
+    this.idleWaiters = [];
+    for (const waiter of waiters) {
+      waiter();
+    }
+  }
+
+  /** Resolves when no statement is running on this incarnation. */
+  idle(): Promise<void> {
+    if (this.inFlight === 0) {
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => this.idleWaiters.push(resolve));
+  }
+
+  /**
+   * Holds statements back and answers how to let them through again. The
+   * release is idempotent, so a retire and an ordinary release cannot both
+   * open a gate that has since been replaced.
+   */
+  closeGate(): () => void {
+    this.gatePromise = new Promise<void>((resolve) => {
+      this.gateRelease = () => {
+        this.gatePromise = undefined;
+        this.gateRelease = () => undefined;
+        resolve();
+      };
+    });
+    return () => this.gateRelease();
+  }
+
+  /**
+   * Retires this incarnation: statements queued on its gate are let through so
+   * they re-read the client's current epoch, and every wait raced against
+   * {@link superseded} rejects. Quiescence waiters are deliberately NOT
+   * resolved - they settle through the rejection instead, so a wait cannot
+   * resolve as "drained" when the truth is "the instance it was waiting on is
+   * gone".
+   */
+  retire(currentId: number): void {
+    this.retired = true;
+    this.gateRelease();
+    this.idleWaiters = [];
+    this.supersede(new PGliteEpochSupersededError(this.id, currentId));
   }
 }
 
@@ -87,7 +305,9 @@ export class PGliteFlushQuiesceTimeoutError extends Error {
  *
  * It is the self-heal coordinator: {@link recreate} is single-flight, so
  * concurrent poison reports collapse into one instance recreation, and it emits
- * {@link StorageSessionRecreatedEvent} on success so the recovery is observable.
+ * {@link StorageSessionRecreatedEvent} on success so the recovery is observable
+ * - and so the sync manager can reset its channels, whose in-memory cursors are
+ * stale-high the moment the store falls back to its last flushed snapshot.
  *
  * It is also the reactor's durability barrier ({@link IStorageFlusher}),
  * because the two jobs are the same job: the thing a recreate falls back to is
@@ -95,46 +315,24 @@ export class PGliteFlushQuiesceTimeoutError extends Error {
  * place that can say what "durable" means. {@link setDeferredFlush} takes the
  * filesystem sync off every statement and {@link flush} puts it back at the two
  * acknowledgment boundaries, group-committed.
+ *
+ * All of that per-instance state lives in one {@link PGliteEpoch} which a
+ * recreate replaces atomically, so no flush, watermark or statement count can
+ * outlive the instance it describes.
  */
 export class SelfHealingPGliteClient implements PGliteSession, IStorageFlusher {
-  private instance: RecreatablePGliteInstance;
+  private epoch: PGliteEpoch;
   private readonly options: SelfHealingPGliteClientOptions;
   private recreatedListener: (event: StorageSessionRecreatedEvent) => void;
   private healing: Promise<boolean> | undefined = undefined;
-  private attempt = 0;
   /** True while statements have had their own filesystem sync taken away. */
   private deferred = false;
-  /** The current instance's real `syncToFs`, captured before any suppression. */
-  private instanceSync: () => Promise<void> = () => Promise.resolve();
-  /**
-   * Whether the instance offers a filesystem sync at all. A stub session (or a
-   * worker proxy that does not surface one) has nothing to flush, so the
-   * barrier is trivially satisfied and deferral must stay off.
-   */
-  private hasInstanceSync = false;
-  /** Statements running right now; a flush waits for this to reach zero. */
-  private statementsInFlight = 0;
-  /** Set while a flush is taking its snapshot; new statements wait on it. */
-  private statementGate: Promise<void> | undefined = undefined;
-  /** Resolvers waiting for {@link statementsInFlight} to reach zero. */
-  private quiesceWaiters: Array<() => void> = [];
-  /** Monotonic statement counter, so a flush with nothing to do can say so. */
-  private statementSequence = 0;
-  /** The statement count a completed flush has already made durable. */
-  private flushedStatements = 0;
-  /** Monotonic request counter; a flush covers every request up to its own. */
-  private flushRequests = 0;
-  /** The highest request number a completed flush has covered. */
-  private flushCompleted = 0;
-  private flushInFlight: Promise<void> | undefined = undefined;
-  /** The request number the in-flight flush covers; 0 until its snapshot starts. */
-  private flushInFlightCovers = 0;
 
   constructor(
     initial: RecreatablePGliteInstance,
     options: Partial<SelfHealingPGliteClientOptions> = {},
   ) {
-    this.instance = initial;
+    this.epoch = new PGliteEpoch(0, initial);
     this.options = {
       openInstance:
         options.openInstance ??
@@ -149,12 +347,15 @@ export class SelfHealingPGliteClient implements PGliteSession, IStorageFlusher {
         ((message, error) => {
           console.error(`[self-healing-pglite] ${message}`, error);
         }),
+      onSyncStuck:
+        options.onSyncStuck ?? ((reason: string) => this.recreate(reason)),
       closeTimeoutMs: options.closeTimeoutMs ?? DEFAULT_CLOSE_TIMEOUT_MS,
       flushQuiesceTimeoutMs:
         options.flushQuiesceTimeoutMs ?? DEFAULT_FLUSH_QUIESCE_TIMEOUT_MS,
+      flushSyncTimeoutMs:
+        options.flushSyncTimeoutMs ?? DEFAULT_FLUSH_SYNC_TIMEOUT_MS,
     };
     this.recreatedListener = this.options.onRecreated;
-    this.bindInstanceSync();
   }
 
   /**
@@ -172,29 +373,34 @@ export class SelfHealingPGliteClient implements PGliteSession, IStorageFlusher {
     sql: string,
     params?: unknown[],
   ): Promise<{ rows: unknown[]; affectedRows?: number }> {
-    await this.enterStatement();
+    const epoch = await this.enterStatement();
     try {
-      return await this.instance.query(sql, params);
+      return await epoch.instance.query(sql, params);
     } finally {
-      this.leaveStatement();
+      epoch.end();
     }
   }
 
   async exec(sql: string): Promise<unknown> {
-    await this.enterStatement();
+    const epoch = await this.enterStatement();
     try {
-      return await this.instance.exec(sql);
+      return await epoch.instance.exec(sql);
     } finally {
-      this.leaveStatement();
+      epoch.end();
     }
   }
 
   isInTransaction(): boolean {
-    return this.instance.isInTransaction();
+    return this.epoch.instance.isInTransaction();
   }
 
   get deferringStatementFlush(): boolean {
     return this.deferred;
+  }
+
+  /** @see IStorageFlusher.storageEpoch */
+  get storageEpoch(): number {
+    return this.epoch.id;
   }
 
   /**
@@ -219,7 +425,7 @@ export class SelfHealingPGliteClient implements PGliteSession, IStorageFlusher {
    * silently stops working and the store is slow again - never unflushed.
    */
   setDeferredFlush(deferred: boolean): void {
-    if (deferred && !this.hasInstanceSync) {
+    if (deferred && !this.epoch.hasInstanceSync) {
       this.options.onDiagnostic(
         "this PGlite session exposes no filesystem sync, so there is nothing to defer; statements keep whatever durability they already had",
       );
@@ -232,40 +438,51 @@ export class SelfHealingPGliteClient implements PGliteSession, IStorageFlusher {
     this.applyDeferral();
   }
 
-  /** @see IStorageFlusher.flush */
+  /**
+   * @see IStorageFlusher.flush
+   *
+   * Everything it reads and writes belongs to the epoch captured on entry, so a
+   * flush whose instance was replaced mid-flight rejects with
+   * {@link PGliteEpochSupersededError} instead of marking the fresh epoch's
+   * statements durable. A flush with nothing run since the last completed one
+   * is free, which is what keeps a burst of cursor writes over an idle store
+   * from costing one filesystem sync each.
+   */
   async flush(): Promise<void> {
-    if (this.statementSequence === this.flushedStatements) {
-      // Nothing has run since the snapshot that is already durable, so there
-      // is nothing to make durable. This is what keeps a burst of cursor
-      // writes over an idle store from costing one filesystem sync each.
-      return;
-    }
-    const target = ++this.flushRequests;
+    const epoch = this.epoch;
+    epoch.assertCurrent(this.epoch.id);
+    // The caller's watermark, captured once: a flush covers everything issued
+    // before this call and owes nothing for a statement that started after it.
+    const target = epoch.sequence;
     for (;;) {
-      if (this.flushCompleted >= target) {
+      epoch.assertCurrent(this.epoch.id);
+      if (epoch.flushed >= target) {
         return;
       }
-      const inFlight = this.flushInFlight;
-      if (inFlight === undefined) {
-        await this.startFlush();
-        return;
+      const running = epoch.running;
+      if (running === undefined) {
+        await this.startFlush(epoch);
+        continue;
       }
-      if (this.flushInFlightCovers >= target) {
-        await inFlight;
-        return;
+      // A snapshot that has not started yet will capture a sequence at or
+      // above this caller's, so it covers these writes; one that started
+      // before them does not, and the loop waits for the next.
+      if (running.covers === 0 || running.covers >= target) {
+        await running.promise;
+        continue;
       }
-      await inFlight.catch(() => undefined);
+      await running.promise.catch(() => undefined);
     }
   }
 
   /** The instance currently backing the client; swapped by {@link recreate}. */
   get current(): RecreatablePGliteInstance {
-    return this.instance;
+    return this.epoch.instance;
   }
 
   /** How many times the instance has been recreated over this client's life. */
   get recreateCount(): number {
-    return this.attempt;
+    return this.epoch.id;
   }
 
   /**
@@ -289,7 +506,7 @@ export class SelfHealingPGliteClient implements PGliteSession, IStorageFlusher {
       );
     }
     this.setDeferredFlush(false);
-    await this.instance.close();
+    await this.epoch.instance.close();
   }
 
   /**
@@ -318,6 +535,13 @@ export class SelfHealingPGliteClient implements PGliteSession, IStorageFlusher {
    * did not advance past them, and which the next poll re-pulls, or work no
    * caller was ever told was durable.
    *
+   * The swap is one assignment of a fresh {@link PGliteEpoch}, and the old one
+   * is retired in the same turn: its gate opens, its waiters reject, and its
+   * statement accounting and flush watermark are left behind with the instance
+   * they described. That is what makes the state of a dead instance unable to
+   * reach the live one - including an abandoned hung statement's leaked count,
+   * which used to wedge every later flush permanently.
+   *
    * Single-flight: concurrent callers share one recreation and its result.
    * Resolves `true` when the instance was replaced, `false` when the poisoned
    * instance could not be closed within the bound or a replacement could not be
@@ -331,9 +555,9 @@ export class SelfHealingPGliteClient implements PGliteSession, IStorageFlusher {
   }
 
   private async runRecreate(reason: string): Promise<boolean> {
-    const old = this.instance;
+    const old = this.epoch;
 
-    const closed = await this.closeQuietly(old);
+    const closed = await this.closeQuietly(old.instance);
     if (!closed) {
       return false;
     }
@@ -349,15 +573,15 @@ export class SelfHealingPGliteClient implements PGliteSession, IStorageFlusher {
       return false;
     }
 
-    this.instance = next;
-    this.bindInstanceSync();
+    const epoch = new PGliteEpoch(old.id + 1, next);
+    this.epoch = epoch;
+    old.retire(epoch.id);
     this.applyDeferral();
-    this.attempt += 1;
 
     const event: StorageSessionRecreatedEvent = {
       reason,
       timestampUtcMs: Date.now(),
-      attempt: this.attempt,
+      attempt: epoch.id,
     };
     try {
       this.recreatedListener(event);
@@ -379,98 +603,115 @@ export class SelfHealingPGliteClient implements PGliteSession, IStorageFlusher {
   private async closeQuietly(
     instance: RecreatablePGliteInstance,
   ): Promise<boolean> {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const bounded = new Promise<boolean>((resolve) => {
-      timer = setTimeout(() => {
-        this.options.onDiagnostic(
-          "closing the poisoned PGlite instance timed out; it may still hold the store, so not opening a replacement - escalating",
-        );
-        resolve(false);
-      }, this.options.closeTimeoutMs);
-    });
     const closing = instance
       .close()
       .then(() => true)
-      .catch((error) => {
+      .catch((error: unknown) => {
         this.options.onDiagnostic(
           "closing the poisoned PGlite instance failed; the teardown returned, so proceeding with the replacement",
           error,
         );
         return true;
       });
-    try {
-      return await Promise.race([closing, bounded]);
-    } finally {
-      clearTimeout(timer);
+
+    const outcome = await withDeadline(closing, this.options.closeTimeoutMs);
+    if (outcome === TIMED_OUT) {
+      this.options.onDiagnostic(
+        "closing the poisoned PGlite instance timed out; it may still hold the store, so not opening a replacement - escalating",
+      );
+      return false;
     }
+    return outcome;
   }
 
   /**
    * Installs or lifts the no-op that takes the automatic per-statement sync
-   * away. The real `syncToFs` is captured when the instance is bound, so
+   * away. The real `syncToFs` is captured by the epoch when it is created, so
    * {@link flush} keeps reaching it while statements see the no-op; lifting
    * writes the captured function back rather than deleting the override, which
    * works whether the instance carries `syncToFs` on its prototype or as an own
    * field.
    */
   private applyDeferral(): void {
-    if (!this.hasInstanceSync) {
+    const epoch = this.epoch;
+    if (!epoch.hasInstanceSync) {
       return;
     }
-    const target = this.instance as unknown as {
+    const target = epoch.instance as unknown as {
       syncToFs: () => Promise<void>;
     };
     target.syncToFs = this.deferred
       ? () => Promise.resolve()
-      : this.instanceSync;
+      : epoch.instanceSync;
   }
 
   /**
-   * Captures the instance's real filesystem sync before any suppression can
-   * shadow it, so {@link flush} keeps reaching the genuine one while statements
-   * see the no-op.
+   * Starts one group commit on `epoch`. Every request made before the snapshot
+   * begins is covered by it, which is what lets concurrent callers share a
+   * single filesystem sync; a request made after it starts gets the next one.
    */
-  private bindInstanceSync(): void {
-    const candidate = (this.instance as { syncToFs?: unknown }).syncToFs;
-    this.hasInstanceSync = typeof candidate === "function";
-    this.instanceSync = this.hasInstanceSync
-      ? (candidate as () => Promise<void>).bind(this.instance)
-      : () => Promise.resolve();
-  }
-
-  /**
-   * Starts one group commit. Every request made before the snapshot begins is
-   * covered by it, which is what lets concurrent callers share a single
-   * filesystem sync; a request made after it starts gets the next one.
-   */
-  private startFlush(): Promise<void> {
-    const run = this.runFlush().finally(() => {
-      this.flushInFlight = undefined;
+  private startFlush(epoch: PGliteEpoch): Promise<void> {
+    const running: { promise: Promise<void>; covers: number } = {
+      promise: Promise.resolve(),
+      covers: 0,
+    };
+    running.promise = this.runFlush(epoch, running).finally(() => {
+      if (epoch.running === running) {
+        epoch.running = undefined;
+      }
     });
-    this.flushInFlight = run;
-    this.flushInFlightCovers = 0;
-    return run;
+    epoch.running = running;
+    return running.promise;
   }
 
-  private async runFlush(): Promise<void> {
-    const release = await this.holdStatements();
-    // Nothing is executing now, so every request made up to this point has its
-    // writes in the filesystem and is covered by the snapshot about to be
-    // taken. Capturing the watermark here rather than when the flush was
+  private async runFlush(
+    epoch: PGliteEpoch,
+    running: { covers: number },
+  ): Promise<void> {
+    const release = await this.holdStatements(epoch);
+    // Nothing is executing now, so every statement started up to this point
+    // has its writes in the filesystem and is covered by the snapshot about to
+    // be taken. Capturing the watermark here rather than when the flush was
     // requested is what makes the group as wide as it can safely be.
-    const covers = this.flushRequests;
-    const statementsCovered = this.statementSequence;
-    this.flushInFlightCovers = covers;
+    running.covers = epoch.sequence;
+    const covered = running.covers;
     try {
-      await this.instanceSync();
+      await this.boundedSync(epoch);
     } finally {
       release();
     }
-    this.flushCompleted = Math.max(this.flushCompleted, covers);
-    this.flushedStatements = Math.max(
-      this.flushedStatements,
-      statementsCovered,
+    epoch.flushed = Math.max(epoch.flushed, covered);
+  }
+
+  /**
+   * Runs the filesystem sync under {@link
+   * SelfHealingPGliteClientOptions.flushSyncTimeoutMs} and routes an expiry
+   * into the poison path, because a sync that never settles is a dead wasm call
+   * by the same argument a statement that never settles is. The wait is also
+   * raced against the epoch's retirement, so a recreate triggered from
+   * anywhere frees this flush rather than leaving it holding the statement gate
+   * of an instance that no longer exists.
+   */
+  private async boundedSync(epoch: PGliteEpoch): Promise<void> {
+    const timeoutMs = this.options.flushSyncTimeoutMs;
+    const syncing = Promise.race([epoch.instanceSync(), epoch.superseded]);
+    if (timeoutMs <= 0) {
+      await syncing;
+      return;
+    }
+
+    const outcome = await withDeadline(syncing, timeoutMs);
+    if (outcome !== TIMED_OUT) {
+      return;
+    }
+
+    const expiry = new PGliteFlushSyncTimeoutError(timeoutMs);
+    this.options.onDiagnostic(
+      "the PGlite filesystem sync never settled within its deadline; treating the session as poisoned",
+      expiry,
     );
+    await this.options.onSyncStuck(expiry.message);
+    throw expiry;
   }
 
   /**
@@ -478,73 +719,59 @@ export class SelfHealingPGliteClient implements PGliteSession, IStorageFlusher {
    * so the snapshot is taken against a filesystem nothing is writing to. The
    * returned function lets statements through again.
    */
-  private async holdStatements(): Promise<() => void> {
-    while (this.statementGate !== undefined) {
-      await this.statementGate;
+  private async holdStatements(epoch: PGliteEpoch): Promise<() => void> {
+    let gate = epoch.gate;
+    while (gate !== undefined) {
+      await gate;
+      epoch.assertCurrent(this.epoch.id);
+      gate = epoch.gate;
     }
+    epoch.assertCurrent(this.epoch.id);
 
-    let released = false;
-    let release: () => void = () => undefined;
-    this.statementGate = new Promise<void>((resolve) => {
-      release = () => {
-        if (released) {
-          return;
-        }
-        released = true;
-        this.statementGate = undefined;
-        resolve();
-      };
-    });
-
-    if (this.statementsInFlight === 0) {
+    const release = epoch.closeGate();
+    if (!epoch.busy) {
       return release;
     }
 
-    const drained = await this.awaitQuiesce();
-    if (!drained) {
+    try {
+      await this.awaitQuiesce(epoch);
+    } catch (error) {
       release();
-      throw new PGliteFlushQuiesceTimeoutError(
-        this.options.flushQuiesceTimeoutMs,
-      );
+      throw error;
     }
     return release;
   }
 
-  private async awaitQuiesce(): Promise<boolean> {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const expiry = new Promise<boolean>((resolve) => {
-      timer = setTimeout(
-        () => resolve(false),
-        this.options.flushQuiesceTimeoutMs,
-      );
-    });
-    const drained = new Promise<boolean>((resolve) => {
-      this.quiesceWaiters.push(() => resolve(true));
-    });
-    try {
-      return await Promise.race([drained, expiry]);
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
-  private async enterStatement(): Promise<void> {
-    while (this.statementGate !== undefined) {
-      await this.statementGate;
-    }
-    this.statementsInFlight += 1;
-    this.statementSequence += 1;
-  }
-
-  private leaveStatement(): void {
-    this.statementsInFlight -= 1;
-    if (this.statementsInFlight > 0) {
+  private async awaitQuiesce(epoch: PGliteEpoch): Promise<void> {
+    const drained = Promise.race([epoch.idle(), epoch.superseded]);
+    const timeoutMs = this.options.flushQuiesceTimeoutMs;
+    if (timeoutMs <= 0) {
+      await drained;
       return;
     }
-    const waiters = this.quiesceWaiters;
-    this.quiesceWaiters = [];
-    for (const waiter of waiters) {
-      waiter();
+
+    const outcome = await withDeadline(drained, timeoutMs);
+    if (outcome === TIMED_OUT) {
+      throw new PGliteFlushQuiesceTimeoutError(timeoutMs);
+    }
+  }
+
+  /**
+   * Admits one statement to the current epoch and hands back the epoch it was
+   * admitted to, so the statement runs against that instance and its
+   * accounting lands in that epoch's fields. A statement held back by a flush
+   * re-reads the client's epoch when the gate opens, which is how a recreate
+   * during the wait routes it to the replacement instead of to a dead instance.
+   */
+  private async enterStatement(): Promise<PGliteEpoch> {
+    for (;;) {
+      const epoch = this.epoch;
+      const gate = epoch.gate;
+      if (gate === undefined) {
+        epoch.begin();
+        return epoch;
+      }
+      await gate;
     }
   }
 }

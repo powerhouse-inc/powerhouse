@@ -340,15 +340,20 @@ export {
 export {
   DEFAULT_CLOSE_TIMEOUT_MS,
   DEFAULT_FLUSH_QUIESCE_TIMEOUT_MS,
+  DEFAULT_FLUSH_SYNC_TIMEOUT_MS,
+  PGliteEpochSupersededError,
   PGliteFlushQuiesceTimeoutError,
+  PGliteFlushSyncTimeoutError,
   SelfHealingPGliteClient,
   type RecreatablePGliteInstance,
   type SelfHealingPGliteClientOptions,
 } from "./src/storage/kysely/self-healing-pglite-client.js";
 export {
   NoopStorageFlusher,
+  StorageEpochSupersededError,
   type IStorageFlusher,
 } from "./src/storage/storage-flush.js";
+export { FlushGuardedSyncCursorStorage } from "./src/storage/flush-guarded-sync-cursor-storage.js";
 export { KyselyOperationStore } from "./src/storage/kysely/store.js";
 export {
   instrumentPgPool,
