@@ -59,3 +59,14 @@ widen the interleaving window), which is why it presents as "dies after enough t
    must not read "connected/green" while every statement fails — add a DB-health
    dimension to sync/queue status.
 4. Re-run the Accounts soak after the fix (same script) as the regression gate.
+
+## Addendum: non-durable reads + rollback on restart
+
+Immediately before the brick, the worker reported drive revision document:373/global:263.
+After `adminClient.restart()`, the fresh worker serves document:340/global:230 — the
+~33 revisions "ingested" inside the poisoned transaction were never durably committed,
+yet reads served them as current state. Two extra defects implied:
+(a) reads can reflect an uncommitted transaction's state (consistency tokens/watermark
+presumably advanced past durability), and (b) restart silently rolls back to the last
+durable state and relies on sync to re-pull the gap. Watch the post-restart soak cycles
+for whether catch-up closes the gap without manual intervention.
