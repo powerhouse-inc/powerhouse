@@ -166,6 +166,26 @@ invariant. Sync is the expected bug nest and gets the deepest instrumentation.
    (Unverified: projection races across scopes / saveState set-vs-max — re-check
    before acting. Historical note: upstream-bugs-6.2.2-dev.85 investigation and
    updateoutbox-scope-ordering primary defects are ALL fixed pre-branch.)
+13. Review-confirmed, non-blocking (2026-10-03 adversarial review of the fix series):
+   package-loader cluster — reloadSources evicts then silently fails to re-import
+   (worker-package-loader.ts:155), replaceRegistryFamilies drops base-bundle
+   versions of a touched type (connect reactor.worker.ts:197 + reactor-monitor
+   build-worker-reactor.ts duplicate), monitor registerPackages silently no-ops
+   without a boot-time loader (build-worker-reactor.ts:129), worker/server
+   isUpgradeManifest predicates diverge (worker-package-loader.ts:55).
+14. reactor-monitor polish: kill-during-provision race adopts killed reactor
+   (registry.ts:58), QueueTab pause button bricks without try/finally, EventsTab
+   duplicate keys, unbounded getQueueState cloned over RPC every 2s.
+15. reactor-workflow: rerun re-executes side-effectful steps whose journaled output
+   was truncated by the 256KB cap; truncation marker is duck-typed (service.ts:3774,
+   store.ts:842) — fold into W3.3 workflow hardening.
+16. Unverified finder-only candidates (reactor-api/builder-tools verifiers never
+   ran): http-loader versions pin not invalidated (http-loader.ts:508), ensureLink
+   rename-over-junction on Windows (registry-cache.ts:650), non-restoring directory
+   swaps (reactor-worker-build.ts:379, worker-packages-build.ts:223),
+   es-module-lexer fill() abort on non-JS assets (registry-cache.ts:387),
+   isSubgraphClass drops minified subgraphs (graphql/utils.ts:34) — needs a
+   dedicated verify pass before acting.
 
 ## Coordination
 
