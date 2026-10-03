@@ -124,6 +124,16 @@ let syncManager: ISyncManager | undefined;
 type RelationalState = {
   pg?: PgLiveModuleNs.PGliteWithLive;
   db?: IRelationalDb;
+  /**
+   * The one Kysely over the relational PGlite, the same handle `db` wraps.
+   * Inspector SQL from the DB explorer goes through it rather than at the
+   * client, so it enters the hardened dialect's serialising queue instead of
+   * landing inside whatever transaction a relational processor has open on the
+   * shared session - reading its uncommitted rows, or aborting it outright. See
+   * docs/bugs/2026-10-03-sync-defect-analysis.md, mechanism A-3, which fixed
+   * the same bypass on the reactor store.
+   */
+  kysely?: Kysely<unknown>;
 };
 const relational: RelationalState = {};
 type OwnedStorage = {
@@ -282,9 +292,11 @@ async function openRelational(namespace: string): Promise<DetectedMajor> {
     });
     await pg.waitReady;
     relational.pg = pg as unknown as PgLiveModuleNs.PGliteWithLive;
-    relational.db = createRelationalDb(
-      new Kysely({ dialect: new HardenedPGliteDialect(pg) }),
-    );
+    const relationalKysely = new Kysely<unknown>({
+      dialect: new HardenedPGliteDialect(pg),
+    });
+    relational.kysely = relationalKysely;
+    relational.db = createRelationalDb(relationalKysely);
     console.info(
       `[reactor.worker] Relational store opened: idb://${namespace} (Postgres ${major}).`,
     );
@@ -317,6 +329,7 @@ async function releaseStores(): Promise<void> {
   const stores = [relational.pg, owned.reactorPg];
   relational.pg = undefined;
   relational.db = undefined;
+  relational.kysely = undefined;
   owned.reactorPg = undefined;
   owned.reactorDb = undefined;
   for (const store of stores) {
@@ -578,14 +591,15 @@ const host = new ReactorHost({
     }
   },
   onDbOp: async (method, args) => {
-    if (!relational.pg) {
+    if (!relational.kysely) {
       throw new Error("Relational store not available");
     }
     switch (method) {
       case "query": {
         const [sql, params] = args as [string, unknown[]];
-        const result = await relational.pg.query(sql, params);
-        return result.rows;
+        // Through the dialect queue, never at the shared PGlite session: the
+        // relational store's processors hold transactions on it.
+        return queryThroughDialect(relational.kysely, sql, params);
       }
       default:
         throw new Error(`Unknown db op: ${method}`);
