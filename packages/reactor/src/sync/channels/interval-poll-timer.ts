@@ -1,5 +1,5 @@
 import type { IQueue } from "../../queue/interfaces.js";
-import type { IPollTimer } from "./poll-timer.js";
+import type { IPollTimer, PollDelegate } from "./poll-timer.js";
 
 export type PollTimerConfig = {
   intervalMs: number;
@@ -14,14 +14,16 @@ export type PollTimerConfig = {
    */
   startPaused: boolean;
   /**
-   * How long one tick's delegate may run before the tick is abandoned and the
-   * next one scheduled. Ticks are scheduled only from the delegate's
-   * settlement, so a delegate that neither resolves nor rejects used to leave
-   * nothing pending at all: the loop was dead forever, silently, with nothing
-   * but an external `triggerNow()` able to revive it. Defaults to ten
-   * intervals, with a floor of {@link DELEGATE_TIMEOUT_FLOOR_MS}; a channel
-   * passes its own bound, comfortably above its request deadline, so a slow
-   * but live poll is never abandoned.
+   * How long one tick's delegate may run before the tick is CANCELLED - its
+   * abort signal fired - and the next tick scheduled from its settlement.
+   * Ticks are scheduled only from the delegate's settlement, so a delegate that
+   * neither resolves nor rejects used to leave nothing pending at all: the loop
+   * was dead forever, silently, with nothing but an external `triggerNow()`
+   * able to revive it. Defaults to ten intervals, with a floor of
+   * {@link DELEGATE_TIMEOUT_FLOOR_MS}; a channel passes its own bound,
+   * comfortably above its request deadline, so a slow but live poll is never
+   * cancelled. Zero or less disables the bound, which is what an unbounded
+   * delegate - a channel whose own request deadline is off - asks for.
    */
   delegateTimeoutMs: number;
   /**
@@ -68,14 +70,25 @@ type TickOutcome = "success" | "failure" | "backpressure" | "stopped";
  *
  * Waits for delegate completion before scheduling the next tick, and checks
  * queue depth so polling defers under backpressure. Both of those waits are
- * bounded: a tick that does not settle within `delegateTimeoutMs`, and a size
- * probe that does not answer within `queueProbeTimeoutMs`, are abandoned so the
- * loop always has a next tick pending. Only one tick runs at a time; a
- * `triggerNow()` during a tick is remembered and fires as soon as it settles,
- * rather than running a second delegate alongside it and orphaning a timer.
+ * bounded: a tick that has not settled within `delegateTimeoutMs`, and a size
+ * probe that has not answered within `queueProbeTimeoutMs`, are CANCELLED
+ * through the tick's abort signal, and the next tick is scheduled from the
+ * cancelled tick's settlement.
+ *
+ * Exactly one delegate runs at a time, under every path. The watchdog used to
+ * invalidate the tick's token and schedule the next one while the old delegate
+ * was still running and uncancelled: a second poll then ran alongside the
+ * first, on a channel with no reentrancy guard, ingesting the same envelopes
+ * twice and interleaving cursor writes. Cancelling and waiting is what makes
+ * the bound safe, and it is why the delegate contract (see
+ * {@link PollDelegate}) requires settling once aborted - a delegate that
+ * ignores its signal stalls its own loop, which is the lesser of the two
+ * failures. A `triggerNow()` during a tick is remembered and fires as soon as
+ * it settles, rather than running a second delegate alongside it and orphaning
+ * a timer.
  */
 export class IntervalPollTimer implements IPollTimer {
-  private delegate: (() => Promise<void>) | undefined;
+  private delegate: PollDelegate | undefined;
   private timer: NodeJS.Timeout | undefined;
   private watchdog: NodeJS.Timeout | undefined;
   private running: boolean;
@@ -84,6 +97,10 @@ export class IntervalPollTimer implements IPollTimer {
   /** Identifies the tick in flight; a stale settlement is ignored. */
   private tickToken = 0;
   private ticking = false;
+  /** Cancels the tick in flight; the watchdog and `stop()` fire it. */
+  private tickAbort: AbortController | undefined;
+  /** The tick the watchdog cancelled, so its settlement counts as a failure. */
+  private cancelledToken: number | undefined;
   private retriggerRequested = false;
   private readonly queue: IQueue;
   private readonly config: PollTimerConfig;
@@ -101,7 +118,7 @@ export class IntervalPollTimer implements IPollTimer {
     this.consecutiveFailures = 0;
   }
 
-  setDelegate(delegate: () => Promise<void>): void {
+  setDelegate(delegate: PollDelegate): void {
     this.delegate = delegate;
   }
 
@@ -113,11 +130,20 @@ export class IntervalPollTimer implements IPollTimer {
     }
   }
 
+  /**
+   * Stops the loop and cancels the tick in flight. The token is invalidated so
+   * a late settlement from that tick cannot schedule anything, and `ticking` is
+   * cleared so a later `start()` is not mistaken for a reentrant trigger.
+   */
   stop(): void {
     this.running = false;
     this.retriggerRequested = false;
     this.clearTimer();
     this.clearWatchdog();
+    this.cancelTick(new Error("poll timer stopped"));
+    this.tickToken++;
+    this.cancelledToken = undefined;
+    this.ticking = false;
   }
 
   pause(): void {
@@ -167,30 +193,42 @@ export class IntervalPollTimer implements IPollTimer {
     const delegate = this.delegate;
     const token = ++this.tickToken;
     this.ticking = true;
+    this.cancelledToken = undefined;
+    const abort = new AbortController();
+    this.tickAbort = abort;
     this.clearTimer();
     this.armWatchdog(token);
 
-    void this.measureQueue().then((size) => {
+    void this.measureQueue(abort.signal).then((size) => {
       if (!this.running) {
         this.settle(token, "stopped");
+        return;
+      }
+      if (size === "cancelled") {
+        // The watchdog gave up on the probe; count it and move the loop on.
+        this.settle(token, "failure");
         return;
       }
       if (size === "unknown") {
         // Depth unknown rather than low: polling risks adding work, while not
         // polling risks a channel that never ingests again. Poll.
-        this.runDelegate(delegate, token);
+        this.runDelegate(delegate, token, abort.signal);
         return;
       }
       if (size > this.config.maxQueueDepth) {
         this.settle(token, "backpressure");
         return;
       }
-      this.runDelegate(delegate, token);
+      this.runDelegate(delegate, token, abort.signal);
     });
   }
 
-  private runDelegate(delegate: () => Promise<void>, token: number): void {
-    void delegate().then(
+  private runDelegate(
+    delegate: PollDelegate,
+    token: number,
+    signal: AbortSignal,
+  ): void {
+    void delegate(signal).then(
       () => this.settle(token, "success"),
       () => this.settle(token, "failure"),
     );
@@ -199,6 +237,8 @@ export class IntervalPollTimer implements IPollTimer {
   /**
    * `"unknown"` when the depth could not be established, whether the probe
    * timed out or rejected. Both fail open the same way: the delegate runs.
+   * `"cancelled"` when the tick itself was cancelled while the probe was still
+   * outstanding, which ends the tick rather than polling.
    *
    * A rejection used to settle the tick as a SUCCESS instead, which skipped the
    * delegate, reset `consecutiveFailures` and rescheduled at the normal
@@ -208,7 +248,9 @@ export class IntervalPollTimer implements IPollTimer {
    * never ran cannot be "success"; and whatever the probe does, not polling is
    * the one choice that can strand a channel forever.
    */
-  private async measureQueue(): Promise<number | "unknown"> {
+  private async measureQueue(
+    signal: AbortSignal,
+  ): Promise<number | "unknown" | "cancelled"> {
     const timeoutMs = this.config.queueProbeTimeoutMs;
     let handle: NodeJS.Timeout | undefined;
     const expiry = new Promise<"unknown">((resolve) => {
@@ -216,9 +258,20 @@ export class IntervalPollTimer implements IPollTimer {
         handle = setTimeout(() => resolve("unknown"), timeoutMs);
       }
     });
+    // A probe with no bound of its own - or one outlasting the tick's - must
+    // still end when the tick is cancelled, or nothing is left pending.
+    const cancelled = new Promise<"cancelled">((resolve) => {
+      if (signal.aborted) {
+        resolve("cancelled");
+        return;
+      }
+      signal.addEventListener("abort", () => resolve("cancelled"), {
+        once: true,
+      });
+    });
 
     try {
-      return await Promise.race([this.queue.totalSize(), expiry]);
+      return await Promise.race([this.queue.totalSize(), expiry, cancelled]);
     } catch {
       return "unknown";
     } finally {
@@ -230,19 +283,26 @@ export class IntervalPollTimer implements IPollTimer {
 
   private settle(token: number, outcome: TickOutcome): void {
     if (token !== this.tickToken) {
-      // The watchdog already abandoned this tick and moved the loop on.
+      // A settlement from a tick `stop()` invalidated.
       return;
     }
     this.clearWatchdog();
     this.ticking = false;
+    this.tickAbort = undefined;
+    // A cancelled tick settles however the delegate chose to settle, but the
+    // loop treats it as the failure it is: it did not finish its work.
+    const cancelled = this.cancelledToken === token;
+    this.cancelledToken = undefined;
+    const effective: TickOutcome =
+      cancelled && outcome !== "stopped" ? "failure" : outcome;
 
-    if (outcome === "success") {
+    if (effective === "success") {
       this.consecutiveFailures = 0;
-    } else if (outcome === "failure") {
+    } else if (effective === "failure") {
       this.consecutiveFailures++;
     }
 
-    if (outcome === "stopped" || !this.running) {
+    if (effective === "stopped" || !this.running) {
       return;
     }
 
@@ -252,15 +312,23 @@ export class IntervalPollTimer implements IPollTimer {
       return;
     }
 
-    if (outcome === "backpressure") {
+    if (effective === "backpressure") {
       this.scheduleBackpressureRecheck();
-    } else if (outcome === "failure") {
+    } else if (effective === "failure") {
       this.scheduleRetry();
     } else {
       this.scheduleNext();
     }
   }
 
+  /**
+   * Cancels the tick rather than abandoning it. Abandoning it - invalidating
+   * the token, clearing `ticking` and scheduling the next tick while the old
+   * delegate ran on, uncancelled - put two polls on one channel at once:
+   * duplicate envelope ingestion and interleaved cursor writes, on a channel
+   * with no reentrancy guard. The next tick is scheduled from this tick's
+   * settlement, which the cancellation is there to bring about.
+   */
   private armWatchdog(token: number): void {
     const timeoutMs = this.config.delegateTimeoutMs;
     if (timeoutMs <= 0) {
@@ -268,18 +336,22 @@ export class IntervalPollTimer implements IPollTimer {
     }
     this.watchdog = setTimeout(() => {
       this.watchdog = undefined;
-      if (token !== this.tickToken) {
+      if (token !== this.tickToken || !this.ticking) {
         return;
       }
-      // Invalidate the tick in flight so its eventual settlement cannot
-      // schedule a second next tick on top of this one.
-      this.tickToken++;
-      this.ticking = false;
-      this.consecutiveFailures++;
-      if (this.running) {
-        this.scheduleRetry();
-      }
+      this.cancelledToken = token;
+      this.cancelTick(
+        new Error(`poll delegate exceeded its ${timeoutMs}ms bound`),
+      );
     }, timeoutMs);
+  }
+
+  private cancelTick(reason: Error): void {
+    const abort = this.tickAbort;
+    if (abort === undefined || abort.signal.aborted) {
+      return;
+    }
+    abort.abort(reason);
   }
 
   private clearWatchdog(): void {

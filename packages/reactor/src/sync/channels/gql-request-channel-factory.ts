@@ -159,12 +159,16 @@ export class GqlRequestChannelFactory implements IChannelFactory {
         backpressureCheckIntervalMs,
       }),
       // Comfortably above the channel's own request deadline, so the watchdog
-      // only ever fires for a delegate that is genuinely stuck rather than for
-      // a request that is merely slow.
-      delegateTimeoutMs: Math.max(
-        DELEGATE_TIMEOUT_FLOOR_MS,
-        requestTimeoutMs * 2,
-      ),
+      // only ever cancels a delegate that is genuinely stuck rather than one
+      // whose request is merely slow. `requestTimeoutMs: 0` asks for an
+      // unbounded request, so the tick is left unbounded too: a 30s watchdog
+      // over a deliberately unbounded request would cancel exactly the slow
+      // polls the operator asked to allow. The loop then has no supervisor, by
+      // that operator's choice.
+      delegateTimeoutMs:
+        requestTimeoutMs > 0
+          ? Math.max(DELEGATE_TIMEOUT_FLOOR_MS, requestTimeoutMs * 2)
+          : 0,
       startPaused: options?.pollBehavior === PollBehavior.Manual,
     });
 

@@ -474,6 +474,7 @@ export class GqlRequestChannel implements IChannel {
   private async refreshManifestsIfStale(
     manifestRevision: string | null | undefined,
     peerManifestRevision: string | null | undefined,
+    signal: AbortSignal | undefined,
   ): Promise<boolean> {
     if (!this.peerServesAgreement || typeof manifestRevision !== "string") {
       return true;
@@ -488,7 +489,7 @@ export class GqlRequestChannel implements IChannel {
     if (this.isShutdown) {
       return false;
     }
-    this.manifestRefresh ??= this.touchRemoteChannel()
+    this.manifestRefresh ??= this.touchRemoteChannel(signal)
       .then(({ ackOrdinal }) => {
         if (ackOrdinal > 0) {
           trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
@@ -502,10 +503,10 @@ export class GqlRequestChannel implements IChannel {
   }
 
   /** Re-touches a silent remote in case it was upgraded. */
-  private async probeAgreement(): Promise<void> {
+  private async probeAgreement(signal: AbortSignal | undefined): Promise<void> {
     this.agreementStoppedUtcMs = Date.now();
     try {
-      const { ackOrdinal } = await this.touchRemoteChannel();
+      const { ackOrdinal } = await this.touchRemoteChannel(signal);
       if (ackOrdinal > 0) {
         trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
       }
@@ -522,7 +523,7 @@ export class GqlRequestChannel implements IChannel {
    * Initializes the channel by registering it on the remote server and starting polling.
    */
   async init(): Promise<void> {
-    const { ackOrdinal } = await this.touchRemoteChannel();
+    const { ackOrdinal } = await this.touchRemoteChannel(undefined);
 
     // get cursors -- these are the last acknowledged ordinals for the inbox and outbox
     const cursors = await this.cursorStorage.list(this.remoteName);
@@ -539,7 +540,7 @@ export class GqlRequestChannel implements IChannel {
       trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
     }
 
-    this.pollTimer.setDelegate(() => this.poll());
+    this.pollTimer.setDelegate((signal) => this.poll(signal));
     this.pollTimer.start();
   }
 
@@ -583,13 +584,13 @@ export class GqlRequestChannel implements IChannel {
    * channel could retry once every five minutes while reporting
    * `connected / 0 / 0`.
    */
-  private async poll(): Promise<void> {
+  private async poll(signal: AbortSignal | undefined): Promise<void> {
     if (this.isShutdown) {
       return;
     }
 
     try {
-      await this.pollOnce();
+      await this.pollOnce(signal);
     } catch (error) {
       if (!this.handlePollError(error)) {
         throw error;
@@ -597,18 +598,24 @@ export class GqlRequestChannel implements IChannel {
     }
   }
 
-  private async pollOnce(): Promise<void> {
+  private async pollOnce(signal: AbortSignal | undefined): Promise<void> {
     if (
       !this.peerServesAgreement &&
       Date.now() - this.agreementStoppedUtcMs >= AGREEMENT_PROBE_INTERVAL_MS
     ) {
-      await this.probeAgreement();
+      await this.probeAgreement(signal);
     }
 
     const response = await this.pollSyncEnvelopes(
       this.inbox.ackOrdinal,
       this.inbox.latestOrdinal,
+      signal,
     );
+
+    // The timer cancelled this tick: it is already counting the poll as failed
+    // and will schedule the next one from here. Touching the mailboxes or the
+    // cursors now would interleave this poll's writes with the next poll's.
+    this.throwIfPollCancelled(signal);
 
     const {
       envelopes,
@@ -632,10 +639,13 @@ export class GqlRequestChannel implements IChannel {
       !(await this.refreshManifestsIfStale(
         manifestRevision,
         peerManifestRevision,
+        signal,
       ))
     ) {
       return;
     }
+
+    this.throwIfPollCancelled(signal);
 
     // convert the envelopes to sync operations
     const allSyncOps: SyncOperation[] = [];
@@ -787,7 +797,7 @@ export class GqlRequestChannel implements IChannel {
         return;
       }
 
-      void this.touchRemoteChannel()
+      void this.touchRemoteChannel(undefined)
         .then(({ ackOrdinal }) => {
           this.logger.info(
             "GqlChannel @ChannelId re-registered successfully",
@@ -869,6 +879,7 @@ export class GqlRequestChannel implements IChannel {
   private async pollSyncEnvelopes(
     ackOrdinal: number,
     latestOrdinal: number,
+    signal: AbortSignal | undefined,
   ): Promise<{
     envelopes: SyncEnvelope[];
     ackOrdinal: number;
@@ -907,6 +918,7 @@ export class GqlRequestChannel implements IChannel {
           this.peerServesAgreement
             ? { ...variables, manifestRevision: revision, refusals }
             : variables,
+          signal,
         );
         break;
       } catch (error) {
@@ -1091,7 +1103,9 @@ export class GqlRequestChannel implements IChannel {
    * Registers or updates this channel on the remote server via GraphQL mutation.
    * Returns the remote's ack ordinal so the client can trim its outbox.
    */
-  private async touchRemoteChannel(): Promise<{ ackOrdinal: number }> {
+  private async touchRemoteChannel(
+    signal: AbortSignal | undefined,
+  ): Promise<{ ackOrdinal: number }> {
     let sinceTimestampUtcMs = "0";
     try {
       const result = await this.operationIndex.getLatestTimestampForCollection(
@@ -1138,6 +1152,7 @@ export class GqlRequestChannel implements IChannel {
             ...(manifest ? { manifest } : {}),
           },
         },
+        signal,
       );
     };
 
@@ -1377,6 +1392,9 @@ export class GqlRequestChannel implements IChannel {
             ? { peerManifestRevision: gatedUnder }
             : {}),
         },
+        // A push is not part of a poll tick, so the timer's bound is not its
+        // bound; the channel's own request deadline and shutdown signal are.
+        undefined,
       );
       return;
     } catch (error) {
@@ -1394,6 +1412,7 @@ export class GqlRequestChannel implements IChannel {
     await this.executeGraphQL<{ pushSyncEnvelopes: boolean }>(
       pushMutation(false),
       { envelopes: this.envelopesFor(remaining) },
+      undefined,
     );
   }
 
@@ -1470,7 +1489,10 @@ export class GqlRequestChannel implements IChannel {
    * fetch that ignores its signal - or a body read, which takes none - is
    * still bounded.
    */
-  private requestDeadline(timeoutMs: number): RequestDeadline {
+  private requestDeadline(
+    timeoutMs: number,
+    tick: AbortSignal | undefined,
+  ): RequestDeadline {
     const controller = new AbortController();
     const onShutdown = () =>
       controller.abort(this.abortController.signal.reason);
@@ -1482,16 +1504,34 @@ export class GqlRequestChannel implements IChannel {
       });
     }
 
+    // The poll timer's bound on the whole tick. Linking it here is what makes
+    // that bound a cancellation rather than an abandonment: the request is
+    // aborted, the poll rejects, and the timer schedules the next tick from
+    // this one's settlement instead of running a second poll beside it.
+    let expireTick = () => undefined as void;
+    const onTickCancelled = () => {
+      controller.abort(tick?.reason);
+      expireTick();
+    };
+    if (tick?.aborted) {
+      onTickCancelled();
+    } else {
+      tick?.addEventListener("abort", onTickCancelled, { once: true });
+    }
+
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const expired =
-      timeoutMs > 0
-        ? new Promise<void>((resolve) => {
-            timer = setTimeout(() => {
-              controller.abort(new Error("request deadline exceeded"));
-              resolve();
-            }, timeoutMs);
-          })
-        : new Promise<void>(() => undefined);
+    const expired = new Promise<void>((resolve) => {
+      expireTick = () => resolve();
+      if (tick?.aborted) {
+        resolve();
+      }
+      if (timeoutMs > 0) {
+        timer = setTimeout(() => {
+          controller.abort(new Error("request deadline exceeded"));
+          resolve();
+        }, timeoutMs);
+      }
+    });
 
     return {
       signal: controller.signal,
@@ -1502,8 +1542,27 @@ export class GqlRequestChannel implements IChannel {
           clearTimeout(timer);
         }
         this.abortController.signal.removeEventListener("abort", onShutdown);
+        tick?.removeEventListener("abort", onTickCancelled);
       },
     };
+  }
+
+  /**
+   * Ends a poll whose tick the timer cancelled, before it writes anything.
+   *
+   * The timer counts a cancelled tick as a failure and schedules the next one
+   * from this poll's settlement, so what matters here is that the cancelled
+   * poll stops touching shared state: a half-applied page, an advanced cursor
+   * or a trimmed outbox would then interleave with the poll that follows.
+   */
+  private throwIfPollCancelled(signal: AbortSignal | undefined): void {
+    if (signal?.aborted !== true) {
+      return;
+    }
+    const reason: unknown = signal.reason;
+    throw reason instanceof Error
+      ? reason
+      : new Error(`poll cancelled: ${String(reason)}`);
   }
 
   private async withDeadline<T>(
@@ -1527,7 +1586,8 @@ export class GqlRequestChannel implements IChannel {
 
   private async executeGraphQL<T>(
     query: string,
-    variables?: Record<string, unknown>,
+    variables: Record<string, unknown> | undefined,
+    signal: AbortSignal | undefined,
   ): Promise<T> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -1552,7 +1612,7 @@ export class GqlRequestChannel implements IChannel {
     const fetchFn = this.config.fetchFn ?? fetch;
     const timeoutMs =
       this.config.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
-    const deadline = this.requestDeadline(timeoutMs);
+    const deadline = this.requestDeadline(timeoutMs, signal);
     let response;
     try {
       response = await this.withDeadline(

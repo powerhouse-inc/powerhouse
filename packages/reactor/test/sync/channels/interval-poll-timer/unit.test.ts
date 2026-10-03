@@ -748,4 +748,125 @@ describe("IntervalPollTimer", () => {
       timer.stop();
     });
   });
+
+  describe("delegate watchdog", () => {
+    /**
+     * The bound on a tick cancels it; it does not abandon it. Abandoning it -
+     * invalidating the token and scheduling the next tick while the old
+     * delegate ran on, uncancelled - put two polls on one channel at once:
+     * duplicate envelope ingestion and interleaved cursor writes.
+     */
+    it("cancels the stuck tick instead of starting a second delegate", async () => {
+      const mockQueue = createMockQueue();
+      const timer = new IntervalPollTimer(mockQueue, {
+        intervalMs: 1000,
+        delegateTimeoutMs: 5000,
+        retryBaseDelayMs: 1000,
+        retryMaxDelayMs: 1000,
+      });
+
+      let live = 0;
+      let maxLive = 0;
+      let cancellations = 0;
+      const signals: Array<AbortSignal | undefined> = [];
+      const delegate = vi.fn((signal: AbortSignal | undefined) => {
+        live++;
+        maxLive = Math.max(maxLive, live);
+        signals.push(signal);
+        return new Promise<void>((resolve) => {
+          signal?.addEventListener("abort", () => {
+            cancellations++;
+            live--;
+            resolve();
+          });
+        });
+      });
+
+      timer.setDelegate(delegate);
+      timer.start();
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(delegate).toHaveBeenCalledTimes(1);
+
+      // The bound passes: the tick is cancelled, and no second delegate starts
+      // until the first has settled.
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(cancellations).toBe(1);
+      expect(signals[0]?.aborted).toBe(true);
+      expect(delegate).toHaveBeenCalledTimes(1);
+
+      // The cancelled tick counts as a failure, so the next one comes after the
+      // retry backoff rather than the interval.
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(delegate).toHaveBeenCalledTimes(2);
+      expect(maxLive).toBe(1);
+
+      timer.stop();
+    });
+
+    /**
+     * A delegate that ignores its signal stalls its own loop. That is the
+     * deliberate trade: a stalled channel is observable and recoverable, two
+     * concurrent polls corrupting cursors are not.
+     */
+    it("waits for a cancelled delegate to settle before ticking again", async () => {
+      const mockQueue = createMockQueue();
+      const timer = new IntervalPollTimer(mockQueue, {
+        intervalMs: 1000,
+        delegateTimeoutMs: 5000,
+        retryBaseDelayMs: 1000,
+        retryMaxDelayMs: 1000,
+      });
+
+      let settleFirst: (() => void) | undefined;
+      let calls = 0;
+      timer.setDelegate(() => {
+        calls++;
+        if (calls > 1) {
+          return Promise.resolve();
+        }
+        return new Promise<void>((resolve) => {
+          settleFirst = resolve;
+        });
+      });
+      timer.start();
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(calls).toBe(1);
+
+      // Long past the bound and every backoff that would follow it.
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(calls).toBe(1);
+
+      // Once the delegate finally settles, the loop resumes from there.
+      settleFirst?.();
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(calls).toBe(2);
+
+      timer.stop();
+    });
+
+    /** `delegateTimeoutMs: 0` is an unbounded tick, by the caller's choice. */
+    it("never cancels a tick when the bound is disabled", async () => {
+      const mockQueue = createMockQueue();
+      const timer = new IntervalPollTimer(mockQueue, {
+        intervalMs: 1000,
+        delegateTimeoutMs: 0,
+      });
+
+      let aborted = false;
+      timer.setDelegate((signal) => {
+        signal?.addEventListener("abort", () => {
+          aborted = true;
+        });
+        return new Promise<void>(() => undefined);
+      });
+      timer.start();
+
+      await vi.advanceTimersByTimeAsync(600_000);
+      expect(aborted).toBe(false);
+
+      timer.stop();
+    });
+  });
 });

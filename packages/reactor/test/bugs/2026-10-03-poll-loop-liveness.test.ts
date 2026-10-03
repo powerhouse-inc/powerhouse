@@ -316,23 +316,45 @@ describe("mechanism C: a dead poll loop reports itself as connected", () => {
    *
    * Correct behaviour: the loop must be supervised and must always have a next
    * tick pending.
+   *
+   * How that supervision works, after the review of the first fix round: the
+   * watchdog CANCELS the stuck tick through its abort signal and the next tick
+   * is scheduled from that tick's settlement. The first round abandoned the
+   * tick instead - token invalidated, next tick scheduled - while the old
+   * delegate ran on uncancelled, which put two polls on one channel at once.
+   * So the delegate below hangs until it is cancelled, which is the contract
+   * `PollDelegate` states and which `GqlRequestChannel.poll` honours by
+   * threading the signal into every request of the tick. A delegate that
+   * ignores its signal stalls its own loop, deliberately: a stalled channel is
+   * recoverable, duplicated ingestion with interleaved cursor writes is not.
    */
-  it("keeps ticking when the delegate never settles", async () => {
+  it("keeps ticking when the delegate hangs until it is cancelled", async () => {
     vi.useFakeTimers();
     try {
       let starts = 0;
+      let concurrent = 0;
+      let maxConcurrent = 0;
       const timer = new IntervalPollTimer(
         fakeQueue(() => Promise.resolve(0)),
         { intervalMs: 500, retryBaseDelayMs: 500, retryMaxDelayMs: 2000 },
       );
-      timer.setDelegate(() => {
+      timer.setDelegate((signal) => {
         starts++;
-        return new Promise(() => undefined);
+        concurrent++;
+        maxConcurrent = Math.max(maxConcurrent, concurrent);
+        return new Promise<void>((_resolve, reject) => {
+          signal?.addEventListener("abort", () => {
+            concurrent--;
+            reject(new Error("cancelled"));
+          });
+        });
       });
       timer.start();
 
-      await vi.advanceTimersByTimeAsync(60_000);
+      await vi.advanceTimersByTimeAsync(600_000);
       expect(starts).toBeGreaterThan(1);
+      // And never two at once: the stuck tick is cancelled, not abandoned.
+      expect(maxConcurrent).toBe(1);
       timer.stop();
     } finally {
       vi.useRealTimers();

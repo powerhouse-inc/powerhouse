@@ -459,6 +459,7 @@ export {
   type ISyncStatusTracker,
   type JwtHandler,
   type OperationBatch,
+  type PollDelegate,
   type Remote,
   type RemoteCursor,
   type RemoteMeta,
