@@ -610,7 +610,7 @@ describe("SyncManager - Unit Tests", () => {
     it("should unsubscribe from event bus", async () => {
       await syncManager.startup();
 
-      expect(getTotalSubscriberCount()).toBe(7);
+      expect(getTotalSubscriberCount()).toBe(8);
 
       syncManager.shutdown();
 
@@ -3119,7 +3119,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-inbox" },
+        { sourceRemote: "remote-inbox", cursorProtected: true },
       );
     });
 
@@ -3250,7 +3250,7 @@ describe("SyncManager - Unit Tests", () => {
         "main",
         expect.any(Array),
         expect.any(AbortSignal),
-        { sourceRemote: "remote-inbox2" },
+        { sourceRemote: "remote-inbox2", cursorProtected: true },
       );
     });
 
@@ -3687,7 +3687,7 @@ describe("SyncManager - Unit Tests", () => {
         "main",
         expect.any(Array),
         expect.any(AbortSignal),
-        { sourceRemote: "remote-mixed" },
+        { sourceRemote: "remote-mixed", cursorProtected: true },
       );
 
       expect((mockReactor as any).loadBatch).toHaveBeenCalledTimes(1);
@@ -3699,7 +3699,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-mixed" },
+        { sourceRemote: "remote-mixed", cursorProtected: true },
       );
     });
 
@@ -3937,7 +3937,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-empty-dep" },
+        { sourceRemote: "remote-empty-dep", cursorProtected: true },
       );
 
       expect(ch.deadLetter.add).not.toHaveBeenCalled();
@@ -4045,7 +4045,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-fifo" },
+        { sourceRemote: "remote-fifo", cursorProtected: true },
       );
       expect((mockReactor as any).loadBatch).toHaveBeenNthCalledWith(
         2,
@@ -4058,7 +4058,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-fifo" },
+        { sourceRemote: "remote-fifo", cursorProtected: true },
       );
     });
 
@@ -4168,7 +4168,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-xdoc" },
+        { sourceRemote: "remote-xdoc", cursorProtected: true },
       );
     });
 
@@ -4238,7 +4238,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-stale" },
+        { sourceRemote: "remote-stale", cursorProtected: true },
       );
     });
 
@@ -4361,7 +4361,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-concurrent" },
+        { sourceRemote: "remote-concurrent", cursorProtected: true },
       );
     });
   });

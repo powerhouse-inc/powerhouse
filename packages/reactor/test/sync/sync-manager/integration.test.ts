@@ -819,7 +819,9 @@ describe("SyncManager Integration", () => {
         "main",
         [operations[0].operation],
         expect.any(AbortSignal),
-        { sourceRemote: "remote1" },
+        // cursorProtected marks the load as one the inbox cursor protects, so
+        // durability boundary 2 exempts it; only sync's own call sites set it.
+        { sourceRemote: "remote1", cursorProtected: true },
       );
     });
 

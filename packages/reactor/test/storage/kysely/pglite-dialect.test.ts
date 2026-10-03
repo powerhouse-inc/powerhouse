@@ -507,4 +507,139 @@ describe("HardenedPGliteDialect statement deadline", () => {
       PGliteSessionPoisonedError,
     );
   });
+
+  /**
+   * The one statement path the deadline did not cover: the BEGIN retried after
+   * an aborted-transaction recovery went straight at the inner driver, so a
+   * retry whose wasm call died held the single lease forever - precisely the
+   * silent wedge the deadline exists to break, left standing in the path most
+   * likely to hit it, since it is issued at a session that just failed.
+   */
+  it("bounds the BEGIN retried after an aborted-transaction recovery", async () => {
+    const pg = new PGlite();
+    await pg.waitReady;
+    let begins = 0;
+    let poisonCalls = 0;
+    const session: PGliteSession = {
+      query: (text: string, params?: unknown[]) => {
+        if (/^\s*(begin|start transaction)/i.test(text)) {
+          begins += 1;
+          if (begins === 1) {
+            return Promise.reject(
+              new Error(
+                "current transaction is aborted, commands ignored until end of transaction block",
+              ),
+            );
+          }
+          // The retry's wasm call dies: it neither resolves nor rejects.
+          return new Promise(() => undefined);
+        }
+        return pg.query(text, params);
+      },
+      exec: (text: string) => pg.exec(text),
+      isInTransaction: () => false,
+    };
+    const db = new Kysely<Schema>({
+      dialect: new HardenedPGliteDialect(session, {
+        acquireTimeoutMs: 2_000,
+        statementTimeoutMs: 60,
+        recoveryTimeoutMs: 500,
+        onDiagnostic: () => undefined,
+        onPoisoned: () => {
+          poisonCalls += 1;
+          return Promise.resolve(false);
+        },
+      }),
+    });
+    open.push({ db, pg });
+
+    const outcome = await db
+      .transaction()
+      .execute(() => Promise.resolve("never reached"))
+      .then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+
+    expect(begins).toBe(2);
+    // Bounded, escalated once, and refused loudly - not parked forever.
+    expect(outcome).toBeInstanceOf(PGliteSessionPoisonedError);
+    expect(poisonCalls).toBe(1);
+  }, 10_000);
+
+  /**
+   * Finding 9. `commitTransaction` recorded its failure without the generation
+   * guard `executeQuery` has, so a timed-out COMMIT - whose escalation may
+   * already have replaced the instance - marked the FRESH session suspect. The
+   * release-time recovery then rolled back a transaction belonging to the
+   * replacement: a cross-incarnation rollback, worse than the error it was
+   * recording. Every failure-recording path now goes through the guard, and a
+   * connection whose incarnation was replaced carries nothing forward at all -
+   * not its failure and not its open transaction.
+   */
+  it("does not roll the replacement session back when a COMMIT times out", async () => {
+    const pg = new PGlite();
+    await pg.waitReady;
+    await pg.query("create table t (id int primary key)");
+
+    let poisonCalls = 0;
+    let hangCommit = true;
+    /** Recovery statements issued after the instance was replaced. */
+    const afterPoison: string[] = [];
+    const session: PGliteSession = {
+      query: (text: string, params?: unknown[]) => {
+        if (poisonCalls > 0) {
+          afterPoison.push(text);
+        }
+        return pg.query(text, params);
+      },
+      exec: (text: string) => {
+        if (poisonCalls > 0) {
+          afterPoison.push(text);
+        }
+        if (hangCommit && text.includes("__commit_guard")) {
+          return new Promise(() => undefined);
+        }
+        return pg.exec(text);
+      },
+      isInTransaction: () => pg.isInTransaction(),
+    };
+    const db = new Kysely<Schema>({
+      dialect: new HardenedPGliteDialect(session, {
+        acquireTimeoutMs: 2_000,
+        statementTimeoutMs: 60,
+        recoveryTimeoutMs: 500,
+        onDiagnostic: () => undefined,
+        onPoisoned: () => {
+          poisonCalls += 1;
+          // What a self-heal does: the instance is replaced and healthy again.
+          hangCommit = false;
+          return Promise.resolve(true);
+        },
+      }),
+    });
+    open.push({ db, pg });
+
+    const outcome = await db
+      .transaction()
+      .execute(async (trx) => {
+        await sql`insert into t (id) values (1)`.execute(trx);
+        return "ok";
+      })
+      .then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+
+    expect(outcome).toBeInstanceOf(PGliteStatementTimeoutError);
+    expect(poisonCalls).toBe(1);
+    // Nothing was issued at the replacement on this connection's behalf: no
+    // ROLLBACK, no recovery probe.
+    expect(
+      afterPoison.filter((statement) => /rollback/i.test(statement)),
+    ).toEqual([]);
+
+    // And the replacement is immediately usable, not marked unrecoverable.
+    await expect(sql<Row>`select id from t`.execute(db)).resolves.toBeDefined();
+  }, 10_000);
 });

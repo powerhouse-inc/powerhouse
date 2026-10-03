@@ -229,9 +229,9 @@ thing that can say what durable means.
   are held back while a snapshot is taken, reproducing the property PGlite gets
   from holding its query mutex across the per-statement sync - without it the
   sync would read a filesystem something is writing to.
-- **Boundary 1, sync cursors.** `KyselySyncCursorStorage.upsert` flushes before
-  it writes a cursor row, and a failing flush takes the cursor write with it.
-  This is the single choke point for every cursor write (inbox, outbox, the
+- **Boundary 1, sync cursors.** `FlushGuardedSyncCursorStorage.upsert` flushes
+  before it writes a cursor row, and a failing flush takes the cursor write with
+  it. This is the single choke point for every cursor write (inbox, outbox, the
   rewind lever, and `GqlResponseChannel` too), and it is downstream of
   `GqlRequestChannel.writeCursor`'s existing serialisation, so a burst of
   applied operations coalesces into one cursor write and therefore one flush -
@@ -259,8 +259,9 @@ thing that can say what durable means.
 - **Measured.** 500 synthetic operations, real fsync standing in for the
   browser's IDBFS `syncfs`
   (`test/storage/kysely/group-commit-throughput.test.ts`): 500 flushes /
-  1162ms flush-per-statement versus 10 flushes / 123ms batched at 50 - a
-  **9.5x** wall-clock speedup and a 50x reduction in flushes. The live gap is
+  1183ms flush-per-statement versus 10 flushes / 123ms batched at 50 - a
+  **9.6x** wall-clock speedup and a 50x reduction in flushes (re-measured after
+  the redesign round below; unchanged). The live gap is
   larger on both counts: an IDBFS `syncfs` over a whole Postgres data directory
   costs far more than a single-file fsync, and one operation costs several
   statements.
@@ -268,6 +269,100 @@ thing that can say what durable means.
 **The invariant that survives all of it:** no cursor and no durable-success
 acknowledgment ever points past data that is not flushed. A crash can lose only
 work that will be re-pulled by sync or re-run by its caller.
+
+### W0.8 redesign round (2026-10-03): ten confirmed findings, one cause
+
+An adversarial review of the above confirmed ten correctness findings. They had
+one cause, worth stating plainly because it is the lesson rather than the list:
+**the flush and quiescence mechanisms were sound in concept, but their state was
+GLOBAL while the PGlite instance is REPLACEABLE** - and the durability
+boundaries were enforced inside implementations instead of at seams, so any new
+implementation or construction path silently lost them.
+
+**Epoch scoping (findings 1, 2-storage, 3-gate, 6).** All per-instance state now
+lives in one `PGliteEpoch`: the instance, its captured `syncToFs`, the statement
+sequence, the flush watermark, the statement accounting, the statement gate and
+the in-flight flush. `recreate` swaps a fresh epoch in with one assignment and
+retires the old one, whose gate opens and whose waiters reject. Every statement,
+flush and watermark access happens against an epoch captured on entry, so:
+- an abandoned hung statement's accounting is discarded with its instance
+  instead of leaking a count that wedged every later flush (finding 1);
+- a flush cannot credit the fresh instance for statements that fell back with
+  the old one - it rejects with the retriable `PGliteEpochSupersededError`
+  (finding 2, storage half);
+- retiring an epoch frees whatever is parked on its gate even if the old
+  filesystem sync never settles (finding 3, gate half);
+- there is no second clock racing the statement deadlines: the quiesce bound
+  defaults to 0, meaning the flush waits for the statement in flight, which is
+  bounded by that statement's own deadline in the dialect. A sanctioned
+  15-minute maintenance statement therefore no longer makes every concurrent
+  flush stall for three minutes and fail (finding 6).
+
+**The filesystem sync is bounded (finding 3, B).** `flushSyncTimeoutMs`
+(120s default) bounds `syncToFs`, and an expiry goes to `onSyncStuck`, which the
+hosts wire to the same escalation as the dialect's `onPoisoned`: recreate in
+place, worker reload if no replacement opens. A hung sync is now a recreate, not
+a permanently parked flush holding the statement gate.
+
+**Sync state rewinds on recovery (finding 2, sync half).** The persisted cursors
+are safe by boundary 1, but the channels' in-memory cursors are stale-HIGH the
+moment the store falls back. `SyncManager` subscribes to
+STORAGE_SESSION_RECREATED and resets every channel through W0.5's
+`resetChannel`, so each one re-initialises from the persisted rows and re-pulls
+the lost tail - the repair that previously needed a SQL rewind plus an operator
+restart. It subscribes rather than being wired per host, because the channels
+are its own state and all three hosts already emit the event.
+
+**Boundaries at seams (findings 4, 5, and the cursor-storage altitude point).**
+- `FlushGuardedSyncCursorStorage` is boundary 1 as a decorator around ANY
+  `ISyncCursorStorage`, so a caller-supplied storage (the stage-1 `LocalChannel`
+  is coming) inherits the invariant. It also brackets the write with the
+  flusher's `storageEpoch`, refusing a cursor advance whose covering flush
+  belongs to a replaced session.
+- `ReactorBuilder` fills in a caller SyncBuilder's barrier only when the caller
+  chose none (`withDefaultStorageFlusher`), instead of overwriting a configured
+  one with its default no-op (finding 4).
+- `ReactorBuilder.build()` REFUSES `withWorkerPool` or `withExecutor` together
+  with a deferring barrier (finding 5). A live flusher object cannot cross a
+  worker boundary, and a caller-supplied manager builds its own executors, so
+  boundary 2 would be silently absent; `buildWorkerExecutor` takes a `flusher`
+  for the day a worker opens a deferring store of its own.
+
+**Announce-on-flush-failure (finding 7).** The job's transaction has already
+committed when the flush runs, so reporting FAILED told callers to redo
+committed work. The flush is retried with bounded backoff (5 attempts, the
+executor's retry delays) because any later group commit covers these writes too;
+the announcement is released as soon as one succeeds. If all attempts fail the
+announcement is WITHHELD and the job is still not failed: it stays RUNNING, so
+`waitForJob` neither succeeds nor fails and its caller times out - the honest
+answer for a write that happened but is not durable, with the self-heal path
+already handling the store. The exception is `StorageEpochSupersededError`,
+which is not retried: the session was replaced, the commit itself fell back, and
+FAILED is then the truth.
+
+**Deadline coverage (findings 8, 9).** The BEGIN retried after an
+aborted-transaction recovery now goes through `runStatement` like every other
+statement - it is issued at a session that just failed, so it is the likeliest
+one to hang. And every failure-recording path goes through one generation-guarded
+helper, so a timed-out COMMIT can no longer mark the FRESH session suspect; a
+connection whose incarnation was replaced is retired outright, carrying neither
+its failure nor its open transaction forward, which also stops the release-time
+recovery from rolling back a replacement session's transaction.
+
+**The load exemption (finding 10).** `load` and `loadBatch` are PUBLIC reactor
+APIs, so the job kind never meant "a cursor is protecting these operations". The
+exemption keys on a `cursorProtected` job-meta flag that only the sync manager's
+own inbox call sites set; a direct `load`/`loadBatch` keeps the full durability
+semantics.
+
+**Residual window, stated precisely.** The cursor guard brackets the write with
+the storage epoch read BEFORE the flush and compared after the write, so a
+recreate anywhere in that window refuses the advance. What it cannot undo is a
+recreate landing INSIDE the inner write: the row then sits unflushed in the
+replacement's memory while the call refuses. The recreate-triggered channel
+reset re-reads cursors, so the exposure is one unflushed row, and closing it
+completely needs the cursor row written in the same transaction as the
+operations it covers - a property only a local channel can have.
 
 **Still browser-pending (gate for regression run 4):** deferral is wired into
 the live worker but has not been exercised in a browser. What run 4 must show:

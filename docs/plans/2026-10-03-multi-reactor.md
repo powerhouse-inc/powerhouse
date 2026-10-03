@@ -151,12 +151,46 @@ the poison/self-heal path, and a generation token discards the abandoned call's
 late settlement. (2) Group commit: the store keeps relaxedDurability off, but
 `SelfHealingPGliteClient.setDeferredFlush` takes PGlite's automatic
 per-statement sync away and `IStorageFlusher.flush()` puts it back at the two
-acknowledgment boundaries - a sync cursor write (`KyselySyncCursorStorage`, the
-choke point for every cursor row) and a non-load job's `JOB_WRITE_READY`
-(`SimpleJobExecutor`; load jobs exempt, their durability being the cursor's).
-Measured 9.5x wall-clock / 50x fewer flushes on 500 synthetic ops. Full design,
-the exact boundary, and what run 4 must demonstrate: the W0.8 addendum in
+acknowledgment boundaries - a sync cursor write (`FlushGuardedSyncCursorStorage`,
+the decorator every cursor write goes through) and a non-sync job's
+`JOB_WRITE_READY` (`SimpleJobExecutor`; only cursor-protected sync loads are
+exempt, their durability being the cursor's). Measured 9.6x wall-clock / 50x
+fewer flushes on 500 synthetic ops. Full design, the exact boundary, and what run
+4 must demonstrate: the W0.8 addendum in
 docs/bugs/2026-10-03-pglite-aborted-transaction-bricks-worker-reactor.md.
+
+**W0.8 redesign round (2026-10-03).** An adversarial review confirmed ten
+correctness findings whose single cause was that the flush and quiescence state
+was GLOBAL while the PGlite instance is REPLACEABLE, and that the durability
+boundaries were enforced inside implementations rather than at seams. Restructured
+rather than point-patched:
+- **Epoch scoping.** One `PGliteEpoch` bundles the instance, its captured
+  `syncToFs`, the statement sequence, the flush watermark, the statement
+  accounting, the statement gate and the in-flight flush. A recreate swaps it in
+  one assignment and retires the old one; every statement, flush and watermark
+  read/write happens against a captured epoch, and a stale one rejects with the
+  retriable `PGliteEpochSupersededError` instead of touching fresh state. That
+  kills the leaked-statement wedge, the post-recreate over-claiming flush and the
+  stuck flush gate structurally.
+- **The filesystem sync is bounded** (`flushSyncTimeoutMs`, 120s) and an expiry
+  escalates into the poison/self-heal path, so a hung `syncfs` is a recreate
+  rather than a parked flush holding every statement behind it.
+- **Sync state rewinds on recovery.** `SyncManager` subscribes to
+  STORAGE_SESSION_RECREATED and resets every channel through the W0.5
+  `resetChannel` machinery, so channels re-initialise from the persisted
+  (flush-gated, therefore safe) cursors and re-pull the tail the fallback lost.
+- **Seams, not implementations.** `FlushGuardedSyncCursorStorage` wraps ANY
+  cursor storage (so the stage-1 `LocalChannel` inherits boundary 1) and also
+  checks the storage epoch around the write; `ReactorBuilder` no longer clobbers
+  a caller SyncBuilder's barrier and REFUSES `withWorkerPool`/`withExecutor`
+  together with a deferring barrier, since boundary 2 cannot be enforced in an
+  executor it does not construct.
+- **A committed job is never reported FAILED** for a failing flush: the flush is
+  retried with bounded backoff and the announcement withheld if it never
+  succeeds; only a session replacement (the commit really was undone) fails it.
+- **The load exemption keys on an explicit `cursorProtected` job-meta flag** set
+  by sync's own call sites, because `load`/`loadBatch` are public APIs and a
+  direct caller has no cursor protecting it.
 
 ### Stage 1 — two workers, one drive, synced + load-tested
 - **W1.1 `LocalChannel`** (core track): symmetric MessagePort channel + handshake
