@@ -1,10 +1,21 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
+    "lib": ["ESNext", "dom", "dom.iterable"],
     "outDir": "./.tsbuild",
     "types": ["vitest/globals"]
   },
   "include": ["**/*"],
-  "references": [],
+  "references": [
+    {
+      "path": "../reactor"
+    },
+    {
+      "path": "../reactor-browser"
+    },
+    {
+      "path": "../shared"
+    }
+  ],
   "exclude": ["dist", "node_modules"]
 }

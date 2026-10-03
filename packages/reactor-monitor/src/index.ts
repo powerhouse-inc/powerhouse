@@ -1,45 +1,86 @@
 /**
- * Placeholder typed API surface for the reactor-monitor library (W0.1 of the
- * multi-reactor initiative — see docs/plans/2026-10-03-multi-reactor.md).
+ * The reactor-monitor hosting library (W0.2 of the multi-reactor initiative —
+ * see docs/plans/2026-10-03-multi-reactor.md).
  *
- * Provisioning (worker | in-process kinds) lands in W0.2, remote in W3.1.
- * This module only pins the shape so `apps/reactor-monitor` has a real,
- * typed import to build against before that work starts.
- */
-
-/** Bump when the shape of this module's exports changes in a breaking way. */
-export const ReactorMonitorVersion = "0.1.0" as const;
-
-/**
- * How a monitored reactor is hosted. `kind` is the discriminant other code
- * should switch on as more hosting strategies (and their config) are added.
- */
-export interface ReactorDescriptor {
-  kind: "worker" | "in-process" | "remote";
-  /** Human-readable label shown in the monitor UI's reactor list. */
-  name: string;
-}
-
-/** A reactor the monitor has provisioned and can inspect. */
-export interface ManagedReactor {
-  kind: "worker" | "in-process" | "remote";
-  name: string;
-  /** Opaque id the monitor uses to address this reactor in inspector ops. */
-  id: string;
-}
-
-/**
- * Provisions a reactor matching `descriptor`.
+ * A clean, Renown-free, Connect-free way to provision and manage browser
+ * reactors: `provision(descriptor)` returns a `ManagedReactor` whose client,
+ * inspector, raw-SQL capability and sync manager are reached the same way
+ * whether the reactor lives in a SharedWorker or on the calling thread. The
+ * RPC machinery is consumed from `@powerhousedao/reactor-browser/rpc`; the
+ * reactor graph and the typed inspector come from `@powerhousedao/reactor`.
  *
- * Not implemented yet: hosting (worker | in-process) lands in W0.2 and
- * remote in W3.1. Always rejects until then.
+ * React consumers import the scoped context from
+ * `@powerhousedao/reactor-monitor/react`.
  */
-export function provision(
-  descriptor: ReactorDescriptor,
-): Promise<ManagedReactor> {
-  return Promise.reject(
-    new Error(
-      `NotImplemented: provision() for reactor kind "${descriptor.kind}" lands in W0.2 (worker/in-process) or W3.1 (remote)`,
-    ),
-  );
-}
+
+export { ReactorMonitorVersion } from "./version.js";
+
+export type {
+  ManagedInProcessReactor,
+  ManagedReactor,
+  ManagedReactorBase,
+  ManagedWorkerReactor,
+  MonitorInProcessClientModule,
+  MonitorInProcessReactorModule,
+  MonitorWorkerClientModule,
+  ReactorDescriptor,
+  ReactorKind,
+  ReactorPackageConfig,
+  ReactorStorageConfig,
+  ReactorSyncConfig,
+} from "./types.js";
+
+export { provision, type ProvisionOptions } from "./provision.js";
+export { provisionInProcess } from "./in-process.js";
+export {
+  connectManagedWorkerReactor,
+  provisionWorkerReactor,
+  type ProvisionWorkerOptions,
+} from "./worker/client.js";
+export { reactorMonitorWorkerUrl } from "./worker-url.js";
+
+export {
+  ReactorMonitorRegistry,
+  type ManagedReactorEntry,
+  type ReactorMonitorRegistryListener,
+} from "./registry.js";
+
+export {
+  buildMonitorReactor,
+  type BuildReactorOptions,
+  type BuiltReactor,
+} from "./build-reactor.js";
+export { openReactorStore, storageLocation } from "./store.js";
+export {
+  MONITOR_STORAGE_PREFIX,
+  MONITOR_WORKER_PREFIX,
+  normalizeReactorName,
+  reactorStorageNamespace,
+  reactorWorkerName,
+} from "./naming.js";
+export {
+  ANONYMOUS_MONITOR_USER,
+  createLocalSigner,
+  LocalSigner,
+  MONITOR_APP_NAME,
+  type LocalSignerOptions,
+} from "./signer.js";
+
+// Worker-side building blocks, exported so a host other than this package's
+// own SharedWorker entry (a test, a future Node host) can assemble one.
+export {
+  buildWorkerReactor,
+  type BuiltWorkerReactor,
+  type WorkerPackageImporters,
+} from "./worker/build-worker-reactor.js";
+export {
+  createMonitorWorkerHost,
+  type MonitorWorkerHost,
+  type MonitorWorkerHostOptions,
+} from "./worker/host.js";
+export {
+  parseWorkerConstruct,
+  toWorkerConstruct,
+  type MonitorWorkerConstruct,
+} from "./worker/construct.js";
+export { dispatchSyncOp, toWireRemote } from "./worker/sync-ops.js";

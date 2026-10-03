@@ -23,6 +23,16 @@
       "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./react": {
+      "source": "./src/react/index.ts",
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js"
+    },
+    "./worker": {
+      "source": "./src/worker/reactor-monitor.worker.ts",
+      "types": "./dist/worker/reactor-monitor.worker.d.ts",
+      "import": "./dist/worker/reactor-monitor.worker.js"
     }
   },
   "scripts": {
@@ -31,8 +41,29 @@
     "build": "tsdown",
     "test": "vitest --run"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@electric-sql/pglite": "catalog:",
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "kysely": "catalog:",
+    "kysely-pglite-dialect": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.0.1",
+    "@types/react": "catalog:",
+    "happy-dom": "^20.8.9",
+    "react": "catalog:",
+    "react-dom": "catalog:",
     "tsdown": "catalog:",
     "vitest": "catalog:"
   }
