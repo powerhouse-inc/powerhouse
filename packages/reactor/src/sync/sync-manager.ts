@@ -2320,9 +2320,16 @@ export class SyncManager
     error: ErrorInfo | undefined,
   ): ChannelError {
     const message = error?.message || "Unknown error";
+    const wrapper = new Error(`Failed to apply operations: ${message}`);
+    // The document the failure named, kept across the rewrap so a repair path
+    // knows which ancestor to backfill. Nothing reads it yet; the repair is
+    // its own work package.
+    if (error?.documentId !== undefined) {
+      Object.assign(wrapper, { documentId: error.documentId });
+    }
     return new ChannelError(
       ChannelErrorSource.Inbox,
-      new Error(`Failed to apply operations: ${message}`),
+      wrapper,
       carriesMarker(syncOp)
         ? "MARKER_REFUSED"
         : classifyJobFailure(error?.name ?? "Error"),

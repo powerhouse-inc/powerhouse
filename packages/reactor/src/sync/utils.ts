@@ -569,6 +569,13 @@ export function classifyJobFailure(errorName: string): SyncOperationErrorType {
       return "UNSUPPORTED_PROTOCOL";
     case "DocumentPurgedError":
       return "DOCUMENT_PURGED";
+    // Must be matched by name, not by `DocumentNotFoundError.isError`, which
+    // deliberately answers true for the purged subclass because only the name
+    // crosses the queue. Purged is terminal; a missing ancestor is repair
+    // signal - the remote has the operations and a cursor rewind would fetch
+    // them.
+    case "DocumentNotFoundError":
+      return "MISSING_OPERATIONS";
     case "DocumentNotDeletedError":
     case "GroupInUseError":
     case "PurgeTooLargeError":
@@ -596,12 +603,17 @@ const NON_QUARANTINING_ERROR_TYPES: ReadonlySet<SyncOperationErrorType> =
     "DOCUMENT_PURGED",
     "PURGE_PRECONDITION",
     "MARKER_REFUSED",
+    "MISSING_OPERATIONS",
   ]);
 
 /**
  * A held auth operation must not quarantine: reconciling the two policies needs
  * the traffic a quarantine would stop. A protocol refusal concerns one peer,
- * and quarantine is global to the document.
+ * and quarantine is global to the document. A missing ancestor makes the same
+ * argument most sharply: the traffic that would repair it is exactly the
+ * traffic a quarantine stops, and nothing but a purge ever clears one, so one
+ * rolled-back ancestor would excommunicate the document from sync for the life
+ * of the store.
  */
 export function quarantinesDocument(
   errorType: SyncOperationErrorType,

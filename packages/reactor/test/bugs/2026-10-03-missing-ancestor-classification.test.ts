@@ -25,7 +25,7 @@ import {
 import { ChannelError } from "../../src/sync/errors.js";
 import { ChannelErrorSource } from "../../src/sync/types.js";
 
-describe.skip("mechanism D: missing-ancestor inbox failures are buried as garbage", () => {
+describe("mechanism D: missing-ancestor inbox failures are buried as garbage", () => {
   /**
    * The classification site is the single `switch` in
    * src/sync/utils.ts:556-580. It has no `DocumentNotFoundError` case, so the
