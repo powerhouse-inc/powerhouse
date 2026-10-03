@@ -2028,7 +2028,7 @@ describe("GqlRequestChannel", () => {
       );
     });
 
-    it("should persist inbox cursor when applied operations are removed", () => {
+    it("should persist inbox cursor when applied operations are removed", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
       global.fetch = mockFetch as unknown as typeof global.fetch;
@@ -2047,6 +2047,10 @@ describe("GqlRequestChannel", () => {
       channel.inbox.add(syncOp);
       syncOp.executed();
       channel.inbox.remove(syncOp);
+
+      // Cursor writes are serialised per cursor row, so the upsert is issued
+      // from the write chain rather than inline with the removal.
+      await vi.advanceTimersByTimeAsync(0);
 
       expect(cursorStorage.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
