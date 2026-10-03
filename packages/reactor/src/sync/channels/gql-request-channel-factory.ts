@@ -13,8 +13,15 @@ import type {
   RemoteOptions,
 } from "../types.js";
 import { PollBehavior } from "../types.js";
-import { GqlRequestChannel, type GqlChannelConfig } from "./gql-req-channel.js";
-import { IntervalPollTimer } from "./interval-poll-timer.js";
+import {
+  DEFAULT_REQUEST_TIMEOUT_MS,
+  GqlRequestChannel,
+  type GqlChannelConfig,
+} from "./gql-req-channel.js";
+import {
+  DELEGATE_TIMEOUT_FLOOR_MS,
+  IntervalPollTimer,
+} from "./interval-poll-timer.js";
 
 /**
  * Factory for creating GqlRequestChannel instances.
@@ -115,6 +122,15 @@ export class GqlRequestChannelFactory implements IChannelFactory {
       gqlConfig.retryMaxDelayMs = retryMaxDelayMs;
     }
 
+    let requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS;
+    if (config.parameters.requestTimeoutMs !== undefined) {
+      if (typeof config.parameters.requestTimeoutMs !== "number") {
+        throw new Error('"requestTimeoutMs" parameter must be a number');
+      }
+      requestTimeoutMs = config.parameters.requestTimeoutMs;
+    }
+    gqlConfig.requestTimeoutMs = requestTimeoutMs;
+
     let maxQueueDepth: number | undefined;
     if (config.parameters.maxQueueDepth !== undefined) {
       if (typeof config.parameters.maxQueueDepth !== "number") {
@@ -142,6 +158,13 @@ export class GqlRequestChannelFactory implements IChannelFactory {
       ...(backpressureCheckIntervalMs !== undefined && {
         backpressureCheckIntervalMs,
       }),
+      // Comfortably above the channel's own request deadline, so the watchdog
+      // only ever fires for a delegate that is genuinely stuck rather than for
+      // a request that is merely slow.
+      delegateTimeoutMs: Math.max(
+        DELEGATE_TIMEOUT_FLOOR_MS,
+        requestTimeoutMs * 2,
+      ),
       startPaused: options?.pollBehavior === PollBehavior.Manual,
     });
 

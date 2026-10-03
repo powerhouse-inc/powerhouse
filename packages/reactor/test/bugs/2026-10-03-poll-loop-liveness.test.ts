@@ -47,7 +47,7 @@ function fakeQueue(totalSize: () => Promise<number>): IQueue {
   return { totalSize } as unknown as IQueue;
 }
 
-describe.skip("mechanism C: a dead poll loop reports itself as connected", () => {
+describe("mechanism C: a dead poll loop reports itself as connected", () => {
   /**
    * The reporting defect, and the reason the live snapshot was unfalsifiable.
    *

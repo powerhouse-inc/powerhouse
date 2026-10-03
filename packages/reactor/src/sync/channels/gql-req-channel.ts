@@ -66,7 +66,19 @@ export type GqlChannelConfig = {
   retryBaseDelayMs: number;
   /** Maximum delay in ms for exponential backoff on push retries */
   retryMaxDelayMs: number;
+  /**
+   * How long a single GraphQL request - the fetch and the body read - may take
+   * before it is abandoned as a timeout. Without a bound a hung request never
+   * settles, and `IntervalPollTimer` schedules the next tick only from the
+   * delegate's settlement: the loop then dies silently with nothing pending
+   * and no failure recorded. Defaults to {@link DEFAULT_REQUEST_TIMEOUT_MS};
+   * generous, because a too-tight bound would thrash a slow remote.
+   */
+  requestTimeoutMs?: number;
 };
+
+/** Default bound on one GraphQL request. See `requestTimeoutMs`. */
+export const DEFAULT_REQUEST_TIMEOUT_MS = 60_000;
 
 /**
  * Fields the auth projection added to the sync schema. A remote that predates
@@ -116,6 +128,15 @@ type DeadLetterWire = {
   branch: string;
   scopes: string[];
   operationCount: number;
+};
+
+/** A single GraphQL request's abort signal and expiry. */
+type RequestDeadline = {
+  signal: AbortSignal;
+  /** Resolves when the deadline passes; never resolves when unbounded. */
+  expired: Promise<void>;
+  timeoutMs: number;
+  dispose: () => void;
 };
 
 type PollSyncEnvelopesResult = {
@@ -202,6 +223,7 @@ export class GqlRequestChannel implements IChannel {
       filter: config.filter,
       retryBaseDelayMs: config.retryBaseDelayMs,
       retryMaxDelayMs: config.retryMaxDelayMs,
+      requestTimeoutMs: config.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
     };
     this.isShutdown = false;
     this.failureCount = 0;
@@ -400,6 +422,14 @@ export class GqlRequestChannel implements IChannel {
    * Re-touches once when either side's manifest moved; touching is idempotent.
    * False when the refresh failed, so polled rows must not be judged yet.
    */
+  /**
+   * Whether the poll may go on. A refresh that fails raises, so the poll is
+   * recorded as a failure: returning false logged and let `poll()` bail, which
+   * reached neither `lastSuccessUtcMs` nor `handlePollError`, so the delegate
+   * resolved and the timer counted the bail as a success. A peer whose
+   * manifest cannot be refreshed then polled forever, ingested nothing, and
+   * reported `connected / 0 / 0`. False now means only "shutting down".
+   */
   private async refreshManifestsIfStale(
     manifestRevision: string | null | undefined,
     peerManifestRevision: string | null | undefined,
@@ -426,17 +456,8 @@ export class GqlRequestChannel implements IChannel {
       .finally(() => {
         this.manifestRefresh = undefined;
       });
-    try {
-      await this.manifestRefresh;
-      return true;
-    } catch (error) {
-      this.logger.error(
-        "GqlChannel @ChannelId manifest refresh failed: @Error",
-        this.channelId,
-        error,
-      );
-      return false;
-    }
+    await this.manifestRefresh;
+    return true;
   }
 
   /** Re-touches a silent remote in case it was upgraded. */
@@ -479,7 +500,18 @@ export class GqlRequestChannel implements IChannel {
 
     this.pollTimer.setDelegate(() => this.poll());
     this.pollTimer.start();
-    this.transitionConnectionState("connected");
+  }
+
+  /**
+   * `"connected"` is earned by a completed poll, never by starting a timer.
+   * Until one completes the channel stays `"connecting"`, which is the state
+   * that says "never succeeded" - the distinction the live snapshot could not
+   * make, because `state: "connected", lastSuccessUtcMs: 0` was
+   * indistinguishable from a success at the epoch and no value of `state`
+   * could have revealed the dead loop.
+   */
+  private reachedState(): ConnectionState {
+    return this.lastSuccessUtcMs === undefined ? "connecting" : "connected";
   }
 
   private transitionConnectionState(next: ConnectionState): void {
@@ -501,12 +533,30 @@ export class GqlRequestChannel implements IChannel {
 
   /**
    * Polls the remote for new sync envelopes.
+   *
+   * Every failure the poll can raise lands in `handlePollError`, not just the
+   * ones from the fetch: `consolidateSyncOperations`, `inbox.add` (which
+   * rethrows listener failures as a `MailboxAggregateError`) and
+   * `handleRemoteDeadLetters` used to escape with `failureCount`
+   * unincremented, `lastFailureUtcMs` unset and no state transition, so a
+   * channel could retry once every five minutes while reporting
+   * `connected / 0 / 0`.
    */
   private async poll(): Promise<void> {
     if (this.isShutdown) {
       return;
     }
 
+    try {
+      await this.pollOnce();
+    } catch (error) {
+      if (!this.handlePollError(error)) {
+        throw error;
+      }
+    }
+  }
+
+  private async pollOnce(): Promise<void> {
     if (
       !this.peerServesAgreement &&
       Date.now() - this.agreementStoppedUtcMs >= AGREEMENT_PROBE_INTERVAL_MS
@@ -514,18 +564,10 @@ export class GqlRequestChannel implements IChannel {
       await this.probeAgreement();
     }
 
-    let response;
-    try {
-      response = await this.pollSyncEnvelopes(
-        this.inbox.ackOrdinal,
-        this.inbox.latestOrdinal,
-      );
-    } catch (error) {
-      if (!this.handlePollError(error)) {
-        throw error;
-      }
-      return;
-    }
+    const response = await this.pollSyncEnvelopes(
+      this.inbox.ackOrdinal,
+      this.inbox.latestOrdinal,
+    );
 
     const {
       envelopes,
@@ -716,7 +758,7 @@ export class GqlRequestChannel implements IChannel {
             trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
           }
           this.pollTimer.start();
-          this.transitionConnectionState("connected");
+          this.transitionConnectionState(this.reachedState());
           this.resumePushAfterRecovery();
         })
         .catch((recoveryError: unknown) => {
@@ -1104,7 +1146,7 @@ export class GqlRequestChannel implements IChannel {
           this.connectionState === "reconnecting" ||
           this.connectionState === "error"
         ) {
-          this.transitionConnectionState("connected");
+          this.transitionConnectionState(this.reachedState());
         }
         this.drainOutbox();
       })
@@ -1253,6 +1295,8 @@ export class GqlRequestChannel implements IChannel {
       }
       case "parse":
         return "recoverable";
+      case "timeout":
+        return "recoverable";
       case "graphql":
         // A remote that classified the failure as worth polling through is
         // taken at its word. Everything else stays permanent: it stops the poll
@@ -1378,6 +1422,68 @@ export class GqlRequestChannel implements IChannel {
   /**
    * Executes a GraphQL query or mutation against the remote endpoint.
    */
+  /**
+   * One request's abort signal and its expiry. The signal is aborted by the
+   * channel's own shutdown and by the deadline, so a well-behaved fetch is
+   * cancelled rather than merely abandoned; `expired` settles either way, so a
+   * fetch that ignores its signal - or a body read, which takes none - is
+   * still bounded.
+   */
+  private requestDeadline(timeoutMs: number): RequestDeadline {
+    const controller = new AbortController();
+    const onShutdown = () =>
+      controller.abort(this.abortController.signal.reason);
+    if (this.abortController.signal.aborted) {
+      onShutdown();
+    } else {
+      this.abortController.signal.addEventListener("abort", onShutdown, {
+        once: true,
+      });
+    }
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const expired =
+      timeoutMs > 0
+        ? new Promise<void>((resolve) => {
+            timer = setTimeout(() => {
+              controller.abort(new Error("request deadline exceeded"));
+              resolve();
+            }, timeoutMs);
+          })
+        : new Promise<void>(() => undefined);
+
+    return {
+      signal: controller.signal,
+      expired,
+      timeoutMs,
+      dispose: () => {
+        if (timer !== undefined) {
+          clearTimeout(timer);
+        }
+        this.abortController.signal.removeEventListener("abort", onShutdown);
+      },
+    };
+  }
+
+  private async withDeadline<T>(
+    work: Promise<T>,
+    deadline: RequestDeadline,
+    what: string,
+  ): Promise<T> {
+    const timedOut = Symbol("timed-out");
+    const outcome = await Promise.race([
+      work,
+      deadline.expired.then(() => timedOut),
+    ]);
+    if (outcome === timedOut) {
+      throw new GraphQLRequestError(
+        `GraphQL ${what} timed out after ${deadline.timeoutMs}ms`,
+        "timeout",
+      );
+    }
+    return outcome as T;
+  }
+
   private async executeGraphQL<T>(
     query: string,
     variables?: Record<string, unknown>,
@@ -1403,18 +1509,30 @@ export class GqlRequestChannel implements IChannel {
     );
 
     const fetchFn = this.config.fetchFn ?? fetch;
+    const timeoutMs =
+      this.config.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+    const deadline = this.requestDeadline(timeoutMs);
     let response;
     try {
-      response = await fetchFn(this.config.url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          query,
-          variables,
+      response = await this.withDeadline(
+        fetchFn(this.config.url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            query,
+            variables,
+          }),
+          signal: deadline.signal,
         }),
-        signal: this.abortController.signal,
-      });
+        deadline,
+        `${operationName} request`,
+      );
     } catch (error) {
+      if (error instanceof GraphQLRequestError) {
+        deadline.dispose();
+        throw error;
+      }
+      deadline.dispose();
       throw new GraphQLRequestError(
         `GraphQL request failed: ${error instanceof Error ? error.message : String(error)}`,
         "network",
@@ -1422,6 +1540,7 @@ export class GqlRequestChannel implements IChannel {
     }
 
     if (!response.ok) {
+      deadline.dispose();
       throw new GraphQLRequestError(
         `GraphQL request failed: ${response.status} ${response.statusText}`,
         "http",
@@ -1431,15 +1550,24 @@ export class GqlRequestChannel implements IChannel {
 
     let result;
     try {
-      result = (await response.json()) as {
+      result = (await this.withDeadline(
+        response.json(),
+        deadline,
+        `${operationName} response body`,
+      )) as {
         data?: T;
         errors?: Array<{ message: string; extensions?: { code?: string } }>;
       };
     } catch (error) {
+      if (error instanceof GraphQLRequestError) {
+        throw error;
+      }
       throw new GraphQLRequestError(
         `Failed to parse GraphQL response: ${error instanceof Error ? error.message : String(error)}`,
         "parse",
       );
+    } finally {
+      deadline.dispose();
     }
 
     this.logger.verbose(

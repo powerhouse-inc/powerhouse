@@ -177,7 +177,10 @@ function isCredentialOrNetworkError(error: unknown): boolean {
   if (isDriveAuthError(error)) {
     return true;
   }
-  return error instanceof GraphQLRequestError && error.category === "network";
+  return (
+    error instanceof GraphQLRequestError &&
+    (error.category === "network" || error.category === "timeout")
+  );
 }
 
 const holdKey = (documentId: string, branch: string): string =>
