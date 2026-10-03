@@ -191,13 +191,15 @@ invariant. Sync is the expected bug nest and gets the deepest instrumentation.
    watermark raised before the write, no retry on rejection, concurrent upserts
    possible (gql-res-channel.ts:74, persistOutboxCursor) — same class as the
    fixed finding 4; align it with CursorWriter.
-17. Unverified finder-only candidates (reactor-api/builder-tools verifiers never
-   ran): http-loader versions pin not invalidated (http-loader.ts:508), ensureLink
-   rename-over-junction on Windows (registry-cache.ts:650), non-restoring directory
-   swaps (reactor-worker-build.ts:379, worker-packages-build.ts:223),
-   es-module-lexer fill() abort on non-JS assets (registry-cache.ts:387),
-   isSubgraphClass drops minified subgraphs (graphql/utils.ts:34) — needs a
-   dedicated verify pass before acting.
+17. Finder-only candidates NOW VERIFIED (accidental review-resume completed the
+   reactor-api/builder-tools verifier groups, 2026-10-03): http-loader version pin
+   not invalidated on reinstall (http-loader.ts:508) CONFIRMED; both non-restoring
+   directory swaps + worker-packages-build has no build lock (reactor-worker-build.ts:379,
+   worker-packages-build.ts:223) CONFIRMED; es-module-lexer fill() abort on non-JS dep
+   (registry-cache.ts:387) PLAUSIBLE; ensureLink stale-junction rename on Windows
+   (registry-cache.ts:650) PLAUSIBLE; isSubgraphClass narrowing (graphql/utils.ts:34)
+   PLAUSIBLE-low (deliberate fix of a previously-broken check). All non-blocking,
+   builder-tools/package-loader cluster — fold into the item-13 package-loader hardening WP.
 
 ## Coordination
 
