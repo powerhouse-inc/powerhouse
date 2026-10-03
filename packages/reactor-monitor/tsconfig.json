@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./.tsbuild",
+    "types": ["vitest/globals"]
+  },
+  "include": ["**/*"],
+  "references": [],
+  "exclude": ["dist", "node_modules"]
+}

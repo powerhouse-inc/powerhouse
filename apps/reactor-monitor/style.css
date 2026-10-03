@@ -1,0 +1,79 @@
+/* Minimal placeholder styling for the reactor-monitor shell (W0.1). No
+   design-system dependency yet — this app is a lab bench outside Connect;
+   real styling/theming arrives with the inspector UI port (W0.4). */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  color: #1a1a1a;
+}
+
+.reactor-monitor {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.reactor-monitor__header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.reactor-monitor__header h1 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.reactor-monitor__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.reactor-monitor__sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  padding: 1rem;
+  border-right: 1px solid #ddd;
+  overflow-y: auto;
+}
+
+.reactor-monitor__sidebar h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: #666;
+}
+
+.reactor-monitor__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.reactor-monitor__tabs {
+  display: flex;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.reactor-monitor__tab {
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.reactor-monitor__panel {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.reactor-monitor__placeholder {
+  color: #888;
+}
