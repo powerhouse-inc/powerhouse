@@ -38,6 +38,16 @@ export function LinkLocalSyncPanel({ reactorName }: LinkLocalSyncPanelProps) {
     if (!other || !drive) {
       return;
     }
+    // Said here rather than let through to the broker, which refuses it too:
+    // the collection id key splits on its last dot, so a dotted drive id would
+    // reach the peer as a different collection. See assertCollectionIdParts.
+    if (drive.includes(".")) {
+      setError(
+        'A drive id for local sync cannot contain a "." -- the collection id format cannot carry it',
+      );
+      setLinked(null);
+      return;
+    }
     setLinking(true);
     setError(null);
     setLinked(null);

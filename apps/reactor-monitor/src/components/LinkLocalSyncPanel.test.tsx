@@ -134,4 +134,27 @@ describe("LinkLocalSyncPanel", () => {
     const error = await view.findByTestId("link-local-sync-error");
     expect(error.textContent).toMatch(/not provisioned with local sync/);
   });
+
+  // A dotted drive id does not survive the collection id key, so the peer would
+  // sync a different collection; refuse it before brokering anything.
+  it("refuses a dotted drive id without calling the broker", async () => {
+    const { registry, linkLocalSync } = fakeRegistry([
+      readyEntry("a"),
+      readyEntry("b"),
+    ]);
+    const view = renderInProvider(
+      registry,
+      createElement(LinkLocalSyncPanel, { reactorName: "a" }),
+    );
+
+    fireEvent.change(view.getByRole("combobox"), { target: { value: "b" } });
+    fireEvent.change(view.getByPlaceholderText("drive id to sync"), {
+      target: { value: "drive.x" },
+    });
+    fireEvent.click(view.getByRole("button", { name: "Link local sync" }));
+
+    const error = await view.findByTestId("link-local-sync-error");
+    expect(error.textContent).toMatch(/cannot contain a "\."/);
+    expect(linkLocalSync).not.toHaveBeenCalled();
+  });
 });

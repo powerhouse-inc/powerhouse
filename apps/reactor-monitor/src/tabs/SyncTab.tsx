@@ -14,6 +14,15 @@ import { timeSince } from "../lib/time.js";
 export type SyncTabProps = {
   readonly syncManager: InspectableSyncManager | undefined;
   readonly inspector?: IInspector;
+  /**
+   * Whether this reactor was provisioned local-only (`sync.local`).
+   *
+   * Such a reactor wires a single `LocalChannelFactory` and no gql factory, so
+   * the "Add remote" form below cannot work on it -- the factory rejects a
+   * `{ type: "gql" }` config. Required rather than defaulted, because a silent
+   * `false` would put the broken form back in front of the user.
+   */
+  readonly localOnly: boolean;
 };
 
 const POLL_INTERVAL_MS = 2000;
@@ -273,7 +282,7 @@ function RemoteRow({
   );
 }
 
-export function SyncTab({ syncManager, inspector }: SyncTabProps) {
+export function SyncTab({ syncManager, inspector, localOnly }: SyncTabProps) {
   const [remotes, setRemotes] = useState<Remote[]>([]);
   const [inspections, setInspections] = useState<
     Map<string, RemoteSyncInspection>
@@ -361,7 +370,10 @@ export function SyncTab({ syncManager, inspector }: SyncTabProps) {
   }, [refresh]);
 
   const handleAdd = useCallback(async () => {
-    if (!syncManager) {
+    // The form is disabled for a local-only reactor; this is the belt to that
+    // braces, so a submit that slips through cannot reach a factory that will
+    // only reject it.
+    if (!syncManager || localOnly) {
       return;
     }
     const trimmedName = name.trim();
@@ -390,7 +402,7 @@ export function SyncTab({ syncManager, inspector }: SyncTabProps) {
     } finally {
       setAdding(false);
     }
-  }, [syncManager, name, driveId, url, refresh]);
+  }, [syncManager, localOnly, name, driveId, url, refresh]);
 
   const handleTriggerPull = useCallback(
     (remoteName: string) => {
@@ -466,6 +478,15 @@ export function SyncTab({ syncManager, inspector }: SyncTabProps) {
 
       <StorageHealthPanel health={storageHealth} />
 
+      {localOnly ? (
+        <p className="rm-note" data-testid="sync-add-remote-unavailable">
+          This reactor is provisioned local-only (sync.local), so it has a local
+          channel factory and no GraphQL one; a gql remote cannot be added here.
+          Use &quot;Link local sync&quot; above to sync it with another
+          monitor-owned reactor, or provision a reactor with sync mode
+          &quot;connect&quot; to add gql remotes.
+        </p>
+      ) : null}
       <form
         className="rm-form rm-form-inline"
         onSubmit={(e) => {
@@ -476,6 +497,7 @@ export function SyncTab({ syncManager, inspector }: SyncTabProps) {
         <label>
           Remote name
           <input
+            disabled={localOnly}
             onChange={(e) => setName(e.target.value)}
             placeholder="my-remote"
             type="text"
@@ -485,6 +507,7 @@ export function SyncTab({ syncManager, inspector }: SyncTabProps) {
         <label>
           Drive ID
           <input
+            disabled={localOnly}
             onChange={(e) => setDriveId(e.target.value)}
             placeholder="drive id to sync"
             type="text"
@@ -494,13 +517,14 @@ export function SyncTab({ syncManager, inspector }: SyncTabProps) {
         <label>
           GraphQL URL
           <input
+            disabled={localOnly}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://.../graphql"
             type="text"
             value={url}
           />
         </label>
-        <button className="rm-btn" disabled={adding} type="submit">
+        <button className="rm-btn" disabled={adding || localOnly} type="submit">
           Add remote
         </button>
       </form>

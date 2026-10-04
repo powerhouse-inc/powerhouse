@@ -131,7 +131,9 @@ function fakeInspector(health: StorageHealth): IInspector {
 
 describe("SyncTab", () => {
   it("renders the empty state with no remotes configured", () => {
-    const view = render(<SyncTab syncManager={fakeSyncManager([])} />);
+    const view = render(
+      <SyncTab localOnly={false} syncManager={fakeSyncManager([])} />,
+    );
     expect(view.getByTestId("sync-empty-state")).toBeTruthy();
   });
 
@@ -147,6 +149,7 @@ describe("SyncTab", () => {
     });
     const view = render(
       <SyncTab
+        localOnly={false}
         syncManager={fakeSyncManager(
           [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
           [inspection],
@@ -161,6 +164,7 @@ describe("SyncTab", () => {
   it("does not warn for a healthy connected channel", async () => {
     const view = render(
       <SyncTab
+        localOnly={false}
         syncManager={fakeSyncManager(
           [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
           [inspectionFor("accounts")],
@@ -175,6 +179,7 @@ describe("SyncTab", () => {
   it("renders real cursors and mailbox depths from the inspection op", async () => {
     const view = render(
       <SyncTab
+        localOnly={false}
         syncManager={fakeSyncManager(
           [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
           [inspectionFor("accounts")],
@@ -198,6 +203,7 @@ describe("SyncTab", () => {
           recreateCount: 1,
           lastRecreated: { reason: "portal", timestampUtcMs: 1, attempt: 1 },
         })}
+        localOnly={false}
         syncManager={fakeSyncManager(
           [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
           [inspectionFor("accounts")],
@@ -228,7 +234,7 @@ describe("SyncTab", () => {
       [inspectionFor("accounts")],
       { accounts: [deadLetter] },
     );
-    const view = render(<SyncTab syncManager={manager} />);
+    const view = render(<SyncTab localOnly={false} syncManager={manager} />);
 
     const row = await view.findByTestId("sync-dead-letter");
     expect(row.textContent).toMatch(/MISSING_OPERATIONS/);
@@ -252,7 +258,7 @@ describe("SyncTab", () => {
       [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
       [inspectionFor("accounts")],
     );
-    const view = render(<SyncTab syncManager={manager} />);
+    const view = render(<SyncTab localOnly={false} syncManager={manager} />);
 
     await view.findByTestId("sync-mailbox-depths");
 
@@ -273,7 +279,7 @@ describe("SyncTab", () => {
       [inspectionFor("accounts")],
     );
     manager.resetChannel.mockRejectedValue(new Error("reset exploded"));
-    const view = render(<SyncTab syncManager={manager} />);
+    const view = render(<SyncTab localOnly={false} syncManager={manager} />);
 
     await view.findByTestId("sync-mailbox-depths");
     fireEvent.click(view.getByText("Reset channel"));
@@ -291,14 +297,44 @@ describe("SyncTab", () => {
         }),
       ],
     );
-    const view = render(<SyncTab syncManager={manager} />);
+    const view = render(<SyncTab localOnly={false} syncManager={manager} />);
 
     await view.findByTestId("sync-mailbox-depths");
     expect(manager.listDeadLetters).not.toHaveBeenCalled();
   });
 
   it("renders a placeholder when the reactor has no sync module", () => {
-    const view = render(<SyncTab syncManager={undefined} />);
+    const view = render(<SyncTab localOnly={false} syncManager={undefined} />);
     expect(view.getByText(/no sync module/)).toBeTruthy();
+  });
+
+  // A local-only reactor has no gql channel factory, so submitting this form
+  // could only ever produce an error from a factory that will not serve it.
+  it("disables the gql add-remote form on a local-only reactor and says why", () => {
+    const manager = fakeSyncManager([]);
+    const view = render(<SyncTab localOnly syncManager={manager} />);
+
+    expect(view.getByTestId("sync-add-remote-unavailable").textContent).toMatch(
+      /provisioned local-only/,
+    );
+    expect(
+      view.getByRole("button", { name: "Add remote" }).hasAttribute("disabled"),
+    ).toBe(true);
+    for (const label of ["Remote name", "Drive ID", "GraphQL URL"]) {
+      expect((view.getByLabelText(label) as HTMLInputElement).disabled).toBe(
+        true,
+      );
+    }
+  });
+
+  it("leaves the add-remote form usable on a connect reactor", () => {
+    const view = render(
+      <SyncTab localOnly={false} syncManager={fakeSyncManager([])} />,
+    );
+
+    expect(view.queryByTestId("sync-add-remote-unavailable")).toBeNull();
+    expect(
+      view.getByRole("button", { name: "Add remote" }).hasAttribute("disabled"),
+    ).toBe(false);
   });
 });

@@ -89,6 +89,11 @@ function renderPanel(
           <LinkLocalSyncPanel reactorName={reactor.name} />
           <SyncTab
             inspector={reactor.inspector}
+            // Local-only is exactly what `sync.local` provisioned, and the
+            // adopt handle is present only then -- on both hosting kinds -- so
+            // it is the one signal that cannot drift from how the reactor was
+            // actually built.
+            localOnly={reactor.adoptLocalSyncPeer !== undefined}
             syncManager={reactor.syncManager}
           />
         </>
