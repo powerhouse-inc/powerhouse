@@ -85,6 +85,18 @@ export type ReactorHostOptions = {
   onAdminRestart?: () => void;
   onAdminClearStorage?: () => Promise<void>;
   onAdminMigrate?: () => Promise<void>;
+  /**
+   * Reports the capability-relevant facts of whatever construct actually won
+   * the build -- not whatever a later-connecting tab's hello asked for. A
+   * `ReactorHost` builds once and silently drops every construct after the
+   * first, so a tab that only read its OWN hello's construct back would
+   * describe a reactor that may not be the one running (multi-reactor stage 2
+   * review). Awaited behind the same `awaitClientReady()` gate as an op, so a
+   * caller gets the winning construct's facts, or the build's rejection, never
+   * a half-built guess. The payload is opaque to `ReactorHost` -- it only
+   * ferries whatever the build hook returns.
+   */
+  onAdminGetBuiltConfig?: () => unknown;
 };
 
 /**
@@ -336,6 +348,10 @@ export class ReactorHost {
       void this.handleAdminAsync(this.options.onAdminMigrate, message, reply);
       return;
     }
+    if (message.method === "builtConfig") {
+      void this.handleAdminBuiltConfig(message, reply);
+      return;
+    }
     const info: WorkerInspectorInfo = {
       namespace: this.options.namespace ?? "",
       ownerId: this.ownerId,
@@ -358,6 +374,24 @@ export class ReactorHost {
     await reply.run(message.id, async () => {
       await handler?.();
     });
+  }
+
+  /**
+   * Answers "builtConfig" only once the client is resolved, so the reply
+   * describes the construct that WON the build rather than racing it.
+   */
+  private async handleAdminBuiltConfig(
+    message: RpcAdmin,
+    reply: IHostResponder,
+  ): Promise<void> {
+    await reply.run(
+      message.id,
+      async () => {
+        await this.awaitClientReady();
+        return this.options.onAdminGetBuiltConfig?.() ?? null;
+      },
+      (value) => value,
+    );
   }
 
   private resolveClient(construct?: unknown): Promise<IReactorClient> {

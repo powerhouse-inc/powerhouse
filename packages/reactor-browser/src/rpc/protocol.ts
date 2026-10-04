@@ -118,7 +118,7 @@ export type RpcReload = { k: "reload"; reason: string; workerGen?: string };
 export type RpcAdmin = {
   k: "admin";
   id: CorrelationId;
-  method: "info" | "restart" | "clearStorage" | "migrate";
+  method: "info" | "restart" | "clearStorage" | "migrate" | "builtConfig";
 };
 
 export type WorkerMigrationState = {

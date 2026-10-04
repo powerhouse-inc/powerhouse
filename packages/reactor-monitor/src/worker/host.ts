@@ -18,6 +18,7 @@ import {
   type BuiltWorkerReactor,
   type WorkerPackageImporters,
 } from "./build-worker-reactor.js";
+import { builtWorkerConfigOf } from "./construct.js";
 import { dispatchSyncOp } from "./sync-ops.js";
 
 export type MonitorWorkerHost = {
@@ -158,6 +159,12 @@ export function createMonitorWorkerHost(
     },
     onAdminRestart: () =>
       host.broadcastReload("admin restart", crypto.randomUUID()),
+    // The construct that WON the build, not whatever the asking tab's own
+    // hello sent -- see the "builtConfig" op's doc on `ReactorHostOptions`.
+    onAdminGetBuiltConfig: () => {
+      const current = requireBuilt();
+      return builtWorkerConfigOf(current.construct, current.canSelfHeal);
+    },
   });
 
   const release = async (): Promise<void> => {

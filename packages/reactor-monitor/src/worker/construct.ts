@@ -4,6 +4,7 @@ import {
 } from "@powerhousedao/reactor";
 import type { WorkerPackageSource } from "@powerhousedao/reactor-browser/rpc";
 import { reactorStorageNamespace } from "../naming.js";
+import { DEFAULT_REACTOR_STORAGE } from "../store.js";
 import type { ReactorDescriptor, ReactorStorageConfig } from "../types.js";
 
 /**
@@ -172,4 +173,62 @@ export function toWorkerConstruct(
     construct.localSync = descriptor.sync.local;
   }
   return construct;
+}
+
+/**
+ * The capability-relevant facts of whatever construct actually won the
+ * build, reported over the "builtConfig" admin op (multi-reactor stage 2
+ * review: a worker builds once and `ReactorHost` silently drops every
+ * construct after the first, so a later-connecting tab's own descriptor is
+ * not a safe thing to derive capabilities from).
+ */
+export type BuiltWorkerConfig = {
+  storage: ReactorStorageConfig;
+  channelScheme: ChannelScheme | null | undefined;
+  localSync: boolean;
+  canSelfHeal: boolean;
+};
+
+/** The {@link BuiltWorkerConfig} for the construct that won, plus its actual `canSelfHeal`. */
+export function builtWorkerConfigOf(
+  construct: MonitorWorkerConstruct,
+  canSelfHeal: boolean,
+): BuiltWorkerConfig {
+  return {
+    storage: construct.storage ?? DEFAULT_REACTOR_STORAGE,
+    channelScheme: construct.channelScheme,
+    localSync: construct.localSync ?? false,
+    canSelfHeal,
+  };
+}
+
+/**
+ * Validates the untyped payload the "builtConfig" admin op answers with.
+ * Reuses the same realm-boundary discipline as {@link parseWorkerConstruct}:
+ * it arrives over `postMessage` from a worker that may be on a different
+ * build, so nothing about its shape is guaranteed by the type system.
+ */
+export function parseBuiltWorkerConfig(raw: unknown): BuiltWorkerConfig {
+  if (typeof raw !== "object" || raw === null) {
+    throw new Error(
+      "Invalid built worker config: expected an object from the builtConfig admin op",
+    );
+  }
+  const value = raw as Record<string, unknown>;
+  const storage = asStorage(value.storage) ?? DEFAULT_REACTOR_STORAGE;
+  const channelScheme = asScheme(value.channelScheme);
+  if (typeof value.localSync !== "boolean") {
+    throw new Error("Invalid built worker config: localSync must be a boolean");
+  }
+  if (typeof value.canSelfHeal !== "boolean") {
+    throw new Error(
+      "Invalid built worker config: canSelfHeal must be a boolean",
+    );
+  }
+  return {
+    storage,
+    channelScheme,
+    localSync: value.localSync,
+    canSelfHeal: value.canSelfHeal,
+  };
 }

@@ -1,6 +1,6 @@
 import { ReactorEventTypes } from "@powerhousedao/reactor";
 import { createPortTransport } from "@powerhousedao/reactor-browser/rpc";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildWorkerReactor,
   connectManagedWorkerReactor,
@@ -24,8 +24,11 @@ const DRIVE_TYPE = "powerhouse/document-drive";
  * Built on the shared in-process `descriptor` helper with `kind` overridden
  * to `"worker"`, rather than its own copy of the same base shape.
  */
-function descriptor(name: string): ReactorDescriptor {
-  return inProcessDescriptor(name, { kind: "worker" });
+function descriptor(
+  name: string,
+  overrides?: Partial<ReactorDescriptor>,
+): ReactorDescriptor {
+  return inProcessDescriptor(name, { kind: "worker", ...overrides });
 }
 
 describe("monitor worker host over a MessageChannel", () => {
@@ -34,11 +37,11 @@ describe("monitor worker host over a MessageChannel", () => {
   let tab: ManagedWorkerReactor;
   let disconnect: () => void;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     channel = new MessageChannel();
     worker = createMonitorWorkerHost({ workerName: "ph-reactor-monitor:w" });
     disconnect = worker.host.connectPort(channel.port1);
-    tab = connectManagedWorkerReactor(
+    tab = await connectManagedWorkerReactor(
       descriptor("w"),
       createPortTransport(channel.port2),
       { buildId: "test-build" },
@@ -53,16 +56,18 @@ describe("monitor worker host over a MessageChannel", () => {
     await worker.release();
   });
 
-  it("builds the reactor from the tab's construct on first use", async () => {
-    expect(worker.current()).toBeUndefined();
-
-    const created = await tab.client.createEmpty(DRIVE_TYPE);
-
+  it("builds the reactor from the tab's construct by the time it connects", async () => {
+    // `connectManagedWorkerReactor` awaits the "builtConfig" admin round-trip
+    // to derive truthful capabilities (multi-reactor stage 2 review), which
+    // forces the build to have completed by the time `beforeEach` resolves --
+    // unlike a bare op, which only buffers until a build settles.
     expect(worker.current()?.construct).toMatchObject({
       name: "w",
       namespace: "reactor-monitor-w",
       storage: { kind: "memory" },
     });
+
+    const created = await tab.client.createEmpty(DRIVE_TYPE);
     expect(created.header.id).toBeTruthy();
   });
 
@@ -136,7 +141,7 @@ describe("monitor worker host over a MessageChannel", () => {
     const reloads: string[] = [];
     const other = new MessageChannel();
     const otherDispose = worker.host.connectPort(other.port1);
-    const otherTab = connectManagedWorkerReactor(
+    const otherTab = await connectManagedWorkerReactor(
       descriptor("w"),
       createPortTransport(other.port2),
       { buildId: "test-build", onReload: (reason) => reloads.push(reason) },
@@ -157,7 +162,7 @@ describe("monitor worker host over a MessageChannel", () => {
   it("shares one worker reactor between two tabs", async () => {
     const other = new MessageChannel();
     const otherDispose = worker.host.connectPort(other.port1);
-    const otherTab = connectManagedWorkerReactor(
+    const otherTab = await connectManagedWorkerReactor(
       descriptor("w"),
       createPortTransport(other.port2),
       { buildId: "test-build" },
@@ -174,13 +179,68 @@ describe("monitor worker host over a MessageChannel", () => {
     other.port2.close();
   });
 
+  it("derives a later tab's capabilities from the FIRST built construct, and flags the mismatch", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const mismatchHost = createMonitorWorkerHost();
+    const firstChannel = new MessageChannel();
+    const firstDispose = mismatchHost.host.connectPort(firstChannel.port1);
+
+    // The FIRST tab wins the build: sync.local, so the worker actually wires
+    // a LocalChannelFactory reactor.
+    const first = await connectManagedWorkerReactor(
+      descriptor("mismatch", { sync: { local: true } }),
+      createPortTransport(firstChannel.port2),
+      { buildId: "test-build" },
+    );
+
+    const secondChannel = new MessageChannel();
+    const secondDispose = mismatchHost.host.connectPort(secondChannel.port1);
+    // The SECOND tab connects with a plain gql descriptor for the SAME
+    // worker name -- ReactorHost already built from the first hello, so this
+    // construct is silently dropped (W0.2). The handle must not pretend it
+    // got what IT asked for.
+    const second = await connectManagedWorkerReactor(
+      descriptor("mismatch"),
+      createPortTransport(secondChannel.port2),
+      { buildId: "test-build" },
+    );
+
+    try {
+      expect(first.capabilities.syncChannels).toEqual(["local"]);
+      expect(first.descriptorMismatch).toBe(false);
+      expect(first.adoptLocalSyncPeer).toBeDefined();
+
+      // The SECOND handle's capabilities reflect the FIRST, built construct
+      // -- not its own gql request -- and the disagreement is flagged rather
+      // than silently misreported.
+      expect(second.capabilities.syncChannels).toEqual(["local"]);
+      expect(second.descriptorMismatch).toBe(true);
+      expect(second.adoptLocalSyncPeer).toBeDefined();
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+      await first.kill();
+      await second.kill();
+      firstDispose();
+      secondDispose();
+      firstChannel.port1.close();
+      firstChannel.port2.close();
+      secondChannel.port1.close();
+      secondChannel.port2.close();
+      await mismatchHost.release();
+    }
+  }, 60_000);
+
   it("surfaces a failed build to the ops that follow it", async () => {
     const failing = createMonitorWorkerHost({
       build: () => Promise.reject(new Error("boom")),
     });
     const failingChannel = new MessageChannel();
     const failingDispose = failing.host.connectPort(failingChannel.port1);
-    const failingTab = connectManagedWorkerReactor(
+    // connectManagedWorkerReactor's own "builtConfig" fetch hits this same
+    // boot failure and falls back to the connecting descriptor rather than
+    // failing provisioning on it -- the handle still connects.
+    const failingTab = await connectManagedWorkerReactor(
       descriptor("fails"),
       createPortTransport(failingChannel.port2),
     );
@@ -264,7 +324,7 @@ describe("provisionWorkerReactor", () => {
     const dispose = host.host.connectPort(channel.port1);
     const names: string[] = [];
 
-    const reactor = provisionWorkerReactor({
+    const reactor = await provisionWorkerReactor({
       kind: "worker",
       name: "supplied",
       storage: { kind: "memory" },

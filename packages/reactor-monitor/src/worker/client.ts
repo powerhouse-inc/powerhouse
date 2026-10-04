@@ -17,7 +17,10 @@ import {
   type IRpcTransport,
   type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
-import { reactorCapabilities } from "../capabilities.js";
+import {
+  reactorCapabilities,
+  type ReactorCapabilities,
+} from "../capabilities.js";
 import { reactorWorkerName } from "../naming.js";
 import type { AdoptLocalSyncPeerLink } from "../sync/types.js";
 import type {
@@ -25,7 +28,11 @@ import type {
   MonitorWorkerClientModule,
   ReactorDescriptor,
 } from "../types.js";
-import { toWorkerConstruct } from "./construct.js";
+import {
+  parseBuiltWorkerConfig,
+  toWorkerConstruct,
+  type BuiltWorkerConfig,
+} from "./construct.js";
 import { ReactorMonitorVersion } from "../version.js";
 import { reactorMonitorWorkerUrl } from "../worker-url.js";
 
@@ -50,6 +57,47 @@ function resolveWorkerUrl(descriptor: ReactorDescriptor): URL {
     return new URL(descriptor.workerUrl, base);
   }
   return reactorMonitorWorkerUrl();
+}
+
+/**
+ * `ReactorCapabilities` for the construct that WON the build, synthesized
+ * from the built-config report rather than from any connecting descriptor --
+ * the whole point being that a later tab's descriptor must not leak into
+ * what this handle claims the reactor can do (multi-reactor stage 2 review).
+ */
+function capabilitiesOfBuiltConfig(
+  name: string,
+  builtConfig: BuiltWorkerConfig,
+): ReactorCapabilities {
+  return reactorCapabilities(
+    {
+      kind: "worker",
+      name,
+      storage: builtConfig.storage,
+      sync: {
+        channelScheme: builtConfig.channelScheme,
+        local: builtConfig.localSync,
+      },
+    },
+    { canSelfHeal: builtConfig.canSelfHeal },
+  );
+}
+
+/**
+ * Whether the connecting descriptor asked for a different storage/sync shape
+ * than what the worker actually built -- the two facts a later tab's
+ * descriptor can disagree with the FIRST, winning one on, because
+ * `ReactorHost` builds once and silently drops every construct after the
+ * first (multi-reactor stage 2 review).
+ */
+function describesDifferentBuild(
+  requested: ReactorCapabilities,
+  built: ReactorCapabilities,
+): boolean {
+  return (
+    requested.storage.kind !== built.storage.kind ||
+    requested.syncChannels.join(",") !== built.syncChannels.join(",")
+  );
 }
 
 export type ProvisionWorkerOptions = {
@@ -80,11 +128,11 @@ export type ProvisionWorkerOptions = {
  * `createMonitorWorkerHost()` in a unit test, which is the only way to test
  * it: there is no `SharedWorker` outside a browser.
  */
-export function connectManagedWorkerReactor(
+export async function connectManagedWorkerReactor(
   descriptor: ReactorDescriptor,
   transport: IRpcTransport,
   options: ProvisionWorkerOptions = {},
-): ManagedWorkerReactor {
+): Promise<ManagedWorkerReactor> {
   const router = new MessageRouter();
   router.attach(transport);
 
@@ -152,12 +200,55 @@ export function connectManagedWorkerReactor(
     },
   };
 
-  // Exposed only when the worker was provisioned with sync.local, matching the
-  // in-process handle exactly. Without the conditional, linkLocalSync's
-  // requireLocalCapable() saw two methods on every worker reactor and only
-  // found out the worker had no local sync module after a port had been opened
-  // and transferred -- a failure with side effects where a fail-fast belonged.
-  const localSync = descriptor.sync?.local
+  // The construct that actually won the build, not this connection's own
+  // descriptor: a later tab's hello can name a different storage/sync shape
+  // than the first, and `ReactorHost` builds once and silently drops it
+  // (multi-reactor stage 2 review). A failed fetch falls back to the
+  // connecting descriptor rather than failing provisioning on it, so a build
+  // failure keeps surfacing where it already does -- at the first op (see
+  // `worker-host.test.ts`'s "surfaces a failed build to the ops that follow
+  // it") -- instead of here too.
+  let builtConfig: BuiltWorkerConfig | undefined;
+  try {
+    builtConfig = parseBuiltWorkerConfig(await adminClient.getBuiltConfig());
+  } catch (error) {
+    console.warn(
+      `[reactor-monitor] could not read "${descriptor.name}"'s built configuration; ` +
+        `falling back to the connecting descriptor's own (possibly wrong) capabilities:`,
+      error,
+    );
+  }
+
+  const requestedCapabilities = reactorCapabilities(descriptor);
+  const capabilities = builtConfig
+    ? capabilitiesOfBuiltConfig(descriptor.name, builtConfig)
+    : requestedCapabilities;
+  // True only when a LATER tab's descriptor disagrees with the FIRST,
+  // winning one -- never for the tab whose descriptor was actually built.
+  const descriptorMismatch = builtConfig
+    ? describesDifferentBuild(requestedCapabilities, capabilities)
+    : false;
+  if (descriptorMismatch) {
+    console.warn(
+      `[reactor-monitor] "${descriptor.name}" connected with a descriptor that disagrees with the ` +
+        `worker's already-built reactor (requested storage "${requestedCapabilities.storage.kind}" / ` +
+        `sync [${requestedCapabilities.syncChannels.join(", ")}], built storage "${capabilities.storage.kind}" / ` +
+        `sync [${capabilities.syncChannels.join(", ")}]); this handle's capabilities describe what was ` +
+        `actually built, not this connection's request.`,
+    );
+  }
+
+  // Exposed only when the WORKER actually built sync.local -- not when this
+  // connection's own descriptor asked for it, which can disagree with the
+  // construct that won (see `descriptorMismatch` above). Without reading the
+  // built fact, linkLocalSync's requireLocalCapable() saw two methods on
+  // every worker reactor that asked for sync.local and only found out the
+  // worker had no local sync module after a port had been opened and
+  // transferred -- a failure with side effects where a fail-fast belonged.
+  const localSyncBuilt = builtConfig
+    ? builtConfig.localSync
+    : (descriptor.sync?.local ?? false);
+  const localSync = localSyncBuilt
     ? {
         /**
          * Transfers one end of the broker's MessageChannel into the worker and
@@ -196,7 +287,8 @@ export function connectManagedWorkerReactor(
   return {
     name: descriptor.name,
     kind: "worker",
-    capabilities: reactorCapabilities(descriptor),
+    capabilities,
+    descriptorMismatch,
     client,
     inspector,
     dbQuery: {
@@ -243,7 +335,7 @@ export function connectManagedWorkerReactor(
 export function provisionWorkerReactor(
   descriptor: ReactorDescriptor,
   options: ProvisionWorkerOptions = {},
-): ManagedWorkerReactor {
+): Promise<ManagedWorkerReactor> {
   const name = reactorWorkerName(descriptor.name);
   let worker: SharedWorker;
   let from: string;

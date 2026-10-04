@@ -239,6 +239,16 @@ export interface ManagedWorkerReactor extends ManagedReactorBase {
   readonly syncManager: InspectableSyncManager;
   adminInfo: () => Promise<WorkerInspectorInfo>;
   restart: () => Promise<void>;
+  /**
+   * True when this handle's connecting descriptor disagreed with the
+   * construct the worker actually built -- a later tab's hello whose
+   * construct `ReactorHost` silently dropped because the worker builds once
+   * (multi-reactor stage 2 review). `capabilities` always describes what was
+   * BUILT, never this handle's own request, so a caller that only reads
+   * `capabilities` cannot see the disagreement; this flag is the one place it
+   * surfaces. Always `false` for the tab whose descriptor won the build.
+   */
+  readonly descriptorMismatch: boolean;
 }
 
 /** A reactor the monitor has provisioned and can inspect. */
