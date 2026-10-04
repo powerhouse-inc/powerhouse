@@ -256,6 +256,60 @@ browser messagePortTransport branch, adopt-sync-peer end-to-end.
 - Capability descriptor becomes explicit (hosting kind, processors?, workflows?,
   storage class, inspection transport). Monitor renders capability differences.
 
+**DONE 2026-10-04** (lib+app suites green: 96 package tests, 39 app tests; tsc,
+oxlint, oxfmt clean).
+
+- **The capability contract** is `ReactorCapabilities` in
+  `packages/reactor-monitor/src/capabilities.ts`, derived per descriptor by
+  `reactorCapabilities()` at provision time, frozen onto every handle as
+  `ManagedReactor.capabilities`, and static for the life of the instance (so a
+  router may cache it). Fields: `hosting` (worker | in-process | remote),
+  `storage: { kind: idb|memory|path|remote, durable }`, `processors` (can host
+  processor FACTORIES - false for worker, because a factory is a function and
+  does not survive postMessage: Connect's live limitation, backlog item 2),
+  `workflows` (false for both browser kinds - the engine forks child processes,
+  agreed decision 3), `inspection` (direct | rpc | none), `syncChannels`
+  (gql | local, from the descriptor's sync mode; empty for a
+  `channelScheme: null` island), `selfHeal` (durable store this process opened,
+  i.e. the W0.7/W0.8 in-place recreate applies). Worker and in-process differ in
+  EXACTLY three fields - `hosting`, `inspection`, `processors` - which is
+  asserted, so a new divergence cannot be introduced silently.
+  **This is the router's input**: placement, which reactor may host a processor
+  or fire a workflow trigger, which pair may be linked, and what observability a
+  caller may expect of a target are all reads of this table. The `remote` row is
+  derived too (stating today's truth: `inspection: "none"` until W3.2), so the
+  router can be designed against a complete table before stage 3 lands.
+- **Capability-aware guard**: `linkLocalSync` now refuses on
+  `supportsSyncChannel(capabilities, "local")` rather than on method presence,
+  so the declared contract is the thing enforced, in one place; the method check
+  remains behind it as a provisioning-invariant assertion.
+- **Monitor Overview tab** renders the contract as a 7-cell capability grid with
+  a one-line reason per field (plain CSS, `.rm-cap-*`), so worker vs in-process
+  variance is visible at a glance instead of buried in prose.
+- **RELAY VERDICT: transitive relay WORKS.** `test/three-reactor-topology.test.ts`
+  links A<->B and B<->C on one drive (B the hub, two brokered local remotes on one
+  reactor - a composition stage 1 never exercised) and asserts that an op created
+  on A reaches C through B with no A<->C link, symmetrically C->B->A, with all
+  three converging to identical operation counts that then stop moving (no echo
+  storm) and all three still inspectable. Cutting one arm leaves the other alive.
+  **The echo-suppression mechanism** (read-only; no `packages/reactor` changes):
+  a sync load job stamps each written operation's `sourceRemote` with the NAME OF
+  THE REMOTE it arrived on (`simple-job-executor.ts`, `effectiveSourceRemote`; a
+  load that had to reshuffle clears it so the reorder goes back to everyone), and
+  `SyncManager.deriveOutbox` queries the operation index with
+  `excludeSourceRemote: remote.meta.name` (`sync-manager.ts:3449` ->
+  `kysely-operation-index.ts:591` `WHERE oi."sourceRemote" != ?`), with
+  `backfillDocument` and `delivery-tracking.ts` applying the same exclusion.
+  Suppression is keyed on the remote NAME, not on "came from sync" - which is
+  why A<->B terminates AND why a relay happens: B's remote-for-C has a different
+  name, so the op is offered onward exactly once. Loop-freedom and relay are two
+  readings of one rule. Consequence for the router: a chain of local links is a
+  working transport, so the router must not assume every pair needs a direct link
+  (nor that a relayed op's provenance names its originator).
+- Live pass still owed: the same trio in the browser (two SharedWorkers + one
+  in-process reactor), Overview capability grids side by side showing the
+  worker/in-process difference, and A->C relay observed in the Sync tabs.
+
 ### Stage 3 — Switchboard reactor joins
 - **W3.1** attach remote via existing GQL channels.
 - **W3.2 core: remote inspection** — `IInspector` served over HTTP/GraphQL by
@@ -271,6 +325,10 @@ browser messagePortTransport branch, adopt-sync-peer end-to-end.
   collection/drive; advisory routing + structured misroute; v1 constraints: batches
   never span reactors, cross-reactor relationships read-level only, subscriptions
   fan-in.
+- **Input contract: `ReactorCapabilities`** (stage 2, shipped — see above). Target
+  selection routes on that table; it is per-instance static and therefore
+  cacheable. Capability variance is explicit by construction, so the router never
+  has to probe a target to learn what it can do.
 
 ### Stage 4 — migrate back
 - Fold monitor components into Connect; Switchboard hosts/routes multiple reactors

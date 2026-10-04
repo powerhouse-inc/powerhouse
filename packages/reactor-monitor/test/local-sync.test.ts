@@ -147,17 +147,56 @@ describe("brokered local sync between two in-process reactors", () => {
     await handle.unlink();
   }, 60_000);
 
-  it("refuses to link a reactor that was not provisioned for local sync", async () => {
+  it("refuses to link a reactor whose capabilities lack the local sync channel", async () => {
     const local = await host("mixed-local");
     const connect = await provisionInProcess(descriptor("mixed-connect"));
     provisioned.push(connect);
 
+    // The guard reads the capability contract, so the refusal names what the
+    // reactor actually declares (stage 2: one place enforces it).
+    expect(connect.capabilities.syncChannels).toEqual(["gql"]);
     await expect(
       linkLocalSync(local, connect, {
         driveId: "nope",
         createChannel: nodeChannel,
       }),
+    ).rejects.toThrow(
+      /not provisioned with local sync .*declare sync channels \[gql\]/,
+    );
+  });
+
+  it("refuses a sync-less island, which declares no sync channels at all", async () => {
+    const local = await host("island-local");
+    const island = await provisionInProcess(
+      descriptor("island", { sync: { channelScheme: null } }),
+    );
+    provisioned.push(island);
+
+    expect(island.capabilities.syncChannels).toEqual([]);
+    await expect(
+      linkLocalSync(local, island, {
+        driveId: "nope",
+        createChannel: nodeChannel,
+      }),
+    ).rejects.toThrow(/declare sync channels \[none at all\]/);
+  });
+
+  it("refuses before opening a port, so a rejected link leaves no channel behind", async () => {
+    const local = await host("fail-fast-local");
+    const connect = await provisionInProcess(descriptor("fail-fast-connect"));
+    provisioned.push(connect);
+
+    let opened = 0;
+    await expect(
+      linkLocalSync(local, connect, {
+        driveId: "nope",
+        createChannel: () => {
+          opened++;
+          return nodeChannel();
+        },
+      }),
     ).rejects.toThrow(/not provisioned with local sync/);
+    expect(opened).toBe(0);
   });
 
   it("keeps the brokered remote out of durable storage", async () => {

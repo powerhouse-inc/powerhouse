@@ -3,6 +3,7 @@ import {
   type MessagePortLike,
   type RemoteFilter,
 } from "@powerhousedao/reactor";
+import { supportsSyncChannel } from "../capabilities.js";
 import type { ManagedReactor } from "../types.js";
 import {
   assertCollectionIdParts,
@@ -74,10 +75,29 @@ function resolveCollectionId(options: LinkLocalSyncOptions): DriveCollectionId {
   );
 }
 
+/**
+ * Refuses a reactor whose capability contract does not include the `local`
+ * sync channel (multi-reactor stage 2).
+ *
+ * The check is on {@link ReactorCapabilities.syncChannels} rather than on the
+ * presence of the adopt/remove methods, so the declared contract -- what a
+ * router would read -- is the thing enforced, in one place, and cannot drift
+ * from what linking actually accepts. The method check stays behind it as an
+ * invariant assertion: the two are derived from the same `sync.local` flag, so
+ * a disagreement is a bug in provisioning, not a user error, and it is worth
+ * saying so before a port is opened.
+ */
 function requireLocalCapable(reactor: ManagedReactor): void {
+  if (!supportsSyncChannel(reactor.capabilities, "local")) {
+    const declared =
+      reactor.capabilities.syncChannels.join(", ") || "none at all";
+    throw new Error(
+      `Reactor "${reactor.name}" was not provisioned with local sync (sync.local): its capabilities declare sync channels [${declared}], so it cannot adopt a brokered local peer`,
+    );
+  }
   if (!reactor.adoptLocalSyncPeer || !reactor.removeLocalSyncPeer) {
     throw new Error(
-      `Reactor "${reactor.name}" was not provisioned with local sync (sync.local); it cannot adopt a brokered local peer`,
+      `Reactor "${reactor.name}" declares the "local" sync channel but has no adoptLocalSyncPeer/removeLocalSyncPeer handle; its capabilities and its provisioning disagree`,
     );
   }
 }
