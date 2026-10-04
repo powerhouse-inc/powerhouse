@@ -42,21 +42,55 @@ export type LoadHarnessOptions = {
   pollIntervalMs?: number;
 };
 
-/** Wall-clock duration of each phase, plus their sum. */
+/**
+ * Wall-clock duration of each phase, plus their sum.
+ *
+ * Sync streams ops from A to B concurrently with generation (B does not wait
+ * for A to finish before applying what has already arrived), so a clock
+ * started only after `generateLoad` resolves measures nothing but whatever
+ * residual tail was left plus a poll quantum -- most of the real propagation
+ * latency already elapsed, unmeasured, during generation. {@link endToEndMs}
+ * is the honest headline: one clock, started before generation begins,
+ * stopped when B holds every generated op. {@link residualTailMs} is kept
+ * alongside it as the (always non-negative) remainder after generation
+ * itself finishes -- the old `propagateMs`, renamed to say what it actually
+ * measures.
+ */
 export type LoadHarnessDurations = {
   /** Provisioning + linking a fresh pair; 0 when `options.reactors` was given. */
   setupMs: number;
   /** Generating every op on A, sequentially. */
   generateMs: number;
-  /** From the end of generation until B holds every op. */
-  propagateMs: number;
+  /**
+   * From the start of generation on A until B first holds one more
+   * generated op than it did at the start of the run (the pre-run baseline
+   * count, see the module doc's re-run note). `undefined` when the run
+   * never generated anything for B to receive. The number to compare
+   * against this harness's live browser-measured "first-op propagation"
+   * reference points.
+   */
+  firstOpArrivedAtBMs: number | undefined;
+  /**
+   * From the start of generation on A until B holds every generated op.
+   * Always `>= generateMs`, since the last op cannot arrive on B before A
+   * finishes generating it. The headline latency number.
+   */
+  endToEndMs: number;
+  /**
+   * `endToEndMs - generateMs`, clamped to 0: how much longer B took to catch
+   * up after A stopped generating. Most of this harness's runs see most of
+   * the propagation already finish concurrently with generation, so this is
+   * usually small or zero -- that is the point, not a bug.
+   */
+  residualTailMs: number;
   totalMs: number;
 };
 
 /** Derived rates, the headline numbers a baseline comparison reads first. */
 export type LoadHarnessThroughput = {
   createOpsPerSec: number;
-  propagateOpsPerSec: number;
+  /** Ops per second over {@link LoadHarnessDurations.endToEndMs}, the honest end-to-end rate. */
+  e2eOpsPerSec: number;
 };
 
 /**

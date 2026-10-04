@@ -42,21 +42,30 @@ describe("runLocalSyncLoad", () => {
     expect(report.operationCounts.b).toBe(report.operationCounts.a);
     expect(report.operationCounts.a).toBeGreaterThanOrEqual(report.totalOps);
 
-    // Every phase measured something; propagation is not instantaneous zero,
-    // generation did not somehow outrun the clock.
+    // Every phase measured something; the end-to-end clock (generation start
+    // to B holding every op) can never run shorter than generation itself,
+    // and the residual tail left over after generation is never negative.
     expect(report.durationsMs.setupMs).toBeGreaterThan(0);
     expect(report.durationsMs.generateMs).toBeGreaterThan(0);
-    expect(report.durationsMs.propagateMs).toBeGreaterThanOrEqual(0);
+    expect(report.durationsMs.endToEndMs).toBeGreaterThanOrEqual(
+      report.durationsMs.generateMs,
+    );
+    expect(report.durationsMs.residualTailMs).toBeGreaterThanOrEqual(0);
+    // At least one op reached B strictly before the last one did -- the
+    // first-op arrival is measured, not just the end-to-end total.
+    expect(report.durationsMs.firstOpArrivedAtBMs).toBeGreaterThan(0);
+    expect(report.durationsMs.firstOpArrivedAtBMs).toBeLessThanOrEqual(
+      report.durationsMs.endToEndMs,
+    );
     expect(report.durationsMs.totalMs).toBeCloseTo(
-      report.durationsMs.setupMs +
-        report.durationsMs.generateMs +
-        report.durationsMs.propagateMs,
+      report.durationsMs.setupMs + report.durationsMs.endToEndMs,
       5,
     );
 
     expect(report.throughput.createOpsPerSec).toBeGreaterThan(0);
     expect(Number.isFinite(report.throughput.createOpsPerSec)).toBe(true);
-    expect(Number.isFinite(report.throughput.propagateOpsPerSec)).toBe(true);
+    expect(report.throughput.e2eOpsPerSec).toBeGreaterThan(0);
+    expect(Number.isFinite(report.throughput.e2eOpsPerSec)).toBe(true);
 
     // The report is the Stage-P baseline record: JSON-serializable, stable
     // field names, no live handles leaked into it.

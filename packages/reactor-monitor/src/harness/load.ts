@@ -28,6 +28,16 @@ export type {
  * `test/local-sync.test.ts`, waits for reactor B to hold all of them, and
  * returns a stable, JSON-serializable report -- the Stage-P baseline record.
  *
+ * Sync streams ops from A to B concurrently with generation -- B does not
+ * wait for A to finish before applying what has already arrived. That means
+ * a clock started only after generation resolves measures nothing but a
+ * residual tail plus a poll quantum, not real propagation latency: most of
+ * it already elapsed, unmeasured, while A was still generating. This harness
+ * instead polls B from before generation starts, so `durationsMs.endToEndMs`
+ * -- generation start to B holding every op -- is the honest headline
+ * number; `durationsMs.residualTailMs` keeps the old post-generation-only
+ * measurement around under a name that says what it is.
+ *
  * Live-measured reference points (2026-10-04, two browser SharedWorker
  * reactors, Stage-P baselines -- see the plan's "W1.3 milestone achieved"
  * note): alpha->beta first-op propagation 105ms; beta->alpha first-op
@@ -66,22 +76,26 @@ export async function runLocalSyncLoad(
     const baseline = process.memoryUsage();
 
     const generateStart = now();
-    await generateLoad(a, driveId, options, payloadSize);
-    const generateMs = now() - generateStart;
-    const afterGenerate = process.memoryUsage();
-
-    const propagateStart = now();
-    await waitForPropagation(
+    // Started before generation, not after: sync streams ops to B
+    // concurrently with generation, so the poller has to be live from the
+    // same clock origin as generation for `endToEndMs` to mean what it says.
+    const propagation = trackPropagation(
       b,
       driveId,
       totalOps,
       propagationTimeoutMs,
       pollIntervalMs,
     );
-    const propagateMs = now() - propagateStart;
+    await generateLoad(a, driveId, options, payloadSize);
+    const generateMs = now() - generateStart;
+    const afterGenerate = process.memoryUsage();
+
+    const endToEndMs = await propagation.completed;
+    const firstOpArrivedAtBMs = await propagation.firstOpArrivedMs;
     const afterPropagate = process.memoryUsage();
 
     const operationCounts = await countOperations(a, b, driveId);
+    const residualTailMs = Math.max(0, endToEndMs - generateMs);
 
     return {
       documentCount: options.documentCount,
@@ -91,12 +105,14 @@ export async function runLocalSyncLoad(
       durationsMs: {
         setupMs,
         generateMs,
-        propagateMs,
-        totalMs: setupMs + generateMs + propagateMs,
+        firstOpArrivedAtBMs,
+        endToEndMs,
+        residualTailMs,
+        totalMs: setupMs + endToEndMs,
       },
       throughput: {
         createOpsPerSec: rate(totalOps, generateMs),
-        propagateOpsPerSec: rate(totalOps, propagateMs),
+        e2eOpsPerSec: rate(totalOps, endToEndMs),
       },
       operationCounts,
       memory: { baseline, afterGenerate, afterPropagate },
@@ -190,26 +206,67 @@ async function countLoadNodes(
   }
 }
 
-async function waitForPropagation(
+type PropagationTracker = {
+  /**
+   * Resolves once B first holds at least one matching node, with the
+   * ms-from-generation-start timestamp of that observation; resolves
+   * `undefined` instead if `completed` settles before that ever happens
+   * (e.g. `totalOps` was 0). Never rejects, so it is safe to leave unawaited.
+   */
+  firstOpArrivedMs: Promise<number | undefined>;
+  /** Resolves with `endToEndMs` once B holds `targetCount` matching nodes; rejects on timeout. */
+  completed: Promise<number>;
+};
+
+/**
+ * Polls B from `start` (before generation on A begins, per the module doc)
+ * until it holds `targetCount` nodes matching the load prefix, or until
+ * `timeoutMs` elapses.
+ */
+function trackPropagation(
   b: ManagedInProcessReactor,
   driveId: string,
-  totalOps: number,
+  targetCount: number,
   timeoutMs: number,
   pollIntervalMs: number,
-): Promise<void> {
-  const deadline = now() + timeoutMs;
-  for (;;) {
-    const count = await countLoadNodes(b, driveId);
-    if (count >= totalOps) {
-      return;
+): PropagationTracker {
+  const start = now();
+
+  let resolveFirstOp: (value: number | undefined) => void;
+  let firstOpSettled = false;
+  const firstOpArrivedMs = new Promise<number | undefined>((resolve) => {
+    resolveFirstOp = resolve;
+  });
+  const settleFirstOp = (value: number | undefined): void => {
+    if (!firstOpSettled) {
+      firstOpSettled = true;
+      resolveFirstOp(value);
     }
-    if (now() >= deadline) {
-      throw new Error(
-        `runLocalSyncLoad: reactor "${b.name}" held ${count}/${totalOps} ops after ${timeoutMs}ms`,
-      );
+  };
+
+  const completed = (async (): Promise<number> => {
+    try {
+      const deadline = start + timeoutMs;
+      for (;;) {
+        const count = await countLoadNodes(b, driveId);
+        if (count >= 1) {
+          settleFirstOp(now() - start);
+        }
+        if (count >= targetCount) {
+          return now() - start;
+        }
+        if (now() >= deadline) {
+          throw new Error(
+            `runLocalSyncLoad: reactor "${b.name}" held ${count}/${targetCount} ops after ${timeoutMs}ms`,
+          );
+        }
+        await sleep(pollIntervalMs);
+      }
+    } finally {
+      settleFirstOp(undefined);
     }
-    await sleep(pollIntervalMs);
-  }
+  })();
+  return { firstOpArrivedMs, completed };
 }
 
 function sleep(ms: number): Promise<void> {
