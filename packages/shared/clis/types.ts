@@ -153,6 +153,13 @@ export type PHConnectOpenPanel = {
 export type PHConnectInstance = {
   namespace: string | null;
   reactorWorker: boolean;
+  /**
+   * Opt-in: route this Connect through a multi-reactor RoutingReactorClient
+   * over the in-browser reactor plus a remote Switchboard backend, instead of
+   * the single in-browser reactor. Off by default; the single-reactor path is
+   * unchanged for every existing user (multi-reactor stage 4, WP-E).
+   */
+  multiReactor?: boolean;
 };
 
 /** Each flag implies its predecessors, and must match the fleet Connect syncs
