@@ -22,6 +22,7 @@ import {
   type ReactorBackend,
   type ReactorCapabilities,
 } from "@powerhousedao/reactor-router";
+import { getSwitchboardGatewayUrlFromDriveUrl } from "@powerhousedao/reactor-browser";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { createRemoteSwitchboardBackend } from "./remote-switchboard-backend.js";
 
@@ -108,18 +109,23 @@ export function buildMultiReactorClient(
 /**
  * Derives the Switchboard reactor GraphQL endpoint from a configured remote
  * drive URL. A drive URL is `<origin>[/<prefix>]/d/<slug>`; the reactor GraphQL
- * endpoint `GraphQLReactorClient` talks to is `<origin>/graphql`. Returns
- * undefined for a URL that will not parse, so the caller can fall back to the
- * single-reactor path with a warning rather than throw during boot.
+ * endpoint is `<origin>[/<prefix>]/graphql`, so any reverse-proxy subpath is
+ * preserved (collapsing to `<origin>/graphql` 404s a Switchboard mounted under
+ * a prefix). Reuses Connect's existing drive-URL derivation rather than
+ * re-deriving it. Returns undefined for a URL that will not parse, so the
+ * caller can fall back to the single-reactor path with a warning rather than
+ * throw during boot.
  */
 export function deriveSwitchboardGraphqlUrl(
   remoteDriveUrl: string,
 ): string | undefined {
+  let parsed: URL;
   try {
-    return `${new URL(remoteDriveUrl).origin}/graphql`;
+    parsed = new URL(remoteDriveUrl);
   } catch {
     return undefined;
   }
+  return getSwitchboardGatewayUrlFromDriveUrl(parsed.href);
 }
 
 export type SelectAppReactorClientParams = {

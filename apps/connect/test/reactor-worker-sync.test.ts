@@ -12,6 +12,7 @@ import {
   localChannelConfig,
   LocalChannelPortRegistry,
   registerLocalPeer,
+  removeLocalPeer,
 } from "../src/reactor-worker-sync.js";
 
 function fakePort(): LocalChannelPort & {
@@ -168,6 +169,66 @@ describe("registerLocalPeer (adopt-sync-peer handler wiring)", () => {
 
     expect(port.close).toHaveBeenCalledTimes(1);
     expect(registry.has("peerA", "chanA")).toBe(false);
+  });
+});
+
+describe("removeLocalPeer frees the registry entry even when remove() rejects", () => {
+  const collectionId = collectionIdFromKey("drive.main.testdrive");
+
+  it("a rejected remove still frees the key so re-adopt of the same peer succeeds", async () => {
+    const registry = new LocalChannelPortRegistry();
+    registry.register("peerA", "chanA", fakePort());
+    const manager = {
+      list: () => [],
+      add: vi.fn(),
+      remove: vi.fn((..._args: unknown[]): Promise<void> =>
+        Promise.reject(new Error("remove failed")),
+      ),
+    } as unknown as ISyncManager;
+
+    await expect(
+      removeLocalPeer(manager, registry, {
+        remoteName: "remoteA",
+        peerId: "peerA",
+        channelName: "chanA",
+      }),
+    ).rejects.toThrow(/remove failed/);
+
+    // The entry is freed despite the rejection, so a re-adopt of the same key
+    // registers its port again rather than being refused as already-present.
+    expect(registry.has("peerA", "chanA")).toBe(false);
+
+    const { manager: freshManager, add } = fakeSyncManager();
+    await registerLocalPeer(
+      freshManager,
+      registry,
+      {
+        peerId: "peerA",
+        channelName: "chanA",
+        collectionId,
+        remoteName: "remoteA",
+        filter: DEFAULT_LOCAL_FILTER,
+      },
+      fakePort(),
+    );
+
+    expect(registry.has("peerA", "chanA")).toBe(true);
+    expect(add).toHaveBeenCalledTimes(1);
+  });
+
+  it("a successful remove drops the remote and frees the key", async () => {
+    const registry = new LocalChannelPortRegistry();
+    registry.register("peerB", "chanB", fakePort());
+    const { manager, remove } = fakeSyncManager();
+
+    await removeLocalPeer(manager, registry, {
+      remoteName: "remoteB",
+      peerId: "peerB",
+      channelName: "chanB",
+    });
+
+    expect(remove).toHaveBeenCalledWith("remoteB");
+    expect(registry.has("peerB", "chanB")).toBe(false);
   });
 });
 

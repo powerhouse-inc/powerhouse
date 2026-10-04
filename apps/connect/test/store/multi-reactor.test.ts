@@ -97,6 +97,14 @@ describe("deriveSwitchboardGraphqlUrl", () => {
     ).toBe("https://switchboard.example.com/graphql");
   });
 
+  it("preserves a reverse-proxy path prefix instead of collapsing to the origin", () => {
+    // A Switchboard mounted under /team-a: the reactor GraphQL endpoint lives
+    // under the same prefix, so <origin>/graphql would 404.
+    expect(deriveSwitchboardGraphqlUrl("https://host/team-a/d/slug")).toBe(
+      "https://host/team-a/graphql",
+    );
+  });
+
   it("returns undefined for an unparseable URL", () => {
     expect(deriveSwitchboardGraphqlUrl("not a url")).toBeUndefined();
   });

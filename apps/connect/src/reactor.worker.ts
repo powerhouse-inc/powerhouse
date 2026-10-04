@@ -46,6 +46,7 @@ import {
   collectionIdFromKey,
   LocalChannelPortRegistry,
   registerLocalPeer,
+  removeLocalPeer,
 } from "./reactor-worker-sync.js";
 import * as commonDocumentModels from "@powerhousedao/powerhouse-vetra-packages/document-models";
 import {
@@ -738,11 +739,14 @@ const host = new ReactorHost({
   onRemoveSyncPeer: async (params) => {
     if (!syncManager || !localChannelPorts) {
       throw new Error(
-        "Worker reactor has no sync module to adopt a local peer into",
+        "Worker reactor has no sync module to remove a local peer from",
       );
     }
-    await syncManager.remove(params.remoteName);
-    localChannelPorts.unregister(params.peerId, params.channelName);
+    await removeLocalPeer(syncManager, localChannelPorts, {
+      remoteName: params.remoteName,
+      peerId: params.peerId,
+      channelName: params.channelName,
+    });
   },
 });
 

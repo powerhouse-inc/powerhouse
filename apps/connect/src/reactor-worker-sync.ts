@@ -228,3 +228,31 @@ export async function registerLocalPeer(
     throw error;
   }
 }
+
+/** Names the registry entry a {@link removeLocalPeer} frees, and the remote it drops. */
+export type LocalRemoveSpec = {
+  /** The remote name to drop from the sync manager. */
+  remoteName: string;
+  /** The transport-provider key halves to free from the registry. */
+  peerId: string;
+  channelName: string;
+};
+
+/**
+ * The reactor side of the remove-sync-peer op: drops the local remote, then
+ * frees the registry/port entry. The unregister ALWAYS runs, even if
+ * `syncManager.remove()` throws -- a failed removal that left the entry behind
+ * would block re-adopting the same peer. Mirrors {@link registerLocalPeer}'s
+ * failure cleanup.
+ */
+export async function removeLocalPeer(
+  syncManager: ISyncManager,
+  registry: LocalChannelPortRegistry,
+  spec: LocalRemoveSpec,
+): Promise<void> {
+  try {
+    await syncManager.remove(spec.remoteName);
+  } finally {
+    registry.unregister(spec.peerId, spec.channelName);
+  }
+}

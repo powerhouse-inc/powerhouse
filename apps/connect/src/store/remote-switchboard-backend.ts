@@ -97,7 +97,10 @@ function asFullReactorClient(
 
   const drives = new Proxy({} as IDriveClient, {
     get(_target, prop) {
-      if (typeof prop !== "string") {
+      // `then`/symbol reads resolve to undefined so `await client.drives` does
+      // not treat this sub-proxy as a thenable (and reject spuriously); the
+      // outer client proxy guards `then` the same way.
+      if (typeof prop !== "string" || prop === "then") {
         return undefined;
       }
       return () => notSupported(`drives.${prop}`);
