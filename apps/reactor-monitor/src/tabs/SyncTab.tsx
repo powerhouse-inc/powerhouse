@@ -9,6 +9,11 @@ import {
   type StorageHealth,
 } from "@powerhousedao/reactor";
 import { useCallback, useEffect, useState } from "react";
+import {
+  ADMIN_ALLOWED,
+  AdminGateNote,
+  type AdminGate,
+} from "../components/AdminGate.js";
 import { isConnectionLying } from "../lib/sync-health.js";
 import { timeSince } from "../lib/time.js";
 
@@ -31,6 +36,19 @@ export type SyncTabProps = {
    * cannot work in front of the user.
    */
   readonly gqlRemotes: boolean;
+  /**
+   * Whether this reactor serves the repair levers -- trigger pull, reset
+   * channel, rewind cursor, requeue/clear a dead letter. Defaults to allowed,
+   * which is every locally hosted reactor. A REMOTE reactor serves them only
+   * when its host opted in (PH_INSPECTION_ADMIN), and the levers are then
+   * disabled with the reason rather than offered and refused: the facts came
+   * back with that reactor own info at provision time, so the click could
+   * only teach the operator less.
+   *
+   * Independent of {@link gqlRemotes}: that gates CREATING a remote on this
+   * reactor own channel types, this gates REPAIRING the remotes it has.
+   */
+  readonly admin?: AdminGate;
 };
 
 const POLL_INTERVAL_MS = 2000;
@@ -81,11 +99,13 @@ function StorageHealthPanel({ health }: { health: StorageHealth | undefined }) {
 function DeadLetterRow({
   remoteName,
   record,
+  repairable,
   onRequeue,
   onClear,
 }: {
   remoteName: string;
   record: DeadLetterRecord;
+  repairable: boolean;
   onRequeue: (remoteName: string, id: string) => void;
   onClear: (remoteName: string, id: string) => void;
 }) {
@@ -97,6 +117,7 @@ function DeadLetterRow({
         <code>{record.documentId}</code>
         <button
           className="rm-btn"
+          disabled={!repairable}
           onClick={() => onRequeue(remoteName, record.id)}
           type="button"
         >
@@ -104,6 +125,7 @@ function DeadLetterRow({
         </button>
         <button
           className="rm-btn"
+          disabled={!repairable}
           onClick={() => onClear(remoteName, record.id)}
           type="button"
         >
@@ -120,6 +142,7 @@ function RemoteRow({
   inspection,
   deadLetters,
   repairError,
+  repairable,
   onTriggerPull,
   onResetChannel,
   onRewindInbox,
@@ -130,6 +153,7 @@ function RemoteRow({
   inspection: RemoteSyncInspection | undefined;
   deadLetters: DeadLetterRecord[];
   repairError: string | undefined;
+  repairable: boolean;
   onTriggerPull: (name: string) => void;
   onResetChannel: (name: string) => void;
   onRewindInbox: (name: string, toOrdinal: number) => void;
@@ -170,6 +194,7 @@ function RemoteRow({
         </span>
         <button
           className="rm-btn"
+          disabled={!repairable}
           onClick={() => onTriggerPull(remote.meta.name)}
           type="button"
         >
@@ -177,6 +202,7 @@ function RemoteRow({
         </button>
         <button
           className="rm-btn"
+          disabled={!repairable}
           onClick={() => onResetChannel(remote.meta.name)}
           type="button"
         >
@@ -246,6 +272,7 @@ function RemoteRow({
         <label>
           Rewind inbox to ordinal
           <input
+            disabled={!repairable}
             max={maxRewind}
             min={0}
             onChange={(e) => setRewindTo(e.target.value)}
@@ -255,6 +282,7 @@ function RemoteRow({
         </label>
         <button
           className="rm-btn"
+          disabled={!repairable}
           onClick={() =>
             onRewindInbox(remote.meta.name, Number.parseInt(rewindTo, 10) || 0)
           }
@@ -281,6 +309,7 @@ function RemoteRow({
                 onRequeue={onRequeue}
                 record={record}
                 remoteName={remote.meta.name}
+                repairable={repairable}
               />
             ))}
           </ul>
@@ -290,7 +319,12 @@ function RemoteRow({
   );
 }
 
-export function SyncTab({ syncManager, inspector, gqlRemotes }: SyncTabProps) {
+export function SyncTab({
+  syncManager,
+  inspector,
+  gqlRemotes,
+  admin = ADMIN_ALLOWED,
+}: SyncTabProps) {
   const [remotes, setRemotes] = useState<Remote[]>([]);
   const [inspections, setInspections] = useState<
     Map<string, RemoteSyncInspection>
@@ -487,6 +521,8 @@ export function SyncTab({ syncManager, inspector, gqlRemotes }: SyncTabProps) {
     <div className="rm-tab">
       <h2>Sync / Remotes</h2>
 
+      <AdminGateNote gate={admin} />
+
       <StorageHealthPanel health={storageHealth} />
 
       {gqlRemotes ? null : (
@@ -568,6 +604,7 @@ export function SyncTab({ syncManager, inspector, gqlRemotes }: SyncTabProps) {
               onTriggerPull={handleTriggerPull}
               remote={remote}
               repairError={repairErrors.get(remote.meta.name)}
+              repairable={admin.enabled}
             />
           ))}
         </ul>

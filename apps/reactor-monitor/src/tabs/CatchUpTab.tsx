@@ -5,9 +5,16 @@
  */
 import type { CatchUpStatus, IInspector } from "@powerhousedao/reactor";
 import { useCallback, useEffect, useState } from "react";
+import {
+  ADMIN_ALLOWED,
+  AdminGateNote,
+  type AdminGate,
+} from "../components/AdminGate.js";
 
 export type CatchUpTabProps = {
   readonly inspector: IInspector;
+  /** Whether an on-demand sweep is served for this reactor. */
+  readonly admin?: AdminGate;
 };
 
 const POLL_INTERVAL_MS = 2000;
@@ -26,7 +33,10 @@ function formatDuration(ms: number): string {
   return `${seconds}s`;
 }
 
-export function CatchUpTab({ inspector }: CatchUpTabProps) {
+export function CatchUpTab({
+  inspector,
+  admin = ADMIN_ALLOWED,
+}: CatchUpTabProps) {
   const [status, setStatus] = useState<CatchUpStatus | undefined>();
   const [loading, setLoading] = useState(true);
   const [sweeping, setSweeping] = useState(false);
@@ -72,12 +82,13 @@ export function CatchUpTab({ inspector }: CatchUpTabProps) {
 
   return (
     <div className="rm-tab">
+      <AdminGateNote gate={admin} />
       <div className="rm-tab-header">
         <h2>Catch-up</h2>
         <div className="rm-actions">
           <button
             className="rm-btn"
-            disabled={sweeping}
+            disabled={sweeping || !admin.enabled}
             onClick={() => void handleSweepNow()}
             type="button"
           >

@@ -17,9 +17,19 @@
  */
 import type { IInspector, Job } from "@powerhousedao/reactor";
 import { Fragment, useCallback, useEffect, useState } from "react";
+import {
+  ADMIN_ALLOWED,
+  AdminGateNote,
+  type AdminGate,
+} from "../components/AdminGate.js";
 
 export type QueueTabProps = {
   readonly inspector: IInspector;
+  /**
+   * Whether pause/resume is served for this reactor. Defaults to allowed,
+   * which is every locally hosted reactor; a remote one reports it.
+   */
+  readonly admin?: AdminGate;
 };
 
 type JobWithStatus = Job & { status: "pending" | "executing" };
@@ -56,7 +66,7 @@ function sortJobs(
   return direction === "asc" ? sorted : sorted.reverse();
 }
 
-export function QueueTab({ inspector }: QueueTabProps) {
+export function QueueTab({ inspector, admin = ADMIN_ALLOWED }: QueueTabProps) {
   const [state, setState] = useState<{
     isPaused: boolean;
     pendingJobs: Job[];
@@ -122,12 +132,13 @@ export function QueueTab({ inspector }: QueueTabProps) {
 
   return (
     <div className="rm-tab">
+      <AdminGateNote gate={admin} />
       <div className="rm-tab-header">
         <h2>Queue</h2>
         <div className="rm-actions">
           <button
             className={state.isPaused ? "rm-btn rm-btn-warn" : "rm-btn"}
-            disabled={actionInProgress}
+            disabled={actionInProgress || !admin.enabled}
             onClick={() => void handlePauseResume()}
             type="button"
           >

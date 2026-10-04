@@ -18,10 +18,11 @@ import {
   type ReactorDescriptor,
 } from "@powerhousedao/reactor-monitor";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { adminGateFor, sqlGateFor } from "./components/AdminGate.js";
 import { LinkLocalSyncPanel } from "./components/LinkLocalSyncPanel.js";
 import {
   ProvisionPanel,
-  type ProvisionSyncMode,
+  type ProvisionRequest,
 } from "./components/ProvisionPanel.js";
 import { buildDescriptor as buildDescriptorFromForm } from "./provisioning.js";
 import { CatchUpTab } from "./tabs/CatchUpTab.js";
@@ -73,19 +74,25 @@ function renderPanel(
   }
 
   const reactor = entry.reactor;
+  // What this reactor serves beyond reads. Every locally hosted reactor serves
+  // everything -- it is this process's own; a REMOTE one reported which tiers
+  // its host opted into, and the levers are disabled with that reason rather
+  // than offered and refused (multi-reactor W3.2).
+  const admin = adminGateFor(reactor);
+  const sql = sqlGateFor(reactor);
   switch (tab) {
     case "Overview":
       return <OverviewTab reactor={reactor} />;
     case "Queue":
-      return <QueueTab inspector={reactor.inspector} />;
+      return <QueueTab admin={admin} inspector={reactor.inspector} />;
     case "Processors":
-      return <ProcessorsTab inspector={reactor.inspector} />;
+      return <ProcessorsTab admin={admin} inspector={reactor.inspector} />;
     case "Catch-up":
-      return <CatchUpTab inspector={reactor.inspector} />;
+      return <CatchUpTab admin={admin} inspector={reactor.inspector} />;
     case "Integrity":
-      return <IntegrityTab inspector={reactor.inspector} />;
+      return <IntegrityTab admin={admin} inspector={reactor.inspector} />;
     case "DB":
-      return <DbTab dbQuery={reactor.dbQuery} />;
+      return <DbTab dbQuery={reactor.dbQuery} sql={sql} />;
     case "Sync":
       return (
         <>
@@ -102,8 +109,17 @@ function renderPanel(
             this reactor), and an island none. The link panel reads its own end
             from the registry, so only the gql gate is passed in.
           */}
-          <LinkLocalSyncPanel reactorName={reactor.name} />
+          {/*
+            A remote reactor cannot be given a MessagePort, so the brokered
+            link panel has nothing to offer it -- `syncChannels` never contains
+            `local` for one, but the panel is also about THIS monitor's own
+            reactors, so it is left out entirely rather than rendered inert.
+          */}
+          {reactor.kind === "remote" ? null : (
+            <LinkLocalSyncPanel reactorName={reactor.name} />
+          )}
           <SyncTab
+            admin={admin}
             gqlRemotes={supportsSyncChannel(
               reactor.capabilities,
               GQL_CHANNEL_TYPE,
@@ -114,18 +130,25 @@ function renderPanel(
         </>
       );
     case "Events":
-      return <EventsTab events={reactor.events} />;
+      // The remote inspection surface is request/response GraphQL: nothing
+      // streams the far side's bus events, and `reactor.events` says so by
+      // throwing. Say it here instead of letting the tab hit that.
+      return reactor.kind === "remote" ? (
+        <p className="rm-placeholder" data-testid="events-unavailable">
+          A remote reactor&apos;s event bus is not forwarded over the inspection
+          surface (request/response GraphQL, no stream). The inspection tabs
+          poll instead.
+        </p>
+      ) : (
+        <EventsTab events={reactor.events} />
+      );
   }
 }
 
 type AppBodyProps = {
   readonly selected: string | undefined;
   readonly onSelect: (name: string) => void;
-  readonly onProvision: (
-    name: string,
-    kind: "worker" | "in-process",
-    syncMode: ProvisionSyncMode,
-  ) => void;
+  readonly onProvision: (request: ProvisionRequest) => void;
   readonly onKill: (name: string) => void;
 };
 
@@ -191,11 +214,7 @@ export type AppProps = {
    * Overridable so a test can force `storage: { kind: "memory" }` — a
    * worker/an `idb://` store needs a browser, not happy-dom.
    */
-  readonly buildDescriptor?: (
-    name: string,
-    kind: "worker" | "in-process",
-    syncMode: ProvisionSyncMode,
-  ) => ReactorDescriptor;
+  readonly buildDescriptor?: (request: ProvisionRequest) => ReactorDescriptor;
 };
 
 export function App({
@@ -205,16 +224,9 @@ export function App({
   const [selected, setSelected] = useState<string | undefined>();
 
   const handleProvision = useCallback(
-    (
-      name: string,
-      kind: "worker" | "in-process",
-      syncMode: ProvisionSyncMode,
-    ) => {
-      setDescriptors((previous) => [
-        ...previous,
-        buildDescriptor(name, kind, syncMode),
-      ]);
-      setSelected(name);
+    (request: ProvisionRequest) => {
+      setDescriptors((previous) => [...previous, buildDescriptor(request)]);
+      setSelected(request.name);
     },
     [buildDescriptor],
   );

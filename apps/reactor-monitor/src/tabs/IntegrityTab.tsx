@@ -9,9 +9,21 @@ import type {
   ValidationResult,
 } from "@powerhousedao/reactor";
 import { useCallback, useState } from "react";
+import {
+  ADMIN_ALLOWED,
+  AdminGateNote,
+  type AdminGate,
+} from "../components/AdminGate.js";
 
 export type IntegrityTabProps = {
   readonly inspector: IInspector;
+  /**
+   * Whether the integrity ops are served for this reactor. Validation sits
+   * behind the same gate as the rebuilds: it walks a document's whole
+   * operation history, which is an operator-weight read, and the remote
+   * surface serves the three together.
+   */
+  readonly admin?: AdminGate;
 };
 
 type Status = "idle" | "running" | "done" | "error";
@@ -76,7 +88,10 @@ function RebuildResultView({ result }: { result: RebuildResult }) {
   );
 }
 
-export function IntegrityTab({ inspector }: IntegrityTabProps) {
+export function IntegrityTab({
+  inspector,
+  admin = ADMIN_ALLOWED,
+}: IntegrityTabProps) {
   const [documentId, setDocumentId] = useState("");
   const [branch, setBranch] = useState("");
   const [status, setStatus] = useState<Status>("idle");
@@ -120,11 +135,16 @@ export function IntegrityTab({ inspector }: IntegrityTabProps) {
 
   const trimmedId = documentId.trim();
   const trimmedBranch = branch.trim() || undefined;
-  const disabled = !trimmedId || status === "running" || confirmAction !== null;
+  const disabled =
+    !admin.enabled ||
+    !trimmedId ||
+    status === "running" ||
+    confirmAction !== null;
 
   return (
     <div className="rm-tab">
       <h2>Integrity</h2>
+      <AdminGateNote gate={admin} />
       <div className="rm-form rm-form-inline">
         <label>
           Document ID

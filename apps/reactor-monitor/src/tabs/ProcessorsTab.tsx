@@ -11,14 +11,24 @@ import type {
   InspectorProcessorInfo,
 } from "@powerhousedao/reactor";
 import { useCallback, useEffect, useState } from "react";
+import {
+  ADMIN_ALLOWED,
+  AdminGateNote,
+  type AdminGate,
+} from "../components/AdminGate.js";
 
 export type ProcessorsTabProps = {
   readonly inspector: IInspector;
+  /** Whether a processor retry is served for this reactor. */
+  readonly admin?: AdminGate;
 };
 
 const POLL_INTERVAL_MS = 2000;
 
-export function ProcessorsTab({ inspector }: ProcessorsTabProps) {
+export function ProcessorsTab({
+  inspector,
+  admin = ADMIN_ALLOWED,
+}: ProcessorsTabProps) {
   const [processors, setProcessors] = useState<InspectorProcessorInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +70,7 @@ export function ProcessorsTab({ inspector }: ProcessorsTabProps) {
 
   return (
     <div className="rm-tab">
+      <AdminGateNote gate={admin} />
       <div className="rm-tab-header">
         <h2>Processors</h2>
         <button
@@ -151,7 +162,9 @@ export function ProcessorsTab({ inspector }: ProcessorsTabProps) {
                     {processor.status === "errored" ? (
                       <button
                         className="rm-btn rm-btn-warn"
-                        disabled={retryingId === processor.processorId}
+                        disabled={
+                          retryingId === processor.processorId || !admin.enabled
+                        }
                         onClick={() => void handleRetry(processor.processorId)}
                         type="button"
                       >

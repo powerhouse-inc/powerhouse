@@ -7,9 +7,22 @@
  */
 import type { IReactorDbQuery } from "@powerhousedao/reactor";
 import { useCallback, useEffect, useState } from "react";
+import {
+  ADMIN_ALLOWED,
+  AdminGateNote,
+  type AdminGate,
+} from "../components/AdminGate.js";
 
 export type DbTabProps = {
   readonly dbQuery: IReactorDbQuery;
+  /**
+   * Whether raw SQL against this reactor's store is served. Defaults to
+   * allowed, which is every locally hosted reactor -- its store is this
+   * process's own. A remote reactor's host has to opt in separately
+   * (PH_INSPECTION_SQL), and the whole tab is replaced by the reason when it
+   * has not: there is no part of a schema browser that works without SQL.
+   */
+  readonly sql?: AdminGate;
 };
 
 type TableRef = { schema: string; name: string };
@@ -28,7 +41,19 @@ function quoteIdentifier(identifier: string): string {
 
 const ROW_LIMIT = 50;
 
-export function DbTab({ dbQuery }: DbTabProps) {
+export function DbTab({ dbQuery, sql = ADMIN_ALLOWED }: DbTabProps) {
+  if (!sql.enabled) {
+    return (
+      <div className="rm-tab rm-db-tab">
+        <h2>DB</h2>
+        <AdminGateNote gate={sql} />
+      </div>
+    );
+  }
+  return <DbExplorer dbQuery={dbQuery} />;
+}
+
+function DbExplorer({ dbQuery }: { readonly dbQuery: IReactorDbQuery }) {
   const [tables, setTables] = useState<TableRef[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<TableRef | null>(null);

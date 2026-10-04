@@ -3,6 +3,7 @@ import {
   LOCAL_CHANNEL_TYPE,
   POLLING_CHANNEL_TYPE,
   type ManagedReactor,
+  type ManagedRemoteReactor,
   type ManagedWorkerReactor,
   type ReactorCapabilities,
   type ReactorSyncChannel,
@@ -134,7 +135,7 @@ function capabilityCells(
           ? "SharedWorker in this origin, reached over RPC."
           : capabilities.hosting === "in-process"
             ? "The calling thread; every component reachable directly."
-            : "Already-running reactor behind HTTP/GraphQL (stage 3).",
+            : "An already-running reactor attached over HTTP; nothing was built here.",
     },
     {
       label: "Storage",
@@ -155,8 +156,10 @@ function capabilityCells(
       label: "Workflows",
       ...yesNo(capabilities.workflows),
       note: capabilities.workflows
-        ? "May run the workflow engine."
-        : "Browser host: the engine forks child processes, so it is Node-only.",
+        ? "That host reported the workflow engine composed into it."
+        : capabilities.hosting === "remote"
+          ? "That host reported no workflow engine composed into it, so it fires no triggers."
+          : "Browser host: the engine forks child processes, so it is Node-only.",
     },
     {
       label: "Inspection",
@@ -166,8 +169,8 @@ function capabilityCells(
         capabilities.inspection === "direct"
           ? "Live components: synchronous truth, nothing serialized."
           : capabilities.inspection === "rpc"
-            ? "Proxy over a message port: only what the dispatch layer models crosses."
-            : "No inspection surface (W3.2 serves IInspector remotely).",
+            ? "Over a transport, so only what the dispatch layer models crosses: a worker message port, or reactor-api's inspection subgraph for a remote reactor (W3.2)."
+            : "No inspection surface at all: a router must not promise observability for this target.",
     },
     {
       label: "Sync channels",
@@ -183,7 +186,9 @@ function capabilityCells(
       ...yesNo(capabilities.selfHeal),
       note: capabilities.selfHeal
         ? "A poisoned PGlite session is recreated in place against the same store."
-        : "A storage fault is terminal: there is no durable store to reopen.",
+        : capabilities.hosting === "remote"
+          ? "The store is on the far side of the wire and is not ours to reopen."
+          : "A storage fault is terminal: there is no durable store to reopen.",
     },
   ];
 }
@@ -210,6 +215,41 @@ function CapabilityGrid({
   );
 }
 
+/**
+ * What the REMOTE reactor said about itself, beside the capability grid it was
+ * derived from.
+ *
+ * Shown separately because two of these facts are not capabilities at all but
+ * properties of the DEPLOYMENT -- which inspection tiers its host opted into
+ * -- and they are what every disabled lever in the other tabs points back to.
+ * The store class is here for the same reason: the contract records a remote
+ * store as `remote` (not ours to open), which is the right answer for a router
+ * and tells an operator nothing about what is actually behind it.
+ */
+function RemoteServerInfo({ reactor }: { reactor: ManagedRemoteReactor }) {
+  const info = reactor.serverInfo;
+  return (
+    <dl className="rm-kv">
+      <dt>Inspection endpoint</dt>
+      <dd>{reactor.endpoint}</dd>
+      <dt>Server store class</dt>
+      <dd>{info.storageKind}</dd>
+      <dt>Admin ops (PH_INSPECTION_ADMIN)</dt>
+      <dd data-testid="remote-admin-enabled">
+        {info.adminEnabled
+          ? "enabled: pause/resume, retries, sweeps, rebuilds and sync repair levers are served"
+          : "disabled: reads only, every state-changing lever is refused there"}
+      </dd>
+      <dt>Raw SQL (PH_INSPECTION_SQL)</dt>
+      <dd data-testid="remote-sql-enabled">
+        {info.sqlEnabled
+          ? "enabled: the DB tab can query that reactor's store"
+          : "disabled: the DB tab is unavailable"}
+      </dd>
+    </dl>
+  );
+}
+
 export function OverviewTab({ reactor }: OverviewTabProps) {
   return (
     <div className="rm-tab">
@@ -233,6 +273,16 @@ export function OverviewTab({ reactor }: OverviewTabProps) {
         <>
           <h3>Worker host</h3>
           <AdminInfo reactor={reactor} />
+        </>
+      ) : reactor.kind === "remote" ? (
+        <>
+          <h3>Remote host</h3>
+          <p className="rm-note">
+            Reported by that reactor over its inspection subgraph; the grid
+            above is derived from it rather than from the URL this monitor was
+            given (multi-reactor W3.2).
+          </p>
+          <RemoteServerInfo reactor={reactor} />
         </>
       ) : (
         <p className="rm-note">

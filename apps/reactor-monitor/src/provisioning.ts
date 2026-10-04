@@ -1,8 +1,5 @@
-import type {
-  ReactorDescriptor,
-  ReactorKind,
-} from "@powerhousedao/reactor-monitor";
-import type { ProvisionSyncMode } from "./components/ProvisionPanel.js";
+import type { ReactorDescriptor } from "@powerhousedao/reactor-monitor";
+import type { ProvisionRequest } from "./components/ProvisionPanel.js";
 
 /**
  * Constructs this app's SharedWorker for a worker-hosted reactor.
@@ -38,11 +35,14 @@ export function createMonitorWorker(name: string): SharedWorker {
  * stage 3 need. Prefer it unless the point is a reactor with no gql factory at
  * all.
  */
-export function buildDescriptor(
-  name: string,
-  kind: ReactorKind,
-  syncMode: ProvisionSyncMode = "local",
-): ReactorDescriptor {
+export function buildDescriptor(request: ProvisionRequest): ReactorDescriptor {
+  const { name, kind, syncMode = "local", remoteUrl } = request;
+  // A remote reactor was built by someone else: `sync` describes what this
+  // monitor would BUILD, so it has no meaning here, and the handle reads the
+  // far side's real channel types off its own report (multi-reactor W3.2).
+  if (kind === "remote") {
+    return { kind, name, remote: { url: remoteUrl ?? "" } };
+  }
   const sync = syncMode === "local" ? { local: true } : undefined;
   if (kind === "worker") {
     return {

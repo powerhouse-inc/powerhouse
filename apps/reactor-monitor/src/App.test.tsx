@@ -4,6 +4,7 @@ import { fireEvent, render, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { ReactorDescriptor } from "@powerhousedao/reactor-monitor";
 import { App, INSPECTOR_TABS } from "./App.js";
+import type { ProvisionRequest } from "./components/ProvisionPanel.js";
 
 // Provisioning a reactor stands up a whole PGlite (WASM cold boot plus the
 // reactor migrations), which outlasts waitFor's 1s default on a loaded
@@ -14,10 +15,7 @@ const WAIT = { timeout: 30_000 } as const;
 // storage, which needs a real browser's IndexedDB; happy-dom has none. Force
 // an ephemeral in-memory PGlite instead, matching
 // packages/reactor-monitor's own test convention.
-function testDescriptor(
-  name: string,
-  kind: "worker" | "in-process",
-): ReactorDescriptor {
+function testDescriptor({ name, kind }: ProvisionRequest): ReactorDescriptor {
   return { kind, name, storage: { kind: "memory" } };
 }
 
@@ -66,7 +64,7 @@ describe("App", () => {
   it("hides the gql add-remote form on a switchboard-scheme reactor but keeps local links", async () => {
     const view = render(
       <App
-        buildDescriptor={(name, kind) => ({
+        buildDescriptor={({ name, kind }) => ({
           kind,
           name,
           storage: { kind: "memory" },
