@@ -381,7 +381,9 @@ Stage 2 complete.
   restart with PH_INSPECTION_ADMIN=true, "Re-check server" flipped the tiers live
   under the same handle and a trigger-pull was exercised against a real channel.
   Minor follow-up: the server report said workflows:false despite vetra's runtime
-  booting — verify the detection keys on the composed runtime, not a proxy fact.
+  booting — **FIXED in W3.3**: the field was frozen at construction and nothing
+  ever set it; it is now the composed-runtime fact, reported per call and set by
+  switchboard once `composeWorkflowRuntime` has returned.
   W0.10 cold-boot KnexTimeout: third occurrence, strictly first-boot-after-rebuild;
   warm boots clean.
 - **W3.3 workflow placement + hardening** — see the W3.3 section below.
@@ -744,6 +746,14 @@ rendered distinctly in Studio — instead of claiming a failure that did not
 happen. An INDETERMINATE step does not take the error port and does not replay
 on rerun.
 
+**Still owed from the W3.3 line item**: "which reactor ran this" on a run row.
+The singleton owner name now exists (`PH_WORKFLOWS_SINGLETON_OWNER`, and the
+lease row holds it), so it is a column plus a read; it was left out of this pass
+to keep the change to hardening and placement. Also owed: the live pass — a
+Switchboard restart showing the lease claimed and released, a second process
+refused by name, and the monitor's capability grid reading `workflows: true`
+against the real vetra host.
+
 **7. The inspection `workflows` fact is the composed-runtime fact** (the W3.2
 live finding). It was an option defaulting to false that nothing ever set, so a
 vetra host whose runtime booted reported `workflows: false`. `startAPI` now
@@ -788,9 +798,14 @@ baseline numbers for all three axes so Stage P starts from data.
 ## Standing bug backlog (fix as encountered, each with a test)
 
 1. Dev fingerprint staleness (W0.6). 2. Worker-path processors unsupported/silent.
-3. `/__vendor__/shared-deps.js` 404 in dev. 4. Workflow policy knobs unenforced.
-5. Workflow EPIPE crash → boot-loop. 6. Host-call 10s timeout false-failure.
-7. Unbounded workflow step journal. 8. Sync mailbox state invisible over RPC (W0.5). 9. **PGlite aborted transaction +
+3. `/__vendor__/shared-deps.js` 404 in dev. 4. ~~Workflow policy knobs
+unenforced~~ **FIXED (W3.3)**: enforced, or marked NOT YET ENFORCED in the SDL.
+5. ~~Workflow EPIPE crash → boot-loop~~ **FIXED (W3.3)**: a crash-replay budget
+on the dedupe row, plus truncated log writes.
+6. ~~Host-call 10s timeout false-failure~~ **FIXED (W3.3)**: configurable, never
+shorter than the step's timeout, and INDETERMINATE rather than FAILED.
+7. ~~Unbounded workflow step journal~~ **FIXED (W3.3)**: retention defaults to 30
+days. 8. Sync mailbox state invisible over RPC (W0.5). 9. **PGlite aborted transaction +
    active portal bricks worker reactor** — root cause of Accounts sync death; see
    docs/bugs/2026-10-03-pglite-aborted-transaction-bricks-worker-reactor.md.
 10. externalDeps/queueHint unvalidated — dangling hint wedges a sub-queue silently
@@ -813,9 +828,11 @@ baseline numbers for all three axes so Stage P starts from data.
 14. reactor-monitor polish: kill-during-provision race adopts killed reactor
    (registry.ts:58), QueueTab pause button bricks without try/finally, EventsTab
    duplicate keys, unbounded getQueueState cloned over RPC every 2s.
-15. reactor-workflow: rerun re-executes side-effectful steps whose journaled output
-   was truncated by the 256KB cap; truncation marker is duck-typed (service.ts:3774,
-   store.ts:842) — fold into W3.3 workflow hardening.
+15. ~~reactor-workflow: rerun re-executes side-effectful steps whose journaled
+   output was truncated by the 256KB cap; truncation marker is duck-typed~~
+   **FIXED (W3.3)**: a truncated SUCCEEDED step replays as completed with an
+   explicitly unavailable output, and the marker is keyed on a reserved
+   sentinel (the legacy shape is still read, matched by its exact key set).
 16. GqlResponseChannel (server side) still has the pre-fix cursor pattern:
    watermark raised before the write, no retry on rejection, concurrent upserts
    possible (gql-res-channel.ts:74, persistOutboxCursor) — same class as the

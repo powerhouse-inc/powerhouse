@@ -212,8 +212,9 @@ type Options = {
    * Which tiers of the reactor inspection surface this host serves
    * (multi-reactor W3.2). Both default to the matching environment variable
    * and to OFF; see `IReactorInspectionSource` for the posture. `workflows`
-   * is a fact the host reports about itself, because the workflow runtime is
-   * composed after the API boots.
+   * is a fact the host reports about itself, and a host that composes the
+   * engine after the API boots — which is all of them — reports it through
+   * `api.inspection.setWorkflowsComposed()` rather than here.
    */
   inspection?: ReactorInspectionOptions;
 };
