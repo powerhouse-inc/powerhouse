@@ -162,6 +162,22 @@ export type SyncManagerConfig = {
   /** Backoff for reloading a received marker whose load failed transiently. */
   markerRetryBaseDelayMs: number;
   markerRetryMaxDelayMs: number;
+  /**
+   * How many inbox chunks may be inside their load at once.
+   *
+   * Chunks that share no lane key run concurrently, so without a bound one
+   * poll's worth of a wide drive would put every document's chunk into the
+   * queue at the same time and hold a batch of operations in memory for each.
+   * The bound is on chunks rather than operations because a chunk is already
+   * capped at {@link SyncManagerConfig.maxInboxBatchSize}.
+   */
+  maxConcurrentInboxChunks: number;
+};
+
+/** One inbox chunk's loads, enqueued and awaiting their jobs. */
+type InboxBatchEnqueued = {
+  items: Array<{ remote: Remote; syncOp: SyncOperation }>;
+  result: BatchLoadResult;
 };
 
 enum OutboxMode {
@@ -176,6 +192,7 @@ const defaultSyncManagerConfig: SyncManagerConfig = {
   staleRemotePollWindowMs: 5 * 60_000,
   markerRetryBaseDelayMs: 1_000,
   markerRetryMaxDelayMs: 60_000,
+  maxConcurrentInboxChunks: 8,
 };
 
 const PLAN_KEY_TO_JOB_UUID_CAP = 10000;
@@ -319,7 +336,10 @@ export class SyncManager
   // settled ordinals at or below this have owed their collections' remotes
   private sweptThrough = 0;
   private settledUnsubscribe?: () => void;
-  private inboxChunkChain: Promise<void> = Promise.resolve();
+  // lane key -> the tail of the chunks queued on it
+  private readonly inboxLanes = new Map<string, Promise<void>>();
+  private inboxChunksInFlight = 0;
+  private readonly inboxSlotWaiters: Array<() => void> = [];
   private readonly capabilities: readonly PeerCapability[];
   private readonly manifest: PeerManifest;
   private readonly localSupport: Supports;
@@ -580,6 +600,15 @@ export class SyncManager
     this.backfillAbortControllers.clear();
     this.planKeyToJobUuid.clear();
     this.lastEnqueuedJobIdByKey.clear();
+    this.inboxLanes.clear();
+    // Released rather than abandoned: a waiter never resolved leaves its lane
+    // promise pending for the life of the process.
+    for (const waiter of this.inboxSlotWaiters.splice(
+      0,
+      this.inboxSlotWaiters.length,
+    )) {
+      waiter();
+    }
     this.prunePending.clear();
     this.pruneDrainDeferred = false;
     this.batchAggregator.clear();
@@ -2265,14 +2294,22 @@ export class SyncManager
         }
       } else if (this.purgedDocumentIds.has(syncOp.documentId)) {
         dropped.push(syncOp);
-      } else if (!this.quarantinedDocumentIds.has(syncOp.documentId)) {
+      } else if (this.quarantinedDocumentIds.has(syncOp.documentId)) {
+        // Dropped rather than left where it is. A quarantined document's
+        // operations are deliberately not applied, and an item that stays in
+        // the inbox unapplied now holds the channel's ack below itself, which
+        // would freeze the cursor of every other document on the channel. The
+        // quarantine is cleared by re-queuing the dead letter, which puts the
+        // operation back itself, so nothing depends on re-pulling it.
+        dropped.push(syncOp);
+      } else {
         eligible.push(syncOp);
       }
     }
     // A purged id's history is gone here; a job or a dead letter would restore it.
     for (const syncOp of dropped) {
       this.logger.debug(
-        "Dropping received operations of a purged or already-loading document (@remote, @documentId)",
+        "Dropping received operations of a purged, quarantined or already-loading document (@remote, @documentId)",
         remote.meta.name,
         syncOp.documentId,
       );
@@ -2419,19 +2456,137 @@ export class SyncManager
   private processInboxChunks(
     chunks: Array<Array<{ remote: Remote; syncOp: SyncOperation }>>,
   ): Promise<void> {
-    const next = this.inboxChunkChain.then(async () => {
-      for (const chunk of chunks) {
-        if (this.isShutdown) return;
-        await this.applyInboxBatch(chunk);
+    const queued = chunks.map((chunk) => this.queueInboxChunk(chunk));
+    return Promise.all(queued).then(() => undefined);
+  }
+
+  /**
+   * Queues one chunk behind every chunk it shares a lane key with, and beside
+   * every chunk it does not.
+   *
+   * One chain for the whole inbox made a document's failures the channel's: a
+   * load that dead-letters is bad enough, and a load deferred for a missing
+   * ancestor holds the chain for the deferral's whole time-to-live, during
+   * which no other document applies anything. The lane keys are the two orders
+   * the apply path owes: the documents a chunk writes, because the queue
+   * serialises a document's jobs and the FIFO dependency the plan injects
+   * assumes they were enqueued in order, and the plan keys its dependency edges
+   * name, because a cross-chunk edge only resolves once the chunk providing it
+   * has been enqueued. Chunks sharing neither are independent, and the executor
+   * does not order them anyway.
+   */
+  private queueInboxChunk(
+    chunk: Array<{ remote: Remote; syncOp: SyncOperation }>,
+  ): Promise<void> {
+    const keys = this.inboxLaneKeys(chunk);
+    const predecessors: Array<Promise<void>> = [];
+    for (const key of keys) {
+      const tail = this.inboxLanes.get(key);
+      if (tail !== undefined) predecessors.push(tail);
+    }
+
+    const lane = Promise.all(predecessors)
+      .then(() => this.runInboxChunk(chunk))
+      .catch((err: unknown) => {
+        this.logger.error(
+          "Inbox chunk processing failed (@error)",
+          err instanceof Error ? err.message : String(err),
+        );
+      });
+
+    for (const key of keys) {
+      this.inboxLanes.set(key, lane);
+    }
+    void lane.then(() => {
+      for (const key of keys) {
+        if (this.inboxLanes.get(key) === lane) this.inboxLanes.delete(key);
       }
     });
-    this.inboxChunkChain = next.catch((err) => {
-      this.logger.error(
-        "Inbox chunk processing failed (@error)",
-        err instanceof Error ? err.message : String(err),
-      );
+
+    return lane;
+  }
+
+  /** The documents a chunk writes and the plan keys its dependency edges name. */
+  private inboxLaneKeys(
+    chunk: Array<{ remote: Remote; syncOp: SyncOperation }>,
+  ): string[] {
+    const keys = new Set<string>();
+    for (const { syncOp } of chunk) {
+      // Not per scope or branch: the queue serialises a document's jobs across
+      // both, so a per-scope lane would claim an independence it does not have.
+      keys.add(`doc ${syncOp.documentId}`);
+      keys.add(`plan ${syncOp.jobId}`);
+      for (const dep of syncOp.jobDependencies) {
+        if (dep) keys.add(`plan ${dep}`);
+      }
+    }
+    return [...keys];
+  }
+
+  /**
+   * Enqueues a chunk under a slot and resolves once it is enqueued, leaving the
+   * resolution running on under the same slot.
+   *
+   * The returned promise is what the lane waits on, so it has to settle at the
+   * enqueue and not at the apply: holding the lane through the apply would put
+   * every later chunk of every document in a mixed chunk behind the slowest
+   * document in it. The slot is held to the end instead, which is where the
+   * backpressure belongs -- it bounds how many chunks sit in the queue at once.
+   */
+  private async runInboxChunk(
+    chunk: Array<{ remote: Remote; syncOp: SyncOperation }>,
+  ): Promise<void> {
+    if (this.isShutdown) return;
+    await this.acquireInboxSlot();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
+    if (this.isShutdown) {
+      this.releaseInboxSlot();
+      return;
+    }
+
+    let enqueued: InboxBatchEnqueued | undefined;
+    try {
+      enqueued = await this.enqueueInboxBatch(chunk);
+    } catch (error) {
+      this.releaseInboxSlot();
+      throw error;
+    }
+
+    if (enqueued === undefined) {
+      this.releaseInboxSlot();
+      return;
+    }
+
+    void this.resolveInboxBatch(enqueued)
+      .catch((err: unknown) => {
+        this.logger.error(
+          "Inbox chunk resolution failed (@error)",
+          err instanceof Error ? err.message : String(err),
+        );
+      })
+      .finally(() => {
+        this.releaseInboxSlot();
+      });
+  }
+
+  private acquireInboxSlot(): Promise<void> {
+    if (this.inboxChunksInFlight < this.config.maxConcurrentInboxChunks) {
+      this.inboxChunksInFlight++;
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => {
+      this.inboxSlotWaiters.push(resolve);
     });
-    return next;
+  }
+
+  /** Hands the slot to whoever is waiting rather than freeing and re-taking it. */
+  private releaseInboxSlot(): void {
+    const waiter = this.inboxSlotWaiters.shift();
+    if (waiter !== undefined) {
+      waiter();
+      return;
+    }
+    this.inboxChunksInFlight--;
   }
 
   private async applyInboxJob(
@@ -2601,9 +2756,19 @@ export class SyncManager
     await this.applyInboxJob(remote, syncOp);
   }
 
-  private async applyInboxBatch(
+  /**
+   * Enqueues one chunk's loads and reports what has to be resolved.
+   *
+   * Split from the resolution because the two have different obligations. The
+   * enqueue carries the ordering: the FIFO dependency and the cross-chunk plan
+   * key both read what the chunk before them enqueued, so chunks sharing a lane
+   * have to reach the queue in order. Nothing downstream needs them to finish
+   * in order -- the queue holds the dependency edges and serialises a document
+   * itself -- so the resolution runs outside the lane.
+   */
+  private async enqueueInboxBatch(
     received: Array<{ remote: Remote; syncOp: SyncOperation }>,
-  ): Promise<void> {
+  ): Promise<InboxBatchEnqueued | undefined> {
     const refused = new Set<SyncOperation>();
     for (const { remote, syncOp } of received) {
       const refusals = await this.refuseOnReceipt(remote, [syncOp]);
@@ -2612,7 +2777,7 @@ export class SyncManager
       }
     }
     const items = received.filter(({ syncOp }) => !refused.has(syncOp));
-    if (items.length === 0) return;
+    if (items.length === 0) return undefined;
     const sourceRemote = items[0].remote.meta.name;
 
     const chunkKeys = new Set(items.map(({ syncOp }) => syncOp.jobId));
@@ -2652,7 +2817,7 @@ export class SyncManager
         cursorProtectedLoadMeta(sourceRemote),
       );
     } catch (error) {
-      if (this.isShutdown) return;
+      if (this.isShutdown) return undefined;
       for (const { remote, syncOp } of items) {
         const err = error instanceof Error ? error : new Error(String(error));
         if (carriesMarker(syncOp)) {
@@ -2663,10 +2828,10 @@ export class SyncManager
         remote.channel.deadLetter.add(syncOp);
         remote.channel.inbox.remove(syncOp);
       }
-      return;
+      return undefined;
     }
 
-    if (this.isShutdown) return;
+    if (this.isShutdown) return undefined;
 
     for (const plan of jobs) {
       if (!(plan.key in result.jobs)) continue;
@@ -2676,77 +2841,99 @@ export class SyncManager
       this.lastEnqueuedJobIdByKey.set(fifoKey, info.id);
     }
 
-    for (const { remote, syncOp } of items) {
-      if (!(syncOp.jobId in result.jobs)) {
-        this.logger.error(
-          "Job key missing from batch load result (@remote, @documentId, @jobId)",
-          remote.meta.name,
-          syncOp.documentId,
-          syncOp.jobId,
-        );
-        const error = new ChannelError(
-          ChannelErrorSource.Inbox,
-          new Error(`Job key '${syncOp.jobId}' missing from batch load result`),
-        );
-        syncOp.failed(error);
-        remote.channel.deadLetter.add(syncOp);
-        remote.channel.inbox.remove(syncOp);
-        continue;
-      }
-      const jobInfo = result.jobs[syncOp.jobId];
+    return { items, result };
+  }
 
-      let completedJobInfo;
-      try {
-        completedJobInfo = await this.awaiter.waitForJob(
-          jobInfo.id,
-          this.abortController.signal,
-        );
-      } catch (error) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
-        if (this.isShutdown) continue;
-        const err = error instanceof Error ? error : new Error(String(error));
-        if (carriesMarker(syncOp)) {
-          this.retryMarker(remote, syncOp, err.message);
-          continue;
-        }
-        syncOp.failed(new ChannelError(ChannelErrorSource.Inbox, err));
-        remote.channel.deadLetter.add(syncOp);
-        remote.channel.inbox.remove(syncOp);
-        continue;
-      }
+  /**
+   * Resolves every item of one enqueued chunk beside the others.
+   *
+   * Awaiting them in turn made one document's load the batch's: a load deferred
+   * for a missing ancestor holds its await for the deferral's whole
+   * time-to-live, and an item behind it in the same batch waited that out
+   * however unrelated its document was.
+   */
+  private async resolveInboxBatch(enqueued: InboxBatchEnqueued): Promise<void> {
+    await Promise.all(
+      enqueued.items.map(({ remote, syncOp }) =>
+        this.resolveInboxItem(remote, syncOp, enqueued.result),
+      ),
+    );
+  }
 
+  private async resolveInboxItem(
+    remote: Remote,
+    syncOp: SyncOperation,
+    result: BatchLoadResult,
+  ): Promise<void> {
+    if (!(syncOp.jobId in result.jobs)) {
+      this.logger.error(
+        "Job key missing from batch load result (@remote, @documentId, @jobId)",
+        remote.meta.name,
+        syncOp.documentId,
+        syncOp.jobId,
+      );
+      const error = new ChannelError(
+        ChannelErrorSource.Inbox,
+        new Error(`Job key '${syncOp.jobId}' missing from batch load result`),
+      );
+      syncOp.failed(error);
+      remote.channel.deadLetter.add(syncOp);
+      remote.channel.inbox.remove(syncOp);
+      return;
+    }
+    const jobInfo = result.jobs[syncOp.jobId];
+
+    let completedJobInfo;
+    try {
+      completedJobInfo = await this.awaiter.waitForJob(
+        jobInfo.id,
+        this.abortController.signal,
+      );
+    } catch (error) {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
       if (this.isShutdown) return;
-
-      let syncOpResolved = false;
-      if (completedJobInfo.status !== JobStatus.FAILED) {
-        syncOp.executed();
-        if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
-        syncOpResolved = true;
-      } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
-        this.tombstone(syncOp.documentId);
-        syncOp.executed();
-        syncOpResolved = true;
-      } else if (
-        carriesMarker(syncOp) &&
-        !isRefusedMarker(completedJobInfo.error)
-      ) {
-        this.retryMarker(
-          remote,
-          syncOp,
-          completedJobInfo.error?.message || "Unknown error",
-        );
-        continue;
-      } else {
-        syncOp.failed(this.inboxFailure(syncOp, completedJobInfo.error));
-        remote.channel.deadLetter.add(syncOp);
+      const err = error instanceof Error ? error : new Error(String(error));
+      if (carriesMarker(syncOp)) {
+        this.retryMarker(remote, syncOp, err.message);
+        return;
       }
-
+      syncOp.failed(new ChannelError(ChannelErrorSource.Inbox, err));
+      remote.channel.deadLetter.add(syncOp);
       remote.channel.inbox.remove(syncOp);
+      return;
+    }
 
-      if (syncOpResolved && this.requeuedDeadLetterIds.has(syncOp.id)) {
-        await this.dropRequeuedDeadLetter(syncOp.id);
-      }
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
+    if (this.isShutdown) return;
+
+    let syncOpResolved = false;
+    if (completedJobInfo.status !== JobStatus.FAILED) {
+      syncOp.executed();
+      if (carriesMarker(syncOp)) this.tombstone(syncOp.documentId);
+      syncOpResolved = true;
+    } else if (isPurgedFailure(completedJobInfo.error, syncOp.documentId)) {
+      this.tombstone(syncOp.documentId);
+      syncOp.executed();
+      syncOpResolved = true;
+    } else if (
+      carriesMarker(syncOp) &&
+      !isRefusedMarker(completedJobInfo.error)
+    ) {
+      this.retryMarker(
+        remote,
+        syncOp,
+        completedJobInfo.error?.message || "Unknown error",
+      );
+      return;
+    } else {
+      syncOp.failed(this.inboxFailure(syncOp, completedJobInfo.error));
+      remote.channel.deadLetter.add(syncOp);
+    }
+
+    remote.channel.inbox.remove(syncOp);
+
+    if (syncOpResolved && this.requeuedDeadLetterIds.has(syncOp.id)) {
+      await this.dropRequeuedDeadLetter(syncOp.id);
     }
   }
 

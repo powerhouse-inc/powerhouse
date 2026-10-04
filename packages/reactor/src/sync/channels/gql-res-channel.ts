@@ -49,7 +49,10 @@ export class GqlResponseChannel implements IChannel {
     this.cursorStorage = cursorStorage;
     this.isShutdown = false;
 
-    this.inbox = new Mailbox({ holdAckBelowMarkers: true });
+    this.inbox = new Mailbox({
+      holdAckBelowMarkers: true,
+      holdAckBelowUnapplied: true,
+    });
     this.outbox = new Mailbox();
     this.deadLetter = new Mailbox();
 
