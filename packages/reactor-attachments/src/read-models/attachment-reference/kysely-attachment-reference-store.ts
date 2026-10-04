@@ -4,12 +4,42 @@ import { parseRef } from "../../ref.js";
 import type { AttachmentReferenceDatabase } from "./storage/types.js";
 import type {
   AttachmentReferenceInput,
+  AttachmentReferencePageResult,
   IAttachmentReferenceReader,
+  IAttachmentReferenceScanner,
   IAttachmentReferenceWriter,
 } from "./types.js";
 
+/** Keyset cursor: the `(document_id, attachment_ref)` pair the last page ended on. */
+type ScanCursor = {
+  documentId: string;
+  ref: string;
+};
+
+function encodeCursor(cursor: ScanCursor): string {
+  return JSON.stringify([cursor.documentId, cursor.ref]);
+}
+
+function decodeCursor(cursor: string): ScanCursor {
+  const parsed: unknown = JSON.parse(cursor);
+  if (
+    !Array.isArray(parsed) ||
+    parsed.length !== 2 ||
+    typeof parsed[0] !== "string" ||
+    typeof parsed[1] !== "string"
+  ) {
+    throw new Error(
+      `Invalid attachment reference scan cursor: ${JSON.stringify(cursor)}`,
+    );
+  }
+  return { documentId: parsed[0], ref: parsed[1] };
+}
+
 export class KyselyAttachmentReferenceStore
-  implements IAttachmentReferenceReader, IAttachmentReferenceWriter
+  implements
+    IAttachmentReferenceReader,
+    IAttachmentReferenceScanner,
+    IAttachmentReferenceWriter
 {
   constructor(private readonly db: Kysely<AttachmentReferenceDatabase>) {}
 
@@ -37,6 +67,53 @@ export class KyselyAttachmentReferenceStore
       .execute();
 
     return rows.map((row) => row.scope);
+  }
+
+  /**
+   * Keyset paging over the unique `(document_id, attachment_ref)` constraint,
+   * rather than OFFSET: a scan that runs while the read model is still
+   * indexing must not skip or repeat a row because rows appeared behind the
+   * cursor. That is exactly the boot case the replicator's re-scan runs in.
+   */
+  async listReferences(
+    cursor: string | undefined,
+    limit: number,
+  ): Promise<AttachmentReferencePageResult> {
+    let query = this.db
+      .selectFrom("attachment_reference")
+      .select(["document_id", "attachment_ref"])
+      .orderBy("document_id", "asc")
+      .orderBy("attachment_ref", "asc")
+      .limit(limit);
+
+    if (cursor !== undefined) {
+      const after = decodeCursor(cursor);
+      query = query.where((eb) =>
+        eb.or([
+          eb("document_id", ">", after.documentId),
+          eb.and([
+            eb("document_id", "=", after.documentId),
+            eb("attachment_ref", ">", after.ref),
+          ]),
+        ]),
+      );
+    }
+
+    const rows = await query.execute();
+    const last = rows.at(-1);
+    return {
+      references: rows.map((row) => ({
+        documentId: row.document_id,
+        ref: row.attachment_ref as AttachmentRef,
+      })),
+      nextCursor:
+        rows.length === limit && last
+          ? encodeCursor({
+              documentId: last.document_id,
+              ref: last.attachment_ref,
+            })
+          : undefined,
+    };
   }
 
   async addReferences(

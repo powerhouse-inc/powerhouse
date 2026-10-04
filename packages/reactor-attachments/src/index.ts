@@ -110,6 +110,27 @@ export {
   type CompiledAttachmentExtractor,
   type IAttachmentSchemaCompiler,
 } from "./reference-index/index.js";
+// Lazy fetch-on-reference byte replication (multi-reactor W3.4).
+export {
+  AttachmentReplicator,
+  DEFAULT_ATTACHMENT_BACKLOG_PAGE_SIZE,
+  DEFAULT_ATTACHMENT_REPLICATION_CONCURRENCY,
+  DEFAULT_ATTACHMENT_RETRY_POLICY,
+  SchemaCompiledOperationRefs,
+  sha256Hex,
+  staticAttachmentBacklog,
+  SYSTEM_REPLICATION_TIMERS,
+  type AttachmentReferencePage,
+  type AttachmentReplicationEntry,
+  type AttachmentReplicationState,
+  type AttachmentReplicatorOptions,
+  type AttachmentReplicatorStatus,
+  type AttachmentRetryPolicy,
+  type IAttachmentReferenceBacklog,
+  type IOperationAttachmentRefs,
+  type PersistedAttachmentReference,
+  type ReplicationTimers,
+} from "./replication/index.js";
 export {
   ATTACHMENT_REFERENCE_MIGRATION_LOCK_TABLE,
   ATTACHMENT_REFERENCE_MIGRATION_TABLE,
@@ -124,7 +145,10 @@ export {
   type AttachmentReferenceIndexBuildResult,
   type AttachmentReferenceInput,
   type AttachmentReferenceMigrationResult,
+  type AttachmentReferencePageResult,
+  type AttachmentReferenceRow,
   type IAttachmentReferenceReader,
+  type IAttachmentReferenceScanner,
   type IAttachmentReferenceWriter,
 } from "./read-models/attachment-reference/index.js";
 export {
