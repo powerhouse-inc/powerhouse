@@ -3,6 +3,8 @@ import {
   DocumentIntegrityService,
   HardenedPGliteDialect,
   InMemoryQueue,
+  LOCAL_CHANNEL_TYPE,
+  LocalChannelFactory,
   queryThroughDialect,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -40,6 +42,8 @@ import {
   createRelationalDb,
   type IRelationalDb,
 } from "@powerhousedao/shared/processors";
+import { childLogger } from "document-model";
+import { LocalChannelPortRegistry } from "./reactor-worker-sync.js";
 import * as commonDocumentModels from "@powerhousedao/powerhouse-vetra-packages/document-models";
 import {
   loadFlaggedDocumentModels,
@@ -121,6 +125,11 @@ let loader: WorkerPackageLoader | undefined;
 let registry: ModelRegistry | undefined;
 let signer: RenownCryptoSigner | undefined;
 let syncManager: (ISyncManager & ISyncInspector) | undefined;
+// The brokered-local-sync port registry for the live build. A LocalChannel
+// factory composed onto the gql scheme resolves its ports from here; it is
+// empty (and so inert) until the adopt-sync-peer op registers a transferred
+// MessagePort (multi-reactor stage 4, WP-B/C).
+let localChannelPorts: LocalChannelPortRegistry | undefined;
 type RelationalState = {
   pg?: PgLiveModuleNs.PGliteWithLive;
   db?: IRelationalDb;
@@ -540,9 +549,22 @@ const host = new ReactorHost({
           : undefined;
       phase = "building reactor module";
       console.info(`[reactor.worker] boot: ${phase}`);
+      // Compose a LocalChannelFactory onto the gql scheme (multi-reactor W3.0,
+      // Connect stage 4 WP-B). The builder still constructs the gql factory
+      // itself and routes `{type:"gql"}` remotes through it; this adds
+      // `{type:"local"}` routing for brokered MessagePort peers. INERT until a
+      // peer is adopted: with no port registered the registry's provider returns
+      // undefined, so no local channel is ever built and gql routing is
+      // unchanged.
+      localChannelPorts = new LocalChannelPortRegistry();
+      const localChannelFactory = new LocalChannelFactory(
+        childLogger(["reactor.worker", "local-channel"]),
+        localChannelPorts.provider,
+      );
       const reactorBuilder = new ReactorBuilder()
         .withDocumentModelSources(models)
         .withChannelScheme(ChannelScheme.CONNECT)
+        .withAdditionalChannelFactory(LOCAL_CHANNEL_TYPE, localChannelFactory)
         .withExecutorConfig({ featureFlags: construct.featureFlags ?? {} })
         .withJwtHandler(jwtHandler)
         .withKysely(owned.reactorDb)
