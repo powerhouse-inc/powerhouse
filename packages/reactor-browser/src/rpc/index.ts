@@ -67,7 +67,9 @@ export {
 export { createPortTransport, type IRpcTransport } from "./transport.js";
 export {
   sendAdoptSyncPeer,
+  sendRemoveSyncPeer,
   type AdoptSyncPeerParams,
+  type RemoveSyncPeerParams,
 } from "./adopt-sync-peer.js";
 export { MessageRouter } from "./message-router.js";
 export {
@@ -91,6 +93,7 @@ export type {
   RpcLiveSubscribe,
   RpcLiveUnsub,
   RpcMessage,
+  RpcRemoveSyncPeer,
   VersionFingerprint,
   WorkerInspectorInfo,
   WorkerMigrationState,

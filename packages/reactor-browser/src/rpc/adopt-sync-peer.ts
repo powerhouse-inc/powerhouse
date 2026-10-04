@@ -47,3 +47,35 @@ export function sendAdoptSyncPeer(
     ),
   );
 }
+
+/**
+ * Which brokered local-sync peer to release: the remote to remove, and the
+ * registry key whose port must be forgotten with it.
+ */
+export type RemoveSyncPeerParams = {
+  peerId: string;
+  channelName: string;
+  remoteName: string;
+};
+
+/**
+ * Sends the remove-sync-peer op to a worker reactor. Resolves once the worker
+ * has removed the local remote and unregistered its port, so the key is free to
+ * be linked again. The twin of {@link sendAdoptSyncPeer}; removing the remote
+ * over the plain sync-op channel would leave the worker's port registry holding
+ * a dead entry.
+ */
+export function sendRemoveSyncPeer(
+  router: MessageRouter,
+  params: RemoveSyncPeerParams,
+): Promise<void> {
+  return toVoid(
+    router.request((id) => ({
+      k: "remove-sync-peer",
+      id,
+      peerId: params.peerId,
+      channelName: params.channelName,
+      remoteName: params.remoteName,
+    })),
+  );
+}

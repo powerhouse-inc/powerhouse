@@ -2,6 +2,7 @@ import type { IReactorClient, RemoteFilter } from "@powerhousedao/reactor";
 import { describe, expect, it, vi } from "vitest";
 import {
   sendAdoptSyncPeer,
+  sendRemoveSyncPeer,
   type AdoptSyncPeerParams,
 } from "../../src/rpc/adopt-sync-peer.js";
 import { MessageRouter } from "../../src/rpc/message-router.js";
@@ -68,6 +69,62 @@ function injectableTransport(): {
   return { transport, sent, receive: (message) => listener?.(message) };
 }
 
+/**
+ * Two transports wired to each other, so a real `MessageRouter` request made on
+ * the client side is answered by a real `ReactorHost` on the other.
+ */
+function linkedTransports(): {
+  hostTransport: IRpcTransport;
+  clientTransport: IRpcTransport;
+} {
+  let toHost: ((message: RpcMessage) => void) | undefined;
+  let toClient: ((message: RpcMessage) => void) | undefined;
+  const hostTransport: IRpcTransport = {
+    post(message) {
+      queueMicrotask(() => toClient?.(message));
+    },
+    onMessage(l) {
+      toHost = l;
+      return () => {
+        toHost = undefined;
+      };
+    },
+    close() {},
+  };
+  const clientTransport: IRpcTransport = {
+    post(message) {
+      queueMicrotask(() => toHost?.(message));
+    },
+    onMessage(l) {
+      toClient = l;
+      return () => {
+        toClient = undefined;
+      };
+    },
+    close() {},
+  };
+  return { hostTransport, clientTransport };
+}
+
+/** A MessagePort stand-in whose `close` is observable. */
+function fakePort(): { port: MessagePort; close: ReturnType<typeof vi.fn> } {
+  const close = vi.fn();
+  return { port: { close } as unknown as MessagePort, close };
+}
+
+function adoptMessage(id: string, port: MessagePort): RpcMessage {
+  return {
+    k: "adopt-sync-peer",
+    id,
+    peerId: PARAMS.peerId,
+    channelName: PARAMS.channelName,
+    collectionIdKey: PARAMS.collectionIdKey,
+    remoteName: PARAMS.remoteName,
+    filter: FILTER,
+    port,
+  };
+}
+
 describe("sendAdoptSyncPeer", () => {
   it("posts the op with the port in the transfer list, not cloned into the body", async () => {
     const { transport, posts } = recordingTransport();
@@ -121,26 +178,128 @@ describe("ReactorHost adopt-sync-peer routing", () => {
     dispose();
   });
 
-  it("replies err when no adopt handler is wired", async () => {
+  // The port has already been MOVED into this realm, so the sender cannot
+  // close it. Every failing exit has to, or a live MessagePort leaks and the
+  // far end waits forever on a reader that was never created.
+  it("closes the transferred port when no adopt handler is wired", async () => {
     const host = new ReactorHost({
       build: () => Promise.resolve({} as IReactorClient),
     });
     const { transport, sent, receive } = injectableTransport();
     const dispose = host.connect(transport);
+    const port = fakePort();
 
-    receive({
-      k: "adopt-sync-peer",
-      id: "a2",
-      peerId: PARAMS.peerId,
-      channelName: PARAMS.channelName,
-      collectionIdKey: PARAMS.collectionIdKey,
-      remoteName: PARAMS.remoteName,
-      filter: FILTER,
-      port: {} as unknown as MessagePort,
-    });
+    receive(adoptMessage("a2", port.port));
 
     await vi.waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0].k).toBe("err");
+    expect(port.close).toHaveBeenCalledTimes(1);
+    dispose();
+  });
+
+  it("closes the transferred port when the adopt handler throws", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve({} as IReactorClient),
+      onAdoptSyncPeer: () => Promise.reject(new Error("no local sync module")),
+    });
+    const { transport, sent, receive } = injectableTransport();
+    const dispose = host.connect(transport);
+    const port = fakePort();
+
+    receive(adoptMessage("a3", port.port));
+
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0].k).toBe("err");
+    expect(port.close).toHaveBeenCalledTimes(1);
+    dispose();
+  });
+
+  it("leaves the port open when the adopt succeeds", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve({} as IReactorClient),
+      onAdoptSyncPeer: () => Promise.resolve(),
+    });
+    const { transport, sent, receive } = injectableTransport();
+    const dispose = host.connect(transport);
+    const port = fakePort();
+
+    receive(adoptMessage("a4", port.port));
+
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toEqual({ k: "res", id: "a4", value: { ok: true } });
+    expect(port.close).not.toHaveBeenCalled();
+    dispose();
+  });
+});
+
+describe("remove-sync-peer round trip", () => {
+  it("carries the remote name and the registry key to the worker handler", async () => {
+    const onRemoveSyncPeer = vi.fn(() => Promise.resolve());
+    const host = new ReactorHost({
+      build: () => Promise.resolve({} as IReactorClient),
+      onRemoveSyncPeer,
+    });
+    const { hostTransport, clientTransport } = linkedTransports();
+    const dispose = host.connect(hostTransport);
+    const router = new MessageRouter();
+    router.attach(clientTransport);
+
+    await sendRemoveSyncPeer(router, {
+      peerId: PARAMS.peerId,
+      channelName: PARAMS.channelName,
+      remoteName: PARAMS.remoteName,
+    });
+
+    expect(onRemoveSyncPeer).toHaveBeenCalledWith({
+      peerId: PARAMS.peerId,
+      channelName: PARAMS.channelName,
+      remoteName: PARAMS.remoteName,
+    });
+    router.detach();
+    dispose();
+  });
+
+  it("rejects the caller when the worker has no remove handler", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve({} as IReactorClient),
+    });
+    const { hostTransport, clientTransport } = linkedTransports();
+    const dispose = host.connect(hostTransport);
+    const router = new MessageRouter();
+    router.attach(clientTransport);
+
+    await expect(
+      sendRemoveSyncPeer(router, {
+        peerId: PARAMS.peerId,
+        channelName: PARAMS.channelName,
+        remoteName: PARAMS.remoteName,
+      }),
+    ).rejects.toThrow(/no remove-sync-peer handler/);
+
+    router.detach();
+    dispose();
+  });
+
+  it("surfaces the worker handler's failure to the caller", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve({} as IReactorClient),
+      onRemoveSyncPeer: () =>
+        Promise.reject(new Error("Remote with name 'x' does not exist")),
+    });
+    const { hostTransport, clientTransport } = linkedTransports();
+    const dispose = host.connect(hostTransport);
+    const router = new MessageRouter();
+    router.attach(clientTransport);
+
+    await expect(
+      sendRemoveSyncPeer(router, {
+        peerId: PARAMS.peerId,
+        channelName: PARAMS.channelName,
+        remoteName: PARAMS.remoteName,
+      }),
+    ).rejects.toThrow(/does not exist/);
+
+    router.detach();
     dispose();
   });
 });

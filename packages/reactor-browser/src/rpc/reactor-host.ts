@@ -2,7 +2,10 @@ import type { IReactorClient } from "@powerhousedao/reactor";
 import { hostResponder, type IHostResponder } from "./host-reply.js";
 import { ReactorHostServer } from "./host-server.js";
 import { SubscriptionStore } from "./subscription.js";
-import type { AdoptSyncPeerParams } from "./adopt-sync-peer.js";
+import type {
+  AdoptSyncPeerParams,
+  RemoveSyncPeerParams,
+} from "./adopt-sync-peer.js";
 import type {
   ClientMessage,
   CorrelationId,
@@ -14,6 +17,7 @@ import type {
   RpcInspectorOp,
   RpcLiveSubscribe,
   RpcRegisterPackages,
+  RpcRemoveSyncPeer,
   RpcSyncOp,
   RpcUnregisterPackages,
   VersionFingerprint,
@@ -35,6 +39,7 @@ function isDataMessage(
     msg.k === "db-op" ||
     msg.k === "inspector-op" ||
     msg.k === "adopt-sync-peer" ||
+    msg.k === "remove-sync-peer" ||
     msg.k === "sub-live"
   );
 }
@@ -61,6 +66,12 @@ export type ReactorHostOptions = {
     params: AdoptSyncPeerParams,
     port: MessagePort,
   ) => Promise<void>;
+  /**
+   * Releases a brokered local-sync peer: removes the remote and unregisters its
+   * port from this realm's transport provider. The twin of
+   * {@link onAdoptSyncPeer}; see `RpcRemoveSyncPeer`.
+   */
+  onRemoveSyncPeer?: (params: RemoveSyncPeerParams) => Promise<void>;
   onLiveQuery?: (
     sql: string,
     params: unknown[],
@@ -229,6 +240,10 @@ export class ReactorHost {
       }
       if (msg.k === "adopt-sync-peer") {
         void this.handleAdoptSyncPeer(msg, reply);
+        return;
+      }
+      if (msg.k === "remove-sync-peer") {
+        void this.handleRemoveSyncPeer(msg, reply);
         return;
       }
       if (msg.k === "sub-live") {
@@ -473,26 +488,67 @@ export class ReactorHost {
     );
   }
 
+  /**
+   * Adopts a transferred local-sync port, closing it on every failure.
+   *
+   * The port was MOVED into this realm by the time this runs, so the sender can
+   * no longer close it: dropping it on an error path would leak a live
+   * MessagePort and leave the other end waiting on a reader that will never
+   * exist. Every exit that is not success therefore closes it before replying.
+   */
   private async handleAdoptSyncPeer(
     message: RpcAdoptSyncPeer,
     reply: IHostResponder,
   ): Promise<void> {
     const handler = this.options.onAdoptSyncPeer;
-    if (!this.requireHandler(handler, message, reply, "adopt-sync-peer")) {
+    if (!handler) {
+      message.port.close();
+      reply.errForKind(
+        message,
+        new Error("ReactorHost has no adopt-sync-peer handler"),
+      );
+      return;
+    }
+    await reply.run(message.id, async () => {
+      try {
+        await this.awaitClientReady();
+      } catch (error) {
+        message.port.close();
+        throw error;
+      }
+      try {
+        await handler(
+          {
+            peerId: message.peerId,
+            channelName: message.channelName,
+            collectionIdKey: message.collectionIdKey,
+            remoteName: message.remoteName,
+            filter: message.filter,
+          },
+          message.port,
+        );
+      } catch (error) {
+        message.port.close();
+        throw error;
+      }
+    });
+  }
+
+  private async handleRemoveSyncPeer(
+    message: RpcRemoveSyncPeer,
+    reply: IHostResponder,
+  ): Promise<void> {
+    const handler = this.options.onRemoveSyncPeer;
+    if (!this.requireHandler(handler, message, reply, "remove-sync-peer")) {
       return;
     }
     await reply.run(message.id, async () => {
       await this.awaitClientReady();
-      await handler(
-        {
-          peerId: message.peerId,
-          channelName: message.channelName,
-          collectionIdKey: message.collectionIdKey,
-          remoteName: message.remoteName,
-          filter: message.filter,
-        },
-        message.port,
-      );
+      await handler({
+        peerId: message.peerId,
+        channelName: message.channelName,
+        remoteName: message.remoteName,
+      });
     });
   }
 

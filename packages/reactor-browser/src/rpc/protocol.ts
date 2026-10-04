@@ -201,6 +201,29 @@ export type RpcAdoptSyncPeer = {
   port: MessagePort;
 };
 
+/**
+ * Releases a monitor-brokered local-sync peer in a worker reactor: removes the
+ * remote AND unregisters its port from the worker's
+ * `LocalChannelTransportProvider`, which is the in-process twin's behaviour.
+ *
+ * Removing the remote alone left the worker's registry holding a key for a port
+ * the channel's shutdown had already closed, so the next lookup -- a channel
+ * reset, or a re-link under the same key -- found a dead port and reported a
+ * healthy transport. The unregister has to happen in the worker realm, which
+ * owns that registry, so it is an op rather than something the tab can do.
+ *
+ * Additive like {@link RpcAdoptSyncPeer}, and for the same reason: a worker that
+ * predates it never handles the kind, and the monitor provisions both ends from
+ * one build, so no {@link RPC_PROTOCOL_VERSION} bump.
+ */
+export type RpcRemoveSyncPeer = {
+  k: "remove-sync-peer";
+  id: CorrelationId;
+  peerId: string;
+  channelName: string;
+  remoteName: string;
+};
+
 export type RpcLiveSubscribe = {
   k: "sub-live";
   id: CorrelationId;
@@ -243,6 +266,7 @@ export type ClientMessage =
   | RpcDbOp
   | RpcInspectorOp
   | RpcAdoptSyncPeer
+  | RpcRemoveSyncPeer
   | RpcLiveSubscribe
   | RpcLiveUnsub
   | RpcPing;
