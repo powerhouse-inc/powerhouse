@@ -311,7 +311,7 @@ has.
 | -------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `concurrency`              | `reactor/run-gate.ts`     | SINGLETON drops a firing while a run is active; QUEUE serialises; PARALLEL runs concurrently          |
 | `maxParallelRuns`          | `reactor/run-gate.ts`     | Bounds PARALLEL; null is unbounded. SINGLETON and QUEUE are 1 by definition                           |
-| `runTimeoutSeconds`        | `pieces/engine/coordinator.ts` | A run deadline, checked between steps and bounding every retry wait; expiry ends the run CANCELLED |
+| `runTimeoutSeconds`        | `pieces/engine/coordinator.ts` | A run deadline from FIRING time, checked between steps and bounding every retry wait; expiry ends the run CANCELLED |
 | `defaultRetry`, step `retry` | `pieces/engine/retry.ts` | Attempts, backoff, delays and `retryOn`; attempts land on the step's journal row                      |
 | `onFailure`                | `reactor/service.ts`      | PARK parks the trigger; NOTIFY logs at error level; IGNORE does nothing                               |
 | `maxSuspensionDays`        | —                         | **Not enforced**: nothing suspends. Waitpoints, `run.pause` and `generateResumeUrl` all throw         |
@@ -331,6 +331,17 @@ schema; what changed is that they are true.
   process is the deployment's whole run set. A firing SINGLETON drops is
   journaled as a CANCELLED run rather than discarded — a firing that vanished
   is indistinguishable from a trigger that never fired.
+- **The QUEUE is bounded**, at `PH_WORKFLOWS_MAX_QUEUED_FIRINGS` waiting
+  firings per workflow (100). QUEUE means latency, not failure — but an
+  unbounded queue means neither: a document-event trigger on a busy type
+  enqueues faster than the workflow runs, every waiter holds its payload and
+  its promise, and the lane grows until the process dies. A firing that
+  overflows the depth is journaled CANCELLED exactly as a SINGLETON refusal is.
+- **The run deadline starts at FIRING time, not at admission.** Queue time is
+  part of the time the run took: a firing that waits past its
+  `runTimeoutSeconds` for a slot is CANCELLED without executing a single step,
+  rather than running its side effect long after the timeout that was supposed
+  to bound it. The document read counts too.
 - **PARKED is terminal, and a restart does not clear it.** The park is a
   runtime override of the document's enabled-ness: parking writes the trigger
   row, never the document, so the document still says ENABLED and re-arming
@@ -441,6 +452,7 @@ explanation behind it.
 | `PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES` | unset              | Addresses or CIDRs a piece may reach, widening the default policy (`reactor/lib.ts`)      |
 | `PH_WORKFLOWS_RUN_CONCURRENCY`        | `4`                | Runs executing at once; one forked node child each (`worker/pool.ts`)                     |
 | `PH_WORKFLOWS_RUN_QUEUE_DEPTH`        | `0`                | Runs that may wait for a slot before new ones are refused; `0` waits without limit        |
+| `PH_WORKFLOWS_MAX_QUEUED_FIRINGS`     | `100`              | Firings of ONE workflow that may wait for its concurrency slot; past it a firing is journaled CANCELLED (`reactor/run-gate.ts`) |
 | `PH_WORKFLOWS_POLL_INTERVAL_MS`       | `60000`            | Cadence for a polling trigger that names none of its own                                  |
 | `PH_WORKFLOWS_WEBHOOK_RECONCILE_MS`   | `900000`           | How often a webhook trigger re-registers with its provider                                |
 | `PH_WORKFLOWS_WEBHOOK_TIMEOUT_MS`     | `30000`            | How long a sync-mode delivery holds the provider's socket                                 |
