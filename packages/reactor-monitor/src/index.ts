@@ -89,7 +89,11 @@ export {
   type LoadHarnessReport,
   type LoadHarnessThroughput,
 } from "./harness/load.js";
-export { openReactorStore, storageLocation } from "./store.js";
+export {
+  DEFAULT_REACTOR_STORAGE,
+  openReactorStore,
+  storageLocation,
+} from "./store.js";
 export {
   MONITOR_STORAGE_PREFIX,
   MONITOR_WORKER_PREFIX,

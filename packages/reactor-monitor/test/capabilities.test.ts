@@ -1,6 +1,8 @@
+import { PGlite } from "@electric-sql/pglite";
 import { ChannelScheme } from "@powerhousedao/reactor";
 import { describe, expect, it } from "vitest";
 import {
+  buildMonitorReactor,
   provisionInProcess,
   reactorCapabilities,
   supportsSyncChannel,
@@ -162,6 +164,36 @@ describe("reactorCapabilities", () => {
     expect(Object.isFrozen(capabilities.storage)).toBe(true);
     expect(Object.isFrozen(capabilities.syncChannels)).toBe(true);
   });
+
+  it("keeps a caller-supplied pg unhealable, threading BuiltReactor.canSelfHeal rather than re-deriving it", async () => {
+    const pg = new PGlite();
+    await pg.waitReady;
+    const built = await buildMonitorReactor({ namespace: "cap-caller-pg", pg });
+    try {
+      // A caller-supplied `pg` is the caller's to reopen, not this process's
+      // -- build-reactor.ts never constructs self-heal for it (ownsStore is
+      // false), independent of what storage kind a descriptor would
+      // otherwise claim.
+      expect(built.canSelfHeal).toBe(false);
+
+      const capabilities = reactorCapabilities(
+        {
+          kind: "in-process",
+          name: "cap-caller-pg",
+          storage: { kind: "idb" },
+        },
+        { canSelfHeal: built.canSelfHeal },
+      );
+      // Storage still reads durable -- that is what the descriptor claims --
+      // but selfHeal must come from the actual built fact, not be re-derived
+      // from that durability alone, or it would (incorrectly) read true.
+      expect(capabilities.storage).toEqual({ kind: "idb", durable: true });
+      expect(capabilities.selfHeal).toBe(false);
+    } finally {
+      await built.shutdown();
+      await pg.close();
+    }
+  }, 60_000);
 
   it("answers channel support through the one contract reader", () => {
     const local = reactorCapabilities({

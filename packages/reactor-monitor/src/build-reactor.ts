@@ -30,7 +30,7 @@ import type {
 import { childLogger } from "document-model";
 import { Kysely } from "kysely";
 import { createLocalSigner } from "./signer.js";
-import { openReactorStore } from "./store.js";
+import { DEFAULT_REACTOR_STORAGE, openReactorStore } from "./store.js";
 import { LocalChannelPortRegistry } from "./sync/local-channel-registry.js";
 import type { ReactorStorageConfig } from "./types.js";
 
@@ -81,6 +81,16 @@ export type BuiltReactor = {
    * transferred port here, and this reactor's `LocalChannelFactory` resolves it.
    */
   localChannelPorts?: LocalChannelPortRegistry;
+  /**
+   * Whether a poisoned PGlite session is recovered in place: a durable store
+   * this process opened (not a caller-supplied `pg`, which the caller owns
+   * and reopens, and not `memory`, which has nothing to reopen). The fact
+   * `capabilities.ts` derives {@link ReactorCapabilities.selfHeal} FROM,
+   * rather than re-deriving it from the descriptor alone -- a descriptor
+   * cannot express a caller-supplied `pg`, so re-deriving from it would miss
+   * exactly that case.
+   */
+  canSelfHeal: boolean;
   /** Stops sync, kills the reactor, destroys the kysely instance, closes the store. */
   shutdown: () => Promise<void>;
   /** True once {@link shutdown} has been entered. */
@@ -122,7 +132,8 @@ export async function buildMonitorReactor(
   // memory store has nothing to reopen without data loss, so both keep the
   // dialect's loud refusal. See docs/bugs/2026-10-03-*, W0.7.
   const canSelfHeal =
-    ownsStore && (options.storage?.kind ?? "idb") !== "memory";
+    ownsStore &&
+    (options.storage?.kind ?? DEFAULT_REACTOR_STORAGE.kind) !== "memory";
   // Declared before the client so both poison paths escalate identically: the
   // dialect's hung statement and the client's own hung filesystem sync (W0.8)
   // end in one in-place recreate.
@@ -315,6 +326,7 @@ export async function buildMonitorReactor(
     inspector,
     dbQuery,
     ...(localChannelPorts ? { localChannelPorts } : {}),
+    canSelfHeal,
     shutdown,
     isShutdown: () => shuttingDown !== undefined,
   };

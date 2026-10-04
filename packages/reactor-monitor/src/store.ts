@@ -2,6 +2,15 @@ import { PGlite } from "@electric-sql/pglite";
 import type { ReactorStorageConfig } from "./types.js";
 
 /**
+ * `openReactorStore`'s default, and the one place it is spelled out. A
+ * provisioned reactor with no `storage` keeps a reload-surviving `idb://`
+ * store, which is what `capabilities.ts` and `build-reactor.ts` must also
+ * assume when a descriptor omits `storage` -- all three read this constant
+ * rather than each repeating the `"idb"` literal.
+ */
+export const DEFAULT_REACTOR_STORAGE: ReactorStorageConfig = { kind: "idb" };
+
+/**
  * Overlapping cold boots race on PGlite's un-cloned wasm fetch `Response` and
  * end up re-fetching the fs bundle; a monitor provisions several reactors at
  * once, so construction is chained here rather than left to callers.
@@ -39,7 +48,7 @@ export function storageLocation(
  */
 export function openReactorStore(
   namespace: string,
-  storage: ReactorStorageConfig = { kind: "idb" },
+  storage: ReactorStorageConfig = DEFAULT_REACTOR_STORAGE,
 ): Promise<PGlite> {
   return chained(async () => {
     // This is the monitor reactor's authoritative operation store, and it

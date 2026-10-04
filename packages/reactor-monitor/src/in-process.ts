@@ -93,7 +93,9 @@ export async function provisionInProcess(
   return {
     name: descriptor.name,
     kind: "in-process",
-    capabilities: reactorCapabilities(descriptor),
+    capabilities: reactorCapabilities(descriptor, {
+      canSelfHeal: built.canSelfHeal,
+    }),
     client: built.module.client,
     inspector: built.inspector,
     dbQuery: built.dbQuery,

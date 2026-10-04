@@ -1,3 +1,4 @@
+import { DEFAULT_REACTOR_STORAGE } from "./store.js";
 import type { ReactorDescriptor, ReactorKind } from "./types.js";
 
 /**
@@ -131,9 +132,6 @@ export interface ReactorCapabilities {
   readonly selfHeal: boolean;
 }
 
-/** Hosting kinds whose realm is a browser, where the workflow engine cannot run. */
-const BROWSER_HOSTING: readonly ReactorHosting[] = ["worker", "in-process"];
-
 /**
  * The sync transports a descriptor's sync config resolves to.
  *
@@ -164,8 +162,7 @@ function storageOf(descriptor: ReactorDescriptor): ReactorStorageCapability {
   if (descriptor.kind === "remote") {
     return { kind: "remote", durable: true };
   }
-  // `openReactorStore`'s default; keep the two in step.
-  const kind = descriptor.storage?.kind ?? "idb";
+  const kind = descriptor.storage?.kind ?? DEFAULT_REACTOR_STORAGE.kind;
   return { kind, durable: kind !== "memory" };
 }
 
@@ -196,24 +193,37 @@ function inspectionOf(hosting: ReactorHosting): ReactorInspectionTransport {
  * table, and a row that only appears once stage 3 lands is a row the router
  * design cannot account for. The `remote` row states today's truth (no
  * inspection surface, nothing here to self-heal), not stage 3's intent.
+ *
+ * `built`, when supplied, carries the one fact the descriptor alone cannot
+ * express: whether this process actually owns a reopenable store
+ * (`BuiltReactor.canSelfHeal`, `build-reactor.ts`). A caller-supplied `pg`
+ * has no representation in {@link ReactorDescriptor} at all, so a worker's
+ * built-config report (multi-reactor stage 2 review) and `provisionInProcess`
+ * both pass the actual built value rather than let `selfHeal` be re-derived
+ * from storage durability alone and risk disagreeing with the real reactor.
+ * Omitted, `selfHeal` falls back to the durability-only approximation, which
+ * is exact for every descriptor that never reaches a caller-supplied `pg`.
  */
 export function reactorCapabilities(
   descriptor: ReactorDescriptor,
+  built?: { readonly canSelfHeal: boolean },
 ): ReactorCapabilities {
   const hosting = descriptor.kind;
   const storage = storageOf(descriptor);
-  const isBrowser = BROWSER_HOSTING.includes(hosting);
   return Object.freeze({
     hosting,
     storage: Object.freeze(storage),
     // A worker cannot be handed a factory function over postMessage.
     processors: hosting !== "worker",
-    // The engine forks child processes: Node only (agreed decision 3).
-    workflows: !isBrowser,
+    // The engine forks child processes and is Node-only (agreed decision 3);
+    // `remote` is the only hosting kind that can be a Node reactor.
+    workflows: hosting === "remote",
     inspection: inspectionOf(hosting),
     syncChannels: Object.freeze(syncChannelsOf(descriptor)),
-    // Only a durable store this process opened can be reopened in place.
-    selfHeal: isBrowser && storage.durable,
+    // `remote`'s store lives on the far side and is never ours to reopen;
+    // otherwise defer to the actual built fact when one is known.
+    selfHeal:
+      hosting !== "remote" && (built ? built.canSelfHeal : storage.durable),
   });
 }
 

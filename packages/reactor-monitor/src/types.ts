@@ -100,7 +100,7 @@ export interface ReactorDescriptor {
   /** Enforcement flags. Absent means all off. */
   featureFlags?: Partial<ReactorFeatureFlags>;
   sync?: ReactorSyncConfig;
-  /** Defaults to `{ kind: "idb" }`. */
+  /** Defaults to `DEFAULT_REACTOR_STORAGE` (`store.ts`): `{ kind: "idb" }`. */
   storage?: ReactorStorageConfig;
   /**
    * Signs submitted actions and synthesized operations. In-process only;
