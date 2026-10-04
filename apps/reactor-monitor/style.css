@@ -218,6 +218,18 @@ body {
   color: #991b1b;
 }
 
+/* A capability the reactor lacks: a difference, not a failure. */
+.rm-badge-off {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* A classification with no better/worse to it. */
+.rm-badge-neutral {
+  background: #eff6ff;
+  color: #1e40af;
+}
+
 .rm-dot {
   display: inline-block;
   width: 0.5rem;
@@ -382,6 +394,47 @@ body {
 
 .rm-kv-compact {
   font-size: 0.8rem;
+}
+
+/* Capability grid (Overview tab, multi-reactor stage 2) */
+
+.rm-cap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rm-cap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+  background: #fff;
+}
+
+.rm-cap-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.rm-cap-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.rm-cap-note {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #6b7280;
 }
 
 /* Forms */
