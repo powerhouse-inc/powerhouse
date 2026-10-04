@@ -2,6 +2,26 @@ export { GqlRequestChannelFactory } from "./gql-request-channel-factory.js";
 export { GqlResponseChannelFactory } from "./gql-response-channel-factory.js";
 export { GqlRequestChannel, type GqlChannelConfig } from "./gql-req-channel.js";
 export { GqlResponseChannel } from "./gql-res-channel.js";
+export { LocalChannel } from "./local-channel.js";
+export {
+  LocalChannelFactory,
+  LOCAL_CHANNEL_TYPE,
+} from "./local-channel-factory.js";
+export {
+  messagePortTransport,
+  type LocalChannelPort,
+  type LocalChannelTransportProvider,
+  type MessagePortLike,
+} from "./local-channel-transport.js";
+export {
+  isLocalWireMessage,
+  type LocalAckMessage,
+  type LocalHelloMessage,
+  type LocalPushMessage,
+  type LocalResendMessage,
+  type LocalWireKind,
+  type LocalWireMessage,
+} from "./local-wire.js";
 export {
   IntervalPollTimer,
   calculateBackoffDelay,
