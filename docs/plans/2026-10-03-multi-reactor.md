@@ -964,6 +964,15 @@ E (Connect RoutingReactorClient default) / F (Switchboard multi-reactor host) / 
 QUEUE+PARK) = NEED USER DECISION (change production app default behavior / deployment contract).
 Full assessment in task a271fb11d025708bc.
 
+USER DECISIONS (2026-10-05): (1) Connect = ROUTER BEHIND A FLAG — wire inert seams B/C
+AND integrate RoutingReactorClient (in-browser + remote switchboard) opt-in, default OFF,
+no change for existing users. (2) Switchboard multi-reactor = DEFERRED to its own
+design-led stage (gateway-granularity rework + placement config + switchboard-lb alignment)
+— the 'later cloud scaling' stepping stone, not now. (3) QUEUE+PARK = KEEP the new default.
+So Stage 4 scope NOW = WP-A (switchboard inspection operator pass) + WP-B/C (Connect inert
+seams) + WP-E (Connect RoutingReactorClient behind a flag) + the cross-tab broker (WP-D) only
+insofar as the flagged router path needs it. WP-F (Switchboard multi-reactor) becomes Stage 5.
+
 ## Standing bug backlog (fix as encountered, each with a test)
 
 1. Dev fingerprint staleness (W0.6). 2. Worker-path processors unsupported/silent.
