@@ -479,8 +479,17 @@ their exact key set.
 
 A SUCCEEDED step whose output was truncated **replays** on rerun rather than
 re-executing: it had side effects. Its output is explicitly unavailable, so a
-later step that reads `steps.<key>.output…` fails the rerun by name instead of
-being handed a marker.
+later step that reads it fails the rerun by name (`UnavailableValueError`)
+instead of being handed a marker.
+
+The refusal is **deep, and on every route out of resolution**. The unavailable
+wrapper carries its reason on a symbol, which anything that serializes it drops
+— so a path that lands one level ABOVE the wrapper (`{{steps.charge}}`, or a
+bare `{{steps}}`) would have handed the piece an ordinary-looking object whose
+`output` became `{}` across the worker boundary, reason and all. Resolution
+therefore checks the value it is about to return at any depth, and
+`resolveStepInput` checks the whole resolved input again before it crosses to
+the piece.
 
 **The secrets key is not optional in production.** Unset, `loadKey` generates
 `./.ph/secrets.key` — relative to the working directory, like the bundle cache

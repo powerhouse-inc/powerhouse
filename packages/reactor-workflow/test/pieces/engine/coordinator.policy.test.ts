@@ -438,4 +438,44 @@ describe("replaying a step whose journaled output was truncated", () => {
     expect(result.error).toContain("truncated its output");
     expect(result.error).toContain("not re-run");
   });
+
+  // The leaf path landed ON the wrapper and was refused. The PARENT path landed
+  // on the step's entry, one level above it, which looked like an ordinary
+  // object - so the wrapper went over to the piece and JSON.stringify dropped
+  // the reason with the symbol it hangs on. The step received a bare `{}`.
+  it("refuses a parent path too, not just the leaf one", async () => {
+    for (const reference of [
+      "{{steps.charge}}",
+      "{{steps.charge.output}}",
+      "{{steps}}",
+    ]) {
+      const executor = new FlakyExecutor(0);
+
+      const result = await runWorkflow({
+        definition: definition(
+          [
+            step("a", "charge"),
+            step("b", "receipt", undefined, { body: reference }),
+          ],
+          [{ id: "e1", from: "a", to: "b", port: "next" }],
+        ),
+        executor,
+        completedSteps: new Map([
+          ["a", { port: "next", outputTruncated: true }],
+        ]),
+      });
+
+      // Nothing ran, and the failure names the truncation rather than handing
+      // the piece an empty object.
+      expect(executor.calls, reference).toHaveLength(0);
+      expect(result.status, reference).toBe("FAILED");
+      expect(result.error, reference).toContain("truncated its output");
+      expect(result.steps[1], reference).toMatchObject({
+        key: "receipt",
+        status: "FAILED",
+      });
+      // And the input journaled for it carries no wrapper masquerading as data.
+      expect(JSON.stringify(result.steps[1].input ?? null)).not.toContain("{}");
+    }
+  });
 });
