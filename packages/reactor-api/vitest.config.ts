@@ -7,6 +7,27 @@ if (process.env.RUN_HUB_SPOKE_INTEGRATION !== "1") {
   baseExclude.push("**/hub-spoke-catchup.integration.test.ts");
 }
 
+// Resolve @powerhousedao/reactor through its TypeScript source instead of its
+// built `dist/`, the same intent as the `"source"` export condition that
+// apps/connect/vitest.config.ts and apps/reactor-monitor/vitest.config.ts opt
+// into project-wide.
+//
+// Without this, the cross-package suites here (fault-injection-sync,
+// connect-switchboard-*, hub-spoke and the rest of the reactor integration
+// tests) silently test whatever `packages/reactor/dist` happens to hold. That
+// masked real behavioural changes for a stretch of feat/multi-reactor: five
+// fault-injection-sync assertions kept passing against a stale dist long after
+// the contract they asserted had been deliberately replaced in reactor source,
+// and only a fresh `pnpm --filter @powerhousedao/reactor build` revealed it.
+//
+// A targeted alias rather than `resolve.conditions`/`ssr.resolve.conditions`:
+// flipping the whole condition set source-first also re-resolves third-party
+// CJS (`pg` picks up `pg-pool`'s ESM entry through its own `require`, which
+// fails as "Class extends value [object Module]"), and this suite loads the
+// Postgres adapters. The alias is exact-match, so reactor's single "."
+// export is all it redirects.
+const REACTOR_SOURCE = resolve(__dirname, "../reactor/index.ts");
+
 export default defineConfig({
   resolve: {
     alias: {
@@ -14,6 +35,7 @@ export default defineConfig({
         __dirname,
         "../../node_modules/graphql-ws/lib/use/ws.mjs",
       ),
+      "@powerhousedao/reactor": REACTOR_SOURCE,
     },
   },
   test: {
