@@ -81,7 +81,7 @@ function AdminInfo({ reactor }: { reactor: ManagedWorkerReactor }) {
  * classification with no better/worse to it (`neutral`) -- the whole point of
  * the grid is that worker and in-process differ, not that one is broken.
  */
-type CapabilityCell = {
+export type CapabilityCell = {
   readonly label: string;
   readonly value: string;
   readonly tone: "ok" | "off" | "neutral";
@@ -132,7 +132,7 @@ function syncChannelNote(channels: readonly ReactorSyncChannel[]): string {
  * variance is a fact to model explicitly" becomes visible at a glance, so the
  * notes explain the variance rather than restating the value.
  */
-function capabilityCells(
+export function capabilityCells(
   capabilities: ReactorCapabilities,
 ): readonly CapabilityCell[] {
   const { storage } = capabilities;

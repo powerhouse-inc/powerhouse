@@ -25,6 +25,7 @@ import {
   ProvisionPanel,
   type ProvisionRequest,
 } from "./components/ProvisionPanel.js";
+import { RoutingPanel } from "./components/RoutingPanel.js";
 import { buildDescriptor as buildDescriptorFromForm } from "./provisioning.js";
 import { AttachmentsTab } from "./tabs/AttachmentsTab.js";
 import { CatchUpTab } from "./tabs/CatchUpTab.js";
@@ -49,6 +50,16 @@ export const INSPECTOR_TABS = [
 ] as const;
 
 export type InspectorTab = (typeof INSPECTOR_TABS)[number];
+
+/**
+ * The two top-level surfaces. "Inspect" is the per-reactor tab strip; "Router"
+ * is the reactor-SPANNING topology view, which does not belong on the per-
+ * reactor strip because it is about the set of reactors, not any one of them
+ * (multi-reactor router, stages 1-3).
+ */
+export const APP_VIEWS = ["Inspect", "Router"] as const;
+
+export type AppView = (typeof APP_VIEWS)[number];
 
 /**
  * The inspector panel for a READY reactor.
@@ -205,12 +216,15 @@ function AppBody({ selected, onSelect, onProvision, onKill }: AppBodyProps) {
   const entries = useManagedReactors();
   const entry = useManagedReactorEntry(selected ?? "");
   const [activeTab, setActiveTab] = useState<InspectorTab>("Overview");
+  const [view, setView] = useState<AppView>("Inspect");
   const registry = useReactorMonitorRegistry();
 
   /**
    * Dev-only scripting handle: exposes the live registry on the window so
    * operator tooling (live verification passes, demo scripts) can provision,
-   * link, and drive reactors programmatically. Never set in production builds.
+   * link, and drive reactors programmatically. The Router view augments this
+   * same object with `.router` (the built routing client) and
+   * `.routerDescribe()` — see RoutingPanel. Never set in production builds.
    */
   useEffect(() => {
     const env = (import.meta as unknown as { env?: { DEV?: boolean } }).env;
@@ -231,25 +245,52 @@ function AppBody({ selected, onSelect, onProvision, onKill }: AppBodyProps) {
         selected={selected}
       />
       <main className="reactor-monitor__main">
-        <nav aria-label="Inspector panels" className="reactor-monitor__tabs">
-          {INSPECTOR_TABS.map((tab) => (
+        <nav aria-label="Views" className="reactor-monitor__tabs">
+          {APP_VIEWS.map((name) => (
             <button
               className={
-                tab === activeTab
+                name === view
                   ? "reactor-monitor__tab reactor-monitor__tab-active"
                   : "reactor-monitor__tab"
               }
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={name}
+              onClick={() => setView(name)}
               type="button"
             >
-              {tab}
+              {name}
             </button>
           ))}
         </nav>
-        <div className="reactor-monitor__panel">
-          <InspectorPanel entry={entry} tab={activeTab} />
-        </div>
+        {view === "Inspect" ? (
+          <>
+            <nav
+              aria-label="Inspector panels"
+              className="reactor-monitor__tabs"
+            >
+              {INSPECTOR_TABS.map((tab) => (
+                <button
+                  className={
+                    tab === activeTab
+                      ? "reactor-monitor__tab reactor-monitor__tab-active"
+                      : "reactor-monitor__tab"
+                  }
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  type="button"
+                >
+                  {tab}
+                </button>
+              ))}
+            </nav>
+            <div className="reactor-monitor__panel">
+              <InspectorPanel entry={entry} tab={activeTab} />
+            </div>
+          </>
+        ) : (
+          <div className="reactor-monitor__panel">
+            <RoutingPanel />
+          </div>
+        )}
       </main>
     </div>
   );
