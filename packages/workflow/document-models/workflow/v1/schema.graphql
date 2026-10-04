@@ -54,11 +54,12 @@ enum BackoffKind {
 }
 
 type RetryPolicy {
+  "Attempts, not retries: 1 is no retry. Clamped to 10 by the runtime, since each attempt re-runs a side effect and holds the run's worker slot."
   maxAttempts: Int!
   backoff: BackoffKind!
   initialDelaySeconds: Int!
   maxDelaySeconds: Int!
-  "Error classes that are retryable. Everything else fails terminally on attempt 1."
+  "Error classes that are retryable, matched against the error's class name or anywhere in its message, case-insensitively. EMPTY admits every error: an empty list with maxAttempts > 1 means retry, not never-retry."
   retryOn: [String!]!
 }
 
@@ -119,10 +120,11 @@ type WorkflowStep {
   actionName: String!
   connectionId: PHID
   config: Unknown!
-  "Per-step override of the workflow default retry policy."
+  "ENFORCED. Per-step override of the workflow default retry policy."
   retry: RetryPolicy
+  "ENFORCED. Also raises the cap on each host call the step's piece makes, which is never shorter than the step's own timeout."
   timeoutSeconds: Int
-  "Expression yielding a stable key; two executions with the same key are one side effect."
+  "NOT YET ENFORCED. Expression yielding a stable key; two executions with the same key are one side effect. A fire is deduplicated on its trigger operation or a trigger item's _dedupe_key, never on a step expression."
   idempotencyKeyExpression: String
   position: Point
   propertySettings: [PropertySetting!]
@@ -165,16 +167,21 @@ type WorkflowVariable {
 }
 
 type WorkflowPolicy {
-  "SINGLETON drops a firing while a run is active; QUEUE serialises; PARALLEL runs concurrently."
+  "ENFORCED. SINGLETON drops a firing while a run is active (journaled CANCELLED, not dropped silently); QUEUE serialises; PARALLEL runs concurrently."
   concurrency: ConcurrencyMode!
+  "ENFORCED under PARALLEL: how many runs of this workflow may execute at once; null is unbounded. SINGLETON and QUEUE are 1 by definition."
   maxParallelRuns: Int
+  "ENFORCED. Checked between steps and while a retry waits; past it the run ends CANCELLED."
   runTimeoutSeconds: Int!
-  "Bounds how long a run may stay suspended on a waitpoint."
+  "NOT YET ENFORCED. Bounds how long a run may stay suspended on a waitpoint - but nothing suspends: waitpoints, run.pause and generateResumeUrl all throw, so there is no suspended state to bound."
   maxSuspensionDays: Int!
+  "ENFORCED. The fallback for a step with no retry of its own."
   defaultRetry: RetryPolicy!
-  "What happens to a run whose steps have all failed terminally."
+  "ENFORCED. What happens to a run whose steps have all failed terminally: PARK takes the trigger out of the supervisor's ENABLED set until the workflow is re-published or re-enabled, NOTIFY logs at error level (the only notification channel this engine has), IGNORE does nothing."
   onFailure: FailureMode!
+  "NOT YET ENFORCED per workflow. Retention is a journal-wide sweep on the relational handle, which has no reactor read to resolve a per-workflow window with; PH_WORKFLOWS_RUN_RETENTION_DAYS (30 days by default) is the control that applies."
   retainRunsDays: Int!
+  "NOT YET ENFORCED. The run journal is relational; there is no run document model to write."
   journalAsDocument: Boolean!
 }
 

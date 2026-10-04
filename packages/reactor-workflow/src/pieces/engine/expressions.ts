@@ -45,6 +45,48 @@ export class UnresolvedReferenceError extends Error {
   }
 }
 
+/**
+ * A value that exists but cannot be read, with the reason attached.
+ *
+ * The case it was written for: a rerun replaying a SUCCEEDED step whose
+ * journaled output the payload cap truncated. The step must NOT run again — it
+ * had side effects — but its output is genuinely gone, so a downstream step
+ * that reads it has to be told, by name, rather than handed a truncation
+ * marker or quietly made to re-run the step that produced it.
+ *
+ * The reason hangs off a SYMBOL key, so `JSON.stringify` drops it and nothing
+ * can leak the wrapper into a payload as data.
+ */
+const UNAVAILABLE = Symbol("unavailable");
+
+export class UnavailableValueError extends Error {
+  constructor(reason: string) {
+    super(reason);
+    this.name = "UnavailableValueError";
+  }
+}
+
+export function unavailableValue(reason: string): unknown {
+  return { [UNAVAILABLE]: reason };
+}
+
+function unavailableReason(value: unknown): string | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  const reason = (value as Record<symbol, unknown>)[UNAVAILABLE];
+  return typeof reason === "string" ? reason : undefined;
+}
+
+/** True for anything {@link unavailableValue} produced, at any depth of a
+ * resolved value. Lets a caller refuse before a piece is handed it. */
+export function containsUnavailableValue(value: unknown): boolean {
+  if (unavailableReason(value) !== undefined) return true;
+  if (Array.isArray(value)) return value.some(containsUnavailableValue);
+  if (typeof value === "object" && value !== null) {
+    return Object.values(value).some(containsUnavailableValue);
+  }
+  return false;
+}
+
 const IDENT = /[A-Za-z0-9_$-]/;
 
 // A hand-rolled tokenizer: dot and bracket paths, quoted literals, `||`, `?`.
@@ -198,10 +240,16 @@ export function lookupPath(
   let current: unknown = scope;
   for (const segment of segments) {
     if (current === null || typeof current !== "object") return MISSING;
+    // Not missing and not readable: say which, before the path walks into it.
+    const blocked = unavailableReason(current);
+    if (blocked !== undefined) throw new UnavailableValueError(blocked);
     const record = current as Record<string | number, unknown>;
     if (!Object.prototype.hasOwnProperty.call(record, segment)) return MISSING;
     current = record[segment];
   }
+  // The path landed ON the unavailable value itself, e.g. `steps.x.output`.
+  const blocked = unavailableReason(current);
+  if (blocked !== undefined) throw new UnavailableValueError(blocked);
   return current === undefined ? MISSING : current;
 }
 

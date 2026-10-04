@@ -264,6 +264,70 @@ Which port a step takes changes which steps run, never the order steps are
 reached in. The studio's step outline (`stepOutline` in the workflow editor)
 lists steps in this order.
 
+## The workflow policy
+
+A workflow document carries a `policy` block, and every field in it was schema
+and editor only until W3.3: nothing read `concurrency`, `runTimeoutSeconds`,
+`defaultRetry` or `onFailure`, so an author who set them got no behaviour and
+no warning. They are enforced now, and the fields that are **not** are marked
+`NOT YET ENFORCED` in the document model's own SDL rather than left to look
+live. `reactor/policy.ts` resolves the block; a definition with **no** policy
+at all enforces nothing, which is what every legacy and hand-built definition
+has.
+
+| Field                      | Where                     | Behaviour                                                                                             |
+| -------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `concurrency`              | `reactor/run-gate.ts`     | SINGLETON drops a firing while a run is active; QUEUE serialises; PARALLEL runs concurrently          |
+| `maxParallelRuns`          | `reactor/run-gate.ts`     | Bounds PARALLEL; null is unbounded. SINGLETON and QUEUE are 1 by definition                           |
+| `runTimeoutSeconds`        | `pieces/engine/coordinator.ts` | A run deadline, checked between steps and bounding every retry wait; expiry ends the run CANCELLED |
+| `defaultRetry`, step `retry` | `pieces/engine/retry.ts` | Attempts, backoff, delays and `retryOn`; attempts land on the step's journal row                      |
+| `onFailure`                | `reactor/service.ts`      | PARK parks the trigger; NOTIFY logs at error level; IGNORE does nothing                               |
+| `maxSuspensionDays`        | —                         | **Not enforced**: nothing suspends. Waitpoints, `run.pause` and `generateResumeUrl` all throw         |
+| `retainRunsDays`           | —                         | **Not enforced** per workflow; `PH_WORKFLOWS_RUN_RETENTION_DAYS` is the journal-wide control           |
+| `journalAsDocument`        | —                         | **Not enforced**: the journal is relational, and there is no run document model                       |
+| step `idempotencyKeyExpression` | —                    | **Not enforced**: a fire dedupes on its trigger operation or a trigger item's `_dedupe_key`           |
+
+**The document factory's defaults are `concurrency: QUEUE` and
+`onFailure: PARK`**, so enforcing them is a behaviour change for every workflow
+created from it: runs of one workflow now serialise, and a terminal failure
+takes the trigger out of the supervisor's ENABLED set until the workflow is
+re-published or re-enabled. That is what the fields have said since the first
+schema; what changed is that they are true.
+
+- **Concurrency is process-local**, which is exactly right: workflow execution
+  is a singleton pinned to one reactor (see **Placement** above), so this
+  process is the deployment's whole run set. A firing SINGLETON drops is
+  journaled as a CANCELLED run rather than discarded — a firing that vanished
+  is indistinguishable from a trigger that never fired.
+- **`retryOn` empty means every error is retryable.** The schema reads "error
+  classes that are retryable; everything else fails terminally on attempt 1",
+  but the shipped default is an empty list, and taking that literally would
+  make every `maxAttempts` a lie. A non-empty entry matches the error's class
+  name exactly or appears anywhere in its message, case-insensitively, so both
+  `["HostCallTimeoutError"]` and `["429"]` work.
+- `maxAttempts` is clamped to 10 and one backoff wait to 5 minutes: each
+  attempt re-runs a side effect and holds the run's worker slot.
+- A step that DECLARES a `retry` block overrides `defaultRetry`, whatever the
+  block resolves to — `{maxAttempts: 1}` is an author saying "not this one".
+- An **INDETERMINATE** step is never retried and never replayed: a retry would
+  be a second write. See **Indeterminate steps** below.
+
+## Indeterminate steps
+
+A piece's call of its host is capped (`PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS`, 10s,
+raised to the step's own `timeoutSeconds` when that is longer). A **writing**
+call that times out — `store.put`, `store.delete`, `reactor.submit`,
+`reactor.submitCreate`, `reactor.wait` — may well have been committed, so the
+step records `INDETERMINATE` rather than FAILED: reporting a failure for a
+write that landed is a claim nobody can stand behind, and it was happening
+(the 10s cap against a dispatch under load). A read that times out is an
+ordinary failure.
+
+An INDETERMINATE step **takes no port**, so no error branch claims to have
+handled it, and the run fails naming the state. It is not retried, and a rerun
+does not replay it — only SUCCEEDED and REPLAYED steps replay. Workflow Studio
+renders it in its own tone.
+
 ## Expressions
 
 Every string in a step's config is a template, nested strings in objects and
@@ -318,6 +382,7 @@ explanation behind it.
 | `PH_WORKFLOWS_WEBHOOK_RECONCILE_MS`   | `900000`           | How often a webhook trigger re-registers with its provider                                |
 | `PH_WORKFLOWS_WEBHOOK_TIMEOUT_MS`     | `30000`            | How long a sync-mode delivery holds the provider's socket                                 |
 | `PH_WORKFLOWS_PIECE_MAX_FILE_BYTES`   | `8388608`          | File-size ceiling for FILE-property hydration and `ctx.files.write`                       |
+| `PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS`   | `10000`            | Cap on one call a piece makes of its host; raised to the step's own timeout when that is longer (`activepieces/context/limits.ts`) |
 | `PH_WORKFLOWS_RUN_RETENTION_DAYS`     | `30`               | Deletes finished runs older than this many days; `0`/`off` keeps everything (`reactor/run-retention.ts`) |
 | `PH_WORKFLOWS_SINGLETON_OWNER`        | `<host>/<pid>/…`   | Names this process as the workflow singleton's owner (`reactor/singleton-lease.ts`)       |
 

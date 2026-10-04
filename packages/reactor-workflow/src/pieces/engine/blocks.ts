@@ -14,6 +14,7 @@ import {
   type PieceResolver,
 } from "../activepieces/resolver.js";
 import type { ActionContextIdentity } from "../activepieces/context/action.js";
+import { hostCallTimeoutForStep } from "../activepieces/context/limits.js";
 import type {
   ReactorCreateInput,
   ReactorCreateSubmission,
@@ -585,6 +586,9 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
         },
         {
           ...(timeoutMs ? { timeoutMs } : {}),
+          // Never shorter than the step's own timeout: a step given two
+          // minutes must not have its host calls cut off after ten seconds.
+          hostCallTimeoutMs: hostCallTimeoutForStep(timeoutMs),
           ...(pieceStore || reactor
             ? {
                 hostCalls: {

@@ -51,6 +51,7 @@ import {
   type EgressPolicy,
   type ExpressionScope,
   type PieceWorkerSession,
+  type ReplayedStep,
   type SecretProvider,
   type SecretStore,
   type StepExecutionRecord,
@@ -200,6 +201,13 @@ import {
   type TriggerStateRow,
 } from "./store.js";
 import { decodeRunCursor, encodeRunCursor } from "./run-cursor.js";
+import {
+  CANCELLED_RUN_STATUS,
+  effectiveRunPolicy,
+  PARKED_TRIGGER_STATUS,
+  type EffectiveRunPolicy,
+} from "./policy.js";
+import { WorkflowRunGate } from "./run-gate.js";
 import {
   RETENTION_SWEEP_INTERVAL_MS,
   runRetentionMs,
@@ -3519,7 +3527,7 @@ export class WorkflowRuntimeService {
     triggerPayload?: unknown,
     triggerKind = "manual",
     resume?: {
-      completedSteps: Map<string, { output?: unknown; port?: string | null }>;
+      completedSteps: Map<string, ReplayedStep>;
       rerunOf: string;
     },
     ctx?: WorkflowCaller,
@@ -3576,6 +3584,21 @@ export class WorkflowRuntimeService {
     const executor = this.blockExecutor(store);
 
     const runnable = runnableDefinition(state);
+    // `policy.concurrency`, enforced. SINGLETON refuses here, before the run
+    // row is adopted, so a dropped firing is journaled as the CANCELLED run it
+    // is rather than disappearing; QUEUE and a bounded PARALLEL wait.
+    const policy = effectiveRunPolicy(runnable);
+    const admission = await this.runGate.admit(workflowId, policy);
+    if (!admission.admitted) {
+      return this.skipFiring(store, workflowId, enqueuedRunId, {
+        reason: admission.reason,
+        triggerKind,
+        triggerPayload,
+        workflowName: runJournalName(state.name, documentName),
+        workflowVersion: runnable.version,
+      });
+    }
+
     let runId: string | null = enqueuedRunId ?? null;
     if (enqueuedRunId) {
       await store?.beginRun(enqueuedRunId, {
@@ -3634,6 +3657,15 @@ export class WorkflowRuntimeService {
             ...(secretValues.length > 0 ? { redactValues: secretValues } : {}),
             triggerPayload,
             completedSteps: resume?.completedSteps,
+            // `policy.defaultRetry` and `policy.runTimeoutSeconds`, enforced.
+            ...(policy.defaultRetry
+              ? { defaultRetry: policy.defaultRetry }
+              : {}),
+            ...(policy.runTimeoutSeconds
+              ? {
+                  deadline: Date.now() + policy.runTimeoutSeconds * 1000,
+                }
+              : {}),
             // Journal each step as it lands, so a reactor that dies mid-run
             // still leaves a rerunnable record of the work it finished.
             onStep:
@@ -3669,6 +3701,11 @@ export class WorkflowRuntimeService {
           );
         }
       }
+      // `policy.onFailure`, enforced: PARK stops the trigger refiring, NOTIFY
+      // says so where an operator will see it, IGNORE is the old behaviour.
+      if (result.status === "FAILED") {
+        await this.applyFailureMode(policy, workflowId, runId, result.error);
+      }
       const finished = { ...result, runId };
       if (!ctx) return finished;
       // Handed back only as `run` would serve it, so a step's output never
@@ -3689,6 +3726,102 @@ export class WorkflowRuntimeService {
       // The run owns the child, however it ended: closing kills it and hands
       // the slot to whichever run is waiting.
       session?.close();
+      // And the concurrency slot, so the next QUEUE'd firing starts.
+      admission.release();
+    }
+  }
+
+  // Firings of one workflow at a time; see run-gate.ts.
+  private readonly runGate = new WorkflowRunGate();
+
+  /**
+   * A firing SINGLETON refused.
+   *
+   * Journaled as a CANCELLED run rather than dropped: a firing that vanished
+   * is indistinguishable from a trigger that never fired, which is the class
+   * of bug this work package exists to stamp out. An already-enqueued row is
+   * closed out in place, so nothing is left PENDING for a sweep to find.
+   */
+  private async skipFiring(
+    store: WorkflowRunStore | undefined,
+    workflowId: string,
+    enqueuedRunId: string | undefined,
+    details: {
+      reason: string;
+      triggerKind: string;
+      triggerPayload?: unknown;
+      workflowName: string;
+      workflowVersion: number;
+    },
+  ): Promise<PersistedRunResult> {
+    this.logger.info(`Workflow ${workflowId}: ${details.reason}`);
+    let runId = enqueuedRunId ?? null;
+    if (store) {
+      try {
+        if (runId) {
+          // The row is already durable, with its trigger payload; adopt and
+          // close it rather than leaving a PENDING run for a sweep to find.
+          await store.beginRun(runId, details);
+        } else {
+          runId = await store.startRun({ workflowId, ...details });
+        }
+        await store.cancelRun(runId, details.reason);
+      } catch (error) {
+        this.logger.warn(
+          `Could not journal the skipped firing of workflow ${workflowId}: @error`,
+          error,
+        );
+      }
+    }
+    return { status: CANCELLED_RUN_STATUS, steps: [], runId };
+  }
+
+  /**
+   * `policy.onFailure` for a run that failed terminally.
+   *
+   * PARK is the document model's own default, so this is where enforcing the
+   * knob becomes visible: a terminal failure takes the trigger out of the
+   * supervisor's ENABLED set, and the schedule stops refiring until the
+   * workflow is re-published or re-enabled. That is what PARK means, and
+   * leaving a broken workflow firing every minute is what it meant before.
+   *
+   * NOTIFY logs at error level, which is the only notification channel this
+   * engine has; it is marked as such rather than pretending to page anyone.
+   */
+  private async applyFailureMode(
+    policy: EffectiveRunPolicy,
+    workflowId: string,
+    runId: string | null,
+    error: string | undefined,
+  ): Promise<void> {
+    if (policy.onFailure === "IGNORE") return;
+    const detail = error ?? "the run failed";
+    if (policy.onFailure === "NOTIFY") {
+      this.logger.error(
+        `Workflow ${workflowId} run ${runId ?? "(unjournaled)"} failed and ` +
+          `its policy is NOTIFY: @error`,
+        detail,
+      );
+      return;
+    }
+    const store = await this.store();
+    if (!store) return;
+    try {
+      await store.setTriggerStatus(
+        workflowId,
+        PARKED_TRIGGER_STATUS,
+        `Parked after a failed run (policy.onFailure = PARK): ${detail}`,
+      );
+      this.logger.error(
+        `Workflow ${workflowId} is PARKED after run ${runId ?? "(unjournaled)"} ` +
+          "failed; its trigger will not fire again until the workflow is " +
+          "re-published or re-enabled",
+      );
+    } catch (parkError) {
+      this.logger.warn(
+        `Could not park workflow ${workflowId} after a failed run: @error`,
+        parkError,
+      );
     }
   }
 
@@ -3750,10 +3883,7 @@ export class WorkflowRuntimeService {
     );
     // Reuse an output only while the step is the step that produced it: same
     // key, and the same definition hash (block type, config, connection, schemas).
-    const completedSteps = new Map<
-      string,
-      { output?: unknown; port?: string | null }
-    >();
+    const completedSteps = new Map<string, ReplayedStep>();
     for (const row of await store.getSteps(runId)) {
       if (row.status !== "SUCCEEDED" && row.status !== "REPLAYED") continue;
       const current = currentSteps.get(row.step_id);
@@ -3768,9 +3898,18 @@ export class WorkflowRuntimeService {
       const output =
         row.output === null ? undefined : (JSON.parse(row.output) as unknown);
       // The journal capped this output to a marker (store.ts,
-      // STEP_PAYLOAD_MAX_BYTES); replaying it would hand the marker to the
-      // steps downstream. Re-executing the step reproduces the real value.
-      if (isTruncatedStepPayload(output)) continue;
+      // STEP_PAYLOAD_MAX_BYTES). The step still counts as COMPLETED: it
+      // succeeded, it had side effects, and re-running it would do them again
+      // — which is exactly what dropping it from this map used to mean
+      // (backlog item 15). Its output is unavailable instead, and a
+      // downstream step that reads it fails the rerun by name.
+      if (isTruncatedStepPayload(output)) {
+        completedSteps.set(row.step_id, {
+          port: row.port,
+          outputTruncated: true,
+        });
+        continue;
+      }
       completedSteps.set(row.step_id, { output, port: row.port });
     }
     return this.fire(

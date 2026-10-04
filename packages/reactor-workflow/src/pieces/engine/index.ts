@@ -5,6 +5,7 @@ export * from "./step-input.js";
 export * from "./connections.js";
 export * from "./blocks.js";
 export * from "./coordinator.js";
+export * from "./retry.js";
 export * from "./dynamic-props.js";
 export * from "./resolution.js";
 export * from "./canonical.js";

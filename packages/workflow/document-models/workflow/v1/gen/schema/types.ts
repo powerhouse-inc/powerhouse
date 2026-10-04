@@ -168,7 +168,7 @@ export type RetryPolicy = {
   initialDelaySeconds: Scalars["Int"]["output"];
   maxAttempts: Scalars["Int"]["output"];
   maxDelaySeconds: Scalars["Int"]["output"];
-  /** Error classes that are retryable. Everything else fails terminally on attempt 1. */
+  /** Error classes that are retryable, matched against the error's class name or anywhere in its message, case-insensitively. EMPTY admits every error: an empty list with maxAttempts > 1 means retry, not never-retry. */
   retryOn: Array<Scalars["String"]["output"]>;
 };
 
@@ -338,16 +338,21 @@ export type WorkflowEdge = {
 };
 
 export type WorkflowPolicy = {
-  /** SINGLETON drops a firing while a run is active; QUEUE serialises; PARALLEL runs concurrently. */
+  /** ENFORCED. SINGLETON drops a firing while a run is active (journaled CANCELLED, not dropped silently); QUEUE serialises; PARALLEL runs concurrently. */
   concurrency: ConcurrencyMode;
+  /** ENFORCED. The fallback for a step with no retry of its own. */
   defaultRetry: RetryPolicy;
+  /** NOT YET ENFORCED. The run journal is relational; there is no run document model to write. */
   journalAsDocument: Scalars["Boolean"]["output"];
+  /** ENFORCED under PARALLEL: how many runs of this workflow may execute at once; null is unbounded. SINGLETON and QUEUE are 1 by definition. */
   maxParallelRuns: Maybe<Scalars["Int"]["output"]>;
-  /** Bounds how long a run may stay suspended on a waitpoint. */
+  /** NOT YET ENFORCED. Bounds how long a run may stay suspended on a waitpoint - but nothing suspends: waitpoints, run.pause and generateResumeUrl all throw, so there is no suspended state to bound. */
   maxSuspensionDays: Scalars["Int"]["output"];
-  /** What happens to a run whose steps have all failed terminally. */
+  /** ENFORCED. What happens to a run whose steps have all failed terminally: PARK takes the trigger out of the supervisor's ENABLED set until the workflow is re-published or re-enabled, NOTIFY logs at error level (the only notification channel this engine has), IGNORE does nothing. */
   onFailure: FailureMode;
+  /** NOT YET ENFORCED per workflow. Retention is a journal-wide sweep on the relational handle, which has no reactor read to resolve a per-workflow window with; PH_WORKFLOWS_RUN_RETENTION_DAYS (30 days by default) is the control that applies. */
   retainRunsDays: Scalars["Int"]["output"];
+  /** ENFORCED. Checked between steps and while a retry waits; past it the run ends CANCELLED. */
   runTimeoutSeconds: Scalars["Int"]["output"];
 };
 
@@ -378,7 +383,7 @@ export type WorkflowStep = {
   config: Scalars["Unknown"]["output"];
   connectionId: Maybe<Scalars["PHID"]["output"]>;
   id: Scalars["OID"]["output"];
-  /** Expression yielding a stable key; two executions with the same key are one side effect. */
+  /** NOT YET ENFORCED. Expression yielding a stable key; two executions with the same key are one side effect. A fire is deduplicated on its trigger operation or a trigger item's _dedupe_key, never on a step expression. */
   idempotencyKeyExpression: Maybe<Scalars["String"]["output"]>;
   /** Author-visible label; unique within the workflow; used in expressions. */
   key: Scalars["String"]["output"];
@@ -390,10 +395,11 @@ export type WorkflowStep = {
   pieceVersion: Scalars["String"]["output"];
   position: Maybe<Point>;
   propertySettings: Maybe<Array<PropertySetting>>;
-  /** Per-step override of the workflow default retry policy. */
+  /** ENFORCED. Per-step override of the workflow default retry policy. */
   retry: Maybe<RetryPolicy>;
   /** Skipped steps are passed over at run time. */
   skip: Maybe<Scalars["Boolean"]["output"]>;
+  /** ENFORCED. Also raises the cap on each host call the step's piece makes, which is never shorter than the step's own timeout. */
   timeoutSeconds: Maybe<Scalars["Int"]["output"]>;
   /** Timestamp of the last real edit; a lastTest before it is stale. */
   updatedAt: Maybe<Scalars["DateTime"]["output"]>;

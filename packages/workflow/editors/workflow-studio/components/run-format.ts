@@ -45,6 +45,10 @@ export const STEP_TONE: Record<string, Tone> = {
   ...RUN_TONE,
   SKIPPED: "idle",
   REPLAYED: "run",
+  // Neither a success nor a failure: a host call the step made timed out, so
+  // a write it asked for may well have been committed. Its own tone, because
+  // reading it as either of the other two is the mistake.
+  INDETERMINATE: "warn",
 };
 
 export const WORKFLOW_TONE: Record<string, Tone> = {

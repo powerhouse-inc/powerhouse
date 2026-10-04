@@ -86,6 +86,10 @@ export interface RequestTaps {
 // the taps the host offers while it runs.
 export interface RequestOptions extends RequestTaps {
   timeoutMs?: number;
+  // Cap on each call the child makes of its host, for THIS request. Per
+  // request rather than per worker because it follows the step's own timeout
+  // (`hostCallTimeoutForStep`), and one worker serves many steps.
+  hostCallTimeoutMs?: number;
 }
 
 /** @deprecated Named for the one request that had it; every request takes it
@@ -218,7 +222,7 @@ export class PieceWorker implements IPieceWorker {
     type: WorkerRequestType,
     request: WorkerRequest,
     timeoutMs?: number,
-    taps: RequestTaps = {},
+    taps: RequestOptions = {},
   ): Promise<PieceWorkerResult> {
     const run = this.queue.then(() =>
       this.execute(type, request, timeoutMs ?? this.defaultTimeoutMs, taps),
@@ -248,10 +252,15 @@ export class PieceWorker implements IPieceWorker {
     type: WorkerRequestType,
     request: WorkerRequest,
     timeoutMs: number,
-    taps: RequestTaps,
+    taps: RequestOptions,
   ): Promise<PieceWorkerResult> {
     const worker = this.spawn();
     const id = this.nextId++;
+    // An explicit per-worker cap is the host's own decision and wins. With
+    // none — which is how the pool builds them — each request carries the cap
+    // derived from its step (`hostCallTimeoutForStep`), because one worker
+    // serves many steps and the cap follows the step's own timeout.
+    const hostCallTimeoutMs = this.hostCallTimeoutMs ?? taps.hostCallTimeoutMs;
 
     return new Promise<PieceWorkerResult>((resolve, reject) => {
       // The kill timer's own reading, so the child can give up in time to say why.
@@ -325,9 +334,7 @@ export class PieceWorker implements IPieceWorker {
           request: {
             maxFileBytes: configuredMaxFileBytes(),
             deadline,
-            ...(this.hostCallTimeoutMs
-              ? { hostCallTimeoutMs: this.hostCallTimeoutMs }
-              : {}),
+            ...(hostCallTimeoutMs ? { hostCallTimeoutMs } : {}),
             ...request,
           },
         }),

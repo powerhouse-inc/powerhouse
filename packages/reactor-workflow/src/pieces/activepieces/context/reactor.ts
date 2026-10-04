@@ -7,9 +7,11 @@
 // throwing stub instead, and finds out by name that it has no reactor.
 import {
   callHost,
+  HostCallIndeterminateError,
   HostCallTimeoutError,
   hostCallTimeoutMs,
 } from "../worker/host-call.js";
+import { markIndeterminate } from "../indeterminate.js";
 import type { StoreScopeName } from "./store-scope.js";
 import type {
   ReactorCreateInput,
@@ -114,6 +116,9 @@ export class ReactorJobPendingError extends Error {
     this.name = "ReactorJobPendingError";
     this.jobId = jobId;
     this.status = status;
+    // The job WAS submitted; only its outcome is unknown. Reporting the step
+    // FAILED would be a claim nobody can stand behind.
+    markIndeterminate(this);
   }
 }
 
@@ -124,6 +129,7 @@ export class ReactorSubmitUnconfirmedError extends Error {
       `Submitting ${what} to the reactor got no answer before the step deadline; it may have been submitted`,
     );
     this.name = "ReactorSubmitUnconfirmedError";
+    markIndeterminate(this);
   }
 }
 
@@ -342,7 +348,12 @@ export class RemoteReactorService implements ReactorService {
         Math.min(hostCallTimeoutMs(), remaining),
       );
     } catch (error) {
-      if (error instanceof HostCallTimeoutError) {
+      // Either timeout class: the mutating one is already indeterminate, and
+      // this error says the same thing in the reactor port's own words.
+      if (
+        error instanceof HostCallTimeoutError ||
+        error instanceof HostCallIndeterminateError
+      ) {
         throw new ReactorSubmitUnconfirmedError(what);
       }
       throw error;

@@ -265,13 +265,15 @@ describe("a reactor write that outlasts one host call", () => {
     });
   });
 
-  it("fails by name, carrying the job, when the deadline comes first", async () => {
+  it("reports the job by name, as indeterminate, when the deadline comes first", async () => {
     const { port, calls } = scriptedPort({});
 
     const result = await run(port, 1);
 
     const [step] = result.steps;
-    expect(step.status).toBe("FAILED");
+    // The job WAS submitted; only its outcome is unknown, so the step is
+    // neither a success nor a failure (W3.3, backlog item 6).
+    expect(step.status).toBe("INDETERMINATE");
     // The status word is the race's incidental half: under load the 1s
     // deadline can pass before the first wait slice runs, so the job is
     // reported at its initial PENDING rather than RUNNING. Both are
@@ -382,7 +384,9 @@ describe("a reactor write that outlasts one host call", () => {
     const result = await run(port, 1, undefined, roomy);
 
     const [step] = result.steps;
-    expect(step.status).toBe("FAILED");
+    // Not FAILED: the submit may have landed, and claiming a failure for a
+    // write that was committed is the thing W3.3 set out to stop.
+    expect(step.status).toBe("INDETERMINATE");
     expect(step.error).toMatch(
       /^ReactorSubmitUnconfirmedError: .*may have been submitted/,
     );
@@ -405,13 +409,13 @@ describe("a reactor write that outlasts one host call", () => {
     for (const wait of waits) expect(wait).toBeLessThan(HOST_CALL_CAP_MS);
   });
 
-  it("fails a create still queued at the deadline as pending, not failed", async () => {
+  it("reports a create still queued at the deadline as indeterminate", async () => {
     const { port, calls } = scriptedPort({});
 
     const result = await run(port, 1, undefined, roomy, "make");
 
     const [step] = result.steps;
-    expect(step.status).toBe("FAILED");
+    expect(step.status).toBe("INDETERMINATE");
     expect(step.error).toMatch(
       /^ReactorJobPendingError: Reactor job job-create was still RUNNING/,
     );
