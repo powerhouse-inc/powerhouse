@@ -64,9 +64,13 @@ export { provisionInProcess } from "./in-process.js";
 // Remote reactor attachment and its inspection client (multi-reactor W3.2).
 export {
   createRemoteInspectorClient,
+  DEFAULT_INFO_TTL_MS,
+  DEFAULT_STORAGE_HEALTH_TTL_MS,
+  FORBIDDEN_CODE,
   GraphqlInspectionTransport,
   inspectionEndpoint,
   INSPECTION_OPERATIONS,
+  InspectionRequestError,
   provisionRemote,
   RemoteInspectorClient,
   RemoteSyncManagerClient,
@@ -78,7 +82,6 @@ export {
   type RemoteInspectionRemote,
   type RemoteInspectionTransportOptions,
   type RemoteInspectorClientOptions,
-  type WireRemoteMeta,
 } from "./remote/index.js";
 export {
   connectManagedWorkerReactor,

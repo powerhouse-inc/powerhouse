@@ -1,10 +1,11 @@
 export {
   createRemoteInspectorClient,
+  DEFAULT_INFO_TTL_MS,
+  DEFAULT_STORAGE_HEALTH_TTL_MS,
   RemoteInspectorClient,
   type RemoteInspectionInfo,
   type RemoteInspectionRemote,
   type RemoteInspectorClientOptions,
-  type WireRemoteMeta,
 } from "./client.js";
 export {
   INSPECTION_OPERATIONS,
@@ -13,7 +14,9 @@ export {
 export { inspectionEndpoint, provisionRemote } from "./provision.js";
 export { RemoteSyncManagerClient } from "./sync-manager.js";
 export {
+  FORBIDDEN_CODE,
   GraphqlInspectionTransport,
+  InspectionRequestError,
   type RemoteInspectionHeaders,
   type RemoteInspectionTransportOptions,
 } from "./transport.js";

@@ -36,6 +36,12 @@ export function inspectionEndpoint(url: string, override?: string): string {
  * is the capability row's SOURCE: which channel types that reactor routes and
  * whether it runs workflows are facts only it holds, and the row is frozen
  * from its answer exactly as a worker's row is frozen from its built config.
+ *
+ * The record itself is NOT frozen onto the handle. `serverInfo` reads through
+ * to the client's current answer and `refreshServerInfo()` re-asks, because the
+ * admin tiers in it are a deployment's posture rather than a property of the
+ * reactor: an operator restarts the host with `PH_INSPECTION_ADMIN=true` and
+ * the levers are meant to go live under the same handle.
  */
 export async function provisionRemote(
   descriptor: ReactorDescriptor,
@@ -79,7 +85,16 @@ export async function provisionRemote(
       syncChannelTypes: serverInfo.syncChannels,
     }),
     endpoint,
-    serverInfo,
+    // Read through to the client's own last answer rather than a copy taken
+    // here: the client re-reads the reported facts on its refusal paths too, so
+    // a copy would leave a holder looking at a tier flag the client has already
+    // learned is wrong. The fallback is unreachable in practice -- the read
+    // above seeded the client's cache, which is only ever replaced -- and is
+    // the provision-time record either way.
+    get serverInfo() {
+      return client.reportedInfo ?? serverInfo;
+    },
+    refreshServerInfo: () => client.refreshInfo(),
     remoteInspector: client,
     inspector: client,
     dbQuery: client,

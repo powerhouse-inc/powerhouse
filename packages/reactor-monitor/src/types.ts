@@ -322,11 +322,33 @@ export interface ManagedRemoteReactor extends ManagedReactorBase {
   readonly endpoint: string;
   /**
    * What the remote reactor reported about itself, including which admin tiers
-   * that deployment serves. `capabilities` is derived from it; a view that
-   * needs to disable a repair lever or the DB tab reads `adminEnabled` /
-   * `sqlEnabled` from here.
+   * that deployment serves. A view that needs to disable a repair lever or the
+   * DB tab reads `adminEnabled` / `sqlEnabled` from here.
+   *
+   * A LIVE read, not a value frozen at provision time. The two tier flags are
+   * the one part of this record an operator changes under a running monitor --
+   * restart the host with `PH_INSPECTION_ADMIN=true` -- so the handle reports
+   * what the client last learned, and {@link refreshServerInfo} is how a UI
+   * asks for a fresh answer. Reading it twice can therefore give two answers;
+   * that is the feature.
+   *
+   * `capabilities` is still derived from the record as it stood at provision
+   * time and stays frozen, because the rest of this report describes how the
+   * far side was BUILT: a reactor whose channel factories or workflow engine
+   * changed is a different reactor, and the contract a router caches must not
+   * change under it. Re-provision to pick that up.
    */
   readonly serverInfo: RemoteInspectionInfo;
+  /**
+   * Re-reads the reported facts from the reactor now and updates
+   * {@link serverInfo}.
+   *
+   * The seam behind the monitor's "re-check server" affordance, and what makes
+   * the documented restart-with-the-flag flow work in both directions. The
+   * inspection client also calls it on its own refusal paths, so a lever that
+   * the far side rejects corrects the gate rather than merely failing.
+   */
+  refreshServerInfo(): Promise<RemoteInspectionInfo>;
   /** The remote inspection client, for the ops beyond `IInspector`'s own surface. */
   readonly remoteInspector: RemoteInspectorClient;
 }

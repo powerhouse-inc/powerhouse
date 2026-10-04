@@ -68,6 +68,14 @@ type FakeServerOptions = {
   sqlEnabled?: boolean;
   workflows?: boolean;
   syncChannels?: readonly string[];
+  /**
+   * Answer every mutation with reactor-api's own refusal, extensions code and
+   * all -- the shape of a host that was restarted WITHOUT the admin flag under
+   * a client that still believes it has one.
+   */
+  refuseMutations?: boolean;
+  /** Overrides for the one wire remote the server reports. */
+  remote?: Record<string, unknown>;
 };
 
 /**
@@ -91,7 +99,7 @@ function fakeInspectionServer(options: FakeServerOptions = {}) {
   };
 
   const health = deriveConnectionHealth(SNAPSHOT, 0);
-  const wireRemote = {
+  const wireRemote: Record<string, unknown> = {
     remoteName: REMOTE_META.name,
     remoteId: REMOTE_META.id,
     meta: REMOTE_META,
@@ -115,6 +123,7 @@ function fakeInspectionServer(options: FakeServerOptions = {}) {
       neverSucceeded: health.neverSucceeded,
       stalenessMs: health.stalenessMs ?? null,
     },
+    ...options.remote,
   };
 
   const answers: Record<string, unknown> = {
@@ -205,6 +214,19 @@ function fakeInspectionServer(options: FakeServerOptions = {}) {
       throw new Error(`unnamed operation: ${body.query}`);
     }
     requests.push({ operation: name, variables: body.variables });
+    if (options.refuseMutations && body.query.startsWith("mutation")) {
+      return Promise.resolve(
+        Response.json({
+          errors: [
+            {
+              message:
+                "Reactor inspection pausing the queue is not enabled on this host: set PH_INSPECTION_ADMIN=true (or 1, yes, on) to serve it",
+              extensions: { code: "FORBIDDEN" },
+            },
+          ],
+        }),
+      );
+    }
     const data = answers[name];
     if (data === undefined) {
       return Promise.resolve(
@@ -380,8 +402,7 @@ describe("RemoteInspectorClient reads", () => {
       url: "http://host.example/graphql/inspection",
       headers: () => ({ authorization: `Bearer token-${seen.length}` }),
       fetch: (_input, init) => {
-        const headers = init?.headers as Record<string, string> | undefined;
-        seen.push(headers?.authorization ?? "none");
+        seen.push(new Headers(init?.headers).get("authorization") ?? "none");
         return Promise.resolve(
           Response.json({ data: { inspection: { catchUpStatus: {} } } }),
         );
@@ -392,6 +413,89 @@ describe("RemoteInspectorClient reads", () => {
     await client.getCatchUpStatus();
 
     expect(seen).toEqual(["Bearer token-0", "Bearer token-1"]);
+  });
+
+  // HTTP header names are case-INSENSITIVE, so merging a provider's headers
+  // over the defaults by object spread produces TWO content-type headers
+  // whenever the provider spells it differently, and which one the server
+  // reads is up to its parser.
+  it("lets a provider override a default header instead of sending it twice", async () => {
+    let sent: Headers | undefined;
+    const client = new RemoteInspectorClient({
+      url: "http://host.example/graphql/inspection",
+      headers: () => ({
+        "Content-Type": "application/graphql+json",
+        Accept: "application/graphql-response+json",
+        Authorization: "Bearer t",
+      }),
+      fetch: (_input, init) => {
+        sent = new Headers(init?.headers);
+        return Promise.resolve(
+          Response.json({ data: { inspection: { catchUpStatus: {} } } }),
+        );
+      },
+    });
+
+    await client.getCatchUpStatus();
+
+    // `Headers.get` joins duplicates with ", ", so a single value is also the
+    // proof that nothing was sent twice.
+    expect(sent?.get("content-type")).toBe("application/graphql+json");
+    expect(sent?.get("accept")).toBe("application/graphql-response+json");
+    expect(sent?.get("authorization")).toBe("Bearer t");
+  });
+
+  it("decodes an ordinal past 2^31, which the Int-typed first cut could not carry", async () => {
+    const BIG = 4_294_967_296;
+    const server = fakeInspectionServer({
+      remote: {
+        inboxCursor: {
+          cursorType: "inbox",
+          cursorOrdinal: BIG,
+          lastSyncedAtUtcMs: null,
+          liveAckOrdinal: BIG + 1,
+          liveLatestOrdinal: BIG + 2,
+        },
+      },
+      adminEnabled: true,
+    });
+    const client = new RemoteInspectorClient({
+      url: "http://host.example/graphql/inspection",
+      fetch: server.fetchImpl,
+    });
+
+    const [inspection] = await client.inspectRemotes();
+    expect(inspection!.inboxCursor).toEqual({
+      cursorType: "inbox",
+      cursorOrdinal: BIG,
+      liveAckOrdinal: BIG + 1,
+      liveLatestOrdinal: BIG + 2,
+    });
+
+    // And an operator can NAME such a position when rewinding.
+    await client.rewindInboxCursor("switchboard", BIG);
+    expect(server.requests.at(-1)?.variables).toEqual({
+      remoteName: "switchboard",
+      toOrdinal: BIG,
+    });
+  });
+
+  it("reads storage health from a short cache, not once per poll", async () => {
+    const server = fakeInspectionServer();
+    const client = new RemoteInspectorClient({
+      url: "http://host.example/graphql/inspection",
+      fetch: server.fetchImpl,
+    });
+
+    await client.getStorageHealth();
+    await client.getStorageHealth();
+    await client.getStorageHealth();
+
+    expect(
+      server.requests.filter(
+        (request) => request.operation === "ReactorInspectionStorageHealth",
+      ),
+    ).toHaveLength(1);
   });
 });
 
@@ -421,10 +525,13 @@ describe("RemoteInspectorClient admin tiers", () => {
     for (const [name, call] of levers) {
       await expect(call(), name).rejects.toThrow(/PH_INSPECTION_ADMIN=true/);
     }
-    // Refused before the wire: only the one `info` request was made.
-    expect(server.requests.map((request) => request.operation)).toEqual([
-      "ReactorInspectionInfo",
-    ]);
+    // No LEVER reached the wire: every request was a re-read of the reported
+    // facts, which is what a local "no" costs now -- one round trip to make
+    // sure the host was not restarted with the flag since this client last
+    // asked, rather than a refusal based on a cache of unbounded age.
+    expect(
+      new Set(server.requests.map((request) => request.operation)),
+    ).toEqual(new Set(["ReactorInspectionInfo"]));
   });
 
   it("sends the lever once the host opted in", async () => {
@@ -477,7 +584,7 @@ describe("RemoteInspectorClient admin tiers", () => {
     });
   });
 
-  it("fetches the reported facts once and reuses them", async () => {
+  it("reuses the reported facts while they are fresh", async () => {
     const server = fakeInspectionServer({ adminEnabled: true });
     const client = new RemoteInspectorClient({
       url: "http://host.example/graphql/inspection",
@@ -486,6 +593,88 @@ describe("RemoteInspectorClient admin tiers", () => {
 
     await client.pauseQueue();
     await client.resumeQueue();
+
+    expect(
+      server.requests.filter((r) => r.operation === "ReactorInspectionInfo"),
+    ).toHaveLength(1);
+  });
+
+  // The documented operator flow: restart the Switchboard with the flag and
+  // the levers go live under the SAME monitor handle. A client that cached the
+  // tiers at provision time -- the first cut of W3.2 -- dead-ends it.
+  it("re-reads the tiers before refusing, so a host restarted with the flag works", async () => {
+    const server = fakeInspectionServer({ adminEnabled: false });
+    const client = new RemoteInspectorClient({
+      url: "http://host.example/graphql/inspection",
+      fetch: server.fetchImpl,
+    });
+
+    await expect(client.pauseQueue()).rejects.toThrow(/PH_INSPECTION_ADMIN/);
+
+    // The operator restarts that host with the flag on.
+    server.info.adminEnabled = true;
+
+    await client.pauseQueue();
+    expect(server.requests.at(-1)?.operation).toBe(
+      "ReactorInspectionPauseQueue",
+    );
+    expect(client.reportedInfo?.adminEnabled).toBe(true);
+  });
+
+  // And the other direction, which a cache-forever client got wrong just as
+  // badly: the lever is offered, the far side refuses it, and nothing updates
+  // the picture the UI's gate is drawn from.
+  it("corrects itself when the far side refuses a lever it thought was served", async () => {
+    const server = fakeInspectionServer({
+      adminEnabled: true,
+      refuseMutations: true,
+    });
+    const client = new RemoteInspectorClient({
+      url: "http://host.example/graphql/inspection",
+      fetch: server.fetchImpl,
+    });
+    await client.info();
+
+    // The host is restarted WITHOUT the flag; this client does not know yet.
+    server.info.adminEnabled = false;
+
+    await expect(client.pauseQueue()).rejects.toThrow(/PH_INSPECTION_ADMIN/);
+
+    // The refusal carried extensions.code FORBIDDEN, so the facts were
+    // re-read: the gate now closes with the real reason instead of offering
+    // the lever again.
+    expect(client.reportedInfo?.adminEnabled).toBe(false);
+    await expect(client.pauseQueue()).rejects.toThrow(
+      /does not serve admin inspection ops/,
+    );
+  });
+
+  it("re-reads on demand, for an operator who will not wait for the TTL", async () => {
+    const server = fakeInspectionServer({ adminEnabled: false });
+    const client = new RemoteInspectorClient({
+      url: "http://host.example/graphql/inspection",
+      fetch: server.fetchImpl,
+    });
+
+    expect((await client.info()).adminEnabled).toBe(false);
+    server.info.adminEnabled = true;
+
+    expect((await client.refreshInfo()).adminEnabled).toBe(true);
+    expect(client.reportedInfo?.adminEnabled).toBe(true);
+  });
+
+  it("shares one in-flight read between concurrent callers", async () => {
+    const server = fakeInspectionServer({ adminEnabled: true });
+    const client = new RemoteInspectorClient({
+      url: "http://host.example/graphql/inspection",
+      fetch: server.fetchImpl,
+    });
+
+    await Promise.all([
+      client.refreshInfo(),
+      client.refreshInfo(),
+      client.refreshInfo(),
+    ]);
 
     expect(
       server.requests.filter((r) => r.operation === "ReactorInspectionInfo"),
@@ -534,6 +723,58 @@ describe("RemoteSyncManagerClient", () => {
     expect(
       server.requests.filter((r) => r.operation === "ReactorInspectionRemotes"),
     ).toHaveLength(1);
+  });
+
+  // Wire data, not a trusted record: the subgraph serves a remote's
+  // configuration through a JSON scalar, and a remote that vanished between
+  // the inspection and the server's own lookup comes back as identity alone.
+  // A channel config with no `parameters` used to take the whole remotes list
+  // down with a TypeError, in a view whose entire purpose is diagnosing that
+  // reactor.
+  it("renders a remote whose channel config arrived half-formed", async () => {
+    const server = fakeInspectionServer({
+      remote: {
+        meta: { id: "remote-1", channelConfig: { type: "polling" } },
+      },
+    });
+    const syncManager = new RemoteSyncManagerClient(
+      new RemoteInspectorClient({
+        url: "http://host.example/graphql/inspection",
+        fetch: server.fetchImpl,
+      }),
+    );
+
+    await syncManager.startup();
+
+    const [remote] = syncManager.list();
+    expect(remote!.meta.name).toBe("switchboard");
+    expect(remote!.meta.channelConfig).toEqual({
+      type: "polling",
+      parameters: {},
+    });
+    expect(remote!.meta.collectionId.branch).toBe("main");
+    expect(remote!.channel.getConnectionState()).toEqual(SNAPSHOT);
+  });
+
+  it("renders a remote the server could only identify", async () => {
+    const server = fakeInspectionServer({
+      remote: { meta: { id: "remote-1" } },
+    });
+    const syncManager = new RemoteSyncManagerClient(
+      new RemoteInspectorClient({
+        url: "http://host.example/graphql/inspection",
+        fetch: server.fetchImpl,
+      }),
+    );
+
+    await syncManager.startup();
+
+    const [remote] = syncManager.list();
+    expect(remote!.meta.channelConfig).toEqual({
+      type: "unknown",
+      parameters: {},
+    });
+    expect(remote!.meta.filter.branch).toBe("main");
   });
 
   it("refuses to reconfigure the far side, by name", async () => {
@@ -633,6 +874,68 @@ describe("provisioning a remote reactor", () => {
     expect(() => reactor.events.subscribe(1, () => {})).toThrow(
       /The reactor event bus is not wired/,
     );
+  });
+
+  // Refusing a document operation is the point; refusing to be PRINTED is a
+  // trap for whoever is diagnosing something else. A log line, an error
+  // report or a devtools expansion that happens to include the handle must
+  // not throw while trying to say what it is.
+  it("lets the unwired handles be described, not just refused", async () => {
+    const reactor = await provisionRemote(
+      remoteDescriptor(fakeInspectionServer().fetchImpl),
+    );
+
+    // Through a template literal, so the assertion exercises the same
+    // ToPrimitive path a log line or an error message would.
+    const text = (value: unknown): string => `${value as string}`;
+
+    expect(() => JSON.stringify(reactor.client)).not.toThrow();
+    expect(() =>
+      JSON.stringify({ client: reactor.client.drives }),
+    ).not.toThrow();
+    expect(text(reactor.client)).toMatch(/unwired client/);
+    expect(text(reactor.client.drives)).toMatch(/unwired client\.drives/);
+    expect(JSON.parse(JSON.stringify(reactor.client))).toMatch(
+      /http:\/\/host\.example\/graphql\/inspection/,
+    );
+    // Still refuses the thing it exists to refuse.
+    expect(() => reactor.client.get("doc-1")).toThrow(/is not wired/);
+  });
+
+  it("reports the tiers the host NOW serves, not the ones it served at provision time", async () => {
+    const server = fakeInspectionServer({ adminEnabled: false });
+    const reactor = await provisionRemote(remoteDescriptor(server.fetchImpl));
+
+    expect(reactor.serverInfo.adminEnabled).toBe(false);
+
+    // The operator restarts that Switchboard with PH_INSPECTION_ADMIN=true and
+    // asks the monitor to re-check it.
+    server.info.adminEnabled = true;
+    const refreshed = await reactor.refreshServerInfo();
+
+    expect(refreshed.adminEnabled).toBe(true);
+    expect(reactor.serverInfo.adminEnabled).toBe(true);
+    // And the client agrees: the lever now goes to the wire instead of being
+    // refused locally.
+    await reactor.inspector.pauseQueue();
+    expect(server.requests.at(-1)?.operation).toBe(
+      "ReactorInspectionPauseQueue",
+    );
+  });
+
+  it("keeps the capability row frozen at provision time, tiers or not", async () => {
+    const server = fakeInspectionServer({ workflows: false });
+    const reactor = await provisionRemote(remoteDescriptor(server.fetchImpl));
+
+    // A reactor built with different channel factories or a workflow engine is
+    // a DIFFERENT reactor, and the contract a router caches must not change
+    // under it: re-provision for that, unlike the host's admin posture.
+    server.info.workflows = true;
+    await reactor.refreshServerInfo();
+
+    expect(reactor.serverInfo.workflows).toBe(true);
+    expect(reactor.capabilities.workflows).toBe(false);
+    expect(Object.isFrozen(reactor.capabilities)).toBe(true);
   });
 
   it("fails at provision time when the endpoint is not a reactor", async () => {

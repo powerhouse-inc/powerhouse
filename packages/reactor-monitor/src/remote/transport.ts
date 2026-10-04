@@ -28,8 +28,33 @@ export type RemoteInspectionTransportOptions = {
 
 type GraphqlResponse<T> = {
   data?: T;
-  errors?: { message: string }[];
+  errors?: { message: string; extensions?: { code?: string } }[];
 };
+
+/** The `extensions.code` reactor-api's inspection refusals carry. */
+export const FORBIDDEN_CODE = "FORBIDDEN";
+
+/**
+ * A failed inspection request, carrying the GraphQL `extensions.code` when the
+ * server sent one.
+ *
+ * The code is load-bearing, not decoration: a `FORBIDDEN` from the far side is
+ * how a caller learns its cached picture of that host's admin tiers is STALE
+ * (the host was restarted without the flag), as opposed to a transport fault or
+ * the reactor refusing an op on its own merits. `RemoteInspectorClient` re-reads
+ * `info` on exactly this code; without it a client would have to pattern-match
+ * message text to tell the two apart.
+ */
+export class InspectionRequestError extends Error {
+  /** The server's `extensions.code`, or `""` when it sent none. */
+  readonly code: string;
+
+  constructor(message: string, code: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "InspectionRequestError";
+    this.code = code;
+  }
+}
 
 /**
  * One GraphQL endpoint, spoken to over `fetch`.
@@ -38,7 +63,9 @@ type GraphqlResponse<T> = {
  * browser, the operations are a fixed handful of documents, and a failure here
  * has to be legible to an operator staring at the monitor's Sync tab -- so
  * every failure mode (transport, HTTP status, GraphQL errors, empty data)
- * becomes one `Error` whose message names the endpoint and the operation.
+ * becomes one error whose message names the endpoint and the operation, and
+ * whose {@link InspectionRequestError.code} carries the server's own
+ * `extensions.code` where there is one to carry.
  */
 export class GraphqlInspectionTransport {
   private readonly url: string;
@@ -63,15 +90,24 @@ export class GraphqlInspectionTransport {
   ): Promise<T> {
     const extra = this.headers ? await this.headers() : {};
 
+    // Merged through `Headers`, not an object spread: HTTP header names are
+    // case-INSENSITIVE, so a provider returning `Content-Type` or `Accept`
+    // spread over these defaults produces two of the same header rather than
+    // an override, and which one a server reads is then up to its parser.
+    // `Headers.set` replaces by canonical name, so a provider always wins.
+    const headers = new Headers({
+      "content-type": "application/json",
+      accept: "application/json",
+    });
+    for (const [name, value] of Object.entries(extra)) {
+      headers.set(name, value);
+    }
+
     let response: Response;
     try {
       response = await this.fetchImpl(this.url, {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          accept: "application/json",
-          ...extra,
-        },
+        headers,
         body: JSON.stringify({ query, variables }),
       });
     } catch (error) {
@@ -88,10 +124,15 @@ export class GraphqlInspectionTransport {
       // description of what went wrong is in there, and a 401/403 is the
       // answer an operator needs to see verbatim.
       const detail = await response.text().catch(() => "");
-      throw new Error(
+      throw new InspectionRequestError(
         `Reactor inspection "${operationName}" failed at ${this.url}: ${
           response.status
         }${detail ? ` ${detail}` : ""}`,
+        // A 401/403 is the HTTP spelling of the same refusal the GraphQL
+        // extension carries, so a caller reacts to one code either way.
+        response.status === 401 || response.status === 403
+          ? FORBIDDEN_CODE
+          : String(response.status),
       );
     }
 
@@ -108,10 +149,14 @@ export class GraphqlInspectionTransport {
     }
 
     if (body.errors && body.errors.length > 0) {
-      throw new Error(
+      const code =
+        body.errors.find((error) => error.extensions?.code)?.extensions?.code ??
+        "";
+      throw new InspectionRequestError(
         `Reactor inspection "${operationName}": ${body.errors
           .map((error) => error.message)
           .join("; ")}`,
+        code,
       );
     }
     if (body.data === undefined || body.data === null) {
