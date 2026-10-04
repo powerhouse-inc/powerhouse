@@ -21,6 +21,7 @@ import type {
 } from "../types.js";
 import { ChannelErrorSource, SyncOperationStatus } from "../types.js";
 import { trimMailboxFromAckOrdinal } from "../utils.js";
+import { calculateBackoffDelay } from "./interval-poll-timer.js";
 import type { LocalChannelPort } from "./local-channel-transport.js";
 import {
   isLocalWireMessage,
@@ -37,6 +38,11 @@ import {
 
 /** Which of a remote's two cursor rows a write targets. */
 type CursorType = "inbox" | "outbox";
+
+/** Base delay for the backoff that re-pushes after a transient transport fault. */
+const PUSH_RETRY_BASE_DELAY_MS = 500;
+/** Ceiling for that backoff. */
+const PUSH_RETRY_MAX_DELAY_MS = 30_000;
 
 /**
  * Serialised cursor persistence for one cursor row; see
@@ -90,6 +96,8 @@ export class LocalChannel implements IChannel {
   private lastFailureUtcMs?: number;
   /** The highest inbox ack already reported to the peer; only an advance re-posts. */
   private lastPostedAckOrdinal = 0;
+  private pushFailureCount = 0;
+  private pushRetryTimer?: ReturnType<typeof setTimeout>;
   private readonly connectionStateCallbacks =
     new Set<ConnectionStateChangeCallback>();
 
@@ -185,6 +193,7 @@ export class LocalChannel implements IChannel {
 
   async shutdown(): Promise<void> {
     this.isShutdown = true;
+    this.clearPushRetry();
     this.unsubscribeTransport?.();
     this.unsubscribeTransport = undefined;
     try {
@@ -206,8 +215,8 @@ export class LocalChannel implements IChannel {
       failureCount: this.failureCount,
       lastSuccessUtcMs: this.lastSuccessUtcMs ?? 0,
       lastFailureUtcMs: this.lastFailureUtcMs ?? 0,
-      pushBlocked: false,
-      pushFailureCount: 0,
+      pushBlocked: this.pushRetryTimer !== undefined,
+      pushFailureCount: this.pushFailureCount,
       receivingPages: false,
       requiresAuth: false,
     };
@@ -342,23 +351,33 @@ export class LocalChannel implements IChannel {
     });
   }
 
-  /** Pushes the given outbox items to the peer, marking them in flight. */
-  private pushOutbox(syncOps: SyncOperation[]): void {
+  /**
+   * Pushes the given outbox items to the peer, marking them in flight.
+   *
+   * A transport throw is classified rather than treated as terminal: only a
+   * structured-clone failure, which recurs identically on every retry, dead-
+   * letters its ops. Any other fault is transient -- the port is momentarily
+   * unusable -- so the ops stay in the outbox and {@link handlePushFailure}
+   * schedules a backoff re-push, keeping behaviour in step with the gql
+   * sibling's recoverable/unrecoverable split.
+   */
+  private pushOutbox(syncOps: readonly SyncOperation[]): void {
+    if (this.isShutdown || syncOps.length === 0) return;
     for (const syncOp of syncOps) syncOp.started();
-    const sent = this.post({
-      kind: "push",
-      channelId: this.channelId,
-      envelopes: this.envelopesFor(syncOps),
-    });
-    if (!sent) {
-      const channelError = new ChannelError(
-        ChannelErrorSource.Outbox,
-        this.lastFailure(),
+    try {
+      this.port.postMessage({
+        kind: "push",
+        channelId: this.channelId,
+        envelopes: this.envelopesFor(syncOps),
+      });
+    } catch (error) {
+      this.handlePushFailure(
+        syncOps,
+        error instanceof Error ? error : new Error(String(error)),
       );
-      for (const syncOp of syncOps) syncOp.failed(channelError);
-      this.deadLetter.add(...syncOps);
-      this.outbox.remove(...syncOps);
+      return;
     }
+    this.clearPushRetry();
   }
 
   /** Re-pushes every outbox item the peer has not acknowledged. */
@@ -367,12 +386,59 @@ export class LocalChannel implements IChannel {
     const unacked = this.outbox.items.filter(
       (syncOp) => syncOp.status !== SyncOperationStatus.Applied,
     );
-    if (unacked.length === 0) return;
-    this.post({
-      kind: "push",
-      channelId: this.channelId,
-      envelopes: this.envelopesFor(unacked),
-    });
+    this.pushOutbox(unacked);
+  }
+
+  /**
+   * Routes a push transport failure: a structured-clone (`DataCloneError`)
+   * failure is unrecoverable and dead-letters its ops; any other error is a
+   * transient transport fault, so the ops are left in the outbox to be
+   * re-pushed by the backoff retry and by the next hello/resend recovery.
+   */
+  private handlePushFailure(
+    syncOps: readonly SyncOperation[],
+    error: Error,
+  ): void {
+    if (this.classifyPostError(error) === "unrecoverable") {
+      const channelError = new ChannelError(ChannelErrorSource.Outbox, error);
+      for (const syncOp of syncOps) syncOp.failed(channelError);
+      this.deadLetter.add(...syncOps);
+      this.outbox.remove(...syncOps);
+      this.recordFailure(error);
+      return;
+    }
+    this.recordFailure(error);
+    this.schedulePushRetry();
+  }
+
+  /** A structured-clone failure cannot self-heal; every other fault can. */
+  private classifyPostError(error: Error): "recoverable" | "unrecoverable" {
+    return error.name === "DataCloneError" ? "unrecoverable" : "recoverable";
+  }
+
+  /** Schedules a single backoff re-push of the unacked outbox. */
+  private schedulePushRetry(): void {
+    if (this.isShutdown || this.pushRetryTimer !== undefined) return;
+    const delay = calculateBackoffDelay(
+      this.pushFailureCount,
+      PUSH_RETRY_BASE_DELAY_MS,
+      PUSH_RETRY_MAX_DELAY_MS,
+      Math.random(),
+    );
+    this.pushFailureCount++;
+    this.pushRetryTimer = setTimeout(() => {
+      this.pushRetryTimer = undefined;
+      this.rePushUnacked();
+    }, delay);
+  }
+
+  /** Clears the backoff state once a push lands or the channel stops. */
+  private clearPushRetry(): void {
+    this.pushFailureCount = 0;
+    if (this.pushRetryTimer !== undefined) {
+      clearTimeout(this.pushRetryTimer);
+      this.pushRetryTimer = undefined;
+    }
   }
 
   /** One envelope per SyncOperation, with key/dependsOn for batch ordering. */
@@ -455,6 +521,7 @@ export class LocalChannel implements IChannel {
   private markSuccess(): void {
     this.lastSuccessUtcMs = Date.now();
     this.failureCount = 0;
+    this.clearPushRetry();
   }
 
   private recordFailure(error: Error): void {
@@ -467,10 +534,6 @@ export class LocalChannel implements IChannel {
       error,
     );
     this.transitionConnectionState("error");
-  }
-
-  private lastFailure(): Error {
-    return new Error(`LocalChannel ${this.channelId} transport is unavailable`);
   }
 
   private transitionConnectionState(next: ConnectionState): void {
