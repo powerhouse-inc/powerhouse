@@ -23,6 +23,7 @@ import type {
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import type { PGlite } from "@electric-sql/pglite";
+import type { ReactorCapabilities } from "./capabilities.js";
 import type { AdoptLocalSyncPeerLink } from "./sync/types.js";
 
 /** How a monitored reactor is hosted. */
@@ -163,6 +164,13 @@ export interface MonitorWorkerClientModule {
 export interface ManagedReactorBase {
   readonly name: string;
   readonly kind: ReactorKind;
+  /**
+   * What this reactor can and cannot do, derived from its descriptor at
+   * provision time and static for the life of the handle (multi-reactor stage
+   * 2). The typed contract a router selects targets on; see
+   * {@link ReactorCapabilities}.
+   */
+  readonly capabilities: ReactorCapabilities;
   /** The reactor's client: direct in-process, an RPC proxy in a worker. */
   readonly client: IReactorClient;
   /** Typed inspection surface (`IInspector`, W0.3). */

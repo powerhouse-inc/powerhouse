@@ -30,6 +30,17 @@ export type {
   ReactorSyncConfig,
 } from "./types.js";
 
+export {
+  reactorCapabilities,
+  supportsSyncChannel,
+  type ReactorCapabilities,
+  type ReactorHosting,
+  type ReactorInspectionTransport,
+  type ReactorStorageCapability,
+  type ReactorStorageKind,
+  type ReactorSyncChannel,
+} from "./capabilities.js";
+
 export { provision, type ProvisionOptions } from "./provision.js";
 export { provisionInProcess } from "./in-process.js";
 export {

@@ -1,5 +1,6 @@
 import { messagePortTransport } from "@powerhousedao/reactor";
 import { buildMonitorReactor } from "./build-reactor.js";
+import { reactorCapabilities } from "./capabilities.js";
 import { reactorStorageNamespace } from "./naming.js";
 import {
   assertCollectionIdParts,
@@ -92,6 +93,7 @@ export async function provisionInProcess(
   return {
     name: descriptor.name,
     kind: "in-process",
+    capabilities: reactorCapabilities(descriptor),
     client: built.module.client,
     inspector: built.inspector,
     dbQuery: built.dbQuery,

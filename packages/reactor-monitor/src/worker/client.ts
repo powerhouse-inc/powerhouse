@@ -17,6 +17,7 @@ import {
   type IRpcTransport,
   type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
+import { reactorCapabilities } from "../capabilities.js";
 import { reactorWorkerName } from "../naming.js";
 import type { AdoptLocalSyncPeerLink } from "../sync/types.js";
 import type {
@@ -195,6 +196,7 @@ export function connectManagedWorkerReactor(
   return {
     name: descriptor.name,
     kind: "worker",
+    capabilities: reactorCapabilities(descriptor),
     client,
     inspector,
     dbQuery: {
