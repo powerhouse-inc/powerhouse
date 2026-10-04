@@ -1,5 +1,4 @@
 import { REACTOR_SCHEMA } from "@powerhousedao/reactor";
-import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ReactorMonitorRegistry,
@@ -7,7 +6,13 @@ import {
   type ManagedInProcessReactor,
   type ManagedReactor,
 } from "../src/index.js";
-import { descriptor, nodeChannel } from "./helpers.js";
+import {
+  descriptor,
+  folderNames,
+  hasDrive,
+  nodeChannel,
+  sleep,
+} from "./helpers.js";
 
 /**
  * Stage-2 mixed topology (docs/plans/2026-10-03-multi-reactor.md): three
@@ -56,31 +61,6 @@ type OpCounts = { a: number; b: number; c: number };
 
 const PROPAGATION_TIMEOUT_MS = 20_000;
 
-async function folderNames(
-  reactor: ManagedReactor,
-  driveId: string,
-): Promise<string[]> {
-  try {
-    const drive = await reactor.client.get<DocumentDriveDocument>(driveId);
-    return drive.state.global.nodes.map((node) => node.name);
-  } catch {
-    return [];
-  }
-}
-
-/** Distinct from "the drive is here but empty", which `folderNames` cannot tell apart. */
-async function hasDrive(
-  reactor: ManagedReactor,
-  driveId: string,
-): Promise<boolean> {
-  try {
-    await reactor.client.get(driveId);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /** `Operation` rows for the drive, read through each reactor's own dbQuery. */
 async function operationCount(
   reactor: ManagedReactor,
@@ -102,10 +82,6 @@ async function countAll(
     reactors.map((reactor) => operationCount(reactor, driveId)),
   );
   return { a, b, c };
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 describe("three-reactor mixed topology (A <-> B <-> C on one drive)", () => {

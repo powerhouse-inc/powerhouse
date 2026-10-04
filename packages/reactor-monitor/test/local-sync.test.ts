@@ -5,34 +5,8 @@ import {
   ReactorMonitorRegistry,
   type ManagedInProcessReactor,
 } from "../src/index.js";
-import { descriptor, nodeChannel } from "./helpers.js";
+import { descriptor, folderNames, hasDrive, nodeChannel } from "./helpers.js";
 import type { MessagePortLike } from "@powerhousedao/reactor";
-
-type DriveState = { state: { global: { nodes: Array<{ name: string }> } } };
-
-async function folderNames(
-  reactor: ManagedInProcessReactor,
-  driveId: string,
-): Promise<string[]> {
-  try {
-    const doc = (await reactor.client.get(driveId)) as unknown as DriveState;
-    return doc.state.global.nodes.map((node) => node.name);
-  } catch {
-    return [];
-  }
-}
-
-async function hasDrive(
-  reactor: ManagedInProcessReactor,
-  driveId: string,
-): Promise<boolean> {
-  try {
-    await reactor.client.get(driveId);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 describe("brokered local sync between two in-process reactors", () => {
   const provisioned: ManagedInProcessReactor[] = [];

@@ -1,6 +1,7 @@
 import { MessageChannel } from "node:worker_threads";
-import type { ReactorDescriptor } from "../src/index.js";
+import type { ManagedReactor, ReactorDescriptor } from "../src/index.js";
 import type { MessagePortLike } from "@powerhousedao/reactor";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 
 /**
  * An in-memory, in-process reactor descriptor, so a test reactor leaves
@@ -36,4 +37,35 @@ export function nodeChannel(): {
     port1: port1 as unknown as MessagePortLike,
     port2: port2 as unknown as MessagePortLike,
   };
+}
+
+/** The drive's folder names, read through `reactor.client`; `[]` if it is not there yet. */
+export async function folderNames(
+  reactor: ManagedReactor,
+  driveId: string,
+): Promise<string[]> {
+  try {
+    const drive = await reactor.client.get<DocumentDriveDocument>(driveId);
+    return drive.state.global.nodes.map((node) => node.name);
+  } catch {
+    return [];
+  }
+}
+
+/** Distinct from "the drive is here but empty", which `folderNames` cannot tell apart. */
+export async function hasDrive(
+  reactor: ManagedReactor,
+  driveId: string,
+): Promise<boolean> {
+  try {
+    await reactor.client.get(driveId);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Waits plainly; used to prove a settled op count stays settled. */
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

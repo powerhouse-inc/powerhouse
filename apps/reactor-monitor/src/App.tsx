@@ -11,9 +11,10 @@ import {
   useManagedReactors,
   useReactorMonitorRegistry,
 } from "@powerhousedao/reactor-monitor/react";
-import type {
-  ManagedReactorEntry,
-  ReactorDescriptor,
+import {
+  supportsSyncChannel,
+  type ManagedReactorEntry,
+  type ReactorDescriptor,
 } from "@powerhousedao/reactor-monitor";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { LinkLocalSyncPanel } from "./components/LinkLocalSyncPanel.js";
@@ -90,11 +91,13 @@ function renderPanel(
           <LinkLocalSyncPanel reactorName={reactor.name} />
           <SyncTab
             inspector={reactor.inspector}
-            // Local-only is exactly what `sync.local` provisioned, and the
-            // adopt handle is present only then -- on both hosting kinds -- so
-            // it is the one signal that cannot drift from how the reactor was
-            // actually built.
-            localOnly={reactor.adoptLocalSyncPeer !== undefined}
+            // The capability contract is what a router (and this panel)
+            // reads to know what a reactor can do; a worker's `adoptLocalSyncPeer`
+            // presence alone can disagree with it when a later tab's
+            // descriptor loses the race to the construct that actually built
+            // (multi-reactor stage 2 review) -- the contract cannot drift
+            // from that because it is what the handle derives it from.
+            localOnly={supportsSyncChannel(reactor.capabilities, "local")}
             syncManager={reactor.syncManager}
           />
         </>
