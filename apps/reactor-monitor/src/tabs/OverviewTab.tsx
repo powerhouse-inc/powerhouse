@@ -13,6 +13,17 @@ import type { WorkerInspectorInfo } from "@powerhousedao/reactor-browser/rpc";
 
 export type OverviewTabProps = {
   readonly reactor: ManagedReactor;
+  /**
+   * Re-reads a REMOTE reactor's reported facts. Wired to the "Re-check server"
+   * button on the Remote host block, which is how an operator who just
+   * restarted that host with `PH_INSPECTION_ADMIN=true` gets the levers without
+   * waiting for the client's TTL. Inert for a local reactor, which has no far
+   * side to ask.
+   */
+  readonly onRecheckServer?: () => void;
+  readonly rechecking?: boolean;
+  /** Why the last re-check failed; empty when it did not. */
+  readonly recheckError?: string;
 };
 
 /** Worker-only lifecycle info, fetched once and refreshable. */
@@ -226,31 +237,70 @@ function CapabilityGrid({
  * store as `remote` (not ours to open), which is the right answer for a router
  * and tells an operator nothing about what is actually behind it.
  */
-function RemoteServerInfo({ reactor }: { reactor: ManagedRemoteReactor }) {
+function RemoteServerInfo({
+  reactor,
+  onRecheck,
+  rechecking,
+  recheckError,
+}: {
+  reactor: ManagedRemoteReactor;
+  onRecheck?: () => void;
+  rechecking: boolean;
+  recheckError: string;
+}) {
   const info = reactor.serverInfo;
   return (
-    <dl className="rm-kv">
-      <dt>Inspection endpoint</dt>
-      <dd>{reactor.endpoint}</dd>
-      <dt>Server store class</dt>
-      <dd>{info.storageKind}</dd>
-      <dt>Admin ops (PH_INSPECTION_ADMIN)</dt>
-      <dd data-testid="remote-admin-enabled">
-        {info.adminEnabled
-          ? "enabled: pause/resume, retries, sweeps, rebuilds and sync repair levers are served"
-          : "disabled: reads only, every state-changing lever is refused there"}
-      </dd>
-      <dt>Raw SQL (PH_INSPECTION_SQL)</dt>
-      <dd data-testid="remote-sql-enabled">
-        {info.sqlEnabled
-          ? "enabled: the DB tab can query that reactor's store"
-          : "disabled: the DB tab is unavailable"}
-      </dd>
-    </dl>
+    <>
+      <div className="rm-form-inline">
+        <button
+          className="rm-btn"
+          data-testid="remote-recheck"
+          disabled={rechecking || !onRecheck}
+          onClick={onRecheck}
+          type="button"
+        >
+          {rechecking ? "Re-checking..." : "Re-check server"}
+        </button>
+        <span className="rm-cap-note">
+          Asks that reactor for its reported facts again. The two tier rows
+          below are its host&apos;s posture, not a property of the reactor: a
+          restart with PH_INSPECTION_ADMIN=true turns the levers on under this
+          same handle.
+        </span>
+      </div>
+      {recheckError ? (
+        <p className="rm-error" data-testid="remote-recheck-error" role="alert">
+          Could not re-check {reactor.endpoint}: {recheckError}
+        </p>
+      ) : null}
+      <dl className="rm-kv">
+        <dt>Inspection endpoint</dt>
+        <dd>{reactor.endpoint}</dd>
+        <dt>Server store class</dt>
+        <dd>{info.storageKind}</dd>
+        <dt>Admin ops (PH_INSPECTION_ADMIN)</dt>
+        <dd data-testid="remote-admin-enabled">
+          {info.adminEnabled
+            ? "enabled: pause/resume, retries, sweeps, rebuilds and sync repair levers are served"
+            : "disabled: reads only, every state-changing lever is refused there"}
+        </dd>
+        <dt>Raw SQL (PH_INSPECTION_SQL)</dt>
+        <dd data-testid="remote-sql-enabled">
+          {info.sqlEnabled
+            ? "enabled: the DB tab can query that reactor's store"
+            : "disabled: the DB tab is unavailable"}
+        </dd>
+      </dl>
+    </>
   );
 }
 
-export function OverviewTab({ reactor }: OverviewTabProps) {
+export function OverviewTab({
+  reactor,
+  onRecheckServer,
+  rechecking = false,
+  recheckError = "",
+}: OverviewTabProps) {
   return (
     <div className="rm-tab">
       <h2>Overview</h2>
@@ -280,9 +330,17 @@ export function OverviewTab({ reactor }: OverviewTabProps) {
           <p className="rm-note">
             Reported by that reactor over its inspection subgraph; the grid
             above is derived from it rather than from the URL this monitor was
-            given (multi-reactor W3.2).
+            given (multi-reactor W3.2). The grid is frozen at provision time --
+            a reactor built differently is a different reactor -- but the two
+            tier rows are re-read, because they are the host&apos;s posture and
+            an operator changes them with a restart.
           </p>
-          <RemoteServerInfo reactor={reactor} />
+          <RemoteServerInfo
+            onRecheck={onRecheckServer}
+            reactor={reactor}
+            recheckError={recheckError}
+            rechecking={rechecking}
+          />
         </>
       ) : (
         <p className="rm-note">

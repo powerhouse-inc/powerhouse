@@ -14,11 +14,12 @@ import {
 import {
   GQL_CHANNEL_TYPE,
   supportsSyncChannel,
+  type ManagedReactor,
   type ManagedReactorEntry,
   type ReactorDescriptor,
 } from "@powerhousedao/reactor-monitor";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { adminGateFor, sqlGateFor } from "./components/AdminGate.js";
+import { useServerTierGates } from "./components/AdminGate.js";
 import { LinkLocalSyncPanel } from "./components/LinkLocalSyncPanel.js";
 import {
   ProvisionPanel,
@@ -47,42 +48,37 @@ export const INSPECTOR_TABS = [
 
 export type InspectorTab = (typeof INSPECTOR_TABS)[number];
 
-function renderPanel(
-  entry: ManagedReactorEntry | undefined,
-  tab: InspectorTab,
-): ReactNode {
-  if (!entry) {
-    return (
-      <p className="reactor-monitor__placeholder">
-        Select a reactor to inspect it.
-      </p>
-    );
-  }
-  if (entry.status === "provisioning") {
-    return (
-      <p className="reactor-monitor__placeholder">
-        Provisioning {entry.name}...
-      </p>
-    );
-  }
-  if (entry.status === "failed") {
-    return (
-      <p className="rm-error">
-        Failed to provision {entry.name}: {entry.error.message}
-      </p>
-    );
-  }
-
-  const reactor = entry.reactor;
+/**
+ * The inspector panel for a READY reactor.
+ *
+ * Its own component, keyed per reactor by the caller, because the gates it
+ * reads are not static: a remote reactor's admin tiers are its host's posture,
+ * an operator changes them with a restart, and {@link useServerTierGates} keeps
+ * this panel's reading of them current (multi-reactor W3.2 review).
+ */
+function ReadyPanel({
+  reactor,
+  tab,
+}: {
+  readonly reactor: ManagedReactor;
+  readonly tab: InspectorTab;
+}): ReactNode {
   // What this reactor serves beyond reads. Every locally hosted reactor serves
-  // everything -- it is this process's own; a REMOTE one reported which tiers
+  // everything -- it is this process's own; a REMOTE one reports which tiers
   // its host opted into, and the levers are disabled with that reason rather
   // than offered and refused (multi-reactor W3.2).
-  const admin = adminGateFor(reactor);
-  const sql = sqlGateFor(reactor);
+  const { admin, sql, recheck, rechecking, recheckError } =
+    useServerTierGates(reactor);
   switch (tab) {
     case "Overview":
-      return <OverviewTab reactor={reactor} />;
+      return (
+        <OverviewTab
+          onRecheckServer={recheck}
+          recheckError={recheckError}
+          rechecking={rechecking}
+          reactor={reactor}
+        />
+      );
     case "Queue":
       return <QueueTab admin={admin} inspector={reactor.inspector} />;
     case "Processors":
@@ -118,6 +114,16 @@ function renderPanel(
           {reactor.kind === "remote" ? null : (
             <LinkLocalSyncPanel reactorName={reactor.name} />
           )}
+          {/*
+            The add-remote form gets the SAME rule the link panel just got, for
+            the same reason: a remote reactor's remotes are not this monitor's
+            to change. `RemoteSyncManagerClient.add()` refuses by name because
+            which peers a Switchboard syncs with is that deployment's
+            configuration, and the inspection subgraph does not serve it -- so a
+            live form whose every submit is refused is a form that cannot work,
+            whatever channel types that reactor reports routing (a CONNECT-scheme
+            Switchboard reports `gql` and would have rendered one).
+          */}
           <SyncTab
             admin={admin}
             gqlRemotes={supportsSyncChannel(
@@ -125,6 +131,7 @@ function renderPanel(
               GQL_CHANNEL_TYPE,
             )}
             inspector={reactor.inspector}
+            reconfigurable={reactor.kind !== "remote"}
             syncManager={reactor.syncManager}
           />
         </>
@@ -143,6 +150,40 @@ function renderPanel(
         <EventsTab events={reactor.events} />
       );
   }
+}
+
+/** The selected reactor's panel, or why there is none to show. */
+function InspectorPanel({
+  entry,
+  tab,
+}: {
+  readonly entry: ManagedReactorEntry | undefined;
+  readonly tab: InspectorTab;
+}): ReactNode {
+  if (!entry) {
+    return (
+      <p className="reactor-monitor__placeholder">
+        Select a reactor to inspect it.
+      </p>
+    );
+  }
+  if (entry.status === "provisioning") {
+    return (
+      <p className="reactor-monitor__placeholder">
+        Provisioning {entry.name}...
+      </p>
+    );
+  }
+  if (entry.status === "failed") {
+    return (
+      <p className="rm-error">
+        Failed to provision {entry.name}: {entry.error.message}
+      </p>
+    );
+  }
+  // Keyed per reactor, so the panel's tier-polling state belongs to the handle
+  // it was read from rather than surviving a switch to another reactor.
+  return <ReadyPanel key={entry.name} reactor={entry.reactor} tab={tab} />;
 }
 
 type AppBodyProps = {
@@ -199,7 +240,7 @@ function AppBody({ selected, onSelect, onProvision, onKill }: AppBodyProps) {
           ))}
         </nav>
         <div className="reactor-monitor__panel">
-          {renderPanel(entry, activeTab)}
+          <InspectorPanel entry={entry} tab={activeTab} />
         </div>
       </main>
     </div>

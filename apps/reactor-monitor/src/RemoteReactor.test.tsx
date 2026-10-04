@@ -20,7 +20,17 @@ import { App } from "./App.js";
 
 const WAIT = { timeout: 10_000 } as const;
 
-type ServerTiers = { admin: boolean; sql: boolean };
+/**
+ * The far side's posture, as a MUTABLE record: the two tier flags are what an
+ * operator changes by restarting that host, and the monitor is supposed to pick
+ * that up under the same handle (multi-reactor W3.2 review).
+ */
+type ServerTiers = {
+  admin: boolean;
+  sql: boolean;
+  /** What that reactor reports routing; a connect-scheme host says "gql". */
+  syncChannels?: readonly string[];
+};
 
 function fakeInspectionFetch(tiers: ServerTiers): typeof fetch {
   const answers = (name: string): unknown => {
@@ -34,7 +44,7 @@ function fakeInspectionFetch(tiers: ServerTiers): typeof fetch {
               storageKind: "postgres",
               processors: true,
               workflows: true,
-              syncChannels: ["polling"],
+              syncChannels: tiers.syncChannels ?? ["polling"],
               adminEnabled: tiers.admin,
               sqlEnabled: tiers.sql,
             },
@@ -88,7 +98,7 @@ function fakeInspectionFetch(tiers: ServerTiers): typeof fetch {
   };
 }
 
-function remoteApp(tiers: ServerTiers) {
+function remoteApp(tiers: ServerTiers): ReturnType<typeof render> {
   const buildDescriptor = ({
     name,
     kind,
@@ -232,6 +242,66 @@ describe("remote reactor in the monitor app", () => {
       WAIT,
     );
     expect(view.queryByTestId("admin-gate-note")).toBeNull();
+    expect(
+      view.getByRole("button", { name: "Pause" }).getAttribute("disabled"),
+    ).toBeNull();
+  }, 20_000);
+
+  // The form could not work for ANY remote reactor: every submit calls
+  // `RemoteSyncManagerClient.add()`, which refuses because that deployment's
+  // peers are its own configuration. A connect-scheme Switchboard reports the
+  // "gql" channel the form writes, so the channel gate alone left a live form
+  // in front of the operator whose every submit was refused.
+  it("hides the add-remote form on a remote host that DOES route gql, with the reason", async () => {
+    const view = remoteApp({ admin: true, sql: true, syncChannels: ["gql"] });
+    await provisionRemoteReactor(view, "connect-switchboard");
+
+    fireEvent.click(view.getByRole("button", { name: "Sync" }));
+    await waitFor(
+      () =>
+        expect(
+          view.getByTestId("sync-add-remote-remote-host").textContent,
+        ).toMatch(
+          /not served over the remote inspection surface|runs on another host/,
+        ),
+      WAIT,
+    );
+    expect(view.queryByRole("button", { name: "Add remote" })).toBeNull();
+    expect(view.queryByPlaceholderText("my-remote")).toBeNull();
+    // The reactor DOES route gql, so the channel-gate note is not the reason
+    // shown -- the reason is that this reactor is not ours to reconfigure.
+    expect(view.queryByTestId("sync-add-remote-unavailable")).toBeNull();
+  }, 20_000);
+
+  // The documented operator flow, end to end in the UI: restart that host with
+  // PH_INSPECTION_ADMIN=true, re-check it, and the levers go live under the
+  // same handle. Gates computed once at provision time dead-ended this.
+  it("picks up a host restarted with the admin flag when asked to re-check", async () => {
+    const tiers: ServerTiers = { admin: false, sql: false };
+    const view = remoteApp(tiers);
+    await provisionRemoteReactor(view, "restarted-switchboard");
+
+    expect(view.getByTestId("remote-admin-enabled").textContent).toMatch(
+      /disabled: reads only/,
+    );
+
+    tiers.admin = true;
+    fireEvent.click(view.getByTestId("remote-recheck"));
+
+    await waitFor(
+      () =>
+        expect(view.getByTestId("remote-admin-enabled").textContent).toMatch(
+          /enabled: pause\/resume/,
+        ),
+      WAIT,
+    );
+
+    // And the gate the other tabs read agrees: no reason note, live button.
+    fireEvent.click(view.getByRole("button", { name: "Queue" }));
+    await waitFor(
+      () => expect(view.queryByTestId("admin-gate-note")).toBeNull(),
+      WAIT,
+    );
     expect(
       view.getByRole("button", { name: "Pause" }).getAttribute("disabled"),
     ).toBeNull();

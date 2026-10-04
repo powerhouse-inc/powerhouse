@@ -37,6 +37,23 @@ export type SyncTabProps = {
    */
   readonly gqlRemotes: boolean;
   /**
+   * Whether this monitor may CHANGE which peers this reactor syncs with.
+   *
+   * Defaults to true, which is every reactor this process built: its sync
+   * manager is right here. False for a REMOTE reactor, and then the add-remote
+   * form is not rendered at all rather than rendered live -- the inspection
+   * surface serves observation only, `RemoteSyncManagerClient.add()` refuses by
+   * name because that deployment's peers are its own configuration, and a form
+   * whose every submit is refused is worse than no form. The same rule the
+   * brokered link panel above it follows.
+   *
+   * Independent of {@link gqlRemotes}: that is about which channel types the
+   * reactor ROUTES, this about whether anything here may reconfigure it. A
+   * CONNECT-scheme Switchboard reports `gql` and still cannot be reconfigured
+   * from here.
+   */
+  readonly reconfigurable?: boolean;
+  /**
    * Whether this reactor serves the repair levers -- trigger pull, reset
    * channel, rewind cursor, requeue/clear a dead letter. Defaults to allowed,
    * which is every locally hosted reactor. A REMOTE reactor serves them only
@@ -323,8 +340,13 @@ export function SyncTab({
   syncManager,
   inspector,
   gqlRemotes,
+  reconfigurable = true,
   admin = ADMIN_ALLOWED,
 }: SyncTabProps) {
+  // Both conditions have to hold for the form to be able to do anything: the
+  // reactor must route the channel type the form writes, AND its remotes must
+  // be this monitor's to change.
+  const canAddRemote = gqlRemotes && reconfigurable;
   const [remotes, setRemotes] = useState<Remote[]>([]);
   const [inspections, setInspections] = useState<
     Map<string, RemoteSyncInspection>
@@ -412,10 +434,11 @@ export function SyncTab({
   }, [refresh]);
 
   const handleAdd = useCallback(async () => {
-    // The form is disabled on a reactor with no gql factory; this is the belt
-    // to that braces, so a submit that slips through cannot reach a factory
-    // that will only reject it.
-    if (!syncManager || !gqlRemotes) {
+    // The form is disabled on a reactor with no gql factory and absent
+    // entirely on one this monitor may not reconfigure; this is the belt to
+    // those braces, so a submit that slips through cannot reach a factory or a
+    // remote sync manager that will only reject it.
+    if (!syncManager || !canAddRemote) {
       return;
     }
     const trimmedName = name.trim();
@@ -447,7 +470,7 @@ export function SyncTab({
     } finally {
       setAdding(false);
     }
-  }, [syncManager, gqlRemotes, name, driveId, url, refresh]);
+  }, [syncManager, canAddRemote, name, driveId, url, refresh]);
 
   const handleTriggerPull = useCallback(
     (remoteName: string) => {
@@ -525,7 +548,18 @@ export function SyncTab({
 
       <StorageHealthPanel health={storageHealth} />
 
-      {gqlRemotes ? null : (
+      {reconfigurable ? null : (
+        <p className="rm-note" data-testid="sync-add-remote-remote-host">
+          This reactor runs on another host, and which peers it syncs with is
+          that deployment&apos;s own configuration: the inspection surface
+          serves observation and repair, not reconfiguration, so adding or
+          removing a remote is refused there whatever channel types it reports
+          routing. Change its remotes where it is configured. Everything below
+          is live: cursors, mailbox depths, connection health and dead letters
+          are read from that reactor&apos;s own sync manager.
+        </p>
+      )}
+      {!reconfigurable || gqlRemotes ? null : (
         <p className="rm-note" data-testid="sync-add-remote-unavailable">
           This reactor does not declare the &quot;gql&quot; sync channel, so a
           gql remote cannot be added here: a local-ONLY reactor (sync.local) has
@@ -537,51 +571,60 @@ export function SyncTab({
           serves gql remotes and local links at once.
         </p>
       )}
-      <form
-        className="rm-form rm-form-inline"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void handleAdd();
-        }}
-      >
-        <label>
-          Remote name
-          <input
-            disabled={!gqlRemotes}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="my-remote"
-            type="text"
-            value={name}
-          />
-        </label>
-        <label>
-          Drive ID
-          <input
-            disabled={!gqlRemotes}
-            onChange={(e) => setDriveId(e.target.value)}
-            placeholder="drive id to sync"
-            type="text"
-            value={driveId}
-          />
-        </label>
-        <label>
-          GraphQL URL
-          <input
-            disabled={!gqlRemotes}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://.../graphql"
-            type="text"
-            value={url}
-          />
-        </label>
-        <button
-          className="rm-btn"
-          disabled={adding || !gqlRemotes}
-          type="submit"
+      {/*
+        Absent, not disabled, for a reactor this monitor may not reconfigure:
+        there is no version of this form that works against one, so the note
+        above replaces it. The gql gate still only DISABLES it, because that is
+        a property of the reactor's channel factory and re-provisioning the same
+        reactor in connect mode makes the very same form work.
+      */}
+      {reconfigurable ? (
+        <form
+          className="rm-form rm-form-inline"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleAdd();
+          }}
         >
-          Add remote
-        </button>
-      </form>
+          <label>
+            Remote name
+            <input
+              disabled={!canAddRemote}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="my-remote"
+              type="text"
+              value={name}
+            />
+          </label>
+          <label>
+            Drive ID
+            <input
+              disabled={!canAddRemote}
+              onChange={(e) => setDriveId(e.target.value)}
+              placeholder="drive id to sync"
+              type="text"
+              value={driveId}
+            />
+          </label>
+          <label>
+            GraphQL URL
+            <input
+              disabled={!canAddRemote}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://.../graphql"
+              type="text"
+              value={url}
+            />
+          </label>
+          <button
+            className="rm-btn"
+            disabled={adding || !canAddRemote}
+            type="submit"
+          >
+            Add remote
+          </button>
+        </form>
+      ) : null}
       {addError ? (
         <p className="rm-error">Failed to add remote: {addError}</p>
       ) : null}
