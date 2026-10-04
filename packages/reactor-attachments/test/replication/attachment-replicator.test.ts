@@ -567,4 +567,48 @@ describe("AttachmentReplicator", () => {
     expect(h.fetches).toEqual([]);
     expect((await h.replicator.status()).running).toBe(false);
   });
+
+  it("resumes outstanding entries on start after a stop stranded them", async () => {
+    // First attempt parks the hash waiting on a retry deadline; a stop then
+    // empties the queue but keeps the entry. Starting again must chase it
+    // without needing an unrelated live operation to re-pump the queue.
+    const h = harness([
+      {
+        kind: "pending",
+        hash: HASH,
+        expiresAtUtc: "2026-01-01T00:05:00.000Z",
+        retryAfterMs: 2_000,
+      },
+      dataAnswer(),
+    ]);
+    h.replicator.start();
+    await h.bus.fire({ jobId: "job-1", operations: [operation(REF)] });
+    await h.replicator.idle();
+    expect((await h.replicator.status()).waiting).toBe(1);
+    expect(await h.store.has(HASH)).toBe(false);
+
+    await h.replicator.stop();
+
+    h.replicator.start();
+    await h.replicator.idle();
+
+    expect(await h.store.has(HASH)).toBe(true);
+    expect(h.fetches).toEqual([
+      [HASH, DOC],
+      [HASH, DOC],
+    ]);
+    await h.replicator.stop();
+  });
+
+  it("reports backlogScanned:false when there is no reference backlog", async () => {
+    // No reference index to re-scan means this reactor is not resumable across
+    // a restart; claiming a finished scan would promise a resumability it does
+    // not have (W3.4 review finding 10).
+    const h = harness([]);
+    h.replicator.start();
+    await h.replicator.backlogScanned();
+
+    expect((await h.replicator.status()).backlogScanned).toBe(false);
+    await h.replicator.stop();
+  });
 });
