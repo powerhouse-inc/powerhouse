@@ -46,6 +46,15 @@ export class LocalChannelFactory implements IChannelFactory {
     _operationIndex: IOperationIndex,
     _options?: RemoteOptions,
   ): IChannel {
+    // Checked before anything else, so a reactor provisioned local-only answers
+    // a gql (or any other) config with what is actually wrong rather than with
+    // a confusing complaint about a missing peerId parameter.
+    if (config.type !== LOCAL_CHANNEL_TYPE) {
+      throw new Error(
+        `This reactor has no "${config.type}" channel factory: it is provisioned local-only, and LocalChannelFactory builds only "${LOCAL_CHANNEL_TYPE}" channels`,
+      );
+    }
+
     const peerId = config.parameters.peerId;
     if (typeof peerId !== "string" || !peerId) {
       throw new Error(

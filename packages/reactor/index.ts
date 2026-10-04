@@ -453,6 +453,7 @@ export {
   Mailbox,
   PollBehavior,
   PollingChannelError,
+  RemotePersistence,
   SyncBuilder,
   SyncRepairRefusedError,
   SyncEventTypes,

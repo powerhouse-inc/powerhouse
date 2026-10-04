@@ -47,6 +47,7 @@ export {
   ChannelErrorSource,
   ChannelScheme,
   PollBehavior,
+  RemotePersistence,
   SyncEventTypes,
   SyncOperationStatus,
 } from "./types.js";
