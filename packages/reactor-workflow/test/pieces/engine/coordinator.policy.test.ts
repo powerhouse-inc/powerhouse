@@ -281,6 +281,66 @@ describe("the run deadline", () => {
     // The deadline is checked before the first step, so nothing ran at all.
     expect(executor.calls).toHaveLength(0);
   });
+
+  // The wait used to be slept in full, with the deadline left to "the next
+  // attempt's own check" — which did not exist inside the retry loop. So the
+  // next attempt ran its side effect after the run had expired, and the run
+  // ended FAILED rather than CANCELLED.
+  it("clips the retry wait to the deadline and runs no further attempt", async () => {
+    const executor = new FlakyExecutor(99);
+    const slept: number[] = [];
+    const longWait = {
+      maxAttempts: 5,
+      backoff: "FIXED",
+      initialDelaySeconds: 300,
+      maxDelaySeconds: 300,
+      retryOn: [],
+    };
+
+    const result = await runWorkflow({
+      definition: definition([step("a", "first", longWait)]),
+      executor,
+      // Time for the first attempt, nowhere near the five-minute backoff.
+      deadline: Date.now() + 30,
+      sleep: (ms) => {
+        slept.push(ms);
+        return Promise.resolve();
+      },
+    });
+
+    // One attempt: the wait outlives the run, so there is no second one.
+    expect(executor.calls).toHaveLength(1);
+    // And the wait was clipped to what was left, not slept in full.
+    expect(slept).toHaveLength(1);
+    expect(slept[0]).toBeLessThanOrEqual(30);
+    // CANCELLED, not FAILED: the clock stopped the run, the workflow did not
+    // fail. A CANCELLED run is not rerunnable and reads as no workflow defect.
+    expect(result.status).toBe("CANCELLED");
+    expect(result.error).toContain("runTimeoutSeconds");
+    // The attempt that failed is still journaled, as the record of the work.
+    expect(result.steps[0]).toMatchObject({ key: "first", status: "FAILED" });
+  });
+
+  it("takes no error port when the deadline cut the retry short", async () => {
+    const executor = new FlakyExecutor(99);
+
+    const result = await runWorkflow({
+      definition: definition(
+        [
+          step("a", "first", { ...NO_WAIT, initialDelaySeconds: 60 }),
+          step("b", "handler"),
+        ],
+        [{ id: "e-err", from: "a", to: "b", port: "error" }],
+      ),
+      executor,
+      deadline: Date.now() + 20,
+      sleep: () => Promise.resolve(),
+    });
+
+    expect(result.status).toBe("CANCELLED");
+    // Nothing downstream may run after the run has ended, handler or not.
+    expect(result.steps[1].status).toBe("SKIPPED");
+  });
 });
 
 describe("an indeterminate host call", () => {
