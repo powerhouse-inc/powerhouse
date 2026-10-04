@@ -55,6 +55,8 @@ export { ReactorHostServer } from "./host-server.js";
 export { ReactorHost } from "./reactor-host.js";
 export {
   createSyncManagerProxy,
+  DEFAULT_CONNECTION_SNAPSHOT,
+  NOOP_MAILBOX,
   SyncManagerProxy,
   SYNC_STATUS_CHANGED_EVENT,
   type SyncStatusChangedBusEvent,

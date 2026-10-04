@@ -59,7 +59,17 @@ type WireRemote = {
   connectionState: ConnectionStateSnapshot;
 };
 
-const DEFAULT_SNAPSHOT: ConnectionStateSnapshot = {
+/**
+ * What a channel's connection state reads as before anything has been heard
+ * about it: connecting, never succeeded, never failed.
+ *
+ * Exported because it is not specific to this transport. Any proxy of a remote
+ * reactor's sync manager owes `IChannel.getConnectionState()` an answer before
+ * its first inspection lands, and two of them inventing the same record
+ * separately is how the two drift (multi-reactor W3.2: reactor-monitor's
+ * remote sync client reads it from here).
+ */
+export const DEFAULT_CONNECTION_SNAPSHOT: ConnectionStateSnapshot = {
   state: "connecting",
   failureCount: 0,
   lastSuccessUtcMs: 0,
@@ -98,7 +108,16 @@ class NoopMailbox implements IMailbox {
   }
 }
 
-const NOOP_MAILBOX = new NoopMailbox();
+/**
+ * The one inert mailbox every proxied remote's channel shares.
+ *
+ * Exported for the same reason as {@link DEFAULT_CONNECTION_SNAPSHOT}:
+ * `Remote.channel` is part of the `ISyncManager` contract, a transport that
+ * cannot carry live sync operations still has to produce a channel, and what a
+ * holder can actually see of those operations is the mailbox DEPTHS on
+ * `RemoteSyncInspection`. Stateless, so one instance serves every remote.
+ */
+export const NOOP_MAILBOX = new NoopMailbox();
 
 function rehydrateMeta(wire: WireRemoteMeta): RemoteMeta {
   return {
@@ -351,10 +370,13 @@ export class SyncManagerProxy implements ISyncManager, ISyncInspector {
       init: () => Promise.resolve(),
       shutdown: () => Promise.resolve(),
       getConnectionState: () =>
-        this.connectionStates.get(remoteName) ?? DEFAULT_SNAPSHOT,
+        this.connectionStates.get(remoteName) ?? DEFAULT_CONNECTION_SNAPSHOT,
       onConnectionStateChange: (callback: ConnectionStateChangeCallback) => {
         const listener = () =>
-          callback(this.connectionStates.get(remoteName) ?? DEFAULT_SNAPSHOT);
+          callback(
+            this.connectionStates.get(remoteName) ??
+              DEFAULT_CONNECTION_SNAPSHOT,
+          );
         return this.connectionListeners.add(remoteName, listener);
       },
 
