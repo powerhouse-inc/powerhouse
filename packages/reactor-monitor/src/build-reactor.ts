@@ -2,9 +2,8 @@ import type { PGlite } from "@electric-sql/pglite";
 import {
   ChannelScheme,
   channelFactoryTypes,
-  DocumentIntegrityService,
+  createReactorInspector,
   HardenedPGliteDialect,
-  InMemoryQueue,
   LOCAL_CHANNEL_TYPE,
   LocalChannelFactory,
   queryThroughDialect,
@@ -303,25 +302,12 @@ export async function buildMonitorReactor(
       ? [...channelFactoryTypes(rm.syncModule.channelFactory)]
       : [],
   );
-  const inspector = new ReactorInspector(
-    rm
-      ? {
-          // The inspectable queue surface is the in-memory queue's; another
-          // implementation degrades to empty queue reads.
-          queue: rm.queue instanceof InMemoryQueue ? rm.queue : undefined,
-          processorManager: rm.processorManager,
-          catchUp: rm.catchUp,
-          integrity: new DocumentIntegrityService(
-            rm.keyframeStore,
-            rm.operationStore,
-            rm.writeCache,
-            rm.documentView,
-            rm.documentModelRegistry,
-          ),
-          storageHealth,
-        }
-      : {},
-  );
+  // The shared wiring, so a monitor-hosted reactor and a server-hosted one
+  // (reactor-api's inspection subgraph, W3.2) are observed through exactly the
+  // same components; the storage-health dimension is this host's to feed.
+  const inspector = rm
+    ? createReactorInspector(rm, storageHealth)
+    : new ReactorInspector({});
 
   const dbQuery: IReactorDbQuery = {
     queryDb: (sql, params) => queryThroughDialect(db, sql, params),

@@ -594,6 +594,8 @@ export * from "./src/catch-up/index.js";
 
 // Inspection
 export {
+  createReactorInspector,
+  reactorInspectorComponents,
   ReactorInspector,
   StorageHealthTracker,
   type IInspectableQueue,

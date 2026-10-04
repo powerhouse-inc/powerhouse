@@ -84,6 +84,12 @@ import {
   decodeExplorerUrlState,
   renderGraphqlPlayground,
 } from "./graphql/playground.js";
+import {
+  createReactorInspectionSource,
+  InspectionSubgraph,
+  type IReactorInspectionSource,
+  type ReactorInspectionOptions,
+} from "./graphql/inspection/index.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
 import { runMigrations } from "./migrations/index.js";
@@ -202,6 +208,14 @@ type Options = {
    * or os.tmpdir() for in-memory DB deployments.
    */
   attachmentStoragePath?: string;
+  /**
+   * Which tiers of the reactor inspection surface this host serves
+   * (multi-reactor W3.2). Both default to the matching environment variable
+   * and to OFF; see `IReactorInspectionSource` for the posture. `workflows`
+   * is a fact the host reports about itself, because the workflow runtime is
+   * composed after the API boots.
+   */
+  inspection?: ReactorInspectionOptions;
 };
 
 type ProcessorInitializer = ProcessorFactoryBuilder;
@@ -461,6 +475,7 @@ type SetupGraphQLManagerOptions = {
   syncServingGate?: SyncScopeGate;
   httpRoutes?: HttpRouteService;
   attachments?: IAttachmentClientProvider;
+  inspection?: IReactorInspectionSource;
 };
 
 /**
@@ -487,6 +502,7 @@ async function setupGraphQLManager({
   syncServingGate,
   httpRoutes,
   attachments,
+  inspection,
 }: SetupGraphQLManagerOptions): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager({
     path: config.basePath,
@@ -513,6 +529,7 @@ async function setupGraphQLManager({
     syncServingGate,
     httpRoutes,
     attachments,
+    inspection,
   });
 
   await graphqlManager.init(
@@ -1184,6 +1201,7 @@ async function _setupAPI(
   syncServingGate?: SyncScopeGate,
   httpRoutes?: HttpRouteService,
   attachmentReadsFollowDocumentPolicy = false,
+  inspection?: IReactorInspectionSource,
 ): Promise<API> {
   const hostModuleBase: IProcessorHostModule = {
     ...createReactorHostModuleBase({
@@ -1334,6 +1352,20 @@ async function _setupAPI(
   const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
   coreSubgraphs.push(ReactorSubgraph);
 
+  // Only with a source to serve: the subgraph needs the in-process reactor
+  // MODULE (queue, processor manager, catch-up, integrity stores), which a
+  // host that composed its client differently may not have. Absent rather
+  // than present-and-refusing, so a client discovers "no remote inspection
+  // here" from the schema instead of from an error on every field.
+  if (inspection) {
+    coreSubgraphs.push(InspectionSubgraph);
+    logger.info(
+      `Inspection subgraph registered (admin ops ${
+        inspection.adminEnabled ? "ENABLED" : "disabled"
+      }, raw SQL ${inspection.sqlEnabled ? "ENABLED" : "disabled"})`,
+    );
+  }
+
   // Register Auth subgraph when document permission service is available
   if (documentPermissionService) {
     coreSubgraphs.push(AuthSubgraph);
@@ -1364,6 +1396,7 @@ async function _setupAPI(
     syncServingGate,
     httpRoutes,
     attachments: attachmentClientProvider,
+    inspection,
   });
 
   // Set up event listeners
@@ -1615,6 +1648,11 @@ export async function initializeAndStartAPI(
     reactorClientModule.reactorModule?.readModelCoordinator;
   const readModels = readModelCoordinator?.readModels ?? [];
 
+  // The full in-process graph, when this host composed one. The inspection
+  // surface reads components (`queue`, `catchUp`, the integrity stores) that
+  // only the in-process module carries.
+  const inProcessModule = reactorClientModule.reactorModule;
+
   const api = await _setupAPI(
     reactorClient,
     syncManager,
@@ -1648,6 +1686,15 @@ export async function initializeAndStartAPI(
     ),
     httpRoutes,
     attachmentReadsFollowDocumentPolicy,
+    // Needs the in-process module, which only this boot path holds; a host
+    // whose initializer returned no module serves no inspection subgraph.
+    inProcessModule
+      ? createReactorInspectionSource(
+          inProcessModule,
+          syncManager,
+          options.inspection,
+        )
+      : undefined,
   );
 
   return {

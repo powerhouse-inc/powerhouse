@@ -1,4 +1,8 @@
 export {
+  createReactorInspector,
+  reactorInspectorComponents,
+} from "./from-module.js";
+export {
   ReactorInspector,
   type ReactorInspectorComponents,
 } from "./reactor-inspector.js";
