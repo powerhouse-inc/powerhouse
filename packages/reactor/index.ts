@@ -595,6 +595,8 @@ export * from "./src/catch-up/index.js";
 // Inspection
 export {
   createReactorInspector,
+  INSPECTION_ORDINAL_FIELDS,
+  INSPECTION_WIRE_FIELDS,
   reactorInspectorComponents,
   ReactorInspector,
   StorageHealthTracker,
@@ -606,6 +608,17 @@ export {
   type QueueStateSnapshot,
   type ReactorInspectorComponents,
   type StorageHealth,
+  type WireChannelConfig,
+  type WireDeadLetterPage,
+  type WireInspectorProcessor,
+  type WireMailboxDepths,
+  type WireQueueState,
+  type WireReactorInspectionInfo,
+  type WireRemoteConnectionHealth,
+  type WireRemoteCursor,
+  type WireRemoteMeta,
+  type WireRemoteSyncInspection,
+  type WireStorageHealth,
 } from "./src/inspector/index.js";
 
 // Document erasure
