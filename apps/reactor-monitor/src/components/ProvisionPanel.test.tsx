@@ -56,7 +56,8 @@ describe("ProvisionPanel", () => {
     });
     fireEvent.click(view.getByRole("button", { name: "Provision" }));
 
-    expect(onProvision).toHaveBeenCalledWith("alpha", "worker");
+    // Sync mode defaults to "local" (brokered); kind was switched to worker.
+    expect(onProvision).toHaveBeenCalledWith("alpha", "worker", "local");
   });
 
   it("rejects a name that already exists among the entries", () => {

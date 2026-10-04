@@ -546,14 +546,16 @@ body {
 
 /* Sync repair levers + dead letters + storage health (W0.5) */
 
-.rm-storage-health {
+.rm-storage-health,
+.rm-link-local-sync {
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   padding: 0.6rem 0.75rem;
   margin-bottom: 0.75rem;
 }
 
-.rm-storage-health h3 {
+.rm-storage-health h3,
+.rm-link-local-sync h3 {
   margin: 0 0 0.4rem;
   font-size: 0.95rem;
 }

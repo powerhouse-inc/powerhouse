@@ -15,7 +15,11 @@ import type {
   ReactorDescriptor,
 } from "@powerhousedao/reactor-monitor";
 import { useCallback, useState, type ReactNode } from "react";
-import { ProvisionPanel } from "./components/ProvisionPanel.js";
+import { LinkLocalSyncPanel } from "./components/LinkLocalSyncPanel.js";
+import {
+  ProvisionPanel,
+  type ProvisionSyncMode,
+} from "./components/ProvisionPanel.js";
 import { buildDescriptor as buildDescriptorFromForm } from "./provisioning.js";
 import { CatchUpTab } from "./tabs/CatchUpTab.js";
 import { DbTab } from "./tabs/DbTab.js";
@@ -81,10 +85,13 @@ function renderPanel(
       return <DbTab dbQuery={reactor.dbQuery} />;
     case "Sync":
       return (
-        <SyncTab
-          inspector={reactor.inspector}
-          syncManager={reactor.syncManager}
-        />
+        <>
+          <LinkLocalSyncPanel reactorName={reactor.name} />
+          <SyncTab
+            inspector={reactor.inspector}
+            syncManager={reactor.syncManager}
+          />
+        </>
       );
     case "Events":
       return <EventsTab events={reactor.events} />;
@@ -94,7 +101,11 @@ function renderPanel(
 type AppBodyProps = {
   readonly selected: string | undefined;
   readonly onSelect: (name: string) => void;
-  readonly onProvision: (name: string, kind: "worker" | "in-process") => void;
+  readonly onProvision: (
+    name: string,
+    kind: "worker" | "in-process",
+    syncMode: ProvisionSyncMode,
+  ) => void;
   readonly onKill: (name: string) => void;
 };
 
@@ -148,6 +159,7 @@ export type AppProps = {
   readonly buildDescriptor?: (
     name: string,
     kind: "worker" | "in-process",
+    syncMode: ProvisionSyncMode,
   ) => ReactorDescriptor;
 };
 
@@ -158,8 +170,15 @@ export function App({
   const [selected, setSelected] = useState<string | undefined>();
 
   const handleProvision = useCallback(
-    (name: string, kind: "worker" | "in-process") => {
-      setDescriptors((previous) => [...previous, buildDescriptor(name, kind)]);
+    (
+      name: string,
+      kind: "worker" | "in-process",
+      syncMode: ProvisionSyncMode,
+    ) => {
+      setDescriptors((previous) => [
+        ...previous,
+        buildDescriptor(name, kind, syncMode),
+      ]);
       setSelected(name);
     },
     [buildDescriptor],

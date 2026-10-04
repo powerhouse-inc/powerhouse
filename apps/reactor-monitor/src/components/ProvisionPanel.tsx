@@ -1,11 +1,18 @@
 import type { ManagedReactorEntry } from "@powerhousedao/reactor-monitor";
 import { useState, type FormEvent } from "react";
 
+/** Local-sync reactors can be linked peer-to-peer; connect reactors poll gql. */
+export type ProvisionSyncMode = "local" | "connect";
+
 export type ProvisionPanelProps = {
   readonly entries: readonly ManagedReactorEntry[];
   readonly selected: string | undefined;
   readonly onSelect: (name: string) => void;
-  readonly onProvision: (name: string, kind: "worker" | "in-process") => void;
+  readonly onProvision: (
+    name: string,
+    kind: "worker" | "in-process",
+    syncMode: ProvisionSyncMode,
+  ) => void;
   readonly onKill: (name: string) => void;
 };
 
@@ -25,6 +32,7 @@ export function ProvisionPanel({
 }: ProvisionPanelProps) {
   const [name, setName] = useState("");
   const [kind, setKind] = useState<"worker" | "in-process">("in-process");
+  const [syncMode, setSyncMode] = useState<ProvisionSyncMode>("local");
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleSubmit = (e: FormEvent) => {
@@ -39,7 +47,7 @@ export function ProvisionPanel({
       return;
     }
     setValidationError(null);
-    onProvision(trimmed, kind);
+    onProvision(trimmed, kind, syncMode);
     setName("");
   };
 
@@ -65,6 +73,16 @@ export function ProvisionPanel({
           >
             <option value="in-process">in-process</option>
             <option value="worker">worker</option>
+          </select>
+        </label>
+        <label>
+          Sync mode
+          <select
+            onChange={(e) => setSyncMode(e.target.value as ProvisionSyncMode)}
+            value={syncMode}
+          >
+            <option value="local">local (brokered)</option>
+            <option value="connect">connect (gql)</option>
           </select>
         </label>
         <button className="rm-btn" type="submit">
