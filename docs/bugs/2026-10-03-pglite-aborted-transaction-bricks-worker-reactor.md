@@ -417,3 +417,38 @@ already-held operations were charged the whole live tail. (b) was one global
 apply chain plus a serial per-item await inside each chunk, compounded by the 30s
 deferred-job TTL; replaced with per-document lanes, concurrent resolution, and an
 unapplied floor on the inbox ack.
+
+## Regression run 5 (2026-10-04, post review-fix stack) — headline fixes CONFIRMED live
+
+Stack: HEAD with W0.9 + the 10 review fixes (21d791ed2e..30b8d5446e), persistent profile
+carrying run-4 state. Two assertions run 4 could not make, both now TRUE:
+- RESHUFFLE WALL GONE: worker booted straight to drive rev 406 — past the ~340 wall
+  that stopped runs 1-4. The dedup-before-costing fix (2e9a4a671a) eliminated the
+  phantom 1612-op charge on redelivered ops.
+- HEAD-OF-LINE BLOCKING GONE: the stuck inbox backlog drained to 0 across all remotes
+  on boot via the per-document lane scheduler (71f9334cbe). Storage healthy throughout.
+
+Not cleanly asserted (environment, not code): the persistent profile still carried
+run-4's 14 dead letters + quarantine state created by PRE-FIX code. The fixes PREVENT
+the gap; they do not auto-heal a profile the old bug already damaged. The channel was
+therefore cursor-blocked behind the stale-quarantined OSC/OSQ docs, so fresh run-5
+renames did not propagate. Attempting recovery via the W0.5 requeue lever (requeue 14
+dead letters oldest-first) wedged the single-threaded browser worker: replaying the
+giant OSC automation document's apply is too heavy for a memory-constrained browser
+(RAM was ~6-7 GB free; worker stopped answering sync-op). Torn down rather than fight
+the ceiling at 02:00.
+
+FINDINGS for the backlog:
+- NEW (boot): switchboard first-boot-after-rebuild once crashed with KnexTimeoutError
+  "Timeout acquiring a connection" — boot-time migration/connection cost exceeds Knex's
+  acquire timeout on a cold build; succeeded on immediate retry. Flaky startup; worth a
+  longer acquire timeout or a boot warm-up. (W0.10 candidate)
+- REAFFIRMED (ceiling): replaying a ~1600-source OSC automation document's full op
+  history in a browser worker saturates/wedges it — the local-first ceiling again. Not
+  a storage-correctness bug (storage stayed healthy); it is the motivation-1 case for
+  routing large/automation-heavy drives to a remote reactor. A requeue-driven mass
+  re-apply needs the same throughput treatment as bulk catch-up (batching/yielding), or
+  simply belongs on a server reactor.
+- Clean-profile run (no pre-fix corruption) is the correct way to assert fresh
+  bidirectional renames + reshuffle recovery end-to-end; the run-4 profile is
+  contaminated and should be discarded for future runs (delete the persistent profile).
