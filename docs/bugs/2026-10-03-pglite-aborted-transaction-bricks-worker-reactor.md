@@ -409,3 +409,11 @@ REMAINING — the final layer (executor/apply), now precisely scoped:
    late OSC op reorder 1612 operations? skip-chain shape from the automation's
    queue mechanics?) and decide threshold vs smarter reshuffle vs doc-model fix;
    (b) eliminate head-of-line blocking for unrelated documents in the inbox apply.
+
+Both root-caused and fixed: see docs/bugs/2026-10-04-excessive-shuffle-analysis.md.
+(a) was not the reorder being refused on its merits -- the reshuffle was costed
+before the load established it had anything to apply, so the gap re-pull's
+already-held operations were charged the whole live tail. (b) was one global
+apply chain plus a serial per-item await inside each chunk, compounded by the 30s
+deferred-job TTL; replaced with per-document lanes, concurrent resolution, and an
+unapplied floor on the inbox ack.

@@ -200,6 +200,23 @@ legitimate 1612-op reorder on the distyra OSC doc (the recurring rev-340 wall);
 (b) the inbox apply loop head-of-line blocks unrelated healthy documents behind a
 dead-lettered doc's ops (run-4 renames never applied). See bug doc run-4 section.
 
+**Root-caused and fixed** — see `docs/bugs/2026-10-04-excessive-shuffle-analysis.md`.
+- (a) The reshuffle was costed before the load established it had anything to
+  apply, so a gap re-pull of operations the store already held was charged the
+  whole live tail (1612) and dead-lettered. The dedup early return now precedes
+  the cost check. The bound itself stays at 1000: a reshuffle materialises two
+  document snapshots and a state string per moved operation, so its peak memory
+  is quadratic in document size and raising the bound on this document shape
+  trades a dead letter for an out-of-memory worker. Deciding concurrency by
+  provenance instead of timestamp, and bounding the reshuffle by bytes with a
+  streamed re-append, are written up ranked and left for decision.
+- (b) The inbox apply ran as one global chain and awaited each item's job in
+  turn, compounded by the 30s deferred-job TTL per missing-ancestor operation.
+  Replaced with per-document/per-plan-key lanes that settle at the enqueue,
+  concurrent per-item resolution, a bounded in-flight slot count, and an
+  unapplied floor on the inbox ack so the cursor cannot pass an operation that
+  is neither applied nor dead-lettered.
+
 ### Stage 1 — two workers, one drive, synced + load-tested
 - **W1.1 `LocalChannel`** (core track): symmetric MessagePort channel + handshake
   (touch analog + peer manifests) + `LocalChannelFactory` + cursor persistence.
