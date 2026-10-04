@@ -389,12 +389,35 @@ explanation behind it.
 Each numeric one parses as `Number(raw) || default`: a value that is not a
 positive number falls back silently rather than failing at boot.
 
-**Run retention is off by default**: the run journal keeps every run. With
-`PH_WORKFLOWS_RUN_RETENTION_DAYS` set, a sweep runs when the journal opens and
-hourly after, deleting runs that finished before the window together with their
-step executions and run documents, 500 runs per transaction. Unfinished runs
-are never pruned. The same sweep drops trigger dedupe keys older than the
-longest dedupe TTL (24h); a deleted workflow's keys go when it is deleted.
+**Run retention is ON by default, at 30 days.** It used to be opt-in, which
+meant unbounded growth on every host that did not know to set the variable —
+measured at 743MB in three days. A journal is diagnostic, so a default window
+is the honest setting and "keep everything" is a deliberate choice:
+`PH_WORKFLOWS_RUN_RETENTION_DAYS=0` (or `off`, `never`, `false`, `none`) turns
+it off. A value that is not a positive number falls back to the **default**
+rather than to off — a typo must not remove the bound the variable exists to
+set.
+
+A sweep runs when the journal opens and hourly after, deleting runs that
+finished before the window together with their step executions and run
+documents, 500 runs per transaction. Unfinished runs are never pruned. The same
+sweep drops trigger dedupe keys older than the longest dedupe TTL (24h); a
+deleted workflow's keys go when it is deleted.
+
+**Row width is capped too**: a step's input and output, and a run's trigger
+payload, are each truncated past `STEP_PAYLOAD_MAX_BYTES` (256KB) to a marker
+holding the original byte count and the head of the serialized JSON. The marker
+is keyed on a **reserved** key whose value is a versioned sentinel, so a
+payload cannot be mistaken for one — the predicate used to duck-type
+`{truncated, bytes, prefix}`, which is exactly the shape of a truncation report
+a piece might legitimately return, and being mistaken for a marker makes a
+side-effectful step re-run. Rows written before the sentinel are still read, by
+their exact key set.
+
+A SUCCEEDED step whose output was truncated **replays** on rerun rather than
+re-executing: it had side effects. Its output is explicitly unavailable, so a
+later step that reads `steps.<key>.output…` fails the rerun by name instead of
+being handed a marker.
 
 **The secrets key is not optional in production.** Unset, `loadKey` generates
 `./.ph/secrets.key` — relative to the working directory, like the bundle cache
