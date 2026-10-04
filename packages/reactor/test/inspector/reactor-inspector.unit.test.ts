@@ -136,10 +136,22 @@ describe("ReactorInspector", () => {
       expect(queue.resumeCalls).toBe(1);
     });
 
-    it("tolerates pause and resume with no queue", async () => {
+    // A read of a queue that is not inspectable is empty; an ACTION on it
+    // refuses. Resolving would report a pause that never happened -- and one
+    // layer up, over the inspection subgraph, would answer the operator
+    // `inspectionPauseQueue: true`.
+    it("refuses pause and resume with no inspectable queue, naming the reason", async () => {
       const inspector = new ReactorInspector({});
-      await expect(inspector.pauseQueue()).resolves.toBeUndefined();
-      await expect(inspector.resumeQueue()).resolves.toBeUndefined();
+
+      await expect(inspector.pauseQueue()).rejects.toThrow(
+        /Pausing the queue is unsupported on this host's queue/,
+      );
+      await expect(inspector.resumeQueue()).rejects.toThrow(
+        /Resuming the queue is unsupported on this host's queue/,
+      );
+      await expect(inspector.getQueueState()).resolves.toMatchObject({
+        totalPending: 0,
+      });
     });
   });
 
@@ -189,11 +201,16 @@ describe("ReactorInspector", () => {
       expect(retry).toHaveBeenCalledTimes(1);
     });
 
-    it("ignores a retry for an unknown processor", async () => {
-      const inspector = new ReactorInspector({
-        processorManager: processorManager([]),
-      });
-      await expect(inspector.retryProcessor("nope")).resolves.toBeUndefined();
+    it("refuses a retry it cannot deliver rather than reporting one it did not", async () => {
+      await expect(
+        new ReactorInspector({
+          processorManager: processorManager([]),
+        }).retryProcessor("nope"),
+      ).rejects.toThrow(/this reactor is not tracking it/);
+
+      await expect(
+        new ReactorInspector({}).retryProcessor("p1"),
+      ).rejects.toThrow(/built with no processor manager/);
     });
   });
 

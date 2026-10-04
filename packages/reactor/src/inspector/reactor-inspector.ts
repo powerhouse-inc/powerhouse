@@ -23,8 +23,15 @@ import type {
  * The components a `ReactorInspector` observes. Every one is optional: a
  * reactor module that lacks a piece (a queue that is not the in-memory one, no
  * catch-up scheduler) still gets an inspector, and the methods needing the
- * missing piece degrade - queue and processor reads come back empty, catch-up
- * and integrity refuse.
+ * missing piece degrade along one rule -- a READ of a component that is not
+ * there comes back empty (there is no queue state, so there are no jobs), and
+ * an ACTION on one REFUSES by name.
+ *
+ * The asymmetry is the point. An action that silently returns success is the
+ * failure mode this whole surface exists to stamp out: `pauseQueue()`
+ * resolving on a reactor whose queue it cannot pause leaves an operator
+ * looking at a "Pause" button that reports done and changes nothing, and a
+ * remote caller one layer up turning that into `inspectionPauseQueue: true`.
  */
 export type ReactorInspectorComponents = {
   queue?: IInspectableQueue;
@@ -54,6 +61,18 @@ function catchUpUnavailable(): Error {
 
 function integrityUnavailable(): Error {
   return new Error("Integrity service not available");
+}
+
+function queueControlUnsupported(what: string): Error {
+  return new Error(
+    `${what} is unsupported on this host's queue: pause and resume are the in-memory queue's own inspection affordances (IInspectableQueue), not part of the IQueue contract, so a reactor built with another queue implementation cannot serve them`,
+  );
+}
+
+function processorsUnsupported(what: string): Error {
+  return new Error(
+    `${what} is unsupported on this host: it was built with no processor manager, so there is nothing tracking processors to act on`,
+  );
 }
 
 /** In-process `IInspector` over a reactor module's live components. */
@@ -97,12 +116,20 @@ export class ReactorInspector implements IInspector {
   }
 
   pauseQueue(): Promise<void> {
-    this.queue?.pause();
+    const queue = this.queue;
+    if (!queue) {
+      return Promise.reject(queueControlUnsupported("Pausing the queue"));
+    }
+    queue.pause();
     return Promise.resolve();
   }
 
-  async resumeQueue(): Promise<void> {
-    await this.queue?.resume();
+  resumeQueue(): Promise<void> {
+    const queue = this.queue;
+    if (!queue) {
+      return Promise.reject(queueControlUnsupported("Resuming the queue"));
+    }
+    return queue.resume();
   }
 
   getProcessors(): Promise<InspectorProcessorInfo[]> {
@@ -121,8 +148,20 @@ export class ReactorInspector implements IInspector {
     );
   }
 
-  async retryProcessor(processorId: string): Promise<void> {
-    await this.processorManager?.get(processorId)?.retry();
+  retryProcessor(processorId: string): Promise<void> {
+    const manager = this.processorManager;
+    if (!manager) {
+      return Promise.reject(processorsUnsupported("Retrying a processor"));
+    }
+    const processor = manager.get(processorId);
+    if (!processor) {
+      return Promise.reject(
+        new Error(
+          `Cannot retry processor ${JSON.stringify(processorId)}: this reactor is not tracking it. Re-read the processor list -- the row that named it is stale.`,
+        ),
+      );
+    }
+    return processor.retry();
   }
 
   getCatchUpStatus(): Promise<CatchUpStatus> {

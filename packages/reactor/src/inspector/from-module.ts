@@ -18,7 +18,9 @@ import type { IStorageHealthProvider } from "./types.js";
  *
  * - the queue is inspectable only when it is the in-memory one, because
  *   `IInspectableQueue` is that implementation's debugging surface and not part
- *   of the `IQueue` contract; another implementation reports empty queue state.
+ *   of the `IQueue` contract. Another implementation reports empty queue state
+ *   and REFUSES pause/resume by name, rather than accepting a pause it cannot
+ *   perform (`ReactorInspector`).
  * - `storageHealth` is the caller's to supply. It is fed by the self-heal path
  *   that owns the PGlite session (W0.7/W0.8), which only a host that opened
  *   such a store has; a host without one gets the healthy, never-recreated
