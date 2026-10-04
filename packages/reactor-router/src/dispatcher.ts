@@ -410,6 +410,16 @@ export class RouteDispatcher {
    * configured budget, every refusal recorded, and a refusal that outlasts the
    * budget raised as a {@link MisrouteUnresolvedError} -- never swallowed, and
    * never resolved as if the operation had happened.
+   *
+   * Stops short of the budget the moment `select(excluded)` has nothing new to
+   * offer -- it returns a backend already in `excluded`. That is `select`
+   * saying it is out of alternatives (an {@link onBackend} target always
+   * returns the one backend the caller pinned, ignoring `excluded` entirely;
+   * a table-backed target falls back to its placement answer once every
+   * candidate is excluded), and re-running the operation against a backend
+   * that already refused it once can only reproduce the same refusal. Burning
+   * the rest of the budget on that guaranteed repeat is pure latency with no
+   * chance of a different outcome, so the loop raises immediately instead.
    */
   private async attempt<T>(
     target: RouteTarget,
@@ -421,6 +431,9 @@ export class RouteDispatcher {
     let lastReason = "";
     for (let attempt = 0; attempt < this.attempts; attempt++) {
       const backend = await target.select(excluded);
+      if (excluded.has(backend.name)) {
+        break;
+      }
       try {
         const value = await run(backend);
         target.accepted(backend, attempt > 0);

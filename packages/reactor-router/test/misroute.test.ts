@@ -240,6 +240,38 @@ describe("advisory routing", () => {
     );
   });
 
+  it("raises after exactly one attempt when a caller-pinned backend keeps refusing", async () => {
+    let calls = 0;
+    const pinned: ReactorBackend = {
+      name: "pinned",
+      capabilities: inProcessCapabilities("pinned"),
+      client: {
+        rename: () => {
+          calls++;
+          return Promise.reject(
+            new WrongBackendError({
+              documentId: "doc-1",
+              ownerHint: "",
+              rejectedBy: "pinned",
+              operation: "rename",
+            }),
+          );
+        },
+      } as unknown as ReactorBackend["client"],
+    };
+    const dispatcher = new RouteDispatcher([pinned], { onDiagnostic: silent });
+
+    const run = dispatcher.onBackend(
+      "rename",
+      pinned,
+      (backend) => backend.client.rename("doc-1", "x"),
+      ATTEMPT.write,
+    );
+
+    await expect(run).rejects.toThrow(MisrouteUnresolvedError);
+    expect(calls).toBe(1);
+  });
+
   it("ignores an owner hint naming a backend it does not hold", async () => {
     const one = reactor("one");
     one.seed(fakeDocument({ id: "doc-1" }));
