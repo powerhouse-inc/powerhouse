@@ -4,6 +4,7 @@ import {
   DocumentIntegrityService,
   HardenedPGliteDialect,
   InMemoryQueue,
+  LOCAL_CHANNEL_TYPE,
   LocalChannelFactory,
   queryThroughDialect,
   ReactorBuilder,
@@ -49,13 +50,14 @@ export type BuildReactorOptions = {
   /** `null` builds no sync module; omitted means {@link ChannelScheme.CONNECT}. */
   channelScheme?: ChannelScheme | null;
   /**
-   * Builds the sync module on a {@link LocalChannelFactory} instead of a gql
-   * scheme, so the reactor can adopt monitor-brokered `LocalChannel` peers
-   * (multi-reactor W1.2). Mutually exclusive with a gql `channelScheme`: the
-   * reactor builder wires ONE channel factory, and W1.2 is deliberately
-   * Switchboard- and GraphQL-free, so a local-sync reactor is local-only. When
-   * set, `channelScheme` is ignored and {@link BuiltReactor.localChannelPorts}
-   * is the registry the adopt-sync-peer op registers ports with.
+   * Builds the sync module on a lone {@link LocalChannelFactory} instead of a
+   * gql scheme: a local-ONLY reactor, deliberately Switchboard- and
+   * GraphQL-free (multi-reactor W1.2). When set, `channelScheme` is ignored.
+   *
+   * Brokered local peers no longer REQUIRE this. A gql-scheme reactor composes
+   * a `LocalChannelFactory` onto its scheme (W3.0), so it adopts brokered
+   * peers too and {@link BuiltReactor.localChannelPorts} is present for it as
+   * well. Keep this only for a reactor that must have no gql factory at all.
    */
   localSync?: boolean;
   jwtHandler?: JwtHandler;
@@ -76,9 +78,14 @@ export type BuiltReactor = {
   /** Raw SQL against this reactor's own store. */
   dbQuery: IReactorDbQuery;
   /**
-   * The brokered-local-sync port registry, present only when built with
-   * {@link BuildReactorOptions.localSync}. The adopt-sync-peer op registers a
-   * transferred port here, and this reactor's `LocalChannelFactory` resolves it.
+   * The brokered-local-sync port registry. The adopt-sync-peer op registers a
+   * transferred port here, and this reactor's `LocalChannelFactory` resolves
+   * it.
+   *
+   * Present for every reactor that built a sync module at all -- the
+   * {@link BuildReactorOptions.localSync} local-only mode AND a gql scheme,
+   * which composes a local factory onto itself (W3.0). Absent only for a
+   * `channelScheme: null` island, which has no sync module to adopt into.
    */
   localChannelPorts?: LocalChannelPortRegistry;
   /**
@@ -115,17 +122,20 @@ export async function buildMonitorReactor(
     options.pg ?? (await openReactorStore(options.namespace, options.storage));
 
   const models = options.documentModelModules ?? baseDocumentModels;
-  // A local-sync reactor wires its own LocalChannelFactory via withSync and
-  // leaves the scheme unset; a gql reactor keeps the CONNECT default. The two
-  // are mutually exclusive because the builder wires one channel factory.
-  const localChannelPorts = options.localSync
-    ? new LocalChannelPortRegistry()
-    : undefined;
-  const scheme = localChannelPorts
+  // Local-ONLY mode still wires a lone LocalChannelFactory via withSync and
+  // leaves the scheme unset. Otherwise the gql scheme (CONNECT by default)
+  // wins, and W3.0 composes a LocalChannelFactory onto it rather than making
+  // the two exclusive -- so a connect-mode reactor holds Switchboard remotes
+  // and brokered peers at once. Only a `channelScheme: null` island gets
+  // neither, and so gets no port registry either.
+  const localOnly = options.localSync === true;
+  const scheme = localOnly
     ? null
     : options.channelScheme === undefined
       ? ChannelScheme.CONNECT
       : options.channelScheme;
+  const localChannelPorts =
+    localOnly || scheme !== null ? new LocalChannelPortRegistry() : undefined;
 
   // Self-heal only when this reactor owns a durable store it knows how to
   // reopen. A caller-supplied `pg` is owned (and reopened) by the caller, and a
@@ -197,33 +207,38 @@ export async function buildMonitorReactor(
   if (options.upgradeManifests && options.upgradeManifests.length > 0) {
     reactorBuilder.withUpgradeManifests(options.upgradeManifests);
   }
-  if (localChannelPorts) {
-    // CONNECT-scheme-free local wiring: the one channel factory resolves a
-    // brokered MessagePort from the registry under the (peerId, channelName)
-    // each remote's ChannelConfig names. The ReactorBuilder applies its own
-    // storage flusher to this SyncBuilder via withDefaultStorageFlusher, so the
-    // LocalChannel's cursor writes inherit the durability barrier.
-    //
-    // A storage heal SEVERS every local link, and does so visibly. The heal
-    // path resets each remote's channel, the reset shuts the old channel down
-    // (closing the brokered port, which unregisters it here), and the fresh
-    // channel's factory lookup then fails loudly with "the link is severed" --
-    // the remote drops out of the registry with that message rather than
-    // sitting in `connecting` over a dead port. The monitor's Sync tab shows
-    // the link as gone and re-linking is a click; nothing is recoverable
-    // automatically, because the other reactor's end of the MessageChannel went
-    // with it. Brokered remotes are session-scoped (`RemotePersistence`), so
-    // there is no stale record left behind either.
-    reactorBuilder.withSync(
-      new SyncBuilder().withChannelFactory(
-        new LocalChannelFactory(
-          childLogger(["reactor-monitor", "local-channel"]),
-          localChannelPorts.provider,
-        ),
-      ),
-    );
-  } else if (scheme !== null) {
-    reactorBuilder.withChannelScheme(scheme);
+  // The local factory resolves a brokered MessagePort from the registry under
+  // the (peerId, channelName) each remote's ChannelConfig names.
+  //
+  // A storage heal SEVERS every local link, and does so visibly. The heal path
+  // resets each remote's channel, the reset shuts the old channel down (closing
+  // the brokered port, which unregisters it here), and the fresh channel's
+  // factory lookup then fails loudly with "the link is severed" -- the remote
+  // drops out of the registry with that message rather than sitting in
+  // `connecting` over a dead port. The monitor's Sync tab shows the link as
+  // gone and re-linking is a click; nothing is recoverable automatically,
+  // because the other reactor's end of the MessageChannel went with it.
+  // Brokered remotes are session-scoped (`RemotePersistence`), so there is no
+  // stale record left behind either.
+  const localFactory = localChannelPorts
+    ? new LocalChannelFactory(
+        childLogger(["reactor-monitor", "local-channel"]),
+        localChannelPorts.provider,
+      )
+    : undefined;
+  if (localOnly && localFactory) {
+    // Local-only: no gql factory at all. The ReactorBuilder applies its own
+    // storage flusher to this SyncBuilder via withDefaultStorageFlusher, so
+    // the LocalChannel's cursor writes inherit the durability barrier.
+    reactorBuilder.withSync(new SyncBuilder().withChannelFactory(localFactory));
+  } else if (scheme !== null && localFactory) {
+    // W3.0: the builder keeps constructing the scheme's gql factory (only it
+    // holds the job queue the poll timer needs) and composes the local one
+    // onto it, so this reactor routes `{type:"gql"}` and `{type:"local"}`
+    // remotes side by side.
+    reactorBuilder
+      .withChannelScheme(scheme)
+      .withAdditionalChannelFactory(LOCAL_CHANNEL_TYPE, localFactory);
   }
   if (options.jwtHandler) {
     reactorBuilder.withJwtHandler(options.jwtHandler);

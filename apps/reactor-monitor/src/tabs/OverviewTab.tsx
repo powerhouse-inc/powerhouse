@@ -2,6 +2,7 @@ import type {
   ManagedReactor,
   ManagedWorkerReactor,
   ReactorCapabilities,
+  ReactorSyncChannel,
 } from "@powerhousedao/reactor-monitor";
 import { useCallback, useEffect, useState } from "react";
 import type { WorkerInspectorInfo } from "@powerhousedao/reactor-browser/rpc";
@@ -77,6 +78,29 @@ function yesNo(enabled: boolean): Pick<CapabilityCell, "value" | "tone"> {
 }
 
 /**
+ * The one-line reason the sync-channel cell reads the way it does.
+ *
+ * A reactor holding BOTH channels is the normal connect-mode case since W3.0,
+ * and it gets a note naming both: an either/or note would have reported one
+ * capability and hidden the other, which is the opposite of what this grid is
+ * for.
+ */
+function syncChannelNote(channels: readonly ReactorSyncChannel[]): string {
+  const gql = channels.includes("gql");
+  const local = channels.includes("local");
+  if (gql && local) {
+    return "Both: Switchboard GraphQL remotes and brokered-MessagePort LocalChannel peers, composed on one reactor.";
+  }
+  if (local) {
+    return "Brokered-MessagePort LocalChannel peers; linkable from the Sync tab.";
+  }
+  if (gql) {
+    return "Connect/Switchboard GraphQL channels; add a remote from the Sync tab.";
+  }
+  return "No sync module was built: this reactor is an island.";
+}
+
+/**
  * Renders `ReactorCapabilities` field by field, each with the one-line reason
  * it reads the way it does -- this grid is where the plan's "capability
  * variance is a fact to model explicitly" becomes visible at a glance, so the
@@ -138,11 +162,7 @@ function capabilityCells(
           ? capabilities.syncChannels.join(", ")
           : "none",
       tone: capabilities.syncChannels.length > 0 ? "neutral" : "off",
-      note: capabilities.syncChannels.includes("local")
-        ? "Brokered-MessagePort LocalChannel peers; linkable from the Sync tab."
-        : capabilities.syncChannels.includes("gql")
-          ? "Connect/Switchboard GraphQL channels; add a remote from the Sync tab."
-          : "No sync module was built: this reactor is an island.",
+      note: syncChannelNote(capabilities.syncChannels),
     },
     {
       label: "Self-heal",

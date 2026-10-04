@@ -119,7 +119,7 @@ export function createMonitorWorkerHost(
       const registry = current.localChannelPorts;
       if (!syncManager || !registry) {
         throw new Error(
-          "Worker reactor has no local sync module; provision it with sync.local",
+          "Worker reactor has no sync module to adopt a local peer into; it was built with sync.channelScheme: null",
         );
       }
       // Rehydrated through the round-trip check: a dotted drive id would parse
@@ -151,7 +151,7 @@ export function createMonitorWorkerHost(
       const registry = current.localChannelPorts;
       if (!syncManager || !registry) {
         throw new Error(
-          "Worker reactor has no local sync module; provision it with sync.local",
+          "Worker reactor has no sync module to adopt a local peer into; it was built with sync.channelScheme: null",
         );
       }
       await syncManager.remove(params.remoteName);

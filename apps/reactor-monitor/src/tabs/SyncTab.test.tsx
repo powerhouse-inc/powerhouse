@@ -132,7 +132,7 @@ function fakeInspector(health: StorageHealth): IInspector {
 describe("SyncTab", () => {
   it("renders the empty state with no remotes configured", () => {
     const view = render(
-      <SyncTab localOnly={false} syncManager={fakeSyncManager([])} />,
+      <SyncTab gqlRemotes syncManager={fakeSyncManager([])} />,
     );
     expect(view.getByTestId("sync-empty-state")).toBeTruthy();
   });
@@ -149,7 +149,7 @@ describe("SyncTab", () => {
     });
     const view = render(
       <SyncTab
-        localOnly={false}
+        gqlRemotes
         syncManager={fakeSyncManager(
           [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
           [inspection],
@@ -164,7 +164,7 @@ describe("SyncTab", () => {
   it("does not warn for a healthy connected channel", async () => {
     const view = render(
       <SyncTab
-        localOnly={false}
+        gqlRemotes
         syncManager={fakeSyncManager(
           [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
           [inspectionFor("accounts")],
@@ -179,7 +179,7 @@ describe("SyncTab", () => {
   it("renders real cursors and mailbox depths from the inspection op", async () => {
     const view = render(
       <SyncTab
-        localOnly={false}
+        gqlRemotes
         syncManager={fakeSyncManager(
           [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
           [inspectionFor("accounts")],
@@ -203,7 +203,7 @@ describe("SyncTab", () => {
           recreateCount: 1,
           lastRecreated: { reason: "portal", timestampUtcMs: 1, attempt: 1 },
         })}
-        localOnly={false}
+        gqlRemotes
         syncManager={fakeSyncManager(
           [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
           [inspectionFor("accounts")],
@@ -234,7 +234,7 @@ describe("SyncTab", () => {
       [inspectionFor("accounts")],
       { accounts: [deadLetter] },
     );
-    const view = render(<SyncTab localOnly={false} syncManager={manager} />);
+    const view = render(<SyncTab gqlRemotes syncManager={manager} />);
 
     const row = await view.findByTestId("sync-dead-letter");
     expect(row.textContent).toMatch(/MISSING_OPERATIONS/);
@@ -258,7 +258,7 @@ describe("SyncTab", () => {
       [fakeRemote("accounts", HEALTHY_SNAPSHOT)],
       [inspectionFor("accounts")],
     );
-    const view = render(<SyncTab localOnly={false} syncManager={manager} />);
+    const view = render(<SyncTab gqlRemotes syncManager={manager} />);
 
     await view.findByTestId("sync-mailbox-depths");
 
@@ -279,7 +279,7 @@ describe("SyncTab", () => {
       [inspectionFor("accounts")],
     );
     manager.resetChannel.mockRejectedValue(new Error("reset exploded"));
-    const view = render(<SyncTab localOnly={false} syncManager={manager} />);
+    const view = render(<SyncTab gqlRemotes syncManager={manager} />);
 
     await view.findByTestId("sync-mailbox-depths");
     fireEvent.click(view.getByText("Reset channel"));
@@ -297,14 +297,14 @@ describe("SyncTab", () => {
         }),
       ],
     );
-    const view = render(<SyncTab localOnly={false} syncManager={manager} />);
+    const view = render(<SyncTab gqlRemotes syncManager={manager} />);
 
     await view.findByTestId("sync-mailbox-depths");
     expect(manager.listDeadLetters).not.toHaveBeenCalled();
   });
 
   it("renders a placeholder when the reactor has no sync module", () => {
-    const view = render(<SyncTab localOnly={false} syncManager={undefined} />);
+    const view = render(<SyncTab gqlRemotes syncManager={undefined} />);
     expect(view.getByText(/no sync module/)).toBeTruthy();
   });
 
@@ -312,7 +312,7 @@ describe("SyncTab", () => {
   // could only ever produce an error from a factory that will not serve it.
   it("disables the gql add-remote form on a local-only reactor and says why", () => {
     const manager = fakeSyncManager([]);
-    const view = render(<SyncTab localOnly syncManager={manager} />);
+    const view = render(<SyncTab gqlRemotes={false} syncManager={manager} />);
 
     expect(view.getByTestId("sync-add-remote-unavailable").textContent).toMatch(
       /provisioned local-only/,
@@ -327,9 +327,12 @@ describe("SyncTab", () => {
     }
   });
 
+  // Connect mode now ALSO serves brokered local peers (W3.0), so the gating
+  // is on the gql channel alone: the form stays live on a reactor that can do
+  // both, which the earlier "local means no gql form" reading got backwards.
   it("leaves the add-remote form usable on a connect reactor", () => {
     const view = render(
-      <SyncTab localOnly={false} syncManager={fakeSyncManager([])} />,
+      <SyncTab gqlRemotes syncManager={fakeSyncManager([])} />,
     );
 
     expect(view.queryByTestId("sync-add-remote-unavailable")).toBeNull();

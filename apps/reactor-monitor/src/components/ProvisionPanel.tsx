@@ -1,7 +1,11 @@
 import type { ManagedReactorEntry } from "@powerhousedao/reactor-monitor";
 import { useState, type FormEvent } from "react";
 
-/** Local-sync reactors can be linked peer-to-peer; connect reactors poll gql. */
+/**
+ * `local` is local-ONLY: brokered peer links and no gql factory. `connect`
+ * polls gql AND can be linked to a sibling, because W3.0 composes a local
+ * factory onto the gql scheme.
+ */
 export type ProvisionSyncMode = "local" | "connect";
 
 export type ProvisionPanelProps = {
@@ -81,8 +85,8 @@ export function ProvisionPanel({
             onChange={(e) => setSyncMode(e.target.value as ProvisionSyncMode)}
             value={syncMode}
           >
-            <option value="local">local (brokered)</option>
-            <option value="connect">connect (gql)</option>
+            <option value="local">local only (brokered)</option>
+            <option value="connect">connect (gql + brokered)</option>
           </select>
         </label>
         <button className="rm-btn" type="submit">

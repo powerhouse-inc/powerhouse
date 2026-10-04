@@ -6,7 +6,10 @@ import {
   type ManagedInProcessReactor,
 } from "../src/index.js";
 import { descriptor, folderNames, hasDrive, nodeChannel } from "./helpers.js";
-import type { MessagePortLike } from "@powerhousedao/reactor";
+import {
+  DriveCollectionId,
+  type MessagePortLike,
+} from "@powerhousedao/reactor";
 
 describe("brokered local sync between two in-process reactors", () => {
   const provisioned: ManagedInProcessReactor[] = [];
@@ -121,23 +124,119 @@ describe("brokered local sync between two in-process reactors", () => {
     await handle.unlink();
   }, 60_000);
 
-  it("refuses to link a reactor whose capabilities lack the local sync channel", async () => {
+  // W3.0: connect mode gained local capability. A connect-mode reactor now
+  // composes a LocalChannelFactory onto its gql scheme, so it is a valid end
+  // of a brokered link -- which is what the mixed topologies in stage 3 rest
+  // on, and what this suite previously asserted was impossible.
+  it("links a connect-mode reactor to a local-only one and syncs over it", async () => {
     const local = await host("mixed-local");
     const connect = await provisionInProcess(descriptor("mixed-connect"));
     provisioned.push(connect);
 
-    // The guard reads the capability contract, so the refusal names what the
-    // reactor actually declares (stage 2: one place enforces it).
-    expect(connect.capabilities.syncChannels).toEqual(["gql"]);
-    await expect(
-      linkLocalSync(local, connect, {
-        driveId: "nope",
-        createChannel: nodeChannel,
-      }),
-    ).rejects.toThrow(
-      /not provisioned with local sync .*declare sync channels \[gql\]/,
+    expect(connect.capabilities.syncChannels).toEqual(["gql", "local"]);
+
+    const drive = await connect.client.drives.create({
+      global: { name: "Mixed" },
+    });
+    const driveId = drive.header.id;
+    const handle = await linkLocalSync(connect, local, {
+      driveId,
+      createChannel: nodeChannel,
+    });
+
+    expect(
+      connect.syncManager?.list().map((r) => r.meta.channelConfig.type),
+    ).toEqual(["local"]);
+    await vi.waitFor(
+      async () => expect(await hasDrive(local, driveId)).toBe(true),
+      { timeout: 15_000 },
     );
-  });
+
+    await connect.client.drives.addFolder(driveId, "fromConnect");
+    await vi.waitFor(
+      async () =>
+        expect(await folderNames(local, driveId)).toContain("fromConnect"),
+      { timeout: 15_000 },
+    );
+    await local.client.drives.addFolder(driveId, "fromLocalOnly");
+    await vi.waitFor(
+      async () =>
+        expect(await folderNames(connect, driveId)).toContain("fromLocalOnly"),
+      { timeout: 15_000 },
+    );
+
+    await handle.unlink();
+  }, 60_000);
+
+  // The composite routes on the remote's channel type, so the two remotes
+  // coexist on one sync manager rather than one shadowing the other.
+  it("holds a gql remote and a brokered local remote on the same connect-mode reactor", async () => {
+    const local = await host("both-local");
+    const connect = await provisionInProcess(descriptor("both-connect"));
+    provisioned.push(connect);
+
+    const drive = await connect.client.drives.create({
+      global: { name: "Both" },
+    });
+    const driveId = drive.header.id;
+    const handle = await linkLocalSync(connect, local, {
+      driveId,
+      createChannel: nodeChannel,
+    });
+
+    // A stub fetch, so adding the gql remote exercises the composite's gql
+    // arm without a network: the channel registers and polls against this.
+    const fetchFn = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              touchChannel: { success: true, ackOrdinal: 0 },
+              pushSyncEnvelopes: true,
+              pollSyncEnvelopes: {
+                envelopes: [],
+                ackOrdinal: 0,
+                deadLetters: [],
+                hasMore: false,
+              },
+            },
+          }),
+      }),
+    );
+    await connect.syncManager!.add(
+      "gql:switchboard",
+      DriveCollectionId.forDrive(driveId),
+      {
+        type: "gql",
+        parameters: {
+          url: "https://switchboard.test/graphql",
+          pollIntervalMs: 50,
+          fetchFn,
+        },
+      },
+      { documentId: [], scope: [], branch: "main" },
+    );
+
+    expect(
+      connect
+        .syncManager!.list()
+        .map((r) => r.meta.channelConfig.type)
+        .sort(),
+    ).toEqual(["gql", "local"]);
+    // Both arms are actually running: the gql channel talked to its endpoint
+    // while the local link kept delivering.
+    await vi.waitFor(() => expect(fetchFn).toHaveBeenCalled(), {
+      timeout: 15_000,
+    });
+    await vi.waitFor(
+      async () => expect(await hasDrive(local, driveId)).toBe(true),
+      { timeout: 15_000 },
+    );
+
+    await connect.syncManager!.remove("gql:switchboard");
+    await handle.unlink();
+  }, 60_000);
 
   it("refuses a sync-less island, which declares no sync channels at all", async () => {
     const local = await host("island-local");
@@ -157,19 +256,21 @@ describe("brokered local sync between two in-process reactors", () => {
 
   it("refuses before opening a port, so a rejected link leaves no channel behind", async () => {
     const local = await host("fail-fast-local");
-    const connect = await provisionInProcess(descriptor("fail-fast-connect"));
-    provisioned.push(connect);
+    const island = await provisionInProcess(
+      descriptor("fail-fast-island", { sync: { channelScheme: null } }),
+    );
+    provisioned.push(island);
 
     let opened = 0;
     await expect(
-      linkLocalSync(local, connect, {
+      linkLocalSync(local, island, {
         driveId: "nope",
         createChannel: () => {
           opened++;
           return nodeChannel();
         },
       }),
-    ).rejects.toThrow(/not provisioned with local sync/);
+    ).rejects.toThrow(/has no local sync channel/);
     expect(opened).toBe(0);
   });
 

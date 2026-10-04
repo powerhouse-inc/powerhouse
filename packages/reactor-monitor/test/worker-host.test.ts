@@ -111,6 +111,18 @@ describe("monitor worker host over a MessageChannel", () => {
     expect(tab.syncManager.list()).toEqual([]);
   });
 
+  // W3.0: `descriptor("w")` is connect-mode, and the worker's built config
+  // reports `localSync: false` for it. The handle reads its local capability
+  // off the capability contract rather than off that flag, so a connect-mode
+  // worker reactor is a valid end of a brokered link -- which it has to be
+  // for a browser reactor to sync with a Switchboard AND a sibling worker.
+  it("declares both sync channels for a connect-mode worker reactor and exposes the link handles", () => {
+    expect(tab.capabilities.syncChannels).toEqual(["gql", "local"]);
+    expect(tab.descriptorMismatch).toBe(false);
+    expect(tab.adoptLocalSyncPeer).toBeDefined();
+    expect(tab.removeLocalSyncPeer).toBeDefined();
+  });
+
   it("exposes the event bus, forwarding only the whitelisted types", async () => {
     await tab.client.createEmpty(DRIVE_TYPE);
 

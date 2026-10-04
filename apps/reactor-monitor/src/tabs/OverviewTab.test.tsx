@@ -99,8 +99,13 @@ describe("OverviewTab capability grid", () => {
     const container = view.container as HTMLElement;
     expect(badgeFor(container, "Storage")).toBe("memory");
     expect(badgeFor(container, "Self-heal")).toBe("no");
-    // A gql-mode reactor, so the sync-channel cell differs too.
-    expect(badgeFor(container, "Sync channels")).toBe("gql");
+    // A gql-scheme reactor, which since W3.0 also composes a local channel
+    // factory, so the cell reports both and the note names both rather than
+    // reporting one capability and hiding the other.
+    expect(badgeFor(container, "Sync channels")).toBe("gql, local");
+    expect(
+      view.getByText(/Switchboard GraphQL remotes and brokered/),
+    ).toBeTruthy();
     expect(view.getByText(/no durable store to reopen/)).toBeTruthy();
   });
 

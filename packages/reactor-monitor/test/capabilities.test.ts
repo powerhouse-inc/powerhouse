@@ -76,25 +76,29 @@ describe("reactorCapabilities", () => {
     expect(differing).toEqual(["hosting", "inspection", "processors"]);
   });
 
-  it("reads gql sync channels for a connect-mode reactor and none for a sync-less one", () => {
+  // W3.0: a gql-scheme reactor composes a LocalChannelFactory onto its scheme,
+  // so it serves Switchboard remotes AND brokered local peers. This row is
+  // what tells a router that a connected reactor may still be linked to a
+  // sibling, which is the whole point of the mixed topologies in stage 3.
+  it("reads both channels for a gql-scheme reactor and none for a sync-less one", () => {
     expect(
       reactorCapabilities({ kind: "in-process", name: "cap-default" })
         .syncChannels,
-    ).toEqual(["gql"]);
+    ).toEqual(["gql", "local"]);
     expect(
       reactorCapabilities({
         kind: "worker",
         name: "cap-connect",
         sync: { channelScheme: ChannelScheme.CONNECT },
       }).syncChannels,
-    ).toEqual(["gql"]);
+    ).toEqual(["gql", "local"]);
     expect(
       reactorCapabilities({
         kind: "in-process",
         name: "cap-switchboard",
         sync: { channelScheme: ChannelScheme.SWITCHBOARD },
       }).syncChannels,
-    ).toEqual(["gql"]);
+    ).toEqual(["gql", "local"]);
     // No sync module at all: an island, linkable by nothing.
     expect(
       reactorCapabilities({
@@ -106,8 +110,8 @@ describe("reactorCapabilities", () => {
   });
 
   it("lets sync.local win over a channelScheme, exactly as the builder does", () => {
-    // buildMonitorReactor ignores channelScheme when localSync is set: one
-    // reactor wires one channel factory.
+    // buildMonitorReactor still ignores channelScheme when localSync is set:
+    // that mode means local-ONLY, with no gql factory at all.
     expect(
       reactorCapabilities({
         kind: "worker",
@@ -203,6 +207,22 @@ describe("reactorCapabilities", () => {
     });
     expect(supportsSyncChannel(local, "local")).toBe(true);
     expect(supportsSyncChannel(local, "gql")).toBe(false);
+
+    const connect = reactorCapabilities({
+      kind: "in-process",
+      name: "cap-connect-reader",
+      sync: { channelScheme: ChannelScheme.CONNECT },
+    });
+    expect(supportsSyncChannel(connect, "local")).toBe(true);
+    expect(supportsSyncChannel(connect, "gql")).toBe(true);
+
+    const island = reactorCapabilities({
+      kind: "in-process",
+      name: "cap-island-reader",
+      sync: { channelScheme: null },
+    });
+    expect(supportsSyncChannel(island, "local")).toBe(false);
+    expect(supportsSyncChannel(island, "gql")).toBe(false);
   });
 });
 

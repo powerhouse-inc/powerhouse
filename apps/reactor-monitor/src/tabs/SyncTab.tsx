@@ -15,14 +15,18 @@ export type SyncTabProps = {
   readonly syncManager: InspectableSyncManager | undefined;
   readonly inspector?: IInspector;
   /**
-   * Whether this reactor was provisioned local-only (`sync.local`).
+   * Whether this reactor can form gql remotes, i.e. whether its capability
+   * contract declares the `"gql"` sync channel.
    *
-   * Such a reactor wires a single `LocalChannelFactory` and no gql factory, so
-   * the "Add remote" form below cannot work on it -- the factory rejects a
-   * `{ type: "gql" }` config. Required rather than defaulted, because a silent
-   * `false` would put the broken form back in front of the user.
+   * False for a local-ONLY reactor (`sync.local`): it wires a single
+   * `LocalChannelFactory`, so the "Add remote" form below cannot work -- the
+   * factory rejects a `{ type: "gql" }` config. True for a connect-mode
+   * reactor, which since W3.0 serves gql remotes AND brokered local peers, so
+   * both this form and the link panel above are live on it. Required rather
+   * than defaulted, because either silent default puts a form that cannot work
+   * in front of the user.
    */
-  readonly localOnly: boolean;
+  readonly gqlRemotes: boolean;
 };
 
 const POLL_INTERVAL_MS = 2000;
@@ -282,7 +286,7 @@ function RemoteRow({
   );
 }
 
-export function SyncTab({ syncManager, inspector, localOnly }: SyncTabProps) {
+export function SyncTab({ syncManager, inspector, gqlRemotes }: SyncTabProps) {
   const [remotes, setRemotes] = useState<Remote[]>([]);
   const [inspections, setInspections] = useState<
     Map<string, RemoteSyncInspection>
@@ -370,10 +374,10 @@ export function SyncTab({ syncManager, inspector, localOnly }: SyncTabProps) {
   }, [refresh]);
 
   const handleAdd = useCallback(async () => {
-    // The form is disabled for a local-only reactor; this is the belt to that
-    // braces, so a submit that slips through cannot reach a factory that will
-    // only reject it.
-    if (!syncManager || localOnly) {
+    // The form is disabled on a reactor with no gql factory; this is the belt
+    // to that braces, so a submit that slips through cannot reach a factory
+    // that will only reject it.
+    if (!syncManager || !gqlRemotes) {
       return;
     }
     const trimmedName = name.trim();
@@ -402,7 +406,7 @@ export function SyncTab({ syncManager, inspector, localOnly }: SyncTabProps) {
     } finally {
       setAdding(false);
     }
-  }, [syncManager, localOnly, name, driveId, url, refresh]);
+  }, [syncManager, gqlRemotes, name, driveId, url, refresh]);
 
   const handleTriggerPull = useCallback(
     (remoteName: string) => {
@@ -478,15 +482,15 @@ export function SyncTab({ syncManager, inspector, localOnly }: SyncTabProps) {
 
       <StorageHealthPanel health={storageHealth} />
 
-      {localOnly ? (
+      {gqlRemotes ? null : (
         <p className="rm-note" data-testid="sync-add-remote-unavailable">
           This reactor is provisioned local-only (sync.local), so it has a local
           channel factory and no GraphQL one; a gql remote cannot be added here.
           Use &quot;Link local sync&quot; above to sync it with another
           monitor-owned reactor, or provision a reactor with sync mode
-          &quot;connect&quot; to add gql remotes.
+          &quot;connect&quot;, which serves gql remotes and local links at once.
         </p>
-      ) : null}
+      )}
       <form
         className="rm-form rm-form-inline"
         onSubmit={(e) => {
@@ -497,7 +501,7 @@ export function SyncTab({ syncManager, inspector, localOnly }: SyncTabProps) {
         <label>
           Remote name
           <input
-            disabled={localOnly}
+            disabled={!gqlRemotes}
             onChange={(e) => setName(e.target.value)}
             placeholder="my-remote"
             type="text"
@@ -507,7 +511,7 @@ export function SyncTab({ syncManager, inspector, localOnly }: SyncTabProps) {
         <label>
           Drive ID
           <input
-            disabled={localOnly}
+            disabled={!gqlRemotes}
             onChange={(e) => setDriveId(e.target.value)}
             placeholder="drive id to sync"
             type="text"
@@ -517,14 +521,18 @@ export function SyncTab({ syncManager, inspector, localOnly }: SyncTabProps) {
         <label>
           GraphQL URL
           <input
-            disabled={localOnly}
+            disabled={!gqlRemotes}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://.../graphql"
             type="text"
             value={url}
           />
         </label>
-        <button className="rm-btn" disabled={adding || localOnly} type="submit">
+        <button
+          className="rm-btn"
+          disabled={adding || !gqlRemotes}
+          type="submit"
+        >
           Add remote
         </button>
       </form>

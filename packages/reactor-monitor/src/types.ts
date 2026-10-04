@@ -63,11 +63,14 @@ export type ReactorPackageConfig = {
 export type ReactorSyncConfig = {
   channelScheme?: ChannelScheme | null;
   /**
-   * Builds the sync module on a `LocalChannelFactory` so the reactor can adopt
-   * monitor-brokered `LocalChannel` peers (multi-reactor W1.2). Mutually
-   * exclusive with a gql `channelScheme`: a reactor wires one channel factory,
-   * and W1.2 is Switchboard- and GraphQL-free, so a local-sync reactor is
-   * local-only. When set, `channelScheme` is ignored.
+   * Builds the sync module on a lone `LocalChannelFactory`: a local-ONLY
+   * reactor, deliberately Switchboard- and GraphQL-free (multi-reactor W1.2).
+   * When set, `channelScheme` is ignored.
+   *
+   * Not needed to adopt brokered `LocalChannel` peers any more. A gql-scheme
+   * reactor composes a local factory onto its scheme (W3.0), so it declares
+   * `syncChannels: ["gql", "local"]` and accepts both kinds of remote. Use
+   * this only for a reactor that must have no gql factory at all.
    */
   local?: boolean;
   /**
@@ -190,9 +193,12 @@ export interface ManagedReactorBase {
   readonly events: IEventBus;
   /**
    * Adopts one end of a monitor-brokered local-sync link: registers the port
-   * and adds the local remote. Present only when the reactor was provisioned
-   * with `sync.local`. Prefer {@link ReactorMonitorRegistry.linkLocalSync},
-   * which brokers both ends. Multi-reactor W1.2.
+   * and adds the local remote. Present whenever
+   * {@link ReactorCapabilities.syncChannels} includes `"local"` -- the
+   * local-only `sync.local` mode and a gql scheme alike, since a gql-scheme
+   * reactor composes a local factory onto its scheme (W3.0). Prefer
+   * {@link ReactorMonitorRegistry.linkLocalSync}, which brokers both ends.
+   * Multi-reactor W1.2.
    */
   adoptLocalSyncPeer?: (link: AdoptLocalSyncPeerLink) => Promise<void>;
   /**
@@ -203,9 +209,9 @@ export interface ManagedReactorBase {
    * -- because a registry entry outliving its closed port is exactly how a
    * dead link reports itself healthy.
    *
-   * Present, like {@link adoptLocalSyncPeer}, only when the reactor was
-   * provisioned with `sync.local`. The two always appear and disappear
-   * together, so a caller that finds one can rely on the other.
+   * Present, like {@link adoptLocalSyncPeer}, whenever the reactor declares
+   * the `"local"` sync channel. The two always appear and disappear together,
+   * so a caller that finds one can rely on the other.
    */
   removeLocalSyncPeer?: (
     remoteName: string,

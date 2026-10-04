@@ -43,7 +43,8 @@ export async function provisionInProcess(
   const reactorModule = built.module.reactorModule;
   const syncManager = reactorModule?.syncModule?.syncManager;
   const localChannelPorts = built.localChannelPorts;
-  // Present only when local sync is wired and a sync manager exists; the broker
+  // Present whenever a sync module exists -- the local-only mode AND a gql
+  // scheme, which composes a local factory onto itself (W3.0). The broker
   // (linkLocalSync) hands this reactor one end of the channel directly, so an
   // in-process adopt needs no transfer -- the node/browser port is wrapped and
   // registered, then the local remote is added.

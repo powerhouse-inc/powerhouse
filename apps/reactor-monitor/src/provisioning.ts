@@ -28,11 +28,15 @@ export function createMonitorWorker(name: string): SharedWorker {
 /**
  * Builds the descriptor the provision form submits.
  *
- * `syncMode: "local"` wires the reactor for monitor-brokered `LocalChannel`
- * sync (multi-reactor W1.2), so two such reactors can be linked peer-to-peer
- * from the Sync tab with no Switchboard. `"connect"` keeps the default gql
- * channel scheme for the Sync tab's manual "Add remote" flow. A reactor is one
- * or the other: the builder wires a single channel factory.
+ * `syncMode: "local"` wires the reactor local-ONLY: a lone `LocalChannelFactory`
+ * and no gql one, so it can be linked peer-to-peer from the Sync tab but has no
+ * "Add remote" flow (multi-reactor W1.2).
+ *
+ * `"connect"` keeps the default gql channel scheme, which since W3.0 ALSO
+ * composes a local factory: such a reactor serves the Sync tab's "Add remote"
+ * flow AND can be linked to a sibling, which is what the mixed topologies of
+ * stage 3 need. Prefer it unless the point is a reactor with no gql factory at
+ * all.
  */
 export function buildDescriptor(
   name: string,

@@ -2,6 +2,7 @@
 import type {
   ManagedReactorEntry,
   ReactorMonitorRegistry,
+  ReactorSyncChannel,
 } from "@powerhousedao/reactor-monitor";
 import { ReactorMonitorProvider } from "@powerhousedao/reactor-monitor/react";
 import { fireEvent, render, waitFor } from "@testing-library/react";
@@ -9,13 +10,22 @@ import { createElement, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { LinkLocalSyncPanel } from "./LinkLocalSyncPanel.js";
 
-/** A ready entry carrying only the fields the panel reads. */
-function readyEntry(name: string): ManagedReactorEntry {
+/**
+ * A ready entry carrying only the fields the panel reads. `syncChannels` is
+ * one of them: the panel offers only local-capable peers as targets.
+ */
+function readyEntry(
+  name: string,
+  syncChannels: readonly ReactorSyncChannel[] = ["gql", "local"],
+): ManagedReactorEntry {
   return {
     name,
     descriptor: { kind: "in-process", name },
     status: "ready",
-    reactor: { name } as unknown as ManagedReactorEntry["reactor"],
+    reactor: {
+      name,
+      capabilities: { syncChannels },
+    } as unknown as ManagedReactorEntry["reactor"],
   } as ManagedReactorEntry;
 }
 
@@ -79,11 +89,46 @@ describe("LinkLocalSyncPanel", () => {
     const { registry } = fakeRegistry([readyEntry("a")]);
     const view = renderInProvider(
       registry,
-      createElement(LinkLocalSyncPanel, { reactorName: "a" }),
+      createElement(LinkLocalSyncPanel, { localLinks: true, reactorName: "a" }),
     );
 
     expect(view.getByTestId("link-local-sync")).toBeTruthy();
-    expect(view.getByText(/Provision another ready reactor/)).toBeTruthy();
+    expect(
+      view.getByText(/Provision another ready local-capable reactor/),
+    ).toBeTruthy();
+  });
+
+  // A connect-mode reactor is a valid end of a local link since W3.0, so the
+  // panel must offer it; only an island (no sync module) is refused.
+  it("offers a connect-mode peer as a target but not an island", () => {
+    const { registry } = fakeRegistry([
+      readyEntry("a"),
+      readyEntry("b", ["gql", "local"]),
+      readyEntry("island", []),
+    ]);
+    const view = renderInProvider(
+      registry,
+      createElement(LinkLocalSyncPanel, { localLinks: true, reactorName: "a" }),
+    );
+
+    const options = view
+      .getAllByRole("option")
+      .map((option) => (option as HTMLOptionElement).value);
+    expect(options).toEqual(["", "b"]);
+  });
+
+  it("says why an island cannot be linked at all", () => {
+    const { registry } = fakeRegistry([readyEntry("a", []), readyEntry("b")]);
+    const view = renderInProvider(
+      registry,
+      createElement(LinkLocalSyncPanel, {
+        localLinks: false,
+        reactorName: "a",
+      }),
+    );
+
+    expect(view.getByTestId("link-local-sync-unavailable")).toBeTruthy();
+    expect(view.queryByRole("combobox")).toBeNull();
   });
 
   it("brokers a link to the selected peer for the given drive", async () => {
@@ -93,7 +138,7 @@ describe("LinkLocalSyncPanel", () => {
     ]);
     const view = renderInProvider(
       registry,
-      createElement(LinkLocalSyncPanel, { reactorName: "a" }),
+      createElement(LinkLocalSyncPanel, { localLinks: true, reactorName: "a" }),
     );
 
     fireEvent.change(view.getByRole("combobox"), { target: { value: "b" } });
@@ -122,7 +167,7 @@ describe("LinkLocalSyncPanel", () => {
     );
     const view = renderInProvider(
       registry,
-      createElement(LinkLocalSyncPanel, { reactorName: "a" }),
+      createElement(LinkLocalSyncPanel, { localLinks: true, reactorName: "a" }),
     );
 
     fireEvent.change(view.getByRole("combobox"), { target: { value: "b" } });
@@ -144,7 +189,7 @@ describe("LinkLocalSyncPanel", () => {
     ]);
     const view = renderInProvider(
       registry,
-      createElement(LinkLocalSyncPanel, { reactorName: "a" }),
+      createElement(LinkLocalSyncPanel, { localLinks: true, reactorName: "a" }),
     );
 
     fireEvent.change(view.getByRole("combobox"), { target: { value: "b" } });

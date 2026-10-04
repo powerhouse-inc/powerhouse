@@ -88,16 +88,22 @@ function renderPanel(
     case "Sync":
       return (
         <>
-          <LinkLocalSyncPanel reactorName={reactor.name} />
+          {/*
+            Both panels gate on the capability contract, which is what a router
+            reads too; a worker's `adoptLocalSyncPeer` presence alone can
+            disagree with it when a later tab's descriptor loses the race to
+            the construct that actually built (multi-reactor stage 2 review).
+            Since W3.0 the two channels are independent: a connect-mode reactor
+            answers true to both, a local-only reactor only to `local`, and an
+            island to neither.
+          */}
+          <LinkLocalSyncPanel
+            localLinks={supportsSyncChannel(reactor.capabilities, "local")}
+            reactorName={reactor.name}
+          />
           <SyncTab
+            gqlRemotes={supportsSyncChannel(reactor.capabilities, "gql")}
             inspector={reactor.inspector}
-            // The capability contract is what a router (and this panel)
-            // reads to know what a reactor can do; a worker's `adoptLocalSyncPeer`
-            // presence alone can disagree with it when a later tab's
-            // descriptor loses the race to the construct that actually built
-            // (multi-reactor stage 2 review) -- the contract cannot drift
-            // from that because it is what the handle derives it from.
-            localOnly={supportsSyncChannel(reactor.capabilities, "local")}
             syncManager={reactor.syncManager}
           />
         </>

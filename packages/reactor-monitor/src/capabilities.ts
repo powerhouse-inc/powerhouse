@@ -41,10 +41,12 @@ export type ReactorInspectionTransport = "direct" | "rpc" | "none";
  * - `gql`: the Connect/Switchboard GraphQL channels (poll or resolver driven).
  * - `local`: a brokered-`MessagePort` `LocalChannel` peer (multi-reactor W1.2).
  *
- * A reactor wires ONE channel factory, so this is at most one entry today; it
- * is modelled as a set because that is the shape a router needs to intersect
- * two reactors' transports, and because a reactor that wires several factories
- * is a plausible later change that must not break the contract's type.
+ * A gql-scheme reactor now declares BOTH (multi-reactor W3.0): the reactor
+ * builder composes its scheme factory and a `LocalChannelFactory` in a
+ * `CompositeChannelFactory`, which routes each remote on its channel type, so
+ * one reactor can hold Switchboard remotes and brokered peers at once. Modelled
+ * as a set because that is the shape a router needs to intersect two reactors'
+ * transports.
  */
 export type ReactorSyncChannel = "gql" | "local";
 
@@ -135,17 +137,25 @@ export interface ReactorCapabilities {
 /**
  * The sync transports a descriptor's sync config resolves to.
  *
- * `sync.local` wins over `channelScheme` exactly as `buildMonitorReactor` does
- * -- a local-sync reactor is local-only because the builder wires one channel
- * factory and W1.2 is Switchboard-free. An explicit `channelScheme: null`
- * builds no sync module, hence no transports. Everything else (including an
- * absent `sync`) gets the gql default.
+ * `sync.local` still wins over `channelScheme` exactly as
+ * `buildMonitorReactor` does, and still means local-ONLY: that mode wires a
+ * lone `LocalChannelFactory` and is deliberately Switchboard- and
+ * GraphQL-free. An explicit `channelScheme: null` builds no sync module, hence
+ * no transports at all.
+ *
+ * Everything else -- a gql scheme, including the default -- declares BOTH
+ * (multi-reactor W3.0). Such a reactor is built with
+ * `withAdditionalChannelFactory(LOCAL_CHANNEL_TYPE, ...)` on top of its
+ * scheme, so it genuinely serves gql remotes and brokered local peers at the
+ * same time; this row is what a router reads to know a Switchboard-connected
+ * reactor may also be linked to a sibling.
  */
 function syncChannelsOf(
   descriptor: ReactorDescriptor,
 ): readonly ReactorSyncChannel[] {
   if (descriptor.kind === "remote") {
-    // Attached over the existing GQL channels (plan W3.1).
+    // Attached over the existing GQL channels (plan W3.1). Nothing on the far
+    // side of the wire can be handed a MessagePort, so no local channel.
     return ["gql"];
   }
   if (descriptor.sync?.local) {
@@ -154,7 +164,7 @@ function syncChannelsOf(
   if (descriptor.sync?.channelScheme === null) {
     return [];
   }
-  return ["gql"];
+  return ["gql", "local"];
 }
 
 /** The store class and durability a descriptor resolves to. */

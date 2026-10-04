@@ -83,16 +83,20 @@ function resolveCollectionId(options: LinkLocalSyncOptions): DriveCollectionId {
  * presence of the adopt/remove methods, so the declared contract -- what a
  * router would read -- is the thing enforced, in one place, and cannot drift
  * from what linking actually accepts. The method check stays behind it as an
- * invariant assertion: the two are derived from the same `sync.local` flag, so
- * a disagreement is a bug in provisioning, not a user error, and it is worth
- * saying so before a port is opened.
+ * invariant assertion: both are reads of the same field, so a disagreement is
+ * a bug in provisioning, not a user error, and it is worth saying so before a
+ * port is opened.
+ *
+ * Since W3.0 this admits a gql-scheme reactor too: it composes a local channel
+ * factory onto its scheme, so the only reactor left that cannot be linked is a
+ * `channelScheme: null` island.
  */
 function requireLocalCapable(reactor: ManagedReactor): void {
   if (!supportsSyncChannel(reactor.capabilities, "local")) {
     const declared =
       reactor.capabilities.syncChannels.join(", ") || "none at all";
     throw new Error(
-      `Reactor "${reactor.name}" was not provisioned with local sync (sync.local): its capabilities declare sync channels [${declared}], so it cannot adopt a brokered local peer`,
+      `Reactor "${reactor.name}" has no local sync channel: its capabilities declare sync channels [${declared}], so it cannot adopt a brokered local peer`,
     );
   }
   if (!reactor.adoptLocalSyncPeer || !reactor.removeLocalSyncPeer) {

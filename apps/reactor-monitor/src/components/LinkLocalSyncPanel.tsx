@@ -1,3 +1,4 @@
+import { supportsSyncChannel } from "@powerhousedao/reactor-monitor";
 import {
   useManagedReactors,
   useReactorMonitorRegistry,
@@ -7,6 +8,13 @@ import { useCallback, useMemo, useState } from "react";
 export type LinkLocalSyncPanelProps = {
   /** The reactor whose Sync tab this panel sits in; one end of the link. */
   readonly reactorName: string;
+  /**
+   * Whether this reactor declares the `"local"` sync channel. True for the
+   * local-only mode AND for connect mode, which composes a local channel
+   * factory onto its gql scheme (W3.0); false only for a `channelScheme: null`
+   * island, which has no sync module to adopt a peer into.
+   */
+  readonly localLinks: boolean;
 };
 
 /**
@@ -14,8 +22,15 @@ export type LinkLocalSyncPanelProps = {
  * monitor-owned reactor for a chosen drive -- no Switchboard, no GraphQL
  * (multi-reactor W1.2). The resulting `local` remote then shows up in each
  * reactor's Sync tab below, with its connection state and cursors.
+ *
+ * Both ends are gated on the capability contract, not on how they were
+ * spelled: a connect-mode reactor is a valid end of a local link since W3.0,
+ * and only an island is not.
  */
-export function LinkLocalSyncPanel({ reactorName }: LinkLocalSyncPanelProps) {
+export function LinkLocalSyncPanel({
+  reactorName,
+  localLinks,
+}: LinkLocalSyncPanelProps) {
   const registry = useReactorMonitorRegistry();
   const entries = useManagedReactors();
   const [target, setTarget] = useState("");
@@ -24,10 +39,16 @@ export function LinkLocalSyncPanel({ reactorName }: LinkLocalSyncPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [linked, setLinked] = useState<string | null>(null);
 
+  // Only local-capable peers are offered: linkLocalSync refuses the others,
+  // and it refuses them before opening a port, so listing them would only
+  // invite the error.
   const targets = useMemo(
     () =>
       entries.filter(
-        (entry) => entry.status === "ready" && entry.name !== reactorName,
+        (entry) =>
+          entry.status === "ready" &&
+          entry.name !== reactorName &&
+          supportsSyncChannel(entry.reactor.capabilities, "local"),
       ),
     [entries, reactorName],
   );
@@ -67,9 +88,16 @@ export function LinkLocalSyncPanel({ reactorName }: LinkLocalSyncPanelProps) {
   return (
     <section className="rm-link-local-sync" data-testid="link-local-sync">
       <h3>Link local sync</h3>
-      {targets.length === 0 ? (
+      {!localLinks ? (
+        <p className="rm-placeholder" data-testid="link-local-sync-unavailable">
+          This reactor was built with no sync module (sync.channelScheme: null),
+          so it cannot adopt a brokered local peer. Provision it with sync mode
+          &quot;local&quot; or &quot;connect&quot; to link it.
+        </p>
+      ) : targets.length === 0 ? (
         <p className="rm-placeholder">
-          Provision another ready reactor to link this one to it directly.
+          Provision another ready local-capable reactor to link this one to it
+          directly.
         </p>
       ) : (
         <form

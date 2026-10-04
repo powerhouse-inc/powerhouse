@@ -19,6 +19,7 @@ import {
 } from "@powerhousedao/reactor-browser/rpc";
 import {
   reactorCapabilities,
+  supportsSyncChannel,
   type ReactorCapabilities,
 } from "../capabilities.js";
 import { reactorWorkerName } from "../naming.js";
@@ -238,17 +239,17 @@ export async function connectManagedWorkerReactor(
     );
   }
 
-  // Exposed only when the WORKER actually built sync.local -- not when this
-  // connection's own descriptor asked for it, which can disagree with the
-  // construct that won (see `descriptorMismatch` above). Without reading the
-  // built fact, linkLocalSync's requireLocalCapable() saw two methods on
-  // every worker reactor that asked for sync.local and only found out the
-  // worker had no local sync module after a port had been opened and
-  // transferred -- a failure with side effects where a fail-fast belonged.
-  const localSyncBuilt = builtConfig
-    ? builtConfig.localSync
-    : (descriptor.sync?.local ?? false);
-  const localSync = localSyncBuilt
+  // Read off the capability contract rather than off `builtConfig.localSync`,
+  // because a gql-scheme worker reactor also serves brokered local peers now
+  // (W3.0) while reporting `localSync: false`. `capabilities` is already
+  // derived from the construct that WON the build, not from this connection's
+  // own descriptor (see `descriptorMismatch` above) -- without that, linkLocal
+  // Sync's requireLocalCapable() saw two methods on every worker reactor that
+  // asked for local sync and only found out the worker had none after a port
+  // had been opened and transferred: a failure with side effects where a
+  // fail-fast belonged. Keeping both reads on one field is also what stops
+  // the contract and the handle's methods from drifting apart.
+  const localSync = supportsSyncChannel(capabilities, "local")
     ? {
         /**
          * Transfers one end of the broker's MessageChannel into the worker and
