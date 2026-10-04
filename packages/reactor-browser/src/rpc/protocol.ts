@@ -61,6 +61,12 @@ export type WorkerPackageSource = {
   url: string;
 };
 
+/**
+ * What a tab tells the worker about the build it is running, so the worker can
+ * tell whether it may serve that tab (see `ReactorHost.handleHello`).
+ *
+ * `appBuildId` is opaque: the host only ever compares it for equality.
+ */
 export type VersionFingerprint = {
   appBuildId: string;
   rpcProtocolVersion: number;
@@ -68,6 +74,16 @@ export type VersionFingerprint = {
   // Enabled enforcement flags, sorted and joined. In the fingerprint so a
   // worker cannot keep enforcing the set it booted with after a config change.
   featureFlags?: string;
+  /**
+   * Content token of the worker bundle this tab resolved, where the deployment
+   * serves one and the tab could read it (dev; see
+   * `apps/connect/src/utils/reactor-worker-url.ts`). Separate from
+   * `appBuildId` because it can be ABSENT for a tab of the very same build --
+   * the metadata fetch is per-tab and can fail transiently -- and an absent
+   * token has to read as "unknown", not as "a different build". Additive: a
+   * tab that never sends it is treated leniently, so no protocol bump.
+   */
+  buildDigest?: string;
 };
 
 export type RpcHello = {

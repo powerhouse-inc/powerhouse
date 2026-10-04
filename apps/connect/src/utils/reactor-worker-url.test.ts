@@ -73,6 +73,40 @@ describe("fetchReactorWorkerBuildDigest", () => {
     ).toBeNull();
   });
 
+  /**
+   * The digest is part of a tab's identity, not a display value: one tab
+   * resolving it while another gives up makes two tabs of the identical build
+   * look like different builds to the worker.
+   */
+  it("retries a transient failure before yielding null", async () => {
+    let attempts = 0;
+    const fetchMock = vi.fn(() => {
+      attempts += 1;
+      if (attempts < 3) throw new Error("meta not written yet");
+      return { ok: true, json: () => ({ sourceDigest: "late123" }) };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(
+      await fetchReactorWorkerBuildDigest(
+        "https://example.test/__reactor_worker__/reactor.worker.js",
+      ),
+    ).toBe("late123");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("gives up after a bounded number of attempts", async () => {
+    const fetchMock = vi.fn(() => ({ ok: false, json: () => ({}) }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(
+      await fetchReactorWorkerBuildDigest(
+        "https://example.test/__reactor_worker__/reactor.worker.js",
+      ),
+    ).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it("returns null when the body isn't valid JSON", async () => {
     vi.stubGlobal(
       "fetch",

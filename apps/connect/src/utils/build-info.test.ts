@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { getAppBuildId, getVersion } from "./build-info.js";
+import {
+  getAppBuildId,
+  getVersion,
+  needsWorkerBuildDigest,
+} from "./build-info.js";
 
 // No vite `define` for CONNECT_GIT_SHA is wired into vitest.config.ts (see
 // vite.config.ts, which only does that for the real app build), so
 // getGitSha() falls through to WORKSPACE_GIT_SHA in this suite — exactly the
-// "env sha set" vs. "dev, no env" split getAppBuildId needs to distinguish.
+// "env sha set" vs. "dev, no env" split these helpers need to distinguish.
 describe("getAppBuildId", () => {
   const originalSha = process.env.WORKSPACE_GIT_SHA;
 
@@ -16,27 +20,46 @@ describe("getAppBuildId", () => {
     }
   });
 
-  it("returns the real git sha unchanged in production, ignoring any worker build digest", () => {
+  it("returns the real git sha unchanged in production", () => {
     process.env.WORKSPACE_GIT_SHA = "deadbeef1234";
-    expect(getAppBuildId("some-dev-digest")).toBe("deadbeef1234");
-    expect(getAppBuildId(null)).toBe("deadbeef1234");
-    expect(getAppBuildId(undefined)).toBe("deadbeef1234");
+    expect(getAppBuildId()).toBe("deadbeef1234");
   });
 
-  it("falls back to the static version with no digest (dev, no worker bundle served yet)", () => {
+  it("falls back to the static version in dev", () => {
     delete process.env.WORKSPACE_GIT_SHA;
-    expect(getAppBuildId(null)).toBe(getVersion());
-    expect(getAppBuildId(undefined)).toBe(getVersion());
-    expect(getAppBuildId("")).toBe(getVersion());
+    expect(getAppBuildId()).toBe(getVersion());
   });
 
-  it("folds a worker build digest into the dev fingerprint, so a rebuilt bundle changes it", () => {
+  /**
+   * The worker bundle's content token is NOT folded in here: it travels as the
+   * fingerprint's own `buildDigest` field, because a tab of the identical build
+   * can fail to resolve it and an absent token must read as unknown rather than
+   * as a different build.
+   */
+  it("carries no worker build digest of its own", () => {
     delete process.env.WORKSPACE_GIT_SHA;
-    const a = getAppBuildId("digest-aaa");
-    const b = getAppBuildId("digest-bbb");
-    expect(a).not.toBe(b);
-    expect(a).not.toBe(getVersion());
-    expect(a).toContain(getVersion());
-    expect(a).toContain("digest-aaa");
+    expect(getAppBuildId()).not.toContain("+");
+  });
+});
+
+describe("needsWorkerBuildDigest", () => {
+  const originalSha = process.env.WORKSPACE_GIT_SHA;
+
+  afterEach(() => {
+    if (originalSha === undefined) {
+      delete process.env.WORKSPACE_GIT_SHA;
+    } else {
+      process.env.WORKSPACE_GIT_SHA = originalSha;
+    }
+  });
+
+  it("is false where a baked-in git sha already identifies the build", () => {
+    process.env.WORKSPACE_GIT_SHA = "deadbeef1234";
+    expect(needsWorkerBuildDigest()).toBe(false);
+  });
+
+  it("is true in dev, where the static version does not move on a rebuild", () => {
+    delete process.env.WORKSPACE_GIT_SHA;
+    expect(needsWorkerBuildDigest()).toBe(true);
   });
 });

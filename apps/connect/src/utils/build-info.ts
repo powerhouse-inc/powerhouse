@@ -22,30 +22,35 @@ export function getGitSha(): string {
 }
 
 /**
- * The reactor worker's version fingerprint, sent as `appBuildId` in the
- * worker hello handshake (see `reactor-worker-client.ts`). `ReactorHost`
- * broadcasts a reload whenever a tab's fingerprint differs from the worker's,
- * so this must change whenever the worker's actual code changes.
+ * The build identity sent as `appBuildId` in the worker hello handshake (see
+ * `reactor-worker-client.ts`): the baked-in git sha in production, the static
+ * package version otherwise.
  *
- * Production (a real git sha baked in via `CONNECT_GIT_SHA`/
- * `WORKSPACE_GIT_SHA`) returns that sha unchanged — `workerBuildDigest` is
- * ignored, so this is a strict no-op there.
- *
- * Dev has no git sha, and the static package version alone does not move
- * between rebuilds. `workerBuildDigest` — the dev-served worker bundle's
- * content token, see `fetchReactorWorkerBuildDigest` in
- * `./reactor-worker-url.js` — is folded in so a rebuilt worker bundle
- * produces a different fingerprint even though the version string didn't.
- * This is the W0.6 fix for the stale-SharedWorker bug (see
- * docs/bugs/2026-10-03-pglite-aborted-transaction-bricks-worker-reactor.md):
- * without it, a dev tab's fingerprint never changes across rebuilds, so the
- * worker never reloads and a stale worker can survive indefinitely.
+ * Deliberately NOT a function of the worker bundle's content token. The token
+ * travels as its own `buildDigest` field on the fingerprint, because it is
+ * fetched per tab and can be absent for a tab of the identical build; folding
+ * it in here made "token unavailable" indistinguishable from "different
+ * build", and two tabs of one build then bumped the worker generation against
+ * each other. `ReactorHost.versionsCompatible` compares the token only when
+ * both tabs have one, and `workerGenForVersion` still folds it into the worker
+ * name, so the W0.6 behaviour is intact: a dev rebuild changes the token and
+ * lands every tab on a fresh worker (see
+ * docs/bugs/2026-10-03-pglite-aborted-transaction-bricks-worker-reactor.md).
  */
-export function getAppBuildId(workerBuildDigest?: string | null): string {
+export function getAppBuildId(): string {
   const gitSha = getGitSha();
   if (gitSha !== "unknown") return gitSha;
-  const version = getVersion();
-  return workerBuildDigest ? `${version}+${workerBuildDigest}` : version;
+  return getVersion();
+}
+
+/**
+ * Whether this build needs the worker bundle's content token to identify
+ * itself. A baked-in git sha already identifies the build exactly, so
+ * production skips the metadata fetch rather than paying a blocking round trip
+ * for a value it would discard.
+ */
+export function needsWorkerBuildDigest(): boolean {
+  return getGitSha() === "unknown";
 }
 
 /**

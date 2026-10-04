@@ -64,6 +64,7 @@ import { closeDeletedSelection } from "../utils/deleted-selection.js";
 import { bumpWorkerGen } from "../reactor-worker-name.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
+import { needsWorkerBuildDigest } from "../utils/build-info.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
 import {
   fetchReactorWorkerBuildDigest,
@@ -411,17 +412,19 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     // (the dist worker itself is a library artifact no worker can load);
     // null means this is the monorepo app, where Vite bundles the worker.
     const packagedWorkerUrl = await resolvePackagedReactorWorkerUrl();
-    // Dev-only content token for the resolved bundle (null in production,
-    // where a real git sha already identifies the build — see
-    // getAppBuildId); folds the actual built worker code into the version
-    // fingerprint so a rebuilt dev bundle reloads stale tabs/workers (W0.6).
-    const workerBuildDigest =
-      await fetchReactorWorkerBuildDigest(packagedWorkerUrl);
+    // Content token for the resolved bundle, sent as the fingerprint's
+    // buildDigest so a rebuilt dev bundle lands every tab on a fresh worker
+    // (W0.6). Skipped where a baked-in git sha already identifies the build:
+    // the fetch would block boot for a value the handshake discards. Run
+    // beside the local package sources, which need nothing from it.
     // Local project models the registry cannot serve: prebuilt bundles in
     // production, the dev server's live project models entry in dev.
-    const packageSources = await resolveLocalPackageSources(
-      import.meta.env.BASE_URL,
-    );
+    const [workerBuildDigest, packageSources] = await Promise.all([
+      needsWorkerBuildDigest()
+        ? fetchReactorWorkerBuildDigest(packagedWorkerUrl)
+        : Promise.resolve(null),
+      resolveLocalPackageSources(import.meta.env.BASE_URL),
+    ]);
     const workerClient = createWorkerReactorClientModule({
       workerUrl: packagedWorkerUrl ?? undefined,
       workerBuildDigest,

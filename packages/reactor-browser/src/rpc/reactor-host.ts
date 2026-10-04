@@ -63,23 +63,42 @@ export type ReactorHostOptions = {
   onAdminMigrate?: () => Promise<void>;
 };
 
+/**
+ * Whether one worker may serve both fingerprints.
+ *
+ * `buildDigest` is compared only when BOTH sides carry one. A tab of the very
+ * same build can arrive without it -- the token comes from a per-tab metadata
+ * fetch that is skipped in production and can fail transiently in dev -- so an
+ * absent token means "unknown", and reading it as "a different build" is what
+ * made two tabs of one identical build bump the worker generation against each
+ * other and run two workers over one idb namespace.
+ */
 function versionsCompatible(
   a: VersionFingerprint,
   b: VersionFingerprint,
 ): boolean {
-  return (
-    a.appBuildId === b.appBuildId &&
-    a.rpcProtocolVersion === b.rpcProtocolVersion &&
-    (a.featureFlags ?? "") === (b.featureFlags ?? "")
-  );
+  if (
+    a.appBuildId !== b.appBuildId ||
+    a.rpcProtocolVersion !== b.rpcProtocolVersion ||
+    (a.featureFlags ?? "") !== (b.featureFlags ?? "")
+  ) {
+    return false;
+  }
+  if (a.buildDigest === undefined || b.buildDigest === undefined) {
+    return true;
+  }
+  return a.buildDigest === b.buildDigest;
 }
 
 // Deterministic per version so every new-build tab converges on one fresh
-// worker; the flags are in it so a flag-only change lands on a fresh one too.
+// worker; the flags are in it so a flag-only change lands on a fresh one too,
+// and the build digest so a dev rebuild under an unchanged version does too.
 function workerGenForVersion(version: VersionFingerprint): string {
   const flags = version.featureFlags ?? "";
-  const suffix = flags === "" ? "" : `-${hashFlags(flags)}`;
-  return `v${version.rpcProtocolVersion}-${version.appBuildId}${suffix}`;
+  const flagSuffix = flags === "" ? "" : `-${hashFlags(flags)}`;
+  const digestSuffix =
+    version.buildDigest === undefined ? "" : `-${version.buildDigest}`;
+  return `v${version.rpcProtocolVersion}-${version.appBuildId}${digestSuffix}${flagSuffix}`;
 }
 
 /** Names what differs, so a reload is diagnosable from the tab's console. */
@@ -168,7 +187,7 @@ export class ReactorHost {
         return;
       }
       if (msg.k === "hello") {
-        void this.handleHello(msg, transport, reply, ensureServer, drainBuffer);
+        void this.handleHello(msg, reply, ensureServer, drainBuffer);
         return;
       }
       if (msg.k === "register-packages") {
@@ -353,20 +372,35 @@ export class ReactorHost {
     return false;
   }
 
+  /**
+   * Admits a tab, or sends every tab away when its build disagrees with the
+   * one this worker was adopted for.
+   *
+   * Baseline adoption: the FIRST hello adopts the baseline, and a later hello
+   * that disagrees with it REPLACES it -- the newest hello wins. The newest
+   * hello is the newest build, because its page code is whatever the server
+   * just served, and a worker has no other way to order two opaque build ids.
+   *
+   * The reload goes to EVERY connected tab, not only the one that disagreed.
+   * The stale tabs are the ones holding this worker alive: told nothing, they
+   * keep it, while the new tab bumps its generation and spawns a second worker
+   * over the same idb namespace. All of them reload onto the one generation the
+   * incoming fingerprint names, and because a reload re-fetches the page, a tab
+   * that was on an older build comes back on the newest one and agrees. If it
+   * comes back disagreeing again, that hello is itself the newest and the same
+   * rule runs once more, so the naming converges rather than oscillating.
+   */
   private async handleHello(
     message: RpcHello,
-    transport: IRpcTransport,
     reply: IHostResponder,
     ensureServer: (construct?: unknown) => Promise<void>,
     drainBuffer: () => Promise<void>,
   ): Promise<void> {
     if (this.baseline) {
       if (!versionsCompatible(this.baseline, message.version)) {
-        transport.post({
-          k: "reload",
-          reason: mismatchReason(this.baseline, message.version),
-          workerGen: workerGenForVersion(message.version),
-        });
+        const reason = mismatchReason(this.baseline, message.version);
+        this.baseline = message.version;
+        this.broadcastReload(reason, workerGenForVersion(message.version));
         reply.ok(message.id, { ok: false });
         return;
       }

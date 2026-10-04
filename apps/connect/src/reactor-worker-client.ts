@@ -82,10 +82,12 @@ export type WorkerReactorClientArgs = {
   packageSources?: WorkerPackageSource[];
   /**
    * The resolved worker bundle's build digest (see
-   * `fetchReactorWorkerBuildDigest` in `./utils/reactor-worker-url.js`),
-   * folded into `appBuildId` in dev so a rebuilt worker bundle changes the
-   * tab's version fingerprint. Ignored in production (a real git sha takes
-   * precedence) — see `getAppBuildId`.
+   * `fetchReactorWorkerBuildDigest` in `./utils/reactor-worker-url.js`), sent
+   * as the fingerprint's own `buildDigest` field so a rebuilt dev bundle lands
+   * tabs on a fresh worker. Null where the deployment serves no bundle, where
+   * a baked-in git sha makes the token unnecessary, or where the fetch did not
+   * resolve — the host reads an absent token as unknown, not as a different
+   * build.
    */
   workerBuildDigest?: string | null;
 };
@@ -158,7 +160,8 @@ export function createWorkerReactorClientModule(
     router,
     {
       version: {
-        appBuildId: getAppBuildId(args.workerBuildDigest),
+        appBuildId: getAppBuildId(),
+        buildDigest: args.workerBuildDigest ?? undefined,
         rpcProtocolVersion: RPC_PROTOCOL_VERSION,
         models: args.documentModelModules.map((m) => ({
           id: m.documentModel.global.id,
