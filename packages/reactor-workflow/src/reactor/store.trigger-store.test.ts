@@ -31,8 +31,6 @@ function legacyRow(storeState: string) {
     last_poll_at: null,
     last_error: null,
     consecutive_failures: 0,
-    lease_owner: null,
-    lease_expires_at: null,
     updated_at: new Date().toISOString(),
   };
 }

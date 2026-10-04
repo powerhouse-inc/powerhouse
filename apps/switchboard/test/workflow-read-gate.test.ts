@@ -101,6 +101,9 @@ describe("the workflow runtime's read check", () => {
       attachments: {} as never,
       authorizationService: openAuthorization as never,
       logger,
+      // This suite is about the read gate, not placement; the lease has its
+      // own suite in reactor-workflow.
+      singletonLease: false,
       load: () =>
         Promise.resolve({
           WORKFLOW_PACKAGE_NAME: "@powerhousedao/workflow",

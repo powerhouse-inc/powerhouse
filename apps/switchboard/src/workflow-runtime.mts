@@ -135,12 +135,22 @@ export interface ComposeWorkflowRuntimeDeps {
   logger: ILogger;
   /** Overridden by the tests; production always loads the real engine. */
   load?: () => Promise<WorkflowEngineModule>;
+  /**
+   * Whether to claim the workflow singleton before composing (plan agreed
+   * decision 3). On by default, and the only honest setting for a real host:
+   * two replicas over one run journal fail each other's live runs. A suite
+   * that composes several runtimes over separate databases turns it off.
+   */
+  singletonLease?: boolean;
 }
 
 export interface ComposedWorkflowRuntime {
   subgraph: SubgraphClass;
   /** Whether document operations reach the runtime at all. */
   triggers: WorkflowTriggersCapability;
+  /** The owner name this host holds the workflow singleton under; undefined
+   * when the lease was not taken (a suite that opted out). */
+  singletonOwner?: string;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -309,6 +319,19 @@ export async function composeWorkflowRuntime(
     );
   }
 
+  // BEFORE anything else touches the run journal. Opening the journal runs
+  // its orphan/abandoned sweeps, which close out every RUNNING and PENDING
+  // run that is not this process's — i.e. a second replica booting fails the
+  // first replica's live runs. The claim is what makes the plan's singleton
+  // decision structural instead of documented; it refuses by name.
+  const lease =
+    deps.singletonLease === false
+      ? undefined
+      : await engine.acquireWorkflowSingletonLease({
+          relationalDb: deps.relationalDb,
+          logger: deps.logger,
+        });
+
   // The same registry the host installs packages from, so a piece it indexes
   // is reachable without a second setting to keep in step.
   engine.setPieceRegistryUrl(deps.pieceRegistryUrl);
@@ -365,20 +388,27 @@ export async function composeWorkflowRuntime(
       deps.http ? { callbackUrl: callbackUrlOf(deps.http) } : undefined,
     ),
     triggers,
+    ...(lease ? { singletonOwner: lease.owner } : {}),
 
     async start() {
+      // Renewing only once the runtime is actually running: a host that threw
+      // between composing and starting leaves the lease to expire rather than
+      // holding it forever.
+      lease?.startHeartbeat();
       // The endpoint family first: a restored webhook trigger asks for its URL
       // as soon as the supervisor starts.
       await runtime.registerWebhookEndpoint();
       runtime.startTriggerSupervisor();
     },
 
-    stop() {
-      if (stopped) return Promise.resolve();
+    async stop() {
+      if (stopped) return;
       stopped = true;
       oauthCallback?.dispose();
       runtime.shutdown();
-      return Promise.resolve();
+      // Released, so the next boot owns workflows immediately instead of
+      // waiting out the lease TTL.
+      await lease?.release();
     },
   };
 }

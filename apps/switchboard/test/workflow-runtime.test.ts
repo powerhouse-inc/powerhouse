@@ -68,6 +68,14 @@ function fakeEngine() {
     runtime: unknown;
     init: number;
   }[] = [];
+  // The singleton claim, faked at the same seam: the lease itself is the
+  // engine's to test (reactor-workflow, singleton-lease).
+  const lease = {
+    owner: "test-owner",
+    startHeartbeat: vi.fn(),
+    heartbeat: vi.fn(() => Promise.resolve(true)),
+    release: vi.fn(() => Promise.resolve()),
+  };
 
   class FakeWorkflowTriggersReadModel {
     readonly name = "workflow-triggers";
@@ -97,6 +105,7 @@ function fakeEngine() {
   return {
     runtime,
     constructed,
+    lease,
     module: {
       WORKFLOW_PACKAGE_NAME: "@powerhousedao/workflow",
       WORKFLOW_TRIGGERS_READ_MODEL: "workflow-triggers",
@@ -105,6 +114,9 @@ function fakeEngine() {
       WorkflowTriggersReadModel: FakeWorkflowTriggersReadModel,
       setPieceRegistryUrl: vi.fn((_url: string | undefined) => undefined),
       createWorkflowRuntime: vi.fn((_deps: Record<string, unknown>) => runtime),
+      acquireWorkflowSingletonLease: vi.fn((_options: unknown) =>
+        Promise.resolve(lease),
+      ),
     },
   };
 }
@@ -364,6 +376,54 @@ describe("composeWorkflowRuntime", () => {
 
     await expect(failing).rejects.toThrow("@powerhousedao/reactor-workflow");
     await expect(failing).rejects.toMatchObject({ cause });
+  });
+
+  // Placement (plan agreed decision 3): the claim is taken before the runtime
+  // exists, renewed only while it runs, and released on the way out.
+  it("claims the workflow singleton before it builds the runtime", async () => {
+    const engine = fakeEngine();
+    const order: string[] = [];
+    engine.module.acquireWorkflowSingletonLease.mockImplementation(() => {
+      order.push("lease");
+      return Promise.resolve(engine.lease);
+    });
+    engine.module.createWorkflowRuntime.mockImplementation(() => {
+      order.push("runtime");
+      return engine.runtime;
+    });
+
+    const workflows = await compose(engine, stubLogger());
+
+    expect(order).toEqual(["lease", "runtime"]);
+    expect(workflows.singletonOwner).toBe("test-owner");
+    expect(engine.lease.startHeartbeat).not.toHaveBeenCalled();
+
+    await workflows.start();
+    expect(engine.lease.startHeartbeat).toHaveBeenCalledTimes(1);
+
+    await workflows.stop();
+    expect(engine.lease.release).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses to compose when another process holds the singleton", async () => {
+    const engine = fakeEngine();
+    const conflict = new Error('Workflow execution is a singleton and "a" …');
+    engine.module.acquireWorkflowSingletonLease.mockRejectedValue(conflict);
+
+    await expect(compose(engine, stubLogger())).rejects.toBe(conflict);
+    // Nothing was built: a host that cannot own workflows composes none of it.
+    expect(engine.module.createWorkflowRuntime).not.toHaveBeenCalled();
+  });
+
+  it("composes without a claim only when the host opts out", async () => {
+    const engine = fakeEngine();
+
+    const workflows = await compose(engine, stubLogger(), {
+      singletonLease: false,
+    });
+
+    expect(engine.module.acquireWorkflowSingletonLease).not.toHaveBeenCalled();
+    expect(workflows.singletonOwner).toBeUndefined();
   });
 });
 

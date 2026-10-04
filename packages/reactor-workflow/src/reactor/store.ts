@@ -83,9 +83,6 @@ export interface TriggerStateRow {
   last_poll_at: string | null;
   last_error: string | null;
   consecutive_failures: number;
-  // Written for rolling-deploy overlap; not enforced yet.
-  lease_owner: string | null;
-  lease_expires_at: string | null;
   updated_at: string;
   // The piece version the trigger armed with; null for a host-fed trigger.
   piece_version: string | null;
@@ -224,8 +221,9 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     .addColumn("last_poll_at", "text")
     .addColumn("last_error", "text")
     .addColumn("consecutive_failures", "integer", (col) => col.notNull())
-    .addColumn("lease_owner", "text")
-    .addColumn("lease_expires_at", "text")
+    // No lease columns: placement is a PROCESS-level claim, not per trigger.
+    // See reactor/singleton-lease.ts; an existing table keeps its (always
+    // null) lease_owner/lease_expires_at, which nothing reads or writes.
     .addColumn("updated_at", "text", (col) => col.notNull())
     .ifNotExists()
     .execute();

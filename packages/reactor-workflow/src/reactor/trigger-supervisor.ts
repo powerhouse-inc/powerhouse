@@ -452,8 +452,6 @@ export class TriggerSupervisor {
       last_poll_at: existing?.last_poll_at ?? null,
       last_error: message,
       consecutive_failures: (existing?.consecutive_failures ?? 0) + 1,
-      lease_owner: null,
-      lease_expires_at: null,
       updated_at: this.now().toISOString(),
       ...pieceColumns(),
     });
@@ -790,8 +788,6 @@ export class TriggerSupervisor {
         last_poll_at: null,
         last_error: null,
         consecutive_failures: 0,
-        lease_owner: null,
-        lease_expires_at: null,
         updated_at: now.toISOString(),
         ...pieceColumns(binding),
         next_renew_at: renewAt?.toISOString() ?? null,
@@ -837,8 +833,6 @@ export class TriggerSupervisor {
         last_poll_at: null,
         last_error: message,
         consecutive_failures: failures,
-        lease_owner: null,
-        lease_expires_at: null,
         updated_at: now.toISOString(),
         ...pieceColumns(binding),
       });
@@ -955,8 +949,6 @@ export class TriggerSupervisor {
       config_hash: hash,
       store_state: VESTIGIAL_STORE_STATE,
       last_poll_at: existing?.last_poll_at ?? null,
-      lease_owner: null,
-      lease_expires_at: null,
       updated_at: now.toISOString(),
       ...pieceColumns(),
     };

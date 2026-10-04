@@ -22,8 +22,6 @@ function triggerRow(workflowId: string, blockType: string) {
     last_poll_at: null,
     last_error: null,
     consecutive_failures: 0,
-    lease_owner: null,
-    lease_expires_at: null,
     updated_at: NOW,
   };
 }
@@ -63,8 +61,6 @@ async function legacyJournal(): Promise<IRelationalDb> {
     .addColumn("last_poll_at", "text")
     .addColumn("last_error", "text")
     .addColumn("consecutive_failures", "integer", (col) => col.notNull())
-    .addColumn("lease_owner", "text")
-    .addColumn("lease_expires_at", "text")
     .addColumn("updated_at", "text", (col) => col.notNull())
     .execute();
   await legacy.schema

@@ -384,9 +384,7 @@ Stage 2 complete.
   booting — verify the detection keys on the composed runtime, not a proxy fact.
   W0.10 cold-boot KnexTimeout: third occurrence, strictly first-boot-after-rebuild;
   warm boots clean.
-- **W3.3 workflow placement + hardening**: designated-reactor pinning; enforce or
-  remove dead policy knobs; bound the run journal; fix EPIPE boot-loop + 10s
-  host-call timeout; "which reactor ran this" in run observability.
+- **W3.3 workflow placement + hardening** — see the W3.3 section below.
 - **W3.4 attachments byte movement**: lazy fetch-on-reference wiring, browser-side
   store, reference-index race handling.
 
@@ -648,6 +646,110 @@ depths), the Overview grid reporting `polling` + `workflows` as that host
 actually has them, the levers disabled with their reason by default, and the
 same levers live after a restart with `PH_INSPECTION_ADMIN=true` -- under the
 SAME monitor handle, via "Re-check server" rather than a re-provision.
+
+### W3.3 workflow placement + engine hardening (2026-10-04)
+
+**1. Placement, made structural.** Agreed decision 3 (workflow execution is a
+singleton pinned to one Node reactor) was documentation; it is now a durable
+claim. `acquireWorkflowSingletonLease`
+(`packages/reactor-workflow/src/reactor/singleton-lease.ts`) takes one row in a
+`singleton_lease` table in the run journal's own database, and
+`composeWorkflowRuntime` takes it BEFORE it builds the runtime. A second live
+process is refused by name (`WorkflowSingletonConflictError`).
+- **Why a real lease rather than a config assertion**: the two-replica hazard
+  is not hypothetical and not gradual. `WorkflowRunStore.create` runs
+  `recoverOrphanedRuns` + `recoverAbandonedRuns` when the journal opens, and
+  both close out every RUNNING/PENDING run that is not in **this** process's
+  `runsInFlight` set — so the second replica's boot marks the first replica's
+  live runs FAILED, and then both arm and poll every trigger. An env assertion
+  cannot catch that, because the misconfiguration is exactly "both slots have
+  the same env". The store already owns a relational namespace and a migration
+  path, so one table + three single-statement claims was cheap.
+- **Lease / heartbeat / takeover**: 60s TTL, renewed every 20s from `start()`
+  (not from compose — a host that threw in between leaves it to expire),
+  released on `stop()` so the next boot does not wait out the TTL, and taken
+  over once expired so a killed process does not lock workflows out. A
+  heartbeat that finds the lease taken logs an ERROR naming the owner and stops
+  renewing; it does not kill the process (a database hiccup must not be an
+  outage) — what the operator needs is to be told they have a second writer.
+- `PH_WORKFLOWS_SINGLETON_OWNER` is the operator's contract on top: a stable
+  name per slot re-claims its own lease at once, which is the rolling-deploy
+  overlap the dead `trigger_state.lease_owner`/`lease_expires_at` columns were
+  written for. Those columns are **removed** (never written non-null, and per
+  trigger — the wrong granularity for a per-process guard).
+
+**2. Policy knobs: enforced, or marked unenforced. None left silently dead.**
+Enforced in the runtime (`reactor/policy.ts` resolves the effective policy off
+the runnable definition; a document with no `policy` enforces nothing, so
+legacy and hand-built definitions keep today's behaviour):
+- per-step `retry` / policy `defaultRetry` — `maxAttempts`, `backoff`
+  FIXED|EXPONENTIAL, `initialDelaySeconds`, `maxDelaySeconds`, `retryOn`
+  (empty = every error retryable; otherwise matched against the error's name
+  and message). Attempts are journaled on the step row.
+- `runTimeoutSeconds` — a run deadline checked between steps and bounding every
+  retry wait; expiry ends the run CANCELLED.
+- `concurrency` SINGLETON|QUEUE|PARALLEL + `maxParallelRuns` — a per-workflow
+  gate in the service. SINGLETON skips a firing while a run is active (the
+  skipped run is journaled CANCELLED, so it is visible rather than silent);
+  QUEUE serialises; PARALLEL is today's behaviour, bounded by
+  `maxParallelRuns` when set.
+- `onFailure` PARK|NOTIFY|IGNORE — PARK sets the trigger row PARKED, which the
+  due-trigger query (status = ENABLED) does not return, so the schedule stops
+  refiring until the workflow is re-published/re-enabled; NOTIFY logs at error
+  level (the only notification channel that exists); IGNORE is today's
+  behaviour.
+- **BREAKING, on purpose**: the document model's own defaults are
+  `concurrency: QUEUE` and `onFailure: PARK`, so enforcing them changes
+  behaviour for every workflow created by the factory — runs of one workflow
+  now serialise, and a terminal failure parks the trigger.
+
+Marked **not yet enforced** at the schema (SDL descriptions) rather than left
+lying: `maxSuspensionDays` (nothing can suspend — waitpoints, `run.pause` and
+`generateResumeUrl` all throw, so there is no suspended state to bound),
+`retainRunsDays` (retention is a journal-wide sweep on the relational handle
+with no reactor read; honouring a per-workflow window would mean fetching every
+workflow document hourly, including deleted ones — `PH_WORKFLOWS_RUN_RETENTION_DAYS`
+is the enforced control), `journalAsDocument` (the journal is relational; there
+is no run document model), and a step's `idempotencyKeyExpression` (dedupe is
+keyed on the trigger operation/`_dedupe_key`, not on a step expression).
+
+**3. The run journal is bounded on both axes.** Row width was already capped
+(256KB per payload); row COUNT now is too: `PH_WORKFLOWS_RUN_RETENTION_DAYS`
+defaults to **30 days** instead of unbounded growth, and `0`/`off`/`never` is
+the explicit opt-out. The 743MB/3-days observation is what made opt-in the
+wrong default. The truncation marker's duck-typed predicate (backlog item 15)
+is replaced by a RESERVED sentinel key whose value is a versioned magic string,
+which a legitimate payload cannot produce; the old `{truncated:true,…}` shape
+is still READ, for rows written before the sentinel, and never written.
+
+**4. Rerun no longer re-runs a side effect it cannot see.** A SUCCEEDED step
+whose journaled output was truncated used to be dropped from `completedSteps`,
+i.e. re-executed — a second charge, a second email. It now REPLAYS as
+completed, and its output is an explicitly unavailable value: a later step that
+reads `steps.<key>.output…` fails the rerun by name instead of being handed a
+marker or silently re-running the step that produced it.
+
+**5. The crash-replay budget (EPIPE boot-loop).** A fire that kills the process
+before its claim commits is re-delivered by the read model forever. The dedupe
+row now carries an `attempts` counter committed BEFORE the risky work, so a
+replay is countable: over the budget (3) the fire is abandoned with a FAILED
+run naming the loop, rather than crashing the reactor on every boot. Log writes
+on the piece-log and run-failure paths are truncated before the write.
+
+**6. A host call that times out is INDETERMINATE, not FAILED.** The 10s cap is
+configurable (`PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS`) and never shorter than the
+step's own `timeoutSeconds`. A host call that writes (a dispatch) and then
+times out may well have committed, so the step records INDETERMINATE —
+rendered distinctly in Studio — instead of claiming a failure that did not
+happen. An INDETERMINATE step does not take the error port and does not replay
+on rerun.
+
+**7. The inspection `workflows` fact is the composed-runtime fact** (the W3.2
+live finding). It was an option defaulting to false that nothing ever set, so a
+vetra host whose runtime booted reported `workflows: false`. `startAPI` now
+hands its inspection source back on the API, the source's reported info is read
+per call rather than frozen, and switchboard flips it with
+`setWorkflowsComposed(true)` once `composeWorkflowRuntime` has returned.
 
 ### Router client (iterative, stages 1→3)
 - New package; `IReactorClient` facade via Proxy-forwarding + target selection by

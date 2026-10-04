@@ -25,6 +25,16 @@ export {
   type RunsPageArgs,
 } from "./reactor/service.js";
 export { InvalidRunCursorError } from "./reactor/run-cursor.js";
+export {
+  acquireWorkflowSingletonLease,
+  singletonOwnerName,
+  SINGLETON_HEARTBEAT_MS,
+  SINGLETON_LEASE_TTL_MS,
+  WORKFLOW_SINGLETON_OWNER_ENV,
+  WorkflowSingletonConflictError,
+  type AcquireSingletonOptions,
+  type WorkflowSingletonLease,
+} from "./reactor/singleton-lease.js";
 export type {
   OAuthAttemptStatus,
   OAuthAttemptView,
