@@ -46,6 +46,7 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "document-model": "workspace:*",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:"
   },

@@ -1,4 +1,9 @@
 import { provision, type ProvisionOptions } from "./provision.js";
+import {
+  linkLocalSync,
+  type LinkLocalSyncOptions,
+  type LocalSyncHandle,
+} from "./sync/link.js";
 import type { ManagedReactor, ReactorDescriptor } from "./types.js";
 
 /**
@@ -79,6 +84,32 @@ export class ReactorMonitorRegistry {
       }
       throw error;
     }
+  }
+
+  /**
+   * Brokers a direct `LocalChannel` sync link between two ready reactors for
+   * one collection -- no Switchboard, no GraphQL (multi-reactor W1.2). Both
+   * reactors must have been provisioned with `sync.local`. Returns a handle
+   * whose `unlink()` removes both remotes and closes both ports.
+   */
+  linkLocalSync(
+    nameA: string,
+    nameB: string,
+    options: LinkLocalSyncOptions,
+  ): Promise<LocalSyncHandle> {
+    const a = this.reactor(nameA);
+    const b = this.reactor(nameB);
+    if (!a) {
+      return Promise.reject(
+        new Error(`No ready reactor named ${JSON.stringify(nameA)}`),
+      );
+    }
+    if (!b) {
+      return Promise.reject(
+        new Error(`No ready reactor named ${JSON.stringify(nameB)}`),
+      );
+    }
+    return linkLocalSync(a, b, options);
   }
 
   get(name: string): ManagedReactorEntry | undefined {

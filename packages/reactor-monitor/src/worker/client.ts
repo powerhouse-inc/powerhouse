@@ -11,11 +11,13 @@ import {
   createWorkerAdminClient,
   MessageRouter,
   RPC_PROTOCOL_VERSION,
+  sendAdoptSyncPeer,
   SyncManagerProxy,
   type IRpcTransport,
   type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
 import { reactorWorkerName } from "../naming.js";
+import type { AdoptLocalSyncPeerLink } from "../sync/types.js";
 import type {
   ManagedWorkerReactor,
   MonitorWorkerClientModule,
@@ -160,6 +162,33 @@ export function connectManagedWorkerReactor(
     syncManager,
     events: eventBus,
     module,
+    /**
+     * Transfers one end of the broker's MessageChannel into the worker and
+     * adds the local remote there via the adopt-sync-peer op. The port is
+     * MOVED, not cloned; this handle must not touch it afterwards. Needs the
+     * worker to have been provisioned with `sync.local`, and the transferred-
+     * MessagePort path needs a real browser (W1.3).
+     */
+    adoptLocalSyncPeer: (link: AdoptLocalSyncPeerLink): Promise<void> =>
+      sendAdoptSyncPeer(
+        router,
+        {
+          peerId: link.peerId,
+          channelName: link.channelName,
+          collectionIdKey: link.collectionId.key,
+          remoteName: link.remoteName,
+          filter: link.filter,
+        },
+        link.port as unknown as MessagePort,
+      ),
+    /**
+     * Removes the local remote over the sync-op channel; the worker closes the
+     * brokered port when it shuts the channel down. The registry key is unused
+     * on this side -- the worker owns its own registry.
+     */
+    removeLocalSyncPeer: async (remoteName: string): Promise<void> => {
+      await syncManager.remove(remoteName);
+    },
     adminInfo: () => adminClient.info(),
     restart: () => adminClient.restart(),
     /**

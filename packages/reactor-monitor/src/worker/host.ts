@@ -1,10 +1,16 @@
-import type { IReactorClient, IReactorDbQuery } from "@powerhousedao/reactor";
+import {
+  DriveCollectionId,
+  messagePortTransport,
+  type IReactorClient,
+  type IReactorDbQuery,
+} from "@powerhousedao/reactor";
 import {
   dispatchInspectorOp,
   FORWARDED_EVENT_TYPES,
   ReactorHost,
   SYNC_STATUS_CHANGED_EVENT,
 } from "@powerhousedao/reactor-browser/rpc";
+import { registerLocalPeer } from "../sync/adopt-sync-peer.js";
 import {
   buildWorkerReactor,
   type BuiltWorkerReactor,
@@ -104,6 +110,30 @@ export function createMonitorWorkerHost(
     },
     onInspectorOp: (method, args) =>
       dispatchInspectorOp(requireBuilt().inspector, db, method, args),
+    onAdoptSyncPeer: async (params, port) => {
+      const current = requireBuilt();
+      const syncManager = current.module.reactorModule?.syncModule?.syncManager;
+      const registry = current.localChannelPorts;
+      if (!syncManager || !registry) {
+        throw new Error(
+          "Worker reactor has no local sync module; provision it with sync.local",
+        );
+      }
+      // The transferred MessagePort is this realm's own now; wrap it as a
+      // LocalChannelPort and register it so LocalChannelFactory resolves it.
+      await registerLocalPeer(
+        syncManager,
+        registry,
+        {
+          peerId: params.peerId,
+          channelName: params.channelName,
+          collectionId: DriveCollectionId.fromKey(params.collectionIdKey),
+          remoteName: params.remoteName,
+          filter: params.filter,
+        },
+        messagePortTransport(port),
+      );
+    },
     onAdminRestart: () =>
       host.broadcastReload("admin restart", crypto.randomUUID()),
   });

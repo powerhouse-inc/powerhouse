@@ -90,6 +90,7 @@ export async function buildWorkerReactor(
     documentModelModules: models,
     featureFlags: construct.featureFlags,
     channelScheme: construct.channelScheme,
+    localSync: construct.localSync,
     ...(loader ? { documentModelLoader: loader } : {}),
   });
 

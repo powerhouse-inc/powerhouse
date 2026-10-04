@@ -2564,6 +2564,9 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
+      document-model:
+        specifier: workspace:*
+        version: link:../document-model
       kysely:
         specifier: 'catalog:'
         version: 0.28.16

@@ -23,6 +23,7 @@ import type {
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import type { PGlite } from "@electric-sql/pglite";
+import type { AdoptLocalSyncPeerLink } from "./sync/types.js";
 
 /** How a monitored reactor is hosted. */
 export type ReactorKind = "worker" | "in-process" | "remote";
@@ -60,6 +61,14 @@ export type ReactorPackageConfig = {
  */
 export type ReactorSyncConfig = {
   channelScheme?: ChannelScheme | null;
+  /**
+   * Builds the sync module on a `LocalChannelFactory` so the reactor can adopt
+   * monitor-brokered `LocalChannel` peers (multi-reactor W1.2). Mutually
+   * exclusive with a gql `channelScheme`: a reactor wires one channel factory,
+   * and W1.2 is Switchboard- and GraphQL-free, so a local-sync reactor is
+   * local-only. When set, `channelScheme` is ignored.
+   */
+  local?: boolean;
   /**
    * Mints bearer tokens for remote channels. In-process only — a handler is a
    * function and cannot cross into a worker; a worker reactor runs
@@ -171,6 +180,24 @@ export interface ManagedReactorBase {
    * against both kinds should subscribe only to the forwarded set.
    */
   readonly events: IEventBus;
+  /**
+   * Adopts one end of a monitor-brokered local-sync link: registers the port
+   * and adds the local remote. Present only when the reactor was provisioned
+   * with `sync.local`. Prefer {@link ReactorMonitorRegistry.linkLocalSync},
+   * which brokers both ends. Multi-reactor W1.2.
+   */
+  adoptLocalSyncPeer?: (link: AdoptLocalSyncPeerLink) => Promise<void>;
+  /**
+   * Removes a local remote added by {@link adoptLocalSyncPeer} (closing its
+   * port) and forgets its registration. `peerId`/`channelName` identify the
+   * registry entry to drop; a worker reactor closes the port through the
+   * channel shutdown that `remove` triggers.
+   */
+  removeLocalSyncPeer?: (
+    remoteName: string,
+    peerId: string,
+    channelName: string,
+  ) => Promise<void>;
   /** Worker lifecycle info; worker-hosted reactors only. */
   adminInfo?: () => Promise<WorkerInspectorInfo>;
   /** Restarts the host; worker-hosted reactors only. */

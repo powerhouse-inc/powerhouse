@@ -1,5 +1,8 @@
+import { messagePortTransport } from "@powerhousedao/reactor";
 import { buildMonitorReactor } from "./build-reactor.js";
 import { reactorStorageNamespace } from "./naming.js";
+import { registerLocalPeer } from "./sync/adopt-sync-peer.js";
+import type { AdoptLocalSyncPeerLink } from "./sync/types.js";
 import type {
   ManagedInProcessReactor,
   MonitorInProcessClientModule,
@@ -28,11 +31,47 @@ export async function provisionInProcess(
     upgradeManifests: descriptor.upgradeManifests,
     featureFlags: descriptor.featureFlags,
     channelScheme: descriptor.sync?.channelScheme,
+    localSync: descriptor.sync?.local,
     jwtHandler: descriptor.sync?.jwtHandler,
     signer: descriptor.signer,
   });
 
   const reactorModule = built.module.reactorModule;
+  const syncManager = reactorModule?.syncModule?.syncManager;
+  const localChannelPorts = built.localChannelPorts;
+  // Present only when local sync is wired and a sync manager exists; the broker
+  // (linkLocalSync) hands this reactor one end of the channel directly, so an
+  // in-process adopt needs no transfer -- the node/browser port is wrapped and
+  // registered, then the local remote is added.
+  const localSync =
+    localChannelPorts && syncManager
+      ? {
+          adoptLocalSyncPeer: async (
+            link: AdoptLocalSyncPeerLink,
+          ): Promise<void> => {
+            await registerLocalPeer(
+              syncManager,
+              localChannelPorts,
+              {
+                peerId: link.peerId,
+                channelName: link.channelName,
+                collectionId: link.collectionId,
+                remoteName: link.remoteName,
+                filter: link.filter,
+              },
+              messagePortTransport(link.port),
+            );
+          },
+          removeLocalSyncPeer: async (
+            remoteName: string,
+            peerId: string,
+            channelName: string,
+          ): Promise<void> => {
+            await syncManager.remove(remoteName);
+            localChannelPorts.unregister(peerId, channelName);
+          },
+        }
+      : undefined;
   const module: MonitorInProcessClientModule = {
     ...built.module,
     kind: "in-process",
@@ -47,9 +86,10 @@ export async function provisionInProcess(
     client: built.module.client,
     inspector: built.inspector,
     dbQuery: built.dbQuery,
-    syncManager: reactorModule?.syncModule?.syncManager,
+    syncManager,
     events: built.module.eventBus,
     module,
+    ...(localSync ?? {}),
     kill: built.shutdown,
     isShutdown: built.isShutdown,
   };

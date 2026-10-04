@@ -46,6 +46,20 @@ export {
 } from "./registry.js";
 
 export {
+  linkLocalSync,
+  type LinkLocalSyncOptions,
+  type LocalSyncHandle,
+} from "./sync/link.js";
+export {
+  DEFAULT_LOCAL_FILTER,
+  localChannelConfig,
+  registerLocalPeer,
+  type LocalRemoteSpec,
+} from "./sync/adopt-sync-peer.js";
+export { LocalChannelPortRegistry } from "./sync/local-channel-registry.js";
+export type { AdoptLocalSyncPeerLink } from "./sync/types.js";
+
+export {
   buildMonitorReactor,
   type BuildReactorOptions,
   type BuiltReactor,

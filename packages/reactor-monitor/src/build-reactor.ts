@@ -4,6 +4,7 @@ import {
   DocumentIntegrityService,
   HardenedPGliteDialect,
   InMemoryQueue,
+  LocalChannelFactory,
   queryThroughDialect,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -11,6 +12,7 @@ import {
   ReactorInspector,
   SelfHealingPGliteClient,
   StorageHealthTracker,
+  SyncBuilder,
   type Database,
   type IDocumentModelLoader,
   type InProcessReactorClientModule,
@@ -25,9 +27,11 @@ import type {
   ISigner,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
+import { childLogger } from "document-model";
 import { Kysely } from "kysely";
 import { createLocalSigner } from "./signer.js";
 import { openReactorStore } from "./store.js";
+import { LocalChannelPortRegistry } from "./sync/local-channel-registry.js";
 import type { ReactorStorageConfig } from "./types.js";
 
 /** Everything the realm-local reactor graph is built from. */
@@ -44,6 +48,16 @@ export type BuildReactorOptions = {
   featureFlags?: Partial<ReactorFeatureFlags>;
   /** `null` builds no sync module; omitted means {@link ChannelScheme.CONNECT}. */
   channelScheme?: ChannelScheme | null;
+  /**
+   * Builds the sync module on a {@link LocalChannelFactory} instead of a gql
+   * scheme, so the reactor can adopt monitor-brokered `LocalChannel` peers
+   * (multi-reactor W1.2). Mutually exclusive with a gql `channelScheme`: the
+   * reactor builder wires ONE channel factory, and W1.2 is deliberately
+   * Switchboard- and GraphQL-free, so a local-sync reactor is local-only. When
+   * set, `channelScheme` is ignored and {@link BuiltReactor.localChannelPorts}
+   * is the registry the adopt-sync-peer op registers ports with.
+   */
+  localSync?: boolean;
   jwtHandler?: JwtHandler;
   /** Defaults to a fresh {@link LocalSigner}. */
   signer?: ISigner;
@@ -61,6 +75,12 @@ export type BuiltReactor = {
   inspector: ReactorInspector;
   /** Raw SQL against this reactor's own store. */
   dbQuery: IReactorDbQuery;
+  /**
+   * The brokered-local-sync port registry, present only when built with
+   * {@link BuildReactorOptions.localSync}. The adopt-sync-peer op registers a
+   * transferred port here, and this reactor's `LocalChannelFactory` resolves it.
+   */
+  localChannelPorts?: LocalChannelPortRegistry;
   /** Stops sync, kills the reactor, destroys the kysely instance, closes the store. */
   shutdown: () => Promise<void>;
   /** True once {@link shutdown} has been entered. */
@@ -85,8 +105,15 @@ export async function buildMonitorReactor(
     options.pg ?? (await openReactorStore(options.namespace, options.storage));
 
   const models = options.documentModelModules ?? baseDocumentModels;
-  const scheme =
-    options.channelScheme === undefined
+  // A local-sync reactor wires its own LocalChannelFactory via withSync and
+  // leaves the scheme unset; a gql reactor keeps the CONNECT default. The two
+  // are mutually exclusive because the builder wires one channel factory.
+  const localChannelPorts = options.localSync
+    ? new LocalChannelPortRegistry()
+    : undefined;
+  const scheme = localChannelPorts
+    ? null
+    : options.channelScheme === undefined
       ? ChannelScheme.CONNECT
       : options.channelScheme;
 
@@ -159,7 +186,21 @@ export async function buildMonitorReactor(
   if (options.upgradeManifests && options.upgradeManifests.length > 0) {
     reactorBuilder.withUpgradeManifests(options.upgradeManifests);
   }
-  if (scheme !== null) {
+  if (localChannelPorts) {
+    // CONNECT-scheme-free local wiring: the one channel factory resolves a
+    // brokered MessagePort from the registry under the (peerId, channelName)
+    // each remote's ChannelConfig names. The ReactorBuilder applies its own
+    // storage flusher to this SyncBuilder via withDefaultStorageFlusher, so the
+    // LocalChannel's cursor writes inherit the durability barrier.
+    reactorBuilder.withSync(
+      new SyncBuilder().withChannelFactory(
+        new LocalChannelFactory(
+          childLogger(["reactor-monitor", "local-channel"]),
+          localChannelPorts.provider,
+        ),
+      ),
+    );
+  } else if (scheme !== null) {
     reactorBuilder.withChannelScheme(scheme);
   }
   if (options.jwtHandler) {
@@ -262,6 +303,7 @@ export async function buildMonitorReactor(
     pg,
     inspector,
     dbQuery,
+    ...(localChannelPorts ? { localChannelPorts } : {}),
     shutdown,
     isShutdown: () => shuttingDown !== undefined,
   };

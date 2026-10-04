@@ -26,6 +26,11 @@ export type MonitorWorkerConstruct = {
   featureFlags?: Partial<ReactorFeatureFlags>;
   /** `null` builds no sync module; absent means {@link ChannelScheme.CONNECT}. */
   channelScheme?: ChannelScheme | null;
+  /**
+   * Builds the sync module on a `LocalChannelFactory` for brokered local peers
+   * (multi-reactor W1.2). Mutually exclusive with a gql `channelScheme`.
+   */
+  localSync?: boolean;
 };
 
 const SCHEMES = new Set<string>(Object.values(ChannelScheme));
@@ -128,6 +133,12 @@ export function parseWorkerConstruct(raw: unknown): MonitorWorkerConstruct {
   if (scheme !== undefined) {
     construct.channelScheme = scheme;
   }
+  if (value.localSync !== undefined) {
+    if (typeof value.localSync !== "boolean") {
+      throw new Error("Invalid worker construct: localSync must be a boolean");
+    }
+    construct.localSync = value.localSync;
+  }
   return construct;
 }
 
@@ -156,6 +167,9 @@ export function toWorkerConstruct(
   }
   if (descriptor.sync?.channelScheme !== undefined) {
     construct.channelScheme = descriptor.sync.channelScheme;
+  }
+  if (descriptor.sync?.local !== undefined) {
+    construct.localSync = descriptor.sync.local;
   }
   return construct;
 }
