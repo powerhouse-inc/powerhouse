@@ -19,6 +19,13 @@ vi.mock("../../src/pglite.db.js", () => ({
   getReactorPGlite: () => Promise.resolve({}),
 }));
 
+// createBrowserReactor now resolves the multiReactor flag (off by default),
+// which reads the runtime config; this suite never warms it, so pin the flag
+// off rather than let getRuntimeConfig throw "cache empty".
+vi.mock("../../src/utils/multi-reactor-flag.js", () => ({
+  isMultiReactorEnabled: () => false,
+}));
+
 const WALLET = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
 const OTHER_WALLET = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
 const BOUND_KEY = "did:key:zDnaeConnectKey";

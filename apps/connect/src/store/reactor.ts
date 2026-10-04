@@ -445,6 +445,9 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       workflowsEnabled: connectConfig.workflowsEnabled,
       renownChainId,
       featureFlags: reactorFeatureFlags,
+      // Threaded into the worker's construct so its reactor build gates the
+      // local-channel factory on the same flag the main thread resolves.
+      multiReactor: isMultiReactorEnabled(),
       createSignaturePolicy,
       unsupportedStoredDocuments,
       renownEndpoints,

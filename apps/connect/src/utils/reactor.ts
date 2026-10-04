@@ -1,7 +1,6 @@
 import {
   addDrive,
   addRemoteDrive,
-  ChannelScheme,
   HardenedPGliteDialect,
   isDriveAuthError,
   ReactorBuilder,
@@ -18,11 +17,12 @@ import {
   type RecreatablePGliteInstance,
 } from "@powerhousedao/reactor-browser";
 import {
-  LOCAL_CHANNEL_TYPE,
   LocalChannelFactory,
   type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import { LocalChannelPortRegistry } from "../reactor-worker-sync.js";
+import { isMultiReactorEnabled } from "./multi-reactor-flag.js";
+import { configureConnectChannelScheme } from "./reactor-channel-scheme.js";
 import type {
   PHConnectDefaultDrive,
   PHConnectDefaultDriveLocal,
@@ -88,21 +88,9 @@ export async function createBrowserReactor(
         console.error(`[reactor] self-heal: ${message}`, error),
     },
   );
-  // Compose an inert LocalChannelFactory onto the gql scheme (multi-reactor
-  // W3.0, Connect stage 4 WP-B), so the main-thread reactor routes
-  // `{type:"local"}` brokered peers the same way the worker path does and its
-  // declared sync channels match. There is no brokered-port adopt seam on the
-  // main thread (no ReactorHost), so this registry stays empty and the factory
-  // is never asked to build a channel; gql routing is unchanged.
-  const localChannelFactory = new LocalChannelFactory(
-    logger,
-    new LocalChannelPortRegistry().provider,
-  );
   const reactorBuilder = new ReactorBuilder()
     .withDocumentModelSources(documentModelModules)
     .withUpgradeManifests(upgradeManifests)
-    .withChannelScheme(ChannelScheme.CONNECT)
-    .withAdditionalChannelFactory(LOCAL_CHANNEL_TYPE, localChannelFactory)
     .withExecutorConfig({ featureFlags })
     .withJwtHandler(jwtHandler)
     .withKysely(
@@ -115,6 +103,17 @@ export async function createBrowserReactor(
         }),
       }),
     );
+  // Flag OFF (the default) builds the bare CONNECT gql scheme exactly as before
+  // multi-reactor: no local factory, no CompositeChannelFactory, channel factory
+  // types = [gql]. Flag ON composes a LocalChannelFactory onto the scheme so the
+  // main-thread reactor also declares `{type:"local"}` routing. There is no
+  // brokered-port adopt seam on the main thread (no ReactorHost), so even flag-on
+  // the registry stays empty and the factory is never asked to build a channel.
+  configureConnectChannelScheme(reactorBuilder, {
+    multiReactor: isMultiReactorEnabled(),
+    createLocalChannelFactory: () =>
+      new LocalChannelFactory(logger, new LocalChannelPortRegistry().provider),
+  });
   const builder = new ReactorClientBuilder()
     .withLogger(logger)
     .withSigner(signerConfig)

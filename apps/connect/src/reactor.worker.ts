@@ -1,9 +1,7 @@
 import {
-  ChannelScheme,
   DocumentIntegrityService,
   HardenedPGliteDialect,
   InMemoryQueue,
-  LOCAL_CHANNEL_TYPE,
   LocalChannelFactory,
   messagePortTransport,
   queryThroughDialect,
@@ -60,6 +58,7 @@ import {
   type RenownCryptoSigner,
 } from "@renown/sdk/crypto";
 import { createWorkerSignerConfig } from "./reactor-worker-signer.js";
+import { configureConnectChannelScheme } from "./utils/reactor-channel-scheme.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
 import { toStoredDocumentsRefused } from "./utils/stored-documents-refused.js";
 import type * as PgLiveModuleNs from "@electric-sql/pglite/live";
@@ -108,6 +107,11 @@ type WorkerConstruct = {
   // Same reason: enforcement flags arrive from the tab. Absent means all off,
   // which is what a tab on an older build sends.
   featureFlags?: Partial<ReactorFeatureFlags>;
+  // The resolved multiReactor flag, threaded from the tab the same way the
+  // other flags are. OFF (or absent, i.e. a tab on an older build) builds the
+  // bare gql scheme; ON composes the local-channel factory and wires the
+  // adopt/remove-sync-peer handlers.
+  multiReactor?: boolean;
   // What new documents are created as; absent means the reactor's default.
   createSignaturePolicy?: SignaturePolicy;
   // Absent means the reactor's default, refuse.
@@ -554,26 +558,30 @@ const host = new ReactorHost({
           : undefined;
       phase = "building reactor module";
       console.info(`[reactor.worker] boot: ${phase}`);
-      // Compose a LocalChannelFactory onto the gql scheme (multi-reactor W3.0,
-      // Connect stage 4 WP-B). The builder still constructs the gql factory
-      // itself and routes `{type:"gql"}` remotes through it; this adds
-      // `{type:"local"}` routing for brokered MessagePort peers. INERT until a
-      // peer is adopted: with no port registered the registry's provider returns
-      // undefined, so no local channel is ever built and gql routing is
-      // unchanged.
-      localChannelPorts = new LocalChannelPortRegistry();
-      const localChannelFactory = new LocalChannelFactory(
-        childLogger(["reactor.worker", "local-channel"]),
-        localChannelPorts.provider,
-      );
       const reactorBuilder = new ReactorBuilder()
         .withDocumentModelSources(models)
-        .withChannelScheme(ChannelScheme.CONNECT)
-        .withAdditionalChannelFactory(LOCAL_CHANNEL_TYPE, localChannelFactory)
         .withExecutorConfig({ featureFlags: construct.featureFlags ?? {} })
         .withJwtHandler(jwtHandler)
         .withKysely(owned.reactorDb)
         .withStorageFlusher(reactorSelfHeal);
+      // Flag OFF (the default, and what a tab on an older build sends) builds the
+      // bare CONNECT gql scheme exactly as before multi-reactor: no local factory,
+      // no CompositeChannelFactory, channel factory types = [gql]. Flag ON composes
+      // a LocalChannelFactory onto the gql scheme (multi-reactor W3.0, Connect stage
+      // 4 WP-B) so this reactor also routes `{type:"local"}` brokered MessagePort
+      // peers. The registry is created only on the ON path and stays empty until the
+      // adopt-sync-peer op registers a transferred port, so the composed factory is
+      // inert until then.
+      configureConnectChannelScheme(reactorBuilder, {
+        multiReactor: construct.multiReactor ?? false,
+        createLocalChannelFactory: () => {
+          localChannelPorts = new LocalChannelPortRegistry();
+          return new LocalChannelFactory(
+            childLogger(["reactor.worker", "local-channel"]),
+            localChannelPorts.provider,
+          );
+        },
+      });
       if (construct.unsupportedStoredDocuments) {
         reactorBuilder.withUnsupportedStoredDocuments(
           construct.unsupportedStoredDocuments,
