@@ -3632,22 +3632,6 @@ export class WorkflowRuntimeService {
     }
 
     let runId: string | null = enqueuedRunId ?? null;
-    if (enqueuedRunId) {
-      await store?.beginRun(enqueuedRunId, {
-        workflowName: runJournalName(state.name, documentName),
-        workflowVersion: runnable.version,
-      });
-    } else {
-      runId =
-        (await store?.startRun({
-          workflowId,
-          workflowName: runJournalName(state.name, documentName),
-          workflowVersion: runnable.version,
-          triggerKind,
-          triggerPayload,
-          rerunOf: resume?.rerunOf,
-        })) ?? null;
-    }
     let journalFailed = false;
     // Recorded whether or not the write lands: it is what lets finishRun put a
     // lost row back where the step ran.
@@ -3655,8 +3639,29 @@ export class WorkflowRuntimeService {
     // This run's child, forked at its first piece step and killed below. Free
     // until then, so a run of document blocks never takes a slot.
     let session: PieceWorkerSession | undefined;
+    // EVERYTHING after admit() belongs inside this try, the journal writes
+    // below included: a throw between the admission and the finally would
+    // never release the slot, and a leaked slot wedges the workflow for the
+    // life of the process — SINGLETON refuses every later firing, QUEUE waits
+    // for a run that is already over.
     try {
-      // Inside the try: a pool disposed while this run was starting up refuses
+      if (enqueuedRunId) {
+        await store?.beginRun(enqueuedRunId, {
+          workflowName: runJournalName(state.name, documentName),
+          workflowVersion: runnable.version,
+        });
+      } else {
+        runId =
+          (await store?.startRun({
+            workflowId,
+            workflowName: runJournalName(state.name, documentName),
+            workflowVersion: runnable.version,
+            triggerKind,
+            triggerPayload,
+            rerunOf: resume?.rerunOf,
+          })) ?? null;
+      }
+      // Also in here: a pool disposed while this run was starting up refuses
       // here, and the journal records the run as failed rather than leaving it
       // to be swept up as an orphan.
       session = this.workers().session();
