@@ -151,7 +151,8 @@ export class LocalChannel implements IChannel {
     this.inbox.onRemoved(() => {
       const ackOrdinal = this.inbox.ackOrdinal;
       this.persistCursor("inbox", ackOrdinal);
-      if (ackOrdinal > 0) {
+      if (ackOrdinal > this.lastPostedAckOrdinal) {
+        this.lastPostedAckOrdinal = ackOrdinal;
         this.post({ kind: "ack", channelId: this.channelId, ackOrdinal });
       }
     });

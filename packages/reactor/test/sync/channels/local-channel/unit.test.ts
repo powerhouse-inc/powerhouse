@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { ChannelError } from "../../../../src/sync/errors.js";
+import type { SyncOperation } from "../../../../src/sync/sync-operation.js";
 import {
   ChannelErrorSource,
   SyncOperationStatus,
@@ -289,6 +290,48 @@ describe("LocalChannel", () => {
         expect(channel.outbox.items).toHaveLength(0);
         expect(channel.deadLetter.items).toHaveLength(1);
         expect(op.status).toBe(SyncOperationStatus.Error);
+      } finally {
+        await channel.shutdown();
+      }
+    });
+  });
+
+  describe("ack posting", () => {
+    it("posts an ack only when the floor advances across a burst of removals", async () => {
+      const transport = new FakeTransport();
+      const channel = makeChannel({ transport });
+      try {
+        await channel.init();
+
+        const add = (...ops: SyncOperation[]): void => {
+          for (const op of ops) op.transported();
+          channel.inbox.add(...ops);
+        };
+        const applyRemove = (...ops: SyncOperation[]): void => {
+          for (const op of ops) op.executed();
+          channel.inbox.remove(...ops);
+        };
+
+        // Advancing removal: the floor moves to 2 and posts one ack.
+        add(syncOp("a->b", 1), syncOp("a->b", 2, "doc-2"));
+        const [op1, op2] = [...channel.inbox.items];
+        applyRemove(op1, op2);
+
+        // Non-advancing removal: op4 is removed while op3 is still unapplied,
+        // so the floor stays at 2 and no ack is posted despite the removal.
+        add(syncOp("a->b", 3, "doc-3"), syncOp("a->b", 4, "doc-4"));
+        const held = [...channel.inbox.items];
+        const op3 = held.find((op) => op.documentId === "doc-3")!;
+        const op4 = held.find((op) => op.documentId === "doc-4")!;
+        applyRemove(op4);
+
+        // Releasing op3 advances the floor to 4 and posts the second ack.
+        applyRemove(op3);
+
+        const acks = transport
+          .sentOfKind("ack")
+          .map((frame) => frame.ackOrdinal as number);
+        expect(acks).toEqual([2, 4]);
       } finally {
         await channel.shutdown();
       }
