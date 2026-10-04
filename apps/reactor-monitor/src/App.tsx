@@ -9,12 +9,13 @@ import {
   ReactorMonitorProvider,
   useManagedReactorEntry,
   useManagedReactors,
+  useReactorMonitorRegistry,
 } from "@powerhousedao/reactor-monitor/react";
 import type {
   ManagedReactorEntry,
   ReactorDescriptor,
 } from "@powerhousedao/reactor-monitor";
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { LinkLocalSyncPanel } from "./components/LinkLocalSyncPanel.js";
 import {
   ProvisionPanel,
@@ -118,6 +119,21 @@ function AppBody({ selected, onSelect, onProvision, onKill }: AppBodyProps) {
   const entries = useManagedReactors();
   const entry = useManagedReactorEntry(selected ?? "");
   const [activeTab, setActiveTab] = useState<InspectorTab>("Overview");
+  const registry = useReactorMonitorRegistry();
+
+  /**
+   * Dev-only scripting handle: exposes the live registry on the window so
+   * operator tooling (live verification passes, demo scripts) can provision,
+   * link, and drive reactors programmatically. Never set in production builds.
+   */
+  useEffect(() => {
+    const env = (import.meta as unknown as { env?: { DEV?: boolean } }).env;
+    if (env?.DEV) {
+      (
+        window as unknown as { __reactorMonitor?: typeof registry }
+      ).__reactorMonitor = registry;
+    }
+  }, [registry]);
 
   return (
     <div className="reactor-monitor__body">
