@@ -3,9 +3,12 @@ import { ChannelError } from "../../../../src/sync/errors.js";
 import { ChannelErrorSource } from "../../../../src/sync/types.js";
 import {
   applyInbox,
+  FakeTransport,
+  makeChannel,
   makePair,
   manifestFor,
   MemoryCursorStorage,
+  pushFrame,
   syncOp,
   waitFor,
   type ChannelPair,
@@ -150,6 +153,65 @@ describe("LocalChannel", () => {
         expect(restart.a.outbox.ackOrdinal).toBe(8);
       } finally {
         await restart.close();
+      }
+    });
+  });
+
+  describe("init ordering race", () => {
+    it("drops a push delivered at subscribe time for ops already acked", async () => {
+      const cursors = new MemoryCursorStorage();
+      await cursors.upsert({
+        remoteName: "a->b",
+        cursorType: "inbox",
+        cursorOrdinal: 10,
+        lastSyncedAtUtcMs: Date.now(),
+      });
+
+      // The transport flushes its buffered frame synchronously the instant a
+      // listener subscribes -- the moment a real MessagePort releases what was
+      // posted before the listener attached, and the window the race lives in.
+      const transport = new FakeTransport();
+      transport.deliverOnSubscribe = true;
+      transport.enqueue(pushFrame("channel-peer", [syncOp("a->b", 5)]));
+
+      const channel = makeChannel({ transport, cursors });
+      try {
+        await channel.init();
+
+        // init loaded the cursor and initialised the mailbox before it
+        // subscribed, so the stale op is dropped rather than re-loaded, and the
+        // ack floor is never dragged below the persisted cursor.
+        expect(channel.inbox.items).toHaveLength(0);
+        expect(channel.inbox.ackOrdinal).toBe(10);
+        expect((await cursors.get("a->b", "inbox")).cursorOrdinal).toBe(10);
+        expect(transport.sentOfKind("ack")).toHaveLength(0);
+      } finally {
+        await channel.shutdown();
+      }
+    });
+
+    it("ingests a genuinely new push delivered at subscribe time", async () => {
+      const cursors = new MemoryCursorStorage();
+      await cursors.upsert({
+        remoteName: "a->b",
+        cursorType: "inbox",
+        cursorOrdinal: 10,
+        lastSyncedAtUtcMs: Date.now(),
+      });
+
+      const transport = new FakeTransport();
+      transport.deliverOnSubscribe = true;
+      transport.enqueue(pushFrame("channel-peer", [syncOp("a->b", 11)]));
+
+      const channel = makeChannel({ transport, cursors });
+      try {
+        await channel.init();
+
+        // An op past the persisted cursor is real work and is still ingested.
+        expect(channel.inbox.items).toHaveLength(1);
+        expect(channel.inbox.ackOrdinal).toBe(10);
+      } finally {
+        await channel.shutdown();
       }
     });
   });
