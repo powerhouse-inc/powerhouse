@@ -60,6 +60,18 @@ export {
   type PagedParticipant,
 } from "./fan-in.js";
 export { withOwnershipGuard, type OwnershipGuardOptions } from "./guard.js";
+// The capability contract a backend is built against. It is defined in
+// @powerhousedao/reactor-monitor (the stage-2 contract), but a consumer that
+// authors a ReactorBackend needs the type to populate `capabilities`, and it
+// should get it from the package that owns the ReactorBackend contract rather
+// than reach into the lab-bench package. Type-only, so this re-export adds no
+// runtime dependency on reactor-monitor for any consumer (multi-reactor stage
+// 4: Connect builds its two backends against this without naming
+// reactor-monitor).
+export type {
+  ReactorCapabilities,
+  ReactorSyncChannel,
+} from "@powerhousedao/reactor-monitor";
 export {
   eligibleBackends,
   ineligibleReason,
