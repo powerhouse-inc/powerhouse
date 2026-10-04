@@ -310,6 +310,14 @@ oxlint, oxfmt clean).
   in-process reactor), Overview capability grids side by side showing the
   worker/in-process difference, and A->C relay observed in the Sync tabs.
 
+### Stage 2 LIVE-VERIFIED (2026-10-04, screenshots delivered)
+Three-reactor mixed topology in the monitor UI: worker alpha <-> worker beta <->
+in-process gamma, one drive, linked via the UI. Transitive relay live: alpha's op
+reached gamma THROUGH beta in 258ms with no direct link (reverse 266ms). Capability
+grids render the real worker/in-process variance; capabilities derive from the
+BUILT worker config (post-review truthfulness fix) with descriptorMismatch flagged.
+Stage 2 complete.
+
 ### Stage 3 — Switchboard reactor joins
 - **W3.1** attach remote via existing GQL channels.
 - **W3.2 core: remote inspection** — `IInspector` served over HTTP/GraphQL by
