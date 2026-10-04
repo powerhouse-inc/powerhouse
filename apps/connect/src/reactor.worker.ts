@@ -5,6 +5,7 @@ import {
   InMemoryQueue,
   LOCAL_CHANNEL_TYPE,
   LocalChannelFactory,
+  messagePortTransport,
   queryThroughDialect,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -43,7 +44,11 @@ import {
   type IRelationalDb,
 } from "@powerhousedao/shared/processors";
 import { childLogger } from "document-model";
-import { LocalChannelPortRegistry } from "./reactor-worker-sync.js";
+import {
+  collectionIdFromKey,
+  LocalChannelPortRegistry,
+  registerLocalPeer,
+} from "./reactor-worker-sync.js";
 import * as commonDocumentModels from "@powerhousedao/powerhouse-vetra-packages/document-models";
 import {
   loadFlaggedDocumentModels,
@@ -691,6 +696,46 @@ const host = new ReactorHost({
   },
   onInspectorOp: (method, args) =>
     dispatchInspectorOp(inspector, inspectorDb, method, args),
+  // Adopt a brokered local-sync peer (multi-reactor stage 4, WP-C), mirroring
+  // reactor-monitor/src/worker/host.ts. The transferred MessagePort is this
+  // realm's own now; wrap it as a LocalChannelPort and register it so the
+  // composed LocalChannelFactory resolves it, then add the local remote so the
+  // handshake runs over it. ReactorHost closes the transferred port on any
+  // failure here, so a throw never leaks it.
+  onAdoptSyncPeer: async (params, port) => {
+    if (!syncManager || !localChannelPorts) {
+      throw new Error(
+        "Worker reactor has no sync module to adopt a local peer into",
+      );
+    }
+    // Round-tripped through the parse check: a dotted drive id would rehydrate
+    // as a different collection, and this side would sync the wrong one while
+    // reporting a healthy link.
+    const collectionId = collectionIdFromKey(params.collectionIdKey);
+    await registerLocalPeer(
+      syncManager,
+      localChannelPorts,
+      {
+        peerId: params.peerId,
+        channelName: params.channelName,
+        collectionId,
+        remoteName: params.remoteName,
+        filter: params.filter,
+      },
+      messagePortTransport(port),
+    );
+  },
+  // The twin of onAdoptSyncPeer: both halves (remove the remote, forget the
+  // port) must happen in the realm that owns the registry.
+  onRemoveSyncPeer: async (params) => {
+    if (!syncManager || !localChannelPorts) {
+      throw new Error(
+        "Worker reactor has no sync module to adopt a local peer into",
+      );
+    }
+    await syncManager.remove(params.remoteName);
+    localChannelPorts.unregister(params.peerId, params.channelName);
+  },
 });
 
 type WorkerGlobalErrorEvent = {
