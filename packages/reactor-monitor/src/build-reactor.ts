@@ -192,6 +192,17 @@ export async function buildMonitorReactor(
     // each remote's ChannelConfig names. The ReactorBuilder applies its own
     // storage flusher to this SyncBuilder via withDefaultStorageFlusher, so the
     // LocalChannel's cursor writes inherit the durability barrier.
+    //
+    // A storage heal SEVERS every local link, and does so visibly. The heal
+    // path resets each remote's channel, the reset shuts the old channel down
+    // (closing the brokered port, which unregisters it here), and the fresh
+    // channel's factory lookup then fails loudly with "the link is severed" --
+    // the remote drops out of the registry with that message rather than
+    // sitting in `connecting` over a dead port. The monitor's Sync tab shows
+    // the link as gone and re-linking is a click; nothing is recoverable
+    // automatically, because the other reactor's end of the MessageChannel went
+    // with it. Brokered remotes are session-scoped (`RemotePersistence`), so
+    // there is no stale record left behind either.
     reactorBuilder.withSync(
       new SyncBuilder().withChannelFactory(
         new LocalChannelFactory(

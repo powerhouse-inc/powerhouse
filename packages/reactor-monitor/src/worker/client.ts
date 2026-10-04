@@ -12,6 +12,7 @@ import {
   MessageRouter,
   RPC_PROTOCOL_VERSION,
   sendAdoptSyncPeer,
+  sendRemoveSyncPeer,
   SyncManagerProxy,
   type IRpcTransport,
   type WorkerPackageSource,
@@ -150,6 +151,46 @@ export function connectManagedWorkerReactor(
     },
   };
 
+  // Exposed only when the worker was provisioned with sync.local, matching the
+  // in-process handle exactly. Without the conditional, linkLocalSync's
+  // requireLocalCapable() saw two methods on every worker reactor and only
+  // found out the worker had no local sync module after a port had been opened
+  // and transferred -- a failure with side effects where a fail-fast belonged.
+  const localSync = descriptor.sync?.local
+    ? {
+        /**
+         * Transfers one end of the broker's MessageChannel into the worker and
+         * adds the local remote there via the adopt-sync-peer op. The port is
+         * MOVED, not cloned; this handle must not touch it afterwards. The
+         * transferred-MessagePort path needs a real browser (W1.3).
+         */
+        adoptLocalSyncPeer: (link: AdoptLocalSyncPeerLink): Promise<void> =>
+          sendAdoptSyncPeer(
+            router,
+            {
+              peerId: link.peerId,
+              channelName: link.channelName,
+              collectionIdKey: link.collectionId.key,
+              remoteName: link.remoteName,
+              filter: link.filter,
+            },
+            link.port as unknown as MessagePort,
+          ),
+        /**
+         * Removes the local remote AND unregisters its port inside the worker,
+         * over the remove-sync-peer op. The registry lives in the worker realm,
+         * so the tab cannot unregister anything itself; removing the remote
+         * over the plain sync-op channel left a dead port registered there.
+         */
+        removeLocalSyncPeer: (
+          remoteName: string,
+          peerId: string,
+          channelName: string,
+        ): Promise<void> =>
+          sendRemoveSyncPeer(router, { peerId, channelName, remoteName }),
+      }
+    : undefined;
+
   let killed = false;
   return {
     name: descriptor.name,
@@ -162,33 +203,7 @@ export function connectManagedWorkerReactor(
     syncManager,
     events: eventBus,
     module,
-    /**
-     * Transfers one end of the broker's MessageChannel into the worker and
-     * adds the local remote there via the adopt-sync-peer op. The port is
-     * MOVED, not cloned; this handle must not touch it afterwards. Needs the
-     * worker to have been provisioned with `sync.local`, and the transferred-
-     * MessagePort path needs a real browser (W1.3).
-     */
-    adoptLocalSyncPeer: (link: AdoptLocalSyncPeerLink): Promise<void> =>
-      sendAdoptSyncPeer(
-        router,
-        {
-          peerId: link.peerId,
-          channelName: link.channelName,
-          collectionIdKey: link.collectionId.key,
-          remoteName: link.remoteName,
-          filter: link.filter,
-        },
-        link.port as unknown as MessagePort,
-      ),
-    /**
-     * Removes the local remote over the sync-op channel; the worker closes the
-     * brokered port when it shuts the channel down. The registry key is unused
-     * on this side -- the worker owns its own registry.
-     */
-    removeLocalSyncPeer: async (remoteName: string): Promise<void> => {
-      await syncManager.remove(remoteName);
-    },
+    ...(localSync ?? {}),
     adminInfo: () => adminClient.info(),
     restart: () => adminClient.restart(),
     /**

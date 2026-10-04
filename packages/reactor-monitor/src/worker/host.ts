@@ -1,5 +1,4 @@
 import {
-  DriveCollectionId,
   messagePortTransport,
   type IReactorClient,
   type IReactorDbQuery,
@@ -10,7 +9,10 @@ import {
   ReactorHost,
   SYNC_STATUS_CHANGED_EVENT,
 } from "@powerhousedao/reactor-browser/rpc";
-import { registerLocalPeer } from "../sync/adopt-sync-peer.js";
+import {
+  collectionIdFromKey,
+  registerLocalPeer,
+} from "../sync/adopt-sync-peer.js";
 import {
   buildWorkerReactor,
   type BuiltWorkerReactor,
@@ -119,6 +121,10 @@ export function createMonitorWorkerHost(
           "Worker reactor has no local sync module; provision it with sync.local",
         );
       }
+      // Rehydrated through the round-trip check: a dotted drive id would parse
+      // back as a different collection, and this side would then sync the wrong
+      // one while reporting a healthy link.
+      const collectionId = collectionIdFromKey(params.collectionIdKey);
       // The transferred MessagePort is this realm's own now; wrap it as a
       // LocalChannelPort and register it so LocalChannelFactory resolves it.
       await registerLocalPeer(
@@ -127,12 +133,28 @@ export function createMonitorWorkerHost(
         {
           peerId: params.peerId,
           channelName: params.channelName,
-          collectionId: DriveCollectionId.fromKey(params.collectionIdKey),
+          collectionId,
           remoteName: params.remoteName,
           filter: params.filter,
         },
         messagePortTransport(port),
       );
+    },
+    // The in-process twin of this is one function that removes the remote and
+    // unregisters the port; both halves have to happen in the realm that owns
+    // the registry, which is why removing the remote over the sync-op channel
+    // was not enough.
+    onRemoveSyncPeer: async (params) => {
+      const current = requireBuilt();
+      const syncManager = current.module.reactorModule?.syncModule?.syncManager;
+      const registry = current.localChannelPorts;
+      if (!syncManager || !registry) {
+        throw new Error(
+          "Worker reactor has no local sync module; provision it with sync.local",
+        );
+      }
+      await syncManager.remove(params.remoteName);
+      registry.unregister(params.peerId, params.channelName);
     },
     onAdminRestart: () =>
       host.broadcastReload("admin restart", crypto.randomUUID()),

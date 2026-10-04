@@ -51,7 +51,10 @@ export {
   type LocalSyncHandle,
 } from "./sync/link.js";
 export {
+  assertCollectionIdParts,
+  collectionIdFromKey,
   DEFAULT_LOCAL_FILTER,
+  LOCAL_REMOTE_OPTIONS,
   localChannelConfig,
   registerLocalPeer,
   type LocalRemoteSpec,

@@ -1,7 +1,10 @@
 import { messagePortTransport } from "@powerhousedao/reactor";
 import { buildMonitorReactor } from "./build-reactor.js";
 import { reactorStorageNamespace } from "./naming.js";
-import { registerLocalPeer } from "./sync/adopt-sync-peer.js";
+import {
+  assertCollectionIdParts,
+  registerLocalPeer,
+} from "./sync/adopt-sync-peer.js";
 import type { AdoptLocalSyncPeerLink } from "./sync/types.js";
 import type {
   ManagedInProcessReactor,
@@ -49,6 +52,12 @@ export async function provisionInProcess(
           adoptLocalSyncPeer: async (
             link: AdoptLocalSyncPeerLink,
           ): Promise<void> => {
+            // Checked here too, not only in linkLocalSync: adoptLocalSyncPeer
+            // is a public handle method, so a caller can reach it directly.
+            assertCollectionIdParts(
+              link.collectionId.driveId,
+              link.collectionId.branch,
+            );
             await registerLocalPeer(
               syncManager,
               localChannelPorts,

@@ -183,4 +183,120 @@ describe("brokered local sync between two in-process reactors", () => {
       }),
     ).rejects.toThrow(/not provisioned with local sync/);
   });
+
+  it("keeps the brokered remote out of durable storage", async () => {
+    const a = await host("eph-a");
+    const b = await host("eph-b");
+
+    const drive = await a.client.drives.create({ global: { name: "Eph" } });
+    const handle = await linkLocalSync(a, b, {
+      driveId: drive.header.id,
+      createChannel: nodeChannel,
+    });
+
+    expect(a.syncManager?.list().map((r) => r.meta.name)).toEqual([
+      handle.remoteNameA,
+    ]);
+    // Session-scoped: live in memory, absent from the storage a restart reads.
+    const storageA = a.module.reactorModule!.syncModule!.remoteStorage;
+    const storageB = b.module.reactorModule!.syncModule!.remoteStorage;
+    expect(await storageA.list()).toEqual([]);
+    expect(await storageB.list()).toEqual([]);
+
+    await handle.unlink();
+  }, 60_000);
+
+  it("rolls A back completely when B refuses the link", async () => {
+    const a = await host("roll-a");
+    const b = await host("roll-b");
+
+    const drive = await a.client.drives.create({ global: { name: "Roll" } });
+    const driveId = drive.header.id;
+
+    const ports: MessagePortLike[] = [];
+    const closed = new Set<MessagePortLike>();
+    const trackingChannel = (): {
+      port1: MessagePortLike;
+      port2: MessagePortLike;
+    } => {
+      const { port1, port2 } = nodeChannel();
+      for (const port of [port1, port2]) {
+        ports.push(port);
+        const close = port.close.bind(port);
+        port.close = () => {
+          closed.add(port);
+          close();
+        };
+      }
+      return { port1, port2 };
+    };
+
+    const adoptB = b.adoptLocalSyncPeer!;
+    b.adoptLocalSyncPeer = () => Promise.reject(new Error("B refuses"));
+
+    await expect(
+      linkLocalSync(a, b, { driveId, createChannel: trackingChannel }),
+    ).rejects.toThrow("B refuses");
+
+    // A is fully unwound: no remote, no live registry entry, both ports closed.
+    expect(a.syncManager?.list()).toEqual([]);
+    expect(b.syncManager?.list()).toEqual([]);
+    expect(ports).toHaveLength(2);
+    expect(closed.size).toBe(2);
+
+    b.adoptLocalSyncPeer = adoptB;
+
+    // And the pair is linkable again afterwards.
+    const handle = await linkLocalSync(a, b, {
+      driveId,
+      createChannel: nodeChannel,
+    });
+    await handle.unlink();
+  }, 60_000);
+
+  it("refuses a second link over an already-linked pair without touching the first", async () => {
+    const a = await host("dup-a");
+    const b = await host("dup-b");
+
+    const drive = await a.client.drives.create({ global: { name: "Dup" } });
+    const driveId = drive.header.id;
+    const handle = await linkLocalSync(a, b, {
+      driveId,
+      createChannel: nodeChannel,
+    });
+
+    await expect(
+      linkLocalSync(a, b, { driveId, createChannel: nodeChannel }),
+    ).rejects.toThrow(/already has a local sync remote named/);
+
+    // The live link survived the refusal intact.
+    expect(a.syncManager?.list().map((r) => r.meta.name)).toEqual([
+      handle.remoteNameA,
+    ]);
+    expect(b.syncManager?.list().map((r) => r.meta.name)).toEqual([
+      handle.remoteNameB,
+    ]);
+
+    await handle.unlink();
+  }, 60_000);
+
+  it("refuses a drive id the collection id format cannot carry", async () => {
+    const a = await host("dot-a");
+    const b = await host("dot-b");
+
+    await expect(
+      linkLocalSync(a, b, {
+        driveId: "drive.with.dots",
+        createChannel: nodeChannel,
+      }),
+    ).rejects.toThrow(/contains a "\." which the collection id format/);
+
+    await expect(
+      linkLocalSync(a, b, {
+        driveId: "drive-1",
+        branch: "feat.x",
+        createChannel: nodeChannel,
+      }),
+    ).rejects.toThrow(/Branch "feat\.x" contains a "\."/);
+  }, 60_000);
 });

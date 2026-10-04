@@ -190,8 +190,14 @@ export interface ManagedReactorBase {
   /**
    * Removes a local remote added by {@link adoptLocalSyncPeer} (closing its
    * port) and forgets its registration. `peerId`/`channelName` identify the
-   * registry entry to drop; a worker reactor closes the port through the
-   * channel shutdown that `remove` triggers.
+   * registry entry to drop. Both halves happen in the realm that owns the
+   * registry -- directly in process, over the remove-sync-peer op in a worker
+   * -- because a registry entry outliving its closed port is exactly how a
+   * dead link reports itself healthy.
+   *
+   * Present, like {@link adoptLocalSyncPeer}, only when the reactor was
+   * provisioned with `sync.local`. The two always appear and disappear
+   * together, so a caller that finds one can rely on the other.
    */
   removeLocalSyncPeer?: (
     remoteName: string,
