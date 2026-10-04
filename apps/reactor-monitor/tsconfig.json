@@ -16,6 +16,9 @@
     },
     {
       "path": "../../packages/reactor-monitor"
+    },
+    {
+      "path": "../../packages/reactor-router"
     }
   ]
 }

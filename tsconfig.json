@@ -29,9 +29,6 @@
       "path": "packages/reactor-hypercore"
     },
     {
-      "path": "packages/reactor-router"
-    },
-    {
       "path": "packages/shared"
     },
     {
