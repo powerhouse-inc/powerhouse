@@ -247,10 +247,7 @@ export class GqlRequestChannel implements IChannel {
     this.isShutdown = false;
     this.failureCount = 0;
 
-    this.inbox = new Mailbox({
-      holdAckBelowMarkers: true,
-      holdAckBelowUnapplied: true,
-    });
+    this.inbox = new Mailbox({ holdAckBelowMarkers: true });
     this.bufferedOutbox = new BufferedMailbox(500, 25);
     this.outbox = this.bufferedOutbox;
     this.deadLetter = new Mailbox();
