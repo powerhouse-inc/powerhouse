@@ -886,6 +886,18 @@ proved the ref string travels; this proves the bytes follow it.
   the handle's `attachments` presence is the live fact a UI reads. Adding a row
   is a contract change and should wait until a router needs it.
 
+### Stage 3 COMPLETE (2026-10-04) — all builders review-clean, live-verified where demonstrable
+W3.0 composite factory, W3.1 mixed topology (live: switchboard gql + local worker, both ways),
+W3.2 remote inspection (live: real vetra Switchboard inspected over HTTP, admin tier flip),
+W3.3 workflow placement + hardening (live: singleton lease claimed, workflows:true reported;
+10 review findings incl. self-inflicted regressions all fixed), W3.4 attachment bytes (store +
+lazy replicator + local transport over brokered port + switchboard transport; 10 review findings
+incl. a bytes-verification security fix all fixed). Live-pass boundary recorded: end-to-end
+attachment byte replication in the UI needs a document model declaring an AttachmentRef field —
+the lab bench's base models declare none, and the Attachments tab says so; the byte mechanism
+itself is unit-proven (4/4 content-verified A->B over a brokered MessagePort). W0.10 cold-boot
+KnexTimeout: intermittent (clean this run after rebuild, crashed on the prior).
+
 ### Router client (iterative, stages 1→3)
 - New package; `IReactorClient` facade via Proxy-forwarding + target selection by
   collection/drive; advisory routing + structured misroute; v1 constraints: batches
