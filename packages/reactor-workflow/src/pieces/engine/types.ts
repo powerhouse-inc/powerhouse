@@ -107,6 +107,17 @@ export interface StepExecutionRecord {
   // Resolved config the block ran with; absent for skipped steps.
   input?: unknown;
   output?: unknown;
+  /**
+   * Journaled in the output column in place of `output`, when there is no
+   * output to hand a caller but the row still has to say something.
+   *
+   * One use today: a REPLAYED step whose journaled output the payload cap
+   * truncated. The record's `output` stays absent — a caller must not be
+   * handed a marker where real data goes — while the row keeps the marker, so
+   * a SECOND rerun still knows the output is gone and tells a downstream step
+   * by name instead of resolving it to nothing.
+   */
+  journaledOutput?: unknown;
   port?: string;
   error?: string;
   // ISO times the block ran between; absent for skipped and replayed steps.
