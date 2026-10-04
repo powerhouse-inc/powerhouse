@@ -4,6 +4,10 @@ import {
   type MessagePortLike,
   type RemoteFilter,
 } from "@powerhousedao/reactor";
+import {
+  linkLocalAttachments,
+  type AttachmentLinkHandle,
+} from "../attachments/link.js";
 import { supportsSyncChannel } from "../capabilities.js";
 import type { ManagedReactor } from "../types.js";
 import {
@@ -19,6 +23,13 @@ export type LocalSyncHandle = {
   readonly collectionId: DriveCollectionId;
   readonly remoteNameA: string;
   readonly remoteNameB: string;
+  /**
+   * The attachment-byte link brokered alongside this one, when both reactors
+   * hold an attachment store (multi-reactor W3.4). Absent when either does
+   * not, which is not a failure: a pair can sync operations while only one
+   * side holds bytes.
+   */
+  readonly attachments: AttachmentLinkHandle | undefined;
   /** Removes both remotes (closing both ports) and forgets both registrations. */
   unlink: () => Promise<void>;
 };
@@ -196,6 +207,27 @@ export async function linkLocalSync(
     throw error;
   }
 
+  // Byte movement rides a SECOND brokered channel, so a large chunked transfer
+  // cannot delay operation delivery on the sync wire (multi-reactor W3.4). A
+  // failure here does not undo the sync link: operations syncing without their
+  // attachment bytes is the documented lazy model's own fallback, and tearing
+  // down a healthy sync link over it would be the worse outcome. It is loud in
+  // the console and `attachments` on the handle reads undefined.
+  let attachments: AttachmentLinkHandle | undefined;
+  try {
+    attachments = await linkLocalAttachments(a, b, {
+      channelName: `attachments:${channelName}`,
+      ...(options.createChannel
+        ? { createChannel: options.createChannel }
+        : {}),
+    });
+  } catch (error) {
+    console.error(
+      `[reactor-monitor] brokering the attachment link between "${a.name}" and "${b.name}" failed; operations will sync but bytes will not:`,
+      error,
+    );
+  }
+
   return {
     reactorA: a.name,
     reactorB: b.name,
@@ -203,10 +235,12 @@ export async function linkLocalSync(
     collectionId,
     remoteNameA,
     remoteNameB,
+    attachments,
     unlink: async () => {
       const results = await Promise.allSettled([
         a.removeLocalSyncPeer!(remoteNameA, b.name, channelName),
         b.removeLocalSyncPeer!(remoteNameB, a.name, channelName),
+        ...(attachments ? [attachments.unlink()] : []),
       ]);
       // Both sides are always attempted; surface the first failure, if any.
       for (const result of results) {

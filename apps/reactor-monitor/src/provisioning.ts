@@ -34,9 +34,20 @@ export function createMonitorWorker(name: string): SharedWorker {
  * flow AND can be linked to a sibling, which is what the mixed topologies of
  * stage 3 need. Prefer it unless the point is a reactor with no gql factory at
  * all.
+ *
+ * `attachmentStore` gives a BUILT reactor a byte store plus a
+ * fetch-on-reference replicator (multi-reactor W3.4); `none` leaves it without
+ * one, which is the default and a legitimate reactor. It is dropped for the
+ * worker kind, which is not wired yet.
  */
 export function buildDescriptor(request: ProvisionRequest): ReactorDescriptor {
-  const { name, kind, syncMode = "local", remoteUrl } = request;
+  const {
+    name,
+    kind,
+    syncMode = "local",
+    remoteUrl,
+    attachmentStore = "none",
+  } = request;
   // A remote reactor was built by someone else: `sync` describes what this
   // monitor would BUILD, so it has no meaning here, and the handle reads the
   // far side's real channel types off its own report (multi-reactor W3.2).
@@ -45,6 +56,8 @@ export function buildDescriptor(request: ProvisionRequest): ReactorDescriptor {
   }
   const sync = syncMode === "local" ? { local: true } : undefined;
   if (kind === "worker") {
+    // No `attachments`: byte movement is in-process only for now (W3.4). The
+    // form says so rather than the descriptor silently dropping it.
     return {
       kind,
       name,
@@ -52,5 +65,12 @@ export function buildDescriptor(request: ProvisionRequest): ReactorDescriptor {
       ...(sync ? { sync } : {}),
     };
   }
-  return { kind, name, ...(sync ? { sync } : {}) };
+  return {
+    kind,
+    name,
+    ...(sync ? { sync } : {}),
+    ...(attachmentStore === "none"
+      ? {}
+      : { attachments: { store: attachmentStore } }),
+  };
 }

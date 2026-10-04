@@ -26,6 +26,7 @@ import {
   type ProvisionRequest,
 } from "./components/ProvisionPanel.js";
 import { buildDescriptor as buildDescriptorFromForm } from "./provisioning.js";
+import { AttachmentsTab } from "./tabs/AttachmentsTab.js";
 import { CatchUpTab } from "./tabs/CatchUpTab.js";
 import { DbTab } from "./tabs/DbTab.js";
 import { EventsTab } from "./tabs/EventsTab.js";
@@ -43,6 +44,7 @@ export const INSPECTOR_TABS = [
   "Integrity",
   "DB",
   "Sync",
+  "Attachments",
   "Events",
 ] as const;
 
@@ -89,6 +91,12 @@ function ReadyPanel({
       return <IntegrityTab admin={admin} inspector={reactor.inspector} />;
     case "DB":
       return <DbTab dbQuery={reactor.dbQuery} sql={sql} />;
+    case "Attachments":
+      // Reads the handle's own attachment surface rather than the inspector:
+      // byte movement is a capability of the reactor this process BUILT, so a
+      // reactor without a store says so instead of rendering empty counts
+      // (multi-reactor W3.4).
+      return <AttachmentsTab reactor={reactor} />;
     case "Sync":
       return (
         <>

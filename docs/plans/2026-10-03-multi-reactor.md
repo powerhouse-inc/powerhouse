@@ -387,8 +387,10 @@ Stage 2 complete.
   W0.10 cold-boot KnexTimeout: third occurrence, strictly first-boot-after-rebuild;
   warm boots clean.
 - **W3.3 workflow placement + hardening** — see the W3.3 section below.
-- **W3.4 attachments byte movement**: lazy fetch-on-reference wiring, browser-side
-  store, reference-index race handling.
+- **W3.4 attachments byte movement - DONE 2026-10-04** (see the section below):
+  lazy fetch-on-reference replication, a browser-capable IndexedDB store, a
+  peer-to-peer byte transport over the brokered-port seam, and the
+  reference-index race surfaced rather than papered over.
 
 ### W3.0 monitor adoption (2026-10-04)
 The monitor's `connect` sync mode gained local capability, so a mixed topology can
@@ -760,6 +762,129 @@ vetra host whose runtime booted reported `workflows: false`. `startAPI` now
 hands its inspection source back on the API, the source's reported info is read
 per call rather than frozen, and switchboard flips it with
 `setWorkflowsComposed(true)` once `composeWorkflowRuntime` has returned.
+
+### W3.4 attachments byte movement (2026-10-04)
+
+Byte movement was designed in stage 1 and built here (agreed decision 1). The
+model is **lazy fetch-on-reference**: nothing is pushed and nothing is eagerly
+replicated; a reactor pulls the bytes behind a ref when one of its own
+committed operations names a hash its local store lacks.
+
+Suites green: reactor-attachments 613 passed (the Postgres-gated `[Postgres]`
+purge rows excepted), reactor-monitor 166 passed, the monitor app 62 passed;
+tsc, oxlint and oxfmt clean across all three.
+
+**1. The browser-capable store** is `LocalAttachmentStore` over a narrow
+`ILocalAttachmentBackend` seam, with `IdbAttachmentBackend` (two IndexedDB
+object stores written in one transaction, bytes as `ArrayBuffer`) and
+`MemoryAttachmentBackend`. Every `IAttachmentStore` semantic lives once in the
+store, so the two backends cannot drift; the backend contract suite runs
+against both, the IndexedDB rows skipping where the realm has no `indexedDB`
+(the repo has no `fake-indexeddb`). OPFS stays a later backend and changes
+nothing above the seam. Three deliberate differences from
+`KyselyAttachmentStore`: no reservation table (so `pending` is only ever a
+TRANSPORT answer), `get()` snapshots the blob before handing back a stream (so
+the contract's no-destroying-in-flight-reads clause holds by construction
+rather than by a refcount), and `sizeBytes` is the measured length received
+rather than the producer's claim.
+
+**2. The replicator's seam is `JOB_READ_READY`** on the reactor's own event bus,
+and the choice is load-bearing twice. It is AFTER the pre-ready read models, so
+a reactor never chases a hash its own attachment reference index has not
+recorded -- which is exactly the hash it would refuse to serve onward -- and it
+is off the write path, so an unreachable peer cannot delay a commit. Refs come
+from `IOperationAttachmentRefs`, whose production implementation reuses
+`AttachmentReferenceReadModel`'s own `(registry, AttachmentSchemaCompiler)`
+pair; it swallows extraction failures with a diagnostic, because
+`IEventBus.emit` aggregates subscriber errors back to the emitter and an
+attachment problem must not become a reactor-wide write failure.
+
+**3. Resume is a re-scan, not a cursor.** `IAttachmentReferenceBacklog` pages
+the reference index (keyset over `(document_id, attachment_ref)`, so a scan
+racing a still-indexing read model cannot skip a row) and `store.has()` decides
+per hash. Both are idempotent and together re-derive the exact outstanding work
+set on every boot, including hashes whose fetch failed or was still pending
+when the realm went away. A persisted cursor would be a second source of truth
+that can only ever be wrong in the direction that loses bytes. Loop-safety is
+structural: one entry per hash, and a terminal entry is never re-queued by a
+further reference -- only `retry()` moves one back.
+
+**4. The local transport** is `LocalAttachmentTransport` +
+`LocalAttachmentServer` over the same `LocalChannelPort` abstraction W1.1
+built, on a SECOND brokered channel (`attachments:<channelName>`) so a chunked
+body cannot delay operation delivery on the sync wire. Protocol
+`ph-attachment/v1`: `fetch(id, hash, documentId)` / `cancel(id)` answered by
+`begin(metadata) -> chunk(seq, bytes)* -> end`, or `pending`, `not-found`,
+`error`. Both halves run on one port and ignore each other's messages; request
+ids carry a per-instance nonce, because two peers that both start counting at 1
+would otherwise match each other's replies. The server reads its store WITHOUT
+a document id, so a peer can never chain a miss back out through its own
+transport and two linked peers cannot bounce a hash neither holds. `announce`
+is a no-op and `push` refuses by name: pull-on-reference is the model, and a
+push reporting success while moving nothing is worse than no push at all.
+
+**5. The reference-index race is surfaced, not papered over.** A peer
+authorizes a byte read through its OWN reference index, which trails its own
+sync, so the first `not-found` for a freshly synced ref is more likely to mean
+"not indexed yet" than "no such bytes". `not-found` is therefore absorbed as
+lag for a bounded number of attempts (default 3, exponential) before being
+recorded terminally, `pending` retries on the answer's `retryAfterMs`, and the
+status counts keep `waiting` and `notFound` as separate numbers so an operator
+sees which state a reactor is in. Unauthorized and absent are ONE wire answer
+on purpose: distinguishing them would disclose which hashes exist, and the
+requester's correct action is the same bounded retry either way. Adopting a new
+peer re-chases every terminal hash, and the inspector's lever does too.
+
+**6. Monitor wiring** is `descriptor.attachments: { store: "idb" | "memory" }`,
+in-process only for now. `MonitorAttachmentTransport` derives its sources at
+FETCH time -- brokered peers first (an in-realm hop with no network), then the
+Switchboard origins its own gql remotes name -- because a reactor's remotes
+change under it, so adding a remote in the Sync tab is all it takes to make
+that Switchboard's attachments reachable. Answers are combined by what each
+licenses: `data` wins, `pending` outranks `not-found`, `not-found` needs
+unanimity, and "nobody could be reached" rethrows rather than being laundered
+into `not-found`. `linkLocalSync` brokers the byte channel alongside the sync
+one, and a failure there does NOT undo the sync link (operations syncing
+without their bytes is the lazy model's own fallback).
+`ManagedReactor.attachments` exposes the store, the counts, the per-hash
+report, the served-to-peers stats, the live source list and the retry lever;
+the app's Attachments tab renders them, and a reactor without a store says so
+by name instead of rendering zeroes that look like a healthy empty state.
+
+**7. Package boundary**: `@powerhousedao/reactor-attachments/replication` is a
+new entry carrying the realm-neutral byte-movement surface (store, replicator,
+local transport, schema-compiled ref extractor) with no filesystem, S3 or
+Kysely backend, so a browser reactor does not pull an AWS SDK in to replicate
+bytes. `./client` stays deliberately free of the schema compiler, which this
+surface needs.
+
+**Proved end to end** (`packages/reactor-monitor/test/local-attachment-sync.test.ts`):
+two real in-process reactors linked over brokered MessagePorts, A holding the
+bytes, the ref entering A as an operation, sync carrying the STRING to B, and
+B's replicator turning that into bytes -- byte-identical, content-address
+verified, with A's served counts and B's held counts both reporting it. W1.4
+proved the ref string travels; this proves the bytes follow it.
+
+**Owed, and stated rather than implied:**
+- **Live-browser pass**: the IndexedDB backend has no Node coverage (no
+  `fake-indexeddb` in the repo); its contract rows run automatically in any
+  realm that has `indexedDB`. Needed: an in-process monitor reactor with
+  `attachments: { store: "idb" }` holding bytes across a reload, plus the
+  Attachments tab read live.
+- **Worker reactors**: the store config would have to ride the worker construct
+  and the status/peer-link ops cross the RPC boundary (a new host op beside
+  adopt-sync-peer). The tab says so by name rather than rendering an empty
+  panel.
+- **A monitor reactor registers no attachment reference read model**, so it has
+  no durable backlog (`backlogScanned: false`, reported in the tab) and serves
+  peers with the default allow-any-held-hash authorizer. Registering that read
+  model is what makes a monitor reactor resumable AND able to authorize what it
+  serves; the seams for both (`backlog`, `referenceReader`) are already
+  parameters of `buildAttachmentModule`.
+- **`ReactorCapabilities` gained no attachment field.** Byte movement is not a
+  routing input in this roadmap -- no placement decision depends on it -- and
+  the handle's `attachments` presence is the live fact a UI reads. Adding a row
+  is a contract change and should wait until a router needs it.
 
 ### Router client (iterative, stages 1→3)
 - New package; `IReactorClient` facade via Proxy-forwarding + target selection by

@@ -57,10 +57,13 @@ describe("ProvisionPanel", () => {
     fireEvent.click(view.getByRole("button", { name: "Provision" }));
 
     // Sync mode defaults to "local" (brokered); kind was switched to worker.
+    // The attachment store defaults to "none": a reactor that holds no
+    // attachment bytes is the cheapest one and stays the default (W3.4).
     expect(onProvision).toHaveBeenCalledWith({
       name: "alpha",
       kind: "worker",
       syncMode: "local",
+      attachmentStore: "none",
     });
   });
 

@@ -2558,6 +2558,9 @@ importers:
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../reactor
+      '@powerhousedao/reactor-attachments':
+        specifier: workspace:*
+        version: link:../reactor-attachments
       '@powerhousedao/reactor-browser':
         specifier: workspace:*
         version: link:../reactor-browser

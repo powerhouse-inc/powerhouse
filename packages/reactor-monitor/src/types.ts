@@ -23,6 +23,10 @@ import type {
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import type { PGlite } from "@electric-sql/pglite";
+import type {
+  ManagedAttachments,
+  ReactorAttachmentsConfig,
+} from "./attachments/types.js";
 import type { ReactorCapabilities } from "./capabilities.js";
 import type {
   RemoteInspectionInfo,
@@ -140,6 +144,16 @@ export interface ReactorDescriptor {
   sync?: ReactorSyncConfig;
   /** Defaults to `DEFAULT_REACTOR_STORAGE` (`store.ts`): `{ kind: "idb" }`. */
   storage?: ReactorStorageConfig;
+  /**
+   * Attachment byte movement: a local byte store plus a fetch-on-reference
+   * replicator (multi-reactor W3.4). Absent, the reactor holds no attachment
+   * bytes and {@link ManagedReactorBase.attachments} is absent too.
+   *
+   * In-process only for now. A worker reactor would need the store config to
+   * ride the construct and the status/peer ops to cross the RPC boundary; see
+   * the W3.4 section of docs/plans/2026-10-03-multi-reactor.md.
+   */
+  attachments?: ReactorAttachmentsConfig;
   /**
    * Signs submitted actions and synthesized operations. In-process only;
    * defaults to a fresh `LocalSigner` (an ephemeral P-256 key, no Renown).
@@ -259,6 +273,18 @@ export interface ManagedReactorBase {
     peerId: string,
     channelName: string,
   ) => Promise<void>;
+  /**
+   * This reactor's attachment store, replicator status and peer links
+   * (multi-reactor W3.4).
+   *
+   * Present exactly when the descriptor asked for attachments AND this process
+   * built the reactor -- so `in-process` today. A `worker` reactor's store
+   * lives in the worker and its status would have to cross the RPC boundary; a
+   * `remote` reactor's attachment service is that deployment's, reached over
+   * its own HTTP routes rather than through this handle. Absence is the fact a
+   * UI reads: no store means this reactor neither holds nor serves bytes.
+   */
+  readonly attachments?: ManagedAttachments;
   /** Worker lifecycle info; worker-hosted reactors only. */
   adminInfo?: () => Promise<WorkerInspectorInfo>;
   /** Restarts the host; worker-hosted reactors only. */

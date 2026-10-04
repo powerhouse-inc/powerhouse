@@ -44,6 +44,7 @@
   "dependencies": {
     "@electric-sql/pglite": "catalog:",
     "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-attachments": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "document-model": "workspace:*",

@@ -38,6 +38,7 @@ export async function provisionInProcess(
     localSync: descriptor.sync?.local,
     jwtHandler: descriptor.sync?.jwtHandler,
     signer: descriptor.signer,
+    attachments: descriptor.attachments,
   });
 
   const reactorModule = built.module.reactorModule;
@@ -104,6 +105,7 @@ export async function provisionInProcess(
     syncManager,
     events: built.module.eventBus,
     module,
+    ...(built.attachments ? { attachments: built.attachments.managed } : {}),
     ...(localSync ?? {}),
     kill: built.shutdown,
     isShutdown: built.isShutdown,

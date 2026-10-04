@@ -119,6 +119,34 @@ export {
   type BuiltReactor,
 } from "./build-reactor.js";
 
+// Attachment byte movement (multi-reactor W3.4).
+export {
+  attachmentOriginOf,
+  buildAttachmentModule,
+  linkLocalAttachments,
+  MonitorAttachmentTransport,
+  type AdoptAttachmentPeerLink,
+  type AttachmentLinkHandle,
+  type AttachmentModule,
+  type AttachmentServedStats,
+  type BuildAttachmentModuleOptions,
+  type LinkAttachmentsOptions,
+  type ManagedAttachments,
+  type MonitorAttachmentTransportOptions,
+  type ReactorAttachmentsConfig,
+} from "./attachments/index.js";
+// Re-exported so a consumer of this library reads the replicator's reported
+// shapes without also taking a direct dependency on reactor-attachments: the
+// monitor handle is what hands them out.
+export type {
+  AttachmentReplicationEntry,
+  AttachmentReplicationState,
+  AttachmentReplicatorStatus,
+  AttachmentRetryPolicy,
+  IAttachmentStore,
+  IOperationAttachmentRefs,
+} from "@powerhousedao/reactor-attachments/replication";
+
 export {
   runLocalSyncLoad,
   type LoadHarnessDurations,

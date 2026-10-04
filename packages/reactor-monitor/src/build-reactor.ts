@@ -30,9 +30,14 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { childLogger } from "document-model";
 import { Kysely } from "kysely";
+import {
+  buildAttachmentModule,
+  type AttachmentModule,
+} from "./attachments/index.js";
 import { createLocalSigner } from "./signer.js";
 import { DEFAULT_REACTOR_STORAGE, openReactorStore } from "./store.js";
 import { LocalChannelPortRegistry } from "./sync/local-channel-registry.js";
+import type { ReactorAttachmentsConfig } from "./attachments/types.js";
 import { isLocalOnlySync } from "./sync-mode.js";
 import type { ReactorStorageConfig } from "./types.js";
 
@@ -68,6 +73,11 @@ export type BuildReactorOptions = {
   documentModelLoader?: IDocumentModelLoader;
   /** An already-open store; the caller then owns closing it. */
   pg?: PGlite;
+  /**
+   * Attachment byte movement (multi-reactor W3.4). Absent, the reactor gets no
+   * attachment store and no replicator -- the pre-W3.4 behaviour.
+   */
+  attachments?: ReactorAttachmentsConfig;
 };
 
 /** A built reactor plus the handles a host needs to inspect and tear it down. */
@@ -116,6 +126,13 @@ export type BuiltReactor = {
    * transport the reactor refuses (or hide one it serves).
    */
   syncChannelTypes: readonly string[];
+  /**
+   * The attachment store, replicator and byte transport, when the build asked
+   * for them ({@link BuildReactorOptions.attachments}). Absent otherwise, which
+   * is what a handle reads to decide whether this reactor can hold or serve
+   * attachment bytes at all (multi-reactor W3.4).
+   */
+  attachments?: AttachmentModule;
   /** Stops sync, kills the reactor, destroys the kysely instance, closes the store. */
   shutdown: () => Promise<void>;
   /** True once {@link shutdown} has been entered. */
@@ -313,9 +330,40 @@ export async function buildMonitorReactor(
     queryDb: (sql, params) => queryThroughDialect(db, sql, params),
   };
 
+  // Attachment byte movement (W3.4). Built after the reactor, because the
+  // replicator subscribes to the reactor's own bus and the transport reads the
+  // reactor's own sync manager; started last, so a byte fetch cannot race the
+  // boot it would be reacting to.
+  //
+  // No reference backlog is passed: a monitor reactor does not register the
+  // attachment reference read model, so there is nothing durable to re-scan and
+  // `backlogScanned` reports false rather than claiming resumability this
+  // reactor does not have. Registering that read model is the follow-up that
+  // makes a monitor reactor resumable AND lets it authorize what it serves.
+  let attachments: AttachmentModule | undefined;
+  if (options.attachments && rm) {
+    attachments = buildAttachmentModule({
+      config: options.attachments,
+      namespace: options.namespace,
+      eventBus: module.eventBus,
+      documentModelRegistry: rm.documentModelRegistry,
+      ...(rm.syncModule ? { syncManager: rm.syncModule.syncManager } : {}),
+      ...(options.jwtHandler ? { jwtHandler: options.jwtHandler } : {}),
+    });
+    attachments.replicator.start();
+  }
+
   let shuttingDown: Promise<void> | undefined;
   const shutdown = (): Promise<void> => {
     shuttingDown ??= (async () => {
+      // First, so no in-flight byte fetch outlives the store it writes into.
+      if (attachments) {
+        try {
+          await attachments.shutdown();
+        } catch (error) {
+          console.error("[reactor-monitor] attachment shutdown failed:", error);
+        }
+      }
       // The reactor's own kill() does not stop sync: the builder starts the
       // sync manager but registers no closer for it.
       const sync = rm?.syncModule?.syncManager;
@@ -356,6 +404,7 @@ export async function buildMonitorReactor(
     ...(localChannelPorts ? { localChannelPorts } : {}),
     canSelfHeal,
     syncChannelTypes,
+    ...(attachments ? { attachments } : {}),
     shutdown,
     isShutdown: () => shuttingDown !== undefined,
   };

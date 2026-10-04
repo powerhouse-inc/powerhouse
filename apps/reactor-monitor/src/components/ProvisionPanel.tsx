@@ -15,6 +15,15 @@ import { useState, type FormEvent } from "react";
 export type ProvisionSyncMode = "local" | "connect";
 
 /**
+ * Which attachment byte store a built reactor gets (multi-reactor W3.4).
+ *
+ * `none` is the default and means the reactor holds no attachment bytes at
+ * all, which is a legitimate reactor and the cheapest one. `idb` survives a
+ * reload; `memory` does not.
+ */
+export type ProvisionAttachmentStore = "none" | "idb" | "memory";
+
+/**
  * One submission of the provision form. An object rather than positional
  * arguments because the fields are per-kind: `syncMode` configures a reactor
  * this monitor BUILDS, and `remoteUrl` names one it merely attaches to.
@@ -25,6 +34,8 @@ export type ProvisionRequest = {
   readonly syncMode: ProvisionSyncMode;
   /** Required for `remote`: the reactor's GraphQL endpoint. */
   readonly remoteUrl?: string;
+  /** Built reactors only; `none` leaves the reactor without a byte store. */
+  readonly attachmentStore: ProvisionAttachmentStore;
 };
 
 export type ProvisionPanelProps = {
@@ -53,6 +64,8 @@ export function ProvisionPanel({
   const [kind, setKind] = useState<ReactorKind>("in-process");
   const [syncMode, setSyncMode] = useState<ProvisionSyncMode>("local");
   const [remoteUrl, setRemoteUrl] = useState("");
+  const [attachmentStore, setAttachmentStore] =
+    useState<ProvisionAttachmentStore>("none");
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const isRemote = kind === "remote";
@@ -80,6 +93,7 @@ export function ProvisionPanel({
       name: trimmed,
       kind,
       syncMode,
+      attachmentStore,
       ...(isRemote ? { remoteUrl: trimmedUrl } : {}),
     });
     setName("");
@@ -132,6 +146,39 @@ export function ProvisionPanel({
             </select>
           </label>
         )}
+        {isRemote ? null : (
+          <label>
+            Attachment store
+            <select
+              onChange={(e) =>
+                setAttachmentStore(e.target.value as ProvisionAttachmentStore)
+              }
+              value={attachmentStore}
+            >
+              <option value="none">none</option>
+              <option value="idb">idb (survives a reload)</option>
+              <option value="memory">memory (ephemeral)</option>
+            </select>
+          </label>
+        )}
+        {!isRemote && kind === "worker" && attachmentStore !== "none" ? (
+          <p
+            className="rm-note"
+            data-testid="provision-attachments-worker-note"
+          >
+            Attachment byte movement is in-process only for now: a worker
+            reactor would keep its store in the worker and its counts would have
+            to cross the RPC boundary, so this setting is ignored.
+          </p>
+        ) : null}
+        {!isRemote && kind === "in-process" && attachmentStore !== "none" ? (
+          <p className="rm-note" data-testid="provision-attachments-note">
+            Byte replication chases the refs a document model DECLARES as
+            AttachmentRef fields. The default model set declares none, so a
+            store provisioned here stays empty until a model with an attachment
+            field is registered.
+          </p>
+        ) : null}
         {isRemote ? (
           <p className="rm-note" data-testid="provision-remote-note">
             Nothing is built here: the monitor attaches to that reactor and

@@ -24,6 +24,11 @@
       "source": "./src/client.ts",
       "types": "./dist/client.d.ts",
       "import": "./dist/client.js"
+    },
+    "./replication": {
+      "source": "./src/replication-entry.ts",
+      "types": "./dist/replication.d.ts",
+      "import": "./dist/replication.js"
     }
   },
   "sideEffects": false,
