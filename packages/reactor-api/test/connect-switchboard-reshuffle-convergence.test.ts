@@ -163,6 +163,16 @@ async function waitForDocumentAvailable(
   throw new Error(`Timed out waiting for document ${documentId}`);
 }
 
+async function readGlobalIndex(
+  module: InProcessReactorModule,
+): Promise<GlobalEntry[]> {
+  const index = await module.operationIndex.get(DOCUMENT_ID);
+
+  return index.results.filter(
+    (entry) => entry.scope === "global",
+  ) as unknown as GlobalEntry[];
+}
+
 function createDeterministicAddFolderAction(
   actionId: string,
   folderId: string,
@@ -205,6 +215,51 @@ function normalizeForComparison(entries: GlobalEntry[]) {
     operationId: entry.id,
     timestampUtcMs: entry.timestampUtcMs,
   }));
+}
+
+/**
+ * Waits until every reactor's garbage-collected global history agrees, rather
+ * than advancing a fixed amount of fake time and assuming it did.
+ *
+ * The single `advanceTimersByTimeAsync(3000)` this replaces exhausted three
+ * seconds of virtual time in one call, and virtual time is not what the
+ * rebroadcast is waiting on: each hop runs real-async work between its timers
+ * (storage reads and writes, the per-document inbox lane, the deferred
+ * durability flush), and one jump only flushes the microtask queue between
+ * timer callbacks. On an unloaded machine the convergence happened to land
+ * inside those microtask flushes - it needs roughly 450ms of virtual time -
+ * but under load the assertions could run while the last hop was still in
+ * flight, which is why this suite failed in a full-suite run and passed in
+ * isolation.
+ *
+ * Stepping instead interleaves real awaits with the advance, and stops on the
+ * observable condition. Returns on convergence and otherwise simply falls
+ * through on timeout, leaving the test's own assertions to report the
+ * divergence.
+ */
+async function waitForConvergence(
+  modules: InProcessReactorModule[],
+  timeoutMs = 10000,
+): Promise<void> {
+  let elapsedMs = 0;
+
+  while (elapsedMs <= timeoutMs) {
+    const perReactor = await Promise.all(modules.map(readGlobalIndex));
+
+    const reshuffled = perReactor.some((entries) =>
+      entries.some((entry) => entry.skip > 0),
+    );
+    const histories = perReactor.map((entries) =>
+      JSON.stringify(normalizeForComparison(gcGlobalEntries(entries))),
+    );
+
+    if (reshuffled && new Set(histories).size === 1) {
+      return;
+    }
+
+    await advanceAndFlush(WAIT_STEP_MS);
+    elapsedMs += WAIT_STEP_MS;
+  }
 }
 
 describe("Connect-Switchboard reshuffle rebroadcast convergence", () => {
@@ -291,7 +346,7 @@ describe("Connect-Switchboard reshuffle rebroadcast convergence", () => {
     await waitForJobCompletion(connectA.reactor, jobA.id);
     await waitForJobCompletion(connectB.reactor, jobB.id);
 
-    await advanceAndFlush(3000);
+    await waitForConvergence([connectA, connectB, switchboard]);
 
     const [docA, docB, docS] = await Promise.all([
       connectA.reactor.get(DOCUMENT_ID, { branch: "main" }),
