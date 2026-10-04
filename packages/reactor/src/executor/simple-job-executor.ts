@@ -2814,6 +2814,24 @@ export class SimpleJobExecutor implements IJobExecutor {
     };
   }
 
+  /**
+   * Applies a load job's arriving operations, reshuffling the local tail where
+   * their indexes conflict with it.
+   *
+   * Two orderings inside are load-bearing. The reshuffle limiter is charged
+   * AFTER the selection has established that there is something to apply, not
+   * before: a load whose operations the store already holds moves nothing
+   * whatever window its timestamps opened, and costing it first charged a
+   * re-delivery the whole live tail it would have had to re-append if there had
+   * been anything to insert. A gap re-pull after a crash is exactly that
+   * re-delivery, and on a document with a long history the charge exceeds any
+   * bound the limiter could carry.
+   *
+   * The auth stream's monotonic-timestamp check runs AFTER the dedup, never
+   * before: a re-appended auth operation keeps its original timestamp and does
+   * travel, so a re-delivered copy is at or below the local head and would
+   * dead-letter on traffic both replicas agree about.
+   */
   private async executeLoadJob(executing: ExecutingJob): Promise<JobResult> {
     const { job, startTime, indexTxn, stores, signal } = executing;
 
@@ -2949,12 +2967,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       incomingOpsToApply,
     } = selection;
 
-    // Before the reshuffle is costed, not after. A load whose operations the
-    // store already holds moves nothing whatever window its timestamps opened,
-    // and costing it first charged a re-delivery the whole live tail it would
-    // have had to re-append if there had been anything to insert. A gap re-pull
-    // after a crash is exactly that re-delivery, and on a document with a long
-    // history the charge exceeds any bound the limiter could carry.
     if (incomingOpsToApply.length === 0) {
       return {
         job,
@@ -3011,9 +3023,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       if (logicalSkip > skipCount) skipCount = logicalSkip;
     }
 
-    // After the dedup, never before: a re-appended auth operation keeps its
-    // original timestamp and does travel, so a re-delivered copy is at or below
-    // the local head and would dead-letter on traffic both replicas agree about.
     if (monotonicAuthStream) {
       const newest = await stores.operationStore.getStreamLatestTimestamp(
         job.documentId,

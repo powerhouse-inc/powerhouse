@@ -1,6 +1,8 @@
 import type { Operation } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { IOperationIndex } from "../../src/cache/operation-index-types.js";
+import type { IWriteCache } from "../../src/cache/write/interfaces.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../src/core/drive-container-types.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import type { Job } from "../../src/queue/types.js";
@@ -16,6 +18,36 @@ import {
 
 const DOC_ID = "osc-doc";
 const DOC_TYPE = "powerhouse/document-model";
+
+/** The index-transaction members the load path calls, and nothing else. */
+type OperationIndexTxnMock = {
+  createCollection: () => void;
+  addToCollection: () => void;
+  removeFromCollection: () => void;
+  recordGroupReferences: () => void;
+  getMembershipInvalidations: () => unknown[];
+  write: () => void;
+};
+
+/** The operation-index members the load path calls, and nothing else. */
+type OperationIndexMock = {
+  start: () => OperationIndexTxnMock;
+  commit: () => Promise<unknown[]>;
+  find: () => Promise<{ items: unknown[]; total: number }>;
+  getCollectionsForDocuments: () => Promise<Record<string, unknown>>;
+  getGroupReferencers: () => Promise<unknown[]>;
+};
+
+/** The write-cache members the load path calls, and nothing else. */
+type WriteCacheMock = {
+  getState: () => Promise<unknown>;
+  putState: () => void;
+  putRun: () => void;
+  invalidate: () => void;
+  clear: () => void;
+  startup: () => void;
+  shutdown: () => void;
+};
 
 function at(seconds: number): string {
   return new Date(Date.UTC(2026, 0, 1, 0, 0, seconds)).toISOString();
@@ -86,7 +118,7 @@ describe("excessive reshuffle on a re-delivered operation", () => {
   }
 
   function build(maxSkipThreshold: number, globalRevision: number) {
-    const writeCache: any = {
+    const writeCache: WriteCacheMock = {
       getState: vi.fn().mockResolvedValue(document(globalRevision)),
       putState: vi.fn(),
       putRun: vi.fn(),
@@ -95,7 +127,7 @@ describe("excessive reshuffle on a re-delivered operation", () => {
       startup: vi.fn(),
       shutdown: vi.fn(),
     };
-    const operationIndex: any = {
+    const operationIndex: OperationIndexMock = {
       start: vi.fn().mockReturnValue({
         createCollection: vi.fn(),
         addToCollection: vi.fn(),
@@ -115,8 +147,8 @@ describe("excessive reshuffle on a re-delivered operation", () => {
       createTestRegistry([documentModelDocumentModelModule]),
       mockOperationStore,
       createTestEventBus(),
-      writeCache,
-      operationIndex,
+      writeCache as unknown as IWriteCache,
+      operationIndex as unknown as IOperationIndex,
       createMockDocumentMetaCache(),
       createMockCollectionMembershipCache(),
       DEFAULT_DRIVE_CONTAINER_TYPES,
