@@ -281,8 +281,10 @@ oxlint, oxfmt clean).
   **This is the router's input**: placement, which reactor may host a processor
   or fire a workflow trigger, which pair may be linked, and what observability a
   caller may expect of a target are all reads of this table. The `remote` row is
-  derived too (stating today's truth: `inspection: "none"` until W3.2), so the
-  router can be designed against a complete table before stage 3 lands.
+  derived too, so the router could be designed against a complete table before
+  stage 3 landed; since W3.2 a PROVISIONED remote reactor's row is read from
+  what that reactor REPORTS (`remoteReactorCapabilities`), and `inspection` is
+  `"rpc"` rather than the `"none"` this row carried through stage 2.
 - **Capability-aware guard**: `linkLocalSync` now refuses on
   `supportsSyncChannel(capabilities, "local")` rather than on method presence,
   so the declared contract is the thing enforced, in one place; the method check
@@ -367,8 +369,11 @@ Stage 2 complete.
   Switchboard's own state. Heterogeneous bidirectional relay live — motivation 1
   demonstrated. Note: W0.10 cold-boot KnexTimeout reproduced again on first boot
   after dist rebuild (recovered on retry; now a reproducible pattern, not flaky).
-- **W3.2 core: remote inspection** — `IInspector` served over HTTP/GraphQL by
-  reactor-api (authed) so the monitor inspects server reactors.
+- **W3.2 core: remote inspection — DONE 2026-10-04** (see the section below):
+  `IInspector` + `ISyncInspector` served over GraphQL by reactor-api, a
+  `RemoteInspectorClient` implementing both, and `provision({kind:"remote"})`
+  made real. The capability contract's `remote` row now reads
+  `inspection: "rpc"`.
 - **W3.3 workflow placement + hardening**: designated-reactor pinning; enforce or
   remove dead policy knobs; bound the run journal; fix EPIPE boot-loop + 10s
   host-call timeout; "which reactor ran this" in run observability.
@@ -440,6 +445,148 @@ everywhere.
 - **One `sync.local` read**: `isLocalOnlySync()` is strict (only the boolean
   `true`) and validated at the descriptor boundary, shared by the builder that
   acts on it and the contract that describes it.
+
+### W3.2 remote inspection (2026-10-04)
+A Switchboard is now inspectable from the monitor over HTTP, through the SAME
+typed surfaces the two local hosting kinds use -- so every inspector tab works
+against a remote reactor unchanged, and there is no remote-specific inspection
+view anywhere. The `remote` capability row's `inspection: "none"` (the thing
+this work package existed to raise) is now `"rpc"`.
+
+**Server: the `inspection` subgraph** (`packages/reactor-api/src/graphql/inspection/`),
+registered as a core subgraph and mounted at `<basePath>/graphql/inspection`
+(also stitched into the supergraph). Split the way reactor-api's own reactor
+subgraph is: `schema.ts` holds the SDL, `resolvers.ts` the behaviour and all
+access checks (pure over its source, so the whole surface is testable with no
+HTTP server), `source.ts` the reactor wiring, `subgraph.ts` a shell that
+supplies only the request's caller.
+- Reads hang off ONE root field, `Query.inspection`: `info`, `queueState`,
+  `processors`, `catchUpStatus`, `storageHealth`, `remotes`,
+  `remote(remoteName)`, `deadLetters(remoteName, cursor, limit)`,
+  `holds(remoteName, documentId)`. One root field means one supergraph name and
+  one round trip for a tab that wants several reads.
+- Mutations are flat and `inspection`-prefixed: `inspectionPauseQueue`,
+  `...ResumeQueue`, `...RetryProcessor`, `...SweepCatchUp`,
+  `...ValidateDocument`, `...RebuildKeyframes`, `...RebuildSnapshots`,
+  `...TriggerPull`, `...RewindInboxCursor`, `...ResetChannel`,
+  `...RequeueDeadLetter`, `...ClearDeadLetter`, `...QueryDb`.
+- **The inspector is not re-assembled.** `createReactorInspector(module,
+  storageHealth?)` moved into `packages/reactor` (`src/inspector/from-module.ts`)
+  and is now the one definition of which live component answers which op;
+  `reactor-monitor`'s `buildMonitorReactor` and reactor-api's source both call
+  it. The two documented degradations live there: the queue is inspectable only
+  when it is the in-memory one (`IInspectableQueue` is that implementation's
+  debugging surface, not part of `IQueue`), and `storageHealth` is the host's to
+  supply -- a Postgres-backed server reactor has no PGlite-session dimension and
+  reports the healthy, never-recreated default, so one client reads every
+  hosting kind the same way.
+- Flat records are real GraphQL fields; the open-ended payloads (a `Job`, a
+  `DeadLetterRecord`, a `CatchUpStatus`, an integrity result) ride the host's
+  `JSONObject` scalar. Re-declaring the reactor's type graph in SDL would be a
+  second definition that can only drift -- the same call the worker RPC
+  boundary makes by structured-cloning them. The one `Date`
+  (`InspectorProcessorInfo.lastErrorTimestamp`) travels as epoch ms.
+
+**SECURITY POSTURE — three independent tiers**, documented in
+`IReactorInspectionSource` and enforced in one place (`resolvers.ts`):
+1. **Reads**: no host opt-in, but NOT public. Queue jobs and dead letters carry
+   operation payloads, i.e. document content, so every read is gated on the
+   host's own policy-wide reader check (`IAuthorizationService.isSupremeAdmin`,
+   the same one `syncHolds` and the package-management ops gate on) --
+   everyone under `OPEN`, which is what an unauthenticated dev Switchboard
+   already is for every other read, and the ADMINS list under `ADMIN_ONLY` /
+   `DOCUMENT_PERMISSIONS`. Deliberately not a second notion of "admin" that
+   could disagree with the deployment's policy.
+2. **Mutations**: the same check AND `PH_INSPECTION_ADMIN=true` (or
+   `options.inspection.admin`). Default OFF; the refusal names the flag, so an
+   operator can tell "not allowed here" from "not turned on".
+3. **Raw SQL** (`inspectionQueryDb`): `PH_INSPECTION_SQL=true` ON TOP of the
+   admin tier. Default OFF, and never implied by tier 2 -- it is the only field
+   in the schema that is unconstrained read/write access to the store, and a
+   host that wanted operator repair levers has not thereby agreed to expose its
+   database. `sqlEnabled` is forced false without `adminEnabled`.
+   Both flags are read once at construction, so a deployment's posture cannot
+   change under a request. With no inspection source the subgraph is NOT
+   registered at all, rather than present and refusing every field.
+
+**Client: `RemoteInspectorClient`** (`packages/reactor-monitor/src/remote/`)
+implements `IInspector`, `ISyncInspector` and `IReactorDbQuery` over
+`fetch`, plus `listHolds`/`triggerPull`/`info`. A `headers` provider resolved
+per request is the seam for a bearer (the monitor still has no identity
+channel). It knows the far side's tiers from the reported `info` and refuses a
+lever that host does not serve locally, by name, before any request -- the tiers
+are fixed for a deployment's life, so a round trip could only answer the same
+thing more slowly. Decoding restores the reactor's own types: a `Date` rebuilt
+from epoch ms, a JSON `null` dropped back to the absent optional the type
+declares. `RemoteSyncManagerClient` is a full `InspectableSyncManager` whose
+inspection half is real and whose RECONFIGURATION half (`add`, `remove`,
+`bindRemote`, `setPeerManifest`, `agreement`) refuses by name: which peers a
+Switchboard syncs with is that deployment's configuration, not a monitor's to
+rewrite. `list()` is synchronous by contract, so it answers from a cache that
+provisioning seeds and every `inspectRemotes()` refreshes -- the same
+cache-backed-reads shape `SyncManagerProxy` uses across the worker boundary.
+
+**`provision({kind:"remote", remote:{url}})` is real.** It builds nothing: the
+inspection endpoint is derived as `<url>/inspection` (overridable), and the one
+up-front request is the reactor's own `info`, load-bearing twice -- proof of
+life (a URL that is not a reactor fails at provision time with the endpoint in
+the message, not on a later tab render) and the SOURCE of the capability row.
+- **What the remote row reports**, via the new `remoteReactorCapabilities(descriptor, reported)`:
+  `hosting: "remote"`, `storage: {kind:"remote", durable:true}` (not ours to
+  open, close or heal), `processors: true` (a server reactor registers its own
+  factories in its own realm), `inspection: "rpc"`, `selfHeal: false`, and the
+  two fields READ FROM THE REPORT -- `workflows` (whether the engine is actually
+  composed into that host; the descriptor-only row says `true` for every remote,
+  which would have a router place a workflow drive on a Switchboard that never
+  composed it) and `syncChannels` (a Switchboard-scheme reactor routes
+  `polling`, not the `gql` a URL suggests, so the add-remote form is correctly
+  hidden for it). `ReportedCapabilityFacts` is required-together, like
+  `BuiltCapabilityFacts`, and is its own type because wire-reported facts and
+  built-and-read facts are categorically different. `descriptorMismatch` has no
+  analog: nothing was built from this descriptor.
+- **What is NOT wired, stated rather than faked** (`remote/unwired.ts`): the
+  handle's `client` and `events` throw by name, saying what to use instead
+  (a GraphQL reactor client for documents; the surface is request/response, so
+  nothing streams the far side's bus). A silently inert stub would read green
+  while nothing works -- the exact failure mode this initiative exists to stamp
+  out. Document ops over a remote handle are deliberately out of scope for
+  W3.2: inspection-first.
+
+**Monitor UI**: kind `remote` + a GraphQL URL field in the provision form (the
+sync-mode select is swapped out -- nothing is built here); the Overview tab
+renders the capability grid beside a "Remote host" block with the endpoint, the
+server's own store class and the two tier flags; and `AdminGate` turns the
+reported tiers into per-tab gating -- pause/resume, processor retry, catch-up
+sweep, the integrity ops and every sync repair lever are DISABLED with the
+reason when `adminEnabled` is false, the DB tab is replaced by its reason when
+`sqlEnabled` is false, the brokered link panel is absent (a remote reactor
+cannot be handed a MessagePort), and the Events tab says why it is empty. Every
+locally hosted reactor defaults to allowed, so no local tab had to learn about
+any of this.
+
+**Tests**: `packages/reactor-api/test/inspection-subgraph.test.ts` (30) runs the
+real SDL and resolvers against a real in-process reactor module -- each read's
+typed shape, every mutating op refusing without the flag and succeeding with it,
+raw SQL refusing under the admin tier alone, reads refused under `ADMIN_ONLY`,
+the booted API actually REGISTERING the subgraph (`initializeAndStartAPI` +
+`executeSubgraphQuery`), and a pinned list of root field names so a rename is a
+visible diff next to the client's documents.
+`packages/reactor-monitor/test/remote-inspection.test.ts` (25) covers the client
+against a stand-in server: variables, decoding, the local tier refusals, the
+sync manager's cache and its refusals, and the whole provisioning path.
+`apps/reactor-monitor/src/RemoteReactor.test.tsx` (6) drives the UI.
+**Known seam**: no package dependency links the server's SDL to the client's
+hand-written documents (reactor-monitor is a browser package; reactor-api is a
+server one), exactly as `reactor-browser` already holds documents against
+reactor-api's schema. The pinned field-name test is the drift guard; the live
+pass is the end-to-end proof.
+
+**Live pass still owed**: the monitor attaching to the real vetra Switchboard --
+read tabs green (queue/processors/catch-up/storage health, and the Sync tab
+showing that Switchboard's own `polling` remotes with cursors and mailbox
+depths), the Overview grid reporting `polling` + `workflows` as that host
+actually has them, the levers disabled with their reason by default, and the
+same levers live after a restart with `PH_INSPECTION_ADMIN=true`.
 
 ### Router client (iterative, stages 1→3)
 - New package; `IReactorClient` facade via Proxy-forwarding + target selection by
