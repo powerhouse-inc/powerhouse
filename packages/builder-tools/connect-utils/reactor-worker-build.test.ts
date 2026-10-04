@@ -21,6 +21,7 @@ import {
   REACTOR_WORKER_ENTRY,
   resolveOwnPackageVersion,
   resolveWorkspacePackageDir,
+  upstreamWorkerPackages,
   vendorRelativePath,
   workerSafeVendorImports,
 } from "./reactor-worker-build.js";
@@ -188,6 +189,77 @@ describe("distDirFingerprint", () => {
   it("is a stable non-crashing string for a missing directory", () => {
     expect(distDirFingerprint(join(dir, "does-not-exist"))).toBe("unreadable");
   });
+
+  it("bounds itself to the same names however readdir orders them", () => {
+    const bounded = mkdtempSync(join(tmpdir(), "ph-dist-bound-test-"));
+    try {
+      for (const name of ["a.js", "m.js", "z.js"]) {
+        writeFileSync(join(bounded, name), "export const x = 1;\n");
+      }
+      const fingerprint = distDirFingerprint(bounded, 2);
+      expect(fingerprint).toContain("a.js:");
+      expect(fingerprint).toContain("m.js:");
+      expect(fingerprint).not.toContain("z.js:");
+
+      // A file beyond the bound cannot move what the bound kept.
+      writeFileSync(join(bounded, "zz.js"), "export const y = 1;\n");
+      expect(distDirFingerprint(bounded, 2)).toBe(fingerprint);
+    } finally {
+      rmSync(bounded, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("upstreamWorkerPackages", () => {
+  let dir: string;
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), "ph-upstream-pkgs-test-"));
+    mkdirSync(join(dir, "node_modules/@powerhousedao/connect"), {
+      recursive: true,
+    });
+    writeFileSync(
+      join(dir, "node_modules/@powerhousedao/connect/package.json"),
+      JSON.stringify({
+        name: "@powerhousedao/connect",
+        version: "1.0.0",
+        dependencies: {
+          "@powerhousedao/shared": "workspace:*",
+          "@renown/sdk": "workspace:*",
+          react: "^19.0.0",
+        },
+      }),
+    );
+  });
+
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("derives the list from the installed connect's scoped dependencies", () => {
+    const names = upstreamWorkerPackages(dir);
+    expect(names).toContain("@powerhousedao/shared");
+    expect(names).toContain("@renown/sdk");
+    expect(names).not.toContain("react");
+  });
+
+  it("always covers the reactor packages the entry imports by name", () => {
+    const names = upstreamWorkerPackages(dir);
+    expect(names).toContain("@powerhousedao/reactor");
+    expect(names).toContain("@powerhousedao/reactor-browser");
+  });
+
+  it("falls back to the reactor pair when connect is not installed", () => {
+    const bare = mkdtempSync(join(tmpdir(), "ph-upstream-pkgs-bare-"));
+    try {
+      expect(upstreamWorkerPackages(bare)).toEqual([
+        "@powerhousedao/reactor",
+        "@powerhousedao/reactor-browser",
+      ]);
+    } finally {
+      rmSync(bare, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("computeSourceDigest", () => {
@@ -244,6 +316,45 @@ describe("computeSourceDigest", () => {
       expect(() => computeSourceDigest(bareDir, entryPath)).not.toThrow();
     } finally {
       rmSync(bareDir, { recursive: true, force: true });
+    }
+  });
+
+  /**
+   * The bundle pulls @renown/sdk, @powerhousedao/shared and the vetra packages
+   * out of node_modules too, and the hardcoded reactor pair left all of them
+   * able to be rebuilt behind a cache hit.
+   */
+  it("changes when a package covered only via connect's deps is rebuilt", () => {
+    const dir = mkdtempSync(join(tmpdir(), "ph-source-digest-derived-"));
+    try {
+      const entry = join(dir, "entry.js");
+      writeFileSync(entry, "self.onconnect = () => {};\n");
+      mkdirSync(join(dir, "node_modules/@powerhousedao/connect"), {
+        recursive: true,
+      });
+      writeFileSync(
+        join(dir, "node_modules/@powerhousedao/connect/package.json"),
+        JSON.stringify({
+          name: "@powerhousedao/connect",
+          version: "1.0.0",
+          dependencies: { "@renown/sdk": "workspace:*" },
+        }),
+      );
+      const sdkDist = join(dir, "node_modules/@renown/sdk/dist");
+      mkdirSync(sdkDist, { recursive: true });
+      writeFileSync(join(sdkDist, "index.js"), "export const s = 1;\n");
+
+      const before = computeSourceDigest(dir, entry);
+      writeFileSync(join(sdkDist, "index.js"), "export const s = 2;\n");
+      utimesSync(
+        join(sdkDist, "index.js"),
+        new Date(Date.now() + 5000),
+        new Date(Date.now() + 5000),
+      );
+
+      expect(computeSourceDigest(dir, entry)).not.toBe(before);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });

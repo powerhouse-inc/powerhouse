@@ -181,18 +181,55 @@ interface WorkerBundleMeta {
 }
 
 /**
- * Workspace packages whose BUILT dist shapes the worker bundle's output even
- * when connect's own dist/reactor.worker.js entry file did not change: that
- * entry is a library artifact whose bare imports (`@powerhousedao/reactor`,
- * `@powerhousedao/reactor-browser`) this build resolves through
- * node_modules at BUILD time, so a rebuilt reactor/reactor-browser dist
- * changes the bundle output without touching the entry file's own
- * size/mtime.
+ * Fallback list of packages whose BUILT dist shapes the worker bundle's output,
+ * used only when the installed Connect's package.json cannot be read (see
+ * {@link upstreamWorkerPackages}).
  */
-const UPSTREAM_WORKER_PACKAGES = [
+const FALLBACK_UPSTREAM_WORKER_PACKAGES = [
   "@powerhousedao/reactor",
   "@powerhousedao/reactor-browser",
-] as const;
+];
+
+/** Dependency scopes whose installed dist can change the bundle's output. */
+const UPSTREAM_SCOPES = ["@powerhousedao/", "@renown/"];
+
+/**
+ * Packages whose BUILT dist shapes the worker bundle's output even when
+ * connect's own dist/reactor.worker.js entry file did not change.
+ *
+ * That entry is a library artifact whose bare imports this build resolves
+ * through node_modules at BUILD time, so a rebuilt dist anywhere in its
+ * closure changes the bundle output without touching the entry file's own
+ * size/mtime. The list is DERIVED from the installed Connect's own
+ * dependencies rather than hardcoded: the bundle pulls `@renown/sdk`,
+ * `@powerhousedao/powerhouse-vetra-packages` and `@powerhousedao/shared` out
+ * of node_modules too, and a hardcoded pair left every one of those able to be
+ * rebuilt behind a cache hit. Connect's dependency list is the cheap stand-in
+ * for the resolved bundle graph: every workspace package the worker can reach
+ * is reachable through it, and a package not in the bundle only costs a readdir.
+ */
+export function upstreamWorkerPackages(dirname: string): string[] {
+  const connectDir = resolveWorkspacePackageDir(
+    dirname,
+    "@powerhousedao/connect",
+  );
+  if (!connectDir) return [...FALLBACK_UPSTREAM_WORKER_PACKAGES];
+  let meta: { dependencies?: Record<string, string> };
+  try {
+    meta = JSON.parse(
+      readFileSync(join(connectDir, "package.json"), "utf8"),
+    ) as { dependencies?: Record<string, string> };
+  } catch {
+    return [...FALLBACK_UPSTREAM_WORKER_PACKAGES];
+  }
+  const names = Object.keys(meta.dependencies ?? {}).filter((name) =>
+    UPSTREAM_SCOPES.some((scope) => name.startsWith(scope)),
+  );
+  for (const name of FALLBACK_UPSTREAM_WORKER_PACKAGES) {
+    if (!names.includes(name)) names.push(name);
+  }
+  return names.sort();
+}
 
 /**
  * This module's own installed version, read by walking up from its file to
@@ -261,18 +298,24 @@ export function resolveWorkspacePackageDir(
  * (an entry point) changes size or mtime. Bounded (`maxFiles`) so a
  * pathological directory cannot make this slow — deliberately not a
  * full-tree hash.
+ *
+ * The names are sorted BEFORE the bound is applied, so the subset the bound
+ * keeps is the same subset on every run: readdir order is unspecified, and
+ * truncating it first made the fingerprint of a directory past the bound a
+ * function of whatever order the filesystem happened to report.
  */
 export function distDirFingerprint(dir: string, maxFiles = 1000): string {
   try {
-    const entries = readdirSync(dir, { withFileTypes: true })
+    const names = readdirSync(dir, { withFileTypes: true })
       .filter((e) => e.isFile())
-      .slice(0, maxFiles);
-    return entries
-      .map((e) => {
-        const stat = statSync(join(dir, e.name));
-        return `${e.name}:${stat.size}:${Math.round(stat.mtimeMs)}`;
+      .map((e) => e.name)
+      .sort();
+    return names
+      .slice(0, maxFiles)
+      .map((name) => {
+        const stat = statSync(join(dir, name));
+        return `${name}:${stat.size}:${Math.round(stat.mtimeMs)}`;
       })
-      .sort()
       .join("|");
   } catch {
     return "unreadable";
@@ -281,9 +324,10 @@ export function distDirFingerprint(dir: string, maxFiles = 1000): string {
 
 // Digest of everything that shapes the output: the connect dist the entry
 // comes from (version + entry mtime/size cover a rebuild in place), the
-// upstream workspace packages the entry's bare imports resolve into at build
-// time (dist fingerprint — covers a reactor/reactor-browser rebuild that
-// never touched connect's own dist), the vendor the externals point at (its
+// upstream packages the entry's bare imports resolve into at build time
+// (dist fingerprint, over the list {@link upstreamWorkerPackages} derives —
+// covers an upstream rebuild that never touched connect's own dist), the
+// vendor the externals point at (its
 // import-map.json changes whenever the vendor is rebuilt), NODE_ENV, the
 // build-worker source, and the builder-tools version, so a logic change
 // (in either the inline build-worker script or this module more broadly)
@@ -316,7 +360,7 @@ export function computeSourceDigest(
   } catch {
     h.update("entry:unstatable\n");
   }
-  for (const pkg of UPSTREAM_WORKER_PACKAGES) {
+  for (const pkg of upstreamWorkerPackages(dirname)) {
     const pkgDir = resolveWorkspacePackageDir(dirname, pkg);
     h.update(
       `${pkg}:${pkgDir ? distDirFingerprint(join(pkgDir, "dist")) : "unresolved"}\n`,
