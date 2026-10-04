@@ -238,6 +238,20 @@ dead-lettered doc's ops (run-4 renames never applied). See bug doc run-4 section
 - **W1.5 workflows assertion**: workflow documents sync as documents; no browser
   reactor fires triggers.
 
+### W1.3 milestone achieved (2026-10-04, live, screenshots delivered)
+Two browser SharedWorker reactors (alpha/beta, provisioned local-mode in the monitor
+UI) synced a drive DIRECTLY over a brokered-MessagePort LocalChannel — no Switchboard,
+no GraphQL, no polling. Linked via the UI panel; both Sync tabs showed the local
+remote live. Measured (Stage P baselines, small-doc ops): alpha→beta first-op
+propagation 105ms; beta→alpha 87ms; 50-op burst created on A in 4.9s (~10 ops/s
+local durable write — flush cost, Stage P item) and fully arrived on B 625ms after
+creation finished. The review-fix UX verified live: gql add-remote correctly
+disabled on local-only reactors with explanation. Remaining W1.3 work: the load
+harness proper (bigger N, memory/DB-size sampling, recorded baselines) + W1.4
+attachments-refs assertions + W1.5 workflow assertions. Browser-pass items from
+W1.1/W1.2 implicitly verified by the live link: transferred MessagePort delivery,
+browser messagePortTransport branch, adopt-sync-peer end-to-end.
+
 ### Stage 2 — third reactor, in-process (no-worker fallback)
 - Capability descriptor becomes explicit (hosting kind, processors?, workflows?,
   storage class, inspection transport). Monitor renders capability differences.
