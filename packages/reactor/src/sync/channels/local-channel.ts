@@ -89,6 +89,8 @@ export class LocalChannel implements IChannel {
   private failureCount = 0;
   private lastSuccessUtcMs?: number;
   private lastFailureUtcMs?: number;
+  /** The highest inbox ack already reported to the peer; only an advance re-posts. */
+  private lastPostedAckOrdinal = 0;
   private readonly connectionStateCallbacks =
     new Set<ConnectionStateChangeCallback>();
 
@@ -148,11 +150,22 @@ export class LocalChannel implements IChannel {
     });
   }
 
+  /**
+   * Loads the persisted cursors and initialises both mailboxes BEFORE
+   * subscribing to the transport, so no inbound message is ever processed
+   * against a zeroed mailbox. A frame processed before `inbox.init` runs would
+   * be added below an ack of 0, and the init that followed would overwrite the
+   * ack while leaving that frame pinning the floor -- dragging the live ack
+   * below the durable cursor and re-loading already-applied ops as fresh jobs.
+   *
+   * Loading first is safe because both the browser MessagePort and the
+   * node:worker_threads port buffer messages posted before a listener attaches:
+   * a peer frame sent during the cursor load is delivered, in order, the moment
+   * the listener is attached here -- never lost, and never applied before the
+   * ack floor is known. Nothing needs the subscription during the load, since
+   * this side announces itself only once init completes.
+   */
   async init(): Promise<void> {
-    this.unsubscribeTransport = this.port.onMessage((data) =>
-      this.receive(data),
-    );
-
     const cursors = await this.cursorStorage.list(this.remoteName);
     const inboxOrdinal =
       cursors.find((c) => c.cursorType === "inbox")?.cursorOrdinal ?? 0;
@@ -162,6 +175,11 @@ export class LocalChannel implements IChannel {
     this.outbox.init(outboxOrdinal);
     this.cursorWriters.inbox.persisted = inboxOrdinal;
     this.cursorWriters.outbox.persisted = outboxOrdinal;
+    this.lastPostedAckOrdinal = inboxOrdinal;
+
+    this.unsubscribeTransport = this.port.onMessage((data) =>
+      this.receive(data),
+    );
 
     this.sendHello();
   }
@@ -274,7 +292,16 @@ export class LocalChannel implements IChannel {
     this.rePushUnacked();
   }
 
+  /**
+   * Ingests a push into the inbox, dropping operations the inbox has already
+   * acked. A reconnecting peer may re-push durable ops before it hears this
+   * side's ack; adding one back as a fresh sync job would transiently drag the
+   * ack floor below the persisted cursor, so a batch entirely at or below the
+   * ack is skipped. A frame whose envelopes are malformed never reaches here --
+   * {@link isLocalWireMessage} rejects it and {@link receive} records a failure.
+   */
   private receivePush(message: LocalPushMessage): void {
+    const ackFloor = this.inbox.ackOrdinal;
     const syncOps: SyncOperation[] = [];
     for (const envelope of message.envelopes) {
       const converted = envelopesToSyncOperations(
@@ -282,6 +309,7 @@ export class LocalChannel implements IChannel {
         this.remoteName,
       );
       for (const syncOp of converted) {
+        if (this.highestOrdinal(syncOp) <= ackFloor) continue;
         syncOp.transported();
         syncOps.push(syncOp);
       }
@@ -461,6 +489,15 @@ export class LocalChannel implements IChannel {
         );
       }
     }
+  }
+
+  /** The greatest operation ordinal a sync op carries, or 0 when it carries none. */
+  private highestOrdinal(syncOp: SyncOperation): number {
+    let highest = 0;
+    for (const op of syncOp.operations) {
+      if (op.context.ordinal > highest) highest = op.context.ordinal;
+    }
+    return highest;
   }
 
   /** The lowest ordinal of an outbox item the peer has not applied. */
