@@ -151,6 +151,17 @@ that leaves nothing behind can be counted at all:
   a FAILED run naming the loop — visible, and rerunnable once the cause is
   fixed, instead of a reactor that crashes on every boot and says nothing.
 
+The **count** and the **claim** are deliberately different writes. Counting is
+its own committed transaction, because a delivery that leaves nothing behind
+has to be countable. Claiming is `run_id`, set under a `WHERE run_id IS NULL`
+guard in the SAME transaction as the run row: the guard takes the row's lock,
+so of two concurrent deliveries of one operation the second blocks until the
+first commits and then matches no row — exactly one delivery fires, and a crash
+in between rolls the claim back with the run it failed to journal. Were the
+bump to ride along inside the claim transaction, a run insert that takes the
+process down would roll the count back too and the budget could never reach its
+limit.
+
 Log writes on the piece-log and run-failure paths are truncated before the
 write (`MAX_LOG_LINE_CHARS`): a piece error carrying an HTML error page is a
 multi-megabyte write to a pipe that may be blocked, and bounding the write is

@@ -96,6 +96,68 @@ describe("pending runs in the journal", () => {
     expect(run?.workflow_version).toBe(7);
   });
 
+  // The claim and the run commit together, so two concurrent deliveries of one
+  // operation cannot both fire it: the loser sees the winner's run id.
+  it("claims the dedupe key and journals the run together", async () => {
+    const now = new Date().toISOString();
+    const options = { workflowId: "wf-atomic", triggerKind: "document-event" };
+
+    const [first, second] = await Promise.all([
+      store.claimAndEnqueueRun("op:race", 60_000, now, options),
+      store.claimAndEnqueueRun("op:race", 60_000, now, options),
+    ]);
+
+    const outcomes = [first.outcome, second.outcome].sort();
+    expect(outcomes).toEqual(["claimed", "duplicate"]);
+    const winner = first.outcome === "claimed" ? first : second;
+    if (winner.outcome !== "claimed") throw new Error("expected a claim");
+
+    // Exactly one run, and the dedupe row points at it.
+    const runs = await store.listRuns("wf-atomic");
+    expect(runs.map((run) => run.id)).toEqual([winner.runId]);
+    const db =
+      await relationalDb.createNamespace<WorkflowRuntimeDB>("workflow_runtime");
+    const row = await db
+      .selectFrom("trigger_dedupe")
+      .selectAll()
+      .where("workflow_id", "=", "wf-atomic")
+      .executeTakeFirstOrThrow();
+    expect(row.run_id).toBe(winner.runId);
+  });
+
+  // And the other half of the same invariant: a run insert that throws takes
+  // the run_id back with it, so the claim never holds a run that is not there.
+  it("rolls the claim back with a run that failed to journal", async () => {
+    const now = new Date().toISOString();
+    const options = {
+      workflowId: "wf-rollback",
+      triggerKind: "document-event",
+    };
+    const insert = vi
+      .spyOn(
+        store as unknown as { insertPendingRun: () => Promise<void> },
+        "insertPendingRun",
+      )
+      .mockRejectedValueOnce(new Error("crash between claim and enqueue"));
+
+    await expect(
+      store.claimAndEnqueueRun("op:rb", 60_000, now, options),
+    ).rejects.toThrow("crash between claim and enqueue");
+
+    const db =
+      await relationalDb.createNamespace<WorkflowRuntimeDB>("workflow_runtime");
+    const row = await db
+      .selectFrom("trigger_dedupe")
+      .selectAll()
+      .where("workflow_id", "=", "wf-rollback")
+      .executeTakeFirstOrThrow();
+    // The attempt is counted (the budget needs it) but no run is claimed.
+    expect(row.run_id).toBeNull();
+    expect(row.attempts).toBe(1);
+    expect(await store.listRuns("wf-rollback")).toEqual([]);
+    insert.mockRestore();
+  });
+
   it("retries a claim whose run never landed, up to the crash budget", async () => {
     const now = new Date().toISOString();
     const options = { workflowId: "wf-claim", triggerKind: "document-event" };

@@ -1330,11 +1330,24 @@ export class WorkflowRunStore {
    *   EPIPE boot loop (backlog item 5), and a budget is what turns it from an
    *   unbootable reactor into one FAILED run naming the loop.
    *
-   * The attempt is counted in its OWN committed transaction, BEFORE the risky
-   * work, which is the only way a crash that leaves nothing behind can be
-   * counted at all. The claim and the run row then go together, so a claim
-   * that holds a run id is never a claim without one — and a claim WITHOUT a
-   * run id is retried rather than lost, up to the budget.
+   * Two writes, and which one is which matters:
+   *
+   * - The **attempt count** is bumped in its own committed transaction,
+   *   BEFORE the risky work. That is the only way a delivery that leaves no
+   *   run behind can be counted at all, which is what the budget needs. The
+   *   counter is never a claim signal — it only decides the budget.
+   * - The **claim** is `run_id`, and it is set in the SAME transaction as the
+   *   run row, under a `WHERE run_id IS NULL` guard. The guard takes the
+   *   row's lock, so of two concurrent deliveries of one operation the second
+   *   blocks until the first commits and then matches no row: exactly one
+   *   delivery wins, and the run it journaled is committed with the claim. A
+   *   crash in between rolls BOTH back, so a claim that holds a run id always
+   *   holds a run — and a claim without one is retried, up to the budget.
+   *
+   * Counting and claiming are deliberately not the same write: if the bump
+   * rode along inside the claim transaction, a run insert that takes the
+   * process down would roll the count back with it and the budget could never
+   * reach its limit — the boot loop it exists to bound.
    */
   async claimAndEnqueueRun(
     dedupeKey: string,
@@ -1354,15 +1367,22 @@ export class WorkflowRunStore {
     }
 
     const id = randomUUID();
-    await this.db.transaction().execute(async (trx) => {
-      await this.insertPendingRun(trx, id, options);
-      await trx
+    const claimed = await this.db.transaction().execute(async (trx) => {
+      // RETURNING, not a row count: the knex-backed dialect reports none.
+      const won = await trx
         .updateTable("trigger_dedupe")
         .set({ run_id: id })
         .where("workflow_id", "=", options.workflowId)
         .where("dedupe_key", "=", dedupeKey)
-        .execute();
+        .where("run_id", "is", null)
+        .returning("dedupe_key")
+        .executeTakeFirst();
+      if (won === undefined) return false;
+      await this.insertPendingRun(trx, id, options);
+      return true;
     });
+    // The read this lost to is committed, so it holds the winner's run.
+    if (!claimed) return { outcome: "duplicate" };
     this.runsInFlight.add(id);
     return { outcome: "claimed", runId: id };
   }
@@ -1372,7 +1392,9 @@ export class WorkflowRunStore {
    * journaled for it.
    *
    * Committed on its own: the point is to leave a trace even when whatever
-   * comes next takes the process down.
+   * comes next takes the process down. It is NOT a claim — the row it writes
+   * holds no run id, and {@link claimAndEnqueueRun} is what decides, under a
+   * lock, which delivery gets to fill it in.
    */
   async recordFireAttempt(
     workflowId: string,
