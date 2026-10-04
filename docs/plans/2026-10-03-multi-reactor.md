@@ -1037,3 +1037,25 @@ days. 8. Sync mailbox state invisible over RPC (W0.5). 9. **PGlite aborted trans
   environment (vetra on distyra-test: studio 6452 / reactor 7452 / connect 2452) and
   does all browser verification.
 - Client checkpoints: every stage exit demo + any design decision flagged above.
+
+---
+
+## Stage 4 — Connect integration (WP-B/C/E) — CODE COMPLETE 2026-10-05
+
+Per the 2026-10-05 user decisions (router behind a flag). Built by Opus fleet, through the /code-review gate, all findings fixed.
+
+**Shipped on feat/multi-reactor:**
+- Flag `connect.instance.multiReactor` (default **false**) + `?multiReactor=true` / `localStorage` override, via a shared `runtime-flag.ts` helper (try/catch-guarded localStorage for private-mode browsers). `reactor-worker-flag.ts` refactored onto the same helper.
+- **WP-B** inert local-channel factory, **gated behind the flag on BOTH the main-thread and worker paths** via a single shared `configureConnectChannelScheme()` so the two cannot drift. Flag-off builds the bare CONNECT gql scheme (factory types `[gql]`, no CompositeChannelFactory) — provably unchanged from pre-Stage-4. Flag reaches the worker through `WorkerConstruct.multiReactor` (threaded like `featureFlags`; not part of the version fingerprint, so flag-off worker build is byte-identical).
+- **WP-C** adopt/remove-sync-peer handlers on the worker ReactorHost; `removeLocalPeer` frees the port in a `finally` (no leak on a failing remove). Inert until a port is brokered.
+- **WP-E** flag-on builds a `RoutingReactorClient` over `[connect-local, switchboard-remote]`, each `withOwnershipGuard`; `window.ph.reactorClient` keeps its IReactorClient shape. Remote backend = `GraphQLReactorClient` at the prefix-preserving gateway URL (`getSwitchboardGatewayUrlFromDriveUrl`), adapted to full IReactorClient via a by-name-throwing Proxy (honest degradation; `then`/symbol guarded so it's never mistaken for a thenable).
+
+**Tests:** connect 333 (+14, incl. flag-off=`[gql]`/flag-on=`[gql,local]` on both paths, worker flag-threading, remove-leak, thenable-guard, localStorage-throw, subpath URL), reactor-router 83. tsc/lint clean. apps/connect dist NOT rebuilt by agents.
+
+**Review findings (all fixed):** #1 (critical) composite was unconditional → gated; #2 gateway URL dropped reverse-proxy prefix; #3 remove-peer port leak; #4 drives-proxy thenable trap; #5 copy-pasted error string; #6 flag-module clone + unguarded localStorage; #7 optional→required config field.
+
+**Known follow-up (documented, not a regression):** the remote backend delegates only the 6 `IReactorBrowserClient` methods (get/subscribe/execute/getOperations/create/deleteDocument); drive choreography, find, relationships, jobs, batches throw by-name until a later pass. So the flag-on remote path exercises document reads/writes/subscriptions, not full drive CRUD.
+
+Commits: f2b5fa2aad, 364808ab47, e6e77bb672, 3d988dafa8, 608487c9cc (initial); 0b8ed3d27f, 20aa537d17, 52c2bd9e23, 7f38a71c03 (review fixes).
+
+**Next:** live pass (flag-off = normal Connect; flag-on = RoutingReactorClient over two backends) + screenshots, then Stage P (performance).
