@@ -93,6 +93,23 @@ export {
   type XhrUploadTransportOptions,
 } from "./switchboard/index.js";
 export { NullAttachmentTransport } from "./null-attachment-transport.js";
+// The browser-resident attachment store (multi-reactor W3.4). On the client
+// entry because that is the realm it exists for: a tab or SharedWorker reactor
+// replicating bytes into IndexedDB.
+export {
+  collectStream,
+  DEFAULT_IDB_DATABASE,
+  IDB_BLOB_STORE,
+  IDB_RECORD_STORE,
+  IDB_STATUS_INDEX,
+  IdbAttachmentBackend,
+  LocalAttachmentStore,
+  MemoryAttachmentBackend,
+  streamFromBytes,
+  type IdbAttachmentBackendOptions,
+  type ILocalAttachmentBackend,
+  type LocalAttachmentRecord,
+} from "./storage/local/index.js";
 export {
   DEFAULT_PROGRESS_THROTTLE_MS,
   progressFraction,

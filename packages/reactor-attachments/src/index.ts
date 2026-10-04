@@ -89,6 +89,20 @@ export {
   type XhrUploadTransportOptions,
 } from "./switchboard/index.js";
 export { NullAttachmentTransport } from "./null-attachment-transport.js";
+export {
+  collectStream,
+  DEFAULT_IDB_DATABASE,
+  IDB_BLOB_STORE,
+  IDB_RECORD_STORE,
+  IDB_STATUS_INDEX,
+  IdbAttachmentBackend,
+  LocalAttachmentStore,
+  MemoryAttachmentBackend,
+  streamFromBytes,
+  type IdbAttachmentBackendOptions,
+  type ILocalAttachmentBackend,
+  type LocalAttachmentRecord,
+} from "./storage/local/index.js";
 export { AttachmentBuilder } from "./attachment-builder.js";
 export type { AttachmentBuildResult } from "./attachment-builder.js";
 export {
