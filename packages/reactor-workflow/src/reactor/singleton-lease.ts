@@ -20,7 +20,7 @@
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import { childLogger, type ILogger } from "document-model";
 import { hostname } from "node:os";
-import { randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 
 const logger = childLogger(["workflow", "runtime", "singleton"]);
 
@@ -33,8 +33,14 @@ const logger = childLogger(["workflow", "runtime", "singleton"]);
  * immediately instead of waiting out {@link SINGLETON_LEASE_TTL_MS}, which is
  * exactly the rolling-deploy overlap the dead lease columns were written for.
  *
- * Unset, the owner is `<hostname>/<pid>/<random>` — unique per process, so a
- * second replica is refused, and a restart waits for the lease to expire.
+ * Unset, the owner is derived from a STABLE identity — the hostname and a
+ * fingerprint of the journal's own storage location ({@link
+ * AcquireSingletonOptions.storageId}) — not from the pid and a random suffix.
+ * A random per-process owner meant every unclean kill locked the next boot out
+ * for the whole {@link SINGLETON_LEASE_TTL_MS}: the dead process's lease was
+ * nobody's to re-claim, and `release()` never ran. One deployment slot
+ * restarting is the common case and it has to be instant; a genuine second
+ * replica still differs, by hostname or by the journal it points at.
  */
 export const WORKFLOW_SINGLETON_OWNER_ENV = "PH_WORKFLOWS_SINGLETON_OWNER";
 
@@ -97,8 +103,18 @@ export interface WorkflowSingletonLease {
 export interface AcquireSingletonOptions {
   relationalDb: IRelationalDb;
   logger?: ILogger;
-  /** Defaults to {@link WORKFLOW_SINGLETON_OWNER_ENV}, then a per-process id. */
+  /** Defaults to {@link WORKFLOW_SINGLETON_OWNER_ENV}, then
+   * `<hostname>/<storageId fingerprint>`. */
   owner?: string;
+  /**
+   * Where this host's journal lives — a Postgres URL, an absolute PGlite
+   * directory — as the stable half of the default owner name. Hashed, so a
+   * connection string's credentials never reach the lease row or a log line.
+   *
+   * It is what separates two hosts that share a hostname but not a journal,
+   * and it is stable across restarts, which is the whole point.
+   */
+  storageId?: string;
   ttlMs?: number;
   heartbeatMs?: number;
   /** Called when a heartbeat finds the lease taken: this process is no longer
@@ -108,15 +124,36 @@ export interface AcquireSingletonOptions {
   env?: Record<string, string | undefined>;
 }
 
-/** The owner name this process claims under. */
+/**
+ * The owner name this process claims under.
+ *
+ * `<hostname>/<storage fingerprint>`, so it is the same name on every boot of
+ * one deployment slot — a restart re-claims its OWN lease at once rather than
+ * waiting out the TTL for a dead process's claim to expire — and a different
+ * name on any host or journal that is genuinely somebody else.
+ *
+ * The storage location is hashed, never printed: it can be a Postgres URL with
+ * credentials in it, and the owner name goes into a database row an operator
+ * reads and into every log line about the lease.
+ *
+ * The residual case a stable name cannot tell apart is two processes on ONE
+ * host over ONE journal, which is a misconfiguration those two already share
+ * (one read-model directory, one run journal). It is not silent: the loser's
+ * heartbeat finds the lease taken and says so by name.
+ */
 export function singletonOwnerName(
   env: Record<string, string | undefined> = process.env,
+  storageId?: string,
 ): string {
   const configured = env[WORKFLOW_SINGLETON_OWNER_ENV]?.trim();
   if (configured) return configured;
-  // Unique per process on purpose: without an operator contract, the safe
-  // default is that a second process is a second process.
-  return `${hostname()}/${process.pid}/${randomUUID().slice(0, 8)}`;
+  return `${hostname()}/${storageFingerprint(storageId)}`;
+}
+
+function storageFingerprint(storageId: string | undefined): string {
+  const source = storageId?.trim();
+  if (!source) return "default";
+  return createHash("sha256").update(source).digest("hex").slice(0, 12);
 }
 
 async function ensureTable(db: IRelationalDb<SingletonLeaseDB>): Promise<void> {
@@ -150,7 +187,8 @@ export async function acquireWorkflowSingletonLease(
   const now = options.now ?? (() => new Date());
   const ttlMs = options.ttlMs ?? SINGLETON_LEASE_TTL_MS;
   const heartbeatMs = options.heartbeatMs ?? SINGLETON_HEARTBEAT_MS;
-  const owner = options.owner ?? singletonOwnerName(options.env);
+  const owner =
+    options.owner ?? singletonOwnerName(options.env, options.storageId);
 
   const db = (await options.relationalDb.createNamespace(
     "workflow_runtime",

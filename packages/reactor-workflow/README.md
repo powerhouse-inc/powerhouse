@@ -105,11 +105,29 @@ sweeps and the supervisor are per process.
   stops renewing. It does not kill the process: a database hiccup must not
   become an outage, and what the operator needs is to be told that this reactor
   is now a second writer.
-- `PH_WORKFLOWS_SINGLETON_OWNER` is the operator's contract. Set it to a stable
-  name per deployment slot and a restart re-claims its own lease at once —
-  the rolling-deploy overlap the dead columns were written for. Unset, the
-  owner is `<hostname>/<pid>/<random>`, so a second process is always refused
-  and a restart waits out the TTL.
+- **A refused claim does not take the API down.** The host boots WITHOUT the
+  workflow runtime and warns, naming the current owner: no trigger fires here
+  and the workflow GraphQL face is absent, while inspection, GraphQL, sync, MCP
+  and every drive serve normally. The one thing this process must not do is run
+  workflows against a journal a live process owns; aborting the whole boot over
+  it turned "not allowed to run one component" into an outage — and, with a
+  random owner name, into a crash loop for the TTL after every unclean kill.
+  Workflows come back on the next boot once the lease is claimable, which under
+  a stable owner is immediately.
+- **The default owner is stable**: `<hostname>/<fingerprint of the journal's
+  storage location>`. So one deployment slot restarting re-claims its OWN lease
+  at once rather than waiting out the TTL for a killed process's claim — the
+  common case, and it has to be instant. A genuine second replica still differs
+  by hostname or by the journal it points at. The storage location is hashed,
+  never printed: it can be a Postgres URL with credentials, and the owner name
+  goes into a database row and every log line about the lease. The case a stable
+  name cannot separate is two processes on ONE host over ONE journal, which is a
+  misconfiguration those two already share — and it is not silent: the loser's
+  heartbeat finds the lease taken and says so by name.
+- `PH_WORKFLOWS_SINGLETON_OWNER` is still the operator's contract and overrides
+  the derived name. Set it per deployment slot when the hostname is not stable
+  (a fresh container id each deploy) or when two slots share a journal on
+  purpose.
 
 ## How the host composes it
 
@@ -459,7 +477,7 @@ explanation behind it.
 | `PH_WORKFLOWS_PIECE_MAX_FILE_BYTES`   | `8388608`          | File-size ceiling for FILE-property hydration and `ctx.files.write`                       |
 | `PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS`   | `10000`            | Cap on one call a piece makes of its host; raised to the step's own timeout when that is longer (`activepieces/context/limits.ts`) |
 | `PH_WORKFLOWS_RUN_RETENTION_DAYS`     | `30`               | Deletes finished runs older than this many days; `0`/`off` keeps everything (`reactor/run-retention.ts`) |
-| `PH_WORKFLOWS_SINGLETON_OWNER`        | `<host>/<pid>/…`   | Names this process as the workflow singleton's owner (`reactor/singleton-lease.ts`)       |
+| `PH_WORKFLOWS_SINGLETON_OWNER`        | `<host>/<journal hash>` | Names this process as the workflow singleton's owner; the default is stable per slot, so a restart re-claims at once (`reactor/singleton-lease.ts`) |
 
 Each numeric one parses as `Number(raw) || default`: a value that is not a
 positive number falls back silently rather than failing at boot.

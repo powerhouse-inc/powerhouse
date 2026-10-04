@@ -111,6 +111,22 @@ export async function assertWorkflowPackageLoadable(
   }
 }
 
+/**
+ * Whether a composition failure was the workflow singleton refusing this
+ * process, rather than something that should take the boot down.
+ *
+ * Matched by NAME: the engine loads lazily, and importing it here for the
+ * constructor would defeat that. The fields the engine's error carries are
+ * typed optional for the same reason.
+ */
+export function isWorkflowSingletonConflict(
+  error: unknown,
+): error is Error & { owner?: string; expiresAt?: string; wouldBe?: string } {
+  return (
+    error instanceof Error && error.name === "WorkflowSingletonConflictError"
+  );
+}
+
 export interface ComposeWorkflowRuntimeDeps {
   reactorClient: IReactorClient;
   /** The registry this host installs packages from; pieces come from it too.
@@ -142,6 +158,14 @@ export interface ComposeWorkflowRuntimeDeps {
    * that composes several runtimes over separate databases turns it off.
    */
   singletonLease?: boolean;
+  /**
+   * Where this host's read-model database lives — the Postgres URL, or the
+   * absolute PGlite directory. It is the stable half of the default singleton
+   * owner name, so a restart of THIS slot re-claims its own lease at once
+   * instead of waiting out the 60s TTL for a killed process's claim. Hashed
+   * before it is used, so a connection string's credentials go no further.
+   */
+  storageId?: string;
 }
 
 export interface ComposedWorkflowRuntime {
@@ -330,6 +354,7 @@ export async function composeWorkflowRuntime(
       : await engine.acquireWorkflowSingletonLease({
           relationalDb: deps.relationalDb,
           logger: deps.logger,
+          ...(deps.storageId ? { storageId: deps.storageId } : {}),
         });
 
   // The same registry the host installs packages from, so a piece it indexes
