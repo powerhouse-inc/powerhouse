@@ -5,18 +5,10 @@ import {
   provisionInProcess,
   reactorStorageNamespace,
   type ManagedInProcessReactor,
-  type ReactorDescriptor,
 } from "../src/index.js";
+import { descriptor } from "./helpers.js";
 
 const DRIVE_TYPE = "powerhouse/document-drive";
-
-/**
- * An in-memory PGlite, so a test reactor leaves nothing behind. `idb://` is
- * the browser default and has no backing store in node.
- */
-function descriptor(name: string): ReactorDescriptor {
-  return { kind: "in-process", name, storage: { kind: "memory" } };
-}
 
 describe("provisionInProcess", () => {
   const provisioned: ManagedInProcessReactor[] = [];

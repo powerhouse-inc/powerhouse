@@ -10,6 +10,7 @@ import {
   type MonitorWorkerHost,
   type ReactorDescriptor,
 } from "../src/index.js";
+import { descriptor as inProcessDescriptor } from "./helpers.js";
 
 const DRIVE_TYPE = "powerhouse/document-drive";
 
@@ -20,9 +21,11 @@ const DRIVE_TYPE = "powerhouse/document-drive";
  * `connectManagedWorkerReactor()` is the real tab-side wiring.
  *
  * `storage: memory` keeps it out of IndexedDB, which does not exist in node.
+ * Built on the shared in-process `descriptor` helper with `kind` overridden
+ * to `"worker"`, rather than its own copy of the same base shape.
  */
 function descriptor(name: string): ReactorDescriptor {
-  return { kind: "worker", name, storage: { kind: "memory" } };
+  return inProcessDescriptor(name, { kind: "worker" });
 }
 
 describe("monitor worker host over a MessageChannel", () => {

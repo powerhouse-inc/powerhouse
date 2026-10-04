@@ -1,7 +1,6 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { MessageChannel } from "node:worker_threads";
 import { baseDocumentModels } from "@powerhousedao/reactor-browser/base-document-models";
 // The `./document-models/workflow` subpath, not the package's top-level
 // `./document-models` barrel: that barrel's `upgrade-manifests.ts` re-exports
@@ -16,8 +15,8 @@ import {
   type ManagedInProcessReactor,
   type ReactorDescriptor,
 } from "../src/index.js";
+import { descriptor, nodeChannel } from "./helpers.js";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import type { MessagePortLike } from "@powerhousedao/reactor";
 
 // Each generated document model module is typed over its own state shape;
 // `baseDocumentModelsMap` (reactor-browser/src/document-model.ts) widens the
@@ -41,43 +40,29 @@ const workflowDocumentModelModule =
  *    whether or not workflow support is even linked in), so this is checked
  *    at the build level instead -- `@powerhousedao/reactor-workflow` (the
  *    engine package `WorkflowTriggersReadModel` lives in) is absent from
- *    every dependency field, and no `src/` file names the engine's
- *    composition entry points. A reactor cannot register a read model from a
- *    class it never imports, so the absence of the import is itself the
- *    proof of the absence of the registration -- this is the "assert at the
- *    build level" fallback the plan allows when no runtime surface exists to
- *    assert against. The runtime half of this test (reading the actually-
+ *    every dependency field, and no `src/` file's import/require statements
+ *    name the engine's composition entry points. A reactor cannot register a
+ *    read model from a class it never imports, so the absence of the import
+ *    is itself the proof of the absence of the registration. The runtime
+ *    half of this test (provisioning a drive and reading the actually-
  *    provisioned reactor's processor list) adds a second, independent line
  *    of evidence on top of the static one.
  */
-function descriptor(name: string): ReactorDescriptor {
-  return {
-    kind: "in-process",
-    name,
-    storage: { kind: "memory" },
+function workflowDescriptor(name: string): ReactorDescriptor {
+  return descriptor(name, {
     sync: { local: true },
     // documentModelModules REPLACES the default set (build-reactor.ts falls
     // back to baseDocumentModels only when this is omitted entirely), so the
     // base models are spread back in alongside the workflow one.
     documentModelModules: [...baseDocumentModels, workflowDocumentModelModule],
-  };
-}
-
-function nodeChannel(): { port1: MessagePortLike; port2: MessagePortLike } {
-  const { port1, port2 } = new MessageChannel();
-  port1.unref();
-  port2.unref();
-  return {
-    port1: port1 as unknown as MessagePortLike,
-    port2: port2 as unknown as MessagePortLike,
-  };
+  });
 }
 
 describe("workflow documents sync as documents; no trigger execution (W1.5)", () => {
   const provisioned: ManagedInProcessReactor[] = [];
 
   async function host(name: string): Promise<ManagedInProcessReactor> {
-    const reactor = await provisionInProcess(descriptor(name));
+    const reactor = await provisionInProcess(workflowDescriptor(name));
     provisioned.push(reactor);
     return reactor;
   }
@@ -153,18 +138,25 @@ describe("workflow documents sync as documents; no trigger execution (W1.5)", ()
     ];
     for (const file of listTsFiles(srcRoot)) {
       const content = readFileSync(file, "utf8");
+      const importStatements = listImportStatements(content).join("\n");
       for (const needle of forbidden) {
-        expect(content.includes(needle)).toBe(false);
+        expect(
+          importStatements.includes(needle),
+          `${file} imports forbidden "${needle}"`,
+        ).toBe(false);
       }
     }
 
-    // Second, independent line of evidence: the reactor this package
-    // actually provisions registers no processor whose factory names
-    // "workflow" -- it wires no processors of its own kind at all, which is
-    // the live confirmation to pair with the static import check above.
+    // Second, independent line of evidence: a drive-provisioned reactor
+    // registers no processor at all -- not merely none whose factory names
+    // "workflow" -- the live confirmation to pair with the static import
+    // check above. Provisioning a drive first (rather than asserting on a
+    // bare reactor) means a future drive-scoped workflow factory
+    // registration would actually fail this assertion.
     const reactor = await host("wf-no-trigger-check");
+    await reactor.client.drives.create({ global: { name: "Trigger-check" } });
     const processors = await reactor.inspector.getProcessors();
-    expect(processors.some((p) => /workflow/i.test(p.factoryId))).toBe(false);
+    expect(processors).toEqual([]);
   });
 });
 
@@ -180,4 +172,12 @@ function listTsFiles(dir: string): string[] {
     }
   }
   return files;
+}
+
+/** Every `import`/`require(...)` statement in `content`, so a scan over them never trips on a comment or string that merely mentions a forbidden name. */
+const IMPORT_STATEMENT_PATTERN =
+  /\bimport\s[\s\S]*?;|\brequire\(\s*["'][^"']*["']\s*\)/g;
+
+function listImportStatements(content: string): string[] {
+  return content.match(IMPORT_STATEMENT_PATTERN) ?? [];
 }

@@ -1,14 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  ReactorMonitorRegistry,
-  type ReactorDescriptor,
-} from "../src/index.js";
+import { ReactorMonitorRegistry } from "../src/index.js";
+import { descriptor } from "./helpers.js";
 
 const DRIVE_TYPE = "powerhouse/document-drive";
-
-function descriptor(name: string): ReactorDescriptor {
-  return { kind: "in-process", name, storage: { kind: "memory" } };
-}
 
 describe("ReactorMonitorRegistry", () => {
   const registries: ReactorMonitorRegistry[] = [];

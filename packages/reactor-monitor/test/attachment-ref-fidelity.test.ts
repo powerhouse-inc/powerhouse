@@ -1,12 +1,11 @@
-import { MessageChannel } from "node:worker_threads";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   linkLocalSync,
   provisionInProcess,
   type ManagedInProcessReactor,
-  type ReactorDescriptor,
 } from "../src/index.js";
-import type { AttachmentRef, MessagePortLike } from "@powerhousedao/reactor";
+import { descriptor, nodeChannel } from "./helpers.js";
+import type { AttachmentRef } from "@powerhousedao/reactor";
 
 /**
  * W1.4 (docs/plans/2026-10-03-multi-reactor.md, Stage 1 decision 1): Stage 1
@@ -26,25 +25,6 @@ import type { AttachmentRef, MessagePortLike } from "@powerhousedao/reactor";
  * a stricter assertion (exact string identity, not just "arrived") on the
  * same proven path.
  */
-function descriptor(name: string): ReactorDescriptor {
-  return {
-    kind: "in-process",
-    name,
-    storage: { kind: "memory" },
-    sync: { local: true },
-  };
-}
-
-function nodeChannel(): { port1: MessagePortLike; port2: MessagePortLike } {
-  const { port1, port2 } = new MessageChannel();
-  port1.unref();
-  port2.unref();
-  return {
-    port1: port1 as unknown as MessagePortLike,
-    port2: port2 as unknown as MessagePortLike,
-  };
-}
-
 type DriveState = {
   state: { global: { nodes: Array<{ id: string; name: string }> } };
 };
@@ -66,7 +46,9 @@ describe("attachment ref fidelity over local sync (W1.4, refs-only)", () => {
   const provisioned: ManagedInProcessReactor[] = [];
 
   async function host(name: string): Promise<ManagedInProcessReactor> {
-    const reactor = await provisionInProcess(descriptor(name));
+    const reactor = await provisionInProcess(
+      descriptor(name, { sync: { local: true } }),
+    );
     provisioned.push(reactor);
     return reactor;
   }

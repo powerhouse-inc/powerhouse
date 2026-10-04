@@ -1,38 +1,12 @@
-import { MessageChannel } from "node:worker_threads";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   linkLocalSync,
   provisionInProcess,
   ReactorMonitorRegistry,
   type ManagedInProcessReactor,
-  type ReactorDescriptor,
 } from "../src/index.js";
+import { descriptor, nodeChannel } from "./helpers.js";
 import type { MessagePortLike } from "@powerhousedao/reactor";
-
-/** An in-memory PGlite reactor wired for brokered local sync. */
-function descriptor(name: string): ReactorDescriptor {
-  return {
-    kind: "in-process",
-    name,
-    storage: { kind: "memory" },
-    sync: { local: true },
-  };
-}
-
-/**
- * A `node:worker_threads` MessageChannel in place of the browser global, so
- * the in-process path has no browser dependency. `unref()` lets the test
- * process exit without waiting on the ports.
- */
-function nodeChannel(): { port1: MessagePortLike; port2: MessagePortLike } {
-  const { port1, port2 } = new MessageChannel();
-  port1.unref();
-  port2.unref();
-  return {
-    port1: port1 as unknown as MessagePortLike,
-    port2: port2 as unknown as MessagePortLike,
-  };
-}
 
 type DriveState = { state: { global: { nodes: Array<{ name: string }> } } };
 
@@ -64,7 +38,9 @@ describe("brokered local sync between two in-process reactors", () => {
   const provisioned: ManagedInProcessReactor[] = [];
 
   async function host(name: string): Promise<ManagedInProcessReactor> {
-    const reactor = await provisionInProcess(descriptor(name));
+    const reactor = await provisionInProcess(
+      descriptor(name, { sync: { local: true } }),
+    );
     provisioned.push(reactor);
     return reactor;
   }
@@ -141,8 +117,12 @@ describe("brokered local sync between two in-process reactors", () => {
 
   it("brokers the same link through the registry", async () => {
     const registry = new ReactorMonitorRegistry();
-    const a = await registry.provision(descriptor("reg-a"));
-    const b = await registry.provision(descriptor("reg-b"));
+    const a = await registry.provision(
+      descriptor("reg-a", { sync: { local: true } }),
+    );
+    const b = await registry.provision(
+      descriptor("reg-b", { sync: { local: true } }),
+    );
     provisioned.push(
       a as ManagedInProcessReactor,
       b as ManagedInProcessReactor,
@@ -169,11 +149,7 @@ describe("brokered local sync between two in-process reactors", () => {
 
   it("refuses to link a reactor that was not provisioned for local sync", async () => {
     const local = await host("mixed-local");
-    const connect = await provisionInProcess({
-      kind: "in-process",
-      name: "mixed-connect",
-      storage: { kind: "memory" },
-    });
+    const connect = await provisionInProcess(descriptor("mixed-connect"));
     provisioned.push(connect);
 
     await expect(
