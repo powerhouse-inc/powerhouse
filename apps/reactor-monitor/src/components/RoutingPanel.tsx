@@ -45,7 +45,7 @@ import {
   type RouteSource,
   type RoutingReactorClient,
 } from "@powerhousedao/reactor-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildRoutingClient } from "../lib/router.js";
 import { capabilityCells } from "../tabs/OverviewTab.js";
 
@@ -98,6 +98,29 @@ function sourceTone(source: RouteSource): "ok" | "neutral" | "off" {
     case "placed":
       return "off";
   }
+}
+
+const DEV = ((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV ??
+  false) as boolean;
+
+/**
+ * Publishes the built client on `window.__reactorMonitor.router` (dev only),
+ * beside the registry handle the app already exposes, so a live pass can script
+ * the router: `window.__reactorMonitor.router.describeRouting()`,
+ * `.find(...)`, and so on. Never set in production builds.
+ */
+function exposeRouter(client: RoutingReactorClient | null): void {
+  if (!DEV || typeof window === "undefined") {
+    return;
+  }
+  const win = window as unknown as {
+    __reactorMonitor?: Record<string, unknown>;
+  };
+  win.__reactorMonitor = win.__reactorMonitor ?? {};
+  win.__reactorMonitor.router = client ?? undefined;
+  win.__reactorMonitor.routerDescribe = client
+    ? () => client.describeRouting()
+    : undefined;
 }
 
 function SourceBadge({ source }: { readonly source: RouteSource }) {
@@ -165,6 +188,10 @@ export function RoutingPanel() {
     setLog((previous) => [...previous, { id: logCounter.current++, text }]);
   }, []);
 
+  useEffect(() => {
+    return () => exposeRouter(null);
+  }, []);
+
   const refresh = useCallback((built: RoutingReactorClient) => {
     setSnapshot(built.describeRouting());
   }, []);
@@ -189,6 +216,7 @@ export function RoutingPanel() {
       setClient(built);
       setTopology(next);
       refresh(built);
+      exposeRouter(built);
     },
     [appendLog, refresh],
   );
