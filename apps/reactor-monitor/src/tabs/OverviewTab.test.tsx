@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { ChannelScheme } from "@powerhousedao/reactor";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import {
@@ -104,9 +105,34 @@ describe("OverviewTab capability grid", () => {
     // reporting one capability and hiding the other.
     expect(badgeFor(container, "Sync channels")).toBe("gql, local");
     expect(
-      view.getByText(/Switchboard GraphQL remotes and brokered/),
+      view.getByText(
+        /gql: Switchboard GraphQL remotes.*local: brokered-MessagePort/,
+      ),
     ).toBeTruthy();
     expect(view.getByText(/no durable store to reopen/)).toBeTruthy();
+  });
+
+  // The literal channel types reach the grid, so a switchboard-scheme reactor
+  // is described as serving `polling` -- resolver-driven, created by the peer
+  // that polls it -- instead of being folded into the `gql` row whose
+  // add-remote form it could never serve.
+  it("names the switchboard scheme's polling channel in the sync cell", () => {
+    const view = render(
+      <OverviewTab
+        reactor={stubReactor({
+          kind: "in-process",
+          name: "overview-switchboard",
+          sync: { channelScheme: ChannelScheme.SWITCHBOARD },
+        })}
+      />,
+    );
+
+    expect(badgeFor(view.container as HTMLElement, "Sync channels")).toBe(
+      "polling, local",
+    );
+    expect(
+      view.getByText(/created by the peer that polls this reactor/),
+    ).toBeTruthy();
   });
 
   it("tones a lacked capability as off rather than as an error", () => {

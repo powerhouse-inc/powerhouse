@@ -1,5 +1,6 @@
 import {
   DriveCollectionId,
+  GQL_CHANNEL_TYPE,
   type DeadLetterRecord,
   type IInspector,
   type InspectableSyncManager,
@@ -16,15 +17,18 @@ export type SyncTabProps = {
   readonly inspector?: IInspector;
   /**
    * Whether this reactor can form gql remotes, i.e. whether its capability
-   * contract declares the `"gql"` sync channel.
+   * contract declares the `"gql"` sync channel -- the exact
+   * `ChannelConfig.type` the "Add remote" form below writes.
    *
-   * False for a local-ONLY reactor (`sync.local`): it wires a single
-   * `LocalChannelFactory`, so the "Add remote" form below cannot work -- the
-   * factory rejects a `{ type: "gql" }` config. True for a connect-mode
-   * reactor, which since W3.0 serves gql remotes AND brokered local peers, so
-   * both this form and the link panel above are live on it. Required rather
-   * than defaulted, because either silent default puts a form that cannot work
-   * in front of the user.
+   * True for a connect-mode reactor, which since W3.0 serves gql remotes AND
+   * brokered local peers, so both this form and the link panel above are live
+   * on it. False for the two reactors whose factory would only refuse the
+   * form's config: a local-ONLY one (`sync.local`, a single
+   * `LocalChannelFactory`), and a SWITCHBOARD-scheme one, whose
+   * `GqlResponseChannelFactory` serves `"polling"` channels that peers create
+   * by polling this reactor rather than ones a holder adds here. Required
+   * rather than defaulted, because either silent default puts a form that
+   * cannot work in front of the user.
    */
   readonly gqlRemotes: boolean;
 };
@@ -393,7 +397,10 @@ export function SyncTab({ syncManager, inspector, gqlRemotes }: SyncTabProps) {
         trimmedName,
         DriveCollectionId.forDrive(trimmedDriveId),
         {
-          type: "gql",
+          // The reactor's own constant, not a literal: this form's config has
+          // to be the type the reactor actually routes, and `gqlRemotes` is a
+          // read of that same spelling in the capability contract.
+          type: GQL_CHANNEL_TYPE,
           parameters: { url: trimmedUrl },
         },
       );
@@ -484,11 +491,14 @@ export function SyncTab({ syncManager, inspector, gqlRemotes }: SyncTabProps) {
 
       {gqlRemotes ? null : (
         <p className="rm-note" data-testid="sync-add-remote-unavailable">
-          This reactor is provisioned local-only (sync.local), so it has a local
-          channel factory and no GraphQL one; a gql remote cannot be added here.
-          Use &quot;Link local sync&quot; above to sync it with another
-          monitor-owned reactor, or provision a reactor with sync mode
-          &quot;connect&quot;, which serves gql remotes and local links at once.
+          This reactor does not declare the &quot;gql&quot; sync channel, so a
+          gql remote cannot be added here: a local-ONLY reactor (sync.local) has
+          no GraphQL factory at all, and a switchboard-scheme one serves
+          &quot;polling&quot; channels, which come into being when a peer polls
+          this reactor rather than being added from this side. Use &quot;Link
+          local sync&quot; above to sync it with another monitor-owned reactor,
+          or provision a reactor with sync mode &quot;connect&quot;, which
+          serves gql remotes and local links at once.
         </p>
       )}
       <form

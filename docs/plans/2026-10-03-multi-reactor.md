@@ -381,8 +381,10 @@ worker's previous read of `builtConfig.localSync` would have reported false for 
 reactor that does serve local peers. The two UI gates are now independent reads of
 the contract: `SyncTab`'s gql add-remote form takes `gqlRemotes` (it was gated on
 `local`, which now means the opposite of what it needs) and `LinkLocalSyncPanel`
-takes `localLinks`, offering only local-capable peers and explaining an island
-rather than letting the broker refuse it. Live pass still owed: one browser
+reads its own end's `local` capability off the registry it already subscribes to
+for the target list, offering only local-capable peers and diagnosing a no-local
+reactor from its declared channels rather than letting the broker refuse it.
+Live pass still owed: one browser
 reactor syncing a Switchboard remote and a sibling worker at the same time.
 Connect itself adopts the seam in stage 4.
 

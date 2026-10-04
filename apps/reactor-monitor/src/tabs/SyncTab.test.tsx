@@ -10,7 +10,11 @@ import type {
   RemoteSyncInspection,
   StorageHealth,
 } from "@powerhousedao/reactor";
-import { ChannelErrorSource, DriveCollectionId } from "@powerhousedao/reactor";
+import {
+  ChannelErrorSource,
+  DriveCollectionId,
+  GQL_CHANNEL_TYPE,
+} from "@powerhousedao/reactor";
 import { fireEvent, render, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { SyncTab } from "./SyncTab.js";
@@ -90,6 +94,7 @@ function inspectionFor(
 }
 
 type FakeSyncManager = InspectableSyncManager & {
+  add: ReturnType<typeof vi.fn>;
   inspectRemotes: ReturnType<typeof vi.fn>;
   listDeadLetters: ReturnType<typeof vi.fn>;
   requeueDeadLetter: ReturnType<typeof vi.fn>;
@@ -105,7 +110,7 @@ function fakeSyncManager(
 ): FakeSyncManager {
   const partial = {
     list: () => remotes,
-    add: () => Promise.reject(new Error("not used in this test")),
+    add: vi.fn(() => Promise.resolve()),
     triggerPull: vi.fn(),
     inspectRemotes: vi.fn(() => Promise.resolve(inspections)),
     listDeadLetters: vi.fn((remoteName: string) =>
@@ -308,15 +313,19 @@ describe("SyncTab", () => {
     expect(view.getByText(/no sync module/)).toBeTruthy();
   });
 
-  // A local-only reactor has no gql channel factory, so submitting this form
-  // could only ever produce an error from a factory that will not serve it.
-  it("disables the gql add-remote form on a local-only reactor and says why", () => {
+  // Neither a local-only reactor nor a switchboard-scheme one routes the
+  // `{type:"gql"}` config this form writes, so submitting it could only ever
+  // produce an error from a factory that will not serve it. The note names
+  // both reasons, because the reactor's own channel types are what the gate
+  // reads and this form cannot tell which of the two is in front of it.
+  it("disables the gql add-remote form when the reactor serves no gql channel and says why", () => {
     const manager = fakeSyncManager([]);
     const view = render(<SyncTab gqlRemotes={false} syncManager={manager} />);
 
-    expect(view.getByTestId("sync-add-remote-unavailable").textContent).toMatch(
-      /provisioned local-only/,
-    );
+    const note = view.getByTestId("sync-add-remote-unavailable").textContent;
+    expect(note).toMatch(/does not declare the "gql" sync channel/);
+    expect(note).toMatch(/local-ONLY reactor/);
+    expect(note).toMatch(/switchboard-scheme one serves "polling" channels/);
     expect(
       view.getByRole("button", { name: "Add remote" }).hasAttribute("disabled"),
     ).toBe(true);
@@ -339,5 +348,31 @@ describe("SyncTab", () => {
     expect(
       view.getByRole("button", { name: "Add remote" }).hasAttribute("disabled"),
     ).toBe(false);
+  });
+
+  // The config this form writes has to be the type the reactor actually
+  // routes, and `gqlRemotes` is a read of that same spelling in the
+  // capability contract -- a literal here could drift from the gate that
+  // enabled the form, which is exactly the drift the constant removes.
+  it("adds the remote under the reactor's own gql channel type", async () => {
+    const manager = fakeSyncManager([]);
+    const view = render(<SyncTab gqlRemotes syncManager={manager} />);
+
+    fireEvent.change(view.getByLabelText("Remote name"), {
+      target: { value: "hub" },
+    });
+    fireEvent.change(view.getByLabelText("Drive ID"), {
+      target: { value: "drive-1" },
+    });
+    fireEvent.change(view.getByLabelText("GraphQL URL"), {
+      target: { value: "https://hub.test/graphql" },
+    });
+    fireEvent.click(view.getByRole("button", { name: "Add remote" }));
+
+    await waitFor(() => expect(manager.add).toHaveBeenCalled());
+    expect(manager.add.mock.calls[0][2]).toEqual({
+      type: GQL_CHANNEL_TYPE,
+      parameters: { url: "https://hub.test/graphql" },
+    });
   });
 });

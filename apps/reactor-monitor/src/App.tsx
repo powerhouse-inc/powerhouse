@@ -12,6 +12,7 @@ import {
   useReactorMonitorRegistry,
 } from "@powerhousedao/reactor-monitor/react";
 import {
+  GQL_CHANNEL_TYPE,
   supportsSyncChannel,
   type ManagedReactorEntry,
   type ReactorDescriptor,
@@ -90,19 +91,23 @@ function renderPanel(
         <>
           {/*
             Both panels gate on the capability contract, which is what a router
-            reads too; a worker's `adoptLocalSyncPeer` presence alone can
-            disagree with it when a later tab's descriptor loses the race to
-            the construct that actually built (multi-reactor stage 2 review).
-            Since W3.0 the two channels are independent: a connect-mode reactor
-            answers true to both, a local-only reactor only to `local`, and an
-            island to neither.
+            reads too, and which carries the channel types the reactor actually
+            routes -- a worker's `adoptLocalSyncPeer` presence alone can
+            disagree with a descriptor when a later tab's loses the race to the
+            construct that actually built (multi-reactor stage 2 review). Since
+            W3.0 the channels are independent: a connect-mode reactor declares
+            `gql` and `local`, a local-only reactor only `local`, a
+            switchboard-scheme reactor `polling` and `local` (so no add-remote
+            form, since a polling channel is created by the peer that polls
+            this reactor), and an island none. The link panel reads its own end
+            from the registry, so only the gql gate is passed in.
           */}
-          <LinkLocalSyncPanel
-            localLinks={supportsSyncChannel(reactor.capabilities, "local")}
-            reactorName={reactor.name}
-          />
+          <LinkLocalSyncPanel reactorName={reactor.name} />
           <SyncTab
-            gqlRemotes={supportsSyncChannel(reactor.capabilities, "gql")}
+            gqlRemotes={supportsSyncChannel(
+              reactor.capabilities,
+              GQL_CHANNEL_TYPE,
+            )}
             inspector={reactor.inspector}
             syncManager={reactor.syncManager}
           />

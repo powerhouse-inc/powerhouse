@@ -1,4 +1,8 @@
-import { supportsSyncChannel } from "@powerhousedao/reactor-monitor";
+import {
+  LOCAL_CHANNEL_TYPE,
+  supportsSyncChannel,
+  type ManagedReactorEntry,
+} from "@powerhousedao/reactor-monitor";
 import {
   useManagedReactors,
   useReactorMonitorRegistry,
@@ -8,14 +12,30 @@ import { useCallback, useMemo, useState } from "react";
 export type LinkLocalSyncPanelProps = {
   /** The reactor whose Sync tab this panel sits in; one end of the link. */
   readonly reactorName: string;
-  /**
-   * Whether this reactor declares the `"local"` sync channel. True for the
-   * local-only mode AND for connect mode, which composes a local channel
-   * factory onto its gql scheme (W3.0); false only for a `channelScheme: null`
-   * island, which has no sync module to adopt a peer into.
-   */
-  readonly localLinks: boolean;
 };
+
+/**
+ * Why this reactor cannot be an end of a brokered local link, diagnosed from
+ * its capability contract.
+ *
+ * The three reasons are genuinely different, and the earlier single
+ * hard-coded island message mis-told two of them: a reactor that declares
+ * channels but not `"local"` has a sync module and is syncing, it just cannot
+ * be handed a `MessagePort` (a `remote` reactor is on the far side of a wire,
+ * and a worker whose built configuration could not be read is not taken to
+ * serve local peers on a guess) -- telling its operator to pick a sync mode
+ * would be advice for a problem they do not have.
+ */
+function noLocalChannelReason(entry: ManagedReactorEntry | undefined): string {
+  if (!entry || entry.status !== "ready") {
+    return "This reactor is not ready, so there is no capability contract to read yet; the link panel appears once it is.";
+  }
+  const channels = entry.reactor.capabilities.syncChannels;
+  if (channels.length === 0) {
+    return 'This reactor was built with no sync module (sync.channelScheme: null), so it has nothing to adopt a brokered local peer into. Provision it with sync mode "local" or "connect" to link it.';
+  }
+  return `This reactor declares sync channels [${channels.join(", ")}] and no "local" one, so it cannot adopt a brokered local peer: a MessagePort reaches neither a reactor on the far side of a wire nor one whose own built configuration could not be read. Re-provision it to link it.`;
+}
 
 /**
  * Brokers a direct `LocalChannel` sync link from this reactor to another
@@ -25,12 +45,12 @@ export type LinkLocalSyncPanelProps = {
  *
  * Both ends are gated on the capability contract, not on how they were
  * spelled: a connect-mode reactor is a valid end of a local link since W3.0,
- * and only an island is not.
+ * and only a reactor that does not declare the channel is not. THIS end is
+ * read from the registry here rather than passed in -- the panel already
+ * subscribes to it for the target list, so a prop would be a second path to
+ * the same fact, and the two could disagree.
  */
-export function LinkLocalSyncPanel({
-  reactorName,
-  localLinks,
-}: LinkLocalSyncPanelProps) {
+export function LinkLocalSyncPanel({ reactorName }: LinkLocalSyncPanelProps) {
   const registry = useReactorMonitorRegistry();
   const entries = useManagedReactors();
   const [target, setTarget] = useState("");
@@ -38,6 +58,15 @@ export function LinkLocalSyncPanel({
   const [linking, setLinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [linked, setLinked] = useState<string | null>(null);
+
+  // This end's own contract, from the same subscription the target list reads.
+  const self = useMemo(
+    () => entries.find((entry) => entry.name === reactorName),
+    [entries, reactorName],
+  );
+  const localLinks =
+    self?.status === "ready" &&
+    supportsSyncChannel(self.reactor.capabilities, LOCAL_CHANNEL_TYPE);
 
   // Only local-capable peers are offered: linkLocalSync refuses the others,
   // and it refuses them before opening a port, so listing them would only
@@ -48,7 +77,7 @@ export function LinkLocalSyncPanel({
         (entry) =>
           entry.status === "ready" &&
           entry.name !== reactorName &&
-          supportsSyncChannel(entry.reactor.capabilities, "local"),
+          supportsSyncChannel(entry.reactor.capabilities, LOCAL_CHANNEL_TYPE),
       ),
     [entries, reactorName],
   );
@@ -90,9 +119,7 @@ export function LinkLocalSyncPanel({
       <h3>Link local sync</h3>
       {!localLinks ? (
         <p className="rm-placeholder" data-testid="link-local-sync-unavailable">
-          This reactor was built with no sync module (sync.channelScheme: null),
-          so it cannot adopt a brokered local peer. Provision it with sync mode
-          &quot;local&quot; or &quot;connect&quot; to link it.
+          {noLocalChannelReason(self)}
         </p>
       ) : targets.length === 0 ? (
         <p className="rm-placeholder">

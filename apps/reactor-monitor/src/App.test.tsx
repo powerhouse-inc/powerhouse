@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { ChannelScheme } from "@powerhousedao/reactor";
 import { fireEvent, render, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { ReactorDescriptor } from "@powerhousedao/reactor-monitor";
@@ -52,6 +53,49 @@ describe("App", () => {
       WAIT,
     );
     expect(view.getByText("Running")).toBeTruthy();
+  }, 30_000);
+
+  /**
+   * The SWITCHBOARD row of the capability contract, as the Sync tab's two
+   * gates read it. Such a reactor's `GqlResponseChannelFactory` serves
+   * "polling" channels, which a PEER creates by polling this reactor, so the
+   * add-remote form has nothing to create and stays hidden -- while the local
+   * channel the builder composes on is as real as on any other scheme, so the
+   * link panel is live rather than showing the island refusal.
+   */
+  it("hides the gql add-remote form on a switchboard-scheme reactor but keeps local links", async () => {
+    const view = render(
+      <App
+        buildDescriptor={(name, kind) => ({
+          kind,
+          name,
+          storage: { kind: "memory" },
+          sync: { channelScheme: ChannelScheme.SWITCHBOARD },
+        })}
+      />,
+    );
+
+    fireEvent.change(view.getByPlaceholderText("alpha"), {
+      target: { value: "switchboard-reactor" },
+    });
+    fireEvent.click(view.getByRole("button", { name: "Provision" }));
+
+    await waitFor(() => expect(view.getByTitle("ready")).toBeTruthy(), WAIT);
+    fireEvent.click(view.getByRole("button", { name: "Sync" }));
+
+    await waitFor(
+      () =>
+        expect(
+          view.getByTestId("sync-add-remote-unavailable").textContent,
+        ).toMatch(/does not declare the "gql" sync channel/),
+      WAIT,
+    );
+    // The local end is capable, so the panel asks for a peer instead of
+    // explaining why it can never have one.
+    expect(view.queryByTestId("link-local-sync-unavailable")).toBeNull();
+    expect(
+      view.getByText(/Provision another ready local-capable reactor/),
+    ).toBeTruthy();
   }, 30_000);
 
   it("kills a provisioned reactor and clears the selection", async () => {

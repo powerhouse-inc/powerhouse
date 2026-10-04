@@ -1,8 +1,12 @@
 // @vitest-environment happy-dom
-import type {
-  ManagedReactorEntry,
-  ReactorMonitorRegistry,
-  ReactorSyncChannel,
+import { DriveCollectionId } from "@powerhousedao/reactor";
+import {
+  GQL_CHANNEL_TYPE,
+  LOCAL_CHANNEL_TYPE,
+  reactorCapabilities,
+  type ManagedInProcessReactor,
+  type ManagedReactorEntry,
+  type ReactorMonitorRegistry,
 } from "@powerhousedao/reactor-monitor";
 import { ReactorMonitorProvider } from "@powerhousedao/reactor-monitor/react";
 import { fireEvent, render, waitFor } from "@testing-library/react";
@@ -11,22 +15,78 @@ import { describe, expect, it, vi } from "vitest";
 import { LinkLocalSyncPanel } from "./LinkLocalSyncPanel.js";
 
 /**
- * A ready entry carrying only the fields the panel reads. `syncChannels` is
- * one of them: the panel offers only local-capable peers as targets.
+ * A handle member this panel must never touch. A getter rather than an absent
+ * field, so a read the fake does not model fails loudly here instead of
+ * reaching the panel as `undefined`.
+ */
+function unused(member: string): never {
+  throw new Error(
+    `LinkLocalSyncPanel read "${member}", which this fake reactor does not model`,
+  );
+}
+
+/**
+ * A reactor handle with the runtime shape of the real one: the two members the
+ * panel reads carry real values (the capability contract comes from
+ * `reactorCapabilities` itself, derived from the built channel types), and
+ * every other member is present and loud.
+ */
+function readyReactor(
+  name: string,
+  syncChannelTypes: readonly string[],
+): ManagedInProcessReactor {
+  return {
+    name,
+    kind: "in-process",
+    capabilities: reactorCapabilities(
+      { kind: "in-process", name, storage: { kind: "memory" } },
+      { canSelfHeal: false, syncChannelTypes },
+    ),
+    syncManager: undefined,
+    get client() {
+      return unused("client");
+    },
+    get inspector() {
+      return unused("inspector");
+    },
+    get dbQuery() {
+      return unused("dbQuery");
+    },
+    get events() {
+      return unused("events");
+    },
+    get module() {
+      return unused("module");
+    },
+    kill: () => Promise.resolve(),
+    isShutdown: () => false,
+  };
+}
+
+/**
+ * A ready entry. `syncChannelTypes` is what the panel gates on -- for BOTH
+ * ends now: it reads this reactor's own entry for its own local capability,
+ * and every other entry's for the target list.
  */
 function readyEntry(
   name: string,
-  syncChannels: readonly ReactorSyncChannel[] = ["gql", "local"],
+  syncChannelTypes: readonly string[] = [GQL_CHANNEL_TYPE, LOCAL_CHANNEL_TYPE],
 ): ManagedReactorEntry {
   return {
     name,
     descriptor: { kind: "in-process", name },
     status: "ready",
-    reactor: {
-      name,
-      capabilities: { syncChannels },
-    } as unknown as ManagedReactorEntry["reactor"],
-  } as ManagedReactorEntry;
+    reactor: readyReactor(name, syncChannelTypes),
+  };
+}
+
+/** An entry that is still booting, so there is no contract to read yet. */
+function provisioningEntry(name: string): ManagedReactorEntry {
+  return {
+    name,
+    descriptor: { kind: "in-process", name },
+    status: "provisioning",
+  };
 }
 
 /**
@@ -41,7 +101,7 @@ function fakeRegistry(entries: ManagedReactorEntry[]) {
       reactorA: "a",
       reactorB: "b",
       channelName: "drive-x:main",
-      collectionId: {} as never,
+      collectionId: DriveCollectionId.forDrive("drive-x"),
       remoteNameA: "local:b:drive-x:main",
       remoteNameB: "local:a:drive-x:main",
       unlink: () => Promise.resolve(),
@@ -89,7 +149,7 @@ describe("LinkLocalSyncPanel", () => {
     const { registry } = fakeRegistry([readyEntry("a")]);
     const view = renderInProvider(
       registry,
-      createElement(LinkLocalSyncPanel, { localLinks: true, reactorName: "a" }),
+      createElement(LinkLocalSyncPanel, { reactorName: "a" }),
     );
 
     expect(view.getByTestId("link-local-sync")).toBeTruthy();
@@ -99,16 +159,17 @@ describe("LinkLocalSyncPanel", () => {
   });
 
   // A connect-mode reactor is a valid end of a local link since W3.0, so the
-  // panel must offer it; only an island (no sync module) is refused.
+  // panel must offer it; only a reactor that does not declare the channel is
+  // refused.
   it("offers a connect-mode peer as a target but not an island", () => {
     const { registry } = fakeRegistry([
       readyEntry("a"),
-      readyEntry("b", ["gql", "local"]),
+      readyEntry("b", [GQL_CHANNEL_TYPE, LOCAL_CHANNEL_TYPE]),
       readyEntry("island", []),
     ]);
     const view = renderInProvider(
       registry,
-      createElement(LinkLocalSyncPanel, { localLinks: true, reactorName: "a" }),
+      createElement(LinkLocalSyncPanel, { reactorName: "a" }),
     );
 
     const options = view
@@ -117,18 +178,63 @@ describe("LinkLocalSyncPanel", () => {
     expect(options).toEqual(["", "b"]);
   });
 
-  it("says why an island cannot be linked at all", () => {
+  // This end's capability comes from the registry the panel already
+  // subscribes to, not from a prop: one path to the fact, so there is nothing
+  // to disagree with.
+  it("reads its own local capability off its own entry", () => {
     const { registry } = fakeRegistry([readyEntry("a", []), readyEntry("b")]);
     const view = renderInProvider(
       registry,
-      createElement(LinkLocalSyncPanel, {
-        localLinks: false,
-        reactorName: "a",
-      }),
+      createElement(LinkLocalSyncPanel, { reactorName: "a" }),
     );
 
     expect(view.getByTestId("link-local-sync-unavailable")).toBeTruthy();
     expect(view.queryByRole("combobox")).toBeNull();
+  });
+
+  it("says why an island cannot be linked at all", () => {
+    const { registry } = fakeRegistry([readyEntry("a", []), readyEntry("b")]);
+    const view = renderInProvider(
+      registry,
+      createElement(LinkLocalSyncPanel, { reactorName: "a" }),
+    );
+
+    expect(view.getByTestId("link-local-sync-unavailable").textContent).toMatch(
+      /built with no sync module/,
+    );
+  });
+
+  // The other no-local shape, and a different problem: this reactor syncs,
+  // it just cannot be handed a MessagePort. Telling its operator to choose a
+  // sync mode would be advice for a fault they do not have.
+  it("distinguishes a syncing reactor that serves no local channel from an island", () => {
+    const { registry } = fakeRegistry([
+      readyEntry("a", [GQL_CHANNEL_TYPE]),
+      readyEntry("b"),
+    ]);
+    const view = renderInProvider(
+      registry,
+      createElement(LinkLocalSyncPanel, { reactorName: "a" }),
+    );
+
+    const message = view.getByTestId("link-local-sync-unavailable").textContent;
+    expect(message).toMatch(/declares sync channels \[gql\]/);
+    expect(message).not.toMatch(/built with no sync module/);
+  });
+
+  it("says a booting reactor has no contract to read yet", () => {
+    const { registry } = fakeRegistry([
+      provisioningEntry("a"),
+      readyEntry("b"),
+    ]);
+    const view = renderInProvider(
+      registry,
+      createElement(LinkLocalSyncPanel, { reactorName: "a" }),
+    );
+
+    expect(view.getByTestId("link-local-sync-unavailable").textContent).toMatch(
+      /not ready/,
+    );
   });
 
   it("brokers a link to the selected peer for the given drive", async () => {
@@ -138,7 +244,7 @@ describe("LinkLocalSyncPanel", () => {
     ]);
     const view = renderInProvider(
       registry,
-      createElement(LinkLocalSyncPanel, { localLinks: true, reactorName: "a" }),
+      createElement(LinkLocalSyncPanel, { reactorName: "a" }),
     );
 
     fireEvent.change(view.getByRole("combobox"), { target: { value: "b" } });
@@ -167,7 +273,7 @@ describe("LinkLocalSyncPanel", () => {
     );
     const view = renderInProvider(
       registry,
-      createElement(LinkLocalSyncPanel, { localLinks: true, reactorName: "a" }),
+      createElement(LinkLocalSyncPanel, { reactorName: "a" }),
     );
 
     fireEvent.change(view.getByRole("combobox"), { target: { value: "b" } });
@@ -189,7 +295,7 @@ describe("LinkLocalSyncPanel", () => {
     ]);
     const view = renderInProvider(
       registry,
-      createElement(LinkLocalSyncPanel, { localLinks: true, reactorName: "a" }),
+      createElement(LinkLocalSyncPanel, { reactorName: "a" }),
     );
 
     fireEvent.change(view.getByRole("combobox"), { target: { value: "b" } });

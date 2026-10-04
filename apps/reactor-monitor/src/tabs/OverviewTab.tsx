@@ -1,8 +1,11 @@
-import type {
-  ManagedReactor,
-  ManagedWorkerReactor,
-  ReactorCapabilities,
-  ReactorSyncChannel,
+import {
+  GQL_CHANNEL_TYPE,
+  LOCAL_CHANNEL_TYPE,
+  POLLING_CHANNEL_TYPE,
+  type ManagedReactor,
+  type ManagedWorkerReactor,
+  type ReactorCapabilities,
+  type ReactorSyncChannel,
 } from "@powerhousedao/reactor-monitor";
 import { useCallback, useEffect, useState } from "react";
 import type { WorkerInspectorInfo } from "@powerhousedao/reactor-browser/rpc";
@@ -77,27 +80,38 @@ function yesNo(enabled: boolean): Pick<CapabilityCell, "value" | "tone"> {
   return { value: enabled ? "yes" : "no", tone: enabled ? "ok" : "off" };
 }
 
+/** What one declared channel type means, and what can be done with it here. */
+function channelNote(channel: ReactorSyncChannel): string {
+  switch (channel) {
+    case GQL_CHANNEL_TYPE:
+      return "gql: Switchboard GraphQL remotes, added from the Sync tab.";
+    case POLLING_CHANNEL_TYPE:
+      return "polling: resolver-driven GraphQL channels, created by the peer that polls this reactor rather than added from here.";
+    case LOCAL_CHANNEL_TYPE:
+      return "local: brokered-MessagePort LocalChannel peers, linkable from the Sync tab.";
+    default: {
+      const unsupported: never = channel;
+      throw new Error(`Unknown sync channel: ${JSON.stringify(unsupported)}`);
+    }
+  }
+}
+
 /**
- * The one-line reason the sync-channel cell reads the way it does.
+ * The reason the sync-channel cell reads the way it does: one line per channel
+ * the reactor declares.
  *
- * A reactor holding BOTH channels is the normal connect-mode case since W3.0,
- * and it gets a note naming both: an either/or note would have reported one
- * capability and hidden the other, which is the opposite of what this grid is
- * for.
+ * Composed per channel rather than written as an either/or, because a reactor
+ * holding several is the normal case since W3.0 and an either/or note reported
+ * one capability while hiding the other -- the opposite of what this grid is
+ * for. Driven off the declared list, so a reactor whose scheme serves
+ * `polling` is described as serving `polling`, not as whatever the nearest
+ * hard-coded combination happened to be.
  */
 function syncChannelNote(channels: readonly ReactorSyncChannel[]): string {
-  const gql = channels.includes("gql");
-  const local = channels.includes("local");
-  if (gql && local) {
-    return "Both: Switchboard GraphQL remotes and brokered-MessagePort LocalChannel peers, composed on one reactor.";
+  if (channels.length === 0) {
+    return "No sync module was built: this reactor is an island.";
   }
-  if (local) {
-    return "Brokered-MessagePort LocalChannel peers; linkable from the Sync tab.";
-  }
-  if (gql) {
-    return "Connect/Switchboard GraphQL channels; add a remote from the Sync tab.";
-  }
-  return "No sync module was built: this reactor is an island.";
+  return channels.map(channelNote).join(" ");
 }
 
 /**
