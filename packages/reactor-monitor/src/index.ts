@@ -67,6 +67,17 @@ export {
   type BuildReactorOptions,
   type BuiltReactor,
 } from "./build-reactor.js";
+
+export {
+  runLocalSyncLoad,
+  type LoadHarnessDurations,
+  type LoadHarnessMemorySamples,
+  type LoadHarnessOperationCounts,
+  type LoadHarnessOptions,
+  type LoadHarnessReactors,
+  type LoadHarnessReport,
+  type LoadHarnessThroughput,
+} from "./harness/load.js";
 export { openReactorStore, storageLocation } from "./store.js";
 export {
   MONITOR_STORAGE_PREFIX,
