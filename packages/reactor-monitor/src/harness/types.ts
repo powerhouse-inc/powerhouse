@@ -97,11 +97,17 @@ export type LoadHarnessThroughput = {
  * `process.memoryUsage()` snapshots at phase boundaries. One process hosts
  * both reactors in-process, so this is whole-process memory, not a
  * per-reactor split -- the Stage-P memory axis's starting instrument.
+ *
+ * Optional: this harness module is part of a browser-targeted barrel, and
+ * `process.memoryUsage` does not exist there. A browser run leaves every
+ * field `undefined` rather than throwing; `performance.memory` is a
+ * non-standard, Chromium-only nicety this harness does not bother reaching
+ * for.
  */
 export type LoadHarnessMemorySamples = {
-  baseline: NodeJS.MemoryUsage;
-  afterGenerate: NodeJS.MemoryUsage;
-  afterPropagate: NodeJS.MemoryUsage;
+  baseline: NodeJS.MemoryUsage | undefined;
+  afterGenerate: NodeJS.MemoryUsage | undefined;
+  afterPropagate: NodeJS.MemoryUsage | undefined;
 };
 
 /**

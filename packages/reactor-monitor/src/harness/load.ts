@@ -1,7 +1,7 @@
 import { REACTOR_SCHEMA } from "@powerhousedao/reactor";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { provisionInProcess } from "../in-process.js";
-import { linkLocalSync } from "../sync/link.js";
+import { linkLocalSync, type LocalSyncHandle } from "../sync/link.js";
 import type { ManagedInProcessReactor, ReactorDescriptor } from "../types.js";
 import type {
   LoadHarnessOperationCounts,
@@ -52,19 +52,27 @@ export type {
  * Load is generated as `drives.addFolder` calls on one shared drive, the
  * same primitive `local-sync.test.ts` already proved travels the link: each
  * call is one operation on the drive document, named
- * `load:<doc>:<op>:<payload>` so propagation can be measured by counting
- * matching nodes on B without a bespoke document model. This deliberately
- * does not exercise separate per-document storage; see
+ * `load:<runId>:<doc>:<op>:<payload>` so propagation can be measured by
+ * counting matching nodes on B without a bespoke document model. The run id
+ * is salted per call so a second run against an already-linked pair passed
+ * via `options.reactors` (the documented reuse case) never counts a prior
+ * run's nodes as its own; the pre-run count of nodes already matching the
+ * (fresh, so normally zero) prefix is also snapshotted and added to the
+ * target, belt-and-suspenders against the same contamination. This
+ * deliberately does not exercise separate per-document storage; see
  * docs/plans/2026-10-03-multi-reactor.md Stage P for the memory/DB-size axes
  * this harness seeds but does not itself fix.
  */
 export async function runLocalSyncLoad(
   options: LoadHarnessOptions,
 ): Promise<LoadHarnessReport> {
-  const payloadSize = options.payloadSize ?? 0;
-  const propagationTimeoutMs = options.propagationTimeoutMs ?? 30_000;
-  const pollIntervalMs = options.pollIntervalMs ?? 25;
-  const totalOps = options.documentCount * options.opsPerDocument;
+  const run: LoadRunParams = {
+    payloadSize: options.payloadSize ?? 0,
+    propagationTimeoutMs: options.propagationTimeoutMs ?? 30_000,
+    pollIntervalMs: options.pollIntervalMs ?? 25,
+    totalOps: options.documentCount * options.opsPerDocument,
+    nodePrefix: `load:${crypto.randomUUID().slice(0, 8)}:`,
+  };
 
   const setupStart = now();
   const owned = options.reactors === undefined;
@@ -72,60 +80,140 @@ export async function runLocalSyncLoad(
     options.reactors ?? (await provisionLinkedPair(options));
   const setupMs = owned ? now() - setupStart : 0;
 
+  let outcome: { report: LoadHarnessReport } | { error: unknown };
   try {
-    const baseline = process.memoryUsage();
-
-    const generateStart = now();
-    // Started before generation, not after: sync streams ops to B
-    // concurrently with generation, so the poller has to be live from the
-    // same clock origin as generation for `endToEndMs` to mean what it says.
-    const propagation = trackPropagation(
+    const report = await generateAndMeasure(
+      a,
       b,
       driveId,
-      totalOps,
-      propagationTimeoutMs,
-      pollIntervalMs,
+      options,
+      run,
+      setupMs,
     );
-    await generateLoad(a, driveId, options, payloadSize);
-    const generateMs = now() - generateStart;
-    const afterGenerate = process.memoryUsage();
+    outcome = { report };
+  } catch (error) {
+    outcome = { error };
+  }
 
-    const endToEndMs = await propagation.completed;
-    const firstOpArrivedAtBMs = await propagation.firstOpArrivedMs;
-    const afterPropagate = process.memoryUsage();
-
-    const operationCounts = await countOperations(a, b, driveId);
-    const residualTailMs = Math.max(0, endToEndMs - generateMs);
-
-    return {
-      documentCount: options.documentCount,
-      opsPerDocument: options.opsPerDocument,
-      payloadSize,
-      totalOps,
-      durationsMs: {
-        setupMs,
-        generateMs,
-        firstOpArrivedAtBMs,
-        endToEndMs,
-        residualTailMs,
-        totalMs: setupMs + endToEndMs,
-      },
-      throughput: {
-        createOpsPerSec: rate(totalOps, generateMs),
-        e2eOpsPerSec: rate(totalOps, endToEndMs),
-      },
-      operationCounts,
-      memory: { baseline, afterGenerate, afterPropagate },
-      driveId,
-      reactorNames: { a: a.name, b: b.name },
-    };
-  } finally {
-    if (owned) {
-      await link.unlink();
-      await a.kill();
-      await b.kill();
+  if (owned) {
+    const teardownFailures = await teardownLinkedPair(link, a, b);
+    // The original failure always wins: teardown problems are logged inside
+    // teardownLinkedPair and only thrown here when there was no original
+    // error for them to replace.
+    if (!("error" in outcome) && teardownFailures.length > 0) {
+      throw teardownFailures[0];
     }
   }
+
+  if ("error" in outcome) {
+    throw outcome.error;
+  }
+  return outcome.report;
+}
+
+/** Derived, per-run values computed once in {@link runLocalSyncLoad} and threaded through the measurement phase. */
+type LoadRunParams = {
+  payloadSize: number;
+  totalOps: number;
+  /** Salted per run (see the module doc); every generated node's name starts with this. */
+  nodePrefix: string;
+  propagationTimeoutMs: number;
+  pollIntervalMs: number;
+};
+
+async function generateAndMeasure(
+  a: ManagedInProcessReactor,
+  b: ManagedInProcessReactor,
+  driveId: string,
+  options: LoadHarnessOptions,
+  run: LoadRunParams,
+  setupMs: number,
+): Promise<LoadHarnessReport> {
+  const baseline = sampleMemory();
+  const baselineCount = await countLoadNodesOrZero(b, driveId, run.nodePrefix);
+
+  const generateStart = now();
+  const propagation = trackPropagation(
+    b,
+    driveId,
+    run.nodePrefix,
+    baselineCount,
+    run.totalOps,
+    run.propagationTimeoutMs,
+    run.pollIntervalMs,
+  );
+  await generateLoad(a, driveId, options, run.payloadSize, run.nodePrefix);
+  const generateMs = now() - generateStart;
+  const afterGenerate = sampleMemory();
+
+  const endToEndMs = await propagation.completed;
+  const firstOpArrivedAtBMs = await propagation.firstOpArrivedMs;
+  const afterPropagate = sampleMemory();
+
+  const operationCounts = await countOperations(a, b, driveId);
+  const residualTailMs = Math.max(0, endToEndMs - generateMs);
+
+  return {
+    documentCount: options.documentCount,
+    opsPerDocument: options.opsPerDocument,
+    payloadSize: run.payloadSize,
+    totalOps: run.totalOps,
+    durationsMs: {
+      setupMs,
+      generateMs,
+      firstOpArrivedAtBMs,
+      endToEndMs,
+      residualTailMs,
+      totalMs: setupMs + endToEndMs,
+    },
+    throughput: {
+      createOpsPerSec: rate(run.totalOps, generateMs),
+      e2eOpsPerSec: rate(run.totalOps, endToEndMs),
+    },
+    operationCounts,
+    memory: { baseline, afterGenerate, afterPropagate },
+    driveId,
+    reactorNames: { a: a.name, b: b.name },
+  };
+}
+
+/**
+ * Every step runs even when an earlier one rejects; failures are logged and
+ * returned (never thrown here -- the caller decides whether a teardown
+ * failure gets to outrank a real error from the run itself). `unlink` runs
+ * to completion before either `kill`, not alongside them: `unlink` still
+ * needs both reactors' storage alive to remove the sync peer, so racing it
+ * against `kill` tears the PGlite connection out from under it instead of
+ * just independently failing. The two kills have no such dependency on each
+ * other and run concurrently.
+ */
+async function teardownLinkedPair(
+  link: LocalSyncHandle,
+  a: ManagedInProcessReactor,
+  b: ManagedInProcessReactor,
+): Promise<unknown[]> {
+  const failures: unknown[] = [];
+
+  try {
+    await link.unlink();
+  } catch (error) {
+    failures.push(error);
+    logTeardownFailure(error);
+  }
+
+  const killResults = await Promise.allSettled([a.kill(), b.kill()]);
+  for (const result of killResults) {
+    if (result.status === "rejected") {
+      failures.push(result.reason);
+      logTeardownFailure(result.reason);
+    }
+  }
+  return failures;
+}
+
+function logTeardownFailure(reason: unknown): void {
+  // eslint-disable-next-line no-console
+  console.error("runLocalSyncLoad: teardown step failed", reason);
 }
 
 function now(): number {
@@ -135,6 +223,22 @@ function now(): number {
 /** Ops per second; 0 when nothing ran rather than an `Infinity`/`NaN`. */
 function rate(ops: number, elapsedMs: number): number {
   return elapsedMs > 0 ? (ops / elapsedMs) * 1000 : 0;
+}
+
+/**
+ * `process.memoryUsage()`, guarded for the browser-targeted barrel this
+ * module is part of: `process` does not exist there at all, so a direct
+ * call throws. `undefined` in that case; see
+ * {@link LoadHarnessMemorySamples}.
+ */
+function sampleMemory(): NodeJS.MemoryUsage | undefined {
+  if (
+    typeof process !== "undefined" &&
+    typeof process.memoryUsage === "function"
+  ) {
+    return process.memoryUsage();
+  }
+  return undefined;
 }
 
 async function provisionLinkedPair(
@@ -167,12 +271,14 @@ async function provisionLinkedPair(
   }
 }
 
-/** The name prefix every generated op's node carries; propagation counts these. */
-const LOAD_NODE_PREFIX = "load:";
-
-function loadNodeName(doc: number, op: number, payloadSize: number): string {
+function loadNodeName(
+  nodePrefix: string,
+  doc: number,
+  op: number,
+  payloadSize: number,
+): string {
   const payload = payloadSize > 0 ? `:${"p".repeat(payloadSize)}` : "";
-  return `${LOAD_NODE_PREFIX}${doc}:${op}${payload}`;
+  return `${nodePrefix}${doc}:${op}${payload}`;
 }
 
 /** Sequential, matching the measurement method the milestone baseline used. */
@@ -181,56 +287,91 @@ async function generateLoad(
   driveId: string,
   options: LoadHarnessOptions,
   payloadSize: number,
+  nodePrefix: string,
 ): Promise<void> {
   for (let doc = 0; doc < options.documentCount; doc++) {
     for (let op = 0; op < options.opsPerDocument; op++) {
       await a.client.drives.addFolder(
         driveId,
-        loadNodeName(doc, op, payloadSize),
+        loadNodeName(nodePrefix, doc, op, payloadSize),
       );
     }
   }
 }
 
+/** True for `DocumentNotFoundError`/`DocumentPurgedError` by name, matching their `isError` without importing a class the package does not export publicly. */
+function isDocumentNotFoundError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === "DocumentNotFoundError" ||
+      error.name === "DocumentPurgedError")
+  );
+}
+
 async function countLoadNodes(
   reactor: ManagedInProcessReactor,
   driveId: string,
+  nodePrefix: string,
+): Promise<number> {
+  const drive = await reactor.client.get<DocumentDriveDocument>(driveId);
+  return drive.state.global.nodes.filter((node) =>
+    node.name.startsWith(nodePrefix),
+  ).length;
+}
+
+/** `countLoadNodes`, treating "B has not even seen the drive yet" as 0 rather than a thrown error. Any other error still propagates. */
+async function countLoadNodesOrZero(
+  reactor: ManagedInProcessReactor,
+  driveId: string,
+  nodePrefix: string,
 ): Promise<number> {
   try {
-    const drive = await reactor.client.get<DocumentDriveDocument>(driveId);
-    return drive.state.global.nodes.filter((node) =>
-      node.name.startsWith(LOAD_NODE_PREFIX),
-    ).length;
-  } catch {
-    return 0;
+    return await countLoadNodes(reactor, driveId, nodePrefix);
+  } catch (error) {
+    if (isDocumentNotFoundError(error)) {
+      return 0;
+    }
+    throw error;
   }
 }
 
+/** Consecutive identical non-"not found" errors tolerated before `trackPropagation` gives up and surfaces the real exception. */
+const MAX_CONSECUTIVE_POLL_ERRORS = 5;
+
 type PropagationTracker = {
   /**
-   * Resolves once B first holds at least one matching node, with the
-   * ms-from-generation-start timestamp of that observation; resolves
-   * `undefined` instead if `completed` settles before that ever happens
-   * (e.g. `totalOps` was 0). Never rejects, so it is safe to leave unawaited.
+   * Resolves once B first holds more matching nodes than `baselineCount`,
+   * with the ms-from-`start` timestamp of that observation; resolves
+   * `undefined` instead if `completed` settles (returns or throws) before
+   * that ever happens (e.g. `totalOps` was 0). Never rejects, so it is safe
+   * to leave unawaited.
    */
   firstOpArrivedMs: Promise<number | undefined>;
-  /** Resolves with `endToEndMs` once B holds `targetCount` matching nodes; rejects on timeout. */
+  /** Resolves with `endToEndMs` once B holds `baselineCount + totalOps` matching nodes; rejects on timeout or a surfaced hard error. */
   completed: Promise<number>;
 };
 
 /**
  * Polls B from `start` (before generation on A begins, per the module doc)
- * until it holds `targetCount` nodes matching the load prefix, or until
- * `timeoutMs` elapses.
+ * until it holds `baselineCount + totalOps` nodes matching `nodePrefix`, or
+ * until `timeoutMs` elapses. A bare "not found" (B has not even seen the
+ * drive yet) counts as 0 and keeps polling; any other error is tolerated for
+ * {@link MAX_CONSECUTIVE_POLL_ERRORS} consecutive occurrences before being
+ * rethrown, so a hard B failure fails fast instead of spinning the full
+ * timeout.
  */
 function trackPropagation(
   b: ManagedInProcessReactor,
   driveId: string,
-  targetCount: number,
+  nodePrefix: string,
+  baselineCount: number,
+  totalOps: number,
   timeoutMs: number,
   pollIntervalMs: number,
 ): PropagationTracker {
   const start = now();
+  const targetCount = baselineCount + totalOps;
+  const firstOpThreshold = baselineCount + 1;
 
   let resolveFirstOp: (value: number | undefined) => void;
   let firstOpSettled = false;
@@ -247,9 +388,32 @@ function trackPropagation(
   const completed = (async (): Promise<number> => {
     try {
       const deadline = start + timeoutMs;
+      // Tracked as one object, carried across loop iterations, rather than
+      // two loose `let`s: each field is written and read on a later
+      // iteration, not "later in this iteration", which a simple
+      // per-variable liveness check cannot see across a `for (;;)` back-edge.
+      const pollErrors = {
+        count: 0,
+        lastMessage: undefined as string | undefined,
+      };
       for (;;) {
-        const count = await countLoadNodes(b, driveId);
-        if (count >= 1) {
+        let count: number;
+        try {
+          count = await countLoadNodesOrZero(b, driveId, nodePrefix);
+          pollErrors.count = 0;
+          pollErrors.lastMessage = undefined;
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          pollErrors.count =
+            message === pollErrors.lastMessage ? pollErrors.count + 1 : 1;
+          if (pollErrors.count >= MAX_CONSECUTIVE_POLL_ERRORS) {
+            throw error;
+          }
+          pollErrors.lastMessage = message;
+          count = 0;
+        }
+        if (count >= firstOpThreshold) {
           settleFirstOp(now() - start);
         }
         if (count >= targetCount) {

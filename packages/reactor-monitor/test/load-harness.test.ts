@@ -70,9 +70,11 @@ describe("runLocalSyncLoad", () => {
     // The report is the Stage-P baseline record: JSON-serializable, stable
     // field names, no live handles leaked into it.
     expect(() => JSON.stringify(report)).not.toThrow();
+    // In-process/node, so every sample is a real process.memoryUsage()
+    // snapshot, not the browser-side undefined fallback.
     for (const sample of Object.values(report.memory)) {
-      expect(typeof sample.rss).toBe("number");
-      expect(typeof sample.heapUsed).toBe("number");
+      expect(typeof sample?.rss).toBe("number");
+      expect(typeof sample?.heapUsed).toBe("number");
     }
   }, 60_000);
 
