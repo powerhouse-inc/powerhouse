@@ -1,6 +1,7 @@
 import type { PGlite } from "@electric-sql/pglite";
 import {
   ChannelScheme,
+  channelFactoryTypes,
   DocumentIntegrityService,
   HardenedPGliteDialect,
   InMemoryQueue,
@@ -33,6 +34,7 @@ import { Kysely } from "kysely";
 import { createLocalSigner } from "./signer.js";
 import { DEFAULT_REACTOR_STORAGE, openReactorStore } from "./store.js";
 import { LocalChannelPortRegistry } from "./sync/local-channel-registry.js";
+import { isLocalOnlySync } from "./sync-mode.js";
 import type { ReactorStorageConfig } from "./types.js";
 
 /** Everything the realm-local reactor graph is built from. */
@@ -98,6 +100,23 @@ export type BuiltReactor = {
    * exactly that case.
    */
   canSelfHeal: boolean;
+  /**
+   * The `ChannelConfig.type`s this reactor's sync module actually routes, read
+   * off the channel factory it was BUILT with (`channelFactoryTypes`): the
+   * composite's registered types for a reactor that composes several
+   * transports, the scheme factory's single type when there is no composite,
+   * and empty for a `channelScheme: null` island with no sync module at all.
+   *
+   * The same kind of fact as {@link canSelfHeal}, and present for the same
+   * reason: `capabilities.ts` derives
+   * {@link ReactorCapabilities.syncChannels} FROM this rather than re-deriving
+   * it from the configuration branches that asked for it. A descriptor cannot
+   * express which factories were actually composed -- `sync.local` and
+   * `channelScheme` describe a REQUEST -- so re-deriving would state what was
+   * asked for instead of what routes, and a UI or a router would offer a
+   * transport the reactor refuses (or hide one it serves).
+   */
+  syncChannelTypes: readonly string[];
   /** Stops sync, kills the reactor, destroys the kysely instance, closes the store. */
   shutdown: () => Promise<void>;
   /** True once {@link shutdown} has been entered. */
@@ -128,7 +147,7 @@ export async function buildMonitorReactor(
   // the two exclusive -- so a connect-mode reactor holds Switchboard remotes
   // and brokered peers at once. Only a `channelScheme: null` island gets
   // neither, and so gets no port registry either.
-  const localOnly = options.localSync === true;
+  const localOnly = isLocalOnlySync(options.localSync);
   const scheme = localOnly
     ? null
     : options.channelScheme === undefined
@@ -276,6 +295,14 @@ export async function buildMonitorReactor(
   });
 
   const rm = module.reactorModule;
+  // The routing fact, taken from the factory the sync module was built with
+  // rather than from the branches above that chose it. See
+  // BuiltReactor.syncChannelTypes.
+  const syncChannelTypes: readonly string[] = Object.freeze(
+    rm?.syncModule
+      ? [...channelFactoryTypes(rm.syncModule.channelFactory)]
+      : [],
+  );
   const inspector = new ReactorInspector(
     rm
       ? {
@@ -342,6 +369,7 @@ export async function buildMonitorReactor(
     dbQuery,
     ...(localChannelPorts ? { localChannelPorts } : {}),
     canSelfHeal,
+    syncChannelTypes,
     shutdown,
     isShutdown: () => shuttingDown !== undefined,
   };

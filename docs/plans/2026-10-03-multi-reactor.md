@@ -272,9 +272,10 @@ oxlint, oxfmt clean).
   does not survive postMessage: Connect's live limitation, backlog item 2),
   `workflows` (false for both browser kinds - the engine forks child processes,
   agreed decision 3), `inspection` (direct | rpc | none), `syncChannels`
-  (gql | local, from the descriptor's sync mode; empty for a
-  `channelScheme: null` island), `selfHeal` (durable store this process opened,
-  i.e. the W0.7/W0.8 in-place recreate applies). Worker and in-process differ in
+  (the literal `ChannelConfig.type`s the BUILT channel factory routes - `gql` |
+  `polling` | `local`; empty for a `channelScheme: null` island), `selfHeal`
+  (durable store this process opened, i.e. the W0.7/W0.8 in-place recreate
+  applies). Worker and in-process differ in
   EXACTLY three fields - `hosting`, `inspection`, `processors` - which is
   asserted, so a new divergence cannot be introduced silently.
   **This is the router's input**: placement, which reactor may host a processor
@@ -384,6 +385,52 @@ takes `localLinks`, offering only local-capable peers and explaining an island
 rather than letting the broker refuse it. Live pass still owed: one browser
 reactor syncing a Switchboard remote and a sibling worker at the same time.
 Connect itself adopts the seam in stage 4.
+
+### W3.0 review fixes (2026-10-04)
+The review of the two commits above found the same defect in four places: the
+capabilities were re-derived from CONFIGURATION branches instead of read from the
+reactor that was built. The fix makes the routing a built fact and reads it
+everywhere.
+
+- **`BuiltReactor.syncChannelTypes`** (`build-reactor.ts`), exactly parallel to
+  `canSelfHeal`: the `ChannelConfig.type`s the sync module's factory actually
+  routes, taken off the live factory by `channelFactoryTypes()`
+  (`packages/reactor/src/sync/channels/channel-factory-types.ts`) — a
+  composite's `registeredTypes()`, the scheme factory's single type when there
+  is no composite, `[]` for an island, and `[]` (conservatively) for a factory
+  this package cannot classify. It rides the worker's built-config report
+  (`BuiltWorkerConfig.syncChannelTypes`, which REPLACES the reported
+  `channelScheme`/`localSync` so the tab has no branches left to re-run), and
+  `reactorCapabilities(descriptor, built)` takes both built facts together. The
+  descriptor-only derivation survives for exactly two rows: the `remote` kind
+  and a pre-provision query.
+- **Conservative fallback**: when a worker's built-config round-trip fails — a
+  failed boot, or a worker on a build that does not report the field at all, in
+  which case the payload is REFUSED rather than read as silence —
+  `unverifiedReactorCapabilities()` claims the descriptor's capabilities minus
+  `local`. The asymmetry is deliberate: a wrong `true` puts adopt/remove on the
+  handle and is discovered only after a port has been opened and TRANSFERRED,
+  where a wrong `false` costs a re-provision. Worker handles gate those methods
+  on the REPORTED types, so version skew fails fast in both directions.
+- **`gql` vs `polling` decided**: `syncChannels` carries the LITERAL composite
+  types, with no translation layer. A SWITCHBOARD-scheme reactor therefore reads
+  `["polling", "local"]`, and the monitor's add-remote form (which gates on
+  `gql`, the type it writes) is hidden for it — correctly: a `polling` channel
+  is resolver-driven, created when a PEER registers one against this reactor,
+  so there is nothing for a holder to add from this side. Its local link panel
+  stays live. Asserted at the contract (`local-sync.test.ts`), in the grid
+  (`OverviewTab.test.tsx`) and end to end through the UI gates
+  (`App.test.tsx`).
+- **One spelling**: `GQL_CHANNEL_TYPE` / `POLLING_CHANNEL_TYPE` /
+  `LOCAL_CHANNEL_TYPE` are the single source for every writer and reader —
+  reactor-api's `touchChannel` resolver, the Sync tab's add-remote form, the
+  capability rows, the link guard, and the tests that assert them. One
+  per-scheme descriptor in `ReactorBuilder` (exhaustive, never-checked) now
+  answers both "which type" and "which factory", so a new scheme cannot be
+  registered under one scheme's type while serving another's.
+- **One `sync.local` read**: `isLocalOnlySync()` is strict (only the boolean
+  `true`) and validated at the descriptor boundary, shared by the builder that
+  acts on it and the contract that describes it.
 
 ### Router client (iterative, stages 1→3)
 - New package; `IReactorClient` facade via Proxy-forwarding + target selection by

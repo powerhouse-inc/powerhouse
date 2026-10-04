@@ -1,3 +1,4 @@
+export { channelFactoryTypes } from "./channel-factory-types.js";
 export { CompositeChannelFactory } from "./composite-channel-factory.js";
 export {
   GqlRequestChannelFactory,

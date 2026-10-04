@@ -33,6 +33,8 @@ export type {
 export {
   reactorCapabilities,
   supportsSyncChannel,
+  unverifiedReactorCapabilities,
+  type BuiltCapabilityFacts,
   type ReactorCapabilities,
   type ReactorHosting,
   type ReactorInspectionTransport,
@@ -40,6 +42,17 @@ export {
   type ReactorStorageKind,
   type ReactorSyncChannel,
 } from "./capabilities.js";
+export { isLocalOnlySync } from "./sync-mode.js";
+
+// The channel-type constants, re-exported so a consumer of this package reads
+// `capabilities.syncChannels` against the SAME spellings the reactor routes on
+// and writes into a `ChannelConfig.type`, without importing
+// `@powerhousedao/reactor` for three strings.
+export {
+  GQL_CHANNEL_TYPE,
+  LOCAL_CHANNEL_TYPE,
+  POLLING_CHANNEL_TYPE,
+} from "@powerhousedao/reactor";
 
 export { provision, type ProvisionOptions } from "./provision.js";
 export { provisionInProcess } from "./in-process.js";
@@ -122,8 +135,11 @@ export {
   type MonitorWorkerHostOptions,
 } from "./worker/host.js";
 export {
+  builtWorkerConfigOf,
+  parseBuiltWorkerConfig,
   parseWorkerConstruct,
   toWorkerConstruct,
+  type BuiltWorkerConfig,
   type MonitorWorkerConstruct,
 } from "./worker/construct.js";
 export { dispatchSyncOp, toWireRemote } from "./worker/sync-ops.js";

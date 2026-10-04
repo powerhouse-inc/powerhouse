@@ -443,6 +443,7 @@ export {
 } from "./src/storage/index.js";
 export {
   batchOperationsByDocument,
+  channelFactoryTypes,
   ChannelError,
   ChannelErrorSource,
   ChannelScheme,

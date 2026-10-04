@@ -186,20 +186,33 @@ export function toWorkerConstruct(
  */
 export type BuiltWorkerConfig = {
   storage: ReactorStorageConfig;
-  channelScheme: ChannelScheme | null | undefined;
-  localSync: boolean;
+  /**
+   * `BuiltReactor.syncChannelTypes`: the `ChannelConfig.type`s the worker's
+   * channel factory actually routes.
+   *
+   * Reported instead of the construct's `channelScheme`/`localSync` on purpose.
+   * Those two name a REQUEST, and the tab would have to re-run the builder's
+   * branches on them to guess what routes -- which is how the tab came to put
+   * `adoptLocalSyncPeer` on a handle whose worker had no local factory, and to
+   * withhold it from one that did. The worker reads the fact off the factory it
+   * built and sends that; the tab reads it, and neither side re-derives.
+   */
+  syncChannelTypes: readonly string[];
   canSelfHeal: boolean;
 };
 
-/** The {@link BuiltWorkerConfig} for the construct that won, plus its actual `canSelfHeal`. */
+/**
+ * The {@link BuiltWorkerConfig} for the construct that won, plus the two facts
+ * only the built reactor knows.
+ */
 export function builtWorkerConfigOf(
   construct: MonitorWorkerConstruct,
   canSelfHeal: boolean,
+  syncChannelTypes: readonly string[],
 ): BuiltWorkerConfig {
   return {
     storage: construct.storage ?? DEFAULT_REACTOR_STORAGE,
-    channelScheme: construct.channelScheme,
-    localSync: construct.localSync ?? false,
+    syncChannelTypes: [...syncChannelTypes],
     canSelfHeal,
   };
 }
@@ -218,9 +231,19 @@ export function parseBuiltWorkerConfig(raw: unknown): BuiltWorkerConfig {
   }
   const value = raw as Record<string, unknown>;
   const storage = asStorage(value.storage) ?? DEFAULT_REACTOR_STORAGE;
-  const channelScheme = asScheme(value.channelScheme);
-  if (typeof value.localSync !== "boolean") {
-    throw new Error("Invalid built worker config: localSync must be a boolean");
+  // Required, not defaulted: a worker on a build that predates the routing
+  // report cannot answer this, and silently reading its silence as "routes
+  // nothing" would hide a real version skew behind a plausible-looking
+  // contract. Refusing the payload sends the tab down the conservative
+  // no-local fallback WITH a warning naming the worker.
+  const syncChannelTypes = asStringArray(
+    value.syncChannelTypes,
+    "syncChannelTypes",
+  );
+  if (!syncChannelTypes) {
+    throw new Error(
+      "Invalid built worker config: syncChannelTypes must be string[]; a worker that does not report the channel types it routes cannot be taken to serve any",
+    );
   }
   if (typeof value.canSelfHeal !== "boolean") {
     throw new Error(
@@ -229,8 +252,7 @@ export function parseBuiltWorkerConfig(raw: unknown): BuiltWorkerConfig {
   }
   return {
     storage,
-    channelScheme,
-    localSync: value.localSync,
+    syncChannelTypes,
     canSelfHeal: value.canSelfHeal,
   };
 }

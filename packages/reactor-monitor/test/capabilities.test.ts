@@ -1,11 +1,18 @@
 import { PGlite } from "@electric-sql/pglite";
-import { ChannelScheme } from "@powerhousedao/reactor";
+import {
+  ChannelScheme,
+  GQL_CHANNEL_TYPE,
+  LOCAL_CHANNEL_TYPE,
+  POLLING_CHANNEL_TYPE,
+} from "@powerhousedao/reactor";
 import { describe, expect, it } from "vitest";
 import {
   buildMonitorReactor,
+  isLocalOnlySync,
   provisionInProcess,
   reactorCapabilities,
   supportsSyncChannel,
+  unverifiedReactorCapabilities,
   type ReactorCapabilities,
   type ReactorDescriptor,
 } from "../src/index.js";
@@ -84,21 +91,14 @@ describe("reactorCapabilities", () => {
     expect(
       reactorCapabilities({ kind: "in-process", name: "cap-default" })
         .syncChannels,
-    ).toEqual(["gql", "local"]);
+    ).toEqual([GQL_CHANNEL_TYPE, LOCAL_CHANNEL_TYPE]);
     expect(
       reactorCapabilities({
         kind: "worker",
         name: "cap-connect",
         sync: { channelScheme: ChannelScheme.CONNECT },
       }).syncChannels,
-    ).toEqual(["gql", "local"]);
-    expect(
-      reactorCapabilities({
-        kind: "in-process",
-        name: "cap-switchboard",
-        sync: { channelScheme: ChannelScheme.SWITCHBOARD },
-      }).syncChannels,
-    ).toEqual(["gql", "local"]);
+    ).toEqual([GQL_CHANNEL_TYPE, LOCAL_CHANNEL_TYPE]);
     // No sync module at all: an island, linkable by nothing.
     expect(
       reactorCapabilities({
@@ -107,6 +107,101 @@ describe("reactorCapabilities", () => {
         sync: { channelScheme: null },
       }).syncChannels,
     ).toEqual([]);
+  });
+
+  // The SWITCHBOARD row, and the reason this contract carries the LITERAL
+  // channel types: that scheme's factory serves "polling" channels, which come
+  // into being when a peer registers one against this reactor, not when a
+  // holder adds one. Labelling it "gql" would have told the monitor's
+  // add-remote form it could create a `{type:"gql"}` remote here -- a config
+  // the GqlResponseChannelFactory refuses -- so the form reads the absence of
+  // "gql" and stays hidden instead.
+  it("names the switchboard scheme's own polling channel, not an abstract gql one", () => {
+    const capabilities = reactorCapabilities({
+      kind: "in-process",
+      name: "cap-switchboard",
+      sync: { channelScheme: ChannelScheme.SWITCHBOARD },
+    });
+
+    expect(capabilities.syncChannels).toEqual([
+      POLLING_CHANNEL_TYPE,
+      LOCAL_CHANNEL_TYPE,
+    ]);
+    expect(supportsSyncChannel(capabilities, GQL_CHANNEL_TYPE)).toBe(false);
+    expect(supportsSyncChannel(capabilities, LOCAL_CHANNEL_TYPE)).toBe(true);
+  });
+
+  // The structural rule: syncChannels states what the reactor ROUTES, which
+  // only the built factory knows. A descriptor saying otherwise loses.
+  it("reads the built channel types over anything the descriptor asked for", () => {
+    const asked: ReactorDescriptor = {
+      kind: "worker",
+      name: "cap-built-wins",
+      sync: { channelScheme: ChannelScheme.CONNECT },
+    };
+
+    expect(
+      reactorCapabilities(asked, {
+        canSelfHeal: true,
+        syncChannelTypes: [LOCAL_CHANNEL_TYPE],
+      }).syncChannels,
+    ).toEqual([LOCAL_CHANNEL_TYPE]);
+    // And the reverse: a local-ONLY request on a worker that actually built a
+    // composite declares the composite's types.
+    expect(
+      reactorCapabilities(
+        { kind: "worker", name: "cap-built-wins-2", sync: { local: true } },
+        {
+          canSelfHeal: true,
+          syncChannelTypes: [GQL_CHANNEL_TYPE, LOCAL_CHANNEL_TYPE],
+        },
+      ).syncChannels,
+    ).toEqual([GQL_CHANNEL_TYPE, LOCAL_CHANNEL_TYPE]);
+  });
+
+  // A transport this contract has no row for cannot be routed on by a router
+  // that was never taught it, so it is dropped rather than widening the type.
+  it("drops a reported channel type the contract has no row for", () => {
+    expect(
+      reactorCapabilities(
+        { kind: "worker", name: "cap-unknown-type" },
+        {
+          canSelfHeal: false,
+          syncChannelTypes: ["carrier-pigeon", LOCAL_CHANNEL_TYPE],
+        },
+      ).syncChannels,
+    ).toEqual([LOCAL_CHANNEL_TYPE]);
+  });
+
+  // Never claim `local` on a guess: claiming it puts the adopt/remove handles
+  // on the reactor and lets linkLocalSync open and TRANSFER a port before
+  // finding out, where refusing only costs a re-provision.
+  it("claims no local channel for a reactor whose built facts could not be read", () => {
+    expect(
+      unverifiedReactorCapabilities({
+        kind: "worker",
+        name: "cap-unverified-connect",
+      }).syncChannels,
+    ).toEqual([GQL_CHANNEL_TYPE]);
+    expect(
+      unverifiedReactorCapabilities({
+        kind: "worker",
+        name: "cap-unverified-local",
+        sync: { local: true },
+      }).syncChannels,
+    ).toEqual([]);
+    // Everything else still reads as the descriptor's own approximation.
+    expect(
+      unverifiedReactorCapabilities({
+        kind: "worker",
+        name: "cap-unverified-memory",
+        storage: { kind: "memory" },
+      }),
+    ).toMatchObject({
+      storage: { kind: "memory", durable: false },
+      selfHeal: false,
+      inspection: "rpc",
+    });
   });
 
   it("lets sync.local win over a channelScheme, exactly as the builder does", () => {
@@ -174,6 +269,13 @@ describe("reactorCapabilities", () => {
     await pg.waitReady;
     const built = await buildMonitorReactor({ namespace: "cap-caller-pg", pg });
     try {
+      // The other built fact, from the same reactor: the default scheme
+      // composes a local factory onto its gql one, and the composite reports
+      // both types rather than the builder's branches being re-run here.
+      expect(built.syncChannelTypes).toEqual([
+        GQL_CHANNEL_TYPE,
+        LOCAL_CHANNEL_TYPE,
+      ]);
       // A caller-supplied `pg` is the caller's to reopen, not this process's
       // -- build-reactor.ts never constructs self-heal for it (ownsStore is
       // false), independent of what storage kind a descriptor would
@@ -186,7 +288,10 @@ describe("reactorCapabilities", () => {
           name: "cap-caller-pg",
           storage: { kind: "idb" },
         },
-        { canSelfHeal: built.canSelfHeal },
+        {
+          canSelfHeal: built.canSelfHeal,
+          syncChannelTypes: built.syncChannelTypes,
+        },
       );
       // Storage still reads durable -- that is what the descriptor claims --
       // but selfHeal must come from the actual built fact, not be re-derived
@@ -205,24 +310,43 @@ describe("reactorCapabilities", () => {
       name: "cap-local",
       sync: { local: true },
     });
-    expect(supportsSyncChannel(local, "local")).toBe(true);
-    expect(supportsSyncChannel(local, "gql")).toBe(false);
+    expect(supportsSyncChannel(local, LOCAL_CHANNEL_TYPE)).toBe(true);
+    expect(supportsSyncChannel(local, GQL_CHANNEL_TYPE)).toBe(false);
 
     const connect = reactorCapabilities({
       kind: "in-process",
       name: "cap-connect-reader",
       sync: { channelScheme: ChannelScheme.CONNECT },
     });
-    expect(supportsSyncChannel(connect, "local")).toBe(true);
-    expect(supportsSyncChannel(connect, "gql")).toBe(true);
+    expect(supportsSyncChannel(connect, LOCAL_CHANNEL_TYPE)).toBe(true);
+    expect(supportsSyncChannel(connect, GQL_CHANNEL_TYPE)).toBe(true);
 
     const island = reactorCapabilities({
       kind: "in-process",
       name: "cap-island-reader",
       sync: { channelScheme: null },
     });
-    expect(supportsSyncChannel(island, "local")).toBe(false);
-    expect(supportsSyncChannel(island, "gql")).toBe(false);
+    expect(supportsSyncChannel(island, LOCAL_CHANNEL_TYPE)).toBe(false);
+    expect(supportsSyncChannel(island, GQL_CHANNEL_TYPE)).toBe(false);
+  });
+});
+
+/**
+ * The one read of the local-ONLY mode, shared by the builder and this
+ * contract. Two readers each spelling their own truthiness test is how what a
+ * reactor is BUILT as and what it DECLARES drift apart.
+ */
+describe("isLocalOnlySync", () => {
+  it("selects local-only on the boolean true and nothing else", () => {
+    expect(isLocalOnlySync(true)).toBe(true);
+    expect(isLocalOnlySync(false)).toBe(false);
+    expect(isLocalOnlySync(undefined)).toBe(false);
+  });
+
+  it("refuses an untyped value instead of reading it as truthy", () => {
+    for (const value of ["true", "", 1, 0, {}, null]) {
+      expect(() => isLocalOnlySync(value)).toThrow(/local must be a boolean/);
+    }
   });
 });
 

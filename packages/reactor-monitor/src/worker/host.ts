@@ -163,7 +163,11 @@ export function createMonitorWorkerHost(
     // hello sent -- see the "builtConfig" op's doc on `ReactorHostOptions`.
     onAdminGetBuiltConfig: () => {
       const current = requireBuilt();
-      return builtWorkerConfigOf(current.construct, current.canSelfHeal);
+      return builtWorkerConfigOf(
+        current.construct,
+        current.canSelfHeal,
+        current.syncChannelTypes,
+      );
     },
   });
 

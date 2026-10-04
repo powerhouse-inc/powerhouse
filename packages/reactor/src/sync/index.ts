@@ -70,6 +70,7 @@ export {
 } from "./errors.js";
 
 export {
+  channelFactoryTypes,
   CompositeChannelFactory,
   envelopesToSyncOperations,
   GqlRequestChannel,

@@ -96,6 +96,7 @@ export async function provisionInProcess(
     kind: "in-process",
     capabilities: reactorCapabilities(descriptor, {
       canSelfHeal: built.canSelfHeal,
+      syncChannelTypes: built.syncChannelTypes,
     }),
     client: built.module.client,
     inspector: built.inspector,

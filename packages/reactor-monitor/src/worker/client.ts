@@ -17,9 +17,11 @@ import {
   type IRpcTransport,
   type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
+import { LOCAL_CHANNEL_TYPE } from "@powerhousedao/reactor";
 import {
   reactorCapabilities,
   supportsSyncChannel,
+  unverifiedReactorCapabilities,
   type ReactorCapabilities,
 } from "../capabilities.js";
 import { reactorWorkerName } from "../naming.js";
@@ -65,6 +67,11 @@ function resolveWorkerUrl(descriptor: ReactorDescriptor): URL {
  * from the built-config report rather than from any connecting descriptor --
  * the whole point being that a later tab's descriptor must not leak into
  * what this handle claims the reactor can do (multi-reactor stage 2 review).
+ *
+ * The report's own `syncChannelTypes` and `canSelfHeal` are passed through as
+ * built facts; the synthetic descriptor carries only what is left (the hosting
+ * kind and the store), so there is no sync configuration here for anything to
+ * be re-derived from.
  */
 function capabilitiesOfBuiltConfig(
   name: string,
@@ -75,12 +82,11 @@ function capabilitiesOfBuiltConfig(
       kind: "worker",
       name,
       storage: builtConfig.storage,
-      sync: {
-        channelScheme: builtConfig.channelScheme,
-        local: builtConfig.localSync,
-      },
     },
-    { canSelfHeal: builtConfig.canSelfHeal },
+    {
+      canSelfHeal: builtConfig.canSelfHeal,
+      syncChannelTypes: builtConfig.syncChannelTypes,
+    },
   );
 }
 
@@ -204,18 +210,18 @@ export async function connectManagedWorkerReactor(
   // The construct that actually won the build, not this connection's own
   // descriptor: a later tab's hello can name a different storage/sync shape
   // than the first, and `ReactorHost` builds once and silently drops it
-  // (multi-reactor stage 2 review). A failed fetch falls back to the
-  // connecting descriptor rather than failing provisioning on it, so a build
-  // failure keeps surfacing where it already does -- at the first op (see
-  // `worker-host.test.ts`'s "surfaces a failed build to the ops that follow
-  // it") -- instead of here too.
+  // (multi-reactor stage 2 review). A failed fetch falls back to a
+  // CONSERVATIVE reading of the connecting descriptor rather than failing
+  // provisioning on it, so a build failure keeps surfacing where it already
+  // does -- at the first op (see `worker-host.test.ts`'s "surfaces a failed
+  // build to the ops that follow it") -- instead of here too.
   let builtConfig: BuiltWorkerConfig | undefined;
   try {
     builtConfig = parseBuiltWorkerConfig(await adminClient.getBuiltConfig());
   } catch (error) {
     console.warn(
       `[reactor-monitor] could not read "${descriptor.name}"'s built configuration; ` +
-        `falling back to the connecting descriptor's own (possibly wrong) capabilities:`,
+        `falling back to the connecting descriptor's capabilities, with no local sync channel claimed:`,
       error,
     );
   }
@@ -223,7 +229,7 @@ export async function connectManagedWorkerReactor(
   const requestedCapabilities = reactorCapabilities(descriptor);
   const capabilities = builtConfig
     ? capabilitiesOfBuiltConfig(descriptor.name, builtConfig)
-    : requestedCapabilities;
+    : unverifiedReactorCapabilities(descriptor);
   // True only when a LATER tab's descriptor disagrees with the FIRST,
   // winning one -- never for the tab whose descriptor was actually built.
   const descriptorMismatch = builtConfig
@@ -239,17 +245,19 @@ export async function connectManagedWorkerReactor(
     );
   }
 
-  // Read off the capability contract rather than off `builtConfig.localSync`,
-  // because a gql-scheme worker reactor also serves brokered local peers now
-  // (W3.0) while reporting `localSync: false`. `capabilities` is already
-  // derived from the construct that WON the build, not from this connection's
-  // own descriptor (see `descriptorMismatch` above) -- without that, linkLocal
-  // Sync's requireLocalCapable() saw two methods on every worker reactor that
-  // asked for local sync and only found out the worker had none after a port
-  // had been opened and transferred: a failure with side effects where a
-  // fail-fast belonged. Keeping both reads on one field is also what stops
-  // the contract and the handle's methods from drifting apart.
-  const localSync = supportsSyncChannel(capabilities, "local")
+  // Gated on the channel types the worker REPORTED routing, through the one
+  // capability field: `capabilities` comes from the construct that WON the
+  // build (see `descriptorMismatch` above), and its syncChannels are the
+  // worker's own `syncChannelTypes` rather than anything re-derived from a
+  // requested sync mode. That is what makes this survive version skew in both
+  // directions -- a connect-mode worker DOES serve brokered peers (W3.0) and
+  // must expose the handles, while a worker that reports no local type (an
+  // older build, or one that really has no local factory) must not get them.
+  // Without it, linkLocalSync's requireLocalCapable() saw two methods on every
+  // worker reactor that asked for local sync and only found out the worker had
+  // none after a port had been opened and transferred: a failure with side
+  // effects where a fail-fast belonged.
+  const localSync = supportsSyncChannel(capabilities, LOCAL_CHANNEL_TYPE)
     ? {
         /**
          * Transfers one end of the broker's MessageChannel into the worker and

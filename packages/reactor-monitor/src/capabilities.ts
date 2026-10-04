@@ -1,4 +1,11 @@
+import {
+  ChannelScheme,
+  GQL_CHANNEL_TYPE,
+  LOCAL_CHANNEL_TYPE,
+  POLLING_CHANNEL_TYPE,
+} from "@powerhousedao/reactor";
 import { DEFAULT_REACTOR_STORAGE } from "./store.js";
+import { isLocalOnlySync } from "./sync-mode.js";
 import type { ReactorDescriptor, ReactorKind } from "./types.js";
 
 /**
@@ -36,19 +43,51 @@ export type ReactorStorageKind = "idb" | "memory" | "path" | "remote";
 export type ReactorInspectionTransport = "direct" | "rpc" | "none";
 
 /**
- * A sync transport the reactor can actually form a remote on.
+ * A sync transport the reactor can actually form a remote on, spelled EXACTLY
+ * as the `ChannelConfig.type` the reactor routes it under -- these are the
+ * reactor's own channel-type constants, not a monitor-side abstraction over
+ * them:
  *
- * - `gql`: the Connect/Switchboard GraphQL channels (poll or resolver driven).
- * - `local`: a brokered-`MessagePort` `LocalChannel` peer (multi-reactor W1.2).
+ * - `gql` ({@link GQL_CHANNEL_TYPE}): a Connect reactor's request channel. It
+ *   polls a Switchboard, and a holder can ADD one by naming a URL, which is
+ *   what makes it the only channel the monitor's add-remote form can create.
+ * - `polling` ({@link POLLING_CHANNEL_TYPE}): a Switchboard reactor's response
+ *   channel. Resolver-driven: it comes into being when a peer calls
+ *   `registerChannel` against this reactor, so there is nothing for a holder
+ *   to "add" from this side.
+ * - `local` ({@link LOCAL_CHANNEL_TYPE}): a brokered-`MessagePort`
+ *   `LocalChannel` peer (multi-reactor W1.2).
  *
- * A gql-scheme reactor now declares BOTH (multi-reactor W3.0): the reactor
- * builder composes its scheme factory and a `LocalChannelFactory` in a
- * `CompositeChannelFactory`, which routes each remote on its channel type, so
- * one reactor can hold Switchboard remotes and brokered peers at once. Modelled
- * as a set because that is the shape a router needs to intersect two reactors'
- * transports.
+ * Literal rather than abstract on purpose. An earlier reading labelled every
+ * gql scheme `"gql"`, which made a SWITCHBOARD-scheme reactor claim a channel
+ * type it does not route: the add-remote form would have offered to create a
+ * `{type:"gql"}` remote that its `GqlResponseChannelFactory` refuses. Carrying
+ * the literal truth here and letting each reader decide what it can do with a
+ * given type keeps the contract free of a translation layer that could only
+ * ever be wrong in one direction.
+ *
+ * A reactor declares one entry per composed factory (multi-reactor W3.0): a
+ * CONNECT-scheme reactor declares `["gql", "local"]`, because the builder
+ * composes its scheme factory and a `LocalChannelFactory` in a
+ * `CompositeChannelFactory` that routes each remote on its channel type.
+ * Modelled as a set because that is the shape a router needs to intersect two
+ * reactors' transports.
  */
-export type ReactorSyncChannel = "gql" | "local";
+export type ReactorSyncChannel =
+  | typeof GQL_CHANNEL_TYPE
+  | typeof POLLING_CHANNEL_TYPE
+  | typeof LOCAL_CHANNEL_TYPE;
+
+/** Every channel type this contract has a row for; see {@link ReactorSyncChannel}. */
+const REACTOR_SYNC_CHANNELS: readonly ReactorSyncChannel[] = [
+  GQL_CHANNEL_TYPE,
+  POLLING_CHANNEL_TYPE,
+  LOCAL_CHANNEL_TYPE,
+];
+
+function isReactorSyncChannel(type: string): type is ReactorSyncChannel {
+  return REACTOR_SYNC_CHANNELS.some((known) => known === type);
+}
 
 /** The reactor's store, and whether an acknowledged write outlives the realm. */
 export type ReactorStorageCapability = {
@@ -71,10 +110,12 @@ export type ReactorStorageCapability = {
  * client", stages 1-3) selects targets on: placement, which reactor may host a
  * processor or fire a workflow trigger, which pair of reactors can be linked,
  * and what observability a caller may expect of a target. Every field is
- * therefore a statement about the reactor as provisioned, derived from its
- * descriptor alone -- not a runtime health reading and not a wish. Health lives
- * in `IInspector` (`getStorageHealth`, `inspectRemotes`); this is static for
- * the life of the instance, which is what makes it cacheable by a router.
+ * therefore a statement about the reactor as BUILT -- read from the built
+ * reactor itself wherever the descriptor cannot state it (see
+ * {@link BuiltCapabilityFacts}) -- not a runtime health reading and not a wish.
+ * Health lives in `IInspector` (`getStorageHealth`, `inspectRemotes`); this is
+ * static for the life of the instance, which is what makes it cacheable by a
+ * router.
  *
  * Adding a field is a contract change: a router that routes on it has to be
  * taught what it means first.
@@ -112,13 +153,15 @@ export interface ReactorCapabilities {
   /** How the inspector reaches the reactor; see {@link ReactorInspectionTransport}. */
   readonly inspection: ReactorInspectionTransport;
   /**
-   * The sync transports this reactor can form a remote on, derived from the
-   * descriptor's sync mode. Empty when the reactor was built with no sync
-   * module at all (`sync.channelScheme: null`) -- such a reactor is an island
-   * and no link of any kind can be made to it.
+   * The sync transports this reactor can form a remote on, read off the
+   * channel factory it was BUILT with ({@link BuiltReactor.syncChannelTypes})
+   * and spelled as the `ChannelConfig.type`s it routes. Empty when the reactor
+   * was built with no sync module at all (`sync.channelScheme: null`) -- such a
+   * reactor is an island and no link of any kind can be made to it.
    *
-   * `linkLocalSync` enforces its precondition through this field, so the
-   * contract and the behaviour cannot drift.
+   * `linkLocalSync` enforces its precondition through this field, the worker
+   * handle exposes its adopt/remove methods on it, and the monitor's two sync
+   * forms gate on it, so the contract and the behaviour cannot drift.
    */
   readonly syncChannels: readonly ReactorSyncChannel[];
   /**
@@ -135,36 +178,100 @@ export interface ReactorCapabilities {
 }
 
 /**
- * The sync transports a descriptor's sync config resolves to.
+ * The facts about a reactor that only the BUILT reactor can state, and that
+ * {@link reactorCapabilities} must therefore be GIVEN rather than re-derive
+ * from the descriptor that asked for them.
  *
- * `sync.local` still wins over `channelScheme` exactly as
- * `buildMonitorReactor` does, and still means local-ONLY: that mode wires a
- * lone `LocalChannelFactory` and is deliberately Switchboard- and
- * GraphQL-free. An explicit `channelScheme: null` builds no sync module, hence
- * no transports at all.
+ * Both fields exist because the descriptor cannot express them:
  *
- * Everything else -- a gql scheme, including the default -- declares BOTH
- * (multi-reactor W3.0). Such a reactor is built with
- * `withAdditionalChannelFactory(LOCAL_CHANNEL_TYPE, ...)` on top of its
- * scheme, so it genuinely serves gql remotes and brokered local peers at the
- * same time; this row is what a router reads to know a Switchboard-connected
- * reactor may also be linked to a sibling.
+ * - `canSelfHeal`: whether this process owns a store it can reopen in place. A
+ *   caller-supplied `pg` is the caller's to reopen and has no representation in
+ *   a {@link ReactorDescriptor} at all, so durability alone would read `true`
+ *   for a reactor that cannot heal.
+ * - `syncChannelTypes`: which `ChannelConfig.type`s the built channel factory
+ *   actually routes. `sync.local` and `channelScheme` describe a REQUEST; what
+ *   routes is whatever factories were composed, which is also what a worker
+ *   reports back over its built-config op after a later tab's descriptor lost
+ *   the race to the construct that won the build (multi-reactor stage 2
+ *   review).
+ *
+ * Required together, and supplied together, so a caller cannot thread one true
+ * fact and leave the other to an approximation.
  */
-function syncChannelsOf(
+export type BuiltCapabilityFacts = {
+  readonly canSelfHeal: boolean;
+  readonly syncChannelTypes: readonly string[];
+};
+
+/**
+ * The contract rows for the channel types a BUILT reactor reports routing
+ * ({@link BuiltReactor.syncChannelTypes}). This is the path every provisioned
+ * reactor takes.
+ *
+ * A type this contract has no row for is dropped rather than passed through:
+ * `syncChannels` is what a router selects on, and a router cannot route on a
+ * transport it has never been taught. The monitor composes only the three
+ * channel types {@link ReactorSyncChannel} names, so this filters nothing in
+ * practice -- it exists so a reactor built with a custom factory downgrades to
+ * "cannot be routed on that" instead of widening the contract silently.
+ */
+function builtSyncChannels(
+  types: readonly string[],
+): readonly ReactorSyncChannel[] {
+  return types.filter(isReactorSyncChannel);
+}
+
+/**
+ * The sync transports a descriptor's sync config WOULD resolve to, for the two
+ * rows that have no built reactor to read: the `remote` kind (nothing is built
+ * in this process at all) and a pre-provision query against a descriptor.
+ *
+ * Deliberately NOT how a provisioned reactor's capabilities are derived --
+ * {@link builtSyncChannels} is -- because this can only restate the request.
+ * It mirrors `buildMonitorReactor`'s branches: `sync.local` wins over
+ * `channelScheme` and means local-ONLY (a lone `LocalChannelFactory`, no gql
+ * factory at all), an explicit `channelScheme: null` builds no sync module and
+ * so declares nothing, and a gql scheme declares its own type plus `local`,
+ * which the builder composes onto it (multi-reactor W3.0).
+ */
+function descriptorSyncChannels(
   descriptor: ReactorDescriptor,
 ): readonly ReactorSyncChannel[] {
   if (descriptor.kind === "remote") {
     // Attached over the existing GQL channels (plan W3.1). Nothing on the far
     // side of the wire can be handed a MessagePort, so no local channel.
-    return ["gql"];
+    return [GQL_CHANNEL_TYPE];
   }
-  if (descriptor.sync?.local) {
-    return ["local"];
+  if (isLocalOnlySync(descriptor.sync?.local)) {
+    return [LOCAL_CHANNEL_TYPE];
   }
-  if (descriptor.sync?.channelScheme === null) {
+  const scheme = descriptor.sync?.channelScheme;
+  if (scheme === null) {
     return [];
   }
-  return ["gql", "local"];
+  return schemeSyncChannels(scheme ?? ChannelScheme.CONNECT);
+}
+
+/**
+ * What one gql {@link ChannelScheme} contributes, plus the `local` channel the
+ * builder composes onto every scheme. Exhaustive with a never-check so a new
+ * scheme cannot silently inherit the CONNECT row and mislabel its channel.
+ */
+function schemeSyncChannels(
+  scheme: ChannelScheme,
+): readonly ReactorSyncChannel[] {
+  switch (scheme) {
+    case ChannelScheme.CONNECT:
+      return [GQL_CHANNEL_TYPE, LOCAL_CHANNEL_TYPE];
+    case ChannelScheme.SWITCHBOARD:
+      return [POLLING_CHANNEL_TYPE, LOCAL_CHANNEL_TYPE];
+    default: {
+      const unsupported: never = scheme;
+      throw new Error(
+        `Unsupported channel scheme: ${JSON.stringify(unsupported)}`,
+      );
+    }
+  }
 }
 
 /** The store class and durability a descriptor resolves to. */
@@ -204,19 +311,17 @@ function inspectionOf(hosting: ReactorHosting): ReactorInspectionTransport {
  * design cannot account for. The `remote` row states today's truth (no
  * inspection surface, nothing here to self-heal), not stage 3's intent.
  *
- * `built`, when supplied, carries the one fact the descriptor alone cannot
- * express: whether this process actually owns a reopenable store
- * (`BuiltReactor.canSelfHeal`, `build-reactor.ts`). A caller-supplied `pg`
- * has no representation in {@link ReactorDescriptor} at all, so a worker's
- * built-config report (multi-reactor stage 2 review) and `provisionInProcess`
- * both pass the actual built value rather than let `selfHeal` be re-derived
- * from storage durability alone and risk disagreeing with the real reactor.
- * Omitted, `selfHeal` falls back to the durability-only approximation, which
- * is exact for every descriptor that never reaches a caller-supplied `pg`.
+ * `built` carries the facts the descriptor alone cannot express, and every
+ * provisioned reactor passes it; see {@link BuiltCapabilityFacts}. Omitting it
+ * leaves the descriptor-only APPROXIMATION, which is the right answer for
+ * exactly two rows -- the `remote` kind, which this process builds nothing for,
+ * and a pre-provision query about a descriptor that has not been built yet --
+ * and a guess for every other. A caller that has a built reactor and omits it
+ * states what was requested rather than what exists.
  */
 export function reactorCapabilities(
   descriptor: ReactorDescriptor,
-  built?: { readonly canSelfHeal: boolean },
+  built?: BuiltCapabilityFacts,
 ): ReactorCapabilities {
   const hosting = descriptor.kind;
   const storage = storageOf(descriptor);
@@ -229,11 +334,42 @@ export function reactorCapabilities(
     // `remote` is the only hosting kind that can be a Node reactor.
     workflows: hosting === "remote",
     inspection: inspectionOf(hosting),
-    syncChannels: Object.freeze(syncChannelsOf(descriptor)),
+    syncChannels: Object.freeze(
+      built
+        ? builtSyncChannels(built.syncChannelTypes)
+        : descriptorSyncChannels(descriptor),
+    ),
     // `remote`'s store lives on the far side and is never ours to reopen;
     // otherwise defer to the actual built fact when one is known.
     selfHeal:
       hosting !== "remote" && (built ? built.canSelfHeal : storage.durable),
+  });
+}
+
+/**
+ * The capabilities to claim for a reactor whose built facts could NOT be read
+ * -- today only a worker whose "builtConfig" admin round-trip failed
+ * (`worker/client.ts`), which is also the shape of a tab talking to a worker on
+ * an older build that does not report them at all.
+ *
+ * Conservative about `local` specifically, and that asymmetry is the point.
+ * Declaring `local` puts `adoptLocalSyncPeer`/`removeLocalSyncPeer` on the
+ * handle and lets `linkLocalSync` proceed, so a wrong `true` is discovered only
+ * after a `MessageChannel` has been opened and one end TRANSFERRED into the
+ * worker -- a failure with side effects where the whole design is a fail-fast
+ * before any port moves. A wrong `false` only refuses a link that a
+ * re-provision would then allow. So an unverifiable reactor claims no local
+ * channel, whatever its descriptor asked for.
+ */
+export function unverifiedReactorCapabilities(
+  descriptor: ReactorDescriptor,
+): ReactorCapabilities {
+  const approximated = reactorCapabilities(descriptor);
+  return reactorCapabilities(descriptor, {
+    canSelfHeal: approximated.selfHeal,
+    syncChannelTypes: approximated.syncChannels.filter(
+      (channel) => channel !== LOCAL_CHANNEL_TYPE,
+    ),
   });
 }
 

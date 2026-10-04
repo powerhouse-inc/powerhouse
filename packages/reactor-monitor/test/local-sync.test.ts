@@ -3,11 +3,16 @@ import {
   linkLocalSync,
   provisionInProcess,
   ReactorMonitorRegistry,
+  supportsSyncChannel,
   type ManagedInProcessReactor,
 } from "../src/index.js";
 import { descriptor, folderNames, hasDrive, nodeChannel } from "./helpers.js";
 import {
+  ChannelScheme,
   DriveCollectionId,
+  GQL_CHANNEL_TYPE,
+  LOCAL_CHANNEL_TYPE,
+  POLLING_CHANNEL_TYPE,
   type MessagePortLike,
 } from "@powerhousedao/reactor";
 
@@ -133,7 +138,10 @@ describe("brokered local sync between two in-process reactors", () => {
     const connect = await provisionInProcess(descriptor("mixed-connect"));
     provisioned.push(connect);
 
-    expect(connect.capabilities.syncChannels).toEqual(["gql", "local"]);
+    expect(connect.capabilities.syncChannels).toEqual([
+      GQL_CHANNEL_TYPE,
+      LOCAL_CHANNEL_TYPE,
+    ]);
 
     const drive = await connect.client.drives.create({
       global: { name: "Mixed" },
@@ -208,7 +216,7 @@ describe("brokered local sync between two in-process reactors", () => {
       "gql:switchboard",
       DriveCollectionId.forDrive(driveId),
       {
-        type: "gql",
+        type: GQL_CHANNEL_TYPE,
         parameters: {
           url: "https://switchboard.test/graphql",
           pollIntervalMs: 50,
@@ -223,7 +231,7 @@ describe("brokered local sync between two in-process reactors", () => {
         .syncManager!.list()
         .map((r) => r.meta.channelConfig.type)
         .sort(),
-    ).toEqual(["gql", "local"]);
+    ).toEqual([GQL_CHANNEL_TYPE, LOCAL_CHANNEL_TYPE]);
     // Both arms are actually running: the gql channel talked to its endpoint
     // while the local link kept delivering.
     await vi.waitFor(() => expect(fetchFn).toHaveBeenCalled(), {
@@ -235,6 +243,64 @@ describe("brokered local sync between two in-process reactors", () => {
     );
 
     await connect.syncManager!.remove("gql:switchboard");
+    await handle.unlink();
+  }, 60_000);
+
+  /**
+   * The SWITCHBOARD row of the contract, read off the reactor that was built
+   * rather than off the scheme that asked for it.
+   *
+   * Its gql factory is a `GqlResponseChannelFactory`, which serves "polling"
+   * channels -- resolver-driven, created when a PEER registers one against
+   * this reactor, so there is nothing for the monitor's add-remote form to
+   * create here. Declaring the literal type is what makes that form's gate
+   * (the absence of "gql") correct without a translation layer, while the
+   * local channel the builder composes on is as real as on any other scheme.
+   */
+  it("declares the switchboard scheme's polling channel beside local, and links locally", async () => {
+    const localOnly = await host("sb-local");
+    const switchboard = await provisionInProcess(
+      descriptor("sb-reactor", {
+        sync: { channelScheme: ChannelScheme.SWITCHBOARD },
+      }),
+    );
+    provisioned.push(switchboard);
+
+    expect(switchboard.capabilities.syncChannels).toEqual([
+      POLLING_CHANNEL_TYPE,
+      LOCAL_CHANNEL_TYPE,
+    ]);
+    // The two UI gates, as the Sync tab reads them: no add-remote form, but a
+    // live link panel.
+    expect(
+      supportsSyncChannel(switchboard.capabilities, GQL_CHANNEL_TYPE),
+    ).toBe(false);
+    expect(
+      supportsSyncChannel(switchboard.capabilities, LOCAL_CHANNEL_TYPE),
+    ).toBe(true);
+
+    const drive = await switchboard.client.drives.create({
+      global: { name: "Switchboard" },
+    });
+    const driveId = drive.header.id;
+    const handle = await linkLocalSync(switchboard, localOnly, {
+      driveId,
+      createChannel: nodeChannel,
+    });
+
+    await vi.waitFor(
+      async () => expect(await hasDrive(localOnly, driveId)).toBe(true),
+      { timeout: 15_000 },
+    );
+    await switchboard.client.drives.addFolder(driveId, "fromSwitchboard");
+    await vi.waitFor(
+      async () =>
+        expect(await folderNames(localOnly, driveId)).toContain(
+          "fromSwitchboard",
+        ),
+      { timeout: 15_000 },
+    );
+
     await handle.unlink();
   }, 60_000);
 

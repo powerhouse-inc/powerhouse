@@ -1,16 +1,23 @@
-import { ReactorEventTypes } from "@powerhousedao/reactor";
+import {
+  GQL_CHANNEL_TYPE,
+  LOCAL_CHANNEL_TYPE,
+  ReactorEventTypes,
+} from "@powerhousedao/reactor";
 import { createPortTransport } from "@powerhousedao/reactor-browser/rpc";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildWorkerReactor,
   connectManagedWorkerReactor,
   createMonitorWorkerHost,
+  linkLocalSync,
+  provisionInProcess,
   provisionWorkerReactor,
+  type ManagedInProcessReactor,
   type ManagedWorkerReactor,
   type MonitorWorkerHost,
   type ReactorDescriptor,
 } from "../src/index.js";
-import { descriptor as inProcessDescriptor } from "./helpers.js";
+import { descriptor as inProcessDescriptor, nodeChannel } from "./helpers.js";
 
 const DRIVE_TYPE = "powerhouse/document-drive";
 
@@ -117,7 +124,10 @@ describe("monitor worker host over a MessageChannel", () => {
   // worker reactor is a valid end of a brokered link -- which it has to be
   // for a browser reactor to sync with a Switchboard AND a sibling worker.
   it("declares both sync channels for a connect-mode worker reactor and exposes the link handles", () => {
-    expect(tab.capabilities.syncChannels).toEqual(["gql", "local"]);
+    expect(tab.capabilities.syncChannels).toEqual([
+      GQL_CHANNEL_TYPE,
+      LOCAL_CHANNEL_TYPE,
+    ]);
     expect(tab.descriptorMismatch).toBe(false);
     expect(tab.adoptLocalSyncPeer).toBeDefined();
     expect(tab.removeLocalSyncPeer).toBeDefined();
@@ -218,14 +228,14 @@ describe("monitor worker host over a MessageChannel", () => {
     );
 
     try {
-      expect(first.capabilities.syncChannels).toEqual(["local"]);
+      expect(first.capabilities.syncChannels).toEqual([LOCAL_CHANNEL_TYPE]);
       expect(first.descriptorMismatch).toBe(false);
       expect(first.adoptLocalSyncPeer).toBeDefined();
 
       // The SECOND handle's capabilities reflect the FIRST, built construct
       // -- not its own gql request -- and the disagreement is flagged rather
       // than silently misreported.
-      expect(second.capabilities.syncChannels).toEqual(["local"]);
+      expect(second.capabilities.syncChannels).toEqual([LOCAL_CHANNEL_TYPE]);
       expect(second.descriptorMismatch).toBe(true);
       expect(second.adoptLocalSyncPeer).toBeDefined();
       expect(warn).toHaveBeenCalled();
@@ -240,6 +250,63 @@ describe("monitor worker host over a MessageChannel", () => {
       secondChannel.port1.close();
       secondChannel.port2.close();
       await mismatchHost.release();
+    }
+  }, 60_000);
+
+  /**
+   * Version skew in the direction that matters: a worker that does not report
+   * the `local` channel type -- an older build whose reactor composed no local
+   * factory, or one deliberately built without it -- must not get the adopt
+   * handles, and the link must be refused before any port is opened. The
+   * handle gates on the REPORTED types, so the tab's own descriptor (plain
+   * connect mode, which would ask for local) cannot talk it into them.
+   */
+  it("withholds the link handles from a worker that reports no local channel type", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const stale = createMonitorWorkerHost({
+      // The reactor itself is the real one; only what it REPORTS routing is
+      // narrowed, which is exactly what a pre-W3.0 worker's answer looks like.
+      build: async (construct, importers) => {
+        const built = await buildWorkerReactor(construct, importers);
+        return { ...built, syncChannelTypes: [GQL_CHANNEL_TYPE] };
+      },
+    });
+    const staleChannel = new MessageChannel();
+    const staleDispose = stale.host.connectPort(staleChannel.port1);
+    const staleTab = await connectManagedWorkerReactor(
+      descriptor("stale"),
+      createPortTransport(staleChannel.port2),
+      { buildId: "test-build" },
+    );
+    const peer: ManagedInProcessReactor = await provisionInProcess(
+      inProcessDescriptor("stale-peer", { sync: { local: true } }),
+    );
+
+    try {
+      expect(staleTab.capabilities.syncChannels).toEqual([GQL_CHANNEL_TYPE]);
+      expect(staleTab.adoptLocalSyncPeer).toBeUndefined();
+      expect(staleTab.removeLocalSyncPeer).toBeUndefined();
+
+      let opened = 0;
+      await expect(
+        linkLocalSync(peer, staleTab, {
+          driveId: "stale-drive",
+          createChannel: () => {
+            opened++;
+            return nodeChannel();
+          },
+        }),
+      ).rejects.toThrow(/has no local sync channel/);
+      // No port was opened, so none was transferred into the worker either.
+      expect(opened).toBe(0);
+    } finally {
+      warn.mockRestore();
+      await peer.kill();
+      await staleTab.kill();
+      staleDispose();
+      staleChannel.port1.close();
+      staleChannel.port2.close();
+      await stale.release();
     }
   }, 60_000);
 
@@ -266,6 +333,14 @@ describe("monitor worker host over a MessageChannel", () => {
       /boom/,
     );
     expect(failing.current()).toBeUndefined();
+
+    // And the capabilities that handle fell back on are CONSERVATIVE about
+    // `local`: the descriptor asked for connect mode, which would route local
+    // peers, but nothing was verified, so no adopt handle is offered. A wrong
+    // `true` here is only discovered after a port has been transferred.
+    expect(failingTab.capabilities.syncChannels).toEqual([GQL_CHANNEL_TYPE]);
+    expect(failingTab.adoptLocalSyncPeer).toBeUndefined();
+    expect(failingTab.removeLocalSyncPeer).toBeUndefined();
 
     await failingTab.kill();
     failingDispose();
