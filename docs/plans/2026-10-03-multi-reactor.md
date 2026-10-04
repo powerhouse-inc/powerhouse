@@ -374,6 +374,16 @@ Stage 2 complete.
   `RemoteInspectorClient` implementing both, and `provision({kind:"remote"})`
   made real. The capability contract's `remote` row now reads
   `inspection: "rpc"`.
+- **W3.2 LIVE-VERIFIED (2026-10-04, screenshots delivered)**: the real vetra
+  Switchboard provisioned as kind "remote" in the monitor; read tabs populated over
+  HTTP (info/storage-health/queue/sync with the server's real polling remotes and
+  cursors); default posture read-only with levers greyed + reasons; after a server
+  restart with PH_INSPECTION_ADMIN=true, "Re-check server" flipped the tiers live
+  under the same handle and a trigger-pull was exercised against a real channel.
+  Minor follow-up: the server report said workflows:false despite vetra's runtime
+  booting — verify the detection keys on the composed runtime, not a proxy fact.
+  W0.10 cold-boot KnexTimeout: third occurrence, strictly first-boot-after-rebuild;
+  warm boots clean.
 - **W3.3 workflow placement + hardening**: designated-reactor pinning; enforce or
   remove dead policy knobs; bound the run journal; fix EPIPE boot-loop + 10s
   host-call timeout; "which reactor ran this" in run observability.
