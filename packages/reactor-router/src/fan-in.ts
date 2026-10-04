@@ -190,11 +190,20 @@ export type PagedParticipant = {
  * non-empty cursor that is NOT a router cursor is refused unless there is only
  * one backend to hand it to, because with several backends there is no way to
  * know whose cursor it is, and guessing would silently page the wrong reactor.
+ *
+ * A router cursor can also name a backend that is no longer configured -- the
+ * topology changed between the page that minted it and this continuation. That
+ * is exactly the shape of thing {@link FanInMode} already governs for a failed
+ * backend, so it is decided the same way: under `strict`, the missing backend
+ * is raised as a {@link FanInPartialFailureError} naming it rather than
+ * quietly shortening the page; under `tolerant`, it is reported through
+ * `onDiagnostic` and dropped.
  */
 export function pagedParticipants(
   operation: string,
   backends: readonly ReactorBackend[],
   paging: PagingOptions | undefined,
+  options: FanInOptions,
 ): readonly PagedParticipant[] {
   const cursor = paging?.cursor ?? "";
   if (cursor === "") {
@@ -211,16 +220,33 @@ export function pagedParticipants(
   }
   const decoded = decodeFanInCursor(cursor);
   const participants: PagedParticipant[] = [];
+  const missing: Failure[] = [];
   for (const entry of decoded) {
     const backend = backends.find(
       (candidate) => candidate.name === entry.backend,
     );
     if (backend === undefined) {
-      // A backend named by a cursor the router minted earlier is gone. Dropping
-      // it is the only available answer, and it is reported rather than hidden.
+      missing.push({
+        backend: entry.backend,
+        error: new Error(
+          `backend ${JSON.stringify(entry.backend)} named by this continuation cursor is no longer configured`,
+        ),
+      });
       continue;
     }
     participants.push({ backend, cursor: entry.cursor });
+  }
+  if (missing.length === 0) {
+    return participants;
+  }
+  if (options.mode === "strict") {
+    throw new FanInPartialFailureError(operation, missing, participants);
+  }
+  for (const failure of missing) {
+    options.onDiagnostic(
+      `${operation}: ${messageOf(failure.error)}`,
+      failure.error,
+    );
   }
   return participants;
 }

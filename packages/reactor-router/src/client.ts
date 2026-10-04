@@ -1292,6 +1292,7 @@ export class RoutingReactorClient implements IReactorClient {
       operation,
       this.dispatcher.backends,
       paging,
+      { mode, onDiagnostic: this.dispatcher.onDiagnostic },
     );
     return mergePaged(participants, call, {
       operation,

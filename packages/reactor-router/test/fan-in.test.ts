@@ -48,18 +48,22 @@ describe("fan-in cursors", () => {
 
   it("refuses a foreign cursor when several backends would have to share it", () => {
     expect(() =>
-      pagedParticipants("find", pool("one", "two"), {
-        cursor: "42",
-        limit: 10,
-      }),
+      pagedParticipants(
+        "find",
+        pool("one", "two"),
+        { cursor: "42", limit: 10 },
+        { mode: "strict", onDiagnostic: silent },
+      ),
     ).toThrow(InvalidFanInCursorError);
   });
 
   it("passes a foreign cursor straight through to a lone backend", () => {
-    const participants = pagedParticipants("find", pool("only"), {
-      cursor: "42",
-      limit: 10,
-    });
+    const participants = pagedParticipants(
+      "find",
+      pool("only"),
+      { cursor: "42", limit: 10 },
+      { mode: "strict", onDiagnostic: silent },
+    );
 
     expect(participants).toHaveLength(1);
     expect(participants[0]?.backend.name).toBe("only");
@@ -70,13 +74,51 @@ describe("fan-in cursors", () => {
     const backends = pool("one", "two", "three");
     const cursor = encodeFanInCursor([{ backend: "three", cursor: "9" }]);
 
-    const participants = pagedParticipants("find", backends, {
-      cursor,
-      limit: 5,
-    });
+    const participants = pagedParticipants(
+      "find",
+      backends,
+      { cursor, limit: 5 },
+      { mode: "strict", onDiagnostic: silent },
+    );
 
     expect(participants.map((entry) => entry.backend.name)).toEqual(["three"]);
     expect(participants[0]?.cursor).toBe("9");
+  });
+
+  it("surfaces a continuation cursor naming an absent backend under strict mode", () => {
+    const backends = pool("one", "two");
+    const cursor = encodeFanInCursor([
+      { backend: "gone", cursor: "9" },
+      { backend: "two", cursor: "3" },
+    ]);
+
+    expect(() =>
+      pagedParticipants(
+        "find",
+        backends,
+        { cursor, limit: 5 },
+        { mode: "strict", onDiagnostic: silent },
+      ),
+    ).toThrow(FanInPartialFailureError);
+  });
+
+  it("drops an absent backend and reports it under tolerant mode", () => {
+    const backends = pool("one", "two");
+    const cursor = encodeFanInCursor([
+      { backend: "gone", cursor: "9" },
+      { backend: "two", cursor: "3" },
+    ]);
+    const reported: string[] = [];
+
+    const participants = pagedParticipants(
+      "find",
+      backends,
+      { cursor, limit: 5 },
+      { mode: "tolerant", onDiagnostic: (message) => reported.push(message) },
+    );
+
+    expect(participants.map((entry) => entry.backend.name)).toEqual(["two"]);
+    expect(reported.join()).toMatch(/gone.*no longer configured/);
   });
 });
 
@@ -171,7 +213,10 @@ describe("mergePaged", () => {
     two.seed(fakeDocument({ id: "only-on-two", documentType: "test/doc" }));
 
     const page = await mergePaged(
-      pagedParticipants("find", [one.backend(), two.backend()], undefined),
+      pagedParticipants("find", [one.backend(), two.backend()], undefined, {
+        mode: "strict",
+        onDiagnostic: silent,
+      }),
       (backend, paging) =>
         backend.client.find({ type: "test/doc" }, undefined, paging),
       {
@@ -211,7 +256,10 @@ describe("mergePaged", () => {
     };
 
     const first = await mergePaged(
-      pagedParticipants("find", backends, options.paging),
+      pagedParticipants("find", backends, options.paging, {
+        mode: options.mode,
+        onDiagnostic: options.onDiagnostic,
+      }),
       call,
       options,
     );
@@ -271,7 +319,10 @@ describe("mergePaged", () => {
     ) => b.client.find({ type: "test/doc" }, undefined, paging);
 
     const first = await mergePaged(
-      pagedParticipants("find", [backend], undefined),
+      pagedParticipants("find", [backend], undefined, {
+        mode: "strict",
+        onDiagnostic: silent,
+      }),
       call,
       {
         operation: "find",
