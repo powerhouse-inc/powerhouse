@@ -45,6 +45,15 @@ invariant. Sync is the expected bug nest and gets the deepest instrumentation.
    (exactly one instance) and drives playwright-cli sessions. Subagents run at most a
    few unconnected tests/builds in parallel (client requirement, resource limits).
 
+6. **Reshuffle strategy (W0.9 follow-up) is OUT OF SCOPE for the entire roadmap**
+   (Wouter, 2026-10-04): hardest problem, needs conceptual evaluation; tackle only
+   after the roadmap completes. The no-op-redelivery fix stands; a genuine giant
+   reorder still dead-letters at the bound — accepted for now (repair lever exists).
+7. **No pushing** (Wouter, 2026-10-04): all work stays on the local feat/multi-reactor
+   branch; no origin push, no PR, until further notice.
+8. **Delivery**: Claude owns the roadmap end-to-end; progress is communicated via
+   screenshots at milestones.
+
 ## Research ground truth (2026-10-03, file refs in agent reports)
 
 - `IChannel`/`IChannelFactory` (`packages/reactor/src/sync/interfaces.ts:37,137`) are
@@ -252,6 +261,26 @@ dead-lettered doc's ops (run-4 renames never applied). See bug doc run-4 section
 ### Stage 4 — migrate back
 - Fold monitor components into Connect; Switchboard hosts/routes multiple reactors
   (`options.reactor` seam); switchboard-lb alignment.
+
+### Stage P — Performance (major chapter, appended 2026-10-04 per Wouter)
+Covers three axes, each with measurement harnesses in reactor-monitor first, then
+fixes ranked by evidence:
+- **Memory**: the ~18 GB footprint for the Accounts dataset (worker ~9 GB + switchboard
+  ~9 GB for ~16.6k ops / ~1600 sources) — PGlite-wasm heap profiling, document/state
+  snapshot duplication (write cache, keyframes, resultingState copies), reshuffle's
+  O(moved x docSize) peak, tab render-storm memory. Target: an Accounts-scale drive
+  must fit comfortably in a browser worker or be measurably ineligible (feeding the
+  router's placement logic).
+- **DB size**: PGlite 2 GB ceiling vs operation-log + keyframe + snapshot growth;
+  workflow step-journal growth (known: 743 MB/3 days); vacuum/checkpoint cadence;
+  idb persistence cost of the durable flush.
+- **Speed**: bulk catch-up throughput (current ~36 ops/s observed; flush batching
+  ratios), apply-path hot spots (per-op reducer + indexing cost), sync round-trip
+  latency (local channel vs gql), UI responsiveness under load (worker saturation,
+  render storms), switchboard cold-boot time (W0.10 KnexTimeout).
+Positioning: runs AFTER stage 4 (migration back) unless live-test pain forces
+specific items earlier; the stage-1 load harness (W1.3) should already record the
+baseline numbers for all three axes so Stage P starts from data.
 
 ## Standing bug backlog (fix as encountered, each with a test)
 
