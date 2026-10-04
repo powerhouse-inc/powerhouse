@@ -258,6 +258,15 @@ export type MergePagedOptions<T> = {
  * express -- the router does not mint backend cursors, it carries them. The
  * echoed `options` therefore state the limit as it was passed down.
  *
+ * **A caller that set no limit gets every backend's own default page size, on
+ * every page, including continuations.** `limit === 0` is this function's
+ * sentinel for "the caller did not ask for a specific size" (see
+ * {@link MergePagedOptions.paging}), and it is forwarded to the backend as-is
+ * rather than inflated to `Number.MAX_SAFE_INTEGER`: every backend treats a
+ * falsy limit as "use my own default", the same convention `find`'s first,
+ * paging-less call already relies on. Inflating it on a continuation would
+ * make page 2 an unbounded pull that page 1 never was.
+ *
  * The merged `nextCursor` names only the backends that reported one, and
  * `next()` continues exactly those.
  */
@@ -281,7 +290,7 @@ export async function mergePaged<T>(
       const paging =
         options.paging === undefined && cursor === ""
           ? undefined
-          : { cursor, limit: limit === 0 ? Number.MAX_SAFE_INTEGER : limit };
+          : { cursor, limit };
       return call(backend, paging);
     },
     { mode: options.mode, onDiagnostic: options.onDiagnostic },

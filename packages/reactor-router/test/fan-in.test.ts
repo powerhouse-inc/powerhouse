@@ -233,4 +233,65 @@ describe("mergePaged", () => {
     ]);
     expect(second?.nextCursor).toBeUndefined();
   });
+
+  it("keeps requesting the backend's default page size across continuations when the caller set no limit", async () => {
+    const DEFAULT_PAGE_SIZE = 2;
+    const ids = ["a", "b", "c", "d", "e"];
+    const requestedLimits: number[] = [];
+    const backend: ReactorBackend = {
+      name: "big",
+      capabilities: inProcessCapabilities("big"),
+      client: {
+        find: (
+          _search: unknown,
+          _view: unknown,
+          paging?: { cursor: string; limit: number },
+        ) => {
+          // Mirrors the real reactor's own `paging?.limit || DEFAULT` idiom:
+          // a falsy limit (undefined, or the fan-in's 0 sentinel) means "use my
+          // own default", never "give me everything".
+          const limit = paging?.limit || DEFAULT_PAGE_SIZE;
+          requestedLimits.push(limit);
+          const offset = paging?.cursor ? Number(paging.cursor) : 0;
+          const slice = ids
+            .slice(offset, offset + limit)
+            .map((id) => fakeDocument({ id, documentType: "test/doc" }));
+          const next = offset + slice.length;
+          return Promise.resolve({
+            results: slice,
+            options: { cursor: paging?.cursor ?? "", limit },
+            nextCursor: next < ids.length ? String(next) : undefined,
+          });
+        },
+      } as unknown as ReactorBackend["client"],
+    };
+    const call = (
+      b: ReactorBackend,
+      paging: { cursor: string; limit: number } | undefined,
+    ) => b.client.find({ type: "test/doc" }, undefined, paging);
+
+    const first = await mergePaged(
+      pagedParticipants("find", [backend], undefined),
+      call,
+      {
+        operation: "find",
+        mode: "strict",
+        onDiagnostic: silent,
+        identify: (document: { header: { id: string } }) => document.header.id,
+        paging: undefined,
+      },
+    );
+    const second = await first.next?.();
+    const third = await second?.next?.();
+
+    expect(first.results).toHaveLength(2);
+    expect(second?.results).toHaveLength(2);
+    expect(third?.results).toHaveLength(1);
+    expect(third?.nextCursor).toBeUndefined();
+    // Never inflated to Number.MAX_SAFE_INTEGER: every request, including the
+    // continuations, asked for no more than the backend's own default page.
+    expect(requestedLimits.every((limit) => limit <= DEFAULT_PAGE_SIZE)).toBe(
+      true,
+    );
+  });
 });
