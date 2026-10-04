@@ -78,7 +78,10 @@ export interface TriggerStateRow {
   piece_name: string;
   trigger_name: string;
   config_hash: string;
-  status: string; // ENABLED | DISABLED | ERROR
+  // ENABLED | DISABLED | ERROR | PARKED. PARKED is terminal: it is a runtime
+  // override of the document's enabled-ness, and only a re-publish that
+  // changes the trigger or a disable/re-enable clears it — never a restart.
+  status: string;
   // Vestigial: hook state lives in piece_store now, and this is written "{}"
   // and never read. Rolling back past the migration re-delivers; see up().
   store_state: string;
