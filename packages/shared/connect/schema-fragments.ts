@@ -397,7 +397,7 @@ export const phConnectRuntimeConfigSchema = {
     instance: {
       type: "object",
       additionalProperties: false,
-      required: ["namespace", "reactorWorker"],
+      required: ["namespace", "reactorWorker", "multiReactor"],
       description:
         "Per-instance identity. Lets one origin host multiple isolated Connect instances, each with its own storage + SharedWorker namespace.",
       properties: {

@@ -159,7 +159,7 @@ export type PHConnectInstance = {
    * the single in-browser reactor. Off by default; the single-reactor path is
    * unchanged for every existing user (multi-reactor stage 4, WP-E).
    */
-  multiReactor?: boolean;
+  multiReactor: boolean;
 };
 
 /** Each flag implies its predecessors, and must match the fleet Connect syncs
