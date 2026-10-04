@@ -343,6 +343,36 @@ describe("the run deadline", () => {
   });
 });
 
+// Resolution reads the scope and nothing else, and no attempt changes the
+// scope, so a resolution error is deterministic: retrying it burns the whole
+// budget, backoff and all, on something that cannot come right.
+describe("a deterministic resolution failure", () => {
+  it("fails the step on the first attempt, with no retries", async () => {
+    const executor = new FlakyExecutor(0);
+    const slept: number[] = [];
+
+    const result = await runWorkflow({
+      definition: definition([
+        step("a", "first", NO_WAIT, { n: "{{steps.nope.output.id}}" }),
+      ]),
+      executor,
+      sleep: (ms) => {
+        slept.push(ms);
+        return Promise.resolve();
+      },
+    });
+
+    // The executor never ran: resolution failed before the first attempt.
+    expect(executor.calls).toHaveLength(0);
+    // And no backoff waits were served out on the way to failing.
+    expect(slept).toEqual([]);
+    expect(result.status).toBe("FAILED");
+    expect(result.steps[0]).toMatchObject({ key: "first", status: "FAILED" });
+    // One attempt, so the record carries no attempts count at all.
+    expect(result.steps[0].attempts).toBeUndefined();
+  });
+});
+
 describe("an indeterminate host call", () => {
   it("records INDETERMINATE, takes no port and is never retried", async () => {
     const executor = new FlakyExecutor(

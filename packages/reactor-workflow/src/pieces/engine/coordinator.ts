@@ -307,11 +307,24 @@ export async function runWorkflow(
     const startedAt = new Date().toISOString();
     let input: unknown;
 
+    // Resolution is OUTSIDE the retry loop on purpose. It reads the scope and
+    // nothing else, and no attempt of this step changes the scope, so every
+    // attempt would resolve the very same value — while a resolution error is
+    // deterministic by construction: a reference to a key that does not exist
+    // names nothing on attempt five either. Inside the loop it burned the
+    // whole retry budget, backoff waits and all, on an error that could not
+    // come right, and held the run's worker slot while it did.
+    try {
+      input = resolveStepInput(step, scope);
+      checkDynamicProperties(input, step.propertySettings);
+    } catch (error) {
+      await endStep(step, { error, input, startedAt, attempt: 1 });
+      return;
+    }
+
     for (let attempt = 1; ; attempt++) {
       const attempts = attempt > 1 ? { attempts: attempt } : {};
       try {
-        input = resolveStepInput(step, scope);
-        checkDynamicProperties(input, step.propertySettings);
         const result = await executor.execute({
           block: stepBlock(step),
           config: input,
