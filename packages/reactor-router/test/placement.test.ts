@@ -269,6 +269,40 @@ describe("RouterTable", () => {
     ]);
     expect(snapshot.jobs).toEqual([{ jobId: "job-1", backend: "two" }]);
   });
+
+  it("reports one row, as an override, when an override and a learned probe share a key", () => {
+    const pool = backends("one", "two");
+    const target = collection("drive-a");
+    const table = new RouterTable(pool, {
+      collections: { [target.key]: "one" },
+    });
+    table.recordLearnedCollection(target, "two");
+
+    const snapshot = table.describe();
+
+    expect(
+      snapshot.collections.filter((entry) => entry.collectionId === target.key),
+    ).toEqual([
+      { collectionId: target.key, backend: "one", source: "override" },
+    ]);
+  });
+
+  it("reports one row, as corrected, when an override was itself corrected", () => {
+    const pool = backends("one", "two");
+    const target = collection("drive-a");
+    const table = new RouterTable(pool, {
+      collections: { [target.key]: "one" },
+    });
+    table.recordCorrectedCollection(target, "two");
+
+    const snapshot = table.describe();
+
+    expect(
+      snapshot.collections.filter((entry) => entry.collectionId === target.key),
+    ).toEqual([
+      { collectionId: target.key, backend: "two", source: "corrected" },
+    ]);
+  });
 });
 
 function table(pool: ReactorBackend[]): RouterTable {

@@ -349,24 +349,43 @@ export class RouterTable {
     this.jobs.set(jobId, backend);
   }
 
-  /** Everything the router currently believes, for a test or an operator view. */
+  /**
+   * Everything the router currently believes, for a test or an operator view.
+   *
+   * One row per collection key, resolved by the same priority
+   * {@link collectionRoute} uses: a correction outranks an override, which
+   * outranks a plain learned entry. A key the override and learned maps both
+   * name is reported once, labeled by whichever of those actually wins --
+   * never as a second, contradictory row.
+   */
   describe(): RouterTableSnapshot {
+    const keys = new Set<string>([
+      ...this.overrides.keys(),
+      ...this.learned.keys(),
+    ]);
     const collections: RouterTableEntry[] = [];
-    for (const [key, backend] of this.overrides) {
-      // The override's key may be a bare drive id; report the canonical id when
-      // it is a collection key and the raw key otherwise.
-      collections.push({
-        collectionId: key,
-        backend,
-        source: this.learned.has(key) ? "corrected" : "override",
-      });
-    }
-    for (const [key, route] of this.learned) {
-      collections.push({
-        collectionId: key,
-        backend: route.backend,
-        source: route.source,
-      });
+    for (const key of keys) {
+      const learned = this.learned.get(key);
+      const override = this.overrides.get(key);
+      if (learned !== undefined && learned.source === "corrected") {
+        collections.push({
+          collectionId: key,
+          backend: learned.backend,
+          source: "corrected",
+        });
+      } else if (override !== undefined) {
+        collections.push({
+          collectionId: key,
+          backend: override,
+          source: "override",
+        });
+      } else if (learned !== undefined) {
+        collections.push({
+          collectionId: key,
+          backend: learned.backend,
+          source: learned.source,
+        });
+      }
     }
     return {
       backends: this.order.map((backend) => backend.name),
