@@ -22,10 +22,12 @@ export {
   DocumentChangeType,
   type ActionCandidate,
   type ActionEvaluations,
+  type CreateDocumentOptions,
   type DocumentChangeEvent,
   type IDriveClient,
   type IReactorClient,
   type ProtocolSelection,
+  type UpgradeDocumentOptions,
 } from "./src/client/types.js";
 export {
   ReactorBuilder,
@@ -199,6 +201,15 @@ export {
   type JobStartedEvent,
   type ReactorFeatureFlags,
 } from "./src/executor/types.js";
+
+// Sticky-by-key routing. Exported because the convention is shared, not
+// private to the worker pool: the executor pool, the projection shard manager
+// and the multi-reactor router all place a key with this exact FNV-1a hash, and
+// a second implementation of it would place the same key differently.
+export {
+  bucketFor,
+  hashDocumentId,
+} from "./src/executor/worker-pool-router.js";
 
 // Executor Worker Utilities
 export {
