@@ -123,6 +123,13 @@ export type SyncOperationErrorType =
   | "RESERVED_ACTION"
   /** A peer's purge marker was refused; the document keeps syncing. */
   | "MARKER_REFUSED"
+  /**
+   * An operation that arrived while its document was quarantined. Not itself a
+   * failure: the document is already quarantined by the dead letter that put it
+   * there, and this row exists so the operation survives the cursor advancing
+   * past it and can be requeued after the one that quarantined the document.
+   */
+  | "QUARANTINED_GAP"
   /** No classification applies, including rows written before the field. */
   | "UNCLASSIFIED";
 

@@ -604,6 +604,7 @@ const NON_QUARANTINING_ERROR_TYPES: ReadonlySet<SyncOperationErrorType> =
     "PURGE_PRECONDITION",
     "MARKER_REFUSED",
     "MISSING_OPERATIONS",
+    "QUARANTINED_GAP",
   ]);
 
 /**
@@ -613,7 +614,9 @@ const NON_QUARANTINING_ERROR_TYPES: ReadonlySet<SyncOperationErrorType> =
  * argument most sharply: the traffic that would repair it is exactly the
  * traffic a quarantine stops, and nothing but a purge ever clears one, so one
  * rolled-back ancestor would excommunicate the document from sync for the life
- * of the store.
+ * of the store. A quarantine gap is a consequence of a quarantine rather than a
+ * cause of one, and quarantining on it would survive the requeue that clears
+ * the quarantine the gap was parked behind.
  */
 export function quarantinesDocument(
   errorType: SyncOperationErrorType,

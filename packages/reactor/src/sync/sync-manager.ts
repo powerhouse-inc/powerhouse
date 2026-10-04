@@ -163,13 +163,17 @@ export type SyncManagerConfig = {
   markerRetryBaseDelayMs: number;
   markerRetryMaxDelayMs: number;
   /**
-   * How many inbox chunks may be inside their load at once.
+   * How many inbox chunks may be inside their ENQUEUE at once.
    *
    * Chunks that share no lane key run concurrently, so without a bound one
-   * poll's worth of a wide drive would put every document's chunk into the
-   * queue at the same time and hold a batch of operations in memory for each.
-   * The bound is on chunks rather than operations because a chunk is already
-   * capped at {@link SyncManagerConfig.maxInboxBatchSize}.
+   * poll's worth of a wide drive would hand the queue every document's chunk in
+   * the same turn. The bound is on chunks rather than operations because a chunk
+   * is already capped at {@link SyncManagerConfig.maxInboxBatchSize}.
+   *
+   * Deliberately not a bound on chunks awaiting their jobs: a chunk deferred for
+   * a missing ancestor would then hold a slot for the deferral's whole
+   * time-to-live, and enough of them would stop the very arrival that resolves
+   * them from reaching the queue (see {@link SyncManager.runInboxChunk}).
    */
   maxConcurrentInboxChunks: number;
 };
@@ -591,6 +595,12 @@ export class SyncManager
       );
   }
 
+  /**
+   * Stops the manager and frees everything holding a continuation.
+   *
+   * Inbox slot waiters are released rather than abandoned: a waiter never
+   * resolved leaves its lane promise pending for the life of the process.
+   */
   shutdown(): ShutdownStatus {
     this.isShutdown = true;
     this.abortController.abort();
@@ -601,8 +611,6 @@ export class SyncManager
     this.planKeyToJobUuid.clear();
     this.lastEnqueuedJobIdByKey.clear();
     this.inboxLanes.clear();
-    // Released rather than abandoned: a waiter never resolved leaves its lane
-    // promise pending for the life of the process.
     for (const waiter of this.inboxSlotWaiters.splice(
       0,
       this.inboxSlotWaiters.length,
@@ -2269,6 +2277,7 @@ export class SyncManager
 
     const eligible: SyncOperation[] = [];
     const dropped: SyncOperation[] = [];
+    const quarantined: SyncOperation[] = [];
     const received = this.receivedMarkersOf(remote.meta.name);
     // A resent marker whose first copy is still loading or awaiting a retry.
     const loading = (id: string, syncOp: SyncOperation): boolean => {
@@ -2295,13 +2304,7 @@ export class SyncManager
       } else if (this.purgedDocumentIds.has(syncOp.documentId)) {
         dropped.push(syncOp);
       } else if (this.quarantinedDocumentIds.has(syncOp.documentId)) {
-        // Dropped rather than left where it is. A quarantined document's
-        // operations are deliberately not applied, and an item that stays in
-        // the inbox unapplied now holds the channel's ack below itself, which
-        // would freeze the cursor of every other document on the channel. The
-        // quarantine is cleared by re-queuing the dead letter, which puts the
-        // operation back itself, so nothing depends on re-pulling it.
-        dropped.push(syncOp);
+        quarantined.push(syncOp);
       } else {
         eligible.push(syncOp);
       }
@@ -2309,13 +2312,14 @@ export class SyncManager
     // A purged id's history is gone here; a job or a dead letter would restore it.
     for (const syncOp of dropped) {
       this.logger.debug(
-        "Dropping received operations of a purged, quarantined or already-loading document (@remote, @documentId)",
+        "Dropping received operations of a purged or already-loading document (@remote, @documentId)",
         remote.meta.name,
         syncOp.documentId,
       );
       syncOp.executed();
     }
     if (dropped.length > 0) remote.channel.inbox.remove(...dropped);
+    for (const syncOp of quarantined) this.parkQuarantineGap(remote, syncOp);
     if (eligible.length === 0) return;
 
     const keyed: SyncOperation[] = [];
@@ -2341,6 +2345,45 @@ export class SyncManager
       );
       void this.processInboxChunks(chunks);
     }
+  }
+
+  /**
+   * Dead-letters an operation that arrived while its document was quarantined.
+   *
+   * It cannot be applied -- that is what the quarantine means -- and it cannot
+   * stay in the inbox either: an unapplied item holds the channel's ack below
+   * itself, which would freeze the cursor of every other document sharing the
+   * channel for as long as the quarantine lasts. Acknowledging it and dropping
+   * it was the third option and the wrong one: the cursor advances past an
+   * operation with no durable record anywhere, so requeuing the dead letter
+   * that caused the quarantine restores that one operation and every operation
+   * of the quarantine window is gone, leaving the document dead-lettering
+   * MISSING_OPERATIONS forever.
+   *
+   * A dead letter keeps the PR's invariant -- the cursor never passes an
+   * operation that is neither applied nor dead-lettered -- and puts the window
+   * on the same W0.5 requeue lever as the operation that opened it: requeued
+   * oldest-first after that one, the document is whole again. The classification
+   * is deliberately its own, so the row does not itself quarantine the document
+   * and survive the requeue that clears the quarantine.
+   */
+  private parkQuarantineGap(remote: Remote, syncOp: SyncOperation): void {
+    this.logger.warn(
+      "Dead-lettering operations received for a quarantined document (@remote, @documentId)",
+      remote.meta.name,
+      syncOp.documentId,
+    );
+    syncOp.failed(
+      new ChannelError(
+        ChannelErrorSource.Inbox,
+        new Error(
+          `Document ${syncOp.documentId} was quarantined when these operations arrived; requeue them after the dead letter that quarantined it`,
+        ),
+        "QUARANTINED_GAP",
+      ),
+    );
+    remote.channel.deadLetter.add(syncOp);
+    remote.channel.inbox.remove(syncOp);
   }
 
   /** Forgets a marker once the item loading it leaves the inbox. */
@@ -2506,14 +2549,18 @@ export class SyncManager
     return lane;
   }
 
-  /** The documents a chunk writes and the plan keys its dependency edges name. */
+  /**
+   * The documents a chunk writes and the plan keys its dependency edges name.
+   *
+   * A document key is not per scope or branch: the queue serialises a
+   * document's jobs across both, so a per-scope lane would claim an
+   * independence it does not have.
+   */
   private inboxLaneKeys(
     chunk: Array<{ remote: Remote; syncOp: SyncOperation }>,
   ): string[] {
     const keys = new Set<string>();
     for (const { syncOp } of chunk) {
-      // Not per scope or branch: the queue serialises a document's jobs across
-      // both, so a per-scope lane would claim an independence it does not have.
       keys.add(`doc ${syncOp.documentId}`);
       keys.add(`plan ${syncOp.jobId}`);
       for (const dep of syncOp.jobDependencies) {
@@ -2525,13 +2572,23 @@ export class SyncManager
 
   /**
    * Enqueues a chunk under a slot and resolves once it is enqueued, leaving the
-   * resolution running on under the same slot.
+   * resolution running outside the slot.
    *
    * The returned promise is what the lane waits on, so it has to settle at the
    * enqueue and not at the apply: holding the lane through the apply would put
    * every later chunk of every document in a mixed chunk behind the slowest
-   * document in it. The slot is held to the end instead, which is where the
-   * backpressure belongs -- it bounds how many chunks sit in the queue at once.
+   * document in it.
+   *
+   * The slot settles there too, because the slot bounds ENQUEUE work and
+   * nothing else. Holding it through the resolution made the bound a stall
+   * class of its own: a chunk deferred for a missing ancestor waits out the
+   * deferral's whole time-to-live, so eight of them held every slot and no
+   * chunk of any document could even reach the queue -- the missing CREATE
+   * among them, which is the one arrival that would have resolved them all.
+   * A resolution holds a job id and a reference to an item the inbox already
+   * holds, and every await in it is a passive waitForJob subscription, so the
+   * set of unresolved chunks is left unbounded on purpose: bounding it would
+   * reintroduce that deadlock to cap memory the inbox's own depth already caps.
    */
   private async runInboxChunk(
     chunk: Array<{ remote: Remote; syncOp: SyncOperation }>,
@@ -2551,22 +2608,16 @@ export class SyncManager
       this.releaseInboxSlot();
       throw error;
     }
+    this.releaseInboxSlot();
 
-    if (enqueued === undefined) {
-      this.releaseInboxSlot();
-      return;
-    }
+    if (enqueued === undefined) return;
 
-    void this.resolveInboxBatch(enqueued)
-      .catch((err: unknown) => {
-        this.logger.error(
-          "Inbox chunk resolution failed (@error)",
-          err instanceof Error ? err.message : String(err),
-        );
-      })
-      .finally(() => {
-        this.releaseInboxSlot();
-      });
+    void this.resolveInboxBatch(enqueued).catch((err: unknown) => {
+      this.logger.error(
+        "Inbox chunk resolution failed (@error)",
+        err instanceof Error ? err.message : String(err),
+      );
+    });
   }
 
   private acquireInboxSlot(): Promise<void> {
