@@ -54,7 +54,7 @@ function source(
 }
 
 describe("attachmentOriginOf", () => {
-  it("strips the GraphQL path so the attachment route is not nested under it", () => {
+  it("reduces a GraphQL url to its host origin so the attachment route is not nested under it", () => {
     expect(attachmentOriginOf("http://localhost:4001/graphql/my-drive")).toBe(
       "http://localhost:4001",
     );
@@ -64,8 +64,17 @@ describe("attachmentOriginOf", () => {
     expect(attachmentOriginOf("http://localhost:4001/")).toBe(
       "http://localhost:4001",
     );
-    expect(attachmentOriginOf("https://host/base/graphql/d")).toBe(
-      "https://host/base",
+  });
+
+  it("is not fooled by the scheme's own '//' when a host is named 'graphql'", () => {
+    expect(attachmentOriginOf("http://graphql.example.com/graphql/x")).toBe(
+      "http://graphql.example.com",
+    );
+  });
+
+  it("takes the host origin of a path-prefixed deployment, not the prefix", () => {
+    expect(attachmentOriginOf("https://host/ph/graphql/drive")).toBe(
+      "https://host",
     );
   });
 });
@@ -110,6 +119,7 @@ describe("MonitorAttachmentTransport", () => {
     });
     transport.addPeer(
       "peer-a",
+      "col-1",
       source(
         {
           kind: "data",
@@ -140,9 +150,10 @@ describe("MonitorAttachmentTransport", () => {
 
   it("prefers a pending answer over a not-found from another source", async () => {
     const transport = new MonitorAttachmentTransport();
-    transport.addPeer("quiet", source({ kind: "not-found" }));
+    transport.addPeer("quiet", "col-1", source({ kind: "not-found" }));
     transport.addPeer(
       "uploading",
+      "col-1",
       source({
         kind: "pending",
         hash: HASH,
@@ -161,8 +172,8 @@ describe("MonitorAttachmentTransport", () => {
 
   it("reports not-found only when every source said so", async () => {
     const transport = new MonitorAttachmentTransport();
-    transport.addPeer("one", source({ kind: "not-found" }));
-    transport.addPeer("two", source({ kind: "not-found" }));
+    transport.addPeer("one", "col-1", source({ kind: "not-found" }));
+    transport.addPeer("two", "col-1", source({ kind: "not-found" }));
     await expect(transport.fetch(HASH, DOC)).resolves.toEqual({
       kind: "not-found",
     });
@@ -172,6 +183,7 @@ describe("MonitorAttachmentTransport", () => {
     const transport = new MonitorAttachmentTransport();
     transport.addPeer(
       "severed",
+      "col-1",
       source(() => {
         throw new Error("port is closed");
       }),
@@ -179,29 +191,75 @@ describe("MonitorAttachmentTransport", () => {
     await expect(transport.fetch(HASH, DOC)).rejects.toThrow(/port is closed/);
   });
 
-  it("still answers not-found when one source failed but another replied", async () => {
+  it("surfaces an error rather than a not-found when a source errored and the rest only said not-found", async () => {
+    // A not-found from one source must not bury another's transient failure:
+    // the caller would otherwise spend its (smaller) lag budget on what was
+    // really an unreachable peer. Error outranks not-found-unanimous.
     const transport = new MonitorAttachmentTransport();
     transport.addPeer(
       "severed",
+      "col-1",
       source(() => {
         throw new Error("port is closed");
       }),
     );
-    transport.addPeer("live", source({ kind: "not-found" }));
+    transport.addPeer("live", "col-1", source({ kind: "not-found" }));
+    await expect(transport.fetch(HASH, DOC)).rejects.toThrow(/port is closed/);
+  });
+
+  it("still prefers a pending answer over an error from another source", async () => {
+    const transport = new MonitorAttachmentTransport();
+    transport.addPeer(
+      "severed",
+      "col-1",
+      source(() => {
+        throw new Error("port is closed");
+      }),
+    );
+    transport.addPeer(
+      "uploading",
+      "col-1",
+      source({
+        kind: "pending",
+        hash: HASH,
+        expiresAtUtc: "2026-01-01T00:05:00.000Z",
+        retryAfterMs: 1_000,
+      }),
+    );
     await expect(transport.fetch(HASH, DOC)).resolves.toEqual({
-      kind: "not-found",
+      kind: "pending",
+      hash: HASH,
+      expiresAtUtc: "2026-01-01T00:05:00.000Z",
+      retryAfterMs: 1_000,
     });
   });
 
-  it("refuses a second link to the same peer, and forgets one on removal", () => {
+  it("refuses a second link to the same peer on the same channel, and forgets one on removal", () => {
     const transport = new MonitorAttachmentTransport();
-    transport.addPeer("peer", source({ kind: "not-found" }));
+    transport.addPeer("peer", "col-1", source({ kind: "not-found" }));
     expect(transport.peerNames()).toEqual(["peer"]);
     expect(() =>
-      transport.addPeer("peer", source({ kind: "not-found" })),
+      transport.addPeer("peer", "col-1", source({ kind: "not-found" })),
     ).toThrow(/already registered/);
 
-    transport.removePeer("peer");
+    transport.removePeer("peer", "col-1");
+    expect(transport.peerNames()).toEqual([]);
+  });
+
+  it("keeps two links to the same peer on different channels distinct", () => {
+    const transport = new MonitorAttachmentTransport();
+    transport.addPeer("peer", "col-1", source({ kind: "not-found" }));
+    // A second collection with the same peer must NOT collide with the first.
+    expect(() =>
+      transport.addPeer("peer", "col-2", source({ kind: "not-found" })),
+    ).not.toThrow();
+    // peerNames reports the reactor once, not once per channel.
+    expect(transport.peerNames()).toEqual(["peer"]);
+
+    // Dropping one channel leaves the other serving.
+    transport.removePeer("peer", "col-1");
+    expect(transport.peerNames()).toEqual(["peer"]);
+    transport.removePeer("peer", "col-2");
     expect(transport.peerNames()).toEqual([]);
   });
 
