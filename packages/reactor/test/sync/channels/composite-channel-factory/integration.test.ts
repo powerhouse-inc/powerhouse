@@ -46,6 +46,11 @@ type WireEnvelope = {
   operations?: Array<{ context: { ordinal: number } }>;
 };
 
+/** The GraphQL body of one request, as the double reads it back off `init`. */
+function requestBody(init: RequestInit | undefined): GraphQLRequest {
+  return JSON.parse(String(init?.body ?? "")) as GraphQLRequest;
+}
+
 function portKey(peerId: string, channelName: string): string {
   return `${peerId} ${channelName}`;
 }
@@ -65,10 +70,14 @@ class FakeSwitchboard {
   private readonly waiting = new Map<string, WireEnvelope[]>();
   private readonly absorbed = new Map<string, number>();
 
-  /** The `fetchFn` one side's gql remote is configured with. */
+  /**
+   * The `fetchFn` one side's gql remote is configured with. Typed as `fetch`
+   * itself and answering with real `Response` objects, so the channel's own
+   * `ok`/`status`/`json()` reads run against the real thing.
+   */
   fetchFor(side: string, peer: string): typeof fetch {
-    const fetchFn = (_url: string, init: RequestInit): Promise<Response> => {
-      const body = JSON.parse(init.body as string) as GraphQLRequest;
+    return (_input, init) => {
+      const body = requestBody(init);
       this.record(side, body);
       if (body.query.includes("touchChannel")) {
         return this.reply({
@@ -88,7 +97,6 @@ class FakeSwitchboard {
         },
       });
     };
-    return fetchFn as unknown as typeof fetch;
   }
 
   /** Every envelope the named side pushed, in push order. */
@@ -120,10 +128,12 @@ class FakeSwitchboard {
   }
 
   private reply(data: unknown): Promise<Response> {
-    return Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve({ data }),
-    } as unknown as Response);
+    return Promise.resolve(
+      new Response(JSON.stringify({ data }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
   }
 
   /**
@@ -166,6 +176,15 @@ type PeerOptions = {
   gql: boolean;
 };
 
+/**
+ * One real reactor, wired for the transports `options` names.
+ *
+ * `gql` plus `local` is the W3.0 seam itself: the builder keeps constructing
+ * the scheme's gql factory (only it holds the job queue the poll timer needs)
+ * and composes the local one onto it, instead of the caller having to choose
+ * one. `local` alone goes through a caller-supplied `SyncBuilder`, which is
+ * all a local-only reactor could ever have had.
+ */
 async function buildPeer(name: string, options: PeerOptions): Promise<Peer> {
   const transports = new Map<string, LocalChannelPort>();
   const localFactory = new LocalChannelFactory(
@@ -183,9 +202,6 @@ async function buildPeer(name: string, options: PeerOptions): Promise<Peer> {
   if (options.gql) {
     reactorBuilder.withChannelScheme(ChannelScheme.CONNECT);
     if (options.local) {
-      // The W3.0 seam: the builder keeps constructing the gql factory (only it
-      // holds the job queue the poll timer needs) and composes the local one
-      // onto it, instead of the caller having to choose one.
       reactorBuilder.withAdditionalChannelFactory(
         LOCAL_CHANNEL_TYPE,
         localFactory,
@@ -270,22 +286,38 @@ describe("a reactor holding gql and local remotes at once", () => {
   const peers: Peer[] = [];
   const ports: MessagePort[] = [];
 
-  afterEach(() => {
-    for (const peer of peers) {
-      peer.reactor.kill();
+  /**
+   * Tears each peer down completely, mirroring `Fleet.dispose`: the reactor is
+   * killed AND its sync manager shut down, both awaited to completion.
+   *
+   * Killing the reactor alone leaves the sync manager running -- the builder
+   * starts it and registers no closer for it -- so this file's 50ms gql poll
+   * timers and their in-flight requests outlive the test that made them and
+   * keep firing into the next one, against a reactor that is already gone.
+   */
+  afterEach(async () => {
+    for (const peer of peers.splice(0)) {
+      await peer.reactor.kill().completed;
+      await peer.sync.shutdown().completed;
     }
-    peers.length = 0;
-    for (const port of ports) {
+    for (const port of ports.splice(0)) {
       port.close();
     }
-    ports.length = 0;
   });
 
+  /**
+   * The mixed topology in one test. `mixed` is the W3.0 subject: CONNECT
+   * scheme AND a local factory on one reactor. `sibling` is a brokered local
+   * peer that never talks to the hub; `cloud` is a second Connect reactor
+   * reachable only through it.
+   *
+   * So each assertion isolates one arm: the local arm delivers with no server
+   * and no polling, the gql arm reaches `cloud` through the hub, and the two
+   * crossings (in over gql then out over local, and the reverse) can only be
+   * explained by one reactor routing both transports at once.
+   */
   it("syncs one drive over a brokered local link and a gql remote simultaneously", async () => {
     const hub = new FakeSwitchboard();
-    // `mixed` is the W3.0 subject: CONNECT scheme AND a local factory on one
-    // reactor. `sibling` is a brokered local peer; `cloud` is a second Connect
-    // reactor reachable only through the hub.
     const mixed = await buildPeer("mixed", { local: true, gql: true });
     const sibling = await buildPeer("sibling", { local: true, gql: false });
     const cloud = await buildPeer("cloud", { local: false, gql: true });
@@ -296,7 +328,6 @@ describe("a reactor holding gql and local remotes at once", () => {
     await addGqlRemote(mixed, driveId, hub.fetchFor("mixed", "cloud"));
     await addGqlRemote(cloud, driveId, hub.fetchFor("cloud", "mixed"));
 
-    // One reactor, two transports, both live.
     expect(
       mixed.sync
         .list()
@@ -306,21 +337,16 @@ describe("a reactor holding gql and local remotes at once", () => {
 
     await create(mixed, driveId, {});
 
-    // The local arm: no server, no polling.
     await vi.waitFor(
       async () => expect(await has(sibling, driveId)).toBe(true),
       { timeout: 20_000 },
     );
-    // The gql arm, on the same reactor and the same collection: the drive
-    // reached the second Connect reactor through the hub.
     await vi.waitFor(async () => expect(await has(cloud, driveId)).toBe(true), {
       timeout: 20_000,
     });
     expect(hub.hasPolled("mixed")).toBe(true);
     expect(hub.pushedBy("mixed").length).toBeGreaterThan(0);
 
-    // Inbound over gql, then relayed onward over local: the sibling never
-    // talks to the hub, so "fromCloud" can only have arrived through `mixed`.
     await addFolder(cloud, driveId, "fromCloud");
     await vi.waitFor(
       async () => expect(await folders(mixed, driveId)).toContain("fromCloud"),
@@ -332,7 +358,6 @@ describe("a reactor holding gql and local remotes at once", () => {
       { timeout: 20_000 },
     );
 
-    // And the reverse crossing: in over the local link, out over gql.
     await addFolder(sibling, driveId, "fromSibling");
     await vi.waitFor(
       async () =>

@@ -11,28 +11,37 @@ import type {
 } from "../../../../src/sync/interfaces.js";
 import { PollBehavior } from "../../../../src/sync/types.js";
 import type {
+  ChannelConfig,
   RemoteFilter,
   RemoteOptions,
 } from "../../../../src/sync/types.js";
+import { TestChannel } from "../test-channel.js";
 
 const FILTER: RemoteFilter = { documentId: [], scope: [], branch: "main" };
 const COLLECTION = DriveCollectionId.forDrive("drive-1");
 const CURSORS = {} as ISyncCursorStorage;
 const INDEX = {} as IOperationIndex;
 
-/** A factory that records every call and returns a distinguishable channel. */
+/**
+ * A factory that records every call and returns a distinguishable channel.
+ *
+ * The channel is a real `TestChannel` rather than a labelled stand-in: the
+ * composite forwards whatever its delegate returns and touches nothing on it,
+ * so the assertions are on identity, and a fake missing half of `IChannel`
+ * would only hide the day the composite starts reading one.
+ */
 class RecordingFactory implements IChannelFactory {
   readonly calls: unknown[][] = [];
   readonly channel: IChannel;
 
   constructor(readonly label: string) {
-    this.channel = { label } as unknown as IChannel;
+    this.channel = new TestChannel(label, label, CURSORS, () => {});
   }
 
   instance(
     remoteId: string,
     remoteName: string,
-    config: unknown,
+    config: ChannelConfig,
     cursorStorage: ISyncCursorStorage,
     collectionId: DriveCollectionId,
     filter: RemoteFilter,
