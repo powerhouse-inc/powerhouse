@@ -359,7 +359,14 @@ Stage 2 complete.
     reachable only through a `FakeSwitchboard` double at the `fetch` boundary.
     One drive syncs over both arms at once, and an op crosses transports in both
     directions (gql in -> local out, and local in -> gql out).
-- **W3.1** attach remote via existing GQL channels.
+- **W3.1 LIVE-VERIFIED (2026-10-04, screenshots delivered)**: worker "mixed"
+  (connect-mode: gql+local composed) held a gql remote to the real vetra
+  Switchboard AND a brokered local link to worker "sibling" simultaneously on one
+  drive. The Switchboard's drive reached sibling (no server connection) through
+  mixed in ms; a folder created on sibling propagated local->gql back into the
+  Switchboard's own state. Heterogeneous bidirectional relay live — motivation 1
+  demonstrated. Note: W0.10 cold-boot KnexTimeout reproduced again on first boot
+  after dist rebuild (recovered on retry; now a reproducible pattern, not flaky).
 - **W3.2 core: remote inspection** — `IInspector` served over HTTP/GraphQL by
   reactor-api (authed) so the monitor inspects server reactors.
 - **W3.3 workflow placement + hardening**: designated-reactor pinning; enforce or
