@@ -445,6 +445,18 @@ async function pollWorkflowSubgraph(
   return undefined;
 }
 
+// Also off the public boot type: the inspection source the API hands back,
+// which the workflow runtime flips once it is composed.
+function inspectionInfo(
+  switchboard: Awaited<ReturnType<typeof startSwitchboard>>,
+) {
+  return (
+    switchboard as unknown as {
+      api: { inspection?: { info: () => { workflows: boolean } } };
+    }
+  ).api.inspection?.info();
+}
+
 describe("booting Switchboard with workflows on", () => {
   it("arms the intake and registers the workflow document models", async () => {
     const tempRoot = await mkdtemp(join(tmpdir(), "switchboard-workflows-"));
@@ -473,6 +485,9 @@ describe("booting Switchboard with workflows on", () => {
       await expect(pollWorkflowSubgraph(switchboard)).resolves.toMatchObject({
         name: "workflow-runtime",
       });
+      // W3.2 live finding: the inspection report said workflows: false on a
+      // host whose runtime had booted. It is the composed-runtime fact now.
+      expect(inspectionInfo(switchboard)?.workflows).toBe(true);
 
       await switchboard.shutdown();
       switchboard = undefined;

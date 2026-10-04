@@ -72,6 +72,20 @@ export interface IReactorInspectionSource {
   readonly sqlEnabled: boolean;
   /** The facts this reactor reports about itself; see {@link ReactorInspectionInfo}. */
   info(): ReactorInspectionInfo;
+  /**
+   * Records whether the workflow engine is composed on this host.
+   *
+   * The engine is composed by the host AFTER the API boots (plan agreed
+   * decision 3: Node-only and a singleton), so the API cannot observe it and
+   * has to be told — and until W3.3 nothing told it, so a vetra Switchboard
+   * whose runtime had booted reported `workflows: false`. The host calls this
+   * once `composeWorkflowRuntime` has returned, and `info()` reads the current
+   * value rather than one frozen at construction.
+   *
+   * Only this fact is late-bound. The security tiers deliberately are not: a
+   * deployment's posture must not change under a request.
+   */
+  setWorkflowsComposed(composed: boolean): void;
 }
 
 /** Host-side configuration of the inspection surface; both tiers default off. */
@@ -88,11 +102,15 @@ export type ReactorInspectionOptions = {
    */
   sql?: boolean;
   /**
-   * Whether the workflow engine is composed into this host. The engine is
-   * composed by the host AFTER the API boots (plan agreed decision 3: Node-only
-   * and a singleton), so the API cannot observe it and is told. Defaults to
-   * false, i.e. "this reactor does not run workflows", which is the right
-   * answer for every host that has not said otherwise.
+   * Whether the workflow engine is composed into this host, as far as the host
+   * knows AT BOOT. Defaults to false, i.e. "this reactor does not run
+   * workflows", which is the right answer for every host that has not said
+   * otherwise — and the honest one before the engine has been composed.
+   *
+   * A host that composes the engine after the API boots (which is every host
+   * that composes it at all) calls
+   * {@link IReactorInspectionSource.setWorkflowsComposed} instead, once the
+   * runtime is actually there.
    */
   workflows?: boolean;
 };
@@ -163,7 +181,9 @@ export function createReactorInspectionSource(
     options.admin ?? envEnabled(process.env.PH_INSPECTION_ADMIN);
   const sqlEnabled =
     adminEnabled && (options.sql ?? envEnabled(process.env.PH_INSPECTION_SQL));
-  const workflows = options.workflows ?? false;
+  // The one late-bound fact: the host composes the workflow engine after this
+  // boots and tells us (setWorkflowsComposed).
+  let workflows = options.workflows ?? false;
   const storageKind = storageKindOf(module);
   const syncChannels: readonly string[] = Object.freeze(
     module.syncModule
@@ -175,18 +195,23 @@ export function createReactorInspectionSource(
     queryDb: (sql, params) => queryThroughDialect(module.database, sql, params),
   };
 
-  const info: ReactorInspectionInfo = Object.freeze({
-    hosting: "remote",
-    inspection: "rpc",
-    storageKind,
-    // A server reactor registers its own factories in its own realm; nothing
-    // has to survive a postMessage for it to host one.
-    processors: true,
-    workflows,
-    syncChannels,
-    adminEnabled,
-    sqlEnabled,
-  } as const);
+  // Built per call rather than frozen once: `workflows` is a fact about this
+  // host that becomes true after the API has booted, and a frozen record is
+  // what made the server report `workflows: false` on a Switchboard whose
+  // runtime had started (W3.2 live finding).
+  const info = (): ReactorInspectionInfo =>
+    Object.freeze({
+      hosting: "remote",
+      inspection: "rpc",
+      storageKind,
+      // A server reactor registers its own factories in its own realm; nothing
+      // has to survive a postMessage for it to host one.
+      processors: true,
+      workflows,
+      syncChannels,
+      adminEnabled,
+      sqlEnabled,
+    } as const);
 
   return {
     inspector,
@@ -194,6 +219,9 @@ export function createReactorInspectionSource(
     dbQuery,
     adminEnabled,
     sqlEnabled,
-    info: () => info,
+    info,
+    setWorkflowsComposed(composed: boolean) {
+      workflows = composed;
+    },
   };
 }

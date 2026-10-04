@@ -1073,6 +1073,11 @@ async function initServer(
 
     await workflows.start();
     logger.info("Workflow runtime started");
+    // The inspection report's `workflows` is a fact about this host that only
+    // becomes true here: the engine is composed after startAPI returns, so the
+    // API cannot observe it (W3.2 live finding — a vetra Switchboard whose
+    // runtime had booted still reported workflows: false).
+    api.inspection?.setWorkflowsComposed(true);
   }
 
   let privacy: RunningPrivacy | undefined;

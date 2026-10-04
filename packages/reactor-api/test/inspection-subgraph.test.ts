@@ -133,6 +133,7 @@ function buildStubSchema(stub: {
         adminEnabled: stub.adminEnabled ?? true,
         sqlEnabled: false,
       }),
+      setWorkflowsComposed: () => undefined,
     },
   } as unknown as SubgraphArgs);
   return createSchema([], subgraph.resolvers, subgraph.typeDefs);
@@ -217,6 +218,26 @@ describe("inspection subgraph", () => {
           },
         },
       });
+    });
+
+    // W3.2 live finding: a vetra Switchboard whose workflow runtime had booted
+    // reported workflows: false. The report was frozen at construction, and
+    // the engine is composed AFTER the API boots, so the fact could only ever
+    // have been the default.
+    it("reports the workflow runtime once the host says it is composed", () => {
+      const source = createReactorInspectionSource(
+        module.reactorModule!,
+        syncManager,
+      );
+      expect(source.info().workflows).toBe(false);
+
+      source.setWorkflowsComposed(true);
+
+      expect(source.info().workflows).toBe(true);
+      // And back, so a host that tears the runtime down is not still claiming
+      // to run workflows.
+      source.setWorkflowsComposed(false);
+      expect(source.info().workflows).toBe(false);
     });
 
     it("reports the admin tiers the host opted into", async () => {

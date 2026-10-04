@@ -1453,6 +1453,9 @@ async function _setupAPI(
     // stores in this database.
     authorizationService,
     relationalDb,
+    // Likewise handed back: the workflow runtime, composed after this boots,
+    // is the only thing that knows whether it is composed.
+    inspection,
     dispose,
   };
 }
