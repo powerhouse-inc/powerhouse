@@ -79,6 +79,7 @@ export class LocalAttachmentServer {
   private readonly chunkSizeBytes: number;
   private readonly onDiagnostic: (message: string, error?: unknown) => void;
   private readonly cancelled = new Set<string>();
+  private readonly inFlight = new Set<string>();
   private readonly detachPort: () => void;
   private served = 0;
   private bytesServed = 0;
@@ -111,6 +112,9 @@ export class LocalAttachmentServer {
     }
     this.closed = true;
     this.detachPort();
+    // Nothing will ever consume these again; a closed server holds no requests.
+    this.cancelled.clear();
+    this.inFlight.clear();
   }
 
   private onMessage(data: unknown): void {
@@ -118,13 +122,31 @@ export class LocalAttachmentServer {
       return;
     }
     if (data.kind === "cancel") {
-      this.cancelled.add(data.id);
+      // Only track a cancel for a request that is actually in flight. A cancel
+      // that arrives after a request has finished (or for one that never
+      // started) would otherwise accumulate in the set forever, since nothing
+      // downstream would ever match and drop it.
+      if (this.inFlight.has(data.id)) {
+        this.cancelled.add(data.id);
+      }
       return;
     }
     void this.serve(data);
   }
 
   private async serve(request: LocalAttachmentFetchRequest): Promise<void> {
+    this.inFlight.add(request.id);
+    try {
+      await this.serveInner(request);
+    } finally {
+      this.inFlight.delete(request.id);
+      this.cancelled.delete(request.id);
+    }
+  }
+
+  private async serveInner(
+    request: LocalAttachmentFetchRequest,
+  ): Promise<void> {
     try {
       const authorized = await this.authorize(request.hash, request.documentId);
       if (!authorized) {

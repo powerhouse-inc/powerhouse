@@ -10,6 +10,7 @@ import {
   LocalAttachmentServer,
   LocalAttachmentTransport,
 } from "../../src/local/index.js";
+import { LOCAL_ATTACHMENT_PROTOCOL } from "../../src/local/protocol.js";
 import { sha256Hex } from "../../src/replication/hash.js";
 import {
   LocalAttachmentStore,
@@ -353,5 +354,152 @@ describe("LocalAttachmentTransport over a MessageChannel", () => {
     const { puller } = await pair({ bytes });
     await expect(puller.announce()).resolves.toBeUndefined();
     await expect(puller.push()).rejects.toThrow(/pull-only/);
+  });
+
+  it("fails the fetch and frees the slot when the peer ends before it begins", async () => {
+    // A terminal reply with no preceding `begin` left the fetch promise
+    // unsettled and the pending entry leaked, hanging the fetch and starving a
+    // concurrency slot forever (W3.4 review finding 8). Three such must not
+    // wedge the transport: a later fetch still gets answered.
+    const fake = fakePort();
+    const puller = new LocalAttachmentTransport({
+      port: fake.port,
+      requestTimeoutMs: 10_000,
+    });
+    cleanups.push(() => puller.close());
+
+    for (let i = 0; i < 3; i += 1) {
+      const inFlight = puller.fetch(`${"a".repeat(64)}`, DOC);
+      const request = fake.takeFetch();
+      fake.deliver({
+        protocol: LOCAL_ATTACHMENT_PROTOCOL,
+        kind: "end",
+        id: request.id,
+      });
+      await expect(inFlight).rejects.toThrow(/before announcing/);
+    }
+
+    // Nothing is wedged: a fresh fetch is still accepted and answered.
+    const live = puller.fetch(`${"b".repeat(64)}`, DOC);
+    const liveRequest = fake.takeFetch();
+    fake.deliver({
+      protocol: LOCAL_ATTACHMENT_PROTOCOL,
+      kind: "not-found",
+      id: liveRequest.id,
+    });
+    await expect(live).resolves.toEqual({ kind: "not-found" });
+  });
+});
+
+/**
+ * A `LocalChannelPort` whose outgoing messages a test can read and whose
+ * incoming messages a test injects by hand, for driving raw protocol edge
+ * cases a real peer would never send.
+ */
+function fakePort(): {
+  port: LocalChannelPort;
+  deliver: (message: unknown) => void;
+  takeFetch: () => { id: string };
+} {
+  let handler: ((data: unknown) => void) | undefined;
+  const sent: Array<Record<string, unknown>> = [];
+  return {
+    port: {
+      postMessage: (data: unknown) => {
+        sent.push(data as Record<string, unknown>);
+      },
+      onMessage: (callback: (data: unknown) => void) => {
+        handler = callback;
+        return () => {
+          handler = undefined;
+        };
+      },
+      close: () => {
+        handler = undefined;
+      },
+    },
+    deliver: (message: unknown) => handler?.(message),
+    takeFetch: () => {
+      const message = sent.find((entry) => entry.kind === "fetch");
+      if (!message) {
+        throw new Error("no fetch request was posted");
+      }
+      sent.splice(sent.indexOf(message), 1);
+      return { id: message.id as string };
+    },
+  };
+}
+
+describe("LocalAttachmentServer cancellation tracking (W3.4 finding 9)", () => {
+  type ServerState = { cancelled: Set<string>; inFlight: Set<string> };
+  const state = (server: LocalAttachmentServer): ServerState =>
+    server as unknown as ServerState;
+
+  const settle = (): Promise<void> =>
+    new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  it("ignores cancels for requests that were never in flight, and close clears the set", () => {
+    const fake = fakePort();
+    const server = new LocalAttachmentServer({
+      port: fake.port,
+      store: new LocalAttachmentStore(
+        new MemoryAttachmentBackend(),
+        new NullAttachmentTransport(),
+      ),
+    });
+
+    // Cancels for ids with no matching in-flight request used to accumulate in
+    // the set forever; now they are dropped on arrival.
+    for (let i = 0; i < 5; i += 1) {
+      fake.deliver({
+        protocol: LOCAL_ATTACHMENT_PROTOCOL,
+        kind: "cancel",
+        id: `ghost-${i}`,
+      });
+    }
+    expect(state(server).cancelled.size).toBe(0);
+
+    server.close();
+    expect(state(server).cancelled.size).toBe(0);
+    expect(state(server).inFlight.size).toBe(0);
+  });
+
+  it("tracks a cancel only while its request is in flight and drops it when the serve ends", async () => {
+    const fake = fakePort();
+    let releaseAuthorize: () => void = () => undefined;
+    const authorizeGate = new Promise<boolean>((resolve) => {
+      releaseAuthorize = () => resolve(true);
+    });
+    const server = new LocalAttachmentServer({
+      port: fake.port,
+      store: new LocalAttachmentStore(
+        new MemoryAttachmentBackend(),
+        new NullAttachmentTransport(),
+      ),
+      authorize: () => authorizeGate,
+    });
+
+    // Parked in authorize(), so the request is in flight.
+    fake.deliver({
+      protocol: LOCAL_ATTACHMENT_PROTOCOL,
+      kind: "fetch",
+      id: "req-1",
+      hash: "a".repeat(64),
+      documentId: DOC,
+    });
+    fake.deliver({
+      protocol: LOCAL_ATTACHMENT_PROTOCOL,
+      kind: "cancel",
+      id: "req-1",
+    });
+    expect(state(server).cancelled.has("req-1")).toBe(true);
+
+    // The serve finishes (the store holds nothing, so it answers not-found),
+    // and the finally drops both the in-flight marker and the tracked cancel.
+    releaseAuthorize();
+    await settle();
+    expect(state(server).cancelled.size).toBe(0);
+    expect(state(server).inFlight.size).toBe(0);
+    server.close();
   });
 });
