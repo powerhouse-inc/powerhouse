@@ -1,3 +1,5 @@
+import type { RemoteFilter } from "@powerhousedao/reactor";
+
 export type CorrelationId = string;
 
 export type ErrorInfo = {
@@ -172,6 +174,33 @@ export type RpcDbOp = MethodCallMessage<"db-op">;
 
 export type RpcInspectorOp = MethodCallMessage<"inspector-op">;
 
+/**
+ * Delivers one end of a monitor-brokered `MessageChannel` into a worker
+ * reactor and asks it to adopt the peer as a {@link LOCAL_CHANNEL_TYPE} remote
+ * (multi-reactor W1.2 -- see docs/plans/2026-10-03-multi-reactor.md).
+ *
+ * `port` is a live {@link MessagePort}, so this message MUST be posted with
+ * `port` in the transfer list -- it is moved into the worker, never cloned. The
+ * worker registers it under {@link peerId}/{@link channelName} with its
+ * `LocalChannelTransportProvider` and adds a local remote for
+ * {@link collectionIdKey}/{@link filter}, so `LocalChannelFactory` resolves the
+ * brokered port the handshake then runs over.
+ *
+ * Additive to the wire protocol: a worker that predates it never handles the
+ * kind, so no {@link RPC_PROTOCOL_VERSION} bump -- the monitor provisions both
+ * ends from one build.
+ */
+export type RpcAdoptSyncPeer = {
+  k: "adopt-sync-peer";
+  id: CorrelationId;
+  peerId: string;
+  channelName: string;
+  collectionIdKey: string;
+  remoteName: string;
+  filter: RemoteFilter;
+  port: MessagePort;
+};
+
 export type RpcLiveSubscribe = {
   k: "sub-live";
   id: CorrelationId;
@@ -213,6 +242,7 @@ export type ClientMessage =
   | RpcSyncOp
   | RpcDbOp
   | RpcInspectorOp
+  | RpcAdoptSyncPeer
   | RpcLiveSubscribe
   | RpcLiveUnsub
   | RpcPing;

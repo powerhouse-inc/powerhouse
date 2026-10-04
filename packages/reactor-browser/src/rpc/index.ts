@@ -65,6 +65,10 @@ export {
   type WorkerPackageLoaderOptions,
 } from "./worker-package-loader.js";
 export { createPortTransport, type IRpcTransport } from "./transport.js";
+export {
+  sendAdoptSyncPeer,
+  type AdoptSyncPeerParams,
+} from "./adopt-sync-peer.js";
 export { MessageRouter } from "./message-router.js";
 export {
   RpcCorrelator,
@@ -81,6 +85,7 @@ export type {
   OpKind,
   OwnerMessage,
   ReactorIdentity,
+  RpcAdoptSyncPeer,
   RpcDbOp,
   RpcLiveEvent,
   RpcLiveSubscribe,

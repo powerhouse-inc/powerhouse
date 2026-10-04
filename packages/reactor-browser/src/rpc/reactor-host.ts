@@ -2,11 +2,13 @@ import type { IReactorClient } from "@powerhousedao/reactor";
 import { hostResponder, type IHostResponder } from "./host-reply.js";
 import { ReactorHostServer } from "./host-server.js";
 import { SubscriptionStore } from "./subscription.js";
+import type { AdoptSyncPeerParams } from "./adopt-sync-peer.js";
 import type {
   ClientMessage,
   CorrelationId,
   ReactorIdentity,
   RpcAdmin,
+  RpcAdoptSyncPeer,
   RpcDbOp,
   RpcHello,
   RpcInspectorOp,
@@ -32,6 +34,7 @@ function isDataMessage(
     msg.k === "sync-op" ||
     msg.k === "db-op" ||
     msg.k === "inspector-op" ||
+    msg.k === "adopt-sync-peer" ||
     msg.k === "sub-live"
   );
 }
@@ -48,6 +51,16 @@ export type ReactorHostOptions = {
   onSyncOp?: (method: string, args: unknown[]) => Promise<unknown>;
   onDbOp?: (method: string, args: unknown[]) => Promise<unknown>;
   onInspectorOp?: (method: string, args: unknown[]) => Promise<unknown>;
+  /**
+   * Adopts a monitor-brokered local-sync peer: the transferred `port` and the
+   * remote it describes. The host extracts the port from the (transferred, not
+   * cloned) message and hands it over; the handler registers it and adds the
+   * local remote. Multi-reactor W1.2.
+   */
+  onAdoptSyncPeer?: (
+    params: AdoptSyncPeerParams,
+    port: MessagePort,
+  ) => Promise<void>;
   onLiveQuery?: (
     sql: string,
     params: unknown[],
@@ -212,6 +225,10 @@ export class ReactorHost {
       }
       if (msg.k === "inspector-op") {
         void this.handleOp(msg, this.options.onInspectorOp, "inspector", reply);
+        return;
+      }
+      if (msg.k === "adopt-sync-peer") {
+        void this.handleAdoptSyncPeer(msg, reply);
         return;
       }
       if (msg.k === "sub-live") {
@@ -454,6 +471,29 @@ export class ReactorHost {
       },
       (value) => value,
     );
+  }
+
+  private async handleAdoptSyncPeer(
+    message: RpcAdoptSyncPeer,
+    reply: IHostResponder,
+  ): Promise<void> {
+    const handler = this.options.onAdoptSyncPeer;
+    if (!this.requireHandler(handler, message, reply, "adopt-sync-peer")) {
+      return;
+    }
+    await reply.run(message.id, async () => {
+      await this.awaitClientReady();
+      await handler(
+        {
+          peerId: message.peerId,
+          channelName: message.channelName,
+          collectionIdKey: message.collectionIdKey,
+          remoteName: message.remoteName,
+          filter: message.filter,
+        },
+        message.port,
+      );
+    });
   }
 
   private async handleLiveSubscribe(
