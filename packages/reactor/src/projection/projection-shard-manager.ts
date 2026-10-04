@@ -33,9 +33,6 @@ import type {
   ReadModelIndexingConfig,
 } from "./protocol.js";
 import type { IProjectionTransport } from "./transport.js";
-// The one definition of the sticky-routing hash. It was copied here, which
-// meant two implementations deciding the same shard for the same document only
-// as long as both copies stayed identical.
 import { bucketFor } from "../executor/worker-pool-router.js";
 
 const DEFAULT_INIT_TIMEOUT_MS = 30_000;

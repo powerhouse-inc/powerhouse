@@ -27,6 +27,16 @@ export function hashDocumentId(documentId: string): number {
   return hash >>> 0;
 }
 
+/**
+ * Picks the worker bucket for a document under consistent hashing.
+ *
+ * Exported from the package root alongside {@link hashDocumentId} because the
+ * convention is shared, not private to this worker pool: the executor pool,
+ * the projection shard manager, and the multi-reactor router all place a key
+ * with this exact hash, and a second implementation of it would place the
+ * same key differently. Importing this one definition everywhere it is
+ * needed is what keeps those placements agreeing with each other.
+ */
 export function bucketFor(documentId: string, numWorkers: number): number {
   if (numWorkers < 1) {
     throw new Error(`bucketFor: numWorkers must be >= 1 (got ${numWorkers})`);
