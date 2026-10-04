@@ -42,6 +42,22 @@ import { runnableDefinition, type RunnableDefinition } from "./runnable.js";
 import type { OAuthTokenRefresher } from "./oauth.js";
 
 const pieceLogger = childLogger(["workflow", "piece"]);
+
+/**
+ * The ceiling on one line this engine writes to a log.
+ *
+ * Nothing here is worth more than this to a reader, and an unbounded write is
+ * a liability: a piece error carrying an HTML error page, or a piece logging a
+ * whole document, becomes a multi-megabyte write to a pipe that may be
+ * blocked — and an EPIPE on the fatal path is what produced the boot loop in
+ * backlog item 5. Bounding the write is cheaper than handling the throw.
+ */
+export const MAX_LOG_LINE_CHARS = 8_192;
+
+export function truncateForLog(text: string): string {
+  if (text.length <= MAX_LOG_LINE_CHARS) return text;
+  return `${text.slice(0, MAX_LOG_LINE_CHARS)}… [truncated, ${text.length} chars]`;
+}
 const connectionLogger = childLogger(["workflow", "connection"]);
 
 // A connection is bound to its connector (doc 08 §10): a step of one piece
@@ -277,7 +293,12 @@ export function createBlockExecutor(
       // The worker's stdio is discarded, so a piece's own console output is
       // invisible until it is forwarded here.
       onPieceLog: (entry, execution) => {
-        const line = `[${execution.step.key}] ${entry.message}`;
+        // Truncated HERE as well as in the child. The child caps an entry at
+        // 8KB, but a remote transport need not, and an oversized write to a
+        // blocked stdout is how the fatal-shutdown EPIPE loop started
+        // (backlog item 5): the log line must never be the thing that kills
+        // the process.
+        const line = truncateForLog(`[${execution.step.key}] ${entry.message}`);
         if (entry.level === "error") pieceLogger.error(line);
         else if (entry.level === "warn") pieceLogger.warn(line);
         else if (entry.level === "debug") pieceLogger.debug(line);

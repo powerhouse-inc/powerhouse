@@ -151,6 +151,7 @@ import {
   resolveConnectionAuth,
   stepDefinition,
   toWorkflowDefinition,
+  truncateForLog,
 } from "./lib.js";
 import { packageFromConnectorId } from "./connector-id.js";
 import { parseScheduleConfig, schedulePayload } from "./schedule.js";
@@ -196,6 +197,7 @@ import {
   journaledTriggerDocumentIds,
   triggerDocumentIds,
   type ErasedRuns,
+  type FireClaim,
   type RunRow,
   type StepExecutionRow,
   type TriggerStateRow,
@@ -1508,14 +1510,17 @@ export class WorkflowRuntimeService {
       return;
     }
     // The durable half of the dedupe: a crash can leave the cursor behind the
-    // run it already wrote, so the replay delivers this operation a second time.
-    let runId: string | null;
+    // run it already wrote, so the replay delivers this operation a second
+    // time. The claim counts deliveries, so a fire that takes the process down
+    // BEFORE it journals anything is bounded instead of replayed every boot.
+    const enqueue = { workflowId, triggerKind: kind, triggerPayload: payload };
+    let claim: FireClaim;
     try {
-      runId = await store.claimAndEnqueueRun(
+      claim = await store.claimAndEnqueueRun(
         `op:${opKey}`,
         OPERATION_DEDUPE_TTL_MS,
         new Date().toISOString(),
-        { workflowId, triggerKind: kind, triggerPayload: payload },
+        enqueue,
       );
     } catch (error) {
       this.logger.error(
@@ -1525,8 +1530,29 @@ export class WorkflowRuntimeService {
       this.fireUnjournaled(fireKey, workflowId, payload, kind);
       return;
     }
-    if (runId === null) return;
-    this.fireFromTrigger(workflowId, payload, kind, runId);
+    if (claim.outcome === "duplicate") return;
+    if (claim.outcome === "abandoned") {
+      // Loudly, and with a run to point at: the alternative is a reactor that
+      // crashes on every boot and says nothing about why.
+      this.logger.error(
+        `Workflow ${workflowId}: a ${kind} fire has been delivered ` +
+          `${claim.attempts} times without ever journaling a run; abandoning ` +
+          "it rather than replaying it on every boot",
+      );
+      try {
+        await store.journalAbandonedFire({
+          ...enqueue,
+          attempts: claim.attempts,
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Could not journal the abandoned ${kind} fire for workflow ${workflowId}: @error`,
+          error,
+        );
+      }
+      return;
+    }
+    this.fireFromTrigger(workflowId, payload, kind, claim.runId);
   }
 
   private fireFromTrigger(
@@ -1547,9 +1573,15 @@ export class WorkflowRuntimeService {
         this.logger.info(`${kind} fired workflow ${workflowId}: ${run.status}`);
       },
       (error: unknown) => {
+        // The message, truncated, rather than the error object: a piece error
+        // carries the HTTP response the framework's formatter lifted out of
+        // it, which can be a whole HTML error page. An unbounded write on the
+        // failure path is how the EPIPE boot loop started (backlog item 5).
         this.logger.error(
-          `${kind} run failed for workflow ${workflowId}`,
-          error,
+          `${kind} run failed for workflow ${workflowId}: @error`,
+          truncateForLog(
+            error instanceof Error ? error.message : String(error),
+          ),
         );
       },
     );

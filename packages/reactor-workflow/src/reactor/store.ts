@@ -129,7 +129,41 @@ export interface TriggerDedupeRow {
   dedupe_key: string;
   run_id: string | null;
   created_at: string;
+  // How many times this operation has been DELIVERED. Counted before the run
+  // is journaled, so a fire that takes the process down before the write
+  // lands is still countable on the next boot — which is what bounds the
+  // crash-replay loop (see claimAndEnqueueRun). Null on rows written before
+  // the budget existed.
+  attempts: number | null;
 }
+
+/**
+ * How many times one operation may be re-delivered without ever having
+ * journaled a run before it is abandoned.
+ *
+ * Three, not one: a delivery can fail to journal for reasons that are nothing
+ * to do with the fire — a store mid-recreate, a transient database error — and
+ * losing a legitimate trigger to the first hiccup would be worse than the loop
+ * this bounds. Three deliveries of the same operation that never once reach a
+ * run row is not a hiccup.
+ */
+export const FIRE_CRASH_BUDGET = 3;
+
+export function abandonedFireError(attempts: number): string {
+  return (
+    `This operation was delivered ${attempts} times and never once got as ` +
+    "far as journaling a run, so the reactor was taken down before the " +
+    "write landed each time. It is abandoned rather than replayed on every " +
+    "boot. Fix the cause, then rerun this run to fire the workflow with the " +
+    "same payload."
+  );
+}
+
+/** What a fire claim resolved to; see {@link WorkflowRunStore.claimAndEnqueueRun}. */
+export type FireClaim =
+  | { outcome: "claimed"; runId: string }
+  | { outcome: "duplicate" }
+  | { outcome: "abandoned"; attempts: number };
 
 // One key a piece wrote through `ctx.store`, from an action or a trigger hook
 // alike — the same table for both, as Activepieces has.
@@ -309,6 +343,18 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
       }
     }
   }
+  // Additive migration for the crash-replay budget: how many times one
+  // operation has been delivered. Defaulted, so a row written before this
+  // counts as its first delivery rather than as none.
+  try {
+    await db.schema
+      .alterTable("trigger_dedupe")
+      .addColumn("attempts", "integer", (col) => col.notNull().defaultTo(1))
+      .execute();
+  } catch {
+    // column already exists
+  }
+
   // Additive migration for enforced step retry: how many times a step ran.
   try {
     await db.schema
@@ -1082,6 +1128,7 @@ async function claimDedupeIn(
       dedupe_key: dedupeKey,
       run_id: runId,
       created_at: nowIso,
+      attempts: 1,
     })
     .onConflict((oc) => oc.columns(["workflow_id", "dedupe_key"]).doNothing())
     .returning("dedupe_key")
@@ -1268,33 +1315,108 @@ export class WorkflowRunStore {
     return id;
   }
 
-  // Claims the dedupe key and journals the PENDING run in one transaction, so
-  // a crash cannot keep the claim without the run. Null when already claimed.
+  /**
+   * Claims the dedupe key and journals the PENDING run, bounding crash replays.
+   *
+   * Three outcomes, as {@link FireClaim}:
+   *
+   * - **`"claimed"`** with a run id: this fire is ours to run.
+   * - **`"duplicate"`**: an earlier delivery of this operation already
+   *   journaled a run. Today's replay suppression, unchanged.
+   * - **`"abandoned"`**: the operation has been delivered
+   *   {@link FIRE_CRASH_BUDGET} times and has never once got as far as
+   *   journaling a run — i.e. it is taking the process down before the write
+   *   lands, and the read-model cursor replays it on every boot. That is the
+   *   EPIPE boot loop (backlog item 5), and a budget is what turns it from an
+   *   unbootable reactor into one FAILED run naming the loop.
+   *
+   * The attempt is counted in its OWN committed transaction, BEFORE the risky
+   * work, which is the only way a crash that leaves nothing behind can be
+   * counted at all. The claim and the run row then go together, so a claim
+   * that holds a run id is never a claim without one — and a claim WITHOUT a
+   * run id is retried rather than lost, up to the budget.
+   */
   async claimAndEnqueueRun(
     dedupeKey: string,
     ttlMs: number,
     nowIso: string,
     options: EnqueueRunOptions,
-  ): Promise<string | null> {
+  ): Promise<FireClaim> {
+    const attempt = await this.recordFireAttempt(
+      options.workflowId,
+      dedupeKey,
+      ttlMs,
+      nowIso,
+    );
+    if (attempt.runId !== null) return { outcome: "duplicate" };
+    if (attempt.attempts > FIRE_CRASH_BUDGET) {
+      return { outcome: "abandoned", attempts: attempt.attempts };
+    }
+
     const id = randomUUID();
-    const claimed = await this.db.transaction().execute(async (trx) => {
-      if (
-        !(await claimDedupeIn(
-          trx,
-          options.workflowId,
-          dedupeKey,
-          ttlMs,
-          nowIso,
-          id,
-        ))
-      ) {
-        return false;
-      }
+    await this.db.transaction().execute(async (trx) => {
       await this.insertPendingRun(trx, id, options);
-      return true;
+      await trx
+        .updateTable("trigger_dedupe")
+        .set({ run_id: id })
+        .where("workflow_id", "=", options.workflowId)
+        .where("dedupe_key", "=", dedupeKey)
+        .execute();
     });
-    if (!claimed) return null;
     this.runsInFlight.add(id);
+    return { outcome: "claimed", runId: id };
+  }
+
+  /**
+   * Counts one delivery of an operation, and reports whether a run was ever
+   * journaled for it.
+   *
+   * Committed on its own: the point is to leave a trace even when whatever
+   * comes next takes the process down.
+   */
+  async recordFireAttempt(
+    workflowId: string,
+    dedupeKey: string,
+    ttlMs: number,
+    nowIso: string,
+  ): Promise<{ attempts: number; runId: string | null }> {
+    const cutoff = new Date(Date.parse(nowIso) - ttlMs).toISOString();
+    await this.db
+      .deleteFrom("trigger_dedupe")
+      .where("workflow_id", "=", workflowId)
+      .where("created_at", "<", cutoff)
+      .execute();
+    const row = await this.db
+      .insertInto("trigger_dedupe")
+      .values({
+        workflow_id: workflowId,
+        dedupe_key: dedupeKey,
+        run_id: null,
+        created_at: nowIso,
+        attempts: 1,
+      })
+      .onConflict((oc) =>
+        oc.columns(["workflow_id", "dedupe_key"]).doUpdateSet({
+          attempts: sql`${sql.table("trigger_dedupe")}.attempts + 1`,
+        }),
+      )
+      .returning(["attempts", "run_id"])
+      .executeTakeFirstOrThrow();
+    return { attempts: row.attempts ?? 1, runId: row.run_id };
+  }
+
+  /** The abandonment of an over-budget fire, as a visible FAILED run. */
+  async journalAbandonedFire(
+    options: EnqueueRunOptions & { attempts: number },
+  ): Promise<string> {
+    const id = await this.startRun({
+      workflowId: options.workflowId,
+      workflowName: "",
+      workflowVersion: 0,
+      triggerKind: options.triggerKind,
+      triggerPayload: options.triggerPayload,
+    });
+    await this.failRun(id, abandonedFireError(options.attempts));
     return id;
   }
 
