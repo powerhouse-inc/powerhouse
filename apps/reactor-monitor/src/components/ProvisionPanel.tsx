@@ -34,8 +34,12 @@ export type ProvisionRequest = {
   readonly syncMode: ProvisionSyncMode;
   /** Required for `remote`: the reactor's GraphQL endpoint. */
   readonly remoteUrl?: string;
-  /** Built reactors only; `none` leaves the reactor without a byte store. */
-  readonly attachmentStore: ProvisionAttachmentStore;
+  /**
+   * Built reactors only; `none` leaves the reactor without a byte store, and is
+   * also the default `buildDescriptor` applies when this is absent. Optional
+   * here so the type matches that default rather than contradicting it.
+   */
+  readonly attachmentStore?: ProvisionAttachmentStore;
 };
 
 export type ProvisionPanelProps = {

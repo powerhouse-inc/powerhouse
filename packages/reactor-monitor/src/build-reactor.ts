@@ -341,7 +341,17 @@ export async function buildMonitorReactor(
   // reactor does not have. Registering that read model is the follow-up that
   // makes a monitor reactor resumable AND lets it authorize what it serves.
   let attachments: AttachmentModule | undefined;
-  if (options.attachments && rm) {
+  if (options.attachments) {
+    if (!rm) {
+      // An explicit attachments request cannot be silently dropped into a
+      // healthy-looking "no store". This build has no reactor module to hang a
+      // store, replicator and transport off, so byte movement is unsupportable
+      // here -- an in-process build always has one, so reaching this is a
+      // provisioning mismatch worth a sentence rather than a silent skip.
+      throw new Error(
+        "attachments were requested but this reactor build has no reactor module to attach a byte store to; attachment byte movement is in-process only (multi-reactor W3.4)",
+      );
+    }
     attachments = buildAttachmentModule({
       config: options.attachments,
       namespace: options.namespace,
