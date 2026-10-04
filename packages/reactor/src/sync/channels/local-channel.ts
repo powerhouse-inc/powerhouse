@@ -69,7 +69,10 @@ type CursorWriter = {
  *
  * The inbox is constructed with the ack-floor active (holdAckBelowUnapplied
  * defaults true), so its cursor never advances past an operation that is neither
- * applied nor dead-lettered -- the invariant the whole sync system rests on.
+ * applied nor dead-lettered -- the invariant the whole sync system rests on. The
+ * outbox disables that floor (holdAckBelowUnapplied: false): its cursor is
+ * persisted from the applied ordinal of what it removes, not from its ack, so a
+ * withheld entry must not pin it.
  */
 export class LocalChannel implements IChannel {
   readonly inbox: IMailbox;
@@ -124,39 +127,13 @@ export class LocalChannel implements IChannel {
     this.collectionId = collectionId;
     this.filter = filter;
 
-    // Ack-floor active: the inbox cursor never passes an unapplied op.
     this.inbox = new Mailbox({ holdAckBelowMarkers: true });
-    // The outbox cursor is persisted from the applied ordinal of what it
-    // removes, not from its ack, so a withheld entry must not pin it.
     this.outbox = new Mailbox({ holdAckBelowUnapplied: false });
     this.deadLetter = new Mailbox();
 
-    this.outbox.onAdded((added) => {
-      if (this.isShutdown) return;
-      const syncOps = added.filter((op) => this.outbox.get(op.id) === op);
-      if (syncOps.length > 0) this.pushOutbox(syncOps);
-    });
-
-    this.outbox.onRemoved((syncOps) => {
-      // Items for different documents apply out of order, so the highest
-      // applied ordinal can pass one still in flight; a restart would skip it.
-      const ordinal = Math.min(
-        getLatestAppliedOrdinal(syncOps),
-        this.unappliedOutboxFloor() - 1,
-      );
-      this.persistCursor("outbox", ordinal);
-    });
-
-    // The inbox ack never passes a marker still awaiting its load; advancing it
-    // is also what tells the peer to trim its outbox.
-    this.inbox.onRemoved(() => {
-      const ackOrdinal = this.inbox.ackOrdinal;
-      this.persistCursor("inbox", ackOrdinal);
-      if (ackOrdinal > this.lastPostedAckOrdinal) {
-        this.lastPostedAckOrdinal = ackOrdinal;
-        this.post({ kind: "ack", channelId: this.channelId, ackOrdinal });
-      }
-    });
+    this.outbox.onAdded((added) => this.onOutboxAdded(added));
+    this.outbox.onRemoved((syncOps) => this.onOutboxRemoved(syncOps));
+    this.inbox.onRemoved(() => this.onInboxRemoved());
   }
 
   /**
@@ -263,6 +240,41 @@ export class LocalChannel implements IChannel {
     };
   }
 
+  /** Pushes freshly added outbox items that have not since been removed. */
+  private onOutboxAdded(added: SyncOperation[]): void {
+    if (this.isShutdown) return;
+    const syncOps = added.filter((op) => this.outbox.get(op.id) === op);
+    if (syncOps.length > 0) this.pushOutbox(syncOps);
+  }
+
+  /**
+   * Persists the outbox cursor from the applied ordinal of what was removed,
+   * clamped below the lowest ordinal still in flight. Items for different
+   * documents apply out of order, so the highest applied ordinal can pass one
+   * still unacked; a restart from it would skip that one.
+   */
+  private onOutboxRemoved(syncOps: SyncOperation[]): void {
+    const ordinal = Math.min(
+      getLatestAppliedOrdinal(syncOps),
+      this.unappliedOutboxFloor() - 1,
+    );
+    this.persistCursor("outbox", ordinal);
+  }
+
+  /**
+   * Persists the inbox ack and reports it to the peer so it trims its outbox.
+   * The ack is posted only when it strictly advances, so a burst of removals
+   * that does not move the floor does not flood the peer with duplicate acks.
+   */
+  private onInboxRemoved(): void {
+    const ackOrdinal = this.inbox.ackOrdinal;
+    this.persistCursor("inbox", ackOrdinal);
+    if (ackOrdinal > this.lastPostedAckOrdinal) {
+      this.lastPostedAckOrdinal = ackOrdinal;
+      this.post({ kind: "ack", channelId: this.channelId, ackOrdinal });
+    }
+  }
+
   private receive(data: unknown): void {
     if (this.isShutdown) return;
     if (!isLocalWireMessage(data)) {
@@ -289,16 +301,19 @@ export class LocalChannel implements IChannel {
     }
   }
 
+  /**
+   * A HELLO's sinceOrdinal is the peer's inbox ack, so the outbox is trimmed to
+   * it exactly as an ACK would, letting a reconnect resume without re-serving
+   * applied ops; the remaining unacked items are then re-pushed in case the
+   * peer reconnected and lost them.
+   */
   private receiveHello(message: LocalHelloMessage): void {
-    // A HELLO's sinceOrdinal is the peer's inbox ack: trim our outbox to it,
-    // exactly as an ACK would, so a reconnect does not re-serve applied ops.
     if (message.sinceOrdinal > 0) {
       trimMailboxFromAckOrdinal(this.outbox, message.sinceOrdinal);
     }
     this.markSuccess();
     this.transitionConnectionState("connected");
     void this.hearPeer(message.manifest);
-    // Re-push anything still unacked: the peer may have reconnected and lost it.
     this.rePushUnacked();
   }
 
