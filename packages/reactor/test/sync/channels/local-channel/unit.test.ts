@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { ChannelError } from "../../../../src/sync/errors.js";
-import { ChannelErrorSource } from "../../../../src/sync/types.js";
+import {
+  ChannelErrorSource,
+  SyncOperationStatus,
+} from "../../../../src/sync/types.js";
 import { deriveConnectionHealth } from "../../../../src/sync/sync-inspection.js";
 import {
   applyInbox,
@@ -296,6 +299,59 @@ describe("LocalChannel", () => {
         const state = channel.getConnectionState();
         expect(state.failureCount).toBe(2);
         expect(state.state).toBe("error");
+      } finally {
+        await channel.shutdown();
+      }
+    });
+  });
+
+  describe("push failure classification", () => {
+    it("keeps an op in the outbox on a transient post failure and re-pushes on recovery", async () => {
+      const transport = new FakeTransport();
+      const channel = makeChannel({ transport });
+      try {
+        await channel.init();
+
+        const op = syncOp("a->b", 5);
+        transport.throwOnPost = new Error("port temporarily unusable");
+        channel.outbox.add(op);
+
+        // A transient throw must not dead-letter: the op stays in the outbox.
+        expect(channel.outbox.items).toHaveLength(1);
+        expect(channel.deadLetter.items).toHaveLength(0);
+        expect(op.status).not.toBe(SyncOperationStatus.Error);
+        expect(transport.sentOfKind("push")).toHaveLength(0);
+
+        // Recovery: the transport works again and a resend re-pushes it.
+        transport.throwOnPost = undefined;
+        transport.deliver({
+          kind: "resend",
+          channelId: "channel-peer",
+          sinceOrdinal: 0,
+        });
+
+        expect(transport.sentOfKind("push")).toHaveLength(1);
+        expect(channel.outbox.items).toHaveLength(1);
+      } finally {
+        await channel.shutdown();
+      }
+    });
+
+    it("dead-letters an op on an unrecoverable serialization failure", async () => {
+      const transport = new FakeTransport();
+      const channel = makeChannel({ transport });
+      try {
+        await channel.init();
+
+        const op = syncOp("a->b", 5);
+        const cloneError = new Error("value could not be cloned");
+        cloneError.name = "DataCloneError";
+        transport.throwOnPost = cloneError;
+        channel.outbox.add(op);
+
+        expect(channel.outbox.items).toHaveLength(0);
+        expect(channel.deadLetter.items).toHaveLength(1);
+        expect(op.status).toBe(SyncOperationStatus.Error);
       } finally {
         await channel.shutdown();
       }
