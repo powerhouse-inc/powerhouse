@@ -332,6 +332,59 @@ function validateBuiltInKindCoverage(
   );
 }
 
+/**
+ * Everything one {@link ChannelScheme} contributes to a reactor's sync
+ * routing: the `ChannelConfig.type` its factory serves, and how to construct
+ * that factory.
+ *
+ * One row per scheme, so the type and the factory cannot be chosen by
+ * independent conditionals that disagree -- a scheme answering with one
+ * factory while being registered under another scheme's channel type routes
+ * every remote to the wrong place, and nothing would say so.
+ */
+type SchemeChannelDescriptor = {
+  readonly type: string;
+  /**
+   * Builds the scheme's factory. Takes the reactor's internal job queue
+   * because the CONNECT poll timer drives its backpressure from it, which is
+   * why only the builder can construct these.
+   */
+  readonly create: (
+    logger: ILogger,
+    jwtHandler: JwtHandler | undefined,
+    queue: IQueue,
+  ) => IChannelFactory;
+};
+
+/**
+ * The per-scheme row. Exhaustive with a never-check, so adding a
+ * {@link ChannelScheme} is a compile error here rather than a reactor that
+ * silently inherits CONNECT's channel type and misroutes every remote.
+ */
+function schemeChannelDescriptor(
+  scheme: ChannelScheme,
+): SchemeChannelDescriptor {
+  switch (scheme) {
+    case ChannelScheme.CONNECT:
+      return {
+        type: GQL_CHANNEL_TYPE,
+        create: (logger, jwtHandler, queue) =>
+          new GqlRequestChannelFactory(logger, jwtHandler, queue),
+      };
+    case ChannelScheme.SWITCHBOARD:
+      return {
+        type: POLLING_CHANNEL_TYPE,
+        create: (logger) => new GqlResponseChannelFactory(logger),
+      };
+    default: {
+      const unsupported: never = scheme;
+      throw new Error(
+        `Unsupported channel scheme: ${JSON.stringify(unsupported)}`,
+      );
+    }
+  }
+}
+
 export class ReactorBuilder {
   private logger?: ILogger;
   private documentModelSources: DocumentModelSource[] = [];
@@ -1307,7 +1360,7 @@ export class ReactorBuilder {
     let syncModule: InProcessSyncModule | undefined = undefined;
     if (this.channelScheme) {
       const syncBuilder = new SyncBuilder()
-        .withChannelFactory(this.buildSchemeChannelFactory(this.logger, queue))
+        .withChannelFactory(this.buildSchemeChannelFactory(queue))
         .withStorageFlusher(this.storageFlusher);
       syncModule = syncBuilder.buildModule(
         reactor,
@@ -1431,19 +1484,12 @@ export class ReactorBuilder {
         `withAdditionalChannelFactory([${types}]) needs a withChannelScheme to compose with: without a scheme there is no factory to compose, and a withSync SyncBuilder owns its own. Pass a CompositeChannelFactory to that SyncBuilder instead.`,
       );
     }
-    const schemeType = this.schemeChannelType();
-    if (this.additionalChannelFactories.has(schemeType)) {
+    const { type } = schemeChannelDescriptor(this.channelScheme);
+    if (this.additionalChannelFactories.has(type)) {
       throw new Error(
-        `withAdditionalChannelFactory("${schemeType}", ...) collides with the "${this.channelScheme}" channel scheme, which already serves that channel type`,
+        `withAdditionalChannelFactory("${type}", ...) collides with the "${this.channelScheme}" channel scheme, which already serves that channel type`,
       );
     }
-  }
-
-  /** The {@link ChannelConfig.type} the selected gql scheme's factory serves. */
-  private schemeChannelType(): string {
-    return this.channelScheme === ChannelScheme.CONNECT
-      ? GQL_CHANNEL_TYPE
-      : POLLING_CHANNEL_TYPE;
   }
 
   /**
@@ -1464,20 +1510,20 @@ export class ReactorBuilder {
    * {@link assertSyncConfiguration} has already refused every combination this
    * cannot express, so there is nothing left to validate here.
    */
-  private buildSchemeChannelFactory(
-    logger: ILogger,
-    queue: IQueue,
-  ): IChannelFactory {
-    const schemeFactory: IChannelFactory =
-      this.channelScheme === ChannelScheme.CONNECT
-        ? new GqlRequestChannelFactory(logger, this.jwtHandler, queue)
-        : new GqlResponseChannelFactory(logger);
+  private buildSchemeChannelFactory(queue: IQueue): IChannelFactory {
+    if (!this.channelScheme) {
+      throw new Error(
+        "unreachable: buildSchemeChannelFactory called without a channel scheme",
+      );
+    }
+    const { type, create } = schemeChannelDescriptor(this.channelScheme);
+    const schemeFactory = create(this.logger!, this.jwtHandler, queue);
 
     if (this.additionalChannelFactories.size === 0) {
       return schemeFactory;
     }
     return new CompositeChannelFactory([
-      [this.schemeChannelType(), schemeFactory],
+      [type, schemeFactory],
       ...this.additionalChannelFactories,
     ]);
   }

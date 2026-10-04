@@ -16,6 +16,7 @@ import {
   type OperationFilter,
   type PagedResults,
   type PagingOptions,
+  POLLING_CHANNEL_TYPE,
   type RemoteFilter,
   type SearchFilter,
   supportsPurgeRefusals,
@@ -1478,7 +1479,7 @@ export async function touchChannel(
       args.input.name,
       DriveCollectionId.fromKey(args.input.collectionId),
       {
-        type: "polling",
+        type: POLLING_CHANNEL_TYPE,
         parameters: {},
       },
       filter,

@@ -1,5 +1,6 @@
 import {
   DriveCollectionId,
+  LOCAL_CHANNEL_TYPE,
   type MessagePortLike,
   type RemoteFilter,
 } from "@powerhousedao/reactor";
@@ -92,7 +93,7 @@ function resolveCollectionId(options: LinkLocalSyncOptions): DriveCollectionId {
  * `channelScheme: null` island.
  */
 function requireLocalCapable(reactor: ManagedReactor): void {
-  if (!supportsSyncChannel(reactor.capabilities, "local")) {
+  if (!supportsSyncChannel(reactor.capabilities, LOCAL_CHANNEL_TYPE)) {
     const declared =
       reactor.capabilities.syncChannels.join(", ") || "none at all";
     throw new Error(
