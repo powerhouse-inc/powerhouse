@@ -37,7 +37,27 @@ export function unwiredRemoteClient(endpoint: string): IReactorClient {
   return makeRefusingProxy(endpoint, "client") as IReactorClient;
 }
 
+/**
+ * The members that must NOT refuse: the ones a runtime or a logger calls on a
+ * value it was merely handed.
+ *
+ * `JSON.stringify` calls `toJSON`, `String(x)` and template interpolation call
+ * `Symbol.toPrimitive` then `toString`, `console.log` in Node reaches for
+ * `util.inspect.custom`, and `+x` calls `valueOf`. Routed through the throwing
+ * trap, every one of those turns an attempt to DESCRIBE the handle into an
+ * exception -- so an error report, a log line or a devtools expansion that
+ * happens to include a remote reactor handle dies while trying to say what it
+ * is. Refusing a document operation is the point; refusing to be printed is
+ * just a trap for whoever is diagnosing something else.
+ */
+const DESCRIBABLE: ReadonlySet<string> = new Set([
+  "toJSON",
+  "toString",
+  "valueOf",
+]);
+
 function makeRefusingProxy(endpoint: string, path: string): unknown {
+  const description = `[unwired ${path} of the remote reactor at ${endpoint}]`;
   const target = () =>
     refuse(
       endpoint,
@@ -47,9 +67,15 @@ function makeRefusingProxy(endpoint: string, path: string): unknown {
   return new Proxy(target, {
     get: (_target, property) => {
       // Never pretend to be a thenable: awaiting the handle (or any field of
-      // it) must not call into this.
+      // it) must not call into this. Every symbol-keyed protocol member --
+      // `Symbol.toPrimitive`, `Symbol.toStringTag`, `util.inspect.custom`,
+      // iteration -- is absent for the same reason, which leaves the string
+      // fallbacks below to answer.
       if (property === "then" || typeof property === "symbol") {
         return undefined;
+      }
+      if (DESCRIBABLE.has(property)) {
+        return () => description;
       }
       return makeRefusingProxy(endpoint, `${path}.${String(property)}`);
     },

@@ -287,7 +287,24 @@ function storageOf(descriptor: ReactorDescriptor): ReactorStorageCapability {
   return { kind, durable: kind !== "memory" };
 }
 
-/** How the inspector reaches a reactor of this hosting kind. */
+/**
+ * How the inspector reaches a reactor of this hosting kind, as far as the
+ * DESCRIPTOR can say.
+ *
+ * The two local kinds are decided by the descriptor: a reactor this process
+ * builds is inspected directly, a worker-hosted one over its message port, and
+ * nothing about either is in question before it is built.
+ *
+ * `remote` is not. Whether a URL answers reactor-api's inspection subgraph at
+ * all is unknown until something has asked it -- a reachable Switchboard on an
+ * older build, or a host that registered no inspection source, serves nothing
+ * here -- so the descriptor-only row claims `"none"` rather than promising a
+ * transport nobody has verified. {@link remoteReactorCapabilities} raises it to
+ * `"rpc"`, and only it, because reaching that function means the reactor
+ * ANSWERED its `info` query: the subgraph is there and the handle has proof.
+ * A router reading `"none"` refuses to promise observability for that target,
+ * which is the right answer for a row that is still a guess.
+ */
 function inspectionOf(hosting: ReactorHosting): ReactorInspectionTransport {
   switch (hosting) {
     case "in-process":
@@ -295,12 +312,7 @@ function inspectionOf(hosting: ReactorHosting): ReactorInspectionTransport {
     case "worker":
       return "rpc";
     case "remote":
-      // W3.2: reactor-api's inspection subgraph serves `IInspector` and
-      // `ISyncInspector` over HTTP, and `RemoteInspectorClient` implements
-      // both against it -- so a remote reactor is inspected over a transport,
-      // exactly like a worker-hosted one, and only what the subgraph models
-      // crosses. (It was `"none"` through stage 2.)
-      return "rpc";
+      return "none";
   }
 }
 
@@ -344,10 +356,15 @@ export type ReportedCapabilityFacts = {
  *   monitor's add-remote form and a router's link planning agree with what
  *   that reactor will actually accept.
  *
+ * `inspection` is `"rpc"` here and ONLY here. Reaching this function means the
+ * reactor answered its own `info` query over reactor-api's inspection
+ * subgraph, which is the proof that the transport exists; the descriptor-only
+ * row says `"none"` because a URL is not that proof (see
+ * {@link inspectionOf}).
+ *
  * The rest are properties of being remote at all and are not the report's to
- * vary: the store is `remote` and never this process's to heal, inspection is
- * `rpc` over the subgraph, and a server reactor registers its own processor
- * factories in its own realm.
+ * vary: the store is `remote` and never this process's to heal, and a server
+ * reactor registers its own processor factories in its own realm.
  */
 export function remoteReactorCapabilities(
   descriptor: ReactorDescriptor,
@@ -363,7 +380,7 @@ export function remoteReactorCapabilities(
     storage: Object.freeze(storageOf(descriptor)),
     processors: true,
     workflows: reported.workflows,
-    inspection: inspectionOf("remote"),
+    inspection: "rpc",
     syncChannels: Object.freeze(builtSyncChannels(reported.syncChannelTypes)),
     selfHeal: false,
   });
@@ -383,7 +400,8 @@ export function remoteReactorCapabilities(
  * {@link remoteReactorCapabilities} reads the row off what that reactor
  * reported (W3.2) -- and what remains here is the descriptor-only
  * approximation, whose `workflows: true` says "a Node host MAY run the engine",
- * not that this one does.
+ * not that this one does, and whose `inspection: "none"` says "nothing has
+ * verified an inspection subgraph behind that URL", not that there is none.
  *
  * `built` carries the facts the descriptor alone cannot express, and every
  * provisioned reactor passes it; see {@link BuiltCapabilityFacts}. Omitting it

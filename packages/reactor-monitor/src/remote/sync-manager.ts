@@ -5,7 +5,6 @@ import {
   type ConnectionStateSnapshot,
   type DeadLetterPage,
   type IChannel,
-  type IMailbox,
   type InspectableSyncManager,
   type IPeerAgreement,
   type Remote,
@@ -13,71 +12,68 @@ import {
   type RemoteSyncInspection,
   type ShutdownStatus,
   type SyncHold,
-  type SyncOperation,
   type SyncStatus,
+  type WireChannelConfig,
+  type WireRemoteMeta,
 } from "@powerhousedao/reactor";
+import {
+  DEFAULT_CONNECTION_SNAPSHOT,
+  NOOP_MAILBOX,
+} from "@powerhousedao/reactor-browser/rpc";
 import type { PeerManifest } from "@powerhousedao/shared/document-model";
 import type {
   RemoteInspectionRemote,
   RemoteInspectorClient,
-  WireRemoteMeta,
 } from "./client.js";
 
 /**
- * A mailbox that carries nothing. The live sync operations of a remote
- * reactor's channel never leave that process; what a holder can see of them --
- * the depths -- is a first-class field of `RemoteSyncInspection` instead, so
- * this stub reports empty rather than guessing.
+ * The inert mailbox and the pre-connection snapshot are `SyncManagerProxy`'s
+ * own (`@powerhousedao/reactor-browser/rpc`), not copies of them.
  *
- * The same shape `SyncManagerProxy` uses for a worker reactor, and for the
- * same reason: `Remote.channel` is part of the `ISyncManager` contract, and a
- * transport that cannot carry a live channel still has to produce one.
+ * Both exist for a reason that is not specific to either transport:
+ * `Remote.channel` is part of the `ISyncManager` contract, and a transport that
+ * cannot carry a live channel still has to produce one. The live sync
+ * operations of a remote reactor's channel never leave that process, and what a
+ * holder can see of them -- the depths -- is a first-class field of
+ * `RemoteSyncInspection` instead, so the mailbox reports empty rather than
+ * guessing.
  */
-class EmptyMailbox implements IMailbox {
-  get items(): readonly SyncOperation[] {
-    return [];
-  }
-  get ackOrdinal(): number {
-    return 0;
-  }
-  get latestOrdinal(): number {
-    return 0;
-  }
-  init(): void {}
-  advanceOrdinal(): void {}
-  get(): undefined {
-    return undefined;
-  }
-  add(): void {}
-  remove(): void {}
-  onAdded(): void {}
-  onRemoved(): void {}
-  pause(): void {}
-  resume(): void {}
-  flush(): void {}
-  isPaused(): boolean {
-    return false;
-  }
-}
-
-const EMPTY_MAILBOX = new EmptyMailbox();
-
-const DEFAULT_SNAPSHOT: ConnectionStateSnapshot = {
-  state: "connecting",
-  failureCount: 0,
-  lastSuccessUtcMs: 0,
-  lastFailureUtcMs: 0,
-  pushBlocked: false,
-  pushFailureCount: 0,
-  receivingPages: false,
-  requiresAuth: false,
-};
 
 const DEFAULT_FILTER: RemoteMeta["filter"] = {
   documentId: [],
   scope: [],
   branch: "main",
 };
+
+const UNKNOWN_CHANNEL: ChannelConfig = { type: "unknown", parameters: {} };
+
+/**
+ * Rebuilds a `ChannelConfig` from the wire.
+ *
+ * Both halves are guarded, not just the config's presence: `parameters` is
+ * dereferenced downstream (`makeChannel` reads `parameters.url`), and a server
+ * that served a remote's configuration through a JSON scalar can deliver a
+ * config with a type and no parameters -- or either half of the wrong
+ * shape -- without anything in between noticing. The whole point of
+ * {@link WireRemoteMeta} being optional-everywhere is that this is untrusted
+ * wire data; a `TypeError` here would take the entire remotes list down with
+ * it.
+ */
+function rehydrateChannelConfig(
+  config: WireChannelConfig | undefined,
+): ChannelConfig {
+  // Read through an unknown-valued view of the record. The wire type states
+  // what the contract SAYS arrives; this function exists because a server can
+  // send something else, so neither field is taken on its declared type.
+  const wire: { type?: unknown; parameters?: unknown } = config ?? {};
+  return {
+    type: typeof wire.type === "string" ? wire.type : UNKNOWN_CHANNEL.type,
+    parameters:
+      typeof wire.parameters === "object" && wire.parameters !== null
+        ? (wire.parameters as Record<string, unknown>)
+        : {},
+  };
+}
 
 /**
  * Rebuilds a `RemoteMeta` from what the wire delivered (see
@@ -93,7 +89,7 @@ function rehydrateMeta(meta: WireRemoteMeta, fallbackName: string): RemoteMeta {
       meta.collectionId?.driveId ?? "",
       meta.collectionId?.branch ?? "main",
     ),
-    channelConfig: meta.channelConfig ?? { type: "unknown", parameters: {} },
+    channelConfig: rehydrateChannelConfig(meta.channelConfig),
     filter: meta.filter ?? DEFAULT_FILTER,
     options: meta.options ?? {},
     ...(meta.peer === undefined ? {} : { peer: meta.peer }),
@@ -287,15 +283,17 @@ export class RemoteSyncManagerClient implements InspectableSyncManager {
    * `inspectRemote(s)`, which is what every monitor view reads.
    */
   private makeChannel(remoteName: string, config: ChannelConfig): IChannel {
+    // Safe to dereference: `rehydrateMeta` guarantees `parameters` is an
+    // object, whatever the wire delivered.
     const url = config.parameters.url;
     const channel: IChannel & { config: { url?: string } } = {
-      inbox: EMPTY_MAILBOX,
-      outbox: EMPTY_MAILBOX,
-      deadLetter: EMPTY_MAILBOX,
+      inbox: NOOP_MAILBOX,
+      outbox: NOOP_MAILBOX,
+      deadLetter: NOOP_MAILBOX,
       init: () => Promise.resolve(),
       shutdown: () => Promise.resolve(),
       getConnectionState: () =>
-        this.connectionStates.get(remoteName) ?? DEFAULT_SNAPSHOT,
+        this.connectionStates.get(remoteName) ?? DEFAULT_CONNECTION_SNAPSHOT,
       onConnectionStateChange:
         (_callback: ConnectionStateChangeCallback) =>
         // Nothing pushes from the far side: the monitor polls.

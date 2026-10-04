@@ -251,9 +251,13 @@ describe("reactorCapabilities", () => {
       // A provisioned remote reads the reactor's own answer instead; see
       // remoteReactorCapabilities below.
       workflows: true,
-      // W3.2: reactor-api's inspection subgraph is a real transport, so the
-      // remote row is inspectable like a worker-hosted one.
-      inspection: "rpc",
+      // NOT "rpc". Whether that URL answers reactor-api's inspection subgraph
+      // at all is unverified here -- a reachable Switchboard on an older
+      // build, or one whose host registered no inspection source, serves
+      // nothing -- and a router reading this row must not be promised
+      // observability nobody has confirmed. Only the PROVISIONED row claims
+      // "rpc", and it has the reactor's own answer as proof.
+      inspection: "none",
       syncChannels: ["gql"],
       selfHeal: false,
     } satisfies ReactorCapabilities);
@@ -275,6 +279,9 @@ describe("reactorCapabilities", () => {
       storage: { kind: "remote", durable: true },
       processors: true,
       workflows: false,
+      // Earned, not assumed: reaching this function means the reactor
+      // ANSWERED its info query over the inspection subgraph, which is the
+      // proof the descriptor-only row (above) does not have.
       inspection: "rpc",
       syncChannels: [POLLING_CHANNEL_TYPE],
       selfHeal: false,
