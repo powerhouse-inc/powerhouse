@@ -945,6 +945,25 @@ Positioning: runs AFTER stage 4 (migration back) unless live-test pain forces
 specific items earlier; the stage-1 load harness (W1.3) should already record the
 baseline numbers for all three axes so Stage P starts from data.
 
+### Stage 4 scoping (2026-10-05) — assessment complete, awaiting user decisions
+Headline: the hardening is ALREADY LIVE in the real apps via shared workspace:* deps.
+Connect worker: self-heal + durable group-commit flush (reactor.worker.ts:489,262,549) +
+typed inspector. Connect browser path: self-heal but NO group-commit (worker-only).
+Switchboard: hardened ClosablePGliteDialect (server.mts:297), inspection subgraph ALREADY
+MOUNTED + read-gated on isSupremeAdmin, mutations behind PH_INSPECTION_ADMIN (server.ts:1695,
+1361), workflow singleton lease + boot-degradation. NO destructive data migration needed for
+distyra-test; removed trigger_state.lease_owner columns are left in place (non-destructive);
+singleton_lease + workflow-store migrations are additive/idempotent. One behavior change:
+W3.3 QUEUE+PARK factory default (workflows only).
+NOT inherited (the genuinely-new Stage-4 work): composite/LocalChannel wiring into the apps;
+RoutingReactorClient into Connect (neither app deps reactor-router); multi-reactor Switchboard
+hosting (API federates ONE reactor — gateway-granularity work). options.reactor seam exists.
+WP split: A (switchboard inspection operator pass) / B (Connect composite factory, inert) /
+C (Connect worker adopt-peer handlers) = safe-autonomous. D (Connect cross-tab broker surface) /
+E (Connect RoutingReactorClient default) / F (Switchboard multi-reactor host) / G (confirm
+QUEUE+PARK) = NEED USER DECISION (change production app default behavior / deployment contract).
+Full assessment in task a271fb11d025708bc.
+
 ## Standing bug backlog (fix as encountered, each with a test)
 
 1. Dev fingerprint staleness (W0.6). 2. Worker-path processors unsupported/silent.
