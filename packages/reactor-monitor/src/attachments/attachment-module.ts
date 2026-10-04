@@ -61,6 +61,7 @@ type PeerLink = {
   server: LocalAttachmentServer;
   transport: LocalAttachmentTransport;
   port: LocalChannelPort;
+  peerId: string;
   channelName: string;
 };
 
@@ -148,15 +149,21 @@ export function buildAttachmentModule(
     onDiagnostic,
   });
 
+  // Keyed by `(peerId, channelName)`, mirroring the sync-link registry: two
+  // links to the same peer on different channels (a second collection) must
+  // coexist, so neither adopting nor dropping one may touch the other.
   const links = new Map<string, PeerLink>();
+  const linkKey = (peerId: string, channelName: string): string =>
+    `${peerId}\u0000${channelName}`;
 
-  const dropPeer = (peerId: string): void => {
-    const link = links.get(peerId);
+  const dropPeer = (peerId: string, channelName: string): void => {
+    const key = linkKey(peerId, channelName);
+    const link = links.get(key);
     if (!link) {
       return;
     }
-    links.delete(peerId);
-    transport.removePeer(peerId);
+    links.delete(key);
+    transport.removePeer(peerId, channelName);
     link.server.close();
     link.transport.close();
     try {
@@ -189,10 +196,11 @@ export function buildAttachmentModule(
     peers: () => transport.peerNames(),
     switchboardSources: () => transport.switchboardSources(),
     adoptPeer: (link: AdoptAttachmentPeerLink): Promise<void> => {
-      if (links.has(link.peerId)) {
+      const key = linkKey(link.peerId, link.channelName);
+      if (links.has(key)) {
         return Promise.reject(
           new Error(
-            `This reactor already holds an attachment link to peer '${link.peerId}'; unlink it before brokering another`,
+            `This reactor already holds an attachment link to peer '${link.peerId}' on channel '${link.channelName}'; unlink it before brokering another`,
           ),
         );
       }
@@ -211,16 +219,17 @@ export function buildAttachmentModule(
       });
       const peerTransport = new LocalAttachmentTransport({ port });
       try {
-        transport.addPeer(link.peerId, peerTransport);
+        transport.addPeer(link.peerId, link.channelName, peerTransport);
       } catch (error) {
         server.close();
         peerTransport.close();
         return Promise.reject(error as Error);
       }
-      links.set(link.peerId, {
+      links.set(key, {
         server,
         transport: peerTransport,
         port,
+        peerId: link.peerId,
         channelName: link.channelName,
       });
       // A newly linked peer may hold bytes this reactor gave up on, so every
@@ -230,22 +239,15 @@ export function buildAttachmentModule(
       return Promise.resolve();
     },
     removePeer: (peerId: string, channelName: string): Promise<void> => {
-      const link = links.get(peerId);
+      const link = links.get(linkKey(peerId, channelName));
       if (!link) {
         return Promise.reject(
           new Error(
-            `This reactor has no attachment link to peer '${peerId}' to remove`,
+            `This reactor has no attachment link to peer '${peerId}' on channel '${channelName}' to remove`,
           ),
         );
       }
-      if (link.channelName !== channelName) {
-        return Promise.reject(
-          new Error(
-            `The attachment link to peer '${peerId}' is on channel '${link.channelName}', not '${channelName}'`,
-          ),
-        );
-      }
-      dropPeer(peerId);
+      dropPeer(peerId, channelName);
       return Promise.resolve();
     },
   };
@@ -257,8 +259,8 @@ export function buildAttachmentModule(
     managed,
     shutdown: async () => {
       await replicator.stop();
-      for (const peerId of [...links.keys()]) {
-        dropPeer(peerId);
+      for (const link of [...links.values()]) {
+        dropPeer(link.peerId, link.channelName);
       }
       await store.close();
     },

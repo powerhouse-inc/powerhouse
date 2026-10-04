@@ -228,6 +228,7 @@ export async function linkLocalSync(
     );
   }
 
+  let unlinked = false;
   return {
     reactorA: a.name,
     reactorB: b.name,
@@ -236,13 +237,23 @@ export async function linkLocalSync(
     remoteNameA,
     remoteNameB,
     attachments,
+    // Best-effort-complete-all-then-report, and idempotent. Every teardown is
+    // attempted (sync on both sides AND the attachment link) before any failure
+    // is surfaced, so one failing half never strands the others. The original
+    // failure is what the caller sees; a second unlink() is a safe no-op rather
+    // than a fresh "already removed" error that would mask it. A retry after a
+    // partial failure is therefore clean.
     unlink: async () => {
+      if (unlinked) {
+        return;
+      }
+      unlinked = true;
       const results = await Promise.allSettled([
         a.removeLocalSyncPeer!(remoteNameA, b.name, channelName),
         b.removeLocalSyncPeer!(remoteNameB, a.name, channelName),
         ...(attachments ? [attachments.unlink()] : []),
       ]);
-      // Both sides are always attempted; surface the first failure, if any.
+      // Every teardown was attempted; surface the first failure, if any.
       for (const result of results) {
         if (result.status === "rejected") {
           throw result.reason;

@@ -274,4 +274,72 @@ describe("attachment byte replication over a brokered local link (W3.4)", () => 
     );
     expect((await b.attachments!.status()).held).toBe(1);
   }, 60_000);
+
+  it("keeps a second collection's attachment link serving when the first is unlinked (W3.4 finding 5)", async () => {
+    const a = await host("multi-a", attachments());
+    const b = await host("multi-b", attachments());
+
+    // A holds the bytes referenced on the SECOND drive.
+    const bytes = new TextEncoder().encode("bytes for the second collection");
+    const hash = await sha256Hex(bytes);
+    const ref = `attachment://v1:${hash}` as AttachmentRef;
+    await (a.attachments!.store as LocalAttachmentStore).putLocal(
+      hash,
+      {
+        mimeType: "text/plain",
+        fileName: "second.txt",
+        sizeBytes: bytes.byteLength,
+        extension: ".txt",
+        createdAtUtc: "2026-01-01T00:00:00.000Z",
+      },
+      streamFromBytes(bytes),
+    );
+
+    const drive1 = await a.client.drives.create({ global: { name: "One" } });
+    const drive2 = await a.client.drives.create({ global: { name: "Two" } });
+
+    // Two links for the SAME pair on DIFFERENT collections. The second must
+    // not be rejected as a duplicate peer.
+    const link1 = await linkLocalSync(a, b, {
+      driveId: drive1.header.id,
+      createChannel: nodeChannel,
+    });
+    const link2 = await linkLocalSync(a, b, {
+      driveId: drive2.header.id,
+      createChannel: nodeChannel,
+    });
+    expect(link1.attachments).toBeDefined();
+    expect(link2.attachments).toBeDefined();
+    // peers() reports the reactor once, not once per channel.
+    expect(b.attachments!.peers()).toEqual(["multi-a"]);
+
+    // Tear down the FIRST link; the second must keep serving.
+    await link1.unlink();
+    expect(b.attachments!.peers()).toEqual(["multi-a"]);
+
+    // A ref on the still-linked second drive still pulls its bytes.
+    await a.client.drives.addFolder(drive2.header.id, ref);
+    await vi.waitFor(
+      async () => {
+        expect(await b.attachments!.store.has(hash)).toBe(true);
+      },
+      { timeout: 20_000 },
+    );
+  }, 60_000);
+
+  it("unlink is idempotent: a second call is a safe no-op (W3.4 finding 7)", async () => {
+    const a = await host("idem-a", attachments());
+    const b = await host("idem-b", attachments());
+    const drive = await a.client.drives.create({ global: { name: "Idem" } });
+
+    const link = await linkLocalSync(a, b, {
+      driveId: drive.header.id,
+      createChannel: nodeChannel,
+    });
+    await link.unlink();
+    // A second unlink does nothing and does not throw a fresh "already removed".
+    await expect(link.unlink()).resolves.toBeUndefined();
+    expect(a.attachments!.peers()).toEqual([]);
+    expect(b.attachments!.peers()).toEqual([]);
+  }, 60_000);
 });

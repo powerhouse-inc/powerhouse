@@ -90,15 +90,24 @@ export async function linkLocalAttachments(
     throw error;
   }
 
+  let unlinked = false;
   return {
     reactorA: a.name,
     reactorB: b.name,
     channelName,
+    // Both ends are always attempted before any failure is surfaced, and a
+    // second call is a safe no-op: a retry after a partial failure must not
+    // raise a fresh "no link to remove" that buries the original error.
     unlink: async () => {
+      if (unlinked) {
+        return;
+      }
+      unlinked = true;
       const results = await Promise.allSettled([
         a.attachments!.removePeer(b.name, channelName),
         b.attachments!.removePeer(a.name, channelName),
       ]);
+      // Both ends were attempted; surface the first failure, if any.
       for (const result of results) {
         if (result.status === "rejected") {
           throw result.reason;
