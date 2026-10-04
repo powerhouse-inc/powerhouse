@@ -123,8 +123,16 @@ import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.j
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import { SubscriptionNotificationReadModel } from "../subs/subscription-notification-read-model.js";
 import { GroupReevaluationTrigger } from "./group-reevaluation-trigger.js";
-import { GqlRequestChannelFactory } from "../sync/channels/gql-request-channel-factory.js";
-import { GqlResponseChannelFactory } from "../sync/channels/gql-response-channel-factory.js";
+import { CompositeChannelFactory } from "../sync/channels/composite-channel-factory.js";
+import {
+  GqlRequestChannelFactory,
+  GQL_CHANNEL_TYPE,
+} from "../sync/channels/gql-request-channel-factory.js";
+import {
+  GqlResponseChannelFactory,
+  POLLING_CHANNEL_TYPE,
+} from "../sync/channels/gql-response-channel-factory.js";
+import type { IChannelFactory } from "../sync/interfaces.js";
 import { SyncBuilder } from "../sync/sync-builder.js";
 import type { JwtHandler, LocalPeer } from "../sync/types.js";
 import { ChannelScheme } from "../sync/types.js";
@@ -349,6 +357,10 @@ export class ReactorBuilder {
   private signalHandlersEnabled = false;
   private queueInstance?: IQueue;
   private channelScheme?: ChannelScheme;
+  private readonly additionalChannelFactories = new Map<
+    string,
+    IChannelFactory
+  >();
   private jwtHandler?: JwtHandler;
   private documentModelLoader?: IDocumentModelLoader;
   private shutdownHooks: Array<() => Promise<void>> = [];
@@ -545,8 +557,24 @@ export class ReactorBuilder {
     return this;
   }
 
+  /** Compose further transports onto the scheme with {@link withAdditionalChannelFactory}. */
   withChannelScheme(scheme: ChannelScheme): this {
     this.channelScheme = scheme;
+    return this;
+  }
+
+  /**
+   * Routes `type` to `factory` beside the {@link withChannelScheme} scheme's
+   * own factory, through a {@link CompositeChannelFactory}. Build refuses it
+   * without a scheme, or when `type` is the scheme's own.
+   */
+  withAdditionalChannelFactory(type: string, factory: IChannelFactory): this {
+    if (this.additionalChannelFactories.has(type)) {
+      throw new Error(
+        `A channel factory for the type "${type}" is already registered on this ReactorBuilder`,
+      );
+    }
+    this.additionalChannelFactories.set(type, factory);
     return this;
   }
 
@@ -662,6 +690,8 @@ export class ReactorBuilder {
         "withReadModelCoordinator and withReadModelCoordinatorFactory are mutually exclusive; register one coordinator source",
       );
     }
+
+    this.assertAdditionalChannelFactories();
 
     if (
       this.projectionShardConfig !== undefined &&
@@ -1195,12 +1225,9 @@ export class ReactorBuilder {
     };
     let syncModule: InProcessSyncModule | undefined = undefined;
     if (this.channelScheme) {
-      const factory =
-        this.channelScheme === ChannelScheme.CONNECT
-          ? new GqlRequestChannelFactory(this.logger, this.jwtHandler, queue)
-          : new GqlResponseChannelFactory(this.logger);
-
-      const syncBuilder = new SyncBuilder().withChannelFactory(factory);
+      const syncBuilder = new SyncBuilder().withChannelFactory(
+        this.buildSchemeChannelFactory(this.logger, queue),
+      );
       syncModule = syncBuilder.buildModule(
         reactor,
         this.logger,
@@ -1293,6 +1320,50 @@ export class ReactorBuilder {
     }
 
     return module;
+  }
+
+  private assertAdditionalChannelFactories(): void {
+    if (this.additionalChannelFactories.size === 0) {
+      return;
+    }
+    if (!this.channelScheme) {
+      const types = [...this.additionalChannelFactories.keys()].join(", ");
+      throw new Error(
+        `withAdditionalChannelFactory([${types}]) needs a withChannelScheme to compose with: without a scheme there is no factory to compose, and a withSync SyncBuilder owns its own. Pass a CompositeChannelFactory to that SyncBuilder instead.`,
+      );
+    }
+    const schemeType = this.schemeChannelType();
+    if (this.additionalChannelFactories.has(schemeType)) {
+      throw new Error(
+        `withAdditionalChannelFactory("${schemeType}", ...) collides with the "${this.channelScheme}" channel scheme, which already serves that channel type`,
+      );
+    }
+  }
+
+  /** The {@link ChannelConfig.type} the selected gql scheme's factory serves. */
+  private schemeChannelType(): string {
+    return this.channelScheme === ChannelScheme.CONNECT
+      ? GQL_CHANNEL_TYPE
+      : POLLING_CHANNEL_TYPE;
+  }
+
+  /** Bare without additional factories, so an existing reactor routes as before. */
+  private buildSchemeChannelFactory(
+    logger: ILogger,
+    queue: IQueue,
+  ): IChannelFactory {
+    const schemeFactory: IChannelFactory =
+      this.channelScheme === ChannelScheme.CONNECT
+        ? new GqlRequestChannelFactory(logger, this.jwtHandler, queue)
+        : new GqlResponseChannelFactory(logger);
+
+    if (this.additionalChannelFactories.size === 0) {
+      return schemeFactory;
+    }
+    return new CompositeChannelFactory([
+      [this.schemeChannelType(), schemeFactory],
+      ...this.additionalChannelFactories,
+    ]);
   }
 
   /**
