@@ -1,4 +1,5 @@
 import { provisionInProcess } from "./in-process.js";
+import { provisionRemote } from "./remote/provision.js";
 import type { ManagedReactor, ReactorDescriptor } from "./types.js";
 import {
   provisionWorkerReactor,
@@ -16,8 +17,10 @@ export type ProvisionOptions = ProvisionWorkerOptions;
  * namespace their store by `descriptor.name`, so provisioning N descriptors
  * gives N independent reactors in one origin.
  *
- * `remote` is not implemented: attaching an already-running reactor over
- * HTTP/GraphQL needs the remote inspection surface from stage 3 (W3.1/W3.2).
+ * `remote` attaches an already-running reactor (a Switchboard) over HTTP: it
+ * builds nothing and namespaces nothing, and its inspection surfaces speak to
+ * reactor-api's inspection subgraph (multi-reactor W3.2). `descriptor.name`
+ * is then only this monitor session's label for it.
  */
 export function provision(
   descriptor: ReactorDescriptor,
@@ -33,11 +36,7 @@ export function provision(
         return Promise.reject(error as Error);
       }
     case "remote":
-      return Promise.reject(
-        new Error(
-          `NotImplemented: provision() for reactor kind "remote" lands in W3.1 (attach over the existing GQL channels) and W3.2 (remote IInspector)`,
-        ),
-      );
+      return provisionRemote(descriptor);
     default: {
       const kind: never = descriptor.kind;
       return Promise.reject(

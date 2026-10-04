@@ -19,6 +19,7 @@ export type {
   ManagedInProcessReactor,
   ManagedReactor,
   ManagedReactorBase,
+  ManagedRemoteReactor,
   ManagedWorkerReactor,
   MonitorInProcessClientModule,
   MonitorInProcessReactorModule,
@@ -26,12 +27,14 @@ export type {
   ReactorDescriptor,
   ReactorKind,
   ReactorPackageConfig,
+  ReactorRemoteConfig,
   ReactorStorageConfig,
   ReactorSyncConfig,
 } from "./types.js";
 
 export {
   reactorCapabilities,
+  remoteReactorCapabilities,
   supportsSyncChannel,
   unverifiedReactorCapabilities,
   type BuiltCapabilityFacts,
@@ -41,6 +44,7 @@ export {
   type ReactorStorageCapability,
   type ReactorStorageKind,
   type ReactorSyncChannel,
+  type ReportedCapabilityFacts,
 } from "./capabilities.js";
 export { isLocalOnlySync } from "./sync-mode.js";
 
@@ -56,6 +60,26 @@ export {
 
 export { provision, type ProvisionOptions } from "./provision.js";
 export { provisionInProcess } from "./in-process.js";
+
+// Remote reactor attachment and its inspection client (multi-reactor W3.2).
+export {
+  createRemoteInspectorClient,
+  GraphqlInspectionTransport,
+  inspectionEndpoint,
+  INSPECTION_OPERATIONS,
+  provisionRemote,
+  RemoteInspectorClient,
+  RemoteSyncManagerClient,
+  unwiredRemoteClient,
+  unwiredRemoteEventBus,
+  type InspectionOperationName,
+  type RemoteInspectionHeaders,
+  type RemoteInspectionInfo,
+  type RemoteInspectionRemote,
+  type RemoteInspectionTransportOptions,
+  type RemoteInspectorClientOptions,
+  type WireRemoteMeta,
+} from "./remote/index.js";
 export {
   connectManagedWorkerReactor,
   provisionWorkerReactor,

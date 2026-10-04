@@ -201,8 +201,12 @@ describe("ReactorMonitorProvider", () => {
       () => expect(view.getByTestId("entries").textContent).toBe("far:failed"),
       WAIT,
     );
-    expect(errors[0]).toMatch(/NotImplemented/);
-    expect(monitor.get("far")?.error?.message).toMatch(/NotImplemented/);
+    // A remote descriptor with no endpoint: the cheapest provisioning failure
+    // that needs no reactor built, which is all this test is about.
+    expect(errors[0]).toMatch(/carries no "remote" config/);
+    expect(monitor.get("far")?.error?.message).toMatch(
+      /carries no "remote" config/,
+    );
   });
 
   it("kills the reactors of a registry it created when it unmounts", async () => {

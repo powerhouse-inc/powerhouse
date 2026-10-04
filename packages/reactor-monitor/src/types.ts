@@ -24,6 +24,11 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import type { PGlite } from "@electric-sql/pglite";
 import type { ReactorCapabilities } from "./capabilities.js";
+import type {
+  RemoteInspectionInfo,
+  RemoteInspectorClient,
+} from "./remote/client.js";
+import type { RemoteInspectionHeaders } from "./remote/transport.js";
 import type { AdoptLocalSyncPeerLink } from "./sync/types.js";
 
 /** How a monitored reactor is hosted. */
@@ -81,6 +86,36 @@ export type ReactorSyncConfig = {
   jwtHandler?: JwtHandler;
 };
 
+/**
+ * Where an already-running reactor lives and how to reach its inspection
+ * surface (multi-reactor W3.2). `remote` kind only.
+ */
+export type ReactorRemoteConfig = {
+  /**
+   * The reactor's GraphQL endpoint -- the same URL the Sync tab's add-remote
+   * form takes, e.g. `http://localhost:4001/graphql`. The inspection subgraph
+   * is mounted beneath it at `/inspection`, which is what
+   * {@link inspectionEndpoint} derives unless {@link inspectionUrl} overrides
+   * it.
+   */
+  url: string;
+  /**
+   * The inspection subgraph's endpoint, when it is not `${url}/inspection` --
+   * a host behind a path-rewriting proxy, or the stitched supergraph at
+   * `${url}` itself, which serves the same fields.
+   */
+  inspectionUrl?: string;
+  /**
+   * Headers to send with every inspection request, resolved per request. The
+   * seam an authenticated monitor threads a bearer through; absent, the
+   * reactor is inspected unauthenticated, which is what a dev Switchboard
+   * under the OPEN policy serves.
+   */
+  headers?: RemoteInspectionHeaders;
+  /** Defaults to the global `fetch`. A test seam, and a host with its own agent. */
+  fetch?: typeof fetch;
+};
+
 /** What to provision. `name` must be unique across a monitor session. */
 export interface ReactorDescriptor {
   kind: ReactorKind;
@@ -127,6 +162,12 @@ export interface ReactorDescriptor {
    * works where the bundler reads this package from source.
    */
   workerUrl?: string | URL;
+  /**
+   * `remote` only, and required for it: the already-running reactor to attach
+   * to. Nothing is built in this process; the handle's inspection surfaces
+   * speak to that reactor over HTTP (multi-reactor W3.2).
+   */
+  remote?: ReactorRemoteConfig;
 }
 
 /** The in-process reactor graph plus the PGlite it was opened over. */
@@ -257,5 +298,41 @@ export interface ManagedWorkerReactor extends ManagedReactorBase {
   readonly descriptorMismatch: boolean;
 }
 
+/**
+ * An already-running reactor the monitor attached to over HTTP (multi-reactor
+ * W3.2): a Switchboard serving reactor-api's inspection subgraph.
+ *
+ * `inspector`, `dbQuery` and `syncManager` are the SAME typed surfaces the
+ * local kinds expose -- that is the whole point, so every inspector view works
+ * against a remote reactor unchanged. What is NOT wired is stated rather than
+ * faked: `client` and `events` refuse by name (see `remote/unwired.ts`), and
+ * the sync manager's reconfiguration half refuses too, because which peers a
+ * Switchboard syncs with is that deployment's configuration.
+ *
+ * `descriptorMismatch` has no analog here: nothing was built from this
+ * descriptor, so there is no construct for it to disagree with. The equivalent
+ * question -- what is actually on the other end -- is answered by
+ * {@link serverInfo}, which `capabilities` is derived from.
+ */
+export interface ManagedRemoteReactor extends ManagedReactorBase {
+  readonly kind: "remote";
+  /** Always present: the inspection surface is what a remote reactor is attached for. */
+  readonly syncManager: InspectableSyncManager;
+  /** The inspection endpoint this handle talks to. */
+  readonly endpoint: string;
+  /**
+   * What the remote reactor reported about itself, including which admin tiers
+   * that deployment serves. `capabilities` is derived from it; a view that
+   * needs to disable a repair lever or the DB tab reads `adminEnabled` /
+   * `sqlEnabled` from here.
+   */
+  readonly serverInfo: RemoteInspectionInfo;
+  /** The remote inspection client, for the ops beyond `IInspector`'s own surface. */
+  readonly remoteInspector: RemoteInspectorClient;
+}
+
 /** A reactor the monitor has provisioned and can inspect. */
-export type ManagedReactor = ManagedInProcessReactor | ManagedWorkerReactor;
+export type ManagedReactor =
+  | ManagedInProcessReactor
+  | ManagedWorkerReactor
+  | ManagedRemoteReactor;

@@ -238,8 +238,12 @@ function descriptorSyncChannels(
   descriptor: ReactorDescriptor,
 ): readonly ReactorSyncChannel[] {
   if (descriptor.kind === "remote") {
-    // Attached over the existing GQL channels (plan W3.1). Nothing on the far
-    // side of the wire can be handed a MessagePort, so no local channel.
+    // The pre-provision GUESS only. Nothing on the far side of the wire can be
+    // handed a MessagePort, so no local channel -- but which GraphQL channel
+    // type the far side routes is not knowable from a URL, and a provisioned
+    // remote reads it off the reactor's own report instead
+    // ({@link remoteReactorCapabilities}): a Switchboard-scheme reactor routes
+    // `polling`, not `gql`.
     return [GQL_CHANNEL_TYPE];
   }
   if (isLocalOnlySync(descriptor.sync?.local)) {
@@ -291,10 +295,78 @@ function inspectionOf(hosting: ReactorHosting): ReactorInspectionTransport {
     case "worker":
       return "rpc";
     case "remote":
-      // No remote inspection surface exists yet; W3.2 serves `IInspector` over
-      // HTTP/GraphQL from reactor-api and raises this to "rpc".
-      return "none";
+      // W3.2: reactor-api's inspection subgraph serves `IInspector` and
+      // `ISyncInspector` over HTTP, and `RemoteInspectorClient` implements
+      // both against it -- so a remote reactor is inspected over a transport,
+      // exactly like a worker-hosted one, and only what the subgraph models
+      // crosses. (It was `"none"` through stage 2.)
+      return "rpc";
   }
+}
+
+/**
+ * The facts a REMOTE reactor REPORTS about itself over its inspection surface
+ * (`ReactorInspectionInfo`, multi-reactor W3.2).
+ *
+ * The remote analog of {@link BuiltCapabilityFacts}, and separate from it
+ * because the two are categorically different: those are read off a reactor
+ * this process built, these arrive over a wire from a reactor it did not. Both
+ * exist for the same reason -- a descriptor can only restate the REQUEST, and
+ * for a remote reactor the descriptor is a URL, which says nothing at all
+ * about what is on the other end.
+ *
+ * Required together, like the built facts, so a caller cannot thread one
+ * reported truth and leave the other to a guess.
+ */
+export type ReportedCapabilityFacts = {
+  /** Whether the workflow engine is composed into that host. */
+  readonly workflows: boolean;
+  /** The `ChannelConfig.type`s that reactor's BUILT channel factory routes. */
+  readonly syncChannelTypes: readonly string[];
+};
+
+/**
+ * Derives a REMOTE reactor's capability row from what the reactor itself
+ * reported, rather than from the descriptor that named its URL.
+ *
+ * The fields the report decides, and why each is a report rather than a
+ * derivation:
+ *
+ * - `workflows`: Node hosts are the only ones that may run the engine, but
+ *   "may" is not "does" -- the runtime is composed by the host after its API
+ *   boots, so whether a given Switchboard fires workflow triggers is a fact
+ *   only that Switchboard holds. The descriptor-only row says `true` for every
+ *   remote, which would have a router place a workflow drive on a Switchboard
+ *   that never composed the engine.
+ * - `syncChannels`: a Switchboard-scheme reactor routes `polling`, not `gql`
+ *   (the stage-2 note on {@link ReactorSyncChannel} is the same trap in the
+ *   other direction). Read off the far side's own channel factory, so the
+ *   monitor's add-remote form and a router's link planning agree with what
+ *   that reactor will actually accept.
+ *
+ * The rest are properties of being remote at all and are not the report's to
+ * vary: the store is `remote` and never this process's to heal, inspection is
+ * `rpc` over the subgraph, and a server reactor registers its own processor
+ * factories in its own realm.
+ */
+export function remoteReactorCapabilities(
+  descriptor: ReactorDescriptor,
+  reported: ReportedCapabilityFacts,
+): ReactorCapabilities {
+  if (descriptor.kind !== "remote") {
+    throw new Error(
+      `remoteReactorCapabilities is for the "remote" kind, not ${JSON.stringify(descriptor.kind)}`,
+    );
+  }
+  return Object.freeze({
+    hosting: "remote",
+    storage: Object.freeze(storageOf(descriptor)),
+    processors: true,
+    workflows: reported.workflows,
+    inspection: inspectionOf("remote"),
+    syncChannels: Object.freeze(builtSyncChannels(reported.syncChannelTypes)),
+    selfHeal: false,
+  });
 }
 
 /**
@@ -305,11 +377,13 @@ function inspectionOf(hosting: ReactorHosting): ReactorInspectionTransport {
  * cannot change under a holder, and a router may cache them for the life of the
  * instance.
  *
- * Total over {@link ReactorKind} on purpose, `remote` included, even though
- * `provision()` still refuses that kind: the router is written against this
- * table, and a row that only appears once stage 3 lands is a row the router
- * design cannot account for. The `remote` row states today's truth (no
- * inspection surface, nothing here to self-heal), not stage 3's intent.
+ * Total over {@link ReactorKind} on purpose, `remote` included: the router is
+ * written against this table, so every row has to exist for it to be designed
+ * against. For a PROVISIONED remote reactor this function is the wrong one --
+ * {@link remoteReactorCapabilities} reads the row off what that reactor
+ * reported (W3.2) -- and what remains here is the descriptor-only
+ * approximation, whose `workflows: true` says "a Node host MAY run the engine",
+ * not that this one does.
  *
  * `built` carries the facts the descriptor alone cannot express, and every
  * provisioned reactor passes it; see {@link BuiltCapabilityFacts}. Omitting it

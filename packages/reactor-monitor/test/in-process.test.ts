@@ -168,9 +168,12 @@ describe("provision", () => {
     }
   });
 
-  it("refuses the remote kind until stage 3", async () => {
+  // The remote kind is served since W3.2 (test/remote-inspection.test.ts);
+  // what provision() still refuses is a remote descriptor with nothing to
+  // attach to.
+  it("refuses a remote descriptor with no endpoint to attach to", async () => {
     await expect(provision({ kind: "remote", name: "far" })).rejects.toThrow(
-      /NotImplemented/,
+      /carries no "remote" config/,
     );
   });
 

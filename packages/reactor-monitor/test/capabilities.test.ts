@@ -11,6 +11,7 @@ import {
   isLocalOnlySync,
   provisionInProcess,
   reactorCapabilities,
+  remoteReactorCapabilities,
   supportsSyncChannel,
   unverifiedReactorCapabilities,
   type ReactorCapabilities,
@@ -236,7 +237,7 @@ describe("reactorCapabilities", () => {
     expect(capabilities.selfHeal).toBe(true);
   });
 
-  it("states today's truth for the not-yet-provisionable remote kind", () => {
+  it("approximates the remote kind from a descriptor that is only a URL", () => {
     const capabilities = reactorCapabilities({
       kind: "remote",
       name: "cap-remote",
@@ -246,12 +247,63 @@ describe("reactorCapabilities", () => {
       // The far side owns the store; it is not ours to open, close or heal.
       storage: { kind: "remote", durable: true },
       processors: true,
+      // "A Node host MAY run the engine" -- which is as much as a URL can say.
+      // A provisioned remote reads the reactor's own answer instead; see
+      // remoteReactorCapabilities below.
       workflows: true,
-      // W3.2 serves IInspector over HTTP/GraphQL and raises this to "rpc".
-      inspection: "none",
+      // W3.2: reactor-api's inspection subgraph is a real transport, so the
+      // remote row is inspectable like a worker-hosted one.
+      inspection: "rpc",
       syncChannels: ["gql"],
       selfHeal: false,
     } satisfies ReactorCapabilities);
+  });
+
+  it("reads a provisioned remote reactor's row off what it reported", () => {
+    // The two facts a URL cannot state, and the trap each one closes: a
+    // Switchboard-scheme reactor routes "polling", not "gql" (so the
+    // add-remote form must not offer a config its factory refuses), and
+    // whether the workflow engine is actually composed into that host is only
+    // knowable from that host.
+    const capabilities = remoteReactorCapabilities(
+      { kind: "remote", name: "cap-remote-reported" },
+      { workflows: false, syncChannelTypes: [POLLING_CHANNEL_TYPE] },
+    );
+
+    expect(capabilities).toEqual({
+      hosting: "remote",
+      storage: { kind: "remote", durable: true },
+      processors: true,
+      workflows: false,
+      inspection: "rpc",
+      syncChannels: [POLLING_CHANNEL_TYPE],
+      selfHeal: false,
+    } satisfies ReactorCapabilities);
+    expect(Object.isFrozen(capabilities)).toBe(true);
+  });
+
+  it("drops a reported channel type the contract has no row for", () => {
+    // Same rule as the built path: a router cannot route on a transport it has
+    // never been taught, so an unknown type downgrades to "cannot be routed
+    // on that" rather than widening the contract silently.
+    expect(
+      remoteReactorCapabilities(
+        { kind: "remote", name: "cap-remote-unknown" },
+        {
+          workflows: false,
+          syncChannelTypes: ["carrier-pigeon", POLLING_CHANNEL_TYPE],
+        },
+      ).syncChannels,
+    ).toEqual([POLLING_CHANNEL_TYPE]);
+  });
+
+  it("refuses to describe a non-remote descriptor as remote", () => {
+    expect(() =>
+      remoteReactorCapabilities(
+        { kind: "worker", name: "cap-not-remote" },
+        { workflows: false, syncChannelTypes: [] },
+      ),
+    ).toThrow(/is for the "remote" kind/);
   });
 
   it("is frozen, so a holder cannot edit another holder's contract", () => {
