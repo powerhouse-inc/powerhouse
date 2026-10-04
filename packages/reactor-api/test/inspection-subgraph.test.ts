@@ -1,11 +1,19 @@
 import {
   ChannelScheme,
+  deriveConnectionHealth,
   EventBus,
+  INSPECTION_ORDINAL_FIELDS,
+  INSPECTION_WIRE_FIELDS,
   InMemoryQueue,
   ReactorBuilder,
   ReactorClientBuilder,
+  ReactorInspector,
+  type ConnectionStateSnapshot,
+  type IInspector,
   type InProcessReactorClientModule,
   type InspectableSyncManager,
+  type IReactorDbQuery,
+  type RemoteSyncInspection,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
@@ -92,12 +100,71 @@ function buildSchema(
   return createSchema([], subgraph.resolvers, subgraph.typeDefs);
 }
 
+/**
+ * A schema over a STUB source, for the two things a real reactor module cannot
+ * produce on demand: an operation index past 2^31, and an inspector whose
+ * components are missing.
+ */
+function buildStubSchema(stub: {
+  inspector: IInspector;
+  syncManager: Partial<InspectableSyncManager>;
+  adminEnabled?: boolean;
+}): GraphQLSchema {
+  const subgraph = new InspectionSubgraph({
+    reactorClient: module.client,
+    authorizationService: createAuthorizationService({
+      admins: [],
+      defaultProtection: false,
+      policy: AuthorizationPolicy.OPEN,
+    }),
+    inspection: {
+      inspector: stub.inspector,
+      syncManager: stub.syncManager as InspectableSyncManager,
+      dbQuery: { queryDb: () => Promise.resolve([]) } as IReactorDbQuery,
+      adminEnabled: stub.adminEnabled ?? true,
+      sqlEnabled: false,
+      info: () => ({
+        hosting: "remote",
+        inspection: "rpc",
+        storageKind: "pglite",
+        processors: true,
+        workflows: false,
+        syncChannels: [],
+        adminEnabled: stub.adminEnabled ?? true,
+        sqlEnabled: false,
+      }),
+    },
+  } as unknown as SubgraphArgs);
+  return createSchema([], subgraph.resolvers, subgraph.typeDefs);
+}
+
 async function run(
   schema: GraphQLSchema,
   source: string,
   contextValue: Context = ANONYMOUS,
 ) {
   return graphql({ schema, source, contextValue });
+}
+
+/** The SDL type of one field, printed (e.g. "Float!"). */
+function fieldType(schema: GraphQLSchema, type: string, field: string): string {
+  const fields = (
+    schema.getType(type) as unknown as {
+      getFields: () => Record<string, { type: { toString: () => string } }>;
+    }
+  ).getFields();
+  return String(fields[field]?.type);
+}
+
+/** The SDL type of one mutation ARGUMENT, printed. */
+function argumentType(
+  schema: GraphQLSchema,
+  mutation: string,
+  argument: string,
+): string {
+  const field = schema.getMutationType()?.getFields()[mutation];
+  const found = field?.args.find((arg) => arg.name === argument);
+  return String(found?.type);
 }
 
 function errorMessages(result: { errors?: readonly { message: string }[] }) {
@@ -163,6 +230,47 @@ describe("inspection subgraph", () => {
           info: { adminEnabled: true, sqlEnabled: true, workflows: true },
         },
       });
+    });
+
+    // The thing on the other end of these variables is an env file, a Docker
+    // -e or a Helm value, and all of those have shipped "TRUE" and trailing
+    // whitespace. A posture that silently stays OFF for a flag the operator
+    // DID set -- while the refusal tells them to set it -- is the worst
+    // outcome available.
+    it("reads an opt-in flag the way an operator actually spells it", async () => {
+      const previous = process.env.PH_INSPECTION_ADMIN;
+      for (const spelling of [" TRUE ", "True", "yes", "on", "1"]) {
+        process.env.PH_INSPECTION_ADMIN = spelling;
+        const result = await run(
+          buildSchema({}),
+          `{ inspection { info { adminEnabled } } }`,
+        );
+        expect(result.data, spelling).toEqual({
+          inspection: { info: { adminEnabled: true } },
+        });
+      }
+      for (const spelling of ["false", "0", "maybe", ""]) {
+        process.env.PH_INSPECTION_ADMIN = spelling;
+        const result = await run(
+          buildSchema({}),
+          `{ inspection { info { adminEnabled } } }`,
+        );
+        expect(result.data, spelling).toEqual({
+          inspection: { info: { adminEnabled: false } },
+        });
+      }
+      process.env.PH_INSPECTION_ADMIN = previous;
+    });
+
+    it("names the accepted spellings when it refuses for a missing flag", async () => {
+      const result = await run(
+        buildSchema({ admin: false }),
+        `mutation { inspectionPauseQueue }`,
+      );
+
+      expect(errorMessages(result)[0]).toBe(
+        "Reactor inspection pausing the queue is not enabled on this host: set PH_INSPECTION_ADMIN=true (or 1, yes, on) to serve it",
+      );
     });
 
     it("refuses raw SQL without the admin tier under it", async () => {
@@ -379,7 +487,7 @@ describe("inspection subgraph", () => {
       });
     });
 
-    it("sweeps catch-up and retries an unknown processor without complaint", async () => {
+    it("sweeps catch-up, and refuses a retry for a processor nothing is tracking", async () => {
       const schema = buildSchema({ admin: true });
 
       const swept = await run(schema, `mutation { inspectionSweepCatchUp }`);
@@ -389,13 +497,59 @@ describe("inspection subgraph", () => {
           .inspectionSweepCatchUp,
       ).toBeInstanceOf(Array);
 
-      // Idempotent by design: the inspector's retry is a no-op for an id that
-      // is not tracked, so an operator clicking a stale row gets no error.
+      // The reactor cannot deliver a retry to an id it is not tracking, so it
+      // says so. Answering `true` would tell an operator clicking a stale row
+      // that a retry happened.
       const retried = await run(
         schema,
         `mutation { inspectionRetryProcessor(processorId: "nope") }`,
       );
-      expect(errorMessages(retried)).toEqual([]);
+      expect(errorMessages(retried)).toHaveLength(1);
+      expect(errorMessages(retried)[0]).toMatch(/not tracking it/);
+      // The field is `Boolean!`, so the refusal nulls the whole response
+      // rather than resolving to a value no caller could act on.
+      expect(retried.data).toBeNull();
+    });
+
+    // The ops that CAN silently no-op on a degraded reactor, through the real
+    // SDL: a host whose queue is not the inspectable one, or that composed no
+    // processor manager, must not answer `true` to a lever it cannot pull.
+    // Nothing downstream can tell such a `true` from a real one.
+    it("refuses a lever the host's components cannot serve, rather than answering true", async () => {
+      const schema = buildStubSchema({
+        inspector: new ReactorInspector({}),
+        syncManager: { list: () => [] },
+      });
+
+      const paused = await run(schema, `mutation { inspectionPauseQueue }`);
+      expect(errorMessages(paused)[0]).toMatch(
+        /unsupported on this host's queue/,
+      );
+      expect(paused.data).toBeNull();
+
+      const resumed = await run(schema, `mutation { inspectionResumeQueue }`);
+      expect(errorMessages(resumed)[0]).toMatch(
+        /unsupported on this host's queue/,
+      );
+
+      const retried = await run(
+        schema,
+        `mutation { inspectionRetryProcessor(processorId: "p") }`,
+      );
+      expect(errorMessages(retried)[0]).toMatch(
+        /built with no processor manager/,
+      );
+
+      // A READ of the same missing component is still empty rather than an
+      // error: there is no queue state, so there are no jobs.
+      const state = await run(
+        schema,
+        `{ inspection { queueState { isPaused totalPending } } }`,
+      );
+      expect(errorMessages(state)).toEqual([]);
+      expect(state.data).toEqual({
+        inspection: { queueState: { isPaused: false, totalPending: 0 } },
+      });
     });
 
     it("surfaces the reactor's own refusal for an unknown remote", async () => {
@@ -500,7 +654,130 @@ describe("inspection subgraph", () => {
     // The browser monitor's remote client writes these operation names by
     // hand against this schema (no package dependency links the two), so a
     // rename here has to be a visible diff rather than a runtime surprise on
-    // the far side of HTTP.
+    // the far side of HTTP. What the two ends DO share is the field table in
+    // `@powerhousedao/reactor` (`src/inspector/wire.ts`): the client builds its
+    // selection sets from it, and these tests hold this SDL to it.
+    it("serves exactly the fields the shared wire contract declares", () => {
+      const schema = buildSchema({});
+
+      for (const [type, expected] of Object.entries(INSPECTION_WIRE_FIELDS)) {
+        const served = Object.keys(
+          (
+            schema.getType(type) as unknown as {
+              getFields: () => Record<string, unknown>;
+            }
+          ).getFields(),
+        ).sort();
+        expect(served, type).toEqual([...expected].sort());
+      }
+    });
+
+    // Ordinals are bigint-origin, and `Int` is 32-bit: a reactor whose
+    // operation index has passed 2^31 must still be inspectable. The shared
+    // contract names every ordinal field and argument; this is what holds the
+    // SDL to Float for each one.
+    it("types every ordinal as Float, never Int", () => {
+      const schema = buildSchema({});
+
+      for (const field of INSPECTION_ORDINAL_FIELDS.InspectionProcessor) {
+        expect(fieldType(schema, "InspectionProcessor", field), field).toBe(
+          "Float!",
+        );
+      }
+      for (const field of INSPECTION_ORDINAL_FIELDS.InspectionCursor) {
+        expect(fieldType(schema, "InspectionCursor", field), field).toBe(
+          "Float!",
+        );
+      }
+      for (const argument of INSPECTION_ORDINAL_FIELDS.inspectionRewindInboxCursor) {
+        expect(
+          argumentType(schema, "inspectionRewindInboxCursor", argument),
+          argument,
+        ).toBe("Float!");
+      }
+    });
+
+    it("serves an ordinal past 2^31, which Int would have refused", async () => {
+      const BIG = 4_294_967_296; // 2^32: past Int, exact in a double.
+      const snapshot: ConnectionStateSnapshot = {
+        state: "connected",
+        failureCount: 0,
+        lastSuccessUtcMs: 1,
+        lastFailureUtcMs: 0,
+        pushBlocked: false,
+        pushFailureCount: 0,
+        receivingPages: false,
+        requiresAuth: false,
+      };
+      const inspection: RemoteSyncInspection = {
+        remoteName: "peer",
+        remoteId: "r-1",
+        inboxCursor: {
+          cursorType: "inbox",
+          cursorOrdinal: BIG,
+          liveAckOrdinal: BIG + 1,
+          liveLatestOrdinal: BIG + 2,
+        },
+        outboxCursor: {
+          cursorType: "outbox",
+          cursorOrdinal: BIG,
+          liveAckOrdinal: BIG,
+          liveLatestOrdinal: BIG,
+        },
+        mailboxDepths: { inbox: 0, outbox: 0, deadLetter: 0 },
+        connection: deriveConnectionHealth(snapshot, 2),
+      };
+      const inspector = new ReactorInspector({
+        processorManager: {
+          getAll: () => [
+            {
+              processorId: "p-1",
+              factoryId: "f-1",
+              driveId: "d-1",
+              processorIndex: 0,
+              lastOrdinal: BIG,
+              status: "active",
+              lastError: undefined,
+              lastErrorTimestamp: undefined,
+            },
+          ],
+        } as never,
+      });
+      const schema = buildStubSchema({
+        inspector,
+        syncManager: {
+          inspectRemotes: () => Promise.resolve([inspection]),
+          list: () => [],
+        },
+      });
+
+      const result = await run(
+        schema,
+        `{ inspection {
+            processors { lastOrdinal }
+            remotes {
+              inboxCursor { cursorOrdinal liveAckOrdinal liveLatestOrdinal }
+            }
+          } }`,
+      );
+
+      expect(errorMessages(result)).toEqual([]);
+      expect(result.data).toEqual({
+        inspection: {
+          processors: [{ lastOrdinal: BIG }],
+          remotes: [
+            {
+              inboxCursor: {
+                cursorOrdinal: BIG,
+                liveAckOrdinal: BIG + 1,
+                liveLatestOrdinal: BIG + 2,
+              },
+            },
+          ],
+        },
+      });
+    });
+
     it("exposes exactly the documented root fields", () => {
       const schema = buildSchema({});
       const query = schema.getQueryType();

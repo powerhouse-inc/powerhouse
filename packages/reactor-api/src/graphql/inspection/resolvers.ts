@@ -1,10 +1,14 @@
 import type {
-  DeadLetterPage,
   InspectorProcessorInfo,
-  QueueStateSnapshot,
   Remote,
+  RemoteCursorInfo,
   RemoteSyncInspection,
-  StorageHealth,
+  WireDeadLetterPage,
+  WireInspectorProcessor,
+  WireQueueState,
+  WireRemoteCursor,
+  WireRemoteSyncInspection,
+  WireStorageHealth,
 } from "@powerhousedao/reactor";
 import { GraphQLError } from "graphql";
 import type { Context } from "../types.js";
@@ -25,21 +29,6 @@ export type InspectionResolverOptions = {
   readonly isAdminCaller: InspectionAdminCheck;
 };
 
-/** The wire shape of {@link InspectorProcessorInfo}: a Date cannot cross JSON. */
-type WireProcessor = {
-  processorId: string;
-  factoryId: string;
-  driveId: string;
-  processorIndex: number;
-  lastOrdinal: number;
-  status: string;
-  lastError: string | null;
-  lastErrorTimestampUtcMs: number | null;
-};
-
-/** One remote's inspection plus the remote's configuration, in one record. */
-type WireRemote = RemoteSyncInspection & { meta: Remote["meta"] };
-
 function forbidden(what: string): GraphQLError {
   return new GraphQLError(`Reactor inspection requires admin access ${what}`, {
     extensions: { code: "FORBIDDEN" },
@@ -48,23 +37,44 @@ function forbidden(what: string): GraphQLError {
 
 function notEnabled(flag: string, what: string): GraphQLError {
   return new GraphQLError(
-    `Reactor inspection ${what} is not enabled on this host: set ${flag}=true to serve it`,
+    `Reactor inspection ${what} is not enabled on this host: set ${flag}=true (or 1, yes, on) to serve it`,
     { extensions: { code: "FORBIDDEN" } },
   );
 }
 
-function toWireProcessor(info: InspectorProcessorInfo): WireProcessor {
+/**
+ * An ordinal as the wire carries it. Ordinals are bigint-origin
+ * (`IOperationIndex`) and the SDL serves them as `Float`, which graphql-js
+ * refuses to serialize a `bigint` through -- so the coercion happens here,
+ * once, rather than as a serialization error on a reactor whose index has
+ * grown past what a `number` was handed back as.
+ */
+function toOrdinal(value: number | bigint): number {
+  return Number(value);
+}
+
+function toWireProcessor(info: InspectorProcessorInfo): WireInspectorProcessor {
   return {
     processorId: info.processorId,
     factoryId: info.factoryId,
     driveId: info.driveId,
     processorIndex: info.processorIndex,
-    lastOrdinal: info.lastOrdinal,
+    lastOrdinal: toOrdinal(info.lastOrdinal),
     status: info.status,
     lastError: info.lastError ?? null,
     lastErrorTimestampUtcMs: info.lastErrorTimestamp
       ? info.lastErrorTimestamp.getTime()
       : null,
+  };
+}
+
+function toWireCursor(cursor: RemoteCursorInfo): WireRemoteCursor {
+  return {
+    cursorType: cursor.cursorType,
+    cursorOrdinal: toOrdinal(cursor.cursorOrdinal),
+    lastSyncedAtUtcMs: cursor.lastSyncedAtUtcMs ?? null,
+    liveAckOrdinal: toOrdinal(cursor.liveAckOrdinal),
+    liveLatestOrdinal: toOrdinal(cursor.liveLatestOrdinal),
   };
 }
 
@@ -77,15 +87,24 @@ function toWireProcessor(info: InspectorProcessorInfo): WireProcessor {
 function toWireRemotes(
   inspections: RemoteSyncInspection[],
   remotes: Remote[],
-): WireRemote[] {
+): WireRemoteSyncInspection[] {
   const byName = new Map(remotes.map((remote) => [remote.meta.name, remote]));
   return inspections.map((inspection) => ({
-    ...inspection,
+    remoteName: inspection.remoteName,
+    remoteId: inspection.remoteId,
+    inboxCursor: toWireCursor(inspection.inboxCursor),
+    outboxCursor: toWireCursor(inspection.outboxCursor),
+    mailboxDepths: inspection.mailboxDepths,
+    connection: {
+      snapshot: inspection.connection.snapshot,
+      neverSucceeded: inspection.connection.neverSucceeded,
+      stalenessMs: inspection.connection.stalenessMs ?? null,
+    },
     meta: byName.get(inspection.remoteName)?.meta ?? {
       id: inspection.remoteId,
       name: inspection.remoteName,
     },
-  })) as WireRemote[];
+  }));
 }
 
 /**
@@ -95,8 +114,12 @@ function toWireRemotes(
  *
  * The three access tiers are enforced here and nowhere else; see
  * {@link IReactorInspectionSource} for the posture they implement. `requireRead`
- * guards every read, `requireAdmin` every state-changing op, and `requireSql`
- * raw SQL on top of that.
+ * guards every read, `adminOp` wraps every state-changing op in the tier-2
+ * check, and `requireSql` adds raw SQL's own tier on top of that.
+ *
+ * Every record served here is one of `@powerhousedao/reactor`'s inspection WIRE
+ * types, which the remote client decodes from -- one contract, one definition,
+ * pinned against this SDL by the subgraph test.
  */
 export function createInspectionResolvers(
   source: IReactorInspectionSource,
@@ -122,8 +145,30 @@ export function createInspectionResolvers(
     }
   };
 
+  /**
+   * One state-changing field: the tier-2 check by the name of what it guards,
+   * then the op. A factory rather than the check repeated in every resolver
+   * body, so no mutation can be added that forgets it -- the gate and the
+   * field are the same expression.
+   */
+  const adminOp = <Args, Result>(
+    what: string,
+    run: (args: Args) => Result,
+  ): ((parent: unknown, args: Args, ctx: Context) => Result) => {
+    return (_parent: unknown, args: Args, ctx: Context): Result => {
+      requireAdmin(ctx, what);
+      return run(args);
+    };
+  };
+
   const inspector = () => source.inspector;
   const sync = () => source.syncManager;
+
+  /** Resolves `true` once the op it wraps has actually completed. */
+  const done = async (op: Promise<void>): Promise<boolean> => {
+    await op;
+    return true;
+  };
 
   return {
     Query: {
@@ -138,33 +183,50 @@ export function createInspectionResolvers(
     ReactorInspection: {
       info: (): ReactorInspectionInfo => source.info(),
 
-      queueState: async (): Promise<QueueStateSnapshot> =>
+      queueState: async (): Promise<WireQueueState> =>
         inspector().getQueueState(),
 
-      processors: async (): Promise<WireProcessor[]> =>
+      processors: async (): Promise<WireInspectorProcessor[]> =>
         (await inspector().getProcessors()).map(toWireProcessor),
 
       catchUpStatus: () => inspector().getCatchUpStatus(),
 
-      storageHealth: async (): Promise<StorageHealth> =>
-        inspector().getStorageHealth(),
+      storageHealth: async (): Promise<WireStorageHealth> => {
+        const health = await inspector().getStorageHealth();
+        return {
+          healthy: health.healthy,
+          everRecreated: health.everRecreated,
+          recreateCount: health.recreateCount,
+          lastRecreated: health.lastRecreated ?? null,
+        };
+      },
 
-      remotes: async (): Promise<WireRemote[]> =>
+      remotes: async (): Promise<WireRemoteSyncInspection[]> =>
         toWireRemotes(await sync().inspectRemotes(), sync().list()),
 
       remote: async (
         _parent: unknown,
         args: { remoteName: string },
-      ): Promise<WireRemote> => {
+      ): Promise<WireRemoteSyncInspection> => {
         const inspection = await sync().inspectRemote(args.remoteName);
-        return toWireRemotes([inspection], sync().list())[0];
+        return toWireRemotes([inspection], sync().list())[0]!;
       },
 
-      deadLetters: (
+      deadLetters: async (
         _parent: unknown,
         args: { remoteName: string; cursor?: string; limit?: number },
-      ): Promise<DeadLetterPage> =>
-        sync().listDeadLetters(args.remoteName, args.cursor, args.limit),
+      ): Promise<WireDeadLetterPage> => {
+        const page = await sync().listDeadLetters(
+          args.remoteName,
+          args.cursor,
+          args.limit,
+        );
+        return {
+          remoteName: page.remoteName,
+          results: page.results,
+          nextCursor: page.nextCursor ?? null,
+        };
+      },
 
       holds: (
         _parent: unknown,
@@ -177,130 +239,86 @@ export function createInspectionResolvers(
     },
 
     Mutation: {
-      inspectionPauseQueue: async (
-        _parent: unknown,
-        _args: unknown,
-        ctx: Context,
-      ) => {
-        requireAdmin(ctx, "pausing the queue");
-        await inspector().pauseQueue();
-        return true;
-      },
+      // Each lever answers `true` only after the reactor's own op resolved:
+      // the inspector REFUSES a lever its components cannot serve (a queue
+      // that is not the inspectable one cannot be paused), and that refusal
+      // has to reach the operator instead of becoming a cheerful `true`.
+      inspectionPauseQueue: adminOp("pausing the queue", () =>
+        done(inspector().pauseQueue()),
+      ),
 
-      inspectionResumeQueue: async (
-        _parent: unknown,
-        _args: unknown,
-        ctx: Context,
-      ) => {
-        requireAdmin(ctx, "resuming the queue");
-        await inspector().resumeQueue();
-        return true;
-      },
+      inspectionResumeQueue: adminOp("resuming the queue", () =>
+        done(inspector().resumeQueue()),
+      ),
 
-      inspectionRetryProcessor: async (
-        _parent: unknown,
-        args: { processorId: string },
-        ctx: Context,
-      ) => {
-        requireAdmin(ctx, "retrying a processor");
-        await inspector().retryProcessor(args.processorId);
-        return true;
-      },
+      inspectionRetryProcessor: adminOp(
+        "retrying a processor",
+        (args: { processorId: string }) =>
+          done(inspector().retryProcessor(args.processorId)),
+      ),
 
-      inspectionSweepCatchUp: (
-        _parent: unknown,
-        _args: unknown,
-        ctx: Context,
-      ) => {
-        requireAdmin(ctx, "sweeping catch-up");
-        return inspector().sweepCatchUp();
-      },
+      inspectionSweepCatchUp: adminOp("sweeping catch-up", () =>
+        inspector().sweepCatchUp(),
+      ),
 
-      inspectionValidateDocument: (
-        _parent: unknown,
-        args: { documentId: string; branch?: string },
-        ctx: Context,
-      ) => {
-        requireAdmin(ctx, "validating a document");
-        return inspector().validateDocument(
-          args.documentId,
-          args.branch ?? undefined,
-        );
-      },
+      inspectionValidateDocument: adminOp(
+        "validating a document",
+        (args: { documentId: string; branch?: string }) =>
+          inspector().validateDocument(
+            args.documentId,
+            args.branch ?? undefined,
+          ),
+      ),
 
-      inspectionRebuildKeyframes: (
-        _parent: unknown,
-        args: { documentId: string; branch?: string },
-        ctx: Context,
-      ) => {
-        requireAdmin(ctx, "rebuilding keyframes");
-        return inspector().rebuildKeyframes(
-          args.documentId,
-          args.branch ?? undefined,
-        );
-      },
+      inspectionRebuildKeyframes: adminOp(
+        "rebuilding keyframes",
+        (args: { documentId: string; branch?: string }) =>
+          inspector().rebuildKeyframes(
+            args.documentId,
+            args.branch ?? undefined,
+          ),
+      ),
 
-      inspectionRebuildSnapshots: (
-        _parent: unknown,
-        args: { documentId: string; branch?: string },
-        ctx: Context,
-      ) => {
-        requireAdmin(ctx, "rebuilding snapshots");
-        return inspector().rebuildSnapshots(
-          args.documentId,
-          args.branch ?? undefined,
-        );
-      },
+      inspectionRebuildSnapshots: adminOp(
+        "rebuilding snapshots",
+        (args: { documentId: string; branch?: string }) =>
+          inspector().rebuildSnapshots(
+            args.documentId,
+            args.branch ?? undefined,
+          ),
+      ),
 
-      inspectionTriggerPull: (
-        _parent: unknown,
-        args: { remoteName: string },
-        ctx: Context,
-      ) => {
-        requireAdmin(ctx, "triggering a pull");
-        sync().triggerPull(args.remoteName);
-        return true;
-      },
+      inspectionTriggerPull: adminOp(
+        "triggering a pull",
+        (args: { remoteName: string }) => {
+          sync().triggerPull(args.remoteName);
+          return true;
+        },
+      ),
 
-      inspectionRewindInboxCursor: async (
-        _parent: unknown,
-        args: { remoteName: string; toOrdinal: number },
-        ctx: Context,
-      ) => {
-        requireAdmin(ctx, "rewinding an inbox cursor");
-        await sync().rewindInboxCursor(args.remoteName, args.toOrdinal);
-        return true;
-      },
+      inspectionRewindInboxCursor: adminOp(
+        "rewinding an inbox cursor",
+        (args: { remoteName: string; toOrdinal: number }) =>
+          done(sync().rewindInboxCursor(args.remoteName, args.toOrdinal)),
+      ),
 
-      inspectionResetChannel: async (
-        _parent: unknown,
-        args: { remoteName: string },
-        ctx: Context,
-      ) => {
-        requireAdmin(ctx, "resetting a channel");
-        await sync().resetChannel(args.remoteName);
-        return true;
-      },
+      inspectionResetChannel: adminOp(
+        "resetting a channel",
+        (args: { remoteName: string }) =>
+          done(sync().resetChannel(args.remoteName)),
+      ),
 
-      inspectionRequeueDeadLetter: async (
-        _parent: unknown,
-        args: { remoteName: string; id: string },
-        ctx: Context,
-      ) => {
-        requireAdmin(ctx, "requeueing a dead letter");
-        await sync().requeueDeadLetter(args.remoteName, args.id);
-        return true;
-      },
+      inspectionRequeueDeadLetter: adminOp(
+        "requeueing a dead letter",
+        (args: { remoteName: string; id: string }) =>
+          done(sync().requeueDeadLetter(args.remoteName, args.id)),
+      ),
 
-      inspectionClearDeadLetter: async (
-        _parent: unknown,
-        args: { remoteName: string; id: string },
-        ctx: Context,
-      ) => {
-        requireAdmin(ctx, "clearing a dead letter");
-        await sync().clearDeadLetter(args.remoteName, args.id);
-        return true;
-      },
+      inspectionClearDeadLetter: adminOp(
+        "clearing a dead letter",
+        (args: { remoteName: string; id: string }) =>
+          done(sync().clearDeadLetter(args.remoteName, args.id)),
+      ),
 
       inspectionQueryDb: (
         _parent: unknown,

@@ -25,6 +25,20 @@ import { gql } from "graphql-tag";
  * - `Date`s do not survive JSON, so the one date-typed inspection field
  *   (`InspectorProcessorInfo.lastErrorTimestamp`) travels as epoch
  *   milliseconds and is rebuilt client-side.
+ * - Every ORDINAL is `Float`, not `Int`. Ordinals come from `IOperationIndex`
+ *   and are bigint-origin: `Int` is a signed 32-bit integer and refuses to
+ *   serialize anything past 2^31, which would turn a healthy reactor's
+ *   inspection read into a serialization error the day its operation index
+ *   crossed that line. A double carries every integer up to 2^53 exactly, which
+ *   is the same reason the epoch-millisecond fields use it.
+ *   `INSPECTION_ORDINAL_FIELDS` (`@powerhousedao/reactor`) names them and the
+ *   subgraph test pins this SDL against it. Counts and indexes -- queue totals,
+ *   mailbox depths, `processorIndex`, a page `limit` -- stay `Int`: they are
+ *   bounded by what is in memory, not by how long the reactor has run.
+ *
+ * The RECORDS this SDL serves are `@powerhousedao/reactor`'s wire types
+ * (`src/inspector/wire.ts`), which the remote client decodes from, so the one
+ * contract has one definition instead of a transcription at each end.
  */
 export const inspectionTypeDefs = gql`
   """
@@ -90,7 +104,10 @@ export const inspectionTypeDefs = gql`
     factoryId: String!
     driveId: String!
     processorIndex: Int!
-    lastOrdinal: Int!
+    """
+    An ordinal, so Float: see the module note on bigint-origin ordinals.
+    """
+    lastOrdinal: Float!
     status: String!
     lastError: String
     """
@@ -116,10 +133,15 @@ export const inspectionTypeDefs = gql`
   """
   type InspectionCursor {
     cursorType: String!
-    cursorOrdinal: Int!
+    """
+    All three are ordinals, so Float: see the module note on bigint-origin
+    ordinals. A reactor whose operation index has passed 2^31 is exactly the
+    long-lived deployment an operator most needs to inspect.
+    """
+    cursorOrdinal: Float!
     lastSyncedAtUtcMs: Float
-    liveAckOrdinal: Int!
-    liveLatestOrdinal: Int!
+    liveAckOrdinal: Float!
+    liveLatestOrdinal: Float!
   }
 
   type InspectionMailboxDepths {
@@ -208,7 +230,14 @@ export const inspectionTypeDefs = gql`
     inspectionRebuildKeyframes(documentId: String!, branch: String): JSONObject!
     inspectionRebuildSnapshots(documentId: String!, branch: String): JSONObject!
     inspectionTriggerPull(remoteName: String!): Boolean!
-    inspectionRewindInboxCursor(remoteName: String!, toOrdinal: Int!): Boolean!
+    """
+    toOrdinal is an ordinal, so Float: an operator rewinding a long-lived
+    reactor's inbox needs to be able to NAME a position past 2^31.
+    """
+    inspectionRewindInboxCursor(
+      remoteName: String!
+      toOrdinal: Float!
+    ): Boolean!
     inspectionResetChannel(remoteName: String!): Boolean!
     inspectionRequeueDeadLetter(remoteName: String!, id: String!): Boolean!
     inspectionClearDeadLetter(remoteName: String!, id: String!): Boolean!

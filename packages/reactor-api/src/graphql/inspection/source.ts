@@ -6,6 +6,7 @@ import {
   type InProcessReactorModule,
   type InspectableSyncManager,
   type IReactorDbQuery,
+  type WireReactorInspectionInfo,
 } from "@powerhousedao/reactor";
 
 /**
@@ -13,22 +14,17 @@ import {
  * caller on the far side of HTTP cannot derive, plus which inspection tiers
  * this deployment has opted into.
  *
+ * The shared wire type, not a server-side transcription of it: the remote
+ * client decodes exactly this record (`@powerhousedao/reactor`,
+ * `src/inspector/wire.ts`), so the one contract has one definition.
+ *
  * `hosting`/`inspection` are fixed strings rather than computed: anything
  * reading this is remote by construction, and it reaches the reactor over this
  * surface. They are reported anyway so a client's capability row is a read of
  * the server's own answer rather than an assumption about the endpoint it
  * happens to be talking to.
  */
-export type ReactorInspectionInfo = {
-  readonly hosting: "remote";
-  readonly inspection: "rpc";
-  readonly storageKind: string;
-  readonly processors: boolean;
-  readonly workflows: boolean;
-  readonly syncChannels: readonly string[];
-  readonly adminEnabled: boolean;
-  readonly sqlEnabled: boolean;
-};
+export type ReactorInspectionInfo = WireReactorInspectionInfo;
 
 /**
  * The reactor the inspection subgraph serves, and the tiers it may serve.
@@ -54,7 +50,11 @@ export type ReactorInspectionInfo = {
  *    has not thereby asked to expose its database.
  *
  * Both flags are read once at construction, from the host's option or the
- * environment, so a deployment's posture cannot change under a request.
+ * environment, so a deployment's posture cannot change under a REQUEST. It can
+ * change under a long-lived CLIENT, which is the documented operator flow:
+ * restart the host with `PH_INSPECTION_ADMIN=true` and the same levers go live.
+ * A client therefore re-reads `info()` rather than treating the tiers it saw
+ * once as fixed for the life of its handle.
  */
 export interface IReactorInspectionSource {
   /** The reactor's typed inspection surface (`IInspector`, W0.3). */
@@ -77,13 +77,14 @@ export interface IReactorInspectionSource {
 /** Host-side configuration of the inspection surface; both tiers default off. */
 export type ReactorInspectionOptions = {
   /**
-   * Serve the mutating inspection ops. Defaults to the truthiness of
-   * `PH_INSPECTION_ADMIN`.
+   * Serve the mutating inspection ops. Defaults to whether
+   * `PH_INSPECTION_ADMIN` reads as an opt-in; see {@link ENV_OPT_IN_SPELLINGS}.
    */
   admin?: boolean;
   /**
-   * Serve raw SQL against the reactor store. Defaults to the truthiness of
-   * `PH_INSPECTION_SQL`, and is ignored unless {@link admin} is on as well.
+   * Serve raw SQL against the reactor store. Defaults to whether
+   * `PH_INSPECTION_SQL` reads as an opt-in ({@link ENV_OPT_IN_SPELLINGS}), and
+   * is ignored unless {@link admin} is on as well.
    */
   sql?: boolean;
   /**
@@ -96,9 +97,32 @@ export type ReactorInspectionOptions = {
   workflows?: boolean;
 };
 
+/**
+ * The spellings of an explicit opt-in, compared case-insensitively after
+ * trimming.
+ *
+ * Wider than the original `"true" | "1"` because the thing on the other end of
+ * these variables is a deployment's env file, a Docker `-e`, a Helm value or a
+ * shell export, and every one of those has shipped `TRUE`, `True`, `yes`,
+ * `on` or a trailing space at some point. A posture that silently stays OFF
+ * because an operator wrote `PH_INSPECTION_ADMIN=TRUE` is the worst of both
+ * worlds: the flag is set, the levers are refused, and the refusal says to set
+ * the flag. Refusals name these spellings for the same reason.
+ *
+ * Still an explicit allow-list, not general truthiness: anything unrecognised
+ * (`maybe`, `0`, `false`, empty) leaves the tier off, so the default-off
+ * posture can only be lifted by something that reads as a yes.
+ */
+export const ENV_OPT_IN_SPELLINGS: readonly string[] = [
+  "true",
+  "1",
+  "yes",
+  "on",
+];
+
 /** Whether an environment variable reads as an explicit opt-in. */
 function envEnabled(value: string | undefined): boolean {
-  return value === "true" || value === "1";
+  return ENV_OPT_IN_SPELLINGS.includes((value ?? "").trim().toLowerCase());
 }
 
 /**
