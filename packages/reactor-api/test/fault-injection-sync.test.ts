@@ -164,7 +164,12 @@ describe("Fault-Injection Sync", () => {
     );
 
     await channel.init();
-    expect(channel.getConnectionState().state).toBe("connected");
+    // `"connected"` is earned by a completed poll, never by starting a timer
+    // (fix(reactor) a8dcfc00, mechanism C-1 of
+    // docs/bugs/2026-10-03-sync-defect-analysis.md). `init()` has registered
+    // the channel and started the timer but completed no poll, so the channel
+    // is still in the never-succeeded state.
+    expect(channel.getConnectionState().state).toBe("connecting");
   });
 
   afterEach(async () => {
@@ -226,8 +231,17 @@ describe("Fault-Injection Sync", () => {
     expect(channel.getConnectionState().state).toBe("reconnecting");
     expect(manualTimer.isRunning()).toBe(false);
 
-    // Recovery touchChannel -> real resolver recreates the channel
+    // Recovery touchChannel -> real resolver recreates the channel. A
+    // successful re-touch restarts the loop but completes no poll, so the
+    // channel returns to the never-succeeded state rather than claiming
+    // "connected".
     await vi.advanceTimersByTimeAsync(500);
+
+    expect(channel.getConnectionState().state).toBe("connecting");
+    expect(manualTimer.isRunning()).toBe(true);
+
+    // The poll that follows is what earns "connected".
+    await manualTimer.tick();
 
     expect(channel.getConnectionState().state).toBe("connected");
     expect(manualTimer.isRunning()).toBe(true);
@@ -276,13 +290,20 @@ describe("Fault-Injection Sync", () => {
     // Advance time until the recovery retry succeeds. The backoff delay is
     // jittered and the recovery involves async work across multiple microtask
     // turns, so we advance in steps and let vi.waitFor re-check the assertion.
+    // A recovered re-touch restarts the loop without completing a poll, so the
+    // state it lands in is "connecting", not "connected".
     await vi.waitFor(
       async () => {
         await vi.advanceTimersByTimeAsync(50);
-        expect(channel.getConnectionState().state).toBe("connected");
+        expect(channel.getConnectionState().state).toBe("connecting");
       },
       { timeout: 2000, interval: 0 },
     );
     expect(manualTimer.isRunning()).toBe(true);
+
+    // The poll that follows is what earns "connected".
+    await manualTimer.tick();
+
+    expect(channel.getConnectionState().state).toBe("connected");
   });
 });
