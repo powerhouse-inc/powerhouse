@@ -2949,6 +2949,22 @@ export class SimpleJobExecutor implements IJobExecutor {
       incomingOpsToApply,
     } = selection;
 
+    // Before the reshuffle is costed, not after. A load whose operations the
+    // store already holds moves nothing whatever window its timestamps opened,
+    // and costing it first charged a re-delivery the whole live tail it would
+    // have had to re-append if there had been anything to insert. A gap re-pull
+    // after a crash is exactly that re-delivery, and on a document with a long
+    // history the charge exceeds any bound the limiter could carry.
+    if (incomingOpsToApply.length === 0) {
+      return {
+        job,
+        success: true,
+        operations: [],
+        operationsWithContext: [],
+        duration: Date.now() - startTime,
+      };
+    }
+
     // Creation holds the first two indexes for the life of the document, so it
     // never moves however far back the conflicting range reaches. The auth stream
     // moves nothing at all.
@@ -2993,16 +3009,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
       const logicalSkip = latestRevision - minLogicalIndex;
       if (logicalSkip > skipCount) skipCount = logicalSkip;
-    }
-
-    if (incomingOpsToApply.length === 0) {
-      return {
-        job,
-        success: true,
-        operations: [],
-        operationsWithContext: [],
-        duration: Date.now() - startTime,
-      };
     }
 
     // After the dedup, never before: a re-appended auth operation keeps its
