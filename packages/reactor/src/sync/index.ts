@@ -18,6 +18,7 @@ export type {
   ConnectionStateChangedEvent,
   ConnectionStateSnapshot,
   DeadLetterAddedEvent,
+  DegradedRemote,
   JwtHandler,
   LocalPeer,
   PurgeLookup,
@@ -46,6 +47,7 @@ export {
   ChannelErrorSource,
   ChannelScheme,
   PollBehavior,
+  RemotePersistence,
   SyncEventTypes,
   SyncOperationStatus,
 } from "./types.js";

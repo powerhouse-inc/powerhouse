@@ -30,6 +30,27 @@ export enum PollBehavior {
   Manual = "manual",
 }
 
+/**
+ * How long a remote's configuration is meant to outlive the process that added
+ * it.
+ *
+ * - `Durable` (default): the remote is written to `ISyncRemoteStorage` and
+ *   rehydrated by the next `startup()`. Every channel whose config is enough to
+ *   rebuild the transport (a URL, a token source) is durable.
+ * - `Session`: the remote is never persisted, so it is never rehydrated. This is
+ *   for a channel whose transport is a live object owned by the current session
+ *   -- a `LocalChannel` over a brokered `MessagePort` dies with the page or
+ *   worker that holds it, and its stored config would only name a port that no
+ *   longer exists. Such a record is not merely useless on the next boot, it is
+ *   poison: nothing can rebuild its transport, so rehydrating it can only fail.
+ *   The session-scoped remote is re-added by whoever brokers the transport
+ *   again.
+ */
+export enum RemotePersistence {
+  Durable = "durable",
+  Session = "session",
+}
+
 export type RemoteOptions = {
   /**
    * Stringified UTC timestamp (ms). When set and not `"0"`, outbox operations older
@@ -37,6 +58,12 @@ export type RemoteOptions = {
    * the filter, syncing from the beginning of history.
    */
   sinceTimestampUtcMs?: string;
+  /**
+   * Whether this remote survives a restart. Defaults to
+   * {@link RemotePersistence.Durable} when omitted, so every existing caller and
+   * every stored record keeps its meaning.
+   */
+  persistence?: RemotePersistence;
   /**
    * Polling cadence for this remote. Defaults to `PollBehavior.Auto` when omitted.
    */
@@ -57,6 +84,22 @@ export type RemoteFilter = {
   documentId: string[];
   scope: string[];
   branch: string;
+};
+
+/**
+ * A stored remote that `SyncManager.startup()` could not bring up, so it has no
+ * channel and does not appear in `list()`.
+ *
+ * A reactor must always boot: one unusable remote degrades itself, never the
+ * whole sync module. `recordKept` says whether its row survived -- a credential
+ * or network-shaped failure keeps it, so a retry after sign-in can re-add it,
+ * while any other failure says the configuration itself is unusable and the row
+ * is dropped. This is the visible form of that degradation.
+ */
+export type DegradedRemote = {
+  name: string;
+  error: string;
+  recordKept: boolean;
 };
 
 export type RemoteCursor = {

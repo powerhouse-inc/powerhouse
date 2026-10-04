@@ -24,10 +24,27 @@ import { SyncManager } from "../../../src/sync/sync-manager.js";
 import { SyncOperation } from "../../../src/sync/sync-operation.js";
 import {
   ChannelErrorSource,
+  RemotePersistence,
   SyncOperationStatus,
   type ChannelConfig,
   type RemoteRecord,
 } from "../../../src/sync/types.js";
+
+/** A stored remote record with every field the rehydration path reads. */
+function storedRemote(name: string): RemoteRecord {
+  return {
+    id: `ch-${name}`,
+    name,
+    collectionId: DriveCollectionId.forDrive("col1"),
+    channelConfig: { type: "internal", parameters: {} },
+    filter: { documentId: [], scope: [], branch: "main" },
+    options: { sinceTimestampUtcMs: "0" },
+    status: {
+      push: { state: "idle", failureCount: 0 },
+      pull: { state: "idle", failureCount: 0 },
+    },
+  };
+}
 import {
   quarantinesDocument,
   syncOperationErrorType,
@@ -397,6 +414,70 @@ describe("SyncManager - Unit Tests", () => {
       await expect(syncManager.startup()).rejects.toThrow(
         "SyncManager is already shutdown and cannot be started",
       );
+    });
+
+    it("should boot the remaining remotes when one record's factory throws", async () => {
+      const okChannel = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockImplementation(
+        (_id, name): any => {
+          if (name === "remote-broken") {
+            throw new Error("no transport for peer 'gone'");
+          }
+          return okChannel;
+        },
+      );
+
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue([
+        storedRemote("remote-broken"),
+        storedRemote("remote-ok"),
+      ]);
+
+      await expect(syncManager.startup()).resolves.toBeUndefined();
+
+      const remotes = syncManager.list();
+      expect(remotes).toHaveLength(1);
+      expect(remotes[0].meta.name).toBe("remote-ok");
+      expect(() => syncManager.getByName("remote-broken")).toThrow(
+        "Remote with name 'remote-broken' does not exist",
+      );
+    });
+
+    it("should drop the record of a remote whose config the factory rejects", async () => {
+      vi.mocked(mockChannelFactory.instance).mockImplementation((): any => {
+        throw new Error("no channel factory for 'local' channels");
+      });
+
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue([
+        storedRemote("remote-broken"),
+      ]);
+
+      await syncManager.startup();
+
+      expect(syncManager.listDegradedRemotes()).toEqual([
+        {
+          name: "remote-broken",
+          error: "no channel factory for 'local' channels",
+          recordKept: false,
+        },
+      ]);
+      expect(mockRemoteStorage.remove).toHaveBeenCalledWith("remote-broken");
+    });
+
+    it("should keep the record of a remote whose factory failed on credentials", async () => {
+      vi.mocked(mockChannelFactory.instance).mockImplementation((): any => {
+        throw new GraphQLRequestError("offline", "network");
+      });
+
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue([
+        storedRemote("remote-offline"),
+      ]);
+
+      await syncManager.startup();
+
+      expect(syncManager.listDegradedRemotes()).toEqual([
+        { name: "remote-offline", error: "offline", recordKept: true },
+      ]);
+      expect(mockRemoteStorage.remove).not.toHaveBeenCalled();
     });
 
     it("should not register remote when channel.init() fails", async () => {
@@ -5812,6 +5893,112 @@ describe("SyncManager - Unit Tests", () => {
       await vi.waitFor(() => {
         expect(mockChannel.outbox.advanceOrdinal).toHaveBeenCalledWith(30);
       });
+    });
+  });
+
+  describe("remote persistence", () => {
+    const sessionOptions = {
+      sinceTimestampUtcMs: "0",
+      persistence: RemotePersistence.Session,
+    };
+
+    it("should never write a session-scoped remote to storage", async () => {
+      const remote = await syncManager.add(
+        "local:peer-b:drive-1",
+        DriveCollectionId.forDrive("drive-1"),
+        { type: "local", parameters: { peerId: "peer-b" } },
+        { documentId: [], scope: [], branch: "" },
+        sessionOptions,
+      );
+
+      expect(remote.meta.name).toBe("local:peer-b:drive-1");
+      expect(syncManager.list()).toHaveLength(1);
+      expect(mockRemoteStorage.upsert).not.toHaveBeenCalled();
+    });
+
+    it("should keep a session-scoped remote out of a later startup", async () => {
+      // The storage double answers list() with exactly what was upserted, so a
+      // fresh manager over the same storage is the restart this proves.
+      const stored: RemoteRecord[] = [];
+      vi.mocked(mockRemoteStorage.upsert).mockImplementation((record) => {
+        stored.push(record);
+        return Promise.resolve();
+      });
+      vi.mocked(mockRemoteStorage.list).mockImplementation(() =>
+        Promise.resolve(stored),
+      );
+
+      await syncManager.add(
+        "local:peer-b:drive-1",
+        DriveCollectionId.forDrive("drive-1"),
+        { type: "local", parameters: { peerId: "peer-b" } },
+        { documentId: [], scope: [], branch: "" },
+        sessionOptions,
+      );
+      await syncManager.add(
+        "durable-remote",
+        DriveCollectionId.forDrive("drive-1"),
+        { type: "internal", parameters: {} },
+      );
+
+      expect(stored.map((record) => record.name)).toEqual(["durable-remote"]);
+
+      // A reactor restarting: a brand-new manager, the same storage, and a
+      // local channel factory that can no longer resolve the dead port.
+      const restarted = new SyncManager(
+        new ConsoleLogger(["SyncManager"]),
+        mockRemoteStorage,
+        mockCursorStorage,
+        mockDeadLetterStorage,
+        {
+          instance: vi.fn((_id, name) => {
+            if (name.startsWith("local:")) {
+              throw new Error("no transport for peer");
+            }
+            return mockChannel;
+          }),
+        },
+        mockOperationIndex,
+        mockReactor,
+        mockEventBus,
+        DEFAULT_DRIVE_CONTAINER_TYPES,
+        settledAtHead(),
+      );
+
+      await expect(restarted.startup()).resolves.toBeUndefined();
+      expect(restarted.list().map((r) => r.meta.name)).toEqual([
+        "durable-remote",
+      ]);
+      expect(restarted.listDegradedRemotes()).toEqual([]);
+      restarted.shutdown();
+    });
+
+    it("should persist a remote by default", async () => {
+      await syncManager.add(
+        "durable-remote",
+        DriveCollectionId.forDrive("drive-1"),
+        { type: "internal", parameters: {} },
+      );
+
+      expect(mockRemoteStorage.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "durable-remote" }),
+      );
+    });
+
+    it("should leave no record when the factory rejects the config", async () => {
+      vi.mocked(mockChannelFactory.instance).mockImplementation((): any => {
+        throw new Error('This reactor has no "gql" channel factory');
+      });
+
+      await expect(
+        syncManager.add("bad-remote", DriveCollectionId.forDrive("drive-1"), {
+          type: "gql",
+          parameters: { url: "https://example.test/graphql" },
+        }),
+      ).rejects.toThrow('This reactor has no "gql" channel factory');
+
+      expect(mockRemoteStorage.upsert).not.toHaveBeenCalled();
+      expect(syncManager.list()).toHaveLength(0);
     });
   });
 });
