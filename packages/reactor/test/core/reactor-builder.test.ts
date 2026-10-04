@@ -12,6 +12,12 @@ import type {
 import type { Job } from "../../src/queue/types.js";
 import type { DbConfig } from "../../src/executor/worker/protocol.js";
 import type { IReadModel } from "../../src/read-models/interfaces.js";
+import { GQL_CHANNEL_TYPE } from "../../src/sync/channels/gql-request-channel-factory.js";
+import { POLLING_CHANNEL_TYPE } from "../../src/sync/channels/gql-response-channel-factory.js";
+import { LOCAL_CHANNEL_TYPE } from "../../src/sync/channels/local-channel-factory.js";
+import type { IChannelFactory } from "../../src/sync/interfaces.js";
+import { SyncBuilder } from "../../src/sync/sync-builder.js";
+import { ChannelScheme } from "../../src/sync/types.js";
 
 /** An ILogger that keeps what it was handed, so the report can be asserted. */
 function recordingLogger(): ILogger & {
@@ -708,6 +714,84 @@ describe("ReactorBuilder", () => {
       module.reactor.kill();
 
       expect(module.degradedComponents).toEqual([]);
+    });
+  });
+
+  // The channel-factory composition seam (multi-reactor W3.0). Every case here
+  // is refused before any storage is opened, so none of them builds a reactor.
+  describe("channel factory composition", () => {
+    const localFactory: IChannelFactory = {
+      instance: () => {
+        throw new Error("not reached");
+      },
+    };
+
+    // BREAKING, deliberately: this combination used to build the scheme and
+    // silently drop the SyncBuilder, so a caller asking for a local factory
+    // beside a gql scheme got a gql-only reactor and no word about it.
+    it("refuses withChannelScheme together with withSync", async () => {
+      const builder = new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withChannelScheme(ChannelScheme.CONNECT)
+        .withSync(new SyncBuilder().withChannelFactory(localFactory));
+
+      await expect(builder.buildModule()).rejects.toThrow(
+        "withChannelScheme and withSync are mutually exclusive",
+      );
+    });
+
+    it("refuses withChannelScheme together with withSync whichever order they were set in", async () => {
+      const builder = new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withSync(new SyncBuilder().withChannelFactory(localFactory))
+        .withChannelScheme(ChannelScheme.SWITCHBOARD);
+
+      await expect(builder.buildModule()).rejects.toThrow(
+        "withChannelScheme and withSync are mutually exclusive",
+      );
+    });
+
+    it("refuses an additional channel factory with no scheme to compose with", async () => {
+      const builder = new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withAdditionalChannelFactory(LOCAL_CHANNEL_TYPE, localFactory);
+
+      await expect(builder.buildModule()).rejects.toThrow(
+        "withAdditionalChannelFactory([local]) needs a withChannelScheme",
+      );
+    });
+
+    it("refuses an additional factory that claims the scheme's own channel type", async () => {
+      const builder = new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withChannelScheme(ChannelScheme.CONNECT)
+        .withAdditionalChannelFactory(GQL_CHANNEL_TYPE, localFactory);
+
+      await expect(builder.buildModule()).rejects.toThrow(
+        'withAdditionalChannelFactory("gql", ...) collides with the "connect" channel scheme',
+      );
+    });
+
+    it("refuses the switchboard scheme's own channel type too", async () => {
+      const builder = new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withChannelScheme(ChannelScheme.SWITCHBOARD)
+        .withAdditionalChannelFactory(POLLING_CHANNEL_TYPE, localFactory);
+
+      await expect(builder.buildModule()).rejects.toThrow(
+        'withAdditionalChannelFactory("polling", ...) collides with the "switchboard" channel scheme',
+      );
+    });
+
+    it("refuses registering two factories for one type", () => {
+      const builder = new ReactorBuilder().withAdditionalChannelFactory(
+        LOCAL_CHANNEL_TYPE,
+        localFactory,
+      );
+
+      expect(() =>
+        builder.withAdditionalChannelFactory(LOCAL_CHANNEL_TYPE, localFactory),
+      ).toThrow('A channel factory for the type "local" is already registered');
     });
   });
 });

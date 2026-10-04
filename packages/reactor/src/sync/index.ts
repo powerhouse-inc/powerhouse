@@ -70,15 +70,18 @@ export {
 } from "./errors.js";
 
 export {
+  CompositeChannelFactory,
   envelopesToSyncOperations,
   GqlRequestChannel,
   GqlRequestChannelFactory,
   GqlResponseChannel,
   GqlResponseChannelFactory,
+  GQL_CHANNEL_TYPE,
   IntervalPollTimer,
   LocalChannel,
   LocalChannelFactory,
   LOCAL_CHANNEL_TYPE,
+  POLLING_CHANNEL_TYPE,
   messagePortTransport,
   isLocalWireMessage,
   type GqlChannelConfig,

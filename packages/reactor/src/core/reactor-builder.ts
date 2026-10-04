@@ -125,8 +125,16 @@ import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.j
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import { SubscriptionNotificationReadModel } from "../subs/subscription-notification-read-model.js";
 import { GroupReevaluationTrigger } from "./group-reevaluation-trigger.js";
-import { GqlRequestChannelFactory } from "../sync/channels/gql-request-channel-factory.js";
-import { GqlResponseChannelFactory } from "../sync/channels/gql-response-channel-factory.js";
+import { CompositeChannelFactory } from "../sync/channels/composite-channel-factory.js";
+import {
+  GqlRequestChannelFactory,
+  GQL_CHANNEL_TYPE,
+} from "../sync/channels/gql-request-channel-factory.js";
+import {
+  GqlResponseChannelFactory,
+  POLLING_CHANNEL_TYPE,
+} from "../sync/channels/gql-response-channel-factory.js";
+import type { IChannelFactory } from "../sync/interfaces.js";
 import { SyncBuilder } from "../sync/sync-builder.js";
 import type { JwtHandler, LocalPeer } from "../sync/types.js";
 import { ChannelScheme } from "../sync/types.js";
@@ -352,6 +360,10 @@ export class ReactorBuilder {
   private signalHandlersEnabled = false;
   private queueInstance?: IQueue;
   private channelScheme?: ChannelScheme;
+  private readonly additionalChannelFactories = new Map<
+    string,
+    IChannelFactory
+  >();
   private jwtHandler?: JwtHandler;
   private documentModelLoader?: IDocumentModelLoader;
   private shutdownHooks: Array<() => Promise<void>> = [];
@@ -474,6 +486,18 @@ export class ReactorBuilder {
     return this;
   }
 
+  /**
+   * Builds the sync module from a caller-supplied SyncBuilder, which owns its
+   * own channel factory and storages.
+   *
+   * Mutually exclusive with {@link withChannelScheme}: setting both is refused
+   * at build time. It used to build the scheme and silently drop this builder.
+   * To hold gql and non-gql remotes on one reactor, use
+   * {@link withChannelScheme} plus {@link withAdditionalChannelFactory}; a
+   * SyncBuilder that wants the same can be handed a `CompositeChannelFactory`
+   * directly, but it cannot build the CONNECT gql factory, which needs this
+   * reactor's internal job queue.
+   */
   withSync(syncBuilder: SyncBuilder): this {
     this.syncBuilder = syncBuilder;
     return this;
@@ -567,8 +591,56 @@ export class ReactorBuilder {
     return this;
   }
 
+  /**
+   * Selects the gql channel scheme this reactor's sync module is built on.
+   *
+   * CONNECT builds a {@link GqlRequestChannelFactory} (it polls a Switchboard);
+   * SWITCHBOARD builds a {@link GqlResponseChannelFactory} (it serves peers
+   * that poll it). The builder owns the factory because only the builder has
+   * the reactor's internal job queue, which the request factory's poll timer
+   * needs.
+   *
+   * Compose further transports onto the scheme with
+   * {@link withAdditionalChannelFactory}. Mutually exclusive with
+   * {@link withSync}: a caller-supplied SyncBuilder brings its own factory, so
+   * setting both is refused rather than resolved by precedence.
+   */
   withChannelScheme(scheme: ChannelScheme): this {
     this.channelScheme = scheme;
+    return this;
+  }
+
+  /**
+   * Registers one more channel factory alongside the {@link withChannelScheme}
+   * scheme's, so this reactor can hold remotes of several transports at once.
+   *
+   * This is the multi-reactor W3.0 seam: `withAdditionalChannelFactory(
+   * LOCAL_CHANNEL_TYPE, new LocalChannelFactory(logger, provider))` on a
+   * CONNECT-scheme reactor yields a reactor that serves BOTH gql remotes to a
+   * Switchboard and brokered `LocalChannel` peers. The builder wraps the
+   * scheme's factory and every registered one in a
+   * {@link CompositeChannelFactory}, which routes each remote's
+   * `ChannelConfig.type` to the factory that claims it.
+   *
+   * Generic in the type rather than a `withLocalChannelFactory(factory)`
+   * shortcut: the composite already keys on the config type, so a type-specific
+   * method would only hide which key a factory is registered under, and a third
+   * transport would need a third method.
+   *
+   * @param type - The {@link ChannelConfig.type} this factory claims (e.g.
+   *   {@link LOCAL_CHANNEL_TYPE}). It must differ from the scheme's own type
+   *   and from every other registration; a collision is refused at build time.
+   * @param factory - The factory to route that type to
+   * @throws Error at build time if no {@link withChannelScheme} was set, or if
+   *   `type` collides with the scheme's
+   */
+  withAdditionalChannelFactory(type: string, factory: IChannelFactory): this {
+    if (this.additionalChannelFactories.has(type)) {
+      throw new Error(
+        `A channel factory for the type "${type}" is already registered on this ReactorBuilder`,
+      );
+    }
+    this.additionalChannelFactories.set(type, factory);
     return this;
   }
 
@@ -671,6 +743,8 @@ export class ReactorBuilder {
         "withReadModelCoordinator and withReadModelCoordinatorFactory are mutually exclusive; register one coordinator source",
       );
     }
+
+    this.assertSyncConfiguration();
 
     // A deferring barrier is only safe because the builder puts the flush at
     // durability boundary 2 - the executor it constructs flushes before it
@@ -1232,13 +1306,8 @@ export class ReactorBuilder {
     };
     let syncModule: InProcessSyncModule | undefined = undefined;
     if (this.channelScheme) {
-      const factory =
-        this.channelScheme === ChannelScheme.CONNECT
-          ? new GqlRequestChannelFactory(this.logger, this.jwtHandler, queue)
-          : new GqlResponseChannelFactory(this.logger);
-
       const syncBuilder = new SyncBuilder()
-        .withChannelFactory(factory)
+        .withChannelFactory(this.buildSchemeChannelFactory(this.logger, queue))
         .withStorageFlusher(this.storageFlusher);
       syncModule = syncBuilder.buildModule(
         reactor,
@@ -1334,6 +1403,83 @@ export class ReactorBuilder {
     }
 
     return module;
+  }
+
+  /**
+   * Refuses sync configurations that have no single correct reading.
+   *
+   * BREAKING, deliberately: `withChannelScheme` plus `withSync` used to build
+   * the scheme and SILENTLY DROP the custom SyncBuilder -- its channel factory,
+   * its storages, its limits -- so a caller who asked for a local factory and a
+   * gql scheme got a gql-only reactor and no word about it. Only configurations
+   * that were already silently broken now fail, and they fail at build time
+   * with the two methods named. The way to combine transports is
+   * {@link withAdditionalChannelFactory}, which composes instead of dropping.
+   */
+  private assertSyncConfiguration(): void {
+    if (this.channelScheme && this.syncBuilder) {
+      throw new Error(
+        "withChannelScheme and withSync are mutually exclusive: the scheme makes this builder own the channel factory (it holds the job queue the gql poll timer needs), while a SyncBuilder brings its own. Combine transports with withAdditionalChannelFactory(type, factory) on the scheme, or drop withChannelScheme and compose a CompositeChannelFactory into your own SyncBuilder.",
+      );
+    }
+    if (this.additionalChannelFactories.size === 0) {
+      return;
+    }
+    if (!this.channelScheme) {
+      const types = [...this.additionalChannelFactories.keys()].join(", ");
+      throw new Error(
+        `withAdditionalChannelFactory([${types}]) needs a withChannelScheme to compose with: without a scheme there is no factory to compose, and a withSync SyncBuilder owns its own. Pass a CompositeChannelFactory to that SyncBuilder instead.`,
+      );
+    }
+    const schemeType = this.schemeChannelType();
+    if (this.additionalChannelFactories.has(schemeType)) {
+      throw new Error(
+        `withAdditionalChannelFactory("${schemeType}", ...) collides with the "${this.channelScheme}" channel scheme, which already serves that channel type`,
+      );
+    }
+  }
+
+  /** The {@link ChannelConfig.type} the selected gql scheme's factory serves. */
+  private schemeChannelType(): string {
+    return this.channelScheme === ChannelScheme.CONNECT
+      ? GQL_CHANNEL_TYPE
+      : POLLING_CHANNEL_TYPE;
+  }
+
+  /**
+   * The channel factory a {@link withChannelScheme} reactor syncs on: the
+   * scheme's own, or a {@link CompositeChannelFactory} over it and every
+   * {@link withAdditionalChannelFactory} registration.
+   *
+   * The scheme factory is constructed here rather than by the caller because
+   * only the builder holds the reactor's internal job queue, which the CONNECT
+   * poll timer drives its backpressure from -- the reason a true gql+local
+   * composite could not be assembled from outside (multi-reactor W1.2 note).
+   *
+   * With no additional factory the scheme's factory is used bare, so an
+   * existing reactor's routing is byte-for-byte what it was: the composite is
+   * strict about `ChannelConfig.type` and the gql factories are not, and
+   * tightening that for every reactor is not this seam's business.
+   *
+   * {@link assertSyncConfiguration} has already refused every combination this
+   * cannot express, so there is nothing left to validate here.
+   */
+  private buildSchemeChannelFactory(
+    logger: ILogger,
+    queue: IQueue,
+  ): IChannelFactory {
+    const schemeFactory: IChannelFactory =
+      this.channelScheme === ChannelScheme.CONNECT
+        ? new GqlRequestChannelFactory(logger, this.jwtHandler, queue)
+        : new GqlResponseChannelFactory(logger);
+
+    if (this.additionalChannelFactories.size === 0) {
+      return schemeFactory;
+    }
+    return new CompositeChannelFactory([
+      [this.schemeChannelType(), schemeFactory],
+      ...this.additionalChannelFactories,
+    ]);
   }
 
   /**
