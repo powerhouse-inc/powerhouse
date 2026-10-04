@@ -908,6 +908,19 @@ KnexTimeout: intermittent (clean this run after rebuild, crashed on the prior).
   cacheable. Capability variance is explicit by construction, so the router never
   has to probe a target to learn what it can do.
 
+### ROUTER CLIENT COMPLETE + LIVE-VERIFIED (2026-10-05, screenshots delivered)
+packages/reactor-router: RoutingReactorClient over N backends, capability-aware placement
+(bucketFor), advisory routing with structured WrongBackendError + ownership guard, fan-in
+reads, v1 constraints (no cross-backend batch/relationship-write). 83 pkg tests + review-clean
+(5 findings fixed; review confirmed NO lost-write/corruption — the advisory core held under
+adversarial tracing). Monitor Router panel + dev handle (66 app tests). LIVE: one client over
+workers alpha+beta — routed creates, fan-in find (5 drives merged), capability gating (workflows
+refused on browser backends, reason named), cross-backend batch → CrossBackendBatchError, and the
+headline: a deliberately-wrong override (drive1→beta) still landed the write on alpha (true owner),
+beta never got it, log said "the route was corrected. The override is stale." Wrong-table-never-
+loses-a-write invariant demonstrated live. Note: DriveClient.create mints its own id, so
+router-created drives land on the primary and are learned (documented).
+
 ### Stage 4 — migrate back
 - Fold monitor components into Connect; Switchboard hosts/routes multiple reactors
   (`options.reactor` seam); switchboard-lb alignment.
