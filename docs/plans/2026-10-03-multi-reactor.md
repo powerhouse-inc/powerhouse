@@ -230,7 +230,10 @@ dead-lettered doc's ops (run-4 renames never applied). See bug doc run-4 section
 - **W1.1 `LocalChannel`** (core track): symmetric MessagePort channel + handshake
   (touch analog + peer manifests) + `LocalChannelFactory` + cursor persistence.
 - **W1.2 port brokering**: "adopt sync peer" host op; monitor wires A↔B for a chosen
-  collection.
+  collection. The gql+local composite deferred here (it needs the reactor's
+  internal job queue, which only `GqlRequestChannelFactory`'s constructor takes
+  and only the builder owns) landed as **W3.0** below; a local-sync reactor is no
+  longer forced to be local-only.
 - **W1.3 load harness**: document/op generators in the monitor package; per-reactor
   OTel instrumentation; inspector views for lag/cursors/dead letters under load.
   Deliverable: dump N documents into A, watch them sync to B in the inspector.
@@ -319,6 +322,42 @@ BUILT worker config (post-review truthfulness fix) with descriptorMismatch flagg
 Stage 2 complete.
 
 ### Stage 3 — Switchboard reactor joins
+- **W3.0 composite channel factory — DONE 2026-10-04** (the deferred core seam;
+  prerequisite for every other stage-3 item, because mixed topologies need ONE
+  reactor to hold gql remotes AND brokered local peers).
+  - `CompositeChannelFactory` (`packages/reactor/src/sync/channels/composite-channel-factory.ts`)
+    implements `IChannelFactory` over a (channel-config type -> factory) map and
+    routes `instance()` strictly on `config.type`. An unclaimed type is refused
+    by name, listing the types it does serve — the single-factory world answered
+    a `{type:"local"}` config on a gql reactor by complaining about a missing
+    `url`. Duplicate or empty registrations are refused at construction. It adds
+    no behaviour: no queue, no logger, every argument passed through.
+  - **Builder-seam shape**: `ReactorBuilder.withChannelScheme(scheme)` is
+    unchanged; `withAdditionalChannelFactory(type, factory)` composes ONTO the
+    scheme-selected factory. The builder still constructs the gql factory itself
+    (the W1.2 note's reason: only it holds the reactor's internal job queue that
+    `GqlRequestChannelFactory`'s poll timer needs) and wraps it plus every
+    registration in a composite. Generic in the type rather than a
+    `withLocalChannelFactory(factory)` shortcut: the composite already keys on
+    the config type, so a type-specific method would only hide which key a
+    factory sits under, and a third transport would need a third method. The
+    scheme's own type is `gql` for CONNECT and `polling` for SWITCHBOARD (what
+    reactor-api's `registerChannel` resolver actually writes); registering a
+    factory for the scheme's own type is refused. With no registration the
+    scheme's factory is used BARE, so an existing reactor's routing is unchanged
+    — the composite is strict about `type` where the gql factories are not, and
+    tightening that for every reactor is not this seam's business.
+  - **Trap removed, BREAKING on purpose**: `withChannelScheme` + `withSync`
+    used to build the scheme and silently drop the custom `SyncBuilder` (its
+    factory, storages and limits). It now throws at build time naming both
+    methods and the composition path. Only configurations that were already
+    silently broken fail.
+  - Verified by `test/sync/channels/composite-channel-factory/`: unit routing
+    and refusals, plus an integration test with THREE real reactors — `mixed`
+    (CONNECT + local), a brokered local sibling, and a second Connect reactor
+    reachable only through a `FakeSwitchboard` double at the `fetch` boundary.
+    One drive syncs over both arms at once, and an op crosses transports in both
+    directions (gql in -> local out, and local in -> gql out).
 - **W3.1** attach remote via existing GQL channels.
 - **W3.2 core: remote inspection** — `IInspector` served over HTTP/GraphQL by
   reactor-api (authed) so the monitor inspects server reactors.
@@ -327,6 +366,24 @@ Stage 2 complete.
   host-call timeout; "which reactor ran this" in run observability.
 - **W3.4 attachments byte movement**: lazy fetch-on-reference wiring, browser-side
   store, reference-index race handling.
+
+### W3.0 monitor adoption (2026-10-04)
+The monitor's `connect` sync mode gained local capability, so a mixed topology can
+actually be set up in the UI. `buildMonitorReactor` composes a
+`LocalChannelFactory` onto the gql scheme, so every reactor with a sync module
+holds a `LocalChannelPortRegistry` and adopts brokered peers; `sync.local` keeps
+its narrower meaning (local-ONLY, no gql factory) and a `channelScheme: null`
+island still has neither. The capability contract states it: a gql-scheme reactor
+declares `syncChannels: ["gql", "local"]`, and BOTH the worker handle's
+adopt/remove methods and `linkLocalSync`'s guard read that one field — the
+worker's previous read of `builtConfig.localSync` would have reported false for a
+reactor that does serve local peers. The two UI gates are now independent reads of
+the contract: `SyncTab`'s gql add-remote form takes `gqlRemotes` (it was gated on
+`local`, which now means the opposite of what it needs) and `LinkLocalSyncPanel`
+takes `localLinks`, offering only local-capable peers and explaining an island
+rather than letting the broker refuse it. Live pass still owed: one browser
+reactor syncing a Switchboard remote and a sibling worker at the same time.
+Connect itself adopts the seam in stage 4.
 
 ### Router client (iterative, stages 1→3)
 - New package; `IReactorClient` facade via Proxy-forwarding + target selection by
