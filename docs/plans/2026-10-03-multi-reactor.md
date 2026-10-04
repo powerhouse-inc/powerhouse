@@ -506,19 +506,46 @@ supplies only the request's caller.
    host that wanted operator repair levers has not thereby agreed to expose its
    database. `sqlEnabled` is forced false without `adminEnabled`.
    Both flags are read once at construction, so a deployment's posture cannot
-   change under a request. With no inspection source the subgraph is NOT
-   registered at all, rather than present and refusing every field.
+   change under a REQUEST -- it changes under a long-lived CLIENT, which is the
+   documented operator flow (restart with the flag), and the client re-reads
+   `info` rather than caching it forever. An env flag reads as an opt-in in any
+   of `true`/`1`/`yes`/`on`, case-insensitively and trimmed, and refusals name
+   those spellings: a posture that silently stays off because an operator wrote
+   `TRUE` -- while the refusal tells them to set the flag -- is the worst
+   outcome available. With no inspection source the subgraph is NOT registered
+   at all, rather than present and refusing every field.
+
+**One wire contract, one definition.** The records that cross this boundary --
+the reported info, the processor and remote rows, the cursors, the queue and
+storage-health shapes -- live in `@powerhousedao/reactor`
+(`src/inspector/wire.ts`), imported by reactor-api's schema/resolvers AND
+reactor-monitor's client, with `INSPECTION_WIRE_FIELDS` as the field table both
+ends are held to (the client builds its selection sets from it; the subgraph
+test asserts the SDL against it, field set by field set, not just root-field
+names). Every ordinal is `Float`, never `Int`: ordinals are bigint-origin and
+`Int` is 32-bit, so an `Int`-typed cursor turns a long-lived reactor's
+inspection read into a serialization error the day its operation index passes
+2^31. `INSPECTION_ORDINAL_FIELDS` names them and the test pins each one.
 
 **Client: `RemoteInspectorClient`** (`packages/reactor-monitor/src/remote/`)
 implements `IInspector`, `ISyncInspector` and `IReactorDbQuery` over
 `fetch`, plus `listHolds`/`triggerPull`/`info`. A `headers` provider resolved
 per request is the seam for a bearer (the monitor still has no identity
 channel). It knows the far side's tiers from the reported `info` and refuses a
-lever that host does not serve locally, by name, before any request -- the tiers
-are fixed for a deployment's life, so a round trip could only answer the same
-thing more slowly. Decoding restores the reactor's own types: a `Date` rebuilt
-from epoch ms, a JSON `null` dropped back to the absent optional the type
-declares. `RemoteSyncManagerClient` is a full `InspectableSyncManager` whose
+lever that host does not serve locally, by name, so an operator reads WHY
+instead of watching a click fail. Those tiers are NOT fixed for the handle's
+life -- the documented flow is a restart with the flag -- so `info` is cached
+on a modest TTL and re-read at the two moments that matter: before refusing
+locally (a stale "no" must never stand in for a host that now says yes) and
+after the far side answers `FORBIDDEN` (a stale "yes" is corrected, and the
+UI's gate closes with the real reason). `refreshInfo()` is the explicit form
+behind the UI's "re-check server" button; the transport carries GraphQL
+`extensions.code` on its errors so `FORBIDDEN` is recognised as a code rather
+than matched as message text. Decoding restores the reactor's own types: a
+`Date` rebuilt from epoch ms, a JSON `null` dropped back to the absent optional
+the type declares. Storage health is cached for a few seconds -- the Sync tab
+polls every 2s and that dimension changes only on an event.
+`RemoteSyncManagerClient` is a full `InspectableSyncManager` whose
 inspection half is real and whose RECONFIGURATION half (`add`, `remove`,
 `bindRemote`, `setPeerManifest`, `agreement`) refuses by name: which peers a
 Switchboard syncs with is that deployment's configuration, not a monitor's to
@@ -534,13 +561,15 @@ the message, not on a later tab render) and the SOURCE of the capability row.
 - **What the remote row reports**, via the new `remoteReactorCapabilities(descriptor, reported)`:
   `hosting: "remote"`, `storage: {kind:"remote", durable:true}` (not ours to
   open, close or heal), `processors: true` (a server reactor registers its own
-  factories in its own realm), `inspection: "rpc"`, `selfHeal: false`, and the
+  factories in its own realm), `inspection: "rpc"` -- claimed HERE and only
+  here, because reaching this function means the reactor answered its `info`
+  query, which is the proof a URL is not; the descriptor-only row says
+  `"none"` -- `selfHeal: false`, and the
   two fields READ FROM THE REPORT -- `workflows` (whether the engine is actually
   composed into that host; the descriptor-only row says `true` for every remote,
   which would have a router place a workflow drive on a Switchboard that never
   composed it) and `syncChannels` (a Switchboard-scheme reactor routes
-  `polling`, not the `gql` a URL suggests, so the add-remote form is correctly
-  hidden for it). `ReportedCapabilityFacts` is required-together, like
+  `polling`, not the `gql` a URL suggests). `ReportedCapabilityFacts` is required-together, like
   `BuiltCapabilityFacts`, and is its own type because wire-reported facts and
   built-and-read facts are categorically different. `descriptorMismatch` has no
   analog: nothing was built from this descriptor.
@@ -550,43 +579,65 @@ the message, not on a later tab render) and the SOURCE of the capability row.
   nothing streams the far side's bus). A silently inert stub would read green
   while nothing works -- the exact failure mode this initiative exists to stamp
   out. Document ops over a remote handle are deliberately out of scope for
-  W3.2: inspection-first.
+  W3.2: inspection-first. They still answer `toString`/`toJSON`/`valueOf` with
+  a description: refusing a document operation is the point, refusing to be
+  PRINTED just breaks the log line or error report of whoever is diagnosing
+  something else.
 
 **Monitor UI**: kind `remote` + a GraphQL URL field in the provision form (the
 sync-mode select is swapped out -- nothing is built here); the Overview tab
 renders the capability grid beside a "Remote host" block with the endpoint, the
-server's own store class and the two tier flags; and `AdminGate` turns the
-reported tiers into per-tab gating -- pause/resume, processor retry, catch-up
-sweep, the integrity ops and every sync repair lever are DISABLED with the
-reason when `adminEnabled` is false, the DB tab is replaced by its reason when
-`sqlEnabled` is false, the brokered link panel is absent (a remote reactor
-cannot be handed a MessagePort), and the Events tab says why it is empty. Every
-locally hosted reactor defaults to allowed, so no local tab had to learn about
-any of this.
+server's own store class, the two tier flags and a **"Re-check server"** button;
+and `useServerTierGates` turns the reported tiers into per-tab gating --
+pause/resume, processor retry, catch-up sweep, the integrity ops and every sync
+repair lever are DISABLED with the reason when `adminEnabled` is false, the DB
+tab is replaced by its reason when `sqlEnabled` is false, the brokered link
+panel is absent (a remote reactor cannot be handed a MessagePort), the
+add-remote form is absent for the same reason the link panel is -- a remote
+reactor's remotes are that deployment's configuration, so every submit would be
+refused, whatever channel types it reports routing -- and the Events tab says
+why it is empty. The gates are RE-READ, not computed once: `serverInfo` is a
+live read on the handle, `refreshServerInfo()` re-asks, and the hook polls the
+handle so a refresh the client performed on its own refusal path reaches the
+screen. Every locally hosted reactor defaults to allowed, so no local tab had
+to learn about any of this.
 
-**Tests**: `packages/reactor-api/test/inspection-subgraph.test.ts` (30) runs the
+**Honest degradation.** `ReactorInspector` refuses a lever its components
+cannot serve instead of resolving: `pauseQueue`/`resumeQueue` on a reactor
+whose queue is not the inspectable in-memory one, and `retryProcessor` for an
+id nothing is tracking. A READ of a missing component is still empty (there is
+no queue state, so there are no jobs); an ACTION refuses. Resolving turned into
+`inspectionPauseQueue: true` over the wire, i.e. a monitor reporting a pause
+that never happened -- the failure mode this surface exists to catch.
+
+**Tests**: `packages/reactor-api/test/inspection-subgraph.test.ts` (36) runs the
 real SDL and resolvers against a real in-process reactor module -- each read's
 typed shape, every mutating op refusing without the flag and succeeding with it,
 raw SQL refusing under the admin tier alone, reads refused under `ADMIN_ONLY`,
 the booted API actually REGISTERING the subgraph (`initializeAndStartAPI` +
-`executeSubgraphQuery`), and a pinned list of root field names so a rename is a
-visible diff next to the client's documents.
-`packages/reactor-monitor/test/remote-inspection.test.ts` (25) covers the client
-against a stand-in server: variables, decoding, the local tier refusals, the
-sync manager's cache and its refusals, and the whole provisioning path.
-`apps/reactor-monitor/src/RemoteReactor.test.tsx` (6) drives the UI.
+`executeSubgraphQuery`), the opt-in spellings, a lever refused on a degraded
+inspector, an ordinal past 2^31 served intact, and the wire contract pinned
+field-set by field-set (plus Float on every ordinal) against the shared table.
+`packages/reactor-monitor/test/remote-inspection.test.ts` (37) covers the client
+against a stand-in server: variables, decoding, the local tier refusals, both
+directions of the restart-with-the-flag flow, header override, half-formed wire
+metadata, the describable-but-refusing handles, and the whole provisioning path.
+`apps/reactor-monitor/src/RemoteReactor.test.tsx` (8) drives the UI.
 **Known seam**: no package dependency links the server's SDL to the client's
-hand-written documents (reactor-monitor is a browser package; reactor-api is a
+hand-written DOCUMENTS (reactor-monitor is a browser package; reactor-api is a
 server one), exactly as `reactor-browser` already holds documents against
-reactor-api's schema. The pinned field-name test is the drift guard; the live
-pass is the end-to-end proof.
+reactor-api's schema. What they do share is the wire contract in
+`@powerhousedao/reactor`, which both import and the subgraph test pins the SDL
+against, so the drift guard is now the record SHAPES rather than a list of root
+field names; the live pass is the end-to-end proof.
 
 **Live pass still owed**: the monitor attaching to the real vetra Switchboard --
 read tabs green (queue/processors/catch-up/storage health, and the Sync tab
 showing that Switchboard's own `polling` remotes with cursors and mailbox
 depths), the Overview grid reporting `polling` + `workflows` as that host
 actually has them, the levers disabled with their reason by default, and the
-same levers live after a restart with `PH_INSPECTION_ADMIN=true`.
+same levers live after a restart with `PH_INSPECTION_ADMIN=true` -- under the
+SAME monitor handle, via "Re-check server" rather than a re-provision.
 
 ### Router client (iterative, stages 1→3)
 - New package; `IReactorClient` facade via Proxy-forwarding + target selection by
