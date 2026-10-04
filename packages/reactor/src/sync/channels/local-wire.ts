@@ -78,13 +78,29 @@ export type LocalResendMessage = {
   sinceOrdinal: number;
 };
 
-/** Whether a received value is a well-formed wire message. */
+/**
+ * Whether a received value is a well-formed wire message.
+ *
+ * A push is validated past its `kind`: its `envelopes` must be an array of
+ * non-null objects. receivePush iterates that array and reads each entry, so a
+ * `{ kind: "push" }` with a missing or non-array `envelopes` would otherwise
+ * throw a TypeError out of the transport's message callback, escaping the
+ * try/catch that wraps only the inbox write. Rejecting it here routes it
+ * through the same failure path as any other malformed frame.
+ */
 export function isLocalWireMessage(data: unknown): data is LocalWireMessage {
   if (typeof data !== "object" || data === null) {
     return false;
   }
   const kind = (data as { kind?: unknown }).kind;
-  return (
-    kind === "hello" || kind === "push" || kind === "ack" || kind === "resend"
-  );
+  if (kind === "push") {
+    const envelopes = (data as { envelopes?: unknown }).envelopes;
+    return (
+      Array.isArray(envelopes) &&
+      envelopes.every(
+        (envelope) => typeof envelope === "object" && envelope !== null,
+      )
+    );
+  }
+  return kind === "hello" || kind === "ack" || kind === "resend";
 }

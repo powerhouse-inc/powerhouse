@@ -278,4 +278,27 @@ describe("LocalChannel", () => {
       }
     });
   });
+
+  describe("malformed frames", () => {
+    it("records a malformed push as a failure instead of throwing", async () => {
+      const transport = new FakeTransport();
+      const channel = makeChannel({ transport });
+      try {
+        await channel.init();
+
+        // Both frames pass the top-level object/kind check but carry no usable
+        // envelopes array; the old code threw a TypeError out of the callback.
+        expect(() => transport.deliver({ kind: "push" })).not.toThrow();
+        expect(() =>
+          transport.deliver({ kind: "push", envelopes: "not-an-array" }),
+        ).not.toThrow();
+
+        const state = channel.getConnectionState();
+        expect(state.failureCount).toBe(2);
+        expect(state.state).toBe("error");
+      } finally {
+        await channel.shutdown();
+      }
+    });
+  });
 });
