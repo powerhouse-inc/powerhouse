@@ -6,6 +6,7 @@ import {
   type ManagedRemoteReactor,
   type ManagedWorkerReactor,
   type ReactorCapabilities,
+  type ReactorHosting,
   type ReactorSyncChannel,
 } from "@powerhousedao/reactor-monitor";
 import { useCallback, useEffect, useState } from "react";
@@ -92,6 +93,32 @@ function yesNo(enabled: boolean): Pick<CapabilityCell, "value" | "tone"> {
   return { value: enabled ? "yes" : "no", tone: enabled ? "ok" : "off" };
 }
 
+/**
+ * The Workflows capability cell, from the engine-presence boolean and the host
+ * kind.
+ *
+ * Split out because a REMOTE reactor's value is read LIVE from
+ * `serverInfo.workflows` rather than the frozen capability (multi-reactor §4a):
+ * a host that composed its workflow runtime after the monitor attached reported
+ * `workflows: false` at provision time, and the badge must follow the current
+ * report instead of that stale snapshot. The copy says "currently reports" for
+ * the remote case so the live read is explicit.
+ */
+function workflowsCell(
+  workflows: boolean,
+  hosting: ReactorHosting,
+): CapabilityCell {
+  return {
+    label: "Workflows",
+    ...yesNo(workflows),
+    note: workflows
+      ? "That host currently reports the workflow engine composed into it."
+      : hosting === "remote"
+        ? "That host currently reports no workflow engine composed into it, so it fires no triggers; re-check the server if it has since composed one."
+        : "Browser host: the engine forks child processes, so it is Node-only.",
+  };
+}
+
 /** What one declared channel type means, and what can be done with it here. */
 function channelNote(channel: ReactorSyncChannel): string {
   switch (channel) {
@@ -163,15 +190,7 @@ export function capabilityCells(
         ? "Can host processor factories: factory and manager share a realm."
         : "Cannot host processor factories: a function does not survive postMessage.",
     },
-    {
-      label: "Workflows",
-      ...yesNo(capabilities.workflows),
-      note: capabilities.workflows
-        ? "That host reported the workflow engine composed into it."
-        : capabilities.hosting === "remote"
-          ? "That host reported no workflow engine composed into it, so it fires no triggers."
-          : "Browser host: the engine forks child processes, so it is Node-only.",
-    },
+    workflowsCell(capabilities.workflows, capabilities.hosting),
     {
       label: "Inspection",
       value: capabilities.inspection,
@@ -204,14 +223,28 @@ export function capabilityCells(
   ];
 }
 
+/**
+ * Renders the capability grid, with the Workflows cell driven by the EFFECTIVE
+ * value the caller passes rather than the frozen capability: a remote reactor
+ * passes its live `serverInfo.workflows`, a local one passes the authoritative
+ * `capabilities.workflows` and the cell is identical to the frozen one
+ * (multi-reactor §4a).
+ */
 function CapabilityGrid({
   capabilities,
+  workflows,
 }: {
   capabilities: ReactorCapabilities;
+  workflows: boolean;
 }) {
+  const cells = capabilityCells(capabilities).map((cell) =>
+    cell.label === "Workflows"
+      ? workflowsCell(workflows, capabilities.hosting)
+      : cell,
+  );
   return (
     <ul aria-label="Reactor capabilities" className="rm-cap-grid">
-      {capabilityCells(capabilities).map((cell) => (
+      {cells.map((cell) => (
         <li className="rm-cap" key={cell.label}>
           <div className="rm-cap-head">
             <span className="rm-cap-label">{cell.label}</span>
@@ -317,7 +350,14 @@ export function OverviewTab({
         this reactor — the typed contract a multi-reactor router selects targets
         on (multi-reactor stage 2).
       </p>
-      <CapabilityGrid capabilities={reactor.capabilities} />
+      <CapabilityGrid
+        capabilities={reactor.capabilities}
+        workflows={
+          reactor.kind === "remote"
+            ? reactor.serverInfo.workflows
+            : reactor.capabilities.workflows
+        }
+      />
 
       {reactor.kind === "worker" ? (
         <>
@@ -332,8 +372,10 @@ export function OverviewTab({
             above is derived from it rather than from the URL this monitor was
             given (multi-reactor W3.2). The grid is frozen at provision time --
             a reactor built differently is a different reactor -- but the two
-            tier rows are re-read, because they are the host&apos;s posture and
-            an operator changes them with a restart.
+            tier rows AND the Workflows cell are re-read, because they are the
+            host&apos;s posture: an operator turns the tiers on with a restart,
+            and a host can compose its workflow runtime after this monitor
+            attached (multi-reactor §4a). Re-check the server to refresh them.
           </p>
           <RemoteServerInfo
             onRecheck={onRecheckServer}

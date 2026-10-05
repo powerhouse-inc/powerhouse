@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   reactorCapabilities,
   type ManagedReactor,
+  type ReactorCapabilities,
   type ReactorDescriptor,
 } from "@powerhousedao/reactor-monitor";
 import { OverviewTab } from "./OverviewTab.js";
@@ -133,6 +134,70 @@ describe("OverviewTab capability grid", () => {
     expect(
       view.getByText(/created by the peer that polls this reactor/),
     ).toBeTruthy();
+  });
+
+  // The capability grid is frozen at provision time, EXCEPT the Workflows cell
+  // for a remote reactor, which reads the live serverInfo so a host that
+  // composed its workflow runtime after the monitor attached stops showing
+  // "no" forever (multi-reactor §4a).
+  it("reads a remote reactor's LIVE serverInfo.workflows over the stale frozen capability", () => {
+    const frozenCapabilities: ReactorCapabilities = {
+      hosting: "remote",
+      storage: { kind: "remote", durable: true },
+      processors: true,
+      // Stale: the host reported no workflow engine at provision time.
+      workflows: false,
+      inspection: "rpc",
+      syncChannels: ["polling"],
+      selfHeal: false,
+    };
+    const reactor = {
+      name: "live-workflows",
+      kind: "remote",
+      endpoint: "http://switchboard.test/inspection",
+      capabilities: frozenCapabilities,
+      serverInfo: {
+        hosting: "remote",
+        inspection: "rpc",
+        storageKind: "postgres",
+        processors: true,
+        // The host has since composed its workflow runtime.
+        workflows: true,
+        syncChannels: ["polling"],
+        adminEnabled: false,
+        sqlEnabled: false,
+      },
+    } as unknown as ManagedReactor;
+
+    const view = render(<OverviewTab reactor={reactor} />);
+
+    expect(badgeFor(view.container as HTMLElement, "Workflows")).toBe("yes");
+    expect(
+      view.getByText(/currently reports the workflow engine composed into it/),
+    ).toBeTruthy();
+  });
+
+  // A non-remote reactor's grid stays authoritative: its Workflows cell reads
+  // the frozen capability, not any live report (it has none).
+  it("keeps reading the frozen capability for a non-remote reactor", () => {
+    const frozenCapabilities: ReactorCapabilities = {
+      hosting: "in-process",
+      storage: { kind: "memory", durable: false },
+      processors: true,
+      workflows: true,
+      inspection: "direct",
+      syncChannels: ["local"],
+      selfHeal: false,
+    };
+    const reactor = {
+      name: "frozen-workflows",
+      kind: "in-process",
+      capabilities: frozenCapabilities,
+    } as unknown as ManagedReactor;
+
+    const view = render(<OverviewTab reactor={reactor} />);
+
+    expect(badgeFor(view.container as HTMLElement, "Workflows")).toBe("yes");
   });
 
   it("tones a lacked capability as off rather than as an error", () => {
