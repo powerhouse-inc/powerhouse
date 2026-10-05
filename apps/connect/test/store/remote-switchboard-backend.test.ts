@@ -1,3 +1,7 @@
+import {
+  isOperationNotSupported,
+  ReactorOperationNotSupportedError,
+} from "@powerhousedao/reactor-router";
 import { describe, expect, it } from "vitest";
 import { createRemoteSwitchboardBackend } from "../../src/store/remote-switchboard-backend.js";
 
@@ -27,7 +31,30 @@ describe("remote Switchboard backend drives sub-proxy", () => {
     const drives = client.drives as unknown as { addDrive: () => unknown };
 
     expect(() => drives.addDrive()).toThrow(
-      /does not support 'drives\.addDrive'/,
+      /does not support "drives\.addDrive"/,
     );
+  });
+});
+
+describe("remote Switchboard backend unsupported-operation signal", () => {
+  it("refuses an unsupported member with a typed ReactorOperationNotSupportedError the router can recognise", () => {
+    const client = backendClient();
+    // `find` is the operation Connect's boot getDrives fans in; the remote
+    // GraphQL client cannot serve it, and the throw must be the TYPED error the
+    // router's fan-in excludes rather than a generic Error it would fail on.
+    let thrown: unknown;
+    try {
+      (client as unknown as { find: () => unknown }).find();
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(ReactorOperationNotSupportedError);
+    expect(isOperationNotSupported(thrown)).toBe(true);
+    const typed = thrown as ReactorOperationNotSupportedError;
+    expect(typed.backend).toBe("switchboard-remote");
+    expect(typed.operation).toBe("find");
+    // The helpful served-methods message content is preserved.
+    expect(typed.message).toMatch(/get, subscribe, execute/);
   });
 });

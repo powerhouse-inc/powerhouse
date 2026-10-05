@@ -6,11 +6,20 @@
  * subset of `IReactorClient` (get, subscribe, execute, getOperations, create,
  * deleteDocument), so this module adapts it to the full `IReactorClient` the
  * router's `ReactorBackend` requires: the subset delegates to the GraphQL
- * client, and every other member throws BY NAME rather than resolving to a
- * silent wrong answer. That honest-degradation posture is deliberate -- the
- * same one reactor-monitor's remote `unwired.ts` takes -- because a stub that
- * read green while nothing worked is the exact failure mode this initiative
- * exists to stamp out.
+ * client, and every other member throws a typed
+ * {@link ReactorOperationNotSupportedError} naming the backend and the member,
+ * rather than resolving to a silent wrong answer. That honest-degradation
+ * posture is deliberate -- the same one reactor-monitor's remote `unwired.ts`
+ * takes -- because a stub that read green while nothing worked is the exact
+ * failure mode this initiative exists to stamp out.
+ *
+ * The error being TYPED (not a bare `Error`) is load-bearing for the router's
+ * fan-in reads: a collection-spanning read (`find`, the relationship reads)
+ * recognises this backend as NOT APPLICABLE to the read and excludes it from
+ * the union, surfacing the exclusion, instead of treating a by-contract
+ * limitation as a failure that would make the whole read incomplete. A CAPABLE
+ * backend that errored at runtime still fails that read loud -- the router
+ * draws the line on the error type.
  *
  * Completing the remaining surface (drive choreography, find, relationships,
  * jobs, batches) over GraphQL is the follow-up that makes the remote backend a
@@ -23,6 +32,7 @@ import {
   type IReactorClient,
 } from "@powerhousedao/reactor";
 import { GraphQLReactorClient } from "@powerhousedao/reactor-browser";
+import { ReactorOperationNotSupportedError } from "@powerhousedao/reactor-router";
 import type {
   ReactorBackend,
   ReactorCapabilities,
@@ -86,13 +96,13 @@ function asFullReactorClient(
   backendName: string,
 ): IReactorClient {
   const notSupported = (member: string): never => {
-    throw new Error(
-      `Remote Switchboard backend '${backendName}' does not support '${member}': its GraphQL client serves only ${[
-        ...DELEGATED_METHODS,
-      ].join(
+    throw new ReactorOperationNotSupportedError({
+      backend: backendName,
+      operation: member,
+      reason: `its GraphQL client serves only ${[...DELEGATED_METHODS].join(
         ", ",
-      )} in the router v1 document surface (multi-reactor stage 4, WP-E).`,
-    );
+      )} in the router v1 document surface (multi-reactor stage 4, WP-E)`,
+    });
   };
 
   const drives = new Proxy({} as IDriveClient, {
