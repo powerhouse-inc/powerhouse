@@ -1,6 +1,9 @@
 import {
   groupDocumentType,
   groupMembershipActionTypes,
+  retractionTarget,
+  type Action,
+  type Operation,
   type OperationWithContext,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -118,8 +121,12 @@ export class GroupReevaluationTrigger extends BaseReadModel {
   ): Promise<void> {
     // groupId -> earliest membership-change timestamp in this batch
     const changed = new Map<string, string>();
+    const baseReducer3 = new Map<string, Promise<boolean>>();
     for (const item of items) {
       if (!isMembershipChange(item)) continue;
+      if (!(await this.retractsMembership(item, items, baseReducer3))) {
+        continue;
+      }
       const { operation, context } = item;
       const existing = changed.get(context.documentId);
       if (
@@ -198,6 +205,101 @@ export class GroupReevaluationTrigger extends BaseReadModel {
         "group re-evaluation was not enqueued for every affected document",
       );
     }
+  }
+
+  /**
+   * Whether a RETRACT can change membership: only on a base-reducer 3 group,
+   * and only when its target, through any RETRACTs it names, is a membership
+   * action. Any other change passes. A lookup that fails or finds nothing
+   * passes too, so a re-evaluation is never lost.
+   */
+  private async retractsMembership(
+    item: OperationWithContext,
+    batch: OperationWithContext[],
+    baseReducer3: Map<string, Promise<boolean>>,
+  ): Promise<boolean> {
+    const { operation, context } = item;
+    if (operation.action.type !== "RETRACT") {
+      return true;
+    }
+    try {
+      let created = baseReducer3.get(context.documentId);
+      if (created === undefined) {
+        created = this.isBaseReducer3(context.documentId);
+        baseReducer3.set(context.documentId, created);
+      }
+      if (!(await created)) {
+        return false;
+      }
+
+      const seen = new Set<string>();
+      let target = retractionTarget(operation);
+      while (target !== undefined && !seen.has(target)) {
+        seen.add(target);
+        const action = await this.groupAction(item, batch, target);
+        if (action === undefined) {
+          return true;
+        }
+        if (action.type !== "RETRACT") {
+          return (groupMembershipActionTypes as readonly string[]).includes(
+            action.type,
+          );
+        }
+        target = retractionTarget({ action } as Operation);
+      }
+      return true;
+    } catch {
+      return true;
+    }
+  }
+
+  /** Whether the group was created on base-reducer 3; so taken when unknown. */
+  private async isBaseReducer3(groupId: string): Promise<boolean> {
+    const row = await (this.db as unknown as Kysely<StorageDatabase>)
+      .selectFrom("operation_index_operations")
+      .select(
+        sql<
+          string | null
+        >`action->'input'->'protocolVersions'->>'base-reducer'`.as(
+          "baseReducer",
+        ),
+      )
+      .where("documentId", "=", groupId)
+      .where("scope", "=", "document")
+      .where("index", "=", 0)
+      .where(sql<string>`action->>'type'`, "=", "CREATE_DOCUMENT")
+      .limit(1)
+      .executeTakeFirst();
+    return row === undefined || row.baseReducer === "3";
+  }
+
+  /** The group action with this id, from the batch or the index. */
+  private async groupAction(
+    item: OperationWithContext,
+    batch: OperationWithContext[],
+    actionId: string,
+  ): Promise<Action | undefined> {
+    const { documentId, scope, branch } = item.context;
+    const inBatch = batch.find(
+      ({ operation, context }) =>
+        context.documentId === documentId &&
+        context.scope === scope &&
+        context.branch === branch &&
+        operation.action.id === actionId,
+    );
+    if (inBatch !== undefined) {
+      return inBatch.operation.action;
+    }
+    const row = await (this.db as unknown as Kysely<StorageDatabase>)
+      .selectFrom("operation_index_operations")
+      .select("action")
+      .where("documentId", "=", documentId)
+      .where("scope", "=", scope)
+      .where("branch", "=", branch)
+      .where(sql<string>`action->>'id'`, "=", actionId)
+      .limit(1)
+      .executeTakeFirst();
+    return row?.action as Action | undefined;
   }
 
   private async onWriteReady(event: JobWriteReadyEvent): Promise<void> {

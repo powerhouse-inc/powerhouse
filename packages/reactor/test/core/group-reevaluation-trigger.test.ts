@@ -264,6 +264,111 @@ describe("GroupReevaluationTrigger", () => {
     expect(enqueued).toHaveLength(0);
   });
 
+  describe("RETRACT", () => {
+    const at = "2026-01-01T00:00:05.000Z";
+
+    /** Indexes a group's creation and its global actions, by id and type. */
+    async function seed(
+      operationIndex: KyselyOperationIndex,
+      groupId: string,
+      baseReducer: number,
+      actions: Array<[id: string, type: string, input?: unknown]>,
+    ): Promise<void> {
+      const row = (
+        scope: string,
+        index: number,
+        action: { id: string; type: string; input: unknown },
+      ) => ({
+        id: `op-${groupId}-${action.id}`,
+        documentId: groupId,
+        documentType: groupDocumentType,
+        scope,
+        branch: "main",
+        sourceRemote: "",
+        index,
+        timestampUtcMs: at,
+        hash: "h",
+        skip: 0,
+        action: { ...action, scope, timestampUtcMs: at },
+      });
+      const txn = operationIndex.start();
+      txn.write([
+        row("document", 0, {
+          id: `create-${groupId}`,
+          type: "CREATE_DOCUMENT",
+          input: { protocolVersions: { "base-reducer": baseReducer } },
+        }),
+        ...actions.map(([id, type, input], i) =>
+          row("global", i, { id, type, input: input ?? {} }),
+        ),
+      ]);
+      await operationIndex.commit(txn);
+    }
+
+    function retractOf(groupId: string, target: string): OperationWithContext {
+      const operation = owc(
+        groupId,
+        groupDocumentType,
+        "global",
+        "RETRACT",
+        at,
+      );
+      operation.operation.action = {
+        ...operation.operation.action,
+        id: `retract-${target}`,
+        input: { target },
+      };
+      return operation;
+    }
+
+    async function enqueuedFor(
+      baseReducer: number,
+      actions: Array<[id: string, type: string, input?: unknown]>,
+      target: string,
+    ): Promise<string[]> {
+      const { trigger, emit, enqueued, operationIndex } = await harness({
+        "g-1": ["doc-a"],
+      });
+      await seed(operationIndex, "g-1", baseReducer, actions);
+      await trigger.startup();
+      await emit([retractOf("g-1", target)]);
+      return enqueued.map((job) => job.documentId);
+    }
+
+    it("enqueues for a RETRACT of a membership action on base-reducer 3", async () => {
+      expect(await enqueuedFor(3, [["add", "ADD_MEMBER"]], "add")).toEqual([
+        "doc-a",
+      ]);
+    });
+
+    it("follows a RETRACT chain to the membership action", async () => {
+      expect(
+        await enqueuedFor(
+          3,
+          [
+            ["add", "ADD_MEMBER"],
+            ["undo", "RETRACT", { target: "add" }],
+          ],
+          "undo",
+        ),
+      ).toEqual(["doc-a"]);
+    });
+
+    it("enqueues when the RETRACT's target is not indexed", async () => {
+      expect(await enqueuedFor(3, [], "missing")).toEqual(["doc-a"]);
+    });
+
+    it("skips a RETRACT of a non-membership action", async () => {
+      expect(
+        await enqueuedFor(3, [["name", "SET_GROUP_NAME"]], "name"),
+      ).toEqual([]);
+    });
+
+    it("skips a RETRACT on a base-reducer 2 group, where it is inert", async () => {
+      expect(await enqueuedFor(2, [["add", "ADD_MEMBER"]], "add")).toEqual([]);
+    });
+  });
+
   describe("catch-up", () => {
     it("enqueues for a membership change only the sweep found", async () => {
       const { trigger, commit, sweep, enqueued, storedCursor } = await harness({
