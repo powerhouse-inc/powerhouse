@@ -225,9 +225,12 @@ type BatchJobResult {
 }
 
 """
-The outcome of an atomic batch mutation, one entry per job the request named.
-The wire shape of `BatchExecutionResult` (`{ jobs }`), keyed on each entry by
-the plan key rather than by position so the client can rebuild the record.
+The outcome of a batch mutation, one entry per job the request named. The wire
+shape of `BatchExecutionResult` (`{ jobs }`), keyed on each entry by the plan
+key rather than by position so the client can rebuild the record. The batch is
+ordering only -- NOT atomic: each job commits independently, there is no batch
+rollback, and re-submitting after a partial failure re-applies the jobs that
+already succeeded.
 """
 type BatchExecutionResult {
   jobs: [BatchJobResult!]!
@@ -391,8 +394,10 @@ input ActionInput {
 }
 
 """
-One mutation job of an atomic batch, mirroring the reactor's `ExecutionJobPlan`
-(packages/reactor/src/core/types.ts).
+One mutation job of a batch, mirroring the reactor's `ExecutionJobPlan`
+(packages/reactor/src/core/types.ts). The batch runs its jobs in dependency
+order only -- NOT atomically: each job commits independently with no batch
+rollback.
 
 `documentIdOrSlug` is the document the job's actions apply to -- an id that does
 not yet exist when the job's actions create it. `actions` are coerced against

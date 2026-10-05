@@ -192,7 +192,7 @@ describe("executeBatch", () => {
     expect(getJobStatusSpy).toHaveBeenCalledWith("job-delete");
   });
 
-  it("surfaces a batch failure as an error", async () => {
+  it("surfaces a batch failure with the partial-state caveat", async () => {
     const client = {
       executeBatch: vi
         .fn()
@@ -200,9 +200,77 @@ describe("executeBatch", () => {
       getJobStatus: vi.fn(),
     } as unknown as IReactorClient;
 
-    await expect(
-      executeBatch(client, { jobs: [deleteFileJob] }),
-    ).rejects.toThrow("drive refused the removal");
+    const run = executeBatch(client, { jobs: [deleteFileJob] });
+
+    await expect(run).rejects.toThrow("drive refused the removal");
+    await expect(run).rejects.toThrow(/ordering-only, not atomic/);
+    await expect(run).rejects.toThrow(
+      /re-applies every job that already succeeded/,
+    );
+  });
+
+  it("names the failed plan key and the partial-state caveat when a job comes back FAILED", async () => {
+    const failed = {
+      id: "job-delete",
+      documentId: "file-1",
+      status: "FAILED",
+      createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+      error: { name: "Error", message: "delete rejected", stack: "" },
+      consistencyToken: {
+        version: 1,
+        createdAtUtcIso: "2026-01-01T00:00:01.000Z",
+        coordinates: [],
+      },
+      meta: { batchId: "batch-1", batchJobIds: ["job-delete"] },
+    } as unknown as JobInfo;
+    const client = {
+      executeBatch: vi.fn().mockResolvedValue({
+        jobs: {
+          drive: { id: "job-drive", documentId: "drive-1", status: "PENDING" },
+          delete: {
+            id: "job-delete",
+            documentId: "file-1",
+            status: "PENDING",
+          },
+        },
+      }),
+      getJobStatus: vi
+        .fn()
+        .mockImplementation((id: string) =>
+          Promise.resolve(
+            id === "job-delete" ? failed : completedJob("job-drive", "drive-1"),
+          ),
+        ),
+    } as unknown as IReactorClient;
+
+    const run = executeBatch(client, {
+      jobs: [deleteFileJob, deleteDocJob],
+    });
+
+    await expect(run).rejects.toThrow(/Batch job "delete" failed/);
+    await expect(run).rejects.toThrow("delete rejected");
+    await expect(run).rejects.toThrow(/ordering-only, not atomic/);
+    await expect(run).rejects.toThrow(
+      /re-applies every job that already succeeded/,
+    );
+  });
+
+  it("raises a diagnosable error naming a plan key missing from the reactor result", async () => {
+    const client = {
+      executeBatch: vi.fn().mockResolvedValue({
+        jobs: {
+          drive: { id: "job-drive", documentId: "drive-1", status: "PENDING" },
+        },
+      }),
+      getJobStatus: vi.fn(),
+    } as unknown as IReactorClient;
+
+    const run = executeBatch(client, {
+      jobs: [deleteFileJob, deleteDocJob],
+    });
+
+    await expect(run).rejects.toThrow(/missing plan key "delete"/);
+    await expect(run).rejects.toThrow(/returned jobs for \[drive\]/);
   });
 });
 
